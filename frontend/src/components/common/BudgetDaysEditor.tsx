@@ -1,9 +1,10 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { InputNumber, Modal, Space, Tooltip } from 'antd';
 import { App } from 'antd';
 import dayjs from 'dayjs';
 import { ProductionOrder } from '@/types/production';
 import { computeStageBudgetHint, getStageConfig } from '@/utils/progressTimeBudget';
+import { computeStageTimeline, type StageTimelineItem } from '@/components/common/StageTimelineHint';
 import api from '@/utils/api';
 
 interface BudgetDaysEditorProps {
@@ -14,6 +15,23 @@ interface BudgetDaysEditorProps {
   isCompletedOrClosed: boolean;
   isProcureNode?: boolean;
   onUpdated?: () => void;
+}
+
+function formatGapDuration(ms: number): string {
+  const totalMinutes = Math.floor(ms / 60000);
+  const days = Math.floor(totalMinutes / 1440);
+  const hours = Math.floor((totalMinutes % 1440) / 60);
+  const mins = totalMinutes % 60;
+  if (days > 0) return `${days}天${hours}时`;
+  if (hours > 0) return `${hours}时${mins}分`;
+  if (mins > 0) return `${mins}分`;
+  return '<1分';
+}
+
+function gapColorForDays(days: number): string {
+  if (days >= 3) return '#ff7875';
+  if (days >= 1) return '#faad14';
+  return 'var(--color-text-quaternary, #bfbfbf)';
 }
 
 const BudgetDaysEditor: React.FC<BudgetDaysEditorProps> = ({
@@ -45,6 +63,28 @@ const BudgetDaysEditor: React.FC<BudgetDaysEditorProps> = ({
     const actualDays = dayjs(stageEndTime).diff(start, 'day');
     return `实际${actualDays}天`;
   })();
+
+  const gapInfo = useMemo(() => {
+    const timelineItems: StageTimelineItem[] = [
+      { name: '下单', startTime: record.createTime, endTime: record.createTime, isCompleted: true },
+      { name: '采购', startTime: (record as any).procurementStartTime, endTime: (record as any).procurementEndTime, isProcureNode: true },
+      { name: '裁剪', startTime: (record as any).cuttingStartTime, endTime: (record as any).cuttingEndTime },
+      { name: '二次工艺', startTime: (record as any).secondaryProcessStartTime, endTime: (record as any).secondaryProcessEndTime },
+      { name: '车缝', startTime: (record as any).carSewingStartTime, endTime: (record as any).carSewingEndTime },
+      { name: '尾部', startTime: (record as any).ironingStartTime, endTime: (record as any).ironingEndTime },
+      { name: '入库', startTime: (record as any).warehousingStartTime, endTime: (record as any).warehousingEndTime },
+    ];
+    const computed = computeStageTimeline(
+      timelineItems,
+      record.createTime as string | null,
+      (record.expectedShipDate || record.plannedEndDate) as string | null,
+    );
+    const idx = timelineItems.findIndex(t => t.name === nodeName);
+    if (idx < 0) return null;
+    const stage = computed[idx];
+    if (!stage?.gapText) return null;
+    return { text: stage.gapText, color: stage.gapColor, from: stage.gapFrom };
+  }, [record, nodeName]);
 
   const isStageCompleted = !!stageEndTime;
 
@@ -114,35 +154,53 @@ const BudgetDaysEditor: React.FC<BudgetDaysEditorProps> = ({
     });
   }, [record, nodeName, hint, isCompletedOrClosed, editing, onUpdated, modal]);
 
-  if (!hint) return null;
+  if (!hint && !gapInfo) return null;
 
-  const displayText = actualDaysText
-    ? `${hint.text} · ${actualDaysText}`
-    : hint.text;
-
+  const budgetText = hint
+    ? (actualDaysText ? `${hint.text} · ${actualDaysText}` : hint.text)
+    : null;
   const isReadOnly = isCompletedOrClosed || isStageCompleted;
 
   return (
-    <Tooltip title={isReadOnly ? displayText : '点击调整预算天数'}>
-      <div
-        style={{
-          fontSize: 10,
-          color: hint.color,
-          fontWeight: 400,
-          lineHeight: 1.2,
-          textAlign: 'center',
-          whiteSpace: 'nowrap',
-          cursor: isReadOnly ? 'default' : 'pointer',
-          ...(isReadOnly ? {} : {
-            borderBottom: '1px dashed',
-            borderColor: hint.color,
-          }),
-        }}
-        onClick={handleClick}
-      >
-        {displayText}
-      </div>
-    </Tooltip>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 1, alignItems: 'center' }}>
+      {gapInfo && (
+        <Tooltip title={`${gapInfo.from} → ${nodeName} ${gapInfo.text}`}>
+          <div style={{
+            fontSize: 10,
+            color: gapInfo.color,
+            fontWeight: 400,
+            lineHeight: 1.2,
+            textAlign: 'center',
+            whiteSpace: 'normal',
+            wordBreak: 'break-all',
+          }}>
+            {gapInfo.text}
+          </div>
+        </Tooltip>
+      )}
+      {budgetText && (
+        <Tooltip title={isReadOnly ? budgetText : '点击调整预算天数'}>
+          <div
+            style={{
+              fontSize: 10,
+              color: hint!.color,
+              fontWeight: 400,
+              lineHeight: 1.2,
+              textAlign: 'center',
+              whiteSpace: 'nowrap',
+              cursor: isReadOnly ? 'default' : 'pointer',
+              ...(isReadOnly ? {} : {
+                borderBottom: '1px dashed',
+                borderColor: hint!.color,
+              }),
+            }}
+            onClick={handleClick}
+          >
+            {budgetText}
+          </div>
+        </Tooltip>
+      )}
+    </div>
   );
 };
 
