@@ -1,5 +1,5 @@
 .system-logs-page .filter-card {
-  background-color: #fafafa;
+  background-color: var(--color-bg-container);
   margin-bottom: 16px;
 }
 

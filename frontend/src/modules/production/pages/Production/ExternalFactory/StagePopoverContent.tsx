@@ -63,27 +63,27 @@ const StagePopoverContent: React.FC<StagePopoverInfo & { open?: boolean }> = ({
       <div style={{ fontWeight: 600, marginBottom: 8, color: '#262626', fontSize: 14 }}>{label}</div>
 
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, marginBottom: 4 }}>
-        <span style={{ color: '#8c8c8c' }}>已生产</span>
+        <span style={{ color: 'var(--color-text-tertiary)' }}>已生产</span>
         <span style={{ color: '#262626', fontWeight: 600 }}>{doneQty} 件</span>
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, marginBottom: 4 }}>
-        <span style={{ color: '#8c8c8c' }}>还剩</span>
+        <span style={{ color: 'var(--color-text-tertiary)' }}>还剩</span>
         <span style={{ color: leftQty > 0 ? '#595959' : '#52c41a', fontWeight: 600 }}>{leftQty} 件</span>
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, marginBottom: 8 }}>
-        <span style={{ color: '#8c8c8c' }}>近7天工人</span>
+        <span style={{ color: 'var(--color-text-tertiary)' }}>近7天工人</span>
         <span style={{ color: scanData.workerCount > 0 ? '#262626' : '#bfbfbf', fontWeight: 600 }}>
           {scanData.loading ? '…' : scanData.workerCount > 0 ? `${scanData.workerCount} 人` : '-'}
         </span>
       </div>
 
       {scanData.loading ? (
-        <div style={{ textAlign: 'center', paddingTop: 6, paddingBottom: 4, borderTop: '1px solid #f0f0f0', marginBottom: 6 }}>
-          <Spin /><span style={{ color: '#bfbfbf', marginLeft: 6, fontSize: 14 }}>加载子工序…</span>
+        <div style={{ textAlign: 'center', paddingTop: 6, paddingBottom: 4, borderTop: '1px solid var(--color-border-light)', marginBottom: 6 }}>
+          <Spin /><span style={{ color: 'var(--color-text-quaternary)', marginLeft: 6, fontSize: 14 }}>加载子工序…</span>
         </div>
       ) : scanData.subProcesses.length > 0 ? (
-        <div style={{ borderTop: '1px solid #f0f0f0', paddingTop: 6, marginBottom: 6 }}>
-          <div style={{ color: '#8c8c8c', marginBottom: 4 }}>子工序明细</div>
+        <div style={{ borderTop: '1px solid var(--color-border-light)', paddingTop: 6, marginBottom: 6 }}>
+          <div style={{ color: 'var(--color-text-tertiary)', marginBottom: 4 }}>子工序明细</div>
           {scanData.subProcesses.map(sp => (
             <div key={sp.name} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, marginBottom: 3 }}>
               <span style={{ color: '#595959', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 120 }}>{sp.name}</span>
@@ -93,13 +93,13 @@ const StagePopoverContent: React.FC<StagePopoverInfo & { open?: boolean }> = ({
         </div>
       ) : null}
 
-      <div style={{ borderTop: '1px solid #f0f0f0', paddingTop: 6 }}>
+      <div style={{ borderTop: '1px solid var(--color-border-light)', paddingTop: 6 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'center' }}>
-          <span style={{ color: '#8c8c8c' }}>AI预计</span>
+          <span style={{ color: 'var(--color-text-tertiary)' }}>AI预计</span>
           <span style={{ color: aiColor, fontWeight: 600 }}>{aiLabel}</span>
         </div>
         {scanData.dailyRate7d > 0 && (
-          <div style={{ color: '#bfbfbf', fontSize: 14, textAlign: 'right', marginTop: 2 }}>
+          <div style={{ color: 'var(--color-text-quaternary)', fontSize: 14, textAlign: 'right', marginTop: 2 }}>
             近7日 {Math.round(scanData.dailyRate7d)} 件/天
           </div>
         )}

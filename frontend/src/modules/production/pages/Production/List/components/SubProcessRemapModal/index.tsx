@@ -207,12 +207,12 @@ export default function SubProcessRemapModal({
               <Button type="text" icon={<ArrowUpOutlined />}
                 disabled={row.subIndex === 0}
                 onClick={() => moveSubProcess(row.parentNode.stageKey, row.subIndex, -1)}
-                style={{ padding: '0 3px', color: '#6b7280' }}
+                style={{ padding: '0 3px', color: 'var(--color-text-secondary)' }}
               />
               <Button type="text" icon={<ArrowDownOutlined />}
                 disabled={row.subIndex === row.totalInParent - 1}
                 onClick={() => moveSubProcess(row.parentNode.stageKey, row.subIndex, 1)}
-                style={{ padding: '0 3px', color: '#6b7280' }}
+                style={{ padding: '0 3px', color: 'var(--color-text-secondary)' }}
               />
               <Tooltip title={row.totalInParent <= 1 ? '父节点至少保留 1 个子工序' : '删除'}>
                 <Button type="text" danger icon={<DeleteOutlined />}
@@ -261,7 +261,7 @@ export default function SubProcessRemapModal({
           <Tag style={{ background: ACCENT, color: '#fff', border: 'none', fontWeight: 600, fontSize: 14, margin: 0 }}>
             {row.parentNode.name}
           </Tag>
-          <span style={{ fontSize: 14, color: '#999' }}>
+          <span style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>
             {row.entry.enabled && row.entry.subProcesses.length > 0
               ? `${row.entry.subProcesses.length} 个子工序`
               : '未启用'}

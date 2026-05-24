@@ -31,11 +31,11 @@ public class PendingTaskDTO {
     private String endTime;
     /** 当前阶段领取人名字 */
     private String assigneeName;
-    /** 责任人用户ID（用于按责任人过滤） */
+    /** 领取人用户ID（用于按领取人过滤） */
     private String assigneeId;
     /** 任务状态：pending=待处理 / completed=已完成 */
     private String taskStatus;
-    /** 责任人角色标签（如"跟单员"、"财务人员"、"工厂"），前端展示用 */
+    /** 领取人角色标签（如"跟单员"、"财务人员"、"工厂"），前端展示用 */
     private String assigneeRole;
 
     public int getPriorityOrder() {

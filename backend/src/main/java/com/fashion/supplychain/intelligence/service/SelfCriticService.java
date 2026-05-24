@@ -8,6 +8,7 @@ import com.fashion.supplychain.intelligence.mapper.IntelligenceFeedbackRecordMap
 import com.fashion.supplychain.intelligence.orchestration.IntelligenceMemoryOrchestrator;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
@@ -54,6 +55,12 @@ public class SelfCriticService {
     @Autowired(required = false)
     private AiAdvisorService aiAdvisorService;
 
+    @Autowired(required = false)
+    private com.fashion.supplychain.intelligence.orchestration.IntelligenceInferenceOrchestrator inferenceOrchestrator;
+
+    @Value("${xiaoyun.self-critic.llm-enabled:true}")
+    private boolean llmCriticEnabled;
+
     // ──────────────────────────────────────────────────────────────
 
     /**
@@ -80,24 +87,63 @@ public class SelfCriticService {
         try {
             long start = System.currentTimeMillis();
 
-            // 1. 多维度自动评分
-            double dataAccuracyScore = evaluateDataAccuracy(aiResponse, toolResults);
-            double toolEfficiencyScore = evaluateToolEfficiency(userMessage, toolCalls, usedQuickPath);
-            double completenessScore = evaluateCompleteness(userMessage, aiResponse);
-            double hallucinationScore = evaluateHallucination(aiResponse, toolResults);
-            double contextUtilizationScore = evaluateContextUtilization(aiResponse, metrics);
+            double dataAccuracyScore, toolEfficiencyScore, completenessScore, hallucinationScore, contextUtilizationScore, overallScore;
+            String critiqueReport;
 
-            double overallScore = (dataAccuracyScore * 0.30
-                    + toolEfficiencyScore * 0.25
-                    + completenessScore * 0.20
-                    + hallucinationScore * 0.15
-                    + contextUtilizationScore * 0.10);
-
-            // 2. 生成批评报告
-            String critiqueReport = buildCritiqueReport(
-                    dataAccuracyScore, toolEfficiencyScore, completenessScore,
-                    hallucinationScore, contextUtilizationScore, overallScore,
-                    userMessage, aiResponse, toolCalls, usedQuickPath);
+            if (llmCriticEnabled && inferenceOrchestrator != null && inferenceOrchestrator.isAnyModelEnabled()) {
+                com.fashion.supplychain.intelligence.dto.IntelligenceInferenceResult llmResult =
+                        evaluateWithLlm(userMessage, aiResponse, toolCalls, toolResults, usedQuickPath, metrics);
+                if (llmResult != null && llmResult.isSuccess()) {
+                    double[] scores = parseLlmScores(llmResult.getContent());
+                    dataAccuracyScore = scores[0];
+                    toolEfficiencyScore = scores[1];
+                    completenessScore = scores[2];
+                    hallucinationScore = scores[3];
+                    contextUtilizationScore = scores[4];
+                    overallScore = (dataAccuracyScore * 0.30
+                            + toolEfficiencyScore * 0.25
+                            + completenessScore * 0.20
+                            + hallucinationScore * 0.15
+                            + contextUtilizationScore * 0.10);
+                    critiqueReport = buildCritiqueReport(
+                            dataAccuracyScore, toolEfficiencyScore, completenessScore,
+                            hallucinationScore, contextUtilizationScore, overallScore,
+                            userMessage, aiResponse, toolCalls, usedQuickPath)
+                            + " | LLM语义评分: " + (llmResult.getContent().length() > 200
+                            ? llmResult.getContent().substring(0, 200) : llmResult.getContent());
+                } else {
+                    dataAccuracyScore = evaluateDataAccuracy(aiResponse, toolResults);
+                    toolEfficiencyScore = evaluateToolEfficiency(userMessage, toolCalls, usedQuickPath);
+                    completenessScore = evaluateCompleteness(userMessage, aiResponse);
+                    hallucinationScore = evaluateHallucination(aiResponse, toolResults);
+                    contextUtilizationScore = evaluateContextUtilization(aiResponse, metrics);
+                    overallScore = (dataAccuracyScore * 0.30
+                            + toolEfficiencyScore * 0.25
+                            + completenessScore * 0.20
+                            + hallucinationScore * 0.15
+                            + contextUtilizationScore * 0.10);
+                    critiqueReport = buildCritiqueReport(
+                            dataAccuracyScore, toolEfficiencyScore, completenessScore,
+                            hallucinationScore, contextUtilizationScore, overallScore,
+                            userMessage, aiResponse, toolCalls, usedQuickPath)
+                            + " | [降级为正则评分]";
+                }
+            } else {
+                dataAccuracyScore = evaluateDataAccuracy(aiResponse, toolResults);
+                toolEfficiencyScore = evaluateToolEfficiency(userMessage, toolCalls, usedQuickPath);
+                completenessScore = evaluateCompleteness(userMessage, aiResponse);
+                hallucinationScore = evaluateHallucination(aiResponse, toolResults);
+                contextUtilizationScore = evaluateContextUtilization(aiResponse, metrics);
+                overallScore = (dataAccuracyScore * 0.30
+                        + toolEfficiencyScore * 0.25
+                        + completenessScore * 0.20
+                        + hallucinationScore * 0.15
+                        + contextUtilizationScore * 0.10);
+                critiqueReport = buildCritiqueReport(
+                        dataAccuracyScore, toolEfficiencyScore, completenessScore,
+                        hallucinationScore, contextUtilizationScore, overallScore,
+                        userMessage, aiResponse, toolCalls, usedQuickPath);
+            }
 
             // 3. 低分自动沉淀反馈
             if (overallScore < SELF_IMPROVE_THRESHOLD) {
@@ -419,5 +465,78 @@ public class SelfCriticService {
             return trimmed;
         }
         return trimmed.substring(0, maxLen);
+    }
+
+    private com.fashion.supplychain.intelligence.dto.IntelligenceInferenceResult evaluateWithLlm(
+            String userMessage, String aiResponse,
+            List<AgentTool> toolCalls, List<String> toolResults,
+            boolean usedQuickPath, AgentExecutionMetrics metrics) {
+        String toolSummary = "无";
+        if (toolCalls != null && !toolCalls.isEmpty()) {
+            toolSummary = toolCalls.stream()
+                    .map(AgentTool::getName)
+                    .distinct()
+                    .reduce((a, b) -> a + ", " + b)
+                    .orElse("无");
+        }
+        String toolResultSummary = "无";
+        if (toolResults != null && !toolResults.isEmpty()) {
+            String combined = String.join(" ", toolResults);
+            toolResultSummary = combined.length() > 800 ? combined.substring(0, 800) + "…" : combined;
+        }
+        String truncatedResponse = aiResponse != null && aiResponse.length() > 600
+                ? aiResponse.substring(0, 600) + "…" : aiResponse;
+        String truncatedQuestion = userMessage != null && userMessage.length() > 200
+                ? userMessage.substring(0, 200) : userMessage;
+
+        String systemPrompt = "你是AI质量审查员，负责评估AI助手的回答质量。请严格按以下5个维度评分（0-100分）：\n"
+                + "1. data_accuracy: 回答中引用的数据是否与工具返回一致，有无编造数字\n"
+                + "2. tool_efficiency: 工具选择是否合理，有无遗漏或冗余\n"
+                + "3. completeness: 是否完整回答了用户问题的所有方面\n"
+                + "4. hallucination_control: 是否存在无数据支撑的断言、模糊表述或矛盾\n"
+                + "5. context_utilization: 是否充分利用了可用上下文信息\n"
+                + "请严格按此JSON格式输出，不要输出其他内容：\n"
+                + "{\"data_accuracy\":85,\"tool_efficiency\":90,\"completeness\":75,\"hallucination_control\":95,\"context_utilization\":80,\"reason\":\"简要说明\"}";
+
+        String userPrompt = String.format(
+                "【用户问题】%s\n【AI回答】%s\n【调用的工具】%s\n【工具返回】%s\n【快速通道】%s\n【迭代轮数】%d\n\n请评分：",
+                truncatedQuestion, truncatedResponse, toolSummary, toolResultSummary,
+                usedQuickPath ? "是" : "否",
+                metrics != null ? metrics.getIterations() : 0);
+
+        try {
+            return inferenceOrchestrator.chat("self_critic", systemPrompt, userPrompt);
+        } catch (Exception e) {
+            log.debug("[SelfCritic-LLM] LLM评分失败，降级为正则: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    private double[] parseLlmScores(String content) {
+        double[] defaults = {75.0, 75.0, 75.0, 75.0, 75.0};
+        if (content == null || content.isBlank()) return defaults;
+        try {
+            String json = content.trim();
+            int start = json.indexOf('{');
+            int end = json.lastIndexOf('}');
+            if (start < 0 || end < 0) return defaults;
+            json = json.substring(start, end + 1);
+            var mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            var node = mapper.readTree(json);
+            return new double[]{
+                    clampScore(node.path("data_accuracy").asDouble(75)),
+                    clampScore(node.path("tool_efficiency").asDouble(75)),
+                    clampScore(node.path("completeness").asDouble(75)),
+                    clampScore(node.path("hallucination_control").asDouble(75)),
+                    clampScore(node.path("context_utilization").asDouble(75))
+            };
+        } catch (Exception e) {
+            log.debug("[SelfCritic-LLM] 解析评分JSON失败: {}", e.getMessage());
+            return defaults;
+        }
+    }
+
+    private double clampScore(double score) {
+        return Math.max(0, Math.min(100, score));
     }
 }

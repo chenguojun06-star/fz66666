@@ -5,6 +5,7 @@ import { PrinterOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import api from '@/utils/api';
 import { safePrint } from '@/utils/safePrint';
+import { formatMoney } from '@/utils/format';
 
 interface FactoryStatementPrintModalProps {
     visible: boolean;
@@ -179,7 +180,7 @@ const FactoryStatementPrintModal: React.FC<FactoryStatementPrintModalProps> = ({
                     </tr>
                 )) : (
                     <tr>
-                        <td colSpan={7}>暂无明细数据（汇总金额为 ¥{Number(factory.totalAmount).toFixed(2)}）</td>
+                        <td colSpan={7}>暂无明细数据（汇总金额为 {formatMoney(factory.totalAmount)}）</td>
                     </tr>
                 )}
             </tbody>
@@ -280,7 +281,7 @@ const FactoryStatementPrintModal: React.FC<FactoryStatementPrintModalProps> = ({
                                 <div className="footer">
                                     <span>合计单数：{factory.orderCount} 单</span>
                                     <span>合计入库数：{factory.totalOrderQuantity} 件</span>
-                                    <span>总金额：¥{Number(factory.totalAmount).toFixed(2)}</span>
+                                    <span>总金额：{formatMoney(factory.totalAmount)}</span>
                                 </div>
                                 <div className="amount-words">
                                     <strong>大写金额：</strong>{digitUppercase(factory.totalAmount)}
@@ -293,7 +294,7 @@ const FactoryStatementPrintModal: React.FC<FactoryStatementPrintModalProps> = ({
                         );
                     })}
                     {selectedFactories.length === 0 && (
-                        <div style={{ textAlign: 'center', padding: 40, color: '#999' }}>请先选择需要打印的工厂</div>
+                        <div style={{ textAlign: 'center', padding: 40, color: 'var(--color-text-tertiary)' }}>请先选择需要打印的工厂</div>
                     )}
                 </div>
             </Spin>

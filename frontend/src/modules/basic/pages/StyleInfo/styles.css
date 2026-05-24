@@ -265,7 +265,7 @@
 }
 
 .style-smart-row__delivery--scrapped {
-  color: #6b7280;
+  color: var(--color-text-secondary);
   background: rgba(148, 163, 184, 0.14);
 }
 
@@ -350,11 +350,11 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  z-index: 1;
+  z-index: var(--z-local);
 }
 
 .style-smart-row__progress-pct {
-  color: #6b7280;
+  color: var(--color-text-secondary);
   font-size: 11px;
   font-weight: 600;
   line-height: 1;
@@ -440,7 +440,7 @@
 
 .style-smart-stage__time-start {
   min-height: 16px;
-  color: #6b7280;
+  color: var(--color-text-secondary);
   font-size: 11px;
   line-height: 1.35;
   font-weight: 400;
@@ -462,7 +462,7 @@
 }
 
 .style-smart-stage__time-start-inline {
-  color: #6b7280;
+  color: var(--color-text-secondary);
   font-weight: 400;
   font-size: 11px;
 }
@@ -553,7 +553,7 @@
 
 .style-smart-stage--done .style-smart-stage__ring {
   border-color: #52c41a;
-  background: #ffffff;
+  background: var(--color-bg-base);
   border-width: 3px;
   box-shadow: 0 0 0 1px rgba(82, 196, 26, 0.08);
 }
@@ -565,7 +565,7 @@
 .style-smart-stage--done .style-smart-stage__core {
   width: 60%;
   height: 60%;
-  background: #ffffff;
+  background: var(--color-bg-base);
   border: 0;
   box-shadow: none;
   animation: none;
@@ -590,7 +590,7 @@
 
 .style-smart-stage--waiting .style-smart-stage__ring {
   border-color: rgba(203, 213, 225, 0.96);
-  background: #fff;
+  background: var(--color-bg-base);
 }
 
 .style-smart-stage--waiting .style-smart-stage__orbit {
@@ -625,7 +625,7 @@
 
 .style-smart-stage--scrapped .style-smart-stage__time,
 .style-smart-stage--scrapped .style-smart-stage__helper {
-  color: #6b7280;
+  color: var(--color-text-secondary);
 }
 
 .style-smart-stage--scrapped .style-smart-stage__label {
@@ -653,7 +653,7 @@
 }
 
 .style-smart-row--scrapped .style-smart-row__overview-value {
-  color: #6b7280;
+  color: var(--color-text-secondary);
 }
 
 .style-smart-row__actions {
@@ -670,7 +670,7 @@
   padding: 4px 8px;
   border-radius: 999px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  z-index: 10;
+  z-index: var(--z-local);
 }
 
 .style-smart-row:hover .style-smart-row__actions {
@@ -787,7 +787,7 @@
 .style-smart-stage-modal__fact {
   padding: 12px;
   border-radius: 6px;
-  background: #fff;
+  background: var(--color-bg-base);
   border: 1px solid rgba(148, 163, 184, 0.12);
 }
 
@@ -828,7 +828,7 @@
 .style-smart-stage-modal__process-item {
   padding: 12px;
   border-radius: 6px;
-  background: #fff;
+  background: var(--color-bg-base);
   border: 1px solid rgba(148, 163, 184, 0.12);
 }
 
@@ -865,7 +865,7 @@
 .style-smart-stage-modal__empty {
   padding: 18px 12px;
   border-radius: 6px;
-  background: #fff;
+  background: var(--color-bg-base);
   color: var(--color-text-secondary);
   text-align: center;
 }
@@ -1168,12 +1168,12 @@
   padding: 8px 0 6px;
   border-bottom: 2px solid #333;
   margin-bottom: 0;
-  color: #1a1a1a;
+  color: var(--color-text-primary);
 }
 
 .wps-section__subtitle {
   font-size: 12px;
-  color: #666;
+  color: var(--color-text-secondary);
   margin-left: 8px;
   font-weight: 400;
 }
@@ -1183,7 +1183,7 @@
   border-collapse: collapse;
   font-size: 13px;
   line-height: 1.5;
-  color: #1a1a1a;
+  color: var(--color-text-primary);
   margin-bottom: 0;
 }
 
@@ -1193,14 +1193,14 @@
   padding: 6px 10px;
   text-align: left;
   vertical-align: middle;
-  background: #fff;
+  background: var(--color-bg-base);
 }
 
 .wps-table thead th {
-  background: #f5f5f5;
+  background: var(--color-bg-subtle);
   font-weight: 600;
   font-size: 12px;
-  color: #333;
+  color: var(--color-text-primary);
   text-align: center;
   border-bottom: 2px solid #333;
 }
@@ -1224,10 +1224,10 @@
   padding: 6px 10px;
   border: 1px solid #999;
   border-top: 2px solid #333;
-  background: #fafafa;
+  background: var(--color-bg-container);
   font-weight: 600;
   font-size: 11px;
-  color: #1a1a1a;
+  color: var(--color-text-primary);
 }
 
 /* WPS 成本核算区 */
@@ -1253,14 +1253,14 @@
 
 .wps-cost-grid__label {
   font-size: 12px;
-  color: #666;
+  color: var(--color-text-secondary);
   font-weight: 600;
 }
 
 .wps-cost-grid__value {
   font-size: 13px;
   font-weight: 700;
-  color: #1a1a1a;
+  color: var(--color-text-primary);
   min-height: 24px;
   display: flex;
   align-items: center;

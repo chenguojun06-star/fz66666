@@ -11,6 +11,7 @@ import {
   InboxOutlined,
 } from '@ant-design/icons';
 import axios from 'axios';
+import { formatMoney } from '@/utils/format';
 
 const PLATFORM_URL = import.meta.env.VITE_PLATFORM_URL || window.location.origin;
 
@@ -166,7 +167,7 @@ const ShareOutstockPage: React.FC = () => {
             <SummaryCard
               icon={<DollarOutlined />}
               label="合计金额"
-              value={data.totalAmount != null ? `¥${Number(data.totalAmount).toFixed(2)}` : '—'}
+              value={data.totalAmount != null ? formatMoney(data.totalAmount) : '—'}
               color="#10b981"
             />
             <SummaryCard
@@ -217,10 +218,10 @@ const ShareOutstockPage: React.FC = () => {
                       <td style={tdStyle}>{item.color} / {item.size}</td>
                       <td style={{ ...tdStyle, textAlign: 'right', fontWeight: 600 }}>{item.outstockQuantity}</td>
                       <td style={{ ...tdStyle, textAlign: 'right' }}>
-                        {item.salesPrice != null ? `¥${Number(item.salesPrice).toFixed(2)}` : '—'}
+                        {item.salesPrice != null ? formatMoney(item.salesPrice) : '—'}
                       </td>
                       <td style={{ ...tdStyle, textAlign: 'right', fontWeight: 600, color: '#0f172a' }}>
-                        {item.totalAmount != null ? `¥${Number(item.totalAmount).toFixed(2)}` : '—'}
+                        {item.totalAmount != null ? formatMoney(item.totalAmount) : '—'}
                       </td>
                       <td style={tdStyle}>
                         {item.expressCompany || item.trackingNo ? (
@@ -247,7 +248,7 @@ const ShareOutstockPage: React.FC = () => {
             <span style={{ fontWeight: 700, fontSize: 14 }}>
               {data.totalQuantity ?? 0} 件
               {data.totalAmount != null && (
-                <span style={{ marginLeft: 16, color: '#10b981' }}>¥{Number(data.totalAmount).toFixed(2)}</span>
+                <span style={{ marginLeft: 16, color: '#10b981' }}>{formatMoney(data.totalAmount)}</span>
               )}
             </span>
           </div>

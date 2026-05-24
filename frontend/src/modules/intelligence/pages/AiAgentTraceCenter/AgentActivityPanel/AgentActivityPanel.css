@@ -76,7 +76,7 @@
   padding: 5px 14px;
   border-radius: 8px;
   border: 1px solid #e2e8f0;
-  background: #fff;
+  background: var(--color-bg-base);
   font-size: 14px;
   font-weight: 500;
   color: #64748b;
@@ -204,7 +204,7 @@
 
 .ws-station {
   position: relative;
-  background: #fff;
+  background: var(--color-bg-base);
   border-radius: 12px;
   padding: 12px;
   cursor: pointer;
@@ -593,7 +593,7 @@
 }
 
 .agent-detail {
-  background: #fff;
+  background: var(--color-bg-base);
   border-radius: 6px;
   padding: 16px 20px;
   border: 1.5px solid color-mix(in srgb, var(--agent-color) 20%, #e2e8f0);
@@ -658,7 +658,7 @@
 }
 
 .agent-detail-stat {
-  background: #f8fafc;
+  background: var(--color-bg-page);
   padding: 8px 10px;
   border-radius: 8px;
   text-align: center;
@@ -698,7 +698,7 @@
   padding: 6px 14px;
   border-radius: 8px;
   border-left: 3px solid;
-  background: #fff;
+  background: var(--color-bg-base);
   color: #475569;
   font-weight: 500;
   display: flex;

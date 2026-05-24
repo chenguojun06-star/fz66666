@@ -35,8 +35,11 @@ const CuttingSheetPrintModal: React.FC<CuttingSheetPrintModalProps> = ({
   cuttingTask,
 }) => {
   const [orientation, setOrientation] = useState<'portrait' | 'landscape'>('portrait');
+  const [printLoading, setPrintLoading] = useState(false);
 
-  const handlePrint = () => {
+  const handlePrint = async () => {
+    setPrintLoading(true);
+    try {
     if (!bundles.length) {
       message.warning('没有可打印的裁剪单');
       return;
@@ -382,6 +385,7 @@ const CuttingSheetPrintModal: React.FC<CuttingSheetPrintModalProps> = ({
 
     safePrint(printHtml);
     onCancel();
+    } finally { setPrintLoading(false); }
   };
 
   return (
@@ -393,7 +397,7 @@ const CuttingSheetPrintModal: React.FC<CuttingSheetPrintModalProps> = ({
       footer={
         <Space>
           <Button onClick={onCancel}>取消</Button>
-          <Button type="primary" onClick={handlePrint}>
+          <Button type="primary" onClick={() => void handlePrint()} loading={printLoading}>
             打印
           </Button>
         </Space>

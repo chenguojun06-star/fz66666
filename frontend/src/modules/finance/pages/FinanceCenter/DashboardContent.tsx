@@ -18,7 +18,7 @@ echarts.use([LineChart, GridComponent, TooltipComponent, LegendComponent, DataZo
 const { RangePicker } = DatePicker;
 
 const renderChange = (change: number, prefix = '') => {
-  if (change === 0) return <span style={{ color: '#999', fontSize: 14 }}>{prefix}持平</span>;
+  if (change === 0) return <span style={{ color: 'var(--color-text-tertiary)', fontSize: 14 }}>{prefix}持平</span>;
   const isUp = change > 0;
   return <span style={{ color: isUp ? '#52c41a' : '#ff4d4f', fontSize: 14 }}>{prefix}{isUp ? <ArrowUpOutlined /> : <ArrowDownOutlined />} {Math.abs(change).toFixed(1)}%</span>;
 };
@@ -53,9 +53,9 @@ const DashboardContent: React.FC = () => {
           title={<span><DashboardOutlined /> 系统健康指数 <b style={{ fontSize: 15, color: healthData.score >= 80 ? '#52c41a' : healthData.score >= 60 ? '#faad14' : '#ff4d4f' }}>{healthData.score}</b> 分</span>}
           extra={<Button type="link" style={{ padding: 0, height: 'auto' }} onClick={() => setHealthCollapsed(true)}>收起</Button>}>
           <Row gutter={16}>
-            <Col span={4}><div style={{ textAlign: 'center' }}><div style={{ fontSize: 16, fontWeight: 700, color: healthData.score >= 80 ? '#52c41a' : healthData.score >= 60 ? '#faad14' : '#ff4d4f' }}>{healthData.score >= 80 ? 'A' : healthData.score >= 60 ? 'B' : 'C'}</div><div style={{ fontSize: 14, color: '#999' }}>等级</div></div></Col>
-            {healthData.subScores?.map((sub: any, i: number) => <Col key={i} span={4}><div style={{ textAlign: 'center' }}><div style={{ fontSize: 13, fontWeight: 600, color: sub.score >= 80 ? '#52c41a' : sub.score >= 60 ? '#faad14' : '#ff4d4f' }}>{sub.score}</div><div style={{ fontSize: 14, color: '#999' }}>{sub.name}</div></div></Col>)}
-            <Col span={4}>{healthData.topRisk && <div><Tooltip title={healthData.topRisk.detail}><span style={{ color: '#ff4d4f' }}><WarningOutlined /> {healthData.topRisk.name}</span></Tooltip></div>}{healthData.suggestion && <div style={{ fontSize: 14, color: '#666', marginTop: 4 }}><CheckCircleOutlined /> {healthData.suggestion}</div>}</Col>
+            <Col span={4}><div style={{ textAlign: 'center' }}><div style={{ fontSize: 16, fontWeight: 700, color: healthData.score >= 80 ? '#52c41a' : healthData.score >= 60 ? '#faad14' : '#ff4d4f' }}>{healthData.score >= 80 ? 'A' : healthData.score >= 60 ? 'B' : 'C'}</div><div style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>等级</div></div></Col>
+            {healthData.subScores?.map((sub: any, i: number) => <Col key={i} span={4}><div style={{ textAlign: 'center' }}><div style={{ fontSize: 13, fontWeight: 600, color: sub.score >= 80 ? '#52c41a' : sub.score >= 60 ? '#faad14' : '#ff4d4f' }}>{sub.score}</div><div style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>{sub.name}</div></div></Col>)}
+            <Col span={4}>{healthData.topRisk && <div><Tooltip title={healthData.topRisk.detail}><span style={{ color: '#ff4d4f' }}><WarningOutlined /> {healthData.topRisk.name}</span></Tooltip></div>}{healthData.suggestion && <div style={{ fontSize: 14, color: 'var(--color-text-secondary)', marginTop: 4 }}><CheckCircleOutlined /> {healthData.suggestion}</div>}</Col>
           </Row>
         </Card>
       )}
@@ -75,32 +75,32 @@ const DashboardContent: React.FC = () => {
       <Row gutter={16}>
         <Col span={18}>
           <Row gutter={16} style={{ marginBottom: 16 }}>
-            <Col span={6}><Card><div style={{ fontSize: 14, color: '#999' }}>总金额</div><div style={{ fontSize: 15, fontWeight: 700 }}>¥{(statData.totalAmount || 0).toLocaleString()}</div>{renderChange(statData.totalAmountChange, compareLabel)}</Card></Col>
-            <Col span={6}><Card><div style={{ fontSize: 14, color: '#999' }}>入库数量</div><div style={{ fontSize: 15, fontWeight: 700 }}>{(statData.inboundQuantity || 0).toLocaleString()}</div>{renderChange(statData.inboundQuantityChange, compareLabel)}</Card></Col>
-            <Col span={6}><Card><div style={{ fontSize: 14, color: '#999' }}>订单数量</div><div style={{ fontSize: 15, fontWeight: 700 }}>{statData.orderCount || 0}</div>{renderChange(statData.orderCountChange, compareLabel)}</Card></Col>
-            <Col span={6}><Card><div style={{ fontSize: 14, color: '#999' }}>次品数量</div><div style={{ fontSize: 15, fontWeight: 700, color: '#ff4d4f' }}>{statData.defectQuantity || 0}</div>{renderChange(statData.defectQuantityChange, compareLabel)}</Card></Col>
+            <Col span={6}><Card><div style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>总金额</div><div style={{ fontSize: 15, fontWeight: 700 }}>¥{(statData.totalAmount || 0).toLocaleString()}</div>{renderChange(statData.totalAmountChange, compareLabel)}</Card></Col>
+            <Col span={6}><Card><div style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>入库数量</div><div style={{ fontSize: 15, fontWeight: 700 }}>{(statData.inboundQuantity || 0).toLocaleString()}</div>{renderChange(statData.inboundQuantityChange, compareLabel)}</Card></Col>
+            <Col span={6}><Card><div style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>订单数量</div><div style={{ fontSize: 15, fontWeight: 700 }}>{statData.orderCount || 0}</div>{renderChange(statData.orderCountChange, compareLabel)}</Card></Col>
+            <Col span={6}><Card><div style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>次品数量</div><div style={{ fontSize: 15, fontWeight: 700, color: '#ff4d4f' }}>{statData.defectQuantity || 0}</div>{renderChange(statData.defectQuantityChange, compareLabel)}</Card></Col>
           </Row>
           <Card title="趋势分析"><ReactEChartsCore echarts={echarts} option={chartOption} style={{ height: 320 }} /></Card>
         </Col>
         <Col span={6}>
           <Card title="工厂金额排名 Top 10" style={{ height: '100%' }}>
             {rankData.length > 0 ? rankData.map(r => (
-              <div key={r.rank} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #f0f0f0' }}>
+              <div key={r.rank} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid var(--color-border-light)' }}>
                 <span><b style={{ color: r.rank <= 3 ? '#1890ff' : '#999', marginRight: 8 }}>{r.rank}</b>{r.name}</span>
                 <span style={{ fontWeight: 600 }}>¥{r.value.toLocaleString()}</span>
               </div>
-            )) : <div style={{ textAlign: 'center', color: '#999', padding: 20 }}>暂无数据</div>}
+            )) : <div style={{ textAlign: 'center', color: 'var(--color-text-tertiary)', padding: 20 }}>暂无数据</div>}
           </Card>
         </Col>
       </Row>
       <Row gutter={16} style={{ marginTop: 16 }}>
-        <Col span={4}><Card><div style={{ fontSize: 14, color: '#999' }}>总金额</div><div style={{ fontSize: 13, fontWeight: 700 }}>¥{(statData.totalAmount || 0).toLocaleString()}</div></Card></Col>
-        <Col span={4}><Card><div style={{ fontSize: 14, color: '#999' }}>订单数量</div><div style={{ fontSize: 13, fontWeight: 700 }}>{statData.orderCount || 0}</div></Card></Col>
-        <Col span={4}><Card><div style={{ fontSize: 14, color: '#999' }}>入库数量</div><div style={{ fontSize: 13, fontWeight: 700 }}>{(statData.inboundQuantity || 0).toLocaleString()}</div></Card></Col>
-        <Col span={4}><Card><div style={{ fontSize: 14, color: '#999' }}>面辅料总价</div><div style={{ fontSize: 13, fontWeight: 700 }}>¥{(statData.materialCost || 0).toLocaleString()}</div></Card></Col>
-        <Col span={4}><Card><div style={{ fontSize: 14, color: '#999' }}>生产总价</div><div style={{ fontSize: 13, fontWeight: 700 }}>¥{(statData.productionCost || 0).toLocaleString()}</div></Card></Col>
-        <Col span={2}><Card><div style={{ fontSize: 14, color: '#999' }}>利润</div><div style={{ fontSize: 13, fontWeight: 700, color: (statData.profit || 0) >= 0 ? '#52c41a' : '#ff4d4f' }}>¥{(statData.profit || 0).toLocaleString()}</div></Card></Col>
-        <Col span={2}><Card><div style={{ fontSize: 14, color: '#999' }}>利润率</div><div style={{ fontSize: 13, fontWeight: 700, color: (statData.profitRate || 0) >= 0 ? '#52c41a' : '#ff4d4f' }}>{statData.profitRate || 0}%</div></Card></Col>
+        <Col span={4}><Card><div style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>总金额</div><div style={{ fontSize: 13, fontWeight: 700 }}>¥{(statData.totalAmount || 0).toLocaleString()}</div></Card></Col>
+        <Col span={4}><Card><div style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>订单数量</div><div style={{ fontSize: 13, fontWeight: 700 }}>{statData.orderCount || 0}</div></Card></Col>
+        <Col span={4}><Card><div style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>入库数量</div><div style={{ fontSize: 13, fontWeight: 700 }}>{(statData.inboundQuantity || 0).toLocaleString()}</div></Card></Col>
+        <Col span={4}><Card><div style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>面辅料总价</div><div style={{ fontSize: 13, fontWeight: 700 }}>¥{(statData.materialCost || 0).toLocaleString()}</div></Card></Col>
+        <Col span={4}><Card><div style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>生产总价</div><div style={{ fontSize: 13, fontWeight: 700 }}>¥{(statData.productionCost || 0).toLocaleString()}</div></Card></Col>
+        <Col span={2}><Card><div style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>利润</div><div style={{ fontSize: 13, fontWeight: 700, color: (statData.profit || 0) >= 0 ? '#52c41a' : '#ff4d4f' }}>¥{(statData.profit || 0).toLocaleString()}</div></Card></Col>
+        <Col span={2}><Card><div style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>利润率</div><div style={{ fontSize: 13, fontWeight: 700, color: (statData.profitRate || 0) >= 0 ? '#52c41a' : '#ff4d4f' }}>{statData.profitRate || 0}%</div></Card></Col>
       </Row>
     </Spin>
   );

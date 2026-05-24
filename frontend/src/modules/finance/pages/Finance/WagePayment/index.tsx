@@ -1,5 +1,6 @@
 import React, { useCallback } from 'react';
 import { readPageSize } from '@/utils/pageSizeStore';
+import { formatMoney } from '@/utils/format';
 import dayjs from 'dayjs';
 import AccountManagementModal from './components/AccountManagementModal';
 import BillSummaryTab from './components/BillSummaryTab';
@@ -250,7 +251,7 @@ const PaymentCenterPage: React.FC = () => {
                           <>
                             <span style={{ color: '#1677ff', marginLeft: 8 }}>
                               已选 {data.selectedPayableKeys.length} 笔
-                              （¥{data.filteredPayables.filter(p => data.selectedPayableKeys.includes(`${p.bizType}-${p.bizId}`)).reduce((s, p) => s + Number(p.amount ?? 0), 0).toFixed(2)}）
+                              （{formatMoney(data.filteredPayables.filter(p => data.selectedPayableKeys.includes(`${p.bizType}-${p.bizId}`)).reduce((s, p) => s + Number(p.amount ?? 0), 0))}）
                             </span>
                             <Button
                               type="primary"
@@ -453,7 +454,7 @@ const PaymentCenterPage: React.FC = () => {
                   <Descriptions.Item label="单据编号">{pay.currentPayable.bizNo}</Descriptions.Item>
                   <Descriptions.Item label="收款方">{pay.currentPayable.payeeName}</Descriptions.Item>
                   <Descriptions.Item label="应付金额">
-                    <span style={{ fontWeight: 600, color: '#cf1322' }}>¥{Number(pay.currentPayable.amount).toFixed(2)}</span>
+                    <span style={{ fontWeight: 600, color: '#cf1322' }}>{formatMoney(pay.currentPayable.amount)}</span>
                   </Descriptions.Item>
                 </Descriptions>
               </Card>
@@ -655,7 +656,7 @@ const PaymentCenterPage: React.FC = () => {
                   </Space>
                 </Descriptions.Item>
                 <Descriptions.Item label="金额">
-                  <span style={{ fontWeight: 600, color: '#cf1322' }}>¥{Number(detailRecord.amount).toFixed(2)}</span>
+                  <span style={{ fontWeight: 600, color: '#cf1322' }}>{formatMoney(detailRecord.amount)}</span>
                 </Descriptions.Item>
                 <Descriptions.Item label="操作人">{detailRecord.operatorName}</Descriptions.Item>
                 <Descriptions.Item label="创建时间">{formatDateTime(detailRecord.createTime)}</Descriptions.Item>
@@ -719,7 +720,7 @@ const PaymentCenterPage: React.FC = () => {
       <RejectReasonModal
         open={!!data.pendingRejectPayable}
         title="驳回待收付款"
-        description={data.pendingRejectPayable ? `确定驳回 ${data.pendingRejectPayable.payeeName} 的待收付款项？${BIZ_TYPE_MAP[data.pendingRejectPayable.bizType]?.text ? `\n${BIZ_TYPE_MAP[data.pendingRejectPayable.bizType].text} · ¥${Number(data.pendingRejectPayable.amount).toFixed(2)}` : ''}` : undefined}
+        description={data.pendingRejectPayable ? `确定驳回 ${data.pendingRejectPayable.payeeName} 的待收付款项？${BIZ_TYPE_MAP[data.pendingRejectPayable.bizType]?.text ? `\n${BIZ_TYPE_MAP[data.pendingRejectPayable.bizType].text} · ${formatMoney(data.pendingRejectPayable.amount)}` : ''}` : undefined}
         onOk={data.handleRejectPayableConfirm}
         onCancel={() => data.setPendingRejectPayable(null)}
         loading={data.rejectPayableLoading}
@@ -743,10 +744,10 @@ const PaymentCenterPage: React.FC = () => {
               {amountDetailTarget.payeeType === 'WORKER' ? '员工' : '工厂/供应商'}
             </Descriptions.Item>
             <Descriptions.Item label="应付金额">
-              <span style={{ fontWeight: 600, color: '#cf1322' }}>¥{Number(amountDetailTarget.amount).toFixed(2)}</span>
+              <span style={{ fontWeight: 600, color: '#cf1322' }}>{formatMoney(amountDetailTarget.amount)}</span>
             </Descriptions.Item>
             <Descriptions.Item label="已付金额">
-              <span style={{ color: '#389e0d' }}>¥{Number(amountDetailTarget.paidAmount || 0).toFixed(2)}</span>
+              <span style={{ color: '#389e0d' }}>{formatMoney(amountDetailTarget.paidAmount || 0)}</span>
             </Descriptions.Item>
             <Descriptions.Item label="描述" span={2}>{amountDetailTarget.description || '-'}</Descriptions.Item>
             <Descriptions.Item label="创建时间" span={2}>{formatDateTime(amountDetailTarget.createTime)}</Descriptions.Item>

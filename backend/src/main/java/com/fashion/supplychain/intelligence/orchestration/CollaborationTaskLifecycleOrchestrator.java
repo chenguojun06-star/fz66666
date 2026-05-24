@@ -141,13 +141,13 @@ public class CollaborationTaskLifecycleOrchestrator {
             response.setNextStep("等待复核或归档");
         } else if (processing > 0) {
             response.setCurrentStage("处理中");
-            response.setNextStep("等待责任人完成并回写结果");
+            response.setNextStep("等待领取人完成并回写结果");
         } else if (accepted > 0) {
             response.setCurrentStage("已接收");
-            response.setNextStep("等待责任人开始处理");
+            response.setNextStep("等待领取人开始处理");
         } else {
             response.setCurrentStage("已通知");
-            response.setNextStep("等待责任人接收");
+            response.setNextStep("等待领取人接收");
         }
     }
 

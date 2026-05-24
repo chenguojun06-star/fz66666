@@ -100,6 +100,8 @@ const MaintenanceCenter: React.FC = () => {
 
   const keywordRef = useRef(keyword);
   keywordRef.current = keyword;
+  const messageRef = useRef(message);
+  messageRef.current = message;
   const fetchStyles = useCallback(async (pg: number) => {
     setLoading(true);
     try {
@@ -117,13 +119,19 @@ const MaintenanceCenter: React.FC = () => {
       setTotal(Number(data?.total ?? 0));
       setPage(pg);
     } catch {
-      message.error('加载款式列表失败');
+      messageRef.current.error('加载款式列表失败');
     } finally {
       setLoading(false);
     }
-  }, [message]);
+  }, []);
 
-  useEffect(() => { fetchStyles(1); fetchTemplates(); }, [fetchStyles, fetchTemplates]);
+  const initialLoadDone = useRef(false);
+  useEffect(() => {
+    if (initialLoadDone.current) return;
+    initialLoadDone.current = true;
+    fetchStyles(1);
+    fetchTemplates();
+  }, [fetchStyles, fetchTemplates]);
 
   const buildStages = useCallback((record: StyleInfo): MStage[] => {
     const sizeTpls = sizeMap[record.styleNo] || [];
@@ -151,6 +159,9 @@ const MaintenanceCenter: React.FC = () => {
 
   const handlePanelClose = useCallback(() => {
     setPanelType(null);
+  }, []);
+
+  const handlePanelSaved = useCallback(() => {
     fetchStyles(page);
     fetchTemplates();
   }, [fetchStyles, fetchTemplates, page]);
@@ -335,11 +346,11 @@ const MaintenanceCenter: React.FC = () => {
         footer={null}
         destroyOnHidden
       >
-        {panelType === 'pattern' && <PatternPanel key={activeStyleNo} styleNo={activeStyleNo} />}
-        {panelType === 'sheet' && <ProductionSheetPanel key={activeStyleNo} styleNo={activeStyleNo} />}
-        {panelType === 'size' && <SizeTablePanel key={activeStyleNo} styleNo={activeStyleNo} />}
-        {panelType === 'bom' && <BomPanel key={activeStyleNo} styleNo={activeStyleNo} />}
-        {panelType === 'price' && <UnitPricePanel key={activeStyleNo} styleNo={activeStyleNo} />}
+        {panelType === 'pattern' && <PatternPanel key={activeStyleNo} styleNo={activeStyleNo} onSaved={handlePanelSaved} />}
+        {panelType === 'sheet' && <ProductionSheetPanel key={activeStyleNo} styleNo={activeStyleNo} onSaved={handlePanelSaved} />}
+        {panelType === 'size' && <SizeTablePanel key={activeStyleNo} styleNo={activeStyleNo} onSaved={handlePanelSaved} />}
+        {panelType === 'bom' && <BomPanel key={activeStyleNo} styleNo={activeStyleNo} onSaved={handlePanelSaved} />}
+        {panelType === 'price' && <UnitPricePanel key={activeStyleNo} styleNo={activeStyleNo} onSaved={handlePanelSaved} />}
       </ResizableModal>
 
       <StylePrintModal

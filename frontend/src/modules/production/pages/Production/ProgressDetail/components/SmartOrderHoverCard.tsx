@@ -312,7 +312,7 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
         }}>
           {order.styleNo && (
             <span style={{
-              fontSize: 11, color: '#555', background: '#f5f5f5',
+              fontSize: 11, color: '#555', background: 'var(--color-bg-subtle)',
               padding: '1px 7px', borderRadius: 10, fontWeight: 600,
             }}>
               款号 {order.styleNo}
@@ -361,8 +361,8 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
         }}>
           <span></span>
           <span>AI预测完工 <b>{predictHint.text}</b></span>
-          {predictHint.confidence && <span style={{ color: '#8c8c8c' }}>置信{predictHint.confidence}</span>}
-          {predictHint.remaining > 0 && <span style={{ color: '#8c8c8c' }}>剩{predictHint.remaining}件</span>}
+          {predictHint.confidence && <span style={{ color: 'var(--color-text-tertiary)' }}>置信{predictHint.confidence}</span>}
+          {predictHint.remaining > 0 && <span style={{ color: 'var(--color-text-tertiary)' }}>剩{predictHint.remaining}件</span>}
         </div>
       )}
 
@@ -438,7 +438,7 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
           <span style={{ fontWeight: 700, color: todayTask.color }}>
             今日需≥{todayTask.target}件
           </span>
-          <span style={{ color: '#8c8c8c' }}>才能按时交货</span>
+          <span style={{ color: 'var(--color-text-tertiary)' }}>才能按时交货</span>
           <span style={{
             background: todayTask.color + '28',
             color: todayTask.color,
@@ -510,7 +510,7 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
                       </span>
                     )}
                     {s.workerCount > 0 && speed > 0 && (
-                      <span style={{ color: '#999' }}>
+                      <span style={{ color: 'var(--color-text-tertiary)' }}>
                         约{(speed / s.workerCount).toFixed(1)}件/人·天
                       </span>
                     )}
@@ -528,7 +528,7 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
       {inProgressList.length > 0 && nextList.length > 0 && (
         <div style={{
           display: 'flex', alignItems: 'center', gap: 6,
-          borderTop: '1px dashed #e8e8e8', margin: '2px 0 6px',
+          borderTop: '1px dashed var(--color-border)', margin: '2px 0 6px',
         }}>
           <span style={{ fontSize: 11, color: '#bbb', paddingTop: 3, whiteSpace: 'nowrap' }}>预测</span>
         </div>
@@ -547,7 +547,7 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   <span style={{ width: 14, fontSize: 11, textAlign: 'center', flexShrink: 0, color: '#d9d9d9' }}>○</span>
                   <span style={{ width: 26, flexShrink: 0, fontWeight: 400, color: '#bbb' }}>{s.label}</span>
-                  <div style={{ flex: 1, height: 5, background: '#f5f5f5', borderRadius: 3 }} />
+                  <div style={{ flex: 1, height: 5, background: 'var(--color-bg-subtle)', borderRadius: 3 }} />
                   <span style={{ width: 70, textAlign: 'right', flexShrink: 0, fontSize: 11, color: '#bbb' }}>
                     约 {predictDate}
                   </span>

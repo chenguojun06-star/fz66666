@@ -90,7 +90,7 @@
   font-size: 12px;
   border: 1px solid rgba(0, 0, 0, 0.18);
   border-radius: 6px;
-  background: #fff;
+  background: var(--color-bg-base);
   color: rgba(0, 0, 0, 0.85);
   outline: none;
   transition: border-color 0.2s;

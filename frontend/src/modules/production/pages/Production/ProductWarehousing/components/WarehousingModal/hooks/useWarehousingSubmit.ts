@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { Form } from 'antd';
-import type { UploadFile } from 'antd/es/upload/interface';
 import { ProductWarehousing as WarehousingType } from '@/types/production';
 import api from '@/utils/api';
 import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
@@ -10,7 +9,7 @@ interface SubmitDeps {
   form: ReturnType<typeof Form.useForm>[0];
   batchSelectedBundleQrs: string[];
   batchQtyByQr: Record<string, number>;
-  unqualifiedFileList: UploadFile[];
+  unqualifiedFileList: string[];
   currentWarehousing: WarehousingType | null;
   onSuccess: () => void;
   onCancel: () => void;
@@ -94,7 +93,7 @@ export const useWarehousingSubmit = (deps: SubmitDeps) => {
       const values: any = await form.validateFields();
       if (!(await ensureOrderUnlockedById(values.orderId))) return;
 
-      const urls = unqualifiedFileList.map((f) => String((f as any)?.url || '').trim()).filter(Boolean).slice(0, 4);
+      const urls = unqualifiedFileList.filter(Boolean).slice(0, 4);
       const warehousingQty = Number(values.warehousingQuantity || 0) || 0;
       const unqualifiedQty = Math.max(0, Math.min(warehousingQty, Number(values.unqualifiedQuantity || 0) || 0));
       const qualifiedQty = Math.max(0, warehousingQty - unqualifiedQty);

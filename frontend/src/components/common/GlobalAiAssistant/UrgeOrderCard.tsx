@@ -46,7 +46,7 @@ const UrgeOrderCard: React.FC<{ card: ActionCard; onSaved: () => void }> = ({ ca
         {card.factoryName && <span className={styles.urgeCardFactory}> · {card.factoryName}</span>}
       </div>
       {card.responsiblePerson && (
-        <div className={styles.urgeCardPerson}>负责人：{card.responsiblePerson}</div>
+        <div className={styles.urgeCardPerson}>领取人：{card.responsiblePerson}</div>
       )}
       <div className={styles.urgeCardDesc}>{card.desc ?? '请填写最新预计出货日期和备注，以便跟进。'}</div>
       <div className={styles.urgeCardForm}>

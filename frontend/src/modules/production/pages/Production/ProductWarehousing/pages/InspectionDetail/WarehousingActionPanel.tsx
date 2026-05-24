@@ -64,7 +64,7 @@ const WarehousingActionPanel: React.FC<Props> = ({
       </Card>
 
       <Card title="选择仓库并确认入库">
-        <Space direction="vertical" style={{ width: '100%' }} size="middle">
+        <Space orientation="vertical" style={{ width: '100%' }} size="middle">
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
             <Text strong>仓库：</Text>
             <Select

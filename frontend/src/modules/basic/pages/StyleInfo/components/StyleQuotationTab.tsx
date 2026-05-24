@@ -295,7 +295,7 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, styleNo, readOnly, onSave
   return (
     <div className="style-quotation" style={{ padding: '0 8px' }}>
       {styleNo && (
-        <div style={{ marginBottom: 12, fontWeight: 600, fontSize: 15, color: '#333' }}>
+        <div style={{ marginBottom: 12, fontWeight: 600, fontSize: 15, color: 'var(--color-text-primary)' }}>
           款号：{styleNo}
         </div>
       )}

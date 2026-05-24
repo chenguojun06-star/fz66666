@@ -180,7 +180,7 @@
 }
 
 .wlm-zone-tab.active .ant-badge-count {
-  background: #fff !important;
+  background: var(--color-bg-base) !important;
   color: var(--color-primary) !important;
   box-shadow: 0 0 0 1px var(--color-primary) !important;
 }

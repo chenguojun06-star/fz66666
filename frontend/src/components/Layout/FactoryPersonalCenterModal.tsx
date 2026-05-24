@@ -2,6 +2,8 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { App, Avatar, Badge, Button, Collapse, Form, Input, Popconfirm, Space, Tabs, Tag, Typography } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
 import ResizableModal from '@/components/common/ResizableModal';
+import StatusTag from '@/components/common/StatusTag';
+import { FACTORY_STATUS_MAP } from '@/constants/statusMaps';
 import { LockOutlined, PlusOutlined, QuestionCircleOutlined, UserOutlined } from '@ant-design/icons';
 
 const { Text } = Typography;
@@ -13,11 +15,6 @@ interface FactoryPersonalCenterModalProps {
   open: boolean;
   onClose: () => void;
 }
-
-const statusMap: Record<string, { text: string; color: string }> = {
-  active: { text: '启用', color: 'green' },
-  inactive: { text: '停用', color: 'default' },
-};
 
 const FactoryPersonalCenterModal: React.FC<FactoryPersonalCenterModalProps> = ({ open, onClose }) => {
   const { user } = useUser();
@@ -141,7 +138,7 @@ const FactoryPersonalCenterModal: React.FC<FactoryPersonalCenterModalProps> = ({
       title: '状态',
       dataIndex: 'status',
       key: 'status',
-      render: (s: string) => <Tag color={statusMap[s]?.color}>{statusMap[s]?.text ?? s}</Tag>,
+      render: (s: string) => <StatusTag status={s} statusMap={FACTORY_STATUS_MAP} />,
     },
     {
       title: '操作',
@@ -291,7 +288,7 @@ const FactoryPersonalCenterModal: React.FC<FactoryPersonalCenterModalProps> = ({
               label: <span><QuestionCircleOutlined style={{ marginRight: 4 }} />使用教程</span>,
               children: (
                 <div style={{ padding: '4px 0' }}>
-                  <div style={{ marginBottom: 12, color: '#666', fontSize: 14 }}>点击展开各功能操作说明：</div>
+                  <div style={{ marginBottom: 12, color: 'var(--color-text-secondary)', fontSize: 14 }}>点击展开各功能操作说明：</div>
                   <Collapse
                    
                     ghost

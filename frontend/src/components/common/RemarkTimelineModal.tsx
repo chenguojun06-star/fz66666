@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Input, Button, Empty, Spin, App, Tag, Image } from 'antd';
-import { UploadOutlined, DeleteOutlined, EyeOutlined } from '@ant-design/icons';
+import { DeleteOutlined, EyeOutlined } from '@ant-design/icons';
 import ResizableModal from './ResizableModal';
+import MultiImageUploadBox from './MultiImageUploadBox';
 import { remarkApi } from '@/services/system/remarkApi';
 import type { OrderRemark } from '@/services/system/remarkApi';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
-import api from '@/utils/api';
 
 const { TextArea } = Input;
 
@@ -33,8 +33,6 @@ const RemarkTimelineModal: React.FC<RemarkTimelineModalProps> = ({
   const [content, setContent] = useState('');
   const [authorRole, setAuthorRole] = useState('');
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
-  const [uploading, setUploading] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchRemarks = useCallback(async () => {
     if (!targetNo) return;
@@ -58,45 +56,6 @@ const RemarkTimelineModal: React.FC<RemarkTimelineModalProps> = ({
       setUploadedImages([]);
     }
   }, [open, targetNo, defaultRole, fetchRemarks]);
-
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-    const remaining = 5 - uploadedImages.length;
-    if (remaining <= 0) {
-      message.warning('最多上传5张图片');
-      return;
-    }
-    const filesToUpload = Array.from(files).slice(0, remaining);
-    setUploading(true);
-    try {
-      const newUrls: string[] = [];
-      for (const file of filesToUpload) {
-        if (file.size > 5 * 1024 * 1024) {
-          message.warning(`${file.name} 超过5MB限制`);
-          continue;
-        }
-        const formData = new FormData();
-        formData.append('file', file);
-        const data: any = await api.post('/common/upload', formData);
-        if (data?.code === 200 && data?.data) {
-          newUrls.push(data.data);
-        } else {
-          message.error(`上传失败: ${file.name}`);
-        }
-      }
-      setUploadedImages(prev => [...prev, ...newUrls]);
-    } catch {
-      message.error('图片上传失败');
-    } finally {
-      setUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
-    }
-  };
-
-  const removeImage = (index: number) => {
-    setUploadedImages(prev => prev.filter((_, i) => i !== index));
-  };
 
   const handleSubmit = async () => {
     const trimmed = content.trim();
@@ -147,7 +106,7 @@ const RemarkTimelineModal: React.FC<RemarkTimelineModalProps> = ({
       destroyOnHidden
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16, height: '100%' }}>
-        {canAddRemark ? <div style={{ background: '#fafafa', padding: 12, borderRadius: 6 }}>
+        {canAddRemark ? <div style={{ background: 'var(--color-bg-container)', padding: 12, borderRadius: 6 }}>
           <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
             <Input
               placeholder="你的角色/工序（可选，如：裁剪、车缝、质检）"
@@ -155,22 +114,6 @@ const RemarkTimelineModal: React.FC<RemarkTimelineModalProps> = ({
               onChange={(e) => setAuthorRole(e.target.value)}
               style={{ flex: '0 0 200px' }}
               maxLength={50}
-            />
-            <Button
-              icon={<UploadOutlined />}
-              onClick={() => fileInputRef.current?.click()}
-              loading={uploading}
-              disabled={uploadedImages.length >= 5}
-            >
-              上传图片({uploadedImages.length}/5)
-            </Button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/jpeg,image/png"
-              multiple
-              style={{ display: 'none' }}
-              onChange={handleImageUpload}
             />
             <Button type="primary" onClick={handleSubmit} loading={submitting}>
               提交备注
@@ -184,27 +127,15 @@ const RemarkTimelineModal: React.FC<RemarkTimelineModalProps> = ({
             maxLength={1000}
             showCount
           />
-          {uploadedImages.length > 0 && (
-            <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
-              {uploadedImages.map((url, idx) => (
-                <div key={idx} style={{ position: 'relative', width: 64, height: 64 }}>
-                  <Image
-                    src={getFullAuthedFileUrl(url)}
-                    style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 4 }}
-                    preview={{ mask: <EyeOutlined /> }}
-                  />
-                  <Button
-                    type="text"
-                    size="small"
-                    danger
-                    icon={<DeleteOutlined />}
-                    style={{ position: 'absolute', top: -4, right: -4, minWidth: 20, padding: 0 }}
-                    onClick={() => removeImage(idx)}
-                  />
-                </div>
-              ))}
-            </div>
-          )}
+          <div style={{ marginTop: 8 }}>
+            <MultiImageUploadBox
+              value={uploadedImages}
+              onChange={setUploadedImages}
+              maxCount={5}
+              maxSizeMB={5}
+              accept="image/jpeg,image/png"
+            />
+          </div>
         </div> : null}
 
         <div style={{ flex: 1, overflow: 'auto', minHeight: 200 }}>
@@ -220,8 +151,8 @@ const RemarkTimelineModal: React.FC<RemarkTimelineModalProps> = ({
                       key={r.id}
                       style={{
                         padding: '10px 12px',
-                        background: '#fff',
-                        border: '1px solid #f0f0f0',
+                        background: 'var(--color-bg-base)',
+                        border: '1px solid var(--color-border-light)',
                         borderRadius: 6,
                       }}
                     >
@@ -232,7 +163,7 @@ const RemarkTimelineModal: React.FC<RemarkTimelineModalProps> = ({
                             <Tag style={{ marginLeft: 8 }}>{r.authorRole}</Tag>
                           )}
                         </span>
-                        <span style={{ color: '#999', fontSize: 14 }}>
+                        <span style={{ color: 'var(--color-text-tertiary)', fontSize: 14 }}>
                           {r.createTime ? r.createTime.replace('T', ' ').substring(0, 16) : ''}
                         </span>
                       </div>

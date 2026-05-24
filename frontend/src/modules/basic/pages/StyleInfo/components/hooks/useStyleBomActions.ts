@@ -1,8 +1,9 @@
-import { App, Modal } from 'antd';
+import { App } from 'antd';
 import type { FormInstance } from 'antd/es/form';
 import { useCallback, type Dispatch, type SetStateAction } from 'react';
 import type { StyleBom } from '@/types/style';
 import api from '@/utils/api';
+import { confirmAction } from '@/utils/confirm';
 
 interface UseStyleBomActionsOptions {
   locked: boolean;
@@ -75,15 +76,7 @@ const useStyleBomActions = ({
 
         const errorMessage = String(result.message || '生成失败');
         if (errorMessage.includes('已生成过') && !force) {
-          Modal.confirm({
-            width: '30vw',
-            title: '已存在样衣采购记录',
-            content: '该款式已生成过样衣采购记录。是否删除旧的【待采购】记录并重新生成？（已领取/已完成的记录不会被删除）',
-            okText: '重新生成',
-            okButtonProps: { danger: true, type: 'default' },
-            cancelText: '取消',
-            onOk: () => doGenerate(true),
-          });
+          confirmAction('已存在样衣采购记录', '该款式已生成过样衣采购记录。是否删除旧的【待采购】记录并重新生成？（已领取/已完成的记录不会被删除）', () => doGenerate(true), { okText: '重新生成', danger: true });
           return;
         }
 
@@ -95,12 +88,7 @@ const useStyleBomActions = ({
       }
     };
 
-    Modal.confirm({
-      width: '30vw',
-      title: '确认生成采购单',
-      content: `将根据当前BOM配置（${data.length}个物料）及款式颜色数量生成物料采购记录，是否继续？`,
-      onOk: () => doGenerate(false),
-    });
+    confirmAction('确认生成采购单', `将根据当前BOM配置（${data.length}个物料）及款式颜色数量生成物料采购记录，是否继续？`, () => doGenerate(false));
   }, [data, message, setLoading, styleId]);
 
   const handleCheckStock = useCallback(async () => {
@@ -141,40 +129,33 @@ const useStyleBomActions = ({
 
   const handleApplyPickup = useCallback((record: StyleBom) => {
     const pickupQty = record.devUsageAmount ?? record.usageAmount;
-    Modal.confirm({
-      width: '40vw',
-      title: '申请领取',
-      content: `确认申请领取「${record.materialCode || ''} ${record.materialName || ''}」，数量：${pickupQty ?? ''}${record.unit || ''}？`,
-      okText: '确认申请',
-      cancelText: '取消',
-      onOk: async () => {
-        try {
-          await api.post('/production/picking/pending', {
-            picking: {
-              styleId: String(styleId || ''),
-              styleNo: currentStyleNo,
-              pickerId: String(user?.id || ''),
-              pickerName: String(user?.name || user?.username || ''),
-              pickupType: 'INTERNAL',
-              usageType: 'SAMPLE',
-              remark: 'BOM_PICK',
-            },
-            items: [{
-              materialId: record.materialId,
-              materialCode: record.materialCode,
-              materialName: record.materialName,
-              color: record.color ?? '',
-              size: '',
-              quantity: pickupQty != null ? Number(pickupQty) : 1,
-              unit: record.unit ?? '',
-            }],
-          });
-          message.success('申请领取成功，将在「面辅料出入库 → 待出库领料」中显示');
-        } catch (error: unknown) {
-          message.error(`申请失败：${error instanceof Error ? error.message : '请求错误'}`);
-        }
-      },
-    });
+    confirmAction('申请领取', `确认申请领取「${record.materialCode || ''} ${record.materialName || ''}」，数量：${pickupQty ?? ''}${record.unit || ''}？`, async () => {
+      try {
+        await api.post('/production/picking/pending', {
+          picking: {
+            styleId: String(styleId || ''),
+            styleNo: currentStyleNo,
+            pickerId: String(user?.id || ''),
+            pickerName: String(user?.name || user?.username || ''),
+            pickupType: 'INTERNAL',
+            usageType: 'SAMPLE',
+            remark: 'BOM_PICK',
+          },
+          items: [{
+            materialId: record.materialId,
+            materialCode: record.materialCode,
+            materialName: record.materialName,
+            color: record.color ?? '',
+            size: '',
+            quantity: pickupQty != null ? Number(pickupQty) : 1,
+            unit: record.unit ?? '',
+          }],
+        });
+        message.success('申请领取成功，将在「面辅料出入库 → 待出库领料」中显示');
+      } catch (error: unknown) {
+        message.error(`申请失败：${error instanceof Error ? error.message : '请求错误'}`);
+      }
+    }, { okText: '确认申请' });
   }, [currentStyleNo, message, styleId, user]);
 
   const handleDelete = useCallback(async (id: string | number) => {

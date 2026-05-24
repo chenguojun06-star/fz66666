@@ -3,6 +3,7 @@ import { Select, Tabs, Input, InputNumber } from 'antd';
 import ResizableModal from '@/components/common/ResizableModal';
 import ResizableTable from '@/components/common/ResizableTable';
 import { safeString } from './utils';
+import { formatMoney } from '@/utils/format';
 
 const { Option } = Select;
 
@@ -209,7 +210,7 @@ const TransferOrderModal: React.FC<TransferOrderModalProps> = (props) => {
           >
             {transferProcesses.map((p: any) => {
               const price = Number(p.unitPrice || 0);
-              const priceText = price > 0 ? ` - ¥${price.toFixed(2)}/件` : '';
+              const priceText = price > 0 ? ` - ${formatMoney(price)}/件` : '';
               const label = `${p.processName}${priceText}${p.progressStage ? ` (${p.progressStage})` : ''}`;
               return (
                 <Option key={p.processCode || p.id} value={p.processCode || p.id} label={label}>
@@ -217,7 +218,7 @@ const TransferOrderModal: React.FC<TransferOrderModalProps> = (props) => {
                     <span>{p.processName}</span>
                     <span style={{ color: 'var(--color-text-tertiary)', fontSize: '12px' }}>
                       {p.progressStage && `${p.progressStage} | `}
-                      {price > 0 ? `¥${price.toFixed(2)}` : '未配置单价'}
+                      {price > 0 ? formatMoney(price) : '未配置单价'}
                     </span>
                   </div>
                 </Option>
@@ -257,14 +258,14 @@ const TransferOrderModal: React.FC<TransferOrderModalProps> = (props) => {
                       <tr key={code} style={{ borderTop: '1px solid var(--color-border)' }}>
                         <td style={{ padding: '6px 12px' }}>{p.processName}</td>
                         <td style={{ padding: '6px 12px', textAlign: 'right', color: 'var(--color-text-tertiary)' }}>
-                          {originalPrice > 0 ? `¥${originalPrice.toFixed(2)}` : '-'}
+                          {originalPrice > 0 ? formatMoney(originalPrice) : '-'}
                         </td>
                         <td style={{ padding: '6px 12px', textAlign: 'right' }}>
                           <InputNumber
                            
                             min={0}
                             precision={2}
-                            placeholder={originalPrice > 0 ? `默认 ¥${originalPrice.toFixed(2)}` : '输入单价'}
+                            placeholder={originalPrice > 0 ? `默认 ${formatMoney(originalPrice)}` : '输入单价'}
                             value={newPrice != null ? newPrice : undefined}
                             onChange={(val) => handlePriceChange(code, val)}
                             style={{ width: 130 }}

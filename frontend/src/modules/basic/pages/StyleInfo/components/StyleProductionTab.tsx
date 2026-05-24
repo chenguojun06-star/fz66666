@@ -459,8 +459,8 @@ const StyleProductionTab: React.FC<Props> = ({
           onClick={() => ocrFileInputRef.current?.click()}
           tabIndex={0}
           style={{
-            border: '1px dashed #d9d9d9', borderRadius: 8, padding: 16,
-            textAlign: 'center', cursor: 'pointer', background: '#fafafa',
+            border: '1px dashed var(--color-border-antd)', borderRadius: 8, padding: 16,
+            textAlign: 'center', cursor: 'pointer', background: 'var(--color-bg-container)',
             transition: 'border-color 0.3s', marginBottom: 12, outline: 'none',
           }}
           onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--primary-color)'; }}

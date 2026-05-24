@@ -96,7 +96,7 @@ const AssignMemberModal: React.FC<AssignMemberModalProps> = ({
       )}
       <div style={{
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        marginTop: 16, paddingTop: 12, borderTop: '1px solid #f0f0f0',
+        marginTop: 16, paddingTop: 12, borderTop: '1px solid var(--color-border-light)',
       }}>
         <span style={{ color: 'var(--neutral-text-secondary)', fontSize: 14 }}>
           {batchSelectedIds.length > 0 ? `已勾选 ${batchSelectedIds.length} 人` : '勾选后批量添加'}

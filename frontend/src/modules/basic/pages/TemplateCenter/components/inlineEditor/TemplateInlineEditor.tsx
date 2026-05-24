@@ -183,7 +183,7 @@ const TemplateInlineEditor: React.FC<TemplateInlineEditorProps> = ({
         content: (
           <div>
             <p style={{ marginBottom: 12 }}>保存工序单价后，系统会同步更新未完成订单的工序单价。</p>
-            <p style={{ margin: 0, fontSize: 14, color: '#8c8c8c' }}>通常 1 到 3 秒内完成。</p>
+            <p style={{ margin: 0, fontSize: 14, color: 'var(--color-text-tertiary)' }}>通常 1 到 3 秒内完成。</p>
           </div>
         ),
         okText: '确认保存',
@@ -202,7 +202,7 @@ const TemplateInlineEditor: React.FC<TemplateInlineEditorProps> = ({
         content: (
           <div>
             <p style={{ marginBottom: 8 }}>是否同步到该款号已有的未完成生产订单？</p>
-            <p style={{ margin: 0, color: '#8c8c8c', fontSize: 14 }}>款号：{styleNo}</p>
+            <p style={{ margin: 0, color: 'var(--color-text-tertiary)', fontSize: 14 }}>款号：{styleNo}</p>
           </div>
         ),
         okText: '保存并同步',

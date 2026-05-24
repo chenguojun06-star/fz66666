@@ -19,3 +19,7 @@ export const toPercentRaw = (v: unknown, decimals = 1): string => {
   if (!Number.isFinite(n)) return '0%';
   return `${n.toFixed(decimals)}%`;
 };
+
+export function formatMoney(value: number | string | undefined | null): string {
+  return `¥${toMoney(value)}`;
+}

@@ -1,6 +1,7 @@
 import React from 'react';
 import { toNumberSafe } from '@/utils/api';
 import ResizableTable from '@/components/common/ResizableTable';
+import { formatMoney } from '@/utils/format';
 
 interface Props {
   secondaryProcessList: any[];
@@ -21,7 +22,7 @@ const QuotationSecondarySection: React.FC<Props> = ({ secondaryProcessList }) =>
         borderBottom: '1px solid var(--color-border-light, #f0f0f0)', marginBottom: 12, color: 'var(--color-text-primary, #1a1a1a)',
       }}>
         二次工艺
-        <span style={{ fontSize: 12, color: '#666', marginLeft: 8, fontWeight: 400 }}>
+        <span style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginLeft: 8, fontWeight: 400 }}>
           共 {secondaryProcessList.length} 项
         </span>
       </div>
@@ -44,9 +45,9 @@ const QuotationSecondarySection: React.FC<Props> = ({ secondaryProcessList }) =>
       <div style={{
         display: 'flex', justifyContent: 'flex-end', padding: '6px 10px',
         border: '1px solid var(--color-border, #e8e8e8)', borderTop: '1px solid var(--color-border, #e8e8e8)',
-        background: '#fafafa', fontWeight: 600, fontSize: 14, color: '#1a1a1a',
+        background: 'var(--color-bg-container)', fontWeight: 600, fontSize: 14, color: 'var(--color-text-primary)',
       }}>
-        小计：¥{secondaryTotal.toFixed(2)}
+        小计：{formatMoney(secondaryTotal)}
       </div>
     </div>
   );

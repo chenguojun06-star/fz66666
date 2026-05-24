@@ -6,6 +6,7 @@ import XiaoyunCloudAvatar from '@/components/common/XiaoyunCloudAvatar';
 import type { ColumnsType, TableProps } from 'antd/es/table';
 import type { TableRowSelection } from 'antd/es/table/interface';
 import { intelligenceApi, ProcessKnowledgeItem, ProcessKnowledgeResponse, ProcessKnowledgeStyleRecord } from '@/services/intelligence/intelligenceApi';
+import { formatMoney } from '@/utils/format';
 
 // ───────────────────────────────────── 子表（展开明细）──────────────────────
 const RecentStylesTable: React.FC<{ records: ProcessKnowledgeStyleRecord[] }> = ({ records }) => {
@@ -15,7 +16,7 @@ const RecentStylesTable: React.FC<{ records: ProcessKnowledgeStyleRecord[] }> = 
       title: '单价（元）',
       dataIndex: 'price',
       width: 100,
-      render: (v) => (v != null ? `¥${Number(v).toFixed(2)}` : '-'),
+      render: (v) => (v != null ? formatMoney(v) : '-'),
     },
     { title: '机器类型', dataIndex: 'machineType', width: 100, render: (v) => v || '-' },
     {
@@ -198,9 +199,9 @@ const StyleProcessKnowledgeTab: React.FC<StyleProcessKnowledgeTabProps> = ({
       render: (_, r) =>
         r.minPrice != null && r.maxPrice != null ? (
           <Space size={4}>
-            <span style={{ color: '#52c41a' }}>¥{r.minPrice.toFixed(2)}</span>
-            <span style={{ color: '#999' }}>~</span>
-            <span style={{ color: '#f5222d' }}>¥{r.maxPrice.toFixed(2)}</span>
+            <span style={{ color: '#52c41a' }}>{formatMoney(r.minPrice)}</span>
+            <span style={{ color: 'var(--color-text-tertiary)' }}>~</span>
+            <span style={{ color: '#f5222d' }}>{formatMoney(r.maxPrice)}</span>
           </Space>
         ) : (
           '-'
@@ -211,7 +212,7 @@ const StyleProcessKnowledgeTab: React.FC<StyleProcessKnowledgeTabProps> = ({
       dataIndex: 'avgPrice',
       width: 100,
       sorter: (a, b) => (a.avgPrice ?? 0) - (b.avgPrice ?? 0),
-      render: (v) => (v != null ? `¥${Number(v).toFixed(2)}` : '-'),
+      render: (v) => (v != null ? formatMoney(v) : '-'),
     },
     {
       title: (
@@ -226,7 +227,7 @@ const StyleProcessKnowledgeTab: React.FC<StyleProcessKnowledgeTabProps> = ({
       width: 110,
       render: (v) =>
         v != null ? (
-          <span style={{ color: '#1677ff', fontWeight: 600 }}>¥{Number(v).toFixed(2)}</span>
+          <span style={{ color: '#1677ff', fontWeight: 600 }}>{formatMoney(v)}</span>
         ) : (
           '-'
         ),
@@ -257,7 +258,7 @@ const StyleProcessKnowledgeTab: React.FC<StyleProcessKnowledgeTabProps> = ({
       record.recentStyles && record.recentStyles.length > 0 ? (
         <RecentStylesTable records={record.recentStyles} />
       ) : (
-        <div style={{ padding: '8px 24px', color: '#999' }}>暂无历史款式明细</div>
+        <div style={{ padding: '8px 24px', color: 'var(--color-text-tertiary)' }}>暂无历史款式明细</div>
       ),
     rowExpandable: (record) => (record.recentStyles?.length ?? 0) > 0,
   };
@@ -328,7 +329,7 @@ const StyleProcessKnowledgeTab: React.FC<StyleProcessKnowledgeTabProps> = ({
           onChange: (page, size) => onPageChange(page, size),
         }}
         footer={() => (
-           <span style={{ color: '#999', fontSize: 14 }}>
+           <span style={{ color: 'var(--color-text-tertiary)', fontSize: 14 }}>
              数据实时聚合自所有款式工序表，点击行左侧展开查看最近 5 款历史记录。AI 建议价 = 最近 3 条权重 ×2 的加权均价，这里作为工序库持续为开发、生产与财务联动提供基线。
            </span>
         )}

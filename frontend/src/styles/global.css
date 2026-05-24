@@ -25,8 +25,8 @@ html {
 
 /* ===== 自定义滚动条 - 细、圆角、专业 ===== */
 ::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
+  width: 4px;
+  height: 4px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
@@ -928,7 +928,7 @@ body {
   bottom: 0;
   left: 0;
   right: 0;
-  z-index: 10;
+  z-index: var(--z-local);
   display: flex;
   justify-content: flex-end;
   align-items: center;
@@ -961,8 +961,8 @@ body {
   background: var(--table-header-bg);
   color: var(--neutral-text);
   text-align: center !important;
-  height: var(--table-header-height, 48px);
-  padding: var(--table-header-padding-y, 12px) var(--table-header-padding-x, 8px);
+  height: var(--table-header-height, 34px);
+  padding: var(--table-header-padding-y, 4px) var(--table-header-padding-x, 8px);
   border-bottom: 2px solid var(--table-border-color) !important;
   letter-spacing: 0.02em;
   transition: font-size 0.25s var(--ease-smooth, cubic-bezier(0.16, 1, 0.3, 1)),
@@ -1000,7 +1000,7 @@ body {
   font-size: var(--table-cell-font-size, var(--font-size-sm));
   font-weight: var(--font-weight-normal);
   text-align: center !important;
-  padding: var(--table-cell-padding-y, 10px) var(--table-cell-padding-x, 8px);
+  padding: var(--table-cell-padding-y, 1px) var(--table-cell-padding-x, 8px);
   line-height: 1.35;
   transition: font-size 0.25s var(--ease-smooth, cubic-bezier(0.16, 1, 0.3, 1)),
               padding 0.25s var(--ease-smooth, cubic-bezier(0.16, 1, 0.3, 1));
@@ -1151,7 +1151,7 @@ body {
   right: 0;
   top: 0;
   bottom: 0;
-  width: 8px;
+  width: 6px;
   cursor: col-resize;
   z-index: 5;
 }
@@ -1159,19 +1159,19 @@ body {
 .resizable-table .resizable-handle::after {
   content: '';
   position: absolute;
-  right: 3px;
+  right: 2px;
   top: 25%;
   height: 50%;
   width: 1px;
-  background: rgba(0, 0, 0, 0.12);
+  background: rgba(0, 0, 0, 0.08);
   transition: background 0.15s ease, width 0.15s ease;
 }
 
 .resizable-table .resizable-handle:hover::after,
 .resizable-table .resizable-handle:active::after {
-  background: rgba(45, 127, 249, 0.6);
+  background: rgba(45, 127, 249, 0.5);
   width: 2px;
-  right: 2px;
+  right: 1px;
 }
 
 .ant-table-wrapper .ant-table-tbody > tr:nth-child(even):not(.ant-table-measure-row) > td {
@@ -1189,7 +1189,7 @@ body {
 .ant-table-wrapper .ant-table-tbody > tr.ant-table-row-selected > td {
   background: var(--table-selected-row-bg);
   position: relative;
-  z-index: 1;
+  z-index: var(--z-local);
 }
 
 .resizable-table-shell {
@@ -1336,7 +1336,7 @@ body {
   position: sticky;
   bottom: 0;
   background: var(--neutral-white);
-  z-index: 10;
+  z-index: var(--z-local);
   padding: 12px 16px;
   margin: 0 !important;
   border-top: 1px solid var(--table-border-light);
@@ -1470,7 +1470,7 @@ body {
   align-items: center;
   justify-content: center;
   position: relative;
-  z-index: 1;
+  z-index: var(--z-local);
 }
 
 .row-actions__btn--icon .anticon {
@@ -1507,6 +1507,51 @@ body {
 .row-actions .ant-btn-link:disabled {
   color: rgba(0, 0, 0, 0.28) !important;
   cursor: not-allowed !important;
+}
+
+/* ========================================
+   表格内嵌输入框统一样式 — 填满撑大模式
+   核心原则：输入框固定高度撑大行高，内部零padding让输入区域最大化
+   ======================================== */
+
+.ant-table-cell .ant-input-number {
+  width: 100% !important;
+  height: 30px !important;
+  border-radius: 2px !important;
+}
+
+.ant-table-cell .ant-input-number .ant-input-number-input {
+  height: 28px !important;
+  padding: 0 10px !important;
+  text-align: center;
+  font-size: 13px;
+}
+
+.ant-table-cell .ant-input-number .ant-input-number-handler-wrap {
+  display: none !important;
+}
+
+.ant-table-cell .ant-input {
+  height: 30px !important;
+  padding: 0 10px !important;
+  border-radius: 2px !important;
+  text-align: center;
+  font-size: 13px;
+}
+
+.ant-table-cell .ant-select {
+  width: 100% !important;
+}
+
+.ant-table-cell .ant-select-selector {
+  height: 30px !important;
+  padding: 0 10px !important;
+  border-radius: 2px !important;
+}
+
+.ant-table-cell .ant-select-selection-item,
+.ant-table-cell .ant-select-selection-placeholder {
+  line-height: 28px !important;
 }
 
 /* ========================================
@@ -1791,8 +1836,8 @@ body {
     top: 0 !important;
     width: 100% !important;
     height: auto !important;
-    background: #fff !important;
-    z-index: 99999 !important;
+    background: var(--color-bg-base) !important;
+    z-index: var(--z-print) !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
@@ -2230,7 +2275,7 @@ body {
 
 .ant-card-head {
   background: var(--card-header-bg, #fafafa);
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--color-border-light);
   padding: var(--card-header-padding, 12px 16px);
   min-height: 44px;
 }
@@ -2269,17 +2314,17 @@ body {
 }
 .ant-statistic-title {
   font-size: var(--kpi-label-size, 12px) !important;
-  color: #6b7280 !important;
+  color: var(--color-text-secondary) !important;
   margin-bottom: 4px !important;
 }
 
 .ant-descriptions-item-label {
   font-size: 12px !important;
-  color: #6b7280 !important;
+  color: var(--color-text-secondary) !important;
 }
 .ant-descriptions-item-content {
   font-size: 12px !important;
-  color: #1a1a1a !important;
+  color: var(--color-text-primary) !important;
 }
 
 .ant-tag {

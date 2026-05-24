@@ -71,7 +71,7 @@ public class CollaborationDispatchOrchestrator {
         String dueHint = hasText(request.getDueHint()) ? request.getDueHint().trim() : resolveDueHint(ownerRole);
         String fromName = resolveSenderName();
         response.setCurrentStage("已通知");
-        response.setNextStep("等待责任人接收并按要求处理");
+        response.setNextStep("等待领取人接收并按要求处理");
         response.setDueHint(dueHint);
 
         int noticeCount = 0;
@@ -133,7 +133,7 @@ public class CollaborationDispatchOrchestrator {
         boolean anyRead = notices.stream().anyMatch(n -> Integer.valueOf(1).equals(n.getIsRead()));
         boolean allRead = notices.stream().allMatch(n -> Integer.valueOf(1).equals(n.getIsRead()));
         response.setCurrentStage(allRead ? "处理中" : anyRead ? "部分接收" : "已通知");
-        response.setNextStep(allRead ? "等待责任人处理并回写结果" : anyRead ? "继续跟进未接收人员" : "等待责任人接收");
+        response.setNextStep(allRead ? "等待领取人处理并回写结果" : anyRead ? "继续跟进未接收人员" : "等待领取人接收");
         response.setDueHint(normalizedRole == null ? "尽快处理" : resolveDueHint(normalizedRole));
         response.setSummary(buildQuerySummary(notices.size(), response.getCurrentStage(), response.getNextStep(), trim(orderNo)));
 

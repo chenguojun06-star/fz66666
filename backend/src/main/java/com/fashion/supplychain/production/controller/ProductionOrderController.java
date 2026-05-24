@@ -50,6 +50,7 @@ public class ProductionOrderController {
     private final ProductionOrderExportOrchestrator exportOrchestrator;
     private final OrderHealthScoreOrchestrator orderHealthScoreOrchestrator;
     private final SysNoticeOrchestrator sysNoticeOrchestrator;
+    private final com.fashion.supplychain.production.service.UrgeRecordService urgeRecordService;
     private final StyleInfoService styleInfoService;
     private final com.fashion.supplychain.style.service.SecondaryProcessService secondaryProcessService;
     private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
@@ -388,6 +389,7 @@ public class ProductionOrderController {
     @PostMapping("/urge")
     public Result<?> urge(@RequestBody Map<String, Object> payload) {
         String orderId = payload == null ? null : String.valueOf(payload.getOrDefault("orderId", "")).trim();
+        String remark = payload != null ? (String) payload.getOrDefault("remark", "") : "";
         if (!StringUtils.hasText(orderId)) {
             return Result.fail("缺少orderId参数");
         }
@@ -402,9 +404,28 @@ public class ProductionOrderController {
             return Result.fail("该订单未设置跟单员，无法发送催单通知");
         }
 
+        Long tenantId = UserContext.tenantId();
+        String senderUsername = UserContext.username();
+        String senderName = sysNoticeOrchestrator.resolveDisplayName(senderUsername, tenantId);
+
+        com.fashion.supplychain.production.entity.UrgeRecord record = new com.fashion.supplychain.production.entity.UrgeRecord();
+        record.setTenantId(tenantId);
+        record.setOrderId(orderId);
+        record.setOrderNo(order.getOrderNo());
+        record.setSenderName(senderName);
+        record.setReceiverName(order.getMerchandiser());
+        record.setRemark(remark);
+        record.setStatus("pending");
+        record.setCreatedAt(java.time.LocalDateTime.now());
+        urgeRecordService.save(record);
+
+        order.setUrgencyLevel("urgent");
+        order.setUrgeCount(order.getUrgeCount() != null ? order.getUrgeCount() + 1 : 1);
+        order.setLastUrgeTime(java.time.LocalDateTime.now());
+        productionOrderService.updateById(order);
+
         try {
-            sysNoticeOrchestrator.send(order.getOrderNo(), "urge_order");
-            return Result.successMessage("催单通知已发送");
+            sysNoticeOrchestrator.sendWithUrgeRecord(order.getOrderNo(), "urge_order", record.getId());
         } catch (IllegalArgumentException e) {
             log.warn("[urge] 催单失败 orderId={} msg={}", orderId, e.getMessage());
             return Result.fail(e.getMessage());
@@ -412,6 +433,68 @@ public class ProductionOrderController {
             log.error("[urge] 催单异常 orderId={}", orderId, e);
             return Result.fail("催单通知发送失败");
         }
+
+        return Result.success(Map.of(
+                "message", "催单通知已发送",
+                "urgeRecordId", record.getId(),
+                "urgeCount", order.getUrgeCount()
+        ));
+    }
+
+    @PostMapping("/urge/reply")
+    public Result<?> urgeReply(@RequestBody Map<String, Object> payload) {
+        String urgeRecordId = payload == null ? null : (String) payload.get("urgeRecordId");
+        if (!StringUtils.hasText(urgeRecordId)) {
+            return Result.fail("缺少urgeRecordId参数");
+        }
+
+        com.fashion.supplychain.production.entity.UrgeRecord record = urgeRecordService.getById(urgeRecordId);
+        if (record == null) {
+            return Result.fail("催单记录不存在");
+        }
+        TenantAssert.assertBelongsToCurrentTenant(record.getTenantId(), "催单记录");
+
+        String replyContent = (String) payload.getOrDefault("replyContent", "");
+        String expectedShipDateStr = (String) payload.get("expectedShipDate");
+
+        record.setReplyContent(replyContent);
+        record.setReplyTime(java.time.LocalDateTime.now());
+        record.setStatus("replied");
+
+        if (StringUtils.hasText(expectedShipDateStr)) {
+            try {
+                record.setReplyExpectedShipDate(java.time.LocalDate.parse(expectedShipDateStr).atTime(18, 0));
+            } catch (Exception e) {
+                return Result.fail("日期格式错误，请使用yyyy-MM-dd格式");
+            }
+        }
+        urgeRecordService.updateById(record);
+
+        if (record.getReplyExpectedShipDate() != null) {
+            ProductionOrder order = productionOrderService.lambdaQuery()
+                    .eq(ProductionOrder::getOrderNo, record.getOrderNo())
+                    .eq(ProductionOrder::getTenantId, record.getTenantId())
+                    .eq(ProductionOrder::getDeleteFlag, 0)
+                    .one();
+            if (order != null) {
+                order.setExpectedShipDate(record.getReplyExpectedShipDate());
+                productionOrderService.updateById(order);
+            }
+        }
+
+        return Result.success("回复成功");
+    }
+
+    @PostMapping("/urge/check-urged")
+    public Result<?> checkUrged(@RequestBody Map<String, Object> payload) {
+        @SuppressWarnings("unchecked")
+        List<String> orderIds = (List<String>) payload.get("orderIds");
+        if (orderIds == null || orderIds.isEmpty()) {
+            return Result.success(Map.of("urgedOrderIds", List.of()));
+        }
+        Long tenantId = UserContext.tenantId();
+        java.util.Set<String> urgedOrderIds = urgeRecordService.findUrgedOrderIds(tenantId, orderIds);
+        return Result.success(Map.of("urgedOrderIds", urgedOrderIds));
     }
 
     /**

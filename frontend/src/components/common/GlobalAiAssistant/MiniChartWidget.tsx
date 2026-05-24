@@ -78,7 +78,7 @@ const MiniChartWidget: React.FC<{ chart: ChartSpec }> = ({ chart }) => {
           color: gaugeColor,
           offsetCenter: [0, '28%'],
         },
-        title: { fontSize: 14, color: '#8c8c8c', offsetCenter: [0, '48%'] },
+        title: { fontSize: 14, color: 'var(--color-text-tertiary)', offsetCenter: [0, '48%'] },
         data: [{ value: val, name: chart.subtitle ?? '' }],
       }],
     };
@@ -103,7 +103,7 @@ const MiniChartWidget: React.FC<{ chart: ChartSpec }> = ({ chart }) => {
           formatter: () => `{val|${chart.highlight}}\n{subval|${chart.unit ?? ''}}`,
           rich: {
             val: { fontSize: 18, fontWeight: 'bold', color: '#262626', lineHeight: 24 },
-            subval: { fontSize: 14, color: '#8c8c8c', lineHeight: 18 },
+            subval: { fontSize: 14, color: 'var(--color-text-tertiary)', lineHeight: 18 },
           },
         } : { show: false },
         data: ringData,

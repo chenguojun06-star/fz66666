@@ -93,7 +93,7 @@
   backdrop-filter: blur(4px);
   position: sticky;
   top: 0;
-  z-index: 10;
+  z-index: var(--z-local);
 }
 
 .cockpit-header-left  { display: flex; align-items: center; gap: 10px; }
@@ -304,7 +304,7 @@
   font-weight: 700;
   letter-spacing: 0.3px;
   position: relative;
-  z-index: 1;
+  z-index: var(--z-local);
 }
 
 .c-stage-card::after {
@@ -322,7 +322,7 @@
   justify-content: space-between;
   gap: 8px;
   position: relative;
-  z-index: 1;
+  z-index: var(--z-local);
 }
 
 .c-stage-name {
@@ -341,7 +341,7 @@
 
 .c-stage-card-main {
   position: relative;
-  z-index: 1;
+  z-index: var(--z-local);
   margin-top: 10px;
   font-size: 18px;
   font-weight: 700;
@@ -353,7 +353,7 @@
 
 .c-stage-card-unit {
   position: relative;
-  z-index: 1;
+  z-index: var(--z-local);
   margin-top: 4px;
 }
 

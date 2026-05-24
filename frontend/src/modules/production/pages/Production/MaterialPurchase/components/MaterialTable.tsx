@@ -13,6 +13,7 @@ import SortableColumnTitle from '@/components/common/SortableColumnTitle';
 import { StyleCoverThumb } from '@/components/StyleAssets';
 import { MaterialPurchase as MaterialPurchaseType, MaterialQueryParams } from '@/types/production';
 import { formatMaterialSpecWidth } from '@/utils/materialType';
+import { formatMoney } from '@/utils/format';
 import { analyzePurchase, renderPurchaseTooltip } from '../utils/purchaseIntelligence';
 import { formatDateTime } from '@/utils/datetime';
 import { formatMaterialQuantityWithUnit, formatReferenceKilograms, getStatusConfig, subtractMaterialQuantity } from '../utils';
@@ -156,7 +157,7 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
 
         return tooltipContent
           ? (
-            <Tooltip title={tooltipContent} placement="right" color="white" styles={{ container: { color: '#333', boxShadow: '0 3px 12px rgba(0,0,0,0.12)' } }}>
+            <Tooltip title={tooltipContent} placement="right" color="white" styles={{ container: { color: 'var(--color-text-primary)', boxShadow: '0 3px 12px rgba(0,0,0,0.12)' } }}>
               <span style={{ borderBottom: '1px dotted var(--color-primary)', cursor: 'help' }}>{orderNo}</span>
             </Tooltip>
           )
@@ -330,7 +331,7 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
       key: 'unitPrice',
       width: 100,
       align: 'right' as const,
-      render: (v: number) => Number.isFinite(Number(v)) ? `¥${Number(v).toFixed(2)}` : '-',
+      render: (v: number) => Number.isFinite(Number(v)) ? formatMoney(Number(v)) : '-',
     },
     {
       title: '状态',

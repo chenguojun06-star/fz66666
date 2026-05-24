@@ -18,7 +18,7 @@ const isViteDevServerRequest = (): boolean => {
 
 let _cachedToken: string | null = null;
 let _tokenCacheTs = 0;
-const TOKEN_CACHE_TTL_MS = 60_000;
+const TOKEN_CACHE_TTL_MS = 5_000;
 
 function getCachedToken(): string | null {
   const now = Date.now();
@@ -26,12 +26,22 @@ function getCachedToken(): string | null {
     return _cachedToken;
   }
   try {
-    _cachedToken = localStorage.getItem('authToken');
+    const fresh = localStorage.getItem('authToken');
+    if (fresh) {
+      _cachedToken = fresh;
+      _tokenCacheTs = now;
+      return fresh;
+    }
   } catch {
     _cachedToken = null;
   }
   _tokenCacheTs = now;
   return _cachedToken;
+}
+
+export function invalidateFileUrlTokenCache(): void {
+  _cachedToken = null;
+  _tokenCacheTs = 0;
 }
 
 /**

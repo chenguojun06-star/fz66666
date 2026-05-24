@@ -126,10 +126,6 @@ export function parseWashLabelPartsMap(value?: string): Record<string, string[]>
   return result;
 }
 
-export function hasWashLabelComposition(value?: string, fallbackComposition?: string): boolean {
-  return buildWashLabelSections(value, fallbackComposition).length > 0;
-}
-
 export function hasExplicitWashCareCodes(codes?: WashCareCodeSet): boolean {
   return Boolean(
     codes?.washTempCode

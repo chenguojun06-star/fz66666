@@ -51,46 +51,46 @@ const OrderFlow: React.FC = () => {
               <Col flex="1" style={{ minWidth: 180, padding: '0 20px', borderLeft: '1px solid rgba(0,0,0,0.08)' }}>
                 <div style={{ fontSize: 14, fontWeight: 700, color: '#bbb', marginBottom: 8, letterSpacing: 1 }}>基本信息</div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', rowGap: 4, columnGap: 12 }}>
-                  <span style={{ color: '#999', fontSize: 14, lineHeight: '22px' }}>订单号</span>
+                  <span style={{ color: 'var(--color-text-tertiary)', fontSize: 14, lineHeight: '22px' }}>订单号</span>
                   <span style={{ fontSize: 14, fontWeight: 600, lineHeight: '22px' }}>{(order as any)?.orderNo || '-'}</span>
-                  <span style={{ color: '#999', fontSize: 14, lineHeight: '22px' }}>款号</span>
+                  <span style={{ color: 'var(--color-text-tertiary)', fontSize: 14, lineHeight: '22px' }}>款号</span>
                   <span style={{ fontSize: 14, lineHeight: '22px' }}>{(order as any)?.styleNo || '-'}</span>
-                  <span style={{ color: '#999', fontSize: 14, lineHeight: '22px' }}>款名</span>
+                  <span style={{ color: 'var(--color-text-tertiary)', fontSize: 14, lineHeight: '22px' }}>款名</span>
                   <span style={{ fontSize: 14, lineHeight: '22px' }}>{(order as any)?.styleName || '-'}</span>
-                  <span style={{ color: '#999', fontSize: 14, lineHeight: '22px' }}>颜色</span>
+                  <span style={{ color: 'var(--color-text-tertiary)', fontSize: 14, lineHeight: '22px' }}>颜色</span>
                   <span style={{ fontSize: 14, lineHeight: '22px' }}>{(order as any)?.color || '-'}</span>
-                  <span style={{ color: '#999', fontSize: 14, lineHeight: '22px' }}>加工厂</span>
+                  <span style={{ color: 'var(--color-text-tertiary)', fontSize: 14, lineHeight: '22px' }}>加工厂</span>
                   <span style={{ fontSize: 14, lineHeight: '22px' }}>{String((order as any)?.factoryName || '-').trim()}</span>
-                  <span style={{ color: '#999', fontSize: 14, lineHeight: '22px' }}>状态</span>
+                  <span style={{ color: 'var(--color-text-tertiary)', fontSize: 14, lineHeight: '22px' }}>状态</span>
                   <span style={{ fontSize: 14, lineHeight: '22px' }}>{orderStatusTag((order as any)?.status)}</span>
-                  <span style={{ color: '#999', fontSize: 14, lineHeight: '22px' }}>当前环节</span>
+                  <span style={{ color: 'var(--color-text-tertiary)', fontSize: 14, lineHeight: '22px' }}>当前环节</span>
                   <span style={{ fontSize: 14, lineHeight: '22px' }}>{String((order as any)?.currentProcessName || '-').trim()}</span>
                 </div>
               </Col>
               <Col flex="1" style={{ minWidth: 200, paddingLeft: 20, borderLeft: '1px solid rgba(0,0,0,0.08)' }}>
                 <div style={{ fontSize: 14, fontWeight: 700, color: '#bbb', marginBottom: 8, letterSpacing: 1 }}>生产统计</div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', rowGap: 4, columnGap: 12 }}>
-                  <span style={{ color: '#999', fontSize: 14, lineHeight: '22px' }}>下单数</span>
+                  <span style={{ color: 'var(--color-text-tertiary)', fontSize: 14, lineHeight: '22px' }}>下单数</span>
                   <span style={{ fontSize: 14, lineHeight: '22px' }}>{toNumberSafe((order as any)?.orderQuantity)}</span>
-                  <span style={{ color: '#999', fontSize: 14, lineHeight: '22px' }}>已完成</span>
+                  <span style={{ color: 'var(--color-text-tertiary)', fontSize: 14, lineHeight: '22px' }}>已完成</span>
                   <span style={{ fontSize: 14, lineHeight: '22px' }}>{toNumberSafe((order as any)?.completedQuantity)}</span>
-                  <span style={{ color: '#999', fontSize: 14, lineHeight: '22px' }}>生产进度</span>
+                  <span style={{ color: 'var(--color-text-tertiary)', fontSize: 14, lineHeight: '22px' }}>生产进度</span>
                   <span style={{ fontSize: 14, fontWeight: 600, lineHeight: '22px' }}>{`${calcOrderProgress(order ?? undefined)}%`}</span>
-                  <span style={{ color: '#999', fontSize: 14, lineHeight: '22px' }}>扎数</span>
+                  <span style={{ color: 'var(--color-text-tertiary)', fontSize: 14, lineHeight: '22px' }}>扎数</span>
                   <span style={{ fontSize: 14, lineHeight: '22px' }}>{toNumberSafe((order as any)?.cuttingBundleCount)}</span>
-                  <span style={{ color: '#999', fontSize: 14, lineHeight: '22px' }}>入库数</span>
+                  <span style={{ color: 'var(--color-text-tertiary)', fontSize: 14, lineHeight: '22px' }}>入库数</span>
                   <span style={{ fontSize: 14, lineHeight: '22px' }}>{warehousingTotal}</span>
-                  <span style={{ color: '#999', fontSize: 14, lineHeight: '22px' }}>合格/不合格</span>
+                  <span style={{ color: 'var(--color-text-tertiary)', fontSize: 14, lineHeight: '22px' }}>合格/不合格</span>
                   <span style={{ fontSize: 14, lineHeight: '22px' }}>{`${warehousingQualified} / ${warehousingUnqualified}`}</span>
-                  <span style={{ color: '#999', fontSize: 14, lineHeight: '22px' }}>计划开始</span>
+                  <span style={{ color: 'var(--color-text-tertiary)', fontSize: 14, lineHeight: '22px' }}>计划开始</span>
                   <span style={{ fontSize: 14, lineHeight: '22px' }}>{(order as any)?.plannedStartDate ? formatDateTime((order as any)?.plannedStartDate) : '-'}</span>
-                  <span style={{ color: '#999', fontSize: 14, lineHeight: '22px' }}>计划交期</span>
+                  <span style={{ color: 'var(--color-text-tertiary)', fontSize: 14, lineHeight: '22px' }}>计划交期</span>
                   <span style={{ fontSize: 14, lineHeight: '22px' }}>{(order as any)?.plannedEndDate ? formatDateTime((order as any)?.plannedEndDate) : '-'}</span>
-                  <span style={{ color: '#999', fontSize: 14, lineHeight: '22px' }}>下单时间</span>
+                  <span style={{ color: 'var(--color-text-tertiary)', fontSize: 14, lineHeight: '22px' }}>下单时间</span>
                   <span style={{ fontSize: 14, lineHeight: '22px' }}>{(order as any)?.createTime ? formatDateTime((order as any)?.createTime) : '-'}</span>
-                  <span style={{ color: '#999', fontSize: 14, lineHeight: '22px' }}>实际完成</span>
+                  <span style={{ color: 'var(--color-text-tertiary)', fontSize: 14, lineHeight: '22px' }}>实际完成</span>
                   <span style={{ fontSize: 14, lineHeight: '22px' }}>{(order as any)?.actualEndDate ? formatDateTime((order as any)?.actualEndDate) : '-'}</span>
-                  <span style={{ color: '#999', fontSize: 14, lineHeight: '22px' }}>更新时间</span>
+                  <span style={{ color: 'var(--color-text-tertiary)', fontSize: 14, lineHeight: '22px' }}>更新时间</span>
                   <span style={{ fontSize: 14, lineHeight: '22px' }}>{(order as any)?.updateTime ? formatDateTime((order as any)?.updateTime) : '-'}</span>
                 </div>
               </Col>

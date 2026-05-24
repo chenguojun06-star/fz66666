@@ -1,11 +1,11 @@
 .orphan-data-page {
   padding: 24px;
-  background: #f5f5f5;
+  background: var(--color-bg-subtle);
   min-height: 100vh;
 }
 
 .orphan-header {
-  background: #fff;
+  background: var(--color-bg-base);
   border-radius: 8px;
   padding: 24px;
   margin-bottom: 16px;
@@ -19,7 +19,7 @@
 }
 
 .orphan-desc {
-  color: #8c8c8c;
+  color: var(--color-text-tertiary);
   font-size: 14px;
   margin-bottom: 16px;
 }
@@ -29,7 +29,7 @@
 }
 
 .orphan-categories {
-  background: #fff;
+  background: var(--color-bg-base);
   border-radius: 8px;
   padding: 16px 20px;
 }
@@ -51,11 +51,11 @@
   align-items: center;
   gap: 10px;
   padding: 12px 14px;
-  border: 1px solid #e8e8e8;
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s;
-  background: #fafafa;
+  background: var(--color-bg-container);
 }
 
 .orphan-category-card:hover {
@@ -94,7 +94,7 @@
 }
 
 .orphan-detail {
-  background: #fff;
+  background: var(--color-bg-base);
   border-radius: 8px;
   padding: 16px 20px;
 }

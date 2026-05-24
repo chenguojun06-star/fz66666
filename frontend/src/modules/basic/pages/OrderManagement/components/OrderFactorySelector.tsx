@@ -126,8 +126,8 @@ const OrderFactorySelector: React.FC<OrderFactorySelectorProps> = ({
                 </div>
               )}
               <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-                <span>生产中 <b style={{ color: '#333' }}>{selectedFactoryStat.totalOrders}</b> 单</span>
-                <span>共 <b style={{ color: '#333' }}>{selectedFactoryStat.totalQuantity?.toLocaleString() ?? 0}</b> 件</span>
+                <span>生产中 <b style={{ color: 'var(--color-text-primary)' }}>{selectedFactoryStat.totalOrders}</b> 单</span>
+                <span>共 <b style={{ color: 'var(--color-text-primary)' }}>{selectedFactoryStat.totalQuantity?.toLocaleString() ?? 0}</b> 件</span>
                 <span>
                   货期完成率
                   <b style={{ marginLeft: 4, color: selectedFactoryStat.deliveryOnTimeRate < 0 ? '#888' : selectedFactoryStat.deliveryOnTimeRate >= 80 ? '#52c41a' : selectedFactoryStat.deliveryOnTimeRate >= 60 ? '#fa8c16' : '#ff4d4f' }}>
@@ -138,7 +138,7 @@ const OrderFactorySelector: React.FC<OrderFactorySelectorProps> = ({
                 {selectedFactoryStat.overdueCount > 0 ? <span style={{ color: '#ff4d4f' }}>逾期 <b>{selectedFactoryStat.overdueCount}</b> 单</span> : null}
               </div>
               <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 4, paddingTop: 4, borderTop: '1px dashed var(--color-border, #e8e8e8)' }}>
-                <span>生产人数 <b style={{ color: '#333' }}>{selectedFactoryStat.activeWorkers}</b> 人</span>
+                <span>生产人数 <b style={{ color: 'var(--color-text-primary)' }}>{selectedFactoryStat.activeWorkers}</b> 人</span>
                 {selectedFactoryStat.avgDailyOutput > 0 ? <span>日均产量 <b style={{ color: '#1890ff' }}>{selectedFactoryStat.avgDailyOutput}</b> 件/天{selectedFactoryStat.capacitySource === 'configured' ? '（配置值）' : ''}</span> : null}
                 {selectedFactoryStat.estimatedCompletionDays > 0 ? (
                   <span>
@@ -189,8 +189,8 @@ const OrderFactorySelector: React.FC<OrderFactorySelectorProps> = ({
                 </div>
               )}
               <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-                <span>生产中 <b style={{ color: '#333' }}>{selectedFactoryStat.totalOrders}</b> 单</span>
-                <span>共 <b style={{ color: '#333' }}>{selectedFactoryStat.totalQuantity?.toLocaleString() ?? 0}</b> 件</span>
+                <span>生产中 <b style={{ color: 'var(--color-text-primary)' }}>{selectedFactoryStat.totalOrders}</b> 单</span>
+                <span>共 <b style={{ color: 'var(--color-text-primary)' }}>{selectedFactoryStat.totalQuantity?.toLocaleString() ?? 0}</b> 件</span>
                 <span>
                   货期完成率
                   <b style={{ marginLeft: 4, color: selectedFactoryStat.deliveryOnTimeRate < 0 ? '#888' : selectedFactoryStat.deliveryOnTimeRate >= 80 ? '#52c41a' : selectedFactoryStat.deliveryOnTimeRate >= 60 ? '#fa8c16' : '#ff4d4f' }}>
@@ -201,7 +201,7 @@ const OrderFactorySelector: React.FC<OrderFactorySelectorProps> = ({
                 {selectedFactoryStat.overdueCount > 0 ? <span style={{ color: '#ff4d4f' }}>逾期 <b>{selectedFactoryStat.overdueCount}</b> 单</span> : null}
               </div>
               <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 4, paddingTop: 4, borderTop: '1px dashed var(--color-border, #e8e8e8)' }}>
-                <span>生产人数 <b style={{ color: '#333' }}>{selectedFactoryStat.activeWorkers}</b> 人</span>
+                <span>生产人数 <b style={{ color: 'var(--color-text-primary)' }}>{selectedFactoryStat.activeWorkers}</b> 人</span>
                 {selectedFactoryStat.avgDailyOutput > 0 ? <span>日均产量 <b style={{ color: '#1890ff' }}>{selectedFactoryStat.avgDailyOutput}</b> 件/天{selectedFactoryStat.capacitySource === 'configured' ? '（配置值）' : ''}</span> : null}
                 {selectedFactoryStat.estimatedCompletionDays > 0 ? (
                   <span>

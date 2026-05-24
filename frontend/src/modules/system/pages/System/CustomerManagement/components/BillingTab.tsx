@@ -8,6 +8,7 @@ import RowActions from '@/components/common/RowActions';
 import type { RowAction } from '@/components/common/RowActions';
 import { useModal } from '@/hooks';
 import tenantService from '@/services/tenantService';
+import { confirmAction } from '@/utils/confirm';
 import type { TenantInfo, PlanDefinition, BillingRecord } from '@/services/tenantService';
 import type { ColumnsType } from 'antd/es/table';
 
@@ -171,40 +172,27 @@ const BillingTab: React.FC = () => {
     const feeLabel = isYearly
       ? `¥${plan?.yearlyFee || record.monthlyFee * 10}/年`
       : `¥${record.monthlyFee || 0}/月`;
-    Modal.confirm({
-      width: '30vw',
-      title: `为「${record.tenantName}」生成${isYearly ? '年度' : '本月'}账单`,
-      content: `将根据当前套餐配置（${PLAN_LABELS[record.planType]?.label || record.planType}，${feeLabel}，${isYearly ? '年付' : '月付'}）生成账单。`,
-      okText: '确认生成',
-      cancelText: '取消',
-      onOk: async () => {
-        try {
-          await tenantService.generateMonthlyBill(record.id);
-          message.success('账单已生成');
-          fetchBills();
-        } catch (e: unknown) {
-          message.error(e instanceof Error ? e.message : '生成失败');
-        }
-      },
-    });
+    confirmAction(`为「${record.tenantName}」生成${isYearly ? '年度' : '本月'}账单`, `将根据当前套餐配置（${PLAN_LABELS[record.planType]?.label || record.planType}，${feeLabel}，${isYearly ? '年付' : '月付'}）生成账单。`, async () => {
+      try {
+        await tenantService.generateMonthlyBill(record.id);
+        message.success('账单已生成');
+        fetchBills();
+      } catch (e: unknown) {
+        message.error(e instanceof Error ? e.message : '生成失败');
+      }
+    }, { okText: '确认生成' });
   };
 
   const handleMarkBillPaid = async (bill: BillingRecord) => {
-    Modal.confirm({
-      width: '30vw',
-      title: `确认标记账单 ${bill.billingNo} 已支付`,
-      content: `金额：¥${bill.totalAmount}，租户：${bill.tenantName}`,
-      okText: '确认支付',
-      onOk: async () => {
-        try {
-          await tenantService.markBillPaid(bill.id);
-          message.success('已标记为已支付');
-          fetchBills();
-        } catch (e: unknown) {
-          message.error(e instanceof Error ? e.message : '操作失败');
-        }
-      },
-    });
+    confirmAction(`确认标记账单 ${bill.billingNo} 已支付`, `金额：¥${bill.totalAmount}，租户：${bill.tenantName}`, async () => {
+      try {
+        await tenantService.markBillPaid(bill.id);
+        message.success('已标记为已支付');
+        fetchBills();
+      } catch (e: unknown) {
+        message.error(e instanceof Error ? e.message : '操作失败');
+      }
+    }, { okText: '确认支付' });
   };
 
   const handleWaiveBill = (bill: BillingRecord) => {
@@ -259,7 +247,7 @@ const BillingTab: React.FC = () => {
     },
     {
       title: '月费', dataIndex: 'monthlyFee', width: 90, align: 'right',
-      render: (v: number) => v > 0 ? `¥${v}` : <span style={{ color: '#999' }}>免费</span>,
+      render: (v: number) => v > 0 ? `¥${v}` : <span style={{ color: 'var(--color-text-tertiary)' }}>免费</span>,
     },
     {
       title: '计费', dataIndex: 'billingCycle', width: 70, align: 'center',
@@ -476,7 +464,7 @@ const BillingTab: React.FC = () => {
         footer={<Button onClick={overviewModal.close}>关闭</Button>}
       >
         {overviewLoading ? (
-          <div style={{ textAlign: 'center', padding: 40, color: '#999' }}>加载中...</div>
+          <div style={{ textAlign: 'center', padding: 40, color: 'var(--color-text-tertiary)' }}>加载中...</div>
         ) : overview ? (
           <div>
             <Descriptions column={2} bordered>
@@ -539,7 +527,7 @@ const BillingTab: React.FC = () => {
             )}
           </div>
         ) : (
-          <div style={{ textAlign: 'center', padding: 40, color: '#999' }}>暂无数据</div>
+          <div style={{ textAlign: 'center', padding: 40, color: 'var(--color-text-tertiary)' }}>暂无数据</div>
         )}
       </ResizableModal>
 

@@ -25,7 +25,7 @@ export const MODULE_ICONS: Record<string, { icon: string; color: string; bgColor
   EC_TAOBAO:        { icon: '', color: '#ff4500',              bgColor: 'rgba(255, 69, 0, 0.1)' },
   EC_TMALL:         { icon: '', color: '#ff2d2d',              bgColor: 'rgba(255, 45, 45, 0.1)' },
   EC_JD:            { icon: '', color: '#e1251b',              bgColor: 'rgba(225, 37, 27, 0.1)' },
-  EC_DOUYIN:        { icon: '', color: '#333333',              bgColor: 'rgba(0,0,0,0.06)' },
+  EC_DOUYIN:        { icon: '', color: 'var(--color-text-primary)',              bgColor: 'rgba(0,0,0,0.06)' },
   EC_PINDUODUO:     { icon: '', color: '#e02e24',              bgColor: 'rgba(224, 46, 36, 0.1)' },
   EC_XIAOHONGSHU:   { icon: '', color: '#fe2c55',              bgColor: 'rgba(254, 44, 85, 0.1)' },
   EC_WECHAT_SHOP:   { icon: '', color: '#07c160',              bgColor: 'rgba(7, 193, 96, 0.1)' },

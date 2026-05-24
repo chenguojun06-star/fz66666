@@ -166,7 +166,7 @@ const MultiColorOrderEditor: React.FC<MultiColorOrderEditorProps> = ({
           总数量：<span style={{ fontWeight: 600 }}>{totalQuantity}</span>
         </div>
       </div>
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10, color: '#8c8c8c' }}>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10, color: 'var(--color-text-tertiary)' }}>
         <span>开发颜色：{availableColors.join(' / ') || '-'}</span>
         <span>可手动加色</span>
       </div>
@@ -199,19 +199,19 @@ const MultiColorOrderEditor: React.FC<MultiColorOrderEditorProps> = ({
       </Space>
 
       {!selectedColors.length || !selectedSizes.length ? (
-        <div style={{ border: '1px dashed #d9d9d9', borderRadius: 8, padding: '24px 12px', background: '#fafafa' }}>
+        <div style={{ border: '1px dashed var(--color-border-antd)', borderRadius: 8, padding: '24px 12px', background: 'var(--color-bg-container)' }}>
           <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="先选颜色和码数" />
         </div>
       ) : (
-        <div style={{ border: '1px solid #f0f0f0', borderRadius: 8, overflow: 'auto', width: '100%' }}>
+        <div style={{ border: '1px solid var(--color-border-light)', borderRadius: 8, overflow: 'auto', width: '100%' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
             <thead>
               <tr>
-                <th style={{ textAlign: 'left', padding: '8px 6px', borderBottom: '1px solid #f0f0f0', background: '#fafafa', width: '15%' }}>颜色</th>
+                <th style={{ textAlign: 'left', padding: '8px 6px', borderBottom: '1px solid var(--color-border-light)', background: 'var(--color-bg-container)', width: '15%' }}>颜色</th>
                 {selectedSizes.map((size) => (
-                  <th key={size} style={{ textAlign: 'center', padding: '8px 2px', borderBottom: '1px solid #f0f0f0', background: '#fafafa', width: `${70 / selectedSizes.length}%` }}>{size}</th>
+                  <th key={size} style={{ textAlign: 'center', padding: '8px 2px', borderBottom: '1px solid var(--color-border-light)', background: 'var(--color-bg-container)', width: `${70 / selectedSizes.length}%` }}>{size}</th>
                 ))}
-                <th style={{ textAlign: 'center', padding: '8px 4px', borderBottom: '1px solid #f0f0f0', background: '#fafafa', width: '15%' }}>小计</th>
+                <th style={{ textAlign: 'center', padding: '8px 4px', borderBottom: '1px solid var(--color-border-light)', background: 'var(--color-bg-container)', width: '15%' }}>小计</th>
               </tr>
             </thead>
             <tbody>
@@ -226,6 +226,7 @@ const MultiColorOrderEditor: React.FC<MultiColorOrderEditorProps> = ({
                           min={0}
                           value={matched?.quantity || 0}
                           style={{ width: '100%' }}
+                          controls={false}
                          
                           onChange={(value) => updateMatrixQty(row.color, size, Number(value) || 0)}
                         />
@@ -236,13 +237,13 @@ const MultiColorOrderEditor: React.FC<MultiColorOrderEditorProps> = ({
                 </tr>
               ))}
               <tr>
-                <td style={{ padding: '6px 6px', background: '#fafafa', fontWeight: 700 }}>码数合计</td>
+                <td style={{ padding: '6px 6px', background: 'var(--color-bg-container)', fontWeight: 700 }}>码数合计</td>
                 {selectedSizes.map((size) => (
-                  <td key={`total-${size}`} style={{ padding: '6px 2px', background: '#fafafa', textAlign: 'center', fontWeight: 700 }}>
+                  <td key={`total-${size}`} style={{ padding: '6px 2px', background: 'var(--color-bg-container)', textAlign: 'center', fontWeight: 700 }}>
                     {sizeTotals[size] || 0}
                   </td>
                 ))}
-                <td style={{ padding: '6px 6px', background: '#fafafa', textAlign: 'center', fontWeight: 700 }}>{totalQuantity}</td>
+                <td style={{ padding: '6px 6px', background: 'var(--color-bg-container)', textAlign: 'center', fontWeight: 700 }}>{totalQuantity}</td>
               </tr>
             </tbody>
           </table>

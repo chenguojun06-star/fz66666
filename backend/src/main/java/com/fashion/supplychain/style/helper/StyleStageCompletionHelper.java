@@ -105,7 +105,7 @@ public class StyleStageCompletionHelper {
     }
 
     /**
-     * 退回尺寸表配置（只清空完成时间，保留开始时间和负责人）
+     * 退回尺寸表配置（只清空完成时间，保留开始时间和领取人）
      */
     public boolean resetSize(Long id, Map<String, Object> body) {
         if (!UserContext.isSupervisorOrAbove()) {

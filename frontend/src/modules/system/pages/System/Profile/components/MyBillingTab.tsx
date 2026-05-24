@@ -13,6 +13,7 @@ import {
   FileTextOutlined, BellOutlined, AppstoreOutlined, SyncOutlined,
   CreditCardOutlined, CopyOutlined,
 } from '@ant-design/icons';
+import { formatMoney } from '@/utils/format';
 import dayjs from 'dayjs';
 import tenantService from '@/services/tenantService';
 import { appStoreService } from '@/services/system/appStore';
@@ -191,7 +192,7 @@ const MyBillingTab: React.FC<MyBillingTabProps> = ({ embedded = false }) => {
     { title: '金额(¥)', dataIndex: 'totalAmount', width: 100,
       render: (v: number) => (
         <Text strong style={{ color: 'var(--color-primary)' }}>
-          ¥{v?.toFixed(2) || '0.00'}
+          {formatMoney(v)}
         </Text>
       ),
     },
@@ -444,7 +445,7 @@ const MyBillingTab: React.FC<MyBillingTabProps> = ({ embedded = false }) => {
               <Descriptions.Item label="应付金额" span={2}>
                 <Space align="center">
                   <Text strong style={{ color: '#f5222d', fontSize: 22 }}>
-                    ¥{payingBill.totalAmount?.toFixed(2)}
+                    {formatMoney(payingBill.totalAmount)}
                   </Text>
                   <Button type="text" icon={<CopyOutlined />}
                     onClick={() => copyText(String(payingBill.totalAmount?.toFixed(2)), '金额')} />
@@ -471,7 +472,7 @@ const MyBillingTab: React.FC<MyBillingTabProps> = ({ embedded = false }) => {
                 </Descriptions.Item>
                 <Descriptions.Item label="付款金额">
                   <Space>
-                    <Text strong style={{ color: '#f5222d' }}>¥{payingBill.totalAmount?.toFixed(2)}</Text>
+                    <Text strong style={{ color: '#f5222d' }}>{formatMoney(payingBill.totalAmount)}</Text>
                     <Button type="text" icon={<CopyOutlined />}
                       onClick={() => copyText(String(payingBill.totalAmount?.toFixed(2)), '金额')} />
                   </Space>
@@ -498,7 +499,7 @@ const MyBillingTab: React.FC<MyBillingTabProps> = ({ embedded = false }) => {
         {currentBill && (
           <Descriptions column={2} style={{ marginBottom: 16 }}>
             <Descriptions.Item label="账单编号">{currentBill.billingNo}</Descriptions.Item>
-            <Descriptions.Item label="金额">¥{currentBill.totalAmount?.toFixed(2)}</Descriptions.Item>
+            <Descriptions.Item label="金额">{formatMoney(currentBill.totalAmount)}</Descriptions.Item>
           </Descriptions>
         )}
         <Form form={invoiceForm} layout="vertical">

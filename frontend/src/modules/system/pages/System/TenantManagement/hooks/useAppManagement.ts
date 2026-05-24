@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
-import { Modal } from 'antd';
 import { useUser } from '@/utils/AuthContext';
 import { useModal } from '@/hooks';
+import { confirmDelete, confirmAction } from '@/utils/confirm';
 import tenantAppService from '@/services/tenantAppService';
 import type { TenantAppInfo, TenantAppLogInfo } from '@/services/tenantAppService';
 import { message } from '@/utils/antdStatic';
@@ -115,47 +115,28 @@ export const useAppManagement = () => {
   };
 
   const handleResetSecret = async (record: TenantAppInfo) => {
-    Modal.confirm({
-      width: '30vw',
-      title: '重置密钥',
-      content: '重置后旧密钥立即失效，客户系统需要更新配置。确认重置？',
-      okText: '确认重置',
-      okButtonProps: { danger: true, type: 'default' },
-      onOk: async () => {
-        try {
-          const res: any = await tenantAppService.resetSecret(record.id);
-          const data = res?.data || res;
-          setNewSecret(data?.appSecret || null);
-          setSelectedApp(data);
-          setDetailEditCallbackUrl(data?.callbackUrl || '');
-          setDetailEditExternalApiUrl(data?.externalApiUrl || '');
-          detailModal.open(data);
-          message.success('密钥已重置');
-          fetchApps();
-        } catch {
-          message.error('重置失败');
-        }
-      },
-    });
+    confirmAction('重置密钥', '重置后旧密钥立即失效，客户系统需要更新配置。确认重置？', async () => {
+      try {
+        const res: any = await tenantAppService.resetSecret(record.id);
+        const data = res?.data || res;
+        setNewSecret(data?.appSecret || null);
+        setSelectedApp(data);
+        setDetailEditCallbackUrl(data?.callbackUrl || '');
+        setDetailEditExternalApiUrl(data?.externalApiUrl || '');
+        detailModal.open(data);
+        message.success('密钥已重置');
+        fetchApps();
+      } catch {
+        message.error('重置失败');
+      }
+    }, { okText: '确认重置', danger: true });
   };
   const handleDelete = async (record: TenantAppInfo) => {
-    Modal.confirm({
-      width: '30vw',
-      title: '删除应用',
-      content: `确认删除应用"${record.appName}"？删除后无法恢复。`,
-      okText: '确认删除',
-      okButtonProps: { danger: true, type: 'default' },
-      onOk: async () => {
-        try {
-          await tenantAppService.deleteApp(record.id);
-          message.success('已删除');
-          fetchApps();
-          fetchStats();
-        } catch {
-          message.error('删除失败');
-        }
-      },
-    });
+    confirmDelete(`应用"${record.appName}"`, async () => {
+      await tenantAppService.deleteApp(record.id);
+      fetchApps();
+      fetchStats();
+    }, { content: '删除后无法恢复。' });
   };
 
   const handleViewLogs = async (record: TenantAppInfo) => {

@@ -7,6 +7,7 @@ import RowActions from '@/components/common/RowActions';
 import SupplierNameTooltip from '@/components/common/SupplierNameTooltip';
 import { canViewPrice } from '@/utils/sensitiveDataMask';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
+import { formatMoney } from '@/utils/format';
 import { formatMaterialSpecWidth, getMaterialTypeCategory } from '@/utils/materialType';
 import type { UserInfo } from '@/utils/AuthContext';
 import type { MaterialInventory } from '../types';
@@ -190,7 +191,7 @@ export function useMaterialInventoryColumns({
               fontSize: "var(--font-size-xs)",
               color: 'var(--neutral-text-disabled)',
               paddingTop: 4,
-              borderTop: '1px solid #f0f0f0',
+              borderTop: '1px solid var(--color-border-light)',
             }}>
               <span>安全库存:</span> {safetyStock} {record.unit}
               <span style={{ margin: '0 6px', color: 'var(--neutral-border)' }}>|</span>
@@ -221,13 +222,13 @@ export function useMaterialInventoryColumns({
           <div>
             <div style={{ fontSize: "var(--font-size-sm)", color: 'var(--neutral-text-disabled)', marginBottom: 4, fontWeight: 500 }}>单价</div>
             <div style={{ fontSize: "var(--font-size-lg)", fontWeight: 700, color: 'var(--neutral-text)' }}>
-              {canViewPrice(user) ? `¥${(record.unitPrice ?? 0).toFixed(2)}` : '***'}
+              {canViewPrice(user) ? formatMoney(record.unitPrice ?? 0) : '***'}
             </div>
             <div style={{ fontSize: "var(--font-size-xs)", color: 'var(--neutral-text-disabled)', marginTop: 2 }}>/{record.unit}</div>
           </div>
           <div style={{
             paddingTop: 8,
-            borderTop: '1px solid #f0f0f0'
+            borderTop: '1px solid var(--color-border-light)'
           }}>
             <div style={{ fontSize: "var(--font-size-sm)", color: 'var(--neutral-text-disabled)', marginBottom: 4, fontWeight: 500 }}>库存总值</div>
             <div style={{ fontSize: "var(--font-size-lg)", fontWeight: 700, color: 'var(--neutral-text)' }}>
@@ -257,14 +258,14 @@ export function useMaterialInventoryColumns({
       width: 200,
       render: (_, record) => (
         <Space orientation="vertical" size={6} style={{ width: '100%' }}>
-          <div style={{ padding: '4px 8px', background: '#fafafa' }}>
+          <div style={{ padding: '4px 8px', background: 'var(--color-bg-container)' }}>
             <div style={{ fontSize: "var(--font-size-xs)", color: 'var(--neutral-text-secondary)', marginBottom: 2 }}> 最后入库</div>
             <div style={{ fontSize: "var(--font-size-xs)", color: 'var(--neutral-text-secondary)' }}>{record.lastInboundDate}</div>
             {record.lastInboundBy && (
               <div style={{ fontSize: "var(--font-size-xs)", color: 'var(--neutral-text-disabled)' }}>操作人: {record.lastInboundBy}</div>
             )}
           </div>
-          <div style={{ padding: '4px 8px', background: '#fafafa' }}>
+          <div style={{ padding: '4px 8px', background: 'var(--color-bg-container)' }}>
             <div style={{ fontSize: "var(--font-size-xs)", color: 'var(--neutral-text-secondary)', marginBottom: 2 }}> 最后出库</div>
             <div style={{ fontSize: "var(--font-size-xs)", color: 'var(--neutral-text-secondary)' }}>{record.lastOutboundDate}</div>
             {record.lastOutboundBy && (

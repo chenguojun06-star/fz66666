@@ -3,6 +3,7 @@ import { Card, Segmented, Spin } from 'antd';
 import { DownOutlined, RightOutlined } from '@ant-design/icons';
 import type { PatternDevelopmentStats } from '@/types/production';
 import type { StatsRangeType } from '../../StyleInfo/hooks/useStyleStats';
+import { formatMoney } from '@/utils/format';
 
 interface StyleStatsCardProps {
   stats: PatternDevelopmentStats | null;
@@ -14,8 +15,6 @@ interface StyleStatsCardProps {
   /** 点击标题时的展开/折叠回调 */
   onToggle?: () => void;
 }
-
-const fmt = (v: number) => v.toFixed(2);
 
 /**
  * 开发费用统计迷你看板（紧凑单行版，支持折叠）
@@ -78,19 +77,19 @@ const StyleStatsCard: React.FC<StyleStatsCardProps> = ({
           <div style={{ display: 'flex', flex: 1, gap: 8, alignItems: 'center', justifyContent: 'space-evenly' }}>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
               <span style={{ fontSize: 14, color: 'var(--neutral-text-secondary)', lineHeight: 1.2 }}> 面辅料</span>
-              <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--neutral-text)', lineHeight: 1.4 }}>¥{fmt(stats?.materialCost ?? 0)}</span>
+              <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--neutral-text)', lineHeight: 1.4 }}>{formatMoney(stats?.materialCost)}</span>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
               <span style={{ fontSize: 14, color: 'var(--neutral-text-secondary)', lineHeight: 1.2 }}> 工序单价</span>
-              <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--neutral-text)', lineHeight: 1.4 }}>¥{fmt(stats?.processCost ?? 0)}</span>
+              <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--neutral-text)', lineHeight: 1.4 }}>{formatMoney(stats?.processCost)}</span>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
               <span style={{ fontSize: 14, color: 'var(--neutral-text-secondary)', lineHeight: 1.2 }}> 二次工艺</span>
-              <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--neutral-text)', lineHeight: 1.4 }}>¥{fmt(stats?.secondaryProcessCost ?? 0)}</span>
+              <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--neutral-text)', lineHeight: 1.4 }}>{formatMoney(stats?.secondaryProcessCost)}</span>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
               <span style={{ fontSize: 14, color: 'var(--neutral-text-secondary)', lineHeight: 1.2 }}> 总开发费</span>
-              <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--primary-color)', lineHeight: 1.4 }}>¥{fmt(stats?.totalCost ?? 0)}</span>
+              <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--primary-color)', lineHeight: 1.4 }}>{formatMoney(stats?.totalCost)}</span>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
               <span style={{ fontSize: 14, color: 'var(--neutral-text-secondary)', lineHeight: 1.2 }}> 样衣数量</span>

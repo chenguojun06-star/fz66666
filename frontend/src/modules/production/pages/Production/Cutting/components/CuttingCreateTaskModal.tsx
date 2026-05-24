@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useRef, useCallback } from 'react';
 import { AutoComplete, Button, Card, Dropdown, Input, InputNumber, Select, Segmented, Space, Tag, Tooltip } from 'antd';
 import { PlusOutlined, DeleteOutlined, DownOutlined, QuestionCircleOutlined, ImportOutlined } from '@ant-design/icons';
 import ResizableModal from '@/components/common/ResizableModal';
@@ -8,6 +8,7 @@ import DictAutoComplete from '@/components/common/DictAutoComplete';
 import CustomerSelect from '@/components/common/CustomerSelect';
 import { STAGE_ACCENT, STAGE_ACCENT_LIGHT } from '@/utils/stageStyles';
 import { CUTTING_STAGE_ORDER, computeStageSortedAndSpan } from '@/utils/productionStage';
+import { formatMoney } from '@/utils/format';
 import type { FactoryCapacityItem } from '@/services/production/productionApi';
 import type { CuttingCreateTaskState } from '../hooks';
 
@@ -17,6 +18,14 @@ interface Props {
 
 const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
   const { sorted, spanMap } = computeStageSortedAndSpan(createTask.createProcessNodes, CUTTING_STAGE_ORDER);
+
+  const styleSearchTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  const debouncedFetchStyleInfoOptions = useCallback((v: string) => {
+    if (styleSearchTimerRef.current) clearTimeout(styleSearchTimerRef.current);
+    styleSearchTimerRef.current = setTimeout(() => {
+      createTask.fetchStyleInfoOptions(v);
+    }, 300);
+  }, [createTask]);
 
   // ── 快速批量录入 状态 ──────────────────────────────────────────────────
   const [matrixColors, setMatrixColors] = useState<string[]>([]);
@@ -76,9 +85,9 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
 
   const cardStyle: React.CSSProperties = {
     padding: '6px 10px',
-    background: '#fafafa',
+    background: 'var(--color-bg-container)',
     borderRadius: 6,
-    border: '1px solid #e8e8e8',
+    border: '1px solid var(--color-border)',
     display: 'flex',
     alignItems: 'center',
     gap: 8,
@@ -144,7 +153,7 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
               value: x.styleNo,
               label: x.styleName ? `${x.styleNo}（${x.styleName}）` : x.styleNo,
             }))}
-            onSearch={(v) => createTask.fetchStyleInfoOptions(v)}
+            onSearch={(v) => debouncedFetchStyleInfoOptions(v)}
             onChange={(v) => createTask.handleStyleNoChange(v)}
             onSelect={(v) => createTask.handleStyleNoSelect(String(v || ''))}
             onBlur={createTask.handleStyleNoBlur}
@@ -286,7 +295,7 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
             </div>
 
             {/* ── 快速批量录入：颜色+码数 → 生成明细行 ───────────────── */}
-            <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 6, padding: '6px 0', marginBottom: 8, borderBottom: '1px dashed #e8e8e8' }}>
+            <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 6, padding: '6px 0', marginBottom: 8, borderBottom: '1px dashed var(--color-border)' }}>
               <span style={{ fontSize: 14, color: '#555', flexShrink: 0 }}>颜色</span>
               {matrixColors.map((c) => (
                 <Tag
@@ -394,7 +403,7 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
               style={{ width: 180 }}
               placeholder="选择款号导入模板"
               value={templateStyleNo || undefined}
-              onSearch={(v) => createTask.fetchStyleInfoOptions(v)}
+              onSearch={(v) => debouncedFetchStyleInfoOptions(v)}
               onChange={(v) => setTemplateStyleNo(v)}
               filterOption={false}
               loading={createTask.createStyleLoading}
@@ -428,13 +437,13 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
       >
         <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
           <div style={cardStyle}>
-            <span style={{ fontSize: 14, color: '#8c8c8c' }}>工序单价（总计）</span>
+            <span style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>工序单价（总计）</span>
             <span style={{ fontSize: 14, fontWeight: 600, color: '#262626' }}>¥{totalCost.toFixed(2)}</span>
-            <span style={{ fontSize: 14, color: '#bfbfbf', marginLeft: 'auto' }}>{createTask.createProcessNodes.length} 道工序</span>
+            <span style={{ fontSize: 14, color: 'var(--color-text-quaternary)', marginLeft: 'auto' }}>{createTask.createProcessNodes.length} 道工序</span>
           </div>
         </div>
 
-        <div style={{ border: '1px solid #e5e7eb', borderRadius: 6, overflow: 'hidden', overflowX: 'auto' }}>
+        <div style={{ border: '1px solid var(--color-border)', borderRadius: 6, overflow: 'hidden', overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14, minWidth: 900 + uniqueSizes.length * 90 }}>
             <colgroup>
               <col style={{ width: 50 }} />
@@ -449,19 +458,19 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
               <col style={{ width: 50 }} />
             </colgroup>
             <thead>
-              <tr style={{ background: '#fafafa' }}>
-                <th style={{ padding: '8px 8px', textAlign: 'center', borderBottom: '1px solid #e5e7eb' }}>排序</th>
-                <th style={{ padding: '8px 8px', textAlign: 'center', borderBottom: '1px solid #e5e7eb' }}>工序编号</th>
-                <th style={{ padding: '8px 8px', textAlign: 'center', borderBottom: '1px solid #e5e7eb' }}>工序名称</th>
-                <th style={{ padding: '8px 8px', textAlign: 'center', borderBottom: '1px solid #e5e7eb' }}>进度节点</th>
-                <th style={{ padding: '8px 8px', textAlign: 'center', borderBottom: '1px solid #e5e7eb' }}>机器类型</th>
-                <th style={{ padding: '8px 8px', textAlign: 'center', borderBottom: '1px solid #e5e7eb' }}>工序难度</th>
-                <th style={{ padding: '8px 8px', textAlign: 'center', borderBottom: '1px solid #e5e7eb' }}>工时(秒)</th>
-                <th style={{ padding: '8px 8px', textAlign: 'center', borderBottom: '1px solid #e5e7eb' }}>工价(元)</th>
+              <tr style={{ background: 'var(--color-bg-container)' }}>
+                <th style={{ padding: '8px 8px', textAlign: 'center', borderBottom: '1px solid var(--color-border)' }}>排序</th>
+                <th style={{ padding: '8px 8px', textAlign: 'center', borderBottom: '1px solid var(--color-border)' }}>工序编号</th>
+                <th style={{ padding: '8px 8px', textAlign: 'center', borderBottom: '1px solid var(--color-border)' }}>工序名称</th>
+                <th style={{ padding: '8px 8px', textAlign: 'center', borderBottom: '1px solid var(--color-border)' }}>进度节点</th>
+                <th style={{ padding: '8px 8px', textAlign: 'center', borderBottom: '1px solid var(--color-border)' }}>机器类型</th>
+                <th style={{ padding: '8px 8px', textAlign: 'center', borderBottom: '1px solid var(--color-border)' }}>工序难度</th>
+                <th style={{ padding: '8px 8px', textAlign: 'center', borderBottom: '1px solid var(--color-border)' }}>工时(秒)</th>
+                <th style={{ padding: '8px 8px', textAlign: 'center', borderBottom: '1px solid var(--color-border)' }}>工价(元)</th>
                 {uniqueSizes.map((s) => (
-                  <th key={s} style={{ padding: '8px 8px', textAlign: 'center', borderBottom: '1px solid #e5e7eb' }}>{s}码</th>
+                  <th key={s} style={{ padding: '8px 8px', textAlign: 'center', borderBottom: '1px solid var(--color-border)' }}>{s}码</th>
                 ))}
-                <th style={{ padding: '8px 8px', textAlign: 'center', borderBottom: '1px solid #e5e7eb' }}>操作</th>
+                <th style={{ padding: '8px 8px', textAlign: 'center', borderBottom: '1px solid var(--color-border)' }}>操作</th>
               </tr>
             </thead>
             <tbody>
@@ -470,13 +479,13 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
                 const originalIndex = createTask.createProcessNodes.indexOf(node);
                 return (
                   <tr key={`process-row-${originalIndex}`}>
-                    <td style={{ padding: '6px 8px', textAlign: 'center', borderBottom: '1px solid #f0f0f0' }}>
+                    <td style={{ padding: '6px 8px', textAlign: 'center', borderBottom: '1px solid var(--color-border-light)' }}>
                       {index + 1}
                     </td>
-                    <td style={{ padding: '6px 8px', textAlign: 'center', borderBottom: '1px solid #f0f0f0', color: '#8c8c8c' }}>
+                    <td style={{ padding: '6px 8px', textAlign: 'center', borderBottom: '1px solid var(--color-border-light)', color: 'var(--color-text-tertiary)' }}>
                       {String(index + 1).padStart(2, '0')}
                     </td>
-                    <td style={{ padding: '4px 6px', borderBottom: '1px solid #f0f0f0' }}>
+                    <td style={{ padding: '4px 6px', borderBottom: '1px solid var(--color-border-light)' }}>
                       <DictAutoComplete
                         dictType="process_name"
                         autoCollect
@@ -495,14 +504,14 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
                           borderLeft: `3px solid ${STAGE_ACCENT}`,
                           verticalAlign: 'middle',
                           textAlign: 'center',
-                          borderBottom: '1px solid #f0f0f0',
+                          borderBottom: '1px solid var(--color-border-light)',
                         }}
                       >
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
                           <Tag style={{ background: STAGE_ACCENT, color: '#fff', border: 'none', fontWeight: 600, fontSize: 14 }}>
                             {spanInfo.stage}
                           </Tag>
-                          <span style={{ fontSize: 14, color: '#999' }}>{spanInfo.count} 个工序</span>
+                          <span style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>{spanInfo.count} 个工序</span>
                           <Button
                             type="link"
                            
@@ -515,7 +524,7 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
                         </div>
                       </td>
                     ) : null}
-                    <td style={{ padding: '4px 6px', borderBottom: '1px solid #f0f0f0' }}>
+                    <td style={{ padding: '4px 6px', borderBottom: '1px solid var(--color-border-light)' }}>
                       <DictAutoComplete
                         dictType="machine_type"
                         autoCollect
@@ -525,7 +534,7 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
                         onChange={(v) => createTask.updateProcessNode(originalIndex, 'machineType', v)}
                       />
                     </td>
-                    <td style={{ padding: '4px 6px', borderBottom: '1px solid #f0f0f0' }}>
+                    <td style={{ padding: '4px 6px', borderBottom: '1px solid var(--color-border-light)' }}>
                       <Select
                        
                         value={node.difficulty || undefined}
@@ -540,7 +549,7 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
                         ]}
                       />
                     </td>
-                    <td style={{ padding: '4px 6px', borderBottom: '1px solid #f0f0f0' }}>
+                    <td style={{ padding: '4px 6px', borderBottom: '1px solid var(--color-border-light)' }}>
                       <InputNumber
                        
                         value={node.standardTime || 0}
@@ -549,7 +558,7 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
                         onChange={(v) => createTask.updateProcessNode(originalIndex, 'standardTime', typeof v === 'number' ? v : 0)}
                       />
                     </td>
-                    <td style={{ padding: '4px 6px', borderBottom: '1px solid #f0f0f0' }}>
+                    <td style={{ padding: '4px 6px', borderBottom: '1px solid var(--color-border-light)' }}>
                       <InputNumber
                        
                         value={node.unitPrice}
@@ -563,7 +572,7 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
                       />
                     </td>
                     {uniqueSizes.map((s) => (
-                      <td key={s} style={{ padding: '4px 6px', borderBottom: '1px solid #f0f0f0' }}>
+                      <td key={s} style={{ padding: '4px 6px', borderBottom: '1px solid var(--color-border-light)' }}>
                         <InputNumber
                          
                           value={node.sizePrices?.[s] ?? node.unitPrice}
@@ -576,7 +585,7 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
                         />
                       </td>
                     ))}
-                    <td style={{ padding: '6px 8px', textAlign: 'center', borderBottom: '1px solid #f0f0f0' }}>
+                    <td style={{ padding: '6px 8px', textAlign: 'center', borderBottom: '1px solid var(--color-border-light)' }}>
                       <Button
                        
                         type="text"
@@ -637,8 +646,8 @@ const FactoryCapacityCard: React.FC<{ stat: FactoryCapacityItem }> = ({ stat }) 
       </div>
     )}
     <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-      <span>生产中 <b style={{ color: '#333' }}>{stat.totalOrders}</b> 单</span>
-      <span>共 <b style={{ color: '#333' }}>{stat.totalQuantity?.toLocaleString() ?? 0}</b> 件</span>
+      <span>生产中 <b style={{ color: 'var(--color-text-primary)' }}>{stat.totalOrders}</b> 单</span>
+      <span>共 <b style={{ color: 'var(--color-text-primary)' }}>{stat.totalQuantity?.toLocaleString() ?? 0}</b> 件</span>
       <span>
         货期完成率
         <b style={{ marginLeft: 4, color: stat.deliveryOnTimeRate < 0 ? '#888' : stat.deliveryOnTimeRate >= 80 ? '#52c41a' : stat.deliveryOnTimeRate >= 60 ? '#fa8c16' : '#ff4d4f' }}>
@@ -649,7 +658,7 @@ const FactoryCapacityCard: React.FC<{ stat: FactoryCapacityItem }> = ({ stat }) 
       {stat.overdueCount > 0 ? <span style={{ color: '#ff4d4f' }}>逾期 <b>{stat.overdueCount}</b> 单</span> : null}
     </div>
     <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 4, paddingTop: 4, borderTop: '1px dashed var(--color-border, #e8e8e8)' }}>
-      <span>生产人数 <b style={{ color: '#333' }}>{stat.activeWorkers}</b> 人</span>
+      <span>生产人数 <b style={{ color: 'var(--color-text-primary)' }}>{stat.activeWorkers}</b> 人</span>
       {stat.avgDailyOutput > 0 ? <span>日均产量 <b style={{ color: '#1890ff' }}>{stat.avgDailyOutput}</b> 件/天{stat.capacitySource === 'configured' ? '（配置值）' : ''}</span> : null}
       {stat.estimatedCompletionDays > 0 ? (
         <span>

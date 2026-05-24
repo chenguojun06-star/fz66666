@@ -183,7 +183,7 @@ public class TenantIntelligenceBrainOrchestrator {
         String prompt = String.format(
                 "你是工厂AI智慧大脑。当前信号 %d 条（紧急 %d 条），最严重：%s。\n"
                 + "历史经验记忆：\n%s\n\n"
-                + "请给出今日最重要的3个行动建议，每条格式：【优先级:高/中/低】【负责人:生产主管/采购/财务】标题：内容",
+                + "请给出今日最重要的3个行动建议，每条格式：【优先级:高/中/低】【领取人:生产主管/采购/财务】标题：内容",
                 signalCount, criticalCount, topSignal, memoryContext);
 
         String aiReply = aiAdvisorService.chat(

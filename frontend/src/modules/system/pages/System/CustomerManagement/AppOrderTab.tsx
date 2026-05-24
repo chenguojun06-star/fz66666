@@ -10,6 +10,7 @@ import { appStoreService } from '@/services/system/appStore';
 import type { AppOrder } from '@/services/system/appStore';
 import type { ColumnsType } from 'antd/es/table';
 import request from '@/utils/api';
+import { formatMoney } from '@/utils/format';
 import { message } from '@/utils/antdStatic';
 
 const { Text } = Typography;
@@ -166,7 +167,7 @@ const AppOrderTab: React.FC<{ onOrderActivated?: () => void }> = ({ onOrderActiv
       title: '金额',
       dataIndex: 'actualAmount',
       width: 100,
-      render: (v: number) => v != null ? <Text strong>¥{Number(v).toFixed(2)}</Text> : '-',
+      render: (v: number) => v != null ? <Text strong>{formatMoney(Number(v))}</Text> : '-',
     },
     {
       title: '状态',
@@ -303,7 +304,7 @@ const AppOrderTab: React.FC<{ onOrderActivated?: () => void }> = ({ onOrderActiv
               </Descriptions.Item>
               <Descriptions.Item label="实付金额">
                 <Text strong style={{ color: 'var(--primary-color)' }}>
-                  ¥{Number(activateModal.data.actualAmount).toFixed(2)}
+                  {formatMoney(Number(activateModal.data.actualAmount))}
                 </Text>
               </Descriptions.Item>
               <Descriptions.Item label="联系人">

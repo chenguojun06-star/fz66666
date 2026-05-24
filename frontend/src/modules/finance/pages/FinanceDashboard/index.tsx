@@ -133,15 +133,13 @@ const FinanceDashboard: React.FC = () => {
         if (data.trend && Array.isArray(data.trend)) {
           setTrendData(data.trend);
         } else {
-          // 生成模拟趋势数据
-          setTrendData(generateMockTrendData());
+          setTrendData([]);
         }
 
-        // 排名数据
         if (data.rank && Array.isArray(data.rank)) {
           setRankData(data.rank);
         } else {
-          setRankData(generateMockRankData());
+          setRankData([]);
         }
         if (showSmartErrorNotice) setSmartError(null);
       }
@@ -166,30 +164,6 @@ const FinanceDashboard: React.FC = () => {
       setRankData([]);
     }
   }, { manual: true });
-
-  // 生成模拟趋势数据
-  const generateMockTrendData = (): TrendData[] => {
-    const months = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
-    const values = [1200, 1100, 350, 900, 250, 400, 1050, 750, 800, 1100, 380, 780];
-    return months.map((month, index) => ({
-      month,
-      value: values[index],
-      type: activeTab === 'amount' ? '金额' : '数量',
-    }));
-  };
-
-  // 生成模拟排名数据
-  const generateMockRankData = (): RankData[] => {
-    return [
-      { rank: 1, name: '车缝工序', value: 323234 },
-      { rank: 2, name: '裁剪工序', value: 286521 },
-      { rank: 3, name: '整烫工序', value: 198432 },
-      { rank: 4, name: '包装工序', value: 156789 },
-      { rank: 5, name: '质检工序', value: 123456 },
-      { rank: 6, name: '上领工序', value: 98765 },
-      { rank: 7, name: '锁边工序', value: 76543 },
-    ];
-  };
 
   useEffect(() => {
     loadData();

@@ -1,49 +1,42 @@
 import React from 'react';
 import { Form, Row, Col, Select, Input, Button, Popconfirm } from 'antd';
 import StandardModal from '@/components/common/StandardModal';
-import UnqualifiedUpload from './components/UnqualifiedUpload';
+import MultiImageUploadBox from '@/components/common/MultiImageUploadBox';
 import { DEFECT_CATEGORY_OPTIONS, DEFECT_REMARK_OPTIONS } from '../../constants';
 
 interface BatchUnqualifiedModalProps {
   open: boolean;
   totalQty: number;
   submitLoading: boolean;
-  unqualifiedFileList: any[];
+  unqualifiedImageUrls: string[];
   onCancel: () => void;
   onOk: (defectCategory: string, defectRemark: string, imageUrls: string[]) => Promise<void>;
-  onUploadImage: (file: File) => Promise<any> | void;
-  onRemoveImage: (file: any) => void;
-  onFileListChange: (fileList: any[]) => void;
+  onImageUrlsChange: (urls: string[]) => void;
 }
 
 const BatchUnqualifiedModal: React.FC<BatchUnqualifiedModalProps> = ({
   open,
   totalQty,
   submitLoading,
-  unqualifiedFileList,
+  unqualifiedImageUrls,
   onCancel,
   onOk,
-  onUploadImage,
-  onRemoveImage,
-  onFileListChange,
+  onImageUrlsChange,
 }) => {
   const [form] = Form.useForm();
 
   const handleCancel = () => {
     form.resetFields();
-    onFileListChange([]);
+    onImageUrlsChange([]);
     onCancel();
   };
 
   const handleOk = async () => {
     try {
       const values = await form.validateFields();
-      const urls = unqualifiedFileList
-        .map((f: any) => String(f?.url || '').trim())
-        .filter(Boolean);
-      await onOk(values.defectCategory, values.defectRemark, urls);
+      await onOk(values.defectCategory, values.defectRemark, unqualifiedImageUrls);
       form.resetFields();
-      onFileListChange([]);
+      onImageUrlsChange([]);
     } catch (e) {
       // 表单验证失败
     }
@@ -65,7 +58,7 @@ const BatchUnqualifiedModal: React.FC<BatchUnqualifiedModalProps> = ({
             cancelText="再想想"
             okButtonProps={{ danger: true }}
           >
-            <Button type="primary" loading={submitLoading} style={{ color: '#ff4d4f', background: '#fff', borderColor: '#ff4d4f' }}>
+            <Button type="primary" loading={submitLoading} style={{ color: '#ff4d4f', background: 'var(--color-bg-base)', borderColor: '#ff4d4f' }}>
               确认批量不合格
             </Button>
           </Popconfirm>
@@ -96,12 +89,13 @@ const BatchUnqualifiedModal: React.FC<BatchUnqualifiedModalProps> = ({
           </Col>
         </Row>
         <Form.Item label="不合格图片（可选）">
-          <UnqualifiedUpload
-            fileList={unqualifiedFileList}
+          <MultiImageUploadBox
+            value={unqualifiedImageUrls}
+            onChange={onImageUrlsChange}
+            maxCount={4}
+            maxSizeMB={15}
+            accept="image/jpeg,image/png,image/webp"
             disabled={submitLoading}
-            onUpload={onUploadImage}
-            onRemove={onRemoveImage}
-            onPreview={() => {}}
           />
         </Form.Item>
         <Form.Item name="repairRemark" label="返修备注（可选）">

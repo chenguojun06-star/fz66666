@@ -273,7 +273,7 @@ const TaskItem: React.FC<{
           )}
           {!task.assigneeName && task.assigneeRole && (
             <span className={styles.taskExtraItem}>
-              <span className={styles.taskExtraLabel}>负责人</span>
+              <span className={styles.taskExtraLabel}>领取人</span>
               <span className={styles.taskExtraValue}>{task.assigneeRole}</span>
             </span>
           )}

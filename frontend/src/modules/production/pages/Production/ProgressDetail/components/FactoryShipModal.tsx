@@ -150,7 +150,7 @@ const FactoryShipModal: React.FC<FactoryShipModalProps> = ({
           <div style={{ overflowX: 'auto', marginBottom: 12 }}>
             <table style={{ borderCollapse: 'collapse', minWidth: '100%', fontSize: 14 }}>
               <thead>
-                <tr style={{ background: '#fafafa' }}>
+                <tr style={{ background: 'var(--color-bg-container)' }}>
                   <th style={thStyle}>颜色</th>
                   {allSizes.map(sz => (
                     <th key={sz} style={thStyle}>{sz}</th>
@@ -191,7 +191,7 @@ const FactoryShipModal: React.FC<FactoryShipModalProps> = ({
         <>
           <div style={{ fontWeight: 600, fontSize: 14, color: '#555', marginBottom: 6 }}>历史发货记录</div>
           <div style={{
-            background: '#fafafa', border: '1px solid #f0f0f0', borderRadius: 4,
+            background: 'var(--color-bg-container)', border: '1px solid var(--color-border-light)', borderRadius: 4,
             padding: '6px 10px', marginBottom: 12, maxHeight: 120, overflowY: 'auto',
           }}>
             {shipHistory.map((rec, i) => (
@@ -230,7 +230,7 @@ const FactoryShipModal: React.FC<FactoryShipModalProps> = ({
             <div style={{ overflowX: 'auto' }}>
               <table style={{ borderCollapse: 'collapse', minWidth: '100%', fontSize: 14 }}>
                 <thead>
-                  <tr style={{ background: '#fafafa' }}>
+                  <tr style={{ background: 'var(--color-bg-container)' }}>
                     <th style={{ ...thStyle, minWidth: 90 }}>颜色</th>
                     {allSizes.map(sz => <th key={sz} style={thStyle}>{sz}</th>)}
                     <th style={thStyle}>小计</th>
@@ -392,20 +392,20 @@ const FactoryShipModal: React.FC<FactoryShipModalProps> = ({
 };
 
 const thStyle: React.CSSProperties = {
-  border: '1px solid #f0f0f0',
+  border: '1px solid var(--color-border-light)',
   padding: '4px 8px',
   textAlign: 'center',
   fontWeight: 600,
   whiteSpace: 'nowrap',
 };
 const tdStyle: React.CSSProperties = {
-  border: '1px solid #f0f0f0',
+  border: '1px solid var(--color-border-light)',
   padding: '4px 8px',
   textAlign: 'center',
   whiteSpace: 'nowrap',
 };
 const tdEditStyle: React.CSSProperties = {
-  border: '1px solid #f0f0f0',
+  border: '1px solid var(--color-border-light)',
   padding: '3px 4px',
   minWidth: 64,
 };

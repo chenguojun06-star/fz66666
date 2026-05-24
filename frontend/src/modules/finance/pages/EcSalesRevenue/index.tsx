@@ -9,6 +9,7 @@ import type { ColumnsType } from 'antd/es/table';
 import { ecSalesRevenueApi, EcRevenueRecord, EcRevenueSummary } from '@/services/finance/ecSalesRevenueApi';
 import { message } from '@/utils/antdStatic';
 import { readPageSize } from '@/utils/pageSizeStore';
+import { formatMoney } from '@/utils/format';
 
 const { Text } = Typography;
 
@@ -139,7 +140,7 @@ const EcSalesRevenue: React.FC = () => {
       align: 'right',
       render: (v: number) => (
         <Text style={{ color: '#52c41a', fontWeight: 600 }}>
-          ¥{Number(v ?? 0).toFixed(2)}
+          {formatMoney(v)}
         </Text>
       ),
     },
@@ -212,7 +213,7 @@ const EcSalesRevenue: React.FC = () => {
     },
   ];
 
-  const fmtAmt = (v: number = 0) => `¥${Number(v).toFixed(2)}`;
+  const fmtAmt = (v: number = 0) => formatMoney(v);
 
   return (
     <>

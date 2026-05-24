@@ -1,3 +1,4 @@
+import { formatDateTimeSecond } from '@/utils/datetime';
 import dayjs from 'dayjs';
 import { useModal } from '@/hooks';
 import { useState } from 'react';
@@ -34,7 +35,7 @@ export function useOutboundActions({
   const buildManualOutboundPrintPayload = (
     record: MaterialInventory, values: Record<string, any>, outboundNo: string,
   ): MaterialOutboundPrintPayload => ({
-    outboundNo, outboundTime: dayjs().format('YYYY-MM-DD HH:mm:ss'),
+    outboundNo, outboundTime: formatDateTimeSecond(new Date()),
     materialCode: record.materialCode, materialName: record.materialName,
     materialType: record.materialType, specification: record.specification,
     color: record.color, unit: record.unit,
@@ -121,7 +122,7 @@ export function useOutboundActions({
   const handlePrintOutbound = (record: MaterialInventory) => {
     openPrintModal({
       outboundNo: `PREVIEW-${dayjs().format('YYYYMMDDHHmmss')}`,
-      outboundTime: dayjs().format('YYYY-MM-DD HH:mm:ss'),
+      outboundTime: formatDateTimeSecond(new Date()),
       materialCode: record.materialCode, materialName: record.materialName,
       materialType: record.materialType, specification: record.specification,
       color: record.color, unit: record.unit,

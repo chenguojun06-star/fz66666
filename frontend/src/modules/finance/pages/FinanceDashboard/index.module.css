@@ -19,20 +19,20 @@
 
 .cardTitle {
   font-size: 14px;
-  color: #8c8c8c;
+  color: var(--color-text-tertiary);
 }
 
 .infoIcon {
   margin-left: 4px;
   font-size: 12px;
-  color: #bfbfbf;
+  color: var(--color-text-quaternary);
   cursor: pointer;
 }
 
 .cardFooter {
   margin-top: 12px;
   font-size: 12px;
-  color: #8c8c8c;
+  color: var(--color-text-tertiary);
 }
 
 .subLabel {
@@ -50,12 +50,12 @@
 .dailyInfo {
   margin-top: 8px;
   padding-top: 8px;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--color-border-light);
 }
 
 .dailyLabel {
   font-size: 12px;
-  color: #8c8c8c;
+  color: var(--color-text-tertiary);
   margin-right: 8px;
 }
 
@@ -111,7 +111,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 0 24px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--color-border-light);
 }
 
 .tabs :global(.ant-tabs-nav) {
@@ -161,7 +161,7 @@
 
 .rankSection {
   padding: 24px 24px 24px 0;
-  border-left: 1px solid #f0f0f0;
+  border-left: 1px solid var(--color-border-light);
   height: 100%;
 }
 
@@ -190,7 +190,7 @@
   align-items: center;
   justify-content: center;
   font-size: 12px;
-  color: #8c8c8c;
+  color: var(--color-text-tertiary);
   margin-right: 12px;
 }
 

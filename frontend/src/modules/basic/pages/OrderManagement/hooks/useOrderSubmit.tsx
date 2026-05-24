@@ -71,7 +71,7 @@ export const useOrderSubmit = (deps: {
         content: (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div style={{ color: '#595959' }}>请在提交前确认价格编排与面辅料编排都已核对完成。</div>
-            <div style={{ padding: 12, borderRadius: 10, border: '1px solid #d9d9d9', background: '#fafafa' }}>
+            <div style={{ padding: 12, borderRadius: 10, border: '1px solid var(--color-border-antd)', background: 'var(--color-bg-container)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, marginBottom: 8 }}>
                 <span style={{ fontWeight: 600 }}>价格编排</span>
                 <Tag color={deps.orderOrchestration.pricingStatus === 'error' ? 'error' : deps.orderOrchestration.pricingStatus === 'warning' ? 'warning' : deps.orderOrchestration.pricingStatus === 'success' ? 'success' : 'default'}>
@@ -89,7 +89,7 @@ export const useOrderSubmit = (deps: {
               <div style={{ fontSize: 14, color: '#595959' }}>{deps.orderOrchestration.pricingSummary}</div>
               <div style={{ marginTop: 6, fontSize: 14, color: '#1677ff' }}>下单锁定单价：¥{deps.resolvedOrderUnitPrice.toFixed(2)} / 件</div>
             </div>
-            <div style={{ padding: 12, borderRadius: 10, border: '1px solid #d9d9d9', background: '#fafafa' }}>
+            <div style={{ padding: 12, borderRadius: 10, border: '1px solid var(--color-border-antd)', background: 'var(--color-bg-container)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, marginBottom: 8 }}>
                 <span style={{ fontWeight: 600 }}>面辅料编排</span>
                 <Tag color={deps.orderOrchestration.scatterStatus === 'error' ? 'error' : deps.orderOrchestration.scatterStatus === 'warning' ? 'warning' : 'success'}>

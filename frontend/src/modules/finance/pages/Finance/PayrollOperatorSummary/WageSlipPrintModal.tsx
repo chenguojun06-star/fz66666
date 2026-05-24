@@ -4,6 +4,7 @@ import ResizableModal from '@/components/common/ResizableModal';
 import { PrinterOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { safePrint } from '@/utils/safePrint';
+import { formatMoney } from '@/utils/format';
 
 interface WageSlipPrintModalProps {
     visible: boolean;
@@ -46,6 +47,7 @@ const WageSlipPrintModal: React.FC<WageSlipPrintModalProps> = ({
 }) => {
     const printRef = useRef<HTMLDivElement>(null);
     const [printVersion, setPrintVersion] = useState<'simple' | 'detail'>('detail');
+    const [printLoading, setPrintLoading] = useState(false);
     const [selectedWorkerNames, setSelectedWorkerNames] = useState<string[]>([]);
 
     React.useEffect(() => {
@@ -54,8 +56,10 @@ const WageSlipPrintModal: React.FC<WageSlipPrintModalProps> = ({
         }
     }, [visible, workerData]);
 
-    const handlePrint = () => {
+    const handlePrint = async () => {
         if (!printRef.current) return;
+        setPrintLoading(true);
+        try {
         const printContent = printRef.current.innerHTML;
         const htmlContent = `
             <html>
@@ -69,6 +73,7 @@ const WageSlipPrintModal: React.FC<WageSlipPrintModalProps> = ({
             </html>
         `;
         safePrint(htmlContent);
+        } finally { setPrintLoading(false); }
     };
 
     const handleWorkerCheck = (name: string, checked: boolean) => {
@@ -151,7 +156,7 @@ const WageSlipPrintModal: React.FC<WageSlipPrintModalProps> = ({
             width="85vw"
             footer={[
                 <Button key="cancel" onClick={onClose}>取消</Button>,
-                <Button key="print" type="primary" icon={<PrinterOutlined />} onClick={handlePrint} disabled={selectedWorkerNames.length === 0}>
+                <Button key="print" type="primary" icon={<PrinterOutlined />} onClick={() => void handlePrint()} loading={printLoading} disabled={selectedWorkerNames.length === 0}>
                     打印 ({selectedWorkerNames.length} 人)
                 </Button>
             ]}
@@ -204,7 +209,7 @@ const WageSlipPrintModal: React.FC<WageSlipPrintModalProps> = ({
                         {printVersion === 'detail' ? renderDetailTable(worker.details) : renderSimpleTable(worker.details)}
                         <div className="footer">
                             <span>合计总件数：{worker.totalQuantity} 件</span>
-                            <span>应发总计：¥{Number(worker.totalAmount).toFixed(2)}</span>
+                            <span>应发总计：{formatMoney(worker.totalAmount)}</span>
                         </div>
                         <div className="sign-area">
                             <span>核算人：_____________</span>
@@ -213,7 +218,7 @@ const WageSlipPrintModal: React.FC<WageSlipPrintModalProps> = ({
                     </div>
                 ))}
                 {selectedWorkers.length === 0 && (
-                    <div style={{ textAlign: 'center', padding: 40, color: '#999' }}>请先选择需要打印的人员</div>
+                    <div style={{ textAlign: 'center', padding: 40, color: 'var(--color-text-tertiary)' }}>请先选择需要打印的人员</div>
                 )}
             </div>
         </ResizableModal>

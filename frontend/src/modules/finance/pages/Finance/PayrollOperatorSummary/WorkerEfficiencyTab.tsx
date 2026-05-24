@@ -7,7 +7,7 @@ import { readPageSize } from '@/utils/pageSizeStore';
 const TREND_ICON: Record<string, { icon: string; color: string }> = {
     up:   { icon: '↑', color: '#52c41a' },
     down: { icon: '↓', color: '#ff4d4f' },
-    flat: { icon: '→', color: '#8c8c8c' },
+    flat: { icon: '→', color: 'var(--color-text-tertiary)' },
 };
 
 function ScoreCell({ value }: { value: number }) {
@@ -33,7 +33,7 @@ const WorkerEfficiencyTab: React.FC<WorkerEfficiencyTabProps> = ({ list, loading
                 if (idx === 0) return <Tag color="gold"> 1</Tag>;
                 if (idx === 1) return <Tag color="silver"> 2</Tag>;
                 if (idx === 2) return <Tag color="orange"> 3</Tag>;
-                return <span style={{ color: '#8c8c8c' }}>{idx + 1}</span>;
+                return <span style={{ color: 'var(--color-text-tertiary)' }}>{idx + 1}</span>;
             },
         },
         {

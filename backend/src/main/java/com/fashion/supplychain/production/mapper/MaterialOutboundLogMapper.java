@@ -1,5 +1,6 @@
 package com.fashion.supplychain.production.mapper;
 
+import com.baomidou.mybatisplus.annotation.InterceptorIgnore;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.fashion.supplychain.production.entity.MaterialOutboundLog;
 import org.apache.ibatis.annotations.Mapper;
@@ -63,6 +64,7 @@ public interface MaterialOutboundLogMapper extends BaseMapper<MaterialOutboundLo
             "GROUP BY MONTH(COALESCE(outbound_time, create_time))")
     List<Map<String, Object>> selectYearOutboundByMonth(@Param("year") int year, @Param("tenantId") Long tenantId);
 
+    @InterceptorIgnore(tenantLine = "true")
     @Select("SELECT HOUR(COALESCE(m.outbound_time, m.create_time)) AS hour, COUNT(*) AS count " +
             "FROM t_material_outbound_log m " +
             "JOIN t_material_stock s ON m.stock_id = s.id " +
@@ -73,10 +75,11 @@ public interface MaterialOutboundLogMapper extends BaseMapper<MaterialOutboundLo
             "     OR (#{materialType} = 'fabric' AND s.material_type = '面料') " +
             "     OR (#{materialType} = 'accessory' AND s.material_type = '辅料')) " +
             "AND (m.delete_flag IS NULL OR m.delete_flag = 0) " +
-            "AND m.tenant_id = #{tenantId} " +
+            "AND m.tenant_id = #{tenantId} AND s.tenant_id = #{tenantId} " +
             "GROUP BY HOUR(COALESCE(m.outbound_time, m.create_time))")
     List<Map<String, Object>> selectTodayOutboundByHourAndType(@Param("today") LocalDate today, @Param("materialType") String materialType, @Param("tenantId") Long tenantId);
 
+    @InterceptorIgnore(tenantLine = "true")
     @Select("SELECT DATE(COALESCE(m.outbound_time, m.create_time)) AS date, COUNT(*) AS count " +
             "FROM t_material_outbound_log m " +
             "JOIN t_material_stock s ON m.stock_id = s.id " +
@@ -87,10 +90,11 @@ public interface MaterialOutboundLogMapper extends BaseMapper<MaterialOutboundLo
             "     OR (#{materialType} = 'fabric' AND s.material_type = '面料') " +
             "     OR (#{materialType} = 'accessory' AND s.material_type = '辅料')) " +
             "AND (m.delete_flag IS NULL OR m.delete_flag = 0) " +
-            "AND m.tenant_id = #{tenantId} " +
+            "AND m.tenant_id = #{tenantId} AND s.tenant_id = #{tenantId} " +
             "GROUP BY DATE(COALESCE(m.outbound_time, m.create_time))")
     List<Map<String, Object>> selectLast7DaysOutboundByType(@Param("startDate") LocalDate startDate, @Param("today") LocalDate today, @Param("materialType") String materialType, @Param("tenantId") Long tenantId);
 
+    @InterceptorIgnore(tenantLine = "true")
     @Select("SELECT DAY(COALESCE(m.outbound_time, m.create_time)) AS day, COUNT(*) AS count " +
             "FROM t_material_outbound_log m " +
             "JOIN t_material_stock s ON m.stock_id = s.id " +
@@ -101,10 +105,11 @@ public interface MaterialOutboundLogMapper extends BaseMapper<MaterialOutboundLo
             "     OR (#{materialType} = 'fabric' AND s.material_type = '面料') " +
             "     OR (#{materialType} = 'accessory' AND s.material_type = '辅料')) " +
             "AND (m.delete_flag IS NULL OR m.delete_flag = 0) " +
-            "AND m.tenant_id = #{tenantId} " +
+            "AND m.tenant_id = #{tenantId} AND s.tenant_id = #{tenantId} " +
             "GROUP BY DAY(COALESCE(m.outbound_time, m.create_time))")
     List<Map<String, Object>> selectLast30DaysOutboundByType(@Param("startDate") LocalDate startDate, @Param("today") LocalDate today, @Param("materialType") String materialType, @Param("tenantId") Long tenantId);
 
+    @InterceptorIgnore(tenantLine = "true")
     @Select("SELECT MONTH(COALESCE(m.outbound_time, m.create_time)) AS month, COUNT(*) AS count " +
             "FROM t_material_outbound_log m " +
             "JOIN t_material_stock s ON m.stock_id = s.id " +
@@ -114,7 +119,7 @@ public interface MaterialOutboundLogMapper extends BaseMapper<MaterialOutboundLo
             "     OR (#{materialType} = 'fabric' AND s.material_type = '面料') " +
             "     OR (#{materialType} = 'accessory' AND s.material_type = '辅料')) " +
             "AND (m.delete_flag IS NULL OR m.delete_flag = 0) " +
-            "AND m.tenant_id = #{tenantId} " +
+            "AND m.tenant_id = #{tenantId} AND s.tenant_id = #{tenantId} " +
             "GROUP BY MONTH(COALESCE(m.outbound_time, m.create_time))")
     List<Map<String, Object>> selectYearOutboundByMonthAndType(@Param("year") int year, @Param("materialType") String materialType, @Param("tenantId") Long tenantId);
 }

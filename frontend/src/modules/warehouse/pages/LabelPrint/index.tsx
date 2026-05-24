@@ -1,11 +1,14 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { Card, Input, Button, Space, InputNumber, Radio, App, Spin, Row, Col, Image, Divider, Slider, Switch, Collapse, Tooltip, Tag } from 'antd';
+import { Card, Input, Button, Space, InputNumber, Radio, App, Spin, Row, Col, Image, Divider, Slider, Switch, Collapse, Tooltip, Typography } from 'antd';
 import { PrinterOutlined, SearchOutlined, SettingOutlined, QuestionCircleOutlined, EditOutlined, SaveOutlined } from '@ant-design/icons';
 import QRCode from 'qrcode';
 import { safePrint } from '@/utils/safePrint';
 import api, { parseProductionOrderLines, sortSizeNames } from '@/utils/api';
-import { buildWashLabelSections } from '@/utils/washLabel';
-import { parseCareIconCodes, getEffectiveCareIconCodes, CARE_CATEGORIES, CARE_ICONS, serializeCareIconCodes } from '@/utils/careIcons';
+import { formatMoney } from '@/utils/format';
+import { buildWashLabelPrintHtml, buildWashLabelMultiPageHtml, getDefaultDateText, compositionFromSections, washTextFromInstructions, type WashLabelPrintData } from '@/utils/washLabelPrintTemplate';
+import { parseCareIconCodes, getEffectiveCareIconCodes, CARE_ICONS } from '@/utils/careIcons';
+
+const { Text } = Typography;
 
 interface OrderInfo {
   orderId: string;
@@ -44,7 +47,7 @@ const defaultHang = {
   showInspector: true, showInspectionDate: true,
 };
 const defaultBar = { w: 40, h: 20, codeSz: 7, textSz: 5.5, showName: true };
-const defaultWash = { w: 30, h: 80, showOrigin: true, showUCode: true, titleSz: 7, textSz: 5, careSz: 4 };
+const defaultWash = { w: 30, h: 80, titleSz: 7, textSz: 5, careSz: 4 };
 
 const LabelPrint: React.FC = () => {
   const { message } = App.useApp();
@@ -63,11 +66,6 @@ const LabelPrint: React.FC = () => {
   const [hang, setHang] = useState(defaultHang);
   const [bar, setBar] = useState(defaultBar);
   const [wash, setWash] = useState(defaultWash);
-
-  // 洗水唛编辑状态（本地覆盖，不直接修改订单数据）
-  const [editFabricComp, setEditFabricComp] = useState('');
-  const [editWashInstructions, setEditWashInstructions] = useState('');
-  const [editCareIconCodes, setEditCareIconCodes] = useState<string[]>([]);
 
   const resetSettings = useCallback(() => {
     setHang(defaultHang); setBar(defaultBar); setWash(defaultWash);
@@ -122,9 +120,6 @@ const LabelPrint: React.FC = () => {
         setSelectedOrder(first);
         setSelectedColor(first.colors[0] || '');
         setSelectedSize(first.sizes[0] || '');
-        setEditFabricComp(first.fabricComposition || '');
-        setEditWashInstructions(first.washInstructions || '');
-        setEditCareIconCodes(parseCareIconCodes(first.careIconCodes));
       }
     } catch (e: any) { message.error(e.message || '搜索失败'); } finally { setLoading(false); }
   }, [keyword, message]);
@@ -180,7 +175,7 @@ const LabelPrint: React.FC = () => {
     const hasUCode = hang.showUCode && selectedOrder.uCode;
 
     const certHtml = hasCert ? `<div class="cert-box"><div class="cert-title">合 格 证</div>${certRows.join('')}</div>` : '';
-    const priceHtml = hasPrice ? `<div class="price">¥${selectedOrder.price!.toFixed(2)}</div>` : '';
+    const priceHtml = hasPrice ? `<div class="price">${formatMoney(selectedOrder.price!)}</div>` : '';
     const ucodeHtml = hasUCode ? `<div class="ucode">${selectedOrder.uCode}</div>` : '';
     const bottomHtml = (hasPrice || hasUCode) ? `<div class="bottom-bar">${ucodeHtml}${priceHtml}</div>` : '';
 
@@ -252,95 +247,23 @@ ${Array.from({ length: count }, () => `<div class="lb">
 
   const generateWashlabelHtml = useCallback(async (count: number) => {
     if (!selectedOrder) return '';
-    const w = wash.w; const h = wash.h;
-    const fs = w >= 48 ? 6.5 : 5.5;
-    const fabricComp = editFabricComp !== undefined ? editFabricComp : (selectedOrder.fabricComposition || '');
-    const washInst = editWashInstructions !== undefined ? editWashInstructions : (selectedOrder.washInstructions || '');
-    const careCodes = editCareIconCodes.length > 0 ? editCareIconCodes : getEffectiveCareIconCodes(
+    const careCodes = getEffectiveCareIconCodes(
       selectedOrder.careIconCodes,
       { washTempCode: selectedOrder.washTempCode, bleachCode: selectedOrder.bleachCode, tumbleDryCode: selectedOrder.tumbleDryCode, ironCode: selectedOrder.ironCode, dryCleanCode: selectedOrder.dryCleanCode },
       selectedOrder.washInstructions,
     );
-    const sections = buildWashLabelSections(selectedOrder.fabricCompositionParts, fabricComp);
-    const showPartTitle = sections.length > 1;
-    let compositionHtml = sections
-      .map(section =>
-        `<div class="comp-block">${showPartTitle && section.key !== 'other' ? `<div class="comp-name">${section.label}</div>` : ''}` +
-        `<div class="comp-mats">${section.items.join('<br/>')}</div></div>`
-      ).join('');
-    if (!compositionHtml) {
-      if (fabricComp) {
-        compositionHtml = `<div class="comp-mats">${fabricComp}</div>`;
-      } else {
-        compositionHtml = '<div class="comp-mats" style="color:#aaa">（成分未填写）</div>';
-      }
-    }
-    const washText = (washInst || '').replace(/^洗涤说明[（(]水洗标专用[）)]\s*/u, '').trim();
-    const washInstHtml = washText
-      ? `<div class="section-sep"></div><div class="wash-label">洗涤说明</div><div class="care-wash">${washText.replace(/\n/g, '<br/>')}</div>`
-      : '';
-    const categoryOrder = ['wash', 'bleach', 'dry', 'iron', 'dryclean', 'naturaldry', 'special'];
-    const groups: Record<string, string[]> = {};
-    careCodes.forEach(code => {
-      const def = CARE_ICONS[code];
-      if (!def) return;
-      const cat = def.category;
-      if (!groups[cat]) groups[cat] = [];
-      groups[cat].push(def.svg);
-    });
-    const iconRows = categoryOrder
-      .filter(cat => groups[cat]?.length)
-      .map(cat => `<div class="icon-row">${groups[cat].map(svg => `<span class="icon-cell">${svg}</span>`).join('')}</div>`)
-      .join('');
-    const careIconRow = iconRows ? `<div class="section-sep"></div><div class="icons">${iconRows}</div>` : '';
-    const now = new Date();
-    const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
-    const singlePage = `<div class="label-page">
-  <div class="dash-sep"></div>
-  <div class="top-block">
-    <div class="style-no">${selectedOrder.styleNo || '-'}</div>
-    ${selectedOrder.styleName ? `<div class="style-name">${selectedOrder.styleName}</div>` : ''}
-  </div>
-  <div class="content-block">
-    ${compositionHtml}
-    ${washInstHtml}
-  </div>
-  <div class="bottom-block">
-    ${careIconRow}
-    <div class="footer">${wash.showOrigin ? 'MADE IN CHINA' : ''}</div>
-    <div class="date">${dateStr}${wash.showUCode && selectedOrder.uCode ? '  ' + selectedOrder.uCode : ''}</div>
-  </div>
-  <div class="dash-sep"></div>
-</div>`;
-    return `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
-@page{size:${w}mm ${h}mm;margin:0}
-*{margin:0;padding:0;box-sizing:border-box}
-html,body{width:${w}mm;min-height:${h}mm}
-body{font-family:"PingFang SC","Microsoft YaHei","Noto Sans SC",system-ui,sans-serif;color:#000;background:#fff;-webkit-font-smoothing:antialiased}
-.label-page{position:relative;width:${w}mm;height:${h}mm;padding:2mm 2.2mm;page-break-after:always;display:flex;flex-direction:column;align-items:center}
-.label-page:last-child{page-break-after:auto}
-.dash-sep{border:none;border-top:0.8pt dashed #555;width:calc(100% + 6mm);margin-left:-3mm;flex:0 0 auto}
-.top-block{text-align:center;flex:0 0 auto;width:100%;padding-bottom:1mm;margin-bottom:1mm}
-.style-no{font-size:${w <= 30 ? fs + 0.3 : fs + 0.8}pt;font-weight:800;letter-spacing:0.5mm;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center}
-.style-name{font-size:${w <= 30 ? fs - 0.3 : fs}pt;font-weight:500;color:#555;line-height:1.35;margin-top:0.5mm;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center}
-.content-block{flex:1 1 0;overflow:hidden;min-height:0;width:100%;text-align:center}
-.comp-block{margin:0.5mm 0 1.2mm}
-.comp-name{font-size:${w <= 30 ? fs + 0.2 : fs}pt;font-weight:700;display:block;margin-bottom:0.5mm;text-align:center;letter-spacing:0.3mm}
-.comp-mats{font-size:${w <= 30 ? fs + 1.5 : fs + 0.5}pt;line-height:1.6;font-weight:600;text-align:center}
-.section-sep{width:40%;height:0;border-top:0.3pt solid #bbb;margin:1.5mm auto}
-.wash-label{font-size:${w <= 30 ? fs - 0.1 : fs}pt;font-weight:600;color:#333;line-height:1.5;margin-bottom:0.5mm;text-align:center;letter-spacing:0.3mm}
-.care-wash{font-size:${fs}pt;color:#444;line-height:1.6;margin-top:0.8mm;text-align:center}
-.bottom-block{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;width:100%;margin-top:auto}
-.icons{display:flex;flex-direction:column;gap:1mm;align-items:center;width:100%;margin:0.5mm auto 0}
-.icon-row{display:flex;gap:1mm;align-items:center;justify-content:center;flex-wrap:wrap}
-.icon-cell{width:6mm;height:6mm;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
-.icons svg{width:100%;height:100%}
-.footer{margin-top:1.5mm;font-size:${w <= 30 ? fs - 0.2 : fs}pt;font-weight:700;letter-spacing:0.8mm;line-height:1.3;text-align:center;white-space:nowrap}
-.date{margin-top:1mm;font-size:${fs - 0.5}pt;color:#777;text-align:center;letter-spacing:0.2mm}
-</style></head><body>
-${Array.from({ length: count }, () => singlePage).join('\n')}
-</body></html>`;
-  }, [selectedOrder, wash, editFabricComp, editWashInstructions, editCareIconCodes]);
+    const printData: WashLabelPrintData = {
+      width: wash.w,
+      height: wash.h,
+      compositionText: compositionFromSections(selectedOrder.fabricCompositionParts, selectedOrder.fabricComposition),
+      washInstructionsText: washTextFromInstructions(selectedOrder.washInstructions, selectedOrder.fabricCompositionParts),
+      careIconCodes: careCodes,
+      manufacturingText: 'MADE IN CHINA',
+      dateText: getDefaultDateText(),
+    };
+    if (count <= 1) return buildWashLabelPrintHtml(printData);
+    return buildWashLabelMultiPageHtml(Array.from({ length: count }, () => printData));
+  }, [selectedOrder, wash.w, wash.h]);
 
   const generateHtml = useCallback(async (count: number) => {
     if (printType === 'hangtag') return generateHangtagHtml(count);
@@ -361,8 +284,7 @@ ${Array.from({ length: count }, () => singlePage).join('\n')}
     hang.w, hang.h, hang.titleSz, hang.infoSz, hang.brandName, hang.showStyleNo, hang.showColorSize, hang.showComposition, hang.showOrderNo, hang.showPrice, hang.showUCode, hang.showImage, hang.showQr, hang.showQualityGrade, hang.showExecuteStandard, hang.showSafetyCategory, hang.showInspector, hang.showInspectionDate,
     selectedOrder?.fabricComposition, selectedOrder?.qualityGrade, selectedOrder?.executeStandard, selectedOrder?.safetyCategory, selectedOrder?.inspector, selectedOrder?.inspectionDate,
     bar.w, bar.h, bar.codeSz, bar.textSz, bar.showName,
-    wash.w, wash.h, wash.showOrigin, wash.showUCode,
-    editFabricComp, editWashInstructions, editCareIconCodes,
+    wash.w, wash.h,
     updatePreview]);
 
   const handlePrint = async () => {
@@ -386,6 +308,14 @@ ${Array.from({ length: count }, () => singlePage).join('\n')}
     </div>
   );
 
+  const effectiveCareCodes = selectedOrder
+    ? getEffectiveCareIconCodes(
+        selectedOrder.careIconCodes,
+        { washTempCode: selectedOrder.washTempCode, bleachCode: selectedOrder.bleachCode, tumbleDryCode: selectedOrder.tumbleDryCode, ironCode: selectedOrder.ironCode, dryCleanCode: selectedOrder.dryCleanCode },
+        selectedOrder.washInstructions,
+      )
+    : [];
+
   return (
     <div style={{ padding: 16 }}>
       <Row gutter={16}>
@@ -402,7 +332,7 @@ ${Array.from({ length: count }, () => singlePage).join('\n')}
             <>
               <Card title="打印设置" size="small" style={{ marginBottom: 12 }}>
                 <div style={{ marginBottom: 12 }}>
-                  <div style={{ fontSize: 14, color: '#999', marginBottom: 6 }}>打印数量</div>
+                  <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginBottom: 6 }}>打印数量</div>
                   <InputNumber min={1} max={999} value={printCount} onChange={v => setPrintCount(v || 1)} style={{ width: '100%' }} />
                 </div>
                 <Button type="primary" icon={<PrinterOutlined />} loading={printing} onClick={() => void handlePrint()} block>
@@ -415,7 +345,7 @@ ${Array.from({ length: count }, () => singlePage).join('\n')}
                 children: (
                   <div style={{ padding: '2px 0' }}>
                     <div style={{ marginBottom: 8 }}>
-                      <div style={{ fontSize: 14, color: '#999', marginBottom: 3 }}>尺寸 (mm)</div>
+                      <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginBottom: 3 }}>尺寸 (mm)</div>
                       <Space wrap size={4} style={{ marginBottom: 4 }}>
                         {sizePresets[printType].map(p => (
                           <Button key={p.label} size="small"
@@ -443,16 +373,16 @@ ${Array.from({ length: count }, () => singlePage).join('\n')}
 
                     {printType === 'hangtag' && (<>
                       <div style={{ marginBottom: 8 }}>
-                        <div style={{ fontSize: 14, color: '#999', marginBottom: 3 }}>品牌名（留空=使用款名）</div>
+                        <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginBottom: 3 }}>品牌名（留空=使用款名）</div>
                         <Input size="small" value={hang.brandName} placeholder={selectedOrder.styleName || selectedOrder.styleNo}
                           onChange={e => setHang(h => ({ ...h, brandName: e.target.value }))} maxLength={20} />
                       </div>
                       <div style={{ marginBottom: 6 }}>
-                        <div style={{ fontSize: 14, color: '#999', marginBottom: 2 }}>标题字号: {hang.titleSz}pt</div>
+                        <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginBottom: 2 }}>标题字号: {hang.titleSz}pt</div>
                         <Slider min={8} max={20} step={0.5} value={hang.titleSz} onChange={v => setHang(h => ({ ...h, titleSz: v }))} />
                       </div>
                       <div style={{ marginBottom: 6 }}>
-                        <div style={{ fontSize: 14, color: '#999', marginBottom: 2 }}>信息字号: {hang.infoSz}pt</div>
+                        <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginBottom: 2 }}>信息字号: {hang.infoSz}pt</div>
                         <Slider min={5} max={12} step={0.5} value={hang.infoSz} onChange={v => setHang(h => ({ ...h, infoSz: v }))} />
                       </div>
                       <div style={{ fontSize: 14, color: '#bbb', margin: '6px 0 4px', fontWeight: 600 }}>显示内容</div>
@@ -475,22 +405,18 @@ ${Array.from({ length: count }, () => singlePage).join('\n')}
 
                     {printType === 'barcode' && (<>
                       <div style={{ marginBottom: 6 }}>
-                        <div style={{ fontSize: 14, color: '#999', marginBottom: 2 }}>编码字号: {bar.codeSz}pt</div>
+                        <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginBottom: 2 }}>编码字号: {bar.codeSz}pt</div>
                         <Slider min={5} max={14} step={0.5} value={bar.codeSz} onChange={v => setBar(b => ({ ...b, codeSz: v }))} />
                       </div>
                       <div style={{ marginBottom: 6 }}>
-                        <div style={{ fontSize: 14, color: '#999', marginBottom: 2 }}>文字字号: {bar.textSz}pt</div>
+                        <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginBottom: 2 }}>文字字号: {bar.textSz}pt</div>
                         <Slider min={4} max={10} step={0.5} value={bar.textSz} onChange={v => setBar(b => ({ ...b, textSz: v }))} />
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><span style={{ fontSize: 14 }}>显示款式名</span><Switch size="small" checked={bar.showName} onChange={v => setBar(b => ({ ...b, showName: v }))} /></div>
                     </>)}
 
                     {printType === 'washlabel' && (<>
-                      <div style={{ fontSize: 14, color: '#999', marginBottom: 4 }}>字号根据纸张宽度自动适配</div>
-                      <Space orientation="vertical" style={{ width: '100%' }} size={2}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><span style={{ fontSize: 14 }}>显示产地</span><Switch size="small" checked={wash.showOrigin} onChange={v => setWash(w => ({ ...w, showOrigin: v }))} /></div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><span style={{ fontSize: 14 }}>显示商品编码</span><Switch size="small" checked={wash.showUCode} onChange={v => setWash(w => ({ ...w, showUCode: v }))} /></div>
-                      </Space>
+                      <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginBottom: 4 }}>字号根据纸张宽度自动适配</div>
                     </>)}
 
                     <Button size="small" type="link" danger style={{ marginTop: 6, padding: 0 }} onClick={resetSettings}>恢复默认</Button>
@@ -525,12 +451,12 @@ ${Array.from({ length: count }, () => singlePage).join('\n')}
                   </Col>
                   <Col span={17}>
                     <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>{selectedOrder.styleName || selectedOrder.styleNo}</div>
-                    <div style={{ color: '#666', marginBottom: 4 }}>款号: <span style={{ color: '#1890ff' }}>{selectedOrder.styleNo}</span></div>
-                    <div style={{ color: '#666', marginBottom: 12 }}>订单号: {selectedOrder.orderNo}</div>
+                    <div style={{ color: 'var(--color-text-secondary)', marginBottom: 4 }}>款号: <span style={{ color: '#1890ff' }}>{selectedOrder.styleNo}</span></div>
+                    <div style={{ color: 'var(--color-text-secondary)', marginBottom: 12 }}>订单号: {selectedOrder.orderNo}</div>
                     <Divider style={{ margin: '10px 0' }} />
                     {selectedOrder.colors.length > 0 && (
                       <div style={{ marginBottom: 12 }}>
-                        <div style={{ fontSize: 14, color: '#999', marginBottom: 6 }}>颜色</div>
+                        <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginBottom: 6 }}>颜色</div>
                         <Space wrap>{selectedOrder.colors.map(c => (
                           <Button key={c} size="small" type={selectedColor === c ? 'primary' : 'default'} onClick={() => setSelectedColor(c)}>{c}</Button>
                         ))}</Space>
@@ -538,7 +464,7 @@ ${Array.from({ length: count }, () => singlePage).join('\n')}
                     )}
                     {selectedOrder.sizes.length > 0 && (
                       <div style={{ marginBottom: 12 }}>
-                        <div style={{ fontSize: 14, color: '#999', marginBottom: 6 }}>尺码</div>
+                        <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginBottom: 6 }}>尺码</div>
                         <Space wrap>{selectedOrder.sizes.map(s => (
                           <Button key={s} size="small" type={selectedSize === s ? 'primary' : 'default'} onClick={() => setSelectedSize(s)}>{s}</Button>
                         ))}</Space>
@@ -551,42 +477,42 @@ ${Array.from({ length: count }, () => singlePage).join('\n')}
                       children: (
                         <div style={{ padding: '2px 0' }}>
                           <div style={{ marginBottom: 6 }}>
-                            <div style={{ fontSize: 14, color: '#999', marginBottom: 2 }}>成分</div>
+                            <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginBottom: 2 }}>成分</div>
                             <Input size="small" value={selectedOrder.fabricComposition} placeholder="如：100%棉"
                               onChange={e => setSelectedOrder(o => o ? { ...o, fabricComposition: e.target.value } : o)} />
                           </div>
                           <div style={{ marginBottom: 6 }}>
-                            <div style={{ fontSize: 14, color: '#999', marginBottom: 2 }}>质量等级</div>
+                            <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginBottom: 2 }}>质量等级</div>
                             <Input size="small" value={selectedOrder.qualityGrade} placeholder="如：合格品"
                               onChange={e => setSelectedOrder(o => o ? { ...o, qualityGrade: e.target.value } : o)} />
                           </div>
                           <div style={{ marginBottom: 6 }}>
-                            <div style={{ fontSize: 14, color: '#999', marginBottom: 2 }}>执行标准</div>
+                            <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginBottom: 2 }}>执行标准</div>
                             <Input size="small" value={selectedOrder.executeStandard} placeholder="如：GB/T 2660-2017"
                               onChange={e => setSelectedOrder(o => o ? { ...o, executeStandard: e.target.value } : o)} />
                           </div>
                           <div style={{ marginBottom: 6 }}>
-                            <div style={{ fontSize: 14, color: '#999', marginBottom: 2 }}>安全类别</div>
+                            <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginBottom: 2 }}>安全类别</div>
                             <Input size="small" value={selectedOrder.safetyCategory} placeholder="如：GB 18401 B类"
                               onChange={e => setSelectedOrder(o => o ? { ...o, safetyCategory: e.target.value } : o)} />
                           </div>
                           <div style={{ marginBottom: 6 }}>
-                            <div style={{ fontSize: 14, color: '#999', marginBottom: 2 }}>检验员</div>
+                            <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginBottom: 2 }}>检验员</div>
                             <Input size="small" value={selectedOrder.inspector} placeholder="检验员姓名"
                               onChange={e => setSelectedOrder(o => o ? { ...o, inspector: e.target.value } : o)} />
                           </div>
                           <div style={{ marginBottom: 6 }}>
-                            <div style={{ fontSize: 14, color: '#999', marginBottom: 2 }}>检验日期</div>
+                            <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginBottom: 2 }}>检验日期</div>
                             <Input size="small" value={selectedOrder.inspectionDate} placeholder="如：2026-05-15"
                               onChange={e => setSelectedOrder(o => o ? { ...o, inspectionDate: e.target.value } : o)} />
                           </div>
                           <div style={{ marginBottom: 6 }}>
-                            <div style={{ fontSize: 14, color: '#999', marginBottom: 2 }}>价格（元）</div>
+                            <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginBottom: 2 }}>价格（元）</div>
                             <InputNumber size="small" min={0} step={0.01} value={selectedOrder.price ?? undefined} placeholder="如：299.00"
                               onChange={v => setSelectedOrder(o => o ? { ...o, price: v ?? 0 } : o)} style={{ width: '100%' }} />
                           </div>
                           <div style={{ marginBottom: 6 }}>
-                            <div style={{ fontSize: 14, color: '#999', marginBottom: 2 }}>商品编码（U码）</div>
+                            <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginBottom: 2 }}>商品编码（U码）</div>
                             <Input size="small" value={selectedOrder.uCode} placeholder="商品条码"
                               onChange={e => setSelectedOrder(o => o ? { ...o, uCode: e.target.value } : o)} />
                           </div>
@@ -615,106 +541,58 @@ ${Array.from({ length: count }, () => singlePage).join('\n')}
                         </div>
                       ),
                     }, {
-                      key: 'wash-edit', label: <span><EditOutlined style={{ marginRight: 6 }} />洗水唛内容编辑</span>,
+                      key: 'wash-info', label: <span>洗水唛信息（样衣设定）</span>,
                       children: (
                         <div style={{ padding: '2px 0' }}>
-                          <div style={{ marginBottom: 6 }}>
-                            <div style={{ fontSize: 14, color: '#999', marginBottom: 2 }}>面料成分{editFabricComp !== (selectedOrder.fabricComposition || '') ? <Tag color="blue" style={{ fontSize: 9, marginLeft: 4, padding: '0 4px', lineHeight: '16px' }}>已改</Tag> : null}</div>
-                            <Input.TextArea
-                              size="small"
-                              rows={2}
-                              value={editFabricComp}
-                              placeholder="如：100%棉 或 70%棉 30%聚酯"
-                              onChange={e => setEditFabricComp(e.target.value)}
-                              style={{ fontSize: 14 }}
-                            />
+                          <div style={{ marginBottom: 8 }}>
+                            <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginBottom: 2 }}>① 面料成分</div>
+                            <Text style={{ fontSize: 14 }}>
+                              {compositionFromSections(selectedOrder.fabricCompositionParts, selectedOrder.fabricComposition) || '未设定'}
+                            </Text>
                           </div>
-                          <div style={{ marginBottom: 6 }}>
-                            <div style={{ fontSize: 14, color: '#999', marginBottom: 2 }}>洗涤说明{editWashInstructions !== (selectedOrder.washInstructions || '') ? <Tag color="blue" style={{ fontSize: 9, marginLeft: 4, padding: '0 4px', lineHeight: '16px' }}>已改</Tag> : null}</div>
-                            <Input.TextArea
-                              size="small"
-                              rows={3}
-                              value={editWashInstructions}
-                              placeholder="如：30°C水洗，不可漂白，悬挂晾干"
-                              onChange={e => setEditWashInstructions(e.target.value)}
-                              style={{ fontSize: 14 }}
-                            />
+                          <div style={{ marginBottom: 8 }}>
+                            <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginBottom: 2 }}>② 洗涤说明</div>
+                            <Text style={{ fontSize: 14, whiteSpace: 'pre-wrap' }}>
+                              {washTextFromInstructions(selectedOrder.washInstructions, selectedOrder.fabricCompositionParts) || '未设定'}
+                            </Text>
                           </div>
-                          <div style={{ marginBottom: 6 }}>
-                            <div style={{ fontSize: 14, color: '#999', marginBottom: 4 }}>护理图标（点击切换，同类只选一个）</div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                              {CARE_CATEGORIES.map(cat => (
-                                <div key={cat.key}>
-                                  <div style={{ fontSize: 14, color: '#aaa', marginBottom: 3, fontWeight: 500 }}>{cat.label}</div>
-                                  <Space wrap size={6}>
-                                    {cat.codes.map(code => {
-                                      const icon = CARE_ICONS[code];
-                                      const selected = editCareIconCodes.includes(code);
-                                      return (
-                                        <div
-                                          key={code}
-                                          onClick={() => {
-                                            setEditCareIconCodes(prev => {
-                                              const sameCat = prev.filter(c => CARE_ICONS[c]?.category !== cat.key);
-                                              if (prev.includes(code)) return sameCat;
-                                              return [...sameCat, code];
-                                            });
-                                          }}
-                                          style={{
-                                            display: 'inline-flex', alignItems: 'center', gap: 4,
-                                            padding: '3px 8px', borderRadius: 6, cursor: 'pointer',
-                                            border: selected ? '1.5px solid #1677ff' : '1px solid #d9d9d9',
-                                            background: selected ? '#e6f4ff' : '#fff',
-                                            transition: 'all 0.15s',
-                                          }}
-                                        >
-                                          <span dangerouslySetInnerHTML={{ __html: icon?.svg || '' }} style={{ display: 'inline-block', width: 22, height: 22, flexShrink: 0 }} />
-                                          <span style={{ fontSize: 14, color: selected ? '#1677ff' : '#666', whiteSpace: 'nowrap' }}>{icon?.label || code}</span>
-                                        </div>
-                                      );
-                                    })}
-                                  </Space>
-                                </div>
-                              ))}
-                            </div>
+                          <div style={{ marginBottom: 8 }}>
+                            <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginBottom: 4 }}>③ 护理图标</div>
+                            {effectiveCareCodes.length > 0 ? (
+                              <Space wrap size={6}>
+                                {effectiveCareCodes.map(code => {
+                                  const icon = CARE_ICONS[code];
+                                  return (
+                                    <div key={code} style={{
+                                      display: 'inline-flex', alignItems: 'center', gap: 4,
+                                      padding: '3px 8px', borderRadius: 6,
+                                      border: '1.5px solid #1677ff',
+                                      background: '#e6f4ff',
+                                    }}>
+                                      <span dangerouslySetInnerHTML={{ __html: icon?.svg || '' }} style={{ display: 'inline-block', width: 22, height: 22, flexShrink: 0 }} />
+                                      <span style={{ fontSize: 14, color: '#1677ff', whiteSpace: 'nowrap' }}>{icon?.label || code}</span>
+                                    </div>
+                                  );
+                                })}
+                              </Space>
+                            ) : (
+                              <Text style={{ fontSize: 14, color: '#bbb' }}>未设定</Text>
+                            )}
                           </div>
-                          <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
-                            <Button size="small" type="primary" icon={<SaveOutlined />}
-                              onClick={async () => {
-                                try {
-                                  const res = await api.get(`/style/info/${selectedOrder.styleId}`);
-                                  const detail = res?.data?.data || res?.data || {};
-                                  if (!detail.styleNo) { message.error('款式信息不完整，无法保存'); return; }
-                                  await api.put('/style/info', {
-                                    ...detail,
-                                    fabricComposition: editFabricComp,
-                                    washInstructions: editWashInstructions,
-                                    careIconCodes: serializeCareIconCodes(editCareIconCodes),
-                                  });
-                                  setSelectedOrder(o => o ? {
-                                    ...o,
-                                    fabricComposition: editFabricComp,
-                                    washInstructions: editWashInstructions,
-                                    careIconCodes: serializeCareIconCodes(editCareIconCodes) || '',
-                                  } : o);
-                                  message.success('洗水唛保存成功');
-                                } catch (e: any) { message.error(e.message || '保存失败'); }
-                              }}>保存到款式资料</Button>
-                            <Button size="small" onClick={() => {
-                              setEditFabricComp(selectedOrder.fabricComposition || '');
-                              setEditWashInstructions(selectedOrder.washInstructions || '');
-                              setEditCareIconCodes(parseCareIconCodes(selectedOrder.careIconCodes));
-                            }}>还原原始数据</Button>
+                          <div>
+                            <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginBottom: 2 }}>④ 生产制造</div>
+                            <Text style={{ fontSize: 14 }}>MADE IN CHINA</Text>
+                            <Text style={{ fontSize: 14, color: '#888', marginLeft: 12 }}>{getDefaultDateText()}</Text>
                           </div>
                         </div>
                       ),
                     }]} />
 
                     <Divider style={{ margin: '10px 0' }} />
-                    <div style={{ fontSize: 14, color: '#999' }}>
-                      当前打印: <span style={{ color: '#222', fontWeight: 600 }}>{ptLabel}</span>
-                      {' | '}SKU: <span style={{ color: '#222', fontWeight: 600 }}>{selectedOrder.styleNo}-{selectedColor}-{selectedSize}</span>
-                      {selectedOrder.price ? ` | ¥${selectedOrder.price.toFixed(2)}` : ''}
+                    <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>
+                      当前打印: <span style={{ color: 'var(--color-text-primary)', fontWeight: 600 }}>{ptLabel}</span>
+                      {' | '}SKU: <span style={{ color: 'var(--color-text-primary)', fontWeight: 600 }}>{selectedOrder.styleNo}-{selectedColor}-{selectedSize}</span>
+                      {selectedOrder.price ? ` | ${formatMoney(selectedOrder.price)}` : ''}
                     </div>
                   </Col>
                 </Row>
@@ -722,7 +600,7 @@ ${Array.from({ length: count }, () => singlePage).join('\n')}
                 <Divider style={{ margin: '14px 0' }} />
 
                 <div>
-                  <div style={{ fontSize: 14, color: '#999', marginBottom: 6 }}>{ptLabel}预览（实时更新）</div>
+                  <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginBottom: 6 }}>{ptLabel}预览（实时更新）</div>
                   <div style={{ border: '1px solid #e0e0e0', borderRadius: 8, overflow: 'hidden', background: '#fff' }}>
                     <iframe srcDoc={previewHtml} style={{ width: '100%', height: 350, border: 'none' }} title="打印预览" />
                   </div>
@@ -730,7 +608,7 @@ ${Array.from({ length: count }, () => singlePage).join('\n')}
               </Card>
             ) : orders.length > 0 ? (
               <Card>
-                <div style={{ fontSize: 14, color: '#999', marginBottom: 8 }}>搜索到 {orders.length} 个订单，请选择</div>
+                <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginBottom: 8 }}>搜索到 {orders.length} 个订单，请选择</div>
                 <Space orientation="vertical" style={{ width: '100%' }}>
                   {orders.map(o => (
                     <Card key={o.orderId} size="small" hoverable style={{ cursor: 'pointer' }}
@@ -738,12 +616,9 @@ ${Array.from({ length: count }, () => singlePage).join('\n')}
                         setSelectedOrder(o);
                         setSelectedColor(o.colors[0] || '');
                         setSelectedSize(o.sizes[0] || '');
-                        setEditFabricComp(o.fabricComposition || '');
-                        setEditWashInstructions(o.washInstructions || '');
-                        setEditCareIconCodes(parseCareIconCodes(o.careIconCodes));
                       }}>
                       <div style={{ fontWeight: 600 }}>{o.styleName || o.styleNo}</div>
-                      <div style={{ fontSize: 14, color: '#666' }}>订单号: {o.orderNo} | {o.colors.join('/')} | {o.sizes.join('/')}</div>
+                      <div style={{ fontSize: 14, color: 'var(--color-text-secondary)' }}>订单号: {o.orderNo} | {o.colors.join('/')} | {o.sizes.join('/')}</div>
                     </Card>
                   ))}
                 </Space>

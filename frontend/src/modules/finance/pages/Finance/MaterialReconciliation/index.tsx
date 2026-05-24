@@ -104,7 +104,7 @@ const MaterialReconciliation: React.FC = () => {
             title={<span style={{ fontSize: 14, color: '#1677ff' }}> 智能财务审核助手</span>}
           >
             {!financeAudit ? (
-              <span style={{ fontSize: 14, color: '#8c8c8c' }}>点击「AI分析」自动检测对账差异并给出审核建议</span>
+              <span style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>点击「AI分析」自动检测对账差异并给出审核建议</span>
             ) : (
               <div style={{ fontSize: 14 }}>
                 <div style={{ marginBottom: 4 }}>
@@ -116,7 +116,7 @@ const MaterialReconciliation: React.FC = () => {
                 {financeAudit.findings?.length > 0 && (
                   <ul style={{ margin: '4px 0 0 0', paddingLeft: 16, color: '#595959' }}>
                     {financeAudit.findings.slice(0, 3).map((f: any, i: number) => <li key={i}>{f.description || f.detail || String(f)}</li>)}
-                    {financeAudit.findings.length > 3 && <li style={{ color: '#8c8c8c' }}>...共 {financeAudit.findings.length} 条异常</li>}
+                    {financeAudit.findings.length > 3 && <li style={{ color: 'var(--color-text-tertiary)' }}>...共 {financeAudit.findings.length} 条异常</li>}
                   </ul>
                 )}
               </div>

@@ -49,7 +49,7 @@ const OrderCreateModalSidebar: React.FC<Props> = ({
               borderRadius={8}
             />
           </div>
-          <div style={{ fontSize: 14, color: '#8c8c8c', textAlign: 'center', marginTop: 4 }}>
+          <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', textAlign: 'center', marginTop: 4 }}>
             悬停查看报价参考
           </div>
         </div>

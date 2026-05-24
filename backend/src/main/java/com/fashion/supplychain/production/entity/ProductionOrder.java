@@ -231,6 +231,12 @@ public class ProductionOrder {
     @TableField("urgency_level")
     private String urgencyLevel;
 
+    @TableField("urge_count")
+    private Integer urgeCount;
+
+    @TableField("last_urge_time")
+    private LocalDateTime lastUrgeTime;
+
     /**
      * 订单类型(FIRST:首单, REORDER:翻单，默认FIRST)
      */
@@ -553,7 +559,7 @@ public class ProductionOrder {
     private String remarks;
 
     /**
-     * 节点操作记录(委派工厂/指定负责人/备注等)
+     * 节点操作记录(委派工厂/指定领取人/备注等)
      * JSON格式存储各节点的操作信息
      */
     @TableField("node_operations")

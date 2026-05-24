@@ -10,6 +10,8 @@ import StandardSearchBar from '@/components/common/StandardSearchBar';
 import { useTablePagination } from '@/hooks';
 import api from '@/utils/api';
 import dayjs from 'dayjs';
+import { formatDateTime } from '@/utils/datetime';
+import { formatMoney } from '@/utils/format';
 import { useOutstockShare } from './useOutstockShare';
 import { printOutstockRecord } from './outstockPrintHelper';
 import ShareLinkModal from './ShareLinkModal';
@@ -190,7 +192,7 @@ const OutstockRecordTab: React.FC = () => {
       align: 'center' as const,
       render: (val: number) => {
         const sale = Number(val) || 0;
-        return <span style={{ color: '#cf1322', fontWeight: 600 }}>¥{sale.toFixed(2)}</span>;
+        return <span style={{ color: '#cf1322', fontWeight: 600 }}>{formatMoney(sale)}</span>;
       },
     },
     {
@@ -211,7 +213,7 @@ const OutstockRecordTab: React.FC = () => {
       width: 110,
       align: 'right',
       render: (val) => val != null ? (
-        <span style={{ color: '#cf1322', fontWeight: 600 }}>¥{Number(val).toFixed(2)}</span>
+        <span style={{ color: '#cf1322', fontWeight: 600 }}>{formatMoney(Number(val))}</span>
       ) : '-',
     },
     {
@@ -220,7 +222,7 @@ const OutstockRecordTab: React.FC = () => {
       width: 110,
       align: 'right',
       render: (val) => val != null ? (
-        <span style={{ color: 'var(--color-success)', fontWeight: 600 }}>¥{Number(val).toFixed(2)}</span>
+        <span style={{ color: 'var(--color-success)', fontWeight: 600 }}>{formatMoney(Number(val))}</span>
       ) : '-',
     },
     {
@@ -278,7 +280,7 @@ const OutstockRecordTab: React.FC = () => {
       title: '结算时间',
       dataIndex: 'settlementTime',
       width: 160,
-      render: (text) => text ? dayjs(text).format('YYYY-MM-DD HH:mm') : '-',
+      render: (text) => text ? formatDateTime(text) : '-',
     },
     {
       title: '审核状态',
@@ -293,7 +295,7 @@ const OutstockRecordTab: React.FC = () => {
       title: '出库时间',
       dataIndex: 'createTime',
       width: 160,
-      render: (text) => text ? dayjs(text).format('YYYY-MM-DD HH:mm') : '-',
+      render: (text) => text ? formatDateTime(text) : '-',
     },
     {
       title: '操作',

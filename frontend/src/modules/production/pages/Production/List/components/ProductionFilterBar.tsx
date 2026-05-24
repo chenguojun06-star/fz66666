@@ -129,7 +129,7 @@ function buildFilterBar(props: ProductionFilterBarProps) {
           content={(
             <div>
               <div style={{ fontWeight: 600, color: 'var(--neutral-text-secondary)', padding: '8px 16px 4px' }}>选择要显示的列</div>
-              <div style={{ borderTop: '1px solid #f0f0f0', margin: '4px 0' }} />
+              <div style={{ borderTop: '1px solid var(--color-border-light)', margin: '4px 0' }} />
               {columnOptions.map(opt => (
                 <div key={opt.key} style={{ padding: '4px 16px' }}>
                   <Checkbox
@@ -140,7 +140,7 @@ function buildFilterBar(props: ProductionFilterBarProps) {
                   </Checkbox>
                 </div>
               ))}
-              <div style={{ borderTop: '1px solid #f0f0f0', margin: '4px 0' }} />
+              <div style={{ borderTop: '1px solid var(--color-border-light)', margin: '4px 0' }} />
               <div
                 style={{ color: 'var(--primary-color)', textAlign: 'center', cursor: 'pointer', padding: '6px 16px' }}
                 onClick={() => resetColumnSettings()}

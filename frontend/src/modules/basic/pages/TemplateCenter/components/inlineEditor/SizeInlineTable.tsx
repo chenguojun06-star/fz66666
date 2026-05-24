@@ -28,6 +28,7 @@ const SizeInlineTable: React.FC<SizeInlineTableProps> = ({ value, onChange, read
   const sizeHeaderInputRef = useRef<any>(null);
   const sortedRef = useRef(false);
   const dictLoadedRef = useRef(false);
+  const sizeSearchTimerRef = useRef<ReturnType<typeof setTimeout>>();
 
   useEffect(() => {
     if (dictLoadedRef.current) return;
@@ -286,9 +287,12 @@ const SizeInlineTable: React.FC<SizeInlineTableProps> = ({ value, onChange, read
               }
               onSearch={(searchValue) => {
                 const trimmed = searchValue && searchValue.trim();
-                if (trimmed && !sizeOptions.some((opt) => opt.value === trimmed)) {
-                  ensureSizeOption(trimmed);
-                }
+                if (sizeSearchTimerRef.current) clearTimeout(sizeSearchTimerRef.current);
+                sizeSearchTimerRef.current = setTimeout(() => {
+                  if (trimmed && !sizeOptions.some((opt) => opt.value === trimmed)) {
+                    ensureSizeOption(trimmed);
+                  }
+                }, 300);
               }}
               tokenSeparators={[',', '，']}
             />

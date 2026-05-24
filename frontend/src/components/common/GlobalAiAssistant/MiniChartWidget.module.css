@@ -24,13 +24,13 @@
 .miniChartSubtitle {
   font-size: 13px;
   font-weight: 400;
-  color: #8c8c8c;
+  color: var(--color-text-tertiary);
 }
 
 .chartLoading {
   text-align: center;
   padding: 20px;
-  color: #bfbfbf;
+  color: var(--color-text-quaternary);
   font-size: 12px;
 }
 

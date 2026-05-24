@@ -1,4 +1,5 @@
 import type { OrderLearningRecommendationResponse } from '@/services/intelligence/orderLearningApi';
+import { formatMoney } from '@/utils/format';
 
 const pricingModeTextMap: Record<string, string> = {
   PROCESS: '工序单价',
@@ -37,7 +38,7 @@ export const presentOrderLearningRecommendation = (
     recommendationLines: [
       `推荐生产方式：${factoryModeText(payload.recommendedFactoryMode)}`,
       `推荐单价口径：${pricingModeText(payload.recommendedPricingMode)}`,
-      payload.recommendedUnitPrice ? `推荐参考单价：¥${Number(payload.recommendedUnitPrice).toFixed(2)}/件` : '',
+      payload.recommendedUnitPrice ? `推荐参考单价：${formatMoney(payload.recommendedUnitPrice)}/件` : '',
       payload.costInsight || '',
       payload.deliveryInsight || '',
       payload.riskInsight || '',
@@ -46,10 +47,10 @@ export const presentOrderLearningRecommendation = (
       payload.gapInsight || '',
       payload.actionSuggestion || '',
       payload.extraUnitCostIfKeepCurrent && payload.extraUnitCostIfKeepCurrent > 0
-        ? `继续当前方案，预计单件多花 ¥${Number(payload.extraUnitCostIfKeepCurrent).toFixed(2)}`
+        ? `继续当前方案，预计单件多花 ${formatMoney(payload.extraUnitCostIfKeepCurrent)}`
         : '',
       payload.extraTotalCostIfKeepCurrent && payload.extraTotalCostIfKeepCurrent > 0
-        ? `继续当前方案，整单预计多花 ¥${Number(payload.extraTotalCostIfKeepCurrent).toFixed(2)}`
+        ? `继续当前方案，整单预计多花 ${formatMoney(payload.extraTotalCostIfKeepCurrent)}`
         : '',
     ].filter(Boolean),
     tags: payload.recommendationTags || [],
@@ -58,7 +59,7 @@ export const presentOrderLearningRecommendation = (
         item.orderNo || '-',
         factoryModeText(item.factoryMode),
         pricingModeText(item.pricingMode),
-        item.selectedUnitPrice ? `下单 ¥${Number(item.selectedUnitPrice).toFixed(2)}` : '',
+        item.selectedUnitPrice ? `下单 ${formatMoney(item.selectedUnitPrice)}` : '',
         item.delayDays ? `延期 ${item.delayDays} 天` : '',
         item.outcomeSummary || '',
       ].filter(Boolean);
@@ -70,7 +71,7 @@ export const presentOrderLearningRecommendation = (
         item.styleName || '',
         factoryModeText(item.factoryMode),
         pricingModeText(item.pricingMode),
-        item.selectedUnitPrice ? `下单 ¥${Number(item.selectedUnitPrice).toFixed(2)}` : '',
+        item.selectedUnitPrice ? `下单 ${formatMoney(item.selectedUnitPrice)}` : '',
         item.outcomeSummary || '',
       ].filter(Boolean);
       return parts.join(' · ');
@@ -79,7 +80,7 @@ export const presentOrderLearningRecommendation = (
       const parts = [
         item.factoryName || factoryModeText(item.factoryMode),
         typeof item.orderCount === 'number' ? `${item.orderCount} 单` : '',
-        typeof item.avgUnitPrice === 'number' ? `均价 ¥${Number(item.avgUnitPrice).toFixed(2)}` : '',
+        typeof item.avgUnitPrice === 'number' ? `均价 ${formatMoney(item.avgUnitPrice)}` : '',
         typeof item.avgDelayDays === 'number' ? `平均延期 ${item.avgDelayDays} 天` : '',
         typeof item.avgOutcomeScore === 'number' ? `综合分 ${Number(item.avgOutcomeScore).toFixed(1)}` : '',
       ].filter(Boolean);

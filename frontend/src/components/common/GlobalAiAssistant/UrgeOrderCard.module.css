@@ -44,7 +44,7 @@
   padding: 6px 10px;
   font-size: 14px;
   background: #fffbf0;
-  color: #333;
+  color: var(--color-text-primary);
   outline: none;
   width: 100%;
   box-sizing: border-box;
@@ -59,7 +59,7 @@
   padding: 6px 10px;
   font-size: 14px;
   background: #fffbf0;
-  color: #333;
+  color: var(--color-text-primary);
   resize: none;
   outline: none;
   font-family: inherit;

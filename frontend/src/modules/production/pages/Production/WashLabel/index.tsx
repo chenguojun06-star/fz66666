@@ -110,6 +110,7 @@ const WashLabelPage: React.FC = () => {
   const [batchPrintOpen, setBatchPrintOpen] = useState(false);
   const [batchPrintItems, setBatchPrintItems] = useState<WashLabelItem[]>([]);
   const [batchPrintLoading, setBatchPrintLoading] = useState(false);
+  const [printingOrderId, setPrintingOrderId] = useState<string | null>(null);
 
   /** 并行获取款式标签信息（静默，不阻塞UI，利用缓存） */
   const fetchStyleInfoForOrders = useCallback(async (list: ProductionOrder[]) => {
@@ -198,10 +199,15 @@ const WashLabelPage: React.FC = () => {
 
   const openBatchPrint = useCallback(async (targetOrders: ProductionOrder[]) => {
     setBatchPrintLoading(true);
+    if (targetOrders.length === 1 && targetOrders[0].id) setPrintingOrderId(targetOrders[0].id);
     setBatchPrintOpen(true);
-    const items = await buildPrintItems(targetOrders);
-    setBatchPrintItems(items);
-    setBatchPrintLoading(false);
+    try {
+      const items = await buildPrintItems(targetOrders);
+      setBatchPrintItems(items);
+    } finally {
+      setBatchPrintLoading(false);
+      setPrintingOrderId(null);
+    }
   }, [buildPrintItems]);
 
   const handleBatchPrint = async () => {
@@ -310,8 +316,8 @@ const WashLabelPage: React.FC = () => {
       width: 80,
       render: (_: unknown, record: ProductionOrder) => (
         <Button
-         
           icon={<PrinterOutlined />}
+          loading={record.id === printingOrderId}
           onClick={() => void openBatchPrint([record])}
         >
           打印
@@ -376,6 +382,7 @@ const WashLabelPage: React.FC = () => {
               <Button
                 type="primary"
                 icon={<PrinterOutlined />}
+                loading={batchPrintLoading}
                 disabled={selectedRowKeys.length === 0}
                 onClick={() => void handleBatchPrint()}
               >

@@ -27,18 +27,13 @@ import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
 import { useSearchParams } from 'react-router-dom';
+import { formatDateTime } from '@/utils/datetime';
 
 export const STYLE_INFO_LIST_REFRESH_KEY = 'style-info-list:refresh-needed';
 
-const formatTime = (value?: string) => {
-  if (!value) return '-';
-  const instance = dayjs(value);
-  return instance.isValid() ? instance.format('YYYY-MM-DD HH:mm') : String(value);
-};
-
 const getRecordSwitchButtonStyle = (selected: boolean) => {
   return {
-    background: '#ffffff',
+    background: 'var(--color-bg-base)',
     borderColor: selected ? '#cbd5e1' : '#e2e8f0',
     color: selected ? '#0f172a' : '#475569',
     boxShadow: selected ? '0 2px 8px rgba(15, 23, 42, 0.08)' : 'none',
@@ -297,28 +292,28 @@ const SampleInventory: React.FC = () => {
       dataIndex: 'sampleCompletedTime',
       key: 'sampleCompletedTime',
       width: 168,
-      render: (text) => formatTime(text),
+      render: (text) => formatDateTime(text),
     },
     {
       title: '入库时间',
       dataIndex: 'createTime',
       key: 'createTime',
       width: 168,
-      render: (text) => formatTime(text),
+      render: (text) => formatDateTime(text),
     },
     {
       title: '最近更新时间',
       dataIndex: 'updateTime',
       key: 'updateTime',
       width: 168,
-      render: (text) => formatTime(text),
+      render: (text) => formatDateTime(text),
     },
     {
       title: '销毁时间',
       dataIndex: 'destroyTime',
       key: 'destroyTime',
       width: 168,
-      render: (text) => formatTime(text),
+      render: (text) => formatDateTime(text),
     },
     {
       title: '位置',

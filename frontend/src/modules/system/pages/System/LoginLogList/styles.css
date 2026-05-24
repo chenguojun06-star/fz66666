@@ -2,7 +2,7 @@
 .empty-state {
   text-align: center;
   padding: 40px 0;
-  color: #8c8c8c;
+  color: var(--color-text-tertiary);
   font-size: 14px;
 }
 
@@ -24,7 +24,7 @@
 }
 
 .user-perm-tree {
-  border: 1px solid #f0f0f0;
+  border: 1px solid var(--color-border-light);
   border-radius: 12px;
   padding: 12px;
   background: var(--neutral-white);
@@ -37,7 +37,7 @@
 }
 
 .permission-tree {
-  border: 1px solid #f0f0f0;
+  border: 1px solid var(--color-border-light);
   padding: 12px;
   background: var(--neutral-white);
   max-height: 300px;

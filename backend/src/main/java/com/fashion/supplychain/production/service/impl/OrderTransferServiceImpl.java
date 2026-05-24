@@ -306,7 +306,7 @@ public class OrderTransferServiceImpl extends ServiceImpl<OrderTransferMapper, O
         boolean updated = this.updateById(transfer);
 
         if (updated) {
-            // ✅ 人员转单：将订单责任人更新为接收人
+            // ✅ 人员转单：将订单领取人更新为接收人
             applyTransferToOrder(transfer);
             log.info("接受订单转移: transferId={}, orderId={}, toUserId={}",
                     transferId, transfer.getOrderId(), currentUserId);
@@ -369,7 +369,7 @@ public class OrderTransferServiceImpl extends ServiceImpl<OrderTransferMapper, O
                     order.setCreatedById(String.valueOf(toUser.getId()));
                     order.setCreatedByName(toUser.getName());
                     productionOrderService.updateById(order);
-                    log.info("[转单生效] 责任人更新: orderId={}, newUserId={}, newUserName={}",
+                    log.info("[转单生效] 领取人更新: orderId={}, newUserId={}, newUserName={}",
                             order.getId(), toUser.getId(), toUser.getName());
                 }
             }

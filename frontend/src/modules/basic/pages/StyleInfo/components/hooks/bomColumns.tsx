@@ -265,7 +265,7 @@ export function useBomColumns({
                 const liveUsage = liveRow.usageAmount ?? text;
                 const liveDisplay = hasPatternData ? liveUsage : (liveDevUsage ?? liveUsage);
                 return (
-                  <span style={{ color: '#8c8c8c' }}>
+                  <span style={{ color: 'var(--color-text-tertiary)' }}>
                     {liveDisplay != null ? liveDisplay : '-'}
                     {hasPatternData && <span style={{ fontSize: 14, marginLeft: 4, color: '#52c41a' }}>(纸样)</span>}
                   </span>
@@ -325,7 +325,7 @@ export function useBomColumns({
         <Space size={4}>
           换算
           <Tooltip title="每公斤对应的米数，BOM单位为公斤时参与换算，辅料不换算">
-            <QuestionCircleOutlined style={{ color: '#8c8c8c', cursor: 'help' }} />
+            <QuestionCircleOutlined style={{ color: 'var(--color-text-tertiary)', cursor: 'help' }} />
           </Tooltip>
         </Space>
       ),

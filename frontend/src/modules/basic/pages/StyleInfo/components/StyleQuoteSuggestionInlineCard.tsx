@@ -85,14 +85,14 @@ const StyleQuoteSuggestionInlineCard: React.FC<Props> = ({ styleNo, sourceStyleN
         <span style={{ color: '#ad6800', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
           <BulbOutlined /> AI报价建议
         </span>
-        <span style={{ color: '#8c8c8c', fontSize: 14 }}>分析对象：{subjectText}</span>
+        <span style={{ color: 'var(--color-text-tertiary)', fontSize: 14 }}>分析对象：{subjectText}</span>
         <span style={{ marginLeft: 'auto', color: '#ad6800', fontSize: 14, display: 'flex', alignItems: 'center', gap: 4 }}>
           {expanded ? '收起' : '展开'} {expanded ? <DownOutlined style={{ fontSize: 12 }} /> : <RightOutlined style={{ fontSize: 12 }} />}
         </span>
       </div>
 
       {expanded && (
-        <div style={{ padding: '12px 14px', background: '#fff' }}>
+        <div style={{ padding: '12px 14px', background: 'var(--color-bg-base)' }}>
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 10 }}>
             <Button
              
@@ -106,7 +106,7 @@ const StyleQuoteSuggestionInlineCard: React.FC<Props> = ({ styleNo, sourceStyleN
           </div>
 
           {!effectiveStyleNo ? (
-            <div style={{ fontSize: 14, color: '#8c8c8c' }}>当前款号为空，暂无法生成报价建议</div>
+            <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>当前款号为空，暂无法生成报价建议</div>
           ) : loading ? (
             <div style={{ padding: '12px 0', textAlign: 'center' }}><Spin /></div>
           ) : error ? (
@@ -129,7 +129,7 @@ const StyleQuoteSuggestionInlineCard: React.FC<Props> = ({ styleNo, sourceStyleN
                       background: item.highlight ? 'rgba(250,173,20,0.08)' : 'rgba(255,255,255,0.55)',
                     }}
                   >
-                    <div style={{ fontSize: 14, color: '#8c8c8c', marginBottom: 4 }}>{item.label}</div>
+                    <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginBottom: 4 }}>{item.label}</div>
                     <div style={{ fontSize: 13, fontWeight: 700, color: item.highlight ? '#d48806' : '#262626' }}>{item.value}</div>
                   </div>
                 ))}

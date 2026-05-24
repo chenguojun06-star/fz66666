@@ -82,7 +82,7 @@ const MaterialDatabasePage: React.FC = () => {
       ) : null}
       <Card>
         <div style={{ marginBottom: 16 }}><h2 style={{ margin: 0 }}> 物料资料库</h2></div>
-        <Card style={{ marginBottom: 16, background: '#fafafa' }}>
+        <Card style={{ marginBottom: 16, background: 'var(--color-bg-container)' }}>
           <StandardToolbar
             left={(
               <StandardSearchBar

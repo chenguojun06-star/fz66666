@@ -85,7 +85,7 @@ const LogisticsRecordsTab: React.FC<Props> = ({ active }) => {
     { title: '运单号', dataIndex: 'trackingNumber', width: 160,
       render: (v: string | null) => v
         ? <Tooltip title={v}><span style={{ fontFamily: 'monospace', fontSize: 14 }}>{v}</span></Tooltip>
-        : <span style={{ color: '#999' }}>-</span> },
+        : <span style={{ color: 'var(--color-text-tertiary)' }}>-</span> },
     { title: '状态', dataIndex: 'status', width: 90,
       render: (v: string) => {
         const s = STATUS_MAP[v] || { color: 'default', text: '未知' };

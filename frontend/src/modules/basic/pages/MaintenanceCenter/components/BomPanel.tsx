@@ -13,7 +13,7 @@ const directCardStyle = {
   border: '1px solid #ececec',
   borderRadius: 10,
   padding: 12,
-  background: '#fff',
+  background: 'var(--color-bg-base)',
 } as const;
 
 const directStackStyle = { display: 'grid', gap: 10 } as const;
@@ -62,9 +62,9 @@ const normalizeTemplateRecords = (payload: unknown, sourceStyleNo?: string) => {
     .filter((item) => !normalizedStyleNo || String(item.sourceStyleNo || '').trim() === normalizedStyleNo);
 };
 
-interface BomPanelProps { styleNo?: string; }
+interface BomPanelProps { styleNo?: string; onSaved?: () => void; }
 
-const BomPanel: React.FC<BomPanelProps> = ({ styleNo }) => {
+const BomPanel: React.FC<BomPanelProps> = ({ styleNo, onSaved }) => {
   const { message } = App.useApp();
   const [directRollbackForm] = Form.useForm();
 
@@ -181,7 +181,7 @@ const BomPanel: React.FC<BomPanelProps> = ({ styleNo }) => {
                  
                   loading={rollbackLoading}
                   onClick={handleDirectRollback}
-                  style={{ background: '#fff', color: '#ff4d4f', borderColor: '#ff4d4f' }}
+                  style={{ background: 'var(--color-bg-base)', color: '#ff4d4f', borderColor: '#ff4d4f' }}
                 >
                   确认退回
                 </Button>

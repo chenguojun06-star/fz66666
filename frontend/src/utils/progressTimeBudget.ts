@@ -1,6 +1,7 @@
 import dayjs from 'dayjs';
 
 const STAGE_BUDGET_RATIOS: { match: RegExp; ratio: number; label: string }[] = [
+  { match: /整体|overall|全部/i, ratio: 1.00, label: '整体' },
   { match: /采购|物料|备料|辅料|面料|procurement/i, ratio: 0.30, label: '采购' },
   { match: /裁剪|剪裁|cutting/i, ratio: 0.15, label: '裁剪' },
   { match: /车缝|缝纫|平车|sewing/i, ratio: 0.25, label: '车缝' },
@@ -12,7 +13,7 @@ const STAGE_BUDGET_RATIOS: { match: RegExp; ratio: number; label: string }[] = [
 
 const DEFAULT_RATIO = 0.10;
 
-function getStageConfig(nodeName: string) {
+export function getStageConfig(nodeName: string) {
   for (const s of STAGE_BUDGET_RATIOS) {
     if (s.match.test(nodeName)) return s;
   }
@@ -41,7 +42,7 @@ export function computeStageBudgetHint(params: {
   } = params;
 
   if (!orderCreateTime || !expectedShipDate) return null;
-  if (isCompletedOrClosed) return null;
+  if (isCompletedOrClosed && !stageEndTime) return null;
 
   const config = getStageConfig(nodeName);
   const create = dayjs(orderCreateTime);

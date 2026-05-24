@@ -37,7 +37,7 @@ const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
       return (
         <div style={{ display: 'grid', gap: 16, gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}>
           {Array.from({ length: rows }).map((_, i) => (
-            <div key={i} style={{ background: '#fff', borderRadius: 8, padding: 16 }}>
+            <div key={i} style={{ background: 'var(--color-bg-base)', borderRadius: 8, padding: 16 }}>
               <Skeleton.Image active={active} style={{ width: '100%', height: 120 }} />
               <Skeleton active={active} paragraph={{ rows: 2 }} style={{ marginTop: 12 }} />
             </div>

@@ -46,7 +46,7 @@ const BatchSelectionPanel: React.FC<BatchSelectionPanelProps> = ({
     const collapseHeaderStyle: React.CSSProperties = {
         display: 'flex', alignItems: 'center', gap: 8,
         padding: '6px 12px', cursor: 'pointer', userSelect: 'none',
-        border: '1px solid #d9d9d9', borderRadius: 6,
+        border: '1px solid var(--color-border-antd)', borderRadius: 6,
         background: 'var(--color-bg-container, #fff)',
         fontSize: 14,
     };
@@ -72,7 +72,7 @@ const BatchSelectionPanel: React.FC<BatchSelectionPanelProps> = ({
                         </Tag>
                     </div>
                     {batchSelectOpen && (
-                        <div style={{ border: '1px solid #d9d9d9', borderTop: 'none', borderRadius: '0 0 6px 6px', padding: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                        <div style={{ border: '1px solid var(--color-border-antd)', borderTop: 'none', borderRadius: '0 0 6px 6px', padding: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
                             <Space wrap>
                                 <Button onClick={onSelectAll} disabled={!batchSelectableQrs.length}>全选</Button>
                                 <Button onClick={onSelectInvert} disabled={!batchSelectableQrs.length}>反选</Button>
@@ -136,7 +136,7 @@ const BatchSelectionPanel: React.FC<BatchSelectionPanelProps> = ({
                         </div>
                         {batchListOpen && (
                             <div style={{
-                                border: '1px solid #d9d9d9', borderTop: 'none', borderRadius: '0 0 6px 6px',
+                                border: '1px solid var(--color-border-antd)', borderTop: 'none', borderRadius: '0 0 6px 6px',
                                 display: 'flex', flexDirection: 'column', gap: 8,
                                 maxHeight: 400, overflowY: 'auto', padding: 8,
                             }}>

@@ -10,31 +10,26 @@
 const ProductionOrderShape = {
   id: { required: true, type: 'string' },
   orderNo: { required: true, type: 'string' },
-  styleId: { type: 'string', default: '' }, // 可能为空
-  styleNo: { type: 'string', default: '' }, // 可能为空（历史数据）
-  styleName: { type: 'string', default: '' }, // 可能为空
-  factoryId: { type: 'string', default: '' }, // 可能为空
-  factoryName: { type: 'string', default: '' }, // 可能为空
+  styleId: { type: 'string', default: '' },
+  styleNo: { type: 'string', default: '' },
+  styleName: { type: 'string', default: '' },
+  factoryId: { type: 'string', default: '' },
+  factoryName: { type: 'string', default: '' },
   orderQuantity: { required: true, type: 'number', default: 0 },
   completedQuantity: { type: 'number', default: 0 },
   productionProgress: { type: 'number', default: 0 },
   status: { required: true, type: 'string' },
 
-  // 关键: 进度流程定义 (JSON 字符串)
   progressWorkflowJson: { required: false, default: {} },
   progressWorkflowLocked: { type: 'number', default: 0 },
   progressWorkflowLockedAt: { type: 'string' },
   progressWorkflowLockedBy: { type: 'string' },
   progressWorkflowLockedByName: { type: 'string' },
 
-  // 时间戳
   createTime: { type: 'string' },
   updateTime: { type: 'string' },
 };
 
-/**
- * 扫码记录数据结构定义
- */
 const ScanRecordShape = {
   id: { required: true, type: 'string' },
   orderId: { required: true, type: 'string' },
@@ -47,80 +42,61 @@ const ScanRecordShape = {
   status: { type: 'string' },
 };
 
-/**
- * 验证单个字段
- * @param {*} value 字段值
- * @param {Object} rule 字段规则
- * @param {string} fieldName 字段名称
- * @returns {string|null} 错误信息或 null
- */
-function validateField(value, rule, fieldName = '') {
-  // 检查必需字段
+function validateField(value, rule, fieldName) {
   if (rule.required && (value === null || value === undefined || value === '')) {
-    return `${fieldName} 不能为空`;
+    return fieldName + ' 不能为空';
   }
 
-  // 检查类型
-  const valueType = typeof value;
+  var valueType = typeof value;
   if (value !== null && value !== undefined) {
     if (rule.type === 'number' && valueType !== 'number') {
-      return `${fieldName} 必须是数字类型`;
+      return fieldName + ' 必须是数字类型';
     }
     if (rule.type === 'string' && valueType !== 'string') {
-      return `${fieldName} 必须是字符串类型`;
+      return fieldName + ' 必须是字符串类型';
     }
     if (rule.type === 'object' && valueType !== 'object') {
-      return `${fieldName} 必须是对象类型`;
+      return fieldName + ' 必须是对象类型';
     }
   }
 
   return null;
 }
 
-/**
- * 验证完整的数据对象
- * @param {Object} data 数据对象
- * @param {Object} shape 数据结构定义
- * @returns {Object} { valid: boolean, errors: Array<string> }
- */
 function validateDataShape(data, shape) {
-  const errors = [];
+  var errors = [];
 
   if (!data || typeof data !== 'object') {
     return { valid: false, errors: ['数据必须是对象类型'] };
   }
 
-  for (const [fieldName, rule] of Object.entries(shape)) {
-    const value = data[fieldName];
-    const error = validateField(value, rule, fieldName);
+  for (var fieldName in shape) {
+    if (shape.hasOwnProperty(fieldName)) {
+      var rule = shape[fieldName];
+      var value = data[fieldName];
+      var error = validateField(value, rule, fieldName);
 
-    if (error) {
-      errors.push(error);
+      if (error) {
+        errors.push(error);
+      }
     }
   }
 
   return {
     valid: errors.length === 0,
-    errors,
+    errors: errors,
   };
 }
 
-/**
- * 验证生产订单数据
- * @param {Object} order 订单对象
- * @returns {Object} { valid: boolean, errors: Array<string> }
- */
 function validateProductionOrder(order) {
-  const result = validateDataShape(order, ProductionOrderShape);
+  var result = validateDataShape(order, ProductionOrderShape);
 
   if (!result.valid) {
     return result;
   }
 
-  // 额外的业务规则验证
-  const additionalErrors = [];
+  var additionalErrors = [];
 
-  // 验证 progressWorkflowJson 格式
   if (order.progressWorkflowJson) {
     try {
       var parsed = order.progressWorkflowJson;
@@ -137,12 +113,10 @@ function validateProductionOrder(order) {
     }
   }
 
-  // 验证进度值范围
   if (order.productionProgress < 0 || order.productionProgress > 100) {
     additionalErrors.push('productionProgress 必须在 0-100 之间');
   }
 
-  // 验证数量关系
   if (order.completedQuantity > order.orderQuantity) {
     additionalErrors.push('completedQuantity 不能大于 orderQuantity');
   }
@@ -153,58 +127,48 @@ function validateProductionOrder(order) {
   };
 }
 
-/**
- * 验证扫码记录数据
- * @param {Object} scan 扫码记录对象
- * @returns {Object} { valid: boolean, errors: Array<string> }
- */
 function validateScanRecord(scan) {
   return validateDataShape(scan, ScanRecordShape);
 }
 
-/**
- * 安全获取嵌套属性
- * @param {Object} obj 对象
- * @param {string} path 路径，如 "order.id"
- * @param {*} fallback 默认值
- * @returns {*} 属性值或默认值
- */
-function safeGet(obj, path, fallback = null) {
+function safeGet(obj, path, fallback) {
   try {
-    const keys = String(path || '').split('.');
-    let result = obj;
-    for (const key of keys) {
+    var keys = String(path || '').split('.');
+    var result = obj;
+    for (var i = 0; i < keys.length; i++) {
+      var key = keys[i];
       if (result && typeof result === 'object') {
         result = result[key];
       } else {
-        return fallback;
+        return fallback !== undefined ? fallback : null;
       }
     }
-    return result !== undefined ? result : fallback;
+    return result !== undefined ? result : (fallback !== undefined ? fallback : null);
   } catch (e) {
-    return fallback;
+    return fallback !== undefined ? fallback : null;
   }
 }
 
-/**
- * 规范化数据对象（填充默认值）
- * @param {Object} data 原始数据
- * @param {Object} shape 数据结构定义
- * @returns {Object} 规范化后的数据
- */
 function normalizeData(data, shape) {
   if (!data || typeof data !== 'object') {
     return {};
   }
 
-  const normalized = { ...data };
+  var normalized = {};
+  for (var key in data) {
+    if (data.hasOwnProperty(key)) {
+      normalized[key] = data[key];
+    }
+  }
 
-  for (const [fieldName, rule] of Object.entries(shape)) {
-    const value = normalized[fieldName];
+  for (var fieldName in shape) {
+    if (shape.hasOwnProperty(fieldName)) {
+      var rule = shape[fieldName];
+      var value = normalized[fieldName];
 
-    // 如果字段为空且有默认值，使用默认值
-    if ((value === null || value === undefined) && rule.default !== undefined) {
-      normalized[fieldName] = rule.default;
+      if ((value === null || value === undefined) && rule.default !== undefined) {
+        normalized[fieldName] = rule.default;
+      }
     }
   }
 
@@ -212,12 +176,12 @@ function normalizeData(data, shape) {
 }
 
 module.exports = {
-  ProductionOrderShape,
-  ScanRecordShape,
-  validateField,
-  validateDataShape,
-  validateProductionOrder,
-  validateScanRecord,
-  safeGet,
-  normalizeData,
+  ProductionOrderShape: ProductionOrderShape,
+  ScanRecordShape: ScanRecordShape,
+  validateField: validateField,
+  validateDataShape: validateDataShape,
+  validateProductionOrder: validateProductionOrder,
+  validateScanRecord: validateScanRecord,
+  safeGet: safeGet,
+  normalizeData: normalizeData,
 };

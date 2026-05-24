@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button, Input, InputNumber, Select } from 'antd';
+import { Button, Input, InputNumber, Popconfirm, Select } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import ResizableTable from '@/components/common/ResizableTable';
 import SupplierNameTooltip from '@/components/common/SupplierNameTooltip';
@@ -256,6 +256,7 @@ const BomInlineTable: React.FC<BomInlineTableProps> = ({ value, onChange, readOn
       <InputNumber
         min={0}
         precision={precision}
+        controls={false}
         value={currentValue}
         onChange={(nextValue) => {
           const numericValue = nextValue ?? 0;
@@ -297,6 +298,7 @@ const BomInlineTable: React.FC<BomInlineTableProps> = ({ value, onChange, readOn
             <InputNumber
               min={0}
               step={0.01}
+              controls={false}
               value={usageMap[sizeKey] ?? 0}
               onChange={(nextValue) => {
                 const nextMap = { ...usageMap, [sizeKey]: Number(nextValue ?? 0) };
@@ -478,9 +480,9 @@ const BomInlineTable: React.FC<BomInlineTableProps> = ({ value, onChange, readOn
       width: compact ? 60 : 72,
       render: (_: unknown, __: BomEditableRow, index?: number) => (
         readOnly ? null : (
-          <Button danger type="link" onClick={() => deleteRow(index ?? 0)}>
-            删除
-          </Button>
+          <Popconfirm title="确认删除该物料行？" onConfirm={() => deleteRow(index ?? 0)} okButtonProps={{ danger: true }} okText="删除" cancelText="取消">
+            <Button danger type="link">删除</Button>
+          </Popconfirm>
         )
       ),
     },

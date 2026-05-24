@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Button, Tag, Space, message, Form, Input, Modal, Card, Typography, Alert, Badge } from 'antd';
+import { Button, Tag, Space, message, Form, Input, Card, Typography, Alert, Badge } from 'antd';
 import RejectReasonModal from '@/components/common/RejectReasonModal';
 import ResizableTable from '@/components/common/ResizableTable';
 import SmallModal from '@/components/common/SmallModal';
@@ -8,6 +8,7 @@ import type { RowAction } from '@/components/common/RowActions';
 import { useModal } from '@/hooks';
 import { useUser } from '@/utils/AuthContext';
 import tenantService from '@/services/tenantService';
+import { confirmAction } from '@/utils/confirm';
 import type { TenantInfo } from '@/services/tenantService';
 import type { ColumnsType } from 'antd/es/table';
 
@@ -36,22 +37,15 @@ const RegistrationTab: React.FC = () => {
   }, [isSuperAdmin]);
 
   const handleApproveTenant = async (record: TenantInfo) => {
-    Modal.confirm({
-      width: '30vw',
-      title: `确认审批通过「${record.tenantName}」`,
-      content: `将创建主账号「${record.applyUsername || ''}」，并激活该工厂账户（默认免费试用30天，可在「客户管理」中调整套餐）。`,
-      okText: '确认审批',
-      cancelText: '取消',
-      onOk: async () => {
-        try {
-          await tenantService.approveApplication(record.id, { planType: 'TRIAL', trialDays: 30 });
-          message.success('审批通过，工厂账户已激活');
-          fetchTenantApps();
-        } catch (e: unknown) {
-          message.error(e instanceof Error ? e.message : '审批失败');
-        }
-      },
-    });
+    confirmAction(`确认审批通过「${record.tenantName}」`, `将创建主账号「${record.applyUsername || ''}」，并激活该工厂账户（默认免费试用30天，可在「客户管理」中调整套餐）。`, async () => {
+      try {
+        await tenantService.approveApplication(record.id, { planType: 'TRIAL', trialDays: 30 });
+        message.success('审批通过，工厂账户已激活');
+        fetchTenantApps();
+      } catch (e: unknown) {
+        message.error(e instanceof Error ? e.message : '审批失败');
+      }
+    }, { okText: '确认审批' });
   };
 
   const handleRejectTenant = (record: TenantInfo) => {
@@ -159,7 +153,7 @@ const RegistrationTab: React.FC = () => {
            
           />
         ) : (
-          <Card style={{ textAlign: 'center', color: '#999' }}>
+          <Card style={{ textAlign: 'center', color: 'var(--color-text-tertiary)' }}>
             {tenantAppsLoading ? '加载中...' : '暂无待审核的工厂入驻申请'}
           </Card>
         )}

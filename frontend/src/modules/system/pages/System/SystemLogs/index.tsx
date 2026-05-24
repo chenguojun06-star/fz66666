@@ -160,7 +160,7 @@ const SystemLogs: React.FC = () => {
             {record.ip && <div><strong>IP地址：</strong>{record.ip}</div>}
           </div>
           <div style={{
-            backgroundColor: '#f5f5f5',
+            backgroundColor: 'var(--color-bg-subtle)',
             padding: 12,
             fontFamily: 'monospace',
             fontSize: 14

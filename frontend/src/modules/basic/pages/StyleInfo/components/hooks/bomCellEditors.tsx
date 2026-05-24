@@ -5,6 +5,7 @@ import DictAutoComplete from '@/components/common/DictAutoComplete';
 import SupplierSelect from '@/components/common/SupplierSelect';
 import ImageUploadBox from '@/components/common/ImageUploadBox';
 import { materialTypeOptions } from './bomConstants';
+import { formatMoney } from '@/utils/format';
 
 export const parseSizeUsageMap = (value?: string) => {
   try {
@@ -175,7 +176,7 @@ export function useBomEditorHelpers(ctx: BomEditorContext) {
     if (canEdit(record)) {
       return (
         <Form.Item name={ctx.rowName(record.id, fieldName)} style={{ margin: 0 }} rules={required ? [{ required: true, message: '必填' }] : undefined}>
-          <InputNumber min={min} step={step} prefix={prefix} style={{ width: '100%' }} />
+          <InputNumber min={min} step={step} prefix={prefix} controls={false} style={{ width: '100%' }} />
         </Form.Item>
       );
     }
@@ -222,6 +223,7 @@ export function useBomEditorHelpers(ctx: BomEditorContext) {
           <InputNumber
             min={0}
             step={0.01}
+            controls={false}
             style={{ width: '100%' }}
             onChange={(val) => {
               if (val != null) {
@@ -240,7 +242,7 @@ export function useBomEditorHelpers(ctx: BomEditorContext) {
     if (canEdit(record)) {
       return (
         <Form.Item name={ctx.rowName(record.id, 'conversionRate')} style={{ margin: 0 }} initialValue={value}>
-          <InputNumber min={0} step={0.01} style={{ width: '100%' }} />
+          <InputNumber min={0} step={0.01} controls={false} style={{ width: '100%' }} />
         </Form.Item>
       );
     }
@@ -251,7 +253,7 @@ export function useBomEditorHelpers(ctx: BomEditorContext) {
     if (canEdit(record)) {
       return (
         <Form.Item name={ctx.rowName(record.id, 'lossRate')} style={{ margin: 0 }}>
-          <InputNumber min={0} max={100} style={{ width: '100%' }} />
+          <InputNumber min={0} max={100} controls={false} style={{ width: '100%' }} />
         </Form.Item>
       );
     }
@@ -262,7 +264,7 @@ export function useBomEditorHelpers(ctx: BomEditorContext) {
     if (canEdit(record)) {
       return (
         <Form.Item name={ctx.rowName(record.id, 'unitPrice')} style={{ margin: 0 }} rules={[{ required: true, message: '必填' }]}>
-          <InputNumber min={0} step={0.01} prefix="¥" style={{ width: '100%' }} />
+          <InputNumber min={0} step={0.01} prefix="¥" controls={false} style={{ width: '100%' }} />
         </Form.Item>
       );
     }
@@ -283,7 +285,7 @@ export function useBomEditorHelpers(ctx: BomEditorContext) {
             const row = form.getFieldValue(rid) || {};
             const base = { ...record, ...row };
             const value = ctx.calcTotalPrice(base);
-            return `¥${Number(value || 0).toFixed(2)}`;
+            return formatMoney(Number(value || 0));
           }}
         </Form.Item>
       );

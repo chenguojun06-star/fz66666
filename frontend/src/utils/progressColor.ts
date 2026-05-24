@@ -53,13 +53,13 @@ export const getRemainingDaysDisplay = (
   actualEndDate?: string | null,
   status?: string | null
 ): { text: string; color: string } => {
-  if (!endDate) return { text: '-', color: '#999' };
+  if (!endDate) return { text: '-', color: 'var(--color-text-tertiary)' };
   const s = (status || '').toLowerCase();
-  if (s === 'scrapped') return { text: '已报废', color: '#8c8c8c' };
-  if (s === 'closed' || s === 'archived') return { text: '已关单', color: '#8c8c8c' };
+  if (s === 'scrapped') return { text: '已报废', color: 'var(--color-text-tertiary)' };
+  if (s === 'closed' || s === 'archived') return { text: '已关单', color: 'var(--color-text-tertiary)' };
   if (s === 'completed') return { text: '已完成', color: '#52c41a' };
-  if (s === 'cancelled') return { text: '已取消', color: '#8c8c8c' };
-  if (actualEndDate) return { text: '已关单', color: '#8c8c8c' };
+  if (s === 'cancelled') return { text: '已取消', color: 'var(--color-text-tertiary)' };
+  if (actualEndDate) return { text: '已关单', color: 'var(--color-text-tertiary)' };
 
   const now = new Date();
   const deadline = new Date(endDate);

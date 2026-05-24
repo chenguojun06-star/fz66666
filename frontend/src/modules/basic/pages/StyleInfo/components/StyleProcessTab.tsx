@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Button, Input, Space, Select, App, Popover, Dropdown, Tag } from 'antd';
 import { modal } from '@/utils/antdStatic';
 import { LoadingOutlined, DownOutlined, PlusOutlined } from '@ant-design/icons';
@@ -22,6 +22,11 @@ const StyleProcessTab: React.FC<StyleProcessTabProps> = ({
   const [deletedIds, setDeletedIds] = useState<Array<string | number>>([]);
   const snapshotRef = useRef<StyleProcessWithSizePrice[] | null>(null);
   const [processTemplateKey, setProcessTemplateKey] = useState<string | undefined>(undefined);
+  const editHintTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  useEffect(() => {
+    return () => { editHintTimersRef.current.forEach(t => clearTimeout(t)); };
+  }, []);
 
   const { data, setData, loading, sizes, setSizes, sizeOptions: _sizeOptions, setSizeOptions: _setSizeOptions, fetchSizeDictOptions: _fetchSizeDictOptions, fetchProcess, processTemplates, templateLoading } = useStyleProcessData({ styleId, onDataLoaded });
 
@@ -33,11 +38,14 @@ const StyleProcessTab: React.FC<StyleProcessTabProps> = ({
     if (!processStartTime) { message.warning('请先点击上方「开始工序单价」按钮再进行编辑'); return; }
     snapshotRef.current = JSON.parse(JSON.stringify(data)) as StyleProcessWithSizePrice[];
     setEditMode(true);
+    editHintTimersRef.current.forEach(t => clearTimeout(t));
+    editHintTimersRef.current = [];
     const rows = data.filter(row => row.processName && row.id);
     const BATCH = 5;
     for (let i = 0; i < rows.length; i += BATCH) {
       const batch = rows.slice(i, i + BATCH);
-      setTimeout(() => batch.forEach(row => fetchPriceHintRef.current(row.id!, row.processName, row.standardTime ?? undefined)), (i / BATCH) * 200);
+      const t = setTimeout(() => batch.forEach(row => fetchPriceHintRef.current(row.id!, row.processName, row.standardTime ?? undefined)), (i / BATCH) * 200);
+      editHintTimersRef.current.push(t);
     }
   }, [readOnly, editMode, processStartTime, data, message]);
 

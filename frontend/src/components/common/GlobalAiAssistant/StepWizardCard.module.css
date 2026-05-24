@@ -1,5 +1,5 @@
 .card {
-  background: #ffffff;
+  background: var(--color-bg-base);
   border: 1px solid #e8edf5;
   border-radius: 14px;
   padding: 16px;
@@ -32,7 +32,7 @@
 
 .desc {
   font-size: 14px;
-  color: #8c8c8c;
+  color: var(--color-text-tertiary);
   margin-top: 2px;
 }
 
@@ -50,9 +50,9 @@
   gap: 4px;
   padding: 4px 10px;
   border-radius: 20px;
-  background: #f5f5f5;
+  background: var(--color-bg-subtle);
   font-size: 14px;
-  color: #8c8c8c;
+  color: var(--color-text-tertiary);
   transition: all 0.25s ease;
   white-space: nowrap;
 }
@@ -102,7 +102,7 @@
   color: #595959;
   margin-bottom: 12px;
   padding: 8px 10px;
-  background: #fafafa;
+  background: var(--color-bg-container);
   border-radius: 8px;
   border-left: 3px solid #1677ff;
 }
@@ -115,7 +115,7 @@
   display: block;
   font-size: 14px;
   font-weight: 500;
-  color: #333;
+  color: var(--color-text-primary);
   margin-bottom: 6px;
 }
 
@@ -137,9 +137,9 @@
   align-items: center;
   gap: 2px;
   padding: 10px 14px;
-  border: 1.5px solid #e8e8e8;
+  border: 1.5px solid var(--color-border);
   border-radius: 10px;
-  background: #fff;
+  background: var(--color-bg-base);
   cursor: pointer;
   transition: all 0.2s ease;
   min-width: 80px;
@@ -164,12 +164,12 @@
 .optLabel {
   font-size: 14px;
   font-weight: 500;
-  color: #333;
+  color: var(--color-text-primary);
 }
 
 .optDesc {
   font-size: 14px;
-  color: #8c8c8c;
+  color: var(--color-text-tertiary);
 }
 
 .checkMark {
@@ -184,10 +184,10 @@
 .textInput {
   width: 100%;
   padding: 8px 12px;
-  border: 1.5px solid #e8e8e8;
+  border: 1.5px solid var(--color-border);
   border-radius: 8px;
   font-size: 14px;
-  color: #333;
+  color: var(--color-text-primary);
   outline: none;
   transition: border-color 0.2s;
   box-sizing: border-box;
@@ -204,14 +204,14 @@
   gap: 8px;
   margin-top: 14px;
   padding-top: 12px;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--color-border-light);
 }
 
 .prevBtn {
   padding: 7px 18px;
-  border: 1px solid #d9d9d9;
+  border: 1px solid var(--color-border-antd);
   border-radius: 8px;
-  background: #fff;
+  background: var(--color-bg-base);
   color: #595959;
   font-size: 14px;
   cursor: pointer;
@@ -220,7 +220,7 @@
 
 .prevBtn:hover {
   border-color: #8c8c8c;
-  color: #333;
+  color: var(--color-text-primary);
 }
 
 .nextBtn {

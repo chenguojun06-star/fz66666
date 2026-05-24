@@ -129,12 +129,12 @@ const ChannelStatusTab: React.FC<Props> = ({ active }) => {
                     <p style={{ color: '#fa8c16', margin: '0 0 8px' }}>尚未填写密钥，当前以模拟模式运行</p>
                   )}
                   {ch.mode === 'DISABLED' && (
-                    <p style={{ color: '#999', margin: '0 0 8px' }}>配置文件中已禁用（enabled=false）</p>
+                    <p style={{ color: 'var(--color-text-tertiary)', margin: '0 0 8px' }}>配置文件中已禁用（enabled=false）</p>
                   )}
 
                   <Divider style={{ margin: '8px 0' }} />
 
-                  <div style={{ fontSize: 14, color: '#666' }}>
+                  <div style={{ fontSize: 14, color: 'var(--color-text-secondary)' }}>
                     <div style={{ marginBottom: 4 }}>
                       <strong>回调地址：</strong>
                       <Tooltip title={webhookUrl}>

@@ -8,6 +8,7 @@ import type { ColumnsType } from 'antd/es/table';
 import RowActions from '@/components/common/RowActions';
 import type { RowAction } from '@/components/common/RowActions';
 import { formatDateTime } from '@/utils/datetime';
+import { formatMoney } from '@/utils/format';
 import {
   wagePaymentApi,
   PAYMENT_METHOD_OPTIONS,
@@ -115,7 +116,7 @@ export function usePaymentColumns(props: UsePaymentColumnsProps) {
             title="点击查看明细"
             onClick={() => onAmountClick?.(record)}
           >
-            ¥{Number(v).toFixed(2)}
+            {formatMoney(v)}
           </span>
         ),
       },
@@ -125,7 +126,7 @@ export function usePaymentColumns(props: UsePaymentColumnsProps) {
         key: 'paidAmount',
         width: 120,
         align: 'right',
-        render: (v: number) => <span style={{ color: '#389e0d' }}>¥{Number(v || 0).toFixed(2)}</span>,
+        render: (v: number) => <span style={{ color: '#389e0d' }}>{formatMoney(v || 0)}</span>,
       },
       {
         title: '付款状态',
@@ -245,7 +246,7 @@ export function usePaymentColumns(props: UsePaymentColumnsProps) {
         key: 'amount',
         width: 120,
         align: 'right',
-        render: (v: number) => <span style={{ fontWeight: 600, color: '#cf1322' }}>¥{Number(v).toFixed(2)}</span>,
+        render: (v: number) => <span style={{ fontWeight: 600, color: '#cf1322' }}>{formatMoney(v)}</span>,
       },
       {
         title: '状态',

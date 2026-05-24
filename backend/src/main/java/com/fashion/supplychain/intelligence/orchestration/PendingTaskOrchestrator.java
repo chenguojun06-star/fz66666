@@ -87,7 +87,7 @@ public class PendingTaskOrchestrator {
         collectSafely("payroll", this::collectPayrollSettlementTasks, all);
         collectSafely("materialRecon", this::collectMaterialReconciliationTasks, all);
         collectSafely("expenseReimburse", this::collectExpenseReimbursementTasks, all);
-        // 按责任人过滤：租户老板看全部，其他人只看自己负责的
+        // 按领取人过滤：租户老板看全部，其他人只看自己负责的
         all = filterByResponsiblePerson(all);
         // 全局去重：防止不同 collector 因条件交叉产生重复 id（保留首次出现的那条）
         Map<String, PendingTaskDTO> deduped = new LinkedHashMap<>();

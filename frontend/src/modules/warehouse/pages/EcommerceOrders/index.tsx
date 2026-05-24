@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useDebouncedValue } from '@/hooks/usePerformance';
 import { Tabs, Tag, Button, Input, Select, Card, Space, Form, Row, Col, Statistic, Drawer, Descriptions, Divider, InputNumber, Typography, Badge, Tooltip, Steps, Alert, Image } from 'antd';
 import ResizableModal from '@/components/common/ResizableModal';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
@@ -12,6 +13,7 @@ import ResizableTable from '@/components/common/ResizableTable';
 import api, { type ApiResult } from '@/utils/api';
 import { message } from '@/utils/antdStatic';
 import { readPageSize } from '@/utils/pageSizeStore';
+import { formatMoney } from '@/utils/format';
 
 const { Text } = Typography;
 const { Option } = Select;
@@ -71,6 +73,12 @@ const OrdersTab: React.FC = () => {
   const [filterStatus, setFilterStatus] = useState<number | undefined>();
   const [filterLinked, setFilterLinked] = useState<boolean | undefined>();
   const [keyword, setKeyword] = useState('');
+  const debouncedKeyword = useDebouncedValue(keyword, 300);
+  const prevDebouncedKeywordRef = useRef(debouncedKeyword);
+  if (debouncedKeyword !== prevDebouncedKeywordRef.current) {
+    prevDebouncedKeywordRef.current = debouncedKeyword;
+    setPage(1);
+  }
   const [detail, setDetail] = useState<EcOrder | null>(null);
   const [linkTarget, setLinkTarget] = useState<EcOrder | null>(null);
   const [linkForm] = Form.useForm();
@@ -109,7 +117,7 @@ const OrdersTab: React.FC = () => {
       if (filterPlatform) params.platform = filterPlatform;
       if (filterStatus !== undefined) params.status = filterStatus;
       if (filterLinked !== undefined) params.productionOrderLinked = filterLinked;
-      if (keyword) params.keyword = keyword;
+      if (debouncedKeyword) params.keyword = debouncedKeyword;
       const res = await api.post<ApiResult>('/ecommerce/orders/list', params);
       const d = (res?.data ?? {}) as Record<string, unknown>;
       const records: EcOrder[] = (d.records as EcOrder[]) ?? [];
@@ -119,7 +127,7 @@ const OrdersTab: React.FC = () => {
       fetchStyleImages(records);
     } catch (err: unknown) { message.error(err instanceof Error ? err.message : '加载失败'); }
     finally { setLoading(false); }
-  }, [page, pageSize, filterPlatform, filterStatus, filterLinked, keyword, fetchStyleImages]);
+  }, [page, pageSize, filterPlatform, filterStatus, filterLinked, debouncedKeyword, fetchStyleImages]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -204,7 +212,7 @@ const OrdersTab: React.FC = () => {
               preview={{ mask: <EyeOutlined style={{ fontSize: 12 }} /> }}
             />
           : <div style={{
-              width: 44, height: 44, background: '#f5f5f5', borderRadius: 4,
+              width: 44, height: 44, background: 'var(--color-bg-subtle)', borderRadius: 4,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 16, color: '#bbb',
             }}></div>;
@@ -321,7 +329,7 @@ const OrdersTab: React.FC = () => {
       <Card style={{ marginBottom: 8, background: 'rgba(235,47,150,0.04)', border: '1px solid rgba(235,47,150,0.18)' }}
         styles={{ body: { padding: '8px 14px' } }}>
         <span style={{ fontSize: 14, color: '#888' }}>本页实付合计：</span>
-        <span style={{ fontSize: 15, fontWeight: 700, color: '#eb2f96' }}>¥{totalRevenue.toFixed(2)}</span>
+        <span style={{ fontSize: 15, fontWeight: 700, color: '#eb2f96' }}>{formatMoney(totalRevenue)}</span>
       </Card>
 
       <Card style={{ marginBottom: 10 }}>
@@ -340,7 +348,7 @@ const OrdersTab: React.FC = () => {
           </Select>
           <Input.Search placeholder="订单号 / 买家 / 收件人" allowClear style={{ width: 220 }}
             enterButton={<SearchOutlined />}
-            onSearch={v => { setKeyword(v); setPage(1); }} />
+            onSearch={v => { setKeyword(v); }} />
           <Button icon={<ReloadOutlined />} onClick={fetchData}>刷新</Button>
         </Space>
       </Card>

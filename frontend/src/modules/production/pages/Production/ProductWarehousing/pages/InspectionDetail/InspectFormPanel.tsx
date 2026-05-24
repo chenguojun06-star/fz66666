@@ -5,7 +5,7 @@ import { ToolOutlined, InfoCircleOutlined } from '@ant-design/icons';
 import { BatchSelectBundleRow } from '../../types';
 import { isBundleBlockedForWarehousing } from '../../utils';
 import { DEFECT_CATEGORY_OPTIONS, DEFECT_REMARK_OPTIONS } from '../../constants';
-import UnqualifiedUpload from '../../components/WarehousingModal/components/UnqualifiedUpload';
+import MultiImageUploadBox from '@/components/common/MultiImageUploadBox';
 import type { useWarehousingForm } from '../../components/WarehousingModal/hooks/useWarehousingForm';
 
 const { Text } = Typography;
@@ -28,7 +28,7 @@ const InspectFormPanel: React.FC<InspectFormPanelProps> = ({
     singleSelectedBundle, isSingleSelectedBundleBlocked, singleSelectedBundleRepairStats,
     handleBatchSelectionChange, handleBatchSelectAll, handleBatchSelectInvert, handleBatchSelectClear,
     handleBatchQualifiedSubmit, handleBatchUnqualifiedSubmit: _handleBatchUnqualifiedSubmit, handleSubmit: handleQcSubmit,
-    uploadOneUnqualifiedImage, unqualifiedFileList, setUnqualifiedFileList,
+    unqualifiedImageUrls, setUnqualifiedImageUrls,
     watchedWarehousingQty, watchedUnqualifiedQty,
     bundles: formBundles, orderOptionsLoading,
   } = formHook;
@@ -243,22 +243,18 @@ const InspectFormPanel: React.FC<InspectFormPanelProps> = ({
                     </Row>
 
                     <Form.Item label="不合格图片">
-                      <UnqualifiedUpload
-                        fileList={unqualifiedFileList}
-                        disabled={submitLoading}
-                        onUpload={uploadOneUnqualifiedImage}
-                        onRemove={(file) => {
-                          setUnqualifiedFileList((prev) => {
-                            const next = prev.filter((f) => f.uid !== file.uid);
-                            qcForm.setFieldsValue({
-                              unqualifiedImageUrls: JSON.stringify(
-                                next.map((f: any) => String(f?.url || '').trim()).filter(Boolean)
-                              ),
-                            });
-                            return next;
+                      <MultiImageUploadBox
+                        value={unqualifiedImageUrls}
+                        onChange={(urls: string[]) => {
+                          setUnqualifiedImageUrls(urls);
+                          qcForm.setFieldsValue({
+                            unqualifiedImageUrls: JSON.stringify(urls.slice(0, 4)),
                           });
                         }}
-                        onPreview={() => {}}
+                        maxCount={4}
+                        maxSizeMB={15}
+                        accept="image/jpeg,image/png,image/webp"
+                        disabled={submitLoading}
                       />
                     </Form.Item>
 

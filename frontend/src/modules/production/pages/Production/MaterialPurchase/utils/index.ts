@@ -318,12 +318,12 @@ export const buildPurchaseSheetHtml = (
           .section h3{margin:0 0 8px 0;font-size:14px}
           .data-table{width:100%;border-collapse:collapse;font-size:12px}
           .data-table th,.data-table td{border:1px solid #d1d5db;padding:6px 8px;vertical-align:middle;text-align:center}
-          .data-table th{background:#fafafa;text-align:center}
+          .data-table th{background:var(--color-bg-container);text-align:center}
           .data-table .num{text-align:right;white-space:nowrap}
           .empty{text-align:center;color:#999}
           .actions{display:flex;gap:8px;justify-content:flex-end}
           .ant-btn{font-family:inherit}
-          .cover-img{width:80px;height:80px;object-fit:cover;border-radius:4px;border:1px solid #e5e7eb;display:block}
+          .cover-img{width:80px;height:80px;object-fit:cover;border-radius:4px;border:1px solid var(--color-border);display:block}
           @media print{.no-print{display:none} body{margin:0}}
         </style>
       </head>

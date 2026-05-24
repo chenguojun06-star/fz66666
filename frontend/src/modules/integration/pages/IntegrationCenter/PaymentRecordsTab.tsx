@@ -7,6 +7,7 @@ import { formatDateTimeSecond } from '@/utils/datetime';
 import api from '@/utils/api';
 import { message } from '@/utils/antdStatic';
 import { readPageSize } from '@/utils/pageSizeStore';
+import { formatMoney } from '@/utils/format';
 
 interface PaymentRecord {
   id: number;
@@ -79,9 +80,9 @@ const PaymentRecordsTab: React.FC<Props> = ({ active }) => {
     { title: '渠道', dataIndex: 'channel', width: 90,
       render: (v: string) => <Tag color="blue">{CHANNEL_MAP[v] || v}</Tag> },
     { title: '金额（元）', dataIndex: 'amount', width: 100,
-      render: (v: number) => v != null ? `¥${(v / 100).toFixed(2)}` : '-' },
+      render: (v: number) => v != null ? formatMoney(v / 100) : '-' },
     { title: '实付（元）', dataIndex: 'actualAmount', width: 100,
-      render: (v: number | null) => v != null ? `¥${(v / 100).toFixed(2)}` : '-' },
+      render: (v: number | null) => v != null ? formatMoney(v / 100) : '-' },
     { title: '状态', dataIndex: 'status', width: 90,
       render: (v: string) => {
         const s = STATUS_MAP[v] || { color: 'default', text: '未知' };

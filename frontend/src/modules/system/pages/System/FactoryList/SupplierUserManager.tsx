@@ -89,7 +89,7 @@ const SupplierUserManager: React.FC<Props> = ({ open, supplierId, supplierName, 
               <div>
                 <p>用户 <strong>{user.username}</strong> 的新密码：</p>
                 <p style={{ fontSize: 18, fontWeight: 700, color: '#1890ff' }}>{data?.newPassword || newPwd}</p>
-                <p style={{ color: '#999' }}>请及时通知供应商</p>
+                <p style={{ color: 'var(--color-text-tertiary)' }}>请及时通知供应商</p>
               </div>
             ),
           });

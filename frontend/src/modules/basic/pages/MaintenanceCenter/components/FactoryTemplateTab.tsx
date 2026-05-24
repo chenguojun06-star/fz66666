@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import { App, Button, Form, Input, Select, Space, Tag, Dropdown, message } from 'antd';
 import { PlusOutlined, CopyOutlined, SearchOutlined } from '@ant-design/icons';
 import ResizableModal from '@/components/common/ResizableModal';
@@ -11,6 +11,7 @@ import type { TemplateLibrary } from '@/types/style';
 import { typeLabel, typeColor } from '../../TemplateCenter/utils/templateUtils';
 import TemplateInlineEditor from '../../TemplateCenter/components/inlineEditor/TemplateInlineEditor';
 import TemplateViewContent from '../../TemplateCenter/components/TemplateViewContent';
+import { useDebouncedValue } from '@/hooks/usePerformance';
 import './FactoryTemplateTab.css';
 
 const FACTORY_TEMPLATE_TYPES = [
@@ -43,6 +44,12 @@ const FactoryTemplateTab: React.FC = () => {
   const [total, setTotal] = useState(0);
   const [templateType, setTemplateType] = useState('');
   const [keyword, setKeyword] = useState('');
+  const debouncedKeyword = useDebouncedValue(keyword, 300);
+  const prevDebouncedKeywordRef = useRef(debouncedKeyword);
+  if (debouncedKeyword !== prevDebouncedKeywordRef.current) {
+    prevDebouncedKeywordRef.current = debouncedKeyword;
+    setPage(1);
+  }
 
   const [editOpen, setEditOpen] = useState(false);
   const [editingRow, setEditingRow] = useState<TemplateLibrary | null>(null);
@@ -55,6 +62,7 @@ const FactoryTemplateTab: React.FC = () => {
   const [copyLoading, setCopyLoading] = useState(false);
   const [styleNoOptions, setStyleNoOptions] = useState<Array<{ value: string; label: string }>>([]);
   const [styleNoLoading, setStyleNoLoading] = useState(false);
+  const styleNoSearchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fetchList = useCallback(async (pg?: number) => {
     setLoading(true);
@@ -62,7 +70,7 @@ const FactoryTemplateTab: React.FC = () => {
       const p = pg ?? page;
       const params: Record<string, unknown> = { page: p, pageSize, isFactoryTemplate: true };
       if (templateType) params.templateType = templateType;
-      if (keyword) params.keyword = keyword;
+      if (debouncedKeyword) params.keyword = debouncedKeyword;
       const res = await api.get<any>('/template-library/list', { params });
       const d = res?.data ?? res;
       setData(d?.records ?? []);
@@ -73,9 +81,15 @@ const FactoryTemplateTab: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, pageSize, templateType, keyword]);
+  }, [page, pageSize, templateType, debouncedKeyword]);
 
   useEffect(() => { fetchList(1); }, [templateType]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    return () => {
+      if (styleNoSearchTimerRef.current) clearTimeout(styleNoSearchTimerRef.current);
+    };
+  }, []);
 
   const handleCreateBlank = async (type: string) => {
     setCreateType(type);
@@ -165,26 +179,33 @@ const FactoryTemplateTab: React.FC = () => {
     }
   };
 
-  const fetchStyleNoOptions = async (searchText: string) => {
-    setStyleNoLoading(true);
-    try {
-      const res = await api.get<any>('/template-library/process-price-style-options', {
-        params: { keyword: searchText || undefined },
-      });
-      const list = res?.data ?? res ?? [];
-      setStyleNoOptions(
-        Array.isArray(list)
-          ? list.map((item: any) => ({
-              value: item.styleNo || item.value,
-              label: item.styleNo || item.label,
-            }))
-          : []
-      );
-    } catch {
+  const fetchStyleNoOptions = (searchText: string) => {
+    if (styleNoSearchTimerRef.current) clearTimeout(styleNoSearchTimerRef.current);
+    if (!searchText || searchText.trim().length < 1) {
       setStyleNoOptions([]);
-    } finally {
-      setStyleNoLoading(false);
+      return;
     }
+    styleNoSearchTimerRef.current = setTimeout(async () => {
+      setStyleNoLoading(true);
+      try {
+        const res = await api.get<any>('/template-library/process-price-style-options', {
+          params: { keyword: searchText || undefined },
+        });
+        const list = res?.data ?? res ?? [];
+        setStyleNoOptions(
+          Array.isArray(list)
+            ? list.map((item: any) => ({
+                value: item.styleNo || item.value,
+                label: item.styleNo || item.label,
+              }))
+            : []
+        );
+      } catch {
+        setStyleNoOptions([]);
+      } finally {
+        setStyleNoLoading(false);
+      }
+    }, 300);
   };
 
   const handleCopyFromStyle = () => {
@@ -303,7 +324,7 @@ const FactoryTemplateTab: React.FC = () => {
             allowClear
             enterButton={<SearchOutlined />}
             style={{ width: 240 }}
-            onSearch={(val) => { setKeyword(val); fetchList(1); }}
+            onSearch={(val) => { setKeyword(val); }}
           />
         </Space>
         <Space>

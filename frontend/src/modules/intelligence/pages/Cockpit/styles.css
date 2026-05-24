@@ -27,7 +27,7 @@
   background: var(--bi-bg);
   color: var(--bi-text-primary);
   position: relative;
-  z-index: 1;
+  z-index: var(--z-local);
 }
 
 .cockpit-sidebar,
@@ -149,7 +149,7 @@
 
 .cockpit-widget {
   position: absolute;
-  z-index: 10;
+  z-index: var(--z-local);
   border-radius: var(--bi-radius);
   background: var(--bi-surface);
   border: 1px solid var(--bi-border);
@@ -225,16 +225,16 @@
   position: absolute;
   right: 0;
   bottom: 0;
-  width: 20px;
-  height: 20px;
+  width: 12px;
+  height: 12px;
   cursor: se-resize;
-  background: linear-gradient(135deg, transparent 50%, rgba(59, 130, 246, 0.2) 50%);
+  background: linear-gradient(135deg, transparent 50%, rgba(59, 130, 246, 0.15) 50%);
   border-radius: 0 0 var(--bi-radius) 0;
   transition: background 0.2s;
 }
 
 .cockpit-widget-resize:hover {
-  background: linear-gradient(135deg, transparent 50%, rgba(59, 130, 246, 0.4) 50%);
+  background: linear-gradient(135deg, transparent 50%, rgba(59, 130, 246, 0.35) 50%);
 }
 
 @media (max-width: 900px) {

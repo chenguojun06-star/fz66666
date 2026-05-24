@@ -38,14 +38,14 @@
   align-items: center;
   gap: calc(8px * var(--ov-scale));
   padding: calc(14px * var(--ov-scale)) calc(10px * var(--ov-scale));
-  background: #ffffff;
+  background: var(--color-bg-base);
   border-radius: calc(8px * var(--ov-scale));
   border: 1px solid #f0f1f3;
   transition: all 0.2s ease;
 }
 
 .overview-pie-card:hover {
-  border-color: #e5e7eb;
+  border-color: var(--color-border);
   box-shadow: 0 2px 8px rgba(0,0,0,0.06);
 }
 
@@ -123,7 +123,7 @@
 }
 
 .overview-chart-container {
-  background: #ffffff;
+  background: var(--color-bg-base);
   border-radius: calc(8px * var(--ov-scale));
   padding: calc(10px * var(--ov-scale));
   border: 1px solid #f0f1f3;
@@ -157,12 +157,12 @@
   top: 0;
   left: 50%;
   transform: translateX(-50%);
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
+  background: var(--color-bg-base);
+  border: 1px solid var(--color-border);
   border-radius: calc(8px * var(--ov-scale));
   padding: calc(10px * var(--ov-scale)) calc(14px * var(--ov-scale));
   min-width: calc(100px * var(--ov-scale));
-  z-index: 100;
+  z-index: var(--z-dropdown);
   box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }
 
@@ -181,7 +181,7 @@
   align-items: center;
   font-size: calc(12px * var(--ov-scale));
   padding: calc(3px * var(--ov-scale)) 0;
-  color: #6b7280;
+  color: var(--color-text-secondary);
 }
 
 .tooltip-label {
@@ -217,7 +217,7 @@
   align-items: center;
   gap: 6px;
   font-size: 14px;
-  color: #6b7280;
+  color: var(--color-text-secondary);
 }
 
 .legend-dot {

@@ -91,9 +91,9 @@ const OrphanDataPage: React.FC = () => {
 
   const columns = [
     { title: '订单号', dataIndex: 'orderNo', key: 'orderNo', width: 140,
-      render: (v: string) => v ? <span style={{ color: '#1890ff', fontWeight: 500 }}>{v}</span> : <span style={{ color: '#bfbfbf' }}>-</span> },
+      render: (v: string) => v ? <span style={{ color: '#1890ff', fontWeight: 500 }}>{v}</span> : <span style={{ color: 'var(--color-text-quaternary)' }}>-</span> },
     { title: '款号', dataIndex: 'styleNo', key: 'styleNo', width: 120,
-      render: (v: string) => v || <span style={{ color: '#bfbfbf' }}>-</span> },
+      render: (v: string) => v || <span style={{ color: 'var(--color-text-quaternary)' }}>-</span> },
     { title: '摘要', dataIndex: 'summary', key: 'summary', ellipsis: true },
     { title: '所属模块', dataIndex: 'module', key: 'module', width: 100,
       render: (v: string) => <Tag color={MODULE_COLORS[v] || 'default'}>{v}</Tag> },

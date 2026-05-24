@@ -9,11 +9,6 @@ const COLOR_WARNING = 'var(--color-warning)';
 const COLOR_ERROR = 'var(--color-error)';
 const COLOR_FALLBACK = 'var(--color-text-secondary)';
 
-/**
- * 将订单状态码转换为中文文本
- * @param {string} status - 状态码
- * @returns {string} 中文状态文本
- */
 function orderStatusText(status) {
   const s = (status || '').toString().trim().toLowerCase();
   const map = {
@@ -35,11 +30,6 @@ function orderStatusText(status) {
   return map[s] || '未知';
 }
 
-/**
- * 将质检状态码转换为中文文本
- * @param {string} status - 质检状态码
- * @returns {string} 中文状态文本
- */
 function qualityStatusText(status) {
   const s = (status || '').toString().trim().toLowerCase();
   const map = {
@@ -53,11 +43,6 @@ function qualityStatusText(status) {
   return map[s] || '未知';
 }
 
-/**
- * 将扫码结果码转换为中文文本
- * @param {string} status - 扫码结果码
- * @returns {string} 中文状态文本
- */
 function scanResultText(status) {
   const s = (status || '').toString().trim().toLowerCase();
   const map = {
@@ -70,11 +55,6 @@ function scanResultText(status) {
   return map[s] || '未知';
 }
 
-/**
- * 根据订单状态获取对应的颜色
- * @param {string} status - 状态码
- * @returns {string} 颜色值
- */
 function getStatusColor(status) {
   const s = (status || '').toString().trim().toLowerCase();
   const colorMap = {
@@ -93,11 +73,6 @@ function getStatusColor(status) {
   return colorMap[s] || COLOR_FALLBACK;
 }
 
-/**
- * 根据质检状态获取对应的颜色
- * @param {string} qualityStatus - 质检状态码
- * @returns {string} 颜色值
- */
 function getQualityColor(qualityStatus) {
   const s = (qualityStatus || '').toString().trim().toLowerCase();
   const colorMap = {
@@ -109,9 +84,9 @@ function getQualityColor(qualityStatus) {
 }
 
 module.exports = {
-  orderStatusText,
-  qualityStatusText,
-  scanResultText,
-  getStatusColor,
-  getQualityColor,
+  orderStatusText: orderStatusText,
+  qualityStatusText: qualityStatusText,
+  scanResultText: scanResultText,
+  getStatusColor: getStatusColor,
+  getQualityColor: getQualityColor,
 };

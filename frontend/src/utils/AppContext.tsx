@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useRef, ReactNode, useCallback, useMemo } from 'react';
+import React, { createContext, useContext, useState, useRef, ReactNode, useCallback, useEffect, useMemo } from 'react';
 import { message } from '@/utils/antdStatic';
 
 
@@ -32,6 +32,10 @@ interface AppProviderProps {
 
 export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const hideTimerRef = useRef<ReturnType<typeof setTimeout>>();
+
+  useEffect(() => {
+    return () => { clearTimeout(hideTimerRef.current); };
+  }, []);
 
   // 应用状态
   const [state, setState] = useState<AppState>({

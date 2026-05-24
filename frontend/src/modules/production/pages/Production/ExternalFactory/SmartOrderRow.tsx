@@ -180,11 +180,11 @@ const SmartOrderRow: React.FC<SmartOrderRowProps> = ({
               </div>
             </div>
             <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap', alignItems: 'center' }}>
-              <Tag color={statusInfo.color} style={{ margin: 0, fontSize: 14, padding: '0 5px', lineHeight: '18px', height: 18 }}>{statusInfo.text}</Tag>
-              {record.urgencyLevel === 'urgent' && <Tag color="red" style={{ margin: 0, fontSize: 14, padding: '0 5px', lineHeight: '18px', height: 18 }}>急单</Tag>}
-              {String(record.plateType || '').toUpperCase() === 'FIRST' && <Tag color="blue" style={{ margin: 0, fontSize: 14, padding: '0 5px', lineHeight: '18px', height: 18 }}>首单</Tag>}
-              {String(record.plateType || '').toUpperCase() === 'REORDER' && <Tag color="gold" style={{ margin: 0, fontSize: 14, padding: '0 5px', lineHeight: '18px', height: 18 }}>翻单</Tag>}
-              <span className={`ef-delivery-badge ef-delivery-badge--${deliveryMeta.tone}`} style={{ fontSize: 14, fontWeight: 600 }}>
+              <Tag color={statusInfo.color} style={{ margin: 0, fontSize: 11, padding: '0 4px', lineHeight: '16px', height: 16 }}>{statusInfo.text}</Tag>
+              {record.urgencyLevel === 'urgent' && <Tag color="red" style={{ margin: 0, fontSize: 11, padding: '0 4px', lineHeight: '16px', height: 16 }}>急单</Tag>}
+              {String(record.plateType || '').toUpperCase() === 'FIRST' && <Tag color="blue" style={{ margin: 0, fontSize: 11, padding: '0 4px', lineHeight: '16px', height: 16 }}>首单</Tag>}
+              {String(record.plateType || '').toUpperCase() === 'REORDER' && <Tag color="gold" style={{ margin: 0, fontSize: 11, padding: '0 4px', lineHeight: '16px', height: 16 }}>翻单</Tag>}
+              <span className={`ef-delivery-badge ef-delivery-badge--${deliveryMeta.tone}`} style={{ fontSize: 11, fontWeight: 600 }}>
                 {deliveryMeta.label}
               </span>
             </div>

@@ -155,7 +155,7 @@ const PermissionDialog = forwardRef<PermissionDialogHandle, PermissionDialogProp
                   <Checkbox checked={checkedPermIds.has(module.moduleId)} onChange={(e) => { const next = new Set(checkedPermIds); if (e.target.checked) { next.add(module.moduleId); allBtnIds.forEach(id => next.add(id)); } else { next.delete(module.moduleId); allBtnIds.forEach(id => next.delete(id)); } setCheckedPermIds(next); }} style={{ color: '#fff', fontSize: 14, fontWeight: 600 }}>{module.moduleName}</Checkbox>
                 </div>
                 {module.groups.map(group => (
-                  <div key={group.groupId} style={{ borderBottom: '1px solid #f0f0f0' }}>
+                  <div key={group.groupId} style={{ borderBottom: '1px solid var(--color-border-light)' }}>
                     <div style={{ background: checkedPermIds.has(group.groupId) ? '#dbeafe' : '#f0f4ff', padding: '2px 6px', borderBottom: '1px solid #e8eaf0' }}>
                       <Checkbox checked={checkedPermIds.has(group.groupId)} onChange={(e) => { const next = new Set(checkedPermIds); const ids = [group.groupId, ...group.buttons.map(b => b.id)]; if (e.target.checked) ids.forEach(id => next.add(id)); else ids.forEach(id => next.delete(id)); setCheckedPermIds(next); }} style={{ fontSize: 14, fontWeight: 500 }}>{group.groupName}</Checkbox>
                     </div>

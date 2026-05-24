@@ -240,7 +240,7 @@ const PageStatCards: React.FC<PageStatCardsProps> = ({
             marginLeft: 'auto',
             border: 'none',
             background: 'transparent',
-            color: '#8c8c8c',
+            color: 'var(--color-text-tertiary)',
             cursor: 'pointer',
             fontSize: TAG_FONT_SIZE,
           }}

@@ -353,7 +353,7 @@ export default function AiExecutionPanel() {
               <h4>AI 建议</h4>
               <div style={{
                 padding: '12px',
-                background: '#f5f5f5',
+                background: 'var(--color-bg-subtle)',
                 borderRadius: '4px',
                 marginBottom: '16px'
               }}>
@@ -379,7 +379,7 @@ export default function AiExecutionPanel() {
                 <h4>命令参数</h4>
                 <pre style={{
                   fontSize: '12px',
-                  background: '#f5f5f5',
+                  background: 'var(--color-bg-subtle)',
                   padding: '8px',
                   borderRadius: '4px',
                   overflow: 'auto'
@@ -401,7 +401,7 @@ export default function AiExecutionPanel() {
             </div>
 
             {/* 操作按钮 */}
-            <div style={{ marginTop: '24px', paddingTop: '16px', borderTop: '1px solid #f0f0f0' }}>
+            <div style={{ marginTop: '24px', paddingTop: '16px', borderTop: '1px solid var(--color-border-light)' }}>
               <Space style={{ width: '100%', justifyContent: 'flex-end' }}>
                 <Button
                   type="primary"
@@ -466,7 +466,7 @@ export default function AiExecutionPanel() {
               )}
 
               <div style={{ marginTop: '16px', padding: '12px', background: '#f6f8f9', borderRadius: '4px' }}>
-                <p style={{ margin: 0, fontSize: '12px', color: '#666' }}>
+                <p style={{ margin: 0, fontSize: '12px', color: 'var(--color-text-secondary)' }}>
                   命令已成功执行，相关团队将在3分钟内看到影响。
                 </p>
               </div>

@@ -142,7 +142,7 @@ const StyleSizeGradingConfigModal: React.FC<Props> = ({
           const gridColumns = `50px 100px repeat(${totalPairs}, 1fr 80px) 40px`;
           return (
             <div key={zone.key} style={{ border: '1px solid #e2e8f0', borderRadius: 8, overflow: 'hidden' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px', background: 'var(--color-bg-page)', borderBottom: '1px solid #e2e8f0' }}>
                 <span style={{ fontWeight: 600 }}>跳码区</span>
                 <Input
                   value={zone.label}
@@ -192,7 +192,7 @@ const StyleSizeGradingConfigModal: React.FC<Props> = ({
                   ))}
                   <div style={{ padding: '10px 12px' }}>删</div>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: gridColumns, gap: 0, background: '#fff', alignItems: 'center', minWidth: 'fit-content' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: gridColumns, gap: 0, background: 'var(--color-bg-base)', alignItems: 'center', minWidth: 'fit-content' }}>
                   <div style={{ padding: '10px 12px', borderRight: '1px solid #e2e8f0', display: 'flex', justifyContent: 'center' }}>
                     <Button
                      

@@ -5,7 +5,7 @@ import WarehouseLocationAutoComplete from '@/components/common/WarehouseLocation
 import { useWarehouseAreaOptions } from '@/hooks/useWarehouseAreaOptions';
 import { COVER_SIZE, DEFECT_CATEGORY_OPTIONS, DEFECT_REMARK_OPTIONS } from '../../../constants';
 import BatchSelectionPanel from './BatchSelectionPanel';
-import UnqualifiedUpload from './UnqualifiedUpload';
+import MultiImageUploadBox from '@/components/common/MultiImageUploadBox';
 import AiQualityHelper from './AiQualityHelper';
 import { useWarehousingForm } from '../hooks/useWarehousingForm';
 
@@ -39,7 +39,7 @@ const WarehousingFormFields: React.FC<WarehousingFormFieldsProps> = ({ hook, ope
     watchedBundleQr,
     watchedWarehousingQty,
     watchedUnqualifiedQty,
-    unqualifiedFileList,
+    unqualifiedImageUrls,
     batchSelectedBundleQrs,
     batchQtyByQr,
     batchSelectRows,
@@ -50,16 +50,14 @@ const WarehousingFormFields: React.FC<WarehousingFormFieldsProps> = ({ hook, ope
     isSingleSelectedBundleBlocked,
     singleSelectedBundleRepairStats,
     bundleRepairRemainingByQr,
-    // Methods
     setBatchQtyByQr,
     setBatchSelectedBundleQrs,
-    setUnqualifiedFileList,
+    setUnqualifiedImageUrls,
     handleOrderChange,
     handleBatchSelectAll,
     handleBatchSelectInvert,
     handleBatchSelectClear,
     handleBatchSelectionChange,
-    uploadOneUnqualifiedImage,
     handleSubmit,
     handleBatchQualifiedSubmit,
   } = hook;
@@ -225,7 +223,7 @@ const WarehousingFormFields: React.FC<WarehousingFormFieldsProps> = ({ hook, ope
                       unqualifiedImageUrls: uq > 0 ? form.getFieldValue('unqualifiedImageUrls') : '[]',
                     });
                     if (uq <= 0) {
-                      setUnqualifiedFileList([]);
+                      setUnqualifiedImageUrls([]);
                     }
                   }}
                 />
@@ -286,26 +284,21 @@ const WarehousingFormFields: React.FC<WarehousingFormFieldsProps> = ({ hook, ope
 
           <div className="wh-line wh-line-bottom">
             <div className="wh-label">不合格图片</div>
-            <UnqualifiedUpload
-              fileList={unqualifiedFileList}
-              disabled={(Number(watchedUnqualifiedQty || 0) || 0) <= 0}
-              onUpload={uploadOneUnqualifiedImage}
-              onPreview={openPreview}
-              onRemove={(file) => {
-                setUnqualifiedFileList((prev) => {
-                  const next = prev.filter((f) => f.uid !== file.uid);
-                  form.setFieldsValue({
-                    unqualifiedImageUrls: JSON.stringify(
-                      next
-                        .map((f) => String((f as any)?.url || '').trim())
-                        .filter(Boolean)
-                        .slice(0, 4)
-                    ),
+            <div className="wh-control wh-upload">
+              <MultiImageUploadBox
+                value={hook.unqualifiedImageUrls}
+                onChange={(urls: string[]) => {
+                  hook.setUnqualifiedImageUrls(urls);
+                  hook.form.setFieldsValue({
+                    unqualifiedImageUrls: JSON.stringify(urls.slice(0, 4)),
                   });
-                  return next;
-                });
-              }}
-            />
+                }}
+                maxCount={4}
+                maxSizeMB={15}
+                accept="image/jpeg,image/png,image/webp"
+                disabled={(Number(watchedUnqualifiedQty || 0) || 0) <= 0}
+              />
+            </div>
           </div>
 
           <div className="wh-line wh-line-bottom">

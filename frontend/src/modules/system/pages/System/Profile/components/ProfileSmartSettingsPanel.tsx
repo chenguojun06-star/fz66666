@@ -191,7 +191,7 @@ const ProfileSmartSettingsPanel: React.FC<Props> = ({
                 justifyContent: 'space-between',
                 gap: 12,
                 padding: '8px 0',
-                borderTop: '1px solid #f0f0f0',
+                borderTop: '1px solid var(--color-border-light)',
               }}
             >
               <div style={{ minWidth: 0 }}>
@@ -261,7 +261,7 @@ const ProfileSmartSettingsPanel: React.FC<Props> = ({
             </Form>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-              <div style={{ padding: 12, borderRadius: 10, background: '#ffffff', border: '1px solid #eef1f4' }}>
+              <div style={{ padding: 12, borderRadius: 10, background: 'var(--color-bg-base)', border: '1px solid #eef1f4' }}>
                 <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 6 }}>当前生效</div>
                 <Typography.Text type="secondary" style={{ fontSize: 14, display: 'block' }}>
                   {smartProfile?.manualConfigured ? '已手工保存，款式智能卡与预警逻辑将优先采用这套偏好。' : '当前直接使用系统学习建议，还没有人工覆盖。'}
@@ -272,7 +272,7 @@ const ProfileSmartSettingsPanel: React.FC<Props> = ({
                   </Typography.Text>
                 )}
               </div>
-              <div style={{ padding: 12, borderRadius: 10, background: '#ffffff', border: '1px solid #eef1f4' }}>
+              <div style={{ padding: 12, borderRadius: 10, background: 'var(--color-bg-base)', border: '1px solid #eef1f4' }}>
                 <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 6 }}>系统学习建议</div>
                 <Typography.Text type="secondary" style={{ fontSize: 14, display: 'block' }}>
                   目标：{smartProfile?.learnedProfile?.primaryGoalLabel || '-'}；交期预警 {smartProfile?.learnedProfile?.deliveryWarningDays ?? '-'} 天；异常阈值 {smartProfile?.learnedProfile?.anomalyWarningCount ?? '-'} 次；利润安全线 {smartProfile?.learnedProfile?.lowMarginThreshold ?? '-'}%
@@ -329,7 +329,7 @@ const ProfileSmartSettingsPanel: React.FC<Props> = ({
                   justifyContent: 'space-between',
                   gap: 12,
                   padding: '8px 0',
-                  borderTop: '1px solid #f0f0f0',
+                  borderTop: '1px solid var(--color-border-light)',
                 }}
               >
                 <div style={{ minWidth: 0 }}>

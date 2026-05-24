@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { Popover, Tag } from 'antd';
 import DecisionInsightCard, { SMART_CARD_CONTENT_WIDTH, SMART_CARD_OVERLAY_WIDTH, type DecisionInsight } from '@/components/common/DecisionInsightCard';
 import type { PayableItem } from '@/services/finance/wagePaymentApi';
+import { formatMoney } from '@/utils/format';
 
 const choose = (seed: number, variants: string[]) => {
   if (!variants.length) return '';
@@ -74,17 +75,17 @@ function analyzePayable(item: PayableItem): AnalysisResult {
     checks.push({ label: '金额核验', status: 'warn', detail: `¥${amount.toLocaleString()} 大额付款` });
     warnCount++;
   } else {
-    checks.push({ label: '金额核验', status: 'ok', detail: `¥${amount.toFixed(2)}` });
+    checks.push({ label: '金额核验', status: 'ok', detail: formatMoney(amount) });
   }
 
   // ② 重复/超额付款检查
   if (paidAmount > 0) {
     if (paidAmount >= amount) {
-      checks.push({ label: '付款状态', status: 'danger', detail: `已付¥${paidAmount.toFixed(2)}，已全额付清` });
+      checks.push({ label: '付款状态', status: 'danger', detail: `已付${formatMoney(paidAmount)}，已全额付清` });
       dangerCount++;
     } else {
       const remaining = amount - paidAmount;
-      checks.push({ label: '付款状态', status: 'warn', detail: `已付¥${paidAmount.toFixed(2)}，剩余¥${remaining.toFixed(2)}` });
+      checks.push({ label: '付款状态', status: 'warn', detail: `已付${formatMoney(paidAmount)}，剩余${formatMoney(remaining)}` });
       warnCount++;
     }
   } else {
@@ -134,7 +135,7 @@ function analyzePayable(item: PayableItem): AnalysisResult {
         checks.push({ label: '件均成本', status: 'warn', detail: `${baseQty.toLocaleString()}件 · 均¥${avgPerPiece.toFixed(1)} 偏高` });
         warnCount++;
       } else if (avgPerPiece < 1 && avgPerPiece > 0) {
-        checks.push({ label: '件均成本', status: 'warn', detail: `${baseQty.toLocaleString()}件 · 均¥${avgPerPiece.toFixed(2)} 偏低` });
+        checks.push({ label: '件均成本', status: 'warn', detail: `${baseQty.toLocaleString()}件 · 均${formatMoney(avgPerPiece)} 偏低` });
         warnCount++;
       } else {
         checks.push({ label: '件均成本', status: 'ok', detail: `${baseQty.toLocaleString()}件 · 均¥${avgPerPiece.toFixed(1)}` });
@@ -203,7 +204,7 @@ function analyzePayable(item: PayableItem): AnalysisResult {
     if (pp.totalQty > 0 && amount > 0) {
       const avgPerPiece = amount / pp.totalQty;
       if (avgPerPiece < 2) {
-        checks.push({ label: '件均工资', status: 'warn', detail: `¥${avgPerPiece.toFixed(2)}/件，偏低` });
+        checks.push({ label: '件均工资', status: 'warn', detail: `${formatMoney(avgPerPiece)}/件，偏低` });
         warnCount++;
       } else if (avgPerPiece > 200) {
         checks.push({ label: '件均工资', status: 'warn', detail: `¥${avgPerPiece.toFixed(1)}/件，偏高` });
@@ -239,7 +240,7 @@ function analyzePayable(item: PayableItem): AnalysisResult {
       checks.push({ label: '报销审查', status: 'warn', detail: `¥${amount.toLocaleString()} 大额，建议核实凭证` });
       warnCount++;
     } else {
-      checks.push({ label: '报销审查', status: 'ok', detail: `¥${amount.toFixed(2)} 金额正常` });
+      checks.push({ label: '报销审查', status: 'ok', detail: `${formatMoney(amount)} 金额正常` });
     }
     if (/餐饮|招待|接待/.test(desc) && amount > 2000) {
       checks.push({ label: '合规提示', status: 'warn', detail: '接待费用建议附签字审批单' });
@@ -261,7 +262,7 @@ function analyzePayable(item: PayableItem): AnalysisResult {
       checks.push({ label: '对账审查', status: 'warn', detail: `¥${amount.toLocaleString()} 大额，建议复核明细` });
       warnCount++;
     } else {
-      checks.push({ label: '对账审查', status: 'ok', detail: `¥${amount.toFixed(2)} 金额核实` });
+      checks.push({ label: '对账审查', status: 'ok', detail: `${formatMoney(amount)} 金额核实` });
     }
   }
 
@@ -389,10 +390,10 @@ const PaymentAuditPopover: React.FC<{ record: PayableItem; children: React.React
       <DecisionInsightCard compact insight={insight} />
 
       {analysis.breakdown.length > 0 && (
-        <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: '4px 10px', padding: '6px 8px', background: '#fafafa', borderRadius: 6 }}>
+        <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: '4px 10px', padding: '6px 8px', background: 'var(--color-bg-container)', borderRadius: 6 }}>
           {analysis.breakdown.slice(0, 6).map((b, i) => (
             <span key={i} style={{ whiteSpace: 'nowrap', color: '#595959', fontSize: 14 }}>
-              <span style={{ color: '#8c8c8c' }}>{b.label}：</span>
+              <span style={{ color: 'var(--color-text-tertiary)' }}>{b.label}：</span>
               <span style={{ fontWeight: 500 }}>{b.value}</span>
             </span>
           ))}

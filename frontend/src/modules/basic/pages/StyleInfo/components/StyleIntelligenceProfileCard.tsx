@@ -6,6 +6,7 @@ import type { StyleInfo } from '@/types/style';
 import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
 import type { DifficultyAssessment, StyleIntelligenceProfileResponse, StyleQuoteSuggestionResponse } from '@/services/intelligence/intelligenceApi';
 import { visualAnalyze } from '@/services/intelligence/intelligenceApi';
+import { formatMoney } from '@/utils/format';
 import type { VisualAIResponse } from '@/services/intelligence/intelligenceApi';
 
 interface Props {
@@ -24,7 +25,7 @@ const STAGE_MAP = [
 
 const fmtMoney = (value?: number | null) => {
   if (value == null || Number.isNaN(Number(value))) return '—';
-  return `¥${Number(value).toFixed(2)}`;
+  return formatMoney(value);
 };
 
 const fmtPercent = (value?: number | null) => {
@@ -345,8 +346,8 @@ const StyleIntelligenceProfileCard: React.FC<Props> = ({ style }) => {
             </Tag>
           </Tooltip>
         )}
-        {loading && <span style={{ fontSize: 14, color: '#8c8c8c' }}>分析中…</span>}
-        <span style={{ marginLeft: 'auto', fontSize: 14, color: '#8c8c8c' }}>
+        {loading && <span style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>分析中…</span>}
+        <span style={{ marginLeft: 'auto', fontSize: 14, color: 'var(--color-text-tertiary)' }}>
           {expanded ? '收起 ▲' : '展开详情 ▼'}
         </span>
       </div>
@@ -355,7 +356,7 @@ const StyleIntelligenceProfileCard: React.FC<Props> = ({ style }) => {
       {expanded && (
         <div style={{ padding: '0 12px 8px' }}>
           {/* 基本信息行 */}
-          <div style={{ color: '#8c8c8c', fontSize: 14, lineHeight: 1.6, marginBottom: 6, borderBottom: '1px solid rgba(0,0,0,0.04)', paddingBottom: 5 }}>
+          <div style={{ color: 'var(--color-text-tertiary)', fontSize: 14, lineHeight: 1.6, marginBottom: 6, borderBottom: '1px solid rgba(0,0,0,0.04)', paddingBottom: 5 }}>
             <span>节点：{profile?.progressNode || style.progressNode || '未启动'} · {deliveryMeta.detail}</span>
             {' · '}
             <span>最新订单：{profile?.production?.latestOrderNo || style.latestOrderNo || '暂无'} · 进度 {profile?.production?.latestProductionProgress != null ? `${profile.production.latestProductionProgress}%` : style.latestProductionProgress != null ? `${style.latestProductionProgress}%` : '—'}</span>
@@ -404,13 +405,13 @@ const StyleIntelligenceProfileCard: React.FC<Props> = ({ style }) => {
                     color: '#722ed1',
                   },
                 ].map((item) => (
-                  <div key={item.key} style={{ padding: '5px 7px', borderRadius: 6, background: '#fff', border: '1px solid rgba(0,0,0,0.06)' }}>
+                  <div key={item.key} style={{ padding: '5px 7px', borderRadius: 6, background: 'var(--color-bg-base)', border: '1px solid rgba(0,0,0,0.06)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 3, marginBottom: 1 }}>
                       <span style={{ color: item.color, fontSize: 14 }}>{item.icon}</span>
-                      <span style={{ fontSize: 14, color: '#8c8c8c' }}>{item.title}</span>
+                      <span style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>{item.title}</span>
                     </div>
                     <div style={{ fontSize: 14, fontWeight: 700, color: item.color, lineHeight: 1.3 }}>{item.value}</div>
-                    <div style={{ fontSize: 14, color: '#bfbfbf', marginTop: 1, lineHeight: 1.3, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{item.extra}</div>
+                    <div style={{ fontSize: 14, color: 'var(--color-text-quaternary)', marginTop: 1, lineHeight: 1.3, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{item.extra}</div>
                   </div>
                 ))}
               </div>
@@ -426,7 +427,7 @@ const StyleIntelligenceProfileCard: React.FC<Props> = ({ style }) => {
 
               {/* 难度评估 — 紧凑版 */}
               {activeDifficulty ? (
-                <div style={{ padding: '5px 7px', borderRadius: 6, background: '#fff', border: '1px solid rgba(0,0,0,0.06)' }}>
+                <div style={{ padding: '5px 7px', borderRadius: 6, background: 'var(--color-bg-base)', border: '1px solid rgba(0,0,0,0.06)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 3 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                       <ExperimentOutlined style={{ color: '#722ed1', fontSize: 13 }} />
@@ -442,7 +443,7 @@ const StyleIntelligenceProfileCard: React.FC<Props> = ({ style }) => {
                       style={{ flex: 1, margin: 0 }} />
                     <span style={{ fontSize: 14, color: '#595959', whiteSpace: 'nowrap' }}><b>{activeDifficulty.difficultyScore}</b>/10 ×<b style={{ color: '#722ed1' }}>{activeDifficulty.pricingMultiplier}</b></span>
                   </div>
-                  <div style={{ fontSize: 14, color: '#8c8c8c', marginTop: 2 }}>BOM {activeDifficulty.bomCount}种 · 工序 {activeDifficulty.processCount}道{activeDifficulty.hasSecondaryProcess ? ' · 含二次工艺' : ''}</div>
+                  <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginTop: 2 }}>BOM {activeDifficulty.bomCount}种 · 工序 {activeDifficulty.processCount}道{activeDifficulty.hasSecondaryProcess ? ' · 含二次工艺' : ''}</div>
                   {activeDifficulty.imageInsight && (() => {
                     const insight = activeDifficulty.imageInsight as string;
                     const isError = insight.includes('未开通') || insight.includes('读取失败') || insight.includes('未配置') || insight.includes('未上传');
@@ -459,13 +460,13 @@ const StyleIntelligenceProfileCard: React.FC<Props> = ({ style }) => {
                         {visualResult.severity && visualResult.severity !== 'NONE' && (
                           <Tag style={{ margin: 0, fontSize: 14, lineHeight: '16px', padding: '0 4px' }} color={SEVERITY_COLOR[visualResult.severity] ?? 'default'}>{visualResult.severity}</Tag>
                         )}
-                        <span style={{ fontSize: 14, color: '#8c8c8c', marginLeft: 'auto' }}>置信度 {Math.round(visualResult.confidence * 100)}%</span>
+                        <span style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginLeft: 'auto' }}>置信度 {Math.round(visualResult.confidence * 100)}%</span>
                       </div>
                       <div style={{ fontSize: 14, color: '#595959', lineHeight: 1.5 }}>{visualResult.summary}</div>
                       {visualResult.defects && visualResult.defects.length > 0 && (
                         <div style={{ marginTop: 3 }}>
                           {visualResult.defects.slice(0, 3).map((d, i) => (
-                            <div key={i} style={{ fontSize: 14, color: '#8c8c8c', lineHeight: 1.4 }}>• [{d.level}] {d.type} — {d.description}{d.location ? ` @ ${d.location}` : ''}</div>
+                            <div key={i} style={{ fontSize: 14, color: 'var(--color-text-tertiary)', lineHeight: 1.4 }}>• [{d.level}] {d.type} — {d.description}{d.location ? ` @ ${d.location}` : ''}</div>
                           ))}
                         </div>
                       )}
@@ -505,7 +506,7 @@ const StyleIntelligenceProfileCard: React.FC<Props> = ({ style }) => {
                           </span>
                         </div>
                         <div style={{ fontSize: 14, color: '#262626', lineHeight: 1.5 }}>{item.issue}</div>
-                        <div style={{ fontSize: 14, color: '#8c8c8c', lineHeight: 1.4, marginTop: 2 }}>{item.cause}</div>
+                        <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', lineHeight: 1.4, marginTop: 2 }}>{item.cause}</div>
                       </div>
                     );
                   })}

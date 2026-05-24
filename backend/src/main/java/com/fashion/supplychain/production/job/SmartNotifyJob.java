@@ -158,7 +158,7 @@ public class SmartNotifyJob {
             String dedupKey = "anomaly_" + item.getType()
                     + (item.getTargetName() != null ? "_" + item.getTargetName() : "");
             if (!noRecentNotice(tenantId, dedupKey, "anomaly")) continue;
-            // 精准推给生产/跟单负责人（不全局广播），由 SysNoticeOrchestrator 统一处理 toName
+            // 精准推给生产/跟单领取人（不全局广播），由 SysNoticeOrchestrator 统一处理 toName
             sysNoticeOrchestrator.sendAnomalyToManagers(tenantId, dedupKey,
                     "⚠️ " + item.getTitle(), item.getDescription());
             wxAlertNotifyService.notifyAlert(tenantId, item.getTitle(),

@@ -9,6 +9,7 @@ import {
 } from '@ant-design/icons';
 import ResizableModal from '@/components/common/ResizableModal';
 import api from '@/utils/api';
+import { formatMoney } from '@/utils/format';
 
 const { Text, Title } = Typography;
 
@@ -48,6 +49,7 @@ const ExpressOrderModal: React.FC<ExpressOrderModalProps> = ({ open, order, onCl
   const [feeMap, setFeeMap] = useState<Record<string, number>>({});
   const [result, setResult] = useState<ShipResult | null>(null);
   const [tracking, setTracking] = useState(false);
+  const [printLoading, setPrintLoading] = useState(false);
   const [trackList, setTrackList] = useState<{ time: string; status: string; desc: string }[]>([]);
 
   useEffect(() => {
@@ -107,13 +109,16 @@ const ExpressOrderModal: React.FC<ExpressOrderModalProps> = ({ open, order, onCl
     }
   };
 
-  const handlePrint = () => {
+  const handlePrint = async () => {
     if (!result || !order) return;
+    setPrintLoading(true);
+    try {
     const printWindow = window.open('', '_blank', 'width=800,height=600');
     if (!printWindow) return;
     printWindow.document.write(generateWaybillHtml(result, order));
     printWindow.document.close();
     setTimeout(() => printWindow.print(), 500);
+    } finally { setPrintLoading(false); }
   };
 
   const handleTrack = async () => {
@@ -155,7 +160,7 @@ const ExpressOrderModal: React.FC<ExpressOrderModalProps> = ({ open, order, onCl
           <Button key="track" icon={<EnvironmentOutlined />} loading={tracking} onClick={handleTrack}>
             查询物流轨迹
           </Button>,
-          <Button key="print" type="primary" icon={<PrinterOutlined />} onClick={handlePrint}>
+          <Button key="print" type="primary" icon={<PrinterOutlined />} onClick={() => void handlePrint()} loading={printLoading}>
             打印电子面单
           </Button>,
           <Button key="close" onClick={onClose}>关闭</Button>,
@@ -196,7 +201,7 @@ const ExpressOrderModal: React.FC<ExpressOrderModalProps> = ({ open, order, onCl
                     children: (
                       <div>
                         <div style={{ fontWeight: 500 }}>{t.status}</div>
-                        <div style={{ color: '#999', fontSize: 14 }}>{t.time}</div>
+                        <div style={{ color: 'var(--color-text-tertiary)', fontSize: 14 }}>{t.time}</div>
                         <div>{t.desc}</div>
                       </div>
                     ),
@@ -250,7 +255,7 @@ const ExpressOrderModal: React.FC<ExpressOrderModalProps> = ({ open, order, onCl
             </Button>
             {currentFee !== null && (
               <Tag color="blue">
-                {companyShort} 预估: ¥{(currentFee / 100).toFixed(2)}
+                {companyShort} 预估: {formatMoney(currentFee / 100)}
               </Tag>
             )}
           </Space>

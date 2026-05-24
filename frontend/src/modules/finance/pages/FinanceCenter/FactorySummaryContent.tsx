@@ -63,6 +63,8 @@ const FactorySummaryContent: React.FC<Props> = ({ auditedOrderNos, onAuditNosCha
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
   const [pushedFactoryIds, setPushedFactoryIds] = useState<Set<string>>(new Set());
   const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
+  const [batchApproveLoading, setBatchApproveLoading] = useState(false);
+  const [exportLoading, setExportLoading] = useState(false);
   const showSmartErrorNotice = useMemo(() => isSmartFeatureEnabled('smart.finance.explain.enabled'), []);
 
   // ===== 工厂绩效榜 =====
@@ -270,6 +272,7 @@ const FactorySummaryContent: React.FC<Props> = ({ auditedOrderNos, onAuditNosCha
         okText: '确认终审',
       cancelText: '取消',
       onOk: async () => {
+        setBatchApproveLoading(true);
         try {
           const newPushedIds: string[] = [];
           for (const record of selected) {
@@ -289,35 +292,45 @@ const FactorySummaryContent: React.FC<Props> = ({ auditedOrderNos, onAuditNosCha
           fetchData();
         } catch (e: unknown) {
           message.error(e instanceof Error ? e.message : '批量推送失败');
+        } finally {
+          setBatchApproveLoading(false);
         }
       },
     });
   };
 
   const handleExport = async () => {
-    const { exportToExcel } = await import('@/utils/excelExport');
     if (data.length === 0) {
       message.warning('无数据可导出');
       return;
     }
-    const formattedData = data.map((item: any) => ({
-      '工厂名称': item.factoryName || '-',
-      '订单数': item.orderCount || 0,
-      '下单总量': item.totalOrderQuantity || 0,
-      '入库总量': item.totalWarehousedQuantity || 0,
-      '次品量': item.totalDefectQuantity || 0,
-      '面辅料成本': item.totalMaterialCost || 0,
-      '生产成本': item.totalProductionCost || 0,
-      '总金额': item.totalAmount || 0,
-      '利润': item.totalProfit || 0,
-      '订单号列表': item.orderNos?.join(', ') || '-'
-    }));
-    const headers = ['工厂名称','订单数','下单总量','入库总量','次品量','面辅料成本','生产成本','总金额','利润','订单号列表'];
-    await exportToExcel(
-      formattedData,
-      headers.map(h => ({ header: h, key: h })),
-      `工厂订单汇总_${dayjs().format('YYYYMMDDHHmmss')}.xlsx`
-    );
+    setExportLoading(true);
+    try {
+      const { exportToExcel } = await import('@/utils/excelExport');
+      const formattedData = data.map((item: any) => ({
+        '工厂名称': item.factoryName || '-',
+        '订单数': item.orderCount || 0,
+        '下单总量': item.totalOrderQuantity || 0,
+        '入库总量': item.totalWarehousedQuantity || 0,
+        '次品量': item.totalDefectQuantity || 0,
+        '面辅料成本': item.totalMaterialCost || 0,
+        '生产成本': item.totalProductionCost || 0,
+        '总金额': item.totalAmount || 0,
+        '利润': item.totalProfit || 0,
+        '订单号列表': item.orderNos?.join(', ') || '-'
+      }));
+      const headers = ['工厂名称','订单数','下单总量','入库总量','次品量','面辅料成本','生产成本','总金额','利润','订单号列表'];
+      await exportToExcel(
+        formattedData,
+        headers.map(h => ({ header: h, key: h })),
+        `工厂订单汇总_${dayjs().format('YYYYMMDDHHmmss')}.xlsx`
+      );
+      message.success('导出成功');
+    } catch (e: unknown) {
+      message.error(e instanceof Error ? e.message : '导出失败');
+    } finally {
+      setExportLoading(false);
+    }
   };
 
   // 表格列定义
@@ -514,31 +527,31 @@ const FactorySummaryContent: React.FC<Props> = ({ auditedOrderNos, onAuditNosCha
       {/* 汇总卡片 */}
       <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
         <Card style={{ flex: 1, textAlign: 'center' }}>
-          <div style={{ fontSize: 14, color: '#999' }}>工厂数</div>
+          <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>工厂数</div>
           <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--primary-color)' }}>
             {filteredData.length}
           </div>
         </Card>
         <Card style={{ flex: 1, textAlign: 'center' }}>
-          <div style={{ fontSize: 14, color: '#999' }}>订单总数</div>
+          <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>订单总数</div>
           <div style={{ fontSize: 15, fontWeight: 600 }}>
             {summary.totalOrders}
           </div>
         </Card>
         <Card style={{ flex: 1, textAlign: 'center' }}>
-          <div style={{ fontSize: 14, color: '#999' }}>入库总量</div>
+          <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>入库总量</div>
           <div style={{ fontSize: 15, fontWeight: 600 }}>
             {summary.totalWarehoused.toLocaleString()}
           </div>
         </Card>
         <Card style={{ flex: 1, textAlign: 'center' }}>
-          <div style={{ fontSize: 14, color: '#999' }}>总金额</div>
+          <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>总金额</div>
           <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--primary-color)' }}>
             ¥{toMoney(summary.totalAmount)}
           </div>
         </Card>
         <Card style={{ flex: 1, textAlign: 'center' }}>
-          <div style={{ fontSize: 14, color: '#999' }}>总利润</div>
+          <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>总利润</div>
           <div style={{
             fontSize: 15,
             fontWeight: 600,
@@ -604,6 +617,7 @@ const FactorySummaryContent: React.FC<Props> = ({ auditedOrderNos, onAuditNosCha
               icon={<CheckCircleOutlined />}
               disabled={selectedRowKeys.length === 0}
               onClick={handleBatchApprove}
+              loading={batchApproveLoading}
             >
               批量终审推送 ({selectedRowKeys.length})
             </Button>
@@ -618,6 +632,7 @@ const FactorySummaryContent: React.FC<Props> = ({ auditedOrderNos, onAuditNosCha
               icon={<DownloadOutlined />}
               onClick={handleExport}
               disabled={data.length === 0}
+              loading={exportLoading}
             >
               导出汇总
             </Button>

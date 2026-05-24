@@ -51,10 +51,10 @@ const ProgressAlerts: React.FC<ProgressAlertsProps> = ({
                 <li key={idx}>
                   <b>{it.stageName}</b>
                   {it.backlog > 0 && <span style={{ marginLeft: 6, color: '#888' }}>积压 {it.backlog} 件</span>}
-                  {it.suggestion && <span style={{ marginLeft: 6, color: '#666' }}>{it.suggestion}</span>}
+                  {it.suggestion && <span style={{ marginLeft: 6, color: 'var(--color-text-secondary)' }}>{it.suggestion}</span>}
                 </li>
               ))}
-              {bottleneckItems.length > 4 && <li style={{ color: '#999' }}>还有 {bottleneckItems.length - 4} 个阶段...</li>}
+              {bottleneckItems.length > 4 && <li style={{ color: 'var(--color-text-tertiary)' }}>还有 {bottleneckItems.length - 4} 个阶段...</li>}
             </ul>
           }
         />

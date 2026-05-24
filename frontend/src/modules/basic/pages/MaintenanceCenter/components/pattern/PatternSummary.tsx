@@ -120,10 +120,10 @@ export const PatternSummary: React.FC<PatternSummaryProps> = ({
       </div>
 
       {!patternMetaLoading && patternVersionList.filter(v => v.status === 'archived').length > 0 ? (
-        <div style={{ border: '1px solid #f0f0f0', borderRadius: 10, overflow: 'hidden' }}>
-          <div style={{ padding: '8px 12px', background: '#fafafa', borderBottom: '1px solid #f0f0f0', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+        <div style={{ border: '1px solid var(--color-border-light)', borderRadius: 10, overflow: 'hidden' }}>
+          <div style={{ padding: '8px 12px', background: 'var(--color-bg-container)', borderBottom: '1px solid var(--color-border-light)', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
             <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-text-primary)' }}>历史封存版本</span>
-            <span style={{ fontSize: 14, color: '#8c8c8c', background: '#fff7e6', padding: '1px 8px', borderRadius: 4, border: '1px solid #ffd591' }}>已封存 · 仅供参考 · 不参与大货生产</span>
+            <span style={{ fontSize: 14, color: 'var(--color-text-tertiary)', background: '#fff7e6', padding: '1px 8px', borderRadius: 4, border: '1px solid #ffd591' }}>已封存 · 仅供参考 · 不参与大货生产</span>
           </div>
           <div>
             {patternVersionList
@@ -134,7 +134,7 @@ export const PatternSummary: React.FC<PatternSummaryProps> = ({
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                       <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-text-primary)', flexShrink: 0 }}>V{ver.version || '-'}</span>
-                      <span style={{ fontSize: 14, color: '#8c8c8c', background: '#f5f5f5', padding: '0 6px', borderRadius: 3, border: '1px solid #e8e8e8', flexShrink: 0 }}>封存</span>
+                      <span style={{ fontSize: 14, color: 'var(--color-text-tertiary)', background: 'var(--color-bg-subtle)', padding: '0 6px', borderRadius: 3, border: '1px solid var(--color-border)', flexShrink: 0 }}>封存</span>
                       <span style={{ fontSize: 14, color: 'var(--neutral-text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 180 }}>{ver.fileName || '-'}</span>
                     </div>
                     <div style={{ marginTop: 2, fontSize: 14, color: 'var(--neutral-text-disabled)' }}>

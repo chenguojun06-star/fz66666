@@ -71,11 +71,11 @@ const ScanCountChart: React.FC = () => {
     tooltip: {
       trigger: 'axis',
       confine: true,
-      backgroundColor: '#fff',
-      borderColor: '#e5e7eb',
+      backgroundColor: 'var(--color-bg-base)',
+      borderColor: 'var(--color-border)',
       borderWidth: 1,
       textStyle: {
-        color: '#1a1a1a',
+        color: 'var(--color-text-primary)',
       },
       formatter: (params: any) => {
         if (!params || params.length === 0) return '';
@@ -101,7 +101,7 @@ const ScanCountChart: React.FC = () => {
       top: 5,
       textStyle: {
         fontSize: 14,
-        color: '#666',
+        color: 'var(--color-text-secondary)',
       },
     },
     grid: {
@@ -121,7 +121,7 @@ const ScanCountChart: React.FC = () => {
         },
       },
       axisLabel: {
-        color: '#999',
+        color: 'var(--color-text-tertiary)',
         fontSize: 14,
       },
     },
@@ -134,7 +134,7 @@ const ScanCountChart: React.FC = () => {
         show: false,
       },
       axisLabel: {
-        color: '#999',
+        color: 'var(--color-text-tertiary)',
         fontSize: 14,
         formatter: (value: number) => value.toLocaleString(),
       },

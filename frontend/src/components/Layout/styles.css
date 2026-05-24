@@ -19,7 +19,7 @@
   align-items: center;
   padding: 0 var(--spacing-md);
   box-shadow: var(--shadow-sm);
-  z-index: 100;
+  z-index: var(--z-dropdown);
 }
 
 .header-left {
@@ -63,6 +63,19 @@
   overflow: hidden;
   /* 原 animation: header-brand-flow 7.5s ease-in-out infinite 已移除 */
   /* 理由：background-position 对纯色背景无视觉效果，但强制 GPU 每帧合成 backdrop-filter，是全页抖动噪声源 */
+}
+
+.header-tenant-name {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 160px;
+  padding: 4px 10px;
+  background: var(--color-bg-container);
+  border-radius: 4px;
+  border: 1px solid var(--color-border-light);
 }
 
 /* 深色主题下的品牌标签 - 增强对比度 */
@@ -935,7 +948,7 @@
   max-width: calc(100vw - 24px);
   min-width: 320px;
   box-sizing: border-box;
-  background: #fff;
+  background: var(--color-bg-base);
   border-radius: 12px;
   box-shadow: 0 8px 32px rgba(45, 127, 249, 0.13), 0 2px 8px rgba(0, 0, 0, 0.08);
   border: 1.5px solid rgba(45, 127, 249, 0.14);
@@ -1051,7 +1064,7 @@
 .sap-section-title {
   font-size: 14px;
   font-weight: 600;
-  color: #6b7280;
+  color: var(--color-text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.04em;
   margin-bottom: 6px;
@@ -1104,13 +1117,13 @@
   font-weight: 700;
   color: #1a5fb4;
   margin-left: auto;
-  z-index: 1;
+  z-index: var(--z-local);
 }
 .sap-priority-days {
   position: relative;
   font-size: 14px;
   font-weight: 600;
-  z-index: 1;
+  z-index: var(--z-local);
 }
 
 /* 事件行 */
@@ -1156,7 +1169,7 @@
 .sap-notice-row:hover { filter: brightness(0.97); }
 .sap-notice-read-btn {
   flex-shrink: 0; font-size: 14px; padding: 1px 5px; cursor: pointer;
-  background: #fff; border: 1px solid #ffa940; border-radius: 4px; color: #d46b08;
+  background: var(--color-bg-base); border: 1px solid #ffa940; border-radius: 4px; color: #d46b08;
 }
 .sap-notice-dismiss-btn {
   flex-shrink: 0;
@@ -1269,7 +1282,7 @@
 }
 .sap-ai-msg-ai .sap-ai-msg-bubble {
   background: rgba(45, 127, 249, 0.07);
-  color: #222;
+  color: var(--color-text-primary);
   border-bottom-left-radius: 3px;
 }
 .sap-ai-msg-user .sap-ai-msg-bubble {

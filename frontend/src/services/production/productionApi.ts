@@ -181,10 +181,21 @@ export interface SysNotice {
   orderNo: string;
   title: string;
   content: string;
-  noticeType: 'stagnant' | 'deadline' | 'quality' | 'manual';
+  noticeType: 'stagnant' | 'deadline' | 'quality' | 'manual' | 'urge_order';
   isRead: 0 | 1;
   createdAt: string;
+  urgeRecordId?: string;
+  actionType?: string;
 }
+
+export const urgeApi = {
+  urge: (orderId: string, remark?: string) =>
+    api.post('/production/order/urge', { orderId, remark: remark || '' }),
+  reply: (urgeRecordId: string, replyContent: string, expectedShipDate?: string) =>
+    api.post('/production/order/urge/reply', { urgeRecordId, replyContent, expectedShipDate }),
+  checkUrged: (orderIds: string[]) =>
+    api.post<{ code: number; data: { urgedOrderIds: string[] } }>('/production/order/urge/check-urged', { orderIds }),
+};
 
 export const sysNoticeApi = {
   /** 发送通知给跟单员 */

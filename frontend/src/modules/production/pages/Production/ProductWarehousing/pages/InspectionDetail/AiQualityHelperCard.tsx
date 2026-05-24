@@ -15,7 +15,7 @@ const AiQualityHelperCard: React.FC<Props> = ({ aiSuggestion, aiLoading, actualD
   return (
     <Card
      
-      style={{ background: '#fff', border: '1px solid #d6e4ff' }}
+      style={{ background: 'var(--color-bg-base)', border: '1px solid #d6e4ff' }}
       title={
         <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <XiaoyunCloudAvatar size={18} active />
@@ -53,7 +53,7 @@ const AiQualityHelperCard: React.FC<Props> = ({ aiSuggestion, aiLoading, actualD
               {aiSuggestion.urgentTip}
             </div>
           )}
-          <div style={{ fontWeight: 600, color: '#333', marginBottom: 8, fontSize: 14 }}>质检要点</div>
+          <div style={{ fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: 8, fontSize: 14 }}>质检要点</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {aiSuggestion.checkpoints.map((cp, i) => {
               const isRed = cp.startsWith('🔴');
@@ -64,7 +64,7 @@ const AiQualityHelperCard: React.FC<Props> = ({ aiSuggestion, aiLoading, actualD
                   background: isRed ? '#fff1f0' : isYellow ? '#fffbe6' : '#f6ffed',
                   borderLeft: `3px solid ${isRed ? '#ff4d4f' : isYellow ? '#faad14' : '#52c41a'}`,
                   borderRadius: '0 4px 4px 0',
-                  color: '#333', fontSize: 14,
+                  color: 'var(--color-text-primary)', fontSize: 14,
                 }}>
                   {cp}
                 </div>
@@ -73,7 +73,7 @@ const AiQualityHelperCard: React.FC<Props> = ({ aiSuggestion, aiLoading, actualD
           </div>
           {aiSuggestion.defectSuggestions && Object.keys(aiSuggestion.defectSuggestions).length > 0 && (
             <>
-              <div style={{ fontWeight: 600, color: '#333', marginTop: 12, marginBottom: 8, fontSize: 14 }}>
+              <div style={{ fontWeight: 600, color: 'var(--color-text-primary)', marginTop: 12, marginBottom: 8, fontSize: 14 }}>
                 缺陷处理建议
                 {actualDefectSet.size === 0 && (
                   <span style={{ fontWeight: 400, fontSize: 14, color: '#aaa', marginLeft: 6 }}>（本批暂无次品）</span>

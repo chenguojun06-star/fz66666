@@ -85,7 +85,7 @@ const ProfileTenantEngagementPanel: React.FC<Props> = ({
             <div style={{ marginTop: 16 }}>
               <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>最近反馈</div>
               {myFeedbacks.slice(0, 5).map((fb) => (
-                <div key={fb.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', borderBottom: '1px solid #f0f0f0' }}>
+                <div key={fb.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', borderBottom: '1px solid var(--color-border-light)' }}>
                   <Tag color={FEEDBACK_CATEGORY_MAP[fb.category]?.color || 'default'} style={{ margin: 0 }}>
                     {FEEDBACK_CATEGORY_MAP[fb.category]?.label || fb.category}
                   </Tag>
@@ -97,7 +97,7 @@ const ProfileTenantEngagementPanel: React.FC<Props> = ({
               ))}
             </div>
           )}
-          {loadingFeedbacks && <div style={{ textAlign: 'center', padding: 16, color: '#999' }}>加载中...</div>}
+          {loadingFeedbacks && <div style={{ textAlign: 'center', padding: 16, color: 'var(--color-text-tertiary)' }}>加载中...</div>}
         </Card>
       </div>
     </div>

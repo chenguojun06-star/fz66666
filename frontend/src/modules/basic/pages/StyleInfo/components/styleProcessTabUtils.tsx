@@ -156,7 +156,7 @@ export function buildProcessColumns(opts: BuildProcessColumnsOptions): any[] {
         return (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
             <Tag style={{ background: STAGE_ACCENT, color: '#fff', border: 'none', fontWeight: 600, fontSize: 14 }}>{stage}</Tag>
-            <span style={{ fontSize: 14, color: '#999' }}>{info.count} 个工序</span>
+            <span style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>{info.count} 个工序</span>
             {editableMode && (
               <Button type="link" icon={<PlusOutlined />} onClick={() => handleAdd(stage)} style={{ fontSize: 14, padding: 0 }}>
                 添加

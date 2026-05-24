@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { Form } from 'antd';
 
 import { factoryApi } from '@/services/system/factoryApi';
@@ -16,6 +16,7 @@ export function useOutboundContext() {
   const [outboundForm] = Form.useForm();
   const [factoryOptions, setFactoryOptions] = useState<OutboundFactoryOption[]>([]);
   const [outboundOrderOptions, setOutboundOrderOptions] = useState<OutboundOrderOption[]>([]);
+  const outboundSearchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const loadFactories = useCallback(async () => {
     try {
@@ -57,10 +58,17 @@ export function useOutboundContext() {
     if (factoryName) { await searchOutboundOrders(factoryName, resolvedType); }
   }, [factoryOptions, outboundForm, searchOutboundOrders]);
 
-  const handleOutboundOrderInput = useCallback(async (keyword: string) => {
-    const factoryName = outboundForm.getFieldValue('factoryName') || '';
-    const factoryType = outboundForm.getFieldValue('factoryType') || '';
-    await searchOutboundOrders(factoryName, factoryType, keyword);
+  const handleOutboundOrderInput = useCallback((keyword: string) => {
+    if (outboundSearchTimerRef.current) clearTimeout(outboundSearchTimerRef.current);
+    if (!keyword || keyword.trim().length < 1) {
+      setOutboundOrderOptions([]);
+      return;
+    }
+    outboundSearchTimerRef.current = setTimeout(async () => {
+      const factoryName = outboundForm.getFieldValue('factoryName') || '';
+      const factoryType = outboundForm.getFieldValue('factoryType') || '';
+      await searchOutboundOrders(factoryName, factoryType, keyword);
+    }, 300);
   }, [outboundForm, searchOutboundOrders]);
 
   const handleOutboundOrderSelect = useCallback((orderNo: string) => {

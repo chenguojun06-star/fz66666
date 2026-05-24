@@ -3,11 +3,12 @@
  * ~130 lines (target ≤ 200)
  */
 import { useState } from 'react';
-import { Form, Modal } from 'antd';
+import { Form } from 'antd';
 import api from '@/utils/api';
 import { safePrint } from '@/utils/safePrint';
 import { normalizeMaterialType } from '@/utils/materialType';
 import { MATERIAL_PURCHASE_STATUS, MATERIAL_TYPES } from '@/constants/business';
+import { confirmAction } from '@/utils/confirm';
 import type { MaterialPurchase as MaterialPurchaseType, ProductionOrder, MaterialQueryParams } from '@/types/production';
 import { buildPurchaseSheetHtml } from '../utils';
 
@@ -141,13 +142,7 @@ export function usePurchaseDialog({
     } catch (e) {
       const errMsg = (e as Error)?.message || '';
       if (!overwrite && errMsg.includes('已生成')) {
-        Modal.confirm({
-          title: '采购单已存在',
-          content: '该订单已有采购需求记录，是否按当前BOM数据重新生成？（旧数据将被替换）',
-          okText: '重新生成',
-          cancelText: '取消',
-          onOk: () => handleSavePreview(true),
-        });
+        confirmAction('采购单已存在', '该订单已有采购需求记录，是否按当前BOM数据重新生成？（旧数据将被替换）', () => handleSavePreview(true), { okText: '重新生成', danger: true });
       } else {
         message.error(errMsg || '生成失败');
       }

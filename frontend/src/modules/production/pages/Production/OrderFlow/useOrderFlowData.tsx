@@ -5,6 +5,7 @@ import { useLocation } from 'react-router-dom';
 import api, { parseProductionOrderLines, toNumberSafe } from '@/utils/api';
 import { useUser } from '@/utils/AuthContext';
 import { formatDateTime } from '@/utils/datetime';
+import { formatMoney } from '@/utils/format';
 import type { CuttingBundle, ProductionOrder, ProductWarehousing } from '@/types/production';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
@@ -259,13 +260,13 @@ export function useOrderFlowData() {
       width: 120,
       render: (_: unknown, record: FlowStage) => {
         const start = record.startTime ? new Date(record.startTime).getTime() : 0;
-        if (!start) return React.createElement('span', { style: { color: '#bfbfbf' } }, '-');
+        if (!start) return React.createElement('span', { style: { color: 'var(--color-text-quaternary)' } }, '-');
         const end = record.completeTime
           ? new Date(record.completeTime).getTime()
           : record.status === 'in_progress' ? Date.now() : 0;
-        if (!end) return React.createElement('span', { style: { color: '#bfbfbf' } }, '-');
+        if (!end) return React.createElement('span', { style: { color: 'var(--color-text-quaternary)' } }, '-');
         const hours = Math.round((end - start) / 3600000);
-        if (hours <= 0) return React.createElement('span', { style: { color: '#bfbfbf' } }, '-');
+        if (hours <= 0) return React.createElement('span', { style: { color: 'var(--color-text-quaternary)' } }, '-');
         const days = Math.floor(hours / 24);
         const remainHours = hours % 24;
         const label = days > 0 ? `${days}天${remainHours}小时` : `${hours}小时`;
@@ -326,7 +327,7 @@ export function useOrderFlowData() {
     { title: '数量', dataIndex: 'quantity', key: 'quantity', width: 90, align: 'right', render: (v: unknown) => toNumberSafe(v) },
     { title: '单价', dataIndex: 'totalPrice', key: 'totalPrice', width: 110, align: 'right', render: (v: unknown) => {
       const val = toNumberSafe(v);
-      return val > 0 ? `¥${val.toFixed(2)}` : '-';
+      return val > 0 ? formatMoney(val) : '-';
     }},
     { title: '质检数', dataIndex: 'qualityQuantity', key: 'qualityQuantity', width: 90, align: 'right', render: (v: unknown) => {
       const val = toNumberSafe(v);

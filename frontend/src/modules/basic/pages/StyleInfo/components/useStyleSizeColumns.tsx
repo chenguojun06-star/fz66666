@@ -90,7 +90,7 @@ export function useStyleSizeColumns({
                       src={getFullAuthedFileUrl(url)}
                       width="100%"
                       height={blockHeight}
-                      style={{ objectFit: 'contain', borderRadius: 8, border: '1px solid #eee', background: '#fff', padding: 6 }}
+                      style={{ objectFit: 'contain', borderRadius: 8, border: '1px solid #eee', background: 'var(--color-bg-base)', padding: 6 }}
                       preview={{ src: getFullAuthedFileUrl(url) }}
                     />
                     {editableMode && (

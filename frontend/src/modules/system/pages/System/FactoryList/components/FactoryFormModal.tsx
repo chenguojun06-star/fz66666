@@ -123,7 +123,7 @@ const FactoryFormModal: React.FC<FactoryFormModalProps> = ({
                 return (
                   <>
                     {isInternal ? (
-                      <Form.Item name="managerId" label="负责人">
+                      <Form.Item name="managerId" label="领取人">
                         <Select
                           id="managerId"
                           showSearch

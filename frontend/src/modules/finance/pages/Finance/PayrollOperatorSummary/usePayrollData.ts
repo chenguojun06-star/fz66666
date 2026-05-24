@@ -4,7 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useDebouncedValue } from '@/hooks/usePerformance';
 import api, { unwrapApiData } from '@/utils/api';
 import type { PayrollOperatorProcessSummaryRow } from '@/types/finance';
-import dayjs from 'dayjs';
+import { formatDateTimeSecond } from '@/utils/datetime';
 import type { SmartErrorInfo } from '@/smart/core/types';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
@@ -234,8 +234,8 @@ export function usePayrollData() {
             includeSettled,
         };
         if (dateRange?.[0] && dateRange?.[1]) {
-            payload.startTime = dayjs(dateRange[0]).format('YYYY-MM-DD HH:mm:ss');
-            payload.endTime = dayjs(dateRange[1]).format('YYYY-MM-DD HH:mm:ss');
+            payload.startTime = formatDateTimeSecond(dateRange[0]);
+            payload.endTime = formatDateTimeSecond(dateRange[1]);
         }
         return payload;
     }, [scanType, includeSettled, dateRange]);

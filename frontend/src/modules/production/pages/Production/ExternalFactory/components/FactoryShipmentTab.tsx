@@ -329,8 +329,8 @@ const FactoryShipmentTab: React.FC<FactoryShipmentTabProps> = ({ selectedFactory
           expandedRowRender: (record) => {
             const details = expandedDetails[record.id!] || [];
             const isLoading = expandedLoading[record.id!];
-            if (isLoading) return <span style={{ color: '#999', fontSize: 14 }}>加载中...</span>;
-            if (details.length === 0) return <span style={{ color: '#999', fontSize: 14 }}>无明细</span>;
+            if (isLoading) return <span style={{ color: 'var(--color-text-tertiary)', fontSize: 14 }}>加载中...</span>;
+            if (details.length === 0) return <span style={{ color: 'var(--color-text-tertiary)', fontSize: 14 }}>无明细</span>;
             return (
               <table style={{ fontSize: 14, borderCollapse: 'collapse' as const }}>
                 <thead><tr>
@@ -386,7 +386,7 @@ const FactoryShipmentTab: React.FC<FactoryShipmentTabProps> = ({ selectedFactory
             rules={[{ required: true, message: '请选择订单' }]}
           >
             <select
-              style={{ width: '100%', height: 32, borderRadius: 6, border: '1px solid #d9d9d9', padding: '0 8px' }}
+              style={{ width: '100%', height: 32, borderRadius: 6, border: '1px solid var(--color-border-antd)', padding: '0 8px' }}
               onChange={e => handleOrderSelect(e.target.value)}
               defaultValue=""
             >
@@ -509,7 +509,7 @@ const FactoryShipmentTab: React.FC<FactoryShipmentTabProps> = ({ selectedFactory
                 style={{ width: '100%' }}
                 suffix="件"
               />
-              <div style={{ marginTop: 4, fontSize: 14, color: '#999' }}>
+              <div style={{ marginTop: 4, fontSize: 14, color: 'var(--color-text-tertiary)' }}>
                 默认等于发货数量，如实际到货数量不同请修改
               </div>
             </div>

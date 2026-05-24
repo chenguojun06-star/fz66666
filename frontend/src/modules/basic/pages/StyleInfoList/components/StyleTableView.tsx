@@ -504,12 +504,12 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
                         <strong>{sample.sampleCompletedTimeLabel}</strong>
                       </div>
                     </div>
-                    <div style={{ marginTop: 12, padding: '10px 0', borderTop: '1px solid #f0f0f0', display: 'flex', alignItems: 'center', gap: 14 }}>
+                    <div style={{ marginTop: 12, padding: '10px 0', borderTop: '1px solid var(--color-border-light)', display: 'flex', alignItems: 'center', gap: 14 }}>
                       <QRCode
                         value={JSON.stringify({ type: 'pattern', id: sample.sampleSnapshot.id })}
                         size={80}
                       />
-                      <div style={{ fontSize: 14, color: '#8c8c8c', lineHeight: 1.8 }}>
+                      <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', lineHeight: 1.8 }}>
                         <div style={{ fontWeight: 500, color: '#595959' }}>工人扫码领取/完成</div>
                         <div>样衣单号: {sample.sampleSnapshot.id}</div>
                       </div>

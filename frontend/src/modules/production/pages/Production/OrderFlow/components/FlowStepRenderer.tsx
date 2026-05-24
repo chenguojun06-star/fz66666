@@ -8,6 +8,7 @@ import StylePatternSimpleTab from './StylePatternSimpleTab';
 import StyleQuotationTab from '@/modules/basic/pages/StyleInfo/components/StyleQuotationTab';
 import StyleSecondaryProcessTab from '@/modules/basic/pages/StyleInfo/components/StyleSecondaryProcessTab';
 import { formatReferenceKilograms } from '../../MaterialPurchase/utils';
+import { formatMoney } from '@/utils/format';
 
 interface Props {
   loading: boolean;
@@ -131,7 +132,7 @@ const FlowStepRenderer: React.FC<Props> = ({
                             <Alert title="工序单价信息" type="info" showIcon style={{ marginBottom: 16 }}
                               description={
                                 <div>
-                                  <p>工序数量: <strong>{workflowNodes.length}</strong> 个 | 工序总单价: <strong style={{ color: 'var(--primary-color)', fontSize: 'var(--font-size-lg)' }}>¥{totalPrice.toFixed(2)}</strong></p>
+                                  <p>工序数量: <strong>{workflowNodes.length}</strong> 个 | 工序总单价: <strong style={{ color: 'var(--primary-color)', fontSize: 'var(--font-size-lg)' }}>{formatMoney(totalPrice)}</strong></p>
                                   <p style={{ marginTop: 8, color: 'var(--color-warning)' }}>提示：单价修改需要到"单价维护"模块中修改，修改后点击"刷新数据"按钮可更新单价</p>
                                 </div>
                               } />
@@ -146,7 +147,7 @@ const FlowStepRenderer: React.FC<Props> = ({
                                 return m[v] || v || '-'; }},
                               { title: '机器类型', dataIndex: 'machineType', key: 'machineType', width: 120, render: (v: any) => v || '-' },
                               { title: '标准工时(分钟)', dataIndex: 'standardTime', key: 'standardTime', width: 130, align: 'right' as const, render: (v: any) => Number(v || 0).toFixed(2) },
-                              ...(!isFactoryUser ? [{ title: '单价(元)', dataIndex: 'unitPrice', key: 'unitPrice', width: 120, align: 'right' as const, render: (v: any) => <strong style={{ color: 'var(--primary-color)' }}>¥{Number(v || 0).toFixed(2)}</strong> }] : []),
+                              ...(!isFactoryUser ? [{ title: '单价(元)', dataIndex: 'unitPrice', key: 'unitPrice', width: 120, align: 'right' as const, render: (v: any) => <strong style={{ color: 'var(--primary-color)' }}>{formatMoney(Number(v || 0))}</strong> }] : []),
                               { title: '工序描述', dataIndex: 'description', key: 'description', ellipsis: true, render: (v: any) => v || '-' },
                             ]} pagination={false} bordered scroll={{ x: 'max-content' }} />
                         </>
@@ -182,7 +183,7 @@ const FlowStepRenderer: React.FC<Props> = ({
                               if (entries.length > 0) return <div style={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>{entries.map(([sz, usage]) => <span key={sz} style={{ margin: 0, fontSize: 14, background: '#f0f0f0', padding: '0 4px', borderRadius: 2 }}>{sz}: {Number(usage).toFixed(2)}{record.unit || ''}</span>)}</div>;
                             } catch { /* ignore */ }
                           }
-                          return <span style={{ color: '#999' }}>{record.size || '-'}</span>;
+                          return <span style={{ color: 'var(--color-text-tertiary)' }}>{record.size || '-'}</span>;
                         }},
                         { title: '采购数量', dataIndex: 'purchaseQuantity', key: 'purchaseQuantity', width: 120, align: 'right' as const, render: (v: any, record: any) => `${Number(v || 0).toFixed(2)} ${record.unit || ''}` },
                         { title: '参考公斤数', key: 'referenceKilograms', width: 120, align: 'right' as const, render: (_: any, record: any) => formatReferenceKilograms(record.purchaseQuantity, record.conversionRate, record.unit) },
@@ -191,10 +192,10 @@ const FlowStepRenderer: React.FC<Props> = ({
                           const color = val >= ordered && ordered > 0 ? 'var(--color-success)' : 'var(--color-warning)';
                           return <span style={{ color }}>{val.toFixed(2)} {record.unit || ''}</span>;
                         }},
-                        ...(!isFactoryUser ? [{ title: '单价', dataIndex: 'unitPrice', key: 'unitPrice', width: 100, align: 'right' as const, render: (v: any) => v ? `¥${Number(v).toFixed(2)}` : '-' }] : []),
+                        ...(!isFactoryUser ? [{ title: '单价', dataIndex: 'unitPrice', key: 'unitPrice', width: 100, align: 'right' as const, render: (v: any) => v ? formatMoney(Number(v)) : '-' }] : []),
                         { title: '总价', key: 'totalAmount', width: 120, align: 'right' as const, render: (_: any, record: any) => {
                           const total = Number(record.totalAmount || 0) || (Number(record.purchasedQuantity || 0) * Number(record.unitPrice || 0));
-                          return total > 0 ? <strong style={{ color: 'var(--primary-color)' }}>¥{total.toFixed(2)}</strong> : '-';
+                          return total > 0 ? <strong style={{ color: 'var(--primary-color)' }}>{formatMoney(total)}</strong> : '-';
                         }},
                         { title: '供应商', dataIndex: 'supplierName', key: 'supplierName', width: 150, ellipsis: true, render: (_: any, record: any) => <SupplierNameTooltip name={record.supplierName} contactPerson={record.supplierContactPerson} contactPhone={record.supplierContactPhone} /> },
                         { title: '状态', dataIndex: 'status', key: 'status', width: 100, render: (v: any) => {

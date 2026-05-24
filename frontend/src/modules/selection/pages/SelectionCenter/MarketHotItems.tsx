@@ -263,7 +263,7 @@ export default function MarketHotItems({ onAdded }: { onAdded?: () => void }) {
     const insight = buildMarketInsight(item, analysis);
     return (
       <div style={{ width: SMART_CARD_CONTENT_WIDTH, maxWidth: SMART_CARD_CONTENT_WIDTH, fontSize: 14, boxSizing: 'border-box' }}>
-        <div style={{ fontWeight: 700, marginBottom: 8, borderBottom: '1px solid #f0f0f0', paddingBottom: 6 }}>市场判断</div>
+        <div style={{ fontWeight: 700, marginBottom: 8, borderBottom: '1px solid var(--color-border-light)', paddingBottom: 6 }}>市场判断</div>
         <DecisionInsightCard compact insight={insight} />
         {analysis && analysis.avgPrice > 0 && (
           <div style={{ marginTop: 8, fontSize: 14, color: '#595959', lineHeight: 1.6 }}>
@@ -301,7 +301,7 @@ export default function MarketHotItems({ onAdded }: { onAdded?: () => void }) {
   return (
     <div>
       {/* 今日热榜 */}
-      <div style={{ marginBottom: 16, border: '1px solid #f0f0f0', borderRadius: 8, padding: '12px 16px', background: '#fffbf0' }}>
+      <div style={{ marginBottom: 16, border: '1px solid var(--color-border-light)', borderRadius: 8, padding: '12px 16px', background: '#fffbf0' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
           <Space size={6}>
             <FireOutlined style={{ color: '#fa8c16' }} />
@@ -338,14 +338,14 @@ export default function MarketHotItems({ onAdded }: { onAdded?: () => void }) {
                   <Row gutter={[10, 10]}>
                     {filterProductsBySource(g.products).map((item, i) => (
                       <Col key={i} xs={24} sm={12} md={8} lg={6} xl={4}>
-                        <div style={{ border: '1px solid #f0f0f0', borderRadius: 6, background: '#fff', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                        <div style={{ border: '1px solid var(--color-border-light)', borderRadius: 6, background: 'var(--color-bg-base)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
                           {item.thumbnail
                             ? (
-                              <div style={{ width: '100%', height: 190, background: '#fafafa', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 6 }}>
+                              <div style={{ width: '100%', height: 190, background: 'var(--color-bg-container)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 6 }}>
                                 <img src={item.thumbnail} alt={item.title} style={{ width: '100%', height: '100%', objectFit: 'contain' }} loading="lazy" referrerPolicy="no-referrer" />
                               </div>
                             )
-                            : <div style={{ height: 80, background: '#f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#bbb', fontSize: 14 }}>暂无图片</div>}
+                            : <div style={{ height: 80, background: 'var(--color-bg-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#bbb', fontSize: 14 }}>暂无图片</div>}
                           <div style={{ padding: '8px 10px' }}>
                             <Tooltip title={item.title}><div style={{ fontSize: 14, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 4 }}>{item.title}</div></Tooltip>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
@@ -435,7 +435,7 @@ export default function MarketHotItems({ onAdded }: { onAdded?: () => void }) {
                 <Popover content={renderItemPopover(item, sectionAiAnalysis)} title={null} trigger="hover" placement="right" mouseEnterDelay={0.3} overlayStyle={{ width: SMART_CARD_OVERLAY_WIDTH, maxWidth: SMART_CARD_OVERLAY_WIDTH }}>
                   <div
                     style={{
-                      border: '1px solid #f0f0f0', borderRadius: 8, background: '#fff',
+                      border: '1px solid var(--color-border-light)', borderRadius: 8, background: 'var(--color-bg-base)',
                       overflow: 'hidden', transition: 'box-shadow .2s, transform .15s',
                       display: 'flex', flexDirection: 'column', height: '100%', cursor: 'default',
                     }}
@@ -444,11 +444,11 @@ export default function MarketHotItems({ onAdded }: { onAdded?: () => void }) {
                   >
                     {/* 商品图片 */}
                     {item.thumbnail ? (
-                      <div style={{ height: 280, background: '#fafafa', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 6 }}>
+                      <div style={{ height: 280, background: 'var(--color-bg-container)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 6 }}>
                         <img src={item.thumbnail} alt={item.title} style={{ width: '100%', height: '100%', objectFit: 'contain' }} loading="lazy" referrerPolicy="no-referrer" />
                       </div>
                     ) : (
-                      <div style={{ height: 100, background: '#f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#bbb', fontSize: 14 }}>暂无图片</div>
+                      <div style={{ height: 100, background: 'var(--color-bg-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#bbb', fontSize: 14 }}>暂无图片</div>
                     )}
                     {/* 内容区 */}
                     <div style={{ padding: '10px 12px', flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -489,12 +489,12 @@ export default function MarketHotItems({ onAdded }: { onAdded?: () => void }) {
                 result && result.items?.length === 0 ? (
                   <div>
                     <p style={{ margin: '8px 0', fontSize: 14 }}>未搜索到「{lastKeyword}」的相关商品</p>
-                    <p style={{ margin: 0, color: '#999', fontSize: 14 }}>请换一个关键词，或稍后重试</p>
+                    <p style={{ margin: 0, color: 'var(--color-text-tertiary)', fontSize: 14 }}>请换一个关键词，或稍后重试</p>
                   </div>
                 ) : (
                   <div>
                     <p style={{ margin: '8px 0', fontSize: 14 }}>输入关键词，搜索多渠道真实市场数据</p>
-                    <p style={{ margin: 0, color: '#999', fontSize: 14 }}>数据来源：Google Shopping / Amazon / eBay / Walmart，结果按渠道权重、评分和评论量排序</p>
+                    <p style={{ margin: 0, color: 'var(--color-text-tertiary)', fontSize: 14 }}>数据来源：Google Shopping / Amazon / eBay / Walmart，结果按渠道权重、评分和评论量排序</p>
                   </div>
                 )
               }

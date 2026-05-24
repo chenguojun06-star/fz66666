@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState, type Dispatch, type SetStateAction } from 'react';
 import { Form } from 'antd';
-import dayjs from 'dayjs';
+import { formatDateTimeSecond } from '@/utils/datetime';
 import { StyleInfo } from '@/types/style';
 import api from '@/utils/api';
 import {
@@ -112,7 +112,7 @@ export default function useConfirmStage({ selectedStage, setSelectedStage, messa
         reviewStatus: values.reviewStatus,
         reviewComment: values.reviewComment || null,
       });
-      const now = dayjs().format('YYYY-MM-DD HH:mm:ss');
+      const now = formatDateTimeSecond(new Date());
       const nextRecord = {
         ...selectedStage.record,
         sampleReviewStatus: values.reviewStatus,

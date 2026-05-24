@@ -9,6 +9,7 @@ import {
 } from '@/services/finance/wagePaymentApi';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
+import { formatMoney } from '@/utils/format';
 
 interface UsePaymentDataOptions {
   msg: { success: (text: string) => void; error: (text: string) => void; warning: (text: string) => void };
@@ -127,8 +128,8 @@ export function usePaymentData({ msg, filterForm }: UsePaymentDataOptions) {
       title: '批量线下付款',
       content: (
         <div>
-          <p>选中 <strong>{selected.length}</strong> 笔待收付款，合计金额：<strong style={{ color: '#cf1322' }}>¥{totalAmt.toFixed(2)}</strong></p>
-          <p style={{ fontSize: 14, color: '#999' }}>将以「线下付款」方式逐笔发起，请在完成转账后分别上传凭证确认。</p>
+          <p>选中 <strong>{selected.length}</strong> 笔待收付款，合计金额：<strong style={{ color: '#cf1322' }}>{formatMoney(totalAmt)}</strong></p>
+          <p style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>将以「线下付款」方式逐笔发起，请在完成转账后分别上传凭证确认。</p>
         </div>
       ),
       okText: '确认批量发起',

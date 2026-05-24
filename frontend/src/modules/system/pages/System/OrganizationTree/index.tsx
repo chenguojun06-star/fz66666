@@ -465,7 +465,7 @@ const OrganizationTreePage: React.FC = () => {
           <Avatar size={24} icon={<UserOutlined />} style={{ backgroundColor: 'var(--primary-color, #1677ff)', flexShrink: 0, cursor: 'pointer' }} onClick={() => setProfileUser(r)} />
           {v || r.username}
           {selectedUnit?.managerUserId && String(r.id) === String(selectedUnit.managerUserId) && (
-            <Tag color="blue" style={{ fontSize: 14 }}>负责人</Tag>
+            <Tag color="blue" style={{ fontSize: 14 }}>领取人</Tag>
           )}
         </Space>
       ),
@@ -510,7 +510,7 @@ const OrganizationTreePage: React.FC = () => {
       },
     },
     {
-      title: '部门负责人',
+      title: '部门领取人',
       width: 90,
       render: (_: unknown, r: User) => {
         if (!selectedUnit?.managerUserId) return '—';

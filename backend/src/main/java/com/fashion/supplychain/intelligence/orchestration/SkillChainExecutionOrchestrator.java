@@ -110,6 +110,126 @@ public class SkillChainExecutionOrchestrator {
                     .defaultArgsHint("{\"action\":\"notify_factory\"}")
                     .build()
             ))
+            .build(),
+
+        SkillChainDef.builder()
+            .id("overdue_follow_up")
+            .name("逾期订单催单")
+            .description("查询逾期订单 → 分析逾期原因 → 通知跟单员催单，一句话完成催单闭环")
+            .triggers(List.of("催单", "逾期催单", "催工厂", "催跟单", "逾期跟进"))
+            .steps(List.of(
+                SkillChainStep.builder()
+                    .toolName("tool_query_production_progress")
+                    .description("查询当前逾期订单列表")
+                    .defaultArgsHint("{\"status\":\"overdue\"}")
+                    .build(),
+                SkillChainStep.builder()
+                    .toolName("tool_deep_analysis")
+                    .description("分析逾期根因（工厂产能/物料/排产问题）")
+                    .defaultArgsHint("{\"analysisType\":\"overdue_root_cause\"}")
+                    .build(),
+                SkillChainStep.builder()
+                    .toolName("tool_team_dispatch")
+                    .description("通知跟单员跟进逾期订单")
+                    .defaultArgsHint("{\"action\":\"dispatch\",\"targetRole\":\"跟单\"}")
+                    .build()
+            ))
+            .build(),
+
+        SkillChainDef.builder()
+            .id("factory_silence_break")
+            .name("工厂沉默破冰")
+            .description("检测长时间无进度更新的工厂 → 生成关注清单 → 通知生产主管，适用于工厂失联场景")
+            .triggers(List.of("工厂沉默", "工厂失联", "无进度", "工厂不回复", "联系工厂"))
+            .steps(List.of(
+                SkillChainStep.builder()
+                    .toolName("tool_query_production_progress")
+                    .description("查询3天以上无扫码记录的工厂/订单")
+                    .defaultArgsHint("{\"status\":\"factory_silence\"}")
+                    .build(),
+                SkillChainStep.builder()
+                    .toolName("tool_smart_report")
+                    .description("生成工厂沉默风险简报")
+                    .defaultArgsHint("{\"reportType\":\"factory_silence\"}")
+                    .build(),
+                SkillChainStep.builder()
+                    .toolName("tool_team_dispatch")
+                    .description("通知生产主管联系工厂")
+                    .defaultArgsHint("{\"action\":\"dispatch\",\"targetRole\":\"生产主管\"}")
+                    .build()
+            ))
+            .build(),
+
+        SkillChainDef.builder()
+            .id("material_shortage_response")
+            .name("物料短缺应急")
+            .description("检测物料库存低于安全值 → 生成采购建议 → 通知采购员，适用于物料告急场景")
+            .triggers(List.of("物料短缺", "缺料", "库存不足", "物料告急", "采购应急"))
+            .steps(List.of(
+                SkillChainStep.builder()
+                    .toolName("tool_query_stock")
+                    .description("查询低于安全库存的物料清单")
+                    .defaultArgsHint("{\"status\":\"below_safety\"}")
+                    .build(),
+                SkillChainStep.builder()
+                    .toolName("tool_deep_analysis")
+                    .description("分析物料缺口与关联订单影响")
+                    .defaultArgsHint("{\"analysisType\":\"material_shortage\"}")
+                    .build(),
+                SkillChainStep.builder()
+                    .toolName("tool_team_dispatch")
+                    .description("通知采购员紧急采购")
+                    .defaultArgsHint("{\"action\":\"dispatch\",\"targetRole\":\"采购\"}")
+                    .build()
+            ))
+            .build(),
+
+        SkillChainDef.builder()
+            .id("delivery_expedite")
+            .name("交期加急协调")
+            .description("标记订单加急 → 通知工厂优先排产 → 设置3天后自动复查，适用于客户催交期场景")
+            .triggers(List.of("加急", "催交期", "优先排产", "交期提前", "急单"))
+            .steps(List.of(
+                SkillChainStep.builder()
+                    .toolName("tool_action_executor")
+                    .description("标记订单为加急状态")
+                    .defaultArgsHint("{\"action\":\"mark_urgent\"}")
+                    .build(),
+                SkillChainStep.builder()
+                    .toolName("tool_team_dispatch")
+                    .description("通知工厂优先排产")
+                    .defaultArgsHint("{\"action\":\"dispatch\",\"targetRole\":\"工厂\"}")
+                    .build(),
+                SkillChainStep.builder()
+                    .toolName("tool_smart_report")
+                    .description("生成加急订单跟踪报告")
+                    .defaultArgsHint("{\"reportType\":\"expedite_tracking\"}")
+                    .build()
+            ))
+            .build(),
+
+        SkillChainDef.builder()
+            .id("quality_issue_escalation")
+            .name("质量异常升级")
+            .description("检测质量异常 → 分析影响范围 → 通知质检+生产主管，适用于批量质量问题场景")
+            .triggers(List.of("质量异常", "质量升级", "返工", "疵点超标", "质量告警"))
+            .steps(List.of(
+                SkillChainStep.builder()
+                    .toolName("tool_query_production_progress")
+                    .description("查询质检异常订单列表")
+                    .defaultArgsHint("{\"status\":\"quality_issue\"}")
+                    .build(),
+                SkillChainStep.builder()
+                    .toolName("tool_deep_analysis")
+                    .description("分析质量异常根因与影响范围")
+                    .defaultArgsHint("{\"analysisType\":\"quality_root_cause\"}")
+                    .build(),
+                SkillChainStep.builder()
+                    .toolName("tool_team_dispatch")
+                    .description("通知质检和生产主管处理")
+                    .defaultArgsHint("{\"action\":\"dispatch\",\"targetRole\":\"质检\"}")
+                    .build()
+            ))
             .build()
     );
 

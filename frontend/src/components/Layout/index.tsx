@@ -18,7 +18,7 @@ import GlobalAiAssistant from '../common/GlobalAiAssistant';
 import SideMenu from './SideMenu';
 import { useMenuBadgeCounts } from './useMenuBadgeCounts';
 import { useLayoutAuth, normalizePath } from './useLayoutAuth';
-import { useActivePath, useActiveSectionKey, useRecentPages } from './router';
+import { useActivePath, useActiveSectionKey, useRecentPages, resolveRecentTitle } from './router';
 import { menuConfig } from '../../routeConfig';
 import './styles.css';
 
@@ -80,7 +80,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const showGlobalSmartGuide = useMemo(() => isSmartFeatureEnabled('smart.guide.enabled'), []);
   const globalGuide = useMemo(() => resolveSmartGlobalGuide(effectivePathname), [effectivePathname]);
 
-  const brandName = String((user as any)?.tenantName || '').trim() || t('login.brand', language);
+  const brandName = t('login.brand', language);
+  const tenantName = String((user as any)?.tenantName || '').trim();
 
   const localizedMenuConfig = useMemo(() => {
     return menuConfig.map((section) => ({ ...section }));
@@ -151,9 +152,15 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     }
   }, [auth.isFactoryAccount, effectivePathname, navigate]);
 
+  const pageTitle = useMemo(() => {
+    const basePath = getActivePath || normalizePath(effectivePathname);
+    const moduleName = resolveRecentTitle(basePath, normalizePath(effectivePathname), language, localizedMenuConfig);
+    return moduleName && moduleName !== basePath ? moduleName : '';
+  }, [effectivePathname, getActivePath, language, localizedMenuConfig]);
+
   useEffect(() => {
-    document.title = brandName;
-  }, [brandName]);
+    document.title = pageTitle ? `${pageTitle} - ${brandName}` : brandName;
+  }, [pageTitle, brandName]);
 
   const handleLogout = () => {
     logout();
@@ -171,6 +178,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         <div className="header-content">
           <div className="header-left">
             <h1 className="header-title header-brand" title={brandName}>{brandName}</h1>
+            {tenantName && <span className="header-tenant-name">{tenantName}</span>}
             {recentPages.length ? (
               <div className="header-recents" role="tablist" aria-label={t('layout.recentPages', language)} ref={recentsContainerRef}>
                 {recentPages.map((p) => {

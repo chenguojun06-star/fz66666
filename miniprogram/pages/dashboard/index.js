@@ -12,8 +12,8 @@
  *   production.listOrders      → 订单列表 + 状态计数
  */
 var api = require('../../utils/api');
-var { transformOrderData } = require('../../utils/order/orderTransform');
-var { buildProcessNodesWithRates, calcOrderProgress } = require('../../utils/order/progressNodes');
+var { transformOrderData } = require('./utils/orderTransform');
+var { buildProcessNodesWithRates, calcOrderProgress } = require('./utils/progressNodes');
 var { isAdminOrSupervisor } = require('../../utils/permission');
 var { isTenantOwner } = require('../../utils/storage');
 var { eventBus, Events } = require('../../utils/eventBus');
@@ -87,8 +87,9 @@ Page({
       this.loadOrders(true);
     }
     this._loaded = true;
-    this._loadUnreadCount();
     this._bindWsEvents();
+    var that = this;
+    setTimeout(function () { that._loadUnreadCount(); }, 200);
   },
 
   onPullDownRefresh: function () {

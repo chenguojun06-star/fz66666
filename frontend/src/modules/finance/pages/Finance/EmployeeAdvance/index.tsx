@@ -7,6 +7,8 @@ import StandardModal from '@/components/common/StandardModal';
 import { PlusOutlined, SearchOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
+import { formatDateTime } from '@/utils/datetime';
+import { formatMoney } from '@/utils/format';
 import {
   ADVANCE_STATUS,
   REPAYMENT_STATUS,
@@ -92,7 +94,7 @@ const EmployeeAdvancePage: React.FC = () => {
     modal.confirm({
       width: '30vw',
       title: '审批通过',
-      content: `确认通过 ${record.employeeName} 的借支单 ${record.advanceNo}，金额 ¥${(record.amount || 0).toFixed(2)}？`,
+      content: `确认通过 ${record.employeeName} 的借支单 ${record.advanceNo}，金额 ${formatMoney(record.amount || 0)}？`,
       okText: '确认通过',
       cancelText: '取消',
       onOk: async () => {
@@ -159,15 +161,15 @@ const EmployeeAdvancePage: React.FC = () => {
     { title: '所属工厂', dataIndex: 'factoryName', width: 120, render: (val: string) => val || '-' },
     {
       title: '借支金额', dataIndex: 'amount', width: 110, align: 'right',
-      render: (val: number) => <span style={{ color: 'var(--color-danger)', fontWeight: 500 }}>¥{(val || 0).toFixed(2)}</span>,
+      render: (val: number) => <span style={{ color: 'var(--color-danger)', fontWeight: 500 }}>{formatMoney(val || 0)}</span>,
     },
     { title: '审批状态', dataIndex: 'status', width: 90, render: (val: string) => statusTag(val) },
     { title: '还款状态', dataIndex: 'repaymentStatus', width: 100, render: (val: string) => repaymentTag(val) },
     {
       title: '剩余金额', dataIndex: 'remainingAmount', width: 110, align: 'right',
-      render: (val: number) => <span style={{ color: 'var(--color-warning)', fontWeight: 500 }}>¥{(val || 0).toFixed(2)}</span>,
+      render: (val: number) => <span style={{ color: 'var(--color-warning)', fontWeight: 500 }}>{formatMoney(val || 0)}</span>,
     },
-    { title: '创建时间', dataIndex: 'createTime', width: 120, render: (val: string) => val ? dayjs(val).format('YYYY-MM-DD HH:mm') : '-' },
+    { title: '创建时间', dataIndex: 'createTime', width: 120, render: (val: string) => val ? formatDateTime(val) : '-' },
     {
       title: '操作', key: 'actions', width: 140, fixed: 'right' as const,
       render: (_: unknown, record: EmployeeAdvance) => {
@@ -247,9 +249,9 @@ const EmployeeAdvancePage: React.FC = () => {
               <div style={{ color: 'var(--color-text-tertiary)', fontSize: 14, marginBottom: 4 }}>借支信息</div>
               <div style={{ fontWeight: 500 }}>{repayRecord.employeeName} · {repayRecord.advanceNo}</div>
               <div style={{ marginTop: 4 }}>
-                借支金额：<span style={{ color: 'var(--color-danger)' }}>¥{(repayRecord.amount || 0).toFixed(2)}</span>
+                借支金额：<span style={{ color: 'var(--color-danger)' }}>{formatMoney(repayRecord.amount || 0)}</span>
                 {' / '}
-                剩余：<span style={{ color: 'var(--color-warning)' }}>¥{(repayRecord.remainingAmount || 0).toFixed(2)}</span>
+                剩余：<span style={{ color: 'var(--color-warning)' }}>{formatMoney(repayRecord.remainingAmount || 0)}</span>
               </div>
             </Card>
           )}

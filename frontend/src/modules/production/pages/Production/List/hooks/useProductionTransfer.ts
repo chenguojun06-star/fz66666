@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { ProductionOrder } from '@/types/production';
 import api from '@/utils/api';
 
@@ -41,6 +41,8 @@ export function useProductionTransfer({ message }: UseProductionTransferOptions)
   const [transferUsers, setTransferUsers] = useState<TransferUser[]>([]);
   const [transferSearching, setTransferSearching] = useState(false);
 
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // --- 转工厂 ---
   const [transferFactoryId, setTransferFactoryId] = useState<string | undefined>(undefined);
   const [transferFactoryMessage, setTransferFactoryMessage] = useState('');
@@ -56,58 +58,64 @@ export function useProductionTransfer({ message }: UseProductionTransferOptions)
   const [transferSelectedProcessCodes, setTransferSelectedProcessCodes] = useState<string[]>([]);
 
   /** 搜索可转单用户（仅限同租户系统内部用户） */
-  const searchTransferUsers = async (keyword: string) => {
+  const searchTransferUsers = (keyword: string) => {
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
     if (!keyword || keyword.length < 1) {
       setTransferUsers([]);
       return;
     }
-    setTransferSearching(true);
-    try {
-      const result = await api.get('/production/order/transfer/search-users', {
-        params: { keyword }
-      }) as any;
-      if (result?.code === 200 && Array.isArray(result.data?.records)) {
-        setTransferUsers(result.data.records.map((u: any) => ({
-          id: String(u.id),
-          name: u.name || u.username,
-          username: u.username || '',
-        })));
-      } else if (Array.isArray(result.data)) {
-        setTransferUsers(result.data.map((u: any) => ({
-          id: String(u.id),
-          name: u.name || u.username,
-          username: u.username || '',
-        })));
+    searchTimerRef.current = setTimeout(async () => {
+      setTransferSearching(true);
+      try {
+        const result = await api.get('/production/order/transfer/search-users', {
+          params: { keyword }
+        }) as any;
+        if (result?.code === 200 && Array.isArray(result.data?.records)) {
+          setTransferUsers(result.data.records.map((u: any) => ({
+            id: String(u.id),
+            name: u.name || u.username,
+            username: u.username || '',
+          })));
+        } else if (Array.isArray(result.data)) {
+          setTransferUsers(result.data.map((u: any) => ({
+            id: String(u.id),
+            name: u.name || u.username,
+            username: u.username || '',
+          })));
+        }
+      } catch {
+        // ignore
+      } finally {
+        setTransferSearching(false);
       }
-    } catch {
-      // ignore
-    } finally {
-      setTransferSearching(false);
-    }
+    }, 300);
   };
 
   /** 搜索可转工厂（仅限同租户系统内部工厂） */
-  const searchTransferFactories = async (keyword: string) => {
-    setTransferFactorySearching(true);
-    try {
-      const result = await api.get('/production/order/transfer/search-factories', {
-        params: { keyword: keyword || '' }
-      }) as any;
-      const records = result?.data?.records || result?.data || [];
-      if (Array.isArray(records)) {
-        setTransferFactories(records.map((f: any) => ({
-          id: String(f.id),
-          factoryCode: f.factoryCode || '',
-          factoryName: f.factoryName || '',
-          contactPerson: f.contactPerson || '',
-          contactPhone: f.contactPhone || '',
-        })));
+  const searchTransferFactories = (keyword: string) => {
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    searchTimerRef.current = setTimeout(async () => {
+      setTransferFactorySearching(true);
+      try {
+        const result = await api.get('/production/order/transfer/search-factories', {
+          params: { keyword: keyword || '' }
+        }) as any;
+        const records = result?.data?.records || result?.data || [];
+        if (Array.isArray(records)) {
+          setTransferFactories(records.map((f: any) => ({
+            id: String(f.id),
+            factoryCode: f.factoryCode || '',
+            factoryName: f.factoryName || '',
+            contactPerson: f.contactPerson || '',
+            contactPhone: f.contactPhone || '',
+          })));
+        }
+      } catch {
+        // ignore
+      } finally {
+        setTransferFactorySearching(false);
       }
-    } catch {
-      // ignore
-    } finally {
-      setTransferFactorySearching(false);
-    }
+    }, 300);
   };
 
   /** 打开转单弹窗 */

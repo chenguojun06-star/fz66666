@@ -9,9 +9,11 @@ import SupplierSelect from '@/components/common/SupplierSelect';
 import SupplierNameTooltip from '@/components/common/SupplierNameTooltip';
 import DictAutoComplete from '@/components/common/DictAutoComplete';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
+import { confirmDelete } from '@/utils/confirm';
 import { getMaterialTypeLabel } from '@/utils/materialType';
 import { DEFAULT_PAGE_SIZE_OPTIONS } from '@/utils/pageSizeStore';
 import type { CuttingBomRow } from '../hooks/useCuttingBom';
+import { formatMoney } from '@/utils/format';
 
 interface CuttingBomPanelProps {
   bomList: CuttingBomRow[];
@@ -248,6 +250,7 @@ const CuttingBomPanel: React.FC<CuttingBomPanelProps> = ({
            
             min={0}
             precision={2}
+            controls={false}
             style={{ width: '100%' }}
             onChange={(val) => onUpdateRow(record.id!, 'usageAmount', val ?? 0)}
           />
@@ -269,6 +272,7 @@ const CuttingBomPanel: React.FC<CuttingBomPanelProps> = ({
             min={0}
             max={100}
             precision={1}
+            controls={false}
             style={{ width: '100%' }}
             onChange={(val) => onUpdateRow(record.id!, 'lossRate', val ?? 0)}
           />
@@ -289,6 +293,7 @@ const CuttingBomPanel: React.FC<CuttingBomPanelProps> = ({
            
             min={0}
             precision={2}
+            controls={false}
             style={{ width: '100%' }}
             prefix="¥"
             onChange={(val) => onUpdateRow(record.id!, 'unitPrice', val ?? 0)}
@@ -351,7 +356,7 @@ const CuttingBomPanel: React.FC<CuttingBomPanelProps> = ({
                           label: '删除',
                           title: '删除',
                           danger: true as const,
-                          onClick: () => onDelete(record.id!),
+                          onClick: () => confirmDelete('该BOM记录', async () => onDelete(record.id!), { content: '删除后不可恢复，确认删除该BOM记录？' }),
                         },
                       ]
                     : [
@@ -600,7 +605,7 @@ const CuttingBomMaterialModal: React.FC<CuttingBomMaterialModalProps> = ({
                     title: '单价',
                     dataIndex: 'unitPrice',
                     width: 90,
-                    render: (value: unknown) => `¥${Number(value || 0).toFixed(2)}`,
+                    render: (value: unknown) => formatMoney(Number(value || 0)),
                   },
                   {
                     title: '操作',

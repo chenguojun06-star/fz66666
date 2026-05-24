@@ -130,7 +130,7 @@ const DecisionCardRow: React.FC<{
         </Tag>
         <span style={{ fontWeight: 600, fontSize: 14, color: '#141414' }}>{card.title}</span>
         {card.confidence > 0 && (
-          <span style={{ fontSize: 14, color: '#8c8c8c', marginLeft: 'auto' }}>
+          <span style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginLeft: 'auto' }}>
             置信度 {card.confidence}%
           </span>
         )}
@@ -145,7 +145,7 @@ const DecisionCardRow: React.FC<{
         </div>
       )}
       {card.evidence?.length > 0 && (
-        <div style={{ fontSize: 14, color: '#8c8c8c', marginBottom: 6 }}>
+        <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginBottom: 6 }}>
           {card.evidence.slice(0, 6).map((e, i) => (
             <div key={i} style={{ marginBottom: 2 }}>· {e}</div>
           ))}
@@ -178,8 +178,8 @@ function buildTrendOption(trend: TrendPoint[]) {
     tooltip: {
       trigger: 'axis' as const,
       backgroundColor: 'rgba(255,255,255,0.96)',
-      borderColor: '#e8e8e8',
-      textStyle: { fontSize: 14, color: '#333' },
+      borderColor: 'var(--color-border)',
+      textStyle: { fontSize: 14, color: 'var(--color-text-primary)' },
     },
     legend: {
       data: ['扫码次数', '入库单数', '下单数'],
@@ -189,11 +189,11 @@ function buildTrendOption(trend: TrendPoint[]) {
     xAxis: {
       type: 'category' as const, data: dates, boundaryGap: false,
       axisLine: { lineStyle: { color: '#e8e8e8' } },
-      axisLabel: { fontSize: 14, color: '#8c8c8c' },
+      axisLabel: { fontSize: 14, color: 'var(--color-text-tertiary)' },
     },
     yAxis: {
       type: 'value' as const, splitLine: { lineStyle: { color: '#f5f5f5' } },
-      axisLabel: { fontSize: 14, color: '#8c8c8c' },
+      axisLabel: { fontSize: 14, color: 'var(--color-text-tertiary)' },
     },
     series: [
       {
@@ -324,7 +324,7 @@ const DailyTodoModal: React.FC = () => {
               <div style={{ fontSize: 14, fontWeight: 700, color: '#141414' }}>
                 ☀️ 早上好，今日生产运营简报
               </div>
-              <div style={{ fontSize: 14, color: '#8c8c8c', marginTop: 2 }}>
+              <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginTop: 2 }}>
                 {brief.date} · 数据已实时同步
                 {brief.suggestionsSource === 'ai' && (
                   <Tag color="purple" style={{ marginLeft: 8, fontSize: 14 }}>
@@ -363,8 +363,8 @@ const DailyTodoModal: React.FC = () => {
           {/* ── 7日趋势折线图 ── */}
           {trend.length > 1 && (
             <div style={{
-              background: '#fafafa', borderRadius: 8, padding: '12px 14px',
-              marginBottom: 16, border: '1px solid #f0f0f0',
+              background: 'var(--color-bg-container)', borderRadius: 8, padding: '12px 14px',
+              marginBottom: 16, border: '1px solid var(--color-border-light)',
             }}>
               <div style={{
                 fontSize: 14, fontWeight: 600, color: '#262626', marginBottom: 8,
@@ -460,7 +460,7 @@ const DailyTodoModal: React.FC = () => {
           )}
         </div>
       ) : (
-        <div style={{ textAlign: 'center', padding: '40px 0', color: '#8c8c8c' }}>
+        <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--color-text-tertiary)' }}>
           数据加载中，请稍后
         </div>
       )}
@@ -477,7 +477,7 @@ const ActionRow: React.FC<{
     onClick={() => onNav(path)}
     style={{
       display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px',
-      borderRadius: 8, background: '#fafafa', border: '1px solid #f0f0f0',
+      borderRadius: 8, background: 'var(--color-bg-container)', border: '1px solid var(--color-border-light)',
       marginBottom: 8, cursor: 'pointer', transition: 'background 0.15s',
     }}
     onMouseEnter={e => ((e.currentTarget as HTMLDivElement).style.background = '#f0f5ff')}
@@ -485,7 +485,7 @@ const ActionRow: React.FC<{
   >
     <span style={{ fontSize: 13, color }}>{icon}</span>
     <span style={{ flex: 1, fontSize: 14, color: '#262626' }}>{title}</span>
-    <RightOutlined style={{ fontSize: 13, color: '#bfbfbf' }} />
+    <RightOutlined style={{ fontSize: 13, color: 'var(--color-text-quaternary)' }} />
   </div>
 );
 

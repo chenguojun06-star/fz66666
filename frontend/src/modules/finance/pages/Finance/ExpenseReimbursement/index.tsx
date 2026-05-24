@@ -6,6 +6,8 @@ import type { RowAction } from '@/components/common/RowActions';
 import { PlusOutlined, SearchOutlined, CloseCircleOutlined, UploadOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
+import { formatDateTime } from '@/utils/datetime';
+import { formatMoney } from '@/utils/format';
 import ResizableModal from '@/components/common/ResizableModal';
 import { useUser, isSupervisorOrAbove } from '@/utils/AuthContext';
 import { EXPENSE_TYPES, EXPENSE_STATUS, PAYMENT_METHODS, expenseReimbursementApi, type ExpenseReimbursement } from '@/services/finance/expenseReimbursementApi';
@@ -72,7 +74,7 @@ const ExpenseReimbursementPage: React.FC = () => {
         <div>
           <p>报销单号：{record.reimbursementNo}</p>
           <p>申请人：{record.applicantName}</p>
-          <p>金额：<strong style={{ color: 'var(--color-danger)', fontSize: 13 }}>¥{record.amount?.toFixed(2)}</strong></p>
+          <p>金额：<strong style={{ color: 'var(--color-danger)', fontSize: 13 }}>{formatMoney(record.amount)}</strong></p>
           <p>收款方式：{PAYMENT_METHODS.find(m => m.value === record.paymentMethod)?.label || record.paymentMethod}</p>
           <p>收款账号：{record.paymentAccount}</p>
           <p>收款户名：{record.accountName}</p>
@@ -100,8 +102,8 @@ const ExpenseReimbursementPage: React.FC = () => {
     { title: '报销单号', dataIndex: 'reimbursementNo', width: 160, render: (text: string, record) => <Button type="link" style={{ padding: 0, height: 'auto' }} onClick={() => openDetail(record)}>{text}</Button> },
     { title: '事由', dataIndex: 'title', width: 180, ellipsis: true },
     { title: '类型', dataIndex: 'expenseType', width: 110, render: (val: string) => typeLabel(val) },
-    { title: '金额', dataIndex: 'amount', width: 110, align: 'right', render: (val: number) => <span style={{ color: 'var(--color-danger)', fontWeight: 500 }}>¥{(val || 0).toFixed(2)}</span> },
-    { title: '费用日期', dataIndex: 'expenseDate', width: 110, render: (val: string) => val ? dayjs(val).format('YYYY-MM-DD HH:mm') : '-' },
+    { title: '金额', dataIndex: 'amount', width: 110, align: 'right', render: (val: number) => <span style={{ color: 'var(--color-danger)', fontWeight: 500 }}>{formatMoney(val || 0)}</span> },
+    { title: '费用日期', dataIndex: 'expenseDate', width: 110, render: (val: string) => val ? formatDateTime(val) : '-' },
     { title: '状态', dataIndex: 'status', width: 90, render: (val: string) => statusTag(val) },
     { title: '报销人', dataIndex: 'applicantName', width: 90, render: (val: string) => val || '-' },
     { title: '审批人', dataIndex: 'approverName', width: 90, render: (val: string) => val || '-' },
@@ -200,10 +202,10 @@ const ExpenseReimbursementPage: React.FC = () => {
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                       {uploadedDocs.map((doc, idx) => (
                         <div key={doc.tempId} style={{ position: 'relative', flexShrink: 0 }}>
-                          {doc.recognizing ? (<div style={{ width: 72, height: 72, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px dashed #d9d9d9', borderRadius: 6, background: '#fafafa' }}><Spin /></div>)
+                          {doc.recognizing ? (<div style={{ width: 72, height: 72, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px dashed var(--color-border-antd)', borderRadius: 6, background: 'var(--color-bg-container)' }}><Spin /></div>)
                             : doc.imageUrl ? (<Image src={getFullAuthedFileUrl(doc.imageUrl)} width={72} height={72} style={{ objectFit: 'cover', borderRadius: 6 }} />) : null}
                           <Button type="text" danger icon={<CloseCircleOutlined />}
-                            style={{ position: 'absolute', top: -8, right: -8, padding: 0, minWidth: 18, height: 18, background: '#fff', borderRadius: '50%', border: '1px solid #ff4d4f' }}
+                            style={{ position: 'absolute', top: -8, right: -8, padding: 0, minWidth: 18, height: 18, background: 'var(--color-bg-base)', borderRadius: '50%', border: '1px solid #ff4d4f' }}
                             onClick={() => setUploadedDocs(prev => prev.filter((_, i) => i !== idx))}
                           />
                         </div>
@@ -233,7 +235,7 @@ const ExpenseReimbursementPage: React.FC = () => {
               </Row>
             )}
             <Form.Item name="description" label="详细说明"><Input.TextArea rows={3} placeholder="详细描述费用用途、原因等" /></Form.Item>
-            <div style={{ borderTop: '1px solid #f0f0f0', margin: '16px 0 8px', paddingTop: 12 }}><span style={{ fontWeight: 500, color: 'var(--color-text-primary)' }}>收款信息</span></div>
+            <div style={{ borderTop: '1px solid var(--color-border-light)', margin: '16px 0 8px', paddingTop: 12 }}><span style={{ fontWeight: 500, color: 'var(--color-text-primary)' }}>收款信息</span></div>
             <Row gutter={16}>
               <Col span={12}><Form.Item name="paymentMethod" label="收款方式" rules={[{ required: true }]}><Select options={PAYMENT_METHODS} placeholder="请选择" /></Form.Item></Col>
               <Col span={12}><Form.Item name="accountName" label="收款户名" rules={[{ required: true, message: '请填写收款户名' }]}><Input placeholder="收款人姓名" /></Form.Item></Col>
@@ -243,7 +245,7 @@ const ExpenseReimbursementPage: React.FC = () => {
               <Col span={10}><Form.Item name="bankName" label="开户银行（选填）"><Input placeholder="转账时填写开户行" /></Form.Item></Col>
             </Row>
             {editingRecord && docList.length > 0 && (
-              <div style={{ marginTop: 16, borderTop: '1px solid #f0f0f0', paddingTop: 12 }}>
+              <div style={{ marginTop: 16, borderTop: '1px solid var(--color-border-light)', paddingTop: 12 }}>
                 <div style={{ fontWeight: 500, marginBottom: 8, color: 'var(--color-text-primary)' }}>已上传凭证（点击预览）</div>
                 <Image.PreviewGroup><Space wrap>{docList.map(doc => (<Image key={doc.id} src={getFullAuthedFileUrl(doc.imageUrl)} width={80} height={80} style={{ objectFit: 'cover', borderRadius: 6 }} />))}</Space></Image.PreviewGroup>
               </div>

@@ -135,9 +135,7 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
         Long currentTenantId = UserContext.tenantId();
         if (currentTenantId != null) {
             final Long tid = currentTenantId;
-            wrapper.and(q -> q.eq(TemplateLibrary::getTenantId, tid).or().isNull(TemplateLibrary::getTenantId));
-        } else {
-            wrapper.isNull(TemplateLibrary::getTenantId);
+            wrapper.eq(TemplateLibrary::getTenantId, tid);
         }
 
         return baseMapper.selectPage(pageInfo, wrapper);
@@ -156,9 +154,7 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
         Long currentTenantId = UserContext.tenantId();
         if (currentTenantId != null) {
             final Long tid = currentTenantId;
-            wrapper.and(q -> q.eq(TemplateLibrary::getTenantId, tid).or().isNull(TemplateLibrary::getTenantId));
-        } else {
-            wrapper.isNull(TemplateLibrary::getTenantId);
+            wrapper.eq(TemplateLibrary::getTenantId, tid);
         }
         return list(wrapper);
     }
@@ -177,6 +173,7 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
         TemplateLibrary existing = getOne(new LambdaQueryWrapper<TemplateLibrary>()
                 .eq(TemplateLibrary::getTemplateType, template.getTemplateType())
                 .eq(TemplateLibrary::getTemplateKey, template.getTemplateKey())
+                .eq(TemplateLibrary::getTenantId, UserContext.tenantId())
                 .last("LIMIT 1"));
 
         if (existing != null) {

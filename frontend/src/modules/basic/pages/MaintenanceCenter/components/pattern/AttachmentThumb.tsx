@@ -1,5 +1,6 @@
 import React from 'react';
 import api from '@/utils/api';
+import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 
 export const AttachmentThumb: React.FC<{ styleId?: string | number; cover?: string | null }> = ({ styleId, cover }) => {
   const [url, setUrl] = React.useState<string | null>(null);
@@ -32,7 +33,7 @@ export const AttachmentThumb: React.FC<{ styleId?: string | number; cover?: stri
       {loading ? (
         <span style={{ color: 'var(--neutral-text-secondary)', fontSize: 'var(--font-size-sm)' }}>...</span>
       ) : url ? (
-        <img loading="lazy" src={url} alt="cover" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        <img loading="lazy" src={getFullAuthedFileUrl(url)} alt="cover" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
       ) : (
         <span style={{ color: 'var(--neutral-text-disabled)', fontSize: 'var(--font-size-sm)' }}>无图</span>
       )}

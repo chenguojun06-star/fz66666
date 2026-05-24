@@ -1,4 +1,4 @@
-var { sortSizeNames } = require('../sizeUtils');
+var { sortSizeNames } = require('../../../utils/sizeUtils');
 
 function toNumberSafe(val) {
   if (val === null || val === undefined) return 0;

@@ -40,7 +40,7 @@ function ImageUploadBox({
   label = '图片',
   showClear = true,
   shape = 'square',
-  enableDrop = false,
+  enableDrop = true,
   borderRadius = 6,
   className,
   style,

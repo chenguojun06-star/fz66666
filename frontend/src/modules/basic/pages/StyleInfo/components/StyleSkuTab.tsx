@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { App, Switch, Button, Input, InputNumber, Space, Popconfirm, Tooltip, Tag, Dropdown, Modal, Form } from 'antd';
+import { App, Switch, Button, Input, InputNumber, Space, Popconfirm, Tooltip, Tag, Dropdown, Form } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
 import { SyncOutlined, PlusOutlined, DeleteOutlined, SaveOutlined, CloudUploadOutlined, EditOutlined, RollbackOutlined } from '@ant-design/icons';
 import api from '@/utils/api';
+import { formatMoney } from '@/utils/format';
 import type { ProductSku } from '@/types/style';
 import type { MenuProps } from 'antd';
 import SmallModal from '@/components/common/SmallModal';
+import { confirmAction } from '@/utils/confirm';
 
 interface StyleSkuTabProps {
   styleId: string;
@@ -81,13 +83,7 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = ({ styleId, styleNo, skc: initia
   const handleModeToggle = async (checked: boolean) => {
     const newMode = checked ? 'MANUAL' : 'AUTO';
     if (newMode === 'AUTO') {
-      Modal.confirm({
-        title: '确认切换为自动生成模式？',
-        content: '切换后，所有手动编辑的SKU编码将被重置为自动生成的编码，此操作不可撤销。',
-        okText: '确认切换',
-        cancelText: '取消',
-        onOk: () => doToggleMode(newMode),
-      });
+      confirmAction('确认切换为自动生成模式？', '切换后，所有手动编辑的SKU编码将被重置为自动生成的编码，此操作不可撤销。', () => doToggleMode(newMode), { okText: '确认切换' });
     } else {
       doToggleMode(newMode);
     }
@@ -283,8 +279,8 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = ({ styleId, styleNo, skc: initia
       render: (_: number, record: ProductSku) => {
         const key = getRowKey(record);
         return canEdit ? (
-          <InputNumber value={getCellValue(record, 'costPrice')} onChange={v => handleFieldChange(key, 'costPrice', v)} min={0} precision={2} prefix="¥" style={{ width: '100%' }} />
-        ) : record.costPrice != null ? `¥${record.costPrice.toFixed(2)}` : '-';
+          <InputNumber value={getCellValue(record, 'costPrice')} onChange={v => handleFieldChange(key, 'costPrice', v)} min={0} precision={2} prefix="¥" controls={false} style={{ width: '100%' }} />
+        ) : record.costPrice != null ? formatMoney(record.costPrice) : '-';
       },
     },
     {
@@ -292,8 +288,8 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = ({ styleId, styleNo, skc: initia
       render: (_: number, record: ProductSku) => {
         const key = getRowKey(record);
         return canEdit ? (
-          <InputNumber value={getCellValue(record, 'salesPrice')} onChange={v => handleFieldChange(key, 'salesPrice', v)} min={0} precision={2} prefix="¥" style={{ width: '100%' }} />
-        ) : record.salesPrice != null ? `¥${record.salesPrice.toFixed(2)}` : '-';
+          <InputNumber value={getCellValue(record, 'salesPrice')} onChange={v => handleFieldChange(key, 'salesPrice', v)} min={0} precision={2} prefix="¥" controls={false} style={{ width: '100%' }} />
+        ) : record.salesPrice != null ? formatMoney(record.salesPrice) : '-';
       },
     },
     {

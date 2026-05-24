@@ -186,27 +186,53 @@ const PurchaseDocRecognizeModal: React.FC<Props> = ({ open, orderNo, onCancel, o
         <Space orientation="vertical" style={{ width: '100%' }} size={16}>
           {!result && (
             <>
-              <Dragger
-                accept="image/*,application/pdf"
-                multiple={false}
-                maxCount={1}
-                beforeUpload={(f) => {
-                  setFile(f);
-                  return false;
+              <div
+                tabIndex={0}
+                style={{ outline: 'none' }}
+                onPaste={(e) => {
+                  const items = e.clipboardData.items;
+                  for (let i = 0; i < items.length; i++) {
+                    const item = items[i];
+                    if (item.type.startsWith('image/') || item.type === 'application/pdf') {
+                      e.preventDefault();
+                      const f = item.getAsFile();
+                      if (f) setFile(f);
+                      break;
+                    }
+                  }
+                  const files = e.clipboardData.files;
+                  if (files && files.length > 0) {
+                    const f = files[0];
+                    if (f.type.startsWith('image/') || f.type === 'application/pdf') {
+                      e.preventDefault();
+                      setFile(f);
+                    }
+                  }
                 }}
-                onRemove={() => setFile(null)}
               >
-                <p className="ant-upload-drag-icon">
-                  <InboxOutlined />
-                </p>
-                <p className="ant-upload-text">点击或拖拽供应商送货单图片到此处</p>
-                <p className="ant-upload-hint">支持 JPG / PNG / PDF，最大 10MB</p>
-              </Dragger>
+                <Dragger
+                  accept="image/*,application/pdf"
+                  multiple={false}
+                  maxCount={1}
+                  beforeUpload={(f) => {
+                    setFile(f);
+                    return false;
+                  }}
+                  onRemove={() => setFile(null)}
+                >
+                  <p className="ant-upload-drag-icon">
+                    <InboxOutlined />
+                  </p>
+                  <p className="ant-upload-text">点击、拖拽或粘贴供应商送货单图片到此处</p>
+                  <p className="ant-upload-hint">支持 JPG / PNG / PDF，最大 10MB</p>
+                </Dragger>
+              </div>
               <Button
                 type="primary"
                 block
                 onClick={handleRecognize}
                 disabled={!file || recognizing}
+                loading={recognizing}
               >
                 开始 AI 识别
               </Button>
@@ -215,7 +241,7 @@ const PurchaseDocRecognizeModal: React.FC<Props> = ({ open, orderNo, onCancel, o
 
           {result && (
             <>
-              <div style={{ color: '#666', fontSize: 14 }}>
+              <div style={{ color: 'var(--color-text-secondary)', fontSize: 14 }}>
                 共识别 <strong>{recognizedCount}</strong> 项，
                 已匹配采购记录 <strong>{matchedCount}</strong> 项（可编辑数量后点击应用）
               </div>

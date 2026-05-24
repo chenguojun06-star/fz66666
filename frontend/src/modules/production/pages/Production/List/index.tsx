@@ -17,6 +17,7 @@ import { isSupervisorOrAboveUser, useUser } from '@/utils/AuthContext';
 import '../../../styles.css';
 import dayjs from 'dayjs';
 import UniversalCardView from '@/components/common/UniversalCardView';
+import BudgetDaysEditor from '@/components/common/BudgetDaysEditor';
 import { createOrderColorSizeGridFieldGroups } from '@/components/common/CardSizeQuantityFieldGroups';
 import SmartOrderHoverCard from '../ProgressDetail/components/SmartOrderHoverCard';
 import { useShareOrderDialog } from '../ProgressDetail/hooks/useShareOrderDialog';
@@ -142,6 +143,7 @@ const ProductionList: React.FC = () => {
 
   const {
     renderCompletionTimeTag,
+    getStageCompletionTime,
   } = useProgressTracking(productionList);
 
   // ===== useOrderFocus: 聚焦/滚动/高亮逻辑 =====
@@ -180,6 +182,7 @@ const ProductionList: React.FC = () => {
     canManageOrderLifecycle,
     openSubProcessRemap,
     isFactoryAccount,
+    getStageCompletionTime,
     openWorkflowEditor: (styleNo?: string) => {
       setWorkflowEditorStyleNo(styleNo || '');
       setWorkflowEditorVisible(true);
@@ -363,7 +366,6 @@ const ProductionList: React.FC = () => {
               fields={[]}
               fieldGroups={[
                 [
-                  { label: '交期', key: 'plannedEndDate', render: (val: unknown) => val ? dayjs(val as string).format('MM-DD') : '-' },
                   { label: '下单', key: 'createTime', render: (val: unknown) => val ? dayjs(val as string).format('MM-DD') : '-' },
                 ],
                 ...createOrderColorSizeGridFieldGroups<ProductionOrder>({
@@ -378,9 +380,11 @@ const ProductionList: React.FC = () => {
                     const status = ORDER_STATUS_LABEL[String(record?.status || '').trim().toLowerCase()] || String(record?.status || '-');
                     const statusColor = ORDER_STATUS_COLOR[String(record?.status || '').trim().toLowerCase()] || 'default';
                     const { text: remainText, color: remainColor } = getRemainingDaysDisplay(record?.plannedEndDate as string, record?.createTime as string, record?.actualEndDate as string, record?.status as string);
+                    const deliveryDate = record?.plannedEndDate ? dayjs(record.plannedEndDate as string).format('MM-DD') : '';
                     return (
                       <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap', alignItems: 'center' }}>
                         <Tag color={statusColor} style={{ margin: 0, fontSize: 11, padding: '0 4px', lineHeight: '18px', height: 18 }}>{status}</Tag>
+                        {deliveryDate && <span style={{ fontSize: 11, color: 'var(--color-text-tertiary)' }}>{deliveryDate}</span>}
                         {record?.urgencyLevel === 'urgent' && <Tag color="red" style={{ margin: 0, fontSize: 11, padding: '0 4px', lineHeight: '18px', height: 18 }}>急</Tag>}
                         {String(record?.plateType || '').toUpperCase() === 'FIRST' && <Tag color="blue" style={{ margin: 0, fontSize: 11, padding: '0 4px', lineHeight: '18px', height: 18 }}>首单</Tag>}
                         {String(record?.plateType || '').toUpperCase() === 'REORDER' && <Tag color="gold" style={{ margin: 0, fontSize: 11, padding: '0 4px', lineHeight: '18px', height: 18 }}>翻单</Tag>}
@@ -406,6 +410,17 @@ const ProductionList: React.FC = () => {
                 minVisiblePercent: (record: ProductionOrder) => String(record.status || '').trim().toLowerCase() === 'in_progress' ? 5 : 0,
                 show: true,
                 type: 'liquid',
+                progressExtra: (record: ProductionOrder) => {
+                  const frozen = isOrderFrozenByStatus(record);
+                  return (
+                    <BudgetDaysEditor
+                      record={record}
+                      nodeName="整体"
+                      stageEndTime={(record as any).actualEndDate || undefined}
+                      isCompletedOrClosed={frozen}
+                    />
+                  );
+                },
               }}
               getCardId={(record) => `production-order-card-${getOrderDomKey(record as ProductionOrder)}`}
               getCardStyle={(record) => getOrderDomKey(record as ProductionOrder) === focusedOrderId ? {

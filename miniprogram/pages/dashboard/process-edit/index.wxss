@@ -168,7 +168,7 @@
   font-weight: 600;
 }
 .price-value--empty {
-  color: #d9d9d9;
+  color: var(--color-text-tertiary);
   font-weight: 400;
 }
 .process-actions {
@@ -259,7 +259,7 @@
 }
 .empty-stage-text {
   font-size: 13px;
-  color: #ccc;
+  color: var(--color-text-tertiary);
 }
 
 /* ===== 底部操作栏 ===== */

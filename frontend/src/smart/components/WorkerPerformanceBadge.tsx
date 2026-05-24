@@ -113,8 +113,8 @@ function StageRow({ sp }: { sp: StageProfile }) {
   const arrow = diff >= 0 ? '▲' : '▼';
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12,
-                  fontSize: 14, padding: '3px 0', borderBottom: '1px solid #f0f0f0' }}>
-      <span style={{ color: '#333', minWidth: 48 }}>{sp.stageName}</span>
+                  fontSize: 14, padding: '3px 0', borderBottom: '1px solid var(--color-border-light)' }}>
+      <span style={{ color: 'var(--color-text-primary)', minWidth: 48 }}>{sp.stageName}</span>
       <span style={{ color: '#555' }}>{sp.avgPerDay.toFixed(1)} 件/天</span>
       <span style={{ color, fontSize: 14 }}>
         {arrow} {diff !== 0 ? `${sign}${diff.toFixed(1)}%` : '均值'}
@@ -147,7 +147,7 @@ function ProfileContent({ profile }: { profile: WorkerProfile }) {
       </div>
 
       {stages.length === 0 ? (
-        <div style={{ color: '#999', fontSize: 14 }}>
+        <div style={{ color: 'var(--color-text-tertiary)', fontSize: 14 }}>
           {lastDate !== '—' ? '近期无扫码活动' : '暂无扫码历史'}
         </div>
       ) : (
@@ -200,7 +200,7 @@ const WorkerPerformanceBadge: React.FC<Props> = ({ operatorName }) => {
             <Spin />
           </div>
         ) : profile === null ? (
-          <div style={{ padding: '8px 12px', color: '#999', fontSize: 14 }}>
+          <div style={{ padding: '8px 12px', color: 'var(--color-text-tertiary)', fontSize: 14 }}>
             暂无绩效画像
           </div>
         ) : (

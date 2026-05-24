@@ -298,11 +298,12 @@ export function useUserListData({ user, isSuperAdmin, isTenantOwner, form, userM
     if (!userModal.visible) { form.resetFields(); return; }
     if (userModal.data) {
       const next = { ...userModal.data, roleId: String((userModal.data as any).roleId ?? '') };
-      setTimeout(() => { form.setFieldsValue(next); }, 50);
-      return;
+      const t1 = setTimeout(() => { form.setFieldsValue(next); }, 50);
+      return () => clearTimeout(t1);
     }
     form.resetFields();
-    setTimeout(() => { form.setFieldsValue({ permissionRange: 'all', status: 'active', approvalStatus: 'approved' }); }, 50);
+    const t2 = setTimeout(() => { form.setFieldsValue({ permissionRange: 'all', status: 'active', approvalStatus: 'approved' }); }, 50);
+    return () => clearTimeout(t2);
   }, [form, userModal.data, userModal.visible]);
 
   const openDialog = (editUser?: UserType, initialTab: 'base' | 'perm' = 'base') => {

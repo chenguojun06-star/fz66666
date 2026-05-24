@@ -13,6 +13,7 @@ import {
   type ExpenseReimbursement,
   type ExpenseReimbursementDoc,
 } from '@/services/finance/expenseReimbursementApi';
+import { formatMoney } from '@/utils/format';
 
 const { TextArea } = Input;
 
@@ -94,7 +95,7 @@ const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({ open, record, v
       footer={<Button onClick={onClose}>关闭</Button>}
     >
       <div style={{ display: 'flex', gap: 0, height: 540 }}>
-        <div style={{ width: '42%', background: '#f7f8fa', borderRight: '1px solid #f0f0f0', borderRadius: '6px 0 0 6px', padding: 12, height: '100%', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <div style={{ width: '42%', background: '#f7f8fa', borderRight: '1px solid var(--color-border-light)', borderRadius: '6px 0 0 6px', padding: 12, height: '100%', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           {detailDocList.length === 0 ? (
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#bbb' }}>
               <PictureOutlined style={{ fontSize: 48, marginBottom: 12 }} />
@@ -102,7 +103,7 @@ const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({ open, record, v
             </div>
           ) : (
             <>
-              <div style={{ flex: 1, minHeight: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fff', borderRadius: 8, overflow: 'hidden', padding: 8 }}>
+              <div style={{ flex: 1, minHeight: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--color-bg-base)', borderRadius: 8, overflow: 'hidden', padding: 8 }}>
                 <Image.PreviewGroup>
                   <Image src={getFullAuthedFileUrl(detailDocList[selectedDocIndex]?.imageUrl)} style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: 6, display: 'block' }} preview={{ mask: '点击查看原图' }} />
                 </Image.PreviewGroup>
@@ -129,7 +130,7 @@ const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({ open, record, v
           <ModalFieldRow><ModalField label="申请人" value={record.applicantName || '-'} /><ModalField label="费用类型" value={typeLabel(record.expenseType)} /></ModalFieldRow>
           <ModalFieldRow><ModalField label="事由" value={record.title || '-'} /></ModalFieldRow>
           <ModalFieldRow>
-            <ModalField label="金额" value={<span style={{ color: 'var(--color-danger)', fontSize: 14, fontWeight: 600 }}>¥{record.amount?.toFixed(2)}</span>} />
+            <ModalField label="金额" value={<span style={{ color: 'var(--color-danger)', fontSize: 14, fontWeight: 600 }}>{formatMoney(record.amount)}</span>} />
             <ModalField label="费用日期" value={record.expenseDate || '-'} />
           </ModalFieldRow>
           {record.description && <ModalFieldRow><ModalField label="详细说明" value={record.description} /></ModalFieldRow>}
@@ -140,13 +141,13 @@ const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({ open, record, v
             </ModalFieldRow>
           )}
 
-          <div style={{ borderTop: '1px solid #f0f0f0', margin: '16px 0 8px', paddingTop: 12 }}><span style={{ fontWeight: 500, color: 'var(--color-text-primary)' }}>收款信息</span></div>
+          <div style={{ borderTop: '1px solid var(--color-border-light)', margin: '16px 0 8px', paddingTop: 12 }}><span style={{ fontWeight: 500, color: 'var(--color-text-primary)' }}>收款信息</span></div>
           <ModalFieldRow><ModalField label="收款方式" value={PAYMENT_METHODS.find(m => m.value === record.paymentMethod)?.label || record.paymentMethod || '-'} /><ModalField label="收款户名" value={record.accountName || '-'} /></ModalFieldRow>
           <ModalFieldRow><ModalField label="收款账号" value={record.paymentAccount || '-'} />{record.bankName && <ModalField label="开户银行" value={record.bankName} />}</ModalFieldRow>
 
           {record.approverName && (
             <>
-              <div style={{ borderTop: '1px solid #f0f0f0', margin: '16px 0 8px', paddingTop: 12 }}><span style={{ fontWeight: 500, color: 'var(--color-text-primary)' }}>审批信息</span></div>
+              <div style={{ borderTop: '1px solid var(--color-border-light)', margin: '16px 0 8px', paddingTop: 12 }}><span style={{ fontWeight: 500, color: 'var(--color-text-primary)' }}>审批信息</span></div>
               <ModalFieldRow><ModalField label="审批人" value={record.approverName} /><ModalField label="审批时间" value={record.approvalTime ? dayjs(record.approvalTime).format('YYYY-MM-DD HH:mm') : '-'} /></ModalFieldRow>
               {record.approvalRemark && <ModalFieldRow><ModalField label="审批备注" value={record.approvalRemark} /></ModalFieldRow>}
             </>
@@ -154,7 +155,7 @@ const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({ open, record, v
 
           {record.paymentTime && (
             <>
-              <div style={{ borderTop: '1px solid #f0f0f0', margin: '16px 0 8px', paddingTop: 12 }}><span style={{ fontWeight: 500, color: 'var(--color-text-primary)' }}>付款信息</span></div>
+              <div style={{ borderTop: '1px solid var(--color-border-light)', margin: '16px 0 8px', paddingTop: 12 }}><span style={{ fontWeight: 500, color: 'var(--color-text-primary)' }}>付款信息</span></div>
               <ModalFieldRow><ModalField label="付款时间" value={dayjs(record.paymentTime).format('YYYY-MM-DD HH:mm')} /><ModalField label="付款人" value={record.paymentBy || '-'} /></ModalFieldRow>
             </>
           )}
@@ -164,7 +165,7 @@ const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({ open, record, v
           {record.status === 'pending' && (
             <>
               {viewMode === 'all' && (record.applicantId !== Number(user?.id) || isSupervisorOrAbove(user)) && (
-                <div style={{ borderTop: '1px solid #f0f0f0', margin: '16px 0 8px', paddingTop: 12 }}>
+                <div style={{ borderTop: '1px solid var(--color-border-light)', margin: '16px 0 8px', paddingTop: 12 }}>
                   <div style={{ fontWeight: 500, marginBottom: 8, color: 'var(--color-text-primary)' }}>审批与备注</div>
                   <TextArea id="approveRemark" rows={3} value={approveRemark} onChange={(e) => setApproveRemark(e.target.value)} placeholder="请填写审批备注，驳回时必须填写原因" />
                   <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 12 }}>

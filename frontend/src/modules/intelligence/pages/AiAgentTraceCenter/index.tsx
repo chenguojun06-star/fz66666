@@ -35,7 +35,7 @@ const extractOrderNo = (row?: TraceRow | null) => {
 const buildSuggestion = (row?: TraceRow | null) => {
   if (!row || row.status !== 'FAILED') return '';
   if ((row.action || '').includes('tool_material_doc_receive')) return '建议先回放采购单据识别结果，确认匹配行和数量后再执行自动到货。';
-  if ((row.action || '').includes('tool_team_dispatch')) return '建议确认订单号、目标岗位和责任人是否匹配，再重新派单或回写状态。';
+  if ((row.action || '').includes('tool_team_dispatch')) return '建议确认订单号、目标岗位和领取人是否匹配，再重新派单或回写状态。';
   if ((row.action || '').includes('tool_finance_workflow')) return '建议先核对审批状态、付款账户和业务单据是否已准备完成。';
   return '建议先查看失败步骤的参数与错误信息，修正后重新执行。';
 };
@@ -175,7 +175,7 @@ const AiAgentTraceCenter: React.FC = () => {
     <>
       <PageLayout
         title="AI 执行记录中心"
-        headerContent={<div style={{ color: '#8c8c8c', fontSize: 14 }}>统一查看小云每次执行的 commandId、状态、耗时、工具轨迹与失败信息</div>}
+        headerContent={<div style={{ color: 'var(--color-text-tertiary)', fontSize: 14 }}>统一查看小云每次执行的 commandId、状态、耗时、工具轨迹与失败信息</div>}
         titleExtra={
           <Space>
             <Button onClick={() => navigate(paths.cockpit)}>返回智能运营中心</Button>
@@ -232,7 +232,7 @@ const AiAgentTraceCenter: React.FC = () => {
                     allowClear
                     value={executorKeyword}
                     onChange={(e) => setExecutorKeyword(e.target.value)}
-                    placeholder="按责任人筛选"
+                    placeholder="按领取人筛选"
                     style={{ width: 180 }}
                   />
                   <DatePicker.RangePicker
@@ -244,7 +244,7 @@ const AiAgentTraceCenter: React.FC = () => {
                     仅看失败
                   </Button>
                   <Button type="primary" onClick={() => void fetchRecent()}>查询</Button>
-                      <span style={{ color: '#8c8c8c', fontSize: 14 }}>共 {filteredRows.length} 条请求</span>
+                      <span style={{ color: 'var(--color-text-tertiary)', fontSize: 14 }}>共 {filteredRows.length} 条请求</span>
                     </Space>
                   </Card>
 
@@ -277,7 +277,7 @@ const AiAgentTraceCenter: React.FC = () => {
                       { title: '时间', dataIndex: 'createdAt', width: 180 },
                       { title: 'commandId', dataIndex: 'commandId', width: 240, ellipsis: true },
                       { title: '状态', dataIndex: 'status', width: 100, render: (value) => { const m: Record<string, string> = { SUCCESS: '成功', FAILED: '失败', EXECUTING: '执行中', TIMEOUT: '超时', PENDING: '待执行', UNKNOWN: '未知' }; return <Tag color={statusColor(value)}>{m[value] || value || '未知'}</Tag>; } },
-                      { title: '责任人', dataIndex: 'executorId', width: 120, ellipsis: true },
+                      { title: '领取人', dataIndex: 'executorId', width: 120, ellipsis: true },
                       { title: '目标单据', dataIndex: 'targetId', width: 140, ellipsis: true },
                       { title: '工具', dataIndex: 'remark', width: 220, ellipsis: true },
                       { title: '耗时', dataIndex: 'durationMs', width: 90, render: (value) => typeof value === 'number' ? `${value}ms` : '-' },
@@ -349,7 +349,7 @@ const AiAgentTraceCenter: React.FC = () => {
                     {item.errorMessage ? <div style={{ marginTop: 6, color: '#cf1322' }}>{item.errorMessage}</div> : null}
                     {item.status === 'FAILED' ? <div style={{ marginTop: 6, color: '#d46b08' }}>补救建议：{buildSuggestion(item)}</div> : null}
                     {item.resultData ? (
-                      <pre style={{ marginTop: 8, background: '#fafafa', padding: 10, borderRadius: 6, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                      <pre style={{ marginTop: 8, background: 'var(--color-bg-container)', padding: 10, borderRadius: 6, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
                         {item.resultData}
                       </pre>
                     ) : null}

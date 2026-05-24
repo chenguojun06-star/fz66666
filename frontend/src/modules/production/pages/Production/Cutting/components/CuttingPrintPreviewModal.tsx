@@ -204,7 +204,7 @@ const CuttingPrintPreviewModal: React.FC<Props> = ({ modalWidth, print, bundles 
                   {b.qrCode ? (
                     <QRCodeCanvas value={b.qrCode} size={qrDisplaySize} includeMargin />
                   ) : (
-                    <div style={{ width: qrDisplaySize, height: qrDisplaySize, background: '#f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: '#999' }}>
+                    <div style={{ width: qrDisplaySize, height: qrDisplaySize, background: '#f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: 'var(--color-text-tertiary)' }}>
                       无QR
                     </div>
                   )}

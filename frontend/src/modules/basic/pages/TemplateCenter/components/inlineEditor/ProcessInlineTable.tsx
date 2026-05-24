@@ -6,6 +6,7 @@ import {
   Image,
   Input,
   InputNumber,
+  Popconfirm,
   Tag,
 } from 'antd';
 import {
@@ -186,7 +187,7 @@ const ProcessInlineTable: React.FC<ProcessInlineTableProps> = ({
             <Tag style={{ background: STAGE_ACCENT, color: '#fff', border: 'none', fontWeight: 600, fontSize: compact ? 12 : 13, marginInlineEnd: 0 }}>
               {stage}
             </Tag>
-            <span style={{ fontSize: compact ? 11 : 12, color: '#999' }}>{info.count} 个工序</span>
+            <span style={{ fontSize: compact ? 11 : 12, color: 'var(--color-text-tertiary)' }}>{info.count} 个工序</span>
             {readOnly ? null : (
               <Button type="link" icon={<PlusOutlined />} onClick={() => addStepToStage(stage)} style={{ padding: 0 }}>
                 添加
@@ -232,6 +233,7 @@ const ProcessInlineTable: React.FC<ProcessInlineTableProps> = ({
         <InputNumber
           min={0}
           disabled={readOnly}
+          controls={false}
           value={value || 0}
           onChange={(nextValue) => updateStep(index, { standardTime: nextValue || 0 })}
           style={{ width: '100%' }}
@@ -247,6 +249,7 @@ const ProcessInlineTable: React.FC<ProcessInlineTableProps> = ({
           min={0}
           precision={2}
           disabled={readOnly}
+          controls={false}
           value={record.unitPrice ?? record.price ?? 0}
           onChange={(nextValue) => updateStep(index, { unitPrice: nextValue || 0 })}
           style={{ width: '100%' }}
@@ -263,6 +266,7 @@ const ProcessInlineTable: React.FC<ProcessInlineTableProps> = ({
                 min={0}
                 precision={2}
                 disabled={readOnly}
+                controls={false}
                 value={record.sizePrices?.[size] ?? record.unitPrice ?? record.price ?? 0}
                 onChange={(nextValue) => {
                   const originalIndex = sortedSteps[index]?._origIdx ?? index;
@@ -288,9 +292,9 @@ const ProcessInlineTable: React.FC<ProcessInlineTableProps> = ({
       width: compact ? 60 : 80,
       render: (_: unknown, __: ProcessStepRow, index: number) => (
         readOnly ? null : (
-          <Button danger type="link" onClick={() => deleteStep(index)}>
-            删除
-          </Button>
+          <Popconfirm title="确认删除该工序步骤？" onConfirm={() => deleteStep(index)} okButtonProps={{ danger: true }} okText="删除" cancelText="取消">
+            <Button danger type="link">删除</Button>
+          </Popconfirm>
         )
       ),
     },
@@ -298,7 +302,7 @@ const ProcessInlineTable: React.FC<ProcessInlineTableProps> = ({
 
   return (
     <div>
-      <div style={compact ? { display: 'grid', gap: 8, marginBottom: 8 } : { marginBottom: 12, padding: '10px 12px', background: '#f9f9f9', borderRadius: 8 }}>
+      <div style={compact ? { display: 'grid', gap: 8, marginBottom: 8 } : { marginBottom: 12, padding: '10px 12px', background: 'var(--color-bg-container)', borderRadius: 8 }}>
         {allowProcessPriceImages && (!readOnly || imageUrls.length > 0) ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: compact ? 0 : 12 }}>
             {compact ? <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--neutral-text-secondary)' }}>参考图</span> : null}
@@ -310,7 +314,7 @@ const ProcessInlineTable: React.FC<ProcessInlineTableProps> = ({
                     src={getFullAuthedFileUrl(url)}
                     width={compact ? 44 : 52}
                     height={compact ? 44 : 52}
-                    style={{ objectFit: 'cover', borderRadius: 4, border: '1px solid #f0f0f0' }}
+                    style={{ objectFit: 'cover', borderRadius: 4, border: '1px solid var(--color-border-light)' }}
                     preview
                   />
                   {readOnly ? null : (
@@ -327,7 +331,7 @@ const ProcessInlineTable: React.FC<ProcessInlineTableProps> = ({
                         width: 18,
                         height: 18,
                         padding: 0,
-                        background: '#fff',
+                        background: 'var(--color-bg-base)',
                         borderRadius: '50%',
                         boxShadow: '0 1px 4px rgba(0,0,0,0.12)',
                       }}

@@ -217,6 +217,7 @@ const CuttingRatioPanel: React.FC<CuttingRatioPanelProps> = ({
               precision={0}
              
               value={lastQty}
+              controls={false}
               disabled={disabled}
               onChange={(v) => handleLastBundleChange(record.key, v)}
               style={{ width: 64 }}
@@ -288,8 +289,8 @@ const CuttingRatioPanel: React.FC<CuttingRatioPanelProps> = ({
       </Space>
 
       {fabricUsageRows && fabricUsageRows.length > 1 && (
-        <div style={{ marginBottom: 12, padding: '6px 10px', background: '#fafafa', border: '1px solid #e8e8e8', borderRadius: 6, fontSize: 14 }}>
-          <div style={{ fontWeight: 500, marginBottom: 4, color: '#333' }}>面料用量参考</div>
+        <div style={{ marginBottom: 12, padding: '6px 10px', background: 'var(--color-bg-container)', border: '1px solid var(--color-border)', borderRadius: 6, fontSize: 14 }}>
+          <div style={{ fontWeight: 500, marginBottom: 4, color: 'var(--color-text-primary)' }}>面料用量参考</div>
           {fabricUsageRows.map((row, idx) => {
             const sizes = Object.entries(row.sizeUsageMap);
             if (sizes.length === 0) return null;
@@ -298,10 +299,10 @@ const CuttingRatioPanel: React.FC<CuttingRatioPanelProps> = ({
               return sum + usage * r.cuttingQty;
             }, 0);
             return (
-              <div key={idx} style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 2, color: '#666' }}>
-                <span style={{ minWidth: 80, fontWeight: 500, color: '#333' }}>{row.materialName}</span>
+              <div key={idx} style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 2, color: 'var(--color-text-secondary)' }}>
+                <span style={{ minWidth: 80, fontWeight: 500, color: 'var(--color-text-primary)' }}>{row.materialName}</span>
                 <span>约 {totalM > 0 ? totalM.toFixed(1) : '-'} m</span>
-                <span style={{ color: '#999' }}>（{sizes.map(([s, v]) => `${s}:${v}m`).join(' ')}）</span>
+                <span style={{ color: 'var(--color-text-tertiary)' }}>（{sizes.map(([s, v]) => `${s}:${v}m`).join(' ')}）</span>
               </div>
             );
           })}

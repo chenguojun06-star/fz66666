@@ -331,7 +331,7 @@ export default function WashLabelPrintModal({ open, onCancel, order }: Props) {
       destroyOnHidden
     >
       {order && (
-        <div style={{ marginBottom: 10, color: '#666', fontSize: 14 }}>
+        <div style={{ marginBottom: 10, color: 'var(--color-text-secondary)', fontSize: 14 }}>
           款号：{order.styleNo || '-'}&nbsp;&nbsp;
           款名：{order.styleName || '-'}&nbsp;&nbsp;
           <Text type="secondary">纸张规格：7 × 4 cm（与菲号标签相同）</Text>

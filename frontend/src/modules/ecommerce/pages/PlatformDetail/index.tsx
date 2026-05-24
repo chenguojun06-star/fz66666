@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Tabs, Card, Row, Col, Statistic, Tag, Button, Space, Spin, Typography, Alert, Descriptions, Input, Select, Form, Steps, Divider, Empty,
@@ -13,12 +13,14 @@ import {
 import type { ColumnsType } from 'antd/es/table';
 import ResizableTable from '@/components/common/ResizableTable';
 import ExpressOrderModal from '../../components/ExpressOrderModal';
+import { formatMoney } from '@/utils/format';
 import { usePlatformConnector, type ShopStats } from '../../../integration/pages/IntegrationCenter/usePlatformConnector';
 import { PLATFORM_LIST, SYNC_MODE_LABELS } from '../../../integration/pages/IntegrationCenter/PlatformConnectorConstants';
 import api, { type ApiResult } from '@/utils/api';
 import { message } from '@/utils/antdStatic';
 import { paths } from '@/routeConfig';
 import { readPageSize } from '@/utils/pageSizeStore';
+import { useDebouncedValue } from '@/hooks/usePerformance';
 
 const { Text } = Typography;
 
@@ -107,6 +109,12 @@ const PlatformDetail: React.FC = () => {
   const [orderPageSize, setOrderPageSize] = useState(readPageSize(20));
   const [filterStatus, setFilterStatus] = useState<number | undefined>();
   const [keyword, setKeyword] = useState('');
+  const debouncedKeyword = useDebouncedValue(keyword, 300);
+  const prevDebouncedKeywordRef = useRef(debouncedKeyword);
+  if (debouncedKeyword !== prevDebouncedKeywordRef.current) {
+    prevDebouncedKeywordRef.current = debouncedKeyword;
+    setOrderPage(1);
+  }
   const [_detail, setDetail] = useState<EcOrder | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [linkTarget, setLinkTarget] = useState<EcOrder | null>(null);
@@ -138,14 +146,14 @@ const [expressModalOpen, setExpressModalOpen] = useState(false);
     try {
       const params: Record<string, unknown> = { page: orderPage, pageSize: orderPageSize, platform: platformCode };
       if (filterStatus !== undefined) params.status = filterStatus;
-      if (keyword) params.keyword = keyword;
+      if (debouncedKeyword) params.keyword = debouncedKeyword;
       const res = await api.post<ApiResult>('/ecommerce/orders/list', params);
       const d = (res?.data ?? {}) as Record<string, unknown>;
       setOrders((d.records as EcOrder[]) ?? []);
       setOrderTotal((d.total as number) ?? 0);
     } catch (err: unknown) { message.error(err instanceof Error ? err.message : '加载失败'); }
     finally { setOrderLoading(false); }
-  }, [platformCode, configured, orderPage, orderPageSize, filterStatus, keyword]);
+  }, [platformCode, configured, orderPage, orderPageSize, filterStatus, debouncedKeyword]);
 
   useEffect(() => { loadPlatformData(); }, [loadPlatformData]);
   useEffect(() => { if (configured) loadOrders(); }, [loadOrders, configured]);
@@ -286,7 +294,7 @@ const [expressModalOpen, setExpressModalOpen] = useState(false);
               <Select placeholder="全部状态" allowClear value={filterStatus} onChange={v => { setFilterStatus(v); setOrderPage(1); }} style={{ width: 100 }}>
                 {Object.entries(STATUS_MAP).map(([k, v]) => <Select.Option key={k} value={Number(k)}>{v.label}</Select.Option>)}
               </Select>
-              <Input.Search placeholder="订单号 / 买家" allowClear style={{ width: 200 }} enterButton={<SearchOutlined />} onSearch={v => { setKeyword(v); setOrderPage(1); }} />
+              <Input.Search placeholder="订单号 / 买家" allowClear style={{ width: 200 }} enterButton={<SearchOutlined />} onSearch={v => { setKeyword(v); }} />
               <Button icon={<ReloadOutlined />} onClick={loadOrders}>刷新</Button>
             </Space>
           </Card>
@@ -352,8 +360,8 @@ const [expressModalOpen, setExpressModalOpen] = useState(false);
           </Row>
           <Descriptions bordered column={2}>
             <Descriptions.Item label="累计订单">{stats?.totalOrders ?? 0} 单</Descriptions.Item>
-            <Descriptions.Item label="累计销售额">¥{stats ? parseFloat(stats.totalSales).toFixed(2) : '0.00'}</Descriptions.Item>
-            <Descriptions.Item label="客单价">¥{stats ? parseFloat(stats.avgOrderValue).toFixed(2) : '0.00'}</Descriptions.Item>
+            <Descriptions.Item label="累计销售额">{stats ? formatMoney(parseFloat(stats.totalSales)) : '¥0.00'}</Descriptions.Item>
+            <Descriptions.Item label="客单价">{stats ? formatMoney(parseFloat(stats.avgOrderValue)) : '¥0.00'}</Descriptions.Item>
             <Descriptions.Item label="关联店铺">{stats?.shopCount ?? 0} 个</Descriptions.Item>
           </Descriptions>
         </div>
@@ -455,7 +463,7 @@ const [expressModalOpen, setExpressModalOpen] = useState(false);
             </Col>
             <Col span={6}>
               <Card variant="borderless" style={{ background: 'linear-gradient(135deg, #f6ffed 0%, #fcffe6 100%)', borderRadius: 12 }}>
-                <Statistic title="今日销售" value={parseFloat(stats.todaySales).toFixed(2)} prefix="¥" styles={{ content: { color: '#52c41a' } }} />
+                <Statistic title="今日销售" value={formatMoney(parseFloat(stats.todaySales))} styles={{ content: { color: '#52c41a' } }} />
               </Card>
             </Col>
             <Col span={6}>
@@ -482,7 +490,7 @@ const [expressModalOpen, setExpressModalOpen] = useState(false);
           onSuccess={() => { loadOrders(); }}
         />
 
-        <div style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 100 }}>
+        <div style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 'var(--z-dropdown)' }}>
           <Button type="primary" shape="circle" size="large" icon={<ArrowLeftOutlined />}
             onClick={() => navigate(paths.ecommerceCenter)}
             style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}

@@ -84,7 +84,7 @@ const WageFeedbackTab: React.FC = () => {
       render: (v: string, r: any) => v ? (
         <div>
           <div>{v}</div>
-          {r.resolverName && <div style={{ fontSize: 14, color: '#999' }}>处理人: {r.resolverName}</div>}
+          {r.resolverName && <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>处理人: {r.resolverName}</div>}
         </div>
       ) : '-',
     },

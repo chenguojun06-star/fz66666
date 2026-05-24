@@ -321,9 +321,7 @@ public class TemplateQueryHelper {
                 .ne(TemplateLibrary::getSourceStyleNo, "")
                 .like(StringUtils.hasText(keywordText), TemplateLibrary::getSourceStyleNo, keywordText);
         if (tid != null) {
-            tplWrapper.and(q -> q.eq(TemplateLibrary::getTenantId, tid).or().isNull(TemplateLibrary::getTenantId));
-        } else {
-            tplWrapper.isNull(TemplateLibrary::getTenantId);
+            tplWrapper.eq(TemplateLibrary::getTenantId, tid);
         }
         tplWrapper.orderByDesc(TemplateLibrary::getUpdateTime)
                 .orderByDesc(TemplateLibrary::getCreateTime)
@@ -401,12 +399,17 @@ public class TemplateQueryHelper {
     private TemplateLibrary findStyleScopedProcessPriceTemplate(String styleNo) {
         String sn = StringUtils.hasText(styleNo) ? styleNo.trim() : null;
         if (StringUtils.hasText(sn)) {
-            return templateLibraryService.getOne(new LambdaQueryWrapper<TemplateLibrary>()
+            Long tid = UserContext.tenantId();
+            LambdaQueryWrapper<TemplateLibrary> q = new LambdaQueryWrapper<TemplateLibrary>()
                     .eq(TemplateLibrary::getTemplateType, "process_price")
                     .eq(TemplateLibrary::getSourceStyleNo, sn)
                     .orderByDesc(TemplateLibrary::getUpdateTime)
                     .orderByDesc(TemplateLibrary::getCreateTime)
-                    .last("limit 1"));
+                    .last("limit 1");
+            if (tid != null) {
+                q.eq(TemplateLibrary::getTenantId, tid);
+            }
+            return templateLibraryService.getOne(q);
         }
         return null;
     }

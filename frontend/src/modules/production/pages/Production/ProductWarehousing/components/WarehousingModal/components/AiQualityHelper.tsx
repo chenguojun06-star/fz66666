@@ -117,7 +117,7 @@ const AiQualityHelper: React.FC<AiQualityHelperProps> = ({ orderId, defectCatego
                   padding: '4px 8px', fontSize: 14,
                   background: isRed ? '#fff1f0' : isYellow ? '#fffbe6' : '#f0f7ff',
                   borderLeft: `3px solid ${isRed ? '#ff4d4f' : isYellow ? '#faad14' : '#1677ff'}`,
-                  borderRadius: '0 4px 4px 0', color: '#333',
+                  borderRadius: '0 4px 4px 0', color: 'var(--color-text-primary)',
                 }}>{point}</div>
               );
             })}

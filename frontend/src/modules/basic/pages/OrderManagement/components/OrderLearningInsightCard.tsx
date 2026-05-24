@@ -30,14 +30,14 @@ const OrderLearningInsightCard: React.FC<OrderLearningInsightCardProps> = ({
           alignItems: 'center',
           justifyContent: 'space-between',
           padding: '10px 14px',
-          background: '#fafafa',
+          background: 'var(--color-bg-container)',
           borderRadius: 8,
           cursor: 'pointer',
-          border: '1px solid #e8e8e8',
+          border: '1px solid var(--color-border)',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 14, fontWeight: 400, color: '#8c8c8c' }}>AI 学习建议</span>
+          <span style={{ fontSize: 14, fontWeight: 400, color: 'var(--color-text-tertiary)' }}>AI 学习建议</span>
           {presented && presented.tags.length > 0 && (
             <div style={{ display: 'flex', gap: 4 }}>
               {presented.tags.slice(0, 2).map((tag) => <Tag key={tag} style={{ margin: 0 }}>{tag}</Tag>)}
@@ -45,12 +45,12 @@ const OrderLearningInsightCard: React.FC<OrderLearningInsightCardProps> = ({
           )}
         </div>
         <span style={{ display: 'flex', alignItems: 'center' }}>
-          {expanded ? <DownOutlined style={{ fontSize: 13, color: '#8c8c8c' }} /> : <RightOutlined style={{ fontSize: 13, color: '#8c8c8c' }} />}
+          {expanded ? <DownOutlined style={{ fontSize: 13, color: 'var(--color-text-tertiary)' }} /> : <RightOutlined style={{ fontSize: 13, color: 'var(--color-text-tertiary)' }} />}
         </span>
       </div>
 
       {expanded && (
-        <div style={{ padding: '12px', background: '#fff', border: '1px solid #e8e8e8', borderTop: 'none', borderRadius: '0 0 8px 8px' }}>
+        <div style={{ padding: '12px', background: 'var(--color-bg-base)', border: '1px solid var(--color-border)', borderTop: 'none', borderRadius: '0 0 8px 8px' }}>
           <Spin spinning={loading}>
             {!presented ? (
               <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="AI 学习建议暂不可用" />

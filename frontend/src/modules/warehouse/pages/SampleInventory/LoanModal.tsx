@@ -3,6 +3,7 @@ import { Form, Input, InputNumber, DatePicker, Select } from 'antd';
 import ResizableModal from '@/components/common/ResizableModal';
 import { SampleStock } from './types';
 import api from '@/utils/api';
+import { formatDateTimeSecond } from '@/utils/datetime';
 import dayjs from 'dayjs';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
@@ -46,7 +47,7 @@ const LoanModal: React.FC<LoanModalProps> = ({ visible, stock, onCancel, onSucce
       const payload = {
         sampleStockId: stock?.id,
         ...values,
-        expectedReturnDate: values.expectedReturnDate ? values.expectedReturnDate.format('YYYY-MM-DD HH:mm:ss') : undefined
+        expectedReturnDate: values.expectedReturnDate ? formatDateTimeSecond(values.expectedReturnDate) : undefined
       };
 
       const res = await api.post('/stock/sample/loan', payload);

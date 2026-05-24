@@ -83,6 +83,9 @@ public class AiPatrolJob {
     private SmartEscalationOrchestrator smartEscalationOrchestrator;
 
     @Autowired(required = false)
+    private com.fashion.supplychain.intelligence.orchestration.CollaborationDispatchOrchestrator collaborationDispatchOrchestrator;
+
+    @Autowired(required = false)
     private ProcessStatsEngine processStatsEngine;
 
     /**
@@ -230,6 +233,7 @@ public class AiPatrolJob {
 
         if (found > 0) {
             performCorrelationAnalysis();
+            pushHighSeverityAlerts();
         }
     }
 
@@ -665,6 +669,79 @@ public class AiPatrolJob {
         if (written > 0) {
             log.info("[AiPatrolJob] REFLECTIVE 记忆生成完成，新增 {} 条", written);
         }
+    }
+
+    private void pushHighSeverityAlerts() {
+        if (collaborationDispatchOrchestrator == null) {
+            log.debug("[AiPatrolJob-Push] CollaborationDispatchOrchestrator 未注入，跳过主动推送");
+            return;
+        }
+        try {
+            List<AiPatrolAction> recent = patrolOrchestrator.recentActions(4);
+            if (recent == null || recent.isEmpty()) return;
+
+            List<AiPatrolAction> highSeverity = recent.stream()
+                    .filter(a -> "HIGH".equals(a.getIssueSeverity()))
+                    .filter(a -> a.getCreateTime() != null
+                            && a.getCreateTime().isAfter(LocalDateTime.now().minusHours(5)))
+                    .limit(5)
+                    .toList();
+
+            if (highSeverity.isEmpty()) return;
+
+            List<Long> processedTenants = new java.util.ArrayList<>();
+            for (AiPatrolAction action : highSeverity) {
+                Long tenantId = action.getTenantId();
+                if (tenantId == null) continue;
+                if (processedTenants.contains(tenantId)) continue;
+
+                UserContext previous = UserContext.get();
+                try {
+                    UserContext ctx = new UserContext();
+                    ctx.setTenantId(tenantId);
+                    ctx.setUsername("system");
+                    ctx.setUserId("system");
+                    UserContext.set(ctx);
+
+                    String targetRole = resolveTargetRoleByIssueType(action.getIssueType());
+                    String instruction = String.format("系统巡检发现高危风险：%s，请尽快跟进处理。",
+                            action.getDetectedIssue() != null ? action.getDetectedIssue() : "未知风险");
+
+                    com.fashion.supplychain.intelligence.dto.CollaborationDispatchRequest dispatchReq =
+                            new com.fashion.supplychain.intelligence.dto.CollaborationDispatchRequest();
+                    dispatchReq.setInstruction(instruction);
+                    dispatchReq.setTargetRole(targetRole);
+                    dispatchReq.setOrderNo(action.getTargetId());
+                    dispatchReq.setTitle("小云巡检告警 — " + action.getIssueType());
+
+                    collaborationDispatchOrchestrator.dispatch(dispatchReq);
+                    processedTenants.add(tenantId);
+                    log.info("[AiPatrolJob-Push] 已推送高危巡检告警: tenant={} type={} role={}",
+                            tenantId, action.getIssueType(), targetRole);
+                } catch (Exception e) {
+                    log.warn("[AiPatrolJob-Push] 推送失败: tenant={} error={}", tenantId, e.getMessage());
+                } finally {
+                    if (previous != null) {
+                        UserContext.set(previous);
+                    } else {
+                        UserContext.clear();
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("[AiPatrolJob-Push] 主动推送异常: {}", e.getMessage());
+        }
+    }
+
+    private String resolveTargetRoleByIssueType(String issueType) {
+        if (issueType == null) return "跟单";
+        return switch (issueType) {
+            case "DEADLINE_RISK", "CUTTING_BACKLOG" -> "跟单";
+            case "FACTORY_SILENCE" -> "生产主管";
+            case "QUALITY_SPIKE" -> "质检";
+            case "CORRELATED_RISK" -> "生产主管";
+            default -> "跟单";
+        };
     }
 
     private static String getString(Map<String, Object> map, String key) {

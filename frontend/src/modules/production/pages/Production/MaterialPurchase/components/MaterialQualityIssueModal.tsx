@@ -5,6 +5,7 @@ import ResizableTable from '@/components/common/ResizableTable';
 import type { MaterialPurchase } from '@/types/production';
 import { materialQualityIssueApi, type MaterialQualityIssue } from '@/services/production/materialQualityIssueApi';
 import { formatDateTime } from '@/utils/datetime';
+import { formatMoney } from '@/utils/format';
 import type { ApiResult } from '@/utils/api';
 
 interface Props {
@@ -239,7 +240,7 @@ const MaterialQualityIssueModal: React.FC<Props> = ({ open, purchase, onClose, o
                       return `已生成补货单 ${record.relatedPurchaseNo}`;
                     }
                     if (typeof record.deductionAmount === 'number') {
-                      return `已扣款 ¥${record.deductionAmount.toFixed(2)}`;
+                      return `已扣款 ${formatMoney(record.deductionAmount)}`;
                     }
                     return record.status === 'RESOLVED' ? '已同步原采购业务' : '-';
                   },

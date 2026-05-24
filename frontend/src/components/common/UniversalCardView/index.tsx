@@ -21,6 +21,7 @@ export interface CardProgressConfig {
   show?: boolean; // 是否显示进度条
   type?: 'capsule' | 'liquid'; // 进度条类型：capsule=胶囊条（默认），liquid=液体波浪条
   minVisiblePercent?: (record: any) => number;
+  progressExtra?: (record: any) => React.ReactNode;
 }
 
 export interface CardAction {
@@ -241,6 +242,7 @@ const UniversalCardView: React.FC<UniversalCardViewProps> = ({
                       </span>
                     </div>
                   )}
+                  {progressConfig.progressExtra?.(record)}
                 </div>
               )}
 

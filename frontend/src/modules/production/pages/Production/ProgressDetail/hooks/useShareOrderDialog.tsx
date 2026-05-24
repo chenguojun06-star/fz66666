@@ -110,7 +110,7 @@ export const useShareOrderDialog = ({ message }: UseShareOrderDialogOptions) => 
       destroyOnHidden
     >
       {shareModal.loading ? (
-        <div style={{ padding: '24px 0', textAlign: 'center', color: '#666' }}>正在生成分享链接…</div>
+        <div style={{ padding: '24px 0', textAlign: 'center', color: 'var(--color-text-secondary)' }}>正在生成分享链接…</div>
       ) : (
         <div>
           <p style={{ marginBottom: 8, color: '#555', fontSize: 14 }}>
@@ -121,7 +121,7 @@ export const useShareOrderDialog = ({ message }: UseShareOrderDialogOptions) => 
             value={shareModal.shareUrl}
             autoSize={{ minRows: 2 }}
             readOnly
-            style={{ fontSize: 14, background: '#f5f5f5', cursor: 'text' }}
+            style={{ fontSize: 14, background: 'var(--color-bg-subtle)', cursor: 'text' }}
           />
         </div>
       )}

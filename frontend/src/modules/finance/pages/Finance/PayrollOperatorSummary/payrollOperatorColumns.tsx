@@ -1,5 +1,7 @@
 import { Button, Tag, Tooltip } from 'antd';
 import dayjs from 'dayjs';
+import { formatDateTime } from '@/utils/datetime';
+import { formatMoney } from '@/utils/format';
 import { formatProcessDisplayName } from '@/utils/productionStage';
 import SortableColumnTitle from '@/components/common/SortableColumnTitle';
 import RowActions from '@/components/common/RowActions';
@@ -10,6 +12,8 @@ import WorkerPayrollAuditPopover from './WorkerPayrollAuditPopover';
 import { isOrderFrozenByStatus } from '@/utils/api/production';
 import { ORDER_STATUS_LABEL, ORDER_STATUS_COLOR } from '@/constants/orderStatus';
 import { getScanTypeLabel } from '@/components/common/ScanTypeBadge';
+import StatusTag from '@/components/common/StatusTag';
+import { PAYROLL_PAYMENT_STATUS_MAP } from '@/constants/statusMaps';
 
 // 工具函数：创建可排序的数字列配置
 export const createSortableNumberColumn = (
@@ -56,7 +60,7 @@ export const createSortableTimeColumn = (
     key: dataIndex,
     width,
     ellipsis: true,
-    render: (v: unknown) => v ? dayjs(v as string).format('YYYY-MM-DD HH:mm') : '-',
+    render: (v: unknown) => v ? formatDateTime(v) : '-',
 });
 
 export const scanTypeText = (raw: any) => getScanTypeLabel(raw);
@@ -77,12 +81,6 @@ export interface SummaryColumnDeps {
 
 export function getSummaryColumns(deps: SummaryColumnDeps): any[] {
     const { sortField, sortOrder, handleSort, toNumberOrZero, toMoneyText, summaryRows, totalAmount, handleFinalPush, handleRejectOperator, handleRecordPayment, handleAddDeduction } = deps;
-
-    const paymentStatusMap: Record<string, { text: string; color: string }> = {
-        unpaid: { text: '未付', color: 'red' },
-        partially_paid: { text: '部分已付', color: 'orange' },
-        fully_paid: { text: '已付清', color: 'green' },
-    };
 
     return [
         {
@@ -126,7 +124,7 @@ export function getSummaryColumns(deps: SummaryColumnDeps): any[] {
                     grandTotal={totalAmount}
                     workerCount={summaryRows.length}
                 >
-                    <span style={{ cursor: 'pointer', borderBottom: '1px dashed #d9d9d9', whiteSpace: 'nowrap' }}>
+                    <span style={{ cursor: 'pointer', borderBottom: '1px dashed var(--color-border-antd)', whiteSpace: 'nowrap' }}>
                         {toMoneyText(v)}
                     </span>
                 </WorkerPayrollAuditPopover>
@@ -141,7 +139,7 @@ export function getSummaryColumns(deps: SummaryColumnDeps): any[] {
             width: 130,
             align: 'right' as const,
             render: (v: unknown) => (
-                <span style={{ color: '#389e0d' }}>¥{toNumberOrZero(v).toFixed(2)}</span>
+                <span style={{ color: '#389e0d' }}>{formatMoney(toNumberOrZero(v))}</span>
             ),
         },
         {
@@ -154,7 +152,7 @@ export function getSummaryColumns(deps: SummaryColumnDeps): any[] {
                 const val = toNumberOrZero(v);
                 return (
                     <span style={{ color: val > 0 ? 'var(--color-danger)' : 'var(--neutral-text-secondary)' }}>
-                        ¥{val.toFixed(2)}
+                        {formatMoney(val)}
                     </span>
                 );
             },
@@ -165,7 +163,7 @@ export function getSummaryColumns(deps: SummaryColumnDeps): any[] {
             key: 'advanceAmount',
             width: 130,
             align: 'right' as const,
-            render: (v: unknown) => `¥${toNumberOrZero(v).toFixed(2)}`,
+            render: (v: unknown) => formatMoney(toNumberOrZero(v)),
         },
         {
             title: <SortableColumnTitle title="剩余未付" fieldName="remainingAmount" sortField={sortField} sortOrder={sortOrder} onSort={handleSort} />,
@@ -190,8 +188,7 @@ export function getSummaryColumns(deps: SummaryColumnDeps): any[] {
             align: 'center' as const,
             render: (v: unknown) => {
                 const status = String(v || '');
-                const info = paymentStatusMap[status];
-                return info ? <Tag color={info.color}>{info.text}</Tag> : <Tag>未知</Tag>;
+                return <StatusTag status={status} statusMap={PAYROLL_PAYMENT_STATUS_MAP} />;
             },
         },
         {
@@ -371,7 +368,7 @@ export function getDetailColumns(deps: DetailColumnDeps): any[] {
             key: 'startTime',
             width: 130,
             ellipsis: true,
-            render: (v: unknown) => v ? dayjs(v as string).format('YYYY-MM-DD HH:mm') : '-',
+            render: (v: unknown) => v ? formatDateTime(v) : '-',
         },
         {
             title: <SortableColumnTitle
@@ -386,7 +383,7 @@ export function getDetailColumns(deps: DetailColumnDeps): any[] {
             key: 'endTime',
             width: 130,
             ellipsis: true,
-            render: (v: unknown) => v ? dayjs(v as string).format('YYYY-MM-DD HH:mm') : '-',
+            render: (v: unknown) => v ? formatDateTime(v) : '-',
         },
         {
             title: '数量',

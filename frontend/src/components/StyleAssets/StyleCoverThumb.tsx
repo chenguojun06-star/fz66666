@@ -51,7 +51,8 @@ const StyleCoverThumb: React.FC<{
   size?: number | 'fill';
   borderRadius?: number;
   fit?: 'cover' | 'contain';
-}> = ({ styleId, styleNo, src, size = 40, borderRadius = 6, fit = 'cover' }) => {
+  onClick?: (e: React.MouseEvent) => void;
+}> = ({ styleId, styleNo, src, size = 40, borderRadius = 6, fit = 'cover', onClick }) => {
   const isFill = size === 'fill';
   const numSize = (!isFill && typeof size === 'number' && !isNaN(size) && size > 0) ? size : 40;
   const preferredUrl = React.useMemo(() => {
@@ -140,6 +141,10 @@ const StyleCoverThumb: React.FC<{
       }}
       onClick={(e) => {
         e.stopPropagation();
+        if (onClick) {
+          onClick(e);
+          return;
+        }
         const validUrl = getFullAuthedFileUrl(url);
         if (validUrl) {
           window.open(validUrl, '_blank');

@@ -105,9 +105,9 @@ const StyleColorSizeTable: React.FC<StyleColorSizeTableProps> = ({
     margin: 0,
     paddingInline: 8,
     borderRadius: 999,
-    color: '#8c8c8c',
-    background: '#f5f5f5',
-    borderColor: '#d9d9d9',
+    color: 'var(--color-text-tertiary)',
+    background: 'var(--color-bg-subtle)',
+    borderColor: 'var(--color-border-antd)',
   };
 
   const prevColorsRef = useRef<string[]>(selectedColors);
@@ -285,7 +285,7 @@ const StyleColorSizeTable: React.FC<StyleColorSizeTableProps> = ({
             ) : null}
             {!editLocked && (
               !showColorInput ? (
-                <Button type="text" style={{ color: '#8c8c8c' }} onClick={() => setShowColorInput(true)}>
+                <Button type="text" style={{ color: 'var(--color-text-tertiary)' }} onClick={() => setShowColorInput(true)}>
                   新增颜色
                 </Button>
               ) : (
@@ -339,7 +339,7 @@ const StyleColorSizeTable: React.FC<StyleColorSizeTableProps> = ({
             ) : null}
             {!editLocked && (
               !showSizeInput ? (
-                <Button type="text" style={{ color: '#8c8c8c' }} onClick={() => setShowSizeInput(true)}>
+                <Button type="text" style={{ color: 'var(--color-text-tertiary)' }} onClick={() => setShowSizeInput(true)}>
                   新增码数
                 </Button>
               ) : (

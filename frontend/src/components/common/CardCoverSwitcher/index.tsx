@@ -154,7 +154,7 @@ function CardCoverSwitcher({
         <div style={{
           width: '100%', height: '100%', display: 'flex',
           alignItems: 'center', justifyContent: 'center',
-          background: '#f5f5f5',
+          background: 'var(--color-bg-subtle)',
         }}>
           <span style={{ color: '#ccc', fontSize: 14 }}>...</span>
         </div>
@@ -167,14 +167,14 @@ function CardCoverSwitcher({
           onClick={handleImageClick}
           style={{
             width: '100%', height: '100%', objectFit: fit,
-            display: 'block', background: '#f5f5f5', cursor: 'pointer',
+            display: 'block', background: 'var(--color-bg-subtle)', cursor: 'pointer',
           }}
         />
       ) : (
         <div style={{
           width: '100%', height: '100%', display: 'flex',
           alignItems: 'center', justifyContent: 'center',
-          background: '#f5f5f5',
+          background: 'var(--color-bg-subtle)',
         }}>
           <span style={{ color: '#ccc', fontSize: 14 }}>无图</span>
         </div>

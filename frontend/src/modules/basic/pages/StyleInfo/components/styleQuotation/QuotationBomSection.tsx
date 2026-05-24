@@ -3,6 +3,7 @@ import type { StyleBom } from '@/types/style';
 import { toNumberSafe } from '@/utils/api';
 import { getMaterialTypeLabel } from '@/utils/materialType';
 import ResizableTable from '@/components/common/ResizableTable';
+import { formatMoney } from '@/utils/format';
 
 export interface BomColorCosts {
   costByColor: Record<string, number>;
@@ -41,7 +42,7 @@ const QuotationBomSection: React.FC<Props> = ({ bomList, bomColorCosts, material
         color: 'var(--color-text-primary, #1a1a1a)',
       }}>
         物料明细（BOM）
-        <span style={{ fontSize: 12, color: '#666', marginLeft: 8, fontWeight: 400 }}>
+        <span style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginLeft: 8, fontWeight: 400 }}>
           共 {bomList.length} 项
         </span>
       </div>
@@ -49,12 +50,12 @@ const QuotationBomSection: React.FC<Props> = ({ bomList, bomColorCosts, material
       {bomColorCosts.colors.length > 1 && (
         <div style={{
           display: 'flex', gap: 16, padding: '6px 10px', fontSize: 13, lineHeight: '20px',
-          background: '#fafafa', border: '1px solid #e8e8e8', borderBottom: 'none',
+          background: 'var(--color-bg-container)', border: '1px solid var(--color-border)', borderBottom: 'none',
         }}>
-          <span style={{ color: '#666' }}>各颜色物料成本（单件）：</span>
+          <span style={{ color: 'var(--color-text-secondary)' }}>各颜色物料成本（单件）：</span>
           {bomColorCosts.colors.map(color => (
             <span key={color}>
-              {color}：<strong>¥{(bomColorCosts.costByColor[color] || 0).toFixed(2)}</strong>
+              {color}：<strong>{formatMoney(bomColorCosts.costByColor[color] || 0)}</strong>
             </span>
           ))}
         </div>
@@ -74,17 +75,17 @@ const QuotationBomSection: React.FC<Props> = ({ bomList, bomColorCosts, material
           { title: '用量', dataIndex: 'usageAmount', width: 70, align: 'right' as const, render: (_: any, r: any) => toNumberSafe(r.usageAmount).toFixed(2) },
           { title: '开发采购用量', dataIndex: 'devUsageAmount', width: 100, align: 'right' as const, render: (_: any, r: any) => toNumberSafe(r.devUsageAmount) > 0 ? toNumberSafe(r.devUsageAmount).toFixed(2) : '-' },
           { title: '损耗率%', dataIndex: 'lossRate', width: 80, align: 'right' as const, render: (_: any, r: any) => toNumberSafe(r.lossRate).toFixed(1) },
-          { title: '单价', dataIndex: 'unitPrice', width: 80, align: 'right' as const, render: (_: any, r: any) => `¥${toNumberSafe(r.unitPrice).toFixed(2)}` },
-          { title: '总价', dataIndex: 'totalPrice', width: 90, align: 'right' as const, render: (_: any, r: any) => <strong>¥{calcRowTotal(r).toFixed(2)}</strong> },
+          { title: '单价', dataIndex: 'unitPrice', width: 80, align: 'right' as const, render: (_: any, r: any) => formatMoney(r.unitPrice) },
+          { title: '总价', dataIndex: 'totalPrice', width: 90, align: 'right' as const, render: (_: any, r: any) => <strong>{formatMoney(calcRowTotal(r))}</strong> },
         ]}
       />
 
       <div style={{
         display: 'flex', justifyContent: 'flex-end', padding: '6px 10px',
         border: '1px solid var(--color-border, #e8e8e8)', borderTop: '1px solid var(--color-border, #e8e8e8)',
-        background: '#fafafa', fontWeight: 600, fontSize: 14, color: '#1a1a1a',
+        background: 'var(--color-bg-container)', fontWeight: 600, fontSize: 14, color: 'var(--color-text-primary)',
       }}>
-        物料成本：¥{materialCost.toFixed(2)}
+        物料成本：{formatMoney(materialCost)}
       </div>
     </div>
   );

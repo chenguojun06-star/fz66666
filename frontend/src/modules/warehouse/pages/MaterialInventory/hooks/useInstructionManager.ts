@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Form } from 'antd';
 import api from '@/utils/api';
 import { isSupervisorOrAbove, isAdmin as isAdminUser } from '@/utils/AuthContext';
@@ -14,38 +14,42 @@ interface UseInstructionManagerParams {
 export function useInstructionManager({ alertList, user }: UseInstructionManagerParams) {
   const [dbMaterialOptions, setDbMaterialOptions] = useState<Array<{ label: string; value: string; dbRecord?: any }>>([]);
   const [dbSearchLoading, setDbSearchLoading] = useState(false);
+  const dbSearchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [instructionVisible, setInstructionVisible] = useState(false);
   const [instructionSubmitting, setInstructionSubmitting] = useState(false);
   const [instructionTarget, setInstructionTarget] = useState<MaterialStockAlertItem | null>(null);
   const [receiverOptions, setReceiverOptions] = useState<Array<{ label: string; value: string; name: string; roleName?: string }>>([]);
   const [instructionForm] = Form.useForm();
 
-  const searchMaterialFromDatabase = async (keyword: string) => {
+  const searchMaterialFromDatabase = (keyword: string) => {
+    if (dbSearchTimerRef.current) clearTimeout(dbSearchTimerRef.current);
     if (!keyword || keyword.length < 1) {
       setDbMaterialOptions([]);
       return;
     }
-    setDbSearchLoading(true);
-    try {
-      const res = await api.get('/material/database/list', {
-        params: { keyword, pageSize: 20 },
-      });
-      const records: any[] = res?.data?.records || [];
-      const opts = records.map((m: any) => {
-        const isAlert = alertList.some((a) => a.materialCode === m.materialCode);
-        const labelBase = `${m.materialName || ''}（${m.materialCode || ''}）`;
-        return {
-          label: isAlert ? `${labelBase} 库存不足` : labelBase,
-          value: m.materialCode,
-          dbRecord: m,
-        };
-      });
-      setDbMaterialOptions(opts);
-    } catch {
-      setDbMaterialOptions([]);
-    } finally {
-      setDbSearchLoading(false);
-    }
+    dbSearchTimerRef.current = setTimeout(async () => {
+      setDbSearchLoading(true);
+      try {
+        const res = await api.get('/material/database/list', {
+          params: { keyword, pageSize: 20 },
+        });
+        const records: any[] = res?.data?.records || [];
+        const opts = records.map((m: any) => {
+          const isAlert = alertList.some((a) => a.materialCode === m.materialCode);
+          const labelBase = `${m.materialName || ''}（${m.materialCode || ''}）`;
+          return {
+            label: isAlert ? `${labelBase} 库存不足` : labelBase,
+            value: m.materialCode,
+            dbRecord: m,
+          };
+        });
+        setDbMaterialOptions(opts);
+      } catch {
+        setDbMaterialOptions([]);
+      } finally {
+        setDbSearchLoading(false);
+      }
+    }, 300);
   };
 
   const loadReceivers = async () => {

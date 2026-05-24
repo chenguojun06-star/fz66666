@@ -18,25 +18,31 @@ export const useLabelPrint = () => {
   const [labelPrintOpen, setLabelPrintOpen] = useState(false);
   const [labelPrintOrder, setLabelPrintOrder] = useState<ProductionOrder | null>(null);
   const [labelPrintStyle, setLabelPrintStyle] = useState<LabelPrintStyleInfo | null>(null);
+  const [labelPrintLoading, setLabelPrintLoading] = useState(false);
 
   const handlePrintLabel = useCallback(async (record: ProductionOrder) => {
+    setLabelPrintLoading(true);
     setLabelPrintOrder(record);
     setLabelPrintStyle(null);
     setLabelPrintOpen(true);
-    if (record.styleId || record.styleNo) {
-      const styleInfo = await getStyleInfoByRef(record.styleId, record.styleNo);
-      const d: Partial<LabelPrintStyleInfo> = styleInfo ?? {};
-      setLabelPrintStyle({
-        fabricComposition: d.fabricComposition,
-        fabricCompositionParts: d.fabricCompositionParts,
-        washInstructions: d.washInstructions,
-        uCode: d.uCode,
-        washTempCode: d.washTempCode,
-        bleachCode: d.bleachCode,
-        tumbleDryCode: d.tumbleDryCode,
-        ironCode: d.ironCode,
-        dryCleanCode: d.dryCleanCode,
-      });
+    try {
+      if (record.styleId || record.styleNo) {
+        const styleInfo = await getStyleInfoByRef(record.styleId, record.styleNo);
+        const d: Partial<LabelPrintStyleInfo> = styleInfo ?? {};
+        setLabelPrintStyle({
+          fabricComposition: d.fabricComposition,
+          fabricCompositionParts: d.fabricCompositionParts,
+          washInstructions: d.washInstructions,
+          uCode: d.uCode,
+          washTempCode: d.washTempCode,
+          bleachCode: d.bleachCode,
+          tumbleDryCode: d.tumbleDryCode,
+          ironCode: d.ironCode,
+          dryCleanCode: d.dryCleanCode,
+        });
+      }
+    } finally {
+      setLabelPrintLoading(false);
     }
   }, []);
 
@@ -50,6 +56,7 @@ export const useLabelPrint = () => {
     labelPrintOpen,
     labelPrintOrder,
     labelPrintStyle,
+    labelPrintLoading,
     handlePrintLabel,
     closeLabelPrint,
   };

@@ -5,6 +5,7 @@ import RowActions from '@/components/common/RowActions';
 import { StyleCoverThumb } from '@/components/StyleAssets';
 import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
 import type { SalesForecastResponse, SizeCurveResponse } from '@/services/intelligence/intelligenceTypes';
+import { formatMoney } from '@/utils/format';
 
 // SKU明细接口
 export interface SKUDetail {
@@ -103,9 +104,9 @@ export function getMainColumns(handlers: {
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'center' }}>
             {record.sizes && record.sizes.length > 0 ? (
-              record.sizes.map((s, i) => <Tag key={i} style={{ margin: 0, background: '#f0f0f0', border: '1px solid #d9d9d9' }}>{s}</Tag>)
+              record.sizes.map((s, i) => <Tag key={i} style={{ margin: 0, background: '#f0f0f0', border: '1px solid var(--color-border-antd)' }}>{s}</Tag>)
             ) : (
-              <Tag style={{ margin: 0, background: '#f0f0f0', border: '1px solid #d9d9d9' }}>{record.size}</Tag>
+              <Tag style={{ margin: 0, background: '#f0f0f0', border: '1px solid var(--color-border-antd)' }}>{record.size}</Tag>
             )}
           </div>
         </div>
@@ -151,7 +152,7 @@ export function getMainColumns(handlers: {
       width: 90,
       align: 'center' as const,
       render: (v: number | null) => v != null
-        ? <span style={{ fontSize: 14, fontWeight: 700, color: '#cf1322' }}>¥{Number(v).toFixed(2)}</span>
+        ? <span style={{ fontSize: 14, fontWeight: 700, color: '#cf1322' }}>{formatMoney(Number(v))}</span>
         : <span style={{ color: 'var(--neutral-text-disabled)' }}>-</span>,
     },
     {
@@ -245,7 +246,7 @@ function StyleNoForecastHover({ styleNo }: { styleNo: string }) {
                     <span>{pct}%</span>
                   </div>
                 ))}
-                <div style={{ color: '#999', marginTop: 2 }}>样本 {sizeCurve!.sampleCount} 条，置信 {sizeCurve!.confidence}%</div>
+                <div style={{ color: 'var(--color-text-tertiary)', marginTop: 2 }}>样本 {sizeCurve!.sampleCount} 条，置信 {sizeCurve!.confidence}%</div>
               </>
             )}
           </div>
@@ -337,7 +338,7 @@ export function getSkuColumns(handlers: {
       key: 'costPrice',
       width: 90,
       align: 'center',
-      render: (v: number) => v != null ? `¥${v.toFixed(2)}` : '-',
+      render: (v: number) => v != null ? formatMoney(v) : '-',
     },
     {
       title: '单价',
@@ -345,7 +346,7 @@ export function getSkuColumns(handlers: {
       key: 'salesPrice',
       width: 90,
       align: 'center',
-      render: (v: number) => v != null ? `¥${v.toFixed(2)}` : '-',
+      render: (v: number) => v != null ? formatMoney(v) : '-',
     },
     {
       title: '出库数量',
@@ -358,6 +359,7 @@ export function getSkuColumns(handlers: {
           min={0}
           max={record.availableQty}
           value={value}
+          controls={false}
           onChange={(val) => handlers.handleSKUQtyChange(index, val)}
           style={{ width: '100%' }}
           placeholder="0"

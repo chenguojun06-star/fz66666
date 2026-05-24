@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import type { CSSProperties } from 'react';
 import dayjs from 'dayjs';
 import { Badge, Button, Popover, Tag, Tooltip } from 'antd';
@@ -8,9 +8,10 @@ import OrderInfoGrid from '@/components/common/OrderInfoGrid';
 import { buildOrderColorSizeMatrixModel, ColorSizeMatrixPopoverContent } from '@/components/common/OrderColorSizeMatrix';
 import { SMART_CARD_OVERLAY_WIDTH } from '@/components/common/DecisionInsightCard';
 import LiquidProgressLottie from '@/components/common/LiquidProgressLottie';
+import BudgetDaysEditor from '@/components/common/BudgetDaysEditor';
+import CardCoverSwitcher from '@/components/common/CardCoverSwitcher';
 import SmartOrderHoverCard from '../components/SmartOrderHoverCard';
 import DefectTracePopover from '../components/DefectTracePopover';
-import { StyleCoverThumb } from '@/components/StyleAssets';
 import { getOrderStatusConfig } from '@/components/common/OrderStatusTag';
 import FactoryTypeTag from '@/components/common/FactoryTypeTag';
 import { isDirectCuttingOrder, isOrderFrozenByStatus } from '@/utils/api';
@@ -18,10 +19,10 @@ import { factoryShipmentApi } from '@/services/production/factoryShipmentApi';
 import SupplierNameTooltip from '@/components/common/SupplierNameTooltip';
 import { parseProductionOrderLines } from '@/utils/api/production';
 import { getRemainingDaysDisplay } from '@/utils/progressColor';
-import { computeStageBudgetHint } from '@/utils/progressTimeBudget';
 import { stageAliasMap } from '@/utils/productionStage';
 import { ProductionOrder } from '@/types/production';
 import { ProgressNode } from '../types';
+import api from '@/utils/api';
 import {
   stripWarehousingNode,
   getOrderShipTime,
@@ -103,7 +104,7 @@ export const ShipmentSumCell: React.FC<{ orderId: string }> = ({ orderId }) => {
         <div key={row.color} style={{ marginBottom: 1 }}>
           <span style={{ color: '#595959' }}>{row.color}: </span>
           {row.sizes.map(s => `${s.sizeName}:${s.quantity}`).join(' ')}
-          <span style={{ color: '#bfbfbf', marginLeft: 4 }}>共{row.total}</span>
+          <span style={{ color: 'var(--color-text-quaternary)', marginLeft: 4 }}>共{row.total}</span>
         </div>
       ))}
     </div>
@@ -153,22 +154,16 @@ export function createOrderSummaryRender(ctx: OrderSummaryContext) {
       whiteSpace: 'nowrap',
     };
     return (
-      <Popover
-        content={<SmartOrderHoverCard order={record} />}
-        trigger="hover"
-        placement="rightTop"
-        mouseEnterDelay={0.3}
-        styles={{ root: { width: SMART_CARD_OVERLAY_WIDTH, maxWidth: SMART_CARD_OVERLAY_WIDTH } }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, minHeight: 168, paddingRight: 6, paddingTop: 6, paddingBottom: 6, textAlign: 'left' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, minHeight: 168, paddingRight: 6, paddingTop: 6, paddingBottom: 6, textAlign: 'left' }}>
           <div style={{ width: 162, minWidth: 162, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'flex-start', gap: 6 }}>
-            <StyleCoverThumb
-              styleId={record.styleId}
-              styleNo={record.styleNo}
-              src={(record as any).styleCover || null}
-              size={148}
-              borderRadius={14}
-            />
+            <div style={{ position: 'relative', width: 148, height: 148, borderRadius: 14, overflow: 'hidden' }}>
+              <CardCoverSwitcher
+                styleId={record.styleId}
+                styleNo={record.styleNo}
+                src={(record as any).styleCover || null}
+                fit="contain"
+              />
+            </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', minHeight: 24 }}>
               <Tag color={status.color} style={{ margin: 0, fontSize: 14 }}>{status.label}</Tag>
               {record.urgencyLevel === 'urgent' && <Tag color="red" style={{ margin: 0, fontSize: 14 }}>急单</Tag>}
@@ -229,7 +224,17 @@ export function createOrderSummaryRender(ctx: OrderSummaryContext) {
                 },
                 {
                   label: '订单号',
-                  value: String(record.orderNo || '').trim() || '-',
+                  value: (
+                    <Popover
+                      content={<SmartOrderHoverCard order={record} />}
+                      trigger="hover"
+                      placement="rightTop"
+                      mouseEnterDelay={0.3}
+                      styles={{ root: { width: SMART_CARD_OVERLAY_WIDTH, maxWidth: SMART_CARD_OVERLAY_WIDTH } }}
+                    >
+                      <span style={{ ...metaValueStyle, cursor: 'pointer' }}>{String(record.orderNo || '').trim() || '-'}</span>
+                    </Popover>
+                  ),
                   labelStyle: metaLabelStyle,
                   valueStyle: metaValueStyle,
                 },
@@ -256,7 +261,7 @@ export function createOrderSummaryRender(ctx: OrderSummaryContext) {
                   value: (
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                       <span style={metaValueStyle}>{shipDate}</span>
-                      {text && text !== '已完成' && text !== '已报废' && text !== '已关单' && text !== '已取消' ? <span style={{ color, fontWeight: 700, fontSize: 14 }}>{text}</span> : null}
+                      {text && text !== '已完成' && text !== '已报废' && text !== '已关单' && text !== '已取消' ? <span style={{ color, fontWeight: 600, fontSize: 12 }}>{text}</span> : null}
                     </span>
                   ),
                   labelStyle: { ...metaLabelStyle, fontWeight: 500 },
@@ -280,7 +285,6 @@ export function createOrderSummaryRender(ctx: OrderSummaryContext) {
             </div>
           </div>
         </div>
-      </Popover>
     );
   };
 }
@@ -301,6 +305,7 @@ export interface ProgressNodesContext {
   setQuickEditVisible: (v: boolean) => void;
   setPrintingRecord: (record: ProductionOrder) => void;
   handlePrintLabel: (record: ProductionOrder) => void | Promise<void>;
+  labelPrintLoading?: boolean;
   isFactoryAccount?: boolean;
   onFactoryShip?: (order: ProductionOrder) => void;
   canManageOrderLifecycle?: boolean;
@@ -321,6 +326,7 @@ export function createProgressNodesRender(ctx: ProgressNodesContext) {
     setQuickEditVisible,
     setPrintingRecord,
     handlePrintLabel,
+    labelPrintLoading,
     isFactoryAccount,
     onFactoryShip,
     canManageOrderLifecycle,
@@ -534,7 +540,7 @@ export function createProgressNodesRender(ctx: ProgressNodesContext) {
                   cursor: frozen ? 'default' : 'pointer',
                   opacity: isCompletedOrClosed ? 0.75 : (frozen ? 0.6 : percent >= 100 ? 0.75 : 1),
                   position: 'relative',
-                  zIndex: 1,
+                  zIndex: 'var(--z-local)',
                 }}
                 onClick={() => {
                   if (frozen) return;
@@ -652,38 +658,16 @@ export function createProgressNodesRender(ctx: ProgressNodesContext) {
                   }}>
                     {nodeLabel}
                   </div>
-                  <div style={{
-                    fontSize: 12,
-                    color: 'var(--color-text-tertiary)',
-                    fontWeight: 400,
-                    lineHeight: 1.2,
-                    textAlign: 'center',
-                    whiteSpace: 'nowrap',
-                  }}>
-                    {startTime ? formatCompletionTime(startTime) : '--'} ~ {completionTime ? formatCompletionTime(completionTime) : '--'}
-                  </div>
                   {(() => {
-                    const hint = computeStageBudgetHint({
-                      nodeName,
-                      orderCreateTime: record.createTime as string | null,
-                      expectedShipDate: (record.expectedShipDate || record.plannedEndDate) as string | null,
-                      stageStartTime: startTime || undefined,
-                      stageEndTime: completionTime || undefined,
-                      isCompletedOrClosed,
-                      isProcureNode,
-                    });
-                    if (!hint) return null;
                     return (
-                      <div style={{
-                        fontSize: 10,
-                        color: hint.color,
-                        fontWeight: 400,
-                        lineHeight: 1.2,
-                        textAlign: 'center',
-                        whiteSpace: 'nowrap',
-                      }}>
-                        {hint.text}
-                      </div>
+                      <BudgetDaysEditor
+                        record={record}
+                        nodeName={nodeName}
+                        stageStartTime={startTime || undefined}
+                        stageEndTime={completionTime || undefined}
+                        isCompletedOrClosed={isCompletedOrClosed}
+                        isProcureNode={isProcureNode}
+                      />
                     );
                   })()}
                 </div>
@@ -720,7 +704,7 @@ export function createProgressNodesRender(ctx: ProgressNodesContext) {
           <Button icon={<AppstoreOutlined />} onClick={() => ctx.openKanban(record)}>看板</Button>
           <Button onClick={() => { setQuickEditRecord(record); setQuickEditVisible(true); }}>编辑</Button>
           <Button disabled={frozen} onClick={() => setPrintingRecord(record)}>打印</Button>
-          <Button disabled={frozen} onClick={() => { void handlePrintLabel(record); }}>标签</Button>
+          <Button disabled={frozen} loading={labelPrintLoading} onClick={() => { void handlePrintLabel(record); }}>标签</Button>
           {isFactoryAccount ? <Button type="primary" disabled={frozen} icon={<SendOutlined />} onClick={() => onFactoryShip?.(record)}>发货</Button> : null}
           {canManageOrderLifecycle ? <Button danger disabled={frozen} onClick={() => handleCloseOrder(record)}>关单</Button> : null}
           <Button icon={<ShareAltOutlined />} onClick={() => onShareOrder?.(record)}>分享</Button>

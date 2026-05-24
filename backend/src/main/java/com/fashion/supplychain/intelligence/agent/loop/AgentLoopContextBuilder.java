@@ -39,6 +39,7 @@ public class AgentLoopContextBuilder {
     @Autowired private AiAgentTraceOrchestrator aiAgentTraceOrchestrator;
     @Autowired private AgentStateStore agentStateStore;
     @Autowired private List<AgentTool> registeredTools;
+    @Autowired(required = false) private com.fashion.supplychain.intelligence.orchestration.MultiAgentGraphOrchestrator multiAgentGraphOrchestrator;
 
     @Value("${xiaoyun.agent.token-budget:30000}")
     private int tokenBudget;
@@ -76,6 +77,10 @@ public class AgentLoopContextBuilder {
             String domainHint = "用户的问题涉及" + domainRouter.describeDomains(multiDomains)
                     + "多个领域，请综合分析各领域数据，给出跨域关联洞察。";
             messages.add(AiMessage.system(domainHint));
+            String masInsight = buildLightweightMasInsight(userMessage, tenantId);
+            if (masInsight != null && !masInsight.isBlank()) {
+                messages.add(AiMessage.system(masInsight));
+            }
         }
         List<AiMessage> history = memoryHelper.getConversationHistory(userId, tenantId);
         messages.addAll(memoryHelper.compactConversationHistory(history));
@@ -113,5 +118,43 @@ public class AgentLoopContextBuilder {
 
     public boolean isModelEnabled() {
         return inferenceOrchestrator.isAnyModelEnabled();
+    }
+
+    private String buildLightweightMasInsight(String userMessage, Long tenantId) {
+        if (multiAgentGraphOrchestrator == null) return "";
+        try {
+            com.fashion.supplychain.intelligence.dto.MultiAgentRequest req =
+                    new com.fashion.supplychain.intelligence.dto.MultiAgentRequest();
+            req.setQuestion(userMessage);
+            req.setScene("quick");
+            long masStart = System.currentTimeMillis();
+            com.fashion.supplychain.intelligence.dto.GraphExecutionResult result =
+                    multiAgentGraphOrchestrator.runGraph(req);
+            long masLatency = System.currentTimeMillis() - masStart;
+            if (result == null || !result.isSuccess()) {
+                log.debug("[ContextBuilder-MAS] MAS分析未成功: latency={}ms", masLatency);
+                return "";
+            }
+            StringBuilder insight = new StringBuilder();
+            insight.append("【多Agent专家分析（").append(masLatency).append("ms）】\n");
+            if (result.getOptimizationSuggestion() != null && !result.getOptimizationSuggestion().isBlank()) {
+                insight.append("综合建议：").append(result.getOptimizationSuggestion()).append("\n");
+            }
+            if (result.getSpecialistResults() != null && !result.getSpecialistResults().isEmpty()) {
+                insight.append("各领域专家分析：\n");
+                result.getSpecialistResults().forEach((domain, analysis) -> {
+                    String truncated = analysis != null && analysis.length() > 300
+                            ? analysis.substring(0, 300) + "…" : analysis;
+                    insight.append("- [").append(domain).append("] ").append(truncated).append("\n");
+                });
+            }
+            insight.append("（以上为多Agent专家系统的预分析，请结合工具查询的实时数据综合判断）\n");
+            log.info("[ContextBuilder-MAS] MAS分析注入成功: route={} confidence={} latency={}ms",
+                    result.getRoute(), result.getConfidenceScore(), masLatency);
+            return insight.toString();
+        } catch (Exception e) {
+            log.debug("[ContextBuilder-MAS] MAS分析跳过: {}", e.getMessage());
+            return "";
+        }
     }
 }

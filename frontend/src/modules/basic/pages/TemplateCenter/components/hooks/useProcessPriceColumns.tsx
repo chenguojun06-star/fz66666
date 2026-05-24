@@ -129,6 +129,7 @@ export default function useProcessPriceColumns(
                
                 value={value}
                 min={0}
+                controls={false}
                 style={{ width: '100%' }}
                 onChange={(nextValue) => updateField(record.id, 'standardTime', toNumberSafe(nextValue))}
               />
@@ -146,6 +147,7 @@ export default function useProcessPriceColumns(
                 value={value}
                 min={0}
                 step={0.01}
+                controls={false}
                 prefix="¥"
                 style={{ width: '100%' }}
                 onChange={(nextValue) => updateField(record.id, 'price', nextValue)}
@@ -186,6 +188,7 @@ export default function useProcessPriceColumns(
                 value={price}
                 min={0}
                 step={0.01}
+                controls={false}
                 prefix="¥"
                 style={{ width: '100%' }}
                 onChange={(nextValue) => updateSizePrice(record.id, size, toNumberSafe(nextValue))}

@@ -65,13 +65,13 @@ const RemarkTimelineContent: React.FC<{ targetType: string; targetNo: string; ca
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 340, overflow: 'auto' }}>
             {remarks.map((r) => (
-              <div key={r.id} style={{ padding: '8px 10px', background: '#fafafa', borderRadius: 6, border: '1px solid #f0f0f0' }}>
+              <div key={r.id} style={{ padding: '8px 10px', background: 'var(--color-bg-container)', borderRadius: 6, border: '1px solid var(--color-border-light)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
                   <span>
                     <strong style={{ fontSize: 14 }}>{r.authorName || '匿名'}</strong>
                     {r.authorRole && <Tag style={{ marginLeft: 6, fontSize: 14 }}>{r.authorRole}</Tag>}
                   </span>
-                  <span style={{ color: '#999', fontSize: 14 }}>{r.createTime ? r.createTime.replace('T', ' ').substring(0, 16) : ''}</span>
+                  <span style={{ color: 'var(--color-text-tertiary)', fontSize: 14 }}>{r.createTime ? r.createTime.replace('T', ' ').substring(0, 16) : ''}</span>
                 </div>
                 <div style={{ fontSize: 14, whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>{r.content}</div>
               </div>
@@ -466,7 +466,7 @@ const ProcessKanbanDrawer: React.FC<ProcessKanbanDrawerProps> = ({
         <div style={{ textAlign: 'center', padding: 60 }}>
           <ExclamationCircleOutlined style={{ fontSize: 48, color: '#faad14', marginBottom: 16 }} />
           <div style={{ fontSize: 16, fontWeight: 500, marginBottom: 8 }}>请先选择一个订单</div>
-          <div style={{ color: '#999' }}>在进度详情页点击某个订单的「看板」按钮，即可对该订单的菲号进行质检</div>
+          <div style={{ color: 'var(--color-text-tertiary)' }}>在进度详情页点击某个订单的「看板」按钮，即可对该订单的菲号进行质检</div>
         </div>
       );
     }
@@ -507,7 +507,7 @@ const ProcessKanbanDrawer: React.FC<ProcessKanbanDrawerProps> = ({
               onChange={(e) => setSearchText(e.target.value)}
               allowClear
             />
-            <span style={{ color: '#999', fontSize: 14 }}>
+            <span style={{ color: 'var(--color-text-tertiary)', fontSize: 14 }}>
               {scannedRecords.length} 已扫码 | {pendingQc.length} 待质检
             </span>
           </Space>
@@ -574,15 +574,15 @@ const ProcessKanbanDrawer: React.FC<ProcessKanbanDrawerProps> = ({
               {groups.map((g) => {
                 const selectableInGroup = g.records.filter(r => !r.qualityStatus).map(r => r.id);
                 return (
-                  <div key={g.key} style={{ border: '1px solid #f0f0f0', borderRadius: 8, overflow: 'hidden' }}>
+                  <div key={g.key} style={{ border: '1px solid var(--color-border-light)', borderRadius: 8, overflow: 'hidden' }}>
                     <div style={{
                       display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                      padding: '8px 14px', background: '#fafafa', borderBottom: '1px solid #f0f0f0',
+                      padding: '8px 14px', background: 'var(--color-bg-container)', borderBottom: '1px solid var(--color-border-light)',
                     }}>
                       <Space>
                         <Tag color={STAGE_COLORS[g.stage] || undefined}>{g.stage}</Tag>
                         <span style={{ fontWeight: 600, fontSize: 14 }}>{g.name}</span>
-                        <span style={{ color: '#999', fontSize: 14 }}>{g.records.length} 条菲号</span>
+                        <span style={{ color: 'var(--color-text-tertiary)', fontSize: 14 }}>{g.records.length} 条菲号</span>
                       </Space>
                       {qcFilter === 'pending' && selectableInGroup.length > 0 && (
                         <Checkbox
@@ -622,7 +622,7 @@ const ProcessKanbanDrawer: React.FC<ProcessKanbanDrawerProps> = ({
                                 {r.color && <Tag>{r.color}</Tag>}
                                 {r.size && <Tag>{r.size}</Tag>}
                               </div>
-                              <div style={{ fontSize: 14, color: '#999', marginTop: 2 }}>
+                              <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginTop: 2 }}>
                                 {r.quantity}件{r.unitPrice ? ` × ¥${r.unitPrice}` : ''}{r.operatorName ? ` | ${r.operatorName}` : ''}
                               </div>
                               {isUnqualified && (
@@ -636,7 +636,7 @@ const ProcessKanbanDrawer: React.FC<ProcessKanbanDrawerProps> = ({
                                   {r.repairStatus === 'pending' && <Tag color="warning">待返修</Tag>}
                                   {r.repairStatus === 'repairing' && <Tag color="processing">返修中</Tag>}
                                   {r.repairStatus === 'repair_done' && <Tag color="cyan">待复检</Tag>}
-                                  {r.qualityOperatorName && <span style={{ fontSize: 14, color: '#999' }}>质检: {r.qualityOperatorName}</span>}
+                                  {r.qualityOperatorName && <span style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>质检: {r.qualityOperatorName}</span>}
                                 </div>
                               )}
                             </div>
@@ -699,13 +699,13 @@ const ProcessKanbanDrawer: React.FC<ProcessKanbanDrawerProps> = ({
             style={{ minWidth: 220, flex: '0 0 auto' }}
           >
             <Progress percent={stage.completionRate} strokeColor={STAGE_COLORS[stage.stageName] || '#1890ff'} style={{ marginBottom: 8 }} />
-            <div style={{ fontSize: 14, color: '#666' }}>
+            <div style={{ fontSize: 14, color: 'var(--color-text-secondary)' }}>
               <div>总记录: {stage.totalRecords}</div>
               <div style={{ color: '#52c41a' }}>已完成: {stage.scannedRecords}</div>
               <div style={{ color: '#ff4d4f' }}>待完成: {stage.pendingRecords}</div>
             </div>
             {stage.processBreakdown && Object.keys(stage.processBreakdown).length > 0 && (
-              <div style={{ marginTop: 8, borderTop: '1px solid #f0f0f0', paddingTop: 8 }}>
+              <div style={{ marginTop: 8, borderTop: '1px solid var(--color-border-light)', paddingTop: 8 }}>
                 {Object.entries(stage.processBreakdown).map(([name, count]) => (
                   <Tag key={name} style={{ marginBottom: 4, fontSize: 14 }}>{name}: {count}</Tag>
                 ))}

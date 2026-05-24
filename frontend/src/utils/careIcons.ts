@@ -71,7 +71,7 @@ export const CARE_ICONS: Record<string, CareIconDef> = {
   wash_W60:  { code: 'wash_W60',  label: '60°C水洗',    svg: tubSvg(numTxt('60°')), category: 'wash', categoryLabel: '水洗' },
   wash_W70:  { code: 'wash_W70',  label: '70°C水洗',    svg: tubSvg(numTxt('70°')), category: 'wash', categoryLabel: '水洗' },
   wash_W95:  { code: 'wash_W95',  label: '95°C水洗',    svg: tubSvg(numTxt('95°')), category: 'wash', categoryLabel: '水洗' },
-  wash_HAND: { code: 'wash_HAND', label: '手洗',        svg: tubSvg('<path d="M7,16 L7,11 L9.5,11 L9.5,9 L12,9 L12,11 L14,11 L14,14 Q14,16 12,16 Z" fill="none" stroke="#000" stroke-width="1"/>'), category: 'wash', categoryLabel: '水洗' },
+  wash_HAND: { code: 'wash_HAND', label: '手洗', svg: tubSvg('<rect x="7" y="0" width="6" height="6" fill="#000"/><rect x="5" y="3" width="2" height="4.5" rx="0.5" fill="#000"/><rect x="7" y="6" width="1.2" height="5" rx="0.5" fill="#000"/><rect x="8.6" y="6" width="1.2" height="6" rx="0.5" fill="#000"/><rect x="10.2" y="6" width="1.2" height="5.5" rx="0.5" fill="#000"/><rect x="11.8" y="6" width="1.2" height="4" rx="0.5" fill="#000"/>'), category: 'wash', categoryLabel: '水洗' },
   wash_NO:   { code: 'wash_NO',   label: '不可水洗',    svg: tubSvg(X), category: 'wash', categoryLabel: '水洗' },
 
   bleach_ANY:     { code: 'bleach_ANY',     label: '可漂白',      svg: triSvg(''), category: 'bleach', categoryLabel: '漂白' },

@@ -12,11 +12,13 @@ import SupplierNameTooltip from '@/components/common/SupplierNameTooltip';
 import SupplierSelect from '@/components/common/SupplierSelect';
 import DictAutoComplete from '@/components/common/DictAutoComplete';
 import { ProductionOrderHeader } from '@/components/StyleAssets';
+import { confirmDelete } from '@/utils/confirm';
 import MaterialQualityIssueModal from '../MaterialPurchase/components/MaterialQualityIssueModal';
 import PurchaseDocRecognizeModal from '../MaterialPurchase/components/PurchaseDocRecognizeModal';
 import { useViewport } from '@/utils/useViewport';
 import { DEFAULT_PAGE_SIZE_OPTIONS } from '@/utils/pageSizeStore';
 import { formatDateTime } from '@/utils/datetime';
+import { formatMoney } from '@/utils/format';
 import { formatMaterialQuantityWithUnit, getStatusConfig } from '../MaterialPurchase/utils';
 import { getMaterialTypeLabel } from '@/utils/materialType';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
@@ -74,7 +76,28 @@ const MaterialPurchaseDetail: React.FC = () => {
   const [materialPage, setMaterialPage] = useState(1);
   const [materialPageSize, setMaterialPageSize] = useState(10);
   const [docRecognizeOpen, setDocRecognizeOpen] = useState(false);
+  const [batchPurchaseLoading, setBatchPurchaseLoading] = useState(false);
+  const [batchReturnLoading, setBatchReturnLoading] = useState(false);
+  const [exportLoading, setExportLoading] = useState(false);
   const [materialCreateForm] = Form.useForm();
+
+  const onBatchPurchase = async () => {
+    setBatchPurchaseLoading(true);
+    try { await handleBatchReceive(); }
+    finally { setBatchPurchaseLoading(false); }
+  };
+
+  const onBatchReturnConfirm = async () => {
+    setBatchReturnLoading(true);
+    try { await handleBatchReturnConfirm(); }
+    finally { setBatchReturnLoading(false); }
+  };
+
+  const onExport = async () => {
+    setExportLoading(true);
+    try { await handleExport(); }
+    finally { setExportLoading(false); }
+  };
 
   const handleSearchMaterial = useCallback(async () => {
     setMaterialLoading(true);
@@ -274,7 +297,7 @@ const MaterialPurchaseDetail: React.FC = () => {
           maxInline={2}
           actions={[
             { key: 'select', label: '选用', title: '从面辅料资料选用', onClick: () => handleOpenMaterialModal(record.id!) },
-            { key: 'delete', label: '删除', title: '删除此行', danger: true, onClick: () => handleRemoveRow(record.id!) },
+            { key: 'delete', label: '删除', title: '删除此行', danger: true, onClick: () => { confirmDelete('该物料行', async () => handleRemoveRow(record.id!), { content: '删除此物料行？保存后将不可恢复' }); } },
           ]}
         />
       ),
@@ -288,7 +311,7 @@ const MaterialPurchaseDetail: React.FC = () => {
     { title: '颜色', dataIndex: 'color', key: 'color', width: colWidth || 80, ellipsis: true },
     { title: '尺码', dataIndex: 'size', key: 'size', width: colWidth || 80, ellipsis: true },
     { title: '单位', dataIndex: 'unit', key: 'unit', width: colWidth || 70, ellipsis: true },
-    { title: '单价', dataIndex: 'unitPrice', key: 'unitPrice', width: colWidth || 90, align: 'right' as const, render: (v: number) => Number.isFinite(Number(v)) ? `¥${Number(v).toFixed(2)}` : '-' },
+    { title: '单价', dataIndex: 'unitPrice', key: 'unitPrice', width: colWidth || 90, align: 'right' as const, render: (v: number) => Number.isFinite(Number(v)) ? formatMoney(v) : '-' },
     { title: '采购数量', dataIndex: 'purchaseQuantity', key: 'purchaseQuantity', width: colWidth || 100, align: 'right' as const, render: (v: number, r: MaterialPurchase) => formatMaterialQuantityWithUnit(v, r.unit) },
     { title: '到货数量', dataIndex: 'arrivedQuantity', key: 'arrivedQuantity', width: colWidth || 100, align: 'right' as const, render: (v: number, r: MaterialPurchase) => formatMaterialQuantityWithUnit(v, r.unit) },
     {
@@ -297,7 +320,7 @@ const MaterialPurchaseDetail: React.FC = () => {
         const quantity = Number(r.purchaseQuantity || 0);
         const price = Number(r.unitPrice || 0);
         const total = quantity * price;
-        return Number.isFinite(total) ? `¥${total.toFixed(2)}` : '-';
+        return Number.isFinite(total) ? formatMoney(total) : '-';
       },
     },
     {
@@ -354,34 +377,6 @@ const MaterialPurchaseDetail: React.FC = () => {
         <Space>
           <Button onClick={() => navigate(-1)}>返回</Button>
           <h2 style={{ margin: 0, fontSize: isMobile ? 16 : 20 }}>订单物料采购明细</h2>
-        </Space>
-        <Space>
-          <Button icon={<UploadOutlined />} onClick={() => setDocRecognizeOpen(true)}>
-            上传采购单
-          </Button>
-          <Button onClick={handleBatchReceive} disabled={!canProcure} title={!canProcure ? '请先完善面辅料信息再批量采购' : ''}>
-            批量采购
-          </Button>
-          <Button onClick={handleBatchReturnConfirm}>
-            批量回料确认
-          </Button>
-          <Button onClick={handleConfirmComplete} loading={confirmCompleteSubmitting}>确认回料完成</Button>
-          <Dropdown menu={{
-            items: [
-              { key: 'print', label: '打印采购单', icon: <PrinterOutlined />, onClick: () => {
-                const w = window.open('', '_blank');
-                if (!w) return;
-                const rows = purchaseList.map((p) => `<tr><td>${p.materialType || ''}</td><td>${p.materialName || ''}</td><td>${p.purchaseQuantity || ''}</td><td>${p.arrivedQuantity || ''}</td><td>${p.supplierName || ''}</td><td>${p.status || ''}</td></tr>`).join('');
-                w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>采购单 ${styleNo}</title><style>body{font-family:sans-serif;padding:20px}table{border-collapse:collapse;width:100%}td,th{border:1px solid #ccc;padding:6px 8px}</style></head><body><h2>采购单 - ${styleNo}</h2><table><tr><th>物料类型</th><th>物料名称</th><th>采购数量</th><th>到货数量</th><th>供应商</th><th>状态</th></tr>${rows}</table></body></html>`);
-                w.document.close();
-                w.print();
-              }},
-              { key: 'download', label: '下载采购单', icon: <DownloadOutlined />, onClick: handleExport },
-            ],
-          }}>
-            <Button>采购单生成</Button>
-          </Dropdown>
-          <Button icon={<ExportOutlined />} onClick={handleExport}>导出</Button>
         </Space>
       </div>
 
@@ -440,31 +435,60 @@ const MaterialPurchaseDetail: React.FC = () => {
       <Card
         title={`面辅料信息（共 ${displayData.length} 项）`}
         loading={loading}
+        styles={{ body: { padding: '0 16px 16px' } }}
         extra={
-          editing ? (
-            <Space>
-              <Button type="dashed" icon={<PlusOutlined />} onClick={handleAddRow}>
-                添加物料
-              </Button>
-              <Button type="primary" loading={saving} onClick={handleSaveAll}>
-                保存
-              </Button>
-              <Button onClick={handleCancelEdit}>
-                取消
-              </Button>
-            </Space>
-          ) : (
-            <Space>
-              <Button type="primary" icon={<PlusOutlined />} onClick={handleStartEdit}>
-                编辑面辅料
-              </Button>
-              {bomIncomplete && (
-                <Tag icon={<ExclamationCircleOutlined />} color="warning">
-                  {isMultiColor ? '多颜色订单需完善面辅料信息后才可采购' : '请完善面辅料信息'}
-                </Tag>
-              )}
-            </Space>
-          )
+          <Space wrap>
+            <Button icon={<UploadOutlined />} onClick={() => setDocRecognizeOpen(true)} size="small">
+              上传采购单
+            </Button>
+            <Button onClick={onBatchPurchase} disabled={!canProcure} loading={batchPurchaseLoading} title={!canProcure ? '请先完善面辅料信息再批量采购' : ''} size="small">
+              批量采购
+            </Button>
+            <Button onClick={onBatchReturnConfirm} loading={batchReturnLoading} size="small">
+              批量回料确认
+            </Button>
+            <Button onClick={handleConfirmComplete} loading={confirmCompleteSubmitting} size="small">确认回料完成</Button>
+            <Dropdown menu={{
+              items: [
+                { key: 'print', label: '打印采购单', icon: <PrinterOutlined />, onClick: () => {
+                  const w = window.open('', '_blank');
+                  if (!w) return;
+                  const rows = purchaseList.map((p) => `<tr><td>${p.materialType || ''}</td><td>${p.materialName || ''}</td><td>${p.purchaseQuantity || ''}</td><td>${p.arrivedQuantity || ''}</td><td>${p.supplierName || ''}</td><td>${p.status || ''}</td></tr>`).join('');
+                  w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>采购单 ${styleNo}</title><style>body{font-family:sans-serif;padding:20px}table{border-collapse:collapse;width:100%}td,th{border:1px solid #ccc;padding:6px 8px}</style></head><body><h2>采购单 - ${styleNo}</h2><table><tr><th>物料类型</th><th>物料名称</th><th>采购数量</th><th>到货数量</th><th>供应商</th><th>状态</th></tr>${rows}</table></body></html>`);
+                  w.document.close();
+                  w.print();
+                }},
+                { key: 'download', label: '下载采购单', icon: <DownloadOutlined />, onClick: handleExport },
+              ],
+            }}>
+              <Button size="small">采购单生成</Button>
+            </Dropdown>
+            <Button icon={<ExportOutlined />} onClick={onExport} loading={exportLoading} size="small">导出</Button>
+            {editing ? (
+              <>
+                <Button type="dashed" icon={<PlusOutlined />} onClick={handleAddRow} size="small">
+                  添加物料
+                </Button>
+                <Button type="primary" loading={saving} onClick={handleSaveAll} size="small">
+                  保存
+                </Button>
+                <Button onClick={handleCancelEdit} size="small">
+                  取消
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button type="primary" icon={<PlusOutlined />} onClick={handleStartEdit} size="small">
+                  编辑面辅料
+                </Button>
+                {bomIncomplete && (
+                  <Tag icon={<ExclamationCircleOutlined />} color="warning">
+                    {isMultiColor ? '多颜色订单需完善面辅料信息后才可采购' : '请完善面辅料信息'}
+                  </Tag>
+                )}
+              </>
+            )}
+          </Space>
         }
       >
         {displayData.length === 0 && !editing ? (
@@ -557,7 +581,7 @@ const MaterialPurchaseDetail: React.FC = () => {
                           <SupplierNameTooltip name={record.supplierName} contactPerson={record.supplierContactPerson} contactPhone={record.supplierContactPhone} />
                         ),
                       },
-                      { title: '单价', dataIndex: 'unitPrice', width: 90, render: (value: unknown) => `¥${Number(value || 0).toFixed(2)}` },
+                      { title: '单价', dataIndex: 'unitPrice', width: 90, render: (value: unknown) => formatMoney((value as number | string) || 0) },
                       {
                         title: '操作', dataIndex: 'operation', width: 90,
                         render: (_: unknown, record: Record<string, unknown>) => (

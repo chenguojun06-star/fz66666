@@ -217,7 +217,7 @@ public class SelectionCandidateOrchestrator {
         return review;
     }
 
-    /** 候选款状态流转（老板/负责人最终裁定） */
+    /** 候选款状态流转（老板/领取人最终裁定） */
     @Transactional(rollbackFor = Exception.class)
     public SelectionCandidate decideCandidate(Long id, String action, String reason) {
         Long tenantId = UserContext.tenantId();

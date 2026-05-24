@@ -11,6 +11,7 @@ import WageSlipPrintModal from './WageSlipPrintModal';
 import { PrinterOutlined, SearchOutlined, DownloadOutlined } from '@ant-design/icons';
 import { readPageSize } from '@/utils/pageSizeStore';
 import { usePayrollData, toNumberOrZero, toMoneyText, getDetailRowKey, getDetailApprovalId, isDetailAudited } from './usePayrollData';
+import { formatMoney } from '@/utils/format';
 import { statusMap } from '@/modules/finance/pages/FinanceCenter/useSettlementData';
 import { usePayrollActions } from './usePayrollActions';
 import WorkerEfficiencyTab from './WorkerEfficiencyTab';
@@ -199,7 +200,7 @@ const PayrollOperatorSummary: React.FC = () => {
             width: 150,
             align: 'right' as const,
             render: (val: number) => (
-                <span style={{ fontWeight: 600, color: 'var(--primary-color)' }}>¥{val?.toFixed(2) || '0.00'}</span>
+                <span style={{ fontWeight: 600, color: 'var(--primary-color)' }}>{formatMoney(val)}</span>
             ),
         },
         {
@@ -208,7 +209,7 @@ const PayrollOperatorSummary: React.FC = () => {
             key: 'materialCost',
             width: 130,
             align: 'right' as const,
-            render: (val: number) => `¥${val?.toFixed(2) || '0.00'}`,
+            render: (val: number) => formatMoney(val),
         },
         {
             title: (<Tooltip title="生产过程中工序扫码成本总计"><span>生产成本</span></Tooltip>),
@@ -216,7 +217,7 @@ const PayrollOperatorSummary: React.FC = () => {
             key: 'productionCost',
             width: 120,
             align: 'right' as const,
-            render: (val: number) => `¥${val?.toFixed(2) || '0.00'}`,
+            render: (val: number) => formatMoney(val),
         },
         {
             title: (<Tooltip title="次品报废损失 = 次品数 × 单件成本"><span>报废损失</span></Tooltip>),
@@ -226,7 +227,7 @@ const PayrollOperatorSummary: React.FC = () => {
             align: 'right' as const,
             render: (val: number) => (
                 <span style={{ color: val > 0 ? 'var(--color-danger)' : 'var(--neutral-text-secondary)' }}>
-                    {val > 0 ? '-' : ''}¥{val?.toFixed(2) || '0.00'}
+                    {val > 0 ? '-' : ''}{formatMoney(val)}
                 </span>
             ),
         },
@@ -237,7 +238,7 @@ const PayrollOperatorSummary: React.FC = () => {
             width: 130,
             align: 'right' as const,
             render: (val: number) => (
-                <span style={{ fontWeight: 600, color: 'var(--primary-color)' }}>¥{val?.toFixed(2) || '0.00'}</span>
+                <span style={{ fontWeight: 600, color: 'var(--primary-color)' }}>{formatMoney(val)}</span>
             ),
         },
         {
@@ -248,7 +249,7 @@ const PayrollOperatorSummary: React.FC = () => {
             align: 'right' as const,
             render: (val: number) => (
                 <span style={{ fontWeight: 600, color: val >= 0 ? 'var(--color-success)' : 'var(--color-danger)' }}>
-                    ¥{val?.toFixed(2) || '0.00'}
+                    {formatMoney(val)}
                 </span>
             ),
         },
@@ -309,7 +310,7 @@ const PayrollOperatorSummary: React.FC = () => {
                 <Card className="filter-card mb-sm">
                     <Space wrap>
                         <Input placeholder="搜索订单号 / 款号 / 人员 / 工序" style={{ width: 280 }} allowClear value={keyword}
-                            onChange={(e) => setKeyword(e.target.value)} prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />} />
+                            onChange={(e) => setKeyword(e.target.value)} prefix={<SearchOutlined style={{ color: 'var(--color-text-quaternary)' }} />} />
                         <Select placeholder="生产节点" style={{ width: 140 }} allowClear value={scanType}
                             options={SCAN_TYPE_OPTIONS}
                             onChange={(v) => setScanType(v)} />
@@ -451,7 +452,7 @@ const PayrollOperatorSummary: React.FC = () => {
                 <Form form={paymentForm} layout="vertical">
                     <Form.Item label="剩余未付金额" style={{ color: 'var(--neutral-text-secondary)' }}>
                         <span style={{ fontWeight: 700, color: 'var(--color-danger)', fontSize: 13 }}>
-                            ¥{toNumberOrZero(activeRecord?.remainingAmount).toFixed(2)}
+                            {formatMoney(Number(activeRecord?.remainingAmount ?? 0))}
                         </span>
                     </Form.Item>
                     <Form.Item name="amount" label="打款金额" rules={[{ required: true, message: '请输入打款金额' }]}>

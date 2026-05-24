@@ -6,6 +6,7 @@ import ResizableTable from '@/components/common/ResizableTable';
 import { SampleLoan, SampleStock } from './types';
 import api from '@/utils/api';
 import dayjs from 'dayjs';
+import { formatDateTime } from '@/utils/datetime';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
@@ -96,19 +97,19 @@ const LoanHistoryModal: React.FC<LoanHistoryModalProps> = ({ visible, stock, onC
       title: '借出时间',
       dataIndex: 'loanDate',
       key: 'loanDate',
-      render: (text: string) => text ? dayjs(text).format('YYYY-MM-DD HH:mm') : '-',
+      render: (text: string) => text ? formatDateTime(text) : '-',
     },
     {
       title: '预计归还',
       dataIndex: 'expectedReturnDate',
       key: 'expectedReturnDate',
-      render: (text: string) => text ? dayjs(text).format('YYYY-MM-DD HH:mm') : '-',
+      render: (text: string) => text ? formatDateTime(text) : '-',
     },
     {
       title: '实际归还',
       dataIndex: 'returnDate',
       key: 'returnDate',
-      render: (text: string) => text ? dayjs(text).format('YYYY-MM-DD HH:mm') : '-',
+      render: (text: string) => text ? formatDateTime(text) : '-',
     },
     {
       title: '状态',

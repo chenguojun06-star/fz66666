@@ -99,7 +99,7 @@ const SmartStyleHoverCard: React.FC<Props> = ({ record }) => {
     execute: isCompleted
       ? '确认是否已衔接后续样衣或大货动作。'
       : nextStage
-      ? `先把 ${nextStage.label} 的责任人和完成时间敲定。`
+      ? `先把 ${nextStage.label} 的领取人和完成时间敲定。`
       : '继续按当前节奏推进，并盯住交板时间。',
     source: '节点判断',
     confidence: '中置信',
@@ -114,9 +114,9 @@ const SmartStyleHoverCard: React.FC<Props> = ({ record }) => {
         alignItems: 'center',
         marginBottom: 10,
         paddingBottom: 8,
-        borderBottom: '1px solid #f0f0f0',
+        borderBottom: '1px solid var(--color-border-light)',
       }}>
-        <span style={{ fontWeight: 600, color: '#333', fontSize: 11 }}>{record.styleNo}</span>
+        <span style={{ fontWeight: 600, color: 'var(--color-text-primary)', fontSize: 11 }}>{record.styleNo}</span>
         <Tag color="blue" style={{ margin: 0, fontSize: 11, lineHeight: '18px' }}>{progressNode}</Tag>
       </div>
 
@@ -157,7 +157,7 @@ const SmartStyleHoverCard: React.FC<Props> = ({ record }) => {
       <div style={{
         marginTop: 10,
         paddingTop: 8,
-        borderTop: '1px solid #f0f0f0',
+        borderTop: '1px solid var(--color-border-light)',
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',

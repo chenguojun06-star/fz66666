@@ -3,6 +3,7 @@ import { Form, InputNumber, Button } from 'antd';
 import type { FormInstance } from 'antd/es/form';
 import { LockOutlined, SaveOutlined, UnlockOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
+import { formatMoney } from '@/utils/format';
 
 interface Props {
   form: FormInstance;
@@ -65,6 +66,7 @@ const QuotationCostPanel: React.FC<Props> = ({
                 <Form.Item name="profitRate" noStyle>
                   <InputNumber<number>
                     min={0} max={100} precision={1}
+                    controls={false}
                     formatter={(v) => (v !== undefined && v !== null) ? `${v}%` : ''}
                     parser={(v) => Number((v ?? '').replace('%', ''))}
                     disabled={isLocked}
@@ -89,7 +91,7 @@ const QuotationCostPanel: React.FC<Props> = ({
               title: '最终报价',
               dataIndex: 'price',
               width: 140,
-              render: () => <span style={{ fontWeight: 700 }}>¥{totalPrice.toFixed(2)}</span>,
+              render: () => <span style={{ fontWeight: 700 }}>{formatMoney(totalPrice)}</span>,
             },
           ]}
         />
@@ -97,9 +99,9 @@ const QuotationCostPanel: React.FC<Props> = ({
         {totalQty > 1 && (
           <div style={{
             display: 'flex', gap: 12, marginTop: 8, padding: '6px 10px',
-            border: '1px solid #e8e8e8', background: '#fafafa',
+            border: '1px solid var(--color-border)', background: 'var(--color-bg-container)',
           }}>
-            <span style={{ color: '#666', fontSize: 12 }}>
+            <span style={{ color: 'var(--color-text-secondary)', fontSize: 12 }}>
               {totalQty} 件开发 · 单件成本为总成本÷{totalQty}件摊薄
             </span>
           </div>
@@ -112,13 +114,13 @@ const QuotationCostPanel: React.FC<Props> = ({
         {!readOnly && (
           <div style={{
             display: 'flex', justifyContent: 'flex-end', gap: 8,
-            padding: '10px 0 0', borderTop: '1px solid #e8e8e8', marginTop: 12,
+            padding: '10px 0 0', borderTop: '1px solid var(--color-border)', marginTop: 12,
           }}>
             {isLocked ? (
               canUnlock !== false ? (
                 <Button icon={<UnlockOutlined />} onClick={onUnlock}>解锁修改</Button>
               ) : (
-                <span style={{ color: '#666', fontSize: 13 }}>
+                <span style={{ color: 'var(--color-text-secondary)', fontSize: 13 }}>
                   <LockOutlined style={{ marginRight: 4 }} />已锁定，仅管理员可操作
                 </span>
               )

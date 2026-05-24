@@ -152,7 +152,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   }, []);
 
   const { printingRecord, printModalVisible, setPrintingRecord, closePrintModal } = usePrintFlow();
-  const { labelPrintOpen, labelPrintOrder, labelPrintStyle, handlePrintLabel, closeLabelPrint } = useLabelPrint();
+  const { labelPrintOpen, labelPrintOrder, labelPrintStyle, labelPrintLoading, handlePrintLabel, closeLabelPrint } = useLabelPrint();
 
   const [remarkModalOpen, setRemarkModalOpen] = useState(false);
   const [remarkOrderNo, setRemarkOrderNo] = useState('');
@@ -275,7 +275,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     orderSortField, orderSortOrder, handleOrderSort,
     boardStatsByOrder: boardStatsByOrder as Record<string, Record<string, number>>, boardTimesByOrder, progressNodesByStyleNo,
     openNodeDetail, isSupervisorOrAbove, handleCloseOrder,
-    setPrintingRecord, handlePrintLabel, setQuickEditRecord, setQuickEditVisible,
+    setPrintingRecord, handlePrintLabel, labelPrintLoading, setQuickEditRecord, setQuickEditVisible,
     openRemarkModal, stagnantOrderIds, deliveryRiskMap,
     onShareOrder: handleShareOrder, isFactoryAccount, onFactoryShip: handleFactoryShip, canManageOrderLifecycle,
     openKanban,

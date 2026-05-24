@@ -23,9 +23,9 @@ import {
 
 const { TextArea } = Input;
 
-interface PatternPanelProps { styleNo?: string; }
+interface PatternPanelProps { styleNo?: string; onSaved?: () => void; }
 
-const PatternPanel: React.FC<PatternPanelProps> = ({ styleNo }) => {
+const PatternPanel: React.FC<PatternPanelProps> = ({ styleNo, onSaved }) => {
   const { message } = App.useApp();
   const {
     queryParams, setQueryParams, styleNoInput, setStyleNoInput, styleNameInput, setStyleNameInput,
@@ -104,7 +104,7 @@ const PatternPanel: React.FC<PatternPanelProps> = ({ styleNo }) => {
                 </Form.Item>
               </Form>
               <div style={actionBarStyle}>
-                <Button danger type="default" loading={returnPatternSaving} onClick={handleReturnPatternSave} style={{ background: '#fff', color: '#ff4d4f', borderColor: '#ff4d4f' }}>确认退回</Button>
+                <Button danger type="default" loading={returnPatternSaving} onClick={handleReturnPatternSave} style={{ background: 'var(--color-bg-base)', color: '#ff4d4f', borderColor: '#ff4d4f' }}>确认退回</Button>
               </div>
             </div>
             <div style={directCardStyle}><PatternSummary record={directRow} readOnly {...summaryProps} /></div>

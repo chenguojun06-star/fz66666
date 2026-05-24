@@ -39,8 +39,8 @@ const FactorySidebar: React.FC<FactorySidebarProps> = ({
     <div
       style={{
         width: 260,
-        borderRight: '1px solid #f0f0f0',
-        background: '#fafafa',
+        borderRight: '1px solid var(--color-border-light)',
+        background: 'var(--color-bg-container)',
         overflow: 'auto',
         flexShrink: 0,
       }}
@@ -63,7 +63,7 @@ const FactorySidebar: React.FC<FactorySidebarProps> = ({
               padding: '12px 16px',
               cursor: 'pointer',
               background: selectedFactoryId === null ? '#e6f4ff' : 'transparent',
-              borderBottom: '1px solid #f0f0f0',
+              borderBottom: '1px solid var(--color-border-light)',
             }}
           >
             <div style={{ fontWeight: 500, marginBottom: 8 }}>全部工厂</div>
@@ -96,7 +96,7 @@ const FactorySidebar: React.FC<FactorySidebarProps> = ({
                 padding: '12px 16px',
                 cursor: 'pointer',
                 background: selectedFactoryId === item.factoryId ? '#e6f4ff' : 'transparent',
-                borderBottom: '1px solid #f0f0f0',
+                borderBottom: '1px solid var(--color-border-light)',
               }}
             >
               <div style={{ fontWeight: 500, marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>

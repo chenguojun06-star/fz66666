@@ -26,12 +26,12 @@
 }
 
 .time-dimension-btn:hover {
-  color: #6b7280;
+  color: var(--color-text-secondary);
   background: rgba(255,255,255,0.5);
 }
 
 .time-dimension-btn.active {
-  background: #ffffff;
+  background: var(--color-bg-base);
   color: #1f2937;
   font-weight: 600;
   box-shadow: 0 1px 3px rgba(0,0,0,0.08);

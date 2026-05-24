@@ -132,7 +132,7 @@ public class TaskCenterOrchestrator {
             }
         } else if (statusEnum == CollaborationTask.TaskStatus.IN_PROGRESS) {
             task.setCurrentStage("处理中");
-            task.setNextStep("等待责任人完成并回写结果");
+            task.setNextStep("等待领取人完成并回写结果");
         }
 
         String assignee = StringUtils.hasText(UserContext.username()) ? UserContext.username() : null;
@@ -193,7 +193,7 @@ public class TaskCenterOrchestrator {
         task.setTaskStatus(CollaborationTask.TaskStatus.PENDING.name());
         task.setSourceType(CollaborationTask.SourceType.MANUAL.name());
         task.setCurrentStage("待处理");
-        task.setNextStep("分配给对应责任人处理");
+        task.setNextStep("分配给对应领取人处理");
         task.setAcceptanceCriteria(description);
         task.setOverdue(false);
         task.setCreatedAt(LocalDateTime.now());
@@ -295,7 +295,7 @@ public class TaskCenterOrchestrator {
         task.setAssigneeName(username);
         task.setTaskStatus(CollaborationTask.TaskStatus.IN_PROGRESS.name());
         task.setCurrentStage("处理中");
-        task.setNextStep("等待责任人完成并回写结果");
+        task.setNextStep("等待领取人完成并回写结果");
         task.setUpdatedAt(LocalDateTime.now());
         collaborationTaskMapper.updateById(task);
 

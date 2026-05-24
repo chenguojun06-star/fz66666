@@ -1,3 +1,4 @@
+import { formatDateTimeSecond } from '@/utils/datetime';
 import dayjs from 'dayjs';
 import { safePrint } from '@/utils/safePrint';
 
@@ -38,7 +39,7 @@ export function printOutstockRecord(record: OutstockPrintData): void {
     <tr><td>${record.styleNo || '-'}</td><td>${record.styleName || '-'}</td><td>${record.color || '-'}</td><td>${record.size || '-'}</td>
     <td>${record.outstockQuantity ?? '-'}</td><td>${record.salesPrice != null ? `¥${Number(record.salesPrice).toFixed(2)}` : '-'}</td><td>${record.totalAmount != null ? `¥${record.totalAmount}` : '-'}</td></tr></table>
     <div class="info-row"><span>快递：${record.expressCompany || '-'}</span><span>运单号：${record.trackingNo || '-'}</span></div>
-    <div class="footer"><p>打印时间：${dayjs().format('YYYY-MM-DD HH:mm:ss')}</p></div>
+    <div class="footer"><p>打印时间：${formatDateTimeSecond(new Date())}</p></div>
     </body></html>`;
   safePrint(printContent);
 }

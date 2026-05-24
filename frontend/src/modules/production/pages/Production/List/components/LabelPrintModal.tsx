@@ -1,10 +1,5 @@
-/**
- * 打印标签弹窗（双 Tab）
- *  Tab 1 — 打印洗水唛：按 SKU 展示可编辑打印数，生成洗水唛标签
- *  Tab 2 — 打印U编码：按 SKU 展示可编辑打印数，生成 U 编码 / QR 标签
- */
-import { useCallback, useEffect, useState } from 'react';
-import { Button, Checkbox, InputNumber, Radio, Space, Spin, Tabs, Tag } from 'antd';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Button, Checkbox, InputNumber, Radio, Space, Spin, Tabs, Tag, Typography } from 'antd';
 import { PrinterOutlined } from '@ant-design/icons';
 import QRCode from 'qrcode';
 import ResizableModal from '@/components/common/ResizableModal';
@@ -14,70 +9,27 @@ import api, { parseProductionOrderLines } from '@/utils/api';
 import type { ProductionOrder } from '@/types/production';
 import type { ColumnsType } from 'antd/es/table';
 import { StyleCoverThumb } from '@/components/StyleAssets';
-import { buildWashLabelSections, getDisplayWashCareCodes, parseWashNotePerPart } from '@/utils/washLabel';
 import { safePrint } from '@/utils/safePrint';
-import { parseCareIconCodes, CARE_ICONS, DEFAULT_CARE_ICON_CODES } from '@/utils/careIcons';
-
-// ─── 共用类型 ─────────────────────────────────────────────────────────────────
+import { CARE_CATEGORIES, CARE_ICONS, parseCareIconCodes, DEFAULT_CARE_ICON_CODES } from '@/utils/careIcons';
+import {
+  buildWashLabelMultiPageHtml,
+  getDefaultDateText,
+  compositionFromSections,
+  washTextFromInstructions,
+  type WashLabelPrintData,
+} from '@/utils/washLabelPrintTemplate';
 
 export interface LabelStyleInfo {
   fabricComposition?: string;
-  /** 套装多部位成分 JSON，格式：[{"part":"上装","materials":"棉80%..."},...] */
   fabricCompositionParts?: string;
   washInstructions?: string;
   uCode?: string;
-  /** 洗涤温度代码：W30/W40/W60/W95/HAND/NO */
   washTempCode?: string;
-  /** 漂白代码：ANY/NON_CHL/NO */
   bleachCode?: string;
-  /** 烘干代码：NORMAL/LOW/NO */
   tumbleDryCode?: string;
-  /** 熨烫代码：LOW/MED/HIGH/NO */
   ironCode?: string;
-  /** 干洗代码：YES/NO */
   dryCleanCode?: string;
   careIconCodes?: string;
-}
-
-// 默认固定5个洗护图标（适用于所有未配置护理代码的款式）
-// 截图标准：30°水洗 / 不可漂白 / 可滚筒烘干 / 低温熨烫 / A干洗
-function buildCareIconsHtml(s: LabelStyleInfo | null | undefined): string {
-  let codes: string[] = [];
-  if (s) {
-    const explicitCodes = parseCareIconCodes(s.careIconCodes);
-    codes = explicitCodes.length > 0 ? explicitCodes : [];
-    if (!codes.length) {
-      const legacy = getDisplayWashCareCodes(s, s.washInstructions);
-      codes = [
-        legacy.washTempCode ? `wash_${legacy.washTempCode}` : '',
-        legacy.bleachCode ? `bleach_${legacy.bleachCode}` : '',
-        legacy.tumbleDryCode ? `dry_${legacy.tumbleDryCode}` : '',
-        legacy.ironCode ? `iron_${legacy.ironCode}` : '',
-        legacy.dryCleanCode ? `dryclean_${legacy.dryCleanCode}` : '',
-      ].filter(Boolean);
-    }
-  }
-  if (!codes.length) {
-    codes = DEFAULT_CARE_ICON_CODES;
-  }
-
-  // 按类别分组：水洗 → 漂白 → 烘干 → 熨烫 → 干洗 → 自然晾干 → 特殊处理
-  const categoryOrder = ['wash', 'bleach', 'dry', 'iron', 'dryclean', 'naturaldry', 'special'];
-  const groups: Record<string, string[]> = {};
-  codes.forEach(code => {
-    const def = CARE_ICONS[code];
-    if (!def) return;
-    const cat = def.category;
-    if (!groups[cat]) groups[cat] = [];
-    groups[cat].push(def.svg);
-  });
-
-  const rows = categoryOrder
-    .filter(cat => groups[cat]?.length)
-    .map(cat => `<div class="icon-row">${groups[cat].map(svg => `<span class="icon-cell">${svg}</span>`).join('')}</div>`)
-    .join('');
-
-  return rows ? `<div class="icons">${rows}</div>` : '';
 }
 
 interface Props {
@@ -87,21 +39,17 @@ interface Props {
   styleInfo: LabelStyleInfo | null;
 }
 
-// ─── 共用：SKU 行类型 ─────────────────────────────────────────────────────────
-
 interface SkuRow {
   key: string;
   color: string;
   size: string;
-  quantity: number;   // 下单数
-  printCount: number; // 打印数（可编辑，默认=下单数）
-  sku: string;        // 款号-颜色-尺码
-  styleImageUrl?: string; // 款式封面图
+  quantity: number;
+  printCount: number;
+  sku: string;
+  styleImageUrl?: string;
   styleId?: string;
   styleNo?: string;
 }
-
-// ─── 加载 SKU 列表 ────────────────────────────────────────────────────────────
 
 async function loadSkuRows(order: ProductionOrder): Promise<SkuRow[]> {
   try {
@@ -159,8 +107,6 @@ async function loadSkuRows(order: ProductionOrder): Promise<SkuRow[]> {
     styleNo: order.styleNo || '',
   }];
 }
-
-// ─── 共用 SKU 表格组件 ────────────────────────────────────────────────────────
 
 interface SkuTableProps {
   open: boolean;
@@ -256,7 +202,6 @@ function SkuTable({ open, order, styleInfo, printColLabel, onPrint, onClose }: S
           columns={columns}
           pagination={false}
           rowKey="key"
-         
           bordered
         />
       </Spin>
@@ -274,104 +219,37 @@ function SkuTable({ open, order, styleInfo, printColLabel, onPrint, onClose }: S
   );
 }
 
-// ─── 洗水唛打印函数 ────────────────────────────────────────────────────────────
-
 async function printWashLabels(
   selected: SkuRow[],
-  order: ProductionOrder,
+  _order: ProductionOrder,
   styleInfo: LabelStyleInfo | null,
   w: number,
   h: number,
-  suitPart: string = 'all',
 ): Promise<void> {
-  const fs = w >= 45 ? 6.5 : 5.5;
+  const compositionText = compositionFromSections(styleInfo?.fabricCompositionParts, styleInfo?.fabricComposition);
+  const washInstructionsText = washTextFromInstructions(styleInfo?.washInstructions, styleInfo?.fabricCompositionParts);
+  const codes = parseCareIconCodes(styleInfo?.careIconCodes);
+  const careIconCodes = codes.length > 0 ? codes : [...DEFAULT_CARE_ICON_CODES];
+  const manufacturingText = 'MADE IN CHINA';
+  const dateText = getDefaultDateText();
 
-  const allSections = buildWashLabelSections(styleInfo?.fabricCompositionParts, styleInfo?.fabricComposition);
-  const sections = suitPart !== 'all' ? allSections.filter(s => s.key === suitPart) : allSections;
-  const showPartTitle = sections.length > 1;
-  let compositionHtml = sections.map(section => `
-    <div class="comp-block">
-      ${showPartTitle && section.key !== 'other' ? `<div class="comp-name">${section.label}</div>` : ''}
-      <div class="comp-mats">${section.items.join('<br/>')}</div>
-    </div>
-  `).join('');
-  if (!compositionHtml) {
-    compositionHtml = '<div class="comp-mats" style="color:#aaa">（成分未填写）</div>';
-  }
-
-  const perPartWashNotes = parseWashNotePerPart(styleInfo?.fabricCompositionParts);
-  const perPartNote = suitPart !== 'all'
-    ? perPartWashNotes[suitPart]
-    : (allSections.length > 0 ? perPartWashNotes[allSections[0].key] : undefined);
-  const washRaw = (perPartNote !== undefined && perPartNote.trim()) ? perPartNote : (styleInfo?.washInstructions || '');
-  const washText = washRaw.replace(/^洗涤说明[（(]水洗标专用[）)]\s*/u, '').trim();
-  const washInstHtml = washText
-    ? `<div class="section-sep"></div><div class="wash-label">洗涤说明</div><div class="care-wash">${washText.replace(/\n/g, '<br/>')}</div>`
-    : '';
-  const careIconsHtml = styleInfo ? buildCareIconsHtml(styleInfo) : '';
-  const careSectionHtml = careIconsHtml ? `<div class="section-sep"></div>${careIconsHtml}` : '';
-  const styleNo = order.styleNo || '-';
-  const styleName = order.styleName || '-';
-
-  const today = new Date();
-  const dateStr = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}`;
-
-  const oneLabelHtml = `
-    <div class="label">
-      <div class="dash-sep"></div>
-      <div class="top-block">
-        <div class="style-no">${styleNo}</div>
-        ${styleName !== '-' ? `<div class="style-name">${styleName}</div>` : ''}
-      </div>
-      <div class="content-block">
-        ${compositionHtml}
-        ${washInstHtml}
-      </div>
-      <div class="bottom-block">
-        ${careSectionHtml}
-        <div class="footer">MADE IN CHINA</div>
-        <div class="date">${dateStr}</div>
-      </div>
-      <div class="dash-sep"></div>
-    </div>`;
+  const printData: WashLabelPrintData = {
+    width: w,
+    height: h,
+    compositionText,
+    washInstructionsText,
+    careIconCodes,
+    manufacturingText,
+    dateText,
+  };
 
   const pages = selected.flatMap(row =>
-    Array.from({ length: Math.max(1, row.printCount) }, () =>
-      `<div class="page">${oneLabelHtml}</div>`)
-  ).join('\n');
+    Array.from({ length: Math.max(1, row.printCount) }, () => printData)
+  );
 
-  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
-@page { size: ${w}mm ${h}mm; margin: 0; }
-* { margin: 0; padding: 0; box-sizing: border-box; }
-html, body { width: ${w}mm; min-height: ${h}mm; }
-body { font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", system-ui, sans-serif; color: #000; background: #fff; -webkit-font-smoothing: antialiased; }
-.page { width: ${w}mm; min-height: ${h}mm; page-break-after: always; }
-.page:last-child { page-break-after: auto; }
-.label { position: relative; width: ${w}mm; height: ${h}mm; padding: 2mm 2.2mm; color: #000; display: flex; flex-direction: column; align-items: center; }
-.dash-sep { border: none; border-top: 0.8pt dashed #555; width: calc(100% + 6mm); margin-left: -3mm; flex: 0 0 auto; }
-.top-block { text-align: center; flex: 0 0 auto; width: 100%; padding-bottom: 1mm; margin-bottom: 1mm; }
-.style-no { font-size: ${w <= 30 ? fs + 0.3 : fs + 0.8}pt; font-weight: 800; letter-spacing: 0.5mm; line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center; }
-.style-name { font-size: ${w <= 30 ? fs - 0.3 : fs}pt; font-weight: 500; color: #555; line-height: 1.35; margin-top: 0.5mm; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center; }
-.content-block { flex: 1 1 0; overflow: hidden; min-height: 0; width: 100%; text-align: center; }
-.comp-block { margin: 0.5mm 0 1.2mm; }
-.comp-name { font-size: ${w <= 30 ? fs + 0.2 : fs}pt; font-weight: 700; display: block; margin-bottom: 0.5mm; text-align: center; letter-spacing: 0.3mm; }
-.comp-mats { font-size: ${w <= 30 ? fs + 1.5 : fs + 0.5}pt; line-height: 1.6; font-weight: 600; text-align: center; }
-.section-sep { width: 40%; height: 0; border-top: 0.3pt solid #bbb; margin: 1.5mm auto; }
-.wash-label { font-size: ${w <= 30 ? fs - 0.1 : fs}pt; font-weight: 600; color: #333; line-height: 1.5; margin-bottom: 0.5mm; text-align: center; letter-spacing: 0.3mm; }
-.care-wash { font-size: ${fs}pt; color: #444; line-height: 1.6; margin-top: 0.8mm; text-align: center; }
-.bottom-block { flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; width: 100%; margin-top: auto; }
-.icons { display: flex; flex-direction: column; gap: 1mm; align-items: center; width: 100%; margin: 0.5mm auto 0; }
-.icon-row { display: flex; gap: 1mm; align-items: center; justify-content: center; flex-wrap: wrap; }
-.icon-cell { width: 6mm; height: 6mm; display: flex; align-items: center; justify-content: center; flex: 0 0 auto; }
-.icons svg { width: 100%; height: 100%; }
-.footer { margin-top: 1.5mm; font-size: ${w <= 30 ? fs - 0.2 : fs}pt; font-weight: 700; letter-spacing: 0.8mm; line-height: 1.3; text-align: center; white-space: nowrap; }
-.date { margin-top: 1mm; font-size: ${fs - 0.5}pt; color: #777; text-align: center; letter-spacing: 0.2mm; }
-</style></head><body>${pages}</body></html>`;
-
+  const html = buildWashLabelMultiPageHtml(pages);
   safePrint(html);
 }
-
-// ─── U编码打印函数（横版：左QR右文字，实线边框，均匀行距）────────────────────────
 
 async function printUCodeLabels(
   selected: SkuRow[],
@@ -454,19 +332,27 @@ body { font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", system-ui,
   safePrint(html);
 }
 
-// ─── 主组件 ──────────────────────────────────────────────────────────────────
-
 export default function LabelPrintModal({ open, onClose, order, styleInfo }: Props) {
   const [orderFactoryCode, setOrderFactoryCode] = useState<string>('');
-  /** 洗水唛自定义纸张尺寸（mm） */
   const [washW, setWashW] = useState<number>(30);
   const [washH, setWashH] = useState<number>(80);
-  /** U码固定两档：40×70mm 或 50×100mm */
   const [uCodeSize, setUCodeSize] = useState<'40x70' | '50x100'>('40x70');
-  /** 套装部位选择：仅在款式有上下装成分时显示 */
   const [suitPart, setSuitPart] = useState<string>('all');
-  const _suitSections = buildWashLabelSections(styleInfo?.fabricCompositionParts, styleInfo?.fabricComposition);
-  const isSuit = _suitSections.length > 1;
+
+  const compositionText = useMemo(
+    () => compositionFromSections(styleInfo?.fabricCompositionParts, styleInfo?.fabricComposition),
+    [styleInfo?.fabricCompositionParts, styleInfo?.fabricComposition],
+  );
+
+  const washInstructionsText = useMemo(
+    () => washTextFromInstructions(styleInfo?.washInstructions, styleInfo?.fabricCompositionParts),
+    [styleInfo?.washInstructions, styleInfo?.fabricCompositionParts],
+  );
+
+  const careIconCodes = useMemo(() => {
+    const codes = parseCareIconCodes(styleInfo?.careIconCodes);
+    return codes.length > 0 ? codes : [...DEFAULT_CARE_ICON_CODES];
+  }, [styleInfo?.careIconCodes]);
 
   useEffect(() => {
     if (!open || !order?.factoryId) { setOrderFactoryCode(''); return; }
@@ -480,17 +366,16 @@ export default function LabelPrintModal({ open, onClose, order, styleInfo }: Pro
 
   const handleWashPrint = useCallback(
     (selected: SkuRow[], ord: ProductionOrder, si: LabelStyleInfo | null) =>
-      printWashLabels(selected, ord, si, washW, washH, suitPart),
-    [washW, washH, suitPart]
+      printWashLabels(selected, ord, si, washW, washH),
+    [washW, washH],
   );
 
   const handleUCodePrint = useCallback(
     (selected: SkuRow[], ord: ProductionOrder) => {
-      // 横版：4×7cm → 70mm宽×40mm高；5×10cm → 100mm宽×50mm高
       const [uw, uh] = uCodeSize === '40x70' ? [70, 40] : [100, 50];
       return printUCodeLabels(selected, ord, orderFactoryCode, uw, uh);
     },
-    [orderFactoryCode, uCodeSize]
+    [orderFactoryCode, uCodeSize],
   );
 
   return (
@@ -523,7 +408,7 @@ export default function LabelPrintModal({ open, onClose, order, styleInfo }: Pro
                       onChange={v => setWashH(v ?? 80)}
                       suffix="mm" style={{ width: 110 }}
                     />
-                    {isSuit && (
+                    {suitPart && (
                       <>
                         <span style={{ color: '#555', fontSize: 14, marginLeft: 4 }}>打印部位</span>
                         <Radio.Group
@@ -532,17 +417,73 @@ export default function LabelPrintModal({ open, onClose, order, styleInfo }: Pro
                           size="small"
                         >
                           <Radio.Button value="all">全部</Radio.Button>
-                          {_suitSections.map(s => (
-                            <Radio.Button key={s.key} value={s.key}>{s.label}</Radio.Button>
-                          ))}
                         </Radio.Group>
                       </>
                     )}
                   </Space>
-                  <div style={{ fontSize: 14, color: '#999', marginTop: 4 }}>
+                  <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginTop: 4 }}>
                     上下虚线分割，内容距线 1.5cm；不含颜色/尺码，同款通用
                   </div>
                 </div>
+
+                <div style={{ marginBottom: 12 }}>
+                  <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 4 }}>① 面料成分</div>
+                  <Typography.Text style={{ fontSize: 14, whiteSpace: 'pre-wrap' }}>
+                    {compositionText || '（未填写）'}
+                  </Typography.Text>
+                </div>
+
+                <div style={{ marginBottom: 12 }}>
+                  <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 4 }}>② 洗涤说明</div>
+                  <Typography.Text style={{ fontSize: 14, whiteSpace: 'pre-wrap' }}>
+                    {washInstructionsText || '（未填写）'}
+                  </Typography.Text>
+                </div>
+
+                <div style={{ marginBottom: 12 }}>
+                  <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 4 }}>③ 护理图标</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {CARE_CATEGORIES.map(cat => {
+                      const selectedInCat = cat.codes.filter(code => careIconCodes.includes(code));
+                      if (selectedInCat.length === 0) return null;
+                      return (
+                        <div key={cat.key}>
+                          <div style={{ fontSize: 13, color: '#888', marginBottom: 3 }}>{cat.label}</div>
+                          <Space orientation="vertical" wrap size={4}>
+                            {selectedInCat.map(code => {
+                              const icon = CARE_ICONS[code];
+                              return (
+                                <div
+                                  key={code}
+                                  style={{
+                                    display: 'inline-flex', alignItems: 'center', gap: 3,
+                                    padding: '2px 6px', borderRadius: 4,
+                                    border: '1.5px solid #1677ff',
+                                    background: '#e6f4ff',
+                                  }}
+                                >
+                                  <span dangerouslySetInnerHTML={{ __html: icon?.svg || '' }} style={{ display: 'inline-block', width: 18, height: 18, flexShrink: 0 }} />
+                                  <span style={{ fontSize: 12, color: '#1677ff', whiteSpace: 'nowrap' }}>{icon?.label || code}</span>
+                                </div>
+                              );
+                            })}
+                          </Space>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div style={{ marginBottom: 12 }}>
+                  <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 4 }}>④ 生产制造</div>
+                  <Typography.Text style={{ fontSize: 14, fontWeight: 600, letterSpacing: '0.8mm' }}>
+                    MADE IN CHINA
+                  </Typography.Text>
+                  <div style={{ fontSize: 12, color: 'var(--color-text-tertiary)', marginTop: 2 }}>
+                    日期自动生成：{getDefaultDateText()}
+                  </div>
+                </div>
+
                 <SkuTable
                   open={open} order={order} styleInfo={styleInfo}
                   printColLabel="洗水唛打印数"

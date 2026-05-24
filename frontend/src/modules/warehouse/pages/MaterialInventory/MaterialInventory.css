@@ -47,7 +47,7 @@
 
 /* 物料信息分组 */
 .material-info-section {
-  background: #fafafa;
+  background: var(--color-bg-container);
   border-radius: 6px;
   padding: 8px 10px;
   border-left: 3px solid var(--neutral-border);
@@ -94,8 +94,8 @@
 
 /* ============ 面料属性卡片 ============ */
 .fabric-properties-card {
-  background: #fafafa;
-  border: 1px solid #f0f0f0;
+  background: var(--color-bg-container);
+  border: 1px solid var(--color-border-light);
   border-radius: 8px;
   padding: 12px;
 }
@@ -165,7 +165,7 @@
   align-items: center;
   font-size: var(--font-size-sm);
   padding: 6px 8px;
-  background: #fafafa;
+  background: var(--color-bg-container);
   border-radius: 4px;
 }
 

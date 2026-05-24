@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react';
-import { App, Button, Card, Input, InputNumber, Modal, Select, Space, Spin, Typography, Collapse } from 'antd';
+import { App, Button, Card, Input, InputNumber, Select, Space, Spin, Typography, Collapse } from 'antd';
 import { DeleteOutlined } from '@ant-design/icons';
 import api, { type ApiResult } from '@/utils/api';
 import ResizableTable from '@/components/common/ResizableTable';
+import { confirmDelete } from '@/utils/confirm';
 
 import type { StyleBom, StyleAttachment } from '@/types/style';
 import StyleAttachmentTab from './StyleAttachmentTab';
@@ -102,6 +103,7 @@ const StylePatternTab: React.FC<Props> = ({
   const [savingUsage, setSavingUsage] = useState(false);
   const [extraSizes, setExtraSizes] = useState<string[]>([]);
   const [sizeOptions, setSizeOptions] = useState<Array<{ value: string; label: string }>>([]);
+  const sizeSearchTimerRef = useRef<ReturnType<typeof setTimeout>>();
 
   // 检查纸样是否齐全
   const checkPatternComplete = useCallback(async () => {
@@ -116,6 +118,10 @@ const StylePatternTab: React.FC<Props> = ({
       // ignore
     }
   }, [styleId]);
+
+  useEffect(() => {
+    return () => { if (sizeSearchTimerRef.current) clearTimeout(sizeSearchTimerRef.current); };
+  }, []);
 
   useEffect(() => {
     checkPatternComplete();
@@ -351,6 +357,7 @@ const StylePatternTab: React.FC<Props> = ({
               max={100}
               step={1}
               precision={1}
+              controls={false}
               value={val}
               onChange={(v) => handleLossChange(record.bomId, v)}
               disabled={childReadOnly}
@@ -374,22 +381,18 @@ const StylePatternTab: React.FC<Props> = ({
                 icon={<DeleteOutlined />}
                 title={`删除尺码 ${size}`}
                 onClick={() => {
-                  Modal.confirm({
-                    width: '30vw',
-                    title: `确定删除尺码"${size}"？`,
-                    onOk: () => {
-                      setExtraSizes(prev => prev.filter(s => s !== size));
-                      setUsageEdits(prev => {
-                        const next = { ...prev };
-                        for (const bomId of Object.keys(next)) {
-                          if (next[bomId] && size in next[bomId]) {
-                            const { [size]: _, ...rest } = next[bomId];
-                            next[bomId] = rest;
-                          }
+                  confirmDelete(`尺码"${size}"`, async () => {
+                    setExtraSizes(prev => prev.filter(s => s !== size));
+                    setUsageEdits(prev => {
+                      const next = { ...prev };
+                      for (const bomId of Object.keys(next)) {
+                        if (next[bomId] && size in next[bomId]) {
+                          const { [size]: _, ...rest } = next[bomId];
+                          next[bomId] = rest;
                         }
-                        return next;
-                      });
-                    },
+                      }
+                      return next;
+                    });
                   });
                 }}
               />
@@ -407,6 +410,7 @@ const StylePatternTab: React.FC<Props> = ({
               max={99}
               step={0.05}
               precision={2}
+              controls={false}
               value={val ?? undefined}
               onChange={(v) => handleUsageChange(record.bomId, size, v)}
               disabled={childReadOnly}
@@ -522,15 +526,18 @@ const StylePatternTab: React.FC<Props> = ({
                   String(option?.value || '').toLowerCase().includes(String(input || '').toLowerCase())
                 }
                 onSearch={(value) => {
-                  // 支持自由输入：输入的尺码不在字典中时，动态追加到选项列表
-                  if (value && value.trim() && !sizeOptions.some(opt => opt.value === value.trim()) && !allSizes.includes(value.trim())) {
-                    setSizeOptions(prev => [...prev, { value: value.trim(), label: value.trim() }]);
-                  }
+                  const trimmed = value && value.trim();
+                  if (sizeSearchTimerRef.current) clearTimeout(sizeSearchTimerRef.current);
+                  sizeSearchTimerRef.current = setTimeout(() => {
+                    if (trimmed && !sizeOptions.some(opt => opt.value === trimmed) && !allSizes.includes(trimmed)) {
+                      setSizeOptions(prev => [...prev, { value: trimmed, label: trimmed }]);
+                    }
+                  }, 300);
                 }}
                 popupRender={(menu) => (
                   <>
                     {menu}
-                    <div style={{ padding: '8px', borderTop: '1px solid #f0f0f0' }}>
+                    <div style={{ padding: '8px', borderTop: '1px solid var(--color-border-light)' }}>
                       <Input
                         placeholder="输入新码数后回车添加"
                        

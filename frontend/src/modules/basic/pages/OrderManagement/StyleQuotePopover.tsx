@@ -88,14 +88,14 @@ const StyleQuotePopover: React.FC<{
   const content = loading ? (
     <div style={{ width: SMART_CARD_CONTENT_WIDTH, textAlign: 'center', padding: 16, boxSizing: 'border-box' }}><Spin /></div>
   ) : !data ? (
-    <div style={{ width: SMART_CARD_CONTENT_WIDTH, fontSize: 14, color: '#8c8c8c', textAlign: 'center', padding: 12, boxSizing: 'border-box' }}>
+    <div style={{ width: SMART_CARD_CONTENT_WIDTH, fontSize: 14, color: 'var(--color-text-tertiary)', textAlign: 'center', padding: 12, boxSizing: 'border-box' }}>
       暂无历史数据
     </div>
   ) : (
     <div style={{ width: SMART_CARD_CONTENT_WIDTH, fontSize: 14, boxSizing: 'border-box' }}>
       {/* 标题 */}
       <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 8 }}>
-         报价参考 <span style={{ fontSize: 14, fontWeight: 400, color: '#8c8c8c' }}>{data.styleNo}</span>
+         报价参考 <span style={{ fontSize: 14, fontWeight: 400, color: 'var(--color-text-tertiary)' }}>{data.styleNo}</span>
       </div>
 
       {/* 成本分解 */}
@@ -135,7 +135,7 @@ const StyleQuotePopover: React.FC<{
       {/* 历史订单 */}
       {(data.recentOrders?.length ?? 0) > 0 && (
         <>
-          <div style={{ fontSize: 14, color: '#8c8c8c', marginBottom: 4 }}>
+          <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginBottom: 4 }}>
              最近 {data.historicalOrderCount} 个订单（共 {data.historicalTotalQuantity} 件）
           </div>
           <div style={{ maxHeight: 120, overflowY: 'auto' }}>
@@ -159,7 +159,7 @@ const StyleQuotePopover: React.FC<{
       )}
 
       {quoteInsight && (
-        <div style={{ borderTop: '1px solid #f0f0f0', marginTop: 8, paddingTop: 8 }}>
+        <div style={{ borderTop: '1px solid var(--color-border-light)', marginTop: 8, paddingTop: 8 }}>
           <DecisionInsightCard compact insight={quoteInsight} />
         </div>
       )}

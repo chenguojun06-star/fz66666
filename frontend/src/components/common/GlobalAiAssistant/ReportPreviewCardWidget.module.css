@@ -29,8 +29,8 @@
 }
 
 .reportSection {
-  background: #fff;
-  border: 1px solid #f0f0f0;
+  background: var(--color-bg-base);
+  border: 1px solid var(--color-border-light);
   border-radius: 10px;
   padding: 10px 12px;
 }
@@ -53,14 +53,14 @@
 
 .kpiCard {
   background: linear-gradient(135deg, #fafafa 0%, #f0f5ff 100%);
-  border: 1px solid #e8e8e8;
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   padding: 8px 10px;
 }
 
 .kpiName {
   font-size: 13px;
-  color: #8c8c8c;
+  color: var(--color-text-tertiary);
   margin-bottom: 4px;
 }
 
@@ -85,7 +85,7 @@
 
 .kpiChangeUp { color: #52c41a; }
 .kpiChangeDown { color: #ff4d4f; }
-.kpiChangeFlat { color: #8c8c8c; }
+.kpiChangeFlat { color: var(--color-text-tertiary); }
 
 .distRow {
   display: flex;
@@ -94,8 +94,8 @@
 }
 
 .distChip {
-  background: #f5f5f5;
-  border: 1px solid #e8e8e8;
+  background: var(--color-bg-subtle);
+  border: 1px solid var(--color-border);
   border-radius: 6px;
   padding: 4px 8px;
   font-size: 13px;
@@ -118,7 +118,7 @@
   align-items: center;
   gap: 8px;
   padding: 4px 6px;
-  background: #fafafa;
+  background: var(--color-bg-container);
   border-radius: 6px;
   font-size: 13px;
 }
@@ -150,7 +150,7 @@
 }
 
 .rankMeta {
-  color: #8c8c8c;
+  color: var(--color-text-tertiary);
   font-size: 12px;
 }
 
@@ -196,7 +196,7 @@
 .orderItem {
   font-size: 13px;
   padding: 4px 6px;
-  background: #fafafa;
+  background: var(--color-bg-container);
   border-radius: 6px;
   border-left: 3px solid #ff4d4f;
 }
@@ -211,14 +211,14 @@
 }
 
 .orderMeta {
-  color: #8c8c8c;
+  color: var(--color-text-tertiary);
   font-size: 12px;
   margin-top: 2px;
 }
 
 .emptyHint {
   font-size: 13px;
-  color: #8c8c8c;
+  color: var(--color-text-tertiary);
   text-align: center;
   padding: 6px 0;
 }

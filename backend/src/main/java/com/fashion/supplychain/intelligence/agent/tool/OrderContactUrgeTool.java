@@ -19,7 +19,7 @@ import java.util.*;
 
 /**
  * AI工具：查询订单跟单员和工厂联系人，并自动发催单站内通知。
- * 触发场景：用户说"催一下这单"、"催催跟单和工厂"、"通知这单负责人跟进"。
+ * 触发场景：用户说"催一下这单"、"催催跟单和工厂"、"通知这单领取人跟进"。
  */
 @Slf4j
 @Component
@@ -57,7 +57,7 @@ public class OrderContactUrgeTool extends AbstractAgentTool {
         function.setName(getName());
         function.setDescription(
             "查询订单的跟单员和工厂联系人，并自动向两者发送催单站内通知。" +
-            "当用户说【催一下这单】【催催跟单和工厂】【通知这单负责人跟进】时调用。" +
+            "当用户说【催一下这单】【催催跟单和工厂】【通知这单领取人跟进】时调用。" +
             "会自动读取订单的跟单员(merchandiser)和工厂联系人(factoryContactPerson)并各发一条通知。"
         );
 

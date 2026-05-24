@@ -21,7 +21,7 @@
 
 .purchase-detail-label {
   font-size: var(--font-size-sm);
-  color: #8c8c8c;
+  color: var(--color-text-tertiary);
 }
 
 .purchase-detail-value {
@@ -106,7 +106,7 @@
 }
 
 .order-flow-section + .order-flow-section {
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--color-border-light);
 }
 
 .order-flow-section-title {
@@ -209,19 +209,19 @@
   object-fit: cover;
   border-radius: 6px;
   flex-shrink: 0;
-  background: #f5f5f5;
+  background: var(--color-bg-subtle);
   display: block;
 }
 .ofh-cover--empty {
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px dashed #d9d9d9;
+  border: 1px dashed var(--color-border-antd);
   width: 80px;
   height: 80px;
   border-radius: 6px;
   flex-shrink: 0;
-  background: #fafafa;
+  background: var(--color-bg-container);
   font-size: 13px;
   color: #d9d9d9;
 }
@@ -263,7 +263,7 @@
   grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 0 12px;
   padding-top: 6px;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--color-border-light);
 }
 .ofh-kv {
   display: flex;
@@ -299,7 +299,7 @@
 }
 
 .order-flow-module .ant-table-wrapper .ant-table-thead > tr > th {
-  background: #fafafa;
+  background: var(--color-bg-container);
 }
 
 .order-flow-row-highlight > td {
@@ -392,7 +392,7 @@
   padding: 4px 8px;
   border-radius: 999px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  z-index: 10;
+  z-index: var(--z-local);
 }
 
 .progress-row:hover .progress-row-actions {
@@ -492,7 +492,7 @@
 
 .order-flow-metric-label {
   font-size: var(--font-size-sm);
-  color: #8c8c8c;
+  color: var(--color-text-tertiary);
 }
 
 .order-flow-metric-value {
@@ -519,7 +519,7 @@
 
 .order-flow-field-label {
   font-size: var(--font-size-sm);
-  color: #8c8c8c;
+  color: var(--color-text-tertiary);
   white-space: nowrap;
 }
 
@@ -546,7 +546,7 @@
 }
 
 .order-flow-h-timeline {
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--color-border-light);
   padding: 12px;
 }
 
@@ -583,8 +583,8 @@
 .order-flow-h-stage {
   flex: 0 0 320px;
   min-width: 320px;
-  background: #fafafa;
-  border: 1px solid #f0f0f0;
+  background: var(--color-bg-container);
+  border: 1px solid var(--color-border-light);
   padding: 10px;
   scroll-snap-align: start;
 }
@@ -645,8 +645,8 @@
 }
 
 .order-flow-h-event {
-  background: #fff;
-  border: 1px solid #f0f0f0;
+  background: var(--color-bg-base);
+  border: 1px solid var(--color-border-light);
   padding: 10px;
 }
 
@@ -687,8 +687,8 @@
 
 .order-flow-h-empty {
   padding: 10px;
-  background: #fff;
-  border: 1px dashed #d9d9d9;
+  background: var(--color-bg-base);
+  border: 1px dashed var(--color-border-antd);
   color: rgba(0, 0, 0, 0.45);
   text-align: center;
 }
@@ -755,7 +755,7 @@
   text-overflow: ellipsis;
   max-width: 100%;
   border: 1px solid #e6e8f0;
-  background: #fff;
+  background: var(--color-bg-base);
 }
 
 .purchase-detail-size-th {
@@ -787,11 +787,11 @@
   height: 160px;
   object-fit: cover;
   display: block;
-  background: #f5f5f5;
+  background: var(--color-bg-subtle);
 }
 
 .purchase-detail-cover-empty {
-  border: 1px dashed #d9d9d9;
+  border: 1px dashed var(--color-border-antd);
 }
 
 .purchase-detail-section {
@@ -891,23 +891,23 @@
 }
 
 .wh-detail-box {
-  border: 1px solid #d9d9d9;
-  background: #fff;
+  border: 1px solid var(--color-border-antd);
+  background: var(--color-bg-base);
   padding: 10px;
 }
 
 .wh-detail-table .ant-table-thead > tr > th {
-  background: #fafafa;
+  background: var(--color-bg-container);
   font-weight: 600;
-  color: #1a1a1a;
+  color: var(--color-text-primary);
 }
 
 .wh-detail-table .ant-table-tbody > tr > td {
-  background: #fff;
+  background: var(--color-bg-base);
 }
 
 .wh-detail-table .ant-table-summary > tr > td {
-  background: #fafafa;
+  background: var(--color-bg-container);
   font-weight: 600;
 }
 
@@ -931,7 +931,7 @@
   justify-content: space-between;
   gap: 12px;
   padding: 4px 0 12px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--color-border-light);
   margin-bottom: 12px;
 }
 
@@ -965,8 +965,8 @@
   flex-direction: column;
   gap: 10px;
   padding: 12px;
-  border: 1px solid #f0f0f0;
-  background: #fff;
+  border: 1px solid var(--color-border-light);
+  background: var(--color-bg-base);
 }
 
 .cutting-entry-field {
@@ -1050,8 +1050,8 @@
 }
 
 .cutting-entry-footer {
-  border: 1px solid #f0f0f0;
-  background: #fff;
+  border: 1px solid var(--color-border-light);
+  background: var(--color-bg-base);
   padding: 14px 12px;
 }
 

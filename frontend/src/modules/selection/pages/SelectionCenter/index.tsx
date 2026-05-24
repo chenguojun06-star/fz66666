@@ -80,7 +80,7 @@ export default function SelectionCenter() {
                         if (open && item.trendScore == null && !aiLoading) handleAiScore(item.id);
                       }}
                     >
-                      <div style={{ border: '1px solid #e8e8e8', borderRadius: 8, overflow: 'hidden', background: '#fff', cursor: 'pointer', transition: 'box-shadow 0.2s', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}
+                      <div style={{ border: '1px solid var(--color-border)', borderRadius: 8, overflow: 'hidden', background: 'var(--color-bg-base)', cursor: 'pointer', transition: 'box-shadow 0.2s', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}
                         onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.14)')}
                         onMouseLeave={e => (e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,0.06)')}>
                         <div style={{ position: 'relative', height: 260, background: '#f7f7f7', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 8 }}>
@@ -101,7 +101,7 @@ export default function SelectionCenter() {
                         </div>
                         <div style={{ padding: '10px 12px' }}>
                           <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.styleName || '未命名'}</div>
-                          <div style={{ fontSize: 14, color: '#999', marginBottom: 10 }}>{[item.category, item.colorFamily, SOURCE_MAP[item.sourceType] ?? item.sourceType].filter(Boolean).join(' · ')}</div>
+                          <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginBottom: 10 }}>{[item.category, item.colorFamily, SOURCE_MAP[item.sourceType] ?? item.sourceType].filter(Boolean).join(' · ')}</div>
                           <div style={{ fontSize: 14, color: '#777', marginBottom: 8, minHeight: 18 }}>
                             {item.reviewCount ? `已评审 ${item.reviewCount} 次` : '待审核'}{item.avgReviewScore != null ? ` · 平均分 ${item.avgReviewScore}` : ''}
                           </div>
@@ -112,7 +112,7 @@ export default function SelectionCenter() {
                             {item.status === 'PENDING' && <Tag color="orange" style={{ margin: 0 }}>待评审</Tag>}
                             {item.trendScore != null && <Tag color={scoreMeta.color} style={{ marginLeft: 6, fontSize: 14 }}>{scoreMeta.label}</Tag>}
                           </div>
-                          <div style={{ fontSize: 14, color: '#666', marginBottom: 10, minHeight: 34, lineHeight: 1.5 }}>
+                          <div style={{ fontSize: 14, color: 'var(--color-text-secondary)', marginBottom: 10, minHeight: 34, lineHeight: 1.5 }}>
                             {latestReview?.comment || item.rejectReason || item.trendScoreReason || '悬停查看 AI 分析、趋势与价值建议'}
                           </div>
                           <Space size={6} style={{ width: '100%' }}>

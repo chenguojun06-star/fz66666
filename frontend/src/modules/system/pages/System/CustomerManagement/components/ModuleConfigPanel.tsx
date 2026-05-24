@@ -8,11 +8,11 @@ type ModuleConfigPanelProps = {
 };
 
 const ModuleConfigPanel: React.FC<ModuleConfigPanelProps> = ({ selectedModules, setSelectedModules }) => (
-  <div style={{ marginTop: 16, borderTop: '1px dashed #e8e8e8', paddingTop: 16 }}>
+  <div style={{ marginTop: 16, borderTop: '1px dashed var(--color-border)', paddingTop: 16 }}>
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12, gap: 12, flexWrap: 'wrap' }}>
       <span style={{ fontWeight: 600, fontSize: 16, lineHeight: 1.5 }}>
         菜单模块配置
-        <span style={{ fontSize: 14, color: '#999', fontWeight: 400, marginLeft: 8 }}>
+        <span style={{ fontSize: 14, color: 'var(--color-text-tertiary)', fontWeight: 400, marginLeft: 8 }}>
           （不勾选 = 全部开放；勾选后只显示已配置模块）
         </span>
       </span>
@@ -37,7 +37,7 @@ const ModuleConfigPanel: React.FC<ModuleConfigPanelProps> = ({ selectedModules, 
         const allChecked = selectedModules !== null && checkedCount === sectionPaths.length;
         const someChecked = checkedCount > 0 && !allChecked;
         return (
-          <div key={section.key} style={{ border: '1px solid #f0f0f0', borderRadius: 8, padding: '12px 14px', background: '#fafafa' }}>
+          <div key={section.key} style={{ border: '1px solid var(--color-border-light)', borderRadius: 8, padding: '12px 14px', background: 'var(--color-bg-container)' }}>
             <Checkbox
               checked={allChecked}
               indeterminate={someChecked}

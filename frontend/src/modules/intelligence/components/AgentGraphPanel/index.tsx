@@ -269,7 +269,7 @@ const AgentGraphPanel: React.FC = () => {
                     format={v => <span style={{ fontSize: 14, color: confColor(v!) }}>{v} 分</span>}
                   />
                 </div>
-                <span style={{ fontSize: 14, color: '#666' }}>{result.latencyMs} ms</span>
+                <span style={{ fontSize: 14, color: 'var(--color-text-secondary)' }}>{result.latencyMs} ms</span>
               </div>
 
               {/* 节点轨迹 */}

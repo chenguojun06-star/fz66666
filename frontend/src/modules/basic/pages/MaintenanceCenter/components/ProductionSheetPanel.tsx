@@ -23,7 +23,7 @@ const directCardStyle = {
   border: '1px solid #ececec',
   borderRadius: 10,
   padding: 12,
-  background: '#fff',
+  background: 'var(--color-bg-base)',
 } as const;
 
 const directStackStyle = { display: 'grid', gap: 10 } as const;
@@ -74,9 +74,9 @@ interface ProductionRequirementsSaveResult {
   updateTime?: string;
 }
 
-interface ProductionSheetPanelProps { styleNo?: string; }
+interface ProductionSheetPanelProps { styleNo?: string; onSaved?: () => void; }
 
-const ProductionSheetPanel: React.FC<ProductionSheetPanelProps> = ({ styleNo }) => {
+const ProductionSheetPanel: React.FC<ProductionSheetPanelProps> = ({ styleNo, onSaved }) => {
   const { message } = App.useApp();
   const { user } = useUser();
 
@@ -145,6 +145,7 @@ const ProductionSheetPanel: React.FC<ProductionSheetPanelProps> = ({ styleNo }) 
         setEditModalVisible(false);
         editForm.resetFields();
         await fetchStyles();
+        onSaved?.();
         message.success('保存成功');
       } else {
         message.error(res.message || '保存后状态未锁定，请刷新后重试');
@@ -272,7 +273,7 @@ const ProductionSheetPanel: React.FC<ProductionSheetPanelProps> = ({ styleNo }) 
               </Form.Item>
             </Form>
             <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-              <Button danger type="default" loading={returnDescSaving} onClick={handleReturnDescSave} style={{ background: '#fff', color: '#ff4d4f', borderColor: '#ff4d4f' }}>确认退回</Button>
+              <Button danger type="default" loading={returnDescSaving} onClick={handleReturnDescSave} style={{ background: 'var(--color-bg-base)', color: '#ff4d4f', borderColor: '#ff4d4f' }}>确认退回</Button>
             </div>
           </div>
           <div style={directCardStyle}>
@@ -376,7 +377,7 @@ const ProductionSheetPanel: React.FC<ProductionSheetPanelProps> = ({ styleNo }) 
                 {(detailRecord as any).cover ? (
                   <Image src={getFullAuthedFileUrl((detailRecord as any).cover)} style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', borderRadius: 8 }} />
                 ) : (
-                  <div style={{ width: '100%', aspectRatio: '1', background: '#f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8 }}>暂无封面</div>
+                  <div style={{ width: '100%', aspectRatio: '1', background: 'var(--color-bg-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8 }}>暂无封面</div>
                 )}
               </Col>
               <Col span={16}>
@@ -390,7 +391,7 @@ const ProductionSheetPanel: React.FC<ProductionSheetPanelProps> = ({ styleNo }) 
                 </div>
                 <div style={{ marginTop: 16 }}>
                   <strong>生产要求：</strong>
-                  <div style={{ whiteSpace: 'pre-wrap', marginTop: 8, padding: '8px 12px', background: '#fafafa', borderRadius: 4, maxHeight: 200, overflowY: 'auto' }}>
+                  <div style={{ whiteSpace: 'pre-wrap', marginTop: 8, padding: '8px 12px', background: 'var(--color-bg-container)', borderRadius: 4, maxHeight: 200, overflowY: 'auto' }}>
                     {(detailRecord as any).description || '暂无'}
                   </div>
                 </div>

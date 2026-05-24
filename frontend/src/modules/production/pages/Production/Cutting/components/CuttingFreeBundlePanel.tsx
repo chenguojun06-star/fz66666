@@ -139,7 +139,7 @@ const CuttingFreeBundlePanel: React.FC<CuttingFreeBundlePanelProps> = ({
       </div>
 
       {rows.length === 0 && (
-        <div style={{ padding: '16px', textAlign: 'center', color: '#999', background: '#fafafa', borderRadius: 6, marginBottom: 12 }}>
+        <div style={{ padding: '16px', textAlign: 'center', color: 'var(--color-text-tertiary)', background: 'var(--color-bg-container)', borderRadius: 6, marginBottom: 12 }}>
           暂无数据，点击「添加行」开始编辑
         </div>
       )}
@@ -148,7 +148,7 @@ const CuttingFreeBundlePanel: React.FC<CuttingFreeBundlePanelProps> = ({
         <div style={{ overflowX: 'auto', marginBottom: 12 }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
             <thead>
-              <tr style={{ background: '#fafafa', borderBottom: '2px solid #f0f0f0' }}>
+              <tr style={{ background: 'var(--color-bg-container)', borderBottom: '2px solid var(--color-border-light)' }}>
                 <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 600, width: 30 }}>#</th>
                 <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 600 }}>颜色</th>
                 <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 600 }}>尺码</th>
@@ -164,8 +164,8 @@ const CuttingFreeBundlePanel: React.FC<CuttingFreeBundlePanelProps> = ({
                 const filledQty = filledQtyByKey[csKey] || 0;
                 const overOrder = orderQty > 0 && filledQty > orderQty;
                 return (
-                  <tr key={row.key} style={{ borderBottom: '1px solid #f0f0f0', background: overOrder ? '#fff2f0' : undefined }}>
-                    <td style={{ padding: '6px 12px', color: '#999' }}>{idx + 1}</td>
+                  <tr key={row.key} style={{ borderBottom: '1px solid var(--color-border-light)', background: overOrder ? '#fff2f0' : undefined }}>
+                    <td style={{ padding: '6px 12px', color: 'var(--color-text-tertiary)' }}>{idx + 1}</td>
                     <td style={{ padding: '6px 12px' }}>
                       <AutoComplete
                        

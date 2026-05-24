@@ -32,7 +32,7 @@ const directCardStyle = {
   border: '1px solid #ececec',
   borderRadius: 10,
   padding: 12,
-  background: '#fff',
+  background: 'var(--color-bg-base)',
 } as const;
 
 const directStackStyle = { display: 'grid', gap: 10 } as const;
@@ -87,7 +87,7 @@ const templateTypeOptions = [
   { label: '多码工序进度单价', value: 'process_size' },
 ];
 
-interface UnitPricePanelProps { styleNo?: string; }
+interface UnitPricePanelProps { styleNo?: string; onSaved?: () => void; }
 
 const parseTemplateContent = (content: unknown) => {
   if (typeof content === 'object' && content !== null) return content;
@@ -126,7 +126,7 @@ const getDirectTemplatePriority = (row: TemplateLibrary) => {
   return 99;
 };
 
-const UnitPricePanel: React.FC<UnitPricePanelProps> = ({ styleNo }) => {
+const UnitPricePanel: React.FC<UnitPricePanelProps> = ({ styleNo, onSaved }) => {
   const { message } = App.useApp();
   const { user } = useUser();
   const { width: vpWidth } = useViewport();
@@ -470,7 +470,7 @@ const UnitPricePanel: React.FC<UnitPricePanelProps> = ({ styleNo }) => {
                
                 loading={rollbackLoading}
                 onClick={handleDirectRollback}
-                style={{ background: '#fff', color: '#ff4d4f', borderColor: '#ff4d4f' }}
+                style={{ background: 'var(--color-bg-base)', color: '#ff4d4f', borderColor: '#ff4d4f' }}
               >
                 确认退回
               </Button>

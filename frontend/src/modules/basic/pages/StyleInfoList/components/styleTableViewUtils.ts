@@ -353,7 +353,7 @@ export const buildStageInsight = (stage: SmartStage, snapshot: PatternProduction
   if (stage.key === 'sample' && snapshot) {
     if (snapshot.status === 'COMPLETED') return '样衣生产、入库与库存链路已经闭环，可继续做审核与流转。';
     if (snapshot.status === 'PRODUCTION_COMPLETED') return '生产动作已经完成，当前重点转入审核与入库确认。';
-    if (snapshot.status === 'IN_PROGRESS') return `已由 ${snapshot.receiver || '负责人'} 领取，系统正在跟踪工序推进与完工节奏。`;
+    if (snapshot.status === 'IN_PROGRESS') return `已由 ${snapshot.receiver || '领取人'} 领取，系统正在跟踪工序推进与完工节奏。`;
   }
 
   if (stage.key === 'confirm' && snapshot) {
@@ -371,7 +371,7 @@ export const buildStageInsight = (stage: SmartStage, snapshot: PatternProduction
   if (stage.status === 'done') return '当前环节已经闭环，可以继续推进后续节点。';
   if (stage.status === 'scrapped') return '开发样已报废，当前环节已经停止，页面改为静态灰色展示。';
   if (stage.status === 'risk') return '当前环节存在异常或返修，需要优先处理。';
-  if (stage.status === 'active') return '当前环节正在推进，建议优先跟踪负责人与关键时间。';
+  if (stage.status === 'active') return '当前环节正在推进，建议优先跟踪领取人与关键时间。';
   return '当前环节尚未启动，可从快捷动作直接进入处理。';
 };
 
@@ -414,7 +414,7 @@ export const buildPatternStage: StageBuilder = (record) => {
   return {
     key: 'pattern',
     label: '纸样开发',
-    helper: patternDone ? '纸样已完成' : record.patternAssignee ? `负责人 ${String(record.patternAssignee)}` : '等待处理',
+    helper: patternDone ? '纸样已完成' : record.patternAssignee ? `领取人 ${String(record.patternAssignee)}` : '等待处理',
     startTimeLabel: formatNodeTime(record.patternStartTime),
     timeLabel: patternDone
       ? formatStageTimeRange(record.patternStartTime, record.patternCompletedTime)
@@ -424,7 +424,7 @@ export const buildPatternStage: StageBuilder = (record) => {
     actionKey: 'pattern',
     actionLabel: '进入纸样',
     details: buildStageDetails(
-      record.patternAssignee ? `负责人：${String(record.patternAssignee)}` : '负责人待分配',
+      record.patternAssignee ? `领取人：${String(record.patternAssignee)}` : '领取人待分配',
       patternDone ? '纸样文件已完成' : patternStarted ? '纸样开发推进中' : '尚未启动纸样开发'
     ),
   };
@@ -440,7 +440,7 @@ export const buildSizePriceStage: StageBuilder = (record) => {
   return {
     key: 'sizePrice',
     label: '码数单价',
-    helper: done ? '单价已锁定' : record.sizePriceAssignee ? `负责人 ${String(record.sizePriceAssignee)}` : '等待维护',
+    helper: done ? '单价已锁定' : record.sizePriceAssignee ? `领取人 ${String(record.sizePriceAssignee)}` : '等待维护',
     startTimeLabel: formatNodeTime(record.sizePriceStartTime),
     timeLabel: done
       ? formatStageTimeRange(record.sizePriceStartTime, record.sizePriceCompletedTime)
@@ -450,7 +450,7 @@ export const buildSizePriceStage: StageBuilder = (record) => {
     actionKey: 'sizePrice',
     actionLabel: '进入单价',
     details: buildStageDetails(
-      record.sizePriceAssignee ? `负责人：${String(record.sizePriceAssignee)}` : '负责人待分配',
+      record.sizePriceAssignee ? `领取人：${String(record.sizePriceAssignee)}` : '领取人待分配',
       done ? '码数单价已确认' : '当前仍可调整码数单价'
     ),
   };
@@ -466,7 +466,7 @@ export const buildSecondaryStage: StageBuilder = (record) => {
   return {
     key: 'secondary',
     label: '二次工艺',
-    helper: done ? '工艺已锁定' : record.secondaryAssignee ? `负责人 ${String(record.secondaryAssignee)}` : '待安排',
+    helper: done ? '工艺已锁定' : record.secondaryAssignee ? `领取人 ${String(record.secondaryAssignee)}` : '待安排',
     startTimeLabel: formatNodeTime(record.secondaryStartTime),
     timeLabel: done
       ? formatStageTimeRange(record.secondaryStartTime, record.secondaryCompletedTime)
@@ -476,7 +476,7 @@ export const buildSecondaryStage: StageBuilder = (record) => {
     actionKey: 'secondary',
     actionLabel: '进入工艺',
     details: buildStageDetails(
-      record.secondaryAssignee ? `负责人：${String(record.secondaryAssignee)}` : '负责人待分配',
+      record.secondaryAssignee ? `领取人：${String(record.secondaryAssignee)}` : '领取人待分配',
       done ? '二次工艺资料已完成' : '当前正在推进二次工艺'
     ),
   };

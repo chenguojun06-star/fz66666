@@ -12,7 +12,6 @@ import MaterialTable from './components/MaterialTable';
 import PurchaseModal from './components/PurchaseModal';
 import MaterialPurchaseAIBanner from './components/MaterialPurchaseAIBanner';
 import MaterialQualityIssueModal from './components/MaterialQualityIssueModal';
-import PurchaseDocRecognizeModal from './components/PurchaseDocRecognizeModal';
 import RemarkTimelineModal from '@/components/common/RemarkTimelineModal';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import '../../../styles.css';
@@ -71,7 +70,6 @@ const MaterialPurchase: React.FC = () => {
   const [qualityIssuePurchase, setQualityIssuePurchase] = useState<MaterialPurchaseType | null>(null);
   const [remarkOpen, setRemarkOpen] = useState(false);
   const [remarkOrderNo, setRemarkOrderNo] = useState('');
-  const [docRecognizeOpen, setDocRecognizeOpen] = useState(false);
 
   const handleWarehousePickFromDetail = useCallback(async (record: MaterialPurchaseType, pickQty: number) => {
     const purchaseId = String(record?.id || '').trim();
@@ -143,7 +141,7 @@ const MaterialPurchase: React.FC = () => {
       <Form form={form} component={false} />
       <Form form={materialDatabaseForm} component={false} />
         <PageLayout
-          title="面料采购"
+          title="物料采购"
           headerContent={
             showSmartErrorNotice && smartError ? (
               <Card style={{ marginBottom: 12 }}>
@@ -221,7 +219,6 @@ const MaterialPurchase: React.FC = () => {
                       }}
                       onExport={handleExport}
                       onAdd={() => setOrderPickerOpen(true)}
-                      onUploadDoc={() => setDocRecognizeOpen(true)}
                       loading={loading}
                       hasData={purchaseList && purchaseList.length > 0}
                     />
@@ -263,20 +260,23 @@ const MaterialPurchase: React.FC = () => {
         </PageLayout>
 
         <ResizableModal
-          title="选择订单"
+          title="选择订单 — 新增物料采购"
           open={orderPickerOpen}
           onCancel={() => setOrderPickerOpen(false)}
-          width={600}
+          width={isMobile ? '96vw' : 900}
           footer={null}
         >
-          <Space direction="vertical" style={{ width: '100%' }} size={12}>
+          <Space orientation="vertical" style={{ width: '100%' }} size={12}>
+            <div style={{ color: 'var(--color-text-secondary)', fontSize: 13, lineHeight: 1.6 }}>
+              选择一个生产订单，进入该订单的物料采购详情页，可编辑面辅料信息、采购到货、回料确认等操作。
+            </div>
             <Space>
               <Input
                 placeholder="输入订单号或款号搜索"
                 value={orderPickerKeyword}
                 onChange={e => setOrderPickerKeyword(e.target.value)}
                 onPressEnter={handleSearchOrders}
-                style={{ width: 300 }}
+                style={{ width: 320 }}
                 allowClear
               />
               <Button type="primary" onClick={handleSearchOrders} loading={orderPickerLoading}>搜索</Button>
@@ -287,15 +287,15 @@ const MaterialPurchase: React.FC = () => {
               loading={orderPickerLoading}
               pagination={false}
               size="small"
-              scroll={{ y: 400 }}
+              scroll={{ x: 720, y: 400 }}
               columns={[
                 { title: '订单号', dataIndex: 'orderNo', width: 180 },
                 { title: '款号', dataIndex: 'styleNo', width: 120 },
-                { title: '款名', dataIndex: 'styleName', width: 150, ellipsis: true },
+                { title: '款名', dataIndex: 'styleName', width: 160, ellipsis: true },
                 { title: '颜色', dataIndex: 'color', width: 100 },
-                { title: '下单数量', dataIndex: 'orderQuantity', width: 90, align: 'right' as const },
+                { title: '下单数量', dataIndex: 'orderQuantity', width: 100, align: 'right' as const },
                 {
-                  title: '操作', width: 80,
+                  title: '操作', width: 80, fixed: 'right' as const,
                   render: (_: any, record: any) => (
                     <Button type="link" size="small" onClick={() => handlePickOrder(record)}>选择</Button>
                   ),
@@ -453,8 +453,8 @@ const MaterialPurchase: React.FC = () => {
                   }}
                   onClick={() => evidenceFileInputRef.current?.click()}
                   style={{
-                    border: '1px dashed #d9d9d9', borderRadius: 8, padding: '16px 4px',
-                    textAlign: 'center', cursor: 'pointer', background: '#fafafa', transition: 'border-color 0.3s',
+                    border: '1px dashed var(--color-border-antd)', borderRadius: 8, padding: '16px 4px',
+                    textAlign: 'center', cursor: 'pointer', background: 'var(--color-bg-container)', transition: 'border-color 0.3s',
                   }}
                   onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--primary-color)'; }}
                   onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = '#d9d9d9'; }}
@@ -659,16 +659,6 @@ const MaterialPurchase: React.FC = () => {
           targetType="order"
           targetNo={remarkOrderNo}
           canAddRemark={true}
-        />
-
-        <PurchaseDocRecognizeModal
-          open={docRecognizeOpen}
-          orderNo={String(queryParams.orderNo || '').trim() || undefined}
-          onCancel={() => setDocRecognizeOpen(false)}
-          onSuccess={async () => {
-            setDocRecognizeOpen(false);
-            await fetchMaterialPurchaseList();
-          }}
         />
     </>
   );

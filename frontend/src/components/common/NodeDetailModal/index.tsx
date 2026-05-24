@@ -323,12 +323,12 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
           <div style={{ marginBottom: 8 }}>
             <Button
              
-              style={(nodeStats?.percent || 0) >= 100 ? { color: '#999', borderColor: '#d9d9d9' } : {}}
+              style={(nodeStats?.percent || 0) >= 100 ? { color: 'var(--color-text-tertiary)', borderColor: 'var(--color-border-antd)' } : {}}
               onClick={() => navigate(`/production/cutting/task/${encodeURIComponent(orderSummary.orderNo || orderNo || '')}`)}
             >
                前往裁剪管理 →
               {(nodeStats?.percent || 0) >= 100 && (
-                <span style={{ color: '#999', marginLeft: 4 }}>（已完成）</span>
+                <span style={{ color: 'var(--color-text-tertiary)', marginLeft: 4 }}>（已完成）</span>
               )}
             </Button>
           </div>

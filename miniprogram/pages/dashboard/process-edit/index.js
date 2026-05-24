@@ -39,8 +39,6 @@ Page({
     editForm: {},
     showAddModal: false,
     addForm: { stageId: '', stageName: '', processName: '', machineType: '', price: '', standardTime: '', difficulty: '中' },
-    _deletedIds: [],
-    _newProcesses: [],
     processDict: []
   },
 
@@ -99,7 +97,9 @@ Page({
 
       var processes = that._extractProcesses(order);
       that._buildStages(processes);
-      that._originalProcesses = JSON.parse(JSON.stringify(processes));
+      this._originalProcesses = JSON.parse(JSON.stringify(processes));
+      that._deletedIds = [];
+      that._newProcesses = [];
       that.setData({ loading: false });
     }).catch(function (err) {
       console.error('[process-edit] 加载订单失败:', err);
@@ -230,7 +230,8 @@ Page({
         break;
       }
     }
-    this.setData({ stages: stages, showAddModal: false, hasChanges: true, _newProcesses: this.data._newProcesses.concat([newProcess]) });
+    this._newProcesses.push(newProcess);
+    this.setData({ stages: stages, showAddModal: false, hasChanges: true });
   },
 
   onEditProcess: function (e) {
@@ -317,7 +318,7 @@ Page({
       success: function (res) {
         if (!res.confirm) return;
         var stages = that.data.stages;
-        var deletedIds = that.data._deletedIds;
+        var deletedIds = that._deletedIds;
         for (var i = 0; i < stages.length; i++) {
           if (stages[i].id === stageId) {
             var newProcs = [];
@@ -332,7 +333,7 @@ Page({
             break;
           }
         }
-        that.setData({ stages: stages, hasChanges: true, _deletedIds: deletedIds });
+        that.setData({ stages: stages, hasChanges: true });
       }
     });
   },
@@ -345,7 +346,9 @@ Page({
       success: function (res) {
         if (!res.confirm) return;
         that._buildStages(that._originalProcesses || []);
-        that.setData({ hasChanges: false, _deletedIds: [], _newProcesses: [], processEditId: null, editForm: {} });
+        that._deletedIds = [];
+        that._newProcesses = [];
+        that.setData({ hasChanges: false, processEditId: null, editForm: {} });
       }
     });
   },
@@ -386,7 +389,9 @@ Page({
     wx.showLoading({ title: '保存中...' });
     api.production.quickEditOrder(payload).then(function () {
       wx.hideLoading();
-      that.setData({ hasChanges: false, _deletedIds: [], _newProcesses: [] });
+      that._deletedIds = [];
+      that._newProcesses = [];
+      that.setData({ hasChanges: false });
       that._buildStages(nodes.map(function (n, i) {
         return {
           id: n.id,

@@ -63,7 +63,7 @@ const ProgressView: React.FC<{ obj: unknown }> = ({ obj }) => {
         <div style={{ fontSize: "var(--font-size-sm)", fontWeight: 500, marginBottom: 8 }}>进度节点</div>
         <div style={{ maxHeight: 480, overflow: 'auto' }}>
           {nodes.map((n, idx) => (
-            <div key={idx} style={{ padding: '6px 8px', borderBottom: '1px solid #f0f0f0', fontSize: "var(--font-size-sm)" }}>
+            <div key={idx} style={{ padding: '6px 8px', borderBottom: '1px solid var(--color-border-light)', fontSize: "var(--font-size-sm)" }}>
               {String(n?.name || '-')}
             </div>
           ))}
@@ -74,7 +74,7 @@ const ProgressView: React.FC<{ obj: unknown }> = ({ obj }) => {
         <div style={{ fontSize: "var(--font-size-sm)", fontWeight: 500, marginBottom: 8 }}>单价工序库</div>
         <div style={{ maxHeight: 480, overflow: 'auto' }}>
           {nodes.filter((n) => n?.unitPrice != null && n.unitPrice !== 0).map((n, idx) => (
-            <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 8px', borderBottom: '1px solid #f0f0f0', fontSize: "var(--font-size-sm)" }}>
+            <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 8px', borderBottom: '1px solid var(--color-border-light)', fontSize: "var(--font-size-sm)" }}>
               <span>{String(n?.name || '-')}</span>
               <span style={{ fontWeight: 500 }}>¥{Number(n?.unitPrice || 0).toFixed(2)}</span>
             </div>
@@ -117,7 +117,7 @@ const ProcessView: React.FC<{ obj: unknown; type: string }> = ({ obj, type }) =>
         </div>
         <div style={{ maxHeight: 480, overflow: 'auto' }}>
           {steps.map((s, idx) => (
-            <div key={idx} style={{ padding: '6px 8px', borderBottom: '1px solid #f0f0f0', fontSize: "var(--font-size-sm)" }}>
+            <div key={idx} style={{ padding: '6px 8px', borderBottom: '1px solid var(--color-border-light)', fontSize: "var(--font-size-sm)" }}>
               <div>{formatProcessDisplayName(s?.processCode, s?.processName)}</div>
               {type === 'process' && s?.machineType && <div style={{ fontSize: "var(--font-size-xs)", color: 'var(--neutral-text-disabled)', marginTop: 2 }}>机器: {s.machineType}</div>}
               {type === 'process' && s?.standardTime && <div style={{ fontSize: "var(--font-size-xs)", color: 'var(--neutral-text-disabled)', marginTop: 2 }}>工时: {s.standardTime}秒</div>}
@@ -134,7 +134,7 @@ const ProcessView: React.FC<{ obj: unknown; type: string }> = ({ obj, type }) =>
           {steps.filter((s) => getPriceValue(s as unknown as Record<string, unknown>) > 0).map((s, idx) => {
             const price = getPriceValue(s as unknown as Record<string, unknown>);
             return (
-              <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 8px', borderBottom: '1px solid #f0f0f0', fontSize: "var(--font-size-sm)" }}>
+              <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 8px', borderBottom: '1px solid var(--color-border-light)', fontSize: "var(--font-size-sm)" }}>
                 <span>{formatProcessDisplayName(s?.processCode, s?.processName)}</span>
                 <span style={{ fontWeight: 500 }}>¥{price.toFixed(2)}</span>
               </div>

@@ -1,7 +1,7 @@
 var { validateProductionOrder, normalizeData } = require('./dataValidator');
 var { orderStatusText } = require('./orderStatusHelper');
 var { parseProductionOrderLines, sortSizeNames } = require('./orderParser');
-var { getAuthedImageUrl } = require('../fileUrl');
+var { getAuthedImageUrl } = require('../../../utils/fileUrl');
 var { calcOrderProgress } = require('./progressNodes');
 
 function normalizeText(v) {

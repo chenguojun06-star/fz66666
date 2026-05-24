@@ -4,6 +4,7 @@ import { PrinterOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import StandardModal from '@/components/common/StandardModal';
 import { safePrint } from '@/utils/safePrint';
+import { formatMoney } from '@/utils/format';
 
 export interface MaterialOutboundPrintItem {
   batchNo?: string;
@@ -71,7 +72,7 @@ const buildPrintHtml = (data: MaterialOutboundPrintPayload) => {
       <td>${item.warehouseLocation || data.warehouseLocation || '-'}</td>
       <td>${item.quantity}</td>
       <td>${item.unit || data.unit || ''}</td>
-      <td>${item.unitPrice != null ? '¥' + item.unitPrice.toFixed(2) : '-'}</td>
+      <td>${item.unitPrice != null ? formatMoney(item.unitPrice) : '-'}</td>
     </tr>
   `).join('');
 

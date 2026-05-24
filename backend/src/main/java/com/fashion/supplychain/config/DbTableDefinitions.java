@@ -484,6 +484,24 @@ public final class DbTableDefinitions {
             + "INDEX `idx_sn_to_name` (`to_name`),"
             + "INDEX `idx_sn_created_at` (`created_at`)"
             + ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+        TABLE_FIXES.put("t_urge_record",
+            "CREATE TABLE IF NOT EXISTS `t_urge_record` ("
+            + "`id` VARCHAR(64) NOT NULL COMMENT '主键',"
+            + "`tenant_id` BIGINT NOT NULL COMMENT '租户ID',"
+            + "`order_id` VARCHAR(64) NOT NULL COMMENT '生产订单ID',"
+            + "`order_no` VARCHAR(64) NOT NULL COMMENT '订单号',"
+            + "`sender_name` VARCHAR(100) DEFAULT NULL COMMENT '催单人姓名',"
+            + "`receiver_name` VARCHAR(100) DEFAULT NULL COMMENT '被催人姓名',"
+            + "`remark` VARCHAR(500) DEFAULT NULL COMMENT '催单备注',"
+            + "`status` VARCHAR(20) NOT NULL DEFAULT 'pending' COMMENT '状态',"
+            + "`reply_content` VARCHAR(500) DEFAULT NULL COMMENT '回复内容',"
+            + "`reply_expected_ship_date` DATETIME DEFAULT NULL COMMENT '回复的预计出货日期',"
+            + "`reply_time` DATETIME DEFAULT NULL COMMENT '回复时间',"
+            + "`created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '催单时间',"
+            + "PRIMARY KEY (`id`),"
+            + "INDEX `idx_urge_order_id` (`order_id`),"
+            + "INDEX `idx_urge_tenant_order` (`tenant_id`, `order_no`)"
+            + ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
         TABLE_FIXES.put("t_production_process_tracking",
             "CREATE TABLE IF NOT EXISTS `t_production_process_tracking` ("
             + "`id` VARCHAR(64) NOT NULL COMMENT '主键ID',"

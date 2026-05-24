@@ -48,7 +48,7 @@ const StyleCopyModal: React.FC<StyleCopyModalProps> = ({ open, onCancel, copySou
       destroyOnHidden
     >
       {copySource && (
-        <div style={{ marginBottom: 12, color: '#666', fontSize: 14 }}>
+        <div style={{ marginBottom: 12, color: 'var(--color-text-secondary)', fontSize: 14 }}>
           源款式：{copySource.styleNo}（{(copySource as any).color || '无颜色'}）
         </div>
       )}

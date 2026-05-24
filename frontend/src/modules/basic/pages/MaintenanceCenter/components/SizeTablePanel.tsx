@@ -26,7 +26,7 @@ const directCardStyle = {
   border: '1px solid #ececec',
   borderRadius: 10,
   padding: 12,
-  background: '#fff',
+  background: 'var(--color-bg-base)',
 } as const;
 
 const directStackStyle = { display: 'grid', gap: 10 } as const;
@@ -75,9 +75,9 @@ const normalizeTemplateRecords = (payload: unknown, sourceStyleNo?: string) => {
     .filter((item) => !normalizedStyleNo || String(item.sourceStyleNo || '').trim() === normalizedStyleNo);
 };
 
-interface SizeTablePanelProps { styleNo?: string; }
+interface SizeTablePanelProps { styleNo?: string; onSaved?: () => void; }
 
-const SizeTablePanel: React.FC<SizeTablePanelProps> = ({ styleNo }) => {
+const SizeTablePanel: React.FC<SizeTablePanelProps> = ({ styleNo, onSaved }) => {
   const { message } = App.useApp();
   const { user } = useUser();
   const { width: vpWidth } = useViewport();
@@ -364,7 +364,7 @@ const SizeTablePanel: React.FC<SizeTablePanelProps> = ({ styleNo }) => {
                  
                   loading={rollbackLoading}
                   onClick={handleDirectRollback}
-                  style={{ background: '#fff', color: '#ff4d4f', borderColor: '#ff4d4f' }}
+                  style={{ background: 'var(--color-bg-base)', color: '#ff4d4f', borderColor: '#ff4d4f' }}
                 >
                   确认退回
                 </Button>

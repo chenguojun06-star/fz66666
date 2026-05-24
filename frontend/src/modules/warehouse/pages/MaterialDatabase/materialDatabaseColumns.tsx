@@ -35,7 +35,7 @@ export const getMaterialDatabaseColumns = (actions: MaterialColumnActions): Colu
       title: '物料编号', dataIndex: 'materialCode', key: 'materialCode', width: 120,
       render: (text: string, record: MaterialDatabase) => {
         const isDisabled = record.disabled === 1;
-        return <span style={isDisabled ? { color: '#999', textDecoration: 'line-through' } : undefined}>{text}</span>;
+        return <span style={isDisabled ? { color: 'var(--color-text-tertiary)', textDecoration: 'line-through' } : undefined}>{text}</span>;
       },
     },
     { title: '物料名称', dataIndex: 'materialName', key: 'materialName', width: 150, ellipsis: true },

@@ -2,6 +2,8 @@ import React from 'react';
 import { Tooltip, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
+import { formatDateTime } from '@/utils/datetime';
+import { formatMoney } from '@/utils/format';
 import { isOrderFrozenByStatus } from '@/utils/api/production';
 import RowActions from '@/components/common/RowActions';
 import styles from './FinishedSettlementContent.module.css';
@@ -67,7 +69,7 @@ export function getSettlementColumns(
       dataIndex: 'completeTime',
       key: 'completeTime',
       width: 160,
-      render: (val) => val ? dayjs(val).format('YYYY-MM-DD HH:mm') : '-',
+      render: (val) => val ? formatDateTime(val) : '-',
     },
     { title: '颜色', dataIndex: 'colors', key: 'colors', width: 100 },
     {
@@ -105,7 +107,7 @@ export function getSettlementColumns(
       width: 150,
       align: 'right',
       render: (val) => (
-        <span style={{ fontWeight: 600, color: 'var(--primary-color)' }}>¥{val?.toFixed(2) || '0.00'}</span>
+        <span style={{ fontWeight: 600, color: 'var(--primary-color)' }}>{formatMoney(val)}</span>
       ),
     },
     {
@@ -132,7 +134,7 @@ export function getSettlementColumns(
       align: 'right',
       render: (val) => (
         <span style={{ color: val > 0 ? 'var(--color-danger)' : 'var(--neutral-text-secondary)' }}>
-          {val > 0 ? '-' : ''}¥{val?.toFixed(2) || '0.00'}
+          {val > 0 ? '-' : ''}{formatMoney(val)}
         </span>
       ),
     },
@@ -154,7 +156,7 @@ export function getSettlementColumns(
       align: 'right',
       render: (val) => (
         <span style={{ fontWeight: 600, color: val >= 0 ? 'var(--color-success)' : 'var(--color-danger)' }}>
-          ¥{val?.toFixed(2) || '0.00'}
+          {formatMoney(val)}
         </span>
       ),
     },

@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useTablePagination } from '@/hooks';
 import { useUser } from '@/utils/AuthContext';
-import dayjs from 'dayjs';
+import { formatDateTimeSecond } from '@/utils/datetime';
 import type { Dayjs } from 'dayjs';
 import { materialInventoryApi } from '@/services/warehouse/materialInventoryApi';
 import api from '@/utils/api';
@@ -146,7 +146,7 @@ export function useMaterialPickupData() {
 
   const buildPrintPayload = (record: PickingRow): MaterialOutboundPrintPayload => ({
     outboundNo: record.pickingNo,
-    outboundTime: dayjs().format('YYYY-MM-DD HH:mm:ss'),
+    outboundTime: formatDateTimeSecond(new Date()),
     materialCode: record.items?.[0]?.materialCode || '-',
     materialName: record.items?.[0]?.materialName || '面辅料',
     specification: record.items?.[0]?.specification || record.items?.[0]?.size,

@@ -1,18 +1,16 @@
-/**
- * 洗水唛批量打印弹窗
- * 打印方案：iframe HTML 注入（与 CuttingSheetPrintModal 相同模式）
- *
- * 布局规则：
- *   洗水唛 — 宽/高自由输入（mm），上下各一条虚线分割，内容距虚线 1.5cm
- *   U码标签 — 固定两档 4×7cm / 5×10cm
- */
 import React, { useState } from 'react';
-import { Alert, Button, Divider, InputNumber, Radio, Space, Tag } from 'antd';
+import { Alert, Button, Divider, InputNumber, Radio, Space, Tag, Typography } from 'antd';
 import { PrinterOutlined } from '@ant-design/icons';
 import ResizableModal from '@/components/common/ResizableModal';
-import { buildWashLabelSections, getDisplayWashCareCodes, parseWashNotePerPart } from '@/utils/washLabel';
 import { safePrint } from '@/utils/safePrint';
-import { parseCareIconCodes, CARE_ICONS } from '@/utils/careIcons';
+import { CARE_ICONS, parseCareIconCodes } from '@/utils/careIcons';
+import {
+  buildWashLabelMultiPageHtml,
+  getDefaultDateText,
+  compositionFromSections,
+  washTextFromInstructions,
+  type WashLabelPrintData,
+} from '@/utils/washLabelPrintTemplate';
 
 export interface WashLabelItem {
   orderNo: string;
@@ -21,7 +19,6 @@ export interface WashLabelItem {
   color?: string;
   size?: string;
   fabricComposition?: string;
-  /** 多部位成分 JSON: [{part,materials}]，两件套/拼接款使用 */
   fabricCompositionParts?: string;
   washInstructions?: string;
   uCode?: string;
@@ -33,7 +30,6 @@ export interface WashLabelItem {
   careIconCodes?: string;
 }
 
-/** U码固定两档规格 */
 type UCodeSize = '40x70' | '50x100';
 type LabelType = 'wash' | 'ucode';
 
@@ -44,203 +40,95 @@ interface Props {
   loading?: boolean;
 }
 
-/** U码固定规格 */
 const UCODE_SIZES: Record<UCodeSize, { w: number; h: number; label: string }> = {
-  '40x70':  { w: 40, h: 70,  label: '4×7cm' },
+  '40x70': { w: 40, h: 70, label: '4×7cm' },
   '50x100': { w: 50, h: 100, label: '5×10cm' },
 };
 
-// ─── ISO 3758 洗护图标 SVG（内联打印安全）────────────────────────────────────
-function _tubSvg(inner: string): string {
-  return `<svg viewBox="0 0 20 20" width="22" height="22" xmlns="http://www.w3.org/2000/svg"><path d="M2,9 L2,17 Q2,19 4,19 L16,19 Q18,19 18,17 L18,9 Z" fill="none" stroke="#000" stroke-width="1.5" stroke-linejoin="round"/><line x1="1" y1="9" x2="19" y2="9" stroke="#000" stroke-width="1.5"/>${inner}</svg>`;
-}
-function _triSvg(inner: string): string {
-  return `<svg viewBox="0 0 20 20" width="22" height="22" xmlns="http://www.w3.org/2000/svg"><polygon points="10,2 19,18 1,18" fill="none" stroke="#000" stroke-width="1.5"/>${inner}</svg>`;
-}
-function _sqSvg(inner: string): string {
-  return `<svg viewBox="0 0 20 20" width="22" height="22" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="2" width="16" height="16" fill="none" stroke="#000" stroke-width="1.5"/>${inner}</svg>`;
-}
-function _ironSvg(dots: number, cross = false): string {
-  const ds = Array.from({ length: dots }, (_, i) => `<circle cx="${7 + i * 3.5}" cy="13" r="1" fill="#000"/>`).join('');
-  const cx = cross ? '<line x1="5" y1="9" x2="17" y2="16" stroke="#000" stroke-width="1.5"/><line x1="17" y1="9" x2="5" y2="16" stroke="#000" stroke-width="1.5"/>' : '';
-  return `<svg viewBox="0 0 24 20" width="26" height="22" xmlns="http://www.w3.org/2000/svg"><path d="M2,17 L20,17 L22,11 C20,7 15,7 10,7 L5,7 Q3,7 2,10 Z" fill="none" stroke="#000" stroke-width="1.5" stroke-linejoin="round"/>${ds}${cx}</svg>`;
-}
-function _circSvg(inner: string): string {
-  return `<svg viewBox="0 0 20 20" width="22" height="22" xmlns="http://www.w3.org/2000/svg"><circle cx="10" cy="10" r="8" fill="none" stroke="#000" stroke-width="1.5"/>${inner}</svg>`;
-}
-const _CARE_X = '<line x1="5" y1="5" x2="15" y2="15" stroke="#000" stroke-width="1.5"/><line x1="15" y1="5" x2="5" y2="15" stroke="#000" stroke-width="1.5"/>';
-const _numTxt = (n: string) => `<text x="10" y="17" text-anchor="middle" font-size="6" fill="#000" font-family="Arial,serif" font-weight="bold">${n}</text>`;
-function buildCareIconsHtml(item: WashLabelItem): string {
-  const explicitCodes = parseCareIconCodes(item.careIconCodes);
-  let codes: string[] = explicitCodes.length > 0 ? explicitCodes : [];
-  if (!codes.length) {
-    const legacy = getDisplayWashCareCodes(item, item.washInstructions);
-    codes = [
-      legacy.washTempCode ? `wash_${legacy.washTempCode}` : '',
-      legacy.bleachCode ? `bleach_${legacy.bleachCode}` : '',
-      legacy.tumbleDryCode ? `dry_${legacy.tumbleDryCode}` : '',
-      legacy.ironCode ? `iron_${legacy.ironCode}` : '',
-      legacy.dryCleanCode ? `dryclean_${legacy.dryCleanCode}` : '',
-    ].filter(Boolean);
-  }
-  if (!codes.length) return '';
-
-  // 按类别分组：水洗 → 漂白 → 烘干 → 熨烫 → 干洗 → 自然晾干 → 特殊处理
-  const categoryOrder = ['wash', 'bleach', 'dry', 'iron', 'dryclean', 'naturaldry', 'special'];
-  const groups: Record<string, string[]> = {};
-  codes.forEach(code => {
-    const def = CARE_ICONS[code];
-    if (!def) return;
-    const cat = def.category;
-    if (!groups[cat]) groups[cat] = [];
-    groups[cat].push(def.svg);
-  });
-
-  const rows = categoryOrder
-    .filter(cat => groups[cat]?.length)
-    .map(cat => `<div class="icon-row">${groups[cat].map(svg => `<span class="icon-cell">${svg}</span>`).join('')}</div>`)
-    .join('');
-
-  return rows ? `<div class="icons">${rows}</div>` : '';
-}
-function buildUCodeHtml(item: WashLabelItem, w: number, qrDataUrl: string): string {
-  const qrSize = Math.min(w - 8, 32);
-  const now = new Date();
-  const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
-  return `<div class="label-page">
-    <div class="dash-sep"></div>
-    <div class="content-area">
-      <div class="sub">款号：${item.styleNo || '-'}${item.color ? '&nbsp;&nbsp;颜色：' + item.color : ''}${item.size ? '&nbsp;&nbsp;码：' + item.size : ''}</div>
-      <div class="hr"></div>
-      <div class="ucode-val">${item.uCode || '（U码未填写）'}</div>
-      ${qrDataUrl ? `<div class="qr"><img src="${qrDataUrl}" width="${qrSize}mm" height="${qrSize}mm"/></div>` : ''}
-      <div class="hr"></div>
-      <div class="small">${item.orderNo}</div>
-      <div class="date">${dateStr}</div>
-    </div>
-    <div class="dash-sep"></div>
-  </div>`;
-}
-
-function buildWashHtml(item: WashLabelItem): string {
-  const sections = buildWashLabelSections(item.fabricCompositionParts, item.fabricComposition);
-  const showPartTitle = sections.length > 1;
-  let compositionHtml = sections
-    .map(section =>
-      `<div class="comp-block">${showPartTitle && section.key !== 'other' ? `<div class="comp-name">${section.label}</div>` : ''}` +
-      `<div class="comp-mats">${section.items.join('<br/>')}</div></div>`
-    ).join('');
-  if (!compositionHtml) compositionHtml = '<div class="comp-mats" style="color:#aaa">（成分未填写）</div>';
-  const perPartNotes = parseWashNotePerPart(item.fabricCompositionParts);
-  const sectionKeys = sections.map(s => s.key);
-  const firstPartNote = sectionKeys.length > 0 ? perPartNotes[sectionKeys[0]] : undefined;
-  const washRaw = (firstPartNote !== undefined && firstPartNote.trim()) ? firstPartNote : (item.washInstructions || '');
-  const washText = washRaw.replace(/^洗涤说明[（(]水洗标专用[）)]\s*/u, '').trim();
-  const washInstHtml = washText
-    ? `<div class="section-sep"></div><div class="wash-label">洗涤说明</div><div class="care-wash">${washText.replace(/\n/g, '<br/>')}</div>`
-    : '';
-  const careIconRow = buildCareIconsHtml(item);
-  const careSectionHtml = careIconRow ? `<div class="section-sep"></div>${careIconRow}` : '';
-  const now = new Date();
-  const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
-  return `<div class="label-page">
-    <div class="dash-sep"></div>
-    <div class="top-block">
-      <div class="style-no">${item.styleNo || '-'}</div>
-      ${item.styleName ? `<div class="style-name">${item.styleName}</div>` : ''}
-    </div>
-    <div class="content-block">
-      ${compositionHtml}
-      ${washInstHtml}
-    </div>
-    <div class="bottom-block">
-      ${careSectionHtml}
-      <div class="footer">MADE IN CHINA</div>
-      <div class="date">${dateStr}</div>
-    </div>
-    <div class="dash-sep"></div>
-  </div>`;
-}
-
-
 const WashLabelBatchPrintModal: React.FC<Props> = ({ open, onClose, items, loading }) => {
-  /** 洗水唛自定义尺寸（mm） */
   const [washW, setWashW] = useState<number>(30);
   const [washH, setWashH] = useState<number>(80);
-  /** U码固定规格 */
   const [uCodeSize, setUCodeSize] = useState<UCodeSize>('40x70');
   const [labelType, setLabelType] = useState<LabelType>('wash');
+  const [printLoading, setPrintLoading] = useState(false);
+
+  const first = items[0];
+  const compositionText = first
+    ? compositionFromSections(first.fabricCompositionParts, first.fabricComposition)
+    : '';
+  const washInstructionsText = first
+    ? washTextFromInstructions(first.washInstructions, first.fabricCompositionParts)
+    : '';
+  const resolvedCareIconCodes = first ? parseCareIconCodes(first.careIconCodes) : [];
 
   const handlePrint = async () => {
     if (!items.length) return;
-    const w = labelType === 'ucode' ? UCODE_SIZES[uCodeSize].w : washW;
-    const h = labelType === 'ucode' ? UCODE_SIZES[uCodeSize].h : washH;
-    const fs = w >= 48 ? 6.5 : 5.5;   // base font-size (pt)
+    setPrintLoading(true);
+    try {
 
-    const sharedCss = `
-@page { size: ${w}mm ${h}mm; margin: 0; }
-* { margin: 0; padding: 0; box-sizing: border-box; }
-html, body { width: ${w}mm; min-height: ${h}mm; }
-body { font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", system-ui, sans-serif; color: #000; background: #fff; -webkit-font-smoothing: antialiased; }
-.label-page {
-  position: relative;
-  width: ${w}mm; height: ${h}mm;
-  padding: 2mm 2.2mm;
-  page-break-after: always;
-  display: flex; flex-direction: column; align-items: center;
-  justify-content: center;
-}
-.dash-sep {
-  border: none;
-  border-top: 0.8pt dashed #555;
-  width: calc(100% + 6mm);
-  margin-left: -3mm;
-  flex: 0 0 auto;
-}
-.top-block { text-align: center; flex: 0 0 auto; width: 100%; padding-bottom: 1mm; margin-bottom: 1mm; }
-.style-no { font-size: ${w <= 30 ? fs + 0.3 : fs + 0.8}pt; font-weight: 800; letter-spacing: 0.5mm; line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center; }
-.style-name { font-size: ${w <= 30 ? fs - 0.3 : fs}pt; font-weight: 500; color: #555; line-height: 1.35; margin-top: 0.5mm; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center; }
-.content-block { flex: 1 1 0; overflow: hidden; min-height: 0; width: 100%; text-align: center; }
-.comp-block { margin: 0.5mm 0 1.2mm; }
-.comp-name  { font-size: ${w <= 30 ? fs + 0.2 : fs}pt; font-weight: 700; display: block; margin-bottom: 0.5mm; text-align: center; letter-spacing: 0.3mm; }
-.comp-mats  { font-size: ${w <= 30 ? fs + 1.5 : fs + 0.5}pt; line-height: 1.6; font-weight: 600; text-align: center; }
-.section-sep { width: 40%; height: 0; border-top: 0.3pt solid #bbb; margin: 1.5mm auto; }
-.wash-label { font-size: ${w <= 30 ? fs - 0.1 : fs}pt; font-weight: 600; color: #333; line-height: 1.5; margin-bottom: 0.5mm; text-align: center; letter-spacing: 0.3mm; }
-.care-wash  { font-size: ${fs}pt; color: #444; line-height: 1.6; margin-top: 0.8mm; text-align: center; }
-.bottom-block { flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; width: 100%; }
-.icons     { display: flex; flex-direction: column; gap: 1mm; align-items: center; width: 100%; margin: 0.5mm auto 0; }
-.icon-row  { display: flex; gap: 1mm; align-items: center; justify-content: center; flex-wrap: wrap; }
-.icon-cell { width: 6mm; height: 6mm; display: flex; align-items: center; justify-content: center; flex: 0 0 auto; }
-.icons svg { width: 100%; height: 100%; }
-.footer    { margin-top: 1.5mm; font-size: ${w <= 30 ? fs - 0.2 : fs}pt; font-weight: 700; letter-spacing: 0.8mm; line-height: 1.3; text-align: center; white-space: nowrap; }
-.date      { margin-top: 1mm; font-size: ${fs - 0.5}pt; color: #777; text-align: center; letter-spacing: 0.2mm; }
-.ucode-val { font-size: ${w >= 45 ? 9 : 7.5}pt; font-weight: 700; text-align: center;
-             letter-spacing: 0.5mm; margin: 1.5mm 0; word-break: break-all; }
-.qr        { text-align: center; margin: 1mm 0; }
-.hr        { border: none; border-top: 0.3pt solid #bbb; margin: 1.2mm 0; }
-.sub       { font-size: ${fs}pt; color: #555; text-align: center; }
-.small     { font-size: ${fs - 0.5}pt; color: #888; text-align: center; }
-`;
-
-    let allPages: string[];
-    if (labelType === 'ucode') {
+    if (labelType === 'wash') {
+      const printDataList: WashLabelPrintData[] = items.map(() => ({
+        width: washW,
+        height: washH,
+        compositionText: compositionFromSections(first.fabricCompositionParts, first.fabricComposition),
+        washInstructionsText: washTextFromInstructions(first.washInstructions, first.fabricCompositionParts),
+        careIconCodes: parseCareIconCodes(first.careIconCodes),
+        manufacturingText: 'MADE IN CHINA',
+        dateText: getDefaultDateText(),
+      }));
+      const html = buildWashLabelMultiPageHtml(printDataList);
+      safePrint(html);
+    } else {
+      const w = UCODE_SIZES[uCodeSize].w;
+      const h = UCODE_SIZES[uCodeSize].h;
+      const QRCode = await import('qrcode');
       const qrMap: Record<string, string> = {};
       await Promise.all(
         items.filter(it => it.uCode).map(async (it) => {
-          try {
-            const QRCode = await import('qrcode');
-            qrMap[it.orderNo] = await QRCode.toDataURL(it.uCode!, { width: 180, margin: 1 });
-          } catch { /* ignore */ }
+          try { qrMap[it.orderNo] = await QRCode.toDataURL(it.uCode!, { width: 180, margin: 1 }); }
+          catch { /* ignore */ }
         })
       );
-      allPages = items.map(item => buildUCodeHtml(item, w, qrMap[item.orderNo] || ''));
-    } else {
-      allPages = items.map(item => buildWashHtml(item));
+      const dateStr = getDefaultDateText();
+      const fs = w >= 48 ? 6.5 : 5.5;
+      const qrSize = Math.min(w - 8, 32);
+      const pages = items.map(item => {
+        const subLine = `款号：${item.styleNo || '-'}${item.color ? '&nbsp;&nbsp;颜色：' + item.color : ''}${item.size ? '&nbsp;&nbsp;码：' + item.size : ''}`;
+        const qrHtml = qrMap[item.orderNo] ? `<div class="qr"><img src="${qrMap[item.orderNo]}" width="${qrSize}mm" height="${qrSize}mm"/></div>` : '';
+        return `<div class="label-page">
+  <div class="dash-sep"></div>
+  <div class="content-area">
+    <div class="sub">${subLine}</div>
+    <div class="hr"></div>
+    <div class="ucode-val">${item.uCode || '（U码未填写）'}</div>
+    ${qrHtml}
+    <div class="hr"></div>
+    <div class="small">${item.orderNo}</div>
+    <div class="date">${dateStr}</div>
+  </div>
+  <div class="dash-sep"></div>
+</div>`;
+      }).join('\n');
+
+      const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
+@page{size:${w}mm ${h}mm;margin:0}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:${w}mm;min-height:${h}mm}
+body{font-family:"PingFang SC","Microsoft YaHei","Noto Sans SC",system-ui,sans-serif;color:#000;background:#fff;-webkit-font-smoothing:antialiased}
+.label-page{position:relative;width:${w}mm;height:${h}mm;padding:2mm 2.2mm;page-break-after:always;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.label-page:last-child{page-break-after:auto}
+.dash-sep{border:none;border-top:0.8pt dashed #555;width:calc(100% + 6mm);margin-left:-3mm;flex:0 0 auto}
+.content-area{flex:1 1 0;overflow:hidden;min-height:0;width:100%;text-align:center;padding-top:2mm}
+.sub{font-size:${fs}pt;color:#555;text-align:center}
+.hr{border:none;border-top:0.3pt solid #bbb;margin:1.2mm 0}
+.ucode-val{font-size:${w >= 45 ? 9 : 7.5}pt;font-weight:700;text-align:center;letter-spacing:0.5mm;margin:1.5mm 0;word-break:break-all}
+.qr{text-align:center;margin:1mm 0}
+.small{font-size:${fs - 0.5}pt;color:#888;text-align:center}
+.date{margin-top:1mm;font-size:${fs - 0.5}pt;color:#777;text-align:center;letter-spacing:0.2mm}
+</style></head><body>${pages}</body></html>`;
+      safePrint(html);
     }
-
-    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>${sharedCss}</style></head><body>${allPages.join('\n')}</body></html>`;
-
-    safePrint(html);
+    } finally { setPrintLoading(false); }
   };
 
   const missingDataCount = labelType === 'wash'
@@ -260,6 +148,7 @@ body { font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", system-ui,
             type="primary"
             icon={<PrinterOutlined />}
             onClick={handlePrint}
+            loading={printLoading}
             disabled={!items.length || loading}
           >
             打印 {items.length} 张{labelType === 'ucode' ? '（U码）' : '（洗水唛）'}
@@ -268,8 +157,6 @@ body { font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", system-ui,
       }
     >
       <Space orientation="vertical" style={{ width: '100%' }} size="middle">
-
-        {/* 打印类型 */}
         <div>
           <div style={{ marginBottom: 8, fontWeight: 500 }}>打印类型</div>
           <Radio.Group value={labelType} onChange={e => setLabelType(e.target.value as LabelType)} size="small">
@@ -288,35 +175,60 @@ body { font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", system-ui,
           />
         )}
 
-        {/* 洗水唛：自定义宽高 */}
         {labelType === 'wash' && (
-          <div>
-            <div style={{ marginBottom: 8, fontWeight: 500 }}>纸张规格（自定义）</div>
-            <Space wrap>
-              <span style={{ color: '#555' }}>宽</span>
-              <InputNumber
-                min={20} max={200}
-                value={washW}
-                onChange={v => setWashW(v ?? 30)}
-                suffix="mm"
-                style={{ width: 110 }}
-              />
-              <span style={{ color: '#555' }}>高</span>
-              <InputNumber
-                min={30} max={400}
-                value={washH}
-                onChange={v => setWashH(v ?? 80)}
-                suffix="mm"
-                style={{ width: 110 }}
-              />
-            </Space>
-            <div style={{ fontSize: 14, color: '#999', marginTop: 6 }}>
-              上下各一条虚线分割，内容距分割线 1.5cm
+          <>
+            <div>
+              <div style={{ marginBottom: 8, fontWeight: 500 }}>纸张规格（自定义）</div>
+              <Space wrap>
+                <span style={{ color: '#555' }}>宽</span>
+                <InputNumber min={20} max={200} value={washW} onChange={v => setWashW(v ?? 30)} suffix="mm" style={{ width: 110 }} />
+                <span style={{ color: '#555' }}>高</span>
+                <InputNumber min={30} max={400} value={washH} onChange={v => setWashH(v ?? 80)} suffix="mm" style={{ width: 110 }} />
+              </Space>
             </div>
-          </div>
+
+            <div style={{ marginBottom: 4 }}>
+              <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 4 }}>① 面料成分</div>
+              <Typography.Text style={{ fontSize: 14, whiteSpace: 'pre-wrap' }}>
+                {compositionText || '（未填写）'}
+              </Typography.Text>
+            </div>
+            <div style={{ marginBottom: 4 }}>
+              <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 4 }}>② 洗涤说明</div>
+              <Typography.Text style={{ fontSize: 14, whiteSpace: 'pre-wrap' }}>
+                {washInstructionsText || '（未填写）'}
+              </Typography.Text>
+            </div>
+            <div style={{ marginBottom: 4 }}>
+              <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 4 }}>③ 护理图标</div>
+              {resolvedCareIconCodes.length > 0 ? (
+                <Space wrap size={4}>
+                  {resolvedCareIconCodes.map(code => {
+                    const icon = CARE_ICONS[code];
+                    return (
+                      <div key={code} style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 2,
+                        padding: '1px 5px', borderRadius: 3,
+                        border: '1px solid var(--color-border-antd)', background: 'var(--color-bg-base)',
+                      }}>
+                        <span dangerouslySetInnerHTML={{ __html: icon?.svg || '' }} style={{ display: 'inline-block', width: 16, height: 16, flexShrink: 0 }} />
+                        <span style={{ fontSize: 11, color: 'var(--color-text-secondary)', whiteSpace: 'nowrap' }}>{icon?.label || code}</span>
+                      </div>
+                    );
+                  })}
+                </Space>
+              ) : (
+                <Typography.Text type="secondary" style={{ fontSize: 14 }}>（未选择）</Typography.Text>
+              )}
+            </div>
+            <div style={{ marginBottom: 4 }}>
+              <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 4 }}>④ 生产制造</div>
+              <Typography.Text style={{ fontSize: 14 }}>MADE IN CHINA</Typography.Text>
+              <div style={{ fontSize: 12, color: 'var(--color-text-tertiary)', marginTop: 2 }}>日期自动生成：{getDefaultDateText()}</div>
+            </div>
+          </>
         )}
 
-        {/* U码：固定两档 */}
         {labelType === 'ucode' && (
           <div>
             <div style={{ marginBottom: 8, fontWeight: 500 }}>U码规格</div>
@@ -330,19 +242,13 @@ body { font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", system-ui,
 
         <Divider style={{ margin: '4px 0' }} />
 
-        {/* 待打印订单预览列表 */}
         <div>
-          <div style={{ marginBottom: 6, fontWeight: 500, fontSize: 14 }}>
-            待打印订单（{items.length} 条）
-          </div>
+          <div style={{ marginBottom: 6, fontWeight: 500, fontSize: 14 }}>待打印订单（{items.length} 条）</div>
           <div style={{ maxHeight: 200, overflowY: 'auto' }}>
             {items.map(it => (
-              <div
-                key={it.orderNo}
-                style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '4px 0', borderBottom: '1px solid #f0f0f0' }}
-              >
+              <div key={it.orderNo} style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '4px 0', borderBottom: '1px solid var(--color-border-light)' }}>
                 <Tag color="blue" style={{ minWidth: 100, textAlign: 'center' }}>{it.orderNo}</Tag>
-                <span style={{ fontSize: 14, color: '#666' }}>
+                <span style={{ fontSize: 14, color: 'var(--color-text-secondary)' }}>
                   {it.styleNo}{it.color ? ' / ' + it.color : ''}{it.size ? ' / ' + it.size : ''}
                 </span>
                 {labelType === 'ucode' && it.uCode && (

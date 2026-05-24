@@ -1,5 +1,6 @@
 package com.fashion.supplychain.production.mapper;
 
+import com.baomidou.mybatisplus.annotation.InterceptorIgnore;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.fashion.supplychain.production.entity.ProductWarehousing;
 import org.apache.ibatis.annotations.Mapper;
@@ -105,10 +106,11 @@ public interface ProductWarehousingMapper extends BaseMapper<ProductWarehousing>
     })
     Map<String, Object> selectWarehousingStats(@Param("tenantId") Long tenantId);
 
+    @InterceptorIgnore(tenantLine = "true")
     @Select("SELECT cb.size AS size, pw.qualified_quantity AS qualified_quantity " +
             "FROM t_product_warehousing pw " +
             "JOIN t_cutting_bundle cb ON pw.cutting_bundle_id = cb.id " +
-            "WHERE pw.tenant_id = #{tenantId} AND pw.delete_flag = 0 " +
+            "WHERE pw.tenant_id = #{tenantId} AND cb.tenant_id = #{tenantId} AND pw.delete_flag = 0 " +
             "AND pw.style_no = #{styleNo} AND pw.create_time >= #{start} " +
             "LIMIT 5000")
     List<Map<String, Object>> selectSizeQuantityByStyleNo(

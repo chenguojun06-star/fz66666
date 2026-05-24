@@ -5,6 +5,7 @@ import SupplierSelect from '@/components/common/SupplierSelect';
 import DictAutoComplete from '@/components/common/DictAutoComplete';
 import { toNumberSafe } from '@/utils/api';
 import { formatDateTime } from '@/utils/datetime';
+import { formatMoney } from '@/utils/format';
 import { useViewport } from '@/utils/useViewport';
 import { ProcessImageCell, ProcessAttachmentCell, NewRowImageUpload, NewRowAttachmentUpload } from './ProcessUploadCells';
 import type { AttachmentFile } from './ProcessUploadCells';
@@ -80,7 +81,7 @@ export function useSecondaryProcessColumns(ctx: ColumnContext) {
       align: 'right',
       render: (value: number, record: SecondaryProcess) => ctx.isEditing(record) ? (
         <Form.Item name="quantity" style={{ margin: 0 }} rules={[{ required: true, message: '请输入' }]}>
-          <InputNumber min={0} style={{ width: '100%' }} onChange={ctx.calculateTotalPrice} />
+          <InputNumber min={0} controls={false} style={{ width: '100%' }} onChange={ctx.calculateTotalPrice} />
         </Form.Item>
       ) : toNumberSafe(value).toLocaleString(),
     },
@@ -92,7 +93,7 @@ export function useSecondaryProcessColumns(ctx: ColumnContext) {
       align: 'right',
       render: (value: number, record: SecondaryProcess) => ctx.isEditing(record) ? (
         <Form.Item name="unitPrice" style={{ margin: 0 }} rules={[{ required: true, message: '请输入' }]}>
-          <InputNumber min={0} precision={2} prefix="¥" style={{ width: '100%' }} onChange={ctx.calculateTotalPrice} />
+          <InputNumber min={0} precision={2} prefix="¥" controls={false} style={{ width: '100%' }} onChange={ctx.calculateTotalPrice} />
         </Form.Item>
       ) : `¥${toNumberSafe(value).toFixed(2)}`,
     },
@@ -106,7 +107,7 @@ export function useSecondaryProcessColumns(ctx: ColumnContext) {
         if (ctx.isEditing(record)) {
           return (
             <Form.Item name="totalPrice" style={{ margin: 0 }}>
-              <InputNumber disabled precision={2} prefix="¥" style={{ width: '100%' }} />
+              <InputNumber disabled precision={2} prefix="¥" controls={false} style={{ width: '100%' }} />
             </Form.Item>
           );
         }
@@ -115,7 +116,7 @@ export function useSecondaryProcessColumns(ctx: ColumnContext) {
           : toNumberSafe(record.quantity || 0) * toNumberSafe(record.unitPrice || 0);
         return (
           <span style={{ color: 'var(--primary-color)', fontWeight: 600 }}>
-            ¥{total.toFixed(2)}
+            {formatMoney(total)}
           </span>
         );
       },

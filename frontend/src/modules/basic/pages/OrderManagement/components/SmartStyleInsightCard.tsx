@@ -184,7 +184,7 @@ const SmartStyleInsightCard: React.FC<Props> = ({ styleNo, factoryName, capacity
     return (
       <div style={{ padding: '12px 0', textAlign: 'center' }}>
         <Spin />
-        <span style={{ marginLeft: 8, fontSize: 14, color: '#8c8c8c' }}>
+        <span style={{ marginLeft: 8, fontSize: 14, color: 'var(--color-text-tertiary)' }}>
           正在分析历史数据…
         </span>
       </div>
@@ -194,7 +194,7 @@ const SmartStyleInsightCard: React.FC<Props> = ({ styleNo, factoryName, capacity
   if (!insight) {
     return (
       <div style={{
-        background: '#fafafa', borderRadius: 8, padding: '10px 14px',
+        background: 'var(--color-bg-container)', borderRadius: 8, padding: '10px 14px',
         fontSize: 14, color: '#bbb', display: 'flex', alignItems: 'center', gap: 8,
       }}>
         <span></span>
@@ -224,11 +224,11 @@ const SmartStyleInsightCard: React.FC<Props> = ({ styleNo, factoryName, capacity
             type="link"
             icon={<ReloadOutlined style={{ fontSize: 13 }} />}
             onClick={(e) => { e.stopPropagation(); void calcInsight(); }}
-            style={{ padding: 0, height: 'auto', color: '#8c8c8c', fontSize: 14 }}
+            style={{ padding: 0, height: 'auto', color: 'var(--color-text-tertiary)', fontSize: 14 }}
           >
             刷新
           </Button>
-          {collapsed ? <RightOutlined style={{ fontSize: 13, color: '#8c8c8c' }} /> : <DownOutlined style={{ fontSize: 13, color: '#8c8c8c' }} />}
+          {collapsed ? <RightOutlined style={{ fontSize: 13, color: 'var(--color-text-tertiary)' }} /> : <DownOutlined style={{ fontSize: 13, color: 'var(--color-text-tertiary)' }} />}
         </div>
       </div>
 
@@ -251,19 +251,19 @@ const SmartStyleInsightCard: React.FC<Props> = ({ styleNo, factoryName, capacity
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 8 }}>
         {metricItems.map((item) => (
-          <div key={item.label} style={{ background: '#fff', borderRadius: 7, padding: '7px 10px', border: '1px solid #e8f0fe' }}>
+          <div key={item.label} style={{ background: 'var(--color-bg-base)', borderRadius: 7, padding: '7px 10px', border: '1px solid #e8f0fe' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
               <span style={{ fontSize: 14, fontWeight: 700, color: item.color }}>{item.value}</span>
-              <span style={{ fontSize: 14, color: '#8c8c8c' }}>{item.suffix}</span>
+              <span style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>{item.suffix}</span>
             </div>
-            <div style={{ color: '#8c8c8c', fontSize: 14 }}>{item.label}</div>
+            <div style={{ color: 'var(--color-text-tertiary)', fontSize: 14 }}>{item.label}</div>
           </div>
         ))}
       </div>
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 8 }}>
         {quickTags.map((text) => (
-          <Tag key={text} style={{ fontSize: 14, color: '#667085', background: '#f8fafc', border: '1px solid #e5e7eb', marginInlineEnd: 0 }}>
+          <Tag key={text} style={{ fontSize: 14, color: '#667085', background: 'var(--color-bg-page)', border: '1px solid var(--color-border)', marginInlineEnd: 0 }}>
             {text}
           </Tag>
         ))}
@@ -283,7 +283,7 @@ const SmartStyleInsightCard: React.FC<Props> = ({ styleNo, factoryName, capacity
       )}
       {aiAdviceVisible && (
         <div style={{
-          background: '#fff', border: '1px solid #d6e8ff', borderRadius: 8,
+          background: 'var(--color-bg-base)', border: '1px solid #d6e8ff', borderRadius: 8,
           padding: '10px 12px', marginTop: 4,
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
@@ -303,7 +303,7 @@ const SmartStyleInsightCard: React.FC<Props> = ({ styleNo, factoryName, capacity
           <div style={{ display: 'grid', gap: 6 }}>
             {aiAdviceItems.map((item) => (
               <div key={item.label} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: 14, lineHeight: '18px' }}>
-                <span style={{ color: '#6b7280' }}>{item.label}</span>
+                <span style={{ color: 'var(--color-text-secondary)' }}>{item.label}</span>
                 <span style={{ fontWeight: 600, color: '#1f2937', textAlign: 'right' }}>{item.value}</span>
               </div>
             ))}

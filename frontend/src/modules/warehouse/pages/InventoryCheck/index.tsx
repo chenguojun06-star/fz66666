@@ -6,6 +6,7 @@ import { PlusOutlined, AuditOutlined, CheckCircleOutlined, CloseCircleOutlined, 
 import { inventoryCheckApi } from '../../../../services/warehouse/inventoryCheckApi';
 import ResizableTable from '../../../../components/common/ResizableTable';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
+import { formatMoney } from '@/utils/format';
 
 const CHECK_TYPE_MAP: Record<string, { label: string; color: string }> = {
   MATERIAL: { label: '物料盘点', color: 'blue' },
@@ -168,7 +169,7 @@ const InventoryCheck: React.FC = () => {
 
   const imageColumn = {
     title: '图片', dataIndex: 'imageUrl', key: 'imageUrl', width: 60,
-    render: (v: string) => v ? <Image src={getFullAuthedFileUrl(v)} width={40} height={40} style={{ objectFit: 'cover', borderRadius: 4 }} fallback="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mN88P/BfwAJhAPk2iMa1AAAAABJRU5ErkJggg==" /> : <div style={{ width: 40, height: 40, background: '#f5f5f5', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ccc', fontSize: 14 }}>无</div>,
+    render: (v: string) => v ? <Image src={getFullAuthedFileUrl(v)} width={40} height={40} style={{ objectFit: 'cover', borderRadius: 4 }} fallback="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mN88P/BfwAJhAPk2iMa1AAAAABJRU5ErkJggg==" /> : <div style={{ width: 40, height: 40, background: 'var(--color-bg-subtle)', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ccc', fontSize: 14 }}>无</div>,
   };
 
   const styleNoColumn = {
@@ -258,7 +259,7 @@ const InventoryCheck: React.FC = () => {
     { title: '实盘数量', dataIndex: 'actualQuantity', key: 'actualQuantity', width: 90, align: 'right' as const },
     { title: '差异', dataIndex: 'diffQuantity', key: 'diffQuantity', width: 80, align: 'right' as const, render: renderDiff },
     { title: '差异类型', dataIndex: 'diffType', key: 'diffType', width: 80, render: renderDiffType },
-    { title: '差异金额', dataIndex: 'diffAmount', key: 'diffAmount', width: 100, align: 'right' as const, render: (v: number) => v ? `¥${v.toFixed(2)}` : '-' },
+    { title: '差异金额', dataIndex: 'diffAmount', key: 'diffAmount', width: 100, align: 'right' as const, render: (v: number) => v ? formatMoney(v) : '-' },
   ];
 
   const [guideVisible, setGuideVisible] = useState(false);

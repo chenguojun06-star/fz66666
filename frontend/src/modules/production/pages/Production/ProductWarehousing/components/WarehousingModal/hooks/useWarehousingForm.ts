@@ -1,9 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Form } from 'antd';
-import type { UploadFile } from 'antd/es/upload/interface';
 import { ProductWarehousing as WarehousingType, ProductionOrder } from '@/types/production';
 import api, { useProductionOrderFrozenCache } from '@/utils/api';
-import { MAX_UNQUALIFIED_IMAGES, MAX_UNQUALIFIED_IMAGE_MB } from '../../../constants';
+import { MAX_UNQUALIFIED_IMAGES } from '../../../constants';
 import { CuttingBundleRow, BundleRepairStats } from '../../../types';
 import { isBundleBlockedForWarehousing } from '../../../utils';
 import { message } from '@/utils/antdStatic';
@@ -27,7 +26,7 @@ export const useWarehousingForm = (
   const [bundleRepairRemainingByQr, setBundleRepairRemainingByQr] = useState<Record<string, number>>({});
   const [productionReadyQrs, setProductionReadyQrs] = useState<string[]>([]);
   const [qrStageHintsMap, setQrStageHintsMap] = useState<Record<string, string[]>>({});
-  const [unqualifiedFileList, setUnqualifiedFileList] = useState<UploadFile[]>([]);
+  const [unqualifiedImageUrls, setUnqualifiedImageUrls] = useState<string[]>([]);
   const [detailWarehousingItems, setDetailWarehousingItems] = useState<WarehousingType[]>([]);
   const [detailLoading, setDetailLoading] = useState(false);
 
@@ -47,7 +46,7 @@ export const useWarehousingForm = (
     setQualifiedWarehousedBundleQrs, setBundleRepairStatsByQr,
     setBundleRepairRemainingByQr, setProductionReadyQrs,
     setQrStageHintsMap, setDetailWarehousingItems,
-    setDetailLoading, setUnqualifiedFileList,
+    setDetailLoading, setUnqualifiedImageUrls,
   });
 
   const batchSelection = useBatchBundleSelection({
@@ -59,7 +58,7 @@ export const useWarehousingForm = (
     form,
     batchSelectedBundleQrs: batchSelection.batchSelectedBundleQrs,
     batchQtyByQr: batchSelection.batchQtyByQr,
-    unqualifiedFileList, currentWarehousing, onSuccess, onCancel, ensureOrderUnlockedById,
+    unqualifiedFileList: unqualifiedImageUrls, currentWarehousing, onSuccess, onCancel, ensureOrderUnlockedById,
     batchSelectedHasBlocked: batchSelection.batchSelectedHasBlocked,
   });
 
@@ -73,7 +72,7 @@ export const useWarehousingForm = (
       batchSelection.setBatchQtyByQr({});
       setDetailWarehousingItems([]);
       setDetailLoading(false);
-      setUnqualifiedFileList([]);
+      setUnqualifiedImageUrls([]);
       form.resetFields();
       return;
     }
@@ -132,7 +131,7 @@ export const useWarehousingForm = (
       styleNo: (order as any).styleNo, styleName: (order as any).styleName,
       cuttingBundleId: undefined, cuttingBundleNo: undefined, cuttingBundleQrCode: undefined,
       warehousingQuantity: undefined, qualifiedQuantity: undefined, unqualifiedQuantity: 0, qualityStatus: 'qualified',
-      unqualifiedImageUrls: JSON.stringify(unqualifiedFileList.map((f) => String((f as any)?.url || '').trim()).filter(Boolean).slice(0, 4)),
+      unqualifiedImageUrls: JSON.stringify(unqualifiedImageUrls.slice(0, MAX_UNQUALIFIED_IMAGES)),
       defectCategory: undefined, defectRemark: undefined, repairRemark: '',
     });
     setQualifiedWarehousedBundleQrs([]);
@@ -146,36 +145,15 @@ export const useWarehousingForm = (
     ]);
   };
 
-  const uploadOneUnqualifiedImage = async (file: File) => {
-    if (!file.type.startsWith('image/')) { message.error('仅支持图片文件'); return; }
-    if (file.size > MAX_UNQUALIFIED_IMAGE_MB * 1024 * 1024) { message.error(`图片过大，最大${MAX_UNQUALIFIED_IMAGE_MB}MB`); return; }
-    const formData = new FormData();
-    formData.append('file', file);
-    try {
-      const res = await api.post<{ code: number; message: string; data: string }>('/common/upload', formData);
-      if (res.code !== 200) { message.error(res.message || '上传失败'); return; }
-      const url = String(res.data || '').trim();
-      if (!url) { message.error('上传失败'); return; }
-      setUnqualifiedFileList((prev) => {
-        const next = [...prev, { uid: `${Date.now()}-${Math.random()}`, name: file.name, status: 'done', url } as UploadFile].slice(0, MAX_UNQUALIFIED_IMAGES);
-        form.setFieldsValue({ unqualifiedImageUrls: JSON.stringify(next.map((f) => String((f as any)?.url || '').trim()).filter(Boolean).slice(0, MAX_UNQUALIFIED_IMAGES)) });
-        return next;
-      });
-      message.success('上传成功');
-    } catch (e: unknown) {
-      message.error(e instanceof Error ? e.message : '上传失败');
-    }
-  };
-
   return {
     form, orderOptions, orderOptionsLoading, bundles,
-    unqualifiedFileList, detailWarehousingItems, detailLoading,
+    unqualifiedImageUrls, detailWarehousingItems, detailLoading,
     bundleRepairRemainingByQr,
     watchedOrderId, watchedStyleId, watchedBundleQr, watchedWarehousingQty, watchedUnqualifiedQty,
-    setBundles, setQualifiedWarehousedBundleQrs, setUnqualifiedFileList,
+    setBundles, setQualifiedWarehousedBundleQrs, setUnqualifiedImageUrls,
     fetchBundlesByOrderNo: apiHook.fetchBundlesByOrderNo,
     fetchQualifiedWarehousedBundleQrsByOrderId: apiHook.fetchQualifiedWarehousedBundleQrsByOrderId,
-    handleOrderChange, uploadOneUnqualifiedImage,
+    handleOrderChange,
     ...batchSelection,
     ...submitHook,
   };

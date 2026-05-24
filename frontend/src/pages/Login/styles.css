@@ -165,7 +165,7 @@
 /* ---------- Showcase (diagonal layout) ---------- */
 .login-showcase {
   position: relative;
-  z-index: 1;
+  z-index: var(--z-local);
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -254,7 +254,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1;
+  z-index: var(--z-local);
   animation: coreBreath 6.2s ease-in-out infinite;
 }
 
@@ -432,7 +432,7 @@
   position: relative;
   width: 100%;
   max-width: 440px;
-  z-index: 1;
+  z-index: var(--z-local);
 }
 
 .login-form-card {
@@ -502,7 +502,7 @@
 .login-form-wrapper .ant-select-focused .ant-select-selector {
   border-color: #1f75ea !important;
   box-shadow: 0 0 0 3px rgba(31, 117, 234, 0.06) !important;
-  background: #fff !important;
+  background: var(--color-bg-base) !important;
 }
 
 .login-form-wrapper .ant-input,

@@ -28,6 +28,7 @@ interface UseProgressColumnsParams {
   handleCloseOrder: (order: ProductionOrder) => void;
   setPrintingRecord: (record: ProductionOrder) => void;
   handlePrintLabel: (record: ProductionOrder) => void | Promise<void>;
+  labelPrintLoading?: boolean;
   setQuickEditRecord: (record: ProductionOrder | null) => void;
   setQuickEditVisible: (v: boolean) => void;
   openRemarkModal: (orderNo: string, merchandiser?: string) => void;
@@ -53,6 +54,7 @@ export const useProgressColumns = ({
   handleCloseOrder,
   setPrintingRecord,
   handlePrintLabel,
+  labelPrintLoading,
   setQuickEditRecord,
   setQuickEditVisible,
   openRemarkModal,
@@ -93,6 +95,7 @@ export const useProgressColumns = ({
         setQuickEditVisible,
         setPrintingRecord,
         handlePrintLabel,
+        labelPrintLoading,
         isFactoryAccount,
         onFactoryShip,
         canManageOrderLifecycle,
@@ -114,7 +117,7 @@ export const useProgressColumns = ({
   ], [
     boardStatsByOrder, boardTimesByOrder, progressNodesByStyleNo,
     openNodeDetail, handleCloseOrder,
-    setPrintingRecord, handlePrintLabel, setQuickEditRecord, setQuickEditVisible,
+    setPrintingRecord, handlePrintLabel, labelPrintLoading, setQuickEditRecord, setQuickEditVisible,
     openRemarkModal,
     getPredictHint, triggerPredict,
     deliveryRiskMap, onShareOrder,

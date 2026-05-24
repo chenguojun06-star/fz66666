@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import {
   Card,
   Space,
@@ -62,6 +62,7 @@ const OutboundModal: React.FC<OutboundModalProps> = ({
   const warehouseAreaId = Form.useWatch('warehouseAreaId', outboundForm);
   const { selectOptions: areaOptions } = useWarehouseAreaOptions('MATERIAL');
   const { selectOptions: locationOptions } = useWarehouseLocationByArea('MATERIAL', warehouseAreaId);
+  const factorySearchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   return (
     <StandardModal
       title={
@@ -219,7 +220,14 @@ const OutboundModal: React.FC<OutboundModalProps> = ({
                             placeholder={isFree ? '自由出库无需关联生产方' : isExternal ? '筛选选择外发工厂' : '可筛选选择，也可直接手填工厂'}
                             options={filteredFactoryOptions}
                             filterOption={(inputValue, option) => String(option?.label || '').toLowerCase().includes(inputValue.toLowerCase())}
-                            onSearch={(value) => { if (!isFree) void handleOutboundFactoryInput(value); }}
+                            onSearch={(value) => {
+                              if (!isFree) {
+                                if (factorySearchTimerRef.current) clearTimeout(factorySearchTimerRef.current);
+                                factorySearchTimerRef.current = setTimeout(() => {
+                                  void handleOutboundFactoryInput(value);
+                                }, 300);
+                              }
+                            }}
                             onSelect={(value) => {
                               if (isFree) return;
                               void handleOutboundFactoryInput(String(value));

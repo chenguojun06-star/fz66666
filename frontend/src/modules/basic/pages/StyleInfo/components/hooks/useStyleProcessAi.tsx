@@ -1,5 +1,4 @@
-import React from 'react';
-import { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { App } from 'antd';
 import { modal } from '@/utils/antdStatic';
 import { intelligenceApi, ProcessPriceHintResponse, ProcessTemplateItem } from '@/services/intelligence/intelligenceApi';
@@ -23,6 +22,10 @@ export const useStyleProcessAi = ({ styleId, data, editMode, enterEdit }: UseSty
   const [priceHintLoading, setPriceHintLoading] = useState<Record<string | number, boolean>>({});
   const hintTimerRef = useRef<Record<string | number, ReturnType<typeof setTimeout>>>({});
   const { options: categoryOptions } = useDictOptions('category', CATEGORY_CODE_OPTIONS);
+
+  useEffect(() => {
+    return () => { Object.values(hintTimerRef.current).forEach(t => clearTimeout(t)); };
+  }, []);
 
   const fetchPriceHint = useCallback((rowId: string | number, processName: string, standardTime?: number) => {
     if (hintTimerRef.current[rowId]) clearTimeout(hintTimerRef.current[rowId]);

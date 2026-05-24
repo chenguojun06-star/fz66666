@@ -12,6 +12,7 @@ import api from '@/utils/api';
 import { sortSizeNames } from '@/utils/api/size';
 import ResizableTable from '@/components/common/ResizableTable';
 import { formatDateTime } from '@/utils/datetime';
+import { formatMoney } from '@/utils/format';
 import { getMaterialTypeLabel } from '@/utils/materialType';
 import { toCategoryCn } from '@/utils/styleCategory';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
@@ -41,6 +42,7 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
   const [labelSize, setLabelSize] = useState<LabelSize>('40x70');
   const [labelCount, setLabelCount] = useState(1);
   const [labelPrinting, setLabelPrinting] = useState(false);
+  const [printLoading, setPrintLoading] = useState(false);
   const [autoPatternId, setAutoPatternId] = useState<string | null>(null);
   const [qrPngDataUrl, setQrPngDataUrl] = useState<string>('');
   const resolvedPatternId = propPatternId ? String(propPatternId) : autoPatternId;
@@ -110,7 +112,9 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
     loadData();
   }, [visible, styleId, mode, propPatternId, styleNo, cover]);
 
-  const handlePrint = () => {
+  const handlePrint = async () => {
+    setPrintLoading(true);
+    try {
     const hasSelection = Object.values(options).some(v => v);
     if (!hasSelection) { message.warning('请至少选择一项打印内容'); return; }
     const printContent = document.getElementById('style-print-content');
@@ -129,6 +133,7 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
     const printerInfo = printerAccount ? `打印人: ${printerName} (${printerAccount})` : `打印人: ${printerName}`;
     const htmlContent = buildPrintHtml({ headerInfo, printerInfo, printDate, styleNo, bodyHtml: printContent.innerHTML });
     safePrint(htmlContent, `打印预览-${styleNo}`);
+    } finally { setPrintLoading(false); }
   };
 
   const isPatternPrint = extraInfo?.isPattern === true || (mode === 'sample' && !!resolvedPatternId);
@@ -246,7 +251,7 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
           <div style={{ fontWeight: 600, color: '#1d39c4' }}> 打印预览</div>
           <Space>
             <Button icon={<PrinterOutlined />} onClick={() => setLabelPrintMode(v => !v)}>打印标签</Button>
-            <Button type="primary" onClick={handlePrint}>打印</Button>
+            <Button type="primary" onClick={() => void handlePrint()} loading={printLoading}>打印</Button>
           </Space>
         </div>
         {/* 打印选项 */}
@@ -303,11 +308,11 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
           {/* 基本信息 */}
           {options.basicInfo && (
             <div className="print-section">
-              <div style={{ display: 'flex', gap: 24, padding: 16, borderBottom: '2px solid #d9d9d9', background: 'var(--color-bg-container)', borderRadius: 8 }}>
+              <div style={{ display: 'flex', gap: 24, padding: 16, borderBottom: '2px solid var(--color-border-antd)', background: 'var(--color-bg-container)', borderRadius: 8 }}>
                 {resolvedCover && (
                   <div style={{ flexShrink: 0, width: 120, height: 120 }}>
                     <img src={getFullAuthedFileUrl(resolvedCover)} alt={styleNo}
-                      style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 8, border: '1px solid #e8e8e8' }} />
+                      style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 8, border: '1px solid var(--color-border)' }} />
                   </div>
                 )}
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -328,9 +333,9 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
                       <table style={{ borderCollapse: 'collapse', fontSize: 14, minWidth: 300 }}>
                         <thead>
                           <tr>
-                            <th style={{ border: '1px solid #d9d9d9', padding: '6px 10px', background: '#fafafa', fontWeight: 600 }}>颜色/尺码</th>
-                            {sizeColorMatrix.sizes.map(s => <th key={s} style={{ border: '1px solid #d9d9d9', padding: '6px 10px', background: '#fafafa', fontWeight: 600, textAlign: 'center' }}>{s}</th>)}
-                            <th style={{ border: '1px solid #d9d9d9', padding: '6px 10px', background: '#fafafa', fontWeight: 600, textAlign: 'center' }}>小计</th>
+                            <th style={{ border: '1px solid var(--color-border-antd)', padding: '6px 10px', background: 'var(--color-bg-container)', fontWeight: 600 }}>颜色/尺码</th>
+                            {sizeColorMatrix.sizes.map(s => <th key={s} style={{ border: '1px solid var(--color-border-antd)', padding: '6px 10px', background: 'var(--color-bg-container)', fontWeight: 600, textAlign: 'center' }}>{s}</th>)}
+                            <th style={{ border: '1px solid var(--color-border-antd)', padding: '6px 10px', background: 'var(--color-bg-container)', fontWeight: 600, textAlign: 'center' }}>小计</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -338,19 +343,19 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
                             const rowTotal = row.quantities.reduce((s, q) => s + q, 0);
                             return (
                               <tr key={row.color || i}>
-                                <td style={{ border: '1px solid #d9d9d9', padding: '6px 10px', fontWeight: 500 }}>{row.color || '-'}</td>
-                                {sizeColorMatrix.sizes.map((_, ci) => <td key={ci} style={{ border: '1px solid #d9d9d9', padding: '6px 10px', textAlign: 'center' }}>{row.quantities[ci] || 0}</td>)}
-                                <td style={{ border: '1px solid #d9d9d9', padding: '6px 10px', textAlign: 'center', fontWeight: 600 }}>{rowTotal}</td>
+                                <td style={{ border: '1px solid var(--color-border-antd)', padding: '6px 10px', fontWeight: 500 }}>{row.color || '-'}</td>
+                                {sizeColorMatrix.sizes.map((_, ci) => <td key={ci} style={{ border: '1px solid var(--color-border-antd)', padding: '6px 10px', textAlign: 'center' }}>{row.quantities[ci] || 0}</td>)}
+                                <td style={{ border: '1px solid var(--color-border-antd)', padding: '6px 10px', textAlign: 'center', fontWeight: 600 }}>{rowTotal}</td>
                               </tr>
                             );
                           })}
                           <tr>
-                            <td style={{ border: '1px solid #d9d9d9', padding: '6px 10px', background: 'rgba(37,99,235,0.04)', fontWeight: 700 }}>合计</td>
+                            <td style={{ border: '1px solid var(--color-border-antd)', padding: '6px 10px', background: 'rgba(37,99,235,0.04)', fontWeight: 700 }}>合计</td>
                             {sizeColorMatrix.sizes.map((_, ci) => {
                               const colTotal = sizeColorMatrix.matrixRows.reduce((s, r) => s + (r.quantities[ci] || 0), 0);
-                              return <td key={ci} style={{ border: '1px solid #d9d9d9', padding: '6px 10px', textAlign: 'center', background: 'rgba(37,99,235,0.04)', fontWeight: 700 }}>{colTotal}</td>;
+                              return <td key={ci} style={{ border: '1px solid var(--color-border-antd)', padding: '6px 10px', textAlign: 'center', background: 'rgba(37,99,235,0.04)', fontWeight: 700 }}>{colTotal}</td>;
                             })}
-                            <td style={{ border: '1px solid #d9d9d9', padding: '6px 10px', textAlign: 'center', background: 'rgba(37,99,235,0.04)', fontWeight: 700 }}>
+                            <td style={{ border: '1px solid var(--color-border-antd)', padding: '6px 10px', textAlign: 'center', background: 'rgba(37,99,235,0.04)', fontWeight: 700 }}>
                               {sizeColorMatrix.matrixRows.reduce((s, r) => s + r.quantities.reduce((a, b) => a + b, 0), 0)}
                             </td>
                           </tr>
@@ -548,7 +553,7 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
                             {row.chunkImgs.length > 0
                               ? <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'stretch' }}>
                                   {row.chunkImgs.map((url: string) => (
-                                    <img key={url} src={getFullAuthedFileUrl(url)} style={{ width: '100%', height: row.chunkImgs.length > 1 ? 120 : 220, objectFit: 'contain', borderRadius: 8, border: '1px solid #eee', background: '#fff', padding: 4, boxSizing: 'border-box' as const }} />
+                                    <img key={url} src={getFullAuthedFileUrl(url)} style={{ width: '100%', height: row.chunkImgs.length > 1 ? 120 : 220, objectFit: 'contain', borderRadius: 8, border: '1px solid #eee', background: 'var(--color-bg-base)', padding: 4, boxSizing: 'border-box' as const }} />
                                   ))}
                                 </div>
                               : <span style={{ color: '#ccc', fontSize: 14 }}>无图</span>
@@ -595,7 +600,7 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
                   { title: '单位', dataIndex: 'unit', key: 'unit', width: 60 },
                   { title: '用量', dataIndex: 'quantity', key: 'quantity', width: 80, align: 'right' as const },
                   ...(showPrice ? [{ title: '单价', dataIndex: 'unitPrice', key: 'unitPrice', width: 80, align: 'right' as const,
-                    render: (v: number) => v ? `¥${Number(v).toFixed(2)}` : '-' }] : []),
+                    render: (v: number) => v ? formatMoney(Number(v)) : '-' }] : []),
                   { title: '备注', dataIndex: 'remark', key: 'remark', ellipsis: true },
                   { title: '图片', dataIndex: 'imageUrls', key: 'image', width: 90,
                     render: (v: string) => {
@@ -633,7 +638,7 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
                   { title: '工序编码', dataIndex: 'processCode', key: 'processCode', width: 100 },
                   { title: '工时(秒)', dataIndex: 'standardTime', key: 'standardTime', width: 80, align: 'right' as const },
                   ...(showPrice ? [{ title: '单价', dataIndex: 'price', key: 'price', width: 80, align: 'right' as const,
-                    render: (v: number) => v ? `¥${Number(v).toFixed(2)}` : '-' }] : []),
+                    render: (v: number) => v ? formatMoney(Number(v)) : '-' }] : []),
                   { title: '备注', dataIndex: 'remark', key: 'remark', ellipsis: true },
                 ]}
               />

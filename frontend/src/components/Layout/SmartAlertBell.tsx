@@ -10,7 +10,7 @@ import {
 } from '@ant-design/icons';
 import { Badge } from 'antd';
 import api, { ApiResult } from '../../utils/api';
-import { sysNoticeApi } from '../../services/production/productionApi';
+import { sysNoticeApi, urgeApi } from '../../services/production/productionApi';
 import { useUser } from '../../utils/AuthContext';
 import type { SysNotice } from '../../services/production/productionApi';
 import { useAiPatrol, RISK_TYPE_LABELS } from '@/modules/production/pages/Production/List/hooks/useAiPatrol';
@@ -376,7 +376,7 @@ const SmartAlertBell: React.FC = () => {
               <div className="sap-section">
                 <div className="sap-section-title">
                   <AlertOutlined style={{ color: '#6d28d9' }} /> 首要关注
-                  <span style={{ marginLeft: 6, fontSize: 14, color: '#999' }}>点 × 今日不再提醒</span>
+                  <span style={{ marginLeft: 6, fontSize: 14, color: 'var(--color-text-tertiary)' }}>点 × 今日不再提醒</span>
                 </div>
                 <div
                 className="sap-priority-card"
@@ -418,7 +418,7 @@ const SmartAlertBell: React.FC = () => {
               <div className="sap-section">
                 <div className="sap-section-title">
                   <ExclamationCircleOutlined style={{ color: '#ef4444' }} /> 待处理事项
-                  <span style={{ marginLeft: 6, fontSize: 14, color: '#999' }}>点 × 今日不再提醒，明日自动重检</span>
+                  <span style={{ marginLeft: 6, fontSize: 14, color: 'var(--color-text-tertiary)' }}>点 × 今日不再提醒，明日自动重检</span>
                 </div>
                 {visibleEvents.slice(0, 6).map(ev => (
                   <div
@@ -448,7 +448,7 @@ const SmartAlertBell: React.FC = () => {
               <div className="sap-section">
                 <div className="sap-section-title">
                   <CheckCircleOutlined style={{ color: '#0284c7' }} /> 提醒建议
-                  <span style={{ marginLeft: 6, fontSize: 14, color: '#999' }}>点 × 今日不再提醒</span>
+                  <span style={{ marginLeft: 6, fontSize: 14, color: 'var(--color-text-tertiary)' }}>点 × 今日不再提醒</span>
                 </div>
                 {brief.decisionCards && brief.decisionCards.length > 0 ? (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -515,13 +515,13 @@ const SmartAlertBell: React.FC = () => {
                       {visibleNotices.filter(n => !n.isRead).length} 未读
                     </span>
                   )}
-                  <span style={{ marginLeft: 6, fontSize: 14, color: '#999' }}>点 × 关闭该条</span>
+                  <span style={{ marginLeft: 6, fontSize: 14, color: 'var(--color-text-tertiary)' }}>点 × 关闭该条</span>
                 </div>
                 {visibleNotices.slice(0, 8).map(n => (
                   <div key={n.id} className="sap-notice-row"
                     style={{
                       background: n.isRead ? '#fafafa' : '#fff7e6',
-                      borderLeft: `3px solid ${n.isRead ? '#ddd' : '#ffa940'}`,
+                      borderLeft: `3px solid ${n.isRead ? '#ddd' : n.actionType === 'urge_order' ? '#cf1322' : '#ffa940'}`,
                     }}
                     onClick={() => {
                       if (!n.isRead) {
@@ -530,12 +530,26 @@ const SmartAlertBell: React.FC = () => {
                     }}
                   >
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 14, fontWeight: n.isRead ? 400 : 600, color: '#333', lineHeight: 1.4 }}>
+                      <div style={{ fontSize: 14, fontWeight: n.isRead ? 400 : 600, color: 'var(--color-text-primary)', lineHeight: 1.4 }}>
                         {n.title}
                       </div>
                       <div style={{ fontSize: 14, color: '#888', marginTop: 1 }}>
                         {n.fromName} · {n.createdAt?.slice(5, 16)}
                       </div>
+                      {n.actionType === 'urge_order' && n.urgeRecordId && !n.isRead && (
+                        <UrgeReplyInline
+                          urgeRecordId={n.urgeRecordId}
+                          orderNo={n.orderNo}
+                          onReplied={() => {
+                            sysNoticeApi.markRead(n.id).then(() => fetchMyNotices()).catch(() => {});
+                            setDismissedNoticeIds(prev => {
+                              const next = new Set([...prev, n.id]);
+                              saveDismissedNotices(next);
+                              return next;
+                            });
+                          }}
+                        />
+                      )}
                     </div>
                     {!n.isRead && (
                       <button
@@ -573,5 +587,75 @@ const SmartAlertBell: React.FC = () => {
 };
 
 // ─── 小统计格子 ───────────────────────────────────────────
+
+const UrgeReplyInline: React.FC<{
+  urgeRecordId: string;
+  orderNo: string;
+  onReplied: () => void;
+}> = ({ urgeRecordId, orderNo, onReplied }) => {
+  const [replyContent, setReplyContent] = React.useState('');
+  const [expectedShipDate, setExpectedShipDate] = React.useState('');
+  const [submitting, setSubmitting] = React.useState(false);
+  const [submitted, setSubmitted] = React.useState(false);
+
+  const handleSubmit = async () => {
+    if (!replyContent.trim() && !expectedShipDate) return;
+    setSubmitting(true);
+    try {
+      await urgeApi.reply(urgeRecordId, replyContent, expectedShipDate || undefined);
+      setSubmitted(true);
+      onReplied();
+    } catch {
+      // silent
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (submitted) {
+    return (
+      <div style={{ fontSize: 12, color: '#389e0d', marginTop: 4 }}>
+        ✅ 已回复
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ marginTop: 6 }} onClick={(e) => e.stopPropagation()}>
+      <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 4 }}>
+        <input
+          type="date"
+          value={expectedShipDate}
+          onChange={(e) => setExpectedShipDate(e.target.value)}
+          style={{ fontSize: 12, padding: '2px 4px', border: '1px solid #d9d9d9', borderRadius: 4, width: 130 }}
+          placeholder="预计出货日"
+        />
+        <input
+          type="text"
+          value={replyContent}
+          onChange={(e) => setReplyContent(e.target.value)}
+          placeholder="回复备注..."
+          style={{ fontSize: 12, padding: '2px 4px', border: '1px solid #d9d9d9', borderRadius: 4, flex: 1, minWidth: 80 }}
+        />
+      </div>
+      <button
+        onClick={() => void handleSubmit()}
+        disabled={submitting || (!replyContent.trim() && !expectedShipDate)}
+        style={{
+          fontSize: 11,
+          padding: '2px 8px',
+          background: '#cf1322',
+          color: '#fff',
+          border: 'none',
+          borderRadius: 4,
+          cursor: submitting ? 'not-allowed' : 'pointer',
+          opacity: submitting ? 0.6 : 1,
+        }}
+      >
+        {submitting ? '提交中...' : '回复催单'}
+      </button>
+    </div>
+  );
+};
 
 export default SmartAlertBell;

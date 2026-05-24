@@ -43,8 +43,7 @@ public class TenantInterceptor implements InnerInterceptor {
 
     /** 需要混合查询的表（租户数据 + 系统共享数据，用 tenant_id = X OR tenant_id IS NULL） */
     private static final Set<String> SHARED_TENANT_TABLES = Set.of(
-            "t_role", "t_template_library", "t_template_operation_log",
-            "t_dict"
+            "t_role", "t_dict"
     );
 
     /**

@@ -1,6 +1,5 @@
 import React from 'react';
 import { Form } from 'antd';
-import type { UploadFile } from 'antd/es/upload/interface';
 import { ProductWarehousing as WarehousingType, ProductionOrder } from '@/types/production';
 import api from '@/utils/api';
 import { formatDateTime } from '@/utils/datetime';
@@ -11,7 +10,6 @@ import {
 import {
   parseUrlsValue,
   computeBundleRepairStats,
-  toUploadFileList,
 } from '../../../utils';
 import { message } from '@/utils/antdStatic';
 
@@ -26,7 +24,7 @@ interface ApiStateSetters {
   setQrStageHintsMap: React.Dispatch<React.SetStateAction<Record<string, string[]>>>;
   setDetailWarehousingItems: React.Dispatch<React.SetStateAction<WarehousingType[]>>;
   setDetailLoading: React.Dispatch<React.SetStateAction<boolean>>;
-  setUnqualifiedFileList: React.Dispatch<React.SetStateAction<UploadFile[]>>;
+  setUnqualifiedImageUrls: React.Dispatch<React.SetStateAction<string[]>>;
 }
 
 export const useWarehousingApi = (
@@ -38,7 +36,7 @@ export const useWarehousingApi = (
     setQualifiedWarehousedBundleQrs, setBundleRepairStatsByQr,
     setBundleRepairRemainingByQr, setProductionReadyQrs,
     setQrStageHintsMap, setDetailWarehousingItems,
-    setDetailLoading, setUnqualifiedFileList,
+    setDetailLoading, setUnqualifiedImageUrls,
   } = setters;
 
   const fetchOrderOptions = async () => {
@@ -240,7 +238,7 @@ export const useWarehousingApi = (
       createTime: formatDateTime((warehousing as any)?.createTime),
     });
     const urls = parseUrlsValue((warehousing as any)?.unqualifiedImageUrls);
-    setUnqualifiedFileList(toUploadFileList(urls));
+    setUnqualifiedImageUrls(urls);
     loadWarehousingDetail(warehousing);
   };
 
@@ -255,7 +253,7 @@ export const useWarehousingApi = (
       defectRemark: undefined,
       repairRemark: '',
     });
-    setUnqualifiedFileList([]);
+    setUnqualifiedImageUrls([]);
     if (defaultOrderNo && orderOptions) {
       const matchOrder = orderOptions.find((o: any) => String(o?.orderNo || '').trim() === defaultOrderNo);
       if (matchOrder) form.setFieldsValue({ orderId: (matchOrder as any).id });

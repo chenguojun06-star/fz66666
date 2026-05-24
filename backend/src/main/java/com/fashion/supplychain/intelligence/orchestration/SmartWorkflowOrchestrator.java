@@ -121,7 +121,7 @@ public class SmartWorkflowOrchestrator {
      * 级联规则：
      *   1. 生成"库存清点"任务 → 通知仓库员
      *   2. 通知财务部评估已支付成本
-     *   3. 通知生产团队的工序负责人
+     *   3. 通知生产团队的工序领取人
      *   4. 发送风险预警通知到高管看板
      */
     private int workflowOrderHold(ExecutableCommand command, ExecutionResult<?> result) {

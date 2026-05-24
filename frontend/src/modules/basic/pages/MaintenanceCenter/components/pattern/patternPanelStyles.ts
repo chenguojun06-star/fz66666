@@ -2,7 +2,7 @@ export const directCardStyle = {
   border: '1px solid #ececec',
   borderRadius: 12,
   padding: 16,
-  background: '#fff',
+  background: 'var(--color-bg-base)',
 } as const;
 
 export const directStackStyle = { display: 'grid', gap: 12 } as const;
@@ -42,10 +42,10 @@ export const summaryGridStyle = {
 } as const;
 
 export const summaryCardStyle = {
-  border: '1px solid #f0f0f0',
+  border: '1px solid var(--color-border-light)',
   borderRadius: 10,
   padding: '10px 12px',
-  background: '#fafafa',
+  background: 'var(--color-bg-container)',
   display: 'grid',
   gap: 4,
 } as const;
@@ -72,8 +72,8 @@ export const heroThumbStyle = {
   height: 84,
   overflow: 'hidden',
   borderRadius: 12,
-  border: '1px solid #f0f0f0',
-  background: '#fafafa',
+  border: '1px solid var(--color-border-light)',
+  background: 'var(--color-bg-container)',
 } as const;
 
 export const heroHeadlineStyle = {
@@ -112,7 +112,7 @@ export const unlockNoteStyle = {
   padding: '8px 12px',
   borderRadius: 10,
   border: '1px dashed #d7dde7',
-  background: '#fff',
+  background: 'var(--color-bg-base)',
   display: 'grid',
   gap: 2,
 } as const;
@@ -121,7 +121,7 @@ export const uploadAreaStyle = {
   padding: '12px 14px',
   borderRadius: 12,
   border: '1px dashed #cfd8e3',
-  background: '#fff',
+  background: 'var(--color-bg-base)',
   display: 'grid',
   gap: 10,
 } as const;

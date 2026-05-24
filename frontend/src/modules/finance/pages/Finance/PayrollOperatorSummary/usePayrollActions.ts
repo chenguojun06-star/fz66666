@@ -3,6 +3,7 @@ import { App } from 'antd';
 import api from '@/utils/api';
 import { isOrderFrozenByStatus } from '@/utils/api/production';
 import type { PayrollOperatorProcessSummaryRow } from '@/types/finance';
+import { formatDateTimeSecond } from '@/utils/datetime';
 import dayjs from 'dayjs';
 import { scanTypeText } from './payrollOperatorColumns';
 import {
@@ -155,7 +156,7 @@ export function usePayrollActions(deps: PayrollActionDeps) {
                 amount: toNumberOrZero(summary.totalAmount),
                 description: `工资结算：${summary.recordCount}次扫码，共${toNumberOrZero(summary.totalQuantity)}件`,
             });
-            const now = dayjs().format('YYYY-MM-DD HH:mm:ss');
+            const now = formatDateTimeSecond(new Date());
             setRows(prev => prev.map(row => {
                 if ((row as Record<string, unknown>).operatorName === operatorName) {
                     return { ...row, approvalTime: now } as PayrollOperatorProcessSummaryRow;
@@ -183,7 +184,7 @@ export function usePayrollActions(deps: PayrollActionDeps) {
                     description: `工资结算：${summary.recordCount}次扫码，共${toNumberOrZero(summary.totalQuantity)}件`,
                 });
             }
-            const now = dayjs().format('YYYY-MM-DD HH:mm:ss');
+            const now = formatDateTimeSecond(new Date());
             setRows(prev => prev.map(row => {
                 if (selectedRowKeys.includes((row as Record<string, unknown>).operatorName as string)) {
                     return { ...row, approvalTime: now } as PayrollOperatorProcessSummaryRow;
@@ -209,8 +210,8 @@ export function usePayrollActions(deps: PayrollActionDeps) {
                 '扫码次数': toNumberOrZero(item.recordCount),
                 '订单数': toNumberOrZero(item.orderCount),
                 '备注': String(item.remark || '').trim() || '-',
-                '审核时间': item.approvalTime ? dayjs(item.approvalTime).format('YYYY-MM-DD HH:mm:ss') : '-',
-                '付款时间': item.paymentTime ? dayjs(item.paymentTime).format('YYYY-MM-DD HH:mm:ss') : '-',
+                '审核时间': formatDateTimeSecond(item.approvalTime),
+                '付款时间': formatDateTimeSecond(item.paymentTime),
             }));
             const cols = ['人员','总数量','总金额(元)','扫码次数','订单数','备注','审核时间','付款时间'].map(h => ({ header: h, key: h }));
             await exportToExcel(formattedData, cols, `工资汇总_${dayjs().format('YYYYMMDDHHmmss')}.xlsx`);
@@ -222,8 +223,8 @@ export function usePayrollActions(deps: PayrollActionDeps) {
                 '颜色': String(r?.color || ''), '尺码': String(r?.size || ''),
                 '人员': String(r?.operatorName || ''), '工序': String(r?.processName || ''),
                 '生产节点': scanTypeText(r?.scanType),
-                '开始时间': r?.startTime ? dayjs(r.startTime).format('YYYY-MM-DD HH:mm:ss') : '-',
-                '完成时间': r?.endTime ? dayjs(r.endTime).format('YYYY-MM-DD HH:mm:ss') : '-',
+                '开始时间': formatDateTimeSecond(r?.startTime),
+                '完成时间': formatDateTimeSecond(r?.endTime),
                 '数量': toNumberOrZero(r?.quantity), '单价(元)': toNumberOrZero(r?.unitPrice),
                 '金额(元)': toNumberOrZero(r?.totalAmount),
             }));

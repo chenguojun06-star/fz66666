@@ -161,7 +161,7 @@ public class MaterialReconciliationTool extends AbstractAgentTool {
             reasons.add("该对账单曾被退回，原因是：" + item.getReReviewReason());
         }
         if (!StringUtils.hasText(item.getAuditOperatorName()) && "verified".equalsIgnoreCase(item.getStatus())) {
-            reasons.add("已经核实但还没有明确审批责任人，建议尽快进入批准流程");
+            reasons.add("已经核实但还没有明确审批领取人，建议尽快进入批准流程");
         }
         if (reasons.isEmpty()) {
             reasons.add("当前未发现明显异常字段，建议重点复核数量、单价、扣减项和付款状态");

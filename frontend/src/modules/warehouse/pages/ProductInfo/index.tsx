@@ -13,6 +13,7 @@ import { useViewport } from '@/utils/useViewport';
 import { useNavigate } from 'react-router-dom';
 import api from '@/utils/api';
 import { toCategoryCn, toSeasonCn, CATEGORY_CODE_OPTIONS, SEASON_CODE_OPTIONS } from '@/utils/styleCategory';
+import { formatMoney } from '@/utils/format';
 import { StyleInfo } from '@/types/style';
 import { useProductList } from './hooks/useProductList';
 
@@ -235,7 +236,7 @@ const ProductInfoPage: React.FC = () => {
     },
     {
       title: '单价', dataIndex: 'price', key: 'price', width: 80, align: 'right' as const,
-      render: (v: unknown) => v != null ? `¥${Number(v).toFixed(2)}` : '-',
+      render: (v: unknown) => v != null ? formatMoney(v as number | string) : '-',
     },
     {
       title: '下单', dataIndex: 'orderCount', key: 'orderCount', width: 60, align: 'right' as const,
@@ -274,11 +275,11 @@ const ProductInfoPage: React.FC = () => {
     { title: '条形码', dataIndex: 'barcode', key: 'barcode', width: 130, ellipsis: true, render: (v: unknown) => String(v ?? '-') },
     {
       title: '成本价', dataIndex: 'costPrice', key: 'costPrice', width: 80, align: 'right' as const,
-      render: (v: unknown) => v != null ? `¥${Number(v).toFixed(2)}` : '-',
+      render: (v: unknown) => v != null ? formatMoney(v as number | string) : '-',
     },
     {
       title: '销售价', dataIndex: 'salesPrice', key: 'salesPrice', width: 80, align: 'right' as const,
-      render: (v: unknown) => v != null ? `¥${Number(v).toFixed(2)}` : '-',
+      render: (v: unknown) => v != null ? formatMoney(v as number | string) : '-',
     },
     {
       title: '库存', dataIndex: 'stockQuantity', key: 'stockQuantity', width: 70, align: 'right' as const,
@@ -406,7 +407,7 @@ const ProductInfoPage: React.FC = () => {
               <Descriptions.Item label="季节">{toSeasonCn(d.season)}</Descriptions.Item>
               <Descriptions.Item label="SKC">{String(d.skc ?? '-')}</Descriptions.Item>
               <Descriptions.Item label="U编码">{String(d.uCode ?? '-')}</Descriptions.Item>
-              <Descriptions.Item label="单价">{d.price != null ? `¥${Number(d.price).toFixed(2)}` : '-'}</Descriptions.Item>
+              <Descriptions.Item label="单价">{d.price != null ? formatMoney(d.price) : '-'}</Descriptions.Item>
               <Descriptions.Item label="生产周期">{d.cycle ? `${d.cycle}天` : '-'}</Descriptions.Item>
               <Descriptions.Item label="客户">{String(d.customer ?? '-')}</Descriptions.Item>
               <Descriptions.Item label="面料成分" span={3}>{String(d.fabricComposition ?? '-')}</Descriptions.Item>

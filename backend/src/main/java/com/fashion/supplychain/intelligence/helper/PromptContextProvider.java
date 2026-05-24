@@ -59,16 +59,19 @@ public class PromptContextProvider {
     @Autowired(required = false)
     private com.fashion.supplychain.intelligence.service.QdrantService qdrantService;
 
-    /**
-     * 系统操作指南类查询关键词 — 命中时注入知识库内容到系统提示词，
-     * 确保小云即使不调用 tool_knowledge_search 也能回答基础操作问题。
-     */
     private static final java.util.Set<String> SYSTEM_GUIDE_KEYWORDS = java.util.Set.of(
         "怎么下单", "如何建单", "下单方式", "如何创建订单", "怎么创建订单",
         "如何扫码", "怎么扫码", "扫码流程",
         "如何结算", "怎么结算", "工资结算",
         "如何入库", "怎么入库", "质检入库",
-        "如何使用", "怎么用", "操作指南", "新手教程"
+        "如何使用", "怎么用", "操作指南", "新手教程",
+        "面料知识", "纱支", "缩水率", "色牢度", "克重", "门幅",
+        "工艺流程", "裁剪", "缝制", "整烫", "二次工艺", "绣花", "印花",
+        "尺码标准", "版型", "样衣", "打版", "放码",
+        "质量标准", "AQL", "检验标准", "疵点", "返工率",
+        "工序", "排产", "产能", "节拍", "流水线",
+        "采购", "供应商", "报价", "核价", "成本",
+        "交期", "跟单", "出货", "发货", "物流"
     );
 
     public String buildIntelligenceContext() {
@@ -245,25 +248,32 @@ public class PromptContextProvider {
             log.debug("[AiAgent-RAG] 混合检索跳过: {}", e.getMessage());
         }
 
-        // ── 路径3：语义向量检索（Qdrant）── 关键词未命中时降级到语义搜索
-        if (!hasContent && userMessage != null && !userMessage.isBlank() && qdrantService != null) {
+        // ── 路径3：语义向量检索（Qdrant）── 全量触发，与路径1/2并列补充
+        if (userMessage != null && !userMessage.isBlank() && qdrantService != null) {
             try {
                 List<com.fashion.supplychain.intelligence.service.QdrantService.ScoredPoint> semanticResults =
                         qdrantService.search(tenantId, userMessage, ragRecallTopK);
                 if (semanticResults != null && !semanticResults.isEmpty()) {
-                    result.append("【语义检索 — 相关文档】\n");
-                    for (int i = 0; i < Math.min(3, semanticResults.size()); i++) {
-                        var sp = semanticResults.get(i);
-                        String content = sp.getPayload() != null
-                                ? (String) sp.getPayload().getOrDefault("content", "")
-                                : "";
-                        if (content.length() > 500) content = content.substring(0, 500) + "…";
-                        result.append(String.format("  %d. [相似度%.2f] %s\n",
-                                i + 1, sp.getScore(),
-                                content.isBlank() ? "（无内容）" : content));
+                    List<com.fashion.supplychain.intelligence.service.QdrantService.ScoredPoint> filtered =
+                            semanticResults.stream()
+                                    .filter(sp -> sp.getScore() >= ragSimilarityThreshold)
+                                    .limit(3)
+                                    .toList();
+                    if (!filtered.isEmpty()) {
+                        result.append("【语义检索 — 相关知识文档】\n");
+                        for (int i = 0; i < filtered.size(); i++) {
+                            var sp = filtered.get(i);
+                            String content = sp.getPayload() != null
+                                    ? (String) sp.getPayload().getOrDefault("content", "")
+                                    : "";
+                            if (content.length() > 500) content = content.substring(0, 500) + "…";
+                            result.append(String.format("  %d. [相似度%.2f] %s\n",
+                                    i + 1, sp.getScore(),
+                                    content.isBlank() ? "（无内容）" : content));
+                        }
+                        result.append("（以上为语义检索结果，判断须以工具查询的实时数据为准）\n\n");
+                        hasContent = true;
                     }
-                    result.append("（以上为语义检索结果，判断须以工具查询的实时数据为准）\n\n");
-                    hasContent = true;
                 }
             } catch (Exception e) {
                 log.debug("[AiAgent-RAG] 语义检索跳过: {}", e.getMessage());

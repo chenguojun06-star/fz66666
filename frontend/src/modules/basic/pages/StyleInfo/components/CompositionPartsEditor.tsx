@@ -1,8 +1,9 @@
-import { useState, useCallback, useEffect } from 'react';
-import { Button, Input, Select, Space, Spin, Tag } from 'antd';
+import { useState, useCallback, useEffect, useRef } from 'react';
+import { Button, Input, Popconfirm, Select, Space, Spin, Tag } from 'antd';
 import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
 import { parseWashLabelPartsMap, parseWashNotePerPart, serializeWashLabelParts } from '@/utils/washLabel';
 import { useDictOptions, autoCollectDictEntry } from '@/hooks/useDictOptions';
+import { useDebouncedValue } from '@/hooks/usePerformance';
 
 const DEFAULT_GARMENT_PARTS = [
   { label: '整件', value: 'GARMENT_PART_WHOLE' },
@@ -32,6 +33,7 @@ export default function CompositionPartsEditor({ value, onChange, disabled }: Pr
   const [partsMap, setPartsMap] = useState<Record<string, string[]>>({});
   const [washNoteMap, setWashNoteMap] = useState<Record<string, string>>({});
   const [selectSearch, setSelectSearch] = useState('');
+  const debouncedSelectSearch = useDebouncedValue(selectSearch, 300);
 
   useEffect(() => {
     const map = parseWashLabelPartsMap(value);
@@ -96,8 +98,8 @@ export default function CompositionPartsEditor({ value, onChange, disabled }: Pr
             {/* 列头 */}
             <div style={{
               display: 'flex', gap: 8, padding: '2px 0 4px',
-              borderBottom: '1px solid #f0f0f0',
-              color: '#999', fontSize: 14,
+              borderBottom: '1px solid var(--color-border-light)',
+              color: 'var(--color-text-tertiary)', fontSize: 14,
             }}>
               <div style={{ width: 72, flexShrink: 0 }}>品类</div>
               <div style={{ flex: '1 1 160px' }}>成分</div>
@@ -172,10 +174,9 @@ export default function CompositionPartsEditor({ value, onChange, disabled }: Pr
                 {/* 删除整行 */}
                 <div style={{ width: 28, flexShrink: 0, paddingTop: 3 }}>
                   {!disabled && (
-                    <Button
-                      type="text" danger icon={<DeleteOutlined />}
-                      onClick={() => removeSection(partLabel)}
-                    />
+                    <Popconfirm title={`删除品类「${partLabel}」及其所有成分？`} description="删除后不可恢复" onConfirm={() => removeSection(partLabel)} okText="删除" cancelText="取消" okButtonProps={{ danger: true }}>
+                      <Button type="text" danger icon={<DeleteOutlined />} />
+                    </Popconfirm>
                   )}
                 </div>
               </div>
@@ -203,8 +204,8 @@ export default function CompositionPartsEditor({ value, onChange, disabled }: Pr
               }}
               options={[
                 ...unactiveParts.map(label => ({ label, value: label })),
-                ...(selectSearch.trim() && !unactiveParts.includes(selectSearch.trim()) && !activeParts.includes(selectSearch.trim())
-                  ? [{ label: `创建 "${selectSearch.trim()}"`, value: selectSearch.trim() }]
+                ...(debouncedSelectSearch.trim() && !unactiveParts.includes(debouncedSelectSearch.trim()) && !activeParts.includes(debouncedSelectSearch.trim())
+                  ? [{ label: `创建 "${debouncedSelectSearch.trim()}"`, value: debouncedSelectSearch.trim() }]
                   : []),
               ]}
             />

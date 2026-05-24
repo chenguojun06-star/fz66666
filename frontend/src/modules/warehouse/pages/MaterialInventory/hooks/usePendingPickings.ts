@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import dayjs from 'dayjs';
+import { formatDateTimeSecond } from '@/utils/datetime';
 import { materialInventoryApi } from '@/services/warehouse/materialInventoryApi';
 import type { PendingPicking as PendingPickingType, PendingPickingItem } from '@/types/warehouse';
 import type { MaterialOutboundPrintPayload } from '../components/MaterialOutboundPrintModal';
@@ -53,7 +53,7 @@ export function usePendingPickings({ user, fetchData, openPrintModal }: PendingP
 
   const buildPickingPrintPayload = (record: PendingPicking): MaterialOutboundPrintPayload => ({
     outboundNo: record.pickingNo,
-    outboundTime: dayjs().format('YYYY-MM-DD HH:mm:ss'),
+    outboundTime: formatDateTimeSecond(new Date()),
     materialCode: record.items?.[0]?.materialCode || '-',
     materialName: record.items?.[0]?.materialName || '面辅料',
     specification: record.items?.[0]?.specification || record.items?.[0]?.size,

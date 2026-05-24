@@ -35,9 +35,9 @@ const ProcessCostSummary: React.FC<Props> = ({ data }) => {
 
   const cardStyle: React.CSSProperties = {
     padding: '8px 12px',
-    background: '#fafafa',
+    background: 'var(--color-bg-container)',
     borderRadius: 6,
-    border: '1px solid #e8e8e8',
+    border: '1px solid var(--color-border)',
     display: 'flex',
     alignItems: 'center',
     gap: 8,
@@ -45,7 +45,7 @@ const ProcessCostSummary: React.FC<Props> = ({ data }) => {
 
   const labelStyle: React.CSSProperties = {
     fontSize: 14,
-    color: '#8c8c8c',
+    color: 'var(--color-text-tertiary)',
   };
 
   const valueStyle: React.CSSProperties = {
@@ -56,7 +56,7 @@ const ProcessCostSummary: React.FC<Props> = ({ data }) => {
 
   const subStyle: React.CSSProperties = {
     fontSize: 14,
-    color: '#bfbfbf',
+    color: 'var(--color-text-quaternary)',
     marginLeft: 'auto',
   };
 

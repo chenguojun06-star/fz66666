@@ -13,6 +13,7 @@ import {
   QuestionCircleOutlined, NumberOutlined,
 } from '@ant-design/icons';
 import { usePlatformConnector } from './usePlatformConnector';
+import { formatMoney } from '@/utils/format';
 import type { ShopStats } from './usePlatformConnector';
 import {
   PLATFORM_LIST, SYNC_MODE_LABELS, type PlatformMeta,
@@ -482,7 +483,7 @@ const PlatformConnectorTab: React.FC<{ active: boolean }> = ({ active }) => {
                   description={
                     <div>
                       <div style={{ marginBottom: 4 }}>请将此地址配置到平台的回调/Webhook设置中：</div>
-                      <code style={{ background: '#f5f5f5', padding: '4px 8px', borderRadius: 4, fontSize: 14, wordBreak: 'break-all' }}>
+                      <code style={{ background: 'var(--color-bg-subtle)', padding: '4px 8px', borderRadius: 4, fontSize: 14, wordBreak: 'break-all' }}>
                         {window.location.origin}{testResult.webhookUrl}
                       </code>
                     </div>
@@ -524,7 +525,7 @@ const PlatformConnectorTab: React.FC<{ active: boolean }> = ({ active }) => {
                 </Col>
                 <Col span={6}>
                   <Card style={{ background: '#f6ffed', borderRadius: 8, border: 'none' }}>
-                    <Statistic title="今日销售额" value={parseFloat(activeStats.todaySales).toFixed(2)} prefix="¥" styles={{ content: { color: '#52c41a' } }} />
+                    <Statistic title="今日销售额" value={formatMoney(parseFloat(activeStats.todaySales))} styles={{ content: { color: '#52c41a' } }} />
                   </Card>
                 </Col>
                 <Col span={6}>
@@ -606,8 +607,8 @@ const PlatformConnectorTab: React.FC<{ active: boolean }> = ({ active }) => {
               {/* 汇总 */}
               <Descriptions bordered column={2} style={{ marginBottom: 12 }}>
                 <Descriptions.Item label="累计订单">{activeStats.totalOrders} 单</Descriptions.Item>
-                <Descriptions.Item label="累计销售额">¥{parseFloat(activeStats.totalSales).toFixed(2)}</Descriptions.Item>
-                <Descriptions.Item label="客单价">¥{parseFloat(activeStats.avgOrderValue).toFixed(2)}</Descriptions.Item>
+                <Descriptions.Item label="累计销售额">{formatMoney(parseFloat(activeStats.totalSales))}</Descriptions.Item>
+                <Descriptions.Item label="客单价">{formatMoney(parseFloat(activeStats.avgOrderValue))}</Descriptions.Item>
                 <Descriptions.Item label="待发货总数">{activeStats.pendingShip} 单</Descriptions.Item>
               </Descriptions>
 

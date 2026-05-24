@@ -273,7 +273,7 @@ const QrcodeOutboundModal: React.FC<Props> = ({ open, onClose, onSuccess }) => {
             flex: 1,
             height: 32,
             padding: '4px 11px',
-            border: '1px solid #d9d9d9',
+            border: '1px solid var(--color-border-antd)',
             borderRight: 'none',
             borderRadius: '6px 0 0 6px',
             outline: 'none',

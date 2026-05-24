@@ -82,7 +82,7 @@ public class ProductionExceptionTool extends AbstractAgentTool {
                 "processName", processName,
                 "exceptionType", exceptionType,
                 "recommendation", recommendation,
-                "message", "已通知相关负责人，请等待处理"));
+                "message", "已通知相关领取人，请等待处理"));
     }
 
     private String statsExceptions(Map<String, Object> args) throws Exception {

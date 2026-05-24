@@ -41,6 +41,12 @@ public class SysNotice {
     /** 是否已读：0未读 1已读 */
     private Integer isRead;
 
+    /** 关联催单记录ID */
+    private String urgeRecordId;
+
+    /** 操作类型: urge_order等 */
+    private String actionType;
+
     /** 发送时间 */
     private LocalDateTime createdAt;
 }

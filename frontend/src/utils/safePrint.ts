@@ -12,8 +12,28 @@
 
 const PRINT_FIX_CSS = `
 <style>
-  :root { color-scheme: light !important; }
-  html, body { background: #fff !important; color: #000 !important; }
+  :root {
+    color-scheme: light !important;
+    --color-primary: #2D7FF9;
+    --color-text-primary: #1a1a1a;
+    --color-text-secondary: #6b7280;
+    --color-text-tertiary: #9ca3af;
+    --color-text-quaternary: #bfbfbf;
+    --color-bg-base: #ffffff;
+    --color-bg-container: #fafafa;
+    --color-bg-subtle: #f5f5f5;
+    --color-bg-page: #f8fafc;
+    --color-border: #e5e7eb;
+    --color-border-light: #f0f0f0;
+    --color-border-antd: #d9d9d9;
+    --font-size-xxl: 16px;
+    --font-size-xl: 15px;
+    --font-size-lg: 14px;
+    --font-size-base: 13px;
+    --font-size-sm: 12px;
+    --font-size-xs: 11px;
+  }
+  html, body { background: var(--color-bg-base) !important; color: #000 !important; }
 
   * {
     font-family: 'Heiti SC', 'Hiragino Sans GB', 'Arial Unicode MS', 'Songti SC', 'STSong', serif !important;
@@ -24,9 +44,9 @@ const PRINT_FIX_CSS = `
     text-rendering: optimizeLegibility;
   }
 
-  html, body { background-color: #fff !important; }
-  th { background-color: #fafafa !important; }
-  img { background: #fff !important; }
+  html, body { background-color: var(--color-bg-base) !important; }
+  th { background-color: var(--color-bg-container) !important; }
+  img { background: var(--color-bg-base) !important; }
 </style>
 `;
 

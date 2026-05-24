@@ -16,7 +16,7 @@ interface Props {
   styleNo?: string;
   /** 状态（COMPLETED=已完成, IN_PROGRESS=进行中, NOT_STARTED=未开始） */
   status?: string;
-  /** 领取人/负责人 */
+  /** 领取人 */
   assignee?: string;
   /** 开始时间 */
   startTime?: string;
@@ -38,7 +38,7 @@ interface Props {
  * 样衣开发各阶段统一的状态控制栏
  *
  * 功能：
- * 1. 显示状态、负责人、时间信息
+ * 1. 显示状态、领取人、时间信息
  * 2. 统一的三个按钮：开始、完成、退回（维护）
  * 3. 权限控制：完成后按钮变灰，只有主管可以退回
  * 4. 样式统一：所有 Tab 使用相同的布局和交互
@@ -205,7 +205,7 @@ const StyleStageControlBar: React.FC<Props> = ({
           {statusTag}
         </div>
         <span style={{ color: 'var(--text-secondary)' }}>
-          负责人：<span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{assignee || '-'}</span>
+          领取人：<span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{assignee || '-'}</span>
         </span>
         <span style={{ color: 'var(--text-secondary)' }}>
           开始时间：<span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{startTimeText}</span>

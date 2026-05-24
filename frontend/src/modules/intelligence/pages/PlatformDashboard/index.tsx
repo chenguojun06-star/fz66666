@@ -145,7 +145,7 @@ export const PlatformDashboard: React.FC = () => {
   ];
 
   return (
-    <div style={{ padding: 24, background: '#f5f5f5', minHeight: '100vh' }}>
+    <div style={{ padding: 24, background: 'var(--color-bg-subtle)', minHeight: '100vh' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <Title level={4} style={{ margin: 0 }}>🧠 平台级 AI 数据面板</Title>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>

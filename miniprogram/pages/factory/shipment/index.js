@@ -2,8 +2,8 @@ var api = require('../../../utils/api');
 var { toast } = require('../../../utils/uiHelper');
 var { isAdminOrSupervisor } = require('../../../utils/permission');
 var { isFactoryOwner } = require('../../../utils/storage');
-var { transformOrderData } = require('../../../utils/order/orderTransform');
-var { buildProcessNodesWithRates, calcOrderProgress } = require('../../../utils/order/progressNodes');
+var { transformOrderData } = require('../utils/orderTransform');
+var { buildProcessNodesWithRates, calcOrderProgress } = require('../utils/progressNodes');
 
 var STATUS_MAP = {
   pending: { text: '待收货', cls: 'tag-orange' },

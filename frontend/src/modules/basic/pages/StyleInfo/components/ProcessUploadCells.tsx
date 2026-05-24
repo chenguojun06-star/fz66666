@@ -61,7 +61,7 @@ export const ProcessImageCell: React.FC<{ record: any; readOnly?: boolean }> = (
           ))}
         </Image.PreviewGroup>
       )}
-      {imgs.length > 2 && <span style={{ fontSize: 14, color: '#999' }}>+{imgs.length - 2}</span>}
+      {imgs.length > 2 && <span style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>+{imgs.length - 2}</span>}
       {!readOnly && record.id && (
         <Tooltip title={uploading ? '上传中…' : '上传工艺图片'} mouseEnterDelay={0.5}>
           <CameraOutlined style={{ fontSize: 13, color: uploading ? '#1677ff' : '#bbb', cursor: uploading ? 'wait' : 'pointer', flexShrink: 0 }}
@@ -111,7 +111,7 @@ export const ProcessAttachmentCell: React.FC<{ record: any; readOnly?: boolean }
 
   const popoverContent = (
     <div style={{ minWidth: 180, maxWidth: 300 }}>
-      {files.length === 0 && <div style={{ color: '#999', fontSize: 14, padding: '4px 0' }}>暂无附件</div>}
+      {files.length === 0 && <div style={{ color: 'var(--color-text-tertiary)', fontSize: 14, padding: '4px 0' }}>暂无附件</div>}
       {files.map((f, i) => (
         <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '3px 0' }}>
           <PaperClipOutlined style={{ color: '#1677ff', flexShrink: 0, fontSize: 12 }} />
@@ -193,7 +193,7 @@ export const NewRowImageUpload: React.FC<{
           ))}
         </Image.PreviewGroup>
       )}
-      {value.length > 2 && <span style={{ fontSize: 14, color: '#999' }}>+{value.length - 2}</span>}
+      {value.length > 2 && <span style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>+{value.length - 2}</span>}
       <Tooltip title={uploading ? '上传中…' : '上传工艺图片'} mouseEnterDelay={0.5}>
         <CameraOutlined style={{ fontSize: 13, color: uploading ? '#1677ff' : '#bbb', cursor: uploading ? 'wait' : 'pointer', flexShrink: 0 }}
           onClick={() => fileInputRef.current?.click()} />
@@ -234,7 +234,7 @@ export const NewRowAttachmentUpload: React.FC<{
 
   const popoverContent = (
     <div style={{ minWidth: 180, maxWidth: 300 }}>
-      {value.length === 0 && <div style={{ color: '#999', fontSize: 14, padding: '4px 0' }}>暂无附件</div>}
+      {value.length === 0 && <div style={{ color: 'var(--color-text-tertiary)', fontSize: 14, padding: '4px 0' }}>暂无附件</div>}
       {value.map((f, i) => (
         <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '3px 0' }}>
           <PaperClipOutlined style={{ color: '#1677ff', flexShrink: 0, fontSize: 12 }} />

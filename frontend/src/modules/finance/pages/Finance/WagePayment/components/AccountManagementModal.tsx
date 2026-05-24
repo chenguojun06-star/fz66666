@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button, Card, Form, Input, Select, Space, Tag } from 'antd';
+import { Button, Card, Form, Input, Popconfirm, Select, Space, Tag } from 'antd';
 import type { FormInstance, UploadFile } from 'antd';
 import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
 import ResizableModal from '@/components/common/ResizableModal';
@@ -44,7 +44,7 @@ const AccountManagementModal: React.FC<AccountManagementModalProps> = ({
   >
     <div style={{ padding: '0 8px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-        <span style={{ color: '#999' }}>
+        <span style={{ color: 'var(--color-text-tertiary)' }}>
           {ownerType === 'WORKER' ? '员工' : '工厂'}：{ownerName}
         </span>
         <Button
@@ -70,9 +70,9 @@ const AccountManagementModal: React.FC<AccountManagementModalProps> = ({
           extra={
             <Space>
               <Button type="link" onClick={() => onEditAccount(acc)}>编辑</Button>
-              <Button type="link" danger onClick={() => acc.id != null && onDeleteAccount(String(acc.id))}>
-                <DeleteOutlined />
-              </Button>
+              <Popconfirm title="确认删除该收款账户？" description="删除后不可恢复" onConfirm={() => acc.id != null && onDeleteAccount(String(acc.id))} okButtonProps={{ danger: true }} okText="删除" cancelText="取消">
+                <Button type="link" danger><DeleteOutlined /></Button>
+              </Popconfirm>
             </Space>
           }
         >
@@ -84,16 +84,16 @@ const AccountManagementModal: React.FC<AccountManagementModalProps> = ({
                 {acc.isDefault === 1 && <Tag color="blue" style={{ marginLeft: 8 }}>默认</Tag>}
               </div>
               {acc.accountType === 'BANK' ? (
-                <span style={{ color: '#666' }}>{acc.bankName} {acc.accountNo}</span>
+                <span style={{ color: 'var(--color-text-secondary)' }}>{acc.bankName} {acc.accountNo}</span>
               ) : (
-                <span style={{ color: '#666' }}>{acc.accountName || '已上传二维码'}</span>
+                <span style={{ color: 'var(--color-text-secondary)' }}>{acc.accountName || '已上传二维码'}</span>
               )}
             </div>
           </Space>
         </Card>
       ))}
       {!accountsLoading && accounts.length === 0 && (
-        <div style={{ textAlign: 'center', color: '#999', padding: 32 }}>暂无收款账户，请点击"添加账户"</div>
+        <div style={{ textAlign: 'center', color: 'var(--color-text-tertiary)', padding: 32 }}>暂无收款账户，请点击"添加账户"</div>
       )}
 
       <Card title={editingAccount ? '编辑账户' : '添加账户'} style={{ marginTop: 16, display: accountDetailOpen ? undefined : 'none' }}>

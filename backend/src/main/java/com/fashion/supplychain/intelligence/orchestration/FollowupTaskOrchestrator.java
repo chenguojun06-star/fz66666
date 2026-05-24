@@ -55,7 +55,7 @@ public class FollowupTaskOrchestrator {
         action.setOwnerRole(task.getOwnerRole());
         action.setTitle(task.getTitle());
         action.setSummary(task.getSummary());
-        action.setReason(task.getReason() + "；负责人动作：" + task.getOwnerAction() + "；验收：" + task.getCompletionCheck() + "；时效要求：" + task.getDueHint());
+        action.setReason(task.getReason() + "；领取人动作：" + task.getOwnerAction() + "；验收：" + task.getCompletionCheck() + "；时效要求：" + task.getDueHint());
         action.setRoutePath(task.getRoutePath());
         action.setAutoExecutable(task.isAutoExecutable());
         return action;
@@ -63,7 +63,7 @@ public class FollowupTaskOrchestrator {
 
     private String buildOwnerAction(String ownerRole, String title) {
         if (ownerRole == null || ownerRole.isBlank()) {
-            return "负责人确认任务并推进执行";
+            return "领取人确认任务并推进执行";
         }
         return ownerRole + "负责推进：" + title;
     }

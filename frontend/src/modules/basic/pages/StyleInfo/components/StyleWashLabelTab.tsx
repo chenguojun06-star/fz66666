@@ -11,10 +11,17 @@ import {
   serializeCareIconCodes,
   careCodesFromLegacyFields,
   DEFAULT_CARE_ICON_CODES,
-  getCareIconSvgs,
 } from '@/utils/careIcons';
 import { getDisplayWashCareCodes, buildWashLabelSections, parseWashNotePerPart } from '@/utils/washLabel';
 import { safePrint } from '@/utils/safePrint';
+import {
+  buildWashLabelPrintHtml,
+  buildWashLabelMultiPageHtml,
+  getDefaultDateText,
+  compositionFromSections,
+  washTextFromInstructions,
+  type WashLabelPrintData,
+} from '@/utils/washLabelPrintTemplate';
 
 interface Props {
   styleId: string;
@@ -51,6 +58,7 @@ const StyleWashLabelTab: React.FC<Props> = ({
 }) => {
   const { message } = App.useApp();
   const [saving, setSaving] = useState(false);
+  const [printLoading, setPrintLoading] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [rollbackOpen, setRollbackOpen] = useState(false);
   const [rollbackForm] = Form.useForm();
@@ -60,6 +68,7 @@ const StyleWashLabelTab: React.FC<Props> = ({
   const [washInstructions, setWashInstructions] = useState(initialWash || '');
   const [uCode, setUCode] = useState(initialUCode || '');
   const [selectedIconCodes, setSelectedIconCodes] = useState<string[]>([]);
+  const [manufacturingText, setManufacturingText] = useState('MADE IN CHINA');
 
   const [previewW, setPreviewW] = useState(30);
   const [previewH, setPreviewH] = useState(80);
@@ -148,93 +157,40 @@ const StyleWashLabelTab: React.FC<Props> = ({
     onRefresh?.();
   }, [styleId, initialParts, initialWash, initialUCode, rollbackForm, onRefresh, message]);
 
-  const handlePrint = useCallback(() => {
+  const handlePrint = useCallback(async () => {
+    setPrintLoading(true);
+    try {
     const sections = buildWashLabelSections(compositionParts, initialComp);
-    const iconSvgs = getCareIconSvgs(selectedIconCodes);
-    const showPartTitle = sections.length > 1;
     const isMultiPart = sections.length > 1;
-
-    const fs = previewW >= 45 ? 6.5 : 5.5;
-    const w = previewW;
-    const h = previewH;
-
-    const today = new Date();
-    const dateStr = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}`;
-
-    const buildOneLabelHtml = (section: { key: string; label: string; items: string[] }, washNote: string) => {
-      const compositionHtml = `<div class="comp-block">${showPartTitle && section.key !== 'other' ? `<span class="comp-name">${section.label}</span>` : ''}` +
-        `<div class="comp-mats">${section.items.join('<br/>')}</div></div>`;
-
-      const washText = (washNote || '').replace(/^洗涤说明[（(]水洗标专用[）)]\s*/u, '').trim();
-      const washInstHtml = washText ? `<div class="care-wash">${washText.replace(/\n/g, '<br/>')}</div>` : '';
-
-      const careIconsHtml = iconSvgs.length > 0
-        ? `<div class="icons">${iconSvgs.map(svg => `<span class="icon-cell">${svg}</span>`).join('')}</div>`
-        : '';
-
-      return `<div class="label">
-        <div class="dash-sep"></div>
-        <div class="top-block">
-          <div class="style-no">款号：${styleNo || '-'}</div>
-          <div class="style-name">款名：${styleName || '-'}</div>
-        </div>
-        <div class="content-block">
-          ${compositionHtml}
-          ${washInstHtml ? `<div class="wash-title">洗涤说明</div>${washInstHtml}` : ''}
-        </div>
-        <div class="bottom-block">
-          ${careIconsHtml}
-          <div class="footer">MADE IN CHINA</div>
-          <div class="date">${dateStr}</div>
-        </div>
-        <div class="dash-sep"></div>
-      </div>`;
-    };
-
     const perPartWashNotes = parseWashNotePerPart(compositionParts);
-    const washText = (washInstructions || '').replace(/^洗涤说明[（(]水洗标专用[）)]\s*/u, '').trim();
 
-    let labelsHtml: string;
+    const buildOnePrintData = (section: { key: string; label: string; items: string[] }, washNote: string): WashLabelPrintData => ({
+      width: previewW,
+      height: previewH,
+      compositionText: section.items.join('\n'),
+      washInstructionsText: washNote,
+      careIconCodes: selectedIconCodes,
+      manufacturingText: manufacturingText,
+      dateText: getDefaultDateText(),
+    });
+
+    const washText = washTextFromInstructions(washInstructions, compositionParts);
+
+    let html: string;
     if (isMultiPart) {
-      labelsHtml = sections.map(section =>
-        buildOneLabelHtml(section, perPartWashNotes[section.key] || washText)
-      ).join('');
+      const items = sections.map(section =>
+        buildOnePrintData(section, perPartWashNotes[section.key] || washText)
+      );
+      html = buildWashLabelMultiPageHtml(items);
     } else {
       const singleSection = sections.length > 0 ? sections[0] : { key: 'other', label: '', items: [] };
       const singleWashNote = perPartWashNotes[singleSection.key] || washText;
-      labelsHtml = buildOneLabelHtml(singleSection, singleWashNote);
+      html = buildWashLabelPrintHtml(buildOnePrintData(singleSection, singleWashNote));
     }
 
-    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
-@page { size: ${w}mm ${h}mm; margin: 0; }
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "'Segoe UI'", Roboto, "'Helvetica Neue'", Arial, "'Noto Sans'", "'Microsoft YaHei'", "'PingFang SC'", serif; color: #000; background: #fff; -webkit-font-smoothing: antialiased; }
-.page { width: ${w}mm; min-height: ${h}mm; page-break-after: always; }
-.page:last-child { page-break-after: auto; }
-.label { position: relative; width: ${w}mm; height: ${h}mm; padding: 0 2.2mm; color: #000; }
-.dash-sep { border: none; border-top: 0.8pt dashed #555; width: calc(100% + 6mm); margin-left: -3mm; }
-.top-block { position: absolute; left: 2.2mm; right: 2.2mm; top: 15mm; text-align: center; }
-.style-no { font-size: ${w <= 30 ? fs - 0.1 : fs + 0.2}pt; font-weight: bold; line-height: 1.35; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.style-name { font-size: ${w <= 30 ? fs - 0.6 : fs - 0.2}pt; line-height: 1.35; margin-top: 0.8mm; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.content-block { position: absolute; left: 2.2mm; right: 2.2mm; top: 24mm; bottom: 24mm; overflow: hidden; }
-.comp-block { margin: 0.3mm 0 1.1mm; }
-.comp-name { font-size: ${w <= 30 ? fs + 0.2 : fs}pt; font-weight: bold; display: block; margin-bottom: 0.6mm; }
-.comp-mats { font-size: ${w <= 30 ? fs + 1.7 : fs}pt; line-height: 1.55; white-space: pre-wrap; display: block; font-weight: bold; }
-.wash-title { font-size: ${w <= 30 ? fs - 0.1 : fs}pt; color: #444; line-height: 1.5; margin-bottom: 0.6mm; }
-.care-wash { font-size: ${fs}pt; color: #444; line-height: 1.6; margin-top: 1.6mm; }
-.bottom-block { position: absolute; left: 2.2mm; right: 2.2mm; bottom: 6.5mm; display: flex; flex-direction: column; align-items: center; }
-.icons { display: flex; gap: 0.45mm; align-items: center; justify-content: center; flex-wrap: nowrap; width: 100%; margin: 1.8mm auto 0; min-height: 6mm; }
-.icon-cell { width: 4.8mm; height: 4.8mm; display: flex; align-items: center; justify-content: center; flex: 0 0 auto; }
-.icons svg { width: 100%; height: 100%; }
-.footer { margin-top: 2.1mm; font-size: ${w <= 30 ? fs - 0.2 : fs}pt; font-weight: bold; letter-spacing: 0.6mm; line-height: 1.3; text-align: center; white-space: nowrap; }
-.date { margin-top: 2.2mm; font-size: ${fs - 0.5}pt; color: #777; text-align: center; }
-</style></head><body>${isMultiPart
-      ? sections.map(() => `<div class="page">${labelsHtml}</div>`).join('')
-      : `<div class="page">${labelsHtml}</div>`
-    }</body></html>`;
-
     safePrint(html);
-  }, [compositionParts, initialComp, washInstructions, selectedIconCodes, styleNo, styleName, previewW, previewH]);
+    } finally { setPrintLoading(false); }
+  }, [compositionParts, initialComp, washInstructions, selectedIconCodes, manufacturingText, previewW, previewH]);
 
   const sectionTitleStyle: React.CSSProperties = {
     fontSize: 14,
@@ -308,8 +264,8 @@ body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "'Segoe UI'", 
             )}
             <Button
               icon={<PrinterOutlined />}
-              onClick={handlePrint}
-             
+              onClick={() => void handlePrint()}
+              loading={printLoading}
             >
               打印
             </Button>
@@ -369,6 +325,19 @@ body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "'Segoe UI'", 
           />
         </div>
 
+        <div style={{ marginBottom: 20, opacity: isEditing ? 1 : 0.6, pointerEvents: isEditing ? 'auto' : 'none' }}>
+          <div style={sectionTitleStyle}>生产制造</div>
+          <Input
+            value={manufacturingText}
+            onChange={e => setManufacturingText(e.target.value)}
+            placeholder="MADE IN CHINA"
+            disabled={!isEditing}
+          />
+          <div style={{ fontSize: 14, color: 'var(--color-text-quaternary, #bfbfbf)', marginTop: 4 }}>
+            产地信息，默认 MADE IN CHINA，可按需修改；日期自动生成（{getDefaultDateText()}）
+          </div>
+        </div>
+
         <div style={{
           display: 'flex',
           justifyContent: 'flex-end',
@@ -416,6 +385,7 @@ body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "'Segoe UI'", 
           fabricComposition={initialComp}
           washInstructions={washInstructions}
           careIconCodes={selectedIconCodes}
+          manufacturingText={manufacturingText}
           width={previewW}
           height={previewH}
         />

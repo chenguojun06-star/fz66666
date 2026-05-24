@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Button, Tag, Space, Form, Input, Select, Card, Descriptions, Row, Col, Statistic } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
 import ResizableModal from '@/components/common/ResizableModal';
@@ -10,6 +10,7 @@ import type { UserFeedback, FeedbackStats } from '@/services/feedbackService';
 import type { ColumnsType } from 'antd/es/table';
 import { message } from '@/utils/antdStatic';
 import { readPageSize } from '@/utils/pageSizeStore';
+import { useDebouncedValue } from '@/hooks/usePerformance';
 
 const FEEDBACK_CATEGORY: Record<string, { label: string; color: string }> = {
   BUG: { label: '缺陷', color: 'red' },
@@ -32,6 +33,13 @@ const FeedbackTab: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState<FeedbackStats | null>(null);
   const [queryParams, setQueryParams] = useState({ page: 1, pageSize: readPageSize(20), status: '', tenantName: '', category: '' });
+  const [tenantNameSearch, setTenantNameSearch] = useState('');
+  const debouncedTenantName = useDebouncedValue(tenantNameSearch, 300);
+  const prevDebouncedTenantNameRef = useRef(debouncedTenantName);
+  if (debouncedTenantName !== prevDebouncedTenantNameRef.current) {
+    prevDebouncedTenantNameRef.current = debouncedTenantName;
+    setQueryParams(p => ({ ...p, tenantName: debouncedTenantName, page: 1 }));
+  }
   const replyModal = useModal<UserFeedback>();
   const detailModal = useModal<UserFeedback>();
   const [replyForm] = Form.useForm();
@@ -162,7 +170,7 @@ const FeedbackTab: React.FC = () => {
             ]}
           />
           <Input.Search style={{ width: 200 }} placeholder="搜索租户名称" allowClear
-            onSearch={v => setQueryParams(p => ({ ...p, page: 1, tenantName: v }))}
+            onSearch={v => setTenantNameSearch(v)}
           />
           <Button onClick={() => { fetchData(); fetchStats(); }}>刷新</Button>
         </Space>
@@ -232,9 +240,9 @@ const FeedbackTab: React.FC = () => {
         onCancel={replyModal.close} width="40vw" onOk={handleReply} confirmLoading={replying} okText="提交回复"
       >
         {replyModal.data && (
-          <div style={{ marginBottom: 16, padding: 12, background: '#f5f5f5', borderRadius: 8 }}>
+          <div style={{ marginBottom: 16, padding: 12, background: 'var(--color-bg-subtle)', borderRadius: 8 }}>
             <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>{replyModal.data.title}</div>
-            <div style={{ fontSize: 14, color: '#666', whiteSpace: 'pre-wrap' }}>{replyModal.data.content}</div>
+            <div style={{ fontSize: 14, color: 'var(--color-text-secondary)', whiteSpace: 'pre-wrap' }}>{replyModal.data.content}</div>
           </div>
         )}
         <Form form={replyForm} layout="vertical">

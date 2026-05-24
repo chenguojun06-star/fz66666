@@ -9,8 +9,10 @@ import RowActions, { type RowAction } from '@/components/common/RowActions';
 import SortableColumnTitle from '@/components/common/SortableColumnTitle';
 import SmartOrderHoverCard from '../../ProgressDetail/components/SmartOrderHoverCard';
 import { StyleCoverThumb, StyleAttachmentsButton } from '@/components/StyleAssets';
+import BudgetDaysEditor from '@/components/common/BudgetDaysEditor';
 import { isDirectCuttingOrder, isOrderFrozenByStatus, isOrderFrozenByStatusOrStock, withQuery } from '@/utils/api';
 import { formatDateTime } from '@/utils/datetime';
+import { formatMoney } from '@/utils/format';
 import SupplierNameTooltip from '@/components/common/SupplierNameTooltip';
 import FactoryTypeTag from '@/components/common/FactoryTypeTag';
 import { toCategoryCn } from '@/utils/styleCategory';
@@ -22,8 +24,6 @@ import dayjs from 'dayjs';
 import {
   hasSecondaryProcessForOrder,
   renderStageProgressCell,
-  renderStagnantBadge,
-  renderSlaStatus,
   renderMerchandiserCell,
   renderWarehousingCell,
 } from './riskBadgeRenderers';
@@ -56,6 +56,7 @@ export interface UseProductionColumnsProps {
   isFactoryAccount?: boolean;
   onOpenRemark?: (record: ProductionOrder, defaultRole?: string) => void;
   openWorkflowEditor?: (styleNo?: string) => void;
+  getStageCompletionTime?: (record: ProductionOrder, stageKeyword: string, rate?: number) => string;
 }
 
 export function useProductionColumns({
@@ -72,6 +73,7 @@ export function useProductionColumns({
   isFactoryAccount = false,
   onOpenRemark,
   openWorkflowEditor,
+  getStageCompletionTime,
 }: UseProductionColumnsProps) {
   const renderStageTime = (value: unknown) => value ? formatDateTime(value) : '-';
 
@@ -79,6 +81,7 @@ export function useProductionColumns({
     openNodeDetail,
     openProcessDetail,
     renderCompletionTimeTag,
+    getStageCompletionTime,
   };
 
   const allColumns = [
@@ -245,8 +248,8 @@ export function useProductionColumns({
       render: (_: any, record: any) => {
         const v = Number(record?.factoryUnitPrice);
         return (Number.isFinite(v) && v > 0)
-          ? <span style={{ fontWeight: 500 }}>¥{v.toFixed(2)}</span>
-          : <span style={{ color: '#8c8c8c' }}>-</span>;
+          ? <span style={{ fontWeight: 500 }}>{formatMoney(v)}</span>
+          : <span style={{ color: 'var(--color-text-tertiary)' }}>-</span>;
       },
     },
     {
@@ -328,6 +331,13 @@ export function useProductionColumns({
           >
             {renderCompletionTimeTag(record, '采购', rate || 0)}
             <LiquidProgressBar percent={procurePercent} width="100%" height={16} status={colorStatus} />
+            <BudgetDaysEditor
+              record={record}
+              nodeName="采购"
+              stageEndTime={getStageCompletionTime?.(record, '采购', rate || 0) || undefined}
+              isCompletedOrClosed={isCompletedOrClosed}
+              isProcureNode
+            />
           </div>
         );
       },
@@ -429,47 +439,49 @@ export function useProductionColumns({
       render: (v: unknown) => Number(v ?? 0) || 0,
     },
     {
-      title: '状态',
+      title: '状态/交期',
       dataIndex: 'status',
       key: 'status',
-      width: 120,
+      width: 150,
       render: (status: ProductionOrder['status'], record: ProductionOrder) => {
         const { text, color } = getStatusConfig(status);
         const stagnantDays = stagnantOrderIds?.get(String(record.id));
         const progress = calcOrderProgress(record);
-        return (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <Tag color={color} style={{ margin: 0 }}>{text}</Tag>
-              <span style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>{progress}%</span>
-            </div>
-            {renderStagnantBadge(stagnantDays)}
-          </div>
-        );
-      },
-    },
-    {
-      title: <SortableColumnTitle title="交期" fieldName="plannedEndDate" onSort={handleSort} sortField={sortField} sortOrder={sortOrder} />,
-      dataIndex: 'plannedEndDate',
-      key: 'plannedEndDate',
-      width: 155,
-      render: (value: unknown, record: ProductionOrder) => {
-        const dateStr = value ? formatDateTime(value as string) : '-';
-        const { text, color } = getRemainingDaysDisplay(value as string, record.createTime, record.actualEndDate, record.status);
+        const deliveryDate = record.plannedEndDate ? dayjs(record.plannedEndDate as string).format('MM-DD') : '';
+        const remain = getRemainingDaysDisplay(record.plannedEndDate as string, record.createTime, record.actualEndDate, record.status);
         const aiRisk = deliveryRiskMap?.get(String(record.orderNo || ''));
+        const slaMap: Record<string, { color: string; label: string }> = {
+          on_track: { color: '#52c41a', label: '正常' },
+          at_risk: { color: '#faad14', label: '预警' },
+          breached: { color: '#ff4d4f', label: '超期' },
+          completed: { color: '#1890ff', label: '达标' },
+        };
+        const sla = slaMap[record.deliverySlaStatus || ''] || null;
         return (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <span style={{ fontSize: 11 }}>{dateStr}</span>
-            <span style={{ fontSize: 11, fontWeight: 600, color }}>{text}</span>
-            {record.isQuickResponse && <Tag color="volcano" style={{ fontSize: 11, lineHeight: '16px', padding: '0 4px', margin: 0 }}>快反</Tag>}
-            {renderSlaStatus(record)}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 3, lineHeight: 1.4 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
+              <Tag color={color} style={{ margin: 0, fontSize: 11, lineHeight: '16px', padding: '0 4px' }}>{text}</Tag>
+              <span style={{ fontSize: 11, color: 'var(--color-text-secondary)', fontWeight: 500 }}>{progress}%</span>
+              {deliveryDate && <span style={{ fontSize: 11, color: 'var(--color-text-tertiary)' }}>{deliveryDate}</span>}
+              {remain.text && remain.text !== '-' && (
+                <span style={{ fontSize: 11, fontWeight: 600, color: remain.color }}>{remain.text}</span>
+              )}
+              {record.isQuickResponse && <Tag color="volcano" style={{ margin: 0, fontSize: 10, lineHeight: '14px', padding: '0 3px' }}>快反</Tag>}
+            </div>
+            {stagnantDays !== undefined && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                <span style={{ display: 'inline-block', width: 5, height: 5, borderRadius: '50%', background: '#ff4d4f', animation: 'pulse-dot 1.5s infinite' }} />
+                <span style={{ fontSize: 11, color: '#ff4d4f', fontWeight: 500 }}>停滞{stagnantDays}天</span>
+              </div>
+            )}
+            {sla && (
+              <span style={{ fontSize: 11, fontWeight: 500, color: sla.color }}>
+                SLA:{sla.label}{record.actualDeliveryDays != null ? ` ${record.actualDeliveryDays}天` : ''}
+              </span>
+            )}
             {aiRisk && aiRisk.riskLevel !== 'safe' && aiRisk.predictedEndDate && (
-              <span style={{
-                fontSize: 11, fontWeight: 500,
-                color: 'var(--color-text-secondary)',
-              }}>
-                AI {dayjs(aiRisk.predictedEndDate).format('M/D')}
-                {aiRisk.riskLevel === 'overdue' ? ' ⚠' : ''}
+              <span style={{ fontSize: 11, color: 'var(--color-text-tertiary)' }}>
+                AI预测 {dayjs(aiRisk.predictedEndDate).format('M/D')}{aiRisk.riskLevel === 'overdue' ? ' ⚠' : ''}
               </span>
             )}
           </div>

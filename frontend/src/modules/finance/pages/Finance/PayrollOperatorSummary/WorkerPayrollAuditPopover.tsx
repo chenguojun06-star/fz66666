@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { Popover, Tag } from 'antd';
 import DecisionInsightCard, { SMART_CARD_CONTENT_WIDTH, SMART_CARD_OVERLAY_WIDTH, type DecisionInsight } from '@/components/common/DecisionInsightCard';
+import { formatMoney } from '@/utils/format';
 
 const choose = (seed: number, variants: string[]) => {
   if (!variants.length) return '';
@@ -43,20 +44,20 @@ function analyzeWorker(record: WorkerSummaryRow, grandTotal: number, workerCount
     checks.push({ label: '金额核验', status: 'warn', detail: `¥${amount.toLocaleString()} 较高` });
     warnCount++;
   } else {
-    checks.push({ label: '金额核验', status: 'ok', detail: `¥${amount.toFixed(2)}` });
+    checks.push({ label: '金额核验', status: 'ok', detail: formatMoney(amount) });
   }
 
   // ② 件均工资（行业参考：服装1.5~80元/件）
   if (totalQuantity > 0) {
     const perPiece = amount / totalQuantity;
     if (perPiece < 1.5) {
-      checks.push({ label: '件均工资', status: 'warn', detail: `¥${perPiece.toFixed(2)}/件，偏低` });
+      checks.push({ label: '件均工资', status: 'warn', detail: `${formatMoney(perPiece)}/件，偏低` });
       warnCount++;
     } else if (perPiece > 200) {
       checks.push({ label: '件均工资', status: 'warn', detail: `¥${perPiece.toFixed(1)}/件，偏高` });
       warnCount++;
     } else {
-      checks.push({ label: '件均工资', status: 'ok', detail: `${totalQuantity}件 · 均¥${perPiece.toFixed(2)}` });
+      checks.push({ label: '件均工资', status: 'ok', detail: `${totalQuantity}件 · 均${formatMoney(perPiece)}` });
     }
   }
 
@@ -184,10 +185,10 @@ const WorkerPayrollAuditPopover: React.FC<{
       <DecisionInsightCard compact insight={insight} />
 
       {analysis.breakdown.length > 0 && (
-        <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: '4px 10px', padding: '6px 8px', background: '#fafafa', borderRadius: 6 }}>
+        <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: '4px 10px', padding: '6px 8px', background: 'var(--color-bg-container)', borderRadius: 6 }}>
           {analysis.breakdown.slice(0, 6).map((b, i) => (
             <span key={i} style={{ whiteSpace: 'nowrap', color: '#595959', fontSize: 14 }}>
-              <span style={{ color: '#8c8c8c' }}>{b.label}：</span>
+              <span style={{ color: 'var(--color-text-tertiary)' }}>{b.label}：</span>
               <span style={{ fontWeight: 500 }}>{b.value}</span>
             </span>
           ))}

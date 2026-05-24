@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Alert, Button, Card, Col, DatePicker, Descriptions, Form, Input, InputNumber, Modal, Row, Select, Space, Statistic, Tag, Typography } from 'antd';
+import { Alert, Button, Card, Col, DatePicker, Descriptions, Form, Input, InputNumber, Row, Select, Space, Statistic, Tag, Typography } from 'antd';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useDebouncedValue } from '@/hooks/usePerformance';
 import {
@@ -13,6 +13,7 @@ import SmallModal from '@/components/common/SmallModal';
 import RowActions, { type RowAction } from '@/components/common/RowActions';
 import { receivableApi, type Receivable, type ReceivableReceiptLog, type ReceivableStats } from '@/services/crm/customerApi';
 import { message } from '@/utils/antdStatic';
+import { confirmDelete } from '@/utils/confirm';
 import type { ApiResult } from '@/utils/api';
 import { toMoneyLocale } from '@/utils/format';
 import { paths } from '@/routeConfig';
@@ -372,17 +373,10 @@ const ReceivableList: React.FC = () => {
   }, [searchParams, setSearchParams]);
 
   const handleDelete = (record: Receivable) => {
-    Modal.confirm({
-      width: '30vw',
-      title: `确认删除应收单「${record.receivableNo}」？`,
-      content: '删除后不可恢复',
-      okButtonProps: { danger: true, type: 'default' },
-      onOk: async () => {
-        await receivableApi.delete(record.id!);
-        message.success('已删除');
-        fetchList(pagination.current);
-        fetchStats();
-      },
+    confirmDelete(`应收单「${record.receivableNo}」`, async () => {
+      await receivableApi.delete(record.id!);
+      fetchList(pagination.current);
+      fetchStats();
     });
   };
 

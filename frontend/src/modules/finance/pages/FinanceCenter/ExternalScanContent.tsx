@@ -4,6 +4,8 @@ import { SearchOutlined, ReloadOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import type { Dayjs } from 'dayjs';
+import { formatDateTime } from '@/utils/datetime';
+import { formatMoney } from '@/utils/format';
 import api from '@/utils/api';
 import ResizableTable from '@/components/common/ResizableTable';
 import { readPageSize } from '@/utils/pageSizeStore';
@@ -160,7 +162,7 @@ const ExternalScanContent: React.FC = () => {
       key: 'processUnitPrice',
       width: 80,
       align: 'right',
-      render: (v: number) => (v != null ? `¥${Number(v).toFixed(2)}` : '-'),
+      render: (v: number) => (v != null ? formatMoney(v) : '-'),
     },
     {
       title: '金额',
@@ -168,14 +170,14 @@ const ExternalScanContent: React.FC = () => {
       key: 'scanCost',
       width: 90,
       align: 'right',
-      render: (v: number) => (v != null ? `¥${Number(v).toFixed(2)}` : '-'),
+      render: (v: number) => (v != null ? formatMoney(v) : '-'),
     },
     {
       title: '扫码时间',
       dataIndex: 'scanTime',
       key: 'scanTime',
       width: 160,
-      render: (v: string) => (v ? dayjs(v).format('YYYY-MM-DD HH:mm') : '-'),
+      render: (v: string) => (v ? formatDateTime(v) : '-'),
     },
     {
       title: '结果',

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Button, Card, Col, Descriptions, Form, Input, Modal, Progress, Row, Select, Space, Spin, Tabs, Tag, Typography } from 'antd';
+import { Button, Card, Col, Descriptions, Form, Input, Progress, Row, Select, Space, Spin, Tabs, Tag, Typography } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
 import { useDebouncedValue } from '@/hooks/usePerformance';
 import {
@@ -15,9 +15,11 @@ import { useUser } from '@/utils/AuthContext';
 import ResizableModal from '@/components/common/ResizableModal';
 import RowActions, { type RowAction } from '@/components/common/RowActions';
 import { customerApi, receivableApi, type Customer, type Receivable } from '@/services/crm/customerApi';
+import { confirmDelete } from '@/utils/confirm';
 import type { ApiResult } from '@/utils/api';
 import { message } from '@/utils/antdStatic';
 import { readPageSize } from '@/utils/pageSizeStore';
+import { formatMoney } from '@/utils/format';
 import type { ProductionOrder } from '@/types/production';
 import { ORDER_STATUS_LABEL, ORDER_STATUS_COLOR } from '@/constants/orderStatus';
 import { useShareOrderDialog } from '@/modules/production/pages/Production/ProgressDetail/hooks/useShareOrderDialog';
@@ -67,7 +69,7 @@ const LockedView: React.FC<{ onGoStore: () => void }> = ({ onGoStore }) => (
         </Col>
         <Col>
           <Button type="primary" size="large" icon={<RocketOutlined />}
-            style={{ background: '#fff', color: '#764ba2', border: 'none', fontWeight: 600, height: 44, padding: '0 28px' }}
+            style={{ background: 'var(--color-bg-base)', color: '#764ba2', border: 'none', fontWeight: 600, height: 44, padding: '0 28px' }}
             onClick={onGoStore}
           >
             立即开通 <ArrowRightOutlined />
@@ -281,17 +283,10 @@ const CustomerManagement: React.FC = () => {
   };
 
   const handleDelete = (record: Customer) => {
-    Modal.confirm({
-      width: '30vw',
-      title: `确认删除客户「${record.companyName}」？`,
-      content: '删除后不可恢复',
-      okButtonProps: { danger: true, type: 'default' },
-      onOk: async () => {
-        await customerApi.delete(record.id!);
-        message.success('已删除');
-        fetchList(pagination.current);
-        fetchStats();
-      },
+    confirmDelete(`客户「${record.companyName}」`, async () => {
+      await customerApi.delete(record.id!);
+      fetchList(pagination.current);
+      fetchStats();
     });
   };
 
@@ -357,7 +352,7 @@ const CustomerManagement: React.FC = () => {
               <div style={{ fontSize: 28, color: s.color }}>{s.icon}</div>
               <div>
                 <div style={{ fontSize: 22, fontWeight: 700, lineHeight: 1.2 }}>{s.value}</div>
-                <div style={{ fontSize: 14, color: '#8c8c8c', marginTop: 2 }}>{s.label}</div>
+                <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginTop: 2 }}>{s.label}</div>
               </div>
             </Card>
           </Col>
@@ -536,8 +531,8 @@ const CustomerManagement: React.FC = () => {
                     pagination={{ pageSize: 8, showTotal: (t: number) => `共 ${t} 条` }}
                     columns={[
                       { title: '单号', dataIndex: 'receivableNo', width: 150 },
-                      { title: '应收金额', dataIndex: 'amount', width: 110, render: (v: number) => `¥${Number(v).toFixed(2)}` },
-                      { title: '已收金额', dataIndex: 'receivedAmount', width: 110, render: (v: number) => `¥${Number(v ?? 0).toFixed(2)}` },
+                      { title: '应收金额', dataIndex: 'amount', width: 110, render: (v: number) => formatMoney(v) },
+                      { title: '已收金额', dataIndex: 'receivedAmount', width: 110, render: (v: number) => formatMoney(v ?? 0) },
                       { title: '到期日', dataIndex: 'dueDate', width: 110, render: (v: string) => v || '-' },
                       {
                         title: '状态', dataIndex: 'status', width: 110,

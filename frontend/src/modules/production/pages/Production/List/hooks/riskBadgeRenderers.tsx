@@ -5,6 +5,7 @@ import type { ProductionOrder } from '@/types/production';
 import type { DeliveryRiskItem } from '@/services/intelligence/intelligenceApi';
 import { isOrderFrozenByStatus } from '@/utils/api';
 import LiquidProgressBar from '@/components/common/LiquidProgressBar';
+import BudgetDaysEditor from '@/components/common/BudgetDaysEditor';
 import { getProcessesByNodeFromOrder } from '../../ProgressDetail/utils';
 
 export const PROGRESS_CELL_BASE: React.CSSProperties = { padding: '4px', transition: 'background 0.2s' };
@@ -56,6 +57,7 @@ export interface StageProgressContext {
   openNodeDetail?: (record: ProductionOrder, nodeType: string, nodeName: string, stats?: { done: number; total: number; percent: number; remaining: number }, unitPrice?: number, processList?: { name: string; unitPrice?: number; processCode?: string }[]) => void;
   openProcessDetail: (record: ProductionOrder, type: string) => void;
   renderCompletionTimeTag: (record: ProductionOrder, stage: string, rate: number, position?: string) => React.ReactNode;
+  getStageCompletionTime?: (record: ProductionOrder, stageKeyword: string, rate?: number) => string;
 }
 
 export function renderStageProgressCell(
@@ -91,6 +93,13 @@ export function renderStageProgressCell(
       {ctx.renderCompletionTimeTag(record, nodeName, percent)}
       <div style={COUNT_TEXT_STYLE}>{completed}/{total}</div>
       <LiquidProgressBar percent={percent} width="100%" height={16} status={colorStatus} />
+      <BudgetDaysEditor
+        record={record}
+        nodeName={nodeName}
+        stageEndTime={ctx.getStageCompletionTime?.(record, nodeName, percent) || undefined}
+        isCompletedOrClosed={isCompletedOrClosed}
+        isProcureNode={/采购|物料|备料|辅料|面料/.test(nodeName)}
+      />
     </div>
   );
 }

@@ -408,7 +408,7 @@ public class XiaoyunInsightCardOrchestrator {
         if (ownerRoles.isArray() && ownerRoles.size() > 0) {
             List<String> roles = new ArrayList<>();
             ownerRoles.forEach(item -> roles.add(item.asText()));
-            card.put("painPoint", "建议责任人：" + String.join("、", roles));
+            card.put("painPoint", "建议领取人：" + String.join("、", roles));
         }
         card.put("confidence", "管理简报");
         card.put("source", "深度分析");

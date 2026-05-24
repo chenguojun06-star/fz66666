@@ -1,6 +1,7 @@
 import { Button, Tag, Space, Popconfirm } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { formatMaterialSpecWidth } from '@/utils/materialType';
+import { formatMoney } from '@/utils/format';
 
 type LegacyPickupRecord = Record<string, any>;
 
@@ -179,7 +180,7 @@ export function useMaterialPickupColumns(actions: UsedActions): ColumnsType<Lega
       dataIndex: 'unitPrice',
       width: 100,
       align: 'right' as const,
-      render: (v?: number) => v != null ? `¥${v.toFixed(2)}` : '-',
+      render: (v?: number) => v != null ? formatMoney(v) : '-',
     },
     {
       title: '金额(元)',
@@ -188,7 +189,7 @@ export function useMaterialPickupColumns(actions: UsedActions): ColumnsType<Lega
       align: 'right' as const,
       render: (v?: number) => (
         <span style={{ fontWeight: 600, color: 'var(--primary-color)' }}>
-          {v != null ? `¥${v.toFixed(2)}` : '-'}
+          {v != null ? formatMoney(v) : '-'}
         </span>
       ),
     },
@@ -264,7 +265,7 @@ export function useMaterialPickupColumns(actions: UsedActions): ColumnsType<Lega
       dataIndex: 'receivedAmount',
       width: 110,
       align: 'right' as const,
-      render: (v?: number) => v != null ? `¥${v.toFixed(2)}` : '-',
+      render: (v?: number) => v != null ? formatMoney(v) : '-',
     },
     {
       title: '收款时间',

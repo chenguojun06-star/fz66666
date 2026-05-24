@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Button, Tag, Space, Form, Input, InputNumber, Modal, Select, Card, Typography, Alert, QRCode, Radio } from 'antd';
 import { PlusOutlined, CopyOutlined, QrcodeOutlined, ExclamationCircleOutlined, AppstoreOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
@@ -14,11 +14,19 @@ import { message } from '@/utils/antdStatic';
 import { PLAN_OPTIONS, TRIAL_OPTIONS, MODULE_OPTIONS, DURATION_OPTIONS } from './tenantModuleConfig';
 import ModuleConfigPanel from './ModuleConfigPanel';
 import { useTenantListData } from './hooks/useTenantListData';
+import { useDebouncedValue } from '@/hooks/usePerformance';
 
 const { Text } = Typography;
 
 const TenantListTab: React.FC = () => {
   const { data, total, loading, statusTab, queryParams, setStatusTab, setQueryParams, fetchData } = useTenantListData();
+  const [tenantNameSearch, setTenantNameSearch] = useState('');
+  const debouncedTenantName = useDebouncedValue(tenantNameSearch, 300);
+  const prevDebouncedTenantNameRef = useRef(debouncedTenantName);
+  if (debouncedTenantName !== prevDebouncedTenantNameRef.current) {
+    prevDebouncedTenantNameRef.current = debouncedTenantName;
+    setQueryParams(p => ({ ...p, tenantName: debouncedTenantName, page: 1 }));
+  }
   const modal = useModal<TenantInfo>();
   const qrModal = useModal<TenantInfo>();
   const resetPwdModal = useModal<TenantInfo>();
@@ -51,8 +59,9 @@ const TenantListTab: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (!approveModal.visible || !approveModal.data) { setTimeout(() => approveForm?.resetFields(), 50); return; }
-    setTimeout(() => approveForm?.setFieldsValue({ planType: 'TRIAL', trialDays: 30 }), 50);
+    if (!approveModal.visible || !approveModal.data) { const t1 = setTimeout(() => approveForm?.resetFields(), 50); return () => clearTimeout(t1); }
+    const t2 = setTimeout(() => approveForm?.setFieldsValue({ planType: 'TRIAL', trialDays: 30 }), 50);
+    return () => clearTimeout(t2);
   }, [approveForm, approveModal.data, approveModal.visible]);
 
   const handleCreatePlanChange = (value: string) => { const plan = PLAN_OPTIONS.find((item) => item.value === value); if (!plan) return; form.setFieldsValue({ maxUsers: plan.maxUsers }); };
@@ -171,7 +180,7 @@ const TenantListTab: React.FC = () => {
           ))}
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-          <Input.Search placeholder="搜索工厂名称" allowClear onSearch={(v) => setQueryParams(p => ({ ...p, tenantName: v, page: 1 }))} style={{ width: 200 }} />
+          <Input.Search placeholder="搜索工厂名称" allowClear onSearch={(v) => setTenantNameSearch(v)} style={{ width: 200 }} />
           <Button type="primary" icon={<PlusOutlined />} onClick={() => { modal.open(); }}>新建租户</Button>
         </div>
       </div>
@@ -183,7 +192,7 @@ const TenantListTab: React.FC = () => {
 
       <ResizableModal open={modal.visible} title="新建租户" onCancel={modal.close} width="40vw" footer={<Space><Button onClick={modal.close}>取消</Button><Button type="primary" onClick={handleCreate}>确认创建</Button></Space>}>
         <Form form={form} layout="vertical">
-          <Form.Item label="租户类型" name="tenantType" initialValue="HYBRID" rules={[{ required: true }]} style={{ marginBottom: 16 }}><Radio.Group style={{ width: '100%' }}><div style={{ display: 'flex', gap: 8 }}><Radio value="SELF_FACTORY" style={{ flex: 1, margin: 0, alignItems: 'flex-start', padding: '8px 10px', border: '1px solid #f0f0f0', borderRadius: 6 }}><span style={{ fontWeight: 600, whiteSpace: 'nowrap' }}> 自建工厂</span><div style={{ fontSize: 14, color: '#888', marginTop: 2, lineHeight: 1.3 }}>含裁剪管理，不含外发工厂</div></Radio><Radio value="HYBRID" style={{ flex: 1, margin: 0, alignItems: 'flex-start', padding: '8px 10px', border: '1px solid #f0f0f0', borderRadius: 6 }}><span style={{ fontWeight: 600, whiteSpace: 'nowrap' }}> 混合型（推荐）</span><div style={{ fontSize: 14, color: '#888', marginTop: 2, lineHeight: 1.3 }}>自有产线 + 外发合作，全功能</div></Radio><Radio value="BRAND" style={{ flex: 1, margin: 0, alignItems: 'flex-start', padding: '8px 10px', border: '1px solid #f0f0f0', borderRadius: 6 }}><span style={{ fontWeight: 600, whiteSpace: 'nowrap' }}> 纯品牌 / 贸易</span><div style={{ fontSize: 14, color: '#888', marginTop: 2, lineHeight: 1.3 }}>全部外发，不含裁剪管理</div></Radio></div></Radio.Group></Form.Item>
+          <Form.Item label="租户类型" name="tenantType" initialValue="HYBRID" rules={[{ required: true }]} style={{ marginBottom: 16 }}><Radio.Group style={{ width: '100%' }}><div style={{ display: 'flex', gap: 8 }}><Radio value="SELF_FACTORY" style={{ flex: 1, margin: 0, alignItems: 'flex-start', padding: '8px 10px', border: '1px solid var(--color-border-light)', borderRadius: 6 }}><span style={{ fontWeight: 600, whiteSpace: 'nowrap' }}> 自建工厂</span><div style={{ fontSize: 14, color: '#888', marginTop: 2, lineHeight: 1.3 }}>含裁剪管理，不含外发工厂</div></Radio><Radio value="HYBRID" style={{ flex: 1, margin: 0, alignItems: 'flex-start', padding: '8px 10px', border: '1px solid var(--color-border-light)', borderRadius: 6 }}><span style={{ fontWeight: 600, whiteSpace: 'nowrap' }}> 混合型（推荐）</span><div style={{ fontSize: 14, color: '#888', marginTop: 2, lineHeight: 1.3 }}>自有产线 + 外发合作，全功能</div></Radio><Radio value="BRAND" style={{ flex: 1, margin: 0, alignItems: 'flex-start', padding: '8px 10px', border: '1px solid var(--color-border-light)', borderRadius: 6 }}><span style={{ fontWeight: 600, whiteSpace: 'nowrap' }}> 纯品牌 / 贸易</span><div style={{ fontSize: 14, color: '#888', marginTop: 2, lineHeight: 1.3 }}>全部外发，不含裁剪管理</div></Radio></div></Radio.Group></Form.Item>
           <Form.Item label="初始套餐" name="planType" initialValue="TRIAL" rules={[{ required: true }]} style={{ marginBottom: 12 }}><Select onChange={handleCreatePlanChange}>{PLAN_OPTIONS.map(plan => (<Select.Option key={plan.value} value={plan.value}>{plan.label}（{plan.monthlyFee === 0 ? '免费试用' : `¥${plan.monthlyFee}/月`}，{plan.maxUsers}用户，{plan.storageQuotaMb >= 1024 ? `${plan.storageQuotaMb / 1024}GB` : `${plan.storageQuotaMb}MB`}）</Select.Option>))}</Select></Form.Item>
           <Form.Item noStyle shouldUpdate={(prev, cur) => prev.planType !== cur.planType}>{({ getFieldValue }) => { const plan = PLAN_OPTIONS.find((item) => item.value === getFieldValue('planType')); if (!plan) return null; return <Alert type="info" showIcon style={{ marginBottom: 12 }} title={`当前套餐：${plan.label}`} description={`${plan.monthlyFee === 0 ? '免费试用' : `¥${plan.monthlyFee}/月`} · ${plan.maxUsers} 用户 · ${plan.storageQuotaMb >= 1024 ? `${plan.storageQuotaMb / 1024}GB` : `${plan.storageQuotaMb}MB`} 存储`} />; }}</Form.Item>
           <div style={{ display: 'flex', gap: 12 }}><Form.Item label="租户名称" name="tenantName" rules={[{ required: true }]} style={{ flex: 1, marginBottom: 12 }}><Input /></Form.Item><Form.Item label="租户编码" name="tenantCode" rules={[{ required: true }]} style={{ flex: 1, marginBottom: 12 }}><Input placeholder="唯一编码，工人注册用" /></Form.Item></div>
@@ -201,13 +210,13 @@ const TenantListTab: React.FC = () => {
       </SmallModal>
 
       <SmallModal open={resetPwdModal.visible} title={`重置主账号密码 - ${resetPwdModal.data?.tenantName || ''}`} onCancel={() => { resetPwdModal.close(); resetPwdForm.resetFields(); }} footer={<Space><Button onClick={() => { resetPwdModal.close(); resetPwdForm.resetFields(); }}>取消</Button><Button type="default" danger loading={resettingPwd} onClick={handleResetOwnerPassword}>确认重置</Button></Space>}>
-        <div style={{ marginBottom: 12, color: '#666', fontSize: 14 }}>主账号：<strong style={{ color: 'var(--primary-color)' }}>{resetPwdModal.data?.ownerUsername || resetPwdModal.data?.applyUsername || '-'}</strong></div>
+        <div style={{ marginBottom: 12, color: 'var(--color-text-secondary)', fontSize: 14 }}>主账号：<strong style={{ color: 'var(--primary-color)' }}>{resetPwdModal.data?.ownerUsername || resetPwdModal.data?.applyUsername || '-'}</strong></div>
         <Form form={resetPwdForm} layout="vertical"><Form.Item label="新密码" name="newPassword" rules={[{ required: true, min: 6, message: '密码不能少于6位' }]}><Input.Password placeholder="请输入新密码（至少6位）" autoComplete="new-password" /></Form.Item><Form.Item label="确认新密码" name="confirmPassword" rules={[{ required: true, message: '请再次输入新密码' }]}><Input.Password placeholder="请再次输入新密码" autoComplete="new-password" /></Form.Item></Form>
       </SmallModal>
 
       <ResizableModal open={grantModal.visible} title={<><AppstoreOutlined style={{ marginRight: 6 }} />管理「{grantModal.data?.tenantName || ''}」的应用权限</>} onCancel={grantModal.close} width="85vw" initialHeight={Math.round(window.innerHeight * 0.82)} footer={<Space><Button onClick={grantModal.close}>取消</Button><Button type="primary" loading={granting} onClick={handleGrantModules} disabled={grantAppCodes.length === 0 && revokeAppCodes.length === 0}>{grantAppCodes.length > 0 && revokeAppCodes.length > 0 ? '开通 + 撤销' : grantAppCodes.length > 0 ? '确认开通' : '确认撤销'}</Button></Space>}>
         <Alert title="超管可直接为租户开通或撤销应用商店中的任意应用，无需租户下单付费。API 对接类应用开通后自动生成凭证。" type="info" showIcon style={{ marginBottom: 16 }} />
-        {loadingSubs ? <div style={{ textAlign: 'center', padding: 24, color: '#999' }}>加载订阅状态...</div> : (() => {
+        {loadingSubs ? <div style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-tertiary)' }}>加载订阅状态...</div> : (() => {
           const activeSubs = new Set(tenantSubscriptions.filter((s: any) => s.status === 'ACTIVE' || s.status === 'TRIAL').map((s: any) => s.app_code));
           const subMap = new Map(tenantSubscriptions.map((s: any) => [s.app_code, s]));
           const categories = [...new Set(MODULE_OPTIONS.map(o => o.category))];
@@ -228,7 +237,7 @@ const TenantListTab: React.FC = () => {
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                             <span style={{ fontWeight: 500 }}>{opt.label}</span>
                             {isActive ? <Tag color="green" style={{ margin: 0, fontSize: 14 }}>已开通</Tag> : <Tag style={{ margin: 0, fontSize: 14 }}>未开通</Tag>}
-                            {sub?.end_time && isActive && <span style={{ fontSize: 14, color: '#999' }}>到期 {String(sub.end_time).substring(0, 10)}</span>}
+                            {sub?.end_time && isActive && <span style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>到期 {String(sub.end_time).substring(0, 10)}</span>}
                           </div>
                           <Space size={4}>
                             {!isActive && !willGrant && <Button type="link" onClick={() => setGrantAppCodes([...grantAppCodes, opt.value])}>开通</Button>}
@@ -252,7 +261,7 @@ const TenantListTab: React.FC = () => {
           </div>
         )}
         {(grantAppCodes.length > 0 || revokeAppCodes.length > 0) && (
-          <div style={{ marginTop: 12, fontSize: 14, color: '#999' }}>
+          <div style={{ marginTop: 12, fontSize: 14, color: 'var(--color-text-tertiary)' }}>
             {grantAppCodes.length > 0 && <span>将开通 {grantAppCodes.length} 个应用</span>}
             {grantAppCodes.length > 0 && revokeAppCodes.length > 0 && <span> · </span>}
             {revokeAppCodes.length > 0 && <span style={{ color: '#ff4d4f' }}>将撤销 {revokeAppCodes.length} 个应用</span>}

@@ -213,7 +213,7 @@ export const ColorSizeMatrixPopoverContent: React.FC<{
   if (!model.hasData) return null;
   return (
     <div style={{ minWidth: 100 }}>
-      <div style={{ fontWeight: 600, marginBottom: 6, fontSize: 14, color: '#333' }}>{title}</div>
+      <div style={{ fontWeight: 600, marginBottom: 6, fontSize: 14, color: 'var(--color-text-primary)' }}>{title}</div>
       <div style={{
         display: 'grid',
         gridTemplateColumns: `max-content repeat(${model.sizes.length}, minmax(20px, max-content))`,

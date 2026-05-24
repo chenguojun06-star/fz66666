@@ -29,6 +29,7 @@ public class XiaoyunDailyInsightJob {
     @Autowired private ProcessStatsEngine processStatsEngine;
     @Autowired private DistributedLockService distributedLockService;
     @Autowired(required = false) private IntelligenceInferenceOrchestrator inferenceOrchestrator;
+    @Autowired(required = false) private com.fashion.supplychain.intelligence.orchestration.CollaborationDispatchOrchestrator collaborationDispatchOrchestrator;
 
     @Value("${xiaoyun.daily-insight.llm-enabled:true}")
     private boolean llmInsightEnabled;
@@ -100,6 +101,25 @@ public class XiaoyunDailyInsightJob {
                 "高风险订单提醒",
                 "有 " + highRisk + " 单 7 天内到期但进度 <50%，建议催工。",
                 "/production/progress?filter=highrisk");
+        }
+
+        pushDailyBriefingNotification(tenantId, overdue, highRisk, morningContent);
+    }
+
+    private void pushDailyBriefingNotification(Long tenantId, int overdue, int highRisk, String morningContent) {
+        if (collaborationDispatchOrchestrator == null) return;
+        if (overdue < 3 && highRisk < 3) return;
+        try {
+            com.fashion.supplychain.intelligence.dto.CollaborationDispatchRequest req =
+                    new com.fashion.supplychain.intelligence.dto.CollaborationDispatchRequest();
+            req.setTitle("小云每日简报 — " + LocalDate.now());
+            req.setInstruction(morningContent);
+            req.setTargetRole(overdue >= 5 ? "生产主管" : "跟单");
+            collaborationDispatchOrchestrator.dispatch(req);
+            log.info("[XiaoyunInsightJob] 每日简报已推送: tenant={} overdue={} highRisk={}",
+                    tenantId, overdue, highRisk);
+        } catch (Exception e) {
+            log.warn("[XiaoyunInsightJob] 每日简报推送失败: tenant={} error={}", tenantId, e.getMessage());
         }
     }
 

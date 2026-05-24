@@ -76,7 +76,7 @@ const ModalContent: React.FC<{ data: PrecheckData; isHigh: boolean }> = ({ data,
       {suggestions.length > 0 && (
         <>
           {issues.length > 0 && <Divider style={{ margin: '4px 0' }} />}
-          <div style={{ color: '#8c8c8c', fontSize: 14, lineHeight: '18px' }}>
+          <div style={{ color: 'var(--color-text-tertiary)', fontSize: 14, lineHeight: '18px' }}>
             <BulbOutlined style={{ marginRight: 4, color: '#faad14' }} />
             <Text type="secondary">智能建议：</Text>
             {suggestions.join('；')}

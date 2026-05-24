@@ -79,6 +79,21 @@
   --duration-base: 0.3s;
   --duration-slow: 0.4s;
 
+  /* z-index 层级规范 — 避免冲突 */
+  --z-local: 1;
+  --z-dropdown: 100;
+  --z-sticky: 200;
+  --z-modal: 1000;
+  --z-drawer: 1200;
+  --z-popover: 1500;
+  --z-notification: 2000;
+  --z-tooltip: 2500;
+  --z-ai-panel: 9000;
+  --z-ai-trigger: 9100;
+  --z-command: 9200;
+  --z-ai-bubble: 9300;
+  --z-print: 99999;
+
   /* 缓动函数 */
   --ease-smooth: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -103,13 +118,13 @@
   --table-header-font-size: 12px;
   --table-cell-font-size: 12px;
   --table-cell-padding-x: 8px;
-  --table-cell-padding-y: 3px;
+  --table-cell-padding-y: 1px;
   --table-header-padding-x: 8px;
   --table-header-padding-y: 4px;
-  --table-header-height: 28px;
+  --table-header-height: 34px;
   --table-min-col-width: 60px;
   --table-action-col-width: 130px;
-  --table-row-height: 30px;
+  --table-row-height: 34px;
   --table-condensed-row-height: 24px;
   --table-border-radius: 6px;
   --table-scroll-indicator-opacity: 0;
@@ -530,13 +545,13 @@ html.dark-mode {
     --table-header-font-size: 12px;
     --table-cell-font-size: 12px;
     --table-cell-padding-x: 5px;
-    --table-cell-padding-y: 3px;
+    --table-cell-padding-y: 1px;
     --table-header-padding-x: 6px;
     --table-header-padding-y: 4px;
-    --table-header-height: 28px;
+    --table-header-height: 32px;
     --table-min-col-width: 44px;
     --table-action-col-width: 100px;
-    --table-row-height: 28px;
+    --table-row-height: 32px;
     --table-condensed-row-height: 24px;
   }
 }

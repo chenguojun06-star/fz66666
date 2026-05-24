@@ -230,6 +230,7 @@ public class TemplateMutationHelper {
         TemplateLibrary existing = templateLibraryService.getOne(new LambdaQueryWrapper<TemplateLibrary>()
                 .eq(TemplateLibrary::getTemplateType, type)
                 .eq(TemplateLibrary::getTemplateKey, key)
+                .eq(TemplateLibrary::getTenantId, UserContext.tenantId())
                 .last("LIMIT 1"));
         if (existing != null) {
             key = key + "_" + String.valueOf(System.currentTimeMillis());
@@ -297,6 +298,7 @@ public class TemplateMutationHelper {
         TemplateLibrary existing = templateLibraryService.lambdaQuery()
                 .eq(TemplateLibrary::getTemplateType, type)
                 .eq(TemplateLibrary::getTemplateKey, key)
+                .eq(TemplateLibrary::getTenantId, UserContext.tenantId())
                 .one();
 
         LocalDateTime now = LocalDateTime.now();
@@ -463,7 +465,9 @@ public class TemplateMutationHelper {
         if (!StringUtils.hasText(base)) base = newName;
 
         List<TemplateLibrary> siblings = templateLibraryService.list(
-                new LambdaQueryWrapper<TemplateLibrary>().eq(TemplateLibrary::getTemplateKey, groupKey));
+                new LambdaQueryWrapper<TemplateLibrary>()
+                        .eq(TemplateLibrary::getTemplateKey, groupKey)
+                        .eq(TemplateLibrary::getTenantId, UserContext.tenantId()));
         LocalDateTime now = LocalDateTime.now();
         for (TemplateLibrary s : siblings) {
             if (s == null) continue;

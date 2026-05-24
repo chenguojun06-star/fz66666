@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { App, Button, InputNumber, Select, Space, Spin } from 'antd';
+import { App, Button, InputNumber, Popconfirm, Select, Space, Spin } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import ResizableModal from '@/components/common/ResizableModal';
@@ -207,7 +207,7 @@ const CuttingWorkflowEditorModal: React.FC<CuttingWorkflowEditorModalProps> = ({
       key: 'standardTime',
       width: 90,
       render: (v: number, row: WorkflowRow) => (
-        <InputNumber value={v || 0} style={{ width: '100%' }} min={0} onChange={(val) => update(row._key, 'standardTime', typeof val === 'number' ? val : 0)} />
+        <InputNumber value={v || 0} style={{ width: '100%' }} min={0} controls={false} onChange={(val) => update(row._key, 'standardTime', typeof val === 'number' ? val : 0)} />
       ),
     },
     {
@@ -216,7 +216,7 @@ const CuttingWorkflowEditorModal: React.FC<CuttingWorkflowEditorModalProps> = ({
       key: 'unitPrice',
       width: 100,
       render: (v: number, row: WorkflowRow) => (
-        <InputNumber value={v} style={{ width: '100%' }} min={0} precision={2} step={0.01} prefix="¥" onChange={(val) => update(row._key, 'unitPrice', typeof val === 'number' ? val : 0)} />
+        <InputNumber value={v} style={{ width: '100%' }} min={0} precision={2} step={0.01} controls={false} prefix="¥" onChange={(val) => update(row._key, 'unitPrice', typeof val === 'number' ? val : 0)} />
       ),
     },
     {
@@ -224,7 +224,9 @@ const CuttingWorkflowEditorModal: React.FC<CuttingWorkflowEditorModalProps> = ({
       key: 'action',
       width: 50,
       render: (_: any, row: WorkflowRow) => (
-        <Button type="text" danger icon={<DeleteOutlined />} disabled={rows.length <= 1} onClick={() => setRows(prev => prev.filter(r => r._key !== row._key))} />
+        <Popconfirm title="删除此工序行？" description="删除后需重新录入工价、工时等数据" onConfirm={() => setRows(prev => prev.filter(r => r._key !== row._key))} okText="删除" cancelText="取消" okButtonProps={{ danger: true }}>
+          <Button type="text" danger icon={<DeleteOutlined />} disabled={rows.length <= 1} />
+        </Popconfirm>
       ),
     },
   ];

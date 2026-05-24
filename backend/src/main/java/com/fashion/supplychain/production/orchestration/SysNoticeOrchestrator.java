@@ -110,6 +110,46 @@ public class SysNoticeOrchestrator {
         log.info("[SysNotice] 通知已发送 orderNo={} to={} type={}", orderNo, merchandiser, noticeType);
     }
 
+    @Transactional(rollbackFor = Exception.class)
+    public void sendWithUrgeRecord(String orderNo, String noticeType, String urgeRecordId) {
+        Long tenantId = UserContext.tenantId();
+        String senderUsername = UserContext.username();
+        String fromName = resolveDisplayName(senderUsername, tenantId);
+
+        ProductionOrder order = productionOrderService.lambdaQuery()
+                .eq(ProductionOrder::getOrderNo, orderNo)
+                .eq(ProductionOrder::getTenantId, tenantId)
+                .eq(ProductionOrder::getDeleteFlag, 0)
+                .one();
+        if (order == null) {
+            throw new IllegalArgumentException("订单不存在: " + orderNo);
+        }
+
+        String merchandiser = order.getMerchandiser();
+        if (merchandiser == null || merchandiser.isBlank()) {
+            throw new IllegalArgumentException("该订单未设置跟单员，无法发送通知");
+        }
+
+        String title   = buildTitle(noticeType, order);
+        String content = buildContent(noticeType, order);
+
+        SysNotice notice = new SysNotice();
+        notice.setTenantId(tenantId);
+        notice.setToName(merchandiser);
+        notice.setFromName(fromName);
+        notice.setOrderNo(orderNo);
+        notice.setTitle(title);
+        notice.setContent(content);
+        notice.setNoticeType(noticeType);
+        notice.setActionType(noticeType);
+        notice.setUrgeRecordId(urgeRecordId);
+        notice.setIsRead(0);
+        notice.setCreatedAt(LocalDateTime.now());
+
+        sysNoticeService.save(notice);
+        log.info("[SysNotice] 催单通知已发送 orderNo={} to={} urgeRecordId={}", orderNo, merchandiser, urgeRecordId);
+    }
+
     /**
      * 系统自动发送通知（不依赖 UserContext，专供定时任务调用）
      *
@@ -320,11 +360,11 @@ public class SysNoticeOrchestrator {
     // ──────────────────────────────────────────────────────────────────────
 
     // ──────────────────────────────────────────────────────────────────────
-    // 定时任务：异常检测通知（精准推给生产负责人）
+    // 定时任务：异常检测通知（精准推给生产领取人）
     // ──────────────────────────────────────────────────────────────────────
 
     /**
-     * 将 AI 异常检测结果推送给生产相关负责人（不依赖 UserContext，供定时任务调用）
+     * 将 AI 异常检测结果推送给生产相关领取人（不依赖 UserContext，供定时任务调用）
      * 优先推给：角色名含"生产"或"跟单"的活跃用户；兜底：租户主账号
      * 不做全局广播 — 只发给本租户有对应职责的人
      */
@@ -353,7 +393,7 @@ public class SysNoticeOrchestrator {
             return;
         }
 
-        // 2. 为每位负责人创建一条通知
+        // 2. 为每位领取人创建一条通知
         List<SysNotice> notices = new ArrayList<>();
         for (User u : managers) {
             String toName = u.getName() != null ? u.getName() : u.getUsername();
@@ -496,7 +536,7 @@ public class SysNoticeOrchestrator {
     /**
      * 将 loginUsername 解析为可读显示名
      */
-    private String resolveDisplayName(String loginUsername, Long tenantId) {
+    public String resolveDisplayName(String loginUsername, Long tenantId) {
         if (loginUsername == null) return "系统";
         User user = userService.lambdaQuery()
                 .eq(User::getUsername, loginUsername)

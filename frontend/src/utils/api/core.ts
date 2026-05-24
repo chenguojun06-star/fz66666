@@ -267,6 +267,7 @@ export const createApiClient = (): ApiClient => {
                   localStorage.setItem('authToken', newToken);
                   if (newRefresh) localStorage.setItem('refreshToken', newRefresh);
                   setHeader('Authorization', `Bearer ${newToken}`);
+                  import('@/utils/fileUrl').then(({ invalidateFileUrlTokenCache }) => invalidateFileUrlTokenCache());
                 } else {
                   try {
                     localStorage.removeItem('authToken');
@@ -397,6 +398,7 @@ export const createApiClient = (): ApiClient => {
                   const newRefresh = String(refreshRes.data.data.refreshToken || '').trim();
                   localStorage.setItem('authToken', newToken);
                   if (newRefresh) localStorage.setItem('refreshToken', newRefresh);
+                  import('@/utils/fileUrl').then(({ invalidateFileUrlTokenCache }) => invalidateFileUrlTokenCache());
                   if (config) {
                     (config as Record<string, unknown>)._isRefreshAttempt = true;
                     return client(config);

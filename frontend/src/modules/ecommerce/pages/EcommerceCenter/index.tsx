@@ -255,7 +255,7 @@ const EcommerceCenter: React.FC = () => {
       activeKey={activeTab}
       onChange={setActiveTab}
       items={tabs}
-      style={{ background: '#fff', padding: '0 16px', borderRadius: 8 }}
+      style={{ background: 'var(--color-bg-base)', padding: '0 16px', borderRadius: 8 }}
     />
   );
 };

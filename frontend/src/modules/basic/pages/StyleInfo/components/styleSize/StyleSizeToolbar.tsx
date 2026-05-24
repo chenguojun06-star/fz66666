@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { Button, Dropdown, Input, Modal, Popover, Select, Space } from 'antd';
 import { DownOutlined } from '@ant-design/icons';
 import { sortSizeNames } from '@/utils/api';
@@ -40,6 +40,7 @@ const StyleSizeToolbar: React.FC<Props> = ({
   sizeOptions, setSizeOptions, sizeColumns, mergeSizeColumns, fetchSizeDictOptions, message,
 }) => {
   const isReadonly = Boolean(readOnly);
+  const sizeSearchTimerRef = useRef<ReturnType<typeof setTimeout>>();
 
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
@@ -134,14 +135,17 @@ const StyleSizeToolbar: React.FC<Props> = ({
           }
           onSearch={(value) => {
             const trimmed = value && value.trim();
-            if (trimmed && !sizeOptions.some((opt) => opt.value === trimmed) && !sizeColumns.includes(trimmed)) {
-              setSizeOptions((prev) => [...prev, { value: trimmed, label: trimmed }]);
-            }
+            if (sizeSearchTimerRef.current) clearTimeout(sizeSearchTimerRef.current);
+            sizeSearchTimerRef.current = setTimeout(() => {
+              if (trimmed && !sizeOptions.some((opt) => opt.value === trimmed) && !sizeColumns.includes(trimmed)) {
+                setSizeOptions((prev) => [...prev, { value: trimmed, label: trimmed }]);
+              }
+            }, 300);
           }}
           popupRender={(menu) => (
             <>
               {menu}
-              <div style={{ padding: '8px', borderTop: '1px solid #f0f0f0' }}>
+              <div style={{ padding: '8px', borderTop: '1px solid var(--color-border-light)' }}>
                 <Input
                   placeholder="输入新码数后回车添加"
                  

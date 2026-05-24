@@ -6,6 +6,7 @@ import { InboxOutlined, PlusOutlined, DeleteOutlined } from '@ant-design/icons';
 import { finishedWarehouseApi } from '../../../../services/warehouse/inventoryCheckApi';
 import { useWarehouseAreaOptions, useWarehouseLocationByArea } from '../../../../hooks/useWarehouseAreaOptions';
 import { safePrint } from '@/utils/safePrint';
+import { formatMoney } from '@/utils/format';
 
 interface FreeInboundModalProps {
   open: boolean;
@@ -309,7 +310,7 @@ const FreeInboundModal: React.FC<FreeInboundModalProps> = ({ open, onClose, onSu
             <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', background: 'var(--color-bg-highlight)', borderRadius: 6 }}>
               <span>共 <b>{items.length}</b> 个SKU</span>
               <span>合计 <b>{items.reduce((s, i) => s + i.quantity, 0)}</b> 件</span>
-              <span>总金额 <b>¥{items.reduce((s, i) => s + (i.quantity * (i.unitPrice || 0)), 0).toFixed(2)}</b></span>
+              <span>总金额 <b>{formatMoney(items.reduce((s, i) => s + (i.quantity * (i.unitPrice || 0)), 0))}</b></span>
             </div>
           </>
         )}
