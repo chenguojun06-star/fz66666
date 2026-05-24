@@ -2,6 +2,8 @@ import { useRef, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
 import { normalizeXiaoyunChatPayload } from '@/services/intelligence/xiaoyunChatAdapter';
+import { createXiaoyunHandler } from '@/services/intelligence/xiaoyunUnifiedHandler';
+import type { XiaoyunMood } from '@/services/intelligence/xiaoyunUnifiedHandler';
 import type { HyperAdvisorResponse } from '@/services/intelligence/intelligenceApi';
 import api from '@/utils/api';
 import type { Message, FollowUpAction } from './types';
@@ -10,6 +12,14 @@ import { describeToolName } from './helpers';
 
 const SSE_INACTIVITY_TIMEOUT_MS = 60_000;
 
+export interface LiveStatus {
+  mood?: XiaoyunMood;
+  step?: { step: number; total: number; phase: string; message: string };
+  toolExecuting?: { tool: string; icon?: string; message?: string; parallel?: number };
+  elapsedMs?: number;
+  visible: boolean;
+}
+
 interface StreamConfig {
   setMessages: React.Dispatch<React.SetStateAction<Message[]>>;
   setIsTyping: React.Dispatch<React.SetStateAction<boolean>>;
@@ -17,10 +27,11 @@ interface StreamConfig {
   advisorSessionId: string;
   isSuperAdmin: boolean;
   speak: (text: string) => void;
+  onLiveStatusChange: (status: LiveStatus) => void;
 }
 
 export function useAiChatStream(config: StreamConfig) {
-  const { setMessages, setIsTyping, location, advisorSessionId, isSuperAdmin, speak } = config;
+  const { setMessages, setIsTyping, location, advisorSessionId, isSuperAdmin, speak, onLiveStatusChange } = config;
 
   const streamAbortRef = useRef<AbortController | null>(null);
   const subRequestAbortRef = useRef<AbortController | null>(null);
@@ -31,7 +42,8 @@ export function useAiChatStream(config: StreamConfig) {
     streamAbortRef.current = null;
     subRequestAbortRef.current?.abort();
     subRequestAbortRef.current = null;
-  }, []);
+    onLiveStatusChange({ visible: false });
+  }, [onLiveStatusChange]);
 
   const startStream = useCallback((
     contextualText: string,
@@ -56,6 +68,36 @@ export function useAiChatStream(config: StreamConfig) {
     let completed = false;
     let answerReceived = false;
     let streamStarted = false;
+
+    let currentLiveStatus: LiveStatus = { visible: true };
+    const updateLiveStatus = (partial: Partial<LiveStatus>) => {
+      currentLiveStatus = { ...currentLiveStatus, ...partial };
+      onLiveStatusChange({ ...currentLiveStatus });
+    };
+    updateLiveStatus({ mood: 'thinking', visible: true, step: undefined, toolExecuting: undefined, elapsedMs: undefined });
+
+    const unifiedHandler = createXiaoyunHandler({
+      onStepProgress: (e) => updateLiveStatus({
+        mood: 'calculating',
+        step: { step: e.step, total: e.total, phase: e.phase, message: e.message },
+        elapsedMs: e.elapsedMs,
+      }),
+      onToolExecuting: (e) => updateLiveStatus({
+        mood: 'searching',
+        toolExecuting: { tool: e.tool, icon: e.icon, message: e.message, parallel: e.parallel },
+        elapsedMs: e.elapsedMs,
+      }),
+      onXiaoyunMood: (e) => updateLiveStatus({ mood: e.mood }),
+      onTimeBudget: (e) => updateLiveStatus({ elapsedMs: e.elapsedMs }),
+      onThinking: () => updateLiveStatus({ mood: 'thinking' }),
+      onToolCall: (tool) => updateLiveStatus({ mood: 'searching', toolExecuting: { tool } }),
+      onToolResult: () => updateLiveStatus({ toolExecuting: undefined }),
+      onAnswer: () => updateLiveStatus({ mood: 'happy' }),
+      onAnswerChunk: () => {},
+      onFollowUpActions: () => {},
+      onError: () => updateLiveStatus({ mood: 'warning' }),
+      onDone: () => {},
+    });
 
     const finishTyping = () => {
       if (requestSeqRef.current !== currentSeq) return;
@@ -159,6 +201,8 @@ export function useAiChatStream(config: StreamConfig) {
         }
         finishTyping();
       }
+      updateLiveStatus({ mood: 'done' });
+      setTimeout(() => updateLiveStatus({ visible: false }), 2000);
       fireRiskAnalysis();
       fireOverdueFactory();
     };
@@ -167,6 +211,7 @@ export function useAiChatStream(config: StreamConfig) {
       if (completed) return;
       completed = true;
       if (inactivityTimer) { clearTimeout(inactivityTimer); inactivityTimer = undefined; }
+      updateLiveStatus({ mood: 'warning' });
 
       const isAuthError = typeof err === 'string' && (err.includes('401') || err.includes('登录已过期'));
       if (isAuthError) {
@@ -237,6 +282,7 @@ export function useAiChatStream(config: StreamConfig) {
         (event) => {
           streamStarted = true;
           resetInactivityTimer();
+          try { unifiedHandler(event.type, JSON.stringify(event.data)); } catch {}
           if (event.type === 'thinking') {
             const toolStatus = '小云正在整理思路，准备给你结论…';
             setMessages(prev => {
@@ -311,7 +357,7 @@ export function useAiChatStream(config: StreamConfig) {
       if (inactivityTimer) { clearTimeout(inactivityTimer); inactivityTimer = undefined; }
       finishTyping();
     }
-  }, [setMessages, setIsTyping, location, advisorSessionId, isSuperAdmin, speak]);
+  }, [setMessages, setIsTyping, location, advisorSessionId, isSuperAdmin, speak, onLiveStatusChange]);
 
   return { startStream, abort, streamAbortRef };
 }

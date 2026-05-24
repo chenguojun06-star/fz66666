@@ -6,6 +6,7 @@ import com.fashion.supplychain.intelligence.orchestration.OrderDecisionCaptureOr
 import com.fashion.supplychain.intelligence.orchestration.OrderLearningOutcomeOrchestrator;
 import com.fashion.supplychain.production.service.ProductionOrderQueryService;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.production.helper.OrderListCacheHelper;
 import com.fashion.supplychain.common.lock.DistributedLockService;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.system.entity.OperationLog;
@@ -21,6 +22,8 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.util.StringUtils;
 
 /**
@@ -87,87 +90,102 @@ public class ProductionOrderOrchestrator {
     @Autowired(required = false)
     private DistributedLockService distributedLockService;
 
+    @Autowired
+    private OrderListCacheHelper orderListCacheHelper;
+
     // ======================= 查询类方法 =======================
 
     public IPage<ProductionOrder> queryPage(Map<String, Object> params) {
+        String cacheKey = orderListCacheHelper.buildListCacheKey(params);
+        IPage<?> cached = orderListCacheHelper.getListCache(cacheKey);
+        if (cached != null) {
+            @SuppressWarnings("unchecked")
+            IPage<ProductionOrder> typed = (IPage<ProductionOrder>) cached;
+            return typed;
+        }
+
         IPage<ProductionOrder> page = productionOrderQueryService.queryPage(params);
-        // 批量关联 EC 单号（出库打通后回填，失败不影响主流程）
-        if (page != null && !page.getRecords().isEmpty() && ecOrderService != null) {
-            try {
-                List<String> orderNos = page.getRecords().stream()
-                        .map(ProductionOrder::getOrderNo)
-                        .filter(StringUtils::hasText)
-                        .distinct()
-                        .collect(java.util.stream.Collectors.toList());
-                if (!orderNos.isEmpty()) {
-                    List<com.fashion.supplychain.integration.ecommerce.entity.EcommerceOrder> ecOrders =
-                            ecOrderService.list(
-                                    new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<
-                                            com.fashion.supplychain.integration.ecommerce.entity.EcommerceOrder>()
-                                            .in(com.fashion.supplychain.integration.ecommerce.entity.EcommerceOrder::getProductionOrderNo, orderNos)
-                            );
-                    if (!ecOrders.isEmpty()) {
-                        Map<String, com.fashion.supplychain.integration.ecommerce.entity.EcommerceOrder> ecMap =
-                                ecOrders.stream().collect(java.util.stream.Collectors.toMap(
-                                        com.fashion.supplychain.integration.ecommerce.entity.EcommerceOrder::getProductionOrderNo,
-                                        o -> o,
-                                        (a, b) -> a  // 同生产单对应多EC单时取首条
-                                ));
-                        page.getRecords().forEach(o -> {
-                            com.fashion.supplychain.integration.ecommerce.entity.EcommerceOrder ec =
-                                    ecMap.get(o.getOrderNo());
-                            if (ec != null) {
-                                o.setEcOrderNo(ec.getOrderNo());
-                                o.setEcPlatform(ec.getPlatform());
-                            }
-                        });
-                    }
-                }
-            } catch (Exception e) {
-                log.warn("[EC关联] 批量关联EC单号失败，不影响主流程: {}", e.getMessage());
-            }
-        }
-        // 批量填充次品数量（用于前端进度球红点预显示，失败不影响主流程）
-        if (page != null && !page.getRecords().isEmpty()) {
-            try {
-                List<String> orderIds = page.getRecords().stream()
-                        .map(ProductionOrder::getId)
-                        .filter(id -> id != null && !id.isEmpty())
-                        .distinct()
-                        .collect(java.util.stream.Collectors.toList());
-                if (!orderIds.isEmpty()) {
-                    // 只 SELECT order_id/unqualified_quantity，避免 SELECT * 触发
-                    // repair_status 等新增列在云端缺失时的 "Unknown column" 错误
-                    List<com.fashion.supplychain.production.entity.ProductWarehousing> defectRecords =
-                            productWarehousingService.list(
-                                    new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<
-                                            com.fashion.supplychain.production.entity.ProductWarehousing>()
-                                            .select(com.fashion.supplychain.production.entity.ProductWarehousing::getOrderId,
-                                                    com.fashion.supplychain.production.entity.ProductWarehousing::getUnqualifiedQuantity)
-                                            .in(com.fashion.supplychain.production.entity.ProductWarehousing::getOrderId, orderIds)
-                                            .gt(com.fashion.supplychain.production.entity.ProductWarehousing::getUnqualifiedQuantity, 0)
-                                            .eq(com.fashion.supplychain.production.entity.ProductWarehousing::getDeleteFlag, 0)
-                            );
-                    if (!defectRecords.isEmpty()) {
-                        Map<String, Integer> defectSumMap = defectRecords.stream()
-                                .collect(java.util.stream.Collectors.toMap(
-                                        com.fashion.supplychain.production.entity.ProductWarehousing::getOrderId,
-                                        w -> w.getUnqualifiedQuantity() == null ? 0 : w.getUnqualifiedQuantity(),
-                                        Integer::sum
-                                ));
-                        page.getRecords().forEach(o -> {
-                            Integer defectSum = defectSumMap.get(o.getId());
-                            if (defectSum != null) {
-                                o.setUnqualifiedQuantity(defectSum);
-                            }
-                        });
-                    }
-                }
-            } catch (Exception e) {
-                log.warn("[次品数量] 批量填充次品数量失败，不影响主流程: {}", e.getMessage());
-            }
-        }
+        enrichEcAndDefect(page);
+
+        orderListCacheHelper.putListCache(cacheKey, page);
         return page;
+    }
+
+    private void enrichEcAndDefect(IPage<ProductionOrder> page) {
+        if (page == null || page.getRecords().isEmpty()) return;
+        enrichEcOrders(page);
+        enrichDefectQuantity(page);
+    }
+
+    private void enrichEcOrders(IPage<ProductionOrder> page) {
+        if (ecOrderService == null) return;
+        try {
+            List<String> orderNos = page.getRecords().stream()
+                    .map(ProductionOrder::getOrderNo)
+                    .filter(StringUtils::hasText)
+                    .distinct()
+                    .collect(java.util.stream.Collectors.toList());
+            if (orderNos.isEmpty()) return;
+            List<com.fashion.supplychain.integration.ecommerce.entity.EcommerceOrder> ecOrders =
+                    ecOrderService.list(
+                            new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<
+                                    com.fashion.supplychain.integration.ecommerce.entity.EcommerceOrder>()
+                                    .in(com.fashion.supplychain.integration.ecommerce.entity.EcommerceOrder::getProductionOrderNo, orderNos)
+                            );
+            if (ecOrders.isEmpty()) return;
+            Map<String, com.fashion.supplychain.integration.ecommerce.entity.EcommerceOrder> ecMap =
+                    ecOrders.stream().collect(java.util.stream.Collectors.toMap(
+                            com.fashion.supplychain.integration.ecommerce.entity.EcommerceOrder::getProductionOrderNo,
+                            o -> o,
+                            (a, b) -> a
+                    ));
+            page.getRecords().forEach(o -> {
+                com.fashion.supplychain.integration.ecommerce.entity.EcommerceOrder ec =
+                        ecMap.get(o.getOrderNo());
+                if (ec != null) {
+                    o.setEcOrderNo(ec.getOrderNo());
+                    o.setEcPlatform(ec.getPlatform());
+                }
+            });
+        } catch (Exception e) {
+            log.warn("[EC关联] 批量关联EC单号失败，不影响主流程: {}", e.getMessage());
+        }
+    }
+
+    private void enrichDefectQuantity(IPage<ProductionOrder> page) {
+        try {
+            List<String> orderIds = page.getRecords().stream()
+                    .map(ProductionOrder::getId)
+                    .filter(id -> id != null && !id.isEmpty())
+                    .distinct()
+                    .collect(java.util.stream.Collectors.toList());
+            if (orderIds.isEmpty()) return;
+            List<com.fashion.supplychain.production.entity.ProductWarehousing> defectRecords =
+                    productWarehousingService.list(
+                            new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<
+                                    com.fashion.supplychain.production.entity.ProductWarehousing>()
+                                    .select(com.fashion.supplychain.production.entity.ProductWarehousing::getOrderId,
+                                            com.fashion.supplychain.production.entity.ProductWarehousing::getUnqualifiedQuantity)
+                                    .in(com.fashion.supplychain.production.entity.ProductWarehousing::getOrderId, orderIds)
+                                    .gt(com.fashion.supplychain.production.entity.ProductWarehousing::getUnqualifiedQuantity, 0)
+                                    .eq(com.fashion.supplychain.production.entity.ProductWarehousing::getDeleteFlag, 0)
+                            );
+            if (defectRecords.isEmpty()) return;
+            Map<String, Integer> defectSumMap = defectRecords.stream()
+                    .collect(java.util.stream.Collectors.toMap(
+                            com.fashion.supplychain.production.entity.ProductWarehousing::getOrderId,
+                            w -> w.getUnqualifiedQuantity() == null ? 0 : w.getUnqualifiedQuantity(),
+                            Integer::sum
+                    ));
+            page.getRecords().forEach(o -> {
+                Integer defectSum = defectSumMap.get(o.getId());
+                if (defectSum != null) {
+                    o.setUnqualifiedQuantity(defectSum);
+                }
+            });
+        } catch (Exception e) {
+            log.warn("[次品数量] 批量填充次品数量失败，不影响主流程: {}", e.getMessage());
+        }
     }
 
     /**
@@ -234,57 +252,76 @@ public class ProductionOrderOrchestrator {
 
     @Transactional(rollbackFor = Exception.class)
     public boolean saveOrUpdateOrder(ProductionOrder productionOrder) {
-        return creationHelper.saveOrUpdateOrder(productionOrder);
+        boolean result = creationHelper.saveOrUpdateOrder(productionOrder);
+        evictCacheAfterCommit(productionOrder.getId());
+        return result;
     }
 
     @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> createOrderFromStyle(String styleId, String priceType, String remark) {
-        return creationHelper.createOrderFromStyle(styleId, priceType, remark);
+        Map<String, Object> result = creationHelper.createOrderFromStyle(styleId, priceType, remark);
+        evictTenantListCacheAfterCommit();
+        return result;
     }
 
     // ======================= 生命周期 → LifecycleHelper =======================
 
     @Transactional(rollbackFor = Exception.class)
     public boolean deleteById(String id) {
-        return lifecycleHelper.deleteById(id);
+        boolean result = lifecycleHelper.deleteById(id);
+        evictCacheAfterCommit(id);
+        return result;
     }
 
     @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> deleteByIdWithApproval(String id, String reason) {
-        return lifecycleHelper.deleteByIdWithApproval(id, reason);
+        Map<String, Object> result = lifecycleHelper.deleteByIdWithApproval(id, reason);
+        evictCacheAfterCommit(id);
+        return result;
     }
 
     @Transactional(rollbackFor = Exception.class)
     public boolean scrapOrder(String id, String remark) {
         assertOrderBelongsToCurrentTenant(id, "报废订单");
+        boolean result;
         if (distributedLockService == null) {
-            return lifecycleHelper.scrapOrder(id, remark);
+            result = lifecycleHelper.scrapOrder(id, remark);
+        } else {
+            result = distributedLockService.executeWithLock("order:scrap:" + id, 10, java.util.concurrent.TimeUnit.SECONDS,
+                    () -> lifecycleHelper.scrapOrder(id, remark));
         }
-        return distributedLockService.executeWithLock("order:scrap:" + id, 10, java.util.concurrent.TimeUnit.SECONDS,
-                () -> lifecycleHelper.scrapOrder(id, remark));
+        evictCacheAfterCommit(id);
+        return result;
     }
 
     // ======================= 工序/工作流 → WorkflowHelper =======================
 
     @Transactional(rollbackFor = Exception.class)
     public ProductionOrder lockProgressWorkflow(String id, String workflowJson) {
-        return workflowHelper.lockProgressWorkflow(id, workflowJson);
+        ProductionOrder result = workflowHelper.lockProgressWorkflow(id, workflowJson);
+        evictCacheAfterCommit(id);
+        return result;
     }
 
     @Transactional(rollbackFor = Exception.class)
     public ProductionOrder rollbackProgressWorkflow(String id, String reason) {
-        return workflowHelper.rollbackProgressWorkflow(id, reason);
+        ProductionOrder result = workflowHelper.rollbackProgressWorkflow(id, reason);
+        evictCacheAfterCommit(id);
+        return result;
     }
 
     @Transactional(rollbackFor = Exception.class)
     public ProductionOrder confirmProcurement(String orderId, String remark) {
-        return workflowHelper.confirmProcurement(orderId, remark);
+        ProductionOrder result = workflowHelper.confirmProcurement(orderId, remark);
+        evictCacheAfterCommit(orderId);
+        return result;
     }
 
     @Transactional(rollbackFor = Exception.class)
     public void delegateProcess(String orderId, String processNode, String factoryId, Double unitPrice) {
         assertOrderBelongsToCurrentTenant(orderId, "工序委派");
         workflowHelper.delegateProcess(orderId, processNode, factoryId, unitPrice);
+        evictCacheAfterCommit(orderId);
     }
 
     // ======================= 进度/财务编排 =======================
@@ -296,19 +333,25 @@ public class ProductionOrderOrchestrator {
     @Transactional(rollbackFor = Exception.class)
     public boolean updateProductionProgress(String id, Integer progress, String rollbackRemark,
             String rollbackToProcessName) {
-        return progressOrchestrationService.updateProductionProgress(id, progress, rollbackRemark,
+        boolean result = progressOrchestrationService.updateProductionProgress(id, progress, rollbackRemark,
                 rollbackToProcessName);
+        evictCacheAfterCommit(id);
+        return result;
     }
 
     @Transactional(rollbackFor = Exception.class)
     public boolean updateMaterialArrivalRate(String id, Integer rate) {
-        return progressOrchestrationService.updateMaterialArrivalRate(id, rate);
+        boolean result = progressOrchestrationService.updateMaterialArrivalRate(id, rate);
+        evictCacheAfterCommit(id);
+        return result;
     }
 
     @Transactional(rollbackFor = Exception.class)
     public boolean completeProduction(String id, BigDecimal tolerancePercent) {
         assertOrderBelongsToCurrentTenant(id, "完成生产");
-        return financeOrchestrationService.completeProduction(id, tolerancePercent);
+        boolean result = financeOrchestrationService.completeProduction(id, tolerancePercent);
+        evictCacheAfterCommit(id);
+        return result;
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -358,11 +401,18 @@ public class ProductionOrderOrchestrator {
         } catch (Exception e) {
             log.warn("记录订单关闭操作日志失败: orderId={}", id, e);
         }
-        if (result != null && (orderDecisionCaptureOrchestrator != null || orderLearningOutcomeOrchestrator != null)) {
-            org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(
-                new org.springframework.transaction.support.TransactionSynchronization() {
+        if (result != null) {
+            final String orderId = id;
+            TransactionSynchronizationManager.registerSynchronization(
+                new TransactionSynchronization() {
                     @Override
                     public void afterCommit() {
+                        try {
+                            orderListCacheHelper.evictTenantListCache();
+                            orderListCacheHelper.evictDetailCache(orderId);
+                        } catch (Exception ex) {
+                            log.debug("[OrderCache] 关单后缓存清除失败: orderId={}", orderId);
+                        }
                         try {
                             if (orderDecisionCaptureOrchestrator != null) {
                                 orderDecisionCaptureOrchestrator.captureByOrderId(result.getId());
@@ -382,7 +432,9 @@ public class ProductionOrderOrchestrator {
 
     @Transactional(rollbackFor = Exception.class)
     public List<Map<String, Object>> batchCloseOrders(List<String> orderIds, String sourceModule, String remark, boolean specialClose) {
-        return financeOrchestrationService.batchCloseOrders(orderIds, sourceModule, remark, specialClose);
+        List<Map<String, Object>> result = financeOrchestrationService.batchCloseOrders(orderIds, sourceModule, remark, specialClose);
+        evictTenantListCacheAfterCommit();
+        return result;
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
@@ -438,7 +490,6 @@ public class ProductionOrderOrchestrator {
                     operation, orderId, currentTenantId, order.getTenantId());
             throw new AccessDeniedException(operation + "操作失败：订单不属于当前租户");
         }
-        // 工厂账号额外校验：只能操作关联到自己工厂的订单
         String ctxFactoryId = UserContext.factoryId();
         if (StringUtils.hasText(ctxFactoryId)) {
             String orderFactoryId = order.getFactoryId();
@@ -448,5 +499,41 @@ public class ProductionOrderOrchestrator {
                 throw new AccessDeniedException(operation + "操作失败：订单不属于当前工厂");
             }
         }
+    }
+
+    private void evictCacheAfterCommit(String orderId) {
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            orderListCacheHelper.evictTenantListCache();
+            orderListCacheHelper.evictDetailCache(orderId);
+            return;
+        }
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                try {
+                    orderListCacheHelper.evictTenantListCache();
+                    orderListCacheHelper.evictDetailCache(orderId);
+                } catch (Exception e) {
+                    log.debug("[OrderCache] 缓存清除失败: orderId={}", orderId);
+                }
+            }
+        });
+    }
+
+    private void evictTenantListCacheAfterCommit() {
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            orderListCacheHelper.evictTenantListCache();
+            return;
+        }
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                try {
+                    orderListCacheHelper.evictTenantListCache();
+                } catch (Exception e) {
+                    log.debug("[OrderCache] 租户列表缓存清除失败");
+                }
+            }
+        });
     }
 }

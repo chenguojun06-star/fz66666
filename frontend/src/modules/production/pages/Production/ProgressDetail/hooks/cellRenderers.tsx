@@ -421,9 +421,9 @@ export function createProgressNodesRender(ctx: ProgressNodesContext) {
                     gap: 2,
                   }}>
                     <div style={{
-                      fontSize: 14,
-                      color: '#333',
-                      fontWeight: 700,
+                      fontSize: 12,
+                      color: 'var(--color-text-primary)',
+                      fontWeight: 600,
                       lineHeight: 1.2,
                       textAlign: 'center',
                       whiteSpace: 'nowrap',
@@ -431,8 +431,9 @@ export function createProgressNodesRender(ctx: ProgressNodesContext) {
                       下单
                     </div>
                     <div style={{
-                      fontSize: 14,
-                      color: '#6b7280',
+                      fontSize: 12,
+                      color: 'var(--color-text-tertiary)',
+                      fontWeight: 400,
                       lineHeight: 1.2,
                       textAlign: 'center',
                       whiteSpace: 'nowrap',
@@ -641,9 +642,9 @@ export function createProgressNodesRender(ctx: ProgressNodesContext) {
                   gap: 2,
                 }}>
                   <div style={{
-                    fontSize: 14,
-                    color: '#333',
-                    fontWeight: 700,
+                    fontSize: 12,
+                    color: 'var(--color-text-primary)',
+                    fontWeight: 600,
                     lineHeight: 1.2,
                     textAlign: 'center',
                     whiteSpace: 'nowrap',
@@ -651,8 +652,9 @@ export function createProgressNodesRender(ctx: ProgressNodesContext) {
                     {nodeLabel}
                   </div>
                   <div style={{
-                    fontSize: 14,
-                    color: '#6b7280',
+                    fontSize: 12,
+                    color: 'var(--color-text-tertiary)',
+                    fontWeight: 400,
                     lineHeight: 1.2,
                     textAlign: 'center',
                     whiteSpace: 'nowrap',

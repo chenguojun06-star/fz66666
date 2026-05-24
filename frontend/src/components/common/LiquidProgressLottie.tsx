@@ -194,20 +194,20 @@ const LiquidProgressLottie: React.FC<LiquidProgressLottieProps> = ({
           // 双行：数量显示在上方（替代工序名位置）
           text ? (
             <text x={C} y={nameY} textAnchor="middle" dominantBaseline="middle"
-              fill={isDone ? '#237804' : '#374151'} fontSize={FS} fontWeight="600" fontFamily="inherit">
+              fill={isDone ? '#237804' : 'var(--color-text-primary)'} fontSize={FS} fontWeight="600" fontFamily="inherit">
               {text}
             </text>
           ) : null
         ) : nodeName ? (
           <text x={C} y={nameY} textAnchor="middle" dominantBaseline="middle"
-            fill="#374151" fontSize={FS} fontWeight="700" fontFamily="inherit">
+            fill="var(--color-text-primary)" fontSize={FS} fontWeight="700" fontFamily="inherit">
             {nodeName.slice(0, 2)}
           </text>
         ) : null}
 
         {/* ⑦ 百分比/进度文字行 */}
         <text x={C} y={textY} textAnchor="middle" dominantBaseline="middle"
-          fill={isDone ? '#237804' : '#6b7280'}
+          fill={isDone ? '#237804' : 'var(--color-text-tertiary)'}
           fontSize={FS} fontWeight="600" fontFamily="inherit">
           {hasDual ? (subText || `${pct}%`) : (text || `${pct}%`)}
         </text>

@@ -459,14 +459,7 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
               {
                 key: 'view',
                 label: isPending ? '采购' : '查看',
-                onClick: () => {
-                  const sn = String(record.styleNo || '').trim();
-                  const on = String((record as any).orderNo || '').trim();
-                  if (sn) {
-                    const qs = on ? `?orderNo=${encodeURIComponent(on)}` : '';
-                    navigate(`/production/material/${encodeURIComponent(sn)}${qs}`);
-                  }
-                },
+                onClick: () => onView(record),
                 primary: true,
               },
               {

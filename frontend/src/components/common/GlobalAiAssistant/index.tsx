@@ -30,6 +30,7 @@ import { useMoodGreeting } from './useMoodGreeting';
 import { useEmojiPicker } from './useEmojiPicker';
 import MessageBubble from './MessageBubble';
 import SmartBubble from './SmartBubble';
+import XiaoyunLiveStatus from './XiaoyunLiveStatus';
 import TaskAggregationPanel from './TaskAggregationPanel';
 import PendingItemsSection from './PendingItemsSection';
 import TaskListView from './TaskListView';
@@ -114,6 +115,7 @@ const GlobalAiAssistant: React.FC = () => {
     messages, setMessages,
     inputValue, setInputValue,
     isTyping,
+    liveStatus,
     isMuted, setIsMuted,
     downloadingType,
     attachedFile, setAttachedFile,
@@ -483,6 +485,13 @@ const GlobalAiAssistant: React.FC = () => {
               {panelView === 'chat' && (
                 <>
                   <div className={styles.chatArea} ref={chatAreaRef}>
+                    <XiaoyunLiveStatus
+                      mood={liveStatus.mood}
+                      step={liveStatus.step}
+                      toolExecuting={liveStatus.toolExecuting}
+                      elapsedMs={liveStatus.elapsedMs}
+                      visible={liveStatus.visible}
+                    />
                     {messages.length === 1 && (
                       <PendingItemsSection
                         items={visiblePendingItems}

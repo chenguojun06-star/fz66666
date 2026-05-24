@@ -12,6 +12,7 @@ import { INITIAL_MSG } from './constants';
 import { extractOrderNo, isPurchaseDocFile, shouldAutoInbound, shouldAutoArrival, buildReportInsight } from './helpers';
 import { speakText } from './speechUtils';
 import { useAiChatStream } from './useAiChatStream';
+import type { LiveStatus } from './useAiChatStream';
 
 export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useApp>['message']) {
   const { user } = useUser();
@@ -27,6 +28,7 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
   const [uploadingFile, setUploadingFile] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [advisorSessionId, setAdvisorSessionId] = useState(loadSession);
+  const [liveStatus, setLiveStatus] = useState<LiveStatus>({ visible: false });
 
   const historyFetchedRef = useRef(false);
   const briefingFetchedRef = useRef(false);
@@ -60,6 +62,7 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
     advisorSessionId,
     isSuperAdmin,
     speak,
+    onLiveStatusChange: setLiveStatus,
   });
 
   useEffect(() => {
@@ -306,12 +309,14 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
     setMessages([INITIAL_MSG]);
     setInputValue('');
     historyFetchedRef.current = true;
+    setLiveStatus({ visible: false });
   }, [abortStream]);
 
   return {
     messages, setMessages,
     inputValue, setInputValue,
     isTyping,
+    liveStatus,
     isMuted, setIsMuted,
     downloadingType,
     attachedFile, setAttachedFile,
