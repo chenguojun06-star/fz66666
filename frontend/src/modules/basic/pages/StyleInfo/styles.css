@@ -942,9 +942,9 @@
   align-items: center;
   justify-content: center;
   gap: 4px;
-  width: 72px;
-  height: 72px;
-  padding: 6px 4px;
+  width: 108px;
+  min-height: 72px;
+  padding: 6px 8px;
   border: 1px solid rgba(148, 163, 184, 0.18);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.92);

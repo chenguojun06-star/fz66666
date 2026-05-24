@@ -109,7 +109,8 @@ const hintStyle: React.CSSProperties = {
   fontWeight: 400,
   lineHeight: 1.2,
   textAlign: 'center',
-  whiteSpace: 'nowrap',
+  whiteSpace: 'normal',
+  wordBreak: 'break-all',
 };
 
 const StageTimelineHint: React.FC<StageTimelineHintProps> = ({
