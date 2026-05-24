@@ -103,14 +103,14 @@
   --table-header-font-size: 12px;
   --table-cell-font-size: 12px;
   --table-cell-padding-x: 8px;
-  --table-cell-padding-y: 5px;
+  --table-cell-padding-y: 3px;
   --table-header-padding-x: 8px;
-  --table-header-padding-y: 6px;
-  --table-header-height: 32px;
+  --table-header-padding-y: 4px;
+  --table-header-height: 28px;
   --table-min-col-width: 60px;
   --table-action-col-width: 130px;
-  --table-row-height: 36px;
-  --table-condensed-row-height: 28px;
+  --table-row-height: 30px;
+  --table-condensed-row-height: 24px;
   --table-border-radius: 6px;
   --table-scroll-indicator-opacity: 0;
   --table-cell-line-clamp: none;
@@ -530,14 +530,14 @@ html.dark-mode {
     --table-header-font-size: 12px;
     --table-cell-font-size: 12px;
     --table-cell-padding-x: 5px;
-    --table-cell-padding-y: 5px;
+    --table-cell-padding-y: 3px;
     --table-header-padding-x: 6px;
-    --table-header-padding-y: 6px;
-    --table-header-height: 32px;
+    --table-header-padding-y: 4px;
+    --table-header-height: 28px;
     --table-min-col-width: 44px;
     --table-action-col-width: 100px;
-    --table-row-height: 30px;
-    --table-condensed-row-height: 26px;
+    --table-row-height: 28px;
+    --table-condensed-row-height: 24px;
   }
 }
 
@@ -549,14 +549,14 @@ html.dark-mode {
     --table-header-font-size: 12px;
     --table-cell-font-size: 12px;
     --table-cell-padding-x: 4px;
-    --table-cell-padding-y: 4px;
+    --table-cell-padding-y: 2px;
     --table-header-padding-x: 4px;
-    --table-header-padding-y: 4px;
-    --table-header-height: 28px;
+    --table-header-padding-y: 3px;
+    --table-header-height: 26px;
     --table-min-col-width: 36px;
     --table-action-col-width: 80px;
-    --table-row-height: 28px;
-    --table-condensed-row-height: 24px;
+    --table-row-height: 26px;
+    --table-condensed-row-height: 22px;
     --table-cell-line-clamp: 2;
   }
 

@@ -73,7 +73,6 @@ const InspectionDetail: React.FC = () => {
   const [orderDetailLoading, setOrderDetailLoading] = useState(false);
   const [bundles, setBundles] = useState<CuttingBundleRow[]>([]);
   const [warehouseValue, setWarehouseValue] = useState('');
-  const [warehouseType, setWarehouseType] = useState('成品仓');
   const [warehousingLoading, setWarehousingLoading] = useState(false);
   const [showWarehousingModal, setShowWarehousingModal] = useState(false);
   const [markingRepairBundleId, setMarkingRepairBundleId] = useState<string | null>(null);
@@ -484,8 +483,6 @@ const InspectionDetail: React.FC = () => {
           qcRecords={qcRecords}
           warehouseValue={warehouseValue}
           setWarehouseValue={setWarehouseValue}
-          warehouseType={warehouseType}
-          setWarehouseType={setWarehouseType}
           warehousingLoading={warehousingLoading}
           onSubmit={handleWarehouseSubmit}
         />

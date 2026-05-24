@@ -41,11 +41,11 @@ if [ -z "$CHANGED_FILES" ]; then
 fi
 
 echo
-echo "[1/4] git status"
+echo "[1/5] git status"
 git status --short
 
 echo
-echo "[2/4] git diff --stat HEAD"
+echo "[2/5] git diff --stat HEAD"
 git diff --stat HEAD || true
 
 DB_SENSITIVE_PATTERN='(^backend/src/main/java/.*/entity/.*\.java$|^backend/src/main/resources/db/migration/.*\.sql$|^backend/src/main/java/.*/mapper/.*$|^backend/src/main/resources/mapper/.*$|^backend/src/main/java/com/fashion/supplychain/config/DbColumnRepairRunner\.java$|^backend/src/main/java/com/fashion/supplychain/config/CoreSchemaPreflightChecker\.java$|^deployment/.*\.sql$|^sql/.*\.sql$)'
@@ -56,9 +56,22 @@ DB_SENSITIVE_FILES=$(printf '%s\n' "$CHANGED_FILES" | grep -E "$DB_SENSITIVE_PAT
 BACKEND_CHANGED=$(printf '%s\n' "$CHANGED_FILES" | grep -E "$BACKEND_PATTERN" || true)
 FRONTEND_CHANGED=$(printf '%s\n' "$CHANGED_FILES" | grep -E "$FRONTEND_PATTERN" || true)
 
+FLYWAY_PATTERN='^backend/src/main/resources/db/migration/.*\.sql$'
+FLYWAY_CHANGED=$(printf '%s\n' "$CHANGED_FILES" | grep -E "$FLYWAY_PATTERN" || true)
+
+if [ -n "$FLYWAY_CHANGED" ]; then
+	echo
+	echo "[3/5] Flyway SQL 语法校验（P0 强制）"
+	python3 "$ROOT_DIR/scripts/check-flyway-sql.py" || {
+		echo
+		echo "❌ Flyway SQL 校验失败！修复后再推送。"
+		exit 1
+	}
+fi
+
 if [ -n "$DB_SENSITIVE_FILES" ]; then
 	echo
-	echo "[3/4] 数据库敏感改动检测"
+	echo "[4/5] 数据库敏感改动检测"
 	printf '%s\n' "$DB_SENSITIVE_FILES"
 	echo
 	echo "检测到 Entity/Flyway/SQL/DbRepair/Preflight 相关改动。"
@@ -75,7 +88,7 @@ fi
 
 if [ -n "$BACKEND_CHANGED" ] || [ "$FORCE_BACKEND" -eq 1 ]; then
 	echo
-	echo "[4/4] 后端编译检查"
+	echo "[5/5] 后端编译检查"
 	cd "$ROOT_DIR/backend"
 	JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home /opt/homebrew/bin/mvn clean compile -q
 	cd "$ROOT_DIR"
@@ -84,7 +97,7 @@ fi
 
 if [ -n "$FRONTEND_CHANGED" ] || [ "$FORCE_FRONTEND" -eq 1 ]; then
 	echo
-	echo "[4/4] 前端类型检查"
+	echo "[5/5] 前端类型检查"
 	cd "$ROOT_DIR/frontend"
 	npx tsc --noEmit
 	cd "$ROOT_DIR"

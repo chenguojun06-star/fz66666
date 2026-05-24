@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, Alert, Button, Space, Typography, Select } from 'antd';
 import { InboxOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
@@ -12,20 +12,22 @@ interface Props {
   qcRecords: WarehousingDetailRecord[];
   warehouseValue: string;
   setWarehouseValue: (v: string) => void;
-  warehouseType: string;
-  setWarehouseType: (v: string) => void;
   warehousingLoading: boolean;
   onSubmit: () => void;
 }
 
 const WarehousingActionPanel: React.FC<Props> = ({
-  qcRecords, warehouseValue, setWarehouseValue, warehouseType, setWarehouseType,
-  warehousingLoading, onSubmit,
+  qcRecords, warehouseValue, setWarehouseValue, warehousingLoading, onSubmit,
 }) => {
-  const { selectOptions: finishedWarehouseOptions } = useWarehouseAreaOptions('FINISHED');
-  const warehouseTypeOptions = finishedWarehouseOptions.length > 0
-    ? finishedWarehouseOptions.map(opt => ({ label: opt.label, value: opt.label as string }))
-    : [{ label: '成品仓', value: '成品仓' }];
+  const { selectOptions: finishedWarehouseOptions, areas } = useWarehouseAreaOptions('FINISHED');
+  const [selectedAreaId, setSelectedAreaId] = useState<string>('');
+
+  useEffect(() => {
+    if (areas.length > 0 && !selectedAreaId) {
+      setSelectedAreaId(areas[0].id);
+    }
+  }, [areas, selectedAreaId]);
+
   const pendingRecords = qcRecords.filter(r => {
     const qs = String(r.qualityStatus || '').trim().toLowerCase();
     return (!qs || qs === 'qualified') && Number(r.qualifiedQuantity || 0) > 0 && !String(r.warehouse || '').trim();
@@ -47,7 +49,7 @@ const WarehousingActionPanel: React.FC<Props> = ({
           dataSource={pendingRecords}
           resizableColumns={false}
           scroll={undefined}
-          style={{ fontSize: 14 }}
+          style={{ fontSize: 12 }}
           columns={[
             { title: '质检入库号', dataIndex: 'warehousingNo', key: 'wn', width: 110 },
             {
@@ -62,24 +64,25 @@ const WarehousingActionPanel: React.FC<Props> = ({
       </Card>
 
       <Card title="选择仓库并确认入库">
-        <Space orientation="vertical" style={{ width: '100%' }} size="middle">
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-              <Text strong>仓库类型：</Text>
-              <Select
-                value={warehouseType}
-                onChange={(v) => setWarehouseType(v)}
-                options={warehouseTypeOptions}
-                style={{ width: 140 }}
-                placeholder="请选择仓库类型"
-              />
-              <Text strong>入库仓位：</Text>
-              <WarehouseLocationAutoComplete
-                warehouseType={warehouseType === '成品仓' ? 'FINISHED' : warehouseType === '物料仓' ? 'MATERIAL' : 'SAMPLE'}
-                placeholder="请选择或输入仓位"
-                value={warehouseValue || undefined}
-                onChange={(v) => setWarehouseValue(String(v || '').trim())}
-                style={{ width: 200 }}
-              />
+        <Space direction="vertical" style={{ width: '100%' }} size="middle">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+            <Text strong>仓库：</Text>
+            <Select
+              value={selectedAreaId || undefined}
+              onChange={(v) => { setSelectedAreaId(v); setWarehouseValue(''); }}
+              options={finishedWarehouseOptions}
+              style={{ width: 180 }}
+              placeholder="请选择仓库"
+            />
+            <Text strong>入库仓位：</Text>
+            <WarehouseLocationAutoComplete
+              warehouseType="FINISHED"
+              areaId={selectedAreaId}
+              placeholder="请选择或输入仓位"
+              value={warehouseValue || undefined}
+              onChange={(v) => setWarehouseValue(String(v || '').trim())}
+              style={{ width: 220 }}
+            />
           </div>
           <Button type="primary" size="large" icon={<InboxOutlined />}
             loading={warehousingLoading} onClick={onSubmit}

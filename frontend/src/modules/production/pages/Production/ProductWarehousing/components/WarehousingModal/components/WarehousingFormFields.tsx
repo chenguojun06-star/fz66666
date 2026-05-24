@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Form, Input, InputNumber, Select, Button, Space, Tag } from 'antd';
 import { StyleCoverThumb } from '@/components/StyleAssets';
 import WarehouseLocationAutoComplete from '@/components/common/WarehouseLocationAutoComplete';
+import { useWarehouseAreaOptions } from '@/hooks/useWarehouseAreaOptions';
 import { COVER_SIZE, DEFECT_CATEGORY_OPTIONS, DEFECT_REMARK_OPTIONS } from '../../../constants';
 import BatchSelectionPanel from './BatchSelectionPanel';
 import UnqualifiedUpload from './UnqualifiedUpload';
@@ -19,6 +20,14 @@ interface WarehousingFormFieldsProps {
 const WarehousingFormFields: React.FC<WarehousingFormFieldsProps> = ({ hook, openPreview, onCancel }) => {
   const watchedOrderIdForAi = Form.useWatch('orderId', hook.form);
   const watchedDefectCategoryForAi = Form.useWatch('defectCategory', hook.form);
+  const { selectOptions: finishedWarehouseOptions, areas } = useWarehouseAreaOptions('FINISHED');
+  const [selectedAreaId, setSelectedAreaId] = useState<string>('');
+
+  useEffect(() => {
+    if (areas.length > 0 && !selectedAreaId) {
+      setSelectedAreaId(areas[0].id);
+    }
+  }, [areas, selectedAreaId]);
 
   const {
     form,
@@ -318,11 +327,22 @@ const WarehousingFormFields: React.FC<WarehousingFormFieldsProps> = ({ hook, ope
           </div>
 
           <div className="wh-line wh-line-bottom">
-            <div className="wh-label" style={{ width: 72 }}>入库仓库</div>
-            <div className="wh-control" style={{ flex: 1, minWidth: 280 }}>
+            <div className="wh-label" style={{ width: 72 }}>仓库</div>
+            <div className="wh-control" style={{ width: 180 }}>
+              <Select
+                value={selectedAreaId || undefined}
+                onChange={(v) => { setSelectedAreaId(v); form.setFieldValue('warehouse', undefined); }}
+                options={finishedWarehouseOptions}
+                style={{ width: '100%' }}
+                placeholder="请选择仓库"
+              />
+            </div>
+            <div className="wh-label" style={{ width: 72 }}>入库仓位</div>
+            <div className="wh-control" style={{ flex: 1, minWidth: 200 }}>
               <Form.Item name="warehouse" style={{ marginBottom: 0 }}>
                 <WarehouseLocationAutoComplete
                   warehouseType="FINISHED"
+                  areaId={selectedAreaId}
                   placeholder="请选择入库库位（如 A-01-1-1）"
                   style={{ width: '100%' }}
                 />

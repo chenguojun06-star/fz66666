@@ -326,9 +326,11 @@ const AppWrapper: React.FC = () => {
     const isBlue = currentTheme === 'blue';
     const isLightBlue = currentTheme === 'lightblue';
 
+    const baseToken = { fontSize: 12, fontSizeSM: 12, fontSizeLG: 13 };
+
     return {
       algorithm: isDark ? theme.darkAlgorithm : theme.defaultAlgorithm,
-      token: isDark ? darkThemeTokens : isBlue ? blueThemeTokens : isLightBlue ? lightBlueThemeTokens : undefined,
+      token: isDark ? { ...darkThemeTokens, ...baseToken } : isBlue ? { ...blueThemeTokens, ...baseToken } : isLightBlue ? { ...lightBlueThemeTokens, ...baseToken } : baseToken,
       components: isDark ? {
         Table: {
           headerBg: '#0f1115',
@@ -340,8 +342,8 @@ const AppWrapper: React.FC = () => {
           borderColor: 'rgba(255, 255, 255, 0.06)',
           headerSplitColor: 'rgba(255, 255, 255, 0.04)',
           bodySortBg: 'rgba(107, 163, 255, 0.05)',
-          fontSize: 13,
-          headerFontSize: 14,
+          fontSize: 12,
+          headerFontSize: 12,
           colorBgContainer: '#1a1d24',
           filterDropdownBg: '#1a1d24',
         },
@@ -408,8 +410,8 @@ const AppWrapper: React.FC = () => {
           rowHoverBg: 'rgba(224, 242, 254, 0.3)',
           borderColor: 'rgba(147, 197, 253, 0.3)',
           headerSplitColor: 'rgba(147, 197, 253, 0.2)',
-          fontSize: 13,
-          headerFontSize: 14,
+          fontSize: 12,
+          headerFontSize: 12,
         },
         Card: {
           headerBg: 'rgba(224, 242, 254, 0.3)',
@@ -436,8 +438,8 @@ const AppWrapper: React.FC = () => {
           rowHoverBg: '#edf2ff',
           borderColor: '#e8ecf2',
           headerSplitColor: '#e0e4eb',
-          fontSize: 13,
-          headerFontSize: 14,
+          fontSize: 12,
+          headerFontSize: 12,
         },
         Card: {
           colorBgContainer: '#ffffff',

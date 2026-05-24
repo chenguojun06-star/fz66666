@@ -481,8 +481,8 @@
 
 .style-smart-stage__node {
   position: relative;
-  width: 45px;
-  height: 45px;
+  width: 41px;
+  height: 41px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -500,11 +500,11 @@
   inset: 0;
   border: 2px solid rgba(203, 213, 225, 0.96);
   background: rgba(255, 255, 255, 0.98);
-  box-shadow: 0 0 0 7px rgba(255, 255, 255, 0.94);
+  box-shadow: 0 0 0 6px rgba(255, 255, 255, 0.94);
 }
 
 .style-smart-stage__orbit {
-  inset: 17px;
+  inset: 15px;
   background: conic-gradient(from 0deg, rgba(96, 165, 250, 0.92) 0deg, rgba(96, 165, 250, 0.16) 90deg, rgba(96, 165, 250, 0.04) 360deg);
   -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 0);
   mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 0);
@@ -512,8 +512,8 @@
 }
 
 .style-smart-stage__core {
-  width: 15px;
-  height: 15px;
+  width: 14px;
+  height: 14px;
   background: rgba(96, 165, 250, 0.2);
   border: 2px solid rgba(96, 165, 250, 0.92);
 }

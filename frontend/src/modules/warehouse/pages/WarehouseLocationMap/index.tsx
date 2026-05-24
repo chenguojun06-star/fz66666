@@ -304,7 +304,12 @@ const WarehouseLocationMap: React.FC = () => {
   const handleCreateLocation = async () => {
     try {
       const values = await createLocationForm.validateFields();
-      const zoneName = values.zoneName.trim();
+      const rawZoneName = Array.isArray(values.zoneName) ? values.zoneName[0] : values.zoneName;
+      const zoneName = String(rawZoneName || '').trim();
+      if (!zoneName) {
+        message.error('请输入库区名称');
+        return;
+      }
       const rackNum = String(values.rackNum || '01').padStart(2, '0');
       const levelNum = values.levelNum || 1;
       const positionNum = values.positionNum || 1;

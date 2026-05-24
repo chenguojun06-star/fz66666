@@ -950,7 +950,7 @@ body {
 /* 表格基础样式 */
 .ant-table {
   font-size: var(--table-cell-font-size, var(--font-size-sm));
-  line-height: 1.5;
+  line-height: 1.35;
   transition: font-size 0.25s var(--ease-smooth, cubic-bezier(0.16, 1, 0.3, 1));
 }
 
@@ -1001,7 +1001,7 @@ body {
   font-weight: var(--font-weight-normal);
   text-align: center !important;
   padding: var(--table-cell-padding-y, 10px) var(--table-cell-padding-x, 8px);
-  line-height: 1.5;
+  line-height: 1.35;
   transition: font-size 0.25s var(--ease-smooth, cubic-bezier(0.16, 1, 0.3, 1)),
               padding 0.25s var(--ease-smooth, cubic-bezier(0.16, 1, 0.3, 1));
 }
@@ -1016,7 +1016,7 @@ body {
 
 /* 单元格内容 */
 .ant-table-cell {
-  line-height: 1.5;
+  line-height: 1.35;
   vertical-align: middle;
   white-space: normal;
   word-break: break-word;
@@ -1406,23 +1406,15 @@ body {
 }
 
 /* 卡片视图操作按钮：超紧凑 */
-.universal-card-actions .ant-btn.ant-btn-sm:not(.ant-btn-icon-only) {
-  padding: 0 4px !important;
-  font-size: 11px !important;
-  height: 20px !important;
-  line-height: 20px !important;
-}
-
 .table-action-compact .ant-btn:not(.ant-btn-icon-only),
 .table-action-compact .ant-btn-link:not(.ant-btn-icon-only) {
   padding: 0 8px !important;
   font-size: 12px !important;
 }
 
-/* 卡片视图操作按钮：超紧凑 */
 .universal-card-actions .ant-btn.ant-btn-sm:not(.ant-btn-icon-only) {
   padding: 0 4px !important;
-  font-size: 14px !important;
+  font-size: 12px !important;
   height: 20px !important;
   line-height: 20px !important;
 }

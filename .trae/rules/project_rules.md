@@ -62,6 +62,8 @@
 - ❌ 禁止修改已执行的 V*.sql（checksum 校验失败 → 启动报错）
 - ⚠️ **Flyway SET @s 陷阱**：动态 SQL 内禁止 `COMMENT 'xxx'` / `DEFAULT 'PENDING'` 等字符串字面量 → Flyway 把 `''` 当边界截断 SQL，静默失败
 - ⚠️ **Flyway PREPARE + DEFAULT NULL 陷阱**：`PREPARE stmt FROM @s` 动态 SQL 中禁止写 `DEFAULT NULL`，MySQL 8.0 会报 `ERROR 1064 near 'NULL'` → 列实际未添加但 Flyway 可能记录成功 → 云端 500。正确做法：不写 DEFAULT（MySQL 默认即为 NULL），回填值用独立 UPDATE
+- ✅ **推送前必须通过 Flyway SQL 校验**：`python3 scripts/check-flyway-sql.py`（CI 自动执行，本地推送前也必须跑）
+- ✅ 校验覆盖10项：版本号重复 / 文件名格式 / 缺少分号 / 末尾逗号 / 括号不匹配 / 动态SQL字符串字面量 / DEFAULT NULL / 危险操作 / 修改已执行迁移 / INSERT无列列表
 
 ### 2. 权限码必须真实存在
 - ❌ 禁止使用 `t_permission` 表中不存在的权限码（导致全员 403）
@@ -219,6 +221,7 @@
 | 18 | 部署后全站 404 白屏 | 错误恢复代码必须内联在 index.html `<head>` 中，不能放在可能 404 的外部 JS 里 |
 | 19 | nginx SPA fallback 遗漏 .js/.css | @spa_fallback 对所有静态资源类型（含 JS/CSS）返回 404，不返回 index.html |
 | 20 | nginx try_files $uri/ 绕过 no-cache | 根路径必须走 @spa_fallback → location = /index.html，确保 no-cache 头生效 |
+| 21 | Flyway 版本号重复 / 缺少分号 / 末尾逗号 | 推送前必须跑 `python3 scripts/check-flyway-sql.py`（CI 自动拦截） |
 
 ---
 
@@ -360,19 +363,23 @@ try_files $uri @spa_fallback;
 
 ---
 
-## 🚀 推送前三步验证
+## 🚀 推送前四步验证
 
 ```bash
 # 1. 编译
 cd backend && mvn clean compile -q    # BUILD SUCCESS
 cd frontend && npx tsc --noEmit       # 0 errors
 
-# 2. git 全量检查
+# 2. Flyway SQL 校验（P0 强制，CI 也会自动跑）
+python3 scripts/check-flyway-sql.py   # 全量扫描
+python3 scripts/check-flyway-sql.py --diff  # 只检查本次变更
+
+# 3. git 全量检查
 git status && git diff --stat HEAD
 git add <每个文件路径>           # ❌ 禁止 git add .
 git diff --cached --stat
 
-# 3. 数据库检查（有 Entity/表结构改动时）
+# 4. 数据库检查（有 Entity/表结构改动时）
 ./scripts/pre-push-checklist.sh --schema-confirmed
 # 新增 Entity 字段 → 必须有 Flyway
 # 新增 Flyway → 必须有 Entity 字段

@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { App, Empty, Input, Skeleton, Tabs } from 'antd';
+import { App, Empty, Input, Skeleton, Tabs, Tag } from 'antd';
 import { SearchOutlined, PrinterOutlined } from '@ant-design/icons';
 import { useSearchParams } from 'react-router-dom';
 import StylePrintModal from '@/components/common/StylePrintModal';
-import AttachmentThumb from '@/components/common/AttachmentThumb';
+import UniversalCardView, { type CardAction } from '@/components/common/UniversalCardView';
 import StandardPagination from '@/components/common/StandardPagination';
 import ResizableModal from '@/components/common/ResizableModal';
 import PatternPanel from './components/PatternPanel';
@@ -17,10 +17,9 @@ import api from '@/utils/api';
 import { toCategoryCn } from '@/utils/styleCategory';
 import { formatDateTime } from '@/utils/datetime';
 import { readPageSize, savePageSize } from '@/utils/pageSizeStore';
+import { useCardGridLayout } from '@/hooks/useCardGridLayout';
 import type { StyleInfo, TemplateLibrary } from '@/types/style';
-import './index.css';
 
-/* ─── types ─── */
 interface MStage {
   key: string;
   label: string;
@@ -36,11 +35,10 @@ const isTemplateProcessing = (record?: TemplateLibrary | null) => {
   return Number(record.locked) !== 1;
 };
 
-/* ─── component ─── */
 const MaintenanceCenter: React.FC = () => {
   const { message } = App.useApp();
+  const { columns: cardColumns } = useCardGridLayout(20);
 
-  /* ── data ── */
   const [styles, setStyles] = useState<StyleInfo[]>([]);
   const [sizeMap, setSizeMap] = useState<Record<string, TemplateLibrary[]>>({});
   const [bomMap, setBomMap] = useState<Record<string, TemplateLibrary[]>>({});
@@ -51,7 +49,6 @@ const MaintenanceCenter: React.FC = () => {
   const [pageSize, setPageSize] = useState(pageSizeRef.current);
   const [total, setTotal] = useState(0);
 
-  /* ── search ── */
   const [keyword, setKeyword] = useState('');
   const [searchParams, setSearchParams] = useSearchParams();
   const getInitialTab = (): 'maintenance' | 'knowledge' | 'template' => {
@@ -65,16 +62,13 @@ const MaintenanceCenter: React.FC = () => {
   const [knowledgePageSize, setKnowledgePageSize] = useState(10);
   const [knowledgeSelectedKeys, setKnowledgeSelectedKeys] = useState<React.Key[]>([]);
 
-  /* ── print modal ── */
   const [printingStyle, setPrintingStyle] = useState<StyleInfo | null>(null);
 
-  /* ── panel modal ── */
   type PanelType = 'pattern' | 'sheet' | 'size' | 'bom' | 'price' | null;
   const [panelType, setPanelType] = useState<PanelType>(null);
   const [activeStyleNo, setActiveStyleNo] = useState('');
   const panelTitleMap: Record<string, string> = { pattern: '纸样维护', sheet: '制单维护', size: '尺寸表维护', bom: 'BOM维护', price: '工序单价维护' };
 
-  /* ── fetch templates (once) ── */
   const fetchTemplates = useCallback(async () => {
     try {
       const [sizeRes, bomRes, processRes, processPriceRes] = await Promise.all([
@@ -104,7 +98,6 @@ const MaintenanceCenter: React.FC = () => {
     } catch { /* silent */ }
   }, []);
 
-  /* ── fetch styles ── */
   const keywordRef = useRef(keyword);
   keywordRef.current = keyword;
   const fetchStyles = useCallback(async (pg: number) => {
@@ -132,7 +125,6 @@ const MaintenanceCenter: React.FC = () => {
 
   useEffect(() => { fetchStyles(1); fetchTemplates(); }, [fetchStyles, fetchTemplates]);
 
-  /* ── build stages ── */
   const buildStages = useCallback((record: StyleInfo): MStage[] => {
     const sizeTpls = sizeMap[record.styleNo] || [];
     const bomTpls = bomMap[record.styleNo] || [];
@@ -144,55 +136,18 @@ const MaintenanceCenter: React.FC = () => {
       && !!String(record.patternRevReturnComment || '').trim();
     const sheetProcessing = Number(record.descriptionLocked) === 0;
     return [
-      {
-        key: 'pattern',
-        label: '纸样维护',
-        processing: patternProcessing,
-      },
-      {
-        key: 'sheet',
-        label: '制单维护',
-        processing: sheetProcessing,
-      },
-      {
-        key: 'size',
-        label: '尺寸表维护',
-        processing: isTemplateProcessing(latestSizeTpl),
-      },
-      {
-        key: 'bom',
-        label: 'BOM维护',
-        processing: isTemplateProcessing(latestBomTpl),
-      },
-      {
-        key: 'price',
-        label: '工序单价',
-        processing: isTemplateProcessing(latestPriceTpl),
-      },
+      { key: 'pattern', label: '纸样维护', processing: patternProcessing },
+      { key: 'sheet', label: '制单维护', processing: sheetProcessing },
+      { key: 'size', label: '尺寸表维护', processing: isTemplateProcessing(latestSizeTpl) },
+      { key: 'bom', label: 'BOM维护', processing: isTemplateProcessing(latestBomTpl) },
+      { key: 'price', label: '工序单价', processing: isTemplateProcessing(latestPriceTpl) },
     ];
   }, [bomMap, priceMap, sizeMap]);
 
-  /* ── rows ── */
-  const rows = useMemo(() => styles.map(record => {
-    const stages = buildStages(record);
-    const latestMaintenanceRecord = [record.maintenanceMan || '', record.maintenanceTime ? formatDateTime(record.maintenanceTime) : '']
-      .filter(Boolean)
-      .join(' ');
-    return {
-      record,
-      stages,
-      displayCategory: toCategoryCn(record.category) || '未分类',
-      latestMaintenanceRecord: latestMaintenanceRecord || (record.updateTime ? formatDateTime(record.updateTime) : '-'),
-      pushedInfoTime: record.pushedToOrderTime ? formatDateTime(record.pushedToOrderTime) : '-',
-      pushedByName: (record as any).pushedByName || '',
-    };
-  }), [styles, buildStages]);
-
-  /* ── stage click ── */
-  const handleStageClick = (record: StyleInfo, stageKey: string) => {
+  const handleStageClick = useCallback((record: StyleInfo, stageKey: string) => {
     setActiveStyleNo(record.styleNo);
     setPanelType(stageKey as PanelType);
-  };
+  }, []);
 
   const handlePanelClose = useCallback(() => {
     setPanelType(null);
@@ -200,12 +155,60 @@ const MaintenanceCenter: React.FC = () => {
     fetchTemplates();
   }, [fetchStyles, fetchTemplates, page]);
 
-  /* ── render ── */
-  const handleSearch = (val: string) => { setKeyword(val); setTimeout(() => fetchStyles(1), 0); };
+  const handleSearch = useCallback((val: string) => {
+    setKeyword(val);
+    setTimeout(() => fetchStyles(1), 0);
+  }, [fetchStyles]);
+
+  const cardDataSource = useMemo(() => styles.map(record => {
+    const stages = buildStages(record);
+    const processingCount = stages.filter(s => s.processing).length;
+    const latestMaintenanceRecord = [record.maintenanceMan || '', record.maintenanceTime ? formatDateTime(record.maintenanceTime) : '']
+      .filter(Boolean)
+      .join(' ');
+    return {
+      ...record,
+      _stages: stages,
+      _processingCount: processingCount,
+      _displayCategory: toCategoryCn(record.category) || '未分类',
+      _latestMaintenanceRecord: latestMaintenanceRecord || (record.updateTime ? formatDateTime(record.updateTime) : '-'),
+      _pushedInfoTime: record.pushedToOrderTime ? formatDateTime(record.pushedToOrderTime) : '-',
+      _pushedByName: (record as any).pushedByName || '',
+    };
+  }), [styles, buildStages]);
+
+  const cardFields = useMemo(() => [
+    [
+      { label: '品类', key: '_displayCategory' },
+      { label: '工序', key: '_processingCount', render: (val: number) => val > 0 ? <Tag color="warning">{val} 项待处理</Tag> : <Tag color="success">已完成</Tag> },
+    ],
+    [
+      { label: '推送', key: '_pushedInfoTime', render: (_val: any, record: any) => record._pushedByName ? `${record._pushedByName} · ${record._pushedInfoTime}` : record._pushedInfoTime },
+    ],
+    [
+      { label: '修改', key: '_latestMaintenanceRecord' },
+    ],
+  ], []);
+
+  const cardActions = useCallback((record: any): CardAction[] => {
+    const stages: MStage[] = record._stages;
+    const actions: CardAction[] = stages.map(stage => ({
+      key: stage.key,
+      label: stage.processing ? `${stage.label}(待处理)` : stage.label,
+      onClick: () => handleStageClick(record, stage.key),
+    }));
+    actions.push({
+      key: 'print',
+      label: '打印',
+      icon: <PrinterOutlined />,
+      onClick: () => setPrintingStyle(record),
+    });
+    return actions;
+  }, [handleStageClick]);
 
   return (
     <>
-      <div className="maintenance-center">
+      <div style={{ padding: '12px 16px 8px' }}>
         <Tabs
           activeKey={pageTab}
           onChange={(key) => {
@@ -220,106 +223,78 @@ const MaintenanceCenter: React.FC = () => {
               label: '资料维护',
               children: (
                 <>
-                  <div className="maintenance-center__toolbar">
-                    <div className="maintenance-center__toolbar-left">
-                      <Input.Search
-                        placeholder="按款号搜索"
-                        allowClear
-                        enterButton={<SearchOutlined />}
-                        style={{ maxWidth: 320 }}
-                        onSearch={handleSearch}
-                      />
-                    </div>
-                    <div className="maintenance-center__toolbar-right">
-                      <span className="maintenance-center__toolbar-count">共 {total} 款</span>
-                    </div>
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 12,
+                    marginBottom: 12,
+                    padding: '10px 12px',
+                    border: '1px solid var(--color-border-light, #e8edf4)',
+                    borderRadius: 6,
+                    background: 'var(--color-bg-base, #fff)',
+                  }}>
+                    <Input.Search
+                      placeholder="按款号搜索"
+                      allowClear
+                      enterButton={<SearchOutlined />}
+                      style={{ maxWidth: 320 }}
+                      onSearch={handleSearch}
+                    />
+                    <span style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      height: 24,
+                      padding: '0 10px',
+                      borderRadius: 999,
+                      background: 'rgba(45, 127, 249, 0.08)',
+                      color: 'var(--primary-color)',
+                      fontSize: 14,
+                      fontWeight: 700,
+                    }}>
+                      共 {total} 款
+                    </span>
                   </div>
-                  {rows.length === 0 && !loading && (
+
+                  {cardDataSource.length === 0 && !loading && (
                     <div style={{ padding: 48, textAlign: 'center' }}><Empty description="暂无已推送到资料侧的款式" /></div>
                   )}
-                  {loading && rows.length === 0 && (
+                  {loading && cardDataSource.length === 0 && (
                     <div style={{ padding: 24 }}><Skeleton active paragraph={{ rows: 4 }} /></div>
                   )}
 
-                  {rows.length > 0 ? (
-                    <div className="maintenance-center__grid">
-                      {rows.map(({ record, stages, displayCategory, latestMaintenanceRecord, pushedInfoTime, pushedByName }) => {
-                        const processingCount = stages.filter((stage) => stage.processing).length;
-                        return (
-                          <div key={record.id ?? record.styleNo} className="maintenance-card">
-                            <div className="maintenance-card__cover">
-                              <AttachmentThumb styleId={record.id ?? ''} width="100%" height="100%" />
-                              <div className="maintenance-card__overlay">
-                                <div className="maintenance-card__overlay-grid">
-                                  {stages.map((stage) => (
-                                    <button
-                                      key={stage.key}
-                                      type="button"
-                                      className={`maintenance-overlay-btn${stage.processing ? ' maintenance-overlay-btn--processing' : ''}`}
-                                      onClick={() => handleStageClick(record, stage.key)}
-                                    >
-                                      {stage.label}
-                                    </button>
-                                  ))}
-                                  <button
-                                    type="button"
-                                    className="maintenance-overlay-btn maintenance-overlay-btn--print"
-                                    onClick={() => setPrintingStyle(record)}
-                                  >
-                                    <PrinterOutlined /> 打印
-                                  </button>
-                                </div>
-                              </div>
-                            </div>
-                            <div className="maintenance-card__info">
-                              <div className="maintenance-card__info-row">
-                                <span className="maintenance-card__info-item">
-                                  <span className="maintenance-card__info-label">款号</span>
-                                  <span className="maintenance-card__info-value">{record.styleNo || '-'}</span>
-                                </span>
-                                <span className="maintenance-card__info-item">
-                                  <span className="maintenance-card__info-label">品类</span>
-                                  <span className="maintenance-card__info-value">{displayCategory}</span>
-                                </span>
-                              </div>
-                              <div className="maintenance-card__info-row">
-                                <span className="maintenance-card__info-item">
-                                  <span className="maintenance-card__info-label">品名</span>
-                                  <span className="maintenance-card__info-value">{record.styleName || '-'}</span>
-                                </span>
-                                <span className="maintenance-card__info-item">
-                                  <span className="maintenance-card__info-label">工序</span>
-                                  <span className="maintenance-card__info-value">
-                                    {processingCount > 0 ? <span className="maintenance-card__processing-badge">{processingCount} 项待处理</span> : '已完成'}
-                                  </span>
-                                </span>
-                              </div>
-                              <div className="maintenance-card__info-row maintenance-card__info-row--single">
-                                <span className="maintenance-card__info-item">
-                                  <span className="maintenance-card__info-label">推送</span>
-                                  <span className="maintenance-card__info-value maintenance-card__info-value--time">
-                                    {pushedByName ? `${pushedByName} · ${pushedInfoTime}` : pushedInfoTime}
-                                  </span>
-                                </span>
-                              </div>
-                              <div className="maintenance-card__info-row maintenance-card__info-row--single">
-                                <span className="maintenance-card__info-item">
-                                  <span className="maintenance-card__info-label">修改</span>
-                                  <span className="maintenance-card__info-value maintenance-card__info-value--time">{latestMaintenanceRecord}</span>
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ) : null}
+                  {cardDataSource.length > 0 && (
+                    <UniversalCardView
+                      dataSource={cardDataSource}
+                      loading={loading}
+                      columns={cardColumns}
+                      coverField="coverImage"
+                      styleIdField="id"
+                      styleNoField="styleNo"
+                      titleField="styleNo"
+                      subtitleField="styleName"
+                      fields={[]}
+                      fieldGroups={cardFields}
+                      progressConfig={{ show: false, calculate: () => 0 }}
+                      actions={cardActions}
+                      maxInlineActions={6}
+                      coverPlaceholder="暂无图片"
+                    />
+                  )}
 
                   {total > 0 && (
-                    <div className="maintenance-center__pagination">
-                      <StandardPagination current={page} pageSize={pageSize} total={total}
-                        onChange={(p: number, ps: number) => { pageSizeRef.current = ps; setPageSize(ps); savePageSize(ps); fetchStyles(p); }} />
-                    </div>
+                    <StandardPagination
+                      current={page}
+                      pageSize={pageSize}
+                      total={total}
+                      wrapperStyle={{ paddingTop: 12, paddingBottom: 4 }}
+                      onChange={(p: number, ps: number) => {
+                        pageSizeRef.current = ps;
+                        setPageSize(ps);
+                        savePageSize(ps);
+                        fetchStyles(p);
+                      }}
+                    />
                   )}
                 </>
               ),
@@ -351,7 +326,6 @@ const MaintenanceCenter: React.FC = () => {
         />
       </div>
 
-      {/* ── Panel Modal ── */}
       <ResizableModal
         title={panelType ? `${panelTitleMap[panelType]} — ${activeStyleNo}` : ''}
         open={!!panelType}
@@ -368,7 +342,6 @@ const MaintenanceCenter: React.FC = () => {
         {panelType === 'price' && <UnitPricePanel key={activeStyleNo} styleNo={activeStyleNo} />}
       </ResizableModal>
 
-      {/* ── Print Modal ── */}
       <StylePrintModal
         visible={!!printingStyle}
         onClose={() => setPrintingStyle(null)}

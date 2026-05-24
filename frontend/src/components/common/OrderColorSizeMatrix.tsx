@@ -292,20 +292,17 @@ const OrderColorSizeMatrix: React.FC<OrderColorSizeMatrixProps> = ({
 
   return (
     <div style={wrapStyle}>
-      <div style={{ ...rowBaseStyle, gridTemplateColumns, gap }}>
-        <span style={leadStyle}>码数</span>
-        {model.sizes.map((size) => (
-          <span key={`size-${size}`} style={headerCellStyle}>{size}</span>
-        ))}
-      </div>
       {model.rows.map((row) => (
         <div key={row.label} style={{ ...rowBaseStyle, gridTemplateColumns, gap }}>
           <span style={leadStyle}>{row.label}</span>
-          {model.sizes.map((size) => (
-            <span key={`${row.label}-${size}`} style={qtyCellStyle}>
-              {row.quantityMap.get(size) || 0}
-            </span>
-          ))}
+          {model.sizes.map((size) => {
+            const qty = row.quantityMap.get(size) || 0;
+            return (
+              <span key={`${row.label}-${size}`} style={qtyCellStyle}>
+                {qty > 0 ? qty : ''}
+              </span>
+            );
+          })}
         </div>
       ))}
       <div style={totalStyle}>{totalLabel}：{model.total}{totalSuffix}</div>
