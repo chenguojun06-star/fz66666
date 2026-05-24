@@ -450,8 +450,6 @@ export function useCuttingBundles({
         setEntryFabricUsageRows(fabricRows);
       })
       .catch(() => { if (seq === entryBomReqSeq.current) { setEntrySizeUsageMap({}); setEntryFabricUsageRows([]); } });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isEntryPage, (activeTask as unknown as any)?.styleId]);
 
   // 加载面辅料采购
@@ -538,9 +536,6 @@ export function useCuttingBundles({
     })();
 
     return () => { cancelled = true; };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isEntryPage, orderId, activeTask?.id, (activeTask as unknown as any)?.productionOrderId, (activeTask as unknown as any)?.productionOrderNo]);
 
   // 滚动到编辑区域

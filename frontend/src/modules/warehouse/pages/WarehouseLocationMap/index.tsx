@@ -343,7 +343,7 @@ const WarehouseLocationMap: React.FC = () => {
       const levelCount = values.levelCount || 3;
       const positionCount = values.positionCount || 2;
       const existingZoneCodes = zones.map(z => z.code);
-      const zoneCode = generateZoneCode(zoneName, existingZoneCodes);
+      const _zoneCode = generateZoneCode(zoneName, existingZoneCodes);
       await warehouseLocationMapApi.batchInitLocations({
         warehouseType: selectedArea?.warehouseType,
         areaId: selectedAreaId,

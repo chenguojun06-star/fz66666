@@ -5,7 +5,6 @@ import api, { isApiSuccess, isOrderTerminal } from '@/utils/api';
 import type { ProductionOrder, ProductionQueryParams } from '@/types/production';
 import { productionOrderApi, type ProductionOrderListParams } from '@/services/production/productionApi';
 import { useProgressNodeCache, type ProgressNode } from '@/hooks/useProgressNodeCache';
-import { stripWarehousingNode } from '../utils';
 import { clearBoardStatsTimestamps } from './useBoardStats';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
@@ -151,7 +150,7 @@ export function useProgressData({
         setLoading(false);
       }
     }
-  }, [clearAllBoardCache, focusedOrderNosRef, message, reportSmartError, showSmartErrorNotice]);
+  }, [clearAllBoardCache, focusedOrderNosRef, message, progressNodeCache, reportSmartError, showSmartErrorNotice]);
 
   // 获取全局统计数据（根据当前筛选条件）
   const fetchGlobalStats = useCallback(async (params?: typeof queryParams) => {

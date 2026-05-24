@@ -61,7 +61,7 @@ export function usePaginatedList<T = unknown, F = Record<string, unknown>, S = u
     } finally {
       setLoading(false);
     }
-  }, [fetchList, fetchStats, page, pageSize, stableFiltersKey, onError]);
+  }, [fetchList, fetchStats, page, pageSize, onError]);
 
   useEffect(() => {
     fetchData();

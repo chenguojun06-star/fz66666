@@ -190,7 +190,7 @@ export const createApiClient = (): ApiClient => {
       if (isCacheable(url, method)) {
         const cached = responseCache.get(cacheKey);
         if (cached && Date.now() - cached.ts < CACHE_TTL) {
-          const adapter = config.adapter;
+          const _adapter = config.adapter;
           config.adapter = () => Promise.resolve({
             data: cached.data,
             status: 200,
@@ -203,7 +203,7 @@ export const createApiClient = (): ApiClient => {
 
         const pending = pendingRequests.get(cacheKey);
         if (pending) {
-          const adapter = config.adapter;
+          const _adapter2 = config.adapter;
           config.adapter = () => pending.then(data => ({
             data,
             status: 200,

@@ -267,7 +267,7 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = ({ orderId, orde
         if (!isTemp) {
           await api.put('/production/purchase', payload);
         } else {
-          const { id, ...rest } = payload;
+          const { id: _id, ...rest } = payload;
           await api.post('/production/purchase', rest);
         }
       }

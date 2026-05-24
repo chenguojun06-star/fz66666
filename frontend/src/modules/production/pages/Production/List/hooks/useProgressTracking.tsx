@@ -56,7 +56,7 @@ export function useProgressTracking(productionList: ProductionOrder[]) {
         setProgressNodesByStyleNo(prev => ({ ...prev, ...next }));
       }
     })();
-  }, [productionList]);
+  }, [productionList, progressNodeCache]);
 
   // 加载每个订单的进度球统计数据
   useEffect(() => {

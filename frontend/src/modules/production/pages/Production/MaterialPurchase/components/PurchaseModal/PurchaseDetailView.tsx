@@ -30,17 +30,17 @@ interface PurchaseDocRecord {
 // 已回料确认行的样式
 const confirmedRowStyle = `
   .row-confirmed-disabled {
-    background-color: #f5f5f5 !important;
-    color: #999 !important;
+    background-color: var(--color-bg-subtle) !important;
+    color: var(--color-text-tertiary) !important;
   }
   .row-confirmed-disabled:hover {
-    background-color: #e8e8e8 !important;
+    background-color: var(--color-border) !important;
   }
   .row-confirmed-disabled .ant-tag {
     opacity: 0.6;
   }
   .row-confirmed-disabled .ant-btn-link {
-    color: #999 !important;
+    color: var(--color-text-tertiary) !important;
   }
 `;
 
@@ -95,8 +95,8 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
   isOrderFrozenForRecord,
   onWarehousePick,
   onCancelReceive,
-  onConfirmComplete,
-  confirmCompleteSubmitting,
+  onConfirmComplete: _onConfirmComplete,
+  confirmCompleteSubmitting: _confirmCompleteSubmitting,
   onRefresh,
 }) => {
   const normalizeStatus = (status?: MaterialPurchaseType['status'] | string) => String(status || '').trim().toLowerCase();
@@ -573,7 +573,7 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
             <Space>
               <FileImageOutlined />
               <span>历史上传单据</span>
-              <span style={{ color: '#999', fontWeight: 'normal' }}>（{docList.length}张）</span>
+              <span style={{ color: 'var(--color-text-tertiary)', fontWeight: 'normal' }}>（{docList.length}张）</span>
             </Space>
           }
         >
@@ -584,10 +584,10 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
                   key={doc.id}
                   style={{
                     width: 160,
-                    border: '1px solid #f0f0f0',
+                    border: '1px solid var(--color-border-light)',
                     borderRadius: 6,
                     padding: 8,
-                    background: '#fafafa',
+                    background: 'var(--color-bg-container)',
                   }}
                 >
                   <Image
@@ -603,10 +603,10 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
                         {doc.uploaderName || '未知'}
                       </div>
                     </Tooltip>
-                    <div style={{ color: '#999', marginTop: 2 }}>
+                    <div style={{ color: 'var(--color-text-tertiary)', marginTop: 2 }}>
                       {doc.createTime ? doc.createTime.slice(0, 16).replace('T', ' ') : ''}
                     </div>
-                    <div style={{ color: '#666', marginTop: 2 }}>
+                    <div style={{ color: 'var(--color-text-secondary)', marginTop: 2 }}>
                       识别{doc.totalRecognized}条 · 匹配{doc.matchCount}条
                     </div>
                   </div>
@@ -625,7 +625,7 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
           <Space>
             <FileImageOutlined />
             <span>发票/单据</span>
-            <span style={{ color: '#999', fontWeight: 'normal' }}>（{invoiceUrls.length}张，支持拖拽/粘贴/点击上传）</span>
+            <span style={{ color: 'var(--color-text-tertiary)', fontWeight: 'normal' }}>（{invoiceUrls.length}张，支持拖拽/粘贴/点击上传）</span>
           </Space>
         }
       >

@@ -53,7 +53,7 @@ const MaterialPurchase: React.FC = () => {
     returnEvidenceFiles, setReturnEvidenceFiles, returnEvidenceRecognizing, recognizeReturnEvidence,
     returnResetModal, returnResetForm, returnResetSubmitting,
     quickEditModal, quickEditSaving,
-    openDialog, openDialogSafe, closeDialog,
+    openDialog: _openDialog, openDialogSafe, closeDialog,
     handleSubmit, handleSavePreview,
     receivePurchaseTask, confirmReturnPurchaseTask,
     openReturnReset, submitReturnConfirm, submitReturnReset,
@@ -125,7 +125,7 @@ const MaterialPurchase: React.FC = () => {
       setOrderPickerList(records);
     } catch { setOrderPickerList([]); }
     finally { setOrderPickerLoading(false); }
-  }, [orderPickerKeyword, message]);
+  }, [orderPickerKeyword]);
 
   const handlePickOrder = useCallback((order: any) => {
     const styleNo = String(order.styleNo || '').trim();

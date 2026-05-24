@@ -54,7 +54,7 @@ const fetchOne = async (styleNo: string): Promise<ProgressNode[]> => {
 };
 
 export const useProgressNodeCache = () => {
-  const loadingRef = useRef(new Set<string>());
+  const _loadingRef = useRef(new Set<string>());
 
   const fetchBatch = useCallback(async (styleNos: string[]): Promise<Record<string, ProgressNode[]>> => {
     const unique = Array.from(new Set(styleNos.map(s => String(s || '').trim()).filter(Boolean)));

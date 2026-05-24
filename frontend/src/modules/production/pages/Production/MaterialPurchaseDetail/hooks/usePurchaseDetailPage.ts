@@ -6,7 +6,7 @@ import type { MaterialPurchase } from '@/types/production';
 import { MATERIAL_PURCHASE_STATUS } from '@/constants/business';
 import { normalizeMaterialQuantity } from '../../MaterialPurchase/utils';
 
-const postSave = (payload: Record<string, unknown>) =>
+const _postSave = (payload: Record<string, unknown>) =>
   api.post<{ code: number; message?: string }>('/production/purchase', payload);
 
 const postReceive = (payload: Record<string, unknown>) =>
@@ -115,7 +115,7 @@ export function usePurchaseDetailPage(styleNoParam: string, orderNoParam: string
     } finally {
       setLoading(false);
     }
-  }, [styleNoParam, orderNoParam]);
+  }, [styleNoParam, orderNoParam, message]);
 
   useEffect(() => {
     loadData();

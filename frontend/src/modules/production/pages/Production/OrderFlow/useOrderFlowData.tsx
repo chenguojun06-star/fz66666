@@ -326,8 +326,6 @@ export function useOrderFlowData() {
         warehousingQuantity,
       };
     });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [order, data?.warehousings, data?.cuttingBundles, (data as any)?.styleQuotation]);
 
   const orderLineColumns: ColumnsType<OrderLine> = [

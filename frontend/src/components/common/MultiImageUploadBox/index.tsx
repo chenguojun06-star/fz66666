@@ -19,7 +19,7 @@ export interface MultiImageUploadBoxProps {
 }
 
 const THUMB_BORDER = '1px solid #e5e7eb';
-const OVERLAY_BG = 'rgba(0,0,0,0.45)';
+const OVERLAY_BG = 'var(--color-text-tertiary)';
 const ADD_BORDER = '1px dashed #cbd5e1';
 const ADD_BG = '#f8fafc';
 const MUTED_COLOR = '#94a3b8';
@@ -43,9 +43,6 @@ function MultiImageUploadBox({
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewIndex, setPreviewIndex] = useState(0);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   const urls = Array.isArray(value) ? value : [];
 
   const doUpload = useCallback(async (file: File) => {

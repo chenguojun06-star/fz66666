@@ -15,7 +15,7 @@ import { ProductionOrderHeader } from '@/components/StyleAssets';
 import MaterialQualityIssueModal from '../MaterialPurchase/components/MaterialQualityIssueModal';
 import PurchaseDocRecognizeModal from '../MaterialPurchase/components/PurchaseDocRecognizeModal';
 import { useViewport } from '@/utils/useViewport';
-import { readPageSize, DEFAULT_PAGE_SIZE_OPTIONS } from '@/utils/pageSizeStore';
+import { DEFAULT_PAGE_SIZE_OPTIONS } from '@/utils/pageSizeStore';
 import { formatDateTime } from '@/utils/datetime';
 import { formatMaterialQuantityWithUnit, getStatusConfig } from '../MaterialPurchase/utils';
 import { getMaterialTypeLabel } from '@/utils/materialType';
@@ -54,7 +54,7 @@ const MaterialPurchaseDetail: React.FC = () => {
     openReceive, handleReceive,
     handleReturnConfirm, handleCancelReceive,
     handleBatchReceive, handleBatchReturnConfirm, handleConfirmComplete,
-    handleReturnReset, handleWarehousePick,
+    handleReturnReset, handleWarehousePick: _handleWarehousePick,
     handleExport,
     headerOrderNo, headerStyleNo, headerStyleName, headerStyleId, headerStyleCover, headerColor,
     editing, editableData, saving,
