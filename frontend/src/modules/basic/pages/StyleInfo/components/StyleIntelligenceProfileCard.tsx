@@ -5,8 +5,8 @@ import dayjs from 'dayjs';
 import type { StyleInfo } from '@/types/style';
 import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
 import type { DifficultyAssessment, StyleIntelligenceProfileResponse, StyleQuoteSuggestionResponse } from '@/services/intelligence/intelligenceApi';
-import { visualAnalyze } from '@/services/intelligenceApi';
-import type { VisualAIResponse } from '@/services/intelligenceApi';
+import { visualAnalyze } from '@/services/intelligence/intelligenceApi';
+import type { VisualAIResponse } from '@/services/intelligence/intelligenceApi';
 
 interface Props {
   style: StyleInfo | null;

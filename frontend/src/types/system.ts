@@ -114,6 +114,8 @@ export interface Factory extends Record<string, unknown> {
   totalOrders?: number;
   completedOrders?: number;
   overdueOrders?: number;
+  tenantId?: number;
+  businessLicense?: string;
   createTime?: string;
   updateTime?: string;
 }

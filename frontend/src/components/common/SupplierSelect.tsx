@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { AutoComplete, Spin } from 'antd';
 import type { AutoCompleteProps } from 'antd';
-import factoryApi, { type Factory } from '../../services/system/factoryApi';
+import factoryApi from '../../services/system/factoryApi';
+import type { Factory } from '@/types/system';
 
 interface SupplierSelectProps extends Omit<AutoCompleteProps, 'options' | 'onChange'> {
   value?: string;

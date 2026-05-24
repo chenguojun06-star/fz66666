@@ -5,3 +5,7 @@ export * from './mindpush';
 export * from './style';
 export * from './brain';
 export * from './advisor';
+export * from './execution';
+export * from './patrol';
+export * from './graph';
+export * from './simulation';

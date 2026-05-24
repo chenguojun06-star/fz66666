@@ -1,3 +1,4 @@
+import { useCallback, useMemo } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
 import type { ProgressNode } from '../types';
 import type { ProductionOrder } from '@/types/production';
@@ -11,7 +12,7 @@ interface UseTemplateNodesParams {
 }
 
 export function useTemplateNodes({ setNodes, setProgressNodesByStyleNo }: UseTemplateNodesParams) {
-  const fetchTemplateNodes = async (templateId: string): Promise<ProgressNode[]> => {
+  const fetchTemplateNodes = useCallback(async (templateId: string): Promise<ProgressNode[]> => {
     const tid = String(templateId || '').trim();
     if (!tid) return [];
     const res = await templateLibraryApi.getById(tid);
@@ -19,9 +20,9 @@ export function useTemplateNodes({ setNodes, setProgressNodesByStyleNo }: UseTem
     if (result.code !== 200) return [];
     const tpl = result.data as TemplateLibrary;
     return parseProgressNodes(String(tpl?.templateContent ?? ''));
-  };
+  }, []);
 
-  const ensureNodesFromTemplateIfNeeded = async (order: ProductionOrder) => {
+  const ensureNodesFromTemplateIfNeeded = useCallback(async (order: ProductionOrder) => {
     if (!order) return;
     const templateId = String((order as any)?.progressTemplateId || '').trim();
     if (!templateId) return;
@@ -38,9 +39,8 @@ export function useTemplateNodes({ setNodes, setProgressNodesByStyleNo }: UseTem
         }
       }
     } catch {
-      // Silently ignore template loading errors
     }
-  };
+  }, [fetchTemplateNodes, setNodes, setProgressNodesByStyleNo]);
 
-  return { fetchTemplateNodes, ensureNodesFromTemplateIfNeeded };
+  return useMemo(() => ({ fetchTemplateNodes, ensureNodesFromTemplateIfNeeded }), [fetchTemplateNodes, ensureNodesFromTemplateIfNeeded]);
 }

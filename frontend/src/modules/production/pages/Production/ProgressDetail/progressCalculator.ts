@@ -1,4 +1,3 @@
-import { formatDateTime } from '@/utils/datetime';
 import { ProductionOrder, ScanRecord, CuttingBundle } from '@/types/production';
 import { ProgressNode } from './types';
 import { defaultNodes, stripWarehousingNode, resolveNodesForOrder } from './nodeParser';
@@ -8,8 +7,6 @@ export const clampPercent = (value: number) => {
   if (Number.isNaN(value)) return 0;
   return Math.max(0, Math.min(100, Math.round(value)));
 };
-
-export const formatTime = (value?: string) => formatDateTime(value);
 
 export const getOrderShipTime = (order: ProductionOrder) => {
   return order.actualEndDate || order.plannedEndDate || '';

@@ -24,7 +24,8 @@ import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
 import FactoryAuditPopover from './FactoryAuditPopover';
-import { toMoney, getLeaderboardScoreColor } from './chartConfigs';
+import { toMoney } from '@/utils/format';
+import { getLeaderboardScoreColor } from './chartConfigs';
 
 
 /** 工厂汇总行数据 */

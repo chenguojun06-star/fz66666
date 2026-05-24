@@ -44,7 +44,7 @@ export const useDashboardData = () => {
         const flattenTree = (nodes: any[]): Factory[] => {
           const result: Factory[] = [];
           for (const node of nodes) {
-            if (node.factoryName) result.push({ id: String(node.id), factoryName: node.factoryName });
+            if (node.factoryName) result.push({ id: String(node.id), factoryCode: '', factoryName: node.factoryName, status: 'active' as const });
             if (node.children?.length) result.push(...flattenTree(node.children));
           }
           return result;

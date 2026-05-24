@@ -6,15 +6,13 @@ import {
   CheckCircleOutlined,
 } from '@ant-design/icons';
 import api from '@/utils/api';
+import { toMoneyLocale } from '@/utils/format';
 import dayjs, { Dayjs } from 'dayjs';
 
 const ReactECharts = lazy(() => import('echarts-for-react'));
 
 const { Text } = Typography;
 const { RangePicker } = DatePicker;
-
-const fmt = (n?: number | null) =>
-  n == null ? '0.00' : Number(n).toLocaleString('zh-CN', { minimumFractionDigits: 2 });
 
 interface AgingBucket {
   range: string;
@@ -112,7 +110,7 @@ const PaymentDashboard: React.FC = () => {
   const agingColumns = [
     { title: '账龄区间', dataIndex: 'range', key: 'range' },
     { title: '金额', dataIndex: 'amount', key: 'amount', align: 'right' as const,
-      render: (v: number) => <Text strong type={v > 0 ? 'danger' : undefined}>¥{fmt(v)}</Text> },
+      render: (v: number) => <Text strong type={v > 0 ? 'danger' : undefined}>¥{toMoneyLocale(v)}</Text> },
     { title: '笔数', dataIndex: 'count', key: 'count', align: 'center' as const },
   ];
 

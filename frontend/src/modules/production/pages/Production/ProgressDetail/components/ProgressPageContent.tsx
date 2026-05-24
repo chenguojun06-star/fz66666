@@ -185,7 +185,7 @@ const ProgressPageContent: React.FC<ProgressPageContentProps> = ({
             {record?.urgencyLevel === 'urgent' && <Tag color="red" style={{ margin: 0, fontSize: 14, padding: '0 4px', lineHeight: '18px', height: 18 }}>急</Tag>}
             {String(record?.plateType || '').toUpperCase() === 'FIRST' && <Tag color="blue" style={{ margin: 0, fontSize: 14, padding: '0 4px', lineHeight: '18px', height: 18 }}>首单</Tag>}
             {String(record?.plateType || '').toUpperCase() === 'REORDER' && <Tag color="gold" style={{ margin: 0, fontSize: 14, padding: '0 4px', lineHeight: '18px', height: 18 }}>翻单</Tag>}
-            {remainText && remainText !== '已完成' && remainText !== '已报废' && remainText !== '已关单' && remainText !== '-'
+            {remainText && remainText !== '已完成' && remainText !== '已报废' && remainText !== '已关单' && remainText !== '已取消' && remainText !== '-'
               && <Tag style={{ margin: 0, fontSize: 14, padding: '0 4px', lineHeight: '18px', height: 18, color: remainColor, borderColor: remainColor, background: 'transparent', fontWeight: 600 }}>{remainText}</Tag>}
           </div>
         );

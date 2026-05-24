@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { getPatrolActionsByTarget, getPatrolSummary, type PatrolAction, type PatrolSummary } from '@/services/intelligenceApi';
+import { getPatrolActionsByTarget, getPatrolSummary, type PatrolAction, type PatrolSummary } from '@/services/intelligence/intelligenceApi';
 
 interface PatrolRiskMap {
   [orderNo: string]: PatrolAction[];

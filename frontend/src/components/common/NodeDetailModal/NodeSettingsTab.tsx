@@ -15,7 +15,7 @@ interface NodeSettingsTabProps {
   matchedProcess: any;
   disableEdit: boolean;
   saving: boolean;
-  factories: Array<{ id: string; factoryName: string }>;
+  factories: Array<{ id?: string; factoryName: string }>;
   users: Array<{ id: string; name?: string; username?: string }>;
   orderSummary: { orderNo?: string; styleNo?: string; orderQuantity?: number };
   orderNo: string;

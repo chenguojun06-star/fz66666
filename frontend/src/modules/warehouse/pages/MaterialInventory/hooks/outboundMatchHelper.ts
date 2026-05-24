@@ -1,6 +1,9 @@
 import api from '@/utils/api';
 import { materialInventoryApi } from '@/services/warehouse/materialInventoryApi';
 import type { MaterialInventory } from '../types';
+import type { MaterialBatchDetail } from '@/types/warehouse';
+
+export type { MaterialBatchDetail };
 
 export interface OutboundFactoryOption {
   value: string;
@@ -18,18 +21,6 @@ export interface OutboundOrderOption {
   factoryId?: string;
   factoryName?: string;
   factoryType?: string;
-}
-
-/** 出库批次明细（批次库存信息 + 本次出库数量） */
-export interface MaterialBatchDetail {
-  batchNo: string;
-  warehouseLocation: string;
-  color?: string;
-  availableQty: number;
-  lockedQty?: number;
-  inboundDate?: string;
-  expiryDate?: string;
-  outboundQty?: number;
 }
 
 /** 通过工厂/关键词搜索生产订单，返回选项列表（纯数据，不更新 state） */

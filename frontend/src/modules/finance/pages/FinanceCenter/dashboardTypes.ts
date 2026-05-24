@@ -1,3 +1,5 @@
+export type { Factory } from '@/types/system';
+
 export interface StatCardData {
   totalAmount: number;
   totalAmountChange: number;
@@ -35,11 +37,6 @@ export interface SettlementRow {
 }
 
 export type TimeRangeType = 'day' | 'week' | 'month' | 'year' | 'custom';
-
-export interface Factory {
-  id: string;
-  factoryName: string;
-}
 
 export interface EChartData {
   dates: string[];

@@ -1,47 +1,5 @@
 import api from '../../utils/api';
-
-export interface Factory extends Record<string, unknown> {
-  id: string;
-  factoryCode: string;
-  factoryName: string;
-  contactPerson?: string;
-  contactPhone?: string;
-  address?: string;
-  status: 'active' | 'inactive';
-  businessLicense?: string;
-  tenantId: number;
-  factoryType?: 'INTERNAL' | 'EXTERNAL';
-  supplierType?: 'MATERIAL' | 'OUTSOURCE';
-  orgUnitId?: string;
-  parentOrgUnitId?: string;
-  parentOrgUnitName?: string;
-  orgPath?: string;
-  dailyCapacity?: number;
-  supplierCategory?: string;
-  supplierRegion?: string;
-  supplierTier?: 'S' | 'A' | 'B' | 'C';
-  supplierTierUpdatedAt?: string;
-  admissionStatus?: 'pending' | 'approved' | 'probation' | 'rejected' | 'suspended';
-  admissionDate?: string;
-  qualificationCert?: string;
-  contractNo?: string;
-  contractStartDate?: string;
-  contractEndDate?: string;
-  contractAmount?: number;
-  contractTerms?: string;
-  bankName?: string;
-  bankAccount?: string;
-  bankBranch?: string;
-  onTimeDeliveryRate?: number;
-  qualityScore?: number;
-  completionRate?: number;
-  overallScore?: number;
-  totalOrders?: number;
-  completedOrders?: number;
-  overdueOrders?: number;
-  createTime: string;
-  updateTime: string;
-}
+import type { Factory } from '@/types/system';
 
 export interface FactoryListParams {
   page?: number;

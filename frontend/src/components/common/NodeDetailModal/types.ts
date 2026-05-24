@@ -1,4 +1,9 @@
+export type { Factory } from '@/types/system';
+
 /** 节点类型定义 */
+import type { ScanRecord } from '@/types/production';
+export type { ScanRecord };
+
 export type NodeType = 'procurement' | 'cutting' | 'sewing' | 'ironing' | 'quality' | 'packaging' | 'secondaryProcess';
 
 /** 历史记录项 */
@@ -32,37 +37,12 @@ export interface NodeOperationData {
 /** 所有节点操作数据 */
 export type NodeOperations = Partial<Record<NodeType, NodeOperationData>>;
 
-/** 工厂信息 */
-export interface Factory {
-  id: string;
-  factoryName: string;
-}
-
 /** 节点统计信息 */
 export interface NodeStats {
   done: number;
   total: number;
   percent: number;
   remaining: number;
-}
-
-/** 扫码记录 */
-export interface ScanRecord {
-  id: string;
-  scanCode?: string;
-  orderNo?: string;
-  styleNo?: string;
-  color?: string;
-  size?: string;
-  quantity?: number;
-  unitPrice?: number;
-  processName?: string;
-  progressStage?: string;
-  operatorId?: string;
-  operatorName?: string;
-  scanTime?: string;
-  cuttingBundleNo?: number;
-  cuttingBundleQrCode?: string;
 }
 
 /** 菲号（裁剪扎号）记录 */

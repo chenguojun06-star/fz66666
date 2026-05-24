@@ -30,7 +30,7 @@ const PRODUCTION_STAGES: readonly {
 const clamp = (v: number) => Math.max(0, Math.min(100, Math.round(v)));
 
 function getDeliveryMeta(r: ProductionOrder): { tone: DeliveryTone; label: string } {
-  if (r.status === 'scrapped' || r.status === 'cancelled' || r.status === 'closed' || r.status === 'archived') return { tone: 'scrapped', label: r.status === 'closed' ? '已关单' : r.status === 'archived' ? '已归档' : '已废弃' };
+  if (r.status === 'scrapped' || r.status === 'cancelled' || r.status === 'closed' || r.status === 'archived') return { tone: 'scrapped', label: r.status === 'closed' ? '已关单' : r.status === 'archived' ? '已归档' : r.status === 'cancelled' ? '已取消' : '已报废' };
   if (r.status === 'completed') return { tone: 'success', label: '已完成' };
   const target = (r as any).expectedShipDate || r.plannedEndDate;
   if (!target) return { tone: 'normal', label: '未定' };

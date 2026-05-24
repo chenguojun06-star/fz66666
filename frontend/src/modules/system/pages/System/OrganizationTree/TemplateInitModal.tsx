@@ -14,7 +14,7 @@ interface TemplateInitModalProps {
   setTplModal: React.Dispatch<React.SetStateAction<TplModalState>>;
   handleInitTemplate: () => void;
   tplLoading: boolean;
-  factories: Array<{ id: string; factoryName: string; contactPerson?: string }>;
+  factories: Array<{ id?: string; factoryName: string; contactPerson?: string }>;
 }
 
 const TEMPLATES = [

@@ -1,3 +1,4 @@
+export { formatDate, formatDateTimeCompact as formatDateTime } from '@/utils/datetime';
 import type { StageStatus } from './types';
 
 export const getRiskTone = (riskLevel?: 'LOW' | 'MEDIUM' | 'HIGH') => {
@@ -15,24 +16,6 @@ export const getStageTone = (status: StageStatus) => {
 export const isCurrentStage = (stageName: string, currentStage?: string, latestStage?: string) => {
   const current = String(currentStage || latestStage || '').trim();
   return !!current && (current.includes(stageName) || stageName.includes(current));
-};
-
-export const formatDate = (value?: string | number | Date) => {
-  if (value == null || value === '') return '—';
-  try {
-    const date = value instanceof Date ? value : new Date(value);
-    if (Number.isNaN(date.getTime())) return String(value);
-    return date.toLocaleDateString('zh-CN');
-  } catch { return String(value); }
-};
-
-export const formatDateTime = (value?: string | number | Date) => {
-  if (value == null || value === '') return '—';
-  try {
-    const date = value instanceof Date ? value : new Date(value);
-    if (Number.isNaN(date.getTime())) return String(value);
-    return date.toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
-  } catch { return String(value); }
 };
 
 export const formatRemainingDays = (days?: number) => {

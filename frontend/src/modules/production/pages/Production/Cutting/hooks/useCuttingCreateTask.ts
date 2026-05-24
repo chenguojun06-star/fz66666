@@ -1,9 +1,9 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import api from '@/utils/api';
 import { useUser } from '@/utils/AuthContext';
-import { factoryApi, type Factory } from '@/services/system/factoryApi';
+import { factoryApi } from '@/services/system/factoryApi';
 import { organizationApi } from '@/services/system/organizationApi';
-import type { OrganizationUnit } from '@/types/system';
+import type { Factory, OrganizationUnit } from '@/types/system';
 import { CUTTING_STAGE_ORDER } from '@/utils/productionStage';
 import { CATEGORY_CODE_OPTIONS, normalizeCategoryQuery } from '@/utils/styleCategory';
 import { productionOrderApi, type FactoryCapacityItem } from '@/services/production/productionApi';

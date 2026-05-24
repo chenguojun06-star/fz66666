@@ -34,16 +34,7 @@ export type OrderFlowResponse = {
   materialPurchases?: any[];
 };
 
-export type OrderLine = {
-  color: string;
-  size: string;
-  quantity: number;
-  skuNo?: string;
-  totalPrice?: number;
-  qualityQuantity?: number;
-  defectiveQuantity?: number;
-  warehousingQuantity?: number;
-};
+import type { OrderLine } from '@/types/production';
 
 export const orderStatusTag = (status: any) => <OrderStatusTag status={status} />;
 

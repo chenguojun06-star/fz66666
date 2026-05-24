@@ -1,4 +1,4 @@
-import { useRef, useCallback } from 'react';
+import { useRef, useCallback, useMemo } from 'react';
 import { templateLibraryApi } from '@/services/template/templateLibraryApi';
 
 export interface ProgressNode {
@@ -88,7 +88,7 @@ export const useProgressNodeCache = () => {
     }
   }, []);
 
-  return { fetchBatch, get, invalidate, fetchOne };
+  return useMemo(() => ({ fetchBatch, get, invalidate, fetchOne }), [fetchBatch, get, invalidate]);
 };
 
 export const progressNodeCache = { get: (sn: string) => globalCache.get(sn)?.nodes, invalidate: (sn?: string) => { if (sn) globalCache.delete(sn); else globalCache.clear(); } };

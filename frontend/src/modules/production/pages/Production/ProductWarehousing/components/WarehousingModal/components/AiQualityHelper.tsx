@@ -8,6 +8,7 @@ import { Alert, Button, Spin, Tag, Typography } from 'antd';
 import { CheckCircleOutlined, WarningOutlined } from '@ant-design/icons';
 import XiaoyunCloudAvatar from '@/components/common/XiaoyunCloudAvatar';
 import { qualityAiApi, QualityAiSuggestionResult } from '@/services/production/productionApi';
+import { toPercent } from '@/utils/format';
 
 const { Text } = Typography;
 
@@ -72,7 +73,7 @@ const AiQualityHelper: React.FC<AiQualityHelperProps> = ({ orderId, defectCatego
         {data && data.historicalVerdict && (
           <Tag color={verdictColor[data.historicalVerdict]} style={{ marginLeft: 'auto', fontSize: 14 }}>
             {verdictLabel[data.historicalVerdict]}
-            {data.historicalDefectRate != null && ` ${(data.historicalDefectRate * 100).toFixed(1)}%`}
+            {data.historicalDefectRate != null && ` ${toPercent(data.historicalDefectRate)}`}
           </Tag>
         )}
         {data?.urgent && (

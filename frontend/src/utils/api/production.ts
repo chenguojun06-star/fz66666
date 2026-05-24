@@ -4,13 +4,9 @@ import { createApiClient, toNumberSafe } from './core';
 
 const api = createApiClient();
 
-export type ProductionOrderLine = {
-  color: string;
-  size: string;
-  quantity: number;
-  warehousedQuantity?: number;
-  skuNo?: string;
-};
+import type { OrderLine } from '@/types/production';
+
+export type ProductionOrderLine = OrderLine;
 
 export const parseProductionOrderLines = (
   order?: unknown | null,

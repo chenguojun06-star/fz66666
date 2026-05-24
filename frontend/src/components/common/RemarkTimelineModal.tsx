@@ -5,6 +5,7 @@ import ResizableModal from './ResizableModal';
 import { remarkApi } from '@/services/system/remarkApi';
 import type { OrderRemark } from '@/services/system/remarkApi';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
+import api from '@/utils/api';
 
 const { TextArea } = Input;
 
@@ -77,13 +78,8 @@ const RemarkTimelineModal: React.FC<RemarkTimelineModalProps> = ({
         }
         const formData = new FormData();
         formData.append('file', file);
-        const res: any = await fetch('/api/common/upload', {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${localStorage.getItem('token') || ''}` },
-          body: formData,
-        });
-        const data = await res.json();
-        if (data.code === 200 && data.data) {
+        const data: any = await api.post('/common/upload', formData);
+        if (data?.code === 200 && data?.data) {
           newUrls.push(data.data);
         } else {
           message.error(`上传失败: ${file.name}`);

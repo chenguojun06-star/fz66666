@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Spin, Select, Empty, Tooltip } from 'antd';
-import { getGraphAbStats, type ABSceneStat } from '@/services/intelligenceApi';
+import { getGraphAbStats, type ABSceneStat } from '@/services/intelligence/intelligenceApi';
 
 const SCENE_LABELS: Record<string, string> = {
   full: '综合分析',

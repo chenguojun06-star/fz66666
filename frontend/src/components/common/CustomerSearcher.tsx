@@ -1,7 +1,8 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { AutoComplete, Spin } from 'antd';
 import { customerApi, Customer } from '@/services/crm/customerApi';
-import { factoryApi, Factory } from '@/services/system/factoryApi';
+import { factoryApi } from '@/services/system/factoryApi';
+import type { Factory } from '@/types/system';
 import type { FormInstance } from 'antd/es/form';
 
 interface Props {

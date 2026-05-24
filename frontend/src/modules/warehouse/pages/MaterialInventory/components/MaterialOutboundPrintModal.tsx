@@ -71,7 +71,7 @@ const buildPrintHtml = (data: MaterialOutboundPrintPayload) => {
       <td>${item.warehouseLocation || data.warehouseLocation || '-'}</td>
       <td>${item.quantity}</td>
       <td>${item.unit || data.unit || ''}</td>
-      <td>${item.unitPrice != null ? item.unitPrice.toFixed(2) : '-'}</td>
+      <td>${item.unitPrice != null ? '¥' + item.unitPrice.toFixed(2) : '-'}</td>
     </tr>
   `).join('');
 
@@ -254,7 +254,7 @@ const MaterialOutboundPrintModal: React.FC<MaterialOutboundPrintModalProps> = ({
                   <td style={cellStyle}>{item.warehouseLocation || data.warehouseLocation || '-'}</td>
                   <td style={cellStyle}>{item.quantity}</td>
                   <td style={cellStyle}>{item.unit || data.unit || '-'}</td>
-                  <td style={cellStyle}>{item.unitPrice != null ? item.unitPrice.toFixed(2) : '-'}</td>
+                  <td style={cellStyle}>{item.unitPrice != null ? `¥${item.unitPrice.toFixed(2)}` : '-'}</td>
                 </tr>
               ))}
             </tbody>

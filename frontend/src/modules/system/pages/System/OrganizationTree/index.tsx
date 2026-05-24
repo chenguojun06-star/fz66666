@@ -4,9 +4,8 @@ import ResizableModal from '@/components/common/ResizableModal';
 import { organizationApi } from '@/services/system/organizationApi';
 import { factoryApi } from '@/services/system/factoryApi';
 import tenantService from '@/services/tenantService';
-import type { Factory } from '@/services/system/factoryApi';
+import type { Factory, OrganizationUnit, User } from '@/types/system';
 import type { ApiResult } from '@/utils/api';
-import type { OrganizationUnit, User } from '@/types/system';
 import { useUser } from '@/utils/AuthContext';
 import {
   App, Avatar, Button, Checkbox, Col, DatePicker, Empty, Form, Input,

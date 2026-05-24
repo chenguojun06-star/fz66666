@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { intelligenceApi as execApi } from '@/services/intelligenceApi';
+import { intelligenceApi as execApi } from '@/services/intelligence/intelligenceApi';
 
 export function useRepairAction(reload: () => void) {
   const [repairing, setRepairing] = useState(false);

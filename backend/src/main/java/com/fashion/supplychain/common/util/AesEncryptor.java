@@ -88,23 +88,6 @@ public class AesEncryptor {
         }
     }
 
-    public static String maskPhone(String phone) {
-        if (phone == null || phone.length() < 7) return phone;
-        return phone.substring(0, 3) + "****" + phone.substring(phone.length() - 4);
-    }
-
-    public static String maskIdCard(String idCard) {
-        if (idCard == null || idCard.length() < 8) return idCard;
-        return idCard.substring(0, 4) + "**********" + idCard.substring(idCard.length() - 4);
-    }
-
-    public static String maskEmail(String email) {
-        if (email == null || !email.contains("@")) return email;
-        int atIndex = email.indexOf("@");
-        if (atIndex <= 2) return email;
-        return email.substring(0, 2) + "***" + email.substring(atIndex);
-    }
-
     private byte[] padOrTruncateKey(byte[] keyBytes, int length) {
         byte[] result = new byte[length];
         System.arraycopy(keyBytes, 0, result, 0, Math.min(keyBytes.length, length));

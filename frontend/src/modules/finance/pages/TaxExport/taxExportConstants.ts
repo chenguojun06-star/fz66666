@@ -30,9 +30,9 @@ export const INVOICE_STATUS = [
 
 export const PAYABLE_STATUS = [
   { value: 'PENDING', label: '待付款', color: 'orange' },
-  { value: 'PAID', label: '已付款', color: 'green' },
+  { value: 'PAID', label: '已付清', color: 'green' },
   { value: 'OVERDUE', label: '已逾期', color: 'red' },
-  { value: 'PARTIAL', label: '部分付款', color: 'blue' },
+  { value: 'PARTIAL', label: '部分已付', color: 'blue' },
 ];
 
 export const RELATED_BIZ_TYPE_OPTIONS = [
@@ -53,5 +53,6 @@ export const pageShellStyle: React.CSSProperties = {
   padding: '12px 0 32px',
 };
 
-export const formatCurrency = (value?: number) => (Number(value || 0)).toFixed(2);
+import { toMoney } from '@/utils/format';
+export const formatCurrency = toMoney;
 export const formatBizType = (value?: string) => RELATED_BIZ_TYPE_MAP[value || ''] || value || '-';

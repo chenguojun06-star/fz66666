@@ -603,10 +603,23 @@ export interface MaterialDatabaseQueryParams {
 
 // 样衣开发费用统计
 export interface PatternDevelopmentStats {
-  rangeType: 'day' | 'week' | 'month';   // 时间范围
-  patternCount: number;                   // 样衣数量
-  materialCost: number;                   // 面辅料费用
-  processCost: number;                    // 工序单价费用
-  secondaryProcessCost: number;           // 二次工艺费用
-  totalCost: number;                      // 总开发费用
+  rangeType: 'day' | 'week' | 'month';
+  patternCount: number;
+  materialCost: number;
+  processCost: number;
+  secondaryProcessCost: number;
+  totalCost: number;
 }
+
+export type OrderLine = {
+  id?: string;
+  color: string;
+  size: string;
+  quantity: number;
+  skuNo?: string;
+  totalPrice?: number;
+  qualityQuantity?: number;
+  defectiveQuantity?: number;
+  warehousingQuantity?: number;
+  warehousedQuantity?: number;
+};

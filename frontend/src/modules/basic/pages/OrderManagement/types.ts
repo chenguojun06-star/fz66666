@@ -1,9 +1,5 @@
-export type OrderLine = {
-  id: string;
-  color: string;
-  size: string;
-  quantity: number;
-};
+import type { OrderLine } from '@/types/production';
+export type { OrderLine };
 
 export type PricingProcess = {
   id: string;

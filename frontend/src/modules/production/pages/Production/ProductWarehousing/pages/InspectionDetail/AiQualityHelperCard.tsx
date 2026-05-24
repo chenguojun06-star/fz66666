@@ -3,6 +3,7 @@ import { Card } from 'antd';
 import XiaoyunCloudAvatar from '@/components/common/XiaoyunCloudAvatar';
 import type { QualityAiSuggestionResult } from '@/services/production/productionApi';
 import { getDefectCategoryLabel } from '../../utils';
+import { toPercent } from '@/utils/format';
 
 interface Props {
   aiSuggestion: QualityAiSuggestionResult | null;
@@ -28,7 +29,7 @@ const AiQualityHelperCard: React.FC<Props> = ({ aiSuggestion, aiLoading, actualD
               color: aiSuggestion.historicalDefectRate > 0.05 ? '#ff4d4f'
                 : aiSuggestion.historicalDefectRate > 0.02 ? '#fa8c16' : '#52c41a',
             }}>
-              历史次品率 {(aiSuggestion.historicalDefectRate * 100).toFixed(1)}%
+              历史次品率 {toPercent(aiSuggestion.historicalDefectRate)}
             </span>
           )}
         </span>

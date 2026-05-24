@@ -364,6 +364,7 @@ const ProductionList: React.FC = () => {
               fieldGroups={[
                 [
                   { label: '交期', key: 'plannedEndDate', render: (val: unknown) => val ? dayjs(val as string).format('MM-DD') : '-' },
+                  { label: '下单', key: 'createTime', render: (val: unknown) => val ? dayjs(val as string).format('MM-DD') : '-' },
                 ],
                 ...createOrderColorSizeGridFieldGroups<ProductionOrder>({
                   gridKey: 'cardColorSizeGrid',
@@ -372,9 +373,6 @@ const ProductionList: React.FC = () => {
                   getFallbackSize: (record) => String(record.size || '').trim(),
                   getFallbackQuantity: (record) => Number(record.orderQuantity) || 0,
                 }),
-                [
-                  { label: '下单', key: 'createTime', render: (val: unknown) => val ? dayjs(val as string).format('MM-DD') : '-' },
-                ],
                 [
                   { label: '', key: 'statusTags', render: (_val: unknown, record: Record<string, unknown>) => {
                     const status = ORDER_STATUS_LABEL[String(record?.status || '').trim().toLowerCase()] || String(record?.status || '-');
@@ -386,7 +384,7 @@ const ProductionList: React.FC = () => {
                         {record?.urgencyLevel === 'urgent' && <Tag color="red" style={{ margin: 0, fontSize: 11, padding: '0 4px', lineHeight: '18px', height: 18 }}>急</Tag>}
                         {String(record?.plateType || '').toUpperCase() === 'FIRST' && <Tag color="blue" style={{ margin: 0, fontSize: 11, padding: '0 4px', lineHeight: '18px', height: 18 }}>首单</Tag>}
                         {String(record?.plateType || '').toUpperCase() === 'REORDER' && <Tag color="gold" style={{ margin: 0, fontSize: 11, padding: '0 4px', lineHeight: '18px', height: 18 }}>翻单</Tag>}
-                        {remainText && remainText !== '已完成' && remainText !== '已报废' && remainText !== '已关单' && remainText !== '-'
+                        {remainText && remainText !== '已完成' && remainText !== '已报废' && remainText !== '已关单' && remainText !== '已取消' && remainText !== '-'
                           && <Tag style={{ margin: 0, fontSize: 11, padding: '0 4px', lineHeight: '18px', height: 18, color: remainColor, borderColor: remainColor, background: 'transparent', fontWeight: 600 }}>{remainText}</Tag>}
                       </div>
                     );

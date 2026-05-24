@@ -8,13 +8,16 @@
  * 注意：services/production/productionApi.ts 已保留 re-export，旧导入路径仍兼容。
  */
 import api, { type ApiResult } from '../../utils/api';
+import { unwrapApiData } from '../../utils/api/core';
 import { downloadFile } from '../../utils/fileUrl';
 import type {
+  ABSceneStat,
   ActionCenterResponse,
   ActionTaskFeedbackItem,
   ActionTaskFeedbackRequest,
   AgentMeetingRecord,
   AnomalyDetectionResponse,
+  AuditLogQuery,
   BottleneckDetectionResponse,
   ChatHistoryMessage,
   DefectHeatmapResponse,
@@ -23,10 +26,15 @@ import type {
   DeliveryPredictionResponse,
   DeliveryRiskResponse,
   DifficultyAssessment,
+  ExecutionConfig,
+  ExecutionStats,
   FactoryBottleneckItem,
   FactoryLeaderboardResponse,
+  FeedbackData,
   FeedbackReasonRecord,
   FinanceAuditResponse,
+  ForecastRequest,
+  ForecastResult,
   HealthIndexResponse,
   HyperAdvisorResponse,
   IntelligenceBrainSnapshotResponse,
@@ -34,9 +42,12 @@ import type {
   LiveCostResponse,
   LivePulseResponse,
   MaterialShortageResult,
+  MetricsSceneStat,
   MindPushRuleDTO,
   MindPushStatusData,
   NlQueryResponse,
+  PatrolAction,
+  PatrolSummary,
   ProcessKnowledgeResponse,
   ProcessPriceHintResponse,
   ProcessTemplateResponse,
@@ -49,6 +60,10 @@ import type {
   StyleIntelligenceProfileResponse,
   StyleQuoteSuggestionResponse,
   SupplierScorecardResponse,
+  VisualAIRequest,
+  VisualAIResponse,
+  WhatIfParams,
+  WhatIfResult,
   WorkerEfficiencyResponse,
 } from './intelligenceTypes';
 
@@ -679,5 +694,167 @@ export const intelligenceApi = {
   evolutionDeploy: (proposalId: string): Promise<boolean> =>
     api.post(`/intelligence/evolution/deploy/${proposalId}`).then((r: any) => r?.data === true),
 
+  // ── 命令执行引擎 ──
+
+  executeCommand: async (command: any): Promise<any> => {
+    const response = await api.post<ApiResult<any>>('/intelligence/commands/execute', command);
+    return response.data;
+  },
+
+  approveCommand: async (commandId: string, body?: { remark?: string }): Promise<any> => {
+    const response = await api.post<ApiResult<any>>(`/intelligence/commands/${commandId}/approve`, body || {});
+    return response.data;
+  },
+
+  rejectCommand: async (commandId: string, body: { reason?: string }): Promise<any> => {
+    const response = await api.post<ApiResult<any>>(`/intelligence/commands/${commandId}/reject`, body);
+    return response.data;
+  },
+
+  getPendingCommands: async (): Promise<any> => {
+    const response = await api.get<ApiResult<any>>('/intelligence/commands/pending');
+    if (response == null || (response.code != null && response.code !== 200)) {
+      throw new Error(response?.message || '获取待审批命令失败');
+    }
+    return response.data ?? { pending: [], totalCount: 0 };
+  },
+
+  getCommandDetail: async (commandId: string): Promise<any> => {
+    const response = await api.get<ApiResult<any>>(`/intelligence/commands/${commandId}`);
+    return response.data;
+  },
+
+  // ── 审计/统计 ──
+
+  queryAuditLogs: async (options: AuditLogQuery = {}): Promise<any> => {
+    const response = await api.get<ApiResult<any>>('/intelligence/audit-logs', { params: options });
+    return response.data;
+  },
+
+  getExecutionStats: async (): Promise<ExecutionStats> => {
+    const response = await api.get<ApiResult<ExecutionStats>>('/intelligence/execution-stats');
+    return response.data;
+  },
+
+  getMetricsOverview: async (days = 7): Promise<MetricsSceneStat[]> => {
+    const response = await api.get<ApiResult<MetricsSceneStat[]>>('/intelligence/metrics/overview', { params: { days } });
+    return response.data;
+  },
+
+  // ── 反馈/配置 ──
+
+  submitFeedback: async (commandId: string, feedback: FeedbackData): Promise<any> => {
+    try {
+      const response = await api.post<ApiResult<any>>(`/intelligence/commands/${commandId}/feedback`, feedback);
+      return response.data;
+    } catch {
+      return null;
+    }
+  },
+
+  queryWorkflowHistory: async (commandId: string): Promise<any> => {
+    try {
+      const response = await api.get<ApiResult<any>>(`/intelligence/commands/${commandId}/workflow`);
+      return response.data;
+    } catch {
+      return null;
+    }
+  },
+
+  getExecutionConfig: async (): Promise<ExecutionConfig> => {
+    try {
+      const response = await api.get<ApiResult<ExecutionConfig>>('/intelligence/config');
+      return response.data;
+    } catch {
+      return {
+        autoExecutionEnabled: false,
+        autoExecutionThreshold: 3,
+        approvalTimeoutMinutes: 60,
+        notificationEnabled: true,
+        auditEnabled: true,
+      };
+    }
+  },
+
+  updateExecutionConfig: async (config: Partial<ExecutionConfig>): Promise<any> => {
+    try {
+      const response = await api.put<ApiResult<any>>('/intelligence/config', config);
+      return response.data;
+    } catch {
+      return null;
+    }
+  },
+
+  // ── 多代理图 ──
+
+  runMultiAgentGraph: async (params: { scene?: string; orderIds?: string[]; question?: string }): Promise<any> => {
+    const response = await api.post<ApiResult<any>>('/intelligence/multi-agent-graph/run', params);
+    return response.data;
+  },
+
+  getGraphHistory: async (page = 1, size = 20): Promise<any[]> => {
+    const response = await api.get<ApiResult<any[]>>('/intelligence/multi-agent-graph/history', { params: { page, size } });
+    return response.data;
+  },
+
+  submitGraphFeedback: async (executionId: string, score: number, note?: string): Promise<void> => {
+    await api.post('/intelligence/multi-agent-graph/feedback', { executionId, score, note });
+  },
+
+  getGraphAbStats: async (days = 30): Promise<ABSceneStat[]> => {
+    const response = await api.get<ApiResult<ABSceneStat[]>>('/intelligence/multi-agent-graph/ab-stats', { params: { days } });
+    return response.data;
+  },
+
+  // ── 推演/预测/视觉 ──
+
+  simulateWhatIf: async (params: WhatIfParams): Promise<WhatIfResult> => {
+    const response = await api.post<ApiResult<WhatIfResult>>('/intelligence/whatif/simulate', params);
+    return unwrapApiData<WhatIfResult>(response, '推演仿真请求失败');
+  },
+
+  runForecast: async (params: ForecastRequest): Promise<ForecastResult> => {
+    const response = await api.post<ApiResult<ForecastResult>>('/intelligence/forecast', params);
+    return response.data as unknown as ForecastResult;
+  },
+
+  visualAnalyze: async (params: VisualAIRequest): Promise<VisualAIResponse> => {
+    const response = await api.post<ApiResult<VisualAIResponse>>('/intelligence/visual/analyze', params);
+    return response.data as unknown as VisualAIResponse;
+  },
+
+  // ── 巡检 ──
+
+  getPatrolActionsByTarget: async (targetType: string, targetId: string, limit = 10): Promise<PatrolAction[]> => {
+    const response = await api.get<ApiResult<PatrolAction[]>>('/intelligence/patrol/actions/by-target', { params: { targetType, targetId, limit } });
+    return (response as any)?.data ?? [];
+  },
+
+  getPatrolRecentActions: async (limit = 20): Promise<PatrolAction[]> => {
+    const response = await api.get<ApiResult<PatrolAction[]>>('/intelligence/patrol/actions/recent', { params: { limit } });
+    return (response as any)?.data ?? [];
+  },
+
+  getPatrolSummary: async (): Promise<PatrolSummary> => {
+    const response = await api.get<ApiResult<PatrolSummary>>('/intelligence/patrol/summary');
+    return (response as any)?.data ?? { pendingCount: 0, autoExecutedToday: 0, highRiskPending: 0, recentActions: [] };
+  },
+
+  approvePatrolAction: async (actionId: number, remark?: string): Promise<void> => {
+    await api.post(`/intelligence/patrol/actions/${actionId}/approve`, { remark: remark ?? '' });
+  },
+
+  rejectPatrolAction: async (actionId: number, remark?: string): Promise<void> => {
+    await api.post(`/intelligence/patrol/actions/${actionId}/reject`, { remark: remark ?? '' });
+  },
+
 };
+
+export const getPatrolActionsByTarget = intelligenceApi.getPatrolActionsByTarget;
+export const getPatrolSummary = intelligenceApi.getPatrolSummary;
+export const getGraphAbStats = intelligenceApi.getGraphAbStats;
+export const visualAnalyze = intelligenceApi.visualAnalyze;
+export const runMultiAgentGraph = intelligenceApi.runMultiAgentGraph;
+export const getGraphHistory = intelligenceApi.getGraphHistory;
+export const submitGraphFeedback = intelligenceApi.submitGraphFeedback;
 

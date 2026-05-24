@@ -71,8 +71,8 @@ export interface MaterialBatchDetail {
   warehouseLocation: string;
   color?: string;
   availableQty: number;
-  lockedQty: number;
-  inboundDate: string;
+  lockedQty?: number;
+  inboundDate?: string;
   expiryDate?: string;
   outboundQty?: number;
 }

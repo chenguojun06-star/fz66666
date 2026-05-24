@@ -29,7 +29,7 @@ const StagePopoverContent: React.FC<StagePopoverInfo & { open?: boolean }> = ({
   if (status === 'done' || progress >= 100) {
     aiLabel = '已完成'; aiColor = '#52c41a';
   } else if (status === 'scrapped') {
-    aiLabel = '已废弃'; aiColor = '#8c8c8c';
+    aiLabel = '已报废'; aiColor = '#8c8c8c';
   } else if (status === 'waiting') {
     aiLabel = '未开始'; aiColor = '#8c8c8c';
   } else {

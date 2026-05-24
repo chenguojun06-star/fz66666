@@ -14,6 +14,7 @@ import RowActions, { type RowAction } from '@/components/common/RowActions';
 import { receivableApi, type Receivable, type ReceivableReceiptLog, type ReceivableStats } from '@/services/crm/customerApi';
 import { message } from '@/utils/antdStatic';
 import type { ApiResult } from '@/utils/api';
+import { toMoneyLocale } from '@/utils/format';
 import { paths } from '@/routeConfig';
 
 const { Text } = Typography;
@@ -26,9 +27,6 @@ const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
   PAID:     { label: '已全额到账', color: 'green' },
   OVERDUE:  { label: '已逾期', color: 'red' },
 };
-
-const fmt = (n?: number | null) =>
-  n == null ? '0.00' : Number(n).toLocaleString('zh-CN', { minimumFractionDigits: 2 });
 
 // ─── 新建应收单弹窗 ────────────────────────────────────────────────────────
 
@@ -164,9 +162,9 @@ const MarkReceivedModal: React.FC<{
         <div style={{ marginTop: 16 }}>
           <Descriptions column={1} bordered style={{ marginBottom: 16 }}>
             <Descriptions.Item label="客户">{record.customerName}</Descriptions.Item>
-            <Descriptions.Item label="应收金额">¥ {fmt(record.amount)}</Descriptions.Item>
-            <Descriptions.Item label="已收金额">¥ {fmt(record.receivedAmount)}</Descriptions.Item>
-            <Descriptions.Item label="待收余款"><Text type="warning">¥ {fmt(remaining)}</Text></Descriptions.Item>
+            <Descriptions.Item label="应收金额">¥ {toMoneyLocale(record.amount)}</Descriptions.Item>
+            <Descriptions.Item label="已收金额">¥ {toMoneyLocale(record.receivedAmount)}</Descriptions.Item>
+            <Descriptions.Item label="待收余款"><Text type="warning">¥ {toMoneyLocale(remaining)}</Text></Descriptions.Item>
           </Descriptions>
           <Form form={form} layout="vertical">
             <Form.Item
@@ -234,10 +232,10 @@ const ReceivableDetailModal: React.FC<{
             {detail?.sourceBizType === 'MATERIAL_PICKUP' ? <Tag color="purple">面辅料领取</Tag> : (detail?.sourceBizType || '-')}
           </Descriptions.Item>
           <Descriptions.Item label="来源单号">{detail?.sourceBizNo || '-'}</Descriptions.Item>
-          <Descriptions.Item label="应收金额">¥ {fmt(detail?.amount)}</Descriptions.Item>
-          <Descriptions.Item label="已收金额">¥ {fmt(detail?.receivedAmount)}</Descriptions.Item>
+          <Descriptions.Item label="应收金额">¥ {toMoneyLocale(detail?.amount)}</Descriptions.Item>
+          <Descriptions.Item label="已收金额">¥ {toMoneyLocale(detail?.receivedAmount)}</Descriptions.Item>
           <Descriptions.Item label="待收余款">
-            ¥ {fmt((Number(detail?.amount ?? 0) - Number(detail?.receivedAmount ?? 0)))}
+            ¥ {toMoneyLocale((Number(detail?.amount ?? 0) - Number(detail?.receivedAmount ?? 0)))}
           </Descriptions.Item>
           <Descriptions.Item label="状态">
             {detail?.status ? <Tag color={(STATUS_CONFIG[detail.status] ?? { color: 'default' }).color}>{(STATUS_CONFIG[detail.status] ?? { label: detail.status }).label}</Tag> : '-'}
@@ -256,7 +254,7 @@ const ReceivableDetailModal: React.FC<{
             locale={{ emptyText: '暂无回款流水' }}
             columns={[
               { title: '回款时间', dataIndex: 'receivedTime', width: 160, render: (v?: string) => v?.replace('T', ' ').substring(0, 16) || '-' },
-              { title: '回款金额', dataIndex: 'receivedAmount', width: 120, align: 'right', render: (v?: number) => `¥ ${fmt(v)}` },
+              { title: '回款金额', dataIndex: 'receivedAmount', width: 120, align: 'right', render: (v?: number) => `¥ ${toMoneyLocale(v)}` },
               { title: '操作人', dataIndex: 'operatorName', width: 120, render: (v?: string) => v || '-' },
               { title: '备注', dataIndex: 'remark', render: (v?: string) => v || '-' },
             ]}
@@ -421,17 +419,17 @@ const ReceivableList: React.FC = () => {
     },
     {
       title: '应收金额', dataIndex: 'amount', width: 120, align: 'right',
-      render: v => <Text strong>¥ {fmt(v)}</Text>,
+      render: v => <Text strong>¥ {toMoneyLocale(v)}</Text>,
     },
     {
       title: '已收金额', dataIndex: 'receivedAmount', width: 120, align: 'right',
-      render: v => <Text type="success">¥ {fmt(v)}</Text>,
+      render: v => <Text type="success">¥ {toMoneyLocale(v)}</Text>,
     },
     {
       title: '待收余款', width: 120, align: 'right',
       render: (_, r) => {
         const rem = Number(r.amount) - Number(r.receivedAmount ?? 0);
-        return <Text type={rem > 0 ? 'warning' : 'secondary'}>¥ {fmt(rem)}</Text>;
+        return <Text type={rem > 0 ? 'warning' : 'secondary'}>¥ {toMoneyLocale(rem)}</Text>;
       },
     },
     {
@@ -501,7 +499,7 @@ const ReceivableList: React.FC = () => {
                 precision={2}
                 prefix={<DollarOutlined />}
                 styles={{ content: { color: '#1677ff' } }}
-                formatter={v => `¥ ${fmt(Number(v))}`}
+                formatter={v => `¥ ${toMoneyLocale(Number(v))}`}
               />
             </Card>
           </Col>
@@ -513,7 +511,7 @@ const ReceivableList: React.FC = () => {
                 precision={2}
                 prefix={<WarningOutlined />}
                 styles={{ content: { color: '#ff4d4f' } }}
-                formatter={v => `¥ ${fmt(Number(v))}`}
+                formatter={v => `¥ ${toMoneyLocale(Number(v))}`}
               />
             </Card>
           </Col>
@@ -547,7 +545,7 @@ const ReceivableList: React.FC = () => {
             type="warning"
             showIcon
             icon={<WarningOutlined />}
-            title={`有 ${stats.overdueCount} 笔应收款已逾期未收，共 ¥${fmt(Number(stats.totalOverdue))}，请及时催款。`}
+            title={`有 ${stats.overdueCount} 笔应收款已逾期未收，共 ¥${toMoneyLocale(Number(stats.totalOverdue))}，请及时催款。`}
             style={{ marginBottom: 16 }}
             closable
           />

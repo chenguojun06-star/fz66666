@@ -3,7 +3,7 @@ import { Tag, Descriptions, App, Empty } from 'antd';
 import ResizableModal from '@/components/common/ResizableModal';
 import api from '@/utils/api';
 import ResizableTable from '@/components/common/ResizableTable';
-import { toMoney } from './chartConfigs';
+import { toMoney } from '@/utils/format';
 import { statusMap } from './useSettlementData';
 
 interface FactoryOrderDrilldownProps {

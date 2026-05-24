@@ -12,7 +12,7 @@ import { useInboundFlow } from './useInboundFlow';
 import { useOutboundContext } from './useOutboundContext';
 import { useOutboundActions } from './useOutboundActions';
 
-export type { MaterialBatchDetail } from './useOutboundActions';
+export type { MaterialBatchDetail } from '@/types/warehouse';
 export type { PendingPicking } from './usePendingPickings';
 
 export function useMaterialInventoryData() {

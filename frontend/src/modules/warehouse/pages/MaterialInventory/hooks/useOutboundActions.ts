@@ -7,9 +7,9 @@ import type { FormInstance } from 'antd';
 import type { MaterialInventory } from '../types';
 import type { MaterialOutboundPrintPayload } from '../components/MaterialOutboundPrintModal';
 import type { OutboundFactoryOption, OutboundOrderOption } from './outboundMatchHelper';
-import { MaterialBatchDetail } from './outboundMatchHelper';
+import type { MaterialBatchDetail } from '@/types/warehouse';
 
-export type { MaterialBatchDetail } from './outboundMatchHelper';
+export type { MaterialBatchDetail } from '@/types/warehouse';
 
 interface OutboundActionsDeps {
   user?: { name?: string; username?: string; id?: string } | null;

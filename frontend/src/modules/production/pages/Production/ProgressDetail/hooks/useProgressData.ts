@@ -212,6 +212,7 @@ export function useProgressData({
 
   // 仅在组件首次挂载时获取数据
   useEffect(() => {
+    if (initialLoadDone.current) return;
     fetchOrders();
     initialLoadDone.current = true;
   }, [fetchOrders]);
@@ -256,7 +257,7 @@ export function useProgressData({
     fetchOrders,
   ]);
 
-  return {
+  return useMemo(() => ({
     loading, total, orders, sortedOrders, setOrders,
     smartError, setSmartError,
     globalStats, setGlobalStats,
@@ -264,5 +265,5 @@ export function useProgressData({
     showSmartErrorNotice,
     fetchOrders, fetchGlobalStats,
     reportSmartError,
-  };
+  }), [loading, total, orders, sortedOrders, smartError, globalStats, progressNodesByStyleNo, showSmartErrorNotice, fetchOrders, fetchGlobalStats, reportSmartError]);
 }

@@ -18,6 +18,7 @@ import { factoryShipmentApi } from '@/services/production/factoryShipmentApi';
 import SupplierNameTooltip from '@/components/common/SupplierNameTooltip';
 import { parseProductionOrderLines } from '@/utils/api/production';
 import { getRemainingDaysDisplay } from '@/utils/progressColor';
+import { computeStageBudgetHint } from '@/utils/progressTimeBudget';
 import { stageAliasMap } from '@/utils/productionStage';
 import { ProductionOrder } from '@/types/production';
 import { ProgressNode } from '../types';
@@ -255,7 +256,7 @@ export function createOrderSummaryRender(ctx: OrderSummaryContext) {
                   value: (
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                       <span style={metaValueStyle}>{shipDate}</span>
-                      {text && text !== '已完成' && text !== '已报废' && text !== '已关单' ? <span style={{ color, fontWeight: 700, fontSize: 14 }}>{text}</span> : null}
+                      {text && text !== '已完成' && text !== '已报废' && text !== '已关单' && text !== '已取消' ? <span style={{ color, fontWeight: 700, fontSize: 14 }}>{text}</span> : null}
                     </span>
                   ),
                   labelStyle: { ...metaLabelStyle, fontWeight: 500 },
@@ -661,6 +662,30 @@ export function createProgressNodesRender(ctx: ProgressNodesContext) {
                   }}>
                     {startTime ? formatCompletionTime(startTime) : '--'} ~ {completionTime ? formatCompletionTime(completionTime) : '--'}
                   </div>
+                  {(() => {
+                    const hint = computeStageBudgetHint({
+                      nodeName,
+                      orderCreateTime: record.createTime as string | null,
+                      expectedShipDate: (record.expectedShipDate || record.plannedEndDate) as string | null,
+                      stageStartTime: startTime || undefined,
+                      stageEndTime: completionTime || undefined,
+                      isCompletedOrClosed,
+                      isProcureNode,
+                    });
+                    if (!hint) return null;
+                    return (
+                      <div style={{
+                        fontSize: 10,
+                        color: hint.color,
+                        fontWeight: 400,
+                        lineHeight: 1.2,
+                        textAlign: 'center',
+                        whiteSpace: 'nowrap',
+                      }}>
+                        {hint.text}
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
               {index < ns.length - 1 ? (

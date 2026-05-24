@@ -80,7 +80,7 @@ export const useAgentGraphStore = create<AgentGraphState>()((set, get) => ({
     const { scene, orderIds, question } = get();
     set({ loading: true, error: null, result: null, nodeEvents: [] });
     try {
-      const { runMultiAgentGraph } = await import('@/services/intelligenceApi');
+      const { runMultiAgentGraph } = await import('@/services/intelligence/intelligenceApi');
       const ids = orderIds.trim()
         ? orderIds.split(/[,，\s]+/).filter(Boolean)
         : [];
@@ -148,7 +148,7 @@ export const useAgentGraphStore = create<AgentGraphState>()((set, get) => ({
   loadHistory: async () => {
     set({ historyLoading: true });
     try {
-      const { getGraphHistory } = await import('@/services/intelligenceApi');
+      const { getGraphHistory } = await import('@/services/intelligence/intelligenceApi');
       const data = await getGraphHistory(1, 20);
       set({ history: data ?? [], historyLoading: false });
     } catch {
@@ -157,7 +157,7 @@ export const useAgentGraphStore = create<AgentGraphState>()((set, get) => ({
   },
 
   submitFeedback: async (executionId, score, note) => {
-    const { submitGraphFeedback } = await import('@/services/intelligenceApi');
+    const { submitGraphFeedback } = await import('@/services/intelligence/intelligenceApi');
     await submitGraphFeedback(executionId, score, note);
   },
 

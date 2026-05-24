@@ -96,8 +96,5 @@ export type BundleRepairStats = {
   awaitingRepair?: number;   // 仍在工厂返修件数
 };
 
-export type OrderLine = {
-  color: string;
-  size: string;
-  quantity: number;
-};
+import type { OrderLine } from '@/types/production';
+export type { OrderLine };

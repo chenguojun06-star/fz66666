@@ -5,7 +5,7 @@ import ResizableTable from '@/components/common/ResizableTable';
 import { CheckCircleOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { readPageSize } from '@/utils/pageSizeStore';
-import { intelligenceApi } from '@/services/intelligenceApi';
+import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
 import './AiExecutionPanel.css';
 
 /**

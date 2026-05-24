@@ -9,7 +9,8 @@ import axios from 'axios';
 import OrderInfoGrid from '@/components/common/OrderInfoGrid';
 import { createOrderColorSizeMatrixInfoItems } from '@/components/common/OrderColorSizeMatrix';
 import { type ShareOrderData, statusColorMap, stageIconMap } from './types';
-import { getRiskTone, getStageTone, isCurrentStage, formatDate, formatDateTime, formatRemainingDays, describeDelivery, getDisplayColorSizeQuantities } from './utils';
+import { getRiskTone, getStageTone, isCurrentStage, formatRemainingDays, describeDelivery, getDisplayColorSizeQuantities } from './utils';
+import { formatDate, formatDateTimeCompact as formatDateTime } from '@/utils/datetime';
 import { MetricCard, AiItem, FocusItem, XiaoyunMascotLink } from './components';
 import * as S from './styles';
 
