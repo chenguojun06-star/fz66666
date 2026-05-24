@@ -6,6 +6,7 @@ import com.fashion.supplychain.intelligence.entity.AiPatrolAction;
 import com.fashion.supplychain.intelligence.mapper.AiPatrolActionMapper;
 import java.math.BigDecimal;
 import java.time.Duration;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -15,9 +16,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 /**
- * 主动巡检闭环编排器
- * <p>巡检发现 → 建议 → 审批/自动执行 → 关闭，统计 MTTR。租户内可见自身记录，
- * 超管聚合 MTTR/issue 分布作为平台护城河。</p>
+ * 涓诲姩宸℃闂幆缂栨帓鍣? * <p>宸℃鍙戠幇 鈫?寤鸿 鈫?瀹℃壒/鑷姩鎵ц 鈫?鍏抽棴锛岀粺璁?MTTR銆傜鎴峰唴鍙鑷韩璁板綍锛? * 瓒呯鑱氬悎 MTTR/issue 鍒嗗竷浣滀负骞冲彴鎶ゅ煄娌炽€?/p>
  */
 @Slf4j
 @Service
@@ -25,6 +24,9 @@ public class PatrolClosedLoopOrchestrator {
 
     @Autowired
     private AiPatrolActionMapper actionMapper;
+
+    @Autowired(required = false)
+    private SmartEscalationOrchestrator smartEscalation;
 
     public AiPatrolAction createAction(String patrolSource, String detectedIssue, String issueType,
                                        String issueSeverity, String targetType, String targetId,
@@ -85,6 +87,8 @@ public class PatrolClosedLoopOrchestrator {
         a.setLinkedAuditId(linkedAuditId);
         a.setUpdateTime(LocalDateTime.now());
         actionMapper.updateById(a);
+
+        recordEscalationLearning(actionId);
     }
 
     public void close(Long actionId) {
@@ -100,6 +104,34 @@ public class PatrolClosedLoopOrchestrator {
         }
         a.setUpdateTime(LocalDateTime.now());
         actionMapper.updateById(a);
+
+        recordEscalationLearning(actionId);
+    }
+
+    private void recordEscalationLearning(Long actionId) {
+        if (smartEscalation == null) return;
+        try {
+            AiPatrolAction action = actionMapper.selectById(actionId);
+            if (action == null || action.getCreateTime() == null) return;
+
+            long resolutionMins = Duration.between(action.getCreateTime(), LocalDateTime.now()).toMinutes();
+            if (resolutionMins < 0) resolutionMins = 0;
+
+            String escalationLevel = mapRiskToEscalation(action.getRiskLevel());
+            smartEscalation.recordOutcome(escalationLevel, resolutionMins);
+        } catch (Exception e) {
+            log.debug("[PatrolClosedLoop] 鍗囩骇瀛︿範璁板綍澶辫触: {}", e.getMessage());
+        }
+    }
+
+    private String mapRiskToEscalation(String riskLevel) {
+        if (riskLevel == null) return "L1";
+        return switch (riskLevel) {
+            case "AUTO_EXECUTE", "LOW" -> "L1";
+            case "MEDIUM" -> "L2";
+            case "HIGH", "NEED_APPROVAL" -> "L3";
+            default -> "L1";
+        };
     }
 
     public List<AiPatrolAction> recentForCurrentTenant(int limit) {
@@ -119,9 +151,64 @@ public class PatrolClosedLoopOrchestrator {
     }
 
     /**
-     * 平台超管：MTTR 聚合
+     * 骞冲彴瓒呯锛歁TTR 鑱氬悎
      */
     public List<Map<String, Object>> aggregateMttr(LocalDateTime since) {
         return actionMapper.aggregateMttrByIssueType(since);
+    }
+
+    public List<AiPatrolAction> listByTarget(Long tenantId, String targetType, String targetId, int limit) {
+        LambdaQueryWrapper<AiPatrolAction> w = new LambdaQueryWrapper<>();
+        if (tenantId != null) w.eq(AiPatrolAction::getTenantId, tenantId);
+        if (targetType != null && !targetType.isBlank()) w.eq(AiPatrolAction::getTargetType, targetType);
+        if (targetId != null && !targetId.isBlank()) w.eq(AiPatrolAction::getTargetId, targetId);
+        w.in(AiPatrolAction::getStatus, "PENDING", "APPROVED", "AUTO_RUNNING");
+        w.orderByDesc(AiPatrolAction::getId).last("LIMIT " + Math.min(Math.max(limit, 1), 50));
+        return actionMapper.selectList(w);
+    }
+
+    public List<AiPatrolAction> listRecentByTenant(Long tenantId, int limit) {
+        LambdaQueryWrapper<AiPatrolAction> w = new LambdaQueryWrapper<>();
+        if (tenantId != null) w.eq(AiPatrolAction::getTenantId, tenantId);
+        w.orderByDesc(AiPatrolAction::getId).last("LIMIT " + Math.min(Math.max(limit, 1), 50));
+        return actionMapper.selectList(w);
+    }
+
+    public List<AiPatrolAction> listPendingAutoExecute() {
+        LambdaQueryWrapper<AiPatrolAction> w = new LambdaQueryWrapper<>();
+        w.eq(AiPatrolAction::getStatus, "PENDING")
+         .eq(AiPatrolAction::getRiskLevel, "AUTO_EXECUTE");
+        return actionMapper.selectList(w);
+    }
+
+    public void markAutoRunning(Long actionId) {
+        AiPatrolAction a = new AiPatrolAction();
+        a.setId(actionId);
+        a.setStatus("AUTO_RUNNING");
+        a.setUpdateTime(LocalDateTime.now());
+        actionMapper.updateById(a);
+    }
+
+    public int countPendingByTenant(Long tenantId) {
+        LambdaQueryWrapper<AiPatrolAction> w = new LambdaQueryWrapper<>();
+        if (tenantId != null) w.eq(AiPatrolAction::getTenantId, tenantId);
+        w.eq(AiPatrolAction::getStatus, "PENDING");
+        return Math.toIntExact(actionMapper.selectCount(w));
+    }
+
+    public int countAutoExecutedToday(Long tenantId) {
+        LambdaQueryWrapper<AiPatrolAction> w = new LambdaQueryWrapper<>();
+        if (tenantId != null) w.eq(AiPatrolAction::getTenantId, tenantId);
+        w.eq(AiPatrolAction::getStatus, "AUTO_EXECUTED")
+         .ge(AiPatrolAction::getExecutionTime, LocalDate.now().atStartOfDay());
+        return Math.toIntExact(actionMapper.selectCount(w));
+    }
+
+    public int countHighRiskPending(Long tenantId) {
+        LambdaQueryWrapper<AiPatrolAction> w = new LambdaQueryWrapper<>();
+        if (tenantId != null) w.eq(AiPatrolAction::getTenantId, tenantId);
+        w.eq(AiPatrolAction::getStatus, "PENDING")
+         .eq(AiPatrolAction::getRiskLevel, "NEED_APPROVAL");
+        return Math.toIntExact(actionMapper.selectCount(w));
     }
 }

@@ -321,6 +321,11 @@ export async function listAgentMeetings(limit = 10): Promise<any[]> {
 
 // 导出所有方法
 export const intelligenceApi = {
+  getPatrolActionsByTarget,
+  getPatrolRecentActions,
+  getPatrolSummary,
+  approvePatrolAction,
+  rejectPatrolAction,
   executeCommand,
   approveCommand,
   rejectCommand,
@@ -498,4 +503,72 @@ export async function visualAnalyze(params: VisualAIRequest): Promise<VisualAIRe
   return response.data as unknown as VisualAIResponse;
 }
 
+
+/** ── AI 巡检（Patrol）── */
+export interface PatrolAction {
+  id: number;
+  actionUid: string;
+  tenantId: number;
+  patrolSource: string;
+  detectedIssue: string;
+  issueType: string;
+  issueSeverity: string;
+  targetType: string;
+  targetId: string;
+  suggestedActionJson: string;
+  confidence: number;
+  riskLevel: string;
+  status: string;
+  autoExecuted: number;
+  executionResult: string;
+  createTime: string;
+  updateTime: string;
+}
+
+export interface PatrolSummary {
+  pendingCount: number;
+  autoExecutedToday: number;
+  highRiskPending: number;
+  recentActions: Array<{
+    issueType: string;
+    detectedIssue: string;
+    issueSeverity: string;
+    status: string;
+    targetType: string;
+    targetId: string;
+  }>;
+}
+
+export async function getPatrolActionsByTarget(
+  targetType: string, targetId: string, limit = 10
+): Promise<PatrolAction[]> {
+  const response = await api.get<ApiResult<PatrolAction[]>>(
+    '/intelligence/patrol/actions/by-target',
+    { params: { targetType, targetId, limit } }
+  );
+  return (response as any)?.data ?? [];
+}
+
+export async function getPatrolRecentActions(limit = 20): Promise<PatrolAction[]> {
+  const response = await api.get<ApiResult<PatrolAction[]>>(
+    '/intelligence/patrol/actions/recent',
+    { params: { limit } }
+  );
+  return (response as any)?.data ?? [];
+}
+
+export async function getPatrolSummary(): Promise<PatrolSummary> {
+  const response = await api.get<ApiResult<PatrolSummary>>(
+    '/intelligence/patrol/summary'
+  );
+  return (response as any)?.data ?? { pendingCount: 0, autoExecutedToday: 0, highRiskPending: 0, recentActions: [] };
+}
+
+export async function approvePatrolAction(actionId: number, remark?: string): Promise<void> {
+  await api.post(`/intelligence/patrol/actions/${actionId}/approve`, { remark: remark ?? '' });
+}
+
+export async function rejectPatrolAction(actionId: number, remark?: string): Promise<void> {
+  await api.post(`/intelligence/patrol/actions/${actionId}/reject`, { remark: remark ?? '' });
+}
 export default intelligenceApi;

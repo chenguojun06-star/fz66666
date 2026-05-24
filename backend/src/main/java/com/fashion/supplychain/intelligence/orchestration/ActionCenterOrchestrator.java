@@ -14,6 +14,8 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+
+import com.fashion.supplychain.intelligence.entity.AiLongMemory;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -57,6 +59,9 @@ public class ActionCenterOrchestrator {
     @Autowired(required = false)
     private FeedbackLearningOrchestrator feedbackLearning;
 
+    @Autowired(required = false)
+    private LongTermMemoryOrchestrator longTermMemory;
+
     public ActionCenterResponse getCenter() {
         HealthIndexResponse health = safeHealth();
         LivePulseResponse pulse = safePulse();
@@ -81,6 +86,11 @@ public class ActionCenterOrchestrator {
             appendOverdueReviewTasks(tasks);
         } catch (Exception e) {
             log.warn("[ActionCenter] appendOverdueReviewTasks 失败: {}", e.getMessage());
+        }
+        try {
+            enrichWithLongTermMemory(tasks);
+        } catch (Exception e) {
+            log.warn("[ActionCenter] enrichWithLongTermMemory 失败: {}", e.getMessage());
         }
         rankTasks(tasks);
         if (tasks.size() > 8) {
@@ -387,6 +397,69 @@ public class ActionCenterOrchestrator {
             log.debug("[ActionCenter] 日期解析失败: {}", ex.getMessage());
             return false;
         }
+    }
+
+    private void enrichWithLongTermMemory(List<ActionCenterResponse.ActionTask> tasks) {
+        if (longTermMemory == null || tasks == null || tasks.isEmpty()) {
+            return;
+        }
+        for (ActionCenterResponse.ActionTask task : tasks) {
+            try {
+                String query = buildMemoryQuery(task);
+
+                List<AiLongMemory> distilled = longTermMemory.retrieveDistilledInsights(query, 1);
+                if (distilled != null && !distilled.isEmpty()) {
+                    AiLongMemory insight = distilled.get(0);
+                    if (insight.getContent() != null && !insight.getContent().isBlank()) {
+                        String snippet = insight.getContent().length() > 100
+                            ? insight.getContent().substring(0, 100) + "..."
+                            : insight.getContent();
+                        task.setReason(task.getReason() + " | 跨租户最佳实践: " + snippet);
+                        longTermMemory.incrementHit(insight.getId());
+                    }
+                }
+
+                List<AiLongMemory> memories = longTermMemory.retrieveMultiSignal(
+                    query, "platform_scene", null, 2);
+                if (memories == null || memories.isEmpty()) {
+                    continue;
+                }
+                AiLongMemory best = memories.get(0);
+                if (best.getContent() == null || best.getContent().isBlank()) {
+                    continue;
+                }
+                String insightText = best.getContent().length() > 120
+                    ? best.getContent().substring(0, 120) + "..."
+                    : best.getContent();
+                String enriched = task.getReason() + " | AI记忆参考: " + insightText;
+                task.setReason(enriched);
+
+                longTermMemory.incrementHit(best.getId());
+            } catch (Exception e) {
+                log.debug("[ActionCenter] memory enrichment failed for task={}: {}",
+                    task.getTaskCode(), e.getMessage());
+            }
+        }
+    }
+
+    private String buildMemoryQuery(ActionCenterResponse.ActionTask task) {
+        StringBuilder sb = new StringBuilder();
+        if (task.getTitle() != null) {
+            sb.append(task.getTitle());
+        }
+        if (task.getSummary() != null) {
+            if (!sb.isEmpty()) sb.append(" ");
+            sb.append(task.getSummary());
+        }
+        if (task.getDomain() != null) {
+            if (!sb.isEmpty()) sb.append(" ");
+            sb.append(task.getDomain());
+        }
+        if (task.getRelatedOrderNo() != null) {
+            if (!sb.isEmpty()) sb.append(" ");
+            sb.append(task.getRelatedOrderNo());
+        }
+        return sb.toString();
     }
 
     private List<DeliveryRiskResponse.DeliveryRiskItem> topRiskOrders(DeliveryRiskResponse risks, int limit) {

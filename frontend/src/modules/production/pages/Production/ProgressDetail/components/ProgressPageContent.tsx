@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react';
-import { Card, Tag } from 'antd';
+import React, { useEffect, useMemo } from 'react';
+import { Alert, Card, Tag } from 'antd';
 import dayjs from 'dayjs';
 import PageLayout from '@/components/common/PageLayout';
 import PageStatCards from '@/components/common/PageStatCards';
@@ -16,6 +16,7 @@ import type { ProductionOrder, ProductionQueryParams } from '@/types/production'
 import ProgressRowList from './ProgressRowList';
 import ProgressAlerts from './ProgressAlerts';
 import SmartOrderHoverCard from './SmartOrderHoverCard';
+import { useAiPatrol, RISK_TYPE_LABELS } from '../../List/hooks/useAiPatrol';
 import { FilterSearchSection, FilterRightSection, EmbeddedFilterBar } from './ProgressFilterBar';
 
 type ProgressPageContentProps = {
@@ -95,8 +96,65 @@ const ProgressPageContent: React.FC<ProgressPageContentProps> = ({
   loading, orders, sortedOrders, sortedSmartQueueOrders, total, columns, cardColumns, cardActions,
   boardStatsByOrder, focusedOrderId, getOrderDomKey,
   smartQueueFilter, smartQueueOrders, smartActionItems, setSmartQueueFilter,
-  fetchOrders,
+  fetchOrders, titleTags,
 }) => {
+  const { patrolRiskMap, patrolSummary, fetchForOrders, getOrderRisks, hasRisks, getHighestSeverity } = useAiPatrol();
+
+  useEffect(() => {
+    if (sortedOrders.length > 0) {
+      const orderNos = sortedOrders.map(o => o.orderNo).filter(Boolean) as string[];
+      fetchForOrders(orderNos);
+    }
+  }, [sortedOrders.length]);
+
+  const patrolTitleTags = useMemo(() => (record: ProductionOrder) => {
+    const risks = getOrderRisks(record.orderNo || '');
+    const severity = getHighestSeverity(record.orderNo || '');
+    if (!severity || risks.length === 0) return null;
+    const label = RISK_TYPE_LABELS[risks[0]?.issueType] || 'AI巡检';
+    const colorMap: Record<string, string> = { HIGH: 'red', MEDIUM: 'orange', LOW: 'gold' };
+    return (
+      <Tag color={colorMap[severity] || 'orange'} style={{ margin: 0, fontSize: 11, lineHeight: '17px', padding: '0 3px' }}>
+        {label}
+      </Tag>
+    );
+  }, [patrolRiskMap]);
+
+  const mergedTitleTags = useMemo(() => (record: ProductionOrder) => {
+    const base = typeof titleTags === 'function' ? titleTags(record) : null;
+    const patrol = patrolTitleTags(record);
+    if (!base && !patrol) return null;
+    return (
+      <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap', alignItems: 'center' }}>
+        {base}
+        {patrol}
+      </div>
+    );
+  }, [titleTags, patrolTitleTags]);
+
+  const patrolAlertBanner = useMemo(() => {
+    const orderNos = sortedOrders.map(o => o.orderNo).filter(Boolean) as string[];
+    const riskyOrders = orderNos.filter(no => hasRisks(no));
+    if (riskyOrders.length === 0) return null;
+    const highCount = riskyOrders.filter(no => getHighestSeverity(no) === 'HIGH').length;
+    const type = highCount > 0 ? 'error' : 'warning';
+    const msg = highCount > 0
+      ? `AI巡检发现 ${riskyOrders.length} 个订单存在风险，其中 ${highCount} 个为高风险`
+      : `AI巡检发现 ${riskyOrders.length} 个订单需关注`;
+    const autoInfo = patrolSummary && patrolSummary.autoExecutedToday > 0
+      ? `（今日AI已自动处理 ${patrolSummary.autoExecutedToday} 项）`
+      : '';
+    return (
+      <Alert
+        type={type}
+        showIcon
+        message={`${msg}${autoInfo}`}
+        style={{ marginBottom: 10 }}
+        closable
+      />
+    );
+  }, [sortedOrders, patrolRiskMap, patrolSummary]);
+
   const calcCardProgress = useMemo(() => (record: ProductionOrder): number =>
     calcOrderProgress(record, boardStatsByOrder[String(record.id || '')] ?? null),
     [boardStatsByOrder],
@@ -163,7 +221,10 @@ const ProgressPageContent: React.FC<ProgressPageContentProps> = ({
   }), [activeStatFilter, globalStats, handleStatClick]);
 
   const alerts = (
-    <ProgressAlerts showSmartErrorNotice={showSmartErrorNotice} smartError={smartError} onFixError={onFixError} bottleneckBannerVisible={bottleneckBannerVisible} bottleneckItems={bottleneckItems} setBottleneckBannerVisible={setBottleneckBannerVisible} bottleneckLoading={bottleneckLoading} />
+    <>
+      {patrolAlertBanner}
+      <ProgressAlerts showSmartErrorNotice={showSmartErrorNotice} smartError={smartError} onFixError={onFixError} bottleneckBannerVisible={bottleneckBannerVisible} bottleneckItems={bottleneckItems} setBottleneckBannerVisible={setBottleneckBannerVisible} bottleneckLoading={bottleneckLoading} />
+    </>
   );
 
   const paginationConfig = {
@@ -184,7 +245,7 @@ const ProgressPageContent: React.FC<ProgressPageContentProps> = ({
         fieldGroups={productionCardFieldGroups} progressConfig={productionCardProgressConfig}
         getCardId={showFocus ? (record) => `progress-order-card-${getOrderDomKey(record as ProductionOrder)}` : undefined}
         getCardStyle={showFocus ? (record) => getOrderDomKey(record as ProductionOrder) === focusedOrderId ? { boxShadow: '0 0 0 2px rgba(24, 144, 255, 0.28), 0 10px 24px rgba(24, 144, 255, 0.18)', transform: 'translateY(-2px)' } : undefined : undefined}
-        actions={cardActions} hoverRender={(record) => <SmartOrderHoverCard order={record as ProductionOrder} />} titleTags={undefined}
+        actions={cardActions} hoverRender={(record) => <SmartOrderHoverCard order={record as ProductionOrder} />} titleTags={mergedTitleTags}
       />
       <StandardPagination current={queryParams.page} pageSize={queryParams.pageSize} total={total} wrapperStyle={{ paddingTop: 12, paddingBottom: 4 }} showQuickJumper={false} onChange={(page, pageSize) => { savePageSize(pageSize); setQueryParams((prev) => ({ ...prev, page, pageSize })); }} />
     </>

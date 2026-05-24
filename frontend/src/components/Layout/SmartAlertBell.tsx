@@ -5,6 +5,7 @@ import {
   CheckCircleOutlined,
   CloseOutlined,
   ExclamationCircleOutlined,
+  RobotOutlined,
   ThunderboltOutlined,
 } from '@ant-design/icons';
 import { Badge } from 'antd';
@@ -12,6 +13,7 @@ import api, { ApiResult } from '../../utils/api';
 import { sysNoticeApi } from '../../services/production/productionApi';
 import { useUser } from '../../utils/AuthContext';
 import type { SysNotice } from '../../services/production/productionApi';
+import { useAiPatrol, RISK_TYPE_LABELS } from '@/modules/production/pages/Production/List/hooks/useAiPatrol';
 import XiaoyunCloudAvatar from '../common/XiaoyunCloudAvatar';
 import XiaoyunInsightCard, { type XiaoyunInsightCardData } from '../common/XiaoyunInsightCard';
 
@@ -105,10 +107,12 @@ const SmartAlertBell: React.FC = () => {
   const userRef = useRef(user);
   userRef.current = user;
 
+  const { patrolSummary, fetchForOrders: fetchPatrolRiskData } = useAiPatrol();
+
   const visibleEvents = useMemo(() => events.filter(ev => !dismissedIds.has(ev.id)), [events, dismissedIds]);
   const visibleNotices = useMemo(() => myNotices.filter(n => !dismissedNoticeIds.has(n.id)), [myNotices, dismissedNoticeIds]);
 
-  const alertCount = visibleEvents.length;
+  const alertCount = visibleEvents.length + (patrolSummary?.pendingCount ?? 0);
 
   const fetchMyNotices = useCallback(async () => {
     try {
@@ -163,6 +167,12 @@ const SmartAlertBell: React.FC = () => {
     }
   }, []);
 
+  const fetchPatrolData = useCallback(async () => {
+    try {
+      await fetchPatrolRiskData([]);
+    } catch { /* silent fail */ }
+  }, [fetchPatrolRiskData]);
+
   const noticeFailRef = useRef(0);
   const noticeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -184,6 +194,7 @@ const SmartAlertBell: React.FC = () => {
 
   useEffect(() => {
     fetchData();
+    fetchPatrolData();
     void fetchMyNotices().then((result) => {
       if (result === 'failed') noticeFailRef.current += 1;
       else noticeFailRef.current = 0;
@@ -195,11 +206,11 @@ const SmartAlertBell: React.FC = () => {
       if (noticeTimerRef.current) clearTimeout(noticeTimerRef.current);
       abortRef.current?.abort();
     };
-  }, [fetchData, fetchMyNotices, scheduleNoticePoll]);
+  }, [fetchData, fetchMyNotices, fetchPatrolData, scheduleNoticePoll]);
 
   useEffect(() => {
-    if (!fetchedToday) fetchData();
-  }, [fetchedToday, fetchData]);
+    if (!fetchedToday) { fetchData(); fetchPatrolData(); }
+  }, [fetchedToday, fetchData, fetchPatrolData]);
 
   // 点击面板外关闭
   useEffect(() => {
@@ -252,12 +263,18 @@ const SmartAlertBell: React.FC = () => {
 
   // 点击按钮时先拉数据
   const handleToggle = () => {
-    if (!open) fetchData();
+    if (!open) { fetchData(); fetchPatrolData(); }
     setOpen(v => !v);
   };
 
   // ── 渲染 ──────────────────────────────────────────────────
-  const riskLevel = (brief?.overdueOrderCount ?? 0) > 0 ? 'high'
+  const patrolSeverityColor = (severity: string) => {
+    if (severity === 'HIGH') return '#cf1322';
+    if (severity === 'MEDIUM') return '#fa8c16';
+    return '#faad14';
+  };
+
+  const riskLevel = (brief?.overdueOrderCount ?? 0) > 0 || (patrolSummary?.highRiskPending ?? 0) > 0 ? 'high'
     : (brief?.highRiskOrderCount ?? 0) > 0 ? 'mid'
     : 'ok';
 
@@ -319,6 +336,40 @@ const SmartAlertBell: React.FC = () => {
         {!loading && (
           <>
 
+            {/* ── AI 巡检简报 ── */}
+            {patrolSummary && (patrolSummary.autoExecutedToday > 0 || patrolSummary.recentActions.length > 0) && (
+              <div className="sap-section">
+                <div className="sap-section-title">
+                  <RobotOutlined style={{ color: '#722ed1' }} /> AI巡检简报
+                  {patrolSummary.autoExecutedToday > 0 && (
+                    <span style={{ marginLeft: 8, fontSize: 11, color: '#722ed1', background: '#f9f0ff', borderRadius: 10, padding: '1px 8px' }}>
+                      今日自动执行 {patrolSummary.autoExecutedToday} 次
+                    </span>
+                  )}
+                  {patrolSummary.highRiskPending > 0 && (
+                    <Badge count={patrolSummary.highRiskPending} size="small"
+                      style={{ marginLeft: 8, background: '#cf1322', boxShadow: 'none' }} />
+                  )}
+                </div>
+                {patrolSummary.recentActions.slice(0, 5).map((action, idx) => (
+                  <div key={idx} className="sap-event-row" style={{ cursor: 'default' }}>
+                    <span className="sap-event-dot"
+                      style={{ background: patrolSeverityColor(action.issueSeverity) }} />
+                    <span className="sap-event-title">
+                      {RISK_TYPE_LABELS[action.issueType] || action.issueType}: {action.detectedIssue}
+                    </span>
+                    <span style={{
+                      fontSize: 11,
+                      color: action.status === 'PENDING' ? '#fa8c16' : '#722ed1',
+                      marginLeft: 'auto',
+                      flexShrink: 0,
+                    }}>
+                      {action.status === 'PENDING' ? '待处理' : '已执行'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
 
             {/* ── 首要关注订单 ── */}
             {brief?.topPriorityOrder && !dismissedIds.has('topPriority') && (

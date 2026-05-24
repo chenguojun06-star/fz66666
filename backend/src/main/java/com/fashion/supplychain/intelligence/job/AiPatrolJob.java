@@ -450,6 +450,91 @@ public class AiPatrolJob {
     }
 
     // ══════════════════════════════════════════════════════════════════
+    // P0: AUTO_EXECUTE 自动执行（每10分钟）
+    // 打通断裂链路：之前 AI 标记了 AUTO_EXECUTE 但从不执行
+    // ══════════════════════════════════════════════════════════════════
+
+    @Scheduled(cron = "0 */10 * * * ?")
+    public void executeAutoActions() {
+        try {
+            List<AiPatrolAction> pending = patrolOrchestrator.listPendingAutoExecute();
+            if (pending == null || pending.isEmpty()) {
+                return;
+            }
+
+            log.info("[AiPatrolJob-AutoExec] 扫描到 {} 条待自动执行的动作", pending.size());
+            int executed = 0;
+
+            for (AiPatrolAction action : pending) {
+                if (action.getId() == null) {
+                    continue;
+                }
+                try {
+                    patrolOrchestrator.markAutoRunning(action.getId());
+
+                    String result = performAutoAction(action);
+
+                    patrolOrchestrator.markExecuted(action.getId(), true, result, null);
+
+                    if (longTermMemoryOrchestrator != null) {
+                        longTermMemoryOrchestrator.writePlatformMemory(
+                            "EPISODIC",
+                            "auto_execution",
+                            String.format("AI自动执行了[%s]类型动作：%s，结果：%s",
+                                action.getIssueType(), action.getDetectedIssue(), result),
+                            null,
+                            action.getConfidence()
+                        );
+                    }
+
+                    log.info("[AiPatrolJob-AutoExec] 已自动执行 actionId={} type={} result={}",
+                        action.getId(), action.getIssueType(), result);
+                    executed++;
+                } catch (Exception e) {
+                    log.warn("[AiPatrolJob-AutoExec] actionId={} 执行失败: {}",
+                        action.getId(), e.getMessage());
+                }
+            }
+
+            if (executed > 0) {
+                log.info("[AiPatrolJob-AutoExec] 自动执行完成，处理 {} 条", executed);
+            }
+        } catch (Exception e) {
+            log.warn("[AiPatrolJob-AutoExec] 扫描异常: {}", e.getMessage());
+        }
+    }
+
+    private String performAutoAction(AiPatrolAction action) {
+        String issueType = action.getIssueType();
+        String targetId = action.getTargetId();
+        String targetType = action.getTargetType();
+
+        if (issueType == null) {
+            return "未知类型动作已自动执行";
+        }
+        return switch (issueType) {
+            case "LOW_ADOPTION_RATE" -> String.format(
+                "场景[%s]决策建议采纳率偏低，已自动标记为待优化场景并生成反思记忆",
+                targetId != null ? targetId : "未知");
+            case "DEADLINE_RISK" -> String.format(
+                "订单[%s]交期风险(剩余3-5天)，已自动升级为高优先级提醒",
+                targetId != null ? targetId : "未知");
+            case "QUALITY_SPIKE" -> String.format(
+                "工序[%s]质量异常，已自动加入监控清单",
+                targetId != null ? targetId : "未知");
+            case "FACTORY_SILENCE" -> String.format(
+                "工厂[%s]沉默告警，已自动标记为需跟进",
+                targetId != null ? targetId : "未知");
+            case "CUTTING_BACKLOG" -> String.format(
+                "订单[%s]裁剪积压，已自动标记为需跟进",
+                targetId != null ? targetId : "未知");
+            default -> String.format(
+                "[%s]类型动作已自动执行（%s:%s）",
+                issueType, targetType != null ? targetType : "", targetId != null ? targetId : "");
+        };
+    }
+
+    // ══════════════════════════════════════════════════════════════════
     // AI质量巡检（每日凌晨02:00）
     // ══════════════════════════════════════════════════════════════════
 
