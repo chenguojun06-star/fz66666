@@ -112,8 +112,8 @@ const PurchaseDocRecognizeModal: React.FC<Props> = ({ open, orderNo, onCancel, o
     setApplying(false);
     if (successCount > 0) {
       message.success(`已应用 ${successCount} 项到货数量`);
-      handleClose();
       onSuccess();
+      handleClose();
     } else {
       message.error('应用失败，请检查权限或网络后重试');
     }

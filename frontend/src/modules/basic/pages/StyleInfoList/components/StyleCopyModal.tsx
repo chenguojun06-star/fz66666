@@ -23,9 +23,9 @@ const StyleCopyModal: React.FC<StyleCopyModalProps> = ({ open, onCancel, copySou
       const res = await api.post<ApiResult>(`/style/info/${copySource.id}/copy`, values);
       if (isApiSuccess(res)) {
         message.success('复制成功');
+        onSuccess();
         onCancel();
         copyForm.resetFields();
-        onSuccess();
       } else {
         message.error(getApiMessage(res, '复制失败'));
       }
