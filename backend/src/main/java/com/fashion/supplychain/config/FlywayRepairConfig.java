@@ -6,12 +6,6 @@ import org.springframework.boot.autoconfigure.flyway.FlywayMigrationStrategy;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-/**
- * Flyway 启动前自动 repair + migrate。
- * cloud_patch 已手动执行了大量迁移但未记录到 flyway_schema_history，
- * 因此 migrate 时可能遇到 Duplicate column / Unknown column / Table exists 等幂等冲突。
- * 此策略确保任何迁移错误都不会阻止应用启动。
- */
 @Configuration
 @ConditionalOnProperty(name = "spring.flyway.enabled", havingValue = "true")
 @Slf4j
@@ -32,9 +26,14 @@ public class FlywayRepairConfig {
                 log.info("[FlywayRepair] Migrate complete.");
             } catch (Exception e) {
                 log.error("[FlywayRepair] Migrate 失败，应用继续启动。详情: {}", e.getMessage());
-                if (e.getCause() != null) {
-                    log.error("[FlywayRepair] 根因: {}", e.getCause().getMessage());
+                Throwable cause = e.getCause();
+                int depth = 0;
+                while (cause != null && depth < 5) {
+                    log.error("[FlywayRepair] 根因[{}]: {}", depth, cause.getMessage());
+                    cause = cause.getCause();
+                    depth++;
                 }
+                log.error("[FlywayRepair] 完整异常栈:", e);
                 try {
                     flyway.repair();
                 } catch (Exception ignored) {
