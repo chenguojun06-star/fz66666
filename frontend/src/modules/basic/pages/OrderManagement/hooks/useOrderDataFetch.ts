@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { useSync } from '@/utils/syncManager';
 import api from '@/utils/api';
 import type { StyleInfo, StyleQueryParams } from '@/types/style';
@@ -162,8 +162,11 @@ export function useOrderDataFetch({ queryParams, visible, showSmartErrorNotice, 
       .catch(() => {});
   }, []);
 
-  return {
+  const refetchStyles = useCallback(() => fetchStyles(queryParams), [fetchStyles, queryParams]);
+
+  return useMemo(() => ({
     styles, total, loading, factories, factoryCapacities, departments, users,
-    smartError, setSmartError, reportSmartError, fetchStyles: () => fetchStyles(queryParams),
-  };
+    smartError, setSmartError, reportSmartError, fetchStyles: refetchStyles,
+  }), [styles, total, loading, factories, factoryCapacities, departments, users,
+    smartError, setSmartError, reportSmartError, refetchStyles]);
 }

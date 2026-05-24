@@ -5,6 +5,7 @@ import ResizableModal from '@/components/common/ResizableModal';
 import { PlusOutlined, AuditOutlined, CheckCircleOutlined, CloseCircleOutlined, EyeOutlined, ReloadOutlined, QuestionCircleOutlined } from '@ant-design/icons';
 import { inventoryCheckApi } from '../../../../services/warehouse/inventoryCheckApi';
 import ResizableTable from '../../../../components/common/ResizableTable';
+import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 
 const CHECK_TYPE_MAP: Record<string, { label: string; color: string }> = {
   MATERIAL: { label: '物料盘点', color: 'blue' },
@@ -167,7 +168,7 @@ const InventoryCheck: React.FC = () => {
 
   const imageColumn = {
     title: '图片', dataIndex: 'imageUrl', key: 'imageUrl', width: 60,
-    render: (v: string) => v ? <Image src={v} width={40} height={40} style={{ objectFit: 'cover', borderRadius: 4 }} fallback="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mN88P/BfwAJhAPk2iMa1AAAAABJRU5ErkJggg==" /> : <div style={{ width: 40, height: 40, background: '#f5f5f5', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ccc', fontSize: 14 }}>无</div>,
+    render: (v: string) => v ? <Image src={getFullAuthedFileUrl(v)} width={40} height={40} style={{ objectFit: 'cover', borderRadius: 4 }} fallback="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mN88P/BfwAJhAPk2iMa1AAAAABJRU5ErkJggg==" /> : <div style={{ width: 40, height: 40, background: '#f5f5f5', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ccc', fontSize: 14 }}>无</div>,
   };
 
   const styleNoColumn = {

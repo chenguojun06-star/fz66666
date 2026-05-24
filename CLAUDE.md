@@ -107,6 +107,46 @@ Note: Java单元测试源码按项目P0铁律"测试代码隔离"从未提交到
 6. **SKU system**: 款号+颜色+尺码 三维统一，三端共享
 7. **Full copilot instructions** at `.github/copilot-instructions.md` — read it for complete P0/P1 rules
 
+## Auto-Invocation Skills
+
+根据当前任务类型**自动调用**对应技能，无需等待用户指令：
+
+### 代码编写 / 开发
+| 场景 | 自动调用技能 | 说明 |
+|------|------------|------|
+| 写前端UI组件/页面 | `frontend-design` | React+TS+Ant Design 高质量UI |
+| 前端样式/主题 | `ui-styling` | shadcn/ui + Tailwind CSS 变量 |
+| 实现新功能前 | `brainstorming` | 探索需求、设计、方案 |
+| 多步骤/复杂任务前 | `writing-plans` | 先出计划，再写代码 |
+| 多文件、独立子任务 | `dispatching-parallel-agents` | 并行执行独立任务 |
+
+### 代码优化 / 重构
+| 场景 | 自动调用技能 | 说明 |
+|------|------------|------|
+| 改动后代码质量审查 | `simplify` | 检查复用、质量、效率 |
+| 设计系统/设计Token | `design-system` | Token架构、组件规范 |
+| 品牌一致性 | `brand` | 品牌形象、视觉识别 |
+
+### Bug修复 / 调试
+| 场景 | 自动调用技能 | 说明 |
+|------|------------|------|
+| 遇到Bug/测试失败 | `systematic-debugging` | 系统化排查问题根因 |
+| 按TDD模式修复 | `test-driven-development` | 先写测试再修代码 |
+
+### 完成 / 提交 / 合并
+| 场景 | 自动调用技能 | 说明 |
+|------|------------|------|
+| 完成工作、声明修复前 | `verification-before-completion` | 运行测试验证再断言 |
+| 合并前代码审查 | `requesting-code-review` | 对照需求审查 |
+| 收到审查反馈 | `receiving-code-review` | 验证反馈再实施 |
+
+### 开发流程
+| 场景 | 自动调用技能 | 说明 |
+|------|------------|------|
+| 新功能独立开发 | `using-git-worktrees` | 创建隔离 worktree |
+| 执行实现计划 | `subagent-driven-development` | 按计划分步执行 |
+| 减少权限弹窗 | `fewer-permission-prompts` | 扫描并添加权限白名单 |
+
 ## Key Reference Docs
 
 - [开发指南.md](开发指南.md) — 完整架构规范与禁止模式
