@@ -3,6 +3,7 @@ import { App, Button, Skeleton, Tag } from 'antd';
 import dayjs from 'dayjs';
 import api from '@/utils/api';
 import { formatMoney } from '@/utils/format';
+import BudgetDaysHint from '@/components/common/BudgetDaysHint';
 import { StyleAttachment, StyleBom, StyleInfo, StyleProcess, StyleQuotation, StyleSize, WorkbenchSection } from '@/types/style';
 import StyleAttachmentTab from '../../StyleInfo/components/StyleAttachmentTab';
 import StyleBomTab from '../../StyleInfo/components/StyleBomTab';
@@ -169,13 +170,13 @@ const StyleDevelopmentWorkbench: React.FC<Props> = ({ record, onClose, initialSe
     const quotationLocked = Boolean((data.quotation as any)?.id);
 
     return [
-      { key: 'bom', title: 'BOM清单', count: `${data.bomList.length} 项`, meta: bomMeta, helper: formatTime((detail as any).bomCompletedTime || (detail as any).bomStartTime) },
-      { key: 'pattern', title: '纸样开发', count: `${data.attachments.filter((item) => item.bizType === 'pattern').length} 份`, meta: patternMeta, helper: formatTime((detail as any).patternCompletedTime || (detail as any).patternStartTime) },
-      { key: 'process', title: '工序单价', count: `${data.processList.length} 项`, meta: processMeta, helper: formatTime((detail as any).processCompletedTime || (detail as any).processStartTime) },
-      { key: 'secondary', title: '二次工艺', count: `${String((detail as any).secondaryProcessCount || 0)} 项`, meta: resolveStageMeta(Boolean((detail as any).secondaryCompletedTime), Boolean((detail as any).secondaryStartTime)), helper: formatTime((detail as any).secondaryCompletedTime || (detail as any).secondaryStartTime) },
-      { key: 'production', title: '生产制单', count: `${String((detail as any).productionReqRows || 0)} 行`, meta: productionMeta, helper: formatTime((detail as any).productionCompletedTime || (detail as any).productionStartTime) },
-      { key: 'quotation', title: '报价单', count: data.quotation?.totalPrice != null ? formatMoney(data.quotation.totalPrice) : '未报价', meta: quotationLocked ? resolveStageMeta(true, true) : resolveStageMeta(false, Boolean((detail as any).price)), helper: quotationLocked ? '已保存报价单' : '待维护报价' },
-      { key: 'files', title: '附件文件', count: `${data.attachments.length} 份`, meta: data.attachments.length ? resolveStageMeta(true, true) : resolveStageMeta(false, false), helper: data.attachments[0] ? `最近更新 ${formatTime(data.attachments[0].createTime)}` : '暂无文件' },
+      { key: 'bom', title: 'BOM清单', count: `${data.bomList.length} 项`, meta: bomMeta, helper: formatTime((detail as any).bomCompletedTime || (detail as any).bomStartTime), startTime: (detail as any).bomStartTime, endTime: (detail as any).bomCompletedTime, completed: Boolean((detail as any).bomCompletedTime) },
+      { key: 'pattern', title: '纸样开发', count: `${data.attachments.filter((item) => item.bizType === 'pattern').length} 份`, meta: patternMeta, helper: formatTime((detail as any).patternCompletedTime || (detail as any).patternStartTime), startTime: (detail as any).patternStartTime, endTime: (detail as any).patternCompletedTime, completed: Boolean((detail as any).patternCompletedTime) },
+      { key: 'process', title: '工序单价', count: `${data.processList.length} 项`, meta: processMeta, helper: formatTime((detail as any).processCompletedTime || (detail as any).processStartTime), startTime: (detail as any).processStartTime, endTime: (detail as any).processCompletedTime, completed: Boolean((detail as any).processCompletedTime) },
+      { key: 'secondary', title: '二次工艺', count: `${String((detail as any).secondaryProcessCount || 0)} 项`, meta: resolveStageMeta(Boolean((detail as any).secondaryCompletedTime), Boolean((detail as any).secondaryStartTime)), helper: formatTime((detail as any).secondaryCompletedTime || (detail as any).secondaryStartTime), startTime: (detail as any).secondaryStartTime, endTime: (detail as any).secondaryCompletedTime, completed: Boolean((detail as any).secondaryCompletedTime) },
+      { key: 'production', title: '生产制单', count: `${String((detail as any).productionReqRows || 0)} 行`, meta: productionMeta, helper: formatTime((detail as any).productionCompletedTime || (detail as any).productionStartTime), startTime: (detail as any).productionStartTime, endTime: (detail as any).productionCompletedTime, completed: Boolean((detail as any).productionCompletedTime) },
+      { key: 'quotation', title: '报价单', count: data.quotation?.totalPrice != null ? formatMoney(data.quotation.totalPrice) : '未报价', meta: quotationLocked ? resolveStageMeta(true, true) : resolveStageMeta(false, Boolean((detail as any).price)), helper: quotationLocked ? '已保存报价单' : '待维护报价', startTime: null, endTime: null, completed: quotationLocked },
+      { key: 'files', title: '附件文件', count: `${data.attachments.length} 份`, meta: data.attachments.length ? resolveStageMeta(true, true) : resolveStageMeta(false, false), helper: data.attachments[0] ? `最近更新 ${formatTime(data.attachments[0].createTime)}` : '暂无文件', startTime: null, endTime: null, completed: data.attachments.length > 0 },
     ] as const;
   }, [data.attachments, data.bomList.length, data.processList.length, data.quotation, detail]);
 
@@ -358,6 +359,14 @@ const StyleDevelopmentWorkbench: React.FC<Props> = ({ record, onClose, initialSe
           >
             <span>{item.title}</span>
             <Tag color={item.meta.color}>{item.meta.label}</Tag>
+            <BudgetDaysHint
+              nodeName={item.title}
+              orderCreateTime={(detail as any).createTime}
+              expectedShipDate={(detail as any).deliveryDate}
+              stageStartTime={item.startTime}
+              stageEndTime={item.endTime}
+              isCompleted={item.completed}
+            />
           </button>
         ))}
       </div>
