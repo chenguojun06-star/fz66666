@@ -3,6 +3,7 @@ import { stageAliasMap, carSewingKeywords, tailProcessKeywords } from '@/utils/p
 export interface ProcessTrackingRecord {
   id: string;
   bundleNo: string;
+  cuttingBundleId?: string;
   sku?: string;
   color?: string;
   size?: string;

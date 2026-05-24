@@ -130,48 +130,64 @@ const StyleInfoListPage: React.FC = () => {
     };
   }, [fetchList, loadDevelopmentStats, statsRangeType]);
 
+  const stockStateLoadedRef = useRef('');
+
   useEffect(() => {
+    const styleNos = Array.from(new Set(
+      data
+        .map((item) => String(item.styleNo || '').trim())
+        .filter(Boolean)
+    ));
+    if (!styleNos.length) {
+      setStockStateMap({});
+      return;
+    }
+
+    const loadKey = styleNos.sort().join(',');
+    if (stockStateLoadedRef.current === loadKey) return;
+    stockStateLoadedRef.current = loadKey;
+
+    let cancelled = false;
+
     const loadStockState = async () => {
-      const styleNos = Array.from(new Set(
-        data
-          .map((item) => String(item.styleNo || '').trim())
-          .filter(Boolean)
-      ));
-      if (!styleNos.length) {
-        setStockStateMap({});
-        return;
-      }
-
       try {
-        const results = await Promise.all(styleNos.map(async (styleNo) => {
-          const res = await api.get('/stock/sample/list', {
-            params: {
-              page: 1,
-              pageSize: 50,
-              styleNo,
-              sampleType: 'development',
-              recordStatus: 'active',
-            },
-          });
-          return { styleNo, records: res?.data?.records || [] };
-        }));
-
+        const BATCH_SIZE = 5;
         const nextMap: Record<string, boolean> = {};
-        results.forEach(({ styleNo, records }) => {
-          records.forEach((item: any) => {
-            const key = `${String(styleNo || '').trim().toUpperCase()}|${String(item?.color || '').trim().toUpperCase()}`;
-            if (key !== '|') {
-              nextMap[key] = true;
+
+        for (let i = 0; i < styleNos.length; i += BATCH_SIZE) {
+          if (cancelled) return;
+          const batch = styleNos.slice(i, i + BATCH_SIZE);
+          const results = await Promise.all(batch.map(async (styleNo) => {
+            const res = await api.get('/stock/sample/list', {
+              params: {
+                page: 1,
+                pageSize: 50,
+                styleNo,
+                sampleType: 'development',
+                recordStatus: 'active',
+              },
+            });
+            return { styleNo, records: res?.data?.records || [] };
+          }));
+
+          for (const { styleNo, records } of results) {
+            for (const item of records) {
+              const key = `${String(styleNo || '').trim().toUpperCase()}|${String(item?.color || '').trim().toUpperCase()}`;
+              if (key !== '|') {
+                nextMap[key] = true;
+              }
             }
-          });
-        });
-        setStockStateMap(nextMap);
+          }
+        }
+
+        if (!cancelled) setStockStateMap(nextMap);
       } catch {
-        setStockStateMap({});
+        if (!cancelled) setStockStateMap({});
       }
     };
 
     void loadStockState();
+    return () => { cancelled = true; };
   }, [data]);
 
   // 加载品类选项（从字典API动态加载，用于表格代码转标签）

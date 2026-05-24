@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { App, Spin } from 'antd';
 import {
+
   TagsOutlined,
   ShoppingCartOutlined,
   ScissorOutlined,
@@ -8,6 +9,7 @@ import {
   ExportOutlined,
 } from '@ant-design/icons';
 import api from '@/utils/api';
+import { createPauseableInterval } from '@/hooks/useRefreshHelpers';
 import './styles.css';
 
 interface TimeRangeStats {
@@ -110,8 +112,10 @@ const TopStats: React.FC = () => {
 
   useEffect(() => {
     fetchStats();
-    const timer = setInterval(fetchStats, 30_000);
-    return () => clearInterval(timer);
+    const poller = createPauseableInterval(fetchStats, 30_000);
+    poller.start();
+    const cleanup = poller.autoPauseOnHidden();
+    return () => { poller.stop(); cleanup(); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

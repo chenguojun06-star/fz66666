@@ -1,18 +1,22 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import { Alert, App, Button, Card, Collapse, Form, Space, Spin, Tag } from 'antd';
+import { Alert, App, Button, Card, Collapse, Image, Input, InputNumber, Select, Space, Spin, Tag } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import ResizableTable from '@/components/common/ResizableTable';
 import ResizableModal from '@/components/common/ResizableModal';
 import MaterialTypeTag from '@/components/common/MaterialTypeTag';
 import SupplierNameTooltip from '@/components/common/SupplierNameTooltip';
+import SupplierSelect from '@/components/common/SupplierSelect';
+import DictAutoComplete from '@/components/common/DictAutoComplete';
+import RowActions from '@/components/common/RowActions';
 import { ProductionOrderHeader } from '@/components/StyleAssets';
 import api, { parseProductionOrderLines } from '@/utils/api';
 import { useUser } from '@/utils/AuthContext';
+import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import type { MaterialPurchase, ProductionOrder } from '@/types/production';
-import { MATERIAL_PURCHASE_STATUS, MATERIAL_TYPES } from '@/constants/business';
-import { getMaterialTypeCategory, getMaterialTypeSortKey, normalizeMaterialType } from '@/utils/materialType';
-import PurchaseCreateForm from '@/modules/production/pages/Production/MaterialPurchase/components/PurchaseModal/PurchaseCreateForm';
+import { MATERIAL_PURCHASE_STATUS } from '@/constants/business';
+import { getMaterialTypeCategory, getMaterialTypeLabel, getMaterialTypeSortKey } from '@/utils/materialType';
+import { DEFAULT_PAGE_SIZE_OPTIONS } from '@/utils/pageSizeStore';
 import {
   formatMaterialQuantity,
   formatReferenceKilograms,
@@ -26,6 +30,24 @@ interface InlinePurchasePanelProps {
   orderId?: string;
   orderNo?: string;
 }
+
+const MATERIAL_TYPE_OPTIONS = [
+  { value: 'fabricA', label: '面料A' },
+  { value: 'fabricB', label: '面料B' },
+  { value: 'fabricC', label: '面料C' },
+  { value: 'fabricD', label: '面料D' },
+  { value: 'fabricE', label: '面料E' },
+  { value: 'liningA', label: '里料A' },
+  { value: 'liningB', label: '里料B' },
+  { value: 'liningC', label: '里料C' },
+  { value: 'liningD', label: '里料D' },
+  { value: 'liningE', label: '里料E' },
+  { value: 'accessoryA', label: '辅料A' },
+  { value: 'accessoryB', label: '辅料B' },
+  { value: 'accessoryC', label: '辅料C' },
+  { value: 'accessoryD', label: '辅料D' },
+  { value: 'accessoryE', label: '辅料E' },
+];
 
 const unwrapRecords = (res: any): MaterialPurchase[] => {
   if (res?.code !== 200) return [];
@@ -60,9 +82,17 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = ({ orderId, orde
   const [actionLoading, setActionLoading] = useState(false);
   const [confirmCompleteLoading, setConfirmCompleteLoading] = useState(false);
 
-  const [createModalVisible, setCreateModalVisible] = useState(false);
-  const [createForm] = Form.useForm();
-  const [createLoading, setCreateLoading] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editableData, setEditableData] = useState<MaterialPurchase[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [materialModalOpen, setMaterialModalOpen] = useState(false);
+  const [materialTargetRowId, setMaterialTargetRowId] = useState<string | null>(null);
+  const [materialKeyword, setMaterialKeyword] = useState('');
+  const [materialLoading, setMaterialLoading] = useState(false);
+  const [materialList, setMaterialList] = useState<Record<string, unknown>[]>([]);
+  const [materialTotal, setMaterialTotal] = useState(0);
+  const [materialPage, setMaterialPage] = useState(1);
+  const [materialPageSize, setMaterialPageSize] = useState(10);
 
   const orderColors = useMemo(() => {
     const colors = new Set<string>();
@@ -105,9 +135,7 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = ({ orderId, orde
           if (previewRes?.code === 200 && Array.isArray(previewRes?.data)) {
             records = sortPurchases(previewRes.data);
           }
-        } catch {
-          // 预览失败，保持空列表
-        }
+        } catch {}
       }
 
       setPurchases(records);
@@ -175,68 +203,138 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = ({ orderId, orde
     };
   }, [orderId, orderNo, order, firstPurchase]);
 
-  const openCreateModal = useCallback(() => {
+  const handleStartEdit = useCallback(() => {
+    setEditableData([...purchases]);
+    setEditing(true);
+  }, [purchases]);
+
+  const handleCancelEdit = useCallback(() => {
+    setEditing(false);
+    setEditableData([]);
+  }, []);
+
+  const handleAddRow = useCallback(() => {
     const info = getOrderStyleInfo();
-    createForm.setFieldsValue({
-      orderId: info.orderId,
+    const newRow: MaterialPurchase = {
+      id: `tmp_${Date.now()}`,
+      purchaseNo: '',
+      supplierId: '',
       orderNo: info.orderNo,
       styleNo: info.styleNo,
       styleName: info.styleName,
       styleId: info.styleId,
-      styleCover: info.styleCover,
-      materialType: normalizeMaterialType(MATERIAL_TYPES.FABRIC),
+      materialType: 'fabricA',
+      materialCode: '',
+      materialName: '',
+      unit: '',
+      color: '',
+      size: '',
+      specification: '',
+      fabricComposition: '',
+      fabricWeight: '',
+      purchaseQuantity: 0,
       arrivedQuantity: 0,
+      unitPrice: 0,
+      totalAmount: 0,
+      supplierName: '',
       status: MATERIAL_PURCHASE_STATUS.PENDING,
-      sourceType: 'order',
-    });
-    setCreateModalVisible(true);
-  }, [createForm, getOrderStyleInfo]);
+    } as MaterialPurchase;
+    setEditableData(prev => [...prev, newRow]);
+  }, [getOrderStyleInfo]);
 
-  const handleCreateSave = useCallback(async () => {
+  const handleUpdateRow = useCallback((rowId: string, field: string, value: any) => {
+    setEditableData(prev => prev.map(r => r.id === rowId ? { ...r, [field]: value } : r));
+  }, []);
+
+  const handleRemoveRow = useCallback((rowId: string) => {
+    setEditableData(prev => prev.filter(r => r.id !== rowId));
+  }, []);
+
+  const handleSaveAll = useCallback(async () => {
+    const validRows = editableData.filter(r => r.materialCode || r.materialName);
+    if (validRows.length === 0) { message.warning('请至少添加一行物料'); return; }
+    const REQUIRED = ['materialType', 'materialCode', 'materialName', 'unit', 'supplierName'];
+    const incomplete = validRows.find(r => REQUIRED.some(f => { const v = (r as any)[f]; return v === undefined || v === null || String(v).trim() === ''; }));
+    if (incomplete) { message.warning('请完善所有物料的必填信息'); return; }
+    setSaving(true);
     try {
-      setCreateLoading(true);
-      const values = await createForm.validateFields();
-      const purchaseQuantity = Number(values.purchaseQuantity || 0);
-      const unitPrice = Number(values.unitPrice || 0);
-      const totalAmount = Number.isFinite(purchaseQuantity) && Number.isFinite(unitPrice)
-        ? Number((purchaseQuantity * unitPrice).toFixed(2)) : undefined;
-      const arrivedQuantity = Number(values.arrivedQuantity || 0);
-      const computedStatus = values.status === MATERIAL_PURCHASE_STATUS.CANCELLED
-        ? MATERIAL_PURCHASE_STATUS.CANCELLED
-        : arrivedQuantity <= 0 ? MATERIAL_PURCHASE_STATUS.PENDING
-        : arrivedQuantity < purchaseQuantity ? MATERIAL_PURCHASE_STATUS.PARTIAL
-        : MATERIAL_PURCHASE_STATUS.AWAITING_CONFIRM;
-      const payload = {
-        ...values,
-        totalAmount,
-        status: values.status || computedStatus,
-        sourceType: values.sourceType || 'order',
-      };
-      const response = await api.post<{ code: number; message?: string }>('/production/purchase', payload);
-      if (response.code === 200) {
-        message.success('采购物料添加成功');
-        setCreateModalVisible(false);
-        createForm.resetFields();
-        loadData();
-      } else {
-        message.error(response.message || '保存失败');
+      for (const row of validRows) {
+        const purchaseQuantity = Number(row.purchaseQuantity || 0);
+        const unitPrice = Number(row.unitPrice || 0);
+        const totalAmount = Number.isFinite(purchaseQuantity) && Number.isFinite(unitPrice) ? Number((purchaseQuantity * unitPrice).toFixed(2)) : 0;
+        const payload = { ...row, totalAmount, status: row.status || MATERIAL_PURCHASE_STATUS.PENDING, sourceType: 'order' };
+        const isTemp = String(row.id || '').startsWith('tmp_');
+        if (!isTemp) {
+          await api.put('/production/purchase', payload);
+        } else {
+          const { id, ...rest } = payload;
+          await api.post('/production/purchase', rest);
+        }
       }
-    } catch (error) {
-      const formError = error as { errorFields?: Array<{ errors?: string[] }> };
-      if (formError?.errorFields?.length) {
-        message.error(formError.errorFields[0]?.errors?.[0] || '表单验证失败');
-      } else {
-        message.error((error as Error).message || '保存失败');
-      }
+      const originalIds = new Set(purchases.map(p => p.id));
+      const keptIds = new Set(validRows.filter(r => !String(r.id).startsWith('tmp_')).map(r => r.id));
+      const deletedIds = [...originalIds].filter(id => !keptIds.has(id));
+      for (const delId of deletedIds) { if (delId) await api.delete(`/production/purchase/${delId}`); }
+      message.success('保存成功');
+      setEditing(false);
+      setEditableData([]);
+      loadData();
+    } catch (err: any) {
+      message.error(err?.response?.data?.message || err?.message || '保存失败');
     } finally {
-      setCreateLoading(false);
+      setSaving(false);
     }
-  }, [createForm, message, loadData]);
+  }, [editableData, purchases, message, loadData]);
 
-  const handleCloseCreateModal = useCallback(() => {
-    setCreateModalVisible(false);
-    createForm.resetFields();
-  }, [createForm]);
+  const handleOpenMaterialModal = useCallback((rowId: string) => {
+    setMaterialTargetRowId(rowId);
+    setMaterialModalOpen(true);
+  }, []);
+
+  const fillRowFromMaterial = useCallback((rowId: string, record: Record<string, unknown>) => {
+    setEditableData(prev => prev.map(r => {
+      if (r.id !== rowId) return r;
+      return {
+        ...r,
+        materialCode: String(record.materialCode || r.materialCode || ''),
+        materialName: String(record.materialName || r.materialName || ''),
+        materialType: String(record.materialType || r.materialType || 'accessoryA') as MaterialPurchase['materialType'],
+        fabricComposition: String(record.fabricComposition || r.fabricComposition || ''),
+        fabricWeight: String(record.fabricWeight || r.fabricWeight || ''),
+        color: String(record.color || r.color || ''),
+        specification: String(record.specifications || r.specification || ''),
+        unit: String(record.unit || r.unit || ''),
+        unitPrice: Number(record.unitPrice || r.unitPrice || 0),
+        supplierName: String(record.supplierName || r.supplierName || ''),
+        supplierId: String(record.supplierId || r.supplierId || ''),
+      };
+    }));
+  }, []);
+
+  const handleUseMaterial = useCallback(async (record: Record<string, unknown>) => {
+    if (!materialTargetRowId) return;
+    fillRowFromMaterial(materialTargetRowId, record);
+    setMaterialModalOpen(false);
+  }, [materialTargetRowId, fillRowFromMaterial]);
+
+  const handleSearchMaterial = useCallback(async () => {
+    setMaterialLoading(true);
+    try {
+      const res = await api.get('/material/database/list', {
+        params: { keyword: materialKeyword, page: materialPage, pageSize: materialPageSize, status: 'completed' },
+      });
+      if (res?.code === 200) {
+        setMaterialList(res.data?.records || []);
+        setMaterialTotal(res.data?.total || 0);
+      }
+    } catch {} finally {
+      setMaterialLoading(false);
+    }
+  }, [materialKeyword, materialPage, materialPageSize]);
+
+  useEffect(() => {
+    if (materialModalOpen) handleSearchMaterial();
+  }, [materialModalOpen, materialPage, materialPageSize, handleSearchMaterial]);
 
   const handleReceive = useCallback(async (record: MaterialPurchase) => {
     const purchaseId = String(record?.id || '').trim();
@@ -328,6 +426,25 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = ({ orderId, orde
       }
     } catch (e) {
       message.error((e as Error)?.message || '退回失败');
+    }
+  }, [message, loadData]);
+
+  const handleCancelReceive = useCallback(async (record: MaterialPurchase) => {
+    const purchaseId = String(record?.id || '').trim();
+    if (!purchaseId) return;
+    try {
+      const res = await api.post<{ code: number; message?: string }>('/production/purchase/cancel-receive', {
+        purchaseId,
+        reason: '手动取消领取',
+      });
+      if (res?.code === 200) {
+        message.success(`${record.materialName || record.materialCode} 已取消领取`);
+        loadData();
+      } else {
+        message.error(res?.message || '取消领取失败');
+      }
+    } catch (e) {
+      message.error((e as Error)?.message || '取消领取失败');
     }
   }, [message, loadData]);
 
@@ -448,6 +565,227 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = ({ orderId, orde
       return { ...sec, data };
     }).filter(x => x.data.length > 0);
   }, [purchases]);
+
+  const displayData = editing ? editableData : purchases;
+
+  const editColumns = useMemo(() => {
+    const rid = (r: MaterialPurchase) => String(r.id || '');
+    return [
+      {
+        title: '物料类型',
+        dataIndex: 'materialType',
+        key: 'materialType',
+        width: 110,
+        render: (v: unknown, r: MaterialPurchase) => (
+          <Select
+            value={String(v || 'fabricA')}
+            options={MATERIAL_TYPE_OPTIONS}
+            onChange={(val) => handleUpdateRow(rid(r), 'materialType', val)}
+            style={{ width: '100%' }}
+            size="small"
+          />
+        ),
+      },
+      {
+        title: '物料编码',
+        dataIndex: 'materialCode',
+        key: 'materialCode',
+        width: 130,
+        render: (v: unknown, r: MaterialPurchase) => (
+          <Input
+            value={String(v || '')}
+            onChange={(e) => handleUpdateRow(rid(r), 'materialCode', e.target.value)}
+            onClick={() => handleOpenMaterialModal(rid(r))}
+            placeholder="点击选用"
+            readOnly
+            style={{ cursor: 'pointer' }}
+            size="small"
+          />
+        ),
+      },
+      {
+        title: '物料名称',
+        dataIndex: 'materialName',
+        key: 'materialName',
+        width: 160,
+        ellipsis: true,
+        render: (v: unknown, r: MaterialPurchase) => (
+          <Input
+            value={String(v || '')}
+            onChange={(e) => handleUpdateRow(rid(r), 'materialName', e.target.value)}
+            placeholder="物料名称"
+            size="small"
+          />
+        ),
+      },
+      {
+        title: '成分',
+        dataIndex: 'fabricComposition',
+        key: 'fabricComposition',
+        width: 120,
+        ellipsis: true,
+        render: (v: unknown, r: MaterialPurchase) => (
+          <Input
+            value={String(v || '')}
+            onChange={(e) => handleUpdateRow(rid(r), 'fabricComposition', e.target.value)}
+            placeholder="成分"
+            size="small"
+          />
+        ),
+      },
+      {
+        title: '克重',
+        dataIndex: 'fabricWeight',
+        key: 'fabricWeight',
+        width: 80,
+        render: (v: unknown, r: MaterialPurchase) => (
+          <Input
+            value={String(v || '')}
+            onChange={(e) => handleUpdateRow(rid(r), 'fabricWeight', e.target.value)}
+            placeholder="克重"
+            size="small"
+          />
+        ),
+      },
+      {
+        title: '颜色',
+        dataIndex: 'color',
+        key: 'color',
+        width: 90,
+        render: (v: unknown, r: MaterialPurchase) =>
+          orderColors.length > 1 ? (
+            <Select
+              value={String(v || '') || undefined}
+              options={orderColors.filter(Boolean).map(c => ({ label: c, value: c }))}
+              onChange={(val) => handleUpdateRow(rid(r), 'color', val)}
+              placeholder="颜色"
+              allowClear
+              style={{ width: '100%' }}
+              size="small"
+            />
+          ) : (
+            <Input
+              value={String(v || '')}
+              onChange={(e) => handleUpdateRow(rid(r), 'color', e.target.value)}
+              placeholder="颜色"
+              size="small"
+            />
+          ),
+      },
+      {
+        title: '规格',
+        dataIndex: 'specification',
+        key: 'specification',
+        width: 100,
+        render: (v: unknown, r: MaterialPurchase) => (
+          <Input
+            value={String(v || '')}
+            onChange={(e) => handleUpdateRow(rid(r), 'specification', e.target.value)}
+            placeholder="规格"
+            size="small"
+          />
+        ),
+      },
+      {
+        title: '单位',
+        dataIndex: 'unit',
+        key: 'unit',
+        width: 80,
+        render: (v: unknown, r: MaterialPurchase) => (
+          <DictAutoComplete
+            dictType="material_unit"
+            value={String(v || '')}
+            onChange={(val: string) => handleUpdateRow(rid(r), 'unit', val)}
+            placeholder="单位"
+            style={{ width: '100%' }}
+            size="small"
+          />
+        ),
+      },
+      {
+        title: '采购数量',
+        dataIndex: 'purchaseQuantity',
+        key: 'purchaseQuantity',
+        width: 100,
+        align: 'right' as const,
+        render: (v: unknown, r: MaterialPurchase) => (
+          <InputNumber
+            value={Number(v || 0)}
+            min={0}
+            precision={2}
+            style={{ width: '100%' }}
+            onChange={(val) => handleUpdateRow(rid(r), 'purchaseQuantity', val ?? 0)}
+            size="small"
+          />
+        ),
+      },
+      {
+        title: '单价(元)',
+        dataIndex: 'unitPrice',
+        key: 'unitPrice',
+        width: 100,
+        align: 'right' as const,
+        render: (v: unknown, r: MaterialPurchase) => (
+          <InputNumber
+            value={Number(v || 0)}
+            min={0}
+            precision={2}
+            style={{ width: '100%' }}
+            onChange={(val) => handleUpdateRow(rid(r), 'unitPrice', val ?? 0)}
+            size="small"
+          />
+        ),
+      },
+      {
+        title: '供应商',
+        dataIndex: 'supplierName',
+        key: 'supplierName',
+        width: 140,
+        ellipsis: true,
+        render: (v: unknown, r: MaterialPurchase) => (
+          <SupplierSelect
+            value={String(v || '')}
+            placeholder="供应商"
+            style={{ width: '100%' }}
+            onChange={(_val: string, option: any) => {
+              handleUpdateRow(rid(r), 'supplierName', _val);
+              const sel = Array.isArray(option) ? option[0] : option;
+              if (sel) {
+                handleUpdateRow(rid(r), 'supplierId', sel.id || '');
+                handleUpdateRow(rid(r), 'supplierContactPerson', sel.supplierContactPerson || '');
+                handleUpdateRow(rid(r), 'supplierContactPhone', sel.supplierContactPhone || '');
+              }
+            }}
+          />
+        ),
+      },
+      {
+        title: '操作',
+        key: 'action',
+        width: 120,
+        render: (_: unknown, r: MaterialPurchase) => (
+          <RowActions
+            maxInline={2}
+            actions={[
+              {
+                key: 'select',
+                label: '选用',
+                title: '从物料资料选用',
+                onClick: () => handleOpenMaterialModal(rid(r)),
+              },
+              {
+                key: 'delete',
+                label: '删除',
+                title: '删除',
+                danger: true as const,
+                onClick: () => handleRemoveRow(rid(r)),
+              },
+            ]}
+          />
+        ),
+      },
+    ];
+  }, [handleUpdateRow, handleOpenMaterialModal, handleRemoveRow, orderColors]);
 
   const columns = useMemo(() => [
     {
@@ -663,11 +1001,21 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = ({ orderId, orde
                 退回
               </Button>
             )}
+            {status !== MATERIAL_PURCHASE_STATUS.PENDING && status !== MATERIAL_PURCHASE_STATUS.COMPLETED && status !== MATERIAL_PURCHASE_STATUS.CANCELLED && Number(record?.returnConfirmed || 0) !== 1 && (
+              <Button
+                type="link"
+                size="small"
+                danger
+                onClick={() => handleCancelReceive(record)}
+              >
+                取消领取
+              </Button>
+            )}
           </Space>
         );
       },
     },
-  ], [handleReceive, handleConfirmReturn, handleReturnReset, handleWarehousePick, handleQualityIssue, stockMap]);
+  ], [handleReceive, handleConfirmReturn, handleReturnReset, handleCancelReceive, handleWarehousePick, handleQualityIssue, stockMap]);
 
   return (
     <Spin spinning={loading}>
@@ -686,16 +1034,16 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = ({ orderId, orde
         coverSize={80}
       />
 
-      {missingColors.length > 0 && (
+      {missingColors.length > 0 && !editing && (
         <Alert
           type="warning"
           showIcon
-          message="颜色覆盖不完整"
+          title="颜色覆盖不完整"
           description={
             <span>
               订单包含 <strong>{orderColorSet.size}</strong> 种颜色（{Array.from(orderColorSet).join('、')}），
               但以下颜色缺少采购物料记录：<strong style={{ color: 'var(--color-error)' }}>{missingColors.join('、')}</strong>。
-              请前往<a href={`/production/material?orderNo=${encodeURIComponent(String(orderNo || ''))}`}>物料采购页面</a>为每个颜色分别添加面料信息。
+              请前往<a href={`/production/material/${encodeURIComponent(String(order?.styleNo || firstPurchase?.styleNo || ''))}?orderNo=${encodeURIComponent(String(orderNo || ''))}`}>物料采购详情页</a>为每个颜色分别添加面料信息。
             </span>
           }
           style={{ marginBottom: 12 }}
@@ -704,59 +1052,84 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = ({ orderId, orde
 
       <Card
         size="small"
-        title={`需要采购的面辅料（${purchases.length}项）`}
+        title={`需要采购的面辅料（${displayData.length}项）`}
         loading={loading}
         extra={
           <Space>
+            {!editing && (
+              <>
+                <Button
+                  type="primary"
+                  size="small"
+                  disabled={!purchases.some(p => normalizeStatus(p.status) === MATERIAL_PURCHASE_STATUS.PENDING)}
+                  loading={actionLoading}
+                  onClick={handleReceiveAll}
+                >
+                  采购全部
+                </Button>
+                <Button
+                  size="small"
+                  disabled={!purchases.some(p => {
+                    const s = normalizeStatus(p.status);
+                    return (s === MATERIAL_PURCHASE_STATUS.RECEIVED || s === MATERIAL_PURCHASE_STATUS.PARTIAL || s === MATERIAL_PURCHASE_STATUS.COMPLETED)
+                      && Number(p?.returnConfirmed || 0) !== 1;
+                  })}
+                  loading={actionLoading}
+                  onClick={handleBatchReturn}
+                >
+                  回料确认
+                </Button>
+                <Button
+                  size="small"
+                  disabled={!purchases.some(p => normalizeStatus(p.status) === MATERIAL_PURCHASE_STATUS.AWAITING_CONFIRM)}
+                  loading={confirmCompleteLoading}
+                  onClick={handleConfirmComplete}
+                >
+                  确认完成
+                </Button>
+                <Button
+                  size="small"
+                  type="primary"
+                  onClick={handleStartEdit}
+                >
+                  编辑物料
+                </Button>
+              </>
+            )}
+            {editing && (
+              <>
+                <Button type="dashed" icon={<PlusOutlined />} onClick={handleAddRow} size="small">
+                  添加物料
+                </Button>
+                <Button type="primary" loading={saving} onClick={handleSaveAll} size="small">
+                  保存
+                </Button>
+                <Button onClick={handleCancelEdit} size="small">
+                  取消
+                </Button>
+              </>
+            )}
             <Button
-              type="primary"
               size="small"
-              disabled={!purchases.some(p => normalizeStatus(p.status) === MATERIAL_PURCHASE_STATUS.PENDING)}
-              loading={actionLoading}
-              onClick={handleReceiveAll}
-            >
-              采购全部
-            </Button>
-            <Button
-              size="small"
-              disabled={!purchases.some(p => {
-                const s = normalizeStatus(p.status);
-                return (s === MATERIAL_PURCHASE_STATUS.RECEIVED || s === MATERIAL_PURCHASE_STATUS.PARTIAL || s === MATERIAL_PURCHASE_STATUS.COMPLETED)
-                  && Number(p?.returnConfirmed || 0) !== 1;
-              })}
-              loading={actionLoading}
-              onClick={handleBatchReturn}
-            >
-              回料确认
-            </Button>
-            <Button
-              size="small"
-              disabled={!purchases.some(p => normalizeStatus(p.status) === MATERIAL_PURCHASE_STATUS.AWAITING_CONFIRM)}
-              loading={confirmCompleteLoading}
-              onClick={handleConfirmComplete}
-            >
-              确认完成
-            </Button>
-            <Button
-              size="small"
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={openCreateModal}
-            >
-              添加采购物料
-            </Button>
-            <Button
-              size="small"
-              onClick={() => navigate(`/production/material?orderNo=${encodeURIComponent(String(orderNo || ''))}`)}
+              onClick={() => navigate(`/production/material/${encodeURIComponent(String(order?.styleNo || firstPurchase?.styleNo || ''))}?orderNo=${encodeURIComponent(String(orderNo || ''))}`)}
             >
               前往物料采购 →
             </Button>
           </Space>
         }
       >
-        {purchases.length === 0 && !loading ? (
+        {editing ? (
+          <ResizableTable<MaterialPurchase>
+            rowKey={(r: MaterialPurchase) => String(r.id || `${r.purchaseNo}-${r.materialType}-${r.materialCode}`)}
+            dataSource={displayData}
+            pagination={false}
+            size="small"
+            scroll={{ x: 'max-content' }}
+            columns={editColumns as any}
+          />
+        ) : purchases.length === 0 && !loading ? (
           <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--color-text-tertiary)' }}>
-            该订单暂无采购记录，点击上方「添加采购物料」按钮添加
+            该订单暂无采购记录，点击上方「编辑物料」按钮添加
           </div>
         ) : (
           <Collapse
@@ -781,21 +1154,128 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = ({ orderId, orde
       </Card>
 
       <ResizableModal
-        title="添加采购物料"
-        open={createModalVisible}
-        onCancel={handleCloseCreateModal}
-        width={typeof window !== 'undefined' ? Math.max(600, window.innerWidth * 0.45) : 700}
-        footer={[
-          <Button key="cancel" onClick={handleCloseCreateModal}>
-            取消
-          </Button>,
-          <Button key="submit" type="primary" loading={createLoading} onClick={handleCreateSave}>
-            保存
-          </Button>,
-        ]}
+        title="面辅料选择"
+        open={materialModalOpen}
+        onCancel={() => setMaterialModalOpen(false)}
+        footer={null}
+        width="85vw"
+        destroyOnHidden
       >
-        <Form form={createForm} component={false} />
-        <PurchaseCreateForm form={createForm} orderColors={orderColors} />
+        <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+          <Input
+            value={materialKeyword}
+            onChange={(e) => setMaterialKeyword(e.target.value)}
+            onPressEnter={handleSearchMaterial}
+            placeholder="输入物料编码/名称"
+            allowClear
+          />
+          <Button onClick={handleSearchMaterial} loading={materialLoading}>搜索</Button>
+        </div>
+        <ResizableTable
+          storageKey="purchase-inline-material-select"
+          loading={materialLoading}
+          dataSource={materialList}
+          rowKey={(record: Record<string, unknown>) => String(record.id || record.materialCode || '')}
+          pagination={{
+            current: materialPage,
+            pageSize: materialPageSize,
+            total: materialTotal,
+            showTotal: (total) => `共 ${total} 条`,
+            onChange: (page, pageSize) => { setMaterialPage(page); setMaterialPageSize(pageSize); },
+            showSizeChanger: true,
+            pageSizeOptions: [...DEFAULT_PAGE_SIZE_OPTIONS],
+          }}
+          onRow={(record) => ({
+            onDoubleClick: async () => {
+              await handleUseMaterial(record as Record<string, unknown>);
+            },
+          })}
+          columns={[
+            {
+              title: '图片',
+              dataIndex: 'image',
+              width: 80,
+              render: (value: unknown) => {
+                const raw = String(value || '').trim();
+                if (!raw) return null;
+                const url = getFullAuthedFileUrl(raw.startsWith('http') ? raw : `/api${raw.startsWith('/') ? '' : '/'}${raw}`);
+                return (
+                  <Image
+                    src={url}
+                    width={40}
+                    height={40}
+                    style={{ objectFit: 'cover', borderRadius: 4, border: '1px solid #eee' }}
+                    preview={{ src: url }}
+                  />
+                );
+              },
+            },
+            { title: '物料编码', dataIndex: 'materialCode', key: 'materialCode', width: 140 },
+            { title: '物料名称', dataIndex: 'materialName', key: 'materialName', width: 160, ellipsis: true },
+            {
+              title: '成分',
+              dataIndex: 'fabricComposition',
+              key: 'fabricComposition',
+              width: 140,
+              ellipsis: true,
+              render: (value: unknown) => String(value || '').trim() || '-',
+            },
+            {
+              title: '克重',
+              dataIndex: 'fabricWeight',
+              key: 'fabricWeight',
+              width: 90,
+              render: (value: unknown) => String(value || '').trim() || '-',
+            },
+            {
+              title: '物料类型',
+              dataIndex: 'materialType',
+              width: 90,
+              render: (value: unknown) => getMaterialTypeLabel(value),
+            },
+            { title: '颜色', dataIndex: 'color', width: 90, ellipsis: true },
+            { title: '规格/幅宽', dataIndex: 'specifications', width: 120, ellipsis: true },
+            { title: '单位', dataIndex: 'unit', width: 70 },
+            {
+              title: '供应商',
+              dataIndex: 'supplierName',
+              width: 140,
+              ellipsis: true,
+              render: (_: unknown, record: Record<string, unknown>) => (
+                <SupplierNameTooltip
+                  name={record.supplierName}
+                  contactPerson={record.supplierContactPerson}
+                  contactPhone={record.supplierContactPhone}
+                />
+              ),
+            },
+            {
+              title: '单价',
+              dataIndex: 'unitPrice',
+              width: 90,
+              render: (value: unknown) => `¥${Number(value || 0).toFixed(2)}`,
+            },
+            {
+              title: '操作',
+              dataIndex: 'operation',
+              width: 90,
+              render: (_: unknown, record: Record<string, unknown>) => (
+                <RowActions
+                  maxInline={1}
+                  actions={[
+                    {
+                      key: 'use',
+                      label: '选用',
+                      title: '选用',
+                      onClick: async () => { await handleUseMaterial(record); },
+                      primary: true,
+                    },
+                  ]}
+                />
+              ),
+            },
+          ]}
+        />
       </ResizableModal>
     </Spin>
   );

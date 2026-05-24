@@ -282,7 +282,7 @@ const FreeInboundModal: React.FC<FreeInboundModalProps> = ({ open, onClose, onSu
           <Alert
             type="warning"
             showIcon
-            message="SKU不存在"
+            title="SKU不存在"
             description={
               <div style={{ marginTop: 8 }}>
                 <div style={{ marginBottom: 8 }}>

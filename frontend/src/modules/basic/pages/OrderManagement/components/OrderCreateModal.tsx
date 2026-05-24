@@ -20,8 +20,6 @@ interface Props {
   submitLoading: boolean;
   createdOrder: any;
   selectedStyle: StyleInfo | null;
-  modalWidth: string | number;
-  modalInitialHeight: number;
   isMobile: boolean;
   form: FormInstance;
   factoryMode: 'INTERNAL' | 'EXTERNAL';
@@ -62,7 +60,7 @@ interface Props {
 const OrderCreateModal: React.FC<Props> = (p) => {
   const {
     visible, onClose, onSubmit, submitLoading, createdOrder, selectedStyle,
-    modalWidth, modalInitialHeight, isMobile, form,
+    isMobile, form,
     factoryMode, setFactoryMode, factories, departments, users,
     selectedFactoryStat, watchedFactoryId, watchedOrgUnitId,
     schedulingLoading, schedulingPlans, tooltipTheme, categoryOptions,
@@ -80,11 +78,9 @@ const OrderCreateModal: React.FC<Props> = (p) => {
       title={selectedStyle ? `下单(${selectedStyle.styleNo})` : '下单'}
       onCancel={onClose}
       footer={null}
-      width={modalWidth}
-      initialHeight={modalInitialHeight}
-      minWidth={isMobile ? 320 : 520}
-      scaleWithViewport
-      tableDensity={isMobile ? 'dense' : 'auto'}
+      width={isMobile ? '96vw' : '85vw'}
+      initialHeight={typeof window !== 'undefined' ? Math.round(window.innerHeight * 0.85) : 800}
+      minWidth={isMobile ? 320 : 760}
     >
       <Form form={form} layout="vertical" style={{ minWidth: 0, width: '100%' }}>
         <div

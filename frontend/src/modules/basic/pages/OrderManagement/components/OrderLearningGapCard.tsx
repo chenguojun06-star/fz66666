@@ -17,7 +17,7 @@ const OrderLearningGapCard: React.FC<OrderLearningGapCardProps> = ({
           key={`${line}-${index}`}
           type={index === 0 ? 'warning' : 'info'}
           showIcon
-          message={line}
+          title={line}
         />
       ))}
     </div>

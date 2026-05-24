@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Button, Card, Collapse, Space, Tag, Image, Spin, Tooltip } from 'antd';
+import { Button, Card, Collapse, Space, Tag, Image, Spin, Tooltip, Form, InputNumber, App } from 'antd';
 import { FileImageOutlined, LoadingOutlined } from '@ant-design/icons';
 import api from '@/utils/api';
 
@@ -7,13 +7,15 @@ import MaterialTypeTag from '@/components/common/MaterialTypeTag';
 import ResizableTable from '@/components/common/ResizableTable';
 import SupplierNameTooltip from '@/components/common/SupplierNameTooltip';
 import MultiImageUploadBox from '@/components/common/MultiImageUploadBox';
+import RejectReasonModal from '@/components/common/RejectReasonModal';
+import SmallModal from '@/components/common/SmallModal';
 import { ProductionOrderHeader } from '@/components/StyleAssets';
 import { MaterialPurchase as MaterialPurchaseType, ProductionOrder } from '@/types/production';
 import { formatMaterialSpecWidth, getMaterialTypeCategory } from '@/utils/materialType';
 import { formatDateTime } from '@/utils/datetime';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { MATERIAL_PURCHASE_STATUS } from '@/constants/business';
-import { getStatusConfig, buildColorSummary, getOrderQtyTotal, formatMaterialQuantity, formatReferenceKilograms } from '../../utils';
+import { getStatusConfig, buildColorSummary, getOrderQtyTotal, formatMaterialQuantity, formatMaterialQuantityWithUnit, formatReferenceKilograms, subtractMaterialQuantity } from '../../utils';
 
 interface PurchaseDocRecord {
   id: string;
@@ -63,6 +65,10 @@ interface PurchaseDetailViewProps {
   isSamplePurchase: boolean;
   isOrderFrozenForRecord: (record?: Record<string, unknown> | null) => boolean;
   onWarehousePick?: (record: MaterialPurchaseType, pickQty: number) => void;
+  onCancelReceive?: (record: MaterialPurchaseType) => void;
+  onConfirmComplete?: () => void;
+  confirmCompleteSubmitting?: boolean;
+  onRefresh?: () => void;
 }
 
 const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
@@ -87,10 +93,20 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
   isSamplePurchase,
   isOrderFrozenForRecord,
   onWarehousePick,
+  onCancelReceive,
+  onConfirmComplete,
+  confirmCompleteSubmitting,
+  onRefresh,
 }) => {
   const normalizeStatus = (status?: MaterialPurchaseType['status'] | string) => String(status || '').trim().toLowerCase();
+  const { message } = App.useApp();
   const [docList, setDocList] = useState<PurchaseDocRecord[]>([]);
   const [docsLoading, setDocsLoading] = useState(false);
+  const [cancelTarget, setCancelTarget] = useState<MaterialPurchaseType | null>(null);
+  const [cancelConfirmLoading, setCancelConfirmLoading] = useState(false);
+  const [arrivalTarget, setArrivalTarget] = useState<MaterialPurchaseType | null>(null);
+  const [arrivalLoading, setArrivalLoading] = useState(false);
+  const [arrivalForm] = Form.useForm();
 
   // ── 发票/单据上传（复用 PurchaseCreateForm 同款上传逻辑） ──
   // invoiceUrls 从 currentPurchase.invoiceUrls（JSON字符串）解析，本地维护可编辑副本
@@ -187,6 +203,43 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
     setStockMap({});
   }, [currentPurchase?.orderNo, currentPurchase?.styleNo]);
 
+  const handleCancelConfirm = useCallback(async (reason: string) => {
+    if (!cancelTarget) return;
+    setCancelConfirmLoading(true);
+    try {
+      await api.post('/production/purchase/cancel-receive', {
+        purchaseId: cancelTarget.id,
+        reason,
+      });
+      message.success('撤回成功，采购单已恢复为待处理');
+      setCancelTarget(null);
+      onRefresh?.();
+    } catch {
+      message.error('撤回失败');
+    } finally {
+      setCancelConfirmLoading(false);
+    }
+  }, [cancelTarget, message, onRefresh]);
+
+  const handleArrivalSubmit = useCallback(async (values: { arrivedQuantity: number }) => {
+    if (!arrivalTarget) return;
+    setArrivalLoading(true);
+    try {
+      await api.post('/production/material/inbound/confirm-arrival', {
+        purchaseId: arrivalTarget.id,
+        arrivedQuantity: values.arrivedQuantity,
+      });
+      message.success('入库成功，库存已更新');
+      setArrivalTarget(null);
+      arrivalForm.resetFields();
+      onRefresh?.();
+    } catch {
+      message.error('入库失败');
+    } finally {
+      setArrivalLoading(false);
+    }
+  }, [arrivalTarget, arrivalForm, message, onRefresh]);
+
   return (
     <div className="purchase-detail-view">
       <style>{confirmedRowStyle}</style>
@@ -209,7 +262,7 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
 
       <Card
        
-        title="需要采购的面辅料（只读）"
+        title="需要采购的面辅料"
         loading={detailLoading}
         extra={
           <Space>
@@ -282,20 +335,35 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
                     render: (v: unknown, r: MaterialPurchaseType) => {
                       const qty = Number(v ?? 0);
                       const purchased = Number(r.purchaseQuantity ?? 0);
-                      const canReceive = purchased > qty;
+                      const canArrive = purchased > qty && ['received', 'partial', 'partial_arrival'].includes(normalizeStatus(r.status));
                       return (
                         <span
                           style={{
-                            color: canReceive ? '#1890ff' : undefined,
-                            cursor: canReceive ? 'pointer' : undefined,
-                            textDecoration: canReceive ? 'underline' : undefined,
+                            color: canArrive ? 'var(--color-primary)' : undefined,
+                            cursor: canArrive ? 'pointer' : undefined,
+                            textDecoration: canArrive ? 'underline' : undefined,
                           }}
-                          title={canReceive ? '点击到货入库' : undefined}
-                          onClick={() => { if (canReceive) onReceive(r); }}
+                          title={canArrive ? '点击到货入库' : undefined}
+                          onClick={() => {
+                            if (!canArrive) return;
+                            const maxQty = Math.max(0.01, purchased - qty);
+                            arrivalForm.setFieldsValue({ arrivedQuantity: maxQty });
+                            setArrivalTarget(r);
+                          }}
                         >
                           {formatMaterialQuantity(v)}
                         </span>
                       );
+                    },
+                  },
+                  {
+                    title: '待到数量',
+                    key: 'remainingQuantity',
+                    width: 100,
+                    align: 'right' as const,
+                    render: (_: any, r: MaterialPurchaseType) => {
+                      const remaining = subtractMaterialQuantity(r?.purchaseQuantity, r?.arrivedQuantity);
+                      return formatMaterialQuantityWithUnit(remaining, r.unit);
                     },
                   },
                   {
@@ -310,7 +378,7 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
                       return (
                         <span
                           style={{
-                            color: hasStock ? '#1890ff' : '#bbb',
+                            color: hasStock ? 'var(--color-primary)' : '#bbb',
                             cursor: hasStock ? 'pointer' : undefined,
                             textDecoration: hasStock ? 'underline' : undefined,
                           }}
@@ -387,21 +455,23 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
                   {
                     title: '操作',
                     key: 'confirm',
-                    width: 220,
+                    width: 280,
                     render: (_: any, record: MaterialPurchaseType) => {
                       const frozen = isOrderFrozenForRecord(record);
                       const status = normalizeStatus(record.status);
                       const stock = stockMap[String(record.id)];
                       const hasStock = stock != null && stock > 0;
                       const isWarehousePending = status === MATERIAL_PURCHASE_STATUS.WAREHOUSE_PENDING;
+                      const isPending = status === MATERIAL_PURCHASE_STATUS.PENDING;
+                      const canArrival = ['received', 'partial', 'partial_arrival'].includes(status) && !frozen;
+                      const canCancelReceive = !isPending && !['completed', 'cancelled'].includes(status) && !frozen;
                       return (
-                        <Space size={4}>
+                        <Space size={4} wrap>
                           {isWarehousePending ? (
                             <Tag color="blue">待仓库出库</Tag>
                           ) : (
                             <Button
                               type="link"
-                             
                               disabled={frozen || status !== MATERIAL_PURCHASE_STATUS.PENDING}
                               onClick={() => {
                                 if (hasStock && onWarehousePick) {
@@ -415,21 +485,21 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
                               {hasStock ? '出库领取' : '采购'}
                             </Button>
                           )}
+                          {canArrival && (
+                            <Button
+                              type="link"
+                              onClick={() => {
+                                const maxQty = Math.max(0.01, Number(record.purchaseQuantity || 0) - Number(record.arrivedQuantity || 0));
+                                arrivalForm.setFieldsValue({ arrivedQuantity: maxQty });
+                                setArrivalTarget(record);
+                              }}
+                            >
+                              到货入库
+                            </Button>
+                          )}
                           <Button
                             type="link"
-                           
                             disabled={frozen || !(status === MATERIAL_PURCHASE_STATUS.RECEIVED || status === MATERIAL_PURCHASE_STATUS.PARTIAL || status === MATERIAL_PURCHASE_STATUS.COMPLETED)}
-                            onClick={() => onQualityIssue(record)}
-                          >
-                            品质异常
-                          </Button>
-                          <Button
-                            type="link"
-                           
-                            disabled={
-                              frozen
-                              || !(status === MATERIAL_PURCHASE_STATUS.RECEIVED || status === MATERIAL_PURCHASE_STATUS.PARTIAL || status === MATERIAL_PURCHASE_STATUS.COMPLETED)
-                            }
                             onClick={() => onConfirmReturn(record)}
                           >
                             {Number(record?.returnConfirmed || 0) === 1 ? '追加回料' : '回料确认'}
@@ -437,13 +507,34 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
                           {(Number(record?.returnConfirmed || 0) === 1 || status === MATERIAL_PURCHASE_STATUS.COMPLETED) && (
                             <Button
                               type="link"
-                             
                               disabled={!isSupervisorOrAbove}
                               onClick={() => onReturnReset(record)}
                             >
                               退回
                             </Button>
                           )}
+                          {canCancelReceive && (
+                            <Button
+                              type="link"
+                              danger
+                              onClick={() => {
+                                if (onCancelReceive) {
+                                  onCancelReceive(record);
+                                } else {
+                                  setCancelTarget(record);
+                                }
+                              }}
+                            >
+                              取消领取
+                            </Button>
+                          )}
+                          <Button
+                            type="link"
+                            disabled={frozen || !(status === MATERIAL_PURCHASE_STATUS.RECEIVED || status === MATERIAL_PURCHASE_STATUS.PARTIAL || status === MATERIAL_PURCHASE_STATUS.COMPLETED)}
+                            onClick={() => onQualityIssue(record)}
+                          >
+                            品质异常
+                          </Button>
                         </Space>
                       );
                     },
@@ -552,6 +643,56 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
           </div>
         )}
       </Card>
+
+      <RejectReasonModal
+        open={cancelTarget !== null}
+        title="撤回采购"
+        description={cancelTarget ? (
+          <div>
+            <p style={{ marginBottom: 8 }}>确定撤回「{cancelTarget.materialName || cancelTarget.materialCode}」的采购记录？</p>
+            <p style={{ color: 'var(--color-text-secondary)', fontSize: 12, marginBottom: 4 }}>
+              领取人：{cancelTarget.receiverName || '-'}，到货数量：{formatMaterialQuantityWithUnit(cancelTarget.arrivedQuantity || 0, cancelTarget.unit)}
+            </p>
+          </div>
+        ) : null}
+        fieldLabel="撤回原因"
+        okText="确认撤回"
+        placeholder="请填写撤回原因（必填）"
+        required
+        okDanger
+        loading={cancelConfirmLoading}
+        onOk={handleCancelConfirm}
+        onCancel={() => setCancelTarget(null)}
+      />
+
+      <SmallModal
+        open={Boolean(arrivalTarget)}
+        title={`${arrivalTarget?.materialName || arrivalTarget?.materialCode || ''} — 到货入库`}
+        okText="确认入库"
+        confirmLoading={arrivalLoading}
+        onOk={() => arrivalForm.submit()}
+        onCancel={() => { setArrivalTarget(null); arrivalForm.resetFields(); }}
+        destroyOnHidden
+      >
+        <Form form={arrivalForm} layout="vertical" onFinish={handleArrivalSubmit}>
+          <p style={{ marginBottom: 8, color: 'var(--color-text-secondary)', fontSize: 12 }}>
+            采购 {arrivalTarget?.purchaseQuantity || '-'}{arrivalTarget?.unit ? ' ' + arrivalTarget.unit : ''}，
+            已到 {arrivalTarget?.arrivedQuantity || 0}，
+            待到 {arrivalTarget ? Math.max(0.01, Number(arrivalTarget.purchaseQuantity || 0) - Number(arrivalTarget.arrivedQuantity || 0)) : 0}
+          </p>
+          <Form.Item name="arrivedQuantity" label="到货数量" rules={[{ required: true, message: '请输入到货数量' }]}>
+            <InputNumber
+              min={0.01}
+              max={arrivalTarget ? Math.max(0.01, Number(arrivalTarget.purchaseQuantity || 0) - Number(arrivalTarget.arrivedQuantity || 0)) : 1}
+              step={0.01}
+              precision={2}
+              style={{ width: '100%' }}
+              placeholder="请输入到货数量（支持小数）"
+              autoFocus
+            />
+          </Form.Item>
+        </Form>
+      </SmallModal>
 
     </div>
   );

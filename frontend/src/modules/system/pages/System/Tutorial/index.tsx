@@ -60,7 +60,7 @@ const VideoPlayerBlock: React.FC<{ url: string }> = ({ url }) => {
       <Alert
         type="warning"
         showIcon
-        message="YouTube 视频无法播放"
+        title="YouTube 视频无法播放"
         description={
           <>
             <p style={{ margin: '4px 0' }}>YouTube 在国内网络环境下无法访问，请将视频上传至 Bilibili 后使用 Bilibili 链接。</p>

@@ -116,8 +116,7 @@ export const useWarehousingSubmit = (deps: SubmitDeps) => {
       if (currentWarehousing?.id) {
         response = await api.put('/production/warehousing', { ...payload, id: currentWarehousing.id });
       } else {
-        const { warehouse: _warehouse, ...safePayload } = payload;
-        response = await api.post('/production/warehousing', { ...safePayload, warehousingType: 'manual' });
+        response = await api.post('/production/warehousing', { ...payload, warehousingType: 'manual' });
       }
 
       const result = response as any;

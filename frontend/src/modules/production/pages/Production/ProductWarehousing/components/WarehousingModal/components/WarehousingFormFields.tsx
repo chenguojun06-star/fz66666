@@ -1,6 +1,7 @@
 import React from 'react';
 import { Form, Input, InputNumber, Select, Button, Space, Tag } from 'antd';
 import { StyleCoverThumb } from '@/components/StyleAssets';
+import WarehouseLocationAutoComplete from '@/components/common/WarehouseLocationAutoComplete';
 import { COVER_SIZE, DEFECT_CATEGORY_OPTIONS, DEFECT_REMARK_OPTIONS } from '../../../constants';
 import BatchSelectionPanel from './BatchSelectionPanel';
 import UnqualifiedUpload from './UnqualifiedUpload';
@@ -312,6 +313,19 @@ const WarehousingFormFields: React.FC<WarehousingFormFieldsProps> = ({ hook, ope
                 rules={isSingleSelectedBundleBlocked ? [{ required: true, message: '请输入返修备注' }] : undefined}
               >
                 <Input.TextArea rows={2} placeholder="请输入返修备注" />
+              </Form.Item>
+            </div>
+          </div>
+
+          <div className="wh-line wh-line-bottom">
+            <div className="wh-label" style={{ width: 72 }}>入库仓库</div>
+            <div className="wh-control" style={{ flex: 1, minWidth: 280 }}>
+              <Form.Item name="warehouse" style={{ marginBottom: 0 }}>
+                <WarehouseLocationAutoComplete
+                  warehouseType="FINISHED"
+                  placeholder="请选择入库库位（如 A-01-1-1）"
+                  style={{ width: '100%' }}
+                />
               </Form.Item>
             </div>
           </div>

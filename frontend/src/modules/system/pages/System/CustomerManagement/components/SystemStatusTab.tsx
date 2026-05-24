@@ -3,6 +3,7 @@ import { Button, Space, Card, Typography, Badge, Alert, Row, Col, Progress, Desc
 import ResizableTable from '@/components/common/ResizableTable';
 import systemStatusService from '@/services/systemStatusService';
 import type { SystemStatusOverview } from '@/services/systemStatusService';
+import { createPauseableInterval } from '@/hooks/useRefreshHelpers';
 import { message } from '@/utils/antdStatic';
 
 const { Text } = Typography;
@@ -37,8 +38,10 @@ const SystemStatusTab: React.FC = () => {
   // 自动刷新
   useEffect(() => {
     if (!autoRefresh) return;
-    const timer = setInterval(fetchOverview, 15000);
-    return () => clearInterval(timer);
+    const poller = createPauseableInterval(fetchOverview, 15000);
+    poller.start();
+    const cleanup = poller.autoPauseOnHidden();
+    return () => { poller.stop(); cleanup(); };
   }, [autoRefresh, fetchOverview]);
 
   const heapPercent = overview?.heapUsedPercent || 0;

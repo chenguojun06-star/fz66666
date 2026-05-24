@@ -103,4 +103,13 @@ public class WarehouseLocationController {
     public Result<Map<String, Object>> getWarehouseOverview() {
         return locationOrchestrator.getWarehouseOverview();
     }
+
+    @PreAuthorize("isAuthenticated()")
+    @PostMapping("/transfer")
+    public Result<Map<String, Object>> transfer(@RequestBody Map<String, Object> params) {
+        String fromLocationCode = params.get("fromLocationCode") != null ? String.valueOf(params.get("fromLocationCode")) : null;
+        String toLocationCode = params.get("toLocationCode") != null ? String.valueOf(params.get("toLocationCode")) : null;
+        String warehouseType = params.get("warehouseType") != null ? String.valueOf(params.get("warehouseType")) : null;
+        return locationOrchestrator.transfer(fromLocationCode, toLocationCode, warehouseType);
+    }
 }

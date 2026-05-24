@@ -23,7 +23,6 @@ export function useProcessTrackingColumns(ctx: ColumnContext) {
       dataIndex: 'bundleNo',
       key: 'bundleNo',
       width: 70,
-      fixed: 'left' as const,
       render: (v: number) => (
         <span style={{ fontSize: 14, fontWeight: 700, color: '#1f2937' }}>{v}</span>
       ),

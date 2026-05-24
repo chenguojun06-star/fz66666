@@ -45,4 +45,7 @@ export const warehouseLocationMapApi = {
 
   getWarehouseOverview: () =>
     api.get(`${LOCATION_BASE}/overview`),
+
+  transferLocation: (fromLocationCode: string, toLocationCode: string, warehouseType?: string) =>
+    api.post(`${LOCATION_BASE}/transfer`, { fromLocationCode, toLocationCode, warehouseType }),
 };

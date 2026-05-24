@@ -402,7 +402,7 @@ export function useProductionColumns({
       key: 'warehousingQualifiedQuantity',
       width: 140,
       align: 'left' as const,
-      render: (_: unknown, record: ProductionOrder) => renderWarehousingCell(record, openProcessDetail, renderCompletionTimeTag),
+      render: (_: unknown, record: ProductionOrder) => renderWarehousingCell(record, navigate, renderCompletionTimeTag),
     },
     {
       title: '次品数',

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { AutoComplete, Button, InputNumber, Space, Tag, Typography } from 'antd';
+import { AutoComplete, Button, Dropdown, InputNumber, Space, Tag, Typography } from 'antd';
 import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
 
 const { Text } = Typography;
@@ -59,14 +59,25 @@ const CuttingFreeBundlePanel: React.FC<CuttingFreeBundlePanelProps> = ({
     return orderQtyMap[`${color.trim()}|${size.trim()}`] ?? 0;
   };
 
-  const addRow = () => {
+  const addRows = (count: number) => {
     const defaultColor = colorSet[0] || '';
     const defaultSize = sizeSet[0] || '';
-    setRows((prev) => [
-      ...prev,
-      { key: nextKey(), color: defaultColor, size: defaultSize, quantity: 0 },
-    ]);
+    const newRows = Array.from({ length: count }, () => ({
+      key: nextKey(),
+      color: defaultColor,
+      size: defaultSize,
+      quantity: 0,
+    }));
+    setRows((prev) => [...prev, ...newRows]);
   };
+
+  const addRowMenuItems = [
+    { key: '1', label: '添加 1 行' },
+    { key: '5', label: '添加 5 行' },
+    { key: '10', label: '添加 10 行' },
+    { key: '20', label: '添加 20 行' },
+    { key: '30', label: '添加 30 行' },
+  ];
 
   const updateRow = (key: string, field: keyof FreeBundleRow, value: unknown) => {
     setRows((prev) => prev.map((r) => (r.key === key ? { ...r, [field]: value } : r)));
@@ -113,9 +124,18 @@ const CuttingFreeBundlePanel: React.FC<CuttingFreeBundlePanelProps> = ({
     <div style={{ padding: '0 0 8px' }}>
       <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <Text type="secondary">自由添加菲号行，下单数量仅作提醒不限制输入</Text>
-        <Button icon={<PlusOutlined />} onClick={addRow} disabled={disabled}>
-          添加行
-        </Button>
+        <Dropdown
+          menu={{
+            items: addRowMenuItems,
+            onClick: ({ key }) => addRows(Number(key)),
+          }}
+          trigger={['hover']}
+          disabled={disabled}
+        >
+          <Button icon={<PlusOutlined />} disabled={disabled}>
+            添加行
+          </Button>
+        </Dropdown>
       </div>
 
       {rows.length === 0 && (

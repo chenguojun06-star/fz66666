@@ -38,6 +38,10 @@ interface MaterialTableProps {
   onPurchaseSort: (field: string, order: 'asc' | 'desc') => void;
   isOrderFrozenForRecord: (record?: Record<string, unknown> | null) => boolean;
   onDelete?: (record: MaterialPurchaseType) => void;
+  onConfirmReturn?: (record: MaterialPurchaseType) => void;
+  onReturnReset?: (record: MaterialPurchaseType) => void;
+  onQualityIssue?: (record: MaterialPurchaseType) => void;
+  isSupervisorOrAbove?: boolean;
 }
 
 const MaterialTable: React.FC<MaterialTableProps> = ({
@@ -59,6 +63,10 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
   onPurchaseSort,
   isOrderFrozenForRecord,
   onDelete,
+  onConfirmReturn,
+  onReturnReset,
+  onQualityIssue,
+  isSupervisorOrAbove,
 }) => {
   const navigate = useNavigate();
   const { message } = App.useApp();
@@ -451,7 +459,14 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
               {
                 key: 'view',
                 label: isPending ? '采购' : '查看',
-                onClick: () => onView(record),
+                onClick: () => {
+                  const sn = String(record.styleNo || '').trim();
+                  const on = String((record as any).orderNo || '').trim();
+                  if (sn) {
+                    const qs = on ? `?orderNo=${encodeURIComponent(on)}` : '';
+                    navigate(`/production/material/${encodeURIComponent(sn)}${qs}`);
+                  }
+                },
                 primary: true,
               },
               {
@@ -468,6 +483,21 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
                   arrivalForm.setFieldsValue({ arrivedQuantity: maxQty });
                   setArrivalTarget(record);
                 },
+              }] : []),
+              ...(onConfirmReturn && [MATERIAL_PURCHASE_STATUS.RECEIVED, MATERIAL_PURCHASE_STATUS.PARTIAL, MATERIAL_PURCHASE_STATUS.COMPLETED].includes(status as any) ? [{
+                key: 'confirm-return',
+                label: Number(record?.returnConfirmed || 0) === 1 ? '追加回料' : '回料确认',
+                onClick: () => onConfirmReturn(record),
+              }] : []),
+              ...(onReturnReset && (Number(record?.returnConfirmed || 0) === 1 || status === MATERIAL_PURCHASE_STATUS.COMPLETED) && isSupervisorOrAbove ? [{
+                key: 'return-reset',
+                label: '退回',
+                onClick: () => onReturnReset(record),
+              }] : []),
+              ...(onQualityIssue && [MATERIAL_PURCHASE_STATUS.RECEIVED, MATERIAL_PURCHASE_STATUS.PARTIAL, MATERIAL_PURCHASE_STATUS.COMPLETED].includes(status as any) ? [{
+                key: 'quality-issue',
+                label: '品质异常',
+                onClick: () => onQualityIssue(record),
               }] : []),
               {
                 key: 'remark',

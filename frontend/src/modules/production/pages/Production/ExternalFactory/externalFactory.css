@@ -223,12 +223,12 @@
 }
 
 .ef-compact .style-smart-stage__node {
-  width: 54px;
-  height: 54px;
+  width: 51px;
+  height: 51px;
 }
 
 .ef-compact .style-smart-stage__label {
-  font-size: 11px;
+  font-size: 12px;
 }
 
 /* ─── 操作按钮区：悬停卡片时才显示 ─── */

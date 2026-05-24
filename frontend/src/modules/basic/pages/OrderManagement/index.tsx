@@ -43,7 +43,7 @@ const OrderManagement: React.FC = () => {
   const { options: categoryOptions } = useDictOptions('category', CATEGORY_CODE_OPTIONS);
   const location = useLocation();
   const navigate = useNavigate();
-  const { isMobile, modalWidth } = useViewport();
+  const { isMobile } = useViewport();
   const { columns: cardColumns } = useCardGridLayout(10);
 
   const cuttingCreateTask = useCuttingCreateTask({ message, navigate, fetchTasks: async () => {} });
@@ -93,8 +93,6 @@ const OrderManagement: React.FC = () => {
     styles, total, loading, factories, factoryCapacities, departments, users,
     smartError, fetchStyles,
   } = useOrderDataFetch({ queryParams, visible, showSmartErrorNotice, message });
-
-  const modalInitialHeight = typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800;
 
   const normalizeSizeKey = (v: unknown) => String(v || '').trim().toUpperCase().replace(/\s+/g, '');
   const displaySizeLabel = (v: unknown) => normalizeSizeKey(v) || '-';
@@ -281,8 +279,6 @@ const OrderManagement: React.FC = () => {
         submitLoading={submitLoading}
         createdOrder={createdOrder}
         selectedStyle={selectedStyle}
-        modalWidth={modalWidth}
-        modalInitialHeight={modalInitialHeight}
         isMobile={isMobile}
         form={form}
         factoryMode={factoryMode}

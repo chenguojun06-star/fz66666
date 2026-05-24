@@ -2,10 +2,10 @@ import React from 'react';
 import ResizableModal, { ResizableModalProps } from '@/components/common/ResizableModal';
 
 /**
- * 弹窗尺寸规范（项目铁律：30vw/40vw/60vw 三档）
+ * 弹窗尺寸规范（项目铁律：30vw/40vw/85vw 三档）
  * sm = 30vw: 简单表单、确认弹窗
  * md = 40vw: 普通表单、列表选择（默认）
- * lg = 60vw: 复杂表单、含表格、多Tab
+ * lg = 85vw: 复杂表单、含表格、多Tab
  */
 export type StandardModalSize = 'sm' | 'md' | 'lg';
 

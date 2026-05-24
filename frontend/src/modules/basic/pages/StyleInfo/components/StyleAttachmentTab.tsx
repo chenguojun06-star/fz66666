@@ -25,6 +25,8 @@ const StyleAttachmentTab: React.FC<Props> = ({ styleId, styleNo, bizType, upload
   const [data, setData] = useState<StyleAttachment[]>([]);
   const [loading, setLoading] = useState(false);
   const { message } = App.useApp();
+  const messageRef = useRef(message);
+  messageRef.current = message;
 
   const normalizedStyleId = useMemo(() => {
     const value = String(styleId ?? '').trim();
@@ -92,11 +94,11 @@ const StyleAttachmentTab: React.FC<Props> = ({ styleId, styleNo, bizType, upload
         onListChange?.(list);
       }
     } catch (error) {
-      message.error('获取附件列表失败');
+      messageRef.current.error('获取附件列表失败');
     } finally {
       setLoading(false);
     }
-  }, [normalizedStyleId, normalizedStyleNo, bizType, message, onListChange]);
+  }, [normalizedStyleId, normalizedStyleNo, bizType, onListChange]);
 
   useEffect(() => {
     fetchList();

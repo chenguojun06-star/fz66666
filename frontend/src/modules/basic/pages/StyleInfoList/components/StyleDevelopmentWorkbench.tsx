@@ -67,6 +67,11 @@ const StyleDevelopmentWorkbench: React.FC<Props> = ({ record, onClose, initialSe
     quotation: null,
   });
 
+  const handleAttachmentListChange = useCallback((list: StyleAttachment[]) => {
+    setData((prev) => ({ ...prev, attachments: list }));
+    onSync?.();
+  }, [onSync]);
+
   const parseProductionReqRows = useCallback((value: unknown) => {
     const raw = String(value ?? '');
     // 原文整串存 index 0，不拆行、不修改任何内容
@@ -323,10 +328,7 @@ const StyleDevelopmentWorkbench: React.FC<Props> = ({ record, onClose, initialSe
           <StyleAttachmentTab
             styleId={record.id!}
             uploadText="上传开发资料"
-            onListChange={(list) => {
-              setData((prev) => ({ ...prev, attachments: list }));
-              onSync?.();
-            }}
+            onListChange={handleAttachmentListChange}
           />
         </div>
       );

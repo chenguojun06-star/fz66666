@@ -183,7 +183,7 @@ const ExpressOrderModal: React.FC<ExpressOrderModalProps> = ({ open, order, onCl
           </Descriptions>
           <Alert
             type="info"
-            message="请点击「打印电子面单」按钮打印快递面单，贴到包裹上即可发货"
+            title="请点击「打印电子面单」按钮打印快递面单，贴到包裹上即可发货"
             style={{ marginTop: 16 }}
           />
           {trackList.length > 0 && (
@@ -209,7 +209,7 @@ const ExpressOrderModal: React.FC<ExpressOrderModalProps> = ({ open, order, onCl
       ) : alreadyShipped ? (
         <Alert
           type="warning"
-          message="该订单已有物流信息"
+          title="该订单已有物流信息"
           description={`运单号: ${order.trackingNo}，快递公司: ${order.expressCompany}。如需重新下单，请先取消现有运单。`}
           showIcon
         />

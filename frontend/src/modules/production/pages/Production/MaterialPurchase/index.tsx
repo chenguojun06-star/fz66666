@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useRef } from 'react';
-import { Card, Input, Form, InputNumber, Tooltip, Button, message, Modal } from 'antd';
+import { Card, Input, Form, InputNumber, Tooltip, Button, message, Modal, Space } from 'antd';
+import { useNavigate } from 'react-router-dom';
 import { QuestionCircleOutlined, InboxOutlined, FileSearchOutlined, ShopOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
 import PageLayout from '@/components/common/PageLayout';
@@ -20,6 +21,11 @@ import type { MaterialPurchase as MaterialPurchaseType } from '@/types/productio
 import api from '@/utils/api';
 
 const MaterialPurchase: React.FC = () => {
+  const navigate = useNavigate();
+  const [orderPickerOpen, setOrderPickerOpen] = useState(false);
+  const [orderPickerKeyword, setOrderPickerKeyword] = useState('');
+  const [orderPickerList, setOrderPickerList] = useState<any[]>([]);
+  const [orderPickerLoading, setOrderPickerLoading] = useState(false);
   const {
     contextHolder,
     user, isMobile, isSupervisorOrAbove,
@@ -106,6 +112,29 @@ const MaterialPurchase: React.FC = () => {
     });
   }, [user, fetchMaterialPurchaseList, reloadCurrentDetail]);
 
+  const handleSearchOrders = useCallback(async () => {
+    if (!orderPickerKeyword.trim()) { message.warning('请输入订单号或款号'); return; }
+    setOrderPickerLoading(true);
+    try {
+      const res = await api.get('/production/order/list', {
+        params: { page: 1, pageSize: 20, keyword: orderPickerKeyword.trim() },
+      });
+      const records = res?.code === 200 ? (res?.data?.records || []) : [];
+      setOrderPickerList(records);
+    } catch { setOrderPickerList([]); }
+    finally { setOrderPickerLoading(false); }
+  }, [orderPickerKeyword, message]);
+
+  const handlePickOrder = useCallback((order: any) => {
+    const styleNo = String(order.styleNo || '').trim();
+    const orderNo = String(order.orderNo || '').trim();
+    if (styleNo) {
+      const qs = orderNo ? `?orderNo=${encodeURIComponent(orderNo)}` : '';
+      navigate(`/production/material/${encodeURIComponent(styleNo)}${qs}`);
+    }
+    setOrderPickerOpen(false);
+  }, [navigate]);
+
   return (
     <>
       {contextHolder}
@@ -189,7 +218,7 @@ const MaterialPurchase: React.FC = () => {
                         setQueryParams((prev) => ({ page: 1, pageSize: prev.pageSize, orderNo, materialType: '', factoryType: '', sourceType: '', status: '' }));
                       }}
                       onExport={handleExport}
-                      onAdd={() => openDialog('create')}
+                      onAdd={() => setOrderPickerOpen(true)}
                       loading={loading}
                       hasData={purchaseList && purchaseList.length > 0}
                     />
@@ -220,8 +249,58 @@ const MaterialPurchase: React.FC = () => {
                       onPurchaseSort={handlePurchaseSort}
                       isOrderFrozenForRecord={isOrderFrozenForRecord}
                       onDelete={handleDeleteOrphan}
+                      onConfirmReturn={confirmReturnPurchaseTask}
+                      onReturnReset={openReturnReset}
+                      onQualityIssue={(record) => {
+                        setQualityIssuePurchase(record);
+                        setQualityIssueOpen(true);
+                      }}
+                      isSupervisorOrAbove={isSupervisorOrAbove}
                     />
         </PageLayout>
+
+        <ResizableModal
+          title="选择订单"
+          open={orderPickerOpen}
+          onCancel={() => setOrderPickerOpen(false)}
+          width={600}
+          footer={null}
+        >
+          <Space direction="vertical" style={{ width: '100%' }} size={12}>
+            <Space>
+              <Input
+                placeholder="输入订单号或款号搜索"
+                value={orderPickerKeyword}
+                onChange={e => setOrderPickerKeyword(e.target.value)}
+                onPressEnter={handleSearchOrders}
+                style={{ width: 300 }}
+                allowClear
+              />
+              <Button type="primary" onClick={handleSearchOrders} loading={orderPickerLoading}>搜索</Button>
+            </Space>
+            <ResizableTable
+              rowKey="id"
+              dataSource={orderPickerList}
+              loading={orderPickerLoading}
+              pagination={false}
+              size="small"
+              scroll={{ y: 400 }}
+              columns={[
+                { title: '订单号', dataIndex: 'orderNo', width: 180 },
+                { title: '款号', dataIndex: 'styleNo', width: 120 },
+                { title: '款名', dataIndex: 'styleName', width: 150, ellipsis: true },
+                { title: '颜色', dataIndex: 'color', width: 100 },
+                { title: '下单数量', dataIndex: 'orderQuantity', width: 90, align: 'right' as const },
+                {
+                  title: '操作', width: 80,
+                  render: (_: any, record: any) => (
+                    <Button type="link" size="small" onClick={() => handlePickOrder(record)}>选择</Button>
+                  ),
+                },
+              ]}
+            />
+          </Space>
+        </ResizableModal>
 
         <PurchaseModal
           visible={visible}
@@ -262,6 +341,10 @@ const MaterialPurchase: React.FC = () => {
           onSavePreview={handleSavePreview}
           isOrderFrozenForRecord={isOrderFrozenForRecord}
           onWarehousePick={handleWarehousePickFromDetail}
+          onRefresh={async () => {
+            await fetchMaterialPurchaseList();
+            await reloadCurrentDetail();
+          }}
         />
         <MaterialQualityIssueModal
           open={qualityIssueOpen}

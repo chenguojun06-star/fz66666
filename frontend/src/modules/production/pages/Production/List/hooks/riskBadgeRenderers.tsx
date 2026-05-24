@@ -168,7 +168,7 @@ export function renderMerchandiserCell(v: any, record: ProductionOrder, onOpenRe
   );
 }
 
-export function renderWarehousingCell(record: ProductionOrder, openProcessDetail: (record: ProductionOrder, type: string) => void, renderCompletionTimeTag: (record: ProductionOrder, stage: string, rate: number, position?: string) => React.ReactNode) {
+export function renderWarehousingCell(record: ProductionOrder, navigate: (path: string) => void, renderCompletionTimeTag: (record: ProductionOrder, stage: string, rate: number, position?: string) => React.ReactNode) {
   const qualified = Number(record.warehousingQualifiedQuantity ?? 0) || 0;
   const total = Number(record.cuttingQuantity || record.orderQuantity) || 1;
   const rate = Math.min(100, Math.round((qualified / total) * 100));
@@ -186,7 +186,8 @@ export function renderWarehousingCell(record: ProductionOrder, openProcessDetail
   return (
     <div
       style={{ display: 'flex', flexDirection: 'column', cursor: frozen ? 'default' : 'pointer', padding: '4px 0', opacity: isCompletedOrClosed ? 0.75 : (frozen ? 0.6 : 1) }}
-      onClick={(e) => { e.stopPropagation(); if (!frozen) openProcessDetail(record, 'warehousing'); }}
+      title={frozen ? '订单已关单/报废/完成' : '点击进入质检入库'}
+      onClick={(e) => { e.stopPropagation(); if (!frozen) navigate(`/production/warehousing/inspect/${record.id}`); }}
     >
       {renderCompletionTimeTag(record, '入库', rate || 0, 'left')}
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>

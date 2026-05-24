@@ -366,7 +366,7 @@ const UserApproval: React.FC = () => {
           ) : (
             <>
               <Alert
-                message={canApproveFactory
+                title={canApproveFactory
                   ? `当前有 ${factoryTotal} 个外发工厂员工待审批，您可以直接审批或跳转到对应工厂的人员名册管理`
                   : "以下为外发工厂的待审批员工，由各外发工厂管理员自行审批，租户仅可查看"}
                 type={canApproveFactory ? "info" : "warning"}

@@ -74,7 +74,7 @@ const WarehousingActionPanel: React.FC<Props> = ({
               />
               <Text strong>入库仓位：</Text>
               <WarehouseLocationAutoComplete
-                warehouseType="FINISHED"
+                warehouseType={warehouseType === '成品仓' ? 'FINISHED' : warehouseType === '物料仓' ? 'MATERIAL' : 'SAMPLE'}
                 placeholder="请选择或输入仓位"
                 value={warehouseValue || undefined}
                 onChange={(v) => setWarehouseValue(String(v || '').trim())}

@@ -387,7 +387,7 @@ const PlatformConnectorTab: React.FC<{ active: boolean }> = ({ active }) => {
         </Row>
 
         <Alert type="info" showIcon style={{ marginBottom: 20, borderRadius: 8 }}
-          message={<span>选择一个电商/ERP平台，填写应用标识和密钥即可自动对接。支持 <strong>主动拉取</strong> 和 <strong>回调推送</strong>。<span style={{ color: '#fa8c16' }}>不知道怎么获取凭证？点击「配置连接」→「如何获取凭证？」查看教程。</span></span>}
+          title={<span>选择一个电商/ERP平台，填写应用标识和密钥即可自动对接。支持 <strong>主动拉取</strong> 和 <strong>回调推送</strong>。<span style={{ color: '#fa8c16' }}>不知道怎么获取凭证？点击「配置连接」→「如何获取凭证？」查看教程。</span></span>}
         />
         <Row gutter={[16, 16]}>{PLATFORM_LIST.map(renderPlatformCard)}</Row>
         {stats.connected === 0 && (
@@ -406,7 +406,7 @@ const PlatformConnectorTab: React.FC<{ active: boolean }> = ({ active }) => {
           {/* 凭证获取教程 */}
           {!showGuide ? (
             <Alert type="warning" showIcon icon={<QuestionCircleOutlined />} style={{ marginBottom: 16, borderRadius: 8 }}
-              message={
+              title={
                 <span>
                   不知道怎么获取 {activePlatform?.name} 的应用标识和密钥？
                   <Button type="link" onClick={() => setShowGuide(true)} style={{ padding: '0 4px' }}>
@@ -444,7 +444,7 @@ const PlatformConnectorTab: React.FC<{ active: boolean }> = ({ active }) => {
           <Divider style={{ margin: '12px 0' }} />
           <Form form={form} layout="vertical">
             <Alert type="error" showIcon style={{ marginBottom: 16, borderRadius: 8 }}
-              message="请填写从平台获取的真实凭证"
+              title="请填写从平台获取的真实凭证"
               description="AppKey 和 AppSecret 需要在对应平台的开放平台注册应用后获取，不是本系统的登录账号。点击上方「如何获取凭证？」查看教程。" />
             <Form.Item name="appKey" label={<span><KeyOutlined /> 应用标识 (AppKey)</span>} rules={[{ required: true, message: '请输入应用标识' }]} tooltip={`${activePlatform?.name} 开放平台颁发的应用标识`}>
               <Input placeholder={`请输入 ${activePlatform?.name} 的真实 AppKey（非登录账号）`} autoComplete="off" />
@@ -473,12 +473,12 @@ const PlatformConnectorTab: React.FC<{ active: boolean }> = ({ active }) => {
                 description={testResult.message} style={{ marginBottom: 16 }} />
               {testResult.credentialGuide && (
                 <Alert type="info" showIcon style={{ marginBottom: 16, borderRadius: 8 }}
-                  message="如何获取凭证？"
+                  title="如何获取凭证？"
                   description={testResult.credentialGuide} />
               )}
               {testResult.webhookUrl && (
                 <Alert type="warning" showIcon style={{ marginBottom: 16, borderRadius: 8 }}
-                  message="下一步：配置回调地址"
+                  title="下一步：配置回调地址"
                   description={
                     <div>
                       <div style={{ marginBottom: 4 }}>请将此地址配置到平台的回调/Webhook设置中：</div>
@@ -541,7 +541,7 @@ const PlatformConnectorTab: React.FC<{ active: boolean }> = ({ active }) => {
 
               {/* 两条出库链路 */}
               <Alert type="info" showIcon style={{ marginBottom: 16, borderRadius: 8 }}
-                message={<div style={{ fontWeight: 600, marginBottom: 8 }}>两条出库链路</div>}
+                title={<div style={{ fontWeight: 600, marginBottom: 8 }}>两条出库链路</div>}
                 description={
                   <Row gutter={24}>
                     <Col span={12}>
@@ -613,7 +613,7 @@ const PlatformConnectorTab: React.FC<{ active: boolean }> = ({ active }) => {
 
               {activeStats.noStockWarn > 0 && (
                 <Alert type="error" showIcon style={{ borderRadius: 8 }}
-                  message={`⚠️ 缺货预警：${activeStats.noStockWarn} 单未匹配到生产单，需人工确认库存或创建生产计划`} />
+                  title={`⚠️ 缺货预警：${activeStats.noStockWarn} 单未匹配到生产单，需人工确认库存或创建生产计划`} />
               )}
             </div>
           ) : (<Spin />)}

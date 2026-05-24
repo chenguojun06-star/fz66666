@@ -63,7 +63,7 @@ const WarehouseLocationAutoComplete: React.FC<WarehouseLocationAutoCompleteProps
     const filtered = keyword
       ? activeOptions.filter(item => (item.label || '').toString().includes(keyword) || (item.value || '').includes(keyword))
       : activeOptions;
-    return filtered.map(item => ({ value: item.label || item.value, label: item.label || item.value }));
+    return filtered.map(item => ({ value: item.value, label: item.label || item.value }));
   }, [activeOptions]);
 
   useEffect(() => {

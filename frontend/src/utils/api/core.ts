@@ -136,6 +136,41 @@ const isJwtExpired = (token: string): boolean => {
   }
 };
 
+const pendingRequests = new Map<string, Promise<unknown>>();
+const responseCache = new Map<string, { data: unknown; ts: number }>();
+const CACHE_TTL = 30_000;
+const CACHEABLE_PATTERNS = [
+  '/system/dict/',
+  '/system/organization/',
+  '/system/permission/',
+  '/system/role/',
+  '/factory/',
+  '/factory-worker/',
+  '/process/',
+  '/template-library/',
+  '/stock/sample/list',
+];
+
+const isCacheable = (url: string, method?: string): boolean => {
+  if (method && method.toLowerCase() !== 'get') return false;
+  return CACHEABLE_PATTERNS.some(p => url.includes(p));
+};
+
+const getCacheKey = (url: string, params?: unknown): string => {
+  const paramStr = params ? JSON.stringify(params) : '';
+  return `${url}||${paramStr}`;
+};
+
+export const clearApiCache = (pattern?: string) => {
+  if (!pattern) {
+    responseCache.clear();
+    return;
+  }
+  for (const key of responseCache.keys()) {
+    if (key.includes(pattern)) responseCache.delete(key);
+  }
+};
+
 export const createApiClient = (): ApiClient => {
   const client = axios.create({
     baseURL: resolveApiBaseUrl(),
@@ -148,6 +183,37 @@ export const createApiClient = (): ApiClient => {
   // 请求拦截器
   client.interceptors.request.use(
     async config => {
+      const url = config.url || '';
+      const method = config.method || 'get';
+      const cacheKey = getCacheKey(url, config.params);
+
+      if (isCacheable(url, method)) {
+        const cached = responseCache.get(cacheKey);
+        if (cached && Date.now() - cached.ts < CACHE_TTL) {
+          const adapter = config.adapter;
+          config.adapter = () => Promise.resolve({
+            data: cached.data,
+            status: 200,
+            statusText: 'OK (cached)',
+            headers: { 'x-cache': 'HIT' },
+            config,
+          } as any);
+          return config;
+        }
+
+        const pending = pendingRequests.get(cacheKey);
+        if (pending) {
+          const adapter = config.adapter;
+          config.adapter = () => pending.then(data => ({
+            data,
+            status: 200,
+            statusText: 'OK (deduped)',
+            headers: { 'x-cache': 'DEDUP' },
+            config,
+          } as any));
+          return config;
+        }
+      }
       const headers = (config.headers || {}) as any & {
         set?: (key: string, value: string) => void;
         get?: (key: string) => unknown;
@@ -244,6 +310,18 @@ export const createApiClient = (): ApiClient => {
         setHeader('X-User-Id', uid);
       }
 
+      if (isCacheable(url, method) && !config.adapter) {
+        const realAdapter = config.adapter || axios.defaults.adapter;
+        const promise = new Promise((resolve) => {
+          const origAdapter = typeof realAdapter === 'function' ? realAdapter : axios.defaults.adapter;
+          const result = (origAdapter as Function)(config);
+          result.then((res: any) => resolve(res?.data ?? res)).catch(() => {
+            pendingRequests.delete(cacheKey);
+          });
+        });
+        pendingRequests.set(cacheKey, promise);
+      }
+
       return config;
     },
     error => Promise.reject(error)
@@ -251,7 +329,18 @@ export const createApiClient = (): ApiClient => {
 
   // 响应拦截器
   client.interceptors.response.use(
-    response => response.data,
+    response => {
+      const url = response.config?.url || '';
+      const method = response.config?.method || 'get';
+      const cacheKey = getCacheKey(url, response.config?.params);
+
+      if (isCacheable(url, method)) {
+        responseCache.set(cacheKey, { data: response.data, ts: Date.now() });
+        pendingRequests.delete(cacheKey);
+      }
+
+      return response.data;
+    },
     async error => {
       const config = error.config as (AxiosRequestConfig & {
         retry?: number;

@@ -15,6 +15,7 @@ public class BundleLookupContext {
     private String color;
     private String size;
     private Integer bundleNo;
+    private String cuttingBundleId;
     private ProductionOrder order;
 
     public static BundleLookupContext from(Map<String, Object> params) {
@@ -28,6 +29,7 @@ public class BundleLookupContext {
             bn = NumberUtils.toInt(params.get("cuttingBundleNo"));
         }
         context.setBundleNo(bn != null && bn > 0 ? bn : null);
+        context.setCuttingBundleId(TextUtils.safeText(params.get("cuttingBundleId")));
         return context;
     }
 }

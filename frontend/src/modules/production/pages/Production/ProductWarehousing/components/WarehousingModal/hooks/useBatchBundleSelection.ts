@@ -50,22 +50,26 @@ export const useBatchBundleSelection = (deps: BatchSelectionDeps) => {
         const qty = Number(b.quantity || 0) || 0;
         const bundleNo = Number(b.bundleNo || 0) || 0;
         const rawStatus = String((b as any)?.status || '').trim();
+        const qsLower = rawStatus.toLowerCase();
         const isBlocked = isBundleBlockedForWarehousing(rawStatus);
         const isRepairedWaitingQc = rawStatus === 'repaired_waiting_qc' || rawStatus === '返修待质检' || rawStatus === '返修完成待质检';
+        const isQualified = qsLower === 'qualified';
         const needsRepairQty = isBlocked || isRepairedWaitingQc;
         const remaining = needsRepairQty ? bundleRepairRemainingByQr[qr] : undefined;
         const availableQty = needsRepairQty
           ? (remaining !== undefined ? Math.max(0, Number(remaining || 0) || 0) : (isRepairedWaitingQc ? qty : 0))
-          : qty;
+          : (isQualified ? 0 : qty);
         const isUsed = qualifiedWarehousedBundleQrSet.has(qr);
         const isProductionReady = productionReadyQrSet.size === 0 || productionReadyQrSet.has(qr);
-        const disabled = isUsed || !isProductionReady ||
+        const disabled = isUsed || isQualified || !isProductionReady ||
           (isBlocked && !isRepairedWaitingQc && (remaining === undefined || availableQty <= 0)) ||
           (isRepairedWaitingQc && remaining !== undefined && availableQty <= 0);
 
         let statusText = '';
         if (isUsed) {
           statusText = '已入库';
+        } else if (isQualified) {
+          statusText = '已合格';
         } else if (!isProductionReady) {
           statusText = '生产未完成';
         } else if (isRepairedWaitingQc) {

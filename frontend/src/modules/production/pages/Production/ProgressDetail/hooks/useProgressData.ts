@@ -4,9 +4,8 @@ import type { Dayjs } from 'dayjs';
 import api, { isApiSuccess, isOrderTerminal } from '@/utils/api';
 import type { ProductionOrder, ProductionQueryParams } from '@/types/production';
 import { productionOrderApi, type ProductionOrderListParams } from '@/services/production/productionApi';
-import { templateLibraryApi } from '@/services/template/templateLibraryApi';
+import { useProgressNodeCache, type ProgressNode } from '@/hooks/useProgressNodeCache';
 import { stripWarehousingNode } from '../utils';
-import type { ProgressNode } from '../types';
 import { clearBoardStatsTimestamps } from './useBoardStats';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
@@ -27,6 +26,7 @@ export function useProgressData({
   clearAllBoardCache,
 }: UseProgressDataParams) {
   const { message } = App.useApp();
+  const progressNodeCache = useProgressNodeCache();
 
   // ── 订单数据 ──────────────────────────────────────────────────
   const [loading, setLoading] = useState(false);
@@ -129,31 +129,7 @@ export function useProgressData({
         );
         if (styleNos.length) {
           void (async () => {
-            const settled = await Promise.allSettled(
-              styleNos.map(async (sn) => {
-                const res = await templateLibraryApi.progressNodeUnitPrices(sn);
-                const r = res as Record<string, unknown>;
-                const rows = Array.isArray(r?.data) ? r.data : [];
-                const normalized: ProgressNode[] = rows
-                  .map((n: any) => {
-                    const name = String(n?.name || '').trim();
-                    const id = String(n?.id || name || '').trim() || name;
-                    const p = Number(n?.unitPrice);
-                    const unitPrice = Number.isFinite(p) && p >= 0 ? p : 0;
-                    //  保留 progressStage（父分类字段），用于进度球弹窗过滤和boardStats匹配
-                    const progressStage = String(n?.progressStage || '').trim() || undefined;
-                    return { id, name, unitPrice, progressStage };
-                  })
-                  .filter((n: ProgressNode) => n.name);
-                return { styleNo: sn, nodes: stripWarehousingNode(normalized) };
-              })
-            );
-            const next: Record<string, ProgressNode[]> = {};
-            for (const s of settled) {
-              if (s.status !== 'fulfilled') continue;
-              if (!s.value.nodes.length) continue;
-              next[s.value.styleNo] = s.value.nodes;
-            }
+            const next = await progressNodeCache.fetchBatch(styleNos);
             if (Object.keys(next).length) {
               setProgressNodesByStyleNo((prev) => ({ ...prev, ...next }));
             }

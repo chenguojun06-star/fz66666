@@ -3,6 +3,7 @@ import { Tag } from 'antd';
 import { RobotOutlined, ThunderboltOutlined, WarningOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { intelligenceApi } from '../../../../../services/intelligence/intelligenceApi';
+import { createPauseableInterval } from '@/hooks/useRefreshHelpers';
 import './AgentActivityPanel.css';
 
 type AgentInfo = {
@@ -250,7 +251,13 @@ const AgentActivityPanel: React.FC = () => {
     } catch { /* silent */ }
   }, []);
 
-  useEffect(() => { void fetchData(); const t = setInterval(() => void fetchData(), 15000); return () => clearInterval(t); }, [fetchData]);
+  useEffect(() => {
+    void fetchData();
+    const poller = createPauseableInterval(() => void fetchData(), 15000);
+    poller.start();
+    const cleanup = poller.autoPauseOnHidden();
+    return () => { poller.stop(); cleanup(); };
+  }, [fetchData]);
 
   const workingCount = useMemo(() => agents.filter((a) => a.status === 'working').length, [agents]);
   const criticalAlerts = useMemo(() => alerts.filter((a) => a.level === 'critical').length, [alerts]);

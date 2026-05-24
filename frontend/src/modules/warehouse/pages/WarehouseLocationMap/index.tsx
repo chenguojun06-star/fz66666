@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Switch, Badge, Empty, Tag, Statistic, Row, Col, Tooltip, Spin, App, Button, Input, Select, Form } from 'antd';
-import { ShopOutlined, EnvironmentOutlined, AppstoreOutlined, InboxOutlined, PlusOutlined, DeleteOutlined } from '@ant-design/icons';
+import { Switch, Badge, Empty, Tag, Statistic, Row, Col, Tooltip, Spin, App, Button, Input, Select, Form, Alert } from 'antd';
+import { ShopOutlined, EnvironmentOutlined, AppstoreOutlined, InboxOutlined, PlusOutlined, DeleteOutlined, SwapOutlined } from '@ant-design/icons';
 import ResizableModal from '@/components/common/ResizableModal';
+import WarehouseLocationAutoComplete from '@/components/common/WarehouseLocationAutoComplete';
 import { warehouseLocationMapApi } from '@/services/warehouse/warehouseLocationMapApi';
 import './WarehouseLocationMap.css';
 
@@ -87,6 +88,10 @@ const WarehouseLocationMap: React.FC = () => {
 
   const [batchInitModalOpen, setBatchInitModalOpen] = useState(false);
   const [batchInitForm] = Form.useForm();
+
+  const [transferModalOpen, setTransferModalOpen] = useState(false);
+  const [transferTargetLocation, setTransferTargetLocation] = useState('');
+  const [transferLoading, setTransferLoading] = useState(false);
 
   const loadAreas = useCallback(async () => {
     setAreasLoading(true);
@@ -285,14 +290,37 @@ const WarehouseLocationMap: React.FC = () => {
     }
   };
 
+  const generateZoneCode = (zoneName: string, existingZones: string[]): string => {
+    if (!zoneName) return 'A';
+    const firstChar = zoneName.trim().charAt(0).toUpperCase();
+    if (/[A-Z]/.test(firstChar) && !existingZones.includes(firstChar)) return firstChar;
+    const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    for (const l of letters) {
+      if (!existingZones.includes(l)) return l;
+    }
+    return 'Z';
+  };
+
   const handleCreateLocation = async () => {
     try {
       const values = await createLocationForm.validateFields();
+      const zoneName = values.zoneName.trim();
+      const rackNum = String(values.rackNum || '01').padStart(2, '0');
+      const levelNum = values.levelNum || 1;
+      const positionNum = values.positionNum || 1;
+      const existingZoneCodes = zones.map(z => z.code);
+      const zoneCode = values.zoneCode || generateZoneCode(zoneName, existingZoneCodes);
+      const locationCode = `${zoneCode}-${rackNum}-${levelNum}-${positionNum}`;
+      const locationName = `${zoneName} ${rackNum}架${levelNum}层${positionNum}位`;
       await warehouseLocationMapApi.createLocation({
-        locationCode: values.locationCode,
-        locationName: values.locationName || values.locationCode,
-        zoneCode: values.zoneCode,
-        zoneName: values.zoneName,
+        locationCode,
+        locationName,
+        zoneCode,
+        zoneName,
+        aisleCode: zoneCode,
+        rackCode: `${zoneCode}-${rackNum}`,
+        levelCode: String(levelNum),
+        positionCode: String(positionNum),
         warehouseType: selectedArea?.warehouseType,
         areaId: selectedAreaId,
         capacity: values.capacity || 100,
@@ -310,16 +338,19 @@ const WarehouseLocationMap: React.FC = () => {
   const handleBatchInit = async () => {
     try {
       const values = await batchInitForm.validateFields();
-      const zoneNames = values.zoneNames
-        ? values.zoneNames.split(',').map((s: string) => s.trim()).filter(Boolean)
-        : undefined;
+      const zoneName = values.zoneName.trim();
+      const rackCount = values.rackCount || 2;
+      const levelCount = values.levelCount || 3;
+      const positionCount = values.positionCount || 2;
+      const existingZoneCodes = zones.map(z => z.code);
+      const zoneCode = generateZoneCode(zoneName, existingZoneCodes);
       await warehouseLocationMapApi.batchInitLocations({
         warehouseType: selectedArea?.warehouseType,
         areaId: selectedAreaId,
-        zoneNames,
-        racksPerZone: values.racksPerZone || 2,
-        levelsPerRack: values.levelsPerRack || 3,
-        positionsPerLevel: values.positionsPerLevel || 2,
+        zoneNames: [zoneName],
+        racksPerZone: rackCount,
+        levelsPerRack: levelCount,
+        positionsPerLevel: positionCount,
       });
       message.success('批量初始化成功');
       setBatchInitModalOpen(false);
@@ -343,6 +374,39 @@ const WarehouseLocationMap: React.FC = () => {
       setLocationItems([]);
     } finally {
       setLocationItemsLoading(false);
+    }
+  };
+
+  const handleTransfer = async () => {
+    if (!selectedLocation || !transferTargetLocation) {
+      message.error('请选择目标库位');
+      return;
+    }
+    setTransferLoading(true);
+    try {
+      const res = await warehouseLocationMapApi.transferLocation(
+        selectedLocation.locationCode,
+        transferTargetLocation,
+        selectedLocation.warehouseType,
+      );
+      const code = res?.data?.code;
+      if (code !== undefined && code !== 0 && code !== 200) {
+        message.error(res?.data?.message || '转移失败');
+        return;
+      }
+      const data = res?.data?.data || res?.data;
+      message.success(`已从 ${data?.fromLocationCode || selectedLocation.locationCode} 转移 ${data?.transferredCount || 0} 条记录到 ${data?.toLocationCode || transferTargetLocation}`);
+      setTransferModalOpen(false);
+      setTransferTargetLocation('');
+      setDetailModalOpen(false);
+      setSelectedLocation(null);
+      loadLocations(selectedAreaId);
+      loadOverview();
+    } catch (err: any) {
+      const errMsg = err?.response?.data?.message || err?.message || '转移失败';
+      message.error(errMsg);
+    } finally {
+      setTransferLoading(false);
     }
   };
 
@@ -515,13 +579,13 @@ const WarehouseLocationMap: React.FC = () => {
                     size="small"
                     icon={<AppstoreOutlined />}
                     onClick={() => {
-                      batchInitForm.setFieldsValue({
-                        racksPerZone: 2,
-                        levelsPerRack: 3,
-                        positionsPerLevel: 2,
-                      });
-                      setBatchInitModalOpen(true);
-                    }}
+                    batchInitForm.setFieldsValue({
+                      rackCount: 2,
+                      levelCount: 3,
+                      positionCount: 2,
+                    });
+                    setBatchInitModalOpen(true);
+                  }}
                   >
                     批量初始化
                   </Button>
@@ -623,18 +687,37 @@ const WarehouseLocationMap: React.FC = () => {
         <div style={{ padding: '8px 0' }}>
           <Form form={createLocationForm} layout="vertical">
             <Form.Item name="zoneName" label="库区名称" rules={[{ required: true, message: '请输入库区名称' }]}>
-              <Input placeholder="例如：A区-合格品" />
+              <Select
+                mode="tags"
+                maxCount={1}
+                placeholder="输入或选择已有库区"
+                options={zones.map(z => ({ label: z.name, value: z.name }))}
+              />
             </Form.Item>
-            <Form.Item name="zoneCode" label="库区编码">
-              <Input placeholder="例如：A（自动取库区名称首字母）" />
+            <Form.Item name="zoneCode" label="库区编码" extra="留空自动取库区首字母">
+              <Input placeholder="自动生成" maxLength={1} />
             </Form.Item>
-            <Form.Item name="locationCode" label="库位编码" rules={[{ required: true, message: '请输入库位编码' }]}>
-              <Input placeholder="例如：A-01-1-1" />
-            </Form.Item>
-            <Form.Item name="locationName" label="库位名称">
-              <Input placeholder="不填则与编码相同" />
-            </Form.Item>
-            <Form.Item name="capacity" label="容量上限" initialValue={100}>
+            <Row gutter={12}>
+              <Col span={8}>
+                <Form.Item name="rackNum" label="货架号" rules={[{ required: true, message: '必填' }]} initialValue="01">
+                  <Input placeholder="01" />
+                </Form.Item>
+              </Col>
+              <Col span={8}>
+                <Form.Item name="levelNum" label="层" rules={[{ required: true, message: '必填' }]} initialValue={1}>
+                  <Input type="number" min={1} />
+                </Form.Item>
+              </Col>
+              <Col span={8}>
+                <Form.Item name="positionNum" label="位" rules={[{ required: true, message: '必填' }]} initialValue={1}>
+                  <Input type="number" min={1} />
+                </Form.Item>
+              </Col>
+            </Row>
+            <div style={{ color: 'var(--color-text-tertiary)', fontSize: 14 }}>
+              编码格式：{createLocationForm.getFieldValue('zoneCode') || 'A'}-{String(createLocationForm.getFieldValue('rackNum') || '01').padStart(2,'0')}-{createLocationForm.getFieldValue('levelNum') || 1}-{createLocationForm.getFieldValue('positionNum') || 1}
+            </div>
+            <Form.Item name="capacity" label="容量上限" initialValue={100} style={{ marginTop: 12 }}>
               <Input type="number" placeholder="100" />
             </Form.Item>
           </Form>
@@ -652,28 +735,28 @@ const WarehouseLocationMap: React.FC = () => {
       >
         <div style={{ padding: '8px 0' }}>
           <Form form={batchInitForm} layout="vertical">
-            <Form.Item name="zoneNames" label="库区名称（逗号分隔）" extra="留空则使用默认库区">
-              <Input placeholder="例如：A区-合格品,B区-待检品,C区-次品区" />
+            <Form.Item name="zoneName" label="库区名称" rules={[{ required: true, message: '请输入库区名称' }]} initialValue="A区">
+              <Input placeholder="例如：A区" />
             </Form.Item>
-            <Row gutter={16}>
+            <Row gutter={12}>
               <Col span={8}>
-                <Form.Item name="racksPerZone" label="每区货架数" initialValue={2}>
-                  <Input type="number" />
+                <Form.Item name="rackCount" label="货架数" initialValue={2}>
+                  <Input type="number" min={1} />
                 </Form.Item>
               </Col>
               <Col span={8}>
-                <Form.Item name="levelsPerRack" label="每架层数" initialValue={3}>
-                  <Input type="number" />
+                <Form.Item name="levelCount" label="每架层数" initialValue={3}>
+                  <Input type="number" min={1} />
                 </Form.Item>
               </Col>
               <Col span={8}>
-                <Form.Item name="positionsPerLevel" label="每层位数" initialValue={2}>
-                  <Input type="number" />
+                <Form.Item name="positionCount" label="每层位数" initialValue={2}>
+                  <Input type="number" min={1} />
                 </Form.Item>
               </Col>
             </Row>
             <div style={{ color: 'var(--color-text-tertiary)', fontSize: 14 }}>
-              将生成 {selectedArea?.areaName || ''} 下的库位，编码格式：库区-货架-层-位（如 A-01-1-1）
+              将生成 {(batchInitForm.getFieldValue('rackCount') || 2) * (batchInitForm.getFieldValue('levelCount') || 3) * (batchInitForm.getFieldValue('positionCount') || 2)} 个库位，编码如 A-01-1-1 到 A-{(String(batchInitForm.getFieldValue('rackCount') || 2)).padStart(2,'0')}-{batchInitForm.getFieldValue('levelCount') || 3}-{batchInitForm.getFieldValue('positionCount') || 2}
             </div>
           </Form>
         </div>
@@ -685,7 +768,26 @@ const WarehouseLocationMap: React.FC = () => {
         onCancel={() => setDetailModalOpen(false)}
         title={selectedLocation ? `库位 ${selectedLocation.locationCode} - 库存详情` : '库存详情'}
         width="40vw"
-        footer={null}
+        footer={
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <div>
+              {selectedLocation && selectedLocation.usedCapacity > 0 && (
+                <Button
+                  type="primary"
+                  icon={<SwapOutlined />}
+                  onClick={() => {
+                    setDetailModalOpen(false);
+                    setTransferTargetLocation('');
+                    setTransferModalOpen(true);
+                  }}
+                >
+                  转移库存
+                </Button>
+              )}
+            </div>
+            <Button onClick={() => setDetailModalOpen(false)}>关闭</Button>
+          </div>
+        }
       >
         {selectedLocation && (
           <div className="wlm-detail-content">
@@ -751,6 +853,45 @@ const WarehouseLocationMap: React.FC = () => {
             </Spin>
           </div>
         )}
+      </ResizableModal>
+
+      {/* 库存转移弹窗 */}
+      <ResizableModal
+        open={transferModalOpen}
+        onCancel={() => { setTransferModalOpen(false); setTransferTargetLocation(''); }}
+        title="库存转移"
+        width="30vw"
+        onOk={handleTransfer}
+        okText="确认转移"
+        confirmLoading={transferLoading}
+        okButtonProps={{ disabled: !transferTargetLocation }}
+      >
+        <div style={{ padding: '8px 0' }}>
+          <Alert
+            type="info"
+            showIcon
+            style={{ marginBottom: 16 }}
+            title={
+              <span>
+                源库位：<strong>{selectedLocation?.locationCode}</strong>
+                {selectedLocation?.locationName && `（${selectedLocation.locationName}）`}
+                ，当前库存 <strong>{selectedLocation?.usedCapacity}</strong> 件
+              </span>
+            }
+          />
+          <Form layout="vertical">
+            <Form.Item label="目标库位" required>
+              <WarehouseLocationAutoComplete
+                warehouseType={selectedLocation?.warehouseType}
+                areaId={selectedAreaId}
+                value={transferTargetLocation}
+                onChange={(val) => setTransferTargetLocation(val)}
+                placeholder="请选择目标库位"
+                style={{ width: '100%' }}
+              />
+            </Form.Item>
+          </Form>
+        </div>
       </ResizableModal>
     </div>
   );

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { message } from '@/utils/antdStatic';
 
 interface PaginatedResult<_T = unknown> {
@@ -34,11 +34,16 @@ export function usePaginatedList<T = unknown, F = Record<string, unknown>, S = u
   const [page, setPage] = useState(1);
   const [stats, setStats] = useState<S | null>(null);
 
+  const filtersRef = useRef(filters);
+  filtersRef.current = filters;
+
+  const stableFiltersKey = useMemo(() => JSON.stringify(filters), [filters]);
+
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       const promises: [Promise<unknown>, Promise<unknown>?] = [
-        fetchList({ page, pageSize, ...filters } as { page: number; pageSize: number } & Partial<F>),
+        fetchList({ page, pageSize, ...filtersRef.current } as { page: number; pageSize: number } & Partial<F>),
       ];
       if (fetchStats) {
         promises.push(fetchStats());
@@ -56,7 +61,7 @@ export function usePaginatedList<T = unknown, F = Record<string, unknown>, S = u
     } finally {
       setLoading(false);
     }
-  }, [fetchList, fetchStats, page, pageSize, filters, onError]);
+  }, [fetchList, fetchStats, page, pageSize, stableFiltersKey, onError]);
 
   useEffect(() => {
     fetchData();

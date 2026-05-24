@@ -330,7 +330,7 @@ const Register: React.FC = () => {
 
           {!isWorkerInvite && (
             <Alert
-              message="以下账号信息用于审批通过后登录系统"
+              title="以下账号信息用于审批通过后登录系统"
               type="info"
               showIcon
               style={{ marginBottom: 16, borderRadius: 8 }}

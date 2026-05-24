@@ -301,7 +301,7 @@ const [expressModalOpen, setExpressModalOpen] = useState(false);
       children: configured ? (
         <div>
           <Alert type="info" showIcon style={{ marginBottom: 16, borderRadius: 8 }}
-            message={<div style={{ fontWeight: 600, marginBottom: 8 }}>两条出库链路</div>}
+            title={<div style={{ fontWeight: 600, marginBottom: 8 }}>两条出库链路</div>}
             description={
               <Row gutter={24}>
                 <Col span={12}>
@@ -366,7 +366,7 @@ const [expressModalOpen, setExpressModalOpen] = useState(false);
         <div>
           {!showGuide ? (
             <Alert type="warning" showIcon icon={<WarningOutlined />} style={{ marginBottom: 16, borderRadius: 8 }}
-              message={<span>不知道怎么获取 {platform.name} 的凭证？<Button type="link" onClick={() => setShowGuide(true)} style={{ padding: '0 4px' }}>点击查看获取教程 →</Button></span>}
+              title={<span>不知道怎么获取 {platform.name} 的凭证？<Button type="link" onClick={() => setShowGuide(true)} style={{ padding: '0 4px' }}>点击查看获取教程 →</Button></span>}
             />
           ) : (
             <Card title={guide.title} style={{ marginBottom: 16, borderRadius: 8, border: '1px solid #ffe58f' }}

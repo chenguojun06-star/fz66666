@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ProductionOrder } from '@/types/production';
-import { templateLibraryApi } from '@/services/template/templateLibraryApi';
+import { useProgressNodeCache, type ProgressNode } from '@/hooks/useProgressNodeCache';
 import { ensureBoardStatsForOrder } from '../../ProgressDetail/hooks/useBoardStats';
 import { usePredictFinishHint } from '../../ProgressDetail/hooks/usePredictFinishHint';
 import {
@@ -12,15 +12,11 @@ import {
   stageNameMatches,
   getOrderStageCompletionTimeFallback,
 } from '../../ProgressDetail/utils';
-import type { ProgressNode } from '../../ProgressDetail/types';
 import { formatCompletionTime } from '../utils';
 import { useProductionBoardStore } from '@/stores';
 
-/**
- * 进度追踪 Hook
- * 管理进度球数据加载、工序节点解析、完成时间展示
- */
 export function useProgressTracking(productionList: ProductionOrder[]) {
+  const progressNodeCache = useProgressNodeCache();
   // 进度球数据
   const [progressNodesByStyleNo, setProgressNodesByStyleNo] = useState<Record<string, ProgressNode[]>>({});
   const progressNodesByStyleNoRef = useRef<Record<string, ProgressNode[]>>({});
@@ -55,30 +51,7 @@ export function useProgressTracking(productionList: ProductionOrder[]) {
     );
     if (!styleNos.length) return;
     void (async () => {
-      const settled = await Promise.allSettled(
-        styleNos.map(async (sn) => {
-          const res = await templateLibraryApi.progressNodeUnitPrices(sn);
-          const r = res as any;
-          const rows = Array.isArray(r?.data) ? r.data : [];
-          const normalized: ProgressNode[] = rows
-            .map((n: any) => {
-              const name = String(n?.name || '').trim();
-              const id = String(n?.id || name || '').trim() || name;
-              const p = Number(n?.unitPrice);
-              const unitPrice = Number.isFinite(p) && p >= 0 ? p : 0;
-              const progressStage = String(n?.progressStage || '').trim() || undefined;
-              return { id, name, unitPrice, progressStage };
-            })
-            .filter((n: ProgressNode) => n.name);
-          return { styleNo: sn, nodes: stripWarehousingNode(normalized) };
-        })
-      );
-      const next: Record<string, ProgressNode[]> = {};
-      for (const s of settled) {
-        if (s.status !== 'fulfilled') continue;
-        if (!s.value.nodes.length) continue;
-        next[s.value.styleNo] = s.value.nodes;
-      }
+      const next = await progressNodeCache.fetchBatch(styleNos);
       if (Object.keys(next).length) {
         setProgressNodesByStyleNo(prev => ({ ...prev, ...next }));
       }
