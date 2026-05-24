@@ -219,7 +219,7 @@ const WarehousingList: React.FC<WarehousingListProps> = ({ hook }) => {
         visible={visible}
         currentWarehousing={currentWarehousing}
         onCancel={closeDialog}
-        onSuccess={fetchWarehousingList}
+        onSuccess={() => { fetchWarehousingList(); closeDialog(); }}
         openPreview={(url, title) => {
           setPreviewUrl(url);
           setPreviewTitle(title);

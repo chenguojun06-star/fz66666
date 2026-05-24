@@ -39,6 +39,9 @@ const StyleAttachmentTab: React.FC<Props> = ({ styleId, styleNo, bizType, upload
   const normalizedStyleNo = useMemo(() => String(styleNo || '').trim(), [styleNo]);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
+  const onListChangeRef = useRef(onListChange);
+  onListChangeRef.current = onListChange;
+
   const isPattern = useMemo(() => {
     const type = String(bizType || '').trim().toLowerCase();
     return type === 'pattern' || type === 'pattern_grading';
@@ -91,14 +94,14 @@ const StyleAttachmentTab: React.FC<Props> = ({ styleId, styleNo, bizType, upload
       if (result.code === 200) {
         const list = Array.isArray(result.data) ? (result.data as StyleAttachment[]) : [];
         setData(list);
-        onListChange?.(list);
+        onListChangeRef.current?.(list);
       }
     } catch (error) {
       messageRef.current.error('获取附件列表失败');
     } finally {
       setLoading(false);
     }
-  }, [normalizedStyleId, normalizedStyleNo, bizType, onListChange]);
+  }, [normalizedStyleId, normalizedStyleNo, bizType]);
 
   useEffect(() => {
     fetchList();
