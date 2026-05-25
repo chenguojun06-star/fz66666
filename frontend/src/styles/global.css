@@ -978,12 +978,20 @@ body {
   text-align: right !important;
 }
 
-/* 表头文字：默认不换行，让列宽由表头文字自然撑开 */
+/* 表头文字：允许换行，适配大分辨率 */
+.ant-table-thead > tr > th {
+  white-space: normal;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+
 .ant-table-thead > tr > th .ant-table-column-title {
   display: inline-block;
   overflow: visible;
   text-overflow: clip;
-  white-space: nowrap;
+  white-space: normal;
+  word-break: keep-all;
+  overflow-wrap: break-word;
   max-width: 100%;
 }
 
@@ -1211,23 +1219,17 @@ body {
   white-space: normal;
 }
 
-/* ── 表头单元格：标题不换行，排序图标不换行 ── */
+/* ── 表头单元格：允许换行，适配大分辨率 ── */
 .resizable-table .ant-table-thead .ant-table-cell {
-  white-space: nowrap;
+  white-space: normal;
+  word-break: keep-all;
+  overflow-wrap: break-word;
 }
 
 .resizable-table .ant-table-thead .ant-table-cell .ant-table-column-title {
-  white-space: nowrap;
-}
-
-/* ── 小屏下表头允许折行 ── */
-@media (max-width: 1280px) {
-  .resizable-table .ant-table-thead .ant-table-cell,
-  .resizable-table .ant-table-thead .ant-table-cell .ant-table-column-title {
-    white-space: normal;
-    word-break: keep-all;
-    overflow-wrap: break-word;
-  }
+  white-space: normal;
+  word-break: keep-all;
+  overflow-wrap: break-word;
 }
 
 /* ── 表格行高响应式 ── */

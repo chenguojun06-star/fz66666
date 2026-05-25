@@ -378,7 +378,7 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
   }, [finalColumns]);
 
   const mergedScroll = React.useMemo(() => {
-    if (!scroll) return hasFixedColumn ? { x: 'max-content' } : undefined;
+    if (!scroll) return hasFixedColumn ? { x: '100%' } : undefined;
     return typeof scroll === 'object' ? scroll : undefined;
   }, [scroll, hasFixedColumn]);
 
