@@ -21,7 +21,7 @@ FROM t_template_library src
 CROSS JOIN t_tenant t
 WHERE src.tenant_id IS NULL
   AND src.source_style_no IS NULL
-  AND (t.delete_flag = 0 OR t.delete_flag IS NULL)
+  AND t.status != 'DISABLED'
   AND NOT EXISTS (
     SELECT 1 FROM t_template_library existing
     WHERE existing.template_type = src.template_type
@@ -44,7 +44,7 @@ SELECT
     NOW() AS create_time,
     NOW() AS update_time
 FROM t_template_library src
-JOIN t_style_info si ON si.style_no = src.source_style_no AND si.delete_flag = 0
+JOIN t_style_info si ON si.style_no = src.source_style_no
 WHERE src.tenant_id IS NULL
   AND src.source_style_no IS NOT NULL
   AND src.source_style_no != ''
