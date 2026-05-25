@@ -249,7 +249,7 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
         return {
           ...safeColRecord,
           colId,
-          ...(adaptive.width != null ? { width: adaptive.width } : {}),
+          ...(adaptive.minWidth != null ? { minWidth: adaptive.minWidth } : {}),
           fixed: allowFixedColumns ? (maybeAction ? 'right' : colRecord.fixed) : undefined,
         };
       });
@@ -420,9 +420,9 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
           columns={finalColumns as TableProps<T>['columns']}
           components={mergedComponents}
           scroll={mergedScroll as TableProps<T>['scroll']}
-          tableLayout={tableLayout || 'fixed'}
+          tableLayout={tableLayout || 'auto'}
           size={responsiveTableSize}
-          style={{ wordBreak: 'break-all' }}
+          style={{ wordBreak: 'break-word' }}
           pagination={mergedPagination as TableProps<T>['pagination']}
           sticky={stickyHeaderProp === true ? { offsetHeader: 0 } : (stickyHeaderProp || undefined)}
         />

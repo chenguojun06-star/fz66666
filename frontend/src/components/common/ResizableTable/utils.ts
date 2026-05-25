@@ -222,12 +222,12 @@ const getViewportScale = (): number => {
   return 1;
 };
 
-export const computeAdaptiveWidth = (col: any): { width?: number } => {
+export const computeAdaptiveWidth = (col: any): { minWidth?: number } => {
   if (typeof col?.width === 'number' && col.width > 0) return {};
 
   const titleText = typeof col?.title === 'string' ? col.title : '';
 
-  if (!titleText) return { width: 60 };
+  if (!titleText) return { minWidth: 40 };
 
   const fontSize = getHeaderFontSize();
   const textWidth = estimateTextWidth(titleText, fontSize);
@@ -235,8 +235,8 @@ export const computeAdaptiveWidth = (col: any): { width?: number } => {
   const naturalWidth = textWidth + padding;
   const scale = getViewportScale();
 
-  const scaledMin = Math.round(60 * scale);
+  const scaledMin = Math.round(40 * scale);
   const scaledMax = Math.round(200 * scale);
 
-  return { width: Math.max(scaledMin, Math.min(Math.round(naturalWidth * scale), scaledMax)) };
+  return { minWidth: Math.max(scaledMin, Math.min(Math.round(naturalWidth * scale), scaledMax)) };
 };
