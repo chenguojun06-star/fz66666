@@ -111,12 +111,17 @@ public class WarehouseLocationOrchestrator {
         }
 
         // 查询所有相关的入库记录，按 warehouse 字段分组统计数量
-        List<ProductWarehousing> allRecords = productWarehousingMapper.selectList(
+        List<ProductWarehousing> allRecords;
+        if (warehouseIdentifiers.isEmpty()) {
+            allRecords = java.util.Collections.emptyList();
+        } else {
+            allRecords = productWarehousingMapper.selectList(
                 new LambdaQueryWrapper<ProductWarehousing>()
                         .eq(ProductWarehousing::getTenantId, tenantId)
                         .eq(ProductWarehousing::getDeleteFlag, 0)
                         .in(ProductWarehousing::getWarehouse, warehouseIdentifiers)
         );
+        }
 
         // 构建统计 map：warehouse -> count
         Map<String, Integer> warehouseCountMap = new HashMap<>();
@@ -463,12 +468,17 @@ public class WarehouseLocationOrchestrator {
             }
 
             // 查询所有相关的入库记录，按 warehouse 字段分组统计
-            List<ProductWarehousing> allRecords = productWarehousingMapper.selectList(
+            List<ProductWarehousing> allRecords;
+            if (warehouseIdentifiers.isEmpty()) {
+                allRecords = java.util.Collections.emptyList();
+            } else {
+                allRecords = productWarehousingMapper.selectList(
                     new LambdaQueryWrapper<ProductWarehousing>()
                             .eq(ProductWarehousing::getTenantId, tenantId)
                             .eq(ProductWarehousing::getDeleteFlag, 0)
                             .in(ProductWarehousing::getWarehouse, warehouseIdentifiers)
             );
+            }
 
             // 构建统计 map：warehouse -> count
             Map<String, Integer> warehouseCountMap = new HashMap<>();
