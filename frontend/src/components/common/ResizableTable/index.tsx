@@ -249,7 +249,7 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
         return {
           ...safeColRecord,
           colId,
-          ...(adaptive.minWidth != null ? { minWidth: adaptive.minWidth } : {}),
+          ...(adaptive.width != null ? { width: adaptive.width } : {}),
           fixed: allowFixedColumns ? (maybeAction ? 'right' : colRecord.fixed) : undefined,
         };
       });
@@ -378,7 +378,7 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
   }, [finalColumns]);
 
   const mergedScroll = React.useMemo(() => {
-    if (!scroll) return hasFixedColumn ? { x: '100%' } : undefined;
+    if (!scroll) return hasFixedColumn ? { x: 'max-content' } : undefined;
     return typeof scroll === 'object' ? scroll : undefined;
   }, [scroll, hasFixedColumn]);
 
@@ -420,9 +420,9 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
           columns={finalColumns as TableProps<T>['columns']}
           components={mergedComponents}
           scroll={mergedScroll as TableProps<T>['scroll']}
-          tableLayout={tableLayout || 'auto'}
+          tableLayout={tableLayout || 'fixed'}
           size={responsiveTableSize}
-          style={{ wordBreak: 'break-word' }}
+          style={{ wordBreak: 'break-all' }}
           pagination={mergedPagination as TableProps<T>['pagination']}
           sticky={stickyHeaderProp === true ? { offsetHeader: 0 } : (stickyHeaderProp || undefined)}
         />

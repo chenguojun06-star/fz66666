@@ -978,20 +978,12 @@ body {
   text-align: right !important;
 }
 
-/* 表头文字：允许换行，适配大分辨率 */
-.ant-table-thead > tr > th {
-  white-space: normal;
-  word-break: keep-all;
-  overflow-wrap: break-word;
-}
-
+/* 表头文字：默认不换行，让列宽由表头文字自然撑开 */
 .ant-table-thead > tr > th .ant-table-column-title {
   display: inline-block;
   overflow: visible;
   text-overflow: clip;
-  white-space: normal;
-  word-break: keep-all;
-  overflow-wrap: break-word;
+  white-space: nowrap;
   max-width: 100%;
 }
 
@@ -1132,13 +1124,16 @@ body {
   border-inline-end: none !important;
 }
 
-/* ── 所有表格统一 auto 布局 + 撑满容器 ── */
+/* ── 所有表格统一 fixed 布局 + 撑满容器 ── */
 .ant-table-wrapper .ant-table-container table {
-  table-layout: auto;
+  table-layout: fixed;
   width: 100%;
 }
 
-/* ── 表头列宽：auto 布局下由浏览器根据内容分配 ── */
+/* ── 表头列宽自适应：确保 nowrap 标题不被截断 ── */
+.resizable-table .ant-table-thead > tr > th {
+  min-width: fit-content;
+}
 
 /* ── 表头排序图标与标题同行，不额外占高 ── */
 .resizable-table .ant-table-thead > tr > th .ant-table-column-sorters {
@@ -1210,27 +1205,29 @@ body {
   width: 100%;
 }
 
-.resizable-table-shell .ant-table-wrapper .ant-table-container table {
-  min-width: 0 !important;
-}
-
 .resizable-table .ant-table-cell {
   overflow-wrap: anywhere;
   word-break: break-word;
   white-space: normal;
 }
 
-/* ── 表头单元格：允许换行，适配大分辨率 ── */
+/* ── 表头单元格：标题不换行，排序图标不换行 ── */
 .resizable-table .ant-table-thead .ant-table-cell {
-  white-space: normal;
-  word-break: keep-all;
-  overflow-wrap: break-word;
+  white-space: nowrap;
 }
 
 .resizable-table .ant-table-thead .ant-table-cell .ant-table-column-title {
-  white-space: normal;
-  word-break: keep-all;
-  overflow-wrap: break-word;
+  white-space: nowrap;
+}
+
+/* ── 小屏下表头允许折行 ── */
+@media (max-width: 1280px) {
+  .resizable-table .ant-table-thead .ant-table-cell,
+  .resizable-table .ant-table-thead .ant-table-cell .ant-table-column-title {
+    white-space: normal;
+    word-break: keep-all;
+    overflow-wrap: break-word;
+  }
 }
 
 /* ── 表格行高响应式 ── */
@@ -2331,10 +2328,10 @@ body {
 }
 
 .ant-tag {
-  height: 22px !important;
-  line-height: 20px !important;
-  font-size: 10px !important;
-  padding: 0 6px !important;
+  height: auto !important;
+  line-height: 18px !important;
+  font-size: 12px !important;
+  padding: 0 4px !important;
   border-radius: 4px !important;
 }
 

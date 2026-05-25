@@ -59,7 +59,8 @@ export function usePurchaseDetailPage(styleNoParam: string, orderNoParam: string
   const isMultiColor = colorList.length > 1;
 
   const missingColors = useMemo(() => {
-    if (!isMultiColor || purchaseList.length === 0) return [];
+    if (!isMultiColor) return [];
+    if (purchaseList.length === 0) return colorList;
     const coveredColors = new Set(
       purchaseList
         .map((item) => String(item.color || '').trim())
@@ -88,6 +89,7 @@ export function usePurchaseDetailPage(styleNoParam: string, orderNoParam: string
   const loadData = useCallback(async () => {
     if (!styleNoParam) return;
     setLoading(true);
+    let orderRecord: any = null;
     try {
       try {
         const orderRes = await api.get('/production/order/list', {
@@ -95,7 +97,8 @@ export function usePurchaseDetailPage(styleNoParam: string, orderNoParam: string
         });
         const orderResult = orderRes as any;
         const orders = (orderResult?.data as any)?.records || [];
-        setOrder(orders.length > 0 ? orders[0] : null);
+        orderRecord = orders.length > 0 ? orders[0] : null;
+        setOrder(orderRecord);
       } catch {
         setOrder(null);
       }
@@ -105,11 +108,26 @@ export function usePurchaseDetailPage(styleNoParam: string, orderNoParam: string
         : { styleNo: styleNoParam, page: 1, pageSize: 1000 };
       const purchaseRes = await api.get('/production/purchase/list', { params });
       const result = purchaseRes as any;
+      let records: MaterialPurchase[] = [];
       if (result?.code === 200) {
-        setPurchaseList(result?.data?.records || []);
+        records = result?.data?.records || [];
       } else {
-        setPurchaseList(result?.data?.records || result?.records || []);
+        records = result?.data?.records || result?.records || [];
       }
+
+      if (records.length === 0 && orderRecord?.id) {
+        try {
+          const previewRes = await api.get<{ code: number; data: MaterialPurchase[] }>(
+            '/production/purchase/demand/preview',
+            { params: { orderId: orderRecord.id } }
+          );
+          if ((previewRes as any)?.code === 200 && Array.isArray((previewRes as any)?.data)) {
+            records = (previewRes as any).data;
+          }
+        } catch { /* 预览不可用则用空列表 */ }
+      }
+
+      setPurchaseList(records);
     } catch {
       message.error('加载采购数据失败');
     } finally {

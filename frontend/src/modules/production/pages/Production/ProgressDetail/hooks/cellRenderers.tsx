@@ -97,9 +97,9 @@ export const ShipmentSumCell: React.FC<{ orderId: string }> = ({ orderId }) => {
       .then(res => { if (res?.data?.length) setData(res.data); })
       .catch((err) => { console.warn('[Progress] 发货汇总加载失败:', err?.message || err); });
   }, [orderId]);
-  if (!data) return <span style={{ color: '#d9d9d9', fontSize: 14 }}>-</span>;
+  if (!data) return <span style={{ color: '#d9d9d9', fontSize: 12 }}>-</span>;
   return (
-    <div style={{ fontSize: 14, lineHeight: '18px' }}>
+    <div style={{ fontSize: 12, lineHeight: '18px' }}>
       {data.map(row => (
         <div key={row.color} style={{ marginBottom: 1 }}>
           <span style={{ color: '#595959' }}>{row.color}: </span>
@@ -135,7 +135,7 @@ export function createOrderSummaryRender(ctx: OrderSummaryContext) {
     const expectedShipDate = expectedShipDateRaw ? dayjs(String(expectedShipDateRaw)).format('YYYY-MM-DD HH:mm') : '-';
     const softTagBaseStyle: CSSProperties = {
       margin: 0,
-      fontSize: 14,
+      fontSize: 12,
       border: 'none',
     };
     const softTagStyle = (background: string, foreground: string): CSSProperties => ({
@@ -165,16 +165,16 @@ export function createOrderSummaryRender(ctx: OrderSummaryContext) {
               />
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', minHeight: 24 }}>
-              <Tag color={status.color} style={{ margin: 0, fontSize: 14 }}>{status.label}</Tag>
-              {record.urgencyLevel === 'urgent' && <Tag color="red" style={{ margin: 0, fontSize: 14 }}>急单</Tag>}
-              {String(record.plateType || '').toUpperCase() === 'FIRST' && <Tag color="blue" style={{ margin: 0, fontSize: 14 }}>首单</Tag>}
-              {String(record.plateType || '').toUpperCase() === 'REORDER' && <Tag color="gold" style={{ margin: 0, fontSize: 14 }}>翻单</Tag>}
+              <Tag color={status.color} style={{ margin: 0, fontSize: 12 }}>{status.label}</Tag>
+              {record.urgencyLevel === 'urgent' && <Tag color="red" style={{ margin: 0, fontSize: 12 }}>急单</Tag>}
+              {String(record.plateType || '').toUpperCase() === 'FIRST' && <Tag color="blue" style={{ margin: 0, fontSize: 12 }}>首单</Tag>}
+              {String(record.plateType || '').toUpperCase() === 'REORDER' && <Tag color="gold" style={{ margin: 0, fontSize: 12 }}>翻单</Tag>}
               {(() => {
                 const { score, level } = calcHealthScore(record);
                 if (level === 'good') return null;
-                return <Tag color={level === 'warn' ? 'orange' : 'red'} style={{ margin: 0, fontSize: 14 }}>{level === 'warn' ? `关注 ${score}` : `风险 ${score}`}</Tag>;
+                return <Tag color={level === 'warn' ? 'orange' : 'red'} style={{ margin: 0, fontSize: 12 }}>{level === 'warn' ? `关注 ${score}` : `风险 ${score}`}</Tag>;
               })()}
-              {stagnantDays !== undefined ? <Tag color="orange" style={{ margin: 0, fontSize: 14 }}>停滞 {stagnantDays} 天</Tag> : null}
+              {stagnantDays !== undefined ? <Tag color="orange" style={{ margin: 0, fontSize: 12 }}>停滞 {stagnantDays} 天</Tag> : null}
             </div>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0, paddingTop: 2, textAlign: 'left' }}>

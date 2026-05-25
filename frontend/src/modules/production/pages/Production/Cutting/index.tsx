@@ -358,7 +358,7 @@ const CuttingManagement: React.FC = () => {
                       return (
                         <Space size={4}>
                           <FactoryTypeTag factoryType={type} />
-                          <span style={{ fontSize: 14 }}>{name}</span>
+                          <span>{name}</span>
                         </Space>
                       );
                     },

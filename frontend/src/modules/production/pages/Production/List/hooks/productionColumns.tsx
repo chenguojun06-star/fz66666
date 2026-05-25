@@ -123,18 +123,18 @@ export function useProductionColumns({
             </a>
             </Popover>
             {(record as any).urgencyLevel === 'urgent' && (
-              <Tag color="red" style={{ margin: 0, fontSize: 11, padding: '0 3px', lineHeight: '16px', height: 16 }}>急</Tag>
+              <Tag color="red" style={{ margin: 0, fontSize: 12, padding: '0 4px', lineHeight: '18px' }}>急</Tag>
             )}
             {String((record as any).plateType || '').toUpperCase() === 'FIRST' && (
-              <Tag color="blue" style={{ margin: 0, fontSize: 11, padding: '0 3px', lineHeight: '16px', height: 16 }}>首</Tag>
+              <Tag color="blue" style={{ margin: 0, fontSize: 12, padding: '0 4px', lineHeight: '18px' }}>首</Tag>
             )}
             {String((record as any).plateType || '').toUpperCase() === 'REORDER' && (
-              <Tag color="gold" style={{ margin: 0, fontSize: 11, padding: '0 3px', lineHeight: '16px', height: 16 }}>翻</Tag>
+              <Tag color="gold" style={{ margin: 0, fontSize: 12, padding: '0 4px', lineHeight: '18px' }}>翻</Tag>
             )}
             {(record as any).orderBizType && (() => {
               const bizType = String((record as any).orderBizType);
               const colorMap: Record<string, string> = { FOB: 'cyan', ODM: 'purple', OEM: 'blue', CMT: 'orange' };
-              return <Tag color={colorMap[bizType] ?? 'default'} style={{ margin: 0, fontSize: 11, padding: '0 3px', lineHeight: '16px', height: 16 }}>{bizType}</Tag>;
+              return <Tag color={colorMap[bizType] ?? 'default'} style={{ margin: 0, fontSize: 12, padding: '0 4px', lineHeight: '18px' }}>{bizType}</Tag>;
             })()}
           </div>
         );
@@ -207,7 +207,7 @@ export function useProductionColumns({
               onClick={(e) => { e.stopPropagation(); onOpenRemark?.(record, '生产方 — ' + (v || '')); }}
             />
             {bizType && (
-              <Tag color={colorMap[bizType] ?? 'default'} style={{ margin: 0, fontSize: 11, padding: '0 4px', lineHeight: '16px', height: 16 }}>{bizType}</Tag>
+              <Tag color={colorMap[bizType] ?? 'default'} style={{ margin: 0, fontSize: 12, padding: '0 4px', lineHeight: '18px' }}>{bizType}</Tag>
             )}
           </Space>
         );
@@ -323,7 +323,12 @@ export function useProductionColumns({
             onClick={(e) => {
               e.stopPropagation();
               if (frozen) return;
-              navigate(`/production/material/${record.styleNo}?orderNo=${record.orderNo}`);
+              if (openNodeDetail) {
+                const procureCompleted = (rate || 0) > 0 ? 1 : 0;
+                openNodeDetail(record, 'procurement', '采购', { done: procureCompleted, total: 1, percent: procurePercent, remaining: procureCompleted > 0 ? 0 : 1 });
+              } else {
+                openProcessDetail(record, 'procurement');
+              }
             }}
             onMouseEnter={(e) => { if (!frozen) e.currentTarget.style.background = 'var(--color-bg-container)'; }}
             onMouseLeave={(e) => { e.currentTarget.style.background = ''; }}
@@ -464,27 +469,27 @@ export function useProductionColumns({
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 3, lineHeight: 1.4 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
-              <Tag color={color} style={{ margin: 0, fontSize: 11, lineHeight: '16px', padding: '0 4px' }}>{text}</Tag>
-              <span style={{ fontSize: 11, color: 'var(--color-text-secondary)', fontWeight: 500 }}>{progress}%</span>
-              {deliveryDate && <span style={{ fontSize: 11, color: 'var(--color-text-tertiary)' }}>{deliveryDate}</span>}
+              <Tag color={color} style={{ margin: 0, fontSize: 12, lineHeight: '18px', padding: '0 4px' }}>{text}</Tag>
+              <span style={{ fontSize: 12, color: 'var(--color-text-secondary)', fontWeight: 500 }}>{progress}%</span>
+              {deliveryDate && <span style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>{deliveryDate}</span>}
               {remain.text && remain.text !== '-' && (
-                <span style={{ fontSize: 11, fontWeight: 600, color: remain.color }}>{remain.text}</span>
+                <span style={{ fontSize: 12, fontWeight: 600, color: remain.color }}>{remain.text}</span>
               )}
-              {record.isQuickResponse && <Tag color="volcano" style={{ margin: 0, fontSize: 10, lineHeight: '14px', padding: '0 3px' }}>快反</Tag>}
+              {record.isQuickResponse && <Tag color="volcano" style={{ margin: 0, fontSize: 12, lineHeight: '18px', padding: '0 4px' }}>快反</Tag>}
             </div>
             {stagnantDays !== undefined && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
                 <span style={{ display: 'inline-block', width: 5, height: 5, borderRadius: '50%', background: '#ff4d4f', animation: 'pulse-dot 1.5s infinite' }} />
-                <span style={{ fontSize: 11, color: '#ff4d4f', fontWeight: 500 }}>停滞{stagnantDays}天</span>
+                <span style={{ fontSize: 12, color: '#ff4d4f', fontWeight: 500 }}>停滞{stagnantDays}天</span>
               </div>
             )}
             {sla && (
-              <span style={{ fontSize: 11, fontWeight: 500, color: sla.color }}>
+              <span style={{ fontSize: 12, fontWeight: 500, color: sla.color }}>
                 SLA:{sla.label}{record.actualDeliveryDays != null ? ` ${record.actualDeliveryDays}天` : ''}
               </span>
             )}
             {aiRisk && aiRisk.riskLevel !== 'safe' && aiRisk.predictedEndDate && (
-              <span style={{ fontSize: 11, color: 'var(--color-text-tertiary)' }}>
+              <span style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>
                 AI预测 {dayjs(aiRisk.predictedEndDate).format('M/D')}{aiRisk.riskLevel === 'overdue' ? ' ⚠' : ''}
               </span>
             )}
