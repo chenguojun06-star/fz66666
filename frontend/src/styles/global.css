@@ -1132,16 +1132,13 @@ body {
   border-inline-end: none !important;
 }
 
-/* ── 所有表格统一 fixed 布局 + 撑满容器 ── */
+/* ── 所有表格统一 auto 布局 + 撑满容器 ── */
 .ant-table-wrapper .ant-table-container table {
-  table-layout: fixed;
+  table-layout: auto;
   width: 100%;
 }
 
-/* ── 表头列宽自适应：确保 nowrap 标题不被截断 ── */
-.resizable-table .ant-table-thead > tr > th {
-  min-width: fit-content;
-}
+/* ── 表头列宽：auto 布局下由浏览器根据内容分配 ── */
 
 /* ── 表头排序图标与标题同行，不额外占高 ── */
 .resizable-table .ant-table-thead > tr > th .ant-table-column-sorters {
@@ -1211,6 +1208,10 @@ body {
 .resizable-table-shell .ant-table-wrapper {
   min-width: 0;
   width: 100%;
+}
+
+.resizable-table-shell .ant-table-wrapper .ant-table-container table {
+  min-width: 0 !important;
 }
 
 .resizable-table .ant-table-cell {
