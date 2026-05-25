@@ -113,6 +113,7 @@ const SmartAlertBell: React.FC = () => {
   const visibleNotices = useMemo(() => myNotices.filter(n => !dismissedNoticeIds.has(n.id)), [myNotices, dismissedNoticeIds]);
 
   const alertCount = visibleEvents.length + (patrolSummary?.pendingCount ?? 0);
+  const unreadNoticeCount = visibleNotices.filter(n => !n.isRead).length;
 
   const fetchMyNotices = useCallback(async () => {
     try {
@@ -244,6 +245,19 @@ const SmartAlertBell: React.FC = () => {
     });
   }, []);
 
+  const markAllNoticesRead = useCallback(() => {
+    const unreadIds = myNotices.filter(n => !n.isRead).map(n => n.id);
+    if (unreadIds.length === 0) return;
+    Promise.allSettled(unreadIds.map(id => sysNoticeApi.markRead(id)))
+      .then(() => fetchMyNotices())
+      .catch(() => {});
+    setDismissedNoticeIds(prev => {
+      const next = new Set([...prev, ...unreadIds]);
+      saveDismissedNotices(next);
+      return next;
+    });
+  }, [myNotices, fetchMyNotices]);
+
   // 消除单条事件（当天不再显示，隔天重新检测）
   const dismissEvent = useCallback((id: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -334,7 +348,7 @@ const SmartAlertBell: React.FC = () => {
         )}
 
         {!loading && (
-          <>
+          <div className="sap-body-scroll">
 
             {/* ── AI 巡检简报 ── */}
             {patrolSummary && (patrolSummary.autoExecutedToday > 0 || patrolSummary.recentActions.length > 0) && (
@@ -510,12 +524,20 @@ const SmartAlertBell: React.FC = () => {
               <div className="sap-section">
                 <div className="sap-section-title">
                   <span style={{ color: '#d46b08' }}></span> 我的通知
-                  {visibleNotices.filter(n => !n.isRead).length > 0 && (
-                    <span style={{ marginLeft: 4, fontSize: 14, background: '#ffa940', color: '#fff', borderRadius: 8, padding: '0 5px' }}>
-                      {visibleNotices.filter(n => !n.isRead).length} 未读
+                  {unreadNoticeCount > 0 && (
+                    <span style={{ marginLeft: 4, fontSize: 11, background: '#ffa940', color: '#fff', borderRadius: 10, padding: '1px 8px' }}>
+                      {unreadNoticeCount} 未读
                     </span>
                   )}
-                  <span style={{ marginLeft: 6, fontSize: 14, color: 'var(--color-text-tertiary)' }}>点 × 关闭该条</span>
+                  {unreadNoticeCount > 1 && (
+                    <button
+                      className="sap-mark-all-read-btn"
+                      onClick={(e) => { e.stopPropagation(); markAllNoticesRead(); }}
+                      title="一键全部已读"
+                    >
+                      全部已读
+                    </button>
+                  )}
                 </div>
                 {visibleNotices.slice(0, 8).map(n => (
                   <div key={n.id} className="sap-notice-row"
@@ -579,7 +601,7 @@ const SmartAlertBell: React.FC = () => {
               </div>
             )}
 
-          </>
+          </div>
         )}
       </div>
     </div>

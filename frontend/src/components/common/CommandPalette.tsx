@@ -6,6 +6,7 @@ import {
   CloseOutlined,
   FileTextOutlined,
   RightOutlined,
+  RobotOutlined,
   SearchOutlined,
   SkinOutlined,
   TeamOutlined,

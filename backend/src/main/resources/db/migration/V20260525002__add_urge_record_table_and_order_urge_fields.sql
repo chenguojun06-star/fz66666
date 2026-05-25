@@ -16,10 +16,23 @@ CREATE TABLE IF NOT EXISTS `t_urge_record` (
   KEY `idx_urge_tenant_order` (`tenant_id`, `order_no`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='催单记录表';
 
-ALTER TABLE `t_production_order`
-  ADD COLUMN IF NOT EXISTS `urge_count` INT NOT NULL DEFAULT 0 COMMENT '催单次数',
-  ADD COLUMN IF NOT EXISTS `last_urge_time` DATETIME DEFAULT NULL COMMENT '最后催单时间';
+-- MySQL 8.0 不支持 ADD COLUMN IF NOT EXISTS，使用 INFORMATION_SCHEMA 守卫
+SET @col = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+            WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='t_production_order' AND COLUMN_NAME='urge_count');
+SET @s = IF(@col=0, 'ALTER TABLE t_production_order ADD COLUMN urge_count INT NOT NULL DEFAULT 0 COMMENT ''催单次数''', 'SELECT 1');
+PREPARE stmt FROM @s; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
-ALTER TABLE `t_sys_notice`
-  ADD COLUMN IF NOT EXISTS `urge_record_id` VARCHAR(64) DEFAULT NULL COMMENT '关联催单记录ID',
-  ADD COLUMN IF NOT EXISTS `action_type` VARCHAR(32) DEFAULT NULL COMMENT '操作类型: urge_order等';
+SET @col = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+            WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='t_production_order' AND COLUMN_NAME='last_urge_time');
+SET @s = IF(@col=0, 'ALTER TABLE t_production_order ADD COLUMN last_urge_time DATETIME DEFAULT NULL COMMENT ''最后催单时间''', 'SELECT 1');
+PREPARE stmt FROM @s; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @col = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+            WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='t_sys_notice' AND COLUMN_NAME='urge_record_id');
+SET @s = IF(@col=0, 'ALTER TABLE t_sys_notice ADD COLUMN urge_record_id VARCHAR(64) DEFAULT NULL COMMENT ''关联催单记录ID''', 'SELECT 1');
+PREPARE stmt FROM @s; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @col = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+            WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='t_sys_notice' AND COLUMN_NAME='action_type');
+SET @s = IF(@col=0, 'ALTER TABLE t_sys_notice ADD COLUMN action_type VARCHAR(32) DEFAULT NULL COMMENT ''操作类型: urge_order等''', 'SELECT 1');
+PREPARE stmt FROM @s; EXECUTE stmt; DEALLOCATE PREPARE stmt;

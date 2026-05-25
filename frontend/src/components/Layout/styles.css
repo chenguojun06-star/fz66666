@@ -944,9 +944,10 @@
   position: absolute;
   top: calc(100% + 10px);
   right: 0;
-  width: 360px;
+  width: 380px;
   max-width: calc(100vw - 24px);
   min-width: 320px;
+  max-height: calc(100vh - 80px);
   box-sizing: border-box;
   background: var(--color-bg-base);
   border-radius: 12px;
@@ -954,8 +955,9 @@
   border: 1.5px solid rgba(45, 127, 249, 0.14);
   z-index: 1100;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 
-  /* 下滑动画初始态（隐藏） */
   opacity: 0;
   transform: translateY(-10px) scale(0.98);
   pointer-events: none;
@@ -965,6 +967,23 @@
   opacity: 1;
   transform: translateY(0) scale(1);
   pointer-events: auto;
+}
+
+.smart-alert-panel .sap-body-scroll {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+}
+.smart-alert-panel .sap-body-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+.smart-alert-panel .sap-body-scroll::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.12);
+  border-radius: 4px;
+}
+.smart-alert-panel .sap-body-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.22);
 }
 
 /* 面板顶部渐变装饰条 */
@@ -1062,15 +1081,31 @@
   border-bottom: 1px solid #f3f4f6;
 }
 .sap-section-title {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--color-text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.02em;
   margin-bottom: 6px;
   display: flex;
   align-items: center;
   gap: 5px;
+}
+
+.sap-mark-all-read-btn {
+  margin-left: auto;
+  font-size: 11px;
+  padding: 1px 8px;
+  border: 1px solid rgba(45, 127, 249, 0.3);
+  border-radius: 10px;
+  background: rgba(45, 127, 249, 0.06);
+  color: var(--color-primary);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+.sap-mark-all-read-btn:hover {
+  background: rgba(45, 127, 249, 0.12);
+  border-color: rgba(45, 127, 249, 0.5);
 }
 
 /* 首要关注卡片 */
