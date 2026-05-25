@@ -102,47 +102,33 @@ public class ProductionScanStageSupport {
         String prevParent = FIXED_PRODUCTION_NODES[currentIdx - 1];
         Map<String, Set<String>> requiredByParent = resolveRequiredProcessesByParent(order);
         Set<String> required = requiredByParent.getOrDefault(prevParent, new LinkedHashSet<>());
+
+        log.info("门禁校验: orderNo={}, targetParent={}, prevParent={}, required={}, bundleNo={}",
+                order.getOrderNo(), targetParent, prevParent, required,
+                bundle != null ? bundle.getBundleNo() : "无菲号");
+
+        String bundleId = (bundle != null && StringUtils.hasText(bundle.getId())) ? bundle.getId() : null;
+
+        java.util.Set<String> completedProcesses = resolveCompletedProcesses(order, bundleId);
+
+        log.info("门禁校验已完成工序: orderNo={}, bundleNo={}, completedProcesses={}",
+                order.getOrderNo(), bundle != null ? bundle.getBundleNo() : "无菲号", completedProcesses);
+
         if (required.isEmpty()) {
+            boolean prevStageHasAnyScan = hasAnyScanInStage(completedProcesses, prevParent);
+            if (!prevStageHasAnyScan) {
+                log.warn("模板未配置{}必做子工序，但{}阶段无任何扫码记录，拦截: orderNo={}, targetParent={}",
+                        prevParent, prevParent, order.getOrderNo(), targetParent);
+                throw new IllegalStateException(String.format(
+                        "温馨提示：%s阶段尚未开始，暂不能进入%s",
+                        prevParent, targetParent
+                ));
+            }
+            log.debug("模板未配置{}必做子工序，但{}阶段已有扫码记录，放行: orderNo={}", prevParent, prevParent, order.getOrderNo());
             return;
         }
 
         List<String> missing = new ArrayList<>();
-        String bundleId = (bundle != null && StringUtils.hasText(bundle.getId())) ? bundle.getId() : null;
-        QueryWrapper<ScanRecord> qw = new QueryWrapper<ScanRecord>()
-                .select("DISTINCT process_code")
-                .eq("order_id", order.getId());
-        if (bundleId != null) {
-            qw.and(bw -> bw.isNull("cutting_bundle_id")
-                    .or().eq("cutting_bundle_id", bundleId));
-        }
-        qw.in("scan_type", java.util.Arrays.asList("production", "cutting", "quality"))
-                .eq("scan_result", "success")
-                .isNotNull("process_code");
-        List<Map<String, Object>> codeResult = scanRecordService.listMaps(qw);
-        java.util.Set<String> completedProcesses = new java.util.HashSet<>();
-        if (codeResult != null) {
-            for (Map<String, Object> row : codeResult) {
-                Object val = row.get("process_code");
-                if (val != null) completedProcesses.add(val.toString().trim());
-            }
-        }
-        QueryWrapper<ScanRecord> qw2 = new QueryWrapper<ScanRecord>()
-                .select("DISTINCT process_name")
-                .eq("order_id", order.getId());
-        if (bundleId != null) {
-            qw2.and(bw -> bw.isNull("cutting_bundle_id")
-                    .or().eq("cutting_bundle_id", bundleId));
-        }
-        qw2.in("scan_type", java.util.Arrays.asList("production", "cutting", "quality"))
-                .eq("scan_result", "success")
-                .isNotNull("process_name");
-        List<Map<String, Object>> nameResult = scanRecordService.listMaps(qw2);
-        if (nameResult != null) {
-            for (Map<String, Object> row : nameResult) {
-                Object val = row.get("process_name");
-                if (val != null) completedProcesses.add(val.toString().trim());
-            }
-        }
         for (String process : required) {
             boolean found = completedProcesses.contains(process);
             if (!found) {
@@ -358,8 +344,14 @@ public class ProductionScanStageSupport {
 
         applySubProcessRemap(order, result);
 
-        // 订单显式标记"无二次工艺"时，清空模板默认归到"二次工艺"父节点的子工序，
-        // 避免模板里的"印花"等子工序在订单关闭二次工艺时仍然拦截下游扫码
+        if (log.isDebugEnabled()) {
+            for (Map.Entry<String, Set<String>> entry : result.entrySet()) {
+                if (!entry.getValue().isEmpty()) {
+                    log.debug("门禁必做子工序: 父节点={}, 子工序={}, orderNo={}", entry.getKey(), entry.getValue(), order.getOrderNo());
+                }
+            }
+        }
+
         if (Boolean.FALSE.equals(order.getHasSecondaryProcess())) {
             Set<String> secondary = result.get("二次工艺");
             if (secondary != null && !secondary.isEmpty()) {
@@ -419,5 +411,88 @@ public class ProductionScanStageSupport {
         } catch (Exception e) {
             log.warn("解析subProcessRemap失败，忽略重映射: orderNo={}", order.getOrderNo(), e);
         }
+    }
+
+    private java.util.Set<String> resolveCompletedProcesses(ProductionOrder order, String bundleId) {
+        java.util.Set<String> completedProcesses = new java.util.HashSet<>();
+
+        QueryWrapper<ScanRecord> qw = new QueryWrapper<ScanRecord>()
+                .select("DISTINCT process_code")
+                .eq("order_id", order.getId());
+        if (bundleId != null) {
+            qw.and(bw -> bw.isNull("cutting_bundle_id")
+                    .or().eq("cutting_bundle_id", bundleId));
+        }
+        qw.in("scan_type", java.util.Arrays.asList("production", "cutting", "quality"))
+                .eq("scan_result", "success")
+                .isNotNull("process_code");
+        List<Map<String, Object>> codeResult = scanRecordService.listMaps(qw);
+        if (codeResult != null) {
+            for (Map<String, Object> row : codeResult) {
+                Object val = row.get("process_code");
+                if (val != null) completedProcesses.add(val.toString().trim());
+            }
+        }
+
+        QueryWrapper<ScanRecord> qw2 = new QueryWrapper<ScanRecord>()
+                .select("DISTINCT process_name")
+                .eq("order_id", order.getId());
+        if (bundleId != null) {
+            qw2.and(bw -> bw.isNull("cutting_bundle_id")
+                    .or().eq("cutting_bundle_id", bundleId));
+        }
+        qw2.in("scan_type", java.util.Arrays.asList("production", "cutting", "quality"))
+                .eq("scan_result", "success")
+                .isNotNull("process_name");
+        List<Map<String, Object>> nameResult = scanRecordService.listMaps(qw2);
+        if (nameResult != null) {
+            for (Map<String, Object> row : nameResult) {
+                Object val = row.get("process_name");
+                if (val != null) completedProcesses.add(val.toString().trim());
+            }
+        }
+
+        QueryWrapper<ScanRecord> qw3 = new QueryWrapper<ScanRecord>()
+                .select("DISTINCT progress_stage")
+                .eq("order_id", order.getId());
+        if (bundleId != null) {
+            qw3.and(bw -> bw.isNull("cutting_bundle_id")
+                    .or().eq("cutting_bundle_id", bundleId));
+        }
+        qw3.in("scan_type", java.util.Arrays.asList("production", "cutting", "quality"))
+                .eq("scan_result", "success")
+                .isNotNull("progress_stage");
+        List<Map<String, Object>> stageResult = scanRecordService.listMaps(qw3);
+        if (stageResult != null) {
+            for (Map<String, Object> row : stageResult) {
+                Object val = row.get("progress_stage");
+                if (val != null) completedProcesses.add(val.toString().trim());
+            }
+        }
+
+        return completedProcesses;
+    }
+
+    private boolean hasAnyScanInStage(java.util.Set<String> completedProcesses, String parentStage) {
+        if (completedProcesses == null || completedProcesses.isEmpty() || !StringUtils.hasText(parentStage)) {
+            return false;
+        }
+        if (completedProcesses.contains(parentStage)) {
+            return true;
+        }
+        for (String completed : completedProcesses) {
+            if (ProcessSynonymMapping.isEquivalent(parentStage, completed)) {
+                return true;
+            }
+            String normalized = normalizeFixedProductionNodeName(completed);
+            if (parentStage.equals(normalized)) {
+                return true;
+            }
+            String mappedParent = processParentMappingService.resolveParentNode(completed);
+            if (parentStage.equals(mappedParent)) {
+                return true;
+            }
+        }
+        return false;
     }
 }
