@@ -61,6 +61,7 @@ interface WarehousingTableProps {
   setQueryParams: (params: WarehousingQueryParams) => void;
   isOrderFrozen: (orderId: string) => boolean;
   isMobile?: boolean;
+  onOpenInspect?: (orderId: string, tab?: string) => void;
 }
 
 const WarehousingTable: React.FC<WarehousingTableProps> = ({
@@ -71,6 +72,7 @@ const WarehousingTable: React.FC<WarehousingTableProps> = ({
   setQueryParams,
   isOrderFrozen,
   isMobile: _isMobile,
+  onOpenInspect,
 }) => {
   const navigate = useNavigate();
 
@@ -79,6 +81,10 @@ const WarehousingTable: React.FC<WarehousingTableProps> = ({
     const orderId = String((record as any)?.orderId || '').trim();
     if (!orderId) {
       message.warning('该记录缺少订单信息，无法跳转详情');
+      return;
+    }
+    if (onOpenInspect) {
+      onOpenInspect(orderId, tab);
       return;
     }
     const warehousingNo = String(record.warehousingNo || '').trim();

@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef } from 'react';
-import { Card, Input, Form, InputNumber, Tooltip, Button, message, Modal, Space } from 'antd';
+import { Card, Input, Form, InputNumber, Tooltip, Button, message, Modal, Space, Drawer } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import { QuestionCircleOutlined, InboxOutlined, FileSearchOutlined, ShopOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
@@ -12,6 +12,7 @@ import MaterialTable from './components/MaterialTable';
 import PurchaseModal from './components/PurchaseModal';
 import MaterialPurchaseAIBanner from './components/MaterialPurchaseAIBanner';
 import MaterialQualityIssueModal from './components/MaterialQualityIssueModal';
+import MaterialPurchaseDetail from '../MaterialPurchaseDetail';
 import RemarkTimelineModal from '@/components/common/RemarkTimelineModal';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import '../../../styles.css';
@@ -71,6 +72,16 @@ const MaterialPurchase: React.FC = () => {
   const [remarkOpen, setRemarkOpen] = useState(false);
   const [remarkOrderNo, setRemarkOrderNo] = useState('');
 
+  const [detailDrawerVisible, setDetailDrawerVisible] = useState(false);
+  const [detailDrawerStyleNo, setDetailDrawerStyleNo] = useState('');
+  const [detailDrawerOrderNo, setDetailDrawerOrderNo] = useState('');
+
+  const openDetailDrawer = useCallback((styleNo: string, orderNo?: string) => {
+    setDetailDrawerStyleNo(styleNo);
+    setDetailDrawerOrderNo(orderNo || '');
+    setDetailDrawerVisible(true);
+  }, []);
+
   const handleWarehousePickFromDetail = useCallback(async (record: MaterialPurchaseType, pickQty: number) => {
     const purchaseId = String(record?.id || '').trim();
     if (!purchaseId) { message.error('采购任务缺少ID'); return; }
@@ -129,11 +140,10 @@ const MaterialPurchase: React.FC = () => {
     const styleNo = String(order.styleNo || '').trim();
     const orderNo = String(order.orderNo || '').trim();
     if (styleNo) {
-      const qs = orderNo ? `?orderNo=${encodeURIComponent(orderNo)}` : '';
-      navigate(`/production/material/${encodeURIComponent(styleNo)}${qs}`);
+      openDetailDrawer(styleNo, orderNo);
     }
     setOrderPickerOpen(false);
-  }, [navigate]);
+  }, [openDetailDrawer]);
 
   return (
     <>
@@ -256,6 +266,7 @@ const MaterialPurchase: React.FC = () => {
                         setQualityIssueOpen(true);
                       }}
                       isSupervisorOrAbove={isSupervisorOrAbove}
+                      onOpenDetail={openDetailDrawer}
                     />
         </PageLayout>
 
@@ -660,6 +671,24 @@ const MaterialPurchase: React.FC = () => {
           targetNo={remarkOrderNo}
           canAddRemark={true}
         />
+
+        <Drawer
+          title="订单物料采购明细"
+          open={detailDrawerVisible}
+          onClose={() => setDetailDrawerVisible(false)}
+          width={isMobile ? '100%' : '90%'}
+          destroyOnHidden
+          styles={{ body: { padding: 0 } }}
+        >
+          {detailDrawerVisible && (
+            <MaterialPurchaseDetail
+              styleNo={detailDrawerStyleNo}
+              orderNo={detailDrawerOrderNo}
+              embedded
+              onClose={() => setDetailDrawerVisible(false)}
+            />
+          )}
+        </Drawer>
     </>
   );
 };

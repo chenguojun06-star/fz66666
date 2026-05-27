@@ -58,6 +58,9 @@ public class SelfCriticService {
     @Autowired(required = false)
     private com.fashion.supplychain.intelligence.orchestration.IntelligenceInferenceOrchestrator inferenceOrchestrator;
 
+    @Autowired(required = false)
+    private com.fashion.supplychain.intelligence.gateway.ModelConsortiumRouter modelConsortiumRouter;
+
     @Value("${xiaoyun.self-critic.llm-enabled:true}")
     private boolean llmCriticEnabled;
 
@@ -152,6 +155,18 @@ public class SelfCriticService {
 
             // 4. 无论分数高低，都保存执行快照到记忆系统（用于后续模式挖掘）
             saveExecutionSnapshot(sessionId, userMessage, aiResponse, overallScore, metrics, usedQuickPath);
+
+            // 5. RouteLLM 质量反馈闭环：将评分反哺给模型路由器，驱动成本最优路由
+            if (modelConsortiumRouter != null && metrics != null && metrics.getModelName() != null) {
+                try {
+                    String modelName = metrics.getModelName();
+                    int score = (int) Math.round(overallScore);
+                    modelConsortiumRouter.recordQuality(modelName,
+                            com.fashion.supplychain.intelligence.gateway.ModelConsortiumRouter.Complexity.MODERATE,
+                            score);
+                    log.debug("[SelfCritic→Router] 质量反馈: model={} score={} session={}", modelName, score, sessionId);
+                } catch (Exception ignored) {}
+            }
 
             log.info("[SelfCritic] session={} score={} quickPath={} tools={}耗时={}ms",
                     sessionId, overallScore, usedQuickPath,

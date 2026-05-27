@@ -16,6 +16,7 @@ import { useNavigate } from 'react-router-dom';
 import PageLayout from '@/components/common/PageLayout';
 import api from '@/utils/api';
 import TopStats from '../../components/TopStats';
+import DashboardAiInsight from '../../components/DashboardAiInsight';
 import StandardToolbar from '@/components/common/StandardToolbar';
 import OrderCuttingChart from '../../components/OrderCuttingChart';
 import ScanCountChart from '../../components/ScanCountChart';
@@ -266,7 +267,7 @@ const Dashboard: React.FC = () => {
                 optionRender={(opt: any) => (
                   <div>
                     <div style={{ fontWeight: 500 }}>{opt.label}</div>
-                    <div style={{ fontSize: 14, color: 'var(--neutral-text-secondary)' }}>{opt.desc}</div>
+                    <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>{opt.desc}</div>
                   </div>
                 )}
               />
@@ -293,6 +294,9 @@ const Dashboard: React.FC = () => {
 
         {/* 顶部4个统计看板 */}
         <TopStats />
+
+        {/* AI 智能洞察摘要 */}
+        <DashboardAiInsight />
 
         {/* 数据分析区域 */}
         <div className="dashboard-analysis-section">
@@ -352,7 +356,7 @@ const Dashboard: React.FC = () => {
                 type="text"
                 onClick={() => setSettingsVisible(true)}
                 title="设置快捷入口"
-                style={{ color: 'var(--neutral-text-secondary)' }}
+                style={{ color: 'var(--color-text-tertiary)' }}
               />
             </div>
             <div className="card-content">
@@ -396,7 +400,7 @@ const Dashboard: React.FC = () => {
         ]}
       >
         <div style={{ padding: '16px 0' }}>
-          <p style={{ marginBottom: 16, color: 'var(--neutral-text-secondary)' }}>
+          <p style={{ marginBottom: 16, color: 'var(--color-text-tertiary)' }}>
             勾选需要在首页显示的快捷入口（至少保留一个）
           </p>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>

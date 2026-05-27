@@ -500,16 +500,14 @@ const GlobalAiAssistant: React.FC = () => {
                         onOpenTaskList={switchToTasks}
                       />
                     )}
-                    {messages.length === 1 && (
-                      <>
-                        <div className={msgStyles.quickHint}>直接自然语言输入就可以，下面只是常用示例</div>
-                        <div className={msgStyles.suggestionChips}>
-                          {pageSuggestions.map(q => (
-                            <div key={q} className={msgStyles.chip} onClick={() => sendWithContext(q)}>{q}</div>
-                          ))}
-                        </div>
-                      </>
+                    {messages.length <= 1 && (
+                      <div className={msgStyles.quickHint}>直接自然语言输入就可以，下面只是常用示例</div>
                     )}
+                    <div className={msgStyles.suggestionChips}>
+                      {pageSuggestions.map(q => (
+                        <div key={q} className={msgStyles.chip} onClick={() => sendWithContext(q)}>{q}</div>
+                      ))}
+                    </div>
                     {messages.map(msg => (
                       <MessageBubble
                         key={msg.id} msg={msg} downloadingType={downloadingType}

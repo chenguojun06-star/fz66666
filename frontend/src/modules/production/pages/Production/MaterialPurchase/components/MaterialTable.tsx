@@ -43,6 +43,7 @@ interface MaterialTableProps {
   onReturnReset?: (record: MaterialPurchaseType) => void;
   onQualityIssue?: (record: MaterialPurchaseType) => void;
   isSupervisorOrAbove?: boolean;
+  onOpenDetail?: (styleNo: string, orderNo?: string) => void;
 }
 
 const MaterialTable: React.FC<MaterialTableProps> = ({
@@ -68,6 +69,7 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
   onReturnReset,
   onQualityIssue,
   isSupervisorOrAbove,
+  onOpenDetail,
 }) => {
   const navigate = useNavigate();
   const { message } = App.useApp();
@@ -212,13 +214,21 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
         return (
           <a
             onClick={() => {
-              if (styleNo) {
-                // 有款号：按款号+订单号跳转
-                const qs = orderNo ? `?orderNo=${encodeURIComponent(orderNo)}` : '';
-                navigate(`/production/material/${encodeURIComponent(styleNo)}${qs}`);
-              } else if (purchaseNo) {
-                // 无款号（如仓库独立采购单）：按采购单号跳转
-                navigate(`/production/material/_?purchaseNo=${encodeURIComponent(purchaseNo)}`);
+              if (onOpenDetail) {
+                if (styleNo) {
+                  onOpenDetail(styleNo, orderNo);
+                } else if (purchaseNo) {
+                  onOpenDetail('_', purchaseNo);
+                }
+              } else {
+                if (styleNo) {
+                  // 有款号：按款号+订单号跳转
+                  const qs = orderNo ? `?orderNo=${encodeURIComponent(orderNo)}` : '';
+                  navigate(`/production/material/${encodeURIComponent(styleNo)}${qs}`);
+                } else if (purchaseNo) {
+                  // 无款号（如仓库独立采购单）：按采购单号跳转
+                  navigate(`/production/material/_?purchaseNo=${encodeURIComponent(purchaseNo)}`);
+                }
               }
             }}
             style={{ color: 'var(--color-primary)', cursor: 'pointer' }}

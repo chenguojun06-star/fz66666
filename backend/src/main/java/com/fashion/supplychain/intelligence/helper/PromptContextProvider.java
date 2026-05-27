@@ -59,6 +59,18 @@ public class PromptContextProvider {
     @Autowired(required = false)
     private com.fashion.supplychain.intelligence.service.QdrantService qdrantService;
 
+    @Autowired(required = false)
+    private com.fashion.supplychain.intelligence.service.EntityMemoryContextService entityMemoryContextService;
+
+    @Autowired(required = false)
+    private com.fashion.supplychain.intelligence.orchestration.MultiAgentGraphOrchestrator multiAgentGraphOrchestrator;
+
+    @Autowired(required = false)
+    private com.fashion.supplychain.intelligence.service.GraphRagService graphRagService;
+
+    @Autowired(required = false)
+    private com.fashion.supplychain.intelligence.service.FactoryProfileLearningService factoryProfileLearningService;
+
     private static final java.util.Set<String> SYSTEM_GUIDE_KEYWORDS = java.util.Set.of(
         "怎么下单", "如何建单", "下单方式", "如何创建订单", "怎么创建订单",
         "如何扫码", "怎么扫码", "扫码流程",
@@ -170,6 +182,66 @@ public class PromptContextProvider {
         } catch (Exception e) {
             log.debug("[AiAgent] 加载历史对话记忆失败，跳过: {}", e.getMessage());
             return "【历史对话】（加载失败，请勿编造之前的对话内容）\n";
+        }
+    }
+
+    public String buildEntityMemoryContext(Long tenantId, String userMessage) {
+        if (entityMemoryContextService == null) return "";
+        try {
+            return entityMemoryContextService.buildEntityMemoryContext(tenantId, userMessage);
+        } catch (Exception e) {
+            log.debug("[AiAgent] 实体记忆上下文加载跳过: {}", e.getMessage());
+            return "";
+        }
+    }
+
+    public String buildMasInsightContext(Long tenantId, String userMessage) {
+        if (multiAgentGraphOrchestrator == null) return "";
+        try {
+            com.fashion.supplychain.intelligence.dto.MultiAgentRequest req =
+                    new com.fashion.supplychain.intelligence.dto.MultiAgentRequest();
+            req.setQuestion(userMessage);
+            req.setScene("quick");
+            com.fashion.supplychain.intelligence.dto.GraphExecutionResult result =
+                    multiAgentGraphOrchestrator.runGraph(req);
+            if (result == null || !result.isSuccess()) return "";
+
+            StringBuilder insight = new StringBuilder("【多Agent专家协同分析】\n");
+            if (result.getSpecialistResults() != null && !result.getSpecialistResults().isEmpty()) {
+                result.getSpecialistResults().forEach((domain, analysis) -> {
+                    String truncated = analysis != null && analysis.length() > 200
+                            ? analysis.substring(0, 200) + "…" : analysis;
+                    insight.append("- [").append(domain).append("] ").append(truncated).append("\n");
+                });
+            }
+            if (result.getOptimizationSuggestion() != null && !result.getOptimizationSuggestion().isBlank()) {
+                insight.append("综合建议：").append(result.getOptimizationSuggestion()).append("\n");
+            }
+            insight.append("（以上为多Agent专家协同分析，请结合工具查询实时数据）\n");
+            return insight.toString();
+        } catch (Exception e) {
+            log.debug("[AiAgent] MAS insight加载跳过: {}", e.getMessage());
+            return "";
+        }
+    }
+
+    public String buildGraphRagContext(Long tenantId, String userMessage) {
+        if (graphRagService == null) return "";
+        try {
+            return graphRagService.buildGraphContext(tenantId, userMessage);
+        } catch (Exception e) {
+            log.debug("[AiAgent] 知识图谱上下文加载跳过: {}", e.getMessage());
+            return "";
+        }
+    }
+
+    public String buildFactoryProfileContext(Long tenantId, String userMessage) {
+        if (factoryProfileLearningService == null) return "";
+        try {
+            return factoryProfileLearningService.buildFactoryProfileContext(tenantId, userMessage);
+        } catch (Exception e) {
+            log.debug("[AiAgent] 工厂画像上下文加载跳过: {}", e.getMessage());
+            return "";
         }
     }
 

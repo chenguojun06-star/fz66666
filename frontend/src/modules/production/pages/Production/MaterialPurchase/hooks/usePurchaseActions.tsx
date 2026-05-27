@@ -340,15 +340,35 @@ export function usePurchaseActions({
         });
         return;
       }
-      const res = await api.post<{ code: number; message?: string; data: boolean }>('/production/purchase/receive', { purchaseId: id, receiverId, receiverName: String(receiverName).trim() });
-      if (res.code === 200) {
-        message.success('已采购');
-        fetchMaterialPurchaseList();
-        const no = String(currentPurchase?.orderNo || record?.orderNo || '').trim();
-        if (no) loadDetailByOrderNo(no);
-        return;
-      }
-      message.error(res.message || '采购失败');
+      Modal.confirm({
+        width: '30vw',
+        title: `确认采购 - ${record.materialName || record.materialCode}`,
+        content: (
+          <div>
+            <p>物料：<strong>{record.materialName || record.materialCode}</strong> {record.color ? `(${record.color})` : ''}</p>
+            <p>采购数量：<strong>{formatMaterialQuantity(record.purchaseQuantity)}{record.unit || ''}</strong></p>
+            <p>供应商：{record.supplierName || '-'}</p>
+            <p style={{ color: 'var(--color-text-secondary)', fontSize: 14 }}>确认后将直接创建采购任务</p>
+          </div>
+        ),
+        okText: '确认采购',
+        cancelText: '取消',
+        onOk: async () => {
+          setSubmitLoading(true);
+          try {
+            const res = await api.post<{ code: number; message?: string; data: boolean }>('/production/purchase/receive', { purchaseId: id, receiverId, receiverName: String(receiverName).trim() });
+            if (res.code === 200) {
+              message.success('已采购');
+              fetchMaterialPurchaseList();
+              const no = String(currentPurchase?.orderNo || record?.orderNo || '').trim();
+              if (no) loadDetailByOrderNo(no);
+            } else {
+              message.error(res.message || '采购失败');
+            }
+          } catch (err: unknown) { message.error(err instanceof Error ? err.message : '采购失败'); }
+          finally { setSubmitLoading(false); }
+        },
+      });
     } catch (e: unknown) { message.error(e instanceof Error ? e.message : '采购失败'); }
   };
 
@@ -367,84 +387,137 @@ export function usePurchaseActions({
       if (!pending.length) { message.info('没有待采购的任务'); return; }
       const receiverName = String(user?.name || user?.username || '').trim() || window.prompt('请输入采购人姓名') || '';
       if (!receiverName.trim()) { message.error('未填写采购人'); return; }
-      setSubmitLoading(true);
-      try {
-        const styleNoParam = String(currentPurchase?.styleNo || '').trim();
-        let previewMaterials: any[] = [];
-        if (styleNoParam && styleNoParam !== '-') {
-          try {
-            const previewRes = await api.get<any>('/production/purchase/smart-receive-preview', { params: { styleNo: styleNoParam } });
-            previewMaterials = previewRes?.data?.materials || previewRes?.materials || [];
-          } catch { /* 预览失败按无库存处理 */ }
-        }
-        let outCount = 0;
-        let purCount = 0;
-        for (const p of pending) {
-          const matched = previewMaterials.find((m: any) => String(m.purchaseId) === String(p.id));
-          const stock = matched ? Number(matched.availableStock ?? 0) : 0;
-          if (stock > 0) {
-            const pickQty = Math.min(stock, Number(p.purchaseQuantity || 0));
+      const doSampleReceiveAll = async () => {
+        setSubmitLoading(true);
+        try {
+          const styleNoParam = String(currentPurchase?.styleNo || '').trim();
+          let previewMaterials: any[] = [];
+          if (styleNoParam && styleNoParam !== '-') {
             try {
-              const res = await api.post<{ code: number; message?: string }>('/production/purchase/warehouse-pick', {
-                purchaseId: p.id, pickQty, receiverId: user?.id, receiverName,
-              });
-              if (res.code === 200) outCount++;
-              else message.warning(`${p.materialName || p.materialCode} 出库失败: ${res.message || '未知'}`);
-            } catch (e: unknown) { message.warning(`${p.materialName || p.materialCode} 出库失败: ${e instanceof Error ? e.message : '未知错误'}`); }
-          } else {
-            try {
-              const res = await api.post<{ code: number; message?: string }>('/production/purchase/receive', {
-                purchaseId: p.id, receiverId: user?.id, receiverName,
-              });
-              if (res.code === 200) purCount++;
-              else message.warning(`${p.materialName || p.materialCode} 采购失败: ${res.message || '未知'}`);
-            } catch (e: unknown) { message.warning(`${p.materialName || p.materialCode} 采购失败: ${e instanceof Error ? e.message : '未知错误'}`); }
+              const previewRes = await api.get<any>('/production/purchase/smart-receive-preview', { params: { styleNo: styleNoParam } });
+              previewMaterials = previewRes?.data?.materials || previewRes?.materials || [];
+            } catch { /* 预览失败按无库存处理 */ }
           }
-        }
-        const parts: string[] = [];
-        if (outCount > 0) parts.push(`${outCount}项出库`);
-        if (purCount > 0) parts.push(`${purCount}项外采`);
-        if (parts.length) message.success(`领取完成：${parts.join('，')}`);
-        const styleNo = String(currentPurchase?.styleNo || '').trim();
-        const purchaseNo = String(currentPurchase?.purchaseNo || '').trim();
-        if (styleNo) loadDetailByStyleNo(styleNo, purchaseNo);
-        fetchMaterialPurchaseList();
-      } catch (e: unknown) { message.error(e instanceof Error ? e.message : '领取失败'); }
-      finally { setSubmitLoading(false); }
+          let outCount = 0;
+          let purCount = 0;
+          for (const p of pending) {
+            const matched = previewMaterials.find((m: any) => String(m.purchaseId) === String(p.id));
+            const stock = matched ? Number(matched.availableStock ?? 0) : 0;
+            if (stock > 0) {
+              const pickQty = Math.min(stock, Number(p.purchaseQuantity || 0));
+              try {
+                const res = await api.post<{ code: number; message?: string }>('/production/purchase/warehouse-pick', {
+                  purchaseId: p.id, pickQty, receiverId: user?.id, receiverName,
+                });
+                if (res.code === 200) outCount++;
+                else message.warning(`${p.materialName || p.materialCode} 出库失败: ${res.message || '未知'}`);
+              } catch (e: unknown) { message.warning(`${p.materialName || p.materialCode} 出库失败: ${e instanceof Error ? e.message : '未知错误'}`); }
+            } else {
+              try {
+                const res = await api.post<{ code: number; message?: string }>('/production/purchase/receive', {
+                  purchaseId: p.id, receiverId: user?.id, receiverName,
+                });
+                if (res.code === 200) purCount++;
+                else message.warning(`${p.materialName || p.materialCode} 采购失败: ${res.message || '未知'}`);
+              } catch (e: unknown) { message.warning(`${p.materialName || p.materialCode} 采购失败: ${e instanceof Error ? e.message : '未知错误'}`); }
+            }
+          }
+          const parts: string[] = [];
+          if (outCount > 0) parts.push(`${outCount}项出库`);
+          if (purCount > 0) parts.push(`${purCount}项外采`);
+          if (parts.length) message.success(`领取完成：${parts.join('，')}`);
+          const styleNo = String(currentPurchase?.styleNo || '').trim();
+          const purchaseNo = String(currentPurchase?.purchaseNo || '').trim();
+          if (styleNo) loadDetailByStyleNo(styleNo, purchaseNo);
+          fetchMaterialPurchaseList();
+        } catch (e: unknown) { message.error(e instanceof Error ? e.message : '领取失败'); }
+        finally { setSubmitLoading(false); }
+      };
+      Modal.confirm({
+        width: '30vw',
+        title: '确认采购全部',
+        content: (
+          <div>
+            <p>即将采购以下 <strong>{pending.length}</strong> 项物料：</p>
+            <div style={{ maxHeight: 200, overflow: 'auto', marginTop: 8, fontSize: 14 }}>
+              {pending.map((p, i) => (
+                <div key={i} style={{ padding: '4px 0', borderBottom: i < pending.length - 1 ? '1px solid #f0f0f0' : 'none', display: 'flex', justifyContent: 'space-between' }}>
+                  <span>{p.materialName || p.materialCode} {p.color ? `(${p.color})` : ''}</span>
+                  <span style={{ color: 'var(--color-primary)' }}>{formatMaterialQuantity(p.purchaseQuantity)}{p.unit || ''}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        ),
+        okText: '确认全部采购',
+        cancelText: '取消',
+        onOk: doSampleReceiveAll,
+      });
       return;
     }
     if (!orderNo || orderNo === '-') { message.error('缺少订单号'); return; }
     setSubmitLoading(true);
+    let previewPending: any[] = [];
     try {
       const res = await api.get<any>('/production/purchase/smart-receive-preview', { params: { orderNo } });
       const materials: any[] = res?.data?.materials || res?.materials || [];
-      const pending = materials.filter((m) => String(m.purchaseStatus || '').toLowerCase() === 'pending');
-      if (!pending.length) { message.info('没有待采购的物料'); return; }
-      const withStock = pending.filter((m) => Number(m.availableStock ?? 0) > 0);
-      const noStock = pending.filter((m) => Number(m.availableStock ?? 0) <= 0);
-      const receiverName = String(user?.name || user?.username || '').trim();
-      let outCount = 0;
-      let purCount = 0;
-      for (const m of withStock) {
-        try {
-          await api.post('/production/purchase/warehouse-pick', { purchaseId: m.purchaseId, pickQty: m.canPickQty, receiverId: user?.id, receiverName });
-          outCount++;
-        } catch (e: unknown) { message.warning(`${m.materialName || m.materialCode} 出库失败: ${e instanceof Error ? e.message : '未知错误'}`); }
-      }
-      for (const m of noStock) {
-        try {
-          await api.post('/production/purchase/receive', { purchaseId: m.purchaseId, receiverId: user?.id, receiverName });
-          purCount++;
-        } catch (e: unknown) { message.warning(`${m.materialName || m.materialCode} 采购失败: ${e instanceof Error ? e.message : '未知错误'}`); }
-      }
-      const parts: string[] = [];
-      if (outCount > 0) parts.push(`${outCount}项出库`);
-      if (purCount > 0) parts.push(`${purCount}项外采`);
-      if (parts.length) message.success(`采购完成：${parts.join('，')}`);
-      fetchMaterialPurchaseList();
-      if (orderNo && orderNo !== '-') loadDetailByOrderNo(orderNo);
-    } catch (e: unknown) { message.error(e instanceof Error ? e.message : '采购失败'); }
+      previewPending = materials.filter((m) => String(m.purchaseStatus || '').toLowerCase() === 'pending');
+    } catch (e: unknown) { message.error(e instanceof Error ? e.message : '获取采购预览失败'); }
     finally { setSubmitLoading(false); }
+    if (!previewPending.length) { message.info('没有待采购的物料'); return; }
+    const withStock = previewPending.filter((m) => Number(m.availableStock ?? 0) > 0);
+    const noStock = previewPending.filter((m) => Number(m.availableStock ?? 0) <= 0);
+    const receiverName = String(user?.name || user?.username || '').trim();
+    Modal.confirm({
+      width: '30vw',
+      title: '确认采购全部',
+      content: (
+        <div>
+          <p>确认批量采购以下物料：</p>
+          <p style={{ color: 'var(--color-text-secondary)', fontSize: 14 }}>
+            有库存出库 <strong>{withStock.length}</strong> 项 + 无库存外采 <strong>{noStock.length}</strong> 项
+          </p>
+          <div style={{ maxHeight: 200, overflow: 'auto', marginTop: 8, fontSize: 14 }}>
+            {[...withStock, ...noStock].map((m, i) => (
+              <div key={i} style={{ padding: '4px 0', borderBottom: '1px solid #f0f0f0', display: 'flex', justifyContent: 'space-between' }}>
+                <span>{m.materialName || m.materialCode} {m.color ? `(${m.color})` : ''}</span>
+                <span style={{ color: Number(m.availableStock ?? 0) > 0 ? 'var(--color-success)' : 'var(--color-primary)' }}>
+                  {Number(m.availableStock ?? 0) > 0 ? `出库 ${m.canPickQty}` : `采购 ${m.purchaseQuantity}`}{m.unit || ''}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      ),
+      okText: '确认全部采购',
+      cancelText: '取消',
+      onOk: async () => {
+        setSubmitLoading(true);
+        try {
+          let outCount = 0;
+          let purCount = 0;
+          for (const m of withStock) {
+            try {
+              await api.post('/production/purchase/warehouse-pick', { purchaseId: m.purchaseId, pickQty: m.canPickQty, receiverId: user?.id, receiverName });
+              outCount++;
+            } catch (e: unknown) { message.warning(`${m.materialName || m.materialCode} 出库失败: ${e instanceof Error ? e.message : '未知错误'}`); }
+          }
+          for (const m of noStock) {
+            try {
+              await api.post('/production/purchase/receive', { purchaseId: m.purchaseId, receiverId: user?.id, receiverName });
+              purCount++;
+            } catch (e: unknown) { message.warning(`${m.materialName || m.materialCode} 采购失败: ${e instanceof Error ? e.message : '未知错误'}`); }
+          }
+          const parts: string[] = [];
+          if (outCount > 0) parts.push(`${outCount}项出库`);
+          if (purCount > 0) parts.push(`${purCount}项外采`);
+          if (parts.length) message.success(`采购完成：${parts.join('，')}`);
+          fetchMaterialPurchaseList();
+          if (orderNo && orderNo !== '-') loadDetailByOrderNo(orderNo);
+        } catch (e: unknown) { message.error(e instanceof Error ? e.message : '采购失败'); }
+        finally { setSubmitLoading(false); }
+      },
+    });
   };
 
   const handleSmartReceiveSuccess = () => {

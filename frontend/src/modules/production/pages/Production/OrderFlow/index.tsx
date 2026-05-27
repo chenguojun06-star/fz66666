@@ -1,23 +1,64 @@
-import React from 'react';
-import { Alert, Button, Card, Col, Row, Space, Tag } from 'antd';
+import React, { useCallback, useState } from 'react';
+import { Alert, App, Button, Card, Col, Row, Space, Tag, Upload } from 'antd';
+import { CameraOutlined } from '@ant-design/icons';
 import PageLayout from '@/components/common/PageLayout';
 import { toNumberSafe } from '@/utils/api';
 import { formatDateTime } from '@/utils/datetime';
 import { calcOrderProgress } from '@/modules/production/utils/calcOrderProgress';
-import { StyleCoverThumb } from '@/components/StyleAssets';
+import { StyleCoverThumb, setStyleCoverOverride } from '@/components/StyleAssets';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import '../../../styles.css';
 import { useOrderFlowData, orderStatusTag } from './useOrderFlowData';
 import FlowStepRenderer from './components/FlowStepRenderer';
+import api from '@/utils/api';
+import { RcFile } from 'antd/es/upload';
 
 const OrderFlow: React.FC = () => {
+  const { message } = App.useApp();
   const {
     query, loading, data, order, isFactoryUser,
     smartError, showSmartErrorNotice, fetchFlow,
     enrichedStages, stageColumns, orderLines, orderLineColumns,
     warehousingTotal, warehousingQualified, warehousingUnqualified,
-    cuttingSizeItems, styleProcessDescriptionMap, secondaryProcessDescriptionMap,
+    cuttingSizeItems, cuttingBundles, cuttingTasks, styleProcessDescriptionMap, secondaryProcessDescriptionMap,
   } = useOrderFlowData();
+
+  const [uploading, setUploading] = useState(false);
+
+  const handleCoverUpload = useCallback(async (file: RcFile) => {
+    const styleId = (order as any)?.styleId;
+    if (!styleId) {
+      message.error('未关联款号，无法更新封面');
+      return;
+    }
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const uploadRes = await api.post<{ code: number; data: { id: string; fileUrl: string }; message?: string }>(
+        '/style/attachment/upload',
+        formData,
+        {
+          headers: { 'Content-Type': 'multipart/form-data' },
+          params: { styleId, bizType: 'cover' },
+        },
+      );
+      if (uploadRes.code !== 200 || !uploadRes.data) {
+        throw new Error(uploadRes.message || '上传失败');
+      }
+      const attachmentId = uploadRes.data.id;
+      const fileUrl = uploadRes.data.fileUrl;
+
+      await api.post(`/style/attachment/${attachmentId}/set-cover`);
+      setStyleCoverOverride(styleId, undefined, fileUrl);
+      message.success('封面更新成功');
+      fetchFlow();
+    } catch (e: unknown) {
+      message.error(e instanceof Error ? e.message : '上传失败');
+    } finally {
+      setUploading(false);
+    }
+  }, [order, message, fetchFlow]);
 
   return (
     <>
@@ -45,8 +86,18 @@ const OrderFlow: React.FC = () => {
 
           <Card className="order-flow-detail" style={{ marginTop: 8 }} loading={loading}>
             <Row gutter={0} align="top" wrap={false}>
-              <Col flex="none" style={{ paddingRight: 20, flexShrink: 0, paddingTop: 2 }}>
+              <Col flex="none" style={{ paddingRight: 20, flexShrink: 0, paddingTop: 2, textAlign: 'center' }}>
                 <StyleCoverThumb src={(order as any)?.styleCover} styleId={(order as any)?.styleId} size={80} borderRadius={8} />
+                <Upload
+                  accept="image/*"
+                  showUploadList={false}
+                  beforeUpload={(file) => { handleCoverUpload(file as RcFile); return false; }}
+                  disabled={uploading}
+                >
+                  <Button size="small" icon={<CameraOutlined />} loading={uploading} style={{ marginTop: 6, fontSize: 12 }}>
+                    封面
+                  </Button>
+                </Upload>
               </Col>
               <Col flex="1" style={{ minWidth: 180, padding: '0 20px', borderLeft: '1px solid rgba(0,0,0,0.08)' }}>
                 <div style={{ fontSize: 14, fontWeight: 700, color: '#bbb', marginBottom: 8, letterSpacing: 1 }}>基本信息</div>
@@ -102,6 +153,8 @@ const OrderFlow: React.FC = () => {
             enrichedStages={enrichedStages} stageColumns={stageColumns}
             orderLines={orderLines} orderLineColumns={orderLineColumns}
             cuttingSizeItems={cuttingSizeItems ?? []}
+            cuttingBundles={cuttingBundles ?? []}
+            cuttingTasks={cuttingTasks ?? []}
             styleProcessDescriptionMap={styleProcessDescriptionMap}
             secondaryProcessDescriptionMap={secondaryProcessDescriptionMap ?? new Map<string, string>()}
           />

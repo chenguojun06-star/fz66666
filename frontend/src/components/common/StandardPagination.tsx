@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Pagination } from 'antd';
 import type { PaginationProps } from 'antd';
 import { DEFAULT_PAGE_SIZE, DEFAULT_PAGE_SIZE_OPTIONS, normalizePageSize } from '@/utils/pageSizeStore';
@@ -29,6 +29,12 @@ const StandardPagination: React.FC<StandardPaginationProps> = ({
   const normalizedPageSize = pageSize == null ? undefined : normalizePageSize(Number(pageSize), DEFAULT_PAGE_SIZE);
   const normalizedDefaultPageSize = defaultPageSize == null ? undefined : normalizePageSize(Number(defaultPageSize), DEFAULT_PAGE_SIZE);
 
+  const resolvedShowSizeChanger = useMemo(() => {
+    if (showSizeChanger === false) return false;
+    const base = typeof showSizeChanger === 'object' ? showSizeChanger : {};
+    return { getPopupContainer: (triggerNode: HTMLElement) => document.body, ...base };
+  }, [showSizeChanger]);
+
   return (
     <div
       style={{
@@ -44,7 +50,7 @@ const StandardPagination: React.FC<StandardPaginationProps> = ({
         pageSize={normalizedPageSize}
         defaultPageSize={normalizedDefaultPageSize}
         showTotal={showTotal ?? ((value) => `共 ${value} 条`)}
-        showSizeChanger={showSizeChanger}
+        showSizeChanger={resolvedShowSizeChanger}
         showQuickJumper={showQuickJumper}
         pageSizeOptions={[...DEFAULT_PAGE_SIZE_OPTIONS]}
       />

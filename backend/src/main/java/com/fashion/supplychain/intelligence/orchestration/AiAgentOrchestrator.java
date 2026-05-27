@@ -11,6 +11,8 @@ import com.fashion.supplychain.intelligence.agent.loop.AgentLoopEngine;
 import com.fashion.supplychain.intelligence.agent.loop.StreamingAgentLoopCallback;
 import com.fashion.supplychain.intelligence.agent.loop.SyncAgentLoopCallback;
 import com.fashion.supplychain.intelligence.entity.SkillTemplate;
+import com.fashion.supplychain.intelligence.entity.AiLongMemory;
+import com.fashion.supplychain.intelligence.mapper.AiLongMemoryMapper;
 import com.fashion.supplychain.intelligence.helper.AiAgentMemoryHelper;
 import com.fashion.supplychain.intelligence.helper.AiAgentToolExecHelper;
 import com.fashion.supplychain.intelligence.helper.XiaoyunPatterns;
@@ -65,6 +67,8 @@ public class AiAgentOrchestrator {
     // 五大Agent框架增强组件
     @Autowired(required = false) private com.fashion.supplychain.intelligence.service.MemoryBankService memoryBankService;
     @Autowired(required = false) private com.fashion.supplychain.intelligence.service.SkillAutoCreationService skillAutoCreationService;
+    @Autowired(required = false) private com.fashion.supplychain.intelligence.service.EntityMemoryContextService entityMemoryContextService;
+    @Autowired(required = false) private AiLongMemoryMapper longMemoryMapper;
 
     private final ThreadLocal<String> lastCommandIdHolder = new ThreadLocal<>();
     private final ThreadLocal<List<AiAgentToolExecHelper.ToolExecRecord>> lastToolRecordsHolder = new ThreadLocal<>();
@@ -84,6 +88,8 @@ public class AiAgentOrchestrator {
             new LinkedBlockingQueue<>(64),
             r -> { Thread t = new Thread(r, "post-turn-hook"); t.setDaemon(true); return t; },
             new ThreadPoolExecutor.CallerRunsPolicy());
+
+    private final java.util.concurrent.atomic.AtomicLong conversationTurnCounter = new java.util.concurrent.atomic.AtomicLong(0);
 
     private final com.github.benmanes.caffeine.cache.Cache<String, String> queryCache = com.github.benmanes.caffeine.cache.Caffeine.newBuilder()
             .maximumSize(200)
@@ -292,6 +298,71 @@ public class AiAgentOrchestrator {
         memoryHelper.saveCurrentConversationToMemory(userId, tenantId);
     }
 
+    private void learnEntityMemoryFromTools(Long tenantId, String toolResultsStr) {
+        if (longMemoryMapper == null) return;
+        String userId = UserContext.userId();
+        try {
+            java.util.Set<String> entities = extractEntityNames(toolResultsStr);
+            if (entities.isEmpty()) return;
+
+            for (String entity : entities) {
+                try {
+                    AiLongMemory existing = longMemoryMapper.selectOne(
+                            new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<AiLongMemory>()
+                                    .eq(AiLongMemory::getTenantId, tenantId)
+                                    .eq(AiLongMemory::getDeleteFlag, 0)
+                                    .eq(AiLongMemory::getSubjectName, entity)
+                                    .eq(AiLongMemory::getLayer, "FACT")
+                                    .last("LIMIT 1"));
+                    if (existing != null) {
+                        existing.setHitCount((existing.getHitCount() != null ? existing.getHitCount() : 0) + 1);
+                        existing.setUpdateTime(java.time.LocalDateTime.now());
+                        longMemoryMapper.updateById(existing);
+                    } else {
+                        AiLongMemory newMem = new AiLongMemory();
+                        newMem.setTenantId(tenantId);
+                        newMem.setSourceUserId(UserContext.userId());
+                        newMem.setSubjectName(entity);
+                        newMem.setSubjectType(detectEntityType(entity));
+                        newMem.setLayer("FACT");
+                        newMem.setContent("从对话中自动发现实体: " + entity);
+                        newMem.setConfidence(new java.math.BigDecimal("0.6"));
+                        newMem.setHitCount(1);
+                        newMem.setDeleteFlag(0);
+                        newMem.setCreateTime(java.time.LocalDateTime.now());
+                        newMem.setUpdateTime(java.time.LocalDateTime.now());
+                        longMemoryMapper.insert(newMem);
+                        log.debug("[EntityMemory] 新增实体记忆: {}", entity);
+                    }
+                } catch (Exception ex) {
+                    log.debug("[EntityMemory] 实体记忆保存跳过: {} - {}", entity, ex.getMessage());
+                }
+            }
+        } catch (Exception e) {
+            log.debug("[EntityMemory] 实体记忆学习跳过: {}", e.getMessage());
+        }
+    }
+
+    private java.util.Set<String> extractEntityNames(String toolResultsStr) {
+        java.util.Set<String> entities = new java.util.LinkedHashSet<>();
+        if (toolResultsStr == null || toolResultsStr.isBlank()) return entities;
+        java.util.regex.Pattern orderPattern = java.util.regex.Pattern.compile("PO\\d{14}|[A-Z]{2,4}\\d{8,}");
+        java.util.regex.Pattern stylePattern = java.util.regex.Pattern.compile("[A-Z]{2,4}-?\\d{4,}[A-Z]?");
+
+        java.util.regex.Matcher m = orderPattern.matcher(toolResultsStr);
+        while (m.find()) entities.add(m.group());
+        m = stylePattern.matcher(toolResultsStr);
+        while (m.find()) entities.add(m.group());
+        return entities;
+    }
+
+    private String detectEntityType(String entityName) {
+        if (entityName == null) return "unknown";
+        if (entityName.startsWith("PO") || entityName.matches("[A-Z]{2,4}\\d{8,}")) return "order";
+        if (entityName.matches("[A-Z]{2,4}-?\\d{4,}[A-Z]?")) return "style";
+        return "unknown";
+    }
+
     private void triggerPostTurnHooks(AgentLoopContext ctx, String userMessage,
                                        String assistantResponse,
                                        java.util.List<AiAgentToolExecHelper.ToolExecRecord> toolRecords,
@@ -397,6 +468,21 @@ public class AiAgentOrchestrator {
                 userProfileEvolutionOrchestrator.evolveProfile(
                         tenantId, userId, userMessage, assistantResponse,
                         conversationId, finalToolNames2);
+            }));
+        }
+
+        long turnCount = conversationTurnCounter.incrementAndGet();
+        if (!usedQuickPath && turnCount % 3 == 0) {
+            postTurnExecutor.execute(UserContext.wrap(() -> {
+                memoryHelper.saveCurrentConversationToMemory(userId, tenantId);
+                log.info("[AiAgent] 自动保存L3对话记忆 (turn #{})", turnCount);
+            }));
+        }
+
+        if (toolRecords != null && !toolRecords.isEmpty() && !usedQuickPath) {
+            final String finalToolResults = toolResultsStr;
+            postTurnExecutor.execute(UserContext.wrap(() -> {
+                learnEntityMemoryFromTools(tenantId, finalToolResults);
             }));
         }
     }
@@ -535,6 +621,19 @@ public class AiAgentOrchestrator {
                     }
                 } catch (Exception e) {
                     log.debug("[QuickPath] MemoryBank注入跳过: {}", e.getMessage());
+                }
+            }
+            if (entityMemoryContextService != null) {
+                try {
+                    Long memTenantId = UserContext.tenantId();
+                    if (memTenantId != null) {
+                        String entityMemCtx = entityMemoryContextService.buildEntityMemoryContext(memTenantId, userMessage);
+                        if (!entityMemCtx.isBlank()) {
+                            sysPrompt.append("【实体记忆】\n").append(entityMemCtx).append("\n\n");
+                        }
+                    }
+                } catch (Exception e) {
+                    log.debug("[QuickPath] EntityMemory注入跳过: {}", e.getMessage());
                 }
             }
 

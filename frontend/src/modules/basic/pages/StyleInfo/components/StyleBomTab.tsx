@@ -5,7 +5,6 @@ import api from '@/utils/api';
 import ResizableTable from '@/components/common/ResizableTable';
 import { isSupervisorOrAboveUser, useUser } from '@/utils/AuthContext';
 import { getMaterialSortWeight } from '@/utils/materialType';
-import { useViewport } from '@/utils/useViewport';
 import StyleStageControlBar from './StyleStageControlBar';
 import useStyleBomActions from './hooks/useStyleBomActions';
 import { useBomColumns } from './hooks/useBomColumns';
@@ -98,7 +97,6 @@ const StyleBomTab: React.FC<Props> = ({
 }) => {
   const { user } = useUser();
   const { message } = App.useApp();
-  const { modalWidth } = useViewport();
   const [editingKey, setEditingKey] = useState('');
   const [tableEditable, setTableEditable] = useState(false);
   const [form] = Form.useForm();
@@ -522,7 +520,7 @@ const StyleBomTab: React.FC<Props> = ({
 
       <StyleBomMaterialModal
         open={materialModalOpen}
-        modalWidth={modalWidth}
+        modalWidth={'98vw'}
         materialTab={materialTab}
         materialKeyword={materialKeyword}
         materialLoading={materialLoading}

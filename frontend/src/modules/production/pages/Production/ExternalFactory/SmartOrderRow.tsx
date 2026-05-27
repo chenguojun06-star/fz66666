@@ -130,7 +130,15 @@ const SmartOrderRow: React.FC<SmartOrderRowProps> = ({
                   overlayStyle={{ width: SMART_CARD_OVERLAY_WIDTH }}
                   trigger="hover" placement="rightTop" mouseEnterDelay={0.3}
                 >
-                  <span className="ef-field-value ef-order-no">{record.orderNo}</span>
+                  <span
+                    className="ef-field-value ef-order-no"
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => navigate(withQuery('/production/order-flow', {
+                      orderId: record.id, orderNo: record.orderNo, styleNo: record.styleNo,
+                    }))}
+                  >
+                    {record.orderNo}
+                  </span>
                 </Popover>
               </div>
               <div className="ef-field-row">

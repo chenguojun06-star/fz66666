@@ -29,4 +29,14 @@ public interface KgEntityMapper extends BaseMapper<KgEntity> {
         FROM graph_path
         """)
     List<Map<String, Object>> traverseGraph(@Param("startId") Long startId, @Param("maxHops") int maxHops);
+
+    @Select("""
+        SELECT * FROM t_kg_entity
+        WHERE tenant_id = #{tenantId} AND delete_flag = 0
+        AND (entity_name LIKE CONCAT('%', #{keyword}, '%')
+             OR entity_type LIKE CONCAT('%', #{keyword}, '%')
+             OR external_id = #{keyword})
+        LIMIT #{limit}
+        """)
+    List<KgEntity> searchEntities(@Param("tenantId") Long tenantId, @Param("keyword") String keyword, @Param("limit") int limit);
 }

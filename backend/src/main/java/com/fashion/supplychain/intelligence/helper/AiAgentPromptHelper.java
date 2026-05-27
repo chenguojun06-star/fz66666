@@ -57,7 +57,7 @@ public class AiAgentPromptHelper {
         this.masAnalysisCacheTime = System.currentTimeMillis();
     }
 
-    public String buildSystemPrompt(String userMessage, String pageContext, List<AgentTool> visibleTools) {
+    public String buildSystemPrompt(String userMessage, String pageContext, List<AgentTool> visibleTools, boolean isMultiDomain) {
         TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         String userId = UserContext.userId();
@@ -86,6 +86,12 @@ public class AiAgentPromptHelper {
         CompletableFuture<String> userProfileBlock = supplyAsync(() -> contextProvider.buildUserProfileBlock(tenantId, userId));
         CompletableFuture<String> memoryBankBlock = supplyAsync(() -> buildMemoryBankContext(tenantId));
         CompletableFuture<String> selfCritiqueCtx = supplyAsync(() -> contextProvider.buildSelfCritiqueContext(tenantId));
+        CompletableFuture<String> entityMemCtx = supplyAsync(() -> contextProvider.buildEntityMemoryContext(tenantId, userMessage));
+        CompletableFuture<String> masInsightCtx = isMultiDomain
+                ? supplyAsync(() -> contextProvider.buildMasInsightContext(tenantId, userMessage))
+                : CompletableFuture.completedFuture("");
+        CompletableFuture<String> graphRagCtx = supplyAsync(() -> contextProvider.buildGraphRagContext(tenantId, userMessage));
+        CompletableFuture<String> factoryProfileCtx = supplyAsync(() -> contextProvider.buildFactoryProfileContext(tenantId, userMessage));
 
         String intelligenceContext = safeJoin(intelligenceCtx, "实时经营上下文");
         String workerProfileBlock = safeJoin(workerProfile, "工人画像");
@@ -100,8 +106,14 @@ public class AiAgentPromptHelper {
         String userProfileBlockStr = safeJoin(userProfileBlock, "用户画像");
         String memoryBankBlockStr = safeJoin(memoryBankBlock, "MemoryBank");
         String selfCritiqueBlock = safeJoin(selfCritiqueCtx, "自我评分反馈");
+        String entityMemoryBlock = safeJoin(entityMemCtx, "实体记忆");
+        String graphRagBlock = safeJoin(graphRagCtx, "知识图谱");
+        String factoryProfileBlock = safeJoin(factoryProfileCtx, "工厂画像");
 
-        String masInsightBlock = buildMasInsightBlock();
+        String masFromFuture = safeJoin(masInsightCtx, "多Agent分析");
+        String masFromCache = buildMasInsightBlock();
+        String masInsightBlock = !masFromFuture.isBlank() ? masFromFuture
+                : (!masFromCache.isBlank() ? masFromCache : "");
         String contextBlock = buildContextBlock(userName, userRole, isSuperAdmin, isTenantOwner, isManager);
         String pageCtxBlock = buildPageContextBlock(pageContext);
         // 智能工具筛选：工具太多时用 RAG 选最相关的
@@ -113,12 +125,12 @@ public class AiAgentPromptHelper {
         String prompt = assemblePrompt(contextBlock, pageCtxBlock, roleBlock, exceptionReportBlock, activePatrolBlock,
                 masInsightBlock, intelligenceContext, longTermMemBlock, memoryContext, ragContext,
                 userBehaviorBlock, contextFileBlockStr, userProfileBlockStr, memoryBankBlockStr, selfCritiqueBlock,
-                toolGuide, domainHint);
+                entityMemoryBlock, graphRagBlock, factoryProfileBlock, toolGuide, domainHint);
 
         if (prompt.length() > maxSystemPromptChars) {
             int excess = prompt.length() - maxSystemPromptChars;
             log.warn("[AiAgent] systemPrompt过长({}字符 > {}上限)，超出{}字符，按优先级缩减", prompt.length(), maxSystemPromptChars, excess);
-            String[] lowPriorityLabels = {"userBehavior", "longTermMem", "masInsight", "contextFile", "selfCritique"};
+            String[] lowPriorityLabels = {"userBehavior", "longTermMem", "masInsight", "contextFile", "selfCritique", "graphRag", "factoryProfile"};
             // 第一轮：缩短低优先级块至200字符
             for (String label : lowPriorityLabels) {
                 if (prompt.length() <= maxSystemPromptChars) break;
@@ -368,7 +380,8 @@ public class AiAgentPromptHelper {
             String masInsightBlock, String intelligenceContext,
             String longTermMemBlock, String memoryContext, String ragContext,
             String userBehaviorBlock, String contextFileBlockStr, String userProfileBlockStr,
-            String memoryBankBlockStr, String selfCritiqueBlock, String toolGuide, String domainHint) {
+            String memoryBankBlockStr, String selfCritiqueBlock, String entityMemoryBlock,
+            String graphRagBlock, String factoryProfileBlock, String toolGuide, String domainHint) {
         String identity = promptTemplateLoader.getBaseIdentity();
         if (identity == null || identity.isBlank()) {
             identity = "你是小云——服装供应链首席运营顾问，由云裳智链Trivia团队开发。";
@@ -387,6 +400,9 @@ public class AiAgentPromptHelper {
                 "<!--BLOCK:longTermMem-->" + longTermMemBlock + "<!--/BLOCK:longTermMem-->" +
                 "<!--BLOCK:memoryBank-->" + memoryBankBlockStr + "<!--/BLOCK:memoryBank-->" +
                 "<!--BLOCK:memory-->" + memoryContext + "<!--/BLOCK:memory-->" +
+                "<!--BLOCK:entityMemory-->" + entityMemoryBlock + "<!--/BLOCK:entityMemory-->" +
+                "<!--BLOCK:graphRag-->" + graphRagBlock + "<!--/BLOCK:graphRag-->" +
+                "<!--BLOCK:factoryProfile-->" + factoryProfileBlock + "<!--/BLOCK:factoryProfile-->" +
                 "<!--BLOCK:rag-->" + ragContext + "<!--/BLOCK:rag-->" +
                 "<!--BLOCK:userBehavior-->" + userBehaviorBlock + "<!--/BLOCK:userBehavior-->" +
                 "<!--BLOCK:selfCritique-->" + selfCritiqueBlock + "<!--/BLOCK:selfCritique-->" +

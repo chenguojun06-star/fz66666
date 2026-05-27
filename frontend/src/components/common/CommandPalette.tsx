@@ -125,6 +125,11 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose }) => {
     }
   }, [navigate, onClose]);
 
+  const askAiAssistant = useCallback(() => {
+    onClose();
+    window.dispatchEvent(new CustomEvent('openAiChat', { detail: { query } }));
+  }, [onClose, query]);
+
   // 键盘导航
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Escape') { onClose(); return; }
@@ -205,6 +210,13 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose }) => {
             <div className="cp-empty-hint">
               <SearchOutlined style={{ fontSize: 16, marginBottom: 8, opacity: 0.3 }} />
               <div>未找到与「{query}」相关的结果</div>
+              <button
+                type="button"
+                className="cp-ai-fallback"
+                onClick={askAiAssistant}
+              >
+                <RobotOutlined /> 问小云AI助手
+              </button>
             </div>
           )}
 

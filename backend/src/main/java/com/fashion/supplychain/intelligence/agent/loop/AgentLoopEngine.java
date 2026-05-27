@@ -62,127 +62,172 @@ public class AgentLoopEngine {
         String sessionId = ctx.getCommandId();
         compensatingTxManager.beginSession(sessionId);
         try {
+            String termination;
+            while (ctx.getCurrentIteration() < ctx.getMaxIterations()) {
+                termination = checkSessionTermination(ctx, cb);
+                if (termination != null) return termination;
 
-        while (ctx.getCurrentIteration() < ctx.getMaxIterations()) {
-            if (ctx.isCancelled()) {
-                log.warn("[AgentLoop] SSE断开，中断Agent执行 (iter={})", ctx.getCurrentIteration());
-                aiAgentTraceOrchestrator.finishRequest(ctx.getCommandId(), null, "cancelled",
-                        System.currentTimeMillis() - ctx.getRequestStartAt());
-                cb.onError("连接已断开，执行已中断");
-                return "cancelled";
+                ctx.incrementIteration();
+                int iter = ctx.getCurrentIteration();
+                cb.onThinking(iter, "正在思考第 " + iter + " 轮…");
+                injectProgressHint(ctx, iter);
+
+                String turnResult = runSingleTurn(ctx, cb, iter);
+                if (turnResult != null) return turnResult;
             }
-            if (ctx.isDeadlineExceeded()) {
-                log.warn("[AgentLoop] 超时中断 ({}ms > {}ms)", System.currentTimeMillis() - ctx.getRequestStartAt(), ctx.getDeadlineMs() - ctx.getRequestStartAt());
-                aiAgentTraceOrchestrator.finishRequest(ctx.getCommandId(), null, "deadline_exceeded",
-                        System.currentTimeMillis() - ctx.getRequestStartAt());
-                cb.onError("执行超时，已完成部分将在下次请求中使用");
-                return "deadline_exceeded";
-            }
-            ctx.incrementIteration();
-            int iter = ctx.getCurrentIteration();
+            return handleMaxIterations(ctx, cb);
+        } finally {
+            compensatingTxManager.endSession(sessionId);
+        }
+    }
 
-            cb.onThinking(iter, "正在思考第 " + iter + " 轮…");
-            injectProgressHint(ctx, iter);
+    private String checkSessionTermination(AgentLoopContext ctx, AgentLoopCallback cb) {
+        if (ctx.isCancelled()) {
+            log.warn("[AgentLoop] SSE断开，中断Agent执行 (iter={})", ctx.getCurrentIteration());
+            aiAgentTraceOrchestrator.finishRequest(ctx.getCommandId(), null, "cancelled",
+                    System.currentTimeMillis() - ctx.getRequestStartAt());
+            cb.onError("连接已断开，执行已中断");
+            return "cancelled";
+        }
+        if (ctx.isDeadlineExceeded()) {
+            log.warn("[AgentLoop] 超时中断 ({}ms > {}ms)",
+                    System.currentTimeMillis() - ctx.getRequestStartAt(),
+                    ctx.getDeadlineMs() - ctx.getRequestStartAt());
+            aiAgentTraceOrchestrator.finishRequest(ctx.getCommandId(), null, "deadline_exceeded",
+                    System.currentTimeMillis() - ctx.getRequestStartAt());
+            cb.onError("执行超时，已完成部分将在下次请求中使用");
+            return "deadline_exceeded";
+        }
+        return null;
+    }
 
-            cb.onThinking(iter, "正在调用推理模型，请稍候…");
-            IntelligenceInferenceResult result;
-
-            boolean isLikelyFinalRound = (iter >= ctx.getMaxIterations() - 1)
-                    || (iter == 1 && ctx.getMaxIterations() <= 3);
-
-            if (isLikelyFinalRound && cb instanceof StreamingAgentLoopCallback) {
-                result = inferenceGateway.chatStream("agent-loop", ctx.getMessages(), ctx.getVisibleApiTools(),
-                        (chunk, done) -> {
-                            if (!chunk.isEmpty()) {
-                                cb.onAnswerChunk(chunk);
-                            }
-                        });
-            } else {
-                result = inferenceGateway.chat(
-                        "agent-loop", ctx.getMessages(), ctx.getVisibleApiTools());
-            }
-
-            if (!result.isSuccess()) {
-                String errMsg = "推理服务暂时不可用: " + result.getErrorMessage();
-                aiAgentTraceOrchestrator.finishRequest(ctx.getCommandId(), null, result.getErrorMessage(),
-                        System.currentTimeMillis() - ctx.getRequestStartAt());
-                cb.onError(errMsg);
-                return errMsg;
-            }
-
-            ctx.addTokens(result.getPromptTokens(), result.getCompletionTokens());
-            if (ctx.isTokenBudgetExceeded()) {
-                String budgetMsg = "今天的回答次数已消耗完成，请明天再来或联系管理员调整额度";
-                log.warn("[AgentLoop] Token 预算超限: {} > {}", ctx.getTotalTokens(), ctx.getTokenBudget());
-                aiAgentTraceOrchestrator.finishRequest(ctx.getCommandId(), budgetMsg, "token_budget_exceeded",
-                        System.currentTimeMillis() - ctx.getRequestStartAt());
-                cb.onTokenBudgetExceeded(budgetMsg, ctx.getCommandId());
-                return budgetMsg;
-            }
-
-            AiMessage assistantMessage = AiMessage.assistant(result.getContent());
-            if (result.getReasoningContent() != null && !result.getReasoningContent().isEmpty()) {
-                assistantMessage.setReasoning_content(result.getReasoningContent());
-            }
-
-            if (result.getToolCalls() != null && !result.getToolCalls().isEmpty()) {
-                if (handleStuckDetection(ctx, result.getToolCalls(), cb)) {
-                    return "stuck_detected";
-                }
-                assistantMessage.setTool_calls(result.getToolCalls());
-                ctx.getMessages().add(assistantMessage);
-
-                if (AgentModeContext.isPlan()) {
-                    cb.onPlanMode(result.getToolCalls(), iter, result.getContent());
-                    return "plan_mode";
-                }
-
-                for (AiToolCall toolCall : result.getToolCalls()) {
-                    cb.onToolCall(toolCall);
-                }
-                cb.onThinking(iter, "正在执行工具查询，请稍候…");
-
-                List<AiAgentToolExecHelper.ToolExecRecord> execRecords =
-                        toolExecHelper.executeToolsConcurrently(
-                                result.getToolCalls(), ctx.getVisibleToolMap(),
-                                ctx.getCommandId(), ctx.getToolResultCache());
-
-                recordCompensableExecs(ctx.getCommandId(), ctx.getVisibleToolMap(), execRecords);
-
-                boolean hasFailure = execRecords.stream()
-                        .anyMatch(r -> r.rawResult != null && r.rawResult.startsWith("{\"error\""));
-                if (hasFailure && compensatingTxManager.activeSessionCount() > 0) {
-                    CompensationResult rollbackResult = compensatingTxManager.rollbackSession(ctx.getCommandId());
-                    String rollbackMsg = buildRollbackMessage(rollbackResult);
-                    cb.onError(rollbackMsg);
-                    failSession(ctx, rollbackMsg);
-                    return "rollback_performed";
-                }
-
-                processToolResults(ctx, execRecords);
-                ctx.addExecRecords(execRecords);
-
-                for (AiAgentToolExecHelper.ToolExecRecord rec : execRecords) {
-                    cb.onToolResult(rec.toolName,
-                            !rec.rawResult.startsWith("{\"error\""),
-                            AiAgentEvidenceHelper.truncateOneLine(rec.evidence, 200));
-                }
-
-                recordPrmMetrics(ctx.getCommandId(), iter, execRecords);
-                saveCheckpoint(ctx);
-            } else {
-                return handleFinalAnswer(ctx, result.getContent(), cb);
-            }
+    private String runSingleTurn(AgentLoopContext ctx, AgentLoopCallback cb, int iter) {
+        IntelligenceInferenceResult result = performInference(ctx, cb, iter);
+        if (!result.isSuccess()) {
+            return handleInferenceError(ctx, result, cb);
         }
 
+        ctx.addTokens(result.getPromptTokens(), result.getCompletionTokens());
+        if (ctx.isTokenBudgetExceeded()) {
+            return handleTokenBudgetExceeded(ctx, cb);
+        }
+
+        AiMessage assistantMessage = AiMessage.assistant(result.getContent());
+        if (result.getReasoningContent() != null && !result.getReasoningContent().isEmpty()) {
+            assistantMessage.setReasoning_content(result.getReasoningContent());
+        }
+
+        if (result.getToolCalls() != null && !result.getToolCalls().isEmpty()) {
+            return runToolExecutionPhase(ctx, cb, iter, assistantMessage, result);
+        }
+        return handleFinalAnswer(ctx, result.getContent(), cb);
+    }
+
+    private IntelligenceInferenceResult performInference(AgentLoopContext ctx, AgentLoopCallback cb, int iter) {
+        cb.onThinking(iter, "正在调用推理模型，请稍候…");
+        boolean isLikelyFinalRound = (iter >= ctx.getMaxIterations() - 1)
+                || (iter == 1 && ctx.getMaxIterations() <= 3);
+
+        if (isLikelyFinalRound && cb instanceof StreamingAgentLoopCallback) {
+            return inferenceGateway.chatStream("agent-loop", ctx.getMessages(), ctx.getVisibleApiTools(),
+                    (chunk, done) -> {
+                        if (!chunk.isEmpty()) {
+                            cb.onAnswerChunk(chunk);
+                        }
+                    });
+        }
+        return inferenceGateway.chat("agent-loop", ctx.getMessages(), ctx.getVisibleApiTools());
+    }
+
+    private String handleInferenceError(AgentLoopContext ctx, IntelligenceInferenceResult result,
+                                         AgentLoopCallback cb) {
+        String errMsg = "推理服务暂时不可用: " + result.getErrorMessage();
+        aiAgentTraceOrchestrator.finishRequest(ctx.getCommandId(), null, result.getErrorMessage(),
+                System.currentTimeMillis() - ctx.getRequestStartAt());
+        cb.onError(errMsg);
+        return errMsg;
+    }
+
+    private String handleTokenBudgetExceeded(AgentLoopContext ctx, AgentLoopCallback cb) {
+        String budgetMsg = "今天的回答次数已消耗完成，请明天再来或联系管理员调整额度";
+        log.warn("[AgentLoop] Token 预算超限: {} > {}", ctx.getTotalTokens(), ctx.getTokenBudget());
+        aiAgentTraceOrchestrator.finishRequest(ctx.getCommandId(), budgetMsg, "token_budget_exceeded",
+                System.currentTimeMillis() - ctx.getRequestStartAt());
+        cb.onTokenBudgetExceeded(budgetMsg, ctx.getCommandId());
+        return budgetMsg;
+    }
+
+    private String runToolExecutionPhase(AgentLoopContext ctx, AgentLoopCallback cb, int iter,
+                                          AiMessage assistantMessage, IntelligenceInferenceResult result) {
+        if (handleStuckDetection(ctx, result.getToolCalls(), cb)) {
+            return "stuck_detected";
+        }
+        assistantMessage.setTool_calls(result.getToolCalls());
+        ctx.getMessages().add(assistantMessage);
+
+        if (AgentModeContext.isPlan()) {
+            cb.onPlanMode(result.getToolCalls(), iter, result.getContent());
+            return "plan_mode";
+        }
+
+        for (AiToolCall toolCall : result.getToolCalls()) {
+            cb.onToolCall(toolCall);
+        }
+        cb.onThinking(iter, "正在执行工具查询，请稍候…");
+
+        List<AiAgentToolExecHelper.ToolExecRecord> execRecords =
+                toolExecHelper.executeToolsConcurrently(
+                        result.getToolCalls(), ctx.getVisibleToolMap(),
+                        ctx.getCommandId(), ctx.getToolResultCache());
+
+        recordCompensableExecs(ctx.getCommandId(), ctx.getVisibleToolMap(), execRecords);
+
+        String rollbackResult = checkAndRollback(ctx, cb, execRecords);
+        if (rollbackResult != null) return rollbackResult;
+
+        processToolResults(ctx, execRecords);
+        ctx.addExecRecords(execRecords);
+        notifyToolResults(ctx, cb, execRecords);
+
+        recordPrmMetrics(ctx.getCommandId(), iter, execRecords);
+        saveCheckpoint(ctx);
+        return null;
+    }
+
+    private String checkAndRollback(AgentLoopContext ctx, AgentLoopCallback cb,
+                                     List<AiAgentToolExecHelper.ToolExecRecord> execRecords) {
+        boolean hasFailure = execRecords.stream()
+                .anyMatch(r -> r.rawResult != null && r.rawResult.startsWith("{\"error\""));
+        if (!hasFailure) {
+            return null;
+        }
+        boolean hasCompensableInSession = compensatingTxManager.hasSession(ctx.getCommandId());
+        if (!hasCompensableInSession) {
+            log.debug("[AgentLoop] 工具执行有错误但当前会话无可补偿操作，跳过回滚 commandId={}", ctx.getCommandId());
+            return null;
+        }
+        CompensationResult rollbackResult = compensatingTxManager.rollbackSession(ctx.getCommandId());
+        String rollbackMsg = buildRollbackMessage(rollbackResult);
+        cb.onError(rollbackMsg);
+        failSession(ctx, rollbackMsg);
+        return "rollback_performed";
+    }
+
+    private void notifyToolResults(AgentLoopContext ctx, AgentLoopCallback cb,
+                                    List<AiAgentToolExecHelper.ToolExecRecord> execRecords) {
+        for (AiAgentToolExecHelper.ToolExecRecord rec : execRecords) {
+            cb.onToolResult(rec.toolName,
+                    !rec.rawResult.startsWith("{\"error\""),
+                    AiAgentEvidenceHelper.truncateOneLine(rec.evidence, 200));
+        }
+    }
+
+    private String handleMaxIterations(AgentLoopContext ctx, AgentLoopCallback cb) {
         aiAgentTraceOrchestrator.finishRequest(ctx.getCommandId(), null, "对话轮数超过限制",
                 System.currentTimeMillis() - ctx.getRequestStartAt());
         failSession(ctx, "对话轮数超过限制");
         cb.onMaxIterationsExceeded();
         return "max_iterations_exceeded";
-        } finally {
-            compensatingTxManager.endSession(sessionId);
-        }
     }
 
     private void injectProgressHint(AgentLoopContext ctx, int iteration) {

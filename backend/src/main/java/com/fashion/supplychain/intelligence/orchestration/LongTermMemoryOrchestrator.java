@@ -124,8 +124,10 @@ public class LongTermMemoryOrchestrator {
 
         if (StringUtils.hasText(query)) {
             List<String> entities = extractEntities(query);
-            candidates.sort(Comparator.comparingDouble(
+            List<AiLongMemory> sortable = new ArrayList<>(candidates);
+            sortable.sort(Comparator.comparingDouble(
                     m -> -calcMultiSignalScore(m, query, entities)));
+            return sortable.size() > limit ? sortable.subList(0, limit) : sortable;
         }
 
         return candidates.size() > limit ? candidates.subList(0, limit) : candidates;

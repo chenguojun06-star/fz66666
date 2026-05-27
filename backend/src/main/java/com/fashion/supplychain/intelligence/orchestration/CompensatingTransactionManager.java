@@ -102,6 +102,10 @@ public class CompensatingTransactionManager {
         return SESSIONS.size();
     }
 
+    public boolean hasSession(String sessionId) {
+        return sessionId != null && SESSIONS.containsKey(sessionId);
+    }
+
     @Scheduled(fixedRate = 600_000)
     public void evictExpiredSessions() {
         LocalDateTime cutoff = LocalDateTime.now().minusMinutes(SESSION_TTL_MINUTES);

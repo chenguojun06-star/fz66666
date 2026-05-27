@@ -119,10 +119,30 @@ kbd.cp-kbd {
   align-items: center;
   justify-content: center;
   padding: 32px 20px 28px;
-  color: #9ca3af;
+  color: var(--color-text-tertiary);
   font-size: 13px;
   gap: 4px;
   text-align: center;
+}
+
+.cp-ai-fallback {
+  margin-top: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 16px;
+  border-radius: 20px;
+  border: 1px solid rgba(45, 127, 249, 0.3);
+  background: rgba(45, 127, 249, 0.06);
+  color: var(--color-primary);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.cp-ai-fallback:hover {
+  background: rgba(45, 127, 249, 0.12);
+  border-color: rgba(45, 127, 249, 0.5);
 }
 
 .cp-hint-tips {

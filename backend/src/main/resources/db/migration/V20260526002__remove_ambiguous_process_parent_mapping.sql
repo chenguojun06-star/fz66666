@@ -1,0 +1,1 @@
+DELETE FROM t_process_parent_mapping WHERE process_keyword IN ('钉扣', '锁眼');

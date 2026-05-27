@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Form, App } from 'antd';
 import api from '@/utils/api';
 import { useUser } from '@/utils/AuthContext';
@@ -35,6 +35,10 @@ export function usePurchaseDetailPage(styleNoParam: string, orderNoParam: string
   const [receiveRecord, setReceiveRecord] = useState<MaterialPurchase | null>(null);
   const [receiveLoading, setReceiveLoading] = useState(false);
 
+  const [returnConfirmVisible, setReturnConfirmVisible] = useState(false);
+  const [returnConfirmRecord, setReturnConfirmRecord] = useState<MaterialPurchase | null>(null);
+  const [returnConfirmLoading, setReturnConfirmLoading] = useState(false);
+
   const [qualityIssueVisible, setQualityIssueVisible] = useState(false);
   const [qualityIssueRecord, setQualityIssueRecord] = useState<MaterialPurchase | null>(null);
 
@@ -42,6 +46,7 @@ export function usePurchaseDetailPage(styleNoParam: string, orderNoParam: string
 
   const [form] = Form.useForm();
   const [receiveForm] = Form.useForm();
+  const [returnConfirmForm] = Form.useForm();
 
   const [editing, setEditing] = useState(false);
   const [editableData, setEditableData] = useState<MaterialPurchase[]>([]);
@@ -387,32 +392,43 @@ export function usePurchaseDetailPage(styleNoParam: string, orderNoParam: string
     }
   };
 
-  const handleReturnConfirm = (record: MaterialPurchase) => {
-    const confirmerName = String(user?.name || user?.username || '').trim();
-    modal.confirm({
-      title: '回料确认',
-      content: `确认物料「${record.materialName || record.materialCode}」已回料吗？`,
-      okText: '确认回料',
-      cancelText: '取消',
-      onOk: async () => {
-        try {
-          const res = await postReturnConfirm({
-            purchaseId: record.id,
-            confirmerName,
-            returnQuantity: Number(record.arrivedQuantity || record.purchaseQuantity),
-          });
-          if (res.code === 200) {
-            message.success('回料确认成功');
-            await loadData();
-          } else {
-            message.error(res.message || '回料确认失败');
-          }
-        } catch {
-          message.error('回料确认失败');
-        }
-      },
-    });
-  };
+  const handleReturnConfirm = useCallback((record: MaterialPurchase) => {
+    setReturnConfirmRecord(record);
+    returnConfirmForm.resetFields();
+    returnConfirmForm.setFieldsValue({ quantity: Number(record.arrivedQuantity || record.purchaseQuantity || 0) });
+    setReturnConfirmVisible(true);
+  }, [returnConfirmForm]);
+
+  const doReturnConfirm = useCallback(async () => {
+    if (!returnConfirmRecord) return;
+    try {
+      setReturnConfirmLoading(true);
+      const values = await returnConfirmForm.validateFields();
+      const confirmerName = String(user?.name || user?.username || '').trim();
+      const res = await postReturnConfirm({
+        purchaseId: returnConfirmRecord.id,
+        confirmerName,
+        returnQuantity: values.quantity,
+      });
+      if (res.code === 200) {
+        message.success('回料确认成功');
+        setReturnConfirmVisible(false);
+        returnConfirmForm.resetFields();
+        await loadData();
+      } else {
+        message.error(res.message || '回料确认失败');
+      }
+    } catch (error: unknown) {
+      const formError = error as { errorFields?: Array<{ errors?: string[] }> };
+      if (formError?.errorFields?.length) {
+        message.error(formError.errorFields[0]?.errors?.[0] || '请填写数量');
+      } else {
+        message.error((error as Error).message || '回料确认失败');
+      }
+    } finally {
+      setReturnConfirmLoading(false);
+    }
+  }, [returnConfirmRecord, returnConfirmForm, user, message, loadData]);
 
   const handleCancelReceive = (record: MaterialPurchase) => {
     modal.confirm({
@@ -450,11 +466,23 @@ export function usePurchaseDetailPage(styleNoParam: string, orderNoParam: string
       return;
     }
     const receiverName = String(user?.name || user?.username || '').trim();
+    const contentEl = React.createElement('div', null,
+      React.createElement('p', null, `确认批量采购以下 ${pending.length} 项物料：`),
+      React.createElement('div', { style: { maxHeight: 220, overflowY: 'auto', marginTop: 8, fontSize: 12 } },
+        pending.map((item, idx) =>
+          React.createElement('div', { key: idx, style: { padding: '6px 0', borderBottom: '1px solid #f0f0f0', display: 'flex', justifyContent: 'space-between' } },
+            React.createElement('span', null, `${item.materialName || item.materialCode} · ${item.color || '-'}`),
+            React.createElement('span', { style: { color: '#1677ff' } }, `采购 ${item.purchaseQuantity}${item.unit || ''}`)
+          )
+        )
+      )
+    );
     modal.confirm({
       title: '批量采购',
-      content: `确认批量采购 ${pending.length} 项物料吗？`,
+      content: contentEl,
       okText: '确认批量采购',
       cancelText: '取消',
+      width: 440,
       onOk: async () => {
         for (const item of pending) {
           try {
@@ -483,11 +511,23 @@ export function usePurchaseDetailPage(styleNoParam: string, orderNoParam: string
       return;
     }
     const confirmerName = String(user?.name || user?.username || '').trim();
+    const contentEl = React.createElement('div', null,
+      React.createElement('p', null, `确认回料以下 ${returnable.length} 项物料：`),
+      React.createElement('div', { style: { maxHeight: 220, overflowY: 'auto', marginTop: 8, fontSize: 12 } },
+        returnable.map((item, idx) =>
+          React.createElement('div', { key: idx, style: { padding: '6px 0', borderBottom: '1px solid #f0f0f0', display: 'flex', justifyContent: 'space-between' } },
+            React.createElement('span', null, `${item.materialName || item.materialCode} · ${item.color || '-'}`),
+            React.createElement('span', { style: { color: '#1677ff' } }, `到货 ${item.arrivedQuantity || item.purchaseQuantity}${item.unit || ''}`)
+          )
+        )
+      )
+    );
     modal.confirm({
       title: '批量回料确认',
-      content: `确认批量回料确认 ${returnable.length} 项物料吗？`,
+      content: contentEl,
       okText: '确认回料',
       cancelText: '取消',
+      width: 440,
       onOk: async () => {
         for (const item of returnable) {
           try {
@@ -614,14 +654,15 @@ export function usePurchaseDetailPage(styleNoParam: string, orderNoParam: string
 
   return {
     loading, order, purchaseList, materialArrivalRate,
-    form, receiveForm,
+    form, receiveForm, returnConfirmForm,
     receiveVisible, setReceiveVisible, receiveRecord, receiveLoading,
+    returnConfirmVisible, setReturnConfirmVisible, returnConfirmRecord, returnConfirmLoading,
     qualityIssueVisible, setQualityIssueVisible, qualityIssueRecord, setQualityIssueRecord,
     confirmCompleteSubmitting,
     loadData,
     handleDelete,
     openReceive, handleReceive,
-    handleReturnConfirm, handleCancelReceive,
+    handleReturnConfirm, doReturnConfirm, handleCancelReceive,
     handleBatchReceive, handleBatchReturnConfirm, handleConfirmComplete,
     handleReturnReset, handleWarehousePick,
     handleExport,

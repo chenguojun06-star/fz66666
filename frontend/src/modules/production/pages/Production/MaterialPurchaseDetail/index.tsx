@@ -38,23 +38,31 @@ const MATERIAL_TYPE_OPTIONS = [
   { value: 'accessoryC', label: '辅料C' }, { value: 'accessoryD', label: '辅料D' }, { value: 'accessoryE', label: '辅料E' },
 ];
 
-const MaterialPurchaseDetail: React.FC = () => {
+export interface MaterialPurchaseDetailProps {
+  styleNo?: string;
+  orderNo?: string;
+  embedded?: boolean;
+  onClose?: () => void;
+}
+
+const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo: propStyleNo, orderNo: propOrderNo, embedded, onClose }) => {
   const { styleNo: styleNoParam } = useParams<{ styleNo: string }>();
   const [searchParams] = useSearchParams();
-  const orderNo = searchParams.get('orderNo') || '';
-  const styleNo = styleNoParam || '';
+  const orderNo = propOrderNo ?? searchParams.get('orderNo') ?? '';
+  const styleNo = propStyleNo ?? styleNoParam ?? '';
   const navigate = useNavigate();
   const { isMobile } = useViewport();
 
   const {
     loading, order, purchaseList, materialArrivalRate,
-    receiveForm,
+    receiveForm, returnConfirmForm,
     receiveVisible, setReceiveVisible, receiveRecord, receiveLoading,
+    returnConfirmVisible, setReturnConfirmVisible, returnConfirmRecord, returnConfirmLoading,
     qualityIssueVisible, setQualityIssueVisible, qualityIssueRecord, setQualityIssueRecord,
     confirmCompleteSubmitting,
     handleDelete,
     openReceive, handleReceive,
-    handleReturnConfirm, handleCancelReceive,
+    handleReturnConfirm, doReturnConfirm, handleCancelReceive,
     handleBatchReceive, handleBatchReturnConfirm, handleConfirmComplete,
     handleReturnReset, handleWarehousePick: _handleWarehousePick,
     handleExport,
@@ -372,10 +380,10 @@ const MaterialPurchaseDetail: React.FC = () => {
   const columns = editing ? editColumns : viewColumns;
 
   return (
-    <div style={{ padding: isMobile ? 12 : 24 }}>
+    <div style={{ padding: embedded ? 0 : (isMobile ? 12 : 24) }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
         <Space>
-          <Button onClick={() => navigate(-1)}>返回</Button>
+          <Button onClick={() => embedded && onClose ? onClose() : navigate(-1)}>返回</Button>
           <h2 style={{ margin: 0, fontSize: isMobile ? 16 : 20 }}>订单物料采购明细</h2>
         </Space>
       </div>
@@ -684,6 +692,30 @@ const MaterialPurchaseDetail: React.FC = () => {
         <Form form={receiveForm} layout="vertical">
           <Form.Item name="quantity" label="数量" rules={[{ required: true, message: '请输入数量' }]}>
             <InputNumber min={0.01} step={0.01} precision={2} style={{ width: '100%' }} />
+          </Form.Item>
+        </Form>
+      </ResizableModal>
+
+      <ResizableModal
+        title="回料确认"
+        open={returnConfirmVisible}
+        onOk={doReturnConfirm}
+        onCancel={() => { setReturnConfirmVisible(false); returnConfirmForm.resetFields(); }}
+        confirmLoading={returnConfirmLoading}
+        width="30vw"
+      >
+        {returnConfirmRecord && (
+          <ModalContentLayout.HeaderCard>
+            <ModalContentLayout.FieldRow gap={24}>
+              <ModalContentLayout.Field label="物料名称" value={returnConfirmRecord.materialName} />
+              <ModalContentLayout.Field label="物料编码" value={returnConfirmRecord.materialCode} />
+              <ModalContentLayout.Field label="已到货" value={formatMaterialQuantityWithUnit(returnConfirmRecord.arrivedQuantity, returnConfirmRecord.unit)} />
+            </ModalContentLayout.FieldRow>
+          </ModalContentLayout.HeaderCard>
+        )}
+        <Form form={returnConfirmForm} layout="vertical">
+          <Form.Item name="quantity" label="实际回料数量" rules={[{ required: true, message: '请输入实际回料数量' }]}>
+            <InputNumber min={0} step={1} precision={0} style={{ width: '100%' }} />
           </Form.Item>
         </Form>
       </ResizableModal>

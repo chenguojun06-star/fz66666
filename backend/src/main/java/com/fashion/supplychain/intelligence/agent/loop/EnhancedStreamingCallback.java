@@ -139,23 +139,33 @@ public class EnhancedStreamingCallback extends StreamingAgentLoopCallback {
         }
     }
 
-    /** 根据工具名推断图标 */
+    private static final List<String[]> TOOL_ICON_MAP = List.of(
+            new String[]{"order,production,progress", "📦"},
+            new String[]{"warehouse,stock,inventory", "🏗️"},
+            new String[]{"finance,payroll,invoice", "💰"},
+            new String[]{"style,sample,pattern", "👗"},
+            new String[]{"quality,defect,inspect", "🔍"},
+            new String[]{"scan", "📱"},
+            new String[]{"material,procurement,purchase", "🧵"},
+            new String[]{"report,analysis,dashboard", "📊"},
+            new String[]{"knowledge,search,rag", "📚"},
+            new String[]{"think,plan", "💭"},
+            new String[]{"customer,crm", "🤝"},
+            new String[]{"supplier,factory", "🏭"},
+            new String[]{"logistics,ship", "🚚"}
+    );
+
+    /** 根据工具名推断图标 — 基于关键词映射，O(n) 但 n=13 可忽略 */
     public static String resolveToolIcon(String toolName) {
         if (toolName == null) return "🔧";
         String name = toolName.toLowerCase();
-        if (name.contains("order") || name.contains("production") || name.contains("progress")) return "📦";
-        if (name.contains("warehouse") || name.contains("stock") || name.contains("inventory")) return "🏗️";
-        if (name.contains("finance") || name.contains("payroll") || name.contains("invoice")) return "💰";
-        if (name.contains("style") || name.contains("sample") || name.contains("pattern")) return "👗";
-        if (name.contains("quality") || name.contains("defect") || name.contains("inspect")) return "🔍";
-        if (name.contains("scan")) return "📱";
-        if (name.contains("material") || name.contains("procurement") || name.contains("purchase")) return "🧵";
-        if (name.contains("report") || name.contains("analysis") || name.contains("dashboard")) return "📊";
-        if (name.contains("knowledge") || name.contains("search") || name.contains("rag")) return "📚";
-        if (name.contains("think") || name.contains("plan")) return "💭";
-        if (name.contains("customer") || name.contains("crm")) return "🤝";
-        if (name.contains("supplier") || name.contains("factory")) return "🏭";
-        if (name.contains("logistics") || name.contains("ship")) return "🚚";
+        for (String[] entry : TOOL_ICON_MAP) {
+            for (String keyword : entry[0].split(",")) {
+                if (name.contains(keyword)) {
+                    return entry[1];
+                }
+            }
+        }
         return "🔧";
     }
 

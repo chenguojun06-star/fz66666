@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import { Alert, App, Button, Card, Collapse, Image, Input, InputNumber, Select, Space, Spin, Tag } from 'antd';
+import { Alert, App, Button, Card, Collapse, Form, Image, Input, InputNumber, Select, Space, Spin, Tag } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import ResizableTable from '@/components/common/ResizableTable';
@@ -69,7 +69,7 @@ const normalizeStatus = (status?: MaterialPurchase['status'] | string) =>
   String(status || '').trim().toLowerCase();
 
 const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = ({ orderId, orderNo }) => {
-  const { message } = App.useApp();
+  const { message, modal } = App.useApp();
   const navigate = useNavigate();
   const { user } = useUser();
 
@@ -93,6 +93,13 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = ({ orderId, orde
   const [materialTotal, setMaterialTotal] = useState(0);
   const [materialPage, setMaterialPage] = useState(1);
   const [materialPageSize, setMaterialPageSize] = useState(10);
+
+  const [receiveModalVisible, setReceiveModalVisible] = useState(false);
+  const [receiveModalRecord, setReceiveModalRecord] = useState<MaterialPurchase | null>(null);
+  const [returnModalVisible, setReturnModalVisible] = useState(false);
+  const [returnModalRecord, setReturnModalRecord] = useState<MaterialPurchase | null>(null);
+  const [receiveForm] = Form.useForm();
+  const [returnForm] = Form.useForm();
 
   const orderColors = useMemo(() => {
     const colors = new Set<string>();
@@ -337,27 +344,38 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = ({ orderId, orde
   }, [materialModalOpen, materialPage, materialPageSize, handleSearchMaterial]);
 
   const handleReceive = useCallback(async (record: MaterialPurchase) => {
-    const purchaseId = String(record?.id || '').trim();
-    if (!purchaseId) return;
-    const receiverId = String(user?.id || '').trim();
-    const receiverName = String(user?.name || user?.username || '').trim();
+    setReceiveModalRecord(record);
+    receiveForm.setFieldsValue({ quantity: Number(record.purchaseQuantity || 0) });
+    setReceiveModalVisible(true);
+  }, [receiveForm]);
+
+  const doReceive = useCallback(async () => {
     try {
+      const values = await receiveForm.validateFields();
+      const record = receiveModalRecord;
+      if (!record) return;
+      const purchaseId = String(record?.id || '').trim();
+      if (!purchaseId) return;
+      const receiverId = String(user?.id || '').trim();
+      const receiverName = String(user?.name || user?.username || '').trim();
       const res = await api.post<{ code: number; message?: string }>('/production/purchase/receive', {
         purchaseId,
         receiverId,
         receiverName,
-        arrivedQuantity: Number(record.purchaseQuantity || 0),
+        arrivedQuantity: values.quantity,
       });
       if (res?.code === 200) {
-        message.success(`${record.materialName || record.materialCode} 采购领取成功`);
+        message.success(`${record.materialName || record.materialCode} 到货确认成功`);
+        setReceiveModalVisible(false);
         loadData();
       } else {
-        message.error(res?.message || '领取失败');
+        message.error(res?.message || '到货确认失败');
       }
     } catch (e) {
-      message.error((e as Error)?.message || '领取失败');
+      if (e && typeof e === 'object' && 'errorFields' in e) return; // form validation
+      message.error((e as Error)?.message || '到货确认失败');
     }
-  }, [user, message, loadData]);
+  }, [receiveModalRecord, receiveForm, user, message, loadData]);
 
   const handleReceiveAll = useCallback(async () => {
     const pendingItems = purchases.filter(p => normalizeStatus(p.status) === MATERIAL_PURCHASE_STATUS.PENDING);
@@ -389,27 +407,38 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = ({ orderId, orde
   }, [purchases, user, message, loadData]);
 
   const handleConfirmReturn = useCallback(async (record: MaterialPurchase) => {
-    const purchaseId = String(record?.id || '').trim();
-    if (!purchaseId) return;
-    const confirmerId = String(user?.id || '').trim();
-    const confirmerName = String(user?.name || user?.username || '').trim();
+    setReturnModalRecord(record);
+    returnForm.setFieldsValue({ quantity: Number(record.arrivedQuantity || record.purchaseQuantity || 0) });
+    setReturnModalVisible(true);
+  }, [returnForm]);
+
+  const doReturnConfirm = useCallback(async () => {
     try {
+      const values = await returnForm.validateFields();
+      const record = returnModalRecord;
+      if (!record) return;
+      const purchaseId = String(record?.id || '').trim();
+      if (!purchaseId) return;
+      const confirmerId = String(user?.id || '').trim();
+      const confirmerName = String(user?.name || user?.username || '').trim();
       const res = await api.post<{ code: number; message?: string }>('/production/purchase/return-confirm', {
         purchaseId,
-        returnQuantity: Number(record.arrivedQuantity || record.purchaseQuantity || 0),
+        returnQuantity: values.quantity,
         confirmerId,
         confirmerName,
       });
       if (res?.code === 200) {
         message.success(`${record.materialName || record.materialCode} 回料确认成功`);
+        setReturnModalVisible(false);
         loadData();
       } else {
         message.error(res?.message || '回料确认失败');
       }
     } catch (e) {
+      if (e && typeof e === 'object' && 'errorFields' in e) return;
       message.error((e as Error)?.message || '回料确认失败');
     }
-  }, [user, message, loadData]);
+  }, [returnModalRecord, returnForm, user, message, loadData]);
 
   const handleReturnReset = useCallback(async (record: MaterialPurchase) => {
     const purchaseId = String(record?.id || '').trim();
@@ -458,27 +487,49 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = ({ orderId, orde
       message.info('没有可回料确认的物料');
       return;
     }
-    setActionLoading(true);
-    try {
-      const confirmerId = String(user?.id || '').trim();
-      const confirmerName = String(user?.name || user?.username || '').trim();
-      const purchaseIds = returnable.map(p => String(p.id || '')).filter(Boolean);
-      const res = await api.post<{ code: number; message?: string }>('/production/purchase/batch-return-confirm', {
-        purchaseIds,
-        confirmerId,
-        confirmerName,
-      });
-      if (res?.code === 200) {
-        message.success(`已批量回料确认 ${returnable.length} 项`);
-        loadData();
-      } else {
-        message.error(res?.message || '批量回料确认失败');
-      }
-    } catch (e) {
-      message.error((e as Error)?.message || '批量回料确认失败');
-    } finally {
-      setActionLoading(false);
-    }
+    const contentEl = (
+      <div>
+        <p>确认回料以下 {returnable.length} 项物料：</p>
+        <div style={{ maxHeight: 220, overflowY: 'auto', marginTop: 8, fontSize: 12 }}>
+          {returnable.map((item, idx) => (
+            <div key={idx} style={{ padding: '6px 0', borderBottom: '1px solid #f0f0f0', display: 'flex', justifyContent: 'space-between' }}>
+              <span>{item.materialName || item.materialCode} · {item.color || '-'}</span>
+              <span style={{ color: '#1677ff' }}>到货 {item.arrivedQuantity || item.purchaseQuantity}{item.unit || ''}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+    modal.confirm({
+      title: '批量回料确认',
+      content: contentEl,
+      okText: '确认回料',
+      cancelText: '取消',
+      width: 440,
+      onOk: async () => {
+        setActionLoading(true);
+        try {
+          const confirmerId = String(user?.id || '').trim();
+          const confirmerName = String(user?.name || user?.username || '').trim();
+          const purchaseIds = returnable.map(p => String(p.id || '')).filter(Boolean);
+          const res = await api.post<{ code: number; message?: string }>('/production/purchase/batch-return-confirm', {
+            purchaseIds,
+            confirmerId,
+            confirmerName,
+          });
+          if (res?.code === 200) {
+            message.success(`已批量回料确认 ${returnable.length} 项`);
+            loadData();
+          } else {
+            message.error(res?.message || '批量回料确认失败');
+          }
+        } catch (e) {
+          message.error((e as Error)?.message || '批量回料确认失败');
+        } finally {
+          setActionLoading(false);
+        }
+      },
+    });
   }, [purchases, user, message, loadData]);
 
   const handleConfirmComplete = useCallback(async () => {
@@ -554,6 +605,19 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = ({ orderId, orde
     });
     return missing;
   }, [orderColorSet, purchaseColorSet]);
+
+  const bomIncomplete = useMemo(() => {
+    if (purchases.length === 0) return true;
+    const REQUIRED = ['materialType', 'materialCode', 'materialName', 'unit', 'supplierName'] as (keyof MaterialPurchase)[];
+    return purchases.some((item) =>
+      REQUIRED.some((field) => {
+        const val = item[field];
+        return val === undefined || val === null || String(val).trim() === '';
+      })
+    );
+  }, [purchases]);
+
+  const canProcure = !bomIncomplete;
 
   const sections = useMemo(() => {
     return ([
@@ -963,7 +1027,7 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = ({ orderId, orde
               <Button
                 type="link"
                 size="small"
-                disabled={status !== MATERIAL_PURCHASE_STATUS.PENDING}
+                disabled={status !== MATERIAL_PURCHASE_STATUS.PENDING || (bomIncomplete && !hasStock)}
                 onClick={() => {
                   if (hasStock) {
                     const pickQty = Math.min(stock, Number(record.purchaseQuantity || 0));
@@ -973,7 +1037,7 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = ({ orderId, orde
                   }
                 }}
               >
-                {hasStock ? '出库领取' : '采购'}
+                {hasStock ? '出库领取' : (bomIncomplete ? '采购（信息不全）' : '采购')}
               </Button>
             )}
             <Button
@@ -1015,7 +1079,7 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = ({ orderId, orde
         );
       },
     },
-  ], [handleReceive, handleConfirmReturn, handleReturnReset, handleCancelReceive, handleWarehousePick, handleQualityIssue, stockMap]);
+  ], [handleReceive, handleConfirmReturn, handleReturnReset, handleCancelReceive, handleWarehousePick, handleQualityIssue, stockMap, bomIncomplete]);
 
   return (
     <Spin spinning={loading}>
@@ -1061,12 +1125,15 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = ({ orderId, orde
                 <Button
                   type="primary"
                   size="small"
-                  disabled={!purchases.some(p => normalizeStatus(p.status) === MATERIAL_PURCHASE_STATUS.PENDING)}
+                  disabled={!purchases.some(p => normalizeStatus(p.status) === MATERIAL_PURCHASE_STATUS.PENDING) || !canProcure}
                   loading={actionLoading}
                   onClick={handleReceiveAll}
                 >
                   采购全部
                 </Button>
+                {bomIncomplete && (
+                  <Tag color="warning" style={{ marginLeft: 4 }}>请先编辑物料信息</Tag>
+                )}
                 <Button
                   size="small"
                   disabled={!purchases.some(p => {
@@ -1276,6 +1343,54 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = ({ orderId, orde
             },
           ]}
         />
+      </ResizableModal>
+
+      <ResizableModal
+        title="确认到货"
+        open={receiveModalVisible}
+        onCancel={() => setReceiveModalVisible(false)}
+        onOk={doReceive}
+        width={420}
+        destroyOnHidden
+      >
+        <Form form={receiveForm} layout="vertical" style={{ marginTop: 12 }}>
+          <Form.Item label="物料">{receiveModalRecord?.materialName || receiveModalRecord?.materialCode || '-'}</Form.Item>
+          <Form.Item label="颜色">{receiveModalRecord?.color || '-'}</Form.Item>
+          <Form.Item
+            label="实际到货数量"
+            name="quantity"
+            rules={[
+              { required: true, message: '请输入实际到货数量' },
+              { type: 'number', min: 1, message: '数量必须大于 0' },
+            ]}
+          >
+            <InputNumber style={{ width: '100%' }} min={1} precision={0} />
+          </Form.Item>
+        </Form>
+      </ResizableModal>
+
+      <ResizableModal
+        title="确认回料"
+        open={returnModalVisible}
+        onCancel={() => setReturnModalVisible(false)}
+        onOk={doReturnConfirm}
+        width={420}
+        destroyOnHidden
+      >
+        <Form form={returnForm} layout="vertical" style={{ marginTop: 12 }}>
+          <Form.Item label="物料">{returnModalRecord?.materialName || returnModalRecord?.materialCode || '-'}</Form.Item>
+          <Form.Item label="颜色">{returnModalRecord?.color || '-'}</Form.Item>
+          <Form.Item
+            label="实际回料数量"
+            name="quantity"
+            rules={[
+              { required: true, message: '请输入实际回料数量' },
+              { type: 'number', min: 0, message: '不能为负数' },
+            ]}
+          >
+            <InputNumber style={{ width: '100%' }} min={0} precision={0} />
+          </Form.Item>
+        </Form>
       </ResizableModal>
     </Spin>
   );

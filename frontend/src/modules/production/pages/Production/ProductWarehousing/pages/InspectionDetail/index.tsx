@@ -56,11 +56,19 @@ interface QualityBriefingData {
   qualityTips: string[];
 }
 
-const InspectionDetail: React.FC = () => {
-  const { orderId } = useParams<{ orderId: string }>();
+export interface InspectionDetailProps {
+  orderId?: string;
+  defaultTab?: string;
+  embedded?: boolean;
+  onClose?: () => void;
+}
+
+const InspectionDetail: React.FC<InspectionDetailProps> = ({ orderId: propOrderId, defaultTab: propDefaultTab, embedded, onClose }) => {
+  const { orderId: paramOrderId } = useParams<{ orderId: string }>();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const defaultTab = searchParams.get('tab') || 'records';
+  const orderId = propOrderId || paramOrderId || '';
+  const defaultTab = propDefaultTab || searchParams.get('tab') || 'records';
   const highlightWhNo = searchParams.get('warehousingNo') || '';
   const [loading, setLoading] = useState(true);
   const [briefing, setBriefing] = useState<QualityBriefingData | null>(null);
@@ -81,7 +89,7 @@ const InspectionDetail: React.FC = () => {
 
   const formHook = useWarehousingForm(
     true, null,
-    () => navigate('/production/warehousing'),
+    () => embedded && onClose ? onClose() : navigate('/production/warehousing'),
     () => { message.success('质检完成'); fetchBriefing(); fetchQcRecords(); },
     briefing?.order?.orderNo,
   );
@@ -239,17 +247,19 @@ const InspectionDetail: React.FC = () => {
     return set;
   }, [qcRecords]);
 
-  const handleWarehouseSubmit = async () => {
+  const handleWarehouseSubmit = async (selectedIds?: string[]) => {
     if (!warehouseValue) { message.error('请选择仓库'); return; }
     if (!orderId) return;
     setWarehousingLoading(true);
     try {
+      const idSet = selectedIds ? new Set(selectedIds) : null;
       const targets = qcRecords.filter(r => {
         const qs = String(r.qualityStatus || '').trim().toLowerCase();
         const wt = String((r as any)?.warehousingType || '').trim();
         const wh = String(r.warehouse || '').trim();
         if (wt === 'quality_scan_scrap' || wt === 'repair_return') return false;
         if (wh && wh !== '待分配') return false;
+        if (idSet && !idSet.has(String(r.id))) return false;
         return (!qs || qs === 'qualified') && Number(r.qualifiedQuantity || 0) > 0;
       });
       if (!targets.length) { message.info('暂无可入库的合格质检记录'); setWarehousingLoading(false); return; }
@@ -320,7 +330,7 @@ const InspectionDetail: React.FC = () => {
   if (!briefing) return (
     <Card>
       <Alert type="error" title="无法加载质检简报数据" showIcon />
-      <Button type="link" onClick={() => navigate('/production/warehousing')}>返回质检入库列表</Button>
+      <Button type="link" onClick={() => embedded && onClose ? onClose() : navigate('/production/warehousing')}>返回质检入库列表</Button>
     </Card>
   );
 
@@ -333,7 +343,7 @@ const InspectionDetail: React.FC = () => {
     <>
       {/* 顶部导航栏 */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-        <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/production/warehousing')}>返回</Button>
+        <Button icon={<ArrowLeftOutlined />} onClick={() => embedded && onClose ? onClose() : navigate('/production/warehousing')}>返回</Button>
         <Title level={4} style={{ margin: 0 }}>质检入库 - {order.orderNo}</Title>
         {(plateTypeKey === 'FIRST') && <Tag color="blue">首</Tag>}
         {(plateTypeKey === 'REORDER' || plateTypeKey === 'REPLATE') && <Tag color="purple">翻</Tag>}

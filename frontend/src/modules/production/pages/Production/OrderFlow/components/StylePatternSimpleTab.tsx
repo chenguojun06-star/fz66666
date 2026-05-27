@@ -4,7 +4,6 @@ import { FileOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
 import type { StyleAttachment } from '@/types/style';
 import StyleSizeTab from '@/modules/basic/pages/StyleInfo/components/StyleSizeTab';
-import StyleSecondaryProcessTab from '@/modules/basic/pages/StyleInfo/components/StyleSecondaryProcessTab';
 import api from '@/utils/api';
 import { getStyleInfoByRef } from '@/services/style/styleApi';
 import { downloadFile } from '@/utils/fileUrl';
@@ -205,16 +204,7 @@ const StylePatternSimpleTab: React.FC<Props> = ({ styleId, styleNo }) => {
               </Card>
             ),
           },
-          {
-            key: 'secondary',
-            label: ' 二次工艺',
-            children: (
-              <Card style={{ marginBottom: 16 }}>
-                <StyleSecondaryProcessTab styleId={styleId} styleNo={styleNo} readOnly simpleView />
-              </Card>
-            ),
-          },
-        ]}
+          ]}
       />
     </div>
   );

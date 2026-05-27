@@ -87,8 +87,8 @@
   height: var(--control-height, 32px) !important;
   border-radius: 999px !important;
   align-items: center !important;
-  border-color: var(--neutral-border) !important;
-  background: var(--neutral-white) !important;
+  border-color: var(--color-border) !important;
+  background: var(--color-bg-base) !important;
 }
 
 .dashboard-search-inline .ant-select-selection-search-input {
@@ -553,7 +553,7 @@
   align-items: center;
   justify-content: center;
   padding: 20px;
-  background: var(--neutral-bg);
+  background: var(--color-bg-subtle);
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.8);
   border-radius: 16px;
@@ -571,7 +571,7 @@
   transform: translateY(-6px) scale(1.03);
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12),
               inset 0 0 0 1px rgba(255, 255, 255, 1);
-  background: var(--neutral-bg);
+  background: var(--color-bg-subtle);
 }
 
 .quick-entry-item--style {
@@ -739,7 +739,7 @@
 
 /* ============= 深色主题覆盖规则 ============= */
 :root[data-theme="dark"] .page-title {
-  color: var(--neutral-text);
+  color: var(--color-text-primary);
 }
 
 :root[data-theme="dark"] .dashboard-page .filter-card {
@@ -820,11 +820,11 @@
 }
 
 :root[data-theme="dark"] .stat-value {
-  color: var(--neutral-text);
+  color: var(--color-text-primary);
 }
 
 :root[data-theme="dark"] .stat-label {
-  color: var(--neutral-text-light);
+  color: var(--color-text-secondary);
 }
 
 :root[data-theme="dark"] .dashboard-card {
@@ -845,11 +845,11 @@
 }
 
 :root[data-theme="dark"] .card-title {
-  color: var(--neutral-text);
+  color: var(--color-text-primary);
 }
 
 :root[data-theme="dark"] .entry-label {
-  color: var(--neutral-text);
+  color: var(--color-text-primary);
 }
 
 /* ============= 白色主题覆盖规则 ============= */
@@ -995,7 +995,7 @@
 
 /* 页面背景 */
 :root[data-theme="white"] .dashboard-page .page-card {
-  background: var(--page-bg);
+  background: var(--color-bg-page);
 }
 
 /* Error alert */
@@ -1029,7 +1029,7 @@
 
 .dashboard-error-alert-desc {
   font-size: var(--font-size-sm);
-  color: var(--neutral-text-secondary, #8c8c8c);
+  color: var(--color-text-tertiary);
 }
 
 :root[data-theme="dark"] .dashboard-error-alert {
@@ -1045,18 +1045,18 @@
 
 .dashboard-empty-state-icon {
   font-size: 20px;
-  color: var(--neutral-text-lighter, #d9d9d9);
+  color: var(--color-text-tertiary);
   margin-bottom: 12px;
 }
 
 .dashboard-empty-state-text {
-  color: var(--neutral-text-secondary, #8c8c8c);
+  color: var(--color-text-tertiary);
   font-size: 14px;
   font-weight: 500;
 }
 
 .dashboard-empty-state-hint {
-  color: var(--neutral-text-lighter, #bfbfbf);
+  color: var(--color-text-quaternary);
   font-size: 14px;
   margin-top: 6px;
 }

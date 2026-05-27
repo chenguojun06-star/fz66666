@@ -1,0 +1,160 @@
+.dai-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  margin-bottom: 20px;
+  background: linear-gradient(135deg, rgba(45, 127, 249, 0.04), rgba(114, 46, 209, 0.03));
+  border: 1px solid rgba(45, 127, 249, 0.1);
+  border-radius: 12px;
+  position: relative;
+  z-index: var(--z-local);
+  animation: slideInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.15s backwards;
+}
+
+.dai-bar--loading {
+  min-height: 44px;
+  overflow: hidden;
+}
+
+.dai-shimmer {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(45, 127, 249, 0.06) 50%, transparent 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+  border-radius: 12px;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.dai-loading-text {
+  font-size: 13px;
+  color: var(--color-text-tertiary);
+  z-index: 1;
+  margin-left: 32px;
+}
+
+.dai-icon-badge {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #2D7FF9, #722ed1);
+  color: #fff;
+  font-size: 16px;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(45, 127, 249, 0.25);
+}
+
+.dai-insights-scroll {
+  display: flex;
+  gap: 16px;
+  overflow-x: auto;
+  flex: 1;
+  padding: 2px 0;
+  scrollbar-width: none;
+}
+.dai-insights-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.dai-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+
+.dai-item--risk {
+  background: rgba(255, 77, 79, 0.06);
+  border: 1px solid rgba(255, 77, 79, 0.15);
+}
+.dai-item--risk .dai-item-icon {
+  color: #ff4d4f;
+}
+
+.dai-item--suggestion {
+  background: rgba(45, 127, 249, 0.05);
+  border: 1px solid rgba(45, 127, 249, 0.12);
+}
+.dai-item--suggestion .dai-item-icon {
+  color: #2D7FF9;
+}
+
+.dai-item--info {
+  background: rgba(82, 196, 26, 0.05);
+  border: 1px solid rgba(82, 196, 26, 0.12);
+}
+.dai-item--info .dai-item-icon {
+  color: #52c41a;
+}
+
+.dai-item-body {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.dai-item-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.dai-item-desc {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dai-item-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(45, 127, 249, 0.25);
+  background: rgba(45, 127, 249, 0.04);
+  color: var(--color-primary);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+.dai-item-action:hover {
+  background: rgba(45, 127, 249, 0.1);
+  border-color: rgba(45, 127, 249, 0.4);
+}
+
+:root[data-theme="dark"] .dai-bar {
+  background: linear-gradient(135deg, rgba(45, 127, 249, 0.08), rgba(114, 46, 209, 0.06));
+  border-color: rgba(45, 127, 249, 0.15);
+}
+
+:root[data-theme="dark"] .dai-item--risk {
+  background: rgba(255, 77, 79, 0.1);
+  border-color: rgba(255, 77, 79, 0.2);
+}
+
+:root[data-theme="dark"] .dai-item--suggestion {
+  background: rgba(45, 127, 249, 0.08);
+  border-color: rgba(45, 127, 249, 0.18);
+}
+
+:root[data-theme="dark"] .dai-item--info {
+  background: rgba(82, 196, 26, 0.08);
+  border-color: rgba(82, 196, 26, 0.18);
+}

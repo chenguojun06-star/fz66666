@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, Card, Tag } from 'antd';
+import { Button, Card, Drawer, Tag } from 'antd';
 
 import PageStatCards from '@/components/common/PageStatCards';
 import ResizableTable from '@/components/common/ResizableTable';
@@ -14,6 +14,8 @@ import { StyleCoverThumb } from '@/components/StyleAssets';
 import { useProductWarehousing } from '../hooks/useProductWarehousing';
 import type { StatusFilter, PendingBundleRow } from '../hooks/useProductWarehousing';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
+import InspectionDetail from '../pages/InspectionDetail';
+import { useViewport } from '@/utils/useViewport';
 
 interface WarehousingListProps {
   hook: ReturnType<typeof useProductWarehousing>;
@@ -21,6 +23,18 @@ interface WarehousingListProps {
 
 const WarehousingList: React.FC<WarehousingListProps> = ({ hook }) => {
   const navigate = useNavigate();
+  const { isMobile } = useViewport();
+
+  const [inspectDrawerVisible, setInspectDrawerVisible] = useState(false);
+  const [inspectDrawerOrderId, setInspectDrawerOrderId] = useState('');
+  const [inspectDrawerTab, setInspectDrawerTab] = useState('records');
+
+  const openInspectDrawer = useCallback((orderId: string, tab?: string) => {
+    setInspectDrawerOrderId(orderId);
+    setInspectDrawerTab(tab || 'records');
+    setInspectDrawerVisible(true);
+  }, []);
+
   const {
     loading,
     warehousingList: _warehousingList,
@@ -77,16 +91,14 @@ const WarehousingList: React.FC<WarehousingListProps> = ({ hook }) => {
             key: 'inspect',
             label: '质检查货',
             primary: true,
-            onClick: () => navigateToInspect(record.orderId, record.bundleId),
+            onClick: () => openInspectDrawer(record.orderId, 'records'),
           });
         } else if (statusFilter === 'pendingWarehouse') {
           actions.push({
             key: 'warehousing',
             label: '入库',
             primary: true,
-            onClick: () => {
-              navigate(`/production/warehousing/inspect/${record.orderId}?tab=warehousing`);
-            },
+            onClick: () => openInspectDrawer(record.orderId, 'warehousing'),
           });
         }
         return <RowActions actions={actions} />;
@@ -170,6 +182,7 @@ const WarehousingList: React.FC<WarehousingListProps> = ({ hook }) => {
               queryParams={queryParams}
               setQueryParams={setQueryParams}
               isOrderFrozen={isOrderFrozenById}
+              onOpenInspect={openInspectDrawer}
             />
           ) : (
             <>
@@ -237,6 +250,24 @@ const WarehousingList: React.FC<WarehousingListProps> = ({ hook }) => {
           setPreviewTitle('');
         }}
       />
+
+      <Drawer
+        title="质检入库详情"
+        open={inspectDrawerVisible}
+        onClose={() => setInspectDrawerVisible(false)}
+        width={isMobile ? '100%' : '90%'}
+        destroyOnHidden
+        styles={{ body: { padding: 0 } }}
+      >
+        {inspectDrawerVisible && (
+          <InspectionDetail
+            orderId={inspectDrawerOrderId}
+            defaultTab={inspectDrawerTab}
+            embedded
+            onClose={() => setInspectDrawerVisible(false)}
+          />
+        )}
+      </Drawer>
     </>
   );
 };

@@ -9,6 +9,9 @@ import StyleQuotationTab from '@/modules/basic/pages/StyleInfo/components/StyleQ
 import StyleSecondaryProcessTab from '@/modules/basic/pages/StyleInfo/components/StyleSecondaryProcessTab';
 import { formatReferenceKilograms } from '../../MaterialPurchase/utils';
 import { formatMoney } from '@/utils/format';
+import { toNumberSafe } from '@/utils/api';
+import { formatDateTime } from '@/utils/datetime';
+import type { CuttingBundle, CuttingTask } from '@/types/production';
 
 interface Props {
   loading: boolean;
@@ -20,6 +23,8 @@ interface Props {
   orderLines: any[];
   orderLineColumns: any[];
   cuttingSizeItems: any[];
+  cuttingBundles: CuttingBundle[];
+  cuttingTasks: CuttingTask[];
   styleProcessDescriptionMap: Map<string, string>;
   secondaryProcessDescriptionMap: Map<string, string>;
 }
@@ -27,7 +32,7 @@ interface Props {
 const FlowStepRenderer: React.FC<Props> = ({
   loading, data, isFactoryUser,
   enrichedStages, stageColumns, orderLines, orderLineColumns,
-  cuttingSizeItems, styleProcessDescriptionMap, secondaryProcessDescriptionMap,
+  cuttingSizeItems, cuttingBundles, cuttingTasks, styleProcessDescriptionMap, secondaryProcessDescriptionMap,
 }) => {
   return (
     <Card className="order-flow-tabs-card" style={{ marginTop: 8 }} loading={loading}>
@@ -51,7 +56,58 @@ const FlowStepRenderer: React.FC<Props> = ({
                 pagination={false} scroll={{ x: 1060 }} />
             ),
           },
-          ...(cuttingSizeItems && cuttingSizeItems.length > 0 ? [{
+          ...(cuttingBundles && cuttingBundles.length > 0 ? [
+            {
+              key: 'cutting',
+              label: `裁剪明细 (${cuttingBundles.length})`,
+              children: (
+                <div>
+                  {cuttingTasks && cuttingTasks.length > 0 && (
+                    <Card size="small" title="裁剪任务" style={{ marginBottom: 12 }}>
+                      <ResizableTable storageKey="order-flow-cutting-tasks" size="small"
+                        dataSource={cuttingTasks}
+                        rowKey={(r: any) => r.id || `${r.bedNo || ''}-${r.createTime || ''}`}
+                        columns={[
+                          { title: '床号', dataIndex: 'bedNo', key: 'bedNo', width: 100, render: (v: any) => v ? `第${v}床` : '-' },
+                          { title: '裁片数', dataIndex: 'cuttingQuantity', key: 'cuttingQuantity', width: 100, align: 'right' as const, render: (v: any) => toNumberSafe(v) },
+                          { title: '扎数', dataIndex: 'cuttingBundleCount', key: 'cuttingBundleCount', width: 80, align: 'right' as const, render: (v: any) => toNumberSafe(v) },
+                          { title: '操作人', dataIndex: 'receiverName', key: 'receiverName', width: 120, render: (v: any) => v || '-' },
+                          { title: '完成时间', dataIndex: 'bundledTime', key: 'bundledTime', width: 170, render: (v: any, record: any) => v ? formatDateTime(v) : (record?.createTime ? formatDateTime(record.createTime) : '-') },
+                          { title: '状态', dataIndex: 'status', key: 'status', width: 100, render: (v: any) => {
+                            const m: Record<string, { text: string; color: string }> = { pending: { text: '待裁剪', color: 'default' }, in_progress: { text: '裁剪中', color: 'processing' }, completed: { text: '已完成', color: 'success' }, bundled: { text: '已打扎', color: 'success' } };
+                            const s = m[v] || { text: v || '未知', color: 'default' };
+                            return <span style={{ padding: '1px 6px', borderRadius: 3, fontSize: 14, background: `var(--ant-${s.color}-1, #f0f0f0)`, color: `var(--ant-${s.color}-6, #333)` }}>{s.text}</span>;
+                          }},
+                        ]} pagination={false} scroll={{ x: 670 }} />
+                    </Card>
+                  )}
+                  <ResizableTable storageKey="order-flow-cutting" size="small"
+                    dataSource={cuttingBundles}
+                    rowKey={(r: any) => r.id}
+                    columns={[
+                      { title: '床号', dataIndex: 'bedNo', key: 'bedNo', width: 90, render: (v: any, record: any) => {
+                        if (!v) return '-';
+                        const sub = record.bedSubNo;
+                        return sub != null ? `${v}-${sub}` : String(v);
+                      }},
+                      { title: '扎号', dataIndex: 'bundleNo', key: 'bundleNo', width: 80 },
+                      { title: '标签号', dataIndex: 'bundleLabel', key: 'bundleLabel', width: 120, render: (v: any) => v || '-' },
+                      { title: '颜色', dataIndex: 'color', key: 'color', width: 100, render: (v: any) => String(v || '').trim() || '-' },
+                      { title: '尺码', dataIndex: 'size', key: 'size', width: 80 },
+                      { title: '数量', dataIndex: 'quantity', key: 'quantity', width: 80, align: 'right' as const, render: (v: any) => toNumberSafe(v) },
+                      { title: '状态', dataIndex: 'status', key: 'status', width: 100, render: (v: any) => {
+                        const m: Record<string, { text: string; color: string }> = { active: { text: '有效', color: 'success' }, inactive: { text: '无效', color: 'default' }, split: { text: '已拆分', color: 'processing' } };
+                        const s = m[v] || { text: v || '未知', color: 'default' };
+                        return <span style={{ padding: '1px 6px', borderRadius: 3, fontSize: 14, background: `var(--ant-${s.color}-1, #f0f0f0)`, color: `var(--ant-${s.color}-6, #333)` }}>{s.text}</span>;
+                      }},
+                      { title: '创建时间', dataIndex: 'createTime', key: 'createTime', width: 170, render: (v: any) => v ? formatDateTime(v) : '-' },
+                      { title: '操作人', dataIndex: 'operatorName', key: 'operatorName', width: 120, render: (v: any, record: any) => v || record?.creatorName || '-' },
+                    ]} pagination={false} scroll={{ x: 1020 }} />
+                </div>
+              ),
+            },
+          ] : []),
+          ...(cuttingSizeItems && cuttingSizeItems.length > 0 && cuttingBundles && cuttingBundles.length === 0 ? [{
             key: 'cutting',
             label: `裁剪明细 (${cuttingSizeItems.reduce((s: number, i: any) => s + i.quantity, 0)})`,
             children: (

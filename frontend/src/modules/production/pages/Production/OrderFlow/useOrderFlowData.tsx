@@ -6,7 +6,7 @@ import api, { parseProductionOrderLines, toNumberSafe } from '@/utils/api';
 import { useUser } from '@/utils/AuthContext';
 import { formatDateTime } from '@/utils/datetime';
 import { formatMoney } from '@/utils/format';
-import type { CuttingBundle, ProductionOrder, ProductWarehousing } from '@/types/production';
+import type { CuttingBundle, CuttingTask, ProductionOrder, ProductWarehousing } from '@/types/production';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
 import { message } from '@/utils/antdStatic';
@@ -32,6 +32,7 @@ export type OrderFlowResponse = {
   stages: FlowStage[];
   warehousings?: ProductWarehousing[];
   cuttingBundles?: CuttingBundle[];
+  cuttingTasks?: CuttingTask[];
   materialPurchases?: any[];
 };
 
@@ -374,6 +375,9 @@ export function useOrderFlowData() {
     return Array.from(map.values());
   }, [data?.cuttingBundles]);
 
+  const cuttingBundles = useMemo(() => (data?.cuttingBundles || []) as CuttingBundle[], [data?.cuttingBundles]);
+  const cuttingTasks = useMemo(() => (data?.cuttingTasks || []) as CuttingTask[], [data?.cuttingTasks]);
+
   return {
     query,
     loading,
@@ -391,6 +395,8 @@ export function useOrderFlowData() {
     warehousingQualified,
     warehousingUnqualified,
     cuttingSizeItems,
+    cuttingBundles,
+    cuttingTasks,
     styleProcessDescriptionMap,
     secondaryProcessDescriptionMap,
   };
