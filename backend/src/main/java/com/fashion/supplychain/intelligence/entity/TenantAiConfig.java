@@ -43,7 +43,7 @@ public class TenantAiConfig {
     }
 
     public boolean hasOwnApiKey() {
-        return textApiKey != null && !textApiKey.isBlank();
+        return "tenant".equals(configSource) && textApiKey != null && !textApiKey.isBlank();
     }
 
     public boolean isPlatformProvisioned() {

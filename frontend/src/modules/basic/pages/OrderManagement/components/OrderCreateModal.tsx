@@ -1,5 +1,5 @@
-import React from 'react';
-import { Button, Col, Form, FormInstance, Input, Row, Select, Space, Tag, Tooltip } from 'antd';
+import React, { useState } from 'react';
+import { Button, Col, Collapse, Form, FormInstance, Input, Row, Select, Space, Tag, Tooltip } from 'antd';
 import dayjs from 'dayjs';
 import { UnifiedDatePicker } from '@/components/common/UnifiedDatePicker';
 import ResizableModal from '@/components/common/ResizableModal';
@@ -71,6 +71,8 @@ const OrderCreateModal: React.FC<Props> = (p) => {
     orderOrchestration, orderLearningLoading, orderLearningRecommendation,
     deliverySuggestion, suggestionLoading, generateOrderNo,
   } = p;
+
+  const [advancedOpen, setAdvancedOpen] = useState(false);
 
   return (
     <ResizableModal
@@ -176,74 +178,83 @@ const OrderCreateModal: React.FC<Props> = (p) => {
               </Col>
             </Row>
 
-            <div style={{ marginBottom: 12 }}>
-              <Row gutter={[12, 12]}>
-                <Col xs={24} sm={8}>
-                  <InlineField label="客户">
-                    <Form.Item name="company" style={{ marginBottom: 0 }}>
-                      <CustomerSelect
-                        placeholder="选填"
-                        allowClear
-                        onChange={(_value: string, option?: { customerId: string; customer: any }) => {
-                          if (option?.customerId) {
-                            form.setFieldsValue({
-                              customerId: option.customerId,
-                              customerName: option.customer?.companyName || _value || undefined,
-                            });
-                          } else {
-                            form.setFieldsValue({ customerId: undefined, customerName: undefined });
-                          }
-                        }}
-                      />
-                    </Form.Item>
-                    <Form.Item name="customerId" hidden><Input /></Form.Item>
-                    <Form.Item name="customerName" hidden><Input /></Form.Item>
-                  </InlineField>
-                </Col>
-                <Col xs={24} sm={8}>
-                  <InlineField label="品类">
-                    <Form.Item name="productCategory" style={{ marginBottom: 0 }}>
-                      <Select placeholder="选填" allowClear showSearch optionFilterProp="label" style={{ width: '100%' }} options={categoryOptions} />
-                    </Form.Item>
-                  </InlineField>
-                </Col>
-                <Col xs={24} sm={8}>
-                  <InlineField label="首翻单">
-                    <Form.Item name="plateType" style={{ marginBottom: 0 }}>
-                      <Select placeholder="不填自动判断" allowClear options={[{ label: '首单', value: 'FIRST' }, { label: '翻单', value: 'REORDER' }]} />
-                    </Form.Item>
-                  </InlineField>
-                </Col>
-                <Col xs={24} sm={8}>
-                  <InlineField label="下单类型">
-                    <Form.Item name="orderBizType" style={{ marginBottom: 0 }}>
-                      <Select placeholder="选填" allowClear options={[
-                        { label: 'FOB', value: 'FOB' },
-                        { label: 'ODM', value: 'ODM' },
-                        { label: 'OEM', value: 'OEM' },
-                        { label: 'CMT', value: 'CMT' },
-                      ]} />
-                    </Form.Item>
-                  </InlineField>
-                </Col>
-                <Col xs={24} sm={8}>
-                  <InlineField label="纸样师">
-                    <Form.Item name="patternMaker" style={{ marginBottom: 0 }}>
-                      <Select placeholder="选填" allowClear showSearch optionFilterProp="label"
-                        options={users.filter(u => u.name || u.username).map(u => ({ value: u.name || u.username, label: u.name || u.username }))} />
-                    </Form.Item>
-                  </InlineField>
-                </Col>
-                <Col xs={24} sm={8}>
-                  <InlineField label="跟单员">
-                    <Form.Item name="merchandiser" style={{ marginBottom: 0 }}>
-                      <Select placeholder="选填" allowClear showSearch optionFilterProp="label"
-                        options={users.filter(u => u.name || u.username).map(u => ({ value: u.name || u.username, label: u.name || u.username }))} />
-                    </Form.Item>
-                  </InlineField>
-                </Col>
-              </Row>
-            </div>
+            <Collapse
+              ghost
+              activeKey={advancedOpen ? ['advanced'] : []}
+              onChange={(keys) => setAdvancedOpen(keys.includes('advanced'))}
+              items={[{
+                key: 'advanced',
+                label: <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--color-text-tertiary)' }}>{advancedOpen ? '收起更多信息' : '更多信息（选填）'}</span>,
+                children: (
+                  <Row gutter={[12, 12]}>
+                    <Col xs={24} sm={8}>
+                      <InlineField label="客户">
+                        <Form.Item name="company" style={{ marginBottom: 0 }}>
+                          <CustomerSelect
+                            placeholder="选填"
+                            allowClear
+                            onChange={(_value: string, option?: { customerId: string; customer: any }) => {
+                              if (option?.customerId) {
+                                form.setFieldsValue({
+                                  customerId: option.customerId,
+                                  customerName: option.customer?.companyName || _value || undefined,
+                                });
+                              } else {
+                                form.setFieldsValue({ customerId: undefined, customerName: undefined });
+                              }
+                            }}
+                          />
+                        </Form.Item>
+                        <Form.Item name="customerId" hidden><Input /></Form.Item>
+                        <Form.Item name="customerName" hidden><Input /></Form.Item>
+                      </InlineField>
+                    </Col>
+                    <Col xs={24} sm={8}>
+                      <InlineField label="品类">
+                        <Form.Item name="productCategory" style={{ marginBottom: 0 }}>
+                          <Select placeholder="选填" allowClear showSearch optionFilterProp="label" style={{ width: '100%' }} options={categoryOptions} />
+                        </Form.Item>
+                      </InlineField>
+                    </Col>
+                    <Col xs={24} sm={8}>
+                      <InlineField label="首翻单">
+                        <Form.Item name="plateType" style={{ marginBottom: 0 }}>
+                          <Select placeholder="不填自动判断" allowClear options={[{ label: '首单', value: 'FIRST' }, { label: '翻单', value: 'REORDER' }]} />
+                        </Form.Item>
+                      </InlineField>
+                    </Col>
+                    <Col xs={24} sm={8}>
+                      <InlineField label="下单类型">
+                        <Form.Item name="orderBizType" style={{ marginBottom: 0 }}>
+                          <Select placeholder="选填" allowClear options={[
+                            { label: 'FOB', value: 'FOB' },
+                            { label: 'ODM', value: 'ODM' },
+                            { label: 'OEM', value: 'OEM' },
+                            { label: 'CMT', value: 'CMT' },
+                          ]} />
+                        </Form.Item>
+                      </InlineField>
+                    </Col>
+                    <Col xs={24} sm={8}>
+                      <InlineField label="纸样师">
+                        <Form.Item name="patternMaker" style={{ marginBottom: 0 }}>
+                          <Select placeholder="选填" allowClear showSearch optionFilterProp="label"
+                            options={users.filter(u => u.name || u.username).map(u => ({ value: u.name || u.username, label: u.name || u.username }))} />
+                        </Form.Item>
+                      </InlineField>
+                    </Col>
+                    <Col xs={24} sm={8}>
+                      <InlineField label="跟单员">
+                        <Form.Item name="merchandiser" style={{ marginBottom: 0 }}>
+                          <Select placeholder="选填" allowClear showSearch optionFilterProp="label"
+                            options={users.filter(u => u.name || u.username).map(u => ({ value: u.name || u.username, label: u.name || u.username }))} />
+                        </Form.Item>
+                      </InlineField>
+                    </Col>
+                  </Row>
+                ),
+              }]}
+            />
 
             <div style={{ marginBottom: 12 }}>
               <div style={{ marginBottom: 8 }}><span style={{ fontWeight: 600 }}> 下单数量</span></div>

@@ -152,14 +152,14 @@ export function useCuttingBundles({
   };
 
   // 排序后的采购列表
-  async function fetchSortedPurchasesByOrderNo(orderNo: string) {
+  async function fetchSortedPurchasesByOrderNo(orderNo: string, fallbackStyleNo?: string) {
     const no = String(orderNo || '').trim();
     if (!no) return [] as MaterialPurchase[];
-    try {
+    const fetchAndSort = async (params: Record<string, any>) => {
       const res = await api.get<{ code: number; data: { records: MaterialPurchase[] } }>('/production/purchase/list', {
-        params: { page: 1, pageSize: 200, orderNo: no, materialType: '', status: '' },
+        params: { page: 1, pageSize: 200, ...params },
       });
-      if (res.code !== 200) return [] as MaterialPurchase[];
+      if (res.code !== 200) return null;
       const records = (res.data?.records || []) as MaterialPurchase[];
       const sorted = [...records].sort((a: any, b: any) => {
         const ka = getMaterialTypeSortKey(a?.materialType);
@@ -171,6 +171,14 @@ export function useCuttingBundles({
         return String(a?.id || '').localeCompare(String(b?.id || ''));
       });
       return sorted as unknown as MaterialPurchase[];
+    };
+    try {
+      const result = await fetchAndSort({ orderNo: no, materialType: '', status: '' });
+      if (result && result.length > 0) return result;
+      const styleNo = String(fallbackStyleNo || '').trim();
+      if (!styleNo) return result || [];
+      const fallbackResult = await fetchAndSort({ styleNo, sourceType: 'sample', materialType: '', status: '' });
+      return fallbackResult || result || [];
     } catch {
       return [] as MaterialPurchase[];
     }
@@ -464,7 +472,7 @@ export function useCuttingBundles({
     }
     setEntryPurchaseLoading(true);
     setEntryPurchases([]);
-    fetchSortedPurchasesByOrderNo(no)
+    fetchSortedPurchasesByOrderNo(no, (activeTask as any)?.styleNo)
       .then((list) => { if (seq === entryPurchaseReqSeq.current) setEntryPurchases(list); })
       .finally(() => { if (seq === entryPurchaseReqSeq.current) setEntryPurchaseLoading(false); });
   }, [isEntryPage, activeOrderNo]);

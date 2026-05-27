@@ -63,7 +63,7 @@ export function computeStageTimeline(
       expectedShipDate,
       stageStartTime: stage.startTime || undefined,
       stageEndTime: stage.endTime || undefined,
-      isCompletedOrClosed: stage.isCompleted ?? false,
+      isCompletedOrClosed: stage.isCompleted || !!stage.endTime,
       isProcureNode: stage.isProcureNode ?? false,
     });
 

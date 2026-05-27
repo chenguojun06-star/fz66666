@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { RobotOutlined, BulbOutlined, AlertOutlined, SafetyOutlined, RightOutlined, ThunderboltOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
@@ -14,8 +14,6 @@ interface InsightItem {
   action?: string;
   onClick?: () => void;
 }
-
-const severityColors: Record<string, string> = { HIGH: '#ff4d4f', MEDIUM: '#faad14', LOW: '#52c41a' };
 
 const DashboardAiInsight: React.FC = () => {
   const navigate = useNavigate();

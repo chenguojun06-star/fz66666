@@ -2,7 +2,6 @@ package com.fashion.supplychain.intelligence.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
-import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.util.AesEncryptor;
 import com.fashion.supplychain.intelligence.entity.TenantAiConfig;
 import com.fashion.supplychain.intelligence.entity.TenantAiUsage;
@@ -15,7 +14,6 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.Optional;
 
 @Slf4j
 @Service
@@ -54,6 +52,10 @@ public class TenantAiConfigService {
     }
 
     public TenantAiConfig getOrCreateConfig(Long tenantId) {
+        if (tenantId == null) {
+            log.warn("[TenantAiConfig] tenantId为null，返回空配置");
+            return new TenantAiConfig();
+        }
         QueryWrapper<TenantAiConfig> qw = new QueryWrapper<>();
         qw.eq("tenant_id", tenantId).eq("delete_flag", 0);
         TenantAiConfig config = configMapper.selectOne(qw);
@@ -104,12 +106,12 @@ public class TenantAiConfigService {
 
         if (config.hasOwnApiKey()) {
             String decryptedKey = aesEncryptor.tryDecrypt(config.getTextApiKey());
-            if (decryptedKey != null) {
+            if (decryptedKey != null && !decryptedKey.isBlank()) {
                 return new ResolvedConfig(
                         decryptedKey,
                         firstNonBlank(config.getTextBaseUrl(), platformBaseUrl),
                         firstNonBlank(config.getTextModel(), platformModel),
-                        config.getTextProvider(),
+                        firstNonBlank(config.getTextProvider(), "mimo"),
                         "tenant"
                 );
             }
@@ -117,7 +119,7 @@ public class TenantAiConfigService {
 
         if (config.isPlatformProvisioned() && config.getTextApiKey() != null && !config.getTextApiKey().isBlank()) {
             String decryptedKey = aesEncryptor.tryDecrypt(config.getTextApiKey());
-            if (decryptedKey != null) {
+            if (decryptedKey != null && !decryptedKey.isBlank()) {
                 return new ResolvedConfig(
                         decryptedKey,
                         firstNonBlank(config.getTextBaseUrl(), platformBaseUrl),
