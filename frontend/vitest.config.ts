@@ -6,6 +6,7 @@ export default mergeConfig(
   defineConfig({
     test: {
       exclude: ['e2e/**', '**/e2e/**', 'playwright.config.ts', 'node_modules/**', 'dist/**'],
+      environment: 'jsdom',
     },
   }),
 );

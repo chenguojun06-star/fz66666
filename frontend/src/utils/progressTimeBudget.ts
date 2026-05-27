@@ -60,7 +60,7 @@ export function computeStageBudgetHint(params: {
     if (actualDays <= budgetDays) {
       return { text: `预算${budgetDays}天 · 准时`, color: 'var(--color-text-quaternary, #bfbfbf)', budgetDays };
     }
-    return { text: `预算${budgetDays}天 · 超${actualDays - budgetDays}天`, color: '#ff7875', budgetDays };
+    return { text: `预算${budgetDays}天 · 超${actualDays - budgetDays}天`, color: 'var(--color-text-quaternary, #bfbfbf)', budgetDays };
   }
 
   if (stageStartTime) {

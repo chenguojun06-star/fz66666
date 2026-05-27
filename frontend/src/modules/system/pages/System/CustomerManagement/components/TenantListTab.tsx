@@ -69,7 +69,23 @@ const TenantListTab: React.FC = () => {
   const handleSaveModuleConfig = async () => { const record = moduleModal.data; if (!record) return; try { setSavingModules(true); const enabledModules = editingEnabledModules !== null && editingEnabledModules.length > 0 ? JSON.stringify(editingEnabledModules) : null; await tenantService.updateTenantEnabledModules(record.id, enabledModules); message.success('菜单模块配置已更新'); moduleModal.close(); fetchData(); } catch (e: unknown) { message.error(e instanceof Error ? e.message : '保存失败'); } finally { setSavingModules(false); } };
 
   const handleCreate = async () => {
-    try { const values = await form.validateFields(); await tenantService.createTenant(values); message.success('租户创建成功'); modal.close(); form.resetFields(); fetchData(); }
+    try {
+      const values = await form.validateFields();
+      const result = await tenantService.createTenant(values);
+      const tenantId = result?.data?.tenantId || result?.tenantId;
+      const aiMode = values.aiConfigMode || 'platform';
+      if (tenantId && aiMode === 'platform') {
+        try {
+          await tenantService.setTenantAiConfig(tenantId, { action: 'provision', apiKey: values.tenantAiApiKey || 'platform-default' });
+        } catch { }
+      } else if (tenantId && aiMode === 'tenant' && values.tenantAiApiKey) {
+        try {
+          await tenantService.setTenantAiConfig(tenantId, { action: 'provision', apiKey: values.tenantAiApiKey });
+        } catch { }
+      }
+      message.success('租户创建成功');
+      modal.close(); form.resetFields(); fetchData();
+    }
     catch (e: unknown) { if (e && typeof e === 'object' && 'errorFields' in e) return; message.error(e instanceof Error ? e.message : '创建失败'); }
   };
 
@@ -197,6 +213,27 @@ const TenantListTab: React.FC = () => {
           <Form.Item noStyle shouldUpdate={(prev, cur) => prev.planType !== cur.planType}>{({ getFieldValue }) => { const plan = PLAN_OPTIONS.find((item) => item.value === getFieldValue('planType')); if (!plan) return null; return <Alert type="info" showIcon style={{ marginBottom: 12 }} title={`当前套餐：${plan.label}`} description={`${plan.monthlyFee === 0 ? '免费试用' : `¥${plan.monthlyFee}/月`} · ${plan.maxUsers} 用户 · ${plan.storageQuotaMb >= 1024 ? `${plan.storageQuotaMb / 1024}GB` : `${plan.storageQuotaMb}MB`} 存储`} />; }}</Form.Item>
           <div style={{ display: 'flex', gap: 12 }}><Form.Item label="租户名称" name="tenantName" rules={[{ required: true }]} style={{ flex: 1, marginBottom: 12 }}><Input /></Form.Item><Form.Item label="租户编码" name="tenantCode" rules={[{ required: true }]} style={{ flex: 1, marginBottom: 12 }}><Input placeholder="唯一编码，工人注册用" /></Form.Item></div>
           <div style={{ display: 'flex', gap: 12 }}><Form.Item label="联系人" name="contactName" rules={[{ required: true }]} style={{ flex: 1, marginBottom: 12 }}><Input /></Form.Item><Form.Item label="联系电话" name="contactPhone" style={{ flex: 1, marginBottom: 12 }}><Input /></Form.Item><Form.Item label="最大用户数" name="maxUsers" style={{ flex: '0 0 120px', marginBottom: 12 }}><InputNumber min={1} max={9999} style={{ width: '100%' }} disabled /></Form.Item></div>
+          <div style={{ background: 'rgba(82,196,26,0.06)', borderRadius: 8, padding: '12px 16px', marginTop: 8, marginBottom: 8 }}>
+            <div style={{ fontWeight: 600, marginBottom: 8 }}>🤖 AI 能力配置（开户即用，租户无需自备Key）</div>
+            <Form.Item label="AI配置方式" name="aiConfigMode" initialValue="platform" style={{ marginBottom: 8 }}>
+              <Radio.Group>
+                <Radio value="platform">平台代充（推荐）— 租户直接用，含在套餐费里</Radio>
+                <Radio value="tenant">租户自带Key — 租户自己提供 API Key</Radio>
+                <Radio value="trial">免费试用（限 100 次/月）</Radio>
+              </Radio.Group>
+            </Form.Item>
+            <Form.Item noStyle shouldUpdate={(prev, cur) => prev.aiConfigMode !== cur.aiConfigMode}>
+              {({ getFieldValue }) => {
+                if (getFieldValue('aiConfigMode') === 'tenant') {
+                  return <Form.Item label="租户 API Key" name="tenantAiApiKey" style={{ marginBottom: 8 }}><Input.Password placeholder="填入租户自己的 API Key" /></Form.Item>;
+                }
+                return null;
+              }}
+            </Form.Item>
+            <Alert type="success" showIcon style={{ fontSize: 13 }}
+              title="租户登录后即可使用全部 AI 功能（小云助手、智能巡检、交期预测等），无需自行注册任何 AI 服务平台。"
+            />
+          </div>
           <div style={{ background: 'rgba(45, 127, 249, 0.08)', borderRadius: 8, padding: '12px 16px', marginTop: 8 }}><div style={{ fontWeight: 600, marginBottom: 8 }}>主账号信息</div><Form.Item label="用户名" name="ownerUsername" rules={[{ required: true }]}><Input /></Form.Item><Form.Item label="密码" name="ownerPassword" rules={[{ required: true, min: 6 }]}><Input.Password autoComplete="new-password" /></Form.Item><Form.Item label="姓名" name="ownerName"><Input /></Form.Item></div>
         </Form>
       </ResizableModal>

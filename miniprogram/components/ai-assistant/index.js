@@ -512,10 +512,33 @@ Component({
           streamPayload,
           function (event) {
             streamStarted = true;
-            if (event.type === 'answer') {
+            if (event.type === 'thinking') {
+              self.setData({ streamingTool: '小云正在思考中...' });
+            } else if (event.type === 'tool_call') {
+              var toolName = event.data.tool ? describeTool(event.data.tool) : '工具';
+              self.setData({ streamingTool: '正在使用「' + toolName + '」...' });
+            } else if (event.type === 'tool_result') {
+              self.setData({ streamingTool: '' });
+            } else if (event.type === 'answer_chunk') {
+              var chunk = String(event.data.chunk || '');
+              if (chunk) {
+                accumulatedText += chunk;
+                self.setData({ streamingText: accumulatedText });
+              }
+            } else if (event.type === 'answer') {
               var content = String(event.data.content || '');
               if (content) {
-                accumulatedText += content;
+                accumulatedText = content;
+                self.setData({ streamingText: accumulatedText });
+              }
+              if (event.data.commandId) {
+                self._latestCommandId = String(event.data.commandId);
+              }
+              if (event.data.charts && Array.isArray(event.data.charts)) {
+                self._latestCharts = event.data.charts;
+              }
+              if (event.data.insightCards && Array.isArray(event.data.insightCards)) {
+                self._latestInsightCards = event.data.insightCards;
               }
             } else if (event.type === 'follow_up_actions') {
               if (event.data && event.data.actions) {
@@ -552,11 +575,16 @@ Component({
               id: aiMsgId, role: 'ai', content: parsed.text,
               recommendPills: recommendPills,
               actions: actions,
-              insightCards: parsed.insightCards || [],
+              insightCards: self._latestInsightCards || parsed.insightCards || [],
               clarificationHints: parsed.clarificationHints || [],
               stepWizardCards: parsed.stepWizardCards && parsed.stepWizardCards.length > 0 ? parsed.stepWizardCards : null,
               teamStatusCards: parsed.teamStatusCards && parsed.teamStatusCards.length > 0 ? parsed.teamStatusCards : null,
+              charts: self._latestCharts || parsed.charts || null,
+              commandId: self._latestCommandId || null,
             };
+            self._latestCommandId = null;
+            self._latestCharts = null;
+            self._latestInsightCards = null;
             self._setMessages([].concat(self.data.messages, [completedAiMsg]), { isLoading: false, streamingText: '', streamingTool: '' });
             self.scrollToBottom();
             self._saveChatHistory();

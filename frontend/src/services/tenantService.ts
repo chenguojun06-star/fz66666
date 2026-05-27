@@ -104,6 +104,10 @@ const tenantService = {
   updateApplication: (id: number, data: { applyUsername?: string; contactName?: string; contactPhone?: string }) =>
     api.post(`${BASE}/${id}/update-application`, data),
   markTenantPaid: (id: number, paidStatus: string) => api.post(`${BASE}/${id}/mark-paid`, { paidStatus }),
+  setTenantAiConfig: (id: number, params: Record<string, unknown>) => api.post(`${BASE}/${id}/ai-config`, params),
+  getTenantAiConfig: (id: number) => api.get(`${BASE}/${id}/ai-config`),
+  updateMyAiConfig: (params: Record<string, unknown>) => api.put(`${BASE}/my/ai-config`, params),
+  getMyAiConfig: () => api.get(`${BASE}/my/ai-config`),
 
   // ========== 套餐与收费管理 ==========
   /** 获取预设套餐方案 */

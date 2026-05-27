@@ -500,11 +500,22 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
         }
       >
         {displayData.length === 0 && !editing ? (
-          <div style={{ textAlign: 'center', padding: '24px 0', color: 'var(--color-text-quaternary)' }}>
-            暂无面辅料信息
-            <Button type="link" onClick={handleStartEdit}>
-              添加面辅料
-            </Button>
+          <div style={{ textAlign: 'center', padding: '48px 16px' }}>
+            <Alert
+              type="info"
+              showIcon
+              message="该订单尚未创建面辅料信息"
+              description={isMultiColor
+                ? `订单包含 ${colorList.length} 种颜色（${colorList.join('、')}），需要为每种颜色分别创建对应的面辅料记录。`
+                : `请为订单创建面辅料信息（物料编码、名称、单位、供应商等），完善后才可进行采购。`
+              }
+              style={{ maxWidth: 600, margin: '0 auto', textAlign: 'left' }}
+              action={
+                <Button type="primary" size="small" onClick={handleStartEdit}>
+                  创建面辅料
+                </Button>
+              }
+            />
           </div>
         ) : (
           <ResizableTable

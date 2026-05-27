@@ -132,6 +132,23 @@ export function usePurchaseDetailPage(styleNoParam: string, orderNoParam: string
         } catch { /* 预览不可用则用空列表 */ }
       }
 
+      if (records.length === 0 && orderNoParam && orderRecord) {
+        const styleNo = String(orderRecord?.styleNo || '').trim();
+        if (styleNo) {
+          try {
+            const styleRes = await api.get('/production/purchase/list', {
+              params: { styleNo, sourceType: 'sample', page: 1, pageSize: 1000 },
+            });
+            if ((styleRes as any)?.code === 200) {
+              const styleRecords = (styleRes as any)?.data?.records || [];
+              if (styleRecords.length > 0) {
+                records = styleRecords;
+              }
+            }
+          } catch { /* 降级 */ }
+        }
+      }
+
       setPurchaseList(records);
     } catch {
       message.error('加载采购数据失败');
@@ -145,9 +162,35 @@ export function usePurchaseDetailPage(styleNoParam: string, orderNoParam: string
   }, [loadData]);
 
   const handleStartEdit = useCallback(() => {
-    setEditableData([...purchaseList]);
+    if (purchaseList.length === 0 && isMultiColor && colorList.length > 0) {
+      const autoRows: MaterialPurchase[] = colorList.map((color: string) => ({
+        id: `tmp_${Date.now()}_${color}`,
+        purchaseNo: '',
+        supplierId: '',
+        orderNo: orderNoParam || order?.orderNo || '',
+        styleNo: styleNoParam,
+        materialType: 'fabricA',
+        materialCode: '',
+        materialName: '',
+        unit: '',
+        color,
+        size: '',
+        specification: '',
+        fabricComposition: '',
+        fabricWeight: '',
+        purchaseQuantity: 0,
+        arrivedQuantity: 0,
+        unitPrice: 0,
+        totalAmount: 0,
+        supplierName: '',
+        status: MATERIAL_PURCHASE_STATUS.PENDING,
+      } as MaterialPurchase));
+      setEditableData(autoRows);
+    } else {
+      setEditableData([...purchaseList]);
+    }
     setEditing(true);
-  }, [purchaseList]);
+  }, [purchaseList, isMultiColor, colorList, orderNoParam, order?.orderNo, styleNoParam]);
 
   const handleCancelEdit = useCallback(() => {
     setEditing(false);

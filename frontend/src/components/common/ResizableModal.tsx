@@ -208,7 +208,7 @@ const ResizableModal: React.FC<ResizableModalProps> = ({
     })();
 
     return (
-      '[data-resizable-modal-root] .ant-modal-container{height:100%;display:flex;flex-direction:column;overflow:hidden;}' +
+      '[data-resizable-modal-root] .ant-modal-container{height:100%;display:flex;flex-direction:column;overflow:visible;}' +
       '[data-resizable-modal-root] .ant-modal-header,[data-resizable-modal-root] .ant-modal-footer{flex:0 0 auto;}' +
       '[data-resizable-modal-root] .ant-modal-body{flex:1 1 auto;min-height:0;overflow:auto;padding:' +
       `${resolvedPadding.top}px ${resolvedPadding.right}px ${resolvedPadding.bottom}px ${resolvedPadding.left}px` +
@@ -328,7 +328,7 @@ const ResizableModal: React.FC<ResizableModalProps> = ({
               lineHeight: 1.4,
               maxWidth: '100vw',
               maxHeight: '100vh',
-              overflow: 'hidden',
+              overflow: 'visible',
             }}
           >
             <style>{modalCss}</style>

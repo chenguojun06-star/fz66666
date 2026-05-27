@@ -8,6 +8,7 @@ import com.fashion.supplychain.intelligence.agent.AiMessage;
 import com.fashion.supplychain.intelligence.agent.AiTool;
 import com.fashion.supplychain.intelligence.agent.AiToolCall;
 import com.fashion.supplychain.intelligence.dto.IntelligenceInferenceResult;
+import com.fashion.supplychain.intelligence.service.TenantAiConfigService;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -71,6 +72,7 @@ public class IntelligenceInferenceOrchestrator {
     @Autowired private IntelligenceModelGatewayOrchestrator intelligenceModelGatewayOrchestrator;
     @Autowired private IntelligenceObservabilityOrchestrator intelligenceObservabilityOrchestrator;
     @Autowired private com.fashion.supplychain.intelligence.service.AiAgentTokenBudgetService aiAgentTokenBudgetService;
+    @Autowired(required = false) private TenantAiConfigService tenantAiConfigService;
 
     @PostConstruct
     public void initHttpClient() {
@@ -221,6 +223,23 @@ public class IntelligenceInferenceOrchestrator {
     private record StreamConfig(String endpoint, String apiKey, String model, int timeout) {}
 
     private StreamConfig resolveStreamConfig() {
+        if (tenantAiConfigService != null) {
+            Long tenantId = UserContext.tenantId();
+            if (tenantId != null) {
+                TenantAiConfigService.ResolvedConfig tc = tenantAiConfigService.resolveConfig(tenantId);
+                if (tc.getApiKey() != null) {
+                    String endpoint = tc.getBaseUrl() != null
+                            ? normalizeChatCompletionsUrl(tc.getBaseUrl())
+                            : directApiUrl;
+                    String model = tc.getModel() != null && !tc.getModel().isBlank()
+                            ? tc.getModel() : directModel;
+                    log.debug("[InferenceOrch] 租户AI路由: tenant={} source={} provider={} model={}",
+                            tenantId, tc.getConfigSource(), tc.getProvider(), model);
+                    return new StreamConfig(endpoint, tc.getApiKey(), model, directTimeoutSeconds);
+                }
+            }
+        }
+
         String endpoint = directApiUrl;
         String apiKey = directApiKey;
         String model = directModel;

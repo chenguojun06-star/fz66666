@@ -83,7 +83,7 @@ export function computeStageTimeline(
 
     if (!gapText && i > 0) {
       const prev = stages[i - 1];
-      if (prev.endTime && !stage.startTime) {
+      if (prev.endTime && !stage.startTime && !stage.isCompleted && !stage.endTime) {
         const gapMs = dayjs().diff(dayjs(prev.endTime));
         if (gapMs > 0) {
           gapText = `⏱ 等待 ${formatGapDuration(gapMs)}`;

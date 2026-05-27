@@ -146,7 +146,7 @@ public class DbColumnRepairRunner implements ApplicationRunner {
 
     private int addColumn(Connection conn, String table, String column, String definition) {
         try {
-            String sql = "ALTER TABLE `" + table + "` ADD COLUMN `" + column + "` " + definition;
+            String sql = DdlSafeBuilder.alterTableAddColumn(table, column, definition);
             try (PreparedStatement ps = conn.prepareStatement(sql)) {
                 ps.executeUpdate();
             }
@@ -172,7 +172,7 @@ public class DbColumnRepairRunner implements ApplicationRunner {
                 }
             }
             if ("NO".equalsIgnoreCase(isNullable)) {
-                String sql = "ALTER TABLE `" + table + "` MODIFY COLUMN `" + column + "` " + typeDefinition + " DEFAULT NULL";
+                String sql = DdlSafeBuilder.alterTableModifyColumn(table, column, typeDefinition);
                 try (PreparedStatement ps = conn.prepareStatement(sql)) {
                     ps.executeUpdate();
                 }
@@ -192,7 +192,7 @@ public class DbColumnRepairRunner implements ApplicationRunner {
             if (actualType == null || actualType.toLowerCase().startsWith(expectedTypePrefix.toLowerCase())) {
                 return 0;
             }
-            String sql = "ALTER TABLE `" + table + "` " + alterFragment;
+            String sql = DdlSafeBuilder.alterTableModifyFragment(table, alterFragment);
             try (PreparedStatement ps = conn.prepareStatement(sql)) {
                 ps.executeUpdate();
             }
@@ -207,7 +207,7 @@ public class DbColumnRepairRunner implements ApplicationRunner {
     private int ensureColumn(Connection conn, String schema, String table, String column, String definition) {
         try {
             if (DbViewRepairHelper.columnExists(conn, schema, table, column)) return 0;
-            String sql = "ALTER TABLE `" + table + "` ADD COLUMN `" + column + "` " + definition;
+            String sql = DdlSafeBuilder.alterTableAddColumn(table, column, definition);
             try (PreparedStatement ps = conn.prepareStatement(sql)) {
                 ps.executeUpdate();
             }

@@ -149,7 +149,7 @@ public class DatabaseMigrationHelper {
             return false;
         }
         try {
-            jdbcTemplate.execute("ALTER TABLE " + tableName + " ADD INDEX " + indexName + " (" + columnsSql + ")");
+            jdbcTemplate.execute(DdlSafeBuilder.alterTableAddIndex(tableName, indexName, columnsSql));
             log.info("[DBMigration] 已创建索引: {}.{}", tableName, indexName);
             return true;
         } catch (Exception e) {
@@ -162,14 +162,14 @@ public class DatabaseMigrationHelper {
         if (indexExists(tableName, keyName)) {
             return;
         }
-        execSilently("ALTER TABLE " + tableName + " ADD UNIQUE KEY " + keyName + " (" + columnsSql + ")");
+        execSilently(DdlSafeBuilder.alterTableAddUniqueKey(tableName, keyName, columnsSql));
     }
 
     public void dropIndexIfExists(String tableName, String indexName) {
         if (!indexExists(tableName, indexName)) {
             return;
         }
-        execSilently("ALTER TABLE " + tableName + " DROP INDEX " + indexName);
+        execSilently(DdlSafeBuilder.alterTableDropIndex(tableName, indexName));
     }
 
     public String loadCreateTableStatementFromInitSql(String tableName) {

@@ -145,6 +145,24 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = ({ orderId, orde
         } catch {}
       }
 
+      if (records.length === 0 && orderRecord) {
+        const orderStyleNo = String(orderRecord?.styleNo || '').trim();
+        if (orderStyleNo) {
+          try {
+            const styleRes = await api.get<{ code: number; data: { records: MaterialPurchase[] } }>(
+              '/production/purchase/list',
+              { params: { page: 1, pageSize: 200, styleNo: orderStyleNo, sourceType: 'sample', materialType: '', status: '' } }
+            );
+            if (styleRes?.code === 200) {
+              const styleRecords = unwrapRecords(styleRes);
+              if (styleRecords.length > 0) {
+                records = sortPurchases(styleRecords);
+              }
+            }
+          } catch {}
+        }
+      }
+
       setPurchases(records);
 
       const parsedLines = parseProductionOrderLines(orderRecord);
@@ -209,11 +227,6 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = ({ orderId, orde
       styleCover: order?.styleCover || firstPurchase?.styleCover || '',
     };
   }, [orderId, orderNo, order, firstPurchase]);
-
-  const handleStartEdit = useCallback(() => {
-    setEditableData([...purchases]);
-    setEditing(true);
-  }, [purchases]);
 
   const handleCancelEdit = useCallback(() => {
     setEditing(false);
@@ -618,6 +631,39 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = ({ orderId, orde
   }, [purchases]);
 
   const canProcure = !bomIncomplete;
+
+  const handleStartEdit = useCallback(() => {
+    if (purchases.length === 0 && orderColorSet.size > 1) {
+      const autoRows: MaterialPurchase[] = Array.from(orderColorSet).map((color) => ({
+        id: `tmp_${Date.now()}_${color}`,
+        purchaseNo: '',
+        supplierId: '',
+        orderNo: orderNo || order?.orderNo || '',
+        styleNo: order?.styleNo || '',
+        styleName: order?.styleName || '',
+        styleId: order?.styleId || '',
+        materialType: 'fabricA',
+        materialCode: '',
+        materialName: '',
+        unit: '',
+        color,
+        size: '',
+        specification: '',
+        fabricComposition: '',
+        fabricWeight: '',
+        purchaseQuantity: 0,
+        arrivedQuantity: 0,
+        unitPrice: 0,
+        totalAmount: 0,
+        supplierName: '',
+        status: MATERIAL_PURCHASE_STATUS.PENDING,
+      } as MaterialPurchase));
+      setEditableData(autoRows);
+    } else {
+      setEditableData([...purchases]);
+    }
+    setEditing(true);
+  }, [purchases, orderColorSet, orderNo, order]);
 
   const sections = useMemo(() => {
     return ([
@@ -1195,8 +1241,23 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = ({ orderId, orde
             columns={editColumns as any}
           />
         ) : purchases.length === 0 && !loading ? (
-          <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--color-text-tertiary)' }}>
-            该订单暂无采购记录，点击上方「编辑物料」按钮添加
+          <div style={{ textAlign: 'center', padding: '48px 16px' }}>
+            <Alert
+              type="info"
+              showIcon
+              message="该订单尚未创建面辅料信息"
+              description={
+                orderColorSet.size > 1
+                  ? `订单包含 ${orderColorSet.size} 种颜色（${Array.from(orderColorSet).join('、')}），点击「编辑物料」按钮为每种颜色创建对应的面辅料记录。`
+                  : '点击上方「编辑物料」按钮，为订单添加面辅料信息（物料编码、名称、单位、供应商等），完善后才可进行采购。'
+              }
+              style={{ maxWidth: 600, margin: '0 auto', textAlign: 'left' }}
+              action={
+                <Button type="primary" size="small" onClick={handleStartEdit}>
+                  编辑物料
+                </Button>
+              }
+            />
           </div>
         ) : (
           <Collapse

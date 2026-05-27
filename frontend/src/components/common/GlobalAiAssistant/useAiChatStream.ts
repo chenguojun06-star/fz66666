@@ -109,8 +109,12 @@ export function useAiChatStream(config: StreamConfig) {
       inactivityTimer = setTimeout(() => {
         if (requestSeqRef.current === currentSeq) {
           if (!answerReceived && !completed) {
-            setMessages(prev => prev.map(m => m.id === aiMsgId
-              ? { ...m, text: accumulatedText || '小云思考时间较长，请稍后再问一次试试 🤔' } : m));
+            setMessages(prev => {
+              const existing = prev.find(m => m.id === aiMsgId);
+              const errText = accumulatedText || '小云思考时间较长，请稍后再问一次试试 🤔';
+              if (existing) return prev.map(m => m.id === aiMsgId ? { ...m, text: errText } : m);
+              return [...prev, { id: aiMsgId, role: 'ai' as const, text: errText }];
+            });
           }
           finishTyping();
         }
@@ -186,8 +190,12 @@ export function useAiChatStream(config: StreamConfig) {
         } catch (_retryErr) {
         }
       }
-      setMessages(prev => prev.map(m => m.id === aiMsgId
-        ? { ...m, text: '当前连不到数据服务，请稍后再试。' } : m));
+      setMessages(prev => {
+        const existing = prev.find(m => m.id === aiMsgId);
+        const errText = '当前连不到数据服务，请稍后再试。';
+        if (existing) return prev.map(m => m.id === aiMsgId ? { ...m, text: errText } : m);
+        return [...prev, { id: aiMsgId, role: 'ai' as const, text: errText }];
+      });
     };
 
     const onDone = () => {
@@ -196,8 +204,12 @@ export function useAiChatStream(config: StreamConfig) {
       if (inactivityTimer) { clearTimeout(inactivityTimer); inactivityTimer = undefined; }
       if (!answerReceived) {
         if (!accumulatedText) {
-          setMessages(prev => prev.map(m => m.id === aiMsgId
-            ? { ...m, text: '小云未返回有效回答，请重试或换个问法 🤔' } : m));
+          setMessages(prev => {
+            const existing = prev.find(m => m.id === aiMsgId);
+            const errText = '小云未返回有效回答，请重试或换个问法 🤔';
+            if (existing) return prev.map(m => m.id === aiMsgId ? { ...m, text: errText } : m);
+            return [...prev, { id: aiMsgId, role: 'ai' as const, text: errText }];
+          });
         }
         finishTyping();
       }
@@ -215,14 +227,22 @@ export function useAiChatStream(config: StreamConfig) {
 
       const isAuthError = typeof err === 'string' && (err.includes('401') || err.includes('登录已过期'));
       if (isAuthError) {
-        setMessages(prev => prev.map(m => m.id === aiMsgId
-          ? { ...m, text: '登录已过期，请重新登录' } : m));
+        setMessages(prev => {
+          const existing = prev.find(m => m.id === aiMsgId);
+          const errText = '登录已过期，请重新登录';
+          if (existing) return prev.map(m => m.id === aiMsgId ? { ...m, text: errText } : m);
+          return [...prev, { id: aiMsgId, role: 'ai' as const, text: errText }];
+        });
         finishTyping();
         return;
       }
       if (streamStarted) {
-        setMessages(prev => prev.map(m => m.id === aiMsgId
-          ? { ...m, text: accumulatedText || '网络中断，请重试 🌧️' } : m));
+        setMessages(prev => {
+          const existing = prev.find(m => m.id === aiMsgId);
+          const errText = accumulatedText || '网络中断，请重试 🌧️';
+          if (existing) return prev.map(m => m.id === aiMsgId ? { ...m, text: errText } : m);
+          return [...prev, { id: aiMsgId, role: 'ai' as const, text: errText }];
+        });
         finishTyping();
         return;
       }
@@ -252,18 +272,26 @@ export function useAiChatStream(config: StreamConfig) {
         const syncErrMsg = (err as any)?.message || String(err);
         const isSyncAuthError = syncErrMsg.includes('401') || syncErrMsg.includes('登录已过期') || syncErrMsg.includes('过期');
         if (isSyncAuthError) {
-          setMessages(prev => prev.map(m => m.id === aiMsgId
-            ? { ...m, text: '登录已过期，请重新登录' } : m));
+          setMessages(prev => {
+            const existing = prev.find(m => m.id === aiMsgId);
+            const errText = '登录已过期，请重新登录';
+            if (existing) return prev.map(m => m.id === aiMsgId ? { ...m, text: errText } : m);
+            return [...prev, { id: aiMsgId, role: 'ai' as const, text: errText }];
+          });
           return;
         }
 
         await runRetryLoop();
       } catch (syncErr) {
-        const syncErrMsg = (syncErr as any)?.message || String(syncErr);
-        const isSyncAuthError = syncErrMsg.includes('401') || syncErrMsg.includes('登录已过期') || syncErrMsg.includes('过期');
-        if (isSyncAuthError) {
-          setMessages(prev => prev.map(m => m.id === aiMsgId
-            ? { ...m, text: '登录已过期，请重新登录' } : m));
+        const syncErrMsg2 = (syncErr as any)?.message || String(syncErr);
+        const isSyncAuthError2 = syncErrMsg2.includes('401') || syncErrMsg2.includes('登录已过期') || syncErrMsg2.includes('过期');
+        if (isSyncAuthError2) {
+          setMessages(prev => {
+            const existing = prev.find(m => m.id === aiMsgId);
+            const errText = '登录已过期，请重新登录';
+            if (existing) return prev.map(m => m.id === aiMsgId ? { ...m, text: errText } : m);
+            return [...prev, { id: aiMsgId, role: 'ai' as const, text: errText }];
+          });
           return;
         }
         await runRetryLoop();
@@ -292,12 +320,20 @@ export function useAiChatStream(config: StreamConfig) {
             });
           } else if (event.type === 'tool_call') {
             const toolStatus = `小云正在处理：${describeToolName(String(event.data.tool || ''), isSuperAdmin)}…`;
-            setMessages(prev => prev.map(m => m.id === aiMsgId ? { ...m, text: toolStatus } : m));
+            setMessages(prev => {
+              const existing = prev.find(m => m.id === aiMsgId);
+              if (existing) return prev.map(m => m.id === aiMsgId ? { ...m, text: toolStatus } : m);
+              return [...prev, { id: aiMsgId, role: 'ai' as const, text: toolStatus }];
+            });
           } else if (event.type === 'tool_result') {
             const toolStatus = event.data.success
               ? `${describeToolName(String(event.data.tool || ''), isSuperAdmin)} 已处理完成，小云继续整理结果…`
               : `${describeToolName(String(event.data.tool || ''), isSuperAdmin)} 这一步没处理成功，小云正在重新组织答案…`;
-            setMessages(prev => prev.map(m => m.id === aiMsgId ? { ...m, text: toolStatus } : m));
+            setMessages(prev => {
+              const existing = prev.find(m => m.id === aiMsgId);
+              if (existing) return prev.map(m => m.id === aiMsgId ? { ...m, text: toolStatus } : m);
+              return [...prev, { id: aiMsgId, role: 'ai' as const, text: toolStatus }];
+            });
           } else if (event.type === 'answer_chunk') {
             const chunk = String(event.data.chunk || '');
             if (chunk) {
@@ -345,7 +381,11 @@ export function useAiChatStream(config: StreamConfig) {
             }
           } else if (event.type === 'error') {
             accumulatedText = String(event.data.message || '智能分析暂时异常，请稍后再试。');
-            setMessages(prev => prev.map(m => m.id === aiMsgId ? { ...m, text: accumulatedText } : m));
+            setMessages(prev => {
+              const existing = prev.find(m => m.id === aiMsgId);
+              if (existing) return prev.map(m => m.id === aiMsgId ? { ...m, text: accumulatedText } : m);
+              return [...prev, { id: aiMsgId, role: 'ai' as const, text: accumulatedText }];
+            });
           }
         },
         onDone,
@@ -353,7 +393,7 @@ export function useAiChatStream(config: StreamConfig) {
       );
       streamAbortRef.current = ctrl;
     } catch (_error) {
-      setMessages(prev => [...prev, { id: aiMsgId, role: 'ai', text: '当前连不到数据服务，请稍后再试。' }]);
+      setMessages(prev => [...prev, { id: aiMsgId, role: 'ai' as const, text: '当前连不到数据服务，请稍后再试。' }]);
       if (inactivityTimer) { clearTimeout(inactivityTimer); inactivityTimer = undefined; }
       finishTyping();
     }

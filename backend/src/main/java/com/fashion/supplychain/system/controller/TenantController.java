@@ -2,6 +2,7 @@ package com.fashion.supplychain.system.controller;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fashion.supplychain.common.Result;
+import com.fashion.supplychain.intelligence.service.TenantAiConfigService;
 import com.fashion.supplychain.integration.im.service.DingtalkNotifyService;
 import com.fashion.supplychain.integration.im.service.FeishuNotifyService;
 import com.fashion.supplychain.service.RedisService;
@@ -48,6 +49,12 @@ public class TenantController {
 
     @Autowired(required = false)
     private DingtalkNotifyService dingtalkNotifyService;
+
+    @Autowired(required = false)
+    private TenantAiConfigService tenantAiConfigService;
+
+    @Autowired(required = false)
+    private com.fashion.supplychain.intelligence.mapper.TenantAiConfigMapper tenantAiConfigMapper;
 
     // ========== 超级管理员：租户管理 ==========
 
@@ -651,5 +658,80 @@ public class TenantController {
         org.springframework.http.HttpEntity<Map<String, Object>> request =
                 new org.springframework.http.HttpEntity<>(body, headers);
         new org.springframework.web.client.RestTemplate().postForEntity(url, request, String.class);
+    }
+
+    // ========== 租户AI能力配置 ==========
+
+    @GetMapping("/{id}/ai-config")
+    @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
+    public Result<Map<String, Object>> getTenantAiConfig(@PathVariable Long id) {
+        if (tenantAiConfigService == null) return Result.fail("AI配置服务未启用");
+        com.fashion.supplychain.intelligence.entity.TenantAiConfig config = tenantAiConfigService.getOrCreateConfig(id);
+        TenantAiConfigService.ResolvedConfig resolved = tenantAiConfigService.resolveConfig(id);
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("config", config);
+        result.put("resolvedProvider", resolved.getProvider());
+        result.put("resolvedSource", resolved.getConfigSource());
+        return Result.success(result);
+    }
+
+    @PostMapping("/{id}/ai-config")
+    @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
+    public Result<Map<String, Object>> setTenantAiConfig(@PathVariable Long id,
+                                                          @RequestBody Map<String, Object> params) {
+        if (tenantAiConfigService == null) return Result.fail("AI配置服务未启用");
+        String action = params.get("action") != null ? params.get("action").toString() : "provision";
+        if ("provision".equals(action)) {
+            String apiKey = params.get("apiKey") != null ? params.get("apiKey").toString() : null;
+            String model = params.get("model") != null ? params.get("model").toString() : null;
+            if (apiKey == null || apiKey.isBlank()) return Result.fail("API Key不能为空");
+            tenantAiConfigService.setPlatformProvisioned(id, apiKey, model);
+        } else if ("reset".equals(action)) {
+            com.fashion.supplychain.intelligence.entity.TenantAiConfig config = tenantAiConfigService.getOrCreateConfig(id);
+            config.setConfigSource("platform");
+            config.setTextApiKey(null);
+            config.setTextProvider("mimo");
+            config.setTextModel(null);
+            config.setTextBaseUrl(null);
+            config.setAiEnabled(1);
+            if (tenantAiConfigMapper != null) tenantAiConfigMapper.updateById(config);
+        } else {
+            return Result.fail("未知操作: " + action);
+        }
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("ok", true);
+        result.put("tenantId", id);
+        return Result.success(result);
+    }
+
+    @PutMapping("/my/ai-config")
+    public Result<Map<String, Object>> updateMyAiConfig(@RequestBody Map<String, Object> params) {
+        if (tenantAiConfigService == null) return Result.fail("AI配置服务未启用");
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        if (tenantId == null) return Result.fail("无法获取租户信息");
+        String textProvider = params.get("textProvider") != null ? params.get("textProvider").toString() : null;
+        String textApiKey = params.get("textApiKey") != null ? params.get("textApiKey").toString() : null;
+        String textBaseUrl = params.get("textBaseUrl") != null ? params.get("textBaseUrl").toString() : null;
+        String textModel = params.get("textModel") != null ? params.get("textModel").toString() : null;
+        Integer aiEnabled = params.get("aiEnabled") != null
+                ? Integer.valueOf(params.get("aiEnabled").toString()) : null;
+        tenantAiConfigService.updateConfig(tenantId, textProvider, textApiKey, textBaseUrl, textModel, aiEnabled);
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("ok", true);
+        return Result.success(result);
+    }
+
+    @GetMapping("/my/ai-config")
+    public Result<Map<String, Object>> getMyAiConfig() {
+        if (tenantAiConfigService == null) return Result.fail("AI配置服务未启用");
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        if (tenantId == null) return Result.fail("无法获取租户信息");
+        com.fashion.supplychain.intelligence.entity.TenantAiConfig config = tenantAiConfigService.getOrCreateConfig(tenantId);
+        TenantAiConfigService.ResolvedConfig resolved = tenantAiConfigService.resolveConfig(tenantId);
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("config", config);
+        result.put("resolvedProvider", resolved.getProvider());
+        result.put("resolvedSource", resolved.getConfigSource());
+        return Result.success(result);
     }
 }
