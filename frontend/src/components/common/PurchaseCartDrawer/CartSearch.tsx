@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Input, Button, App } from 'antd';
+import { Input, Button, Space, App } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import type { AddCartItemRequest } from '@/types/purchaseCart';
 
@@ -42,7 +42,7 @@ export const CartSearch: React.FC<CartSearchProps> = ({ onAdd, submitting }) => 
 
   return (
     <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--color-border)' }}>
-      <Input.Group compact>
+      <Space.Compact style={{ width: '100%' }}>
         <Input
           style={{ width: 'calc(100% - 80px)' }}
           placeholder="输入物料编码或名称"
@@ -58,7 +58,7 @@ export const CartSearch: React.FC<CartSearchProps> = ({ onAdd, submitting }) => 
         >
           添加
         </Button>
-      </Input.Group>
+      </Space.Compact>
     </div>
   );
 };

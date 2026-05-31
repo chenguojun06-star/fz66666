@@ -1,7 +1,7 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-05-28
+> 最后更新：2026-06-01
 
 ---
 
@@ -92,3 +92,36 @@
   - AgentLoopEngine 集成点清晰：循环前注入（规划+风险+记忆）、工具结果处理（摘要压缩）、最终回答处理（结构化+风险扫描+反馈记录）
 - **修改文件**：AgentLoopEngine.java（核心集成）、PromptEvolutionService.java（修复编译+补齐方法）、xiaoyun-base-prompt.yaml（提示词升级）
 - **新增文件**：AgentPlan.java、AgentPlanningEngine.java、ContextEngineeringService.java、StructuredResponseService.java、MemoryHierarchyService.java、ProactiveRiskDetectionService.java、PromptEvolutionService.java
+
+## D-012：前端字段名必须与后端Entity完全一致
+
+- **上下文**：PurchaseDetailView.tsx 使用 `specification`（单数）但后端 Entity 和 TS 类型定义都是 `specifications`（复数），导致新增面辅料行时规格数据丢失
+- **决策**：前端字段名必须与后端 Entity 字段名完全一致，禁止用 `as any` 绕过 TypeScript 类型检查
+- **理由**：`as any` 绕过类型检查后，字段名拼写错误不会被编译器捕获，运行时数据丢失且难以排查
+- **执行规则**：
+  1. 新增前端类型定义时，必须对照后端 Entity 逐字段核对
+  2. 禁止使用 `as any` 访问后端已有但前端类型未定义的字段，应补充类型定义
+  3. Code Review 时检查所有 `as any` 使用
+
+## D-013：Controller层写操作必须有事务保护
+
+- **上下文**：ProductionOrderController 的 updateBasicInfo/quickEdit/urge/urgeReply 4个方法在 Controller 层直接执行多步写操作，没有 @Transactional，部分失败时数据不一致
+- **决策**：Controller 层写操作必须有 @Transactional 保护（临时方案），后续应下沉到 Orchestrator 层
+- **理由**：
+  1. 项目铁律规定事务只在 Orchestrator 层，但当前这些方法逻辑在 Controller 中，无法立即重构
+  2. 临时在 Controller 加 @Transactional 比无事务安全得多
+  3. 后续迭代中将逻辑下沉到 Orchestrator 后移除 Controller 的 @Transactional
+- **适用范围**：ProductionOrderController.updateBasicInfo/quickEdit/urge/urgeReply
+
+## D-014：所有读接口必须校验资源租户归属
+
+- **上下文**：ProductionOrderController 的 detail()/flow()/timeline() 三个读接口没有校验订单是否属于当前租户，healthScores() 未校验 orderIds 租户归属（IDOR）
+- **决策**：所有按 ID 查询资源的读接口，必须在返回前校验 `TenantAssert.assertBelongsToCurrentTenant()`；批量查询接口必须先过滤出属于当前租户的 ID
+- **理由**：
+  1. MyBatis-Plus 租户插件对 `getById` 可能不生效（取决于插件配置）
+  2. IDOR（Insecure Direct Object Reference）是 OWASP Top 10 漏洞
+  3. 攻击者可通过猜测 ID 读取其他租户数据
+- **执行规则**：
+  1. 所有 `getById` 后必须 `TenantAssert.assertBelongsToCurrentTenant()`
+  2. 所有批量查询必须先过滤租户归属
+  3. Code Review 时检查所有新增的读接口

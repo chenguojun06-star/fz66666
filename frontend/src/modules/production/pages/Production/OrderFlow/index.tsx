@@ -1,11 +1,11 @@
-import React, { useState, useCallback } from 'react';
-import { Alert, App, Button, Card, Col, Row, Space, Tag, Badge, Input, Tooltip, Modal } from 'antd';
-import { MessageOutlined, EditOutlined, CheckOutlined, CloseOutlined } from '@ant-design/icons';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
+import { Alert, App, Button, Card, Col, Row, Space, Tag, Badge, Input, Tooltip } from 'antd';
+import { MessageOutlined, EditOutlined, CheckOutlined, CloseOutlined, SaveOutlined } from '@ant-design/icons';
 import PageLayout from '@/components/common/PageLayout';
 import { toNumberSafe } from '@/utils/api';
+import api from '@/utils/api';
 import { formatDateTime } from '@/utils/datetime';
 import { calcOrderProgress } from '@/modules/production/utils/calcOrderProgress';
-import { StyleCoverThumb } from '@/components/StyleAssets';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import OrderImageManager from '@/components/common/OrderImageManager';
 import RemarkTimelineModal from '@/components/common/RemarkTimelineModal';
@@ -13,6 +13,93 @@ import { remarkApi } from '@/services/system/remarkApi';
 import '../../../styles.css';
 import { useOrderFlowData, orderStatusTag } from './useOrderFlowData';
 import FlowStepRenderer from './components/FlowStepRenderer';
+
+const EDITABLE_FIELDS = ['styleNo', 'styleName', 'skc', 'color'] as const;
+type EditableField = typeof EDITABLE_FIELDS[number];
+
+const FIELD_LABELS: Record<EditableField, string> = {
+  styleNo: '款号',
+  styleName: '款名',
+  skc: 'SKC',
+  color: '颜色',
+};
+
+const InlineEditableField: React.FC<{
+  label: string;
+  value: string;
+  editable: boolean;
+  fieldKey: EditableField;
+  onSave: (field: EditableField, value: string) => void;
+  saving?: boolean;
+  bold?: boolean;
+}> = ({ label, value, editable, fieldKey, onSave, saving, bold }) => {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => { setDraft(value); }, [value]);
+
+  useEffect(() => {
+    if (editing && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [editing]);
+
+  const handleSave = () => {
+    const trimmed = draft.trim();
+    if (trimmed === value.trim()) {
+      setEditing(false);
+      return;
+    }
+    onSave(fieldKey, trimmed);
+    setEditing(false);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') handleSave();
+    if (e.key === 'Escape') { setDraft(value); setEditing(false); }
+  };
+
+  if (!editable) {
+    return (
+      <span style={{ fontSize: 14, lineHeight: '22px', fontWeight: bold ? 600 : 400 }}>
+        {value || '-'}
+      </span>
+    );
+  }
+
+  if (editing) {
+    return (
+      <Input
+        ref={inputRef as any}
+        size="small"
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={handleSave}
+        onKeyDown={handleKeyDown}
+        disabled={saving}
+        style={{ fontSize: 14, lineHeight: '22px' }}
+        onPressEnter={handleSave}
+      />
+    );
+  }
+
+  return (
+    <span
+      onClick={() => setEditing(true)}
+      style={{
+        fontSize: 14, lineHeight: '22px', cursor: 'pointer',
+        fontWeight: bold ? 600 : 400,
+        borderBottom: '1px dashed var(--color-text-quaternary)',
+        padding: '0 2px',
+      }}
+      title="点击编辑"
+    >
+      {value || '-'}
+    </span>
+  );
+};
 
 const OrderFlow: React.FC = () => {
   const { message, modal } = App.useApp();
@@ -25,12 +112,14 @@ const OrderFlow: React.FC = () => {
   } = useOrderFlowData();
 
   const orderNoForImage = query.orderNo || (order as any)?.orderNo || '';
+  const coverUrl = (order as any)?.styleCover || null;
 
   const [remarkOpen, setRemarkOpen] = useState(false);
   const [remarkCount, setRemarkCount] = useState(0);
 
   const [editing, setEditing] = useState(false);
   const [editReason, setEditReason] = useState('');
+  const [savingField, setSavingField] = useState<string | null>(null);
 
   const recordAction = useCallback(async (action: string, reason: string) => {
     const targetNo = orderNoForImage;
@@ -97,6 +186,33 @@ const OrderFlow: React.FC = () => {
     setEditReason('');
   };
 
+  const handleFieldSave = useCallback(async (field: EditableField, value: string) => {
+    const orderId = (order as any)?.id;
+    if (!orderId) {
+      message.error('订单ID不存在');
+      return;
+    }
+    setSavingField(field);
+    try {
+      const res: any = await api.put('/production/order/update-basic-info', {
+        id: orderId,
+        field,
+        value,
+        operationRemark: `修改${FIELD_LABELS[field]}：${(order as any)?.[field] || '-'} → ${value}`,
+      });
+      if (res?.code === 200) {
+        message.success(`${FIELD_LABELS[field]}已更新${res?.data?.syncedCount ? `，已同步${res.data.syncedCount}条下游记录` : ''}`);
+        fetchFlow();
+      } else {
+        message.error(res?.message || '更新失败');
+      }
+    } catch (e: any) {
+      message.error(e?.message || '更新失败');
+    } finally {
+      setSavingField(null);
+    }
+  }, [order, message, fetchFlow]);
+
   React.useEffect(() => {
     const targetNo = orderNoForImage;
     if (!targetNo) return;
@@ -145,10 +261,7 @@ const OrderFlow: React.FC = () => {
           <Card className="order-flow-detail" style={{ marginTop: 8 }} loading={loading}>
             <Row gutter={0} align="top" wrap={false}>
               <Col flex="none" style={{ paddingRight: 20, flexShrink: 0, paddingTop: 2, textAlign: 'center', width: 340 }}>
-                <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'center' }}>
-                  <StyleCoverThumb src={(order as any)?.styleCover} styleId={(order as any)?.styleId} size={80} borderRadius={8} />
-                </div>
-                <OrderImageManager orderNo={orderNoForImage} editable={editing} />
+                <OrderImageManager orderNo={orderNoForImage} editable={editing} coverUrl={coverUrl} />
                 <div style={{ marginTop: 8, display: 'flex', justifyContent: 'center' }}>
                   <Badge count={remarkCount} size="small" offset={[4, -4]}>
                     <Button
@@ -163,16 +276,38 @@ const OrderFlow: React.FC = () => {
                 </div>
               </Col>
               <Col flex="1" style={{ minWidth: 180, padding: '0 20px', borderLeft: '1px solid rgba(0,0,0,0.08)' }}>
-                <div style={{ fontSize: 14, fontWeight: 700, color: '#bbb', marginBottom: 8, letterSpacing: 1 }}>基本信息</div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: '#bbb', marginBottom: 8, letterSpacing: 1 }}>
+                  基本信息
+                  {editing && <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--color-text-quaternary)', marginLeft: 8 }}>点击字段值可编辑</span>}
+                </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', rowGap: 4, columnGap: 12 }}>
                   <span style={{ color: 'var(--color-text-tertiary)', fontSize: 14, lineHeight: '22px' }}>订单号</span>
                   <span style={{ fontSize: 14, fontWeight: 600, lineHeight: '22px' }}>{(order as any)?.orderNo || '-'}</span>
+
                   <span style={{ color: 'var(--color-text-tertiary)', fontSize: 14, lineHeight: '22px' }}>款号</span>
-                  <span style={{ fontSize: 14, lineHeight: '22px' }}>{(order as any)?.styleNo || '-'}</span>
+                  <InlineEditableField
+                    label="款号" value={(order as any)?.styleNo || ''} editable={editing}
+                    fieldKey="styleNo" onSave={handleFieldSave} saving={savingField === 'styleNo'}
+                  />
+
+                  <span style={{ color: 'var(--color-text-tertiary)', fontSize: 14, lineHeight: '22px' }}>SKC</span>
+                  <InlineEditableField
+                    label="SKC" value={(order as any)?.skc || ''} editable={editing}
+                    fieldKey="skc" onSave={handleFieldSave} saving={savingField === 'skc'}
+                  />
+
                   <span style={{ color: 'var(--color-text-tertiary)', fontSize: 14, lineHeight: '22px' }}>款名</span>
-                  <span style={{ fontSize: 14, lineHeight: '22px' }}>{(order as any)?.styleName || '-'}</span>
+                  <InlineEditableField
+                    label="款名" value={(order as any)?.styleName || ''} editable={editing}
+                    fieldKey="styleName" onSave={handleFieldSave} saving={savingField === 'styleName'}
+                  />
+
                   <span style={{ color: 'var(--color-text-tertiary)', fontSize: 14, lineHeight: '22px' }}>颜色</span>
-                  <span style={{ fontSize: 14, lineHeight: '22px' }}>{(order as any)?.color || '-'}</span>
+                  <InlineEditableField
+                    label="颜色" value={(order as any)?.color || ''} editable={editing}
+                    fieldKey="color" onSave={handleFieldSave} saving={savingField === 'color'}
+                  />
+
                   <span style={{ color: 'var(--color-text-tertiary)', fontSize: 14, lineHeight: '22px' }}>加工厂</span>
                   <span style={{ fontSize: 14, lineHeight: '22px' }}>{String((order as any)?.factoryName || '-').trim()}</span>
                   <span style={{ color: 'var(--color-text-tertiary)', fontSize: 14, lineHeight: '22px' }}>状态</span>

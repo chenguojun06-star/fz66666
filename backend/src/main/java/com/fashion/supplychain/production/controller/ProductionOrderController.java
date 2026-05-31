@@ -22,6 +22,7 @@ import com.fashion.supplychain.style.service.StyleInfoService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
@@ -54,6 +55,7 @@ public class ProductionOrderController {
     private final StyleInfoService styleInfoService;
     private final com.fashion.supplychain.style.service.SecondaryProcessService secondaryProcessService;
     private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
+    private final org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
 
     /**
      * 导出生产订单列表为Excel
@@ -207,7 +209,9 @@ public class ProductionOrderController {
     @GetMapping("/detail/{id}")
     public Result<?> detail(@PathVariable String id) {
         ProductionOrder productionOrder = productionOrderOrchestrator.getDetailById(id);
-        // 注入 coverImage/styleImage，修复小程序扫码确认页款式图不显示问题（UUID路径）
+        if (productionOrder != null) {
+            TenantAssert.assertBelongsToCurrentTenant(productionOrder.getTenantId(), "生产订单");
+        }
         if (productionOrder != null && StringUtils.hasText(productionOrder.getStyleId())) {
             StyleInfo si = styleInfoService.getById(productionOrder.getStyleId());
             if (si != null && StringUtils.hasText(si.getCover())) {
@@ -226,6 +230,10 @@ public class ProductionOrderController {
      */
     @GetMapping("/flow/{id}")
     public Result<?> flow(@PathVariable String id) {
+        ProductionOrder order = productionOrderService.getById(id);
+        if (order != null) {
+            TenantAssert.assertBelongsToCurrentTenant(order.getTenantId(), "生产订单");
+        }
         return Result.success(productionOrderOrchestrator.getOrderFlow(id));
     }
 
@@ -302,6 +310,7 @@ public class ProductionOrderController {
      * 快速编辑订单（备注、预计出货日期、工序数据等）
      */
     @PutMapping("/quick-edit")
+    @Transactional(rollbackFor = Exception.class)
     public Result<?> quickEdit(@RequestBody Map<String, Object> payload) {
         String id = (String) payload.get("id");
         if (id == null || id.trim().isEmpty()) {
@@ -386,7 +395,151 @@ public class ProductionOrderController {
         return success ? Result.success("更新成功") : Result.fail("更新失败");
     }
 
+    private static final java.util.Set<String> BASIC_INFO_EDITABLE_FIELDS = java.util.Set.of("styleNo", "styleName", "skc", "color");
+
+    private static final java.util.Map<String, String> FIELD_TO_COLUMN = java.util.Map.of(
+            "styleNo", "style_no",
+            "styleName", "style_name",
+            "skc", "skc",
+            "color", "color"
+    );
+
+    private static final java.util.List<String[]> STYLE_NO_DOWNSTREAM_TABLES = java.util.List.of(
+            new String[]{"t_cutting_bundle", "order_id"},
+            new String[]{"t_cutting_task", "order_id"},
+            new String[]{"t_material_purchase", "order_no"},
+            new String[]{"t_scan_record", "order_id"},
+            new String[]{"t_product_warehousing", "order_id"},
+            new String[]{"t_product_outstock", "order_id"},
+            new String[]{"t_cutting_bom", "order_id"},
+            new String[]{"t_factory_shipment", "order_no"},
+            new String[]{"t_material_picking", "order_id"}
+    );
+
+    private static final java.util.List<String[]> COLOR_DOWNSTREAM_TABLES = java.util.List.of(
+            new String[]{"t_cutting_bundle", "order_id"},
+            new String[]{"t_cutting_task", "order_id"}
+    );
+
+    @PutMapping("/update-basic-info")
+    @Transactional(rollbackFor = Exception.class)
+    public Result<?> updateBasicInfo(@RequestBody Map<String, Object> payload) {
+        String id = (String) payload.get("id");
+        String field = (String) payload.get("field");
+        String value = (String) payload.get("value");
+        String operationRemark = (String) payload.get("operationRemark");
+
+        if (id == null || id.trim().isEmpty()) {
+            return Result.fail("缺少id参数");
+        }
+        if (field == null || !BASIC_INFO_EDITABLE_FIELDS.contains(field)) {
+            return Result.fail("不支持编辑的字段: " + field);
+        }
+        if (value == null) {
+            return Result.fail("值不能为空");
+        }
+
+        ProductionOrder order = productionOrderService.getById(id);
+        if (order == null) {
+            return Result.fail("订单不存在");
+        }
+        TenantAssert.assertBelongsToCurrentTenant(order.getTenantId(), "订单");
+
+        String terminalStatuses = "closed,scrapped,cancelled,archived";
+        if (terminalStatuses.contains(order.getStatus())) {
+            return Result.fail("终态订单不允许编辑基本信息");
+        }
+
+        String oldValue = getFieldValue(order, field);
+        if (value.trim().equals(oldValue != null ? oldValue.trim() : "")) {
+            return Result.success(java.util.Map.of("syncedCount", 0, "message", "值未变化"));
+        }
+
+        setFieldValue(order, field, value.trim());
+
+        String remark = operationRemark != null ? operationRemark
+                : String.format("修改%s：%s → %s", fieldLabel(field), oldValue, value.trim());
+        appendRemark(order, remark);
+
+        boolean success = productionOrderService.updateById(order);
+        if (!success) {
+            return Result.fail("更新失败");
+        }
+
+        int syncedCount = syncDownstream(order, field, value.trim());
+
+        log.info("[updateBasicInfo] orderId={} field={} old={} new={} synced={}", id, field, oldValue, value.trim(), syncedCount);
+
+        return Result.success(java.util.Map.of(
+                "syncedCount", syncedCount,
+                "message", syncedCount > 0 ? "已同步" + syncedCount + "条下游记录" : "更新成功"
+        ));
+    }
+
+    private String getFieldValue(ProductionOrder order, String field) {
+        return switch (field) {
+            case "styleNo" -> order.getStyleNo();
+            case "styleName" -> order.getStyleName();
+            case "skc" -> order.getSkc();
+            case "color" -> order.getColor();
+            default -> null;
+        };
+    }
+
+    private void setFieldValue(ProductionOrder order, String field, String value) {
+        switch (field) {
+            case "styleNo" -> order.setStyleNo(value);
+            case "styleName" -> order.setStyleName(value);
+            case "skc" -> order.setSkc(value);
+            case "color" -> order.setColor(value);
+        }
+    }
+
+    private String fieldLabel(String field) {
+        return java.util.Map.of("styleNo", "款号", "styleName", "款名", "skc", "SKC", "color", "颜色").getOrDefault(field, field);
+    }
+
+    private void appendRemark(ProductionOrder order, String remark) {
+        String existing = order.getRemarks();
+        String timestamp = java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
+        String entry = String.format("[%s] %s", timestamp, remark);
+        order.setRemarks(existing != null && !existing.isEmpty() ? existing + "\n" + entry : entry);
+    }
+
+    private int syncDownstream(ProductionOrder order, String field, String newValue) {
+        String column = FIELD_TO_COLUMN.get(field);
+        if (column == null) return 0;
+
+        int total = 0;
+
+        java.util.List<String[]> tables;
+        if ("styleNo".equals(field)) {
+            tables = STYLE_NO_DOWNSTREAM_TABLES;
+        } else if ("color".equals(field)) {
+            tables = COLOR_DOWNSTREAM_TABLES;
+        } else {
+            return 0;
+        }
+
+        for (String[] tableInfo : tables) {
+            String table = tableInfo[0];
+            String refColumn = tableInfo[1];
+            String refValue = "order_id".equals(refColumn) ? order.getId() : order.getOrderNo();
+            try {
+                int count = jdbcTemplate.update(
+                        "UPDATE " + table + " SET " + column + " = ? WHERE " + refColumn + " = ? AND delete_flag = 0 AND tenant_id = ?",
+                        newValue, refValue, order.getTenantId()
+                );
+                total += count;
+            } catch (Exception e) {
+                log.warn("[syncDownstream] 同步失败: table={} column={} ref={}", table, column, refColumn, e);
+            }
+        }
+        return total;
+    }
+
     @PostMapping("/urge")
+    @Transactional(rollbackFor = Exception.class)
     public Result<?> urge(@RequestBody Map<String, Object> payload) {
         String orderId = payload == null ? null : String.valueOf(payload.getOrDefault("orderId", "")).trim();
         String remark = payload != null ? (String) payload.getOrDefault("remark", "") : "";
@@ -442,6 +595,7 @@ public class ProductionOrderController {
     }
 
     @PostMapping("/urge/reply")
+    @Transactional(rollbackFor = Exception.class)
     public Result<?> urgeReply(@RequestBody Map<String, Object> payload) {
         String urgeRecordId = payload == null ? null : (String) payload.get("urgeRecordId");
         if (!StringUtils.hasText(urgeRecordId)) {
@@ -504,6 +658,17 @@ public class ProductionOrderController {
     public Result<Map<String, com.fashion.supplychain.production.dto.response.OrderHealthScoreDTO>> healthScores(@RequestBody Map<String, Object> payload) {
         @SuppressWarnings("unchecked")
         List<String> ids = (List<String>) payload.get("orderIds");
+        if (ids != null && !ids.isEmpty()) {
+            Long tenantId = UserContext.tenantId();
+            ids = productionOrderService.lambdaQuery()
+                    .in(ProductionOrder::getId, ids)
+                    .eq(ProductionOrder::getTenantId, tenantId)
+                    .eq(ProductionOrder::getDeleteFlag, 0)
+                    .list()
+                    .stream()
+                    .map(ProductionOrder::getId)
+                    .toList();
+        }
         return Result.success(orderHealthScoreOrchestrator.batchCalculateHealth(ids));
     }
 
@@ -537,6 +702,7 @@ public class ProductionOrderController {
         if (order == null) {
             return Result.fail("订单不存在");
         }
+        TenantAssert.assertBelongsToCurrentTenant(order.getTenantId(), "生产订单");
         String remarks = order.getRemarks();
         java.util.List<java.util.Map<String, String>> entries = new java.util.ArrayList<>();
         if (StringUtils.hasText(remarks)) {

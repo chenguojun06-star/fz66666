@@ -1,11 +1,31 @@
 # 进度跟踪
 
 > 本文件由 AI 助手自动维护，记录项目开发进度
-> 最后更新：2026-05-29
+> 最后更新：2026-06-01
 
 ---
 
 ## 已完成
+
+### 2026-06-01
+- [x] 🔴 P0修复：getByOrderNo() 无 tenant_id 过滤 — 跨租户数据泄露
+- [x] 🔴 P0修复：createOrderFromStyle() 未显式设置 tenant_id
+- [x] 🔴 P0修复：PurchaseCartOrchestrator addItem/updateItem 添加 @Transactional
+- [x] 🔴 P0修复：PurchaseDetailView.tsx specification→specifications 字段名修正（4处）
+- [x] 🔴 P0修复：ProductionOrderController updateBasicInfo() 多表更新添加 @Transactional
+- [x] 🔴 P0修复：ProductionOrderController quickEdit/urge/urgeReply 添加 @Transactional
+- [x] 🟡 P1修复：PurchaseCartController 添加 @PreAuthorize
+- [x] 🟡 P1修复：ProductionOrderController detail()/flow()/timeline() 添加 TenantAssert
+- [x] 🟡 P1修复：ProductionOrderController healthScores() IDOR 修复（过滤租户归属）
+- [x] 采购车系统全链路（后端Orchestrator/Service/Controller + 前端组件/Hook/API + 小程序同步）
+- [x] 样衣开发展开视图 + 采购快捷操作
+- [x] ResizableTable 增强
+- [x] 小程序全量 var→const 重构 + 页面优化
+- [x] 补写 2026-05-12/13 优化日志
+- [x] 补写 2026-06-01 优化日志
+- [x] 更新 memory-bank（activeContext + progress + decisionLog D-012/D-013/D-014）
+- [x] 后端 mvn compile BUILD SUCCESS
+- [x] 前端 npx tsc --noEmit 0 errors
 
 ### 2026-05-29
 - [x] 自动化测试缺口分析：审查近期代码变更，识别3个缺少测试覆盖的核心模块

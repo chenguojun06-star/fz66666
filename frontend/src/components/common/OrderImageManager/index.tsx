@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { App, Button, Spin, Empty, Tag, Image } from 'antd';
 import ResizableModal from '@/components/common/ResizableModal';
-import { HistoryOutlined, DeleteOutlined } from '@ant-design/icons';
+import { HistoryOutlined, DeleteOutlined, LeftOutlined, RightOutlined, PlusOutlined } from '@ant-design/icons';
 import { orderImageApi } from '@/services/system/remarkApi';
 import type { OrderImage, OrderImageSnapshot } from '@/services/system/remarkApi';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
@@ -10,14 +10,33 @@ import MultiImageUploadBox from '@/components/common/MultiImageUploadBox';
 interface OrderImageManagerProps {
   orderNo: string;
   editable?: boolean;
+  coverUrl?: string | null;
 }
 
-const OrderImageManager: React.FC<OrderImageManagerProps> = ({ orderNo, editable = true }) => {
+const OrderImageManager: React.FC<OrderImageManagerProps> = ({ orderNo, editable = true, coverUrl }) => {
   const { message, modal } = App.useApp();
   const [images, setImages] = useState<OrderImage[]>([]);
   const [loading, setLoading] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [snapshots, setSnapshots] = useState<OrderImageSnapshot[]>([]);
+  const [currentIdx, setCurrentIdx] = useState(0);
+
+  const allImageUrls = React.useMemo(() => {
+    const urls: { url: string; id?: number; isCover?: boolean }[] = [];
+    if (coverUrl) {
+      urls.push({ url: coverUrl, isCover: true });
+    }
+    images.forEach((img) => {
+      urls.push({ url: getFullAuthedFileUrl(img.imageUrl), id: img.id });
+    });
+    return urls;
+  }, [coverUrl, images]);
+
+  const totalCount = allImageUrls.length;
+
+  useEffect(() => {
+    setCurrentIdx(0);
+  }, [totalCount]);
 
   const fetchImages = useCallback(async () => {
     if (!orderNo) return;
@@ -122,10 +141,23 @@ const OrderImageManager: React.FC<OrderImageManagerProps> = ({ orderNo, editable
     UPDATE: { text: '更新', color: 'orange' },
   };
 
+  const goPrev = () => setCurrentIdx((i) => (i > 0 ? i - 1 : totalCount - 1));
+  const goNext = () => setCurrentIdx((i) => (i < totalCount - 1 ? i + 1 : 0));
+
+  const currentImg = allImageUrls[currentIdx];
+  const currentOrderImg = currentImg && !currentImg.isCover ? images.find((im) => im.id === currentImg.id) : undefined;
+
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-        <span style={{ fontWeight: 500 }}>订单图片 ({images.length}/5)</span>
+        <span style={{ fontWeight: 500 }}>
+          订单图片 ({images.length}/5)
+          {coverUrl && totalCount > 0 && (
+            <span style={{ marginLeft: 8, color: 'var(--color-text-tertiary)', fontWeight: 400, fontSize: 12 }}>
+              含封面共{totalCount}张
+            </span>
+          )}
+        </span>
         {editable && (
           <Button size="small" icon={<HistoryOutlined />} onClick={handleViewHistory}>
             更新历史
@@ -134,31 +166,76 @@ const OrderImageManager: React.FC<OrderImageManagerProps> = ({ orderNo, editable
       </div>
 
       <Spin spinning={loading}>
-        {images.length === 0 && !loading ? (
+        {totalCount === 0 && !loading ? (
           <Empty description="暂无图片" image={Empty.PRESENTED_IMAGE_SIMPLE} />
         ) : (
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <div style={{ position: 'relative', width: '100%', borderRadius: 8, overflow: 'hidden' }}>
             <Image.PreviewGroup>
-              {images.map((img) => (
-                <div key={img.id} style={{ position: 'relative', width: 100, height: 100 }}>
-                  <Image
-                    src={getFullAuthedFileUrl(img.imageUrl)}
-                    style={{ width: 100, height: 100, objectFit: 'cover', borderRadius: 6, cursor: 'pointer' }}
-                    preview={{ mask: '预览' }}
-                  />
-                  {editable && (
-                    <Button
-                      type="text"
-                      size="small"
-                      danger
-                      icon={<DeleteOutlined />}
-                      style={{ position: 'absolute', top: 2, right: 2, minWidth: 20, padding: 0, background: 'rgba(255,255,255,0.8)' }}
-                      onClick={() => handleDelete(img.id)}
-                    />
-                  )}
-                </div>
+              {allImageUrls.map((item, idx) => (
+                <Image
+                  key={item.isCover ? 'cover' : item.id}
+                  src={item.url}
+                  style={{ display: idx === currentIdx ? 'block' : 'none', width: '100%', maxHeight: 280, objectFit: 'contain', borderRadius: 6, cursor: 'pointer' }}
+                  preview={{ mask: '点击预览' }}
+                />
               ))}
             </Image.PreviewGroup>
+
+            {totalCount > 1 && (
+              <>
+                <Button
+                  type="text"
+                  icon={<LeftOutlined />}
+                  onClick={goPrev}
+                  style={{
+                    position: 'absolute', left: 4, top: '50%', transform: 'translateY(-50%)',
+                    background: 'rgba(0,0,0,0.35)', color: '#fff', border: 'none',
+                    width: 28, height: 28, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}
+                />
+                <Button
+                  type="text"
+                  icon={<RightOutlined />}
+                  onClick={goNext}
+                  style={{
+                    position: 'absolute', right: 4, top: '50%', transform: 'translateY(-50%)',
+                    background: 'rgba(0,0,0,0.35)', color: '#fff', border: 'none',
+                    width: 28, height: 28, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}
+                />
+              </>
+            )}
+
+            <div style={{
+              position: 'absolute', bottom: 6, left: '50%', transform: 'translateX(-50%)',
+              background: 'rgba(0,0,0,0.45)', color: '#fff', fontSize: 11, padding: '1px 8px',
+              borderRadius: 10, lineHeight: '18px', pointerEvents: 'none',
+            }}>
+              {currentIdx + 1}/{totalCount}
+            </div>
+
+            {editable && currentOrderImg && (
+              <Button
+                type="text"
+                size="small"
+                danger
+                icon={<DeleteOutlined />}
+                style={{
+                  position: 'absolute', top: 4, right: 4, minWidth: 22, padding: 0,
+                  background: 'rgba(255,255,255,0.85)', borderRadius: 4,
+                }}
+                onClick={() => handleDelete(currentOrderImg.id)}
+              />
+            )}
+
+            {currentImg?.isCover && (
+              <span style={{
+                position: 'absolute', top: 4, left: 4, fontSize: 10, padding: '0 5px',
+                background: 'rgba(0,0,0,0.5)', color: '#fff', borderRadius: 3, lineHeight: '18px',
+              }}>
+                封面
+              </span>
+            )}
           </div>
         )}
 
