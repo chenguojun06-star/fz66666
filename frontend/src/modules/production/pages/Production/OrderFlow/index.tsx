@@ -262,7 +262,13 @@ const OrderFlow: React.FC = () => {
             <Row gutter={0} align="top" wrap={false}>
               <Col flex="none" style={{ paddingRight: 20, flexShrink: 0, paddingTop: 2, textAlign: 'center', width: 340 }}>
                 <OrderImageManager orderNo={orderNoForImage} editable={editing} coverUrl={coverUrl} />
-                <div style={{ marginTop: 8, display: 'flex', justifyContent: 'center' }}>
+              </Col>
+              <Col flex="1" style={{ minWidth: 180, padding: '0 20px', borderLeft: '1px solid rgba(0,0,0,0.08)' }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: '#bbb', marginBottom: 8, letterSpacing: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span>
+                    基本信息
+                    {editing && <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--color-text-quaternary)', marginLeft: 8 }}>点击字段值可编辑</span>}
+                  </span>
                   <Badge count={remarkCount} size="small" offset={[4, -4]}>
                     <Button
                       size="small"
@@ -273,12 +279,6 @@ const OrderFlow: React.FC = () => {
                       备注
                     </Button>
                   </Badge>
-                </div>
-              </Col>
-              <Col flex="1" style={{ minWidth: 180, padding: '0 20px', borderLeft: '1px solid rgba(0,0,0,0.08)' }}>
-                <div style={{ fontSize: 14, fontWeight: 700, color: '#bbb', marginBottom: 8, letterSpacing: 1 }}>
-                  基本信息
-                  {editing && <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--color-text-quaternary)', marginLeft: 8 }}>点击字段值可编辑</span>}
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', rowGap: 4, columnGap: 12 }}>
                   <span style={{ color: 'var(--color-text-tertiary)', fontSize: 14, lineHeight: '22px' }}>订单号</span>

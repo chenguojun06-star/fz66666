@@ -16,20 +16,16 @@ interface SampleStageExpandedContentProps {
   processLoading: boolean;
   orderId: string | null;
   orderNo: string | null;
+  styleNo?: string;
+  color?: string;
+  quantity?: number;
+  size?: string;
   onCompleteProcess?: (processCode: string) => Promise<void>;
   onReceiveSample?: () => void;
   onUpdateProgress?: () => void;
   actionLoading?: boolean;
+  onRefresh?: () => void;
 }
-
-const STAGE_COLORS: Record<string, string> = {
-  procurement: '#1890ff',
-  cutting: '#722ed1',
-  secondary: '#eb2f96',
-  sewing: '#fa8c16',
-  tail: '#13c2c2',
-  warehousing: '#52c41a',
-};
 
 export default function SampleStageExpandedContent({
   patternProductionId,
@@ -41,10 +37,15 @@ export default function SampleStageExpandedContent({
   processLoading,
   orderId,
   orderNo,
+  styleNo,
+  color,
+  quantity,
+  size,
   onCompleteProcess,
   onReceiveSample,
   onUpdateProgress,
   actionLoading = false,
+  onRefresh,
 }: SampleStageExpandedContentProps) {
   const { message } = App.useApp();
   const { scanRecords, scanRecordsLoading, loadScanRecords } = useSampleScanRecords();
@@ -139,30 +140,7 @@ export default function SampleStageExpandedContent({
               <div style={{ fontWeight: 500, color: '#595959', marginBottom: 2 }}>工人扫码领取 / 完成</div>
               <div style={{ fontSize: 12 }}>样衣单号: {patternProductionId || patternId || '-'}</div>
             </div>
-            <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
-              {onReceiveSample ? (
-                <button
-                  type="button"
-                  className="ant-btn ant-btn-primary"
-                  onClick={onReceiveSample}
-                  disabled={actionLoading}
-                  style={{ height: 32 }}
-                >
-                  领取样衣
-                </button>
-              ) : null}
-              {onUpdateProgress ? (
-                <button
-                  type="button"
-                  className="ant-btn ant-btn-default"
-                  onClick={onUpdateProgress}
-                  disabled={actionLoading}
-                  style={{ height: 32 }}
-                >
-                  更新进度
-                </button>
-              ) : null}
-            </div>
+
           </div>
         </div>
 
@@ -189,7 +167,15 @@ export default function SampleStageExpandedContent({
                 loading={processLoading}
                 orderId={orderId}
                 orderNo={orderNo}
+                styleNo={styleNo}
+                color={color}
+                quantity={quantity}
+                size={size}
+                receiver={receiver}
+                receiveTime={receiveTime}
+                patternProductionId={patternProductionId || undefined}
                 onCompleteProcess={onCompleteProcess}
+                onRefresh={onRefresh}
               />
             )}
           </div>

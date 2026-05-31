@@ -78,6 +78,28 @@
   box-shadow: 0 1px 4px rgba(0,0,0,0.06);
 }
 
+.stock-thumb {
+  width: 100rpx;
+  height: 100rpx;
+  border-radius: 8rpx;
+  margin-right: 16rpx;
+  flex-shrink: 0;
+  background: var(--color-bg-light);
+}
+
+.stock-thumb-placeholder {
+  width: 100rpx;
+  height: 100rpx;
+  border-radius: 8rpx;
+  margin-right: 16rpx;
+  flex-shrink: 0;
+  background: var(--color-bg-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 48rpx;
+}
+
 .stock-info {
   flex: 1;
 }
@@ -266,6 +288,15 @@
   margin-bottom: 10px;
   box-shadow: 0 1px 4px rgba(0,0,0,0.06);
 }
+
+.detail-image {
+  width: 100%;
+  height: 360rpx;
+  border-radius: 8rpx;
+  margin-bottom: 12rpx;
+  background: var(--color-bg-light);
+}
+
 .info-row {
   display: flex;
   align-items: center;

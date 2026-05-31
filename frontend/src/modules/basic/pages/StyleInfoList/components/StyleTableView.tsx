@@ -602,21 +602,6 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
                         <span>数量</span>
                         <strong>{sample.sampleSnapshot?.quantity != null ? sample.sampleSnapshot.quantity : '-'}</strong>
                       </div>
-                      <div className="style-smart-stage-modal__fact" style={{ flex: '0 0 auto' }}>
-                        <Button
-                          size="small"
-                          onClick={() => {
-                            setAssigningData({
-                              open: true,
-                              patternId: sample.sampleSnapshot?.id || '',
-                              currentAssignee: sample.sampleReceiverLabel,
-                            });
-                            assignForm.setFieldsValue({ assignee: sample.sampleReceiverLabel !== '-' ? sample.sampleReceiverLabel : '' });
-                          }}
-                        >
-                          指派
-                        </Button>
-                      </div>
                     </div>
                     <div style={{ marginTop: 12, padding: '10px 0', borderTop: '1px solid var(--color-border-light)', display: 'flex', alignItems: 'center', gap: 14 }}>
                       <QRCode
@@ -626,37 +611,6 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
                       <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', lineHeight: 1.8 }}>
                         <div style={{ fontWeight: 500, color: '#595959' }}>工人扫码领取/完成</div>
                         <div>样衣单号: {sample.sampleSnapshot.id}</div>
-                      </div>
-                      <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
-                        {!sample.isSampleSnapshotReceived && (
-                          <Button
-                            type="primary"
-                            loading={sample.sampleActionLoading}
-                            onClick={() => {
-                              const colors = sample.sampleSnapshot?.colors?.length
-                                ? sample.sampleSnapshot.colors
-                                : sample.sampleSnapshot?.color
-                                  ? [sample.sampleSnapshot.color]
-                                  : ['默认'];
-                              const qty = sample.sampleSnapshot?.quantity || 1;
-                              receiveForm.setFieldsValue({
-                                color: colors.length === 1 ? colors[0] : undefined,
-                                quantity: qty,
-                              });
-                              setReceiveModalOpen(true);
-                            }}
-                          >
-                            领取样衣
-                          </Button>
-                        )}
-                        {sample.isSampleSnapshotReceived && !sample.isSampleSnapshotCompleted && (
-                          <Button
-                            loading={sample.sampleActionLoading}
-                            onClick={sample.handleSaveSampleProgress}
-                          >
-                            更新进度
-                          </Button>
-                        )}
                       </div>
                     </div>
 
@@ -725,98 +679,23 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
                       </div>
                     ) : null}
 
-                    {/* 6个固定父节点 - Tab页样式 */}
-                    <div style={{ marginTop: '16px' }}>
-                      {/* Tab标题栏 */}
-                      <div style={{
-                        display: 'flex',
-                        borderBottom: '2px solid var(--color-border-light)',
-                        marginBottom: '16px',
-                        gap: '4px',
-                      }}>
-                        {sampleProcessProgress.stages.map((stage) => {
-                          const isActive = expandedParentStage === stage.key || (!expandedParentStage && sampleProcessProgress.stages.indexOf(stage) === 0);
-                          return (
-                            <div
-                              key={stage.key}
-                              onClick={() => setExpandedParentStage(stage.key)}
-                              style={{
-                                padding: '10px 16px',
-                                cursor: 'pointer',
-                                fontSize: '14px',
-                                fontWeight: isActive ? 600 : 400,
-                                color: isActive ? '#1890ff' : 'var(--color-text-secondary)',
-                                borderBottom: isActive ? '2px solid #1890ff' : '2px solid transparent',
-                                marginBottom: '-2px',
-                                transition: 'all 0.2s',
-                              }}
-                            >
-                              {stage.label}
-                              {stage.subProcesses.length > 0 && (
-                                <Tag color={isActive ? 'blue' : 'default'} style={{ marginLeft: '8px', fontSize: '12px' }}>
-                                  {stage.subProcesses.length}
-                                </Tag>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-
-                      {/* Tab内容区域 */}
-                      {(() => {
-                        const activeStage = expandedParentStage || sampleProcessProgress.stages[0]?.key;
-                        const stage = sampleProcessProgress.stages.find((s) => s.key === activeStage);
-                        if (!stage) return null;
-
-                        const hasSubProcesses = stage.subProcesses.length > 0;
-
-                        return (
-                          <div>
-                            {/* 子工序列表 */}
-                            {hasSubProcesses ? (
-                              <div style={{ marginBottom: '16px' }}>
-                                <div style={{ fontSize: '14px', fontWeight: 500, marginBottom: '10px', color: 'var(--color-text-primary)' }}>
-                                  工序列表
-                                  {stage.totalCount > 0 && (
-                                    <span style={{ fontWeight: 400, marginLeft: '8px', color: 'var(--color-text-secondary)' }}>
-                                      {stage.completedCount}/{stage.totalCount} 完成
-                                    </span>
-                                  )}
-                                </div>
-                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                                  {stage.subProcesses.map((sub) => {
-                                    const stat = sampleProcessProgress.loading
-                                      ? null
-                                      : sampleProcessProgress.trackingStats?.[sub.processCode || sub.name];
-                                    const isCompleted = stat && stat.total > 0 && stat.completed >= stat.total;
-                                    return (
-                                      <Tag
-                                        key={sub.id || sub.processCode || sub.name}
-                                        color={isCompleted ? 'success' : 'default'}
-                                        style={{ fontSize: '13px', padding: '5px 12px' }}
-                                      >
-                                        {sub.name}
-                                      </Tag>
-                                    );
-                                  })}
-                                </div>
-                              </div>
-                            ) : (
-                              <div style={{ fontSize: '14px', color: 'var(--color-text-tertiary)', marginBottom: '16px', padding: '20px', textAlign: 'center', background: 'var(--color-bg-light)', borderRadius: '6px' }}>
-                                当前节点暂无配置工序
-                              </div>
-                            )}
-
-                            {/* 扫码记录 */}
-                            <div>
-                              <div style={{ fontSize: '14px', fontWeight: 500, marginBottom: '10px', color: 'var(--color-text-primary)' }}>
-                                扫码记录
-                              </div>
-                              <SampleScanRecordsTable patternId={sample.sampleSnapshot?.id || ''} stageKey={stage.key} onRefresh={onRefresh} />
-                            </div>
-                          </div>
-                        );
-                      })()}
+                    {/* 子工序表格 - 与大货一致的表格展示 */}
+                    <div style={{ marginTop: 16 }}>
+                      <SampleProcessList
+                        stages={sampleProcessProgress.stages}
+                        loading={sampleProcessProgress.loading}
+                        orderId={sampleProcessProgress.orderId}
+                        orderNo={sampleProcessProgress.orderNo}
+                        styleNo={selectedStage?.record?.styleNo}
+                        color={sample.sampleSnapshot?.color}
+                        quantity={sample.sampleSnapshot?.quantity}
+                        size={sample.sampleSnapshot?.size || sample.sampleSnapshot?.sizeColorConfig}
+                        receiver={sample.sampleReceiverLabel !== '-' ? sample.sampleReceiverLabel : ''}
+                        receiveTime={sample.sampleReceiveTimeLabel !== '待启动' ? sample.sampleReceiveTimeLabel : ''}
+                        patternProductionId={sample.sampleSnapshot?.id}
+                        onCompleteProcess={sampleProcessProgress.completeProcess}
+                        onRefresh={() => { sampleProcessProgress.refresh(); onRefresh(); }}
+                      />
                     </div>
                   </>
                 ) : (

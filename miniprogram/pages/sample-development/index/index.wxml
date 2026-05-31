@@ -30,7 +30,7 @@
   <view wx:else class="list">
     <view class="card {{expandedId === item.id ? 'expanded' : ''}}" wx:for="{{list}}" wx:key="id" data-id="{{item.id}}" data-item="{{item}}" bindtap="onCardTap">
       <view class="card-header">
-        <image wx:if="{{item._cover}}" class="card-cover" src="{{item._cover}}" mode="aspectFill" />
+        <image wx:if="{{item._cover}}" class="card-cover" src="{{item._cover}}" mode="aspectFill" data-src="{{item._cover}}" catchtap="onPreviewImage" />
         <view wx:else class="card-cover-placeholder">
           <text>👔</text>
         </view>
@@ -80,7 +80,7 @@
 
           <view wx:if="{{patternDetail}}" class="detail-more">
             <view wx:if="{{patternDetail.reviewStatus}}" class="detail-row">
-              <text>审核状态: {{patternDetail.reviewStatus === 'APPROVED' ? '已通过' : patternDetail.reviewStatus === 'REJECTED' ? '已驳回' : patternDetail.reviewStatus}}</text>
+              <text>审核状态: {{patternDetail._reviewStatusLabel || patternDetail.reviewStatus}}</text>
             </view>
             <view wx:if="{{patternDetail.procurementProgress && patternDetail.procurementProgress.total > 0}}" class="detail-row">
               <text>采购进度: {{patternDetail.procurementProgress.completed}}/{{patternDetail.procurementProgress.total}} ({{patternDetail.procurementProgress.percent}}%)</text>

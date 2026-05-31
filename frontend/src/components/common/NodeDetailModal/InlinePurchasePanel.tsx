@@ -29,6 +29,9 @@ import {
 interface InlinePurchasePanelProps {
   orderId?: string;
   orderNo?: string;
+  patternId?: string;
+  sourceType?: 'order' | 'sample';
+  styleNo?: string;
 }
 
 const MATERIAL_TYPE_OPTIONS = [
@@ -68,7 +71,7 @@ const sortPurchases = (arr: MaterialPurchase[]) =>
 const normalizeStatus = (status?: MaterialPurchase['status'] | string) =>
   String(status || '').trim().toLowerCase();
 
-const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = ({ orderId, orderNo }) => {
+const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = ({ orderId, orderNo, patternId, sourceType = 'order', styleNo }) => {
   const { message, modal } = App.useApp();
   const navigate = useNavigate();
   const { user } = useUser();
@@ -113,55 +116,65 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = ({ orderId, orde
   const firstPurchase = purchases[0] || null;
 
   const loadData = useCallback(async () => {
-    const no = String(orderNo || '').trim();
-    if (!no) return;
     setLoading(true);
     try {
-      const [orderRes, purchaseRes] = await Promise.all([
-        api.get<{ code: number; data: { records: ProductionOrder[] } }>('/production/order/list', {
-          params: { page: 1, pageSize: 1, orderNo: no },
-        }),
-        api.get<{ code: number; data: { records: MaterialPurchase[] } }>('/production/purchase/list', {
-          params: { page: 1, pageSize: 200, orderNo: no, materialType: '', status: '' },
-        }),
-      ]);
-      const orderRecords = orderRes?.code === 200
-        ? (Array.isArray(orderRes?.data?.records) ? orderRes.data.records : [])
-        : [];
-      const orderRecord = orderRecords[0] || null;
-      setOrder(orderRecord);
+      let records: MaterialPurchase[] = [];
+      let orderRecord: ProductionOrder | null = null;
 
-      let records = sortPurchases(unwrapRecords(purchaseRes));
-
-      if (records.length === 0 && orderRecord?.id) {
+      if (sourceType === 'sample' && patternId) {
+        // 样衣采购模式：不依赖大货订单，直接查样衣采购记录
         try {
-          const previewRes = await api.get<{ code: number; data: MaterialPurchase[] }>(
-            '/production/purchase/demand/preview',
-            { params: { orderId: orderRecord.id } }
+          const sampleRes = await api.get<{ code: number; data: { records: MaterialPurchase[] } }>(
+            '/production/purchase/list',
+            { params: { page: 1, pageSize: 200, patternId, sourceType: 'sample', materialType: '', status: '' } }
           );
-          if (previewRes?.code === 200 && Array.isArray(previewRes?.data)) {
-            records = sortPurchases(previewRes.data);
-          }
-        } catch (e: any) {
-          console.warn('[InlinePurchasePanel] demand/preview请求失败:', e?.message || e);
-        }
-      }
+          records = sortPurchases(unwrapRecords(sampleRes));
+        } catch {}
 
-      if (records.length === 0 && orderRecord) {
-        const orderStyleNo = String(orderRecord?.styleNo || '').trim();
-        if (orderStyleNo) {
+        if (records.length === 0 && styleNo) {
           try {
             const styleRes = await api.get<{ code: number; data: { records: MaterialPurchase[] } }>(
               '/production/purchase/list',
-              { params: { page: 1, pageSize: 200, styleNo: orderStyleNo, sourceType: 'sample', materialType: '', status: '' } }
+              { params: { page: 1, pageSize: 200, styleNo, sourceType: 'sample', materialType: '', status: '' } }
             );
-            if (styleRes?.code === 200) {
-              const styleRecords = unwrapRecords(styleRes);
-              if (styleRecords.length > 0) {
-                records = sortPurchases(styleRecords);
-              }
-            }
+            records = sortPurchases(unwrapRecords(styleRes));
           } catch {}
+        }
+      } else {
+        // 大货采购模式
+        const no = String(orderNo || '').trim();
+        if (!no) {
+          setLoading(false);
+          return;
+        }
+        const [orderRes, purchaseRes] = await Promise.all([
+          api.get<{ code: number; data: { records: ProductionOrder[] } }>('/production/order/list', {
+            params: { page: 1, pageSize: 1, orderNo: no },
+          }),
+          api.get<{ code: number; data: { records: MaterialPurchase[] } }>('/production/purchase/list', {
+            params: { page: 1, pageSize: 200, orderNo: no, materialType: '', status: '' },
+          }),
+        ]);
+        const orderRecords = orderRes?.code === 200
+          ? (Array.isArray(orderRes?.data?.records) ? orderRes.data.records : [])
+          : [];
+        orderRecord = orderRecords[0] || null;
+        setOrder(orderRecord);
+
+        records = sortPurchases(unwrapRecords(purchaseRes));
+
+        if (records.length === 0 && orderRecord?.id) {
+          try {
+            const previewRes = await api.get<{ code: number; data: MaterialPurchase[] }>(
+              '/production/purchase/demand/preview',
+              { params: { orderId: orderRecord.id } }
+            );
+            if (previewRes?.code === 200 && Array.isArray(previewRes?.data)) {
+              records = sortPurchases(previewRes.data);
+            }
+          } catch (e: any) {
+            console.warn('[InlinePurchasePanel] demand/preview请求失败:', e?.message || e);
+          }
         }
       }
 
@@ -200,7 +213,7 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = ({ orderId, orde
     } finally {
       setLoading(false);
     }
-  }, [orderNo]);
+  }, [orderNo, patternId, sourceType, styleNo]);
 
   useEffect(() => {
     loadData();

@@ -3,6 +3,47 @@
  * 功能：样衣库存列表、搜索、扫码、手动出入库管理
  */
 const api = require('../../../../utils/api');
+const { getAuthedImageUrl } = require('../../../../utils/fileUrl');
+
+const SAMPLE_TYPE_MAP = {
+  'development': '开发样',
+  'pre_production': '产前样',
+  'shipment': '大货样',
+  'sales': '销售样',
+  'reference': '参考样',
+  'photo': '拍照样',
+  'confirmation': '确认样',
+  'pattern': '纸样',
+  'fitting': '试穿样',
+  'showroom': '展厅样',
+  'top': '齐色样',
+  'size_set': '套码样',
+  'seal': '封样',
+  'BODY_SAMPLE': '大货样',
+  'FITTING_SAMPLE': '试穿样',
+  'SALES_SAMPLE': '销售样',
+  'REFERENCE_SAMPLE': '参考样',
+  'DEVELOPMENT_SAMPLE': '开发样',
+  'PRODUCTION_SAMPLE': '生产样',
+  'PHOTO_SAMPLE': '拍照样',
+  'SHOWROOM_SAMPLE': '展厅样',
+  'PATTERN_SAMPLE': '纸样样衣',
+  'CONFIRMATION_SAMPLE': '确认样',
+  'PRE_PRODUCTION_SAMPLE': '产前样',
+  'SHIPPING_SAMPLE': '船样',
+  'TOP_SAMPLE': '齐色样',
+  'SIZE_SET_SAMPLE': '套码样',
+  'SEAL_SAMPLE': '封样',
+};
+
+function translateSampleType(type) {
+  if (!type) return '-';
+  return SAMPLE_TYPE_MAP[type] || type;
+}
+
+function buildImageUrl(url) {
+  return getAuthedImageUrl(url || '');
+}
 
 Page({
   data: {
@@ -116,7 +157,11 @@ Page({
         if (res && res.data) data = res.data;
         if (res && res.records) data = res;
         
-        const records = data?.records || data?.data || [];
+        const records = (data?.records || data?.data || []).map(item => ({
+          ...item,
+          _imageUrl: buildImageUrl(item.imageUrl || item.coverImage || ''),
+          _sampleTypeLabel: translateSampleType(item.sampleType || ''),
+        }));
         const total = data?.total || records.length;
         
         this.setData({
@@ -170,6 +215,12 @@ Page({
     return api.sampleStock.scanQuery({ styleNo, color, size })
       .then((res) => {
         const d = res || {};
+        if (d.stock && d.stock.sampleType) {
+          d.stock._sampleTypeLabel = translateSampleType(d.stock.sampleType);
+        }
+        if (d.stock) {
+          d.stock._imageUrl = buildImageUrl(d.stock.imageUrl || d.stock.coverImage || '');
+        }
         this.setData({
           stockInfo: d,
           actions: d.actions || [],
@@ -439,6 +490,14 @@ Page({
 
   onLocationCodeInput(e) {
     this.setData({ warehouseLocationCode: e.detail.value });
+  },
+
+  // ==================== 图片预览 ====================
+
+  onPreviewImage(e) {
+    const url = e.currentTarget.dataset.src;
+    if (!url) return;
+    wx.previewImage({ current: url, urls: [url] });
   },
 
   // ==================== 隐私协议 ====================

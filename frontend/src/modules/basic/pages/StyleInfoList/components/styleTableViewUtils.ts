@@ -42,6 +42,7 @@ export interface PatternProductionSnapshot {
   quantity?: number;
   colors?: string[];
   sizeColorConfig?: string;
+  size?: string;
 }
 
 export interface StageQuickAction {

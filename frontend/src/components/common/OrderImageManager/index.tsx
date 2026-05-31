@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { App, Button, Spin, Empty, Tag, Image } from 'antd';
 import ResizableModal from '@/components/common/ResizableModal';
-import { HistoryOutlined, DeleteOutlined, LeftOutlined, RightOutlined, PlusOutlined } from '@ant-design/icons';
+import { HistoryOutlined, DeleteOutlined, LeftOutlined, RightOutlined } from '@ant-design/icons';
 import { orderImageApi } from '@/services/system/remarkApi';
 import type { OrderImage, OrderImageSnapshot } from '@/services/system/remarkApi';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
@@ -20,11 +20,12 @@ const OrderImageManager: React.FC<OrderImageManagerProps> = ({ orderNo, editable
   const [historyOpen, setHistoryOpen] = useState(false);
   const [snapshots, setSnapshots] = useState<OrderImageSnapshot[]>([]);
   const [currentIdx, setCurrentIdx] = useState(0);
+  const [hovering, setHovering] = useState(false);
 
   const allImageUrls = React.useMemo(() => {
     const urls: { url: string; id?: number; isCover?: boolean }[] = [];
     if (coverUrl) {
-      urls.push({ url: coverUrl, isCover: true });
+      urls.push({ url: getFullAuthedFileUrl(coverUrl), isCover: true });
     }
     images.forEach((img) => {
       urls.push({ url: getFullAuthedFileUrl(img.imageUrl), id: img.id });
@@ -147,6 +148,26 @@ const OrderImageManager: React.FC<OrderImageManagerProps> = ({ orderNo, editable
   const currentImg = allImageUrls[currentIdx];
   const currentOrderImg = currentImg && !currentImg.isCover ? images.find((im) => im.id === currentImg.id) : undefined;
 
+  const arrowBtnStyle = (side: 'left' | 'right'): React.CSSProperties => ({
+    position: 'absolute',
+    [side]: 4,
+    top: '50%',
+    transform: 'translateY(-50%)',
+    background: 'rgba(0,0,0,0.45)',
+    color: '#fff',
+    border: 'none',
+    width: 28,
+    height: 28,
+    borderRadius: '50%',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    opacity: hovering ? 1 : 0,
+    transition: 'opacity 0.2s ease',
+    cursor: 'pointer',
+    zIndex: 2,
+  });
+
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
@@ -169,7 +190,11 @@ const OrderImageManager: React.FC<OrderImageManagerProps> = ({ orderNo, editable
         {totalCount === 0 && !loading ? (
           <Empty description="暂无图片" image={Empty.PRESENTED_IMAGE_SIMPLE} />
         ) : (
-          <div style={{ position: 'relative', width: '100%', borderRadius: 8, overflow: 'hidden' }}>
+          <div
+            style={{ position: 'relative', width: '100%', borderRadius: 8, overflow: 'hidden' }}
+            onMouseEnter={() => setHovering(true)}
+            onMouseLeave={() => setHovering(false)}
+          >
             <Image.PreviewGroup>
               {allImageUrls.map((item, idx) => (
                 <Image
@@ -183,26 +208,8 @@ const OrderImageManager: React.FC<OrderImageManagerProps> = ({ orderNo, editable
 
             {totalCount > 1 && (
               <>
-                <Button
-                  type="text"
-                  icon={<LeftOutlined />}
-                  onClick={goPrev}
-                  style={{
-                    position: 'absolute', left: 4, top: '50%', transform: 'translateY(-50%)',
-                    background: 'rgba(0,0,0,0.35)', color: '#fff', border: 'none',
-                    width: 28, height: 28, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}
-                />
-                <Button
-                  type="text"
-                  icon={<RightOutlined />}
-                  onClick={goNext}
-                  style={{
-                    position: 'absolute', right: 4, top: '50%', transform: 'translateY(-50%)',
-                    background: 'rgba(0,0,0,0.35)', color: '#fff', border: 'none',
-                    width: 28, height: 28, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}
-                />
+                <Button type="text" icon={<LeftOutlined />} onClick={goPrev} style={arrowBtnStyle('left')} />
+                <Button type="text" icon={<RightOutlined />} onClick={goNext} style={arrowBtnStyle('right')} />
               </>
             )}
 
@@ -223,6 +230,9 @@ const OrderImageManager: React.FC<OrderImageManagerProps> = ({ orderNo, editable
                 style={{
                   position: 'absolute', top: 4, right: 4, minWidth: 22, padding: 0,
                   background: 'rgba(255,255,255,0.85)', borderRadius: 4,
+                  opacity: hovering ? 1 : 0,
+                  transition: 'opacity 0.2s ease',
+                  zIndex: 2,
                 }}
                 onClick={() => handleDelete(currentOrderImg.id)}
               />

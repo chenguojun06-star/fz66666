@@ -10,6 +10,15 @@ const STATUS_LABELS = {
   WAREHOUSE_IN: '已入库',
 };
 
+const REVIEW_STATUS_LABELS = {
+  'APPROVED': '已通过',
+  'REJECTED': '已驳回',
+  'PENDING': '待审核',
+  'IN_REVIEW': '审核中',
+  'DRAFT': '草稿',
+  'SUBMITTED': '已提交',
+};
+
 const STATUS_COLORS = {
   PENDING: '#faad14',
   IN_PROGRESS: '#1677ff',
@@ -244,6 +253,9 @@ Page({
     return api.production.getPatternDetail(patternId)
       .then(function (res) {
         const detail = res && res.data ? res.data : res;
+        if (detail.reviewStatus) {
+          detail._reviewStatusLabel = REVIEW_STATUS_LABELS[detail.reviewStatus] || detail.reviewStatus;
+        }
         that.setData({ patternDetail: detail });
         return api.production.getPatternScanRecords(patternId);
       })
@@ -277,5 +289,11 @@ Page({
     safeNavigate({
       url: '/pages/scan/pattern/index?patternId=' + encodeURIComponent(item.id || ''),
     }).catch(() => {});
+  },
+
+  onPreviewImage: function (e) {
+    const url = e.currentTarget.dataset.src;
+    if (!url) return;
+    wx.previewImage({ current: url, urls: [url] });
   },
 });

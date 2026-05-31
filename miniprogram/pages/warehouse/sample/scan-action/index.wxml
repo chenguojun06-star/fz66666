@@ -51,6 +51,10 @@
         bindtap="onStockItemTap"
         data-stock="{{item}}"
       >
+        <image wx:if="{{item._imageUrl}}" class="stock-thumb" src="{{item._imageUrl}}" mode="aspectFill" catchtap="onPreviewImage" data-src="{{item._imageUrl}}" />
+        <view wx:else class="stock-thumb-placeholder">
+          <text>👕</text>
+        </view>
         <view class="stock-info">
           <view class="stock-row">
             <text class="stock-label">款号</text>
@@ -63,6 +67,10 @@
           <view class="stock-row">
             <text class="stock-label">尺码</text>
             <text class="stock-value">{{item.size || '-'}}</text>
+          </view>
+          <view class="stock-row" wx:if="{{item._sampleTypeLabel}}">
+            <text class="stock-label">类型</text>
+            <text class="stock-value">{{item._sampleTypeLabel}}</text>
           </view>
         </view>
         <view class="stock-status">
@@ -142,6 +150,7 @@
       
       <!-- 已有库存记录 -->
       <view class="info-card" wx:if="{{stockInfo.found && stockInfo.stock}}">
+        <image wx:if="{{stockInfo.stock._imageUrl}}" class="detail-image" src="{{stockInfo.stock._imageUrl}}" mode="aspectFill" bindtap="onPreviewImage" data-src="{{stockInfo.stock._imageUrl}}" />
         <view class="info-row">
           <text class="info-label">状态</text>
           <text class="info-value">
@@ -167,7 +176,7 @@
         </view>
         <view class="info-row" wx:if="{{stockInfo.stock.sampleType}}">
           <text class="info-label">类型</text>
-          <text class="info-value">{{stockInfo.stock.sampleType}}</text>
+          <text class="info-value">{{stockInfo.stock._sampleTypeLabel || stockInfo.stock.sampleType}}</text>
         </view>
         <view class="info-row" wx:if="{{stockInfo.stock.location}}">
           <text class="info-label">仓位</text>

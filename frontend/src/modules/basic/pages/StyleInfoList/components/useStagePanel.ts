@@ -101,12 +101,7 @@ export default function useStagePanel({
     }
 
     if (!scrapped && selectedStage.stage.key === 'sample') {
-      if (sampleHook.sampleSnapshot?.status === 'PENDING' || !sampleHook.sampleSnapshot?.receiveTime || sampleHook.sampleSnapshot.receiveTime === '待启动') {
-        actions.push({
-          key: 'receive-sample', label: '领取生产', type: 'primary',
-          onClick: () => { void sampleHook.handleReceiveSample(); },
-        });
-      } else if (sampleHook.sampleSnapshot?.receiveTime && sampleHook.sampleSnapshot.receiveTime !== '待启动' && !sampleStageCompleted && !selectedStage.record.sampleCompletedTime) {
+      if (sampleHook.sampleSnapshot?.receiveTime && sampleHook.sampleSnapshot.receiveTime !== '待启动' && !sampleStageCompleted && !selectedStage.record.sampleCompletedTime) {
         actions.push({
           key: 'complete-sample', label: '标记完成', type: 'primary',
           onClick: () => {
