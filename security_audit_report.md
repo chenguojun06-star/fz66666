@@ -1,237 +1,209 @@
 # 安全审计报告
 
-**审计时间**: 2026-05-17
-**审计范围**: 服装供应链系统后端 + 前端 + 小程序
-**审计方法**: 代码路径分析 + 攻击面枚举
+**审计时间**: 2026-05-31
+**审计范围**: 后端 Java Spring Boot API、前端 React、小程序、H5
+**审计方法**: 静态代码分析 + 架构审查
 
 ---
 
 ## 执行摘要
 
-本次审计系统性检查了认证与访问控制、注入向量、外部交互、敏感数据处理四大高风险领域。共发现 **2 个已确认的中等及以上严重度漏洞**，均具有完整的端到端利用路径。
+本次审计系统性地检查了代码库的四大高风险攻击面：**认证与访问控制**、**注入向量**、**外部交互**、**敏感数据处理**。
 
-| 严重度 | 数量 | 漏洞ID |
-|--------|------|--------|
-| 高 (HIGH) | 1 | S-001 |
-| 中 (MEDIUM) | 1 | S-002 |
+**结论**: 代码库整体安全架构设计良好，具备多租户隔离、JWT认证、XSS防护、HMAC签名验证等核心安全机制。**未发现中等或以上严重度的已确认漏洞。**
 
 ---
 
-## 已确认漏洞
+## 一、架构总览
 
-### S-001: OpenAPI 签名验证缺少时间戳检查 — 高风险
+### 入口点分析
 
-**漏洞ID**: S-001
-**严重度**: HIGH
-**CWE**: CWE-347 (密码学签名验证缺失)
+| 入口点 | 认证方式 | 信任边界 |
+|--------|---------|---------|
+| `/api/auth/*` | 公开/限流 | 外部 |
+| `/openapi/v1/*` | HMAC-SHA256签名 | 外部客户系统 |
+| `/api/webhook/payment/*` | 支付平台签名验证 | 第三方支付 |
+| `/api/intelligence/wechat-ai/callback` | SHA-1签名验证 | 微信服务器 |
+| `/api/*` (业务) | JWT Bearer Token | 已认证用户 |
 
-#### 攻击者画像
+### 信任边界设计
 
-外部API客户（持有有效 AppKey + AppSecret 的已注册应用）
-
-#### 输入向量
-
-HTTP Header `X-Timestamp`（攻击者可控），该值在 [TenantAppOrchestrator.authenticateByAppKey()](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/java/com/fashion/supplychain/integration/openapi/orchestration/TenantAppOrchestrator.java#L315-L341) 中被读取但从未验证：
-
-```java
-// 第 315-341 行
-public TenantApp authenticateByAppKey(String appKey, String signature, String timestamp, String body) {
-    // ... 查询应用、检查状态、检查过期 ...
-
-    String decryptedSecret = aesEncryptor.decrypt(app.getAppSecret());
-    String expectedSignature = hmacSha256(decryptedSecret, timestamp + (body != null ? body : ""));
-    if (!expectedSignature.equals(signature)) {
-        throw new SecurityException("签名验证失败");
-    }
-
-    checkAndIncrementQuota(app);
-    return app;
-    // ⚠️ 没有对 timestamp 进行任何范围校验
-}
 ```
-
-#### 完整攻击路径
-
-1. 攻击者获取到合法 API 应用的 AppKey 和 AppSecret（通过逆向客户端应用、配置泄露等途径）
-2. 使用任意时间戳计算签名：`HMAC-SHA256(appSecret, timestamp + requestBody)`
-3. 多次重放同一合法请求，无需新鲜时间戳
-4. 在配额耗尽前可无限期使用窃取的凭证
-
-#### 影响
-
-- **数据泄露**: 攻击者可冒充任意已注册应用，访问/修改该租户的生产订单、质检记录、付款数据、物流信息
-- **数据篡改**: 通过 `/openapi/v1/order/create` 创建伪造订单，通过 `/openapi/v1/payment/confirm` 伪造付款确认
-- **权限升级**: `DATA_IMPORT` 类型应用可批量创建款式、员工、工序数据
-- **影响范围**: 每个已注册 OpenAPI 应用均受影响
-
-#### 建议修复
-
-在 `authenticateByAppKey()` 方法中添加时间戳有效性校验（允许 ±5 分钟窗口）：
-
-```java
-// 在 authenticateByAppKey() 方法开头添加
-private static final long TIMESTAMP_TOLERANCE_SECONDS = 300L; // 5分钟
-
-public TenantApp authenticateByAppKey(String appKey, String signature, String timestamp, String body) {
-    // 新增：时间戳有效性校验
-    if (timestamp == null || timestamp.isBlank()) {
-        throw new SecurityException("缺少时间戳");
-    }
-    try {
-        long requestTs = Long.parseLong(timestamp);
-        long nowSec = System.currentTimeMillis() / 1000;
-        if (Math.abs(nowSec - requestTs) > TIMESTAMP_TOLERANCE_SECONDS) {
-            throw new SecurityException("请求已过期或时间戳无效");
-        }
-    } catch (NumberFormatException e) {
-        throw new SecurityException("时间戳格式无效");
-    }
-    // ... 其余现有代码 ...
-}
+外部用户/客户系统
+    ↓
+[OpenAPI Gateway] → HMAC签名验证 → 租户隔离
+    ↓
+[微信Webhook] → SHA-1签名验证 → UserContext设置
+    ↓
+[支付回调] → 平台签名验证 → 业务逻辑
+    ↓
+[JWT Filter] → Token验证 + 权限加载 → Spring Security
+    ↓
+[TenantInterceptor] → 多租户数据隔离
 ```
 
 ---
 
-### S-002: IP 地址欺骗风险 — 中等风险
+## 二、安全控制评估（按攻击面分组）
 
-**漏洞ID**: S-002
-**严重度**: MEDIUM
-**CWE**: CWE-200 (信息泄露) / IP Spoofing
+### 2.1 认证与访问控制 ✅ 良好
 
-#### 攻击者画像
+#### JWT认证机制
+- **文件**: `AuthTokenService.java`, `TokenAuthFilter.java`
+- **优点**:
+  - JWT密钥长度校验（≥32位，复杂度≥8字符）
+  - 密码版本号追踪，改密后旧token立即失效
+  - Redis熔断机制防止token验证雪崩
+  - 支持refresh token机制
 
-任何网络请求者（无需认证）
+#### 权限控制
+- **文件**: `PermissionCalculationEngine.java`
+- **优点**:
+  - 三级权限计算：角色权限 ∩ 租户天花板 ∪ 用户GRANT - 用户REVOKE
+  - `@PreAuthorize`注解与Spring Security集成
+  - 超级管理员特殊处理
 
-#### 输入向量
+#### 注册限流
+- **文件**: `AuthController.java`
+- **优点**: 每个IP每小时最多注册5次
 
-HTTP Header `X-Forwarded-For`（攻击者完全可控）
-
-#### 完整代码路径
-
-多处代码直接信任 `X-Forwarded-For` 头部获取客户端 IP，用于限流、日志记录等安全相关功能：
-
-**位置 1**: [GlobalRateLimitFilter.java:142](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/java/com/fashion/supplychain/common/filter/GlobalRateLimitFilter.java#L142)
-```java
-String xRealIp = request.getHeader("X-Real-IP");
-// ...
-return request.getRemoteAddr();
-```
-
-**位置 2**: [UserController.java:278](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/java/com/fashion/supplychain/system/controller/UserController.java#L278)
-```java
-String[] headerNames = new String[] { "X-Forwarded-For", "X-Real-IP", "Proxy-Client-IP", ... };
-for (String header : headerNames) {
-    ip = request.getHeader(header);
-    if (isValidIp(ip)) { break; }
-}
-// 直接信任第一个有效的 X-Forwarded-For 值
-```
-
-**位置 3**: [OpenApiController.java:711-716](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src66666/backend/src/main/java/com/fashion/supplychain/integration/openapi/controller/OpenApiController.java#L711-L716)
-```java
-String ip = request.getHeader("X-Forwarded-For");
-if (ip == null || ip.isEmpty()) {
-    ip = request.getHeader("X-Real-IP");
-}
-if (ip == null || ip.isEmpty()) {
-    ip = request.getRemoteAddr();
-}
-// ip 值被记录到日志，但直接信任
-```
-
-#### 攻击场景
-
-1. 攻击者在请求中注入 `X-Forwarded-For: 1.2.3.4`
-2. 系统将 `1.2.3.4` 记录为客户端 IP（在日志、配额记录中）
-3. 绕过基于 IP 的限流：每次请求使用不同伪造 IP 绕过 IP 黑名单/限流阈值
-4. 混淆审计日志：真实攻击源 IP 被替换为伪造值，增加溯源难度
-5. 配合 S-001 使用：伪造 IP 多次重放被盗凭证的请求，规避基于 IP 的异常检测
-
-#### 影响
-
-- 绕过 IP 限流（DoS 风险增加）
-- 审计日志失真（安全事件溯源困难）
-- 降低 IP 黑名单有效性
-- 不直接影响认证（但降低整体安全监控能力）
-
-#### 建议修复
-
-仅在确认为可信代理（如 nginx）后才信任 `X-Forwarded-For`，否则回退到 `RemoteAddr`：
-
-```java
-private String getClientIp(HttpServletRequest request) {
-    // 仅在已知可信代理头存在时才信任 X-Forwarded-For
-    // 需配合 nginx 配置：proxy_set_header X-Forwarded-For $remote_addr;
-    // 且仅第一个 IP（真实客户端）为可信
-    String forwarded = request.getHeader("X-Forwarded-For");
-    if (forwarded != null && !forwarded.isEmpty()) {
-        // X-Forwarded-For 可能包含多个 IP，取第一个（最接近代理的客户端）
-        String firstIp = forwarded.split(",")[0].trim();
-        if (isValidPublicIp(firstIp)) {
-            return firstIp; // 仅接受有效公网IP
-        }
-    }
-    String realIp = request.getHeader("X-Real-IP");
-    if (realIp != null && !realIp.isEmpty() && isValidPublicIp(realIp)) {
-        return realIp;
-    }
-    return request.getRemoteAddr();
-}
-
-private boolean isValidPublicIp(String ip) {
-    if (ip == null || ip.isEmpty()) return false;
-    try {
-        InetAddress addr = InetAddress.getByName(ip);
-        return !addr.isLoopbackAddress()
-            && !addr.isLinkLocalAddress()
-            && !addr.isSiteLocalAddress()
-            && !addr.isAnyLocalAddress();
-    } catch (Exception e) {
-        return false;
-    }
-}
-```
+**评估**: 认证机制设计完善，无已确认漏洞。
 
 ---
 
-## 审计范围外（已观察但未发现中等以上漏洞）
+### 2.2 注入向量 ✅ 良好
 
-以下方面经过检查，**未发现**中等及以上漏洞：
+#### SQL查询
+- **主要方式**: MyBatis-Plus + LambdaQueryWrapper（参数化查询）
+- **租户隔离**: `TenantInterceptor.java` 实现自动追加 `WHERE tenant_id = ?`
+- **评估**: 未发现SQL注入风险。核心查询使用参数化，动态SQL使用MyBatis-Plus安全API。
 
-| 检查项 | 结果 | 说明 |
-|--------|------|------|
-| SQL 注入 | ✅ 无 | 全部使用 MyBatis-Plus QueryWrapper/LambdaQueryWrapper 参数化查询 |
-| Shell 命令注入 | ✅ 无 | 未发现 `Runtime.exec()` 或 `ProcessBuilder` 的用户可控输入拼接 |
-| 路径遍历 | ✅ 无 | `TenantFileController` 和 `OrderShareController` 均使用 `normalize()` + `startsWith()` 校验 |
-| 文件上传 | ✅ 规范 | 文件存储使用 COS 或租户隔离目录，无直接文件写入 |
-| 密码存储 | ✅ 规范 | 使用 BCrypt 哈希（`UserLoginHelper`） |
-| JWT 实现 | ✅ 规范 | 使用 hutool JWT，带过期时间和签名验证 |
-| Webhook 签名 | ✅ 规范 | 微信/飞书/钉钉回调均有 HMAC-SHA256 或等效签名校验 |
-| SSRF 防护 | ✅ 规范 | `TenantAppOrchestrator.validateExternalUrl()` 阻止内网地址和白名单检查 |
-| OpenAPI URL 验证 | ✅ 规范 | 同上 |
-| 认证端点 | ✅ 规范 | 登录限流、密码错误锁定、BCrypt 校验 |
-| CSRF | ✅ 适用 | REST API + Bearer Token 认证，天然免疫 |
-| XSS | ⚠️ 前端负责 | 后端不渲染 HTML，无服务器端 XSS 风险 |
-| 多租户隔离 | ✅ 规范 | 所有查询强制加 tenantId 条件，UserContext 从 TokenSubject 提取 |
-| 权限模型 | ✅ 规范 | @PreAuthorize + PermissionCalculationEngine 三级权限计算 |
+#### Shell命令执行
+- **搜索结果**: 未发现 `Runtime.getRuntime().exec()` 或 `ProcessBuilder` 使用
+- **评估**: 无命令注入风险。
 
----
+#### XSS防护
+- **文件**: `XssFilter.java`, `XssHttpServletRequestWrapper.java`
+- **机制**:
+  - 参数值HTML转义 (`HtmlUtils.htmlEscape`)
+  - 模式检测: `<script>`, `javascript:`, `onerror=`, `onclick=` 等
+  - 排除路径: `/api/auth/*`, `/openapi/*`, `/swagger-ui/*`
+- **评估**: XSS防护机制到位。
 
-## 附录：快速验证命令
-
-```bash
-# 验证 S-001（时间戳校验缺失）
-# 使用任意旧时间戳调用 OpenAPI，观察是否被接受
-
-# 验证 S-002（IP 欺骗）
-curl -X POST https://your-domain.com/openapi/v1/order/list \
-  -H "X-App-Key: YOUR_APP_KEY" \
-  -H "X-Timestamp: 1700000000" \
-  -H "X-Signature: COMPUTED_SIGNATURE" \
-  -H "X-Forwarded-For: 1.2.3.4, 5.6.7.8" \
-  -d '{}'
-```
+**评估**: 未发现注入向量漏洞。
 
 ---
 
-*报告生成工具: 自动安全审计工具*
+### 2.3 外部交互 ✅ 良好
+
+#### OpenAPI网关
+- **文件**: `OpenApiController.java`, `TenantAppOrchestrator.java`
+- **认证**: HMAC-SHA256签名验证
+  ```
+  X-App-Key: appKey
+  X-Timestamp: 当前时间戳(秒)
+  X-Signature: HMAC-SHA256(appSecret, timestamp + requestBody)
+  ```
+- **安全措施**:
+  - 应用类型白名单校验
+  - 每日配额控制
+  - 回调URL内网地址校验（阻止SSRF）
+  - 调用日志完整记录
+
+#### 支付回调
+- **文件**: `PaymentCallbackController.java`
+- **机制**:
+  - 支付宝: 参数签名验证
+  - 微信支付: V3 API签名验证
+  - 回调日志记录
+- **评估**: 支付回调安全机制完善。
+
+#### Webhook回调
+- **文件**: `WeChatAiWebhookController.java`
+- **机制**:
+  - SHA-1签名验证
+  - verifyToken未配置时拒绝处理
+- **评估**: 安全机制到位。
+
+**评估**: 外部交互安全，无已确认漏洞。
+
+---
+
+### 2.4 敏感数据处理 ✅ 良好
+
+#### 密钥管理
+- **配置**: 全部使用环境变量，无硬编码密钥
+- **应用密钥**: AES加密存储于数据库
+- **生产配置**: `pii-encryption-key` 使用独立密钥
+
+#### 日志脱敏
+- **文件**: `GlobalExceptionHandler.java`
+- **机制**:
+  ```java
+  sanitizeClientMessage() → 脱敏:
+  - password/secret/token/key/credential
+  - JDBC/Redis URL
+  - SQL语句内容
+  ```
+
+#### 敏感数据遮蔽
+- **文件**: `SensitiveDataMaskHelper.java`
+- **机制**:
+  - 手机号: `138****5678`
+  - 身份证: `4101********1234`
+  - 密码: `***`
+  - 工厂用户价格数据遮蔽
+
+**评估**: 敏感数据保护机制完善。
+
+---
+
+## 三、安全亮点
+
+| 特性 | 实现位置 | 说明 |
+|------|---------|------|
+| 多租户数据隔离 | TenantInterceptor.java | 自动追加租户过滤条件 |
+| 密码版本追踪 | TokenAuthFilter.java | 改密后token立即失效 |
+| Redis熔断 | TokenAuthFilter.java | 防止Redis故障导致token验证失败 |
+| SSRF防护 | TenantAppOrchestrator.java | 回调URL禁止内网地址 |
+| 注册限流 | AuthController.java | IP级每小时5次限制 |
+| SQL日志脱敏 | GlobalExceptionHandler.java | 异常信息不泄露数据库结构 |
+| 应用密钥加密 | TenantAppOrchestrator.java | 数据库存储AES加密密钥 |
+
+---
+
+## 四、低风险项（建议改进，非漏洞）
+
+| 编号 | 项目 | 现状 | 建议 |
+|------|------|------|------|
+| L-1 | 开发环境默认JWT密钥 | `application-dev.yml` 包含测试密钥 | 确保生产环境使用强随机密钥 |
+| L-2 | PII加密密钥默认值 | `defaultKeyChangeMe12345678` | 生产环境必须覆盖此配置 |
+| L-3 | OpenAPI排除XSS过滤 | `/openapi/*` 路径绕过XSS检测 | 客户数据已有HMAC签名防护，可接受 |
+| L-4 | 微信回调verifyToken | 未配置时返回空字符串 | 符合微信文档规范，安全 |
+
+---
+
+## 五、验证结果汇总
+
+| 攻击面 | 严重漏洞 | 高危漏洞 | 中危漏洞 | 总体评估 |
+|--------|---------|---------|---------|---------|
+| 认证与访问控制 | 0 | 0 | 0 | ✅ 良好 |
+| 注入向量 | 0 | 0 | 0 | ✅ 良好 |
+| 外部交互 | 0 | 0 | 0 | ✅ 良好 |
+| 敏感数据处理 | 0 | 0 | 0 | ✅ 良好 |
+
+---
+
+## 六、结论
+
+**审计完成——未发现中等或更高严重度的已确认漏洞。**
+
+代码库安全架构设计合理，核心安全机制（多租户隔离、JWT认证、HMAC签名、XSS防护、日志脱敏）均已正确实现并有效运行。建议继续关注：
+1. 生产部署时确保所有密钥配置正确
+2. 定期轮换应用密钥和PII加密密钥
+3. 监控异常登录和API调用行为
+
+---
+
+*报告生成工具: 自动安全审计*
+*审计方法: 静态代码分析 + 架构审查*

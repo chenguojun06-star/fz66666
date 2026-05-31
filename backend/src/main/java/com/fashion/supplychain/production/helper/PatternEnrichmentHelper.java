@@ -96,7 +96,7 @@ public class PatternEnrichmentHelper {
             map.put("processConfig", processConfig);
         } catch (Exception e) {
             log.warn("Failed to get processConfig for record: {}", record.getId(), e);
-            map.put("processConfig", buildDefaultPatternProcessConfig());
+            map.put("processConfig", Collections.emptyList());
         }
 
         return map;

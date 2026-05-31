@@ -1,7 +1,7 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-05-12
+> 最后更新：2026-05-28
 
 ---
 
@@ -74,3 +74,21 @@
 - **上下文**：V20260512003唯一索引 `(material_code, color, size, delete_flag)` 缺少tenant_id，不同租户可能使用相同物料编码
 - **决策**：唯一索引改为 `(tenant_id, material_code, color, size, delete_flag)`
 - **理由**：多租户场景下，SKU唯一性应在租户内保证，跨租户允许相同编码
+
+## D-011：小云AI 6模块智能化升级架构
+
+- **上下文**：小云AI当前存在响应"傻"的问题——复杂问题无计划乱查工具、提示词冗余但无结构、无上下文压缩导致token浪费、无记忆导致重复提问、无主动风险检测、提示词静态不进化
+- **决策**：从GitHub前沿Agent项目（OpenManus/CrewAI的Plan-Execute-Verify、Anthropic的Context Engineering、OpenAI的Structured Output、Letta/Mem0的多层级记忆、ACE框架的Prompt Evolution）提取6大核心模式，实现轻量级Service层升级
+- **理由**：
+  1. PEV规划引擎：LLM先制定执行计划再调用工具，复杂度>50分的问题强制走计划模式，避免AI"拍脑袋"连查工具
+  2. 上下文工程：>2000字符的工具结果自动摘要压缩，减少token浪费；对话历史智能压缩，保持关键信息
+  3. 结构化输出：AI最终回答被解析为JSON（summary/insights/actions/risks/dataPoints/confidenceScore），前端可独立渲染
+  4. 多层级记忆：工作中记忆（会话级）→情景记忆（对话级）→语义记忆（租户级），解决重复提问问题
+  5. 主动风险检测：扫描用户消息和AI回答中的7类业务风险，不等用户问就主动预警
+  6. Prompt进化：基于5维度反馈评分，24小时自动生成提示词优化建议
+- **关键设计原则**：
+  - 所有新服务使用 `@Autowired(required = false)`，确保缺失时不影响现有功能
+  - 不修改数据库Schema（纯内存/提示词操作）
+  - AgentLoopEngine 集成点清晰：循环前注入（规划+风险+记忆）、工具结果处理（摘要压缩）、最终回答处理（结构化+风险扫描+反馈记录）
+- **修改文件**：AgentLoopEngine.java（核心集成）、PromptEvolutionService.java（修复编译+补齐方法）、xiaoyun-base-prompt.yaml（提示词升级）
+- **新增文件**：AgentPlan.java、AgentPlanningEngine.java、ContextEngineeringService.java、StructuredResponseService.java、MemoryHierarchyService.java、ProactiveRiskDetectionService.java、PromptEvolutionService.java

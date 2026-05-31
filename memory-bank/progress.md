@@ -1,11 +1,49 @@
 # 进度跟踪
 
 > 本文件由 AI 助手自动维护，记录项目开发进度
-> 最后更新：2026-05-13
+> 最后更新：2026-05-29
 
 ---
 
 ## 已完成
+
+### 2026-05-29
+- [x] 自动化测试缺口分析：审查近期代码变更，识别3个缺少测试覆盖的核心模块
+- [x] 新增测试：WarehouseLocationOrchestratorTest（11个测试用例）
+  - P0 SQL语法错误修复验证：空标识符集合返回空列表，不执行SQL查询
+  - 有效标识符查询入库记录并更新usedCapacity
+  - 创建/批量初始化/容量更新等核心路径
+- [x] 新增测试：GraphRagServiceTest（10个测试用例）
+  - 知识图谱上下文构建：空消息、无匹配关键词、无实体、空结果
+  - 关系链格式化输出、关系类型翻译（MANUFACTURED_BY等）
+  - 数据库异常静默处理、实体去重
+- [x] 新增测试：FactoryProfileLearningServiceTest（7个测试用例）
+  - 工厂画像上下文：无数据、格式化表格、低评分预警、S/A级推荐
+  - 工厂名称截断、null值默认值处理、数据库异常静默处理
+- [x] 测试验证：28个新测试全部通过（BUILD SUCCESS）
+- [x] 确认 TenantAiConfigService 已有完整测试覆盖（无需新增）
+
+### 2026-05-28
+- [x] 小云AI 9大智能化升级（全部3轮）深度审查 + 7项修复
+- [x] 🔴 修复 AgentCheckpoint 实体冲突 — 删除 agent/checkpoint/AgentCheckpoint.java，transient 字段合并到 entity 版本
+- [x] 🔴 修复 AgentCheckpointManager — 正确 import intelligence.entity.AgentCheckpoint + intelligence.mapper.AgentCheckpointMapper
+- [x] 🔴 修复 AgentLoopEngine — import 切换到 intelligence.entity.AgentCheckpoint
+- [x] 🔴 修复 AgentCheckpointManager selectCount().intValue() 类型转换
+- [x] 确认 HandoffEngine/SubAgentRegistry/Skill YAML 无其余问题
+- [x] 后端 mvn compile BUILD SUCCESS, 0 errors
+- [x] 前端 npx tsc --noEmit 0 errors（1项预存测试错误，与本次无关）
+- [x] memory-bank 更新
+- [x] 小云AI 6大智能化升级 — 上下文工程系统（工具结果智能摘要）
+- [x] 小云AI 6大智能化升级 — 结构化输出（JSON置信度+行动建议）
+- [x] 小云AI 6大智能化升级 — 多层级记忆引擎（工作中/情景/语义）
+- [x] 小云AI 6大智能化升级 — 主动风险检测（7类业务风险扫描）
+- [x] 小云AI 6大智能化升级 — Prompt进化系统（自进化提示词）
+- [x] AgentLoopEngine 集成全部6个新Service
+- [x] xiaoyun-base-prompt.yaml 提示词升级（规划先行+结构化输出+智能增色）
+- [x] PromptEvolutionService 编译错误修复（@Getter + 5缺失方法 + getDeleteFlag）
+- [x] 后端 mvn compile BUILD SUCCESS, 0 errors, 0 Checkstyle violations
+- [x] 前端 npx tsc --noEmit 0 errors
+- [x] memory-bank 全面更新
 
 ### 2026-05-13
 - [x] 订单号生成格式统一：SerialOrchestrator/ProductionOrderServiceImpl/ProductionOrderCommandService 三入口统一为 PO+yyyyMMddHHmmss
@@ -67,6 +105,7 @@
 
 ## 待办
 
+- [ ] 小云AI全链路测试（规划引擎+结构化输出+主动风险检测实际效果验证）
 - [ ] P1性能：MaterialPurchase统计查询DATE()函数索引失效
 - [ ] P1性能：订单列表查询添加缓存
 - [ ] P2：@Version与手写原子SQL混用风险统一

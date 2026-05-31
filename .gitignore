@@ -156,6 +156,7 @@ node_modules/
 
 # === 2026-05 清理：测试/AI工具/重构脚本一律隔离 ===
 .claude/
+.codegraph/
 CLAUDE.md
 test-results/
 frontend/test-results/
