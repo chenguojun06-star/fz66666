@@ -7,6 +7,7 @@
 
 // ── 领域模块 ──────────────────────────────────────────────
 const production = require('./api-modules/production');
+const purchaseCart = require('./api-modules/purchase-cart');
 const { system, serial, factory, factoryWorker, tenant } = require('./api-modules/system');
 const { intelligence, notice } = require('./api-modules/intelligence');
 const { style, warehouse, material, materialRoll, orderManagement, sampleStock } = require('./api-modules/style-warehouse');
@@ -17,6 +18,7 @@ const { employeeAdvance, factoryShipment, wagePayment } = require('./api-modules
 const api = {
   dashboard,
   production,
+  purchaseCart,
   system,
   material,
   materialRoll,
@@ -41,6 +43,7 @@ const api = {
 module.exports = api;
 module.exports.dashboard = dashboard;
 module.exports.production = production;
+module.exports.purchaseCart = purchaseCart;
 module.exports.system = system;
 module.exports.material = material;
 module.exports.materialRoll = materialRoll;

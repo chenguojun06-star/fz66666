@@ -3,7 +3,7 @@ Component({
     src: { type: String, value: '' },
     mode: { type: String, value: 'aspectFill' },
     preview: { type: Boolean, value: true },
-    placeholder: { type: String, value: '' }
+    placeholder: { type: String, value: '' },
   },
   data: {
     error: false,
@@ -13,12 +13,12 @@ Component({
   lifetimes: {
     attached() {
       this.setData({ hasSrc: !!this.properties.src });
-    }
+    },
   },
   observers: {
     'src': function (src) {
       this.setData({ hasSrc: !!src, error: false, loaded: false });
-    }
+    },
   },
   methods: {
     onError() {
@@ -35,6 +35,6 @@ Component({
       } catch (e) {
         // ignore
       }
-    }
-  }
+    },
+  },
 });

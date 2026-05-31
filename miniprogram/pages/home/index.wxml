@@ -19,6 +19,31 @@
     <view class="weather-tip">{{dateInfo.dailyTip}}</view>
   </view>
 
+  <!-- 常用应用 -->
+  <view class="menu-section">
+    <view class="section-header">
+      <text class="section-title">常用应用</text>
+      <text class="section-more" bindtap="onMoreAppsTap">管理</text>
+    </view>
+    <view class="menu-grid">
+      <view class="menu-item" wx:for="{{favoriteApps}}" wx:key="id" bindtap="onFavoriteTap" data-app="{{item}}" hover-class="menu-item-hover" hover-stay-time="100">
+        <view class="menu-icon-circle {{item.circleClass}}">
+          <view class="line-icon line-icon--lg {{item.iconClass}}"></view>
+          <text wx:if="{{item.badge}}" class="menu-badge">{{item.badge}}</text>
+        </view>
+        <text class="menu-name">{{item.name}}</text>
+      </view>
+      <view class="menu-item" bindtap="onMoreAppsTap" hover-class="menu-item-hover" hover-stay-time="100">
+        <view class="menu-icon-circle menu-icon-circle--gray">
+          <view class="menu-more-icon">
+            <text>·</text><text>·</text><text>·</text>
+          </view>
+        </view>
+        <text class="menu-name">更多</text>
+      </view>
+    </view>
+  </view>
+
   <!-- 全部菜单 -->
   <view class="menu-section">
     <view class="section-header">
@@ -28,6 +53,7 @@
       <view class="menu-item" wx:for="{{menuItems}}" wx:key="id" bindtap="onMenuTap" data-index="{{index}}" hover-class="menu-item-hover" hover-stay-time="100">
         <view class="menu-icon-circle {{item.circleClass}}">
           <view class="line-icon line-icon--lg {{item.iconClass}}"></view>
+          <text wx:if="{{item.badge}}" class="menu-badge">{{item.badge}}</text>
         </view>
         <text class="menu-name">{{item.name}}</text>
       </view>

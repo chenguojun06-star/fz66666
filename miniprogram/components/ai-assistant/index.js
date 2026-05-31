@@ -2,7 +2,7 @@ const api = require('../../utils/api.js');
 const bellTaskLoader = require('./bellTaskLoader.js');
 const bellTaskActions = require('./bellTaskActions.js');
 
-var TOOL_NAMES = {
+const TOOL_NAMES = {
   tool_query_production_progress: '生产进度', tool_order_edit: '订单编辑',
   tool_query_warehouse_stock: '库存查询', tool_finished_product_stock: '成品库存',
   tool_deep_analysis: '深度分析', tool_knowledge_search: '知识搜索',
@@ -49,11 +49,11 @@ function describeTool(name) {
 }
 
 function parseAiCards(text) {
-  var actions = [];
-  var insightCards = [];
-  var clarificationHints = [];
-  var charts = [];
-  var stepWizardCards = [];
+  let actions = [];
+  let insightCards = [];
+  let clarificationHints = [];
+  let charts = [];
+  let stepWizardCards = [];
 
   function safeParse(str) {
     try { return JSON.parse(str); } catch (e) { return null; }
@@ -62,50 +62,50 @@ function parseAiCards(text) {
     return item && typeof item === 'object' && item.title;
   }
 
-  var acMatch = text.match(/【ACTIONS】([\s\S]*?)【\/ACTIONS】/);
+  const acMatch = text.match(/【ACTIONS】([\s\S]*?)【\/ACTIONS】/);
   if (acMatch) {
     text = text.replace(acMatch[0], '');
-    var acData = safeParse(acMatch[1]);
+    const acData = safeParse(acMatch[1]);
     if (Array.isArray(acData)) actions = acData.filter(validateCard);
     else if (acData && acData.actions) actions = acData.actions;
   }
 
-  var insightRe = /【INSIGHT_CARDS】([\s\S]*?)【\/INSIGHT_CARDS】/g;
-  var m;
+  const insightRe = /【INSIGHT_CARDS】([\s\S]*?)【\/INSIGHT_CARDS】/g;
+  let m;
   while ((m = insightRe.exec(text)) !== null) {
-    var ip = safeParse(m[1]);
+    const ip = safeParse(m[1]);
     if (Array.isArray(ip)) insightCards = insightCards.concat(ip.filter(validateCard));
     else if (validateCard(ip)) insightCards.push(ip);
   }
   text = text.replace(/【INSIGHT_CARDS】[\s\S]*?【\/INSIGHT_CARDS】/g, '');
 
-  var clarifRe = /【CLARIFICATION】([\s\S]*?)【\/CLARIFICATION】/g;
+  const clarifRe = /【CLARIFICATION】([\s\S]*?)【\/CLARIFICATION】/g;
   while ((m = clarifRe.exec(text)) !== null) {
-    var clp = safeParse(m[1]);
+    const clp = safeParse(m[1]);
     if (Array.isArray(clp)) clarificationHints = clarificationHints.concat(clp.filter(function(x) { return typeof x === 'string'; }));
   }
   text = text.replace(/【CLARIFICATION】[\s\S]*?【\/CLARIFICATION】/g, '');
 
-  var chartRe = /【CHART】([\s\S]*?)【\/CHART】/g;
+  const chartRe = /【CHART】([\s\S]*?)【\/CHART】/g;
   while ((m = chartRe.exec(text)) !== null) {
-    var cp = safeParse(m[1]);
+    const cp = safeParse(m[1]);
     if (Array.isArray(cp)) charts = charts.concat(cp.filter(validateCard));
     else if (validateCard(cp)) charts.push(cp);
   }
   text = text.replace(/【CHART】[\s\S]*?【\/CHART】/g, '');
 
-  var wizRe = /【STEP_WIZARD】([\s\S]*?)【\/STEP_WIZARD】/g;
+  const wizRe = /【STEP_WIZARD】([\s\S]*?)【\/STEP_WIZARD】/g;
   while ((m = wizRe.exec(text)) !== null) {
-    var wp = safeParse(m[1]);
+    const wp = safeParse(m[1]);
     if (Array.isArray(wp)) stepWizardCards = stepWizardCards.concat(wp);
     else if (wp) stepWizardCards.push(wp);
   }
   text = text.replace(/【STEP_WIZARD】[\s\S]*?【\/STEP_WIZARD】/g, '');
 
-  var teamStatusCards = [];
-  var tsRe = /【TEAM_STATUS】([\s\S]*?)【\/TEAM_STATUS】/g;
+  let teamStatusCards = [];
+  const tsRe = /【TEAM_STATUS】([\s\S]*?)【\/TEAM_STATUS】/g;
   while ((m = tsRe.exec(text)) !== null) {
-    var tsp = safeParse(m[1]);
+    const tsp = safeParse(m[1]);
     if (Array.isArray(tsp)) teamStatusCards = teamStatusCards.concat(tsp);
     else if (tsp) teamStatusCards.push(tsp);
   }
@@ -180,14 +180,14 @@ Component({
           }
         } catch (_e) { /* ignore invalid saved trigger position */ }
 
-        var conversationId = 'mp_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6);
-        var savedMessages = [];
+        const conversationId = 'mp_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6);
+        let savedMessages = [];
         try {
           savedMessages = wx.getStorageSync('ai_chat_history') || [];
           if (!Array.isArray(savedMessages) || savedMessages.length === 0) savedMessages = [];
         } catch (_e) { /* ignore unreadable chat history */ }
 
-        var initMsgs = savedMessages.length > 0 ? savedMessages : [{
+        const initMsgs = savedMessages.length > 0 ? savedMessages : [{
           id: Date.now(), role: 'ai', content: greeting,
         }];
         this._setMessages(initMsgs, {
@@ -209,7 +209,7 @@ Component({
   },
   pageLifetimes: {
     show() {
-      var now = Date.now();
+      const now = Date.now();
       if (!this._lastLoadTime || now - this._lastLoadTime > 30000) {
         this._lastLoadTime = now;
         setTimeout(() => this.loadTasks(), 0);
@@ -245,9 +245,9 @@ Component({
 
   methods: {
     _setMessages(msgs, extra) {
-      var MAX_VISIBLE = 30;
-      var visible = msgs.length > MAX_VISIBLE ? msgs.slice(msgs.length - MAX_VISIBLE) : msgs;
-      var data = { messages: msgs, visibleMessages: visible };
+      const MAX_VISIBLE = 30;
+      const visible = msgs.length > MAX_VISIBLE ? msgs.slice(msgs.length - MAX_VISIBLE) : msgs;
+      const data = { messages: msgs, visibleMessages: visible };
       if (extra) Object.assign(data, extra);
       this.setData(data);
     },
@@ -353,11 +353,11 @@ Component({
     _loadDynamicSuggestions() {
       // 未登录或 token 不存在时跳过，避免触发 401 请求
       if (!(wx.getStorageSync('auth_token') || '')) return;
-      var self = this;
+      const self = this;
       api.intelligence.getMyPendingTaskSummary().then(function (res) {
-        var data = res && res.data ? res.data : res;
+        const data = res && res.data ? res.data : res;
         if (!data) return;
-        var suggestions = [];
+        const suggestions = [];
         if (data.overdueOrderCount > 0) {
           suggestions.push({ icon: 'icon-alert', label: '🚨 ' + data.overdueOrderCount + '个逾期', question: '当前有哪些逾期订单？帮我分析一下' });
         }
@@ -375,7 +375,7 @@ Component({
 
     _saveChatHistory() {
       try {
-        var msgs = this.data.messages.slice(-20);
+        const msgs = this.data.messages.slice(-20);
         wx.setStorageSync('ai_chat_history', msgs);
       } catch (_e) { /* ignore chat history save failure */ }
     },
@@ -396,14 +396,14 @@ Component({
           data: { loading: false },
           setData: (newData) => {
             if (newData.totalCount !== undefined) {
-              var dismissed = this._getDismissedKeys();
-              var q = (newData.qualityTasks || []).filter(function(t) { return dismissed.indexOf('quality:' + t.orderId) === -1; });
-              var c = (newData.cuttingTasks || []).filter(function(t) { return dismissed.indexOf('cutting:' + t.orderId) === -1; });
-              var p = (newData.procurementTasks || []).filter(function(t) { return dismissed.indexOf('purchase:' + t.id) === -1; });
-              var r = (newData.repairTasks || []).filter(function(t) { return dismissed.indexOf('repair:' + t.id) === -1; });
-              var o = (newData.overdueOrders || []).filter(function(t) { return dismissed.indexOf('overdue:' + t.id) === -1; });
-              var tm = (newData.timeoutReminders || []).filter(function(t) { return dismissed.indexOf('timeout:' + t.id) === -1; });
-              var total = q.length + c.length + p.length + r.length + o.length + tm.length + (newData.pendingUsers || []).length + (newData.pendingRegistrations || []).length;
+              const dismissed = this._getDismissedKeys();
+              const q = (newData.qualityTasks || []).filter(function(t) { return dismissed.indexOf('quality:' + t.orderId) === -1; });
+              const c = (newData.cuttingTasks || []).filter(function(t) { return dismissed.indexOf('cutting:' + t.orderId) === -1; });
+              const p = (newData.procurementTasks || []).filter(function(t) { return dismissed.indexOf('purchase:' + t.id) === -1; });
+              const r = (newData.repairTasks || []).filter(function(t) { return dismissed.indexOf('repair:' + t.id) === -1; });
+              const o = (newData.overdueOrders || []).filter(function(t) { return dismissed.indexOf('overdue:' + t.id) === -1; });
+              const tm = (newData.timeoutReminders || []).filter(function(t) { return dismissed.indexOf('timeout:' + t.id) === -1; });
+              const total = q.length + c.length + p.length + r.length + o.length + tm.length + (newData.pendingUsers || []).length + (newData.pendingRegistrations || []).length;
               this.setData({
                 qualityTasks: q,
                 cuttingTasks: c,
@@ -428,24 +428,24 @@ Component({
 
     _getDismissedKeys() {
       try {
-        var raw = wx.getStorageSync('task_dismissed_items') || '{}';
-        var obj = JSON.parse(raw);
-        var today = new Date().toISOString().slice(0, 10);
+        const raw = wx.getStorageSync('task_dismissed_items') || '{}';
+        const obj = JSON.parse(raw);
+        const today = new Date().toISOString().slice(0, 10);
         if (obj.date !== today) { wx.setStorageSync('task_dismissed_items', '{}'); return []; }
         return obj.keys || [];
       } catch (_e) { return []; }
     },
 
     dismissTask(e) {
-      var type = e.currentTarget.dataset.type;
-      var id = e.currentTarget.dataset.id;
+      const type = e.currentTarget.dataset.type;
+      const id = e.currentTarget.dataset.id;
       if (!type || !id) return;
       try {
-        var raw = wx.getStorageSync('task_dismissed_items') || '{}';
-        var obj = JSON.parse(raw);
-        var today = new Date().toISOString().slice(0, 10);
+        const raw = wx.getStorageSync('task_dismissed_items') || '{}';
+        let obj = JSON.parse(raw);
+        const today = new Date().toISOString().slice(0, 10);
         if (obj.date !== today) { obj = { date: today, keys: [] }; }
-        var key = type + ':' + id;
+        const key = type + ':' + id;
         if (obj.keys.indexOf(key) === -1) { obj.keys.push(key); }
         wx.setStorageSync('task_dismissed_items', JSON.stringify(obj));
       } catch (_e) {}
@@ -476,7 +476,7 @@ Component({
     onInput(e) { this.setData({ inputValue: e.detail.value }); },
 
     async sendMessage() {
-      var text = this.data.inputValue.trim();
+      const text = this.data.inputValue.trim();
       if (!text) return;
 
       this.setData({ inputValue: '' });
@@ -486,7 +486,7 @@ Component({
         this._setMessages(this.data.messages, { isLoading: false, streamingText: '', streamingTool: '' });
       }
 
-      var userMsg = {
+      const userMsg = {
         id: Date.now(), role: 'user',
         content: text,
       };
@@ -494,39 +494,39 @@ Component({
       this.scrollToBottom();
 
       try {
-        var chatContext = this.data.isManager ? 'manager_assistant' : 'worker_assistant';
-        var streamPayload = {
+        const chatContext = this.data.isManager ? 'manager_assistant' : 'worker_assistant';
+        const streamPayload = {
           question: text,
           pageContext: chatContext,
           conversationId: this.data.conversationId,
         };
 
-        var self = this;
-        var accumulatedText = '';
-        var streamStarted = false;
-        var pendingFollowUpActions = null;
+        const self = this;
+        let accumulatedText = '';
+        let streamStarted = false;
+        let pendingFollowUpActions = null;
 
-        var aiMsgId = Date.now() + 1;
+        const aiMsgId = Date.now() + 1;
 
-        var requestTask = api.intelligence.aiAdvisorChatStream(
+        const requestTask = api.intelligence.aiAdvisorChatStream(
           streamPayload,
           function (event) {
             streamStarted = true;
             if (event.type === 'thinking') {
               self.setData({ streamingTool: '小云正在思考中...' });
             } else if (event.type === 'tool_call') {
-              var toolName = event.data.tool ? describeTool(event.data.tool) : '工具';
+              const toolName = event.data.tool ? describeTool(event.data.tool) : '工具';
               self.setData({ streamingTool: '正在使用「' + toolName + '」...' });
             } else if (event.type === 'tool_result') {
               self.setData({ streamingTool: '' });
             } else if (event.type === 'answer_chunk') {
-              var chunk = String(event.data.chunk || '');
+              const chunk = String(event.data.chunk || '');
               if (chunk) {
                 accumulatedText += chunk;
                 self.setData({ streamingText: accumulatedText });
               }
             } else if (event.type === 'answer') {
-              var content = String(event.data.content || '');
+              const content = String(event.data.content || '');
               if (content) {
                 accumulatedText = content;
                 self.setData({ streamingText: accumulatedText });
@@ -548,17 +548,17 @@ Component({
           },
           function () {
             self._streamTask = null;
-            var parsed = parseAiCards(accumulatedText || '抱歉，我现在无法回答这个问题。');
-            var recommendPills = [];
+            const parsed = parseAiCards(accumulatedText || '抱歉，我现在无法回答这个问题。');
+            let recommendPills = [];
             if (parsed.text.includes('【推荐追问】：')) {
-              var parts = parsed.text.split('【推荐追问】：');
+              const parts = parsed.text.split('【推荐追问】：');
               parsed.text = parts[0].trim();
               if (parts[1]) recommendPills = parts[1].split('|').map(function (p) { return p.trim(); }).filter(function (p) { return !!p; });
             }
-            var actions = parsed.actions && parsed.actions.length > 0 ? parsed.actions : null;
+            let actions = parsed.actions && parsed.actions.length > 0 ? parsed.actions : null;
             if (!actions && pendingFollowUpActions && pendingFollowUpActions.length > 0) {
               actions = pendingFollowUpActions.map(function (a) {
-                var actType = a.actionType ? String(a.actionType).toLowerCase() : 'navigate';
+                const actType = a.actionType ? String(a.actionType).toLowerCase() : 'navigate';
                 // 过滤掉NAVIGATE动作手机端看不到,只保留ASK/EXECUTE
                 if (actType === 'navigate') return null;
                 return {
@@ -571,7 +571,7 @@ Component({
                 };
               }).filter(Boolean);
             }
-            var completedAiMsg = {
+            const completedAiMsg = {
               id: aiMsgId, role: 'ai', content: parsed.text,
               recommendPills: recommendPills,
               actions: actions,
@@ -593,18 +593,18 @@ Component({
             console.warn('[XiaoYun] SSE failed, fallback to sync:', err);
             self._streamTask = null;
             if (streamStarted && accumulatedText) {
-              var streamFallbackMsg = { id: aiMsgId, role: 'ai', content: accumulatedText };
+              const streamFallbackMsg = { id: aiMsgId, role: 'ai', content: accumulatedText };
               self._setMessages([].concat(self.data.messages, [streamFallbackMsg]), { isLoading: false, streamingText: '', streamingTool: '' });
               self.scrollToBottom();
               self._saveChatHistory();
               return;
             }
             try {
-              var chatParams = { question: text, context: chatContext };
-              var chatRes = await api.intelligence.aiAdvisorChat(chatParams);
-              var aiResponse = '';
-              var syncActions = null;
-              var syncSuggestions = [];
+              const chatParams = { question: text, context: chatContext };
+              const chatRes = await api.intelligence.aiAdvisorChat(chatParams);
+              let aiResponse = '';
+              let syncActions = null;
+              let syncSuggestions = [];
               if (chatRes && typeof chatRes === 'object') {
                 aiResponse = chatRes.displayAnswer || chatRes.answer || chatRes.content || chatRes.reply || chatRes.message || '';
                 if (chatRes.followUpActions && chatRes.followUpActions.length > 0) {
@@ -627,18 +627,18 @@ Component({
               }
               if (!aiResponse) aiResponse = '抱歉，我现在无法回答这个问题。';
 
-              var parsed = parseAiCards(aiResponse);
-              var recommendPills = syncSuggestions.length > 0 ? syncSuggestions : [];
+              const parsed = parseAiCards(aiResponse);
+              let recommendPills = syncSuggestions.length > 0 ? syncSuggestions : [];
               if (parsed.text.includes('【推荐追问】：')) {
-                var parts = parsed.text.split('【推荐追问】：');
+                const parts = parsed.text.split('【推荐追问】：');
                 parsed.text = parts[0].trim();
                 if (parts[1]) {
-                  var extraPills = parts[1].split('|').map(function (p) { return p.trim(); }).filter(function (p) { return !!p; });
+                  const extraPills = parts[1].split('|').map(function (p) { return p.trim(); }).filter(function (p) { return !!p; });
                   recommendPills = recommendPills.concat(extraPills);
                 }
               }
-              var actions = parsed.actions && parsed.actions.length > 0 ? parsed.actions : syncActions;
-              var syncAiMsg = {
+              const actions = parsed.actions && parsed.actions.length > 0 ? parsed.actions : syncActions;
+              const syncAiMsg = {
                 id: aiMsgId, role: 'ai', content: parsed.text,
                 recommendPills: recommendPills.length > 0 ? recommendPills : null,
                 actions: actions,
@@ -651,25 +651,25 @@ Component({
               self.scrollToBottom();
               self._saveChatHistory();
             } catch (syncErr) {
-              var errMsg = { id: aiMsgId, role: 'ai', content: '服务暂时无法响应，请稍后再试。' };
+              const errMsg = { id: aiMsgId, role: 'ai', content: '服务暂时无法响应，请稍后再试。' };
               self._setMessages([].concat(self.data.messages, [errMsg]), { isLoading: false, streamingText: '', streamingTool: '' });
               self.scrollToBottom();
             }
-          }
+          },
         );
         this._streamTask = requestTask;
 
       } catch (err) {
         console.error('[XiaoYun] sendMessage error:', err);
-        var errContent = (err && err.errMsg && err.errMsg !== 'undefined') ? err.errMsg : '服务暂时无法响应，请稍后再试。';
-        var errMsg = { id: Date.now(), role: 'ai', content: errContent };
+        const errContent = (err && err.errMsg && err.errMsg !== 'undefined') ? err.errMsg : '服务暂时无法响应，请稍后再试。';
+        const errMsg = { id: Date.now(), role: 'ai', content: errContent };
         this._setMessages([].concat(this.data.messages, [errMsg]), { isLoading: false, streamingText: '', streamingTool: '' });
         this.scrollToBottom();
       }
     },
 
     onActionTap(e) {
-      var action = e.currentTarget.dataset.action;
+      const action = e.currentTarget.dataset.action;
       if (!action) return;
       if (action.type === 'execute') {
         this._executeAction(action);
@@ -683,8 +683,8 @@ Component({
     },
 
     _executeAction(action) {
-      var self = this;
-      var command = action.command || action.label || '';
+      const self = this;
+      const command = action.command || action.label || '';
       if (!command) return;
       wx.showModal({
         title: '确认执行',
@@ -696,7 +696,7 @@ Component({
           wx.showLoading({ title: '执行中...' });
           api.intelligence.naturalLanguageExecute({ text: command }).then(function (res) {
             wx.hideLoading();
-            var data = res && res.data ? res.data : res;
+            const data = res && res.data ? res.data : res;
             if (data && data.status === 'SUCCESS') {
               wx.showToast({ title: '执行成功', icon: 'success' });
               self.sendMessage();
@@ -709,41 +709,41 @@ Component({
             wx.hideLoading();
             wx.showToast({ title: '执行失败', icon: 'none' });
           });
-        }
+        },
       });
     },
 
     onWizardOptionTap(e) {
-      var ds = e.currentTarget.dataset;
-      var key = ds.msgId + '_' + ds.fieldKey;
-      var update = {};
+      const ds = e.currentTarget.dataset;
+      const key = ds.msgId + '_' + ds.fieldKey;
+      const update = {};
       update['wizardStates.' + key] = ds.value;
       this.setData(update);
     },
 
     onWizardMultiOptionTap(e) {
-      var ds = e.currentTarget.dataset;
-      var key = ds.msgId + '_' + ds.fieldKey;
-      var current = this.data.wizardStates[key] || [];
-      var idx = current.indexOf(ds.value);
-      var next = idx >= 0 ? current.filter(function (v) { return v !== ds.value; }) : current.concat([ds.value]);
-      var update = {};
+      const ds = e.currentTarget.dataset;
+      const key = ds.msgId + '_' + ds.fieldKey;
+      const current = this.data.wizardStates[key] || [];
+      const idx = current.indexOf(ds.value);
+      const next = idx >= 0 ? current.filter(function (v) { return v !== ds.value; }) : current.concat([ds.value]);
+      const update = {};
       update['wizardStates.' + key] = next;
       this.setData(update);
     },
 
     onWizardInput(e) {
-      var ds = e.currentTarget.dataset;
-      var key = ds.msgId + '_' + ds.fieldKey;
-      var update = {};
+      const ds = e.currentTarget.dataset;
+      const key = ds.msgId + '_' + ds.fieldKey;
+      const update = {};
       update['wizardStates.' + key] = e.detail.value;
       this.setData(update);
     },
 
     onWizardDateTap(e) {
-      var self = this;
-      var ds = e.currentTarget.dataset;
-      var key = ds.msgId + '_' + ds.fieldKey;
+      const self = this;
+      const ds = e.currentTarget.dataset;
+      const key = ds.msgId + '_' + ds.fieldKey;
       wx.showModal({
         title: '输入日期',
         editable: true,
@@ -751,43 +751,43 @@ Component({
         content: this.data.wizardStates[key] || '',
         success: function (res) {
           if (res.confirm && res.content) {
-            var update = {};
+            const update = {};
             update['wizardStates.' + key] = res.content.trim();
             self.setData(update);
           }
-        }
+        },
       });
     },
 
     onWizardSubmit(e) {
-      var ds = e.currentTarget.dataset;
-      var msgId = ds.msgId;
-      var wizIdx = ds.wizardIdx;
-      var msg = null;
-      for (var i = 0; i < this.data.messages.length; i++) {
+      const ds = e.currentTarget.dataset;
+      const msgId = ds.msgId;
+      const wizIdx = ds.wizardIdx;
+      let msg = null;
+      for (let i = 0; i < this.data.messages.length; i++) {
         if (this.data.messages[i].id === msgId) { msg = this.data.messages[i]; break; }
       }
       if (!msg || !msg.stepWizardCards || !msg.stepWizardCards[wizIdx]) return;
-      var wizard = msg.stepWizardCards[wizIdx];
-      var parts = [];
-      for (var si = 0; si < wizard.steps.length; si++) {
-        var step = wizard.steps[si];
-        for (var fi = 0; fi < step.fields.length; fi++) {
-          var field = step.fields[fi];
-          var stateKey = msgId + '_' + field.key;
-          var value = this.data.wizardStates[stateKey];
+      const wizard = msg.stepWizardCards[wizIdx];
+      const parts = [];
+      for (let si = 0; si < wizard.steps.length; si++) {
+        const step = wizard.steps[si];
+        for (let fi = 0; fi < step.fields.length; fi++) {
+          const field = step.fields[fi];
+          const stateKey = msgId + '_' + field.key;
+          const value = this.data.wizardStates[stateKey];
           if (value) {
             if (field.inputType === 'select' && field.options) {
-              for (var oi = 0; oi < field.options.length; oi++) {
+              for (let oi = 0; oi < field.options.length; oi++) {
                 if (field.options[oi].value === value) {
                   parts.push(field.label + '=' + field.options[oi].label);
                   break;
                 }
               }
             } else if (field.inputType === 'multi_select' && Array.isArray(value) && field.options) {
-              var labels = [];
-              for (var vi = 0; vi < value.length; vi++) {
-                for (var oi2 = 0; oi2 < field.options.length; oi2++) {
+              const labels = [];
+              for (let vi = 0; vi < value.length; vi++) {
+                for (let oi2 = 0; oi2 < field.options.length; oi2++) {
                   if (field.options[oi2].value === value[vi]) { labels.push(field.options[oi2].label); break; }
                 }
               }
@@ -802,7 +802,7 @@ Component({
         wx.showToast({ title: '请至少填写一项', icon: 'none' });
         return;
       }
-      var command = (wizard.submitCommand || wizard.title) + '：' + parts.join('，');
+      const command = (wizard.submitCommand || wizard.title) + '：' + parts.join('，');
       this.setData({ inputValue: command }, function () { this.sendMessage(); }.bind(this));
     },
 
@@ -817,7 +817,7 @@ Component({
         /* ignore greeting name read failure */
       }
       const greeting = userName ? 'Hi ' + userName + '，这里是小云帮助中心。' : 'Hi，这里是小云帮助中心。';
-      var newConvId = 'mp_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6);
+      const newConvId = 'mp_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6);
       this._setMessages([{ id: Date.now(), role: 'ai', content: greeting }], { inputValue: '', conversationId: newConvId });
       try { wx.removeStorageSync('ai_chat_history'); } catch (_e) { /* ignore storage cleanup failure */ }
     },

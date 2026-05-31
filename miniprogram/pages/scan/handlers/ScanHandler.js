@@ -62,7 +62,7 @@ class ScanHandler {
     this.stageProcessor = new ScanStageProcessor(
       api,
       this.modeResolver,
-      () => this.scanType // 传递 scanType getter
+      () => this.scanType, // 传递 scanType getter
     );
     this.submitter = new ScanSubmitter(api);
 
@@ -129,7 +129,7 @@ class ScanHandler {
         parsedData,
         orderDetail,
         this._detectStage.bind(this),
-        this.SCAN_MODE.ORDER
+        this.SCAN_MODE.ORDER,
       );
     }
 

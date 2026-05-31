@@ -1,33 +1,74 @@
-<view class="container">
-  <view class="search-bar">
-    <view class="search-box">
-      <text class="search-emoji">🔍</text>
-      <input class="search-input" placeholder="搜索款号/款名" value="{{keyword}}" bindinput="onSearchInput" confirm-type="search" />
-      <text class="search-clear" wx:if="{{keyword}}" catchtap="onSearchClear">✕</text>
-    </view>
+<view class="page">
+  <view class="tab-bar">
+    <view class="tab-item {{activeTab === 'style' ? 'active' : ''}}" data-tab="style" bindtap="switchTab">款式下单</view>
+    <view class="tab-item {{activeTab === 'noData' ? 'active' : ''}}" data-tab="noData" bindtap="switchTab">无资料下单</view>
   </view>
 
-  <view wx:if="{{loading}}" class="state-wrap"><text>加载中...</text></view>
-
-  <view wx:elif="{{filteredStyles.length === 0}}" class="state-wrap">
-    <text>{{keyword ? '未找到匹配' : '暂无已完成入库的样衣'}}</text>
-  </view>
-
-  <scroll-view wx:else scroll-y class="grid-scroll">
-    <view class="grid">
-      <view class="card" wx:for="{{filteredStyles}}" wx:key="id" data-id="{{item.id}}" data-cover="{{item.displayCover}}" data-no="{{item.styleNo}}" data-name="{{item.styleName}}" data-colors="{{item.color}}" data-sizes="{{item.size}}" data-cat="{{item.displayCategory}}" bindtap="onStyleTap">
-        <view class="card-img">
-          <image wx:if="{{item.displayCover}}" src="{{item.displayCover}}" mode="aspectFill" lazy-load />
-          <text wx:else class="card-img-ph">{{item.styleNo}}</text>
-        </view>
-        <view class="card-body">
-          <text class="card-cat" wx:if="{{item.displayCategory}}">{{item.displayCategory}}</text>
-          <text class="card-no">{{item.styleNo || '-'}}</text>
-          <text class="card-name">{{item.styleName || '-'}}</text>
-          <text wx:if="{{item.orderCount > 0}}" class="card-oc">已下单{{item.orderCount}}次</text>
-          <text wx:if="{{item.latestOrderDate}}" class="card-ld">{{item.latestOrderDate}}</text>
-        </view>
+  <view class="tab-content" wx:if="{{activeTab === 'style'}}">
+    <view class="search-bar">
+      <view class="search-box">
+        <text class="search-emoji">🔍</text>
+        <input class="search-input" placeholder="搜索款号/款名" value="{{styleKeyword}}" bindinput="onStyleSearchInput" confirm-type="search" />
+        <text class="search-clear" wx:if="{{styleKeyword}}" catchtap="onStyleSearchClear">✕</text>
       </view>
     </view>
-  </scroll-view>
+
+    <view wx:if="{{styleLoading}}" class="state-wrap"><text>加载中...</text></view>
+
+    <view wx:elif="{{styleFilteredStyles.length === 0}}" class="state-wrap">
+      <text>{{styleKeyword ? '未找到匹配' : '暂无已完成入库的样衣'}}</text>
+    </view>
+
+    <scroll-view wx:else scroll-y class="grid-scroll">
+      <view class="grid">
+        <view class="card" wx:for="{{styleFilteredStyles}}" wx:key="id" data-id="{{item.id}}" data-cover="{{item.displayCover}}" data-no="{{item.styleNo}}" data-name="{{item.styleName}}" data-colors="{{item.color}}" data-sizes="{{item.size}}" data-cat="{{item.displayCategory}}" bindtap="onStyleTap">
+          <view class="card-img">
+            <image wx:if="{{item.displayCover}}" src="{{item.displayCover}}" mode="aspectFill" lazy-load />
+            <text wx:else class="card-img-ph">{{item.styleNo}}</text>
+          </view>
+          <view class="card-body">
+            <text class="card-cat" wx:if="{{item.displayCategory}}">{{item.displayCategory}}</text>
+            <text class="card-no">{{item.styleNo || '-'}}</text>
+            <text class="card-name">{{item.styleName || '-'}}</text>
+            <text wx:if="{{item.orderCount > 0}}" class="card-oc">已下单{{item.orderCount}}次</text>
+            <text wx:if="{{item.latestOrderDate}}" class="card-ld">{{item.latestOrderDate}}</text>
+          </view>
+        </view>
+      </view>
+    </scroll-view>
+  </view>
+
+  <view class="tab-content" wx:if="{{activeTab === 'noData'}}">
+    <view class="search-bar">
+      <view class="search-box">
+        <text class="search-emoji">🔍</text>
+        <input class="search-input" placeholder="搜索款号/款名" value="{{styleKeyword}}" bindinput="onStyleSearchInput" confirm-type="search" />
+        <text class="search-clear" wx:if="{{styleKeyword}}" catchtap="onStyleSearchClear">✕</text>
+      </view>
+    </view>
+
+    <view wx:if="{{styleLoading}}" class="state-wrap"><text>加载中...</text></view>
+
+    <view wx:elif="{{styleFilteredStyles.length === 0}}" class="state-wrap">
+      <text>{{styleKeyword ? '未找到匹配' : '暂无款式数据'}}</text>
+    </view>
+
+    <scroll-view wx:else scroll-y class="grid-scroll">
+      <view class="grid">
+        <view class="card" wx:for="{{styleFilteredStyles}}" wx:key="id" data-id="{{item.id}}" data-cover="{{item.displayCover}}" data-no="{{item.styleNo}}" data-name="{{item.styleName}}" data-colors="{{item.color}}" data-sizes="{{item.size}}" data-cat="{{item.displayCategory}}" bindtap="onStyleTap">
+          <view class="card-img">
+            <image wx:if="{{item.displayCover}}" src="{{item.displayCover}}" mode="aspectFill" lazy-load />
+            <text wx:else class="card-img-ph">{{item.styleNo}}</text>
+          </view>
+          <view class="card-body">
+            <text class="card-cat" wx:if="{{item.displayCategory}}">{{item.displayCategory}}</text>
+            <text class="card-no">{{item.styleNo || '-'}}</text>
+            <text class="card-name">{{item.styleName || '-'}}</text>
+            <text wx:if="{{item.orderCount > 0}}" class="card-oc">已下单{{item.orderCount}}次</text>
+            <text wx:if="{{item.latestOrderDate}}" class="card-ld">{{item.latestOrderDate}}</text>
+          </view>
+        </view>
+      </view>
+    </scroll-view>
+  </view>
 </view>

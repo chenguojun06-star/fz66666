@@ -1,5 +1,14 @@
 <custom-nav title="采购到货" show-back="{{true}}" />
 
+<!-- 购物车入口 -->
+<view class="cart-entry" bindtap="onOpenCart">
+  <view class="cart-entry-icon-box">
+    <view class="line-icon line-icon--lg icon-cart cart-entry-icon"></view>
+  </view>
+  <text class="cart-entry-text">购物车</text>
+  <view class="cart-entry-badge" wx:if="{{ cartCount > 0 }}">{{ cartCount }}</view>
+</view>
+
 <view class="page-container">
   <view class="loading-wrapper" wx:if="{{loading}}">
     <view class="loading-spinner"></view>
@@ -104,3 +113,10 @@
   <view class="btn-submit {{(!hasInput || submitting) ? 'btn-disabled' : ''}}"
     hover-class="footer-bar-hover" bindtap="onSubmit">提交到货</view>
 </view>
+
+<purchase-cart-drawer 
+  id="purchaseCart" 
+  visible="{{ cartVisible }}" 
+  bind:close="onCartClose"
+  bind:confirm="onCartConfirm"
+/>

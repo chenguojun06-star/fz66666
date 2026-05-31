@@ -31,7 +31,7 @@ Page({
 
     if (options.data) {
       try {
-        var detail = JSON.parse(decodeURIComponent(options.data));
+        const detail = JSON.parse(decodeURIComponent(options.data));
         this._processDetail(detail);
         this.setData({ detail: detail });
       } catch (e) {
@@ -51,7 +51,7 @@ Page({
 
     if (d.unqualifiedImageUrls) {
       try {
-        var urls = typeof d.unqualifiedImageUrls === 'string'
+        const urls = typeof d.unqualifiedImageUrls === 'string'
           ? JSON.parse(d.unqualifiedImageUrls)
           : d.unqualifiedImageUrls;
         d.imageList = urls.filter(Boolean).map(function (u) {
@@ -67,19 +67,19 @@ Page({
 
   _formatTime: function (t) {
     if (!t) return '';
-    var d = new Date(t);
+    const d = new Date(t);
     if (isNaN(d.getTime())) return t;
-    var y = d.getFullYear();
-    var m = d.getMonth() + 1;
-    var day = d.getDate();
-    var h = d.getHours();
-    var min = d.getMinutes();
+    const y = d.getFullYear();
+    const m = d.getMonth() + 1;
+    const day = d.getDate();
+    const h = d.getHours();
+    const min = d.getMinutes();
     return y + '-' + (m < 10 ? '0' + m : m) + '-' + (day < 10 ? '0' + day : day) + ' ' + (h < 10 ? '0' + h : h) + ':' + (min < 10 ? '0' + min : min);
   },
 
   onPreviewImage: function (e) {
-    var url = e.currentTarget.dataset.url;
-    var urls = e.currentTarget.dataset.urls;
+    const url = e.currentTarget.dataset.url;
+    const urls = e.currentTarget.dataset.urls;
     wx.previewImage({ current: url, urls: urls || [url] });
   },
 });

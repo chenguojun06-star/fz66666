@@ -1,0 +1,175 @@
+<view class="page-container">
+  <!-- Tab导航 -->
+  <view class="tab-nav">
+    <view class="tab-item {{activeTab === 'basic' ? 'active' : ''}}" data-tab="basic" bindtap="onTabChange">
+      <text class="tab-icon">📋</text>
+      <text class="tab-text">基础资料</text>
+    </view>
+    <view class="tab-item {{activeTab === 'process' ? 'active' : ''}}" data-tab="process" bindtap="onTabChange">
+      <text class="tab-icon">⚙️</text>
+      <text class="tab-text">工序模板</text>
+    </view>
+    <view class="tab-item {{activeTab === 'progress' ? 'active' : ''}}" data-tab="progress" bindtap="onTabChange">
+      <text class="tab-icon">📊</text>
+      <text class="tab-text">进度</text>
+    </view>
+  </view>
+
+  <!-- 加载中 -->
+  <view wx:if="{{loading}}" class="loading-wrap">
+    <view class="loading-spinner"></view>
+    <text class="loading-text">加载中...</text>
+  </view>
+
+  <!-- 基础资料Tab -->
+  <view wx:elif="{{activeTab === 'basic'}}" class="tab-content">
+    <!-- 款式基本信息 -->
+    <view class="section">
+      <view class="section-title">款式信息</view>
+      <view class="info-card">
+        <view class="info-row">
+          <text class="info-label">款号</text>
+          <text class="info-value">{{styleInfo.styleNo || '-'}}</text>
+        </view>
+        <view class="info-row">
+          <text class="info-label">款式名称</text>
+          <text class="info-value">{{styleInfo.styleName || '-'}}</text>
+        </view>
+        <view class="info-row">
+          <text class="info-label">品类</text>
+          <text class="info-value">{{styleInfo.category || '-'}}</text>
+        </view>
+        <view class="info-row">
+          <text class="info-label">颜色</text>
+          <text class="info-value">{{styleInfo.color || '-'}}</text>
+        </view>
+        <view class="info-row">
+          <text class="info-label">尺码</text>
+          <text class="info-value">{{styleInfo.size || '-'}}</text>
+        </view>
+        <view class="info-row">
+          <text class="info-label">数量</text>
+          <text class="info-value">{{styleInfo.sampleQuantity || '-'}}</text>
+        </view>
+        <view class="info-row">
+          <text class="info-label">创建时间</text>
+          <text class="info-value">{{formatDate(styleInfo.createTime)}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- BOM清单 -->
+    <view class="section">
+      <view class="section-title">BOM清单</view>
+      <view wx:if="{{bomLoading}}" class="loading-inline">加载中...</view>
+      <view wx:elif="{{bomList.length === 0}}" class="empty-inline">暂无BOM数据</view>
+      <view wx:else class="list-card">
+        <view class="list-item" wx:for="{{bomList}}" wx:key="id">
+          <view class="item-main">
+            <text class="item-title">{{item.materialName || item.materialCode}}</text>
+            <text class="item-sub">{{item.specification || '-'}}</text>
+          </view>
+          <view class="item-right">
+            <text class="item-qty">x{{item.quantity || 0}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 二次工艺 -->
+    <view class="section">
+      <view class="section-title">二次工艺</view>
+      <view wx:if="{{secondaryLoading}}" class="loading-inline">加载中...</view>
+      <view wx:elif="{{secondaryList.length === 0}}" class="empty-inline">暂无二次工艺</view>
+      <view wx:else class="list-card">
+        <view class="list-item" wx:for="{{secondaryList}}" wx:key="id">
+          <view class="item-main">
+            <text class="item-title">{{item.processName || item.processType}}</text>
+            <text class="item-sub">{{item.factoryName || '-'}}</text>
+          </view>
+          <view class="item-right">
+            <text class="item-price">¥{{item.totalPrice || 0}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 工序模板Tab -->
+  <view wx:elif="{{activeTab === 'process'}}" class="tab-content">
+    <view wx:if="{{processLoading}}" class="loading-wrap">
+      <view class="loading-spinner"></view>
+      <text class="loading-text">加载中...</text>
+    </view>
+    <view wx:elif="{{processList.length === 0}}" class="empty-wrap">
+      <text class="empty-icon">⚙️</text>
+      <text class="empty-text">暂无工序模板</text>
+    </view>
+    <view wx:else class="process-list">
+      <view class="process-item" wx:for="{{processList}}" wx:key="id">
+        <view class="process-left">
+          <view class="process-name">{{item.processName || item.name}}</view>
+          <view class="process-code">{{item.processCode || '-'}}</view>
+        </view>
+        <view class="process-right">
+          <text class="process-price">¥{{item.unitPrice || 0}}</text>
+          <text class="process-unit">/{{item.unit || '件'}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 进度Tab -->
+  <view wx:elif="{{activeTab === 'progress'}}" class="tab-content">
+    <view class="progress-section">
+      <view class="progress-title">开发进度</view>
+      <view class="progress-list">
+        <view class="progress-item">
+          <view class="progress-dot" style="background: {{getStageStatusColor('bom')}}"></view>
+          <view class="progress-content">
+            <text class="progress-name">BOM清单</text>
+            <text class="progress-status" style="color: {{getStageStatusColor('bom')}}">{{getStageStatusText('bom')}}</text>
+          </view>
+          <text wx:if="{{styleInfo.bomCompletedTime}}" class="progress-time">{{formatDate(styleInfo.bomCompletedTime)}}</text>
+        </view>
+        <view class="progress-item">
+          <view class="progress-dot" style="background: {{getStageStatusColor('pattern')}}"></view>
+          <view class="progress-content">
+            <text class="progress-name">纸样开发</text>
+            <text class="progress-status" style="color: {{getStageStatusColor('pattern')}}">{{getStageStatusText('pattern')}}</text>
+          </view>
+          <text wx:if="{{styleInfo.patternCompletedTime}}" class="progress-time">{{formatDate(styleInfo.patternCompletedTime)}}</text>
+        </view>
+        <view class="progress-item">
+          <view class="progress-dot" style="background: {{getStageStatusColor('process')}}"></view>
+          <view class="progress-content">
+            <text class="progress-name">工序单价</text>
+            <text class="progress-status" style="color: {{getStageStatusColor('process')}}">{{getStageStatusText('process')}}</text>
+          </view>
+          <text wx:if="{{styleInfo.processCompletedTime}}" class="progress-time">{{formatDate(styleInfo.processCompletedTime)}}</text>
+        </view>
+        <view class="progress-item">
+          <view class="progress-dot" style="background: {{getStageStatusColor('secondary')}}"></view>
+          <view class="progress-content">
+            <text class="progress-name">二次工艺</text>
+            <text class="progress-status" style="color: {{getStageStatusColor('secondary')}}">{{getStageStatusText('secondary')}}</text>
+          </view>
+          <text wx:if="{{styleInfo.secondaryCompletedTime}}" class="progress-time">{{formatDate(styleInfo.secondaryCompletedTime)}}</text>
+        </view>
+        <view class="progress-item">
+          <view class="progress-dot" style="background: {{getStageStatusColor('production')}}"></view>
+          <view class="progress-content">
+            <text class="progress-name">生产制单</text>
+            <text class="progress-status" style="color: {{getStageStatusColor('production')}}">{{getStageStatusText('production')}}</text>
+          </view>
+          <text wx:if="{{styleInfo.productionCompletedTime}}" class="progress-time">{{formatDate(styleInfo.productionCompletedTime)}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 底部刷新按钮 -->
+  <view class="bottom-bar">
+    <button class="refresh-btn" bindtap="onRefresh">刷新数据</button>
+  </view>
+</view>

@@ -351,7 +351,7 @@ Page({
   },
 
   onTabSwitch(e) {
-    var tab = e.currentTarget.dataset.tab;
+    const tab = e.currentTarget.dataset.tab;
     this.setData({ activeTab: tab });
     if (tab === 'transfer') {
       this._initTransferPanel();
@@ -380,16 +380,16 @@ Page({
   noop() {},
 
   _computePreviewSize() {
-    var cfg = this.data.printConfig || {};
-    var pw = cfg.paperWidth || 7;
-    var ph = cfg.paperHeight || 4;
-    var maxW = 650;
-    var maxH = 400;
-    var scale = Math.min(maxW / (pw * 10), maxH / (ph * 10));
-    var w = Math.round(pw * 10 * scale);
-    var h = Math.round(ph * 10 * scale);
-    var minDim = Math.min(w, h);
-    var qrSize = Math.round(minDim * 0.45);
+    const cfg = this.data.printConfig || {};
+    const pw = cfg.paperWidth || 7;
+    const ph = cfg.paperHeight || 4;
+    const maxW = 650;
+    const maxH = 400;
+    const scale = Math.min(maxW / (pw * 10), maxH / (ph * 10));
+    const w = Math.round(pw * 10 * scale);
+    const h = Math.round(ph * 10 * scale);
+    const minDim = Math.min(w, h);
+    const qrSize = Math.round(minDim * 0.45);
     this.setData({
       'printConfig.previewW': w,
       'printConfig.previewH': h,
@@ -398,11 +398,11 @@ Page({
   },
 
   onLabelSizeSelect(e) {
-    var label = e.currentTarget.dataset.label;
-    var d = this.data;
-    var sizes = d.LABEL_SIZES[d.printConfig.orientation] || [];
-    var found = null;
-    for (var i = 0; i < sizes.length; i++) {
+    const label = e.currentTarget.dataset.label;
+    const d = this.data;
+    const sizes = d.LABEL_SIZES[d.printConfig.orientation] || [];
+    let found = null;
+    for (let i = 0; i < sizes.length; i++) {
       if (sizes[i].label === label) { found = sizes[i]; break; }
     }
     if (!found) return;
@@ -416,7 +416,7 @@ Page({
   },
 
   onPrintModeChange(e) {
-    var mode = e.currentTarget.dataset.mode;
+    const mode = e.currentTarget.dataset.mode;
     this.setData({ 'printConfig.printMode': mode });
   },
 
@@ -425,7 +425,7 @@ Page({
   },
 
   onWifiPortInput(e) {
-    var v = parseInt(e.detail.value, 10);
+    let v = parseInt(e.detail.value, 10);
     if (isNaN(v) || v < 1) v = 9100;
     if (v > 65535) v = 65535;
     this.setData({ 'printConfig.wifiPort': v });
@@ -433,26 +433,26 @@ Page({
 
 
   _generateQrImages(bundles) {
-    var that = this;
-    var drawQrcode = require('../utils/weapp-qrcode');
-    var cfg = that.data.printConfig || {};
-    var paperW = cfg.paperWidth || 7;
-    var paperH = cfg.paperHeight || 4;
-    var minDim = Math.min(Math.round(paperW * 10), Math.round(paperH * 10));
-    var qrSize = minDim <= 40 ? 72 : minDim <= 50 ? 84 : minDim <= 70 ? 100 : 120;
+    const that = this;
+    const drawQrcode = require('../utils/weapp-qrcode');
+    const cfg = that.data.printConfig || {};
+    const paperW = cfg.paperWidth || 7;
+    const paperH = cfg.paperHeight || 4;
+    const minDim = Math.min(Math.round(paperW * 10), Math.round(paperH * 10));
+    const qrSize = minDim <= 40 ? 72 : minDim <= 50 ? 84 : minDim <= 70 ? 100 : 120;
 
-    var query = wx.createSelectorQuery();
+    const query = wx.createSelectorQuery();
     query.select('#qrCanvas').fields({ node: true, size: true }).exec(function (res) {
       if (!res || !res[0] || !res[0].node) {
         console.warn('[bundle-detail] canvas node not found');
         return;
       }
-      var canvas = res[0].node;
+      const canvas = res[0].node;
 
-      var idx = 0;
+      let idx = 0;
       function drawNext() {
         if (idx >= bundles.length) return;
-        var b = bundles[idx];
+        const b = bundles[idx];
         if (!b.qrCode || b._qrImg) { idx++; drawNext(); return; }
 
         try {
@@ -486,7 +486,7 @@ Page({
             fail: function () {
               idx++;
               drawNext();
-            }
+            },
           });
         }, 150);
       }
@@ -499,27 +499,27 @@ Page({
   },
 
   onDoBundlePrint() {
-    var d = this.data;
-    var bundles = d._rawBundles || [];
+    const d = this.data;
+    const bundles = d._rawBundles || [];
     if (!bundles.length) return;
-    var cfg = d.printConfig || {};
-    var paperW = cfg.paperWidth || 7;
-    var paperH = cfg.paperHeight || 4;
-    var minDim = Math.min(Math.round(paperW * 10), Math.round(paperH * 10));
-    var qrCellSize = 5;
+    const cfg = d.printConfig || {};
+    const paperW = cfg.paperWidth || 7;
+    const paperH = cfg.paperHeight || 4;
+    const minDim = Math.min(Math.round(paperW * 10), Math.round(paperH * 10));
+    let qrCellSize = 5;
     if (minDim <= 35) qrCellSize = 3;
     else if (minDim <= 50) qrCellSize = 4;
     else if (minDim <= 80) qrCellSize = 5;
     else qrCellSize = 6;
 
-    var printOpts = {
+    const printOpts = {
       qrCellSize: qrCellSize,
       orientation: cfg.orientation,
       paperWidth: paperW,
       paperHeight: paperH,
     };
 
-    var printFn;
+    let printFn;
     if (cfg.printMode === 'wifi') {
       if (!cfg.wifiHost) {
         toast.info('请输入打印机IP地址');
@@ -534,7 +534,7 @@ Page({
 
     printFn(bundles, d.orderNo, d.orderInfo, printOpts).catch(function (err) {
       wx.hideLoading();
-      var msg = err && err.message ? err.message : '打印失败';
+      const msg = err && err.message ? err.message : '打印失败';
       wx.showModal({
         title: cfg.printMode === 'wifi' ? 'WiFi打印失败' : '蓝牙打印失败',
         content: msg,
@@ -544,11 +544,11 @@ Page({
   },
 
   onOrientationChange(e) {
-    var orient = e.currentTarget.dataset.orient;
-    var cfg = this.data.printConfig;
+    const orient = e.currentTarget.dataset.orient;
+    const cfg = this.data.printConfig;
     if (cfg.orientation === orient) return;
-    var sizes = this.data.LABEL_SIZES[orient] || [];
-    var first = sizes[0] || { w: orient === 'vertical' ? 4 : 7, h: orient === 'vertical' ? 6 : 4, label: orient === 'vertical' ? '40×60' : '60×40' };
+    const sizes = this.data.LABEL_SIZES[orient] || [];
+    const first = sizes[0] || { w: orient === 'vertical' ? 4 : 7, h: orient === 'vertical' ? 6 : 4, label: orient === 'vertical' ? '40×60' : '60×40' };
     this.setData({
       'printConfig.orientation': orient,
       'printConfig.paperWidth': first.w,
@@ -649,7 +649,7 @@ Page({
   /* =================== 转单 Panel =================== */
 
   _initTransferPanel() {
-    var d = this.data;
+    const d = this.data;
     if (d.activeTab !== 'transfer') return;
     this._tfLoadTracking();
     this._tfLoadFactories();
@@ -657,7 +657,7 @@ Page({
   },
 
   onTransferModeChange(e) {
-    var mode = e.currentTarget.dataset.mode;
+    const mode = e.currentTarget.dataset.mode;
     if (mode === 'bundle' && !this.data.hasBundles) {
       toast.info('尚未生成菲号，请先在裁剪分扎中生成菲号后再进行裁片转单');
       return;
@@ -668,9 +668,9 @@ Page({
   /* ── 跟踪记录（菲号×工序扫码状态，用于判定已完成/可转单）── */
 
   _tfLoadTracking() {
-    var that = this;
-    var d = that.data;
-    var oid = d.orderId || (d.orderInfo && d.orderInfo.id) || '';
+    const that = this;
+    const d = that.data;
+    const oid = d.orderId || (d.orderInfo && d.orderInfo.id) || '';
     if (!oid) {
       that._tfTracking = [];
       that._tfLoadBundles([]);
@@ -679,7 +679,7 @@ Page({
     }
 
     api.production.getOrderTracking(String(oid)).then(function (records) {
-      var list = Array.isArray(records) ? records : (records && records.records) || [];
+      const list = Array.isArray(records) ? records : (records && records.records) || [];
       that._tfTracking = list;
       that._tfLoadBundles(list);
       that._tfLoadProcesses(list);
@@ -692,10 +692,10 @@ Page({
 
   /* 根据 tracking 记录计算菲号是否已完成（所有工序皆已扫码 → 不可转单） */
   _tfBundleScanMap(trackingRecords) {
-    var map = {};
+    const map = {};
     if (!trackingRecords || !trackingRecords.length) return map;
     trackingRecords.forEach(function (t) {
-      var bid = t.cuttingBundleId;
+      const bid = t.cuttingBundleId;
       if (!bid) return;
       if (!map[bid]) map[bid] = { total: 0, scanned: 0 };
       map[bid].total += 1;
@@ -707,19 +707,19 @@ Page({
   /* ── 菲号选择 ── */
 
   _tfLoadBundles(trackingRecords) {
-    var that = this;
-    var d = that.data;
+    const that = this;
+    const d = that.data;
     that.setData({ _tfBundlesLoading: true });
 
-    var scanMap = that._tfBundleScanMap(trackingRecords);
+    const scanMap = that._tfBundleScanMap(trackingRecords);
 
     api.production.listBundles(d.orderNo, 1, 500).then(function (res) {
-      var bundles = that._extractList(res);
-      var list = bundles.map(function (b) {
-        var bid = b.id;
-        var s = scanMap[bid];
-        var completed = s && s.total > 0 && s.scanned === s.total;
-        var partialScanned = s && s.scanned > 0 && s.scanned < s.total;
+      const bundles = that._extractList(res);
+      const list = bundles.map(function (b) {
+        const bid = b.id;
+        const s = scanMap[bid];
+        const completed = s && s.total > 0 && s.scanned === s.total;
+        const partialScanned = s && s.scanned > 0 && s.scanned < s.total;
         return {
           id: bid || b.bundleNo,
           bundleLabel: b.bundleNo || b.bundleLabel || bid,
@@ -739,10 +739,10 @@ Page({
   },
 
   onToggleAllBundles() {
-    var d = this.data;
-    var bundles = d._tfBundles;
-    var selected = {};
-    var cnt = 0;
+    const d = this.data;
+    const bundles = d._tfBundles;
+    const selected = {};
+    let cnt = 0;
     if (!d.allSelected) {
       bundles.forEach(function (b) {
         if (!b._disabled) { selected[b.id] = true; cnt++; }
@@ -752,14 +752,14 @@ Page({
   },
 
   onToggleBundle(e) {
-    var id = e.currentTarget.dataset.id;
-    var d = this.data;
-    var bundle = d._tfBundles.find(function (b) { return b.id === id; });
+    const id = e.currentTarget.dataset.id;
+    const d = this.data;
+    const bundle = d._tfBundles.find(function (b) { return b.id === id; });
     if (bundle && bundle._disabled) return;
-    var selected = {};
+    const selected = {};
     Object.keys(d.selectedBundles).forEach(function (k) { selected[k] = d.selectedBundles[k]; });
     if (selected[id]) { delete selected[id]; } else { selected[id] = true; }
-    var cnt = Object.keys(selected).length;
+    const cnt = Object.keys(selected).length;
     this.setData({
       selectedBundles: selected,
       selectedBundleCount: cnt,
@@ -770,14 +770,14 @@ Page({
   /* ── 工序单价 ── */
 
   _tfLoadProcesses(trackingRecords) {
-    var that = this;
-    var d = that.data;
+    const that = this;
+    const d = that.data;
     that.setData({ processesLoading: true });
 
-    var scanMap = {};
+    const scanMap = {};
     if (trackingRecords && trackingRecords.length) {
       trackingRecords.forEach(function (t) {
-        var code = t.processCode;
+        const code = t.processCode;
         if (!code) return;
         if (!scanMap[code]) scanMap[code] = { total: 0, scanned: 0 };
         scanMap[code].total += 1;
@@ -789,18 +789,18 @@ Page({
     function buildFromWorkflow(wfRaw) {
       if (!wfRaw) return [];
       try {
-        var wf = typeof wfRaw === 'string' ? JSON.parse(wfRaw) : wfRaw;
-        var result = [];
+        const wf = typeof wfRaw === 'string' ? JSON.parse(wfRaw) : wfRaw;
+        const result = [];
         // 优先用 processesByNode（含子工序明细单价）
-        var pbn = wf && wf.processesByNode;
+        const pbn = wf && wf.processesByNode;
         if (pbn && typeof pbn === 'object') {
           Object.keys(pbn).forEach(function (stageKey) {
-            var subList = pbn[stageKey];
+            const subList = pbn[stageKey];
             if (!Array.isArray(subList)) return;
             subList.forEach(function (n) {
-              var code = n.id || n.processCode || n.name || '-';
-              var price = Number(n.unitPrice || n.price || 0);
-              var s = scanMap[code];
+              const code = n.id || n.processCode || n.name || '-';
+              const price = Number(n.unitPrice || n.price || 0);
+              const s = scanMap[code];
               result.push({
                 processCode: code,
                 processName: n.name || n.processName || '-',
@@ -816,11 +816,11 @@ Page({
           if (result.length > 0) return result;
         }
         // 回退：从 nodes（父节点汇总）构建
-        var nodes = (wf && wf.nodes) || [];
+        const nodes = (wf && wf.nodes) || [];
         return nodes.map(function (n) {
-          var code = n.id || n.processCode || n.name || '-';
-          var price = Number(n.unitPrice || n.price || 0);
-          var s = scanMap[code];
+          const code = n.id || n.processCode || n.name || '-';
+          const price = Number(n.unitPrice || n.price || 0);
+          const s = scanMap[code];
           return {
             processCode: code,
             processName: n.name || '-',
@@ -836,13 +836,13 @@ Page({
     }
 
     api.production.queryOrderProcesses(d.orderNo).then(function (res) {
-      var list = Array.isArray(res) ? res : (res && res.records) || [];
+      const list = Array.isArray(res) ? res : (res && res.records) || [];
       if (list.length > 0) {
         // API 有数据时直接用（有扫码记录/跟踪记录的订单）
-        var processes = list.map(function (p) {
-          var code = p.processCode || p.code || '-';
-          var price = Number(p.unitPrice || p.price || 0);
-          var s = scanMap[code];
+        const processes = list.map(function (p) {
+          const code = p.processCode || p.code || '-';
+          const price = Number(p.unitPrice || p.price || 0);
+          const s = scanMap[code];
           return {
             processCode: code,
             processName: p.processName || p.name || '-',
@@ -857,20 +857,20 @@ Page({
         that.setData({ processes: processes, processesLoading: false });
       } else {
         // API 返回空（无扫码记录时）→ fallback 到订单的 progressWorkflowJson
-        var wfProcesses = buildFromWorkflow(d.orderInfo && d.orderInfo.progressWorkflowJson);
+        const wfProcesses = buildFromWorkflow(d.orderInfo && d.orderInfo.progressWorkflowJson);
         that.setData({ processes: wfProcesses, processesLoading: false });
       }
     }).catch(function () {
       // 请求失败 → 同样 fallback 到 progressWorkflowJson
-      var wfProcesses = buildFromWorkflow(d.orderInfo && d.orderInfo.progressWorkflowJson);
+      const wfProcesses = buildFromWorkflow(d.orderInfo && d.orderInfo.progressWorkflowJson);
       that.setData({ processes: wfProcesses, processesLoading: false });
     });
   },
 
   onToggleAllProcesses() {
-    var d = this.data;
-    var allCodes = {};
-    var cnt = 0;
+    const d = this.data;
+    const allCodes = {};
+    let cnt = 0;
     if (!d.allProcessSelected) {
       d.processes.forEach(function (p) {
         if (!p._completed) { allCodes[p.processCode] = true; cnt++; }
@@ -880,14 +880,14 @@ Page({
   },
 
   onToggleTransferProcess(e) {
-    var code = e.currentTarget.dataset.code;
-    var d = this.data;
-    var proc = d.processes.find(function (p) { return p.processCode === code; });
+    const code = e.currentTarget.dataset.code;
+    const d = this.data;
+    const proc = d.processes.find(function (p) { return p.processCode === code; });
     if (proc && proc._completed) return;
-    var selected = {};
+    const selected = {};
     Object.keys(d.selectedProcessCodes).forEach(function (k) { selected[k] = d.selectedProcessCodes[k]; });
     if (selected[code]) { delete selected[code]; } else { selected[code] = true; }
-    var cnt = Object.keys(selected).length;
+    const cnt = Object.keys(selected).length;
     this.setData({
       selectedProcessCodes: selected,
       selectedProcessCount: cnt,
@@ -896,13 +896,13 @@ Page({
   },
 
   onPriceInput(e) {
-    var code = e.currentTarget.dataset.code;
-    var v = e.detail.value;
-    var d = this.data;
-    var overrides = {};
+    const code = e.currentTarget.dataset.code;
+    const v = e.detail.value;
+    const d = this.data;
+    const overrides = {};
     Object.keys(d.priceOverrides).forEach(function (k) { overrides[k] = d.priceOverrides[k]; });
     if (v === '' || v === null || v === undefined) { delete overrides[code]; } else {
-      var n = parseFloat(v);
+      const n = parseFloat(v);
       if (!isNaN(n) && n >= 0) overrides[code] = n;
     }
     this.setData({ priceOverrides: overrides });
@@ -917,13 +917,13 @@ Page({
   /* ── 工厂搜索 ── */
 
   _tfLoadFactories() {
-    var that = this;
-    var d = that.data;
+    const that = this;
+    const d = that.data;
     that.setData({ factoriesLoading: true });
 
     api.production.transferSearchFactories(d.factoryKeyword || '', d.factoryPage || 1, 20).then(function (res) {
-      var list = (res && res.records) || (res && res.list) || (Array.isArray(res) ? res : []);
-      var factories = (d.factoryPage || 1) > 1 ? d.factories.concat(list) : list;
+      const list = (res && res.records) || (res && res.list) || (Array.isArray(res) ? res : []);
+      const factories = (d.factoryPage || 1) > 1 ? d.factories.concat(list) : list;
       that.setData({
         factories: factories,
         factoriesLoading: false,
@@ -940,14 +940,14 @@ Page({
   },
 
   onSelectFactory(e) {
-    var factory = e.currentTarget.dataset.factory;
+    const factory = e.currentTarget.dataset.factory;
     this.setData({ selectedFactory: factory });
   },
 
   onLoadMoreFactories() {
-    var d = this.data;
+    const d = this.data;
     if (d.factoriesLoading || !d.factoryHasMore) return;
-    var nextPage = (d.factoryPage || 1) + 1;
+    const nextPage = (d.factoryPage || 1) + 1;
     this.setData({ factoryPage: nextPage });
     this._tfLoadFactories();
   },
@@ -955,13 +955,13 @@ Page({
   /* ── 人员搜索 ── */
 
   _tfLoadUsers() {
-    var that = this;
-    var d = that.data;
+    const that = this;
+    const d = that.data;
     that.setData({ usersLoading: true });
 
     api.production.transferSearchUsers(d.userKeyword || '', d.userPage || 1, 20).then(function (res) {
-      var list = (res && res.records) || (res && res.list) || (Array.isArray(res) ? res : []);
-      var users = (d.userPage || 1) > 1 ? d.users.concat(list) : list;
+      const list = (res && res.records) || (res && res.list) || (Array.isArray(res) ? res : []);
+      const users = (d.userPage || 1) > 1 ? d.users.concat(list) : list;
       that.setData({
         users: users,
         usersLoading: false,
@@ -978,14 +978,14 @@ Page({
   },
 
   onSelectUser(e) {
-    var user = e.currentTarget.dataset.user;
+    const user = e.currentTarget.dataset.user;
     this.setData({ selectedUser: user });
   },
 
   onLoadMoreUsers() {
-    var d = this.data;
+    const d = this.data;
     if (d.usersLoading || !d.userHasMore) return;
-    var nextPage = (d.userPage || 0) + 1;
+    const nextPage = (d.userPage || 0) + 1;
     this.setData({ userPage: nextPage });
     this._tfLoadUsers();
   },
@@ -997,18 +997,18 @@ Page({
   /* ── 提交转单 ── */
 
   onSubmitTransfer() {
-    var d = this.data;
+    const d = this.data;
     if (d.submitting) return;
 
     if (d.transferTab === 'factory' && !d.selectedFactory) return toast.info('请选择目标工厂');
     if (d.transferTab === 'user' && !d.selectedUser) return toast.info('请选择目标人员');
 
     if (d.transferMode === 'bundle') {
-      var cnt = Object.keys(d.selectedBundles).length;
+      const cnt = Object.keys(d.selectedBundles).length;
       if (!cnt) return toast.info('请至少选择一个菲号');
     }
 
-    var payload = {
+    const payload = {
       orderNo: d.orderNo,
       orderId: d.orderId || (d.orderInfo && d.orderInfo.id) || '',
       transferMode: d.transferMode,
@@ -1028,7 +1028,7 @@ Page({
     }
 
     payload.processes = Object.keys(d.selectedProcessCodes).map(function (code) {
-      var p = { processCode: code };
+      const p = { processCode: code };
       if (d.priceOverrides[code] != null) p.newPrice = d.priceOverrides[code];
       return p;
     });
@@ -1037,8 +1037,8 @@ Page({
 
     this.setData({ submitting: true });
 
-    var that = this;
-    var apiFn = d.transferTab === 'factory'
+    const that = this;
+    const apiFn = d.transferTab === 'factory'
       ? api.production.transferCreateToFactory
       : api.production.transferCreate;
     apiFn(payload).then(function () {
@@ -1060,7 +1060,7 @@ Page({
   _parseAndSetCuttingLines(order) {
     if (!order) { this.setData({ cuttingLinesHasData: false }); return; }
 
-    var lines = parseProductionOrderLines(order);
+    const lines = parseProductionOrderLines(order);
     if (!lines || !lines.length) {
       this.setData({ cuttingLinesHasData: false });
       return;
@@ -1071,7 +1071,7 @@ Page({
       return sortSizeNames([a.size, b.size]).indexOf(a.size) === 0 ? -1 : 1;
     });
 
-    var cuttingOrderLines = lines.map(function (line, idx) {
+    const cuttingOrderLines = lines.map(function (line, idx) {
       return {
         color: line.color || '',
         size: line.size || '',
@@ -1091,31 +1091,31 @@ Page({
   },
 
   _recalculateCutting() {
-    var bsVal = parseInt(this.data.bundleSize, 10);
-    var bs = isNaN(bsVal) || bsVal < 1 ? 20 : bsVal;
-    var rateVal = parseFloat(this.data.excessRate);
-    var rate = isNaN(rateVal) ? 0 : rateVal;
-    var lines = this.data.cuttingOrderLines;
+    const bsVal = parseInt(this.data.bundleSize, 10);
+    const bs = isNaN(bsVal) || bsVal < 1 ? 20 : bsVal;
+    const rateVal = parseFloat(this.data.excessRate);
+    const rate = isNaN(rateVal) ? 0 : rateVal;
+    const lines = this.data.cuttingOrderLines;
 
-    var totalOrdered = 0;
-    var totalCutting = 0;
-    var totalBundles = 0;
+    let totalOrdered = 0;
+    let totalCutting = 0;
+    let totalBundles = 0;
 
-    var updated = lines.map(function (line) {
-      var orderQty = line.orderedQty || 0;
+    const updated = lines.map(function (line) {
+      const orderQty = line.orderedQty || 0;
       totalOrdered += orderQty;
 
-      var baseCuttingQty = rate > 0
+      const baseCuttingQty = rate > 0
         ? Math.ceil(orderQty * (1 + rate / 100))
         : orderQty;
 
-      var bundles = baseCuttingQty > 0 ? Math.ceil(baseCuttingQty / bs) : 0;
-      var remainder = bs > 0 ? baseCuttingQty % bs : 0;
-      var defaultLastQty = remainder > 0 ? remainder : (bundles > 0 ? bs : 0);
-      var lastQty = line.lastBundleOverride != null
+      const bundles = baseCuttingQty > 0 ? Math.ceil(baseCuttingQty / bs) : 0;
+      const remainder = bs > 0 ? baseCuttingQty % bs : 0;
+      const defaultLastQty = remainder > 0 ? remainder : (bundles > 0 ? bs : 0);
+      const lastQty = line.lastBundleOverride != null
         ? line.lastBundleOverride
         : defaultLastQty;
-      var cuttingQty = bundles > 1
+      const cuttingQty = bundles > 1
         ? (bundles - 1) * bs + lastQty
         : bundles === 1
           ? lastQty
@@ -1124,7 +1124,7 @@ Page({
       totalCutting += cuttingQty;
       totalBundles += bundles;
 
-      var bundleDisplay = '-';
+      let bundleDisplay = '-';
       if (bundles === 1) {
         bundleDisplay = '1\u00D7' + lastQty + '件';
       } else if (bundles > 1) {
@@ -1153,9 +1153,9 @@ Page({
   },
 
   onBundleSizeInput(e) {
-    var val = (e.detail.value || '').trim();
-    var parsed = parseInt(val, 10);
-    var lines = this.data.cuttingOrderLines.map(function (l) {
+    const val = (e.detail.value || '').trim();
+    const parsed = parseInt(val, 10);
+    const lines = this.data.cuttingOrderLines.map(function (l) {
       return Object.assign({}, l, { lastBundleOverride: null });
     });
     this.setData({
@@ -1166,9 +1166,9 @@ Page({
   },
 
   onExcessRateInput(e) {
-    var val = (e.detail.value || '').trim();
-    var parsed = parseFloat(val);
-    var lines = this.data.cuttingOrderLines.map(function (l) {
+    const val = (e.detail.value || '').trim();
+    const parsed = parseFloat(val);
+    const lines = this.data.cuttingOrderLines.map(function (l) {
       return Object.assign({}, l, { lastBundleOverride: null });
     });
     this.setData({
@@ -1179,12 +1179,12 @@ Page({
   },
 
   onLastBundleQtyInput(e) {
-    var idx = parseInt(e.currentTarget.dataset.idx, 10);
-    var val = parseInt(e.detail.value, 10);
+    const idx = parseInt(e.currentTarget.dataset.idx, 10);
+    const val = parseInt(e.detail.value, 10);
     if (isNaN(idx) || idx < 0 || idx >= this.data.cuttingOrderLines.length) return;
-    var override = isNaN(val) || val < 1 ? null : val;
-    var key = 'cuttingOrderLines[' + idx + '].lastBundleOverride';
-    var obj = {};
+    const override = isNaN(val) || val < 1 ? null : val;
+    const key = 'cuttingOrderLines[' + idx + '].lastBundleOverride';
+    const obj = {};
     obj[key] = override;
     this.setData(obj);
     this._recalculateCutting();
@@ -1192,19 +1192,19 @@ Page({
 
   onGenerateBundles() {
     if (this.data.cuttingSubmitting) return;
-    var d = this.data;
-    var cuttingOrderLines = d.cuttingOrderLines;
-    var bundleSize = parseInt(d.bundleSize, 10) || 20;
-    var orderId = d.orderId;
-    var orderNo = d.orderNo;
+    const d = this.data;
+    const cuttingOrderLines = d.cuttingOrderLines;
+    const bundleSize = parseInt(d.bundleSize, 10) || 20;
+    const orderId = d.orderId;
+    const orderNo = d.orderNo;
 
     if (!orderId) return toast.error('缺少订单信息');
     if (!cuttingOrderLines.length) return toast.error('无可裁剪的尺码数据');
 
-    var items = [];
+    const items = [];
     cuttingOrderLines.forEach(function (line) {
       if (line.cuttingQty <= 0 || line.bundleCount <= 0) return;
-      for (var b = 0; b < line.bundleCount - 1; b++) {
+      for (let b = 0; b < line.bundleCount - 1; b++) {
         items.push({ color: String(line.color || ''), size: String(line.size || ''), quantity: bundleSize });
       }
       items.push({ color: String(line.color || ''), size: String(line.size || ''), quantity: line.lastBundleQty || bundleSize });
@@ -1212,7 +1212,7 @@ Page({
 
     if (!items.length) return toast.error('无有效裁剪数量');
 
-    var that = this;
+    const that = this;
     this.setData({ cuttingSubmitting: true });
     api.production.generateCuttingBundles(orderId, items).then(function () {
       toast.success('菲号生成成功');

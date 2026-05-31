@@ -5,7 +5,7 @@ function showTip(msg) { toast.info(msg); }
 
 Page({
   onCoverPreview: function (e) {
-    var url = e.currentTarget.dataset.url;
+    const url = e.currentTarget.dataset.url;
     if (url) wx.previewImage({ current: url, urls: [url] });
   },
 
@@ -49,7 +49,7 @@ Page({
   },
 
   onShow() {
-    var app = getApp();
+    const app = getApp();
     if (app.requireAuth && !app.requireAuth()) return;
     this._loadUnreadCount();
     this._checkAdmin();
@@ -148,7 +148,7 @@ Page({
       this.fetchProcesses(orderNo, data.splitProcessName || data.currentProcess || '');
     } catch (e) {
       console.error('[bundle-split] scanBundle fail', e);
-      var msg = '扫码识别失败，请重试';
+      let msg = '扫码识别失败，请重试';
       if (e && e.message) {
         if (e.message.indexOf('不存在') >= 0) msg = '未找到该菲号，请确认二维码正确';
         else if (e.message.indexOf('400') >= 0 || e.message.indexOf('参数') >= 0) msg = '二维码格式不正确，请确认扫的是菲号';
@@ -194,7 +194,7 @@ Page({
       if (!list.length) showTip('该订单暂无菲号');
     } catch (e) {
       console.error('[bundle-split] fetch fail', e);
-      var msg = '加载菲号列表失败';
+      let msg = '加载菲号列表失败';
       if (e && e.message) msg = e.message.length > 20 ? msg : e.message;
       showTip(msg);
       this.setData({ loading: false });
@@ -339,7 +339,7 @@ Page({
       this.fetchBundles();
     } catch (e) {
       console.error('[bundle-split] request fail', e);
-      var msg = '拆菲请求失败';
+      let msg = '拆菲请求失败';
       if (e && e.message) {
         if (e.message.indexOf('关单') >= 0 || e.message.indexOf('关闭') >= 0) msg = e.message;
         else if (e.message.indexOf('已完成') >= 0 || e.message.indexOf('取消') >= 0) msg = e.message;
@@ -378,7 +378,7 @@ Page({
       this.loadPendingSplits();
     } catch (err) {
       console.error('[bundle-split] confirmPendingSplit fail', err);
-      var msg = '确认失败，请重试';
+      let msg = '确认失败，请重试';
       if (err && err.message) msg = err.message.length > 30 ? msg : err.message;
       showTip(msg);
     } finally {

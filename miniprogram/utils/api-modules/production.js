@@ -173,9 +173,16 @@ const production = {
     const id = String(patternId || '').trim();
     return ok(`/api/production/pattern/${encodeURIComponent(id)}`, 'GET', {});
   },
+  listPatterns(params) {
+    return ok('/api/production/pattern/list', 'GET', params || {});
+  },
   getPatternProcessConfig(patternId) {
     const id = String(patternId || '').trim();
     return ok(`/api/production/pattern/${encodeURIComponent(id)}/process-config`, 'GET', {});
+  },
+  getPatternLinkedOrder(patternId) {
+    const id = String(patternId || '').trim();
+    return ok(`/api/production/pattern/${encodeURIComponent(id)}/linked-order`, 'GET', {});
   },
   getPatternScanRecords(patternId) {
     const id = String(patternId || '').trim();
@@ -192,11 +199,14 @@ const production = {
       remark,
     });
   },
-  receivePattern(patternId, remark) {
+  receivePattern(patternId, remark, extra) {
     const id = String(patternId || '').trim();
-    return ok(`/api/production/pattern/${encodeURIComponent(id)}/workflow-action?action=receive`, 'POST', {
-      remark: remark || '',
-    });
+    const payload = { remark: remark || '' };
+    if (extra) {
+      if (extra.color) payload.color = extra.color;
+      if (extra.quantity) payload.quantity = extra.quantity;
+    }
+    return ok(`/api/production/pattern/${encodeURIComponent(id)}/workflow-action?action=receive`, 'POST', payload);
   },
   completePatternByTask(patternId) {
     const id = String(patternId || '').trim();
@@ -262,7 +272,7 @@ const production = {
   },
 
   addOrderRemark(targetType, targetNo, content, authorRole, imageUrls) {
-    var payload = { targetType: targetType, targetNo: targetNo, content: content };
+    const payload = { targetType: targetType, targetNo: targetNo, content: content };
     if (authorRole) payload.authorRole = authorRole;
     if (imageUrls) payload.imageUrls = imageUrls;
     return ok('/api/system/order-remark/add', 'POST', payload);
@@ -273,7 +283,7 @@ const production = {
   },
 
   addOrderImage(orderNo, imageUrl, thumbnailUrl) {
-    var payload = { orderNo: orderNo, imageUrl: imageUrl };
+    const payload = { orderNo: orderNo, imageUrl: imageUrl };
     if (thumbnailUrl) payload.thumbnailUrl = thumbnailUrl;
     return ok('/api/production/order-image', 'POST', payload);
   },
@@ -284,6 +294,10 @@ const production = {
 
   listOrderImageSnapshots(orderNo) {
     return ok('/api/production/order-image/snapshots', 'POST', { orderNo: orderNo });
+  },
+
+  createCuttingTask(payload) {
+    return ok('/api/production/cutting-task/custom/create', 'POST', payload || {});
   },
 };
 

@@ -1,0 +1,64 @@
+<view class="page">
+  <view class="search-bar">
+    <view class="search-box">
+      <text class="search-icon">🔍</text>
+      <input class="search-input" placeholder="搜索应用名称" value="{{searchKeyword}}" bindinput="onSearchInput" />
+      <text class="search-clear" wx:if="{{searchKeyword}}" catchtap="onSearchInput" data-clear="true">✕</text>
+    </view>
+    <text class="edit-btn {{editing ? 'edit-btn-active' : ''}}" bindtap="onEditToggle">{{editing ? '完成' : '编辑'}}</text>
+  </view>
+
+  <view class="fav-section" wx:if="{{favoriteApps.length > 0}}">
+    <view class="section-header">
+      <view class="section-title-row">
+        <text class="section-title">⭐ 我的收藏</text>
+        <text class="section-count">{{favoriteApps.length}}</text>
+      </view>
+      <text class="clear-btn" wx:if="{{editing}}" bindtap="onClearFavorites">清空</text>
+    </view>
+    <view class="app-grid">
+      <view class="app-item" wx:for="{{favoriteApps}}" wx:key="id" data-app="{{item}}" bindtap="onAppTap">
+        <view class="menu-icon-circle {{item.circleClass}}">
+          <view class="line-icon line-icon--lg {{item.iconClass}}"></view>
+          <text wx:if="{{item.badge}}" class="menu-badge">{{item.badge}}</text>
+          <view class="fav-star" catchtap="onToggleFavorite" data-app="{{item}}">⭐</view>
+        </view>
+        <text class="app-name">{{item.name}}</text>
+        <view class="remove-btn" wx:if="{{editing}}" data-app="{{item}}" catchtap="onToggleFavorite">✕</view>
+      </view>
+    </view>
+  </view>
+
+  <view class="all-apps-section">
+    <view class="section-header">
+      <view class="section-title-row">
+        <text class="section-title">📱 全部应用</text>
+        <text class="section-count">{{filteredApps.length > 0 ? (filteredApps.length + '个分组') : '暂无结果'}}</text>
+      </view>
+    </view>
+
+    <view class="empty-result" wx:if="{{filteredApps.length === 0 && searchKeyword}}">
+      <text class="empty-icon">🔍</text>
+      <text class="empty-text">未找到"{{searchKeyword}}"相关应用</text>
+    </view>
+
+    <view class="app-group" wx:for="{{filteredApps}}" wx:key="group">
+      <view class="group-title">
+        <text>{{item.group}}</text>
+        <text class="group-count">{{item.items.length}}个</text>
+      </view>
+      <view class="app-grid">
+        <view class="app-item" wx:for="{{item.items}}" wx:for-item="app" wx:key="id" data-app="{{app}}" bindtap="onAppTap">
+          <view class="menu-icon-circle {{app.circleClass}}">
+            <view class="line-icon line-icon--lg {{app.iconClass}}"></view>
+            <text wx:if="{{app.badge}}" class="menu-badge">{{app.badge}}</text>
+            <view class="fav-star {{isFavorite(app.id) ? 'fav-star-active' : ''}}" catchtap="onToggleFavorite" data-app="{{app}}">
+              {{isFavorite(app.id) ? '⭐' : '☆'}}
+            </view>
+          </view>
+          <text class="app-name">{{app.name}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>

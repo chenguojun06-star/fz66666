@@ -3,7 +3,7 @@
  * 通过 URL 参数接收 styleNo / color / size（由扫码入口解析 QR 后跳转）
  * 调用 /api/stock/sample/scan-query 获取库存状态，展示入库/借调/归还按钮
  */
-const api = require('../../../../../utils/api');
+const api = require('/utils/api');
 
 Page({
   data: {
@@ -103,7 +103,7 @@ Page({
             quantity: 1,
             warehouseAreaId: warehouseAreaId,
             location: warehouseLocationCode,
-          })
+          }),
         );
       },
     });
@@ -125,7 +125,7 @@ Page({
             borrower: userInfo.name || userInfo.username || '',
             borrowerId: userInfo.id ? String(userInfo.id) : '',
             quantity: 1,
-          })
+          }),
         );
       },
     });
@@ -150,7 +150,7 @@ Page({
           api.sampleStock.returnSample({
             loanId: loan.id,
             quantity: loan.quantity || 1,
-          })
+          }),
         );
       },
     });
@@ -199,13 +199,13 @@ Page({
       const data = res?.data || res;
       const list = Array.isArray(data) ? data : [];
       if (list.length > 0) {
-        var areaMap = {};
-        var options = [];
-        var sorted = list
+        const areaMap = {};
+        const options = [];
+        const sorted = list
           .filter(function(item) { return item.areaName && item.id; })
           .sort(function(a, b) { return (a.sort || 0) - (b.sort || 0); });
-        for (var i = 0; i < sorted.length; i++) {
-          var item = sorted[i];
+        for (let i = 0; i < sorted.length; i++) {
+          const item = sorted[i];
           options.push(item.areaName);
           areaMap[item.areaName] = item.id;
         }
@@ -256,15 +256,15 @@ Page({
       return;
     }
     try {
-      var res = await api.warehouse.listLocations('SAMPLE', areaId);
-      var data = res?.data || res;
-      var list = Array.isArray(data) ? data : [];
+      const res = await api.warehouse.listLocations('SAMPLE', areaId);
+      const data = res?.data || res;
+      const list = Array.isArray(data) ? data : [];
       if (list.length > 0) {
-        var locMap = {};
-        var options = [];
-        for (var i = 0; i < list.length; i++) {
-          var item = list[i];
-          var label = item.locationCode || item.locationName || '';
+        const locMap = {};
+        const options = [];
+        for (let i = 0; i < list.length; i++) {
+          const item = list[i];
+          const label = item.locationCode || item.locationName || '';
           if (label) {
             options.push(label);
             locMap[label] = item.locationCode || label;

@@ -213,7 +213,7 @@ function handle403Error({ statusCode, body, token, serverMessage, skipAuthRedire
           type: 'auth',
           statusCode,
           data: body,
-        })
+        }),
       );
       return true;
     }
@@ -277,7 +277,7 @@ function handleHttpError({ statusCode, serverMessage, body, url, method, reject 
 
   if (statusCode === 400 && body && typeof body === 'object') {
     if (body.errors && Array.isArray(body.errors)) {
-      const fieldErrors = body.errors.map(function(e) { return e.defaultMessage || e.message }).filter(Boolean);
+      const fieldErrors = body.errors.map(function(e) { return e.defaultMessage || e.message; }).filter(Boolean);
       if (fieldErrors.length > 0) {
         detailMsg = fieldErrors.join('；');
       }
@@ -583,8 +583,8 @@ function uploadFile(options) {
       fail(err) {
         const errMsg = (err && err.errMsg) || '上传失败';
         const mappedMsg = errMsg.includes('timeout') ? '上传超时，请检查网络' :
-                         errMsg.includes('request:fail') ? '网络异常，请重试' :
-                         '上传失败';
+          errMsg.includes('request:fail') ? '网络异常，请重试' :
+            '上传失败';
         reject(createError(mappedMsg, { type: 'network', raw: err }));
       },
     });

@@ -1,9 +1,9 @@
-var api = require('../../utils/api');
-var { safeNavigate } = require('../../utils/uiHelper');
-var { isTokenExpired } = require('../../utils/storage');
-var { eventBus, Events } = require('../../utils/eventBus');
+const api = require('../../utils/api');
+const { safeNavigate } = require('../../utils/uiHelper');
+const { isTokenExpired } = require('../../utils/storage');
+const { eventBus, Events } = require('../../utils/eventBus');
 
-var DAILY_FLOWERS = [
+const DAILY_FLOWERS = [
   '🌸 樱花 — 生命之美，转瞬即永恒',
   '🌹 玫瑰 — 热情与勇气',
   '🌻 向日葵 — 追随阳光，永远热忱',
@@ -37,7 +37,7 @@ var DAILY_FLOWERS = [
   '🎄 冬青 — 寒冬也有绿意',
 ];
 
-var MENU_KEY_MAP = {
+const MENU_KEY_MAP = {
   smartOps: 'miniprogram.menu.smartOps',
   dashboard: 'miniprogram.menu.dashboard',
   orderCreate: 'miniprogram.menu.orderCreate',
@@ -52,15 +52,15 @@ var MENU_KEY_MAP = {
 };
 
 function getGreeting() {
-  var h = new Date().getHours();
+  const h = new Date().getHours();
   if (h < 12) return '上午好';
   if (h < 18) return '下午好';
   return '晚上好';
 }
 
 function buildMenuItems(menuVisibility) {
-  var visibility = menuVisibility || {};
-  var items = [];
+  const visibility = menuVisibility || {};
+  const items = [];
 
   if (visibility.smartOps !== false) {
     items.push({ id: 'smartOps', name: '运营看板', iconClass: 'icon-menu-ai', circleClass: 'menu-icon-circle--purple', route: '/pages/smart-ops/index', badge: 'AI' });
@@ -99,6 +99,7 @@ Page({
     userName: '',
     orgName: '',
     menuItems: [],
+    favoriteApps: [],
     unreadNoticeCount: 0,
     dateInfo: { date: '', day: '', season: '', dailyTip: '' },
   },
@@ -106,11 +107,12 @@ Page({
   _menuVisibility: null,
 
   onLoad: function () {
+    this.loadFavorites();
     this.setData({
       greeting: getGreeting(),
       menuItems: buildMenuItems(null),
     });
-    var app = getApp();
+    const app = getApp();
     if (app && typeof app.requireAuth === 'function' && !app.requireAuth()) return;
     this._loadUserName();
     this._computeDateInfo();
@@ -120,7 +122,7 @@ Page({
     if (typeof this.getTabBar === 'function' && this.getTabBar()) {
       this.getTabBar().setData({ selected: 0 });
     }
-    var app = getApp();
+    const app = getApp();
     if (app && typeof app.requireAuth === 'function' && !app.requireAuth()) return;
     this.setData({ greeting: getGreeting() });
     this._computeDateInfo();
@@ -128,6 +130,18 @@ Page({
     this._refreshHomeData();
     this._bindWsEvents();
     this._loadMenuVisibility();
+    this.loadFavorites();
+    // 暂时禁用购物车加载，避免 API 404 导致的问题
+    // this._loadCartCount();
+  },
+
+  loadFavorites: function () {
+    try {
+      const favorites = wx.getStorageSync('favoriteApps') || [];
+      this.setData({ favoriteApps: favorites });
+    } catch (e) {
+      console.error('Load favorites failed', e);
+    }
   },
 
   onHide: function () {
@@ -149,7 +163,7 @@ Page({
   _bindWsEvents: function () {
     if (this._wsBound) return;
     this._wsBound = true;
-    var that = this;
+    const that = this;
     this._onDataChanged = function () { that._refreshHomeData(); };
     this._onOrderProgress = function () { that._refreshHomeData(); };
     this._onWarehouseIn = function () { that._refreshHomeData(); };
@@ -170,16 +184,16 @@ Page({
   },
 
   _loadMenuVisibility: function () {
-    var self = this;
+    const self = this;
     api.system.getMiniprogramMenuConfig().then(function (resp) {
       return resp;
     }).catch(function () {
       return null;
     }).then(function (resp) {
-      var flags = (resp && resp.data) || resp || {};
-      var visibility = {};
+      const flags = (resp && resp.data) || resp || {};
+      const visibility = {};
       Object.keys(MENU_KEY_MAP).forEach(function (shortKey) {
-        var fullKey = MENU_KEY_MAP[shortKey];
+        const fullKey = MENU_KEY_MAP[shortKey];
         if (typeof flags[fullKey] === 'boolean') {
           visibility[shortKey] = flags[fullKey];
         }
@@ -190,28 +204,28 @@ Page({
   },
 
   _loadUserName: function (forceRemote) {
-    var app = getApp();
-    var globalInfo = (app && app.globalData && app.globalData.userInfo) || {};
-    var cacheInfo = wx.getStorageSync('user_info') || wx.getStorageSync('userInfo') || {};
-    var info = Object.assign({}, cacheInfo, globalInfo);
-    var name = info.realName || info.name || info.nickName || info.nickname || '用户';
-    var orgName = info.factoryName || info.tenantName || '';
-    var patch = {};
+    const app = getApp();
+    const globalInfo = (app && app.globalData && app.globalData.userInfo) || {};
+    const cacheInfo = wx.getStorageSync('user_info') || wx.getStorageSync('userInfo') || {};
+    const info = Object.assign({}, cacheInfo, globalInfo);
+    const name = info.realName || info.name || info.nickName || info.nickname || '用户';
+    const orgName = info.factoryName || info.tenantName || '';
+    const patch = {};
     if (name !== this.data.userName) patch.userName = name;
     if (orgName !== this.data.orgName) patch.orgName = orgName;
     if (Object.keys(patch).length) this.setData(patch);
 
     if (!forceRemote && this._loadedUserNameFromRemote) return;
-    var authToken = wx.getStorageSync('auth_token') || '';
+    const authToken = wx.getStorageSync('auth_token') || '';
     if (!authToken || isTokenExpired()) return;
     this._loadedUserNameFromRemote = true;
-    var that = this;
+    const that = this;
     api.system.getMe()
       .then(function (res) {
-        var me = res || {};
-        var remoteName = me.realName || me.name || me.nickName || me.nickname;
-        var remoteOrgName = me.factoryName || me.tenantName || '';
-        var remotePatch = {};
+        const me = res || {};
+        const remoteName = me.realName || me.name || me.nickName || me.nickname;
+        const remoteOrgName = me.factoryName || me.tenantName || '';
+        const remotePatch = {};
         if (remoteName && remoteName !== that.data.userName) remotePatch.userName = remoteName;
         if (remoteOrgName && remoteOrgName !== that.data.orgName) remotePatch.orgName = remoteOrgName;
         if (Object.keys(remotePatch).length) that.setData(remotePatch);
@@ -220,24 +234,24 @@ Page({
   },
 
   _loadUnreadCount: function () {
-    var self = this;
+    const self = this;
     return api.notice.unreadCount()
       .then(function (res) {
-        var count = Number(res) || 0;
+        const count = Number(res) || 0;
         self.setData({ unreadNoticeCount: count });
       })
       .catch(function (e) { console.warn('[home] _loadUnreadCount失败:', e.message || e); });
   },
 
   _computeDateInfo: function () {
-    var now = new Date();
-    var m = now.getMonth() + 1;
-    var d = now.getDate();
-    var weekDay = ['日', '一', '二', '三', '四', '五', '六'][now.getDay()];
+    const now = new Date();
+    const m = now.getMonth() + 1;
+    const d = now.getDate();
+    const weekDay = ['日', '一', '二', '三', '四', '五', '六'][now.getDay()];
 
-    var season = this._computeSeasonBySolarTerms(now);
-    var dayOfYear = Math.floor((now - new Date(now.getFullYear(), 0, 0)) / 86400000);
-    var dailyTip = DAILY_FLOWERS[dayOfYear % DAILY_FLOWERS.length];
+    const season = this._computeSeasonBySolarTerms(now);
+    const dayOfYear = Math.floor((now - new Date(now.getFullYear(), 0, 0)) / 86400000);
+    const dailyTip = DAILY_FLOWERS[dayOfYear % DAILY_FLOWERS.length];
 
     this.setData({
       dateInfo: {
@@ -248,15 +262,15 @@ Page({
   },
 
   _computeSeasonBySolarTerms: function (now) {
-    var y = now.getFullYear();
-    var yy = y % 100;
-    var dayOfTerm = function (C) {
+    const y = now.getFullYear();
+    const yy = y % 100;
+    const dayOfTerm = function (C) {
       return Math.floor(yy * 0.2422 + C) - Math.floor(yy / 4);
     };
-    var liChun = new Date(y, 1, dayOfTerm(4.81));
-    var liXia = new Date(y, 4, dayOfTerm(5.52));
-    var liQiu = new Date(y, 7, dayOfTerm(7.57));
-    var liDong = new Date(y, 10, dayOfTerm(7.44));
+    const liChun = new Date(y, 1, dayOfTerm(4.81));
+    const liXia = new Date(y, 4, dayOfTerm(5.52));
+    const liQiu = new Date(y, 7, dayOfTerm(7.57));
+    const liDong = new Date(y, 10, dayOfTerm(7.44));
     if (now < liChun) return '冬';
     if (now < liXia) return '春';
     if (now < liQiu) return '夏';
@@ -265,8 +279,8 @@ Page({
   },
 
   onMenuTap: function (e) {
-    var idx = e.currentTarget.dataset.index;
-    var item = this.data.menuItems[idx];
+    const idx = e.currentTarget.dataset.index;
+    const item = this.data.menuItems[idx];
     if (!item) return;
 
     if (item.tab) {
@@ -277,8 +291,18 @@ Page({
       wx.setStorageSync('scan_pref_process', '质检');
     }
 
-    var isTabPage = ['/pages/home/index', '/pages/defect/index', '/pages/scan/index', '/pages/admin/index'].indexOf(item.route) !== -1;
+    const isTabPage = ['/pages/home/index', '/pages/defect/index', '/pages/scan/index', '/pages/admin/index'].indexOf(item.route) !== -1;
     safeNavigate({ url: item.route }, isTabPage ? 'switchTab' : undefined);
+  },
+
+  onFavoriteTap: function (e) {
+    const app = e.currentTarget.dataset.app;
+    if (!app || !app.route) return;
+    safeNavigate({ url: app.route });
+  },
+
+  onMoreAppsTap: function () {
+    safeNavigate({ url: '/pages/more-apps/index' });
   },
 
 });

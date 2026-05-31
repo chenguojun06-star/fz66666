@@ -255,7 +255,7 @@ Page({
         : (this._patternRecords || []);
 
       const newRecords = (result?.records || []).filter(
-        (item) => (item.scanResult || '').toLowerCase() !== 'failure'
+        (item) => (item.scanResult || '').toLowerCase() !== 'failure',
       );
       const formatted = newRecords.map((item) => ({
         ...item,
@@ -278,14 +278,14 @@ Page({
         // 金额优先级与后端 selectPayrollAggregation SQL 一致：totalAmount → scanCost → unitPrice×quantity
         lineAmount: Number(item.totalAmount) || Number(item.scanCost) || ((Number(item.unitPrice) || 0) * (Number(item.quantity) || 0)),
         displayLineAmount: (function() {
-          var amt = Number(item.totalAmount) || Number(item.scanCost) || ((Number(item.unitPrice) || 0) * (Number(item.quantity) || 0));
+          const amt = Number(item.totalAmount) || Number(item.scanCost) || ((Number(item.unitPrice) || 0) * (Number(item.quantity) || 0));
           return amt > 0 ? amt.toFixed(2) : '-';
         })(),
         displayPriceAmount: (function() {
-          var price = item.unitPrice == null || item.unitPrice === '' ? null : Number(item.unitPrice);
-          var amt = Number(item.totalAmount) || Number(item.scanCost) || ((Number(item.unitPrice) || 0) * (Number(item.quantity) || 0));
-          var priceText = price == null ? '-' : '¥' + price.toFixed(2);
-          var amtText = amt > 0 ? '¥' + amt.toFixed(2) : '-';
+          const price = item.unitPrice == null || item.unitPrice === '' ? null : Number(item.unitPrice);
+          const amt = Number(item.totalAmount) || Number(item.scanCost) || ((Number(item.unitPrice) || 0) * (Number(item.quantity) || 0));
+          const priceText = price == null ? '-' : '¥' + price.toFixed(2);
+          const amtText = amt > 0 ? '¥' + amt.toFixed(2) : '-';
           return priceText + ' / ' + amtText;
         })(),
         isPayable: (Number(item.totalAmount) > 0) || (Number(item.scanCost) > 0) || ((Number(item.unitPrice) || 0) > 0 && (Number(item.quantity) || 0) > 0),
@@ -323,7 +323,7 @@ Page({
       if (totalWage === 0) {
         // 工资 API 不可用时回退到客户端估算（与后端 COALESCE 优先级一致）
         merged.forEach((r) => {
-          var amt = Number(r.totalAmount) || Number(r.scanCost) || ((Number(r.unitPrice) || 0) * (Number(r.quantity) || 0));
+          const amt = Number(r.totalAmount) || Number(r.scanCost) || ((Number(r.unitPrice) || 0) * (Number(r.quantity) || 0));
           if (amt > 0) {
             totalWage += amt;
           }

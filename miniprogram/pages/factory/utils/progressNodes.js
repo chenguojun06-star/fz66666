@@ -49,9 +49,9 @@ function getProgressFromNodeIndex(nodes, index) {
 
 function parseProgressNodes(raw) {
   if (!raw) return [];
-  var obj = raw;
+  let obj = raw;
   if (typeof raw === 'string') {
-    var text = raw.trim();
+    const text = raw.trim();
     if (!text) return [];
     try {
       obj = JSON.parse(text);
@@ -60,12 +60,12 @@ function parseProgressNodes(raw) {
     }
   }
   if (typeof obj !== 'object' || obj === null) return [];
-  var nodesRaw = Array.isArray(obj.nodes) ? obj.nodes : [];
+  const nodesRaw = Array.isArray(obj.nodes) ? obj.nodes : [];
   return stripWarehousingNode(
     nodesRaw
       .map(n => {
-        var name = _normalizeText(n && n.name);
-        var id = _normalizeText(n && n.id) || name;
+        const name = _normalizeText(n && n.name);
+        const id = _normalizeText(n && n.id) || name;
         return name ? { id: id, name: name } : null;
       })
       .filter(n => n && n.name),
@@ -110,9 +110,9 @@ function getNodeRateFromOrder(nodeName, order) {
     const entry = STAGE_RATE_MAP[i];
     if (name === entry.match || name.indexOf(entry.match) >= 0 || entry.match.indexOf(name) >= 0) {
       for (let j = 0; j < entry.fields.length; j++) {
-        var raw = order[entry.fields[j]];
+        const raw = order[entry.fields[j]];
         if (raw !== undefined && raw !== null && raw !== '') {
-          var val = Number(raw);
+          const val = Number(raw);
           if (!isNaN(val)) return clampPercent(val);
         }
       }
@@ -124,17 +124,17 @@ function getNodeRateFromOrder(nodeName, order) {
 function extractChildrenMap(wfRaw) {
   if (!wfRaw) return {};
   try {
-    var wf = typeof wfRaw === 'string' ? JSON.parse(wfRaw) : wfRaw;
-    var pbn = wf && wf.processesByNode;
+    const wf = typeof wfRaw === 'string' ? JSON.parse(wfRaw) : wfRaw;
+    const pbn = wf && wf.processesByNode;
     if (!pbn || typeof pbn !== 'object') return {};
-    var result = {};
+    const result = {};
     Object.keys(pbn).forEach(function (stageKey) {
-      var subList = pbn[stageKey];
+      const subList = pbn[stageKey];
       if (!Array.isArray(subList)) return;
       result[stageKey] = subList.map(function (sp) {
         return {
           name: sp.name || sp.processName || '',
-          unitPrice: Number(sp.unitPrice || sp.price || 0)
+          unitPrice: Number(sp.unitPrice || sp.price || 0),
         };
       }).filter(function (sp) { return sp.name; });
     });
@@ -143,31 +143,31 @@ function extractChildrenMap(wfRaw) {
 }
 
 function buildProcessNodesWithRates(order) {
-  var nodes = resolveNodesFromOrder(order);
+  const nodes = resolveNodesFromOrder(order);
   if (!nodes || !nodes.length) return [];
 
-  var childrenMap = extractChildrenMap(order.progressWorkflowJson);
+  const childrenMap = extractChildrenMap(order.progressWorkflowJson);
 
-  var orderStatus = (order.status || '').trim().toLowerCase();
-  var isCompletedOrClosed = orderStatus === 'completed' || orderStatus === 'closed';
-  var progress = Number(order.productionProgress) || 0;
-  var hasAnyRate = false;
-  var hasRealRate = false;
-  var totalBundles = Number(order.cuttingBundleCount) || 0;
-  var processScannedMap = order.stageScannedBundleCount || {};
-  var result = nodes.map(function (n) {
-    var name = n.name || n;
-    var rate = getNodeRateFromOrder(name, order);
-    var scannedBundles = Number(processScannedMap[name]) || 0;
-    var bundleInfo = null;
+  const orderStatus = (order.status || '').trim().toLowerCase();
+  const isCompletedOrClosed = orderStatus === 'completed' || orderStatus === 'closed';
+  const progress = Number(order.productionProgress) || 0;
+  let hasAnyRate = false;
+  let hasRealRate = false;
+  const totalBundles = Number(order.cuttingBundleCount) || 0;
+  const processScannedMap = order.stageScannedBundleCount || {};
+  const result = nodes.map(function (n) {
+    const name = n.name || n;
+    const rate = getNodeRateFromOrder(name, order);
+    const scannedBundles = Number(processScannedMap[name]) || 0;
+    let bundleInfo = null;
     if (totalBundles > 0 && scannedBundles > 0) {
       bundleInfo = {
         total: totalBundles,
         scanned: scannedBundles,
-        remaining: Math.max(0, totalBundles - scannedBundles)
+        remaining: Math.max(0, totalBundles - scannedBundles),
       };
     }
-    var children = childrenMap[name] || [];
+    const children = childrenMap[name] || [];
     if (rate >= 0) {
       hasAnyRate = true;
       if (rate > 0 && rate < 100) hasRealRate = true;
@@ -186,32 +186,32 @@ function buildProcessNodesWithRates(order) {
     });
   }
   if (hasAnyRate && !hasRealRate) {
-    var allHundred = result.every(function (r) { return r.percent === 100 || r.percent < 0; });
+    const allHundred = result.every(function (r) { return r.percent === 100 || r.percent < 0; });
     if (allHundred) {
       return result.map(function (r) {
         return { name: r.name, percent: r.percent >= 0 ? r.percent : 0, bundleInfo: r.bundleInfo, children: r.children };
       });
     }
   }
-  var len = nodes.length;
-  var perNode = 100 / len;
+  const len = nodes.length;
+  const perNode = 100 / len;
   return nodes.map(function (n, i) {
-    var nodeStart = i * perNode;
-    var nodeEnd = (i + 1) * perNode;
-    var pct = 0;
+    const nodeStart = i * perNode;
+    const nodeEnd = (i + 1) * perNode;
+    let pct = 0;
     if (progress >= nodeEnd) {
       pct = 100;
     } else if (progress > nodeStart) {
       pct = Math.round(((progress - nodeStart) / perNode) * 100);
     }
-    var name2 = n.name || n;
-    var scannedBundles2 = Number(processScannedMap[name2]) || 0;
-    var bundleInfo2 = null;
+    const name2 = n.name || n;
+    const scannedBundles2 = Number(processScannedMap[name2]) || 0;
+    let bundleInfo2 = null;
     if (totalBundles > 0 && scannedBundles2 > 0) {
       bundleInfo2 = {
         total: totalBundles,
         scanned: scannedBundles2,
-        remaining: Math.max(0, totalBundles - scannedBundles2)
+        remaining: Math.max(0, totalBundles - scannedBundles2),
       };
     }
     return { name: name2, percent: clampPercent(pct), bundleInfo: bundleInfo2, children: childrenMap[name2] || [] };
@@ -220,43 +220,43 @@ function buildProcessNodesWithRates(order) {
 
 function calcOrderProgress(order) {
   if (!order) return 0;
-  var dbProgress = clampPercent(Number(order.productionProgress) || 0);
-  var status = (order.status || '').trim().toLowerCase();
+  const dbProgress = clampPercent(Number(order.productionProgress) || 0);
+  const status = (order.status || '').trim().toLowerCase();
   if (status === 'completed' || status === 'closed') {
-    var completedQty = Number(order.completedQuantity) || 0;
-    var totalQty = Number(order.cuttingQuantity) || Number(order.cuttingQty)
+    const completedQty = Number(order.completedQuantity) || 0;
+    const totalQty = Number(order.cuttingQuantity) || Number(order.cuttingQty)
                    || Number(order.orderQuantity) || Number(order.sizeTotal) || 0;
     if (completedQty > 0 || totalQty === 0) return 100;
   }
 
-  var orderNo = (order.orderNo || '').trim().toUpperCase();
-  var orderBizType = (order.orderBizType || '').trim().toUpperCase();
-  var isDirectCutting = orderBizType === 'CUTTING_DIRECT' || orderNo.indexOf('CUT') === 0;
+  const orderNo = (order.orderNo || '').trim().toUpperCase();
+  const orderBizType = (order.orderBizType || '').trim().toUpperCase();
+  const isDirectCutting = orderBizType === 'CUTTING_DIRECT' || orderNo.indexOf('CUT') === 0;
 
-  var hasProcurement = !isDirectCutting && (
+  const hasProcurement = !isDirectCutting && (
     (Number(order.procurementCompletionRate) || 0) > 0
     || Boolean(order.procurementManuallyCompleted)
     || Boolean(order.procurementConfirmedAt)
   );
-  var pipeline = hasProcurement
+  const pipeline = hasProcurement
     ? ['采购', '裁剪', '二次工艺', '车缝', '尾部', '入库']
     : ['裁剪', '二次工艺', '车缝', '尾部', '入库'];
 
-  var rateSum = 0;
-  var rateCount = 0;
-  for (var i = 0; i < pipeline.length; i++) {
-    var rate = getNodeRateFromOrder(pipeline[i], order);
+  let rateSum = 0;
+  let rateCount = 0;
+  for (let i = 0; i < pipeline.length; i++) {
+    const rate = getNodeRateFromOrder(pipeline[i], order);
     if (rate >= 0) {
       rateSum += rate;
       rateCount++;
     }
   }
-  var rateProgress = rateCount > 0 ? Math.round(rateSum / rateCount) : 0;
+  const rateProgress = rateCount > 0 ? Math.round(rateSum / rateCount) : 0;
 
-  var hasCuttingAction = (Number(order.cuttingCompletionRate) || 0) > 0
+  const hasCuttingAction = (Number(order.cuttingCompletionRate) || 0) > 0
     && (Number(order.cuttingBundleCount) || 0) > 0;
-  var hasRateAction = rateProgress > 0;
-  var hasRealAction = hasProcurement || hasCuttingAction || hasRateAction;
+  const hasRateAction = rateProgress > 0;
+  const hasRealAction = hasProcurement || hasCuttingAction || hasRateAction;
   if (!hasRealAction) return 0;
 
   return clampPercent(Math.max(dbProgress, rateProgress));

@@ -1,27 +1,27 @@
-var api = require('../../../utils/api');
+const api = require('../../../utils/api');
 
-var STAGE_MAP = [
+const STAGE_MAP = [
   { id: 'procurement', name: '采购' },
   { id: 'cutting', name: '裁剪' },
   { id: 'secondaryProcess', name: '二次工艺' },
   { id: 'carSewing', name: '车缝' },
   { id: 'tailProcess', name: '尾部' },
-  { id: 'warehousing', name: '入库' }
+  { id: 'warehousing', name: '入库' },
 ];
 
-var STAGE_NAME_TO_ID = {};
+const STAGE_NAME_TO_ID = {};
 STAGE_MAP.forEach(function (s) { STAGE_NAME_TO_ID[s.name] = s.id; });
 
-var STATUS_CN = {
+const STATUS_CN = {
   pending: '待生产', production: '生产中', completed: '已完成',
-  cancelled: '已取消', paused: '已暂停'
+  cancelled: '已取消', paused: '已暂停',
 };
-var STATUS_CLASS = {
+const STATUS_CLASS = {
   pending: 'order-status--other', production: 'order-status--production',
   completed: 'order-status--completed', cancelled: 'order-status--other',
-  paused: 'order-status--other'
+  paused: 'order-status--other',
 };
-var EDITABLE_STATUSES = ['production'];
+const EDITABLE_STATUSES = ['production'];
 
 Page({
   data: {
@@ -39,12 +39,12 @@ Page({
     editForm: {},
     showAddModal: false,
     addForm: { stageId: '', stageName: '', processName: '', machineType: '', price: '', standardTime: '', difficulty: '中' },
-    processDict: []
+    processDict: [],
   },
 
   onLoad: function (options) {
-    var orderId = options.orderId || '';
-    var orderNo = options.orderNo || '';
+    const orderId = options.orderId || '';
+    const orderNo = options.orderNo || '';
     this.setData({ orderId: orderId, orderNo: orderNo });
     if (orderId) {
       this._loadOrderAndProcesses(orderId);
@@ -56,19 +56,19 @@ Page({
   },
 
   _loadDictData: function () {
-    var that = this;
+    const that = this;
     api.system.getDictList('process_name').then(function (res) {
-      var list = Array.isArray(res) ? res : (res && res.records) || [];
+      const list = Array.isArray(res) ? res : (res && res.records) || [];
       that.setData({ processDict: list });
     }).catch(function () {});
   },
 
   _loadOrderAndProcesses: function (orderId) {
-    var that = this;
+    const that = this;
     that.setData({ loading: true });
 
     api.production.orderDetail(orderId).then(function (res) {
-      var order = null;
+      let order = null;
       if (res) {
         if (res.records && res.records.length) {
           order = res.records[0];
@@ -83,8 +83,8 @@ Page({
         wx.showToast({ title: '订单不存在', icon: 'none' });
         return;
       }
-      var status = order.status || '';
-      var editable = EDITABLE_STATUSES.indexOf(status) !== -1;
+      const status = order.status || '';
+      const editable = EDITABLE_STATUSES.indexOf(status) !== -1;
       that.setData({
         orderId: order.id || that.data.orderId,
         orderNo: order.orderNo || that.data.orderNo,
@@ -92,10 +92,10 @@ Page({
         status: status,
         statusCn: STATUS_CN[status] || status,
         statusClass: STATUS_CLASS[status] || 'order-status--other',
-        editable: editable
+        editable: editable,
       });
 
-      var processes = that._extractProcesses(order);
+      const processes = that._extractProcesses(order);
       that._buildStages(processes);
       this._originalProcesses = JSON.parse(JSON.stringify(processes));
       that._deletedIds = [];
@@ -109,18 +109,18 @@ Page({
   },
 
   _extractProcesses: function (order) {
-    var wf = order.progressWorkflowJson;
+    let wf = order.progressWorkflowJson;
     if (typeof wf === 'string') {
       try { wf = JSON.parse(wf); } catch (e) { wf = null; }
     }
 
     // 优先从 processesByNode 读取子工序明细（含各子工序真实单价）
     // processesByNode 的 key 是父节点名（中文名或英文ID），value 是子工序数组
-    var processesByNode = wf && wf.processesByNode;
+    const processesByNode = wf && wf.processesByNode;
     if (processesByNode && typeof processesByNode === 'object') {
-      var result = [];
+      const result = [];
       Object.keys(processesByNode).forEach(function (stageKey) {
-        var subList = processesByNode[stageKey];
+        const subList = processesByNode[stageKey];
         if (!Array.isArray(subList)) return;
         subList.forEach(function (n, i) {
           result.push({
@@ -132,7 +132,7 @@ Page({
             standardTime: n.standardTime || 0,
             price: Number(n.unitPrice || n.price || 0),
             difficulty: n.difficulty || '',
-            sortOrder: n.sortOrder != null ? n.sortOrder : i
+            sortOrder: n.sortOrder != null ? n.sortOrder : i,
           });
         });
       });
@@ -140,7 +140,7 @@ Page({
     }
 
     // 回退：从 nodes（父节点汇总）读取，兼容旧格式或无子工序订单
-    var nodes = (wf && wf.nodes) || [];
+    const nodes = (wf && wf.nodes) || [];
     return nodes.map(function (n, i) {
       return {
         id: n.id || ('proc_' + i),
@@ -151,19 +151,19 @@ Page({
         standardTime: n.standardTime || 0,
         price: Number(n.unitPrice || n.price || 0),
         difficulty: n.difficulty || '',
-        sortOrder: n.sortOrder != null ? n.sortOrder : i
+        sortOrder: n.sortOrder != null ? n.sortOrder : i,
       };
     });
   },
 
   _buildStages: function (processes) {
-    var stageMap = {};
+    const stageMap = {};
     STAGE_MAP.forEach(function (s) { stageMap[s.id] = { id: s.id, name: s.name, processes: [] }; });
 
     processes.forEach(function (p) {
-      var raw = p.progressStage || '';
+      const raw = p.progressStage || '';
       // 1. 精确匹配英文ID（如 'tailProcess', 'carSewing'）
-      var stageId = stageMap[raw] ? raw : null;
+      let stageId = stageMap[raw] ? raw : null;
       // 2. 精确匹配中文名（如 '尾部', '车缝'）
       if (!stageId) stageId = STAGE_NAME_TO_ID[raw] || null;
       // 3. 兜底归入尾部（与PC端默认规则一致）
@@ -171,16 +171,16 @@ Page({
       stageMap[stageId].processes.push(p);
     });
 
-    var stages = STAGE_MAP.map(function (s) { return stageMap[s.id]; });
+    const stages = STAGE_MAP.map(function (s) { return stageMap[s.id]; });
     this.setData({ stages: stages });
   },
 
   onAddProcess: function (e) {
-    var stageId = e.currentTarget.dataset.stageId;
-    var stageName = e.currentTarget.dataset.stageName;
+    const stageId = e.currentTarget.dataset.stageId;
+    const stageName = e.currentTarget.dataset.stageName;
     this.setData({
       showAddModal: true,
-      addForm: { stageId: stageId, stageName: stageName, processName: '', machineType: '', price: '', standardTime: '', difficulty: '中' }
+      addForm: { stageId: stageId, stageName: stageName, processName: '', machineType: '', price: '', standardTime: '', difficulty: '中' },
     });
   },
 
@@ -189,29 +189,29 @@ Page({
   },
 
   onAddFormInput: function (e) {
-    var field = e.currentTarget.dataset.field;
-    var val = e.detail.value;
-    var key = 'addForm.' + field;
-    var obj = {};
+    const field = e.currentTarget.dataset.field;
+    const val = e.detail.value;
+    const key = 'addForm.' + field;
+    const obj = {};
     obj[key] = val;
     this.setData(obj);
   },
 
   onDictPickProcess: function (e) {
-    var idx = e.detail.value;
-    var dict = this.data.processDict;
+    const idx = e.detail.value;
+    const dict = this.data.processDict;
     if (dict && dict[idx]) {
       this.setData({ 'addForm.processName': dict[idx].dictLabel || dict[idx].name || dict[idx].dictValue || '' });
     }
   },
 
   onConfirmAdd: function () {
-    var form = this.data.addForm;
+    const form = this.data.addForm;
     if (!form.processName.trim()) {
       wx.showToast({ title: '请输入工序名称', icon: 'none' });
       return;
     }
-    var newProcess = {
+    const newProcess = {
       id: 'new_' + Date.now(),
       processName: form.processName.trim(),
       processCode: String(Date.now()).slice(-4),
@@ -220,11 +220,11 @@ Page({
       standardTime: parseInt(form.standardTime) || 0,
       price: parseFloat(form.price) || 0,
       difficulty: form.difficulty || '中',
-      sortOrder: 999
+      sortOrder: 999,
     };
 
-    var stages = this.data.stages;
-    for (var i = 0; i < stages.length; i++) {
+    const stages = this.data.stages;
+    for (let i = 0; i < stages.length; i++) {
       if (stages[i].id === form.stageId) {
         stages[i].processes.push(newProcess);
         break;
@@ -235,13 +235,13 @@ Page({
   },
 
   onEditProcess: function (e) {
-    var id = e.currentTarget.dataset.id;
-    var stageId = e.currentTarget.dataset.stageId;
-    var process = null;
-    var stages = this.data.stages;
-    for (var i = 0; i < stages.length; i++) {
+    const id = e.currentTarget.dataset.id;
+    const stageId = e.currentTarget.dataset.stageId;
+    let process = null;
+    const stages = this.data.stages;
+    for (let i = 0; i < stages.length; i++) {
       if (stages[i].id === stageId) {
-        for (var j = 0; j < stages[i].processes.length; j++) {
+        for (let j = 0; j < stages[i].processes.length; j++) {
           if (stages[i].processes[j].id === id) {
             process = stages[i].processes[j];
             break;
@@ -262,22 +262,22 @@ Page({
         difficulty: process.difficulty || '中',
         progressStage: process.progressStage,
         processCode: process.processCode,
-        sortOrder: process.sortOrder
-      }
+        sortOrder: process.sortOrder,
+      },
     });
   },
 
   onEditFormInput: function (e) {
-    var field = e.currentTarget.dataset.field;
-    var val = e.detail.value;
-    var key = 'editForm.' + field;
-    var obj = {};
+    const field = e.currentTarget.dataset.field;
+    const val = e.detail.value;
+    const key = 'editForm.' + field;
+    const obj = {};
     obj[key] = val;
     this.setData(obj);
   },
 
   onSetDifficulty: function (e) {
-    var val = e.currentTarget.dataset.val;
+    const val = e.currentTarget.dataset.val;
     this.setData({ 'editForm.difficulty': val });
   },
 
@@ -286,15 +286,15 @@ Page({
   },
 
   onSaveEdit: function () {
-    var form = this.data.editForm;
+    const form = this.data.editForm;
     if (!form.processName || !form.processName.trim()) {
       wx.showToast({ title: '请输入工序名称', icon: 'none' });
       return;
     }
-    var stages = this.data.stages;
-    for (var i = 0; i < stages.length; i++) {
-      var procs = stages[i].processes;
-      for (var j = 0; j < procs.length; j++) {
+    const stages = this.data.stages;
+    for (let i = 0; i < stages.length; i++) {
+      const procs = stages[i].processes;
+      for (let j = 0; j < procs.length; j++) {
         if (procs[j].id === form.id) {
           procs[j].processName = form.processName.trim();
           procs[j].machineType = form.machineType || '';
@@ -309,17 +309,17 @@ Page({
   },
 
   onDeleteProcess: function (e) {
-    var id = e.currentTarget.dataset.id;
-    var stageId = e.currentTarget.dataset.stageId;
-    var that = this;
+    const id = e.currentTarget.dataset.id;
+    const stageId = e.currentTarget.dataset.stageId;
+    const that = this;
     wx.showModal({
       title: '确认删除',
       content: '删除后保存生效，确定删除该工序？',
       success: function (res) {
         if (!res.confirm) return;
-        var stages = that.data.stages;
-        var deletedIds = that._deletedIds;
-        for (var i = 0; i < stages.length; i++) {
+        const stages = that.data.stages;
+        const deletedIds = that._deletedIds;
+        for (let i = 0; i < stages.length; i++) {
           if (stages[i].id === stageId) {
             var newProcs = [];
             stages[i].processes.forEach(function (p) {
@@ -334,12 +334,12 @@ Page({
           }
         }
         that.setData({ stages: stages, hasChanges: true });
-      }
+      },
     });
   },
 
   onResetChanges: function () {
-    var that = this;
+    const that = this;
     wx.showModal({
       title: '确认重置',
       content: '将撤销所有修改，确定？',
@@ -349,17 +349,17 @@ Page({
         that._deletedIds = [];
         that._newProcesses = [];
         that.setData({ hasChanges: false, processEditId: null, editForm: {} });
-      }
+      },
     });
   },
 
   onSaveAll: function () {
-    var that = this;
-    var stages = that.data.stages;
-    var nodes = [];
-    var sortOrder = 0;
+    const that = this;
+    const stages = that.data.stages;
+    const nodes = [];
+    let sortOrder = 0;
     STAGE_MAP.forEach(function (stageDef) {
-      for (var i = 0; i < stages.length; i++) {
+      for (let i = 0; i < stages.length; i++) {
         if (stages[i].id === stageDef.id) {
           stages[i].processes.forEach(function (p) {
             nodes.push({
@@ -371,7 +371,7 @@ Page({
               standardTime: p.standardTime || 0,
               unitPrice: p.price || 0,
               difficulty: p.difficulty || '',
-              sortOrder: sortOrder
+              sortOrder: sortOrder,
             });
             sortOrder++;
           });
@@ -380,10 +380,10 @@ Page({
       }
     });
 
-    var workflowJson = JSON.stringify({ nodes: nodes });
-    var payload = {
+    const workflowJson = JSON.stringify({ nodes: nodes });
+    const payload = {
       id: that.data.orderId,
-      progressWorkflowJson: workflowJson
+      progressWorkflowJson: workflowJson,
     };
 
     wx.showLoading({ title: '保存中...' });
@@ -402,7 +402,7 @@ Page({
           standardTime: n.standardTime,
           price: n.unitPrice,
           difficulty: n.difficulty,
-          sortOrder: n.sortOrder
+          sortOrder: n.sortOrder,
         };
       }));
       that._originalProcesses = JSON.parse(JSON.stringify(nodes.map(function (n, i) {
@@ -410,7 +410,7 @@ Page({
           id: n.id, processName: n.name, processCode: n.processCode,
           progressStage: n.progressStage, machineType: n.machineType,
           standardTime: n.standardTime, price: n.unitPrice,
-          difficulty: n.difficulty, sortOrder: n.sortOrder
+          difficulty: n.difficulty, sortOrder: n.sortOrder,
         };
       })));
       wx.showToast({ title: '保存成功', icon: 'success' });
@@ -419,5 +419,5 @@ Page({
       console.error('[process-edit] 保存失败:', err);
       wx.showToast({ title: '保存失败', icon: 'none' });
     });
-  }
+  },
 });

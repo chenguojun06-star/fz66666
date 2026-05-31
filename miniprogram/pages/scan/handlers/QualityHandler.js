@@ -8,7 +8,7 @@ const { toast } = require('../../../utils/uiHelper');
  * 跳转到质检录入页面
  */
 function showQualityModal(page, detail) {
-  var app = getApp();
+  const app = getApp();
   app.globalData.qualityData = detail;
   wx.navigateTo({ url: '/pages/scan/quality/index' });
 }

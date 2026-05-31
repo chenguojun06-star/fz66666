@@ -124,7 +124,7 @@ function buildColorSizeMeta(order) {
   return {
     groups: Array.from(colorMap.values()).map(group => {
       // sizeMap 转为普通对象，供 WXML 模板 cg.sizeMap[sz] 访问
-      var sizeMapObj = {};
+      const sizeMapObj = {};
       group.sizeMap.forEach(function (val, key) { sizeMapObj[key] = val; });
       return {
         color: group.color,
@@ -152,7 +152,7 @@ function calcDeliveryInfo(source) {
     const raw = source.plannedEndDate || source.expectedShipDate || '';
     var dateStr = '';
     if (raw) {
-      var s = String(raw);
+      const s = String(raw);
       if (s.length > 10) {
         var d = new Date(s.replace(/-/g, '/'));
         if (!isNaN(d.getTime())) {
@@ -190,8 +190,8 @@ function calcDeliveryInfo(source) {
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  var rawDateOnly = String(raw).substring(0, 10);
-  var dateParts = rawDateOnly.split('-');
+  const rawDateOnly = String(raw).substring(0, 10);
+  const dateParts = rawDateOnly.split('-');
   const target = new Date(Number(dateParts[0]), Number(dateParts[1]) - 1, Number(dateParts[2]));
   const diffMs = target.getTime() - today.getTime();
   const remainDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));

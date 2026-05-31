@@ -41,7 +41,7 @@ Page({
     if (typeof this.getTabBar === 'function' && this.getTabBar()) {
       this.getTabBar().setData({ selected: 2 });
     }
-    var app = getApp();
+    const app = getApp();
     if (app && typeof app.requireAuth === 'function' && !app.requireAuth()) return;
     if (this._dataLoaded && !this._needsRefresh) {
       this._bindWsEvents();
@@ -68,17 +68,17 @@ Page({
   },
 
   onFilter: function (e) {
-    var filter = e.currentTarget.dataset.filter;
+    const filter = e.currentTarget.dataset.filter;
     if (filter === this.data.activeFilter) return;
     this.setData({ activeFilter: filter });
     this.loadDefectList(true);
   },
 
   onViewDetail: function (e) {
-    var index = e.currentTarget.dataset.index;
-    var item = this.data.list[index];
+    const index = e.currentTarget.dataset.index;
+    const item = this.data.list[index];
     if (!item) return;
-    var data = JSON.stringify(item);
+    const data = JSON.stringify(item);
     wx.navigateTo({
       url: '/pages/quality-detail/index?data=' + encodeURIComponent(data),
     });
@@ -90,11 +90,11 @@ Page({
   },
 
   loadDefectList: function (reset) {
-    var self = this;
+    const self = this;
     if (self.data.loading) return Promise.resolve();
 
-    var page = reset ? 1 : self.data.page;
-    var filter = self.data.activeFilter;
+    const page = reset ? 1 : self.data.page;
+    const filter = self.data.activeFilter;
 
     self.setData({
       loading: reset,
@@ -103,9 +103,9 @@ Page({
 
     return api.production.myRepairTasks()
       .then(function (res) {
-        var items = Array.isArray(res) ? res : (res && res.records) || (res && res.list) || [];
+        const items = Array.isArray(res) ? res : (res && res.records) || (res && res.list) || [];
 
-        var processed = items.map(function (item) {
+        let processed = items.map(function (item) {
           return self._processDefectItem(item);
         });
 
@@ -118,8 +118,8 @@ Page({
           });
         }
 
-        var stats = self._calcStats(items);
-        var newList = reset ? processed : self.data.list.concat(processed);
+        const stats = self._calcStats(items);
+        const newList = reset ? processed : self.data.list.concat(processed);
 
         self.setData({
           list: newList,
@@ -146,7 +146,7 @@ Page({
 
     if (item.unqualifiedImageUrls) {
       try {
-        var urls = typeof item.unqualifiedImageUrls === 'string'
+        const urls = typeof item.unqualifiedImageUrls === 'string'
           ? JSON.parse(item.unqualifiedImageUrls)
           : item.unqualifiedImageUrls;
         item.coverImage = urls.filter(Boolean).length > 0 ? getAuthedImageUrl(urls[0]) : '';
@@ -168,10 +168,10 @@ Page({
   },
 
   _calcStats: function (items) {
-    var pending = 0;
-    var repairing = 0;
-    var repaired = 0;
-    var completed = 0;
+    let pending = 0;
+    let repairing = 0;
+    let repaired = 0;
+    let completed = 0;
     items.forEach(function (item) {
       if (item.repairStatus === 'pending' || item.repairStatus === 'pending_repair') pending++;
       else if (item.repairStatus === 'repairing') repairing++;
@@ -188,19 +188,19 @@ Page({
 
   _formatTime: function (t) {
     if (!t) return '';
-    var d = new Date(t);
+    const d = new Date(t);
     if (isNaN(d.getTime())) return t;
-    var m = d.getMonth() + 1;
-    var day = d.getDate();
-    var h = d.getHours();
-    var min = d.getMinutes();
+    const m = d.getMonth() + 1;
+    const day = d.getDate();
+    const h = d.getHours();
+    const min = d.getMinutes();
     return m + '/' + day + ' ' + (h < 10 ? '0' + h : h) + ':' + (min < 10 ? '0' + min : min);
   },
 
   onStartRepair: function (e) {
-    var self = this;
-    var index = e.currentTarget.dataset.index;
-    var item = self.data.list[index];
+    const self = this;
+    const index = e.currentTarget.dataset.index;
+    const item = self.data.list[index];
     if (!item || !item.bundleId) return;
 
     wx.showModal({
@@ -210,7 +210,7 @@ Page({
       cancelText: '取消',
       success: function (res) {
         if (!res.confirm) return;
-        var userInfo = getUserInfo() || {};
+        const userInfo = getUserInfo() || {};
         api.production.startBundleRepair(item.bundleId, userInfo.name || userInfo.username || '')
           .then(function () {
             toast.success('已开始返修');
@@ -229,9 +229,9 @@ Page({
   },
 
   onCompleteRepair: function (e) {
-    var self = this;
-    var index = e.currentTarget.dataset.index;
-    var item = self.data.list[index];
+    const self = this;
+    const index = e.currentTarget.dataset.index;
+    const item = self.data.list[index];
     if (!item || !item.bundleId) return;
 
     wx.showModal({
@@ -259,9 +259,9 @@ Page({
   },
 
   onScrap: function (e) {
-    var self = this;
-    var index = e.currentTarget.dataset.index;
-    var item = self.data.list[index];
+    const self = this;
+    const index = e.currentTarget.dataset.index;
+    const item = self.data.list[index];
     if (!item || !item.bundleId) return;
 
     wx.showModal({
@@ -296,7 +296,7 @@ Page({
   _bindWsEvents: function () {
     if (this._wsBound) return;
     this._wsBound = true;
-    var self = this;
+    const self = this;
     this._onDataChanged = function () { self.loadDefectList(true); };
     this._onScanSuccess = function () { self.loadDefectList(true); };
     this._onRefreshAll = function () { self.loadDefectList(true); };

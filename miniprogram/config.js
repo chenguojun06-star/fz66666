@@ -65,11 +65,11 @@ const ALLOWED_DOMAINS = [
 
 function isAllowedDomain(url) {
   try {
-    var match = url.match(/^https?:\/\/([^/:]+)/i);
+    const match = url.match(/^https?:\/\/([^/:]+)/i);
     if (!match) return false;
-    var host = match[1].toLowerCase();
-    for (var i = 0; i < ALLOWED_DOMAINS.length; i++) {
-      var d = ALLOWED_DOMAINS[i];
+    const host = match[1].toLowerCase();
+    for (let i = 0; i < ALLOWED_DOMAINS.length; i++) {
+      const d = ALLOWED_DOMAINS[i];
       if (d.startsWith('.') ? host.endsWith(d) : host === d) return true;
     }
     return false;

@@ -305,7 +305,7 @@ Page({
       fail: () => {
         wx.hideLoading();
         wx.showToast({ title: '检测失败，请重试', icon: 'none' });
-      }
+      },
     });
   },
 
@@ -386,7 +386,7 @@ Page({
       this.setData({ warehouse: '', warehouseAreaId: '', warehouseLocationCode: '', locationOptions: [] });
       try { wx.setStorageSync('scan_pref_warehouse', ''); } catch (_) {}
     } else {
-      var areaId = (this._warehouseAreaMap && this._warehouseAreaMap[value]) || '';
+      const areaId = (this._warehouseAreaMap && this._warehouseAreaMap[value]) || '';
       this.setData({ warehouse: value, warehouseAreaId: areaId, warehouseLocationCode: '', locationOptions: [] });
       try { wx.setStorageSync('scan_pref_warehouse', value); } catch (_) {}
       if (areaId) { this._loadLocationOptions(areaId); }
@@ -394,8 +394,8 @@ Page({
   },
 
   onWarehouseCodeInput(e) {
-    var value = e.detail.value;
-    var areaId = (this._warehouseAreaMap && this._warehouseAreaMap[value]) || '';
+    const value = e.detail.value;
+    const areaId = (this._warehouseAreaMap && this._warehouseAreaMap[value]) || '';
     this.setData({ warehouse: value, warehouseAreaId: areaId, warehouseLocationCode: '' });
     if (areaId) {
       this._loadLocationOptions(areaId);
@@ -409,7 +409,7 @@ Page({
   },
 
   onLocationChipTap(e) {
-    var value = e.currentTarget.dataset.value;
+    const value = e.currentTarget.dataset.value;
     if (this.data.warehouseLocationCode === value) {
       this.setData({ warehouseLocationCode: '' });
     } else {
@@ -430,7 +430,7 @@ Page({
   },
 
   onPreviewCover(e) {
-    var url = e.currentTarget.dataset.url;
+    const url = e.currentTarget.dataset.url;
     if (!url) return;
     wx.previewImage({ current: url, urls: [url] });
   },

@@ -123,7 +123,7 @@ function validateProductionOrder(order) {
   // 验证 progressWorkflowJson 格式
   if (order.progressWorkflowJson) {
     try {
-      var parsed = order.progressWorkflowJson;
+      let parsed = order.progressWorkflowJson;
       if (typeof parsed === 'string') {
         parsed = JSON.parse(parsed);
       }

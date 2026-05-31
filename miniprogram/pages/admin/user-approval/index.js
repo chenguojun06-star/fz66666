@@ -116,7 +116,7 @@ Page({
   },
 
   onTabChange(e) {
-    var tab = e.currentTarget.dataset.tab;
+    const tab = e.currentTarget.dataset.tab;
     if (tab === 'system' && !this.data.isPlatformAdmin) return;
     this.setData({ activeTab: tab });
   },

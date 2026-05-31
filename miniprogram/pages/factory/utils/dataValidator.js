@@ -47,7 +47,7 @@ function validateField(value, rule, fieldName) {
     return fieldName + ' 不能为空';
   }
 
-  var valueType = typeof value;
+  const valueType = typeof value;
   if (value !== null && value !== undefined) {
     if (rule.type === 'number' && valueType !== 'number') {
       return fieldName + ' 必须是数字类型';
@@ -64,17 +64,17 @@ function validateField(value, rule, fieldName) {
 }
 
 function validateDataShape(data, shape) {
-  var errors = [];
+  const errors = [];
 
   if (!data || typeof data !== 'object') {
     return { valid: false, errors: ['数据必须是对象类型'] };
   }
 
-  for (var fieldName in shape) {
+  for (const fieldName in shape) {
     if (shape.hasOwnProperty(fieldName)) {
-      var rule = shape[fieldName];
-      var value = data[fieldName];
-      var error = validateField(value, rule, fieldName);
+      const rule = shape[fieldName];
+      const value = data[fieldName];
+      const error = validateField(value, rule, fieldName);
 
       if (error) {
         errors.push(error);
@@ -89,17 +89,17 @@ function validateDataShape(data, shape) {
 }
 
 function validateProductionOrder(order) {
-  var result = validateDataShape(order, ProductionOrderShape);
+  const result = validateDataShape(order, ProductionOrderShape);
 
   if (!result.valid) {
     return result;
   }
 
-  var additionalErrors = [];
+  const additionalErrors = [];
 
   if (order.progressWorkflowJson) {
     try {
-      var parsed = order.progressWorkflowJson;
+      let parsed = order.progressWorkflowJson;
       if (typeof parsed === 'string') {
         parsed = JSON.parse(parsed);
       }
@@ -133,10 +133,10 @@ function validateScanRecord(scan) {
 
 function safeGet(obj, path, fallback) {
   try {
-    var keys = String(path || '').split('.');
-    var result = obj;
-    for (var i = 0; i < keys.length; i++) {
-      var key = keys[i];
+    const keys = String(path || '').split('.');
+    let result = obj;
+    for (let i = 0; i < keys.length; i++) {
+      const key = keys[i];
       if (result && typeof result === 'object') {
         result = result[key];
       } else {
@@ -154,17 +154,17 @@ function normalizeData(data, shape) {
     return {};
   }
 
-  var normalized = {};
-  for (var key in data) {
+  const normalized = {};
+  for (const key in data) {
     if (data.hasOwnProperty(key)) {
       normalized[key] = data[key];
     }
   }
 
-  for (var fieldName in shape) {
+  for (const fieldName in shape) {
     if (shape.hasOwnProperty(fieldName)) {
-      var rule = shape[fieldName];
-      var value = normalized[fieldName];
+      const rule = shape[fieldName];
+      const value = normalized[fieldName];
 
       if ((value === null || value === undefined) && rule.default !== undefined) {
         normalized[fieldName] = rule.default;

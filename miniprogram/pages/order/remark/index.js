@@ -1,8 +1,8 @@
-var api = require('../../../utils/api');
-var { toast } = require('../../../utils/uiHelper');
-var { getAuthedImageUrl } = require('../../../utils/fileUrl');
-var { getUserInfo } = require('../../../utils/storage');
-var { eventBus } = require('../../../utils/eventBus');
+const api = require('../../../utils/api');
+const { toast } = require('../../../utils/uiHelper');
+const { getAuthedImageUrl } = require('../../../utils/fileUrl');
+const { getUserInfo } = require('../../../utils/storage');
+const { eventBus } = require('../../../utils/eventBus');
 
 Page({
   data: {
@@ -20,16 +20,16 @@ Page({
   },
 
   onLoad: function (options) {
-    var app = getApp();
+    const app = getApp();
     if (app.requireAuth && !app.requireAuth()) return;
-    var targetType = options.targetType || 'order';
-    var targetNo = options.targetNo || '';
+    const targetType = options.targetType || 'order';
+    const targetNo = options.targetNo || '';
     if (!targetNo) {
       toast('参数错误');
       wx.navigateBack();
       return;
     }
-    var userInfo = getUserInfo() || {};
+    const userInfo = getUserInfo() || {};
     this.setData({
       targetType: targetType,
       targetNo: targetNo,
@@ -39,7 +39,7 @@ Page({
     if (eventBus && typeof eventBus.on === 'function') {
       this._unsubPrivacy = eventBus.on('showPrivacyDialog', function (resolve) {
         try {
-          var dialog = this.selectComponent('#privacyDialog');
+          const dialog = this.selectComponent('#privacyDialog');
           if (dialog && typeof dialog.showDialog === 'function') dialog.showDialog(resolve);
         } catch (_) {}
       }.bind(this));
@@ -55,18 +55,18 @@ Page({
   },
 
   onPullDownRefresh: function () {
-    var that = this;
+    const that = this;
     this._loadRemarks().finally(function () {
       wx.stopPullDownRefresh();
     });
   },
 
   _loadRemarks: function () {
-    var that = this;
+    const that = this;
     this.setData({ loading: true });
     return api.production.listOrderRemarks(this.data.targetType, this.data.targetNo)
       .then(function (list) {
-        var remarks = (Array.isArray(list) ? list : []).map(function (r) {
+        const remarks = (Array.isArray(list) ? list : []).map(function (r) {
           if (r.imageUrls) {
             try {
               r.imageList = JSON.parse(r.imageUrls).map(function (u) { return getAuthedImageUrl(u); });
@@ -89,14 +89,14 @@ Page({
   onContentInput: function (e) { this.setData({ content: e.detail.value }); },
 
   onChooseImage: function () {
-    var that = this;
+    const that = this;
     if (this.data.images.length >= 5) { toast('最多上传5张图片'); return; }
     wx.chooseMedia({
       count: 5 - this.data.images.length,
       mediaType: ['image'],
       sourceType: ['album', 'camera'],
       success: function (res) {
-        var files = res.tempFiles || [];
+        const files = res.tempFiles || [];
         that._doUploadImages(files);
       },
       fail: function (err) {
@@ -108,27 +108,27 @@ Page({
             cancelText: '取消',
             success: function (modalRes) {
               if (modalRes.confirm) wx.openSetting({ success: function () {} });
-            }
+            },
           });
         }
-      }
+      },
     });
   },
 
   _doUploadImages: function (files) {
     if (files.length === 0) return;
-    var that = this;
+    const that = this;
     that.setData({ uploading: true });
-    var tasks = files.map(function (f) {
+    const tasks = files.map(function (f) {
       return api.common.uploadImage(f.tempFilePath);
     });
     Promise.all(tasks).then(function (urls) {
-      var rawUrls = urls.filter(Boolean);
-      var authedUrls = rawUrls.map(function (u) { return getAuthedImageUrl(u); });
+      const rawUrls = urls.filter(Boolean);
+      const authedUrls = rawUrls.map(function (u) { return getAuthedImageUrl(u); });
       that.setData({
         images: that.data.images.concat(authedUrls),
         _rawImageUrls: (that.data._rawImageUrls || []).concat(rawUrls),
-        uploading: false
+        uploading: false,
       });
     }).catch(function () {
       that.setData({ uploading: false });
@@ -137,38 +137,38 @@ Page({
   },
 
   onDeleteImage: function (e) {
-    var idx = e.currentTarget.dataset.index;
-    var imgs = this.data.images.slice();
-    var raws = (this.data._rawImageUrls || []).slice();
+    const idx = e.currentTarget.dataset.index;
+    const imgs = this.data.images.slice();
+    const raws = (this.data._rawImageUrls || []).slice();
     imgs.splice(idx, 1);
     raws.splice(idx, 1);
     this.setData({ images: imgs, _rawImageUrls: raws });
   },
 
   onPreviewImage: function (e) {
-    var url = e.currentTarget.dataset.url;
+    const url = e.currentTarget.dataset.url;
     wx.previewImage({ current: url, urls: this.data.images });
   },
 
   onPreviewRemarkImage: function (e) {
-    var url = e.currentTarget.dataset.url;
-    var urls = e.currentTarget.dataset.urls;
+    const url = e.currentTarget.dataset.url;
+    const urls = e.currentTarget.dataset.urls;
     wx.previewImage({ current: url, urls: urls || [url] });
   },
 
   onSubmitRemark: function () {
-    var content = this.data.content.trim();
-    var images = this.data._rawImageUrls || [];
+    const content = this.data.content.trim();
+    const images = this.data._rawImageUrls || [];
     if (!content && images.length === 0) { toast('请输入备注内容或上传图片'); return; }
-    var that = this;
+    const that = this;
     this.setData({ submitting: true });
-    var imageUrlsStr = images.length > 0 ? JSON.stringify(images) : undefined;
+    const imageUrlsStr = images.length > 0 ? JSON.stringify(images) : undefined;
     api.production.addOrderRemark(
       this.data.targetType,
       this.data.targetNo,
       content || '(图片备注)',
       this.data.authorRole.trim() || undefined,
-      imageUrlsStr
+      imageUrlsStr,
     ).then(function () {
       toast('备注已添加');
       that.setData({ content: '', images: [], _rawImageUrls: [] });

@@ -131,7 +131,7 @@ const ScanOfflineQueue = {
       scanData: _deepClone(scanData),
     };
     queue.push(item);
-    var saved = _save(queue);
+    const saved = _save(queue);
     if (!saved) {
       wx.showToast({ title: '离线数据保存失败，请检查存储空间', icon: 'none', duration: 3000 });
       return false;

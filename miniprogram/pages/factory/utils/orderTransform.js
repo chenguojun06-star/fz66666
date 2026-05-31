@@ -1,29 +1,29 @@
-var { validateProductionOrder, normalizeData } = require('./dataValidator');
-var { orderStatusText } = require('./orderStatusHelper');
-var { parseProductionOrderLines, sortSizeNames } = require('./orderParser');
-var { getAuthedImageUrl } = require('../../../utils/fileUrl');
-var { calcOrderProgress } = require('./progressNodes');
+const { validateProductionOrder, normalizeData } = require('./dataValidator');
+const { orderStatusText } = require('./orderStatusHelper');
+const { parseProductionOrderLines, sortSizeNames } = require('./orderParser');
+const { getAuthedImageUrl } = require('../../../utils/fileUrl');
+const { calcOrderProgress } = require('./progressNodes');
 
 function normalizeText(v) {
   return (v || '').toString().trim();
 }
 
 function mapUrgencyLabel(level) {
-  var text = normalizeText(level).toLowerCase();
+  const text = normalizeText(level).toLowerCase();
   if (text === 'urgent' || text === '急' || text === '加急') return '急';
   if (text === 'normal' || text === '普通') return '普';
   return '';
 }
 
 function mapPlateTypeLabel(plateType) {
-  var text = normalizeText(plateType).toUpperCase();
+  const text = normalizeText(plateType).toUpperCase();
   if (text === 'FIRST') return '首';
   if (text === 'REORDER' || text === 'REPLATE') return '翻';
   return '';
 }
 
 function mapFactoryTypeLabel(factoryType) {
-  var text = normalizeText(factoryType).toUpperCase();
+  const text = normalizeText(factoryType).toUpperCase();
   if (text === 'INTERNAL') return '内部';
   if (text === 'EXTERNAL') return '外部';
   return '';
@@ -34,50 +34,50 @@ function sortSizes(sizes) {
 }
 
 function isClosedStatus(status) {
-  var s = normalizeText(status).toLowerCase();
+  const s = normalizeText(status).toLowerCase();
   return s === 'completed' || s === 'cancelled' || s === 'canceled'
     || s === 'scrapped' || s === 'closed' || s === 'archived';
 }
 
 function buildSizeMeta(order) {
-  var lines = parseProductionOrderLines(order);
+  const lines = parseProductionOrderLines(order);
   if (!lines.length) return { sizeList: [], sizeQtyList: [], sizeTotal: 0 };
-  var sizeMap = new Map();
-  var total = 0;
+  const sizeMap = new Map();
+  let total = 0;
   lines.forEach(function (line) {
-    var size = normalizeText(line && line.size);
-    var qty = Number(line && line.quantity) || 0;
+    const size = normalizeText(line && line.size);
+    const qty = Number(line && line.quantity) || 0;
     if (!size || qty <= 0) return;
     total += qty;
     sizeMap.set(size, (sizeMap.get(size) || 0) + qty);
   });
-  var sizes = Array.from(sizeMap.keys());
-  var sizeQtyList = sizes.map(function (size) { return sizeMap.get(size); });
+  const sizes = Array.from(sizeMap.keys());
+  const sizeQtyList = sizes.map(function (size) { return sizeMap.get(size); });
   return { sizeList: sizes, sizeQtyList: sizeQtyList, sizeTotal: total };
 }
 
 function buildColorSizeMeta(order) {
-  var lines = parseProductionOrderLines(order);
+  const lines = parseProductionOrderLines(order);
   if (!lines.length) return [];
-  var colorMap = new Map();
-  var allSizesSet = new Set();
+  const colorMap = new Map();
+  const allSizesSet = new Set();
   lines.forEach(function (line) {
-    var color = normalizeText(line && line.color);
-    var size = normalizeText(line && line.size);
-    var qty = Number(line && line.quantity) || 0;
+    const color = normalizeText(line && line.color);
+    const size = normalizeText(line && line.size);
+    const qty = Number(line && line.quantity) || 0;
     if (!color || !size || qty <= 0) return;
     allSizesSet.add(size);
     if (!colorMap.has(color)) {
       colorMap.set(color, { color: color, sizeMap: new Map(), total: 0 });
     }
-    var current = colorMap.get(color);
+    const current = colorMap.get(color);
     current.sizeMap.set(size, (current.sizeMap.get(size) || 0) + qty);
     current.total += qty;
   });
-  var allSizes = sortSizes(Array.from(allSizesSet));
+  const allSizes = sortSizes(Array.from(allSizesSet));
   return {
     groups: Array.from(colorMap.values()).map(function (group) {
-      var sizeMapObj = {};
+      const sizeMapObj = {};
       group.sizeMap.forEach(function (val, key) { sizeMapObj[key] = val; });
       return {
         color: group.color,
@@ -91,12 +91,12 @@ function buildColorSizeMeta(order) {
 }
 
 function calcDeliveryInfo(source) {
-  var status = String(source.status || '').toLowerCase();
+  const status = String(source.status || '').toLowerCase();
   if (status === 'completed' || status === 'cancelled' || status === 'canceled' || status === 'scrapped' || status === 'closed' || status === 'archived') {
     var raw = source.plannedEndDate || source.expectedShipDate || '';
     var dateStr = '';
     if (raw) {
-      var s = String(raw);
+      const s = String(raw);
       if (s.length > 10) {
         var d = new Date(s.replace(/-/g, '/'));
         if (!isNaN(d.getTime())) {
@@ -123,16 +123,16 @@ function calcDeliveryInfo(source) {
       dateStr = dateStr.substring(0, 16);
     }
   }
-  var deliveryDateStr = dateStr;
-  var today = new Date();
+  const deliveryDateStr = dateStr;
+  const today = new Date();
   today.setHours(0, 0, 0, 0);
-  var rawDateOnly = String(raw).substring(0, 10);
-  var dateParts = rawDateOnly.split('-');
-  var target = new Date(Number(dateParts[0]), Number(dateParts[1]) - 1, Number(dateParts[2]));
-  var diffMs = target.getTime() - today.getTime();
-  var remainDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-  var remainDaysText = '';
-  var remainDaysClass = '';
+  const rawDateOnly = String(raw).substring(0, 10);
+  const dateParts = rawDateOnly.split('-');
+  const target = new Date(Number(dateParts[0]), Number(dateParts[1]) - 1, Number(dateParts[2]));
+  const diffMs = target.getTime() - today.getTime();
+  const remainDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+  let remainDaysText = '';
+  let remainDaysClass = '';
   if (remainDays < 0) {
     remainDaysText = '逾' + Math.abs(remainDays) + '天';
     remainDaysClass = 'days-overdue';
@@ -140,11 +140,11 @@ function calcDeliveryInfo(source) {
     remainDaysText = '今天';
     remainDaysClass = 'days-urgent';
   } else {
-    var createRaw = source.createTime || '';
+    const createRaw = source.createTime || '';
     if (createRaw) {
-      var start = new Date(typeof createRaw === 'string' ? createRaw.replace(' ', 'T') : createRaw);
-      var totalDays = Math.ceil((target.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) || 1;
-      var ratio = remainDays / totalDays;
+      const start = new Date(typeof createRaw === 'string' ? createRaw.replace(' ', 'T') : createRaw);
+      const totalDays = Math.ceil((target.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) || 1;
+      const ratio = remainDays / totalDays;
       if (ratio <= 0.2) { remainDaysText = remainDays + '天'; remainDaysClass = 'days-urgent'; }
       else if (ratio <= 0.5) { remainDaysText = remainDays + '天'; remainDaysClass = 'days-warn'; }
       else { remainDaysText = remainDays + '天'; remainDaysClass = 'days-safe'; }
@@ -158,7 +158,7 @@ function calcDeliveryInfo(source) {
 }
 
 function validateAndNormalizeOrder(order) {
-  var normalized = normalizeData(order, {
+  const normalized = normalizeData(order, {
     id: { required: true, type: 'string' },
     orderNo: { required: true, type: 'string' },
     styleNo: { required: true, type: 'string' },
@@ -168,28 +168,28 @@ function validateAndNormalizeOrder(order) {
     progressWorkflowJson: { required: false, default: {} },
     status: { required: true, type: 'string' },
   });
-  var validation = validateProductionOrder(normalized);
+  const validation = validateProductionOrder(normalized);
   if (!validation.valid) return null;
   return normalized;
 }
 
 function transformOrderData(r) {
-  var validated = validateAndNormalizeOrder(r);
-  var source = validated || r || {};
-  var sizeMeta = buildSizeMeta(source);
-  var colorSizeMeta = buildColorSizeMeta(source);
-  var colorGroups = colorSizeMeta.groups || [];
-  var allSizes = colorSizeMeta.allSizes || [];
-  var delivery = calcDeliveryInfo(source);
-  var urgencyTagText = mapUrgencyLabel(source.urgencyLevel || source.urgency_level);
-  var plateTypeTagText = mapPlateTypeLabel(source.plateType || source.plate_type);
-  var factoryTypeText = mapFactoryTypeLabel(source.factoryType || source.factory_type);
-  var orgDisplay = normalizeText(source.orgPath || source.parentOrgUnitName);
-  var styleCoverUrl = '';
+  const validated = validateAndNormalizeOrder(r);
+  const source = validated || r || {};
+  const sizeMeta = buildSizeMeta(source);
+  const colorSizeMeta = buildColorSizeMeta(source);
+  const colorGroups = colorSizeMeta.groups || [];
+  const allSizes = colorSizeMeta.allSizes || [];
+  const delivery = calcDeliveryInfo(source);
+  const urgencyTagText = mapUrgencyLabel(source.urgencyLevel || source.urgency_level);
+  const plateTypeTagText = mapPlateTypeLabel(source.plateType || source.plate_type);
+  const factoryTypeText = mapFactoryTypeLabel(source.factoryType || source.factory_type);
+  const orgDisplay = normalizeText(source.orgPath || source.parentOrgUnitName);
+  let styleCoverUrl = '';
   if (source.styleCover) {
     styleCoverUrl = getAuthedImageUrl(source.styleCover);
   }
-  var totalQuantity = colorGroups.length > 0
+  const totalQuantity = colorGroups.length > 0
     ? colorGroups.reduce(function (sum, g) { return sum + g.total; }, 0)
     : sizeMeta.sizeTotal;
   return Object.assign({}, source, {

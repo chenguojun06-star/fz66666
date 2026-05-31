@@ -3,6 +3,7 @@
   "enablePullDownRefresh": true,
   "usingComponents": {
     "ai-assistant": "/components/ai-assistant/index",
-    "custom-nav": "/components/common/custom-nav/index"
+    "custom-nav": "/components/common/custom-nav/index",
+    "purchase-cart-drawer": "/components/purchase-cart-drawer/index"
   }
 }

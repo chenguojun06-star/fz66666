@@ -11,17 +11,17 @@
  *   production.orderStats()    → 订单统计（与H5进度看板一致）
  *   production.listOrders      → 订单列表 + 状态计数
  */
-var api = require('../../utils/api');
-var { transformOrderData } = require('./utils/orderTransform');
-var { buildProcessNodesWithRates, calcOrderProgress } = require('./utils/progressNodes');
-var { isAdminOrSupervisor } = require('../../utils/permission');
-var { isTenantOwner } = require('../../utils/storage');
-var { eventBus, Events } = require('../../utils/eventBus');
+const api = require('../../utils/api');
+const { transformOrderData } = require('./utils/orderTransform');
+const { buildProcessNodesWithRates, calcOrderProgress } = require('./utils/progressNodes');
+const { isAdminOrSupervisor } = require('../../utils/permission');
+const { isTenantOwner } = require('../../utils/storage');
+const { eventBus, Events } = require('../../utils/eventBus');
 
-var app = getApp();
+const app = getApp();
 
 /* 状态过滤映射（值 = 后端 status 字段；overdue 为客户端筛选） */
-var STATUS_FILTERS = [
+const STATUS_FILTERS = [
   { key: 'all',           label: '进行中', value: '' },
   { key: 'in_production', label: '生产中', value: 'production' },
   { key: 'completed',     label: '已完成', value: 'completed' },
@@ -34,8 +34,8 @@ function buildProcessNodes(order) {
 
 /** 为订单注入看板所需的扩展字段 */
 function enrichForDashboard(order) {
-  var completed = Number(order.completedQuantity) || 0;
-  var total = Number(order.cuttingQuantity) || Number(order.cuttingQty) || Number(order.orderQuantity) || Number(order.sizeTotal) || 0;
+  const completed = Number(order.completedQuantity) || 0;
+  const total = Number(order.cuttingQuantity) || Number(order.cuttingQty) || Number(order.orderQuantity) || Number(order.sizeTotal) || 0;
   order.processNodes = buildProcessNodes(order);
   order.remainQuantity = Math.max(0, total - completed);
   order.calculatedProgress = calcOrderProgress(order);
@@ -66,7 +66,7 @@ Page({
   },
 
   onLoad: function (options) {
-    var app = getApp();
+    const app = getApp();
     if (app.requireAuth && !app.requireAuth()) return;
     if (!isTenantOwner() && !isAdminOrSupervisor()) {
       wx.showToast({ title: '无权限访问', icon: 'none', duration: 1500 });
@@ -80,7 +80,7 @@ Page({
   },
 
   onShow: function () {
-    var app = getApp();
+    const app = getApp();
     if (app.requireAuth && !app.requireAuth()) return;
     if (this._loaded) {
       this.refreshCards();
@@ -88,7 +88,7 @@ Page({
     }
     this._loaded = true;
     this._bindWsEvents();
-    var that = this;
+    const that = this;
     setTimeout(function () { that._loadUnreadCount(); }, 200);
   },
 
@@ -116,14 +116,14 @@ Page({
 
   /* ======== 刷新摘要卡片（3 个并发请求，与H5进度看板一致） ======== */
   refreshCards: function () {
-    var that = this;
+    const that = this;
     that.setData({ loading: true });
 
-    var apiFailCount = 0;
-    var orderStatsFn = api.production && typeof api.production.orderStats === 'function'
+    let apiFailCount = 0;
+    const orderStatsFn = api.production && typeof api.production.orderStats === 'function'
       ? api.production.orderStats : null;
     if (!orderStatsFn) {
-      var prodKeys = api.production ? Object.keys(api.production).join(',') : 'undefined';
+      const prodKeys = api.production ? Object.keys(api.production).join(',') : 'undefined';
       console.warn('[Dashboard] api.production.orderStats 不可用，跳过订单统计。production keys:', prodKeys);
     }
     return Promise.all([
@@ -131,9 +131,9 @@ Page({
       api.dashboard.getTopStats().catch(function (e) { console.warn('[Dashboard] topStats API失败:', e.message || e); apiFailCount++; return {}; }),
       orderStatsFn ? orderStatsFn({}).catch(function (e) { console.warn('[Dashboard] orderStats API失败:', e.message || e); apiFailCount++; return {}; }) : Promise.resolve({}),
     ]).then(function (res) {
-      var dash     = res[0] || {};
-      var topStats = res[1] || {};
-      var stats    = res[2] || {};
+      const dash     = res[0] || {};
+      const topStats = res[1] || {};
+      const stats    = res[2] || {};
 
       that.setData({
         loading: false,
@@ -171,12 +171,12 @@ Page({
 
   /* ======== 加载订单列表（分页 + 封面图 + 工序明细） ======== */
   loadOrders: function (reset) {
-    var that = this;
-    var activeKey = this.data.activeFilter;
-    var isOverdue = activeKey === 'overdue';
-    var filterVal = '';
+    const that = this;
+    const activeKey = this.data.activeFilter;
+    const isOverdue = activeKey === 'overdue';
+    let filterVal = '';
     if (!isOverdue) {
-      for (var i = 0; i < STATUS_FILTERS.length; i++) {
+      for (let i = 0; i < STATUS_FILTERS.length; i++) {
         if (STATUS_FILTERS[i].key === activeKey) {
           filterVal = STATUS_FILTERS[i].value;
           break;
@@ -185,30 +185,30 @@ Page({
     }
 
     return app.loadPagedList(this, 'orders', reset, function (p) {
-      var params = { page: p.page, pageSize: isOverdue ? 50 : p.pageSize, excludeTerminal: 'true' };
+      const params = { page: p.page, pageSize: isOverdue ? 50 : p.pageSize, excludeTerminal: 'true' };
       if (isOverdue) {
         params.status = 'production';
       } else if (filterVal) {
         params.status = filterVal;
       }
-      var searchKey = that.data.searchKey;
+      const searchKey = that.data.searchKey;
       if (searchKey) params.orderNo = searchKey;
       return api.production.listOrders(params);
     }, function (r) {
       return enrichForDashboard(transformOrderData(r));
     }).then(function () {
       if (isOverdue) {
-        var filtered = (that.data.orders.list || []).filter(function (o) {
+        const filtered = (that.data.orders.list || []).filter(function (o) {
           return o.remainDaysClass === 'days-overdue';
         });
         that.setData({ 'orders.list': filtered });
       }
       if (reset) that._refreshStatCounts();
       if (that._pendingOrderId) {
-        var pid = that._pendingOrderId;
+        const pid = that._pendingOrderId;
         that._pendingOrderId = '';
-        var list = that.data.orders.list || [];
-        for (var i = 0; i < list.length; i++) {
+        const list = that.data.orders.list || [];
+        for (let i = 0; i < list.length; i++) {
           if (list[i].id === pid) {
             if (!list[i].expanded) {
               that.setData({ ['orders.list[' + i + '].expanded']: true });
@@ -222,15 +222,15 @@ Page({
 
   /* ======== 刷新状态计数 ======== */
   _refreshStatCounts: function () {
-    var that = this;
-    var orderStatsFn2 = api.production && typeof api.production.orderStats === 'function'
+    const that = this;
+    const orderStatsFn2 = api.production && typeof api.production.orderStats === 'function'
       ? api.production.orderStats : null;
     Promise.all([
       orderStatsFn2 ? orderStatsFn2({}).catch(function () { return {}; }) : Promise.resolve({}),
       api.dashboard.get().catch(function () { return {}; }),
     ]).then(function (res) {
-      var stats = res[0] || {};
-      var dash  = res[1] || {};
+      const stats = res[0] || {};
+      const dash  = res[1] || {};
       that.setData({
         statCounts: {
           all:            Number(stats.totalOrders) || 0,
@@ -244,7 +244,7 @@ Page({
 
   /* ======== 状态筛选切换 ======== */
   onStatTap: function (e) {
-    var key = e.currentTarget.dataset.key;
+    const key = e.currentTarget.dataset.key;
     if (key === this.data.activeFilter) return;
     this.setData({ activeFilter: key });
     this.loadOrders(true);
@@ -252,28 +252,28 @@ Page({
 
   /* ======== 展开/收起订单卡片 ======== */
   onCardToggle: function (e) {
-    var idx = e.currentTarget.dataset.index;
-    var path = 'orders.list[' + idx + '].expanded';
+    const idx = e.currentTarget.dataset.index;
+    const path = 'orders.list[' + idx + '].expanded';
     this.setData({ [path]: !this.data.orders.list[idx].expanded });
   },
 
   /* ======== 封面图预览 ======== */
   onCoverPreview: function (e) {
-    var url = e.currentTarget.dataset.url;
+    const url = e.currentTarget.dataset.url;
     if (!url) return;
     wx.previewImage({ current: url, urls: [url] });
   },
 
   /* ======== 复制订单号 ======== */
   onOpenRemark: function (e) {
-    var idx = e.currentTarget.dataset.index;
-    var order = this.data.orders.list[idx];
+    const idx = e.currentTarget.dataset.index;
+    const order = this.data.orders.list[idx];
     if (!order) return;
     wx.navigateTo({ url: '/pages/order/remark/index?targetType=order&targetNo=' + encodeURIComponent(order.orderNo || '') });
   },
 
   onCopyOrderNo: function (e) {
-    var orderNo = e.currentTarget.dataset.orderNo;
+    const orderNo = e.currentTarget.dataset.orderNo;
     if (!orderNo) return;
     wx.setClipboardData({ data: orderNo, success: function () {
       wx.showToast({ title: '已复制', icon: 'success', duration: 1000 });
@@ -282,32 +282,32 @@ Page({
 
   /* ======== 采购 ======== */
   onGoProcurement: function (e) {
-    var idx = e.currentTarget.dataset.index;
-    var order = this.data.orders.list[idx];
+    const idx = e.currentTarget.dataset.index;
+    const order = this.data.orders.list[idx];
     if (!order) return;
     wx.navigateTo({ url: '/pages/procurement/task-detail/index?orderNo=' + encodeURIComponent(order.orderNo || '') + '&styleNo=' + encodeURIComponent(order.styleNo || '') });
   },
 
   /* ======== 查看裁剪明细 ======== */
   onViewCuttingBundles: function (e) {
-    var orderNo = e.currentTarget.dataset.orderNo;
+    const orderNo = e.currentTarget.dataset.orderNo;
     if (!orderNo) return;
     wx.navigateTo({ url: '/pages/cutting/bundle-detail/index?orderNo=' + encodeURIComponent(orderNo) });
   },
 
   /* ======== 转单 ======== */
   onTransferOrder: function (e) {
-    var orderId = e.currentTarget.dataset.orderId;
-    var orderNo = e.currentTarget.dataset.orderNo;
+    const orderId = e.currentTarget.dataset.orderId;
+    const orderNo = e.currentTarget.dataset.orderNo;
     if (!orderId && !orderNo) return;
     wx.navigateTo({ url: '/pages/cutting/bundle-detail/index?orderId=' + encodeURIComponent(orderId || '') + '&orderNo=' + encodeURIComponent(orderNo || '') + '&tab=transfer' });
   },
 
   /* ======== 工序编辑 ======== */
   onEditProcess: function (e) {
-    var orderId = e.currentTarget.dataset.orderId;
-    var orderNo = e.currentTarget.dataset.orderNo;
-    var status = e.currentTarget.dataset.status;
+    const orderId = e.currentTarget.dataset.orderId;
+    const orderNo = e.currentTarget.dataset.orderNo;
+    const status = e.currentTarget.dataset.status;
     if (!orderId) return;
     if (status !== 'production') {
       wx.showToast({ title: '仅生产中的订单可编辑工序', icon: 'none' });
@@ -318,8 +318,8 @@ Page({
 
   /* ======== 搜索：输入（防抖 500ms） ======== */
   onSearchInput: function (e) {
-    var that = this;
-    var val = (e.detail.value || '').trim();
+    const that = this;
+    const val = (e.detail.value || '').trim();
     that.setData({ searchKey: val });
     clearTimeout(that._searchTimer);
     that._searchTimer = setTimeout(function () {
@@ -337,7 +337,7 @@ Page({
   _loadUnreadCount: function () {
     return api.notice.unreadCount()
       .then(function (res) {
-        var count = Number(res) || 0;
+        const count = Number(res) || 0;
         this.setData({ unreadNoticeCount: count });
       }.bind(this))
       .catch(function (e) { console.warn('[dashboard] _loadUnreadCount失败:', e.message || e); });
@@ -345,14 +345,14 @@ Page({
 
   /* ======== 工具方法 ======== */
   _formatToday: function () {
-    var d = new Date();
+    const d = new Date();
     return (d.getMonth() + 1) + '月' + d.getDate() + '日';
   },
 
   _bindWsEvents: function () {
     if (this._wsBound) return;
     this._wsBound = true;
-    var that = this;
+    const that = this;
     this._onDataChanged = function () { that.refreshCards(); that.loadOrders(true); };
     this._onOrderProgress = function () { that.refreshCards(); that.loadOrders(true); };
     this._onOrderStatus = function () { that.refreshCards(); that.loadOrders(true); };

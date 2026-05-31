@@ -1,23 +1,23 @@
-var api = require('../../../../utils/api');
+const api = require('../../../../utils/api');
 
 function today() {
-  var d = new Date();
+  const d = new Date();
   return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 }
 function daysLater(n) {
-  var d = new Date();
+  const d = new Date();
   d.setDate(d.getDate() + n);
   return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 }
 
-var PLATE_MAP = ['', 'FIRST', 'REORDER'];
-var BIZ_TYPES = ['FOB', 'ODM', 'OEM', 'CMT'];
-var PRICING_MODES = ['PROCESS', 'SIZE', 'COST', 'QUOTE', 'MANUAL'];
-var PROD_DEPT_KEYWORDS = ['生产', '车间', '裁剪', '缝制', '后整', '工序', '车缝', '尾部', '整烫', '包装', '质检', '工艺', '班组', '产线', '绣花', '印花', '洗水', '组'];
+const PLATE_MAP = ['', 'FIRST', 'REORDER'];
+const BIZ_TYPES = ['FOB', 'ODM', 'OEM', 'CMT'];
+const PRICING_MODES = ['PROCESS', 'SIZE', 'COST', 'QUOTE', 'MANUAL'];
+const PROD_DEPT_KEYWORDS = ['生产', '车间', '裁剪', '缝制', '后整', '工序', '车缝', '尾部', '整烫', '包装', '质检', '工艺', '班组', '产线', '绣花', '印花', '洗水', '组'];
 
 Page({
   onCoverPreview: function (e) {
-    var url = e.currentTarget.dataset.url;
+    const url = e.currentTarget.dataset.url;
     if (url) wx.previewImage({ current: url, urls: [url] });
   },
 
@@ -43,12 +43,18 @@ Page({
     colorOptions: [], sizeOptions: [],
     plateTypeOptions: ['自动判断', '首单', '翻单'],
     factoryList: [], orgUnitList: [], categoryOptions: [],
-    quickFillQty: 1, submitting: false
+    quickFillQty: 1, submitting: false,
   },
 
   onLoad: function (opts) {
-    var colors = (decodeURIComponent(opts.colors || '')).split(',').filter(function (c) { return c.trim(); });
-    var sizes = (decodeURIComponent(opts.sizes || '')).split(',').filter(function (s) { return s.trim(); });
+    var isNoData = opts.noData === 'true';
+    var colors = [];
+    var sizes = [];
+
+    if (!isNoData) {
+      colors = (decodeURIComponent(opts.colors || '')).split(',').filter(function (c) { return c.trim(); });
+      sizes = (decodeURIComponent(opts.sizes || '')).split(',').filter(function (s) { return s.trim(); });
+    }
 
     this.setData({
       styleId: decodeURIComponent(opts.styleId || ''),
@@ -60,26 +66,28 @@ Page({
       colorOptions: colors,
       sizeOptions: sizes,
       selectedColors: colors.slice(),
-      selectedSizes: sizes.slice()
+      selectedSizes: sizes.slice(),
     });
 
-    if (colors.length && sizes.length) { this._rebuildLines(); }
+    if (!isNoData && colors.length && sizes.length) { this._rebuildLines(); }
 
     this._genOrderNo();
 
     var self = this;
     wx.nextTick(function () {
       self._loadAux();
-      self._loadProcessPrices();
-      self._loadQuotation();
+      if (!isNoData) {
+        self._loadProcessPrices();
+        self._loadQuotation();
+      }
     });
   },
 
   _rebuildLines: function () {
-    var cs = this.data.selectedColors, ss = this.data.selectedSizes;
-    var old = {};
+    const cs = this.data.selectedColors; const ss = this.data.selectedSizes;
+    const old = {};
     this.data.orderLines.forEach(function (l) { old[l.color + '|' + l.size] = l.quantity || 0; });
-    var lines = [];
+    const lines = [];
     cs.forEach(function (c) { ss.forEach(function (s) { lines.push({ color: c, size: s, quantity: old[c + '|' + s] || 0 }); }); });
     this.setData({ orderLines: lines });
     this._recalcTotal();
@@ -87,20 +95,20 @@ Page({
   },
 
   _recalcTotal: function () {
-    var t = 0;
+    let t = 0;
     this.data.orderLines.forEach(function (l) { t += l.quantity || 0; });
     this.setData({ orderQuantity: t });
   },
 
   _rebuildGrid: function () {
-    var cs = this.data.selectedColors, ss = this.data.selectedSizes;
-    var rows = [];
+    const cs = this.data.selectedColors; const ss = this.data.selectedSizes;
+    const rows = [];
     cs.forEach(function (c) {
-      var cells = [];
+      const cells = [];
       ss.forEach(function (s) {
-        var q = 0;
-        for (var i = 0; i < this.data.orderLines.length; i++) {
-          var l = this.data.orderLines[i];
+        let q = 0;
+        for (let i = 0; i < this.data.orderLines.length; i++) {
+          const l = this.data.orderLines[i];
           if (l.color === c && l.size === s) { q = l.quantity || 0; break; }
         }
         cells.push({ size: s, quantity: q });
@@ -113,10 +121,10 @@ Page({
   /* ═══ 报价 + 工序 + 核价 → 五模定价 ═══ */
 
   _loadProcessPrices: function () {
-    var self = this;
+    const self = this;
     api.production.listStyleProcesses(self.data.styleId).then(function (res) {
-      var list = Array.isArray(res) ? res : (res && res.records ? res.records : []);
-      var total = 0;
+      const list = Array.isArray(res) ? res : (res && res.records ? res.records : []);
+      let total = 0;
       list.forEach(function (p) { total += parseFloat(p.unitPrice || p.price || 0); });
       self._processPrices = list;
       self._processTotal = total;
@@ -125,7 +133,7 @@ Page({
   },
 
   _loadQuotation: function () {
-    var self = this;
+    const self = this;
     api.style.getQuotation(self.data.styleId).then(function (q) {
       if (!q) return;
       self._quotation = q;
@@ -136,11 +144,11 @@ Page({
   },
 
   _recalcComputedPrice: function () {
-    var d = this.data, mode = d.pricingMode;
-    var processTotal = this._processTotal || 0;
-    var quotationTotalCost = this._quotationTotalCost || 0;
-    var quotationTotalPrice = this._quotationTotalPrice || 0;
-    var price = 0;
+    const d = this.data; const mode = d.pricingMode;
+    const processTotal = this._processTotal || 0;
+    const quotationTotalCost = this._quotationTotalCost || 0;
+    const quotationTotalPrice = this._quotationTotalPrice || 0;
+    let price = 0;
     if (mode === 'PROCESS') price = processTotal;
     else if (mode === 'SIZE') price = processTotal;
     else if (mode === 'COST') price = quotationTotalCost || processTotal;
@@ -152,19 +160,19 @@ Page({
   /* ═══ 工厂 / 部门（对标PC端） ═══ */
 
   _loadAux: function () {
-    var self = this;
+    const self = this;
 
     api.factory.list().then(function (res) {
-      var list = res && res.records ? res.records : (Array.isArray(res) ? res : []);
+      const list = res && res.records ? res.records : (Array.isArray(res) ? res : []);
       self.setData({ factoryList: list.map(function (f) { return { factoryName: f.factoryName || f.name || f.label || '', id: f.id }; }) });
     }).catch(function () {});
 
     api.system.listOrganizationDepartments().then(function (res) {
-      var list = res && res.records ? res.records : (Array.isArray(res) ? res : []);
-      var filtered = list.filter(function (d) {
-        var name = d.nodeName || d.name || d.unitName || '';
-        var path = d.pathNames || '';
-        var content = name + ' ' + path;
+      const list = res && res.records ? res.records : (Array.isArray(res) ? res : []);
+      const filtered = list.filter(function (d) {
+        const name = d.nodeName || d.name || d.unitName || '';
+        const path = d.pathNames || '';
+        const content = name + ' ' + path;
         return PROD_DEPT_KEYWORDS.some(function (kw) { return content.indexOf(kw) !== -1; });
       });
       self.setData({ orgUnitList: filtered.map(function (d) {
@@ -173,7 +181,7 @@ Page({
     }).catch(function () {});
 
     api.system.getDictList('category').then(function (res) {
-      var data = Array.isArray(res) ? res : (res && res.records ? res.records : []);
+      const data = Array.isArray(res) ? res : (res && res.records ? res.records : []);
       self.setData({ categoryOptions: data });
       if (data.length) {
         self.setData({ productCategory: data[0].dictLabel || data[0].label || '' });
@@ -186,12 +194,12 @@ Page({
   },
 
   _genOrderNo: function () {
-    var self = this;
+    const self = this;
     api.serial.generate('ORDER_NO').then(function (no) {
       self.setData({ orderNo: String(no || '') });
     }).catch(function () {
-      var d = new Date();
-      var ts = d.getFullYear()
+      const d = new Date();
+      const ts = d.getFullYear()
         + String(d.getMonth() + 1).padStart(2, '0')
         + String(d.getDate()).padStart(2, '0')
         + String(d.getHours()).padStart(2, '0')
@@ -210,12 +218,12 @@ Page({
   },
 
   onOrgUnitChange: function (e) {
-    var item = this.data.orgUnitList[e.detail.value];
+    const item = this.data.orgUnitList[e.detail.value];
     if (item) this.setData({ orgUnitId: item.id, orgUnitName: item.name || '' });
   },
 
   onFactoryChange: function (e) {
-    var item = this.data.factoryList[e.detail.value];
+    const item = this.data.factoryList[e.detail.value];
     if (item) this.setData({ factoryId: item.id, factoryName: item.factoryName || '' });
   },
 
@@ -227,12 +235,12 @@ Page({
   onCompanyInput: function (e) { this.setData({ company: e.detail.value }); },
 
   onCategoryChange: function (e) {
-    var item = this.data.categoryOptions[e.detail.value];
+    const item = this.data.categoryOptions[e.detail.value];
     this.setData({ productCategory: item ? (item.dictLabel || item.label || '') : '' });
   },
 
   onPlateTypeChange: function (e) {
-    var v = PLATE_MAP[e.detail.value];
+    const v = PLATE_MAP[e.detail.value];
     this.setData({ plateType: v, plateTypeLabel: v ? this.data.plateTypeOptions[e.detail.value] : '' });
   },
 
@@ -246,20 +254,20 @@ Page({
   /* ═══ 颜色 / 码数 ═══ */
   onColorInput: function (e) { this.setData({ colorInput: e.detail.value }); },
   onColorAdd: function () {
-    var v = (this.data.colorInput || '').trim();
+    const v = (this.data.colorInput || '').trim();
     if (!v) return;
-    var opts = this.data.colorOptions.slice();
+    const opts = this.data.colorOptions.slice();
     if (opts.indexOf(v) === -1) opts.push(v);
-    var sel = this.data.selectedColors.slice();
+    const sel = this.data.selectedColors.slice();
     if (sel.indexOf(v) === -1) sel.push(v);
     this.setData({ colorOptions: opts, selectedColors: sel, colorInput: '' });
     this._rebuildLines();
   },
 
   onColorToggle: function (e) {
-    var c = e.currentTarget.dataset.c;
-    var sel = this.data.selectedColors.slice();
-    var i = sel.indexOf(c);
+    const c = e.currentTarget.dataset.c;
+    const sel = this.data.selectedColors.slice();
+    const i = sel.indexOf(c);
     if (i === -1) sel.push(c); else sel.splice(i, 1);
     this.setData({ selectedColors: sel });
     this._rebuildLines();
@@ -267,20 +275,20 @@ Page({
 
   onSizeInput: function (e) { this.setData({ sizeInput: e.detail.value }); },
   onSizeAdd: function () {
-    var v = (this.data.sizeInput || '').trim();
+    const v = (this.data.sizeInput || '').trim();
     if (!v) return;
-    var opts = this.data.sizeOptions.slice();
+    const opts = this.data.sizeOptions.slice();
     if (opts.indexOf(v) === -1) opts.push(v);
-    var sel = this.data.selectedSizes.slice();
+    const sel = this.data.selectedSizes.slice();
     if (sel.indexOf(v) === -1) sel.push(v);
     this.setData({ sizeOptions: opts, selectedSizes: sel, sizeInput: '' });
     this._rebuildLines();
   },
 
   onSizeToggle: function (e) {
-    var s = e.currentTarget.dataset.s;
-    var sel = this.data.selectedSizes.slice();
-    var i = sel.indexOf(s);
+    const s = e.currentTarget.dataset.s;
+    const sel = this.data.selectedSizes.slice();
+    const i = sel.indexOf(s);
     if (i === -1) sel.push(s); else sel.splice(i, 1);
     this.setData({ selectedSizes: sel });
     this._rebuildLines();
@@ -289,20 +297,20 @@ Page({
   /* ═══ 铺量 / 网格 ═══ */
   onQuickFillInput: function (e) { this.setData({ quickFillQty: parseInt(e.detail.value) || 0 }); },
   onQuickFill: function () {
-    var q = this.data.quickFillQty;
+    const q = this.data.quickFillQty;
     if (q <= 0) return;
-    var lines = this.data.orderLines.map(function (l) { return { color: l.color, size: l.size, quantity: q }; });
+    const lines = this.data.orderLines.map(function (l) { return { color: l.color, size: l.size, quantity: q }; });
     this.setData({ orderLines: lines });
     this._recalcTotal();
     this._rebuildGrid();
   },
 
   onGridQtyInput: function (e) {
-    var color = e.currentTarget.dataset.color;
-    var size = e.currentTarget.dataset.size;
-    var v = parseInt(e.detail.value) || 0;
-    var idx = -1;
-    for (var i = 0; i < this.data.orderLines.length; i++) {
+    const color = e.currentTarget.dataset.color;
+    const size = e.currentTarget.dataset.size;
+    const v = parseInt(e.detail.value) || 0;
+    let idx = -1;
+    for (let i = 0; i < this.data.orderLines.length; i++) {
       if (this.data.orderLines[i].color === color && this.data.orderLines[i].size === size) {
         idx = i; break;
       }
@@ -315,8 +323,8 @@ Page({
   },
 
   onLineQtyInput: function (e) {
-    var idx = e.currentTarget.dataset.idx;
-    var v = parseInt(e.detail.value) || 0;
+    const idx = e.currentTarget.dataset.idx;
+    const v = parseInt(e.detail.value) || 0;
     this.setData({ ['orderLines[' + idx + '].quantity']: v });
     this._recalcTotal();
     this._rebuildGrid();
@@ -324,7 +332,7 @@ Page({
 
   /* ═══ 定价模式（对标PC端五模：工序 / 尺码 / 外发整件 / 报价 / 手动） ═══ */
   onPricingModeChange: function (e) {
-    var idx = e.detail.value;
+    const idx = e.detail.value;
     this.setData({ pricingMode: PRICING_MODES[idx] || 'PROCESS', pricingModeIdx: idx });
     this._recalcComputedPrice();
   },
@@ -333,7 +341,7 @@ Page({
   /* ═══ 提交 ═══ */
   onSubmit: function () {
     if (this.data.submitting) return;
-    var d = this.data;
+    const d = this.data;
 
     if (!(d.orderNo || '').trim()) return wx.showToast({ title: '请输入订单号', icon: 'none' });
     if (d.factoryMode === 'INTERNAL' && !d.orgUnitId) return wx.showToast({ title: '请选择部门', icon: 'none' });
@@ -341,44 +349,44 @@ Page({
     if (!d.plannedStartDate) return wx.showToast({ title: '请选下单时间', icon: 'none' });
     if (!d.plannedEndDate) return wx.showToast({ title: '请选订单交期', icon: 'none' });
 
-    var hasQ = false;
-    for (var i = 0; i < d.orderLines.length; i++) {
+    let hasQ = false;
+    for (let i = 0; i < d.orderLines.length; i++) {
       if (d.orderLines[i].quantity > 0) { hasQ = true; break; }
     }
     if (!hasQ) return wx.showToast({ title: '请填写下单数量', icon: 'none' });
 
-    var up = parseFloat(d.computedUnitPrice) || 0;
+    let up = parseFloat(d.computedUnitPrice) || 0;
     if (d.pricingMode === 'MANUAL') {
-      var mup = parseFloat(d.manualOrderUnitPrice) || 0;
+      const mup = parseFloat(d.manualOrderUnitPrice) || 0;
       if (mup <= 0) return wx.showToast({ title: '请输入单价', icon: 'none' });
       up = mup;
     }
     if (up <= 0) return wx.showToast({ title: '请选择定价方式', icon: 'none' });
 
-    var self = this;
+    const self = this;
     wx.showModal({
       title: '确认下单',
       content: '款号：' + d.styleNo + '\n数量：' + d.orderQuantity + '\n单价：¥' + up + '\n确认提交？',
-      success: function (r) { if (r.confirm) self._doSubmit(up); }
+      success: function (r) { if (r.confirm) self._doSubmit(up); },
     });
   },
 
   _doSubmit: function (unitPrice) {
     this.setData({ submitting: true });
-    var d = this.data;
+    const d = this.data;
 
-    var valid = d.orderLines.filter(function (l) { return l.quantity > 0; });
-    var colors = [], sizes = [];
+    const valid = d.orderLines.filter(function (l) { return l.quantity > 0; });
+    const colors = []; const sizes = [];
     valid.forEach(function (l) {
       if (colors.indexOf(l.color) === -1) colors.push(l.color);
       if (sizes.indexOf(l.size) === -1) sizes.push(l.size);
     });
 
-    var details = valid.map(function (l) {
+    const details = valid.map(function (l) {
       return { color: l.color, size: l.size, quantity: l.quantity, materialPriceSource: '物料采购系统', materialPriceAcquiredAt: new Date().toISOString(), materialPriceVersion: 'purchase.v1' };
     });
 
-    var pricingObj = {
+    const pricingObj = {
       pricingMode: d.pricingMode,
       processBasedUnitPrice: this._processTotal || 0,
       sizeBasedUnitPrice: this._processTotal || 0,
@@ -389,7 +397,7 @@ Page({
       sizeLabels: d.selectedSizes || [],
     };
 
-    var payload = {
+    const payload = {
       orderNo: d.orderNo, styleId: d.styleId, styleNo: d.styleNo, styleName: d.styleName,
       color: colors.join(','), size: sizes.join(','),
       factoryId: d.factoryMode === 'EXTERNAL' ? d.factoryId : null,
@@ -409,10 +417,10 @@ Page({
       pricingMode: d.pricingMode,
       plannedStartDate: d.plannedStartDate + 'T09:00:00',
       plannedEndDate: d.plannedEndDate + 'T18:00:00',
-      scatterPricingMode: 'FOLLOW_ORDER'
+      scatterPricingMode: 'FOLLOW_ORDER',
     };
 
-    var self = this;
+    const self = this;
     api.production.createOrder(payload).then(function () {
       self.setData({ submitting: false });
       wx.showToast({ title: '下单成功', icon: 'success' });
@@ -421,5 +429,5 @@ Page({
       self.setData({ submitting: false });
       wx.showToast({ title: (err && err.message) || '下单失败', icon: 'none', duration: 3000 });
     });
-  }
+  },
 });

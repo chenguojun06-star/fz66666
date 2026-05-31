@@ -6,7 +6,7 @@ const { triggerDataRefresh } = require('../../../utils/eventBus');
 const MATERIAL_TYPE_MAP = {
   fabricA: '主面料', fabricB: '辅面料',
   liningA: '里料', liningB: '夹里', liningC: '衬布/粘合衬',
-  accessoryA: '拉链', accessoryB: '纽扣', accessoryC: '配件'
+  accessoryA: '拉链', accessoryB: '纽扣', accessoryC: '配件',
 };
 
 Page({
@@ -21,6 +21,8 @@ Page({
     hasInput: false,
     canConfirmProcurement: false,
     overallArrivalRate: -1,
+    cartVisible: false,
+    cartCount: 0,
   },
 
   onLoad(options) {
@@ -28,6 +30,9 @@ Page({
     const styleNo = decodeURIComponent(options.styleNo || '');
     this.setData({ orderNo: this.orderNo, styleNo });
     if (this.orderNo) this._loadDetail();
+  },
+
+  onShow() {
   },
 
   onPullDownRefresh() {
@@ -132,8 +137,8 @@ Page({
         api.production.receivePurchase({
           purchaseId: item.id || item.purchaseId,
           receiverId,
-          receiverName
-        })
+          receiverName,
+        }),
       ));
       wx.hideLoading();
       toast.success(`已采购 ${pendingItems.length} 项`);
@@ -190,7 +195,7 @@ Page({
           wx.hideLoading();
           toast.error(err.errMsg || err.message || '确认失败');
         }
-      }
+      },
     });
   },
 
@@ -226,7 +231,7 @@ Page({
           wx.hideLoading();
           toast.error(err.errMsg || err.message || '确认失败');
         }
-      }
+      },
     });
   },
 
@@ -285,7 +290,7 @@ Page({
       updates.push({
         id: item.id || item.purchaseId,
         arrivedQuantity: newArrived,
-        remark: remarkText || ''
+        remark: remarkText || '',
       });
     });
     return updates;
@@ -303,7 +308,7 @@ Page({
       const shortageQty = purchaseQty - newArrived;
       throw new Error(
         `「${materialName}」到货率仅${arrivalRate}%（${newArrived}/${purchaseQty}），` +
-        `还差${shortageQty}，请填写备注说明原因`
+        `还差${shortageQty}，请填写备注说明原因`,
       );
     }
     return remark;
@@ -365,5 +370,35 @@ Page({
     if (receiverId && existingId) return receiverId === existingId;
     if (receiverName && existingName) return receiverName === existingName;
     return false;
-  }
+  },
+
+  onOpenCart() {
+    this.setData({ cartVisible: true });
+  },
+
+  onCartClose() {
+    this.setData({ cartVisible: false, cartCount: 0 });
+  },
+
+  onCartConfirm(e) {
+    const purchaseNos = (e.detail && e.detail.purchaseNos) || [];
+    if (purchaseNos.length > 0) {
+      wx.showModal({
+        title: '下单成功',
+        content: '已生成 ' + purchaseNos.length + ' 个采购单',
+        showCancel: false,
+      });
+    }
+  },
+
+  async _loadCartCount() {
+    try {
+      const res = await api.purchaseCart.getCart();
+      const cart = res && res.data || res;
+      const items = cart && cart.items || [];
+      this.setData({ cartCount: items.length });
+    } catch (e) {
+      this.setData({ cartCount: 0 });
+    }
+  },
 });

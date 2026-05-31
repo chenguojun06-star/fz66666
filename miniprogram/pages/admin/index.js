@@ -1,13 +1,13 @@
-var api = require('../../utils/api');
-var { getUserInfo, getToken, setUserInfo, isFactoryOwner, isTenantOwner } = require('../../utils/storage');
-var { getBaseUrl } = require('../../config');
-var { getRoleDisplayName, isAdminOrSupervisor } = require('../../utils/permission');
-var { onDataRefresh, eventBus, Events } = require('../../utils/eventBus');
-var { safeNavigate } = require('../../utils/uiHelper');
-var { getAuthedImageUrl } = require('../../utils/fileUrl');
-var i18n = require('../../utils/i18n/index');
+const api = require('../../utils/api');
+const { getUserInfo, getToken, setUserInfo, isFactoryOwner, isTenantOwner } = require('../../utils/storage');
+const { getBaseUrl } = require('../../config');
+const { getRoleDisplayName, isAdminOrSupervisor } = require('../../utils/permission');
+const { onDataRefresh, eventBus, Events } = require('../../utils/eventBus');
+const { safeNavigate } = require('../../utils/uiHelper');
+const { getAuthedImageUrl } = require('../../utils/fileUrl');
+const i18n = require('../../utils/i18n/index');
 
-var HOME_MENU_KEY_MAP = {
+const HOME_MENU_KEY_MAP = {
   smartOps: { fullKey: 'miniprogram.menu.smartOps', label: '运营看板' },
   dashboard: { fullKey: 'miniprogram.menu.dashboard', label: '生产管理' },
   orderCreate: { fullKey: 'miniprogram.menu.orderCreate', label: '下单管理' },
@@ -21,17 +21,17 @@ var HOME_MENU_KEY_MAP = {
   wagePayment: { fullKey: 'miniprogram.menu.wagePayment', label: '收付款中心' },
 };
 
-var MENU_ROLE_MAP = {
+const MENU_ROLE_MAP = {
   admin: '管理员',
   supervisor: '组长/主管',
   worker: '工人',
 };
 
 function buildMenuItems(opts) {
-  var showInviteSection = opts.showInviteSection || false;
-  var showApprovalEntry = opts.showApprovalEntry || false;
-  var showMenuManage = opts.showMenuManage || false;
-  var items = [];
+  const showInviteSection = opts.showInviteSection || false;
+  const showApprovalEntry = opts.showApprovalEntry || false;
+  const showMenuManage = opts.showMenuManage || false;
+  const items = [];
 
   items.push({ id: 'password', label: '修改密码', iconClass: 'icon-lock', url: '/pages/admin/misc/change-password/index' });
   items.push({ id: 'payroll', label: '工资查询', iconClass: 'icon-payroll', url: '/pages/payroll/payroll' });
@@ -77,15 +77,15 @@ Page({
     if (typeof this.getTabBar === 'function' && this.getTabBar()) {
       this.getTabBar().setData({ selected: 3 });
     }
-    var lang = i18n.getLanguage();
+    const lang = i18n.getLanguage();
     if (lang !== this.data.currentLanguage) {
       this.applyLanguage(lang);
     }
-    var app = getApp();
+    const app = getApp();
     if (app && typeof app.requireAuth === 'function' && !app.requireAuth()) {
       return;
     }
-    var canManage = isAdminOrSupervisor() || isFactoryOwner();
+    const canManage = isAdminOrSupervisor() || isFactoryOwner();
     this._showMenuManage = canManage;
     this._showWagePayment = isTenantOwner() || isAdminOrSupervisor();
     this.loadUserInfo(canManage);
@@ -94,7 +94,7 @@ Page({
   },
 
   applyLanguage: function (language) {
-    var languageNameMap = {
+    const languageNameMap = {
       'zh-CN': i18n.t('language.names.zh-CN', language),
       'en-US': i18n.t('language.names.en-US', language),
       'vi-VN': i18n.t('language.names.vi-VN', language),
@@ -120,8 +120,8 @@ Page({
   },
 
   onMenuTap: function (e) {
-    var index = e.currentTarget.dataset.index;
-    var item = this.data.menuItems[index];
+    const index = e.currentTarget.dataset.index;
+    const item = this.data.menuItems[index];
     if (!item) return;
     if (item.action === 'switchLanguage') {
       this.onLanguageSwitchTap();
@@ -137,18 +137,18 @@ Page({
   },
 
   openMenuManage: function () {
-    var self = this;
-    var menuKeys = Object.keys(HOME_MENU_KEY_MAP);
-    var roles = Object.keys(MENU_ROLE_MAP);
+    const self = this;
+    const menuKeys = Object.keys(HOME_MENU_KEY_MAP);
+    const roles = Object.keys(MENU_ROLE_MAP);
 
     function buildRoleGroups(roleFlags) {
-      var roleGroups = [];
+      const roleGroups = [];
       roles.forEach(function (role) {
-        var flags = roleFlags[role] || {};
-        var menus = [];
+        const flags = roleFlags[role] || {};
+        const menus = [];
         menuKeys.forEach(function (shortKey) {
-          var meta = HOME_MENU_KEY_MAP[shortKey];
-          var enabled = true;
+          const meta = HOME_MENU_KEY_MAP[shortKey];
+          let enabled = true;
           if (typeof flags[meta.fullKey] === 'boolean') {
             enabled = flags[meta.fullKey];
           }
@@ -160,16 +160,16 @@ Page({
     }
 
     api.system.getMiniprogramMenuRoles().then(function (resp) {
-      var roleFlags = (resp && resp.data) || resp || {};
+      const roleFlags = (resp && resp.data) || resp || {};
       self.setData({ menuManageVisible: true, menuManageGroups: buildRoleGroups(roleFlags), _useRoleApi: true });
     }).catch(function () {
       api.system.getMiniprogramMenuConfig().then(function (resp) {
-        var flags = (resp && resp.data) || resp || {};
-        var roleFlags = {};
+        const flags = (resp && resp.data) || resp || {};
+        const roleFlags = {};
         roles.forEach(function (role) { roleFlags[role] = flags; });
         self.setData({ menuManageVisible: true, menuManageGroups: buildRoleGroups(roleFlags), _useRoleApi: false });
       }).catch(function () {
-        var roleGroups = buildRoleGroups({});
+        const roleGroups = buildRoleGroups({});
         self.setData({ menuManageVisible: true, menuManageGroups: roleGroups, _useRoleApi: false });
       });
     });
@@ -180,21 +180,21 @@ Page({
   },
 
   onMenuSwitch: function (e) {
-    var roleIdx = e.currentTarget.dataset.roleIdx;
-    var menuIdx = e.currentTarget.dataset.menuIdx;
-    var groups = this.data.menuManageGroups;
-    var path = 'menuManageGroups[' + roleIdx + '].menus[' + menuIdx + '].enabled';
-    var current = groups[roleIdx].menus[menuIdx].enabled;
+    const roleIdx = e.currentTarget.dataset.roleIdx;
+    const menuIdx = e.currentTarget.dataset.menuIdx;
+    const groups = this.data.menuManageGroups;
+    const path = 'menuManageGroups[' + roleIdx + '].menus[' + menuIdx + '].enabled';
+    const current = groups[roleIdx].menus[menuIdx].enabled;
     this.setData({ [path]: !current });
   },
 
   saveMenuConfig: function () {
     if (this.data.savingMenuConfig) return;
-    var self = this;
-    var groups = this.data.menuManageGroups;
-    var roleMenus = {};
+    const self = this;
+    const groups = this.data.menuManageGroups;
+    const roleMenus = {};
     groups.forEach(function (group) {
-      var menus = {};
+      const menus = {};
       group.menus.forEach(function (item) {
         menus[item.key] = item.enabled;
       });
@@ -212,8 +212,8 @@ Page({
         wx.showToast({ title: '保存失败', icon: 'none' });
       });
     } else {
-      var flatMenus = {};
-      var adminGroup = groups.find(function (g) { return g.role === 'admin'; });
+      const flatMenus = {};
+      const adminGroup = groups.find(function (g) { return g.role === 'admin'; });
       if (adminGroup) {
         adminGroup.menus.forEach(function (item) { flatMenus[item.key] = item.enabled; });
       }
@@ -229,18 +229,18 @@ Page({
   },
 
   onLanguageSwitchTap: function () {
-    var languageNameMap = this._languageNameMap || { 'zh-CN': '中文', 'en-US': 'English', 'vi-VN': 'Tiếng Việt', 'km-KH': 'ភាសាខ្មែរ' };
-    var langList = ['zh-CN', 'en-US', 'vi-VN', 'km-KH'];
-    var itemList = langList.map(function (lang) { return languageNameMap[lang] || lang; });
-    var that = this;
+    const languageNameMap = this._languageNameMap || { 'zh-CN': '中文', 'en-US': 'English', 'vi-VN': 'Tiếng Việt', 'km-KH': 'ភាសាខ្មែរ' };
+    const langList = ['zh-CN', 'en-US', 'vi-VN', 'km-KH'];
+    const itemList = langList.map(function (lang) { return languageNameMap[lang] || lang; });
+    const that = this;
     wx.showActionSheet({
       itemList: itemList,
       alertText: i18n.t('admin.switchLanguage', that.data.currentLanguage),
       success: function (res) {
-        var nextLang = langList[res.tapIndex] || 'zh-CN';
-        var appliedLang = i18n.setLanguage(nextLang);
+        const nextLang = langList[res.tapIndex] || 'zh-CN';
+        const appliedLang = i18n.setLanguage(nextLang);
         that.applyLanguage(appliedLang);
-        var tab = typeof that.getTabBar === 'function' ? that.getTabBar() : null;
+        const tab = typeof that.getTabBar === 'function' ? that.getTabBar() : null;
         if (tab && typeof tab.refreshLanguage === 'function') {
           tab.refreshLanguage(appliedLang);
         }
@@ -296,18 +296,18 @@ Page({
   },
 
   loadUserInfo: function (showApprovalEntry) {
-    var userInfo = getUserInfo();
-    var roleDisplayName = getRoleDisplayName();
-    var userName = (userInfo && userInfo.name) || (userInfo && userInfo.username) || '未知';
-    var avatarLetter = userName.charAt(0);
+    const userInfo = getUserInfo();
+    const roleDisplayName = getRoleDisplayName();
+    const userName = (userInfo && userInfo.name) || (userInfo && userInfo.username) || '未知';
+    const avatarLetter = userName.charAt(0);
 
-    var avatarImgUrl = '';
-    var rawAvatar = (userInfo && (userInfo.avatarUrl || userInfo.avatar || userInfo.headUrl)) || '';
+    let avatarImgUrl = '';
+    const rawAvatar = (userInfo && (userInfo.avatarUrl || userInfo.avatar || userInfo.headUrl)) || '';
     if (rawAvatar) {
       avatarImgUrl = getAuthedImageUrl(rawAvatar);
     }
 
-    var patch = { userInfo: userInfo, roleDisplayName: roleDisplayName, avatarLetter: avatarLetter, avatarImgUrl: avatarImgUrl };
+    const patch = { userInfo: userInfo, roleDisplayName: roleDisplayName, avatarLetter: avatarLetter, avatarImgUrl: avatarImgUrl };
     if (typeof showApprovalEntry === 'boolean') {
       patch.showApprovalEntry = showApprovalEntry;
     }
@@ -315,18 +315,18 @@ Page({
     this.refreshMenuItems();
 
     api.system.getMe().then(function (res) {
-      var freshUser = res;
+      const freshUser = res;
       if (!freshUser || !freshUser.name) return;
       setUserInfo(freshUser);
-      var freshAvatar = freshUser.avatarUrl || freshUser.avatar || freshUser.headUrl || '';
-      var freshImgUrl = '';
+      const freshAvatar = freshUser.avatarUrl || freshUser.avatar || freshUser.headUrl || '';
+      let freshImgUrl = '';
       if (freshAvatar) {
         if (freshAvatar.indexOf('http://') === 0 || freshAvatar.indexOf('https://') === 0) {
           freshImgUrl = freshAvatar;
         } else {
-          var token = getToken();
-          var base = getBaseUrl().replace(/\/$/, '');
-          var sep = freshAvatar.indexOf('?') !== -1 ? '&' : '?';
+          const token = getToken();
+          const base = getBaseUrl().replace(/\/$/, '');
+          const sep = freshAvatar.indexOf('?') !== -1 ? '&' : '?';
           freshImgUrl = base + freshAvatar + sep + 'token=' + encodeURIComponent(token);
         }
       }
@@ -339,14 +339,14 @@ Page({
   loadSystemInfo: function () {
     if (this._loadingSystemInfo) return;
     this._loadingSystemInfo = true;
-    var self = this;
+    const self = this;
     api.system.getOnlineCount().then(function (onlineCount) {
-      var userInfo = getUserInfo();
-      var hasTenant = !!(userInfo && userInfo.tenantId);
+      const userInfo = getUserInfo();
+      const hasTenant = !!(userInfo && userInfo.tenantId);
       if (hasTenant) {
         return api.tenant.myTenant().then(function (tenantResp) {
-          var tenantCode = (tenantResp && tenantResp.tenantCode) || '';
-          var tenantName = (tenantResp && tenantResp.tenantName) || '';
+          const tenantCode = (tenantResp && tenantResp.tenantCode) || '';
+          const tenantName = (tenantResp && tenantResp.tenantName) || '';
           if (tenantCode) {
             self._recruitInfo = { show: true, tenantCode: tenantCode, tenantName: tenantName };
           }
@@ -369,7 +369,7 @@ Page({
   },
 
   onCopyRecruitCode: function () {
-    var code = (this._recruitInfo && this._recruitInfo.tenantCode) || '';
+    const code = (this._recruitInfo && this._recruitInfo.tenantCode) || '';
     if (!code) {
       wx.showToast({ title: '暂无工厂码', icon: 'none' });
       return;
@@ -381,22 +381,22 @@ Page({
   },
 
   onCopyRecruitUrl: function () {
-    var recruitInfo = this._recruitInfo || {};
-    var tenantCode = recruitInfo.tenantCode || '';
-    var tenantName = recruitInfo.tenantName || '';
+    const recruitInfo = this._recruitInfo || {};
+    const tenantCode = recruitInfo.tenantCode || '';
+    const tenantName = recruitInfo.tenantName || '';
     if (!tenantCode) {
       wx.showToast({ title: '暂无工厂码', icon: 'none' });
       return;
     }
-    var baseUrl = '';
+    let baseUrl = '';
     try {
-      var app = getApp();
+      const app = getApp();
       baseUrl = (app.globalData && app.globalData.baseUrl) || getBaseUrl();
     } catch (e) {
       baseUrl = getBaseUrl();
     }
-    var origin = baseUrl.replace(/^(https?:\/\/)api\./, '$1www.').replace(/\/api\/?$/, '');
-    var url = origin + '/register?tenantCode=' + encodeURIComponent(tenantCode)
+    const origin = baseUrl.replace(/^(https?:\/\/)api\./, '$1www.').replace(/\/api\/?$/, '');
+    const url = origin + '/register?tenantCode=' + encodeURIComponent(tenantCode)
       + '&tenantName=' + encodeURIComponent(tenantName || '');
     wx.setClipboardData({
       data: url,
@@ -405,7 +405,7 @@ Page({
   },
 
   onLogout: function () {
-    var app = getApp();
+    const app = getApp();
     if (app && typeof app.logout === 'function') {
       app.logout();
     } else {

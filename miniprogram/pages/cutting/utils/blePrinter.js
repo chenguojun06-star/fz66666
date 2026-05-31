@@ -1,10 +1,10 @@
-var ESC = 0x1B;
-var GS = 0x1D;
-var CHUNK_DELAY_MS = 30;
-var DISCOVERY_TIMEOUT_MS = 8000;
-var CONNECTION_TIMEOUT_MS = 10000;
+const ESC = 0x1B;
+const GS = 0x1D;
+const CHUNK_DELAY_MS = 30;
+const DISCOVERY_TIMEOUT_MS = 8000;
+const CONNECTION_TIMEOUT_MS = 10000;
 
-var PRINTER_SERVICE_UUIDS = [
+const PRINTER_SERVICE_UUIDS = [
   '0000ff00-0000-1000-8000-00805f9b34fb',
   'e7810a71-73ae-499d-8c15-faa9aef0c3f2',
   '49535343-fe7d-4ae5-8fa9-9fafd205e455',
@@ -12,7 +12,7 @@ var PRINTER_SERVICE_UUIDS = [
   '0000fee7-0000-1000-8000-00805f9b34fb',
 ];
 
-var PRINTER_NAME_KEYWORDS = [
+const PRINTER_NAME_KEYWORDS = [
   'pr', 'PR', '印', '打', 'xp', 'XP',
   'hm', 'HM', 'gp', 'GP', 'qr', 'QR',
   'print', 'Print', 'pos', 'POS', 'label',
@@ -29,19 +29,19 @@ var PRINTER_NAME_KEYWORDS = [
  * ASCII 0x00~0x7F → 1 字节
  */
 function utf8Bytes(str) {
-  var bytes = [];
-  var i = 0;
+  const bytes = [];
+  let i = 0;
   while (i < str.length) {
-    var c = str.charCodeAt(i);
+    const c = str.charCodeAt(i);
     if (c < 0x80) {
       bytes.push(c);
     } else if (c < 0x800) {
       bytes.push(0xC0 | (c >> 6));
       bytes.push(0x80 | (c & 0x3F));
     } else if (c >= 0xD800 && c < 0xDC00 && i + 1 < str.length) {
-      var next = str.charCodeAt(i + 1);
+      const next = str.charCodeAt(i + 1);
       if (next >= 0xDC00 && next < 0xE000) {
-        var full = 0x10000 + ((c - 0xD800) << 10) + (next - 0xDC00);
+        const full = 0x10000 + ((c - 0xD800) << 10) + (next - 0xDC00);
         bytes.push(0xF0 | (full >> 18));
         bytes.push(0x80 | ((full >> 12) & 0x3F));
         bytes.push(0x80 | ((full >> 6) & 0x3F));
@@ -64,8 +64,8 @@ function utf8Bytes(str) {
 
 function isPrinter(name) {
   if (!name) return false;
-  var lower = name.toLowerCase();
-  for (var i = 0; i < PRINTER_NAME_KEYWORDS.length; i++) {
+  const lower = name.toLowerCase();
+  for (let i = 0; i < PRINTER_NAME_KEYWORDS.length; i++) {
     if (lower.indexOf(PRINTER_NAME_KEYWORDS[i].toLowerCase()) !== -1) return true;
   }
   return false;
@@ -78,7 +78,7 @@ function cmdInit() {
 }
 
 function cmdAlign(align) {
-  var v = align === 'center' ? 1 : align === 'right' ? 2 : 0;
+  const v = align === 'center' ? 1 : align === 'right' ? 2 : 0;
   return new Uint8Array([ESC, 0x61, v]);
 }
 
@@ -103,7 +103,7 @@ function cmdCut() {
  * 打印机在 init 后应已配置为 UTF-8 模式
  */
 function cmdText(text) {
-  var bytes = utf8Bytes(text);
+  const bytes = utf8Bytes(text);
   return new Uint8Array(bytes);
 }
 
@@ -111,8 +111,8 @@ function cmdText(text) {
  * 对齐标签文本
  */
 function cmdLabelLine(text) {
-  var line = text || '';
-  var utf8 = utf8Bytes(text);
+  const line = text || '';
+  const utf8 = utf8Bytes(text);
   return new Uint8Array(utf8);
 }
 
@@ -121,14 +121,14 @@ function cmdLabelLine(text) {
  * 参考 EPSON ESC/POS 规范，支持绝大多数热敏标签打印机
  */
 function cmdQr(text, dotSize) {
-  var data = utf8Bytes(text);
-  var size = Math.min(Math.max(dotSize || 5, 2), 8);
+  const data = utf8Bytes(text);
+  const size = Math.min(Math.max(dotSize || 5, 2), 8);
 
-  var storeLen = data.length + 3;
-  var pL = storeLen & 0xFF;
-  var pH = (storeLen >> 8) & 0xFF;
+  const storeLen = data.length + 3;
+  const pL = storeLen & 0xFF;
+  const pH = (storeLen >> 8) & 0xFF;
 
-  var seq = [];
+  const seq = [];
 
   // Model select: QR Code Model 2
   seq.push(GS, 0x28, 0x6B, 0x04, 0x00, 0x31, 0x41, 0x32, 0x00);
@@ -141,7 +141,7 @@ function cmdQr(text, dotSize) {
 
   // Store QR data
   seq.push(GS, 0x28, 0x6B, pL, pH, 0x31, 0x50, 0x30);
-  for (var i = 0; i < data.length; i++) seq.push(data[i]);
+  for (let i = 0; i < data.length; i++) seq.push(data[i]);
 
   // Print QR
   seq.push(GS, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x51, 0x30);
@@ -152,10 +152,10 @@ function cmdQr(text, dotSize) {
 /* ==================== 字节拼接 ==================== */
 
 function concatBytes(arrays) {
-  var total = 0;
+  let total = 0;
   for (var i = 0; i < arrays.length; i++) total += arrays[i].length;
-  var result = new Uint8Array(total);
-  var off = 0;
+  const result = new Uint8Array(total);
+  let off = 0;
   for (var i = 0; i < arrays.length; i++) {
     result.set(arrays[i], off);
     off += arrays[i].length;
@@ -164,24 +164,24 @@ function concatBytes(arrays) {
 }
 
 function computeQrCellSize(paperWidthCm, qrPxSize) {
-  var w = paperWidthCm || 7;
-  var px = qrPxSize || 84;
+  const w = paperWidthCm || 7;
+  const px = qrPxSize || 84;
   // 每 cm ≈ 38 dot（203dpi 热敏打印机），QR 最多占纸张宽度的 70%
-  var maxDots = Math.floor(w * 38 * 0.7);
+  const maxDots = Math.floor(w * 38 * 0.7);
   // QR cell = pixel / cellCount(~29 for version 3) ≈ qrPx / 29
-  var cellSize = Math.floor(maxDots / (px / 8));
+  const cellSize = Math.floor(maxDots / (px / 8));
   return Math.min(Math.max(cellSize, 2), 8);
 }
 
 function buildOneLabel(bundle, orderNo, orderInfo, qrSize) {
-  var parts = [];
+  const parts = [];
 
   // 初始化打印机状态
   parts.push(cmdInit());
   parts.push(cmdAlign('center'));
 
   // QR 码
-  var qrText = bundle.qrCode || '';
+  const qrText = bundle.qrCode || '';
   if (qrText) {
     parts.push(cmdQr(qrText, qrSize || 4));
     parts.push(cmdLineFeed());
@@ -209,14 +209,14 @@ function buildOneLabel(bundle, orderNo, orderInfo, qrSize) {
 }
 
 function printPair(label, value) {
-  var line = label + ': ' + value;
-  var parts = [cmdText(line), cmdLineFeed()];
+  const line = label + ': ' + value;
+  const parts = [cmdText(line), cmdLineFeed()];
   return concatBytes(parts);
 }
 
 function buildAllLabels(bundles, orderNo, orderInfo, qrCellSize) {
-  var all = [];
-  for (var i = 0; i < bundles.length; i++) {
+  const all = [];
+  for (let i = 0; i < bundles.length; i++) {
     all.push(buildOneLabel(bundles[i], orderNo, orderInfo, qrCellSize));
   }
   return concatBytes(all);
@@ -230,17 +230,17 @@ function findService(services) {
   // 优先匹配已知打印机 Service UUID
   for (var i = 0; i < services.length; i++) {
     var uuid = (services[i].uuid || '').toLowerCase();
-    for (var j = 0; j < PRINTER_SERVICE_UUIDS.length; j++) {
+    for (let j = 0; j < PRINTER_SERVICE_UUIDS.length; j++) {
       if (uuid === PRINTER_SERVICE_UUIDS[j]) return services[i];
       // 部分匹配（最后 8 位）
-      var suffix = PRINTER_SERVICE_UUIDS[j].substring(4, 8);
+      const suffix = PRINTER_SERVICE_UUIDS[j].substring(4, 8);
       if (uuid.indexOf(suffix) !== -1) return services[i];
     }
   }
 
   // 兜底：找第一个含 (write || writeWithoutResponse) 特征值的 Service
   for (var i = 0; i < services.length; i++) {
-    var s = services[i];
+    const s = services[i];
     // 无法在 Service 级别判断 Characteristics，先返回第一个非通用 Service
     var uuid = (s.uuid || '').toLowerCase();
     if (uuid.indexOf('1800') === -1 && uuid.indexOf('1801') === -1 && uuid.indexOf('180a') === -1) {
@@ -253,10 +253,10 @@ function findService(services) {
 
 function findWriteChar(characteristics) {
   if (!characteristics) return null;
-  var withResp = null;
-  var withoutResp = null;
-  for (var i = 0; i < characteristics.length; i++) {
-    var c = characteristics[i];
+  let withResp = null;
+  let withoutResp = null;
+  for (let i = 0; i < characteristics.length; i++) {
+    const c = characteristics[i];
     if (!c || !c.properties) continue;
     if (c.properties.writeWithoutResponse) withoutResp = c;
     if (c.properties.write) withResp = c;
@@ -273,8 +273,8 @@ function findWriteChar(characteristics) {
  * iOS 需要分片间有足够延时，Android 可以更快
  */
 function writeInChunks(deviceId, serviceId, charId, data, mtu) {
-  var effectiveMtu = Math.max(20, (mtu || 20) - 3);
-  var offset = 0;
+  let effectiveMtu = Math.max(20, (mtu || 20) - 3);
+  let offset = 0;
 
   return new Promise(function (resolve, reject) {
     function sendChunk() {
@@ -283,8 +283,8 @@ function writeInChunks(deviceId, serviceId, charId, data, mtu) {
         return;
       }
 
-      var end = Math.min(offset + effectiveMtu, data.length);
-      var chunk = data.slice(offset, end);
+      const end = Math.min(offset + effectiveMtu, data.length);
+      const chunk = data.slice(offset, end);
 
       wx.writeBLECharacteristicValue({
         deviceId: deviceId,
@@ -294,8 +294,8 @@ function writeInChunks(deviceId, serviceId, charId, data, mtu) {
         success: function () {
           offset = end;
           // 根据剩余数据量和平台调整延时
-          var remaining = data.length - offset;
-          var delay = remaining > 1024 ? CHUNK_DELAY_MS : Math.max(10, CHUNK_DELAY_MS - 15);
+          const remaining = data.length - offset;
+          const delay = remaining > 1024 ? CHUNK_DELAY_MS : Math.max(10, CHUNK_DELAY_MS - 15);
           setTimeout(sendChunk, delay);
         },
         fail: function (err) {
@@ -306,7 +306,7 @@ function writeInChunks(deviceId, serviceId, charId, data, mtu) {
           } else {
             reject(new Error('写入失败: ' + (err.errMsg || err.message || '未知错误')));
           }
-        }
+        },
       });
     }
 
@@ -324,7 +324,7 @@ function negotiateMtu(deviceId) {
       },
       fail: function () {
         resolve(20);
-      }
+      },
     });
   });
 }
@@ -339,20 +339,20 @@ function negotiateMtu(deviceId) {
  * @returns {Promise}
  */
 function blePrint(bundles, orderNo, orderInfo, opts) {
-  var options = opts || {};
-  var qrCellSize = options.qrCellSize;
+  const options = opts || {};
+  let qrCellSize = options.qrCellSize;
   if (!qrCellSize || qrCellSize < 2 || qrCellSize > 8) {
     qrCellSize = computeQrCellSize(options.paperWidth || 7, 80);
   }
-  var printData = buildAllLabels(bundles, orderNo, orderInfo, qrCellSize);
-  var deviceId = null;
-  var adapterClosed = false;
+  const printData = buildAllLabels(bundles, orderNo, orderInfo, qrCellSize);
+  let deviceId = null;
+  let adapterClosed = false;
 
   return new Promise(function (resolve, reject) {
     wx.showLoading({ title: '初始化蓝牙...', mask: true });
     // 超时保护：防止 openBluetoothAdapter 在开发者工具/不支持蓝牙的环境下无任何回调
-    var adapterReady = false;
-    var adapterTimer = setTimeout(function () {
+    let adapterReady = false;
+    const adapterTimer = setTimeout(function () {
       if (!adapterReady) {
         wx.hideLoading();
         reject(new Error('蓝牙初始化无响应\n\n• 开发者工具不支持蓝牙，请使用真机测试\n• 真机上请确认已授权蓝牙权限并开启蓝牙'));
@@ -368,18 +368,18 @@ function blePrint(bundles, orderNo, orderInfo, opts) {
         wx.startBluetoothDevicesDiscovery({
           allowDuplicatesKey: false,
           success: function () {
-            var found = [];
-            var timer = null;
+            const found = [];
+            let timer = null;
 
             function onFound(res) {
-              var devices = res.devices || [];
-              for (var i = 0; i < devices.length; i++) {
-                var d = devices[i];
+              const devices = res.devices || [];
+              for (let i = 0; i < devices.length; i++) {
+                const d = devices[i];
                 if (!d.name || !d.name.length) continue;
                 if (!d.deviceId) continue;
                 // 去重
-                var dup = false;
-                for (var j = 0; j < found.length; j++) {
+                let dup = false;
+                for (let j = 0; j < found.length; j++) {
                   if (found[j].deviceId === d.deviceId) { dup = true; break; }
                 }
                 if (!dup) found.push(d);
@@ -395,9 +395,9 @@ function blePrint(bundles, orderNo, orderInfo, opts) {
               wx.hideLoading();
 
               // 过滤出打印机设备
-              var printers = found.filter(function (d) { return isPrinter(d.name); });
+              const printers = found.filter(function (d) { return isPrinter(d.name); });
               // 没有匹配到打印机时，显示所有命名设备（用户手动选择）
-              var list = printers.length ? printers : found.filter(function (d) {
+              const list = printers.length ? printers : found.filter(function (d) {
                 return d.name && d.name.length > 0;
               });
 
@@ -409,7 +409,7 @@ function blePrint(bundles, orderNo, orderInfo, opts) {
               }
 
               // 限制显示数量（ActionSheet 最多 6 项）
-              var display = list.slice(0, 6);
+              const display = list.slice(0, 6);
               wx.showActionSheet({
                 itemList: display.map(function (d) { return d.name || d.localName || '未知设备'; }),
                 success: function (tapRes) {
@@ -422,7 +422,7 @@ function blePrint(bundles, orderNo, orderInfo, opts) {
                   wx.closeBluetoothAdapter();
                   adapterClosed = true;
                   reject(new Error('已取消选择打印机'));
-                }
+                },
               });
             }, DISCOVERY_TIMEOUT_MS);
           },
@@ -430,20 +430,20 @@ function blePrint(bundles, orderNo, orderInfo, opts) {
             wx.hideLoading();
             wx.closeBluetoothAdapter();
             adapterClosed = true;
-            var msg = (err && err.errMsg) || '';
+            const msg = (err && err.errMsg) || '';
             if (msg.indexOf('location') !== -1 || msg.indexOf('定位') !== -1) {
               reject(new Error('搜索蓝牙需要开启手机定位（Android 系统要求）'));
             } else {
               reject(new Error('搜索蓝牙设备失败，请确认蓝牙已开启'));
             }
-          }
+          },
         });
       },
       fail: function (err) {
         adapterReady = true;
         clearTimeout(adapterTimer);
         wx.hideLoading();
-        var msg = (err && err.errMsg) || '';
+        const msg = (err && err.errMsg) || '';
         if (msg.indexOf('103') !== -1 || msg.indexOf('unauthorized') !== -1 || msg.indexOf('授权') !== -1) {
           reject(new Error('请授权蓝牙权限：点击右上角 ··· → 设置 → 蓝牙 → 允许'));
         } else if (msg.indexOf('10001') !== -1) {
@@ -451,7 +451,7 @@ function blePrint(bundles, orderNo, orderInfo, opts) {
         } else {
           reject(new Error('蓝牙初始化失败，请确认手机支持蓝牙功能'));
         }
-      }
+      },
     });
   }).finally(function () {
     wx.hideLoading();
@@ -465,10 +465,10 @@ function blePrint(bundles, orderNo, orderInfo, opts) {
 }
 
 function connectAndSend(deviceId, printData, resolve, reject, onDone) {
-  var serviceId = null;
-  var charId = null;
-  var connectionEstablished = false;
-  var done = false;
+  let serviceId = null;
+  let charId = null;
+  let connectionEstablished = false;
+  let done = false;
 
   function cleanup() {
     if (done) return;
@@ -485,7 +485,7 @@ function connectAndSend(deviceId, printData, resolve, reject, onDone) {
     }
   }
 
-  var connTimer = setTimeout(function () {
+  const connTimer = setTimeout(function () {
     if (!connectionEstablished) {
       cleanup();
       reject(new Error('连接打印机超时，请确认打印机处于待连接状态'));
@@ -503,7 +503,7 @@ function connectAndSend(deviceId, printData, resolve, reject, onDone) {
       wx.getBLEDeviceServices({
         deviceId: deviceId,
         success: function (res) {
-          var service = findService(res.services);
+          const service = findService(res.services);
           if (!service) {
             cleanup();
             reject(new Error('打印机服务不可用，请确认设备为热敏标签打印机'));
@@ -515,7 +515,7 @@ function connectAndSend(deviceId, printData, resolve, reject, onDone) {
             deviceId: deviceId,
             serviceId: serviceId,
             success: function (charRes) {
-              var ch = findWriteChar(charRes.characteristics);
+              const ch = findWriteChar(charRes.characteristics);
               if (!ch) {
                 cleanup();
                 reject(new Error('打印机不支持数据写入'));
@@ -544,19 +544,19 @@ function connectAndSend(deviceId, printData, resolve, reject, onDone) {
             fail: function () {
               cleanup();
               reject(new Error('获取打印机特征值失败'));
-            }
+            },
           });
         },
         fail: function () {
           cleanup();
           reject(new Error('获取打印机服务失败'));
-        }
+        },
       });
     },
     fail: function (err) {
       clearTimeout(connTimer);
       cleanup();
-      var code = (err && err.errCode) || 0;
+      const code = (err && err.errCode) || 0;
       if (code === 10003) {
         reject(new Error('打印机已被其他设备连接，请先断开'));
       } else if (code === 10012) {
@@ -564,32 +564,32 @@ function connectAndSend(deviceId, printData, resolve, reject, onDone) {
       } else {
         reject(new Error('连接失败(' + (code || '未知') + ')，请确认打印机已开机且在附近'));
       }
-    }
+    },
   });
 }
 
-var WIFI_PRINT_PORT = 9100;
-var WIFI_CONNECT_TIMEOUT_MS = 5000;
+const WIFI_PRINT_PORT = 9100;
+const WIFI_CONNECT_TIMEOUT_MS = 5000;
 
 function wifiPrint(bundles, orderNo, orderInfo, opts) {
-  var options = opts || {};
-  var host = (options.wifiHost || '').replace(/^\s+|\s+$/g, '');
-  var port = options.wifiPort || WIFI_PRINT_PORT;
+  const options = opts || {};
+  const host = (options.wifiHost || '').replace(/^\s+|\s+$/g, '');
+  const port = options.wifiPort || WIFI_PRINT_PORT;
 
   if (!host) {
     return Promise.reject(new Error('请输入打印机IP地址'));
   }
 
-  var qrCellSize = options.qrCellSize;
+  let qrCellSize = options.qrCellSize;
   if (!qrCellSize || qrCellSize < 2 || qrCellSize > 8) {
     qrCellSize = computeQrCellSize(options.paperWidth || 7, 80);
   }
-  var printData = buildAllLabels(bundles, orderNo, orderInfo, qrCellSize);
+  const printData = buildAllLabels(bundles, orderNo, orderInfo, qrCellSize);
 
   return new Promise(function (resolve, reject) {
-    var tcpSocket = null;
-    var connected = false;
-    var done = false;
+    let tcpSocket = null;
+    let connected = false;
+    let done = false;
 
     function cleanup() {
       if (done) return;
@@ -607,7 +607,7 @@ function wifiPrint(bundles, orderNo, orderInfo, opts) {
       return;
     }
 
-    var connTimer = setTimeout(function () {
+    const connTimer = setTimeout(function () {
       if (!connected) {
         cleanup();
         reject(new Error('连接打印机超时，请确认IP地址正确且打印机与手机在同一WiFi'));
@@ -622,8 +622,8 @@ function wifiPrint(bundles, orderNo, orderInfo, opts) {
       wx.hideLoading();
       wx.showLoading({ title: '正在打印...', mask: true });
 
-      var CHUNK_SIZE = 4096;
-      var offset = 0;
+      const CHUNK_SIZE = 4096;
+      let offset = 0;
 
       function sendChunk() {
         if (offset >= printData.length) {
@@ -633,8 +633,8 @@ function wifiPrint(bundles, orderNo, orderInfo, opts) {
           resolve();
           return;
         }
-        var end = Math.min(offset + CHUNK_SIZE, printData.length);
-        var chunk = printData.slice(offset, end);
+        const end = Math.min(offset + CHUNK_SIZE, printData.length);
+        const chunk = printData.slice(offset, end);
         try {
           tcpSocket.write(chunk.buffer);
           offset = end;

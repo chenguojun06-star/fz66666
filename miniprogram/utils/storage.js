@@ -150,8 +150,8 @@ function setStorageValue(key, value) {
 
 function utf8Decode(str) {
   try {
-    var bytes = new Uint8Array(str.length);
-    for (var i = 0; i < str.length; i++) bytes[i] = str.charCodeAt(i);
+    const bytes = new Uint8Array(str.length);
+    for (let i = 0; i < str.length; i++) bytes[i] = str.charCodeAt(i);
     return new TextDecoder('utf-8').decode(bytes);
   } catch (_e) {
     return decodeURIComponent(escape(str));

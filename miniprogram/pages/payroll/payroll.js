@@ -115,7 +115,7 @@ Page({
   // 每次进入页面（包括首次、从子页面返回）都刷新最新工资数据
   onShow() {
     // 未登录时拒绝访问：工资数据属于敏感个人信息，必须验证身份后才能加载
-    var app = getApp();
+    const app = getApp();
     if (app && typeof app.requireAuth === 'function' && !app.requireAuth()) return;
     this.loadData();
   },
@@ -179,7 +179,7 @@ Page({
         if (filter !== 'custom') {
           this.loadData();
         }
-      }
+      },
     );
   },
 
@@ -193,7 +193,7 @@ Page({
       },
       () => {
         this.loadData();
-      }
+      },
     );
   },
 
@@ -207,7 +207,7 @@ Page({
       },
       () => {
         this.loadData();
-      }
+      },
     );
   },
 

@@ -1,15 +1,15 @@
-var api = require('../../../utils/api');
-var { toast } = require('../../../utils/uiHelper');
-var { isAdminOrSupervisor } = require('../../../utils/permission');
+const api = require('../../../utils/api');
+const { toast } = require('../../../utils/uiHelper');
+const { isAdminOrSupervisor } = require('../../../utils/permission');
 
-var PAYMENT_METHOD_MAP = {
+const PAYMENT_METHOD_MAP = {
   OFFLINE: '线下付款',
   BANK: '银行卡',
   WECHAT: '微信',
   ALIPAY: '支付宝',
 };
 
-var BIZ_TYPE_MAP = {
+const BIZ_TYPE_MAP = {
   PAYROLL_SETTLEMENT: { text: '工资结算', cls: 'tag-blue' },
   ORDER_SETTLEMENT: { text: '订单结算', cls: 'tag-green' },
   RECONCILIATION: { text: '工厂对账', cls: 'tag-orange' },
@@ -17,7 +17,7 @@ var BIZ_TYPE_MAP = {
   PAYROLL: { text: '工资', cls: 'tag-blue' },
 };
 
-var PAYMENT_STATUS_MAP = {
+const PAYMENT_STATUS_MAP = {
   pending: { text: '待处理', cls: 'tag-orange' },
   processing: { text: '处理中', cls: 'tag-blue' },
   success: { text: '已完成', cls: 'tag-green' },
@@ -57,14 +57,14 @@ Page({
   },
 
   onShow: function () {
-    var app = getApp();
+    const app = getApp();
     if (app && typeof app.requireAuth === 'function' && !app.requireAuth()) return;
     this._loadStats();
     this._resetAndLoad();
   },
 
   onPullDownRefresh: function () {
-    var that = this;
+    const that = this;
     this._loadStats();
     this._resetAndLoad().finally(function () { wx.stopPullDownRefresh(); });
   },
@@ -75,18 +75,18 @@ Page({
   },
 
   switchTab: function (e) {
-    var tab = Number(e.currentTarget.dataset.tab);
+    const tab = Number(e.currentTarget.dataset.tab);
     this.setData({ activeTab: tab });
   },
 
   _loadStats: function () {
-    var that = this;
-    var now = new Date();
-    var y = now.getFullYear();
-    var m = String(now.getMonth() + 1).padStart(2, '0');
-    var d = String(now.getDate()).padStart(2, '0');
-    var today = y + '-' + m + '-' + d;
-    var firstDay = y + '-' + m + '-01';
+    const that = this;
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const d = String(now.getDate()).padStart(2, '0');
+    const today = y + '-' + m + '-' + d;
+    const firstDay = y + '-' + m + '-01';
     api.wagePayment.dashboardStats(firstDay, today).then(function (stats) {
       that.setData({ stats: stats || {} });
     }).catch(function () {});
@@ -99,12 +99,12 @@ Page({
 
   _loadPending: function () {
     if (this.data.loading) return Promise.resolve();
-    var that = this;
+    const that = this;
     this.setData({ loading: true });
     return api.wagePayment.listPendingPayables({ page: this.data.pendingPage, pageSize: this.data.pageSize }).then(function (res) {
-      var records = (res && res.records) || res || [];
-      var total = (res && res.total) || records.length;
-      var enriched = records.map(function (r) {
+      const records = (res && res.records) || res || [];
+      const total = (res && res.total) || records.length;
+      const enriched = records.map(function (r) {
         r.bizTypeText = bizTypeText(r.bizType);
         r.bizTypeCls = bizTypeCls(r.bizType);
         r.remainingAmount = (r.amount || 0) - (r.paidAmount || 0);
@@ -122,11 +122,11 @@ Page({
   },
 
   _loadPayments: function () {
-    var that = this;
+    const that = this;
     return api.wagePayment.listPayments({ page: this.data.paymentPage, pageSize: this.data.pageSize }).then(function (res) {
-      var records = (res && res.records) || res || [];
-      var total = (res && res.total) || records.length;
-      var enriched = records.map(function (r) {
+      const records = (res && res.records) || res || [];
+      const total = (res && res.total) || records.length;
+      const enriched = records.map(function (r) {
         r.statusText = paymentStatusText(r.status);
         r.statusCls = paymentStatusCls(r.status);
         r.paymentMethodText = PAYMENT_METHOD_MAP[r.paymentMethod] || r.paymentMethod || '';
@@ -141,10 +141,10 @@ Page({
   },
 
   onOpenPayModal: function (e) {
-    var idx = e.currentTarget.dataset.index;
-    var item = this.data.pendingList[idx];
+    const idx = e.currentTarget.dataset.index;
+    const item = this.data.pendingList[idx];
     if (!item) return;
-    var remaining = item.remainingAmount || item.amount || 0;
+    const remaining = item.remainingAmount || item.amount || 0;
     this.setData({
       showPayModal: true,
       currentPayable: item,
@@ -158,9 +158,9 @@ Page({
 
   _loadPayeeAccounts: function (item) {
     if (!item || !item.payeeId) return;
-    var that = this;
+    const that = this;
     api.wagePayment.listAccounts({ payeeId: item.payeeId, payeeType: item.payeeType }).then(function (res) {
-      var accounts = Array.isArray(res) ? res : (res && res.records) || [];
+      const accounts = Array.isArray(res) ? res : (res && res.records) || [];
       that.setData({ payeeAccounts: accounts });
     }).catch(function () {});
   },
@@ -178,22 +178,22 @@ Page({
   },
 
   onSelectAccount: function (e) {
-    var idx = Number(e.detail.value);
-    var accounts = this.data.payeeAccounts;
+    const idx = Number(e.detail.value);
+    const accounts = this.data.payeeAccounts;
     if (accounts[idx]) {
       this.setData({ selectedAccountId: accounts[idx].id, selectedAccountName: accounts[idx].accountName || '' });
     }
   },
 
   onSubmitPay: function () {
-    var item = this.data.currentPayable;
+    const item = this.data.currentPayable;
     if (!item) return;
-    var amount = Number(this.data.payForm.amount);
+    const amount = Number(this.data.payForm.amount);
     if (!amount || amount <= 0) { toast('请输入有效金额'); return; }
-    var remaining = item.remainingAmount || item.amount || 0;
+    const remaining = item.remainingAmount || item.amount || 0;
     if (amount > remaining) { toast('支付金额不能超过待付金额'); return; }
-    var form = this.data.payForm;
-    var payload = {
+    const form = this.data.payForm;
+    const payload = {
       payeeType: item.payeeType,
       payeeId: item.payeeId,
       payeeName: item.payeeName,
@@ -207,7 +207,7 @@ Page({
     if (this.data.selectedAccountId) {
       payload.paymentAccountId = this.data.selectedAccountId;
     }
-    var that = this;
+    const that = this;
     wx.showModal({ title: '确认支付', content: '确认支付 ¥' + amount.toFixed(2) + ' 给 ' + (item.payeeName || '') + '？', success: function (res) {
       if (!res.confirm) return;
       api.wagePayment.initiatePayment(payload).then(function () {

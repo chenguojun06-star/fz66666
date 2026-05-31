@@ -1,14 +1,14 @@
-var api = require('../../../utils/api');
-var { toast, safeNavigate } = require('../../../utils/uiHelper');
-var { isAdminOrSupervisor } = require('../../../utils/permission');
+const api = require('../../../utils/api');
+const { toast, safeNavigate } = require('../../../utils/uiHelper');
+const { isAdminOrSupervisor } = require('../../../utils/permission');
 
-var STATUS_MAP = {
+const STATUS_MAP = {
   pending: { text: '待审批', cls: 'tag-orange' },
   approved: { text: '已审批', cls: 'tag-green' },
   rejected: { text: '已驳回', cls: 'tag-red' },
 };
 
-var DEDUCT_MAP = {
+const DEDUCT_MAP = {
   unrepaid: { text: '未扣款', cls: 'tag-red' },
   partial:  { text: '部分扣款', cls: 'tag-orange' },
   repaid:   { text: '已扣完', cls: 'tag-green' },
@@ -56,13 +56,13 @@ Page({
   },
 
   onShow: function () {
-    var app = getApp();
+    const app = getApp();
     if (app && typeof app.requireAuth === 'function' && !app.requireAuth()) return;
     this._resetAndLoad();
   },
 
   onPullDownRefresh: function () {
-    var that = this;
+    const that = this;
     this._resetAndLoad().finally(function () { wx.stopPullDownRefresh(); });
   },
 
@@ -77,9 +77,9 @@ Page({
 
   _loadData: function () {
     if (this.data.loading) return Promise.resolve();
-    var that = this;
+    const that = this;
     this.setData({ loading: true });
-    var params = {
+    const params = {
       page: this.data.page,
       pageSize: this.data.pageSize,
     };
@@ -88,9 +88,9 @@ Page({
     if (this.data.keyword) params.employeeName = this.data.keyword;
 
     return api.employeeAdvance.list(params).then(function (res) {
-      var records = (res && res.records) || [];
-      var total = (res && res.total) || 0;
-      var enriched = records.map(function (r) {
+      const records = (res && res.records) || [];
+      const total = (res && res.total) || 0;
+      const enriched = records.map(function (r) {
         r.statusText = statusText(r.status);
         r.statusCls = statusCls(r.status);
         r.repayText = deductText(r.repaymentStatus);
@@ -113,13 +113,13 @@ Page({
   },
 
   onStatusFilterChange: function (e) {
-    var idx = Number(e.detail.value);
+    const idx = Number(e.detail.value);
     this.setData({ statusFilter: this._STATUS_OPTIONS[idx].value });
     this._resetAndLoad();
   },
 
   onRepayFilterChange: function (e) {
-    var idx = Number(e.detail.value);
+    const idx = Number(e.detail.value);
     this.setData({ repayFilter: this._REPAY_OPTIONS[idx].value });
     this._resetAndLoad();
   },
@@ -142,18 +142,18 @@ Page({
   },
 
   onCreateFieldInput: function (e) {
-    var field = e.currentTarget.dataset.field;
-    var form = this.data.createForm;
+    const field = e.currentTarget.dataset.field;
+    const form = this.data.createForm;
     form[field] = e.detail.value;
     this.setData({ createForm: form });
   },
 
   onSubmitCreate: function () {
-    var form = this.data.createForm;
+    const form = this.data.createForm;
     if (!form.employeeName || !form.employeeName.trim()) { toast('请输入员工姓名'); return; }
     if (!form.amount || Number(form.amount) <= 0) { toast('请输入有效金额'); return; }
     if (!form.reason || !form.reason.trim()) { toast('请输入借支事由'); return; }
-    var that = this;
+    const that = this;
     api.employeeAdvance.create({
       employeeName: form.employeeName.trim(),
       amount: Number(form.amount),
@@ -171,16 +171,16 @@ Page({
   },
 
   onTapItem: function (e) {
-    var idx = e.currentTarget.dataset.index;
-    var item = this.data.list[idx];
+    const idx = e.currentTarget.dataset.index;
+    const item = this.data.list[idx];
     if (!item) return;
     this.setData({ currentAdvance: item, showActionSheet: true });
   },
 
   onActionApprove: function () {
-    var item = this.data.currentAdvance;
+    const item = this.data.currentAdvance;
     if (!item || item.status !== 'pending') return;
-    var that = this;
+    const that = this;
     wx.showModal({ title: '确认审批', content: '确认通过该借支申请？', success: function (res) {
       if (!res.confirm) return;
       api.employeeAdvance.approve(item.id).then(function () {
@@ -192,9 +192,9 @@ Page({
   },
 
   onActionReject: function () {
-    var item = this.data.currentAdvance;
+    const item = this.data.currentAdvance;
     if (!item || item.status !== 'pending') return;
-    var that = this;
+    const that = this;
     wx.showModal({ title: '确认驳回', content: '确认驳回该借支申请？', editable: true, placeholderText: '驳回原因（可选）', success: function (res) {
       if (!res.confirm) return;
       api.employeeAdvance.reject(item.id, res.content || '').then(function () {

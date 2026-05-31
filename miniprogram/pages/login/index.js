@@ -479,15 +479,17 @@ Page({
           showTenantResults: false,
           filteredTenants: [],
         });
-        // 注意：此处不再自动触发 onWechatLogin
-        // tryAutoWechatLogin 已经在 onShow 中尝试过（openid 未绑定才会走到这里）
-        // 用户需手动选择公司并输入账号密码完成首次绑定
       } else {
         this.setData({ tenantsLoading: false });
       }
-    } catch (_e) {
-      console.error('[Login] 加载租户列表失败:', _e);
+    } catch (e) {
+      const errMsg = (e && (e.errMsg || e.message)) || '';
+      const isTimeout = errMsg.includes('timeout') || errMsg.includes('超时') || errMsg.includes('request:fail');
+      console.error('[Login] 加载租户列表失败:', e);
       this.setData({ tenantsLoading: false });
+      if (isTimeout) {
+        toast.error('服务器响应超时，请检查网络或稍后重试');
+      }
     }
   },
 
@@ -636,7 +638,7 @@ Page({
       if (code && !code.startsWith('mock_')) {
         const result = await executeLogin(
           { code, username, password, tenantId },
-          { expectedTenantId: tenantId }
+          { expectedTenantId: tenantId },
         );
         if (result.success) return;
         // needBind 不应出现（已传账号密码），其他错误 executeLogin 内部已 toast

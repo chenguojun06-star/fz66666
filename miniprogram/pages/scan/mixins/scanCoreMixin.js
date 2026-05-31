@@ -7,16 +7,16 @@
  */
 'use strict';
 
-var scanValidator = require('./scanValidator');
-var scanSubmitter = require('./scanSubmitter');
-var scanStateManager = require('./scanStateManager');
+const scanValidator = require('./scanValidator');
+const scanSubmitter = require('./scanSubmitter');
+const scanStateManager = require('./scanStateManager');
 
-var scanCoreMixin = Behavior({
+const scanCoreMixin = Behavior({
   methods: Object.assign(
     {},
     scanValidator.methods,
     scanSubmitter.methods,
-    scanStateManager.methods
+    scanStateManager.methods,
   ),
 });
 

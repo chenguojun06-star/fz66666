@@ -7,8 +7,8 @@
  *  1. 从生产扫码页扫到 MR码 自动跳转（带 rollCode 参数）
  *  2. 直接进入，手动扫码
  */
-const api = require('../../../../../utils/api');
-const { eventBus } = require('../../../../../utils/eventBus');
+const api = require('/utils/api');
+const { eventBus } = require('/utils/eventBus');
 
 /**
  * 调用料卷扫码接口（封装，使用统一 api.js）

@@ -1,6 +1,6 @@
-var { ok } = require('./helpers');
+const { ok } = require('./helpers');
 
-var employeeAdvance = {
+const employeeAdvance = {
   list: function (params) {
     return ok('/api/finance/employee-advance/list', 'POST', params || {});
   },
@@ -18,7 +18,7 @@ var employeeAdvance = {
   },
 };
 
-var factoryShipment = {
+const factoryShipment = {
   list: function (params) {
     return ok('/api/production/factory-shipment/list', 'POST', params || {});
   },
@@ -42,7 +42,7 @@ var factoryShipment = {
   },
 };
 
-var wagePayment = {
+const wagePayment = {
   listPendingPayables: function (params) {
     return ok('/api/finance/wage-payments/pending-payables', 'POST', params || {});
   },

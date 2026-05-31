@@ -22,13 +22,13 @@ const { getAuthedImageUrl } = require('../../../utils/fileUrl');
  */
 function calcDeliveryInfo(dateStr) {
   if (!dateStr) return {};
-  var s = String(dateStr);
-  var dateOnly = s.substring(0, 10);
-  var displayStr = dateOnly;
+  const s = String(dateStr);
+  const dateOnly = s.substring(0, 10);
+  let displayStr = dateOnly;
   if (s.length > 10) {
-    var d = new Date(s.replace(/-/g, '/'));
+    const d = new Date(s.replace(/-/g, '/'));
     if (!isNaN(d.getTime())) {
-      var pad = n => String(n).padStart(2, '0');
+      const pad = n => String(n).padStart(2, '0');
       displayStr = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
     }
   }

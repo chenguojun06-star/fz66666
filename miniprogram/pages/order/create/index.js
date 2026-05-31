@@ -1,11 +1,15 @@
 var api = require('../../../utils/api');
-var { isAdminOrSupervisor } = require('../../../utils/permission');
-var { isFactoryOwner } = require('../../../utils/storage');
+var { toast } = require('../../../utils/uiHelper');
+var { isAdminOrSupervisor, isFactoryOwner } = require('../../../utils/permission');
 var { getAuthedImageUrl } = require('../../../utils/fileUrl');
 
 Page({
   data: {
-    filteredStyles: [], keyword: '', loading: true
+    activeTab: 'style',
+
+    styleFilteredStyles: [],
+    styleKeyword: '',
+    styleLoading: true,
   },
 
   onLoad: function () {
@@ -20,12 +24,18 @@ Page({
     this.loadStyles().then(function () { wx.stopPullDownRefresh(); });
   },
 
-  /* 加载款式 + 品类中文 dict 映射 */
+  switchTab: function (e) {
+    var tab = e.currentTarget.dataset.tab;
+    this.setData({ activeTab: tab, styleKeyword: '' });
+    this.loadStyles();
+  },
+
   loadStyles: function () {
     var self = this;
     var catMap = {};
+    var isNoData = self.data.activeTab === 'noData';
 
-    this.setData({ loading: true });
+    self.setData({ styleLoading: true });
 
     return api.system.getDictList('category')
       .then(function (res) {
@@ -38,13 +48,17 @@ Page({
       })
       .catch(function () {})
       .then(function () {
-        return api.style.listStyles({ pageSize: 500, sampleStatus: 'COMPLETED' });
+        var params = { pageSize: 500 };
+        if (!isNoData) params.sampleStatus = 'COMPLETED';
+        return api.style.listStyles(params);
       })
       .then(function (res) {
         var raw = (res && res.records) || (res && res.data && res.data.records) || (res && res.data) || [];
         var list = Array.isArray(raw) ? raw : [];
 
-        list = list.filter(function (s) { return s.sampleStatus === 'COMPLETED'; });
+        if (!isNoData) {
+          list = list.filter(function (s) { return s.sampleStatus === 'COMPLETED'; });
+        }
 
         list.forEach(function (s) {
           s.displayCategory = catMap[s.category] || s.category || '';
@@ -62,39 +76,47 @@ Page({
         list.sort(function (a, b) { return (b.orderCount || 0) - (a.orderCount || 0); });
 
         self._styles = list;
-        self.setData({ filteredStyles: list, loading: false });
+        self.setData({ styleFilteredStyles: list, styleLoading: false });
       })
       .catch(function () {
-        self.setData({ loading: false });
+        self.setData({ styleLoading: false });
         wx.showToast({ title: '加载失败', icon: 'none' });
       });
   },
 
-  onSearchInput: function (e) {
+  onStyleSearchInput: function (e) {
     var kw = (e.detail.value || '').trim().toLowerCase();
-    this.setData({ keyword: kw });
-    if (!kw) { this.setData({ filteredStyles: this._styles }); return; }
+    this.setData({ styleKeyword: kw });
+    if (!kw) { this.setData({ styleFilteredStyles: this._styles }); return; }
     var list = (this._styles || []).filter(function (s) {
       return (s.styleNo + '|' + s.styleName + '|' + (s.displayCategory || '')).toLowerCase().indexOf(kw) !== -1;
     });
-    this.setData({ filteredStyles: list });
+    this.setData({ styleFilteredStyles: list });
   },
 
-  onSearchClear: function () {
-    this.setData({ keyword: '', filteredStyles: this._styles });
+  onStyleSearchClear: function () {
+    this.setData({ styleKeyword: '', styleFilteredStyles: this._styles });
   },
 
   onStyleTap: function (e) {
     var ds = e.currentTarget.dataset;
+    var isNoData = this.data.activeTab === 'noData';
+
     var params = [
       'styleId=' + encodeURIComponent(ds.id || ''),
       'styleNo=' + encodeURIComponent(ds.no || ''),
       'styleName=' + encodeURIComponent(ds.name || ''),
-      'colors=' + encodeURIComponent(ds.colors || ''),
-      'sizes=' + encodeURIComponent(ds.sizes || ''),
-      'category=' + encodeURIComponent(ds.cat || ''),
       'coverImage=' + encodeURIComponent(ds.cover || '')
     ];
+
+    if (isNoData) {
+      params.push('noData=true');
+    } else {
+      params.push('colors=' + encodeURIComponent(ds.colors || ''));
+      params.push('sizes=' + encodeURIComponent(ds.sizes || ''));
+      params.push('category=' + encodeURIComponent(ds.cat || ''));
+    }
+
     wx.navigateTo({ url: '/pages/order/create/form/index?' + params.join('&') });
   }
 });
