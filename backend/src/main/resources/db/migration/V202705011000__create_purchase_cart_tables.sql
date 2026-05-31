@@ -1,0 +1,52 @@
+-- 物料采购购物车表
+CREATE TABLE IF NOT EXISTS `t_purchase_cart` (
+    `id` VARCHAR(36) NOT NULL COMMENT '主键',
+    `tenant_id` BIGINT NOT NULL COMMENT '租户ID',
+    `user_id` VARCHAR(36) NOT NULL COMMENT '用户ID',
+    `status` VARCHAR(20) NOT NULL DEFAULT 'DRAFT' COMMENT '状态：DRAFT/CONFIRMED/CANCELLED',
+    `total_items` INT NOT NULL DEFAULT 0 COMMENT '物料总数',
+    `total_amount` DECIMAL(12,2) NOT NULL DEFAULT 0 COMMENT '预计总金额',
+    `remark` TEXT COMMENT '备注',
+    `delete_flag` TINYINT NOT NULL DEFAULT 0 COMMENT '删除标记：0-未删除，1-已删除',
+    `created_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `updated_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (`id`),
+    INDEX `idx_tenant_user` (`tenant_id`, `user_id`),
+    INDEX `idx_status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='物料采购购物车';
+
+-- 物料采购购物车明细表
+CREATE TABLE IF NOT EXISTS `t_purchase_cart_item` (
+    `id` VARCHAR(36) NOT NULL COMMENT '主键',
+    `cart_id` VARCHAR(36) NOT NULL COMMENT '购物车ID',
+    `tenant_id` BIGINT NOT NULL COMMENT '租户ID',
+    `material_code` VARCHAR(50) NOT NULL COMMENT '物料编码',
+    `material_name` VARCHAR(100) NOT NULL COMMENT '物料名称',
+    `material_type` VARCHAR(20) NOT NULL COMMENT '物料类型：FABRIC/LINING/ACCESSORY',
+    `specifications` VARCHAR(100) COMMENT '规格',
+    `unit` VARCHAR(10) NOT NULL COMMENT '单位',
+    `quantity` DECIMAL(10,2) NOT NULL DEFAULT 0 COMMENT '采购数量',
+    `supplier_id` VARCHAR(36) COMMENT '供应商ID',
+    `supplier_name` VARCHAR(100) COMMENT '供应商名称',
+    `unit_price` DECIMAL(10,2) COMMENT '单价',
+    `total_amount` DECIMAL(12,2) COMMENT '金额',
+    `source_type` VARCHAR(20) NOT NULL COMMENT '来源类型：ORDER/SAMPLE/BATCH',
+    `source_id` VARCHAR(36) COMMENT '来源ID',
+    `source_no` VARCHAR(50) COMMENT '来源编号',
+    `source_quantity` DECIMAL(10,2) COMMENT '来源数量',
+    `color` VARCHAR(50) COMMENT '颜色',
+    `fabric_composition` VARCHAR(100) COMMENT '面料成分',
+    `fabric_width` VARCHAR(50) COMMENT '幅宽',
+    `fabric_weight` VARCHAR(50) COMMENT '克重',
+    `merge_group_id` VARCHAR(36) COMMENT '合并组ID',
+    `remark` TEXT COMMENT '备注',
+    `sort_order` INT NOT NULL DEFAULT 0 COMMENT '排序',
+    `delete_flag` TINYINT NOT NULL DEFAULT 0 COMMENT '删除标记：0-未删除，1-已删除',
+    `created_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `updated_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (`id`),
+    INDEX `idx_cart_id` (`cart_id`),
+    INDEX `idx_material` (`material_code`, `specifications`),
+    INDEX `idx_merge_group` (`merge_group_id`),
+    CONSTRAINT `fk_cart_item_cart` FOREIGN KEY (`cart_id`) REFERENCES `t_purchase_cart` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='物料采购购物车明细';
