@@ -325,15 +325,23 @@ public class MaterialPurchaseOrchestrator {
 
     public Object previewDemand(String orderId) {
         if (!StringUtils.hasText(orderId)) {
-            throw new IllegalArgumentException("orderId不能为空");
+            return List.of();
         }
         String seedOrderId = orderId.trim();
         ProductionOrder seed = productionOrderService.getDetailById(seedOrderId);
         if (seed == null) {
-            throw new NoSuchElementException("生产订单不存在");
+            return List.of();
         }
-        List<String> orderIds = helper.resolveTargetOrderIds(seed, false);
-        return helper.buildBatchPreview(orderIds);
+        try {
+            List<String> orderIds = helper.resolveTargetOrderIds(seed, false);
+            if (orderIds == null || orderIds.isEmpty()) {
+                return List.of();
+            }
+            return helper.buildBatchPreview(orderIds);
+        } catch (Exception e) {
+            log.warn("采购需求预览失败: orderId={}, error={}", orderId, e.getMessage());
+            return List.of();
+        }
     }
 
     @Transactional(rollbackFor = Exception.class)

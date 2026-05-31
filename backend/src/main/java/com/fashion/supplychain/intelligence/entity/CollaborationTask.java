@@ -17,6 +17,8 @@ public class CollaborationTask {
 
     private String orderNo;
 
+    private String styleNo;
+
     private String targetRole;
 
     private String currentStage;
@@ -56,6 +58,18 @@ public class CollaborationTask {
     private String completionNote;
 
     private LocalDateTime completedAt;
+
+    private String orderLinkStatus;
+
+    private Boolean progressChangeMonitorEnabled;
+
+    private LocalDateTime lastReminderSentAt;
+
+    private Integer reminderCount;
+
+    private Integer lastOrderProgress;
+
+    private String lastOrderStatus;
 
     public enum TaskStatus {
         PENDING, ACCEPTED, IN_PROGRESS, COMPLETED, ESCALATED, CANCELLED

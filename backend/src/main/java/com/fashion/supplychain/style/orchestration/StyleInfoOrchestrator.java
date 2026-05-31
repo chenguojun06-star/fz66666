@@ -14,6 +14,7 @@ import com.fashion.supplychain.style.entity.SecondaryProcess;
 import com.fashion.supplychain.style.entity.StyleBom;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.entity.StyleProcess;
+import com.fashion.supplychain.style.entity.ProductSku;
 import com.fashion.supplychain.style.helper.StyleCostCalculator;
 import com.fashion.supplychain.style.helper.StyleListEnrichmentHelper;
 import com.fashion.supplychain.style.helper.StyleLogHelper;
@@ -23,6 +24,7 @@ import com.fashion.supplychain.style.service.SecondaryProcessService;
 import com.fashion.supplychain.style.service.StyleBomService;
 import com.fashion.supplychain.style.service.StyleInfoService;
 import com.fashion.supplychain.style.service.StyleProcessService;
+import com.fashion.supplychain.style.service.ProductSkuService;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.HashMap;
@@ -644,7 +646,38 @@ public class StyleInfoOrchestrator {
 
         syncPatternProductionReviewFields(id, reviewStatus, reviewComment);
 
+        if ("PASS".equalsIgnoreCase(reviewStatus)) {
+            autoGenerateSkusIfNeeded(id);
+        }
+
         return styleInfoService.getById(id);
+    }
+
+    private void autoGenerateSkusIfNeeded(Long styleId) {
+        try {
+            List<ProductSku> existingSkus = productSkuService.listByStyleId(styleId);
+            if (existingSkus != null && !existingSkus.isEmpty()) {
+                log.info("SKUs already exist for styleId={}, skip auto-generate", styleId);
+                return;
+            }
+            StyleInfo style = styleInfoService.getById(styleId);
+            if (style == null || !StringUtils.hasText(style.getSizeColorConfig())) {
+                log.info("No sizeColorConfig for styleId={}, skip auto-generate", styleId);
+                return;
+            }
+            String skuMode = style.getSkuMode();
+            if (skuMode == null) {
+                skuMode = "AUTO";
+            }
+            if (!"AUTO".equals(skuMode)) {
+                log.info("SKU mode is {} for styleId={}, skip auto-generate", skuMode, styleId);
+                return;
+            }
+            productSkuService.generateSkusForStyle(styleId);
+            log.info("Auto-generated SKUs after sample review PASS: styleId={}", styleId);
+        } catch (Exception e) {
+            log.error("Failed to auto-generate SKUs after sample review: styleId={}", styleId, e);
+        }
     }
 
     private void syncPatternProductionReviewFields(Long styleId, String reviewStatus, String reviewComment) {

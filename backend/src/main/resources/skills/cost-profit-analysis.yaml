@@ -1,0 +1,35 @@
+id: "cost-profit-analysis"
+name: "成本利润分析"
+description: "分析订单成本结构、利润空间、报价合理性，提供降本建议"
+domain: "finance"
+triggers:
+  - "成本"
+  - "利润"
+  - "报价"
+  - "亏本"
+  - "赚多少"
+  - "单价"
+  - "费用"
+  - "毛利"
+  - "物料成本"
+  - "工价"
+toolNames:
+  - "UnitPriceQueryTool"
+  - "StyleQuotationTool"
+  - "MaterialCalculationTool"
+  - "FinancialReportTool"
+promptInjection: |
+  成本利润分析四步法：
+  1. 用StyleQuotationTool查报价明细（面料/辅料/加工费/管理费/利润）
+  2. 用MaterialCalculationTool核算实际用料成本和损耗率
+  3. 用UnitPriceQueryTool对比市场行情价，判断报价合理性
+  4. 综合计算：预计毛利 = 报价 - (面料成本 + 辅料成本 + 加工费 + 杂费)
+  
+  成本合理性判断：
+  - 面料成本占比 > 60% → 偏高，检查用料是否合理
+  - 加工费 > 市场均价 20% → 考虑外发或换厂
+  - 利润率 < 10% → 预警，建议重新核价
+  
+  回答格式：成本构成占比 + 市场对比 + 预计利润率 + 风险提示
+priority: 8
+version: "1.0"

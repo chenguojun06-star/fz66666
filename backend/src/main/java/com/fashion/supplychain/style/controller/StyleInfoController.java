@@ -4,6 +4,7 @@ import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.orchestration.StyleDocOcrOrchestrator;
 import com.fashion.supplychain.style.orchestration.StyleInfoOrchestrator;
+import com.fashion.supplychain.style.service.ProductSkuService;
 import org.springframework.http.MediaType;
 import org.springframework.web.multipart.MultipartFile;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -26,6 +27,9 @@ public class StyleInfoController {
 
     @Autowired
     private StyleDocOcrOrchestrator styleDocOcrOrchestrator;
+
+    @Autowired
+    private ProductSkuService productSkuService;
 
     /**
      * 分页查询款号资料列表
@@ -268,5 +272,14 @@ public class StyleInfoController {
             @PathVariable Long id,
             @RequestParam("file") MultipartFile file) {
         return Result.success(styleDocOcrOrchestrator.recognizeRequirementDoc(file));
+    }
+
+    @PutMapping("/{id}/use-sku-prefix")
+    public Result<?> updateUseSkuPrefix(
+            @PathVariable Long id,
+            @RequestBody Map<String, Object> body) {
+        Integer useSkuPrefix = (Integer) body.get("useSkuPrefix");
+        productSkuService.updateUseSkuPrefix(id, useSkuPrefix);
+        return Result.successMessage("操作成功");
     }
 }

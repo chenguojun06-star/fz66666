@@ -87,7 +87,7 @@ public class ScanRescanHelper {
 
         String orderId = TextUtils.safeText(target.getOrderId());
         if (hasText(orderId)) {
-            productionOrderService.recomputeProgressAsync(orderId);
+            productionOrderService.recomputeProgressFromRecords(orderId);
         }
 
         Map<String, Object> resp = new HashMap<>();

@@ -17,6 +17,7 @@ import org.springframework.util.StringUtils;
 public class TaskCenterOrchestrator {
 
     private final CollaborationTaskMapper collaborationTaskMapper;
+    private final TaskOrderMonitorOrchestrator taskOrderMonitorOrchestrator;
 
     public Map<String, Object> getDashboard() {
         TenantAssert.assertTenantContext();
@@ -83,6 +84,7 @@ public class TaskCenterOrchestrator {
         Map<String, Object> detail = new LinkedHashMap<>();
         detail.put("id", task.getId());
         detail.put("orderNo", task.getOrderNo());
+        detail.put("styleNo", task.getStyleNo());
         detail.put("targetRole", task.getTargetRole());
         detail.put("taskStatus", task.getTaskStatus());
         detail.put("priority", task.getPriority());
@@ -102,6 +104,12 @@ public class TaskCenterOrchestrator {
         detail.put("completedAt", task.getCompletedAt() != null ? task.getCompletedAt().toString() : null);
         detail.put("updatedAt", task.getUpdatedAt() != null ? task.getUpdatedAt().toString() : null);
         detail.put("createdAt", task.getCreatedAt() != null ? task.getCreatedAt().toString() : null);
+        detail.put("orderLinkStatus", task.getOrderLinkStatus());
+        detail.put("progressChangeMonitorEnabled", task.getProgressChangeMonitorEnabled());
+        detail.put("lastReminderSentAt", task.getLastReminderSentAt() != null ? task.getLastReminderSentAt().toString() : null);
+        detail.put("reminderCount", task.getReminderCount());
+        detail.put("lastOrderProgress", task.getLastOrderProgress());
+        detail.put("lastOrderStatus", task.getLastOrderStatus());
         return detail;
     }
 
@@ -182,6 +190,7 @@ public class TaskCenterOrchestrator {
         String priority = String.valueOf(taskData.getOrDefault("priority", "medium")).toUpperCase();
         String module = String.valueOf(taskData.getOrDefault("module", ""));
         String orderNo = String.valueOf(taskData.getOrDefault("orderNo", ""));
+        String styleNo = String.valueOf(taskData.getOrDefault("styleNo", ""));
         String dueAtStr = String.valueOf(taskData.getOrDefault("endTime", ""));
 
         CollaborationTask task = new CollaborationTask();
@@ -198,9 +207,15 @@ public class TaskCenterOrchestrator {
         task.setOverdue(false);
         task.setCreatedAt(LocalDateTime.now());
         task.setUpdatedAt(LocalDateTime.now());
+        task.setOrderLinkStatus(TaskOrderMonitorOrchestrator.OrderLinkStatus.NOT_LINKED);
+        task.setProgressChangeMonitorEnabled(true);
+        task.setReminderCount(0);
 
         if (StringUtils.hasText(orderNo)) {
             task.setOrderNo(orderNo);
+        }
+        if (StringUtils.hasText(styleNo)) {
+            task.setStyleNo(styleNo);
         }
         if (StringUtils.hasText(dueAtStr)) {
             try {
@@ -216,6 +231,12 @@ public class TaskCenterOrchestrator {
         result.put("taskId", task.getId());
         result.put("title", title);
         result.put("createdAt", task.getCreatedAt().toString());
+
+        if (StringUtils.hasText(orderNo)) {
+            Map<String, Object> linkResult = taskOrderMonitorOrchestrator.linkTaskToOrder(task.getId(), orderNo);
+            result.put("orderLink", linkResult);
+        }
+
         return result;
     }
 

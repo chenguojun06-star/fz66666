@@ -20,7 +20,7 @@ public class OrderListCacheHelper {
 
     private static final String LIST_CACHE_PREFIX = "order:list:";
     private static final String DETAIL_CACHE_PREFIX = "order:detail:";
-    private static final long LIST_TTL_SECONDS = 300;
+    private static final long LIST_TTL_SECONDS = 30;
     private static final long DETAIL_TTL_SECONDS = 30;
 
     @Autowired(required = false)

@@ -526,6 +526,8 @@ public class ProductionProcessTrackingOrchestrator {
         String operatorId = UserContext.userId() != null ? String.valueOf(UserContext.userId()) : null;
         String operatorName = UserContext.username() != null ? UserContext.username() : "system";
 
+        boolean isReinspection = "repair_done".equals(tracking.getRepairStatus());
+
         LambdaUpdateWrapper<ProductionProcessTracking> uw = new LambdaUpdateWrapper<>();
         uw.eq(ProductionProcessTracking::getId, trackingId)
                 .set(ProductionProcessTracking::getQualityStatus, qualityStatus)
@@ -536,8 +538,11 @@ public class ProductionProcessTrackingOrchestrator {
                 .set(ProductionProcessTracking::getQualityOperatorId, operatorId)
                 .set(ProductionProcessTracking::getQualityOperatorName, operatorName)
                 .set(ProductionProcessTracking::getQualityTime, LocalDateTime.now())
-                .set(ProductionProcessTracking::getRepairStatus, defectQty > 0 ? "pending" : null)
+                .set(ProductionProcessTracking::getRepairStatus, defectQty > 0 ? "pending" : (isReinspection ? "completed" : null))
                 .set(ProductionProcessTracking::getUpdater, operatorName);
+        if (isReinspection && defectQty == 0) {
+            uw.set(ProductionProcessTracking::getRepairCompletedTime, LocalDateTime.now());
+        }
         trackingService.update(uw);
 
         if (defectQty > 0 && lockBundle && tracking.getCuttingBundleId() != null) {
@@ -555,6 +560,19 @@ public class ProductionProcessTrackingOrchestrator {
             if (bundle != null && !"unqualified".equals(bundle.getStatus())) {
                 bundle.setStatus("unqualified");
                 cuttingBundleService.updateById(bundle);
+            }
+        }
+
+        if (isReinspection && defectQty == 0 && tracking.getCuttingBundleId() != null) {
+            CuttingBundle bundle = cuttingBundleService.getById(tracking.getCuttingBundleId());
+            if (bundle != null) {
+                bundle.setScanBlocked(false);
+                if ("unqualified".equals(bundle.getStatus()) || "repaired_waiting_qc".equals(bundle.getStatus())) {
+                    bundle.setStatus("qualified");
+                }
+                cuttingBundleService.updateById(bundle);
+                log.info("[复检合格-自动解锁] bundleId={}, bundleNo={}, trackingId={}",
+                        bundle.getId(), bundle.getBundleNo(), trackingId);
             }
         }
 
@@ -597,8 +615,14 @@ public class ProductionProcessTrackingOrchestrator {
                     }
                     remark.setContent(remarkContent);
                 } else {
-                    String remarkContent = String.format("[质检合格] 菲号#%d %s: %d件全部合格",
-                            tracking.getBundleNo(), tracking.getProcessName(), tracking.getQuantity());
+                    String remarkContent;
+                    if (isReinspection) {
+                        remarkContent = String.format("[复检合格] 菲号#%d %s: 返修后复检通过，%d件全部合格",
+                                tracking.getBundleNo(), tracking.getProcessName(), tracking.getQuantity());
+                    } else {
+                        remarkContent = String.format("[质检合格] 菲号#%d %s: %d件全部合格",
+                                tracking.getBundleNo(), tracking.getProcessName(), tracking.getQuantity());
+                    }
                     if (qualityRemark != null && !qualityRemark.isEmpty()) {
                         remarkContent += " — " + qualityRemark;
                     }
@@ -652,6 +676,8 @@ public class ProductionProcessTrackingOrchestrator {
                     continue;
                 }
 
+                boolean isReinspection = "repair_done".equals(tracking.getRepairStatus());
+
                 LambdaUpdateWrapper<ProductionProcessTracking> uw = new LambdaUpdateWrapper<>();
                 uw.eq(ProductionProcessTracking::getId, trackingId)
                         .set(ProductionProcessTracking::getQualityStatus, "qualified")
@@ -659,8 +685,30 @@ public class ProductionProcessTrackingOrchestrator {
                         .set(ProductionProcessTracking::getQualityOperatorId, operatorId)
                         .set(ProductionProcessTracking::getQualityOperatorName, operatorName)
                         .set(ProductionProcessTracking::getQualityTime, LocalDateTime.now())
+                        .set(ProductionProcessTracking::getRepairStatus, isReinspection ? "completed" : null)
                         .set(ProductionProcessTracking::getUpdater, operatorName);
+                if (isReinspection) {
+                    uw.set(ProductionProcessTracking::getRepairCompletedTime, LocalDateTime.now());
+                }
                 trackingService.update(uw);
+
+                if (tracking.getCuttingBundleId() != null) {
+                    CuttingBundle bundle = cuttingBundleService.getById(tracking.getCuttingBundleId());
+                    if (bundle != null) {
+                        boolean needUpdate = false;
+                        if (Boolean.TRUE.equals(bundle.getScanBlocked())) {
+                            bundle.setScanBlocked(false);
+                            needUpdate = true;
+                        }
+                        if ("unqualified".equals(bundle.getStatus()) || "repaired_waiting_qc".equals(bundle.getStatus())) {
+                            bundle.setStatus("qualified");
+                            needUpdate = true;
+                        }
+                        if (needUpdate) {
+                            cuttingBundleService.updateById(bundle);
+                        }
+                    }
+                }
 
                 if (tracking.getProductionOrderNo() != null) {
                     try {

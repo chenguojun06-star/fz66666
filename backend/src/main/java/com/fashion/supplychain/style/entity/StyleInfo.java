@@ -39,6 +39,11 @@ public class StyleInfo {
     private String skuMode;
 
     /**
+     * 是否使用SKU前缀：1=加SKU，0=不加
+     */
+    private Integer useSkuPrefix;
+
+    /**
      * 款名
      * 支持多种前端字段名: styleName, styleNameCN, style_name
      */

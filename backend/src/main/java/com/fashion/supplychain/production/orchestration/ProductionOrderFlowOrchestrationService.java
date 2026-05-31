@@ -55,6 +55,7 @@ public class ProductionOrderFlowOrchestrationService {
         private final List<ShipmentReconciliation> shipmentReconciliations;
         private final List<MaterialReconciliation> materialReconciliations;
         private final StyleQuotation styleQuotation;
+        private final List<StyleBom> bomList;
 
         public OrderFlowResponse(
                 ProductionOrder order,
@@ -67,7 +68,8 @@ public class ProductionOrderFlowOrchestrationService {
                 List<ProductOutstock> outstocks,
                 List<ShipmentReconciliation> shipmentReconciliations,
                 List<MaterialReconciliation> materialReconciliations,
-                StyleQuotation styleQuotation) {
+                StyleQuotation styleQuotation,
+                List<StyleBom> bomList) {
             this.order = order;
             this.stages = stages;
             this.records = records;
@@ -79,6 +81,7 @@ public class ProductionOrderFlowOrchestrationService {
             this.shipmentReconciliations = shipmentReconciliations;
             this.materialReconciliations = materialReconciliations;
             this.styleQuotation = styleQuotation;
+            this.bomList = bomList;
         }
 
         public ProductionOrder getOrder() {
@@ -123,6 +126,10 @@ public class ProductionOrderFlowOrchestrationService {
 
         public StyleQuotation getStyleQuotation() {
             return styleQuotation;
+        }
+
+        public List<StyleBom> getBomList() {
+            return bomList;
         }
     }
 
@@ -236,9 +243,11 @@ public class ProductionOrderFlowOrchestrationService {
         List<MaterialReconciliation> materialReconciliations = queryMaterialReconciliations(oid);
         StyleQuotation styleQuotation = queryStyleQuotation(order);
 
+        List<StyleBom> bomList = queryBomList(order);
+
         return new OrderFlowResponse(order, stages, records, materialPurchases,
                 cuttingTasks, cuttingBundles, warehousings, outstocks,
-                shipmentReconciliations, materialReconciliations, styleQuotation);
+                shipmentReconciliations, materialReconciliations, styleQuotation, bomList);
     }
 
     private List<ScanRecord> queryScanRecords(String oid) {
@@ -346,6 +355,21 @@ public class ProductionOrderFlowOrchestrationService {
                     .orderByDesc(CuttingTask::getCreateTime));
         } catch (Exception e) {
             log.warn("[OrderFlow] 查询CuttingTask失败: orderId={}, err={}", oid, e.getMessage());
+            return new ArrayList<>();
+        }
+    }
+
+    private List<StyleBom> queryBomList(ProductionOrder order) {
+        if (!StringUtils.hasText(order.getStyleId())) return new ArrayList<>();
+        try {
+            Long styleId = Long.valueOf(order.getStyleId());
+            return styleBomMapper.selectList(new LambdaQueryWrapper<StyleBom>()
+                    .eq(StyleBom::getStyleId, styleId)
+                    .orderByAsc(StyleBom::getGroupName)
+                    .orderByAsc(StyleBom::getMaterialType)
+                    .orderByAsc(StyleBom::getMaterialName));
+        } catch (Exception e) {
+            log.warn("[OrderFlow] 查询BOM失败: styleId={}, err={}", order.getStyleId(), e.getMessage());
             return new ArrayList<>();
         }
     }

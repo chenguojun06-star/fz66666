@@ -399,7 +399,7 @@ public class ProductionScanExecutor {
             if (skuService != null) skuService.attachProcessUnitPrice(patch);
             validateScanRecordForSave(patch);
             scanRecordService.updateById(patch);
-            productionOrderService.recomputeProgressAsync(order.getId());
+            productionOrderService.recomputeProgressFromRecords(order.getId());
 
             ScanRecord returned = buildScanRecordPatch(existing.getId(), scanCode, order, bundle,
                     color, size, nextQty, unitPrice, processCode, progressStage, childProcessName,

@@ -5,13 +5,17 @@ import com.fashion.supplychain.intelligence.agent.AiToolCall;
 import com.fashion.supplychain.intelligence.agent.AgentModeContext;
 import com.fashion.supplychain.intelligence.agent.command.CompensableTool;
 import com.fashion.supplychain.intelligence.agent.command.CompensationResult;
+import com.fashion.supplychain.intelligence.agent.planning.AgentPlanningEngine;
+import com.fashion.supplychain.intelligence.agent.skill.AgentSkillRegistry;
+import com.fashion.supplychain.intelligence.entity.AgentCheckpoint;
+import com.fashion.supplychain.intelligence.agent.checkpoint.AgentCheckpointManager;
+import com.fashion.supplychain.intelligence.agent.handoff.HandoffEngine;
 import com.fashion.supplychain.intelligence.dto.FollowUpAction;
 import com.fashion.supplychain.intelligence.dto.IntelligenceInferenceResult;
 import com.fashion.supplychain.intelligence.helper.AiAgentEvidenceHelper;
 import com.fashion.supplychain.intelligence.helper.AiAgentToolExecHelper;
 import com.fashion.supplychain.intelligence.helper.XiaoyunPatterns;
 import com.fashion.supplychain.intelligence.gateway.AiInferenceGateway;
-import com.fashion.supplychain.intelligence.gateway.StreamChunkConsumer;
 import com.fashion.supplychain.intelligence.orchestration.AiCriticOrchestrator;
 import com.fashion.supplychain.intelligence.orchestration.AiAgentTraceOrchestrator;
 import com.fashion.supplychain.intelligence.orchestration.CompensatingTransactionManager;
@@ -26,6 +30,11 @@ import com.fashion.supplychain.intelligence.service.DataTruthGuard;
 import com.fashion.supplychain.intelligence.service.EntityFactChecker;
 import com.fashion.supplychain.intelligence.service.GroundedGenerationGuard;
 import com.fashion.supplychain.intelligence.service.SelfConsistencyVerifier;
+import com.fashion.supplychain.intelligence.service.ContextEngineeringService;
+import com.fashion.supplychain.intelligence.service.StructuredResponseService;
+import com.fashion.supplychain.intelligence.service.MemoryHierarchyService;
+import com.fashion.supplychain.intelligence.service.ProactiveRiskDetectionService;
+import com.fashion.supplychain.intelligence.service.PromptEvolutionService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -57,11 +66,43 @@ public class AgentLoopEngine {
     @Autowired private SelfConsistencyVerifier selfConsistencyVerifier;
     @Autowired private CompensatingTransactionManager compensatingTxManager;
     @Autowired private XiaoyunResponseParser xiaoyunResponseParser;
+    @Autowired(required = false) private AgentPlanningEngine planningEngine;
+    @Autowired(required = false) private ContextEngineeringService contextEngineeringService;
+    @Autowired(required = false) private StructuredResponseService structuredResponseService;
+    @Autowired(required = false) private MemoryHierarchyService memoryHierarchyService;
+    @Autowired(required = false) private ProactiveRiskDetectionService riskDetectionService;
+    @Autowired(required = false) private PromptEvolutionService promptEvolutionService;
+    @Autowired(required = false) private AgentSkillRegistry skillRegistry;
+    @Autowired(required = false) private AgentCheckpointManager checkpointManager;
+    @Autowired(required = false) private HandoffEngine handoffEngine;
 
     public String run(AgentLoopContext ctx, AgentLoopCallback cb) {
         String sessionId = ctx.getCommandId();
         compensatingTxManager.beginSession(sessionId);
         try {
+            HandoffEngine.HandoffResult handoffResult = tryHandoffIfNeeded(ctx, cb);
+            if (handoffResult != null && handoffResult.isDelegated()) {
+                return handleFinalAnswer(ctx, handoffResult.getSubAgentResult(), cb);
+            }
+
+            AgentCheckpoint resumeCheckpoint = null;
+            if (checkpointManager != null) {
+                resumeCheckpoint = checkpointManager.loadLatestCheckpoint(sessionId);
+                if (resumeCheckpoint != null) {
+                    log.info("[AgentLoop] 从断点恢复: thread={} iter={} resumes={}",
+                            sessionId, resumeCheckpoint.getIteration(), resumeCheckpoint.getResumeCount());
+                    cb.onThinking(resumeCheckpoint.getIteration(),
+                            "从第" + resumeCheckpoint.getIteration() + "轮断点恢复…");
+                    ctx.getMessages().add(AiMessage.system(
+                            "[系统] 之前执行在第" + resumeCheckpoint.getIteration() + "轮中断。已恢复上下文，请继续完成剩余工作。"));
+                    // 标记checkpoint已恢复，增加恢复次数
+                    checkpointManager.markCheckpointResumed(resumeCheckpoint.getId(), 
+                            resumeCheckpoint.getResumeCount() != null ? resumeCheckpoint.getResumeCount() : 0);
+                }
+            }
+
+            injectPlanIfNeeded(ctx, cb);
+
             String termination;
             while (ctx.getCurrentIteration() < ctx.getMaxIterations()) {
                 termination = checkSessionTermination(ctx, cb);
@@ -73,7 +114,15 @@ public class AgentLoopEngine {
                 injectProgressHint(ctx, iter);
 
                 String turnResult = runSingleTurn(ctx, cb, iter);
-                if (turnResult != null) return turnResult;
+                if (turnResult != null) {
+                    if (checkpointManager != null) {
+                        checkpointManager.deleteThreadCheckpoints(sessionId);
+                    }
+                    return turnResult;
+                }
+            }
+            if (checkpointManager != null) {
+                checkpointManager.deleteThreadCheckpoints(sessionId);
             }
             return handleMaxIterations(ctx, cb);
         } finally {
@@ -190,7 +239,10 @@ public class AgentLoopEngine {
         notifyToolResults(ctx, cb, execRecords);
 
         recordPrmMetrics(ctx.getCommandId(), iter, execRecords);
-        saveCheckpoint(ctx);
+        saveCheckpoint(ctx, "tool_execution",
+                execRecords.isEmpty() ? "none" : execRecords.get(0).toolName,
+                execRecords.isEmpty() ? "" : String.valueOf(execRecords.get(0).rawResult),
+                execRecords.size());
         return null;
     }
 
@@ -264,7 +316,13 @@ public class AgentLoopEngine {
             evidenceHelper.captureStepWizardCard(rec.toolName, rec.rawResult, ctx.getStepWizardCards());
             evidenceHelper.captureReportPreviewCard(rec.toolName, rec.rawResult, ctx.getReportPreviewCards());
             xiaoyunInsightCardOrchestrator.collectFromToolResult(rec.toolName, rec.rawResult, ctx.getXiaoyunInsightCards());
-            ctx.getMessages().add(AiMessage.tool(rec.evidence, rec.toolCallId, rec.toolName));
+
+            String summarizedEvidence = rec.evidence;
+            if (contextEngineeringService != null && rec.rawResult != null && rec.rawResult.length() > 2000) {
+                summarizedEvidence = contextEngineeringService.summarizeToolResult(
+                        rec.toolName, rec.rawResult, ctx.getUserMessage());
+            }
+            ctx.getMessages().add(AiMessage.tool(summarizedEvidence, rec.toolCallId, rec.toolName));
         }
     }
 
@@ -296,6 +354,28 @@ public class AgentLoopEngine {
         String guardWarnings = runDataTruthGuards(ctx, revisedContent);
         if (!guardWarnings.isEmpty()) {
             revisedContent += guardWarnings;
+        }
+
+        if (structuredResponseService != null) {
+            revisedContent = structuredResponseService.enrichWithStructuredFormat(revisedContent);
+        }
+
+        if (riskDetectionService != null) {
+            ProactiveRiskDetectionService.RiskScanResult respRisk =
+                    riskDetectionService.scanAiResponse(ctx.getUserMessage(), revisedContent);
+            if (respRisk.hasRisks()) {
+                String riskWarnings = respRisk.getRisks().stream()
+                        .map(r -> "> " + r.getEmoji() + " AI自检: " + r.getDescription())
+                        .reduce("", (a, b) -> a.isEmpty() ? b : a + "\n" + b);
+                if (!riskWarnings.isBlank()) {
+                    revisedContent += "\n\n" + riskWarnings;
+                }
+            }
+        }
+
+        if (promptEvolutionService != null && ctx.getTenantId() != null) {
+            promptEvolutionService.recordFeedback(
+                    ctx.getCommandId(), ctx.getUserMessage(), revisedContent, 75.0, null);
         }
 
         boolean usedHighRiskTool = ctx.getAllExecRecords().stream()
@@ -423,17 +503,6 @@ public class AgentLoopEngine {
         }
     }
 
-    private void saveCheckpoint(AgentLoopContext ctx) {
-        if (ctx.getStateSessionId() != null) {
-            try {
-                agentStateStore.saveCheckpoint(ctx.getStateSessionId(), ctx.getCurrentIteration(),
-                        ctx.getMessages(), ctx.getAllExecRecords(), (int) ctx.getTotalTokens());
-            } catch (Exception e) {
-                log.debug("[AgentLoop] 检查点保存跳过: {}", e.getMessage());
-            }
-        }
-    }
-
     private void completeSession(AgentLoopContext ctx, String content) {
         if (ctx.getStateSessionId() != null) {
             try {
@@ -477,6 +546,104 @@ public class AgentLoopEngine {
                 compensatingTxManager.recordExecution(sessionId, rec.toolName,
                         (CompensableTool) tool, snapshot);
             }
+        }
+    }
+
+    private void injectPlanIfNeeded(AgentLoopContext ctx, AgentLoopCallback cb) {
+        if (planningEngine == null) return;
+        try {
+            java.util.List<java.util.Map<String, Object>> toolsForPlanning = new java.util.ArrayList<>();
+            for (com.fashion.supplychain.intelligence.agent.AiTool tool : ctx.getVisibleApiTools()) {
+                java.util.Map<String, Object> toolMap = new java.util.LinkedHashMap<>();
+                toolMap.put("name", tool.getFunction() != null ? tool.getFunction().getName() : "");
+                toolMap.put("description", tool.getFunction() != null ? tool.getFunction().getDescription() : "");
+                toolMap.put("domain", "general");
+                toolsForPlanning.add(toolMap);
+            }
+            AgentPlanningEngine.PlanResult planResult = planningEngine.analyzeAndPlan(
+                    ctx.getUserMessage(), toolsForPlanning, ctx.getPageContext());
+
+            if (planResult.isSkip()) {
+                log.debug("[AgentLoop] 规划跳过: {}", planResult.getSkipReason());
+            } else {
+                String planInjection = planResult.toPromptInjection();
+                if (!planInjection.isBlank()) {
+                    ctx.getMessages().add(1, AiMessage.system(planInjection));
+
+                    if (planResult.getRiskLevel() != null
+                            && ("high".equals(planResult.getRiskLevel()) || "critical".equals(planResult.getRiskLevel()))) {
+                        cb.onThinking(0, "高风险任务，已启动详细规划与验证模式");
+                    }
+
+                    log.info("[AgentLoop] 规划已注入: complexity={} steps={} riskLevel={}",
+                            planResult.getComplexityScore(),
+                            planResult.getPlan() != null ? planResult.getPlan().getStepCount() : 0,
+                            planResult.getRiskLevel());
+                }
+            }
+
+            if (riskDetectionService != null) {
+                ProactiveRiskDetectionService.RiskScanResult riskScan =
+                        riskDetectionService.scanUserMessage(ctx.getUserMessage());
+                if (riskScan.hasRisks()) {
+                    String riskInjection = riskScan.toPromptInjection();
+                    if (!riskInjection.isBlank()) {
+                        ctx.getMessages().add(1, AiMessage.system(riskInjection));
+                        log.info("[AgentLoop] 风险扫描已注入: level={} risks={}",
+                                riskScan.getOverallRiskLevel(), riskScan.getRisks().size());
+                    }
+                }
+            }
+
+            if (memoryHierarchyService != null && ctx.getTenantId() != null) {
+                String memoryInjection = memoryHierarchyService.buildMemoryPromptInjection(
+                        ctx.getTenantId(), ctx.getUserMessage(), 500);
+                if (!memoryInjection.isBlank()) {
+                    ctx.getMessages().add(1, AiMessage.system(memoryInjection));
+                    log.debug("[AgentLoop] 记忆上下文已注入");
+                }
+            }
+
+            if (skillRegistry != null) {
+                String skillInjection = skillRegistry.buildSkillInjection(ctx.getUserMessage());
+                if (!skillInjection.isBlank()) {
+                    ctx.getMessages().add(AiMessage.system(skillInjection));
+                    log.info("[AgentLoop] 技能包已注入: {} skills matched",
+                            skillRegistry.matchSkills(ctx.getUserMessage()).size());
+                }
+            }
+
+        } catch (Exception e) {
+            log.warn("[AgentLoop] 规划/风险/记忆/技能注入失败（继续执行）: {}", e.getMessage());
+        }
+    }
+
+    private HandoffEngine.HandoffResult tryHandoffIfNeeded(AgentLoopContext ctx, AgentLoopCallback cb) {
+        if (handoffEngine == null) return null;
+        try {
+            return handoffEngine.tryHandoff(ctx.getUserMessage(), ctx, cb);
+        } catch (Exception e) {
+            log.warn("[AgentLoop] Handoff尝试失败（继续主Agent执行）: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    private void saveCheckpoint(AgentLoopContext ctx, String lastAction, String lastToolName,
+                                 String lastToolResult, int toolCallCount) {
+        if (checkpointManager == null) return;
+        try {
+            checkpointManager.saveCheckpoint(
+                    ctx.getCommandId(),
+                    ctx.getTenantId() != null ? ctx.getTenantId() : 0L,
+                    ctx.getCurrentIteration(),
+                    lastAction,
+                    lastToolName,
+                    lastToolResult,
+                    toolCallCount,
+                    ctx.getTotalTokens()
+            );
+        } catch (Exception e) {
+            log.debug("[AgentLoop] Checkpoint保存失败（非致命）: {}", e.getMessage());
         }
     }
 

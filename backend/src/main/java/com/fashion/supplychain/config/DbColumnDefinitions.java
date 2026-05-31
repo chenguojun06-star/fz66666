@@ -25,6 +25,9 @@ public final class DbColumnDefinitions {
         addSkuAndTrackingColumns();
         addBargainPriceColumns();
         addEmployeeAdvanceColumns();
+        addPurchaseCartColumns();
+        addCollaborationTaskColumns();
+        addStyleInfoMissingColumns();
     }
 
     private DbColumnDefinitions() {}
@@ -1047,6 +1050,9 @@ public final class DbColumnDefinitions {
 
     private static void addSkuAndTrackingColumns() {
         add("t_style_info", "sku_mode", "VARCHAR(20) DEFAULT NULL");
+        add("t_style_info", "use_sku_prefix", "INT(1) NOT NULL DEFAULT 0");
+        add("t_pattern_production", "production_order_id", "VARCHAR(64) DEFAULT NULL");
+        add("t_pattern_production", "size", "VARCHAR(32) DEFAULT NULL");
         add("t_product_sku", "sku_mode", "VARCHAR(20) DEFAULT NULL");
         add("t_product_sku", "manually_edited", "TINYINT DEFAULT 0");
         add("t_product_sku", "remark", "VARCHAR(500) DEFAULT NULL");
@@ -1105,5 +1111,87 @@ public final class DbColumnDefinitions {
         add("t_employee_advance", "update_by", "VARCHAR(64) DEFAULT NULL COMMENT '更新人'");
         add("t_employee_advance", "delete_flag", "INT NOT NULL DEFAULT 0 COMMENT '删除标记'");
         add("t_employee_advance", "tenant_id", "BIGINT DEFAULT NULL COMMENT '租户ID'");
+    }
+
+    private static void addPurchaseCartColumns() {
+        add("t_purchase_cart", "id", "VARCHAR(64) NOT NULL");
+        add("t_purchase_cart", "tenant_id", "BIGINT DEFAULT NULL");
+        add("t_purchase_cart", "user_id", "VARCHAR(64) DEFAULT NULL");
+        add("t_purchase_cart", "status", "VARCHAR(20) DEFAULT NULL");
+        add("t_purchase_cart", "total_items", "INT DEFAULT 0");
+        add("t_purchase_cart", "total_amount", "DECIMAL(12,2) DEFAULT NULL");
+        add("t_purchase_cart", "remark", "VARCHAR(500) DEFAULT NULL");
+        add("t_purchase_cart", "delete_flag", "INT DEFAULT 0");
+        add("t_purchase_cart", "created_time", "DATETIME DEFAULT NULL");
+        add("t_purchase_cart", "updated_time", "DATETIME DEFAULT NULL");
+
+        add("t_purchase_cart_item", "id", "VARCHAR(64) NOT NULL");
+        add("t_purchase_cart_item", "cart_id", "VARCHAR(64) DEFAULT NULL");
+        add("t_purchase_cart_item", "tenant_id", "BIGINT DEFAULT NULL");
+        add("t_purchase_cart_item", "material_code", "VARCHAR(100) DEFAULT NULL");
+        add("t_purchase_cart_item", "material_name", "VARCHAR(200) DEFAULT NULL");
+        add("t_purchase_cart_item", "material_type", "VARCHAR(50) DEFAULT NULL");
+        add("t_purchase_cart_item", "specifications", "VARCHAR(200) DEFAULT NULL");
+        add("t_purchase_cart_item", "unit", "VARCHAR(20) DEFAULT NULL");
+        add("t_purchase_cart_item", "quantity", "DECIMAL(12,2) DEFAULT NULL");
+        add("t_purchase_cart_item", "supplier_id", "VARCHAR(64) DEFAULT NULL");
+        add("t_purchase_cart_item", "supplier_name", "VARCHAR(100) DEFAULT NULL");
+        add("t_purchase_cart_item", "unit_price", "DECIMAL(12,2) DEFAULT NULL");
+        add("t_purchase_cart_item", "total_amount", "DECIMAL(12,2) DEFAULT NULL");
+        add("t_purchase_cart_item", "source_type", "VARCHAR(32) DEFAULT NULL");
+        add("t_purchase_cart_item", "source_id", "VARCHAR(64) DEFAULT NULL");
+        add("t_purchase_cart_item", "source_no", "VARCHAR(100) DEFAULT NULL");
+        add("t_purchase_cart_item", "source_quantity", "DECIMAL(12,2) DEFAULT NULL");
+        add("t_purchase_cart_item", "color", "VARCHAR(50) DEFAULT NULL");
+        add("t_purchase_cart_item", "fabric_composition", "VARCHAR(200) DEFAULT NULL");
+        add("t_purchase_cart_item", "fabric_width", "VARCHAR(50) DEFAULT NULL");
+        add("t_purchase_cart_item", "fabric_weight", "VARCHAR(50) DEFAULT NULL");
+        add("t_purchase_cart_item", "merge_group_id", "VARCHAR(64) DEFAULT NULL");
+        add("t_purchase_cart_item", "remark", "VARCHAR(500) DEFAULT NULL");
+        add("t_purchase_cart_item", "sort_order", "INT DEFAULT 0");
+        add("t_purchase_cart_item", "delete_flag", "INT DEFAULT 0");
+        add("t_purchase_cart_item", "created_time", "DATETIME DEFAULT NULL");
+        add("t_purchase_cart_item", "updated_time", "DATETIME DEFAULT NULL");
+    }
+
+    private static void addCollaborationTaskColumns() {
+        add("t_collaboration_task", "id", "BIGINT NOT NULL AUTO_INCREMENT");
+        add("t_collaboration_task", "tenant_id", "BIGINT DEFAULT NULL");
+        add("t_collaboration_task", "order_no", "VARCHAR(100) DEFAULT NULL");
+        add("t_collaboration_task", "style_no", "VARCHAR(100) DEFAULT NULL");
+        add("t_collaboration_task", "target_role", "VARCHAR(50) DEFAULT NULL");
+        add("t_collaboration_task", "current_stage", "VARCHAR(50) DEFAULT NULL");
+        add("t_collaboration_task", "next_step", "VARCHAR(200) DEFAULT NULL");
+        add("t_collaboration_task", "instruction", "TEXT DEFAULT NULL");
+        add("t_collaboration_task", "due_hint", "VARCHAR(200) DEFAULT NULL");
+        add("t_collaboration_task", "dispatch_response_json", "TEXT DEFAULT NULL");
+        add("t_collaboration_task", "updated_at", "DATETIME DEFAULT NULL");
+        add("t_collaboration_task", "due_at", "DATETIME DEFAULT NULL");
+        add("t_collaboration_task", "overdue", "TINYINT(1) DEFAULT 0");
+        add("t_collaboration_task", "created_at", "DATETIME DEFAULT NULL");
+        add("t_collaboration_task", "task_status", "VARCHAR(20) DEFAULT NULL");
+        add("t_collaboration_task", "priority", "VARCHAR(20) DEFAULT NULL");
+        add("t_collaboration_task", "assignee_name", "VARCHAR(100) DEFAULT NULL");
+        add("t_collaboration_task", "acceptance_criteria", "TEXT DEFAULT NULL");
+        add("t_collaboration_task", "escalated_at", "DATETIME DEFAULT NULL");
+        add("t_collaboration_task", "escalated_to", "VARCHAR(100) DEFAULT NULL");
+        add("t_collaboration_task", "source_type", "VARCHAR(32) DEFAULT NULL");
+        add("t_collaboration_task", "source_instruction", "TEXT DEFAULT NULL");
+        add("t_collaboration_task", "completion_note", "TEXT DEFAULT NULL");
+        add("t_collaboration_task", "completed_at", "DATETIME DEFAULT NULL");
+        add("t_collaboration_task", "order_link_status", "VARCHAR(32) DEFAULT NULL");
+        add("t_collaboration_task", "progress_change_monitor_enabled", "TINYINT(1) DEFAULT 0");
+        add("t_collaboration_task", "last_reminder_sent_at", "DATETIME DEFAULT NULL");
+        add("t_collaboration_task", "reminder_count", "INT DEFAULT 0");
+        add("t_collaboration_task", "last_order_progress", "INT DEFAULT NULL");
+        add("t_collaboration_task", "last_order_status", "VARCHAR(32) DEFAULT NULL");
+    }
+
+    private static void addStyleInfoMissingColumns() {
+        add("t_style_info", "quality_grade", "VARCHAR(20) DEFAULT NULL");
+        add("t_style_info", "execute_standard", "VARCHAR(100) DEFAULT NULL");
+        add("t_style_info", "safety_category", "VARCHAR(50) DEFAULT NULL");
+        add("t_style_info", "inspector", "VARCHAR(100) DEFAULT NULL");
+        add("t_style_info", "inspection_date", "VARCHAR(32) DEFAULT NULL");
     }
 }

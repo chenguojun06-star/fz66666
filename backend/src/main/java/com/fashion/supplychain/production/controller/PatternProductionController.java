@@ -46,6 +46,12 @@ public class PatternProductionController {
     @Autowired
     private com.fashion.supplychain.production.helper.PatternEnrichmentHelper patternEnrichmentHelper;
 
+    @Autowired
+    private com.fashion.supplychain.production.helper.SampleOrderCreationHelper sampleOrderCreationHelper;
+
+    @Autowired
+    private com.fashion.supplychain.production.service.ProductionOrderService productionOrderService;
+
     /**
      * 获取样衣开发费用统计
      */
@@ -109,6 +115,50 @@ public class PatternProductionController {
         }
     }
 
+    @PostMapping("/{id}/create-sample-order")
+    public Result<Map<String, Object>> createSampleOrder(@PathVariable String id) {
+        try {
+            Map<String, Object> result = sampleOrderCreationHelper.createSampleProductionOrder(id);
+            return Result.success(result);
+        } catch (IllegalArgumentException e) {
+            return Result.fail(e.getMessage());
+        } catch (Exception e) {
+            log.error("创建样衣生产订单失败: id={}", id, e);
+            return Result.fail("创建失败: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/{id}/linked-order")
+    public Result<Map<String, Object>> getLinkedOrder(@PathVariable String id) {
+        try {
+            PatternProduction pattern = patternProductionService.getById(id);
+            if (pattern == null || pattern.getDeleteFlag() == 1) {
+                return Result.fail("样板生产记录不存在");
+            }
+            TenantAssert.assertBelongsToCurrentTenant(pattern.getTenantId(), "样衣");
+            if (!StringUtils.hasText(pattern.getProductionOrderId())) {
+                return Result.success(Map.of("linked", false));
+            }
+            com.fashion.supplychain.production.entity.ProductionOrder order =
+                    productionOrderService.getById(pattern.getProductionOrderId());
+            if (order == null) {
+                return Result.success(Map.of("linked", false));
+            }
+            Map<String, Object> data = new HashMap<>();
+            data.put("linked", true);
+            data.put("orderId", order.getId());
+            data.put("orderNo", order.getOrderNo());
+            data.put("status", order.getStatus());
+            data.put("productionProgress", order.getProductionProgress());
+            data.put("progressWorkflowJson", order.getProgressWorkflowJson());
+            data.put("sourceBizType", order.getSourceBizType());
+            return Result.success(data);
+        } catch (Exception e) {
+            log.error("获取样衣关联订单失败: id={}", id, e);
+            return Result.fail("获取失败: " + e.getMessage());
+        }
+    }
+
     /**
      * 获取指定样衣的扫码记录（供小程序工序判定使用）
      */
@@ -134,6 +184,7 @@ public class PatternProductionController {
             item.put("id", r.getId());
             item.put("patternProductionId", r.getPatternProductionId());
             item.put("operationType", r.getOperationType());
+            item.put("processName", r.getOperationType());
             item.put("operatorId", r.getOperatorId());
             item.put("operatorName", r.getOperatorName());
             item.put("operatorRole", r.getOperatorRole());
@@ -388,6 +439,46 @@ public class PatternProductionController {
         } catch (Exception e) {
             log.error("获取样板扫码历史失败", e);
             return Result.fail("获取失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 撤销样衣扫码记录
+     */
+    @DeleteMapping("/{patternId}/scan-records/{scanRecordId}")
+    public Result<Map<String, Object>> undoScanRecord(
+            @PathVariable String patternId,
+            @PathVariable String scanRecordId) {
+        try {
+            Map<String, Object> result = patternProductionOrchestrator.undoPatternScan(scanRecordId);
+            return Result.success(result);
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            return Result.fail(e.getMessage());
+        } catch (Exception e) {
+            log.error("撤销样衣扫码记录失败: patternId={} scanRecordId={}", patternId, scanRecordId, e);
+            return Result.fail("撤销失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 指派样板生产给指定人员
+     */
+    @PutMapping("/{patternId}/assignee")
+    public Result<String> assignPattern(
+            @PathVariable String patternId,
+            @RequestBody Map<String, Object> request) {
+        try {
+            String assignee = (String) request.get("assignee");
+            if (!StringUtils.hasText(assignee)) {
+                return Result.fail("指派人员不能为空");
+            }
+            patternProductionOrchestrator.assignPattern(patternId, assignee);
+            return Result.success("指派成功");
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            return Result.fail(e.getMessage());
+        } catch (Exception e) {
+            log.error("指派失败: patternId={}", patternId, e);
+            return Result.fail("指派失败: " + e.getMessage());
         }
     }
 

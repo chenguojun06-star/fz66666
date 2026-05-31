@@ -709,6 +709,9 @@ public class TenantController {
         if (tenantAiConfigService == null) return Result.fail("AI配置服务未启用");
         Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
         if (tenantId == null) return Result.fail("无法获取租户信息");
+        if (!com.fashion.supplychain.common.UserContext.isTenantOwner() && !com.fashion.supplychain.common.UserContext.isTopAdmin()) {
+            return Result.fail("只有工厂主账号或管理员才能修改AI配置");
+        }
         String textProvider = params.get("textProvider") != null ? params.get("textProvider").toString() : null;
         String textApiKey = params.get("textApiKey") != null ? params.get("textApiKey").toString() : null;
         String textBaseUrl = params.get("textBaseUrl") != null ? params.get("textBaseUrl").toString() : null;
@@ -726,6 +729,9 @@ public class TenantController {
         if (tenantAiConfigService == null) return Result.fail("AI配置服务未启用");
         Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
         if (tenantId == null) return Result.fail("无法获取租户信息");
+        if (!com.fashion.supplychain.common.UserContext.isTenantOwner() && !com.fashion.supplychain.common.UserContext.isTopAdmin()) {
+            return Result.fail("只有工厂主账号或管理员才能查看AI配置");
+        }
         com.fashion.supplychain.intelligence.entity.TenantAiConfig config = tenantAiConfigService.getOrCreateConfig(tenantId);
         TenantAiConfigService.ResolvedConfig resolved = tenantAiConfigService.resolveConfig(tenantId);
         Map<String, Object> result = new LinkedHashMap<>();

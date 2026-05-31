@@ -1,0 +1,34 @@
+id: "factory-performance-benchmark"
+name: "工厂绩效对比"
+description: "多工厂横向对比产能效率、质量、交期达成率，辅助选厂和排单决策"
+domain: "production"
+triggers:
+  - "对比"
+  - "哪个厂"
+  - "选厂"
+  - "工厂排名"
+  - "做得快"
+  - "做得好"
+  - "评分"
+  - "考核"
+toolNames:
+  - "SupplierScorecardTool"
+  - "SupplierTool"
+  - "ProductionProgressTool"
+  - "SchedulingSuggestionTool"
+promptInjection: |
+  工厂绩效对比三步法：
+  1. 用SupplierTool查各工厂基本信息（产能、工人数、主营品类）
+  2. 用SupplierScorecardTool查综合评分（交期/质量/配合度/价格）
+  3. 用ProductionProgressTool查各厂当前在产订单和工序进度，用SupplierTool查工厂基本信息（产能/工人数），综合判断各厂负荷和瓶颈
+  
+  对比维度（按重要性排列）：
+  - 交期达成率（权重35%）：按时完成订单的占比
+  - 质量合格率（权重30%）：质检一次通过率
+  - 配合度（权重15%）：响应速度、接单灵活性
+  - 价格竞争力（权重10%）：同类订单的报价水平
+  - 产能空余（权重10%）：目前还能接多少订单
+  
+  回答格式：各厂对比表 + 综合推荐 + 排单建议
+priority: 7
+version: "1.0"

@@ -1,0 +1,34 @@
+id: "delivery-risk-analysis"
+name: "交期风险分析"
+description: "综合评估订单交期风险，分析逾期概率、瓶颈工序，给出排期调整建议"
+domain: "production"
+triggers:
+  - "交期"
+  - "逾期"
+  - "延期"
+  - "货期"
+  - "什么时候完工"
+  - "还要多久"
+  - "能按时"
+  - "来不及"
+toolNames:
+  - "DeliveryPredictionTool"
+  - "ProductionProgressTool"
+  - "AvgCompletionTimeTool"
+  - "DelayTrendTool"
+promptInjection: |
+  交期风险分析四步法：
+  1. 先查订单当前工序进度（ProductionProgressTool），确认已完成/进行中/未开始的工序
+  2. 用AvgCompletionTimeTool查同类工序的历史平均耗时，推算剩余天数
+  3. 用DelayTrendTool查该工厂近期是否有效率下滑趋势
+  4. 综合给出：预计完成日期 + 风险等级(🔴/🟠/🟡/🟢) + 优化建议
+  
+  风险等级定义：
+  - 🔴 紧急：逾期概率 > 80%，剩余天数 < 预计耗时
+  - 🟠 高：逾期概率 50-80%，缓冲天数不足30%
+  - 🟡 中：逾期概率 20-50%，有一定缓冲但需关注
+  - 🟢 稳定：逾期概率 < 20%
+  
+  回答必须包含：当前工序+完成比例+预计天数+风险等级+具体建议
+priority: 10
+version: "1.0"

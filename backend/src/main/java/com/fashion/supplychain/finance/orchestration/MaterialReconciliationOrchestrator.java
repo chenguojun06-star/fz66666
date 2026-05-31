@@ -527,6 +527,9 @@ public class MaterialReconciliationOrchestrator {
         patch.setStyleId(purchase.getStyleId());
         patch.setStyleNo(purchase.getStyleNo());
         patch.setStyleName(purchase.getStyleName());
+        if (StringUtils.hasText(purchase.getSourceType())) {
+            patch.setSourceType(purchase.getSourceType().trim());
+        }
         patch.setQuantity(qty);
         patch.setUnitPrice(unitPrice);
         patch.setTotalAmount(totalAmount);
@@ -599,6 +602,10 @@ public class MaterialReconciliationOrchestrator {
         }
         if (!StringUtils.hasText(existed.getStyleName()) && StringUtils.hasText(purchase.getStyleName())) {
             patch.setStyleName(purchase.getStyleName().trim());
+            needPatch = true;
+        }
+        if (!StringUtils.hasText(existed.getSourceType()) && StringUtils.hasText(purchase.getSourceType())) {
+            patch.setSourceType(purchase.getSourceType().trim());
             needPatch = true;
         }
         if (!needPatch) {

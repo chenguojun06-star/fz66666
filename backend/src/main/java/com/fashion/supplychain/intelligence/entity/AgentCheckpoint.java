@@ -35,4 +35,25 @@ public class AgentCheckpoint {
 
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createdAt;
+
+    @TableField(exist = false)
+    private String action;
+
+    @TableField(exist = false)
+    private String toolName;
+
+    @TableField(exist = false)
+    private String toolResult;
+
+    @TableField(exist = false)
+    private Integer iteration;
+
+    @TableField(exist = false)
+    private Integer resumeCount;
+
+    @TableField(exist = false)
+    private Long totalTokens;
+
+    @TableField(exist = false)
+    private Integer toolCount;
 }

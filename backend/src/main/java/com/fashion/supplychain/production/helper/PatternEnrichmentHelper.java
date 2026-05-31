@@ -11,6 +11,7 @@ import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.entity.StyleProcess;
 import com.fashion.supplychain.style.service.StyleInfoService;
 import com.fashion.supplychain.style.service.StyleProcessService;
+import com.fashion.supplychain.template.service.TemplateLibraryService;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
@@ -41,6 +42,9 @@ public class PatternEnrichmentHelper {
 
     @Autowired
     private PatternScanRecordService patternScanRecordService;
+
+    @Autowired
+    private TemplateLibraryService templateLibraryService;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -75,6 +79,7 @@ public class PatternEnrichmentHelper {
         map.put("reviewBy", record.getReviewBy());
         map.put("reviewById", record.getReviewById());
         map.put("reviewTime", record.getReviewTime());
+        map.put("productionOrderId", record.getProductionOrderId());
 
         // 从款式信息获取封面图、码数、人员
         enrichWithStyleInfo(map, record.getStyleId());
@@ -308,7 +313,7 @@ public class PatternEnrichmentHelper {
 
         Long styleId = parseStyleId(pattern.getStyleId());
         if (styleId == null) {
-            return buildDefaultPatternProcessConfig();
+            return Collections.emptyList();
         }
 
         LambdaQueryWrapper<StyleProcess> wrapper = new LambdaQueryWrapper<>();
@@ -317,7 +322,7 @@ public class PatternEnrichmentHelper {
                 .orderByAsc(StyleProcess::getId);
         List<StyleProcess> processes = styleProcessService.list(wrapper);
         if (processes == null || processes.isEmpty()) {
-            return buildDefaultPatternProcessConfig();
+            return resolveFromTemplate(pattern);
         }
 
         List<Map<String, Object>> result = new ArrayList<>();
@@ -347,33 +352,63 @@ public class PatternEnrichmentHelper {
         }
 
         if (result.isEmpty()) {
-            return buildDefaultPatternProcessConfig();
+            return resolveFromTemplate(pattern);
         }
         return result;
     }
 
-    public List<Map<String, Object>> buildDefaultPatternProcessConfig() {
-        List<Map<String, Object>> defaults = new ArrayList<>();
-        defaults.add(buildProcessConfigItem("RECEIVE", "领取样衣", "采购", 1, BigDecimal.ZERO));
-        defaults.add(buildProcessConfigItem("PLATE", "车板", "裁剪", 2, BigDecimal.ZERO));
-        defaults.add(buildProcessConfigItem("FOLLOW_UP", "跟单确认", "车缝", 3, BigDecimal.ZERO));
-        defaults.add(buildProcessConfigItem("COMPLETE", "完成确认", "尾部", 4, BigDecimal.ZERO));
-        defaults.add(buildProcessConfigItem("WAREHOUSE_IN", "样衣入库", "入库", 5, BigDecimal.ZERO));
-        return defaults;
-    }
+    private List<Map<String, Object>> resolveFromTemplate(PatternProduction pattern) {
+        try {
+            String styleNo = pattern.getStyleNo();
+            if (!StringUtils.hasText(styleNo)) {
+                StyleInfo styleInfo = styleInfoService.getById(pattern.getStyleId());
+                if (styleInfo != null) {
+                    styleNo = styleInfo.getStyleNo();
+                }
+            }
+            if (!StringUtils.hasText(styleNo)) {
+                return Collections.emptyList();
+            }
+            List<Map<String, Object>> templateNodes = templateLibraryService.resolveProgressNodeUnitPrices(styleNo);
+            if (templateNodes == null || templateNodes.isEmpty()) {
+                return Collections.emptyList();
+            }
 
-    private Map<String, Object> buildProcessConfigItem(String operationType, String processName,
-                                                       String progressStage, int sortOrder,
-                                                       BigDecimal price) {
-        Map<String, Object> item = new LinkedHashMap<>();
-        item.put("operationType", operationType);
-        item.put("processName", processName);
-        item.put("progressStage", progressStage);
-        item.put("sortOrder", sortOrder);
-        item.put("scanType", inferPatternScanType(progressStage, processName));
-        item.put("price", price != null ? price : BigDecimal.ZERO);
-        item.put("unitPrice", price != null ? price : BigDecimal.ZERO);
-        return item;
+            List<Map<String, Object>> result = new ArrayList<>();
+            for (int i = 0; i < templateNodes.size(); i++) {
+                Map<String, Object> node = templateNodes.get(i);
+                if (node == null) continue;
+                String processName = String.valueOf(node.getOrDefault("name", "")).trim();
+                if (!StringUtils.hasText(processName)) continue;
+
+                String progressStage = String.valueOf(node.getOrDefault("progressStage", "")).trim();
+                if (!StringUtils.hasText(progressStage) || progressStage.equals(processName)) {
+                    progressStage = processName;
+                }
+
+                BigDecimal unitPrice = BigDecimal.ZERO;
+                Object priceObj = node.get("unitPrice");
+                if (priceObj instanceof BigDecimal bd) {
+                    unitPrice = bd;
+                } else if (priceObj != null) {
+                    try { unitPrice = new BigDecimal(String.valueOf(priceObj)); } catch (Exception ignore) {}
+                }
+
+                Map<String, Object> item = new LinkedHashMap<>();
+                item.put("operationType", processName);
+                item.put("processName", processName);
+                item.put("progressStage", progressStage);
+                item.put("sortOrder", i + 1);
+                item.put("scanType", inferPatternScanType(progressStage, processName));
+                item.put("price", unitPrice);
+                item.put("unitPrice", unitPrice);
+                result.add(item);
+            }
+            return result;
+        } catch (Exception e) {
+            log.warn("从模版解析样衣工序配置失败: patternId={}", pattern.getId(), e);
+            return Collections.emptyList();
+        }
     }
 
     private String inferPatternScanType(String progressStage, String processName) {

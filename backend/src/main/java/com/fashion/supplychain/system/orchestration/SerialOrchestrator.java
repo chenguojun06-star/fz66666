@@ -49,7 +49,9 @@ public class SerialOrchestrator {
     private String nextStyleNo() {
         String day = LocalDate.now().format(DAY_FMT);
         String prefix = "ST" + day;
+        Long tenantId = UserContext.tenantId();
         StyleInfo latest = styleInfoService.getOne(new LambdaQueryWrapper<StyleInfo>()
+                .eq(tenantId != null, StyleInfo::getTenantId, tenantId)
                 .likeRight(StyleInfo::getStyleNo, prefix)
                 .orderByDesc(StyleInfo::getStyleNo)
                 .last("limit 1"));
@@ -58,6 +60,7 @@ public class SerialOrchestrator {
         for (int i = 0; i < 200; i++) {
             String candidate = prefix + "%03d".formatted(seq);
             Long cnt = styleInfoService.count(new LambdaQueryWrapper<StyleInfo>()
+                    .eq(tenantId != null, StyleInfo::getTenantId, tenantId)
                     .eq(StyleInfo::getStyleNo, candidate));
             if (cnt == null || cnt == 0) {
                 return candidate;

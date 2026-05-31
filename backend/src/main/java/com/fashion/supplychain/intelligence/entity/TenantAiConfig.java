@@ -38,7 +38,7 @@ public class TenantAiConfig {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
-    public boolean isAiEnabled() {
+    public boolean isAiEnabledFlag() {
         return aiEnabled != null && aiEnabled == 1;
     }
 

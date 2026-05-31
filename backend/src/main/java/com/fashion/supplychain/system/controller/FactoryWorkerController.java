@@ -59,7 +59,7 @@ public class FactoryWorkerController {
      * 自动绑定当前用户的 tenantId 和 factoryId
      */
     @PostMapping
-    public Result<Boolean> create(@RequestBody FactoryWorker worker) {
+    public Result<FactoryWorker> create(@RequestBody FactoryWorker worker) {
         String ctxFactoryId = UserContext.factoryId();
         if (StringUtils.hasText(ctxFactoryId)) {
             worker.setFactoryId(ctxFactoryId);
@@ -77,7 +77,11 @@ public class FactoryWorkerController {
         }
         worker.setCreateTime(LocalDateTime.now());
         worker.setUpdateTime(LocalDateTime.now());
-        return Result.success(factoryWorkerService.save(worker));
+        boolean saved = factoryWorkerService.save(worker);
+        if (saved) {
+            return Result.success(worker);
+        }
+        return Result.fail("创建工人失败");
     }
 
     /**

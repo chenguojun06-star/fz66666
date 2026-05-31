@@ -216,7 +216,11 @@ public class GlobalExceptionHandler {
         public ResponseEntity<Result<?>> handleNoSuchElement(NoSuchElementException e, HttpServletRequest request) {
                 logger.warn("资源不存在: {} {} - {}", request == null ? "" : request.getMethod(),
                                 request == null ? "" : request.getRequestURI(), e.getMessage());
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Result.fail(404, "请求的资源不存在"));
+                String clientMessage = sanitizeClientMessage(e.getMessage());
+                if (clientMessage == null || clientMessage.isEmpty()) {
+                        clientMessage = "请求的资源不存在";
+                }
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Result.fail(404, clientMessage));
         }
 
         /**

@@ -2,6 +2,10 @@ package com.fashion.supplychain.production.helper;
 
 import com.fashion.supplychain.common.ProcessSynonymMapping;
 import com.fashion.supplychain.production.service.ProcessParentMappingService;
+import com.fashion.supplychain.style.entity.StyleInfo;
+import com.fashion.supplychain.style.entity.StyleProcess;
+import com.fashion.supplychain.style.service.StyleInfoService;
+import com.fashion.supplychain.style.service.StyleProcessService;
 import com.fashion.supplychain.template.service.TemplateLibraryService;
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -20,11 +24,17 @@ public class CuttingWorkflowBuilderHelper {
 
     private final TemplateLibraryService templateLibraryService;
     private final ProcessParentMappingService processParentMappingService;
+    private final StyleProcessService styleProcessService;
+    private final StyleInfoService styleInfoService;
 
     public CuttingWorkflowBuilderHelper(TemplateLibraryService templateLibraryService,
-                                        ProcessParentMappingService processParentMappingService) {
+                                        ProcessParentMappingService processParentMappingService,
+                                        StyleProcessService styleProcessService,
+                                        StyleInfoService styleInfoService) {
         this.templateLibraryService = templateLibraryService;
         this.processParentMappingService = processParentMappingService;
+        this.styleProcessService = styleProcessService;
+        this.styleInfoService = styleInfoService;
     }
 
     public String resolveProgressWorkflowJson(Map<String, Object> body, String styleNo) {
@@ -53,7 +63,10 @@ public class CuttingWorkflowBuilderHelper {
     }
 
     public String buildProgressWorkflowJson(String styleNo) {
-        List<Map<String, Object>> nodes = templateLibraryService.resolveProgressNodeUnitPrices(styleNo);
+        List<Map<String, Object>> nodes = resolveFromStyleProcess(styleNo);
+        if (nodes == null || nodes.isEmpty()) {
+            nodes = templateLibraryService.resolveProgressNodeUnitPrices(styleNo);
+        }
         if (nodes == null || nodes.isEmpty()) return null;
 
         List<Map<String, Object>> normalizedNodes = new ArrayList<>();
@@ -97,6 +110,48 @@ public class CuttingWorkflowBuilderHelper {
             return new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(workflow);
         } catch (Exception ex) {
             log.warn("构建 progressWorkflowJson 失败", ex);
+            return null;
+        }
+    }
+
+    private List<Map<String, Object>> resolveFromStyleProcess(String styleNo) {
+        if (!StringUtils.hasText(styleNo)) {
+            return null;
+        }
+        try {
+            StyleInfo styleInfo = styleInfoService.lambdaQuery()
+                    .eq(StyleInfo::getStyleNo, styleNo.trim())
+                    .last("LIMIT 1")
+                    .one();
+            if (styleInfo == null) {
+                return null;
+            }
+            List<StyleProcess> processes = styleProcessService.listByStyleId(styleInfo.getId());
+            if (processes == null || processes.isEmpty()) {
+                return null;
+            }
+            List<Map<String, Object>> nodes = new ArrayList<>();
+            for (StyleProcess process : processes) {
+                String processName = StringUtils.hasText(process.getProcessName())
+                        ? process.getProcessName().trim() : "";
+                if (!StringUtils.hasText(processName)) {
+                    continue;
+                }
+                Map<String, Object> node = new LinkedHashMap<>();
+                node.put("id", StringUtils.hasText(process.getProcessCode())
+                        ? process.getProcessCode().trim() : processName);
+                node.put("name", processName);
+                node.put("processCode", StringUtils.hasText(process.getProcessCode())
+                        ? process.getProcessCode().trim() : processName);
+                node.put("progressStage", StringUtils.hasText(process.getProgressStage())
+                        ? process.getProgressStage().trim() : processName);
+                node.put("unitPrice", process.getPrice() != null ? process.getPrice() : BigDecimal.ZERO);
+                nodes.add(node);
+            }
+            log.info("从款式工序数据构建流程节点: styleNo={}, nodeCount={}", styleNo, nodes.size());
+            return nodes;
+        } catch (Exception e) {
+            log.warn("从款式工序解析节点失败, styleNo={}", styleNo, e);
             return null;
         }
     }

@@ -193,6 +193,11 @@ public class WebSocketService {
         webSocketHandler.sendToUserByType(userId, clientType, message);
     }
 
+    public void broadcastToTenant(Long tenantId, WebSocketMessageType type, Object payload) {
+        WebSocketMessage<Object> message = WebSocketMessage.create(type, payload);
+        webSocketHandler.broadcastToTenant(tenantId, message);
+    }
+
 
 
     public void notifyApprovalPending(String approverId, String approverName,

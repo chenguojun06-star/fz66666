@@ -277,7 +277,7 @@ public class ScanUndoHelper {
 
         String oid = TextUtils.safeText(target.getOrderId());
         if (hasText(oid)) {
-            productionOrderService.recomputeProgressAsync(oid);
+            productionOrderService.recomputeProgressFromRecords(oid);
         }
 
         Map<String, Object> resp = new HashMap<>();
@@ -293,7 +293,7 @@ public class ScanUndoHelper {
 
         String oid = TextUtils.safeText(target.getOrderId());
         if (hasText(oid)) {
-            productionOrderService.recomputeProgressAsync(oid);
+            productionOrderService.recomputeProgressFromRecords(oid);
         }
 
         Map<String, Object> resp = new HashMap<>();

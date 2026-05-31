@@ -260,7 +260,7 @@ public class ProductSkuServiceImpl extends ServiceImpl<ProductSkuMapper, Product
                     continue;
                 }
 
-                String autoCode = String.format("%s-%s-%s", style.getStyleNo(), skuUpdate.getColor(), skuUpdate.getSize());
+                String autoCode = generateSkuCode(style.getStyleNo(), skuUpdate.getColor(), skuUpdate.getSize(), style.getUseSkuPrefix());
                 if (!StringUtils.hasText(skuUpdate.getSkuCode())) {
                     skuUpdate.setSkuCode(autoCode);
                 }
@@ -299,7 +299,7 @@ public class ProductSkuServiceImpl extends ServiceImpl<ProductSkuMapper, Product
             List<ProductSku> skus = listByStyleId(styleId);
             List<ProductSku> toUpdate = skus.stream()
                     .filter(sku -> {
-                        String autoCode = String.format("%s-%s-%s", style.getStyleNo(), sku.getColor(), sku.getSize());
+                        String autoCode = generateSkuCode(style.getStyleNo(), sku.getColor(), sku.getSize(), style.getUseSkuPrefix());
                         if (!autoCode.equals(sku.getSkuCode())) {
                             sku.setSkuCode(autoCode);
                             sku.setManuallyEdited(0);
@@ -377,8 +377,23 @@ public class ProductSkuServiceImpl extends ServiceImpl<ProductSkuMapper, Product
         }
     }
 
+    private String generateSkuCode(String styleNo, String color, String size, Integer useSkuPrefix) {
+        StringBuilder sb = new StringBuilder();
+        if (useSkuPrefix != null && useSkuPrefix == 1) {
+            sb.append("SKU");
+        }
+        sb.append(styleNo);
+        if (color != null && !color.isEmpty()) {
+            sb.append(color);
+        }
+        if (size != null && !size.isEmpty()) {
+            sb.append(size);
+        }
+        return sb.toString();
+    }
+
     private void createOrUpdateSku(StyleInfo style, String color, String size) {
-        String skuCode = String.format("%s-%s-%s", style.getStyleNo(), color, size);
+        String skuCode = generateSkuCode(style.getStyleNo(), color, size, style.getUseSkuPrefix());
         Long tenantId = UserContext.tenantId();
         if (tenantId == null) {
             log.error("Cannot createOrUpdateSku: tenantId is null for styleId={}, skuCode={}", style.getId(), skuCode);
@@ -409,6 +424,36 @@ public class ProductSkuServiceImpl extends ServiceImpl<ProductSkuMapper, Product
                 existing.setSkuCode(skuCode);
             }
             this.updateById(existing);
+        }
+    }
+
+    @Override
+    public void updateUseSkuPrefix(Long styleId, Integer useSkuPrefix) {
+        StyleInfo style = styleInfoMapper.selectById(styleId);
+        if (style == null) {
+            return;
+        }
+
+        style.setUseSkuPrefix(useSkuPrefix);
+        styleInfoMapper.updateById(style);
+
+        if ("AUTO".equals(style.getSkuMode())) {
+            generateSkusForStyle(styleId);
+            List<ProductSku> skus = listByStyleId(styleId);
+            List<ProductSku> toUpdate = skus.stream()
+                    .filter(sku -> {
+                        String autoCode = generateSkuCode(style.getStyleNo(), sku.getColor(), sku.getSize(), useSkuPrefix);
+                        if (!autoCode.equals(sku.getSkuCode())) {
+                            sku.setSkuCode(autoCode);
+                            sku.setManuallyEdited(0);
+                            return true;
+                        }
+                        return false;
+                    })
+                    .collect(Collectors.toList());
+            if (!toUpdate.isEmpty()) {
+                this.updateBatchById(toUpdate);
+            }
         }
     }
 }

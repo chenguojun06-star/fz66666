@@ -11,6 +11,7 @@ import com.fashion.supplychain.intelligence.orchestration.LongTermMemoryOrchestr
 import com.fashion.supplychain.intelligence.orchestration.PatrolClosedLoopOrchestrator;
 import com.fashion.supplychain.intelligence.orchestration.ProcessRewardOrchestrator;
 import com.fashion.supplychain.intelligence.orchestration.SmartEscalationOrchestrator;
+import com.fashion.supplychain.intelligence.orchestration.TaskOrderMonitorOrchestrator;
 import com.fashion.supplychain.intelligence.service.ProcessStatsEngine;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
@@ -87,6 +88,9 @@ public class AiPatrolJob {
 
     @Autowired(required = false)
     private ProcessStatsEngine processStatsEngine;
+
+    @Autowired(required = false)
+    private TaskOrderMonitorOrchestrator taskOrderMonitorOrchestrator;
 
     /**
      * 跨模块读取生产数据（只读，不涉及事务，Job 层允许跨模块调用 Service）。
@@ -747,5 +751,96 @@ public class AiPatrolJob {
     private static String getString(Map<String, Object> map, String key) {
         Object v = map.get(key);
         return v == null ? "unknown" : v.toString();
+    }
+
+    @Scheduled(cron = "0 0 * * * ?")
+    public void checkTaskOrderProgress() {
+        if (taskOrderMonitorOrchestrator == null) {
+            log.debug("[AiPatrolJob-TaskOrder] TaskOrderMonitorOrchestrator 未注入，跳过");
+            return;
+        }
+        if (collaborationTaskMapper == null) {
+            log.debug("[AiPatrolJob-TaskOrder] CollaborationTaskMapper 未注入，跳过");
+            return;
+        }
+        log.info("[AiPatrolJob-TaskOrder] ===== 开始检查任务关联订单进度 =====");
+
+        try {
+            List<CollaborationTask> tasks = taskOrderMonitorOrchestrator.getTasksNeedingOrderCheck(100);
+            if (tasks.isEmpty()) {
+                log.info("[AiPatrolJob-TaskOrder] 没有需要检查的任务");
+                return;
+            }
+
+            int progressChangeCount = 0;
+            int statusChangeCount = 0;
+
+            for (CollaborationTask task : tasks) {
+                UserContext previous = UserContext.get();
+                try {
+                    UserContext ctx = new UserContext();
+                    ctx.setTenantId(task.getTenantId());
+                    ctx.setUsername("system");
+                    ctx.setUserId("system");
+                    UserContext.set(ctx);
+
+                    Map<String, Object> result = taskOrderMonitorOrchestrator.refreshTaskOrderStatus(task.getId());
+                    if (result != null && Boolean.TRUE.equals(result.get("hasChanges"))) {
+                        @SuppressWarnings("unchecked")
+                        List<String> changes = (List<String>) result.get("changes");
+                        if (changes != null) {
+                            for (String change : changes) {
+                                if (change.contains("进度变化")) {
+                                    progressChangeCount++;
+                                }
+                                if (change.contains("状态变化")) {
+                                    statusChangeCount++;
+                                }
+                            }
+                            createTaskReminderAction(task, changes);
+                        }
+                    }
+                } catch (Exception e) {
+                    log.warn("[AiPatrolJob-TaskOrder] 检查任务 {} 失败: {}", task.getId(), e.getMessage());
+                } finally {
+                    if (previous != null) {
+                        UserContext.set(previous);
+                    } else {
+                        UserContext.clear();
+                    }
+                }
+            }
+
+            log.info("[AiPatrolJob-TaskOrder] ===== 订单进度检查完成，进度变化 {}，状态变化 {} =====",
+                progressChangeCount, statusChangeCount);
+        } catch (Exception e) {
+            log.warn("[AiPatrolJob-TaskOrder] 检查失败: {}", e.getMessage());
+        }
+    }
+
+    private void createTaskReminderAction(CollaborationTask task, List<String> changes) {
+        if (patrolOrchestrator == null) return;
+        try {
+            String changesStr = String.join("; ", changes);
+            String issue = String.format("任务[%s] 关联订单[%s] 发生变化: %s",
+                task.getInstruction(),
+                task.getOrderNo(),
+                changesStr);
+
+            patrolOrchestrator.createAction(
+                "TASK_ORDER_MONITOR",
+                issue,
+                "TASK_ORDER_CHANGE",
+                "MEDIUM",
+                "collab_task",
+                String.valueOf(task.getId()),
+                "{\"taskId\":" + task.getId() + ",\"orderNo\":\"" + task.getOrderNo() + "\"}",
+                BigDecimal.valueOf(0.7),
+                "NEED_APPROVAL"
+            );
+            log.info("[AiPatrolJob-TaskOrder] 任务 {} 订单变化已记录: {}", task.getId(), changesStr);
+        } catch (Exception e) {
+            log.warn("[AiPatrolJob-TaskOrder] 创建提醒动作失败: {}", e.getMessage());
+        }
     }
 }

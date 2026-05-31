@@ -21,4 +21,6 @@ public interface ProductSkuService extends IService<ProductSku> {
     void updateSkuMode(Long styleId, String skuMode);
 
     void syncSkusToProduction(Long styleId);
+
+    void updateUseSkuPrefix(Long styleId, Integer useSkuPrefix);
 }

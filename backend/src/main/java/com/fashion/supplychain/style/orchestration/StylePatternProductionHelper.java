@@ -3,6 +3,7 @@ package com.fashion.supplychain.style.orchestration;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.production.entity.PatternProduction;
+import com.fashion.supplychain.production.helper.SampleOrderCreationHelper;
 import com.fashion.supplychain.production.service.PatternProductionService;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import java.time.LocalDateTime;
@@ -10,6 +11,8 @@ import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.util.StringUtils;
 
 /**
@@ -21,6 +24,9 @@ public class StylePatternProductionHelper {
 
     @Autowired
     private PatternProductionService patternProductionService;
+
+    @Autowired
+    private SampleOrderCreationHelper sampleOrderCreationHelper;
 
     /**
      * 款式保存时自动创建样板生产记录
@@ -51,6 +57,12 @@ public class StylePatternProductionHelper {
         }
         patternProduction.setColor(color);
 
+        String size = styleInfo.getSize();
+        if (!StringUtils.hasText(size)) {
+            size = "均码";
+        }
+        patternProduction.setSize(size);
+
         Integer quantity = styleInfo.getSampleQuantity();
         if (quantity == null || quantity == 0) {
             quantity = 1;
@@ -72,9 +84,40 @@ public class StylePatternProductionHelper {
 
         boolean saved = patternProductionService.save(patternProduction);
         if (saved) {
-            log.info("自动创建样板生产记录成功: styleId={}, styleNo={}, patternId={}, color={}, quantity={}",
+            log.info("自动创建样板生产记录成功: styleId={}, styleNo={}, patternId={}, color={}, size={}, quantity={}",
                     styleInfo.getId(), styleInfo.getStyleNo(), patternProduction.getId(),
-                    styleInfo.getColor(), styleInfo.getSampleQuantity());
+                    styleInfo.getColor(), styleInfo.getSize(), styleInfo.getSampleQuantity());
+
+            String patternId = patternProduction.getId();
+            UserContext savedCtx = UserContext.get();
+            if (TransactionSynchronizationManager.isSynchronizationActive()) {
+                TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        try {
+                            if (savedCtx != null) {
+                                UserContext.set(savedCtx);
+                            }
+                            var orderResult = sampleOrderCreationHelper.createSampleProductionOrder(patternId);
+                            log.info("[样衣创建] 自动创建生产订单+菲号+QR码: patternId={}, orderId={}",
+                                    patternId, orderResult.get("orderId"));
+                        } catch (Exception e) {
+                            log.warn("[样衣创建] 自动创建生产订单失败（不影响样板记录创建）: patternId={}", patternId, e);
+                        } finally {
+                            UserContext.clear();
+                        }
+                    }
+                });
+                log.info("[样衣创建] 已注册事务后置回调，将在事务提交后创建生产订单: patternId={}", patternId);
+            } else {
+                try {
+                    var orderResult = sampleOrderCreationHelper.createSampleProductionOrder(patternId);
+                    log.info("[样衣创建] 自动创建生产订单+菲号+QR码: patternId={}, orderId={}",
+                            patternId, orderResult.get("orderId"));
+                } catch (Exception e) {
+                    log.warn("[样衣创建] 自动创建生产订单失败（不影响样板记录创建）: patternId={}", patternId, e);
+                }
+            }
         }
     }
 

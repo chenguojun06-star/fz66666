@@ -35,6 +35,11 @@ public class PatternProduction {
     private String color;
 
     /**
+     * 码数
+     */
+    private String size;
+
+    /**
      * 数量（样板件数）
      */
     private Integer quantity;
@@ -150,6 +155,9 @@ public class PatternProduction {
     private String receiverId;
 
     private String patternMakerId;
+
+    @TableField("production_order_id")
+    private String productionOrderId;
 
     @TableField(fill = FieldFill.INSERT)
     private Long tenantId;

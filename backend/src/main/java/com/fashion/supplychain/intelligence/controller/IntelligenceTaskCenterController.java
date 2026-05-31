@@ -1,8 +1,11 @@
 package com.fashion.supplychain.intelligence.controller;
 
 import com.fashion.supplychain.common.Result;
+import com.fashion.supplychain.intelligence.entity.CollaborationTask;
 import com.fashion.supplychain.intelligence.orchestration.AiMetricsOrchestrator;
 import com.fashion.supplychain.intelligence.orchestration.TaskCenterOrchestrator;
+import com.fashion.supplychain.intelligence.orchestration.TaskOrderMonitorOrchestrator;
+import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,6 +21,7 @@ public class IntelligenceTaskCenterController {
 
     private final TaskCenterOrchestrator taskCenterOrchestrator;
     private final AiMetricsOrchestrator aiMetricsOrchestrator;
+    private final TaskOrderMonitorOrchestrator taskOrderMonitorOrchestrator;
 
     @GetMapping("/dashboard")
     public Result<Map<String, Object>> getDashboard() {
@@ -126,5 +130,23 @@ public class IntelligenceTaskCenterController {
     public Result<String> generateMetricsSnapshot() {
         aiMetricsOrchestrator.generateSnapshot();
         return Result.success("指标快照已生成");
+    }
+
+    @PostMapping("/tasks/{taskId}/link-order")
+    public Result<Map<String, Object>> linkTaskToOrder(
+            @PathVariable Long taskId,
+            @RequestBody Map<String, String> body) {
+        String orderNo = body.get("orderNo");
+        return Result.success(taskOrderMonitorOrchestrator.linkTaskToOrder(taskId, orderNo));
+    }
+
+    @PostMapping("/tasks/{taskId}/refresh-order")
+    public Result<Map<String, Object>> refreshTaskOrderStatus(@PathVariable Long taskId) {
+        return Result.success(taskOrderMonitorOrchestrator.refreshTaskOrderStatus(taskId));
+    }
+
+    @GetMapping("/tasks/by-order/{orderNo}")
+    public Result<List<CollaborationTask>> getTasksByOrderNo(@PathVariable String orderNo) {
+        return Result.success(taskOrderMonitorOrchestrator.getTasksByOrderNo(orderNo));
     }
 }

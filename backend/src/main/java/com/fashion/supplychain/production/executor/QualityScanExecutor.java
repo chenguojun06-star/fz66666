@@ -153,7 +153,7 @@ public class QualityScanExecutor {
         }
 
         // 异步重新计算订单进度，使手机端 productionProgress 随质检进度实时更新
-        executorSupport.recomputeProgressAsync(order.getId());
+        executorSupport.recomputeProgressSync(order.getId());
 
         return result;
     }

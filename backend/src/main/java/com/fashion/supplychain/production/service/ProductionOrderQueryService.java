@@ -7,6 +7,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fashion.supplychain.common.ParamUtils;
 import com.fashion.supplychain.common.constant.OrderStatusConstants;
 import com.fashion.supplychain.production.entity.ProductionOrder;
+import com.fashion.supplychain.production.helper.CuttingWorkflowBuilderHelper;
 import com.fashion.supplychain.production.mapper.ProductionOrderMapper;
 import com.fashion.supplychain.production.helper.OrderFlowStageFillHelper;
 import com.fashion.supplychain.production.helper.OrderPriceFillHelper;
@@ -77,6 +78,9 @@ public class ProductionOrderQueryService {
 
     @Autowired
     private ProcessParentNodeResolver processParentNodeResolver;
+
+    @Autowired
+    private CuttingWorkflowBuilderHelper cuttingWorkflowBuilderHelper;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -304,7 +308,35 @@ public class ProductionOrderQueryService {
         orderQualityFillService.fillQualityStats(productionOrders);
         priceFillHelper.fillFactoryUnitPrice(productionOrders);
         priceFillHelper.fillQuotationUnitPrice(productionOrders);
+        fillProgressWorkflowFromStyleProcess(productionOrders);
         priceFillHelper.fillProgressNodeUnitPrices(productionOrders);
+    }
+
+    /**
+     * 查询已有订单时，自动用 t_style_process 中配置的工序重新生成 progressWorkflowJson。
+     * 确保用户在产品端配置的工序能实时反映到订单详情中。
+     */
+    private void fillProgressWorkflowFromStyleProcess(List<ProductionOrder> productionOrders) {
+        if (productionOrders == null || productionOrders.isEmpty()) {
+            return;
+        }
+        for (ProductionOrder order : productionOrders) {
+            if (order == null) {
+                continue;
+            }
+            String styleNo = order.getStyleNo();
+            if (!StringUtils.hasText(styleNo)) {
+                continue;
+            }
+            try {
+                String regenerated = cuttingWorkflowBuilderHelper.buildProgressWorkflowJson(styleNo);
+                if (StringUtils.hasText(regenerated)) {
+                    order.setProgressWorkflowJson(regenerated);
+                }
+            } catch (Exception e) {
+                log.debug("重新生成 progressWorkflowJson 失败, styleNo={}", styleNo, e);
+            }
+        }
     }
 
     /**

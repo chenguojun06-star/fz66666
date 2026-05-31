@@ -113,6 +113,19 @@ public class ProductionOrderServiceImpl extends ServiceImpl<ProductionOrderMappe
             productionOrder.setStyleNo(style.getStyleNo());
             productionOrder.setStyleName(style.getStyleName());
 
+            if (!StringUtils.hasText(productionOrder.getFactoryName()) && StringUtils.hasText(productionOrder.getFactoryId())) {
+                try {
+                    String fname = jdbcTemplate.queryForObject(
+                            "SELECT factory_name FROM t_factory WHERE id=? AND delete_flag=0 LIMIT 1",
+                            String.class, productionOrder.getFactoryId());
+                    if (StringUtils.hasText(fname)) {
+                        productionOrder.setFactoryName(fname);
+                    }
+                } catch (Exception ex) {
+                    log.warn("自动填充factoryName失败: factoryId={}", productionOrder.getFactoryId(), ex);
+                }
+            }
+
             // 新增操作
             if (!StringUtils.hasText(productionOrder.getOrderNo())) {
                 productionOrder.setOrderNo(nextOrderNo());

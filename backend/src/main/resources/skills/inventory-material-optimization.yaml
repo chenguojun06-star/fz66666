@@ -1,0 +1,34 @@
+id: "inventory-material-optimization"
+name: "库存物料优化"
+description: "分析物料库存结构、短缺预警、呆滞料处理建议、采购时机建议"
+domain: "warehouse"
+triggers:
+  - "库存"
+  - "物料"
+  - "缺料"
+  - "面料不够"
+  - "辅料"
+  - "采购"
+  - "备料"
+  - "呆滞"
+  - "盘点"
+toolNames:
+  - "InventorySummaryTool"
+  - "WarehouseStockTool"
+  - "MaterialAuditTool"
+  - "ProcurementTool"
+promptInjection: |
+  库存物料优化三步法：
+  1. 用InventorySummaryTool查库存总览（各品类库存量/金额/周转天数）
+  2. 用MaterialAuditTool查呆滞料（>90天未动用的库存项）
+  3. 用ProcurementTool查在途采购单，结合生产计划判断物料缺口
+  
+  库存健康度指标：
+  - 周转天数 < 45天 → 健康
+  - 周转天数 45-90天 → 关注
+  - 周转天数 > 90天 → 呆滞预警
+  - 安全库存覆盖率 < 80% → 补库预警
+  
+  回答格式：库存健康度 + 短缺清单 + 呆滞清单 + 采购建议
+priority: 6
+version: "1.0"

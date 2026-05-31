@@ -248,21 +248,27 @@ public class MaterialPurchaseServiceHelper {
     List<MaterialPurchase> buildDemandItems(String orderId, MaterialPurchaseService purchaseService) {
         ProductionOrderService productionOrderService = productionOrderServiceProvider.getIfAvailable();
         if (productionOrderService == null) {
-            throw new IllegalStateException("生产订单服务不可用");
+            return List.of();
         }
         ProductionOrder order = productionOrderService.getDetailById(orderId);
         if (order == null) {
-            throw new NoSuchElementException("生产订单不存在");
+            return List.of();
         }
         if (!StringUtils.hasText(order.getStyleId())) {
-            throw new IllegalArgumentException("生产订单缺少styleId");
+            return List.of();
         }
         Long styleId;
         try { styleId = Long.valueOf(order.getStyleId()); }
-        catch (Exception e) { throw new IllegalArgumentException("styleId格式错误"); }
+        catch (Exception e) { return List.of(); }
 
-        List<StyleBom> bomList = styleBomService.listByStyleId(styleId);
-        if (bomList == null) bomList = List.of();
+        List<StyleBom> bomList;
+        try {
+            bomList = styleBomService.listByStyleId(styleId);
+        } catch (Exception e) {
+            log.warn("查询BOM列表失败: styleId={}, error={}", styleId, e.getMessage());
+            return List.of();
+        }
+        if (bomList == null || bomList.isEmpty()) return List.of();
 
         List<OrderLine> lines = parseOrderLines(order);
         Set<String> orderColorSet = extractColorSet(lines);

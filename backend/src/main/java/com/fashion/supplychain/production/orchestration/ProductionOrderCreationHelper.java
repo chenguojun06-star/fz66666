@@ -131,7 +131,7 @@ public class ProductionOrderCreationHelper {
                     + "，数量" + (productionOrder.getOrderQuantity() != null ? productionOrder.getOrderQuantity() : "未知"));
             try {
                 materialPurchaseService.generateDemandByOrderId(productionOrder.getId().trim(), false);
-            } catch (Exception e) {
+            } catch (Throwable e) {
                 String msg = e == null ? null : e.getMessage();
                 if (msg == null || !msg.contains("已生成采购需求")) {
                     log.warn("Failed to generate material demand after order create: orderId={}",
