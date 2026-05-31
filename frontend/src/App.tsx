@@ -13,6 +13,7 @@ import { useViewport } from './utils/useViewport';
 import CommandPalette from './components/common/CommandPalette';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import { PurchaseCartProvider } from './context/PurchaseCartContext';
 
 import { StyleInfo, StyleInfoList, OrderManagement, DataCenter, TemplateCenter, PatternRevisionManagement, MaintenanceCenter } from './modules/basic';
 import { MaterialReconciliation, PayrollOperatorSummary, FinanceCenter, ExpenseReimbursement, EmployeeAdvance, WagePayment, EcSalesRevenue, TaxExport } from './modules/finance';
@@ -342,7 +343,9 @@ const App: React.FC = () => {
   return (
     <ErrorBoundary>
       <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-        <AppRoutes />
+        <PurchaseCartProvider>
+          <AppRoutes />
+        </PurchaseCartProvider>
       </BrowserRouter>
     </ErrorBoundary>
   );

@@ -107,7 +107,7 @@ const PurchaseModal: React.FC<PurchaseModalProps> = ({
       return [
         <Button
           key="receiveAll"
-          disabled={!detailPurchases.some((p) => normalizeStatus(p.status) === MATERIAL_PURCHASE_STATUS.PENDING)}
+          disabled={!detailPurchases.some((p) => normalizeStatus(p.status) === MATERIAL_PURCHASE_STATUS.PENDING) || detailPurchases.some(p => Number(p?.returnConfirmed || 0) === 1)}
           loading={submitLoading}
           onClick={onReceiveAll}
         >
@@ -129,7 +129,7 @@ const PurchaseModal: React.FC<PurchaseModalProps> = ({
         </Button>,
         <Button
           key="confirmComplete"
-          disabled={!detailPurchases.some((p) => normalizeStatus(p.status) === MATERIAL_PURCHASE_STATUS.AWAITING_CONFIRM)}
+          disabled={!detailPurchases.some((p) => normalizeStatus(p.status) === MATERIAL_PURCHASE_STATUS.AWAITING_CONFIRM) || detailPurchases.some(p => Number(p?.returnConfirmed || 0) === 1)}
           loading={confirmCompleteSubmitting}
           onClick={onConfirmComplete}
         >
@@ -153,7 +153,7 @@ const PurchaseModal: React.FC<PurchaseModalProps> = ({
             ],
           }}
         >
-          <Button disabled={detailLoading || !detailPurchases.length}>
+          <Button disabled={detailLoading || !detailPurchases.length || detailPurchases.some(p => Number(p?.returnConfirmed || 0) === 1)}>
             采购单生成
           </Button>
         </Dropdown>,

@@ -5,6 +5,8 @@
  * @module ConfirmModalHandler
  */
 
+const { safeNavigate } = require('../../../utils/uiHelper');
+
 /**
  * 显示确认页 — 样板模式跳转 /pages/scan/pattern/index，普通模式跳转 /pages/scan/confirm/index
  */
@@ -12,12 +14,12 @@ function showConfirmModal(ctx, data) {
   const isPatternMode = data.patternId || data.patternDetail;
   if (isPatternMode) {
     getApp().globalData.patternScanData = data;
-    wx.navigateTo({ url: '/pages/scan/pattern/index' });
+    safeNavigate({ url: '/pages/scan/pattern/index' }).catch(() => {});
     return;
   }
 
   getApp().globalData.confirmScanData = data;
-  wx.navigateTo({ url: '/pages/scan/confirm/index' });
+  safeNavigate({ url: '/pages/scan/confirm/index' }).catch(() => {});
 }
 
 module.exports = {

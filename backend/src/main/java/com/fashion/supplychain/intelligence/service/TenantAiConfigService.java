@@ -100,7 +100,7 @@ public class TenantAiConfigService {
 
     public ResolvedConfig resolveConfig(Long tenantId) {
         TenantAiConfig config = getOrCreateConfig(tenantId);
-        if (!config.isAiEnabledFlag()) {
+        if (!config.checkAiEnabled()) {
             return new ResolvedConfig(null, null, null, "disabled", "disabled");
         }
 

@@ -153,10 +153,8 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
           value={String(v || '')}
           size="small"
           onChange={(e) => handleUpdateRow(record.id!, 'materialCode', e.target.value)}
-          onClick={() => handleOpenMaterialModal(record.id!)}
-          placeholder="点击选用"
-          readOnly
-          style={{ cursor: 'pointer' }}
+          placeholder="输入编码"
+          suffix={<span style={{ fontSize: 10, color: 'var(--color-primary)', cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); handleOpenMaterialModal(record.id!); }}>选用</span>}
         />
       ),
     },

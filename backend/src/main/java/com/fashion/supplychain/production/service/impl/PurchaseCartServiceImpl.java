@@ -72,6 +72,32 @@ public class PurchaseCartServiceImpl implements PurchaseCartService {
     
     @Override
     @Transactional
+    public BatchAddItemResultDto batchAddItems(Long tenantId, String userId, List<AddCartItemRequest> requests) {
+        int successCount = 0;
+        int mergedCount = 0;
+        List<MergeSuggestionDto> allSuggestions = new java.util.ArrayList<>();
+        
+        for (AddCartItemRequest request : requests) {
+            AddItemResultDto result = purchaseCartOrchestrator.addItem(tenantId, userId, request);
+            if (result != null) {
+                successCount++;
+                if (result.getMergeSuggestion() != null) {
+                    mergedCount++;
+                    allSuggestions.add(result.getMergeSuggestion());
+                }
+            }
+        }
+        
+        return BatchAddItemResultDto.builder()
+                .totalCount(requests.size())
+                .successCount(successCount)
+                .mergedCount(mergedCount)
+                .mergeSuggestions(allSuggestions)
+                .build();
+    }
+    
+    @Override
+    @Transactional
     public void updateItem(Long tenantId, String itemId, UpdateCartItemRequest request) {
         purchaseCartOrchestrator.updateItem(tenantId, itemId, request);
     }
@@ -79,8 +105,18 @@ public class PurchaseCartServiceImpl implements PurchaseCartService {
     @Override
     @Transactional
     public void deleteItem(Long tenantId, String itemId) {
+        // 验证物料属于当前租户
+        PurchaseCartItem item = purchaseCartItemMapper.selectById(itemId);
+        if (item == null) {
+            throw new com.fashion.supplychain.common.BusinessException("购物车物料不存在");
+        }
+        if (!item.getTenantId().equals(tenantId)) {
+            throw new com.fashion.supplychain.common.BusinessException("无权操作此物料");
+        }
+        
+        String cartId = item.getCartId();
         purchaseCartItemMapper.deleteById(itemId);
-        recalculateCartTotal(tenantId);
+        recalculateCartTotal(cartId);
     }
     
     @Override
@@ -114,7 +150,7 @@ public class PurchaseCartServiceImpl implements PurchaseCartService {
         wrapper.eq(PurchaseCartItem::getCartId, cart.getId())
                .eq(PurchaseCartItem::getDeleteFlag, 0);
         purchaseCartItemMapper.delete(wrapper);
-        recalculateCartTotal(tenantId);
+        recalculateCartTotal(cart.getId());
     }
     
     @Override
@@ -122,9 +158,12 @@ public class PurchaseCartServiceImpl implements PurchaseCartService {
         return purchaseCartOrchestrator.getMergeSuggestions(tenantId, userId);
     }
     
-    private void recalculateCartTotal(Long tenantId) {
-        PurchaseCart cart = getOrCreateCart(tenantId, null);
-        List<PurchaseCartItem> items = purchaseCartItemMapper.selectByCartId(cart.getId());
+    private void recalculateCartTotal(String cartId) {
+        PurchaseCart cart = purchaseCartMapper.selectById(cartId);
+        if (cart == null) {
+            return;
+        }
+        List<PurchaseCartItem> items = purchaseCartItemMapper.selectByCartId(cartId);
         
         cart.setTotalItems(items.size());
         cart.setTotalAmount(items.stream()

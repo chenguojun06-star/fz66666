@@ -39,36 +39,28 @@
   </view>
 
   <view class="tab-content" wx:if="{{activeTab === 'noData'}}">
-    <view class="search-bar">
-      <view class="search-box">
-        <text class="search-emoji">🔍</text>
-        <input class="search-input" placeholder="搜索款号/款名" value="{{styleKeyword}}" bindinput="onStyleSearchInput" confirm-type="search" />
-        <text class="search-clear" wx:if="{{styleKeyword}}" catchtap="onStyleSearchClear">✕</text>
+    <view class="no-data-upload-section">
+      <view class="upload-hint">
+        <text class="hint-icon">📷</text>
+        <text class="hint-title">无资料下单</text>
+        <text class="hint-desc">上传款式图片后，填写订单信息即可下单</text>
       </view>
-    </view>
-
-    <view wx:if="{{styleLoading}}" class="state-wrap"><text>加载中...</text></view>
-
-    <view wx:elif="{{styleFilteredStyles.length === 0}}" class="state-wrap">
-      <text>{{styleKeyword ? '未找到匹配' : '暂无款式数据'}}</text>
-    </view>
-
-    <scroll-view wx:else scroll-y class="grid-scroll">
-      <view class="grid">
-        <view class="card" wx:for="{{styleFilteredStyles}}" wx:key="id" data-id="{{item.id}}" data-cover="{{item.displayCover}}" data-no="{{item.styleNo}}" data-name="{{item.styleName}}" data-colors="{{item.color}}" data-sizes="{{item.size}}" data-cat="{{item.displayCategory}}" bindtap="onStyleTap">
-          <view class="card-img">
-            <image wx:if="{{item.displayCover}}" src="{{item.displayCover}}" mode="aspectFill" lazy-load />
-            <text wx:else class="card-img-ph">{{item.styleNo}}</text>
-          </view>
-          <view class="card-body">
-            <text class="card-cat" wx:if="{{item.displayCategory}}">{{item.displayCategory}}</text>
-            <text class="card-no">{{item.styleNo || '-'}}</text>
-            <text class="card-name">{{item.styleName || '-'}}</text>
-            <text wx:if="{{item.orderCount > 0}}" class="card-oc">已下单{{item.orderCount}}次</text>
-            <text wx:if="{{item.latestOrderDate}}" class="card-ld">{{item.latestOrderDate}}</text>
-          </view>
+      
+      <view class="image-upload-large" bindtap="chooseNoDataImage">
+        <image wx:if="{{noDataUploadedImage}}" src="{{noDataUploadedImage}}" mode="aspectFill" />
+        <view wx:else class="upload-placeholder-large">
+          <text class="upload-icon-large">📷</text>
+          <text class="upload-text">点击上传款式图片</text>
+          <text class="upload-hint-text">支持 JPG、PNG 格式</text>
+        </view>
+        <view class="delete-image-large" wx:if="{{noDataUploadedImage}}" bindtap="deleteNoDataImage" catchtap="deleteNoDataImage">
+          <text>✕</text>
         </view>
       </view>
-    </scroll-view>
+
+      <button class="next-btn" wx:if="{{noDataUploadedImage}}" bindtap="goToNoDataOrderForm">
+        下一步：填写订单信息
+      </button>
+    </view>
   </view>
 </view>

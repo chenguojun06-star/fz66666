@@ -17,6 +17,7 @@ const { buildProcessNodesWithRates, calcOrderProgress } = require('./utils/progr
 const { isAdminOrSupervisor } = require('../../utils/permission');
 const { isTenantOwner } = require('../../utils/storage');
 const { eventBus, Events } = require('../../utils/eventBus');
+const { safeNavigate } = require('../../utils/uiHelper');
 
 const app = getApp();
 
@@ -269,7 +270,7 @@ Page({
     const idx = e.currentTarget.dataset.index;
     const order = this.data.orders.list[idx];
     if (!order) return;
-    wx.navigateTo({ url: '/pages/order/remark/index?targetType=order&targetNo=' + encodeURIComponent(order.orderNo || '') });
+    safeNavigate({ url: '/pages/order/remark/index?targetType=order&targetNo=' + encodeURIComponent(order.orderNo || '') }).catch(() => {});
   },
 
   onCopyOrderNo: function (e) {
@@ -285,14 +286,14 @@ Page({
     const idx = e.currentTarget.dataset.index;
     const order = this.data.orders.list[idx];
     if (!order) return;
-    wx.navigateTo({ url: '/pages/procurement/task-detail/index?orderNo=' + encodeURIComponent(order.orderNo || '') + '&styleNo=' + encodeURIComponent(order.styleNo || '') });
+    safeNavigate({ url: '/pages/procurement/task-detail/index?orderNo=' + encodeURIComponent(order.orderNo || '') + '&styleNo=' + encodeURIComponent(order.styleNo || '') }).catch(() => {});
   },
 
   /* ======== 查看裁剪明细 ======== */
   onViewCuttingBundles: function (e) {
     const orderNo = e.currentTarget.dataset.orderNo;
     if (!orderNo) return;
-    wx.navigateTo({ url: '/pages/cutting/bundle-detail/index?orderNo=' + encodeURIComponent(orderNo) });
+    safeNavigate({ url: '/pages/cutting/bundle-detail/index?orderNo=' + encodeURIComponent(orderNo) }).catch(() => {});
   },
 
   /* ======== 转单 ======== */
@@ -300,7 +301,7 @@ Page({
     const orderId = e.currentTarget.dataset.orderId;
     const orderNo = e.currentTarget.dataset.orderNo;
     if (!orderId && !orderNo) return;
-    wx.navigateTo({ url: '/pages/cutting/bundle-detail/index?orderId=' + encodeURIComponent(orderId || '') + '&orderNo=' + encodeURIComponent(orderNo || '') + '&tab=transfer' });
+    safeNavigate({ url: '/pages/cutting/bundle-detail/index?orderId=' + encodeURIComponent(orderId || '') + '&orderNo=' + encodeURIComponent(orderNo || '') + '&tab=transfer' }).catch(() => {});
   },
 
   /* ======== 工序编辑 ======== */
@@ -313,7 +314,7 @@ Page({
       wx.showToast({ title: '仅生产中的订单可编辑工序', icon: 'none' });
       return;
     }
-    wx.navigateTo({ url: '/pages/dashboard/process-edit/index?orderId=' + encodeURIComponent(orderId) + '&orderNo=' + encodeURIComponent(orderNo || '') });
+    safeNavigate({ url: '/pages/dashboard/process-edit/index?orderId=' + encodeURIComponent(orderId) + '&orderNo=' + encodeURIComponent(orderNo || '') }).catch(() => {});
   },
 
   /* ======== 搜索：输入（防抖 500ms） ======== */

@@ -95,7 +95,15 @@ public class ProductionOrderServiceImpl extends ServiceImpl<ProductionOrderMappe
         boolean isCreate = !StringUtils.hasText(productionOrder.getId());
 
         if (!isCreate) {
-            // 更新操作
+            // 更新操作：禁止修改订单号
+            ProductionOrder existingOrder = this.getById(productionOrder.getId());
+            if (existingOrder != null && StringUtils.hasText(existingOrder.getOrderNo())) {
+                // 强制使用原有订单号，防止被修改
+                productionOrder.setOrderNo(existingOrder.getOrderNo());
+                if (StringUtils.hasText(existingOrder.getQrCode())) {
+                    productionOrder.setQrCode(existingOrder.getQrCode());
+                }
+            }
             productionOrder.setUpdateTime(now);
         } else {
             String styleIdRaw = productionOrder == null ? null : productionOrder.getStyleId();
@@ -331,9 +339,13 @@ public class ProductionOrderServiceImpl extends ServiceImpl<ProductionOrderMappe
         if (!StringUtils.hasText(orderNo)) {
             return null;
         }
-        return this.getOne(new LambdaQueryWrapper<ProductionOrder>()
-                .eq(ProductionOrder::getOrderNo, orderNo.trim())
-                .last("LIMIT 1"));
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        LambdaQueryWrapper<ProductionOrder> wrapper = new LambdaQueryWrapper<ProductionOrder>()
+                .eq(ProductionOrder::getOrderNo, orderNo.trim());
+        if (tenantId != null) {
+            wrapper.eq(ProductionOrder::getTenantId, tenantId);
+        }
+        return this.getOne(wrapper.last("LIMIT 1"));
     }
 
     @Override

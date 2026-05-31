@@ -63,7 +63,7 @@ function buildMenuItems(menuVisibility) {
   const items = [];
 
   if (visibility.smartOps !== false) {
-    items.push({ id: 'smartOps', name: '运营看板', iconClass: 'icon-menu-ai', circleClass: 'menu-icon-circle--purple', route: '/pages/smart-ops/index', badge: 'AI' });
+    items.push({ id: 'smartOps', name: '运营看板', iconClass: 'icon-menu-ai', circleClass: 'menu-icon-circle--purple', route: '/pages/smart-ops/index' });
   }
   if (visibility.orderCreate !== false) {
     items.push({ id: 'orderCreate', name: '下单管理', iconClass: 'icon-menu-order', circleClass: 'menu-icon-circle--blue', route: '/pages/order/create/index' });
@@ -102,6 +102,7 @@ Page({
     favoriteApps: [],
     unreadNoticeCount: 0,
     dateInfo: { date: '', day: '', season: '', dailyTip: '' },
+    draggingIndex: -1,  // 正在拖拽的图标索引
   },
 
   _menuVisibility: null,
@@ -296,6 +297,9 @@ Page({
   },
 
   onFavoriteTap: function (e) {
+    // 拖动中不响应点击
+    if (this.data.draggingIndex !== -1) return;
+    
     const app = e.currentTarget.dataset.app;
     if (!app || !app.route) return;
     safeNavigate({ url: app.route });
@@ -303,6 +307,94 @@ Page({
 
   onMoreAppsTap: function () {
     safeNavigate({ url: '/pages/more-apps/index' });
+  },
+
+  // 触摸开始
+  onTouchStart: function (e) {
+    const index = e.currentTarget.dataset.index;
+    this._touchStartTime = Date.now();
+    this._touchStartX = e.touches[0].pageX;
+    this._touchStartY = e.touches[0].pageY;
+    this._touchStartIndex = index;
+    this._hasMoved = false;
+    this._isDragging = false;
+  },
+
+  // 触摸移动
+  onTouchMove: function (e) {
+    if (this._touchStartIndex === undefined) return;
+    
+    const currentX = e.touches[0].pageX;
+    const currentY = e.touches[0].pageY;
+    const deltaX = currentX - this._touchStartX;
+    const deltaY = currentY - this._touchStartY;
+    const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+    const timePassed = Date.now() - this._touchStartTime;
+    
+    // 长按300ms或移动超过15px，开始拖动
+    if (!this._isDragging && (timePassed > 300 || distance > 15)) {
+      this._isDragging = true;
+      this._hasMoved = true;
+      this.setData({ draggingIndex: this._touchStartIndex });
+      wx.vibrateShort({ type: 'light' });
+    }
+    
+    if (this._isDragging && this.data.draggingIndex !== -1) {
+      // 计算移动了多少个位置（3列布局）
+      const itemWidth = 120;  // 每个图标的宽度（包括间距）
+      const itemHeight = 105; // 每个图标的高度（包括间距）
+      const cols = 3;
+      
+      const movedCols = Math.round(deltaX / itemWidth);
+      const movedRows = Math.round(deltaY / itemHeight);
+      const movedPositions = movedRows * cols + movedCols;
+      
+      if (movedPositions !== 0) {
+        const newIndex = this._touchStartIndex + movedPositions;
+        const maxIndex = this.data.favoriteApps.length - 1;
+        const targetIndex = Math.max(0, Math.min(newIndex, maxIndex));
+        
+        if (targetIndex !== this.data.draggingIndex) {
+          // 交换位置
+          const favorites = this.data.favoriteApps.slice();
+          const draggedItem = favorites[this._touchStartIndex];
+          favorites.splice(this._touchStartIndex, 1);
+          favorites.splice(targetIndex, 0, draggedItem);
+          
+          this.setData({ 
+            favoriteApps: favorites,
+            draggingIndex: targetIndex
+          });
+          this._touchStartIndex = targetIndex;
+          this._touchStartX = currentX;
+          this._touchStartY = currentY;
+        }
+      }
+    }
+  },
+
+  // 触摸结束
+  onTouchEnd: function () {
+    if (this._isDragging && this.data.draggingIndex !== -1) {
+      // 保存排序
+      this._saveFavorites(this.data.favoriteApps);
+    }
+    
+    this.setData({ draggingIndex: -1 });
+    this._touchStartIndex = undefined;
+    this._touchStartTime = undefined;
+    this._touchStartX = undefined;
+    this._touchStartY = undefined;
+    this._hasMoved = false;
+    this._isDragging = false;
+  },
+
+  _saveFavorites: function (favorites) {
+    try {
+      wx.setStorageSync('favoriteApps', favorites);
+    } catch (e) {
+      console.error('Save favorites failed', e);
+    }
   },
 
 });

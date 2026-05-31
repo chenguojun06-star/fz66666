@@ -12,6 +12,8 @@ public interface PurchaseCartService {
     
     AddItemResultDto addItem(Long tenantId, String userId, AddCartItemRequest request);
     
+    BatchAddItemResultDto batchAddItems(Long tenantId, String userId, List<AddCartItemRequest> requests);
+    
     void updateItem(Long tenantId, String itemId, UpdateCartItemRequest request);
     
     void deleteItem(Long tenantId, String itemId);

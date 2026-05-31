@@ -7,7 +7,7 @@
 
 const api = require('../../../utils/api');
 const ScanHandler = require('../handlers/ScanHandler');
-const { toast, toastAndRedirect } = require('../../../utils/uiHelper');
+const { toast, toastAndRedirect, safeNavigate } = require('../../../utils/uiHelper');
 const scanValidator = require('./scanValidator');
 const isRecentDuplicate = scanValidator.isRecentDuplicate;
 const markRecent = scanValidator.markRecent;
@@ -51,7 +51,7 @@ module.exports = {
       this.setData({ loading: true });
       if (/^MR\d{13}$/.test(codeStr)) {
         this.setData({ loading: false });
-        wx.navigateTo({ url: '/pages/warehouse/material/scan/index?rollCode=' + encodeURIComponent(codeStr) });
+        safeNavigate({ url: '/pages/warehouse/material/scan/index?rollCode=' + encodeURIComponent(codeStr) }).catch(() => {});
         return;
       }
       if (scanType === 'stock') { this.handleStockQuery(codeStr); return; }
@@ -70,9 +70,9 @@ module.exports = {
       if (result && result.data && result.data.scanMode === 'ucode') {
         markRecent(codeStr, 30000);
         const sd = result.data.scanData || {};
-        wx.navigateTo({
+        safeNavigate({
           url: '/pages/warehouse/sample/scan-action/index?styleNo=' + encodeURIComponent(sd.styleNo || '') + '&color=' + encodeURIComponent(sd.color || '') + '&size=' + encodeURIComponent(sd.size || ''),
-        });
+        }).catch(() => {});
         this.setData({ loading: false });
         return;
       }

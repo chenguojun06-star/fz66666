@@ -1,6 +1,6 @@
 // pages/payroll/payroll.js
 const { request } = require('../../utils/request');
-const { toast } = require('../../utils/uiHelper');
+const { toast, safeNavigate } = require('../../utils/uiHelper');
 
 // 日期格式化工具函数（重构版 - 消除重复代码）
 
@@ -362,6 +362,6 @@ Page({
   },
 
   goFeedback() {
-    wx.navigateTo({ url: '/pages/payroll/feedback/index' });
+    safeNavigate({ url: '/pages/payroll/feedback/index' }).catch(() => {});
   },
 });

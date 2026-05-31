@@ -26,6 +26,7 @@ import useSampleProcessProgress from './useSampleProcessProgress';
 import SampleProcessList from './SampleProcessList';
 import SampleScanRecordsTable from './SampleScanRecordsTable';
 import useSampleScanRecords from './useSampleScanRecords';
+import useSampleProcurementQuickActions, { STATUS_LABELS, STATUS_COLORS } from './useSampleProcurementQuickActions';
 import useConfirmStage from './useConfirmStage';
 import useStagePanel from './useStagePanel';
 
@@ -96,6 +97,7 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
     }
   };
   const sampleProcessProgress = useSampleProcessProgress(sample.sampleSnapshot?.productionOrderId, sample.sampleSnapshot?.id);
+  const procurement = useSampleProcurementQuickActions(selectedStage?.record?.styleNo || null, user);
   const confirm = useConfirmStage({ selectedStage, setSelectedStage, message, onRefresh });
   const panel = useStagePanel({ selectedStage, setSelectedStage, navigate, message, modal, sampleHook: sample, confirmHook: confirm });
 
@@ -494,6 +496,69 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
                       patternId={sample.sampleSnapshot.id}
                       stageKey={selectedStage.stage.key}
                     />
+                  </div>
+                ) : null}
+                {selectedStage.stage.key === 'procurement' ? (
+                  <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid var(--color-border-light)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--color-text-primary)' }}>
+                        快捷采购
+                        <span style={{ fontWeight: 400, fontSize: 12, color: 'var(--color-text-secondary)', marginLeft: 8 }}>
+                          — 款号 {selectedStage.record.styleNo}
+                        </span>
+                      </div>
+                      <Button size="small" onClick={procurement.reload} loading={procurement.loading}>
+                        刷新
+                      </Button>
+                    </div>
+                    {procurement.loading ? (
+                      <Skeleton active paragraph={{ rows: 3 }} />
+                    ) : procurement.error ? (
+                      <div style={{ color: 'var(--color-error)', padding: '8px 0' }}>{procurement.error}</div>
+                    ) : procurement.items.length === 0 ? (
+                      <div style={{ color: 'var(--color-text-tertiary)', padding: '16px', textAlign: 'center', background: 'var(--color-bg-light)', borderRadius: 6 }}>
+                        暂无采购物料，请先在BOM中配置物料并生成采购单
+                      </div>
+                    ) : (
+                      <div style={{ overflowX: 'auto' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                          <thead>
+                            <tr style={{ background: 'var(--color-bg-light)', borderBottom: '2px solid var(--color-border-light)' }}>
+                              <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 600 }}>物料名称</th>
+                              <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 600 }}>规格</th>
+                              <th style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 600 }}>采购数量</th>
+                              <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 600 }}>供应商</th>
+                              <th style={{ padding: '8px 12px', textAlign: 'center', fontWeight: 600 }}>状态</th>
+                              <th style={{ padding: '8px 12px', textAlign: 'center', fontWeight: 600 }}>操作</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {procurement.items.map((item) => (
+                              <tr key={item.id} style={{ borderBottom: '1px solid var(--color-border-light)' }}>
+                                <td style={{ padding: '8px 12px' }}>{item.materialName}</td>
+                                <td style={{ padding: '8px 12px', color: 'var(--color-text-secondary)' }}>{item.specifications || '-'}</td>
+                                <td style={{ padding: '8px 12px', textAlign: 'right' }}>{item.purchaseQuantity} {item.unit}</td>
+                                <td style={{ padding: '8px 12px', color: 'var(--color-text-secondary)' }}>{item.supplierName || '-'}</td>
+                                <td style={{ padding: '8px 12px', textAlign: 'center' }}>
+                                  <Tag color={STATUS_COLORS[item.status] || 'default'}>{STATUS_LABELS[item.status] || item.status}</Tag>
+                                </td>
+                                <td style={{ padding: '8px 12px', textAlign: 'center' }}>
+                                  {item.status === 'pending' ? (
+                                    <Button size="small" type="primary" onClick={() => procurement.receiveItem(item.id)}>
+                                      领取
+                                    </Button>
+                                  ) : (item.status === 'received' || item.status === 'awaiting_confirm') ? (
+                                    <Button size="small" type="primary" onClick={() => procurement.completeItem(item.id)}>
+                                      确认完成
+                                    </Button>
+                                  ) : null}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
                   </div>
                 ) : null}
               </>

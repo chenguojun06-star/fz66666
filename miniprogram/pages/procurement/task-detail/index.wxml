@@ -1,14 +1,6 @@
 <custom-nav title="采购到货" show-back="{{true}}" />
 
 <!-- 购物车入口 -->
-<view class="cart-entry" bindtap="onOpenCart">
-  <view class="cart-entry-icon-box">
-    <view class="line-icon line-icon--lg icon-cart cart-entry-icon"></view>
-  </view>
-  <text class="cart-entry-text">购物车</text>
-  <view class="cart-entry-badge" wx:if="{{ cartCount > 0 }}">{{ cartCount }}</view>
-</view>
-
 <view class="page-container">
   <view class="loading-wrapper" wx:if="{{loading}}">
     <view class="loading-spinner"></view>
@@ -32,7 +24,7 @@
           <text class="summary-count">共{{materialPurchases.length}}项</text>
           <text class="summary-rate" wx:if="{{overallArrivalRate >= 0}}">到货率 {{overallArrivalRate}}%</text>
         </view>
-        <view class="header-actions" wx:if="{{canConfirmProcurement}}">
+        <view class="header-actions" wx:if="{{canConfirmProcurement && !hasReturnConfirmed}}">
           <view class="btn-confirm-procurement" bindtap="onConfirmProcurement">确认回料完成</view>
         </view>
       </view>
@@ -109,14 +101,7 @@
 </view>
 
 <view class="footer-bar" wx:if="{{materialPurchases.length > 0 && !loading}}">
-  <view class="btn-secondary" hover-class="footer-bar-hover" bindtap="onReceiveAll">一键采购</view>
-  <view class="btn-submit {{(!hasInput || submitting) ? 'btn-disabled' : ''}}"
-    hover-class="footer-bar-hover" bindtap="onSubmit">提交到货</view>
+  <view class="btn-secondary {{hasReturnConfirmed ? 'btn-disabled' : ''}}" hover-class="{{hasReturnConfirmed ? '' : 'footer-bar-hover'}}" bindtap="onReceiveAll">一键采购</view>
+  <view class="btn-submit {{(!hasInput || submitting || hasReturnConfirmed) ? 'btn-disabled' : ''}}"
+    hover-class="{{(hasInput && !submitting && !hasReturnConfirmed) ? 'footer-bar-hover' : ''}}" bindtap="onSubmit">提交到货</view>
 </view>
-
-<purchase-cart-drawer 
-  id="purchaseCart" 
-  visible="{{ cartVisible }}" 
-  bind:close="onCartClose"
-  bind:confirm="onCartConfirm"
-/>

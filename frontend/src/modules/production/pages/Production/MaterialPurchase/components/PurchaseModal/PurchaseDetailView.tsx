@@ -305,7 +305,7 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
       id: `tmp_${Date.now()}`,
       purchaseNo: '', supplierId: '', orderNo, styleNo, styleName, styleId,
       materialType: 'fabricA', materialCode: '', materialName: '', unit: '',
-      color: '', size: '', specification: '', fabricComposition: '', fabricWeight: '',
+      color: '', size: '', specifications: '', fabricComposition: '', fabricWeight: '',
       purchaseQuantity: 0, arrivedQuantity: 0, unitPrice: 0, totalAmount: 0,
       supplierName: '', status: MATERIAL_PURCHASE_STATUS.PENDING,
     } as MaterialPurchaseType;
@@ -330,7 +330,7 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
         id: `tmp_${Date.now()}_${color}`,
         purchaseNo: '', supplierId: '', orderNo, styleNo, styleName, styleId,
         materialType: 'fabricA', materialCode: '', materialName: '', unit: '',
-        color, size: '', specification: '', fabricComposition: '', fabricWeight: '',
+        color, size: '', specifications: '', fabricComposition: '', fabricWeight: '',
         purchaseQuantity: 0, arrivedQuantity: 0, unitPrice: 0, totalAmount: 0,
         supplierName: '', status: MATERIAL_PURCHASE_STATUS.PENDING,
       } as MaterialPurchaseType));
@@ -404,7 +404,7 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
         fabricComposition: String(record.fabricComposition || r.fabricComposition || ''),
         fabricWeight: String(record.fabricWeight || r.fabricWeight || ''),
         color: String(record.color || r.color || ''),
-        specification: String(record.specifications || r.specification || ''),
+        specifications: String(record.specifications || r.specifications || ''),
         unit: String(record.unit || r.unit || ''),
         unitPrice: Number(record.unitPrice || r.unitPrice || 0),
         supplierName: String(record.supplierName || r.supplierName || ''),
@@ -502,12 +502,13 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
                 <Button
                   icon={<UploadOutlined />}
                   onClick={() => setDocRecognizeOpen(true)}
+                  disabled={detailPurchases.some(p => Number(p?.returnConfirmed || 0) === 1)}
                 >
                   上传采购单
                 </Button>
                 <Button
                   type="primary"
-                  disabled={detailFrozen || !detailPurchases.some((p) => normalizeStatus(p.status) === MATERIAL_PURCHASE_STATUS.PENDING) || !canProcure}
+                  disabled={detailFrozen || !detailPurchases.some((p) => normalizeStatus(p.status) === MATERIAL_PURCHASE_STATUS.PENDING) || !canProcure || detailPurchases.some(p => Number(p?.returnConfirmed || 0) === 1)}
                   onClick={onReceiveAll}
                 >
                   采购全部
@@ -532,6 +533,7 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
                 <Button
                   type="primary"
                   onClick={handleStartEdit}
+                  disabled={detailPurchases.some(p => Number(p?.returnConfirmed || 0) === 1)}
                 >
                   编辑面辅料
                 </Button>
@@ -583,10 +585,8 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
                     value={String(v || '')}
                     size="small"
                     onChange={(e) => updateRow(record.id!, 'materialCode', e.target.value)}
-                    onClick={() => openMaterialModal(record.id!)}
-                    placeholder="点击选用"
-                    readOnly
-                    style={{ cursor: 'pointer' }}
+                    placeholder="输入编码"
+                    suffix={<span style={{ fontSize: 10, color: 'var(--color-primary)', cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); openMaterialModal(record.id!); }}>选用</span>}
                   />
                 ),
               },
@@ -659,12 +659,12 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
                 ),
               },
               {
-                title: '规格', dataIndex: 'specification', key: 'specification', width: 100,
+                title: '规格', dataIndex: 'specifications', key: 'specifications', width: 100,
                 render: (v: unknown, record: MaterialPurchaseType) => (
                   <Input
                     value={String(v || '')}
                     size="small"
-                    onChange={(e) => updateRow(record.id!, 'specification', e.target.value)}
+                    onChange={(e) => updateRow(record.id!, 'specifications', e.target.value)}
                     placeholder="规格"
                   />
                 ),
@@ -941,7 +941,7 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
                             ) : (
                               <Button
                                 type="link"
-                                disabled={frozen || status !== MATERIAL_PURCHASE_STATUS.PENDING}
+                                disabled={frozen || status !== MATERIAL_PURCHASE_STATUS.PENDING || Number(record?.returnConfirmed || 0) === 1}
                                 onClick={() => {
                                   if (hasStock && onWarehousePick) {
                                     const pickQty = Math.min(stock, Number(record.purchaseQuantity || 0));
@@ -957,6 +957,7 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
                             {canArrival && (
                               <Button
                                 type="link"
+                                disabled={Number(record?.returnConfirmed || 0) === 1}
                                 onClick={() => {
                                   const maxQty = Math.max(0.01, Number(record.purchaseQuantity || 0) - Number(record.arrivedQuantity || 0));
                                   arrivalForm.setFieldsValue({ arrivedQuantity: maxQty });
@@ -968,7 +969,7 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
                             )}
                             <Button
                               type="link"
-                              disabled={frozen || !(status === MATERIAL_PURCHASE_STATUS.RECEIVED || status === MATERIAL_PURCHASE_STATUS.PARTIAL || status === MATERIAL_PURCHASE_STATUS.COMPLETED)}
+                              disabled={frozen || !(status === MATERIAL_PURCHASE_STATUS.RECEIVED || status === MATERIAL_PURCHASE_STATUS.PARTIAL || status === MATERIAL_PURCHASE_STATUS.COMPLETED) || Number(record?.returnConfirmed || 0) === 1}
                               onClick={() => onConfirmReturn(record)}
                             >
                               {Number(record?.returnConfirmed || 0) === 1 ? '追加回料' : '回料确认'}
@@ -999,7 +1000,7 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
                             )}
                             <Button
                               type="link"
-                              disabled={frozen || !(status === MATERIAL_PURCHASE_STATUS.RECEIVED || status === MATERIAL_PURCHASE_STATUS.PARTIAL || status === MATERIAL_PURCHASE_STATUS.COMPLETED)}
+                              disabled={frozen || !(status === MATERIAL_PURCHASE_STATUS.RECEIVED || status === MATERIAL_PURCHASE_STATUS.PARTIAL || status === MATERIAL_PURCHASE_STATUS.COMPLETED) || Number(record?.returnConfirmed || 0) === 1}
                               onClick={() => onQualityIssue(record)}
                             >
                               品质异常

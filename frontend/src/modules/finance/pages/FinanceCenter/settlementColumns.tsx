@@ -6,6 +6,7 @@ import { formatDateTime } from '@/utils/datetime';
 import { formatMoney } from '@/utils/format';
 import { isOrderFrozenByStatus } from '@/utils/api/production';
 import RowActions from '@/components/common/RowActions';
+import FactoryTypeTag from '@/components/common/FactoryTypeTag';
 import styles from './FinishedSettlementContent.module.css';
 import { type FinishedSettlementRow, statusMap } from './useSettlementData';
 
@@ -37,13 +38,12 @@ export function getSettlementColumns(
       render: (_text, record) => (
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            {record.factoryType === 'INTERNAL' && <Tag color="blue" style={{ margin: 0, fontSize: 14, padding: '0 4px', lineHeight: '16px', height: 16 }}>内</Tag>}
-            {record.factoryType === 'EXTERNAL' && <Tag color="purple" style={{ margin: 0, fontSize: 14, padding: '0 4px', lineHeight: '16px', height: 16 }}>外</Tag>}
+            <FactoryTypeTag factoryType={record.factoryType} />
             <span>{record.factoryName || '-'}</span>
           </div>
           {(record.orgPath || record.parentOrgUnitName) &&
            (record.orgPath || record.parentOrgUnitName) !== record.factoryName ? (
-            <div style={{ color: 'var(--neutral-text-secondary)', fontSize: 14 }}>
+            <div style={{ color: 'var(--neutral-text-secondary)', fontSize: 12 }}>
               {record.orgPath || record.parentOrgUnitName}
             </div>
           ) : null}

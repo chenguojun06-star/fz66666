@@ -132,7 +132,7 @@ Page({
       return;
     }
     if (item.url) {
-      wx.navigateTo({ url: item.url });
+      safeNavigate({ url: item.url }).catch(() => {});
     }
   },
 

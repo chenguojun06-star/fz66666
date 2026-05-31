@@ -1,12 +1,27 @@
 /**
- * 样衣扫码动作页
- * 通过 URL 参数接收 styleNo / color / size（由扫码入口解析 QR 后跳转）
- * 调用 /api/stock/sample/scan-query 获取库存状态，展示入库/借调/归还按钮
+ * 样衣仓库管理页
+ * 功能：样衣库存列表、搜索、扫码、手动出入库管理
  */
-const api = require('/utils/api');
+const api = require('../../../../utils/api');
 
 Page({
   data: {
+    // 列表模式 vs 详情模式
+    viewMode: 'list',  // 'list' | 'detail'
+    
+    // 搜索相关
+    searchKeyword: '',
+    
+    // 列表数据
+    stockList: [],
+    stockListLoading: false,
+    stockListError: '',
+    hasMore: true,
+    page: 1,
+    pageSize: 20,
+    
+    // 详情数据
+    currentStock: null,
     styleNo: '',
     color: '',
     size: '',
@@ -14,30 +29,34 @@ Page({
     submitting: false,
     errorMsg: '',
     successMsg: '',
-    stockInfo: null,   // scanQuery 返回的完整数据
-    actions: [],       // ['inbound'] | ['loan'] | ['return'] | ['loan','return']
+    stockInfo: null,
+    actions: [],
     showPrivacy: false,
-    warehouseOptions: [],      // 仓库区域名称列表
-    warehouseAreaId: '',       // 当前选中的仓库区域ID
-    warehouseLocationCode: '', // 当前选中的库位编号
-    locationOptions: [],       // 库位选项列表
+    warehouseOptions: [],
+    warehouseAreaId: '',
+    warehouseLocationCode: '',
+    warehouse: '',
+    locationOptions: [],
   },
 
   onLoad(options) {
     const styleNo = decodeURIComponent(options.styleNo || '');
     const color = decodeURIComponent(options.color || '');
     const size = decodeURIComponent(options.size || '');
-
+    
+    this._loadWarehouseOptions();
+    
     if (!styleNo || !color || !size) {
-      this.setData({ errorMsg: '缺少必要参数（款号/颜色/尺码）' });
+      // 没有参数，显示列表
+      this.setData({ viewMode: 'list' });
+      this.loadStockList(true);
       return;
     }
-
-    this.setData({ styleNo, color, size });
+    
+    // 有参数，直接显示详情
+    this.setData({ viewMode: 'detail', styleNo, color, size });
     this.querySample(styleNo, color, size);
-    this._loadWarehouseOptions();
-
-    // 隐私协议订阅
+    
     if (wx.onNeedPrivacyAuthorization) {
       this._privacyCb = (resolve) => {
         this._resolvePrivacy = resolve;
@@ -53,32 +72,123 @@ Page({
     }
   },
 
-  /** 查询样衣库存状态 */
-  async querySample(styleNo, color, size) {
-    this.setData({ loading: true, errorMsg: '', successMsg: '', stockInfo: null, actions: [] });
-    try {
-      const res = await api.sampleStock.scanQuery({ styleNo, color, size });
-      const d = res || {};
-      this.setData({
-        stockInfo: d,
-        actions: d.actions || [],
-        loading: false,
-      });
-    } catch (err) {
-      console.error('[SampleScanAction] querySample error', err);
-      this.setData({ errorMsg: (err && (err.errMsg || err.message)) || '网络异常，请重试', loading: false });
+  onShow() {
+    if (this.data.viewMode === 'list') {
+      this.loadStockList(true);
     }
   },
 
-  /** 重新查询 */
+  onPullDownRefresh() {
+    if (this.data.viewMode === 'list') {
+      this.loadStockList(true).finally(() => {
+        wx.stopPullDownRefresh();
+      });
+    } else {
+      wx.stopPullDownRefresh();
+    }
+  },
+
+  // ==================== 列表相关 ====================
+
+  loadStockList(refresh = false) {
+    if (this.data.stockListLoading) return Promise.resolve();
+    
+    const page = refresh ? 1 : this.data.page;
+    
+    this.setData({ 
+      stockListLoading: true, 
+      stockListError: refresh ? '' : this.data.stockListError,
+      page: page
+    });
+    
+    const params = {
+      current: page,
+      size: this.data.pageSize,
+    };
+    
+    if (this.data.searchKeyword) {
+      params.keyword = this.data.searchKeyword;
+    }
+    
+    return api.sampleStock.list(params)
+      .then((res) => {
+        let data = res;
+        if (res && res.data) data = res.data;
+        if (res && res.records) data = res;
+        
+        const records = data?.records || data?.data || [];
+        const total = data?.total || records.length;
+        
+        this.setData({
+          stockList: refresh ? records : [...this.data.stockList, ...records],
+          hasMore: this.data.stockList.length < total,
+          page: page + 1,
+          stockListLoading: false,
+        });
+      })
+      .catch((err) => {
+        console.error('[SampleStock] 加载列表失败', err);
+        this.setData({
+          stockListError: '加载失败，请重试',
+          stockListLoading: false,
+        });
+      });
+  },
+
+  onSearchInput(e) {
+    let keyword = (e.detail.value || '').trim();
+    if (e.currentTarget && e.currentTarget.dataset && e.currentTarget.dataset.clear) keyword = '';
+    this.setData({ searchKeyword: keyword });
+  },
+
+  onSearchConfirm() {
+    this.loadStockList(true);
+  },
+
+  onStockItemTap(e) {
+    const stock = e.currentTarget.dataset.stock;
+    if (!stock) return;
+    
+    const styleNo = stock.styleNo || '';
+    const color = stock.color || '';
+    const size = stock.size || '';
+    
+    this.setData({
+      viewMode: 'detail',
+      styleNo,
+      color,
+      size,
+    });
+    
+    this.querySample(styleNo, color, size);
+  },
+
+  // ==================== 详情相关 ====================
+
+  querySample(styleNo, color, size) {
+    this.setData({ loading: true, errorMsg: '', successMsg: '', stockInfo: null, actions: [] });
+    return api.sampleStock.scanQuery({ styleNo, color, size })
+      .then((res) => {
+        const d = res || {};
+        this.setData({
+          stockInfo: d,
+          actions: d.actions || [],
+          loading: false,
+        });
+      })
+      .catch((err) => {
+        console.error('[SampleScanAction] querySample error', err);
+        this.setData({ errorMsg: (err && (err.errMsg || err.message)) || '网络异常，请重试', loading: false });
+      });
+  },
+
   onRetry() {
     const { styleNo, color, size } = this.data;
     this.querySample(styleNo, color, size);
   },
 
-  /* ====== 操作处理（入库 / 借调 / 归还）====== */
+  // ==================== 操作处理 ====================
 
-  /** 入库 */
   onInbound() {
     if (this.data.submitting) return;
     const { warehouseAreaId, warehouseLocationCode } = this.data;
@@ -109,7 +219,6 @@ Page({
     });
   },
 
-  /** 借调 */
   onLoan() {
     if (this.data.submitting) return;
     const userInfo = getApp().globalData.userInfo || {};
@@ -131,7 +240,6 @@ Page({
     });
   },
 
-  /** 归还 */
   onReturn() {
     if (this.data.submitting) return;
     const loans = (this.data.stockInfo && this.data.stockInfo.activeLoans) || [];
@@ -139,7 +247,6 @@ Page({
       wx.showToast({ title: '无借调记录', icon: 'none' });
       return;
     }
-    // 取最早的一条借调记录归还
     const loan = loans[0];
     wx.showModal({
       title: '确认归还',
@@ -156,67 +263,109 @@ Page({
     });
   },
 
-  /** 统一执行操作 */
-  async _doAction(actionName, apiFn) {
+  _doAction(actionName, apiFn) {
     this.setData({ submitting: true, errorMsg: '', successMsg: '' });
     const labelMap = { inbound: '入库', loan: '借调', return: '归还' };
-    try {
-      await apiFn();
-      wx.vibrateShort({ type: 'heavy' });
-      // 显示明显的成功提示（原来只有底部小文字，用户无感知）
-      wx.showToast({
-        title: `${labelMap[actionName] || actionName}成功`,
-        icon: 'success',
-        duration: 2000,
+    return apiFn()
+      .then(() => {
+        wx.vibrateShort({ type: 'heavy' });
+        wx.showToast({
+          title: `${labelMap[actionName] || actionName}成功`,
+          icon: 'success',
+          duration: 2000,
+        });
+        this.setData({
+          submitting: false,
+          successMsg: `${labelMap[actionName] || actionName}成功`,
+        });
+        setTimeout(() => {
+          this.querySample(this.data.styleNo, this.data.color, this.data.size);
+        }, 800);
+      })
+      .catch((err) => {
+        console.error(`[SampleScanAction] ${actionName} error`, err);
+        this.setData({
+          submitting: false,
+          errorMsg: (err && (err.errMsg || err.message)) || `${labelMap[actionName] || actionName}失败`,
+        });
       });
-      this.setData({
-        submitting: false,
-        successMsg: `${labelMap[actionName] || actionName}成功`,
-      });
-      // 刷新状态
-      setTimeout(() => {
-        this.querySample(this.data.styleNo, this.data.color, this.data.size);
-      }, 800);
-    } catch (err) {
-      console.error(`[SampleScanAction] ${actionName} error`, err);
-      this.setData({
-        submitting: false,
-        errorMsg: (err && (err.errMsg || err.message)) || `${labelMap[actionName] || actionName}失败`,
-      });
-    }
   },
 
-  /** 继续扫码（返回扫码页或触发扫码） */
-  onScanNext() {
-    wx.navigateBack();
+  // ==================== 扫码 & 返回 ====================
+
+  onScanCode() {
+    wx.scanCode({
+      success: (res) => {
+        const code = res.result || '';
+        this.parseAndQuery(code);
+      },
+      fail: (err) => {
+        console.error('扫码失败', err);
+      },
+    });
   },
 
-  /* ====== 仓库区域 + 库位选择 ====== */
-
-  async _loadWarehouseOptions() {
+  parseAndQuery(code) {
     try {
-      const res = await api.warehouse.listWarehouseAreas('SAMPLE');
-      const data = res?.data || res;
-      const list = Array.isArray(data) ? data : [];
-      if (list.length > 0) {
-        const areaMap = {};
-        const options = [];
-        const sorted = list
-          .filter(function(item) { return item.areaName && item.id; })
-          .sort(function(a, b) { return (a.sort || 0) - (b.sort || 0); });
-        for (let i = 0; i < sorted.length; i++) {
-          const item = sorted[i];
-          options.push(item.areaName);
-          areaMap[item.areaName] = item.id;
-        }
-        if (options.length > 0) {
-          this.setData({ warehouseOptions: options });
-          this._warehouseAreaMap = areaMap;
-        }
+      const data = JSON.parse(code);
+      if (data.styleNo && data.color && data.size) {
+        this.setData({
+          viewMode: 'detail',
+          styleNo: data.styleNo,
+          color: data.color,
+          size: data.size,
+        });
+        this.querySample(data.styleNo, data.color, data.size);
+        return;
       }
-    } catch (e) {
-      console.warn('[SampleScanAction] 加载仓库选项失败', e);
+    } catch (e) {}
+    
+    const parts = code.trim().split(/\s+/);
+    if (parts.length >= 3) {
+      this.setData({
+        viewMode: 'detail',
+        styleNo: parts[0],
+        color: parts[1],
+        size: parts[2],
+      });
+      this.querySample(parts[0], parts[1], parts[2]);
+      return;
     }
+    
+    wx.showToast({ title: '无法识别的二维码', icon: 'none' });
+  },
+
+  onBackToList() {
+    this.setData({ viewMode: 'list' });
+    this.loadStockList(true);
+  },
+
+  // ==================== 仓库相关 ====================
+
+  _loadWarehouseOptions() {
+    return api.warehouse.listWarehouseAreas('SAMPLE')
+      .then((res) => {
+        const data = res?.data || res;
+        const list = Array.isArray(data) ? data : [];
+        if (list.length > 0) {
+          const areaMap = {};
+          const options = [];
+          const sorted = list
+            .filter((item) => item.areaName && item.id)
+            .sort((a, b) => (a.sort || 0) - (b.sort || 0));
+          for (const item of sorted) {
+            options.push(item.areaName);
+            areaMap[item.areaName] = item.id;
+          }
+          if (options.length > 0) {
+            this.setData({ warehouseOptions: options });
+            this._warehouseAreaMap = areaMap;
+          }
+        }
+      })
+      .catch((e) => {
+        console.warn('[SampleScanAction] 加载仓库选项失败', e);
+      });
   },
 
   onWarehouseChipTap(e) {
@@ -249,43 +398,39 @@ Page({
     });
   },
 
-  async _loadLocationOptions(areaId) {
+  _loadLocationOptions(areaId) {
     if (!areaId) {
-      this.setData({ locationOptions: [] });
-      this._locationMap = {};
+      this.setData({ locationOptions: [], _locationMap: {} });
       return;
     }
-    try {
-      const res = await api.warehouse.listLocations('SAMPLE', areaId);
-      const data = res?.data || res;
-      const list = Array.isArray(data) ? data : [];
-      if (list.length > 0) {
-        const locMap = {};
-        const options = [];
-        for (let i = 0; i < list.length; i++) {
-          const item = list[i];
-          const label = item.locationCode || item.locationName || '';
-          if (label) {
-            options.push(label);
-            locMap[label] = item.locationCode || label;
+    return api.warehouse.listLocations('SAMPLE', areaId)
+      .then((res) => {
+        const data = res?.data || res;
+        const list = Array.isArray(data) ? data : [];
+        if (list.length > 0) {
+          const locMap = {};
+          const options = [];
+          for (const item of list) {
+            const label = item.locationCode || item.locationName || '';
+            if (label) {
+              options.push(label);
+              locMap[label] = item.locationCode || label;
+            }
           }
+          this.setData({ locationOptions: options });
+          this._locationMap = locMap;
+        } else {
+          this.setData({ locationOptions: [], _locationMap: {} });
         }
-        this.setData({ locationOptions: options });
-        this._locationMap = locMap;
-      } else {
-        this.setData({ locationOptions: [] });
-        this._locationMap = {};
-      }
-    } catch (e) {
-      console.warn('[SampleScanAction] 加载库位选项失败', e);
-      this.setData({ locationOptions: [] });
-      this._locationMap = {};
-    }
+      })
+      .catch((e) => {
+        console.warn('[SampleScanAction] 加载库位选项失败', e);
+        this.setData({ locationOptions: [], _locationMap: {} });
+      });
   },
 
   onLocationChipTap(e) {
-    const value = e.currentTarget.dataset.value;
-    this.setData({ warehouseLocationCode: value });
+    this.setData({ warehouseLocationCode: e.currentTarget.dataset.value });
   },
 
   onLocationClear() {
@@ -296,13 +441,15 @@ Page({
     this.setData({ warehouseLocationCode: e.detail.value });
   },
 
-  /* ====== 隐私协议 ====== */
+  // ==================== 隐私协议 ====================
+
   onPrivacyAgree() {
     this.setData({ showPrivacy: false });
     if (this._resolvePrivacy) {
       this._resolvePrivacy({ buttonId: 'agree-btn', event: 'agree' });
     }
   },
+
   onPrivacyDisagree() {
     this.setData({ showPrivacy: false });
     if (this._resolvePrivacy) {

@@ -5,7 +5,7 @@
  * @module ScanResultHandler
  */
 
-const { toast } = require('../../../utils/uiHelper');
+const { toast, safeNavigate } = require('../../../utils/uiHelper');
 const { normalizeScanType } = require('./helpers/ScanModeResolver');
 
 function buildProcessOptions(processName, progressStage, stageResult) {
@@ -66,7 +66,7 @@ function showScanResultConfirm(ctx, data) {
   }
 
   getApp().globalData.scanResultData = data;
-  wx.navigateTo({ url: '/pages/scan/scan-result/index' });
+  safeNavigate({ url: '/pages/scan/scan-result/index' }).catch(() => {});
 }
 
 module.exports = {

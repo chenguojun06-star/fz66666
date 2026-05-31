@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
-import { Tag, App, Space, Tooltip, Modal, InputNumber, Form } from 'antd';
+import { Tag, App, Space, Tooltip, Modal, InputNumber, Form, Button, Checkbox } from 'antd';
+import { ShoppingCartOutlined } from '@ant-design/icons';
 import MaterialTypeTag from '@/components/common/MaterialTypeTag';
+import FactoryTypeTag from '@/components/common/FactoryTypeTag';
 import RejectReasonModal from '@/components/common/RejectReasonModal';
 import SupplierNameTooltip from '@/components/common/SupplierNameTooltip';
 import SmallModal from '@/components/common/SmallModal';
@@ -44,6 +46,7 @@ interface MaterialTableProps {
   onQualityIssue?: (record: MaterialPurchaseType) => void;
   isSupervisorOrAbove?: boolean;
   onOpenDetail?: (styleNo: string, orderNo?: string) => void;
+  onBatchAddToCart?: (records: MaterialPurchaseType[]) => void;
 }
 
 const MaterialTable: React.FC<MaterialTableProps> = ({
@@ -70,10 +73,12 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
   onQualityIssue,
   isSupervisorOrAbove,
   onOpenDetail,
+  onBatchAddToCart,
 }) => {
   const navigate = useNavigate();
   const { message } = App.useApp();
   const [, setCancelLoading] = useState<string | null>(null);
+  const [selectedRows, setSelectedRows] = useState<MaterialPurchaseType[]>([]);
   const [cancelTarget, setCancelTarget] = useState<MaterialPurchaseType | null>(null);
   const [cancelConfirmLoading, setCancelConfirmLoading] = useState(false);
   const [arrivalTarget, setArrivalTarget] = useState<MaterialPurchaseType | null>(null);
@@ -178,10 +183,9 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
         if (!name) return '-';
         return (
           <Space size={4}>
-            {type === 'INTERNAL' && <Tag color="blue" style={{ margin: 0, fontSize: 14, padding: '0 4px', lineHeight: '16px', height: 16 }}>内</Tag>}
-            {type === 'EXTERNAL' && <Tag color="purple" style={{ margin: 0, fontSize: 14, padding: '0 4px', lineHeight: '16px', height: 16 }}>外</Tag>}
-            <span style={{ fontSize: 14 }}>{name}</span>
-            {bizType && <Tag color={colorMap[bizType] ?? 'default'} style={{ margin: 0, fontSize: 14, padding: '0 4px', lineHeight: '16px', height: 16 }}>{bizType}</Tag>}
+            <FactoryTypeTag factoryType={type} />
+            <SupplierNameTooltip name={name} />
+            {bizType && <Tag color={colorMap[bizType] ?? 'default'} style={{ margin: 0, fontSize: 12, padding: '0 4px', lineHeight: '18px' }}>{bizType}</Tag>}
           </Space>
         );
       },
@@ -477,9 +481,9 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
                 key: 'edit',
                 label: '编辑',
                 onClick: () => onEdit(record),
-                disabled: frozen,
+                disabled: frozen || Number(record?.returnConfirmed || 0) === 1,
               },
-              ...(canConfirmArrival ? [{
+              ...(canConfirmArrival && Number(record?.returnConfirmed || 0) !== 1 ? [{
                 key: 'confirm-arrival',
                 label: '到货入库',
                 onClick: () => {
@@ -488,7 +492,7 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
                   setArrivalTarget(record);
                 },
               }] : []),
-              ...(onConfirmReturn && [MATERIAL_PURCHASE_STATUS.RECEIVED, MATERIAL_PURCHASE_STATUS.PARTIAL, MATERIAL_PURCHASE_STATUS.COMPLETED].includes(status as any) ? [{
+              ...(onConfirmReturn && [MATERIAL_PURCHASE_STATUS.RECEIVED, MATERIAL_PURCHASE_STATUS.PARTIAL, MATERIAL_PURCHASE_STATUS.COMPLETED].includes(status as any) && Number(record?.returnConfirmed || 0) !== 1 ? [{
                 key: 'confirm-return',
                 label: Number(record?.returnConfirmed || 0) === 1 ? '追加回料' : '回料确认',
                 onClick: () => onConfirmReturn(record),
@@ -498,7 +502,7 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
                 label: '退回',
                 onClick: () => onReturnReset(record),
               }] : []),
-              ...(onQualityIssue && [MATERIAL_PURCHASE_STATUS.RECEIVED, MATERIAL_PURCHASE_STATUS.PARTIAL, MATERIAL_PURCHASE_STATUS.COMPLETED].includes(status as any) ? [{
+              ...(onQualityIssue && [MATERIAL_PURCHASE_STATUS.RECEIVED, MATERIAL_PURCHASE_STATUS.PARTIAL, MATERIAL_PURCHASE_STATUS.COMPLETED].includes(status as any) && Number(record?.returnConfirmed || 0) !== 1 ? [{
                 key: 'quality-issue',
                 label: '品质异常',
                 onClick: () => onQualityIssue(record),
@@ -593,11 +597,39 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
         </Form.Item>
       </Form>
     </SmallModal>
+    {selectedRows.length > 0 && (
+      <div style={{
+        padding: '8px 16px',
+        marginBottom: 8,
+        background: 'var(--color-bg-highlight)',
+        borderRadius: 6,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+      }}>
+        <Space>
+          <span>已选择 <strong>{selectedRows.length}</strong> 项</span>
+          <Button size="small" onClick={() => setSelectedRows([])}>清空</Button>
+        </Space>
+        <Button
+          type="primary"
+          icon={<ShoppingCartOutlined />}
+          size="small"
+          onClick={() => onBatchAddToCart?.(selectedRows)}
+        >
+          加入购物车
+        </Button>
+      </div>
+    )}
     <ResizableTable<MaterialPurchaseType>
       columns={columns}
       dataSource={dataSource}
       rowKey="id"
       loading={loading}
+      rowSelection={{
+        selectedRowKeys: selectedRows.map(r => r.id as string),
+        onChange: (keys, rows) => setSelectedRows(rows),
+      }}
       scroll={{ x: 'max-content' }}
       rowClassName={(record: MaterialPurchaseType) => {
         const s = String(record.status || '').toLowerCase();

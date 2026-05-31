@@ -150,7 +150,7 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
     if (paginationProp === false) return false;
     if (paginationProp === undefined || paginationProp === null) return paginationProp;
     const base = typeof paginationProp === 'object' ? paginationProp : ({} as any);
-    const { position, placement, ...baseRest } = base as any;
+    const { position, placement, showSizeChanger: showSizeChangerProp, ...baseRest } = base as any;
     const explicitDefaultPageSize = typeof base?.defaultPageSize === 'number'
       ? normalizePageSize(base.defaultPageSize, DEFAULT_PAGE_SIZE)
       : undefined;
@@ -178,6 +178,14 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
       originalOnChange?.(page, nextPageSize);
     };
 
+    let resolvedShowSizeChanger;
+    if (showSizeChangerProp === false) {
+      resolvedShowSizeChanger = false;
+    } else {
+      const baseShowSizeChanger = typeof showSizeChangerProp === 'object' ? showSizeChangerProp : {};
+      resolvedShowSizeChanger = { getPopupContainer: (triggerNode: HTMLElement) => document.body, ...baseShowSizeChanger };
+    }
+
     return {
       ...baseRest,
       pageSize: normalizedPageSize,
@@ -185,7 +193,7 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
       pageSizeOptions: normalizePageSizeOptions(base?.pageSizeOptions, normalizedPageSize, normalizedDefaultPageSize),
       onChange: interceptedOnChange,
       simple: base?.simple ?? false,
-      showSizeChanger: base?.showSizeChanger ?? true,
+      showSizeChanger: resolvedShowSizeChanger,
       placement: placement ?? position ?? ['bottomRight'],
     } as any;
   }, [pageSizeStorageKey, paginationProp]);

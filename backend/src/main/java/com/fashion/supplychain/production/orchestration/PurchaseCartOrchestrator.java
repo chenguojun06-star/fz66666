@@ -51,8 +51,13 @@ public class PurchaseCartOrchestrator {
     @Autowired
     private MaterialPurchaseMapper materialPurchaseMapper;
     
+    @Transactional(rollbackFor = Exception.class)
     public AddItemResultDto addItem(Long tenantId, String userId, AddCartItemRequest request) {
+        log.info("添加物料到购物车: tenantId={}, userId={}, materialCode={}, quantity={}", 
+                tenantId, userId, request.getMaterialCode(), request.getQuantity());
+        
         PurchaseCart cart = purchaseCartService.getOrCreateCart(tenantId, userId);
+        log.info("购物车: id={}", cart.getId());
         
         LambdaQueryWrapper<PurchaseCartItem> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(PurchaseCartItem::getCartId, cart.getId())
@@ -97,7 +102,9 @@ public class PurchaseCartOrchestrator {
         newItem.setSortOrder(existItems.size());
         newItem.setDeleteFlag(0);
         
+        log.info("插入购物车物料: cartId={}, materialCode={}", cart.getId(), request.getMaterialCode());
         purchaseCartItemMapper.insert(newItem);
+        log.info("购物车物料插入成功: id={}", newItem.getId());
         result.setItemId(newItem.getId());
         
         recalculateCartTotal(cart.getId());
@@ -105,10 +112,14 @@ public class PurchaseCartOrchestrator {
         return result;
     }
     
+    @Transactional(rollbackFor = Exception.class)
     public void updateItem(Long tenantId, String itemId, UpdateCartItemRequest request) {
         PurchaseCartItem item = purchaseCartItemMapper.selectById(itemId);
         if (item == null) {
             throw new BusinessException("购物车物料不存在");
+        }
+        if (!item.getTenantId().equals(tenantId)) {
+            throw new BusinessException("无权操作此物料");
         }
         
         if (request.getQuantity() != null) {
@@ -146,6 +157,13 @@ public class PurchaseCartOrchestrator {
             throw new BusinessException("要合并的物料不存在");
         }
         
+        // 验证所有物料都属于当前租户
+        for (PurchaseCartItem item : items) {
+            if (!item.getTenantId().equals(tenantId)) {
+                throw new BusinessException("无权操作此物料");
+            }
+        }
+        
         PurchaseCartItem target = items.get(0);
         
         BigDecimal totalQty = request.getTargetQuantity() != null ? 
@@ -177,6 +195,9 @@ public class PurchaseCartOrchestrator {
         PurchaseCartItem item = purchaseCartItemMapper.selectById(request.getItemId());
         if (item == null) {
             throw new BusinessException("要拆分的物料不存在");
+        }
+        if (!item.getTenantId().equals(tenantId)) {
+            throw new BusinessException("无权操作此物料");
         }
         
         BigDecimal splitQty = request.getSplitQuantity();
@@ -273,6 +294,25 @@ public class PurchaseCartOrchestrator {
     
     @Transactional
     public ConfirmResultDto confirm(Long tenantId, String userId, List<String> itemIds) {
+        // 获取购物车并验证租户
+        PurchaseCart cart = purchaseCartService.getOrCreateCart(tenantId, userId);
+        List<PurchaseCartItem> allItems = purchaseCartItemMapper.selectByCartId(cart.getId());
+        
+        // 过滤要处理的物料
+        List<PurchaseCartItem> itemsToProcess;
+        if (itemIds != null && !itemIds.isEmpty()) {
+            // 验证所有指定物料都属于当前购物车和租户
+            itemsToProcess = allItems.stream()
+                    .filter(item -> itemIds.contains(item.getId()))
+                    .collect(Collectors.toList());
+            if (itemsToProcess.size() != itemIds.size()) {
+                throw new BusinessException("部分物料不存在或无权操作");
+            }
+        } else {
+            itemsToProcess = allItems;
+        }
+        
+        // 分组预览
         CartPreviewDto preview = preview(tenantId, userId);
         
         List<String> purchaseIds = new ArrayList<>();
@@ -320,6 +360,7 @@ public class PurchaseCartOrchestrator {
             purchaseNos.add(purchaseNo);
         }
         
+        // 删除已下单的物料
         if (itemIds != null && !itemIds.isEmpty()) {
             purchaseCartItemMapper.deleteByIds(itemIds);
         } else {

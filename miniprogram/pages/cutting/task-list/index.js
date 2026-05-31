@@ -1,6 +1,6 @@
 const api = require('../../../utils/api');
 const { getUserInfo } = require('../../../utils/storage');
-const { toast } = require('../../../utils/uiHelper');
+const { toast, safeNavigate } = require('../../../utils/uiHelper');
 const { eventBus, Events } = require('../../../utils/eventBus');
 
 Page({
@@ -105,21 +105,21 @@ Page({
     if (!task) return;
     const orderNo = task.productionOrderNo || task.orderNo || '';
     const orderId = task.productionOrderId || task.orderId || '';
-    wx.navigateTo({
+    safeNavigate({
       url: `/pages/cutting/bundle-detail/index?taskId=${task.id}&orderNo=${encodeURIComponent(orderNo)}&orderId=${encodeURIComponent(orderId)}`,
-    });
+    }).catch(() => {});
   },
 
   /* ---- 跳转裁剪单明细页（数量矩阵总览） ---- */
-  goBundleDetail(e) {
+  goMatrix(e) {
     const task = e.currentTarget.dataset.task;
     if (!task) return;
     const orderNo = task.productionOrderNo || task.orderNo || '';
     const orderId = task.productionOrderId || task.orderId || '';
     if (!orderNo) return toast.error('缺少订单号');
-    wx.navigateTo({
+    safeNavigate({
       url: `/pages/cutting/bundle-detail/index?orderNo=${encodeURIComponent(orderNo)}&orderId=${encodeURIComponent(orderId)}`,
-    });
+    }).catch(() => {});
   },
 
   /* ---- 辅助方法 ---- */

@@ -1,5 +1,5 @@
 const api = require('../../../utils/api');
-const { toast } = require('../../../utils/uiHelper');
+const { toast, safeNavigate } = require('../../../utils/uiHelper');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 const { eventBus, Events } = require('../../../utils/eventBus');
 
@@ -262,9 +262,9 @@ Page({
     if (!item) return;
     const styleId = item.styleId || item.id;
     if (!styleId) return;
-    wx.navigateTo({
+    safeNavigate({
       url: '/pages/sample-development/detail/index?styleId=' + encodeURIComponent(styleId),
-    });
+    }).catch(() => {});
   },
 
   onGoScan: function (e) {
@@ -274,8 +274,8 @@ Page({
     if (app && app.globalData) {
       app.globalData.patternScanData = item;
     }
-    wx.navigateTo({
+    safeNavigate({
       url: '/pages/scan/pattern/index?patternId=' + encodeURIComponent(item.id || ''),
-    });
+    }).catch(() => {});
   },
 });

@@ -1,5 +1,5 @@
 const api = require('../../../utils/api');
-const { toast } = require('../../../utils/uiHelper');
+const { toast, safeNavigate } = require('../../../utils/uiHelper');
 const { isAdminOrSupervisor } = require('../../../utils/permission');
 const { isFactoryOwner } = require('../../../utils/storage');
 const { transformOrderData } = require('../utils/orderTransform');
@@ -152,7 +152,7 @@ Page({
     const idx = e.currentTarget.dataset.index;
     const order = this.data.orders[idx];
     if (!order) return;
-    wx.navigateTo({ url: '/pages/order/remark/index?targetType=order&targetNo=' + encodeURIComponent(order.orderNo || '') });
+    safeNavigate({ url: '/pages/order/remark/index?targetType=order&targetNo=' + encodeURIComponent(order.orderNo || '') }).catch(() => {});
   },
 
   onCopyOrderNo: function (e) {
@@ -167,21 +167,21 @@ Page({
     const idx = e.currentTarget.dataset.index;
     const order = this.data.orders[idx];
     if (!order) return;
-    wx.navigateTo({ url: '/pages/procurement/task-detail/index?orderNo=' + encodeURIComponent(order.orderNo || '') + '&styleNo=' + encodeURIComponent(order.styleNo || '') });
+    safeNavigate({ url: '/pages/procurement/task-detail/index?orderNo=' + encodeURIComponent(order.orderNo || '') + '&styleNo=' + encodeURIComponent(order.styleNo || '') }).catch(() => {});
   },
 
   onGoOrderCutting: function (e) {
     const idx = e.currentTarget.dataset.index;
     const order = this.data.orders[idx];
     if (!order) return;
-    wx.navigateTo({ url: '/pages/cutting/bundle-detail/index?orderId=' + encodeURIComponent(order.id) + '&orderNo=' + encodeURIComponent(order.orderNo || '') });
+    safeNavigate({ url: '/pages/cutting/bundle-detail/index?orderId=' + encodeURIComponent(order.id) + '&orderNo=' + encodeURIComponent(order.orderNo || '') }).catch(() => {});
   },
 
   onGoOrderProcessEdit: function (e) {
     const idx = e.currentTarget.dataset.index;
     const order = this.data.orders[idx];
     if (!order) return;
-    wx.navigateTo({ url: '/pages/dashboard/process-edit/index?orderId=' + encodeURIComponent(order.id) + '&orderNo=' + encodeURIComponent(order.orderNo || '') });
+    safeNavigate({ url: '/pages/dashboard/process-edit/index?orderId=' + encodeURIComponent(order.id) + '&orderNo=' + encodeURIComponent(order.orderNo || '') }).catch(() => {});
   },
 
   onOpenShip: function (e) {

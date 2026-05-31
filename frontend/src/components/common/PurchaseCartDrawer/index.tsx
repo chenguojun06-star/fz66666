@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Drawer } from 'antd';
-import { usePurchaseCart } from '@/hooks/usePurchaseCart';
+import { usePurchaseCartContext } from '@/context/PurchaseCartContext';
 import { CartHeader } from './CartHeader';
 import { CartSearch } from './CartSearch';
 import { CartList } from './CartList';
@@ -33,19 +33,28 @@ export const PurchaseCartDrawer: React.FC<PurchaseCartDrawerProps> = ({
     toggleSelect,
     toggleSelectAll,
     setPreviewVisible,
-  } = usePurchaseCart({ onConfirmSuccess });
+    loadCart,
+    loadMergeSuggestions,
+  } = usePurchaseCartContext();
+
+  useEffect(() => {
+    if (open) {
+      loadCart();
+      loadMergeSuggestions();
+    }
+  }, [open, loadCart, loadMergeSuggestions]);
 
   return (
     <Drawer
       title={<CartHeader cart={cart} onClear={clearCart} />}
       placement="right"
-      size={420}
+      styles={{
+        wrapper: { width: '80%' },
+        body: { padding: 0, display: 'flex', flexDirection: 'column', height: '100%' },
+      }}
       open={open}
       onClose={onClose}
       maskClosable={false}
-      styles={{
-        body: { padding: 0, display: 'flex', flexDirection: 'column', height: '100%' },
-      }}
     >
       <div style={{ flex: 1, overflow: 'auto' }}>
         <CartSearch onAdd={addItem} submitting={submitting} />

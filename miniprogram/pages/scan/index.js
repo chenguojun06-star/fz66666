@@ -156,7 +156,7 @@ Page({
     const recordIdx = e.currentTarget.dataset.recordIdx;
     const app = getApp();
     app.globalData.procurementScanData = { groupId, recordIdx };
-    wx.navigateTo({ url: '/pkg-procurement/pages/task/index' });
+    safeNavigate({ url: '/pkg-procurement/pages/task/index' }).catch(() => {});
   },
 
   // ==================== 快捷导航（历史记录 / 当月记录） ====================

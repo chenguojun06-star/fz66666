@@ -4,6 +4,8 @@ import { Button, Space, Tag, Tooltip } from 'antd';
 import QRCode from 'qrcode';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
+import FactoryTypeTag from '@/components/common/FactoryTypeTag';
+import SupplierNameTooltip from '@/components/common/SupplierNameTooltip';
 
 /** 打印入库二维码（传入质检入库号） */
 async function printWarehousingQr(warehousingNo: string, orderNo?: string) {
@@ -180,9 +182,8 @@ const WarehousingTable: React.FC<WarehousingTableProps> = ({
         if (!name) return '-';
         return (
           <Space size={4}>
-            {type === 'INTERNAL' && <Tag color="blue" style={{ margin: 0, fontSize: 14, padding: '0 4px', lineHeight: '16px', height: 16 }}>内</Tag>}
-            {type === 'EXTERNAL' && <Tag color="purple" style={{ margin: 0, fontSize: 14, padding: '0 4px', lineHeight: '16px', height: 16 }}>外</Tag>}
-            <span style={{ fontSize: 14 }}>{name}</span>
+            <FactoryTypeTag factoryType={type} />
+            <SupplierNameTooltip name={name} />
           </Space>
         );
       },

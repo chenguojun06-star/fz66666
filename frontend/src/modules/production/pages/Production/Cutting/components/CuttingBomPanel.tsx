@@ -101,12 +101,9 @@ const CuttingBomPanel: React.FC<CuttingBomPanelProps> = ({
         bomEditing ? (
           <Input
             value={String(v || '')}
-           
             onChange={(e) => onUpdateRow(record.id!, 'materialCode', e.target.value)}
-            onClick={() => onOpenMaterialModal(record.id!)}
-            placeholder="点击选用"
-            readOnly
-            style={{ cursor: 'pointer' }}
+            placeholder="输入编码"
+            suffix={<span style={{ fontSize: 10, color: 'var(--color-primary)', cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); onOpenMaterialModal(record.id!); }}>选用</span>}
           />
         ) : (
           String(v || '').trim() || '-'

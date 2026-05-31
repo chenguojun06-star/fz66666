@@ -2,7 +2,7 @@ export type CartStatus = 'DRAFT' | 'CONFIRMED' | 'CANCELLED';
 
 export type MaterialType = 'FABRIC' | 'LINING' | 'ACCESSORY';
 
-export type SourceType = 'ORDER' | 'SAMPLE' | 'BATCH';
+export type SourceType = 'ORDER' | 'SAMPLE' | 'BATCH' | 'PURCHASE_TASK';
 
 export interface PurchaseCart {
   id: string;

@@ -1,5 +1,5 @@
 const api = require('../../utils/api');
-const { toast } = require('../../utils/uiHelper');
+const { toast, safeNavigate } = require('../../utils/uiHelper');
 const { getUserInfo } = require('../../utils/storage');
 const { eventBus, Events } = require('../../utils/eventBus');
 const { getAuthedImageUrl } = require('../../utils/fileUrl');
@@ -79,9 +79,9 @@ Page({
     const item = this.data.list[index];
     if (!item) return;
     const data = JSON.stringify(item);
-    wx.navigateTo({
+    safeNavigate({
       url: '/pages/quality-detail/index?data=' + encodeURIComponent(data),
-    });
+    }).catch(() => {});
   },
 
   onLoadMore: function () {

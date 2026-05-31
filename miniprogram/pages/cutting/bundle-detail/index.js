@@ -1,6 +1,6 @@
 const api = require('../../../utils/api');
 const { parseProductionOrderLines, sortSizeNames } = require('../utils/orderParser');
-const { toast } = require('../../../utils/uiHelper');
+const { toast, safeNavigate } = require('../../../utils/uiHelper');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 const { triggerDataRefresh } = require('../../../utils/eventBus');
 const blePrinter = require('../utils/blePrinter');
@@ -206,9 +206,9 @@ Page({
     const orderNo = order.orderNo || '';
     const orderId = String(order.id || '');
     if (!orderNo) return;
-    wx.navigateTo({
+    safeNavigate({
       url: `/pages/cutting/bundle-detail/index?orderNo=${encodeURIComponent(orderNo)}&orderId=${encodeURIComponent(orderId)}`,
-    });
+    }).catch(() => {});
   },
 
   /** 点击订单列表中的款式图片放大预览 */

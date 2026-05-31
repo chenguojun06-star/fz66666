@@ -342,3 +342,128 @@ page { background-color: var(--color-bg-page); }
 
 .submit-btn:active { opacity: 0.9; transform: scale(0.98); }
 .submit-btn::after { border: none; }
+
+/* 无资料下单 - 上传图片页面 */
+.no-data-upload-section {
+  padding: 40px var(--page-padding-x);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 60vh;
+}
+
+.upload-hint {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 40px;
+}
+
+.hint-icon {
+  font-size: 64px;
+  margin-bottom: 16px;
+}
+
+.hint-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: 8px;
+}
+
+.hint-desc {
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  text-align: center;
+}
+
+.image-upload-large {
+  width: 100%;
+  max-width: 400px;
+  height: 300px;
+  border: 2px dashed var(--color-border);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  position: relative;
+  background: var(--color-bg-card);
+  transition: all 0.3s ease;
+}
+
+.image-upload-large:active {
+  background: var(--color-bg-gray);
+  border-color: var(--color-primary);
+}
+
+.image-upload-large image {
+  width: 100%;
+  height: 100%;
+}
+
+.upload-placeholder-large {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  color: var(--color-text-tertiary);
+}
+
+.upload-icon-large {
+  font-size: 72px;
+  opacity: 0.6;
+}
+
+.upload-text {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+}
+
+.upload-hint-text {
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+}
+
+.delete-image-large {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 32px;
+  height: 32px;
+  background: rgba(255, 77, 79, 0.95);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 18px;
+  font-weight: bold;
+  box-shadow: 0 2px 8px rgba(255, 77, 79, 0.4);
+  z-index: 10;
+}
+
+.next-btn {
+  width: 100%;
+  max-width: 400px;
+  height: 46px;
+  line-height: 46px;
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  color: #fff;
+  border-radius: 23px;
+  font-size: 16px;
+  font-weight: 500;
+  border: none;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+  margin-top: 32px;
+}
+
+.next-btn:active {
+  opacity: 0.9;
+  transform: scale(0.98);
+}
+
+.next-btn::after {
+  border: none;
+}

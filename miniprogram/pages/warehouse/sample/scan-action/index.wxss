@@ -1,4 +1,4 @@
-/* 样衣扫码动作页 — 遵循 material/scan 设计规范 */
+/* 样衣仓库管理页 */
 
 .container {
   padding: 12rpx var(--page-padding-x);
@@ -6,14 +6,224 @@
   min-height: 100vh;
 }
 
-/* 头部 */
-.header { margin-bottom: 12px; }
-.header-title { font-size: var(--font-size-lg-xl); font-weight: bold; color: var(--color-text); display: block; }
-.header-sub { font-size: var(--font-size-sm); color: var(--color-text-secondary); margin-top: 4px; display: block; }
+/* ==================== 搜索栏 ==================== */
+.search-bar {
+  margin-bottom: 12rpx;
+}
+
+.search-box {
+  display: flex;
+  align-items: center;
+  background: var(--color-bg-card);
+  border-radius: var(--radius-md);
+  padding: 12rpx 16rpx;
+  border: 1px solid var(--color-border-light);
+}
+
+.search-icon {
+  font-size: 28rpx;
+  margin-right: 8rpx;
+}
+
+.search-input {
+  flex: 1;
+  font-size: 28rpx;
+  color: var(--color-text);
+}
+
+.search-clear {
+  font-size: 24rpx;
+  color: var(--color-text-secondary);
+  padding: 8rpx;
+}
+
+/* ==================== 操作栏 ==================== */
+.action-bar {
+  margin-bottom: 12rpx;
+}
+
+.btn-scan {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-md);
+  padding: 20rpx;
+}
+
+.btn-scan .btn-icon {
+  font-size: 36rpx;
+  margin-right: 8rpx;
+}
+
+.btn-scan .btn-text {
+  font-size: 28rpx;
+  color: var(--color-text);
+}
+
+/* ==================== 列表 ==================== */
+.stock-list {
+  margin-top: 8rpx;
+}
+
+.stock-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--color-bg-card);
+  border-radius: var(--radius-md);
+  padding: 24rpx;
+  margin-bottom: 12rpx;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+}
+
+.stock-info {
+  flex: 1;
+}
+
+.stock-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8rpx;
+}
+
+.stock-row:last-child {
+  margin-bottom: 0;
+}
+
+.stock-label {
+  font-size: 24rpx;
+  color: var(--color-text-secondary);
+  width: 60rpx;
+  flex-shrink: 0;
+}
+
+.stock-value {
+  font-size: 28rpx;
+  color: var(--color-text);
+}
+
+.stock-status {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.stock-quantity {
+  display: flex;
+  align-items: baseline;
+}
+
+.qty-num {
+  font-size: 36rpx;
+  font-weight: bold;
+  color: var(--color-primary);
+}
+
+.qty-unit {
+  font-size: 24rpx;
+  color: var(--color-text-secondary);
+  margin-left: 4rpx;
+}
+
+.stock-loan {
+  font-size: 22rpx;
+  color: var(--color-warning);
+  margin-top: 4rpx;
+}
+
+.stock-arrow {
+  font-size: 32rpx;
+  color: var(--color-text-secondary);
+  margin-top: 4rpx;
+}
+
+/* 空状态 */
+.empty-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 80rpx 0;
+}
+
+.empty-icon {
+  font-size: 80rpx;
+  margin-bottom: 16rpx;
+  opacity: 0.6;
+}
+
+.empty-text {
+  font-size: 28rpx;
+  color: var(--color-text-secondary);
+}
+
+/* 加载更多 */
+.load-more {
+  text-align: center;
+  padding: 24rpx 0;
+}
+
+.load-text {
+  font-size: 26rpx;
+  color: var(--color-text-secondary);
+}
+
+/* ==================== 详情页头部 ==================== */
+.header {
+  position: relative;
+  margin-bottom: 12rpx;
+}
+
+.header-back {
+  position: absolute;
+  left: 0;
+  top: 0;
+  font-size: 28rpx;
+  color: var(--color-primary);
+  padding: 8rpx 0;
+}
+
+.header-title {
+  text-align: center;
+  font-size: 32rpx;
+  font-weight: bold;
+  color: var(--color-text);
+  display: block;
+}
+
+.header-scan {
+  position: absolute;
+  right: 0;
+  top: 0;
+  font-size: 26rpx;
+  color: var(--color-primary);
+  padding: 8rpx 0;
+}
+
+.header-info {
+  text-align: center;
+  margin-bottom: 16rpx;
+}
+
+.header-sub {
+  font-size: 28rpx;
+  color: var(--color-text-secondary);
+}
+
+/* ==================== 通用组件 ==================== */
 
 /* 加载 */
-.loading-wrap { display: flex; justify-content: center; align-items: center; padding: 60px 0; }
-.loading-text { font-size: var(--font-size-md); color: var(--color-text-secondary); }
+.loading-wrap { 
+  display: flex; 
+  justify-content: center; 
+  align-items: center; 
+  padding: 60px 0; 
+}
+.loading-text { 
+  font-size: var(--font-size-md); 
+  color: var(--color-text-secondary); 
+}
 
 /* 错误 */
 .error-card {
@@ -79,7 +289,7 @@
 /* 操作按钮 */
 .action-area { margin-bottom: 10px; }
 
-/* 仓库选择区域（对齐主扫码页 scan-area 样式） */
+/* 仓库选择区域 */
 .warehouse-section {
   margin-bottom: 12rpx;
   padding: 16rpx;
@@ -178,14 +388,3 @@
 }
 
 .btn-disabled { opacity: 0.6; pointer-events: none; }
-
-.btn-next {
-  background: var(--color-bg-card);
-  border: 1px solid var(--color-border);
-  color: var(--color-text-secondary);
-  text-align: center;
-  border-radius: var(--radius-md);
-  padding: 12px 0;
-  font-size: var(--font-size-md);
-  margin-top: 6px;
-}

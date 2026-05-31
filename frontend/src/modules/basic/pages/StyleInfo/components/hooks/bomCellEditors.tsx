@@ -127,24 +127,19 @@ export function useBomEditorHelpers(ctx: BomEditorContext) {
   const renderMaterialCodeEditor = (text: string, record: StyleBom) => {
     if (canEdit(record)) {
       return (
-        <div style={{ display: 'flex', gap: 4 }}>
-          <Form.Item name={ctx.rowName(record.id, 'materialCode')} style={{ margin: 0, flex: 1 }} rules={[{ required: true, message: '必填' }]}>
-            <Input placeholder="输入编码或点击选择→" />
-          </Form.Item>
-          <Button
-           
-            onClick={() => {
+        <Form.Item name={ctx.rowName(record.id, 'materialCode')} style={{ margin: 0 }} rules={[{ required: true, message: '必填' }]}>
+          <Input
+            placeholder="输入编码"
+            suffix={<span style={{ fontSize: 10, color: 'var(--color-primary)', cursor: 'pointer' }} onClick={(e) => {
+              e.stopPropagation();
               ctx.setMaterialTargetRowId(String(record.id));
               ctx.setMaterialTab('select');
               ctx.setMaterialKeyword('');
               ctx.setMaterialModalOpen(true);
               ctx.fetchMaterials(1, '');
-            }}
-            style={{ flexShrink: 0 }}
-          >
-            选择
-          </Button>
-        </div>
+            }}>选用</span>}
+          />
+        </Form.Item>
       );
     }
     return undefined;

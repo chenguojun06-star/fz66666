@@ -4,7 +4,7 @@ const { safeNavigate, toast } = require('../../utils/uiHelper');
 const ALL_APPS = [
   { group: '📝 开发下单', items: [
     { id: 'orderCreate', name: '下单管理', iconClass: 'icon-menu-order', circleClass: 'menu-icon-circle--blue', route: '/pages/order/create/index' },
-    { id: 'smartOps', name: '运营看板', iconClass: 'icon-menu-ai', circleClass: 'menu-icon-circle--purple', route: '/pages/smart-ops/index', badge: 'AI' },
+    { id: 'smartOps', name: '运营看板', iconClass: 'icon-menu-ai', circleClass: 'menu-icon-circle--purple', route: '/pages/smart-ops/index' },
   ]},
   { group: '🏭 生产模块', items: [
     { id: 'dashboard', name: '生产管理', iconClass: 'icon-menu-production', circleClass: 'menu-icon-circle--teal', route: '/pages/dashboard/index' },
@@ -28,7 +28,7 @@ const ALL_APPS = [
   ]},
   { group: '📦 库存管理', items: [
     { id: 'materialScan', name: '物料扫码', iconClass: 'icon-menu-material', circleClass: 'menu-icon-circle--cyan', route: '/pages/warehouse/material/scan/index' },
-    { id: 'sampleStock', name: '样衣出入库', iconClass: 'icon-menu-sample', circleClass: 'menu-icon-circle--indigo', route: '/pages/warehouse/sample/scan-action/index' },
+    { id: 'sampleStock', name: '样衣仓库', iconClass: 'icon-menu-sample', circleClass: 'menu-icon-circle--indigo', route: '/pages/warehouse/sample/scan-action/index' },
   ]},
   { group: '💰 财务管理', items: [
     { id: 'wagePayment', name: '工资发放', iconClass: 'icon-menu-wage', circleClass: 'menu-icon-circle--orange', route: '/pages/finance/payment/index' },
@@ -70,7 +70,7 @@ Page({
     try {
       const favorites = wx.getStorageSync('favoriteApps') || [];
       this.setData({ favoriteApps: favorites });
-      this.filterApps(this.data.searchKeyword);
+      this.filterApps(this.data.searchKeyword, favorites);
     } catch (e) {
       console.error('Load favorites failed', e);
     }
@@ -83,14 +83,24 @@ Page({
     this.filterApps(keyword);
   },
 
-  filterApps: function (keyword) {
+  filterApps: function (keyword, favorites) {
     const k = (keyword || '').toLowerCase();
+    const favs = favorites || this.data.favoriteApps || [];
+    const favIds = new Set(favs.map(function(f) { return f.id; }));
+    
     const filtered = ALL_APPS.map(function (group) {
       return {
         group: group.group,
-        items: group.items.filter(function (item) {
-          return item.name.toLowerCase().indexOf(k) !== -1;
-        }),
+        items: group.items
+          .filter(function (item) {
+            return item.name.toLowerCase().indexOf(k) !== -1;
+          })
+          .map(function (item) {
+            return {
+              ...item,
+              isFav: favIds.has(item.id)
+            };
+          }),
       };
     }).filter(function (g) { return g.items.length > 0; });
     this.setData({ filteredApps: filtered });
@@ -126,6 +136,8 @@ Page({
     try {
       wx.setStorageSync('favoriteApps', favorites);
       this.setData({ favoriteApps: favorites });
+      // 重新计算 filteredApps，更新星星状态
+      this.filterApps(this.data.searchKeyword, favorites);
     } catch (e) {
       console.error('Save favorites failed', e);
       toast('操作失败');
@@ -144,8 +156,11 @@ Page({
       success: function (res) {
         if (res.confirm) {
           try {
-            wx.setStorageSync('favoriteApps', []);
-            that.setData({ favoriteApps: [], editing: false });
+            const emptyFavorites = [];
+            wx.setStorageSync('favoriteApps', emptyFavorites);
+            that.setData({ favoriteApps: emptyFavorites, editing: false });
+            // 重新计算 filteredApps，更新星星状态
+            that.filterApps(that.data.searchKeyword, emptyFavorites);
           } catch (e) {
             console.error('Clear favorites failed', e);
           }

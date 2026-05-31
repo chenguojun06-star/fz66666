@@ -708,11 +708,9 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = ({ orderId, orde
           <Input
             value={String(v || '')}
             onChange={(e) => handleUpdateRow(rid(r), 'materialCode', e.target.value)}
-            onClick={() => handleOpenMaterialModal(rid(r))}
-            placeholder="点击选用"
-            readOnly
-            style={{ cursor: 'pointer' }}
+            placeholder="输入编码"
             size="small"
+            suffix={<span style={{ fontSize: 10, color: 'var(--color-primary)', cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); handleOpenMaterialModal(rid(r)); }}>选用</span>}
           />
         ),
       },

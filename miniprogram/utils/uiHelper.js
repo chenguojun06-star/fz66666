@@ -159,6 +159,8 @@ function prompt({
  */
 let navigating = false;
 let navigateTimer = null;
+const NAVIGATE_TIMEOUT = 3000; // 导航超时时间(ms)
+const NAVIGATE_UNLOCK_DELAY = 1500; // 导航完成后解锁延迟(ms)
 
 // tabBar 页面路径集合（与 app.json tabBar.list 保持一致）
 const TAB_BAR_PAGES = new Set([
@@ -169,9 +171,10 @@ const TAB_BAR_PAGES = new Set([
 ]);
 
 /**
- * 安全导航（带防抖保护 + tabBar 自动检测）
+ * 安全导航（带防抖保护 + tabBar 自动检测 + 超时保护）
  * 防止用户快速点击导致 "routeDone with a webviewId xxx is not found" 错误
  * 自动检测 tabBar 页面并切换为 switchTab，避免 navigateTo 报错
+ * 自动检测页面栈深度，避免超过10层导致超时
  * @param {Object} options - 导航参数 { url, ... }
  * @param {string} method - 导航方式: navigateTo | switchTab | redirectTo | reLaunch
  * @returns {Promise} - 导航结果
@@ -179,18 +182,31 @@ const TAB_BAR_PAGES = new Set([
 function safeNavigate(options, method = 'navigateTo') {
   if (navigating) {
     console.warn('[SafeNavigate] 导航进行中，忽略重复调用:', options.url);
-    return Promise.resolve(); // 静默忽略，不抛 reject，避免触发 unhandledRejection
+    return Promise.resolve();
   }
 
-  // 自动检测 tabBar 页面：如果目标是 tabBar 页面且当前不是 switchTab，自动纠正
   const urlPath = (options.url || '').split('?')[0];
+
+  // 自动检测 tabBar 页面：如果目标是 tabBar 页面且当前不是 switchTab，自动纠正
   if (TAB_BAR_PAGES.has(urlPath) && method !== 'switchTab') {
     method = 'switchTab';
   }
 
+  // 页面栈深度检测：如果 navigateTo 页面栈超过8层，自动降级为 redirectTo
+  if (method === 'navigateTo') {
+    try {
+      const pages = getCurrentPages();
+      if (pages && pages.length >= 8) {
+        console.warn('[SafeNavigate] 页面栈过深(' + pages.length + '层)，自动降级为 redirectTo');
+        method = 'redirectTo';
+      }
+    } catch (e) {
+      console.warn('[SafeNavigate] 无法获取页面栈信息:', e);
+    }
+  }
+
   navigating = true;
 
-  // 清除旧的解锁定时器
   if (navigateTimer) {
     clearTimeout(navigateTimer);
   }
@@ -202,19 +218,30 @@ function safeNavigate(options, method = 'navigateTo') {
     reLaunch: wx.reLaunch,
   }[method] || wx.navigateTo;
 
+  let timeoutTimer = null;
+
   return new Promise((resolve, reject) => {
+    // 设置超时保护
+    timeoutTimer = setTimeout(() => {
+      navigating = false;
+      navigateTimer = null;
+      const err = { errMsg: 'navigateTo:fail timeout' };
+      console.error('[SafeNavigate] 导航超时:', options.url, err);
+      reject(err);
+    }, NAVIGATE_TIMEOUT);
+
     navigator({
       ...options,
       success: (res) => {
-        // 导航成功后 500ms 解锁（等待页面完全加载）
+        if (timeoutTimer) clearTimeout(timeoutTimer);
         navigateTimer = setTimeout(() => {
           navigating = false;
           navigateTimer = null;
-        }, 500);
+        }, NAVIGATE_UNLOCK_DELAY);
         resolve(res);
       },
       fail: (err) => {
-        // 导航失败立即解锁
+        if (timeoutTimer) clearTimeout(timeoutTimer);
         navigating = false;
         navigateTimer = null;
         console.error('[SafeNavigate] 导航失败:', err);

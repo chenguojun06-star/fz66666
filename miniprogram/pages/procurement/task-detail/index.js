@@ -20,9 +20,8 @@ Page({
     remark: '',
     hasInput: false,
     canConfirmProcurement: false,
+    hasReturnConfirmed: false,
     overallArrivalRate: -1,
-    cartVisible: false,
-    cartCount: 0,
   },
 
   onLoad(options) {
@@ -51,6 +50,7 @@ Page({
       let totalPurchased = 0;
       let totalArrived = 0;
       let hasUnconfirmed = false;
+      let hasReturnConfirmed = false;
 
       const materialPurchases = list.map(item => {
         const status = this._normalizeStatus(item.status);
@@ -65,6 +65,7 @@ Page({
         totalPurchased += purchaseQty;
         totalArrived += arrivedQty;
         if (!returnConfirmed) hasUnconfirmed = true;
+        if (returnConfirmed) hasReturnConfirmed = true;
 
         const returnConfirmTimeText = item.returnConfirmTime
           ? item.returnConfirmTime.substring(5, 16)
@@ -90,7 +91,7 @@ Page({
       const overallArrivalRate = totalPurchased > 0 ? Math.round(totalArrived / totalPurchased * 100) : 0;
       const canConfirmProcurement = hasUnconfirmed && overallArrivalRate >= 50;
 
-      this.setData({ orderId, materialPurchases, loading: false, overallArrivalRate, canConfirmProcurement });
+      this.setData({ orderId, materialPurchases, loading: false, overallArrivalRate, canConfirmProcurement, hasReturnConfirmed });
     } catch (e) {
       console.error('加载采购详情失败:', e);
       this.setData({ loading: false });
@@ -116,6 +117,11 @@ Page({
   },
 
   async onReceiveAll() {
+    if (this.data.hasReturnConfirmed) {
+      toast.warning('已有物料完成回料确认，无法继续采购');
+      return;
+    }
+
     const userInfo = getUserInfo() || {};
     const receiverId = String(userInfo.id || userInfo.userId || '').trim();
     const receiverName = String(userInfo.name || userInfo.username || '').trim();
@@ -200,6 +206,11 @@ Page({
   },
 
   async onConfirmProcurement() {
+    if (this.data.hasReturnConfirmed) {
+      toast.warning('已有物料完成回料确认，无需再次确认');
+      return;
+    }
+
     const { orderId, orderNo, overallArrivalRate } = this.data;
     if (!orderNo) return;
 
@@ -236,6 +247,11 @@ Page({
   },
 
   async onSubmit() {
+    if (this.data.hasReturnConfirmed) {
+      toast.warning('已有物料完成回料确认，无法继续到货登记');
+      return;
+    }
+
     const { materialPurchases, remark } = this.data;
 
     const hasAny = materialPurchases.some(m => m.inputQuantity && Number(m.inputQuantity) > 0);
@@ -372,33 +388,5 @@ Page({
     return false;
   },
 
-  onOpenCart() {
-    this.setData({ cartVisible: true });
-  },
 
-  onCartClose() {
-    this.setData({ cartVisible: false, cartCount: 0 });
-  },
-
-  onCartConfirm(e) {
-    const purchaseNos = (e.detail && e.detail.purchaseNos) || [];
-    if (purchaseNos.length > 0) {
-      wx.showModal({
-        title: '下单成功',
-        content: '已生成 ' + purchaseNos.length + ' 个采购单',
-        showCancel: false,
-      });
-    }
-  },
-
-  async _loadCartCount() {
-    try {
-      const res = await api.purchaseCart.getCart();
-      const cart = res && res.data || res;
-      const items = cart && cart.items || [];
-      this.setData({ cartCount: items.length });
-    } catch (e) {
-      this.setData({ cartCount: 0 });
-    }
-  },
 });

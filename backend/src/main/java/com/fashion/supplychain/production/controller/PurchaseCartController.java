@@ -14,6 +14,7 @@ import java.util.List;
 @RestController
 @RequestMapping({"/api/production/purchase-cart", "/purchase-cart"})
 @Slf4j
+@org.springframework.security.access.prepost.PreAuthorize("isAuthenticated()")
 public class PurchaseCartController {
     
     @Autowired
@@ -32,6 +33,14 @@ public class PurchaseCartController {
         Long tenantId = UserContext.tenantId();
         String userId = UserContext.userId();
         AddItemResultDto result = purchaseCartService.addItem(tenantId, userId, request);
+        return Result.success(result);
+    }
+    
+    @PostMapping("/items/batch")
+    public Result<BatchAddItemResultDto> batchAddItems(@RequestBody BatchAddCartItemRequest request) {
+        Long tenantId = UserContext.tenantId();
+        String userId = UserContext.userId();
+        BatchAddItemResultDto result = purchaseCartService.batchAddItems(tenantId, userId, request.getItems());
         return Result.success(result);
     }
     

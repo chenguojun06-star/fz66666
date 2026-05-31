@@ -210,6 +210,25 @@ page {
   color: var(--color-link);
 }
 
+/* 空状态 */
+.empty-hint {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 0 20px;
+}
+.empty-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+  opacity: 0.6;
+}
+.empty-text {
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  text-align: center;
+}
+
 .menu-badge {
   position: absolute;
   top: -4px;
@@ -224,6 +243,13 @@ page {
 
 .menu-icon-circle {
   position: relative;
+}
+
+/* 拖拽模式样式 */
+.menu-item--dragging {
+  opacity: 0.8;
+  transform: scale(1.1);
+  transition: transform 0.1s ease;
 }
 
 /* -- 购物车入口 -- */

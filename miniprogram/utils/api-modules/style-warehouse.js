@@ -239,6 +239,7 @@ const orderManagement = {
 
 // 样衣库存
 const sampleStock = {
+  list(params) { return ok('/api/stock/sample/list', 'GET', params || {}); },
   scanQuery(data) { return ok('/api/stock/sample/scan-query', 'POST', data); },
   inbound(data) { return ok('/api/stock/sample/inbound', 'POST', data); },
   loan(data) { return ok('/api/stock/sample/loan', 'POST', data); },

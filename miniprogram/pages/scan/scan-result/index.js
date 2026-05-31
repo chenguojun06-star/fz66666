@@ -1,5 +1,5 @@
 const api = require('../../../utils/api');
-const { toast } = require('../../../utils/uiHelper');
+const { toast, safeNavigate } = require('../../../utils/uiHelper');
 const { normalizeScanType } = require('../handlers/helpers/ScanModeResolver');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 const { triggerDataRefresh } = require('../../../utils/eventBus');
@@ -447,7 +447,7 @@ Page({
         coverImage:    orderDetail.coverImage || orderDetail.styleImage || '',
         orderId:       raw.orderId   || '',
       };
-      wx.navigateTo({ url: '/pages/scan/quality/index' });
+      safeNavigate({ url: '/pages/scan/quality/index' }).catch(() => {});
       return;
     }
 

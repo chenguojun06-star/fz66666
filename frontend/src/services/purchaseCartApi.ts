@@ -1,4 +1,4 @@
-import api from '@/utils/api';
+import api, { unwrapApiData } from '@/utils/api';
 import type {
   PurchaseCart,
   AddCartItemRequest,
@@ -12,44 +12,59 @@ import type {
 } from '@/types/purchaseCart';
 
 export const purchaseCartApi = {
-  getCart: (): Promise<PurchaseCart> => {
-    return api.get('/production/purchase-cart');
+  getCart: async (): Promise<PurchaseCart> => {
+    const res = await api.get('/production/purchase-cart');
+    return unwrapApiData<PurchaseCart>(res, '获取购物车失败');
   },
 
-  addItem: (data: AddCartItemRequest): Promise<AddItemResult> => {
-    return api.post('/production/purchase-cart/items', data);
+  addItem: async (data: AddCartItemRequest): Promise<AddItemResult> => {
+    const res = await api.post('/production/purchase-cart/items', data);
+    return unwrapApiData<AddItemResult>(res, '添加物料失败');
   },
 
-  updateItem: (itemId: string, data: UpdateCartItemRequest): Promise<void> => {
-    return api.put(`/production/purchase-cart/items/${itemId}`, data);
+  batchAddItems: async (items: AddCartItemRequest[]): Promise<{
+    totalCount: number;
+    successCount: number;
+    mergedCount: number;
+    mergeSuggestions: MergeSuggestion[];
+  }> => {
+    const res = await api.post('/production/purchase-cart/items/batch', { items });
+    return unwrapApiData(res, '批量添加失败');
   },
 
-  deleteItem: (itemId: string): Promise<void> => {
-    return api.delete(`/production/purchase-cart/items/${itemId}`);
+  updateItem: async (itemId: string, data: UpdateCartItemRequest): Promise<void> => {
+    await api.put(`/production/purchase-cart/items/${itemId}`, data);
   },
 
-  mergeItems: (data: MergeRequest): Promise<void> => {
-    return api.post('/production/purchase-cart/items/merge', data);
+  deleteItem: async (itemId: string): Promise<void> => {
+    await api.delete(`/production/purchase-cart/items/${itemId}`);
   },
 
-  splitItem: (data: SplitRequest): Promise<void> => {
-    return api.post('/production/purchase-cart/items/split', data);
+  mergeItems: async (data: MergeRequest): Promise<void> => {
+    await api.post('/production/purchase-cart/items/merge', data);
   },
 
-  getMergeSuggestions: (): Promise<MergeSuggestion[]> => {
-    return api.get('/production/purchase-cart/merge-suggestions');
+  splitItem: async (data: SplitRequest): Promise<void> => {
+    await api.post('/production/purchase-cart/items/split', data);
   },
 
-  preview: (): Promise<CartPreview> => {
-    return api.post('/production/purchase-cart/preview');
+  getMergeSuggestions: async (): Promise<MergeSuggestion[]> => {
+    const res = await api.get('/production/purchase-cart/merge-suggestions');
+    return unwrapApiData<MergeSuggestion[]>(res, '获取合并建议失败');
   },
 
-  confirm: (itemIds?: string[]): Promise<ConfirmResult> => {
-    return api.post('/production/purchase-cart/confirm', itemIds || []);
+  preview: async (): Promise<CartPreview> => {
+    const res = await api.post('/production/purchase-cart/preview');
+    return unwrapApiData<CartPreview>(res, '预览失败');
   },
 
-  clearCart: (): Promise<void> => {
-    return api.delete('/production/purchase-cart');
+  confirm: async (itemIds?: string[]): Promise<ConfirmResult> => {
+    const res = await api.post('/production/purchase-cart/confirm', itemIds || []);
+    return unwrapApiData<ConfirmResult>(res, '下单失败');
+  },
+
+  clearCart: async (): Promise<void> => {
+    await api.delete('/production/purchase-cart');
   },
 };
 

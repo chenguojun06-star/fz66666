@@ -35,7 +35,7 @@ export const CartList: React.FC<CartListProps> = ({
     );
   }
 
-  if (items.length === 0) {
+  if (!items || items.length === 0) {
     return (
       <Empty
         description="购物车是空的"

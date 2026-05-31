@@ -15,6 +15,7 @@ import MaterialQualityIssueModal from './components/MaterialQualityIssueModal';
 import RemarkTimelineModal from '@/components/common/RemarkTimelineModal';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { PurchaseCartDrawer } from '@/components/common/PurchaseCartDrawer';
+import { usePurchaseCartActions } from '@/hooks/usePurchaseCart';
 import '../../../styles.css';
 import { useMaterialPurchase } from './hooks/useMaterialPurchase';
 import { formatMaterialQuantity } from './utils';
@@ -72,6 +73,7 @@ const MaterialPurchase: React.FC = () => {
   const [remarkOpen, setRemarkOpen] = useState(false);
   const [remarkOrderNo, setRemarkOrderNo] = useState('');
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
+  const { batchAddItems } = usePurchaseCartActions();
 
   const openDetailPage = useCallback((styleNo: string, orderNo?: string) => {
     if (styleNo && styleNo !== '_') {
@@ -267,6 +269,26 @@ const MaterialPurchase: React.FC = () => {
                       }}
                       isSupervisorOrAbove={isSupervisorOrAbove}
                       onOpenDetail={openDetailPage}
+                      onBatchAddToCart={async (records) => {
+                        if (!records.length) return;
+                        const requests = records.map(record => ({
+                          materialCode: record.materialCode || '',
+                          materialName: record.materialName || '',
+                          materialType: (record.materialType || 'FABRIC') as any,
+                          unit: record.unit || '米',
+                          quantity: Number(record.purchaseQuantity || 0),
+                          supplierId: record.supplierId || '',
+                          supplierName: record.supplierName || '',
+                          sourceType: 'PURCHASE_TASK',
+                          sourceId: record.id || '',
+                          sourceNo: record.purchaseNo || '',
+                          sourceQuantity: Number(record.purchaseQuantity || 0),
+                          color: record.color || '',
+                          specifications: record.specifications || '',
+                        })) as any;
+                        await batchAddItems(requests);
+                        setCartDrawerOpen(true);
+                      }}
                     />
         </PageLayout>
 

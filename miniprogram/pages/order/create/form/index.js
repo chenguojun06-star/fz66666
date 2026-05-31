@@ -23,6 +23,7 @@ Page({
 
   data: {
     styleId: '', styleNo: '', styleName: '', coverImage: '',
+    isNoData: false,  // 是否为无资料下单
     orderNo: '',
     factoryMode: 'INTERNAL', orgUnitId: '', orgUnitName: '',
     factoryId: '', factoryName: '',
@@ -50,8 +51,14 @@ Page({
     var isNoData = opts.noData === 'true';
     var colors = [];
     var sizes = [];
+    var coverImage = '';
 
-    if (!isNoData) {
+    if (isNoData) {
+      // 无资料下单：使用用户上传的临时图片
+      coverImage = decodeURIComponent(opts.tempImage || '');
+    } else {
+      // 有资料下单：使用款式的封面图
+      coverImage = decodeURIComponent(opts.coverImage || '');
       colors = (decodeURIComponent(opts.colors || '')).split(',').filter(function (c) { return c.trim(); });
       sizes = (decodeURIComponent(opts.sizes || '')).split(',').filter(function (s) { return s.trim(); });
     }
@@ -60,7 +67,8 @@ Page({
       styleId: decodeURIComponent(opts.styleId || ''),
       styleNo: decodeURIComponent(opts.styleNo || ''),
       styleName: decodeURIComponent(opts.styleName || ''),
-      coverImage: decodeURIComponent(opts.coverImage || ''),
+      coverImage: coverImage,
+      isNoData: isNoData,
       plannedStartDate: today(),
       plannedEndDate: daysLater(7),
       colorOptions: colors,
@@ -195,17 +203,27 @@ Page({
 
   _genOrderNo: function () {
     const self = this;
-    api.serial.generate('ORDER_NO').then(function (no) {
+    const isNoData = this.data.isNoData;
+    
+    // 无资料下单使用 CUT 前缀，有资料下单使用 ORDER_NO
+    const serialType = isNoData ? 'CUTTING_TASK_NO' : 'ORDER_NO';
+    
+    api.serial.generate(serialType).then(function (no) {
       self.setData({ orderNo: String(no || '') });
     }).catch(function () {
+      // 如果API失败，使用时间戳生成订单号
       const d = new Date();
       const ts = d.getFullYear()
         + String(d.getMonth() + 1).padStart(2, '0')
         + String(d.getDate()).padStart(2, '0')
         + String(d.getHours()).padStart(2, '0')
         + String(d.getMinutes()).padStart(2, '0')
-        + String(d.getSeconds()).padStart(2, '0');
-      self.setData({ orderNo: 'PO' + ts });
+        + String(d.getSeconds()).padStart(2, '0')
+        + String(d.getMilliseconds()).padStart(3, '0');
+      
+      // 无资料下单使用 CUT 前缀，有资料下单使用 PO 前缀
+      const prefix = isNoData ? 'CUT' : 'PO';
+      self.setData({ orderNo: prefix + ts });
     });
   },
 

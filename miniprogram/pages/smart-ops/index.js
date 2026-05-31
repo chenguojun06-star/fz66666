@@ -1,6 +1,7 @@
 const api = require('../../utils/api');
 const { isTenantOwner, isSuperAdmin } = require('../../utils/storage');
 const { getAuthedImageUrl } = require('../../utils/fileUrl');
+const { safeNavigate } = require('../../utils/uiHelper');
 
 const REFRESH_INTERVAL = 30;
 
@@ -164,7 +165,7 @@ Page({
     if (!orders || !orders[idx]) return;
     const order = orders[idx];
     if (order.id) {
-      wx.navigateTo({ url: '/pages/dashboard/index?orderId=' + encodeURIComponent(order.id) });
+      safeNavigate({ url: '/pages/dashboard/index?orderId=' + encodeURIComponent(order.id) }).catch(() => {});
     }
   },
 
@@ -174,7 +175,7 @@ Page({
     if (!orders || !orders[idx]) return;
     const order = orders[idx];
     if (order.id) {
-      wx.navigateTo({ url: '/pages/dashboard/index?orderId=' + encodeURIComponent(order.id) });
+      safeNavigate({ url: '/pages/dashboard/index?orderId=' + encodeURIComponent(order.id) }).catch(() => {});
     }
   },
 

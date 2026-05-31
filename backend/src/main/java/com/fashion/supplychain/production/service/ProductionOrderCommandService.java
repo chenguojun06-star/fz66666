@@ -83,6 +83,14 @@ public class ProductionOrderCommandService {
             if (!StringUtils.hasText(remark)) {
                 throw new IllegalStateException("请填写操作备注");
             }
+
+            // 防止订单号被修改
+            if (StringUtils.hasText(existed.getOrderNo())) {
+                productionOrder.setOrderNo(existed.getOrderNo());
+                if (StringUtils.hasText(existed.getQrCode())) {
+                    productionOrder.setQrCode(existed.getQrCode());
+                }
+            }
         }
 
         applyFactorySnapshot(productionOrder);
@@ -179,6 +187,7 @@ public class ProductionOrderCommandService {
 
         // 创建新订单
         ProductionOrder order = new ProductionOrder();
+        order.setTenantId(com.fashion.supplychain.common.UserContext.tenantId());
         order.setStyleId(String.valueOf(style.getId()));
         order.setStyleNo(style.getStyleNo());
         order.setStyleName(style.getStyleName());

@@ -5,7 +5,7 @@
  * @module RescanHandler
  */
 
-const { toast } = require('../../../utils/uiHelper');
+const { toast, safeNavigate } = require('../../../utils/uiHelper');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 
 /**
@@ -33,7 +33,7 @@ function onRescanRecord(ctx, e) {
     styleNo: record.styleNo || '',
     processName: record.processName || '',
   };
-  wx.navigateTo({ url: '/pages/scan/rescan/index' });
+  safeNavigate({ url: '/pages/scan/rescan/index' }).catch(() => {});
 }
 
 module.exports = {

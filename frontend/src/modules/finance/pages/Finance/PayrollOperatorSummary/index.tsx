@@ -4,6 +4,7 @@ import { UnifiedRangePicker } from '@/components/common/UnifiedDatePicker';
 import PageLayout from '@/components/common/PageLayout';
 import ResizableTable from '@/components/common/ResizableTable';
 import ResizableModal from '@/components/common/ResizableModal';
+import FactoryTypeTag from '@/components/common/FactoryTypeTag';
 import dayjs from 'dayjs';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { getSummaryColumns, getDetailColumns } from './payrollOperatorColumns';
@@ -125,12 +126,12 @@ const PayrollOperatorSummary: React.FC = () => {
             render: (_text: string, record: any) => (
                 <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                        <Tag color="blue" style={{ margin: 0, fontSize: 14, padding: '0 4px', lineHeight: '16px', height: 16 }}>内</Tag>
+                        <FactoryTypeTag factoryType={record.factoryType} />
                         <span>{record.factoryName || '-'}</span>
                     </div>
                     {(record.orgPath || record.parentOrgUnitName) &&
                      (record.orgPath || record.parentOrgUnitName) !== record.factoryName ? (
-                        <div style={{ color: 'var(--neutral-text-secondary)', fontSize: 14 }}>
+                        <div style={{ color: 'var(--neutral-text-secondary)', fontSize: 12 }}>
                             {record.orgPath || record.parentOrgUnitName}
                         </div>
                     ) : null}
