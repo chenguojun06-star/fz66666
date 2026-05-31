@@ -42,6 +42,8 @@ export interface ProcessTrackingTableProps {
   orderStatus?: string;
   onUndoSuccess?: () => void;
   processList?: ProcessListItem[];
+  onOpenInspectDrawer?: (orderId: string) => void;
+  factoryType?: 'INTERNAL' | 'EXTERNAL' | string;
 }
 
 export function canUndoTracking(record: ProcessTrackingRecord, orderStatus?: string, isAdmin?: boolean): boolean {

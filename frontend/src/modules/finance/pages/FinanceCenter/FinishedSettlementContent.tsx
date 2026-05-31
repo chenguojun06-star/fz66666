@@ -132,7 +132,7 @@ const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNo
 
       <StandardModal title="操作日志" open={logModalVisible} onCancel={() => setLogModalVisible(false)} footer={<Button onClick={() => setLogModalVisible(false)}>关闭</Button>} size="md">
         {orderLogs.length > 0 ? (
-          <Timeline items={orderLogs.map((log: any) => ({ children: (
+          <Timeline items={orderLogs.map((log: any) => ({ content: (
             <div>
               <div style={{ fontWeight: 600, marginBottom: 4 }}>{log.action || log.operationType}</div>
               <div style={{ color: 'var(--neutral-text-secondary)', fontSize: '13px', marginBottom: 4 }}>{log.description || log.content}</div>

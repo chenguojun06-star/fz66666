@@ -177,7 +177,7 @@ const RemarkTimelineModal: React.FC<RemarkTimelineModalProps> = ({
                               <Image
                                 key={idx}
                                 src={getFullAuthedFileUrl(url)}
-                                style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 4, cursor: 'pointer' }}
+                                style={{ width: 320, height: 320, objectFit: 'cover', borderRadius: 4, cursor: 'pointer' }}
                                 preview={{ mask: '预览' }}
                               />
                             ))}

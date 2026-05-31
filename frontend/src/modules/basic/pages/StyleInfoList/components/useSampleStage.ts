@@ -28,8 +28,6 @@ export default function useSampleStage({ selectedStage, message, onRefresh }: Us
     [selectedStage],
   );
 
-  // --- 9 sample useMemos ---
-
   const isSampleSnapshotCompleted = useMemo(() => {
     if (!sampleSnapshot) return false;
     const status = String(sampleSnapshot.status || '').trim().toUpperCase();
@@ -102,8 +100,8 @@ export default function useSampleStage({ selectedStage, message, onRefresh }: Us
   }, [sampleSnapshot]);
 
   const shouldShowSampleStageProgress = useMemo(() => (
-    sampleStageProgressItems.some((item) => item.percent > 0) || isSampleSnapshotReceived || isSampleSnapshotCompleted
-  ), [isSampleSnapshotCompleted, isSampleSnapshotReceived, sampleStageProgressItems]);
+    sampleStageProgressItems.some((item) => item.percent > 0) || isSampleSnapshotReceived || isSampleSnapshotCompleted || Boolean(sampleSnapshot?.productionOrderId)
+  ), [isSampleSnapshotCompleted, isSampleSnapshotReceived, sampleStageProgressItems, sampleSnapshot?.productionOrderId]);
 
   const sampleStageSummary = useMemo(() => {
     if (!selectedStage || selectedStage.stage.key !== 'sample') return null;
@@ -141,12 +139,29 @@ export default function useSampleStage({ selectedStage, message, onRefresh }: Us
     setSampleSnapshotLoading(true);
     try {
       const snapshot = await loadSampleSnapshot(selectedStage.record);
-      setSampleSnapshot(snapshot);
+      if (snapshot && !snapshot.productionOrderId) {
+        try {
+          await api.post(`/production/pattern/${snapshot.id}/create-sample-order`);
+        } catch {
+          // 订单已存在或创建失败，继续使用当前快照
+        }
+        const refreshed = await loadSampleSnapshot(selectedStage.record);
+        setSampleSnapshot(refreshed);
+      } else {
+        setSampleSnapshot(snapshot);
+      }
       await onRefresh();
     } finally {
       setSampleSnapshotLoading(false);
     }
   }, [loadSampleSnapshot, onRefresh, selectedStage]);
+
+  useEffect(() => {
+    if (selectedStage && selectedStage.stage.key === 'sample') {
+      void reloadSampleStage();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedStage?.record?.styleNo, selectedStage?.stage?.key]);
 
   const handleReceiveSample = useCallback(async () => {
     if (!sampleSnapshot?.id) return;

@@ -60,6 +60,18 @@ export const useStyleFormActions = ({
   const handleSave = async () => {
     try {
       const values = await form.validateFields();
+
+      // 计算样衣数量总和（先校验）
+      const totalQuantity = (sizeColorConfig.matrixRows?.length
+        ? sizeColorConfig.matrixRows.reduce((sum, row) => sum + (row.quantities || []).reduce((subtotal, qty) => subtotal + Number(qty || 0), 0), 0)
+        : sizeColorConfig.quantities.reduce((sum, qty) => sum + (qty || 0), 0));
+
+      // 校验：样衣数量必须至少1件
+      if (totalQuantity <= 0) {
+        message.error('请至少填写1件样衣数量');
+        return false;
+      }
+
       setSaving(true);
 
       const normalizedValues: Record<string, any> = { ...values };
@@ -99,13 +111,8 @@ export const useStyleFormActions = ({
         normalizedValues.size = selectedSizes.join('/');
       }
 
-      // 计算样衣数量总和
-      const totalQuantity = (sizeColorConfig.matrixRows?.length
-        ? sizeColorConfig.matrixRows.reduce((sum, row) => sum + (row.quantities || []).reduce((subtotal, qty) => subtotal + Number(qty || 0), 0), 0)
-        : sizeColorConfig.quantities.reduce((sum, qty) => sum + (qty || 0), 0));
-      if (totalQuantity > 0) {
-        normalizedValues.sampleQuantity = totalQuantity;
-      }
+      // 设置样衣数量
+      normalizedValues.sampleQuantity = totalQuantity;
 
       let res;
       if (currentStyle?.id) {

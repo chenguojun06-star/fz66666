@@ -17,6 +17,7 @@ export interface PrintOptions {
   bomTable: boolean;     // BOM表
   processTable: boolean; // 工序表
   productionSheet: boolean; // 生产制单
+  sampleReview: boolean; // 样衣审核
 }
 
 // 默认打印选项
@@ -26,6 +27,7 @@ export const DEFAULT_PRINT_OPTIONS: PrintOptions = {
   bomTable: true,
   processTable: true,
   productionSheet: true,
+  sampleReview: true,
 };
 
 // 组件属性

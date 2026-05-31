@@ -173,8 +173,8 @@ export default function WashLabelPrintModal({ open, onCancel, order }: Props) {
             ? row.perLabelQty
             : (row.totalQty - row.perLabelQty * (nc - 1));
           const styleNo = order.styleNo || '';
-          const uCode = [styleNo, row.color, row.size].filter(Boolean).join('-');
-          labels.push({ color: row.color, size: row.size, qty, seq, qrCode: `${uCode}-${seq}` });
+          const uCode = [styleNo, row.color, row.size].filter(Boolean).join('');
+          labels.push({ color: row.color, size: row.size, qty, seq, qrCode: `${uCode}${seq}` });
         }
       });
 

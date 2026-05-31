@@ -317,7 +317,7 @@ export default function AiExecutionPanel() {
         placement="right"
         onClose={() => setShowDetail(false)}
         open={showDetail}
-        styles={{ wrapper: { width: 500 } }}
+        size={500}
       >
         {selectedCommand && (
           <div style={{ paddingTop: '16px' }}>

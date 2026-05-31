@@ -362,6 +362,8 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
     if (triggerNode) {
       const modal = triggerNode.closest?.('.ant-modal-body') as HTMLElement | null;
       if (modal) return modal;
+      const drawer = triggerNode.closest?.('.ant-drawer-content') as HTMLElement | null;
+      if (drawer) return drawer;
     }
     return document.body;
   }, []);

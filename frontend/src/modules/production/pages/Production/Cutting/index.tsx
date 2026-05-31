@@ -202,10 +202,13 @@ const CuttingManagement: React.FC = () => {
 
   const columns = useBundleColumns(activeTask);
 
-  const handleReceiveClick = useCallback(() => {
-    if (activeTask) tasks.handleReceiveTask(activeTask);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tasks.handleReceiveTask, activeTask]);
+  const handleReceiveClick = useCallback(async () => {
+    if (!activeTask) return;
+    const ok = await tasks.handleReceiveTask(activeTask);
+    if (ok && routeOrderNo) {
+      await syncActiveTaskByOrderNo(routeOrderNo);
+    }
+  }, [tasks.handleReceiveTask, activeTask, routeOrderNo]);
 
   return (
     <>

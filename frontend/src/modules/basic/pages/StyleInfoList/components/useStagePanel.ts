@@ -1,5 +1,5 @@
 import { useMemo, type Dispatch, type SetStateAction } from 'react';
-import { Modal } from 'antd';
+import type { ModalStaticFunctions } from 'antd/es/modal/confirm';
 import { NavigateFunction } from 'react-router-dom';
 import { StyleInfo } from '@/types/style';
 import api, { withQuery } from '@/utils/api';
@@ -18,13 +18,14 @@ interface UseStagePanelParams {
   setSelectedStage: Dispatch<SetStateAction<{ record: StyleInfo; stage: SmartStage } | null>>;
   navigate: NavigateFunction;
   message: MessageInstance;
+  modal: Omit<ModalStaticFunctions, 'warn'>;
   sampleHook: ReturnType<typeof useSampleStage>;
   confirmHook: ReturnType<typeof useConfirmStage>;
 }
 
 export default function useStagePanel({
   selectedStage, setSelectedStage, navigate, message,
-  sampleHook, confirmHook,
+  modal, sampleHook, confirmHook,
 }: UseStagePanelParams) {
   const selectedStageTag = selectedStage ? resolveStageTag(selectedStage.stage) : null;
 
@@ -109,7 +110,7 @@ export default function useStagePanel({
         actions.push({
           key: 'complete-sample', label: '标记完成', type: 'primary',
           onClick: () => {
-            Modal.confirm({
+            modal.confirm({
               title: '确认完成样衣生产？', content: '完成后样衣进入审核阶段', okText: '确认完成', cancelText: '取消',
               onOk: async () => {
                 try {
@@ -192,7 +193,7 @@ export default function useStagePanel({
     }
 
     return actions.filter((action, index, list) => list.findIndex((item) => item.key === action.key) === index);
-  }, [confirmHook, message, navigate, sampleHook, selectedStage, setSelectedStage]);
+  }, [confirmHook, message, modal, navigate, sampleHook, selectedStage, setSelectedStage]);
 
   return {
     selectedStageTag,

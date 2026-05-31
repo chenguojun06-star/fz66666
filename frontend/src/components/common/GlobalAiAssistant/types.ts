@@ -189,4 +189,11 @@ export interface TaskItem {
   endTime?: string;
   createdAt: string;
   updatedAt: string;
+  // 订单关联和监控新增字段
+  orderLinkStatus?: 'NOT_LINKED' | 'LINKED' | 'ORDER_NOT_FOUND';
+  progressChangeMonitorEnabled?: boolean;
+  lastOrderProgress?: number;
+  lastOrderStatus?: string;
+  lastReminderSentAt?: string;
+  reminderCount?: number;
 }

@@ -298,6 +298,7 @@ const StyleInfoDetailPage: React.FC = () => {
                   styleNo={currentStyle?.styleNo ?? ''}
                   skc={(currentStyle as any)?.skc}
                   skuMode={(currentStyle as any)?.skuMode}
+                  useSkuPrefix={(currentStyle as any)?.useSkuPrefix}
                   onModeChange={() => { void fetchDetail(styleIdParam!); }}
                   onRefresh={() => { void fetchDetail(styleIdParam!); }}
                 />

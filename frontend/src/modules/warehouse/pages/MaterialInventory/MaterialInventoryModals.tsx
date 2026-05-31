@@ -23,6 +23,7 @@ import MaterialInfoCard from './components/MaterialInfoCard';
 import OutboundModal from './components/OutboundModal';
 import StandardModal from '@/components/common/StandardModal';
 import SmallModal from '@/components/common/SmallModal';
+import InboundOutboundRecordDrawer from '@/components/common/InboundOutboundRecordDrawer';
 
 import type { useMaterialInventoryData } from './hooks/useMaterialInventoryData';
 
@@ -210,79 +211,13 @@ const MaterialInventoryModals: React.FC<MaterialInventoryModalsProps> = ({
       </SmallModal>
 
       {/* 详情模态框 - 出入库记录 */}
-      <StandardModal
-        title="出入库记录"
+      <InboundOutboundRecordDrawer
         open={detailModal.visible}
-        onCancel={detailModal.close}
-        footer={[
-          <Button key="close" onClick={detailModal.close}>
-            关闭
-          </Button>,
-        ]}
-        size="lg"
-      >
-        {detailModal.data && (
-          <div>
-            <Card style={{ marginBottom: 16, background: 'var(--color-bg-subtle)' }}>
-              <Space orientation="vertical" size={8} style={{ width: '100%' }}>
-                <div>
-                  <strong style={{ fontSize: "var(--font-size-lg)" }}>{detailModal.data.materialCode}</strong>
-                  <Tag color={getMaterialTypeCategory(detailModal.data.materialType) === 'fabric' ? 'blue' : getMaterialTypeCategory(detailModal.data.materialType) === 'lining' ? 'cyan' : 'green'} style={{ marginLeft: 8 }}>{getBaseMaterialTypeLabel(detailModal.data.materialType)}</Tag>
-                </div>
-                <div style={{ fontSize: "var(--font-size-base)" }}>{detailModal.data.materialName}</div>
-              </Space>
-            </Card>
-
-            <ResizableTable
-              storageKey="material-inventory-details"
-             
-              loading={txLoading}
-              dataSource={txList}
-              rowKey={(_, idx) => String(idx)}
-              columns={[
-                {
-                  title: '类型',
-                  dataIndex: 'typeLabel',
-                  width: 80,
-                  render: (text: string, record: any) => (
-                    <Tag color={record.type === 'IN' ? 'blue' : 'orange'}>{text || record.type}</Tag>
-                  ),
-                },
-                {
-                  title: '日期',
-                  dataIndex: 'operationTime',
-                  width: 160,
-                  render: (v: string) => v || '-',
-                },
-                {
-                  title: '数量',
-                  dataIndex: 'quantity',
-                  width: 100,
-                  render: (v: number) => `${v} ${detailModal.data?.unit || ''}`,
-                },
-                {
-                  title: '操作人',
-                  dataIndex: 'operatorName',
-                  width: 100,
-                  render: (v: string) => v || '-',
-                },
-                {
-                  title: '库位',
-                  dataIndex: 'warehouseLocation',
-                  width: 100,
-                  render: (v: string) => v || '-',
-                },
-                {
-                  title: '备注',
-                  dataIndex: 'remark',
-                  render: (v: string) => v || '-',
-                },
-              ]}
-              pagination={false}
-            />
-          </div>
-        )}
-      </StandardModal>
+        onClose={detailModal.close}
+        materialData={detailModal.data}
+        records={txList}
+        loading={txLoading}
+      />
 
       {/* 入库模态框 */}
       <StandardModal

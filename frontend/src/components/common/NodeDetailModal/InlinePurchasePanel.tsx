@@ -142,7 +142,9 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = ({ orderId, orde
           if (previewRes?.code === 200 && Array.isArray(previewRes?.data)) {
             records = sortPurchases(previewRes.data);
           }
-        } catch {}
+        } catch (e: any) {
+          console.warn('[InlinePurchasePanel] demand/preview请求失败:', e?.message || e);
+        }
       }
 
       if (records.length === 0 && orderRecord) {
@@ -282,7 +284,8 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = ({ orderId, orde
         const purchaseQuantity = Number(row.purchaseQuantity || 0);
         const unitPrice = Number(row.unitPrice || 0);
         const totalAmount = Number.isFinite(purchaseQuantity) && Number.isFinite(unitPrice) ? Number((purchaseQuantity * unitPrice).toFixed(2)) : 0;
-        const payload = { ...row, totalAmount, status: row.status || MATERIAL_PURCHASE_STATUS.PENDING, sourceType: 'order' };
+        const sourceType = order?.sourceBizType === 'SAMPLE' ? 'sample' : 'order';
+        const payload = { ...row, totalAmount, status: row.status || MATERIAL_PURCHASE_STATUS.PENDING, sourceType };
         const isTemp = String(row.id || '').startsWith('tmp_');
         if (!isTemp) {
           await api.put('/production/purchase', payload);
@@ -1245,7 +1248,7 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = ({ orderId, orde
             <Alert
               type="info"
               showIcon
-              message="该订单尚未创建面辅料信息"
+              title="该订单尚未创建面辅料信息"
               description={
                 orderColorSet.size > 1
                   ? `订单包含 ${orderColorSet.size} 种颜色（${Array.from(orderColorSet).join('、')}），点击「编辑物料」按钮为每种颜色创建对应的面辅料记录。`

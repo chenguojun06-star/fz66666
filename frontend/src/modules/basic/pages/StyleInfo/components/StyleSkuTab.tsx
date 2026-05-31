@@ -14,19 +14,21 @@ interface StyleSkuTabProps {
   styleNo: string;
   skc?: string;
   skuMode?: 'AUTO' | 'MANUAL';
+  useSkuPrefix?: boolean | number;
   onModeChange?: (mode: 'AUTO' | 'MANUAL') => void;
   onRefresh?: () => void;
 }
 
 let tempIdCounter = -1;
 
-const StyleSkuTab: React.FC<StyleSkuTabProps> = ({ styleId, styleNo, skc: initialSkc, skuMode: initialMode, onModeChange, onRefresh }) => {
+const StyleSkuTab: React.FC<StyleSkuTabProps> = ({ styleId, styleNo, skc: initialSkc, skuMode: initialMode, useSkuPrefix: initialUseSkuPrefix, onModeChange, onRefresh }) => {
   const { message } = App.useApp();
   const messageRef = useRef(message);
   messageRef.current = message;
 
   const [skuMode, setSkuMode] = useState<'AUTO' | 'MANUAL'>(initialMode || 'AUTO');
   const [skcValue, setSkcValue] = useState(initialSkc || '');
+  const [useSkuPrefix, setUseSkuPrefix] = useState(initialUseSkuPrefix ? Boolean(initialUseSkuPrefix) : false); // 是否加SKU前缀
   const [skus, setSkus] = useState<ProductSku[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -63,6 +65,23 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = ({ styleId, styleNo, skc: initia
   useEffect(() => { fetchSkus(); }, [fetchSkus]);
   useEffect(() => { if (initialMode) setSkuMode(initialMode); }, [initialMode]);
   useEffect(() => { if (initialSkc) setSkcValue(initialSkc); }, [initialSkc]);
+  useEffect(() => { if (initialUseSkuPrefix !== undefined) setUseSkuPrefix(Boolean(initialUseSkuPrefix)); }, [initialUseSkuPrefix]);
+
+  const handleUseSkuPrefixChange = async (checked: boolean) => {
+    try {
+      setUseSkuPrefix(checked);
+      const res = await api.put(`/style/info/${styleId}/use-sku-prefix`, { useSkuPrefix: checked ? 1 : 0 });
+      if (res.code === 200) {
+        messageRef.current.success('操作成功');
+        void fetchSkus();
+        onRefresh?.();
+      } else {
+        messageRef.current.error(res.message || '操作失败');
+      }
+    } catch {
+      messageRef.current.error('操作失败');
+    }
+  };
 
   const doToggleMode = async (newMode: 'AUTO' | 'MANUAL') => {
     try {
@@ -168,11 +187,11 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = ({ styleId, styleNo, skc: initia
     }
   };
 
-  const addRows = (count: number) => {
+  const addRows = (count: number, autoGenerate: boolean = true) => {
     const newSkus: (ProductSku & { _tempKey: number })[] = [];
     for (let i = 0; i < count; i++) {
       newSkus.push({
-        skuCode: `${styleNo}-`,
+        skuCode: autoGenerate ? (useSkuPrefix ? `SKU${styleNo}` : styleNo) : '',
         color: '',
         size: '',
         status: 'ENABLED',
@@ -187,10 +206,13 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = ({ styleId, styleNo, skc: initia
   };
 
   const addMenuItems: MenuProps['items'] = [
-    { key: '1', label: '+1行', onClick: () => addRows(1) },
-    { key: '5', label: '+5行', onClick: () => addRows(5) },
-    { key: '10', label: '+10行', onClick: () => addRows(10) },
-    { key: '20', label: '+20行', onClick: () => addRows(20) },
+    { key: 'quick-1', label: '快速生成 +1行', onClick: () => addRows(1, true) },
+    { key: 'quick-5', label: '快速生成 +5行', onClick: () => addRows(5, true) },
+    { key: 'quick-10', label: '快速生成 +10行', onClick: () => addRows(10, true) },
+    { type: 'divider' },
+    { key: 'manual-1', label: '自编辑 +1行', onClick: () => addRows(1, false) },
+    { key: 'manual-5', label: '自编辑 +5行', onClick: () => addRows(5, false) },
+    { key: 'manual-10', label: '自编辑 +10行', onClick: () => addRows(10, false) },
   ];
 
   const handleDeleteRow = (rowKey: number | string) => {
@@ -339,6 +361,8 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = ({ styleId, styleNo, skc: initia
           <span style={{ fontSize: 14, color: 'var(--color-text-tertiary, #8c8c8c)' }}>
             {isManual ? '可自由编辑SKU编码、颜色、尺码等信息' : 'SKU编码按「款号+颜色+尺码」自动生成'}
           </span>
+          <span style={{ fontWeight: 500, fontSize: 14, marginLeft: 24 }}>SKU前缀：</span>
+          <Switch checked={useSkuPrefix} onChange={handleUseSkuPrefixChange} checkedChildren="加SKU" unCheckedChildren="不加SKU" />
         </Space>
 
         <Space>
@@ -407,7 +431,7 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = ({ styleId, styleNo, skc: initia
       <div style={{ marginTop: 12, fontSize: 14, color: 'var(--color-text-tertiary, #8c8c8c)', lineHeight: 1.8 }}>
         <div>自动生成模式：SKU编码按「款号+颜色+尺码」规则自动生成，如 {styleNo}-红色-S</div>
         <div>手动编辑模式：可自由修改SKU编码、颜色、尺码等信息，保存后系统不会覆盖您的修改</div>
-        <div>新增SKU：鼠标悬停可选择添加1/5/10/20行</div>
+        <div>新增SKU：鼠标悬停可选择「快速生成」（自动填充款号前缀）或「自编辑」（手动输入完整编码）</div>
       </div>
       <SmallModal
         open={rollbackOpen}

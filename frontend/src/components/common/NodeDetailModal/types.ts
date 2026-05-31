@@ -96,6 +96,8 @@ export interface NodeDetailModalProps {
   styleNo?: string;
   /** 是否是样板生产（样板生产不显示菲号明细、扫码记录等） */
   isPatternProduction?: boolean;
+  /** 展示模式：modal（弹窗，默认）| drawer（侧滑） */
+  mode?: 'modal' | 'drawer';
   /** 额外数据（如采购进度信息、时间节点等） */
   extraData?: {
     procurementProgress?: {
@@ -115,4 +117,6 @@ export interface NodeDetailModalProps {
     receiver?: string;
   };
   onSaved?: () => void;
+  onOpenInspectDrawer?: (orderId: string) => void;
+  factoryType?: 'INTERNAL' | 'EXTERNAL' | string;
 }

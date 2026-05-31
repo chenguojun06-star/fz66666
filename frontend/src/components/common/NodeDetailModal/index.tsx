@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Alert, App, Button, Popconfirm, Space, Spin, Tabs, Tag } from 'antd';
+import { Alert, App, Button, Drawer, Popconfirm, Space, Spin, Tabs, Tag } from 'antd';
 import type { TabsProps } from 'antd';
 import { FileTextOutlined, ShoppingOutlined, UserOutlined, WalletOutlined } from '@ant-design/icons';
 import ResizableModal from '../ResizableModal';
@@ -26,8 +26,11 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
   unitPrice,
   processList = [],
   isPatternProduction = false,
+  mode = 'modal',
   extraData: _extraData,
   onSaved,
+  onOpenInspectDrawer,
+  factoryType,
 }) => {
   const { message } = App.useApp();
   const navigate = useNavigate();
@@ -265,169 +268,204 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
     currentNodeData.remark
   );
 
+  const titleContent = (
+    <Space>
+      <span>{nodeName} 详情</span>
+      {orderNo && <Tag color="blue">{orderNo}</Tag>}
+    </Space>
+  );
+
+  const footerContent = nodeTypeKey === 'procurement' ? null : (
+    <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+      <div>
+        {hasSettings && (
+          <Popconfirm
+            title="确认清空设置？"
+            description="清空后可在操作历史中查看记录，但设置内容将被删除"
+            onConfirm={handleClear}
+            okText="确认清空"
+            cancelText="取消"
+            okButtonProps={{ danger: true, type: 'default' }}
+          >
+            <Button danger loading={saving}>
+              清空设置
+            </Button>
+          </Popconfirm>
+        )}
+      </div>
+    </div>
+  );
+
+  const bodyContent = (
+    <Spin spinning={loading}>
+      {loadWarnings.length > 0 && (
+        <Alert
+          style={{ marginBottom: 8 }}
+          type="warning"
+          showIcon
+          title="部分数据加载失败"
+          description={loadWarnings.join('；')}
+        />
+      )}
+      {!isPatternProduction && orderId && (
+        <PredictionCard
+          predicting={predicting}
+          prediction={prediction}
+          orderId={orderId}
+          orderNo={orderSummary.orderNo || ''}
+          nodeName={nodeName}
+          delegateProcessName={String(currentNodeData.delegateProcessName || '').trim() || undefined}
+        />
+      )}
+      {(nodeTypeKey === 'cutting') && mode !== 'drawer' && (
+        <div style={{ marginBottom: 8 }}>
+          <Button
+            style={(nodeStats?.percent || 0) >= 100 ? { color: 'var(--color-text-tertiary)', borderColor: 'var(--color-border-antd)' } : {}}
+            onClick={() => navigate(`/production/cutting/task/${encodeURIComponent(orderSummary.orderNo || orderNo || '')}`)}
+          >
+             前往裁剪管理 →
+            {(nodeStats?.percent || 0) >= 100 && (
+              <span style={{ color: 'var(--color-text-tertiary)', marginLeft: 4 }}>（已完成）</span>
+            )}
+          </Button>
+        </div>
+      )}
+      {(nodeTypeKey === 'warehousing') && orderId && factoryType !== 'EXTERNAL' && (
+        <div style={{ marginBottom: 8 }}>
+          <Space>
+            {onOpenInspectDrawer && (
+              <Button
+                type="primary"
+                onClick={() => onOpenInspectDrawer(orderId)}
+              >
+                侧滑质检
+              </Button>
+            )}
+            {mode !== 'drawer' && (
+              <Button
+                style={(nodeStats?.percent || 0) >= 100 ? { color: 'var(--color-text-tertiary)', borderColor: 'var(--color-border-antd)' } : {}}
+                onClick={() => navigate(`/production/warehousing/inspect/${orderId}`)}
+              >
+                跳转详情页
+                {(nodeStats?.percent || 0) >= 100 && (
+                  <span style={{ color: 'var(--color-text-tertiary)', marginLeft: 4 }}>（已完成）</span>
+                )}
+              </Button>
+            )}
+          </Space>
+        </div>
+      )}
+      <Tabs
+        activeKey={activeTab}
+        onChange={setActiveTab}
+        items={(() => {
+          const isUnitPriceNode = typeof unitPrice === 'number';
+          const showProductionTabs = !isPatternProduction && !isUnitPriceNode;
+          const isProcurement = nodeTypeKey === 'procurement';
+          return [
+            isProcurement
+              ? {
+                  key: 'purchase',
+                  label: <span><ShoppingOutlined /> 面辅料采购</span>,
+                  children: (
+                    <InlinePurchasePanel
+                      orderId={orderId}
+                      orderNo={orderSummary.orderNo || orderNo}
+                    />
+                  ),
+                }
+              : {
+                  key: 'settings',
+                  label: <span><FileTextOutlined /> 工序委派</span>,
+                  children: (
+                    <NodeSettingsTab
+                      nodeName={nodeName}
+                      nodeStats={nodeStats}
+                      delegateProcessCode={delegateProcessCode}
+                      processList={processList}
+                      currentNodeData={currentNodeData}
+                      matchedProcess={matchedProcess}
+                      disableEdit={disableEdit}
+                      saving={saving}
+                      factories={factories || []}
+                      users={users || []}
+                      orderSummary={orderSummary}
+                      orderNo={orderNo ?? ''}
+                      unitPrice={unitPrice}
+                      cuttingSizeItems={cuttingSizeItems}
+                      updateNodeData={updateNodeData}
+                      handleFactoryChange={handleFactoryChange}
+                      handleSave={handleSave}
+                    />
+                  ),
+                },
+            showProductionTabs && {
+              key: 'operators',
+              label: <span><UserOutlined /> 操作员 ({operatorSummary.length})</span>,
+              children: <OperatorsTab operatorSummary={operatorSummary} />,
+            },
+            !isPatternProduction && !isProcurement && {
+              key: 'processTracking',
+              label: <span><WalletOutlined /> 工序跟踪（工资结算） ({processTrackingRecords.length})</span>,
+              children: (
+                <div>
+                  <div style={{ marginBottom: 8, textAlign: 'right' }}>
+                    <Button
+                      loading={repairLoading}
+                      onClick={handleRepairTracking}
+                      title="将已入库但跟踪记录为pending的历史数据补同步"
+                    >
+                      同步入库跟踪
+                    </Button>
+                  </div>
+                  <ProcessTrackingTable
+                    records={processTrackingRecords}
+                    loading={trackingLoading}
+                    orderId={orderId}
+                    orderNo={orderSummary.orderNo || orderNo}
+                    nodeType={nodeType}
+                    nodeName={nodeName}
+                    processList={processList.length > 0 ? processList : undefined}
+                    onUndoSuccess={handleUndoSuccess}
+                    onOpenInspectDrawer={onOpenInspectDrawer}
+                    factoryType={factoryType}
+                  />
+                </div>
+              ),
+            },
+          ].filter(Boolean) as NonNullable<TabsProps['items']>;
+        })()}
+      />
+    </Spin>
+  );
+
+  if (mode === 'drawer') {
+    return (
+      <Drawer
+        title={titleContent}
+        open={visible}
+        onClose={onClose}
+        size="large"
+        styles={{ wrapper: { width: '50%' }, body: { padding: 16 } }}
+        footer={footerContent || undefined}
+        destroyOnClose
+      >
+        {bodyContent}
+      </Drawer>
+    );
+  }
+
   return (
     <ResizableModal
-      title={
-        <Space>
-          <span>{nodeName} 详情</span>
-          {orderNo && <Tag color="blue">{orderNo}</Tag>}
-        </Space>
-      }
+      title={titleContent}
       open={visible}
       onCancel={onClose}
       className="node-detail-modal"
-      footer={nodeTypeKey === 'procurement' ? null : (
-        <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
-          <div>
-            {hasSettings && (
-              <Popconfirm
-                title="确认清空设置？"
-                description="清空后可在操作历史中查看记录，但设置内容将被删除"
-                onConfirm={handleClear}
-                okText="确认清空"
-                cancelText="取消"
-                okButtonProps={{ danger: true, type: 'default' }}
-              >
-                <Button danger loading={saving}>
-                  清空设置
-                </Button>
-              </Popconfirm>
-            )}
-          </div>
-        </div>
-      )}
+      footer={footerContent}
       width="85vw"
       initialHeight={Math.round(window.innerHeight * 0.82)}
     >
-      <Spin spinning={loading}>
-        {loadWarnings.length > 0 && (
-          <Alert
-            style={{ marginBottom: 8 }}
-            type="warning"
-            showIcon
-            title="部分数据加载失败"
-            description={loadWarnings.join('；')}
-          />
-        )}
-        {!isPatternProduction && orderId && (
-          <PredictionCard
-            predicting={predicting}
-            prediction={prediction}
-            orderId={orderId}
-            orderNo={orderSummary.orderNo || ''}
-            nodeName={nodeName}
-            delegateProcessName={String(currentNodeData.delegateProcessName || '').trim() || undefined}
-          />
-        )}
-        {(nodeTypeKey === 'cutting') && (
-          <div style={{ marginBottom: 8 }}>
-            <Button
-             
-              style={(nodeStats?.percent || 0) >= 100 ? { color: 'var(--color-text-tertiary)', borderColor: 'var(--color-border-antd)' } : {}}
-              onClick={() => navigate(`/production/cutting/task/${encodeURIComponent(orderSummary.orderNo || orderNo || '')}`)}
-            >
-               前往裁剪管理 →
-              {(nodeStats?.percent || 0) >= 100 && (
-                <span style={{ color: 'var(--color-text-tertiary)', marginLeft: 4 }}>（已完成）</span>
-              )}
-            </Button>
-          </div>
-        )}
-        {(nodeTypeKey === 'warehousing') && orderId && (
-          <div style={{ marginBottom: 8 }}>
-            <Button
-              style={(nodeStats?.percent || 0) >= 100 ? { color: 'var(--color-text-tertiary)', borderColor: 'var(--color-border-antd)' } : {}}
-              onClick={() => navigate(`/production/warehousing/inspect/${orderId}`)}
-            >
-              前往质检入库 →
-              {(nodeStats?.percent || 0) >= 100 && (
-                <span style={{ color: 'var(--color-text-tertiary)', marginLeft: 4 }}>（已完成）</span>
-              )}
-            </Button>
-          </div>
-        )}
-        <Tabs
-          activeKey={activeTab}
-          onChange={setActiveTab}
-         
-          items={(() => {
-            const isUnitPriceNode = typeof unitPrice === 'number';
-            const showProductionTabs = !isPatternProduction && !isUnitPriceNode;
-            const isProcurement = nodeTypeKey === 'procurement';
-            return [
-              isProcurement
-                ? {
-                    key: 'purchase',
-                    label: <span><ShoppingOutlined /> 面辅料采购</span>,
-                    children: (
-                      <InlinePurchasePanel
-                        orderId={orderId}
-                        orderNo={orderSummary.orderNo || orderNo}
-                      />
-                    ),
-                  }
-                : {
-                    key: 'settings',
-                    label: <span><FileTextOutlined /> 工序委派</span>,
-                    children: (
-                      <NodeSettingsTab
-                        nodeName={nodeName}
-                        nodeStats={nodeStats}
-                        delegateProcessCode={delegateProcessCode}
-                        processList={processList}
-                        currentNodeData={currentNodeData}
-                        matchedProcess={matchedProcess}
-                        disableEdit={disableEdit}
-                        saving={saving}
-                        factories={factories || []}
-                        users={users || []}
-                        orderSummary={orderSummary}
-                        orderNo={orderNo ?? ''}
-                        unitPrice={unitPrice}
-                        cuttingSizeItems={cuttingSizeItems}
-                        updateNodeData={updateNodeData}
-                        handleFactoryChange={handleFactoryChange}
-                        handleSave={handleSave}
-                      />
-                    ),
-                  },
-              showProductionTabs && {
-                key: 'operators',
-                label: <span><UserOutlined /> 操作员 ({operatorSummary.length})</span>,
-                children: <OperatorsTab operatorSummary={operatorSummary} />,
-              },
-              !isPatternProduction && !isProcurement && {
-                key: 'processTracking',
-                label: <span><WalletOutlined /> 工序跟踪（工资结算） ({processTrackingRecords.length})</span>,
-                children: (
-                  <div>
-                    <div style={{ marginBottom: 8, textAlign: 'right' }}>
-                      <Button
-                       
-                        loading={repairLoading}
-                        onClick={handleRepairTracking}
-                        title="将已入库但跟踪记录为pending的历史数据补同步"
-                      >
-                        同步入库跟踪
-                      </Button>
-                    </div>
-                    <ProcessTrackingTable
-                      records={processTrackingRecords}
-                      loading={trackingLoading}
-                      orderId={orderId}
-                      orderNo={orderSummary.orderNo || orderNo}
-                      nodeType={nodeType}
-                      nodeName={nodeName}
-                      processList={processList.length > 0 ? processList : undefined}
-                      onUndoSuccess={handleUndoSuccess}
-                    />
-                  </div>
-                ),
-              },
-            ].filter(Boolean) as NonNullable<TabsProps['items']>;
-          })()}
-        />
-      </Spin>
+      {bodyContent}
     </ResizableModal>
   );
 };

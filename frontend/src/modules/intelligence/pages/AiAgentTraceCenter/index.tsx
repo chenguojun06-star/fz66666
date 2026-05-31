@@ -337,7 +337,7 @@ const AiAgentTraceCenter: React.FC = () => {
             <Timeline
               items={(detail?.logs || []).map((item) => ({
                 color: item.status === 'FAILED' ? 'red' : item.status === 'SUCCESS' ? 'green' : 'blue',
-                children: (
+                content: (
                   <div>
                     <Space wrap>
                       <Typography.Text strong>{item.action || '未知动作'}</Typography.Text>

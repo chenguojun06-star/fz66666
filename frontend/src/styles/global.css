@@ -1197,7 +1197,7 @@ body {
   width: 100%;
   max-width: 100%;
   min-width: 0;
-  overflow: clip;
+  overflow: visible;
 }
 
 .resizable-table-shell .ant-table-wrapper {

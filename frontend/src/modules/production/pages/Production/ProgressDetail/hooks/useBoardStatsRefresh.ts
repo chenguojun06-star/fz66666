@@ -28,7 +28,7 @@ export const useBoardStatsRefresh = ({
 
   const [boardRefreshTick, setBoardRefreshTick] = useState(0);
   useEffect(() => {
-    const timer = setInterval(() => setBoardRefreshTick(t => t + 1), 2 * 60 * 1000);
+    const timer = setInterval(() => setBoardRefreshTick(t => t + 1), 30 * 1000);
     return () => clearInterval(timer);
   }, []);
 

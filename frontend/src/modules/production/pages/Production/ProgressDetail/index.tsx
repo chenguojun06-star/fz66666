@@ -11,6 +11,8 @@ import ProcessKanbanDrawer from './components/ProcessKanbanDrawer';
 import { useOrganizationFilterOptions } from '@/hooks/useOrganizationFilterOptions';
 import { useProductionBoardStore } from '@/stores';
 import { useProductionSmartQueue } from '../useProductionSmartQueue';
+import { useWebSocket, type WsMessage } from '@/hooks/useWebSocket';
+import { invalidateBoardStatsTimestamp } from './hooks/useBoardStats';
 import '../../../styles.css';
 
 import { defaultNodes, stripWarehousingNode, findPricingProcessForStage, getCloseMinRequired, getCurrentWorkflowNodeForOrder } from './utils';
@@ -112,6 +114,31 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     mergeBoardStatsForOrder, mergeBoardTimesForOrder,
     setBoardLoadingForOrder, mergeProcessDataForOrder,
   });
+
+  const { subscribe } = useWebSocket({
+    userId: user?.id,
+    tenantId: user?.tenantId,
+    enabled: !!user?.id,
+    token: localStorage.getItem('authToken') ?? '',
+  });
+
+  useEffect(() => {
+    const unsub = subscribe('order:progress:changed', (msg: WsMessage) => {
+      const payload = msg.payload as Record<string, unknown> | undefined;
+      const orderNo = String(payload?.orderNo || '').trim();
+      const progress = Number(payload?.progress ?? 0);
+      if (orderNo) {
+        const matchOrder = orders.find(o => o.orderNo === orderNo);
+        if (matchOrder?.id) {
+          invalidateBoardStatsTimestamp(matchOrder.id);
+        }
+        window.dispatchEvent(new CustomEvent('order:progress:changed', {
+          detail: { orderNo, progress, orderId: matchOrder?.id },
+        }));
+      }
+    });
+    return unsub;
+  }, [subscribe, orders]);
 
   const [activeOrder, setActiveOrder] = useState<ProductionOrder | null>(null);
   const [scanHistory, setScanHistory] = useState<ScanRecord[]>([]);

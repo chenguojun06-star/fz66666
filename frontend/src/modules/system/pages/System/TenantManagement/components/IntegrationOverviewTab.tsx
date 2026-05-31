@@ -145,7 +145,7 @@ const IntegrationOverviewTab: React.FC = () => {
                 items={allLogs.map((log, idx) => ({
                   key: idx,
                   color: log.result === 'SUCCESS' ? 'green' : 'red',
-                  children: (
+                  content: (
                     <div style={{ fontSize: 14 }}>
                       <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
                         <Tag color={log.direction === 'INBOUND' ? 'blue' : 'green'} style={{ fontSize: 14 }}>

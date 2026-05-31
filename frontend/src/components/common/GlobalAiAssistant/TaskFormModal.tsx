@@ -15,7 +15,7 @@ const MODULE_OPTS: { value: TaskModule; label: string }[] = [
 
 interface Props {
   task?: TaskItem | null;
-  onSave: (data: { title: string; description?: string; priority: string; module: string; orderNo?: string; endTime?: string }) => void;
+  onSave: (data: { title: string; description?: string; priority: string; module: string; orderNo?: string; styleNo?: string; endTime?: string }) => void;
   onDelete?: (id: string) => void;
   onCancel: () => void;
   saving?: boolean;
@@ -27,6 +27,7 @@ const TaskFormModal: React.FC<Props> = ({ task, onSave, onDelete, onCancel, savi
   const [priority, setPriority] = useState<TaskPriority>(task?.priority || 'medium');
   const [module, setModule] = useState<TaskModule>((task?.module as TaskModule) || 'production');
   const [orderNo, setOrderNo] = useState(task?.orderNo || '');
+  const [styleNo, setStyleNo] = useState(task?.styleNo || '');
   const [endTime, setEndTime] = useState(task?.endTime?.slice(0, 10) || '');
 
   useEffect(() => {
@@ -36,6 +37,7 @@ const TaskFormModal: React.FC<Props> = ({ task, onSave, onDelete, onCancel, savi
       setPriority(task.priority || 'medium');
       setModule((task.module as TaskModule) || 'production');
       setOrderNo(task.orderNo || '');
+      setStyleNo(task.styleNo || '');
       setEndTime(task.endTime?.slice(0, 10) || '');
     }
   }, [task]);
@@ -43,7 +45,15 @@ const TaskFormModal: React.FC<Props> = ({ task, onSave, onDelete, onCancel, savi
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
-    onSave({ title: title.trim(), description: desc.trim() || undefined, priority, module, orderNo: orderNo.trim() || undefined, endTime: endTime || undefined });
+    onSave({
+      title: title.trim(),
+      description: desc.trim() || undefined,
+      priority,
+      module,
+      orderNo: orderNo.trim() || undefined,
+      styleNo: styleNo.trim() || undefined,
+      endTime: endTime || undefined
+    });
   };
 
   return (
@@ -86,6 +96,11 @@ const TaskFormModal: React.FC<Props> = ({ task, onSave, onDelete, onCancel, savi
           <div className={styles.field}>
             <span className={styles.label}>关联订单号</span>
             <input className={styles.input} value={orderNo} onChange={e => setOrderNo(e.target.value)} placeholder="选填，如 PO-2024-001" />
+          </div>
+
+          <div className={styles.field}>
+            <span className={styles.label}>款号</span>
+            <input className={styles.input} value={styleNo} onChange={e => setStyleNo(e.target.value)} placeholder="选填，如 ST-2024-001" />
           </div>
 
           <div className={styles.field}>

@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useRef } from 'react';
-import { Card, Input, Form, InputNumber, Tooltip, Button, message, Modal, Space, Drawer } from 'antd';
+import { Card, Input, Form, InputNumber, Tooltip, Button, message, Modal, Space } from 'antd';
 import { useNavigate } from 'react-router-dom';
-import { QuestionCircleOutlined, InboxOutlined, FileSearchOutlined, ShopOutlined } from '@ant-design/icons';
+import { QuestionCircleOutlined, InboxOutlined, FileSearchOutlined, ShopOutlined, ShoppingCartOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
 import PageLayout from '@/components/common/PageLayout';
 import PageStatCards from '@/components/common/PageStatCards';
@@ -12,9 +12,9 @@ import MaterialTable from './components/MaterialTable';
 import PurchaseModal from './components/PurchaseModal';
 import MaterialPurchaseAIBanner from './components/MaterialPurchaseAIBanner';
 import MaterialQualityIssueModal from './components/MaterialQualityIssueModal';
-import MaterialPurchaseDetail from '../MaterialPurchaseDetail';
 import RemarkTimelineModal from '@/components/common/RemarkTimelineModal';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
+import { PurchaseCartDrawer } from '@/components/common/PurchaseCartDrawer';
 import '../../../styles.css';
 import { useMaterialPurchase } from './hooks/useMaterialPurchase';
 import { formatMaterialQuantity } from './utils';
@@ -71,16 +71,16 @@ const MaterialPurchase: React.FC = () => {
   const [qualityIssuePurchase, setQualityIssuePurchase] = useState<MaterialPurchaseType | null>(null);
   const [remarkOpen, setRemarkOpen] = useState(false);
   const [remarkOrderNo, setRemarkOrderNo] = useState('');
+  const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
 
-  const [detailDrawerVisible, setDetailDrawerVisible] = useState(false);
-  const [detailDrawerStyleNo, setDetailDrawerStyleNo] = useState('');
-  const [detailDrawerOrderNo, setDetailDrawerOrderNo] = useState('');
-
-  const openDetailDrawer = useCallback((styleNo: string, orderNo?: string) => {
-    setDetailDrawerStyleNo(styleNo);
-    setDetailDrawerOrderNo(orderNo || '');
-    setDetailDrawerVisible(true);
-  }, []);
+  const openDetailPage = useCallback((styleNo: string, orderNo?: string) => {
+    if (styleNo && styleNo !== '_') {
+      const qs = orderNo ? `?orderNo=${encodeURIComponent(orderNo)}` : '';
+      navigate(`/production/material/${encodeURIComponent(styleNo)}${qs}`);
+    } else if (orderNo) {
+      navigate(`/production/material/_?purchaseNo=${encodeURIComponent(orderNo)}`);
+    }
+  }, [navigate]);
 
   const handleWarehousePickFromDetail = useCallback(async (record: MaterialPurchaseType, pickQty: number) => {
     const purchaseId = String(record?.id || '').trim();
@@ -140,10 +140,10 @@ const MaterialPurchase: React.FC = () => {
     const styleNo = String(order.styleNo || '').trim();
     const orderNo = String(order.orderNo || '').trim();
     if (styleNo) {
-      openDetailDrawer(styleNo, orderNo);
+      openDetailPage(styleNo, orderNo);
     }
     setOrderPickerOpen(false);
-  }, [openDetailDrawer]);
+  }, [openDetailPage]);
 
   return (
     <>
@@ -266,9 +266,18 @@ const MaterialPurchase: React.FC = () => {
                         setQualityIssueOpen(true);
                       }}
                       isSupervisorOrAbove={isSupervisorOrAbove}
-                      onOpenDetail={openDetailDrawer}
+                      onOpenDetail={openDetailPage}
                     />
         </PageLayout>
+
+        <PurchaseCartDrawer
+          open={cartDrawerOpen}
+          onClose={() => setCartDrawerOpen(false)}
+          onConfirmSuccess={() => {
+            fetchMaterialPurchaseList();
+            reloadCurrentDetail();
+          }}
+        />
 
         <ResizableModal
           title="选择订单 — 新增物料采购"
@@ -672,23 +681,6 @@ const MaterialPurchase: React.FC = () => {
           canAddRemark={true}
         />
 
-        <Drawer
-          title="订单物料采购明细"
-          open={detailDrawerVisible}
-          onClose={() => setDetailDrawerVisible(false)}
-          width={isMobile ? '100%' : '90%'}
-          destroyOnHidden
-          styles={{ body: { padding: 0 } }}
-        >
-          {detailDrawerVisible && (
-            <MaterialPurchaseDetail
-              styleNo={detailDrawerStyleNo}
-              orderNo={detailDrawerOrderNo}
-              embedded
-              onClose={() => setDetailDrawerVisible(false)}
-            />
-          )}
-        </Drawer>
     </>
   );
 };

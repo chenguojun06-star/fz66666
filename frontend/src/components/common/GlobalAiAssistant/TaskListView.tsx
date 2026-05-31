@@ -63,6 +63,24 @@ const TaskListView: React.FC<Props> = ({ tasks, loading, onClaim, onComplete, on
     }
   };
 
+  // 获取订单关联状态标签
+  const getOrderLinkStatusLabel = (status?: string) => {
+    switch (status) {
+      case 'LINKED': return '已关联';
+      case 'ORDER_NOT_FOUND': return '订单未找到';
+      default: return '未关联';
+    }
+  };
+
+  // 获取订单关联状态颜色
+  const getOrderLinkStatusColor = (status?: string) => {
+    switch (status) {
+      case 'LINKED': return '#389e0d';
+      case 'ORDER_NOT_FOUND': return '#cf1322';
+      default: return '#8c8c8c';
+    }
+  };
+
   return (
     <div className={styles.container}>
       <div className={styles.toolbar}>
@@ -96,11 +114,25 @@ const TaskListView: React.FC<Props> = ({ tasks, loading, onClaim, onComplete, on
                 </span>
                 <span className={styles.moduleTag}>{MODULE_LABELS[task.module] || task.module}</span>
                 {isSystem && <span className={styles.sysTag}>系统</span>}
+                {task.orderLinkStatus && (
+                  <span className={styles.moduleTag} style={{ color: getOrderLinkStatusColor(task.orderLinkStatus), borderColor: getOrderLinkStatusColor(task.orderLinkStatus) }}>
+                    {getOrderLinkStatusLabel(task.orderLinkStatus)}
+                  </span>
+                )}
+                {task.progressChangeMonitorEnabled && <span className={styles.sysTag} style={{ background: '#e6f7ff', color: '#1890ff' }}>监控中</span>}
                 <span className={styles.taskTitle}>{task.title}</span>
               </div>
               <div className={styles.taskCardBottom}>
                 <div className={styles.taskMeta}>
                   {task.orderNo && <span>📦 {task.orderNo}</span>}
+                  {task.styleNo && <span>👗 {task.styleNo}</span>}
+                  {task.lastOrderProgress != null && (
+                    <span>📊 进度: {task.lastOrderProgress}%</span>
+                  )}
+                  {task.lastOrderStatus && <span>📍 {task.lastOrderStatus}</span>}
+                  {task.reminderCount != null && task.reminderCount > 0 && (
+                    <span>🔔 提醒: {task.reminderCount}次</span>
+                  )}
                   {task.assigneeName && <span>👤 {task.assigneeName}</span>}
                   {task.endTime && <span>📅 {task.endTime.slice(0, 10)}</span>}
                 </div>

@@ -504,7 +504,7 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
             <Alert
               type="info"
               showIcon
-              message="该订单尚未创建面辅料信息"
+              title="该订单尚未创建面辅料信息"
               description={isMultiColor
                 ? `订单包含 ${colorList.length} 种颜色（${colorList.join('、')}），需要为每种颜色分别创建对应的面辅料记录。`
                 : `请为订单创建面辅料信息（物料编码、名称、单位、供应商等），完善后才可进行采购。`

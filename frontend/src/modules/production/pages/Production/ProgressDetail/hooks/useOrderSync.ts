@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef } from 'react';
 import type { ProductionOrder } from '@/types/production';
 import { useSync } from '@/utils/syncManager';
+import { invalidateBoardStatsTimestamp } from './useBoardStats';
 
 type UseOrderSyncParams = {
   fetchOrders: (options?: { silent?: boolean }) => Promise<void>;
@@ -50,8 +51,12 @@ export const useOrderSync = ({
   useSync('progress-detail-order', fetchFn, () => {}, { interval: 30000, pauseOnHidden: true });
 
   useEffect(() => {
-    const handleProgressChanged = () => {
+    const handleProgressChanged = (event?: Event) => {
       if (syncingRef.current || orderSyncingRef.current) return;
+      const detail = (event as CustomEvent)?.detail;
+      if (detail?.orderId) {
+        invalidateBoardStatsTimestamp(detail.orderId);
+      }
       fetchFn();
     };
     window.addEventListener('order:progress:changed', handleProgressChanged);

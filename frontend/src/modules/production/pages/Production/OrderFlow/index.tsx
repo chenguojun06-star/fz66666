@@ -1,20 +1,21 @@
-import React, { useCallback, useState } from 'react';
-import { Alert, App, Button, Card, Col, Row, Space, Tag, Upload } from 'antd';
-import { CameraOutlined } from '@ant-design/icons';
+import React, { useState, useCallback } from 'react';
+import { Alert, App, Button, Card, Col, Row, Space, Tag, Badge, Input, Tooltip, Modal } from 'antd';
+import { MessageOutlined, EditOutlined, CheckOutlined, CloseOutlined } from '@ant-design/icons';
 import PageLayout from '@/components/common/PageLayout';
 import { toNumberSafe } from '@/utils/api';
 import { formatDateTime } from '@/utils/datetime';
 import { calcOrderProgress } from '@/modules/production/utils/calcOrderProgress';
-import { StyleCoverThumb, setStyleCoverOverride } from '@/components/StyleAssets';
+import { StyleCoverThumb } from '@/components/StyleAssets';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
+import OrderImageManager from '@/components/common/OrderImageManager';
+import RemarkTimelineModal from '@/components/common/RemarkTimelineModal';
+import { remarkApi } from '@/services/system/remarkApi';
 import '../../../styles.css';
 import { useOrderFlowData, orderStatusTag } from './useOrderFlowData';
 import FlowStepRenderer from './components/FlowStepRenderer';
-import api from '@/utils/api';
-import { RcFile } from 'antd/es/upload';
 
 const OrderFlow: React.FC = () => {
-  const { message } = App.useApp();
+  const { message, modal } = App.useApp();
   const {
     query, loading, data, order, isFactoryUser,
     smartError, showSmartErrorNotice, fetchFlow,
@@ -23,42 +24,87 @@ const OrderFlow: React.FC = () => {
     cuttingSizeItems, cuttingBundles, cuttingTasks, styleProcessDescriptionMap, secondaryProcessDescriptionMap,
   } = useOrderFlowData();
 
-  const [uploading, setUploading] = useState(false);
+  const orderNoForImage = query.orderNo || (order as any)?.orderNo || '';
 
-  const handleCoverUpload = useCallback(async (file: RcFile) => {
-    const styleId = (order as any)?.styleId;
-    if (!styleId) {
-      message.error('未关联款号，无法更新封面');
-      return;
-    }
-    setUploading(true);
+  const [remarkOpen, setRemarkOpen] = useState(false);
+  const [remarkCount, setRemarkCount] = useState(0);
+
+  const [editing, setEditing] = useState(false);
+  const [editReason, setEditReason] = useState('');
+
+  const recordAction = useCallback(async (action: string, reason: string) => {
+    const targetNo = orderNoForImage;
+    if (!targetNo) return;
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-      const uploadRes = await api.post<{ code: number; data: { id: string; fileUrl: string }; message?: string }>(
-        '/style/attachment/upload',
-        formData,
-        {
-          headers: { 'Content-Type': 'multipart/form-data' },
-          params: { styleId, bizType: 'cover' },
-        },
-      );
-      if (uploadRes.code !== 200 || !uploadRes.data) {
-        throw new Error(uploadRes.message || '上传失败');
-      }
-      const attachmentId = uploadRes.data.id;
-      const fileUrl = uploadRes.data.fileUrl;
+      await remarkApi.add({
+        targetType: 'order',
+        targetNo,
+        authorRole: action,
+        content: reason,
+      });
+    } catch { /* ignore */ }
+  }, [orderNoForImage]);
 
-      await api.post(`/style/attachment/${attachmentId}/set-cover`);
-      setStyleCoverOverride(styleId, undefined, fileUrl);
-      message.success('封面更新成功');
-      fetchFlow();
-    } catch (e: unknown) {
-      message.error(e instanceof Error ? e.message : '上传失败');
-    } finally {
-      setUploading(false);
-    }
-  }, [order, message, fetchFlow]);
+  const showReasonModal = useCallback((title: string, actionLabel: string, onConfirm: (reason: string) => void) => {
+    let reasonValue = '';
+    modal.confirm({
+      title,
+      width: 480,
+      content: (
+        <div style={{ marginTop: 12 }}>
+          <p style={{ marginBottom: 8, color: 'var(--color-text-secondary)' }}>请输入{actionLabel}原因（将记录到订单操作记录）：</p>
+          <Input.TextArea
+            id="action-reason-input"
+            rows={3}
+            maxLength={500}
+            showCount
+            placeholder={`请输入${actionLabel}原因...`}
+            onChange={(e) => { reasonValue = e.target.value; }}
+          />
+        </div>
+      ),
+      okText: '确认',
+      cancelText: '取消',
+      onOk: () => {
+        const reason = reasonValue?.trim();
+        if (!reason) {
+          message.warning('请输入操作原因');
+          return Promise.reject();
+        }
+        onConfirm(reason);
+      },
+    });
+  }, [modal, message]);
+
+  const handleStartEdit = () => {
+    showReasonModal('进入编辑模式', '编辑', (reason) => {
+      setEditReason(reason);
+      setEditing(true);
+      recordAction('开始编辑', reason);
+    });
+  };
+
+  const handleFinishEdit = async () => {
+    await recordAction('完成编辑', `[编辑完成] ${editReason}`);
+    setEditing(false);
+    setEditReason('');
+    fetchFlow();
+  };
+
+  const handleCancelEdit = async () => {
+    await recordAction('取消编辑', `[取消编辑] ${editReason}`);
+    setEditing(false);
+    setEditReason('');
+  };
+
+  React.useEffect(() => {
+    const targetNo = orderNoForImage;
+    if (!targetNo) return;
+    remarkApi.list({ targetType: 'order', targetNo }).then((res: any) => {
+      const list = (res as any)?.data || res || [];
+      setRemarkCount(Array.isArray(list) ? list.length : 0);
+    }).catch(() => {});
+  }, [orderNoForImage]);
 
   return (
     <>
@@ -68,6 +114,18 @@ const OrderFlow: React.FC = () => {
             <Space wrap>
               {query.orderNo ? <Tag>订单号：{query.orderNo}</Tag> : null}
               {query.styleNo ? <Tag>款号：{query.styleNo}</Tag> : null}
+              {editing ? (
+                <>
+                  <Tooltip title="完成编辑并刷新数据">
+                    <Button type="primary" size="small" icon={<CheckOutlined />} onClick={handleFinishEdit}>
+                      完成编辑
+                    </Button>
+                  </Tooltip>
+                  <Button size="small" icon={<CloseOutlined />} onClick={handleCancelEdit}>取消</Button>
+                </>
+              ) : (
+                <Button size="small" icon={<EditOutlined />} onClick={handleStartEdit}>编辑</Button>
+              )}
               <Button onClick={fetchFlow} loading={loading}>刷新数据</Button>
             </Space>
           }
@@ -86,18 +144,23 @@ const OrderFlow: React.FC = () => {
 
           <Card className="order-flow-detail" style={{ marginTop: 8 }} loading={loading}>
             <Row gutter={0} align="top" wrap={false}>
-              <Col flex="none" style={{ paddingRight: 20, flexShrink: 0, paddingTop: 2, textAlign: 'center' }}>
-                <StyleCoverThumb src={(order as any)?.styleCover} styleId={(order as any)?.styleId} size={80} borderRadius={8} />
-                <Upload
-                  accept="image/*"
-                  showUploadList={false}
-                  beforeUpload={(file) => { handleCoverUpload(file as RcFile); return false; }}
-                  disabled={uploading}
-                >
-                  <Button size="small" icon={<CameraOutlined />} loading={uploading} style={{ marginTop: 6, fontSize: 12 }}>
-                    封面
-                  </Button>
-                </Upload>
+              <Col flex="none" style={{ paddingRight: 20, flexShrink: 0, paddingTop: 2, textAlign: 'center', width: 340 }}>
+                <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'center' }}>
+                  <StyleCoverThumb src={(order as any)?.styleCover} styleId={(order as any)?.styleId} size={80} borderRadius={8} />
+                </div>
+                <OrderImageManager orderNo={orderNoForImage} editable={editing} />
+                <div style={{ marginTop: 8, display: 'flex', justifyContent: 'center' }}>
+                  <Badge count={remarkCount} size="small" offset={[4, -4]}>
+                    <Button
+                      size="small"
+                      icon={<MessageOutlined />}
+                      onClick={() => setRemarkOpen(true)}
+                      style={{ fontSize: 12 }}
+                    >
+                      备注
+                    </Button>
+                  </Badge>
+                </div>
               </Col>
               <Col flex="1" style={{ minWidth: 180, padding: '0 20px', borderLeft: '1px solid rgba(0,0,0,0.08)' }}>
                 <div style={{ fontSize: 14, fontWeight: 700, color: '#bbb', marginBottom: 8, letterSpacing: 1 }}>基本信息</div>
@@ -157,8 +220,19 @@ const OrderFlow: React.FC = () => {
             cuttingTasks={cuttingTasks ?? []}
             styleProcessDescriptionMap={styleProcessDescriptionMap}
             secondaryProcessDescriptionMap={secondaryProcessDescriptionMap ?? new Map<string, string>()}
+            editing={editing}
+            onStartEdit={handleStartEdit}
+            onFinishEdit={handleFinishEdit}
+            onCancelEdit={handleCancelEdit}
+            onRefresh={fetchFlow}
           />
         </PageLayout>
+        <RemarkTimelineModal
+          open={remarkOpen}
+          onClose={() => setRemarkOpen(false)}
+          targetType="order"
+          targetNo={orderNoForImage}
+        />
     </>
   );
 };

@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Drawer, Tabs, Spin, Tag, Progress, Switch, Button, Space, Input, Select,
-  Row, Col, Card, Statistic, message, Tooltip, Empty, Modal, InputNumber, Form, Badge, Checkbox, Radio
+  Row, Col, Card, Statistic, message, Tooltip, Empty, InputNumber, Form, Badge, Checkbox, Radio, Divider,
 } from 'antd';
 import {
   SafetyCertificateOutlined, CheckCircleOutlined, CloseCircleOutlined,
   LockOutlined, UnlockOutlined, ReloadOutlined, ToolOutlined,
   ExclamationCircleOutlined, AppstoreOutlined, SearchOutlined, FileTextOutlined,
+  ArrowLeftOutlined,
 } from '@ant-design/icons';
 import {
   getNodeStats, getProductionProcessTracking,
@@ -14,7 +15,6 @@ import {
 } from '@/utils/api/production';
 import { remarkApi } from '@/services/system/remarkApi';
 import type { OrderRemark } from '@/services/system/remarkApi';
-import ResizableModal from '@/components/common/ResizableModal';
 
 const RemarkTimelineContent: React.FC<{ targetType: string; targetNo: string; canAddRemark?: boolean }> = ({
   targetType, targetNo, canAddRemark = false,
@@ -236,12 +236,13 @@ const ProcessKanbanDrawer: React.FC<ProcessKanbanDrawerProps> = ({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [batchLoading, setBatchLoading] = useState(false);
 
-  const [qcModalVisible, setQcModalVisible] = useState(false);
   const [qcRecord, setQcRecord] = useState<TrackingRecord | null>(null);
   const [qcResult, setQcResult] = useState<'qualified' | 'unqualified'>('qualified');
   const [qcForm] = Form.useForm();
   const [submitting, setSubmitting] = useState(false);
-  const [remarkModalOpen, setRemarkModalOpen] = useState(false);
+  const [remarkPanelOpen, setRemarkPanelOpen] = useState(false);
+  const [batchQcMode, setBatchQcMode] = useState<false | 'qualified' | 'unqualified'>(false);
+  const [batchQcForm] = Form.useForm();
 
   const loadData = useCallback(async () => {
     if (!orderId) return;
@@ -291,7 +292,6 @@ const ProcessKanbanDrawer: React.FC<ProcessKanbanDrawerProps> = ({
       qualityRemark: undefined,
       lockBundle: false,
     });
-    setQcModalVisible(true);
   };
 
   const handleSubmitQuality = async () => {
@@ -339,7 +339,7 @@ const ProcessKanbanDrawer: React.FC<ProcessKanbanDrawerProps> = ({
       message.success(isUnqualified
         ? (values.lockBundle ? '质检不合格，已录入次品并锁定菲号' : '质检不合格，已录入次品')
         : '质检合格');
-      setQcModalVisible(false);
+      setQcRecord(null);
       loadData();
     } catch (e: any) {
       if (e?.message) message.error(e.message);
@@ -369,19 +369,13 @@ const ProcessKanbanDrawer: React.FC<ProcessKanbanDrawerProps> = ({
   };
 
   const handleRepairComplete = async (record: TrackingRecord) => {
-    Modal.confirm({
-      title: '确认返修完成',
-      content: `菲号#${record.bundleNo} ${record.processName} 确认返修完成？`,
-      onOk: async () => {
-        try {
-          await repairComplete(record.id);
-          message.success('返修完成，菲号进入待复检状态');
-          loadData();
-        } catch (e: any) {
-          message.error(e?.message || '操作失败');
-        }
-      },
-    });
+    try {
+      await repairComplete(record.id);
+      message.success('返修完成，菲号进入待复检状态');
+      loadData();
+    } catch (e: any) {
+      message.error(e?.message || '操作失败');
+    }
   };
 
   const handleBatchQualityPass = async () => {
@@ -389,26 +383,71 @@ const ProcessKanbanDrawer: React.FC<ProcessKanbanDrawerProps> = ({
       message.warning('请先勾选要质检的菲号');
       return;
     }
-    Modal.confirm({
-      title: `批量质检合格`,
-      content: `确认将选中的 ${selectedIds.size} 条菲号全部标记为质检合格？`,
-      okText: '确认全部合格',
-      okButtonProps: { danger: false },
-      onOk: async () => {
-        setBatchLoading(true);
+    setBatchLoading(true);
+    try {
+      const res = await batchQualityPass(Array.from(selectedIds));
+      const data = (res as any)?.data;
+      message.success(data?.message || '批量质检完成');
+      setSelectedIds(new Set());
+      setBatchQcMode(false);
+      loadData();
+    } catch (e: any) {
+      message.error(e?.message || '批量质检失败');
+    } finally {
+      setBatchLoading(false);
+    }
+  };
+
+  const handleBatchQualityUnqualified = async () => {
+    if (selectedIds.size === 0) {
+      message.warning('请先勾选要质检的菲号');
+      return;
+    }
+    try {
+      const values = await batchQcForm.validateFields();
+      const defectQty = values.defectQuantity || 0;
+      if (defectQty <= 0) {
+        message.error('次品数量必须大于0');
+        return;
+      }
+      setBatchLoading(true);
+      const ids = Array.from(selectedIds);
+      const results = await Promise.allSettled(
+        ids.map(id => qualityInspect({
+          trackingId: id,
+          defectQuantity: defectQty,
+          defectCategory: values.defectCategory,
+          defectProblems: values.defectProblems,
+          qualityRemark: values.qualityRemark,
+          lockBundle: values.lockBundle,
+        }))
+      );
+      const succeeded = results.filter(r => r.status === 'fulfilled').length;
+      const failed = results.filter(r => r.status === 'rejected').length;
+      if (failed === 0) {
+        message.success(`${succeeded} 条菲号全部标记为不合格`);
+      } else {
+        message.warning(`${succeeded} 条成功，${failed} 条失败`);
+      }
+      if (values.qualityRemark) {
         try {
-          const res = await batchQualityPass(Array.from(selectedIds));
-          const data = (res as any)?.data;
-          message.success(data?.message || '批量质检完成');
-          setSelectedIds(new Set());
-          loadData();
-        } catch (e: any) {
-          message.error(e?.message || '批量质检失败');
-        } finally {
-          setBatchLoading(false);
-        }
-      },
-    });
+          await remarkApi.add({
+            targetType: 'order',
+            targetNo: orderNo || '',
+            authorRole: '工序质检',
+            content: `[批量质检不合格] ${ids.length}条菲号: 次品${defectQty}件/条${values.defectProblems?.length ? '(' + values.defectProblems.join('、') + ')' : ''}${values.qualityRemark ? ' — ' + values.qualityRemark : ''}`,
+          });
+        } catch { /* ignore */ }
+      }
+      setSelectedIds(new Set());
+      setBatchQcMode(false);
+      batchQcForm.resetFields();
+      loadData();
+    } catch (e: any) {
+      if (e?.message) message.error(e.message);
+    } finally {
+      setBatchLoading(false);
+    }
   };
 
   const toggleSelect = (id: string) => {
@@ -529,15 +568,34 @@ const ProcessKanbanDrawer: React.FC<ProcessKanbanDrawerProps> = ({
               </Checkbox>
               {selectedIds.size > 0 && <span style={{ color: '#1890ff', fontWeight: 500 }}>已选 {selectedIds.size} 条</span>}
             </Space>
-            <Button
-              type="primary"
-              icon={<CheckCircleOutlined />}
-              onClick={handleBatchQualityPass}
-              loading={batchLoading}
-              disabled={selectedIds.size === 0}
-            >
-              批量合格 ({selectedIds.size})
-            </Button>
+            <Space>
+              <Button
+                type="primary"
+                icon={<CheckCircleOutlined />}
+                onClick={handleBatchQualityPass}
+                loading={batchLoading && batchQcMode === false}
+                disabled={selectedIds.size === 0}
+              >
+                批量合格 ({selectedIds.size})
+              </Button>
+              <Button
+                danger
+                icon={<CloseCircleOutlined />}
+                onClick={() => {
+                  setBatchQcMode('unqualified');
+                  batchQcForm.setFieldsValue({
+                    defectQuantity: undefined,
+                    defectCategory: undefined,
+                    defectProblems: undefined,
+                    qualityRemark: undefined,
+                    lockBundle: false,
+                  });
+                }}
+                disabled={selectedIds.size === 0}
+              >
+                批量不合格 ({selectedIds.size})
+              </Button>
+            </Space>
           </div>
         )}
 
@@ -656,9 +714,16 @@ const ProcessKanbanDrawer: React.FC<ProcessKanbanDrawerProps> = ({
                                 <Button icon={<ToolOutlined />} onClick={() => handleRepairComplete(r)}>返修完成</Button>
                               )}
                               {isRepairDone && (
-                                <Button type="primary" icon={<UnlockOutlined />} onClick={() => handleUnlock(r)}>
-                                  {isLocked ? '解锁验收' : '验收通过'}
+                                <Button type="primary" icon={<SafetyCertificateOutlined />} onClick={() => handleQualityInspect(r)}>
+                                  复检
                                 </Button>
+                              )}
+                              {isRepairDone && isLocked && (
+                                <Tooltip title="复检合格后自动解锁，也可手动解锁验收">
+                                  <Button icon={<UnlockOutlined />} onClick={() => handleUnlock(r)}>
+                                    手动解锁
+                                  </Button>
+                                </Tooltip>
                               )}
                               {isLocked && !isRepairDone && (
                                 <Tag icon={<LockOutlined />} color="error">已锁定</Tag>
@@ -726,106 +791,163 @@ const ProcessKanbanDrawer: React.FC<ProcessKanbanDrawerProps> = ({
           {orderNo && <Tag color="blue" style={{ fontSize: 14 }}>{orderNo}</Tag>}
         </Space>
       }
-      placement="right" size="large" open={visible} onClose={onClose}
+      placement="right" size={Math.round(window.innerWidth * 0.8)} open={visible} onClose={onClose}
       styles={{ body: { padding: '16px 20px' } }}
       extra={
         <Button icon={<ReloadOutlined />} onClick={loadData} loading={loading}>刷新</Button>
       }
     >
       <Spin spinning={loading}>
-        <Tabs activeKey={activeTab} onChange={setActiveTab} items={[
-          {
-            key: 'qc',
-            label: <Space><SafetyCertificateOutlined />菲号质检{pendingQc.length > 0 && <Badge count={pendingQc.length} />}</Space>,
-            children: renderQcTab(),
-          },
-          {
-            key: 'kanban',
-            label: <Space><AppstoreOutlined />工序看板</Space>,
-            children: renderKanban(),
-          },
-        ]} />
-      </Spin>
-
-      <ResizableModal
-        title={<Space><SafetyCertificateOutlined />工序质检 — 菲号#{qcRecord?.bundleNo} {qcRecord?.processName}</Space>}
-        open={qcModalVisible}
-        onCancel={() => setQcModalVisible(false)}
-        width="40vw"
-        initialHeight={Math.round(window.innerHeight * 0.72)}
-        footer={[
-          <Button key="cancel" onClick={() => setQcModalVisible(false)}>取消</Button>,
-          <Button key="submit" type="primary" onClick={handleSubmitQuality} loading={submitting}>提交质检结果</Button>,
-        ]}
-      >
-        {qcRecord && (
-          <div style={{ marginBottom: 12, padding: '10px 14px', background: '#f8f9fa', borderRadius: 8 }}>
-            <Row gutter={16}>
-              <Col span={8}><Statistic title="菲号" value={qcRecord.bundleNo} styles={{ content: { fontSize: 18 } }} /></Col>
-              <Col span={8}><Statistic title="总数量" value={qcRecord.quantity} styles={{ content: { fontSize: 18 } }} /></Col>
-              <Col span={8}><Statistic title="工序" value={qcRecord.processName} styles={{ content: { fontSize: 15 } }} /></Col>
-            </Row>
-            <div style={{ marginTop: 6, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                {qcRecord.color && <Tag>{qcRecord.color}</Tag>}
-                {qcRecord.size && <Tag>{qcRecord.size}</Tag>}
-                {qcRecord.progressStage && <Tag color={STAGE_COLORS[qcRecord.progressStage]}>{qcRecord.progressStage}</Tag>}
-              </div>
-              {orderNo && (
-                <Button type="link" icon={<FileTextOutlined />} onClick={() => setRemarkModalOpen(true)}>
-                  查看订单备注
-                </Button>
-              )}
+        {qcRecord ? (
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+              <Button type="link" icon={<ArrowLeftOutlined />} onClick={() => setQcRecord(null)} style={{ padding: 0 }}>
+                返回菲号列表
+              </Button>
+              <Divider orientation="vertical" />
+              <span style={{ fontWeight: 600, fontSize: 15 }}>
+                {qcRecord.repairStatus === 'repair_done' ? '复检' : '工序质检'} — 菲号#{qcRecord.bundleNo} {qcRecord.processName}
+              </span>
             </div>
-          </div>
-        )}
-        <Form form={qcForm} layout="vertical">
-          <Row gutter={12}>
-            <Col span={10}>
-              <Form.Item label="质检结果" required>
-                <Radio.Group
-                  value={qcResult}
-                  onChange={(e) => {
-                    setQcResult(e.target.value);
-                    if (e.target.value === 'qualified') {
-                      qcForm.setFieldsValue({ defectQuantity: 0, defectCategory: undefined, defectProblems: undefined, lockBundle: false });
-                    } else {
-                      qcForm.setFieldsValue({ defectQuantity: undefined });
-                    }
-                  }}
-                >
-                  <Radio.Button value="qualified">
-                    <CheckCircleOutlined style={{ color: '#52c41a' }} /> 合格
-                  </Radio.Button>
-                  <Radio.Button value="unqualified" style={qcResult === 'unqualified' ? { color: '#ff4d4f', borderColor: '#ff4d4f' } : { color: '#ff4d4f' }}>
-                    <CloseCircleOutlined /> 不合格
-                  </Radio.Button>
-                </Radio.Group>
-              </Form.Item>
-            </Col>
-            {qcResult === 'unqualified' && (
-              <Col span={14}>
-                <Form.Item name="defectQuantity" label="次品数量" rules={[{ required: true, message: '请输入' }]}>
-                  <InputNumber min={1} max={qcRecord?.quantity || 999} style={{ width: '100%' }} placeholder="次品数量" />
-                </Form.Item>
-              </Col>
-            )}
-          </Row>
-
-          {qcResult === 'unqualified' && (
-            <>
+            <div style={{ marginBottom: 12, padding: '10px 14px', background: '#f8f9fa', borderRadius: 8 }}>
+              <Row gutter={16}>
+                <Col span={8}><Statistic title="菲号" value={qcRecord.bundleNo} styles={{ content: { fontSize: 18 } }} /></Col>
+                <Col span={8}><Statistic title="总数量" value={qcRecord.quantity} styles={{ content: { fontSize: 18 } }} /></Col>
+                <Col span={8}><Statistic title="工序" value={qcRecord.processName} styles={{ content: { fontSize: 15 } }} /></Col>
+              </Row>
+              <div style={{ marginTop: 6, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  {qcRecord.color && <Tag>{qcRecord.color}</Tag>}
+                  {qcRecord.size && <Tag>{qcRecord.size}</Tag>}
+                  {qcRecord.progressStage && <Tag color={STAGE_COLORS[qcRecord.progressStage]}>{qcRecord.progressStage}</Tag>}
+                </div>
+                {orderNo && (
+                  <Button type="link" icon={<FileTextOutlined />} onClick={() => setRemarkPanelOpen(true)}>
+                    查看订单备注
+                  </Button>
+                )}
+              </div>
+            </div>
+            <Form form={qcForm} layout="vertical">
               <Row gutter={12}>
                 <Col span={10}>
+                  <Form.Item label="质检结果" required>
+                    <Radio.Group
+                      value={qcResult}
+                      onChange={(e) => {
+                        setQcResult(e.target.value);
+                        if (e.target.value === 'qualified') {
+                          qcForm.setFieldsValue({ defectQuantity: 0, defectCategory: undefined, defectProblems: undefined, lockBundle: false });
+                        } else {
+                          qcForm.setFieldsValue({ defectQuantity: undefined });
+                        }
+                      }}
+                    >
+                      <Radio.Button value="qualified">
+                        <CheckCircleOutlined style={{ color: '#52c41a' }} /> 合格
+                      </Radio.Button>
+                      <Radio.Button value="unqualified" style={qcResult === 'unqualified' ? { color: '#ff4d4f', borderColor: '#ff4d4f' } : { color: '#ff4d4f' }}>
+                        <CloseCircleOutlined /> 不合格
+                      </Radio.Button>
+                    </Radio.Group>
+                  </Form.Item>
+                </Col>
+                {qcResult === 'unqualified' && (
+                  <Col span={14}>
+                    <Form.Item name="defectQuantity" label="次品数量" rules={[{ required: true, message: '请输入' }]}>
+                      <InputNumber min={1} max={qcRecord?.quantity || 999} style={{ width: '100%' }} placeholder="次品数量" />
+                    </Form.Item>
+                  </Col>
+                )}
+              </Row>
+
+              {qcResult === 'unqualified' && (
+                <>
+                  <Row gutter={12}>
+                    <Col span={10}>
+                      <Form.Item name="defectCategory" label="缺陷分类" rules={[{ required: true, message: '请选择' }]}>
+                        <Select placeholder="选择分类" options={DEFECT_CATEGORIES} />
+                      </Form.Item>
+                    </Col>
+                    <Col span={14}>
+                      <Form.Item name="defectProblems" label="具体次品问题" rules={[{ required: true, message: '请选择' }]}>
+                        <Select
+                          mode="multiple"
+                          placeholder="选择次品问题"
+                          options={getDefectProblemsForProcess(qcRecord?.processName, qcRecord?.progressStage)}
+                          maxTagCount={3}
+                          allowClear
+                          showSearch
+                          optionFilterProp="label"
+                        />
+                      </Form.Item>
+                    </Col>
+                  </Row>
+                  <div style={{ padding: '8px 12px', border: '1px solid #ffccc7', borderRadius: 6, marginBottom: 12 }}>
+                    <Form.Item name="lockBundle" valuePropName="checked" style={{ marginBottom: 0 }}>
+                      <Space>
+                        <Switch checkedChildren={<LockOutlined />} unCheckedChildren={<UnlockOutlined />} />
+                        <span style={{ color: '#cf1322', fontWeight: 500 }}>锁定菲号，阻止下游扫码</span>
+                      </Space>
+                    </Form.Item>
+                  </div>
+                </>
+              )}
+
+              <Form.Item name="qualityRemark" label="备注" extra="备注将同步到订单备注">
+                <Input.TextArea rows={2} placeholder="可选，记录质检情况" />
+              </Form.Item>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 8 }}>
+                <Button onClick={() => setQcRecord(null)}>取消</Button>
+                <Button type="primary" onClick={handleSubmitQuality} loading={submitting}>提交质检结果</Button>
+              </div>
+            </Form>
+
+            {remarkPanelOpen && orderNo && (
+              <div style={{ marginTop: 16, borderTop: '1px solid var(--color-border-light)', paddingTop: 16 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                  <span style={{ fontWeight: 600 }}><FileTextOutlined style={{ marginRight: 6 }} />订单备注 — {orderNo}</span>
+                  <Button type="link" size="small" onClick={() => setRemarkPanelOpen(false)}>收起</Button>
+                </div>
+                <RemarkTimelineContent targetType="order" targetNo={orderNo} canAddRemark />
+              </div>
+            )}
+          </div>
+        ) : batchQcMode === 'unqualified' ? (
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+              <Button type="link" icon={<ArrowLeftOutlined />} onClick={() => setBatchQcMode(false)} style={{ padding: 0 }}>
+                返回菲号列表
+              </Button>
+              <Divider orientation="vertical" />
+              <span style={{ fontWeight: 600, fontSize: 15, color: '#cf1322' }}>
+                <CloseCircleOutlined style={{ marginRight: 4 }} />批量不合格 — 已选 {selectedIds.size} 条菲号
+              </span>
+            </div>
+            <div style={{ marginBottom: 12, padding: '10px 14px', background: '#fff2f0', borderRadius: 8, border: '1px solid #ffccc7' }}>
+              <span style={{ color: '#cf1322', fontWeight: 500 }}>
+                将对选中的 {selectedIds.size} 条菲号统一标记为不合格，请填写次品信息：
+              </span>
+            </div>
+            <Form form={batchQcForm} layout="vertical">
+              <Row gutter={12}>
+                <Col span={8}>
+                  <Form.Item name="defectQuantity" label="每条次品数量" rules={[{ required: true, message: '请输入' }]}>
+                    <InputNumber min={1} style={{ width: '100%' }} placeholder="每条菲号的次品数" />
+                  </Form.Item>
+                </Col>
+                <Col span={8}>
                   <Form.Item name="defectCategory" label="缺陷分类" rules={[{ required: true, message: '请选择' }]}>
                     <Select placeholder="选择分类" options={DEFECT_CATEGORIES} />
                   </Form.Item>
                 </Col>
-                <Col span={14}>
+                <Col span={8}>
                   <Form.Item name="defectProblems" label="具体次品问题" rules={[{ required: true, message: '请选择' }]}>
                     <Select
                       mode="multiple"
                       placeholder="选择次品问题"
-                      options={getDefectProblemsForProcess(qcRecord?.processName, qcRecord?.progressStage)}
+                      options={Object.values(STAGE_DEFECT_PROBLEMS).flat()}
                       maxTagCount={3}
                       allowClear
                       showSearch
@@ -842,26 +964,43 @@ const ProcessKanbanDrawer: React.FC<ProcessKanbanDrawerProps> = ({
                   </Space>
                 </Form.Item>
               </div>
-            </>
-          )}
-
-          <Form.Item name="qualityRemark" label="备注" extra="备注将同步到订单备注">
-            <Input.TextArea rows={2} placeholder="可选，记录质检情况" />
-          </Form.Item>
-        </Form>
-      </ResizableModal>
-      {orderNo && (
-        <ResizableModal
-          title={<Space><FileTextOutlined />订单备注 — {orderNo}</Space>}
-          open={remarkModalOpen}
-          onCancel={() => setRemarkModalOpen(false)}
-          width="40vw"
-          footer={null}
-          destroyOnHidden
-        >
-          <RemarkTimelineContent targetType="order" targetNo={orderNo} canAddRemark={false} />
-        </ResizableModal>
-      )}
+              <Form.Item name="qualityRemark" label="备注" extra="备注将同步到订单备注">
+                <Input.TextArea rows={2} placeholder="可选，记录质检情况" />
+              </Form.Item>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 8 }}>
+                <Button onClick={() => setBatchQcMode(false)}>取消</Button>
+                <Button danger type="primary" onClick={handleBatchQualityUnqualified} loading={batchLoading}>
+                  确认批量不合格 ({selectedIds.size})
+                </Button>
+              </div>
+            </Form>
+          </div>
+        ) : remarkPanelOpen && orderNo ? (
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+              <Button type="link" icon={<ArrowLeftOutlined />} onClick={() => setRemarkPanelOpen(false)} style={{ padding: 0 }}>
+                返回菲号列表
+              </Button>
+              <Divider orientation="vertical" />
+              <span style={{ fontWeight: 600, fontSize: 15 }}><FileTextOutlined style={{ marginRight: 6 }} />订单备注 — {orderNo}</span>
+            </div>
+            <RemarkTimelineContent targetType="order" targetNo={orderNo} canAddRemark />
+          </div>
+        ) : (
+          <Tabs activeKey={activeTab} onChange={setActiveTab} items={[
+            {
+              key: 'qc',
+              label: <Space><SafetyCertificateOutlined />菲号质检{pendingQc.length > 0 && <Badge count={pendingQc.length} />}</Space>,
+              children: renderQcTab(),
+            },
+            {
+              key: 'kanban',
+              label: <Space><AppstoreOutlined />工序看板</Space>,
+              children: renderKanban(),
+            },
+          ]} />
+        )}
+      </Spin>
     </Drawer>
   );
 };

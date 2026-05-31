@@ -1,5 +1,5 @@
 import React from 'react';
-import { Input } from 'antd';
+import { Input, Drawer } from 'antd';
 import { ExclamationCircleOutlined } from '@ant-design/icons';
 import QuickEditModal from '@/components/common/QuickEditModal';
 import StylePrintModal from '@/components/common/StylePrintModal';
@@ -12,6 +12,7 @@ import RemarkTimelineModal from '@/components/common/RemarkTimelineModal';
 import TransferOrderModal from '../TransferOrderModal';
 import ProcessDetailModal from '@/components/production/ProcessDetailModal';
 import NodeDetailModal from '@/components/common/NodeDetailModal';
+import { InspectionDetail } from '@/modules/production';
 import { ProductionOrder } from '@/types/production';
 import { parseProductionOrderLines } from '@/utils/api';
 import { safeString } from '../utils';
@@ -108,6 +109,10 @@ interface ProductionModalsProps {
   workflowEditorStyleNo?: string;
   closeWorkflowEditor: () => void;
   onWorkflowSaved: () => void;
+  onOpenInspectDrawer?: (orderId: string) => void;
+  inspectDrawerVisible: boolean;
+  inspectDrawerOrderId: string;
+  closeInspectDrawer: () => void;
 }
 
 const ProductionModals: React.FC<ProductionModalsProps> = ({
@@ -197,7 +202,12 @@ const ProductionModals: React.FC<ProductionModalsProps> = ({
   workflowEditorStyleNo,
   closeWorkflowEditor,
   onWorkflowSaved,
-}) => (
+  onOpenInspectDrawer,
+  inspectDrawerVisible,
+  inspectDrawerOrderId,
+  closeInspectDrawer,
+}) => {
+  return (
   <>
     <QuickEditModal
       visible={quickEditModal.visible}
@@ -253,7 +263,25 @@ const ProductionModals: React.FC<ProductionModalsProps> = ({
       unitPrice={nodeDetailUnitPrice}
       processList={nodeDetailProcessList}
       onSaved={() => { void fetchProductionList(); }}
+      onOpenInspectDrawer={onOpenInspectDrawer}
+      factoryType={nodeDetailOrder?.factoryType}
     />
+
+    <Drawer
+      title="质检入库"
+      open={inspectDrawerVisible}
+      onClose={closeInspectDrawer}
+      size="large"
+      styles={{ wrapper: { width: '90%' }, body: { padding: 0 } }}
+    >
+      {inspectDrawerVisible && (
+        <InspectionDetail
+          orderId={inspectDrawerOrderId}
+          embedded
+          onClose={closeInspectDrawer}
+        />
+      )}
+    </Drawer>
 
     <TransferOrderModal
       transferModalVisible={transferModalVisible}
@@ -384,6 +412,7 @@ const ProductionModals: React.FC<ProductionModalsProps> = ({
       onCancel={cancelScrapOrder}
     />
   </>
-);
+  );
+};
 
 export default ProductionModals;

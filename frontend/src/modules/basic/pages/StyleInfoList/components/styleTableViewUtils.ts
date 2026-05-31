@@ -37,6 +37,11 @@ export interface PatternProductionSnapshot {
   reviewTime: string;
   procurementProgress: number;
   progressNodes: Record<string, number>;
+  productionOrderId?: string;
+  color?: string;
+  quantity?: number;
+  colors?: string[];
+  sizeColorConfig?: string;
 }
 
 export interface StageQuickAction {
@@ -288,6 +293,39 @@ export const normalizePatternProductionSnapshot = (item: Record<string, unknown>
     progressNodes = rawProgressNodes as Record<string, number>;
   }
 
+  const rawColors = item.colors;
+  let colors: string[] = [];
+  if (Array.isArray(rawColors)) {
+    colors = rawColors.map(String).filter(Boolean);
+  } else if (typeof rawColors === 'string' && rawColors.trim()) {
+    try { colors = JSON.parse(rawColors); } catch { colors = []; }
+  }
+
+  if (colors.length === 0 && item.sizeColorConfig && typeof item.sizeColorConfig === 'string') {
+    try {
+      const config = JSON.parse(item.sizeColorConfig as string);
+      if (Array.isArray(config.colors)) {
+        colors = config.colors.map(String).filter(Boolean);
+      } else if (Array.isArray(config.matrixRows)) {
+        const colorSet = new Set<string>();
+        for (const row of config.matrixRows as any[]) {
+          if (row && row.color) colorSet.add(String(row.color));
+        }
+        colors = Array.from(colorSet);
+      }
+    } catch {}
+  }
+
+  if (colors.length === 0 && item.color && typeof item.color === 'string') {
+    const c = String(item.color).trim();
+    if (c) colors = [c];
+  }
+
+  let sizeColorConfig: string | undefined;
+  if (typeof item.sizeColorConfig === 'string') {
+    sizeColorConfig = item.sizeColorConfig;
+  }
+
   return {
     id: String(item.id || ''),
     status: String(item.status || ''),
@@ -300,6 +338,11 @@ export const normalizePatternProductionSnapshot = (item: Record<string, unknown>
     reviewTime: formatNodeTime(item.reviewTime),
     procurementProgress: clampPercent(Number((item.procurementProgress as Record<string, unknown> | undefined)?.percent || 0)),
     progressNodes,
+    productionOrderId: item.productionOrderId ? String(item.productionOrderId) : undefined,
+    color: item.color ? String(item.color) : undefined,
+    quantity: item.quantity != null ? Number(item.quantity) : undefined,
+    colors,
+    sizeColorConfig,
   };
 };
 

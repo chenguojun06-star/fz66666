@@ -56,6 +56,7 @@ export interface UseProductionColumnsProps {
   onOpenRemark?: (record: ProductionOrder, defaultRole?: string) => void;
   openWorkflowEditor?: (styleNo?: string) => void;
   getStageCompletionTime?: (record: ProductionOrder, stageKeyword: string, rate?: number) => string;
+  onOpenInspectDrawer?: (orderId: string) => void;
 }
 
 export function useProductionColumns({
@@ -73,6 +74,7 @@ export function useProductionColumns({
   onOpenRemark,
   openWorkflowEditor,
   getStageCompletionTime,
+  onOpenInspectDrawer,
 }: UseProductionColumnsProps) {
   const renderStageTime = (value: unknown) => value ? formatDateTime(value) : '-';
 
@@ -81,6 +83,7 @@ export function useProductionColumns({
     openProcessDetail,
     renderCompletionTimeTag,
     getStageCompletionTime,
+    onOpenInspectDrawer,
   };
 
   const allColumns = [

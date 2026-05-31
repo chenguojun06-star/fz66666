@@ -148,7 +148,7 @@ const ProgressPageContent: React.FC<ProgressPageContentProps> = ({
       <Alert
         type={type}
         showIcon
-        message={`${msg}${autoInfo}`}
+        title={`${msg}${autoInfo}`}
         style={{ marginBottom: 10 }}
         closable
       />

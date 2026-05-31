@@ -255,7 +255,7 @@ const WarehousingList: React.FC<WarehousingListProps> = ({ hook }) => {
         title="质检入库详情"
         open={inspectDrawerVisible}
         onClose={() => setInspectDrawerVisible(false)}
-        width={isMobile ? '100%' : '90%'}
+        size="large"
         destroyOnHidden
         styles={{ body: { padding: 0 } }}
       >

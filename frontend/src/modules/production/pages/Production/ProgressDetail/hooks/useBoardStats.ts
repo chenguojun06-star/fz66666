@@ -8,7 +8,7 @@ import type { ApiResult } from '@/utils/api';
  * boardStats 缓存 TTL：2 分钟后自动过期重新拉取。
  * 解决悬停卡/进度球在工厂扫码后数据不自动更新的问题。
  */
-const BOARD_STATS_TTL_MS = 2 * 60 * 1000;
+const BOARD_STATS_TTL_MS = 30 * 1000;
 
 /** 模块级时间戳缓存（不放 store 内，避免触发无关 re-render） */
 const fetchTimestamps = new Map<string, number>();
@@ -18,6 +18,11 @@ const silentRefreshInProgress = new Set<string>();
 
 /** 清空时间戳缓存 — 在调用 clearAllBoardCache() 时同步调用 */
 export const clearBoardStatsTimestamps = () => fetchTimestamps.clear();
+
+export const invalidateBoardStatsTimestamp = (orderId: string) => {
+  const oid = String(orderId || '').trim();
+  if (oid) fetchTimestamps.delete(oid);
+};
 
 interface EnsureBoardStatsArgs {
   order: ProductionOrder;

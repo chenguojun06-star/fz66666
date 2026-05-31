@@ -75,6 +75,17 @@ const ProductionList: React.FC = () => {
   const [workflowEditorVisible, setWorkflowEditorVisible] = useState(false);
   const [workflowEditorStyleNo, setWorkflowEditorStyleNo] = useState('');
 
+  const [inspectDrawerVisible, setInspectDrawerVisible] = useState(false);
+  const [inspectDrawerOrderId, setInspectDrawerOrderId] = useState('');
+  const openInspectDrawer = useCallback((orderId: string) => {
+    setInspectDrawerOrderId(orderId);
+    setInspectDrawerVisible(true);
+  }, []);
+  const closeInspectDrawer = useCallback(() => {
+    setInspectDrawerVisible(false);
+    setInspectDrawerOrderId('');
+  }, []);
+
     // ===== Hook 提取：进度/弹窗/打印/聚焦 =====
     const { nodeDetailVisible, nodeDetailOrder, nodeDetailType, nodeDetailName, nodeDetailStats, nodeDetailUnitPrice, nodeDetailProcessList, openNodeDetail, closeNodeDetail } = useNodeDetailModal();
     const { labelPrintOpen, closeLabelPrint, labelPrintOrder, labelPrintStyle, handlePrintLabel } = useLabelPrint();
@@ -188,6 +199,7 @@ const ProductionList: React.FC = () => {
       setWorkflowEditorVisible(true);
     },
     onOpenRemark: (record: ProductionOrder, defaultRole?: string) => setRemarkTarget({ open: true, orderNo: record.orderNo || '', defaultRole, merchandiser: record.merchandiser }),
+    onOpenInspectDrawer: openInspectDrawer,
   });
 
   // 根据 visibleColumns 过滤列
@@ -551,6 +563,10 @@ const ProductionList: React.FC = () => {
           workflowEditorStyleNo={workflowEditorStyleNo}
           closeWorkflowEditor={() => setWorkflowEditorVisible(false)}
           onWorkflowSaved={() => { void fetchProductionList(); }}
+          onOpenInspectDrawer={openInspectDrawer}
+          inspectDrawerVisible={inspectDrawerVisible}
+          inspectDrawerOrderId={inspectDrawerOrderId}
+          closeInspectDrawer={closeInspectDrawer}
         />
 
     </>

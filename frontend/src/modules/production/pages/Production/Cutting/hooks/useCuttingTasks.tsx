@@ -182,8 +182,8 @@ export function useCuttingTasks({ message, isEntryPage }: UseCuttingTasksOptions
   };
 
   // 领取任务
-  const handleReceiveTask = async (task: CuttingTask) => {
-    if (!task?.id) return;
+  const handleReceiveTask = async (task: CuttingTask): Promise<boolean> => {
+    if (!task?.id) return false;
     setReceiveTaskLoading(true);
     try {
       const payload = {
@@ -195,12 +195,15 @@ export function useCuttingTasks({ message, isEntryPage }: UseCuttingTasksOptions
       if (res.code === 200) {
         message.success('领取成功，请点击「进入」填写数量生成菲号');
         fetchTasks();
+        return true;
       } else {
         message.error(res.message || '领取任务失败');
+        return false;
       }
     } catch (err: unknown) {
       const errMsg = (err && typeof err === 'object' && 'response' in err ? (err as any)?.response?.data?.message : undefined) || (err instanceof Error ? err.message : '领取任务失败');
       message.error(errMsg);
+      return false;
     } finally {
       setReceiveTaskLoading(false);
     }

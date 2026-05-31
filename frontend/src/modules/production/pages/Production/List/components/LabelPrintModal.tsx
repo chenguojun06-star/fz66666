@@ -62,7 +62,7 @@ async function loadSkuRows(order: ProductionOrder): Promise<SkuRow[]> {
         const color = String(item.color ?? '');
         const size = String(item.size ?? '');
         const quantity = Number(item.quantity ?? 0);
-        const sku = String(item.sku ?? item.skuCode ?? `${order.styleNo || ''}-${color}-${size}`);
+        const sku = String(item.sku ?? item.skuCode ?? `${order.styleNo || ''}${color}${size}`);
         return { key: `${color}__${size}`, color, size, quantity, printCount: quantity, sku, styleImageUrl: order.styleCover || '', styleId: order.styleId || '', styleNo: order.styleNo || '' };
       });
     }
@@ -87,7 +87,7 @@ async function loadSkuRows(order: ProductionOrder): Promise<SkuRow[]> {
         size,
         quantity,
         printCount: quantity,
-        sku: String(item.skuNo || `${order.styleNo || ''}-${color}-${size}`),
+        sku: String(item.skuNo || `${order.styleNo || ''}${color}${size}`),
         styleImageUrl: order.styleCover || '',
         styleId: order.styleId || '',
         styleNo: order.styleNo || '',
@@ -101,7 +101,7 @@ async function loadSkuRows(order: ProductionOrder): Promise<SkuRow[]> {
     size: order.size || '-',
     quantity: order.orderQuantity || 0,
     printCount: order.orderQuantity || 0,
-    sku: `${order.styleNo || ''}-${order.color || ''}-${order.size || ''}`,
+    sku: `${order.styleNo || ''}${order.color || ''}${order.size || ''}`,
     styleImageUrl: order.styleCover || '',
     styleId: order.styleId || '',
     styleNo: order.styleNo || '',
@@ -276,7 +276,7 @@ async function printUCodeLabels(
       size: row.size,
       seq: i + 1,
       total,
-      qrContent: [styleNo, row.color, row.size].filter(Boolean).join('-'),
+      qrContent: [styleNo, row.color, row.size].filter(Boolean).join(''),
     }));
   });
 

@@ -24,14 +24,28 @@ const OrderImageManager: React.FC<OrderImageManagerProps> = ({ orderNo, editable
     setLoading(true);
     try {
       const res: any = await orderImageApi.list(orderNo);
-      const list = Array.isArray(res) ? res : Array.isArray(res?.data) ? res.data : [];
+      if (res && typeof res === 'object' && (res as any).code !== undefined && (res as any).code !== 200) {
+        setImages([]);
+        setLoading(false);
+        return;
+      }
+      let list: any[] = [];
+      if (Array.isArray(res)) {
+        list = res;
+      } else if (res && typeof res === 'object') {
+        if (Array.isArray((res as any).data)) {
+          list = (res as any).data;
+        } else if (Array.isArray((res as any).list)) {
+          list = (res as any).list;
+        }
+      }
       setImages(list);
     } catch {
-      message.error('加载图片失败');
+      setImages([]);
     } finally {
       setLoading(false);
     }
-  }, [orderNo, message]);
+  }, [orderNo]);
 
   useEffect(() => {
     fetchImages();
@@ -39,7 +53,11 @@ const OrderImageManager: React.FC<OrderImageManagerProps> = ({ orderNo, editable
 
   const handleUpload = async (url: string) => {
     try {
-      await orderImageApi.add(orderNo, url);
+      const result: any = await orderImageApi.add(orderNo, url);
+      if (result && typeof result === 'object' && (result as any).code !== undefined && (result as any).code !== 200) {
+        message.error((result as any).message || '添加图片失败');
+        return;
+      }
       message.success('图片已添加');
       fetchImages();
     } catch {
@@ -67,7 +85,20 @@ const OrderImageManager: React.FC<OrderImageManagerProps> = ({ orderNo, editable
     setHistoryOpen(true);
     try {
       const res: any = await orderImageApi.snapshots(orderNo);
-      const list = Array.isArray(res) ? res : Array.isArray(res?.data) ? res.data : [];
+      if (res && typeof res === 'object' && (res as any).code !== undefined && (res as any).code !== 200) {
+        setSnapshots([]);
+        return;
+      }
+      let list: any[] = [];
+      if (Array.isArray(res)) {
+        list = res;
+      } else if (res && typeof res === 'object') {
+        if (Array.isArray((res as any).data)) {
+          list = (res as any).data;
+        } else if (Array.isArray((res as any).list)) {
+          list = (res as any).list;
+        }
+      }
       setSnapshots(list);
     } catch {
       message.error('加载历史记录失败');

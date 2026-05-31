@@ -105,6 +105,18 @@ export function useTaskManager() {
     await fetchTasks();
   }, [fetchTasks]);
 
+  // 订单关联功能
+  const linkTaskToOrder = useCallback(async (taskId: string, orderNo: string) => {
+    await (intelligenceApi.linkTaskToOrder(taskId, orderNo) as any);
+    await fetchTasks();
+  }, [fetchTasks]);
+
+  // 刷新订单状态
+  const refreshTaskOrderStatus = useCallback(async (taskId: string) => {
+    await (intelligenceApi.refreshTaskOrderStatus(taskId) as any);
+    await fetchTasks();
+  }, [fetchTasks]);
+
   const startPolling = useCallback(() => {
     if (timerRef.current) clearInterval(timerRef.current);
     timerRef.current = setInterval(() => { void fetchTasks(); }, POLL_INTERVAL);
@@ -122,5 +134,10 @@ export function useTaskManager() {
     highPriority: tasks.filter(t => t.priority === 'high').length,
   };
 
-  return { tasks, loading, stats, fetchTasks, createTask, updateTask, deleteTask, claimTask, completeTask, startPolling, stopPolling };
+  return { 
+    tasks, loading, stats, 
+    fetchTasks, createTask, updateTask, deleteTask, claimTask, completeTask, 
+    linkTaskToOrder, refreshTaskOrderStatus,
+    startPolling, stopPolling 
+  };
 }

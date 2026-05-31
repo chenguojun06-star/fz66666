@@ -1299,3 +1299,96 @@
     display: none;
   }
 }
+
+/* ── 样衣生产行内展开 ── */
+.style-smart-row__sample-expanded {
+  margin: 8px 0 4px;
+  border-radius: 6px;
+  border: 1px solid rgba(37, 99, 235, 0.18);
+  background: var(--color-bg-container);
+  padding: 14px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.sample-stage-expanded {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.sample-stage-expanded__left,
+.sample-stage-expanded__right {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+.sample-stage-expanded__section {
+  background: var(--color-bg-base);
+  border-radius: 6px;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  padding: 12px 14px;
+}
+
+.sample-stage-expanded__section-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin-bottom: 10px;
+}
+
+.sample-stage-expanded__facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.sample-stage-expanded__fact {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sample-stage-expanded__fact-label {
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+}
+
+.sample-stage-expanded__fact-value {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.sample-stage-expanded__qr-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--color-border-light);
+  flex-wrap: wrap;
+}
+
+.sample-stage-expanded .ant-table {
+  font-size: 12px;
+}
+
+.sample-stage-expanded .ant-table-thead > tr > th {
+  font-size: 11px;
+  padding: 6px 8px;
+  background: var(--color-bg-stripe);
+}
+
+.sample-stage-expanded .ant-table-tbody > tr > td {
+  padding: 5px 8px;
+}
+
+@media (max-width: 1200px) {
+  .sample-stage-expanded {
+    grid-template-columns: 1fr;
+  }
+}

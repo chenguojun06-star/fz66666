@@ -484,10 +484,13 @@ const AppWrapper: React.FC = () => {
       componentSize={componentSize}
       getPopupContainer={(triggerNode) => {
         // Modal 内的弹出层锚定到 .ant-modal-body（保证定位正确、outside-click 不误关闭）
+        // Drawer 内的弹出层锚定到 .ant-drawer-content（避免被 Drawer mask 遮挡）
         // 其余情况统一用 document.body，避免 sticky 容器的 z-index 堆叠上下文导致下拉被遮挡
         if (triggerNode) {
           const modal = triggerNode.closest?.('.ant-modal-body') as HTMLElement | null;
           if (modal) return modal;
+          const drawer = triggerNode.closest?.('.ant-drawer-content') as HTMLElement | null;
+          if (drawer) return drawer;
         }
         return document.body;
       }}

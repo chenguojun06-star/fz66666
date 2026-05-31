@@ -21,6 +21,8 @@ const ProcessTrackingTable: React.FC<ProcessTrackingTableProps> = ({
   orderStatus,
   processList,
   onUndoSuccess,
+  onOpenInspectDrawer,
+  factoryType,
 }) => {
   const navigate = useNavigate();
   const [actioningRecordId, setActioningRecordId] = useState<string>('');
@@ -105,16 +107,28 @@ const ProcessTrackingTable: React.FC<ProcessTrackingTableProps> = ({
               当前筛选：<strong style={{ color: '#1f2937' }}>{nodeName || filterType}</strong>
             </span>
           )}
-          {isWarehousingType(filterType, nodeName) && orderId && (
-            <Button
-              type="link"
-              size="small"
-              icon={<SendOutlined />}
-              onClick={() => navigate(paths.warehousingInspect.replace(':orderId', orderId!))}
-              style={{ padding: 0, fontSize: 13 }}
-            >
-              前往质检入库
-            </Button>
+          {isWarehousingType(filterType, nodeName) && orderId && factoryType !== 'EXTERNAL' && (
+            <Space size="small">
+              {onOpenInspectDrawer && (
+                <Button
+                  type="link"
+                  size="small"
+                  onClick={() => onOpenInspectDrawer(orderId!)}
+                  style={{ padding: 0, fontSize: 13 }}
+                >
+                  侧滑质检
+                </Button>
+              )}
+              <Button
+                type="link"
+                size="small"
+                icon={<SendOutlined />}
+                onClick={() => navigate(paths.warehousingInspect.replace(':orderId', orderId!))}
+                style={{ padding: 0, fontSize: 13 }}
+              >
+                跳转详情页
+              </Button>
+            </Space>
           )}
           {completableCount > 0 && (
             <Popconfirm

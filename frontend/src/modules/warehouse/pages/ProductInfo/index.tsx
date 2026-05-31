@@ -367,7 +367,7 @@ const ProductInfoPage: React.FC = () => {
         title={d ? `${d.styleNo} — ${d.styleName}` : '成品详情'}
         open={drawerOpen}
         onClose={() => { setDrawerOpen(false); setDrawerRecord(null); setSkuList([]); }}
-        width="85vw"
+        size="large"
         loading={drawerLoading}
         extra={
           d ? (

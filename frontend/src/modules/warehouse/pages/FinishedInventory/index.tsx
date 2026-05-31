@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Card, Button, Space, Input, Select, App, Tabs, Row, Col } from 'antd';
+import { Card, Button, Space, Input, Select, App, Tabs, Row, Col, Drawer } from 'antd';
 import { HistoryOutlined, ScanOutlined, InboxOutlined } from '@ant-design/icons';
 import QrcodeOutboundModal from './QrcodeOutboundModal';
 import OutstockRecordTab from './OutstockRecordTab';
@@ -70,7 +70,7 @@ const _FinishedInventory: React.FC = () => {
               </>
             )}
           </StandardModal>
-          <StandardModal title={`入库记录 - ${inboundHistoryModal.data?.styleNo || ''}`} open={inboundHistoryModal.visible} onCancel={inboundHistoryModal.close} size="lg" footer={null}>
+          <Drawer title={`入库记录 - ${inboundHistoryModal.data?.styleNo || ''}`} open={inboundHistoryModal.visible} onClose={inboundHistoryModal.close} size="large" destroyOnClose styles={{ body: { padding: 16 }, wrapper: { width: '80%' } }}>
             {inboundHistoryModal.data && (
               <>
                 <Card style={{ marginBottom: 12 }}><Row gutter={16}><Col span={8}><div style={{ color: 'var(--color-text-tertiary)', fontSize: 14 }}>款号</div><div style={{ fontWeight: 600 }}>{inboundHistoryModal.data.styleNo || '-'}</div></Col><Col span={8}><div style={{ color: 'var(--color-text-tertiary)', fontSize: 14 }}>总入库量</div><div style={{ fontWeight: 600 }}>{inboundHistoryModal.data.totalInboundQty ?? 0} 件</div></Col><Col span={8}><div style={{ color: 'var(--color-text-tertiary)', fontSize: 14 }}>当前库存</div><div style={{ fontWeight: 600 }}>{inboundHistoryModal.data.availableQty ?? 0} 件</div></Col></Row></Card>
@@ -82,7 +82,7 @@ const _FinishedInventory: React.FC = () => {
                 </div>
               </>
             )}
-          </StandardModal>
+          </Drawer>
           <QrcodeOutboundModal open={qrcodeOutboundOpen} onClose={() => setQrcodeOutboundOpen(false)} onSuccess={() => { setQrcodeOutboundOpen(false); loadData(); }} />
           <ScanOperationModal open={scanOperationOpen} onClose={() => setScanOperationOpen(false)} onSuccess={() => { setScanOperationOpen(false); loadData(); }} />
           <FreeInboundModal open={freeInboundOpen} onClose={() => setFreeInboundOpen(false)} onSuccess={() => { setFreeInboundOpen(false); loadData(); }} /></>),

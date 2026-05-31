@@ -1,9 +1,8 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { Card, Spin, Button, Tabs, Alert, Descriptions, Tag, Image, Typography, Form } from 'antd';
+import { Card, Spin, Button, Tabs, Alert, Descriptions, Tag, Image, Typography, Form, Drawer } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
 import { ArrowLeftOutlined, CheckCircleOutlined, InboxOutlined } from '@ant-design/icons';
-import ResizableModal from '@/components/common/ResizableModal';
 import api, { type ApiResult, toNumberSafe, parseProductionOrderLines, fetchProductionOrderDetail } from '@/utils/api';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { getMaterialTypeLabel } from '@/utils/materialType';
@@ -80,7 +79,6 @@ const InspectionDetail: React.FC<InspectionDetailProps> = ({ orderId: propOrderI
   const [orderDetail, setOrderDetail] = useState<ProductionOrder | null>(null);
   const [orderDetailLoading, setOrderDetailLoading] = useState(false);
   const [bundles, setBundles] = useState<CuttingBundleRow[]>([]);
-  const [warehouseValue, setWarehouseValue] = useState('');
   const [warehousingLoading, setWarehousingLoading] = useState(false);
   const [showWarehousingModal, setShowWarehousingModal] = useState(false);
   const [markingRepairBundleId, setMarkingRepairBundleId] = useState<string | null>(null);
@@ -247,33 +245,21 @@ const InspectionDetail: React.FC<InspectionDetailProps> = ({ orderId: propOrderI
     return set;
   }, [qcRecords]);
 
-  const handleWarehouseSubmit = async (selectedIds?: string[]) => {
-    if (!warehouseValue) { message.error('请选择仓库'); return; }
+  const handleWarehouseSubmit = async (items: { id: string; warehouse: string }[]) => {
+    if (!items.length) return;
     if (!orderId) return;
     setWarehousingLoading(true);
     try {
-      const idSet = selectedIds ? new Set(selectedIds) : null;
-      const targets = qcRecords.filter(r => {
-        const qs = String(r.qualityStatus || '').trim().toLowerCase();
-        const wt = String((r as any)?.warehousingType || '').trim();
-        const wh = String(r.warehouse || '').trim();
-        if (wt === 'quality_scan_scrap' || wt === 'repair_return') return false;
-        if (wh && wh !== '待分配') return false;
-        if (idSet && !idSet.has(String(r.id))) return false;
-        return (!qs || qs === 'qualified') && Number(r.qualifiedQuantity || 0) > 0;
-      });
-      if (!targets.length) { message.info('暂无可入库的合格质检记录'); setWarehousingLoading(false); return; }
-
-      const queue = targets.slice();
       let failCount = 0;
       const failMessages: string[] = [];
+      const queue = items.slice();
       const workers = Array.from({ length: Math.min(5, queue.length) }).map(async () => {
         while (queue.length) {
-          const r = queue.shift();
-          if (!r) continue;
+          const item = queue.shift();
+          if (!item) continue;
           try {
             const res = await api.put<{ code: number; message: string; data: boolean }>(
-              '/production/warehousing', { id: r.id, warehouse: warehouseValue },
+              '/production/warehousing', { id: item.id, warehouse: item.warehouse },
             );
             if (res.code !== 200) {
               failCount++;
@@ -289,9 +275,8 @@ const InspectionDetail: React.FC<InspectionDetailProps> = ({ orderId: propOrderI
       });
       await Promise.all(workers);
       if (failCount === 0) message.success('入库完成');
-      else if (failCount < targets.length) message.warning(`部分入库成功（${targets.length - failCount}/${targets.length}），失败原因：${failMessages.join('；')}`);
+      else if (failCount < items.length) message.warning(`部分入库成功（${items.length - failCount}/${items.length}），失败原因：${failMessages.join('；')}`);
       else message.error(`入库失败：${failMessages.join('；')}`);
-      setWarehouseValue('');
       fetchQcRecords();
     } catch (e: unknown) {
       message.error(e instanceof Error ? e.message : '入库失败');
@@ -480,23 +465,19 @@ const InspectionDetail: React.FC<InspectionDetailProps> = ({ orderId: propOrderI
         </div>
       </div>
 
-      <ResizableModal
+      <Drawer
         title="入库操作"
         open={showWarehousingModal}
-        onCancel={() => setShowWarehousingModal(false)}
-        footer={null}
-        width="85vw"
-        initialHeight={Math.round(window.innerHeight * 0.82)}
-        destroyOnHidden
+        onClose={() => setShowWarehousingModal(false)}
+        size="large"
+        styles={{ wrapper: { width: '80%' }, body: { padding: 16 } }}
       >
         <WarehousingActionPanel
           qcRecords={qcRecords}
-          warehouseValue={warehouseValue}
-          setWarehouseValue={setWarehouseValue}
           warehousingLoading={warehousingLoading}
           onSubmit={handleWarehouseSubmit}
         />
-      </ResizableModal>
+      </Drawer>
 
       <BatchUnqualifiedModal
         open={batchUnqualifiedModalOpen}

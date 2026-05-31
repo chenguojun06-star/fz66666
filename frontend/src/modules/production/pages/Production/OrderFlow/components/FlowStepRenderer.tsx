@@ -1,5 +1,6 @@
-import React from 'react';
-import { Alert, Card, Tabs } from 'antd';
+import React, { useCallback, useEffect, useState } from 'react';
+import { Alert, App, Button, Card, Space, Tabs, Tooltip, Timeline, Empty, Input, Image } from 'antd';
+import { PlusOutlined, ThunderboltOutlined, EditOutlined, CheckOutlined, CloseOutlined, HistoryOutlined, UserOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
 import SupplierNameTooltip from '@/components/common/SupplierNameTooltip';
 import { formatProcessDisplayName } from '@/utils/productionStage';
@@ -12,6 +13,9 @@ import { formatMoney } from '@/utils/format';
 import { toNumberSafe } from '@/utils/api';
 import { formatDateTime } from '@/utils/datetime';
 import type { CuttingBundle, CuttingTask } from '@/types/production';
+import api from '@/utils/api';
+import { remarkApi, type OrderRemark } from '@/services/system/remarkApi';
+import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 
 interface Props {
   loading: boolean;
@@ -27,15 +31,207 @@ interface Props {
   cuttingTasks: CuttingTask[];
   styleProcessDescriptionMap: Map<string, string>;
   secondaryProcessDescriptionMap: Map<string, string>;
+  editing: boolean;
+  onStartEdit: () => void;
+  onFinishEdit: () => void;
+  onCancelEdit: () => void;
+  onRefresh?: () => void;
 }
+
+const BUNDLE_STATUS_MAP: Record<string, { text: string; color: string }> = {
+  created: { text: '已创建', color: 'default' },
+  active: { text: '有效', color: 'success' },
+  qualified: { text: '合格', color: 'success' },
+  unqualified: { text: '不合格', color: 'error' },
+  inactive: { text: '无效', color: 'default' },
+  split: { text: '已拆分', color: 'processing' },
+  pending: { text: '待处理', color: 'default' },
+  in_progress: { text: '进行中', color: 'processing' },
+  completed: { text: '已完成', color: 'success' },
+};
+
+const TASK_STATUS_MAP: Record<string, { text: string; color: string }> = {
+  pending: { text: '待裁剪', color: 'default' },
+  in_progress: { text: '裁剪中', color: 'processing' },
+  completed: { text: '已完成', color: 'success' },
+  bundled: { text: '已打扎', color: 'success' },
+};
+
+const StatusTag: React.FC<{ status: string; map: Record<string, { text: string; color: string }> }> = ({ status, map }) => {
+  const s = map[status] || { text: status || '未知', color: 'default' };
+  return <span style={{ padding: '1px 6px', borderRadius: 3, fontSize: 14, background: `var(--ant-${s.color}-1, #f0f0f0)`, color: `var(--ant-${s.color}-6, #333)` }}>{s.text}</span>;
+};
 
 const FlowStepRenderer: React.FC<Props> = ({
   loading, data, isFactoryUser,
   enrichedStages, stageColumns, orderLines, orderLineColumns,
   cuttingSizeItems, cuttingBundles, cuttingTasks, styleProcessDescriptionMap, secondaryProcessDescriptionMap,
+  editing, onStartEdit, onFinishEdit, onCancelEdit,
+  onRefresh,
 }) => {
+  const { message, modal } = App.useApp();
+  const bomList = data?.bomList || [];
+  const materialPurchases = data?.materialPurchases || [];
+  const orderId = data?.order?.id || '';
+  const orderNo = data?.order?.orderNo || '';
+  const [generating, setGenerating] = useState(false);
+  const [remarks, setRemarks] = useState<OrderRemark[]>([]);
+  const [remarksLoading, setRemarksLoading] = useState(false);
+  const [newRemark, setNewRemark] = useState('');
+
+  const fetchRemarks = useCallback(async () => {
+    if (!orderNo) return;
+    setRemarksLoading(true);
+    try {
+      const res = await remarkApi.list({ targetType: 'order', targetNo: orderNo });
+      const list = (res as any)?.data || res || [];
+      setRemarks(Array.isArray(list) ? list : []);
+    } catch { setRemarks([]); }
+    finally { setRemarksLoading(false); }
+  }, [orderNo]);
+
+  useEffect(() => { fetchRemarks(); }, [fetchRemarks]);
+
+  const recordAction = useCallback(async (action: string, reason: string) => {
+    if (!orderNo) return;
+    try {
+      await remarkApi.add({
+        targetType: 'order',
+        targetNo: orderNo,
+        authorRole: action,
+        content: reason,
+      });
+      fetchRemarks();
+    } catch { /* ignore */ }
+  }, [orderNo, fetchRemarks]);
+
+  const showReasonModal = useCallback((title: string, actionLabel: string, onConfirm: (reason: string) => void) => {
+    let reasonValue = '';
+    modal.confirm({
+      title,
+      width: 480,
+      content: (
+        <div style={{ marginTop: 12 }}>
+          <p style={{ marginBottom: 8, color: 'var(--color-text-secondary)' }}>请输入{actionLabel}原因（将记录到订单操作记录）：</p>
+          <Input.TextArea
+            id="action-reason-input"
+            rows={3}
+            maxLength={500}
+            showCount
+            placeholder={`请输入${actionLabel}原因...`}
+            onChange={(e) => { reasonValue = e.target.value; }}
+          />
+        </div>
+      ),
+      okText: '确认',
+      cancelText: '取消',
+      onOk: () => {
+        const reason = reasonValue?.trim();
+        if (!reason) {
+          message.warning('请输入操作原因');
+          return Promise.reject();
+        }
+        onConfirm(reason);
+      },
+    });
+  }, [modal, message]);
+
+  const handleGenerateFromBom = async (reason: string) => {
+    if (!orderId) { message.error('缺少订单ID'); return; }
+    setGenerating(true);
+    try {
+      const res = await api.post('/production/material-purchase/demand/generate', { orderId });
+      if (res?.code === 200 || res?.data) {
+        await recordAction('从BOM生成采购', reason);
+        message.success('已从BOM生成采购数据');
+        onRefresh?.();
+      } else {
+        message.error(res?.message || '生成失败');
+      }
+    } catch (e: unknown) {
+      message.error(e instanceof Error ? e.message : '生成采购数据失败');
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const handleStartEdit = () => {
+    onStartEdit();
+  };
+
+  const handleFinishEdit = async () => {
+    onFinishEdit();
+  };
+
+  const handleCancelEdit = async () => {
+    onCancelEdit();
+  };
+
+  const handleAddRemark = async () => {
+    const content = newRemark.trim();
+    if (!content) { message.warning('请输入备注内容'); return; }
+    try {
+      await remarkApi.add({ targetType: 'order', targetNo: orderNo, content });
+      setNewRemark('');
+      fetchRemarks();
+      message.success('备注已添加');
+    } catch { message.error('添加备注失败'); }
+  };
+
+  const taskReceiverName = cuttingTasks?.[0]?.receiverName || '';
+
+  const bomColumns = [
+    { title: '序号', key: 'index', width: 60, align: 'center' as const, render: (_: any, __: any, index: number) => index + 1 },
+    { title: '分组', dataIndex: 'groupName', key: 'groupName', width: 100, render: (v: any) => v || '-' },
+    { title: '物料类型', dataIndex: 'materialType', key: 'materialType', width: 100, render: (v: any) => getMaterialTypeLabel(v) },
+    { title: '物料编码', dataIndex: 'materialCode', key: 'materialCode', width: 120, render: (v: any) => v || '-' },
+    { title: '物料名称', dataIndex: 'materialName', key: 'materialName', width: 180, ellipsis: true, render: (v: any) => v || '-' },
+    { title: '规格/幅宽', dataIndex: 'specification', key: 'specification', width: 120, ellipsis: true, render: (v: any) => v || '-' },
+    { title: '颜色', dataIndex: 'color', key: 'color', width: 80, render: (v: any) => v || '-' },
+    { title: '尺码用量', key: 'sizeUsage', width: 220, render: (_: any, record: any) => {
+      if (record.sizeUsageMap) {
+        try {
+          const map: Record<string, string> = JSON.parse(record.sizeUsageMap);
+          const entries = Object.entries(map);
+          if (entries.length > 0) return <div style={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>{entries.map(([sz, usage]) => <span key={sz} style={{ fontSize: 14, background: '#f0f0f0', padding: '0 4px', borderRadius: 2 }}>{sz}: {Number(usage).toFixed(2)}{record.unit || ''}</span>)}</div>;
+        } catch { /* ignore */ }
+      }
+      return <span style={{ color: 'var(--color-text-tertiary)' }}>{record.size || '-'}</span>;
+    }},
+    { title: '单件用量', dataIndex: 'usageAmount', key: 'usageAmount', width: 100, align: 'right' as const, render: (v: any, record: any) => v ? `${Number(v).toFixed(2)} ${record.unit || ''}` : '-' },
+    { title: '损耗率', dataIndex: 'lossRate', key: 'lossRate', width: 80, align: 'right' as const, render: (v: any) => v ? `${Number(v)}%` : '-' },
+    ...(!isFactoryUser ? [
+      { title: '单价', dataIndex: 'unitPrice', key: 'unitPrice', width: 90, align: 'right' as const, render: (v: any) => v ? formatMoney(Number(v)) : '-' },
+      { title: '总价', key: 'totalPrice', width: 100, align: 'right' as const, render: (_: any, record: any) => {
+        const total = Number(record.totalPrice || 0) || (Number(record.usageAmount || 0) * Number(record.unitPrice || 0));
+        return total > 0 ? <strong style={{ color: 'var(--primary-color)' }}>{formatMoney(total)}</strong> : '-';
+      }},
+    ] : []),
+    { title: '供应商', dataIndex: 'supplier', key: 'supplier', width: 120, ellipsis: true, render: (v: any) => v || '-' },
+    { title: '备注', dataIndex: 'remark', key: 'remark', width: 150, ellipsis: true, render: (v: any) => v || '-' },
+  ];
+
+  const remarkCount = remarks.length;
+
   return (
-    <Card className="order-flow-tabs-card" style={{ marginTop: 8 }} loading={loading}>
+    <Card className="order-flow-tabs-card" style={{ marginTop: 8 }} loading={loading}
+      extra={
+        <Space>
+          {editing ? (
+            <>
+              <Tooltip title="完成编辑并记录备注">
+                <Button type="primary" size="small" icon={<CheckOutlined />} onClick={handleFinishEdit}>
+                  完成编辑
+                </Button>
+              </Tooltip>
+              <Button size="small" icon={<CloseOutlined />} onClick={handleCancelEdit}>取消</Button>
+            </>
+          ) : (
+            <Button size="small" icon={<EditOutlined />} onClick={handleStartEdit}>编辑</Button>
+          )}
+        </Space>
+      }
+    >
       <Tabs
         items={[
           {
@@ -73,11 +269,7 @@ const FlowStepRenderer: React.FC<Props> = ({
                           { title: '扎数', dataIndex: 'cuttingBundleCount', key: 'cuttingBundleCount', width: 80, align: 'right' as const, render: (v: any) => toNumberSafe(v) },
                           { title: '操作人', dataIndex: 'receiverName', key: 'receiverName', width: 120, render: (v: any) => v || '-' },
                           { title: '完成时间', dataIndex: 'bundledTime', key: 'bundledTime', width: 170, render: (v: any, record: any) => v ? formatDateTime(v) : (record?.createTime ? formatDateTime(record.createTime) : '-') },
-                          { title: '状态', dataIndex: 'status', key: 'status', width: 100, render: (v: any) => {
-                            const m: Record<string, { text: string; color: string }> = { pending: { text: '待裁剪', color: 'default' }, in_progress: { text: '裁剪中', color: 'processing' }, completed: { text: '已完成', color: 'success' }, bundled: { text: '已打扎', color: 'success' } };
-                            const s = m[v] || { text: v || '未知', color: 'default' };
-                            return <span style={{ padding: '1px 6px', borderRadius: 3, fontSize: 14, background: `var(--ant-${s.color}-1, #f0f0f0)`, color: `var(--ant-${s.color}-6, #333)` }}>{s.text}</span>;
-                          }},
+                          { title: '状态', dataIndex: 'status', key: 'status', width: 100, render: (v: any) => <StatusTag status={v} map={TASK_STATUS_MAP} /> },
                         ]} pagination={false} scroll={{ x: 670 }} />
                     </Card>
                   )}
@@ -95,13 +287,13 @@ const FlowStepRenderer: React.FC<Props> = ({
                       { title: '颜色', dataIndex: 'color', key: 'color', width: 100, render: (v: any) => String(v || '').trim() || '-' },
                       { title: '尺码', dataIndex: 'size', key: 'size', width: 80 },
                       { title: '数量', dataIndex: 'quantity', key: 'quantity', width: 80, align: 'right' as const, render: (v: any) => toNumberSafe(v) },
-                      { title: '状态', dataIndex: 'status', key: 'status', width: 100, render: (v: any) => {
-                        const m: Record<string, { text: string; color: string }> = { active: { text: '有效', color: 'success' }, inactive: { text: '无效', color: 'default' }, split: { text: '已拆分', color: 'processing' } };
-                        const s = m[v] || { text: v || '未知', color: 'default' };
-                        return <span style={{ padding: '1px 6px', borderRadius: 3, fontSize: 14, background: `var(--ant-${s.color}-1, #f0f0f0)`, color: `var(--ant-${s.color}-6, #333)` }}>{s.text}</span>;
-                      }},
+                      { title: '状态', dataIndex: 'status', key: 'status', width: 100, render: (v: any) => <StatusTag status={v} map={BUNDLE_STATUS_MAP} /> },
                       { title: '创建时间', dataIndex: 'createTime', key: 'createTime', width: 170, render: (v: any) => v ? formatDateTime(v) : '-' },
-                      { title: '操作人', dataIndex: 'operatorName', key: 'operatorName', width: 120, render: (v: any, record: any) => v || record?.creatorName || '-' },
+                      { title: '操作人', key: 'operatorDisplay', width: 120, render: (_: any, record: any) => {
+                        const opName = record.operatorName || record.creatorName;
+                        if (taskReceiverName && (!opName || opName === '系统管理员')) return taskReceiverName;
+                        return opName || '-';
+                      }},
                     ]} pagination={false} scroll={{ x: 1020 }} />
                 </div>
               ),
@@ -122,6 +314,26 @@ const FlowStepRenderer: React.FC<Props> = ({
             ),
           }] : []),
           ...(data?.order?.styleId ? [
+            {
+              key: 'bom',
+              label: `BOM清单${bomList.length ? ` (${bomList.length})` : ''}`,
+              children: bomList.length > 0 ? (
+                <>
+                  <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'flex-end' }}>
+                    <Button type="primary" icon={<ThunderboltOutlined />} loading={generating}
+                      onClick={() => showReasonModal('从BOM生成采购', '生成采购', (reason) => handleGenerateFromBom(reason))}
+                    >
+                      从BOM生成采购
+                    </Button>
+                  </div>
+                  <ResizableTable storageKey="order-flow-bom" size="small"
+                    dataSource={bomList}
+                    rowKey={(r: any) => r.id || `bom-${Math.random()}`}
+                    columns={bomColumns}
+                    pagination={false} bordered scroll={{ x: 'max-content' }} />
+                </>
+              ) : <Alert title="暂无BOM信息" description="此订单关联的款号尚未录入BOM物料清单" type="info" showIcon />,
+            },
             {
               key: 'style-pattern',
               label: '资料详情',
@@ -219,11 +431,35 @@ const FlowStepRenderer: React.FC<Props> = ({
             },
             {
               key: 'material-purchases',
-              label: `物料信息${data?.materialPurchases?.length ? ` (${data.materialPurchases.length})` : ''}`,
+              label: `物料采购${materialPurchases.length ? ` (${materialPurchases.length})` : ''}`,
               children: (
                 <>
-                  {data?.materialPurchases && data.materialPurchases.length > 0 ? (
-                    <ResizableTable storageKey="order-flow-materials" size="small" dataSource={data.materialPurchases}
+                  <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'flex-end' }}>
+                    <Space>
+                      {bomList.length > 0 && (
+                        <Button icon={<ThunderboltOutlined />} loading={generating}
+                          onClick={() => showReasonModal('从BOM生成采购', '生成采购', (reason) => handleGenerateFromBom(reason))}
+                        >
+                          从BOM生成
+                        </Button>
+                      )}
+                      <Button
+                        type="primary"
+                        icon={<PlusOutlined />}
+                        onClick={() => showReasonModal('录入物料采购', '录入采购', (reason) => {
+                          recordAction('录入采购', reason);
+                          const url = orderId
+                            ? `/production/material-purchase?orderId=${orderId}&orderNo=${encodeURIComponent(orderNo)}`
+                            : '/production/material-purchase';
+                          window.open(url, '_blank');
+                        })}
+                      >
+                        录入采购
+                      </Button>
+                    </Space>
+                  </div>
+                  {materialPurchases.length > 0 ? (
+                    <ResizableTable storageKey="order-flow-materials" size="small" dataSource={materialPurchases}
                       rowKey={(record: any) => record.id || record.processCode || `row-${Math.random()}`}
                       columns={[
                         { title: '序号', key: 'index', width: 70, align: 'center' as const, render: (_: any, __: any, index: number) => index + 1 },
@@ -261,17 +497,84 @@ const FlowStepRenderer: React.FC<Props> = ({
                         }},
                         { title: '备注', dataIndex: 'remark', key: 'remark', ellipsis: true, render: (v: any) => v || '-' },
                       ]} pagination={false} bordered scroll={{ x: 'max-content' }} />
-                  ) : <Alert title="暂无物料采购信息" description="此订单尚未录入物料采购数据" type="info" showIcon />}
+                  ) : <Alert title="暂无物料采购信息" description="此订单尚未录入物料采购数据，点击上方「录入采购」按钮开始录入" type="info" showIcon />}
                 </>
               ),
             },
             {
               key: 'style-secondary',
               label: '二次工艺详情',
-              children: data?.order?.styleId ? <StyleSecondaryProcessTab styleId={data.order.styleId} readOnly={true} simpleView={true} />
+              children: data?.order?.styleId ? <StyleSecondaryProcessTab styleId={data.order.styleId} readOnly={!editing} simpleView={true} />
                 : <Alert title="暂无二次工艺信息" description="此订单未关联款号，无法显示二次工艺详情" type="info" showIcon />,
             },
           ] : []),
+          {
+            key: 'operation-log',
+            label: `操作记录${remarkCount ? ` (${remarkCount})` : ''}`,
+            children: (
+              <div>
+                <div style={{ marginBottom: 16, display: 'flex', gap: 8 }}>
+                  <Input.TextArea
+                    value={newRemark}
+                    onChange={(e) => setNewRemark(e.target.value)}
+                    placeholder="添加备注..."
+                    rows={2}
+                    maxLength={500}
+                    showCount
+                    style={{ flex: 1 }}
+                  />
+                  <Button type="primary" onClick={handleAddRemark} disabled={!newRemark.trim()}>
+                    添加
+                  </Button>
+                </div>
+                {remarksLoading ? (
+                  <div style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-tertiary)' }}>加载中...</div>
+                ) : remarks.length > 0 ? (
+                  <Timeline
+                    items={remarks.map((r) => {
+                      const isSystem = r.authorRole && ['开始编辑', '完成编辑', '取消编辑', '从BOM生成采购', '录入采购'].includes(r.authorRole);
+                      const images = r.imageUrls ? (() => {
+                        try { return JSON.parse(r.imageUrls); } catch { return []; }
+                      })() : [];
+                      return {
+                        color: isSystem ? 'blue' : 'green',
+                        content: (
+                          <div key={r.id} style={{ paddingBottom: 4 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                              {isSystem && <HistoryOutlined style={{ color: 'var(--primary-color)' }} />}
+                              <strong>{r.authorRole || r.authorName || '系统'}</strong>
+                              <span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>
+                                {r.authorName && <><UserOutlined /> {r.authorName}</>}
+                              </span>
+                              <span style={{ color: 'var(--color-text-quaternary)', fontSize: 12 }}>
+                                {formatDateTime(r.createTime)}
+                              </span>
+                            </div>
+                            <div style={{ marginLeft: isSystem ? 20 : 0, color: isSystem ? 'var(--color-text-secondary)' : 'var(--color-text-primary)' }}>
+                              {r.content}
+                            </div>
+                            {images.length > 0 && (
+                              <div style={{ marginTop: 4, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                                <Image.PreviewGroup>
+                                  {images.map((url: string, idx: number) => (
+                                    <Image key={idx} src={getFullAuthedFileUrl(url)}
+                                      style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 4, cursor: 'pointer' }}
+                                      preview={{ mask: '预览' }} />
+                                  ))}
+                                </Image.PreviewGroup>
+                              </div>
+                            )}
+                          </div>
+                        ),
+                      };
+                    })}
+                  />
+                ) : (
+                  <Empty description="暂无操作记录" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+                )}
+              </div>
+            ),
+          },
         ]}
       />
     </Card>

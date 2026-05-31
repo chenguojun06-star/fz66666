@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import type { ProductionOrder } from '@/types/production';
 import type { ProgressNode } from '../types';
 import { clampPercent, getNodeIndexFromProgress, resolveNodesForOrder, stripWarehousingNode } from '../utils';
+import { invalidateBoardStatsTimestamp } from './useBoardStats';
 
 type UseOrderProgressParams = {
   activeOrder: ProductionOrder | null;
@@ -43,6 +44,13 @@ export const useOrderProgress = ({
       const result = response as any;
       if (result.code === 200) {
         message.success('进度已更新');
+
+        invalidateBoardStatsTimestamp(order.id);
+
+        window.dispatchEvent(new CustomEvent('order:progress:changed', {
+          detail: { orderId: order.id, orderNo: order.orderNo, progress: clampPercent(nextProgress) },
+        }));
+
         await fetchOrders();
         if (activeOrder?.id === order.id) {
           const p = clampPercent(nextProgress);

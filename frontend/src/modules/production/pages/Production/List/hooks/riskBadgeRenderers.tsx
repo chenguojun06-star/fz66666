@@ -58,6 +58,7 @@ export interface StageProgressContext {
   openProcessDetail: (record: ProductionOrder, type: string) => void;
   renderCompletionTimeTag: (record: ProductionOrder, stage: string, rate: number, position?: string) => React.ReactNode;
   getStageCompletionTime?: (record: ProductionOrder, stageKeyword: string, rate?: number) => string;
+  onOpenInspectDrawer?: (orderId: string) => void;
 }
 
 export function renderStageProgressCell(
@@ -177,7 +178,7 @@ export function renderMerchandiserCell(v: any, record: ProductionOrder, onOpenRe
   );
 }
 
-export function renderWarehousingCell(record: ProductionOrder, navigate: (path: string) => void, renderCompletionTimeTag: (record: ProductionOrder, stage: string, rate: number, position?: string) => React.ReactNode) {
+export function renderWarehousingCell(record: ProductionOrder, navigate: (path: string) => void, renderCompletionTimeTag: (record: ProductionOrder, stage: string, rate: number, position?: string) => React.ReactNode, onOpenInspectDrawer?: (orderId: string) => void, factoryType?: string) {
   const qualified = Number(record.warehousingQualifiedQuantity ?? 0) || 0;
   const total = Number(record.cuttingQuantity || record.orderQuantity) || 1;
   const rate = Math.min(100, Math.round((qualified / total) * 100));
@@ -192,11 +193,10 @@ export function renderWarehousingCell(record: ProductionOrder, navigate: (path: 
     return 'var(--color-border)';
   };
 
-  return (
+  const inner = (
     <div
       style={{ display: 'flex', flexDirection: 'column', cursor: frozen ? 'default' : 'pointer', padding: '4px 0', opacity: isCompletedOrClosed ? 0.75 : (frozen ? 0.6 : 1) }}
-      title={frozen ? '订单已关单/报废/完成' : '点击进入质检入库'}
-      onClick={(e) => { e.stopPropagation(); if (!frozen) navigate(`/production/warehousing/inspect/${record.id}`); }}
+      title={frozen ? '订单已关单/报废/完成' : '点击质检入库'}
     >
       {renderCompletionTimeTag(record, '入库', rate || 0, 'left')}
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
@@ -213,6 +213,23 @@ export function renderWarehousingCell(record: ProductionOrder, navigate: (path: 
           </div>
         </div>
       </div>
+    </div>
+  );
+
+  if (factoryType === 'EXTERNAL' || frozen || !onOpenInspectDrawer) {
+    return (
+      <div onClick={(e) => { e.stopPropagation(); if (!frozen && factoryType !== 'EXTERNAL') navigate(`/production/warehousing/inspect/${record.id}`); }}>
+        {inner}
+      </div>
+    );
+  }
+
+  return (
+    <div
+      onClick={(e) => { e.stopPropagation(); onOpenInspectDrawer(record.id!); }}
+      style={{ cursor: 'pointer' }}
+    >
+      {inner}
     </div>
   );
 }

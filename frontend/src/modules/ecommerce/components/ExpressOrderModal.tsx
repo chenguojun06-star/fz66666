@@ -198,7 +198,7 @@ const ExpressOrderModal: React.FC<ExpressOrderModalProps> = ({ open, order, onCl
                 <Timeline
                   items={trackList.map((t, i) => ({
                     color: i === 0 ? 'green' : 'blue',
-                    children: (
+                    content: (
                       <div>
                         <div style={{ fontWeight: 500 }}>{t.status}</div>
                         <div style={{ color: 'var(--color-text-tertiary)', fontSize: 14 }}>{t.time}</div>

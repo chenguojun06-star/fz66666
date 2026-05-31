@@ -133,6 +133,8 @@ export interface ProductionOrder extends Record<string, unknown> {
   procurementConfirmRemark?: string;
   /** 下单业务类型：FOB=离岸价交货, ODM=原创设计制造, OEM=代工贴牌, CMT=纯加工 */
   orderBizType?: 'FOB' | 'ODM' | 'OEM' | 'CMT';
+  /** 订单来源类型：BULK=大货, SAMPLE=样衣 */
+  sourceBizType?: 'BULK' | 'SAMPLE';
 }
 
 export interface ScanRecord extends Record<string, unknown> {

@@ -650,6 +650,16 @@ export const intelligenceApi = {
       status, note: note ?? ''
     }),
 
+  // 订单关联和监控 API
+  linkTaskToOrder: (taskId: string, orderNo: string) =>
+    api.post<{ code: number; data: Record<string, unknown> }>(`/intelligence/task-center/tasks/${taskId}/link-order`, { orderNo }),
+
+  refreshTaskOrderStatus: (taskId: string) =>
+    api.post<{ code: number; data: Record<string, unknown> }>(`/intelligence/task-center/tasks/${taskId}/refresh-order-status`),
+
+  getTasksByOrderNo: (orderNo: string) =>
+    api.get<{ code: number; data: Record<string, unknown>[] }>(`/intelligence/task-center/tasks/by-order/${orderNo}`),
+
   scanOrphanData: () =>
     api.get<{ code: number; data: import('./intelligenceTypes').OrphanDataScanResultDTO }>('/intelligence/orphan-data/scan'),
 

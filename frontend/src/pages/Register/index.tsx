@@ -226,7 +226,7 @@ const Register: React.FC = () => {
         >
           {isWorkerInvite && (
             <Alert
-              message={belongLabel}
+              title={belongLabel}
               description={isFactoryInvite
                 ? `欢迎加入「${factoryName}」，请您耐心等待管理员审批通过后即可登录。`
                 : `欢迎加入「${factoryName}」，请您耐心等待管理员审批通过后即可登录。`}

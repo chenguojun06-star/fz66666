@@ -366,7 +366,7 @@ const OrdersTab: React.FC = () => {
           onChange: (p, ps) => { setPage(p); setPageSize(ps); } }}
       />
 
-      <Drawer open={!!detail} onClose={() => setDetail(null)} title="订单详情" styles={{ wrapper: { width: 480 } }}>
+      <Drawer open={!!detail} onClose={() => setDetail(null)} title="订单详情" size={480}>
         {detail && (
           <>
             <Descriptions column={2} bordered>

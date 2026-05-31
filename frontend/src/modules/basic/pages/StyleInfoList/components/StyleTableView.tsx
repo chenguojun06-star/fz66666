@@ -1,10 +1,10 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { App, Button, Dropdown, Empty, Form, Input, InputNumber, Popover, Progress, QRCode, Select, Skeleton, Tag } from 'antd';
+import React, { useMemo, useState } from 'react';
+import { App, Button, Drawer, Dropdown, Empty, Form, Input, InputNumber, Modal, Popover, Progress, QRCode, Select, Skeleton, Tag } from 'antd';
 import dayjs from 'dayjs';
+import api from '@/utils/api';
 import { SMART_CARD_OVERLAY_WIDTH } from '@/components/common/DecisionInsightCard';
 import CardCoverSwitcher from '@/components/common/CardCoverSwitcher';
 import SmallModal from '@/components/common/SmallModal';
-import ResizableModal from '@/components/common/ResizableModal';
 import StandardPagination from '@/components/common/StandardPagination';
 import StyleDevelopmentWorkbench from './StyleDevelopmentWorkbench';
 import SmartStyleHoverCard from './SmartStyleHoverCard';
@@ -22,6 +22,10 @@ import { isSupervisorOrAboveUser, useUser } from '@/utils/AuthContext';
 import RemarkTimelineModal from '@/components/common/RemarkTimelineModal';
 import StyleCopyModal from './StyleCopyModal';
 import useSampleStage from './useSampleStage';
+import useSampleProcessProgress from './useSampleProcessProgress';
+import SampleProcessList from './SampleProcessList';
+import SampleScanRecordsTable from './SampleScanRecordsTable';
+import useSampleScanRecords from './useSampleScanRecords';
 import useConfirmStage from './useConfirmStage';
 import useStagePanel from './useStagePanel';
 
@@ -59,22 +63,41 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
   focusedStyleId,
   dateSortAsc = false,
 }) => {
-  const { message } = App.useApp();
+  const { message, modal } = App.useApp();
   const navigate = useNavigate();
   const { user } = useUser();
   const isSupervisorOrAbove = isSupervisorOrAboveUser(user);
   const [selectedStage, setSelectedStage] = useState<{ record: StyleInfo; stage: SmartStage } | null>(null);
-  const [developmentWorkbenchRecord, setDevelopmentWorkbenchRecord] = useState<StyleInfo | null>(null);
-  const [developmentWorkbenchSection, setDevelopmentWorkbenchSection] = useState<WorkbenchSection>('bom');
+  const [developmentDrawerRecord, setDevelopmentDrawerRecord] = useState<StyleInfo | null>(null);
+  const [developmentDrawerSection, setDevelopmentDrawerSection] = useState<WorkbenchSection>('bom');
   const [copyModalOpen, setCopyModalOpen] = useState(false);
   const [copySource, setCopySource] = useState<StyleInfo | null>(null);
 
   const [remarkTarget, setRemarkTarget] = useState<{ open: boolean; styleNo: string; defaultRole?: string }>({ open: false, styleNo: '' });
-  const viewportRestoreRef = useRef<{ x: number; y: number } | null>(null);
+  const [expandedParentStage, setExpandedParentStage] = useState<string | null>(null);
+  const [assigningData, setAssigningData] = useState<{ open: boolean; patternId: string; currentAssignee: string }>({ open: false, patternId: '', currentAssignee: '' });
+  const [assignForm] = Form.useForm();
+  const [receiveModalOpen, setReceiveModalOpen] = useState(false);
+  const [receiveForm] = Form.useForm();
 
   const sample = useSampleStage({ selectedStage, message, onRefresh });
+  const scanRecords = useSampleScanRecords();
+
+  const handleAssignPattern = async () => {
+    try {
+      const values = await assignForm.validateFields();
+      await scanRecords.assignPattern(assigningData.patternId, values.assignee);
+      message.success('指派成功');
+      setAssigningData({ open: false, patternId: '', currentAssignee: '' });
+      onRefresh();
+    } catch (err: any) {
+      if (err?.errorFields) return;
+      message.error(typeof err?.response?.data?.message === 'string' ? err.response.data.message : '指派失败');
+    }
+  };
+  const sampleProcessProgress = useSampleProcessProgress(sample.sampleSnapshot?.productionOrderId, sample.sampleSnapshot?.id);
   const confirm = useConfirmStage({ selectedStage, setSelectedStage, message, onRefresh });
-  const panel = useStagePanel({ selectedStage, setSelectedStage, navigate, message, sampleHook: sample, confirmHook: confirm });
+  const panel = useStagePanel({ selectedStage, setSelectedStage, navigate, message, modal, sampleHook: sample, confirmHook: confirm });
 
   const toCategoryCn = (value: unknown) => {
     const code = String(value || '').trim().toUpperCase();
@@ -102,29 +125,6 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
     return isScrappedStyle(record);
   };
 
-
-  const openDevelopmentWorkbench = useCallback((record: StyleInfo, section: WorkbenchSection) => {
-    const isSameRecord = String(developmentWorkbenchRecord?.id || '') === String(record.id || '');
-    const isSameSection = developmentWorkbenchSection === section;
-    if (isSameRecord && isSameSection) {
-      setDevelopmentWorkbenchRecord(null);
-      return;
-    }
-    viewportRestoreRef.current = { x: window.scrollX, y: window.scrollY };
-    if (document.activeElement instanceof HTMLElement) {
-      document.activeElement.blur();
-    }
-    setDevelopmentWorkbenchSection(section);
-    setDevelopmentWorkbenchRecord(record);
-    requestAnimationFrame(() => {
-      const viewport = viewportRestoreRef.current;
-      if (!viewport) return;
-      window.scrollTo({ left: viewport.x, top: viewport.y, behavior: 'auto' });
-      requestAnimationFrame(() => {
-        window.scrollTo({ left: viewport.x, top: viewport.y, behavior: 'auto' });
-      });
-    });
-  }, [developmentWorkbenchRecord?.id, developmentWorkbenchSection]);
 
   const rows = useMemo(() => {
     const mapped = data.map((record) => {
@@ -318,10 +318,14 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
                           className={`style-smart-stage style-smart-stage--${stage.status}`}
                           onClick={() => {
                             if (stage.key === 'development' || stage.key === 'pattern' || stage.key === 'sizePrice' || stage.key === 'secondary') {
-                              if (stage.key === 'development') openDevelopmentWorkbench(record, 'bom');
-                              if (stage.key === 'pattern') openDevelopmentWorkbench(record, 'pattern');
-                              if (stage.key === 'sizePrice') openDevelopmentWorkbench(record, 'sizePrice');
-                              if (stage.key === 'secondary') openDevelopmentWorkbench(record, 'secondary');
+                              const sectionMap: Record<string, WorkbenchSection> = {
+                                development: 'bom',
+                                pattern: 'pattern',
+                                sizePrice: 'sizePrice',
+                                secondary: 'secondary',
+                              };
+                              setDevelopmentDrawerSection(sectionMap[stage.key]);
+                              setDevelopmentDrawerRecord(record);
                               return;
                             }
                             setSelectedStage((prev) => (
@@ -352,16 +356,6 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
 
 
                 </div>
-                {developmentWorkbenchRecord && String(developmentWorkbenchRecord.id || '') === String(record.id || '') ? (
-                  <div className="style-smart-row__workbench">
-                    <StyleDevelopmentWorkbench
-                      record={developmentWorkbenchRecord}
-                      onClose={() => setDevelopmentWorkbenchRecord(null)}
-                      initialSection={developmentWorkbenchSection}
-                      onSync={onRefresh}
-                    />
-                  </div>
-                ) : null}
               </div>
 
               <div className="style-smart-row__actions">
@@ -411,16 +405,24 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
       </div>
       </div>
 
-      <ResizableModal
+      <Drawer
         open={Boolean(selectedStage)}
         title={selectedStage ? `${selectedStage.record.styleNo} · ${selectedStage.stage.label}` : ''}
-        onCancel={() => setSelectedStage(null)}
-        width="40vw"
-        footer={selectedStage ? [
-          <Button key="close" onClick={() => setSelectedStage(null)}>
+        onClose={() => {
+          setSelectedStage(null);
+          setExpandedParentStage(null);
+        }}
+        size="large"
+        styles={{ wrapper: { width: '85%' }, body: { padding: 16 } }}
+        footer={
+          <Button key="close" onClick={() => {
+            setSelectedStage(null);
+            setExpandedParentStage(null);
+          }}>
             关闭
-          </Button>,
-        ] : null}
+          </Button>
+        }
+        destroyOnClose
       >
         {selectedStage && panel.selectedStageTag ? (
           <div className="style-smart-stage-modal">
@@ -472,13 +474,29 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
               ))}
             </div>
             {selectedStage.stage.key !== 'sample' && selectedStage.stage.key !== 'confirm' ? (
-              <div className="style-smart-stage-modal__details">
-                {selectedStage.stage.details.map((item) => (
-                  <div key={item} className="style-smart-stage-modal__detail-item">
-                    {item}
+              <>
+                <div className="style-smart-stage-modal__details">
+                  {selectedStage.stage.details.map((item) => (
+                    <div key={item} className="style-smart-stage-modal__detail-item">
+                      {item}
+                    </div>
+                  ))}
+                </div>
+                {(selectedStage.stage.key === 'procurement' || selectedStage.stage.key === 'cutting' || selectedStage.stage.key === 'secondary' || selectedStage.stage.key === 'sewing' || selectedStage.stage.key === 'tail' || selectedStage.stage.key === 'warehousing') && sample.sampleSnapshot ? (
+                  <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid var(--color-border-light)' }}>
+                    <div style={{ fontSize: '14px', fontWeight: 700, marginBottom: '10px', color: 'var(--color-text-primary)' }}>
+                      扫码记录
+                      <span style={{ fontWeight: 400, fontSize: '12px', color: 'var(--color-text-secondary)', marginLeft: 8 }}>
+                        — {selectedStage.stage.label} 环节
+                      </span>
+                    </div>
+                    <SampleScanRecordsTable
+                      patternId={sample.sampleSnapshot.id}
+                      stageKey={selectedStage.stage.key}
+                    />
                   </div>
-                ))}
-              </div>
+                ) : null}
+              </>
             ) : null}
             {selectedStage.stage.key === 'sample' ? (
               <div className="style-smart-stage-modal__panel">
@@ -503,6 +521,37 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
                         <span>完成时间</span>
                         <strong>{sample.sampleCompletedTimeLabel}</strong>
                       </div>
+                      <div className="style-smart-stage-modal__fact">
+                        <span>颜色</span>
+                        <strong>
+                          {sample.sampleSnapshot?.colors && sample.sampleSnapshot.colors.length > 0
+                            ? sample.sampleSnapshot.colors.map((c, i) => (
+                                <Tag key={i} color="blue" style={{ marginRight: 4 }}>{c}</Tag>
+                              ))
+                            : sample.sampleSnapshot?.color
+                              ? <Tag color="blue">{sample.sampleSnapshot.color}</Tag>
+                              : '-'}
+                        </strong>
+                      </div>
+                      <div className="style-smart-stage-modal__fact">
+                        <span>数量</span>
+                        <strong>{sample.sampleSnapshot?.quantity != null ? sample.sampleSnapshot.quantity : '-'}</strong>
+                      </div>
+                      <div className="style-smart-stage-modal__fact" style={{ flex: '0 0 auto' }}>
+                        <Button
+                          size="small"
+                          onClick={() => {
+                            setAssigningData({
+                              open: true,
+                              patternId: sample.sampleSnapshot?.id || '',
+                              currentAssignee: sample.sampleReceiverLabel,
+                            });
+                            assignForm.setFieldsValue({ assignee: sample.sampleReceiverLabel !== '-' ? sample.sampleReceiverLabel : '' });
+                          }}
+                        >
+                          指派
+                        </Button>
+                      </div>
                     </div>
                     <div style={{ marginTop: 12, padding: '10px 0', borderTop: '1px solid var(--color-border-light)', display: 'flex', alignItems: 'center', gap: 14 }}>
                       <QRCode
@@ -513,7 +562,87 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
                         <div style={{ fontWeight: 500, color: '#595959' }}>工人扫码领取/完成</div>
                         <div>样衣单号: {sample.sampleSnapshot.id}</div>
                       </div>
+                      <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+                        {!sample.isSampleSnapshotReceived && (
+                          <Button
+                            type="primary"
+                            loading={sample.sampleActionLoading}
+                            onClick={() => {
+                              const colors = sample.sampleSnapshot?.colors?.length
+                                ? sample.sampleSnapshot.colors
+                                : sample.sampleSnapshot?.color
+                                  ? [sample.sampleSnapshot.color]
+                                  : ['默认'];
+                              const qty = sample.sampleSnapshot?.quantity || 1;
+                              receiveForm.setFieldsValue({
+                                color: colors.length === 1 ? colors[0] : undefined,
+                                quantity: qty,
+                              });
+                              setReceiveModalOpen(true);
+                            }}
+                          >
+                            领取样衣
+                          </Button>
+                        )}
+                        {sample.isSampleSnapshotReceived && !sample.isSampleSnapshotCompleted && (
+                          <Button
+                            loading={sample.sampleActionLoading}
+                            onClick={sample.handleSaveSampleProgress}
+                          >
+                            更新进度
+                          </Button>
+                        )}
+                      </div>
                     </div>
+
+                    <Modal
+                      title="领取样衣"
+                      open={receiveModalOpen}
+                      onCancel={() => setReceiveModalOpen(false)}
+                      onOk={async () => {
+                        try {
+                          const values = await receiveForm.validateFields();
+                          setReceiveModalOpen(false);
+                          await api.post(`/production/pattern/${sample.sampleSnapshot?.id}/workflow-action`, {
+                            color: values.color,
+                            quantity: values.quantity,
+                          }, { params: { action: 'receive' } });
+                          message.success('样衣已领取');
+                          await sample.reloadSampleStage();
+                          onRefresh();
+                        } catch (err: any) {
+                          if (err?.errorFields) return;
+                          message.error(typeof err?.response?.data?.message === 'string' ? err.response.data.message : '领取失败');
+                        }
+                      }}
+                      confirmLoading={sample.sampleActionLoading}
+                    >
+                      <Form form={receiveForm} layout="vertical">
+                        {(() => {
+                          const colors = sample.sampleSnapshot?.colors?.length
+                            ? sample.sampleSnapshot.colors
+                            : sample.sampleSnapshot?.color
+                              ? [sample.sampleSnapshot.color]
+                              : ['默认'];
+                          return colors.length > 1 ? (
+                            <Form.Item name="color" label="选择颜色" rules={[{ required: true, message: '请选择颜色' }]}>
+                              <Select placeholder="请选择颜色">
+                                {colors.map((c) => (
+                                  <Select.Option key={c} value={c}>{c}</Select.Option>
+                                ))}
+                              </Select>
+                            </Form.Item>
+                          ) : (
+                            <Form.Item name="color" label="颜色">
+                              <Input disabled value={colors[0] || '默认'} />
+                            </Form.Item>
+                          );
+                        })()}
+                        <Form.Item name="quantity" label="数量" rules={[{ required: true, message: '请输入数量' }]}>
+                          <InputNumber min={1} max={9999} style={{ width: '100%' }} />
+                        </Form.Item>
+                      </Form>
+                    </Modal>
                     {sample.shouldShowSampleStageProgress ? (
                       <div style={{ marginTop: '16px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
@@ -529,9 +658,101 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
                           strokeColor={sample.sampleStageProgressItems.reduce((sum, item) => sum + item.percent, 0) / sample.sampleStageProgressItems.length >= 100 ? '#52c41a' : '#2d7ff9'}
                         />
                       </div>
-                    ) : (
-                      <div className="style-smart-stage-modal__empty">尚未领取，暂无节点进度</div>
-                    )}
+                    ) : null}
+
+                    {/* 6个固定父节点 - Tab页样式 */}
+                    <div style={{ marginTop: '16px' }}>
+                      {/* Tab标题栏 */}
+                      <div style={{
+                        display: 'flex',
+                        borderBottom: '2px solid var(--color-border-light)',
+                        marginBottom: '16px',
+                        gap: '4px',
+                      }}>
+                        {sampleProcessProgress.stages.map((stage) => {
+                          const isActive = expandedParentStage === stage.key || (!expandedParentStage && sampleProcessProgress.stages.indexOf(stage) === 0);
+                          return (
+                            <div
+                              key={stage.key}
+                              onClick={() => setExpandedParentStage(stage.key)}
+                              style={{
+                                padding: '10px 16px',
+                                cursor: 'pointer',
+                                fontSize: '14px',
+                                fontWeight: isActive ? 600 : 400,
+                                color: isActive ? '#1890ff' : 'var(--color-text-secondary)',
+                                borderBottom: isActive ? '2px solid #1890ff' : '2px solid transparent',
+                                marginBottom: '-2px',
+                                transition: 'all 0.2s',
+                              }}
+                            >
+                              {stage.label}
+                              {stage.subProcesses.length > 0 && (
+                                <Tag color={isActive ? 'blue' : 'default'} style={{ marginLeft: '8px', fontSize: '12px' }}>
+                                  {stage.subProcesses.length}
+                                </Tag>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* Tab内容区域 */}
+                      {(() => {
+                        const activeStage = expandedParentStage || sampleProcessProgress.stages[0]?.key;
+                        const stage = sampleProcessProgress.stages.find((s) => s.key === activeStage);
+                        if (!stage) return null;
+
+                        const hasSubProcesses = stage.subProcesses.length > 0;
+
+                        return (
+                          <div>
+                            {/* 子工序列表 */}
+                            {hasSubProcesses ? (
+                              <div style={{ marginBottom: '16px' }}>
+                                <div style={{ fontSize: '14px', fontWeight: 500, marginBottom: '10px', color: 'var(--color-text-primary)' }}>
+                                  工序列表
+                                  {stage.totalCount > 0 && (
+                                    <span style={{ fontWeight: 400, marginLeft: '8px', color: 'var(--color-text-secondary)' }}>
+                                      {stage.completedCount}/{stage.totalCount} 完成
+                                    </span>
+                                  )}
+                                </div>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                                  {stage.subProcesses.map((sub) => {
+                                    const stat = sampleProcessProgress.loading
+                                      ? null
+                                      : sampleProcessProgress.trackingStats?.[sub.processCode || sub.name];
+                                    const isCompleted = stat && stat.total > 0 && stat.completed >= stat.total;
+                                    return (
+                                      <Tag
+                                        key={sub.id || sub.processCode || sub.name}
+                                        color={isCompleted ? 'success' : 'default'}
+                                        style={{ fontSize: '13px', padding: '5px 12px' }}
+                                      >
+                                        {sub.name}
+                                      </Tag>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            ) : (
+                              <div style={{ fontSize: '14px', color: 'var(--color-text-tertiary)', marginBottom: '16px', padding: '20px', textAlign: 'center', background: 'var(--color-bg-light)', borderRadius: '6px' }}>
+                                当前节点暂无配置工序
+                              </div>
+                            )}
+
+                            {/* 扫码记录 */}
+                            <div>
+                              <div style={{ fontSize: '14px', fontWeight: 500, marginBottom: '10px', color: 'var(--color-text-primary)' }}>
+                                扫码记录
+                              </div>
+                              <SampleScanRecordsTable patternId={sample.sampleSnapshot?.id || ''} stageKey={stage.key} onRefresh={onRefresh} />
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </div>
                   </>
                 ) : (
                   <div className="style-smart-stage-modal__empty">当前还没有同步到样衣生产快照数据</div>
@@ -584,7 +805,25 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
             ) : null}
           </div>
         ) : null}
-      </ResizableModal>
+      </Drawer>
+
+      <Drawer
+        open={Boolean(developmentDrawerRecord)}
+        title={developmentDrawerRecord ? `${developmentDrawerRecord.styleNo} · 开发工作台` : ''}
+        onClose={() => setDevelopmentDrawerRecord(null)}
+        size="large"
+        styles={{ wrapper: { width: '85%' }, body: { padding: 0 } }}
+        destroyOnClose
+      >
+        {developmentDrawerRecord && (
+          <StyleDevelopmentWorkbench
+            record={developmentDrawerRecord}
+            onClose={() => setDevelopmentDrawerRecord(null)}
+            initialSection={developmentDrawerSection}
+            onSync={onRefresh}
+          />
+        )}
+      </Drawer>
 
       <SmallModal
         open={sample.progressEditorOpen}
@@ -619,6 +858,7 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
         onOk={() => void confirm.handleSaveReview()}
         okText="保存结论"
         confirmLoading={confirm.reviewSaving}
+        destroyOnHidden={false}
       >
         <Form form={confirm.reviewForm} layout="vertical">
           <Form.Item
@@ -652,6 +892,29 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
         targetNo={remarkTarget.styleNo}
         defaultRole={remarkTarget.defaultRole}
       />
+
+      {/* 样衣指派弹窗 */}
+      <Modal
+        title="指派样板生产"
+        open={assigningData.open}
+        onOk={handleAssignPattern}
+        onCancel={() => setAssigningData({ open: false, patternId: '', currentAssignee: '' })}
+        okText="确认指派"
+        cancelText="取消"
+      >
+        <Form form={assignForm} layout="vertical">
+          <Form.Item
+            name="assignee"
+            label="指派给"
+            rules={[{ required: true, message: '请输入指派人员姓名' }]}
+          >
+            <Input placeholder="请输入姓名" />
+          </Form.Item>
+          <div style={{ fontSize: '13px', color: 'var(--color-text-tertiary)', marginTop: '-8px' }}>
+            当前领取人：{assigningData.currentAssignee || '无'}
+          </div>
+        </Form>
+      </Modal>
     </>
   );
 };
