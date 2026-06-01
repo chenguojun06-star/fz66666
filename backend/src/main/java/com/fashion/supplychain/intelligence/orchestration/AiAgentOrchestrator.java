@@ -265,8 +265,9 @@ public class AiAgentOrchestrator {
             // 先尝试关键词匹配
             String keywordAnswer = matchKeywordIntent(userMessage);
             if (keywordAnswer != null) {
-                AgentLoopContext ctx = contextBuilder.build(userMessage, pageContext);
-                emitSse(emitter, "answer", java.util.Map.of("content", keywordAnswer, "commandId", ctx.getCommandId()));
+                // 关键词兜底不需要完整的 context，直接生成一个简单的 commandId
+                String simpleCommandId = "cmd-" + System.currentTimeMillis();
+                emitSse(emitter, "answer", java.util.Map.of("content", keywordAnswer, "commandId", simpleCommandId));
                 emitSse(emitter, "done", java.util.Map.of());
                 emitter.complete();
                 return;
@@ -276,8 +277,8 @@ public class AiAgentOrchestrator {
             if (!contextBuilder.isModelEnabled()) {
                 // 模型未启用时提供友好的默认回答
                 String defaultAnswer = getDefaultAnswer(userMessage);
-                AgentLoopContext ctx = contextBuilder.build(userMessage, pageContext);
-                emitSse(emitter, "answer", java.util.Map.of("content", defaultAnswer, "commandId", ctx.getCommandId()));
+                String simpleCommandId = "cmd-" + System.currentTimeMillis();
+                emitSse(emitter, "answer", java.util.Map.of("content", defaultAnswer, "commandId", simpleCommandId));
                 emitSse(emitter, "done", java.util.Map.of());
                 emitter.complete();
                 return;
