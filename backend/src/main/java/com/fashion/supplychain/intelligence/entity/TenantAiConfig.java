@@ -38,12 +38,12 @@ public class TenantAiConfig {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
-    public boolean isAiEnabled() {
+    public boolean isAiActive() {
         return aiEnabled != null && aiEnabled == 1;
     }
 
     public boolean checkAiEnabled() {
-        return isAiEnabled();
+        return isAiActive();
     }
 
     public boolean hasOwnApiKey() {
