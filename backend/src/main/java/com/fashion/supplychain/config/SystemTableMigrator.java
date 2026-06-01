@@ -34,6 +34,126 @@ public class SystemTableMigrator {
         fixAppStorePrices(jdbc);
         fixSystemTableEncoding(jdbc);
         ensureMissingColumns(jdbc);
+        ensurePerformanceIndexes();
+    }
+
+    private void ensurePerformanceIndexes() {
+        dbHelper.addUniqueKeyIfAbsent("t_production_order", "idx_production_order_order_no", "order_no");
+        dbHelper.addIndexIfAbsent("t_production_order", "idx_production_order_factory", "factory_id");
+        dbHelper.addIndexIfAbsent("t_production_order", "idx_production_order_status", "status");
+        dbHelper.addIndexIfAbsent("t_production_order", "idx_production_order_style_no", "style_no");
+        dbHelper.addIndexIfAbsent("t_production_order", "idx_production_order_factory_status", "factory_id, status");
+        dbHelper.addIndexIfAbsent("t_production_order", "idx_production_order_progress", "current_progress");
+        dbHelper.addIndexIfAbsent("t_production_order", "idx_production_order_tenant", "tenant_id");
+        dbHelper.addIndexIfAbsent("t_production_order", "idx_production_order_created", "created_at");
+
+        dbHelper.addIndexIfAbsent("t_scan_record", "idx_scan_record_order", "order_id");
+        dbHelper.addIndexIfAbsent("t_scan_record", "idx_scan_record_scanned_at", "scanned_at");
+        dbHelper.addIndexIfAbsent("t_scan_record", "idx_scan_record_scan_type", "scan_type");
+        dbHelper.addIndexIfAbsent("t_scan_record", "idx_scan_record_process", "progress_stage");
+        dbHelper.addIndexIfAbsent("t_scan_record", "idx_scan_record_order_time", "order_id, scanned_at");
+        dbHelper.addIndexIfAbsent("t_scan_record", "idx_scan_record_tenant", "tenant_id");
+
+        dbHelper.addIndexIfAbsent("t_cutting_bundle", "idx_cutting_bundle_order", "order_id");
+        dbHelper.addIndexIfAbsent("t_cutting_bundle", "idx_cutting_bundle_status", "status");
+        dbHelper.addIndexIfAbsent("t_cutting_bundle", "idx_cutting_bundle_no", "bundle_no");
+        dbHelper.addIndexIfAbsent("t_cutting_bundle", "idx_cutting_bundle_order_status", "order_id, status");
+        dbHelper.addIndexIfAbsent("t_cutting_bundle", "idx_cutting_bundle_tenant", "tenant_id");
+
+        dbHelper.addIndexIfAbsent("t_material_stock", "idx_material_stock_code", "material_code");
+        dbHelper.addIndexIfAbsent("t_material_stock", "idx_material_stock_warehouse", "warehouse_id");
+        dbHelper.addIndexIfAbsent("t_material_stock", "idx_material_stock_code_warehouse", "material_code, warehouse_id");
+        dbHelper.addIndexIfAbsent("t_material_stock", "idx_material_stock_tenant", "tenant_id");
+
+        dbHelper.addIndexIfAbsent("t_product_warehousing", "idx_product_warehousing_order", "order_id");
+        dbHelper.addIndexIfAbsent("t_product_warehousing", "idx_product_warehousing_time", "warehousing_at");
+        dbHelper.addIndexIfAbsent("t_product_warehousing", "idx_product_warehousing_warehouse", "warehouse_id");
+        dbHelper.addIndexIfAbsent("t_product_warehousing", "idx_product_warehousing_tenant", "tenant_id");
+
+        dbHelper.addUniqueKeyIfAbsent("t_style_info", "idx_style_info_no", "style_no");
+        dbHelper.addIndexIfAbsent("t_style_info", "idx_style_info_category", "category");
+        dbHelper.addIndexIfAbsent("t_style_info", "idx_style_info_tenant", "tenant_id");
+
+        dbHelper.addIndexIfAbsent("t_wage_payment", "idx_wage_payment_order", "order_id");
+        dbHelper.addIndexIfAbsent("t_wage_payment", "idx_wage_payment_worker", "worker_id");
+        dbHelper.addIndexIfAbsent("t_wage_payment", "idx_wage_payment_status", "payment_status");
+        dbHelper.addIndexIfAbsent("t_wage_payment", "idx_wage_payment_date", "payment_date");
+        dbHelper.addIndexIfAbsent("t_wage_payment", "idx_wage_payment_tenant", "tenant_id");
+
+        dbHelper.addIndexIfAbsent("t_customer", "idx_customer_name", "customer_name");
+        dbHelper.addIndexIfAbsent("t_customer", "idx_customer_status", "status");
+        dbHelper.addIndexIfAbsent("t_customer", "idx_customer_tenant", "tenant_id");
+
+        dbHelper.addIndexIfAbsent("t_receivable", "idx_receivable_customer", "customer_id");
+        dbHelper.addIndexIfAbsent("t_receivable", "idx_receivable_order", "order_id");
+        dbHelper.addIndexIfAbsent("t_receivable", "idx_receivable_status", "status");
+        dbHelper.addIndexIfAbsent("t_receivable", "idx_receivable_due", "due_date");
+        dbHelper.addIndexIfAbsent("t_receivable", "idx_receivable_tenant", "tenant_id");
+
+        dbHelper.addIndexIfAbsent("t_factory", "idx_factory_status", "status");
+        dbHelper.addIndexIfAbsent("t_factory", "idx_factory_tenant", "tenant_id");
+
+        dbHelper.addIndexIfAbsent("t_dict_item", "idx_dict_item_type", "dict_type");
+        dbHelper.addIndexIfAbsent("t_dict_item", "idx_dict_item_status", "status");
+        dbHelper.addIndexIfAbsent("t_dict_item", "idx_dict_item_type_status", "dict_type, status");
+
+        dbHelper.addUniqueKeyIfAbsent("t_user", "idx_user_username", "username");
+        dbHelper.addIndexIfAbsent("t_user", "idx_user_tenant", "tenant_id");
+
+        dbHelper.addIndexIfAbsent("t_user", "idx_created_by_id", "created_by_id");
+        dbHelper.addIndexIfAbsent("t_user", "idx_user_tenant_id", "tenant_id");
+        dbHelper.addIndexIfAbsent("t_user", "idx_t_user_openid", "openid");
+
+        dbHelper.addIndexIfAbsent("t_production_order", "idx_created_by_id", "created_by_id");
+        dbHelper.addIndexIfAbsent("t_production_order", "idx_factory_id", "factory_id");
+        dbHelper.addIndexIfAbsent("t_production_order", "idx_po_tenant_id", "tenant_id");
+
+        dbHelper.addIndexIfAbsent("t_production_process_tracking", "idx_ppt_tenant_id", "tenant_id");
+
+        dbHelper.addIndexIfAbsent("t_cutting_task", "idx_ct_tenant_id", "tenant_id");
+
+        dbHelper.addIndexIfAbsent("t_scan_record", "idx_sr_tenant_id", "tenant_id");
+
+        dbHelper.addIndexIfAbsent("t_secondary_process", "idx_sp_tenant_id", "tenant_id");
+
+        dbHelper.addIndexIfAbsent("t_style_info", "idx_si_tenant_id", "tenant_id");
+        dbHelper.addIndexIfAbsent("t_style_bom", "idx_sb_tenant_id", "tenant_id");
+        dbHelper.addIndexIfAbsent("t_style_process", "idx_spr_tenant_id", "tenant_id");
+        dbHelper.addIndexIfAbsent("t_style_attachment", "idx_sa_tenant_id", "tenant_id");
+        dbHelper.addIndexIfAbsent("t_style_size", "idx_ss_tenant_id", "tenant_id");
+        dbHelper.addIndexIfAbsent("t_style_size_price", "idx_ssp_tenant_id", "tenant_id");
+        dbHelper.addIndexIfAbsent("t_style_quotation", "idx_sq_tenant_id", "tenant_id");
+        dbHelper.addIndexIfAbsent("t_style_operation_log", "idx_sol_tenant_id", "tenant_id");
+
+        dbHelper.addIndexIfAbsent("t_material_database", "idx_md_tenant_id", "tenant_id");
+        dbHelper.addIndexIfAbsent("t_material_stock", "idx_ms_tenant_id", "tenant_id");
+        dbHelper.addIndexIfAbsent("t_material_inbound", "idx_mi_tenant_id", "tenant_id");
+        dbHelper.addIndexIfAbsent("t_material_inbound_sequence", "idx_mis_tenant_id", "tenant_id");
+        dbHelper.addIndexIfAbsent("t_material_picking", "idx_mp_tenant_id", "tenant_id");
+        dbHelper.addIndexIfAbsent("t_material_picking_item", "idx_mpi_tenant_id", "tenant_id");
+        dbHelper.addIndexIfAbsent("t_material_purchase", "idx_mpu_tenant_id", "tenant_id");
+
+        dbHelper.addIndexIfAbsent("t_product_sku", "idx_ps_tenant_id", "tenant_id");
+        dbHelper.addIndexIfAbsent("t_product_warehousing", "idx_pw_tenant_id", "tenant_id");
+        dbHelper.addIndexIfAbsent("t_product_outstock", "idx_pos_tenant_id", "tenant_id");
+
+        dbHelper.addIndexIfAbsent("t_sample_stock", "idx_sst_tenant_id", "tenant_id");
+        dbHelper.addIndexIfAbsent("t_sample_loan", "idx_sl_tenant_id", "tenant_id");
+
+        dbHelper.addIndexIfAbsent("t_material_reconciliation", "idx_mr_tenant_id", "tenant_id");
+        dbHelper.addIndexIfAbsent("t_order_reconciliation_approval", "idx_ora_tenant_id", "tenant_id");
+        dbHelper.addIndexIfAbsent("t_shipment_reconciliation", "idx_shr_tenant_id", "tenant_id");
+        dbHelper.addIndexIfAbsent("t_payroll_settlement", "idx_pse_tenant_id", "tenant_id");
+        dbHelper.addIndexIfAbsent("t_payroll_settlement_item", "idx_psi_tenant_id", "tenant_id");
+        dbHelper.addIndexIfAbsent("t_deduction_item", "idx_di_tenant_id", "tenant_id");
+
+        dbHelper.addIndexIfAbsent("t_factory", "idx_f_tenant_id", "tenant_id");
+
+        dbHelper.addIndexIfAbsent("t_pattern_production", "idx_pp_tenant_id", "tenant_id");
+        dbHelper.addIndexIfAbsent("t_pattern_revision", "idx_pr_tenant_id", "tenant_id");
+
+        dbHelper.addIndexIfAbsent("t_template_library", "idx_tl_tenant_id", "tenant_id");
+        dbHelper.addIndexIfAbsent("t_template_operation_log", "idx_to_tenant_id", "tenant_id");
     }
 
     private void createUserTable(JdbcTemplate jdbc) {

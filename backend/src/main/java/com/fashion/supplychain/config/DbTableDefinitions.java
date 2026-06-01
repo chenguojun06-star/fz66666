@@ -1562,5 +1562,44 @@ public final class DbTableDefinitions {
             + "KEY `idx_pci_cart_id` (`cart_id`),"
             + "KEY `idx_pci_tenant` (`tenant_id`)"
             + ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='采购购物车明细表'");
+
+        TABLE_FIXES.put("t_tenant_ai_config",
+            "CREATE TABLE IF NOT EXISTS `t_tenant_ai_config` ("
+            + "`id` BIGINT NOT NULL AUTO_INCREMENT,"
+            + "`tenant_id` BIGINT NOT NULL,"
+            + "`text_provider` VARCHAR(32) DEFAULT 'mimo',"
+            + "`text_api_key` VARCHAR(512),"
+            + "`text_base_url` VARCHAR(512),"
+            + "`text_model` VARCHAR(64),"
+            + "`vision_provider` VARCHAR(32) DEFAULT 'mimo',"
+            + "`vision_api_key` VARCHAR(512),"
+            + "`vision_base_url` VARCHAR(512),"
+            + "`vision_model` VARCHAR(64),"
+            + "`monthly_budget` DECIMAL(10,2) DEFAULT 0,"
+            + "`rate_limit_rpm` INT DEFAULT 60,"
+            + "`ai_enabled` TINYINT(1) DEFAULT 1,"
+            + "`config_source` VARCHAR(16) DEFAULT 'platform',"
+            + "`delete_flag` INT DEFAULT 0,"
+            + "`created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,"
+            + "`updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,"
+            + "PRIMARY KEY (`id`),"
+            + "UNIQUE KEY `uk_tac_tenant_id` (`tenant_id`)"
+            + ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='租户AI能力配置'");
+
+        TABLE_FIXES.put("t_tenant_ai_usage",
+            "CREATE TABLE IF NOT EXISTS `t_tenant_ai_usage` ("
+            + "`id` BIGINT NOT NULL AUTO_INCREMENT,"
+            + "`tenant_id` BIGINT NOT NULL,"
+            + "`usage_date` DATE NOT NULL,"
+            + "`provider` VARCHAR(32),"
+            + "`model` VARCHAR(64),"
+            + "`request_count` INT DEFAULT 0,"
+            + "`token_count` BIGINT DEFAULT 0,"
+            + "`cost_amount` DECIMAL(10,4) DEFAULT 0,"
+            + "`created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,"
+            + "PRIMARY KEY (`id`),"
+            + "KEY `idx_tau_tenant_date` (`tenant_id`, `usage_date`),"
+            + "KEY `idx_tau_tenant_provider` (`tenant_id`, `provider`)"
+            + ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='租户AI用量统计'");
     }
 }
