@@ -41,6 +41,7 @@ interface EnsureBoardStatsArgs {
     groups: Record<string, string[]>,
     times: Record<string, string>,
     workerCounts: Record<string, number>,
+    workerNames: Record<string, string[]>,
   ) => void;
 }
 
@@ -299,6 +300,7 @@ export const ensureBoardStatsForOrder = async ({
       const pTimes: Record<string, string> = {};
       // 每个 processName 对应的操作人 Set（统计 distinct 人数）
       const pWorkerSets: Record<string, Set<string>> = {};
+      const pWorkerNameSets: Record<string, Set<string>> = {};
       for (const r of valid) {
         const pName = String((r as any)?.processName || '').trim();
         if (!pName) continue;
@@ -316,13 +318,23 @@ export const ensureBoardStatsForOrder = async ({
           if (!pWorkerSets[pName]) pWorkerSets[pName] = new Set();
           pWorkerSets[pName].add(opId);
         }
+        const opName = String((r as any)?.operatorName || '').trim();
+        if (opName) {
+          if (!pWorkerNameSets[pName]) pWorkerNameSets[pName] = new Set();
+          pWorkerNameSets[pName].add(opName);
+        }
       }
       // Set → 数字
       const pWorkers: Record<string, number> = {};
       for (const [pName, idSet] of Object.entries(pWorkerSets)) {
         pWorkers[pName] = idSet.size;
       }
-      mergeProcessDataForOrder(oid, pStats, pGroups, pTimes, pWorkers);
+      // Set → 姓名列表
+      const pWorkerNames: Record<string, string[]> = {};
+      for (const [pName, nameSet] of Object.entries(pWorkerNameSets)) {
+        pWorkerNames[pName] = [...nameSet];
+      }
+      mergeProcessDataForOrder(oid, pStats, pGroups, pTimes, pWorkers, pWorkerNames);
     }
   } catch {
     if (isSilentRefresh) {

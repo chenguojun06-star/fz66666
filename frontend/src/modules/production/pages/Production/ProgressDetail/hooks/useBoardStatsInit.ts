@@ -18,6 +18,7 @@ type UseBoardStatsInitOptions = {
     groups: Record<string, string[]>,
     times: Record<string, string>,
     workerCounts: Record<string, number>,
+    workerNames: Record<string, string[]>,
   ) => void;
   boardRefreshTick: number;
 };

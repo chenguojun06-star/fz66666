@@ -293,6 +293,7 @@ export interface ProgressNodesContext {
   progressNodesByStyleNo: Record<string, ProgressNode[]>;
   boardStatsByOrder: Record<string, Record<string, number>>;
   boardTimesByOrder: Record<string, Record<string, string>>;
+  processWorkerNamesByOrder: Record<string, Record<string, string[]>>;
   openNodeDetail: (
     order: ProductionOrder,
     nodeType: string,
@@ -321,6 +322,7 @@ export function createProgressNodesRender(ctx: ProgressNodesContext) {
     progressNodesByStyleNo,
     boardStatsByOrder,
     boardTimesByOrder,
+    processWorkerNamesByOrder,
     openNodeDetail,
     setQuickEditRecord,
     setQuickEditVisible,
@@ -343,6 +345,7 @@ export function createProgressNodesRender(ctx: ProgressNodesContext) {
     const totalQty = Number(record.cuttingQuantity || record.orderQuantity) || 0;
     const nodeDoneMap = boardStatsByOrder[String(record.id || '')];
     const nodeTimeMap = boardTimesByOrder[String(record.id || '')];
+    const nodeWorkerNamesMap = processWorkerNamesByOrder[String(record.id || '')];
     const progressTrackMinWidth = Math.max((ns.length + 1) * 92, 420);
 
     if (!ns || ns.length === 0) {
@@ -516,6 +519,9 @@ export function createProgressNodesRender(ctx: ProgressNodesContext) {
                 return '';
               })();
           const predictHint = getPredictHint(String(record.id || ''), nodeName, percent);
+          const workerNames = nodeWorkerNamesMap?.[nodeName] || [];
+          const operatorDisplay = workerNames.length > 0 ? workerNames.slice(0, 3).join('、') + (workerNames.length > 3 ? `等${workerNames.length}人` : '') : '';
+          const completionTimeDisplay = completionTime ? completionTime.slice(0, 16).replace('T', ' ') : '';
           const segmentProgress = Math.min(1, percent / 100);
           const nodePrimaryColor = isCompletedOrClosed ? '#52c41a' : (frozen ? '#9ca3af' : getNodeColor(record.expectedShipDate || record.plannedEndDate));
           const nodeSecondaryColor = isCompletedOrClosed ? '#95de64' : (frozen ? '#d1d5db' : getNodeColor(record.expectedShipDate || record.plannedEndDate, true));
@@ -658,6 +664,22 @@ export function createProgressNodesRender(ctx: ProgressNodesContext) {
                   }}>
                     {nodeLabel}
                   </div>
+                  {(operatorDisplay || completionTimeDisplay) && (
+                    <div style={{
+                      fontSize: 10,
+                      color: 'var(--color-text-tertiary)',
+                      lineHeight: 1.3,
+                      textAlign: 'center',
+                      maxWidth: '100%',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}>
+                      {operatorDisplay && <span>{operatorDisplay}</span>}
+                      {operatorDisplay && completionTimeDisplay && <span> · </span>}
+                      {completionTimeDisplay && <span>{completionTimeDisplay}</span>}
+                    </div>
+                  )}
                   {(() => {
                     return (
                       <BudgetDaysEditor

@@ -15,6 +15,7 @@ interface UseProgressColumnsParams {
   handleOrderSort: (field: string, order: 'asc' | 'desc') => void;
   boardStatsByOrder: Record<string, Record<string, number>>;
   boardTimesByOrder: Record<string, Record<string, string>>;
+  processWorkerNamesByOrder: Record<string, Record<string, string[]>>;
   progressNodesByStyleNo: Record<string, import('../types').ProgressNode[]>;
   openNodeDetail: (
     order: ProductionOrder,
@@ -48,6 +49,7 @@ export const useProgressColumns = ({
   handleOrderSort,
   boardStatsByOrder,
   boardTimesByOrder,
+  processWorkerNamesByOrder,
   progressNodesByStyleNo,
   openNodeDetail,
   isSupervisorOrAbove,
@@ -90,6 +92,7 @@ export const useProgressColumns = ({
         progressNodesByStyleNo,
         boardStatsByOrder,
         boardTimesByOrder,
+        processWorkerNamesByOrder,
         openNodeDetail,
         setQuickEditRecord,
         setQuickEditVisible,

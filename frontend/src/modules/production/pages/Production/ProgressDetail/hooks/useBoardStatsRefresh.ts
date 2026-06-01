@@ -12,7 +12,7 @@ type UseBoardStatsRefreshParams = {
   mergeBoardStatsForOrder: (orderId: string, stats: any) => void;
   mergeBoardTimesForOrder: (orderId: string, times: any) => void;
   setBoardLoadingForOrder: (orderId: string, loading: boolean) => void;
-  mergeProcessDataForOrder: (orderId: string, stats: Record<string, number>, groups: Record<string, string[]>, times: Record<string, string>, workerCounts: Record<string, number>) => void;
+  mergeProcessDataForOrder: (orderId: string, stats: Record<string, number>, groups: Record<string, string[]>, times: Record<string, string>, workerCounts: Record<string, number>, workerNames: Record<string, string[]>) => void;
 };
 
 export const useBoardStatsRefresh = ({
