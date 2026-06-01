@@ -66,25 +66,27 @@ public class AgentLoopEngine {
     @Autowired private SelfConsistencyVerifier selfConsistencyVerifier;
     @Autowired private CompensatingTransactionManager compensatingTxManager;
     @Autowired private XiaoyunResponseParser xiaoyunResponseParser;
-    @Autowired(required = false) private AgentPlanningEngine planningEngine;
-    @Autowired(required = false) private ContextEngineeringService contextEngineeringService;
-    @Autowired(required = false) private StructuredResponseService structuredResponseService;
-    @Autowired(required = false) private MemoryHierarchyService memoryHierarchyService;
-    @Autowired(required = false) private ProactiveRiskDetectionService riskDetectionService;
-    @Autowired(required = false) private PromptEvolutionService promptEvolutionService;
-    @Autowired(required = false) private AgentSkillRegistry skillRegistry;
-    @Autowired(required = false) private AgentCheckpointManager checkpointManager;
-    @Autowired(required = false) private HandoffEngine handoffEngine;
+    @Autowired private org.springframework.beans.factory.ObjectProvider<AgentPlanningEngine> planningEngineProvider;
+    @Autowired private org.springframework.beans.factory.ObjectProvider<ContextEngineeringService> contextEngineeringServiceProvider;
+    @Autowired private org.springframework.beans.factory.ObjectProvider<StructuredResponseService> structuredResponseServiceProvider;
+    @Autowired private org.springframework.beans.factory.ObjectProvider<MemoryHierarchyService> memoryHierarchyServiceProvider;
+    @Autowired private org.springframework.beans.factory.ObjectProvider<ProactiveRiskDetectionService> riskDetectionServiceProvider;
+    @Autowired private org.springframework.beans.factory.ObjectProvider<PromptEvolutionService> promptEvolutionServiceProvider;
+    @Autowired private org.springframework.beans.factory.ObjectProvider<AgentSkillRegistry> skillRegistryProvider;
+    @Autowired private org.springframework.beans.factory.ObjectProvider<AgentCheckpointManager> checkpointManagerProvider;
+    @Autowired private org.springframework.beans.factory.ObjectProvider<HandoffEngine> handoffEngineProvider;
 
     public String run(AgentLoopContext ctx, AgentLoopCallback cb) {
         String sessionId = ctx.getCommandId();
         compensatingTxManager.beginSession(sessionId);
         try {
+            HandoffEngine handoffEngine = handoffEngineProvider.getIfAvailable();
             HandoffEngine.HandoffResult handoffResult = tryHandoffIfNeeded(ctx, cb);
             if (handoffResult != null && handoffResult.isDelegated()) {
                 return handleFinalAnswer(ctx, handoffResult.getSubAgentResult(), cb);
             }
 
+            AgentCheckpointManager checkpointManager = checkpointManagerProvider.getIfAvailable();
             AgentCheckpoint resumeCheckpoint = null;
             if (checkpointManager != null) {
                 resumeCheckpoint = checkpointManager.loadLatestCheckpoint(sessionId);
@@ -310,6 +312,7 @@ public class AgentLoopEngine {
     }
 
     private void processToolResults(AgentLoopContext ctx, List<AiAgentToolExecHelper.ToolExecRecord> execRecords) {
+        ContextEngineeringService contextEngineeringService = contextEngineeringServiceProvider.getIfAvailable();
         for (AiAgentToolExecHelper.ToolExecRecord rec : execRecords) {
             evidenceHelper.captureTeamDispatchCard(rec.toolName, rec.rawResult, ctx.getTeamDispatchCards());
             evidenceHelper.captureBundleSplitCard(rec.toolName, rec.rawResult, ctx.getBundleSplitCards());
@@ -356,10 +359,12 @@ public class AgentLoopEngine {
             revisedContent += guardWarnings;
         }
 
+        StructuredResponseService structuredResponseService = structuredResponseServiceProvider.getIfAvailable();
         if (structuredResponseService != null) {
             revisedContent = structuredResponseService.enrichWithStructuredFormat(revisedContent);
         }
 
+        ProactiveRiskDetectionService riskDetectionService = riskDetectionServiceProvider.getIfAvailable();
         if (riskDetectionService != null) {
             ProactiveRiskDetectionService.RiskScanResult respRisk =
                     riskDetectionService.scanAiResponse(ctx.getUserMessage(), revisedContent);
@@ -373,6 +378,7 @@ public class AgentLoopEngine {
             }
         }
 
+        PromptEvolutionService promptEvolutionService = promptEvolutionServiceProvider.getIfAvailable();
         if (promptEvolutionService != null && ctx.getTenantId() != null) {
             promptEvolutionService.recordFeedback(
                     ctx.getCommandId(), ctx.getUserMessage(), revisedContent, 75.0, null);
@@ -550,6 +556,10 @@ public class AgentLoopEngine {
     }
 
     private void injectPlanIfNeeded(AgentLoopContext ctx, AgentLoopCallback cb) {
+        AgentPlanningEngine planningEngine = planningEngineProvider.getIfAvailable();
+        ProactiveRiskDetectionService riskDetectionService = riskDetectionServiceProvider.getIfAvailable();
+        MemoryHierarchyService memoryHierarchyService = memoryHierarchyServiceProvider.getIfAvailable();
+        AgentSkillRegistry skillRegistry = skillRegistryProvider.getIfAvailable();
         if (planningEngine == null) return;
         try {
             java.util.List<java.util.Map<String, Object>> toolsForPlanning = new java.util.ArrayList<>();
@@ -619,6 +629,7 @@ public class AgentLoopEngine {
     }
 
     private HandoffEngine.HandoffResult tryHandoffIfNeeded(AgentLoopContext ctx, AgentLoopCallback cb) {
+        HandoffEngine handoffEngine = handoffEngineProvider.getIfAvailable();
         if (handoffEngine == null) return null;
         try {
             return handoffEngine.tryHandoff(ctx.getUserMessage(), ctx, cb);
@@ -630,6 +641,7 @@ public class AgentLoopEngine {
 
     private void saveCheckpoint(AgentLoopContext ctx, String lastAction, String lastToolName,
                                  String lastToolResult, int toolCallCount) {
+        AgentCheckpointManager checkpointManager = checkpointManagerProvider.getIfAvailable();
         if (checkpointManager == null) return;
         try {
             checkpointManager.saveCheckpoint(

@@ -139,17 +139,7 @@ export default function useSampleStage({ selectedStage, message, onRefresh }: Us
     setSampleSnapshotLoading(true);
     try {
       const snapshot = await loadSampleSnapshot(selectedStage.record);
-      if (snapshot && !snapshot.productionOrderId) {
-        try {
-          await api.post(`/production/pattern/${snapshot.id}/create-sample-order`);
-        } catch {
-          // 订单已存在或创建失败，继续使用当前快照
-        }
-        const refreshed = await loadSampleSnapshot(selectedStage.record);
-        setSampleSnapshot(refreshed);
-      } else {
-        setSampleSnapshot(snapshot);
-      }
+      setSampleSnapshot(snapshot);
       await onRefresh();
     } finally {
       setSampleSnapshotLoading(false);

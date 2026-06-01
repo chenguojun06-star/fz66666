@@ -46,12 +46,6 @@ public class PatternProductionController {
     @Autowired
     private com.fashion.supplychain.production.helper.PatternEnrichmentHelper patternEnrichmentHelper;
 
-    @Autowired
-    private com.fashion.supplychain.production.helper.SampleOrderCreationHelper sampleOrderCreationHelper;
-
-    @Autowired
-    private com.fashion.supplychain.production.service.ProductionOrderService productionOrderService;
-
     /**
      * 获取样衣开发费用统计
      */
@@ -115,48 +109,38 @@ public class PatternProductionController {
         }
     }
 
+    /**
+     * @deprecated 样衣不再自动创建大货订单。样衣独立走完流程后，
+     *             通过样式开发页面的"推送到下单管理"按钮把资料同步到下游，
+     *             用户在"下单管理"页面手动创建大货订单。
+     *             保留端点仅作历史兼容，不再执行业务逻辑。
+     */
+    @Deprecated
     @PostMapping("/{id}/create-sample-order")
     public Result<Map<String, Object>> createSampleOrder(@PathVariable String id) {
-        try {
-            Map<String, Object> result = sampleOrderCreationHelper.createSampleProductionOrder(id);
-            return Result.success(result);
-        } catch (IllegalArgumentException e) {
-            return Result.fail(e.getMessage());
-        } catch (Exception e) {
-            log.error("创建样衣生产订单失败: id={}", id, e);
-            return Result.fail("创建失败: " + e.getMessage());
-        }
+        log.warn("[Deprecated] /api/production/pattern/{}/create-sample-order 已废弃：样衣不再自动创建大货订单", id);
+        Map<String, Object> result = new HashMap<>();
+        result.put("deprecated", true);
+        result.put("orderId", null);
+        result.put("orderNo", null);
+        result.put("patternId", id);
+        result.put("message", "样衣已独立运行，不再自动创建大货订单。请到款式详情点击「推送到下单管理」后由用户手动下单。");
+        return Result.success(result);
     }
 
+    /**
+     * @deprecated 样衣不再自动关联大货订单。保留端点仅作历史兼容，
+     *             不再返回关联大货订单信息（固定返回 linked=false）。
+     */
+    @Deprecated
     @GetMapping("/{id}/linked-order")
     public Result<Map<String, Object>> getLinkedOrder(@PathVariable String id) {
-        try {
-            PatternProduction pattern = patternProductionService.getById(id);
-            if (pattern == null || pattern.getDeleteFlag() == 1) {
-                return Result.fail("样板生产记录不存在");
-            }
-            TenantAssert.assertBelongsToCurrentTenant(pattern.getTenantId(), "样衣");
-            if (!StringUtils.hasText(pattern.getProductionOrderId())) {
-                return Result.success(Map.of("linked", false));
-            }
-            com.fashion.supplychain.production.entity.ProductionOrder order =
-                    productionOrderService.getById(pattern.getProductionOrderId());
-            if (order == null) {
-                return Result.success(Map.of("linked", false));
-            }
-            Map<String, Object> data = new HashMap<>();
-            data.put("linked", true);
-            data.put("orderId", order.getId());
-            data.put("orderNo", order.getOrderNo());
-            data.put("status", order.getStatus());
-            data.put("productionProgress", order.getProductionProgress());
-            data.put("progressWorkflowJson", order.getProgressWorkflowJson());
-            data.put("sourceBizType", order.getSourceBizType());
-            return Result.success(data);
-        } catch (Exception e) {
-            log.error("获取样衣关联订单失败: id={}", id, e);
-            return Result.fail("获取失败: " + e.getMessage());
-        }
+        log.warn("[Deprecated] /api/production/pattern/{}/linked-order 已废弃：样衣不再关联大货订单", id);
+        Map<String, Object> data = new HashMap<>();
+        data.put("linked", false);
+        data.put("deprecated", true);
+        data.put("message", "样衣已独立运行，不再自动关联大货订单。");
+        return Result.success(data);
     }
 
     /**

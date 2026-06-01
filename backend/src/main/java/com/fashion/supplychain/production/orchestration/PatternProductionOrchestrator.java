@@ -3,19 +3,15 @@ package com.fashion.supplychain.production.orchestration;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.UserContext;
-import com.fashion.supplychain.production.entity.CuttingBundle;
 import com.fashion.supplychain.production.entity.PatternProduction;
 import com.fashion.supplychain.production.entity.PatternScanRecord;
-import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.helper.PatternEnrichmentHelper;
 import com.fashion.supplychain.production.helper.PatternStatusHelper;
 import com.fashion.supplychain.production.helper.PatternStockHelper;
 import com.fashion.supplychain.production.service.PatternProductionService;
 import com.fashion.supplychain.production.service.PatternScanRecordService;
-import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.ScanRecordService;
-import com.fashion.supplychain.production.service.CuttingBundleService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -63,18 +59,6 @@ public class PatternProductionOrchestrator {
 
     @Autowired
     private com.fashion.supplychain.style.service.StyleProcessService styleProcessService;
-
-    @Autowired
-    private com.fashion.supplychain.production.helper.SampleOrderCreationHelper sampleOrderCreationHelper;
-
-    @Autowired
-    private ProductionProcessTrackingOrchestrator processTrackingOrchestrator;
-
-    @Autowired
-    private ProductionOrderService productionOrderService;
-
-    @Autowired
-    private CuttingBundleService cuttingBundleService;
 
     /**
      * 分页查询并丰富样板生产记录（关联款式、工序、采购数据）
@@ -163,13 +147,6 @@ public class PatternProductionOrchestrator {
 
         statusHelper.syncStyleInfoOnReceive(record.getStyleId(), currentUser);
         statusHelper.syncStyleInfoSampleStage(record);
-
-        try {
-            Map<String, Object> orderResult = sampleOrderCreationHelper.createSampleProductionOrder(id);
-            log.info("[样衣领取] 自动创建生产订单: patternId={}, orderId={}", id, orderResult.get("orderId"));
-        } catch (Exception e) {
-            log.warn("[样衣领取] 自动创建生产订单失败（不影响领取主流程）: patternId={}", id, e);
-        }
 
         log.info("Pattern production received: id={}, receiver={}", id, currentUser);
         return "领取成功";
@@ -287,8 +264,6 @@ public class PatternProductionOrchestrator {
 
         syncToScanRecord(pattern, operationType, operatorId, operatorName, remark, unitPrice);
         statusHelper.updatePatternStatusByOperation(pattern, operationType, operatorName);
-
-        tryUpdateProductionProcessTracking(pattern, operationType, operatorId, operatorName, scanRecord);
 
         if ("COMPLETE".equals(operationType.trim()) || "WAREHOUSE_IN".equals(operationType.trim())) {
             statusHelper.syncStyleInfoSampleStage(pattern);
@@ -533,68 +508,6 @@ public class PatternProductionOrchestrator {
         }
     }
 
-    private String resolveTrackingProcessName(String operationType, Long styleId) {
-        if (styleId == null) return operationType;
-        List<com.fashion.supplychain.style.entity.StyleProcess> processes = styleProcessService.listByStyleId(styleId);
-        if (processes != null && !processes.isEmpty()) {
-            for (com.fashion.supplychain.style.entity.StyleProcess sp : processes) {
-                if (operationType.equals(sp.getProcessName())) {
-                    return operationType;
-                }
-            }
-        }
-        switch (operationType) {
-            case "RECEIVE":       return "采购";
-            case "PLATE":         return "裁剪";
-            case "FOLLOW_UP":     return "车缝";
-            case "COMPLETE":      return "尾部";
-            case "WAREHOUSE_IN":  return "入库";
-            default:              return operationType;
-        }
-    }
-
-    private void tryUpdateProductionProcessTracking(PatternProduction pattern, String operationType,
-            String operatorId, String operatorName, PatternScanRecord scanRecord) {
-        if (!StringUtils.hasText(pattern.getProductionOrderId())) return;
-        try {
-            Long orderId = Long.valueOf(pattern.getProductionOrderId());
-            ProductionOrder productionOrder = productionOrderService.getById(orderId);
-            if (productionOrder == null || productionOrder.getDeleteFlag() == 1) return;
-
-            String trackingProcessName = resolveTrackingProcessName(
-                    operationType, parseStyleId(pattern.getStyleId()));
-            if (!StringUtils.hasText(trackingProcessName)) return;
-
-            List<CuttingBundle> bundles = cuttingBundleService.lambdaQuery()
-                    .eq(CuttingBundle::getProductionOrderId, orderId)
-                    .list();
-            if (bundles == null || bundles.isEmpty()) return;
-
-            for (CuttingBundle bundle : bundles) {
-                try {
-                    processTrackingOrchestrator.updateScanRecord(
-                            String.valueOf(bundle.getId()), trackingProcessName,
-                            operatorId, operatorName, scanRecord.getId());
-                } catch (Exception inner) {
-                    log.debug("[样衣] 单条工序跟踪更新跳过 bundleId={} process={}", bundle.getId(), trackingProcessName);
-                }
-            }
-            log.info("[样衣工序跟踪] 同步成功: patternId={} orderId={} operationType={} trackingName={} bundles={}",
-                    pattern.getId(), orderId, operationType, trackingProcessName, bundles.size());
-        } catch (Exception e) {
-            log.warn("[样衣工序跟踪] 同步失败（不影响主流程）: patternId={} operationType={}", pattern.getId(), operationType, e);
-        }
-    }
-
-    private Long parseStyleId(String styleId) {
-        if (!StringUtils.hasText(styleId)) return null;
-        try {
-            return Long.valueOf(styleId);
-        } catch (NumberFormatException e) {
-            return null;
-        }
-    }
-
     private void createPatternScanRecordForWage(PatternProduction pattern, String processLabel,
                                                   String operatorId, String operatorName, LocalDateTime scanTime) {
         try {
@@ -669,18 +582,6 @@ public class PatternProductionOrchestrator {
 
         scanRecord.setDeleteFlag(1);
         patternScanRecordService.updateById(scanRecord);
-
-        if (StringUtils.hasText(pattern.getProductionOrderId())) {
-            try {
-                Long orderId = Long.valueOf(pattern.getProductionOrderId());
-                ProductionOrder productionOrder = productionOrderService.getById(orderId);
-                if (productionOrder != null && productionOrder.getDeleteFlag() == 0) {
-                    productionOrderService.recomputeProgressFromRecords(String.valueOf(orderId));
-                }
-            } catch (Exception e) {
-                log.warn("[样衣撤回] 重新计算进度失败: patternId={} scanRecordId={}", patternProductionId, scanRecordId, e);
-            }
-        }
 
         log.info("[样衣撤回] scanRecordId={} operationType={} operatorName={} undoBy={}",
                 scanRecordId, scanRecord.getOperationType(), scanRecord.getOperatorName(), operatorName);

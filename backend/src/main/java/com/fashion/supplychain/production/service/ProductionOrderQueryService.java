@@ -109,6 +109,7 @@ public class ProductionOrderQueryService {
         String includeScrapped, excludeTerminal, orgUnitId, parentOrgUnitId;
         String factoryType, factoryId, customerId, customerName;
         String myOrdersOnly;
+        String includeSample;
     }
 
     private QueryParams extractQueryParams(Map<String, Object> safeParams) {
@@ -133,6 +134,7 @@ public class ProductionOrderQueryService {
         qp.customerId = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "customerId"));
         qp.customerName = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "customerName"));
         qp.myOrdersOnly = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "myOrdersOnly"));
+        qp.includeSample = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "includeSample"));
         return qp;
     }
 
@@ -158,6 +160,12 @@ public class ProductionOrderQueryService {
                 .like(StringUtils.hasText(qp.customerName), "customer_name", qp.customerName)
                 .eq("delete_flag", 0)
                 .ne(!"true".equalsIgnoreCase(qp.includeScrapped), "status", "scrapped");
+
+        // 样衣独立运行：默认不返回 sourceBizType='SAMPLE' 的"样衣类型大货订单"，
+        // 避免历史脏数据混在大货订单列表。显式传 includeSample=true 可查全量。
+        if (!"true".equalsIgnoreCase(qp.includeSample)) {
+            wrapper.and(w -> w.isNull("source_biz_type").or().ne("source_biz_type", "SAMPLE"));
+        }
 
         if ("true".equalsIgnoreCase(qp.excludeTerminal) && !StringUtils.hasText(qp.status)) {
             wrapper.notIn("status", OrderStatusConstants.TERMINAL_STATUSES);

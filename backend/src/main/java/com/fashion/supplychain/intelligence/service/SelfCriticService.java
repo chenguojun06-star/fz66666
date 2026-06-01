@@ -88,49 +88,82 @@ public class SelfCriticService {
             boolean usedQuickPath) {
 
         try {
-            long start = System.currentTimeMillis();
+            calculateAndProcessCritique(
+                    sessionId, userMessage, aiResponse, toolCalls, toolResults, metrics, usedQuickPath);
+        } catch (Exception e) {
+            log.warn("[SelfCritic] 自我批评失败（非关键）session={}: {}", sessionId, e.getMessage());
+        }
+    }
 
-            double dataAccuracyScore, toolEfficiencyScore, completenessScore, hallucinationScore, contextUtilizationScore, overallScore;
-            String critiqueReport;
+    /**
+     * 同步计算自我批评评分并返回（不触发异步任务，用于上游调用链获取分数）。
+     *
+     * @param sessionId      会话ID
+     * @param userMessage    用户原始问题
+     * @param aiResponse     AI最终回答
+     * @param toolCalls      本次调用的工具列表
+     * @param toolResults    工具返回的原始结果（JSON字符串）
+     * @param metrics        执行指标（耗时、token数、迭代轮数等）
+     * @param usedQuickPath  是否使用了快速通道
+     * @return 综合评分（0-100），异常返回80
+     */
+    public double calculateCritiqueScore(
+            String sessionId,
+            String userMessage,
+            String aiResponse,
+            List<AgentTool> toolCalls,
+            List<String> toolResults,
+            AgentExecutionMetrics metrics,
+            boolean usedQuickPath) {
+        try {
+            return calculateAndProcessCritique(
+                    sessionId, userMessage, aiResponse, toolCalls, toolResults, metrics, usedQuickPath);
+        } catch (Exception e) {
+            log.warn("[SelfCritic] 计算评分失败（非关键）session={}: {}", sessionId, e.getMessage());
+            return 80.0;
+        }
+    }
 
-            if (llmCriticEnabled && inferenceOrchestrator != null && inferenceOrchestrator.isAnyModelEnabled()) {
-                com.fashion.supplychain.intelligence.dto.IntelligenceInferenceResult llmResult =
-                        evaluateWithLlm(userMessage, aiResponse, toolCalls, toolResults, usedQuickPath, metrics);
-                if (llmResult != null && llmResult.isSuccess()) {
-                    double[] scores = parseLlmScores(llmResult.getContent());
-                    dataAccuracyScore = scores[0];
-                    toolEfficiencyScore = scores[1];
-                    completenessScore = scores[2];
-                    hallucinationScore = scores[3];
-                    contextUtilizationScore = scores[4];
-                    overallScore = (dataAccuracyScore * 0.30
-                            + toolEfficiencyScore * 0.25
-                            + completenessScore * 0.20
-                            + hallucinationScore * 0.15
-                            + contextUtilizationScore * 0.10);
-                    critiqueReport = buildCritiqueReport(
-                            dataAccuracyScore, toolEfficiencyScore, completenessScore,
-                            hallucinationScore, contextUtilizationScore, overallScore,
-                            userMessage, aiResponse, toolCalls, usedQuickPath)
-                            + " | LLM语义评分: " + (llmResult.getContent().length() > 200
-                            ? llmResult.getContent().substring(0, 200) : llmResult.getContent());
-                } else {
-                    dataAccuracyScore = evaluateDataAccuracy(aiResponse, toolResults);
-                    toolEfficiencyScore = evaluateToolEfficiency(userMessage, toolCalls, usedQuickPath);
-                    completenessScore = evaluateCompleteness(userMessage, aiResponse);
-                    hallucinationScore = evaluateHallucination(aiResponse, toolResults);
-                    contextUtilizationScore = evaluateContextUtilization(aiResponse, metrics);
-                    overallScore = (dataAccuracyScore * 0.30
-                            + toolEfficiencyScore * 0.25
-                            + completenessScore * 0.20
-                            + hallucinationScore * 0.15
-                            + contextUtilizationScore * 0.10);
-                    critiqueReport = buildCritiqueReport(
-                            dataAccuracyScore, toolEfficiencyScore, completenessScore,
-                            hallucinationScore, contextUtilizationScore, overallScore,
-                            userMessage, aiResponse, toolCalls, usedQuickPath)
-                            + " | [降级为正则评分]";
-                }
+    /**
+     * 内部方法：实际计算评分并处理（保存反馈/快照/路由反馈）。
+     *
+     * @return 综合评分（0-100）
+     */
+    private double calculateAndProcessCritique(
+            String sessionId,
+            String userMessage,
+            String aiResponse,
+            List<AgentTool> toolCalls,
+            List<String> toolResults,
+            AgentExecutionMetrics metrics,
+            boolean usedQuickPath) {
+
+        long start = System.currentTimeMillis();
+
+        double dataAccuracyScore, toolEfficiencyScore, completenessScore, hallucinationScore, contextUtilizationScore, overallScore;
+        String critiqueReport;
+
+        if (llmCriticEnabled && inferenceOrchestrator != null && inferenceOrchestrator.isAnyModelEnabled()) {
+            com.fashion.supplychain.intelligence.dto.IntelligenceInferenceResult llmResult =
+                    evaluateWithLlm(userMessage, aiResponse, toolCalls, toolResults, usedQuickPath, metrics);
+            if (llmResult != null && llmResult.isSuccess()) {
+                double[] scores = parseLlmScores(llmResult.getContent());
+                dataAccuracyScore = scores[0];
+                toolEfficiencyScore = scores[1];
+                completenessScore = scores[2];
+                hallucinationScore = scores[3];
+                contextUtilizationScore = scores[4];
+                overallScore = (dataAccuracyScore * 0.30
+                        + toolEfficiencyScore * 0.25
+                        + completenessScore * 0.20
+                        + hallucinationScore * 0.15
+                        + contextUtilizationScore * 0.10);
+                critiqueReport = buildCritiqueReport(
+                        dataAccuracyScore, toolEfficiencyScore, completenessScore,
+                        hallucinationScore, contextUtilizationScore, overallScore,
+                        userMessage, aiResponse, toolCalls, usedQuickPath)
+                        + " | LLM语义评分: " + (llmResult.getContent().length() > 200
+                        ? llmResult.getContent().substring(0, 200) : llmResult.getContent());
             } else {
                 dataAccuracyScore = evaluateDataAccuracy(aiResponse, toolResults);
                 toolEfficiencyScore = evaluateToolEfficiency(userMessage, toolCalls, usedQuickPath);
@@ -145,37 +178,52 @@ public class SelfCriticService {
                 critiqueReport = buildCritiqueReport(
                         dataAccuracyScore, toolEfficiencyScore, completenessScore,
                         hallucinationScore, contextUtilizationScore, overallScore,
-                        userMessage, aiResponse, toolCalls, usedQuickPath);
+                        userMessage, aiResponse, toolCalls, usedQuickPath)
+                        + " | [降级为正则评分]";
             }
-
-            // 3. 低分自动沉淀反馈
-            if (overallScore < SELF_IMPROVE_THRESHOLD) {
-                autoSaveFeedback(sessionId, userMessage, aiResponse, overallScore, critiqueReport, usedQuickPath);
-            }
-
-            // 4. 无论分数高低，都保存执行快照到记忆系统（用于后续模式挖掘）
-            saveExecutionSnapshot(sessionId, userMessage, aiResponse, overallScore, metrics, usedQuickPath);
-
-            // 5. RouteLLM 质量反馈闭环：将评分反哺给模型路由器，驱动成本最优路由
-            if (modelConsortiumRouter != null && metrics != null && metrics.getModelName() != null) {
-                try {
-                    String modelName = metrics.getModelName();
-                    int score = (int) Math.round(overallScore);
-                    modelConsortiumRouter.recordQuality(modelName,
-                            com.fashion.supplychain.intelligence.gateway.ModelConsortiumRouter.Complexity.MODERATE,
-                            score);
-                    log.debug("[SelfCritic→Router] 质量反馈: model={} score={} session={}", modelName, score, sessionId);
-                } catch (Exception ignored) {}
-            }
-
-            log.info("[SelfCritic] session={} score={} quickPath={} tools={}耗时={}ms",
-                    sessionId, overallScore, usedQuickPath,
-                    toolCalls == null ? 0 : toolCalls.size(),
-                    System.currentTimeMillis() - start);
-
-        } catch (Exception e) {
-            log.warn("[SelfCritic] 自我批评失败（非关键）session={}: {}", sessionId, e.getMessage());
+        } else {
+            dataAccuracyScore = evaluateDataAccuracy(aiResponse, toolResults);
+            toolEfficiencyScore = evaluateToolEfficiency(userMessage, toolCalls, usedQuickPath);
+            completenessScore = evaluateCompleteness(userMessage, aiResponse);
+            hallucinationScore = evaluateHallucination(aiResponse, toolResults);
+            contextUtilizationScore = evaluateContextUtilization(aiResponse, metrics);
+            overallScore = (dataAccuracyScore * 0.30
+                    + toolEfficiencyScore * 0.25
+                    + completenessScore * 0.20
+                    + hallucinationScore * 0.15
+                    + contextUtilizationScore * 0.10);
+            critiqueReport = buildCritiqueReport(
+                    dataAccuracyScore, toolEfficiencyScore, completenessScore,
+                    hallucinationScore, contextUtilizationScore, overallScore,
+                    userMessage, aiResponse, toolCalls, usedQuickPath);
         }
+
+        // 3. 低分自动沉淀反馈
+        if (overallScore < SELF_IMPROVE_THRESHOLD) {
+            autoSaveFeedback(sessionId, userMessage, aiResponse, overallScore, critiqueReport, usedQuickPath);
+        }
+
+        // 4. 无论分数高低，都保存执行快照到记忆系统（用于后续模式挖掘）
+        saveExecutionSnapshot(sessionId, userMessage, aiResponse, overallScore, metrics, usedQuickPath);
+
+        // 5. RouteLLM 质量反馈闭环：将评分反哺给模型路由器，驱动成本最优路由
+        if (modelConsortiumRouter != null && metrics != null && metrics.getModelName() != null) {
+            try {
+                String modelName = metrics.getModelName();
+                int score = (int) Math.round(overallScore);
+                modelConsortiumRouter.recordQuality(modelName,
+                        com.fashion.supplychain.intelligence.gateway.ModelConsortiumRouter.Complexity.MODERATE,
+                        score);
+                log.debug("[SelfCritic→Router] 质量反馈: model={} score={} session={}", modelName, score, sessionId);
+            } catch (Exception ignored) {}
+        }
+
+        log.info("[SelfCritic] session={} score={} quickPath={} tools={}耗时={}ms",
+                sessionId, overallScore, usedQuickPath,
+                toolCalls == null ? 0 : toolCalls.size(),
+                System.currentTimeMillis() - start);
+
+        return overallScore;
     }
 
     // ──────────────────────────────────────────────────────────────
@@ -217,7 +265,11 @@ public class SelfCriticService {
             return needsData ? 30.0 : 85.0;
         }
 
-        if (toolCalls == null || toolCalls.isEmpty()) return 50.0;
+        if (toolCalls == null || toolCalls.isEmpty()) {
+            // 无工具调用时，判断是否真的需要数据
+            boolean needsData = impliesDataNeed(userMessage);
+            return needsData ? 50.0 : 85.0;
+        }
 
         // 检查是否有冗余工具调用
         long distinctTools = toolCalls.stream().map(AgentTool::getName).distinct().count();
@@ -528,7 +580,7 @@ public class SelfCriticService {
     }
 
     private double[] parseLlmScores(String content) {
-        double[] defaults = {75.0, 75.0, 75.0, 75.0, 75.0};
+        double[] defaults = {70.0, 70.0, 70.0, 70.0, 70.0};
         if (content == null || content.isBlank()) return defaults;
         try {
             String json = content.trim();
@@ -539,11 +591,11 @@ public class SelfCriticService {
             var mapper = new com.fasterxml.jackson.databind.ObjectMapper();
             var node = mapper.readTree(json);
             return new double[]{
-                    clampScore(node.path("data_accuracy").asDouble(75)),
-                    clampScore(node.path("tool_efficiency").asDouble(75)),
-                    clampScore(node.path("completeness").asDouble(75)),
-                    clampScore(node.path("hallucination_control").asDouble(75)),
-                    clampScore(node.path("context_utilization").asDouble(75))
+                    clampScore(node.path("data_accuracy").asDouble(70)),
+                    clampScore(node.path("tool_efficiency").asDouble(70)),
+                    clampScore(node.path("completeness").asDouble(70)),
+                    clampScore(node.path("hallucination_control").asDouble(70)),
+                    clampScore(node.path("context_utilization").asDouble(70))
             };
         } catch (Exception e) {
             log.debug("[SelfCritic-LLM] 解析评分JSON失败: {}", e.getMessage());

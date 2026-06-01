@@ -514,9 +514,14 @@ public class MaterialPurchaseOrchestrator {
     @Transactional(rollbackFor = Exception.class)
     public boolean saveAndSync(MaterialPurchase materialPurchase) {
         helper.fillUnitPriceFromBom(materialPurchase);
-        if (!StringUtils.hasText(materialPurchase.getSourceType())
-                && !StringUtils.hasText(materialPurchase.getOrderId())) {
-            materialPurchase.setSourceType("batch");
+        if (!StringUtils.hasText(materialPurchase.getSourceType())) {
+            if (StringUtils.hasText(materialPurchase.getPatternProductionId())) {
+                materialPurchase.setSourceType("sample");
+            } else if (StringUtils.hasText(materialPurchase.getOrderId())) {
+                materialPurchase.setSourceType("order");
+            } else {
+                materialPurchase.setSourceType("batch");
+            }
         }
         boolean ok = materialPurchaseService.savePurchaseAndUpdateOrder(materialPurchase);
         if (!ok) {

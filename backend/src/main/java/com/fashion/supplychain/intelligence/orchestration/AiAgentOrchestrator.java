@@ -46,29 +46,29 @@ public class AiAgentOrchestrator {
     @Autowired private AiAgentMemoryHelper memoryHelper;
     @Autowired private DecisionCardOrchestrator decisionCardOrchestrator;
     @Autowired private LongTermMemoryOrchestrator longTermMemoryOrchestrator;
-    @Autowired(required = false) private ConversationReflectionOrchestrator reflectionOrchestrator;
-    @Autowired(required = false) private com.fashion.supplychain.intelligence.service.SessionSearchService sessionSearchService;
-    @Autowired(required = false) private SkillEvolutionOrchestrator skillEvolutionOrchestrator;
-    @Autowired(required = false) private MemoryNudgeOrchestrator memoryNudgeOrchestrator;
-    @Autowired(required = false) private UserProfileEvolutionOrchestrator userProfileEvolutionOrchestrator;
-    @Autowired(required = false) private com.fashion.supplychain.intelligence.service.AgentContextFileService agentContextFileService;
+    @Autowired private org.springframework.beans.factory.ObjectProvider<ConversationReflectionOrchestrator> reflectionOrchestratorProvider;
+    @Autowired private org.springframework.beans.factory.ObjectProvider<com.fashion.supplychain.intelligence.service.SessionSearchService> sessionSearchServiceProvider;
+    @Autowired private org.springframework.beans.factory.ObjectProvider<SkillEvolutionOrchestrator> skillEvolutionOrchestratorProvider;
+    @Autowired private org.springframework.beans.factory.ObjectProvider<MemoryNudgeOrchestrator> memoryNudgeOrchestratorProvider;
+    @Autowired private org.springframework.beans.factory.ObjectProvider<UserProfileEvolutionOrchestrator> userProfileEvolutionOrchestratorProvider;
+    @Autowired private org.springframework.beans.factory.ObjectProvider<com.fashion.supplychain.intelligence.service.AgentContextFileService> agentContextFileServiceProvider;
     @Autowired private com.fashion.supplychain.intelligence.gateway.AiInferenceGateway inferenceGateway;
-    @Autowired(required = false) private com.fashion.supplychain.intelligence.service.KnowledgeBaseService knowledgeBaseService;
+    @Autowired private org.springframework.beans.factory.ObjectProvider<com.fashion.supplychain.intelligence.service.KnowledgeBaseService> knowledgeBaseServiceProvider;
     @Autowired private com.fashion.supplychain.intelligence.helper.PromptContextProvider promptContextProvider;
-    @Autowired(required = false) private com.fashion.supplychain.intelligence.helper.PromptTemplateLoader promptTemplateLoader;
-    @Autowired(required = false) private com.fashion.supplychain.intelligence.helper.AiAgentPromptHelper aiAgentPromptHelper;
+    @Autowired private org.springframework.beans.factory.ObjectProvider<com.fashion.supplychain.intelligence.helper.PromptTemplateLoader> promptTemplateLoaderProvider;
+    @Autowired private org.springframework.beans.factory.ObjectProvider<com.fashion.supplychain.intelligence.helper.AiAgentPromptHelper> aiAgentPromptHelperProvider;
 
     // 自我进化系统组件
-    @Autowired(required = false) private SelfCriticService selfCriticService;
-    @Autowired(required = false) private RealTimeLearningLoop realTimeLearningLoop;
-    @Autowired(required = false) private QuickPathQualityGate quickPathQualityGate;
-    @Autowired(required = false) private DynamicFollowUpEngine dynamicFollowUpEngine;
+    @Autowired private org.springframework.beans.factory.ObjectProvider<SelfCriticService> selfCriticServiceProvider;
+    @Autowired private org.springframework.beans.factory.ObjectProvider<RealTimeLearningLoop> realTimeLearningLoopProvider;
+    @Autowired private org.springframework.beans.factory.ObjectProvider<QuickPathQualityGate> quickPathQualityGateProvider;
+    @Autowired private org.springframework.beans.factory.ObjectProvider<DynamicFollowUpEngine> dynamicFollowUpEngineProvider;
 
     // 五大Agent框架增强组件
-    @Autowired(required = false) private com.fashion.supplychain.intelligence.service.MemoryBankService memoryBankService;
-    @Autowired(required = false) private com.fashion.supplychain.intelligence.service.SkillAutoCreationService skillAutoCreationService;
-    @Autowired(required = false) private com.fashion.supplychain.intelligence.service.EntityMemoryContextService entityMemoryContextService;
-    @Autowired(required = false) private AiLongMemoryMapper longMemoryMapper;
+    @Autowired private org.springframework.beans.factory.ObjectProvider<com.fashion.supplychain.intelligence.service.MemoryBankService> memoryBankServiceProvider;
+    @Autowired private org.springframework.beans.factory.ObjectProvider<com.fashion.supplychain.intelligence.service.SkillAutoCreationService> skillAutoCreationServiceProvider;
+    @Autowired private org.springframework.beans.factory.ObjectProvider<com.fashion.supplychain.intelligence.service.EntityMemoryContextService> entityMemoryContextServiceProvider;
+    @Autowired private org.springframework.beans.factory.ObjectProvider<AiLongMemoryMapper> longMemoryMapperProvider;
 
     private final ThreadLocal<String> lastCommandIdHolder = new ThreadLocal<>();
     private final ThreadLocal<List<AiAgentToolExecHelper.ToolExecRecord>> lastToolRecordsHolder = new ThreadLocal<>();
@@ -130,6 +130,7 @@ public class AiAgentOrchestrator {
     }
 
     private String getOrRefreshSystemContext(Long tenantId) {
+        com.fashion.supplychain.intelligence.service.AgentContextFileService agentContextFileService = agentContextFileServiceProvider.getIfAvailable();
         if (agentContextFileService == null || tenantId == null) return "";
         TenantCachedContext cached = systemContextCache.get(tenantId);
         long now = System.currentTimeMillis();
@@ -142,6 +143,7 @@ public class AiAgentOrchestrator {
     }
 
     private String getOrRefreshSkillContext(Long tenantId) {
+        SkillEvolutionOrchestrator skillEvolutionOrchestrator = skillEvolutionOrchestratorProvider.getIfAvailable();
         if (skillEvolutionOrchestrator == null || tenantId == null) return "";
         TenantCachedContext cached = skillContextCache.get(tenantId);
         long now = System.currentTimeMillis();
@@ -284,7 +286,8 @@ public class AiAgentOrchestrator {
                 return;
             }
 
-            String cacheKey = UserContext.tenantId() + ":" + UserContext.userId() + ":" + userMessage;
+            String pageContextKeyPart = pageContext != null ? String.valueOf(pageContext.hashCode()) : "no_ctx";
+            String cacheKey = UserContext.tenantId() + ":" + UserContext.userId() + ":" + userMessage + ":" + pageContextKeyPart;
             String cached = queryCache.getIfPresent(cacheKey);
             if (cached != null) {
                 log.info("[AiAgent-Stream] 命中查询缓存，直接返回 ({}字符)", cached.length());
@@ -317,7 +320,8 @@ public class AiAgentOrchestrator {
             if ("plan_mode".equals(loopResult) || "stuck_detected".equals(loopResult)
                     || "token_budget_exceeded".equals(loopResult) || "max_iterations_exceeded".equals(loopResult)
                     || "cancelled".equals(loopResult) || "deadline_exceeded".equals(loopResult)) {
-            } else if (cb.getFinalContent() != null && cb.getExecRecords().size() <= 2) {
+                // 失败或取消不缓存
+            } else if (cb.getFinalContent() != null) {
                 queryCache.put(cacheKey, deduplicateAnswer(cb.getFinalContent()));
             }
 
@@ -351,6 +355,7 @@ public class AiAgentOrchestrator {
     }
 
     private void learnEntityMemoryFromTools(Long tenantId, String toolResultsStr) {
+        AiLongMemoryMapper longMemoryMapper = longMemoryMapperProvider.getIfAvailable();
         if (longMemoryMapper == null) return;
         String userId = UserContext.userId();
         try {
@@ -416,12 +421,12 @@ public class AiAgentOrchestrator {
     }
 
     private void triggerPostTurnHooks(AgentLoopContext ctx, String userMessage,
-                                       String assistantResponse,
-                                       java.util.List<AiAgentToolExecHelper.ToolExecRecord> toolRecords,
-                                       boolean usedQuickPath) {
+                                   String assistantResponse,
+                                   List<AiAgentToolExecHelper.ToolExecRecord> toolRecords,
+                                   boolean usedQuickPath) {
         Long tenantId = UserContext.tenantId();
         String userId = UserContext.userId();
-        String sessionId = "default";
+        String sessionId = ctx != null && ctx.getStateSessionId() != null ? ctx.getStateSessionId() : (ctx != null ? ctx.getCommandId() : java.util.UUID.randomUUID().toString());
         String conversationId = ctx != null ? ctx.getCommandId() : java.util.UUID.randomUUID().toString();
 
         String toolResultsStr = "";
@@ -438,30 +443,41 @@ public class AiAgentOrchestrator {
             toolResultsStr = sb.toString();
         }
 
+        double selfScore = 80.0;
+
         // === 自我批评与实时学习（新增）===
+        SelfCriticService selfCriticService = selfCriticServiceProvider.getIfAvailable();
         if (selfCriticService != null) {
             try {
                 AgentExecutionMetrics metrics = AgentExecutionMetrics.empty();
                 metrics.setToolCallCount(toolRecords != null ? toolRecords.size() : 0);
 
+                // 先同步计算评分
+                selfScore = selfCriticService.calculateCritiqueScore(
+                        sessionId, userMessage, assistantResponse,
+                        null, toolResultsList, metrics, usedQuickPath);
+
+                // 再异步触发完整自我批评（异步保存反馈/快照/路由）
                 selfCriticService.critique(
-                        conversationId, userMessage, assistantResponse,
+                        sessionId, userMessage, assistantResponse,
                         null, toolResultsList, metrics, usedQuickPath);
             } catch (Exception e) {
                 log.debug("[AiAgent] SelfCritic触发失败（非关键）: {}", e.getMessage());
             }
         }
 
+        RealTimeLearningLoop realTimeLearningLoop = realTimeLearningLoopProvider.getIfAvailable();
         if (realTimeLearningLoop != null) {
             try {
                 realTimeLearningLoop.trigger(
                         conversationId, userMessage, assistantResponse,
-                        80.0, tenantId);
+                        selfScore, tenantId);
             } catch (Exception e) {
                 log.debug("[AiAgent] RealTimeLearning触发失败（非关键）: {}", e.getMessage());
             }
         }
 
+        com.fashion.supplychain.intelligence.service.MemoryBankService memoryBankService = memoryBankServiceProvider.getIfAvailable();
         if (memoryBankService != null) {
             try {
                 memoryBankService.onFocusChange(tenantId,
@@ -471,6 +487,8 @@ public class AiAgentOrchestrator {
             }
         }
 
+        com.fashion.supplychain.intelligence.service.SkillAutoCreationService skillAutoCreationService = skillAutoCreationServiceProvider.getIfAvailable();
+        ConversationReflectionOrchestrator reflectionOrchestrator = reflectionOrchestratorProvider.getIfAvailable();
         if (skillAutoCreationService != null && reflectionOrchestrator == null
                 && toolRecords != null && toolRecords.size() >= 3) {
             try {
@@ -492,6 +510,7 @@ public class AiAgentOrchestrator {
             }));
         }
 
+        com.fashion.supplychain.intelligence.service.SessionSearchService sessionSearchService = sessionSearchServiceProvider.getIfAvailable();
         if (sessionSearchService != null) {
             sessionSearchService.indexConversation(
                     tenantId, userId, sessionId, conversationId,
@@ -505,6 +524,7 @@ public class AiAgentOrchestrator {
             }
         }
 
+        MemoryNudgeOrchestrator memoryNudgeOrchestrator = memoryNudgeOrchestratorProvider.getIfAvailable();
         if (memoryNudgeOrchestrator != null) {
             final List<String> finalToolNames = toolNames;
             postTurnExecutor.execute(UserContext.wrap(() -> {
@@ -514,6 +534,7 @@ public class AiAgentOrchestrator {
             }));
         }
 
+        UserProfileEvolutionOrchestrator userProfileEvolutionOrchestrator = userProfileEvolutionOrchestratorProvider.getIfAvailable();
         if (userProfileEvolutionOrchestrator != null) {
             final List<String> finalToolNames2 = toolNames;
             postTurnExecutor.execute(UserContext.wrap(() -> {
@@ -617,6 +638,7 @@ public class AiAgentOrchestrator {
             String commandId = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 16);
 
             String ragContext = "";
+            com.fashion.supplychain.intelligence.service.KnowledgeBaseService knowledgeBaseService = knowledgeBaseServiceProvider.getIfAvailable();
             if (knowledgeBaseService != null) {
                 try {
                     ragContext = promptContextProvider.buildRagContext(UserContext.tenantId(), userMessage);
@@ -633,6 +655,7 @@ public class AiAgentOrchestrator {
             }
 
             StringBuilder sysPrompt = new StringBuilder();
+            com.fashion.supplychain.intelligence.helper.PromptTemplateLoader promptTemplateLoader = promptTemplateLoaderProvider.getIfAvailable();
             String identity = promptTemplateLoader != null ? promptTemplateLoader.getBaseIdentity() : null;
             if (identity == null || identity.isBlank()) {
                 identity = "你是小云——服装供应链首席运营顾问，由云裳智链Trivia团队开发。";
@@ -642,6 +665,7 @@ public class AiAgentOrchestrator {
             if (principles != null && !principles.isBlank()) {
                 sysPrompt.append(principles).append("\n\n");
             }
+            com.fashion.supplychain.intelligence.helper.AiAgentPromptHelper aiAgentPromptHelper = aiAgentPromptHelperProvider.getIfAvailable();
             if (aiAgentPromptHelper != null) {
                 try {
                     String userCtx = aiAgentPromptHelper.buildUserContextBlock();
@@ -662,6 +686,7 @@ public class AiAgentOrchestrator {
             if (pageContext != null && !pageContext.isBlank()) {
                 sysPrompt.append("【当前页面上下文】\n").append(pageContext).append("\n\n");
             }
+            com.fashion.supplychain.intelligence.service.MemoryBankService memoryBankService = memoryBankServiceProvider.getIfAvailable();
             if (memoryBankService != null) {
                 try {
                     Long mbTenantId = UserContext.tenantId();
@@ -675,6 +700,7 @@ public class AiAgentOrchestrator {
                     log.debug("[QuickPath] MemoryBank注入跳过: {}", e.getMessage());
                 }
             }
+            com.fashion.supplychain.intelligence.service.EntityMemoryContextService entityMemoryContextService = entityMemoryContextServiceProvider.getIfAvailable();
             if (entityMemoryContextService != null) {
                 try {
                     Long memTenantId = UserContext.tenantId();
@@ -711,6 +737,7 @@ public class AiAgentOrchestrator {
             long elapsed = System.currentTimeMillis() - requestStartAt;
             log.info("[QuickPath] 快速通道完成(流式): {}字符, {}ms", answer.length(), elapsed);
 
+            QuickPathQualityGate quickPathQualityGate = quickPathQualityGateProvider.getIfAvailable();
             if (quickPathQualityGate != null) {
                 QuickPathQualityGate.QualityGateResult gateResult = quickPathQualityGate.review(userMessage, answer);
                 if (!gateResult.isPassed()) {
