@@ -321,7 +321,8 @@ public class DataTruthGuard {
         // 2. 检测"已经"与"还没"的矛盾
         boolean hasCompleted = aiContent.contains("已经完成") || aiContent.contains("已入库") || aiContent.contains("已结束");
         boolean hasNotStarted = aiContent.contains("还没开始") || aiContent.contains("尚未") || aiContent.contains("未入库");
-        if (hasCompleted && hasNotStarted && aiContent.contains("同一") || aiContent.contains("该订单")) {
+        boolean mentionsSameObject = aiContent.contains("同一") || aiContent.contains("该订单") || aiContent.contains("这个订单") || aiContent.contains("这个工厂");
+        if (hasCompleted && hasNotStarted && mentionsSameObject) {
             issues.add("同一对象被描述为既完成又未完成，存在逻辑矛盾");
         }
 
