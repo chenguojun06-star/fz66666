@@ -171,8 +171,17 @@ public class AiAgentOrchestrator {
     }
 
     public Result<String> executeAgent(String userMessage, String pageContext) {
+        // 先尝试关键词匹配
+        String keywordAnswer = matchKeywordIntent(userMessage);
+        if (keywordAnswer != null) {
+            return Result.success(keywordAnswer);
+        }
+
+        // 如果没有关键词匹配，再检查模型是否启用
         if (!contextBuilder.isModelEnabled()) {
-            return Result.fail("智能服务暂未配置或不可用");
+            // 模型未启用时提供友好的默认回答
+            String defaultAnswer = getDefaultAnswer(userMessage);
+            return Result.success(defaultAnswer);
         }
 
         String augmentedPageContext = buildAugmentedPageContext(userMessage, pageContext);
@@ -197,7 +206,8 @@ public class AiAgentOrchestrator {
             lastToolRecordsHolder.set(cb.getExecRecords());
             String content = cb.getFinalContent();
             if (content == null) {
-                return Result.fail("推理服务暂时不可用");
+                // 如果模型返回null，尝试返回默认回答
+                return Result.success(getDefaultAnswer(userMessage));
             }
 
             triggerPostTurnHooks(ctx, userMessage, content, cb.getExecRecords(), false);
@@ -208,6 +218,33 @@ public class AiAgentOrchestrator {
             lastToolRecordsHolder.remove();
             AgentModeContext.clear();
         }
+    }
+
+    private String matchKeywordIntent(String userMessage) {
+        if (userMessage == null || userMessage.isBlank()) return null;
+        String msg = userMessage.toLowerCase();
+        if (msg.contains("订单") && (msg.contains("进度") || msg.contains("状态")))
+            return "您可以在订单管理页面查看订单进度，或告诉我具体的订单号，我帮您查询。";
+        if (msg.contains("延期") || msg.contains("逾期"))
+            return "延期订单信息已同步到待办中心，您可以查看详情或告诉我订单号我帮您分析。";
+        if (msg.contains("扫码") || msg.contains("产量"))
+            return "扫码记录会实时同步，您可以在生产进度页面查看当前产量统计。";
+        if (msg.contains("工资") || msg.contains("结算"))
+            return "工资结算信息在工资管理页面，您可以查看明细或选择特定时间段查询。";
+        if (msg.contains("库存") || msg.contains("入库"))
+            return "库存信息在仓储管理页面，您可以查看实时库存和入库记录。";
+        if (msg.contains("你好") || msg.contains("hi") || msg.contains("hello"))
+            return "你好！我是小云，你的服装供应链智能助手。有什么可以帮到你的？";
+        if (msg.contains("帮助") || msg.contains("怎么"))
+            return "你可以问我关于订单进度、扫码统计、工资结算、库存查询等问题，我会尽力帮你解答！";
+        return null;
+    }
+
+    private String getDefaultAnswer(String userMessage) {
+        if (userMessage == null || userMessage.isBlank()) {
+            return "你好！我是小云，你的服装供应链智能助手。有什么可以帮到你的？";
+        }
+        return "我正在学习中，暂时无法回答这个问题。你可以尝试问我关于订单进度、扫码统计、工资结算、库存查询等问题。";
     }
 
     public Result<String> executeAgent(String userMessage, String pageContext, AgentMode mode) {
@@ -225,8 +262,22 @@ public class AiAgentOrchestrator {
         ScheduledFuture<?> heartbeatFuture = null;
         AtomicBoolean cancelled = new AtomicBoolean(false);
         try {
+            // 先尝试关键词匹配
+            String keywordAnswer = matchKeywordIntent(userMessage);
+            if (keywordAnswer != null) {
+                AgentLoopContext ctx = contextBuilder.build(userMessage, pageContext);
+                emitSse(emitter, "answer", java.util.Map.of("content", keywordAnswer, "commandId", ctx.getCommandId()));
+                emitSse(emitter, "done", java.util.Map.of());
+                emitter.complete();
+                return;
+            }
+
+            // 如果没有关键词匹配，再检查模型是否启用
             if (!contextBuilder.isModelEnabled()) {
-                emitSse(emitter, "error", java.util.Map.of("message", "智能服务暂未配置或不可用"));
+                // 模型未启用时提供友好的默认回答
+                String defaultAnswer = getDefaultAnswer(userMessage);
+                AgentLoopContext ctx = contextBuilder.build(userMessage, pageContext);
+                emitSse(emitter, "answer", java.util.Map.of("content", defaultAnswer, "commandId", ctx.getCommandId()));
                 emitSse(emitter, "done", java.util.Map.of());
                 emitter.complete();
                 return;
