@@ -261,7 +261,8 @@ const OrderFlow: React.FC = () => {
           <Card className="order-flow-detail" style={{ marginTop: 8 }} loading={loading}>
             <Row gutter={0} align="top" wrap={false}>
               <Col flex="none" style={{ paddingRight: 20, flexShrink: 0, paddingTop: 2, textAlign: 'center', width: 340 }}>
-                <OrderImageManager orderNo={orderNoForImage} editable={editing} coverUrl={coverUrl} />
+                <OrderImageManager orderNo={orderNoForImage} editable={editing} coverUrl={coverUrl}
+                  styleId={(order as any)?.styleId} styleNo={(order as any)?.styleNo} />
               </Col>
               <Col flex="1" style={{ minWidth: 180, padding: '0 20px', borderLeft: '1px solid rgba(0,0,0,0.08)' }}>
                 <div style={{ fontSize: 14, fontWeight: 700, color: '#bbb', marginBottom: 8, letterSpacing: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

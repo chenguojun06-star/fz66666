@@ -11,11 +11,14 @@ interface OrderImageManagerProps {
   orderNo: string;
   editable?: boolean;
   coverUrl?: string | null;
+  styleId?: string | number;
+  styleNo?: string;
 }
 
-const OrderImageManager: React.FC<OrderImageManagerProps> = ({ orderNo, editable = true, coverUrl }) => {
+const OrderImageManager: React.FC<OrderImageManagerProps> = ({ orderNo, editable = true, coverUrl, styleId, styleNo }) => {
   const { message, modal } = App.useApp();
   const [images, setImages] = useState<OrderImage[]>([]);
+  const [styleImages, setStyleImages] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [snapshots, setSnapshots] = useState<OrderImageSnapshot[]>([]);
@@ -23,15 +26,18 @@ const OrderImageManager: React.FC<OrderImageManagerProps> = ({ orderNo, editable
   const [hovering, setHovering] = useState(false);
 
   const allImageUrls = React.useMemo(() => {
-    const urls: { url: string; id?: number; isCover?: boolean }[] = [];
+    const urls: { url: string; id?: number; isCover?: boolean; isStyle?: boolean }[] = [];
     if (coverUrl) {
       urls.push({ url: getFullAuthedFileUrl(coverUrl), isCover: true });
     }
+    styleImages.forEach((url) => {
+      urls.push({ url: getFullAuthedFileUrl(url), isStyle: true });
+    });
     images.forEach((img) => {
       urls.push({ url: getFullAuthedFileUrl(img.imageUrl), id: img.id });
     });
     return urls;
-  }, [coverUrl, images]);
+  }, [coverUrl, images, styleImages]);
 
   const totalCount = allImageUrls.length;
 
@@ -67,9 +73,29 @@ const OrderImageManager: React.FC<OrderImageManagerProps> = ({ orderNo, editable
     }
   }, [orderNo]);
 
+  const fetchStyleImages = useCallback(async () => {
+    if (!styleId && !styleNo) return;
+    try {
+      const res: any = await (await import('@/utils/api')).default.get('/style/attachment/list', {
+        params: { styleId: styleId || undefined, styleNo: styleNo || undefined },
+      });
+      if (res?.code === 200 && Array.isArray(res?.data)) {
+        const imgUrls = res.data
+          .filter((f: any) => String(f.fileType || '').includes('image'))
+          .map((f: any) => f.fileUrl)
+          .filter(Boolean) as string[];
+        setStyleImages(imgUrls);
+      }
+    } catch {}
+  }, [styleId, styleNo]);
+
   useEffect(() => {
     fetchImages();
   }, [fetchImages]);
+
+  useEffect(() => {
+    fetchStyleImages();
+  }, [fetchStyleImages]);
 
   const handleUpload = async (url: string) => {
     try {
@@ -173,9 +199,9 @@ const OrderImageManager: React.FC<OrderImageManagerProps> = ({ orderNo, editable
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
         <span style={{ fontWeight: 500 }}>
           订单图片 ({images.length}/5)
-          {coverUrl && totalCount > 0 && (
+          {totalCount > 0 && (
             <span style={{ marginLeft: 8, color: 'var(--color-text-tertiary)', fontWeight: 400, fontSize: 12 }}>
-              含封面共{totalCount}张
+              共{totalCount}张
             </span>
           )}
         </span>
