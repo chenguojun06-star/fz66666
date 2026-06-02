@@ -546,7 +546,7 @@ public class IntelligenceInferenceOrchestrator {
     private IntelligenceInferenceResult buildQuotaExceededResult(String traceId, long start) {
         IntelligenceInferenceResult r = new IntelligenceInferenceResult();
         r.setSuccess(false);
-        r.setErrorMessage("tenant-daily-token-quota-exceeded");
+        r.setErrorMessage("租户日配额已用完（tenant-daily-token-quota-exceeded）");
         r.setContent("今天的回答次数已消耗完成，请明天再来或联系管理员调整额度");
         r.setTraceId(traceId);
         r.setLatencyMs(System.currentTimeMillis() - start);

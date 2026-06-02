@@ -5,7 +5,7 @@ import { CartHeader } from './CartHeader';
 import { CartSearch } from './CartSearch';
 import { CartList } from './CartList';
 import { MergeSuggestionCard } from './MergeSuggestion';
-import { CartPreviewModal } from './CartPreview';
+import { CartPreviewDrawer } from './CartPreview';
 import { CartSummary } from './CartSummary';
 import type { PurchaseCartDrawerProps } from '@/types/purchaseCart';
 
@@ -45,20 +45,22 @@ export const PurchaseCartDrawer: React.FC<PurchaseCartDrawerProps> = ({
   }, [open, loadCart, loadMergeSuggestions]);
 
   return (
-    <Drawer
-      title={<CartHeader cart={cart} onClear={clearCart} />}
-      placement="right"
-      styles={{
-        wrapper: { width: '80%' },
-        body: { padding: 0, display: 'flex', flexDirection: 'column', height: '100%' },
-      }}
-      open={open}
-      onClose={onClose}
-      maskClosable={false}
-    >
-      <div style={{ flex: 1, overflow: 'auto' }}>
-        <CartSearch onAdd={addItem} submitting={submitting} />
-        
+    <>
+      <Drawer
+        title={<CartHeader cart={cart} onClear={clearCart} />}
+        placement="right"
+        size={Math.min(1200, Math.round(typeof window !== 'undefined' ? window.innerWidth * 0.85 : 1200))}
+        styles={{
+          body: { padding: 0, display: 'flex', flexDirection: 'column', height: '100%' },
+        }}
+        open={open}
+        onClose={onClose}
+        maskClosable={false}
+      >
+        <div style={{ padding: '12px 16px 0' }}>
+          <CartSearch onAdd={addItem} submitting={submitting} />
+        </div>
+
         {mergeSuggestions.length > 0 && (
           <MergeSuggestionCard
             suggestions={mergeSuggestions}
@@ -66,36 +68,38 @@ export const PurchaseCartDrawer: React.FC<PurchaseCartDrawerProps> = ({
             submitting={submitting}
           />
         )}
-        
-        <CartList
-          items={cart?.items || []}
-          loading={loading}
-          selectedItems={selectedItems}
-          onToggleSelect={toggleSelect}
-          onToggleSelectAll={toggleSelectAll}
-          onUpdate={updateItem}
-          onDelete={deleteItem}
-          onSplit={splitItem}
+
+        <div style={{ flex: 1, overflow: 'hidden', padding: '0 16px 16px' }}>
+          <CartList
+            items={cart?.items || []}
+            loading={loading}
+            selectedItems={selectedItems}
+            onToggleSelect={toggleSelect}
+            onToggleSelectAll={toggleSelectAll}
+            onUpdate={updateItem}
+            onDelete={deleteItem}
+            onSplit={(id, splitQuantity) => splitItem({ itemId: id, splitQuantity })}
+            submitting={submitting}
+          />
+        </div>
+
+        <CartSummary
+          cart={cart}
+          selectedCount={selectedItems.size}
+          onPreview={preview}
+          onConfirm={() => confirm(Array.from(selectedItems))}
           submitting={submitting}
         />
-      </div>
-      
-      <CartSummary
-        cart={cart}
-        selectedCount={selectedItems.size}
-        onPreview={preview}
-        onConfirm={() => confirm(Array.from(selectedItems))}
-        submitting={submitting}
-      />
-      
-      <CartPreviewModal
-        visible={previewVisible}
+      </Drawer>
+
+      <CartPreviewDrawer
+        open={previewVisible}
         data={previewData}
         onClose={() => setPreviewVisible(false)}
         onConfirm={() => confirm(Array.from(selectedItems))}
         submitting={submitting}
       />
-    </Drawer>
+    </>
   );
 };
 

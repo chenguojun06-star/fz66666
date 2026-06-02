@@ -140,16 +140,73 @@ public class SmartReportTool extends AbstractAgentTool {
         Map<String, Object> previewData = buildPreviewData(report, reportType, baseDate);
         report.put("_previewData", previewData);
 
+        // 7. 构建数据签名（供DataTruthGuard验证AI输出的数字是否准确）
+        Map<String, Object> dataSignatures = buildDataSignatures(report);
+        report.put("_dataSignatures", dataSignatures);
+
         String jsonResult = MAPPER.writeValueAsString(report);
 
         // 嵌入【REPORT_PREVIEW】标记块，前端可解析为卡片
         try {
             String previewJson = MAPPER.writeValueAsString(previewData);
-            return jsonResult + "\n【REPORT_PREVIEW】" + previewJson + "【/REPORT_PREVIEW】";
+            String sigJson = MAPPER.writeValueAsString(dataSignatures);
+            return jsonResult + "\n【REPORT_PREVIEW】" + previewJson + "【/REPORT_PREVIEW】\n【DATA_SIGNATURES】" + sigJson + "【/DATA_SIGNATURES】";
         } catch (Exception e) {
             log.warn("[SmartReport] 序列化预览数据失败: {}", e.getMessage());
             return jsonResult;
         }
+    }
+
+    private Map<String, Object> buildDataSignatures(Map<String, Object> report) {
+        Map<String, Object> sigs = new LinkedHashMap<>();
+
+        // 扫码统计关键数字
+        Map<String, Object> scanStats = (Map<String, Object>) report.get("scanStats");
+        if (scanStats != null) {
+            sigs.put("scanCount", scanStats.get("scanCount"));
+            sigs.put("scanQuantity", scanStats.get("scanQuantity"));
+            sigs.put("prevScanCount", scanStats.get("prevScanCount"));
+            sigs.put("prevScanQuantity", scanStats.get("prevScanQuantity"));
+        }
+
+        // 订单统计关键数字
+        Map<String, Object> orderStats = (Map<String, Object>) report.get("orderStats");
+        if (orderStats != null) {
+            sigs.put("newOrders", orderStats.get("newOrders"));
+            sigs.put("prevNewOrders", orderStats.get("prevNewOrders"));
+            sigs.put("completedOrders", orderStats.get("completedOrders"));
+            sigs.put("urgentOrderCount", orderStats.get("urgentOrderCount"));
+        }
+
+        // 风险统计关键数字
+        Map<String, Object> riskSummary = (Map<String, Object>) report.get("riskSummary");
+        if (riskSummary != null) {
+            sigs.put("overdueCount", riskSummary.get("overdueCount"));
+            sigs.put("highRiskCount", riskSummary.get("highRiskCount"));
+            sigs.put("stagnantCount", riskSummary.get("stagnantCount"));
+        }
+
+        // 成本统计关键数字
+        Map<String, Object> costSummary = (Map<String, Object>) report.get("costSummary");
+        if (costSummary != null) {
+            sigs.put("totalScanCost", costSummary.get("totalScanCost"));
+            sigs.put("scanRecordCount", costSummary.get("scanRecordCount"));
+        }
+
+        // 逾期订单详情中的逾期天数（取最大值，即最严重的）
+        List<Map<String, Object>> overdueOrders = (List<Map<String, Object>>) riskSummary.get("overdueTop5");
+        if (overdueOrders != null && !overdueOrders.isEmpty()) {
+            long maxOverdueDays = overdueOrders.stream()
+                    .mapToLong(o -> {
+                        Object days = o.get("overdueDays");
+                        if (days instanceof Number) return ((Number) days).longValue();
+                        return 0L;
+                    })
+                    .max().orElse(0);
+            sigs.put("maxOverdueDays", maxOverdueDays);
+        }
+
+        return sigs;
     }
 
     private Map<String, Object> buildPreviewData(Map<String, Object> report, String reportType, LocalDate baseDate) {

@@ -211,7 +211,10 @@ public class DataTruthGuard {
             return new NumericConsistencyResult(true, Collections.emptyList(), 1.0);
         }
 
-        Set<Double> toolNumbers = extractNumbers(toolEvidence);
+        Set<Double> toolNumbers = extractNumbersFromDataSignatures(toolEvidence);
+        if (toolNumbers.isEmpty()) {
+            toolNumbers = extractNumbers(toolEvidence);
+        }
         if (toolNumbers.isEmpty()) {
             return new NumericConsistencyResult(true, Collections.emptyList(), 1.0);
         }
@@ -239,6 +242,25 @@ public class DataTruthGuard {
 
         double matchRate = aiNumbers.isEmpty() ? 1.0 : (double) matched / aiNumbers.size();
         return new NumericConsistencyResult(mismatches.isEmpty(), mismatches, matchRate);
+    }
+
+    private Set<Double> extractNumbersFromDataSignatures(String toolEvidence) {
+        Set<Double> numbers = new HashSet<>();
+        int startIdx = toolEvidence.indexOf("关键数据签名（用于AI数字输出校验）");
+        if (startIdx < 0) {
+            return numbers;
+        }
+        int endIdx = toolEvidence.indexOf("\n\n", startIdx);
+        if (endIdx < 0) {
+            endIdx = toolEvidence.length();
+        }
+        String sigSection = toolEvidence.substring(startIdx, endIdx);
+        Pattern pattern = Pattern.compile("\\b(\\d+(?:\\.\\d+)?)\\b");
+        Matcher matcher = pattern.matcher(sigSection);
+        while (matcher.find()) {
+            numbers.add(Double.parseDouble(matcher.group(1)));
+        }
+        return numbers;
     }
 
     // ──────────────────────────────────────────────────────────────

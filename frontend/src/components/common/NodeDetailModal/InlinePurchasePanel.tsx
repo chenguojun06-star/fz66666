@@ -122,24 +122,15 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = ({ orderId, orde
       let orderRecord: ProductionOrder | null = null;
 
       if (sourceType === 'sample' && patternId) {
-        // 样衣采购模式：不依赖大货订单，直接查样衣采购记录
+        // 样衣采购模式：只按 patternId 精确查当前样衣的物料
+        // 不能按 styleNo 模糊查，否则会把同款号其它样衣版本的物料也拉过来
         try {
           const sampleRes = await api.get<{ code: number; data: { records: MaterialPurchase[] } }>(
             '/production/purchase/list',
-            { params: { page: 1, pageSize: 200, patternId, sourceType: 'sample', materialType: '', status: '' } }
+            { params: { page: 1, pageSize: 200, patternProductionId: patternId, sourceType: 'sample', materialType: '', status: '' } }
           );
           records = sortPurchases(unwrapRecords(sampleRes));
         } catch {}
-
-        if (records.length === 0 && styleNo) {
-          try {
-            const styleRes = await api.get<{ code: number; data: { records: MaterialPurchase[] } }>(
-              '/production/purchase/list',
-              { params: { page: 1, pageSize: 200, styleNo, sourceType: 'sample', materialType: '', status: '' } }
-            );
-            records = sortPurchases(unwrapRecords(styleRes));
-          } catch {}
-        }
       } else {
         // 大货采购模式
         const no = String(orderNo || '').trim();
@@ -297,8 +288,14 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = ({ orderId, orde
         const purchaseQuantity = Number(row.purchaseQuantity || 0);
         const unitPrice = Number(row.unitPrice || 0);
         const totalAmount = Number.isFinite(purchaseQuantity) && Number.isFinite(unitPrice) ? Number((purchaseQuantity * unitPrice).toFixed(2)) : 0;
-        const sourceType = order?.sourceBizType === 'SAMPLE' ? 'sample' : 'order';
-        const payload = { ...row, totalAmount, status: row.status || MATERIAL_PURCHASE_STATUS.PENDING, sourceType };
+        const resolvedSourceType = sourceType === 'sample' ? 'sample' : (order?.sourceBizType === 'SAMPLE' ? 'sample' : 'order');
+        const payload = {
+          ...row,
+          totalAmount,
+          status: row.status || MATERIAL_PURCHASE_STATUS.PENDING,
+          sourceType: resolvedSourceType,
+          ...(resolvedSourceType === 'sample' && patternId ? { patternProductionId: patternId } : {}),
+        };
         const isTemp = String(row.id || '').startsWith('tmp_');
         if (!isTemp) {
           await api.put('/production/purchase', payload);

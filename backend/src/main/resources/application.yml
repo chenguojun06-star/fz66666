@@ -421,6 +421,16 @@ intelligence:
     vector-size: ${QDRANT_VECTOR_SIZE:1024}
     api-key: ${QDRANT_API_KEY:}                  # Qdrant Cloud 需要；本地部署留空
     timeout-seconds: ${QDRANT_TIMEOUT_SECONDS:10}
+  # A 子项目：小云核心智能化升级 — 双跑 Feature Flag
+  cognition:
+    enabled: false
+    rollout-tenants: ""
+  execution:
+    enabled: false
+    rollout-tenants: ""
+  perception:
+    enabled: false
+    rollout-tenants: ""
 
 # 小云 AI Agent 运行参数（运维可调，无需改代码）
 xiaoyun:
@@ -518,3 +528,5 @@ resilience4j:
         timeout-duration: 30s
       logisticsService:
         timeout-duration: 15s
+
+# 小云 AI Agent 运行参数（运维可调，无需改代码）

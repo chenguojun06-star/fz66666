@@ -42,6 +42,10 @@ public class TenantAiConfig {
         return aiEnabled != null && aiEnabled == 1;
     }
 
+    public boolean isAiEnabled() {
+        return isAiActive();
+    }
+
     public boolean checkAiEnabled() {
         return isAiActive();
     }

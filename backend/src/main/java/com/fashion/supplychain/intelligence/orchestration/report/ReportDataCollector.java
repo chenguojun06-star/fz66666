@@ -44,19 +44,6 @@ public class ReportDataCollector {
 
         ReportFormatHelper.TimeRange range = ReportFormatHelper.calcTimeRange(reportType, baseDate);
 
-        if (baseDate.equals(LocalDate.now())) {
-            long todayScans = countScans(tenantId, range.start(), range.end(), scopeUserId, factoryId);
-            long todayOrders = countNewOrders(tenantId, range.start(), range.end(), scopeUserId, scopeUsername, factoryId);
-            if (todayScans == 0 && todayOrders == 0) {
-                LocalDate fallbackDate = findLatestDataDate(tenantId, scopeUserId, scopeUsername, factoryId);
-                if (fallbackDate != null) {
-                    baseDate = fallbackDate;
-                    range = ReportFormatHelper.calcTimeRange(reportType, baseDate);
-                    log.info("[ProfessionalReport] 智能报表兜底：{}今日无数据，自动回溯至最近有效日期 {}", reportType, baseDate);
-                }
-            }
-        }
-
         return new ReportContext(tenantId, factoryId, scopeUserId, scopeUsername, isManager, range, baseDate);
     }
 

@@ -185,6 +185,41 @@ public class PromptContextProvider {
         }
     }
 
+    private final java.util.Map<String, String> sessionPromptCache = new java.util.concurrent.ConcurrentHashMap<>();
+    private final java.util.Map<String, Long> sessionPromptTimestamp = new java.util.concurrent.ConcurrentHashMap<>();
+    private static final long PROMPT_CACHE_TTL_MS = 60_000L;
+
+    public String buildSystemPromptIfChanged(String sessionId, Long tenantId, Long userId) {
+        if (sessionId == null || sessionId.isBlank()) sessionId = "default";
+        String key = sessionId + ":" + tenantId + ":" + userId;
+        long now = System.currentTimeMillis();
+        Long lastTs = sessionPromptTimestamp.get(key);
+        String cached = sessionPromptCache.get(key);
+        if (cached != null && lastTs != null && (now - lastTs) < PROMPT_CACHE_TTL_MS) {
+            return cached;
+        }
+        StringBuilder sb = new StringBuilder();
+        try {
+            String intel = buildIntelligenceContext();
+            if (intel != null && !intel.isBlank()) sb.append(intel);
+            String mem = buildMemoryContext(tenantId, userId != null ? userId.toString() : null);
+            if (mem != null && !mem.isBlank()) sb.append(mem);
+            String rag = buildRagContext(tenantId, null);
+            if (rag != null && !rag.isBlank() && !rag.contains("检索失败")) sb.append(rag);
+        } catch (Exception e) {
+            log.debug("[PromptContextProvider] buildSystemPromptIfChanged 部分内容失败: {}", e.getMessage());
+        }
+        String result = sb.length() == 0 ? "" : sb.toString();
+        sessionPromptCache.put(key, result);
+        sessionPromptTimestamp.put(key, now);
+        if (sessionPromptCache.size() > 500) {
+            long cutoff = now - PROMPT_CACHE_TTL_MS * 5;
+            sessionPromptTimestamp.entrySet().removeIf(en -> en.getValue() < cutoff);
+            sessionPromptCache.keySet().retainAll(sessionPromptTimestamp.keySet());
+        }
+        return result;
+    }
+
     public String buildEntityMemoryContext(Long tenantId, String userMessage) {
         if (entityMemoryContextService == null) return "";
         try {

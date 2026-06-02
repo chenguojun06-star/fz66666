@@ -340,12 +340,17 @@ public class ProductionOrderServiceImpl extends ServiceImpl<ProductionOrderMappe
             return null;
         }
         Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
-        LambdaQueryWrapper<ProductionOrder> wrapper = new LambdaQueryWrapper<ProductionOrder>()
-                .eq(ProductionOrder::getOrderNo, orderNo.trim());
-        if (tenantId != null) {
-            wrapper.eq(ProductionOrder::getTenantId, tenantId);
+        // 兜底：order_no 在 (tenant_id, order_no) 复合唯一约束下跨租户可重复。
+        // 缺少租户上下文时不允许"返回任意一条"——宁可返回 null 触发上游报错，
+        // 也不要让 webhook/AOP/异步任务等无用户上下文的调用误命中其他租户的订单。
+        if (tenantId == null) {
+            log.warn("[getByOrderNo] 缺少租户上下文，拒绝跨租户查询: orderNo={}", orderNo.trim());
+            return null;
         }
-        return this.getOne(wrapper.last("LIMIT 1"));
+        return this.getOne(new LambdaQueryWrapper<ProductionOrder>()
+                .eq(ProductionOrder::getOrderNo, orderNo.trim())
+                .eq(ProductionOrder::getTenantId, tenantId)
+                .last("LIMIT 1"));
     }
 
     @Override

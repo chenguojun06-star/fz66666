@@ -34,6 +34,8 @@ public class AiAgentEvidenceHelper {
                 appendWhatIfEvidence(evidence, root);
             } else if ("tool_multi_agent".equals(toolName)) {
                 appendMultiAgentEvidence(evidence, root);
+            } else if ("tool_smart_report".equals(toolName)) {
+                appendSmartReportEvidence(evidence, root, toolResult);
             } else {
                 appendGenericEvidence(evidence, root);
             }
@@ -50,6 +52,34 @@ public class AiAgentEvidenceHelper {
         } catch (Exception e) {
             log.debug("[AiAgent] 工具证据构建回退原始文本: tool={}", toolName);
             return "【工具证据】\n- 工具: " + toolName + "\n- 原始结果: " + StatusTranslator.sanitize(truncate(toolResult, MAX_TOOL_RAW_CHARS));
+        }
+    }
+
+    private void appendSmartReportEvidence(StringBuilder evidence, JsonNode root, String toolResult) {
+        evidence.append("- 报表类型: ").append(root.path("reportType").asText("日报")).append("\n");
+        evidence.append("- 生成时间: ").append(root.path("generatedAt").asText("未知")).append("\n");
+        evidence.append("- 报表周期: ").append(root.path("period").asText("未知")).append("\n");
+        extractAndAppendDataSignatures(evidence, toolResult);
+    }
+
+    private void extractAndAppendDataSignatures(StringBuilder evidence, String toolResult) {
+        int startIdx = toolResult.indexOf("【DATA_SIGNATURES】");
+        int endIdx = toolResult.indexOf("【/DATA_SIGNATURES】");
+        if (startIdx < 0 || endIdx < 0 || endIdx <= startIdx) {
+            return;
+        }
+        try {
+            String sigJson = toolResult.substring(startIdx + "【DATA_SIGNATURES】".length(), endIdx).trim();
+            JsonNode sigs = JSON.readTree(sigJson);
+            evidence.append("\n- 关键数据签名（用于AI数字输出校验）:\n");
+            sigs.fieldNames().forEachRemaining(field -> {
+                JsonNode val = sigs.get(field);
+                if (val.isNumber()) {
+                    evidence.append("  ").append(field).append("=").append(val.asText()).append("\n");
+                }
+            });
+        } catch (Exception e) {
+            log.debug("[AiAgent] 解析DATA_SIGNATURES失败: {}", e.getMessage());
         }
     }
 

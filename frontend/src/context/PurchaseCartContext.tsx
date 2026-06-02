@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import { App } from 'antd';
+import { useAuthState } from '@/utils/AuthContext';
 import { purchaseCartApi } from '@/services/purchaseCartApi';
 import type {
   PurchaseCart,
@@ -59,6 +60,7 @@ export const PurchaseCartProvider: React.FC<PurchaseCartProviderProps> = ({
   onConfirmSuccess,
 }) => {
   const { message } = App.useApp();
+  const { isAuthenticated } = useAuthState();
   const [cart, setCart] = useState<PurchaseCart | null>(null);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -72,6 +74,7 @@ export const PurchaseCartProvider: React.FC<PurchaseCartProviderProps> = ({
   onConfirmSuccessRef.current = onConfirmSuccess;
 
   const loadCart = useCallback(async () => {
+        if (!isAuthenticated) return;
         setLoading(true);
         try {
             const data = await purchaseCartApi.getCart();
@@ -89,16 +92,17 @@ export const PurchaseCartProvider: React.FC<PurchaseCartProviderProps> = ({
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [isAuthenticated]);
 
   const loadMergeSuggestions = useCallback(async () => {
+    if (!isAuthenticated) return;
     try {
       const suggestions = await purchaseCartApi.getMergeSuggestions();
       setMergeSuggestions(suggestions);
     } catch (error) {
       console.error('[PurchaseCart] loadMergeSuggestions failed:', error);
     }
-  }, []);
+  }, [isAuthenticated]);
 
   const addItem = useCallback(async (request: AddCartItemRequest): Promise<AddItemResult | null> => {
     setSubmitting(true);
@@ -268,9 +272,18 @@ export const PurchaseCartProvider: React.FC<PurchaseCartProviderProps> = ({
   }, [cart?.items, selectedItems.size]);
 
   useEffect(() => {
+    if (!isAuthenticated) {
+      setCart(null);
+      setMergeSuggestions([]);
+      setSelectedItems(new Set());
+      setPreviewData(null);
+      setPreviewVisible(false);
+      setCartVersion(0);
+      return;
+    }
     loadCart();
     loadMergeSuggestions();
-  }, [loadCart, loadMergeSuggestions]);
+  }, [isAuthenticated, loadCart, loadMergeSuggestions]);
 
   const value: PurchaseCartContextValue = {
     cart,

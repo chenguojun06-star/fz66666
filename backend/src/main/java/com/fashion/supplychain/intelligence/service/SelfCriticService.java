@@ -19,13 +19,15 @@ import java.util.regex.Pattern;
 /**
  * 自我批评服务 —— 无需用户反馈，系统自动评估每次对话质量并生成内部反馈。
  *
- * <p>核心机制：每次Agent循环结束后，基于以下维度自动评分：
+ * <p>核心机制：每次Agent循环结束后，基于以下 7 个维度自动评分：
  * <ul>
  *   <li>数据真实性：回答中引用的数据是否与工具返回一致</li>
  *   <li>工具使用效率：是否调用了不必要的工具、是否遗漏关键工具</li>
  *   <li>回答完整性：是否回答了用户的全部问题</li>
  *   <li>幻觉检测：是否包含模型编造的信息</li>
  *   <li>上下文利用：是否充分利用了系统提示词中的上下文</li>
+ *   <li>跨对话学习：是否复用了历史学习成果，避免重复发现问题</li>
+ *   <li>用户价值：回答是否对用户真正有用（可执行性、避免空话）</li>
  * </ul>
  *
  * <p>评分低于阈值时，自动生成反馈记录并触发实时学习闭环。</p>
@@ -140,7 +142,8 @@ public class SelfCriticService {
 
         long start = System.currentTimeMillis();
 
-        double dataAccuracyScore, toolEfficiencyScore, completenessScore, hallucinationScore, contextUtilizationScore, overallScore;
+        double dataAccuracyScore, toolEfficiencyScore, completenessScore, hallucinationScore, contextUtilizationScore;
+        double crossDialogLearningScore, userValueScore, overallScore;
         String critiqueReport;
 
         if (llmCriticEnabled && inferenceOrchestrator != null && inferenceOrchestrator.isAnyModelEnabled()) {
@@ -153,14 +156,19 @@ public class SelfCriticService {
                 completenessScore = scores[2];
                 hallucinationScore = scores[3];
                 contextUtilizationScore = scores[4];
-                overallScore = (dataAccuracyScore * 0.30
-                        + toolEfficiencyScore * 0.25
-                        + completenessScore * 0.20
-                        + hallucinationScore * 0.15
-                        + contextUtilizationScore * 0.10);
+                crossDialogLearningScore = evaluateCrossDialogLearning(userMessage, aiResponse, metrics);
+                userValueScore = evaluateUserValue(userMessage, aiResponse, toolResults);
+                overallScore = (dataAccuracyScore * 0.25
+                        + toolEfficiencyScore * 0.20
+                        + completenessScore * 0.18
+                        + hallucinationScore * 0.12
+                        + contextUtilizationScore * 0.10
+                        + crossDialogLearningScore * 0.08
+                        + userValueScore * 0.07);
                 critiqueReport = buildCritiqueReport(
                         dataAccuracyScore, toolEfficiencyScore, completenessScore,
-                        hallucinationScore, contextUtilizationScore, overallScore,
+                        hallucinationScore, contextUtilizationScore,
+                        crossDialogLearningScore, userValueScore, overallScore,
                         userMessage, aiResponse, toolCalls, usedQuickPath)
                         + " | LLM语义评分: " + (llmResult.getContent().length() > 200
                         ? llmResult.getContent().substring(0, 200) : llmResult.getContent());
@@ -170,14 +178,19 @@ public class SelfCriticService {
                 completenessScore = evaluateCompleteness(userMessage, aiResponse);
                 hallucinationScore = evaluateHallucination(aiResponse, toolResults);
                 contextUtilizationScore = evaluateContextUtilization(aiResponse, metrics);
-                overallScore = (dataAccuracyScore * 0.30
-                        + toolEfficiencyScore * 0.25
-                        + completenessScore * 0.20
-                        + hallucinationScore * 0.15
-                        + contextUtilizationScore * 0.10);
+                crossDialogLearningScore = evaluateCrossDialogLearning(userMessage, aiResponse, metrics);
+                userValueScore = evaluateUserValue(userMessage, aiResponse, toolResults);
+                overallScore = (dataAccuracyScore * 0.25
+                        + toolEfficiencyScore * 0.20
+                        + completenessScore * 0.18
+                        + hallucinationScore * 0.12
+                        + contextUtilizationScore * 0.10
+                        + crossDialogLearningScore * 0.08
+                        + userValueScore * 0.07);
                 critiqueReport = buildCritiqueReport(
                         dataAccuracyScore, toolEfficiencyScore, completenessScore,
-                        hallucinationScore, contextUtilizationScore, overallScore,
+                        hallucinationScore, contextUtilizationScore,
+                        crossDialogLearningScore, userValueScore, overallScore,
                         userMessage, aiResponse, toolCalls, usedQuickPath)
                         + " | [降级为正则评分]";
             }
@@ -187,14 +200,19 @@ public class SelfCriticService {
             completenessScore = evaluateCompleteness(userMessage, aiResponse);
             hallucinationScore = evaluateHallucination(aiResponse, toolResults);
             contextUtilizationScore = evaluateContextUtilization(aiResponse, metrics);
-            overallScore = (dataAccuracyScore * 0.30
-                    + toolEfficiencyScore * 0.25
-                    + completenessScore * 0.20
-                    + hallucinationScore * 0.15
-                    + contextUtilizationScore * 0.10);
+            crossDialogLearningScore = evaluateCrossDialogLearning(userMessage, aiResponse, metrics);
+            userValueScore = evaluateUserValue(userMessage, aiResponse, toolResults);
+            overallScore = (dataAccuracyScore * 0.25
+                    + toolEfficiencyScore * 0.20
+                    + completenessScore * 0.18
+                    + hallucinationScore * 0.12
+                    + contextUtilizationScore * 0.10
+                    + crossDialogLearningScore * 0.08
+                    + userValueScore * 0.07);
             critiqueReport = buildCritiqueReport(
                     dataAccuracyScore, toolEfficiencyScore, completenessScore,
-                    hallucinationScore, contextUtilizationScore, overallScore,
+                    hallucinationScore, contextUtilizationScore,
+                    crossDialogLearningScore, userValueScore, overallScore,
                     userMessage, aiResponse, toolCalls, usedQuickPath);
         }
 
@@ -416,7 +434,8 @@ public class SelfCriticService {
     }
 
     private String buildCritiqueReport(double dataAcc, double toolEff, double complete,
-                                        double hallucination, double contextUtil, double overall,
+                                        double hallucination, double contextUtil,
+                                        double crossDialog, double userValue, double overall,
                                         String userMessage, String aiResponse,
                                         List<AgentTool> toolCalls, boolean usedQuickPath) {
         StringBuilder sb = new StringBuilder();
@@ -426,6 +445,8 @@ public class SelfCriticService {
         sb.append(String.format("完整性: %.0f | ", complete));
         sb.append(String.format("幻觉控制: %.0f | ", hallucination));
         sb.append(String.format("上下文利用: %.0f | ", contextUtil));
+        sb.append(String.format("跨对话学习: %.0f | ", crossDialog));
+        sb.append(String.format("用户价值: %.0f | ", userValue));
         sb.append(String.format("快速通道: %s | ", usedQuickPath ? "是" : "否"));
         sb.append(String.format("工具数: %d", toolCalls == null ? 0 : toolCalls.size()));
 
@@ -436,9 +457,115 @@ public class SelfCriticService {
             if (complete < 70) sb.append("回答不完整 ");
             if (hallucination < 70) sb.append("存在幻觉风险 ");
             if (contextUtil < 70) sb.append("上下文利用不充分 ");
+            if (crossDialog < 70) sb.append("未复用历史学习 ");
+            if (userValue < 70) sb.append("用户价值不足 ");
         }
 
         return sb.toString();
+    }
+
+    /**
+     * 跨对话学习评分：检测本次回答是否复用了历史学习成果。
+     * <p>核心思想：避免在多轮对话中重复发现相同问题，应复用历史的模式识别与解决方案。
+     */
+    private double evaluateCrossDialogLearning(String userMessage, String aiResponse, AgentExecutionMetrics metrics) {
+        double score = 75.0;
+
+        if (metrics == null) {
+            return score;
+        }
+
+        int historyTurns = metrics.getHistoryTurns();
+        if (historyTurns <= 0) {
+            return 80.0;
+        }
+
+        if (historyTurns >= 3) {
+            String lower = aiResponse == null ? "" : aiResponse.toLowerCase();
+            if (lower.contains("之前") || lower.contains("历史") || lower.contains("上次")
+                    || lower.contains("刚才") || lower.contains("此前") || lower.contains("以往")) {
+                score += 10.0;
+            } else {
+                score -= 5.0;
+            }
+        }
+
+        if (historyTurns > 6 && aiResponse != null && aiResponse.length() < 100) {
+            score -= 15.0;
+        }
+
+        return Math.max(0, Math.min(100, score));
+    }
+
+    /**
+     * 用户价值评分：评估回答对用户是否真正有用。
+     * <p>三个子维度：
+     * <ul>
+     *   <li>可执行性：是否给出具体可执行的下一步建议</li>
+     *   <li>非空话：是否避免"建议关注"、"应注意"等无信息量模板</li>
+     *   <li>问题对应：是否直接回答用户问题而非泛泛而谈</li>
+     * </ul>
+     */
+    private double evaluateUserValue(String userMessage, String aiResponse, List<String> toolResults) {
+        if (aiResponse == null || aiResponse.isBlank()) {
+            return 0.0;
+        }
+        double score = 65.0;
+
+        boolean hasActionable = hasActionableAdvice(aiResponse);
+        if (hasActionable) score += 12.0;
+
+        boolean hasCliché = hasClichéPhrases(aiResponse);
+        if (hasCliché) score -= 10.0;
+
+        if (toolResults != null && !toolResults.isEmpty()
+                && !toolResults.stream().allMatch(r -> r == null || r.isBlank() || r.equals("[]") || r.equals("{}"))) {
+            score += 8.0;
+        }
+
+        int responseLength = aiResponse.length();
+        if (responseLength < 30) score -= 20.0;
+        else if (responseLength > 30 && responseLength < 200) score += 5.0;
+        else if (responseLength >= 200 && responseLength <= 800) score += 8.0;
+        else if (responseLength > 2000) score -= 5.0;
+
+        if (userMessage != null && addressesUserQuestion(userMessage, aiResponse)) {
+            score += 7.0;
+        }
+
+        return Math.max(0, Math.min(100, score));
+    }
+
+    private static final Pattern ACTIONABLE_PATTERN = Pattern.compile(
+        "(建议|可以|请|去|进入|打开|点击|联系|安排|处理|查看|检查|设置|调整|提交|确认|跟进|处理|分配|录入|创建|更新|添加|删除|导出|导入)"
+    );
+    private static final Pattern CLICHÉ_PATTERN = Pattern.compile(
+        "(建议关注|应注意|需注意|可能存在|值得关注|加强管理|持续优化|进一步提升|不断完善)"
+    );
+
+    private boolean hasActionableAdvice(String text) {
+        if (text == null) return false;
+        java.util.regex.Matcher m = ACTIONABLE_PATTERN.matcher(text);
+        int count = 0;
+        while (m.find()) count++;
+        return count >= 2;
+    }
+
+    private boolean hasClichéPhrases(String text) {
+        if (text == null) return false;
+        return CLICHÉ_PATTERN.matcher(text).find();
+    }
+
+    private boolean addressesUserQuestion(String userMessage, String aiResponse) {
+        if (userMessage == null || aiResponse == null) return false;
+        String lowerResponse = aiResponse.toLowerCase();
+        String lowerUser = userMessage.toLowerCase();
+        int commonChars = 0;
+        for (int i = 0; i < Math.min(lowerUser.length(), 10); i++) {
+            char c = lowerUser.charAt(i);
+            if (lowerResponse.indexOf(c) >= 0) commonChars++;
+        }
+        return commonChars >= 3;
     }
 
     // ── 工具方法 ─────────────────────────────────────────────────────

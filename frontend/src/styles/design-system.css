@@ -868,3 +868,29 @@ html.dark-mode {
   color: var(--color-text-secondary);
   margin-bottom: var(--spacing-base);
 }
+
+/* ========== 采购购物车表格 ========== */
+.purchase-cart-table .ant-table-thead > tr > th {
+  background: var(--color-bg-container);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  border-bottom: 1px solid var(--color-border);
+}
+.purchase-cart-table .ant-table-tbody > tr.row-selected > td {
+  background: var(--color-bg-highlight) !important;
+}
+.purchase-cart-table .ant-table-tbody > tr > td {
+  border-bottom: 1px solid var(--color-border-light);
+  padding: 12px 12px;
+}
+.purchase-cart-table .ant-table-tbody > tr:hover > td {
+  background: var(--color-bg-stripe) !important;
+}
+.purchase-cart-table .ant-table-cell-fix-left,
+.purchase-cart-table .ant-table-cell-fix-right {
+  background: inherit !important;
+}
+.purchase-cart-table .ant-table-tbody > tr.row-selected .ant-table-cell-fix-left,
+.purchase-cart-table .ant-table-tbody > tr.row-selected .ant-table-cell-fix-right {
+  background: var(--color-bg-highlight) !important;
+}

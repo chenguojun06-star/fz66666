@@ -244,26 +244,9 @@ export default function SampleProcessList({
     }
   }, [patternProductionId, assigningRow, assignForm, message, onRefresh]);
 
-  const handlePurchaseClick = useCallback(async () => {
-    if (orderId) {
-      setPurchaseDrawerOpen(true);
-      return;
-    }
-    if (patternProductionId) {
-      try {
-        const { default: api } = await import('@/utils/api');
-        const res: any = await api.get(`/production/pattern/${patternProductionId}/linked-order`);
-        const linkedOrderId = res?.data?.id || res?.id || res?.data?.orderId;
-        if (linkedOrderId) {
-          setPurchaseDrawerOpen(true);
-        } else {
-          message.warning('该样衣暂无关联生产订单，请先创建生产订单');
-        }
-      } catch {
-        message.error('获取关联订单失败');
-      }
-    }
-  }, [orderId, patternProductionId, message]);
+  const handlePurchaseClick = useCallback(() => {
+    setPurchaseDrawerOpen(true);
+  }, []);
 
   const columns = useMemo<ColumnsType<SubProcessRow>>(() => [
     {

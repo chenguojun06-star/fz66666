@@ -32,7 +32,7 @@ import java.util.regex.Pattern;
 @Slf4j
 public class TenantInterceptor implements InnerInterceptor {
 
-    /** 不需要租户隔离的系统表（无 tenant_id 列） */
+    /** 不需要租户隔离的系统表（无 tenant_id 列，或全局共享配置） */
     private static final Set<String> EXCLUDED_TABLES = Set.of(
             "t_tenant", "t_permission", "t_role_permission", "t_login_log",
             "t_param_config", "t_serial_rule", "t_app_store",
@@ -41,9 +41,14 @@ public class TenantInterceptor implements InnerInterceptor {
             "t_cron_job"
     );
 
-    /** 需要混合查询的表（租户数据 + 系统共享数据，用 tenant_id = X OR tenant_id IS NULL） */
+    /**
+     * 需要混合查询的表：每个租户独立配置，但共享系统默认映射。
+     * SQL 拼接为 (tenant_id = X OR tenant_id IS NULL) — 租户级数据 + 系统默认数据。
+     * t_process_parent_mapping：每个租户可独立配置自己的子工序→父节点映射，
+     *                          tenant_id=NULL 的记录是系统默认映射，所有租户共享。
+     */
     private static final Set<String> SHARED_TENANT_TABLES = Set.of(
-            "t_role", "t_dict"
+            "t_role", "t_dict", "t_process_parent_mapping"
     );
 
     /**
@@ -268,8 +273,11 @@ public class TenantInterceptor implements InnerInterceptor {
             // 已有外层 WHERE，在外层结束关键字前插入 AND condition
             return sql.substring(0, insertPos) + condition + sql.substring(insertPos);
         } else {
-            // 无外层 WHERE，在外层结束关键字前插入 WHERE tenant_id = X
-            return sql.substring(0, insertPos) + " WHERE tenant_id = " + tenantIdStr + sql.substring(insertPos);
+            // 无外层 WHERE，在外层结束关键字前插入完整 WHERE condition
+            String whereClause = isSharedTable
+                ? " WHERE (tenant_id = " + tenantIdLong + " OR tenant_id IS NULL)"
+                : " WHERE tenant_id = " + tenantIdLong;
+            return sql.substring(0, insertPos) + whereClause + sql.substring(insertPos);
         }
     }
 
