@@ -25,19 +25,7 @@ export const MergeSuggestionCard: React.FC<MergeSuggestionCardProps> = ({
   onMerge,
   submitting,
 }) => {
-  if (suggestions.length === 0) return null;
-
-  const handleMerge = (suggestion: MergeSuggestion) => {
-    const totalQty = suggestion.items.reduce((sum, item) => sum + item.quantity, 0);
-
-    onMerge({
-      itemIds: suggestion.items.map(item => item.id),
-      targetQuantity: totalQty,
-      targetSupplierId: suggestion.items[0].id,
-      targetSupplierName: suggestion.items[0].supplierName,
-    });
-  };
-
+  // Hooks 必须在早返回之前调用，否则违反 Rules of Hooks
   const rows = useMemo<MergeRow[]>(
     () => suggestions.map((s, idx) => ({
       key: `${s.materialCode}-${idx}`,
@@ -50,6 +38,19 @@ export const MergeSuggestionCard: React.FC<MergeSuggestionCardProps> = ({
     })),
     [suggestions]
   );
+
+  if (suggestions.length === 0) return null;
+
+  const handleMerge = (suggestion: MergeSuggestion) => {
+    const totalQty = suggestion.items.reduce((sum, item) => sum + item.quantity, 0);
+
+    onMerge({
+      itemIds: suggestion.items.map(item => item.id),
+      targetQuantity: totalQty,
+      targetSupplierId: suggestion.items[0].id,
+      targetSupplierName: suggestion.items[0].supplierName,
+    });
+  };
 
   const columns: ColumnsType<MergeRow> = [
     {
