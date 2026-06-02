@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Card, Button, Table, App } from 'antd';
+import { Card, Button, Table } from 'antd';
 import { MergeCellsOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import type { MergeSuggestion, MergeableItem } from '@/types/purchaseCart';
