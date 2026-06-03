@@ -50,6 +50,7 @@ import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import ProductionModals from './components/ProductionModals';
 import ProductionFilterBar from './components/ProductionFilterBar';
 import { buildCommonOrderActions } from '../components/buildCommonOrderActions';
+import SmartReceiveModal from '../MaterialPurchase/components/SmartReceiveModal';
 
 const ProductionList: React.FC = () => {
   const { message } = App.useApp();
@@ -85,6 +86,10 @@ const ProductionList: React.FC = () => {
     setInspectDrawerVisible(false);
     setInspectDrawerOrderId('');
   }, []);
+
+  // ===== 智能领取弹窗（入库/出库） =====
+  const [smartReceiveVisible, setSmartReceiveVisible] = useState(false);
+  const [smartReceiveOrderNo, setSmartReceiveOrderNo] = useState('');
 
     // ===== Hook 提取：进度/弹窗/打印/聚焦 =====
     const { nodeDetailVisible, nodeDetailOrder, nodeDetailType, nodeDetailName, nodeDetailStats, nodeDetailUnitPrice, nodeDetailProcessList, openNodeDetail, closeNodeDetail } = useNodeDetailModal();
@@ -200,6 +205,7 @@ const ProductionList: React.FC = () => {
     },
     onOpenRemark: (record: ProductionOrder, defaultRole?: string) => setRemarkTarget({ open: true, orderNo: record.orderNo || '', defaultRole, merchandiser: record.merchandiser }),
     onOpenInspectDrawer: openInspectDrawer,
+    onOpenSmartReceive: (orderNo: string) => { setSmartReceiveOrderNo(orderNo); setSmartReceiveVisible(true); },
   });
 
   // 根据 visibleColumns 过滤列
@@ -456,6 +462,7 @@ const ProductionList: React.FC = () => {
                   { key: 'printLabel', label: '打印标签', disabled: frozen, title: frozen ? frozenTitle : '打印标签', onClick: () => void handlePrintLabel(record) },
                   ...(!isFactoryAccount ? [{ key: 'process', label: '工序', disabled: frozen, title: frozen ? frozenTitle : '工序', onClick: () => openProcessDetail(record, 'all') }] : []),
                   ...(isFactoryAccount ? [{ key: 'subProcessRemap', label: '子工序', disabled: frozen, title: frozen ? frozenTitle : '子工序单价配置', onClick: () => openSubProcessRemap(record) }] : []),
+                  { key: 'receive', label: '入库/出库', title: '面辅料智能领取（入库/出库）', onClick: () => { setSmartReceiveOrderNo(record.orderNo || ''); setSmartReceiveVisible(true); } },
                   ...commonActions,
                   ...(isFactoryAccount ? [{ key: 'orderFlow', label: '全流程', title: '查看订单全流程记录', onClick: () => navigate(withQuery('/production/order-flow', { orderId: record.id, orderNo: record.orderNo, styleNo: record.styleNo })) }] : []),
                 ];
@@ -567,6 +574,17 @@ const ProductionList: React.FC = () => {
           inspectDrawerVisible={inspectDrawerVisible}
           inspectDrawerOrderId={inspectDrawerOrderId}
           closeInspectDrawer={closeInspectDrawer}
+        />
+
+        {/* 智能领取弹窗（入库/出库） */}
+        <SmartReceiveModal
+          open={smartReceiveVisible}
+          orderNo={smartReceiveOrderNo}
+          onCancel={() => { setSmartReceiveVisible(false); setSmartReceiveOrderNo(''); }}
+          onSuccess={() => { void fetchProductionList(); }}
+          isSupervisorOrAbove={isSupervisorOrAbove}
+          userId={user?.id as any}
+          userName={user?.name || user?.username || ''}
         />
 
     </>

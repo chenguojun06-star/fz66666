@@ -1,0 +1,56 @@
+# P2升级: Guardrails-as-Code 安全规则配置
+# 热更新支持：修改此文件后调用 PromptTemplateLoader.reloadTemplate("guardrails") 即可生效
+
+output_filters:
+  - id: "no_tenant_leak"
+    description: "禁止泄露其他租户数据"
+    patterns:
+      - "租户\\d+的订单"
+      - "其他公司"
+      - "别的客户"
+    action: block
+    message: "[安全拦截] 跨租户数据访问被阻止"
+
+  - id: "sensitive_data_mask"
+    description: "价格敏感数据脱敏"
+    patterns:
+      - "单价\\d+"
+      - "总价\\d+"
+      - "成本价"
+    action: mask
+    replacement: "***"
+
+  - id: "pii_protection"
+    description: "禁止在回答中输出完整手机号/身份证"
+    patterns:
+      - "1[3-9]\\d{9}"
+      - "\\d{17}[\\dXx]"
+    action: mask
+    replacement: "***"
+
+  - id: "off_topic_guard"
+    description: "非服装供应链话题限制"
+    keywords:
+      - "政治"
+      - "色情"
+      - "赌博"
+      - "暴力"
+      - "宗教"
+      - "股票"
+      - "加密货币"
+    action: block
+    message: "抱歉，我是服装供应链智能助手，无法回答此类问题。"
+
+content_quality:
+  - id: "no_empty_answer"
+    description: "确保回答非空"
+    min_length: 10
+    
+  - id: "no_repetition"
+    description: "检测重复内容"
+    max_repeat_ratio: 0.5
+
+risk_levels:
+  info: { max_score: 100 }
+  warning: { max_score: 75 }
+  critical: { max_score: 50 }

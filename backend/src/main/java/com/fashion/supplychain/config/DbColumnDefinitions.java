@@ -163,6 +163,7 @@ public final class DbColumnDefinitions {
         add("t_production_order", "progress_workflow_locked_by", "VARCHAR(64) DEFAULT NULL COMMENT '锁定人ID'");
         add("t_production_order", "progress_workflow_locked_by_name", "VARCHAR(100) DEFAULT NULL COMMENT '锁定人姓名'");
         add("t_production_order", "skc", "VARCHAR(64) DEFAULT NULL COMMENT 'SKC统一编号'");
+        add("t_production_order", "sku", "VARCHAR(128) DEFAULT NULL COMMENT 'SKU编号（款号+颜色+尺码组合）'");
         add("t_production_order", "urgency_level", "VARCHAR(20) DEFAULT NULL COMMENT '紧急程度'");
         add("t_production_order", "plate_type", "VARCHAR(20) DEFAULT NULL COMMENT '板型'");
         add("t_production_order", "order_biz_type", "VARCHAR(30) DEFAULT NULL COMMENT '订单业务类型'");

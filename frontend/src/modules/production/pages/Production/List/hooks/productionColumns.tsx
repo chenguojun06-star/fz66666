@@ -57,6 +57,7 @@ export interface UseProductionColumnsProps {
   openWorkflowEditor?: (styleNo?: string) => void;
   getStageCompletionTime?: (record: ProductionOrder, stageKeyword: string, rate?: number) => string;
   onOpenInspectDrawer?: (orderId: string) => void;
+  onOpenSmartReceive?: (orderNo: string) => void;
 }
 
 export function useProductionColumns({
@@ -75,6 +76,7 @@ export function useProductionColumns({
   openWorkflowEditor,
   getStageCompletionTime,
   onOpenInspectDrawer,
+  onOpenSmartReceive,
 }: UseProductionColumnsProps) {
   const renderStageTime = (value: unknown) => value ? formatDateTime(value) : '-';
 
@@ -552,6 +554,12 @@ export function useProductionColumns({
                 title: frozen ? '子工序单价配置（订单已关单）' : '子工序单价配置',
                 disabled: frozen,
                 onClick: () => openSubProcessRemap(record),
+              }] : []),
+              ...(onOpenSmartReceive ? [{
+                key: 'smartReceive',
+                label: '入库/出库',
+                title: '面辅料智能领取（入库/出库）',
+                onClick: () => onOpenSmartReceive(record.orderNo || ''),
               }] : []),
               ...buildCommonOrderActions({
                 record,

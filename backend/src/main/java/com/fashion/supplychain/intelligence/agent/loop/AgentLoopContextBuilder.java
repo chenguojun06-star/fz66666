@@ -78,7 +78,8 @@ public class AgentLoopContextBuilder {
             messages.add(AiMessage.system(domainHint));
         }
         List<AiMessage> history = memoryHelper.getConversationHistory(userId, tenantId);
-        messages.addAll(memoryHelper.compactConversationHistory(history));
+        // P0升级: token感知压缩 — 当历史对话超过token预算60%时自动触发三级压缩
+        messages.addAll(memoryHelper.compactConversationHistory(history, tokenBudget));
         messages.add(AiMessage.user(userMessage));
 
         int maxIterations = promptHelper.estimateMaxIterations(userMessage);

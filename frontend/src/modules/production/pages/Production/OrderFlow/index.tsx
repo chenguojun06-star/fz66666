@@ -14,7 +14,7 @@ import '../../../styles.css';
 import { useOrderFlowData, orderStatusTag } from './useOrderFlowData';
 import FlowStepRenderer from './components/FlowStepRenderer';
 
-const EDITABLE_FIELDS = ['styleNo', 'styleName', 'skc', 'color'] as const;
+const EDITABLE_FIELDS = ['styleNo', 'styleName', 'skc', 'color', 'size', 'sku'] as const;
 type EditableField = typeof EDITABLE_FIELDS[number];
 
 const FIELD_LABELS: Record<EditableField, string> = {
@@ -22,6 +22,8 @@ const FIELD_LABELS: Record<EditableField, string> = {
   styleName: '款名',
   skc: 'SKC',
   color: '颜色',
+  size: '尺码',
+  sku: 'SKU',
 };
 
 const InlineEditableField: React.FC<{
@@ -307,6 +309,18 @@ const OrderFlow: React.FC = () => {
                   <InlineEditableField
                     label="颜色" value={(order as any)?.color || ''} editable={editing}
                     fieldKey="color" onSave={handleFieldSave} saving={savingField === 'color'}
+                  />
+
+                  <span style={{ color: 'var(--color-text-tertiary)', fontSize: 14, lineHeight: '22px' }}>尺码</span>
+                  <InlineEditableField
+                    label="尺码" value={(order as any)?.size || ''} editable={editing}
+                    fieldKey="size" onSave={handleFieldSave} saving={savingField === 'size'}
+                  />
+
+                  <span style={{ color: 'var(--color-text-tertiary)', fontSize: 14, lineHeight: '22px' }}>SKU</span>
+                  <InlineEditableField
+                    label="SKU" value={(order as any)?.sku || ''} editable={editing}
+                    fieldKey="sku" onSave={handleFieldSave} saving={savingField === 'sku'}
                   />
 
                   <span style={{ color: 'var(--color-text-tertiary)', fontSize: 14, lineHeight: '22px' }}>加工厂</span>

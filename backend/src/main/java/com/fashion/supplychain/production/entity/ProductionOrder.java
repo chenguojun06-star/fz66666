@@ -36,6 +36,11 @@ public class ProductionOrder {
 
     private String size;
 
+    /**
+     * SKU 编号（款号+颜色+尺码组合）
+     */
+    private String sku;
+
     @TableField("order_details")
     private String orderDetails;
 

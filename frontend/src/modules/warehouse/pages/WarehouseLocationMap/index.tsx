@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Switch, Badge, Empty, Tag, Statistic, Row, Col, Tooltip, Spin, App, Button, Input, Select, Form, Alert, Checkbox, Drawer } from 'antd';
-import { ShopOutlined, EnvironmentOutlined, AppstoreOutlined, InboxOutlined, PlusOutlined, DeleteOutlined, SwapOutlined, PrinterOutlined, ImportOutlined, ExportOutlined } from '@ant-design/icons';
+import { Switch, Badge, Empty, Tag, Statistic, Row, Col, Tooltip, Spin, App, Button, Input, Select, Form, Alert, Checkbox, Drawer, InputNumber, Table } from 'antd';
+import { ShopOutlined, EnvironmentOutlined, AppstoreOutlined, InboxOutlined, PlusOutlined, DeleteOutlined, SwapOutlined, PrinterOutlined, ImportOutlined, ExportOutlined, SearchOutlined } from '@ant-design/icons';
 import ResizableModal from '@/components/common/ResizableModal';
 import WarehouseLocationAutoComplete from '@/components/common/WarehouseLocationAutoComplete';
 import { warehouseLocationMapApi } from '@/services/warehouse/warehouseLocationMapApi';
 import LocationLabelPrintModal from './LocationLabelPrintModal';
+import api from '@/utils/api';
+import { useUser } from '@/utils/AuthContext';
 import './WarehouseLocationMap.css';
 
 interface WarehouseAreaItem {
@@ -65,6 +67,7 @@ const WAREHOUSE_TYPE_OPTIONS = [
 
 const WarehouseLocationMap: React.FC = () => {
   const { message, modal } = App.useApp();
+  const { user } = useUser();
   const [searchParams] = useSearchParams();
   const locationCodeFromUrl = searchParams.get('locationCode');
 
@@ -101,6 +104,19 @@ const WarehouseLocationMap: React.FC = () => {
   const [selectMode, setSelectMode] = useState(false);
   const [selectedLocationIds, setSelectedLocationIds] = useState<Set<string>>(new Set());
   const [printModalOpen, setPrintModalOpen] = useState(false);
+
+  // ===== 入库弹窗状态 =====
+  const [inboundModalOpen, setInboundModalOpen] = useState(false);
+  const [inboundForm] = Form.useForm();
+  const [inboundLoading, setInboundLoading] = useState(false);
+
+  // ===== 出库弹窗状态 =====
+  const [outboundModalOpen, setOutboundModalOpen] = useState(false);
+  const [outboundOrderNo, setOutboundOrderNo] = useState('');
+  const [outboundOrderLoading, setOutboundOrderLoading] = useState(false);
+  const [outboundPurchases, setOutboundPurchases] = useState<any[]>([]);
+  const [outboundStockMap, setOutboundStockMap] = useState<Record<string, number>>({});
+  const [outboundLoading, setOutboundLoading] = useState(false);
 
   const loadAreas = useCallback(async () => {
     setAreasLoading(true);
@@ -434,6 +450,132 @@ const WarehouseLocationMap: React.FC = () => {
       message.error(errMsg);
     } finally {
       setTransferLoading(false);
+    }
+  };
+
+  // ===== 入库处理 =====
+  const handleOpenInbound = () => {
+    inboundForm.resetFields();
+    inboundForm.setFieldsValue({ warehouseLocation: selectedLocation?.locationCode || '' });
+    setInboundModalOpen(true);
+  };
+
+  const handleDoInbound = async () => {
+    try {
+      const values = await inboundForm.validateFields();
+      setInboundLoading(true);
+      const operatorId = String(user?.id || '').trim();
+      const operatorName = String(user?.name || user?.username || '').trim();
+      const res = await api.post('/production/material/inbound/manual', {
+        materialCode: values.materialCode,
+        materialName: values.materialName,
+        materialType: values.materialType || 'fabricA',
+        color: values.color || '',
+        size: values.size || '',
+        quantity: values.quantity,
+        warehouseLocation: values.warehouseLocation || selectedLocation?.locationCode || '',
+        supplierName: values.supplierName || '',
+        operatorId,
+        operatorName,
+        remark: values.remark || '',
+      });
+      if ((res as any)?.code === 200) {
+        message.success('入库成功');
+        setInboundModalOpen(false);
+        inboundForm.resetFields();
+        if (selectedLocation) handleLocationClick(selectedLocation);
+        loadLocations(selectedAreaId);
+        loadOverview();
+      } else {
+        message.error((res as any)?.message || '入库失败');
+      }
+    } catch (e: any) {
+      if (e?.errorFields) return;
+      message.error(e?.message || '入库失败');
+    } finally {
+      setInboundLoading(false);
+    }
+  };
+
+  // ===== 出库处理 =====
+  const handleOpenOutbound = () => {
+    setOutboundOrderNo('');
+    setOutboundPurchases([]);
+    setOutboundStockMap({});
+    setOutboundModalOpen(true);
+  };
+
+  const handleSearchOutboundOrder = async () => {
+    const no = outboundOrderNo.trim();
+    if (!no) {
+      message.warning('请输入订单号');
+      return;
+    }
+    setOutboundOrderLoading(true);
+    try {
+      // 获取订单的采购物料列表
+      const purchaseRes = await api.get('/production/purchase/list', {
+        params: { orderNo: no, page: 1, pageSize: 200 },
+      });
+      const records = purchaseRes?.code === 200
+        ? (purchaseRes?.data?.records || [])
+        : [];
+      setOutboundPurchases(records);
+
+      // 获取库存预览
+      if (records.length > 0) {
+        try {
+          const previewRes = await api.get('/production/purchase/smart-receive-preview', {
+            params: { orderNo: no },
+          });
+          const materials = previewRes?.data?.materials || [];
+          const map: Record<string, number> = {};
+          materials.forEach((m: any) => {
+            if (m.purchaseId != null) map[String(m.purchaseId)] = Number(m.availableStock ?? 0);
+          });
+          setOutboundStockMap(map);
+        } catch {
+          setOutboundStockMap({});
+        }
+      }
+    } catch {
+      message.error('查询订单失败');
+    } finally {
+      setOutboundOrderLoading(false);
+    }
+  };
+
+  const handleOutboundPick = async (purchase: any) => {
+    const stock = outboundStockMap[String(purchase.id)] || 0;
+    if (stock <= 0) {
+      message.warning('该物料无可用库存');
+      return;
+    }
+    const pickQty = Math.min(stock, Number(purchase.purchaseQuantity || 0));
+    const receiverId = String(user?.id || '').trim();
+    const receiverName = String(user?.name || user?.username || '').trim();
+    try {
+      setOutboundLoading(true);
+      const res = await api.post('/production/purchase/warehouse-pick', {
+        purchaseId: purchase.id,
+        pickQty,
+        receiverId,
+        receiverName,
+      });
+      if ((res as any)?.code === 200) {
+        message.success(`${purchase.materialName || purchase.materialCode} 出库成功`);
+        // 刷新
+        handleSearchOutboundOrder();
+        if (selectedLocation) handleLocationClick(selectedLocation);
+        loadLocations(selectedAreaId);
+        loadOverview();
+      } else {
+        message.error((res as any)?.message || '出库失败');
+      }
+    } catch (e: any) {
+      message.error(e?.message || '出库失败');
+    } finally {
+      setOutboundLoading(false);
     }
   };
 
@@ -875,9 +1017,7 @@ const WarehouseLocationMap: React.FC = () => {
               <Button
                 type="primary"
                 icon={<ImportOutlined />}
-                onClick={() => {
-                  message.info('入库功能需要跳转到对应页面');
-                }}
+                onClick={handleOpenInbound}
               >
                 入库
               </Button>
@@ -885,9 +1025,7 @@ const WarehouseLocationMap: React.FC = () => {
                 <Button
                   type="default"
                   icon={<ExportOutlined />}
-                  onClick={() => {
-                    message.info('出库功能需要跳转到对应页面');
-                  }}
+                  onClick={handleOpenOutbound}
                 >
                   出库
                 </Button>
@@ -992,6 +1130,141 @@ const WarehouseLocationMap: React.FC = () => {
         areaName={selectedArea?.areaName || ''}
         onClose={() => setPrintModalOpen(false)}
       />
+
+      {/* 入库弹窗 */}
+      <ResizableModal
+        open={inboundModalOpen}
+        onCancel={() => { setInboundModalOpen(false); inboundForm.resetFields(); }}
+        title={`入库 - 库位 ${selectedLocation?.locationCode || ''}`}
+        width="30vw"
+        onOk={handleDoInbound}
+        okText="确认入库"
+        confirmLoading={inboundLoading}
+      >
+        <div style={{ padding: '8px 0' }}>
+          <Form form={inboundForm} layout="vertical">
+            <Form.Item name="materialCode" label="物料编码" rules={[{ required: true, message: '请输入物料编码' }]}>
+              <Input placeholder="请输入物料编码" />
+            </Form.Item>
+            <Form.Item name="materialName" label="物料名称" rules={[{ required: true, message: '请输入物料名称' }]}>
+              <Input placeholder="请输入物料名称" />
+            </Form.Item>
+            <Form.Item name="materialType" label="物料类型" initialValue="fabricA">
+              <Select
+                options={[
+                  { value: 'fabricA', label: '面料A' }, { value: 'fabricB', label: '面料B' },
+                  { value: 'fabricC', label: '面料C' }, { value: 'fabricD', label: '面料D' },
+                  { value: 'fabricE', label: '面料E' }, { value: 'liningA', label: '里料A' },
+                  { value: 'liningB', label: '里料B' }, { value: 'liningC', label: '里料C' },
+                  { value: 'liningD', label: '里料D' }, { value: 'liningE', label: '里料E' },
+                  { value: 'accessoryA', label: '辅料A' }, { value: 'accessoryB', label: '辅料B' },
+                  { value: 'accessoryC', label: '辅料C' }, { value: 'accessoryD', label: '辅料D' },
+                  { value: 'accessoryE', label: '辅料E' },
+                ]}
+              />
+            </Form.Item>
+            <Row gutter={12}>
+              <Col span={12}>
+                <Form.Item name="color" label="颜色">
+                  <Input placeholder="颜色" />
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item name="size" label="尺码">
+                  <Input placeholder="尺码" />
+                </Form.Item>
+              </Col>
+            </Row>
+            <Form.Item name="quantity" label="数量" rules={[{ required: true, message: '请输入数量' }]}>
+              <InputNumber style={{ width: '100%' }} min={0.01} precision={2} placeholder="数量" />
+            </Form.Item>
+            <Form.Item name="warehouseLocation" label="库位">
+              <Input placeholder="库位编码" disabled />
+            </Form.Item>
+            <Form.Item name="supplierName" label="供应商">
+              <Input placeholder="供应商（选填）" />
+            </Form.Item>
+            <Form.Item name="remark" label="备注">
+              <Input.TextArea rows={2} placeholder="备注（选填）" />
+            </Form.Item>
+          </Form>
+        </div>
+      </ResizableModal>
+
+      {/* 出库弹窗 */}
+      <ResizableModal
+        open={outboundModalOpen}
+        onCancel={() => { setOutboundModalOpen(false); setOutboundOrderNo(''); setOutboundPurchases([]); }}
+        title={`出库领取 - 库位 ${selectedLocation?.locationCode || ''}`}
+        width="60vw"
+        footer={null}
+      >
+        <div style={{ padding: '8px 0' }}>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+            <Input
+              placeholder="输入订单号查询"
+              value={outboundOrderNo}
+              onChange={(e) => setOutboundOrderNo(e.target.value)}
+              onPressEnter={handleSearchOutboundOrder}
+              style={{ flex: 1 }}
+            />
+            <Button
+              type="primary"
+              icon={<SearchOutlined />}
+              loading={outboundOrderLoading}
+              onClick={handleSearchOutboundOrder}
+            >
+              查询
+            </Button>
+          </div>
+
+          {outboundPurchases.length > 0 ? (
+            <Table
+              dataSource={outboundPurchases}
+              rowKey={(r: any) => r.id}
+              pagination={false}
+              size="small"
+              loading={outboundLoading}
+              columns={[
+                { title: '物料编码', dataIndex: 'materialCode', width: 120 },
+                { title: '物料名称', dataIndex: 'materialName', width: 150, ellipsis: true },
+                { title: '颜色', dataIndex: 'color', width: 80 },
+                { title: '采购数量', dataIndex: 'purchaseQuantity', width: 100, align: 'right' as const },
+                {
+                  title: '可用库存',
+                  key: 'stock',
+                  width: 100,
+                  align: 'right' as const,
+                  render: (_: any, r: any) => {
+                    const stock = outboundStockMap[String(r.id)] ?? 0;
+                    return <span style={{ color: stock > 0 ? 'var(--color-success)' : 'var(--color-text-quaternary)' }}>{stock}</span>;
+                  },
+                },
+                {
+                  title: '操作',
+                  key: 'action',
+                  width: 120,
+                  render: (_: any, r: any) => {
+                    const stock = outboundStockMap[String(r.id)] ?? 0;
+                    return (
+                      <Button
+                        type="link"
+                        size="small"
+                        disabled={stock <= 0}
+                        onClick={() => handleOutboundPick(r)}
+                      >
+                        出库领取
+                      </Button>
+                    );
+                  },
+                },
+              ]}
+            />
+          ) : (
+            <Empty description={outboundOrderNo ? '该订单暂无采购物料' : '请输入订单号查询'} />
+          )}
+        </div>
+      </ResizableModal>
     </div>
   );
 };

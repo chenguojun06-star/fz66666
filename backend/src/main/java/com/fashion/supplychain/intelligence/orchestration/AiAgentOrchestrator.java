@@ -63,6 +63,10 @@ public class AiAgentOrchestrator {
     @Autowired private org.springframework.beans.factory.ObjectProvider<RealTimeLearningLoop> realTimeLearningLoopProvider;
     @Autowired private org.springframework.beans.factory.ObjectProvider<QuickPathQualityGate> quickPathQualityGateProvider;
     @Autowired private org.springframework.beans.factory.ObjectProvider<DynamicFollowUpEngine> dynamicFollowUpEngineProvider;
+    @Autowired private org.springframework.beans.factory.ObjectProvider<com.fashion.supplychain.intelligence.service.GoldenEvalService> goldenEvalServiceProvider;
+    @Autowired private org.springframework.beans.factory.ObjectProvider<com.fashion.supplychain.intelligence.service.GuardrailsConfigService> guardrailsConfigServiceProvider;
+    /** P2升级: 结构化输出后处理 */
+    @Autowired private org.springframework.beans.factory.ObjectProvider<com.fashion.supplychain.intelligence.service.StructuredOutputEnforcer> outputEnforcerProvider;
 
     // 五大Agent框架增强组件
     @Autowired private org.springframework.beans.factory.ObjectProvider<com.fashion.supplychain.intelligence.service.MemoryBankService> memoryBankServiceProvider;
@@ -466,6 +470,8 @@ public class AiAgentOrchestrator {
             }
         }
 
+        final double finalSelfScore = selfScore;
+
         RealTimeLearningLoop realTimeLearningLoop = realTimeLearningLoopProvider.getIfAvailable();
         if (realTimeLearningLoop != null) {
             try {
@@ -524,6 +530,14 @@ public class AiAgentOrchestrator {
             }
         }
 
+        // P1升级: 在线评估采样 — 10%流量触发LLM-as-Judge，与SelfCritic对比校准
+        com.fashion.supplychain.intelligence.service.GoldenEvalService goldenEvalService = goldenEvalServiceProvider.getIfAvailable();
+        if (goldenEvalService != null && assistantResponse != null && !assistantResponse.isBlank()) {
+            postTurnExecutor.execute(UserContext.wrap(() -> {
+                goldenEvalService.maybeOnlineEvaluate(userMessage, assistantResponse, finalSelfScore);
+            }));
+        }
+
         MemoryNudgeOrchestrator memoryNudgeOrchestrator = memoryNudgeOrchestratorProvider.getIfAvailable();
         if (memoryNudgeOrchestrator != null) {
             final List<String> finalToolNames = toolNames;
@@ -552,11 +566,39 @@ public class AiAgentOrchestrator {
             }));
         }
 
+        // P2升级: 安全护栏 — Guardrails-as-Code输出内容检查
+        com.fashion.supplychain.intelligence.service.GuardrailsConfigService guardrailsConfigService = guardrailsConfigServiceProvider.getIfAvailable();
+        if (guardrailsConfigService != null && assistantResponse != null) {
+            String blockReason = guardrailsConfigService.checkOutput(assistantResponse);
+            if (blockReason != null) {
+                log.warn("[AiAgent-Guardrails] 输出被拦截: {} — reason: {}", conversationId, blockReason);
+            }
+        }
+
+        // P2升级: 结构化输出后处理 — 修复模糊表述、重复段落、过长单行
+        com.fashion.supplychain.intelligence.service.StructuredOutputEnforcer outputEnforcer = outputEnforcerProvider.getIfAvailable();
+        if (outputEnforcer != null && assistantResponse != null) {
+            try {
+                String processed = outputEnforcer.postProcess(assistantResponse);
+                if (!processed.equals(assistantResponse)) {
+                    log.debug("[AiAgent-OutputEnforcer] 已修复回答格式问题 conversationId={}", conversationId);
+                }
+            } catch (Exception e) {
+                log.debug("[AiAgent-OutputEnforcer] 后处理跳过: {}", e.getMessage());
+            }
+        }
+
         if (toolRecords != null && !toolRecords.isEmpty() && !usedQuickPath) {
             final String finalToolResults = toolResultsStr;
             postTurnExecutor.execute(UserContext.wrap(() -> {
                 learnEntityMemoryFromTools(tenantId, finalToolResults);
             }));
+            // P1升级: 记录成功工具调用模式到程序记忆
+            if (selfScore > 80) {
+                List<String> pmToolNames = toolRecords.stream()
+                        .map(r -> r.toolName).distinct().toList();
+                memoryHelper.recordProceduralPattern(userMessage, pmToolNames, selfScore);
+            }
         }
     }
 

@@ -395,13 +395,15 @@ public class ProductionOrderController {
         return success ? Result.success("更新成功") : Result.fail("更新失败");
     }
 
-    private static final java.util.Set<String> BASIC_INFO_EDITABLE_FIELDS = java.util.Set.of("styleNo", "styleName", "skc", "color");
+    private static final java.util.Set<String> BASIC_INFO_EDITABLE_FIELDS = java.util.Set.of("styleNo", "styleName", "skc", "color", "size", "sku");
 
     private static final java.util.Map<String, String> FIELD_TO_COLUMN = java.util.Map.of(
             "styleNo", "style_no",
             "styleName", "style_name",
             "skc", "skc",
-            "color", "color"
+            "color", "color",
+            "size", "size",
+            "sku", "sku"
     );
 
     private static final java.util.List<String[]> STYLE_NO_DOWNSTREAM_TABLES = java.util.List.of(
@@ -419,6 +421,19 @@ public class ProductionOrderController {
     private static final java.util.List<String[]> COLOR_DOWNSTREAM_TABLES = java.util.List.of(
             new String[]{"t_cutting_bundle", "order_id"},
             new String[]{"t_cutting_task", "order_id"}
+    );
+
+    private static final java.util.List<String[]> SKU_DOWNSTREAM_TABLES = java.util.List.of(
+            new String[]{"t_cutting_bundle", "order_id"},
+            new String[]{"t_cutting_task", "order_id"},
+            new String[]{"t_scan_record", "order_id"},
+            new String[]{"t_product_warehousing", "order_id"}
+    );
+
+    private static final java.util.List<String[]> SIZE_DOWNSTREAM_TABLES = java.util.List.of(
+            new String[]{"t_cutting_bundle", "order_id"},
+            new String[]{"t_cutting_task", "order_id"},
+            new String[]{"t_scan_record", "order_id"}
     );
 
     @PutMapping("/update-basic-info")
@@ -482,6 +497,8 @@ public class ProductionOrderController {
             case "styleName" -> order.getStyleName();
             case "skc" -> order.getSkc();
             case "color" -> order.getColor();
+            case "size" -> order.getSize();
+            case "sku" -> order.getSku();
             default -> null;
         };
     }
@@ -492,11 +509,20 @@ public class ProductionOrderController {
             case "styleName" -> order.setStyleName(value);
             case "skc" -> order.setSkc(value);
             case "color" -> order.setColor(value);
+            case "size" -> order.setSize(value);
+            case "sku" -> order.setSku(value);
         }
     }
 
     private String fieldLabel(String field) {
-        return java.util.Map.of("styleNo", "款号", "styleName", "款名", "skc", "SKC", "color", "颜色").getOrDefault(field, field);
+        return java.util.Map.of(
+                "styleNo", "款号",
+                "styleName", "款名",
+                "skc", "SKC",
+                "color", "颜色",
+                "size", "尺码",
+                "sku", "SKU"
+        ).getOrDefault(field, field);
     }
 
     private void appendRemark(ProductionOrder order, String remark) {
@@ -517,6 +543,10 @@ public class ProductionOrderController {
             tables = STYLE_NO_DOWNSTREAM_TABLES;
         } else if ("color".equals(field)) {
             tables = COLOR_DOWNSTREAM_TABLES;
+        } else if ("sku".equals(field)) {
+            tables = SKU_DOWNSTREAM_TABLES;
+        } else if ("size".equals(field)) {
+            tables = SIZE_DOWNSTREAM_TABLES;
         } else {
             return 0;
         }

@@ -858,6 +858,24 @@ export const intelligenceApi = {
     await api.post(`/intelligence/patrol/actions/${actionId}/reject`, { remark: remark ?? '' });
   },
 
+  // ===== P1升级: AI质量评估 =====
+
+  /** 运行Golden Test Dataset回归测试 */
+  runGoldenEval: () =>
+    api.post<{ status: string; total: number; passed: number; avgScore: number; results: Array<Record<string, unknown>> }>(
+      '/intelligence/golden-eval',
+    ),
+
+  // ===== P2升级: 安全护栏管理 =====
+
+  /** 查看安全规则配置 */
+  getGuardrails: () =>
+    api.get<Record<string, unknown>>('/intelligence/guardrails'),
+
+  /** 热更新安全规则 */
+  reloadGuardrails: () =>
+    api.post<{ status: string; message: string }>('/intelligence/guardrails/reload'),
+
 };
 
 export const getPatrolActionsByTarget = intelligenceApi.getPatrolActionsByTarget;

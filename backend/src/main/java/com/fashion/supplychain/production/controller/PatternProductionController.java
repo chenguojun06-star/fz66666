@@ -157,6 +157,7 @@ public class PatternProductionController {
         LambdaQueryWrapper<PatternScanRecord> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(PatternScanRecord::getPatternProductionId, id)
                 .eq(PatternScanRecord::getDeleteFlag, 0)
+                .eq(PatternScanRecord::getTenantId, UserContext.tenantId())
                 .orderByAsc(PatternScanRecord::getScanTime)
                 .orderByAsc(PatternScanRecord::getCreateTime)
                 .last("LIMIT 5000");
@@ -365,7 +366,8 @@ public class PatternProductionController {
 
             LambdaQueryWrapper<PatternScanRecord> wrapper = new LambdaQueryWrapper<>();
             wrapper.eq(PatternScanRecord::getOperatorId, operatorId)
-                    .eq(PatternScanRecord::getDeleteFlag, 0);
+                    .eq(PatternScanRecord::getDeleteFlag, 0)
+                    .eq(PatternScanRecord::getTenantId, UserContext.tenantId());
 
             DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
             if (StringUtils.hasText(startTime)) {
@@ -472,7 +474,8 @@ public class PatternProductionController {
             long scanCount = patternScanRecordService.count(
                 new LambdaQueryWrapper<PatternScanRecord>()
                     .eq(PatternScanRecord::getPatternProductionId, id)
-                    .eq(PatternScanRecord::getDeleteFlag, 0));
+                    .eq(PatternScanRecord::getDeleteFlag, 0)
+                    .eq(PatternScanRecord::getTenantId, UserContext.tenantId()));
             if (scanCount > 0) {
                 return Result.fail("已有扫码记录，不可编辑基本字段");
             }

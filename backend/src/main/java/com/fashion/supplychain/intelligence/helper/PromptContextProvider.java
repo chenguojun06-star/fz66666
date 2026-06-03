@@ -71,6 +71,10 @@ public class PromptContextProvider {
     @Autowired(required = false)
     private com.fashion.supplychain.intelligence.service.FactoryProfileLearningService factoryProfileLearningService;
 
+    /** P2升级: Agentic RAG 自适应检索引擎 */
+    @Autowired(required = false)
+    private com.fashion.supplychain.intelligence.service.AgenticRagService agenticRagService;
+
     private static final java.util.Set<String> SYSTEM_GUIDE_KEYWORDS = java.util.Set.of(
         "怎么下单", "如何建单", "下单方式", "如何创建订单", "怎么创建订单",
         "如何扫码", "怎么扫码", "扫码流程",
@@ -280,13 +284,40 @@ public class PromptContextProvider {
         }
     }
 
+    /**
+     * P2升级: 使用 AgenticRagService 进行自适应检索。
+     * 根据问题类型动态决定检索策略，闲聊类跳过节省token。
+     * AgenticRagService 不可用时降级到旧的三路检索逻辑。
+     */
     public String buildRagContext(Long tenantId, String userMessage) {
+        // ── P2升级：Agentic RAG 自适应检索 ──
+        if (agenticRagService != null && userMessage != null && !userMessage.isBlank()) {
+            try {
+                com.fashion.supplychain.intelligence.service.AgenticRagService.RagResult agenticResult =
+                        agenticRagService.retrieve(tenantId, userMessage);
+                if (agenticResult != null && !agenticResult.isEmpty()) {
+                    log.debug("[AiAgent-RAG] AgenticRAG命中: type={} strategy={} sources={}",
+                            agenticResult.questionType(), agenticResult.strategy(), agenticResult.sourceCount());
+                    return agenticResult.context() + "\n（以上为自适应检索结果，判断须以工具查询的实时数据为准）\n\n";
+                }
+                if (agenticResult != null && "skip_casual".equals(agenticResult.strategy())) {
+                    return ""; // 闲聊类不占token
+                }
+            } catch (Exception e) {
+                log.debug("[AiAgent-RAG] AgenticRAG跳过，降级到传统检索: {}", e.getMessage());
+            }
+        }
+
+        // ── 降级：传统三路检索（AgenticRagService 不可用时） ──
+        return buildRagContextLegacy(tenantId, userMessage);
+    }
+
+    /** 传统三路检索（降级用） */
+    private String buildRagContextLegacy(Long tenantId, String userMessage) {
         StringBuilder result = new StringBuilder();
         boolean hasContent = false;
 
-        // ── 路径1：知识库（系统操作指南）──
-        // 当用户问"怎么下单""如何建单"等操作问题，直接将知识库内容注入系统提示词，
-        // 确保小云不依赖 LLM 主动调用 tool_knowledge_search 也能回答基础操作问题。
+        // 路径1：知识库（系统操作指南）
         if (userMessage != null && !userMessage.isBlank() && knowledgeBaseService != null) {
             boolean isSystemGuideQuery = SYSTEM_GUIDE_KEYWORDS.stream()
                     .anyMatch(kw -> userMessage.contains(kw));
@@ -304,13 +335,10 @@ public class PromptContextProvider {
                         result.append("【系统操作知识库（已预加载）】\n");
                         for (com.fashion.supplychain.intelligence.entity.KnowledgeBase kb : kbList) {
                             String summary = kb.getContent();
-                            if (summary != null && summary.length() > 600) {
-                                summary = summary.substring(0, 600) + "…";
-                            }
-                            result.append("--- ").append(kb.getTitle()).append(" ---\n")
-                                    .append(summary).append("\n\n");
+                            if (summary != null && summary.length() > 600) summary = summary.substring(0, 600) + "…";
+                            result.append("--- ").append(kb.getTitle()).append(" ---\n").append(summary).append("\n\n");
                         }
-                        result.append("（以上为系统内置操作指南，可直接据此回答。如需更详细内容，调用 tool_knowledge_search。）\n\n");
+                        result.append("（以上为系统内置操作指南，如需更详细内容，调用 tool_knowledge_search。）\n\n");
                         hasContent = true;
                     }
                 } catch (Exception e) {
@@ -319,7 +347,7 @@ public class PromptContextProvider {
             }
         }
 
-        // ── 路径2：记忆案例（历史经验）──
+        // 路径2：记忆案例
         try {
             if (userMessage != null && !userMessage.isBlank()) {
                 IntelligenceMemoryResponse ragResult =
@@ -331,19 +359,13 @@ public class PromptContextProvider {
                             .collect(Collectors.toList());
                     if (!relevant.isEmpty()) {
                         StringBuilder rag = new StringBuilder();
-                        rag.append("【混合检索 RAG — 相关历史经验参考（融合分≥").append(ragSimilarityThreshold).append("）】\n");
+                        rag.append("【相关历史经验参考】\n");
                         for (int ri = 0; ri < relevant.size(); ri++) {
                             IntelligenceMemoryResponse.MemoryItem item = relevant.get(ri);
                             String c = item.getContent();
                             if (c != null && c.length() > 400) c = c.substring(0, 400) + "…";
-                            rag.append(String.format("  %d. [%s/%s] %s（融合分%.2f，采纳%d次）\n     %s\n",
-                                    ri + 1,
-                                    item.getMemoryType() != null ? item.getMemoryType() : "case",
-                                    item.getBusinessDomain() != null ? item.getBusinessDomain() : "general",
-                                    item.getTitle() != null ? item.getTitle() : "",
-                                    item.getSimilarityScore(),
-                                    item.getAdoptedCount(),
-                                    c != null ? c : ""));
+                            rag.append(String.format("  %d. [%s] %s\n", ri + 1,
+                                    item.getTitle() != null ? item.getTitle() : "经验", c != null ? c : ""));
                         }
                         rag.append("（以上为历史经验参考，判断须以工具查询的实时数据为准）\n\n");
                         result.append(rag);
@@ -355,30 +377,25 @@ public class PromptContextProvider {
             log.debug("[AiAgent-RAG] 混合检索跳过: {}", e.getMessage());
         }
 
-        // ── 路径3：语义向量检索（Qdrant）── 全量触发，与路径1/2并列补充
+        // 路径3：语义向量检索
         if (userMessage != null && !userMessage.isBlank() && qdrantService != null) {
             try {
                 List<com.fashion.supplychain.intelligence.service.QdrantService.ScoredPoint> semanticResults =
                         qdrantService.search(tenantId, userMessage, ragRecallTopK);
                 if (semanticResults != null && !semanticResults.isEmpty()) {
                     List<com.fashion.supplychain.intelligence.service.QdrantService.ScoredPoint> filtered =
-                            semanticResults.stream()
-                                    .filter(sp -> sp.getScore() >= ragSimilarityThreshold)
-                                    .limit(3)
-                                    .toList();
+                            semanticResults.stream().filter(sp -> sp.getScore() >= ragSimilarityThreshold)
+                                    .limit(3).toList();
                     if (!filtered.isEmpty()) {
                         result.append("【语义检索 — 相关知识文档】\n");
                         for (int i = 0; i < filtered.size(); i++) {
                             var sp = filtered.get(i);
                             String content = sp.getPayload() != null
-                                    ? (String) sp.getPayload().getOrDefault("content", "")
-                                    : "";
+                                    ? (String) sp.getPayload().getOrDefault("content", "") : "";
                             if (content.length() > 500) content = content.substring(0, 500) + "…";
                             result.append(String.format("  %d. [相似度%.2f] %s\n",
-                                    i + 1, sp.getScore(),
-                                    content.isBlank() ? "（无内容）" : content));
+                                    i + 1, sp.getScore(), content.isBlank() ? "（无内容）" : content));
                         }
-                        result.append("（以上为语义检索结果，判断须以工具查询的实时数据为准）\n\n");
                         hasContent = true;
                     }
                 }
@@ -387,9 +404,7 @@ public class PromptContextProvider {
             }
         }
 
-        if (!hasContent) {
-            return "【知识库检索】（检索失败，请勿编造知识库内容，如需查询请调用 tool_knowledge_search）\n";
-        }
+        if (!hasContent) return "【知识库检索】（检索失败，请勿编造知识库内容，如需查询请调用 tool_knowledge_search）\n";
         return result.toString();
     }
 

@@ -2,6 +2,7 @@ package com.fashion.supplychain.production.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.production.dto.PatternDevelopmentStatsDTO;
 import com.fashion.supplychain.production.dto.StyleCostDetailDTO;
 import com.fashion.supplychain.production.entity.MaterialPurchase;
@@ -78,7 +79,8 @@ public class PatternProductionServiceImpl extends ServiceImpl<PatternProductionM
         LambdaQueryWrapper<PatternProduction> ppWrapper = new LambdaQueryWrapper<>();
         ppWrapper.eq(PatternProduction::getDeleteFlag, 0)
                 .ge(PatternProduction::getCreateTime, startTime)
-                .le(PatternProduction::getCreateTime, endTime);
+                .le(PatternProduction::getCreateTime, endTime)
+                .eq(PatternProduction::getTenantId, UserContext.tenantId());
         List<PatternProduction> patterns = this.list(ppWrapper);
         stats.setPatternCount(patterns.size());
 
@@ -108,6 +110,7 @@ public class PatternProductionServiceImpl extends ServiceImpl<PatternProductionM
         mpWrapper.eq(MaterialPurchase::getDeleteFlag, 0)
                 .ge(MaterialPurchase::getCreateTime, startTime)
                 .le(MaterialPurchase::getCreateTime, endTime)
+                .eq(MaterialPurchase::getTenantId, UserContext.tenantId())
                 .and(w -> w.eq(MaterialPurchase::getSourceType, "sample")
                         .or().isNotNull(MaterialPurchase::getPatternProductionId));
 
