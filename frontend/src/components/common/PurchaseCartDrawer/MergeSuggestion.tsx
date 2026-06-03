@@ -47,7 +47,7 @@ export const MergeSuggestionCard: React.FC<MergeSuggestionCardProps> = ({
     onMerge({
       itemIds: suggestion.items.map(item => item.id),
       targetQuantity: totalQty,
-      targetSupplierId: suggestion.items[0].id,
+      targetSupplierId: suggestion.items[0].supplierId,
       targetSupplierName: suggestion.items[0].supplierName,
     });
   };

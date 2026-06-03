@@ -15,6 +15,7 @@ public class MergeSuggestionDto {
     @Data
     public static class MergeableItemDto {
         private String id;
+        private String supplierId;
         private String supplierName;
         private BigDecimal quantity;
     }

@@ -82,6 +82,7 @@ export interface SplitRequest {
 
 export interface MergeableItem {
   id: string;
+  supplierId?: string;
   supplierName?: string;
   quantity: number;
 }

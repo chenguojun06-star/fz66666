@@ -224,7 +224,13 @@ const OrderImageManager: React.FC<OrderImageManagerProps> = ({ orderNo, editable
             <Image.PreviewGroup>
               {allImageUrls.map((item, idx) => (
                 <Image
-                  key={item.isCover ? 'cover' : item.id}
+                  key={
+                    item.isCover
+                      ? `cover-${idx}`
+                      : item.isStyle
+                        ? `style-${idx}-${item.url}`
+                        : `order-${item.id}`
+                  }
                   src={item.url}
                   style={{ display: idx === currentIdx ? 'block' : 'none', width: '100%', maxHeight: 280, objectFit: 'contain', borderRadius: 6, cursor: 'pointer' }}
                   preview={{ mask: '点击预览' }}

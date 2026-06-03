@@ -32,6 +32,8 @@ interface InlinePurchasePanelProps {
   patternId?: string;
   sourceType?: 'order' | 'sample';
   styleNo?: string;
+  color?: string;
+  quantity?: number;
 }
 
 const MATERIAL_TYPE_OPTIONS = [
@@ -71,7 +73,7 @@ const sortPurchases = (arr: MaterialPurchase[]) =>
 const normalizeStatus = (status?: MaterialPurchase['status'] | string) =>
   String(status || '').trim().toLowerCase();
 
-const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = ({ orderId, orderNo, patternId, sourceType = 'order', styleNo }) => {
+const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = ({ orderId, orderNo, patternId, sourceType = 'order', styleNo, color: propColor, quantity: propQuantity }) => {
   const { message, modal } = App.useApp();
   const navigate = useNavigate();
   const { user } = useUser();
@@ -99,9 +101,12 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = ({ orderId, orde
 
   const [receiveModalVisible, setReceiveModalVisible] = useState(false);
   const [receiveModalRecord, setReceiveModalRecord] = useState<MaterialPurchase | null>(null);
+  const [inboundModalVisible, setInboundModalVisible] = useState(false);
+  const [inboundModalRecord, setInboundModalRecord] = useState<MaterialPurchase | null>(null);
   const [returnModalVisible, setReturnModalVisible] = useState(false);
   const [returnModalRecord, setReturnModalRecord] = useState<MaterialPurchase | null>(null);
   const [receiveForm] = Form.useForm();
+  const [inboundForm] = Form.useForm();
   const [returnForm] = Form.useForm();
 
   const orderColors = useMemo(() => {
@@ -402,6 +407,45 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = ({ orderId, orde
       message.error((e as Error)?.message || '到货确认失败');
     }
   }, [receiveModalRecord, receiveForm, user, message, loadData]);
+
+  // 到货入库：将物料入库到仓库库存
+  const handleInbound = useCallback(async (record: MaterialPurchase) => {
+    setInboundModalRecord(record);
+    const maxQty = Math.max(0.01, Number(record.purchaseQuantity || 0) - Number(record.arrivedQuantity || 0));
+    inboundForm.setFieldsValue({ arrivedQuantity: maxQty });
+    setInboundModalVisible(true);
+  }, [inboundForm]);
+
+  const doInbound = useCallback(async () => {
+    try {
+      const values = await inboundForm.validateFields();
+      const record = inboundModalRecord;
+      if (!record) return;
+      const purchaseId = String(record?.id || '').trim();
+      if (!purchaseId) return;
+      const operatorId = String(user?.id || '').trim();
+      const operatorName = String(user?.name || user?.username || '').trim();
+      const res = await api.post<{ code: number; message?: string }>('/production/material/inbound/confirm-arrival', {
+        purchaseId,
+        arrivedQuantity: values.arrivedQuantity,
+        operatorId,
+        operatorName,
+        warehouseLocation: values.warehouseLocation,
+        remark: values.remark,
+      });
+      if (res?.code === 200) {
+        message.success(`${record.materialName || record.materialCode} 到货入库成功，库存已更新`);
+        setInboundModalVisible(false);
+        inboundForm.resetFields();
+        loadData();
+      } else {
+        message.error(res?.message || '到货入库失败');
+      }
+    } catch (e) {
+      if (e && typeof e === 'object' && 'errorFields' in e) return; // form validation
+      message.error((e as Error)?.message || '到货入库失败');
+    }
+  }, [inboundModalRecord, inboundForm, user, message, loadData]);
 
   const handleReceiveAll = useCallback(async () => {
     const pendingItems = purchases.filter(p => normalizeStatus(p.status) === MATERIAL_PURCHASE_STATUS.PENDING);
@@ -1097,6 +1141,16 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = ({ orderId, orde
                 {hasStock ? '出库领取' : (bomIncomplete ? '采购（信息不全）' : '采购')}
               </Button>
             )}
+            {/* 到货入库按钮：将物料入库到仓库库存 */}
+            {status === MATERIAL_PURCHASE_STATUS.PENDING && (
+              <Button
+                type="link"
+                size="small"
+                onClick={() => handleInbound(record)}
+              >
+                到货入库
+              </Button>
+            )}
             <Button
               type="link"
               size="small"
@@ -1136,7 +1190,7 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = ({ orderId, orde
         );
       },
     },
-  ], [handleReceive, handleConfirmReturn, handleReturnReset, handleCancelReceive, handleWarehousePick, handleQualityIssue, stockMap, bomIncomplete]);
+  ], [handleReceive, handleInbound, handleConfirmReturn, handleReturnReset, handleCancelReceive, handleWarehousePick, handleQualityIssue, stockMap, bomIncomplete]);
 
   return (
     <Spin spinning={loading}>
@@ -1144,13 +1198,13 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = ({ orderId, orde
         order={order}
         orderLines={orderLines}
         orderNo={firstPurchase?.orderNo || orderNo}
-        styleNo={firstPurchase?.styleNo || order?.styleNo}
+        styleNo={firstPurchase?.styleNo || order?.styleNo || styleNo}
         styleName={firstPurchase?.styleName || order?.styleName}
         styleId={firstPurchase?.styleId || order?.styleId}
         styleCover={firstPurchase?.styleCover || order?.styleCover}
-        color={String(order?.color || firstPurchase?.color || '').trim() || buildColorSummary(orderLines) || ''}
+        color={String(order?.color || firstPurchase?.color || propColor || '').trim() || buildColorSummary(orderLines) || ''}
         sizeItems={sizePairs.map(x => ({ size: x.size, quantity: x.quantity }))}
-        totalQuantity={getOrderQtyTotal(orderLines)}
+        totalQuantity={getOrderQtyTotal(orderLines) || propQuantity || 0}
         showOrderNo
         coverSize={80}
       />
@@ -1437,6 +1491,45 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = ({ orderId, orde
             ]}
           >
             <InputNumber style={{ width: '100%' }} min={1} precision={0} />
+          </Form.Item>
+        </Form>
+      </ResizableModal>
+
+      {/* 到货入库弹窗：将物料入库到仓库库存 */}
+      <ResizableModal
+        title="到货入库"
+        open={inboundModalVisible}
+        onCancel={() => setInboundModalVisible(false)}
+        onOk={doInbound}
+        width={420}
+        destroyOnHidden
+      >
+        <Form form={inboundForm} layout="vertical" style={{ marginTop: 12 }}>
+          <Form.Item label="物料">{inboundModalRecord?.materialName || inboundModalRecord?.materialCode || '-'}</Form.Item>
+          <Form.Item label="颜色">{inboundModalRecord?.color || '-'}</Form.Item>
+          <Form.Item label="采购数量">{inboundModalRecord?.purchaseQuantity || 0} {inboundModalRecord?.unit || ''}</Form.Item>
+          <Form.Item label="已入库数量">{inboundModalRecord?.arrivedQuantity || 0} {inboundModalRecord?.unit || ''}</Form.Item>
+          <Form.Item
+            label="本次入库数量"
+            name="arrivedQuantity"
+            rules={[
+              { required: true, message: '请输入入库数量' },
+              { type: 'number', min: 1, message: '数量必须大于 0' },
+            ]}
+          >
+            <InputNumber style={{ width: '100%' }} min={1} precision={0} />
+          </Form.Item>
+          <Form.Item
+            label="仓库库位"
+            name="warehouseLocation"
+          >
+            <Input placeholder="请输入库位（如 A区-01）" />
+          </Form.Item>
+          <Form.Item
+            label="备注"
+            name="remark"
+          >
+            <Input.TextArea rows={2} placeholder="可选备注" />
           </Form.Item>
         </Form>
       </ResizableModal>

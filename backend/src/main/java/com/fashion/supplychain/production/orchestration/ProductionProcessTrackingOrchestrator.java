@@ -465,9 +465,22 @@ public class ProductionProcessTrackingOrchestrator {
             item.put("scannedRecords", scanned);
             item.put("pendingRecords", total - scanned);
             item.put("completionRate", total > 0 ? (int) Math.round(scanned * 100.0 / total) : 0);
-            Map<String, Integer> processBreakdown = records.stream()
-                    .collect(Collectors.groupingBy(r -> r.getProcessName() == null ? "未知" : r.getProcessName(),
-                            Collectors.collectingAndThen(Collectors.counting(), Long::intValue)));
+            // processBreakdown 改为返回每个工序的完成/待完成明细（用于工序看板颜色区分）
+            Map<String, Map<String, Integer>> processBreakdown = records.stream()
+                    .collect(Collectors.groupingBy(r -> r.getProcessName() == null ? "未知" : r.getProcessName()))
+                    .entrySet().stream()
+                    .collect(Collectors.toMap(
+                            Map.Entry::getKey,
+                            e -> {
+                                int procTotal = e.getValue().size();
+                                int procCompleted = (int) e.getValue().stream().filter(r -> "scanned".equals(r.getScanStatus())).count();
+                                Map<String, Integer> detail = new LinkedHashMap<>();
+                                detail.put("total", procTotal);
+                                detail.put("completed", procCompleted);
+                                detail.put("pending", procTotal - procCompleted);
+                                return detail;
+                            }
+                    ));
             item.put("processBreakdown", processBreakdown);
             result.add(item);
         }

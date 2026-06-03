@@ -97,7 +97,7 @@ interface NodeStatsItem {
   scannedRecords: number;
   pendingRecords: number;
   completionRate: number;
-  processBreakdown: Record<string, number>;
+  processBreakdown: Record<string, { total: number; completed: number; pending: number }>;
 }
 
 interface TrackingRecord {
@@ -771,9 +771,34 @@ const ProcessKanbanDrawer: React.FC<ProcessKanbanDrawerProps> = ({
             </div>
             {stage.processBreakdown && Object.keys(stage.processBreakdown).length > 0 && (
               <div style={{ marginTop: 8, borderTop: '1px solid var(--color-border-light)', paddingTop: 8 }}>
-                {Object.entries(stage.processBreakdown).map(([name, count]) => (
-                  <Tag key={name} style={{ marginBottom: 4, fontSize: 14 }}>{name}: {count}</Tag>
-                ))}
+                <div style={{ fontSize: 12, color: 'var(--color-text-tertiary)', marginBottom: 6 }}>工序明细</div>
+                {Object.entries(stage.processBreakdown).map(([name, detail]) => {
+                  const { total, completed, pending } = detail;
+                  const isAllDone = completed === total;
+                  const hasPending = pending > 0;
+                  const tagColor = isAllDone ? '#52c41a' : hasPending ? '#ff4d4f' : '#faad14';
+                  const tagBg = isAllDone ? 'rgba(82, 196, 26, 0.1)' : hasPending ? 'rgba(255, 77, 79, 0.1)' : 'rgba(250, 173, 20, 0.1)';
+                  return (
+                    <div key={name} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                      <Tag style={{ backgroundColor: tagBg, borderColor: tagColor, color: tagColor, marginBottom: 0 }}>
+                        {name}
+                      </Tag>
+                      <Space size={4}>
+                        {pending > 0 && (
+                          <span style={{ color: '#ff4d4f', fontSize: 12 }}>
+                            <CheckCircleOutlined /> {pending}
+                          </span>
+                        )}
+                        {completed > 0 && (
+                          <span style={{ color: '#52c41a', fontSize: 12 }}>
+                            {completed}
+                          </span>
+                        )}
+                        <span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>/{total}</span>
+                      </Space>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </Card>

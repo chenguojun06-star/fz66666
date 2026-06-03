@@ -445,6 +445,58 @@ public class PatternProductionController {
     }
 
     /**
+     * 编辑样衣基本信息（款号/颜色/尺码）
+     * 锁定规则：有扫码记录或已入库 → 禁止编辑
+     */
+    @PutMapping("/{id}/basic-info")
+    public Result<String> updateBasicInfo(
+            @PathVariable String id,
+            @RequestBody Map<String, String> request) {
+        try {
+            String field = request.get("field");
+            String value = request.get("value");
+            if (!StringUtils.hasText(field) || value == null) {
+                return Result.fail("field 和 value 不能为空");
+            }
+            if (!List.of("styleNo", "color", "size").contains(field)) {
+                return Result.fail("不支持的编辑字段: " + field + "，仅支持 styleNo / color / size");
+            }
+
+            PatternProduction record = patternProductionService.getById(id);
+            if (record == null || record.getDeleteFlag() == 1) {
+                return Result.fail("记录不存在");
+            }
+            TenantAssert.assertBelongsToCurrentTenant(record.getTenantId(), "纸样");
+
+            // 锁定规则：有扫码记录 → 禁止编辑
+            long scanCount = patternScanRecordService.count(
+                new LambdaQueryWrapper<PatternScanRecord>()
+                    .eq(PatternScanRecord::getPatternProductionId, id)
+                    .eq(PatternScanRecord::getDeleteFlag, 0));
+            if (scanCount > 0) {
+                return Result.fail("已有扫码记录，不可编辑基本字段");
+            }
+
+            switch (field) {
+                case "styleNo": record.setStyleNo(value.trim()); break;
+                case "color":   record.setColor(value.trim()); break;
+                case "size":    record.setSize(value.trim()); break;
+            }
+            record.setUpdateTime(LocalDateTime.now());
+            record.setUpdateBy(UserContext.username());
+            patternProductionService.updateById(record);
+
+            log.info("样板基本信息已更新: id={} field={} value={}", id, field, value);
+            return Result.success("更新成功");
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            return Result.fail(e.getMessage());
+        } catch (Exception e) {
+            log.error("更新样板基本信息失败: id={}", id, e);
+            return Result.fail("更新失败: " + e.getMessage());
+        }
+    }
+
+    /**
      * 指派样板生产给指定人员
      */
     @PutMapping("/{patternId}/assignee")

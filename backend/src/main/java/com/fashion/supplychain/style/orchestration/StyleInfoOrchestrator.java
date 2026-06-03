@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.system.orchestration.ChangeApprovalOrchestrator;
+import com.fashion.supplychain.production.dto.PatternDevelopmentStatsDTO;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.PatternProduction;
 import com.fashion.supplychain.production.service.PatternProductionService;
@@ -627,7 +628,7 @@ public class StyleInfoOrchestrator {
         }
     }
 
-    public Map<String, Object> getDevelopmentStats(String rangeType) {
+    public PatternDevelopmentStatsDTO getDevelopmentStats(String rangeType) {
         return styleCostCalculator.getDevelopmentStats(rangeType);
     }
 

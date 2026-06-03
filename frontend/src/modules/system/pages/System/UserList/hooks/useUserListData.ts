@@ -96,36 +96,6 @@ export function useUserListData({ user, isSuperAdmin, isTenantOwner, form, userM
     }
   };
 
-  const fetchPendingUserCount = async () => {
-    try {
-      const tenantId = user?.tenantId ? Number(user.tenantId) : null;
-      if (!isSuperAdmin && tenantId) {
-        const response = await tenantService.listPendingRegistrations({ page: 1, pageSize: 1 });
-        const result = response as any;
-        if (result.code === 200) {
-          const count = result.data?.total || 0;
-          setPendingUserCount(count);
-        }
-        return;
-      }
-      const response = await api.get('/system/user/pending', { params: { page: 1, pageSize: 1 } });
-      const result = response as any;
-      if (result.code === 200) {
-        const count = result.data?.total || 0;
-        if (count > pendingUserCount && pendingUserCount > 0) {
-          message.info({
-            content: `有 ${count - pendingUserCount} 个新用户待审批`,
-            duration: 5,
-            onClick: () => { navigate('/system/user-approval'); },
-          });
-        }
-        setPendingUserCount(count);
-      }
-    } catch (error) {
-      console.error('获取待审批用户数量失败', error);
-    }
-  };
-
   const getUserList = async () => {
     setLoading(true);
     try {
@@ -186,9 +156,6 @@ export function useUserListData({ user, isSuperAdmin, isTenantOwner, form, userM
     if (!currentUserId) return;
     getUserList();
     fetchRoleOptions();
-    fetchPendingUserCount();
-    const interval = setInterval(() => { fetchPendingUserCount(); }, 30000);
-    return () => clearInterval(interval);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [queryParams, currentUserId]);
 
@@ -242,6 +209,52 @@ export function useUserListData({ user, isSuperAdmin, isTenantOwner, form, userM
       enabled: !loading && !userModal.visible,
       pauseOnHidden: true,
       onError: (error) => console.error('[实时同步] 用户列表同步错误', error),
+    }
+  );
+
+  // 实时同步：待审批用户数量（替代手动 setInterval）
+  useSync(
+    'pending-user-count',
+    async () => {
+      try {
+        const tenantId = user?.tenantId ? Number(user.tenantId) : null;
+        if (!isSuperAdmin && tenantId) {
+          const response = await tenantService.listPendingRegistrations({ page: 1, pageSize: 1 });
+          const result = response as any;
+          if (result.code === 200) {
+            return { count: result.data?.total || 0 };
+          }
+          return { count: 0 };
+        }
+        const response = await api.get('/system/user/pending', { params: { page: 1, pageSize: 1 } });
+        const result = response as any;
+        if (result.code === 200) {
+          return { count: result.data?.total || 0 };
+        }
+        return { count: 0 };
+      } catch (error) {
+        console.error('获取待审批用户数量失败', error);
+        return null;
+      }
+    },
+    (newData, oldData) => {
+      if (!newData) return;
+      const newCount = newData.count;
+      const oldCount = oldData?.count ?? 0;
+      if (newCount > oldCount && oldCount > 0) {
+        message.info({
+          content: `有 ${newCount - oldCount} 个新用户待审批`,
+          duration: 5,
+          onClick: () => { navigate('/system/user-approval'); },
+        });
+      }
+      setPendingUserCount(newCount);
+    },
+    {
+      interval: 30000,
+      enabled: !!currentUserId && !loading && !userModal.visible,
+      pauseOnHidden: true,
+      onError: (error) => console.error('[实时同步] 待审批用户数同步错误', error),
     }
   );
 

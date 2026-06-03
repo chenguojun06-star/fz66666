@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Spin, Tooltip } from 'antd';
 import {
@@ -7,6 +7,7 @@ import {
 } from '@ant-design/icons';
 import { useCockpit } from '../IntelligenceCenter/hooks/useCockpit';
 import { calcOrderProgress } from '@/modules/production/utils/calcOrderProgress';
+import { useSync } from '@/utils/syncManager';
 import './styles.css';
 
 /* ─── 小工具 ─────────────────────────────────────────── */
@@ -43,7 +44,6 @@ export default function IntelligenceScreen() {
   const navigate = useNavigate();
   const { data, load } = useCockpit() as any;
   const [refreshing, setRefreshing] = useState(false);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   /* 手动刷新 */
   const handleRefresh = useCallback(async () => {
@@ -52,11 +52,13 @@ export default function IntelligenceScreen() {
     setRefreshing(false);
   }, [load]);
 
-  /* 30s 自动刷新 */
-  React.useEffect(() => {
-    timerRef.current = setInterval(handleRefresh, 30_000);
-    return () => { if (timerRef.current) clearInterval(timerRef.current); };
-  }, [handleRefresh]);
+  /* 实时同步：30s 自动刷新（替代手动 setInterval） */
+  useSync(
+    'intelligence-screen-refresh',
+    async () => { await load(); return Date.now(); },
+    () => {},
+    { interval: 30000, pauseOnHidden: true }
+  );
 
   const brain    = data?.brain;
   const pulse    = data?.pulse;

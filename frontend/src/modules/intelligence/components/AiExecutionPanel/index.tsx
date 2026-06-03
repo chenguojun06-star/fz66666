@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card, Button, Modal, Tag, Space, Drawer, Spin, Empty, Alert } from 'antd';
 import ResizableModal from '@/components/common/ResizableModal';
 import ResizableTable from '@/components/common/ResizableTable';
@@ -6,6 +6,7 @@ import { CheckCircleOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { readPageSize } from '@/utils/pageSizeStore';
 import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
+import { useSync } from '@/utils/syncManager';
 import './AiExecutionPanel.css';
 
 /**
@@ -39,17 +40,33 @@ export default function AiExecutionPanel() {
   const [error, setError] = useState<string | null>(null);
 
   // =====================================================
-  // 生命周期：组件加载时获取待审批命令
+  // 生命周期：自动轮询待审批命令
   // =====================================================
 
-  useEffect(() => {
-    fetchPendingCommands();
-
-    // 每 30 秒自动刷新一次
-    const timer = setInterval(fetchPendingCommands, 30000);
-
-    return () => clearInterval(timer);
-  }, []);
+  // 实时同步：待审批命令（替代手动 setInterval）
+  useSync(
+    'ai-execution-pending-commands',
+    async () => {
+      try {
+        const response = await intelligenceApi.getPendingCommands();
+        return response?.pending ?? [];
+      } catch (err: unknown) {
+        console.error('Failed to fetch pending commands:', err);
+        return null;
+      }
+    },
+    (newData) => {
+      if (newData !== null) {
+        setPendingCommands(newData);
+        setError(null);
+      }
+    },
+    {
+      interval: 30000,
+      pauseOnHidden: true,
+      onError: (err) => setError(err instanceof Error ? err.message : '获取待审批命令失败'),
+    }
+  );
 
   // =====================================================
   // 数据获取

@@ -630,6 +630,49 @@ export function usePurchaseDetailPage(styleNoParam: string, orderNoParam: string
     }
   };
 
+  // 到货入库：将物料入库到仓库库存
+  const [inboundVisible, setInboundVisible] = useState(false);
+  const [inboundRecord, setInboundRecord] = useState<MaterialPurchase | null>(null);
+  const [inboundForm] = Form.useForm();
+
+  const openInbound = (record: MaterialPurchase) => {
+    setInboundRecord(record);
+    const maxQty = Math.max(0.01, Number(record.purchaseQuantity || 0) - Number(record.arrivedQuantity || 0));
+    inboundForm.setFieldsValue({ arrivedQuantity: maxQty });
+    setInboundVisible(true);
+  };
+
+  const doInbound = async () => {
+    if (!inboundRecord) return;
+    try {
+      const values = await inboundForm.validateFields();
+      const operatorName = String(user?.name || user?.username || '').trim();
+      const res = await api.post('/production/material/inbound/confirm-arrival', {
+        purchaseId: inboundRecord.id,
+        arrivedQuantity: values.arrivedQuantity,
+        operatorId: user?.id || '',
+        operatorName,
+        warehouseLocation: values.warehouseLocation,
+        remark: values.remark,
+      });
+      if ((res as any).code === 200) {
+        message.success('到货入库成功，库存已更新');
+        setInboundVisible(false);
+        inboundForm.resetFields();
+        await loadData();
+      } else {
+        message.error((res as any).message || '到货入库失败');
+      }
+    } catch (error: unknown) {
+      const formError = error as { errorFields?: Array<{ errors?: string[] }> };
+      if (formError?.errorFields?.length) {
+        message.error(formError.errorFields[0]?.errors?.[0] || '请填写数量');
+      } else {
+        message.error((error as Error).message || '到货入库失败');
+      }
+    }
+  };
+
   const handleConfirmComplete = async () => {
     const targets = purchaseList.filter(
       (p) => String(p.status || '').toLowerCase() === MATERIAL_PURCHASE_STATUS.AWAITING_CONFIRM
@@ -697,14 +740,16 @@ export function usePurchaseDetailPage(styleNoParam: string, orderNoParam: string
 
   return {
     loading, order, purchaseList, materialArrivalRate,
-    form, receiveForm, returnConfirmForm,
+    form, receiveForm, returnConfirmForm, inboundForm,
     receiveVisible, setReceiveVisible, receiveRecord, receiveLoading,
+    inboundVisible, setInboundVisible, inboundRecord,
     returnConfirmVisible, setReturnConfirmVisible, returnConfirmRecord, returnConfirmLoading,
     qualityIssueVisible, setQualityIssueVisible, qualityIssueRecord, setQualityIssueRecord,
     confirmCompleteSubmitting,
     loadData,
     handleDelete,
     openReceive, handleReceive,
+    openInbound, doInbound,
     handleReturnConfirm, doReturnConfirm, handleCancelReceive,
     handleBatchReceive, handleBatchReturnConfirm, handleConfirmComplete,
     handleReturnReset, handleWarehousePick,

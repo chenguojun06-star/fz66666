@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { Form, Input, InputNumber, Select, Button, Space, Row, Col, Alert, Switch, App, Divider } from 'antd';
+import { Form, Input, InputNumber, Select, Button, Space, Row, Col, Alert, Switch, App, Divider, Drawer } from 'antd';
 import StandardModal from '@/components/common/StandardModal';
 import ResizableTable from '@/components/common/ResizableTable';
 import { InboxOutlined, PlusOutlined, DeleteOutlined } from '@ant-design/icons';
@@ -258,17 +258,20 @@ const FreeInboundModal: React.FC<FreeInboundModalProps> = ({ open, onClose, onSu
   ];
 
   return (
-    <StandardModal
+    <Drawer
       title={<Space><InboxOutlined />成品入库</Space>}
       open={open}
-      onCancel={handleClose}
-      size="lg"
-      footer={[
-        <Button key="cancel" onClick={handleClose}>取消</Button>,
-        <Button key="ok" type="primary" loading={loading} disabled={items.length === 0} onClick={handleSubmit}>
-          确认入库{items.length > 0 ? ` (${items.length}项)` : ''}
-        </Button>,
-      ]}
+      onClose={handleClose}
+      width="85%"
+      destroyOnClose
+      extra={
+        <Space>
+          <Button onClick={handleClose}>取消</Button>
+          <Button type="primary" loading={loading} disabled={items.length === 0} onClick={handleSubmit}>
+            确认入库{items.length > 0 ? ` (${items.length}项)` : ''}
+          </Button>
+        </Space>
+      }
     >
       <Space vertical style={{ width: '100%' }} size={16}>
         <div>
@@ -368,8 +371,7 @@ const FreeInboundModal: React.FC<FreeInboundModalProps> = ({ open, onClose, onSu
           <Input.TextArea rows={2} placeholder="选填" />
         </Form.Item>
       </Space>
-      <div style={{ display: 'none' }} />
-    </StandardModal>
+    </Drawer>
   );
 };
 

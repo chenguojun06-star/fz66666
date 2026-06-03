@@ -55,22 +55,98 @@ const _FinishedInventory: React.FC = () => {
             <ResizableTable storageKey="warehouse-finished-inventory" size="small" columns={columns} dataSource={pagedDataSource} rowKey={(r: FinishedInventory) => `${r.orderNo}_${r.styleNo}`} loading={loading} pagination={false} scroll={{ x: 'max-content' }} />
             <StandardPagination current={pagination.pagination.current} pageSize={pagination.pagination.pageSize} total={totalRecords} onChange={(page, _pageSize) => pagination.gotoPage(page)} />
           </Card>
-          <StandardModal title={`出库 - ${outboundModal.data?.styleNo || ''}`} open={outboundModal.visible} onOk={handleOutboundConfirm} onCancel={outboundModal.close} okText="确认出库" size="lg">
+          <Drawer
+            title={`出库 - ${outboundModal.data?.styleNo || ''}`}
+            open={outboundModal.visible}
+            onClose={outboundModal.close}
+            width="85%"
+            destroyOnClose
+            extra={
+              <Space>
+                <Button onClick={outboundModal.close}>取消</Button>
+                <Button type="primary" onClick={handleOutboundConfirm}>确认出库</Button>
+              </Space>
+            }
+          >
             {outboundModal.data && (
               <>
-                <Card style={{ marginBottom: 12 }}><Row gutter={16}><Col span={8}><div style={{ color: 'var(--color-text-tertiary)', fontSize: 14 }}>订单号</div><div style={{ fontWeight: 600 }}>{outboundModal.data.orderNo || '-'}</div></Col><Col span={8}><div style={{ color: 'var(--color-text-tertiary)', fontSize: 14 }}>款号</div><div style={{ fontWeight: 600 }}>{outboundModal.data.styleNo || '-'}</div></Col><Col span={8}><div style={{ color: 'var(--color-text-tertiary)', fontSize: 14 }}>款名</div><div style={{ fontWeight: 600 }}>{outboundModal.data.styleName || '-'}</div></Col></Row></Card>
-                <Card style={{ marginBottom: 12 }}><Row gutter={16}><Col span={12}><div style={{ marginBottom: 8, fontSize: 14, color: 'var(--color-text-tertiary)' }}>出库类型</div><Select style={{ width: '100%' }} value={outboundType} onChange={(v) => setOutboundType(v)} options={[{ label: '销售出库', value: 'sales' }, { label: '调拨出库', value: 'transfer' }, { label: '报废出库', value: 'scrap' }]} /></Col><Col span={12}><div style={{ marginBottom: 8, fontSize: 14, color: 'var(--color-text-tertiary)' }}>{outboundType === 'scrap' ? '报废原因' : '备注（选填）'}</div><Input value={outboundReason} onChange={e => setOutboundReason(e.target.value)} placeholder={outboundType === 'scrap' ? '请填写报废原因' : '选填'} status={outboundType === 'scrap' && !outboundReason.trim() ? 'warning' : undefined} /></Col></Row></Card>
+                <Card style={{ marginBottom: 12 }}>
+                  <Row gutter={16}>
+                    <Col span={8}>
+                      <div style={{ color: 'var(--color-text-tertiary)', fontSize: 14 }}>订单号</div>
+                      <div style={{ fontWeight: 600 }}>{outboundModal.data.orderNo || '-'}</div>
+                    </Col>
+                    <Col span={8}>
+                      <div style={{ color: 'var(--color-text-tertiary)', fontSize: 14 }}>款号</div>
+                      <div style={{ fontWeight: 600 }}>{outboundModal.data.styleNo || '-'}</div>
+                    </Col>
+                    <Col span={8}>
+                      <div style={{ color: 'var(--color-text-tertiary)', fontSize: 14 }}>款名</div>
+                      <div style={{ fontWeight: 600 }}>{outboundModal.data.styleName || '-'}</div>
+                    </Col>
+                  </Row>
+                </Card>
+                <Card style={{ marginBottom: 12 }}>
+                  <Row gutter={16}>
+                    <Col span={12}>
+                      <div style={{ marginBottom: 8, fontSize: 14, color: 'var(--color-text-tertiary)' }}>出库类型</div>
+                      <Select
+                        style={{ width: '100%' }}
+                        value={outboundType}
+                        onChange={(v) => setOutboundType(v)}
+                        options={[
+                          { label: '销售出库', value: 'sales' },
+                          { label: '调拨出库', value: 'transfer' },
+                          { label: '报废出库', value: 'scrap' }
+                        ]}
+                      />
+                    </Col>
+                    <Col span={12}>
+                      <div style={{ marginBottom: 8, fontSize: 14, color: 'var(--color-text-tertiary)' }}>
+                        {outboundType === 'scrap' ? '报废原因' : '备注（选填）'}
+                      </div>
+                      <Input
+                        value={outboundReason}
+                        onChange={e => setOutboundReason(e.target.value)}
+                        placeholder={outboundType === 'scrap' ? '请填写报废原因' : '选填'}
+                        status={outboundType === 'scrap' && !outboundReason.trim() ? 'warning' : undefined}
+                      />
+                    </Col>
+                  </Row>
+                </Card>
                 <div style={{ marginBottom: 8, fontWeight: 600 }}>SKU明细</div>
                 <ResizableTable columns={skuColumns} dataSource={skuDetails} rowKey="sku" pagination={false} />
-                <div style={{ marginTop: 8, display: 'flex', justifyContent: 'space-between', fontWeight: 600 }}><span>出库总量: {skuTotalOutbound} 件</span><span>出库金额: {formatMoney(skuTotalAmount)}</span></div>
+                <div style={{ marginTop: 8, display: 'flex', justifyContent: 'space-between', fontWeight: 600 }}>
+                  <span>出库总量: {skuTotalOutbound} 件</span>
+                  <span>出库金额: {formatMoney(skuTotalAmount)}</span>
+                </div>
                 {outboundType === 'sales' && <CustomerInfoSection customerName={outboundCustomerName} onCustomerNameChange={setOutboundCustomerName} customerPhone={outboundCustomerPhone} onCustomerPhoneChange={setOutboundCustomerPhone} shippingAddress={outboundShippingAddress} onShippingAddressChange={setOutboundShippingAddress} variant="card" />}
                 <Card title="发货信息（选填）" style={{ marginTop: 12 }}>
-                  <Row gutter={16}><Col span={8}><div style={{ marginBottom: 8, fontSize: 14, color: 'var(--color-text-tertiary)' }}>关联生产单号</div><Input value={outboundProductionOrderNo} onChange={e => setOutboundProductionOrderNo(e.target.value)} placeholder="选填" /></Col><Col span={8}><div style={{ marginBottom: 8, fontSize: 14, color: 'var(--color-text-tertiary)' }}>快递单号</div><Input value={outboundTrackingNo} onChange={e => setOutboundTrackingNo(e.target.value)} placeholder="选填" /></Col><Col span={8}><div style={{ marginBottom: 8, fontSize: 14, color: 'var(--color-text-tertiary)' }}>快递公司</div><Input value={outboundExpressCompany} onChange={e => setOutboundExpressCompany(e.target.value)} placeholder="选填" /></Col></Row>
+                  <Row gutter={16}>
+                    <Col span={8}>
+                      <div style={{ marginBottom: 8, fontSize: 14, color: 'var(--color-text-tertiary)' }}>关联生产单号</div>
+                      <Input value={outboundProductionOrderNo} onChange={e => setOutboundProductionOrderNo(e.target.value)} placeholder="选填" />
+                    </Col>
+                    <Col span={8}>
+                      <div style={{ marginBottom: 8, fontSize: 14, color: 'var(--color-text-tertiary)' }}>快递单号</div>
+                      <Input value={outboundTrackingNo} onChange={e => setOutboundTrackingNo(e.target.value)} placeholder="选填" />
+                    </Col>
+                    <Col span={8}>
+                      <div style={{ marginBottom: 8, fontSize: 14, color: 'var(--color-text-tertiary)' }}>快递公司</div>
+                      <Input value={outboundExpressCompany} onChange={e => setOutboundExpressCompany(e.target.value)} placeholder="选填" />
+                    </Col>
+                  </Row>
                 </Card>
               </>
             )}
-          </StandardModal>
-          <Drawer title={`入库记录 - ${inboundHistoryModal.data?.styleNo || ''}`} open={inboundHistoryModal.visible} onClose={inboundHistoryModal.close} size="large" destroyOnClose styles={{ body: { padding: 16 }, wrapper: { width: '80%' } }}>
+          </Drawer>
+          <Drawer
+            title={`入库记录 - ${inboundHistoryModal.data?.styleNo || ''}`}
+            open={inboundHistoryModal.visible}
+            onClose={inboundHistoryModal.close}
+            width="85%"
+            destroyOnClose
+          >
             {inboundHistoryModal.data && (
               <>
                 <Card style={{ marginBottom: 12 }}><Row gutter={16}><Col span={8}><div style={{ color: 'var(--color-text-tertiary)', fontSize: 14 }}>款号</div><div style={{ fontWeight: 600 }}>{inboundHistoryModal.data.styleNo || '-'}</div></Col><Col span={8}><div style={{ color: 'var(--color-text-tertiary)', fontSize: 14 }}>总入库量</div><div style={{ fontWeight: 600 }}>{inboundHistoryModal.data.totalInboundQty ?? 0} 件</div></Col><Col span={8}><div style={{ color: 'var(--color-text-tertiary)', fontSize: 14 }}>当前库存</div><div style={{ fontWeight: 600 }}>{inboundHistoryModal.data.availableQty ?? 0} 件</div></Col></Row></Card>

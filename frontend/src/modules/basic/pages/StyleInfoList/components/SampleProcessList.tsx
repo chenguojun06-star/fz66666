@@ -1,11 +1,100 @@
-import React, { useCallback, useState, useMemo } from 'react';
-import { App, Button, Drawer, Modal, Table, Tag, Form, Input, InputNumber, Select } from 'antd';
+import React, { useCallback, useState, useMemo, useRef, useEffect } from 'react';
+import { App, Button, Drawer, Modal, Table, Tag, Form, Input, InputNumber, Select, Space, Tooltip } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { CheckCircleOutlined, ClockCircleOutlined, PlayCircleOutlined, UserAddOutlined } from '@ant-design/icons';
+import { CheckCircleOutlined, ClockCircleOutlined, PlayCircleOutlined, UserAddOutlined, EditOutlined, CloseOutlined, SaveOutlined } from '@ant-design/icons';
 import RowActions from '@/components/common/RowActions';
 import type { RowAction } from '@/components/common/RowActions';
 import InlinePurchasePanel from '@/components/common/NodeDetailModal/InlinePurchasePanel';
 import type { ProcessStageProgress, ProcessNodeInfo } from './useSampleProcessProgress';
+
+const InlineEditableField: React.FC<{
+  label: string;
+  value: string;
+  editable: boolean;
+  onSave: (value: string) => void;
+  saving?: boolean;
+}> = ({ label, value, editable, onSave, saving }) => {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => { setDraft(value); }, [value]);
+
+  useEffect(() => {
+    if (editing && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [editing]);
+
+  const handleSave = () => {
+    const trimmed = draft.trim();
+    if (trimmed && trimmed !== value) {
+      onSave(trimmed);
+    }
+    setEditing(false);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') handleSave();
+    if (e.key === 'Escape') { setDraft(value); setEditing(false); }
+  };
+
+  if (!editable) {
+    return (
+      <span style={{ fontSize: 13, lineHeight: '22px' }}>
+        {value || '-'}
+      </span>
+    );
+  }
+
+  if (editing) {
+    return (
+      <Space size={4}>
+        <input
+          ref={inputRef as any}
+          value={draft}
+          onChange={e => setDraft(e.target.value)}
+          onKeyDown={handleKeyDown}
+          onBlur={() => { setEditing(false); setDraft(value); }}
+          disabled={saving}
+          style={{
+            width: 100,
+            border: '1px solid #1677ff',
+            borderRadius: 4,
+            padding: '2px 6px',
+            fontSize: 13,
+            outline: 'none',
+          }}
+        />
+        <Tooltip title="确定">
+          <Button size="small" type="link" icon={<SaveOutlined />} onClick={handleSave} loading={saving} style={{ padding: 0, color: '#52c41a' }} />
+        </Tooltip>
+        <Tooltip title="取消">
+          <Button size="small" type="link" icon={<CloseOutlined />} onClick={() => { setEditing(false); setDraft(value); }} style={{ padding: 0, color: '#999' }} />
+        </Tooltip>
+      </Space>
+    );
+  }
+
+  return (
+    <span
+      onClick={() => setEditing(true)}
+      style={{
+        fontSize: 13,
+        lineHeight: '22px',
+        borderBottom: '1px dashed #1677ff',
+        cursor: 'pointer',
+        padding: '2px 2px',
+        transition: 'background 0.2s',
+      }}
+      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#e6f4ff'; }}
+      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+    >
+      {value || '-'}
+    </span>
+  );
+};
 
 interface SampleProcessListProps {
   stages: ProcessStageProgress[];
@@ -91,6 +180,12 @@ export default function SampleProcessList({
   const [assigningRow, setAssigningRow] = useState<SubProcessRow | null>(null);
   const [assignForm] = Form.useForm();
   const [assignLoading, setAssignLoading] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [savingField, setSavingField] = useState<string | null>(null);
+
+  const hasScanRecords = useMemo(() => {
+    return stages.some(s => s.percent > 0 || s.subProcesses.some(sp => sp.completed));
+  }, [stages]);
 
   const currentStage = useMemo(() => stages.find(s => s.key === activeTab) || stages[0], [stages, activeTab]);
 
@@ -248,6 +343,33 @@ export default function SampleProcessList({
     setPurchaseDrawerOpen(true);
   }, []);
 
+  const handleFieldSave = useCallback(async (value: string) => {
+    if (!patternProductionId) {
+      message.error('样衣生产ID不存在');
+      return;
+    }
+    const field = savingField;
+    if (!field) return;
+    try {
+      const { default: api } = await import('@/utils/api');
+      await api.put(`/production/pattern/${patternProductionId}/basic-info`, { field, value });
+      message.success(`${field === 'styleNo' ? '款号' : field === 'color' ? '颜色' : '尺码'}已更新`);
+      if (onRefresh) await onRefresh();
+    } catch (e: any) {
+      message.error(e?.response?.data?.message || e?.message || '更新失败');
+    } finally {
+      setSavingField(null);
+    }
+  }, [patternProductionId, savingField, message, onRefresh]);
+
+  const handleStartEdit = useCallback(() => {
+    if (hasScanRecords) {
+      message.warning('已有扫码记录，不可编辑基本字段');
+      return;
+    }
+    setEditing(true);
+  }, [hasScanRecords, message]);
+
   const columns = useMemo<ColumnsType<SubProcessRow>>(() => [
     {
       title: '工序',
@@ -362,11 +484,77 @@ export default function SampleProcessList({
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 8,
+      }}>
         <span style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>
           工序列表 <strong style={{ color: '#1f2937' }}>{completedCount}/{stages.length}</strong> 完成
         </span>
+        {patternProductionId ? (
+          <Button
+            size="small"
+            icon={editing ? <CloseOutlined /> : <EditOutlined />}
+            onClick={() => editing ? setEditing(false) : handleStartEdit()}
+            type={editing ? 'default' : 'link'}
+          >
+            {editing ? '取消编辑' : '编辑基本信息'}
+          </Button>
+        ) : null}
       </div>
+
+      {editing ? (
+        <div style={{
+          background: '#fafafa',
+          borderRadius: 6,
+          padding: '8px 12px',
+          marginBottom: 12,
+          display: 'flex',
+          gap: 24,
+          alignItems: 'center',
+          fontSize: 13,
+        }}>
+          <span style={{ color: 'var(--color-text-tertiary)', whiteSpace: 'nowrap' }}>款号</span>
+          <InlineEditableField
+            label="款号"
+            value={styleNo}
+            editable
+            saving={savingField === 'styleNo'}
+            onSave={(v) => { setSavingField('styleNo'); handleFieldSave(v); }}
+          />
+          <span style={{ color: 'var(--color-text-tertiary)', whiteSpace: 'nowrap' }}>颜色</span>
+          <InlineEditableField
+            label="颜色"
+            value={color}
+            editable
+            saving={savingField === 'color'}
+            onSave={(v) => { setSavingField('color'); handleFieldSave(v); }}
+          />
+          <span style={{ color: 'var(--color-text-tertiary)', whiteSpace: 'nowrap' }}>尺码</span>
+          <InlineEditableField
+            label="尺码"
+            value={parseSizeDisplay(size)}
+            editable
+            saving={savingField === 'size'}
+            onSave={(v) => { setSavingField('size'); handleFieldSave(v); }}
+          />
+        </div>
+      ) : (
+        <div style={{
+          display: 'flex',
+          gap: 24,
+          marginBottom: 8,
+          padding: '4px 0',
+          fontSize: 13,
+          color: 'var(--color-text-secondary)',
+        }}>
+          <span>款号: <strong style={{ color: '#1f2937' }}>{styleNo || '-'}</strong></span>
+          <span>颜色: <strong style={{ color: '#1f2937' }}>{color || '-'}</strong></span>
+          <span>尺码: <strong style={{ color: '#1f2937' }}>{parseSizeDisplay(size)}</strong></span>
+        </div>
+      )}
 
       <div style={{
         display: 'flex',
@@ -427,7 +615,7 @@ export default function SampleProcessList({
         styles={{ body: { padding: 0 } }}
       >
         {sourceType === 'sample' && patternProductionId ? (
-          <InlinePurchasePanel patternId={patternProductionId} sourceType="sample" styleNo={styleNo} />
+          <InlinePurchasePanel patternId={patternProductionId} sourceType="sample" styleNo={styleNo} color={color} quantity={quantity} />
         ) : orderId ? (
           <InlinePurchasePanel orderId={orderId} orderNo={orderNo || ''} />
         ) : null}

@@ -10,11 +10,12 @@ import {
   Row,
   Col,
   InputNumber,
+  Button,
+  Drawer,
 } from 'antd';
 import { ExportOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
 import MaterialInfoCard from './MaterialInfoCard';
-import StandardModal from '@/components/common/StandardModal';
 import type { MaterialBatchDetail } from '../hooks/useMaterialInventoryData';
 import { useWarehouseAreaOptions, useWarehouseLocationByArea } from '@/hooks/useWarehouseAreaOptions';
 
@@ -64,7 +65,7 @@ const OutboundModal: React.FC<OutboundModalProps> = ({
   const { selectOptions: locationOptions } = useWarehouseLocationByArea('MATERIAL', warehouseAreaId);
   const factorySearchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   return (
-    <StandardModal
+    <Drawer
       title={
         <Space>
           <ExportOutlined style={{ color: 'var(--primary-color)' }} />
@@ -72,15 +73,23 @@ const OutboundModal: React.FC<OutboundModalProps> = ({
         </Space>
       }
       open={outboundModal.visible}
-      onCancel={() => {
+      onClose={() => {
         outboundModal.close();
         setBatchDetails([]);
         outboundForm.resetFields();
       }}
-      onOk={handleOutboundConfirm}
-      size="lg"
-      okText="确认出库"
-      cancelText="取消"
+      width="85%"
+      destroyOnClose
+      extra={
+        <Space>
+          <Button onClick={() => {
+            outboundModal.close();
+            setBatchDetails([]);
+            outboundForm.resetFields();
+          }}>取消</Button>
+          <Button type="primary" onClick={handleOutboundConfirm}>确认出库</Button>
+        </Space>
+      }
     >
       {outboundModal.data && (
         <Space orientation="vertical" style={{ width: '100%' }} size={12}>
@@ -431,7 +440,7 @@ const OutboundModal: React.FC<OutboundModalProps> = ({
           </div>
         </Space>
       )}
-    </StandardModal>
+    </Drawer>
   );
 };
 

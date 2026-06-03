@@ -1,6 +1,8 @@
 package com.fashion.supplychain.style.helper;
 
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.production.dto.PatternDevelopmentStatsDTO;
+import com.fashion.supplychain.production.dto.StyleCostDetailDTO;
 import com.fashion.supplychain.style.entity.SecondaryProcess;
 import com.fashion.supplychain.style.entity.StyleBom;
 import com.fashion.supplychain.style.entity.StyleInfo;
@@ -11,12 +13,14 @@ import com.fashion.supplychain.style.service.StyleInfoService;
 import com.fashion.supplychain.style.service.StyleProcessService;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -67,24 +71,43 @@ public class StyleCostCalculator {
                 .setScale(2, RoundingMode.HALF_UP);
     }
 
-    public Map<String, Object> getDevelopmentStats(String rangeType) {
+    public PatternDevelopmentStatsDTO getDevelopmentStats(String rangeType) {
         LocalDateTime startTime = getStartTimeByRange(rangeType);
         LocalDateTime endTime = LocalDateTime.now();
 
         boolean tenantScopedRead = !UserContext.isSuperAdmin();
         Long readableTenantId = resolveReadableTenantId();
 
+        // 查询所有已完成的样衣（不限制完成时间，避免 sampleCompletedTime 为 NULL 时遗漏）
         List<StyleInfo> completedStyles = styleInfoService.lambdaQuery()
-                .eq(StyleInfo::getSampleStatus, "COMPLETED")
                 .eq(tenantScopedRead, StyleInfo::getTenantId, readableTenantId)
-                .ge(StyleInfo::getSampleCompletedTime, startTime)
-                .le(StyleInfo::getSampleCompletedTime, endTime)
+                .and(w -> w.eq(StyleInfo::getSampleStatus, "COMPLETED")
+                        .or().eq(StyleInfo::getSampleStatus, "Completed"))
                 .list();
+
+        // 在 Java 中按时间范围过滤，sampleCompletedTime 为 NULL 时用 updateTime 兜底
+        completedStyles = completedStyles.stream()
+                .filter(style -> {
+                    LocalDateTime refTime = style.getSampleCompletedTime();
+                    if (refTime == null) {
+                        refTime = style.getUpdateTime();
+                    }
+                    return refTime != null
+                            && !refTime.isBefore(startTime)
+                            && !refTime.isAfter(endTime);
+                })
+                .collect(Collectors.toList());
+
+        PatternDevelopmentStatsDTO stats = new PatternDevelopmentStatsDTO();
+        stats.setRangeType(rangeType);
 
         int totalSampleQuantity = 0;
         double totalMaterialCost = 0.0;
         double totalProcessCost = 0.0;
         double totalOtherCost = 0.0;
+        long totalDevelopmentSeconds = 0L;
+
+        List<StyleCostDetailDTO> styleCostDetails = new ArrayList<>();
 
         for (StyleInfo style : completedStyles) {
             int sampleQty = style.getSampleQuantity() == null || style.getSampleQuantity() <= 0
@@ -114,16 +137,45 @@ public class StyleCostCalculator {
                     .mapToDouble(sp -> sp.getTotalPrice() != null ? sp.getTotalPrice().doubleValue() : 0.0)
                     .sum();
             totalOtherCost += secondaryCost * sampleQty;
+
+            // 开发时间
+            if (style.getCreateTime() != null && style.getSampleCompletedTime() != null) {
+                totalDevelopmentSeconds += Duration.between(style.getCreateTime(), style.getSampleCompletedTime()).getSeconds();
+            }
+
+            String developmentTime = "";
+            if (style.getCreateTime() != null && style.getSampleCompletedTime() != null) {
+                long secs = Duration.between(style.getCreateTime(), style.getSampleCompletedTime()).getSeconds();
+                long days = secs / 86400;
+                long hours = (secs % 86400) / 3600;
+                if (days > 0) developmentTime = days + "天" + hours + "小时";
+                else developmentTime = hours + "小时";
+            }
+
+            StyleCostDetailDTO detail = StyleCostDetailDTO.builder()
+                    .styleId(String.valueOf(style.getId()))
+                    .styleNo(style.getStyleNo())
+                    .styleName(style.getStyleName())
+                    .styleImage(style.getCover())
+                    .patternCount(sampleQty)
+                    .developmentTime(developmentTime)
+                    .materialCost(BigDecimal.valueOf(materialCost * sampleQty).setScale(2, RoundingMode.HALF_UP))
+                    .processCost(BigDecimal.valueOf(processCost * sampleQty).setScale(2, RoundingMode.HALF_UP))
+                    .secondaryProcessCost(BigDecimal.valueOf(secondaryCost * sampleQty).setScale(2, RoundingMode.HALF_UP))
+                    .totalCost(BigDecimal.valueOf((materialCost + processCost + secondaryCost) * sampleQty).setScale(2, RoundingMode.HALF_UP))
+                    .build();
+            styleCostDetails.add(detail);
         }
 
         double totalCost = totalMaterialCost + totalProcessCost + totalOtherCost;
 
-        Map<String, Object> stats = new HashMap<>();
-        stats.put("patternCount", totalSampleQuantity);
-        stats.put("materialCost", totalMaterialCost);
-        stats.put("processCost", totalProcessCost);
-        stats.put("secondaryProcessCost", totalOtherCost);
-        stats.put("totalCost", totalCost);
+        stats.setPatternCount(totalSampleQuantity);
+        stats.setMaterialCost(BigDecimal.valueOf(totalMaterialCost).setScale(2, RoundingMode.HALF_UP));
+        stats.setProcessCost(BigDecimal.valueOf(totalProcessCost).setScale(2, RoundingMode.HALF_UP));
+        stats.setSecondaryProcessCost(BigDecimal.valueOf(totalOtherCost).setScale(2, RoundingMode.HALF_UP));
+        stats.setTotalCost(BigDecimal.valueOf(totalCost).setScale(2, RoundingMode.HALF_UP));
+        stats.setTotalDevelopmentTimeSeconds(totalDevelopmentSeconds);
+        stats.setStyleCostDetails(styleCostDetails);
 
         return stats;
     }

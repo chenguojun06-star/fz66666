@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Input, InputNumber, Select, Button, Space, Card, Row, Col, Tag, message, Descriptions } from 'antd';
+import { Input, InputNumber, Select, Button, Space, Card, Row, Col, Tag, message, Descriptions, Drawer } from 'antd';
 import StandardModal from '@/components/common/StandardModal';
 import { ScanOutlined, InboxOutlined, LogoutOutlined, SearchOutlined } from '@ant-design/icons';
 import { finishedWarehouseApi } from '../../../../services/warehouse/inventoryCheckApi';
@@ -81,8 +81,19 @@ const FinishedScanOperationModal: React.FC<FinishedScanOperationModalProps> = ({
   };
 
   return (
-    <StandardModal title={<Space><ScanOutlined />成品扫码出入库</Space>} open={open} onCancel={onClose} size="lg"
-      footer={[<Button key="cancel" onClick={onClose}>取消</Button>, <Button key="ok" type="primary" loading={loading} onClick={handleConfirm}>{operationType === 'inbound' ? '确认入库' : '确认出库'}</Button>]}>
+    <Drawer
+      title={<Space><ScanOutlined />成品扫码出入库</Space>}
+      open={open}
+      onClose={onClose}
+      width="85%"
+      destroyOnClose
+      extra={
+        <Space>
+          <Button onClick={onClose}>取消</Button>
+          <Button type="primary" loading={loading} onClick={handleConfirm}>确认{operationType === 'inbound' ? '入库' : '出库'}</Button>
+        </Space>
+      }
+    >
       <Space orientation="vertical" style={{ width: '100%' }} size={16}>
         <Row gutter={12}>
           <Col span={12}>
@@ -200,7 +211,7 @@ const FinishedScanOperationModal: React.FC<FinishedScanOperationModalProps> = ({
           <Input.TextArea rows={2} value={remark} onChange={e => setRemark(e.target.value)} placeholder="选填" />
         </div>
       </Space>
-    </StandardModal>
+    </Drawer>
   );
 };
 

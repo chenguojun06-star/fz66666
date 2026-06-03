@@ -603,6 +603,20 @@ export interface MaterialDatabaseQueryParams {
   pageSize: number;
 }
 
+// 款式成本明细
+export interface StyleCostDetail {
+  styleId: string;
+  styleNo: string;
+  styleName: string;
+  styleImage?: string;
+  patternCount: number;
+  developmentTime?: string;
+  materialCost: number;
+  processCost: number;
+  secondaryProcessCost: number;
+  totalCost: number;
+}
+
 // 样衣开发费用统计
 export interface PatternDevelopmentStats {
   rangeType: 'day' | 'week' | 'month';
@@ -611,6 +625,8 @@ export interface PatternDevelopmentStats {
   processCost: number;
   secondaryProcessCost: number;
   totalCost: number;
+  totalDevelopmentTimeSeconds?: number;
+  styleCostDetails: StyleCostDetail[];
 }
 
 export type OrderLine = {

@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Switch, Badge, Empty, Tag, Statistic, Row, Col, Tooltip, Spin, App, Button, Input, Select, Form, Alert } from 'antd';
-import { ShopOutlined, EnvironmentOutlined, AppstoreOutlined, InboxOutlined, PlusOutlined, DeleteOutlined, SwapOutlined } from '@ant-design/icons';
+import { useSearchParams } from 'react-router-dom';
+import { Switch, Badge, Empty, Tag, Statistic, Row, Col, Tooltip, Spin, App, Button, Input, Select, Form, Alert, Checkbox, Drawer } from 'antd';
+import { ShopOutlined, EnvironmentOutlined, AppstoreOutlined, InboxOutlined, PlusOutlined, DeleteOutlined, SwapOutlined, PrinterOutlined, ImportOutlined, ExportOutlined } from '@ant-design/icons';
 import ResizableModal from '@/components/common/ResizableModal';
 import WarehouseLocationAutoComplete from '@/components/common/WarehouseLocationAutoComplete';
 import { warehouseLocationMapApi } from '@/services/warehouse/warehouseLocationMapApi';
+import LocationLabelPrintModal from './LocationLabelPrintModal';
 import './WarehouseLocationMap.css';
 
 interface WarehouseAreaItem {
@@ -63,6 +65,8 @@ const WAREHOUSE_TYPE_OPTIONS = [
 
 const WarehouseLocationMap: React.FC = () => {
   const { message, modal } = App.useApp();
+  const [searchParams] = useSearchParams();
+  const locationCodeFromUrl = searchParams.get('locationCode');
 
   const [areas, setAreas] = useState<WarehouseAreaItem[]>([]);
   const [areasLoading, setAreasLoading] = useState(true);
@@ -92,6 +96,11 @@ const WarehouseLocationMap: React.FC = () => {
   const [transferModalOpen, setTransferModalOpen] = useState(false);
   const [transferTargetLocation, setTransferTargetLocation] = useState('');
   const [transferLoading, setTransferLoading] = useState(false);
+
+  // 勾选模式状态
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedLocationIds, setSelectedLocationIds] = useState<Set<string>>(new Set());
+  const [printModalOpen, setPrintModalOpen] = useState(false);
 
   const loadAreas = useCallback(async () => {
     setAreasLoading(true);
@@ -151,6 +160,19 @@ const WarehouseLocationMap: React.FC = () => {
       loadLocations(selectedAreaId);
     }
   }, [selectedAreaId, loadLocations]);
+
+  // URL 参数解析 - 扫码跳转定位
+  useEffect(() => {
+    if (locationCodeFromUrl && locations.length > 0) {
+      const targetLocation = locations.find(l => l.locationCode === locationCodeFromUrl);
+      if (targetLocation) {
+        // 自动定位到该库位所在的区域和库区
+        setSelectedZoneName(targetLocation.zoneName || '');
+        // 自动弹出详情
+        handleLocationClick(targetLocation);
+      }
+    }
+  }, [locationCodeFromUrl, locations]);
 
   const selectedArea = useMemo(
     () => areas.find(a => a.id === selectedAreaId),
@@ -574,26 +596,53 @@ const WarehouseLocationMap: React.FC = () => {
                   <Button
                     type="link"
                     size="small"
-                    icon={<PlusOutlined />}
-                    onClick={() => setCreateLocationModalOpen(true)}
-                  >
-                    新增库位
-                  </Button>
-                  <Button
-                    type="link"
-                    size="small"
                     icon={<AppstoreOutlined />}
                     onClick={() => {
-                    batchInitForm.setFieldsValue({
-                      rackCount: 2,
-                      levelCount: 3,
-                      positionCount: 2,
-                    });
-                    setBatchInitModalOpen(true);
-                  }}
+                      setSelectMode(!selectMode);
+                      if (selectMode) {
+                        setSelectedLocationIds(new Set());
+                      }
+                    }}
                   >
-                    批量初始化
+                    {selectMode ? '取消勾选' : '批量勾选'}
                   </Button>
+                  {selectMode && selectedLocationIds.size > 0 && (
+                    <Button
+                      type="primary"
+                      size="small"
+                      icon={<PrinterOutlined />}
+                      onClick={() => setPrintModalOpen(true)}
+                    >
+                      打印库位贴 ({selectedLocationIds.size})
+                    </Button>
+                  )}
+                  {!selectMode && (
+                    <>
+                      <Button
+                        type="link"
+                        size="small"
+                        icon={<PlusOutlined />}
+                        onClick={() => setCreateLocationModalOpen(true)}
+                      >
+                        新增库位
+                      </Button>
+                      <Button
+                        type="link"
+                        size="small"
+                        icon={<AppstoreOutlined />}
+                        onClick={() => {
+                        batchInitForm.setFieldsValue({
+                          rackCount: 2,
+                          levelCount: 3,
+                          positionCount: 2,
+                        });
+                        setBatchInitModalOpen(true);
+                      }}
+                      >
+                        批量初始化
+                      </Button>
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -602,6 +651,7 @@ const WarehouseLocationMap: React.FC = () => {
                   <div className="wlm-location-grid">
                     {filteredLocations.map(location => {
                       const status = getLocationStatus(location);
+                      const isSelected = selectedLocationIds.has(location.id);
                       return (
                         <Tooltip
                           key={location.id}
@@ -613,13 +663,34 @@ const WarehouseLocationMap: React.FC = () => {
                           placement="top"
                         >
                           <div
-                            className={`wlm-location-card ${status}`}
+                            className={`wlm-location-card ${status} ${isSelected ? 'selected' : ''}`}
                             style={{
                               backgroundColor: getStatusBg(status),
-                              borderColor: getStatusBorder(status),
+                              borderColor: isSelected ? 'var(--color-primary)' : getStatusBorder(status),
                             }}
-                            onClick={() => handleLocationClick(location)}
+                            onClick={() => {
+                              if (selectMode) {
+                                const newSet = new Set(selectedLocationIds);
+                                if (isSelected) newSet.delete(location.id);
+                                else newSet.add(location.id);
+                                setSelectedLocationIds(newSet);
+                              } else {
+                                handleLocationClick(location);
+                              }
+                            }}
                           >
+                            {selectMode && (
+                              <Checkbox
+                                className="wlm-location-checkbox"
+                                checked={isSelected}
+                                onChange={(e) => {
+                                  const newSet = new Set(selectedLocationIds);
+                                  if (e.target.checked) newSet.add(location.id);
+                                  else newSet.delete(location.id);
+                                  setSelectedLocationIds(newSet);
+                                }}
+                              />
+                            )}
                             <div className="wlm-location-code" style={{ color: getStatusColor(status) }}>
                               {location.locationCode}
                             </div>
@@ -636,10 +707,12 @@ const WarehouseLocationMap: React.FC = () => {
                             <div className="wlm-location-capacity">
                               {location.capacity ? `${location.usedCapacity}/${location.capacity}` : `${location.usedCapacity}`}
                             </div>
-                            <DeleteOutlined
-                              className="wlm-location-delete-icon"
-                              onClick={(e) => confirmDeleteLocation(location.id, location.locationCode, location.usedCapacity, e)}
-                            />
+                            {!selectMode && (
+                              <DeleteOutlined
+                                className="wlm-location-delete-icon"
+                                onClick={(e) => confirmDeleteLocation(location.id, location.locationCode, location.usedCapacity, e)}
+                              />
+                            )}
                           </div>
                         </Tooltip>
                       );
@@ -767,18 +840,60 @@ const WarehouseLocationMap: React.FC = () => {
         </div>
       </ResizableModal>
 
-      {/* 库位详情弹窗 */}
-      <ResizableModal
+      {/* 库位详情 Drawer */}
+      <Drawer
         open={detailModalOpen}
-        onCancel={() => setDetailModalOpen(false)}
+        onClose={() => setDetailModalOpen(false)}
         title={selectedLocation ? `库位 ${selectedLocation.locationCode} - 库存详情` : '库存详情'}
-        width="40vw"
-        footer={
-          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <div>
-              {selectedLocation && selectedLocation.usedCapacity > 0 && (
+        width="85%"
+        destroyOnClose
+      >
+        {selectedLocation && (
+          <div className="wlm-detail-content">
+            <Row gutter={16} style={{ marginBottom: 16 }}>
+              <Col span={6}>
+                <div className="wlm-detail-label">库位编码</div>
+                <div className="wlm-detail-value">{selectedLocation.locationCode}</div>
+              </Col>
+              <Col span={6}>
+                <div className="wlm-detail-label">库位名称</div>
+                <div className="wlm-detail-value">{selectedLocation.locationName || '-'}</div>
+              </Col>
+              <Col span={6}>
+                <div className="wlm-detail-label">库区</div>
+                <div className="wlm-detail-value">{selectedLocation.zoneName || '-'}</div>
+              </Col>
+              <Col span={6}>
+                <div className="wlm-detail-label">容量</div>
+                <div className="wlm-detail-value" style={{ color: 'var(--color-primary)', fontWeight: 600 }}>
+                  {selectedLocation.usedCapacity}/{selectedLocation.capacity || '∞'}
+                </div>
+              </Col>
+            </Row>
+
+            <div style={{ marginBottom: 16, display: 'flex', gap: 8 }}>
+              <Button
+                type="primary"
+                icon={<ImportOutlined />}
+                onClick={() => {
+                  message.info('入库功能需要跳转到对应页面');
+                }}
+              >
+                入库
+              </Button>
+              {selectedLocation.usedCapacity > 0 && (
                 <Button
-                  type="primary"
+                  type="default"
+                  icon={<ExportOutlined />}
+                  onClick={() => {
+                    message.info('出库功能需要跳转到对应页面');
+                  }}
+                >
+                  出库
+                </Button>
+              )}
+              {selectedLocation.usedCapacity > 0 && (
+                <Button
                   icon={<SwapOutlined />}
                   onClick={() => {
                     setDetailModalOpen(false);
@@ -790,75 +905,46 @@ const WarehouseLocationMap: React.FC = () => {
                 </Button>
               )}
             </div>
-            <Button onClick={() => setDetailModalOpen(false)}>关闭</Button>
-          </div>
-        }
-      >
-        {selectedLocation && (
-          <div className="wlm-detail-content">
+
             <Spin spinning={locationItemsLoading}>
               {locationItems.length === 0 && !locationItemsLoading ? (
                 <Empty description="该库位暂无库存" />
               ) : (
-                <>
-                  <div className="wlm-detail-summary">
-                    <Row gutter={16}>
-                      <Col span={6}>
-                        <div className="wlm-detail-label">库位编码</div>
-                        <div className="wlm-detail-value">{selectedLocation.locationCode}</div>
-                      </Col>
-                      <Col span={6}>
-                        <div className="wlm-detail-label">库位名称</div>
-                        <div className="wlm-detail-value">{selectedLocation.locationName || '-'}</div>
-                      </Col>
-                      <Col span={6}>
-                        <div className="wlm-detail-label">库区</div>
-                        <div className="wlm-detail-value">{selectedLocation.zoneName || '-'}</div>
-                      </Col>
-                      <Col span={6}>
-                        <div className="wlm-detail-label">容量</div>
-                        <div className="wlm-detail-value" style={{ color: 'var(--color-primary)' }}>
-                          {selectedLocation.usedCapacity}/{selectedLocation.capacity || '∞'}
-                        </div>
-                      </Col>
-                    </Row>
+                <div className="wlm-detail-table" style={{ marginTop: 16 }}>
+                  <div className="wlm-detail-table-header">
+                    <div className="wlm-detail-th">款号</div>
+                    <div className="wlm-detail-th">颜色</div>
+                    <div className="wlm-detail-th">尺码</div>
+                    <div className="wlm-detail-th">SKU编码</div>
+                    <div className="wlm-detail-th" style={{ textAlign: 'right' }}>库存数量</div>
+                    <div className="wlm-detail-th" style={{ textAlign: 'right' }}>单价</div>
                   </div>
-                  <div className="wlm-detail-table">
-                    <div className="wlm-detail-table-header">
-                      <div className="wlm-detail-th">款号</div>
-                      <div className="wlm-detail-th">颜色</div>
-                      <div className="wlm-detail-th">尺码</div>
-                      <div className="wlm-detail-th">SKU编码</div>
-                      <div className="wlm-detail-th" style={{ textAlign: 'right' }}>库存数量</div>
-                      <div className="wlm-detail-th" style={{ textAlign: 'right' }}>单价</div>
-                    </div>
-                    {locationItems.map((sku, idx) => (
-                      <div key={idx} className="wlm-detail-tr">
-                        <div className="wlm-detail-td">{sku.styleNo || '-'}</div>
-                        <div className="wlm-detail-td">
-                          <Tag color="blue">{sku.color || '-'}</Tag>
-                        </div>
-                        <div className="wlm-detail-td">
-                          <Tag>{sku.size || '-'}</Tag>
-                        </div>
-                        <div className="wlm-detail-td" style={{ fontSize: 14, color: 'var(--color-text-secondary)' }}>
-                          {sku.skuCode}
-                        </div>
-                        <div className="wlm-detail-td" style={{ textAlign: 'right', color: 'var(--color-success)', fontWeight: 500 }}>
-                          {sku.stockQuantity}
-                        </div>
-                        <div className="wlm-detail-td" style={{ textAlign: 'right', fontWeight: 500 }}>
-                          ¥{sku.salesPrice?.toFixed(2) || sku.costPrice?.toFixed(2) || '-'}
-                        </div>
+                  {locationItems.map((sku, idx) => (
+                    <div key={idx} className="wlm-detail-tr">
+                      <div className="wlm-detail-td">{sku.styleNo || '-'}</div>
+                      <div className="wlm-detail-td">
+                        <Tag color="blue">{sku.color || '-'}</Tag>
                       </div>
-                    ))}
-                  </div>
-                </>
+                      <div className="wlm-detail-td">
+                        <Tag>{sku.size || '-'}</Tag>
+                      </div>
+                      <div className="wlm-detail-td" style={{ fontSize: 14, color: 'var(--color-text-secondary)' }}>
+                        {sku.skuCode}
+                      </div>
+                      <div className="wlm-detail-td" style={{ textAlign: 'right', color: 'var(--color-success)', fontWeight: 500 }}>
+                        {sku.stockQuantity}
+                      </div>
+                      <div className="wlm-detail-td" style={{ textAlign: 'right', fontWeight: 500 }}>
+                        ¥{sku.salesPrice?.toFixed(2) || sku.costPrice?.toFixed(2) || '-'}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               )}
             </Spin>
           </div>
         )}
-      </ResizableModal>
+      </Drawer>
 
       {/* 库存转移弹窗 */}
       <ResizableModal
@@ -898,6 +984,14 @@ const WarehouseLocationMap: React.FC = () => {
           </Form>
         </div>
       </ResizableModal>
+
+      {/* 库位贴打印弹窗 */}
+      <LocationLabelPrintModal
+        open={printModalOpen}
+        locations={locations.filter(l => selectedLocationIds.has(l.id))}
+        areaName={selectedArea?.areaName || ''}
+        onClose={() => setPrintModalOpen(false)}
+      />
     </div>
   );
 };

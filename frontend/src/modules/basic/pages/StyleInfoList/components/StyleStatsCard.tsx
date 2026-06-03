@@ -1,118 +1,87 @@
 import React from 'react';
-import { Card, Segmented, Spin } from 'antd';
-import { DownOutlined, RightOutlined } from '@ant-design/icons';
+import { Button, Tooltip } from 'antd';
+import { UnorderedListOutlined, ClockCircleOutlined } from '@ant-design/icons';
 import type { PatternDevelopmentStats } from '@/types/production';
-import type { StatsRangeType } from '../../StyleInfo/hooks/useStyleStats';
-import { formatMoney } from '@/utils/format';
 
 interface StyleStatsCardProps {
   stats: PatternDevelopmentStats | null;
   loading: boolean;
-  rangeType: StatsRangeType;
-  onRangeChange: (value: string | number) => void;
   /** 是否折叠，默认 false；折叠时仅显示标题栏 */
   collapsed?: boolean;
   /** 点击标题时的展开/折叠回调 */
   onToggle?: () => void;
+  /** 点击查看明细时的回调 */
+  onViewDetails?: () => void;
 }
 
 /**
- * 开发费用统计迷你看板（紧凑单行版，支持折叠）
- * collapsed=true 时仅显示标题栏，点击可展开
+ * 开发费用统计按钮（紧凑版，点击展开明细）
+ * 日期选项已移至弹窗内部
  */
 const StyleStatsCard: React.FC<StyleStatsCardProps> = ({
   stats,
   loading,
-  rangeType,
-  onRangeChange,
   collapsed = false,
   onToggle,
+  onViewDetails,
 }) => {
-  const cardBase = {
-    size: 'small' as const,
-    className: 'development-stats-card mb-sm',
-    styles: { body: { padding: '8px 14px' } },
-    style: { background: '#f8f9fa', border: '1px solid #e9ecef' },
+  const formatDuration = (seconds: number | undefined): string => {
+    if (!seconds || seconds <= 0) return '-';
+    const days = Math.floor(seconds / 86400);
+    const hours = Math.floor((seconds % 86400) / 3600);
+    if (days > 0) return `${days}天${hours}小时`;
+    return `${hours}小时`;
   };
 
-  /* 折叠状态：只渲染标题行 */
   if (collapsed) {
     return (
-      <Card {...cardBase}>
-        <span
-            onClick={onToggle}
-            style={{
-              fontSize: 14, fontWeight: 600, color: 'var(--neutral-text)',
-              whiteSpace: 'nowrap', cursor: 'pointer', userSelect: 'none',
-              display: 'inline-flex', alignItems: 'center', gap: 4,
-            }}
-          >
-            <RightOutlined style={{ fontSize: 13 }} />
-            开发费用统计
-          </span>
-      </Card>
+      <Tooltip title="点击查看开发费用统计">
+        <Button
+          type="primary"
+          size="small"
+          icon={<UnorderedListOutlined />}
+          onClick={onToggle}
+          loading={loading}
+        >
+          费用
+        </Button>
+      </Tooltip>
     );
   }
 
-  /* 展开状态：完整费用看板 */
   return (
-    <Card {...cardBase}>
-      <Spin spinning={loading}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 0, flexWrap: 'nowrap' }}>
-          {/* 标题（点击折叠） */}
-          <span
-            onClick={onToggle}
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+      <Tooltip title="点击查看明细">
+        <Button
+          type="primary"
+          size="middle"
+          icon={<UnorderedListOutlined />}
+          onClick={onViewDetails}
+          loading={loading}
+        >
+          开发费用
+        </Button>
+      </Tooltip>
+
+      {stats?.totalDevelopmentTimeSeconds && stats.totalDevelopmentTimeSeconds > 0 && (
+        <Tooltip title="开发周期">
+          <Button
+            type="text"
+            size="middle"
+            icon={<ClockCircleOutlined />}
             style={{
-              fontSize: 14, fontWeight: 600, color: 'var(--neutral-text)',
-              whiteSpace: 'nowrap', marginRight: 16,
-              cursor: onToggle ? 'pointer' : 'default',
-              userSelect: 'none', display: 'inline-flex', alignItems: 'center', gap: 4,
+              background: 'rgba(102, 126, 234, 0.1)',
+              border: '1px solid rgba(102, 126, 234, 0.2)',
+              color: '#667eea',
             }}
           >
-            <DownOutlined style={{ fontSize: 13 }} />
-            开发费用统计
-          </span>
-
-          {/* 数据条目 */}
-          <div style={{ display: 'flex', flex: 1, gap: 8, alignItems: 'center', justifyContent: 'space-evenly' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-              <span style={{ fontSize: 14, color: 'var(--neutral-text-secondary)', lineHeight: 1.2 }}> 面辅料</span>
-              <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--neutral-text)', lineHeight: 1.4 }}>{formatMoney(stats?.materialCost)}</span>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-              <span style={{ fontSize: 14, color: 'var(--neutral-text-secondary)', lineHeight: 1.2 }}> 工序单价</span>
-              <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--neutral-text)', lineHeight: 1.4 }}>{formatMoney(stats?.processCost)}</span>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-              <span style={{ fontSize: 14, color: 'var(--neutral-text-secondary)', lineHeight: 1.2 }}> 二次工艺</span>
-              <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--neutral-text)', lineHeight: 1.4 }}>{formatMoney(stats?.secondaryProcessCost)}</span>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-              <span style={{ fontSize: 14, color: 'var(--neutral-text-secondary)', lineHeight: 1.2 }}> 总开发费</span>
-              <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--primary-color)', lineHeight: 1.4 }}>{formatMoney(stats?.totalCost)}</span>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-              <span style={{ fontSize: 14, color: 'var(--neutral-text-secondary)', lineHeight: 1.2 }}> 样衣数量</span>
-              <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--neutral-text)', lineHeight: 1.4 }}>{stats?.patternCount ?? 0} 件</span>
-            </div>
-          </div>
-
-          {/* 时间筛选 */}
-          <Segmented
-            value={rangeType}
-            onChange={onRangeChange}
-            options={[
-              { label: '今日', value: 'day' },
-              { label: '本周', value: 'week' },
-              { label: '本月', value: 'month' },
-              { label: '本年', value: 'year' },
-            ]}
-           
-            style={{ flexShrink: 0, marginLeft: 16 }}
-          />
-        </div>
-      </Spin>
-    </Card>
+            <span style={{ fontSize: 13 }}>
+              {formatDuration(stats.totalDevelopmentTimeSeconds)}
+            </span>
+          </Button>
+        </Tooltip>
+      )}
+    </div>
   );
 };
 

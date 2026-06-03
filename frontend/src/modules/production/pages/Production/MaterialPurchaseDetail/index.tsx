@@ -55,13 +55,15 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
 
   const {
     loading, order, purchaseList, materialArrivalRate,
-    receiveForm, returnConfirmForm,
+    receiveForm, returnConfirmForm, inboundForm,
     receiveVisible, setReceiveVisible, receiveRecord, receiveLoading,
+    inboundVisible, setInboundVisible, inboundRecord,
     returnConfirmVisible, setReturnConfirmVisible, returnConfirmRecord, returnConfirmLoading,
     qualityIssueVisible, setQualityIssueVisible, qualityIssueRecord, setQualityIssueRecord,
     confirmCompleteSubmitting,
     handleDelete,
     openReceive, handleReceive,
+    openInbound, doInbound,
     handleReturnConfirm, doReturnConfirm, handleCancelReceive,
     handleBatchReceive, handleBatchReturnConfirm, handleConfirmComplete,
     handleReturnReset, handleWarehousePick: _handleWarehousePick,
@@ -364,10 +366,12 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
               { key: 'delete', label: '删除', onClick: () => handleDelete(record), danger: true, disabled: isCancelled },
               ...(isWarehousePending ? [{ key: 'warehouse-pending', label: '待仓库出库', disabled: true }] : []),
               ...(!isWarehousePending && (isPending || isReceived || isPartial) ? [{ key: 'receive', label: isPending ? '采购/到货' : '追加到货', onClick: () => openReceive(record), primary: isPending, disabled: !canProcure, title: !canProcure ? '请先完善面辅料信息' : undefined }] : []),
+              ...(isPending ? [{ key: 'inbound', label: '到货入库', onClick: () => openInbound(record) }] : []),
               ...(!isPending && !isCancelled ? [{ key: 'return-confirm', label: isReturnConfirmed ? '追加回料' : '回料确认', onClick: () => handleReturnConfirm(record) }] : []),
               ...((isReturnConfirmed || isCompleted) ? [{ key: 'return-reset', label: '退回', onClick: () => handleReturnReset(record), danger: true }] : []),
               ...(!isPending && !isCompleted && !isCancelled && !isReturnConfirmed ? [{ key: 'cancel-receive', label: '取消领取', onClick: () => handleCancelReceive(record), danger: true }] : []),
               { key: 'quality-issue', label: '品质异常', onClick: () => { setQualityIssueRecord(record); setQualityIssueVisible(true); } },
+              ...(isReturnConfirmed || isCompleted ? [{ key: 'warehouse-pick', label: '出库领取', onClick: () => _handleWarehousePick(record, Number(record.arrivedQuantity || record.purchaseQuantity || 0)), primary: true }] : []),
             ]}
           />
         );
@@ -701,6 +705,36 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
         <Form form={receiveForm} layout="vertical">
           <Form.Item name="quantity" label="数量" rules={[{ required: true, message: '请输入数量' }]}>
             <InputNumber min={0.01} step={0.01} precision={2} style={{ width: '100%' }} />
+          </Form.Item>
+        </Form>
+      </ResizableModal>
+
+      <ResizableModal
+        title="到货入库"
+        open={inboundVisible}
+        onOk={doInbound}
+        onCancel={() => { setInboundVisible(false); inboundForm.resetFields(); }}
+        width="35vw"
+      >
+        {inboundRecord && (
+          <ModalContentLayout.HeaderCard>
+            <ModalContentLayout.FieldRow gap={24}>
+              <ModalContentLayout.Field label="物料名称" value={inboundRecord.materialName} />
+              <ModalContentLayout.Field label="物料编码" value={inboundRecord.materialCode} />
+              <ModalContentLayout.Field label="采购数量" value={formatMaterialQuantityWithUnit(inboundRecord.purchaseQuantity, inboundRecord.unit)} />
+              <ModalContentLayout.Field label="已入库" value={formatMaterialQuantityWithUnit(inboundRecord.arrivedQuantity, inboundRecord.unit)} />
+            </ModalContentLayout.FieldRow>
+          </ModalContentLayout.HeaderCard>
+        )}
+        <Form form={inboundForm} layout="vertical">
+          <Form.Item name="arrivedQuantity" label="本次入库数量" rules={[{ required: true, message: '请输入数量' }]}>
+            <InputNumber min={0.01} step={0.01} precision={2} style={{ width: '100%' }} />
+          </Form.Item>
+          <Form.Item name="warehouseLocation" label="仓库库位">
+            <Input placeholder="请输入库位（如 A区-01）" />
+          </Form.Item>
+          <Form.Item name="remark" label="备注">
+            <Input.TextArea rows={2} placeholder="可选备注" />
           </Form.Item>
         </Form>
       </ResizableModal>

@@ -22,6 +22,7 @@ import StyleFilterPanel from './components/StyleFilterPanel';
 import StyleStatsCard from './components/StyleStatsCard';
 import StyleTableView from './components/StyleTableView';
 import StyleCardView from './components/StyleCardView';
+import StyleCostDetailDrawer from './components/StyleCostDetailDrawer';
 import { useCardGridLayout } from '@/hooks/useCardGridLayout';
 import { STYLE_INFO_LIST_REFRESH_KEY } from '@/modules/warehouse/pages/SampleInventory';
 import { savePageSize } from '@/utils/pageSizeStore';
@@ -81,6 +82,9 @@ const StyleInfoListPage: React.FC = () => {
   const [focusedStyleId, setFocusedStyleId] = useState<string | null>(null);
   const [dateSortAsc, setDateSortAsc] = useState(false);
   const focusClearTimerRef = useRef<number | null>(null);
+
+  // 款式成本明细侧滑弹窗状态
+  const [costDetailVisible, setCostDetailVisible] = useState(false);
 
   // ESC 键清除智能筛选（逾期/临近交期标记）
   useEffect(() => {
@@ -209,13 +213,6 @@ const StyleInfoListPage: React.FC = () => {
       { label: '童装', value: 'KIDS' }, { label: '女童装', value: 'WCMAN' },
       { label: '男女同款', value: 'UNISEX' },
     ]);
-  };
-
-  // 统计时间范围切换
-  const handleStatsRangeChange = (value: string | number) => {
-    const rangeType = value as 'day' | 'week' | 'month' | 'year';
-    setStatsRangeType(rangeType);
-    loadDevelopmentStats(rangeType);
   };
 
   // 打印处理
@@ -401,8 +398,7 @@ const StyleInfoListPage: React.FC = () => {
             <StyleStatsCard
               stats={developmentStats}
               loading={statsLoading}
-              rangeType={statsRangeType}
-              onRangeChange={handleStatsRangeChange}
+              onViewDetails={() => setCostDetailVisible(true)}
             />
 
             <PageStatCards
@@ -568,6 +564,19 @@ const StyleInfoListPage: React.FC = () => {
         loading={scrapLoading}
         onOk={confirmScrap}
         onCancel={cancelScrap}
+      />
+
+      {/* 款式成本明细侧滑弹窗 */}
+      <StyleCostDetailDrawer
+        visible={costDetailVisible}
+        onClose={() => setCostDetailVisible(false)}
+        stats={developmentStats}
+        loading={statsLoading}
+        rangeType={statsRangeType}
+        onRangeChange={(type) => {
+          setStatsRangeType(type);
+          loadDevelopmentStats(type);
+        }}
       />
     </>
   );

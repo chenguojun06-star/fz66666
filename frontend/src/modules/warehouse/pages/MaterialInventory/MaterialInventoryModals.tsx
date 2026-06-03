@@ -10,6 +10,7 @@ import {
   Row,
   Col,
   InputNumber,
+  Drawer,
 } from 'antd';
 import { useWarehouseAreaOptions, useWarehouseLocationByArea } from '@/hooks/useWarehouseAreaOptions';
 import {
@@ -220,7 +221,7 @@ const MaterialInventoryModals: React.FC<MaterialInventoryModalsProps> = ({
       />
 
       {/* 入库模态框 */}
-      <StandardModal
+      <Drawer
         title={
           <Space>
             <ScanOutlined style={{ color: 'var(--primary-color)' }} />
@@ -228,12 +229,21 @@ const MaterialInventoryModals: React.FC<MaterialInventoryModalsProps> = ({
           </Space>
         }
         open={inboundModal.visible}
-        onCancel={() => {
+        onClose={() => {
           inboundModal.close();
           inboundForm.resetFields();
         }}
-        onOk={handleInboundConfirm}
-        size="lg"
+        width="85%"
+        destroyOnClose
+        extra={
+          <Space>
+            <Button onClick={() => {
+              inboundModal.close();
+              inboundForm.resetFields();
+            }}>取消</Button>
+            <Button type="primary" onClick={handleInboundConfirm}>确认入库</Button>
+          </Space>
+        }
       >
         <Form form={inboundForm} layout="vertical" style={{ marginTop: 8 }}>
           <Form.Item
@@ -403,7 +413,7 @@ const MaterialInventoryModals: React.FC<MaterialInventoryModalsProps> = ({
             <Input.TextArea rows={2} placeholder="请输入备注信息" />
           </Form.Item>
         </Form>
-      </StandardModal>
+      </Drawer>
 
       {/* 出库模态框 */}
       <OutboundModal

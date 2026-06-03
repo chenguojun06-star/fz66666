@@ -421,6 +421,7 @@ public class PurchaseCartOrchestrator {
                     .map(item -> {
                         MergeSuggestionDto.MergeableItemDto dto = new MergeSuggestionDto.MergeableItemDto();
                         dto.setId(item.getId());
+                        dto.setSupplierId(item.getSupplierId());
                         dto.setSupplierName(item.getSupplierName());
                         dto.setQuantity(item.getQuantity());
                         return dto;
@@ -446,6 +447,7 @@ public class PurchaseCartOrchestrator {
             .map(item -> {
                 MergeSuggestionDto.MergeableItemDto dto = new MergeSuggestionDto.MergeableItemDto();
                 dto.setId(item.getId());
+                dto.setSupplierId(item.getSupplierId());
                 dto.setSupplierName(item.getSupplierName());
                 dto.setQuantity(item.getQuantity());
                 return dto;

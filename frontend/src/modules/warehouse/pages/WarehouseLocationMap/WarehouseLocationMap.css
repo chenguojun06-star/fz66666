@@ -274,6 +274,32 @@
   background: var(--color-bg-highlight);
 }
 
+/* ========== 勾选模式 ========== */
+.wlm-location-card.selected {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(45, 127, 249, 0.2);
+}
+
+.wlm-location-checkbox {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  z-index: 10;
+}
+
+.wlm-select-mode-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 12px;
+}
+
+.wlm-select-count {
+  font-size: 14px;
+  color: var(--color-primary);
+  font-weight: 500;
+}
+
 .wlm-location-skus {
   display: flex;
   flex-wrap: wrap;
