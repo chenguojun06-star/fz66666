@@ -395,7 +395,7 @@ public class ProductionOrderController {
         return success ? Result.success("更新成功") : Result.fail("更新失败");
     }
 
-    private static final java.util.Set<String> BASIC_INFO_EDITABLE_FIELDS = java.util.Set.of("styleNo", "styleName", "skc", "color", "size", "sku");
+    private static final java.util.Set<String> BASIC_INFO_EDITABLE_FIELDS = java.util.Set.of("styleNo", "styleName", "skc", "color", "size", "sku", "orderLines");
 
     private static final java.util.Map<String, String> FIELD_TO_COLUMN = java.util.Map.of(
             "styleNo", "style_no",
@@ -403,7 +403,8 @@ public class ProductionOrderController {
             "skc", "skc",
             "color", "color",
             "size", "size",
-            "sku", "sku"
+            "sku", "sku",
+            "orderLines", "order_details"
     );
 
     private static final java.util.List<String[]> STYLE_NO_DOWNSTREAM_TABLES = java.util.List.of(
@@ -499,6 +500,7 @@ public class ProductionOrderController {
             case "color" -> order.getColor();
             case "size" -> order.getSize();
             case "sku" -> order.getSku();
+            case "orderLines" -> order.getOrderDetails();
             default -> null;
         };
     }
@@ -511,6 +513,7 @@ public class ProductionOrderController {
             case "color" -> order.setColor(value);
             case "size" -> order.setSize(value);
             case "sku" -> order.setSku(value);
+            case "orderLines" -> order.setOrderDetails(value);
         }
     }
 
@@ -521,7 +524,8 @@ public class ProductionOrderController {
                 "skc", "SKC",
                 "color", "颜色",
                 "size", "尺码",
-                "sku", "SKU"
+                "sku", "SKU",
+                "orderLines", "颜色尺码明细"
         ).getOrDefault(field, field);
     }
 

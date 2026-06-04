@@ -1,5 +1,5 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { Alert, App, Button, Card, Col, Row, Space, Tag, Badge, Input, Tooltip } from 'antd';
+import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import { Alert, App, Button, Card, Col, Row, Space, Tag, Badge, Input, Tooltip, Popover } from 'antd';
 import { MessageOutlined, EditOutlined, CheckOutlined, CloseOutlined, SaveOutlined } from '@ant-design/icons';
 import PageLayout from '@/components/common/PageLayout';
 import { toNumberSafe } from '@/utils/api';
@@ -10,6 +10,7 @@ import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import OrderImageManager from '@/components/common/OrderImageManager';
 import RemarkTimelineModal from '@/components/common/RemarkTimelineModal';
 import { remarkApi } from '@/services/system/remarkApi';
+import OrderColorSizeMatrix, { buildOrderColorSizeMatrixModel } from '@/components/common/OrderColorSizeMatrix';
 import '../../../styles.css';
 import { useOrderFlowData, orderStatusTag } from './useOrderFlowData';
 import FlowStepRenderer from './components/FlowStepRenderer';
@@ -122,6 +123,62 @@ const OrderFlow: React.FC = () => {
   const [editing, setEditing] = useState(false);
   const [editReason, setEditReason] = useState('');
   const [savingField, setSavingField] = useState<string | null>(null);
+  // 颜色尺码矩阵编辑状态：{ "颜色|尺码": skuNo }
+  const [skuEditMap, setSkuEditMap] = useState<Record<string, string>>({});
+  const [savingMatrix, setSavingMatrix] = useState(false);
+
+  // 构建颜色尺码矩阵
+  const colorSizeMatrixModel = useMemo(() => {
+    const items = orderLines.map(l => ({ color: l.color, size: l.size, quantity: l.quantity }));
+    return buildOrderColorSizeMatrixModel({
+      items: items as any,
+      fallbackColor: (order as any)?.color,
+      fallbackSize: (order as any)?.size,
+      fallbackQuantity: toNumberSafe((order as any)?.orderQuantity),
+    });
+  }, [orderLines, order]);
+
+  // 初始化/重置SKU编辑映射
+  useEffect(() => {
+    if (editing) {
+      const map: Record<string, string> = {};
+      orderLines.forEach(l => {
+        const key = `${l.color || ''}|${l.size || ''}`;
+        map[key] = l.skuNo || '';
+      });
+      setSkuEditMap(map);
+    }
+  }, [editing, orderLines]);
+
+  // 保存颜色尺码矩阵（更新 orderDetails JSON）
+  const handleMatrixSave = useCallback(async () => {
+    const orderId = (order as any)?.id;
+    if (!orderId) { message.error('订单ID不存在'); return; }
+    setSavingMatrix(true);
+    try {
+      const updatedLines = orderLines.map(l => {
+        const key = `${l.color || ''}|${l.size || ''}`;
+        const newSku = skuEditMap[key] !== undefined ? skuEditMap[key] : (l.skuNo || '');
+        return { ...l, skuNo: newSku };
+      });
+      const res: any = await api.put('/production/order/update-basic-info', {
+        id: orderId,
+        field: 'orderLines',
+        value: JSON.stringify(updatedLines),
+        operationRemark: `修改颜色尺码明细（SKU）`,
+      });
+      if (res?.code === 200) {
+        message.success('颜色尺码明细已更新');
+        fetchFlow();
+      } else {
+        message.error(res?.message || '更新失败');
+      }
+    } catch (e: any) {
+      message.error(e?.message || '更新失败');
+    } finally {
+      setSavingMatrix(false);
+    }
+  }, [order, orderLines, skuEditMap, message, fetchFlow]);
 
   const recordAction = useCallback(async (action: string, reason: string) => {
     const targetNo = orderNoForImage;
@@ -305,23 +362,78 @@ const OrderFlow: React.FC = () => {
                     fieldKey="styleName" onSave={handleFieldSave} saving={savingField === 'styleName'}
                   />
 
-                  <span style={{ color: 'var(--color-text-tertiary)', fontSize: 14, lineHeight: '22px' }}>颜色</span>
-                  <InlineEditableField
-                    label="颜色" value={(order as any)?.color || ''} editable={editing}
-                    fieldKey="color" onSave={handleFieldSave} saving={savingField === 'color'}
-                  />
-
-                  <span style={{ color: 'var(--color-text-tertiary)', fontSize: 14, lineHeight: '22px' }}>尺码</span>
-                  <InlineEditableField
-                    label="尺码" value={(order as any)?.size || ''} editable={editing}
-                    fieldKey="size" onSave={handleFieldSave} saving={savingField === 'size'}
-                  />
-
-                  <span style={{ color: 'var(--color-text-tertiary)', fontSize: 14, lineHeight: '22px' }}>SKU</span>
-                  <InlineEditableField
-                    label="SKU" value={(order as any)?.sku || ''} editable={editing}
-                    fieldKey="sku" onSave={handleFieldSave} saving={savingField === 'sku'}
-                  />
+                  <span style={{ color: 'var(--color-text-tertiary)', fontSize: 14, lineHeight: '22px' }}>颜色 / 尺码 / SKU</span>
+                  <div>
+                    {colorSizeMatrixModel.hasData ? (
+                      editing ? (
+                        <div style={{ border: '1px solid var(--color-border)', borderRadius: 8, overflow: 'hidden' }}>
+                          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                            <thead>
+                              <tr>
+                                <th style={{ padding: '6px 10px', background: 'var(--color-bg-container)', textAlign: 'left', fontWeight: 600, fontSize: 13, borderBottom: '1px solid var(--color-border)' }}>颜色</th>
+                                <th style={{ padding: '6px 10px', background: 'var(--color-bg-container)', textAlign: 'left', fontWeight: 600, fontSize: 13, borderBottom: '1px solid var(--color-border)' }}>尺码</th>
+                                <th style={{ padding: '6px 10px', background: 'var(--color-bg-container)', textAlign: 'center', fontWeight: 600, fontSize: 13, width: 56, borderBottom: '1px solid var(--color-border)' }}>数量</th>
+                                <th style={{ padding: '6px 10px', background: 'var(--color-bg-container)', textAlign: 'left', fontWeight: 600, fontSize: 13, borderBottom: '1px solid var(--color-border)' }}>SKU</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {orderLines.map((line, idx) => {
+                                const key = `${line.color || ''}|${line.size || ''}`;
+                                const skuVal = skuEditMap[key] !== undefined ? skuEditMap[key] : (line.skuNo || '');
+                                const isOdd = idx % 2 === 1;
+                                return (
+                                  <tr key={idx} style={{ background: isOdd ? 'var(--color-bg-stripe, #fafafa)' : undefined }}>
+                                    <td style={{ padding: '5px 10px', borderBottom: '1px solid var(--color-border-light)' }}>
+                                      <Tag style={{ margin: 0, fontSize: 12, borderRadius: 4 }}>{line.color || '-'}</Tag>
+                                    </td>
+                                    <td style={{ padding: '5px 10px', borderBottom: '1px solid var(--color-border-light)', fontWeight: 500 }}>{line.size || '-'}</td>
+                                    <td style={{ padding: '5px 10px', borderBottom: '1px solid var(--color-border-light)', textAlign: 'center', fontWeight: 500, color: 'var(--color-info)' }}>{line.quantity}</td>
+                                    <td style={{ padding: '3px 6px', borderBottom: '1px solid var(--color-border-light)' }}>
+                                      <Input
+                                        size="small"
+                                        value={skuVal}
+                                        onChange={e => setSkuEditMap(prev => ({ ...prev, [key]: e.target.value }))}
+                                        placeholder="输入SKU"
+                                        style={{ fontSize: 13 }}
+                                      />
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                              <tr>
+                                <td colSpan={2} style={{ padding: '6px 10px', background: 'rgba(37, 99, 235, 0.04)', fontWeight: 700, fontSize: 13 }}>合计</td>
+                                <td style={{ padding: '6px 10px', background: 'rgba(37, 99, 235, 0.04)', textAlign: 'center', fontWeight: 700, fontSize: 13, color: 'var(--color-info)' }}>
+                                  {orderLines.reduce((sum, l) => sum + (Number(l.quantity) || 0), 0)}
+                                </td>
+                                <td style={{ padding: '6px 10px', background: 'rgba(37, 99, 235, 0.04)' }}></td>
+                              </tr>
+                            </tbody>
+                          </table>
+                          <div style={{ padding: '6px 10px', borderTop: '1px solid var(--color-border-light)', display: 'flex', justifyContent: 'flex-end' }}>
+                            <Button
+                              type="primary"
+                              size="small"
+                              loading={savingMatrix}
+                              onClick={handleMatrixSave}
+                              icon={<SaveOutlined />}
+                            >
+                              保存SKU
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <OrderColorSizeMatrix
+                          items={orderLines.map(l => ({ color: l.color, size: l.size, quantity: l.quantity }))}
+                          totalLabel="总"
+                          totalSuffix="件"
+                          fontSize={13}
+                          columnMinWidth={24}
+                        />
+                      )
+                    ) : (
+                      <span style={{ fontSize: 14, lineHeight: '22px', color: 'var(--color-text-quaternary)' }}>-</span>
+                    )}
+                  </div>
 
                   <span style={{ color: 'var(--color-text-tertiary)', fontSize: 14, lineHeight: '22px' }}>加工厂</span>
                   <span style={{ fontSize: 14, lineHeight: '22px' }}>{String((order as any)?.factoryName || '-').trim()}</span>
