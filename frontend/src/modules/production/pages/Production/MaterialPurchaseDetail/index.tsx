@@ -229,12 +229,12 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
       ),
     },
     {
-      title: '规格', dataIndex: 'specification', key: 'specification', width: 100,
+      title: '规格', dataIndex: 'specifications', key: 'specifications', width: 100,
       render: (v: unknown, record: MaterialPurchase) => (
         <Input
           value={String(v || '')}
           size="small"
-          onChange={(e) => handleUpdateRow(record.id!, 'specification', e.target.value)}
+          onChange={(e) => handleUpdateRow(record.id!, 'specifications', e.target.value)}
           placeholder="规格"
         />
       ),

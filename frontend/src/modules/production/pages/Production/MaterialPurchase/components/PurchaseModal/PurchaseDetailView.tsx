@@ -365,7 +365,7 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
         const totalAmount = Number.isFinite(purchaseQuantity) && Number.isFinite(unitPrice)
           ? Number((purchaseQuantity * unitPrice).toFixed(2)) : 0;
         const payload = { ...row, totalAmount, status: row.status || MATERIAL_PURCHASE_STATUS.PENDING, sourceType: (row as any).sourceType || 'order', orderNo: row.orderNo || orderNo, styleNo: row.styleNo || styleNo };
-        const isTemp = String(row.id || '').startsWith('tmp_');
+        const isTemp = !row.id || String(row.id).startsWith('tmp_');
         if (!isTemp) {
           await api.put('/production/purchase', payload);
         } else {
@@ -374,7 +374,7 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
         }
       }
       const originalIds = new Set(detailPurchases.map(p => p.id));
-      const keptIds = new Set(validRows.filter(r => !String(r.id).startsWith('tmp_')).map(r => r.id));
+      const keptIds = new Set(validRows.filter(r => r.id && !String(r.id).startsWith('tmp_')).map(r => r.id));
       const deletedIds = [...originalIds].filter(id => !keptIds.has(id));
       for (const delId of deletedIds) { if (delId) await api.delete(`/production/purchase/${delId}`); }
       message.success('保存成功');

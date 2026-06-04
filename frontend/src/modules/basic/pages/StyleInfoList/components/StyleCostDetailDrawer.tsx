@@ -1,12 +1,15 @@
 import React from 'react';
-import { Drawer, Table, Card, Divider, Typography, Button, Spin } from 'antd';
+import { Drawer, Table, Card, Divider, Typography, Button, Spin, DatePicker } from 'antd';
 import { DollarOutlined, ClockCircleOutlined, DownloadOutlined } from '@ant-design/icons';
+import type { Dayjs } from 'dayjs';
+import dayjs from 'dayjs';
 import type { PatternDevelopmentStats, StyleCostDetail } from '@/types/production';
-import type { StatsRangeType } from '../../StyleInfo/hooks/useStyleStats';
+import type { StatsRangeType, DateRange } from '../../StyleInfo/hooks/useStyleStats';
 import { formatMoney } from '@/utils/format';
 import { StyleCoverThumb } from '@/components/StyleAssets';
 
 const { Text } = Typography;
+const { RangePicker } = DatePicker;
 
 interface StyleCostDetailDrawerProps {
   visible: boolean;
@@ -14,8 +17,17 @@ interface StyleCostDetailDrawerProps {
   stats: PatternDevelopmentStats | null;
   loading: boolean;
   rangeType: StatsRangeType;
+  dateRange: DateRange;
   onRangeChange: (value: StatsRangeType) => void;
+  onDateRangeChange: (range: DateRange) => void;
 }
+
+const QUICK_RANGES: { key: StatsRangeType; label: string }[] = [
+  { key: 'day', label: '今日' },
+  { key: 'week', label: '本周' },
+  { key: 'month', label: '本月' },
+  { key: 'year', label: '本年' },
+];
 
 /**
  * 款式成本明细侧滑弹窗
@@ -27,29 +39,24 @@ const StyleCostDetailDrawer: React.FC<StyleCostDetailDrawerProps> = ({
   stats,
   loading,
   rangeType,
+  dateRange,
   onRangeChange,
+  onDateRangeChange,
 }) => {
   const styleDetails = stats?.styleCostDetails || [];
 
-  // 格式化时间显示（如 "3天5小时"）
   const formatDuration = (seconds: number | undefined): string => {
     if (!seconds || seconds <= 0) return '-';
     const days = Math.floor(seconds / 86400);
     const hours = Math.floor((seconds % 86400) / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
-    if (days > 0) {
-      return `${days}天${hours}小时${minutes > 0 ? minutes + '分钟' : ''}`;
-    }
-    if (hours > 0) {
-      return `${hours}小时${minutes > 0 ? minutes + '分钟' : ''}`;
-    }
+    if (days > 0) return `${days}天${hours}小时${minutes > 0 ? minutes + '分钟' : ''}`;
+    if (hours > 0) return `${hours}小时${minutes > 0 ? minutes + '分钟' : ''}`;
     return `${minutes}分钟`;
   };
 
-  // 下载功能
   const handleDownload = () => {
     if (!stats) return;
-    
     const header = ['款式编号', '款式名称', '样衣数量', '面辅料', '工序费用', '二次工艺', '合计'];
     const rows = styleDetails.map(item => [
       item.styleNo || '-',
@@ -60,13 +67,21 @@ const StyleCostDetailDrawer: React.FC<StyleCostDetailDrawerProps> = ({
       formatMoney(item.secondaryProcessCost),
       formatMoney(item.totalCost),
     ]);
-    
     const csvContent = [header.join(','), ...rows.map(row => row.join(','))].join('\n');
     const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
     link.download = `开发费用明细_${new Date().toISOString().slice(0, 10)}.csv`;
     link.click();
+  };
+
+  const handleDateRangeChange = (dates: null | [Dayjs | null, Dayjs | null]) => {
+    if (dates && dates[0] && dates[1]) {
+      onDateRangeChange({
+        startDate: dates[0].format('YYYY-MM-DD'),
+        endDate: dates[1].format('YYYY-MM-DD'),
+      });
+    }
   };
 
   const columns = [
@@ -167,7 +182,6 @@ const StyleCostDetailDrawer: React.FC<StyleCostDetailDrawerProps> = ({
     },
   ];
 
-  // 汇总行数据
   const summaryData = {
     patternCount: styleDetails.reduce((sum, item) => sum + (item.patternCount || 0), 0),
     materialCost: styleDetails.reduce((sum, item) => sum + (item.materialCost || 0), 0),
@@ -179,9 +193,10 @@ const StyleCostDetailDrawer: React.FC<StyleCostDetailDrawerProps> = ({
   return (
     <Drawer
       title={
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
           <DollarOutlined style={{ color: 'var(--primary-color)' }} />
           <span>款式成本明细</span>
+          {/* 快捷时间按钮 */}
           <div
             style={{
               display: 'flex',
@@ -189,26 +204,34 @@ const StyleCostDetailDrawer: React.FC<StyleCostDetailDrawerProps> = ({
               background: 'rgba(0,0,0,0.04)',
               padding: '2px 4px',
               borderRadius: 6,
-              marginLeft: 16,
+              marginLeft: 12,
             }}
           >
-            {(['day', 'week', 'month'] as const).map((type) => (
+            {QUICK_RANGES.map(({ key, label }) => (
               <Button
-                key={type}
-                type={rangeType === type ? 'primary' : 'text'}
+                key={key}
+                type={rangeType === key ? 'primary' : 'text'}
                 size="small"
-                onClick={() => onRangeChange(type)}
-                style={{
-                  minWidth: 40,
-                  fontSize: 12,
-                  height: 26,
-                  padding: '0 8px',
-                }}
+                onClick={() => onRangeChange(key)}
+                style={{ minWidth: 40, fontSize: 12, height: 26, padding: '0 8px' }}
               >
-                {type === 'day' ? '今日' : type === 'week' ? '本周' : '本月'}
+                {label}
               </Button>
             ))}
           </div>
+          {/* 自定义日期范围 */}
+          <RangePicker
+            size="small"
+            value={
+              rangeType === 'custom'
+                ? [dayjs(dateRange.startDate), dayjs(dateRange.endDate)]
+                : undefined
+            }
+            onChange={handleDateRangeChange}
+            placeholder={['开始日期', '结束日期']}
+            style={{ width: 240 }}
+            allowClear={false}
+          />
           <Button
             type="primary"
             size="small"

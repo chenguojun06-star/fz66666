@@ -102,6 +102,9 @@ public class FactoryOrchestrator {
         if (!UserContext.isTopAdmin()) {
             throw new AccessDeniedException("无权限操作");
         }
+        if (factory == null) {
+            throw new IllegalArgumentException("参数不能为空");
+        }
         if (!StringUtils.hasText(factory.getFactoryName())) {
             throw new IllegalArgumentException("供应商名称不能为空");
         }
@@ -152,7 +155,10 @@ public class FactoryOrchestrator {
         if (!UserContext.isTopAdmin()) {
             throw new AccessDeniedException("无权限操作");
         }
-        if (factory == null || !StringUtils.hasText(factory.getId())) {
+        if (factory == null) {
+            throw new IllegalArgumentException("参数不能为空");
+        }
+        if (!StringUtils.hasText(factory.getId())) {
             throw new IllegalArgumentException("参数错误");
         }
         factory.setUpdateTime(LocalDateTime.now());

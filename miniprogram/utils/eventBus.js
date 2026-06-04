@@ -135,8 +135,9 @@ const Events = {
   QUALITY_CHECKED: 'quality:checked', // 质检完成
   QUALITY_REPAIRED: 'quality:repaired', // 返修完成
 
-  // 入库相关
+  // 库存相关
   WAREHOUSE_IN: 'warehouse:in', // 入库操作
+  STOCK_CHANGED: 'stock:changed', // 库存变更（入库/出库/调整）
 
   // 通用数据变更
   DATA_CHANGED: 'data:changed', // 通用数据变更

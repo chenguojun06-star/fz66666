@@ -4,7 +4,7 @@
  */
 const { validateProductionOrder, normalizeData } = require('./dataValidator');
 const { orderStatusText } = require('./orderStatusHelper');
-const { parseProductionOrderLines, sortSizeNames } = require('./orderParser');
+const { parseProductionOrderLines, sortSizeNames } = require('../../../utils/orderParser');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 const { calcOrderProgress } = require('./progressNodes');
 

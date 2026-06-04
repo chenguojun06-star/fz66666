@@ -160,7 +160,9 @@ public class WarehouseScanExecutor {
 
         // 创建入库记录（正常入库路径）
         ProductWarehousing w = saveWarehousingRecord(order, bundle, qty, warehouse, warehouseAreaId, warehouseAreaName, operatorId, operatorName);
-        warehouseLocationOrchestrator.incrementUsedCapacity(warehouse, "FINISHED", 1);
+        if (warehouseLocationOrchestrator != null) {
+            warehouseLocationOrchestrator.incrementUsedCapacity(warehouse, "FINISHED", 1);
+        }
         ScanRecord sr = saveWarehouseScanRecord(params, requestId, operatorId, operatorName,
                 order, bundle, qty, warehouse, colorResolver, sizeResolver);
         updateProcessTrackingForWarehouse(bundle, order, operatorId, operatorName, sr);

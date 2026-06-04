@@ -48,7 +48,7 @@ public class TenantInterceptor implements InnerInterceptor {
      *                          tenant_id=NULL 的记录是系统默认映射，所有租户共享。
      */
     private static final Set<String> SHARED_TENANT_TABLES = Set.of(
-            "t_role", "t_dict", "t_process_parent_mapping"
+            "t_role", "t_dict", "t_template_library", "t_process_parent_mapping"
     );
 
     /**

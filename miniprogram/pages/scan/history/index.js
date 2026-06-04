@@ -3,7 +3,6 @@
  * 支持"按月"和"自定义"两种时间筛选模式
  */
 const api = require('../../../utils/api');
-const { request } = require('../../../utils/request');
 const { eventBus, Events } = require('../../../utils/eventBus');
 
 function _normalizeQualityName(processName) {
@@ -237,14 +236,10 @@ Page({
         if (end) patternParams.endTime = end + ' 23:59:59';
         requests.push(api.production.myPatternScanHistory(patternParams));
         // 并行调用工资 API 获取准确工资总额
-        requests.push(request({
-          url: '/api/finance/payroll-settlement/operator-summary',
-          method: 'POST',
-          data: {
-            startTime: start + ' 00:00:00',
-            endTime: end + ' 23:59:59',
-            includeSettled: true,
-          },
+        requests.push(api.payrollSettlement.operatorSummary({
+          startTime: start + ' 00:00:00',
+          endTime: end + ' 23:59:59',
+          includeSettled: true,
         }));
       }
 

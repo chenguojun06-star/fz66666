@@ -228,6 +228,7 @@ public class ProductionOrderOrchestrator {
                 if (items != null && !items.isEmpty()) {
                     String styleNo = StringUtils.hasText(order.getStyleNo()) ? order.getStyleNo().trim() : "";
                     String orderNoFinal = StringUtils.hasText(order.getOrderNo()) ? order.getOrderNo().trim() : "";
+                    boolean autoGenerate = Boolean.TRUE.equals(order.getSkuAutoGenerate());
                     for (Map<String, Object> item : items) {
                         if (item == null || item.isEmpty()) {
                             continue;
@@ -237,9 +238,17 @@ public class ProductionOrderOrchestrator {
                         if (!StringUtils.hasText(color) || !StringUtils.hasText(size)) {
                             continue;
                         }
-                        String skuNo = helper.buildSkuNo(orderNoFinal, styleNo, color, size);
-                        item.put("skuNo", skuNo);
-                        item.put("skuKey", skuNo);
+                        // 检查是否已经有用户自定义的 skuNo
+                        String existingSkuNo = item.get("skuNo") != null ? String.valueOf(item.get("skuNo")).trim() : null;
+                        if (autoGenerate || !StringUtils.hasText(existingSkuNo)) {
+                            // 只有当开启自动生成或者用户还没有填写时才自动生成
+                            String skuNo = helper.buildSkuNo(orderNoFinal, styleNo, color, size);
+                            item.put("skuNo", skuNo);
+                            item.put("skuKey", skuNo);
+                        } else {
+                            // 用户已自定义，保留用户的值，只设置 skuKey
+                            item.put("skuKey", existingSkuNo);
+                        }
                     }
                 }
                 order.setItems(items);

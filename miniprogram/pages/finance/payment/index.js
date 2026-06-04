@@ -1,6 +1,6 @@
 const api = require('../../../utils/api');
 const { toast } = require('../../../utils/uiHelper');
-const { isAdminOrSupervisor } = require('../../../utils/permission');
+const { isAdminOrSupervisor, hasFeaturePermission } = require('../../../utils/permission');
 
 const PAYMENT_METHOD_MAP = {
   OFFLINE: '线下付款',
@@ -186,6 +186,7 @@ Page({
   },
 
   onSubmitPay: function () {
+    if (!hasFeaturePermission('initiate_payment')) { toast('您没有发起支付的权限'); return; }
     const item = this.data.currentPayable;
     if (!item) return;
     const amount = Number(this.data.payForm.amount);
@@ -220,6 +221,7 @@ Page({
   },
 
   onCancelPay: function () {
+    if (!hasFeaturePermission('cancel_payment')) { toast('您没有取消支付的权限'); return; }
     this.setData({ showPayModal: false, currentPayable: null });
   },
 });

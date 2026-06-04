@@ -74,7 +74,14 @@ public class StyleCostCalculator {
     public PatternDevelopmentStatsDTO getDevelopmentStats(String rangeType) {
         LocalDateTime startTime = getStartTimeByRange(rangeType);
         LocalDateTime endTime = LocalDateTime.now();
+        return computeDevelopmentStats(startTime, endTime, rangeType);
+    }
 
+    public PatternDevelopmentStatsDTO getDevelopmentStatsByDateRange(LocalDateTime startTime, LocalDateTime endTime) {
+        return computeDevelopmentStats(startTime, endTime, "custom");
+    }
+
+    private PatternDevelopmentStatsDTO computeDevelopmentStats(LocalDateTime startTime, LocalDateTime endTime, String rangeType) {
         boolean tenantScopedRead = !UserContext.isSuperAdmin();
         Long readableTenantId = resolveReadableTenantId();
 

@@ -1,7 +1,7 @@
 export interface BaseEntity {
   id?: string | number
-  createdAt?: string
-  updatedAt?: string
+  createTime?: string
+  updateTime?: string
   createdBy?: string
   updatedBy?: string
   tenantId?: string | number
@@ -27,12 +27,14 @@ export interface ProductionOrder extends BaseEntity {
   styleName?: string
   factoryId: string | number
   factoryName?: string
-  quantity: number
-  currentProgress?: number
+  orderQuantity: number
+  productionProgress?: number
   currentProgressStage?: string
-  status?: 'DRAFT' | 'IN_PROGRESS' | 'COMPLETED' | 'ARCHIVED' | 'CLOSED'
-  deadline?: string
+  status: 'pending' | 'production' | 'completed' | 'delayed' | 'scrapped' | 'cancelled' | 'closed' | 'archived' | 'paused' | 'returned'
+  plannedEndDate?: string
+  urgencyLevel?: 'urgent' | 'normal'
   priority?: number
+  operationRemark?: string
   remarks?: string
 }
 
@@ -46,7 +48,7 @@ export interface OrderProgressNode {
   completedQuantity: number
   startedAt?: string
   completedAt?: string
-  status: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED'
+  status: 'pending' | 'in_progress' | 'completed'
 }
 
 export interface StyleInfo extends BaseEntity {
@@ -84,7 +86,7 @@ export interface CuttingBundle extends BaseEntity {
   color: string
   size: string
   quantity: number
-  status: 'PENDING' | 'CUTTING' | 'COMPLETED'
+  status: 'pending' | 'cutting' | 'completed'
   cuttingStartedAt?: string
   cuttingCompletedAt?: string
 }
@@ -96,14 +98,14 @@ export interface ScanRecord extends BaseEntity {
   color?: string
   size?: string
   quantity?: number
-  bundleNo?: string
-  scanType: 'PRODUCTION' | 'CUTTING' | 'WAREHOUSING' | 'QUALITY'
+  cuttingBundleNo?: number
+  scanType: 'cutting' | 'production' | 'quality' | 'warehouse' | 'pattern' | 'orchestration'
   progressStage?: string
   processName?: string
-  qualityResult?: 'PASSED' | 'FAILED' | 'PENDING'
-  scannerId?: string | number
-  scannerName?: string
-  scannedAt?: string
+  scanResult: 'success' | 'failure'
+  operatorId: string
+  operatorName: string
+  scanTime: string
   qrCode?: string
   remarks?: string
 }
@@ -142,29 +144,31 @@ export interface ProductWarehousing extends BaseEntity {
 export interface WagePayment extends BaseEntity {
   orderId?: string | number
   orderNo?: string
-  workerId?: string | number
-  workerName?: string
+  operatorId?: string | number
+  operatorName?: string
   factoryId?: string | number
   factoryName?: string
   processName?: string
   quantity: number
   unitPrice?: number
   totalAmount?: number
-  paymentStatus: 'UNPAID' | 'PAID' | 'SETTLED'
-  paymentDate?: string
+  paidAmount?: number
+  remainingAmount?: number
+  paymentStatus: 'unpaid' | 'partially_paid' | 'fully_paid'
+  paymentTime?: string
   remarks?: string
 }
 
 export interface Customer extends BaseEntity {
   customerName: string
   customerCode?: string
-  contactName?: string
+  contactPerson?: string
   contactPhone?: string
   contactEmail?: string
   address?: string
   creditLimit?: number
   creditRating?: string
-  status: 'ACTIVE' | 'INACTIVE'
+  status: 'active' | 'inactive'
   remarks?: string
 }
 
@@ -176,13 +180,13 @@ export interface Receivable extends BaseEntity {
   amount: number
   paidAmount?: number
   dueDate?: string
-  status: 'UNPAID' | 'PARTIAL_PAID' | 'PAID' | 'OVERDUE'
+  status: 'unpaid' | 'partial_paid' | 'paid' | 'overdue'
   remarks?: string
 }
 
 export interface UserInfo extends BaseEntity {
   username: string
-  realName?: string
+  name?: string
   email?: string
   phone?: string
   avatar?: string
@@ -197,7 +201,7 @@ export interface DictItem {
   dictCode: string
   dictLabel: string
   sortOrder?: number
-  status: 'ENABLED' | 'DISABLED'
+  status: 'enabled' | 'disabled'
   remark?: string
 }
 
@@ -205,10 +209,10 @@ export interface FactoryInfo extends BaseEntity {
   factoryName: string
   factoryCode?: string
   address?: string
-  contactName?: string
+  contactPerson?: string
   contactPhone?: string
-  capacity?: number
-  status: 'ACTIVE' | 'INACTIVE'
+  dailyCapacity?: number
+  status: 'active' | 'inactive'
   remarks?: string
 }
 
@@ -221,15 +225,15 @@ export interface AgentChatMessage {
 
 export interface AiScanTip {
   orderId: string | number
-  tipType: 'QUALITY' | 'PROGRESS' | 'WARNING' | 'INFO'
+  tipType: 'quality' | 'progress' | 'warning' | 'info'
   message: string
-  severity: 'LOW' | 'MEDIUM' | 'HIGH'
+  severity: 'low' | 'medium' | 'high'
   createdAt: string
 }
 
 export interface AiInsight {
   id: string
-  type: 'SALES' | 'PRODUCTION' | 'INVENTORY' | 'QUALITY'
+  type: 'sales' | 'production' | 'inventory' | 'quality'
   title: string
   content: string
   data?: Record<string, unknown>
@@ -240,7 +244,7 @@ export interface AppEvent<T = unknown> {
   type: string
   data?: T
   timestamp: number
-  source?: 'PC' | 'MINIPROGRAM' | 'H5' | 'BACKEND'
+  source?: 'pc' | 'miniprogram' | 'h5' | 'backend'
 }
 
 export interface OrderChangeEvent extends AppEvent<ProductionOrder> {

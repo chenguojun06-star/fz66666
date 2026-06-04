@@ -1,6 +1,6 @@
 const api = require('../../../utils/api');
 const { toast, safeNavigate } = require('../../../utils/uiHelper');
-const { isAdminOrSupervisor } = require('../../../utils/permission');
+const { isAdminOrSupervisor, hasFeaturePermission } = require('../../../utils/permission');
 
 const STATUS_MAP = {
   pending: { text: '待审批', cls: 'tag-orange' },
@@ -178,6 +178,7 @@ Page({
   },
 
   onActionApprove: function () {
+    if (!hasFeaturePermission('approve_advance')) { toast('您没有审批借支的权限'); return; }
     const item = this.data.currentAdvance;
     if (!item || item.status !== 'pending') return;
     const that = this;

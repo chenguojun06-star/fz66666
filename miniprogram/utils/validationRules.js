@@ -149,8 +149,63 @@ const ValidationRules = {
   apiBaseUrl: {
     name: '接口地址',
     required: true,
-    pattern: /^https?:\/\//,
+    pattern: /^https?:\/\//i,
     message: '接口地址必须以 http:// 或 https:// 开头',
+  },
+
+  // 工资相关
+  wageAmount: {
+    name: '工资金额',
+    required: true,
+    type: 'number',
+    min: 0.01,
+    max: 999999.99,
+    message: '工资金额必须在 0.01-999999.99 之间',
+  },
+  // 物料采购数量
+  purchaseQuantity: {
+    name: '采购数量',
+    required: true,
+    type: 'number',
+    min: 0.01,
+    max: 999999,
+    message: '采购数量必须在 0.01-999999 之间',
+  },
+  // 物料单价
+  unitPrice: {
+    name: '单价',
+    required: true,
+    type: 'number',
+    min: 0.01,
+    max: 999999.99,
+    message: '单价必须在 0.01-999999.99 之间',
+  },
+  // 发货数量
+  shipQuantity: {
+    name: '发货数量',
+    required: true,
+    type: 'integer',
+    min: 1,
+    max: 999999,
+    message: '发货数量必须是 1-999999 之间的正整数',
+  },
+  // 借支金额
+  advanceAmount: {
+    name: '借支金额',
+    required: true,
+    type: 'number',
+    min: 1,
+    max: 999999.99,
+    message: '借支金额必须在 1-999999.99 之间',
+  },
+  // 工厂编码
+  factoryCode: {
+    name: '工厂编码',
+    required: true,
+    minLength: 2,
+    maxLength: 50,
+    pattern: /^[a-zA-Z0-9_-]+$/,
+    message: '工厂编码长度 2-50 位，只能包含字母、数字、下划线、连字符',
   },
 };
 

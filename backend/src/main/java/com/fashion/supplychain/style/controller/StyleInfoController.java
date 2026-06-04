@@ -42,9 +42,20 @@ public class StyleInfoController {
 
     /**
      * 获取样衣开发费用统计
+     * 支持两种模式：
+     * 1. rangeType 模式：day/week/month/year
+     * 2. 自定义日期范围模式：startDate + endDate（格式：yyyy-MM-dd）
      */
     @GetMapping("/development-stats")
-    public Result<?> getDevelopmentStats(@RequestParam(defaultValue = "day") String rangeType) {
+    public Result<?> getDevelopmentStats(
+            @RequestParam(defaultValue = "day") String rangeType,
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate) {
+        if (startDate != null && endDate != null) {
+            java.time.LocalDateTime start = java.time.LocalDate.parse(startDate).atStartOfDay();
+            java.time.LocalDateTime end = java.time.LocalDate.parse(endDate).atTime(23, 59, 59);
+            return Result.success(styleInfoOrchestrator.getDevelopmentStatsByDateRange(start, end));
+        }
         return Result.success(styleInfoOrchestrator.getDevelopmentStats(rangeType));
     }
 

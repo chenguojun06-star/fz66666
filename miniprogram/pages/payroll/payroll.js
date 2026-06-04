@@ -1,6 +1,7 @@
 // pages/payroll/payroll.js
-const { request } = require('../../utils/request');
+const api = require('../../utils/api');
 const { toast, safeNavigate } = require('../../utils/uiHelper');
+const { hasFeaturePermission } = require('../../utils/permission');
 
 // 日期格式化工具函数（重构版 - 消除重复代码）
 
@@ -117,6 +118,12 @@ Page({
     // 未登录时拒绝访问：工资数据属于敏感个人信息，必须验证身份后才能加载
     const app = getApp();
     if (app && typeof app.requireAuth === 'function' && !app.requireAuth()) return;
+    // 权限校验：无查看工资权限则提示并返回
+    if (!hasFeaturePermission('view_payroll')) {
+      toast('您没有查看工资的权限');
+      wx.navigateBack({ delta: 1, fail: function () { wx.switchTab({ url: '/pages/index/index' }); } });
+      return;
+    }
     this.loadData();
   },
 
@@ -224,15 +231,11 @@ Page({
     try {
       const { startDate, endDate } = this.data;
 
-      const res = await request({
-        url: '/api/finance/payroll-settlement/operator-summary',
-        method: 'POST',
-        data: {
+      const res = await api.payrollSettlement.operatorSummary({
           startTime: `${startDate} 00:00:00`,
           endTime: `${endDate} 23:59:59`,
           includeSettled: true,
-        },
-      });
+        });
 
       if (res.code === 200 && Array.isArray(res.data)) {
         this.processData(res.data);

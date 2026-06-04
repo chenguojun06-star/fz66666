@@ -54,6 +54,8 @@ const StyleInfoListPage: React.FC = () => {
   const {
     statsRangeType,
     setStatsRangeType,
+    dateRange,
+    setDateRange,
     developmentStats,
     statsLoading,
     loadDevelopmentStats
@@ -573,9 +575,15 @@ const StyleInfoListPage: React.FC = () => {
         stats={developmentStats}
         loading={statsLoading}
         rangeType={statsRangeType}
+        dateRange={dateRange}
         onRangeChange={(type) => {
           setStatsRangeType(type);
           loadDevelopmentStats(type);
+        }}
+        onDateRangeChange={(range) => {
+          setStatsRangeType('custom');
+          setDateRange(range);
+          loadDevelopmentStats('custom', range);
         }}
       />
     </>

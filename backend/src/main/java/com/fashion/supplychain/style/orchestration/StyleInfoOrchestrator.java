@@ -632,6 +632,10 @@ public class StyleInfoOrchestrator {
         return styleCostCalculator.getDevelopmentStats(rangeType);
     }
 
+    public PatternDevelopmentStatsDTO getDevelopmentStatsByDateRange(LocalDateTime startTime, LocalDateTime endTime) {
+        return styleCostCalculator.getDevelopmentStatsByDateRange(startTime, endTime);
+    }
+
     @Transactional(rollbackFor = Exception.class)
     public StyleInfo saveSampleReview(Long id, String reviewStatus, String reviewComment) {
         StyleInfo style = styleInfoService.getById(id);

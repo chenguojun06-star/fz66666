@@ -101,7 +101,7 @@ function parseProductionOrderLines(order) {
   return extractFallbackLine(order);
 }
 
-const { sortSizeNames } = require('../../../utils/sizeUtils');
+const { sortSizeNames } = require('./sizeUtils');
 
 module.exports = {
   parseProductionOrderLines,

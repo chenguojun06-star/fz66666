@@ -1,4 +1,4 @@
-const { request } = require('../../../utils/request');
+const api = require('../../../utils/api');
 const { toast } = require('../../../utils/uiHelper');
 
 Page({
@@ -24,10 +24,7 @@ Page({
   async loadSettlements() {
     this.setData({ loading: true });
     try {
-      const res = await request({
-        url: '/api/finance/wage-settlement-feedback/my-paid-settlements',
-        method: 'POST',
-      });
+      const res = await api.wageSettlementFeedback.myPaidSettlements();
       const list = res?.data || [];
       list.forEach(item => {
         const d = item.createTime ? new Date(String(item.createTime).replace(' ', 'T')) : null;
@@ -79,11 +76,7 @@ Page({
     }
     this.setData({ submitting: true });
     try {
-      await request({
-        url: '/api/finance/wage-settlement-feedback/submit',
-        method: 'POST',
-        data: { settlementId: currentSettlementId, feedbackType, feedbackContent },
-      });
+      await api.wageSettlementFeedback.submit({ settlementId: currentSettlementId, feedbackType, feedbackContent });
       toast.success('提交成功');
       this.setData({ showForm: false, feedbackContent: '' });
       this.loadSettlements();

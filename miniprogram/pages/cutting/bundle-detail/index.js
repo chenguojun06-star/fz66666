@@ -1,5 +1,5 @@
 const api = require('../../../utils/api');
-const { parseProductionOrderLines, sortSizeNames } = require('../utils/orderParser');
+const { parseProductionOrderLines, sortSizeNames } = require('../../../utils/orderParser');
 const { toast, safeNavigate } = require('../../../utils/uiHelper');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 const { triggerDataRefresh } = require('../../../utils/eventBus');

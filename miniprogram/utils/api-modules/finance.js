@@ -75,4 +75,19 @@ const wagePayment = {
   },
 };
 
-module.exports = { employeeAdvance, factoryShipment, wagePayment };
+const payrollSettlement = {
+  operatorSummary: function (params) {
+    return ok('/api/finance/payroll-settlement/operator-summary', 'POST', params || {});
+  },
+};
+
+const wageSettlementFeedback = {
+  myPaidSettlements: function (params) {
+    return ok('/api/finance/wage-settlement-feedback/my-paid-settlements', 'POST', params || {});
+  },
+  submit: function (data) {
+    return ok('/api/finance/wage-settlement-feedback/submit', 'POST', data || {});
+  },
+};
+
+module.exports = { employeeAdvance, factoryShipment, wagePayment, payrollSettlement, wageSettlementFeedback };

@@ -260,7 +260,7 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = ({ orderId, orde
       unit: '',
       color: '',
       size: '',
-      specification: '',
+      specifications: '',
       fabricComposition: '',
       fabricWeight: '',
       purchaseQuantity: 0,
@@ -301,7 +301,7 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = ({ orderId, orde
           sourceType: resolvedSourceType,
           ...(resolvedSourceType === 'sample' && patternId ? { patternProductionId: patternId } : {}),
         };
-        const isTemp = String(row.id || '').startsWith('tmp_');
+        const isTemp = !row.id || String(row.id).startsWith('tmp_');
         if (!isTemp) {
           await api.put('/production/purchase', payload);
         } else {
@@ -310,7 +310,7 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = ({ orderId, orde
         }
       }
       const originalIds = new Set(purchases.map(p => p.id));
-      const keptIds = new Set(validRows.filter(r => !String(r.id).startsWith('tmp_')).map(r => r.id));
+      const keptIds = new Set(validRows.filter(r => r.id && !String(r.id).startsWith('tmp_')).map(r => r.id));
       const deletedIds = [...originalIds].filter(id => !keptIds.has(id));
       for (const delId of deletedIds) { if (delId) await api.delete(`/production/purchase/${delId}`); }
       message.success('保存成功');
@@ -340,7 +340,7 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = ({ orderId, orde
         fabricComposition: String(record.fabricComposition || r.fabricComposition || ''),
         fabricWeight: String(record.fabricWeight || r.fabricWeight || ''),
         color: String(record.color || r.color || ''),
-        specification: String(record.specifications || r.specification || ''),
+        specifications: String(record.specifications || r.specifications || ''),
         unit: String(record.unit || r.unit || ''),
         unitPrice: Number(record.unitPrice || r.unitPrice || 0),
         supplierName: String(record.supplierName || r.supplierName || ''),
@@ -705,7 +705,7 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = ({ orderId, orde
         unit: '',
         color,
         size: '',
-        specification: '',
+        specifications: '',
         fabricComposition: '',
         fabricWeight: '',
         purchaseQuantity: 0,
@@ -839,13 +839,13 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = ({ orderId, orde
       },
       {
         title: '规格',
-        dataIndex: 'specification',
-        key: 'specification',
+        dataIndex: 'specifications',
+        key: 'specifications',
         width: 100,
         render: (v: unknown, r: MaterialPurchase) => (
           <Input
             value={String(v || '')}
-            onChange={(e) => handleUpdateRow(rid(r), 'specification', e.target.value)}
+            onChange={(e) => handleUpdateRow(rid(r), 'specifications', e.target.value)}
             placeholder="规格"
             size="small"
           />

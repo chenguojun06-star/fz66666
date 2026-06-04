@@ -304,6 +304,38 @@ function hasFeaturePermission(feature) {
     ],
     // 查看所有记录
     view_all_records: [ROLES.ADMIN, ROLES.SUPERVISOR],
+    // 审批付款（仅管理员/主管）
+    approve_payment: [ROLES.ADMIN, ROLES.SUPERVISOR],
+    // 发起支付（仅管理员/主管）
+    initiate_payment: [ROLES.ADMIN, ROLES.SUPERVISOR],
+    // 取消支付（仅管理员/主管）
+    cancel_payment: [ROLES.ADMIN, ROLES.SUPERVISOR],
+    // 查看工资详情（管理员/主管/本人可查看）
+    view_payroll: [
+      ROLES.ADMIN,
+      ROLES.SUPERVISOR,
+      ROLES.PURCHASER,
+      ROLES.CUTTER,
+      ROLES.SEWING,
+      ROLES.PACKAGER,
+      ROLES.QUALITY,
+      ROLES.WAREHOUSE,
+    ],
+    // 工资反馈（所有角色可提交）
+    submit_payroll_feedback: [
+      ROLES.ADMIN,
+      ROLES.SUPERVISOR,
+      ROLES.PURCHASER,
+      ROLES.CUTTER,
+      ROLES.SEWING,
+      ROLES.PACKAGER,
+      ROLES.QUALITY,
+      ROLES.WAREHOUSE,
+    ],
+    // 员工借支审批（仅管理员/主管）
+    approve_advance: [ROLES.ADMIN, ROLES.SUPERVISOR],
+    // 收付款中心（仅管理员/主管）
+    finance_center: [ROLES.ADMIN, ROLES.SUPERVISOR],
   };
 
   const allowedRoles = featurePermissions[feature] || [];

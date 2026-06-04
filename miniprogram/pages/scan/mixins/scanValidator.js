@@ -62,17 +62,6 @@ module.exports = {
       this._quantity = num;
     },
 
-    mapScanType: function(stageName) {
-      const map = {
-        采购: 'production', 裁剪: 'cutting', 裁床: 'cutting', 剪裁: 'cutting', 开裁: 'cutting',
-        二次工艺: 'production', 绣花: 'production', 印花: 'production', 水洗: 'production',
-        车缝: 'production', 缝制: 'production', 缝纫: 'production', 整件: 'production',
-        大烫: 'production', 整烫: 'production', 熨烫: 'production',
-        尾部: 'production', 后整: 'production', 打包: 'production', 装箱: 'production',
-        质检: 'quality', 检验: 'quality', 品检: 'quality', 验货: 'quality',
-        包装: 'production', 入库: 'warehouse', 入仓: 'warehouse', 仓储: 'warehouse',
-      };
-      return map[stageName] || 'production';
-    },
+
   },
 };
