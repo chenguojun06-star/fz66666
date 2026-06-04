@@ -36,8 +36,8 @@ public class StyleDifficultyOrchestrator {
     @Autowired private IntelligenceInferenceOrchestrator inferenceOrchestrator;
     @Autowired private StyleImageUrlResolver imageUrlResolver;
 
-    @Value("${ai.doubao.model:doubao-1.5-vision-pro}")
-    private String doubaoVisionModel;
+    @Value("${ai.agnes.model:agnes-2.0-flash}")
+    private String agnesVisionModel;
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
@@ -107,7 +107,7 @@ public class StyleDifficultyOrchestrator {
     DifficultyAssessment enhanceWithAi(StyleInfo style, List<StyleBom> boms,
             List<StyleProcess> processes, List<SecondaryProcess> secondaryProcesses,
             DifficultyAssessment base, String rawCoverUrl) {
-        boolean visionEnabled = doubaoVisionModel != null && !doubaoVisionModel.isBlank();
+        boolean visionEnabled = agnesVisionModel != null && !agnesVisionModel.isBlank();
         String imageUrl = imageUrlResolver.resolveForVision(rawCoverUrl);
         String visionDescription = analyzeWithVision(visionEnabled, imageUrl);
         String visualSimilarityContext = searchVisualSimilarity(imageUrl);
@@ -147,10 +147,10 @@ public class StyleDifficultyOrchestrator {
             String raw = inferenceOrchestrator.chatWithDoubaoVision(imageUrl, visionPrompt);
             if (raw != null && !raw.isBlank()) {
                 String desc = raw.length() > 400 ? raw.substring(0, 400) : raw;
-                log.info("[StyleDifficulty] Doubao视觉分析成功，描述长度={}", desc.length());
+                log.info("[StyleDifficulty] Agnes视觉分析成功，描述长度={}", desc.length());
                 return desc;
             }
-            log.warn("[StyleDifficulty] Doubao 视觉模型返回空，跳过视觉增强");
+            log.warn("[StyleDifficulty] Agnes 视觉模型返回空，跳过视觉增强");
         } catch (Exception e) {
             log.warn("[StyleDifficulty] 视觉分析异常，降级无描述: {}", e.getMessage());
         }
@@ -195,7 +195,7 @@ public class StyleDifficultyOrchestrator {
                 .filter(p -> "HARD".equalsIgnoreCase(p.getDifficulty()) || "高".equals(p.getDifficulty())).count();
         return String.format(
                 "款式信息：\n- 款号：%s\n- 品类：%s\n- BOM物料种数：%d 种\n- 工序（共%d道）：%s\n" +
-                "- 二次工艺（共%d道）：%s\n%s\n- AI图像发现的工艺难度因素（Doubao 视觉分析）：%s\n%s\n" +
+                "- 二次工艺（共%d道）：%s\n%s\n- AI图像发现的工艺难度因素（Agnes 视觉分析）：%s\n%s\n" +
                 "结构化预评分（仅供参考）：难度%s（%d/10），含高难工序%d道，二次工艺%s。\n\n" +
                 "核心评估原则：\n1. AI图像分析是最可信的评估依据\n2. 西装/大衣/外套类至少5-7分\n" +
                 "3. 标记为「难」的工艺特征应显著提升评分\n4. 多个「难」特征 → 综合评分至少 6-8 分\n" +
@@ -251,7 +251,7 @@ public class StyleDifficultyOrchestrator {
     }
 
     private String buildVisionFallbackMessage(String rawCoverUrl, DifficultyAssessment base) {
-        boolean visionEnabled = doubaoVisionModel != null && !doubaoVisionModel.isBlank();
+        boolean visionEnabled = agnesVisionModel != null && !agnesVisionModel.isBlank();
         boolean imageNotFound = (rawCoverUrl == null || rawCoverUrl.isBlank());
         if (!visionEnabled) return "AI视觉模型未配置，评分依据 BOM和品类结构数据";
         if (imageNotFound) return "封面图未上传，评分依据 BOM（" + base.getBomCount() + " 种物料）及品类信息";

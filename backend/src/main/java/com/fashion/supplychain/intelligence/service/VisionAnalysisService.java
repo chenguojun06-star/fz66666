@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 视觉AI分析服务 — 封装 Doubao Vision 多模态模型调用
+ * 视觉AI分析服务 — 封装 Agnes Vision 多模态模型调用
  *
  * 职责：接收图片URL + 分析类型，返回结构化分析结果
  * 下游：VisualAIOrchestrator（批量视觉分析）、FileAnalysisOrchestrator（文件上传图片分析）
@@ -58,7 +58,7 @@ public class VisionAnalysisService {
 
     private VisionResult analyze(String imageUrl, String textPrompt, String taskType) {
         if (!isAvailable()) {
-            return VisionResult.unavailable("DoubaoVision 未配置，请在环境变量中设置 DOUBAO_API_KEY");
+            return VisionResult.unavailable("AgnesVision 未配置，请在环境变量中设置 AGNES_API_KEY");
         }
 
         String rawResponse;

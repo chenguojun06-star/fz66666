@@ -57,10 +57,10 @@ public class IntelligenceInferenceOrchestrator {
     @Value("${ai.deepseek.api-url:https://api.deepseek.com/v1/chat/completions}") private String directApiUrl;
     @Value("${ai.deepseek.model:deepseek-v4-flash}") private String directModel;
     @Value("${ai.deepseek.timeout-seconds:90}") private int directTimeoutSeconds;
-    @Value("${ai.doubao.api-key:}") private String doubaoApiKey;
-    @Value("${ai.doubao.api-url:https://ark.cn-beijing.volces.com/api/v3/chat/completions}") private String doubaoApiUrl;
-    @Value("${ai.doubao.model:doubao-1-5-vision-pro-32k-250115}") private String doubaoModel;
-    @Value("${ai.doubao.timeout-seconds:60}") private int doubaoTimeoutSeconds;
+    @Value("${ai.agnes.api-key:}") private String agnesApiKey;
+    @Value("${ai.agnes.api-url:https://apihub.agnes-ai.com/v1/chat/completions}") private String agnesApiUrl;
+    @Value("${ai.agnes.model:agnes-2.0-flash}") private String agnesModel;
+    @Value("${ai.agnes.timeout-seconds:60}") private int agnesTimeoutSeconds;
     @Value("${ai.gateway.litellm.api-key:}") private String litellmApiKey;
     @Value("${ai.gateway.litellm.timeout-seconds:30}") private int gatewayTimeoutSeconds;
     @Value("${ai.fallback.qwen.api-key:}") private String qwenApiKey;
@@ -185,35 +185,35 @@ public class IntelligenceInferenceOrchestrator {
     }
 
     public boolean isVisionEnabled() {
-        if (!hasText(doubaoApiKey)) log.warn("[Vision] Doubao 未配置，视觉分析不可用");
-        return hasText(doubaoApiKey);
+        if (!hasText(agnesApiKey)) log.warn("[Vision] Agnes 未配置，视觉分析不可用");
+        return hasText(agnesApiKey);
     }
 
     public String chatWithDoubaoVision(String imageUrl, String textPrompt) {
-        if (!hasText(doubaoApiKey) || !hasText(imageUrl)) {
-            log.warn("[DoubaoVision] 缺少必要参数：apiKey 或 imageUrl 为空");
+        if (!hasText(agnesApiKey) || !hasText(imageUrl)) {
+            log.warn("[AgnesVision] 缺少必要参数：apiKey 或 imageUrl 为空");
             return null;
         }
         try {
             if (imageUrl.startsWith("data:") && imageUrl.length() > 8 * 1024 * 1024) {
-                log.warn("[DoubaoVision] Base64 数据URI超过8MB({}MB)，已跳过", imageUrl.length() / 1024 / 1024);
+                log.warn("[AgnesVision] Base64 数据URI超过8MB({}MB)，已跳过", imageUrl.length() / 1024 / 1024);
                 return null;
             }
-            log.info("[DoubaoVision] 发送请求 类型={} 长度={}字符",
+            log.info("[AgnesVision] 发送请求 类型={} 长度={}字符",
                     imageUrl.startsWith("data:") ? "base64" : imageUrl.startsWith("http") ? "http-url" : "other",
                     imageUrl.length());
-            String payload = buildDoubaoVisionPayload(imageUrl, textPrompt);
+            String payload = buildAgnesVisionPayload(imageUrl, textPrompt);
             HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(doubaoApiUrl))
+                    .uri(URI.create(agnesApiUrl))
                     .header("Content-Type", "application/json")
-                    .header("Authorization", "Bearer " + doubaoApiKey)
-                    .timeout(Duration.ofSeconds(doubaoTimeoutSeconds))
+                    .header("Authorization", "Bearer " + agnesApiKey)
+                    .timeout(Duration.ofSeconds(agnesTimeoutSeconds))
                     .POST(HttpRequest.BodyPublishers.ofString(payload))
                     .build();
             HttpResponse<String> response = sharedHttpClient.send(request, HttpResponse.BodyHandlers.ofString());
-            return extractDoubaoVisionResponse(response);
+            return extractAgnesVisionResponse(response);
         } catch (Exception e) {
-            log.warn("[DoubaoVision] 图像分析异常: {}", e.getMessage());
+            log.warn("[AgnesVision] 图像分析异常: {}", e.getMessage());
         }
         return null;
     }
@@ -564,21 +564,18 @@ public class IntelligenceInferenceOrchestrator {
         aiAgentTokenBudgetService.recordUsage(result.getPromptTokens(), result.getCompletionTokens());
     }
 
-    private String extractDoubaoVisionResponse(HttpResponse<String> response) throws Exception {
+    private String extractAgnesVisionResponse(HttpResponse<String> response) throws Exception {
         String body = response.body();
         if (response.statusCode() == 200) {
             JsonNode root = MAPPER.readTree(body);
             if (root.has("choices") && root.get("choices").size() > 0) {
                 String content = root.get("choices").get(0).get("message").get("content").asText();
-                log.debug("[DoubaoVision] 调用成功，content长度={}", content.length());
+                log.debug("[AgnesVision] 调用成功，content长度={}", content.length());
                 return content;
             }
-            log.warn("[DoubaoVision] 响应格式异常: {}", body);
-        } else if (response.statusCode() == 404 && body.contains("InvalidEndpointOrModel")) {
-            log.error("[DoubaoVision] 模型端点无效(404): model={} — 请在 Volcengine ARK 控制台开通该模型。错误: {}",
-                    doubaoModel, body.substring(0, Math.min(300, body.length())));
+            log.warn("[AgnesVision] 响应格式异常: {}", body);
         } else {
-            log.warn("[DoubaoVision] 调用失败 status={} body={}", response.statusCode(),
+            log.warn("[AgnesVision] 调用失败 status={} body={}", response.statusCode(),
                     body.substring(0, Math.min(200, body.length())));
         }
         return null;
@@ -648,9 +645,9 @@ public class IntelligenceInferenceOrchestrator {
         return value + "/chat/completions";
     }
 
-    private String buildDoubaoVisionPayload(String imageUrl, String textPrompt) throws Exception {
+    private String buildAgnesVisionPayload(String imageUrl, String textPrompt) throws Exception {
         var root = MAPPER.createObjectNode();
-        root.put("model", doubaoModel);
+        root.put("model", agnesModel);
         var messagesArr = root.putArray("messages");
         var userMsg = messagesArr.addObject();
         userMsg.put("role", "user");

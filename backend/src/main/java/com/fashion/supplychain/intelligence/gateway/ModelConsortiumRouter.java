@@ -36,7 +36,7 @@ public class ModelConsortiumRouter {
     @Value("${ai.model.reasoning:deepseek-v4-flash}")
     private String reasoningModel;
 
-    @Value("${ai.model.vision:doubao-1-5-vision-pro-32k-250115}")
+    @Value("${ai.model.vision:agnes-2.0-flash}")
     private String visionModel;
 
     @Value("${ai.model.default:deepseek-v4-flash}")

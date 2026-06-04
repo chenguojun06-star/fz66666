@@ -73,7 +73,7 @@ public class MaterialPurchaseDocOrchestrator {
             return err;
         }
 
-        // 2. 调用 AI 视觉识别（优先 Doubao Vision 真正看图，降级时用文本模式）
+        // 2. 调用 AI 视觉识别（优先 Agnes Vision 真正看图，降级时用文本模式）
         String aiRaw;
         try {
             if (inferenceOrchestrator.isVisionEnabled()) {
@@ -88,7 +88,7 @@ public class MaterialPurchaseDocOrchestrator {
                 log.info("[PurchaseDocRecognize] Vision识别完成, 结果长度={}", aiRaw.length());
             } else {
                 // 降级：文本模式（LLM 无法真正看图，识别效果有限）
-                log.warn("[PurchaseDocRecognize] Doubao Vision 未配置，降级文本模式（建议配置 DOUBAO_API_KEY 和视觉模型）");
+                log.warn("[PurchaseDocRecognize] Agnes Vision 未配置，降级文本模式（建议配置 AGNES_API_KEY 和视觉模型）");
                 var inferResult = inferenceOrchestrator.chat(
                         "purchase-doc-recognize", buildSystemPrompt(), buildUserMessage(imageUrl, orderNo));
                 aiRaw = inferResult.isSuccess() ? inferResult.getContent() : "";

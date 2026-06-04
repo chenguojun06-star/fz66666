@@ -345,10 +345,10 @@ ai:
     model: deepseek-v4-flash
     max-tokens: 1024
     timeout-seconds: 90
-  doubao:
-    api-key: ${DOUBAO_API_KEY:}            # 火山引擎豆包视觉模型
-    api-url: https://ark.cn-beijing.volces.com/api/v3/chat/completions
-    model: ${DOUBAO_MODEL:doubao-1-5-vision-pro-32k-250115}
+  agnes:
+    api-key: ${AGNES_API_KEY:}              # Agnes AI 视觉模型（OpenAI兼容）
+    api-url: https://apihub.agnes-ai.com/v1/chat/completions
+    model: ${AGNES_MODEL:agnes-2.0-flash}
     timeout-seconds: 60
   spring-ai:
     enabled: ${AI_SPRING_AI_ENABLED:true}
@@ -390,7 +390,7 @@ ai:
   model:
     fast: ${AI_MODEL_FAST:deepseek-v4-flash}
     reasoning: ${AI_MODEL_REASONING:deepseek-v4-pro}
-    vision: ${AI_MODEL_VISION:doubao-1-5-vision-pro-32k-250115}
+    vision: ${AI_MODEL_VISION:agnes-2.0-flash}
     default: ${AI_MODEL_DEFAULT:deepseek-v4-flash}
   openai-compat:
     enabled: ${AI_OPENAI_COMPAT_ENABLED:false}

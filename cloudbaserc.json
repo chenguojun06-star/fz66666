@@ -27,7 +27,7 @@
         "APP_COS_BUCKET": "{{COS_BUCKET}}",
         "APP_COS_REGION": "{{COS_REGION}}",
         "DEEPSEEK_API_KEY": "{{DEEPSEEK_API_KEY}}",
-        "DOUBAO_API_KEY": "{{DOUBAO_API_KEY}}",
+        "AGNES_API_KEY": "{{AGNES_API_KEY}}",
         "VOYAGE_API_KEY": "{{VOYAGE_API_KEY}}",
         "QDRANT_URL": "{{QDRANT_URL}}",
         "QDRANT_API_KEY": "{{QDRANT_API_KEY}}",

@@ -29,8 +29,8 @@ wechat:
 ai:
   deepseek:
     api-key: ${DEEPSEEK_API_KEY:}
-  doubao:
-    api-key: ${DOUBAO_API_KEY:}
+  agnes:
+    api-key: ${AGNES_API_KEY:}
   gateway:
     litellm:
       enabled: ${AI_LITELLM_ENABLED:false}
