@@ -41,6 +41,13 @@ public class ProductionOrder {
      */
     private String sku;
 
+    /**
+     * 是否自动生成 SKU（默认 false，由用户控制）
+     * true=裁剪/样衣创建时系统自动生成 SKU-前缀；false=只走颜色尺码，SKU 留空让用户自己填
+     */
+    @TableField("sku_auto_generate")
+    private Boolean skuAutoGenerate;
+
     @TableField("order_details")
     private String orderDetails;
 

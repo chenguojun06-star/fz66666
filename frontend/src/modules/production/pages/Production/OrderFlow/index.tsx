@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
-import { Alert, App, Button, Card, Col, Row, Space, Tag, Badge, Input, Tooltip, Popover } from 'antd';
-import { MessageOutlined, EditOutlined, CheckOutlined, CloseOutlined, SaveOutlined } from '@ant-design/icons';
+import { Alert, App, Button, Card, Col, Row, Space, Tag, Badge, Input, Tooltip, Popover, Switch } from 'antd';
+import { MessageOutlined, EditOutlined, CheckOutlined, CloseOutlined, SaveOutlined, ClearOutlined, ThunderboltOutlined } from '@ant-design/icons';
 import PageLayout from '@/components/common/PageLayout';
 import { toNumberSafe } from '@/utils/api';
 import api from '@/utils/api';
@@ -154,6 +154,15 @@ const OrderFlow: React.FC = () => {
   const handleMatrixSave = useCallback(async () => {
     const orderId = (order as any)?.id;
     if (!orderId) { message.error('订单ID不存在'); return; }
+
+    // 唯一性校验：同一订单内 SKU 不能重复
+    const skuValues = Object.values(skuEditMap).map(s => (s || '').trim()).filter(Boolean);
+    const dupes = skuValues.filter((v, i, arr) => arr.indexOf(v) !== i);
+    if (dupes.length > 0) {
+      message.error(`SKU 重复：${Array.from(new Set(dupes)).join('、')}，请保证唯一性`);
+      return;
+    }
+
     setSavingMatrix(true);
     try {
       const updatedLines = orderLines.map(l => {
@@ -179,6 +188,51 @@ const OrderFlow: React.FC = () => {
       setSavingMatrix(false);
     }
   }, [order, orderLines, skuEditMap, message, fetchFlow]);
+
+  // 用户主动清空所有 SKU
+  const handleMatrixClearAll = useCallback(() => {
+    const map: Record<string, string> = {};
+    orderLines.forEach(l => { map[`${l.color || ''}|${l.size || ''}`] = ''; });
+    setSkuEditMap(map);
+  }, [orderLines]);
+
+  // 用户主动按统一规则生成 SKU（款号 + 颜色 + 尺码 + 顺序号；不加 SKU- 前缀）
+  const handleMatrixAutoGen = useCallback(() => {
+    const styleNo = String((order as any)?.styleNo || '').trim() || 'STYLE';
+    const map: Record<string, string> = {};
+    orderLines.forEach((l, idx) => {
+      const key = `${l.color || ''}|${l.size || ''}`;
+      const c = String(l.color || '').trim();
+      const s = String(l.size || '').trim();
+      const seq = String(idx + 1).padStart(2, '0');
+      const generated = c && s ? `${styleNo}${c}${s}${seq}` : `${styleNo}-${seq}`;
+      map[key] = generated;
+    });
+    setSkuEditMap(map);
+    message.success('已按 "款号+颜色+尺码+顺序" 规则生成 SKU（未加前缀），请按需调整');
+  }, [order, orderLines, message]);
+
+  // 切换"自动生成 SKU"全局开关（保存到订单）
+  const handleSkuAutoToggle = useCallback(async (checked: boolean) => {
+    const orderId = (order as any)?.id;
+    if (!orderId) return;
+    try {
+      const res: any = await api.put('/production/order/update-basic-info', {
+        id: orderId,
+        field: 'skuAutoGenerate',
+        value: checked ? 'true' : 'false',
+        operationRemark: checked ? '开启自动生成 SKU' : '关闭自动生成 SKU',
+      });
+      if (res?.code === 200) {
+        message.success(checked ? '已开启自动生成 SKU' : '已关闭自动生成 SKU');
+        fetchFlow();
+      } else {
+        message.error(res?.message || '切换失败');
+      }
+    } catch (e: any) {
+      message.error(e?.message || '切换失败');
+    }
+  }, [order, message, fetchFlow]);
 
   const recordAction = useCallback(async (action: string, reason: string) => {
     const targetNo = orderNoForImage;
@@ -362,7 +416,18 @@ const OrderFlow: React.FC = () => {
                     fieldKey="styleName" onSave={handleFieldSave} saving={savingField === 'styleName'}
                   />
 
-                  <span style={{ color: 'var(--color-text-tertiary)', fontSize: 14, lineHeight: '22px' }}>颜色 / 尺码 / SKU</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--color-text-tertiary)', fontSize: 14, lineHeight: '22px' }}>
+                    <span>颜色 / 尺码 / SKU</span>
+                    <Tooltip title="开启后，裁剪/样衣创建时系统自动生成 SKU- 前缀；关闭后只走颜色尺码，由你掌控 SKU">
+                      <Switch
+                        size="small"
+                        checked={Boolean((order as any)?.skuAutoGenerate)}
+                        onChange={handleSkuAutoToggle}
+                        checkedChildren="自动"
+                        unCheckedChildren="手动"
+                      />
+                    </Tooltip>
+                  </div>
                   <div>
                     {colorSizeMatrixModel.hasData ? (
                       editing ? (
@@ -409,7 +474,29 @@ const OrderFlow: React.FC = () => {
                               </tr>
                             </tbody>
                           </table>
-                          <div style={{ padding: '6px 10px', borderTop: '1px solid var(--color-border-light)', display: 'flex', justifyContent: 'flex-end' }}>
+                          <div style={{ padding: '6px 10px', borderTop: '1px solid var(--color-border-light)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                            <Space size={4}>
+                              <Tooltip title={'按【款号+颜色+尺码+顺序】自动生成 SKU（不加前缀），生成后可在输入框微调'}>
+                                <Button
+                                  size="small"
+                                  type="link"
+                                  icon={<ThunderboltOutlined />}
+                                  onClick={handleMatrixAutoGen}
+                                >
+                                  一键生成
+                                </Button>
+                              </Tooltip>
+                              <Tooltip title="清空所有 SKU 输入框（不影响颜色尺码）">
+                                <Button
+                                  size="small"
+                                  type="link"
+                                  icon={<ClearOutlined />}
+                                  onClick={handleMatrixClearAll}
+                                >
+                                  清空
+                                </Button>
+                              </Tooltip>
+                            </Space>
                             <Button
                               type="primary"
                               size="small"

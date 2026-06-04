@@ -324,6 +324,16 @@ public class AiAgentToolExecHelper {
         return false;
     }
 
+    /**
+     * 截取一行文本（用于日志/显示）
+     */
+    public static String truncateOneLine(String text, int maxLength) {
+        if (text == null) return "";
+        String oneLine = text.replaceAll("\\s+", " ");
+        if (oneLine.length() <= maxLength) return oneLine;
+        return oneLine.substring(0, maxLength - 3) + "...";
+    }
+
     private String buildConfirmMessage(ConfirmLevel level, String label) {
         if (level == ConfirmLevel.HIGH_RISK) {
             return "{\"success\":false,\"needsConfirmation\":true,\"confirmLevel\":\"high_risk\","

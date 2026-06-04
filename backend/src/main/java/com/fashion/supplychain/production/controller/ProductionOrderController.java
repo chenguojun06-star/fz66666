@@ -395,7 +395,7 @@ public class ProductionOrderController {
         return success ? Result.success("更新成功") : Result.fail("更新失败");
     }
 
-    private static final java.util.Set<String> BASIC_INFO_EDITABLE_FIELDS = java.util.Set.of("styleNo", "styleName", "skc", "color", "size", "sku", "orderLines");
+    private static final java.util.Set<String> BASIC_INFO_EDITABLE_FIELDS = java.util.Set.of("styleNo", "styleName", "skc", "color", "size", "sku", "orderLines", "skuAutoGenerate");
 
     private static final java.util.Map<String, String> FIELD_TO_COLUMN = java.util.Map.of(
             "styleNo", "style_no",
@@ -404,7 +404,8 @@ public class ProductionOrderController {
             "color", "color",
             "size", "size",
             "sku", "sku",
-            "orderLines", "order_details"
+            "orderLines", "order_details",
+            "skuAutoGenerate", "sku_auto_generate"
     );
 
     private static final java.util.List<String[]> STYLE_NO_DOWNSTREAM_TABLES = java.util.List.of(
@@ -501,6 +502,7 @@ public class ProductionOrderController {
             case "size" -> order.getSize();
             case "sku" -> order.getSku();
             case "orderLines" -> order.getOrderDetails();
+            case "skuAutoGenerate" -> order.getSkuAutoGenerate() != null ? order.getSkuAutoGenerate().toString() : null;
             default -> null;
         };
     }
@@ -514,6 +516,7 @@ public class ProductionOrderController {
             case "size" -> order.setSize(value);
             case "sku" -> order.setSku(value);
             case "orderLines" -> order.setOrderDetails(value);
+            case "skuAutoGenerate" -> order.setSkuAutoGenerate("true".equalsIgnoreCase(value) || "1".equals(value));
         }
     }
 
@@ -525,7 +528,8 @@ public class ProductionOrderController {
                 "color", "颜色",
                 "size", "尺码",
                 "sku", "SKU",
-                "orderLines", "颜色尺码明细"
+                "orderLines", "颜色尺码明细",
+                "skuAutoGenerate", "自动生成SKU"
         ).getOrDefault(field, field);
     }
 

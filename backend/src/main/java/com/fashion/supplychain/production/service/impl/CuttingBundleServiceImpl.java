@@ -293,7 +293,8 @@ public class CuttingBundleServiceImpl extends ServiceImpl<CuttingBundleMapper, C
             bundle.setBedSubNo(nextBedSubNo);
             bundle.setQrCode(buildQrCode(
                     StringUtils.hasText(order.getOrderNo()) ? order.getOrderNo() : order.getQrCode(),
-                    order.getStyleNo(), color, size, quantity, idx));
+                    order.getStyleNo(), color, size, quantity, idx,
+                    Boolean.TRUE.equals(order.getSkuAutoGenerate())));
             bundle.setStatus("created");
             bundle.setCreateTime(now);
             bundle.setUpdateTime(now);
@@ -513,16 +514,7 @@ public class CuttingBundleServiceImpl extends ServiceImpl<CuttingBundleMapper, C
      * 小程序 BundleCodeParser.parseByPosition 采用"从后往前固定偏移"方式解析。
      * 如需修改本方法的字段顺序，必须同步修改 parseByPosition。
      */
-    private String buildQrCode(String orderNo, String styleNo, String color, String size, int quantity, int bundleNo) {
-        // ⚠️ 安全断言：颜色和尺码不能含 "-"，否则 QR 码按 "-" 分割后字段会错位
-        if (StringUtils.hasText(color) && color.contains("-")) {
-            log.warn("[BuildQrCode] 颜色名称含\"-\"将导致QR码解析错位，已自动替换: color={}", color);
-            color = color.replace("-", "");
-        }
-        if (StringUtils.hasText(size) && size.contains("-")) {
-            log.warn("[BuildQrCode] 尺码含\"-\"将导致QR码解析错位，已自动替换: size={}", size);
-            size = size.replace("-", "");
-        }
+    private String buildQrCode(String orderNo, String styleNo, String color, String size, int quantity, int bundleNo, boolean autoSku) {
         StringBuilder sb = new StringBuilder();
         if (StringUtils.hasText(orderNo)) {
             sb.append(orderNo);
@@ -547,7 +539,8 @@ public class CuttingBundleServiceImpl extends ServiceImpl<CuttingBundleMapper, C
         String c = StringUtils.hasText(color) ? color.trim() : null;
         String s = StringUtils.hasText(size) ? size.trim() : null;
         String skuNo = null;
-        if (StringUtils.hasText(on) && StringUtils.hasText(sn) && StringUtils.hasText(c) && StringUtils.hasText(s)) {
+        if (autoSku
+                && StringUtils.hasText(on) && StringUtils.hasText(sn) && StringUtils.hasText(c) && StringUtils.hasText(s)) {
             skuNo = "SKU-" + on + "-" + sn + "-" + c + "-" + s;
         }
         String content;

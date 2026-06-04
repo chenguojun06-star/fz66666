@@ -18,4 +18,18 @@ public class AiToolCall {
         private String name;
         private String arguments; // JSON string
     }
+
+    /**
+     * 便捷方法：获取工具名称
+     */
+    public String getFunctionName() {
+        return function != null ? function.getName() : null;
+    }
+
+    /**
+     * 便捷方法：获取参数
+     */
+    public String getArguments() {
+        return function != null ? function.getArguments() : null;
+    }
 }

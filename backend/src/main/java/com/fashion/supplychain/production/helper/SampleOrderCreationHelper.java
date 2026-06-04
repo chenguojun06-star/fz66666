@@ -210,8 +210,13 @@ public class SampleOrderCreationHelper {
         sb.append(bundleNo);
 
         String base = sb.toString();
-        String skuNo = "SKU-" + orderNo + "-" + styleNo + "-" + c + "-" + s;
-        String content = base + "|" + skuNo;
+        String content;
+        if (Boolean.TRUE.equals(order.getSkuAutoGenerate())) {
+            String skuNo = "SKU-" + orderNo + "-" + styleNo + "-" + c + "-" + s;
+            content = base + "|" + skuNo;
+        } else {
+            content = base;
+        }
 
         return qrCodeSigner.sign(content);
     }

@@ -378,7 +378,7 @@ public class CuttingBundleSplitTransferOrchestrator {
         target.setBundleLabel(source.getBundleNo() + "-" + String.format("%02d", splitSeq));
         target.setQuantity(quantity);
         target.setBedNo(source.getBedNo());
-        target.setQrCode(buildQrCode(source, quantity));
+        target.setQrCode(buildQrCode(source, quantity, isAutoSku(source.getProductionOrderId())));
         target.setStatus(transferChild ? "pending" : "completed");
         target.setSplitStatus("split_child");
         target.setSplitSeq(splitSeq);
@@ -843,15 +843,27 @@ public class CuttingBundleSplitTransferOrchestrator {
         }).collect(Collectors.toList());
     }
 
-    private String buildQrCode(CuttingBundle source, int quantity) {
+    private String buildQrCode(CuttingBundle source, int quantity, boolean autoSku) {
         String base = String.format("%s-%s-%s-%s-%d-%d",
                 trim(source.getProductionOrderNo()), trim(source.getStyleNo()), trim(source.getColor()), trim(source.getSize()),
                 Math.max(quantity, 0), source.getBundleNo() == null ? 0 : source.getBundleNo());
-        String sku = StringUtils.hasText(source.getProductionOrderNo()) && StringUtils.hasText(source.getStyleNo())
+        String sku = autoSku
+                && StringUtils.hasText(source.getProductionOrderNo()) && StringUtils.hasText(source.getStyleNo())
                 && StringUtils.hasText(source.getColor()) && StringUtils.hasText(source.getSize())
                 ? "SKU-" + trim(source.getProductionOrderNo()) + "-" + trim(source.getStyleNo()) + "-" + trim(source.getColor()) + "-" + trim(source.getSize())
                 : null;
         return qrCodeSigner.sign(StringUtils.hasText(sku) ? base + "|" + sku : base);
+    }
+
+    private boolean isAutoSku(String productionOrderId) {
+        if (!StringUtils.hasText(productionOrderId)) return false;
+        try {
+            ProductionOrder order = productionOrderService.getById(productionOrderId);
+            return order != null && Boolean.TRUE.equals(order.getSkuAutoGenerate());
+        } catch (Exception e) {
+            log.warn("[CuttingBundleSplitTransfer] 查询订单 SKU 自动生成开关失败，默认关闭: orderId={}, err={}", productionOrderId, e.getMessage());
+            return false;
+        }
     }
 
     private String resolveBundleLabel(CuttingBundle bundle) {
