@@ -154,9 +154,17 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
 
     const factoryId = (user as any)?.factoryId;
     const factoryName = (user as any)?.factoryName;
+
+    // 检测用户是否发送了图片URL，如果是则附加视觉提示
+    const imageUrlPattern = /^https?:\/\/\S+\.(jpg|jpeg|png|gif|webp|bmp)(\?.*)?$/i;
+    const isImageUrl = imageUrlPattern.test(text);
+    const visionHint = isImageUrl
+      ? '\n[系统提示：用户发送了一张图片URL，如果与服装相关，请主动调用视觉工具进行分析（款式识别/缺陷检测/色差检测/以图搜款）]'
+      : '';
+
     const contextualText = factoryId
-      ? `[工厂ID:${factoryId} 工厂名:${factoryName || ''}] ${text}`
-      : text;
+      ? `[工厂ID:${factoryId} 工厂名:${factoryName || ''}] ${text}${visionHint}`
+      : `${text}${visionHint}`;
 
     setMessages(prev => [...prev, { id: `u-${Date.now()}`, role: 'user', text }]);
     if (!manualText) setInputValue('');

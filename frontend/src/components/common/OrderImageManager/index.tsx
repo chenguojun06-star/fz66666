@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { App, Button, Spin, Empty, Tag, Image } from 'antd';
 import ResizableModal from '@/components/common/ResizableModal';
-import { HistoryOutlined, DeleteOutlined, LeftOutlined, RightOutlined } from '@ant-design/icons';
+import { HistoryOutlined, DeleteOutlined, LeftOutlined, RightOutlined, EyeOutlined } from '@ant-design/icons';
 import { orderImageApi } from '@/services/system/remarkApi';
 import type { OrderImage, OrderImageSnapshot } from '@/services/system/remarkApi';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import MultiImageUploadBox from '@/components/common/MultiImageUploadBox';
+import { visualAnalyze } from '@/services/intelligence/intelligenceApi';
 
 interface OrderImageManagerProps {
   orderNo: string;
@@ -24,6 +25,8 @@ const OrderImageManager: React.FC<OrderImageManagerProps> = ({ orderNo, editable
   const [snapshots, setSnapshots] = useState<OrderImageSnapshot[]>([]);
   const [currentIdx, setCurrentIdx] = useState(0);
   const [hovering, setHovering] = useState(false);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [analysisResult, setAnalysisResult] = useState<any>(null);
 
   const allImageUrls = React.useMemo(() => {
     const urls: { url: string; id?: number; isCover?: boolean; isStyle?: boolean }[] = [];
@@ -254,20 +257,48 @@ const OrderImageManager: React.FC<OrderImageManagerProps> = ({ orderNo, editable
             </div>
 
             {editable && currentOrderImg && (
-              <Button
-                type="text"
-                size="small"
-                danger
-                icon={<DeleteOutlined />}
-                style={{
-                  position: 'absolute', top: 4, right: 4, minWidth: 22, padding: 0,
-                  background: 'rgba(255,255,255,0.85)', borderRadius: 4,
-                  opacity: hovering ? 1 : 0,
-                  transition: 'opacity 0.2s ease',
-                  zIndex: 2,
-                }}
-                onClick={() => handleDelete(currentOrderImg.id)}
-              />
+              <div style={{
+                position: 'absolute', top: 4, right: 4, display: 'flex', gap: 4,
+                opacity: hovering ? 1 : 0, transition: 'opacity 0.2s ease', zIndex: 2,
+              }}>
+                <Button
+                  type="text"
+                  size="small"
+                  icon={<EyeOutlined />}
+                  loading={analyzing}
+                  style={{
+                    minWidth: 22, padding: 0,
+                    background: 'rgba(255,255,255,0.85)', borderRadius: 4,
+                  }}
+                  title="AI视觉分析"
+                  onClick={async () => {
+                    if (analyzing || !currentImg?.url) return;
+                    setAnalyzing(true);
+                    try {
+                      const res = await visualAnalyze({
+                        imageUrl: currentImg.url,
+                        taskType: 'STYLE_IDENTIFY',
+                      });
+                      setAnalysisResult(res);
+                    } catch {
+                      message.warning('AI分析暂不可用');
+                    } finally {
+                      setAnalyzing(false);
+                    }
+                  }}
+                />
+                <Button
+                  type="text"
+                  size="small"
+                  danger
+                  icon={<DeleteOutlined />}
+                  style={{
+                    minWidth: 22, padding: 0,
+                    background: 'rgba(255,255,255,0.85)', borderRadius: 4,
+                  }}
+                  onClick={() => handleDelete(currentOrderImg.id)}
+                />
+              </div>
             )}
 
             {currentImg?.isCover && (
@@ -349,6 +380,40 @@ const OrderImageManager: React.FC<OrderImageManagerProps> = ({ orderNo, editable
                 </div>
               );
             })}
+          </div>
+        )}
+      </ResizableModal>
+
+      {/* AI视觉分析结果弹窗 */}
+      <ResizableModal
+        title="AI视觉分析"
+        open={!!analysisResult}
+        onCancel={() => setAnalysisResult(null)}
+        footer={null}
+        width="40vw"
+      >
+        {analysisResult && (
+          <div>
+            {analysisResult.report && (
+              <div style={{ marginBottom: 12 }}>
+                <div style={{ fontWeight: 600, marginBottom: 4 }}>分析结果</div>
+                <div style={{ whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>{analysisResult.report}</div>
+              </div>
+            )}
+            {analysisResult.recommendation && (
+              <div style={{ padding: 10, background: 'var(--color-bg-container)', borderRadius: 6, border: '1px solid var(--color-border-light)' }}>
+                <span style={{ fontWeight: 600 }}>建议：</span>
+                {analysisResult.recommendation}
+              </div>
+            )}
+            {analysisResult.severity && analysisResult.severity !== 'NONE' && (
+              <div style={{ marginTop: 8 }}>
+                <Tag color={analysisResult.severity === 'HIGH' || analysisResult.severity === 'CRITICAL' ? 'red' : analysisResult.severity === 'MEDIUM' ? 'orange' : 'blue'}>
+                  严重程度：{analysisResult.severity}
+                </Tag>
+                {analysisResult.confidence != null && <Tag>置信度：{analysisResult.confidence}%</Tag>}
+              </div>
+            )}
           </div>
         )}
       </ResizableModal>
