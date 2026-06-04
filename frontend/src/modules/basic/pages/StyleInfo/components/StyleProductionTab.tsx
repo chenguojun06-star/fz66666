@@ -423,7 +423,7 @@ const StyleProductionTab: React.FC<Props> = ({
         open={ocrModalOpen}
         onCancel={() => setOcrModalOpen(false)}
         footer={null}
-        width="30vw"
+        width="60vw"
       >
         <input
           ref={ocrFileInputRef}
@@ -505,7 +505,7 @@ const StyleProductionTab: React.FC<Props> = ({
             <Input.TextArea
               value={ocrText}
               readOnly
-              autoSize={{ minRows: 6 }}
+              autoSize={{ minRows: 12 }}
               style={{ marginTop: 12, fontFamily: "'PingFang SC', 'Microsoft YaHei', monospace", fontSize: 14, lineHeight: '1.8', padding: '12px 14px', borderRadius: 6 }}
             />
             <Space style={{ marginTop: 8, display: 'flex', justifyContent: 'flex-end' }}>

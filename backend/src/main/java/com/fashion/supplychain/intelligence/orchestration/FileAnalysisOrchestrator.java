@@ -1,5 +1,8 @@
 package com.fashion.supplychain.intelligence.orchestration;
 
+import com.fashion.supplychain.common.CosService;
+import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.intelligence.service.QdrantService;
 import com.fashion.supplychain.intelligence.service.VisionAnalysisService;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
@@ -32,6 +35,12 @@ public class FileAnalysisOrchestrator {
 
     @Autowired
     private VisionAnalysisService visionAnalysisService;
+
+    @Autowired
+    private QdrantService qdrantService;
+
+    @Autowired
+    private CosService cosService;
 
     /** 分析上传文件，返回 Markdown 格式内容供注入到 AI 对话上下文 */
     public String analyzeFile(MultipartFile file) {
@@ -162,10 +171,90 @@ public class FileAnalysisOrchestrator {
             if (result.getRecommendation() != null && !result.getRecommendation().isBlank()) {
                 sb.append("\n\n建议：").append(result.getRecommendation());
             }
+
+            // 以图搜款：如果是服装相关图片，自动搜索相似款式
+            String styleSearchResult = searchSimilarStyles(file, filename);
+            if (styleSearchResult != null) {
+                sb.append("\n\n").append(styleSearchResult);
+            }
+
             return sb.toString();
         } catch (Exception e) {
             log.warn("[FileAnalysis] 图片视觉分析失败 fileName={}: {}", filename, e.getMessage());
             return "【收到图片文件：" + filename + "】\n（图片分析暂时不可用，请用文字描述图片内容）";
+        }
+    }
+
+    /**
+     * 以图搜款：将图片上传到COS获取公网URL，生成多模态向量，搜索相似款式。
+     * 返回格式化的相似款式信息，或null（搜索不可用/失败时）。
+     */
+    private String searchSimilarStyles(MultipartFile file, String filename) {
+        Long tenantId = UserContext.tenantId();
+        if (tenantId == null) {
+            log.debug("[FileAnalysis] 以图搜款跳过：租户信息缺失");
+            return null;
+        }
+        try {
+            // 1. 上传到COS获取公网URL（向量搜索需要公网可访问的URL）
+            String imageUrl = uploadToCosForSearch(file, filename);
+            if (imageUrl == null || imageUrl.isBlank()) {
+                log.debug("[FileAnalysis] 以图搜款跳过：图片上传COS失败");
+                return null;
+            }
+
+            // 2. 生成多模态向量
+            float[] embedding = qdrantService.computeMultimodalEmbedding(imageUrl);
+            if (embedding == null || embedding.length == 0) {
+                log.debug("[FileAnalysis] 以图搜款跳过：向量生成返回空");
+                return null;
+            }
+
+            // 3. 搜索相似款式
+            List<QdrantService.SimilarStyle> similar = qdrantService.searchSimilarStyleImages(embedding, 5, tenantId);
+            if (similar.isEmpty()) {
+                log.debug("[FileAnalysis] 以图搜款：未找到相似款式");
+                return "🔍 以图搜款：系统中暂未找到视觉相似的历史款式（可能向量库中还没有足够的款式图片数据）";
+            }
+
+            // 4. 格式化结果
+            StringBuilder sb = new StringBuilder();
+            sb.append("🔍 以图搜款结果（找到 ").append(similar.size()).append(" 个相似款式）：\n");
+            for (int i = 0; i < similar.size(); i++) {
+                QdrantService.SimilarStyle ss = similar.get(i);
+                sb.append(i + 1).append(". 款号：").append(ss.getStyleNo().isEmpty() ? "[无款号]" : ss.getStyleNo());
+                sb.append(" | 难度：").append(ss.getDifficultyScore()).append("/10（").append(ss.getDifficultyLevel()).append("）");
+                sb.append(" | 视觉相似度：").append(String.format("%.0f%%", ss.getSimilarity() * 100));
+                sb.append("\n");
+            }
+            sb.append("（相似度≥72%为高相似，可重点关注）");
+            log.info("[FileAnalysis] 以图搜款成功 匹配{}个款式", similar.size());
+            return sb.toString();
+        } catch (IllegalStateException e) {
+            // Voyage API Key 未配置
+            log.debug("[FileAnalysis] 以图搜款跳过：{}", e.getMessage());
+            return null;
+        } catch (Exception e) {
+            log.warn("[FileAnalysis] 以图搜款异常（不影响主流程）: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * 将图片上传到COS，返回公网可访问的URL，供向量搜索使用。
+     * 如果COS不可用则返回null（不影响主流程）。
+     */
+    private String uploadToCosForSearch(MultipartFile file, String filename) {
+        try {
+            if (cosService == null || !cosService.isEnabled()) return null;
+            Long tenantId = UserContext.tenantId();
+            if (tenantId == null) return null;
+            String cosKey = "ai-vision-search/" + System.currentTimeMillis() + "-" + filename;
+            cosService.upload(tenantId, cosKey, file);
+            return cosService.getPresignedUrl(tenantId, cosKey);
+        } catch (Exception e) {
+            log.debug("[FileAnalysis] COS上传跳过: {}", e.getMessage());
+            return null;
         }
     }
 }
