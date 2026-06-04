@@ -19,6 +19,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import java.util.Map;
+
 /**
  * AI 顾问端点 — 对话/流式/文件分析/信号/记忆/学习闭环/预测/沙盘
  */
@@ -54,6 +56,9 @@ public class IntelligenceAiAdvisorController {
 
     @Autowired
     private com.fashion.supplychain.intelligence.orchestration.FileAnalysisOrchestrator fileAnalysisOrchestrator;
+
+    @Autowired
+    private com.fashion.supplychain.intelligence.service.QdrantService qdrantService;
 
     @Autowired
     private com.fashion.supplychain.intelligence.mapper.IntelligenceMetricsMapper intelligenceMetricsMapper;
@@ -255,6 +260,51 @@ public class IntelligenceAiAdvisorController {
     @DataTruth(source = DataTruth.Source.AI_DERIVED, description = "视觉AI分析由LLM生成")
     public Result<VisualAIResponse> visualAnalyze(@RequestBody VisualAIRequest req) {
         return Result.success(visualAIOrchestrator.analyze(req));
+    }
+
+    @PostMapping("/visual/style-search")
+    @DataTruth(source = DataTruth.Source.AI_DERIVED, description = "以图搜款由多模态向量搜索生成")
+    public Result<Map<String, Object>> styleSearchByImage(@RequestBody Map<String, Object> body) {
+        String imageUrl = (String) body.get("imageUrl");
+        Integer topK = body.get("topK") != null ? ((Number) body.get("topK")).intValue() : 5;
+        if (imageUrl == null || imageUrl.isBlank()) {
+            return Result.fail("imageUrl 不能为空");
+        }
+        return Result.success(visualStyleSearch(imageUrl, topK));
+    }
+
+    private Map<String, Object> visualStyleSearch(String imageUrl, int topK) {
+        Map<String, Object> result = new java.util.LinkedHashMap<>();
+        try {
+            Long tenantId = UserContext.tenantId();
+            if (tenantId == null) {
+                result.put("success", false);
+                result.put("error", "租户信息缺失");
+                return result;
+            }
+            float[] embedding = qdrantService.computeMultimodalEmbedding(imageUrl);
+            if (embedding == null || embedding.length == 0) {
+                result.put("success", false);
+                result.put("error", "向量生成失败");
+                return result;
+            }
+            java.util.List<com.fashion.supplychain.intelligence.service.QdrantService.SimilarStyle> similar =
+                    qdrantService.searchSimilarStyleImages(embedding, topK, tenantId);
+            result.put("success", true);
+            result.put("matchCount", similar.size());
+            result.put("matches", similar.stream().map(ss -> {
+                Map<String, Object> m = new java.util.LinkedHashMap<>();
+                m.put("styleNo", ss.getStyleNo());
+                m.put("difficultyLevel", ss.getDifficultyLevel());
+                m.put("difficultyScore", ss.getDifficultyScore());
+                m.put("similarity", String.format("%.0f%%", ss.getSimilarity() * 100));
+                return m;
+            }).toList());
+        } catch (Exception e) {
+            result.put("success", false);
+            result.put("error", e.getMessage());
+        }
+        return result;
     }
 
     @GetMapping("/benchmark/performance")

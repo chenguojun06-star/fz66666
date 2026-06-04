@@ -47,6 +47,11 @@ public class StyleCostDetailDTO {
     private String developmentTime;
 
     /**
+     * 开发时间（秒），用于前端计算平均时间
+     */
+    private Long developmentTimeSeconds;
+
+    /**
      * 面辅料费用
      */
     private BigDecimal materialCost;

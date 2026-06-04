@@ -60,17 +60,23 @@ public class ExpenseDocOrchestrator {
             return err;
         }
 
-        // 2. AI识别：从图片提取金额/日期/事由等
+        // 2. AI视觉识别：从图片提取金额/日期/事由等
         String aiRaw = null;
         try {
-            IntelligenceInferenceResult res = inferenceOrchestrator.chat(
-                    "expense-doc-recognize",
-                    buildSystemPrompt(),
-                    buildUserMessage(imageUrl)
-            );
-            if (res != null && res.isSuccess()) {
-                aiRaw = res.getContent();
-            } else {
+            if (inferenceOrchestrator.isVisionEnabled()) {
+                aiRaw = inferenceOrchestrator.chatWithVision(imageUrl, buildVisionPrompt());
+            }
+            if (aiRaw == null || aiRaw.isBlank()) {
+                IntelligenceInferenceResult res = inferenceOrchestrator.chat(
+                        "expense-doc-recognize",
+                        buildSystemPrompt(),
+                        buildUserMessage(imageUrl)
+                );
+                if (res != null && res.isSuccess()) {
+                    aiRaw = res.getContent();
+                }
+            }
+            if (aiRaw == null) {
                 log.warn("[ExpenseDocRecognize] AI识别失败或无响应, imageUrl={}", imageUrl);
             }
         } catch (Exception e) {
@@ -156,6 +162,10 @@ public class ExpenseDocOrchestrator {
 
     private String buildUserMessage(String imageUrl) {
         return "请识别以下报销凭证图片，图片URL: " + imageUrl + "，按要求格式返回JSON。";
+    }
+
+    private String buildVisionPrompt() {
+        return buildSystemPrompt() + "\n\n请直接分析图片内容，按要求格式返回JSON。";
     }
 
     // ─────────────────────────────────────────────────────────────────

@@ -5,6 +5,7 @@ import com.fashion.supplychain.intelligence.dto.VisualAIRequest;
 import com.fashion.supplychain.intelligence.dto.VisualAIResponse;
 import com.fashion.supplychain.intelligence.entity.VisualAiLog;
 import com.fashion.supplychain.intelligence.mapper.VisualAiLogMapper;
+import com.fashion.supplychain.intelligence.service.QdrantService;
 import com.fashion.supplychain.intelligence.service.VisionAnalysisService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,6 +38,9 @@ public class VisualAIOrchestrator {
 
     @Autowired
     private AiAgentTraceOrchestrator traceOrchestrator;
+
+    @Autowired
+    private QdrantService qdrantService;
 
     // ──────────────────────────────────────────────────────────────────
     // 公共入口
@@ -94,6 +98,17 @@ public class VisualAIOrchestrator {
 
         VisualAIResponse resp = parseResponse(llmRaw, taskType);
         resp.setTaskType(taskType);
+
+        // 以图搜款：款式识别任务完成后，自动搜索相似款式
+        if ("STYLE_IDENTIFY".equals(taskType) && req.getImageUrl() != null
+                && !req.getImageUrl().startsWith("data:")) {
+            String similarStyles = searchSimilarStyles(req.getImageUrl());
+            if (similarStyles != null) {
+                resp.setRecommendation(
+                        (resp.getRecommendation() != null ? resp.getRecommendation() + "\n\n" : "")
+                        + similarStyles);
+            }
+        }
 
         Long logId = persistLog(req, resp);
         resp.setLogId(logId);
@@ -237,5 +252,32 @@ public class VisualAIOrchestrator {
         r.setTaskType(req != null ? req.getTaskType() : "UNKNOWN");
         r.setDetectedItems(new ArrayList<>());
         return r;
+    }
+
+    /**
+     * 以图搜款：根据图片URL搜索视觉相似的历史款式
+     */
+    private String searchSimilarStyles(String imageUrl) {
+        Long tenantId = UserContext.tenantId();
+        if (tenantId == null) return null;
+        try {
+            float[] embedding = qdrantService.computeMultimodalEmbedding(imageUrl);
+            if (embedding == null || embedding.length == 0) return null;
+            List<QdrantService.SimilarStyle> similar = qdrantService.searchSimilarStyleImages(embedding, 3, tenantId);
+            if (similar.isEmpty()) return null;
+            StringBuilder sb = new StringBuilder();
+            sb.append("以图搜款匹配结果：\n");
+            for (int i = 0; i < similar.size(); i++) {
+                QdrantService.SimilarStyle ss = similar.get(i);
+                sb.append(i + 1).append(". 款号：").append(ss.getStyleNo().isEmpty() ? "[无款号]" : ss.getStyleNo());
+                sb.append(" | 难度：").append(ss.getDifficultyScore()).append("/10（").append(ss.getDifficultyLevel()).append("）");
+                sb.append(" | 相似度：").append(String.format("%.0f%%", ss.getSimilarity() * 100));
+                sb.append("\n");
+            }
+            return sb.toString();
+        } catch (Exception e) {
+            log.debug("[VisualAI] 以图搜款跳过: {}", e.getMessage());
+            return null;
+        }
     }
 }

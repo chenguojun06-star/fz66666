@@ -1,9 +1,10 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { App } from 'antd';
-import { DeleteOutlined, StarFilled, StarOutlined, LeftOutlined, RightOutlined } from '@ant-design/icons';
+import { App, Modal } from 'antd';
+import { DeleteOutlined, StarFilled, StarOutlined, LeftOutlined, RightOutlined, SearchOutlined } from '@ant-design/icons';
 import api, { type ApiResult, isApiSuccess, getApiMessage } from '@/utils/api';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { setStyleCoverOverride } from '@/components/StyleAssets';
+import { styleSearchByImage } from '@/services/intelligence/intelligenceApi';
 
 interface CoverImageUploadProps {
   styleId?: string | number;
@@ -37,6 +38,9 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
   const [previewHovered, setPreviewHovered] = useState(false);
   // 本地预览图片URL列表
   const [localPreviewUrls, setLocalPreviewUrls] = useState<string[]>([]);
+  // 以图搜款
+  const [searching, setSearching] = useState(false);
+  const [searchResult, setSearchResult] = useState<any>(null);
 
   // 生成本地预览URL
   useEffect(() => {
@@ -208,6 +212,41 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
             <div style={{ position: 'absolute', left: 10, top: 10, padding: '3px 8px', borderRadius: 999, background: currentAssetMeta.color, color: '#fff', fontSize: 14, fontWeight: 600 }}>
               {currentAssetMeta.label}
             </div>
+            {currentImage && !currentImage.isLocal && (
+              <div
+                onClick={async () => {
+                  if (searching) return;
+                  const imgUrl = getFullAuthedFileUrl(currentImage.fileUrl);
+                  if (!imgUrl || imgUrl.startsWith('blob:') || imgUrl.startsWith('data:')) {
+                    message.warning('当前图片不支持以图搜款（需要公网可访问的图片）');
+                    return;
+                  }
+                  setSearching(true);
+                  try {
+                    const res = await styleSearchByImage(imgUrl);
+                    if (res.success && res.matchCount > 0) {
+                      setSearchResult(res);
+                    } else {
+                      message.info(res.success ? '未找到视觉相似的历史款式' : (res.error || '以图搜款服务暂不可用'));
+                    }
+                  } catch {
+                    message.warning('以图搜款服务暂不可用');
+                  } finally {
+                    setSearching(false);
+                  }
+                }}
+                style={{
+                  position: 'absolute', right: 10, top: 10, padding: '3px 8px', borderRadius: 999,
+                  background: searching ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.45)', color: '#fff',
+                  fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4,
+                  transition: 'background 0.15s',
+                }}
+                title="以图搜款：搜索视觉相似的历史款式"
+              >
+                <SearchOutlined style={{ fontSize: 11 }} />
+                {searching ? '搜索中...' : '搜相似'}
+              </div>
+            )}
           </div>
         ) : coverUrl ? (
           // 无上传附件但有选品中心下板时的参考图（cover字段）
@@ -382,6 +421,47 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
           共 {displayImages.length} 张{isNewMode ? '（保存时上传）' : ''} · 在下方颜色/尺码表可上传图片
         </div>
       )}
+
+      {/* 以图搜款结果弹窗 */}
+      <Modal
+        title="以图搜款结果"
+        open={!!searchResult}
+        onCancel={() => setSearchResult(null)}
+        footer={null}
+        width={480}
+      >
+        {searchResult && (
+          <div>
+            <div style={{ marginBottom: 12, color: 'var(--color-text-secondary)' }}>
+              找到 {searchResult.matchCount} 个视觉相似款式
+            </div>
+            {searchResult.matches?.map((m: any, i: number) => (
+              <div key={i} style={{
+                padding: '8px 12px', marginBottom: 8, borderRadius: 6,
+                background: 'var(--color-bg-container)', border: '1px solid var(--color-border-antd)',
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              }}>
+                <div>
+                  <span style={{ fontWeight: 600, marginRight: 8 }}>{m.styleNo || '[无款号]'}</span>
+                  <span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>
+                    难度 {m.difficultyScore}/10（{m.difficultyLevel}）
+                  </span>
+                </div>
+                <span style={{
+                  padding: '2px 8px', borderRadius: 4, fontSize: 12, fontWeight: 600,
+                  background: parseInt(m.similarity) >= 72 ? 'var(--color-success-bg, #f6ffed)' : 'var(--color-bg-container)',
+                  color: parseInt(m.similarity) >= 72 ? 'var(--color-success, #52c41a)' : 'var(--color-text-secondary)',
+                }}>
+                  相似度 {m.similarity}
+                </span>
+              </div>
+            ))}
+            <div style={{ fontSize: 12, color: 'var(--color-text-quaternary)', marginTop: 8 }}>
+              相似度≥72%为高相似，可重点关注
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 };

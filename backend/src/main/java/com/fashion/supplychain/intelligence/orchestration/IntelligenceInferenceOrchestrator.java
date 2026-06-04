@@ -189,7 +189,7 @@ public class IntelligenceInferenceOrchestrator {
         return hasText(agnesApiKey);
     }
 
-    public String chatWithDoubaoVision(String imageUrl, String textPrompt) {
+    public String chatWithVision(String imageUrl, String textPrompt) {
         if (!hasText(agnesApiKey) || !hasText(imageUrl)) {
             log.warn("[AgnesVision] 缺少必要参数：apiKey 或 imageUrl 为空");
             return null;

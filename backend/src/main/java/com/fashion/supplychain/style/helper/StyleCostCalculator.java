@@ -146,15 +146,16 @@ public class StyleCostCalculator {
             totalOtherCost += secondaryCost * sampleQty;
 
             // 开发时间
+            long devSeconds = 0L;
             if (style.getCreateTime() != null && style.getSampleCompletedTime() != null) {
-                totalDevelopmentSeconds += Duration.between(style.getCreateTime(), style.getSampleCompletedTime()).getSeconds();
+                devSeconds = Duration.between(style.getCreateTime(), style.getSampleCompletedTime()).getSeconds();
+                totalDevelopmentSeconds += devSeconds;
             }
 
             String developmentTime = "";
-            if (style.getCreateTime() != null && style.getSampleCompletedTime() != null) {
-                long secs = Duration.between(style.getCreateTime(), style.getSampleCompletedTime()).getSeconds();
-                long days = secs / 86400;
-                long hours = (secs % 86400) / 3600;
+            if (devSeconds > 0) {
+                long days = devSeconds / 86400;
+                long hours = (devSeconds % 86400) / 3600;
                 if (days > 0) developmentTime = days + "天" + hours + "小时";
                 else developmentTime = hours + "小时";
             }
@@ -166,6 +167,7 @@ public class StyleCostCalculator {
                     .styleImage(style.getCover())
                     .patternCount(sampleQty)
                     .developmentTime(developmentTime)
+                    .developmentTimeSeconds(devSeconds > 0 ? devSeconds : null)
                     .materialCost(BigDecimal.valueOf(materialCost * sampleQty).setScale(2, RoundingMode.HALF_UP))
                     .processCost(BigDecimal.valueOf(processCost * sampleQty).setScale(2, RoundingMode.HALF_UP))
                     .secondaryProcessCost(BigDecimal.valueOf(secondaryCost * sampleQty).setScale(2, RoundingMode.HALF_UP))

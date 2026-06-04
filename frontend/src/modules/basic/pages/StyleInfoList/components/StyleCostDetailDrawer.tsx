@@ -190,6 +190,12 @@ const StyleCostDetailDrawer: React.FC<StyleCostDetailDrawerProps> = ({
     totalCost: styleDetails.reduce((sum, item) => sum + (item.totalCost || 0), 0),
   };
 
+  // 计算平均开发时间
+  const stylesWithTime = styleDetails.filter(item => item.developmentTimeSeconds && item.developmentTimeSeconds > 0);
+  const avgDevSeconds = stylesWithTime.length > 0
+    ? Math.round(stylesWithTime.reduce((sum, item) => sum + (item.developmentTimeSeconds || 0), 0) / stylesWithTime.length)
+    : 0;
+
   return (
     <Drawer
       title={
@@ -264,12 +270,15 @@ const StyleCostDetailDrawer: React.FC<StyleCostDetailDrawerProps> = ({
             <div style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>样衣数量</div>
             <div style={{ color: 'var(--color-text-primary)', fontSize: 20, fontWeight: 700 }}>{summaryData.patternCount} 件</div>
           </div>
-          {stats?.totalDevelopmentTimeSeconds && stats.totalDevelopmentTimeSeconds > 0 && (
+          {avgDevSeconds > 0 && (
             <div>
-              <div style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>开发周期</div>
+              <div style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>平均开发时间</div>
               <div style={{ color: 'var(--color-text-primary)', fontSize: 18, fontWeight: 700 }}>
                 <ClockCircleOutlined style={{ marginRight: 4 }} />
-                {formatDuration(stats.totalDevelopmentTimeSeconds)}
+                {formatDuration(avgDevSeconds)}
+                <span style={{ fontSize: 12, color: 'var(--color-text-quaternary)', marginLeft: 4 }}>
+                  ({stylesWithTime.length}款)
+                </span>
               </div>
             </div>
           )}

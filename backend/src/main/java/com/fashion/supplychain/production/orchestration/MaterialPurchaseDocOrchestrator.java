@@ -83,7 +83,7 @@ public class MaterialPurchaseDocOrchestrator {
                                 ? "\n（对应订单号：" + orderNo + "）"
                                 : "")
                         + "\n请识别图片中的采购单内容，按格式返回JSON。";
-                String visionResult = inferenceOrchestrator.chatWithDoubaoVision(imageUrl, visionPrompt);
+                String visionResult = inferenceOrchestrator.chatWithVision(imageUrl, visionPrompt);
                 aiRaw = visionResult != null ? visionResult : "";
                 log.info("[PurchaseDocRecognize] Vision识别完成, 结果长度={}", aiRaw.length());
             } else {

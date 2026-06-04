@@ -14,7 +14,7 @@ import java.util.UUID;
 
 /**
  * 工艺单图片AI识别编排器
- * 上传图片到COS → 调用豆包视觉模型识别文字 → 返回生产要求文本
+ * 上传图片到COS → 调用Agnes视觉模型识别文字 → 返回生产要求文本
  */
 @Service
 @Slf4j
@@ -33,7 +33,7 @@ public class StyleDocOcrOrchestrator {
         Long tenantId = UserContext.tenantId();
 
         if (!inferenceOrchestrator.isVisionEnabled()) {
-            throw new IllegalStateException("AI视觉识别未启用，请联系管理员配置豆包视觉模型");
+            throw new IllegalStateException("AI视觉识别未启用，请联系管理员配置Agnes视觉模型");
         }
 
         String imageUrl = uploadFileToCos(tenantId, file);
@@ -52,7 +52,7 @@ public class StyleDocOcrOrchestrator {
                     "请将识别内容按原始格式输出，每项要求单独一行。\n" +
                     "直接输出纯文本，不要输出JSON，不要添加额外解释。";
 
-            String rawText = inferenceOrchestrator.chatWithDoubaoVision(imageUrl, prompt);
+            String rawText = inferenceOrchestrator.chatWithVision(imageUrl, prompt);
             if (rawText == null) rawText = "";
             log.info("[StyleDocOcr] 工艺单识别完成 tenantId={} 字符数={}", tenantId, rawText.length());
 
@@ -68,7 +68,7 @@ public class StyleDocOcrOrchestrator {
 
     private String uploadFileToCos(Long tenantId, MultipartFile file) {
         try {
-            // 本地开发模式（COS未配置）：直接转base64 data URI，让豆包Vision直接读取
+            // 本地开发模式（COS未配置）：直接转base64 data URI，让Agnes Vision直接读取
             if (!cosService.isEnabled()) {
                 byte[] bytes = file.getBytes();
                 if (bytes.length > 8 * 1024 * 1024) {

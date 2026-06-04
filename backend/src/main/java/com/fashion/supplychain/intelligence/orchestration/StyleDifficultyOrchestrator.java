@@ -144,7 +144,7 @@ public class StyleDifficultyOrchestrator {
                     "重要：西装/大衣/外套类即使看起来简约，其领型对合、里布挂面、肩部结构、口袋嵌线等工艺本身就有较高制作难度，不要误判为简单。\n" +
                     "严格 200 字以内，只讲工艺，不讲颜色/风格/搭配。\n" +
                     "仅当确实是无结构的基础内衣/背心/纯色T恤时才写「简单基础款，无特殊难度因素」。";
-            String raw = inferenceOrchestrator.chatWithDoubaoVision(imageUrl, visionPrompt);
+            String raw = inferenceOrchestrator.chatWithVision(imageUrl, visionPrompt);
             if (raw != null && !raw.isBlank()) {
                 String desc = raw.length() > 400 ? raw.substring(0, 400) : raw;
                 log.info("[StyleDifficulty] Agnes视觉分析成功，描述长度={}", desc.length());

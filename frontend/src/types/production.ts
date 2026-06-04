@@ -611,6 +611,7 @@ export interface StyleCostDetail {
   styleImage?: string;
   patternCount: number;
   developmentTime?: string;
+  developmentTimeSeconds?: number;
   materialCost: number;
   processCost: number;
   secondaryProcessCost: number;

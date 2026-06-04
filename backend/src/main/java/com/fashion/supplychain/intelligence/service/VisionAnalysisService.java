@@ -63,7 +63,7 @@ public class VisionAnalysisService {
 
         String rawResponse;
         try {
-            rawResponse = inferenceOrchestrator.chatWithDoubaoVision(imageUrl, textPrompt);
+            rawResponse = inferenceOrchestrator.chatWithVision(imageUrl, textPrompt);
         } catch (Exception e) {
             log.warn("[VisionAnalysis] 视觉模型调用异常 taskType={}: {}", taskType, e.getMessage());
             return VisionResult.error("视觉模型调用失败: " + e.getMessage());

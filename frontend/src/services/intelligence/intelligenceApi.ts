@@ -833,6 +833,11 @@ export const intelligenceApi = {
     return response.data as unknown as VisualAIResponse;
   },
 
+  styleSearchByImage: async (imageUrl: string, topK = 5): Promise<{ success: boolean; matchCount: number; matches: Array<{ styleNo: string; difficultyLevel: string; difficultyScore: number; similarity: string }>; error?: string }> => {
+    const response = await api.post<ApiResult<any>>('/intelligence/visual/style-search', { imageUrl, topK });
+    return (response as any)?.data ?? { success: false, matchCount: 0, matches: [] };
+  },
+
   // ── 巡检 ──
 
   getPatrolActionsByTarget: async (targetType: string, targetId: string, limit = 10): Promise<PatrolAction[]> => {
@@ -882,6 +887,7 @@ export const getPatrolActionsByTarget = intelligenceApi.getPatrolActionsByTarget
 export const getPatrolSummary = intelligenceApi.getPatrolSummary;
 export const getGraphAbStats = intelligenceApi.getGraphAbStats;
 export const visualAnalyze = intelligenceApi.visualAnalyze;
+export const styleSearchByImage = intelligenceApi.styleSearchByImage;
 export const runMultiAgentGraph = intelligenceApi.runMultiAgentGraph;
 export const getGraphHistory = intelligenceApi.getGraphHistory;
 export const submitGraphFeedback = intelligenceApi.submitGraphFeedback;
