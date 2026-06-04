@@ -260,6 +260,7 @@ public class TenantInterceptor implements InnerInterceptor {
         int groupByIdx = findFirstAtDepthZero(sql, " GROUP BY ");
         int havingIdx = findFirstAtDepthZero(sql, " HAVING ");
         int limitIdx = findFirstAtDepthZero(sql, " LIMIT ");
+        int forUpdateIdx = findFirstAtDepthZero(sql, " FOR UPDATE");
 
         // 找到最外层最早出现的结束关键字位置
         int insertPos = sql.length(); // 默认插入到末尾
@@ -267,6 +268,7 @@ public class TenantInterceptor implements InnerInterceptor {
         if (groupByIdx > 0) insertPos = Math.min(insertPos, groupByIdx);
         if (havingIdx > 0) insertPos = Math.min(insertPos, havingIdx);
         if (limitIdx > 0) insertPos = Math.min(insertPos, limitIdx);
+        if (forUpdateIdx > 0) insertPos = Math.min(insertPos, forUpdateIdx);
 
         int whereIdx = findLastAtDepthZero(sql, " WHERE ");
         if (whereIdx >= 0 && whereIdx < insertPos) {
@@ -334,12 +336,14 @@ public class TenantInterceptor implements InnerInterceptor {
         int groupByIdx = findFirstAtDepthZero(sql, " GROUP BY ");
         int havingIdx  = findFirstAtDepthZero(sql, " HAVING ");
         int limitIdx   = findFirstAtDepthZero(sql, " LIMIT ");
+        int forUpdateIdx = findFirstAtDepthZero(sql, " FOR UPDATE");
 
         int insertPos = sql.length();
         if (orderByIdx > 0) insertPos = Math.min(insertPos, orderByIdx);
         if (groupByIdx > 0) insertPos = Math.min(insertPos, groupByIdx);
         if (havingIdx  > 0) insertPos = Math.min(insertPos, havingIdx);
         if (limitIdx   > 0) insertPos = Math.min(insertPos, limitIdx);
+        if (forUpdateIdx > 0) insertPos = Math.min(insertPos, forUpdateIdx);
 
         int whereIdx = findLastAtDepthZero(sql, " WHERE ");
         if (whereIdx >= 0 && whereIdx < insertPos) {
