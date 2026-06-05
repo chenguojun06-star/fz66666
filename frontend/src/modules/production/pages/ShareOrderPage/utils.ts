@@ -10,7 +10,7 @@ export const getRiskTone = (riskLevel?: 'LOW' | 'MEDIUM' | 'HIGH') => {
 export const getStageTone = (status: StageStatus) => {
   if (status === 'DONE') return { color: '#10b981', tagColor: 'success', label: '已完成', helper: '该节点已完成' as const, shadow: 'rgba(16,185,129,0.16)' };
   if (status === 'ACTIVE') return { color: '#3b82f6', tagColor: 'processing', label: '进行中', helper: '该节点正在推进' as const, shadow: 'rgba(59,130,246,0.16)' };
-  return { color: '#94a3b8', tagColor: 'default', label: '待开始', helper: '该节点尚未开始' as const, shadow: 'rgba(148,163,184,0.12)' };
+  return { color: 'var(--color-text-tertiary)', tagColor: 'default', label: '待开始', helper: '该节点尚未开始' as const, shadow: 'rgba(148,163,184,0.12)' };
 };
 
 export const isCurrentStage = (stageName: string, currentStage?: string, latestStage?: string) => {

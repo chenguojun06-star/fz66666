@@ -145,7 +145,7 @@ const ExpenseReimbursementPage: React.FC = () => {
             <Col><Select value={viewMode} onChange={(v) => { setViewMode(v); setPage(1); }} style={{ width: 130 }} options={[{ value: 'my', label: '我的报销' }, { value: 'all', label: '全部报销（审批）' }]} /></Col>
             <Col><Select value={filterStatus} onChange={(v) => { setFilterStatus(v); setPage(1); }} allowClear placeholder="状态筛选" style={{ width: 120 }} options={EXPENSE_STATUS} /></Col>
             <Col><Select value={filterType} onChange={(v) => { setFilterType(v); setPage(1); }} allowClear placeholder="费用类型" style={{ width: 130 }} options={EXPENSE_TYPES} /></Col>
-            <Col><Input value={keyword} onChange={(e) => setKeyword(e.target.value)} onPressEnter={() => { setPage(1); fetchList(); }} placeholder="搜索事由" style={{ width: 160 }} suffix={<SearchOutlined style={{ color: '#bbb' }} />} /></Col>
+            <Col><Input value={keyword} onChange={(e) => setKeyword(e.target.value)} onPressEnter={() => { setPage(1); fetchList(); }} placeholder="搜索事由" style={{ width: 160 }} suffix={<SearchOutlined style={{ color: 'var(--color-text-quaternary)' }} />} /></Col>
             <Col flex="auto" style={{ textAlign: 'right' }}><Button type="primary" icon={<PlusOutlined />} onClick={() => openForm()}>新建报销</Button></Col>
           </Row>
         </Card>

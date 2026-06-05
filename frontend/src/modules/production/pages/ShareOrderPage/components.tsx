@@ -14,7 +14,7 @@ export const MetricCard: React.FC<InfoItemProps> = ({ icon, label, value, highli
   <div style={S.metricCardStyle}>
     <span style={{ color: highlightColor || '#3b82f6', marginRight: 6 }}>{icon}</span>
     <div>
-      <div style={{ fontSize: 14, color: '#94a3b8' }}>{label}</div>
+      <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>{label}</div>
       <div style={{ fontSize: 14, fontWeight: 700, color: highlightColor || '#0f172a' }}>{value}</div>
     </div>
   </div>
@@ -22,14 +22,14 @@ export const MetricCard: React.FC<InfoItemProps> = ({ icon, label, value, highli
 
 export const AiItem: React.FC<{ label: string; value: string }> = ({ label, value }) => (
   <div style={S.aiItemStyle}>
-    <div style={{ fontSize: 14, color: '#64748b', marginBottom: 6 }}>{label}</div>
+    <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginBottom: 6 }}>{label}</div>
     <div style={{ fontSize: 14, fontWeight: 600, color: '#0f172a', lineHeight: 1.7 }}>{value}</div>
   </div>
 );
 
 export const FocusItem: React.FC<{ label: string; value: string }> = ({ label, value }) => (
   <div style={S.focusItemStyle}>
-    <div style={{ fontSize: 14, color: '#94a3b8' }}>{label}</div>
+    <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>{label}</div>
     <div style={{ fontSize: 14, fontWeight: 600, color: '#0f172a', textAlign: 'right' }}>{value}</div>
   </div>
 );

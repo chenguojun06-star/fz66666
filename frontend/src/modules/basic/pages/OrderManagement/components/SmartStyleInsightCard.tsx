@@ -195,7 +195,7 @@ const SmartStyleInsightCard: React.FC<Props> = ({ styleNo, factoryName, capacity
     return (
       <div style={{
         background: 'var(--color-bg-container)', borderRadius: 8, padding: '10px 14px',
-        fontSize: 14, color: '#bbb', display: 'flex', alignItems: 'center', gap: 8,
+        fontSize: 14, color: 'var(--color-text-quaternary)', display: 'flex', alignItems: 'center', gap: 8,
       }}>
         <span></span>
         <span>该款暂无历史订单数据</span>

@@ -17,6 +17,12 @@ const DEFAULT_FLAGS: SmartFeatureFlags = {
   'smart.warehousing.audit.enabled': false,
   'smart.material.inventory.ai.enabled': false,
   'smart.material.purchase.ai.enabled': false,
+  'print.hangtag.defaultTemplateId': false,
+  'print.barcode.defaultTemplateId': false,
+  'print.washLabel.defaultTemplateId': false,
+  'print.codeType': false,
+  'outstock.allowPriceAdjust': false,
+  'outstock.priceAdjustRequireReason': false,
 };
 
 interface SmartFeatureState {

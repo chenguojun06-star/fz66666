@@ -296,7 +296,7 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
 
             {/* ── 快速批量录入：颜色+码数 → 生成明细行 ───────────────── */}
             <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 6, padding: '6px 0', marginBottom: 8, borderBottom: '1px dashed var(--color-border)' }}>
-              <span style={{ fontSize: 14, color: '#555', flexShrink: 0 }}>颜色</span>
+              <span style={{ fontSize: 14, color: 'var(--color-text-secondary)', flexShrink: 0 }}>颜色</span>
               {matrixColors.map((c) => (
                 <Tag
                   key={c}
@@ -315,7 +315,7 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
                 onPressEnter={addMatrixColor}
                 suffix={<PlusOutlined style={{ cursor: 'pointer', color: '#1677ff' }} onClick={addMatrixColor} />}
               />
-              <span style={{ fontSize: 14, color: '#555', flexShrink: 0, marginLeft: 8 }}>码数</span>
+              <span style={{ fontSize: 14, color: 'var(--color-text-secondary)', flexShrink: 0, marginLeft: 8 }}>码数</span>
               {matrixSizes.map((s) => (
                 <Tag
                   key={s}
@@ -669,7 +669,7 @@ const FactoryCapacityCard: React.FC<{ stat: FactoryCapacityItem }> = ({ stat }) 
           天可完工
         </span>
       ) : null}
-      {stat.activeWorkers <= 0 && stat.avgDailyOutput <= 0 ? <span style={{ color: '#bbb' }}>暂无产能数据（该车间近30天无扫码记录）</span> : null}
+      {stat.activeWorkers <= 0 && stat.avgDailyOutput <= 0 ? <span style={{ color: 'var(--color-text-quaternary)' }}>暂无产能数据（该车间近30天无扫码记录）</span> : null}
     </div>
   </div>
 );

@@ -1,10 +1,11 @@
 import { useMemo } from 'react';
-import { Button, Input, InputNumber, Select, Modal, Image } from 'antd';
-import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
+import { Button, Input, InputNumber, Select, Modal, Image, message as antMessage } from 'antd';
+import { CopyOutlined, DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import api, { toNumberSafe } from '@/utils/api';
 import { MatrixRow, DisplayRow, normalizeGradingZones } from './styleSizeTabUtils';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import RowActions from '@/components/common/RowActions';
+import ExcelPasteInput from '@/components/common/ExcelPasteInput';
 
 interface UseStyleSizeColumnsParams {
   editMode: boolean;
@@ -25,6 +26,8 @@ interface UseStyleSizeColumnsParams {
   handleDeletePart: (record: MatrixRow) => void;
   handleDeleteSize: (sizeName: string) => void;
   openGradingConfig: (record: MatrixRow) => void;
+  onPasteToRow: (rowKey: string, startSizeIndex: number, values: number[]) => void;
+  onDuplicateRow: (rowKey: string) => void;
 }
 
 export function useStyleSizeColumns({
@@ -46,6 +49,8 @@ export function useStyleSizeColumns({
   handleDeletePart,
   handleDeleteSize,
   openGradingConfig,
+  onPasteToRow,
+  onDuplicateRow,
 }: UseStyleSizeColumnsParams) {
   return useMemo(() => {
     const editableMode = editMode && !readOnly;
@@ -280,7 +285,7 @@ export function useStyleSizeColumns({
       },
     ];
 
-    const sizeCols = sizeColumns.map((sn) => ({
+    const sizeCols = sizeColumns.map((sn, sizeIndex) => ({
       title: (
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
           <span>{sn}</span>
@@ -308,13 +313,15 @@ export function useStyleSizeColumns({
       render: (_: any, record: MatrixRow) => {
         const v = record.cells[sn]?.value;
         return editableMode ? (
-          <InputNumber
+          <ExcelPasteInput
             value={v}
             min={0}
             step={0.1}
-            controls={false}
-            style={{ width: '100%' }}
             onChange={(val) => updateCellValue(record.key, sn, toNumberSafe(val))}
+            onPasteMultiValues={(values) => {
+              onPasteToRow(record.key, sizeIndex, values);
+              return true;
+            }}
           />
         ) : (
           v
@@ -342,13 +349,19 @@ export function useStyleSizeColumns({
       {
         title: '操作',
         key: 'operation',
-        width: 90,
+        width: 120,
         resizable: false,
         render: (_: any, record: MatrixRow) =>
           editableMode ? (
             <RowActions
-              maxInline={1}
+              maxInline={2}
               actions={[
+                {
+                  key: 'duplicate',
+                  label: '复制',
+                  title: '复制此行',
+                  onClick: () => onDuplicateRow(record.key),
+                },
                 {
                   key: 'delete',
                   label: '删除',

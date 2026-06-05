@@ -550,7 +550,7 @@ const PlatformConnectorTab: React.FC<{ active: boolean }> = ({ active }) => {
                         <div style={{ fontWeight: 600, marginBottom: 6, color: '#1677ff' }}>
                           📦 链路一：成品仓（有生产单）
                         </div>
-                        <div style={{ fontSize: 14, color: '#555', lineHeight: 1.8 }}>
+                        <div style={{ fontSize: 14, color: 'var(--color-text-secondary)', lineHeight: 1.8 }}>
                           订单 → SKU匹配款号 → <Tag color="blue" style={{ fontSize: 14 }}>关联生产单</Tag>
                           → 生产加工 → 完工入库 → 出库发货 → 物流回传
                         </div>
@@ -564,7 +564,7 @@ const PlatformConnectorTab: React.FC<{ active: boolean }> = ({ active }) => {
                         <div style={{ fontWeight: 600, marginBottom: 6, color: '#52c41a' }}>
                           🛒 链路二：电商仓（现货发货）
                         </div>
-                        <div style={{ fontSize: 14, color: '#555', lineHeight: 1.8 }}>
+                        <div style={{ fontSize: 14, color: 'var(--color-text-secondary)', lineHeight: 1.8 }}>
                           订单 → <Tag color="orange" style={{ fontSize: 14 }}>待拣货</Tag>
                           → 仓库拣货 → 复核包装 → 出库发货 → 物流回传
                         </div>

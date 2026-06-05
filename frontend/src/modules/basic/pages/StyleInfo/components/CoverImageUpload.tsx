@@ -158,12 +158,12 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
   };
 
   const resolveAssetMeta = (img: any, index: number) => {
-    if (!img) return { label: '', color: '#94a3b8' };
+    if (!img) return { label: '', color: 'var(--color-text-tertiary)' };
     if (String(img.fileUrl || '') === String(coverUrl || '')) {
       return { label: '主图', color: 'var(--color-warning)' };
     }
     if ((img as any).isCoverFallback) {
-      return { label: '参考图', color: '#64748b' };
+      return { label: '参考图', color: 'var(--color-text-tertiary)' };
     }
     if (String(img.bizType || '').startsWith('color_image::')) {
       return { label: '颜色图', color: '#2563eb' };
@@ -171,7 +171,7 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
     if (isNewMode && index === currentIndex) {
       return { label: '主图', color: 'var(--color-warning)' };
     }
-    return { label: '参考图', color: '#64748b' };
+    return { label: '参考图', color: 'var(--color-text-tertiary)' };
   };
 
   // 新建模式使用本地预览，否则使用服务器图片

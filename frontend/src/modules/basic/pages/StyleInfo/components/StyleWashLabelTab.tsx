@@ -346,13 +346,13 @@ const StyleWashLabelTab: React.FC<Props> = ({
           borderTop: '1px solid var(--color-border-light, #f0f0f0)',
         }}>
           <Space>
-            <span style={{ color: '#555', fontSize: 14 }}>预览纸张宽</span>
+            <span style={{ color: 'var(--color-text-secondary)', fontSize: 14 }}>预览纸张宽</span>
             <InputNumber
               min={20} max={200} value={previewW}
               onChange={v => setPreviewW(v ?? 30)}
               suffix="mm" style={{ width: 110 }}
             />
-            <span style={{ color: '#555', fontSize: 14 }}>高</span>
+            <span style={{ color: 'var(--color-text-secondary)', fontSize: 14 }}>高</span>
             <InputNumber
               min={30} max={400} value={previewH}
               onChange={v => setPreviewH(v ?? 80)}

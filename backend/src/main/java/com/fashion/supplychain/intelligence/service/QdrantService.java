@@ -566,16 +566,37 @@ public class QdrantService {
     // ──────────────────────────────────────────────────────────────
 
     /**
-     * 调用 Voyage AI 多模态 API，对款式封面图生成 1024 维语义向量。
-     * 用于款式图视觉相似搜索（以图搜图）和难度评估辅助。
+     * 对款式封面图生成语义向量，用于以图搜款和难度评估。
+     * 优先使用 Voyage 多模态 API（图片→向量），Voyage Key 未配置时
+     * 降级到 DeepSeek 文本 Embedding（用图片 URL 作为文本输入生成向量），
+     * 确保功能始终可用。
      */
     public float[] computeMultimodalEmbedding(String imageUrl) {
         if (imageUrl == null || imageUrl.isBlank()) {
             throw new IllegalArgumentException("imageUrl 不能为空");
         }
-        if (voyageApiKey == null || voyageApiKey.isEmpty()) {
-            throw new IllegalStateException("Voyage API Key 未配置，无法生成多模态向量");
+        // 优先：Voyage 多模态（图片→向量，质量最高）
+        if (voyageApiKey != null && !voyageApiKey.isEmpty()) {
+            return callVoyageMultimodalApi(imageUrl);
         }
+        // 降级：DeepSeek 文本 Embedding（用图片 URL 文本生成向量，维度一致可入同一集合）
+        if (deepseekApiKey != null && !deepseekApiKey.isEmpty()) {
+            log.info("[Qdrant] Voyage Key 未配置，降级使用 DeepSeek 文本 Embedding 生成款式向量");
+            try {
+                float[] vec = callEmbeddingApi(imageUrl);
+                log.debug("[Qdrant] DeepSeek 文本向量替代多模态成功 维度={}", vec.length);
+                return vec;
+            } catch (Exception e) {
+                log.warn("[Qdrant] DeepSeek Embedding 也失败，降级为伪向量: {}", e.getMessage());
+                return pseudoEmbedding(imageUrl);
+            }
+        }
+        // 最后兜底：伪向量（维度不同，不入 style_images 集合，但不会阻断主流程）
+        log.warn("[Qdrant] Voyage 和 DeepSeek Key 均未配置，使用伪向量（搜索质量极低，建议配置 API Key）");
+        return pseudoEmbedding(imageUrl);
+    }
+
+    private float[] callVoyageMultimodalApi(String imageUrl) {
         ObjectNode body = objectMapper.createObjectNode();
         body.put("model", "voyage-multimodal-3");
         ArrayNode inputs = body.putArray("inputs");

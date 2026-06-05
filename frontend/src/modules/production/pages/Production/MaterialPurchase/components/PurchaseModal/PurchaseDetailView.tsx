@@ -842,7 +842,7 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
                       align: 'right' as const,
                       render: (_: unknown, r: MaterialPurchaseType) => {
                         const stock = stockMap[String(r.id)];
-                        if (stock == null) return <span style={{ color: '#bbb' }}>-</span>;
+                        if (stock == null) return <span style={{ color: 'var(--color-text-quaternary)' }}>-</span>;
                         const hasStock = stock > 0;
                         return (
                           <span
@@ -1059,7 +1059,7 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
                     style={{ objectFit: 'cover', borderRadius: 4 }}
                     preview={{ mask: '预览' }}
                   />
-                  <div style={{ marginTop: 6, fontSize: 14, color: '#555' }}>
+                  <div style={{ marginTop: 6, fontSize: 14, color: 'var(--color-text-secondary)' }}>
                     <Tooltip title={doc.uploaderName}>
                       <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {doc.uploaderName || '未知'}
@@ -1108,7 +1108,7 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
           disabled={!currentPurchase?.id}
         />
         {invoiceUrls.length === 0 && !invoiceUploading && (
-          <div style={{ color: '#bbb', fontSize: 14, textAlign: 'center', padding: '4px 0 0' }}>
+          <div style={{ color: 'var(--color-text-quaternary)', fontSize: 14, textAlign: 'center', padding: '4px 0 0' }}>
             暂无发票/单据，支持拖拽、粘贴或点击上传
           </div>
         )}

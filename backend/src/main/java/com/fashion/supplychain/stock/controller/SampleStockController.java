@@ -84,4 +84,27 @@ public class SampleStockController {
         String size = params.get("size");
         return Result.success(sampleStockService.scanQuery(styleNo, color, size));
     }
+
+    /**
+     * 样衣转成品出库
+     */
+    @PostMapping("/transfer-to-outstock")
+    public Result<Map<String, Object>> transferToOutstock(@RequestBody Map<String, Object> params) {
+        String stockId = params.get("stockId") == null ? null : String.valueOf(params.get("stockId"));
+        Integer quantity = params.get("quantity") != null ? Integer.parseInt(String.valueOf(params.get("quantity"))) : null;
+        String customerName = (String) params.get("customerName");
+        String customerPhone = (String) params.get("customerPhone");
+        String shippingAddress = (String) params.get("shippingAddress");
+        String trackingNo = (String) params.get("trackingNo");
+        String expressCompany = (String) params.get("expressCompany");
+        String remark = (String) params.get("remark");
+
+        String outstockId = sampleStockService.transferToOutstock(
+                stockId, quantity, customerName, customerPhone,
+                shippingAddress, trackingNo, expressCompany, remark);
+
+        Map<String, Object> result = new java.util.HashMap<>();
+        result.put("outstockId", outstockId);
+        return Result.success(result);
+    }
 }

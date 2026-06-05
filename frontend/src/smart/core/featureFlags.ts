@@ -9,7 +9,13 @@ export type SmartFeatureKey =
   | 'smart.worker-profile.enabled'
   | 'smart.warehousing.audit.enabled'
   | 'smart.material.inventory.ai.enabled'
-  | 'smart.material.purchase.ai.enabled';
+  | 'smart.material.purchase.ai.enabled'
+  | 'print.hangtag.defaultTemplateId'
+  | 'print.barcode.defaultTemplateId'
+  | 'print.washLabel.defaultTemplateId'
+  | 'print.codeType'
+  | 'outstock.allowPriceAdjust'
+  | 'outstock.priceAdjustRequireReason';
 
 export type MiniprogramMenuKey =
   | 'miniprogram.menu.smartOps'
@@ -51,6 +57,12 @@ const defaultFlags: SmartFeatureFlags = {
   'smart.warehousing.audit.enabled': false,
   'smart.material.inventory.ai.enabled': false,
   'smart.material.purchase.ai.enabled': false,
+  'print.hangtag.defaultTemplateId': false,
+  'print.barcode.defaultTemplateId': false,
+  'print.washLabel.defaultTemplateId': false,
+  'print.codeType': false,
+  'outstock.allowPriceAdjust': false,
+  'outstock.priceAdjustRequireReason': false,
 };
 
 const storageKey = 'smart-feature-flags';

@@ -112,7 +112,7 @@ const SpecialistCards: React.FC<{ results?: Record<string, string> }> = ({ resul
           <div style={{ fontSize: 14, fontWeight: 600, color: '#a78bfa', marginBottom: 4 }}>
             {nameMap[key] ?? key}
           </div>
-          <div style={{ fontSize: 14, color: '#bbb', lineHeight: 1.55, whiteSpace: 'pre-wrap' }}>
+          <div style={{ fontSize: 14, color: 'var(--color-text-quaternary)', lineHeight: 1.55, whiteSpace: 'pre-wrap' }}>
             {(val?.length ?? 0) > 300 ? val.slice(0, 300) + '…' : val}
           </div>
         </div>

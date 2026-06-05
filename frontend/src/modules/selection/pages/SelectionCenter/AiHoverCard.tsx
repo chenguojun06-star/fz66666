@@ -35,7 +35,7 @@ const AiHoverCard: React.FC<{
           <div style={{ fontWeight: 600, marginBottom: 4 }}>
             审核意见{latestReview.reviewerName ? ` · ${latestReview.reviewerName}` : ''}
           </div>
-          <div style={{ color: '#555', lineHeight: 1.6 }}>{latestReview.comment}</div>
+          <div style={{ color: 'var(--color-text-secondary)', lineHeight: 1.6 }}>{latestReview.comment}</div>
         </div>
       )}
 
@@ -62,7 +62,7 @@ const AiHoverCard: React.FC<{
             style={{ marginBottom: 8 }}
           />
           {record.trendScoreReason && (
-            <Paragraph style={{ fontSize: 14, color: '#555', marginBottom: 8, lineHeight: 1.5 }}>
+            <Paragraph style={{ fontSize: 14, color: 'var(--color-text-secondary)', marginBottom: 8, lineHeight: 1.5 }}>
               {record.trendScoreReason.slice(0, 150)}{record.trendScoreReason.length > 150 ? '…' : ''}
             </Paragraph>
           )}

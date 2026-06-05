@@ -262,7 +262,7 @@ const WashLabelPage: React.FC = () => {
       ellipsis: true,
       render: (_: unknown, record: ProductionOrder) => {
         const cached = styleCache.current[record.styleId];
-        if (cached === undefined) return <span style={{ color: '#bbb' }}>--</span>;
+        if (cached === undefined) return <span style={{ color: 'var(--color-text-quaternary)' }}>--</span>;
         return cached.fabricComposition
           ? <Tooltip title={cached.fabricComposition}><span>{cached.fabricComposition}</span></Tooltip>
           : <span style={{ color: '#fa8c16' }}>未填写</span>;
@@ -279,7 +279,7 @@ const WashLabelPage: React.FC = () => {
       ellipsis: true,
       render: (_: unknown, record: ProductionOrder) => {
         const cached = styleCache.current[record.styleId];
-        if (cached === undefined) return <span style={{ color: '#bbb' }}>--</span>;
+        if (cached === undefined) return <span style={{ color: 'var(--color-text-quaternary)' }}>--</span>;
         return cached.washInstructions
           ? <Tooltip title={cached.washInstructions}><span>{cached.washInstructions}</span></Tooltip>
           : <span style={{ color: '#fa8c16' }}>未填写</span>;

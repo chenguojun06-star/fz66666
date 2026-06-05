@@ -97,7 +97,7 @@ const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({ open, record, v
       <div style={{ display: 'flex', gap: 0, height: 540 }}>
         <div style={{ width: '42%', background: '#f7f8fa', borderRight: '1px solid var(--color-border-light)', borderRadius: '6px 0 0 6px', padding: 12, height: '100%', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           {detailDocList.length === 0 ? (
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#bbb' }}>
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-quaternary)' }}>
               <PictureOutlined style={{ fontSize: 48, marginBottom: 12 }} />
               <div>暂无凭证图片</div>
             </div>

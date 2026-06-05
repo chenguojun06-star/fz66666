@@ -5,6 +5,12 @@ import dayjs from 'dayjs';
 import { ProductionOrder } from '@/types/production';
 import { computeStageBudgetHint, getStageConfig } from '@/utils/progressTimeBudget';
 import { computeStageTimeline, type StageTimelineItem } from '@/components/common/StageTimelineHint';
+import {
+  calculateActualDuration,
+  calculateWaitingDuration,
+  computeBudgetStatus,
+  formatBudgetHours,
+} from '@/utils/workingTimeCalculator';
 import api from '@/utils/api';
 
 interface BudgetDaysEditorProps {
@@ -15,6 +21,10 @@ interface BudgetDaysEditorProps {
   isCompletedOrClosed: boolean;
   isProcureNode?: boolean;
   onUpdated?: () => void;
+  /** 独立设定的预算工时（小时），优先于按比例计算 */
+  budgetHours?: number | null;
+  /** 保存预算工时的回调 */
+  onBudgetHoursChange?: (hours: number) => Promise<void>;
 }
 
 function formatGapDuration(ms: number): string {
@@ -42,6 +52,8 @@ const BudgetDaysEditor: React.FC<BudgetDaysEditorProps> = ({
   isCompletedOrClosed,
   isProcureNode = false,
   onUpdated,
+  budgetHours,
+  onBudgetHoursChange,
 }) => {
   const { modal } = App.useApp();
   const [editing, setEditing] = useState(false);
@@ -54,14 +66,14 @@ const BudgetDaysEditor: React.FC<BudgetDaysEditorProps> = ({
     stageEndTime: stageEndTime || undefined,
     isCompletedOrClosed,
     isProcureNode,
+    budgetHours,
   });
 
   const actualDaysText = (() => {
     if (!stageEndTime || !hint) return '';
-    const start = stageStartTime ? dayjs(stageStartTime) : (record.createTime ? dayjs(record.createTime as string) : null);
+    const start = stageStartTime || (record.createTime as string | null);
     if (!start) return '';
-    const actualDays = dayjs(stageEndTime).diff(start, 'day');
-    return `实际${actualDays}天`;
+    return `实际${calculateActualDuration(start, stageEndTime)}`;
   })();
 
   const gapInfo = useMemo(() => {
@@ -93,6 +105,53 @@ const BudgetDaysEditor: React.FC<BudgetDaysEditorProps> = ({
     if (isCompletedOrClosed || isStageCompleted) return;
     if (editing) return;
     setEditing(true);
+
+    // 如果提供了 budgetHours + onBudgetHoursChange，使用小时编辑模式
+    if (budgetHours != null && budgetHours > 0 && onBudgetHoursChange) {
+      let newBudgetHours = budgetHours;
+      modal.confirm({
+        title: `调整「${nodeName}」预算工时`,
+        width: 360,
+        okText: '确认',
+        cancelText: '取消',
+        destroyOnHidden: true,
+        content: (
+          <div style={{ marginTop: 12 }}>
+            <div style={{ marginBottom: 8, color: 'var(--color-text-secondary)', fontSize: 13 }}>
+              当前预算 {formatBudgetHours(budgetHours)}，调整后将保存到服务器
+            </div>
+            <Space.Compact style={{ width: '100%' }}>
+              <InputNumber
+                defaultValue={budgetHours}
+                min={1}
+                max={999}
+                style={{ width: '100%' }}
+                onChange={(v) => { newBudgetHours = v ?? budgetHours; }}
+              />
+              <span style={{
+                display: 'inline-flex', alignItems: 'center',
+                padding: '0 11px', fontSize: 14,
+                background: 'var(--color-bg-subtle)',
+                border: '1px solid var(--color-border)',
+                borderLeft: 0, borderRadius: '0 6px 6px 0',
+                whiteSpace: 'nowrap',
+              }}>小时</span>
+            </Space.Compact>
+          </div>
+        ),
+        onOk: async () => {
+          if (newBudgetHours === budgetHours) return;
+          try {
+            await onBudgetHoursChange(newBudgetHours);
+            window.dispatchEvent(new CustomEvent('progress-data-refresh'));
+            onUpdated?.();
+          } catch { /* ignore */ }
+        },
+        onCancel: () => { setEditing(false); },
+        afterClose: () => { setEditing(false); },
+      });
+      return;
+    }
 
     const currentBudgetDays = hint?.budgetDays ?? 1;
     const orderCreate = record.createTime ? dayjs(record.createTime as string) : dayjs();
@@ -152,14 +211,34 @@ const BudgetDaysEditor: React.FC<BudgetDaysEditorProps> = ({
       onCancel: () => { setEditing(false); },
       afterClose: () => { setEditing(false); },
     });
-  }, [record, nodeName, hint, isCompletedOrClosed, editing, onUpdated, modal]);
+  }, [record, nodeName, hint, isCompletedOrClosed, editing, onUpdated, modal, budgetHours, onBudgetHoursChange, isStageCompleted]);
 
-  if (!hint && !gapInfo) return null;
+  if (!hint && !gapInfo && budgetHours == null) return null;
 
-  const budgetText = hint
-    ? (actualDaysText ? `${hint.text} · ${actualDaysText}` : hint.text)
-    : null;
+  const budgetText = (() => {
+    if (budgetHours != null && budgetHours > 0) {
+      const budgetLabel = `预算${formatBudgetHours(budgetHours)}`;
+      const status = computeBudgetStatus(budgetHours, stageStartTime ?? null, stageEndTime ?? null);
+      const parts = [budgetLabel];
+      if (status.text) parts.push(status.text);
+      if (actualDaysText) parts.push(actualDaysText);
+      return parts.join(' · ');
+    }
+    if (hint) {
+      return actualDaysText ? `${hint.text} · ${actualDaysText}` : hint.text;
+    }
+    return null;
+  })();
   const isReadOnly = isCompletedOrClosed || isStageCompleted;
+
+  // 当使用 budgetHours 模式时，用科学计算的状态颜色
+  const budgetColor = (() => {
+    if (budgetHours != null && budgetHours > 0) {
+      const status = computeBudgetStatus(budgetHours, stageStartTime ?? null, stageEndTime ?? null);
+      return status.color || 'var(--color-text-quaternary, #bfbfbf)';
+    }
+    return hint?.color ?? 'var(--color-text-quaternary, #bfbfbf)';
+  })();
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 1, alignItems: 'center' }}>
@@ -179,11 +258,11 @@ const BudgetDaysEditor: React.FC<BudgetDaysEditorProps> = ({
         </Tooltip>
       )}
       {budgetText && (
-        <Tooltip title={isReadOnly ? budgetText : '点击调整预算天数'}>
+        <Tooltip title={isReadOnly ? budgetText : (budgetHours != null && onBudgetHoursChange ? '点击调整预算工时' : '点击调整预算天数')}>
           <div
             style={{
               fontSize: 10,
-              color: hint!.color,
+              color: budgetColor,
               fontWeight: 400,
               lineHeight: 1.2,
               textAlign: 'center',
@@ -191,7 +270,7 @@ const BudgetDaysEditor: React.FC<BudgetDaysEditorProps> = ({
               cursor: isReadOnly ? 'default' : 'pointer',
               ...(isReadOnly ? {} : {
                 borderBottom: '1px dashed',
-                borderColor: hint!.color,
+                borderColor: budgetColor,
               }),
             }}
             onClick={handleClick}

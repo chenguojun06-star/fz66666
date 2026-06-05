@@ -34,11 +34,14 @@ export function computeStageBudgetHint(params: {
   stageEndTime: string | null | undefined;
   isCompletedOrClosed: boolean;
   isProcureNode: boolean;
+  /** 独立设定的预算工时（小时），优先于按比例计算 */
+  budgetHours?: number | null;
 }): StageBudgetHint | null {
   const {
     nodeName, orderCreateTime, expectedShipDate,
     stageStartTime, stageEndTime,
     isCompletedOrClosed, isProcureNode,
+    budgetHours,
   } = params;
 
   if (!orderCreateTime || !expectedShipDate) return null;
@@ -50,7 +53,10 @@ export function computeStageBudgetHint(params: {
   const totalDays = shipDate.diff(create, 'day');
   if (totalDays <= 0) return null;
 
-  const budgetDays = Math.max(1, Math.round(totalDays * config.ratio));
+  // 如果提供了独立预算工时，使用它（budgetHours / 14 向上取整为天数）
+  const budgetDays = budgetHours != null && budgetHours > 0
+    ? Math.max(1, Math.ceil(budgetHours / 14))
+    : Math.max(1, Math.round(totalDays * config.ratio));
   const now = dayjs();
 
   if (stageEndTime) {

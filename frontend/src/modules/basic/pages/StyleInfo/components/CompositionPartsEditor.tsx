@@ -144,7 +144,7 @@ export default function CompositionPartsEditor({ value, onChange, disabled }: Pr
                     </Space>
                   ))}
                   {!(partsMap[partLabel]?.length) && disabled && (
-                    <span style={{ color: '#bbb', fontSize: 14 }}>（未设置）</span>
+                    <span style={{ color: 'var(--color-text-quaternary)', fontSize: 14 }}>（未设置）</span>
                   )}
                   {!disabled && (
                     <Button
@@ -213,7 +213,7 @@ export default function CompositionPartsEditor({ value, onChange, disabled }: Pr
         )}
 
         {!hasRows && disabled && (
-          <span style={{ color: '#bbb', fontSize: 14 }}>（未设置成分）</span>
+          <span style={{ color: 'var(--color-text-quaternary)', fontSize: 14 }}>（未设置成分）</span>
         )}
       </div>
     </Spin>

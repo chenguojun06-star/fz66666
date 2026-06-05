@@ -11,8 +11,10 @@ import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.production.entity.PatternProduction;
 import com.fashion.supplychain.production.entity.PatternScanRecord;
+import com.fashion.supplychain.production.entity.ProductOutstock;
 import com.fashion.supplychain.production.service.PatternProductionService;
 import com.fashion.supplychain.production.service.PatternScanRecordService;
+import com.fashion.supplychain.production.service.ProductOutstockService;
 import com.fashion.supplychain.production.helper.PatternStatusHelper;
 import com.fashion.supplychain.production.orchestration.PatternProductionOrchestrator;
 import com.fashion.supplychain.stock.dto.SampleStockInboundBatchRequest;
@@ -70,6 +72,9 @@ public class SampleStockServiceImpl extends ServiceImpl<SampleStockMapper, Sampl
 
     @Autowired
     private WarehouseAreaService warehouseAreaService;
+
+    @Autowired
+    private ProductOutstockService productOutstockService;
 
     @Override
     public IPage<SampleStock> queryPage(Map<String, Object> params) {
@@ -455,6 +460,94 @@ public class SampleStockServiceImpl extends ServiceImpl<SampleStockMapper, Sampl
         }
         result.put("actions", actions);
         return result;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public String transferToOutstock(String stockId, Integer quantity, String customerName,
+                                      String customerPhone, String shippingAddress,
+                                      String trackingNo, String expressCompany, String remark) {
+        TenantAssert.assertTenantContext();
+        Long currentTenantId = UserContext.tenantId();
+
+        // 1. 校验样衣库存
+        SampleStock stock = this.lambdaQuery()
+                .eq(SampleStock::getId, stockId)
+                .eq(SampleStock::getDeleteFlag, 0)
+                .eq(SampleStock::getTenantId, currentTenantId)
+                .one();
+        if (stock == null) {
+            throw new IllegalArgumentException("样衣库存不存在或已销毁");
+        }
+
+        int outQty = quantity != null ? quantity : 1;
+        if (outQty <= 0) {
+            throw new IllegalArgumentException("出库数量必须大于0");
+        }
+
+        int available = (stock.getQuantity() == null ? 0 : stock.getQuantity())
+                - (stock.getLoanedQuantity() == null ? 0 : stock.getLoanedQuantity());
+        if (available < outQty) {
+            throw new IllegalStateException("可用库存不足，当前可用 " + available + " 件，无法出库 " + outQty + " 件");
+        }
+
+        // 2. 扣减样衣库存
+        stock.setQuantity(stock.getQuantity() - outQty);
+        stock.setUpdateTime(LocalDateTime.now());
+        this.updateById(stock);
+
+        // 3. 创建成品出库记录
+        ProductOutstock outstock = new ProductOutstock();
+        outstock.setStyleId(stock.getStyleId());
+        outstock.setStyleNo(stock.getStyleNo());
+        outstock.setStyleName(stock.getStyleName());
+        outstock.setColor(stock.getColor());
+        outstock.setSize(stock.getSize());
+        outstock.setOutstockQuantity(outQty);
+        outstock.setOutstockType("sample_out");
+        outstock.setSourceType("sample_stock");
+        outstock.setCustomerName(customerName);
+        outstock.setCustomerPhone(customerPhone);
+        outstock.setShippingAddress(shippingAddress);
+        outstock.setTrackingNo(trackingNo);
+        outstock.setExpressCompany(expressCompany);
+        outstock.setRemark(remark);
+        outstock.setOperatorId(UserContext.userId());
+        outstock.setOperatorName(UserContext.username());
+        outstock.setCreatorId(UserContext.userId());
+        outstock.setCreatorName(UserContext.username());
+        outstock.setTenantId(currentTenantId);
+        outstock.setCreateTime(LocalDateTime.now());
+        outstock.setUpdateTime(LocalDateTime.now());
+        outstock.setDeleteFlag(0);
+        productOutstockService.save(outstock);
+
+        // 4. 同步样衣生产状态
+        PatternProduction pattern = findPatternForStock(stock);
+        if (pattern != null) {
+            try {
+                PatternScanRecord scanRecord = new PatternScanRecord();
+                scanRecord.setPatternProductionId(pattern.getId());
+                scanRecord.setStyleId(pattern.getStyleId());
+                scanRecord.setStyleNo(pattern.getStyleNo());
+                scanRecord.setColor(pattern.getColor());
+                scanRecord.setOperationType("TRANSFER_OUTSTOCK");
+                scanRecord.setOperatorId(UserContext.userId());
+                scanRecord.setOperatorName(UserContext.username());
+                scanRecord.setOperatorRole("WAREHOUSE");
+                scanRecord.setScanTime(LocalDateTime.now());
+                scanRecord.setRemark("样衣转成品出库 " + outQty + " 件");
+                scanRecord.setCreateTime(LocalDateTime.now());
+                scanRecord.setDeleteFlag(0);
+                patternScanRecordService.save(scanRecord);
+                log.info("样衣转成品出库同步扫码记录: patternId={}, outstockId={}", pattern.getId(), outstock.getId());
+            } catch (Exception e) {
+                log.warn("样衣转成品出库同步扫码记录失败，不影响主流程: {}", e.getMessage());
+            }
+        }
+
+        log.info("样衣转成品出库完成: stockId={}, outQty={}, outstockId={}", stockId, outQty, outstock.getId());
+        return outstock.getId();
     }
 
     private void fillStyleFields(List<SampleStock> records) {

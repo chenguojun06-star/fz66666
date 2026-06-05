@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { App, Switch, Button, Input, InputNumber, Space, Popconfirm, Tooltip, Tag, Dropdown, Form } from 'antd';
+import { App, Switch, Button, Input, InputNumber, Space, Popconfirm, Tooltip, Tag, Dropdown, Form, Popover } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
-import { SyncOutlined, PlusOutlined, DeleteOutlined, SaveOutlined, CloudUploadOutlined, EditOutlined, RollbackOutlined } from '@ant-design/icons';
+import { SyncOutlined, PlusOutlined, DeleteOutlined, SaveOutlined, CloudUploadOutlined, EditOutlined, RollbackOutlined, BarcodeOutlined } from '@ant-design/icons';
 import api from '@/utils/api';
 import { formatMoney } from '@/utils/format';
 import type { ProductSku } from '@/types/style';
 import type { MenuProps } from 'antd';
 import SmallModal from '@/components/common/SmallModal';
 import { confirmAction } from '@/utils/confirm';
+import BarcodeSvg from '@/components/common/BarcodeSvg';
 
 interface StyleSkuTabProps {
   styleId: string;
@@ -288,12 +289,26 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = ({ styleId, styleNo, skc: initia
       },
     },
     {
-      title: '商品条码(69码)', dataIndex: 'barcode', key: 'barcode', width: 160,
+      title: '商品条码(69码)', dataIndex: 'barcode', key: 'barcode', width: 200,
       render: (_: string, record: ProductSku) => {
         const key = getRowKey(record);
-        return canEdit ? (
-          <Input value={getCellValue(record, 'barcode') || ''} onChange={e => handleFieldChange(key, 'barcode', e.target.value)} placeholder="商品条码" />
-        ) : record.barcode || '-';
+        const barcodeVal = getCellValue(record, 'barcode') || record.barcode || '';
+        return (
+          <Space size={4}>
+            {canEdit ? (
+              <Input value={barcodeVal} onChange={e => handleFieldChange(key, 'barcode', e.target.value)} placeholder="商品条码" style={{ width: 130 }} />
+            ) : <span>{barcodeVal || '-'}</span>}
+            {barcodeVal && (
+              <Popover
+                content={<BarcodeSvg value={barcodeVal} height={60} width={1.5} fontSize={11} />}
+                trigger="click"
+                placement="right"
+              >
+                <Button type="text" size="small" icon={<BarcodeOutlined />} style={{ color: 'var(--color-primary)' }} />
+              </Popover>
+            )}
+          </Space>
+        );
       },
     },
     {

@@ -6,7 +6,7 @@ import React from 'react';
  */
 const BenchmarkKpiPanel: React.FC = () => {
   return (
-    <div style={{ padding: 16, color: '#94a3b8', textAlign: 'center' }}>
+    <div style={{ padding: 16, color: 'var(--color-text-tertiary)', textAlign: 'center' }}>
       基准 KPI 面板（待实现）
     </div>
   );

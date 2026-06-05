@@ -582,6 +582,30 @@ public class ProductionOrder {
      */
     private LocalDateTime expectedShipDate;
 
+    /** 采购预算工时（小时） */
+    private Integer procurementBudgetHours;
+
+    /** 裁剪预算工时（小时） */
+    private Integer cuttingBudgetHours;
+
+    /** 二次工艺预算工时（小时） */
+    private Integer secondaryProcessBudgetHours;
+
+    /** 车缝预算工时（小时） */
+    private Integer carSewingBudgetHours;
+
+    /** 大烫预算工时（小时） */
+    private Integer ironingBudgetHours;
+
+    /** 包装预算工时（小时） */
+    private Integer packagingBudgetHours;
+
+    /** 质检预算工时（小时） */
+    private Integer qualityBudgetHours;
+
+    /** 入库预算工时（小时） */
+    private Integer warehousingBudgetHours;
+
     /**
      * SKU 明细列表（用于扫码场景）
      * 从 orderDetails JSON 字段解析而来

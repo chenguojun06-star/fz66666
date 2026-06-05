@@ -38,7 +38,7 @@ const PredictionCard: React.FC<PredictionCardProps> = ({
               </b>
             </span>
             {(prediction.confidence != null) && (
-              <span style={{ color: '#555', marginLeft: 4 }}>
+              <span style={{ color: 'var(--color-text-secondary)', marginLeft: 4 }}>
                 置信 <b style={{ color: prediction.confidence >= 70 ? '#52c41a' : prediction.confidence >= 40 ? '#fa8c16' : '#ff4d4f' }}>
                   {prediction.confidence}%
                 </b>

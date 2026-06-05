@@ -180,9 +180,9 @@ body{font-family:"PingFang SC","Microsoft YaHei","Noto Sans SC",system-ui,sans-s
             <div>
               <div style={{ marginBottom: 8, fontWeight: 500 }}>纸张规格（自定义）</div>
               <Space wrap>
-                <span style={{ color: '#555' }}>宽</span>
+                <span style={{ color: 'var(--color-text-secondary)' }}>宽</span>
                 <InputNumber min={20} max={200} value={washW} onChange={v => setWashW(v ?? 30)} suffix="mm" style={{ width: 110 }} />
-                <span style={{ color: '#555' }}>高</span>
+                <span style={{ color: 'var(--color-text-secondary)' }}>高</span>
                 <InputNumber min={30} max={400} value={washH} onChange={v => setWashH(v ?? 80)} suffix="mm" style={{ width: 110 }} />
               </Space>
             </div>

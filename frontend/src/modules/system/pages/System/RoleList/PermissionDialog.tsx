@@ -161,7 +161,7 @@ const PermissionDialog = forwardRef<PermissionDialogHandle, PermissionDialogProp
                     </div>
                     <div style={{ padding: '2px 4px 4px 16px' }}>
                       {group.buttons.map(btn => (<div key={btn.id} style={{ background: checkedPermIds.has(btn.id) ? '#e6f4ff' : undefined, borderRadius: 2, marginBottom: 1 }}><Checkbox checked={checkedPermIds.has(btn.id)} onChange={(e) => { const next = new Set(checkedPermIds); if (e.target.checked) next.add(btn.id); else next.delete(btn.id); setCheckedPermIds(next); }} style={{ fontSize: 14, width: '100%' }}>{btn.name}</Checkbox></div>))}
-                      {group.buttons.length === 0 && <span style={{ color: '#bbb', fontSize: 14 }}>仅菜单权限</span>}
+                      {group.buttons.length === 0 && <span style={{ color: 'var(--color-text-quaternary)', fontSize: 14 }}>仅菜单权限</span>}
                     </div>
                   </div>
                 ))}

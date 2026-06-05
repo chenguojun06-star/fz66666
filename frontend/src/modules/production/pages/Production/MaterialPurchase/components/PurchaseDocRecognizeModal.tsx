@@ -129,7 +129,7 @@ const PurchaseDocRecognizeModal: React.FC<Props> = ({ open, orderNo, onCancel, o
       width: 150,
       ellipsis: true,
       render: (v: string, r: RecognizedItem) =>
-        r.unrecognized ? <span style={{ color: '#bbb' }}>{v}</span> : v,
+        r.unrecognized ? <span style={{ color: 'var(--color-text-quaternary)' }}>{v}</span> : v,
     },
     {
       title: '物料编码',
@@ -153,7 +153,7 @@ const PurchaseDocRecognizeModal: React.FC<Props> = ({ open, orderNo, onCancel, o
             }
           />
         ) : (
-          <span style={{ color: '#bbb' }}>{r.quantity != null ? r.quantity : '—'}</span>
+          <span style={{ color: 'var(--color-text-quaternary)' }}>{r.quantity != null ? r.quantity : '—'}</span>
         ),
     },
     {

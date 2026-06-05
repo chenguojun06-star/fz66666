@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { App, Input, Table } from 'antd';
+import { App, Input, Table, message as antMessage } from 'antd';
 import { toNumberSafe } from '@/utils/api';
 
 import ResizableTable from '@/components/common/ResizableTable';
@@ -18,6 +18,7 @@ import {
   MatrixRow,
   resolveGroupName,
   normalizeRowSorts,
+  buildEmptySizeCells,
 } from './styleSize/shared';
 
 interface Props {
@@ -115,6 +116,45 @@ const StyleSizeTab: React.FC<Props> = ({
       ...r, cells: { ...r.cells, [sizeName]: { ...(r.cells[sizeName] || { value: 0 }), value: toNumberSafe(value) } },
     }));
 
+  /** 从 Excel 粘贴多值到指定行，从 startSizeIndex 开始填充 */
+  const handlePasteToRow = useCallback((rowKey: string, startSizeIndex: number, values: number[]) => {
+    setRows((prev) => prev.map((r) => {
+      if (r.key !== rowKey) return r;
+      const nextCells = { ...r.cells };
+      values.forEach((val, i) => {
+        const targetIndex = startSizeIndex + i;
+        if (targetIndex < sizeColumns.length) {
+          const sizeName = sizeColumns[targetIndex];
+          nextCells[sizeName] = { ...(nextCells[sizeName] || { value: 0 }), value: toNumberSafe(val) };
+        }
+      });
+      return { ...r, cells: nextCells };
+    }));
+  }, [sizeColumns]);
+
+  /** 复制一行（插入到当前行下方） */
+  const handleDuplicateRow = useCallback((rowKey: string) => {
+    setRows((prev) => {
+      const index = prev.findIndex((r) => r.key === rowKey);
+      if (index < 0) return prev;
+      const source = prev[index];
+      const newRow: MatrixRow = {
+        ...source,
+        key: `row-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        partName: `${source.partName}(副本)`,
+        cells: { ...source.cells },
+        gradingZones: source.gradingZones.map((z) => ({
+          ...z,
+          key: `grading-zone-${Date.now()}-${Math.random()}`,
+        })),
+        imageUrls: undefined,
+      };
+      const nextRows = [...prev];
+      nextRows.splice(index + 1, 0, newRow);
+      return normalizeRowSorts(nextRows);
+    });
+  }, []);
+
   const setChunkImageUrls = (chunkRowKeys: string[], nextImages: string[]) => {
     const ownerRowKey = String(chunkRowKeys[0] || '');
     const rowKeySet = new Set(chunkRowKeys);
@@ -163,6 +203,8 @@ const StyleSizeTab: React.FC<Props> = ({
     handleDeletePart: structure.handleDeletePart,
     handleDeleteSize: structure.handleDeleteSize,
     openGradingConfig: grading.openGradingConfig,
+    onPasteToRow: handlePasteToRow,
+    onDuplicateRow: handleDuplicateRow,
   });
 
   return (

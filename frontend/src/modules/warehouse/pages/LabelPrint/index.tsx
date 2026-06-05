@@ -1,12 +1,15 @@
-import React, { useState, useCallback, useEffect } from 'react';
-import { Card, Input, Button, Space, InputNumber, Radio, App, Spin, Row, Col, Image, Divider, Slider, Switch, Collapse, Tooltip, Typography } from 'antd';
-import { PrinterOutlined, SearchOutlined, SettingOutlined, QuestionCircleOutlined, EditOutlined, SaveOutlined } from '@ant-design/icons';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
+import { Card, Input, Button, Space, InputNumber, Radio, App, Spin, Row, Col, Image, Divider, Slider, Switch, Collapse, Tooltip, Typography, Select, Dropdown, Modal } from 'antd';
+import { PrinterOutlined, SearchOutlined, SettingOutlined, QuestionCircleOutlined, EditOutlined, SaveOutlined, BookOutlined, DeleteOutlined, StarOutlined } from '@ant-design/icons';
 import QRCode from 'qrcode';
+import JsBarcode from 'jsbarcode';
 import { safePrint } from '@/utils/safePrint';
 import api, { parseProductionOrderLines, sortSizeNames } from '@/utils/api';
 import { formatMoney } from '@/utils/format';
 import { buildWashLabelPrintHtml, buildWashLabelMultiPageHtml, getDefaultDateText, compositionFromSections, washTextFromInstructions, type WashLabelPrintData } from '@/utils/washLabelPrintTemplate';
 import { parseCareIconCodes, getEffectiveCareIconCodes, CARE_ICONS } from '@/utils/careIcons';
+import BarcodeSvg from '@/components/common/BarcodeSvg';
+import { printTemplateApi } from '@/services/system/printTemplateApi';
 
 const { Text } = Typography;
 
@@ -42,12 +45,24 @@ type PrintType = 'hangtag' | 'barcode' | 'washlabel';
 const defaultHang = {
   w: 100, h: 70, titleSz: 11, infoSz: 6.5, brandName: '',
   showStyleNo: true, showColorSize: true, showComposition: true, showOrderNo: false,
-  showPrice: true, showUCode: true, showImage: false, showQr: false,
+  showPrice: true, showUCode: true, showImage: false, showQr: false, showBarcode: false,
   showQualityGrade: true, showExecuteStandard: true, showSafetyCategory: true,
   showInspector: true, showInspectionDate: true,
 };
-const defaultBar = { w: 40, h: 20, codeSz: 7, textSz: 5.5, showName: true };
-const defaultWash = { w: 30, h: 80, titleSz: 7, textSz: 5, careSz: 4 };
+const defaultBar = { w: 40, h: 20, codeSz: 7, textSz: 5.5, showName: true, codeType: 'qr' as 'qr' | 'barcode128' };
+const defaultWash = { 
+  w: 30, h: 80, 
+  titleSz: 7, textSz: 5, careSz: 4, 
+  manufacturingText: 'MADE IN CHINA', 
+  dateText: '', 
+  showManufacturing: true, 
+  showDate: true, 
+  showCareIcons: true, 
+  showComposition: true, 
+  showWashInstructions: true 
+};
+
+const STORAGE_KEY = 'label-print-settings';
 
 const LabelPrint: React.FC = () => {
   const { message } = App.useApp();
@@ -61,15 +76,119 @@ const LabelPrint: React.FC = () => {
   const [printCount, setPrintCount] = useState(1);
   const [printing, setPrinting] = useState(false);
   const [previewHtml, setPreviewHtml] = useState('');
+  const [templates, setTemplates] = useState<any[]>([]);
+  const [saveTemplateOpen, setSaveTemplateOpen] = useState(false);
+  const [saveTemplateName, setSaveTemplateName] = useState('');
 
   const [coverBase64, setCoverBase64] = useState('');
-  const [hang, setHang] = useState(defaultHang);
-  const [bar, setBar] = useState(defaultBar);
-  const [wash, setWash] = useState(defaultWash);
+  
+  // 从本地存储加载设置
+  const loadSavedSettings = (): { hang: typeof defaultHang; bar: typeof defaultBar; wash: typeof defaultWash } => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return {
+          hang: parsed.hang || defaultHang,
+          bar: parsed.bar || defaultBar,
+          wash: parsed.wash || defaultWash,
+        };
+      }
+    } catch { /* ignore */ }
+    return { hang: defaultHang, bar: defaultBar, wash: defaultWash };
+  };
+  const saved = loadSavedSettings();
+  
+  const [hang, setHang] = useState(saved.hang);
+  const [bar, setBar] = useState(saved.bar);
+  const [wash, setWash] = useState(saved.wash);
+  
+  // 保存设置到本地存储
+  const saveSettings = useCallback((newHang?: typeof defaultHang, newBar?: typeof defaultBar, newWash?: typeof defaultWash) => {
+    try {
+      const current = { hang, bar, wash };
+      const toSave = {
+        hang: newHang || current.hang,
+        bar: newBar || current.bar,
+        wash: newWash || current.wash,
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
+    } catch { /* ignore */ }
+  }, [hang, bar, wash]);
+  
+  // 自动保存设置变化
+  useEffect(() => {
+    saveSettings(hang, bar, wash);
+  }, [hang, bar, wash, saveSettings]);
 
   const resetSettings = useCallback(() => {
     setHang(defaultHang); setBar(defaultBar); setWash(defaultWash);
   }, []);
+
+  /** Generate an inline SVG string for Code128 barcode (for print HTML) */
+  const generateBarcodeSvgString = useCallback((value: string) => {
+    try {
+      const svgEl = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      JsBarcode(svgEl, value, { format: 'CODE128', width: 1.5, height: 40, displayValue: true, fontSize: 10, margin: 0, background: 'transparent' });
+      return svgEl.outerHTML;
+    } catch {
+      return '';
+    }
+  }, []);
+
+  // 模板加载
+  const loadTemplates = useCallback(async () => {
+    try {
+      const res = await printTemplateApi.list(printType);
+      const data = (res as any)?.data?.data || (res as any)?.data || [];
+      setTemplates(Array.isArray(data) ? data : []);
+    } catch { setTemplates([]); }
+  }, [printType]);
+
+  useEffect(() => { loadTemplates(); }, [loadTemplates]);
+
+  const handleSaveTemplate = useCallback(async () => {
+    if (!saveTemplateName.trim()) { message.warning('请输入模板名称'); return; }
+    try {
+      const config = printType === 'hangtag' ? hang : printType === 'barcode' ? bar : wash;
+      await printTemplateApi.save({
+        templateName: saveTemplateName.trim(),
+        templateType: printType,
+        configJson: JSON.stringify(config),
+        isDefault: false,
+      });
+      message.success('模板保存成功');
+      setSaveTemplateOpen(false);
+      setSaveTemplateName('');
+      loadTemplates();
+    } catch (e: any) { message.error(e.message || '保存失败'); }
+  }, [saveTemplateName, printType, hang, bar, wash, message, loadTemplates]);
+
+  const handleLoadTemplate = useCallback((tpl: any) => {
+    try {
+      const config = typeof tpl.configJson === 'string' ? JSON.parse(tpl.configJson) : tpl.configJson;
+      if (tpl.templateType === 'hangtag') setHang(config);
+      else if (tpl.templateType === 'barcode') setBar(config);
+      else if (tpl.templateType === 'washlabel') setWash(config);
+      message.success(`已加载模板: ${tpl.templateName}`);
+    } catch { message.error('模板加载失败'); }
+  }, [message]);
+
+  const handleDeleteTemplate = useCallback(async (id: number) => {
+    try {
+      await printTemplateApi.delete(id);
+      message.success('模板已删除');
+      loadTemplates();
+    } catch (e: any) { message.error(e.message || '删除失败'); }
+  }, [message, loadTemplates]);
+
+  const handleSetDefaultTemplate = useCallback(async (id: number) => {
+    try {
+      await printTemplateApi.setDefault(id);
+      message.success('已设为默认模板');
+      loadTemplates();
+    } catch (e: any) { message.error(e.message || '设置失败'); }
+  }, [message, loadTemplates]);
 
   const handleSearch = useCallback(async () => {
     if (!keyword.trim()) { message.warning('请输入订单号或款号'); return; }
@@ -150,6 +269,7 @@ const LabelPrint: React.FC = () => {
     if (!selectedOrder) return '';
     const sku = `${selectedOrder.styleNo}-${selectedColor}-${selectedSize}`;
     const qrUrl = hang.showQr ? await QRCode.toDataURL(sku, { width: 200, margin: 1, errorCorrectionLevel: 'M' }).catch(() => '') : '';
+    const barcodeSvgStr = hang.showBarcode ? generateBarcodeSvgString(selectedOrder.uCode || selectedOrder.styleNo) : '';
     const brand = hang.brandName || selectedOrder.styleName || selectedOrder.styleNo;
     const imgHtml = hang.showImage && coverBase64 ? `<img class="img" src="${coverBase64}" />` : '';
     const ts = hang.titleSz; const isz = hang.infoSz;
@@ -208,6 +328,7 @@ body{font-family:"PingFang SC","Microsoft YaHei","Noto Sans SC",sans-serif;color
 .ucode{font-size:${isz - 0.5}pt;color:#888;letter-spacing:0.3mm}
 .price{font-size:${ts * 1.15}pt;font-weight:800;color:#c00;letter-spacing:0.5mm}
 ${hang.showQr ? '.qr{width:14mm;height:auto;margin:1mm auto 0;display:block}' : ''}
+${hang.showBarcode ? '.barcode{width:30mm;height:auto;margin:1mm auto 0;display:block}' : ''}
 </style></head><body>
 ${Array.from({ length: count }, () => `<div class="tag"><div class="inner">
 ${imgHtml}
@@ -216,6 +337,7 @@ ${imgHtml}
 ${certHtml}
 ${bottomHtml}
 ${hang.showQr ? `<img class="qr" src="${qrUrl}" />` : ''}
+${hang.showBarcode ? `<div class="barcode">${barcodeSvgStr}</div>` : ''}
 </div></div>`).join('\n')}
 </body></html>`;
   }, [selectedOrder, selectedColor, selectedSize, hang, coverBase64]);
@@ -223,8 +345,11 @@ ${hang.showQr ? `<img class="qr" src="${qrUrl}" />` : ''}
   const generateBarcodeHtml = useCallback(async (count: number) => {
     if (!selectedOrder) return '';
     const sku = `${selectedOrder.styleNo}-${selectedColor}-${selectedSize}`;
-    const qrUrl = await QRCode.toDataURL(sku, { width: 160, margin: 0, errorCorrectionLevel: 'M' }).catch(() => '');
     const cs = bar.codeSz; const ts = bar.textSz;
+    const isBarcode128 = bar.codeType === 'barcode128';
+    const codeImgHtml = isBarcode128
+      ? `<div class="barcode-wrap">${generateBarcodeSvgString(sku)}</div>`
+      : `<img src="${await QRCode.toDataURL(sku, { width: 160, margin: 0, errorCorrectionLevel: 'M' }).catch(() => '')}" />`;
     return `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
 @page{size:${bar.w}mm ${bar.h}mm;margin:0}
 *{margin:0;padding:0;box-sizing:border-box}
@@ -233,13 +358,15 @@ body{font-family:"PingFang SC","Microsoft YaHei","Noto Sans SC",sans-serif;color
 .lb{width:${bar.w}mm;height:${bar.h}mm;page-break-after:always;display:flex;align-items:center;padding:1.5mm 2.5mm;border:0.6pt solid #333;position:relative}
 .lb:last-child{page-break-after:auto}
 .lb img{height:${bar.h * 0.65}mm;width:auto;margin-right:2.5mm;flex-shrink:0}
+.lb .barcode-wrap{height:${bar.h * 0.65}mm;width:auto;margin-right:2.5mm;flex-shrink:0;display:flex;align-items:center}
+.lb .barcode-wrap svg{height:100%;width:auto}
 .lb .i{flex:1;display:flex;flex-direction:column;gap:0.5mm;overflow:hidden;min-width:0}
 .lb .c{font-size:${cs}pt;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:0.2mm}
 .lb .n{font-size:${ts}pt;color:#555;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .lb .s{font-size:${ts * 0.85}pt;color:#888;letter-spacing:0.2mm}
 </style></head><body>
 ${Array.from({ length: count }, () => `<div class="lb">
-<img src="${qrUrl}" />
+${codeImgHtml}
 <div class="i"><div class="c">${sku}</div>${bar.showName ? `<div class="n">${selectedOrder.styleName}</div>` : ''}<div class="s">${selectedColor} / ${selectedSize}</div></div>
 </div>`).join('\n')}
 </body></html>`;
@@ -247,23 +374,37 @@ ${Array.from({ length: count }, () => `<div class="lb">
 
   const generateWashlabelHtml = useCallback(async (count: number) => {
     if (!selectedOrder) return '';
-    const careCodes = getEffectiveCareIconCodes(
+    const careCodes = wash.showCareIcons ? getEffectiveCareIconCodes(
       selectedOrder.careIconCodes,
       { washTempCode: selectedOrder.washTempCode, bleachCode: selectedOrder.bleachCode, tumbleDryCode: selectedOrder.tumbleDryCode, ironCode: selectedOrder.ironCode, dryCleanCode: selectedOrder.dryCleanCode },
       selectedOrder.washInstructions,
-    );
+    ) : [];
+    
+    const compositionText = wash.showComposition 
+      ? compositionFromSections(selectedOrder.fabricCompositionParts, selectedOrder.fabricComposition) 
+      : '';
+    const washInstructionsText = wash.showWashInstructions 
+      ? washTextFromInstructions(selectedOrder.washInstructions, selectedOrder.fabricCompositionParts) 
+      : '';
+    const manufacturingText = wash.showManufacturing 
+      ? (wash.manufacturingText || 'MADE IN CHINA') 
+      : '';
+    const dateText = wash.showDate 
+      ? (wash.dateText || getDefaultDateText()) 
+      : '';
+    
     const printData: WashLabelPrintData = {
       width: wash.w,
       height: wash.h,
-      compositionText: compositionFromSections(selectedOrder.fabricCompositionParts, selectedOrder.fabricComposition),
-      washInstructionsText: washTextFromInstructions(selectedOrder.washInstructions, selectedOrder.fabricCompositionParts),
+      compositionText,
+      washInstructionsText,
       careIconCodes: careCodes,
-      manufacturingText: 'MADE IN CHINA',
-      dateText: getDefaultDateText(),
+      manufacturingText,
+      dateText,
     };
     if (count <= 1) return buildWashLabelPrintHtml(printData);
     return buildWashLabelMultiPageHtml(Array.from({ length: count }, () => printData));
-  }, [selectedOrder, wash.w, wash.h]);
+  }, [selectedOrder, wash]);
 
   const generateHtml = useCallback(async (count: number) => {
     if (printType === 'hangtag') return generateHangtagHtml(count);
@@ -281,9 +422,9 @@ ${Array.from({ length: count }, () => `<div class="lb">
     const timer = setTimeout(() => { updatePreview(); }, 80);
     return () => clearTimeout(timer);
   }, [printType, selectedColor, selectedSize, selectedOrder, coverBase64,
-    hang.w, hang.h, hang.titleSz, hang.infoSz, hang.brandName, hang.showStyleNo, hang.showColorSize, hang.showComposition, hang.showOrderNo, hang.showPrice, hang.showUCode, hang.showImage, hang.showQr, hang.showQualityGrade, hang.showExecuteStandard, hang.showSafetyCategory, hang.showInspector, hang.showInspectionDate,
+    hang.w, hang.h, hang.titleSz, hang.infoSz, hang.brandName, hang.showStyleNo, hang.showColorSize, hang.showComposition, hang.showOrderNo, hang.showPrice, hang.showUCode, hang.showImage, hang.showQr, hang.showBarcode, hang.showQualityGrade, hang.showExecuteStandard, hang.showSafetyCategory, hang.showInspector, hang.showInspectionDate,
     selectedOrder?.fabricComposition, selectedOrder?.qualityGrade, selectedOrder?.executeStandard, selectedOrder?.safetyCategory, selectedOrder?.inspector, selectedOrder?.inspectionDate,
-    bar.w, bar.h, bar.codeSz, bar.textSz, bar.showName,
+    bar.w, bar.h, bar.codeSz, bar.textSz, bar.showName, bar.codeType,
     wash.w, wash.h,
     updatePreview]);
 
@@ -301,10 +442,15 @@ ${Array.from({ length: count }, () => `<div class="lb">
     washlabel: [{ w: 30, h: 80, label: '30×80' }, { w: 40, h: 60, label: '40×60' }, { w: 50, h: 80, label: '50×80' }, { w: 60, h: 90, label: '60×90' }],
   };
 
-  const toggleRow = (label: string, field: keyof typeof hang, checked: boolean) => (
+  const toggleRow = <T,>(
+    label: string, 
+    field: string, 
+    checked: boolean,
+    setter: (updater: (prev: T) => T) => void
+  ) => (
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
       <span style={{ fontSize: 14 }}>{label}</span>
-      <Switch size="small" checked={checked as boolean} onChange={v => setHang(h => ({ ...h, [field]: v }))} />
+      <Switch size="small" checked={checked} onChange={v => setter(prev => ({ ...prev, [field]: v }))} />
     </div>
   );
 
@@ -322,9 +468,9 @@ ${Array.from({ length: count }, () => `<div class="lb">
         <Col span={6}>
           <Card title="打印种类" size="small" style={{ marginBottom: 12 }}>
             <Radio.Group value={printType} onChange={e => setPrintType(e.target.value)} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <Radio value="hangtag">吊牌 <Tooltip title="产品合格证吊牌，含品牌名/款号/颜色尺码/成分/质量等级/执行标准/安全类别/检验员"><QuestionCircleOutlined style={{ fontSize: 11, color: '#bbb' }} /></Tooltip></Radio>
-              <Radio value="barcode">条码 <Tooltip title="贴在包装上的小标签，含二维码和SKU编码"><QuestionCircleOutlined style={{ fontSize: 11, color: '#bbb' }} /></Tooltip></Radio>
-              <Radio value="washlabel">洗水唛 <Tooltip title="缝在衣服内侧的标签，含面料成分和洗护说明"><QuestionCircleOutlined style={{ fontSize: 11, color: '#bbb' }} /></Tooltip></Radio>
+              <Radio value="hangtag">吊牌 <Tooltip title="产品合格证吊牌，含品牌名/款号/颜色尺码/成分/质量等级/执行标准/安全类别/检验员"><QuestionCircleOutlined style={{ fontSize: 11, color: 'var(--color-text-quaternary)' }} /></Tooltip></Radio>
+              <Radio value="barcode">条码 <Tooltip title="贴在包装上的小标签，含二维码和SKU编码"><QuestionCircleOutlined style={{ fontSize: 11, color: 'var(--color-text-quaternary)' }} /></Tooltip></Radio>
+              <Radio value="washlabel">洗水唛 <Tooltip title="缝在衣服内侧的标签，含面料成分和洗护说明"><QuestionCircleOutlined style={{ fontSize: 11, color: 'var(--color-text-quaternary)' }} /></Tooltip></Radio>
             </Radio.Group>
           </Card>
 
@@ -338,6 +484,26 @@ ${Array.from({ length: count }, () => `<div class="lb">
                 <Button type="primary" icon={<PrinterOutlined />} loading={printing} onClick={() => void handlePrint()} block>
                   打印{ptLabel} ({printCount}张)
                 </Button>
+                <div style={{ marginTop: 8, display: 'flex', gap: 4 }}>
+                  <Button size="small" icon={<SaveOutlined />} style={{ flex: 1 }} onClick={() => setSaveTemplateOpen(true)}>保存模板</Button>
+                  {templates.length > 0 && (
+                    <Dropdown menu={{ items: templates.map(tpl => ({
+                      key: tpl.id,
+                      label: (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                          <span>{tpl.templateName}{tpl.isDefault ? ' ★' : ''}</span>
+                          <Space size={2}>
+                            <Button type="link" size="small" icon={<StarOutlined />} onClick={e => { e.stopPropagation(); handleSetDefaultTemplate(tpl.id); }} />
+                            <Button type="link" size="small" danger icon={<DeleteOutlined />} onClick={e => { e.stopPropagation(); handleDeleteTemplate(tpl.id); }} />
+                          </Space>
+                        </div>
+                      ),
+                      onClick: () => handleLoadTemplate(tpl),
+                    })) }} trigger={['click']}>
+                      <Button size="small" icon={<BookOutlined />} style={{ flex: 1 }}>加载模板</Button>
+                    </Dropdown>
+                  )}
+                </div>
               </Card>
 
               <Collapse size="small" ghost items={[{
@@ -385,25 +551,38 @@ ${Array.from({ length: count }, () => `<div class="lb">
                         <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginBottom: 2 }}>信息字号: {hang.infoSz}pt</div>
                         <Slider min={5} max={12} step={0.5} value={hang.infoSz} onChange={v => setHang(h => ({ ...h, infoSz: v }))} />
                       </div>
-                      <div style={{ fontSize: 14, color: '#bbb', margin: '6px 0 4px', fontWeight: 600 }}>显示内容</div>
+                      <div style={{ fontSize: 14, color: 'var(--color-text-quaternary)', margin: '6px 0 4px', fontWeight: 600 }}>显示内容</div>
                       <Space orientation="vertical" style={{ width: '100%' }} size={2}>
-                        {toggleRow('款号', 'showStyleNo', hang.showStyleNo)}
-                        {toggleRow('颜色尺码', 'showColorSize', hang.showColorSize)}
-                        {toggleRow('成分', 'showComposition', hang.showComposition)}
-                        {toggleRow('质量等级', 'showQualityGrade', hang.showQualityGrade)}
-                        {toggleRow('执行标准', 'showExecuteStandard', hang.showExecuteStandard)}
-                        {toggleRow('安全类别', 'showSafetyCategory', hang.showSafetyCategory)}
-                        {toggleRow('检验员', 'showInspector', hang.showInspector)}
-                        {toggleRow('检验日期', 'showInspectionDate', hang.showInspectionDate)}
-                        {toggleRow('价格', 'showPrice', hang.showPrice)}
-                        {toggleRow('商品编码', 'showUCode', hang.showUCode)}
-                        {toggleRow('订单号', 'showOrderNo', hang.showOrderNo)}
-                        {toggleRow('商品图', 'showImage', hang.showImage)}
-                        {toggleRow('二维码', 'showQr', hang.showQr)}
+                        {toggleRow('款号', 'showStyleNo', hang.showStyleNo, setHang)}
+                        {toggleRow('颜色尺码', 'showColorSize', hang.showColorSize, setHang)}
+                        {toggleRow('成分', 'showComposition', hang.showComposition, setHang)}
+                        {toggleRow('质量等级', 'showQualityGrade', hang.showQualityGrade, setHang)}
+                        {toggleRow('执行标准', 'showExecuteStandard', hang.showExecuteStandard, setHang)}
+                        {toggleRow('安全类别', 'showSafetyCategory', hang.showSafetyCategory, setHang)}
+                        {toggleRow('检验员', 'showInspector', hang.showInspector, setHang)}
+                        {toggleRow('检验日期', 'showInspectionDate', hang.showInspectionDate, setHang)}
+                        {toggleRow('价格', 'showPrice', hang.showPrice, setHang)}
+                        {toggleRow('商品编码', 'showUCode', hang.showUCode, setHang)}
+                        {toggleRow('订单号', 'showOrderNo', hang.showOrderNo, setHang)}
+                        {toggleRow('商品图', 'showImage', hang.showImage, setHang)}
+                        {toggleRow('二维码', 'showQr', hang.showQr, setHang)}
+                        {toggleRow('条形码', 'showBarcode', hang.showBarcode, setHang)}
                       </Space>
                     </>)}
 
                     {printType === 'barcode' && (<>
+                      <div style={{ marginBottom: 8 }}>
+                        <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginBottom: 3 }}>码类型</div>
+                        <Select
+                          value={bar.codeType}
+                          onChange={v => setBar(b => ({ ...b, codeType: v }))}
+                          style={{ width: '100%' }}
+                          options={[
+                            { label: '二维码 (QR)', value: 'qr' },
+                            { label: '条形码 (Code128)', value: 'barcode128' },
+                          ]}
+                        />
+                      </div>
                       <div style={{ marginBottom: 6 }}>
                         <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginBottom: 2 }}>编码字号: {bar.codeSz}pt</div>
                         <Slider min={5} max={14} step={0.5} value={bar.codeSz} onChange={v => setBar(b => ({ ...b, codeSz: v }))} />
@@ -416,7 +595,24 @@ ${Array.from({ length: count }, () => `<div class="lb">
                     </>)}
 
                     {printType === 'washlabel' && (<>
-                      <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginBottom: 4 }}>字号根据纸张宽度自动适配</div>
+                      <div style={{ marginBottom: 8 }}>
+                        <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginBottom: 3 }}>制造地</div>
+                        <Input size="small" value={wash.manufacturingText} placeholder="MADE IN CHINA"
+                          onChange={e => setWash(w => ({ ...w, manufacturingText: e.target.value }))} maxLength={30} />
+                      </div>
+                      <div style={{ marginBottom: 8 }}>
+                        <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginBottom: 3 }}>日期（留空=自动使用今天）</div>
+                        <Input size="small" value={wash.dateText} placeholder="如：20260605"
+                          onChange={e => setWash(w => ({ ...w, dateText: e.target.value }))} maxLength={20} />
+                      </div>
+                      <div style={{ fontSize: 14, color: 'var(--color-text-quaternary)', margin: '6px 0 4px', fontWeight: 600 }}>显示内容</div>
+                      <Space orientation="vertical" style={{ width: '100%' }} size={2}>
+                        {toggleRow('面料成分', 'showComposition', wash.showComposition, setWash)}
+                        {toggleRow('洗涤说明', 'showWashInstructions', wash.showWashInstructions, setWash)}
+                        {toggleRow('护理图标', 'showCareIcons', wash.showCareIcons, setWash)}
+                        {toggleRow('制造地', 'showManufacturing', wash.showManufacturing, setWash)}
+                        {toggleRow('日期', 'showDate', wash.showDate, setWash)}
+                      </Space>
                     </>)}
 
                     <Button size="small" type="link" danger style={{ marginTop: 6, padding: 0 }} onClick={resetSettings}>恢复默认</Button>
@@ -576,7 +772,7 @@ ${Array.from({ length: count }, () => `<div class="lb">
                                 })}
                               </Space>
                             ) : (
-                              <Text style={{ fontSize: 14, color: '#bbb' }}>未设定</Text>
+                              <Text style={{ fontSize: 14, color: 'var(--color-text-quaternary)' }}>未设定</Text>
                             )}
                           </div>
                           <div>
@@ -601,7 +797,7 @@ ${Array.from({ length: count }, () => `<div class="lb">
 
                 <div>
                   <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginBottom: 6 }}>{ptLabel}预览（实时更新）</div>
-                  <div style={{ border: '1px solid #e0e0e0', borderRadius: 8, overflow: 'hidden', background: '#fff' }}>
+                  <div style={{ border: '1px solid #e0e0e0', borderRadius: 8, overflow: 'hidden', background: 'var(--color-bg-base)' }}>
                     <iframe srcDoc={previewHtml} style={{ width: '100%', height: 350, border: 'none' }} title="打印预览" />
                   </div>
                 </div>
@@ -625,12 +821,29 @@ ${Array.from({ length: count }, () => `<div class="lb">
               </Card>
             ) : (
               <Card style={{ textAlign: 'center', padding: 60 }}>
-                <div style={{ color: '#bbb', fontSize: 14 }}>请输入订单号或款号搜索</div>
+                <div style={{ color: 'var(--color-text-quaternary)', fontSize: 14 }}>请输入订单号或款号搜索</div>
               </Card>
             )}
           </Spin>
         </Col>
       </Row>
+      <Modal
+        title="保存为模板"
+        open={saveTemplateOpen}
+        onOk={() => void handleSaveTemplate()}
+        onCancel={() => { setSaveTemplateOpen(false); setSaveTemplateName(''); }}
+        okText="保存"
+        destroyOnClose
+      >
+        <Input
+          value={saveTemplateName}
+          onChange={e => setSaveTemplateName(e.target.value)}
+          placeholder="请输入模板名称"
+          maxLength={50}
+          autoFocus
+          onPressEnter={() => void handleSaveTemplate()}
+        />
+      </Modal>
     </div>
   );
 };

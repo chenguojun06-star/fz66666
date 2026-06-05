@@ -141,7 +141,7 @@ const FactoryShipModal: React.FC<FactoryShipModalProps> = ({
       {/* ── Part 2: 参考表（下单/已发明细）── */}
       {hasMatrix && (
         <>
-          <div style={{ fontWeight: 600, fontSize: 14, color: '#555', marginBottom: 6 }}>
+          <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--color-text-secondary)', marginBottom: 6 }}>
             下单与已发明细参考
             <span style={{ fontWeight: 400, color: '#888', marginLeft: 8 }}>
               （格式：下单数 / <span style={{ color: '#096dd9' }}>已发数</span>）
@@ -189,7 +189,7 @@ const FactoryShipModal: React.FC<FactoryShipModalProps> = ({
       {/* ── Part 3: 历史发货记录 ── */}
       {shipHistory.length > 0 && (
         <>
-          <div style={{ fontWeight: 600, fontSize: 14, color: '#555', marginBottom: 6 }}>历史发货记录</div>
+          <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--color-text-secondary)', marginBottom: 6 }}>历史发货记录</div>
           <div style={{
             background: 'var(--color-bg-container)', border: '1px solid var(--color-border-light)', borderRadius: 4,
             padding: '6px 10px', marginBottom: 12, maxHeight: 120, overflowY: 'auto',
@@ -200,7 +200,7 @@ const FactoryShipModal: React.FC<FactoryShipModalProps> = ({
                   {rec.shipTime ? dayjs(rec.shipTime).format('MM-DD HH:mm') : '-'}
                 </span>
                 <span><b>{rec.shipQuantity ?? '-'}</b> 件</span>
-                {rec.trackingNo && <span style={{ color: '#555' }}>单号：{rec.trackingNo}</span>}
+                {rec.trackingNo && <span style={{ color: 'var(--color-text-secondary)' }}>单号：{rec.trackingNo}</span>}
                 {rec.receiveStatus && (
                   <Tag color={rec.receiveStatus === 'received' ? 'success' : rec.receiveStatus === 'pending' ? 'processing' : 'default'} style={{ fontSize: 14, padding: '0 4px', lineHeight: '16px' }}>
                     {rec.receiveStatus === 'received' ? '已收货' : rec.receiveStatus === 'pending' ? '待收货' : rec.receiveStatus}

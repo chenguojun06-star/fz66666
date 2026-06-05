@@ -42,6 +42,30 @@ const SMART_FEATURE_LABELS: Record<SmartFeatureKey, { title: string; desc: strin
     title: '物料采购 AI 分析',
     desc: '物料采购页顶部按订单展示到货情况、裁剪可行性判断与未到货物料供应商提醒。',
   },
+  'print.hangtag.defaultTemplateId': {
+    title: '默认吊牌模板',
+    desc: '设置吊牌打印的默认模板（通过打印模板管理配置）。',
+  },
+  'print.barcode.defaultTemplateId': {
+    title: '默认条码模板',
+    desc: '设置条码标签打印的默认模板（通过打印模板管理配置）。',
+  },
+  'print.washLabel.defaultTemplateId': {
+    title: '默认洗水唛模板',
+    desc: '设置洗水唛打印的默认模板（通过打印模板管理配置）。',
+  },
+  'print.codeType': {
+    title: '条码类型偏好',
+    desc: '设置条码标签默认使用二维码(QR)还是条形码(Code128)。',
+  },
+  'outstock.allowPriceAdjust': {
+    title: '允许出库改价',
+    desc: '出库时允许修改销售价格，适用于客户议价场景。',
+  },
+  'outstock.priceAdjustRequireReason': {
+    title: '改价需填原因',
+    desc: '出库改价时强制要求填写价格调整原因。',
+  },
 };
 
 export const SMART_FEATURE_KEYS: SmartFeatureKey[] = [
@@ -54,6 +78,12 @@ export const SMART_FEATURE_KEYS: SmartFeatureKey[] = [
   'smart.warehousing.audit.enabled',
   'smart.material.inventory.ai.enabled',
   'smart.material.purchase.ai.enabled',
+  'print.hangtag.defaultTemplateId',
+  'print.barcode.defaultTemplateId',
+  'print.washLabel.defaultTemplateId',
+  'print.codeType',
+  'outstock.allowPriceAdjust',
+  'outstock.priceAdjustRequireReason',
 ];
 
 const MINIPROGRAM_MENU_LABELS: Record<MiniprogramMenuKey, { title: string; desc: string }> = {

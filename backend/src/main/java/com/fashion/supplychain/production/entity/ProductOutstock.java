@@ -77,6 +77,12 @@ public class ProductOutstock {
 
     private BigDecimal salesPrice;
 
+    @TableField("price_adjustment_reason")
+    private String priceAdjustmentReason;
+
+    @TableField("original_sales_price")
+    private BigDecimal originalSalesPrice;
+
     private String trackingNo;
 
     private String expressCompany;

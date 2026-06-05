@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { App, Button, Skeleton, Tag } from 'antd';
+import { App, Button, InputNumber, Modal, Skeleton, Space, Tag } from 'antd';
 import dayjs from 'dayjs';
 import api from '@/utils/api';
 import { formatMoney } from '@/utils/format';
@@ -13,6 +13,12 @@ import StyleProcessTab from '../../StyleInfo/components/StyleProcessTab';
 import StyleProductionTab from '../../StyleInfo/components/StyleProductionTab';
 import StyleQuotationTab from '../../StyleInfo/components/StyleQuotationTab';
 import StyleSecondaryProcessTab from '../../StyleInfo/components/StyleSecondaryProcessTab';
+import {
+  formatBudgetHours,
+  calculateActualDuration,
+  calculateWaitingDuration,
+  computeBudgetStatus,
+} from '@/utils/workingTimeCalculator';
 
 interface Props {
   record: StyleInfo;
@@ -171,13 +177,13 @@ const StyleDevelopmentWorkbench: React.FC<Props> = ({ record, onClose, initialSe
     const quotationLocked = Boolean((data.quotation as any)?.id);
 
     return [
-      { key: 'bom', title: 'BOM清单', count: `${data.bomList.length} 项`, meta: bomMeta, helper: formatTime((detail as any).bomCompletedTime || (detail as any).bomStartTime), startTime: (detail as any).bomStartTime, endTime: (detail as any).bomCompletedTime, completed: Boolean((detail as any).bomCompletedTime) },
-      { key: 'pattern', title: '纸样开发', count: `${data.attachments.filter((item) => item.bizType === 'pattern').length} 份`, meta: patternMeta, helper: formatTime((detail as any).patternCompletedTime || (detail as any).patternStartTime), startTime: (detail as any).patternStartTime, endTime: (detail as any).patternCompletedTime, completed: Boolean((detail as any).patternCompletedTime) },
-      { key: 'process', title: '工序单价', count: `${data.processList.length} 项`, meta: processMeta, helper: formatTime((detail as any).processCompletedTime || (detail as any).processStartTime), startTime: (detail as any).processStartTime, endTime: (detail as any).processCompletedTime, completed: Boolean((detail as any).processCompletedTime) },
-      { key: 'secondary', title: '二次工艺', count: `${String((detail as any).secondaryProcessCount || 0)} 项`, meta: resolveStageMeta(Boolean((detail as any).secondaryCompletedTime), Boolean((detail as any).secondaryStartTime)), helper: formatTime((detail as any).secondaryCompletedTime || (detail as any).secondaryStartTime), startTime: (detail as any).secondaryStartTime, endTime: (detail as any).secondaryCompletedTime, completed: Boolean((detail as any).secondaryCompletedTime) },
-      { key: 'production', title: '生产制单', count: `${String((detail as any).productionReqRows || 0)} 行`, meta: productionMeta, helper: formatTime((detail as any).productionCompletedTime || (detail as any).productionStartTime), startTime: (detail as any).productionStartTime, endTime: (detail as any).productionCompletedTime, completed: Boolean((detail as any).productionCompletedTime) },
-      { key: 'quotation', title: '报价单', count: data.quotation?.totalPrice != null ? formatMoney(data.quotation.totalPrice) : '未报价', meta: quotationLocked ? resolveStageMeta(true, true) : resolveStageMeta(false, Boolean((detail as any).price)), helper: quotationLocked ? '已保存报价单' : '待维护报价', startTime: null, endTime: null, completed: quotationLocked },
-      { key: 'files', title: '附件文件', count: `${data.attachments.length} 份`, meta: data.attachments.length ? resolveStageMeta(true, true) : resolveStageMeta(false, false), helper: data.attachments[0] ? `最近更新 ${formatTime(data.attachments[0].createTime)}` : '暂无文件', startTime: null, endTime: null, completed: data.attachments.length > 0 },
+      { key: 'bom', title: 'BOM清单', count: `${data.bomList.length} 项`, meta: bomMeta, helper: formatTime((detail as any).bomCompletedTime || (detail as any).bomStartTime), startTime: (detail as any).bomStartTime, endTime: (detail as any).bomCompletedTime, completed: Boolean((detail as any).bomCompletedTime), budgetHours: (detail as any).bomBudgetHours ?? null, budgetField: 'bomBudgetHours' as const },
+      { key: 'pattern', title: '纸样开发', count: `${data.attachments.filter((item) => item.bizType === 'pattern').length} 份`, meta: patternMeta, helper: formatTime((detail as any).patternCompletedTime || (detail as any).patternStartTime), startTime: (detail as any).patternStartTime, endTime: (detail as any).patternCompletedTime, completed: Boolean((detail as any).patternCompletedTime), budgetHours: (detail as any).patternBudgetHours ?? null, budgetField: 'patternBudgetHours' as const },
+      { key: 'process', title: '工序单价', count: `${data.processList.length} 项`, meta: processMeta, helper: formatTime((detail as any).processCompletedTime || (detail as any).processStartTime), startTime: (detail as any).processStartTime, endTime: (detail as any).processCompletedTime, completed: Boolean((detail as any).processCompletedTime), budgetHours: (detail as any).processBudgetHours ?? null, budgetField: 'processBudgetHours' as const },
+      { key: 'secondary', title: '二次工艺', count: `${String((detail as any).secondaryProcessCount || 0)} 项`, meta: resolveStageMeta(Boolean((detail as any).secondaryCompletedTime), Boolean((detail as any).secondaryStartTime)), helper: formatTime((detail as any).secondaryCompletedTime || (detail as any).secondaryStartTime), startTime: (detail as any).secondaryStartTime, endTime: (detail as any).secondaryCompletedTime, completed: Boolean((detail as any).secondaryCompletedTime), budgetHours: (detail as any).secondaryBudgetHours ?? null, budgetField: 'secondaryBudgetHours' as const },
+      { key: 'production', title: '生产制单', count: `${String((detail as any).productionReqRows || 0)} 行`, meta: productionMeta, helper: formatTime((detail as any).productionCompletedTime || (detail as any).productionStartTime), startTime: (detail as any).productionStartTime, endTime: (detail as any).productionCompletedTime, completed: Boolean((detail as any).productionCompletedTime), budgetHours: (detail as any).productionBudgetHours ?? null, budgetField: 'productionBudgetHours' as const },
+      { key: 'quotation', title: '报价单', count: data.quotation?.totalPrice != null ? formatMoney(data.quotation.totalPrice) : '未报价', meta: quotationLocked ? resolveStageMeta(true, true) : resolveStageMeta(false, Boolean((detail as any).price)), helper: quotationLocked ? '已保存报价单' : '待维护报价', startTime: null, endTime: null, completed: quotationLocked, budgetHours: null, budgetField: null },
+      { key: 'files', title: '附件文件', count: `${data.attachments.length} 份`, meta: data.attachments.length ? resolveStageMeta(true, true) : resolveStageMeta(false, false), helper: data.attachments[0] ? `最近更新 ${formatTime(data.attachments[0].createTime)}` : '暂无文件', startTime: null, endTime: null, completed: data.attachments.length > 0, budgetHours: null, budgetField: null },
     ] as const;
   }, [data.attachments, data.bomList.length, data.processList.length, data.quotation, detail]);
 
@@ -213,6 +219,56 @@ const StyleDevelopmentWorkbench: React.FC<Props> = ({ record, onClose, initialSe
       setProductionSaving(false);
     }
   }, [message, productionReqRows, record.category, record.id, record.styleName, record.styleNo, refreshWorkbenchView, serializeProductionReqRows]);
+
+  const handleBudgetEdit = useCallback((stageKey: string, budgetField: string, currentHours: number | null) => {
+    if (!record.id) return;
+    const stageTitle = stageCards.find(s => s.key === stageKey)?.title ?? stageKey;
+    let newHours = currentHours ?? 8;
+
+    Modal.confirm({
+      title: `调整「${stageTitle}」预算工时`,
+      width: 360,
+      okText: '确认',
+      cancelText: '取消',
+      destroyOnHidden: true,
+      content: (
+        <div style={{ marginTop: 12 }}>
+          <div style={{ marginBottom: 8, color: 'var(--color-text-secondary)', fontSize: 13 }}>
+            当前预算 {currentHours ? formatBudgetHours(currentHours) : '未设定'}
+          </div>
+          <Space.Compact style={{ width: '100%' }}>
+            <InputNumber
+              defaultValue={currentHours ?? 8}
+              min={1}
+              max={999}
+              style={{ width: '100%' }}
+              onChange={(v) => { newHours = v ?? 8; }}
+            />
+            <span style={{
+              display: 'inline-flex', alignItems: 'center',
+              padding: '0 11px', fontSize: 14,
+              background: 'var(--color-bg-subtle)',
+              border: '1px solid var(--color-border)',
+              borderLeft: 0, borderRadius: '0 6px 6px 0',
+              whiteSpace: 'nowrap',
+            }}>小时</span>
+          </Space.Compact>
+        </div>
+      ),
+      onOk: async () => {
+        try {
+          await api.put('/style/info', {
+            id: record.id,
+            [budgetField]: newHours,
+          });
+          message.success('预算工时已更新');
+          await refreshWorkbenchView();
+        } catch {
+          message.error('保存失败');
+        }
+      },
+    });
+  }, [record.id, stageCards, message, refreshWorkbenchView]);
 
   const content = (() => {
     if (loading) {
@@ -361,23 +417,88 @@ const StyleDevelopmentWorkbench: React.FC<Props> = ({ record, onClose, initialSe
       </div>
 
       <div className="style-workbench__stage-strip">
-        {stageCards.map((item, i) => (
-          <button
-            key={item.key}
-            type="button"
-            className={`style-workbench__stage-pill${activeSection === item.key ? ' style-workbench__stage-pill--active' : ''}`}
-            onClick={() => setActiveSection(item.key)}
-          >
-            <span>{item.title}</span>
-            <Tag color={item.meta.color}>{item.meta.label}</Tag>
-            <StageTimelineHint
-              stages={stageTimelineItems}
-              orderCreateTime={(detail as any).createTime}
-              expectedShipDate={(detail as any).deliveryDate}
-              stageIndex={i}
-            />
-          </button>
-        ))}
+        {stageCards.map((item, i) => {
+          // 计算预算状态和实际耗时
+          const budgetStatus = item.budgetHours != null && item.budgetHours > 0
+            ? computeBudgetStatus(item.budgetHours, item.startTime, item.endTime)
+            : null;
+          const actualDuration = item.completed && item.startTime && item.endTime
+            ? calculateActualDuration(item.startTime, item.endTime)
+            : null;
+          // 等待时间：上一环节完成到当前环节开始
+          const prevCard = i > 0 ? stageCards[i - 1] : null;
+          const waitDuration = prevCard?.endTime && item.startTime
+            ? calculateWaitingDuration(prevCard.endTime, item.startTime)
+            : null;
+
+          const canEditBudget = !item.completed && item.budgetField;
+
+          return (
+            <button
+              key={item.key}
+              type="button"
+              className={`style-workbench__stage-pill${activeSection === item.key ? ' style-workbench__stage-pill--active' : ''}`}
+              onClick={() => setActiveSection(item.key)}
+            >
+              <span>{item.title}</span>
+              <Tag color={item.meta.color}>{item.meta.label}</Tag>
+              {(budgetStatus || actualDuration || waitDuration) && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 1, alignItems: 'center' }}>
+                  {budgetStatus && budgetStatus.text && (
+                    <div
+                      style={{
+                        fontSize: 10,
+                        color: budgetStatus.color,
+                        lineHeight: 1.2,
+                        cursor: canEditBudget ? 'pointer' : 'default',
+                        ...(canEditBudget ? { borderBottom: '1px dashed', borderColor: budgetStatus.color } : {}),
+                      }}
+                      onClick={canEditBudget ? (e) => {
+                        e.stopPropagation();
+                        handleBudgetEdit(item.key, item.budgetField!, item.budgetHours);
+                      } : undefined}
+                    >
+                      {`预算${formatBudgetHours(item.budgetHours)} · ${budgetStatus.text}`}
+                    </div>
+                  )}
+                  {item.budgetHours != null && item.budgetHours > 0 && !budgetStatus?.text && (
+                    <div
+                      style={{
+                        fontSize: 10,
+                        color: 'var(--color-text-quaternary, #bfbfbf)',
+                        lineHeight: 1.2,
+                        cursor: canEditBudget ? 'pointer' : 'default',
+                        ...(canEditBudget ? { borderBottom: '1px dashed', borderColor: 'var(--color-text-quaternary, #bfbfbf)' } : {}),
+                      }}
+                      onClick={canEditBudget ? (e) => {
+                        e.stopPropagation();
+                        handleBudgetEdit(item.key, item.budgetField!, item.budgetHours);
+                      } : undefined}
+                    >
+                      {`预算${formatBudgetHours(item.budgetHours)}`}
+                    </div>
+                  )}
+                  {actualDuration && (
+                    <div style={{ fontSize: 10, color: 'var(--color-text-quaternary, #bfbfbf)', lineHeight: 1.2 }}>
+                      {`实际${actualDuration}`}
+                    </div>
+                  )}
+                  {waitDuration && (
+                    <div style={{ fontSize: 10, color: 'var(--color-text-quaternary, #bfbfbf)', lineHeight: 1.2 }}>
+                      {`等待${waitDuration}`}
+                    </div>
+                  )}
+                </div>
+              )}
+              <StageTimelineHint
+                stages={stageTimelineItems}
+                orderCreateTime={(detail as any).createTime}
+                expectedShipDate={(detail as any).deliveryDate}
+                stageIndex={i}
+              />
+            </button>
+          );
+        })}
       </div>
 
       <div className="style-workbench__body">

@@ -1032,12 +1032,12 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = ({ orderId, orde
       align: 'right' as const,
       render: (_: unknown, r: MaterialPurchase) => {
         const stock = stockMap[String(r.id)];
-        if (stock == null) return <span style={{ color: '#bbb' }}>-</span>;
+        if (stock == null) return <span style={{ color: 'var(--color-text-quaternary)' }}>-</span>;
         const hasStock = stock > 0;
         return (
           <span
             style={{
-              color: hasStock ? 'var(--color-primary)' : '#bbb',
+              color: hasStock ? 'var(--color-primary)' : 'var(--color-text-quaternary)',
               cursor: hasStock ? 'pointer' : undefined,
               textDecoration: hasStock ? 'underline' : undefined,
             }}

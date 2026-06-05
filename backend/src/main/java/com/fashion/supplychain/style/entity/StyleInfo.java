@@ -111,6 +111,22 @@ public class StyleInfo {
     @TableField("image_insight")
     private String imageInsight;
 
+    /** AI难度评分 1-10 */
+    @TableField("difficulty_score")
+    private Integer difficultyScore;
+
+    /** AI难度级别：SIMPLE / MEDIUM / COMPLEX / HIGH_END */
+    @TableField("difficulty_level")
+    private String difficultyLevel;
+
+    /** AI难度中文标签：简单款 / 中等难度 / 工艺复杂 / 高定级 */
+    @TableField("difficulty_label")
+    private String difficultyLabel;
+
+    /** AI难度定价倍率（如 1.00 / 1.15 / 1.35 / 1.60） */
+    @TableField("pricing_multiplier")
+    private BigDecimal pricingMultiplier;
+
     /**
      * 状态：ENABLED-启用，DISABLED-禁用
      */
@@ -254,6 +270,27 @@ public class StyleInfo {
      */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime sizePriceCompletedTime;
+
+    /** BOM清单预算工时（小时） */
+    private Integer bomBudgetHours;
+
+    /** 纸样开发预算工时（小时） */
+    private Integer patternBudgetHours;
+
+    /** 尺寸表预算工时（小时） */
+    private Integer sizeBudgetHours;
+
+    /** 工序单价预算工时（小时） */
+    private Integer processBudgetHours;
+
+    /** 生产制单预算工时（小时） */
+    private Integer productionBudgetHours;
+
+    /** 二次工艺预算工时（小时） */
+    private Integer secondaryBudgetHours;
+
+    /** 码数单价预算工时（小时） */
+    private Integer sizePriceBudgetHours;
 
     private String sampleStatus;
 

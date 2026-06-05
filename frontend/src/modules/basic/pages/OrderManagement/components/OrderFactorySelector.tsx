@@ -149,7 +149,7 @@ const OrderFactorySelector: React.FC<OrderFactorySelectorProps> = ({
                     天可完工
                   </span>
                 ) : null}
-                {selectedFactoryStat.activeWorkers <= 0 && selectedFactoryStat.avgDailyOutput <= 0 ? <span style={{ color: '#bbb' }}>暂无产能数据（该车间近30天无扫码记录）</span> : null}
+                {selectedFactoryStat.activeWorkers <= 0 && selectedFactoryStat.avgDailyOutput <= 0 ? <span style={{ color: 'var(--color-text-quaternary)' }}>暂无产能数据（该车间近30天无扫码记录）</span> : null}
               </div>
             </div>
           )}
@@ -212,7 +212,7 @@ const OrderFactorySelector: React.FC<OrderFactorySelectorProps> = ({
                     天可完工
                   </span>
                 ) : null}
-                {selectedFactoryStat.activeWorkers <= 0 && selectedFactoryStat.avgDailyOutput <= 0 ? <span style={{ color: '#bbb' }}>暂无产能数据（该工厂近30天无扫码记录）</span> : null}
+                {selectedFactoryStat.activeWorkers <= 0 && selectedFactoryStat.avgDailyOutput <= 0 ? <span style={{ color: 'var(--color-text-quaternary)' }}>暂无产能数据（该工厂近30天无扫码记录）</span> : null}
               </div>
             </div>
           )}

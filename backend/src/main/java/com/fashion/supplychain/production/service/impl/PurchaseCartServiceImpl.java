@@ -65,13 +65,11 @@ public class PurchaseCartServiceImpl implements PurchaseCartService {
     }
     
     @Override
-    @Transactional
     public AddItemResultDto addItem(Long tenantId, String userId, AddCartItemRequest request) {
         return purchaseCartOrchestrator.addItem(tenantId, userId, request);
     }
     
     @Override
-    @Transactional
     public BatchAddItemResultDto batchAddItems(Long tenantId, String userId, List<AddCartItemRequest> requests) {
         int successCount = 0;
         int mergedCount = 0;
@@ -97,7 +95,6 @@ public class PurchaseCartServiceImpl implements PurchaseCartService {
     }
     
     @Override
-    @Transactional
     public void updateItem(Long tenantId, String itemId, UpdateCartItemRequest request) {
         purchaseCartOrchestrator.updateItem(tenantId, itemId, request);
     }
@@ -120,13 +117,11 @@ public class PurchaseCartServiceImpl implements PurchaseCartService {
     }
     
     @Override
-    @Transactional
     public void mergeItems(Long tenantId, MergeRequest request) {
         purchaseCartOrchestrator.mergeItems(tenantId, request);
     }
     
     @Override
-    @Transactional
     public void splitItem(Long tenantId, SplitRequest request) {
         purchaseCartOrchestrator.splitItem(tenantId, request);
     }
@@ -137,7 +132,6 @@ public class PurchaseCartServiceImpl implements PurchaseCartService {
     }
     
     @Override
-    @Transactional
     public ConfirmResultDto confirm(Long tenantId, String userId, List<String> itemIds) {
         return purchaseCartOrchestrator.confirm(tenantId, userId, itemIds);
     }

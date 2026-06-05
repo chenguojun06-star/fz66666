@@ -128,7 +128,7 @@ const LocationLabelPrintModal: React.FC<Props> = ({
         <div style={{ marginBottom: 16 }}>
           <div style={{ fontWeight: 500, marginBottom: 8 }}>标签尺寸</div>
           <Space wrap align="center">
-            <span style={{ color: '#555' }}>宽度</span>
+            <span style={{ color: 'var(--color-text-secondary)' }}>宽度</span>
             <InputNumber
               min={20}
               max={200}
@@ -137,7 +137,7 @@ const LocationLabelPrintModal: React.FC<Props> = ({
               suffix="mm"
               style={{ width: 100 }}
             />
-            <span style={{ color: '#555' }}>高度</span>
+            <span style={{ color: 'var(--color-text-secondary)' }}>高度</span>
             <InputNumber
               min={20}
               max={200}
@@ -193,7 +193,7 @@ const LocationLabelPrintModal: React.FC<Props> = ({
               alignItems: 'center',
               justifyContent: 'center',
               padding: '4px',
-              background: '#fff',
+              background: 'var(--color-bg-base)',
               gap: 2,
             }}
           >

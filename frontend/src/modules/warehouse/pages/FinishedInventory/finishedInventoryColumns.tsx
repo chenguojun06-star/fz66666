@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { Tag, InputNumber, Tooltip } from 'antd';
+import { Tag, InputNumber, Tooltip, Input } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import RowActions from '@/components/common/RowActions';
 import { StyleCoverThumb } from '@/components/StyleAssets';
@@ -18,6 +18,8 @@ export interface SKUDetail {
   warehouseLocation: string;
   costPrice?: number;
   salesPrice?: number;
+  originalSalesPrice?: number;
+  priceAdjustmentReason?: string;
   outboundQty?: number;
   selected?: boolean;
 }
@@ -267,6 +269,8 @@ function StyleNoForecastHover({ styleNo }: { styleNo: string }) {
 
 export function getSkuColumns(handlers: {
   handleSKUQtyChange: (index: number, val: number | null) => void;
+  handleSKUSalesPriceChange?: (index: number, val: number | null) => void;
+  handleSKUPriceReasonChange?: (index: number, val: string) => void;
 }): ColumnsType<SKUDetail> {
   return [
     {
@@ -344,9 +348,48 @@ export function getSkuColumns(handlers: {
       title: '单价',
       dataIndex: 'salesPrice',
       key: 'salesPrice',
-      width: 90,
+      width: 130,
       align: 'center',
-      render: (v: number) => v != null ? formatMoney(v) : '-',
+      render: (v: number, record: SKUDetail, index: number) => {
+        const priceChanged = record.originalSalesPrice != null && record.salesPrice !== record.originalSalesPrice;
+        return (
+          <div>
+            <InputNumber
+              min={0}
+              precision={2}
+              value={record.salesPrice ?? v}
+              controls={false}
+              onChange={(val) => handlers.handleSKUSalesPriceChange?.(index, val)}
+              style={{ width: '100%' }}
+              status={priceChanged ? 'warning' : undefined}
+            />
+            {record.originalSalesPrice != null && priceChanged && (
+              <div style={{ fontSize: 12, color: 'var(--color-text-quaternary)', marginTop: 2 }}>
+                原价: {formatMoney(record.originalSalesPrice)}
+              </div>
+            )}
+          </div>
+        );
+      },
+    },
+    {
+      title: '改价原因',
+      dataIndex: 'priceAdjustmentReason',
+      key: 'priceAdjustmentReason',
+      width: 150,
+      render: (v: string, record: SKUDetail, index: number) => {
+        const priceChanged = record.originalSalesPrice != null && record.salesPrice !== record.originalSalesPrice;
+        if (!priceChanged) return <span style={{ color: 'var(--color-text-quaternary)' }}>-</span>;
+        return (
+          <Input
+            value={record.priceAdjustmentReason || ''}
+            onChange={e => handlers.handleSKUPriceReasonChange?.(index, e.target.value)}
+            placeholder="必填"
+            status={!record.priceAdjustmentReason?.trim() ? 'error' : undefined}
+            style={{ width: '100%' }}
+          />
+        );
+      },
     },
     {
       title: '出库数量',

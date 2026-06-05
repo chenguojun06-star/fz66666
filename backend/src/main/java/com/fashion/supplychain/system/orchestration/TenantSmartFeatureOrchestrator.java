@@ -31,7 +31,13 @@ public class TenantSmartFeatureOrchestrator {
             "smart.worker-profile.enabled",
             "smart.warehousing.audit.enabled",
             "smart.material.inventory.ai.enabled",
-            "smart.material.purchase.ai.enabled"
+            "smart.material.purchase.ai.enabled",
+            "print.hangtag.defaultTemplateId",
+            "print.barcode.defaultTemplateId",
+            "print.washLabel.defaultTemplateId",
+            "print.codeType",
+            "outstock.allowPriceAdjust",
+            "outstock.priceAdjustRequireReason"
     );
 
     public static final List<String> MINIPROGRAM_MENU_KEYS = Arrays.asList(

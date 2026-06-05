@@ -315,7 +315,7 @@ const [expressModalOpen, setExpressModalOpen] = useState(false);
                 <Col span={12}>
                   <Card style={{ borderRadius: 6, border: '1px solid #91caff', background: '#f0f9ff' }}>
                     <div style={{ fontWeight: 600, marginBottom: 6, color: '#1677ff' }}>📦 链路一：成品仓（有生产单）</div>
-                    <div style={{ fontSize: 14, color: '#555', lineHeight: 1.8 }}>
+                    <div style={{ fontSize: 14, color: 'var(--color-text-secondary)', lineHeight: 1.8 }}>
                       订单 → SKU匹配款号 → <Tag color="blue">关联生产单</Tag> → 生产加工 → 完工入库 → 出库发货 → 物流回传
                     </div>
                     <div style={{ marginTop: 6 }}><Tag color="blue">备货中 {stats?.preparing ?? 0}</Tag></div>
@@ -324,7 +324,7 @@ const [expressModalOpen, setExpressModalOpen] = useState(false);
                 <Col span={12}>
                   <Card style={{ borderRadius: 6, border: '1px solid #b7eb8f', background: '#f6ffed' }}>
                     <div style={{ fontWeight: 600, marginBottom: 6, color: '#52c41a' }}>🛒 链路二：电商仓（现货发货）</div>
-                    <div style={{ fontSize: 14, color: '#555', lineHeight: 1.8 }}>
+                    <div style={{ fontSize: 14, color: 'var(--color-text-secondary)', lineHeight: 1.8 }}>
                       订单 → <Tag color="orange">待拣货</Tag> → 仓库拣货 → 复核包装 → 出库发货 → 物流回传
                     </div>
                     <div style={{ marginTop: 6 }}>

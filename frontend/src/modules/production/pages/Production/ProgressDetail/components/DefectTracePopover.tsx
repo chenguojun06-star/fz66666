@@ -150,7 +150,7 @@ const DefectTracePopover: React.FC<{
                     }}
                     title={`${t.date}: ${t.defectCount}次缺陷 / ${t.totalScans}次扫码`}
                   />
-                  <div style={{ fontSize: 9, color: '#bbb', marginTop: 2 }}>
+                  <div style={{ fontSize: 9, color: 'var(--color-text-quaternary)', marginTop: 2 }}>
                     {t.date.slice(5)}
                   </div>
                 </div>

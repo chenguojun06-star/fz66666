@@ -1,10 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Button, Input, Select, Popconfirm, Modal } from 'antd';
-import { DeleteOutlined, PlusOutlined, EditOutlined } from '@ant-design/icons';
+import { Button, Input, Select, Popconfirm, Modal, Tooltip, message as antMessage } from 'antd';
+import { CopyOutlined, DeleteOutlined, PlusOutlined, EditOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
 import { sortSizeNames } from '@/utils/api';
 import api from '@/utils/api';
 import type { SizeTableData, SizeTablePart } from '../../utils/templateUtils';
+import ExcelPasteInput, { parseExcelClipboard } from '@/components/common/ExcelPasteInput';
 
 interface SizeInlineTableProps {
   value: SizeTableData;
@@ -144,6 +145,33 @@ const SizeInlineTable: React.FC<SizeInlineTableProps> = ({ value, onChange, read
     });
   }, []);
 
+  const handleDuplicatePart = useCallback((index: number) => {
+    const source = value.parts[index];
+    if (!source) return;
+    const newPart: SizeTablePart = {
+      ...source,
+      partName: `${source.partName || ''}(副本)`,
+      values: { ...(source.values || {}) },
+    };
+    const nextParts = [...value.parts];
+    nextParts.splice(index + 1, 0, newPart);
+    onChange({ ...value, parts: nextParts });
+  }, [value, onChange]);
+
+  /** 从 Excel 粘贴多值到指定行的尺码列 */
+  const handlePasteToPartRow = useCallback((partIndex: number, startSizeIndex: number, values: number[]) => {
+    const current = value.parts[partIndex];
+    if (!current) return;
+    const nextValues = { ...(current.values || {}) };
+    values.forEach((val, i) => {
+      const targetIndex = startSizeIndex + i;
+      if (targetIndex < value.sizes.length) {
+        nextValues[value.sizes[targetIndex]] = String(val);
+      }
+    });
+    updatePart(partIndex, { values: nextValues });
+  }, [value.parts, value.sizes, updatePart]);
+
   const columns = useMemo(() => {
     const cols: any[] = [
       {
@@ -174,7 +202,7 @@ const SizeInlineTable: React.FC<SizeInlineTableProps> = ({ value, onChange, read
       },
     ];
 
-    value.sizes.forEach((size) => {
+    value.sizes.forEach((size, sizeIndex) => {
       cols.push({
         title: (
           <div style={{ display: 'flex', alignItems: 'center', gap: 4, justifyContent: 'center' }}>
@@ -220,10 +248,14 @@ const SizeInlineTable: React.FC<SizeInlineTableProps> = ({ value, onChange, read
         dataIndex: ['values', size],
         width: compact ? 80 : 100,
         render: (_: unknown, record: SizeTablePart, index?: number) => (
-          <Input
-            value={record.values?.[size] || ''}
+          <ExcelPasteInput
+            value={record.values?.[size] ? Number(record.values[size]) : undefined}
             disabled={readOnly}
-            onChange={(e) => updateCell(index ?? 0, size, e.target.value)}
+            onChange={(val) => updateCell(index ?? 0, size, val != null ? String(val) : '')}
+            onPasteMultiValues={(values) => {
+              handlePasteToPartRow(index ?? 0, sizeIndex, values);
+              return true;
+            }}
           />
         ),
       });
@@ -247,18 +279,23 @@ const SizeInlineTable: React.FC<SizeInlineTableProps> = ({ value, onChange, read
       cols.push({
         title: '操作',
         key: 'actions',
-        width: 64,
+        width: 88,
         resizable: false,
         render: (_: unknown, __: SizeTablePart, index?: number) => (
-          <Popconfirm title="删除此部位行？" onConfirm={() => handleRemovePart(index ?? 0)} okText="删除" cancelText="取消">
-            <Button type="text" danger icon={<DeleteOutlined />} disabled={value.parts.length <= 1} />
-          </Popconfirm>
+          <div style={{ display: 'flex', gap: 4 }}>
+            <Tooltip title="复制此行">
+              <Button type="text" icon={<CopyOutlined />} onClick={() => handleDuplicatePart(index ?? 0)} />
+            </Tooltip>
+            <Popconfirm title="删除此部位行？" onConfirm={() => handleRemovePart(index ?? 0)} okText="删除" cancelText="取消">
+              <Button type="text" danger icon={<DeleteOutlined />} disabled={value.parts.length <= 1} />
+            </Popconfirm>
+          </div>
         ),
       });
     }
 
     return cols;
-  }, [value, readOnly, editingSizeHeader, sizeHeaderDraft, compact, updatePart, updateCell, handleRemoveSize, handleRemovePart, handleSizeHeaderConfirm]);
+  }, [value, readOnly, editingSizeHeader, sizeHeaderDraft, compact, updatePart, updateCell, handleRemoveSize, handleRemovePart, handleDuplicatePart, handlePasteToPartRow, handleSizeHeaderConfirm]);
 
   const availableSizeOptions = useMemo(
     () => sizeOptions.filter((opt) => !value.sizes.includes(opt.value)),

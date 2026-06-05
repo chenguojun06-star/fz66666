@@ -278,7 +278,7 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
           </div>
           {/* 基本信息字段细化选择 */}
           {options.basicInfo && (
-            <div style={{ marginTop: 12, padding: '10px 14px', background: '#fff', borderRadius: 8, border: '1px solid var(--color-border-light)' }}>
+            <div style={{ marginTop: 12, padding: '10px 14px', background: 'var(--color-bg-base)', borderRadius: 8, border: '1px solid var(--color-border-light)' }}>
               <div style={{ fontWeight: 500, color: '#666', marginBottom: 8, fontSize: 13 }}>基本信息字段（可多选）：</div>
               <Checkbox.Group
                 value={[...basicInfoFields]}

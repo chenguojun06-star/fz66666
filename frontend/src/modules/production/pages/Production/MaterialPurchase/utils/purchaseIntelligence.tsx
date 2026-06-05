@@ -191,7 +191,7 @@ export function renderPurchaseTooltip(insight: PurchaseInsight, _orderNo: string
       </div>
 
       {/* 核心数据 */}
-      <div style={{ marginBottom: 6, padding: '4px 8px', background: 'rgba(0,0,0,0.04)', borderRadius: 4, color: '#555' }}>
+      <div style={{ marginBottom: 6, padding: '4px 8px', background: 'rgba(0,0,0,0.04)', borderRadius: 4, color: 'var(--color-text-secondary)' }}>
         {insight.totalMaterials} 种物料 · 到货率 {insight.arrivalRate}%
         {insight.canStartCutting ? ' ·  可开裁' : ' ·  不可开裁'}
       </div>

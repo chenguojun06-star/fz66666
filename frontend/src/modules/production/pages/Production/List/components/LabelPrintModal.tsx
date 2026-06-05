@@ -396,13 +396,13 @@ export default function LabelPrintModal({ open, onClose, order, styleInfo }: Pro
               <>
                 <div style={{ marginBottom: 12 }}>
                   <Space wrap align="center">
-                    <span style={{ color: '#555', fontSize: 14 }}>纸张宽</span>
+                    <span style={{ color: 'var(--color-text-secondary)', fontSize: 14 }}>纸张宽</span>
                     <InputNumber
                       min={20} max={200} value={washW}
                       onChange={v => setWashW(v ?? 30)}
                       suffix="mm" style={{ width: 110 }}
                     />
-                    <span style={{ color: '#555', fontSize: 14 }}>高</span>
+                    <span style={{ color: 'var(--color-text-secondary)', fontSize: 14 }}>高</span>
                     <InputNumber
                       min={30} max={400} value={washH}
                       onChange={v => setWashH(v ?? 80)}
@@ -410,7 +410,7 @@ export default function LabelPrintModal({ open, onClose, order, styleInfo }: Pro
                     />
                     {suitPart && (
                       <>
-                        <span style={{ color: '#555', fontSize: 14, marginLeft: 4 }}>打印部位</span>
+                        <span style={{ color: 'var(--color-text-secondary)', fontSize: 14, marginLeft: 4 }}>打印部位</span>
                         <Radio.Group
                           value={suitPart}
                           onChange={e => setSuitPart(e.target.value as string)}

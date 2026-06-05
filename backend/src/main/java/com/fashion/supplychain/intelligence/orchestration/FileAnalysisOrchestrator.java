@@ -230,12 +230,8 @@ public class FileAnalysisOrchestrator {
             sb.append("（相似度≥72%为高相似，可重点关注）");
             log.info("[FileAnalysis] 以图搜款成功 匹配{}个款式", similar.size());
             return sb.toString();
-        } catch (IllegalStateException e) {
-            // Voyage API Key 未配置
-            log.debug("[FileAnalysis] 以图搜款跳过：{}", e.getMessage());
-            return null;
         } catch (Exception e) {
-            log.warn("[FileAnalysis] 以图搜款异常（不影响主流程）: {}", e.getMessage());
+            log.debug("[FileAnalysis] 以图搜款跳过：{}", e.getMessage());
             return null;
         }
     }

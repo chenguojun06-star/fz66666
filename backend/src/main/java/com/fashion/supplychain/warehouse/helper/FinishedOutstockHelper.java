@@ -110,10 +110,18 @@ public class FinishedOutstockHelper {
                         "库存不足: " + skuCode + "，可用库存:" + current + "件，申请出库:" + quantity + "件");
             }
 
-                recordProductOutstock(sku, quantity, requestOrderId, requestOrderNo, requestWarehouse,
+            // 价格覆盖逻辑
+            BigDecimal overrideSalesPrice = null;
+            Object priceObj = item.get("salesPrice");
+            if (priceObj != null) {
+                try { overrideSalesPrice = new BigDecimal(priceObj.toString()); } catch (NumberFormatException ignore) {}
+            }
+            String priceAdjustmentReason = trimToNull(item.get("priceAdjustmentReason"));
+
+            recordProductOutstock(sku, quantity, requestOrderId, requestOrderNo, requestWarehouse,
                     "成品库存页面出库|sku=" + skuCode, trackingNo, expressCompany,
                     customerName, customerPhone, shippingAddress, finalOutstockType,
-                    warehouseAreaId, warehouseAreaName);
+                    warehouseAreaId, warehouseAreaName, overrideSalesPrice, priceAdjustmentReason);
         }
         String productionOrderNo = (String) params.get("productionOrderNo");
         if (StringUtils.hasText(productionOrderNo)) {
@@ -174,7 +182,9 @@ public class FinishedOutstockHelper {
                                        String shippingAddress,
                                        String outstockType,
                                        String warehouseAreaId,
-                                       String warehouseAreaName) {
+                                       String warehouseAreaName,
+                                       BigDecimal overrideSalesPrice,
+                                       String priceAdjustmentReason) {
         ProductOutstock outstock = new ProductOutstock();
         LocalDateTime now = LocalDateTime.now();
         StyleInfo styleInfo = sku.getStyleId() == null ? null : styleInfoService.getById(sku.getStyleId());
@@ -198,14 +208,35 @@ public class FinishedOutstockHelper {
         outstock.setColor(sku.getColor());
         outstock.setSize(sku.getSize());
         outstock.setCostPrice(sku.getCostPrice());
-        outstock.setSalesPrice(sku.getSalesPrice());
+
+        // 价格逻辑：支持改价
+        BigDecimal effectiveSalesPrice = sku.getSalesPrice();
+        if (overrideSalesPrice != null && sku.getSalesPrice() != null) {
+            BigDecimal originalPrice = sku.getSalesPrice();
+            if (overrideSalesPrice.compareTo(originalPrice) != 0) {
+                // 价格有变化，记录原始价格
+                outstock.setOriginalSalesPrice(originalPrice);
+                if (priceAdjustmentReason == null || priceAdjustmentReason.isBlank()) {
+                    // 价格偏差超过10%必须填原因
+                    BigDecimal diff = overrideSalesPrice.subtract(originalPrice).abs();
+                    if (diff.compareTo(originalPrice.multiply(BigDecimal.valueOf(0.1))) > 0) {
+                        throw new IllegalArgumentException("价格调整超过10%，必须填写价格调整原因");
+                    }
+                }
+                outstock.setPriceAdjustmentReason(priceAdjustmentReason);
+                log.info("[出库改价] sku={} 原价={} 改价={} 原因={}", sku.getSkuCode(), originalPrice, overrideSalesPrice, priceAdjustmentReason);
+            }
+            effectiveSalesPrice = overrideSalesPrice;
+        }
+        outstock.setSalesPrice(effectiveSalesPrice);
+
         outstock.setTrackingNo(trackingNo);
         outstock.setExpressCompany(expressCompany);
         outstock.setCustomerName(customerName);
         outstock.setCustomerPhone(customerPhone);
         outstock.setShippingAddress(shippingAddress);
-        if (sku.getSalesPrice() != null) {
-            outstock.setTotalAmount(sku.getSalesPrice().multiply(BigDecimal.valueOf(quantity)));
+        if (effectiveSalesPrice != null) {
+            outstock.setTotalAmount(effectiveSalesPrice.multiply(BigDecimal.valueOf(quantity)));
         }
         outstock.setPaidAmount(BigDecimal.ZERO);
         outstock.setPaymentStatus("unpaid");

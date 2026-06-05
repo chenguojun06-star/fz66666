@@ -52,7 +52,7 @@ export const useStyleProcessAi = ({ styleId, data, editMode, enterEdit }: UseSty
         if (preview.length === 0) { message.info('所有工序已存在，无需重复补全'); return; }
         modal.confirm({
           title: `AI建议补全 ${preview.length} 道工序`,
-          content: (<div><p style={{ marginBottom: 8 }}>以下工序将被添加，请确认：</p>{preview.map((p, i) => (<div key={i} style={{ color: '#555', lineHeight: '24px' }}>• {p.progressStage || '车缝'} - {p.processName}（建议单价 ¥{p.suggestedPrice ?? 0}）</div>))}</div>),
+          content: (<div><p style={{ marginBottom: 8 }}>以下工序将被添加，请确认：</p>{preview.map((p, i) => (<div key={i} style={{ color: 'var(--color-text-secondary)', lineHeight: '24px' }}>• {p.progressStage || '车缝'} - {p.processName}（建议单价 ¥{p.suggestedPrice ?? 0}）</div>))}</div>),
           okText: '确认添加', cancelText: '取消',
           onOk: async () => {
             if (!editMode) await enterEdit();

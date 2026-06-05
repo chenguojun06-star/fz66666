@@ -22,6 +22,7 @@ import { SampleStock, SampleTypeMap } from './types';
 import InboundModal from './InboundModal';
 import LoanModal from './LoanModal';
 import LoanHistoryModal from './LoanHistoryModal';
+import TransferToOutstockModal from './TransferToOutstockModal';
 import dayjs, { type Dayjs } from 'dayjs';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
@@ -77,6 +78,8 @@ const SampleInventory: React.FC = () => {
   inboundOpenRef.current = inboundModal.open;
   const loanModal = useModal<SampleStock>();
   const historyDrawer = useModal<SampleStock>();
+  const [transferVisible, setTransferVisible] = useState(false);
+  const [selectedStock, setSelectedStock] = useState<SampleStock | null>(null);
 
   const clearAutoInboundParams = React.useCallback(() => {
     const next = new URLSearchParams(searchParams);
@@ -362,6 +365,15 @@ const SampleInventory: React.FC = () => {
                     onClick: () => loanModal.open(record)
                   },
                   {
+                    key: 'transfer',
+                    label: '转成品出库',
+                    disabled: record.inventoryStatus !== 'active' || record.quantity - record.loanedQuantity <= 0,
+                    onClick: () => {
+                      setSelectedStock(record);
+                      setTransferVisible(true);
+                    },
+                  },
+                  {
                     key: 'history',
                     label: '记录',
                     onClick: () => historyDrawer.open(record)
@@ -478,6 +490,17 @@ const SampleInventory: React.FC = () => {
           stock={historyDrawer.data ?? undefined}
           onClose={historyDrawer.close}
           onRefresh={loadData}
+        />
+
+        <TransferToOutstockModal
+          visible={transferVisible}
+          record={selectedStock}
+          onClose={() => setTransferVisible(false)}
+          onSuccess={() => {
+            setTransferVisible(false);
+            setSelectedStock(null);
+            loadData();
+          }}
         />
         <Modal
           open={destroyModal.visible}

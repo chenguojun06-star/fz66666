@@ -101,7 +101,7 @@ const AiQualityHelperCard: React.FC<Props> = ({ aiSuggestion, aiLoading, actualD
                           {getDefectCategoryLabel(defect)}
                         </span>
                       </div>
-                      <div style={{ color: '#555', fontSize: 14, lineHeight: 1.6 }}>{advice}</div>
+                      <div style={{ color: 'var(--color-text-secondary)', fontSize: 14, lineHeight: 1.6 }}>{advice}</div>
                     </div>
                   );
                 })}

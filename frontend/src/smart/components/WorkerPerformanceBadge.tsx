@@ -115,7 +115,7 @@ function StageRow({ sp }: { sp: StageProfile }) {
     <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12,
                   fontSize: 14, padding: '3px 0', borderBottom: '1px solid var(--color-border-light)' }}>
       <span style={{ color: 'var(--color-text-primary)', minWidth: 48 }}>{sp.stageName}</span>
-      <span style={{ color: '#555' }}>{sp.avgPerDay.toFixed(1)} 件/天</span>
+      <span style={{ color: 'var(--color-text-secondary)' }}>{sp.avgPerDay.toFixed(1)} 件/天</span>
       <span style={{ color, fontSize: 14 }}>
         {arrow} {diff !== 0 ? `${sign}${diff.toFixed(1)}%` : '均值'}
       </span>

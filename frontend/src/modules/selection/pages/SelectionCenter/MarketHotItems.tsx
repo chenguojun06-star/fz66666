@@ -345,7 +345,7 @@ export default function MarketHotItems({ onAdded }: { onAdded?: () => void }) {
                                 <img src={item.thumbnail} alt={item.title} style={{ width: '100%', height: '100%', objectFit: 'contain' }} loading="lazy" referrerPolicy="no-referrer" />
                               </div>
                             )
-                            : <div style={{ height: 80, background: 'var(--color-bg-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#bbb', fontSize: 14 }}>暂无图片</div>}
+                            : <div style={{ height: 80, background: 'var(--color-bg-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-quaternary)', fontSize: 14 }}>暂无图片</div>}
                           <div style={{ padding: '8px 10px' }}>
                             <Tooltip title={item.title}><div style={{ fontSize: 14, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 4 }}>{item.title}</div></Tooltip>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
@@ -448,7 +448,7 @@ export default function MarketHotItems({ onAdded }: { onAdded?: () => void }) {
                         <img src={item.thumbnail} alt={item.title} style={{ width: '100%', height: '100%', objectFit: 'contain' }} loading="lazy" referrerPolicy="no-referrer" />
                       </div>
                     ) : (
-                      <div style={{ height: 100, background: 'var(--color-bg-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#bbb', fontSize: 14 }}>暂无图片</div>
+                      <div style={{ height: 100, background: 'var(--color-bg-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-quaternary)', fontSize: 14 }}>暂无图片</div>
                     )}
                     {/* 内容区 */}
                     <div style={{ padding: '10px 12px', flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>

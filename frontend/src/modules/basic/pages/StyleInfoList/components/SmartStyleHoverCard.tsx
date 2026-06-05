@@ -146,7 +146,7 @@ const SmartStyleHoverCard: React.FC<Props> = ({ record }) => {
                 </Tag>
               )}
               {s.completedAt && (
-                <span style={{ color: '#bbb', fontSize: 12, flexShrink: 0 }}>{s.completedAt}</span>
+                <span style={{ color: 'var(--color-text-quaternary)', fontSize: 12, flexShrink: 0 }}>{s.completedAt}</span>
               )}
             </div>
           );

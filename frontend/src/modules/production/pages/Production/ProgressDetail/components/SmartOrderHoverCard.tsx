@@ -312,7 +312,7 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
         }}>
           {order.styleNo && (
             <span style={{
-              fontSize: 11, color: '#555', background: 'var(--color-bg-subtle)',
+              fontSize: 11, color: 'var(--color-text-secondary)', background: 'var(--color-bg-subtle)',
               padding: '1px 7px', borderRadius: 10, fontWeight: 600,
             }}>
               款号 {order.styleNo}
@@ -339,7 +339,7 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
         marginBottom: 8,
       }}>
-        <span style={{ color: '#555', fontWeight: 600, fontSize: 11 }}>
+        <span style={{ color: 'var(--color-text-secondary)', fontWeight: 600, fontSize: 11 }}>
           {order.factoryName || '工序进度'}
         </span>
         {deadline && (
@@ -530,7 +530,7 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
           display: 'flex', alignItems: 'center', gap: 6,
           borderTop: '1px dashed var(--color-border)', margin: '2px 0 6px',
         }}>
-          <span style={{ fontSize: 11, color: '#bbb', paddingTop: 3, whiteSpace: 'nowrap' }}>预测</span>
+          <span style={{ fontSize: 11, color: 'var(--color-text-quaternary)', paddingTop: 3, whiteSpace: 'nowrap' }}>预测</span>
         </div>
       )}
 
@@ -546,9 +546,9 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
               <div key={s.label} style={{ marginBottom: 7 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   <span style={{ width: 14, fontSize: 11, textAlign: 'center', flexShrink: 0, color: '#d9d9d9' }}>○</span>
-                  <span style={{ width: 26, flexShrink: 0, fontWeight: 400, color: '#bbb' }}>{s.label}</span>
+                  <span style={{ width: 26, flexShrink: 0, fontWeight: 400, color: 'var(--color-text-quaternary)' }}>{s.label}</span>
                   <div style={{ flex: 1, height: 5, background: 'var(--color-bg-subtle)', borderRadius: 3 }} />
-                  <span style={{ width: 70, textAlign: 'right', flexShrink: 0, fontSize: 11, color: '#bbb' }}>
+                  <span style={{ width: 70, textAlign: 'right', flexShrink: 0, fontSize: 11, color: 'var(--color-text-quaternary)' }}>
                     约 {predictDate}
                   </span>
                 </div>
@@ -557,7 +557,7 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
           })}
         </div>
       ) : !hasScan && (
-        <div style={{ color: '#bbb', fontSize: 11, textAlign: 'center', padding: '8px 0' }}>
+        <div style={{ color: 'var(--color-text-quaternary)', fontSize: 11, textAlign: 'center', padding: '8px 0' }}>
           {prog > 0 ? `整体进度 ${prog}%，工序数据加载中…` : '待开工'}
         </div>
       )}
@@ -587,8 +587,8 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
         }}>
           {order.merchandiser && (
             <span>
-              <span style={{ color: '#bbb' }}>跟单 </span>
-              <span style={{ color: '#555' }}>{order.merchandiser}</span>
+              <span style={{ color: 'var(--color-text-quaternary)' }}>跟单 </span>
+              <span style={{ color: 'var(--color-text-secondary)' }}>{order.merchandiser}</span>
             </span>
           )}
           {(order as any).operationRemark && (

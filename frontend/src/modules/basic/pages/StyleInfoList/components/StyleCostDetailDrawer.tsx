@@ -260,7 +260,7 @@ const StyleCostDetailDrawer: React.FC<StyleCostDetailDrawerProps> = ({
       <Card
         size="small"
         style={{
-          background: '#fff',
+          background: 'var(--color-bg-base)',
           border: '1px solid var(--color-border)',
           marginBottom: 16,
         }}

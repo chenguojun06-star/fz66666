@@ -50,7 +50,7 @@ const ShareOrderPage: React.FC = () => {
   const totalQuantityText = `${data.orderQuantity ?? 0} 件`;
   const completedSummaryText = `已完成 ${data.completedQuantity ?? 0} / ${data.orderQuantity ?? 0} 件`;
   const displayColorText = Array.from(new Set(colorSizeQuantities.map((item) => String(item.color || '').trim()).filter(Boolean))).join(' / ') || (String(data.color || '').trim() || '—');
-  const infoLabelStyle: React.CSSProperties = { color: '#64748b', fontSize: 14 };
+  const infoLabelStyle: React.CSSProperties = { color: 'var(--color-text-tertiary)', fontSize: 14 };
   const infoValueStyle: React.CSSProperties = { color: '#0f172a', fontSize: 14, fontWeight: 700 };
   const shareMatrixItems = createOrderColorSizeMatrixInfoItems({
     items: colorSizeQuantities.map((item) => ({ color: String(item.color || '').trim(), size: String(item.size || '').trim(), quantity: Number(item.quantity ?? 0) })),
@@ -68,7 +68,7 @@ const ShareOrderPage: React.FC = () => {
           </div>
           <div style={S.heroOverviewStyle}>
             <div style={S.styleCoverCardStyle}>
-              {styleCoverUrl ? <img loading="lazy" src={styleCoverUrl} alt={data.styleName || data.styleNo || data.orderNo} style={S.styleCoverImageStyle} /> : <div style={S.styleCoverPlaceholderStyle}><div style={{ fontSize: 14, color: '#94a3b8' }}>暂无款式图</div></div>}
+              {styleCoverUrl ? <img loading="lazy" src={styleCoverUrl} alt={data.styleName || data.styleNo || data.orderNo} style={S.styleCoverImageStyle} /> : <div style={S.styleCoverPlaceholderStyle}><div style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>暂无款式图</div></div>}
             </div>
             <div>
               <div style={S.orderNoStyle}>{data.orderNo}</div>
@@ -116,7 +116,7 @@ const ShareOrderPage: React.FC = () => {
                   <XiaoyunMascotLink riskTone={riskTone} />
                   <div>
                     <div style={{ fontSize: 14, fontWeight: 700, color: '#0f172a' }}>{riskTone.label}</div>
-                    <div style={{ fontSize: 14, color: '#64748b' }}>{deliveryDiffText}</div>
+                    <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>{deliveryDiffText}</div>
                     <div style={S.aiSupportTextStyle}>数据由 云裳智链 · 实时智能化平台提供支持</div>
                   </div>
                 </div>
@@ -143,7 +143,7 @@ const ShareOrderPage: React.FC = () => {
                       </div>
                       <div style={{ fontSize: 14, fontWeight: 700, color: tone.color, marginBottom: 4, lineHeight: 1.25, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{active ? `当前节点 · 总进度 ${progress}%` : tone.label}</div>
                       <Progress percent={Math.max(0, Math.min(100, stage.rate ?? 0))} showInfo={false} strokeColor={tone.color} trailColor="rgba(148, 163, 184, 0.18)" />
-                      <div style={{ marginTop: 4, fontSize: 14, color: '#64748b', lineHeight: 1.25, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{active ? `实际当前节点：${currentStage}` : tone.helper}</div>
+                      <div style={{ marginTop: 4, fontSize: 14, color: 'var(--color-text-tertiary)', lineHeight: 1.25, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{active ? `实际当前节点：${currentStage}` : tone.helper}</div>
                     </div>
                   );
                 }) : <div style={S.emptyPanelStyle}>暂未同步到节点数据</div>}
@@ -174,8 +174,8 @@ const ShareOrderPage: React.FC = () => {
                     <div style={S.timelineDotStyle} />
                     <div>
                       <div style={{ fontSize: 14, fontWeight: 600, color: '#0f172a' }}>{scan.processName || '生产更新'}</div>
-                      <div style={{ fontSize: 14, color: '#64748b', marginTop: 2 }}>{scan.quantity != null ? `完成 ${scan.quantity} 件` : '有新的进展记录'}</div>
-                      <div style={{ fontSize: 14, color: '#94a3b8', marginTop: 2 }}>{formatDateTime(scan.scanTime)}</div>
+                      <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginTop: 2 }}>{scan.quantity != null ? `完成 ${scan.quantity} 件` : '有新的进展记录'}</div>
+                      <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginTop: 2 }}>{formatDateTime(scan.scanTime)}</div>
                     </div>
                   </div>
                 )) : <div style={S.emptyPanelStyle}>暂无最新扫码动态</div>}

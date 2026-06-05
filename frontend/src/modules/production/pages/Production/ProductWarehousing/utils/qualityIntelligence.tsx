@@ -175,7 +175,7 @@ export function renderQualityTooltip(insight: QualityInsight, _orderNo: string):
       </div>
 
       {/* 核心数据 */}
-      <div style={{ marginBottom: 6, padding: '4px 8px', background: 'rgba(0,0,0,0.04)', borderRadius: 4, color: '#555' }}>
+      <div style={{ marginBottom: 6, padding: '4px 8px', background: 'rgba(0,0,0,0.04)', borderRadius: 4, color: 'var(--color-text-secondary)' }}>
         质检 {insight.processed} 件 · 合格 {insight.totalQ} · 不合格 {insight.totalUQ} · 已入库 {insight.totalW}
         {insight.totalCut > 0 && ` · 裁剪 ${insight.totalCut}`}
       </div>

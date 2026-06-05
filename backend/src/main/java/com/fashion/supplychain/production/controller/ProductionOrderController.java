@@ -371,6 +371,29 @@ public class ProductionOrderController {
             order.setUrgencyLevel(StringUtils.hasText(urgencyLevel) ? urgencyLevel : "normal");
         }
 
+        // 更新各环节预算工时
+        String[] budgetHourFields = {
+            "procurementBudgetHours", "cuttingBudgetHours", "secondaryProcessBudgetHours",
+            "carSewingBudgetHours", "ironingBudgetHours", "packagingBudgetHours",
+            "qualityBudgetHours", "warehousingBudgetHours"
+        };
+        for (String field : budgetHourFields) {
+            if (payload.containsKey(field)) {
+                Object val = payload.get(field);
+                Integer hours = val != null ? Integer.parseInt(String.valueOf(val)) : null;
+                switch (field) {
+                    case "procurementBudgetHours": order.setProcurementBudgetHours(hours); break;
+                    case "cuttingBudgetHours": order.setCuttingBudgetHours(hours); break;
+                    case "secondaryProcessBudgetHours": order.setSecondaryProcessBudgetHours(hours); break;
+                    case "carSewingBudgetHours": order.setCarSewingBudgetHours(hours); break;
+                    case "ironingBudgetHours": order.setIroningBudgetHours(hours); break;
+                    case "packagingBudgetHours": order.setPackagingBudgetHours(hours); break;
+                    case "qualityBudgetHours": order.setQualityBudgetHours(hours); break;
+                    case "warehousingBudgetHours": order.setWarehousingBudgetHours(hours); break;
+                }
+            }
+        }
+
         boolean success = productionOrderService.updateById(order);
 
         // 工序数据变更时，同步更新工序跟踪表中的单价（解决单价不同步问题）

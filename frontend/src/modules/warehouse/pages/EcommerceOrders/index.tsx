@@ -214,7 +214,7 @@ const OrdersTab: React.FC = () => {
           : <div style={{
               width: 44, height: 44, background: 'var(--color-bg-subtle)', borderRadius: 4,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 16, color: '#bbb',
+              fontSize: 16, color: 'var(--color-text-quaternary)',
             }}></div>;
       },
     },

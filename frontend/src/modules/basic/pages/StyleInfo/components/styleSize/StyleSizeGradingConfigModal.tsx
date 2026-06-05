@@ -1,8 +1,9 @@
-import React from 'react';
-import { Button, Input, InputNumber, Select, Tag, Tooltip } from 'antd';
-import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
-import ResizableModal from '@/components/common/ResizableModal';
+import React, { useMemo } from 'react';
+import { Button, InputNumber, Select, Tag, Divider, Table, Tooltip, Input } from 'antd';
+import { DeleteOutlined, PlusOutlined, CheckCircleFilled } from '@ant-design/icons';
+import Drawer from 'antd/es/drawer';
 import { GradingZone, MatrixRow } from './shared';
+import { toNumberSafe } from '@/utils/api';
 
 interface Props {
   open: boolean;
@@ -26,6 +27,33 @@ const createEmptySizeStepColumn = (): SizeStepColumn => ({
   step: 0,
 });
 
+/** 计算放码预览值 */
+const computePreview = (
+  baseValue: number,
+  baseIndex: number,
+  sizeColumns: string[],
+  zones: GradingZone[],
+): Record<string, number> => {
+  const result: Record<string, number> = {};
+  result[sizeColumns[baseIndex]] = baseValue;
+
+  for (let i = 0; i < sizeColumns.length; i++) {
+    if (i === baseIndex) continue;
+    const sizeName = sizeColumns[i];
+    let step = 0;
+    for (const zone of zones) {
+      if ((zone.frontSizes || []).includes(sizeName)) { step = toNumberSafe(zone.frontStep); break; }
+      if ((zone.backSizes || []).includes(sizeName)) { step = toNumberSafe(zone.backStep); break; }
+      for (const col of zone.sizeStepColumns || []) {
+        if ((col.sizes || []).includes(sizeName)) { step = toNumberSafe(col.step); break; }
+      }
+    }
+    const distance = Math.abs(i - baseIndex);
+    result[sizeName] = Number((i < baseIndex ? baseValue - step * distance : baseValue + step * distance).toFixed(2));
+  }
+  return result;
+};
+
 const StyleSizeGradingConfigModal: React.FC<Props> = ({
   open,
   gradingTargetRowKey,
@@ -47,6 +75,32 @@ const StyleSizeGradingConfigModal: React.FC<Props> = ({
   };
 
   const baseSizeValue = getBaseSizeValue();
+  const baseIndex = gradingDraftBaseSize ? sizeColumns.indexOf(gradingDraftBaseSize) : -1;
+
+  // 实时预览数据
+  const previewData = useMemo(() => {
+    if (baseIndex < 0 || baseSizeValue === null) return [];
+    const preview = computePreview(toNumberSafe(baseSizeValue), baseIndex, sizeColumns, gradingDraftZones);
+    return rows
+      .filter((row) => {
+        if (gradingTargetRowKey === 'batch') return true;
+        return row.key === gradingTargetRowKey;
+      })
+      .slice(0, 8) // 最多预览8行
+      .map((row) => {
+        const rowBaseValue = toNumberSafe(row.cells[gradingDraftBaseSize]?.value);
+        const rowPreview = computePreview(rowBaseValue, baseIndex, sizeColumns, gradingDraftZones);
+        const result: Record<string, any> = {
+          key: row.key,
+          partName: row.partName || '未命名',
+          baseValue: rowBaseValue,
+        };
+        sizeColumns.forEach((sn) => {
+          result[sn] = rowPreview[sn];
+        });
+        return result;
+      });
+  }, [baseIndex, baseSizeValue, gradingDraftBaseSize, gradingDraftZones, gradingTargetRowKey, rows, sizeColumns]);
 
   const addSizeStepColumn = (zoneKey: string) => {
     setGradingDraftZones((prev) => prev.map((zone) => {
@@ -88,22 +142,49 @@ const StyleSizeGradingConfigModal: React.FC<Props> = ({
     }));
   };
 
+  // 预览表格列
+  const previewColumns = [
+    { title: '部位', dataIndex: 'partName', width: 80, fixed: 'left' as const },
+    { title: '基准值', dataIndex: 'baseValue', width: 70, align: 'center' as const },
+    ...sizeColumns.map((sn) => ({
+      title: sn,
+      dataIndex: sn,
+      width: 60,
+      align: 'center' as const,
+      render: (val: number, record: Record<string, any>) => {
+        const isBase = sn === gradingDraftBaseSize;
+        return (
+          <span style={{
+            fontWeight: isBase ? 700 : 400,
+            color: isBase ? 'var(--color-primary, #1677ff)' : undefined,
+          }}>
+            {val ?? '-'}
+          </span>
+        );
+      },
+    })),
+  ];
+
   return (
-    <ResizableModal
+    <Drawer
       open={open}
       title={gradingTargetRowKey === 'batch' ? `批量配置跳码区 (${selectedRowCount}个部位)` : '配置跳码区'}
-      onCancel={onCancel}
-      footer={null}
-      width="85vw"
-      minWidth={800}
-      initialHeight={typeof window !== 'undefined' ? window.innerHeight * 0.65 : 520}
-      minHeight={420}
-      autoFontSize={false}
-      scaleWithViewport
+      onClose={onCancel}
+      width={Math.min(720, typeof window !== 'undefined' ? window.innerWidth * 0.55 : 720)}
+      styles={{ body: { padding: '16px 20px', overflow: 'auto' } }}
+      footer={
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
+          <Button onClick={onCancel}>取消</Button>
+          <Button type="primary" onClick={onSubmit} disabled={!gradingDraftBaseSize}>
+            保存并带出
+          </Button>
+        </div>
+      }
     >
-      <div style={{ display: 'grid', gap: 16 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <div style={{ fontWeight: 600, width: 80 }}>样版码</div>
+      {/* 基准码选择 */}
+      <div style={{ marginBottom: 20 }}>
+        <div style={{ fontWeight: 600, marginBottom: 8, fontSize: 15 }}>1. 选择基准码（样版码）</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           <Select
             value={gradingDraftBaseSize || undefined}
             allowClear
@@ -112,48 +193,67 @@ const StyleSizeGradingConfigModal: React.FC<Props> = ({
             onChange={(value) => {
               const newBaseSize = String(value || '');
               setGradingDraftBaseSize(newBaseSize);
-              const baseIndex = newBaseSize ? sizeColumns.indexOf(newBaseSize) : -1;
-              const newFrontSizes = baseIndex > 0 ? sizeColumns.slice(0, baseIndex) : [];
-              const newBackSizes = baseIndex >= 0 ? sizeColumns.slice(baseIndex + 1) : [...sizeColumns];
+              const newBaseIndex = newBaseSize ? sizeColumns.indexOf(newBaseSize) : -1;
+              const newFrontSizes = newBaseIndex > 0 ? sizeColumns.slice(0, newBaseIndex) : [];
+              const newBackSizes = newBaseIndex >= 0 ? sizeColumns.slice(newBaseIndex + 1) : [...sizeColumns];
               setGradingDraftZones((prev) => prev.map((zone) => ({
                 ...zone,
                 frontSizes: newFrontSizes,
                 backSizes: newBackSizes,
               })));
             }}
-            style={{ width: 120 }}
+            style={{ width: 140 }}
           />
           {gradingDraftBaseSize && baseSizeValue !== null && (
-            <div style={{ color: '#059669', fontWeight: 500 }}>
-              基准尺寸: <span style={{ fontSize: 16 }}>{baseSizeValue}</span>
-            </div>
+            <Tag color="blue" style={{ fontSize: 14, padding: '2px 10px' }}>
+              基准尺寸: {baseSizeValue}
+            </Tag>
           )}
-          <div style={{ flex: 1 }} />
-          <Button type="primary" onClick={onSubmit}>
-            保存并带出
-          </Button>
         </div>
-        <div style={{ color: '#64748b', fontSize: 14, lineHeight: 1.7 }}>
-          样版码为基准码，跳码值相对于样版码递增/递减。点击"添加列"可增加多组"码数+跳码"配置。
+        <div style={{ color: 'var(--color-text-tertiary)', fontSize: 13, marginTop: 6 }}>
+          基准码为放码的参考基准，其他码数相对于基准码递增/递减
         </div>
+      </div>
+
+      <Divider style={{ margin: '12px 0' }} />
+
+      {/* 跳码区配置 */}
+      <div style={{ marginBottom: 20 }}>
+        <div style={{ fontWeight: 600, marginBottom: 8, fontSize: 15 }}>2. 配置跳码区</div>
+        <div style={{ color: 'var(--color-text-tertiary)', fontSize: 13, marginBottom: 12 }}>
+          前区 = 比基准码小的码数，后区 = 比基准码大的码数。点击码数标签可切换选中状态。
+        </div>
+
         {gradingDraftZones.map((zone, zoneIndex) => {
           const sizeStepColumns = zone.sizeStepColumns || [];
-          const totalPairs = 2 + sizeStepColumns.length;
-          const gridColumns = `50px 100px repeat(${totalPairs}, 1fr 80px) 40px`;
           return (
-            <div key={zone.key} style={{ border: '1px solid #e2e8f0', borderRadius: 8, overflow: 'hidden' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px', background: 'var(--color-bg-page)', borderBottom: '1px solid #e2e8f0' }}>
-                <span style={{ fontWeight: 600 }}>跳码区</span>
+            <div
+              key={zone.key}
+              style={{
+                border: '1px solid var(--color-border, #e2e8f0)',
+                borderRadius: 10,
+                marginBottom: 12,
+                overflow: 'hidden',
+              }}
+            >
+              {/* 跳码区头部 */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                padding: '10px 14px',
+                background: 'var(--color-bg-page, #f5f7fa)',
+                borderBottom: '1px solid var(--color-border, #e2e8f0)',
+              }}>
+                <Tag color="blue">区{zoneIndex + 1}</Tag>
                 <Input
                   value={zone.label}
-                 
                   placeholder={`${zoneIndex + 1}`}
                   style={{ width: 60 }}
                   onChange={(e) => setGradingDraftZones((prev) => prev.map((item) => (item.key === zone.key ? { ...item, label: e.target.value } : item)))}
                 />
                 <Select
                   mode="multiple"
-                 
                   value={zone.partKeys || []}
                   onChange={(values) => setGradingDraftZones((prev) => prev.map((item) => (item.key === zone.key ? { ...item, partKeys: values } : item)))}
                   options={rows.map((row) => ({ value: row.key, label: row.partName || '未命名' }))}
@@ -161,69 +261,38 @@ const StyleSizeGradingConfigModal: React.FC<Props> = ({
                   style={{ flex: 1, minWidth: 120 }}
                   maxTagCount="responsive"
                 />
-                <Tooltip title="添加码数跳码列">
-                  <Button
-                   
-                    type="dashed"
-                    icon={<PlusOutlined />}
-                    onClick={() => addSizeStepColumn(zone.key)}
-                  >
-                    添加列
-                  </Button>
-                </Tooltip>
+                <Button
+                  danger
+                  type="text"
+                  icon={<DeleteOutlined />}
+                  onClick={() => setGradingDraftZones((prev) => prev.filter((item) => item.key !== zone.key))}
+                  disabled={gradingDraftZones.length <= 1}
+                />
               </div>
-              <div style={{ overflowX: 'auto' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: gridColumns, gap: 0, background: '#f1f5f9', fontWeight: 600, fontSize: 14, alignItems: 'center', minWidth: 'fit-content' }}>
-                  <div style={{ padding: '10px 12px', borderRight: '1px solid #e2e8f0', textAlign: 'center' }}>操作</div>
-                  <div style={{ padding: '10px 12px', borderRight: '1px solid #e2e8f0' }}>部位</div>
-                  <div style={{ padding: '10px 12px', borderRight: '1px solid #e2e8f0' }}>码数(前)</div>
-                  <div style={{ padding: '10px 12px', borderRight: '1px solid #e2e8f0' }}>跳码</div>
-                  <div style={{ padding: '10px 12px', borderRight: '1px solid #e2e8f0' }}>码数(后)</div>
-                  <div style={{ padding: '10px 12px', borderRight: '1px solid #e2e8f0' }}>跳码</div>
-                  {sizeStepColumns.map((col, colIndex) => (
-                    <React.Fragment key={col.key}>
-                      <div style={{ padding: '10px 12px', borderRight: '1px solid #e2e8f0' }}>
-                        码数{colIndex + 1}
-                      </div>
-                      <div style={{ padding: '10px 12px', borderRight: '1px solid #e2e8f0' }}>
-                        跳码{colIndex + 1}
-                      </div>
-                    </React.Fragment>
-                  ))}
-                  <div style={{ padding: '10px 12px' }}>删</div>
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: gridColumns, gap: 0, background: 'var(--color-bg-base)', alignItems: 'center', minWidth: 'fit-content' }}>
-                  <div style={{ padding: '10px 12px', borderRight: '1px solid #e2e8f0', display: 'flex', justifyContent: 'center' }}>
-                    <Button
-                     
-                      danger
-                      type="text"
-                      icon={<DeleteOutlined />}
-                      onClick={() => setGradingDraftZones((prev) => prev.filter((item) => item.key !== zone.key))}
-                      disabled={gradingDraftZones.length <= 1}
-                    />
+
+              {/* 前区 + 后区 两列布局 */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0 }}>
+                {/* 前区 */}
+                <div style={{ padding: '12px 14px', borderRight: '1px solid var(--color-border, #e2e8f0)' }}>
+                  <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 8, color: 'var(--color-text-secondary)' }}>
+                    前区（小码方向 ↓）
                   </div>
-                  <div style={{ padding: '10px 12px', borderRight: '1px solid #e2e8f0' }}>
-                    <Select
-                      mode="multiple"
-                     
-                      value={zone.partKeys || []}
-                      onChange={(values) => setGradingDraftZones((prev) => prev.map((item) => (item.key === zone.key ? { ...item, partKeys: values } : item)))}
-                      options={rows.map((row) => ({ value: row.key, label: row.partName || '未命名' }))}
-                      placeholder="部位"
-                      style={{ width: '100%' }}
-                      maxTagCount="responsive"
-                      disabled
-                    />
-                  </div>
-                  <div style={{ padding: '10px 12px', borderRight: '1px solid #e2e8f0', display: 'flex', flexWrap: 'wrap', gap: 3 }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 8 }}>
                     {sizeColumns.map((size) => {
                       const checked = (zone.frontSizes || []).includes(size);
                       return (
                         <Tag
                           key={`front-${zone.key}-${size}`}
-                          color={checked ? 'default' : 'default'}
-                          style={{ margin: 0, cursor: 'pointer', userSelect: 'none', opacity: checked ? 1 : 0.5, fontSize: 14, background: checked ? '#e2e8f0' : undefined }}
+                          style={{
+                            margin: 0,
+                            cursor: 'pointer',
+                            userSelect: 'none',
+                            opacity: checked ? 1 : 0.45,
+                            background: checked ? '#e6f4ff' : undefined,
+                            borderColor: checked ? '#1677ff' : undefined,
+                            color: checked ? '#1677ff' : undefined,
+                            fontWeight: checked ? 600 : 400,
+                          }}
                           onClick={() => setGradingDraftZones((prev) => prev.map((item) => {
                             if (item.key !== zone.key) return item;
                             const nextSizes = (item.frontSizes || []).includes(size)
@@ -237,25 +306,40 @@ const StyleSizeGradingConfigModal: React.FC<Props> = ({
                       );
                     })}
                   </div>
-                  <div style={{ padding: '10px 12px', borderRight: '1px solid #e2e8f0' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ fontSize: 13, color: 'var(--color-text-secondary)', whiteSpace: 'nowrap' }}>每码跳码</span>
                     <InputNumber
-                     
                       value={zone.frontStep}
                       min={0}
                       step={0.1}
                       controls={false}
-                      style={{ width: '100%' }}
+                      style={{ width: 90 }}
                       onChange={(value) => setGradingDraftZones((prev) => prev.map((item) => (item.key === zone.key ? { ...item, frontStep: Number(value || 0) } : item)))}
                     />
                   </div>
-                  <div style={{ padding: '10px 12px', borderRight: '1px solid #e2e8f0', display: 'flex', flexWrap: 'wrap', gap: 3 }}>
+                </div>
+
+                {/* 后区 */}
+                <div style={{ padding: '12px 14px' }}>
+                  <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 8, color: 'var(--color-text-secondary)' }}>
+                    后区（大码方向 ↑）
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 8 }}>
                     {sizeColumns.map((size) => {
                       const checked = (zone.backSizes || []).includes(size);
                       return (
                         <Tag
                           key={`back-${zone.key}-${size}`}
-                          color={checked ? 'default' : 'default'}
-                          style={{ margin: 0, cursor: 'pointer', userSelect: 'none', opacity: checked ? 1 : 0.5, fontSize: 14, background: checked ? '#e2e8f0' : undefined }}
+                          style={{
+                            margin: 0,
+                            cursor: 'pointer',
+                            userSelect: 'none',
+                            opacity: checked ? 1 : 0.45,
+                            background: checked ? '#f6ffed' : undefined,
+                            borderColor: checked ? '#52c41a' : undefined,
+                            color: checked ? '#52c41a' : undefined,
+                            fontWeight: checked ? 600 : 400,
+                          }}
                           onClick={() => setGradingDraftZones((prev) => prev.map((item) => {
                             if (item.key !== zone.key) return item;
                             const nextSizes = (item.backSizes || []).includes(size)
@@ -269,27 +353,45 @@ const StyleSizeGradingConfigModal: React.FC<Props> = ({
                       );
                     })}
                   </div>
-                  <div style={{ padding: '10px 12px', borderRight: '1px solid #e2e8f0' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ fontSize: 13, color: 'var(--color-text-secondary)', whiteSpace: 'nowrap' }}>每码跳码</span>
                     <InputNumber
-                     
                       value={zone.backStep}
                       min={0}
                       step={0.1}
                       controls={false}
-                      style={{ width: '100%' }}
+                      style={{ width: 90 }}
                       onChange={(value) => setGradingDraftZones((prev) => prev.map((item) => (item.key === zone.key ? { ...item, backStep: Number(value || 0) } : item)))}
                     />
                   </div>
-                  {sizeStepColumns.map((col) => (
-                    <React.Fragment key={col.key}>
-                      <div style={{ padding: '10px 12px', borderRight: '1px solid #e2e8f0', display: 'flex', flexWrap: 'wrap', gap: 3 }}>
+                </div>
+              </div>
+
+              {/* 自定义跳码列 */}
+              {sizeStepColumns.length > 0 && (
+                <div style={{ borderTop: '1px solid var(--color-border, #e2e8f0)', padding: '10px 14px' }}>
+                  <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 8, color: 'var(--color-text-secondary)' }}>
+                    自定义跳码段
+                  </div>
+                  {sizeStepColumns.map((col, colIndex) => (
+                    <div key={col.key} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                      <span style={{ fontSize: 13, color: 'var(--color-text-tertiary)', minWidth: 40 }}>段{colIndex + 1}</span>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, flex: 1 }}>
                         {sizeColumns.map((size) => {
                           const checked = col.sizes.includes(size);
                           return (
                             <Tag
                               key={`dynamic-${zone.key}-${col.key}-${size}`}
-                              color={checked ? 'default' : 'default'}
-                              style={{ margin: 0, cursor: 'pointer', userSelect: 'none', opacity: checked ? 1 : 0.5, fontSize: 14, background: checked ? '#e2e8f0' : undefined }}
+                              style={{
+                                margin: 0,
+                                cursor: 'pointer',
+                                userSelect: 'none',
+                                opacity: checked ? 1 : 0.45,
+                                background: checked ? '#fff7e6' : undefined,
+                                borderColor: checked ? '#fa8c16' : undefined,
+                                color: checked ? '#fa8c16' : undefined,
+                                fontWeight: checked ? 600 : 400,
+                              }}
                               onClick={() => toggleSizeInColumn(zone.key, col.key, size)}
                             >
                               {size}
@@ -297,39 +399,47 @@ const StyleSizeGradingConfigModal: React.FC<Props> = ({
                           );
                         })}
                       </div>
-                      <div style={{ padding: '10px 12px', borderRight: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: 4 }}>
-                        <InputNumber
-                         
-                          value={col.step}
-                          min={0}
-                          step={0.1}
-                          controls={false}
-                          style={{ flex: 1 }}
-                          onChange={(value) => updateSizeStepColumn(zone.key, col.key, { step: Number(value || 0) })}
-                        />
-                        <Button
-                         
-                          danger
-                          type="text"
-                          icon={<DeleteOutlined />}
-                          onClick={() => removeSizeStepColumn(zone.key, col.key)}
-                        />
-                      </div>
-                    </React.Fragment>
+                      <InputNumber
+                        value={col.step}
+                        min={0}
+                        step={0.1}
+                        controls={false}
+                        style={{ width: 80 }}
+                        onChange={(value) => updateSizeStepColumn(zone.key, col.key, { step: Number(value || 0) })}
+                      />
+                      <Button
+                        danger
+                        type="text"
+                        icon={<DeleteOutlined />}
+                        onClick={() => removeSizeStepColumn(zone.key, col.key)}
+                      />
+                    </div>
                   ))}
-                  <div style={{ padding: '10px 12px' }} />
                 </div>
+              )}
+
+              {/* 添加自定义列 */}
+              <div style={{ borderTop: '1px solid var(--color-border, #e2e8f0)', padding: '8px 14px' }}>
+                <Button
+                  type="dashed"
+                  icon={<PlusOutlined />}
+                  size="small"
+                  onClick={() => addSizeStepColumn(zone.key)}
+                >
+                  添加自定义跳码段
+                </Button>
               </div>
             </div>
           );
         })}
+
         <Button
           type="dashed"
           icon={<PlusOutlined />}
           onClick={() => {
-            const baseIndex = gradingDraftBaseSize ? sizeColumns.indexOf(gradingDraftBaseSize) : -1;
-            const frontSizes = baseIndex > 0 ? sizeColumns.slice(0, baseIndex) : [];
-            const backSizes = baseIndex >= 0 ? sizeColumns.slice(baseIndex + 1) : [...sizeColumns];
+            const newBaseIndex = gradingDraftBaseSize ? sizeColumns.indexOf(gradingDraftBaseSize) : -1;
+            const frontSizes = newBaseIndex > 0 ? sizeColumns.slice(0, newBaseIndex) : [];
+            const backSizes = newBaseIndex >= 0 ? sizeColumns.slice(newBaseIndex + 1) : [...sizeColumns];
             setGradingDraftZones((prev) => [...prev, {
               key: `grading-zone-${Date.now()}`,
               label: `${prev.length + 1}`,
@@ -347,7 +457,32 @@ const StyleSizeGradingConfigModal: React.FC<Props> = ({
           新增跳码区
         </Button>
       </div>
-    </ResizableModal>
+
+      {/* 实时预览 */}
+      {baseIndex >= 0 && previewData.length > 0 && (
+        <>
+          <Divider style={{ margin: '12px 0' }} />
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ fontWeight: 600, marginBottom: 8, fontSize: 15, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <CheckCircleFilled style={{ color: '#52c41a' }} />
+              实时预览
+            </div>
+            <div style={{ color: 'var(--color-text-tertiary)', fontSize: 13, marginBottom: 8 }}>
+              以下为根据当前跳码配置自动计算的放码结果，蓝色加粗为基准码
+            </div>
+            <Table
+              dataSource={previewData}
+              columns={previewColumns}
+              pagination={false}
+              size="small"
+              bordered
+              scroll={{ x: 'max-content' }}
+              style={{ fontSize: 13 }}
+            />
+          </div>
+        </>
+      )}
+    </Drawer>
   );
 };
 

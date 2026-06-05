@@ -109,7 +109,7 @@ const EcommerceCenter: React.FC = () => {
               <div style={{ marginTop: 2 }}><Tag icon={statusConfig.icon} color={isConnected ? 'success' : isConfigured ? 'warning' : 'default'} style={{ margin: 0 }}>{statusConfig.text}</Tag></div>
             </div>
           </Space>
-          <ArrowRightOutlined style={{ color: '#bbb', fontSize: 16 }} />
+          <ArrowRightOutlined style={{ color: 'var(--color-text-quaternary)', fontSize: 16 }} />
         </div>
 
         {isConfigured && statsData ? (

@@ -73,7 +73,7 @@ const formatDateTime = (value?: string | number | Date) => {
 const paymentLabel = (status?: string) => {
   if (status === 'paid') return { text: '已收款', color: '#10b981' };
   if (status === 'partial') return { text: '部分收款', color: '#f59e0b' };
-  return { text: '待收款', color: '#94a3b8' };
+  return { text: '待收款', color: 'var(--color-text-tertiary)' };
 };
 
 const ShareOutstockPage: React.FC = () => {
@@ -105,7 +105,7 @@ const ShareOutstockPage: React.FC = () => {
     return (
       <div style={loadingStyle}>
         <Spin size="large" />
-        <div style={{ marginTop: 16, color: '#64748b', fontSize: 14 }}>正在加载出货信息…</div>
+        <div style={{ marginTop: 16, color: 'var(--color-text-tertiary)', fontSize: 14 }}>正在加载出货信息…</div>
       </div>
     );
   }
@@ -213,7 +213,7 @@ const ShareOutstockPage: React.FC = () => {
                       <td style={tdStyle}>{item.orderNo || '—'}</td>
                       <td style={tdStyle}>
                         <div style={{ fontWeight: 600, color: '#0f172a' }}>{item.styleNo || '—'}</div>
-                        {item.styleName && <div style={{ fontSize: 14, color: '#94a3b8' }}>{item.styleName}</div>}
+                        {item.styleName && <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>{item.styleName}</div>}
                       </td>
                       <td style={tdStyle}>{item.color} / {item.size}</td>
                       <td style={{ ...tdStyle, textAlign: 'right', fontWeight: 600 }}>{item.outstockQuantity}</td>
@@ -227,7 +227,7 @@ const ShareOutstockPage: React.FC = () => {
                         {item.expressCompany || item.trackingNo ? (
                           <div>
                             {item.expressCompany && <div style={{ fontSize: 14 }}>{item.expressCompany}</div>}
-                            {item.trackingNo && <div style={{ fontSize: 14, color: '#64748b' }}>{item.trackingNo}</div>}
+                            {item.trackingNo && <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>{item.trackingNo}</div>}
                           </div>
                         ) : '—'}
                       </td>
@@ -256,7 +256,7 @@ const ShareOutstockPage: React.FC = () => {
 
         {/* Footer */}
         <div style={bottomBrandLineStyle}>
-          <a href={PLATFORM_URL} target="_blank" rel="noreferrer" style={{ color: '#94a3b8', textDecoration: 'none' }}>
+          <a href={PLATFORM_URL} target="_blank" rel="noreferrer" style={{ color: 'var(--color-text-tertiary)', textDecoration: 'none' }}>
             2026 云裳智链
           </a>
           <span>仅展示客户可见的出货信息</span>
@@ -274,7 +274,7 @@ export default ShareOutstockPage;
 const InfoRow: React.FC<{ icon: React.ReactNode; label: string; value: string }> = ({ icon, label, value }) => (
   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
     <span style={{ color: '#3b82f6', fontSize: 14 }}>{icon}</span>
-    <span style={{ color: '#94a3b8', fontSize: 14, minWidth: 32 }}>{label}</span>
+    <span style={{ color: 'var(--color-text-tertiary)', fontSize: 14, minWidth: 32 }}>{label}</span>
     <span style={{ color: '#0f172a', fontSize: 14, fontWeight: 600 }}>{value}</span>
   </div>
 );
@@ -282,7 +282,7 @@ const InfoRow: React.FC<{ icon: React.ReactNode; label: string; value: string }>
 const SummaryCard: React.FC<{ icon: React.ReactNode; label: string; value: string; color: string }> = ({ icon, label, value, color }) => (
   <div style={summaryCardStyle}>
     <span style={{ color, fontSize: 15, marginBottom: 4 }}>{icon}</span>
-    <div style={{ fontSize: 14, color: '#94a3b8' }}>{label}</div>
+    <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>{label}</div>
     <div style={{ fontSize: 14, fontWeight: 700, color: '#0f172a', marginTop: 2 }}>{value}</div>
   </div>
 );
@@ -337,7 +337,7 @@ const brandTitleStyle: React.CSSProperties = {
 
 const brandSubtitleStyle: React.CSSProperties = {
   fontSize: 14,
-  color: '#94a3b8',
+  color: 'var(--color-text-tertiary)',
   marginTop: 2,
 };
 
@@ -420,7 +420,7 @@ const thStyle: React.CSSProperties = {
   textAlign: 'left',
   padding: '10px 12px',
   fontWeight: 600,
-  color: '#64748b',
+  color: 'var(--color-text-tertiary)',
   fontSize: 14,
   borderBottom: '2px solid rgba(148,163,184,0.18)',
   whiteSpace: 'nowrap',
@@ -443,7 +443,7 @@ const totalRowStyle: React.CSSProperties = {
   alignItems: 'center',
   padding: '16px 12px 0',
   fontSize: 14,
-  color: '#64748b',
+  color: 'var(--color-text-tertiary)',
   borderTop: '2px solid rgba(148,163,184,0.18)',
   marginTop: 8,
 };
@@ -454,6 +454,6 @@ const bottomBrandLineStyle: React.CSSProperties = {
   gap: 16,
   flexWrap: 'wrap',
   fontSize: 14,
-  color: '#94a3b8',
+  color: 'var(--color-text-tertiary)',
   padding: '16px 0',
 };

@@ -113,7 +113,7 @@ export const useShareOrderDialog = ({ message }: UseShareOrderDialogOptions) => 
         <div style={{ padding: '24px 0', textAlign: 'center', color: 'var(--color-text-secondary)' }}>正在生成分享链接…</div>
       ) : (
         <div>
-          <p style={{ marginBottom: 8, color: '#555', fontSize: 14 }}>
+          <p style={{ marginBottom: 8, color: 'var(--color-text-secondary)', fontSize: 14 }}>
             发送以下链接给客户，客户无需登录即可实时查看订单工序跟进（30天有效）：
           </p>
           <Input.TextArea
