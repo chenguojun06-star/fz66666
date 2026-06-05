@@ -187,6 +187,8 @@ export const createGradingZone = (
   partKeys: string[] = [],
   frontSizes: string[] = [],
   backSizes: string[] = [],
+  frontStep = 0,
+  backStep = 0,
 ): GradingZone => ({
   key: `grading-zone-${Date.now()}-${Math.random()}`,
   label,
@@ -194,9 +196,9 @@ export const createGradingZone = (
   step: 0,
   partKeys,
   frontSizes,
-  frontStep: 0,
+  frontStep,
   backSizes,
-  backStep: 0,
+  backStep,
   sizeStepColumns: [],
 });
 

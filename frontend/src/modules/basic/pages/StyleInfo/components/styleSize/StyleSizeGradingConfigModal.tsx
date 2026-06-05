@@ -1,9 +1,10 @@
 import React, { useMemo } from 'react';
-import { Button, InputNumber, Select, Tag, Divider, Table, Tooltip, Input } from 'antd';
-import { DeleteOutlined, PlusOutlined, CheckCircleFilled } from '@ant-design/icons';
+import { Button, InputNumber, Select, Tag, Divider, Table, Tooltip, Input, Alert } from 'antd';
+import { DeleteOutlined, PlusOutlined, CheckCircleFilled, BulbOutlined } from '@ant-design/icons';
 import Drawer from 'antd/es/drawer';
 import { GradingZone, MatrixRow } from './shared';
 import { toNumberSafe } from '@/utils/api';
+import { GRADING_PRESETS, matchPresetSteps, inferCategory } from './gradingPresets';
 
 interface Props {
   open: boolean;
@@ -181,6 +182,68 @@ const StyleSizeGradingConfigModal: React.FC<Props> = ({
         </div>
       }
     >
+      {/* 行业预设模板 */}
+      <div style={{ marginBottom: 20 }}>
+        <div style={{ fontWeight: 600, marginBottom: 8, fontSize: 15, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <BulbOutlined style={{ color: '#faad14' }} />
+          快速应用行业预设
+        </div>
+        <div style={{ color: 'var(--color-text-tertiary)', fontSize: 13, marginBottom: 8 }}>
+          选择服装品类，系统自动根据行业标准推荐各部位跳码量
+        </div>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {GRADING_PRESETS.map((preset) => (
+            <Button
+              key={preset.key}
+              size="small"
+              onClick={() => {
+                // 获取当前涉及的部位名
+                const targetRows = gradingTargetRowKey === 'batch'
+                  ? rows.filter((r) => gradingDraftZones.some((z) => (z.partKeys || []).includes(r.key)))
+                  : rows.filter((r) => r.key === gradingTargetRowKey);
+                const partNames = targetRows.map((r) => r.partName);
+                const matchedSteps = matchPresetSteps(partNames, preset.key);
+                const matchedCount = Object.keys(matchedSteps).length;
+                if (matchedCount === 0) return;
+
+                // 将匹配的跳码量应用到对应的跳码区
+                setGradingDraftZones((prev) => prev.map((zone) => {
+                  const zonePartKeys = zone.partKeys || [];
+                  let updatedFrontStep = zone.frontStep || 0;
+                  let updatedBackStep = zone.backStep || 0;
+
+                  // 取所有匹配部位的跳码量平均值
+                  const steps: number[] = [];
+                  for (const pk of zonePartKeys) {
+                    const row = rows.find((r) => r.key === pk);
+                    if (row && matchedSteps[row.partName] !== undefined) {
+                      steps.push(matchedSteps[row.partName]);
+                    }
+                  }
+                  if (steps.length > 0) {
+                    const avgStep = Number((steps.reduce((a, b) => a + b, 0) / steps.length).toFixed(2));
+                    updatedFrontStep = avgStep;
+                    updatedBackStep = avgStep;
+                  }
+
+                  return { ...zone, frontStep: updatedFrontStep, backStep: updatedBackStep };
+                }));
+              }}
+            >
+              {preset.label}
+            </Button>
+          ))}
+        </div>
+        <Alert
+          type="info"
+          showIcon={false}
+          style={{ marginTop: 8, fontSize: 12, padding: '6px 10px' }}
+          message="行业标准参考：胸围每码+2cm、肩宽+1cm、衣长+1cm、腰围+1.5cm、裤长+1.2cm、领围+0.5cm。具体数值请根据实际版型调整。"
+        />
+      </div>
+
+      <Divider style={{ margin: '12px 0' }} />
+
       {/* 基准码选择 */}
       <div style={{ marginBottom: 20 }}>
         <div style={{ fontWeight: 600, marginBottom: 8, fontSize: 15 }}>1. 选择基准码（样版码）</div>

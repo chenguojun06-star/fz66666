@@ -43,6 +43,24 @@ public class StyleDifficultyOrchestrator {
 
     public DifficultyAssessment assess(StyleInfo style) {
         if (style == null || style.getId() == null) return defaultAssessment();
+        // 优先使用已持久化的 AI 难度评估结果，避免每次重新计算
+        if (style.getDifficultyScore() != null && style.getDifficultyLevel() != null) {
+            DifficultyAssessment cached = new DifficultyAssessment();
+            cached.setDifficultyScore(style.getDifficultyScore());
+            cached.setDifficultyLevel(style.getDifficultyLevel());
+            cached.setDifficultyLabel(style.getDifficultyLabel() != null ? style.getDifficultyLabel() : levelToLabel(style.getDifficultyLevel()));
+            cached.setPricingMultiplier(style.getPricingMultiplier() != null ? style.getPricingMultiplier() : levelToMultiplier(style.getDifficultyLevel()));
+            cached.setBomCount(0);
+            cached.setProcessCount(0);
+            cached.setHasSecondaryProcess(false);
+            cached.setKeyFactors(List.of());
+            cached.setImageAnalyzed(true);
+            cached.setAssessmentSource("CACHED");
+            if (style.getImageInsight() != null && !style.getImageInsight().isBlank()) {
+                cached.setImageInsight(style.getImageInsight());
+            }
+            return cached;
+        }
         List<StyleBom> boms = styleBomService.listByStyleId(style.getId());
         List<StyleProcess> processes = styleProcessService.listByStyleId(style.getId());
         List<SecondaryProcess> secondaryProcesses = secondaryProcessService.listByStyleId(style.getId());
@@ -173,7 +191,7 @@ public class StyleDifficultyOrchestrator {
             if (!refs.isEmpty()) return "- 视觉近似历史款式（AI检索）：" + String.join("；", refs) + "\n";
             log.info("[StyleDifficulty] 图片向量完成，相似款式数={}", similar.size());
         } catch (Exception e) {
-            log.warn("[StyleDifficulty] Voyage图像向量失败，跳过视觉上下文: {}", e.getMessage());
+            log.warn("[StyleDifficulty] 图像向量生成失败，跳过视觉上下文: {}", e.getMessage());
         }
         return "";
     }
@@ -247,6 +265,8 @@ public class StyleDifficultyOrchestrator {
         }
         base.setAssessmentSource("AI_ENHANCED");
         upsertStyleImageVector(style, imageUrl, base);
+        // 持久化 AI 难度评估结果到数据库，避免每次重新计算
+        persistDifficultyAssessment(style, base);
         return base;
     }
 
@@ -266,6 +286,25 @@ public class StyleDifficultyOrchestrator {
             log.info("[StyleDifficulty] imageInsight 已持久化: styleId={}", style.getId());
         } catch (Exception e) {
             log.warn("[StyleDifficulty] imageInsight 持久化失败（不影响当前结果）: {}", e.getMessage());
+        }
+    }
+
+    /** 将 AI 难度评估结果持久化到 t_style_info，避免每次重新计算 */
+    private void persistDifficultyAssessment(StyleInfo style, DifficultyAssessment assessment) {
+        if (style == null || style.getId() == null || assessment == null) return;
+        try {
+            style.setDifficultyScore(assessment.getDifficultyScore());
+            style.setDifficultyLevel(assessment.getDifficultyLevel());
+            style.setDifficultyLabel(assessment.getDifficultyLabel());
+            style.setPricingMultiplier(assessment.getPricingMultiplier());
+            if (assessment.getImageInsight() != null && !assessment.getImageInsight().isBlank()) {
+                style.setImageInsight(assessment.getImageInsight());
+            }
+            styleInfoService.updateById(style);
+            log.info("[StyleDifficulty] 难度评估已持久化: styleId={}, score={}, level={}",
+                    style.getId(), assessment.getDifficultyScore(), assessment.getDifficultyLevel());
+        } catch (Exception e) {
+            log.warn("[StyleDifficulty] 难度评估持久化失败（不影响当前结果）: {}", e.getMessage());
         }
     }
 

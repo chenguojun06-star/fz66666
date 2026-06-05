@@ -71,6 +71,10 @@ public final class DbColumnDefinitions {
         add("t_style_info", "development_source_detail", "VARCHAR(64) DEFAULT NULL COMMENT '开发来源明细'");
         add("t_style_info", "size_color_config", "MEDIUMTEXT DEFAULT NULL COMMENT '颜色尺码数量矩阵JSON'");
         add("t_style_info", "image_insight", "VARCHAR(500) DEFAULT NULL COMMENT 'AI图片洞察'");
+        add("t_style_info", "difficulty_score", "INT DEFAULT NULL COMMENT 'AI难度评分1-10'");
+        add("t_style_info", "difficulty_level", "VARCHAR(20) DEFAULT NULL COMMENT 'AI难度级别: SIMPLE/MEDIUM/COMPLEX/HIGH_END'");
+        add("t_style_info", "difficulty_label", "VARCHAR(20) DEFAULT NULL COMMENT 'AI难度中文标签'");
+        add("t_style_info", "pricing_multiplier", "DECIMAL(5,2) DEFAULT NULL COMMENT 'AI难度定价倍率'");
         add("t_style_info", "fabric_composition", "VARCHAR(500) DEFAULT NULL COMMENT '面料成分'");
         add("t_style_info", "wash_instructions", "VARCHAR(500) DEFAULT NULL COMMENT '洗涤说明'");
         add("t_style_info", "u_code", "VARCHAR(100) DEFAULT NULL COMMENT 'U编码'");
@@ -209,6 +213,9 @@ public final class DbColumnDefinitions {
         add("t_production_order", "tenant_id", "BIGINT DEFAULT NULL COMMENT '租户ID'");
         add("t_production_order", "create_time", "DATETIME DEFAULT NULL COMMENT '创建时间'");
         add("t_production_order", "update_time", "DATETIME DEFAULT NULL COMMENT '更新时间'");
+        add("t_production_order", "sku_auto_generate", "TINYINT(1) DEFAULT 0 COMMENT '是否自动生成SKU'");
+        add("t_production_order", "order_unit_price", "DECIMAL(10,2) DEFAULT NULL COMMENT '订单单价'");
+        add("t_production_order", "order_unit_price_type", "VARCHAR(20) DEFAULT NULL COMMENT '订单单价类型'");
         add("t_scan_record", "scan_mode", "VARCHAR(20) DEFAULT NULL COMMENT '扫码模式'");
         add("t_scan_record", "sku_completed_count", "INT DEFAULT NULL COMMENT 'SKU已完成数'");
         add("t_scan_record", "sku_total_count", "INT DEFAULT NULL COMMENT 'SKU总数'");
@@ -929,6 +936,9 @@ public final class DbColumnDefinitions {
         add("t_login_log", "action", "VARCHAR(50) DEFAULT NULL COMMENT '操作'");
         add("t_login_log", "remark", "VARCHAR(500) DEFAULT NULL COMMENT '备注'");
         add("t_login_log", "tenant_id", "BIGINT DEFAULT NULL COMMENT '租户ID'");
+        add("t_login_log", "login_ip", "VARCHAR(50) DEFAULT NULL COMMENT '登录IP'");
+        add("t_login_log", "login_result", "VARCHAR(20) DEFAULT NULL COMMENT '登录结果'");
+        add("t_login_log", "error_message", "VARCHAR(500) DEFAULT NULL COMMENT '错误信息'");
         add("t_agent_checkpoint", "tenant_id", "BIGINT NOT NULL DEFAULT 0 COMMENT '租户ID'");
         add("t_agent_checkpoint", "thread_id", "VARCHAR(128) NOT NULL DEFAULT '' COMMENT '线程ID'");
         add("t_agent_checkpoint", "node_id", "VARCHAR(128) NOT NULL DEFAULT '' COMMENT '节点ID'");
@@ -965,6 +975,9 @@ public final class DbColumnDefinitions {
         add("t_product_sku", "version", "INT NOT NULL DEFAULT 0");
 
         add("t_tenant", "wechat_work_webhook_url", "VARCHAR(512) DEFAULT NULL");
+        add("t_tenant", "apply_password", "VARCHAR(255) DEFAULT NULL COMMENT '申请密码BCrypt'");
+        add("t_tenant", "feishu_webhook_url", "VARCHAR(512) DEFAULT NULL COMMENT '飞书Webhook地址'");
+        add("t_tenant", "dingtalk_webhook_url", "VARCHAR(512) DEFAULT NULL COMMENT '钉钉Webhook地址'");
         add("t_purchase_order_doc", "id", "VARCHAR(64) NOT NULL COMMENT '主键'");
         add("t_purchase_order_doc", "tenant_id", "BIGINT DEFAULT NULL COMMENT '租户ID'");
         add("t_purchase_order_doc", "order_no", "VARCHAR(64) DEFAULT NULL COMMENT '订单号'");
@@ -1043,6 +1056,8 @@ public final class DbColumnDefinitions {
         add("t_product_warehousing", "warehouse_area_name", "VARCHAR(100) DEFAULT NULL");
         add("t_product_outstock", "warehouse_area_id", "VARCHAR(64) DEFAULT NULL");
         add("t_product_outstock", "warehouse_area_name", "VARCHAR(100) DEFAULT NULL");
+        add("t_product_outstock", "price_adjustment_reason", "VARCHAR(500) DEFAULT NULL COMMENT '调价原因'");
+        add("t_product_outstock", "original_sales_price", "DECIMAL(12,2) DEFAULT NULL COMMENT '原始销售价'");
         add("t_material_inbound", "warehouse_area_id", "VARCHAR(64) DEFAULT NULL");
         add("t_material_inbound", "warehouse_area_name", "VARCHAR(100) DEFAULT NULL");
         add("t_material_stock", "warehouse_area_id", "VARCHAR(64) DEFAULT NULL");

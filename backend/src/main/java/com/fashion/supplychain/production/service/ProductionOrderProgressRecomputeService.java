@@ -18,7 +18,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 @Service
@@ -57,14 +56,19 @@ public class ProductionOrderProgressRecomputeService {
             try {
                 ProductionOrder order = productionOrderMapper.selectById(orderId);
                 if (order != null) {
+                    // 异步线程中 UserContext 可能缺失 tenantId，显式传入
                     scanRecordDomainService.insertOrchestrationFailure(
-                            order,
+                            order.getId(),
+                            order.getOrderNo(),
+                            order.getStyleId(),
+                            order.getStyleNo(),
+                            order.getTenantId(),
                             "recomputeProgressAsync",
                             "Async recompute failed: " + e.getMessage(),
                             LocalDateTime.now());
                 }
             } catch (Exception ex) {
-                log.error("Failed to record orchestration failure", ex);
+                log.error("Failed to record orchestration failure: orderId={}", orderId, ex);
             }
         }
     }
@@ -80,7 +84,9 @@ public class ProductionOrderProgressRecomputeService {
                         .progressStageNameMatches(ProductionOrderScanRecordDomainService.STAGE_PROCUREMENT, pn);
     }
 
-    @Transactional(rollbackFor = Exception.class)
+    // 注意：此方法被同类 @Async 方法内部调用，@Transactional 因 self-invocation 不生效，
+    // 且进度重算本质是"查询聚合 + 单行更新"，不需要整体事务保护。
+    // persistProgressUpdate 内部已有乐观锁重试机制保证原子性。
     public ProductionOrder recomputeProgressFromRecords(String orderId) {
         String oid = StringUtils.hasText(orderId) ? orderId.trim() : null;
         if (!StringUtils.hasText(oid)) return null;

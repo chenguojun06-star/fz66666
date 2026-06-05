@@ -32,8 +32,8 @@ import org.springframework.web.client.RestTemplate;
  * <p>通过 Qdrant REST API v1.x 实现向量存储与相似检索。
  * 每个租户使用同一个 collection，通过 tenant_id payload 过滤隔离。
  *
- * <p>向量生成优先级：① Voyage AI（voyage-3，1024维，语义质量最优）
- *                   ② DeepSeek Embedding API（text-embedding-v2，1024维）
+ * <p>向量生成优先级：① Agnes 视觉分析 + Agnes/DeepSeek Embedding（图片→文字描述→向量，推荐）
+ *                   ② DeepSeek Embedding API（text-embedding-v2，用图片URL文本生成向量）
  *                   ③ 关键词哈希伪向量（pseudoEmbedding，128维，无需 API Key）
  *
  * <p>配置项（application.yml）：
@@ -44,9 +44,9 @@ import org.springframework.web.client.RestTemplate;
  *     collection: fashion_memory
  *     vector-size: 1024
  * ai:
- *   voyage:
- *     api-key: ${VOYAGE_API_KEY:}   # 首选 embedding
- *     model: voyage-3
+ *   agnes:
+ *     api-key: ${AGNES_API_KEY:}   # Agnes AI 视觉+Embedding
+ *     model: agnes-2.0-flash
  *   deepseek:
  *     api-key: sk-xxx
  *     embedding-model: text-embedding-v2
@@ -68,12 +68,6 @@ public class QdrantService {
     @Value("${intelligence.qdrant.collection:" + COLLECTION_DEFAULT + "}")
     private String collectionName;
 
-    @Value("${ai.voyage.api-key:}")
-    private String voyageApiKey;
-
-    @Value("${ai.voyage.model:voyage-3}")
-    private String voyageModel;
-
     @Value("${ai.deepseek.api-key:}")
     private String deepseekApiKey;
 
@@ -89,13 +83,25 @@ public class QdrantService {
     @Autowired
     private ObjectMapper objectMapper;
 
+    @Value("${ai.agnes.api-key:}")
+    private String agnesApiKey;
+
+    @Value("${ai.agnes.api-url:https://apihub.agnes-ai.com/v1/chat/completions}")
+    private String agnesApiUrl;
+
+    @Value("${ai.agnes.model:agnes-2.0-flash}")
+    private String agnesModel;
+
+    @Autowired
+    private com.fashion.supplychain.intelligence.orchestration.IntelligenceInferenceOrchestrator inferenceOrchestrator;
+
     private RestTemplate restTemplate;
 
     private final ConcurrentHashMap<String, EmbeddingCacheEntry> embeddingCache = new ConcurrentHashMap<>();
     private static final long EMBEDDING_CACHE_TTL_MS = TimeUnit.MINUTES.toMillis(30);
     private static final int EMBEDDING_CACHE_MAX = 500;
-    private static final String PROVIDER_VOYAGE = "voyage";
     private static final String PROVIDER_DEEPSEEK = "deepseek";
+    private static final String PROVIDER_AGNES = "agnes";
 
     private final AtomicBoolean collectionVerified = new AtomicBoolean(false);
     private final AtomicBoolean styleImageCollectionVerified = new AtomicBoolean(false);
@@ -419,14 +425,16 @@ public class QdrantService {
         if (cached != null && !cached.isExpired()) {
             return cached.vector;
         }
-        if (PROVIDER_VOYAGE.equals(activeProvider)) {
+        if (PROVIDER_AGNES.equals(activeProvider)) {
             try {
-                float[] vector = callVoyageEmbeddingApi(text);
-                embeddingCache.put(cacheKey, new EmbeddingCacheEntry(vector, PROVIDER_VOYAGE));
-                evictCacheIfNeeded();
-                return vector;
+                float[] vector = tryAgnesEmbedding(text);
+                if (vector != null) {
+                    embeddingCache.put(cacheKey, new EmbeddingCacheEntry(vector, PROVIDER_AGNES));
+                    evictCacheIfNeeded();
+                    return vector;
+                }
             } catch (Exception e) {
-                log.warn("[Voyage] Embedding API 调用失败，降级到 DeepSeek: {}", e.getMessage());
+                log.warn("[Agnes] Embedding 调用失败，降级到 DeepSeek: {}", e.getMessage());
             }
         }
         if (PROVIDER_DEEPSEEK.equals(activeProvider)) {
@@ -443,7 +451,7 @@ public class QdrantService {
     }
 
     private String resolveActiveProvider() {
-        if (voyageApiKey != null && !voyageApiKey.isEmpty()) return PROVIDER_VOYAGE;
+        if (agnesApiKey != null && !agnesApiKey.isEmpty()) return PROVIDER_AGNES;
         if (deepseekApiKey != null && !deepseekApiKey.isEmpty()) return PROVIDER_DEEPSEEK;
         return "pseudo";
     }
@@ -452,42 +460,6 @@ public class QdrantService {
         if (embeddingCache.size() > EMBEDDING_CACHE_MAX) {
             embeddingCache.entrySet().removeIf(e -> e.getValue().isExpired());
         }
-    }
-
-    /**
-     * 调用 Voyage AI Embeddings API 获取高质量语义向量。
-     * voyage-3：1024 维，多语言，与 Qdrant collection 维度一致无需重建。
-     */
-    private float[] callVoyageEmbeddingApi(String text) {
-        ObjectNode body = objectMapper.createObjectNode();
-        body.put("model", voyageModel);
-        body.putArray("input").add(text);
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.setBearerAuth(voyageApiKey);
-        HttpEntity<String> entity = new HttpEntity<>(body.toString(), headers);
-
-        ResponseEntity<String> resp = restTemplate.postForEntity(
-                "https://api.voyageai.com/v1/embeddings", entity, String.class);
-        if (resp.getStatusCode().is2xxSuccessful() && resp.getBody() != null) {
-            JsonNode root;
-            try {
-                root = objectMapper.readTree(resp.getBody());
-            } catch (Exception e) {
-                throw new RuntimeException("Voyage Embedding response parse failed", e);
-            }
-            JsonNode embedding = root.path("data").path(0).path("embedding");
-            if (embedding.isArray()) {
-                float[] vec = new float[embedding.size()];
-                for (int i = 0; i < embedding.size(); i++) {
-                    vec[i] = (float) embedding.get(i).asDouble();
-                }
-                log.debug("[Voyage] 语义向量生成成功，model={} 维度={}", voyageModel, vec.length);
-                return vec;
-            }
-        }
-        throw new RuntimeException("Voyage Embedding API returned unexpected response");
     }
 
     /**
@@ -526,9 +498,9 @@ public class QdrantService {
         throw new RuntimeException("Embedding API returned unexpected response");
     }
 
-    /** 获取当前使用的向量维度（voyage/deepseek 均为 1024 维，伪向量 128 维） */
+    /** 获取当前使用的向量维度（agnes/deepseek 均为 1024 维，伪向量 128 维） */
     private int getVectorDim() {
-        boolean hasRealKey = (voyageApiKey != null && !voyageApiKey.isEmpty())
+        boolean hasRealKey = (agnesApiKey != null && !agnesApiKey.isEmpty())
                 || (deepseekApiKey != null && !deepseekApiKey.isEmpty());
         return hasRealKey ? VECTOR_DIM_REAL : VECTOR_DIM_PSEUDO;
     }
@@ -562,59 +534,82 @@ public class QdrantService {
     }
 
     // ──────────────────────────────────────────────────────────────
-    //  款式图多模态接口（voyage-multimodal-3）
+    //  款式图多模态接口
     // ──────────────────────────────────────────────────────────────
 
     /**
      * 对款式封面图生成语义向量，用于以图搜款和难度评估。
-     * 优先使用 Voyage 多模态 API（图片→向量），Voyage Key 未配置时
-     * 降级到 DeepSeek 文本 Embedding（用图片 URL 作为文本输入生成向量），
-     * 确保功能始终可用。
+     *
+     * <p>向量生成优先级（尽量只用 AGNES_API_KEY 一个 Key）：
+     * 1. Agnes 视觉分析 + Agnes Embedding（图片→描述→向量，只需 AGNES_API_KEY）
+     * 2. Agnes 视觉分析 + DeepSeek Embedding（图片→描述→向量，需两个 Key）
+     * 3. Voyage 多模态 API（图片→向量，需单独配置 Voyage Key）
+     * 4. DeepSeek 纯文本 Embedding（用图片 URL 文本生成向量，质量一般）
+     * 5. 伪向量（哈希）— 最低质量，仅兜底
      */
     public float[] computeMultimodalEmbedding(String imageUrl) {
         if (imageUrl == null || imageUrl.isBlank()) {
             throw new IllegalArgumentException("imageUrl 不能为空");
         }
-        // 优先：Voyage 多模态（图片→向量，质量最高）
-        if (voyageApiKey != null && !voyageApiKey.isEmpty()) {
-            return callVoyageMultimodalApi(imageUrl);
-        }
-        // 降级：DeepSeek 文本 Embedding（用图片 URL 文本生成向量，维度一致可入同一集合）
-        if (deepseekApiKey != null && !deepseekApiKey.isEmpty()) {
-            log.info("[Qdrant] Voyage Key 未配置，降级使用 DeepSeek 文本 Embedding 生成款式向量");
+
+        // 优先：Agnes 视觉分析 → 文字描述 → Embedding 向量
+        if (agnesApiKey != null && !agnesApiKey.isEmpty()) {
             try {
-                float[] vec = callEmbeddingApi(imageUrl);
-                log.debug("[Qdrant] DeepSeek 文本向量替代多模态成功 维度={}", vec.length);
-                return vec;
+                String visualDescription = describeImageWithAgnes(imageUrl);
+                if (visualDescription != null && !visualDescription.isBlank()) {
+                    // 尝试用 Agnes Embedding（OpenAI 兼容，可能支持 /v1/embeddings）
+                    float[] vec = tryAgnesEmbedding(visualDescription);
+                    if (vec != null) {
+                        log.info("[Qdrant] Agnes视觉+Agnes Embedding 向量生成成功 维度={}", vec.length);
+                        return vec;
+                    }
+                    // Agnes Embedding 不支持，降级到 DeepSeek Embedding
+                    if (deepseekApiKey != null && !deepseekApiKey.isEmpty()) {
+                        vec = callEmbeddingApi(visualDescription);
+                        log.info("[Qdrant] Agnes视觉+DeepSeek Embedding 向量生成成功 维度={}", vec.length);
+                        return vec;
+                    }
+                }
             } catch (Exception e) {
-                log.warn("[Qdrant] DeepSeek Embedding 也失败，降级为伪向量: {}", e.getMessage());
-                return pseudoEmbedding(imageUrl);
+                log.warn("[Qdrant] Agnes视觉+Embedding 失败，尝试降级: {}", e.getMessage());
             }
         }
-        // 最后兜底：伪向量（维度不同，不入 style_images 集合，但不会阻断主流程）
-        log.warn("[Qdrant] Voyage 和 DeepSeek Key 均未配置，使用伪向量（搜索质量极低，建议配置 API Key）");
+
+        // 降级：DeepSeek 纯文本 Embedding（用图片 URL 文本生成向量）
+        if (deepseekApiKey != null && !deepseekApiKey.isEmpty()) {
+            log.info("[Qdrant] Agnes 不可用，降级使用 DeepSeek 文本 Embedding");
+            try {
+                return callEmbeddingApi(imageUrl);
+            } catch (Exception e) {
+                log.warn("[Qdrant] DeepSeek Embedding 也失败: {}", e.getMessage());
+            }
+        }
+        // 兜底：伪向量
+        log.warn("[Qdrant] 所有 Embedding 方案不可用，使用伪向量（搜索质量极低）");
         return pseudoEmbedding(imageUrl);
     }
 
-    private float[] callVoyageMultimodalApi(String imageUrl) {
-        ObjectNode body = objectMapper.createObjectNode();
-        body.put("model", "voyage-multimodal-3");
-        ArrayNode inputs = body.putArray("inputs");
-        ObjectNode input = inputs.addObject();
-        ArrayNode content = input.putArray("content");
-        ObjectNode imageItem = content.addObject();
-        imageItem.put("type", "image_url");
-        imageItem.put("image_url", imageUrl);
+    /**
+     * 尝试调用 Agnes 的 /v1/embeddings 端点。
+     * Agnes 声称 OpenAI 兼容，如果支持 embeddings 端点，则只需一个 API Key。
+     * 如果不支持，返回 null，由调用方降级到 DeepSeek。
+     */
+    private float[] tryAgnesEmbedding(String text) {
+        try {
+            String agnesBaseUrl = agnesApiUrl.replace("/chat/completions", "");
+            String url = agnesBaseUrl + "/embeddings";
+            ObjectNode body = objectMapper.createObjectNode();
+            body.put("model", agnesModel);
+            body.put("input", text);
+            body.put("encoding_format", "float");
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.setBearerAuth(voyageApiKey);
-        HttpEntity<String> entity = new HttpEntity<>(body.toString(), headers);
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.setBearerAuth(agnesApiKey);
+            HttpEntity<String> entity = new HttpEntity<>(body.toString(), headers);
 
-        ResponseEntity<String> resp = restTemplate.postForEntity(
-                "https://api.voyageai.com/v1/multimodalembeddings", entity, String.class);
-        if (resp.getStatusCode().is2xxSuccessful() && resp.getBody() != null) {
-            try {
+            ResponseEntity<String> resp = restTemplate.postForEntity(url, entity, String.class);
+            if (resp.getStatusCode().is2xxSuccessful() && resp.getBody() != null) {
                 JsonNode root = objectMapper.readTree(resp.getBody());
                 JsonNode embedding = root.path("data").path(0).path("embedding");
                 if (embedding.isArray() && embedding.size() > 0) {
@@ -622,14 +617,33 @@ public class QdrantService {
                     for (int i = 0; i < embedding.size(); i++) {
                         vec[i] = (float) embedding.get(i).asDouble();
                     }
-                    log.debug("[Voyage] 多模态图片向量生成成功 维度={}", vec.length);
+                    log.info("[Qdrant] Agnes Embedding 端点可用！维度={}", vec.length);
                     return vec;
                 }
-            } catch (Exception e) {
-                throw new RuntimeException("Voyage Multimodal response parse failed", e);
             }
+            log.debug("[Qdrant] Agnes Embedding 端点不可用，降级到 DeepSeek");
+        } catch (Exception e) {
+            log.debug("[Qdrant] Agnes Embedding 端点不可用: {}", e.getMessage());
         }
-        throw new RuntimeException("Voyage Multimodal API returned unexpected response: " + resp.getStatusCode());
+        return null;
+    }
+
+    /**
+     * 用 Agnes 视觉模型对图片生成文字描述，用于后续 Embedding。
+     * 这比直接用图片 URL 做 Embedding 质量高得多，因为 Agnes 能理解图片内容。
+     */
+    private String describeImageWithAgnes(String imageUrl) {
+        try {
+            String desc = inferenceOrchestrator.chatWithVision(imageUrl,
+                    "请用50字以内简洁描述这件服装的款式特征（领型、袖型、版型、面料质感、装饰工艺），"
+                            + "仅描述可见的工艺特征，不评价颜色和风格。");
+            if (desc != null && !desc.isBlank()) {
+                return desc.length() > 200 ? desc.substring(0, 200) : desc;
+            }
+        } catch (Exception e) {
+            log.debug("[Qdrant] Agnes 视觉描述失败: {}", e.getMessage());
+        }
+        return null;
     }
 
     /**

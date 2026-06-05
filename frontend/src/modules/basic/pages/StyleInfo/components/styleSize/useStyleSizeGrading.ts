@@ -6,6 +6,7 @@ import {
   createGradingZone,
   normalizeGradingZones,
 } from './shared';
+import { matchPartStep, inferCategory, GRADING_PRESETS, matchPresetSteps } from './gradingPresets';
 
 interface Params {
   rows: MatrixRow[];
@@ -89,8 +90,13 @@ export function useStyleSizeGrading({
         partKeys: [row.key],
       })));
     } else {
+      // 智能推荐：根据部位名自动匹配行业跳码量
+      const category = inferCategory(rows.map((r) => r.partName));
+      const recommendedStep = matchPartStep(row.partName, category);
+      const frontStep = recommendedStep ?? 0;
+      const backStep = recommendedStep ?? 0;
       setGradingDraftZones([
-        createGradingZone([], '1', [row.key], defaultFrontSizes, defaultBackSizes),
+        createGradingZone([], '1', [row.key], defaultFrontSizes, defaultBackSizes, frontStep, backStep),
       ]);
     }
     setGradingConfigOpen(true);
@@ -108,8 +114,19 @@ export function useStyleSizeGrading({
     const baseIndex = baseSize ? sizeColumns.indexOf(baseSize) : -1;
     const frontSizes = baseIndex > 0 ? sizeColumns.slice(0, baseIndex) : [];
     const backSizes = baseIndex >= 0 && baseIndex < sizeColumns.length - 1 ? sizeColumns.slice(baseIndex + 1) : [];
+
+    // 智能推荐：批量配置时取选中部位的平均推荐跳码量
+    const category = inferCategory(rows.map((r) => r.partName));
+    const selectedRows = rows.filter((r) => selectedRowKeys.includes(r.key));
+    const steps: number[] = [];
+    for (const row of selectedRows) {
+      const step = matchPartStep(row.partName, category);
+      if (step !== null) steps.push(step);
+    }
+    const avgStep = steps.length > 0 ? Number((steps.reduce((a, b) => a + b, 0) / steps.length).toFixed(2)) : 0;
+
     setGradingDraftZones([
-      createGradingZone([], '1', selectedRowKeys.map(String), frontSizes, backSizes),
+      createGradingZone([], '1', selectedRowKeys.map(String), frontSizes, backSizes, avgStep, avgStep),
     ]);
     setGradingConfigOpen(true);
   };

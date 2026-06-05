@@ -82,14 +82,20 @@ public class ProductionDataConsistencyJob {
                     continue;
                 }
 
+                // 同步逐个重算，避免 @Async 批量提交导致 DB 连接耗尽和乐观锁冲突
                 for (ProductionOrder order : activeOrders) {
                     try {
-                        productionOrderService.recomputeProgressAsync(order.getId());
+                        productionOrderService.recomputeProgressFromRecords(order.getId());
                         totalSuccess++;
                     } catch (Exception e) {
                         totalFailed++;
                         log.error("[ConsistencyJob] 订单进度重算失败: tenantId={}, id={}, orderNo={}",
                                 tenantId, order.getId(), order.getOrderNo(), e);
+                    }
+                    // 每个订单之间短暂间隔，降低 DB 压力
+                    try { Thread.sleep(50); } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        break;
                     }
                 }
             } catch (Exception e) {

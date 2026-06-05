@@ -336,9 +336,6 @@ ai:
   budget:
     enabled: ${AI_BUDGET_ENABLED:true}
     tenant-daily-token-limit: ${AI_BUDGET_TENANT_DAILY_TOKEN_LIMIT:200000}
-  voyage:
-    api-key: ${VOYAGE_API_KEY:}              # Voyage AI Embedding（首选，语义质量最高）
-    model: ${VOYAGE_MODEL:voyage-3}          # voyage-3：1024维多语言（推荐）
   deepseek:
     api-key: ${DEEPSEEK_API_KEY:}          # 生产/云端：在环境变量中设置
     api-url: https://api.deepseek.com/v1/chat/completions
@@ -359,7 +356,7 @@ ai:
         max-tokens: ${AI_SPRING_AI_CHAT_MAX_TOKENS:1024}
     embedding:
       enabled: ${AI_SPRING_AI_EMBEDDING_ENABLED:false}
-      default-provider: ${AI_SPRING_AI_EMBEDDING_DEFAULT_PROVIDER:voyage}
+      default-provider: ${AI_SPRING_AI_EMBEDDING_DEFAULT_PROVIDER:agnes}
   gateway:
     routing-strategy: ${AI_GATEWAY_ROUTING_STRATEGY:legacy}   # legacy / spring-ai / failover / weighted
     fallback-enabled: ${AI_GATEWAY_FALLBACK_ENABLED:true}
