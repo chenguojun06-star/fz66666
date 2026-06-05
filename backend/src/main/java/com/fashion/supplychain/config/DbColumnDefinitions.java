@@ -216,6 +216,14 @@ public final class DbColumnDefinitions {
         add("t_production_order", "sku_auto_generate", "TINYINT(1) DEFAULT 0 COMMENT '是否自动生成SKU'");
         add("t_production_order", "order_unit_price", "DECIMAL(10,2) DEFAULT NULL COMMENT '订单单价'");
         add("t_production_order", "order_unit_price_type", "VARCHAR(20) DEFAULT NULL COMMENT '订单单价类型'");
+        add("t_production_order", "procurement_budget_hours", "INT DEFAULT NULL COMMENT '采购预算工时（小时）'");
+        add("t_production_order", "cutting_budget_hours", "INT DEFAULT NULL COMMENT '裁剪预算工时（小时）'");
+        add("t_production_order", "secondary_process_budget_hours", "INT DEFAULT NULL COMMENT '二次工艺预算工时（小时）'");
+        add("t_production_order", "car_sewing_budget_hours", "INT DEFAULT NULL COMMENT '车缝预算工时（小时）'");
+        add("t_production_order", "ironing_budget_hours", "INT DEFAULT NULL COMMENT '大烫预算工时（小时）'");
+        add("t_production_order", "packaging_budget_hours", "INT DEFAULT NULL COMMENT '包装预算工时（小时）'");
+        add("t_production_order", "quality_budget_hours", "INT DEFAULT NULL COMMENT '质检预算工时（小时）'");
+        add("t_production_order", "warehousing_budget_hours", "INT DEFAULT NULL COMMENT '入库预算工时（小时）'");
         add("t_scan_record", "scan_mode", "VARCHAR(20) DEFAULT NULL COMMENT '扫码模式'");
         add("t_scan_record", "sku_completed_count", "INT DEFAULT NULL COMMENT 'SKU已完成数'");
         add("t_scan_record", "sku_total_count", "INT DEFAULT NULL COMMENT 'SKU总数'");
