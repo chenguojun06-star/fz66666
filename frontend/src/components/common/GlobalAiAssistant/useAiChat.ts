@@ -29,6 +29,8 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
   const [isRecording, setIsRecording] = useState(false);
   const [advisorSessionId, setAdvisorSessionId] = useState(loadSession);
   const [liveStatus, setLiveStatus] = useState<LiveStatus>({ visible: false });
+  const [previewImage, setPreviewImage] = useState<string | null>(null);  // 图片预览
+
 
   const historyFetchedRef = useRef(false);
   const briefingFetchedRef = useRef(false);
@@ -181,15 +183,39 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
     startStream(contextualText, text, reportTypeToDownload);
   }, [inputValue, isTyping, user, startStream, handleDownloadReport]);
 
+  // 检查是否是图片文件
+  const isImageFile = (file: File): boolean => {
+    const imageExts = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp'];
+    const ext = '.' + (file.name.split('.').pop() ?? '').toLowerCase();
+    return imageExts.includes(ext);
+  };
+
   const handleFileSelect = useCallback((e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const allowed = ['.xlsx', '.xls', '.csv', '.jpg', '.jpeg', '.png', '.gif', '.pdf'];
+    const allowed = ['.xlsx', '.xls', '.csv', '.jpg', '.jpeg', '.png', '.gif', '.pdf', '.webp', '.bmp'];
     const ext = '.' + (file.name.split('.').pop() ?? '').toLowerCase();
     if (!allowed.includes(ext)) { alert('只支持 Excel（xlsx/xls）、CSV、图片和 PDF 文件'); return; }
     if (file.size > 10 * 1024 * 1024) { alert('文件大小不能超过 10MB'); return; }
     setAttachedFile(file);
+    
+    // 如果是图片，生成预览
+    if (isImageFile(file)) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setPreviewImage(event.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    } else {
+      setPreviewImage(null);
+    }
+    
     e.target.value = '';
+  }, []);
+  
+  const handleCancelPreview = useCallback(() => {
+    setAttachedFile(null);
+    setPreviewImage(null);
   }, []);
 
   const handleVoiceInput = useCallback(() => {
@@ -241,6 +267,49 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
     if (!attachedFile) { void handleSend(); return; }
     const question = inputValue.trim();
     setUploadingFile(true);
+    
+    // 处理图片上传
+    if (isImageFile(attachedFile)) {
+      // 生成用户消息
+      const userMsgText = question 
+        ? `📷 我上传了一张图片\n${question}`
+        : '📷 我上传了一张图片，请帮我分析';
+      
+      // 添加用户消息（包含图片URL（暂不修改消息
+      const userMessageId = `u-${Date.now()}`;
+      setMessages(prev => [...prev, { 
+        id: userMessageId, 
+        role: 'user' as const, 
+        text: userMsgText,
+        imageUrl: previewImage || undefined
+      }]);
+      setInputValue('');
+      const fileToUpload = attachedFile;
+      setAttachedFile(null);
+      setPreviewImage(null);
+      
+      try {
+        // 构造专门处理图片
+        // 使用视觉分析
+        const factoryId = (user as any)?.factoryId;
+        const factoryName = (user as any)?.factoryName;
+        const visionInstruction = previewImage 
+          ? '\n[系统提示：用户上传了一张图片，请主动调用视觉工具进行分析（款式识别/缺陷检测/色差检测/以图搜款]'
+          : '';
+        const contextualText = factoryId
+          ? `[工厂ID:${factoryId} 工厂名:${factoryName || ''}] ${question || '请帮我分析这张图片'}${visionInstruction}`
+          : `${question || '请帮我分析这张图片'}${visionInstruction}`;
+        
+        setUploadingFile(false);
+        startStream(contextualText, question || '图片分析', undefined, previewImage || '');
+      } catch {
+        setUploadingFile(false);
+        setMessages(prev => [...prev, { id: `err-${Date.now()}`, role: 'ai' as const, text: `❌ 图片上传失败，请稍后重试。` }]);
+      }
+      return;
+    }
+    
+    // 处理其他类型文件
     const userMsgText = question ? `📎 ${attachedFile.name}\n${question}` : `📎 ${attachedFile.name}`;
     setMessages(prev => [...prev, { id: `u-${Date.now()}`, role: 'user' as const, text: userMsgText }]);
     setInputValue('');
@@ -275,7 +344,7 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
       setUploadingFile(false);
       await handleSend(question || '文件上传失败，请直接描述需求');
     }
-  }, [attachedFile, inputValue, handleSend, speak]);
+  }, [attachedFile, previewImage, inputValue, handleSend, speak, isImageFile, user, startStream]);
 
   const handleShowAgentTrace = useCallback(async (commandId?: string) => {
     if (!commandId) return;
@@ -332,6 +401,8 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
     isRecording,
     advisorSessionId,
     historyFetchedRef,
+    previewImage,
+    setPreviewImage,         // 新增
     speak,
     restoreHistory,
     fetchBriefing,
@@ -344,6 +415,7 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
     handleAdvisorFeedback,
     handleShowAgentTrace,
     handleShowRecentTraces,
+    handleCancelPreview,
     clearChat,
   };
 }

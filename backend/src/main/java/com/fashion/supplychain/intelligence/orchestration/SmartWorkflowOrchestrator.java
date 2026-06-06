@@ -6,6 +6,7 @@ import com.fashion.supplychain.intelligence.entity.IntelligenceWorkflowLog;
 import com.fashion.supplychain.intelligence.mapper.IntelligenceWorkflowLogMapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fashion.supplychain.intelligence.service.WxAlertNotifyService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -50,6 +51,9 @@ import java.util.UUID;
 public class SmartWorkflowOrchestrator {
 
     private final FollowupTaskOrchestrator followupTaskOrchestrator;
+
+    private final WxAlertNotifyService wxAlertNotifyService;
+
 
     private final IntelligenceWorkflowLogMapper workflowLogMapper;
 
@@ -136,16 +140,28 @@ public class SmartWorkflowOrchestrator {
             createdTasks.add("库存清点");
             notifiedTeams.add("warehouse_team");
 
-            // 任务2：通知财务部
-            log.info("[Notify] called");
+            // 任务2：通知财务部 — 评估已支付成本
+            wxAlertNotifyService.notifyAlert(
+                command.getTenantId(), "订单暂停通知",
+                "订单 " + orderId + " 已暂停，请评估已支付成本并规划返工预算",
+                orderId, null
+            );
             notifiedTeams.add("finance_team");
 
-            // 任务3：通知生产协调员
-            log.info("[Notify] called");
+            // 任务3：通知生产团队 — 暂停工序领取
+            wxAlertNotifyService.notifyAlert(
+                command.getTenantId(), "生产暂停通知",
+                "订单 " + orderId + " 已暂停，相关工序暂停领取，等待进一步通知",
+                orderId, null
+            );
             notifiedTeams.add("production_team");
 
-            // 任务4：风险预警到KPI仪表盘
-            log.info("[Notify] called");
+            // 任务4：风险预警通知 — 推送到高管看板
+            wxAlertNotifyService.notifyAlert(
+                command.getTenantId(), "订单暂停风险预警",
+                "订单 " + orderId + " 已暂停 — 需评估交付影响，请关注高管看板",
+                orderId, "pages/dashboard/risk"
+            );
             notifiedTeams.add("executive_dashboard");
 
             logWorkflow(command, createdTasks, notifiedTeams, "COMPLETED");
@@ -178,12 +194,26 @@ public class SmartWorkflowOrchestrator {
             createFollowupTask(orderId, "priority_upgrade", "urgent");
             createdTasks.add("优先级升级");
 
-            // 任务2：通知参与的工人
-            log.info("[Notify] called");
+            // 任务2：通知参与工序的工人 — 加急通知
+            wxAlertNotifyService.notifyAlert(
+                command.getTenantId(), "订单加急通知",
+                "订单 " + orderId + " 已加急！请优先处理相关工序，预计逾期风险已标红",
+                orderId, null
+            );
             notifiedTeams.add("production_workers");
 
-            // 任务3：通知采购部
-            log.info("[Notify] called");
+            // 任务3：通知采购部 — 关注物料及时性
+            wxAlertNotifyService.notifyAlert(
+                command.getTenantId(), "采购关注通知",
+                "订单 " + orderId + " 已加急，请确认相关物料在途状态，确保不延误生产",
+                orderId, null
+            );
+            // 任务4：风险预警通知 — 加急标记
+            wxAlertNotifyService.notifyAlert(
+                command.getTenantId(), "订单加急风险预警",
+                "订单 " + orderId + " 已加急 — 预计逾期，已标记预警，请关注高管看板",
+                orderId, "pages/dashboard/risk"
+            );
             notifiedTeams.add("procurement_team");
 
             // 任务4：在进度看板标记

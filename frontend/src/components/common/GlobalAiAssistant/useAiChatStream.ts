@@ -49,6 +49,7 @@ export function useAiChatStream(config: StreamConfig) {
     contextualText: string,
     text: string,
     reportTypeToDownload?: 'daily' | 'weekly' | 'monthly',
+    imageUrl?: string,
   ) => {
     if (streamAbortRef.current) {
       streamAbortRef.current.abort();

@@ -6,6 +6,8 @@ import com.fashion.supplychain.intelligence.dto.AgentExecutionMetrics;
 import com.fashion.supplychain.intelligence.entity.IntelligenceFeedbackRecord;
 import com.fashion.supplychain.intelligence.mapper.IntelligenceFeedbackRecordMapper;
 import com.fashion.supplychain.intelligence.orchestration.IntelligenceMemoryOrchestrator;
+import com.fashion.supplychain.intelligence.agent.context.ContextCompressor;
+import com.fashion.supplychain.intelligence.service.GraphRagService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -28,6 +30,7 @@ import java.util.regex.Pattern;
  *   <li>上下文利用：是否充分利用了系统提示词中的上下文</li>
  *   <li>跨对话学习：是否复用了历史学习成果，避免重复发现问题</li>
  *   <li>用户价值：回答是否对用户真正有用（可执行性、避免空话）</li>
+ *   <li>知识图谱一致性：回答是否引用了知识图谱中的已知实体关系</li>
  * </ul>
  *
  * <p>评分低于阈值时，自动生成反馈记录并触发实时学习闭环。</p>
@@ -62,6 +65,12 @@ public class SelfCriticService {
 
     @Autowired(required = false)
     private com.fashion.supplychain.intelligence.gateway.ModelConsortiumRouter modelConsortiumRouter;
+
+    @Autowired(required = false)
+    private GraphRagService graphRagService;
+
+    @Autowired(required = false)
+    private ContextCompressor contextCompressor;
 
     @Value("${xiaoyun.self-critic.llm-enabled:true}")
     private boolean llmCriticEnabled;

@@ -92,6 +92,8 @@ export interface Message {
   text: string;
   intent?: string;
   hasSpeech?: boolean;
+  imageUrl?: string;         // 用户上传的图片 URL 或 Base64
+  imagePreview?: boolean;    // 是否显示图片预览
   reportType?: 'daily' | 'weekly' | 'monthly';
   charts?: ChartSpec[];
   cards?: XiaoyunInsightCardData[];

@@ -51,6 +51,23 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
     )}
 
     <div className={`${msgStyles.messageBubble} ${msg.role === 'ai' ? msgStyles.bubbleAi : msgStyles.bubbleUser}`}>
+      {/* 显示用户上传的图片 */}
+      {msg.imageUrl && (
+        <div style={{ marginBottom: 12 }}>
+          <img
+            src={msg.imageUrl}
+            alt="用户上传的图片"
+            style={{
+              maxWidth: '100%',
+              maxHeight: 300,
+              borderRadius: 8,
+              border: '1px solid #e5e7eb',
+              objectFit: 'contain'
+            }}
+          />
+        </div>
+      )}
+      
       {msg.role === 'ai' ? (
         <>
           <div

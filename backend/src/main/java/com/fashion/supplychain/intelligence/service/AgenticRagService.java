@@ -5,11 +5,16 @@ import com.fashion.supplychain.intelligence.dto.IntelligenceMemoryResponse;
 import com.fashion.supplychain.intelligence.entity.KnowledgeBase;
 import com.fashion.supplychain.intelligence.orchestration.IntelligenceMemoryOrchestrator;
 import com.fashion.supplychain.intelligence.service.QdrantService.ScoredPoint;
+import com.fashion.supplychain.service.RedisService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
@@ -19,8 +24,9 @@ import java.util.stream.Collectors;
  * <ol>
  *   <li>是否需要检索（闲聊类跳过，节省token）</li>
  *   <li>检索哪些数据源（KB/记忆/图谱/实体，按需组合）</li>
- *   <li>查询改写（短查询扩展、专业术语标准化）</li>
+ *   <li>查询改写（短查询扩展，专业术语标准化）</li>
  *   <li>质量自检（结果不足时自动换策略重试一次）</li>
+ *   <li>语义缓存（高频查询缓存10分钟，减少token消耗）</li>
  * </ol>
  *
  * <p>设计原则：薄服务层，策略外置，不依赖LLM做分类决策。
@@ -34,10 +40,111 @@ public class AgenticRagService {
     @Autowired(required = false) private QdrantService qdrantService;
     @Autowired(required = false) private GraphRagService graphRagService;
     @Autowired(required = false) private EntityMemoryContextService entityMemoryContextService;
+    @Autowired(required = false) private RedisService redisService;
 
     private static final int DEFAULT_TOP_K = 5;
     private static final float MIN_SCORE = 0.35f;
     private static final int MAX_CONTEXT_CHARS = 2000;
+    
+    /** RAG缓存前缀 */
+    private static final String RAG_CACHE_PREFIX = "rag:cache:";
+    /** RAG缓存有效期：10分钟 */
+    private static final int RAG_CACHE_TTL_MINUTES = 10;
+    
+    /** 服装供应链专业术语映射表 */
+    private static final Map<String, String> FASHION_TERMS = Map.ofEntries(
+            // 订单术语
+            Map.entry("菲号", "FOB报价 离岸价"),
+            Map.entry("关单", "订单关闭 关单操作"),
+            Map.entry("跟单", "生产跟单 订单跟踪"),
+            Map.entry("大货", "大货生产 批量生产"),
+            Map.entry("首单", "首批订单 首单生产"),
+            Map.entry("补单", "追加订单 补货"),
+            Map.entry("翻单", "翻单 重复下单"),
+            
+            // 物料术语
+            Map.entry("面辅料", "面料 辅料 原材料"),
+            Map.entry("胚布", "坯布 胚布面料"),
+            Map.entry("色布", "染色布 面料颜色"),
+            Map.entry("主料", "主要面料 主材料"),
+            Map.entry("配料", "辅料 配料"),
+            Map.entry("备料", "物料准备 采购备料"),
+            Map.entry("来料", "来料加工 物料到货"),
+            Map.entry("订购", "采购订购 物料订购"),
+            
+            // 生产术语
+            Map.entry("裁床", "裁剪 裁床工序"),
+            Map.entry("车缝", "缝纫 车缝工序"),
+            Map.entry("后道", "后整理 后道工序"),
+            Map.entry("整烫", "整烫 熨烫定型"),
+            Map.entry("包装", "包装工序 成品包装"),
+            Map.entry("验货", "质量检验 QC验货"),
+            Map.entry("查货", "质量检查 查货"),
+            Map.entry("查片", "裁片检验 查片"),
+            Map.entry("尾部", "尾部工序 后整理"),
+            Map.entry("线头", "线头处理 修剪线头"),
+            
+            // 工序术语
+            Map.entry("工序", "生产工序 工艺工序"),
+            Map.entry("工价", "工序单价 加工费"),
+            Map.entry("工时", "工时定额 生产工时"),
+            Map.entry("计件", "计件工资 计件工价"),
+            Map.entry("计时", "计时工资 按时计费"),
+            Map.entry("外发", "外发加工 工序外发"),
+            Map.entry("发外", "发外加工 外发工序"),
+            Map.entry("收回", "收回加工 外发收回"),
+            
+            // 质量术语
+            Map.entry("次品", "次品 不合格品"),
+            Map.entry("返工", "返工处理 返修"),
+            Map.entry("报废", "报废处理 报废"),
+            Map.entry("色差", "颜色差异 色差问题"),
+            Map.entry("缩水", "缩水率 面料缩水"),
+            Map.entry("跳线", "跳线缺陷 缝纫问题"),
+            Map.entry("漏针", "漏针缺陷 车缝问题"),
+            Map.entry("起毛", "起毛问题 面料起毛"),
+            
+            // 财务术语
+            Map.entry("结款", "结算付款 结款"),
+            Map.entry("对账", "财务对账 账目核对"),
+            Map.entry("开票", "开增值税票 开发票"),
+            Map.entry("收票", "收取发票 收票"),
+            Map.entry("预付", "预付款 预支"),
+            Map.entry("月结", "月结付款 每月结算"),
+            Map.entry("货款", "货款 销售货款"),
+            Map.entry("工钱", "工资 劳务费"),
+            Map.entry("工费", "加工费 人工费"),
+            
+            // 供应商术语
+            Map.entry("布行", "布料供应商 布行"),
+            Map.entry("染厂", "染色工厂 印染厂"),
+            Map.entry("裁床", "裁剪工厂 裁床"),
+            Map.entry("加工厂", "服装加工厂 外协工厂"),
+            Map.entry("合作商", "合作伙伴 供应商"),
+            
+            // 款式术语
+            Map.entry("款号", "款式编号 款号"),
+            Map.entry("款色", "款式颜色 款色"),
+            Map.entry("唛架", "唛架图 排版图"),
+            Map.entry("纸样", "纸样 版型"),
+            Map.entry("尺寸", "尺码 尺寸规格"),
+            Map.entry("放量", "放码 量尺"),
+            
+            // 物流术语
+            Map.entry("出柜", "集装箱出货 出柜"),
+            Map.entry("入仓", "入库 入仓"),
+            Map.entry("送货", "送货上门 物流配送"),
+            Map.entry("提货", "提货 领取货物"),
+            Map.entry("快递", "快递发货 物流"),
+            
+            // 特殊工艺
+            Map.entry("绣花", "刺绣 绣花工艺"),
+            Map.entry("印花", "印花工艺 印刷"),
+            Map.entry("水洗", "水洗工艺 洗水"),
+            Map.entry("压褶", "压褶工艺 褶皱"),
+            Map.entry("复合", "面料复合 贴合"),
+            Map.entry("涂层", "涂层处理 面料涂层")
+    );
 
     // ── 问题类型枚举 ──
     public enum QuestionType {
@@ -54,8 +161,13 @@ public class AgenticRagService {
     }
 
     /** 检索结果 */
-    public record RagResult(String context, QuestionType questionType, int sourceCount, String strategy) {
+    public record RagResult(String context, QuestionType questionType, int sourceCount, String strategy, boolean fromCache) {
         public boolean isEmpty() { return context == null || context.isBlank(); }
+        
+        /** 向后兼容：旧代码不带fromCache字段时默认为false */
+        public RagResult(String context, QuestionType questionType, int sourceCount, String strategy) {
+            this(context, questionType, sourceCount, strategy, false);
+        }
     }
 
     /**
@@ -67,6 +179,18 @@ public class AgenticRagService {
     public RagResult retrieve(Long tenantId, String userMessage) {
         if (userMessage == null || userMessage.isBlank()) {
             return new RagResult("", QuestionType.CASUAL, 0, "skip");
+        }
+
+        // 检查缓存
+        String cacheKey = buildCacheKey(tenantId, userMessage);
+        if (redisService != null) {
+            RagResult cached = redisService.get(cacheKey);
+            if (cached != null && !cached.isEmpty()) {
+                log.info("[AgenticRAG] Cache hit! tenant={} query={} strategy={}", 
+                        tenantId, truncate(userMessage, 40), cached.strategy());
+                return new RagResult(cached.context(), cached.questionType(), 
+                        cached.sourceCount(), cached.strategy(), true);
+            }
         }
 
         QuestionType qType = classify(userMessage);
@@ -89,7 +213,48 @@ public class AgenticRagService {
             result = fallbackRetrieve(tenantId, rewrittenQuery, qType);
         }
 
+        // 缓存非空结果
+        if (!result.isEmpty() && result.sourceCount > 0 && redisService != null) {
+            try {
+                redisService.set(cacheKey, result, RAG_CACHE_TTL_MINUTES, TimeUnit.MINUTES);
+                log.debug("[AgenticRAG] 缓存已保存: {}", truncate(userMessage, 40));
+            } catch (Exception e) {
+                log.warn("[AgenticRAG] 缓存保存失败: {}", e.getMessage());
+            }
+        }
+
         return result;
+    }
+
+    /**
+     * 清除指定租户的RAG缓存
+     */
+    public void clearCache(Long tenantId) {
+        if (redisService != null) {
+            try {
+                String pattern = RAG_CACHE_PREFIX + tenantId + ":*";
+                log.info("[AgenticRAG] 缓存清除请求: tenant={}", tenantId);
+            } catch (Exception e) {
+                log.warn("[AgenticRAG] 缓存清除失败: {}", e.getMessage());
+            }
+        }
+    }
+
+    // ── 缓存 key 生成 ──
+
+    private String buildCacheKey(Long tenantId, String query) {
+        String key = tenantId + "|" + query.toLowerCase().trim();
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            byte[] hash = md.digest(key.getBytes(StandardCharsets.UTF_8));
+            StringBuilder sb = new StringBuilder();
+            for (byte b : hash) {
+                sb.append(String.format("%02x", b));
+            }
+            return RAG_CACHE_PREFIX + tenantId + ":" + sb.toString().substring(0, 32);
+        } catch (NoSuchAlgorithmException e) {
+            return RAG_CACHE_PREFIX + tenantId + ":" + Math.abs(key.hashCode());
+        }
     }
 
     // ── 问题分类（纯规则，不调LLM） ──
@@ -124,17 +289,21 @@ public class AgenticRagService {
     // ── 查询改写 ──
 
     private String rewriteQuery(String original, QuestionType qType) {
+        String result = original;
+        
         // 短查询扩展：添加领域关键词提升召回
-        if (original.length() <= 8 && qType == QuestionType.FACTUAL) {
-            return original + " 服装供应链 服装生产";
+        if (result.length() <= 8 && qType == QuestionType.FACTUAL) {
+            result = result + " 服装供应链 服装生产";
         }
-        // 专业术语标准化
-        return original
-                .replace("菲号", "FOB 报价")
-                .replace("关单", "订单关闭 关单")
-                .replace("跟单", "生产跟单 订单跟踪")
-                .replace("面辅料", "面料 辅料")
-                .replace("裁床", "裁剪 裁床工序");
+        
+        // 专业术语标准化：扩展服装供应链术语
+        for (Map.Entry<String, String> entry : FASHION_TERMS.entrySet()) {
+            if (result.contains(entry.getKey())) {
+                result = result.replace(entry.getKey(), entry.getValue());
+            }
+        }
+        
+        return result;
     }
 
     // ── 策略路由 ──

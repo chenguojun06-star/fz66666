@@ -15,6 +15,8 @@ public interface AiInferenceGateway {
                                             List<AiTool> tools,
                                             StreamChunkConsumer chunkConsumer);
 
+    IntelligenceInferenceResult chatWithVision(String scene, String systemPrompt, String userMessage, String imageUrl);
+
     boolean isAvailable();
 
     String getProviderName();

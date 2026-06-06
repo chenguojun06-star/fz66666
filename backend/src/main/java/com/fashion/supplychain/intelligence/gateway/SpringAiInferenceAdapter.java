@@ -221,6 +221,52 @@ public class SpringAiInferenceAdapter implements AiInferenceGateway {
         return "spring-ai";
     }
 
+    @Override
+    public IntelligenceInferenceResult chatWithVision(String scene, String systemPrompt, String userMessage, String imageUrl) {
+        long start = System.currentTimeMillis();
+        IntelligenceInferenceResult budgetCheck = checkTokenBudget(start);
+        if (budgetCheck != null) return budgetCheck;
+
+        Exception lastError = null;
+        for (int attempt = 0; attempt < 3; attempt++) {
+            try {
+                ChatClient chatClient = chatClientProvider.getIfAvailable();
+                if (chatClient == null) {
+                    return buildErrorResult(new IllegalStateException("ChatClient bean not available"), start);
+                }
+                
+                // 暂时以文本方式处理图片，后续添加完整 Media 支持
+                String fullPrompt = userMessage + "\n\n[图片地址: " + imageUrl + "]";
+
+                ChatClient.ChatClientRequestSpec requestSpec = chatClient.prompt();
+                if (systemPrompt != null && !systemPrompt.isBlank()) {
+                    requestSpec = requestSpec.system(systemPrompt);
+                }
+                requestSpec = requestSpec.user(fullPrompt);
+
+                ChatResponse response = requestSpec
+                        .options(buildOptions(scene))
+                        .call()
+                        .chatResponse();
+
+                IntelligenceInferenceResult result = convertResult(response, start);
+                recordTokenUsage(result);
+                return result;
+            } catch (Exception e) {
+                lastError = e;
+                if (isRetryable(e) && attempt < 2) {
+                    long backoffMs = (long) Math.pow(2, attempt) * 1000 + (long)(Math.random() * 500);
+                    log.warn("[SpringAiAdapter] chatWithVision failed (attempt={}), retrying in {}ms: {}", attempt + 1, backoffMs, e.getMessage());
+                    try { Thread.sleep(backoffMs); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); break; }
+                } else {
+                    break;
+                }
+            }
+        }
+        log.warn("[SpringAiAdapter] chatWithVision failed after retries: {}", lastError != null ? lastError.getMessage() : "unknown");
+        return buildErrorResult(lastError, start);
+    }
+
     private IntelligenceInferenceResult checkTokenBudget(long startMs) {
         if (!tokenBudgetService.canInvoke()) {
             IntelligenceInferenceResult r = new IntelligenceInferenceResult();

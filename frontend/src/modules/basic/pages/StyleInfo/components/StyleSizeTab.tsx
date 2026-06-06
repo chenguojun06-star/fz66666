@@ -184,6 +184,12 @@ const StyleSizeTab: React.FC<Props> = ({
     deletedIds, originalRef, combinedSizeIdsRef, snapshotRef, fetchSize, message,
   });
 
+  /** 处理AI识别尺寸表结果 */
+  const handleSizeTableRecognized = (result: { sizes: string[]; parts: any[] }) => {
+    // TODO: 完善 AI 识别尺寸表功能
+    message.info('尺寸表AI识别功能即将上线，敬请期待！');
+  };
+
   const columns = useStyleSizeColumns({
     editMode,
     readOnly,
@@ -258,6 +264,8 @@ const StyleSizeTab: React.FC<Props> = ({
           mergeSizeColumns={structure.mergeSizeColumns}
           fetchSizeDictOptions={fetchSizeDictOptions}
           message={message}
+          styleId={styleId}
+          onSizeTableRecognized={handleSizeTableRecognized}
         />
       )}
 

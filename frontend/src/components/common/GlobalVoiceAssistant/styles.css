@@ -11,10 +11,10 @@
   width: 64px !important;
   height: 64px !important;
   font-size: 28px !important;
-  box-shadow: 0 8px 24px rgba(24, 144, 255, 0.35);
-  background: linear-gradient(135deg, #1890ff 0%, #722ed1 100%);
+  box-shadow: 0 8px 24px rgba(45, 127, 249, 0.25);
+  background: #2D7FF9; /* Impeccable: 纯色，不用渐变 */
   border: none;
-  transition: all 0.3s ease;
+  transition: all 0.3s var(--ease-smooth);
   animation: float 3s ease-in-out infinite;
 }
 
@@ -44,7 +44,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 16px 20px;
-  background: linear-gradient(135deg, #1890ff 0%, #722ed1 100%);
+  background: #2D7FF9; /* Impeccable: 纯色，不用渐变 */
   color: white;
 }
 
@@ -78,7 +78,7 @@
 
 .recording-bar {
   width: 8px;
-  background: linear-gradient(to top, #1890ff, #722ed1);
+  background: #2D7FF9; /* Impeccable: 纯色，不用渐变 */
   border-radius: 4px;
   animation: wave 0.8s ease-in-out infinite;
 }

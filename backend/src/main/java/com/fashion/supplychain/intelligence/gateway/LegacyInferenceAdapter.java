@@ -36,6 +36,23 @@ public class LegacyInferenceAdapter implements AiInferenceGateway {
     }
 
     @Override
+    public IntelligenceInferenceResult chatWithVision(String scene, String systemPrompt, String userMessage, String imageUrl) {
+        // 合并 systemPrompt 和 userMessage 传递给 delegate
+        String fullPrompt = (systemPrompt != null ? systemPrompt + "\n\n" : "") + userMessage;
+        String resultText = delegate.chatWithVision(imageUrl, fullPrompt);
+        
+        IntelligenceInferenceResult result = new IntelligenceInferenceResult();
+        result.setSuccess(true);
+        result.setProvider("legacy");
+        result.setContent(resultText);
+        result.setPromptTokens(0);
+        result.setCompletionTokens(0);
+        result.setLatencyMs(0);
+        
+        return result;
+    }
+
+    @Override
     public boolean isAvailable() {
         return delegate.isAnyModelEnabled();
     }

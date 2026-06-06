@@ -1,4 +1,4 @@
--- V20260606001: 在 t_style_info 表中新增 vision_raw 字段
+-- V20260606002: 在 t_style_info 表中新增 vision_raw 字段
 -- 用于持久化 Agnes 视觉模型的原始识别描述，避免每次重新调用 AI
 -- 使用 INFORMATION_SCHEMA 幂等写法（云端 Flyway 安全执行）
 

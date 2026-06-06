@@ -285,6 +285,16 @@ public class StyleInfoController {
         return Result.success(styleDocOcrOrchestrator.recognizeRequirementDoc(file));
     }
 
+    /**
+     * AI识别尺寸表图片，提取尺码和部位尺寸数据
+     */
+    @PostMapping(value = "/{id}/recognize-size-table", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public Result<?> recognizeSizeTable(
+            @PathVariable Long id,
+            @RequestParam("file") MultipartFile file) {
+        return Result.success(styleDocOcrOrchestrator.recognizeSizeTable(file));
+    }
+
     @PutMapping("/{id}/use-sku-prefix")
     public Result<?> updateUseSkuPrefix(
             @PathVariable Long id,

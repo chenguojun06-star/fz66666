@@ -1,17 +1,24 @@
 package com.fashion.supplychain.intelligence.service;
 
 import com.fashion.supplychain.intelligence.entity.KgEntity;
+import com.fashion.supplychain.intelligence.entity.KgRelation;
 import com.fashion.supplychain.intelligence.mapper.KgEntityMapper;
+import com.fashion.supplychain.intelligence.mapper.KgRelationMapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
 @Slf4j
 @Service
 public class GraphRagService {
+
+    @Autowired private KgRelationMapper kgRelationMapper;
 
     @Autowired private KgEntityMapper kgEntityMapper;
 
@@ -113,5 +120,94 @@ public class GraphRagService {
             case "REQUIRES" -> "需要";
             default -> relation;
         };
+    }
+
+    /**
+     * 将业务实体写入知识图谱并建立关系。幂等操作。
+     *
+     * @param tenantId         租户ID
+     * @param sourceEntityType 源实体类型 (ORDER/FACTORY/STYLE/MATERIAL/CUSTOMER)
+     * @param sourceEntityName 源实体名称
+     * @param sourceExternalId 源实体业务ID
+     * @param targetEntityType 目标实体类型
+     * @param targetEntityName 目标实体名称
+     * @param targetExternalId 目标实体业务ID
+     * @param relationType     关系类型
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void recordRelation(
+            Long tenantId,
+            String sourceEntityType, String sourceEntityName, String sourceExternalId,
+            String targetEntityType, String targetEntityName, String targetExternalId,
+            String relationType
+    ) {
+        Long sourceId = upsertEntity(tenantId, sourceEntityType, sourceEntityName, sourceExternalId);
+        Long targetId = upsertEntity(tenantId, targetEntityType, targetEntityName, targetExternalId);
+
+        if (sourceId == null || targetId == null) return;
+        if (sourceId.equals(targetId)) return;
+
+        QueryWrapper<KgRelation> qw = new QueryWrapper<>();
+        qw.eq("tenant_id", tenantId)
+          .eq("source_id", sourceId)
+          .eq("target_id", targetId)
+          .eq("relation_type", relationType)
+          .eq("delete_flag", 0);
+
+        if (kgRelationMapper.selectCount(qw) == 0) {
+            KgRelation rel = new KgRelation();
+            rel.setTenantId(tenantId);
+            rel.setSourceId(sourceId);
+            rel.setTargetId(targetId);
+            rel.setRelationType(relationType);
+            rel.setWeight(1.0);
+            rel.setDeleteFlag(0);
+            rel.setCreatedAt(LocalDateTime.now());
+            kgRelationMapper.insert(rel);
+            log.debug("[GraphRAG] 新建关系: {} --[{}]--> {}", sourceEntityName, relationType, targetEntityName);
+        }
+    }
+
+    /** Upsert 实体：按 tenantId + entityType + externalId 查重 */
+    private Long upsertEntity(Long tenantId, String entityType, String entityName, String externalId) {
+        if (entityName == null || entityName.isBlank()) return null;
+        QueryWrapper<KgEntity> qw = new QueryWrapper<>();
+        qw.eq("tenant_id", tenantId)
+          .eq("entity_type", entityType)
+          .eq("external_id", externalId)
+          .eq("delete_flag", 0);
+        KgEntity existing = kgEntityMapper.selectOne(qw);
+        if (existing != null) return existing.getId();
+
+        KgEntity entity = new KgEntity();
+        entity.setTenantId(tenantId);
+        entity.setEntityType(entityType);
+        entity.setEntityName(entityName);
+        entity.setExternalId(externalId);
+        entity.setDeleteFlag(0);
+        entity.setCreatedAt(LocalDateTime.now());
+        entity.setUpdatedAt(LocalDateTime.now());
+        kgEntityMapper.insert(entity);
+        return entity.getId();
+    }
+
+    /**
+     * 批量同步知识图谱关系。适用于初始化或定时全量同步。
+     */
+    public int batchSyncRelations(Long tenantId, List<Map<String, String>> relations) {
+        int created = 0;
+        for (Map<String, String> r : relations) {
+            try {
+                recordRelation(tenantId,
+                        r.get("sourceType"), r.get("sourceName"), r.get("sourceExternalId"),
+                        r.get("targetType"), r.get("targetName"), r.get("targetExternalId"),
+                        r.getOrDefault("relationType", "RELATED"));
+                created++;
+            } catch (Exception e) {
+                log.debug("[GraphRAG] 同步跳过: {}", e.getMessage());
+            }
+        }
+        log.info("[GraphRAG] 批量同步: {}条关系", created);
+        return created;
     }
 }

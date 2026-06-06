@@ -10,6 +10,7 @@ public enum ToolDomain {
     FINANCE("财务结算"),
     WAREHOUSE("仓储物料"),
     STYLE("款式样衣"),
+    VISION("视觉分析"),
     ANALYSIS("分析决策"),
     SYSTEM("系统通用"),
     GENERAL("通用能力");

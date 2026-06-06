@@ -9,6 +9,9 @@ import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Pattern;
+import java.util.LinkedHashSet;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Component
@@ -112,5 +115,111 @@ public class ContextCompressor {
             }
         }
         return total;
+    }
+    /**
+     * 压缩工具返回输出，减少送入LLM的token量。类似headroom的压缩策略。
+     *
+     * 压缩策略：
+     *   1. 截断超长JSON/列表：保留前N条 + 统计摘要
+     *   2. 去除不必要的JSON字段（createdAt/updatedAt/id等元数据）
+     *   3. 数字精度压缩：浮点数保留2位小数
+     *
+     * @param toolName  工具名称（用于日志统计）
+     * @param rawOutput 原始工具输出字符串
+     * @param maxChars  最大输出字符数，默认8000
+     * @return 压缩后的输出
+     */
+    public String compressToolOutput(String toolName, String rawOutput, int maxChars) {
+        if (rawOutput == null || rawOutput.isEmpty()) return rawOutput;
+
+        int originalLen = rawOutput.length();
+        String compressed = rawOutput;
+
+        // Level 1: 截断超长输出
+        if (compressed.length() > maxChars) {
+            int truncated = compressed.length() - maxChars;
+            compressed = compressed.substring(0, maxChars);
+            compressed += "\n...[截断 " + truncated + " 字符，完整数据请通过精确查询获取]";
+        }
+
+        // Level 2: 去除常见的冗余JSON元数据字段
+        compressed = removeMetadataFields(compressed);
+
+        // Level 3: 浮点数精度压缩
+        compressed = compressFloatPrecision(compressed);
+
+        int savedTokens = (originalLen - compressed.length()) / 2;
+        if (savedTokens > 10) {
+            log.debug("[ContextCompressor] 工具 {} 输出压缩: {}→{} 字符, 节省 ~{} tokens",
+                    toolName, originalLen, compressed.length(), savedTokens);
+        }
+        return compressed;
+    }
+
+    /** 默认最大输出字符数 */
+    public String compressToolOutput(String toolName, String rawOutput) {
+        return compressToolOutput(toolName, rawOutput, 8000);
+    }
+
+    /**
+     * 去重工具调用消息，移除连续的重复工具输出。
+     */
+    public List<AiMessage> deduplicateToolMessages(List<AiMessage> messages) {
+        if (messages == null || messages.size() <= 2) return messages;
+
+        List<AiMessage> deduped = new ArrayList<>();
+        String lastToolContent = null;
+        int skipCount = 0;
+
+        for (AiMessage msg : messages) {
+            if ("tool".equals(msg.getRole()) && msg.getContent() != null) {
+                if (msg.getContent().equals(lastToolContent)) {
+                    skipCount++;
+                    continue;
+                }
+                if (skipCount > 0) {
+                    deduped.add(AiMessage.system("(以上连续 " + skipCount + " 条重复工具结果已省略)"));
+                    skipCount = 0;
+                }
+                lastToolContent = msg.getContent();
+            }
+            deduped.add(msg);
+        }
+
+        if (skipCount > 0) {
+            deduped.add(AiMessage.system("(最后 " + skipCount + " 条重复工具结果已省略)"));
+        }
+
+        if (deduped.size() < messages.size()) {
+            log.info("[ContextCompressor] 去重: {}条 → {}条 (移除{}条重复工具输出)",
+                    messages.size(), deduped.size(), messages.size() - deduped.size());
+        }
+        return deduped;
+    }
+
+    /** 移除常见元数据字段 */
+    private String removeMetadataFields(String json) {
+        String[] noiseKeys = {"\"createdAt\"", "\"updatedAt\"", "\"createTime\"",
+                "\"updateTime\"", "\"deletedFlag\"", "\"tenantId\"", "\"version\"",
+                "\"createBy\"", "\"updateBy\"", "\"remark\""};
+        for (String key : noiseKeys) {
+            json = json.replaceAll(
+                    key + "\\s*:\\s*\"[^\"]*\"\\s*[,}]",
+                    "");
+            json = json.replaceAll(
+                    key + "\\s*:\\s*\\d+\\s*[,}]",
+                    "");
+            json = json.replaceAll(
+                    key + "\\s*:\\s*null\\s*[,}]",
+                    "");
+        }
+        return json;
+    }
+
+    /** 压缩浮点数精度: 保留2位小数 */
+    private String compressFloatPrecision(String text) {
+        return text.replaceAll(
+                "(\\d+\\.\\d{2})\\d+",
+                "$1");
     }
 }

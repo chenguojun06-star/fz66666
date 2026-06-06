@@ -172,16 +172,16 @@
   max-width: 100%;
 }
 .universal-card-progress-success {
-  background: linear-gradient(135deg, #52c41a, #389e0d);
+  background: #52c41a; /* Impeccable: 纯色，不用渐变 */
 }
 .universal-card-progress-warning {
-  background: linear-gradient(135deg, #faad14, #d48806);
+  background: #faad14; /* Impeccable: 纯色，不用渐变 */
 }
 .universal-card-progress-danger {
-  background: linear-gradient(135deg, #ff4d4f, #cf1322);
+  background: #ff4d4f; /* Impeccable: 纯色，不用渐变 */
 }
 .universal-card-progress-default {
-  background: linear-gradient(135deg, #bfbfbf, #8c8c8c);
+  background: #bfbfbf; /* Impeccable: 纯色，不用渐变 */
 }
 .universal-card-progress-default .universal-card-progress-text {
   color: rgba(0, 0, 0, 0.55);

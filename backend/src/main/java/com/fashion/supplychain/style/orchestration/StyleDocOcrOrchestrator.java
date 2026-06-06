@@ -66,6 +66,67 @@ public class StyleDocOcrOrchestrator {
         }
     }
 
+    /**
+     * 识别尺寸表图片，提取尺码和部位尺寸数据
+     * 返回结构化JSON：{ sizes: ["S","M","L"], parts: [{ name: "衣长", values: { "S": 65, "M": 67, "L": 69 } }] }
+     */
+    public Map<String, Object> recognizeSizeTable(MultipartFile file) {
+        Long tenantId = UserContext.tenantId();
+
+        if (!inferenceOrchestrator.isVisionEnabled()) {
+            throw new IllegalStateException("AI视觉识别未启用，请联系管理员配置Agnes视觉模型");
+        }
+
+        String imageUrl = uploadFileToCos(tenantId, file);
+        if (imageUrl == null) {
+            throw new IllegalStateException("图片上传失败，请检查网络连接后重试");
+        }
+
+        try {
+            String prompt = "你是专业服装尺寸表识别助手。请仔细识别图片中的尺寸表。\n" +
+                    "重点提取以下信息：\n" +
+                    "1. 尺码名称（如：S、M、L、XL，或 155/80A、160/84A 等）\n" +
+                    "2. 部位名称（如：衣长、胸围、肩宽、袖长等）\n" +
+                    "3. 每个部位在各尺码下的具体数值（单位：cm厘米）\n" +
+                    "4. 测量方法（如：平铺量、拉伸量等）\n" +
+                    "5. 公差范围（如：±1cm等）\n\n" +
+                    "请严格按照以下JSON格式输出，不要输出其他内容：\n" +
+                    "{\n" +
+                    "  \"sizes\": [\"尺码1\", \"尺码2\", \"尺码3\"],\n" +
+                    "  \"parts\": [\n" +
+                    "    {\n" +
+                    "      \"name\": \"部位名称\",\n" +
+                    "      \"measureMethod\": \"测量方法（如平铺量）\",\n" +
+                    "      \"tolerance\": \"±1cm\",\n" +
+                    "      \"values\": { \"尺码1\": 数值, \"尺码2\": 数值, \"尺码3\": 数值 }\n" +
+                    "    }\n" +
+                    "  ]\n" +
+                    "}\n\n" +
+                    "注意：\n" +
+                    "- values里的key必须与sizes数组中的尺码名称完全一致\n" +
+                    "- 只输出JSON，不要有任何解释性文字\n" +
+                    "- 如果某些部位没有数值，values里对应尺码可以写null\n" +
+                    "- 如果图片中有多行表头，只取第一个尺码行";
+
+            String rawJson = inferenceOrchestrator.chatWithVision(imageUrl, prompt);
+            if (rawJson == null || rawJson.trim().isEmpty()) {
+                throw new IllegalStateException("AI识别返回为空，请重试");
+            }
+
+            log.info("[SizeTableOcr] 尺寸表识别完成 tenantId={} 字符数={}", tenantId, rawJson.length());
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("rawJson", rawJson.trim());
+            result.put("imageUrl", imageUrl);
+            return result;
+        } catch (IllegalStateException e) {
+            throw e;
+        } catch (Exception e) {
+            log.warn("[SizeTableOcr] AI识别异常 tenantId={}: {}", tenantId, e.getMessage());
+            throw new IllegalStateException("AI识别失败，请重试：" + e.getMessage());
+        }
+    }
+
     private String uploadFileToCos(Long tenantId, MultipartFile file) {
         try {
             // 本地开发模式（COS未配置）：直接转base64 data URI，让Agnes Vision直接读取

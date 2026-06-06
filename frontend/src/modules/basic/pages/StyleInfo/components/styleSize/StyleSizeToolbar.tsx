@@ -1,6 +1,6 @@
-import React, { useRef } from 'react';
-import { Button, Dropdown, Input, Modal, Popover, Select, Space } from 'antd';
-import { DownOutlined } from '@ant-design/icons';
+import React, { useRef, useState } from 'react';
+import { Button, Dropdown, Input, Modal, Popover, Select, Space, Upload, message as antMessage, Spin } from 'antd';
+import { DownOutlined, RobotOutlined } from '@ant-design/icons';
 import { sortSizeNames } from '@/utils/api';
 import { TemplateLibrary } from '@/types/style';
 
@@ -28,7 +28,9 @@ interface Props {
   sizeColumns: string[];
   mergeSizeColumns: (additions: string[]) => void;
   fetchSizeDictOptions: () => void;
-  message: { error: (msg: string) => void };
+  message: { error: (msg: string) => void; loading: (msg: string) => void };
+  styleId: string | number;
+  onSizeTableRecognized: (result: { sizes: string[]; parts: any[] }) => void;
 }
 
 const StyleSizeToolbar: React.FC<Props> = ({
@@ -38,9 +40,50 @@ const StyleSizeToolbar: React.FC<Props> = ({
   sizeTemplates, sizeTemplateKey, setSizeTemplateKey, applySizeTemplate,
   newGroupName, setNewGroupName, confirmAddGroup,
   sizeOptions, setSizeOptions, sizeColumns, mergeSizeColumns, fetchSizeDictOptions, message,
+  styleId, onSizeTableRecognized,
 }) => {
   const isReadonly = Boolean(readOnly);
   const sizeSearchTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  const [ocrModalOpen, setOcrModalOpen] = useState(false);
+  const [ocrLoading, setOcrLoading] = useState(false);
+  const [ocrFile, setOcrFile] = useState<any>(null);
+
+  const handleOcrRecognize = async () => {
+    if (!ocrFile) {
+      antMessage.error('请先上传尺寸表图片');
+      return;
+    }
+    setOcrLoading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', ocrFile);
+      
+      const res = await fetch(`/api/style/info/${styleId}/recognize-size-table`, {
+        method: 'POST',
+        body: formData,
+      }).then(r => r.json());
+      
+      if (res.code !== 200) {
+        antMessage.error(res.message || 'AI识别失败');
+      } else {
+        const rawJson = res.data?.rawJson || '{}';
+        // 尝试解析JSON
+        try {
+          const parsed = JSON.parse(rawJson);
+          onSizeTableRecognized(parsed);
+          setOcrModalOpen(false);
+          setOcrFile(null);
+          antMessage.success('尺寸表识别成功！');
+        } catch (e) {
+          antMessage.error('AI返回格式异常，请重试');
+        }
+      }
+    } catch (e: unknown) {
+      antMessage.error(e instanceof Error ? e.message : 'AI识别失败，请重试');
+    } finally {
+      setOcrLoading(false);
+    }
+  };
 
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
@@ -69,6 +112,15 @@ const StyleSizeToolbar: React.FC<Props> = ({
               }}
             >取消</Button>
           </>
+        )}
+        {!editMode && !readOnly && (
+          <Button 
+            icon={<RobotOutlined />} 
+            onClick={() => setOcrModalOpen(true)}
+            disabled={loading || saving}
+          >
+            AI识别尺寸表
+          </Button>
         )}
         <Select
           allowClear
@@ -164,6 +216,51 @@ const StyleSizeToolbar: React.FC<Props> = ({
           onOpenChange={(open) => { if (open) fetchSizeDictOptions(); }}
         />
       </Space>
+
+      {/* AI识别尺寸表 Modal */}
+      <Modal
+        title="AI识别尺寸表"
+        open={ocrModalOpen}
+        onCancel={() => { setOcrModalOpen(false); setOcrFile(null); }}
+        onOk={handleOcrRecognize}
+        okText="识别"
+        confirmLoading={ocrLoading}
+        width={480}
+      >
+        <Spin spinning={ocrLoading} tip="正在识别，请稍候...">
+          <div style={{ padding: '16px 0' }}>
+            <Upload.Dragger
+              accept="image/*"
+              maxCount={1}
+              beforeUpload={(file) => {
+                setOcrFile(file);
+                return false; // 阻止自动上传
+              }}
+              onRemove={() => setOcrFile(null)}
+              fileList={ocrFile ? [{ uid: '-1', name: ocrFile.name, status: 'done', url: '', originFileObj: ocrFile }] : []}
+            >
+              <p className="ant-upload-drag-icon">
+                <RobotOutlined style={{ fontSize: 48, color: 'var(--primary-color)' }} />
+              </p>
+              <p className="ant-upload-text">点击上传尺寸表图片</p>
+              <p className="ant-upload-hint">
+                支持 JPG、PNG 格式，图片中应包含尺码名称和部位尺寸数值
+              </p>
+            </Upload.Dragger>
+            
+            {!ocrLoading && ocrFile && (
+              <div style={{ marginTop: 16, padding: 12, background: '#f6ffed', borderRadius: 8, border: '1px solid #b7eb8f' }}>
+                <p style={{ margin: 0, color: '#52c41a', fontWeight: 500 }}>
+                  已选择: {ocrFile.name}
+                </p>
+                <p style={{ margin: '8px 0 0', color: '#8c8c8c', fontSize: 12 }}>
+                  点击"识别"按钮开始AI分析
+                </p>
+              </div>
+            )}
+          </div>
+        </Spin>
+      </Modal>
     </div>
   );
 };

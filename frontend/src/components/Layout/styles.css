@@ -991,7 +991,7 @@
   content: '';
   display: block;
   height: 3px;
-  background: linear-gradient(90deg, #2D7FF9, #0284c7);
+  background: #2D7FF9; /* Impeccable: 纯色，不用渐变 */
 }
 
 /* 面板头 */
@@ -1142,9 +1142,9 @@
 .sap-priority-bar {
   position: absolute;
   left: 0; top: 0; bottom: 0;
-  background: linear-gradient(90deg, #2D7FF9, #4f8ff7);
+  background: #2D7FF9; /* Impeccable: 纯色，不用渐变 */
   border-radius: 4px;
-  transition: width 0.5s ease;
+  transition: width 0.5s var(--ease-smooth);
 }
 .sap-priority-pct {
   position: relative;

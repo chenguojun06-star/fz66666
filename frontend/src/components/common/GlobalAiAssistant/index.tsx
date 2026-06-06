@@ -112,31 +112,33 @@ const GlobalAiAssistant: React.FC = () => {
 
   // ── chat hook ──
   const {
-    messages, setMessages,
-    inputValue, setInputValue,
-    isTyping,
-    liveStatus,
-    isMuted, setIsMuted,
-    downloadingType,
-    attachedFile, setAttachedFile,
-    uploadingFile,
-    isRecording,
-    advisorSessionId: _advisorSessionId,
-    historyFetchedRef: _historyFetchedRef,
-    speak,
-    restoreHistory,
-    fetchBriefing,
-    handleSend,
-    handleSendWithAttachment,
-    handleFileSelect,
-    handleVoiceInput,
-    handleDownloadReport,
-    handleActualDownload,
-    handleAdvisorFeedback,
-    handleShowAgentTrace,
-    handleShowRecentTraces,
-    clearChat,
-  } = useAiChat(message);
+      messages, setMessages,
+      inputValue, setInputValue,
+      isTyping,
+      liveStatus,
+      isMuted, setIsMuted,
+      downloadingType,
+      attachedFile, setAttachedFile,
+      uploadingFile,
+      isRecording,
+      advisorSessionId: _advisorSessionId,
+      historyFetchedRef: _historyFetchedRef,
+      previewImage,
+      setPreviewImage,
+      speak,
+      restoreHistory,
+      fetchBriefing,
+      handleSend,
+      handleSendWithAttachment,
+      handleFileSelect,
+      handleVoiceInput,
+      handleDownloadReport,
+      handleActualDownload,
+      handleAdvisorFeedback,
+      handleShowAgentTrace,
+      handleShowRecentTraces,
+      clearChat,
+    } = useAiChat(message);
 
   const { mood: _mood, hasFetchedMood: _hasFetchedMood, setHasFetchedMood } = useMoodGreeting(user, setMessages);
   const { showEmojiPicker, setShowEmojiPicker, emojiTab, setEmojiTab, emojiPanelRef, handleEmojiSelect } = useEmojiPicker(setInputValue, inputRef as React.RefObject<HTMLInputElement>);
@@ -538,13 +540,67 @@ const GlobalAiAssistant: React.FC = () => {
                   </div>
 
                   <div className={styles.inputArea}>
-                    <input ref={fileInputRef} type="file" style={{ display: 'none' }} accept=".xlsx,.xls,.csv,.jpg,.jpeg,.png,.gif,.pdf" onChange={handleFileSelect} />
-                    {attachedFile && (
+                    <input ref={fileInputRef} type="file" style={{ display: 'none' }} accept=".xlsx,.xls,.csv,.jpg,.jpeg,.png,.gif,.pdf,.webp,.bmp" onChange={handleFileSelect} />
+                    
+                    {/* 图片预览区域 */}
+                    {previewImage && (
+                      <div style={{
+                        padding: '8px 12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 12,
+                        background: '#f9fafb',
+                        borderRadius: 8,
+                        marginBottom: 8
+                      }}>
+                        <img
+                          src={previewImage}
+                          alt="预览"
+                          style={{
+                            width: 60,
+                            height: 60,
+                            objectFit: 'cover',
+                            borderRadius: 6,
+                            border: '1px solid #e5e7eb'
+                          }}
+                        />
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 13, color: '#374151', fontWeight: 500 }}>
+                            {attachedFile?.name || '图片'}
+                          </div>
+                          <div style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>
+                            即将上传并分析
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAttachedFile(null);
+                            setPreviewImage(null);
+                          }}
+                          style={{
+                            padding: '4px 8px',
+                            border: 'none',
+                            background: 'transparent',
+                            color: '#6b7280',
+                            fontSize: 16,
+                            cursor: 'pointer'
+                          }}
+                          title="移除"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    )}
+                    
+                    {/* 普通文件预览 */}
+                    {attachedFile && !previewImage && (
                       <div className={styles.attachChip}>
                         <span>📎 {attachedFile.name}</span>
                         <button type="button" className={styles.attachChipRemove} onClick={() => setAttachedFile(null)}>×</button>
                       </div>
                     )}
+                    
                     <div className={styles.inputRow}>
                       <button type="button" className={styles.uploadBtn} title="上传文件" onClick={() => fileInputRef.current?.click()} disabled={isTyping || uploadingFile}>
                         <PaperClipOutlined />

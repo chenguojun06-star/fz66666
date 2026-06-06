@@ -89,6 +89,20 @@ public class AiInferenceRouter implements AiInferenceGateway {
     }
 
     @Override
+    public IntelligenceInferenceResult chatWithVision(String scene, String systemPrompt, String userMessage, String imageUrl) {
+        AiInferenceGateway gateway = resolveGateway(scene);
+        IntelligenceInferenceResult result = gateway.chatWithVision(scene, systemPrompt, userMessage, imageUrl);
+        trackSpringAiHealth(result);
+        if (isSpringAiCircuitOpen() && !"legacy".equals(gateway.getProviderName())) {
+            log.info("[AiInferenceRouter] Spring AI 熔断触发，降级到 legacy 重试 scene={}", scene);
+            result = legacyAdapter.chatWithVision(scene, systemPrompt, userMessage, imageUrl);
+            result.setFallbackUsed(true);
+        }
+        recordCostAndAudit(scene, result);
+        return result;
+    }
+
+    @Override
     public boolean isAvailable() {
         return resolveGateway(null).isAvailable();
     }
