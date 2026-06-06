@@ -111,6 +111,12 @@ public class StyleInfo {
     @TableField("image_insight")
     private String imageInsight;
 
+    /**
+     * Agnes视觉模型原始识别描述（未经DeepSeek加工，用于前端展示工艺识别详情）
+     */
+    @TableField("vision_raw")
+    private String visionRaw;
+
     /** AI难度评分 1-10 */
     @TableField("difficulty_score")
     private Integer difficultyScore;

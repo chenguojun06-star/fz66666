@@ -166,6 +166,17 @@ const StyleIntelligenceProfileCard: React.FC<Props> = ({ style }) => {
       ]);
       setProfile((profileRes as any)?.data || null);
       setQuoteSuggestion((quoteRes as any)?.data || null);
+      // 如果缓存中有 visionRaw，直接使用，不重复调用视觉AI
+      const profileData = (profileRes as any)?.data;
+      if (profileData?.difficulty?.visionRaw) {
+        setVisualResult({
+          taskType: 'STYLE_IDENTIFY',
+          severity: 'NONE',
+          confidence: 1,
+          summary: profileData.difficulty.visionRaw,
+          dataSource: 'ai_vision',
+        } as any);
+      }
     } catch {
       setProfile(null);
       setQuoteSuggestion(null);

@@ -59,6 +59,9 @@ public class StyleDifficultyOrchestrator {
             if (style.getImageInsight() != null && !style.getImageInsight().isBlank()) {
                 cached.setImageInsight(style.getImageInsight());
             }
+            if (style.getVisionRaw() != null && !style.getVisionRaw().isBlank()) {
+                cached.setVisionRaw(style.getVisionRaw());
+            }
             return cached;
         }
         List<StyleBom> boms = styleBomService.listByStyleId(style.getId());
@@ -299,6 +302,9 @@ public class StyleDifficultyOrchestrator {
             style.setPricingMultiplier(assessment.getPricingMultiplier());
             if (assessment.getImageInsight() != null && !assessment.getImageInsight().isBlank()) {
                 style.setImageInsight(assessment.getImageInsight());
+            }
+            if (assessment.getVisionRaw() != null && !assessment.getVisionRaw().isBlank()) {
+                style.setVisionRaw(assessment.getVisionRaw());
             }
             styleInfoService.updateById(style);
             log.info("[StyleDifficulty] 难度评估已持久化: styleId={}, score={}, level={}",
