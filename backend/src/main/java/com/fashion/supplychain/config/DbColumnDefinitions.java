@@ -71,6 +71,7 @@ public final class DbColumnDefinitions {
         add("t_style_info", "development_source_detail", "VARCHAR(64) DEFAULT NULL COMMENT '开发来源明细'");
         add("t_style_info", "size_color_config", "MEDIUMTEXT DEFAULT NULL COMMENT '颜色尺码数量矩阵JSON'");
         add("t_style_info", "image_insight", "VARCHAR(500) DEFAULT NULL COMMENT 'AI图片洞察'");
+        add("t_style_info", "vision_raw", "VARCHAR(500) DEFAULT NULL COMMENT 'Agnes视觉模型原始分析结果'");
         add("t_style_info", "difficulty_score", "INT DEFAULT NULL COMMENT 'AI难度评分1-10'");
         add("t_style_info", "difficulty_level", "VARCHAR(20) DEFAULT NULL COMMENT 'AI难度级别: SIMPLE/MEDIUM/COMPLEX/HIGH_END'");
         add("t_style_info", "difficulty_label", "VARCHAR(20) DEFAULT NULL COMMENT 'AI难度中文标签'");

@@ -56,6 +56,11 @@ public class PrintTemplateController {
         if (template.getId() == null) {
             printTemplateMapper.insert(template);
         } else {
+            // 安全检查：验证模板属于当前租户
+            PrintTemplate existing = printTemplateMapper.selectById(template.getId());
+            if (existing == null || !existing.getTenantId().equals(tenantId)) {
+                return Result.fail("模板不存在或无权限修改");
+            }
             printTemplateMapper.updateById(template);
         }
         return Result.success(template);
