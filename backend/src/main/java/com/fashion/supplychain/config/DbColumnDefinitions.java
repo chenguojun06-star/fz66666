@@ -116,6 +116,13 @@ public final class DbColumnDefinitions {
         add("t_style_info", "order_type", "VARCHAR(100) DEFAULT NULL COMMENT '订单类型'");
         add("t_style_info", "delivery_date", "DATETIME DEFAULT NULL COMMENT '交货日期'");
         add("t_style_info", "care_icon_codes", "TEXT DEFAULT NULL COMMENT '洗涤护理图标代码JSON数组'");
+        add("t_style_info", "bom_budget_hours", "INT DEFAULT NULL COMMENT 'BOM清单预算工时（小时）'");
+        add("t_style_info", "pattern_budget_hours", "INT DEFAULT NULL COMMENT '纸样开发预算工时（小时）'");
+        add("t_style_info", "size_budget_hours", "INT DEFAULT NULL COMMENT '尺寸表预算工时（小时）'");
+        add("t_style_info", "process_budget_hours", "INT DEFAULT NULL COMMENT '工序单价预算工时（小时）'");
+        add("t_style_info", "production_budget_hours", "INT DEFAULT NULL COMMENT '生产制单预算工时（小时）'");
+        add("t_style_info", "secondary_budget_hours", "INT DEFAULT NULL COMMENT '二次工艺预算工时（小时）'");
+        add("t_style_info", "size_price_budget_hours", "INT DEFAULT NULL COMMENT '码数单价预算工时（小时）'");
         add("t_style_bom", "image_urls", "TEXT DEFAULT NULL COMMENT '物料图片URLs'");
         add("t_style_bom", "fabric_composition", "VARCHAR(100) DEFAULT NULL COMMENT '物料成分'");
         add("t_style_bom", "fabric_weight", "VARCHAR(50) DEFAULT NULL COMMENT '克重'");
