@@ -19,6 +19,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -65,6 +70,11 @@ public class IntelligenceInferenceOrchestrator {
     @Value("${ai.agnes2.api-url:https://apihub.agnes-ai.com/v1/chat/completions}") private String agnes2ApiUrl;
     @Value("${ai.agnes2.model:agnes-2.0-flash}") private String agnes2Model;
     @Value("${ai.agnes2.timeout-seconds:60}") private int agnes2TimeoutSeconds;
+    @Value("${ai.vision-models.strategy:failover}") private String visionModelStrategy;
+
+    private List<VisionModelConfig> visionModels = new ArrayList<>();
+    private AtomicInteger roundRobinIndex = new AtomicInteger(0);
+    private ExecutorService visionExecutor;
     @Value("${ai.gateway.litellm.api-key:}") private String litellmApiKey;
     @Value("${ai.gateway.litellm.timeout-seconds:30}") private int gatewayTimeoutSeconds;
     @Value("${ai.fallback.qwen.api-key:}") private String qwenApiKey;
@@ -81,6 +91,37 @@ public class IntelligenceInferenceOrchestrator {
     @PostConstruct
     public void initHttpClient() {
         sharedHttpClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
+        visionExecutor = Executors.newFixedThreadPool(Math.min(10, Runtime.getRuntime().availableProcessors() * 2));
+        initVisionModels();
+    }
+
+    private void initVisionModels() {
+        visionModels.clear();
+
+        // 1. 向后兼容：旧的 agnes 和 agnes2 配置
+        if (hasText(agnesApiKey)) {
+            visionModels.add(new VisionModelConfig("agnes", agnesApiKey, agnesApiUrl, agnesModel, agnesTimeoutSeconds));
+        }
+        if (hasText(agnes2ApiKey)) {
+            visionModels.add(new VisionModelConfig("agnes2", agnes2ApiKey, agnes2ApiUrl, agnes2Model, agnes2TimeoutSeconds));
+        }
+
+        // 2. 新的通用配置：VISION_MODEL_1_API_KEY, VISION_MODEL_2_API_KEY...
+        for (int i = 1; i <= 20; i++) {
+            String apiKey = System.getenv("VISION_MODEL_" + i + "_API_KEY");
+            if (hasText(apiKey)) {
+                String apiUrl = System.getenv().getOrDefault("VISION_MODEL_" + i + "_API_URL", "https://apihub.agnes-ai.com/v1/chat/completions");
+                String model = System.getenv().getOrDefault("VISION_MODEL_" + i + "_MODEL", "agnes-2.0-flash");
+                String timeoutStr = System.getenv("VISION_MODEL_" + i + "_TIMEOUT_SECONDS");
+                int timeout = timeoutStr != null ? Integer.parseInt(timeoutStr) : 60;
+                visionModels.add(new VisionModelConfig("vision-model-" + i, apiKey, apiUrl, model, timeout));
+            }
+        }
+
+        log.info("[Vision] 初始化完成，共 {} 个视觉模型，策略: {}", visionModels.size(), visionModelStrategy);
+        for (VisionModelConfig vm : visionModels) {
+            log.info("[Vision]  - {}: {}", vm.name, vm.apiUrl);
+        }
     }
 
     public IntelligenceInferenceResult chat(String scene, String systemPrompt, String userMessage) {
@@ -189,8 +230,7 @@ public class IntelligenceInferenceOrchestrator {
     }
 
     public boolean isVisionEnabled() {
-        if (hasText(agnesApiKey)) return true;
-        if (hasText(agnes2ApiKey)) return true;
+        if (!visionModels.isEmpty()) return true;
         log.warn("[Vision] 未配置任何视觉模型");
         return false;
     }
@@ -203,15 +243,7 @@ public class IntelligenceInferenceOrchestrator {
             return null;
         }
 
-        List<VisionModelConfig> models = new ArrayList<>();
-        if (hasText(agnesApiKey)) {
-            models.add(new VisionModelConfig("agnes", agnesApiKey, agnesApiUrl, agnesModel, agnesTimeoutSeconds));
-        }
-        if (hasText(agnes2ApiKey)) {
-            models.add(new VisionModelConfig("agnes2", agnes2ApiKey, agnes2ApiUrl, agnes2Model, agnes2TimeoutSeconds));
-        }
-
-        if (models.isEmpty()) {
+        if (visionModels.isEmpty()) {
             log.warn("[Vision] 没有可用的视觉模型");
             return null;
         }
@@ -221,44 +253,120 @@ public class IntelligenceInferenceOrchestrator {
                 log.warn("[Vision] Base64 数据URI超过8MB({}MB)，已跳过", imageUrl.length() / 1024 / 1024);
                 return null;
             }
-            log.info("[Vision] 图像分析请求 类型={} 长度={}字符 模型数={}",
+
+            log.info("[Vision] 图像分析请求 类型={} 长度={}字符 模型数={} 策略={}",
                     imageUrl.startsWith("data:") ? "base64" : imageUrl.startsWith("http") ? "http-url" : "other",
                     imageUrl.length(),
-                    models.size());
+                    visionModels.size(),
+                    visionModelStrategy);
 
-            for (int i = 0; i < models.size(); i++) {
-                VisionModelConfig model = models.get(i);
-                try {
-                    log.info("[Vision] 尝试视觉模型: {} ({}/{})", model.name(), i + 1, models.size());
-                    String result = invokeVisionModel(model, imageUrl, textPrompt);
-                    if (result != null) {
-                        log.info("[Vision] 模型 {} 调用成功", model.name());
-                        return result;
-                    }
-                } catch (Exception e) {
-                    log.warn("[Vision] 模型 {} 调用失败: {}", model.name(), e.getMessage());
-                    if (i == models.size() - 1) {
-                        log.warn("[Vision] 所有视觉模型均调用失败");
-                    }
-                }
-            }
+            // 根据策略选择执行方式
+            return switch (visionModelStrategy.toLowerCase()) {
+                case "concurrent" -> chatWithVisionConcurrent(imageUrl, textPrompt);
+                case "round-robin" -> chatWithVisionRoundRobin(imageUrl, textPrompt);
+                default -> chatWithVisionFailover(imageUrl, textPrompt); // failover
+            };
         } catch (Exception e) {
-            log.warn("[Vision] 图像分析异常: {}", e.getMessage());
+            log.warn("[Vision] 图像分析异常: {}", e.getMessage(), e);
         }
         return null;
     }
 
+    /**
+     * 策略1: 故障转移（默认）- 逐个尝试，成功立即返回
+     */
+    private String chatWithVisionFailover(String imageUrl, String textPrompt) {
+        for (int i = 0; i < visionModels.size(); i++) {
+            VisionModelConfig model = visionModels.get(i);
+            try {
+                log.info("[Vision] 尝试视觉模型: {} ({}/{})", model.name, i + 1, visionModels.size());
+                String result = invokeVisionModel(model, imageUrl, textPrompt);
+                if (result != null) {
+                    log.info("[Vision] 模型 {} 调用成功", model.name);
+                    return result;
+                }
+            } catch (Exception e) {
+                log.warn("[Vision] 模型 {} 调用失败: {}", model.name, e.getMessage());
+                if (i == visionModels.size() - 1) {
+                    log.warn("[Vision] 所有视觉模型均调用失败");
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 策略2: 轮询 - 每次轮流转到下一个模型
+     */
+    private String chatWithVisionRoundRobin(String imageUrl, String textPrompt) {
+        int index = roundRobinIndex.getAndUpdate(i -> (i + 1) % visionModels.size());
+        VisionModelConfig model = visionModels.get(index);
+        try {
+            log.info("[Vision] 轮询使用视觉模型: {} (index={})", model.name, index);
+            String result = invokeVisionModel(model, imageUrl, textPrompt);
+            if (result != null) {
+                return result;
+            }
+            log.warn("[Vision] 轮询模型 {} 失败，回退到故障转移", model.name);
+        } catch (Exception e) {
+            log.warn("[Vision] 轮询模型 {} 异常: {}", model.name, e.getMessage());
+        }
+        // 回退到故障转移
+        return chatWithVisionFailover(imageUrl, textPrompt);
+    }
+
+    /**
+     * 策略3: 并发调用 - 同时调用所有模型，取最快成功的返回
+     */
+    private String chatWithVisionConcurrent(String imageUrl, String textPrompt) {
+        List<CompletableFuture<String>> futures = new ArrayList<>();
+        for (VisionModelConfig model : visionModels) {
+            CompletableFuture<String> future = CompletableFuture.supplyAsync(() -> {
+                try {
+                    long start = System.currentTimeMillis();
+                    String result = invokeVisionModel(model, imageUrl, textPrompt);
+                    if (result != null) {
+                        log.info("[Vision] 模型 {} 完成，耗时 {}ms", model.name, System.currentTimeMillis() - start);
+                        return result;
+                    }
+                } catch (Exception e) {
+                    log.warn("[Vision] 模型 {} 并发调用失败: {}", model.name, e.getMessage());
+                }
+                return null;
+            }, visionExecutor);
+            futures.add(future);
+        }
+
+        // 等待第一个成功的结果
+        CompletableFuture<String> anySuccess = CompletableFuture.anyOf(futures.toArray(new CompletableFuture[0]))
+                .thenApply(obj -> (String) obj);
+
+        try {
+            String result = anySuccess.get(Math.max(visionModels.stream().mapToInt(v -> v.timeoutSeconds).max().orElse(60), 30), TimeUnit.SECONDS);
+            if (result != null) {
+                log.info("[Vision] 并发调用完成，已获取最快响应");
+                return result;
+            }
+        } catch (Exception e) {
+            log.warn("[Vision] 并发调用异常: {}", e.getMessage());
+        }
+
+        // 并发都没成功，回退到故障转移
+        log.warn("[Vision] 并发调用无成功结果，回退到故障转移");
+        return chatWithVisionFailover(imageUrl, textPrompt);
+    }
+
     private String invokeVisionModel(VisionModelConfig model, String imageUrl, String textPrompt) throws Exception {
-        String payload = buildVisionPayload(model.model(), imageUrl, textPrompt);
+        String payload = buildVisionPayload(model.model, imageUrl, textPrompt);
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(model.apiUrl()))
+                .uri(URI.create(model.apiUrl))
                 .header("Content-Type", "application/json")
-                .header("Authorization", "Bearer " + model.apiKey())
-                .timeout(Duration.ofSeconds(model.timeoutSeconds()))
+                .header("Authorization", "Bearer " + model.apiKey)
+                .timeout(Duration.ofSeconds(model.timeoutSeconds))
                 .POST(HttpRequest.BodyPublishers.ofString(payload))
                 .build();
         HttpResponse<String> response = sharedHttpClient.send(request, HttpResponse.BodyHandlers.ofString());
-        return extractVisionResponse(response, model.name());
+        return extractVisionResponse(response, model.name);
     }
 
     private String buildVisionPayload(String modelName, String imageUrl, String textPrompt) throws Exception {
