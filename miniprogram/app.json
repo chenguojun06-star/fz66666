@@ -59,7 +59,7 @@
     {
       "root": "pages/procurement",
       "name": "pkg-procurement",
-      "pages": ["task-detail/index"]
+      "pages": ["task-list/index", "task-detail/index"]
     },
     {
       "root": "pages/scan/pattern",

@@ -59,6 +59,22 @@ const system = {
   saveMiniprogramMenuRoleConfig(roleMenus) {
     return ok('/api/system/tenant-miniprogram-menu/menu-roles', 'PUT', { roleMenus });
   },
+  // 收藏应用API可用性标记（后端未部署时跳过请求，避免400/405刷屏）
+  _favApiAvailable: true,
+  getFavoriteApps() {
+    if (!system._favApiAvailable) return Promise.resolve({ favoriteData: '[]' });
+    return ok('/api/system/user/favorite-apps', 'GET', {}).catch(function () {
+      system._favApiAvailable = false;
+      return { favoriteData: '[]' };
+    });
+  },
+  saveFavoriteApps(favoriteData) {
+    if (!system._favApiAvailable) return Promise.resolve({ success: false });
+    return ok('/api/system/user/favorite-apps', 'PUT', { favoriteData: favoriteData }).catch(function () {
+      system._favApiAvailable = false;
+      return { success: false };
+    });
+  },
 };
 
 const serial = {

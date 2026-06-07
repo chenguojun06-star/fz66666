@@ -137,12 +137,27 @@ Page({
   },
 
   loadFavorites: function () {
-    try {
-      const favorites = wx.getStorageSync('favoriteApps') || [];
-      this.setData({ favoriteApps: favorites });
-    } catch (e) {
-      console.error('Load favorites failed', e);
-    }
+    const that = this;
+    // 优先从服务端加载，失败则用本地缓存
+    api.system.getFavoriteApps().then(function (res) {
+      let favorites = [];
+      try {
+        const raw = res && res.favoriteData ? res.favoriteData : (typeof res === 'string' ? res : '[]');
+        favorites = JSON.parse(raw);
+        if (!Array.isArray(favorites)) favorites = [];
+      } catch (e) {
+        favorites = [];
+      }
+      try { wx.setStorageSync('favoriteApps', favorites); } catch (e) { /* ignore */ }
+      that.setData({ favoriteApps: favorites });
+    }).catch(function () {
+      try {
+        const favorites = wx.getStorageSync('favoriteApps') || [];
+        that.setData({ favoriteApps: favorites });
+      } catch (e) {
+        console.error('Load favorites failed', e);
+      }
+    });
   },
 
   onHide: function () {
@@ -395,6 +410,12 @@ Page({
     } catch (e) {
       console.error('Save favorites failed', e);
     }
+    // 异步同步到服务端
+    try {
+      api.system.saveFavoriteApps(JSON.stringify(favorites)).catch(function (e) {
+        console.warn('[home] sync favorites to server failed:', e.message || e);
+      });
+    } catch (e) { /* ignore */ }
   },
 
 });
