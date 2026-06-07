@@ -21,6 +21,7 @@ import StandardToolbar from '@/components/common/StandardToolbar';
 import OrderCuttingChart from '../../components/OrderCuttingChart';
 import ScanCountChart from '../../components/ScanCountChart';
 import OverdueOrderTable from '../../components/OverdueOrderTable';
+import DelayedStageBreakdown from '../../components/DelayedStageBreakdown';
 import { useDashboardStats } from './useDashboardStats';
 import './styles.css';
 
@@ -297,6 +298,9 @@ const Dashboard: React.FC = () => {
 
         {/* AI 智能洞察摘要 */}
         <DashboardAiInsight />
+
+        {/* 智能延期提醒（按环节分组） */}
+        <DelayedStageBreakdown />
 
         {/* 数据分析区域 */}
         <div className="dashboard-analysis-section">

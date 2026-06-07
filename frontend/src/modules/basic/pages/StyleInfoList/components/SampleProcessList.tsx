@@ -611,8 +611,8 @@ export default function SampleProcessList({
         title="面辅料采购"
         open={purchaseDrawerOpen}
         onClose={() => setPurchaseDrawerOpen(false)}
-        width="50vw"
-        styles={{ body: { padding: 0 } }}
+        size="large"
+        styles={{ wrapper: { width: '50vw' }, body: { padding: 0 } }}
       >
         {sourceType === 'sample' && patternProductionId ? (
           <InlinePurchasePanel patternId={patternProductionId} sourceType="sample" styleNo={styleNo} color={color} quantity={quantity} />

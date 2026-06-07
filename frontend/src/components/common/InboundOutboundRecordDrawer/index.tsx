@@ -89,7 +89,7 @@ const InboundOutboundRecordDrawer: React.FC<InboundOutboundRecordDrawerProps> = 
           关闭
         </Button>,
       ]}
-      destroyOnClose
+      destroyOnHidden
       {...restProps}
     >
       {materialData && (

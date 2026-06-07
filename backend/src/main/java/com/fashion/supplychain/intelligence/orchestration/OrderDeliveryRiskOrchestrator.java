@@ -192,7 +192,7 @@ public class OrderDeliveryRiskOrchestrator {
         qw.eq("tenant_id", tenantId)
           .eq(StringUtils.hasText(factoryId), "factory_id", factoryId)
           .eq("delete_flag", 0)
-          .in("status", "production", "cutting");
+          .notIn("status", "completed", "cancelled", "scrapped", "archived", "closed");
         if (request != null && StringUtils.hasText(request.getOrderId())) {
             qw.eq("id", request.getOrderId());
         }

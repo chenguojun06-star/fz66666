@@ -349,14 +349,15 @@
 }
 
 :root[data-theme="dark"] .ant-btn-primary {
-  background: #6ba3ff !important;
+  background: transparent !important;
   border-color: #6ba3ff !important;
-  color: #ffffff !important;
+  color: #6ba3ff !important;
 }
 
 :root[data-theme="dark"] .ant-btn-primary:hover {
-  background: #93c5fd !important;
+  background: rgba(107, 163, 255, 0.1) !important;
   border-color: #93c5fd !important;
+  color: #93c5fd !important;
 }
 
 /* ========== Message/Notification 消息提示 ========== */

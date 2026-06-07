@@ -219,11 +219,26 @@ public class WarehouseLocationOrchestrator {
         }
 
         if (existing.getUsedCapacity() != null && existing.getUsedCapacity() > 0) {
-            return Result.fail("库位正在使用中，无法删除");
+            return Result.fail("库位正在使用中，请先转移库存后再删除");
         }
 
+        // 实时校验：查询实际入库记录，防止 usedCapacity 冗余字段不同步
         String locationCode = existing.getLocationCode();
         String locationName = existing.getLocationName();
+        Long actualCount = productWarehousingMapper.selectCount(
+                new LambdaQueryWrapper<ProductWarehousing>()
+                        .eq(ProductWarehousing::getTenantId, tenantId)
+                        .eq(ProductWarehousing::getDeleteFlag, 0)
+                        .and(w -> w.eq(ProductWarehousing::getWarehouse, locationCode)
+                                .or()
+                                .eq(ProductWarehousing::getWarehouse, locationName))
+        );
+        if (actualCount != null && actualCount > 0) {
+            // 同步修正 usedCapacity
+            existing.setUsedCapacity(actualCount.intValue());
+            locationService.updateById(existing);
+            return Result.fail("库位实际有 " + actualCount + " 条库存记录，请先转移库存后再删除");
+        }
         String warehouseType = existing.getWarehouseType();
 
         locationService.removeById(id);

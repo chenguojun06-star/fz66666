@@ -78,9 +78,9 @@ const OrderCreateModal: React.FC<Props> = (p) => {
       open={visible}
       title={selectedStyle ? `下单(${selectedStyle.styleNo})` : '下单'}
       onClose={onClose}
-      width={isMobile ? '96vw' : '85vw'}
+      size="large"
       placement="right"
-      styles={{ body: { padding: '16px 24px', display: 'flex', flexDirection: 'column', overflow: 'auto' } }}
+      styles={{ wrapper: { width: isMobile ? '96vw' : '85vw' }, body: { padding: '16px 24px', display: 'flex', flexDirection: 'column', overflow: 'auto' } }}
       footer={
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
           <Button onClick={onClose} disabled={submitLoading}>关闭</Button>

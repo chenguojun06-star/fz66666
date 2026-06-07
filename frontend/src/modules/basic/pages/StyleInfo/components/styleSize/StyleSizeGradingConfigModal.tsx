@@ -171,7 +171,7 @@ const StyleSizeGradingConfigModal: React.FC<Props> = ({
       open={open}
       title={gradingTargetRowKey === 'batch' ? `批量配置跳码区 (${selectedRowCount}个部位)` : '配置跳码区'}
       onClose={onCancel}
-      width={Math.min(720, typeof window !== 'undefined' ? window.innerWidth * 0.55 : 720)}
+      size={Math.min(720, typeof window !== 'undefined' ? window.innerWidth * 0.55 : 720)}
       styles={{ body: { padding: '16px 20px', overflow: 'auto' } }}
       footer={
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>

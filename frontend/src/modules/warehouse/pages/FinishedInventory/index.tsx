@@ -59,8 +59,9 @@ const _FinishedInventory: React.FC = () => {
             title={`出库 - ${outboundModal.data?.styleNo || ''}`}
             open={outboundModal.visible}
             onClose={outboundModal.close}
-            width="85%"
-            destroyOnClose
+            size="large"
+            styles={{ wrapper: { width: '85%' } }}
+            destroyOnHidden
             extra={
               <Space>
                 <Button onClick={outboundModal.close}>取消</Button>
@@ -144,8 +145,9 @@ const _FinishedInventory: React.FC = () => {
             title={`入库记录 - ${inboundHistoryModal.data?.styleNo || ''}`}
             open={inboundHistoryModal.visible}
             onClose={inboundHistoryModal.close}
-            width="85%"
-            destroyOnClose
+            size="large"
+            styles={{ wrapper: { width: '85%' } }}
+            destroyOnHidden
           >
             {inboundHistoryModal.data && (
               <>

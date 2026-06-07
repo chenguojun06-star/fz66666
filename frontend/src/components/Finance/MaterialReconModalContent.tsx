@@ -178,7 +178,7 @@ const MaterialReconModalContent: React.FC<MaterialReconModalContentProps> = ({
               rules={[
                 { type: 'string', max: 500, message: '备注长度不能超过500个字符' }
               ]}>
-              <Input placeholder="请输入备注" />
+              <Input.TextArea rows={3} placeholder="请输入备注" maxLength={500} showCount />
             </Form.Item>
           </Col>
         </Row>

@@ -257,7 +257,7 @@ const WarehousingList: React.FC<WarehousingListProps> = ({ hook }) => {
         onClose={() => setInspectDrawerVisible(false)}
         size="large"
         destroyOnHidden
-        styles={{ body: { padding: 0 } }}
+        styles={{ wrapper: { width: '85vw' }, body: { padding: 0 } }}
       >
         {inspectDrawerVisible && (
           <InspectionDetail

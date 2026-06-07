@@ -33,7 +33,7 @@ export const PatternEditorForm: React.FC<PatternEditorFormProps> = ({ form }) =>
           <DatePicker style={{ width: '100%' }} />
         </Form.Item>
         <Form.Item name="remark" label="本次备注" style={{ marginBottom: 0 }}>
-          <Input placeholder="其他说明" />
+          <Input.TextArea rows={3} placeholder="其他说明" />
         </Form.Item>
       </div>
 

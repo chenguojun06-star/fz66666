@@ -277,7 +277,7 @@ public class MindPushOrchestrator {
             new QueryWrapper<ProductionOrder>()
                 .eq("tenant_id", tenantId)
                 .eq("delete_flag", 0)
-                .in("status", "production", "pending")
+                .notIn("status", "completed", "cancelled", "scrapped", "archived", "closed")
                 .isNotNull("expected_ship_date")
         );
         int count = 0;
@@ -302,7 +302,7 @@ public class MindPushOrchestrator {
             new QueryWrapper<ProductionOrder>()
                 .eq("tenant_id", tenantId)
                 .eq("delete_flag", 0)
-                .eq("status", "production")
+                .notIn("status", "completed", "cancelled", "scrapped", "archived", "closed")
         );
         LocalDateTime cutoff = LocalDateTime.now().minusDays(3);
         int count = 0;
@@ -333,7 +333,7 @@ public class MindPushOrchestrator {
             new QueryWrapper<ProductionOrder>()
                 .eq("tenant_id", tenantId)
                 .eq("delete_flag", 0)
-                .in("status", "pending", "production")
+                .notIn("status", "completed", "cancelled", "scrapped", "archived", "closed")
                 .eq("procurement_manually_completed", 0)
         );
         int count = 0;

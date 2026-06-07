@@ -68,6 +68,11 @@ public class AiPatrolJob {
     /** 超时任务升级阈值：逾期超过此小时数后自动升级 */
     private static final int ESCALATION_HOURS_THRESHOLD = 4;
 
+    /** 终态订单状态：这些状态的订单不参与延期/风险检测 */
+    private static final List<String> TERMINAL_STATUSES = List.of(
+            "completed", "cancelled", "scrapped", "archived", "closed"
+    );
+
     @Autowired
     private ProcessRewardOrchestrator processRewardOrchestrator;
     @Autowired
@@ -134,7 +139,7 @@ public class AiPatrolJob {
             LocalDate deadline = today.plusDays(DEADLINE_DAYS_THRESHOLD);
             LambdaQueryWrapper<ProductionOrder> q = new LambdaQueryWrapper<>();
             q.eq(ProductionOrder::getDeleteFlag, 0)
-             .in(ProductionOrder::getStatus, "IN_PROGRESS", "CREATED")
+             .notIn(ProductionOrder::getStatus, TERMINAL_STATUSES)
              .isNotNull(ProductionOrder::getExpectedShipDate)
              .le(ProductionOrder::getExpectedShipDate, deadline)
              .ge(ProductionOrder::getExpectedShipDate, today)
@@ -172,7 +177,7 @@ public class AiPatrolJob {
             // 找到有活跃订单的工厂（tenantId+factoryName 组合）
             LambdaQueryWrapper<ProductionOrder> activeQ = new LambdaQueryWrapper<>();
             activeQ.eq(ProductionOrder::getDeleteFlag, 0)
-                   .in(ProductionOrder::getStatus, "IN_PROGRESS", "CREATED")
+                   .notIn(ProductionOrder::getStatus, TERMINAL_STATUSES)
                    .isNotNull(ProductionOrder::getFactoryName)
                    .select(ProductionOrder::getTenantId, ProductionOrder::getFactoryName,
                            ProductionOrder::getOrderNo);
@@ -325,7 +330,7 @@ public class AiPatrolJob {
             LocalDateTime since = LocalDateTime.now().minusHours(48);
             LambdaQueryWrapper<ProductionOrder> cuttingDone = new LambdaQueryWrapper<>();
             cuttingDone.eq(ProductionOrder::getDeleteFlag, 0)
-                       .eq(ProductionOrder::getStatus, "IN_PROGRESS")
+                       .notIn(ProductionOrder::getStatus, TERMINAL_STATUSES)
                        .isNotNull(ProductionOrder::getFactoryName)
                        .select(ProductionOrder::getId, ProductionOrder::getOrderNo,
                                ProductionOrder::getFactoryName, ProductionOrder::getTenantId);

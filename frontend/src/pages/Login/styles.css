@@ -560,21 +560,24 @@
 }
 
 .login-form-wrapper .ant-btn-primary:not(:disabled) {
-  background: #1f75ea !important;
-  border: none !important;
-  color: #fff !important;
-  box-shadow: 0 8px 20px rgba(31, 117, 234, 0.2) !important;
+  background: transparent !important;
+  border: 1px solid #1f75ea !important;
+  color: #1f75ea !important;
+  box-shadow: none !important;
 }
 
 .login-form-wrapper .ant-btn-primary:not(:disabled):hover {
-  background: #1562d6 !important;
+  background: rgba(31, 117, 234, 0.06) !important;
+  border-color: #1562d6 !important;
+  color: #1562d6 !important;
   transform: translateY(-1px);
-  box-shadow: 0 12px 24px rgba(31, 117, 234, 0.28) !important;
+  box-shadow: none !important;
 }
 
 .login-form-wrapper .ant-btn-primary:not(:disabled):active {
+  background: rgba(31, 117, 234, 0.12) !important;
   transform: translateY(0);
-  box-shadow: 0 4px 12px rgba(31, 117, 234, 0.16) !important;
+  box-shadow: none !important;
 }
 
 .login-code-row {

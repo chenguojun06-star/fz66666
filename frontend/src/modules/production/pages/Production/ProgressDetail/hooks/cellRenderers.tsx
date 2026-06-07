@@ -195,7 +195,6 @@ export function createOrderSummaryRender(ctx: OrderSummaryContext) {
                       />
                       {record.factoryType ? <FactoryTypeTag factoryType={record.factoryType} softStyle /> : null}
                       {merchandiserName ? (
-                        <Tooltip title={remark ? `备注：${remark}` : '点击添加备注'} placement="top">
                           <div
                             style={{ display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer' }}
                             onClick={(event) => {
@@ -211,7 +210,6 @@ export function createOrderSummaryRender(ctx: OrderSummaryContext) {
                               </Badge>
                             ) : null}
                           </div>
-                        </Tooltip>
                       ) : null}
                       {customerName ? (
                         <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>

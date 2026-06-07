@@ -424,7 +424,7 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
             关闭
           </Button>
         }
-        destroyOnClose
+        destroyOnHidden
       >
         {selectedStage && panel.selectedStageTag ? (
           <div className="style-smart-stage-modal">
@@ -757,7 +757,7 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
         onClose={() => setDevelopmentDrawerRecord(null)}
         size="large"
         styles={{ wrapper: { width: '85%' }, body: { padding: 0 } }}
-        destroyOnClose
+        destroyOnHidden
       >
         {developmentDrawerRecord && (
           <StyleDevelopmentWorkbench

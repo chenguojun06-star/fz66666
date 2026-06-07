@@ -95,10 +95,10 @@ public class SystemIssueCollectorOrchestrator {
                      "  SUM(CASE WHEN status IN ('IN_PROGRESS','in_progress') THEN 1 ELSE 0 END) as in_progress, " +
                      "  SUM(CASE WHEN status IN ('PENDING','pending','CREATED','created') THEN 1 ELSE 0 END) as pending, " +
                      "  SUM(CASE WHEN DATEDIFF(expected_ship_date, CURDATE()) BETWEEN 0 AND 7 " +
-                     "           AND status NOT IN ('completed','cancelled','COMPLETED','CANCELLED') THEN 1 ELSE 0 END) as soon_due " +
+                     "           AND status NOT IN ('completed','cancelled','scrapped','archived','closed') THEN 1 ELSE 0 END) as soon_due " +
                      "FROM t_production_order " +
                      "WHERE delete_flag = 0 " +
-                     "  AND status NOT IN ('completed','cancelled','COMPLETED','CANCELLED')";
+                     "  AND status NOT IN ('completed','cancelled','scrapped','archived','closed')";
         Map<String, Object> row = jdbcTemplate.queryForMap(sql);
         int total      = toInt(row.get("total"));
         int inProgress = toInt(row.get("in_progress"));
@@ -163,7 +163,7 @@ public class SystemIssueCollectorOrchestrator {
                      "  SELECT order_id, MAX(scan_time) as last_scan " +
                      "  FROM t_scan_record WHERE scan_result='success' AND scan_type != 'orchestration' GROUP BY order_id" +
                      ") sr ON sr.order_id = po.id " +
-                     "WHERE po.status NOT IN ('completed','cancelled','COMPLETED','CANCELLED') " +
+                     "WHERE po.status NOT IN ('completed','cancelled','scrapped','archived','closed') " +
                      "  AND po.delete_flag = 0 " +
                      "  AND (sr.last_scan IS NULL OR sr.last_scan < DATE_SUB(NOW(), INTERVAL 3 DAY))";
         Map<String, Object> row = jdbcTemplate.queryForMap(sql);

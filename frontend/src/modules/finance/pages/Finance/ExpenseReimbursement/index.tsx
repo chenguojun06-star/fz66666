@@ -9,7 +9,8 @@ import dayjs from 'dayjs';
 import { formatDateTime } from '@/utils/datetime';
 import { formatMoney } from '@/utils/format';
 import ResizableModal from '@/components/common/ResizableModal';
-import { useUser, isSupervisorOrAbove } from '@/utils/AuthContext';
+import { useUser } from '@/utils/AuthContext';
+import { hasPermission } from '@/utils/permission';
 import { EXPENSE_TYPES, EXPENSE_STATUS, PAYMENT_METHODS, expenseReimbursementApi, type ExpenseReimbursement } from '@/services/finance/expenseReimbursementApi';
 import SupplierSelect from '@/components/common/SupplierSelect';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
@@ -115,15 +116,18 @@ const ExpenseReimbursementPage: React.FC = () => {
         const isAllView = viewMode === 'all';
         const isOwnRecord = record.applicantId === Number(user?.id);
         const isPendingRecord = record.status === 'pending';
-        const canApproveOwnRecord = isOwnRecord && isSupervisorOrAbove(user);
-        const canApproveRecord = isAllView && isPendingRecord && (!isOwnRecord || canApproveOwnRecord);
+        const canApproveRecord = isPendingRecord && hasPermission(user, 'PAYMENT_APPROVE');
         if (isOwnRecord && (record.status === 'pending' || record.status === 'rejected')) {
           actions.push({ key: 'edit', label: '编辑', primary: true, onClick: () => openForm(record) });
           actions.push({ key: 'del', label: '删除', danger: true, onClick: () => handleDelete(record.id!) });
         }
-        if (isAllView) { actions.push({ key: 'approve', label: '审批', disabled: !canApproveRecord, onClick: () => { if (canApproveRecord) openDetail(record); } }); }
+        if (canApproveRecord) {
+          actions.push({ key: 'approve', label: '审批', primary: !isOwnRecord, onClick: () => openDetail(record) });
+        }
         if (isAllView && record.status === 'approved') { actions.push({ key: 'pay', label: '付款', onClick: () => handlePay(record) }); }
-        if (!isAllView) { actions.push({ key: 'detail', label: '审批', onClick: () => openDetail(record) }); }
+        if (!canApproveRecord) {
+          actions.push({ key: 'detail', label: '详情', onClick: () => openDetail(record) });
+        }
         return <RowActions actions={actions} />;
       },
     },

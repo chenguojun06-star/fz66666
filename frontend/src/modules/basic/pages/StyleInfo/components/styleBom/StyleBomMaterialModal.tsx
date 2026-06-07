@@ -269,7 +269,7 @@ const StyleBomMaterialModal: React.FC<StyleBomMaterialModalProps> = ({
                   <InputNumber id="unitPrice" min={0} step={0.01} style={{ width: '100%' }} prefix="¥" />
                 </Form.Item>
                 <Form.Item name="remark" label="备注">
-                  <Input id="remark" />
+                  <Input.TextArea id="remark" rows={3} placeholder="请输入备注" />
                 </Form.Item>
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>

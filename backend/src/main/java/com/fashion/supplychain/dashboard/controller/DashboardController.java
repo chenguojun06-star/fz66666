@@ -104,4 +104,15 @@ public class DashboardController {
     public Result<?> overdueFactoryStats() {
         return Result.success(dashboardOrchestrator.getOverdueFactoryStats());
     }
+
+    /**
+     * 获取延期环节统计（样衣开发+大货生产，按环节分组）
+     * - 每个环节的延期数量和明细
+     * - 点击可跳转到对应订单或款号
+     */
+    @GetMapping("/delayed-stage-breakdown")
+    @PreAuthorize("isAuthenticated()")
+    public Result<?> delayedStageBreakdown() {
+        return Result.success(dashboardOrchestrator.getDelayedStageBreakdown());
+    }
 }

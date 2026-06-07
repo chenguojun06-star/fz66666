@@ -262,8 +262,9 @@ const FreeInboundModal: React.FC<FreeInboundModalProps> = ({ open, onClose, onSu
       title={<Space><InboxOutlined />成品入库</Space>}
       open={open}
       onClose={handleClose}
-      width="85%"
-      destroyOnClose
+      size="large"
+      styles={{ wrapper: { width: '85%' } }}
+      destroyOnHidden
       extra={
         <Space>
           <Button onClick={handleClose}>取消</Button>

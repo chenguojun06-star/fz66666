@@ -40,23 +40,51 @@ public class AuditLogCleanupJob {
                     ctx.setUserId("SYSTEM");
                     UserContext.set(ctx);
                     try {
-                        int deleted = jdbcTemplate.update(
-                                "DELETE FROM t_intelligence_audit_log WHERE tenant_id = ? AND create_time < DATE_SUB(NOW(), INTERVAL ? DAY)",
-                                t.getId(), retentionDays);
-                        if (deleted > 0) {
-                            log.info("[AuditLogCleanup] 租户{}清理{}天前审计日志: 删除{}条", t.getId(), retentionDays, deleted);
+                        int totalDeleted = 0;
+                        int batchDeleted;
+                        do {
+                            batchDeleted = jdbcTemplate.update(
+                                    "DELETE FROM t_intelligence_audit_log WHERE tenant_id = ? AND create_time < DATE_SUB(NOW(), INTERVAL ? DAY) LIMIT 500",
+                                    t.getId(), retentionDays);
+                            totalDeleted += batchDeleted;
+                        } while (batchDeleted >= 500);
+                        if (totalDeleted > 0) {
+                            log.info("[AuditLogCleanup] 租户{}清理{}天前审计日志: 删除{}条", t.getId(), retentionDays, totalDeleted);
                         }
                     } finally {
                         UserContext.clear();
                     }
                 }
             } else {
-                int deleted = jdbcTemplate.update(
-                        "DELETE FROM t_intelligence_audit_log WHERE create_time < DATE_SUB(NOW(), INTERVAL ? DAY)",
-                        retentionDays);
-                if (deleted > 0) {
-                    log.info("[AuditLogCleanup] 清理{}天前审计日志: 删除{}条", retentionDays, deleted);
+                int totalDeleted = 0;
+                int batchDeleted;
+                do {
+                    batchDeleted = jdbcTemplate.update(
+                            "DELETE FROM t_intelligence_audit_log WHERE create_time < DATE_SUB(NOW(), INTERVAL ? DAY) LIMIT 500",
+                            retentionDays);
+                    totalDeleted += batchDeleted;
+                } while (batchDeleted >= 500);
+                if (totalDeleted > 0) {
+                    log.info("[AuditLogCleanup] 清理{}天前审计日志: 删除{}条", retentionDays, totalDeleted);
                 }
+            }
+            // 清理已关闭超过30天的巡检工单（避免无限累积，分批删除防锁表）
+            try {
+                int patrolRetentionDays = 30;
+                int totalPatrolDeleted = 0;
+                int batchDeleted;
+                do {
+                    batchDeleted = jdbcTemplate.update(
+                            "DELETE FROM t_ai_patrol_action WHERE status IN ('CLOSED','EXECUTED','REJECTED','AUTO_EXECUTED') " +
+                            "AND close_time < DATE_SUB(NOW(), INTERVAL ? DAY) LIMIT 500",
+                            patrolRetentionDays);
+                    totalPatrolDeleted += batchDeleted;
+                } while (batchDeleted >= 500);
+                if (totalPatrolDeleted > 0) {
+                    log.info("[AuditLogCleanup] 清理{}天前已关闭巡检工单: 删除{}条", patrolRetentionDays, totalPatrolDeleted);
+                }
+            } catch (Exception e) {
+                log.debug("[AuditLogCleanup] 巡检工单清理跳过(表可能不存在): {}", e.getMessage());
             }
         } catch (Exception e) {
             log.warn("[AuditLogCleanup] 审计日志清理失败: {}", e.getMessage());

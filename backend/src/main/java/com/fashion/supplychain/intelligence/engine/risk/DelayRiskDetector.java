@@ -17,6 +17,10 @@ public class DelayRiskDetector implements RiskDetector {
     @Override
     public RiskType getType() { return RiskType.DELAY; }
 
+    private static final java.util.Set<String> TERMINAL_STATUSES = java.util.Set.of(
+            "completed", "cancelled", "scrapped", "archived", "closed"
+    );
+
     @Override
     public List<RiskItem> detect(Long tenantId) {
         if (tenantId == null) return List.of();
@@ -24,18 +28,13 @@ public class DelayRiskDetector implements RiskDetector {
                 new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<ProductionOrder>()
                         .eq(ProductionOrder::getTenantId, tenantId)
                         .eq(ProductionOrder::getDeleteFlag, 0)
+                        .notIn(ProductionOrder::getStatus, TERMINAL_STATUSES)
                         .last("LIMIT 2000"));
         if (orders.isEmpty()) return List.of();
 
         List<RiskItem> items = new ArrayList<>();
         for (ProductionOrder o : orders) {
             String status = o.getStatus() != null ? o.getStatus() : "";
-            if (status.contains("已完成") || status.contains("已交付")
-                    || status.contains("已关闭") || status.contains("已报废")
-                    || status.contains("已取消") || status.contains("COMPLETED")
-                    || status.contains("CLOSED") || status.contains("CANCELLED")) {
-                continue;
-            }
             String slaStatus = o.getDeliverySlaStatus() != null ? o.getDeliverySlaStatus() : "";
             if (slaStatus.contains("DELAYED") || slaStatus.contains("OVERDUE")
                     || status.contains("延期") || status.contains("OVERDUE")) {

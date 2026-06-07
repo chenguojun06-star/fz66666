@@ -833,7 +833,7 @@ ${codeImgHtml}
         onOk={() => void handleSaveTemplate()}
         onCancel={() => { setSaveTemplateOpen(false); setSaveTemplateName(''); }}
         okText="保存"
-        destroyOnClose
+        destroyOnHidden
       >
         <Input
           value={saveTemplateName}

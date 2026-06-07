@@ -136,7 +136,6 @@ const ResizableModal: React.FC<ResizableModalProps> = ({
   contentPadding,
   footer,
   title,
-  destroyOnClose,
   destroyOnHidden,
   ...rest
 }) => {
@@ -305,7 +304,7 @@ const ResizableModal: React.FC<ResizableModalProps> = ({
       onCancel={onCancel}
       footer={footer}
       title={title}
-      destroyOnHidden={destroyOnHidden ?? destroyOnClose}
+      destroyOnHidden={destroyOnHidden}
       centered={centered}
       width={Math.round(size.width)}
       styles={{

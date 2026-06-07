@@ -21,6 +21,10 @@ public class FactoryRiskDetector implements RiskDetector {
     @Override
     public RiskType getType() { return RiskType.FACTORY; }
 
+    private static final java.util.Set<String> TERMINAL_STATUSES = java.util.Set.of(
+            "completed", "cancelled", "scrapped", "archived", "closed"
+    );
+
     @Override
     public List<RiskItem> detect(Long tenantId) {
         if (tenantId == null) return List.of();
@@ -28,6 +32,7 @@ public class FactoryRiskDetector implements RiskDetector {
                 new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<ProductionOrder>()
                         .eq(ProductionOrder::getTenantId, tenantId)
                         .eq(ProductionOrder::getDeleteFlag, 0)
+                        .notIn(ProductionOrder::getStatus, TERMINAL_STATUSES)
                         .last("LIMIT 2000"));
         if (orders.isEmpty()) return List.of();
 
@@ -41,9 +46,7 @@ public class FactoryRiskDetector implements RiskDetector {
             long silentCount = 0;
             long overdueCount = 0;
             for (ProductionOrder o : factoryOrders) {
-                String status = o.getStatus() != null ? o.getStatus() : "";
-                if (status.contains("已关闭") || status.contains("已完成") || status.contains("已交付")
-                        || status.contains("CLOSED") || status.contains("COMPLETED")) continue;
+                // 终态已在SQL层过滤，无需Java层再过滤
                 if (o.getUpdateTime() != null
                         && ChronoUnit.HOURS.between(o.getUpdateTime(), java.time.LocalDateTime.now()) > 72) {
                     silentCount++;

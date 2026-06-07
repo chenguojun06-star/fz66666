@@ -83,6 +83,7 @@ const CustomerInfoSection: React.FC<CustomerInfoSectionProps> = ({
             value={customerName}
             onChange={handleCustomerSelect}
             placeholder="搜索或输入客户名称"
+            style={{ width: '100%' }}
             status={customerName.trim() ? undefined : 'warning'}
           />
         </Col>

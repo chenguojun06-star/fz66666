@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { App, Alert, Button, Image, Input, Tag } from 'antd';
+import { App, Alert, Button, Drawer, Image, Input, Tag } from 'antd';
 import { CheckCircleOutlined, CloseCircleOutlined, PictureOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import ResizableModal from '@/components/common/ResizableModal';
 import { ModalField, ModalFieldRow } from '@/components/common/ModalContentLayout';
-import { useUser, isSupervisorOrAbove } from '@/utils/AuthContext';
+import { useUser } from '@/utils/AuthContext';
+import { hasPermission } from '@/utils/permission';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import {
   expenseReimbursementApi,
@@ -13,6 +13,7 @@ import {
   type ExpenseReimbursement,
   type ExpenseReimbursementDoc,
 } from '@/services/finance/expenseReimbursementApi';
+import { EXPENSE_TYPES } from '@/services/finance/expenseReimbursementApi';
 import { formatMoney } from '@/utils/format';
 
 const { TextArea } = Input;
@@ -21,8 +22,6 @@ const typeLabel = (val: string): React.ReactNode => {
   const t = EXPENSE_TYPES.find(e => e.value === val);
   return t ? <Tag color={t.color}>{t.label}</Tag> : <Tag>{val}</Tag>;
 };
-
-import { EXPENSE_TYPES } from '@/services/finance/expenseReimbursementApi';
 
 const statusTag = (val: string) => {
   const s = EXPENSE_STATUS.find(t => t.value === val);
@@ -84,17 +83,20 @@ const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({ open, record, v
 
   if (!record) return null;
 
+  const isOwnRecord = record.applicantId === Number(user?.id);
+  const canApprove = record.status === 'pending' && hasPermission(user, 'PAYMENT_APPROVE');
+
   return (
-    <ResizableModal
+    <Drawer
       open={open}
-      title="报销单审批"
-      onCancel={onClose}
+      title={`报销单详情 — ${record.reimbursementNo || ''}`}
+      onClose={onClose}
       width="85vw"
-      initialHeight={Math.round(window.innerHeight * 0.82)}
-      centered
-      footer={<Button onClick={onClose}>关闭</Button>}
+      destroyOnHidden
+      styles={{ body: { padding: 0 } }}
     >
-      <div style={{ display: 'flex', gap: 0, height: 540 }}>
+      <div style={{ display: 'flex', gap: 0, height: 'calc(100vh - 120px)' }}>
+        {/* 左侧：凭证图片 */}
         <div style={{ width: '42%', background: '#f7f8fa', borderRight: '1px solid var(--color-border-light)', borderRadius: '6px 0 0 6px', padding: 12, height: '100%', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           {detailDocList.length === 0 ? (
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-quaternary)' }}>
@@ -125,7 +127,8 @@ const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({ open, record, v
           )}
         </div>
 
-        <div style={{ flex: 1, padding: '4px 4px 4px 20px', overflowY: 'auto', height: '100%', boxSizing: 'border-box' }}>
+        {/* 右侧：详情信息 + 审批 */}
+        <div style={{ flex: 1, padding: '12px 20px', overflowY: 'auto', height: '100%', boxSizing: 'border-box' }}>
           <ModalFieldRow><ModalField label="报销单号" value={record.reimbursementNo || '-'} /><ModalField label="状态" value={statusTag(record.status || 'pending')} /></ModalFieldRow>
           <ModalFieldRow><ModalField label="申请人" value={record.applicantName || '-'} /><ModalField label="费用类型" value={typeLabel(record.expenseType)} /></ModalFieldRow>
           <ModalFieldRow><ModalField label="事由" value={record.title || '-'} /></ModalFieldRow>
@@ -162,9 +165,10 @@ const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({ open, record, v
 
           <ModalFieldRow><ModalField label="提交时间" value={record.createTime ? dayjs(record.createTime).format('YYYY-MM-DD HH:mm') : '-'} /></ModalFieldRow>
 
+          {/* 审批区域：只要当前用户有审批权限且记录待审批就显示 */}
           {record.status === 'pending' && (
             <>
-              {viewMode === 'all' && (record.applicantId !== Number(user?.id) || isSupervisorOrAbove(user)) && (
+              {canApprove && (
                 <div style={{ borderTop: '1px solid var(--color-border-light)', margin: '16px 0 8px', paddingTop: 12 }}>
                   <div style={{ fontWeight: 500, marginBottom: 8, color: 'var(--color-text-primary)' }}>审批与备注</div>
                   <TextArea id="approveRemark" rows={3} value={approveRemark} onChange={(e) => setApproveRemark(e.target.value)} placeholder="请填写审批备注，驳回时必须填写原因" />
@@ -174,7 +178,7 @@ const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({ open, record, v
                   </div>
                 </div>
               )}
-              {record.applicantId === Number(user?.id) && !isSupervisorOrAbove(user) && (
+              {isOwnRecord && !canApprove && (
                 <div style={{ margin: '16px 0 8px' }}>
                   <Alert type="info" showIcon title="等待审批" description={<><>您提交的报销单需由其他人审批。</><br /><span style={{ color: 'var(--color-text-secondary)', fontSize: 14 }}>审批人请切换至「全部报销」标签页查看并操作。</span></>} />
                 </div>
@@ -183,7 +187,7 @@ const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({ open, record, v
           )}
         </div>
       </div>
-    </ResizableModal>
+    </Drawer>
   );
 };
 

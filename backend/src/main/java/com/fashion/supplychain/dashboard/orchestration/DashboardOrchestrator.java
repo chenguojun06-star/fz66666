@@ -3,6 +3,8 @@ package com.fashion.supplychain.dashboard.orchestration;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.dashboard.dto.DashboardActivityDto;
 import com.fashion.supplychain.dashboard.dto.DashboardResponse;
+import com.fashion.supplychain.dashboard.dto.DelayedStageBreakdownResponse;
+import com.fashion.supplychain.dashboard.dto.DelayedStageGroup;
 import com.fashion.supplychain.dashboard.dto.DeliveryAlertOrderDto;
 import com.fashion.supplychain.dashboard.dto.DeliveryAlertResponse;
 import com.fashion.supplychain.dashboard.dto.OrderCuttingChartResponse;
@@ -488,5 +490,22 @@ public class DashboardOrchestrator {
 
     public Map<String, Object> getOverdueFactoryStats() {
         return statsHelper.computeOverdueFactoryStats();
+    }
+
+    /**
+     * 获取延期环节统计（样衣开发+大货生产，按环节分组）
+     */
+    public DelayedStageBreakdownResponse getDelayedStageBreakdown() {
+        DelayedStageBreakdownResponse response = new DelayedStageBreakdownResponse();
+
+        List<DelayedStageGroup> bulkGroups = dashboardQueryService.listDelayedBulkOrdersByStage();
+        List<DelayedStageGroup> sampleGroups = dashboardQueryService.listDelayedSampleStylesByStage();
+
+        response.setBulkDelayed(bulkGroups);
+        response.setSampleDelayed(sampleGroups);
+        response.setBulkTotal(bulkGroups.stream().mapToInt(DelayedStageGroup::getCount).sum());
+        response.setSampleTotal(sampleGroups.stream().mapToInt(DelayedStageGroup::getCount).sum());
+
+        return response;
     }
 }

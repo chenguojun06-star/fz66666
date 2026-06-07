@@ -671,7 +671,7 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
                       <InputNumber min={0} step={0.01} style={{ width: '100%' }} prefix="¥" />
                     </Form.Item>
                     <Form.Item name="remark" label="备注">
-                      <Input />
+                      <Input.TextArea rows={3} placeholder="请输入备注" />
                     </Form.Item>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>

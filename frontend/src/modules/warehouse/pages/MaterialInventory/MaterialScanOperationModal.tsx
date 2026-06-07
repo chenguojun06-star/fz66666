@@ -84,8 +84,9 @@ const MaterialScanOperationModal: React.FC<MaterialScanOperationModalProps> = ({
       title={<Space><ScanOutlined />物料扫码出入库</Space>}
       open={open}
       onClose={onClose}
-      width="85%"
-      destroyOnClose
+      size="large"
+      styles={{ wrapper: { width: '85%' } }}
+      destroyOnHidden
       extra={
         <Space>
           <Button onClick={onClose}>取消</Button>

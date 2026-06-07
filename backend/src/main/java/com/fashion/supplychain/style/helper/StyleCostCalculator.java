@@ -145,10 +145,17 @@ public class StyleCostCalculator {
                     .sum();
             totalOtherCost += secondaryCost * sampleQty;
 
-            // 开发时间
+            // 开发时间（确保 createTime 在 sampleCompletedTime 之前，且不超过合理范围）
             long devSeconds = 0L;
-            if (style.getCreateTime() != null && style.getSampleCompletedTime() != null) {
+            if (style.getCreateTime() != null && style.getSampleCompletedTime() != null
+                    && style.getCreateTime().isBefore(style.getSampleCompletedTime())) {
                 devSeconds = Duration.between(style.getCreateTime(), style.getSampleCompletedTime()).getSeconds();
+                // 防御：单款开发时间不可能超过 365 天，异常值丢弃
+                if (devSeconds <= 0 || devSeconds > 365 * 86400) {
+                    devSeconds = 0L;
+                }
+            }
+            if (devSeconds > 0) {
                 totalDevelopmentSeconds += devSeconds;
             }
 

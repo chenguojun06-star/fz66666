@@ -20,14 +20,14 @@ public class ScheduledConfig implements SchedulingConfigurer {
     @Bean
     public TaskScheduler taskScheduler() {
         ThreadPoolTaskScheduler scheduler = new ThreadPoolTaskScheduler();
-        scheduler.setPoolSize(3);
+        scheduler.setPoolSize(10);
         scheduler.setThreadNamePrefix("scheduling-");
         scheduler.setAwaitTerminationSeconds(30);
         scheduler.setWaitForTasksToCompleteOnShutdown(true);
         scheduler.setErrorHandler(throwable -> {
             log.error("[ScheduledTask] 定时任务执行异常: {}", throwable.getMessage(), throwable);
         });
-        log.info("[ScheduledConfig] TaskScheduler initialized poolSize=3 with custom ErrorHandler");
+        log.info("[ScheduledConfig] TaskScheduler initialized poolSize=10 with custom ErrorHandler");
         return scheduler;
     }
 }

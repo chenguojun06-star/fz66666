@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Switch, Badge, Empty, Tag, Statistic, Row, Col, Tooltip, Spin, App, Button, Input, Select, Form, Alert, Checkbox, Drawer, InputNumber, Table } from 'antd';
-import { ShopOutlined, EnvironmentOutlined, AppstoreOutlined, InboxOutlined, PlusOutlined, DeleteOutlined, SwapOutlined, PrinterOutlined, ImportOutlined, ExportOutlined, SearchOutlined } from '@ant-design/icons';
+import { Switch, Badge, Empty, Tag, Statistic, Row, Col, Tooltip, Spin, App, Button, Input, Select, Form, Alert, Checkbox, Drawer, InputNumber } from 'antd';
+import { ShopOutlined, EnvironmentOutlined, AppstoreOutlined, InboxOutlined, PlusOutlined, DeleteOutlined, SwapOutlined, PrinterOutlined, ImportOutlined, ExportOutlined, CheckSquareOutlined } from '@ant-design/icons';
 import ResizableModal from '@/components/common/ResizableModal';
 import WarehouseLocationAutoComplete from '@/components/common/WarehouseLocationAutoComplete';
 import { warehouseLocationMapApi } from '@/services/warehouse/warehouseLocationMapApi';
@@ -112,11 +112,17 @@ const WarehouseLocationMap: React.FC = () => {
 
   // ===== 出库弹窗状态 =====
   const [outboundModalOpen, setOutboundModalOpen] = useState(false);
-  const [outboundOrderNo, setOutboundOrderNo] = useState('');
-  const [outboundOrderLoading, setOutboundOrderLoading] = useState(false);
-  const [outboundPurchases, setOutboundPurchases] = useState<any[]>([]);
-  const [outboundStockMap, setOutboundStockMap] = useState<Record<string, number>>({});
   const [outboundLoading, setOutboundLoading] = useState(false);
+  const [outboundItems, setOutboundItems] = useState<Array<{
+    skuCode: string; styleNo: string; color: string; size: string;
+    stockQuantity: number; salesPrice?: number; costPrice?: number;
+    outboundQty: number; selected: boolean; adjustedPrice?: number;
+  }>>([]);
+  const [outboundCustomerName, setOutboundCustomerName] = useState('');
+  const [outboundCustomerPhone, setOutboundCustomerPhone] = useState('');
+  const [outboundShippingAddress, setOutboundShippingAddress] = useState('');
+  const [outstockType, setOutstockType] = useState<string>('sales');
+  const [outboundRemark, setOutboundRemark] = useState('');
 
   const loadAreas = useCallback(async () => {
     setAreasLoading(true);
@@ -266,7 +272,17 @@ const WarehouseLocationMap: React.FC = () => {
   const confirmDeleteLocation = (locationId: string, locationCode: string, usedCapacity: number, e?: React.MouseEvent) => {
     e?.stopPropagation();
     if (usedCapacity > 0) {
-      message.warning('该库位正在使用中，无法删除');
+      modal.confirm({
+        title: '无法删除库位',
+        content: `该库位有 ${usedCapacity} 件库存，请先转移库存到其他库位后再删除。`,
+        okText: '去转移库存',
+        cancelText: '取消',
+        onOk: () => {
+          setTransferTargetLocation('');
+          setTransferModalOpen(true);
+          setDetailModalOpen(false);
+        },
+      });
       return;
     }
     let reasonInput = '';
@@ -499,81 +515,61 @@ const WarehouseLocationMap: React.FC = () => {
 
   // ===== 出库处理 =====
   const handleOpenOutbound = () => {
-    setOutboundOrderNo('');
-    setOutboundPurchases([]);
-    setOutboundStockMap({});
+    const items = locationItems.map(item => ({
+      ...item,
+      outboundQty: 0,
+      selected: false,
+      adjustedPrice: item.salesPrice,
+    }));
+    setOutboundItems(items);
+    setOutboundCustomerName('');
+    setOutboundCustomerPhone('');
+    setOutboundShippingAddress('');
+    setOutstockType('sales');
+    setOutboundRemark('');
     setOutboundModalOpen(true);
   };
 
-  const handleSearchOutboundOrder = async () => {
-    const no = outboundOrderNo.trim();
-    if (!no) {
-      message.warning('请输入订单号');
+  const handleDoOutbound = async () => {
+    const selectedItems = outboundItems.filter(item => item.selected && item.outboundQty > 0);
+    if (selectedItems.length === 0) {
+      message.warning('请至少选择一项并填写出库数量');
       return;
     }
-    setOutboundOrderLoading(true);
-    try {
-      // 获取订单的采购物料列表
-      const purchaseRes = await api.get('/production/purchase/list', {
-        params: { orderNo: no, page: 1, pageSize: 200 },
-      });
-      const records = purchaseRes?.code === 200
-        ? (purchaseRes?.data?.records || [])
-        : [];
-      setOutboundPurchases(records);
-
-      // 获取库存预览
-      if (records.length > 0) {
-        try {
-          const previewRes = await api.get('/production/purchase/smart-receive-preview', {
-            params: { orderNo: no },
-          });
-          const materials = previewRes?.data?.materials || [];
-          const map: Record<string, number> = {};
-          materials.forEach((m: any) => {
-            if (m.purchaseId != null) map[String(m.purchaseId)] = Number(m.availableStock ?? 0);
-          });
-          setOutboundStockMap(map);
-        } catch {
-          setOutboundStockMap({});
-        }
+    for (const item of selectedItems) {
+      if (item.outboundQty > item.stockQuantity) {
+        message.warning(`${item.styleNo} ${item.color} ${item.size} 出库数量不能超过库存 ${item.stockQuantity}`);
+        return;
       }
-    } catch {
-      message.error('查询订单失败');
-    } finally {
-      setOutboundOrderLoading(false);
     }
-  };
-
-  const handleOutboundPick = async (purchase: any) => {
-    const stock = outboundStockMap[String(purchase.id)] || 0;
-    if (stock <= 0) {
-      message.warning('该物料无可用库存');
-      return;
-    }
-    const pickQty = Math.min(stock, Number(purchase.purchaseQuantity || 0));
-    const receiverId = String(user?.id || '').trim();
-    const receiverName = String(user?.name || user?.username || '').trim();
+    setOutboundLoading(true);
     try {
-      setOutboundLoading(true);
-      const res = await api.post('/production/purchase/warehouse-pick', {
-        purchaseId: purchase.id,
-        pickQty,
-        receiverId,
-        receiverName,
-      });
-      if ((res as any)?.code === 200) {
-        message.success(`${purchase.materialName || purchase.materialCode} 出库成功`);
-        // 刷新
-        handleSearchOutboundOrder();
-        if (selectedLocation) handleLocationClick(selectedLocation);
-        loadLocations(selectedAreaId);
-        loadOverview();
-      } else {
-        message.error((res as any)?.message || '出库失败');
+      const traceId = 'TR-' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).substring(2, 6).toUpperCase();
+      for (const item of selectedItems) {
+        const finalPrice = item.adjustedPrice ?? item.salesPrice;
+        await api.post('/warehouse/finished-inventory/free-outbound', {
+          skuCode: item.skuCode,
+          quantity: item.outboundQty,
+          warehouseLocation: selectedLocation?.locationCode,
+          warehouseAreaId: selectedLocation?.areaId,
+          outstockType: outstockType || 'sales',
+          customerName: outboundCustomerName || undefined,
+          customerPhone: outboundCustomerPhone || undefined,
+          shippingAddress: outboundShippingAddress || undefined,
+          salesPrice: finalPrice,
+          originalSalesPrice: item.salesPrice,
+          priceAdjustmentReason: finalPrice !== item.salesPrice ? '手动调整' : undefined,
+          traceId,
+          remark: outboundRemark || undefined,
+        });
       }
+      message.success(`出库成功，共 ${selectedItems.length} 项`);
+      setOutboundModalOpen(false);
+      if (selectedLocation) handleLocationClick(selectedLocation);
+      loadLocations(selectedAreaId);
+      loadOverview();
     } catch (e: any) {
-      message.error(e?.message || '出库失败');
+      message.error(e?.response?.data?.message || e?.message || '出库失败');
     } finally {
       setOutboundLoading(false);
     }
@@ -748,15 +744,35 @@ const WarehouseLocationMap: React.FC = () => {
                   >
                     {selectMode ? '取消勾选' : '批量勾选'}
                   </Button>
-                  {selectMode && selectedLocationIds.size > 0 && (
-                    <Button
-                      type="primary"
-                      size="small"
-                      icon={<PrinterOutlined />}
-                      onClick={() => setPrintModalOpen(true)}
-                    >
-                      打印库位贴 ({selectedLocationIds.size})
-                    </Button>
+                  {selectMode && (
+                    <>
+                      <Button
+                        type="link"
+                        size="small"
+                        icon={<CheckSquareOutlined />}
+                        onClick={() => {
+                          const allIds = filteredLocations.map(l => l.id);
+                          const allSelected = allIds.length > 0 && allIds.every(id => selectedLocationIds.has(id));
+                          if (allSelected) {
+                            setSelectedLocationIds(new Set());
+                          } else {
+                            setSelectedLocationIds(new Set(allIds));
+                          }
+                        }}
+                      >
+                        {filteredLocations.length > 0 && filteredLocations.every(l => selectedLocationIds.has(l.id)) ? '取消全选' : '全选'}
+                      </Button>
+                      {selectedLocationIds.size > 0 && (
+                        <Button
+                          type="primary"
+                          size="small"
+                          icon={<PrinterOutlined />}
+                          onClick={() => setPrintModalOpen(true)}
+                        >
+                          打印库位贴 ({selectedLocationIds.size})
+                        </Button>
+                      )}
+                    </>
                   )}
                   {!selectMode && (
                     <>
@@ -987,8 +1003,9 @@ const WarehouseLocationMap: React.FC = () => {
         open={detailModalOpen}
         onClose={() => setDetailModalOpen(false)}
         title={selectedLocation ? `库位 ${selectedLocation.locationCode} - 库存详情` : '库存详情'}
-        width="85%"
-        destroyOnClose
+        size="large"
+        styles={{ wrapper: { width: '85%' } }}
+        destroyOnHidden
       >
         {selectedLocation && (
           <div className="wlm-detail-content">
@@ -1084,16 +1101,21 @@ const WarehouseLocationMap: React.FC = () => {
         )}
       </Drawer>
 
-      {/* 库存转移弹窗 */}
-      <ResizableModal
+      {/* 库存转移抽屉 */}
+      <Drawer
         open={transferModalOpen}
-        onCancel={() => { setTransferModalOpen(false); setTransferTargetLocation(''); }}
+        onClose={() => { setTransferModalOpen(false); setTransferTargetLocation(''); }}
         title="库存转移"
-        width="30vw"
-        onOk={handleTransfer}
-        okText="确认转移"
-        confirmLoading={transferLoading}
-        okButtonProps={{ disabled: !transferTargetLocation }}
+        width={420}
+        placement="right"
+        style={{ position: 'relative', zIndex: 2000 }}
+        styles={{ wrapper: { zIndex: 2000 } }}
+        destroyOnHidden
+        extra={
+          <Button type="primary" onClick={handleTransfer} loading={transferLoading} disabled={!transferTargetLocation}>
+            确认转移
+          </Button>
+        }
       >
         <div style={{ padding: '8px 0' }}>
           <Alert
@@ -1121,7 +1143,7 @@ const WarehouseLocationMap: React.FC = () => {
             </Form.Item>
           </Form>
         </div>
-      </ResizableModal>
+      </Drawer>
 
       {/* 库位贴打印弹窗 */}
       <LocationLabelPrintModal
@@ -1131,15 +1153,21 @@ const WarehouseLocationMap: React.FC = () => {
         onClose={() => setPrintModalOpen(false)}
       />
 
-      {/* 入库弹窗 */}
-      <ResizableModal
+      {/* 入库抽屉 */}
+      <Drawer
         open={inboundModalOpen}
-        onCancel={() => { setInboundModalOpen(false); inboundForm.resetFields(); }}
+        onClose={() => { setInboundModalOpen(false); inboundForm.resetFields(); }}
         title={`入库 - 库位 ${selectedLocation?.locationCode || ''}`}
-        width="30vw"
-        onOk={handleDoInbound}
-        okText="确认入库"
-        confirmLoading={inboundLoading}
+        width={420}
+        placement="right"
+        style={{ position: 'relative', zIndex: 2000 }}
+        styles={{ wrapper: { zIndex: 2000 } }}
+        destroyOnHidden
+        extra={
+          <Button type="primary" onClick={handleDoInbound} loading={inboundLoading}>
+            确认入库
+          </Button>
+        }
       >
         <div style={{ padding: '8px 0' }}>
           <Form form={inboundForm} layout="vertical">
@@ -1189,82 +1217,271 @@ const WarehouseLocationMap: React.FC = () => {
             </Form.Item>
           </Form>
         </div>
-      </ResizableModal>
+      </Drawer>
 
-      {/* 出库弹窗 */}
-      <ResizableModal
+      {/* 出库抽屉 */}
+      <Drawer
         open={outboundModalOpen}
-        onCancel={() => { setOutboundModalOpen(false); setOutboundOrderNo(''); setOutboundPurchases([]); }}
-        title={`出库领取 - 库位 ${selectedLocation?.locationCode || ''}`}
-        width="60vw"
-        footer={null}
+        onClose={() => setOutboundModalOpen(false)}
+        title={`出库 - 库位 ${selectedLocation?.locationCode || ''}`}
+        width={760}
+        placement="right"
+        style={{ position: 'relative', zIndex: 2000 }}
+        styles={{ wrapper: { zIndex: 2000 } }}
+        destroyOnHidden
+        extra={
+          <Button type="primary" onClick={handleDoOutbound} loading={outboundLoading}>
+            确认出库
+          </Button>
+        }
       >
         <div style={{ padding: '8px 0' }}>
-          <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-            <Input
-              placeholder="输入订单号查询"
-              value={outboundOrderNo}
-              onChange={(e) => setOutboundOrderNo(e.target.value)}
-              onPressEnter={handleSearchOutboundOrder}
-              style={{ flex: 1 }}
-            />
-            <Button
-              type="primary"
-              icon={<SearchOutlined />}
-              loading={outboundOrderLoading}
-              onClick={handleSearchOutboundOrder}
-            >
-              查询
-            </Button>
-          </div>
-
-          {outboundPurchases.length > 0 ? (
-            <Table
-              dataSource={outboundPurchases}
-              rowKey={(r: any) => r.id}
-              pagination={false}
-              size="small"
-              loading={outboundLoading}
-              columns={[
-                { title: '物料编码', dataIndex: 'materialCode', width: 120 },
-                { title: '物料名称', dataIndex: 'materialName', width: 150, ellipsis: true },
-                { title: '颜色', dataIndex: 'color', width: 80 },
-                { title: '采购数量', dataIndex: 'purchaseQuantity', width: 100, align: 'right' as const },
-                {
-                  title: '可用库存',
-                  key: 'stock',
-                  width: 100,
-                  align: 'right' as const,
-                  render: (_: any, r: any) => {
-                    const stock = outboundStockMap[String(r.id)] ?? 0;
-                    return <span style={{ color: stock > 0 ? 'var(--color-success)' : 'var(--color-text-quaternary)' }}>{stock}</span>;
-                  },
-                },
-                {
-                  title: '操作',
-                  key: 'action',
-                  width: 120,
-                  render: (_: any, r: any) => {
-                    const stock = outboundStockMap[String(r.id)] ?? 0;
-                    return (
-                      <Button
-                        type="link"
-                        size="small"
-                        disabled={stock <= 0}
-                        onClick={() => handleOutboundPick(r)}
-                      >
-                        出库领取
-                      </Button>
-                    );
-                  },
-                },
-              ]}
-            />
+          {outboundItems.length === 0 ? (
+            <Empty description="该库位暂无库存" />
           ) : (
-            <Empty description={outboundOrderNo ? '该订单暂无采购物料' : '请输入订单号查询'} />
+            <>
+              {/* 出库类型 */}
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ fontWeight: 600, marginBottom: 8 }}>出库类型</div>
+                <Select
+                  value={outstockType}
+                  onChange={setOutstockType}
+                  style={{ width: '100%' }}
+                  options={[
+                    { value: 'sales', label: '销售出库' },
+                    { value: 'gift', label: '赠送出库' },
+                    { value: 'transfer', label: '调拨出库' },
+                    { value: 'self_use', label: '自用出库' },
+                    { value: 'free_outbound', label: '自由出库' },
+                  ]}
+                />
+              </div>
+
+              {/* 按款号分组的库存明细 */}
+              <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontWeight: 600 }}>库存物品</span>
+                <Button
+                  type="link"
+                  size="small"
+                  onClick={() => {
+                    const allSelected = outboundItems.every(item => item.selected);
+                    setOutboundItems(outboundItems.map(item => ({ ...item, selected: !allSelected })));
+                  }}
+                >
+                  {outboundItems.every(item => item.selected) ? '取消全选' : '全选'}
+                </Button>
+              </div>
+
+              {(() => {
+                // 按款号分组
+                const groups = new Map<string, typeof outboundItems>();
+                outboundItems.forEach(item => {
+                  const key = item.styleNo || '未知款号';
+                  if (!groups.has(key)) groups.set(key, []);
+                  groups.get(key)!.push(item);
+                });
+                return Array.from(groups.entries()).map(([styleNo, items]) => {
+                  const groupSelected = items.filter(i => i.selected);
+                  const groupTotalStock = items.reduce((s, i) => s + i.stockQuantity, 0);
+                  const groupTotalOut = groupSelected.reduce((s, i) => s + i.outboundQty, 0);
+                  const groupTotalAmount = groupSelected.reduce((s, i) => s + (i.outboundQty * (i.adjustedPrice ?? i.salesPrice ?? 0)), 0);
+                  return (
+                    <div key={styleNo} style={{
+                      marginBottom: 16, border: '1px solid var(--color-border-secondary, #f0f0f0)',
+                      borderRadius: 8, overflow: 'hidden',
+                    }}>
+                      {/* 款号头部 */}
+                      <div style={{
+                        padding: '8px 12px', backgroundColor: 'var(--color-bg-container, #fafafa)',
+                        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                        borderBottom: '1px solid var(--color-border-secondary, #f0f0f0)',
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <Checkbox
+                            checked={items.every(i => i.selected)}
+                            indeterminate={groupSelected.length > 0 && groupSelected.length < items.length}
+                            onChange={(e) => {
+                              const newItems = [...outboundItems];
+                              items.forEach(gi => {
+                                const idx = newItems.findIndex(ni => ni.skuCode === gi.skuCode);
+                                if (idx >= 0) newItems[idx] = { ...newItems[idx], selected: e.target.checked };
+                              });
+                              setOutboundItems(newItems);
+                            }}
+                          />
+                          <span style={{ fontWeight: 600, fontSize: 15 }}>{styleNo}</span>
+                        </div>
+                        <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>
+                          库存 {groupTotalStock} 件 | 已选出库 {groupTotalOut} 件
+                          {groupTotalAmount > 0 && <span style={{ marginLeft: 8, color: 'var(--color-primary)', fontWeight: 500 }}>¥{groupTotalAmount.toFixed(2)}</span>}
+                        </div>
+                      </div>
+
+                      {/* 码数明细表 */}
+                      <div style={{ padding: '4px 0' }}>
+                        {/* 表头 */}
+                        <div style={{
+                          display: 'grid', gridTemplateColumns: '60px 1fr 80px 80px 100px 80px',
+                          padding: '6px 12px', fontSize: 12, color: 'var(--color-text-tertiary)',
+                          borderBottom: '1px solid var(--color-border-secondary, #f0f0f0)',
+                        }}>
+                          <div>选择</div>
+                          <div>颜色 / 尺码</div>
+                          <div style={{ textAlign: 'right' }}>库存</div>
+                          <div style={{ textAlign: 'right' }}>出库数量</div>
+                          <div style={{ textAlign: 'right' }}>出库单价</div>
+                          <div style={{ textAlign: 'right' }}>小计</div>
+                        </div>
+                        {/* 行 */}
+                        {items.map((item) => {
+                          const idx = outboundItems.findIndex(ni => ni.skuCode === item.skuCode);
+                          const subtotal = item.outboundQty * (item.adjustedPrice ?? item.salesPrice ?? 0);
+                          const priceChanged = item.adjustedPrice !== item.salesPrice && item.adjustedPrice !== undefined;
+                          return (
+                            <div key={item.skuCode} style={{
+                              display: 'grid', gridTemplateColumns: '60px 1fr 80px 80px 100px 80px',
+                              padding: '8px 12px', alignItems: 'center',
+                              borderBottom: '1px solid var(--color-border-secondary, #f0f0f0)',
+                              backgroundColor: item.selected ? 'var(--color-bg-highlight, #e6f4ff)' : 'transparent',
+                            }}>
+                              <div>
+                                <Checkbox
+                                  checked={item.selected}
+                                  onChange={(e) => {
+                                    const newItems = [...outboundItems];
+                                    newItems[idx] = { ...newItems[idx], selected: e.target.checked };
+                                    setOutboundItems(newItems);
+                                  }}
+                                />
+                              </div>
+                              <div>
+                                <Tag color="blue" style={{ marginRight: 4 }}>{item.color}</Tag>
+                                <Tag>{item.size}</Tag>
+                              </div>
+                              <div style={{ textAlign: 'right', fontWeight: 500 }}>
+                                {item.stockQuantity}
+                              </div>
+                              <div style={{ textAlign: 'right' }}>
+                                <InputNumber
+                                  size="small"
+                                  min={0}
+                                  max={item.stockQuantity}
+                                  value={item.outboundQty}
+                                  onChange={(val) => {
+                                    const newItems = [...outboundItems];
+                                    newItems[idx] = { ...newItems[idx], outboundQty: val || 0 };
+                                    setOutboundItems(newItems);
+                                  }}
+                                  disabled={!item.selected}
+                                  style={{ width: 72 }}
+                                />
+                              </div>
+                              <div style={{ textAlign: 'right' }}>
+                                <InputNumber
+                                  size="small"
+                                  min={0}
+                                  precision={2}
+                                  value={item.adjustedPrice ?? item.salesPrice}
+                                  onChange={(val) => {
+                                    const newItems = [...outboundItems];
+                                    newItems[idx] = { ...newItems[idx], adjustedPrice: val ?? item.salesPrice };
+                                    setOutboundItems(newItems);
+                                  }}
+                                  disabled={!item.selected}
+                                  style={{ width: 90 }}
+                                  prefix="¥"
+                                />
+                                {priceChanged && (
+                                  <div style={{ fontSize: 10, color: 'var(--color-warning)', marginTop: 2 }}>
+                                    原价 ¥{item.salesPrice?.toFixed(2)}
+                                  </div>
+                                )}
+                              </div>
+                              <div style={{ textAlign: 'right', fontWeight: 500, color: 'var(--color-primary)' }}>
+                                {item.outboundQty > 0 ? `¥${subtotal.toFixed(2)}` : '-'}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                });
+              })()}
+
+              {/* 出库汇总 */}
+              {(() => {
+                const selectedItems = outboundItems.filter(i => i.selected && i.outboundQty > 0);
+                const totalQty = selectedItems.reduce((s, i) => s + i.outboundQty, 0);
+                const totalAmount = selectedItems.reduce((s, i) => s + (i.outboundQty * (i.adjustedPrice ?? i.salesPrice ?? 0)), 0);
+                if (totalQty > 0) {
+                  return (
+                    <div style={{
+                      padding: '12px 16px', marginBottom: 16,
+                      backgroundColor: 'var(--color-bg-container, #fafafa)',
+                      borderRadius: 8, border: '1px solid var(--color-border-secondary, #f0f0f0)',
+                      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                    }}>
+                      <span style={{ fontWeight: 600 }}>出库汇总</span>
+                      <div style={{ display: 'flex', gap: 24 }}>
+                        <span>共 <strong style={{ color: 'var(--color-primary)' }}>{selectedItems.length}</strong> 项</span>
+                        <span>总数量 <strong style={{ color: 'var(--color-primary)' }}>{totalQty}</strong> 件</span>
+                        <span>总金额 <strong style={{ color: 'var(--color-primary)', fontSize: 16 }}>¥{totalAmount.toFixed(2)}</strong></span>
+                      </div>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
+
+              {/* 客户信息 */}
+              <div style={{
+                marginTop: 16, borderTop: '1px solid var(--color-border-secondary, #f0f0f0)',
+                paddingTop: 16,
+              }}>
+                <div style={{ fontWeight: 600, marginBottom: 12 }}>客户/收货信息</div>
+                <Form layout="vertical">
+                  <Row gutter={12}>
+                    <Col span={12}>
+                      <Form.Item label="客户/领取人" style={{ marginBottom: 12 }}>
+                        <Input
+                          placeholder="输入客户名称或领取人姓名"
+                          value={outboundCustomerName}
+                          onChange={(e) => setOutboundCustomerName(e.target.value)}
+                        />
+                      </Form.Item>
+                    </Col>
+                    <Col span={12}>
+                      <Form.Item label="联系电话" style={{ marginBottom: 12 }}>
+                        <Input
+                          placeholder="联系电话（选填）"
+                          value={outboundCustomerPhone}
+                          onChange={(e) => setOutboundCustomerPhone(e.target.value)}
+                        />
+                      </Form.Item>
+                    </Col>
+                  </Row>
+                  <Form.Item label="收货地址" style={{ marginBottom: 12 }}>
+                    <Input
+                      placeholder="收货地址（选填）"
+                      value={outboundShippingAddress}
+                      onChange={(e) => setOutboundShippingAddress(e.target.value)}
+                    />
+                  </Form.Item>
+                  <Form.Item label="备注" style={{ marginBottom: 0 }}>
+                    <Input.TextArea
+                      rows={2}
+                      placeholder="出库备注（选填）"
+                      value={outboundRemark}
+                      onChange={(e) => setOutboundRemark(e.target.value)}
+                    />
+                  </Form.Item>
+                </Form>
+              </div>
+            </>
           )}
         </div>
-      </ResizableModal>
+      </Drawer>
     </div>
   );
 };

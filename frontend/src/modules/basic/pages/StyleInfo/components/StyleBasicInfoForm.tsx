@@ -2,7 +2,7 @@ import React from 'react';
 import { Form, Input, InputNumber, Row, Col, FormInstance, Select } from 'antd';
 import { UnifiedDatePicker } from '@/components/common/UnifiedDatePicker';
 import DictAutoComplete from '@/components/common/DictAutoComplete';
-import CustomerSearcher from '@/components/common/CustomerSearcher';
+import CustomerSelect from '@/components/common/CustomerSelect';
 import CoverImageUpload from './CoverImageUpload';
 import StyleColorSizeTable from './StyleColorSizeTable';
 import { StyleInfo } from '@/types/style';
@@ -191,11 +191,19 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
                 <Form.Item name="customerId" noStyle hidden>
                   <Input id="customerId" />
                 </Form.Item>
-                <Form.Item name="customerType" noStyle hidden>
-                  <Input id="customerType" />
-                </Form.Item>
                 <Form.Item name="customer" label="客户">
-                  <CustomerSearcher id="customer" form={_form} disabled={isFieldLocked((currentStyle as any)?.customer)} />
+                  <CustomerSelect
+                    id="customer"
+                    placeholder="搜索或输入客户名称"
+                    disabled={isFieldLocked((currentStyle as any)?.customer)}
+                    onChange={(_value, option) => {
+                      if (option?.customerId) {
+                        _form.setFieldsValue({ customerId: option.customerId });
+                      } else {
+                        _form.setFieldsValue({ customerId: undefined });
+                      }
+                    }}
+                  />
                 </Form.Item>
               </Col>
               <Col xs={24} md={6}>

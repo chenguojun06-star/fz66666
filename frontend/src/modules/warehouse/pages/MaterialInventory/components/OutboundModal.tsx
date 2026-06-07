@@ -78,8 +78,9 @@ const OutboundModal: React.FC<OutboundModalProps> = ({
         setBatchDetails([]);
         outboundForm.resetFields();
       }}
-      width="85%"
-      destroyOnClose
+      size="large"
+      styles={{ wrapper: { width: '85%' } }}
+      destroyOnHidden
       extra={
         <Space>
           <Button onClick={() => {

@@ -464,8 +464,8 @@ const IntelligenceCenter: React.FC = () => {
                   onClick={handleRepair}
                   disabled={repairing}
                   style={{
-                    background: 'linear-gradient(135deg, #1677ff, #4096ff)', color: '#fff',
-                    border: 'none', borderRadius: 6, padding: '5px 16px', cursor: repairing ? 'wait' : 'pointer',
+                    background: 'transparent', color: '#1677ff',
+                    border: '1px solid #1677ff', borderRadius: 6, padding: '5px 16px', cursor: repairing ? 'wait' : 'pointer',
                     fontSize: 14, fontWeight: 600, opacity: repairing ? 0.6 : 1,
                   }}
                 >

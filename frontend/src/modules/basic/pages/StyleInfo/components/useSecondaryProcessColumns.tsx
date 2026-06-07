@@ -174,7 +174,7 @@ export function useSecondaryProcessColumns(ctx: ColumnContext) {
       ellipsis: true,
       render: (text: string, record: SecondaryProcess) => ctx.isEditing(record) ? (
         <Form.Item name="remark" style={{ margin: 0 }}>
-          <Input placeholder="备注" />
+          <Input.TextArea placeholder="备注" autoSize={{ minRows: 1, maxRows: 3 }} />
         </Form.Item>
       ) : (text || '-'),
     },

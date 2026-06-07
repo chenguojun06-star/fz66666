@@ -146,7 +146,7 @@ public class DailyBriefOrchestrator {
                 .eq(ProductionOrder::getDeleteFlag, 0)
                 .eq(ProductionOrder::getTenantId, UserContext.tenantId())
                 .eq(org.springframework.util.StringUtils.hasText(briefFactoryId), ProductionOrder::getFactoryId, briefFactoryId)
-                .eq(ProductionOrder::getStatus, "production")
+                .notIn(ProductionOrder::getStatus, "completed", "cancelled", "scrapped", "archived", "closed")
                 .isNotNull(ProductionOrder::getPlannedEndDate)
                 .ge(ProductionOrder::getPlannedEndDate, nowTime)
                 .le(ProductionOrder::getPlannedEndDate, deadline)

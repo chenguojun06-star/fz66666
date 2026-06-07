@@ -448,7 +448,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
         size="large"
         styles={{ wrapper: { width: '50%' }, body: { padding: 16 } }}
         footer={footerContent || undefined}
-        destroyOnClose
+        destroyOnHidden
       >
         {bodyContent}
       </Drawer>

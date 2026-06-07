@@ -48,7 +48,10 @@ const StyleCostDetailDrawer: React.FC<StyleCostDetailDrawerProps> = ({
   const [costPagination, setCostPagination] = useState({ current: 1, pageSize: 10 });
 
   const formatDuration = (seconds: number | undefined): string => {
-    if (!seconds || seconds <= 0) return '-';
+    if (!seconds || seconds <= 0 || !Number.isFinite(seconds)) return '-';
+    // 防御：单款开发时间不可能超过 365 天
+    const MAX_SECONDS = 365 * 86400;
+    if (seconds > MAX_SECONDS) return '-';
     const days = Math.floor(seconds / 86400);
     const hours = Math.floor((seconds % 86400) / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
@@ -192,8 +195,11 @@ const StyleCostDetailDrawer: React.FC<StyleCostDetailDrawerProps> = ({
     totalCost: styleDetails.reduce((sum, item) => sum + (item.totalCost || 0), 0),
   };
 
-  // 计算平均开发时间
-  const stylesWithTime = styleDetails.filter(item => item.developmentTimeSeconds && item.developmentTimeSeconds > 0);
+  // 计算平均开发时间（防御：过滤异常大值，单款开发不超过365天）
+  const MAX_DEV_SECONDS = 365 * 86400;
+  const stylesWithTime = styleDetails.filter(
+    item => item.developmentTimeSeconds && item.developmentTimeSeconds > 0 && item.developmentTimeSeconds <= MAX_DEV_SECONDS
+  );
   const avgDevSeconds = stylesWithTime.length > 0
     ? Math.round(stylesWithTime.reduce((sum, item) => sum + (item.developmentTimeSeconds || 0), 0) / stylesWithTime.length)
     : 0;
@@ -252,10 +258,10 @@ const StyleCostDetailDrawer: React.FC<StyleCostDetailDrawerProps> = ({
         </div>
       }
       placement="right"
-      width="80%"
+      size="large"
       open={visible}
       onClose={onClose}
-      styles={{ body: { padding: '16px 20px' } }}
+      styles={{ wrapper: { width: '80%' }, body: { padding: '16px 20px' } }}
     >
       <Spin spinning={loading}>
       {/* 顶部汇总卡片 */}

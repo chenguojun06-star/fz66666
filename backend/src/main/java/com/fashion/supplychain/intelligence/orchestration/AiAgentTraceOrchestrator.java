@@ -286,6 +286,30 @@ public class AiAgentTraceOrchestrator {
         if (scene.contains("ai-patrol")) return "AI巡检";
         if (scene.contains("smart-remark")) return "智能备注巡检";
         if (scene.contains("proactive-patrol")) return "主动巡检Agent";
+        if (scene.contains("data-analyst")) return "数据分析师";
+        if (scene.contains("risk-sentinel")) return "风险哨兵";
+        if (scene.contains("anomaly-detector")) return "异常检测器";
+        if (scene.contains("insight-generator")) return "洞察生成器";
+        if (scene.contains("self-healing")) return "自愈引擎";
+        if (scene.contains("sourcing-specialist")) return "采购专家";
+        if (scene.contains("delivery-specialist")) return "交付专家";
+        if (scene.contains("compliance-specialist")) return "合规专家";
+        if (scene.contains("logistics-specialist")) return "物流专家";
+        if (scene.contains("intelligence-brain")) return "智能中枢";
+        if (scene.contains("critic-agent")) return "批评检查官";
+        if (scene.contains("evolution-engine")) return "进化引擎";
+        if (scene.contains("order-manager")) return "订单管家";
+        if (scene.contains("material-buyer")) return "物料采购员";
+        if (scene.contains("quality-inspector")) return "质检巡检员";
+        if (scene.contains("production-scheduler")) return "生产调度员";
+        if (scene.contains("finance-settler")) return "财务结算员";
+        if (scene.contains("warehouse-keeper")) return "仓库管理员";
+        if (scene.contains("inventory-manager")) return "出入库专员";
+        if (scene.contains("style-designer")) return "样衣开发员";
+        if (scene.contains("crew-coordinator")) return "生产协调员";
+        if (scene.contains("learning-engine")) return "学习引擎";
+        if (scene.contains("system-doctor")) return "系统医生";
+        if (scene.contains("smart-advisor")) return "智能顾问";
         return "AI请求";
     }
 
