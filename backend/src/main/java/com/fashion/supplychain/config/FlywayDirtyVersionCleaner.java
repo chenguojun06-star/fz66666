@@ -78,7 +78,17 @@ public class FlywayDirtyVersionCleaner {
                 for (Map<String, Object> row : allRows) {
                     Object versionObj = row.get("version");
                     String version = versionObj == null ? null : versionObj.toString();
-                    Integer success = (Integer) row.get("success");
+                    // success 列在 MySQL TINYINT(1) 下，不同 JDBC 驱动返回类型不同：
+                    // MySQL Connector/J 8.x 返回 Boolean，旧版返回 Integer
+                    Integer success = null;
+                    Object successObj = row.get("success");
+                    if (successObj instanceof Boolean) {
+                        success = ((Boolean) successObj) ? 1 : 0;
+                    } else if (successObj instanceof Integer) {
+                        success = (Integer) successObj;
+                    } else if (successObj instanceof Number) {
+                        success = ((Number) successObj).intValue();
+                    }
                     String description = (String) row.get("description");
                     String script = (String) row.get("script");
 
