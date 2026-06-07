@@ -61,6 +61,10 @@ public class IntelligenceInferenceOrchestrator {
     @Value("${ai.agnes.api-url:https://apihub.agnes-ai.com/v1/chat/completions}") private String agnesApiUrl;
     @Value("${ai.agnes.model:agnes-2.0-flash}") private String agnesModel;
     @Value("${ai.agnes.timeout-seconds:60}") private int agnesTimeoutSeconds;
+    @Value("${ai.agnes2.api-key:}") private String agnes2ApiKey;
+    @Value("${ai.agnes2.api-url:https://apihub.agnes-ai.com/v1/chat/completions}") private String agnes2ApiUrl;
+    @Value("${ai.agnes2.model:agnes-2.0-flash}") private String agnes2Model;
+    @Value("${ai.agnes2.timeout-seconds:60}") private int agnes2TimeoutSeconds;
     @Value("${ai.gateway.litellm.api-key:}") private String litellmApiKey;
     @Value("${ai.gateway.litellm.timeout-seconds:30}") private int gatewayTimeoutSeconds;
     @Value("${ai.fallback.qwen.api-key:}") private String qwenApiKey;
@@ -185,35 +189,107 @@ public class IntelligenceInferenceOrchestrator {
     }
 
     public boolean isVisionEnabled() {
-        if (!hasText(agnesApiKey)) log.warn("[Vision] Agnes 未配置，视觉分析不可用");
-        return hasText(agnesApiKey);
+        if (hasText(agnesApiKey)) return true;
+        if (hasText(agnes2ApiKey)) return true;
+        log.warn("[Vision] 未配置任何视觉模型");
+        return false;
     }
 
+    private record VisionModelConfig(String name, String apiKey, String apiUrl, String model, int timeoutSeconds) {}
+
     public String chatWithVision(String imageUrl, String textPrompt) {
-        if (!hasText(agnesApiKey) || !hasText(imageUrl)) {
-            log.warn("[AgnesVision] 缺少必要参数：apiKey 或 imageUrl 为空");
+        if (!hasText(imageUrl)) {
+            log.warn("[Vision] 缺少必要参数：imageUrl 为空");
             return null;
         }
+
+        List<VisionModelConfig> models = new ArrayList<>();
+        if (hasText(agnesApiKey)) {
+            models.add(new VisionModelConfig("agnes", agnesApiKey, agnesApiUrl, agnesModel, agnesTimeoutSeconds));
+        }
+        if (hasText(agnes2ApiKey)) {
+            models.add(new VisionModelConfig("agnes2", agnes2ApiKey, agnes2ApiUrl, agnes2Model, agnes2TimeoutSeconds));
+        }
+
+        if (models.isEmpty()) {
+            log.warn("[Vision] 没有可用的视觉模型");
+            return null;
+        }
+
         try {
             if (imageUrl.startsWith("data:") && imageUrl.length() > 8 * 1024 * 1024) {
-                log.warn("[AgnesVision] Base64 数据URI超过8MB({}MB)，已跳过", imageUrl.length() / 1024 / 1024);
+                log.warn("[Vision] Base64 数据URI超过8MB({}MB)，已跳过", imageUrl.length() / 1024 / 1024);
                 return null;
             }
-            log.info("[AgnesVision] 发送请求 类型={} 长度={}字符",
+            log.info("[Vision] 图像分析请求 类型={} 长度={}字符 模型数={}",
                     imageUrl.startsWith("data:") ? "base64" : imageUrl.startsWith("http") ? "http-url" : "other",
-                    imageUrl.length());
-            String payload = buildAgnesVisionPayload(imageUrl, textPrompt);
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(agnesApiUrl))
-                    .header("Content-Type", "application/json")
-                    .header("Authorization", "Bearer " + agnesApiKey)
-                    .timeout(Duration.ofSeconds(agnesTimeoutSeconds))
-                    .POST(HttpRequest.BodyPublishers.ofString(payload))
-                    .build();
-            HttpResponse<String> response = sharedHttpClient.send(request, HttpResponse.BodyHandlers.ofString());
-            return extractAgnesVisionResponse(response);
+                    imageUrl.length(),
+                    models.size());
+
+            for (int i = 0; i < models.size(); i++) {
+                VisionModelConfig model = models.get(i);
+                try {
+                    log.info("[Vision] 尝试视觉模型: {} ({}/{})", model.name(), i + 1, models.size());
+                    String result = invokeVisionModel(model, imageUrl, textPrompt);
+                    if (result != null) {
+                        log.info("[Vision] 模型 {} 调用成功", model.name());
+                        return result;
+                    }
+                } catch (Exception e) {
+                    log.warn("[Vision] 模型 {} 调用失败: {}", model.name(), e.getMessage());
+                    if (i == models.size() - 1) {
+                        log.warn("[Vision] 所有视觉模型均调用失败");
+                    }
+                }
+            }
         } catch (Exception e) {
-            log.warn("[AgnesVision] 图像分析异常: {}", e.getMessage());
+            log.warn("[Vision] 图像分析异常: {}", e.getMessage());
+        }
+        return null;
+    }
+
+    private String invokeVisionModel(VisionModelConfig model, String imageUrl, String textPrompt) throws Exception {
+        String payload = buildVisionPayload(model.model(), imageUrl, textPrompt);
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(model.apiUrl()))
+                .header("Content-Type", "application/json")
+                .header("Authorization", "Bearer " + model.apiKey())
+                .timeout(Duration.ofSeconds(model.timeoutSeconds()))
+                .POST(HttpRequest.BodyPublishers.ofString(payload))
+                .build();
+        HttpResponse<String> response = sharedHttpClient.send(request, HttpResponse.BodyHandlers.ofString());
+        return extractVisionResponse(response, model.name());
+    }
+
+    private String buildVisionPayload(String modelName, String imageUrl, String textPrompt) throws Exception {
+        var root = MAPPER.createObjectNode();
+        root.put("model", modelName);
+        var messagesArr = root.putArray("messages");
+        var userMsg = messagesArr.addObject();
+        userMsg.put("role", "user");
+        var content = userMsg.putArray("content");
+        var imgPart = content.addObject();
+        imgPart.put("type", "image_url");
+        imgPart.putObject("image_url").put("url", imageUrl);
+        var textPart = content.addObject();
+        textPart.put("type", "text");
+        textPart.put("text", textPrompt);
+        return MAPPER.writeValueAsString(root);
+    }
+
+    private String extractVisionResponse(HttpResponse<String> response, String modelName) throws Exception {
+        String body = response.body();
+        if (response.statusCode() == 200) {
+            JsonNode root = MAPPER.readTree(body);
+            if (root.has("choices") && root.get("choices").size() > 0) {
+                String content = root.get("choices").get(0).get("message").get("content").asText();
+                log.debug("[Vision] {} 调用成功，content长度={}", modelName, content.length());
+                return content;
+            }
+            log.warn("[Vision] {} 响应格式异常: {}", modelName, body);
+        } else {
+            log.warn("[Vision] {} 调用失败 status={} body={}", modelName, response.statusCode(),
+                    body.substring(0, Math.min(200, body.length())));
         }
         return null;
     }
@@ -564,22 +640,7 @@ public class IntelligenceInferenceOrchestrator {
         aiAgentTokenBudgetService.recordUsage(result.getPromptTokens(), result.getCompletionTokens());
     }
 
-    private String extractAgnesVisionResponse(HttpResponse<String> response) throws Exception {
-        String body = response.body();
-        if (response.statusCode() == 200) {
-            JsonNode root = MAPPER.readTree(body);
-            if (root.has("choices") && root.get("choices").size() > 0) {
-                String content = root.get("choices").get(0).get("message").get("content").asText();
-                log.debug("[AgnesVision] 调用成功，content长度={}", content.length());
-                return content;
-            }
-            log.warn("[AgnesVision] 响应格式异常: {}", body);
-        } else {
-            log.warn("[AgnesVision] 调用失败 status={} body={}", response.statusCode(),
-                    body.substring(0, Math.min(200, body.length())));
-        }
-        return null;
-    }
+
 
     private int resolveEffectiveTimeoutSeconds(String scene, int configuredTimeoutSeconds) {
         int raw = Math.max(configuredTimeoutSeconds, MIN_TIMEOUT_SECONDS);
@@ -645,21 +706,7 @@ public class IntelligenceInferenceOrchestrator {
         return value + "/chat/completions";
     }
 
-    private String buildAgnesVisionPayload(String imageUrl, String textPrompt) throws Exception {
-        var root = MAPPER.createObjectNode();
-        root.put("model", agnesModel);
-        var messagesArr = root.putArray("messages");
-        var userMsg = messagesArr.addObject();
-        userMsg.put("role", "user");
-        var content = userMsg.putArray("content");
-        var imgPart = content.addObject();
-        imgPart.put("type", "image_url");
-        imgPart.putObject("image_url").put("url", imageUrl);
-        var textPart = content.addObject();
-        textPart.put("type", "text");
-        textPart.put("text", textPrompt);
-        return MAPPER.writeValueAsString(root);
-    }
+
 
     private boolean isRetryableError(Exception e) {
         if (e instanceof java.net.http.HttpTimeoutException) return true;

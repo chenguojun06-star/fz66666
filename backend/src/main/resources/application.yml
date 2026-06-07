@@ -347,6 +347,11 @@ ai:
     api-url: https://apihub.agnes-ai.com/v1/chat/completions
     model: ${AGNES_MODEL:agnes-2.0-flash}
     timeout-seconds: 60
+  agnes2:
+    api-key: ${AGNES2_API_KEY:}             # Agnes AI 视觉模型 - 备用账号
+    api-url: ${AGNES2_API_URL:https://apihub.agnes-ai.com/v1/chat/completions}
+    model: ${AGNES2_MODEL:agnes-2.0-flash}
+    timeout-seconds: 60
   spring-ai:
     enabled: ${AI_SPRING_AI_ENABLED:true}
     chat:
@@ -384,10 +389,11 @@ ai:
       top-n: ${AI_COHERE_RERANK_TOP_N:5}            # 精排后返回条数（候选池 15 → 精排后 top-n）
   consortium:
     enabled: ${AI_CONSORTIUM_ENABLED:true}
+    strategy: ${AI_CONSORTIUM_STRATEGY:speed-first}  # 启用速度优先策略
   model:
-    fast: ${AI_MODEL_FAST:deepseek-v4-flash}
-    reasoning: ${AI_MODEL_REASONING:deepseek-v4-pro}
-    vision: ${AI_MODEL_VISION:agnes-2.0-flash}
+    fast: ${AI_MODEL_FAST:deepseek-v4-flash}        # 简单查询用这个（快）
+    reasoning: ${AI_MODEL_REASONING:deepseek-v4-pro}  # 复杂分析用这个
+    vision: ${AI_MODEL_VISION:agnes-2.0-flash}     # 图片分析用这个
     default: ${AI_MODEL_DEFAULT:deepseek-v4-flash}
   openai-compat:
     enabled: ${AI_OPENAI_COMPAT_ENABLED:false}
