@@ -18,6 +18,11 @@ RUN mvn -e -DskipTests --no-transfer-progress package
 # 移除 ca-certificates-java：Ubuntu 24.04 已不再提供此包，temurin 自带完整 Java CA 证书库
 FROM eclipse-temurin:21-jre
 WORKDIR /app
+
+# Flyway: 强制时间戳版本格式，解决Flyway 10.x NUMERIC模式拒绝V202608051300等问题
+# 环境变量 > flyway.conf > spring.flyway.* > 默认值
+ENV FLYWAY_SQL_MIGRATION_VERSION_FORMAT=yyyyMMddHHmm
+
 ENV PORT=8088
 
 # 合并所有系统配置到一个 RUN 层，减少镜像层数
