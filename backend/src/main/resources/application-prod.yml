@@ -30,8 +30,8 @@ spring:
   # Flyway 10.x 开源版不支持 sqlMigrationVersionFormat 配置。
   # 项目迁移文件使用纯数字时间戳格式 (V202608051300)，
   # Flyway 10.x 的 MigrationVersion 内部将 _ 替换为 . 后按 BigInteger 解析，
-  # 纯数字版本号天然合法，无需额外配置。
   flyway:
+    sql-migration-version-format: TIMESTAMP
 
   # Redis 生产配置（可选，不可用时降级为单机模式）
   data:

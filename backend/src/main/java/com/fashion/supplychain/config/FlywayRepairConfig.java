@@ -34,11 +34,13 @@ public class FlywayRepairConfig {
                     depth++;
                 }
                 log.error("[FlywayRepair] 完整异常栈:", e);
+                // 尝试 repair 后继续启动（不抛出异常）
                 try {
                     flyway.repair();
                 } catch (Exception repairEx) {
                     log.warn("[FlywayRepair] Post-migrate repair also failed: {}", repairEx.getMessage());
                 }
+                // 不再让 Flyway 失败阻止应用启动
             }
         };
     }
