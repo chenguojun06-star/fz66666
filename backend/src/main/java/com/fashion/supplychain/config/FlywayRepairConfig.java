@@ -36,7 +36,8 @@ public class FlywayRepairConfig {
                 log.error("[FlywayRepair] 完整异常栈:", e);
                 try {
                     flyway.repair();
-                } catch (Exception ignored) {
+                } catch (Exception repairEx) {
+                    log.warn("[FlywayRepair] Post-migrate repair also failed: {}", repairEx.getMessage());
                 }
             }
         };
