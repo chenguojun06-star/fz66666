@@ -110,8 +110,10 @@ public class IntelligenceInferenceOrchestrator {
         for (int i = 1; i <= 20; i++) {
             String apiKey = System.getenv("VISION_MODEL_" + i + "_API_KEY");
             if (hasText(apiKey)) {
-                String apiUrl = System.getenv().getOrDefault("VISION_MODEL_" + i + "_API_URL", "https://apihub.agnes-ai.com/v1/chat/completions");
-                String model = System.getenv().getOrDefault("VISION_MODEL_" + i + "_MODEL", "agnes-2.0-flash");
+                String apiUrl = System.getenv("VISION_MODEL_" + i + "_API_URL");
+                apiUrl = apiUrl != null ? apiUrl : "https://apihub.agnes-ai.com/v1/chat/completions";
+                String model = System.getenv("VISION_MODEL_" + i + "_MODEL");
+                model = model != null ? model : "agnes-2.0-flash";
                 String timeoutStr = System.getenv("VISION_MODEL_" + i + "_TIMEOUT_SECONDS");
                 int timeout = timeoutStr != null ? Integer.parseInt(timeoutStr) : 60;
                 visionModels.add(new VisionModelConfig("vision-model-" + i, apiKey, apiUrl, model, timeout));
