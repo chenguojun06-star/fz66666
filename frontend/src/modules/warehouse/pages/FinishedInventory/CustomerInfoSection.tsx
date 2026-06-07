@@ -1,5 +1,7 @@
 import React from 'react';
 import { Card, Col, Input, Row, Space, Typography } from 'antd';
+import CustomerSelect from '@/components/common/CustomerSelect';
+import type { Customer } from '@/services/crm/customerApi';
 
 interface CustomerInfoSectionProps {
   customerName: string;
@@ -20,6 +22,18 @@ const CustomerInfoSection: React.FC<CustomerInfoSectionProps> = ({
   onShippingAddressChange,
   variant,
 }) => {
+
+  const handleCustomerSelect = (_value: string, option?: { customerId: string; customer: Customer }) => {
+    if (option?.customer) {
+      const c = option.customer;
+      onCustomerNameChange(c.companyName || '');
+      if (c.contactPhone) onCustomerPhoneChange(c.contactPhone);
+      if (c.address) onShippingAddressChange(c.address);
+    } else {
+      onCustomerNameChange(_value);
+    }
+  };
+
   if (variant === 'inline') {
     return (
       <div style={{ background: '#f8f9fa', borderRadius: 8, padding: '12px 16px', marginBottom: 12 }}>
@@ -27,12 +41,11 @@ const CustomerInfoSection: React.FC<CustomerInfoSectionProps> = ({
         <Space wrap style={{ width: '100%' }}>
           <span>
             <span style={{ color: '#ff4d4f' }}>*</span> 客户名称：
-            <Input
+            <CustomerSelect
               value={customerName}
-              onChange={e => onCustomerNameChange(e.target.value)}
-              placeholder="必填：输入客户/公司名称"
-              style={{ width: 180 }}
-              status={customerName.trim() ? undefined : 'warning'}
+              onChange={handleCustomerSelect}
+              placeholder="搜索或输入客户名称"
+              style={{ width: 220 }}
             />
           </span>
           <span>
@@ -66,18 +79,16 @@ const CustomerInfoSection: React.FC<CustomerInfoSectionProps> = ({
       <Row gutter={12}>
         <Col span={8}>
           <div style={{ fontSize: 14, color: '#888', marginBottom: 4 }}><span style={{ color: '#ff4d4f' }}>*</span> 客户名称</div>
-          <Input
-           
-            placeholder="必填：输入客户/公司名称"
+          <CustomerSelect
             value={customerName}
-            onChange={(e) => onCustomerNameChange(e.target.value)}
+            onChange={handleCustomerSelect}
+            placeholder="搜索或输入客户名称"
             status={customerName.trim() ? undefined : 'warning'}
           />
         </Col>
         <Col span={8}>
           <div style={{ fontSize: 14, color: '#888', marginBottom: 4 }}>联系电话</div>
           <Input
-           
             placeholder="输入联系电话"
             value={customerPhone}
             onChange={(e) => onCustomerPhoneChange(e.target.value)}
@@ -86,7 +97,6 @@ const CustomerInfoSection: React.FC<CustomerInfoSectionProps> = ({
         <Col span={8}>
           <div style={{ fontSize: 14, color: '#888', marginBottom: 4 }}>收货地址</div>
           <Input
-           
             placeholder="输入收货地址"
             value={shippingAddress}
             onChange={(e) => onShippingAddressChange(e.target.value)}

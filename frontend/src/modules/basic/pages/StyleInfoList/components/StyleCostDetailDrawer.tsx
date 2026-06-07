@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Drawer, Table, Card, Divider, Typography, Button, Spin, DatePicker } from 'antd';
 import { DollarOutlined, ClockCircleOutlined, DownloadOutlined } from '@ant-design/icons';
 import type { Dayjs } from 'dayjs';
@@ -44,6 +44,8 @@ const StyleCostDetailDrawer: React.FC<StyleCostDetailDrawerProps> = ({
   onDateRangeChange,
 }) => {
   const styleDetails = stats?.styleCostDetails || [];
+
+  const [costPagination, setCostPagination] = useState({ current: 1, pageSize: 10 });
 
   const formatDuration = (seconds: number | undefined): string => {
     if (!seconds || seconds <= 0) return '-';
@@ -309,7 +311,13 @@ const StyleCostDetailDrawer: React.FC<StyleCostDetailDrawerProps> = ({
         columns={columns}
         rowKey={(record) => record.styleId || record.styleNo || Math.random().toString()}
         size="middle"
-        pagination={styleDetails.length > 10 ? { pageSize: 10, showSizeChanger: true } : false}
+        pagination={styleDetails.length > 10 ? {
+          current: costPagination.current,
+          pageSize: costPagination.pageSize,
+          showSizeChanger: true,
+          pageSizeOptions: ['10', '20', '50', '100'],
+          onChange: (page, pageSize) => setCostPagination({ current: page, pageSize }),
+        } : false}
         scroll={{ x: 800 }}
         locale={{ emptyText: '暂无成本明细数据' }}
       />

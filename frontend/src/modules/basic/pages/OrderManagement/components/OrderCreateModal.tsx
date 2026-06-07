@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
-import { Button, Col, Collapse, Form, FormInstance, Input, Row, Select, Space, Tag, Tooltip } from 'antd';
+import { Button, Col, Collapse, Drawer, Form, FormInstance, Input, Row, Select, Space, Tag, Tooltip } from 'antd';
 import dayjs from 'dayjs';
 import { UnifiedDatePicker } from '@/components/common/UnifiedDatePicker';
-import ResizableModal from '@/components/common/ResizableModal';
 import CustomerSelect from '@/components/common/CustomerSelect';
 import { StyleInfo } from '@/types/style';
 import OrderFactorySelector from './OrderFactorySelector';
@@ -75,14 +74,19 @@ const OrderCreateModal: React.FC<Props> = (p) => {
   const [advancedOpen, setAdvancedOpen] = useState(false);
 
   return (
-    <ResizableModal
+    <Drawer
       open={visible}
       title={selectedStyle ? `下单(${selectedStyle.styleNo})` : '下单'}
-      onCancel={onClose}
-      footer={null}
+      onClose={onClose}
       width={isMobile ? '96vw' : '85vw'}
-      initialHeight={typeof window !== 'undefined' ? Math.round(window.innerHeight * 0.85) : 800}
-      minWidth={isMobile ? 320 : 760}
+      placement="right"
+      styles={{ body: { padding: '16px 24px', display: 'flex', flexDirection: 'column', overflow: 'auto' } }}
+      footer={
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+          <Button onClick={onClose} disabled={submitLoading}>关闭</Button>
+          <Button type="primary" onClick={onSubmit} loading={submitLoading} disabled={!!createdOrder}>下单</Button>
+        </div>
+      }
     >
       <Form form={form} layout="vertical" style={{ minWidth: 0, width: '100%' }}>
         <div
@@ -290,12 +294,8 @@ const OrderCreateModal: React.FC<Props> = (p) => {
           </div>
         </div>
 
-        <div className="modal-sticky-footer">
-          <Button onClick={onClose} disabled={submitLoading}>关闭</Button>
-          <Button type="primary" onClick={onSubmit} loading={submitLoading} disabled={!!createdOrder}>下单</Button>
-        </div>
       </Form>
-    </ResizableModal>
+    </Drawer>
   );
 };
 

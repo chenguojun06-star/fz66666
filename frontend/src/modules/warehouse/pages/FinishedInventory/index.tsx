@@ -36,7 +36,7 @@ const _FinishedInventory: React.FC = () => {
   const totalAvailableQty = dataSource.reduce((sum, item) => sum + (item.availableQty || 0), 0);
   const totalDefectQty = dataSource.reduce((sum, item) => sum + (item.defectQty || 0), 0);
   const skuTotalOutbound = skuDetails.reduce((sum, item) => sum + (item.outboundQty || 0), 0);
-  const skuTotalAmount = skuDetails.reduce((sum, item) => sum + (item.outboundQty || 0) * (item.costPrice || 0), 0);
+  const skuTotalAmount = skuDetails.reduce((sum, item) => sum + (item.outboundQty || 0) * (item.salesPrice || 0), 0);
   const inboundTotalQty = inboundHistory.reduce((sum, item) => sum + (item.quantity || 0), 0);
 
   return (

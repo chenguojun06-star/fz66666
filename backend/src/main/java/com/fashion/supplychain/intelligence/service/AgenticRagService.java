@@ -8,6 +8,7 @@ import com.fashion.supplychain.intelligence.service.QdrantService.ScoredPoint;
 import com.fashion.supplychain.service.RedisService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import java.nio.charset.StandardCharsets;
@@ -32,6 +33,7 @@ import java.util.stream.Collectors;
  * <p>设计原则：薄服务层，策略外置，不依赖LLM做分类决策。
  */
 @Service
+@Lazy
 @Slf4j
 public class AgenticRagService {
 
@@ -118,7 +120,6 @@ public class AgenticRagService {
             // 供应商术语
             Map.entry("布行", "布料供应商 布行"),
             Map.entry("染厂", "染色工厂 印染厂"),
-            Map.entry("裁床", "裁剪工厂 裁床"),
             Map.entry("加工厂", "服装加工厂 外协工厂"),
             Map.entry("合作商", "合作伙伴 供应商"),
             

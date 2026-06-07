@@ -191,7 +191,7 @@ fashion:
 
 app:
   auth:
-    jwt-secret: ${APP_AUTH_JWT_SECRET:}
+    jwt-secret: ${APP_AUTH_JWT_SECRET:ThisIsA_LocalJwtSecret_OnlyForDev_0123456789}
     jwt-ttl-hours: ${APP_AUTH_JWT_TTL_HOURS:4}
     refresh-token-ttl-hours: ${APP_AUTH_REFRESH_TOKEN_TTL_HOURS:72}
     header-auth-enabled: ${APP_AUTH_HEADER_AUTH_ENABLED:false}

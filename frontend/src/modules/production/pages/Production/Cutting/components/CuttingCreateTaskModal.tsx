@@ -1,7 +1,6 @@
 import React, { useMemo, useState, useRef, useCallback } from 'react';
-import { AutoComplete, Button, Card, Dropdown, Input, InputNumber, Select, Segmented, Space, Tag, Tooltip } from 'antd';
+import { AutoComplete, Button, Card, Drawer, Dropdown, Input, InputNumber, Select, Segmented, Space, Tag, Tooltip } from 'antd';
 import { PlusOutlined, DeleteOutlined, DownOutlined, QuestionCircleOutlined, ImportOutlined } from '@ant-design/icons';
-import ResizableModal from '@/components/common/ResizableModal';
 import ImageUploadBox from '@/components/common/ImageUploadBox';
 import { UnifiedDatePicker, dayjs } from '@/components/common/UnifiedDatePicker';
 import DictAutoComplete from '@/components/common/DictAutoComplete';
@@ -131,16 +130,19 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
   };
 
   return (
-    <ResizableModal
+    <Drawer
       open={createTask.createTaskOpen}
       title="无资料下单"
       width="85vw"
-      initialHeight={Math.round(window.innerHeight * 0.82)}
-      centered
-      onCancel={() => createTask.setCreateTaskOpen(false)}
-      okText="创建"
-      confirmLoading={createTask.createTaskSubmitting}
-      onOk={createTask.handleSubmitCreateTask}
+      placement="right"
+      styles={{ body: { padding: '16px 24px', display: 'flex', flexDirection: 'column', overflow: 'auto' } }}
+      onClose={() => createTask.setCreateTaskOpen(false)}
+      footer={
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+          <Button onClick={() => createTask.setCreateTaskOpen(false)}>关闭</Button>
+          <Button type="primary" onClick={createTask.handleSubmitCreateTask} loading={createTask.createTaskSubmitting}>创建</Button>
+        </div>
+      }
     >
       <Card style={{ marginBottom: 12 }}>
         <Space wrap>
@@ -616,7 +618,7 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
           工序单价直接影响工资结算，请根据实际工价填写。
         </div>
       </Card>
-    </ResizableModal>
+    </Drawer>
   );
 };
 
