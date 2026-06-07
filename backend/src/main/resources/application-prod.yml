@@ -31,7 +31,7 @@ spring:
   # 项目迁移文件使用时间戳格式 (V202608051300)，必须显式配置。
   # 写在这里而不是 flyway.conf，确保云端打包时一定被读取。
   flyway:
-    sql-migration-version-format: yyyyMMddHHmm
+    sql-migration-version-format: TIMESTAMP
 
   # Redis 生产配置（可选，不可用时降级为单机模式）
   data:
