@@ -1,4 +1,4 @@
-import React, { useEffect, useState, Suspense, lazy } from 'react';
+import React, { useEffect, useState, Suspense, lazy, useRef } from 'react';
 import { Card, Row, Col, Statistic, Spin, DatePicker, Typography, App } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
 import {
@@ -22,6 +22,7 @@ interface AgingBucket {
 
 const PaymentDashboard: React.FC = () => {
   const { message } = App.useApp();
+  const mountedRef = useRef(true);
   const [range, setRange] = useState<[Dayjs, Dayjs]>([
     dayjs().subtract(30, 'day'),
     dayjs(),
@@ -29,6 +30,11 @@ const PaymentDashboard: React.FC = () => {
   const [stats, setStats] = useState<Record<string, any> | null>(null);
   const [agingData, setAgingData] = useState<AgingBucket[]>([]);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
 
   const fetchDashboard = async (dates: [Dayjs, Dayjs] | null) => {
     const r = dates || range;
@@ -42,16 +48,18 @@ const PaymentDashboard: React.FC = () => {
           params: { type: 'PAYABLE' },
         }),
       ]);
+      if (!mountedRef.current) return;
       const statsData = (statsRes as any)?.data?.data ?? (statsRes as any)?.data ?? {};
       setStats(statsData);
       const agingResult = (agingRes as any)?.data?.data ?? (agingRes as any)?.data ?? {};
       setAgingData(agingResult.buckets ?? []);
     } catch {
+      if (!mountedRef.current) return;
       setStats({});
       setAgingData([]);
       message.warning('付款仪表板数据加载失败');
     } finally {
-      setLoading(false);
+      if (mountedRef.current) setLoading(false);
     }
   };
 

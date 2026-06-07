@@ -1,0 +1,43 @@
+id: "visual-inspection"
+name: "视觉识别"
+description: "基于图片进行款式识别、色差检测、疵点检测和款式搜索，辅助验布和品质判定"
+domain: "intelligence"
+triggers:
+  - "看图"
+  - "识别"
+  - "色差"
+  - "疵点"
+  - "款式图"
+  - "验布"
+  - "视觉检测"
+  - "图片分析"
+toolNames:
+  - "VisionStyleIdentifyTool"
+  - "VisionColorCheckTool"
+  - "VisionDefectDetectTool"
+  - "VisionStyleSearchTool"
+promptInjection: |
+  视觉识别五步法：
+  1. 图片预处理：确认用户上传的图片格式和清晰度，提示补充信息（如预期款式/颜色/面料类型）
+  2. 用VisionStyleIdentifyTool进行款式识别：识别服装品类、领型、袖型、工艺特征
+  3. 用VisionColorCheckTool进行色差检测：对比标准色卡/参考图，计算色差值(ΔE)
+  4. 用VisionDefectDetectTool进行疵点检测：扫描面料/成衣表面缺陷（断经/跳纱/污渍/色斑/褶皱）
+  5. 综合报告：汇总识别结果 + 色差评级 + 疵点清单 + 处置建议
+
+  色差评级标准（CIE ΔE）：
+  - ΔE < 1.0 → 🟢 不可察觉，合格
+  - ΔE 1.0-2.0 → 🟡 轻微差异，可接受
+  - ΔE 2.0-3.5 → 🟠 明显差异，需确认
+  - ΔE > 3.5 → 🔴 严重色差，不合格
+
+  疵点严重度分级：
+  - 轻微：不影响外观和使用，可降级处理
+  - 中等：影响外观但不影响功能，需返修或降价
+  - 严重：影响功能或安全，需报废或重做
+
+  款式搜索：当用户需要找相似款式时，用VisionStyleSearchTool在款式库中搜索相似款，
+  返回款号+图片+相似度评分
+
+  回答格式：款式识别结果 + 色差检测报告 + 疵点清单（含位置和严重度）+ 处置建议
+priority: 5
+version: "1.0"

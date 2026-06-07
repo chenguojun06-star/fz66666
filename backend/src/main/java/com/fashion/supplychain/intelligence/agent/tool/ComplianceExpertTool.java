@@ -20,6 +20,15 @@ import java.util.Map;
 @Slf4j
 @Component
 @AgentToolDef(name = "tool_compliance_expert", description = "合规专家工具", domain = ToolDomain.PRODUCTION, timeoutMs = 15000)
+@McpToolAnnotation(
+        name = "tool_compliance_expert",
+        description = "合规专家工具",
+        domain = ToolDomain.PRODUCTION,
+        readOnly = true,
+        timeoutSeconds = 15,
+        requiresConfirmation = false,
+        tags = {"合规", "质检合规", "次品统计", "质量合规", "合规检查"}
+)
 public class ComplianceExpertTool extends AbstractAgentTool {
 
     @Autowired

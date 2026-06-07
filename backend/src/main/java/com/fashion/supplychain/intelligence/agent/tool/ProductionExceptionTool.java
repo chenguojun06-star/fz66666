@@ -17,6 +17,15 @@ import java.util.stream.Collectors;
 @Slf4j
 @Component
 @AgentToolDef(name = "tool_production_exception", description = "生产异常上报与分析", domain = ToolDomain.PRODUCTION, timeoutMs = 15000, readOnly = false)
+@McpToolAnnotation(
+        name = "tool_production_exception",
+        description = "生产异常上报与分析",
+        domain = ToolDomain.PRODUCTION,
+        readOnly = false,
+        timeoutSeconds = 15,
+        requiresConfirmation = true,
+        tags = {"生产异常", "异常上报", "异常统计", "异常趋势", "质量异常", "延期风险"}
+)
 public class ProductionExceptionTool extends AbstractAgentTool {
 
     @Autowired private ExceptionReportOrchestrator exceptionReportOrchestrator;

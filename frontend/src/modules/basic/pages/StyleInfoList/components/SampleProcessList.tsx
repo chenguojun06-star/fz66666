@@ -435,7 +435,7 @@ export default function SampleProcessList({
       render: (_: any, record: SubProcessRow) => {
         if (record.status === 'completed') return <Tag color="success" style={{ fontSize: 11 }}>已完成</Tag>;
         if (record.status === 'in_progress') return <Tag color="processing" style={{ fontSize: 11 }}>{record.percent}%</Tag>;
-        return <Tag color="default" style={{ fontSize: 11 }}>待启动</Tag>;
+        return <Tag color="default" style={{ fontSize: 11 }}>待领取</Tag>;
       },
     },
     {

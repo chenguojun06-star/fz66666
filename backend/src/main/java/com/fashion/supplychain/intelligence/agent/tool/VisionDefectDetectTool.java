@@ -22,6 +22,15 @@ import java.util.Map;
         timeoutMs = 30000,
         readOnly = true
 )
+@McpToolAnnotation(
+        name = "tool_vision_defect_detect",
+        description = "服装缺陷检测：分析服装/布料/成品图片，检测破洞、污渍、色差、线头、跳针等质量缺陷",
+        domain = ToolDomain.STYLE,
+        readOnly = true,
+        timeoutSeconds = 30,
+        requiresConfirmation = false,
+        tags = {"缺陷检测", "质量检测", "破洞", "污渍", "线头", "跳针", "瑕疵检测"}
+)
 public class VisionDefectDetectTool extends AbstractAgentTool {
 
     @Autowired

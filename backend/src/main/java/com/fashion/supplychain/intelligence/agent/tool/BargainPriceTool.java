@@ -16,6 +16,15 @@ import java.util.Map;
 @Slf4j
 @Component
 @AgentToolDef(name = "bargain_price_tool", description = "查询订单/款式/工序的还价记录和最新还价单价", domain = ToolDomain.FINANCE)
+@McpToolAnnotation(
+        name = "bargain_price_tool",
+        description = "查询订单/款式/工序的还价记录和最新还价单价",
+        domain = ToolDomain.FINANCE,
+        readOnly = true,
+        timeoutSeconds = 30,
+        requiresConfirmation = false,
+        tags = {"还价", "议价", "砍价", "价格协商", "谈判单价", "财务查询"}
+)
 public class BargainPriceTool extends AbstractAgentTool {
 
     @Autowired

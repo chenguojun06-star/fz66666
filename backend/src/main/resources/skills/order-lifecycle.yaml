@@ -1,0 +1,40 @@
+id: "order-lifecycle"
+name: "订单全生命周期"
+description: "跟踪订单从创建到交付的全流程状态，预测交期，识别瓶颈工序，给出排产调整建议"
+domain: "production"
+triggers:
+  - "订单"
+  - "进度"
+  - "状态"
+  - "跟踪"
+  - "排产"
+  - "交期"
+  - "订单状态"
+  - "订单跟踪"
+toolNames:
+  - "ProductionProgressTool"
+  - "AvgCompletionTimeTool"
+  - "ProductionExceptionTool"
+promptInjection: |
+  订单全生命周期五步法：
+  1. 用ProductionProgressTool查订单概览（当前工序、完成比例、在产/待产/已完成数量）
+  2. 进度追踪：按工序逐项列出状态（未开始/进行中/已完成），标注当前卡点
+  3. 用AvgCompletionTimeTool查同类订单/工序的历史平均耗时，推算剩余天数
+  4. 用ProductionExceptionTool查该订单关联的异常记录（缺料/返工/设备故障）
+  5. 综合给出行动建议：是否需要加急、换线、外发、调整排产
+
+  订单状态定义：
+  - 🆕 待排产：已下单但未开始生产
+  - 🔧 生产中：至少一道工序已开始
+  - ⏸️ 暂停：因异常暂停（缺料/等待确认）
+  - ✅ 已完成：所有工序完成且已入库
+  - 📦 已发货：已出库交付
+
+  瓶颈识别规则：
+  - 单工序耗时 > 历史均值 2倍 → 瓶颈工序
+  - 连续3天无进度更新 → 可能停滞
+  - 返工率 > 15% 的工序 → 质量瓶颈
+
+  回答格式：订单状态卡 + 工序进度甘特图（文字版）+ 交期预测 + 异常清单 + 行动建议
+priority: 9
+version: "1.0"

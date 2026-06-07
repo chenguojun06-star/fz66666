@@ -153,7 +153,11 @@ const intelligence = {
     return ok('/api/intelligence/forecast', 'POST', payload || {});
   },
   getLivePulse() {
-    return ok('/api/intelligence/live-pulse', 'POST', {});
+    return ok('/api/intelligence/live-pulse', 'POST', {}).catch(function(e) {
+      console.warn('[intelligence] live-pulse 接口异常:', e.message || e);
+      // 返回空数据而不是抛出错误，避免影响页面加载
+      return { data: null, error: true };
+    });
   },
   getHealthIndex() {
     return ok('/api/intelligence/health-index', 'POST', {});

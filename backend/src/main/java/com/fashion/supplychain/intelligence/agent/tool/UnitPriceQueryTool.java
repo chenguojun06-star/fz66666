@@ -18,6 +18,15 @@ import java.util.stream.Collectors;
 @Slf4j
 @Component
 @AgentToolDef(name = "tool_unit_price_query", description = "开发单价查询工具", domain = ToolDomain.FINANCE, timeoutMs = 15000)
+@McpToolAnnotation(
+        name = "tool_unit_price_query",
+        description = "开发单价查询工具",
+        domain = ToolDomain.FINANCE,
+        readOnly = true,
+        timeoutSeconds = 15,
+        requiresConfirmation = false,
+        tags = {"单价查询", "加工单价", "报价单价", "工厂对比", "历史单价", "财务查询"}
+)
 public class UnitPriceQueryTool extends AbstractAgentTool {
 
     @Autowired

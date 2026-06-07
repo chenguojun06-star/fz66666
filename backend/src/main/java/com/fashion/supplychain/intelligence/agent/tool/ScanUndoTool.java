@@ -17,6 +17,15 @@ import java.util.*;
 @Slf4j
 @Component
 @AgentToolDef(name = "tool_scan_undo", description = "撤回扫码记录", domain = ToolDomain.PRODUCTION, timeoutMs = 15000, readOnly = false)
+@McpToolAnnotation(
+        name = "tool_scan_undo",
+        description = "撤回扫码记录",
+        domain = ToolDomain.PRODUCTION,
+        readOnly = false,
+        timeoutSeconds = 15,
+        requiresConfirmation = true,
+        tags = {"扫码撤回", "撤销", "撤回记录", "生产撤回", "扫码操作"}
+)
 public class ScanUndoTool extends AbstractAgentTool {
 
     @Autowired private ScanRecordOrchestrator scanRecordOrchestrator;

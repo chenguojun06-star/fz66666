@@ -224,6 +224,15 @@
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3l7 4v13H5V7l7-4z'/%3E%3Cpath d='M12 12l7 4M12 12L5 16M12 12v9'/%3E%3C/svg%3E");
 }
 
+.icon-menu-garment {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 2l10 3v17H6V2z'/%3E%3Cpath d='M6 5h10'/%3E%3Cpath d='M8 8h6'/%3E%3Cpath d='M10 11h4'/%3E%3C/svg%3E");
+}
+.icon-menu-cart {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='9' cy='21' r='1'/%3E%3Ccircle cx='20' cy='21' r='1'/%3E%3Cpath d='M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6'/%3E%3C/svg%3E");
+}
+.icon-menu-warehouse {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 3l9-3 9 3v18H3V3z'/%3E%3Cpath d='M3 8h18'/%3E%3Cpath d='M7 12h10M7 16h10'/%3E%3C/svg%3E");
+}
 .icon-menu-sample {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 5l4-2 4 2 2 4-3 2v8a1 1 0 0 1-1 1H10a1 1 0 0 1-1-1v-8L6 9l2-4z'/%3E%3Cpath d='M9 11h6'/%3E%3C/svg%3E");
 }

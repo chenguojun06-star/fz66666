@@ -130,7 +130,7 @@ function normalizeManualType(manualScanType) {
   return typeMap[manualScanType] || String(manualScanType || '').toUpperCase();
 }
 
-function buildPatternOperationOptions({ patternDetail, processConfig: _processConfig, scanRecords, manualScanType }) {
+function buildPatternOperationOptions({ patternDetail, processConfig, scanRecords, manualScanType }) {
   const status = String(patternDetail?.status || '').toUpperCase();
   const reviewStatus = String(patternDetail?.reviewStatus || '').toUpperCase();
   const reviewResult = String(patternDetail?.reviewResult || '').toUpperCase();
@@ -147,12 +147,12 @@ function buildPatternOperationOptions({ patternDetail, processConfig: _processCo
   // 已入库 → 只能出库
   if (scannedSet.has('WAREHOUSE_IN') && !scannedSet.has('WAREHOUSE_OUT')) {
     options.push({ value: 'WAREHOUSE_OUT', label: '样衣出库', icon: '' });
-    return options; // 已入库阶段只展示出库
+    return options;
   }
   // 已出库 → 只能归还
   if (scannedSet.has('WAREHOUSE_OUT') && !scannedSet.has('WAREHOUSE_RETURN')) {
     options.push({ value: 'WAREHOUSE_RETURN', label: '样衣归还', icon: '' });
-    return options; // 已出库阶段只展示归还
+    return options;
   }
   // 已归还 → 可再次出库（循环借还）
   if (scannedSet.has('WAREHOUSE_RETURN')) {
@@ -189,15 +189,49 @@ function buildPatternOperationOptions({ patternDetail, processConfig: _processCo
     return options;
   }
 
-  // ── 阶段四：已领取/生产中，等待完成确认 ──────────────────────────
-  // 样板生产走 4 步流程：领取 → 完成确认 → 样衣审核 → 样衣入库
-  // 不需要展示采购/裁剪/车缝等生产中间工序（那是普通生产订单的流程）
+  // ── 阶段四：使用工序配置展示当前可执行工序 ─────────────────────────────────
+  if (processConfig && processConfig.length > 0) {
+    // 找出第一个未完成的工序，只显示它
+    let foundFirstPending = false;
+    for (let i = 0; i < processConfig.length; i++) {
+      const config = processConfig[i];
+      const processName = String(config.processName || config.operationType || '').trim();
+      const progressStage = String(config.progressStage || processName).trim();
+      const scanType = String(config.scanType || 'production').trim();
+      const isCompleted = scannedSet.has(processName) || scannedSet.has(config.operationType);
+      
+      if (isCompleted) {
+        continue; // 跳过已完成的
+      }
+      
+      if (!foundFirstPending) {
+        options.push({
+          value: processName,
+          label: processName,
+          icon: '',
+          processName: processName,
+          progressStage: progressStage,
+          scanType: scanType,
+          sortOrder: config.sortOrder || i
+        });
+        foundFirstPending = true;
+      }
+    }
+    
+    // 如果所有工序都完成了，检查是否可以入库
+    if (!foundFirstPending && (status === 'COMPLETED' || status === 'PRODUCTION_COMPLETED') && reviewApproved && !scannedSet.has('WAREHOUSE_IN')) {
+      options.push({ value: 'WAREHOUSE_IN', label: '样衣入库', icon: '' });
+    }
+    
+    return options;
+  }
+
+  // ── 兜底：没有工序配置时使用传统流程 ─────────────────────────────────
   if (!scannedSet.has('COMPLETE')) {
     options.push({ value: 'COMPLETE', label: '完成确认', icon: '' });
     return options;
   }
 
-  // 兜底：COMPLETE 已扫但状态未更新前的临时保底
   const fallbackType = determinePatternOperation(patternDetail, manualScanType);
   options.push({
     value: fallbackType,

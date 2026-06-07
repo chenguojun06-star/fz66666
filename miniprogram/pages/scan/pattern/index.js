@@ -377,7 +377,7 @@ Page({
     wx.navigateBack();
   },
 
-  // ---- 提交逻辑（直接调用 API，不依赖 scanHandler） ----
+  // ---- 提交逻辑（样衣使用独立逻辑，不走菲号系统） ----
 
   async submitOp() {
     const d = this.data.detail;
@@ -396,10 +396,13 @@ Page({
       return;
     }
 
+    // 样衣有自己独立的父子关系逻辑，不走大货的菲号系统
+    // 优先使用工序系统（如果有），否则使用传统样衣流程
     if (d.hasProcessSystem) {
       return await this._submitProcessScan(d, operationType, qty, remark);
     }
 
+    // 传统样衣流程：领取 → 完成 → 审核 → 入库
     if (operationType !== 'REVIEW' && operationType !== 'COMPLETE' && qty <= 0) {
       toast.error('请输入正确数量');
       return;
@@ -443,20 +446,10 @@ Page({
         result = res ? { success: true, message: '制作完成' } : { success: false, message: '完成操作失败' };
 
       } else if (operationType === 'WAREHOUSE_IN') {
-        const latestDetail = await api.production.getPatternDetail(d.patternId);
-        const reviewApproved =
-          latestDetail?.reviewStatus === 'APPROVED' || latestDetail?.reviewResult === 'APPROVED';
-        if (!reviewApproved) {
-          const reviewRes = await api.production.reviewPattern(d.patternId, 'APPROVED', remark);
-          if (!reviewRes) {
-            result = { success: false, message: '入库前自动审核失败' };
-          }
-        }
-        if (!result) {
-          const wiRes = await api.production.warehouseIn(d.patternId, d.warehouseCode || '',
-            this.data.warehouseAreaId, this.data.warehouseLocationCode, remark);
-          result = wiRes ? { success: true, message: '样衣入库成功' } : { success: false, message: '入库失败' };
-        }
+        // 入库操作，不再自动审核
+        const wiRes = await api.production.warehouseIn(d.patternId, d.warehouseCode || '',
+          this.data.warehouseAreaId, this.data.warehouseLocationCode, remark);
+        result = wiRes ? { success: true, message: '样衣入库成功' } : { success: false, message: '入库失败' };
 
       } else if (operationType === 'RECEIVE') {
         const receiveExtra = {};

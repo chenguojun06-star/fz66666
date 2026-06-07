@@ -1,10 +1,12 @@
-# 项目核心铁律速查手册
-> 提取自 `.github/copilot-instructions.md`（3261行）— 2026-05-02
-> **⚡ 开发工作流**：详见 [agent-workflow.md](agent-workflow.md)（融合 DeerFlow/RooFlow/agency-agents/Ruflo/Hermes 五大方法论）
+# 项目铁律速查（唯一真相源）
+
+> 合并自 project_rules.md + 开发必读项.md + DATA_SAFETY_CHECKLIST.md
+> 最后更新：2026-06-08
+> **任何修改前必须对照此文件检查！**
 
 ---
 
-## 🔧 开发环境
+## 开发环境
 
 | 项目 | 值 |
 |------|-----|
@@ -13,277 +15,150 @@
 | Docker MySQL | 3308 |
 | 测试账号 | lilb / 123456（东方制衣厂） |
 
----
-
-## ⚡ 智能体驱动开发流程（每次必做）
-
-> 完整7步流程详见 [agent-workflow.md](agent-workflow.md)，以下是速查版：
-
-```
-[1] 读取 Memory Bank（memory-bank/）→ 不丢上下文
-[2] 选择角色（.github/agents/）→ 专业分工
-[3] 深度调研（DeerFlow法）→ 先调研再动手
-[4] 任务编排（Ruflo法）→ 拆解子任务
-[5] 逐层执行 → DB→后端→前端→小程序
-[6] 质量门控 → 每层完成即验证
-[7] 更新记忆（Hermes法）→ 记录学习点
-```
-
-| 任务类型 | 角色 | Agent文件 |
-|---------|------|----------|
-| 修bug | Bug调查员 | `bug-investigator.agent.md` |
-| 新功能 | 全栈功能编排师 | `fullstack-feature.agent.md` |
-| DB变更 | Flyway迁移助手 | `flyway-migration.agent.md` |
-| 前端页面 | 前端脚手架 | `new-feature-page.agent.md` |
-| AI系统 | AI智能体工程师 | `ai-agent-engineer.agent.md` |
-| 推送检查 | 质量守门员 | `quality-gatekeeper.agent.md` |
-
----
-
-## 🏗 技术栈
+## 技术栈
 
 | 层 | 技术 |
 |----|------|
 | 后端 | Spring Boot 3.4.5 + MyBatis-Plus + MySQL 8.0 |
 | 前端 | React 18 + TypeScript + Ant Design 5.22 |
 | 小程序 | 微信原生 + 共享 `miniprogram/shared/` 模块 |
-| 数据库 | Docker `fashion-mysql-simple:3308` |
 | 缓存 | Redis (Lettuce) |
-| 消息 | WebSocket + STOMP |
 | 部署 | 腾讯云 CloudBase + GitHub Actions CI/CD |
 
 ---
 
-## 🔴 P0 铁律
+## P0 铁律（违反必出事故）
 
 ### 1. 数据库变更必须 Flyway
-- ✅ 所有 ALTER TABLE / ADD COLUMN / CREATE TABLE 通过 `V{timestamp}__{desc}.sql`
+
+- ✅ 所有 ALTER/CREATE 通过 `V{timestamp}__{desc}.sql`
 - ❌ 禁止手动 `docker exec mysql -e "ALTER TABLE..."`
 - ❌ 禁止修改已执行的 V*.sql（checksum 校验失败 → 启动报错）
-- ⚠️ **Flyway SET @s 陷阱**：动态 SQL 内禁止 `COMMENT 'xxx'` / `DEFAULT 'PENDING'` 等字符串字面量 → Flyway 把 `''` 当边界截断 SQL，静默失败
-- ⚠️ **Flyway PREPARE + DEFAULT NULL 陷阱**：`PREPARE stmt FROM @s` 动态 SQL 中禁止写 `DEFAULT NULL`，MySQL 8.0 会报 `ERROR 1064 near 'NULL'` → 列实际未添加但 Flyway 可能记录成功 → 云端 500。正确做法：不写 DEFAULT（MySQL 默认即为 NULL），回填值用独立 UPDATE
-- ✅ **推送前必须通过 Flyway SQL 校验**：`python3 scripts/check-flyway-sql.py`（CI 自动执行，本地推送前也必须跑）
-- ✅ 校验覆盖10项：版本号重复 / 文件名格式 / 缺少分号 / 末尾逗号 / 括号不匹配 / 动态SQL字符串字面量 / DEFAULT NULL / 危险操作 / 修改已执行迁移 / INSERT无列列表
+- ❌ SET @s 动态 SQL 内禁止 `COMMENT ''xxx''` / `DEFAULT ''字符串''`（Flyway 静默失败）
+- ❌ PREPARE + DEFAULT NULL（MySQL 8.0 报 ERROR 1064）
+- ✅ 推送前必须跑 `python3 scripts/check-flyway-sql.py`
 
-### 2. 权限码必须真实存在
+### 2. 事务仅 Orchestrator 层
+
+- ✅ `@Transactional` 只在 Orchestrator
+- ❌ Service 禁止加 `@Transactional`（特例需注释原因）
+- ❌ Service 禁止互调，必须通过 Orchestrator
+- ❌ Controller 禁止调用多个 Service
+
+### 3. 权限码必须真实存在
+
 - ❌ 禁止使用 `t_permission` 表中不存在的权限码（导致全员 403）
-- 实际存在的：`MENU_*`（菜单）、`STYLE_CREATE/DELETE`、`PAYMENT_APPROVE`、`MATERIAL_RECON_CREATE`、`SHIPMENT_RECON_AUDIT`
 - ✅ class 级别设 `@PreAuthorize("isAuthenticated()")`，方法级别不重复
 
-### 3. 事务仅 Orchestrator 层
-- ✅ `@Transactional` 只在 Orchestrator
-- ❌ Service 不加事务注解
+### 4. 多租户数据隔离
 
-### 4. 业务链路必须全链路校验
+- ✅ 任何查询必须有 `tenant_id` 条件
+- ✅ 任何新增必须有 `tenant_id` 赋值
+- ✅ 使用 `TenantAssert.requireTenantId()`
+- ❌ 绝对禁止任何不带 `tenant_id` 的全表查询
+- ❌ 绝对禁止跨租户数据访问
+
+### 5. 业务链路必须全链路校验
+
 - 扫码/工序/质检/入库/PC端/小程序端，禁止只改一端
-- 必须校验上下游数据一致性与工序依赖
+- 子工序→父节点映射优先级：模板 `progressStage` > `t_process_parent_mapping` > 兜底
+- 工序节点名禁止硬编码，必须通过 `ProductionScanStageSupport` 集中校验
 
-### 5. 子工序→父节点映射优先级
-- 模板 `progressStage` > `t_process_parent_mapping` DB 动态表 > 硬编码兜底
-- 6 大固定父进度：采购→裁剪→二次工艺→车缝→尾部→入库
+### 6. 扫码核心链路禁止随意改动
 
-### 6. 多租户/多工厂数据隔离
-- 所有查询必须加 tenantId + factoryId 条件
-- 工厂工人只能看自己工厂的数据
+- ❌ 禁止修改防重复扫码算法（minInterval）
+- ❌ 禁止修改二维码解析逻辑
+- ❌ 禁止修改3大Executor核心逻辑
+- ✅ 入库扫码强制选仓库
 
-### 7. 上下文必须维护（AI/代理强制）
-- ✅ 每次对话开始前，必须更新「当前进度快照」（最近在做、本次目标、待办清单、已知坑、上次关键决策、分支状态、环境状态）
-- ✅ 对话结束时，必须更新进度快照：已完成项、未完成项、新发现的问题、下次继续的入口
-- ✅ AI/代理必须主动执行编译、schema 核对、git 检查等前置动作，不能甩给用户手工兜底
-- ✅ 代码修改前必须检查：是否有同步修改的旧逻辑、注释代码、兼容逻辑需要删除
-- ❌ 禁止不更新进度快照就结束对话 → 下次对话丢失上下文，重复踩坑
+### 7. 工资结算核心规则
+
+- ✅ `operator_id` 决定工资归属
+- ✅ 外发任务 `operator_id` 为 null，不计入内部工资
+- ❌ 工资已结算禁止扫码撤回（`payrollSettled=true` 时拒绝）
+
+### 8. 部署白屏防护
+
+- ✅ 错误恢复代码必须内联在 index.html `<head>` 中
+- ✅ nginx @spa_fallback 对 JS/CSS 返回 404，不返回 index.html
+- ✅ try_files 去掉 `$uri/`，确保根路径走 no-cache 头
+
+### 9. 自定义Hook返回值必须稳定
+
+- ✅ Hook返回对象必须用 `useMemo` 包裹
+- ✅ Hook返回函数必须用 `useCallback` 包裹
+- ✅ mount-only useEffect 必须加 ref 守卫
+- ❌ 禁止 useEffect 依赖裸函数/裸对象
+
+### 10. 上下文必须维护
+
+- ✅ 每次对话开始前，必须读取 `memory-bank/`
+- ✅ 对话结束时，必须更新 activeContext.md + progress.md
 - ❌ 禁止推送含 TODO/FIXME 标记或未处理兼容代码的变更
-
-### 8. 代码薄原则（Code Thinness）— P0 强制
-
-> **核心思想：代码越薄，系统越稳。多租户生产环境不允许大文件、大方法。**
-
-#### 硬性上限（任何新代码不得超过）
-
-| 类型 | 上限 | 说明 |
-|------|------|------|
-| React 页面 index.tsx | **≤300行** | 只做路由入口+数据组装，逻辑下放 Hook |
-| React 组件 | **≤150行** | 一个组件只做一件事 |
-| 自定义 Hook | **≤60行** | 数据+副作用+回调，纯逻辑 |
-| Java Orchestrator | **≤120行** | 事务边界+Service编排，无业务细节 |
-| Java Service | **≤150行** | 纯计算/转换逻辑 |
-| Java Controller | **≤80行** | 参数校验+调用Orchestrator+返回 |
-| 单方法/函数体 | **≤25行** | 能一眼看完 |
-
-#### 薄代码模式（必用）
-
-| 场景 | ❌ 胖做法 | ✅ 薄做法 |
-|------|----------|----------|
-| 页面很多状态 | 全写 index.tsx | 抽 `useXxxState.ts` Hook |
-| 组件内条件分支多 | if/else 堆叠 | 拆子组件，父组件只做路由 |
-| Service 逻辑长 | 一个方法写到底 | 拆 private 小方法，每个≤25行 |
-| API 调用+缓存 | 写在组件里 | 抽 `useXxxData.ts` Hook |
-| 表单校验逻辑 | 写在页面里 | 抽 `validationRules.ts` 独立文件 |
-| 重复 JSX 片段 | 到处复制 | 抽 `<XxxCard />` 或 `<XxxRow />` |
-
-#### 新代码审查门禁
-
-- 任何新增文件超过上限 → **拒绝合入**
-- 修改已有文件新增代码后总行数超过上限 → 必须先拆分再合入
-- 单方法超过 25 行 → 必须解释为什么不拆分
-
-### 9. 全局表格样式严禁擅自修改 — P0 强制
-
-> **核心思想：表格字体、行高、padding 属于全局视觉规范，一人改全站变。未经明确要求不得动。**
-
-- ❌ **禁止**未经用户明确要求修改 `global.css` / `design-system.css` 中的表格 CSS 变量：
-  `--table-cell-padding-y`、`--table-cell-padding-x`、`--table-header-padding-y`、
-  `--table-header-font-size`、`--table-cell-font-size`、`--table-header-height`、
-  `--table-row-height`、`--table-condensed-row-height` 等
-- ❌ **禁止**基于审美主观判断擅自调整全站表格排版
-- ✅ 仅在用户明确说"表格行高太高/太低/字体太大/太小"等指令时才可修改
-- ⚠️ 表格样式问题 → 先确认是哪个页面/组件 → 只改该页面/组件的局部样式，不碰全局变量
 
 ---
 
-## ✅ 强制规范
+## 代码薄原则（强制上限）
 
-### 代码质量
-
-| 类型 | 绿色目标 | 红色禁止 |
-|------|---------|---------|
+| 类型 | 上限 | 红线 |
+|------|------|------|
+| React 页面 index.tsx | ≤300行 | >400行 |
 | React 组件 | ≤150行 | >200行 |
-| React 页面 index | ≤300行 | >400行 |
 | 自定义 Hook | ≤60行 | >80行 |
 | Java Orchestrator | ≤120行 | >150行 |
 | Java Service | ≤150行 | >200行 |
 | Java Controller | ≤80行 | >100行 |
 | 单方法/函数体 | ≤25行 | >40行 |
 
-### 前端组件（强制使用）
+---
+
+## 前端强制规范
+
+### 组件（必须用 / 禁止用）
 
 | 必须用 | 禁止用 |
 |--------|--------|
-| `ResizableTable` | antd `Table`（缺少列宽拖拽） |
+| `ResizableTable` | antd `Table` |
 | `RowActions`（最多1主按钮） | 自定义操作列 |
 | `ResizableModal`（60/40/30vw） | 自定义弹窗尺寸 |
 | `ModalContentLayout` + `ModalFieldRow` | 自定义表单布局 |
-| `ModalHeaderCard`（#f8f9fa） | 自定义头部样式 |
+| `ModalHeaderCard` | 自定义头部样式 |
 | CSS 变量颜色 | 硬编码颜色（业务风险色除外） |
-| 小程序 `styles/.wxss` | 页面内重复定义同名类 |
 
-### 弹窗三级尺寸
+### 弹窗尺寸
 
-| 尺寸 | 场景 | 规则 |
-|------|------|------|
-| 60vw | 复杂表单/多Tab/表格 | **必须传 `initialHeight={Math.round(window.innerHeight * 0.82)}`** |
-| 40vw | 普通表单 | 默认高度即可 |
-| 30vw | 确认对话框 | 默认高度即可 |
+| 尺寸 | 宽度 | 场景 | 高度规则 |
+|------|------|------|---------|
+| sm | 30vw | 确认对话框 | 默认 |
+| md | 40vw | 普通表单 | 默认 |
+| lg | 60vw | 复杂表单/多Tab | **必须传 `initialHeight={Math.round(window.innerHeight * 0.82)}`** |
 
-### API 规范
-- ❌ 旧 GET 查询：`GET /by-xxx/{id}` → ✅ `POST /list` + 过滤参数
-- ❌ 旧状态流转：`POST /{id}/submit` → ✅ `POST /{id}/stage-action?action=xxx`
-- ❌ 旧 CRUD：`POST /save` → ✅ RESTful（`POST /`、`DELETE /{id}`）
+### 全局表格样式禁止擅自修改
 
-### 小程序共享样式
-- `app.wxss`：全局样式（空状态、筛选区、搜索行）自动生效
-- `styles/design-tokens.wxss`：CSS 变量
-- `styles/modal-form.wxss`：弹窗表单
-- `styles/page-utils.wxss`：加载更多、Tag 标签
-- ❌ 禁止页面内重复定义同名 .wxss 类
-
-### 测试要求
-- Orchestrator：**100% 覆盖率**（强制）
-- Service：70%+（推荐）
-- Entity：不要求
-
-### 跨端验证
-- `validationRules.ts`（PC）与 `validationRules.js`（小程序）必须同步修改
+- ❌ 禁止未经用户明确要求修改 global.css / design-system.css 中的表格 CSS 变量
+- ✅ 仅在用户明确说"表格行高太高/太低"等指令时才可修改
 
 ---
 
-## ⚠️ 常见陷阱 TOP 15
+## API 规范
 
-| # | 陷阱 | 预防 |
-|---|------|------|
-| 1 | 改业务只改一端 → 断链 | 全链路校验上下游 |
-| 2 | 使用不存在的权限码 → 403 | 确认 `t_permission` 表实际存在 |
-| 3 | Docker MySQL 端口 3308 非 3306 | 检查端口 |
-| 4 | 使用 `@Deprecated` API | 全部用 POST/list + stage-action |
-| 5 | 弹窗尺寸不统一 | 只用 60/40/30vw |
-| 6 | Service 直接互调 | 必须通过 Orchestrator |
-| 7 | 修改防重复扫码算法 | 不改 minInterval 逻辑 |
-| 8 | 改 validationRules 不同步两端 | PC+小程序同步 |
-| 9 | MySQL UTC vs JVM CST 时区差8h | 测试数据用 `CONVERT_TZ(NOW(),'+00:00','+08:00')` |
-| 10 | 工资已结算扫码撤回 | `payrollSettled=true` 时拒绝 |
-| 11 | Flyway Silent Failure（SET @s + COMMENT） | 不写字符串字面量在动态SQL中 |
-| 12 | JacksonConfig Long→String 导致计数拼接 | 计数返回 int；前端 `Number()` 包裹 |
-| 13 | 修改已执行 Flyway V*.sql | checksum 失败 → 启动不了 |
-| 14 | VIEW 修改只改 ViewMigrator 不改 Flyway | 云端 Flyway 执行，ViewMigrator 云端不跑 |
-| 15 | request_id 超 VARCHAR(64) | 紧凑格式 |
-| 16 | Flyway PREPARE + DEFAULT NULL 报错 | 动态SQL中不写 `DEFAULT NULL`，MySQL默认即NULL |
-| 17 | 不维护上下文 → 重复踩坑 | 每次对话开始/结束必须更新进度快照 |
-| 18 | 部署后全站 404 白屏 | 错误恢复代码必须内联在 index.html `<head>` 中，不能放在可能 404 的外部 JS 里 |
-| 19 | nginx SPA fallback 遗漏 .js/.css | @spa_fallback 对所有静态资源类型（含 JS/CSS）返回 404，不返回 index.html |
-| 20 | nginx try_files $uri/ 绕过 no-cache | 根路径必须走 @spa_fallback → location = /index.html，确保 no-cache 头生效 |
-| 21 | Flyway 版本号重复 / 缺少分号 / 末尾逗号 | 推送前必须跑 `python3 scripts/check-flyway-sql.py`（CI 自动拦截） |
+| 旧式（禁止新增） | RESTful（必须使用） |
+|-----------------|-------------------|
+| `GET /by-xxx/{id}` | `POST /list` + 过滤参数 |
+| `POST /{id}/submit` | `POST /{id}/stage-action?action=xxx` |
+| `POST /save` | `POST /`（新建）+ `PUT /{id}`（更新） |
 
 ---
 
-## 🔧 关键案例 & 修复模式
+## 小程序共享规则
 
-### 模式 #1：Flyway `SET @s` 静默失败（最危险）
-
-**症状**：Flyway 执行成功，`flyway_schema_history` 记录成功标记，但列实际不存在于云端 DB。本地没问题，云端 HTTP 500。
-
-**根因**：Flyway SQL 解析器把动态 SQL 内的 `''` 当字符串结束符：
-
-```sql
--- ❌ 错误：第一个 '' 被 Flyway 当结束符，ALTER TABLE 被截断
-SET @s = IF(..., 'ALTER TABLE t_xxx ADD COLUMN status VARCHAR(20) DEFAULT ''PENDING''', ...);
-PREPARE stmt FROM @s;  -- 执行的是截断后的垃圾
-```
-
-**正确做法**：
-```sql
--- ✅ 动态 SQL 内只用 DEFAULT NULL / DEFAULT 0，不含 '' 字符串字面量
-ALTER TABLE t_xxx ADD COLUMN status VARCHAR(20) DEFAULT NULL;
-
--- ✅ 回填值用独立 UPDATE（在动态 SQL 外部）
-UPDATE t_xxx SET status = 'PENDING' WHERE status IS NULL;
-```
-
-> 曾触发案例：`factory_type`、`repair_status` 两条列因 Flyway Silent Failure 从未添加到云端，导致铃铛任务面板 + 首页统计反复 500
+- ✅ 颜色/尺码分布必须复用 `buildColorSizeMatrix`
+- ✅ 校验规则与PC端同步：`validationRules.js` ↔ `validationRules.ts`
+- ✅ 共享样式用 `styles/.wxss`，禁止页面内重复定义同名类
 
 ---
 
-### 模式 #2：云端 Schema 漂移 — 双路径防御
-
-**症状**：本地开发正常，部署云端后热点接口大量 500 + Unknown column 日志风暴
-
-**策略**：不只修 Flyway（根源），还加**代码防御 select（双保险）**
-
-```
-阶段一（🩹 热修）：代码层最小字段 select
-  → CuttingTaskServiceImpl: 改为显式 select 核心字段
-  → ProductWarehousingOrchestrator: 走 QueryWrapper + listMaps 绕开实体映射
-  → 效果：即使 DB 列补库需重启才生效，热点入口也不 500
-
-阶段二（🔧 根源）：Flyway 补列 + 移除防御临时代码
-```
-
-**核心原则**：云端即使有历史结构债，**热点入口不能先崩**
-
----
-
-### 模式 #3：request_id 超 VARCHAR(64)
-
-**症状**：`ORDER_OP:{action}:{orderId}:{uuid}` 超过 64 字符导致 INSERT 失败
-
-**修复**：紧凑格式，保留语义前缀：
-```
-✅ ORDER_OP/ORDER_ADVANCE/ORDER_ROLLBACK/ORCH_FAIL + 紧凑ID
-❌ 全路径带UUID拼接
-```
-
----
-
-### 模式 #4：VIEW 修改 — Flyway vs ViewRepair 区别
+## VIEW 修改规则
 
 | 路径 | 云端执行 | 本地执行 |
 |------|:--:|:--:|
@@ -291,116 +166,104 @@ UPDATE t_xxx SET status = 'PENDING' WHERE status IS NULL;
 | ViewMigrator.java | ❌ 不跑 | ✅ |
 | DbViewRepairHelper.java | ❌ 不跑 | ✅ |
 
-**结论**：VIEW 修改必须走 Flyway 迁移脚本，不能只改 ViewMigrator/DbViewRepair — 否则本地好云端坏。
+**结论**：VIEW 修改必须走 Flyway，不能只改 ViewMigrator/DbViewRepair。
 
 ---
 
-### 模式 #5：本地 `ALTER TABLE` 无 Flyway → 云端下单 500
+## 云端兼容性陷阱
 
-**经典案例**：`progress_workflow_json` 等 5 个字段本地手动 ALTER TABLE 添加，未写 Flyway。`grep -r "progress_workflow" db/migration/` → 零结果。云端 DB 无此列 → `INSERT` 报 `Unknown column` → `@Transactional` 内异常冒泡 → 全局异常兜底 500。
+### System.getenv() 云端返回 null
 
-**教训**：本地加字段再方便也**必须先写 Flyway 迁移**，检查命令：
-```bash
-grep -r "${新列名}" db/migration/  # 必须有结果
+```java
+// ❌ 本地正常，云端 NPE
+String apiUrl = System.getenv().getOrDefault("KEY", "default");
+// ✅ 始终安全
+String value = System.getenv("KEY");
+String apiUrl = value != null ? value : "default";
 ```
+
+### MySQL TINYINT(1) 驱动类型差异
+
+```java
+// ❌ 云端 Connector/J 8.x 抛 ClassCastException
+Integer success = (Integer) row.get("success");
+// ✅ 兼容所有驱动版本
+Object successObj = row.get("success");
+Integer success = null;
+if (successObj instanceof Boolean) { success = ((Boolean) successObj) ? 1 : 0; }
+else if (successObj instanceof Integer) { success = (Integer) successObj; }
+else if (successObj instanceof Number) { success = ((Number) successObj).intValue(); }
+```
+
+### Flyway 10.x 版本号格式
+
+- ✅ 纯数字：`V1__xxx.sql`、`V20260222__xxx.sql`
+- ✅ 点号分隔：`V20260222.01__xxx.sql`
+- ❌ 字母后缀：`V20260222b__xxx.sql`（BigInteger 解析失败 → 迁移被跳过）
+- ❌ `sql-migration-version-format` 属性已被 Flyway 10.x 移除，配置无效
+
+### Java 静态 Map 重复 key
+
+- ❌ `Map.of("裁床", "cutting", "裁床", "cutting_table")` → 类初始化失败 → 启动失败
+- ✅ 每个 key 唯一
+
+### jwt-secret 无默认值
+
+- ❌ `jwt.secret: ${JWT_SECRET:}` → 环境变量未设置时启动失败
+- ✅ `jwt.secret: ${JWT_SECRET:ThisIsA_LocalJwtSecret_OnlyForDev_0123456789}`
 
 ---
 
-### 模式 #6：子工序硬编码 vs 动态映射（本次修复）
+## 常见陷阱 TOP 10
 
-**架构原则**：6 大固定父节点 + 子工序动态映射
-
-```
-扫码工序名 → ProcessParentNodeResolver
-  ├── progressStage（模板配置，最高优先）
-  ├── ProcessSynonymMapping（父节点同义词）
-  └── t_process_parent_mapping（DB 动态映射，管理员可随时增改）
-```
-
-**不该做的**：在多处硬编码子工序关键词 → 有人加"激光切割→二次工艺"到 DB，硬编码数组不认识
-
-**正确做法**：SQL VIEW 用 `EXISTS (SELECT 1 FROM t_process_parent_mapping ...)` 动态关联，不再写 `LIKE '%绣花%'`
-
----
-
-### 模式 #7：部署后全站 404 白屏（2026-05-03 事故）
-
-**症状**：新部署后用户刷新页面白屏，控制台大量 `GET /assets/vendor-xxx.js 404`。
-
-**根因**（三层叠加）：
-1. 浏览器缓存旧 `index.html`，引用的旧 chunk 已被新部署替换 → 404
-2. 错误恢复代码在 `index-*.js` 里，但 `index-*.js` 本身也 404 → 恢复代码永远不执行
-3. nginx `@spa_fallback` 遗漏 `.js/.css`，404 的 JS/CSS 被错误返回 `index.html`（200）
-
-**正确做法**：
-```html
-<!-- ✅ 内联在 index.html <head> 中，不依赖任何外部文件 -->
-<script>
-(function(){
-  var RK='__crit_reload__';
-  if(sessionStorage.getItem(RK))return;
-  document.addEventListener('error',function(e){
-    var t=e.target||e.srcElement;if(!t)return;
-    var tn=t.tagName;
-    if(tn==='SCRIPT'||tn==='LINK'){
-      var src=tn==='SCRIPT'?t.src:t.href;
-      if(src&&src.indexOf('/assets/')!==-1){
-        sessionStorage.setItem(RK,'1');location.reload();
-      }
-    }
-  },true);
-})();
-</script>
-```
-
-```nginx
-# ✅ nginx @spa_fallback 对 JS/CSS 也返回 404，不返回 index.html
-if ($request_uri ~* "\.(js|css|...|map|json|wasm)$") { return 404; }
-
-# ✅ try_files 去掉 $uri/，确保根路径走 no-cache 头
-try_files $uri @spa_fallback;
-```
+| # | 陷阱 | 预防 |
+|---|------|------|
+| 1 | 改业务只改一端 → 断链 | 全链路校验上下游 |
+| 2 | 使用不存在的权限码 → 403 | 确认 `t_permission` 表实际存在 |
+| 3 | Docker MySQL 端口 3308 非 3306 | 检查端口 |
+| 4 | Flyway SET @s + COMMENT | 不写字符串字面量在动态SQL中 |
+| 5 | 修改已执行 Flyway V*.sql | checksum 失败 → 启动不了 |
+| 6 | VIEW 只改 ViewMigrator 不改 Flyway | 云端 Flyway 执行，ViewMigrator 云端不跑 |
+| 7 | 本地 ALTER TABLE 无 Flyway | 云端 Unknown column → 500 |
+| 8 | 部署后全站 404 白屏 | 错误恢复代码必须内联在 index.html `<head>` 中 |
+| 9 | Hook返回裸对象/裸函数 → 无限循环 | Hook返回值必须 useMemo/useCallback 包裹 |
+| 10 | JacksonConfig Long→String 计数拼接 | 计数返回 int；前端 `Number()` 包裹 |
 
 ---
 
-## 🚀 推送前四步验证
+## 推送前四步验证
 
 ```bash
 # 1. 编译
 cd backend && mvn clean compile -q    # BUILD SUCCESS
 cd frontend && npx tsc --noEmit       # 0 errors
 
-# 2. Flyway SQL 校验（P0 强制，CI 也会自动跑）
-python3 scripts/check-flyway-sql.py   # 全量扫描
-python3 scripts/check-flyway-sql.py --diff  # 只检查本次变更
+# 2. Flyway SQL 校验（P0 强制）
+python3 scripts/check-flyway-sql.py
 
 # 3. git 全量检查
 git status && git diff --stat HEAD
 git add <每个文件路径>           # ❌ 禁止 git add .
-git diff --cached --stat
 
 # 4. 数据库检查（有 Entity/表结构改动时）
-./scripts/pre-push-checklist.sh --schema-confirmed
-# 新增 Entity 字段 → 必须有 Flyway
-# 新增 Flyway → 必须有 Entity 字段
+grep -r "${新列名}" db/migration/  # 必须有结果
 ```
 
 ---
 
-## 📊 架构统计
+## 架构统计
 
 - 编排器总数：**158**
 - 模块分布：intelligence(64) > production(24) > finance(18) > system(15)
-- API 端点：ProductionOrderController(8) / StyleInfoController(23,待拆分)
 - 待优化大文件：OrderManagement(2120行) / MaterialPurchase(1690行) / ProgressDetail(1670行)
 
 ---
 
-## 🔗 关键文档
+## 关键文档索引
 
-- `.github/copilot-instructions.md` — 完整原文（3261行）
-- `系统状态.md` — 系统概览
-- `开发指南.md` — 开发规范
-- `设计系统完整规范-2026.md` — 前端设计 v3.0
-- `docs/小程序开发完整指南.md` — 小程序规范
-- `docs/客户傻瓜式开通与数据迁移SOP.md` — 运维手册
+- `agent-workflow.md` — 智能体驱动开发7步流程
+- `xiaoyun-ai-inventory.md` — 小云AI全量系统清单
+- `thick-methods-backlog.md` — 全系统拆薄记录
+- `设计风格规范.md` — UI设计规范（Impeccable + Taste Skill）
+- `memory-bank/` — 项目记忆（activeContext + progress + decisionLog）
+- `.github/agents/` — Agent角色定义

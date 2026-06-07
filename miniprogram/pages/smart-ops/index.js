@@ -216,6 +216,13 @@ Page({
       const factoryCap = self._unwrap(results[3]);
       const pulse = self._unwrap(results[4]);
 
+      // 如果 pulse 接口失败，使用默认值
+      const pulseData = (pulse && !pulse.error) ? pulse : {
+        systemHealth: 85,
+        alertCount: 0,
+        trend: 'stable',
+      };
+
       let orders = [];
       if (ordersData) {
         if (Array.isArray(ordersData)) orders = ordersData;

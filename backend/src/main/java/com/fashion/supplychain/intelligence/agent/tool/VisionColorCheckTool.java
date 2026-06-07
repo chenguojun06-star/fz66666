@@ -22,6 +22,15 @@ import java.util.Map;
         timeoutMs = 30000,
         readOnly = true
 )
+@McpToolAnnotation(
+        name = "tool_vision_color_check",
+        description = "服装色差检测：分析服装/布料图片的色差、色牢度、染色均匀度问题",
+        domain = ToolDomain.STYLE,
+        readOnly = true,
+        timeoutSeconds = 30,
+        requiresConfirmation = false,
+        tags = {"色差检测", "色牢度", "染色均匀度", "视觉检测", "品质检测"}
+)
 public class VisionColorCheckTool extends AbstractAgentTool {
 
     @Autowired

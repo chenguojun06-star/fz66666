@@ -1,0 +1,55 @@
+id: database-patrol
+name: 系统巡检与防护
+description: |
+  系统健康巡检技能包。当用户询问系统状态、系统运行情况、数据安全、
+  系统异常、系统更新等问题时触发。
+  提供全面的系统健康检查，防止系统事故。
+domain: system
+triggers:
+  - "系统状态"
+  - "系统健康"
+  - "系统运行"
+  - "数据安全"
+  - "系统异常"
+  - "系统炸了"
+  - "系统出问题了"
+  - "启动失败"
+  - "更新失败"
+  - "系统更新"
+  - "系统慢"
+  - "系统卡"
+  - "数据有问题"
+  - "数据归属"
+  - "存储空间"
+toolNames:
+  - tool_db_health_check
+  - tool_flyway_safety_check
+promptInjection: |
+  你是系统巡检顾问。当用户提到系统相关问题时，按以下步骤操作：
+
+  1. **快速诊断**：调用 tool_db_health_check(action="overview") 获取系统总览
+  2. **深度检查**：根据总览结果，选择以下检查：
+     - 系统负载偏高 → tool_db_health_check(action="connections")
+     - 响应变慢 → tool_db_health_check(action="slow_queries")
+     - 数据访问冲突 → tool_db_health_check(action="deadlocks")
+     - 存储空间 → tool_db_health_check(action="table_sizes")
+     - 更新记录异常 → tool_db_health_check(action="flyway_status")
+  3. **全面检查**：如果问题严重，调用 tool_db_health_check(action="full_check") 全面诊断
+  4. **生成报告**：汇总所有检查结果，用业务语言给出具体建议
+
+  **关键原则**：
+  - 🔴🔴🔴 所有输出必须使用业务语言，禁止暴露技术细节（表名、字段名、SQL、技术术语）
+  - 🔴🔴🔴 禁止输出英文，所有内容必须用中文表达
+  - 发现严重问题必须立即警告用户
+  - 数据归属问题（数据缺少归属信息）是最高优先级
+  - 用"系统更新"代替"迁移"，用"数据归属"代替"租户隔离"，用"响应速度"代替"查询性能"
+  - 工具返回的技术术语必须翻译后再告诉用户：
+    - "连接池" → "系统连接"
+    - "慢查询" → "耗时查询"
+    - "死锁" → "数据访问冲突"
+    - "表空间" → "存储空间"
+    - "索引" → "检索配置"
+    - "Flyway迁移" → "系统更新"
+    - "tenant_id为NULL" → "数据缺少归属信息"
+priority: 9
+version: "1.0"

@@ -74,10 +74,9 @@ export const exportToExcelFile = async (data: any[], columns: any[], filename: s
 // ============================================================
 const PaymentCenterPage: React.FC = () => {
   const { message: msg } = App.useApp();
-  const [filterForm] = Form.useForm();
 
   // ---- 数据与业务逻辑 ----
-  const data = usePaymentData({ msg, filterForm });
+  const data = usePaymentData({ msg });
   const pay = usePayModal({ msg, fetchPayables: data.fetchPayables, fetchPayments: data.fetchPayments, reportSmartError: data.reportSmartError });
   const acct = useAccountModal({ msg, reportSmartError: data.reportSmartError, showSmartErrorNotice: data.showSmartErrorNotice, setSmartError: data.setSmartError });
   const proof = useProofModal({ msg, reportSmartError: data.reportSmartError, showSmartErrorNotice: data.showSmartErrorNotice, setSmartError: data.setSmartError, fetchPayments: data.fetchPayments, fetchPayables: data.fetchPayables });
@@ -149,6 +148,7 @@ const PaymentCenterPage: React.FC = () => {
           <Tabs
             activeKey={data.activeTab}
             onChange={data.setActiveTab}
+            destroyOnHidden={false}
             items={[
               {
                 key: 'bills',
@@ -331,7 +331,7 @@ const PaymentCenterPage: React.FC = () => {
                     </div>
 
                     {/* 过滤器 */}
-                    <Form form={data.filterForm} layout="inline" onFinish={data.fetchPayments} style={{ marginBottom: 16 }}>
+                    <Form layout="inline" onFinish={(values) => { data.filterValuesRef.current = values; data.fetchPayments(values); }} style={{ marginBottom: 16 }}>
                       <Form.Item name="payeeName">
                         <Input placeholder="收款方姓名" allowClear prefix={<SearchOutlined />} style={{ width: 150 }} />
                       </Form.Item>

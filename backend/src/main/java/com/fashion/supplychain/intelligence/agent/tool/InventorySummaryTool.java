@@ -17,6 +17,15 @@ import java.util.*;
 @Slf4j
 @Component
 @AgentToolDef(name = "tool_inventory_summary", description = "库存价值汇总工具", domain = ToolDomain.WAREHOUSE, timeoutMs = 15000)
+@McpToolAnnotation(
+        name = "tool_inventory_summary",
+        description = "库存价值汇总工具",
+        domain = ToolDomain.WAREHOUSE,
+        readOnly = true,
+        timeoutSeconds = 15,
+        requiresConfirmation = false,
+        tags = {"库存", "库存价值", "物料库存", "成品库存", "低库存预警", "库存汇总"}
+)
 public class InventorySummaryTool extends AbstractAgentTool {
 
     @Autowired

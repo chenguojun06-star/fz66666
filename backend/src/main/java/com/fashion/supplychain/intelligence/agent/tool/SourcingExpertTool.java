@@ -21,6 +21,15 @@ import java.util.Map;
 @Slf4j
 @Component
 @AgentToolDef(name = "tool_sourcing_expert", description = "采购供应商专家工具", domain = ToolDomain.WAREHOUSE, timeoutMs = 15000)
+@McpToolAnnotation(
+        name = "tool_sourcing_expert",
+        description = "采购供应商专家工具",
+        domain = ToolDomain.WAREHOUSE,
+        readOnly = true,
+        timeoutSeconds = 15,
+        requiresConfirmation = false,
+        tags = {"供应商查询", "采购", "供应商评分", "采购状态", "物料采购"}
+)
 public class SourcingExpertTool extends AbstractAgentTool {
 
     @Autowired

@@ -40,35 +40,35 @@ export default function useSampleStage({ selectedStage, message, onRefresh }: Us
     const status = String(sampleSnapshot.status || '').trim().toUpperCase();
     return ['IN_PROGRESS', 'PRODUCTION_COMPLETED', 'COMPLETED'].includes(status)
       || Boolean(sampleSnapshot.receiver)
-      || sampleSnapshot.receiveTime !== '待启动';
+      || sampleSnapshot.receiveTime !== '待领取';
   }, [sampleSnapshot]);
 
   const sampleCompletedTimeLabel = useMemo(() => {
-    if (!selectedStage || selectedStage.stage.key !== 'sample') return '待启动';
+    if (!selectedStage || selectedStage.stage.key !== 'sample') return '待领取';
     if (!isSampleSnapshotCompleted) {
-      return selectedStageRecordScrapped || isScrappedPatternSnapshot(sampleSnapshot) ? '已停止' : '待启动';
+      return selectedStageRecordScrapped || isScrappedPatternSnapshot(sampleSnapshot) ? '已停止' : '待领取';
     }
-    if (sampleSnapshot?.completeTime && sampleSnapshot.completeTime !== '待启动') {
+    if (sampleSnapshot?.completeTime && sampleSnapshot.completeTime !== '待领取') {
       return sampleSnapshot.completeTime;
     }
     const finalCompletedTime = (selectedStage.record as StyleRecord).completedTime;
     if (finalCompletedTime) return formatNodeTime(finalCompletedTime);
-    return selectedStageRecordScrapped || isScrappedPatternSnapshot(sampleSnapshot) ? '已停止' : '待启动';
+    return selectedStageRecordScrapped || isScrappedPatternSnapshot(sampleSnapshot) ? '已停止' : '待领取';
   }, [isSampleSnapshotCompleted, sampleSnapshot, selectedStage, selectedStageRecordScrapped]);
 
   const sampleReceiveTimeLabel = useMemo(() => {
-    if (!selectedStage || selectedStage.stage.key !== 'sample') return '待启动';
-    if (sampleSnapshot?.receiveTime && sampleSnapshot.receiveTime !== '待启动') return sampleSnapshot.receiveTime;
+    if (!selectedStage || selectedStage.stage.key !== 'sample') return '待领取';
+    if (sampleSnapshot?.receiveTime && sampleSnapshot.receiveTime !== '待领取') return sampleSnapshot.receiveTime;
     const productionStartTime = (selectedStage.record as StyleRecord).productionStartTime;
     if (sampleSnapshot?.receiver && productionStartTime) return formatNodeTime(productionStartTime);
-    return selectedStageRecordScrapped || isScrappedPatternSnapshot(sampleSnapshot) ? '已停止' : '待启动';
+    return selectedStageRecordScrapped || isScrappedPatternSnapshot(sampleSnapshot) ? '已停止' : '待领取';
   }, [sampleSnapshot, selectedStage, selectedStageRecordScrapped]);
 
   const sampleCompletedRangeLabel = useMemo(() => {
-    if (sampleCompletedTimeLabel === '待启动' || sampleCompletedTimeLabel === '已停止') {
+    if (sampleCompletedTimeLabel === '待领取' || sampleCompletedTimeLabel === '已停止') {
       return sampleCompletedTimeLabel;
     }
-    if (sampleReceiveTimeLabel === '待启动' || sampleReceiveTimeLabel === '已停止') {
+    if (sampleReceiveTimeLabel === '待领取' || sampleReceiveTimeLabel === '已停止') {
       return sampleCompletedTimeLabel;
     }
     return formatStageTimeRange(sampleReceiveTimeLabel, sampleCompletedTimeLabel);
@@ -85,7 +85,7 @@ export default function useSampleStage({ selectedStage, message, onRefresh }: Us
     const completed = isSampleSnapshotFullyCompleted(sampleSnapshot);
     const received = ['IN_PROGRESS', 'PRODUCTION_COMPLETED', 'COMPLETED'].includes(status)
       || Boolean(sampleSnapshot.receiver)
-      || sampleSnapshot.receiveTime !== '待启动';
+      || sampleSnapshot.receiveTime !== '待领取';
     return SAMPLE_PARENT_STAGES.map((item) => ({
       key: item.key,
       label: item.label,

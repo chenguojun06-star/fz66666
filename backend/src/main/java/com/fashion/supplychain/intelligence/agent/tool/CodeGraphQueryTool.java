@@ -19,6 +19,15 @@ import java.util.Map;
     timeoutMs = 5000,
     readOnly = true
 )
+@McpToolAnnotation(
+    name = "code_index_search",
+    description = "代码索引搜索：快速定位Agent工具、Service方法、Controller端点的位置和功能。在需要查找系统能力或确定调用哪个工具时优先使用。",
+    domain = ToolDomain.SYSTEM,
+    readOnly = true,
+    timeoutSeconds = 5,
+    requiresConfirmation = false,
+    tags = {"代码索引", "工具搜索", "系统能力", "领域概览", "工具发现"}
+)
 public class CodeGraphQueryTool extends AbstractAgentTool {
 
     @Autowired

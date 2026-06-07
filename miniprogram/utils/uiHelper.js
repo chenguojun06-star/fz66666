@@ -159,7 +159,7 @@ function prompt({
  */
 let navigating = false;
 let navigateTimer = null;
-const NAVIGATE_TIMEOUT = 3000; // 导航超时时间(ms)
+const NAVIGATE_TIMEOUT = 5000; // 导航超时时间(ms)，从3秒增加到5秒
 const NAVIGATE_UNLOCK_DELAY = 1500; // 导航完成后解锁延迟(ms)
 
 // tabBar 页面路径集合（与 app.json tabBar.list 保持一致）

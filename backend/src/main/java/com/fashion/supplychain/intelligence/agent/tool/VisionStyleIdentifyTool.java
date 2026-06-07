@@ -22,6 +22,15 @@ import java.util.Map;
         timeoutMs = 30000,
         readOnly = true
 )
+@McpToolAnnotation(
+        name = "tool_vision_style_identify",
+        description = "服装款式识别：分析服装图片的领型、袖型、版型、面料质感、颜色、图案、风格等款式特征",
+        domain = ToolDomain.STYLE,
+        readOnly = true,
+        timeoutSeconds = 30,
+        requiresConfirmation = false,
+        tags = {"款式识别", "领型", "袖型", "版型", "面料", "风格分析", "视觉识别"}
+)
 public class VisionStyleIdentifyTool extends AbstractAgentTool {
 
     @Autowired

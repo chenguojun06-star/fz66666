@@ -24,6 +24,15 @@ import java.util.Map;
         timeoutMs = 30000,
         readOnly = true
 )
+@McpToolAnnotation(
+        name = "tool_visual_style_search",
+        description = "以图搜款：根据服装图片URL搜索系统中视觉相似的历史款式，返回匹配的款号、难度等级和相似度",
+        domain = ToolDomain.STYLE,
+        readOnly = true,
+        timeoutSeconds = 30,
+        requiresConfirmation = false,
+        tags = {"以图搜款", "相似款式", "向量搜索", "款号查询", "图片搜索"}
+)
 public class VisualStyleSearchTool extends AbstractAgentTool {
 
     @Autowired

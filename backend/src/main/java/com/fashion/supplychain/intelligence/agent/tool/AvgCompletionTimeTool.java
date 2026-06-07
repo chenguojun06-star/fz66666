@@ -11,6 +11,15 @@ import java.util.*;
 @Slf4j
 @Component
 @AgentToolDef(name = "tool_avg_completion_time", description = "查询历史已完成订单的平均完成时间(天)，按工厂/品类分组统计。返回：平均天数、中位数、最快、最慢、准时率、样本量。", domain = ToolDomain.ANALYSIS, timeoutMs = 15000, readOnly = true)
+@McpToolAnnotation(
+        name = "tool_avg_completion_time",
+        description = "查询历史已完成订单的平均完成时间(天)，按工厂/品类分组统计。返回：平均天数、中位数、最快、最慢、准时率、样本量。",
+        domain = ToolDomain.ANALYSIS,
+        readOnly = true,
+        timeoutSeconds = 15,
+        requiresConfirmation = false,
+        tags = {"完成时间", "平均天数", "准时率", "工厂效率", "品类统计", "数据分析"}
+)
 public class AvgCompletionTimeTool extends AbstractAgentTool {
 
     @Autowired

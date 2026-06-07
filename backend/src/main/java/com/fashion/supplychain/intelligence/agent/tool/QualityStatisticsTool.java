@@ -16,6 +16,15 @@ import java.util.*;
 @Slf4j
 @Component
 @AgentToolDef(name = "tool_quality_statistics", description = "质量统计工具", domain = ToolDomain.WAREHOUSE, timeoutMs = 15000)
+@McpToolAnnotation(
+        name = "tool_quality_statistics",
+        description = "质量统计工具",
+        domain = ToolDomain.WAREHOUSE,
+        readOnly = true,
+        timeoutSeconds = 15,
+        requiresConfirmation = false,
+        tags = {"质量统计", "次品率", "报废率", "返修率", "质量分析", "按工厂统计"}
+)
 public class QualityStatisticsTool extends AbstractAgentTool {
 
     @Autowired

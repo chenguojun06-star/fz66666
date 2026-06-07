@@ -20,6 +20,15 @@ import java.util.Map;
 @Slf4j
 @Component
 @AgentToolDef(name = "tool_logistics_expert", description = "物流专家工具", domain = ToolDomain.PRODUCTION, timeoutMs = 15000)
+@McpToolAnnotation(
+        name = "tool_logistics_expert",
+        description = "物流专家工具",
+        domain = ToolDomain.PRODUCTION,
+        readOnly = true,
+        timeoutSeconds = 15,
+        requiresConfirmation = false,
+        tags = {"物流", "出货追踪", "交期预测", "物流状态", "发货查询"}
+)
 public class LogisticsExpertTool extends AbstractAgentTool {
 
     @Autowired

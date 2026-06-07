@@ -144,19 +144,34 @@ export function calculateWaitingDuration(
 
 /**
  * 计算预算超时/剩余状态
+ * @param budgetHours 预算工时（小时）
+ * @param availableTime 该阶段变为可用的时间（创建时间或上一环节完成时间）
+ * @param startTime 该阶段开始执行的时间（领取时间），null 表示尚未领取
+ * @param completedTime 该阶段完成时间，null 表示尚未完成
  * @returns { text: 状态文本, color: 颜色 }
  */
 export function computeBudgetStatus(
   budgetHours: number | null,
-  startTime: string | null,
-  completedTime: string | null,
+  availableTimeOrStartTime: string | null,
+  startTimeOrCompletedTime: string | null,
+  completedTime?: string | null,
 ): { text: string; color: string } {
   if (budgetHours == null || budgetHours <= 0) return { text: '', color: '' };
 
+  // 兼容两种调用方式：
+  // 1. 新方式：computeBudgetStatus(hours, availableTime, startTime, completedTime)
+  // 2. 旧方式：computeBudgetStatus(hours, startTime, completedTime)
+  const availableTime = availableTimeOrStartTime;
+  const startTime = completedTime !== undefined ? startTimeOrCompletedTime : null;
+  const completedTimeFinal = completedTime !== undefined ? completedTime : startTimeOrCompletedTime;
+
+  if (!availableTime) return { text: '', color: '' };
+
   const budgetSeconds = budgetHours * 3600;
 
-  if (completedTime && startTime) {
-    const actualSeconds = calculateWorkingSeconds(startTime, completedTime);
+  // 已完成：从可用时间到完成时间的总耗时
+  if (completedTimeFinal) {
+    const actualSeconds = calculateWorkingSeconds(availableTime, completedTimeFinal);
     if (actualSeconds <= budgetSeconds) {
       return { text: '准时', color: 'var(--color-success, #52c41a)' };
     }
@@ -164,17 +179,14 @@ export function computeBudgetStatus(
     return { text: `超${formatWorkingDuration(overSeconds)}`, color: 'var(--color-error, #ff7875)' };
   }
 
-  if (startTime) {
-    const elapsedSeconds = calculateWorkingSeconds(startTime, new Date().toISOString());
-    const remainingSeconds = budgetSeconds - elapsedSeconds;
-    if (remainingSeconds > 0) {
-      return { text: `剩${formatWorkingDuration(remainingSeconds)}`, color: 'var(--color-text-quaternary, #bfbfbf)' };
-    }
-    if (remainingSeconds > -3600) {
-      return { text: '即将超时', color: 'var(--color-warning, #faad14)' };
-    }
-    return { text: `超${formatWorkingDuration(-remainingSeconds)}`, color: 'var(--color-error, #ff7875)' };
+  // 未完成（含未领取）：从可用时间到现在的已耗时
+  const elapsedSeconds = calculateWorkingSeconds(availableTime, new Date().toISOString());
+  const remainingSeconds = budgetSeconds - elapsedSeconds;
+  if (remainingSeconds > 0) {
+    return { text: `剩${formatWorkingDuration(remainingSeconds)}`, color: 'var(--color-text-quaternary, #bfbfbf)' };
   }
-
-  return { text: '', color: '' };
+  if (remainingSeconds > -3600) {
+    return { text: '即将超时', color: 'var(--color-warning, #faad14)' };
+  }
+  return { text: `超${formatWorkingDuration(-remainingSeconds)}`, color: 'var(--color-error, #ff7875)' };
 }

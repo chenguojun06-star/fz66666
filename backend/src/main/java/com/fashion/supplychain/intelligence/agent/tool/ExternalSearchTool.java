@@ -24,6 +24,15 @@ import java.util.*;
     timeoutMs = 30000,
     readOnly = true
 )
+@McpToolAnnotation(
+    name = "external_search",
+    description = "搜索外部互联网信息：行业政策、市场行情、竞品动态、供应链资讯等。当用户问题超出系统内部数据范围时调用。",
+    domain = ToolDomain.SYSTEM,
+    readOnly = true,
+    timeoutSeconds = 30,
+    requiresConfirmation = false,
+    tags = {"外部搜索", "互联网搜索", "行业政策", "市场行情", "竞品动态", "供应链资讯"}
+)
 public class ExternalSearchTool extends AbstractAgentTool {
 
     private static final HttpClient HTTP_CLIENT = HttpClient.newBuilder()

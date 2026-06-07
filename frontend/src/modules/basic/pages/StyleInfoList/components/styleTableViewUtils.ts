@@ -118,7 +118,7 @@ export const resolveDisplayQuantity = (record: StyleRecord) => {
 };
 
 export const formatNodeTime = (value?: unknown) => {
-  if (!value) return '待启动';
+  if (!value) return '待领取';
   const instance = dayjs(value as string | number | Date | null | undefined);
   if (instance.isValid()) {
     return instance.format('MM-DD');
@@ -132,7 +132,7 @@ export const getLatestTimeLabel = (values: unknown[]) => {
     .filter((item) => item.isValid())
     .sort((a, b) => b.valueOf() - a.valueOf());
 
-  if (!valid.length) return '待启动';
+  if (!valid.length) return '待领取';
   return valid[0].format('MM-DD');
 };
 
@@ -185,7 +185,7 @@ export const isMaintainedAfterCompletion = (record: StyleRecord, completed: bool
 export const formatStageTimeRange = (startTime: unknown, endTime: unknown) => {
   const start = formatNodeTime(startTime);
   const end = formatNodeTime(endTime);
-  if (start !== '待启动' && end !== '待启动') {
+  if (start !== '待领取' && end !== '待领取') {
     const startInstance = dayjs(startTime as string | number | Date | null | undefined);
     const endInstance = dayjs(endTime as string | number | Date | null | undefined);
     if (startInstance.isValid() && endInstance.isValid() && startInstance.isSame(endInstance, 'day')) {
@@ -193,7 +193,7 @@ export const formatStageTimeRange = (startTime: unknown, endTime: unknown) => {
     }
     return `${start} → ${end}`;
   }
-  return end !== '待启动' ? end : start;
+  return end !== '待领取' ? end : start;
 };
 
 export const getDeliveryMeta = (record: StyleRecord, completed = false): { tone: DeliveryTone; label: string } => {
@@ -379,7 +379,7 @@ export const applyScrappedStageState = (record: StyleRecord, stage: SmartStage):
   return {
     ...stage,
     helper,
-    timeLabel: stage.timeLabel === '待启动' ? '已停止' : stage.timeLabel,
+    timeLabel: stage.timeLabel === '待领取' ? '已停止' : stage.timeLabel,
     status: 'scrapped',
     details: Array.from(new Set([
       '当前状态：开发样报废',

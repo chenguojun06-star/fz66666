@@ -1,5 +1,5 @@
 const { getBaseUrl } = require('../config');
-const { getToken } = require('./storage');
+const { getToken, getUserInfo } = require('./storage');
 const { DEBUG } = require('../config/debug');
 const { eventBus, Events } = require('./eventBus');
 
@@ -82,7 +82,19 @@ function buildWsUrl() {
       if (DEBUG) console.warn('[WebSocket] 无 token，跳过连接');
       return null;
     }
-    return wsBase + WS_PATH + '?token=' + encodeURIComponent(token);
+
+    // 获取用户信息
+    const userInfo = getUserInfo();
+    const userId = userInfo && userInfo.id ? String(userInfo.id) : '';
+    const tenantId = userInfo && userInfo.tenantId ? String(userInfo.tenantId) : '';
+
+    // 构建查询参数
+    const params = ['token=' + encodeURIComponent(token)];
+    if (userId) params.push('userId=' + encodeURIComponent(userId));
+    params.push('clientType=miniprogram');
+    if (tenantId) params.push('tenantId=' + encodeURIComponent(tenantId));
+
+    return wsBase + WS_PATH + '?' + params.join('&');
   } catch (e) {
     console.error('[WebSocket] 构建 URL 失败:', e.message || e);
     return null;

@@ -52,17 +52,17 @@ export default function useConfirmStage({ selectedStage, setSelectedStage, messa
   }, [selectedStage]);
 
   const confirmReviewTimeLabel = useMemo(() => {
-    if (!selectedStage || selectedStage.stage.key !== 'confirm') return '待启动';
+    if (!selectedStage || selectedStage.stage.key !== 'confirm') return '待领取';
     const reviewTime = (selectedStage.record as StyleRecord).sampleReviewTime;
     if (reviewTime) return formatNodeTime(reviewTime);
-    return selectedStageRecordScrapped ? '已停止' : '待启动';
+    return selectedStageRecordScrapped ? '已停止' : '待领取';
   }, [selectedStage, selectedStageRecordScrapped]);
 
   const confirmInboundTimeLabel = useMemo(() => {
-    if (!selectedStage || selectedStage.stage.key !== 'confirm') return '待启动';
+    if (!selectedStage || selectedStage.stage.key !== 'confirm') return '待领取';
     const completedTime = (selectedStage.record as StyleRecord).completedTime;
     if (completedTime) return formatNodeTime(completedTime);
-    return selectedStageRecordScrapped ? '已停止' : '待启动';
+    return selectedStageRecordScrapped ? '已停止' : '待领取';
   }, [selectedStage, selectedStageRecordScrapped]);
 
   const confirmStageSummary = useMemo(() => {

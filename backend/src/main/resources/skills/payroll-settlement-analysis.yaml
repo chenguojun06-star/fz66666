@@ -1,0 +1,39 @@
+id: "payroll-settlement-analysis"
+name: "工资结算分析"
+description: "分析工人计件工资、工价合理性、薪资异常，辅助工资核算与结算决策"
+domain: "finance"
+triggers:
+  - "工资"
+  - "计件"
+  - "薪资"
+  - "结算"
+  - "工价"
+  - "工人工资"
+  - "工资异常"
+  - "计件单价"
+toolNames:
+  - "UnitPriceQueryTool"
+  - "ProductionExceptionTool"
+  - "InventorySummaryTool"
+promptInjection: |
+  工资结算分析五步法：
+  1. 用UnitPriceQueryTool查询各工序的计件单价（工价），确认单价是否已录入
+  2. 用ProductionProgressTool（通过ProductionExceptionTool间接获取）统计各工人/工序的产量数据
+  3. 计算应发工资：应发 = 计件单价 × 完成数量，按工人汇总
+  4. 用ProductionExceptionTool检测异常：单价缺失、产量突增/骤降、重复扫码嫌疑
+  5. 生成工资结算报告：按工人列出明细 + 异常标记 + 建议调整项
+
+  异常检测规则：
+  - 单日产量 > 个人历史均值 3倍 → 标记疑似重复扫码
+  - 单日产量 = 0 且有出勤 → 标记待核实
+  - 工序单价缺失 → 标记需补录
+  - 同一工人跨多订单产量异常集中 → 标记待复核
+
+  工资合理性判断：
+  - 计件单价 < 市场均价 80% → 偏低，建议调价
+  - 计件单价 > 市场均价 150% → 偏高，需核实定价依据
+  - 工资已结算的扫码记录禁止撤回（payrollSettled=true）
+
+  回答格式：工资汇总表 + 异常清单 + 单价合理性评估 + 结算建议
+priority: 8
+version: "1.0"

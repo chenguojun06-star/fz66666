@@ -90,7 +90,7 @@ export default function useStagePanel({
     const actions: StageQuickAction[] = [];
     const scrapped = isScrappedStyle(selectedStage.record) || isScrappedPatternSnapshot(sampleHook.sampleSnapshot);
     const sampleStageCompleted = selectedStage.stage.key === 'sample'
-      ? sampleHook.isSampleSnapshotCompleted || sampleHook.sampleCompletedTimeLabel !== '待启动'
+      ? sampleHook.isSampleSnapshotCompleted || sampleHook.sampleCompletedTimeLabel !== '待领取'
       : selectedStage.stage.status === 'done';
 
     if (!scrapped && selectedStage.stage.actionKey && selectedStage.stage.actionKey !== 'detail') {
@@ -101,7 +101,7 @@ export default function useStagePanel({
     }
 
     if (!scrapped && selectedStage.stage.key === 'sample') {
-      if (sampleHook.sampleSnapshot?.receiveTime && sampleHook.sampleSnapshot.receiveTime !== '待启动' && !sampleStageCompleted && !selectedStage.record.sampleCompletedTime) {
+      if (sampleHook.sampleSnapshot?.receiveTime && sampleHook.sampleSnapshot.receiveTime !== '待领取' && !sampleStageCompleted && !selectedStage.record.sampleCompletedTime) {
         actions.push({
           key: 'complete-sample', label: '标记完成', type: 'primary',
           onClick: () => {

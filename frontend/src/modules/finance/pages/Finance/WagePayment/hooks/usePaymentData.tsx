@@ -1,6 +1,5 @@
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { Modal } from 'antd';
-import type { FormInstance } from 'antd';
 import {
   wagePaymentApi,
   type WagePayment,
@@ -13,10 +12,11 @@ import { formatMoney } from '@/utils/format';
 
 interface UsePaymentDataOptions {
   msg: { success: (text: string) => void; error: (text: string) => void; warning: (text: string) => void };
-  filterForm: FormInstance;
 }
 
-export function usePaymentData({ msg, filterForm }: UsePaymentDataOptions) {
+export function usePaymentData({ msg }: UsePaymentDataOptions) {
+  // ---- 用 ref 存筛选条件，避免依赖 Form.useForm() 实例（Form 可能未挂载） ----
+  const filterValuesRef = useRef<Record<string, any>>({});
   // ---- Smart Error ----
   const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
   const showSmartErrorNotice = useMemo(() => isSmartFeatureEnabled('smart.finance.explain.enabled'), []);
@@ -63,10 +63,10 @@ export function usePaymentData({ msg, filterForm }: UsePaymentDataOptions) {
     }
   }, [payableBizType, msg, reportSmartError, showSmartErrorNotice]);
 
-  const fetchPayments = useCallback(async () => {
+  const fetchPayments = useCallback(async (formValues?: Record<string, any>) => {
     setPaymentsLoading(true);
     try {
-      const values = filterForm.getFieldsValue();
+      const values = formValues || filterValuesRef.current;
       const query: PaymentQueryRequest = {};
       if (values.payeeName) query.payeeName = values.payeeName;
       if (values.status) query.status = values.status;
@@ -84,7 +84,7 @@ export function usePaymentData({ msg, filterForm }: UsePaymentDataOptions) {
     } finally {
       setPaymentsLoading(false);
     }
-  }, [filterForm, msg, reportSmartError, showSmartErrorNotice]);
+  }, [msg, reportSmartError, showSmartErrorNotice]);
 
   useEffect(() => {
     if (activeTab === 'pending') fetchPayables();
@@ -218,7 +218,7 @@ export function usePaymentData({ msg, filterForm }: UsePaymentDataOptions) {
     payableDateRange, setPayableDateRange,
     selectedPayableKeys, setSelectedPayableKeys, batchPaySubmitting, handleBatchPay,
     pendingRejectPayable, setPendingRejectPayable, rejectPayableLoading, handleRejectPayable, handleRejectPayableConfirm,
-    payments, paymentsLoading, filterForm,
+    payments, paymentsLoading, filterValuesRef,
     fetchPayables, fetchPayments,
     filteredPayables, pendingStats, paymentStats,
     handleCancel,

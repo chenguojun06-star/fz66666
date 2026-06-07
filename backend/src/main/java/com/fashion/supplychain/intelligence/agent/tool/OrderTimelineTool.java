@@ -23,6 +23,15 @@ import org.springframework.util.StringUtils;
         domain = ToolDomain.PRODUCTION,
         timeoutMs = 15000
 )
+@McpToolAnnotation(
+        name = "tool_order_timeline",
+        description = "订单操作时间线查询工具",
+        domain = ToolDomain.PRODUCTION,
+        readOnly = true,
+        timeoutSeconds = 15,
+        requiresConfirmation = false,
+        tags = {"订单时间线", "操作记录", "订单追踪", "生产进度", "订单历史"}
+)
 public class OrderTimelineTool extends AbstractAgentTool {
 
     private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");

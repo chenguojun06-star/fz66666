@@ -31,6 +31,15 @@ import java.util.Map;
         timeoutMs = 30000,
         readOnly = true
 )
+@McpToolAnnotation(
+        name = "tool_vision_analyze",
+        description = "通用视觉AI分析：分析服装/布料/款式图片，支持缺陷检测、款式识别、颜色检测等多种视觉任务",
+        domain = ToolDomain.VISION,
+        readOnly = true,
+        timeoutSeconds = 30,
+        requiresConfirmation = false,
+        tags = {"视觉分析", "图片识别", "缺陷检测", "款式识别", "颜色检测", "AI视觉"}
+)
 public class VisionAnalyzeTool extends AbstractAgentTool {
 
     @Autowired
