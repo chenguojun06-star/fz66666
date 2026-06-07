@@ -27,6 +27,12 @@ spring:
         socketTimeout: 30000
         connectTimeout: 10000
 
+  # Flyway 10.x 默认只接受纯数字版本号 (V1.0.0)。
+  # 项目迁移文件使用时间戳格式 (V202608051300)，必须显式配置。
+  # 写在这里而不是 flyway.conf，确保云端打包时一定被读取。
+  flyway:
+    sql-migration-version-format: yyyyMMddHHmm
+
   # Redis 生产配置（可选，不可用时降级为单机模式）
   data:
     redis:

@@ -1,6 +1,9 @@
 # 本地开发环境配置（不上传到 Git）
 
 spring:
+  flyway:
+    sql-migration-version-format: yyyyMMddHHmm
+
   datasource:
     url: jdbc:mysql://127.0.0.1:3308/fashion_supplychain?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&createDatabaseIfNotExist=true
     username: root
