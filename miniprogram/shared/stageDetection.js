@@ -100,6 +100,17 @@ const CANONICAL_STAGE_MAP = {
   '入仓': '入库',
   '验收': '入库',
   '成品入库': '入库',
+  // 样衣特有工序映射
+  '车板': '车缝',
+  '打板': '车缝',
+  '制板': '车缝',
+  '跟单': '尾部',
+  '跟单确认': '尾部',
+  '大烫': '整烫',
+  '熨烫': '整烫',
+  '包装': '包装',
+  '打包': '包装',
+  '装箱': '包装',
 };
 
 function canonicalStageKey(k) {
@@ -111,15 +122,50 @@ function canonicalStageKey(k) {
 // ── scanType 推断 ──
 
 const SCAN_TYPE_RULES = {
-  '采购': 'production',
+  '采购': 'procurement',
   '裁剪': 'cutting',
+  '二次工艺': 'secondaryProcess',
+  '车缝': 'production',
+  '尾部': 'production',
+  '整烫': 'pressing',
+  '包装': 'packaging',
   '质检': 'quality',
   '入库': 'warehouse',
 };
 
-const VALID_SCAN_TYPES = new Set(['production', 'quality', 'warehouse', 'cutting']);
+const VALID_SCAN_TYPES = new Set(['production', 'quality', 'warehouse', 'cutting', 'procurement', 'secondaryProcess', 'pressing', 'packaging', 'sewing']);
 
 const DEFAULT_SCAN_TYPE = 'production';
+
+// ── 父子工序门禁（与后端 ProductionConstants.FIXED_PRODUCTION_NODES 对齐）──
+
+const FIXED_PRODUCTION_NODES = ['采购', '裁剪', '二次工艺', '车缝', '尾部', '入库'];
+
+/**
+ * 获取指定工序的前置父工序列表
+ * 与后端 ProductionScanStageSupport.validateParentStagePrerequisite 对齐
+ * @param {string} processName - 工序名（已规范化）
+ * @returns {string[]} 前置工序列表
+ */
+function getParentStages(processName) {
+  const canonical = canonicalStageKey(processName);
+  const idx = FIXED_PRODUCTION_NODES.indexOf(canonical);
+  if (idx <= 0) return []; // 采购或未知工序无前置
+  return FIXED_PRODUCTION_NODES.slice(0, idx);
+}
+
+/**
+ * 检查前置工序是否全部完成
+ * @param {string} processName - 当前工序名
+ * @param {Set<string>} completedStages - 已完成的标准工序集合
+ * @returns {{ pass: boolean, missing: string[] }}
+ */
+function checkParentStageGate(processName, completedStages) {
+  const parents = getParentStages(processName);
+  if (parents.length === 0) return { pass: true, missing: [] };
+  const missing = parents.filter(function(p) { return !completedStages.has(p); });
+  return { pass: missing.length === 0, missing: missing };
+}
 
 /**
  * 根据工序名称/进度阶段推断 scanType
@@ -236,4 +282,7 @@ module.exports = {
   inferScanType: inferScanType,
   parseDefectQtyFromRemark: parseDefectQtyFromRemark,
   extractQualityMeta: extractQualityMeta,
+  FIXED_PRODUCTION_NODES: FIXED_PRODUCTION_NODES,
+  getParentStages: getParentStages,
+  checkParentStageGate: checkParentStageGate,
 };

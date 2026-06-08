@@ -16,63 +16,63 @@ function normalizeStageKey(v) {
 // ── 工序类型判定 ──
 
 function isQualityStageKey(k) {
-  var n = normalizeStageKey(k);
+  const n = normalizeStageKey(k);
   if (!n) return false;
   if (n.includes('入库')) return false;
   return n.includes('质检') || n.includes('检验') || n.includes('品检') || n.includes('验货');
 }
 
 function isCuttingStageKey(k) {
-  var n = normalizeStageKey(k);
+  const n = normalizeStageKey(k);
   if (!n) return false;
   return n.includes('裁剪') || n.includes('裁床') || n.includes('剪裁') || n.includes('开裁');
 }
 
 function isProductionStageKey(k) {
-  var n = normalizeStageKey(k);
+  const n = normalizeStageKey(k);
   if (!n) return false;
   return n.includes('生产');
 }
 
 function isSewingStageKey(k) {
-  var n = normalizeStageKey(k);
+  const n = normalizeStageKey(k);
   if (!n) return false;
   return n.includes('车缝') || n.includes('缝制') || n.includes('缝纫') || n.includes('车工') || n.includes('整件');
 }
 
 function isWarehouseStageKey(k) {
-  var n = normalizeStageKey(k);
+  const n = normalizeStageKey(k);
   if (!n) return false;
   return n.includes('入库') || n.includes('入仓') || n.includes('仓库') || n.includes('仓储');
 }
 
 function isTailStageKey(k) {
-  var n = normalizeStageKey(k);
+  const n = normalizeStageKey(k);
   if (!n) return false;
   return n === '尾部' || n.includes('尾部') || n.includes('尾工');
 }
 
 function isSecondaryProcessStageKey(k) {
-  var n = normalizeStageKey(k);
+  const n = normalizeStageKey(k);
   if (!n) return false;
-  return n.includes('二次工艺') || n.includes('二次') || n.includes('绣花') || n.includes('印花') || n.includes('水洗') || n.includes('压花');
+  return n.includes('二次工艺') || n.includes('二次') || n.includes('绣花') || n.includes('印花') || n.includes('水洗') || n.includes('压花') || n.includes('打揽') || n.includes('烫钻');
 }
 
 function isIroningStageKey(k) {
-  var n = normalizeStageKey(k);
+  const n = normalizeStageKey(k);
   if (!n) return false;
   return n.includes('整烫') || n.includes('熨烫') || n.includes('大烫');
 }
 
 function isPackagingStageKey(k) {
-  var n = normalizeStageKey(k);
+  const n = normalizeStageKey(k);
   if (!n) return false;
   return n.includes('包装') || n.includes('后整') || n.includes('打包') || n.includes('装箱');
 }
 
 // ── 工序名称 → 标准名映射 ──
 
-var CANONICAL_STAGE_MAP = {
+const CANONICAL_STAGE_MAP = {
   '物料采购': '采购',
   '面辅料采购': '采购',
   '备料': '采购',
@@ -100,26 +100,72 @@ var CANONICAL_STAGE_MAP = {
   '入仓': '入库',
   '验收': '入库',
   '成品入库': '入库',
+  // 样衣特有工序映射
+  '车板': '车缝',
+  '打板': '车缝',
+  '制板': '车缝',
+  '跟单': '尾部',
+  '跟单确认': '尾部',
+  '大烫': '整烫',
+  '熨烫': '整烫',
+  '包装': '包装',
+  '打包': '包装',
+  '装箱': '包装',
 };
 
 function canonicalStageKey(k) {
-  var n = normalizeStageKey(k);
+  const n = normalizeStageKey(k);
   if (!n) return '';
   return normalizeStageKey(CANONICAL_STAGE_MAP[n] || n);
 }
 
 // ── scanType 推断 ──
 
-var SCAN_TYPE_RULES = {
-  '采购': 'production',
+const SCAN_TYPE_RULES = {
+  '采购': 'procurement',
   '裁剪': 'cutting',
+  '二次工艺': 'secondaryProcess',
+  '车缝': 'production',
+  '尾部': 'production',
+  '整烫': 'pressing',
+  '包装': 'packaging',
   '质检': 'quality',
   '入库': 'warehouse',
 };
 
-var VALID_SCAN_TYPES = new Set(['production', 'quality', 'warehouse', 'cutting']);
+const VALID_SCAN_TYPES = new Set(['production', 'quality', 'warehouse', 'cutting', 'procurement', 'secondaryProcess', 'pressing', 'packaging', 'sewing']);
 
-var DEFAULT_SCAN_TYPE = 'production';
+const DEFAULT_SCAN_TYPE = 'production';
+
+// ── 父子工序门禁（与后端 ProductionConstants.FIXED_PRODUCTION_NODES 对齐）──
+
+const FIXED_PRODUCTION_NODES = ['采购', '裁剪', '二次工艺', '车缝', '尾部', '入库'];
+
+/**
+ * 获取指定工序的前置父工序列表
+ * 与后端 ProductionScanStageSupport.validateParentStagePrerequisite 对齐
+ * @param {string} processName - 工序名（已规范化）
+ * @returns {string[]} 前置工序列表
+ */
+function getParentStages(processName) {
+  const canonical = canonicalStageKey(processName);
+  const idx = FIXED_PRODUCTION_NODES.indexOf(canonical);
+  if (idx <= 0) return []; // 采购或未知工序无前置
+  return FIXED_PRODUCTION_NODES.slice(0, idx);
+}
+
+/**
+ * 检查前置工序是否全部完成
+ * @param {string} processName - 当前工序名
+ * @param {Set<string>} completedStages - 已完成的标准工序集合
+ * @returns {{ pass: boolean, missing: string[] }}
+ */
+function checkParentStageGate(processName, completedStages) {
+  const parents = getParentStages(processName);
+  if (parents.length === 0) return { pass: true, missing: [] };
+  const missing = parents.filter(function(p) { return !completedStages.has(p); });
+  return { pass: missing.length === 0, missing: missing };
+}
 
 /**
  * 根据工序名称/进度阶段推断 scanType
@@ -138,7 +184,7 @@ function inferScanType(processName, progressStage, backendScanType) {
   if (progressStage && SCAN_TYPE_RULES[progressStage]) {
     return SCAN_TYPE_RULES[progressStage];
   }
-  var canonical = canonicalStageKey(processName);
+  const canonical = canonicalStageKey(processName);
   if (SCAN_TYPE_RULES[canonical]) {
     return SCAN_TYPE_RULES[canonical];
   }
@@ -159,10 +205,10 @@ function inferScanType(processName, progressStage, backendScanType) {
  */
 function parseDefectQtyFromRemark(remark, fallbackQty) {
   if (!remark) return fallbackQty || 0;
-  var parts = (remark || '').split('|');
-  for (var i = 0; i < parts.length; i++) {
+  const parts = (remark || '').split('|');
+  for (let i = 0; i < parts.length; i++) {
     if (parts[i].indexOf('defectQty=') === 0) {
-      var n = parseInt(parts[i].substring('defectQty='.length), 10);
+      const n = parseInt(parts[i].substring('defectQty='.length), 10);
       if (n > 0) return n;
     }
   }
@@ -176,34 +222,34 @@ function parseDefectQtyFromRemark(remark, fallbackQty) {
  * @returns {{ isUnqualified: boolean, defectQty: number, handleMethod: string, isScrap: boolean, defectRemark: string, expectedQty: number }}
  */
 function extractQualityMeta(scanHistory, fallbackQty) {
-  var allConfirmRecs = (scanHistory || []).filter(function(r) {
+  const allConfirmRecs = (scanHistory || []).filter(function(r) {
     return r && r.processCode === 'quality_receive' && r.scanResult === 'success' && r.confirmTime;
   });
 
   allConfirmRecs.sort(function(a, b) {
     return (a.confirmTime || '').localeCompare(b.confirmTime || '');
   });
-  var confirmRec = allConfirmRecs.length > 0 ? allConfirmRecs[allConfirmRecs.length - 1] : null;
+  const confirmRec = allConfirmRecs.length > 0 ? allConfirmRecs[allConfirmRecs.length - 1] : null;
 
-  var remarkStr = confirmRec ? String(confirmRec.remark || '') : '';
-  var isUnqualified = !!(confirmRec && remarkStr.indexOf('unqualified') === 0);
-  var defectQty = isUnqualified
+  const remarkStr = confirmRec ? String(confirmRec.remark || '') : '';
+  const isUnqualified = !!(confirmRec && remarkStr.indexOf('unqualified') === 0);
+  const defectQty = isUnqualified
     ? parseDefectQtyFromRemark(remarkStr, confirmRec.quantity)
     : 0;
 
-  var handleMethod = '返修';
+  let handleMethod = '返修';
   if (isUnqualified) {
-    var parts = remarkStr.split('|');
-    for (var i = 0; i < parts.length; i++) {
+    const parts = remarkStr.split('|');
+    for (let i = 0; i < parts.length; i++) {
       if (parts[i] === '报废' || parts[i] === '返修') {
         handleMethod = parts[i];
         break;
       }
     }
   }
-  var isScrap = handleMethod === '报废';
+  const isScrap = handleMethod === '报废';
 
-  var expectedQty = Number(fallbackQty || 0) > 0 ? Number(fallbackQty || 0) : 0;
+  const expectedQty = Number(fallbackQty || 0) > 0 ? Number(fallbackQty || 0) : 0;
 
   return {
     isUnqualified: isUnqualified,
@@ -236,4 +282,7 @@ module.exports = {
   inferScanType: inferScanType,
   parseDefectQtyFromRemark: parseDefectQtyFromRemark,
   extractQualityMeta: extractQualityMeta,
+  FIXED_PRODUCTION_NODES: FIXED_PRODUCTION_NODES,
+  getParentStages: getParentStages,
+  checkParentStageGate: checkParentStageGate,
 };
