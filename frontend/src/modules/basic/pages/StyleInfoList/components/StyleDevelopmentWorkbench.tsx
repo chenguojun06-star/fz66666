@@ -5,6 +5,7 @@ import dayjs from 'dayjs';
 import api from '@/utils/api';
 import { formatMoney } from '@/utils/format';
 import StageTimelineHint from '@/components/common/StageTimelineHint';
+import StyleDevelopmentProgressBanner from './StyleDevelopmentProgressBanner';
 import type { StageTimelineItem } from '@/components/common/StageTimelineHint';
 import { StyleAttachment, StyleBom, StyleInfo, StyleProcess, StyleQuotation, StyleSize, WorkbenchSection } from '@/types/style';
 import StyleAttachmentTab from '../../StyleInfo/components/StyleAttachmentTab';
@@ -456,48 +457,13 @@ const StyleDevelopmentWorkbench: React.FC<Props> = ({ record, onClose, initialSe
         </div>
       </div>
 
-      <div className="style-workbench__stage-strip">
-        {stageCards.map((item, i) => {
-          // pill 只显示一行预算摘要，详细信息在下方预算栏
-          const budgetLabel = (() => {
-            if (!item.budgetField || item.budgetHours == null) return null;
-            if (!item.budgetCustomized) return { text: `默认${formatBudgetHours(item.budgetHours)}`, color: 'var(--color-text-quaternary, #bfbfbf)' };
-            const status = computeBudgetStatus(item.budgetHours, item.availableTime, item.startTime, item.endTime);
-            if (status?.text) return { text: `预算${formatBudgetHours(item.budgetHours)} · ${status.text}`, color: status.color };
-            return { text: `预算${formatBudgetHours(item.budgetHours)}`, color: 'var(--color-text-quaternary, #bfbfbf)' };
-          })();
-          const actualDuration = item.completed && item.startTime && item.endTime
-            ? calculateActualDuration(item.startTime, item.endTime)
-            : null;
-
-          return (
-            <button
-              key={item.key}
-              type="button"
-              className={`style-workbench__stage-pill${activeSection === item.key ? ' style-workbench__stage-pill--active' : ''}`}
-              onClick={() => setActiveSection(item.key)}
-            >
-              <span>{item.title}</span>
-              <Tag color={item.meta.color}>{item.meta.label}</Tag>
-              {budgetLabel && (
-                <div style={{ fontSize: 10, color: budgetLabel.color, lineHeight: 1.2 }}>
-                  {budgetLabel.text}
-                </div>
-              )}
-              {actualDuration && (
-                <div style={{ fontSize: 10, color: 'var(--color-text-quaternary, #bfbfbf)', lineHeight: 1.2 }}>
-                  {`实际${actualDuration}`}
-                </div>
-              )}
-              <StageTimelineHint
-                stages={stageTimelineItems}
-                orderCreateTime={(detail as any).createTime}
-                expectedShipDate={(detail as any).deliveryDate}
-                stageIndex={i}
-              />
-            </button>
-          );
-        })}
+      <div style={{ marginBottom: 16 }}>
+        <StyleDevelopmentProgressBanner
+          stages={stageCards as any}
+          activeKey={activeSection}
+          onStageClick={(key) => setActiveSection(key as typeof activeSection)}
+          style={{ margin: 0 }}
+        />
       </div>
 
       {/* 当前阶段预算编辑栏 */}

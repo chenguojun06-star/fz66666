@@ -2,6 +2,7 @@ import React, { useRef, useState } from 'react';
 import { Button, Dropdown, Input, Modal, Popover, Select, Space, Upload, message as antMessage, Spin } from 'antd';
 import { DownOutlined, RobotOutlined } from '@ant-design/icons';
 import { sortSizeNames } from '@/utils/api';
+import api from '@/utils/api';
 import { TemplateLibrary } from '@/types/style';
 
 interface Props {
@@ -58,10 +59,9 @@ const StyleSizeToolbar: React.FC<Props> = ({
       const formData = new FormData();
       formData.append('file', ocrFile);
       
-      const res = await fetch(`/api/style/info/${styleId}/recognize-size-table`, {
-        method: 'POST',
-        body: formData,
-      }).then(r => r.json());
+      const res = await api.post(`/style/info/${styleId}/recognize-size-table`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
       
       if (res.code !== 200) {
         antMessage.error(res.message || 'AI识别失败');
