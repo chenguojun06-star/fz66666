@@ -1,8 +1,7 @@
 import React from 'react';
-import { Button, Form, Image, Input, InputNumber, Select, Tabs } from 'antd';
+import { Button, Form, Image, Input, InputNumber, Select, Tabs, Drawer } from 'antd';
 import type { FormInstance } from 'antd/es/form';
 import DictAutoComplete from '@/components/common/DictAutoComplete';
-import ResizableModal from '@/components/common/ResizableModal';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
 import SupplierSelect from '@/components/common/SupplierSelect';
@@ -50,12 +49,13 @@ const StyleBomMaterialModal: React.FC<StyleBomMaterialModalProps> = ({
   onUseMaterial,
   onCreateMaterial,
 }) => (
-  <ResizableModal
+  <Drawer
     title="面辅料选择"
     open={open}
-    onCancel={onClose}
-    footer={null}
-    width={modalWidth}
+    onClose={onClose}
+    placement="right"
+    size="large"
+    styles={{ wrapper: { width: '75vw' }, body: { padding: '16px 24px', display: 'flex', flexDirection: 'column', overflow: 'auto' } }}
     destroyOnHidden
   >
     <Tabs
@@ -281,7 +281,7 @@ const StyleBomMaterialModal: React.FC<StyleBomMaterialModalProps> = ({
         },
       ]}
     />
-  </ResizableModal>
+  </Drawer>
 );
 
 export default StyleBomMaterialModal;

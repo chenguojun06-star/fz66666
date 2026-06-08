@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Input, Button, Empty, Spin, App, Tag, Image } from 'antd';
+import { Input, Button, Empty, Spin, App, Tag, Image, Drawer } from 'antd';
 import { DeleteOutlined, EyeOutlined } from '@ant-design/icons';
-import ResizableModal from './ResizableModal';
 import MultiImageUploadBox from './MultiImageUploadBox';
 import { remarkApi } from '@/services/system/remarkApi';
 import type { OrderRemark } from '@/services/system/remarkApi';
@@ -97,12 +96,13 @@ const RemarkTimelineModal: React.FC<RemarkTimelineModalProps> = ({
   const title = targetType === 'order' ? `订单备注 — ${targetNo}` : `款式备注 — ${targetNo}`;
 
   return (
-    <ResizableModal
+    <Drawer
       title={title}
       open={open}
-      onCancel={onClose}
-      width="40vw"
-      footer={null}
+      onClose={onClose}
+      placement="right"
+      size="large"
+      styles={{ wrapper: { width: '55vw' }, body: { padding: '16px 24px', display: 'flex', flexDirection: 'column', overflow: 'auto' } }}
       destroyOnHidden
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16, height: '100%' }}>
@@ -192,7 +192,7 @@ const RemarkTimelineModal: React.FC<RemarkTimelineModalProps> = ({
           </Spin>
         </div>
       </div>
-    </ResizableModal>
+    </Drawer>
   );
 };
 

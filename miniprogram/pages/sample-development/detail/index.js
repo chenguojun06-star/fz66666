@@ -1,9 +1,10 @@
 const { style } = require('../../../utils/api-modules/style-warehouse');
-const config = require('../../../utils/config');
+const { production } = require('../../../utils/api-modules/production');
 
 Page({
   data: {
     styleId: '',
+    patternId: '',
     styleInfo: null,
     loading: true,
     activeTab: 0,
@@ -44,17 +45,45 @@ Page({
   },
 
   onLoad(options) {
-    const styleId = options.id || options.styleId || '';
-    if (!styleId) {
-      wx.showToast({ title: '缺少款式ID', icon: 'none' });
+    const styleId = options.styleId || '';
+    const patternId = options.id || options.patternId || '';
+    if (!styleId && !patternId) {
+      wx.showToast({ title: '缺少参数', icon: 'none' });
       return;
     }
-    this.setData({ styleId });
-    this.loadStyleDetail();
+    this.setData({ styleId, patternId });
+    // 如果只有 patternId，先获取样衣详情拿到 styleId
+    if (!styleId && patternId) {
+      this.loadStyleIdFromPattern(patternId);
+    } else {
+      this.loadStyleDetail();
+    }
   },
 
   onPullDownRefresh() {
     this.loadStyleDetail().then(() => wx.stopPullDownRefresh());
+  },
+
+  /** 通过 patternId 获取样衣详情，提取 styleId */
+  async loadStyleIdFromPattern(patternId) {
+    this.setData({ loading: true });
+    try {
+      const res = await production.getPatternDetail(patternId);
+      const detail = res?.data || res || {};
+      const styleId = detail.styleId || detail.styleNo || '';
+      if (styleId) {
+        this.setData({ styleId });
+        this.loadStyleDetail();
+      } else {
+        // 没有 styleId，用 patternId 作为兜底显示样衣信息
+        this.setData({ styleInfo: detail, loading: false });
+        wx.showToast({ title: '该样衣暂无关联款式', icon: 'none' });
+      }
+    } catch (e) {
+      console.error('获取样衣详情失败', e);
+      this.setData({ loading: false });
+      wx.showToast({ title: '加载失败', icon: 'none' });
+    }
   },
 
   async loadStyleDetail() {

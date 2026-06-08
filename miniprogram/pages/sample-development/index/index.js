@@ -272,10 +272,13 @@ Page({
   onGoDetail: function (e) {
     const item = e.currentTarget.dataset.item;
     if (!item) return;
-    const styleId = item.styleId || item.id;
-    if (!styleId) return;
+    // 优先使用 styleId（款式ID），没有则用 id 作为兜底
+    const styleId = item.styleId || '';
+    const patternId = item.id || '';
+    if (!styleId && !patternId) return;
+    const param = styleId ? 'styleId=' + encodeURIComponent(styleId) : 'id=' + encodeURIComponent(patternId);
     safeNavigate({
-      url: '/pages/sample-development/detail/index?styleId=' + encodeURIComponent(styleId),
+      url: '/pages/sample-development/detail/index?' + param,
     }).catch(() => {});
   },
 

@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { Alert, Button, Card, Empty, Input, Modal, Select, Space, Tabs, Tag } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
-import SmallModal from '@/components/common/SmallModal';
 import ResizableModal from '@/components/common/ResizableModal';
 import { User } from '@/types/system';
 import api from '@/utils/api';
@@ -460,7 +459,7 @@ const UserApproval: React.FC = () => {
           </div>
         </ResizableModal>
 
-        <SmallModal
+        <ResizableModal
           title="拒绝用户"
           open={rejectModalVisible}
           onOk={confirmReject}
@@ -471,8 +470,9 @@ const UserApproval: React.FC = () => {
           }}
           okText="确定拒绝"
           cancelText="取消"
-          okButtonProps={{ danger: true, type: 'default' }}
+          okButtonProps={{ danger: true, type: 'primary' }}
           confirmLoading={rejectSubmitting}
+          width="40vw"
         >
           <div style={{ marginBottom: 16 }}>
             <p>
@@ -482,16 +482,16 @@ const UserApproval: React.FC = () => {
           </div>
           <TextArea
             id="rejectReason"
-            placeholder="请输入拒绝原因"
+            placeholder="请输入拒绝原因（必填）"
             value={rejectReason}
             onChange={(e) => setRejectReason(e.target.value)}
             rows={4}
             maxLength={200}
             showCount
           />
-        </SmallModal>
+        </ResizableModal>
 
-        <Modal
+        <ResizableModal
           title="批准外发工厂员工"
           open={factoryApproveModalVisible}
           onOk={confirmFactoryApprove}
@@ -532,9 +532,9 @@ const UserApproval: React.FC = () => {
               />
             </div>
           </div>
-        </Modal>
+        </ResizableModal>
 
-        <SmallModal
+        <ResizableModal
           title="拒绝外发工厂员工"
           open={factoryRejectModalVisible}
           onOk={confirmFactoryReject}
@@ -545,8 +545,9 @@ const UserApproval: React.FC = () => {
           }}
           okText="确定拒绝"
           cancelText="取消"
-          okButtonProps={{ danger: true, type: 'default' }}
+          okButtonProps={{ danger: true, type: 'primary' }}
           confirmLoading={factoryApproveLoading}
+          width="40vw"
         >
           <div style={{ marginBottom: 16 }}>
             <p>
@@ -559,14 +560,14 @@ const UserApproval: React.FC = () => {
           </div>
           <TextArea
             id="factoryRejectReason"
-            placeholder="请输入拒绝原因"
+            placeholder="请输入拒绝原因（必填）"
             value={factoryRejectReason}
             onChange={(e) => setFactoryRejectReason(e.target.value)}
             rows={4}
             maxLength={200}
             showCount
           />
-        </SmallModal>
+        </ResizableModal>
     </>
   );
 };

@@ -59,19 +59,26 @@ const system = {
   saveMiniprogramMenuRoleConfig(roleMenus) {
     return ok('/api/system/tenant-miniprogram-menu/menu-roles', 'PUT', { roleMenus });
   },
-  // 收藏应用API可用性标记（后端未部署时跳过请求，避免400/405刷屏）
-  _favApiAvailable: true,
+  // 收藏应用API：不再使用永久禁用标记，每次都尝试请求
+  // 之前 _favApiAvailable 一旦为 false 就永不恢复，导致502后收藏丢失
+  _favFailCount: 0,
   getFavoriteApps() {
-    if (!system._favApiAvailable) return Promise.resolve({ favoriteData: '[]' });
-    return ok('/api/system/user/favorite-apps', 'GET', {}).catch(function () {
-      system._favApiAvailable = false;
+    // 连续失败3次以上时延迟重试（避免频繁请求不可用的API），但不清零
+    // 每次 onShow 都会调用 loadFavorites，所以最终会恢复
+    if (system._favFailCount >= 3) {
+      system._favFailCount = Math.max(0, system._favFailCount - 1);
+      return Promise.resolve({ favoriteData: '[]' });
+    }
+    return ok('/api/system/user/favorite-apps', 'GET', {}).then(function (res) {
+      system._favFailCount = 0; // 成功则重置
+      return res;
+    }).catch(function () {
+      system._favFailCount++;
       return { favoriteData: '[]' };
     });
   },
   saveFavoriteApps(favoriteData) {
-    if (!system._favApiAvailable) return Promise.resolve({ success: false });
     return ok('/api/system/user/favorite-apps', 'PUT', { favoriteData: favoriteData }).catch(function () {
-      system._favApiAvailable = false;
       return { success: false };
     });
   },

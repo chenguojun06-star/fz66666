@@ -231,6 +231,9 @@ public class PayrollSettlementOrchestrator {
         payrollSettlementItemService.saveBatch(items);
         markScanRecordsAsSettled(q, settlement.getId());
 
+        log.info("[PayrollGenerate] 生成工资结算单: operator={}, settlementId={}, settlementNo={}, orderId={}, orderNo={}, totalQty={}, totalAmount={}",
+                UserContext.username(), settlement.getId(), settlement.getSettlementNo(), q.orderId, q.orderNo,
+                settlement.getTotalQuantity(), settlement.getTotalAmount());
         return settlement;
     }
 
@@ -689,6 +692,9 @@ public class PayrollSettlementOrchestrator {
                 .eq(ScanRecord::getTenantId, settlement.getTenantId());
         scanRecordMapper.update(new ScanRecord(), scanUw);
 
+        log.info("[PayrollCancel] 取消工资结算单: operator={}, settlementId={}, settlementNo={}, totalAmount={}, remark={}",
+                UserContext.username(), settlement.getId(), settlement.getSettlementNo(), settlement.getTotalAmount(), remark);
+
         try {
             if (billAggregationOrchestrator != null) {
                 billAggregationOrchestrator.cancelBySource("PAYROLL_SETTLEMENT", settlementId.trim());
@@ -718,6 +724,10 @@ public class PayrollSettlementOrchestrator {
         if (!"cancelled".equalsIgnoreCase(settlement.getStatus())) {
             throw new IllegalStateException("只允许删除已取消(cancelled)的结算单，请先取消");
         }
+
+        log.info("[PayrollDelete] 删除工资结算单: operator={}, settlementId={}, settlementNo={}, orderId={}, orderNo={}, totalAmount={}",
+                UserContext.username(), settlement.getId(), settlement.getSettlementNo(), settlement.getOrderId(),
+                settlement.getOrderNo(), settlement.getTotalAmount());
 
         // 先删明细，再删主记录
         payrollSettlementItemService.deleteBySettlementId(settlementId.trim());

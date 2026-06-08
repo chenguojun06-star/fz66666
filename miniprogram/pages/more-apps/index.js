@@ -79,6 +79,15 @@ Page({
       } catch (e) {
         favorites = [];
       }
+      // 服务端返回空但本地有缓存时，保留本地数据（防止502后服务端返回空覆盖本地收藏）
+      if (favorites.length === 0) {
+        try {
+          const local = wx.getStorageSync('favoriteApps');
+          if (Array.isArray(local) && local.length > 0) {
+            favorites = local;
+          }
+        } catch (e) { /* ignore */ }
+      }
       // 同步到本地缓存
       try { wx.setStorageSync('favoriteApps', favorites); } catch (e) { /* ignore */ }
       that.setData({ favoriteApps: favorites });

@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { App, Button, InputNumber, Popconfirm, Select, Space, Spin } from 'antd';
+import { App, Button, InputNumber, Popconfirm, Select, Space, Spin, Drawer } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
-import ResizableModal from '@/components/common/ResizableModal';
 import DictAutoComplete from '@/components/common/DictAutoComplete';
 import { productionOrderApi } from '@/services/production/productionApi';
 
@@ -232,18 +231,20 @@ const CuttingWorkflowEditorModal: React.FC<CuttingWorkflowEditorModalProps> = ({
   ];
 
   return (
-    <ResizableModal
+    <Drawer
       open={visible}
       title={`编辑工序 — ${orderNo || ''}`}
-      onCancel={onClose}
-      width="40vw"
+      onClose={onClose}
+      placement="right"
+      size="large"
+      styles={{ wrapper: { width: '65vw' }, body: { padding: '16px 24px', display: 'flex', flexDirection: 'column', overflow: 'auto' } }}
       footer={
-        <Space>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
           <Button onClick={onClose}>取消</Button>
           <Button type="primary" loading={saving} onClick={handleSave}>
             保存工序
           </Button>
-        </Space>
+        </div>
       }
     >
       <Spin spinning={loading}>
@@ -254,7 +255,7 @@ const CuttingWorkflowEditorModal: React.FC<CuttingWorkflowEditorModalProps> = ({
         </div>
         <ResizableTable<WorkflowRow>
           storageKey="cutting-workflow-table"
-         
+          
           columns={columns}
           dataSource={rows}
           rowKey="_key"
@@ -263,7 +264,7 @@ const CuttingWorkflowEditorModal: React.FC<CuttingWorkflowEditorModalProps> = ({
           locale={{ emptyText: '暂无工序，点击上方按钮添加' }}
         />
       </Spin>
-    </ResizableModal>
+    </Drawer>
   );
 };
 

@@ -88,6 +88,9 @@ public class FinishedOutstockHelper {
         String warehouseAreaId = trimToNull(params.get("warehouseAreaId"));
         String warehouseAreaName = resolveWarehouseAreaName(warehouseAreaId);
 
+        int totalItems = 0;
+        int totalQty = 0;
+
         for (Map<String, Object> item : items) {
             String skuCode = (String) item.get("sku");
             if (!StringUtils.hasText(skuCode)) {
@@ -122,6 +125,8 @@ public class FinishedOutstockHelper {
                     "成品库存页面出库|sku=" + skuCode, trackingNo, expressCompany,
                     customerName, customerPhone, shippingAddress, finalOutstockType,
                     warehouseAreaId, warehouseAreaName, overrideSalesPrice, priceAdjustmentReason);
+            totalItems++;
+            totalQty += quantity;
         }
         String productionOrderNo = (String) params.get("productionOrderNo");
         if (StringUtils.hasText(productionOrderNo)) {
@@ -132,6 +137,9 @@ public class FinishedOutstockHelper {
                 log.warn("[EC回写失败不阻塞主流程] productionOrderNo={} err={}", productionOrderNo, ex.getMessage());
             }
         }
+
+        log.info("[FinishedOutbound] 成品批量出库: operator={}, orderId={}, orderNo={}, customer={}, items={}, totalQty={}, type={}",
+                UserContext.username(), requestOrderId, requestOrderNo, customerName, totalItems, totalQty, finalOutstockType);
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -158,12 +166,16 @@ public class FinishedOutstockHelper {
             skuQtyMap.merge(skuCode, quantity, Integer::sum);
         }
         List<Map<String, Object>> stdItems = new java.util.ArrayList<>();
+        int totalQty = 0;
         for (Map.Entry<String, Integer> e : skuQtyMap.entrySet()) {
             Map<String, Object> m = new java.util.HashMap<>();
             m.put("sku", e.getKey());
             m.put("quantity", e.getValue());
             stdItems.add(m);
+            totalQty += e.getValue();
         }
+        log.info("[QRCodeOutbound] 二维码成品出库: operator={}, items={}, skus={}, totalQty={}",
+                UserContext.username(), items.size(), stdItems.size(), totalQty);
         Map<String, Object> outboundParams = new java.util.HashMap<>(params);
         outboundParams.put("items", stdItems);
         outbound(outboundParams);
