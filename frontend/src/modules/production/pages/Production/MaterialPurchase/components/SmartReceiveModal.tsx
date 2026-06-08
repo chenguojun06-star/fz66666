@@ -1,8 +1,7 @@
 import React from 'react';
-import { Button, Tag, Tooltip, Divider, Empty, Space } from 'antd';
+import { Button, Tag, Tooltip, Divider, Empty, Space, Drawer } from 'antd';
 import { ShopOutlined, SendOutlined, ExclamationCircleOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
-import ResizableModal from '@/components/common/ResizableModal';
 import PageStatCards, { StatCard } from '@/components/common/PageStatCards';
 import InoutRecommendBanner from './InoutRecommendBanner';
 import type { SmartReceiveModalProps } from './smartReceiveTypes';
@@ -37,22 +36,25 @@ const SmartReceiveModal: React.FC<SmartReceiveModalProps> = ({
     : 'var(--color-warning)';
 
   return (
-    <ResizableModal
+    <Drawer
       title={<Space><ShopOutlined /><span>智能领取 - {orderNo}</span></Space>}
       open={open}
-      onCancel={onCancel}
-      width="85vw"
-      initialHeight={Math.round(window.innerHeight * 0.6)}
-      footer={[
-        <Button key="close" onClick={onCancel}>关闭</Button>,
-        <Button key="batchPurchase" icon={<SendOutlined />} loading={actionLoading._batchPurchase} disabled={pendingMaterials.filter((m) => m.availableStock <= 0).length === 0} onClick={() => handleBatchPurchaseAll(materials)} style={{ borderColor: 'var(--color-primary)', color: 'var(--color-primary)' }}>一键采购全部{noStockCount > 0 ? `（${noStockCount}项）` : ''}</Button>,
-        <Tooltip key="forcePurchase" title={pendingMaterials.filter((m) => m.availableStock > 0).length === 0 ? '当前所有待处理物料均无可用库存，无需跳过库存' : ''}>
-          <Button icon={<ExclamationCircleOutlined />} loading={!!actionLoading._forcePurchase} disabled={pendingMaterials.filter((m) => m.availableStock > 0).length === 0 || !!actionLoading._forcePurchase} onClick={() => handleForcePurchaseAll(materials)} style={{ color: '#fa8c16', borderColor: '#fa8c16' }}>忽略库存全部外采（{pendingMaterials.length}项）</Button>
-        </Tooltip>,
-        <Tooltip key="smartAll" title={pendingMaterials.length > 0 && noStockCount === pendingMaterials.length ? `全部 ${noStockCount} 项物料库存为零，请先点"一键采购全部"完成采购入库后再领取` : ''}>
-          <Button type="primary" icon={<CheckCircleOutlined />} loading={actionLoading._all} disabled={pendingMaterials.length === 0 || noStockCount === pendingMaterials.length || actionLoading._all} onClick={() => handleSmartReceiveAll(orderNo, pendingCount)}>一键智能领取</Button>
-        </Tooltip>,
-      ]}
+      onClose={onCancel}
+      placement="right"
+      size="large"
+      styles={{ wrapper: { width: '85vw' }, body: { padding: '16px 24px', display: 'flex', flexDirection: 'column', overflow: 'auto' } }}
+      footer={
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+          <Button onClick={onCancel}>关闭</Button>
+          <Button icon={<SendOutlined />} loading={actionLoading._batchPurchase} disabled={pendingMaterials.filter((m) => m.availableStock <= 0).length === 0} onClick={() => handleBatchPurchaseAll(materials)} style={{ borderColor: 'var(--color-primary)', color: 'var(--color-primary)' }}>一键采购全部{noStockCount > 0 ? `（${noStockCount}项）` : ''}</Button>
+          <Tooltip title={pendingMaterials.filter((m) => m.availableStock > 0).length === 0 ? '当前所有待处理物料均无可用库存，无需跳过库存' : ''}>
+            <Button icon={<ExclamationCircleOutlined />} loading={!!actionLoading._forcePurchase} disabled={pendingMaterials.filter((m) => m.availableStock > 0).length === 0 || !!actionLoading._forcePurchase} onClick={() => handleForcePurchaseAll(materials)} style={{ color: '#fa8c16', borderColor: '#fa8c16' }}>忽略库存全部外采（{pendingMaterials.length}项）</Button>
+          </Tooltip>
+          <Tooltip title={pendingMaterials.length > 0 && noStockCount === pendingMaterials.length ? `全部 ${noStockCount} 项物料库存为零，请先点"一键采购全部"完成采购入库后再领取` : ''}>
+            <Button type="primary" icon={<CheckCircleOutlined />} loading={actionLoading._all} disabled={pendingMaterials.length === 0 || noStockCount === pendingMaterials.length || actionLoading._all} onClick={() => handleSmartReceiveAll(orderNo, pendingCount)}>一键智能领取</Button>
+          </Tooltip>
+        </div>
+      }
     >
       <InoutRecommendBanner pendingCount={pendingMaterials.length} noStockCount={noStockCount} partialStockCount={partialStockCount} visible={open} />
 
@@ -103,7 +105,7 @@ const SmartReceiveModal: React.FC<SmartReceiveModalProps> = ({
         .row-cancelled { opacity: 0.5; }
         .row-no-stock:hover td, .row-partial:hover td, .row-done:hover td { background: inherit !important; }
       `}</style>
-    </ResizableModal>
+    </Drawer>
   );
 };
 

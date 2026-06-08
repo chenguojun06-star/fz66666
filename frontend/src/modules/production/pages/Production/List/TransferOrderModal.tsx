@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Select, Tabs, Input, InputNumber } from 'antd';
-import ResizableModal from '@/components/common/ResizableModal';
+import { Select, Tabs, Input, InputNumber, Drawer, Button, Space } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
 import { safeString } from './utils';
 import { formatMoney } from '@/utils/format';
@@ -85,17 +84,21 @@ const TransferOrderModal: React.FC<TransferOrderModalProps> = (props) => {
     .filter(Boolean);
 
   return (
-    <ResizableModal
+    <Drawer
       title={`转单 - ${safeString((transferRecord as any)?.orderNo)}`}
       open={transferModalVisible}
-      onCancel={closeTransferModal}
-      onOk={handleSubmit}
-      confirmLoading={transferSubmitting}
-      okText={transferType === 'factory' ? '确认转工厂' : '确认转人员'}
-      cancelText="取消"
-      width="85vw"
-      initialHeight={Math.round(window.innerHeight * 0.82)}
-      destroyOnHidden
+      onClose={closeTransferModal}
+      placement="right"
+      size="large"
+      styles={{ wrapper: { width: '85vw' }, body: { padding: '16px 24px', display: 'flex', flexDirection: 'column', overflow: 'auto' } }}
+      footer={
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+          <Button onClick={closeTransferModal}>取消</Button>
+          <Button type="primary" loading={transferSubmitting} onClick={handleSubmit}>
+            {transferType === 'factory' ? '确认转工厂' : '确认转人员'}
+          </Button>
+        </div>
+      }
     >
       <div style={{ padding: '8px 0' }}>
         <Tabs
@@ -300,7 +303,7 @@ const TransferOrderModal: React.FC<TransferOrderModalProps> = (props) => {
           />
         </div>
       </div>
-    </ResizableModal>
+    </Drawer>
   );
 };
 

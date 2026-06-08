@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import ResizableModal from '@/components/common/ResizableModal';
+import { Drawer } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
 import api from '@/utils/api';
 
@@ -37,13 +37,13 @@ const PickingDetailModal: React.FC<PickingDetailModalProps> = ({ visible, pickin
   ];
 
   return (
-    <ResizableModal
+    <Drawer
       title="领料详情"
       open={visible}
-      onCancel={onCancel}
-      footer={null}
-      width="85vw"
-      initialHeight={Math.round(window.innerHeight * 0.82)}
+      onClose={onCancel}
+      placement="right"
+      size="large"
+      styles={{ wrapper: { width: '65vw' }, body: { padding: '16px 24px', display: 'flex', flexDirection: 'column', overflow: 'auto' } }}
     >
       <ResizableTable
         storageKey="picking-detail"
@@ -52,9 +52,8 @@ const PickingDetailModal: React.FC<PickingDetailModalProps> = ({ visible, pickin
         columns={columns}
         rowKey="id"
         pagination={false}
-       
       />
-    </ResizableModal>
+    </Drawer>
   );
 };
 

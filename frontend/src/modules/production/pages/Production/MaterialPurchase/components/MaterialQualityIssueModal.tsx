@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { App, Button, Card, Descriptions, Form, Input, InputNumber, Select, Space, Tag } from 'antd';
+import { App, Button, Card, Descriptions, Form, Input, InputNumber, Select, Space, Tag, Drawer } from 'antd';
 import ResizableModal from '@/components/common/ResizableModal';
 import ResizableTable from '@/components/common/ResizableTable';
 import type { MaterialPurchase } from '@/types/production';
@@ -153,13 +153,13 @@ const MaterialQualityIssueModal: React.FC<Props> = ({ open, purchase, onClose, o
 
   return (
     <>
-      <ResizableModal
+      <Drawer
         open={open}
         title="面辅料品质异常"
-        onCancel={onClose}
-        footer={null}
-        width="72vw"
-        initialHeight={Math.round(window.innerHeight * 0.82)}
+        onClose={onClose}
+        placement="right"
+        size="large"
+        styles={{ wrapper: { width: '75vw' }, body: { padding: '16px 24px', display: 'flex', flexDirection: 'column', overflow: 'auto' } }}
         destroyOnHidden
       >
         <div style={{ marginTop: 16, display: 'grid', gap: 16 }}>
@@ -272,7 +272,7 @@ const MaterialQualityIssueModal: React.FC<Props> = ({ open, purchase, onClose, o
             />
           </Card>
         </div>
-      </ResizableModal>
+      </Drawer>
       <ResizableModal
         open={Boolean(resolveTarget)}
         title="处理品质异常"

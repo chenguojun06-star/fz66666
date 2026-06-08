@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Tag, Space, Tabs, Typography } from 'antd';
-import ResizableModal from '@/components/common/ResizableModal';
+import { Card, Tag, Space, Tabs, Typography, Drawer } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
 import { ProductionOrderHeader, StyleCoverThumb } from '@/components/StyleAssets';
 import api, { toNumberSafe } from '@/utils/api';
@@ -47,7 +46,7 @@ const IndependentDetailModal: React.FC<IndependentDetailModalProps> = ({
   });
 
   // Viewport logic replacement
-  const detailPopupWidth = "85vw";
+  const detailPopupWidth = "88vw";
   const detailPopupInitialHeight = typeof window !== 'undefined' ? Math.round(window.innerHeight * 0.82) : 800;
 
   // Derive styleId/styleNo for production sheet and size chart tabs
@@ -83,28 +82,17 @@ const IndependentDetailModal: React.FC<IndependentDetailModalProps> = ({
     return () => { cancelled = true; };
   }, [styleId, open]);
 
-  // Cast ResizableModal to any to avoid prop type errors
-  const ResizableModalAny = ResizableModal as any;
-
   return (
-    <ResizableModalAny
+    <Drawer
       title="质检入库详情"
       open={open}
-      onCancel={onClose}
-      footer={null}
-      width={detailPopupWidth}
-      initialHeight={detailPopupInitialHeight}
-      scaleWithViewport
+      onClose={onClose}
+      placement="right"
+      size="large"
+      styles={{ wrapper: { width: '88vw' }, body: { padding: 0, height: 'calc(100vh - 110px)' } }}
       destroyOnHidden
-      styles={{
-        body: {
-          height: 'calc(100% - 56px)',
-          display: 'flex',
-          flexDirection: 'column',
-        },
-      }}
     >
-      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+      <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
         <Tabs
           defaultActiveKey="inspection"
           style={{ flex: 1, minHeight: 0 }}
@@ -374,7 +362,7 @@ const IndependentDetailModal: React.FC<IndependentDetailModalProps> = ({
           ]}
         />
       </div>
-    </ResizableModalAny>
+    </Drawer>
   );
 };
 
