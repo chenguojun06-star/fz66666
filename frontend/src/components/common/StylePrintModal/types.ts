@@ -18,6 +18,11 @@ export interface PrintOptions {
   processTable: boolean; // 工序表
   productionSheet: boolean; // 生产制单
   sampleReview: boolean; // 样衣审核
+  // 基本信息细分区块
+  styleInfoBlock: boolean; // 款号信息
+  customerInfoBlock: boolean; // 客户信息
+  patternInfoBlock: boolean; // 版次信息
+  timeInfoBlock: boolean; // 时间信息
 }
 
 // 默认打印选项
@@ -28,6 +33,10 @@ export const DEFAULT_PRINT_OPTIONS: PrintOptions = {
   processTable: true,
   productionSheet: true,
   sampleReview: true,
+  styleInfoBlock: true,
+  customerInfoBlock: true,
+  patternInfoBlock: true,
+  timeInfoBlock: true,
 };
 
 // 组件属性

@@ -264,7 +264,20 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
               <div style={{ fontWeight: 600, color: '#1f2937', whiteSpace: 'nowrap', lineHeight: '32px' }}> 选择打印内容：</div>
               <Checkbox.Group
                 value={Object.keys(options).filter(k => options[k as keyof PrintOptions])}
-                onChange={(values) => { setOptions({ basicInfo: values.includes('basicInfo'), sizeTable: values.includes('sizeTable'), bomTable: values.includes('bomTable'), processTable: values.includes('processTable'), productionSheet: values.includes('productionSheet'), sampleReview: values.includes('sampleReview') }); }}
+                onChange={(values) => { 
+                  setOptions({ 
+                    basicInfo: values.includes('basicInfo'), 
+                    sizeTable: values.includes('sizeTable'), 
+                    bomTable: values.includes('bomTable'), 
+                    processTable: values.includes('processTable'), 
+                    productionSheet: values.includes('productionSheet'), 
+                    sampleReview: values.includes('sampleReview'),
+                    styleInfoBlock: values.includes('styleInfoBlock'),
+                    customerInfoBlock: values.includes('customerInfoBlock'),
+                    patternInfoBlock: values.includes('patternInfoBlock'),
+                    timeInfoBlock: values.includes('timeInfoBlock'),
+                  }); 
+                }}
                 style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 16px' }}
               >
                 <Checkbox value="basicInfo">基本信息</Checkbox>
@@ -279,28 +292,27 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
           {/* 基本信息字段细化选择 */}
           {options.basicInfo && (
             <div style={{ marginTop: 12, padding: '10px 14px', background: 'var(--color-bg-base)', borderRadius: 8, border: '1px solid var(--color-border-light)' }}>
-              <div style={{ fontWeight: 500, color: '#666', marginBottom: 8, fontSize: 13 }}>基本信息字段（可多选）：</div>
+              <div style={{ fontWeight: 500, color: '#666', marginBottom: 8, fontSize: 13 }}>基本信息区块（可多选）：</div>
               <Checkbox.Group
-                value={[...basicInfoFields]}
-                onChange={(values) => setBasicInfoFields(new Set(values as string[]))}
+                value={Object.keys(options).filter(k => 
+                  ['styleInfoBlock', 'customerInfoBlock', 'patternInfoBlock', 'timeInfoBlock'].includes(k) && 
+                  options[k as keyof PrintOptions]
+                )}
+                onChange={(values) => { 
+                  setOptions(prev => ({ 
+                    ...prev,
+                    styleInfoBlock: values.includes('styleInfoBlock'),
+                    customerInfoBlock: values.includes('customerInfoBlock'),
+                    patternInfoBlock: values.includes('patternInfoBlock'),
+                    timeInfoBlock: values.includes('timeInfoBlock'),
+                  })); 
+                }}
                 style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 16px' }}
               >
-                <Checkbox value="category">分类</Checkbox>
-                <Checkbox value="season">季节</Checkbox>
-                <Checkbox value="price">价格</Checkbox>
-                <Checkbox value="cycle">周期</Checkbox>
-                <Checkbox value="year">年份</Checkbox>
-                <Checkbox value="month">月份</Checkbox>
-                <Checkbox value="sourceType">开发来源</Checkbox>
-                <Checkbox value="fabricComposition">面料成分</Checkbox>
-                <Checkbox value="washInstructions">洗涤说明</Checkbox>
-                <Checkbox value="uCode">U码</Checkbox>
-                <Checkbox value="maintenanceRemark">维护备注</Checkbox>
-                <Checkbox value="description">款式描述</Checkbox>
-                <Checkbox value="returnComment">退回编辑备注</Checkbox>
-                <Checkbox value="colorSizeMatrix">颜色×码数矩阵</Checkbox>
-                <Checkbox value="colorSizeQty">颜色/码数/数量</Checkbox>
-                <Checkbox value="extraInfo">额外信息（订单号/加工厂等）</Checkbox>
+                <Checkbox value="styleInfoBlock">款号信息</Checkbox>
+                <Checkbox value="customerInfoBlock">客户信息</Checkbox>
+                <Checkbox value="patternInfoBlock">版次信息</Checkbox>
+                <Checkbox value="timeInfoBlock">时间信息</Checkbox>
               </Checkbox.Group>
             </div>
           )}
@@ -348,56 +360,134 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
                   </div>
                 )}
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: "var(--font-size-xxl)", fontWeight: 600, marginBottom: 8 }}>{styleNo} - {styleName}</div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 24px', fontSize: "var(--font-size-base)" }}>
-                    {basicInfoFields.has('category') && category && <div><span style={{ color: 'var(--color-text-secondary)' }}>分类：</span><strong>{toCategoryCn(category)}</strong></div>}
-                    {basicInfoFields.has('season') && season && <div><span style={{ color: 'var(--color-text-secondary)' }}>季节：</span><strong>{toSeasonCn(season)}</strong></div>}
-                    {basicInfoFields.has('price') && (data.productionSheet as any)?.price && <div><span style={{ color: 'var(--color-text-secondary)' }}>价格：</span><strong>{formatMoney((data.productionSheet as any)?.price)}</strong></div>}
-                    {basicInfoFields.has('cycle') && (data.productionSheet as any)?.cycle && <div><span style={{ color: 'var(--color-text-secondary)' }}>周期（天）：</span><strong>{(data.productionSheet as any)?.cycle}</strong></div>}
-                    {basicInfoFields.has('year') && (data.productionSheet as any)?.year && <div><span style={{ color: 'var(--color-text-secondary)' }}>年份：</span><strong>{(data.productionSheet as any)?.year}</strong></div>}
-                    {basicInfoFields.has('month') && (data.productionSheet as any)?.month && <div><span style={{ color: 'var(--color-text-secondary)' }}>月份：</span><strong>{(data.productionSheet as any)?.month}</strong></div>}
-                    {basicInfoFields.has('sourceType') && (data.productionSheet as any)?.developmentSourceType && <div><span style={{ color: 'var(--color-text-secondary)' }}>开发来源：</span><strong>{(data.productionSheet as any)?.developmentSourceType}</strong></div>}
-                    {basicInfoFields.has('fabricComposition') && (data.productionSheet as any)?.fabricComposition && <div><span style={{ color: 'var(--color-text-secondary)' }}>面料成分：</span><strong>{(data.productionSheet as any)?.fabricComposition}</strong></div>}
-                    {basicInfoFields.has('washInstructions') && (data.productionSheet as any)?.washInstructions && <div><span style={{ color: 'var(--color-text-secondary)' }}>洗涤说明：</span><strong>{(data.productionSheet as any)?.washInstructions}</strong></div>}
-                    {basicInfoFields.has('uCode') && (data.productionSheet as any)?.uCode && <div><span style={{ color: 'var(--color-text-secondary)' }}>U码：</span><strong>{(data.productionSheet as any)?.uCode}</strong></div>}
-                    {basicInfoFields.has('maintenanceRemark') && (data.productionSheet as any)?.maintenanceRemark && <div><span style={{ color: 'var(--color-text-secondary)' }}>维护备注：</span><strong>{(data.productionSheet as any)?.maintenanceRemark}</strong></div>}
-                    {basicInfoFields.has('extraInfo') && Object.entries(extraInfo).map(([key, value]) => {
-                      if (!value || key === 'sizeColorConfig' || key === 'sizes' || key === 'price' || key === 'cycle') return null;
-                      const display = typeof value === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(value)
-                        ? formatDateTime(value) : String(value);
-                      return <div key={key}><span style={{ color: 'var(--color-text-secondary)' }}>{key}：</span><strong>{display}</strong></div>;
-                    })}
-                  </div>
+                  <div style={{ fontSize: "var(--font-size-xxl)", fontWeight: 600, marginBottom: 16 }}>{styleNo} - {styleName}</div>
+                  
+                  {/* 款号信息区块 */}
+                  {options.styleInfoBlock && mode === 'sample' && (
+                    <div style={{ marginBottom: 16, padding: '12px 14px', background: '#fafafa', borderRadius: 6, border: '1px solid #e8e8e8' }}>
+                      <div style={{ fontWeight: 600, color: '#1f2937', marginBottom: 8, fontSize: 14 }}>款号信息</div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 24px', fontSize: "var(--font-size-base)" }}>
+                        {category && <div><span style={{ color: 'var(--color-text-secondary)' }}>品类：</span><strong>{toCategoryCn(category)}</strong></div>}
+                        {season && <div><span style={{ color: 'var(--color-text-secondary)' }}>季节：</span><strong>{toSeasonCn(season)}</strong></div>}
+                        {(data.productionSheet as any)?.uCode && <div><span style={{ color: 'var(--color-text-secondary)' }}>U码：</span><strong>{(data.productionSheet as any)?.uCode}</strong></div>}
+                        {(data.productionSheet as any)?.fabricComposition && <div><span style={{ color: 'var(--color-text-secondary)' }}>面料成分：</span><strong>{(data.productionSheet as any)?.fabricComposition}</strong></div>}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* 客户信息区块 */}
+                  {options.customerInfoBlock && mode === 'sample' && (
+                    <div style={{ marginBottom: 16, padding: '12px 14px', background: '#fafafa', borderRadius: 6, border: '1px solid #e8e8e8' }}>
+                      <div style={{ fontWeight: 600, color: '#1f2937', marginBottom: 8, fontSize: 14 }}>客户信息</div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 24px', fontSize: "var(--font-size-base)" }}>
+                        {(data.productionSheet as any)?.customerName && <div><span style={{ color: 'var(--color-text-secondary)' }}>客户：</span><strong>{(data.productionSheet as any)?.customerName}</strong></div>}
+                        {(data.productionSheet as any)?.merchandiser && <div><span style={{ color: 'var(--color-text-secondary)' }}>跟单员：</span><strong>{(data.productionSheet as any)?.merchandiser}</strong></div>}
+                        {(data.productionSheet as any)?.designer && <div><span style={{ color: 'var(--color-text-secondary)' }}>设计师：</span><strong>{(data.productionSheet as any)?.designer}</strong></div>}
+                        {(data.productionSheet as any)?.price && <div><span style={{ color: 'var(--color-text-secondary)' }}>打板价：</span><strong>{formatMoney((data.productionSheet as any)?.price)}</strong></div>}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* 版次信息区块 */}
+                  {options.patternInfoBlock && mode === 'sample' && (
+                    <div style={{ marginBottom: 16, padding: '12px 14px', background: '#fafafa', borderRadius: 6, border: '1px solid #e8e8e8' }}>
+                      <div style={{ fontWeight: 600, color: '#1f2937', marginBottom: 8, fontSize: 14 }}>版次信息</div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 24px', fontSize: "var(--font-size-base)" }}>
+                        {(data.productionSheet as any)?.sampleType && <div><span style={{ color: 'var(--color-text-secondary)' }}>版类：</span><strong>{(data.productionSheet as any)?.sampleType}</strong></div>}
+                        {(data.productionSheet as any)?.patternMaker && <div><span style={{ color: 'var(--color-text-secondary)' }}>纸样师：</span><strong>{(data.productionSheet as any)?.patternMaker}</strong></div>}
+                        {(data.productionSheet as any)?.patternNo && <div><span style={{ color: 'var(--color-text-secondary)' }}>纸样号：</span><strong>{(data.productionSheet as any)?.patternNo}</strong></div>}
+                        {(data.productionSheet as any)?.sampleMaker && <div><span style={{ color: 'var(--color-text-secondary)' }}>车板师：</span><strong>{(data.productionSheet as any)?.sampleMaker}</strong></div>}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* 时间信息区块 */}
+                  {options.timeInfoBlock && mode === 'sample' && (
+                    <div style={{ marginBottom: 16, padding: '12px 14px', background: '#fafafa', borderRadius: 6, border: '1px solid #e8e8e8' }}>
+                      <div style={{ fontWeight: 600, color: '#1f2937', marginBottom: 8, fontSize: 14 }}>时间信息</div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 24px', fontSize: "var(--font-size-base)" }}>
+                        {(data.productionSheet as any)?.createTime && <div><span style={{ color: 'var(--color-text-secondary)' }}>创建时间：</span><strong>{formatDateTime((data.productionSheet as any)?.createTime)}</strong></div>}
+                        {(data.productionSheet as any)?.completeTime && <div><span style={{ color: 'var(--color-text-secondary)' }}>完成时间：</span><strong>{formatDateTime((data.productionSheet as any)?.completeTime)}</strong></div>}
+                        {(data.productionSheet as any)?.deliveryDate && <div><span style={{ color: 'var(--color-text-secondary)' }}>交板日期：</span><strong>{formatDateTime((data.productionSheet as any)?.deliveryDate)}</strong></div>}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* 大货/下单模式：款号信息区块 */}
+                  {options.styleInfoBlock && (mode === 'production' || mode === 'order') && (
+                    <div style={{ marginBottom: 16, padding: '12px 14px', background: '#fafafa', borderRadius: 6, border: '1px solid #e8e8e8' }}>
+                      <div style={{ fontWeight: 600, color: '#1f2937', marginBottom: 8, fontSize: 14 }}>款号信息</div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 24px', fontSize: "var(--font-size-base)" }}>
+                        {category && <div><span style={{ color: 'var(--color-text-secondary)' }}>品类：</span><strong>{toCategoryCn(category)}</strong></div>}
+                        {season && <div><span style={{ color: 'var(--color-text-secondary)' }}>季节：</span><strong>{toSeasonCn(season)}</strong></div>}
+                        {(data.productionSheet as any)?.uCode && <div><span style={{ color: 'var(--color-text-secondary)' }}>U码：</span><strong>{(data.productionSheet as any)?.uCode}</strong></div>}
+                        {(data.productionSheet as any)?.fabricComposition && <div><span style={{ color: 'var(--color-text-secondary)' }}>面料成分：</span><strong>{(data.productionSheet as any)?.fabricComposition}</strong></div>}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* 大货/下单模式：订单信息区块 */}
+                  {options.customerInfoBlock && (mode === 'production' || mode === 'order') && (
+                    <div style={{ marginBottom: 16, padding: '12px 14px', background: '#fafafa', borderRadius: 6, border: '1px solid #e8e8e8' }}>
+                      <div style={{ fontWeight: 600, color: '#1f2937', marginBottom: 8, fontSize: 14 }}>订单信息</div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 24px', fontSize: "var(--font-size-base)" }}>
+                        {orderNo && <div><span style={{ color: 'var(--color-text-secondary)' }}>订单号：</span><strong>{orderNo}</strong></div>}
+                        {quantity !== undefined && <div><span style={{ color: 'var(--color-text-secondary)' }}>订单数量：</span><strong>{quantity}</strong></div>}
+                        {(data.productionSheet as any)?.customerName && <div><span style={{ color: 'var(--color-text-secondary)' }}>客户：</span><strong>{(data.productionSheet as any)?.customerName}</strong></div>}
+                        {(data.productionSheet as any)?.merchandiser && <div><span style={{ color: 'var(--color-text-secondary)' }}>跟单员：</span><strong>{(data.productionSheet as any)?.merchandiser}</strong></div>}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* 大货/下单模式：生产信息区块 */}
+                  {options.patternInfoBlock && (mode === 'production' || mode === 'order') && (
+                    <div style={{ marginBottom: 16, padding: '12px 14px', background: '#fafafa', borderRadius: 6, border: '1px solid #e8e8e8' }}>
+                      <div style={{ fontWeight: 600, color: '#1f2937', marginBottom: 8, fontSize: 14 }}>生产信息</div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 24px', fontSize: "var(--font-size-base)" }}>
+                        {(data.productionSheet as any)?.factoryName && <div><span style={{ color: 'var(--color-text-secondary)' }}>加工厂：</span><strong>{(data.productionSheet as any)?.factoryName}</strong></div>}
+                        {(extraInfo as any)?.加工厂 && <div><span style={{ color: 'var(--color-text-secondary)' }}>加工厂：</span><strong>{(extraInfo as any)?.加工厂}</strong></div>}
+                        {(data.productionSheet as any)?.designer && <div><span style={{ color: 'var(--color-text-secondary)' }}>设计师：</span><strong>{(data.productionSheet as any)?.designer}</strong></div>}
+                        {color && <div><span style={{ color: 'var(--color-text-secondary)' }}>颜色：</span><strong>{color}</strong></div>}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* 大货/下单模式：时间信息区块 */}
+                  {options.timeInfoBlock && (mode === 'production' || mode === 'order') && (
+                    <div style={{ marginBottom: 16, padding: '12px 14px', background: '#fafafa', borderRadius: 6, border: '1px solid #e8e8e8' }}>
+                      <div style={{ fontWeight: 600, color: '#1f2937', marginBottom: 8, fontSize: 14 }}>时间信息</div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 24px', fontSize: "var(--font-size-base)" }}>
+                        {(extraInfo as any)?.交期 && <div><span style={{ color: 'var(--color-text-secondary)' }}>交期：</span><strong>{formatDateTime((extraInfo as any)?.交期)}</strong></div>}
+                        {(data.productionSheet as any)?.createTime && <div><span style={{ color: 'var(--color-text-secondary)' }}>创建时间：</span><strong>{formatDateTime((data.productionSheet as any)?.createTime)}</strong></div>}
+                        {(data.productionSheet as any)?.completeTime && <div><span style={{ color: 'var(--color-text-secondary)' }}>完成时间：</span><strong>{formatDateTime((data.productionSheet as any)?.completeTime)}</strong></div>}
+                      </div>
+                    </div>
+                  )}
+                  
                   {/* 款式描述 */}
-                  {basicInfoFields.has('description') && ((data.productionSheet as any)?.description || (data.productionSheet as any)?.descriptionReturnComment) && (
-                    <div style={{ marginTop: 14, border: '1px solid var(--color-border)', padding: '10px 12px', borderRadius: 6 }}>
+                  {((data.productionSheet as any)?.description || (data.productionSheet as any)?.descriptionReturnComment) && (
+                    <div style={{ marginTop: 12, border: '1px solid var(--color-border)', padding: '12px 14px', borderRadius: 6 }}>
                       {(data.productionSheet as any)?.description && (
                         <div>
-                          <span style={{ color: 'var(--color-text-secondary)', fontWeight: 600 }}>款式描述：</span>
+                          <span style={{ color: 'var(--color-text-secondary)', fontWeight: 600 }}>备注：</span>
                           <div style={{ marginTop: 4, fontSize: 14, whiteSpace: 'pre-wrap', lineHeight: 1.8 }}>
                             {(data.productionSheet as any)?.description}
                           </div>
                         </div>
                       )}
-                      {basicInfoFields.has('returnComment') && (data.productionSheet as any)?.descriptionReturnComment && (
-                        <div style={{ marginTop: (data.productionSheet as any)?.description ? 10 : 0 }}>
-                          <span style={{ color: 'var(--color-text-secondary)', fontWeight: 600 }}>退回编辑备注：</span>
-                          <div style={{ marginTop: 4, fontSize: 14, whiteSpace: 'pre-wrap', lineHeight: 1.8 }}>
-                            {(data.productionSheet as any)?.descriptionReturnComment}
-                          </div>
-                        </div>
-                      )}
                     </div>
                   )}
+                  
                   {/* 颜色×码数×数量矩阵 */}
-                  {basicInfoFields.has('colorSizeMatrix') && sizeColorMatrix && sizeColorMatrix.sizes.length > 0 && (
-                    <div style={{ marginTop: 12, overflowX: 'auto' }}>
+                  {sizeColorMatrix && sizeColorMatrix.sizes.length > 0 && (
+                    <div style={{ marginTop: 16, overflowX: 'auto' }}>
+                      <div style={{ fontWeight: 600, color: '#1f2937', marginBottom: 8, fontSize: 14 }}>码数/颜色/数量配置</div>
                       <table style={{ borderCollapse: 'collapse', fontSize: 14, minWidth: 300 }}>
                         <thead>
                           <tr>
                             <th style={{ border: '1px solid var(--color-border-antd)', padding: '6px 10px', background: 'var(--color-bg-container)', fontWeight: 600 }}>颜色/尺码</th>
                             {sizeColorMatrix.sizes.map(s => <th key={s} style={{ border: '1px solid var(--color-border-antd)', padding: '6px 10px', background: 'var(--color-bg-container)', fontWeight: 600, textAlign: 'center' }}>{s}</th>)}
-                            <th style={{ border: '1px solid var(--color-border-antd)', padding: '6px 10px', background: 'var(--color-bg-container)', fontWeight: 600, textAlign: 'center' }}>小计</th>
+                            <th style={{ border: '1px solid var(--color-border-antd)', padding: '6px 10px', background: 'var(--color-bg-container)', fontWeight: 600, textAlign: 'center' }}>合计</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -423,22 +513,6 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
                           </tr>
                         </tbody>
                       </table>
-                    </div>
-                  )}
-                  {/* 无矩阵数据时的回退显示 - 颜色/码数/数量 */}
-                  {basicInfoFields.has('colorSizeQty') && !basicInfoFields.has('colorSizeMatrix') && (
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 24px', fontSize: "var(--font-size-base)", marginTop: 4 }}>
-                      {color && <div><span style={{ color: 'var(--color-text-secondary)' }}>颜色：</span><strong>{color}</strong></div>}
-                      {(propSizes || (extraInfo as any)?.sizes) && <div><span style={{ color: 'var(--color-text-secondary)' }}>码数：</span><strong>{propSizes || (extraInfo as any)?.sizes}</strong></div>}
-                      {quantity !== undefined && <div><span style={{ color: 'var(--color-text-secondary)' }}>{getModeTitle()}数量：</span><strong>{quantity}</strong></div>}
-                    </div>
-                  )}
-                  {/* 无矩阵数据时也显示颜色/码数/数量 */}
-                  {!basicInfoFields.has('colorSizeMatrix') && !basicInfoFields.has('colorSizeQty') && (
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 24px', fontSize: "var(--font-size-base)", marginTop: 4 }}>
-                      {color && <div><span style={{ color: 'var(--color-text-secondary)' }}>颜色：</span><strong>{color}</strong></div>}
-                      {(propSizes || (extraInfo as any)?.sizes) && <div><span style={{ color: 'var(--color-text-secondary)' }}>码数：</span><strong>{propSizes || (extraInfo as any)?.sizes}</strong></div>}
-                      {quantity !== undefined && <div><span style={{ color: 'var(--color-text-secondary)' }}>{getModeTitle()}数量：</span><strong>{quantity}</strong></div>}
                     </div>
                   )}
                 </div>
