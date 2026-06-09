@@ -245,8 +245,8 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
   return (
     <Drawer title={`打印预览 - ${styleNo}`} open={visible} onClose={onClose}
       placement="right"
-      width={Math.min(1600, Math.round(typeof window !== 'undefined' ? window.innerWidth * 0.85 : 1600))}
       styles={{
+        wrapper: { width: Math.min(1600, Math.round(typeof window !== 'undefined' ? window.innerWidth * 0.85 : 1600)) },
         body: { padding: 0, display: 'flex', flexDirection: 'column', height: '100%' },
       }}
       maskClosable={false}

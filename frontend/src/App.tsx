@@ -111,9 +111,9 @@ const GlobalImagePreview: React.FC = () => {
         alt={alt || ''}
         style={{ display: 'none' }}
         preview={{
-          visible: open,
-          onVisibleChange: (visible) => {
-            if (!visible) close();
+          open: open,
+          onOpenChange: (isOpen) => {
+            if (!isOpen) close();
           },
         }}
       />

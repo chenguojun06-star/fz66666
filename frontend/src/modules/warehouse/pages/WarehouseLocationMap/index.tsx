@@ -1106,10 +1106,7 @@ const WarehouseLocationMap: React.FC = () => {
         open={transferModalOpen}
         onClose={() => { setTransferModalOpen(false); setTransferTargetLocation(''); }}
         title="库存转移"
-        width={420}
-        placement="right"
-        style={{ position: 'relative', zIndex: 2000 }}
-        styles={{ wrapper: { zIndex: 2000 } }}
+        styles={{ wrapper: { width: 420, zIndex: 2000 } }}
         destroyOnHidden
         extra={
           <Button type="primary" onClick={handleTransfer} loading={transferLoading} disabled={!transferTargetLocation}>
@@ -1158,10 +1155,7 @@ const WarehouseLocationMap: React.FC = () => {
         open={inboundModalOpen}
         onClose={() => { setInboundModalOpen(false); inboundForm.resetFields(); }}
         title={`入库 - 库位 ${selectedLocation?.locationCode || ''}`}
-        width={420}
-        placement="right"
-        style={{ position: 'relative', zIndex: 2000 }}
-        styles={{ wrapper: { zIndex: 2000 } }}
+        styles={{ wrapper: { width: 420, zIndex: 2000 } }}
         destroyOnHidden
         extra={
           <Button type="primary" onClick={handleDoInbound} loading={inboundLoading}>
@@ -1224,10 +1218,7 @@ const WarehouseLocationMap: React.FC = () => {
         open={outboundModalOpen}
         onClose={() => setOutboundModalOpen(false)}
         title={`出库 - 库位 ${selectedLocation?.locationCode || ''}`}
-        width={760}
-        placement="right"
-        style={{ position: 'relative', zIndex: 2000 }}
-        styles={{ wrapper: { zIndex: 2000 } }}
+        styles={{ wrapper: { width: 760, zIndex: 2000 } }}
         destroyOnHidden
         extra={
           <Button type="primary" onClick={handleDoOutbound} loading={outboundLoading}>

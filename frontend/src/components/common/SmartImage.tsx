@@ -10,7 +10,7 @@ export interface SmartImageProps {
   className?: string;
   style?: React.CSSProperties;
   /** 预览配置，传入 boolean 或预览配置对象。如果传入对象，将与内置预览状态合并。 */
-  preview?: boolean | { visible?: boolean; onVisibleChange?: (visible: boolean) => void; current?: number; mask?: React.ReactNode; cover?: React.ReactNode };
+  preview?: boolean | { open?: boolean; onOpenChange?: (open: boolean) => void; current?: number; mask?: React.ReactNode; cover?: React.ReactNode };
   /** 如果是多图预览，传入所有图片的 src 数组 */
   allSrcs?: string[];
   /** 如果是多图预览，指定当前图片的索引 */
@@ -48,13 +48,13 @@ const SmartImage: React.FC<SmartImageProps> = ({
     // 如果 preview 是对象，合并配置
     if (typeof preview === 'object') {
       return {
-        visible: preview.visible ?? internalPreviewOpen,
-        onVisibleChange: (visible: boolean) => {
-          setInternalPreviewOpen(visible);
-          if (!visible) {
+        open: preview.open ?? internalPreviewOpen,
+        onOpenChange: (open: boolean) => {
+          setInternalPreviewOpen(open);
+          if (!open) {
             setInternalPreviewIndex(currentIndex);
           }
-          preview.onVisibleChange?.(visible);
+          preview.onOpenChange?.(open);
         },
         current: preview.current ?? internalPreviewIndex,
       };
@@ -62,10 +62,10 @@ const SmartImage: React.FC<SmartImageProps> = ({
     
     // 默认预览配置
     return {
-      visible: internalPreviewOpen,
-      onVisibleChange: (visible: boolean) => {
-        setInternalPreviewOpen(visible);
-        if (!visible) {
+      open: internalPreviewOpen,
+      onOpenChange: (open: boolean) => {
+        setInternalPreviewOpen(open);
+        if (!open) {
           setInternalPreviewIndex(currentIndex);
         }
       },

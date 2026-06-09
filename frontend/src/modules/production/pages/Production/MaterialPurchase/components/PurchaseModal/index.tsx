@@ -195,8 +195,8 @@ const PurchaseModal: React.FC<PurchaseModalProps> = ({
       open={visible}
       onClose={onCancel}
       placement="right"
-      width={isMobile ? '96vw' : Math.min(1600, Math.round(typeof window !== 'undefined' ? window.innerWidth * 0.85 : 1600))}
       styles={{
+        wrapper: { width: isMobile ? '96vw' : Math.min(1600, Math.round(typeof window !== 'undefined' ? window.innerWidth * 0.85 : 1600)) },
         body: { padding: 0, display: 'flex', flexDirection: 'column', height: '100%' },
         footer: { padding: '12px 16px' },
       }}

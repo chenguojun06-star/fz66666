@@ -221,8 +221,8 @@ function MultiImageUploadBox({
       {previewImages.length > 0 && (
         <Image.PreviewGroup
           preview={{
-            visible: previewOpen,
-            onVisibleChange: setPreviewOpen,
+            open: previewOpen,
+            onOpenChange: setPreviewOpen,
             current: previewIndex,
           }}
           items={previewImages.map((p) => p.src)}

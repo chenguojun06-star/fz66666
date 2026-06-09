@@ -1,5 +1,6 @@
 package com.fashion.supplychain.production.helper;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.constant.OrderStatusConstants;
 import com.fashion.supplychain.common.util.TextUtils;
@@ -64,33 +65,30 @@ public class ScanRecordPermissionHelper {
         Long tenantId = UserContext.tenantId();
         String factoryId = UserContext.factoryId();
 
-        boolean hasOrderId = StringUtils.hasText(orderId);
-        boolean hasOrderNo = StringUtils.hasText(orderNo);
-        if (!hasOrderId && !hasOrderNo) {
-            return null;
-        }
-
-        com.baomidou.mybatisplus.extension.conditions.query.LambdaQueryChainWrapper<ProductionOrder> qw =
-                productionOrderService.lambdaQuery();
+        LambdaQueryWrapper<ProductionOrder> qw = new LambdaQueryWrapper<>();
         qw.select(ProductionOrder::getId, ProductionOrder::getOrderNo, ProductionOrder::getTenantId,
                         ProductionOrder::getFactoryId, ProductionOrder::getStatus)
                 .eq(ProductionOrder::getTenantId, tenantId)
                 .last("LIMIT 1");
 
+        boolean hasOrderId = StringUtils.hasText(orderId);
+        boolean hasOrderNo = StringUtils.hasText(orderNo);
         if (hasOrderId && hasOrderNo) {
             qw.and(w -> w.eq(ProductionOrder::getId, orderId.trim())
                     .or()
                     .eq(ProductionOrder::getOrderNo, orderNo.trim()));
         } else if (hasOrderId) {
             qw.eq(ProductionOrder::getId, orderId.trim());
-        } else {
+        } else if (hasOrderNo) {
             qw.eq(ProductionOrder::getOrderNo, orderNo.trim());
+        } else {
+            return null;
         }
 
         if (StringUtils.hasText(factoryId)) {
             qw.eq(ProductionOrder::getFactoryId, factoryId);
         }
-        return qw.one();
+        return productionOrderService.getOne(qw, false);
     }
 
     public boolean isTerminalOrderStatus(String status) {
