@@ -44,6 +44,7 @@ const QuickEditModal: React.FC<QuickEditModalProps> = ({
     return { aiRemarks: aiLines, userRemarks: userLines.join('\n') };
   }, [initialValues?.remarks, initialValues?.remark]);
 
+  // destroyOnHidden=true 时每次打开都会重新挂载，必须显式依赖 initialValues 确保表单值同步更新
   React.useEffect(() => {
     if (visible) {
       form.setFieldsValue({
