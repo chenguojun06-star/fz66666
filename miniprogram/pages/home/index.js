@@ -142,7 +142,8 @@ Page({
     api.system.getFavoriteApps().then(function (res) {
       let favorites = [];
       try {
-        const raw = res && res.favoriteData ? res.favoriteData : (typeof res === 'string' ? res : '[]');
+        // request.js resolve(body)，body = { code: 200, data: { favoriteData: "..." } }
+        const raw = res && res.data && res.data.favoriteData ? res.data.favoriteData : (res && res.favoriteData ? res.favoriteData : (typeof res === 'string' ? res : '[]'));
         favorites = JSON.parse(raw);
         if (!Array.isArray(favorites)) favorites = [];
       } catch (e) {
