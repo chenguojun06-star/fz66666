@@ -452,19 +452,22 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
 
                     const remarkVal = options.remarkBlock ? (data.productionSheet as any)?.description : null;
 
-                    // 渲染分组：标题 + 横向5个字段（标签在上、值在下）
+                    // 渲染分组：标题 + 横向字段（标签:值 同一行）
                     const cellStyle: React.CSSProperties = {
                       border: '1px solid #e8e8e8',
                       padding: '8px 10px',
                       background: '#fafafa',
                       borderRadius: 4,
                       minWidth: 0,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 4,
                     };
                     const labelCellStyle: React.CSSProperties = {
-                      fontSize: 12,
-                      color: '#999',
-                      marginBottom: 4,
+                      fontSize: 13,
+                      color: '#666',
                       whiteSpace: 'nowrap',
+                      flexShrink: 0,
                     };
                     const valueCellStyle: React.CSSProperties = {
                       fontSize: 13,
@@ -473,6 +476,7 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
                       whiteSpace: 'nowrap',
+                      minWidth: 0,
                     };
 
                     return (
@@ -483,8 +487,8 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
                             <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(group.fields.length, 5)}, 1fr)`, gap: 8 }}>
                               {group.fields.map((f, fi) => (
                                 <div key={fi} style={cellStyle}>
-                                  <div style={labelCellStyle}>{f.label}</div>
-                                  <div style={valueCellStyle}>{f.value || '-'}</div>
+                                  <span style={labelCellStyle}>{f.label}：</span>
+                                  <span style={valueCellStyle}>{f.value || '-'}</span>
                                 </div>
                               ))}
                             </div>
