@@ -363,166 +363,197 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
           {/* 基本信息 */}
           {options.basicInfo && (
             <div className="print-section">
-              <div style={{ display: 'flex', gap: 16, padding: 12, border: '1px solid var(--color-border-antd)', background: '#fff', borderRadius: 8 }}>
-                {/* 左侧：所有信息紧凑排列 */}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  {/* 标题行 */}
-                  <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 10, color: '#111', borderBottom: '1px solid #e8e8e8', paddingBottom: 6 }}>
-                    {styleNo} - {styleName}
-                  </div>
-                  {/* 紧凑信息表格 */}
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-                    {options.styleInfoBlock && mode === 'sample' && (data.productionSheet as any) && [
-                      { label: '款号', value: styleNo },
-                      { label: 'SKC', value: (data.productionSheet as any)?.skc },
-                      { label: '款名', value: styleName },
-                      { label: '品类', value: toCategoryCn(category || (data.productionSheet as any)?.category) },
-                      { label: '季节', value: toSeasonCn(season || (data.productionSheet as any)?.season) },
-                      (data.productionSheet as any)?.uCode ? { label: 'U码', value: (data.productionSheet as any)?.uCode } : null,
-                      (data.productionSheet as any)?.fabricComposition ? { label: '面料成分', value: (data.productionSheet as any)?.fabricComposition } : null,
-                    ].filter(Boolean).map((item, i) => (
-                      <tr key={`si-${i}`}>
-                        <td style={{ padding: '2px 8px 2px 0', color: '#666', whiteSpace: 'nowrap', width: '1%' }}>{item!.label}：</td>
-                        <td style={{ padding: '2px 0', fontWeight: 600, color: '#111' }}>{item!.value}</td>
-                      </tr>
-                    ))}
-                    {options.customerInfoBlock && mode === 'sample' && (data.productionSheet as any) && [
-                      { label: '客户', value: (data.productionSheet as any)?.customer },
-                      { label: '跟单员', value: (data.productionSheet as any)?.orderType },
-                      { label: '设计师', value: (data.productionSheet as any)?.sampleNo },
-                      { label: '打板价', value: (data.productionSheet as any)?.price ? `¥${Number((data.productionSheet as any)?.price).toFixed(2)}` : '' },
-                    ].filter(r => r.value).map((item, i) => (
-                      <tr key={`ci-${i}`}>
-                        <td style={{ padding: '2px 8px 2px 0', color: '#666', whiteSpace: 'nowrap', width: '1%' }}>{item!.label}：</td>
-                        <td style={{ padding: '2px 0', fontWeight: 600, color: '#111' }}>{item!.value}</td>
-                      </tr>
-                    ))}
-                    {options.patternInfoBlock && mode === 'sample' && (data.productionSheet as any) && [
-                      { label: '版类', value: (data.productionSheet as any)?.plateType },
-                      { label: '纸样师', value: (data.productionSheet as any)?.sampleSupplier },
-                      { label: '纸样号', value: (data.productionSheet as any)?.patternNo },
-                      { label: '车板师', value: (data.productionSheet as any)?.plateWorker },
-                    ].filter(r => r.value).map((item, i) => (
-                      <tr key={`pi-${i}`}>
-                        <td style={{ padding: '2px 8px 2px 0', color: '#666', whiteSpace: 'nowrap', width: '1%' }}>{item!.label}：</td>
-                        <td style={{ padding: '2px 0', fontWeight: 600, color: '#111' }}>{item!.value}</td>
-                      </tr>
-                    ))}
-                    {options.timeInfoBlock && mode === 'sample' && (data.productionSheet as any) && [
-                      { label: '创建时间', value: (data.productionSheet as any)?.createTime ? formatDateTime((data.productionSheet as any)?.createTime) : '' },
-                      { label: '完成时间', value: (data.productionSheet as any)?.completedTime ? formatDateTime((data.productionSheet as any)?.completedTime) : '' },
-                      { label: '交板日期', value: (data.productionSheet as any)?.deliveryDate ? formatDateTime((data.productionSheet as any)?.deliveryDate) : '' },
-                    ].filter(r => r.value).map((item, i) => (
-                      <tr key={`ti-${i}`}>
-                        <td style={{ padding: '2px 8px 2px 0', color: '#666', whiteSpace: 'nowrap', width: '1%' }}>{item!.label}：</td>
-                        <td style={{ padding: '2px 0', fontWeight: 600, color: '#111' }}>{item!.value}</td>
-                      </tr>
-                    ))}
-                    {/* 大货/下单模式信息 */}
-                    {options.styleInfoBlock && (mode === 'production' || mode === 'order') && (data.productionSheet as any) && [
-                      { label: '款号', value: styleNo },
-                      { label: 'SKC', value: (data.productionSheet as any)?.skc },
-                      { label: '款名', value: styleName },
-                      { label: '品类', value: toCategoryCn(category || (data.productionSheet as any)?.category) },
-                      { label: '季节', value: toSeasonCn(season || (data.productionSheet as any)?.season) },
-                    ].map((item, i) => (
-                      <tr key={`si-prod-${i}`}>
-                        <td style={{ padding: '2px 8px 2px 0', color: '#666', whiteSpace: 'nowrap', width: '1%' }}>{item.label}：</td>
-                        <td style={{ padding: '2px 0', fontWeight: 600, color: '#111' }}>{item.value}</td>
-                      </tr>
-                    ))}
-                    {options.customerInfoBlock && (mode === 'production' || mode === 'order') && [
-                      { label: '订单号', value: orderNo },
-                      { label: '订单数量', value: quantity !== undefined ? String(quantity) : '' },
-                      { label: '客户', value: (data.productionSheet as any)?.customer },
-                      { label: '跟单员', value: (data.productionSheet as any)?.orderType },
-                    ].filter(r => r.value).map((item, i) => (
-                      <tr key={`ci-prod-${i}`}>
-                        <td style={{ padding: '2px 8px 2px 0', color: '#666', whiteSpace: 'nowrap', width: '1%' }}>{item.label}：</td>
-                        <td style={{ padding: '2px 0', fontWeight: 600, color: '#111' }}>{item.value}</td>
-                      </tr>
-                    ))}
-                    {options.patternInfoBlock && (mode === 'production' || mode === 'order') && [
-                      { label: '加工厂', value: (data.productionSheet as any)?.factoryName || (extraInfo as any)?.加工厂 },
-                      { label: '设计师', value: (data.productionSheet as any)?.sampleNo },
-                      { label: '颜色', value: color },
-                    ].filter(r => r.value).map((item, i) => (
-                      <tr key={`pi-prod-${i}`}>
-                        <td style={{ padding: '2px 8px 2px 0', color: '#666', whiteSpace: 'nowrap', width: '1%' }}>{item.label}：</td>
-                        <td style={{ padding: '2px 0', fontWeight: 600, color: '#111' }}>{item.value}</td>
-                      </tr>
-                    ))}
-                    {options.timeInfoBlock && (mode === 'production' || mode === 'order') && [
-                      { label: '交期', value: (extraInfo as any)?.交期 ? formatDateTime((extraInfo as any)?.交期) : '' },
-                      { label: '创建时间', value: (data.productionSheet as any)?.createTime ? formatDateTime((data.productionSheet as any)?.createTime) : '' },
-                      { label: '完成时间', value: (data.productionSheet as any)?.completedTime ? formatDateTime((data.productionSheet as any)?.completedTime) : '' },
-                    ].filter(r => r.value).map((item, i) => (
-                      <tr key={`ti-prod-${i}`}>
-                        <td style={{ padding: '2px 8px 2px 0', color: '#666', whiteSpace: 'nowrap', width: '1%' }}>{item.label}：</td>
-                        <td style={{ padding: '2px 0', fontWeight: 600, color: '#111' }}>{item.value}</td>
-                      </tr>
-                    ))}
-                    {/* 备注 */}
-                    {options.remarkBlock && (data.productionSheet as any)?.description && (
-                      <tr key="remark">
-                        <td style={{ padding: '4px 8px 2px 0', color: '#666', whiteSpace: 'nowrap', verticalAlign: 'top' }}>备注：</td>
-                        <td style={{ padding: '4px 0', color: '#111', lineHeight: 1.6 }}>{(data.productionSheet as any)?.description}</td>
-                      </tr>
-                    )}
-                    {/* 码数/颜色/数量配置 */}
-                    {sizeColorMatrix && sizeColorMatrix.sizes.length > 0 && (
-                      <tr key="sizecolor">
-                        <td colSpan={2} style={{ padding: '8px 0 0 0' }}>
-                          <div style={{ fontWeight: 600, color: '#1f2937', marginBottom: 6, fontSize: 13 }}>码数/颜色/数量配置</div>
-                          <table style={{ borderCollapse: 'collapse', fontSize: 13, minWidth: 300 }}>
-                            <thead>
-                              <tr>
-                                <th style={{ border: '1px solid var(--color-border-antd)', padding: '4px 8px', background: 'var(--color-bg-container)', fontWeight: 600, fontSize: 12 }}>颜色/尺码</th>
-                                {sizeColorMatrix.sizes.map(s => <th key={s} style={{ border: '1px solid var(--color-border-antd)', padding: '4px 8px', background: 'var(--color-bg-container)', fontWeight: 600, textAlign: 'center', fontSize: 12 }}>{s}</th>)}
-                                <th style={{ border: '1px solid var(--color-border-antd)', padding: '4px 8px', background: 'var(--color-bg-container)', fontWeight: 600, textAlign: 'center', fontSize: 12 }}>合计</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {sizeColorMatrix.matrixRows.map((row, i) => {
-                                const rowTotal = row.quantities.reduce((s, q) => s + q, 0);
-                                return (
-                                  <tr key={row.color || i}>
-                                    <td style={{ border: '1px solid var(--color-border-antd)', padding: '3px 8px', fontWeight: 500, fontSize: 12 }}>{row.color || '-'}</td>
-                                    {sizeColorMatrix.sizes.map((_, ci) => <td key={ci} style={{ border: '1px solid var(--color-border-antd)', padding: '3px 8px', textAlign: 'center', fontSize: 12 }}>{row.quantities[ci] || 0}</td>)}
-                                    <td style={{ border: '1px solid var(--color-border-antd)', padding: '3px 8px', textAlign: 'center', fontWeight: 600, fontSize: 12 }}>{rowTotal}</td>
-                                  </tr>
-                                );
-                              })}
-                              <tr>
-                                <td style={{ border: '1px solid var(--color-border-antd)', padding: '3px 8px', background: 'rgba(37,99,235,0.04)', fontWeight: 700, fontSize: 12 }}>合计</td>
-                                {sizeColorMatrix.sizes.map((_, ci) => {
-                                  const colTotal = sizeColorMatrix.matrixRows.reduce((s, r) => s + (r.quantities[ci] || 0), 0);
-                                  return <td key={ci} style={{ border: '1px solid var(--color-border-antd)', padding: '3px 8px', textAlign: 'center', background: 'rgba(37,99,235,0.04)', fontWeight: 700, fontSize: 12 }}>{colTotal}</td>;
-                                })}
-                                <td style={{ border: '1px solid var(--color-border-antd)', padding: '3px 8px', textAlign: 'center', background: 'rgba(37,99,235,0.04)', fontWeight: 700, fontSize: 12 }}>
-                                  {sizeColorMatrix.matrixRows.reduce((s, r) => s + r.quantities.reduce((a, b) => a + b, 0), 0)}
-                                </td>
-                              </tr>
-                            </tbody>
-                          </table>
-                        </td>
-                      </tr>
-                    )}
-                  </table>
-                </div>
-                {/* 右侧：图片+二维码并排 */}
-                <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center' }}>
-                  {resolvedCover && (
-                    <div style={{ width: 90, height: 90 }}>
-                      <Image src={getFullAuthedFileUrl(resolvedCover)} alt={styleNo}
-                        style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 6, border: '1px solid var(--color-border)' }} preview={{ cover: <span>预览</span> }} />
-                    </div>
+              {/* 标题行 */}
+              <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 12, color: '#111', padding: '10px 16px', background: 'linear-gradient(90deg, #f0f5ff 0%, #e6f7ff 100%)', borderRadius: 6, border: '1px solid #91d5ff' }}>
+                {styleNo} - {styleName}
+              </div>
+              {/* 主体：左列（图片+二维码） + 右列（信息） */}
+              <div style={{ display: 'flex', gap: 20, padding: 16, border: '1px solid var(--color-border-antd)', background: '#fff', borderRadius: 8 }}>
+                {/* 左侧：图片 + 二维码（纵向排列） */}
+                <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center', width: 120 }}>
+                  {resolvedCover ? (
+                    <Image src={getFullAuthedFileUrl(resolvedCover)} alt={styleNo}
+                      style={{ width: 120, height: 120, objectFit: 'cover', borderRadius: 6, border: '1px solid var(--color-border)' }} preview={{ cover: <span>预览</span> }} />
+                  ) : (
+                    <div style={{ width: 120, height: 120, borderRadius: 6, border: '1px dashed #ccc', background: '#fafafa', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#999', fontSize: 12 }}>无图片</div>
                   )}
-                  {/* 二维码正常大小 */}
-                  {qrPngDataUrl
-                    ? <img src={qrPngDataUrl} alt="QR" style={{ width: 80, height: 80, display: 'block' }} />
-                    : <QRCode value={qrValue} size={80} />}
+                  {/* 二维码 */}
+                  <div style={{ width: 120, height: 120, padding: 6, border: '1px solid var(--color-border-antd)', borderRadius: 6, background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {qrPngDataUrl
+                      ? <img src={qrPngDataUrl} alt="QR" style={{ width: 100, height: 100, display: 'block' }} />
+                      : <QRCode value={qrValue} size={100} />}
+                  </div>
+                  <div style={{ fontSize: 11, color: '#999', textAlign: 'center' }}>扫码查看详情</div>
                 </div>
+
+                {/* 右侧：4个分组，每组标题 + 横向一排字段（标签在上、值在下） */}
+                <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 14 }}>
+                  {(() => {
+                    // 构建所有分组
+                    const groups: {
+                      title: string;
+                      fields: { label: string; value: React.ReactNode }[];
+                    }[] = [];
+
+                    // 款号信息
+                    const styleFields: { label: string; value: React.ReactNode }[] = [];
+                    styleFields.push({ label: '款号', value: styleNo });
+                    if ((data.productionSheet as any)?.skc) styleFields.push({ label: 'SKC', value: (data.productionSheet as any).skc });
+                    styleFields.push({ label: '款名', value: styleName });
+                    styleFields.push({ label: '品类', value: toCategoryCn(category || (data.productionSheet as any)?.category) });
+                    styleFields.push({ label: '季节', value: toSeasonCn(season || (data.productionSheet as any)?.season) });
+                    if ((data.productionSheet as any)?.uCode) styleFields.push({ label: 'U码', value: (data.productionSheet as any).uCode });
+                    const fabricVal = (data.productionSheet as any)?.fabricComposition;
+
+                    // 客户信息
+                    const customerFields: { label: string; value: React.ReactNode }[] = [];
+                    if (mode === 'sample') {
+                      if ((data.productionSheet as any)?.customer) customerFields.push({ label: '客户', value: (data.productionSheet as any).customer });
+                      if ((data.productionSheet as any)?.orderType) customerFields.push({ label: '跟单员', value: (data.productionSheet as any).orderType });
+                      if ((data.productionSheet as any)?.sampleNo) customerFields.push({ label: '设计师', value: (data.productionSheet as any).sampleNo });
+                      if ((data.productionSheet as any)?.price) customerFields.push({ label: '打板价', value: `¥${Number((data.productionSheet as any).price).toFixed(2)}` });
+                    } else {
+                      if (orderNo) customerFields.push({ label: '订单号', value: orderNo });
+                      if (quantity !== undefined) customerFields.push({ label: '订单数量', value: quantity });
+                      if ((data.productionSheet as any)?.customer) customerFields.push({ label: '客户', value: (data.productionSheet as any).customer });
+                      if ((data.productionSheet as any)?.orderType) customerFields.push({ label: '跟单员', value: (data.productionSheet as any).orderType });
+                    }
+
+                    // 版次信息
+                    const patternFields: { label: string; value: React.ReactNode }[] = [];
+                    if (mode === 'sample') {
+                      if ((data.productionSheet as any)?.plateType) patternFields.push({ label: '板类', value: (data.productionSheet as any).plateType });
+                      if ((data.productionSheet as any)?.sampleSupplier) patternFields.push({ label: '纸样师', value: (data.productionSheet as any).sampleSupplier });
+                      if ((data.productionSheet as any)?.patternNo) patternFields.push({ label: '纸样号', value: (data.productionSheet as any).patternNo });
+                      if ((data.productionSheet as any)?.plateWorker) patternFields.push({ label: '车板师', value: (data.productionSheet as any).plateWorker });
+                    } else {
+                      if ((data.productionSheet as any)?.factoryName) patternFields.push({ label: '加工厂', value: (data.productionSheet as any).factoryName });
+                      else if ((extraInfo as any)?.加工厂) patternFields.push({ label: '加工厂', value: (extraInfo as any).加工厂 });
+                      if ((data.productionSheet as any)?.sampleNo) patternFields.push({ label: '设计师', value: (data.productionSheet as any).sampleNo });
+                    }
+
+                    // 时间信息
+                    const timeFields: { label: string; value: React.ReactNode }[] = [];
+                    if (mode === 'sample') {
+                      if ((data.productionSheet as any)?.createTime) timeFields.push({ label: '创建时间', value: formatDateTime((data.productionSheet as any).createTime) });
+                      if ((data.productionSheet as any)?.deliveryDate) timeFields.push({ label: '交板日期', value: formatDateTime((data.productionSheet as any).deliveryDate) });
+                      if ((data.productionSheet as any)?.completedTime) timeFields.push({ label: '完成时间', value: formatDateTime((data.productionSheet as any).completedTime) });
+                    } else {
+                      if ((extraInfo as any)?.交期) timeFields.push({ label: '交期', value: formatDateTime((extraInfo as any).交期) });
+                      if ((data.productionSheet as any)?.createTime) timeFields.push({ label: '创建时间', value: formatDateTime((data.productionSheet as any).createTime) });
+                      if ((data.productionSheet as any)?.completedTime) timeFields.push({ label: '完成时间', value: formatDateTime((data.productionSheet as any).completedTime) });
+                    }
+
+                    // 按配置的开关收集分组
+                    if (options.styleInfoBlock && styleFields.length) groups.push({ title: '款号信息', fields: styleFields });
+                    if (options.customerInfoBlock && customerFields.length) groups.push({ title: '客户信息', fields: customerFields });
+                    if (options.patternInfoBlock && patternFields.length) groups.push({ title: '版次信息', fields: patternFields });
+                    if (options.timeInfoBlock && timeFields.length) groups.push({ title: '时间信息', fields: timeFields });
+
+                    const remarkVal = options.remarkBlock ? (data.productionSheet as any)?.description : null;
+
+                    // 渲染分组：标题 + 横向5个字段（标签在上、值在下）
+                    const cellStyle: React.CSSProperties = {
+                      border: '1px solid #e8e8e8',
+                      padding: '8px 10px',
+                      background: '#fafafa',
+                      borderRadius: 4,
+                      minWidth: 0,
+                    };
+                    const labelCellStyle: React.CSSProperties = {
+                      fontSize: 12,
+                      color: '#999',
+                      marginBottom: 4,
+                      whiteSpace: 'nowrap',
+                    };
+                    const valueCellStyle: React.CSSProperties = {
+                      fontSize: 13,
+                      color: '#111',
+                      fontWeight: 600,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    };
+
+                    return (
+                      <>
+                        {groups.map((group, gi) => (
+                          <div key={gi} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                            <div style={{ fontSize: 13, fontWeight: 600, color: '#1890ff' }}>{group.title}</div>
+                            <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(group.fields.length, 5)}, 1fr)`, gap: 8 }}>
+                              {group.fields.map((f, fi) => (
+                                <div key={fi} style={cellStyle}>
+                                  <div style={labelCellStyle}>{f.label}</div>
+                                  <div style={valueCellStyle}>{f.value || '-'}</div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                        {fabricVal && (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                            <div style={{ fontSize: 13, fontWeight: 600, color: '#1890ff' }}>面料成分</div>
+                            <div style={{ padding: '8px 10px', background: '#fafafa', border: '1px solid #e8e8e8', borderRadius: 4, fontSize: 13, color: '#111', lineHeight: 1.6 }}>
+                              {fabricVal}
+                            </div>
+                          </div>
+                        )}
+                        {remarkVal && (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                            <div style={{ fontSize: 13, fontWeight: 600, color: '#1890ff' }}>备注</div>
+                            <div style={{ padding: '8px 10px', background: '#fafafa', border: '1px solid #e8e8e8', borderRadius: 4, fontSize: 13, color: '#111', lineHeight: 1.6 }}>
+                              {remarkVal}
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
+                </div>
+              </div>
+
+              {/* 码数/颜色/数量配置表（如果有） */}
+              {sizeColorMatrix && sizeColorMatrix.sizes.length > 0 && (
+                <div style={{ marginTop: 12, padding: 16, border: '1px solid var(--color-border-antd)', background: '#fff', borderRadius: 8 }}>
+                  <div style={{ fontWeight: 600, color: '#1f2937', marginBottom: 10, fontSize: 14, paddingBottom: 6, borderBottom: '1px solid #e8e8e8' }}>码数/颜色/数量配置</div>
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                      <thead>
+                        <tr>
+                          <th style={{ border: '1px solid var(--color-border-antd)', padding: '8px 12px', background: 'var(--color-bg-container)', fontWeight: 600, whiteSpace: 'nowrap', textAlign: 'left', width: 100 }}>颜色/尺码</th>
+                          {sizeColorMatrix.sizes.map(s => <th key={s} style={{ border: '1px solid var(--color-border-antd)', padding: '8px 12px', background: 'var(--color-bg-container)', fontWeight: 600, textAlign: 'center', whiteSpace: 'nowrap' }}>{s}</th>)}
+                          <th style={{ border: '1px solid var(--color-border-antd)', padding: '8px 12px', background: 'var(--color-bg-container)', fontWeight: 600, textAlign: 'center', whiteSpace: 'nowrap' }}>合计</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {sizeColorMatrix.matrixRows.map((row, i) => {
+                          const rowTotal = row.quantities.reduce((s, q) => s + q, 0);
+                          return (
+                            <tr key={row.color || i}>
+                              <td style={{ border: '1px solid var(--color-border-antd)', padding: '6px 12px', fontWeight: 500 }}>{row.color || '-'}</td>
+                              {sizeColorMatrix.sizes.map((_, ci) => <td key={ci} style={{ border: '1px solid var(--color-border-antd)', padding: '6px 12px', textAlign: 'center' }}>{row.quantities[ci] || 0}</td>)}
+                              <td style={{ border: '1px solid var(--color-border-antd)', padding: '6px 12px', textAlign: 'center', fontWeight: 600 }}>{rowTotal}</td>
+                            </tr>
+                          );
+                        })}
+                        <tr>
+                          <td style={{ border: '1px solid var(--color-border-antd)', padding: '6px 12px', background: 'rgba(37,99,235,0.04)', fontWeight: 700 }}>合计</td>
+                          {sizeColorMatrix.sizes.map((_, ci) => {
+                            const colTotal = sizeColorMatrix.matrixRows.reduce((s, r) => s + (r.quantities[ci] || 0), 0);
+                            return <td key={ci} style={{ border: '1px solid var(--color-border-antd)', padding: '6px 12px', textAlign: 'center', background: 'rgba(37,99,235,0.04)', fontWeight: 700 }}>{colTotal}</td>;
+                          })}
+                          <td style={{ border: '1px solid var(--color-border-antd)', padding: '6px 12px', textAlign: 'center', background: 'rgba(37,99,235,0.08)', fontWeight: 700, color: '#1890ff' }}>
+                            {sizeColorMatrix.matrixRows.reduce((s, r) => s + r.quantities.reduce((a, b) => a + b, 0), 0)}
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              <div style={{ textAlign: 'right', marginTop: 8, color: '#999', fontSize: 12 }}>
+                打印时间：{formatDateTime(new Date())}
               </div>
             </div>
           )}
