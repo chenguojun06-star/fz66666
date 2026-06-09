@@ -93,7 +93,7 @@ export function useProductionColumns({
       title: '图片',
       dataIndex: 'styleCover',
       key: 'styleCover',
-      width: 72,
+      width: 60,
       render: (_: any, record: any) => (
         <StyleCoverThumb styleId={record.styleId} styleNo={record.styleNo} src={record.styleCover || null} size={48} borderRadius={6} />
       )
@@ -102,7 +102,7 @@ export function useProductionColumns({
       title: '订单号',
       dataIndex: 'orderNo',
       key: 'orderNo',
-      width: 120,
+      width: 100,
       render: (v: any, record: ProductionOrder) => {
         const orderNo = safeString(v, '');
         const styleNo = safeString((record as any)?.styleNo, '');
@@ -149,40 +149,40 @@ export function useProductionColumns({
       title: '款号',
       dataIndex: 'styleNo',
       key: 'styleNo',
-      width: 100,
+      width: 80,
     },
     {
       title: 'SKC',
       dataIndex: 'skc',
       key: 'skc',
-      width: 140,
+      width: 70,
     },
     {
       title: '款名',
       dataIndex: 'styleName',
       key: 'styleName',
-      width: 150,
+      width: 100,
       ellipsis: true,
     },
     {
       title: '品类',
       dataIndex: 'productCategory',
       key: 'productCategory',
-      width: 100,
+      width: 80,
       render: (v: any) => toCategoryCn(v),
     },
     {
       title: '客户',
       dataIndex: 'company',
       key: 'companyName',
-      width: 120,
+      width: 80,
       ellipsis: true,
       render: (_: any, record: any) => record.customerName || record.company || '-',
     },
     {
       title: '纸样',
       key: 'attachments',
-      width: 100,
+      width: 50,
       render: (_: any, record: any) => (
         <StyleAttachmentsButton
           styleId={record.styleId}
@@ -195,7 +195,7 @@ export function useProductionColumns({
       title: '生产方',
       dataIndex: 'factoryName',
       key: 'factoryName',
-      width: 130,
+      width: 90,
       render: (v: any, record: any) => {
         const bizType = record.orderBizType as string | undefined;
         const factoryType = record.factoryType as string | undefined;
@@ -222,14 +222,14 @@ export function useProductionColumns({
       title: '跟单员',
       dataIndex: 'merchandiser',
       key: 'merchandiser',
-      width: 120,
+      width: 70,
       render: (v: any, record: ProductionOrder) => renderMerchandiserCell(v, record, onOpenRemark),
     },
     {
       title: '纸样师',
       dataIndex: 'patternMaker',
       key: 'patternMaker',
-      width: 100,
+      width: 60,
       render: (v: any, record: ProductionOrder) => (
         <span
           style={{ cursor: v ? 'pointer' : 'default' }}
@@ -241,13 +241,13 @@ export function useProductionColumns({
       title: '订单数量',
       dataIndex: 'orderQuantity',
       key: 'orderQuantity',
-      width: 100,
+      width: 80,
       align: 'right' as const,
     },
     {
       title: '单价',
       key: 'factoryUnitPrice',
-      width: 90,
+      width: 70,
       align: 'right' as const,
       render: (_: any, record: any) => {
         const v = Number(record?.factoryUnitPrice);
@@ -260,7 +260,7 @@ export function useProductionColumns({
       title: '下单人',
       dataIndex: 'orderOperatorName',
       key: 'orderOperatorName',
-      width: 120,
+      width: 60,
       render: (v: any, record: ProductionOrder) => {
         const text = safeString(v);
         return (
@@ -282,21 +282,21 @@ export function useProductionColumns({
       />,
       dataIndex: 'createTime',
       key: 'createTime',
-      width: 170,
+      width: 150,
       render: renderStageTime,
     },
     {
       title: <SortableColumnTitle title="预计出货" sortField={sortField} fieldName="expectedShipDate" sortOrder={sortOrder} onSort={handleSort} />,
       dataIndex: 'expectedShipDate',
       key: 'expectedShipDate',
-      width: 120,
+      width: 100,
       render: (v: any) => v ? formatDateTime(v) : '-',
     },
     {
       title: '采购',
       dataIndex: 'procurementCompletionRate',
       key: 'procurementSummary',
-      width: 110,
+      width: 90,
       align: 'center' as const,
       render: (rate: number, record: ProductionOrder) => {
         const directCutting = isDirectCuttingOrder(record as any);
@@ -355,7 +355,7 @@ export function useProductionColumns({
       title: '裁剪',
       dataIndex: 'cuttingCompletionRate',
       key: 'cuttingSummary',
-      width: 110,
+      width: 90,
       align: 'center' as const,
       render: (rate: number, record: ProductionOrder) => renderStageProgressCell(rate, record, 'cutting', '裁剪', stageProgressCtx),
     },
@@ -363,7 +363,7 @@ export function useProductionColumns({
       title: '二次工艺',
       dataIndex: 'secondaryProcessRate',
       key: 'secondaryProcessSummary',
-      width: 90,
+      width: 70,
       align: 'center' as const,
       render: (rate: number, record: ProductionOrder) => {
         if (!hasSecondaryProcessForOrder(record)) {
@@ -380,7 +380,7 @@ export function useProductionColumns({
       title: '车缝',
       dataIndex: 'carSewingCompletionRate',
       key: 'carSewingSummary',
-      width: 110,
+      width: 90,
       align: 'center' as const,
       render: (rate: number, record: ProductionOrder) => renderStageProgressCell(rate, record, 'carSewing', '车缝', stageProgressCtx),
     },
@@ -388,7 +388,7 @@ export function useProductionColumns({
       title: '尾部',
       dataIndex: 'tailProcessRate',
       key: 'tailProcessSummary',
-      width: 110,
+      width: 90,
       align: 'center' as const,
       render: (rate: number, record: ProductionOrder) => renderStageProgressCell(rate, record, 'tailProcess', '尾部', stageProgressCtx),
     },
@@ -396,7 +396,7 @@ export function useProductionColumns({
       title: '裁剪数量',
       dataIndex: 'cuttingQuantity',
       key: 'cuttingQuantity',
-      width: 90,
+      width: 70,
       align: 'right' as const,
       render: (v: unknown) => Number(v ?? 0) || 0,
     },
@@ -404,7 +404,7 @@ export function useProductionColumns({
       title: '扎数',
       dataIndex: 'cuttingBundleCount',
       key: 'cuttingBundleCount',
-      width: 80,
+      width: 60,
       align: 'right' as const,
       render: (v: unknown) => Number(v ?? 0) || 0,
     },
@@ -412,14 +412,14 @@ export function useProductionColumns({
       title: '完成数量',
       dataIndex: 'completedQuantity',
       key: 'completedQuantity',
-      width: 100,
+      width: 80,
       align: 'right' as const,
     },
     {
       title: '入库',
       dataIndex: 'warehousingQualifiedQuantity',
       key: 'warehousingQualifiedQuantity',
-      width: 110,
+      width: 90,
       align: 'center' as const,
       render: (_: unknown, record: ProductionOrder) => {
         const qualified = Number(record.warehousingQualifiedQuantity ?? 0) || 0;
@@ -432,7 +432,7 @@ export function useProductionColumns({
       title: '次品数',
       dataIndex: 'unqualifiedQuantity',
       key: 'unqualifiedQuantity',
-      width: 90,
+      width: 70,
       align: 'right' as const,
       render: (v: unknown) => Number(v ?? 0) || 0,
     },
@@ -440,7 +440,7 @@ export function useProductionColumns({
       title: '返修数',
       dataIndex: 'repairQuantity',
       key: 'repairQuantity',
-      width: 90,
+      width: 70,
       align: 'right' as const,
       render: (v: unknown) => Number(v ?? 0) || 0,
     },
@@ -448,7 +448,7 @@ export function useProductionColumns({
       title: '库存',
       dataIndex: 'inStockQuantity',
       key: 'inStockQuantity',
-      width: 90,
+      width: 70,
       align: 'right' as const,
       render: (v: unknown) => Number(v ?? 0) || 0,
     },
@@ -456,7 +456,7 @@ export function useProductionColumns({
       title: '状态/交期',
       dataIndex: 'status',
       key: 'status',
-      width: 150,
+      width: 110,
       render: (status: ProductionOrder['status'], record: ProductionOrder) => {
         const { text, color } = getStatusConfig(status);
         const stagnantDays = stagnantOrderIds?.get(String(record.id));
@@ -505,7 +505,7 @@ export function useProductionColumns({
     {
       title: '操作',
       key: 'action',
-      width: 130,
+      width: 60,
       onCell: () => ({ className: 'prod-act-cell' }),
       render: (_: any, record: ProductionOrder) => {
         const frozen = isOrderFrozenByStatusOrStock(record);

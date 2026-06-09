@@ -4,8 +4,8 @@ import { Tag } from 'antd';
 import MaterialTypeTag from '@/components/common/MaterialTypeTag';
 import SupplierNameTooltip from '@/components/common/SupplierNameTooltip';
 import RowActions from '@/components/common/RowActions';
+import SmartImage from '@/components/common/SmartImage';
 import { MaterialDatabase } from '@/types/production';
-import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { formatDateTime } from '@/utils/datetime';
 import { formatMaterialSpecWidth } from '@/utils/materialType';
 import { renderMaskedNumber } from '@/utils/sensitiveDataMask';
@@ -28,7 +28,7 @@ export const getMaterialDatabaseColumns = (actions: MaterialColumnActions): Colu
       title: '图片', dataIndex: 'image', key: 'image', width: 80,
       render: (image: string) => {
         if (!image) return null;
-        return <img loading="lazy" src={getFullAuthedFileUrl(image)} alt="物料图片" style={{ width: 40, height: 'auto', display: 'block' }} />;
+        return <SmartImage src={image} alt="物料图片" width={40} height={40} style={{ objectFit: 'cover' }} preview={{ cover: <span>预览</span> }} />;
       }
     },
     {

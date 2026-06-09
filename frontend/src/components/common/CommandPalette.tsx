@@ -1,19 +1,23 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Spin } from 'antd';
+import { Spin, Upload } from 'antd';
 import {
   AppstoreOutlined,
   CloseOutlined,
   FileTextOutlined,
+  PictureOutlined,
   RightOutlined,
   RobotOutlined,
   SearchOutlined,
   SkinOutlined,
   TeamOutlined,
+  UploadOutlined,
 } from '@ant-design/icons';
 import { globalSearchApi } from '@/services/production/productionApi';
 import type { GlobalSearchOrderItem, GlobalSearchStyleItem, GlobalSearchWorkerItem } from '@/services/production/productionApi';
-import { getFullAuthedFileUrl } from '@/utils/fileUrl';
+import { menuConfig, paths } from '@/routeConfig';
+import SmartImage from './SmartImage';
+import api from '@/utils/api';
 import './CommandPalette.css';
 
 // ─── 类型 ─────────────────────────────────────────────────────
@@ -21,7 +25,9 @@ import './CommandPalette.css';
 type ResultItem =
   | { kind: 'order';  data: GlobalSearchOrderItem }
   | { kind: 'style';  data: GlobalSearchStyleItem }
-  | { kind: 'worker'; data: GlobalSearchWorkerItem };
+  | { kind: 'worker'; data: GlobalSearchWorkerItem }
+  | { kind: 'menu';   data: { label: string; path: string; section: string; icon?: React.ReactNode } }
+  | { kind: 'imageStyle'; data: { id: number; styleNo: string; styleName: string; category: string; coverUrl: string; similarity?: number } };
 
 // ─── 常量 ─────────────────────────────────────────────────────
 
@@ -49,12 +55,52 @@ const STATUS_LABEL_ZH: Record<string, string> = {
   returned:   '已退回',
 };
 
+// ─── 菜单索引构建 ─────────────────────────────────────────────
+
+interface MenuEntry {
+  label: string;
+  path: string;
+  section: string;
+  icon?: React.ReactNode;
+  keywords: string[];
+}
+
+function buildMenuIndex(): MenuEntry[] {
+  const entries: MenuEntry[] = [];
+  for (const section of menuConfig) {
+    if (section.items) {
+      for (const item of section.items) {
+        entries.push({
+          label: item.label,
+          path: item.path,
+          section: section.title,
+          icon: item.icon,
+          keywords: [item.label, section.title, item.path].filter(Boolean),
+        });
+      }
+    } else if (section.path) {
+      entries.push({
+        label: section.title,
+        path: section.path,
+        section: section.title,
+        icon: section.icon,
+        keywords: [section.title, section.path].filter(Boolean),
+      });
+    }
+  }
+  return entries;
+}
+
+const MENU_INDEX = buildMenuIndex();
+
 // ─── 主组件 ───────────────────────────────────────────────────
 
 interface CommandPaletteProps {
   open: boolean;
   onClose: () => void;
 }
+
+type SearchTab = 'all' | 'menu' | 'image';
 
 const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose }) => {
   const navigate  = useNavigate();
@@ -65,6 +111,9 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose }) => {
   const [items,     setItems]     = useState<ResultItem[]>([]);
   const [loading,   setLoading]   = useState(false);
   const [activeIdx, setActiveIdx] = useState(0);
+  const [activeTab, setActiveTab] = useState<SearchTab>('all');
+  const [imageSearchMode, setImageSearchMode] = useState(false);
+  const [imageSearchLoading, setImageSearchLoading] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
   const abortRef    = useRef<AbortController | null>(null);
 
@@ -74,9 +123,21 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose }) => {
       setQuery('');
       setItems([]);
       setActiveIdx(0);
+      setActiveTab('all');
+      setImageSearchMode(false);
       setTimeout(() => inputRef.current?.focus(), 50);
     }
   }, [open]);
+
+  // 菜单搜索（纯前端）
+  const searchMenu = useCallback((q: string): ResultItem[] => {
+    if (!q.trim()) return [];
+    const lower = q.toLowerCase();
+    return MENU_INDEX
+      .filter(entry => entry.keywords.some(kw => kw.toLowerCase().includes(lower)))
+      .slice(0, 8)
+      .map(entry => ({ kind: 'menu' as const, data: entry }));
+  }, []);
 
   // 搜索（防抖 250ms）
   const doSearch = useCallback(async (q: string) => {
@@ -88,7 +149,9 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose }) => {
       const res = await globalSearchApi.search(q) as any;
       if (res?.code === 200 && res?.data) {
         const d = res.data;
+        const menuResults = activeTab === 'image' ? [] : searchMenu(q);
         const flat: ResultItem[] = [
+          ...menuResults,
           ...(d.orders  || []).map((o: GlobalSearchOrderItem)  => ({ kind: 'order'  as const, data: o })),
           ...(d.styles  || []).map((s: GlobalSearchStyleItem)  => ({ kind: 'style'  as const, data: s })),
           ...(d.workers || []).map((w: GlobalSearchWorkerItem) => ({ kind: 'worker' as const, data: w })),
@@ -101,7 +164,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose }) => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [activeTab, searchMenu]);
 
   useEffect(() => {
     clearTimeout(debounceRef.current);
@@ -113,6 +176,62 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose }) => {
     return () => clearTimeout(debounceRef.current);
   }, [query, doSearch]);
 
+  // 图片搜款
+  const handleImageSearch = useCallback(async (file: File) => {
+    setImageSearchLoading(true);
+    setImageSearchMode(true);
+    setItems([]);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('topK', '8');
+      const res = await api.post('/intelligence/visual/style-search', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      if (res?.code === 200 && Array.isArray(res?.data?.results)) {
+        const imageResults: ResultItem[] = (res.data.results as any[]).map(s => ({
+          kind: 'imageStyle' as const,
+          data: {
+            id: s.id,
+            styleNo: s.styleNo || '',
+            styleName: s.styleName || '',
+            category: s.category || '',
+            coverUrl: s.coverUrl || s.imageUrl || '',
+            similarity: s.similarity ?? s.score,
+          },
+        }));
+        setItems(imageResults);
+        setActiveIdx(0);
+      } else {
+        setItems([]);
+      }
+    } catch (e) {
+      console.warn('[CmdK] 图片搜款失败:', e);
+      setItems([]);
+    } finally {
+      setImageSearchLoading(false);
+    }
+  }, []);
+
+  // 粘贴图片搜款
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: ClipboardEvent) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      for (const item of items) {
+        if (item.type.startsWith('image/')) {
+          e.preventDefault();
+          const file = item.getAsFile();
+          if (file) handleImageSearch(file);
+          return;
+        }
+      }
+    };
+    document.addEventListener('paste', handler);
+    return () => document.removeEventListener('paste', handler);
+  }, [open, handleImageSearch]);
+
   // 导航到对应路径
   const navigateTo = useCallback((item: ResultItem) => {
     onClose();
@@ -122,6 +241,10 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose }) => {
       navigate(`/style-info?styleNo=${encodeURIComponent(item.data.styleNo)}`);
     } else if (item.kind === 'worker') {
       navigate(`/system/user?name=${encodeURIComponent(item.data.name)}`);
+    } else if (item.kind === 'menu') {
+      navigate(item.data.path);
+    } else if (item.kind === 'imageStyle') {
+      navigate(`/style-info?styleNo=${encodeURIComponent(item.data.styleNo)}`);
     }
   }, [navigate, onClose]);
 
@@ -158,55 +281,98 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose }) => {
 
   // ─── 渲染结果分组 ─────────────────────────────────────────
 
-  const orders  = items.filter(i => i.kind === 'order');
-  const styles  = items.filter(i => i.kind === 'style');
-  const workers = items.filter(i => i.kind === 'worker');
-
-  // 分组标题计算（用于 items 绝对 index）
-  const sectionTitles: Array<{ idx: number; label: string; icon: React.ReactNode }> = [];
-  if (orders.length)  sectionTitles.push({ idx: 0,               label: `生产订单  ${orders.length}`,  icon: <FileTextOutlined /> });
-  if (styles.length)  sectionTitles.push({ idx: orders.length,   label: `款式  ${styles.length}`,       icon: <SkinOutlined /> });
-  if (workers.length) sectionTitles.push({ idx: orders.length + styles.length, label: `工人  ${workers.length}`, icon: <TeamOutlined /> });
+  const menus      = items.filter(i => i.kind === 'menu');
+  const orders     = items.filter(i => i.kind === 'order');
+  const styles     = items.filter(i => i.kind === 'style');
+  const workers    = items.filter(i => i.kind === 'worker');
+  const imageStyles = items.filter(i => i.kind === 'imageStyle');
 
   return (
     <div className="cp-overlay" onClick={onClose}>
-      <div className="cp-modal" onClick={e => e.stopPropagation()} onKeyDown={handleKeyDown} role="dialog" aria-label="全局搜索">
+      <div className="cp-modal cp-modal-wide" onClick={e => e.stopPropagation()} onKeyDown={handleKeyDown} role="dialog" aria-label="全局搜索">
         {/* ── 搜索框 ── */}
         <div className="cp-input-row">
-          <SearchOutlined className="cp-search-icon" />
+          {imageSearchMode ? (
+            <PictureOutlined className="cp-search-icon" style={{ color: '#a855f7' }} />
+          ) : (
+            <SearchOutlined className="cp-search-icon" />
+          )}
           <input
             ref={inputRef}
             className="cp-input"
-            placeholder="搜索订单号 · 款式 · 工人姓名…"
+            placeholder={imageSearchMode ? '图片搜款结果 — 输入文字切换回普通搜索…' : '搜索菜单 · 订单号 · 款式 · 工人…  粘贴图片可搜款'}
             value={query}
-            onChange={e => setQuery(e.target.value)}
+            onChange={e => { setQuery(e.target.value); if (imageSearchMode) setImageSearchMode(false); }}
             autoComplete="off"
             spellCheck={false}
           />
-          {loading && <Spin style={{ marginRight: 8 }} />}
-          {!loading && query && (
-            <button type="button" className="cp-clear" onClick={() => { setQuery(''); setItems([]); inputRef.current?.focus(); }}>
+          {(loading || imageSearchLoading) && <Spin style={{ marginRight: 8 }} size="small" />}
+          {!loading && !imageSearchLoading && (query || imageSearchMode) && (
+            <button type="button" className="cp-clear" onClick={() => { setQuery(''); setItems([]); setImageSearchMode(false); inputRef.current?.focus(); }}>
               <CloseOutlined style={{ fontSize: 13 }} />
             </button>
           )}
+
+          {/* 图片上传按钮 */}
+          <Upload
+            accept="image/*"
+            showUploadList={false}
+            beforeUpload={(file) => { handleImageSearch(file); return false; }}
+          >
+            <button type="button" className="cp-img-btn" title="上传图片搜款">
+              <UploadOutlined style={{ fontSize: 14 }} />
+            </button>
+          </Upload>
+
           <kbd className="cp-kbd">ESC</kbd>
         </div>
 
+        {/* ── 快捷标签 ── */}
+        {!query.trim() && !imageSearchMode && (
+          <div className="cp-quick-tags">
+            <span className="cp-quick-label">快速跳转</span>
+            {MENU_INDEX.slice(0, 10).map((entry, i) => (
+              <button
+                key={i}
+                className="cp-quick-tag"
+                onClick={() => { onClose(); navigate(entry.path); }}
+              >
+                {entry.label}
+              </button>
+            ))}
+          </div>
+        )}
+
         {/* ── 结果列表 ── */}
         <div ref={listRef} className="cp-list">
-          {!query.trim() && (
+          {!query.trim() && !imageSearchMode && (
             <div className="cp-empty-hint">
               <AppstoreOutlined style={{ fontSize: 16, marginBottom: 8, opacity: 0.3 }} />
-              <div>输入订单号、款式名、工人姓名开始搜索</div>
+              <div>输入关键词搜索，或粘贴图片以图搜款</div>
               <div className="cp-hint-tips">
                 <span><kbd>↑</kbd><kbd>↓</kbd> 导航</span>
                 <span><kbd>↵</kbd> 跳转</span>
                 <span><kbd>ESC</kbd> 关闭</span>
+                <span><kbd>⌘V</kbd> 图片搜款</span>
               </div>
             </div>
           )}
 
-          {query.trim() && !loading && items.length === 0 && (
+          {imageSearchMode && imageSearchLoading && (
+            <div className="cp-empty-hint">
+              <Spin size="large" />
+              <div style={{ marginTop: 12 }}>正在以图搜款…</div>
+            </div>
+          )}
+
+          {imageSearchMode && !imageSearchLoading && imageStyles.length === 0 && (
+            <div className="cp-empty-hint">
+              <PictureOutlined style={{ fontSize: 16, marginBottom: 8, opacity: 0.3 }} />
+              <div>未找到相似款式</div>
+            </div>
+          )}
+
+          {query.trim() && !loading && !imageSearchMode && items.length === 0 && (
             <div className="cp-empty-hint">
               <SearchOutlined style={{ fontSize: 16, marginBottom: 8, opacity: 0.3 }} />
               <div>未找到与「{query}」相关的结果</div>
@@ -223,6 +389,67 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose }) => {
           {items.length > 0 && (() => {
             let cursor = 0;
             const sections: React.ReactNode[] = [];
+
+            // 图片搜款结果
+            if (imageStyles.length) {
+              sections.push(<div key="th-image" className="cp-group-title"><PictureOutlined style={{ color: '#a855f7' }} /> 相似款式</div>);
+              imageStyles.forEach((it, i) => {
+                const idx = cursor + i;
+                const s = it.data;
+                sections.push(
+                  <div
+                    key={`imgstyle-${s.id}`}
+                    className={`cp-item${idx === activeIdx ? ' active' : ''}`}
+                    onClick={() => navigateTo(it)}
+                    onMouseEnter={() => setActiveIdx(idx)}
+                  >
+                    <span className="cp-item-icon cp-icon-image">
+                      {s.coverUrl ? (
+                        <SmartImage src={s.coverUrl} alt={s.styleName} className="cp-cover" width={32} height={32} preview={{ cover: <span>预览</span> }} />
+                      ) : (
+                        <PictureOutlined />
+                      )}
+                    </span>
+                    <span className="cp-item-main">
+                      <span className="cp-item-title">{s.styleNo}</span>
+                      <span className="cp-item-sub">{s.styleName}{s.category ? ` · ${s.category}` : ''}</span>
+                    </span>
+                    {s.similarity != null && (
+                      <span className="cp-item-meta">
+                        <span className="cp-similarity">{Math.round(s.similarity * 100)}%</span>
+                      </span>
+                    )}
+                    <RightOutlined className="cp-item-arrow" />
+                  </div>
+                );
+              });
+              cursor += imageStyles.length;
+            }
+
+            // 菜单
+            if (menus.length) {
+              sections.push(<div key="th-menu" className="cp-group-title"><AppstoreOutlined /> 菜单导航</div>);
+              menus.forEach((it, i) => {
+                const idx = cursor + i;
+                const m = it.data;
+                sections.push(
+                  <div
+                    key={`menu-${m.path}`}
+                    className={`cp-item${idx === activeIdx ? ' active' : ''}`}
+                    onClick={() => navigateTo(it)}
+                    onMouseEnter={() => setActiveIdx(idx)}
+                  >
+                    <span className="cp-item-icon cp-icon-menu">{m.icon || <AppstoreOutlined />}</span>
+                    <span className="cp-item-main">
+                      <span className="cp-item-title">{m.label}</span>
+                      <span className="cp-item-sub">{m.section} · {m.path}</span>
+                    </span>
+                    <RightOutlined className="cp-item-arrow" />
+                  </div>
+                );
+              });
+              cursor += menus.length;
+            }
 
             // 订单
             if (orders.length) {
@@ -269,7 +496,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose }) => {
                   >
                     <span className="cp-item-icon cp-icon-style">
                       {s.coverUrl ? (
-                        <img loading="lazy" src={getFullAuthedFileUrl(s.coverUrl)} alt={s.styleName} className="cp-cover" />
+                        <SmartImage src={s.coverUrl} alt={s.styleName} className="cp-cover" width={32} height={32} preview={{ cover: <span>预览</span> }} />
                       ) : (
                         <SkinOutlined />
                       )}

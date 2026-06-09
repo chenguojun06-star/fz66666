@@ -209,7 +209,7 @@ const OrdersTab: React.FC = () => {
               src={getFullAuthedFileUrl(imgUrl)}
               width={44} height={44}
               style={{ objectFit: 'cover', borderRadius: 4 }}
-              preview={{ mask: <EyeOutlined style={{ fontSize: 12 }} /> }}
+              preview={{ cover: <EyeOutlined style={{ fontSize: 12 }} /> }}
             />
           : <div style={{
               width: 44, height: 44, background: 'var(--color-bg-subtle)', borderRadius: 4,

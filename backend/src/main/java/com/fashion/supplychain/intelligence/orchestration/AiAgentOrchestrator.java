@@ -74,6 +74,12 @@ public class AiAgentOrchestrator {
     @Autowired private org.springframework.beans.factory.ObjectProvider<com.fashion.supplychain.intelligence.service.EntityMemoryContextService> entityMemoryContextServiceProvider;
     @Autowired private org.springframework.beans.factory.ObjectProvider<AiLongMemoryMapper> longMemoryMapperProvider;
 
+    // Phase 3/4 高级推理引擎
+    @Autowired private org.springframework.beans.factory.ObjectProvider<com.fashion.supplychain.intelligence.upgrade.phase3.TreeOfThoughtsEngine> treeOfThoughtsEngineProvider;
+    @Autowired private org.springframework.beans.factory.ObjectProvider<com.fashion.supplychain.intelligence.upgrade.phase4.GraphOfThoughtsEngine> graphOfThoughtsEngineProvider;
+    @Autowired private org.springframework.beans.factory.ObjectProvider<com.fashion.supplychain.intelligence.upgrade.phase3.IntentDrivenDagService> intentDrivenDagServiceProvider;
+    @Autowired private org.springframework.beans.factory.ObjectProvider<com.fashion.supplychain.intelligence.upgrade.phase4.DagVisualizationService> dagVisualizationServiceProvider;
+
     private final ThreadLocal<String> lastCommandIdHolder = new ThreadLocal<>();
     private final ThreadLocal<List<AiAgentToolExecHelper.ToolExecRecord>> lastToolRecordsHolder = new ThreadLocal<>();
 
@@ -191,6 +197,21 @@ public class AiAgentOrchestrator {
         }
 
         String augmentedPageContext = buildAugmentedPageContext(userMessage, pageContext);
+
+        // P1升级: 复杂问题先用ToT/GoT生成推理摘要，注入到AgentLoop上下文中（不直接返回，确保工具正常执行）
+        String reasoningHint = tryAdvancedReasoning(userMessage, pageContext);
+        if (reasoningHint != null && !reasoningHint.isBlank()) {
+            augmentedPageContext = "[高级推理参考]\n" + reasoningHint + "\n\n" + augmentedPageContext;
+            log.info("[AiAgent] 高级推理引擎产出推理提示，注入AgentLoop上下文");
+        }
+
+        // P1升级: 尝试意图驱动DAG规划，结果注入上下文（不直接返回）
+        String dagHint = tryIntentDrivenDag(userMessage, pageContext);
+        if (dagHint != null && !dagHint.isBlank()) {
+            augmentedPageContext = dagHint + "\n\n" + augmentedPageContext;
+            log.info("[AiAgent] 意图驱动DAG产出规划提示，注入AgentLoop上下文");
+        }
+
         AgentLoopContext ctx = contextBuilder.build(userMessage, augmentedPageContext);
         lastCommandIdHolder.set(ctx.getCommandId());
 
@@ -313,6 +334,21 @@ public class AiAgentOrchestrator {
             heartbeatFuture = startHeartbeat(emitter, sseHeartbeatIntervalS, cancelled);
 
             String augmentedPageContext = buildAugmentedPageContext(userMessage, pageContext);
+
+            // P1升级: 复杂问题先用ToT/GoT生成推理摘要，注入到AgentLoop上下文中
+            String reasoningHint = tryAdvancedReasoning(userMessage, pageContext);
+            if (reasoningHint != null && !reasoningHint.isBlank()) {
+                augmentedPageContext = "[高级推理参考]\n" + reasoningHint + "\n\n" + augmentedPageContext;
+                log.info("[AiAgent-Stream] 高级推理引擎产出推理提示，注入AgentLoop上下文");
+            }
+
+            // P1升级: 尝试意图驱动DAG规划，结果注入上下文
+            String dagHint = tryIntentDrivenDag(userMessage, pageContext);
+            if (dagHint != null && !dagHint.isBlank()) {
+                augmentedPageContext = dagHint + "\n\n" + augmentedPageContext;
+                log.info("[AiAgent-Stream] 意图驱动DAG产出规划提示，注入AgentLoop上下文");
+            }
+
             AgentLoopContext ctx = contextBuilder.build(userMessage, augmentedPageContext);
             ctx.setDeadlineMs(requestStartAt + agentTimeoutMs);
             ctx.setCancelled(cancelled);
@@ -803,5 +839,106 @@ public class AiAgentOrchestrator {
             log.warn("[QuickPath] 快速通道异常，降级到Agent循环: {}", e.getMessage());
             return false;
         }
+    }
+
+    private boolean isComplexQuestion(String userMessage) {
+        if (userMessage == null || userMessage.isBlank()) return false;
+        String lower = userMessage.toLowerCase();
+        int complexityScore = 0;
+        if (lower.contains("分析") || lower.contains("为什么") || lower.contains("原因")) complexityScore += 2;
+        if (lower.contains("预测") || lower.contains("趋势") || lower.contains("未来")) complexityScore += 2;
+        if (lower.contains("比较") || lower.contains("对比") || lower.contains("差异")) complexityScore += 1;
+        if (lower.contains("多个") || lower.contains("全部") || lower.contains("所有")) complexityScore += 1;
+        if (lower.contains("最优") || lower.contains("方案") || lower.contains("建议")) complexityScore += 2;
+        if (userMessage.length() > 150) complexityScore += 1;
+        return complexityScore >= 4;
+    }
+
+    private String tryAdvancedReasoning(String userMessage, String pageContext) {
+        try {
+            if (!isComplexQuestion(userMessage)) {
+                return null;
+            }
+
+            com.fashion.supplychain.intelligence.upgrade.phase4.GraphOfThoughtsEngine gotEngine = graphOfThoughtsEngineProvider.getIfAvailable();
+            if (gotEngine != null) {
+                com.fashion.supplychain.intelligence.upgrade.phase4.GraphOfThoughtsEngine.GotResult gotResult = gotEngine.reason(
+                        "complex-analysis", userMessage, java.util.Collections.emptyList(), java.util.Collections.emptyList());
+                if (gotResult.isSuccess() && gotResult.getConclusion() != null && !gotResult.getConclusion().isBlank()) {
+                    log.info("[AdvancedReasoning] GoT推理成功，score={}", gotResult.getScore());
+                    return gotResult.getConclusion();
+                }
+            }
+
+            com.fashion.supplychain.intelligence.upgrade.phase3.TreeOfThoughtsEngine totEngine = treeOfThoughtsEngineProvider.getIfAvailable();
+            if (totEngine != null) {
+                com.fashion.supplychain.intelligence.upgrade.phase3.TreeOfThoughtsEngine.TotResult totResult = totEngine.explore(
+                        "complex-analysis", userMessage, java.util.Collections.emptyList(), java.util.Collections.emptyList());
+                if (totResult.isSuccess() && totResult.getBestConclusion() != null && !totResult.getBestConclusion().isBlank()) {
+                    log.info("[AdvancedReasoning] ToT推理成功，score={}, explored={}", totResult.getBestScore(), totResult.getExploredPaths());
+                    return totResult.getBestConclusion();
+                }
+            }
+        } catch (Exception e) {
+            log.debug("[AdvancedReasoning] 高级推理跳过: {}", e.getMessage());
+        }
+        return null;
+    }
+
+    private String tryIntentDrivenDag(String userMessage, String pageContext) {
+        try {
+            com.fashion.supplychain.intelligence.upgrade.phase3.IntentDrivenDagService intentDagService = intentDrivenDagServiceProvider.getIfAvailable();
+            if (intentDagService == null) return null;
+
+            com.fashion.supplychain.intelligence.upgrade.phase3.IntentDrivenDagService.DagPlanResult planResult =
+                    intentDagService.planFromIntent("dag-execution", userMessage, java.util.Collections.emptyList());
+
+            if (!planResult.isSuccess() || planResult.getDagGraph() == null) {
+                return null;
+            }
+
+            log.info("[IntentDag] 意图解析成功: intent={}, target={}", planResult.getIntent(), planResult.getTargetEntity());
+
+            com.fashion.supplychain.intelligence.upgrade.phase4.DagVisualizationService vizService = dagVisualizationServiceProvider.getIfAvailable();
+            if (vizService != null) {
+                try {
+                    com.fashion.supplychain.intelligence.upgrade.phase4.DagVisualizationService.DagVisualResult vizResult =
+                            vizService.visualize(planResult.getDagGraph());
+                    log.debug("[IntentDag] DAG可视化生成: nodes={}, edges={}", vizResult.getNodes().size(), vizResult.getEdges().size());
+                } catch (Exception e) {
+                    log.debug("[IntentDag] DAG可视化跳过: {}", e.getMessage());
+                }
+            }
+
+            return buildDagExecutionSummary(planResult);
+        } catch (Exception e) {
+            log.debug("[IntentDag] 意图驱动DAG跳过: {}", e.getMessage());
+        }
+        return null;
+    }
+
+    private String buildDagExecutionSummary(com.fashion.supplychain.intelligence.upgrade.phase3.IntentDrivenDagService.DagPlanResult planResult) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("**分析计划已生成**\n\n");
+        sb.append("**意图**: ").append(planResult.getIntent()).append("\n");
+        if (planResult.getTargetEntity() != null) {
+            sb.append("**目标**: ").append(planResult.getTargetEntity()).append("\n\n");
+        }
+
+        sb.append("**执行步骤**:\n");
+        if (planResult.getDagGraph() != null) {
+            int idx = 1;
+            for (com.fashion.supplychain.intelligence.agent.dag.DagNode node : planResult.getDagGraph().allNodes()) {
+                sb.append(idx++).append(". ").append(node.getName());
+                java.util.List<String> deps = node.getDependsOn();
+                if (deps != null && !deps.isEmpty()) {
+                    sb.append(" (依赖: ").append(String.join(", ", deps)).append(")");
+                }
+                sb.append("\n");
+            }
+        }
+
+        sb.append("\n正在执行分析，请稍候...");
+        return sb.toString();
     }
 }

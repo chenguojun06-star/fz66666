@@ -1,7 +1,7 @@
 import React, { Suspense } from 'react';
 import { createPortal } from 'react-dom';
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
-import { Button } from 'antd';
+import { Button, Image } from 'antd';
 import PrivateRoute from './components/PrivateRoute';
 import XiaoyunPageLoader from './components/common/XiaoyunPageLoader';
 import { useAuthState } from './utils/AuthContext';
@@ -92,7 +92,6 @@ const GlobalImagePreview: React.FC = () => {
       e.preventDefault();
       e.stopPropagation();
 
-      // 获取图片的实际尺寸（仅预加载，不再用于计算尺寸）
       setSrc(nextSrc);
       setAlt(img.getAttribute('alt') || undefined);
       setOpen(true);
@@ -105,30 +104,17 @@ const GlobalImagePreview: React.FC = () => {
   if (!open || !src) return null;
 
   return createPortal(
-    <div
-      onClick={close}
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 9999,
-        backgroundColor: 'rgba(0,0,0,0.85)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        cursor: 'zoom-out',
-      }}
-    >
-      <img
+    <div style={{ display: 'none' }}>
+      <img src={src} alt={alt || ''} />
+      <Image
         src={src}
         alt={alt || ''}
-        onClick={e => e.stopPropagation()}
-        style={{
-          maxWidth: '90vw',
-          maxHeight: '90vh',
-          objectFit: 'contain',
-          display: 'block',
-          cursor: 'default',
-          borderRadius: 4,
+        style={{ display: 'none' }}
+        preview={{
+          visible: open,
+          onVisibleChange: (visible) => {
+            if (!visible) close();
+          },
         }}
       />
     </div>,

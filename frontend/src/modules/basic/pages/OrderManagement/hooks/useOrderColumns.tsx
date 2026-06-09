@@ -34,33 +34,34 @@ export function useOrderColumns({ openCreate, setPrintModalVisible, setPrintingR
       fixed: 'left' as const,
       render: (_: any, record: StyleInfo) => record.styleNo,
     },
-    { title: 'SKC', dataIndex: 'skc', key: 'skc', width: 140, render: (v: any) => v || '-' },
-    { title: '款名', dataIndex: 'styleName', key: 'styleName', ellipsis: true },
+    { title: 'SKC', dataIndex: 'skc', key: 'skc', width: 100, render: (v: any) => v || '-' },
+    { title: '款名', dataIndex: 'styleName', key: 'styleName', width: 180, ellipsis: true },
     {
       title: '品类',
       dataIndex: 'category',
       key: 'category',
-      width: 110,
+      width: 80,
       render: (v: unknown) => toCategoryCn(v),
     },
     {
       title: '季节',
       dataIndex: 'season',
       key: 'season',
-      width: 90,
+      width: 80,
       render: (v: unknown) => toSeasonCn(v),
     },
     {
       title: '面料成分',
       dataIndex: 'fabricComposition',
       key: 'fabricComposition',
-      width: 140,
+      width: 180,
+      ellipsis: true,
       render: (v: unknown) => v ? String(v) : '-',
     },
     {
       title: '来源',
       key: 'developmentSourceType',
-      width: 120,
+      width: 80,
       render: (_: unknown, record: StyleInfo) => {
         const source = getStyleSourceMeta(record);
         return <Tag color={source.color}>{source.label}</Tag>;
@@ -70,7 +71,7 @@ export function useOrderColumns({ openCreate, setPrintModalVisible, setPrintingR
       title: '下单次数',
       dataIndex: 'orderCount',
       key: 'orderCount',
-      width: 100,
+      width: 90,
       align: 'right' as const,
       render: (v: unknown) => {
         const n = Number(v) || 0;
@@ -88,13 +89,13 @@ export function useOrderColumns({ openCreate, setPrintModalVisible, setPrintingR
       title: '下单人',
       dataIndex: 'latestOrderCreator',
       key: 'latestOrderCreator',
-      width: 100,
+      width: 90,
       render: (v: string) => v || '-',
     },
     {
       title: '是否下单',
       key: 'hasOrder',
-      width: 100,
+      width: 90,
       render: (_: any, record: StyleInfo) => {
         const c = Number((record as Record<string, unknown>)?.orderCount || 0) || 0;
         return c > 0 ? <Tag color="green">有</Tag> : <Tag>无</Tag>;
@@ -103,7 +104,7 @@ export function useOrderColumns({ openCreate, setPrintModalVisible, setPrintingR
     {
       title: '附件',
       key: 'attachments',
-      width: 100,
+      width: 80,
       render: (_: any, record: StyleInfo) => (
         <StyleAttachmentsButton
           styleId={(record as any).id}
@@ -116,7 +117,8 @@ export function useOrderColumns({ openCreate, setPrintModalVisible, setPrintingR
     {
       title: '操作',
       key: 'action',
-      width: 150,
+      width: 110,
+      fixed: 'right' as const,
       render: (_: any, record: StyleInfo) => (
         <RowActions
           actions={[

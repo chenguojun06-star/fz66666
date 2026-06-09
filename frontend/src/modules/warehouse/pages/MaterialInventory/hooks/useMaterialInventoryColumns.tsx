@@ -306,8 +306,10 @@ export function useMaterialInventoryColumns({
               key: 'rollLabel',
               label: '料卷标签',
               onClick: () => {
-                rollForm.setFieldsValue({ rollCount: 1, quantityPerRoll: undefined, unit: '件' });
                 rollModal.open({ inboundId: '', materialCode: record.materialCode, materialName: record.materialName });
+                requestAnimationFrame(() => {
+                  rollForm.setFieldsValue({ rollCount: 1, quantityPerRoll: undefined, unit: '件' });
+                });
               }
             },
             {

@@ -339,11 +339,12 @@ public class MaterialStockServiceImpl extends ServiceImpl<MaterialStockMapper, M
 
         List<MaterialInbound> inboundList = materialInboundMapper.selectList(query);
 
-        MaterialStock currentStock = this.getOne(new LambdaQueryWrapper<MaterialStock>()
+        List<MaterialStock> stockList = this.list(new LambdaQueryWrapper<MaterialStock>()
                 .eq(MaterialStock::getDeleteFlag, 0)
                 .eq(MaterialStock::getMaterialCode, materialCode)
                 .eq(StringUtils.hasText(color), MaterialStock::getColor, color)
                 .eq(StringUtils.hasText(size), MaterialStock::getSize, size));
+        MaterialStock currentStock = stockList.isEmpty() ? null : stockList.get(0);
 
         List<MaterialBatchDetailDto> batchDetails = convertToBatchDetails(inboundList);
 

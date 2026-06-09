@@ -25,21 +25,21 @@ export interface OutboundOrderOption {
 
 /** 通过工厂/关键词搜索生产订单，返回选项列表（纯数据，不更新 state） */
 export async function fetchOrderOptions(
-  factoryName?: string,
-  factoryType?: string,
-  keyword?: string,
+    factoryName?: string,
+    factoryType?: string,
+    keyword?: string,
 ): Promise<OutboundOrderOption[]> {
-  if (!factoryName && !keyword) return [];
-  try {
-    const res = await api.get('/production/orders/list', {
-      params: {
-        page: 1, pageSize: 50,
-        factoryName: factoryName || undefined,
-        factoryType: factoryType || undefined,
-        orderNo: keyword || undefined,
-        excludeTerminal: true,
-      },
-    });
+    if (!factoryName && !keyword) return [];
+    try {
+        const res = await api.get('/production/orders/list', {
+            params: {
+                page: 1, pageSize: 50,
+                factoryName: factoryName || undefined,
+                factoryType: factoryType || undefined,
+                keyword: keyword || undefined,
+                excludeTerminal: true,
+            },
+        });
     const records = res?.data?.records || res?.records || [];
     return (records as any[]).map((item) => ({
       value: String(item.orderNo || ''),

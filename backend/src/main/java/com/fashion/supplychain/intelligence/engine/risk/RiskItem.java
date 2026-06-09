@@ -33,6 +33,7 @@ public class RiskItem {
                 .severity(severity)
                 .score(score)
                 .detectedAt(LocalDateTime.now())
+                .metadata(new HashMap<>())
                 .build();
         return item;
     }

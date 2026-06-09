@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { App, Modal } from 'antd';
+import { App, Modal, Image } from 'antd';
 import { DeleteOutlined, StarFilled, StarOutlined, LeftOutlined, RightOutlined, SearchOutlined } from '@ant-design/icons';
 import api, { type ApiResult, isApiSuccess, getApiMessage } from '@/utils/api';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
@@ -208,7 +208,7 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
       >
         {currentImage ? (
           <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-            <img loading="lazy" src={getFullAuthedFileUrl(currentImage.fileUrl)} alt="main" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            <Image loading="lazy" src={getFullAuthedFileUrl(currentImage.fileUrl)} alt="main" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             <div style={{ position: 'absolute', left: 10, top: 10, padding: '3px 8px', borderRadius: 999, background: currentAssetMeta.color, color: '#fff', fontSize: 14, fontWeight: 600 }}>
               {currentAssetMeta.label}
             </div>
@@ -250,7 +250,7 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
           </div>
         ) : coverUrl ? (
           // 无上传附件但有选品中心下板时的参考图（cover字段）
-          <img loading="lazy" src={getFullAuthedFileUrl(coverUrl)} alt="cover" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          <Image loading="lazy" src={getFullAuthedFileUrl(coverUrl)} alt="cover" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
         ) : (
           <div style={{ textAlign: 'center', padding: '20px' }}>
             {isNewMode ? (

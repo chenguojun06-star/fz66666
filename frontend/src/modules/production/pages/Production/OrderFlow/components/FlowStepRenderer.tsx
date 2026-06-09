@@ -551,7 +551,7 @@ const FlowStepRenderer: React.FC<Props> = ({
                                   {images.map((url: string, idx: number) => (
                                     <Image key={idx} src={getFullAuthedFileUrl(url)}
                                       style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 4, cursor: 'pointer' }}
-                                      preview={{ mask: '预览' }} />
+                                      preview={{ cover: '预览' }} />
                                   ))}
                                 </Image.PreviewGroup>
                               </div>

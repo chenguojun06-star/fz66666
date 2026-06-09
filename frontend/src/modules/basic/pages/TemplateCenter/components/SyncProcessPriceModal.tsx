@@ -1,5 +1,5 @@
 import { memo, useCallback, useEffect, useRef } from 'react';
-import { Button, Input, Popover, Space, Spin, Tooltip } from 'antd';
+import { Button, Input, Popover, Space, Spin, Tooltip, Image } from 'antd';
 import ResizableModal from '@/components/common/ResizableModal';
 import {
   CloudSyncOutlined,
@@ -192,7 +192,7 @@ const SyncProcessPriceModal = memo(function SyncProcessPriceModal({
         <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
           {imageUrls.map((url, idx) => (
             <div key={idx} style={{ position: 'relative', width: 64, height: 64, border: '1px solid var(--color-border)', borderRadius: 4, overflow: 'hidden' }}>
-              <img loading="lazy" src={getFullAuthedFileUrl(url)} alt={`工艺图${idx + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              <Image loading="lazy" src={getFullAuthedFileUrl(url)} alt={`工艺图${idx + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} preview={{ cover: <span>预览</span> }} />
               {editMode && (
                 <DeleteOutlined
                   style={{ position: 'absolute', top: 2, right: 2, color: 'var(--color-danger)', cursor: 'pointer', background: 'rgba(255,255,255,0.8)', borderRadius: '50%', padding: 2 }}

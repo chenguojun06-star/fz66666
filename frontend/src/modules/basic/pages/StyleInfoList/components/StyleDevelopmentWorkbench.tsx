@@ -237,7 +237,7 @@ const StyleDevelopmentWorkbench: React.FC<Props> = ({ record, onClose, initialSe
     let draftDays = initDays;
     let draftHours = initHours;
 
-    Modal.confirm({
+    App.useApp().modal.confirm({
       title: currentHours != null ? `调整「${stageTitle}」预算工时` : `设定「${stageTitle}」预算工时`,
       width: 400,
       okText: '确认',

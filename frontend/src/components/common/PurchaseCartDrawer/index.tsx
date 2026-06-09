@@ -49,9 +49,10 @@ export const PurchaseCartDrawer: React.FC<PurchaseCartDrawerProps> = ({
       <Drawer
         title={<CartHeader cart={cart} onClear={clearCart} />}
         placement="right"
-        size={Math.min(1200, Math.round(typeof window !== 'undefined' ? window.innerWidth * 0.85 : 1200))}
+        size="large"
         styles={{
           body: { padding: 0, display: 'flex', flexDirection: 'column', height: '100%' },
+          wrapper: { width: '85%' },
         }}
         open={open}
         onClose={onClose}

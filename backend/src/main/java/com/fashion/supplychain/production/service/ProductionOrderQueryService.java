@@ -533,12 +533,10 @@ public class ProductionOrderQueryService {
                     "SUM(CASE WHEN create_time >= CURDATE() AND create_time < CURDATE() + INTERVAL 1 DAY THEN 1 ELSE 0 END) AS today_orders",
                     "COALESCE(SUM(CASE WHEN create_time >= CURDATE() AND create_time < CURDATE() + INTERVAL 1 DAY THEN order_quantity ELSE 0 END), 0) AS today_quantity",
                     "SUM(CASE WHEN status NOT IN ('completed','cancelled','scrapped','archived','closed') AND ("
-                        + "(planned_end_date IS NOT NULL AND planned_end_date < NOW()) "
-                        + "OR (planned_end_date IS NOT NULL AND planned_end_date >= NOW() AND planned_end_date <= DATE_ADD(NOW(), INTERVAL 7 DAY) AND COALESCE(production_progress,0) < 50)"
+                        + "(planned_end_date IS NOT NULL AND planned_end_date >= NOW() AND planned_end_date <= DATE_ADD(NOW(), INTERVAL 7 DAY) AND COALESCE(production_progress,0) < 50)"
                         + ") THEN 1 ELSE 0 END) AS risk_orders",
                     "COALESCE(SUM(CASE WHEN status NOT IN ('completed','cancelled','scrapped','archived','closed') AND ("
-                        + "(planned_end_date IS NOT NULL AND planned_end_date < NOW()) "
-                        + "OR (planned_end_date IS NOT NULL AND planned_end_date >= NOW() AND planned_end_date <= DATE_ADD(NOW(), INTERVAL 7 DAY) AND COALESCE(production_progress,0) < 50)"
+                        + "(planned_end_date IS NOT NULL AND planned_end_date >= NOW() AND planned_end_date <= DATE_ADD(NOW(), INTERVAL 7 DAY) AND COALESCE(production_progress,0) < 50)"
                         + ") THEN order_quantity ELSE 0 END), 0) AS risk_quantity"
                 )
             );

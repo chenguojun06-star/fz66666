@@ -440,6 +440,7 @@ const MaterialInventoryModals: React.FC<MaterialInventoryModalsProps> = ({
         title="生成料卷/箱二维码标签"
         open={rollModal.visible}
         onCancel={rollModal.close}
+        forceRender
         footer={[
           <Button key="cancel" onClick={rollModal.close}>取消</Button>,
           <Button

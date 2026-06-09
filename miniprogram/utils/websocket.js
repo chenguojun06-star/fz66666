@@ -9,6 +9,11 @@ const { eventBus, Events } = require('./eventBus');
  * 与后端 /ws/realtime 建立 WebSocket 连接，接收服务端推送的数据变更事件，
  * 并通过本地 EventBus 广播到各页面，实现跨端实时数据同步。
  *
+ * 连接策略（按优先级）：
+ * 1. wx.cloud.connectContainer — 微信云托管专用通道，走微信私有协议，
+ *    无需域名白名单，无需 wss，最稳定可靠
+ * 2. wx.connectSocket — 标准WebSocket，走自定义域名 wss://api.webyszl.cn
+ *
  * 功能：
  * - 自动重连（指数退避：1s, 2s, 4s, 8s, 最大30s）
  * - 心跳保活（30s 一次 ping，连续3次无响应触发重连）
@@ -17,15 +22,15 @@ const { eventBus, Events } = require('./eventBus');
  */
 
 // ========== 常量配置 ==========
-const WS_PATH = '/ws/realtime'; // WebSocket 路径
-const HEARTBEAT_INTERVAL = 30000; // 心跳间隔 30秒
-const HEARTBEAT_MAX_MISS = 3; // 连续3次心跳无响应触发重连
-const RECONNECT_MAX = 10; // 最大重连次数
-const RECONNECT_BASE_DELAY = 1000; // 基础重连延迟 1秒
-const RECONNECT_MAX_DELAY = 30000; // 最大重连延迟 30秒
+var WS_PATH = '/ws/realtime'; // WebSocket 路径
+var HEARTBEAT_INTERVAL = 30000; // 心跳间隔 30秒
+var HEARTBEAT_MAX_MISS = 3; // 连续3次心跳无响应触发重连
+var RECONNECT_MAX = 10; // 最大重连次数
+var RECONNECT_BASE_DELAY = 1000; // 基础重连延迟 1秒
+var RECONNECT_MAX_DELAY = 30000; // 最大重连延迟 30秒
 
 // ========== 后端事件 → EventBus 事件映射 ==========
-const EVENT_MAP = {
+var EVENT_MAP = {
   'order:update': [Events.ORDER_UPDATED, Events.DATA_CHANGED],
   'order:create': [Events.ORDER_UPDATED, Events.DATA_CHANGED],
   'order:change': [Events.ORDER_UPDATED, Events.DATA_CHANGED],
@@ -38,14 +43,17 @@ const EVENT_MAP = {
 };
 
 // ========== 内部状态 ==========
-let socketTask = null; // wx.connectSocket 返回的任务对象
-let connectionState = 'disconnected'; // 'disconnected' | 'connecting' | 'connected'
-let reconnectCount = 0; // 当前重连次数
-let reconnectTimer = null; // 重连定时器
-let heartbeatTimer = null; // 心跳定时器
-let heartbeatMissCount = 0; // 心跳未响应计数
-let heartbeatWaiting = false; // 是否在等待心跳响应
-let manuallyClosed = false; // 是否主动断开（主动断开不自动重连）
+var socketTask = null; // wx.connectSocket / wx.cloud.connectContainer 返回的任务对象
+var connectionState = 'disconnected'; // 'disconnected' | 'connecting' | 'connected'
+var reconnectCount = 0; // 当前重连次数
+var reconnectTimer = null; // 重连定时器
+var heartbeatTimer = null; // 心跳定时器
+var heartbeatMissCount = 0; // 心跳未响应计数
+var heartbeatWaiting = false; // 是否在等待心跳响应
+var manuallyClosed = false; // 是否主动断开（主动断开不自动重连）
+var reconnectScheduled = false; // 防止 onError+onClose 重复调度重连
+var isClosing = false; // 是否正在关闭旧连接（防止并发 connectSocket）
+var useCloudContainer = false; // 是否使用 wx.cloud.connectContainer
 
 /**
  * 将 HTTP 基址转换为 WebSocket 地址
@@ -61,35 +69,32 @@ function toWsUrl(baseUrl) {
   if (baseUrl.startsWith('http://')) {
     return 'ws://' + baseUrl.slice(7);
   }
-  // 兜底：直接拼接 wss://
   return 'wss://' + baseUrl;
 }
 
 /**
- * 构建完整的 WebSocket 连接 URL
+ * 构建完整的 WebSocket 连接 URL（用于 wx.connectSocket 方式）
  * @returns {string|null} 完整的 WebSocket URL，无 token 时返回 null
  */
 function buildWsUrl() {
   try {
-    const baseUrl = getBaseUrl();
+    var baseUrl = getBaseUrl();
     if (!baseUrl) {
       if (DEBUG) console.warn('[WebSocket] getBaseUrl() 返回空，无法建立连接');
       return null;
     }
-    const wsBase = toWsUrl(baseUrl);
-    const token = getToken();
+    var wsBase = toWsUrl(baseUrl);
+    var token = getToken();
     if (!token) {
       if (DEBUG) console.warn('[WebSocket] 无 token，跳过连接');
       return null;
     }
 
-    // 获取用户信息
-    const userInfo = getUserInfo();
-    const userId = userInfo && userInfo.id ? String(userInfo.id) : '';
-    const tenantId = userInfo && userInfo.tenantId ? String(userInfo.tenantId) : '';
+    var userInfo = getUserInfo();
+    var userId = userInfo && userInfo.id ? String(userInfo.id) : '';
+    var tenantId = userInfo && userInfo.tenantId ? String(userInfo.tenantId) : '';
 
-    // 构建查询参数
-    const params = ['token=' + encodeURIComponent(token)];
+    var params = ['token=' + encodeURIComponent(token)];
     if (userId) params.push('userId=' + encodeURIComponent(userId));
     params.push('clientType=miniprogram');
     if (tenantId) params.push('tenantId=' + encodeURIComponent(tenantId));
@@ -98,6 +103,19 @@ function buildWsUrl() {
   } catch (e) {
     console.error('[WebSocket] 构建 URL 失败:', e.message || e);
     return null;
+  }
+}
+
+/**
+ * 检测是否可用 wx.cloud.connectContainer
+ * 微信云托管专用通道，走微信私有协议，无需域名白名单
+ * @returns {boolean}
+ */
+function canUseCloudContainer() {
+  try {
+    return !!(wx && wx.cloud && typeof wx.cloud.connectContainer === 'function');
+  } catch (e) {
+    return false;
   }
 }
 
@@ -122,7 +140,6 @@ function startHeartbeat() {
     if (!socketTask || connectionState !== 'connected') {
       return;
     }
-    // 如果上一轮心跳还没收到响应，累计未响应次数
     if (heartbeatWaiting) {
       heartbeatMissCount++;
       if (DEBUG) console.warn('[WebSocket] 心跳未响应，累计:', heartbeatMissCount);
@@ -133,7 +150,6 @@ function startHeartbeat() {
         return;
       }
     }
-    // 发送心跳
     try {
       heartbeatWaiting = true;
       socketTask.send({
@@ -190,23 +206,19 @@ function handleMessage(rawData) {
   try {
     var msg = typeof rawData === 'string' ? JSON.parse(rawData) : rawData;
 
-    // 心跳响应
     if (msg.type === 'pong') {
       handleHeartbeatResponse();
       return;
     }
 
-    // 提取事件类型
     var eventType = msg.type || msg.event || '';
     if (!eventType) {
       if (DEBUG) console.warn('[WebSocket] 消息缺少事件类型:', rawData);
       return;
     }
 
-    // 提取事件数据
     var payload = msg.data || msg.payload || {};
 
-    // 映射到 EventBus 事件
     var mappedEvents = EVENT_MAP[eventType];
     if (mappedEvents) {
       for (var i = 0; i < mappedEvents.length; i++) {
@@ -218,7 +230,6 @@ function handleMessage(rawData) {
         });
       }
     } else {
-      // 未知事件类型，统一触发 DATA_CHANGED
       eventBus.emit(Events.DATA_CHANGED, {
         source: 'websocket',
         wsEvent: eventType,
@@ -234,25 +245,108 @@ function handleMessage(rawData) {
 }
 
 /**
- * 建立 WebSocket 连接
+ * 绑定 socketTask 的事件回调
+ * @param {object} task - wx.connectSocket 或 wx.cloud.connectContainer 返回的任务对象
  */
-function connect() {
-  // 已连接或正在连接中，不重复建立
-  if (connectionState === 'connected' || connectionState === 'connecting') {
-    if (DEBUG) console.log('[WebSocket] 已在连接状态，跳过');
-    return;
-  }
+function bindSocketEvents(task) {
+  // 监听连接打开
+  task.onOpen(function () {
+    if (DEBUG) console.log('[WebSocket] 连接已建立 (' + (useCloudContainer ? 'cloud' : 'wss') + ')');
+    connectionState = 'connected';
+    isClosing = false;
+    reconnectCount = 0;
+    clearReconnectTimer();
+    reconnectScheduled = false;
+    startHeartbeat();
+  });
 
+  // 监听消息
+  task.onMessage(function (res) {
+    if (res && res.data) {
+      handleMessage(res.data);
+    }
+  });
+
+  // 监听连接关闭
+  // 注意：微信小程序中 onError 后一定会触发 onClose，
+  // 所以只在 onClose 中调度重连，避免重复调度
+  task.onClose(function (res) {
+    if (DEBUG) console.log('[WebSocket] 连接关闭, code:', res.code, 'reason:', res.reason);
+    connectionState = 'disconnected';
+    socketTask = null;
+    isClosing = false;
+    stopHeartbeat();
+
+    if (!manuallyClosed && !reconnectScheduled) {
+      scheduleReconnect();
+    }
+  });
+
+  // 监听连接错误
+  // 注意：onError 后 onClose 一定会触发，重连逻辑放在 onClose 中
+  task.onError(function (err) {
+    console.error('[WebSocket] 连接错误:', err && err.errMsg ? err.errMsg : err);
+  });
+}
+
+/**
+ * 通过 wx.cloud.connectContainer 建立连接（微信云托管专用通道）
+ * @returns {boolean} 是否成功发起连接
+ */
+function connectViaCloudContainer() {
+  try {
+    var token = getToken();
+    if (!token) {
+      if (DEBUG) console.warn('[WebSocket] 无 token，跳过云托管连接');
+      return false;
+    }
+
+    var userInfo = getUserInfo();
+    var userId = userInfo && userInfo.id ? String(userInfo.id) : '';
+    var tenantId = userInfo && userInfo.tenantId ? String(userInfo.tenantId) : '';
+
+    // 构建查询参数
+    var params = ['token=' + encodeURIComponent(token)];
+    if (userId) params.push('userId=' + encodeURIComponent(userId));
+    params.push('clientType=miniprogram');
+    if (tenantId) params.push('tenantId=' + encodeURIComponent(tenantId));
+
+    var wsPath = WS_PATH + '?' + params.join('&');
+
+    if (DEBUG) console.log('[WebSocket] 通过云托管通道连接:', wsPath.split('?')[0] + '...');
+
+    var result = wx.cloud.connectContainer({
+      path: wsPath,
+    });
+
+    if (result && result.socketTask) {
+      socketTask = result.socketTask;
+      useCloudContainer = true;
+      bindSocketEvents(socketTask);
+      if (DEBUG) console.log('[WebSocket] 云托管通道连接已发起');
+      return true;
+    }
+
+    if (DEBUG) console.warn('[WebSocket] wx.cloud.connectContainer 返回空');
+    return false;
+  } catch (e) {
+    console.error('[WebSocket] 云托管通道连接异常:', e.message || e);
+    return false;
+  }
+}
+
+/**
+ * 通过 wx.connectSocket 建立连接（标准WebSocket，走自定义域名）
+ * @returns {boolean} 是否成功发起连接
+ */
+function connectViaWebSocket() {
   var url = buildWsUrl();
   if (!url) {
     if (DEBUG) console.warn('[WebSocket] 无法构建连接 URL，跳过连接');
-    return;
+    return false;
   }
 
-  manuallyClosed = false;
-  connectionState = 'connecting';
-
-  if (DEBUG) console.log('[WebSocket] 正在连接:', url.split('?')[0] + '...');
+  if (DEBUG) console.log('[WebSocket] 通过标准WebSocket连接:', url.split('?')[0] + '...');
 
   try {
     socketTask = wx.connectSocket({
@@ -264,7 +358,6 @@ function connect() {
         console.error('[WebSocket] connectSocket 调用失败:', err && err.errMsg ? err.errMsg : err);
         connectionState = 'disconnected';
         socketTask = null;
-        // 调用失败时尝试重连
         scheduleReconnect();
       },
     });
@@ -272,56 +365,57 @@ function connect() {
     if (!socketTask) {
       connectionState = 'disconnected';
       if (DEBUG) console.warn('[WebSocket] wx.connectSocket 返回空');
-      return;
+      return false;
     }
 
-    // 监听连接打开
-    socketTask.onOpen(function () {
-      if (DEBUG) console.log('[WebSocket] 连接已建立');
-      connectionState = 'connected';
-      reconnectCount = 0;
-      clearReconnectTimer();
-      startHeartbeat();
-    });
-
-    // 监听消息
-    socketTask.onMessage(function (res) {
-      if (res && res.data) {
-        handleMessage(res.data);
-      }
-    });
-
-    // 监听连接关闭
-    socketTask.onClose(function (res) {
-      if (DEBUG) console.log('[WebSocket] 连接关闭, code:', res.code, 'reason:', res.reason);
-      connectionState = 'disconnected';
-      socketTask = null;
-      stopHeartbeat();
-
-      // 非主动关闭时自动重连
-      if (!manuallyClosed) {
-        scheduleReconnect();
-      }
-    });
-
-    // 监听连接错误
-    socketTask.onError(function (err) {
-      console.error('[WebSocket] 连接错误:', err && err.errMsg ? err.errMsg : err);
-      connectionState = 'disconnected';
-      socketTask = null;
-      stopHeartbeat();
-
-      // 非主动关闭时自动重连
-      if (!manuallyClosed) {
-        scheduleReconnect();
-      }
-    });
+    useCloudContainer = false;
+    bindSocketEvents(socketTask);
+    return true;
   } catch (e) {
-    console.error('[WebSocket] 连接异常:', e.message || e);
+    console.error('[WebSocket] 标准WebSocket连接异常:', e.message || e);
     connectionState = 'disconnected';
     socketTask = null;
+    isClosing = false;
     scheduleReconnect();
+    return false;
   }
+}
+
+/**
+ * 建立 WebSocket 连接
+ * 优先使用 wx.cloud.connectContainer（微信云托管专用通道），
+ * 不可用时回退到 wx.connectSocket（标准WebSocket）
+ */
+function connect() {
+  // 已连接或正在连接中，不重复建立
+  if (connectionState === 'connected' || connectionState === 'connecting') {
+    if (DEBUG) console.log('[WebSocket] 已在连接状态，跳过');
+    return;
+  }
+
+  // 微信小程序同时只允许 1 个 WebSocket 连接
+  // 如果旧连接正在关闭中，延迟重试
+  if (isClosing) {
+    if (DEBUG) console.log('[WebSocket] 旧连接正在关闭，延迟 500ms 重试');
+    setTimeout(function () { connect(); }, 500);
+    return;
+  }
+
+  manuallyClosed = false;
+  reconnectScheduled = false;
+  connectionState = 'connecting';
+
+  // 优先尝试微信云托管专用通道
+  if (canUseCloudContainer()) {
+    if (connectViaCloudContainer()) {
+      return;
+    }
+    // 云托管通道失败，回退到标准WebSocket
+    if (DEBUG) console.log('[WebSocket] 云托管通道不可用，回退到标准WebSocket');
+  }
+
+  // 标准WebSocket方式
+  connectViaWebSocket();
 }
 
 /**
@@ -333,11 +427,17 @@ function scheduleReconnect() {
     return;
   }
 
+  if (reconnectScheduled) {
+    if (DEBUG) console.log('[WebSocket] 重连已调度，跳过');
+    return;
+  }
+
   if (reconnectCount >= RECONNECT_MAX) {
     console.warn('[WebSocket] 已达最大重连次数(' + RECONNECT_MAX + ')，停止重连');
     return;
   }
 
+  reconnectScheduled = true;
   clearReconnectTimer();
 
   var delay = getReconnectDelay();
@@ -347,6 +447,7 @@ function scheduleReconnect() {
 
   reconnectTimer = setTimeout(function () {
     reconnectTimer = null;
+    reconnectScheduled = false;
     connect();
   }, delay);
 }
@@ -360,14 +461,11 @@ function reconnect() {
     return;
   }
 
-  // 先关闭现有连接
   closeSocket();
 
-  // 重置重连计数，让指数退避从头开始
   reconnectCount = 0;
   manuallyClosed = false;
 
-  // 延迟一小段时间再连接，避免立即重连导致状态混乱
   setTimeout(function () {
     connect();
   }, 300);
@@ -379,10 +477,11 @@ function reconnect() {
 function closeSocket() {
   stopHeartbeat();
   if (socketTask) {
+    isClosing = true;
     try {
       socketTask.close({});
     } catch (e) {
-      // 忽略关闭异常
+      isClosing = false;
     }
     socketTask = null;
   }
@@ -394,6 +493,7 @@ function closeSocket() {
  */
 function disconnect() {
   manuallyClosed = true;
+  reconnectScheduled = false;
   clearReconnectTimer();
   reconnectCount = 0;
   closeSocket();
@@ -423,7 +523,7 @@ function getConnectionState() {
 function onPageShow() {
   if (connectionState === 'disconnected' && !manuallyClosed) {
     if (DEBUG) console.log('[WebSocket] 页面 onShow，连接已断开，尝试重连');
-    reconnectCount = 0; // 重置退避计数
+    reconnectCount = 0;
     connect();
   }
 }

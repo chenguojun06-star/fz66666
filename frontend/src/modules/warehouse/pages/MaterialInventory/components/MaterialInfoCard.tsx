@@ -38,10 +38,8 @@ const MaterialInfoCard: React.FC<MaterialInfoCardProps> = (props) => {
     <Card style={{ background: 'var(--color-bg-subtle)' }}>
       <Descriptions
         column={3}
-       
         colon={false}
-        labelStyle={{ color: 'var(--neutral-text-disabled)', fontSize: 'var(--font-size-sm)', paddingBottom: 2 }}
-        contentStyle={{ fontWeight: 600, fontSize: 'var(--font-size-sm)', paddingBottom: 8 }}
+        styles={{ label: { color: 'var(--neutral-text-disabled)', fontSize: 'var(--font-size-sm)', paddingBottom: 2 }, content: { fontWeight: 600, fontSize: 'var(--font-size-sm)', paddingBottom: 8 } }}
       >
         <Descriptions.Item label="物料名称" span={3}>
           {materialName || '-'}
@@ -84,10 +82,8 @@ const MaterialInfoCard: React.FC<MaterialInfoCardProps> = (props) => {
           </div>
           <Descriptions
             column={3}
-           
             colon={false}
-            labelStyle={{ color: 'var(--neutral-text-disabled)', fontSize: 'var(--font-size-sm)', paddingBottom: 2 }}
-            contentStyle={{ fontWeight: 600, fontSize: 'var(--font-size-sm)', color: 'var(--primary-color)', paddingBottom: 4 }}
+            styles={{ label: { color: 'var(--neutral-text-disabled)', fontSize: 'var(--font-size-sm)', paddingBottom: 2 }, content: { fontWeight: 600, fontSize: 'var(--font-size-sm)', color: 'var(--primary-color)', paddingBottom: 4 } }}
           >
             <Descriptions.Item label="规格/幅宽">
               {formatMaterialSpecWidth(specification, fabricWidth)}

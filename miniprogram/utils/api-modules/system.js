@@ -59,18 +59,13 @@ const system = {
   saveMiniprogramMenuRoleConfig(roleMenus) {
     return ok('/api/system/tenant-miniprogram-menu/menu-roles', 'PUT', { roleMenus });
   },
-  // 收藏应用API：不再使用永久禁用标记，每次都尝试请求
-  // 之前 _favApiAvailable 一旦为 false 就永不恢复，导致502后收藏丢失
+  // 收藏应用API
   _favFailCount: 0,
   getFavoriteApps() {
-    // 连续失败3次以上时延迟重试（避免频繁请求不可用的API），但不清零
-    // 每次 onShow 都会调用 loadFavorites，所以最终会恢复
-    if (system._favFailCount >= 3) {
-      system._favFailCount = Math.max(0, system._favFailCount - 1);
-      return Promise.resolve({ favoriteData: '[]' });
-    }
+    // 连续失败时仍然请求服务端，只是增加延迟避免频繁请求
+    // 绝不能跳过请求，否则清除缓存后本地空+服务端不请求=收藏丢失
     return ok('/api/system/user/favorite-apps', 'GET', {}).then(function (res) {
-      system._favFailCount = 0; // 成功则重置
+      system._favFailCount = 0;
       return res;
     }).catch(function () {
       system._favFailCount++;

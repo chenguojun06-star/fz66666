@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { Row, Col, Button, Tag, Space, Typography, Tooltip, Spin, Input, Empty, Popover, Rate, Tabs, App } from 'antd';
+import { Row, Col, Button, Tag, Space, Typography, Tooltip, Spin, Input, Empty, Popover, Rate, Tabs, App, Image } from 'antd';
 import { SendOutlined, PlusOutlined, SearchOutlined, GoogleOutlined, FireOutlined, ReloadOutlined } from '@ant-design/icons';
 import { candidateSave, candidateStageAction, candidateCreateStyle, searchExternalMarket, fetchDailyHotItems, refreshDailyHotItems } from '@/services/selection/selectionApi';
 import DecisionInsightCard, { SMART_CARD_CONTENT_WIDTH, SMART_CARD_OVERLAY_WIDTH, type DecisionInsight } from '@/components/common/DecisionInsightCard';
@@ -342,7 +342,7 @@ export default function MarketHotItems({ onAdded }: { onAdded?: () => void }) {
                           {item.thumbnail
                             ? (
                               <div style={{ width: '100%', height: 190, background: 'var(--color-bg-container)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 6 }}>
-                                <img src={item.thumbnail} alt={item.title} style={{ width: '100%', height: '100%', objectFit: 'contain' }} loading="lazy" referrerPolicy="no-referrer" />
+                                <Image src={item.thumbnail} alt={item.title} style={{ width: '100%', height: '100%', objectFit: 'contain' }} loading="lazy" referrerPolicy="no-referrer" />
                               </div>
                             )
                             : <div style={{ height: 80, background: 'var(--color-bg-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-quaternary)', fontSize: 14 }}>暂无图片</div>}
@@ -445,7 +445,7 @@ export default function MarketHotItems({ onAdded }: { onAdded?: () => void }) {
                     {/* 商品图片 */}
                     {item.thumbnail ? (
                       <div style={{ height: 280, background: 'var(--color-bg-container)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 6 }}>
-                        <img src={item.thumbnail} alt={item.title} style={{ width: '100%', height: '100%', objectFit: 'contain' }} loading="lazy" referrerPolicy="no-referrer" />
+                        <Image src={item.thumbnail} alt={item.title} style={{ width: '100%', height: '100%', objectFit: 'contain' }} loading="lazy" referrerPolicy="no-referrer" />
                       </div>
                     ) : (
                       <div style={{ height: 100, background: 'var(--color-bg-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-quaternary)', fontSize: 14 }}>暂无图片</div>

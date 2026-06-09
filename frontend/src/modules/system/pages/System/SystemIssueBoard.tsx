@@ -251,7 +251,7 @@ export default function SystemIssueBoard() {
             <ResizableTable
               dataSource={feErrors}
               columns={feColumns}
-              rowKey={(r, i) => `${r.occurredAt}-${i}`}
+              rowKey={(r) => `${r.occurredAt}-${feErrors.indexOf(r)}`}
               pagination={{ pageSize: 20, showSizeChanger: false }}
              
             />

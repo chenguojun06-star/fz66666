@@ -2,6 +2,7 @@ package com.fashion.supplychain.system.controller;
 
 import com.fashion.supplychain.system.service.UserFavoriteAppsService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -9,6 +10,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/system/user/favorite-apps")
 @RequiredArgsConstructor
+@PreAuthorize("isAuthenticated()")
 public class UserFavoriteAppsController {
 
     private final UserFavoriteAppsService userFavoriteAppsService;

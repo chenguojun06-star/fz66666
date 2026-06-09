@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { Button, Dropdown, Input, Modal, Popover, Select, Space, Upload, message as antMessage, Spin } from 'antd';
+import { App, Button, Dropdown, Input, Modal, Popover, Select, Space, Upload, message as antMessage, Spin } from 'antd';
 import { DownOutlined, RobotOutlined } from '@ant-design/icons';
 import { sortSizeNames } from '@/utils/api';
 import api from '@/utils/api';
@@ -66,19 +66,39 @@ const StyleSizeToolbar: React.FC<Props> = ({
       if (res.code !== 200) {
         antMessage.error(res.message || 'AI识别失败');
       } else {
-        const rawJson = res.data?.rawJson || '{}';
+        let rawJson = res.data?.rawJson || '{}';
+        console.log('[AI识别] 原始返回:', rawJson);
+        
+        // 清理可能的Markdown代码块
+        rawJson = rawJson.trim();
+        // 移除 ```json 和 ``` 包裹
+        if (rawJson.startsWith('```json')) {
+          rawJson = rawJson.slice(7);
+        }
+        if (rawJson.startsWith('```')) {
+          rawJson = rawJson.slice(3);
+        }
+        if (rawJson.endsWith('```')) {
+          rawJson = rawJson.slice(0, -3);
+        }
+        rawJson = rawJson.trim();
+        
         // 尝试解析JSON
         try {
           const parsed = JSON.parse(rawJson);
+          console.log('[AI识别] 解析成功:', parsed);
           onSizeTableRecognized(parsed);
           setOcrModalOpen(false);
           setOcrFile(null);
           antMessage.success('尺寸表识别成功！');
         } catch (e) {
+          console.error('[AI识别] JSON解析失败:', e);
+          console.error('[AI识别] 清理后的JSON:', rawJson);
           antMessage.error('AI返回格式异常，请重试');
         }
       }
     } catch (e: unknown) {
+      console.error('[AI识别] 请求失败:', e);
       antMessage.error(e instanceof Error ? e.message : 'AI识别失败，请重试');
     } finally {
       setOcrLoading(false);
@@ -108,7 +128,7 @@ const StyleSizeToolbar: React.FC<Props> = ({
             <Button
               disabled={saving}
               onClick={() => {
-                Modal.confirm({ width: '30vw', title: '放弃未保存的修改？', onOk: exitEdit });
+                App.useApp().modal.confirm({ width: '30vw', title: '放弃未保存的修改？', onOk: exitEdit });
               }}
             >取消</Button>
           </>
@@ -228,7 +248,29 @@ const StyleSizeToolbar: React.FC<Props> = ({
         width={480}
       >
         <Spin spinning={ocrLoading} tip="正在识别，请稍候...">
-          <div style={{ padding: '16px 0' }}>
+          <div
+            style={{ padding: '16px 0', outline: 'none' }}
+            onPaste={(e) => {
+              const files = e.clipboardData.files;
+              if (files && files.length > 0) {
+                e.preventDefault();
+                const f = files[0];
+                if (f.type.startsWith('image/')) {
+                  setOcrFile(f);
+                }
+                return;
+              }
+              const items = e.clipboardData.items;
+              for (let i = 0; i < items.length; i++) {
+                if (items[i].type.startsWith('image/')) {
+                  e.preventDefault();
+                  const f = items[i].getAsFile();
+                  if (f) setOcrFile(f);
+                  break;
+                }
+              }
+            }}
+          >
             <Upload.Dragger
               accept="image/*"
               maxCount={1}
@@ -244,7 +286,8 @@ const StyleSizeToolbar: React.FC<Props> = ({
               </p>
               <p className="ant-upload-text">点击上传尺寸表图片</p>
               <p className="ant-upload-hint">
-                支持 JPG、PNG 格式，图片中应包含尺码名称和部位尺寸数值
+                支持 JPG、PNG 格式，图片中应包含尺码名称和部位尺寸数值<br/>
+                <span style={{ color: 'var(--color-text-secondary)', fontSize: 12 }}>也可以直接粘贴图片（Ctrl+V）</span>
               </p>
             </Upload.Dragger>
             

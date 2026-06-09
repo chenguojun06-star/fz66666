@@ -19,8 +19,8 @@ type ContentPadding =
     left: number;
   };
 
-const COMPACT_MODAL_BASE_WIDTH = 760;
-const MEDIUM_MODAL_BASE_WIDTH = 920;
+const COMPACT_MODAL_BASE_WIDTH = 880;
+const MEDIUM_MODAL_BASE_WIDTH = 1040;
 
 export const useResizableModalTableScrollY = <T extends HTMLElement>(args: {
   open: boolean;
@@ -85,8 +85,9 @@ const resolveWidthPx = (width: ModalProps['width']): number | null => {
   const vwMatch = raw.match(/^([0-9.]+)vw$/i);
   if (vwMatch) {
     const vw = Number(vwMatch[1]);
-    if (vw <= 35) return COMPACT_MODAL_BASE_WIDTH;
-    if (vw <= 45) return MEDIUM_MODAL_BASE_WIDTH;
+    // 55vw 以下 → 880px 基线；70vw 以下 → 1040px 基线；更大按视口百分比
+    if (vw <= 55) return Math.max(560, Math.min(1100, (vw / 100) * window.innerWidth));
+    if (vw <= 70) return Math.max(720, Math.min(1200, (vw / 100) * window.innerWidth));
     return (vw / 100) * window.innerWidth;
   }
 
@@ -117,7 +118,7 @@ export type ResizableModalProps = ModalProps & {
   [key: string]: any;
 };
 
-export const COMPACT_MODAL_MIN_WIDTH = 760;
+export const COMPACT_MODAL_MIN_WIDTH = 560;
 
 /**
  * 可调整大小的模态框组件
@@ -129,14 +130,15 @@ const ResizableModal: React.FC<ResizableModalProps> = ({
   onCancel,
   styles,
   width,
-  minWidth = COMPACT_MODAL_MIN_WIDTH,
-  minHeight = 320,
+  minWidth = 560,
+  minHeight = 360,
   initialHeight,
   centered: centeredProp,
   contentPadding,
   footer,
   title,
   destroyOnHidden,
+  forceRender,
   ...rest
 }) => {
   // 模态框尺寸状态
@@ -305,6 +307,7 @@ const ResizableModal: React.FC<ResizableModalProps> = ({
       footer={footer}
       title={title}
       destroyOnHidden={destroyOnHidden}
+      forceRender={forceRender}
       centered={centered}
       width={Math.round(size.width)}
       styles={{

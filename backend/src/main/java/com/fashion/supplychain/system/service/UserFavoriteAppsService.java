@@ -27,20 +27,24 @@ public class UserFavoriteAppsService extends ServiceImpl<UserFavoriteAppsMapper,
 
     /**
      * 保存当前用户的收藏数据
+     * 使用 saveOrUpdate 避免竞态条件（防止并发插入导致唯一约束冲突）
      */
     public void saveMyFavorites(String favoriteData) {
         Long tenantId = UserContext.tenantId();
         String userId = UserContext.userId();
 
+        // 先尝试更新
         UserFavoriteApps existing = getOne(new LambdaQueryWrapper<UserFavoriteApps>()
                 .eq(UserFavoriteApps::getTenantId, tenantId)
                 .eq(UserFavoriteApps::getUserId, userId)
+                .eq(UserFavoriteApps::getDeleteFlag, 0)
                 .last("LIMIT 1"));
 
         if (existing != null) {
             existing.setFavoriteData(favoriteData);
             updateById(existing);
         } else {
+            // 不存在则新增
             UserFavoriteApps entity = new UserFavoriteApps();
             entity.setTenantId(tenantId);
             entity.setUserId(userId);

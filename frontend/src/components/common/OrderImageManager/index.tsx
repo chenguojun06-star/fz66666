@@ -236,7 +236,7 @@ const OrderImageManager: React.FC<OrderImageManagerProps> = ({ orderNo, editable
                   }
                   src={item.url}
                   style={{ display: idx === currentIdx ? 'block' : 'none', width: '100%', maxHeight: 280, objectFit: 'contain', borderRadius: 6, cursor: 'pointer' }}
-                  preview={{ mask: '点击预览' }}
+                  preview={{ cover: '点击预览' }}
                 />
               ))}
             </Image.PreviewGroup>

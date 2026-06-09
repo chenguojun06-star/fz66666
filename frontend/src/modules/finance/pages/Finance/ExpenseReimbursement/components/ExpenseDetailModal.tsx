@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { App, Alert, Button, Drawer, Image, Input, Tag } from 'antd';
+import { App, Alert, Button, Drawer, Input, Tag } from 'antd';
 import { CheckCircleOutlined, CloseCircleOutlined, PictureOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { ModalField, ModalFieldRow } from '@/components/common/ModalContentLayout';
 import { useUser } from '@/utils/AuthContext';
 import { hasPermission } from '@/utils/permission';
-import { getFullAuthedFileUrl } from '@/utils/fileUrl';
+import SmartImage from '@/components/common/SmartImage';
 import {
   expenseReimbursementApi,
   EXPENSE_STATUS,
@@ -106,9 +106,12 @@ const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({ open, record, v
           ) : (
             <>
               <div style={{ flex: 1, minHeight: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--color-bg-base)', borderRadius: 8, overflow: 'hidden', padding: 8 }}>
-                <Image.PreviewGroup>
-                  <Image src={getFullAuthedFileUrl(detailDocList[selectedDocIndex]?.imageUrl)} style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: 6, display: 'block' }} preview={{ mask: '点击查看原图' }} />
-                </Image.PreviewGroup>
+                <SmartImage
+                  src={detailDocList[selectedDocIndex]?.imageUrl}
+                  allSrcs={detailDocList.map(doc => doc.imageUrl)}
+                  currentIndex={selectedDocIndex}
+                  style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: 6, display: 'block' }}
+                />
               </div>
               <div style={{ flexShrink: 0, fontSize: 14, color: '#aaa', textAlign: 'center', padding: '6px 0 4px' }}>
                 第 {selectedDocIndex + 1} 张 / 共 {detailDocList.length} 张
@@ -116,9 +119,23 @@ const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({ open, record, v
               {detailDocList.length > 1 && (
                 <div style={{ flexShrink: 0, display: 'flex', gap: 8, overflowX: 'auto', padding: '2px 0 2px', scrollbarWidth: 'thin' as const }}>
                   {detailDocList.map((doc, idx) => (
-                    <img loading="lazy" key={doc.id} src={getFullAuthedFileUrl(doc.imageUrl)} width={60} height={60}
-                      style={{ objectFit: 'cover', borderRadius: 6, cursor: 'pointer', flexShrink: 0, border: selectedDocIndex === idx ? '2px solid var(--color-primary)' : '2px solid #e0e0e0', opacity: selectedDocIndex === idx ? 1 : 0.6, transition: 'all 0.15s' }}
-                      onClick={() => setSelectedDocIndex(idx)} title={`第 ${idx + 1} 张凭证`}
+                    <SmartImage
+                      key={doc.id}
+                      src={doc.imageUrl}
+                      allSrcs={detailDocList.map(d => d.imageUrl)}
+                      currentIndex={idx}
+                      width={60}
+                      height={60}
+                      style={{
+                        objectFit: 'cover',
+                        borderRadius: 6,
+                        cursor: 'pointer',
+                        flexShrink: 0,
+                        border: selectedDocIndex === idx ? '2px solid var(--color-primary)' : '2px solid #e0e0e0',
+                        opacity: selectedDocIndex === idx ? 1 : 0.6,
+                        transition: 'all 0.15s'
+                      }}
+                      onClick={() => setSelectedDocIndex(idx)}
                     />
                   ))}
                 </div>

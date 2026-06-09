@@ -1057,7 +1057,7 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
                     width={144}
                     height={100}
                     style={{ objectFit: 'cover', borderRadius: 4 }}
-                    preview={{ mask: '预览' }}
+                    preview={{ cover: '预览' }}
                   />
                   <div style={{ marginTop: 6, fontSize: 14, color: 'var(--color-text-secondary)' }}>
                     <Tooltip title={doc.uploaderName}>

@@ -116,7 +116,7 @@ const InboundOutboundRecordDrawer: React.FC<InboundOutboundRecordDrawerProps> = 
         storageKey="material-inventory-details-drawer"
         loading={loading}
         dataSource={records}
-        rowKey={(_, idx) => String(idx)}
+        rowKey={(r) => `${r.type}-${r.operationTime}-${records.indexOf(r)}`}
         columns={columns}
         pagination={false}
         scroll={{ y: 400 }}

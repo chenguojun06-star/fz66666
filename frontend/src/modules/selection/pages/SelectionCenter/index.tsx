@@ -1,5 +1,5 @@
 import React from 'react';
-import { Row, Col, Tag, Button, Input, Select, Space, Spin, Empty, Popover, Typography, Form, InputNumber, Tabs, Tooltip } from 'antd';
+import { Row, Col, Tag, Button, Input, Select, Space, Spin, Empty, Popover, Typography, Form, InputNumber, Tabs, Tooltip, Image } from 'antd';
 import ResizableModal from '@/components/common/ResizableModal';
 import StandardPagination from '@/components/common/StandardPagination';
 import { PlusOutlined, DeleteOutlined, SendOutlined, ThunderboltOutlined, FireOutlined, CheckCircleOutlined } from '@ant-design/icons';
@@ -85,7 +85,7 @@ export default function SelectionCenter() {
                         onMouseLeave={e => (e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,0.06)')}>
                         <div style={{ position: 'relative', height: 260, background: '#f7f7f7', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 8 }}>
                           {img ? (
-                            <img loading="lazy" src={img} alt={item.styleName} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                            <Image loading="lazy" src={img} alt={item.styleName} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                           ) : (
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', flexDirection: 'column', color: '#ccc' }}>
                               <FireOutlined style={{ fontSize: 24 }} />

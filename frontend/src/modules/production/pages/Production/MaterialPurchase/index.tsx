@@ -28,6 +28,11 @@ const MaterialPurchase: React.FC = () => {
   const [orderPickerKeyword, setOrderPickerKeyword] = useState('');
   const [orderPickerList, setOrderPickerList] = useState<any[]>([]);
   const [orderPickerLoading, setOrderPickerLoading] = useState(false);
+  const [warehousePickModalOpen, setWarehousePickModalOpen] = useState(false);
+  const [warehousePickTarget, setWarehousePickTarget] = useState<any>(null);
+  const [warehousePickQty, setWarehousePickQty] = useState(0);
+  const [warehousePickSubmitting, setWarehousePickSubmitting] = useState(false);
+  const [warehousePickForm] = Form.useForm();
   const {
     contextHolder,
     user, isMobile, isSupervisorOrAbove,
@@ -87,43 +92,45 @@ const MaterialPurchase: React.FC = () => {
   const handleWarehousePickFromDetail = useCallback(async (record: MaterialPurchaseType, pickQty: number) => {
     const purchaseId = String(record?.id || '').trim();
     if (!purchaseId) { message.error('采购任务缺少ID'); return; }
+    setWarehousePickTarget(record);
+    setWarehousePickQty(pickQty);
+    warehousePickForm.setFieldsValue({ pickQty });
+    setWarehousePickModalOpen(true);
+  }, [warehousePickForm]);
+
+  const handleWarehousePickSubmit = useCallback(async () => {
+    if (!warehousePickTarget) return;
+    const values = await warehousePickForm.validateFields();
+    const pickQty = Number(values.pickQty);
+    if (pickQty <= 0) {
+      message.error('领取数量必须大于0');
+      return;
+    }
+    const purchaseId = String(warehousePickTarget.id).trim();
     const receiverName = String(user?.name || user?.username || '').trim();
     const receiverId = String(user?.id || '').trim();
-    Modal.confirm({
-      width: '30vw',
-      title: `确认仓库领取 - ${record.materialName || record.materialCode}`,
-      icon: <ShopOutlined style={{ color: 'var(--color-primary)' }} />,
-      content: (
-        <div>
-          <p>物料：<strong>{record.materialName || record.materialCode}</strong> {record.color ? `(${record.color})` : ''}</p>
-          <p>需求数量：<strong>{record.purchaseQuantity}</strong></p>
-          <p>仓库领取数量：<strong style={{ color: 'var(--color-primary)' }}>{pickQty}</strong></p>
-          <p style={{ color: 'var(--color-text-secondary)', fontSize: 14 }}>领取后将创建出库单，等待仓库确认出库</p>
-        </div>
-      ),
-      okText: '确认领取',
-      cancelText: '取消',
-      onOk: async () => {
-        try {
-          const res = await api.post<{ code: number; message?: string }>('/production/purchase/warehouse-pick', {
-            purchaseId,
-            pickQty,
-            receiverId,
-            receiverName,
-          });
-          if (res.code === 200) {
-            message.success(`${record.materialName || record.materialCode} 已提交出库申请，等待仓库确认`);
-            fetchMaterialPurchaseList();
-            reloadCurrentDetail();
-          } else {
-            message.error(res.message || '领取失败');
-          }
-        } catch (e: unknown) {
-          message.error(e instanceof Error ? e.message : '领取失败');
-        }
-      },
-    });
-  }, [user, fetchMaterialPurchaseList, reloadCurrentDetail]);
+    setWarehousePickSubmitting(true);
+    try {
+      const res = await api.post<{ code: number; message?: string }>('/production/purchase/warehouse-pick', {
+        purchaseId,
+        pickQty,
+        receiverId,
+        receiverName,
+      });
+      if (res.code === 200) {
+        message.success(`${warehousePickTarget.materialName || warehousePickTarget.materialCode} 已提交出库申请，等待仓库确认`);
+        setWarehousePickModalOpen(false);
+        fetchMaterialPurchaseList();
+        reloadCurrentDetail();
+      } else {
+        message.error(res.message || '领取失败');
+      }
+    } catch (e: unknown) {
+      message.error(e instanceof Error ? e.message : '领取失败');
+    } finally {
+      setWarehousePickSubmitting(false);
+    }
+  }, [warehousePickTarget, warehousePickForm, user, fetchMaterialPurchaseList, reloadCurrentDetail]);
 
   const handleSearchOrders = useCallback(async () => {
     if (!orderPickerKeyword.trim()) { message.warning('请输入订单号或款号'); return; }
@@ -391,6 +398,82 @@ const MaterialPurchase: React.FC = () => {
             await reloadCurrentDetail();
           }}
         />
+
+        <ResizableModal
+          open={warehousePickModalOpen}
+          title={`仓库领取 - ${warehousePickTarget?.materialName || warehousePickTarget?.materialCode}`}
+          okText="确认领取"
+          cancelText="取消"
+          width={isMobile ? '96vw' : '70vw'}
+          onCancel={() => {
+            setWarehousePickModalOpen(false);
+            warehousePickForm.resetFields();
+          }}
+          okButtonProps={{ loading: warehousePickSubmitting }}
+          onOk={handleWarehousePickSubmit}
+          destroyOnHidden
+        >
+          <Form form={warehousePickForm} layout="vertical">
+            {warehousePickTarget && (
+              <>
+                {/* 物料详细信息卡片 */}
+                <Card size="small" style={{ marginBottom: 16 }}>
+                  <ResizableTable
+                    dataSource={[warehousePickTarget]}
+                    pagination={false}
+                    size="small"
+                    rowKey="id"
+                    columns={[
+                      { title: '物料编号', dataIndex: 'materialCode', key: 'materialCode', width: 120, render: (v) => v || '-' },
+                      { title: '物料名称', dataIndex: 'materialName', key: 'materialName', width: 150, render: (v) => v || '-' },
+                      { title: '规格/幅宽', key: 'specWidth', width: 140, render: (_, r) => `${r.specifications || ''}${r.fabricWidth ? ` (${r.fabricWidth})` : ''}` || '-' },
+                      { title: '单价', dataIndex: 'unitPrice', key: 'unitPrice', width: 100, align: 'right', render: (v) => Number(v) ? `¥${Number(v).toFixed(2)}` : '-' },
+                      { title: '供应商', dataIndex: 'supplierName', key: 'supplierName', width: 160, render: (v) => v || '-' },
+                    ]}
+                  />
+                </Card>
+                
+                {/* 需求数量和领取数量 */}
+                <div style={{ marginBottom: 16 }}>
+                  <p>需求数量：<strong>{formatMaterialQuantity(warehousePickTarget.purchaseQuantity)} {warehousePickTarget.unit || ''}</strong></p>
+                  <p style={{ color: 'var(--color-text-secondary)', fontSize: 14, marginTop: 4 }}>领取后将创建出库单，等待仓库确认出库</p>
+                </div>
+                
+                <Form.Item
+                  label="仓库领取数量"
+                  name="pickQty"
+                  rules={[
+                    { required: true, message: '请输入领取数量' },
+                    {
+                      validator: async (_, v) => {
+                        const n = Number(v);
+                        if (!Number.isFinite(n)) throw new Error('请输入数字');
+                        if (n <= 0) throw new Error('领取数量必须大于0');
+                      },
+                    },
+                  ]}
+                >
+                  <Space.Compact style={{ width: '100%' }}>
+                    <InputNumber
+                      style={{ width: '100%' }}
+                      min={0}
+                      max={warehousePickTarget.purchaseQuantity}
+                      step={0.01}
+                      precision={2}
+                      placeholder="请输入领取数量"
+                    />
+                    <Input
+                      style={{ width: 80, textAlign: 'center' }}
+                      value={warehousePickTarget.unit || ''}
+                      disabled
+                    />
+                  </Space.Compact>
+                </Form.Item>
+              </>
+            )}
+          </Form>
+        </ResizableModal>
+
         <MaterialQualityIssueModal
           open={qualityIssueOpen}
           purchase={qualityIssuePurchase}

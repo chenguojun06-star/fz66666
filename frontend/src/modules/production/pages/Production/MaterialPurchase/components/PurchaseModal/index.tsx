@@ -1,7 +1,6 @@
 import React, { useMemo } from 'react';
-import { Button, Dropdown } from 'antd';
+import { Button, Dropdown, Drawer } from 'antd';
 import type { FormInstance } from 'antd/es/form';
-import ResizableModal from '@/components/common/ResizableModal';
 import { MaterialPurchase as MaterialPurchaseType, ProductionOrder } from '@/types/production';
 import { MATERIAL_PURCHASE_STATUS } from '@/constants/business';
 import PurchaseDetailView from './PurchaseDetailView';
@@ -191,48 +190,52 @@ const PurchaseModal: React.FC<PurchaseModalProps> = ({
   };
 
   return (
-    <ResizableModal
+    <Drawer
       title={dialogMode === 'preview' ? '采购清单预览' : dialogMode === 'create' ? '新增采购单' : '采购单详情'}
       open={visible}
-      onCancel={onCancel}
-      width="85vw"
-      initialHeight={Math.round(window.innerHeight * 0.82)}
-      minWidth={isMobile ? 320 : 520}
-      scaleWithViewport
-      tableDensity={isMobile ? 'dense' : 'auto'}
+      onClose={onCancel}
+      placement="right"
+      width={isMobile ? '96vw' : Math.min(1600, Math.round(typeof window !== 'undefined' ? window.innerWidth * 0.85 : 1600))}
+      styles={{
+        body: { padding: 0, display: 'flex', flexDirection: 'column', height: '100%' },
+        footer: { padding: '12px 16px' },
+      }}
+      maskClosable={false}
       footer={getFooter()}
     >
-      {dialogMode === 'preview' ? (
-        <PurchasePreviewView previewList={previewList} isMobile={isMobile} />
-      ) : dialogMode === 'view' ? (
-        <PurchaseDetailView
-          currentPurchase={currentPurchase}
-          detailOrder={detailOrder}
-          detailOrderLines={detailOrderLines}
-          detailPurchases={detailPurchases}
-          detailLoading={detailLoading}
-          detailSizePairs={detailSizePairs}
-          detailFrozen={detailFrozen}
-          isMobile={isMobile}
-          isSupervisorOrAbove={isSupervisorOrAbove}
-          sortField={sortField}
-          sortOrder={sortOrder}
-          onSort={onSort}
-          onReceive={onReceive}
-          onConfirmReturn={onConfirmReturn}
-          onReturnReset={onReturnReset}
-          onQualityIssue={onQualityIssue}
-          onReceiveAll={onReceiveAll}
-          onBatchReturn={onBatchReturn}
-          isSamplePurchase={isSamplePurchase}
-          isOrderFrozenForRecord={isOrderFrozenForRecord}
-          onWarehousePick={onWarehousePick}
-          onRefresh={onRefresh}
-        />
-      ) : (
-        <PurchaseCreateForm form={form} orderColors={orderColors} />
-      )}
-    </ResizableModal>
+      <div style={{ padding: '16px', flex: 1, overflow: 'auto' }}>
+        {dialogMode === 'preview' ? (
+          <PurchasePreviewView previewList={previewList} isMobile={isMobile} />
+        ) : dialogMode === 'view' ? (
+          <PurchaseDetailView
+            currentPurchase={currentPurchase}
+            detailOrder={detailOrder}
+            detailOrderLines={detailOrderLines}
+            detailPurchases={detailPurchases}
+            detailLoading={detailLoading}
+            detailSizePairs={detailSizePairs}
+            detailFrozen={detailFrozen}
+            isMobile={isMobile}
+            isSupervisorOrAbove={isSupervisorOrAbove}
+            sortField={sortField}
+            sortOrder={sortOrder}
+            onSort={onSort}
+            onReceive={onReceive}
+            onConfirmReturn={onConfirmReturn}
+            onReturnReset={onReturnReset}
+            onQualityIssue={onQualityIssue}
+            onReceiveAll={onReceiveAll}
+            onBatchReturn={onBatchReturn}
+            isSamplePurchase={isSamplePurchase}
+            isOrderFrozenForRecord={isOrderFrozenForRecord}
+            onWarehousePick={onWarehousePick}
+            onRefresh={onRefresh}
+          />
+        ) : (
+          <PurchaseCreateForm form={form} orderColors={orderColors} />
+        )}
+      </div>
+    </Drawer>
   );
 };
 

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { Progress, Spin, Result as AntResult, Tag } from 'antd';
+import { Progress, Spin, Result as AntResult, Tag, Image } from 'antd';
 import {
   ClockCircleFilled, ClockCircleOutlined, CalendarOutlined, TeamOutlined,
   MessageOutlined, FieldTimeOutlined, DeploymentUnitOutlined,
@@ -68,7 +68,7 @@ const ShareOrderPage: React.FC = () => {
           </div>
           <div style={S.heroOverviewStyle}>
             <div style={S.styleCoverCardStyle}>
-              {styleCoverUrl ? <img loading="lazy" src={styleCoverUrl} alt={data.styleName || data.styleNo || data.orderNo} style={S.styleCoverImageStyle} /> : <div style={S.styleCoverPlaceholderStyle}><div style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>暂无款式图</div></div>}
+              {styleCoverUrl ? <Image loading="lazy" src={styleCoverUrl} alt={data.styleName || data.styleNo || data.orderNo} style={S.styleCoverImageStyle} /> : <div style={S.styleCoverPlaceholderStyle}><div style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>暂无款式图</div></div>}
             </div>
             <div>
               <div style={S.orderNoStyle}>{data.orderNo}</div>

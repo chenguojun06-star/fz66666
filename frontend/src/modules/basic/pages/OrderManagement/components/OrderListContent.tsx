@@ -79,7 +79,6 @@ const OrderListContent: React.FC<Props> = ({
           dataSource={styles}
           loading={loading}
           stickyHeader
-          scroll={{ x: 'max-content' }}
           pagination={{
             current: queryParams.page,
             pageSize: queryParams.pageSize,

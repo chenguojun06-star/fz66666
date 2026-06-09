@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { App, Input, Table, message as antMessage } from 'antd';
-import { toNumberSafe } from '@/utils/api';
+import { toNumberSafe, sortSizeNames } from '@/utils/api';
 
 import ResizableTable from '@/components/common/ResizableTable';
 import ResizableModal from '@/components/common/ResizableModal';
@@ -186,8 +186,119 @@ const StyleSizeTab: React.FC<Props> = ({
 
   /** 处理AI识别尺寸表结果 */
   const handleSizeTableRecognized = (result: { sizes: string[]; parts: any[] }) => {
-    // TODO: 完善 AI 识别尺寸表功能
-    message.info('尺寸表AI识别功能即将上线，敬请期待！');
+    try {
+      // 1. 处理尺码列表
+      const recognizedSizes = (result.sizes || [])
+        .map((s: string) => String(s || '').trim())
+        .filter(Boolean);
+      
+      if (recognizedSizes.length === 0) {
+        message.warning('未识别到尺码信息');
+        return;
+      }
+      
+      // 2. 将新尺码添加到列中（保留现有尺码，新增不存在的）
+      const existingSizes = new Set(sizeColumns);
+      const newSizes = recognizedSizes.filter((s: string) => !existingSizes.has(s));
+      
+      if (newSizes.length > 0) {
+        // 使用 sortSizeNames 排序后合并
+        const allSizes = sortSizeNames([...sizeColumns, ...newSizes]);
+        setSizeColumns(allSizes);
+        message.success(`已添加 ${newSizes.length} 个新尺码：${newSizes.join(', ')}`);
+      }
+      
+      // 3. 处理部位数据
+      const parts = result.parts || [];
+      
+      if (parts.length === 0) {
+        if (newSizes.length > 0) {
+          // 只有新尺码，没有部位数据
+          message.info('尺码已添加，可手动录入部位数据');
+        }
+        return;
+      }
+      
+      // 4. 构建新行
+      const newRows: MatrixRow[] = parts.map((part: any, index: number) => {
+        const partName = String(part.name || '').trim();
+        const measureMethod = String(part.measureMethod || '').trim();
+        const tolerance = String(part.tolerance || '').trim();
+        const values = part.values || {};
+        
+        // 构建单元格
+        const cells: Record<string, { value: number }> = {};
+        
+        // 为所有尺码填充数值（从识别结果中获取）
+        const allSizeColumns = sortSizeNames([...sizeColumns, ...newSizes]);
+        allSizeColumns.forEach((sizeName: string) => {
+          const rawValue = values[sizeName];
+          if (rawValue !== null && rawValue !== undefined && rawValue !== '') {
+            cells[sizeName] = { value: Number(rawValue) };
+          } else {
+            cells[sizeName] = { value: 0 };
+          }
+        });
+        
+        return {
+          key: `ai-row-${Date.now()}-${index}`,
+          groupName: '',
+          partName,
+          measureMethod,
+          baseSize: '',
+          gradingZones: [],
+          tolerance: tolerance || '',
+          sort: rows.length + index,
+          cells,
+        } as MatrixRow;
+      });
+      
+      // 5. 合并到现有行
+      if (newRows.length > 0) {
+        setRows((prev) => {
+          const updatedRows = [...prev];
+          newRows.forEach((newRow) => {
+            // 检查是否已存在相同部位名的行
+            const existingIndex = updatedRows.findIndex(
+              (r) => r.partName === newRow.partName
+            );
+            
+            if (existingIndex >= 0) {
+              // 合并单元格数值
+              const existing = updatedRows[existingIndex];
+              const mergedCells = { ...existing.cells };
+              Object.keys(newRow.cells).forEach((sizeName) => {
+                if (newRow.cells[sizeName]?.value !== 0) {
+                  mergedCells[sizeName] = newRow.cells[sizeName];
+                }
+              });
+              updatedRows[existingIndex] = {
+                ...existing,
+                cells: mergedCells,
+                measureMethod: newRow.measureMethod || existing.measureMethod,
+                tolerance: newRow.tolerance || existing.tolerance,
+              };
+            } else {
+              // 新增行
+              updatedRows.push(newRow);
+            }
+          });
+          
+          // 重新排序
+          return normalizeRowSorts(updatedRows);
+        });
+        
+        message.success(`已导入 ${parts.length} 个部位数据`);
+      }
+      
+      // 6. 确保进入编辑模式
+      if (!editMode && !readOnly) {
+        enterEdit();
+      }
+    } catch (error) {
+      console.error('[AI识别尺寸表] 处理失败:', error);
+      message.error('处理识别结果失败，请重试');
+    }
   };
 
   const columns = useStyleSizeColumns({
