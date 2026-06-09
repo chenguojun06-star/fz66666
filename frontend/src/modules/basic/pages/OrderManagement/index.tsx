@@ -333,7 +333,7 @@ const OrderManagement: React.FC = () => {
         mode="order"
         extraInfo={{
           '交板日期': printingRecord?.deliveryDate,
-          '设计师': printingRecord?.designer,
+          '设计师': printingRecord?.sampleNo,
         }}
       />
 

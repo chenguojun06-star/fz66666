@@ -26,12 +26,6 @@ const PRINT_FIX_CSS = `
     --color-border: #e5e7eb;
     --color-border-light: #f0f0f0;
     --color-border-antd: #d9d9d9;
-    --font-size-xxl: 16px;
-    --font-size-xl: 15px;
-    --font-size-lg: 14px;
-    --font-size-base: 13px;
-    --font-size-sm: 12px;
-    --font-size-xs: 11px;
   }
   html, body { background: var(--color-bg-base) !important; color: #000 !important; }
 
@@ -59,8 +53,9 @@ function ensureCharset(html: string): string {
 
 function injectFix(html: string): string {
   let fixed = ensureCharset(html);
-  if (fixed.includes('</head>')) {
-    fixed = fixed.replace('</head>', `${PRINT_FIX_CSS}</head>`);
+  // 插入到 <head> 之后（而非 </head> 之前），确保打印模板自身的 CSS 变量和样式优先级更高
+  if (fixed.includes('<head>')) {
+    fixed = fixed.replace('<head>', `<head>${PRINT_FIX_CSS}`);
   } else {
     fixed = `${PRINT_FIX_CSS}${fixed}`;
   }

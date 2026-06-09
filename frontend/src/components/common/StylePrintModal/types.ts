@@ -23,6 +23,7 @@ export interface PrintOptions {
   customerInfoBlock: boolean; // 客户信息
   patternInfoBlock: boolean; // 版次信息
   timeInfoBlock: boolean; // 时间信息
+  remarkBlock: boolean; // 备注信息
 }
 
 // 默认打印选项
@@ -37,6 +38,7 @@ export const DEFAULT_PRINT_OPTIONS: PrintOptions = {
   customerInfoBlock: true,
   patternInfoBlock: true,
   timeInfoBlock: true,
+  remarkBlock: false, // 默认不打印备注
 };
 
 // 组件属性

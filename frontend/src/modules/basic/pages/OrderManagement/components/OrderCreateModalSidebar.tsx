@@ -34,8 +34,8 @@ const OrderCreateModalSidebar: React.FC<Props> = ({
     <div
       style={{
         display: 'flex', flexDirection: 'column', gap: 12, minWidth: 0,
-        flex: isMobile ? '1 1 100%' : '0 0 25%',
-        maxWidth: isMobile ? '100%' : '220px',
+        flex: isMobile ? '1 1 100%' : '0 0 28%',
+        maxWidth: isMobile ? '100%' : '320px',
       }}
     >
       <StyleQuotePopover styleNo={selectedStyle?.styleNo || ''}>

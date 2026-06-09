@@ -4,7 +4,7 @@
  * 可在样衣开发、下单管理、大货生产等页面复用
  */
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import { Checkbox, Button, Space, Spin, QRCode, Radio, InputNumber } from 'antd';
+import { Checkbox, Button, Space, Spin, QRCode, Radio, InputNumber, Drawer, Image } from 'antd';
 import { PrinterOutlined } from '@ant-design/icons';
 import QRCodeLib from 'qrcode';
 
@@ -16,7 +16,6 @@ import { formatMoney } from '@/utils/format';
 import { getMaterialTypeLabel } from '@/utils/materialType';
 import { toCategoryCn } from '@/utils/styleCategory';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
-import StandardModal from '@/components/common/StandardModal';
 import { getStyleInfoByRef } from '@/services/style/styleApi';
 import { message } from '@/utils/antdStatic';
 import { useUser } from '@/utils/AuthContext';
@@ -244,107 +243,119 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
   };
 
   return (
-    <StandardModal title={`打印预览 - ${styleNo}`} open={visible} onCancel={onClose} size="lg" footer={null}>
-      <Spin spinning={loading}>
-        {/* 顶部操作栏 */}
-        <div style={{ marginBottom: 12, padding: '10px 16px',
-          background: 'linear-gradient(90deg, #f0f5ff 0%, #e6f7ff 100%)',
-          borderRadius: 8, border: '1px solid #91d5ff',
-          display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16 }}>
-          <div style={{ fontWeight: 600, color: '#1d39c4' }}> 打印预览</div>
-          <Space>
-            <Button icon={<PrinterOutlined />} onClick={() => setLabelPrintMode(v => !v)}>打印标签</Button>
-            <Button type="primary" onClick={() => void handlePrint()} loading={printLoading}>打印</Button>
-          </Space>
-        </div>
-        {/* 打印选项 */}
-        <div style={{ marginBottom: 16, padding: '12px 16px', background: '#f0f2f5', borderRadius: 12, border: '1px solid var(--color-border)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16 }}>
-            <div style={{ flex: 1, display: 'flex', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap' }}>
-              <div style={{ fontWeight: 600, color: '#1f2937', whiteSpace: 'nowrap', lineHeight: '32px' }}> 选择打印内容：</div>
-              <Checkbox.Group
-                value={Object.keys(options).filter(k => options[k as keyof PrintOptions])}
-                onChange={(values) => { 
-                  setOptions({ 
-                    basicInfo: values.includes('basicInfo'), 
-                    sizeTable: values.includes('sizeTable'), 
-                    bomTable: values.includes('bomTable'), 
-                    processTable: values.includes('processTable'), 
-                    productionSheet: values.includes('productionSheet'), 
-                    sampleReview: values.includes('sampleReview'),
-                    styleInfoBlock: values.includes('styleInfoBlock'),
-                    customerInfoBlock: values.includes('customerInfoBlock'),
-                    patternInfoBlock: values.includes('patternInfoBlock'),
-                    timeInfoBlock: values.includes('timeInfoBlock'),
-                  }); 
-                }}
-                style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 16px' }}
-              >
-                <Checkbox value="basicInfo">基本信息</Checkbox>
-                <Checkbox value="sizeTable">尺寸表</Checkbox>
-                <Checkbox value="bomTable">BOM表</Checkbox>
-                <Checkbox value="processTable">工序表</Checkbox>
-                <Checkbox value="productionSheet">生产制单</Checkbox>
-                <Checkbox value="sampleReview">样衣审核</Checkbox>
-              </Checkbox.Group>
-            </div>
+    <Drawer title={`打印预览 - ${styleNo}`} open={visible} onClose={onClose}
+      placement="right"
+      size={Math.min(1200, Math.round(typeof window !== 'undefined' ? window.innerWidth * 0.85 : 1200))}
+      styles={{
+        body: { padding: 0, display: 'flex', flexDirection: 'column', height: '100%' },
+      }}
+      maskClosable={false}
+      footer={null}
+    >
+      <div style={{ padding: '16px', flex: 1, overflow: 'auto' }}>
+        <Spin spinning={loading}>
+          {/* 顶部操作栏 */}
+          <div style={{ marginBottom: 12, padding: '10px 16px',
+            background: 'linear-gradient(90deg, #f0f5ff 0%, #e6f7ff 100%)',
+            borderRadius: 8, border: '1px solid #91d5ff',
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16 }}>
+            <div style={{ fontWeight: 600, color: '#1d39c4' }}> 打印预览</div>
+            <Space>
+              <Button icon={<PrinterOutlined />} onClick={() => setLabelPrintMode(v => !v)}>打印标签</Button>
+              <Button type="primary" onClick={() => void handlePrint()} loading={printLoading}>打印</Button>
+            </Space>
           </div>
-          {/* 基本信息字段细化选择 */}
-          {options.basicInfo && (
-            <div style={{ marginTop: 12, padding: '10px 14px', background: 'var(--color-bg-base)', borderRadius: 8, border: '1px solid var(--color-border-light)' }}>
-              <div style={{ fontWeight: 500, color: '#666', marginBottom: 8, fontSize: 13 }}>基本信息区块（可多选）：</div>
-              <Checkbox.Group
-                value={Object.keys(options).filter(k => 
-                  ['styleInfoBlock', 'customerInfoBlock', 'patternInfoBlock', 'timeInfoBlock'].includes(k) && 
-                  options[k as keyof PrintOptions]
-                )}
-                onChange={(values) => { 
-                  setOptions(prev => ({ 
-                    ...prev,
-                    styleInfoBlock: values.includes('styleInfoBlock'),
-                    customerInfoBlock: values.includes('customerInfoBlock'),
-                    patternInfoBlock: values.includes('patternInfoBlock'),
-                    timeInfoBlock: values.includes('timeInfoBlock'),
-                  })); 
-                }}
-                style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 16px' }}
-              >
-                <Checkbox value="styleInfoBlock">款号信息</Checkbox>
-                <Checkbox value="customerInfoBlock">客户信息</Checkbox>
-                <Checkbox value="patternInfoBlock">版次信息</Checkbox>
-                <Checkbox value="timeInfoBlock">时间信息</Checkbox>
-              </Checkbox.Group>
+          {/* 打印选项 */}
+          <div style={{ marginBottom: 16, padding: '12px 16px', background: '#f0f2f5', borderRadius: 12, border: '1px solid var(--color-border)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16 }}>
+              <div style={{ flex: 1, display: 'flex', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap' }}>
+                <div style={{ fontWeight: 600, color: '#1f2937', whiteSpace: 'nowrap', lineHeight: '32px' }}> 选择打印内容：</div>
+                <Checkbox.Group
+                  value={Object.keys(options).filter(k => options[k as keyof PrintOptions])}
+                  onChange={(values) => { 
+                    setOptions({ 
+                      basicInfo: values.includes('basicInfo'), 
+                      sizeTable: values.includes('sizeTable'), 
+                      bomTable: values.includes('bomTable'), 
+                      processTable: values.includes('processTable'), 
+                      productionSheet: values.includes('productionSheet'), 
+                      sampleReview: values.includes('sampleReview'),
+                      styleInfoBlock: values.includes('styleInfoBlock'),
+                      customerInfoBlock: values.includes('customerInfoBlock'),
+                      patternInfoBlock: values.includes('patternInfoBlock'),
+                      timeInfoBlock: values.includes('timeInfoBlock'),
+                      remarkBlock: values.includes('remarkBlock'),
+                    }); 
+                  }}
+                  style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 16px' }}
+                >
+                  <Checkbox value="basicInfo">基本信息</Checkbox>
+                  <Checkbox value="sizeTable">尺寸表</Checkbox>
+                  <Checkbox value="bomTable">BOM表</Checkbox>
+                  <Checkbox value="processTable">工序表</Checkbox>
+                  <Checkbox value="productionSheet">生产制单</Checkbox>
+                  <Checkbox value="sampleReview">样衣审核</Checkbox>
+                </Checkbox.Group>
+              </div>
             </div>
-          )}
-        </div>
-        {/* 标签打印选项 */}
-        {labelPrintMode && (
-          <div style={{ marginBottom: 16, padding: '12px 16px', background: '#fff7e6', borderRadius: 12, border: '1px solid #ffd591' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-              <span style={{ fontWeight: 600, color: '#d46b08', whiteSpace: 'nowrap' }}>标签打印：</span>
-              <Radio.Group value={labelSize} onChange={e => setLabelSize(e.target.value)}>
-                <Radio.Button value="40x70">4 × 7 cm</Radio.Button>
-                <Radio.Button value="50x100">5 × 10 cm</Radio.Button>
-              </Radio.Group>
-              <span style={{ whiteSpace: 'nowrap' }}>每组份数：</span>
-              <InputNumber min={1} max={200} value={labelCount} onChange={v => setLabelCount(v ?? 1)} style={{ width: 80 }} />
-              <Button type="primary" icon={<PrinterOutlined />} loading={labelPrinting} onClick={handleLabelPrint}>
-                打印标签{labelItems.length > 0 ? ` (${labelItems.length * labelCount}张)` : ''}
-              </Button>
-            </div>
-            {labelItems.length > 0 && (
-              <div style={{ marginTop: 8, fontSize: 14, color: '#8c6d1f' }}>
-                检测到 {[...new Set(labelItems.map(i => i.color))].length} 颜色
-                {[...new Set(labelItems.map(i => i.size).filter(Boolean))].length > 0
-                  ? ` × ${[...new Set(labelItems.map(i => i.size).filter(Boolean))].length} 码数`
-                  : ''}
-                {' '}= {labelItems.length} 组，每组 {labelCount} 份，共 {labelItems.length * labelCount} 张标签
+            {/* 基本信息字段细化选择 */}
+            {options.basicInfo && (
+              <div style={{ marginTop: 12, padding: '10px 14px', background: 'var(--color-bg-base)', borderRadius: 8, border: '1px solid var(--color-border-light)' }}>
+                <div style={{ fontWeight: 500, color: '#666', marginBottom: 8, fontSize: 13 }}>基本信息区块（可多选）：</div>
+                <Checkbox.Group
+                  value={Object.keys(options).filter(k => 
+                    ['styleInfoBlock', 'customerInfoBlock', 'patternInfoBlock', 'timeInfoBlock', 'remarkBlock'].includes(k) && 
+                    options[k as keyof PrintOptions]
+                  )}
+                  onChange={(values) => { 
+                    setOptions(prev => ({ 
+                      ...prev,
+                      styleInfoBlock: values.includes('styleInfoBlock'),
+                      customerInfoBlock: values.includes('customerInfoBlock'),
+                      patternInfoBlock: values.includes('patternInfoBlock'),
+                      timeInfoBlock: values.includes('timeInfoBlock'),
+                      remarkBlock: values.includes('remarkBlock'),
+                    })); 
+                  }}
+                  style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 16px' }}
+                >
+                  <Checkbox value="styleInfoBlock">款号信息</Checkbox>
+                  <Checkbox value="customerInfoBlock">客户信息</Checkbox>
+                  <Checkbox value="patternInfoBlock">版次信息</Checkbox>
+                  <Checkbox value="timeInfoBlock">时间信息</Checkbox>
+                  <Checkbox value="remarkBlock">备注信息</Checkbox>
+                </Checkbox.Group>
               </div>
             )}
           </div>
-        )}
-        {/* 打印内容预览区域 */}
-        <div className="style-print-content" id="style-print-content" style={{ background: 'var(--color-bg-base)', padding: 20, border: '1px solid var(--color-border)', borderRadius: 12 }}>
+          {/* 标签打印选项 */}
+          {labelPrintMode && (
+            <div style={{ marginBottom: 16, padding: '12px 16px', background: '#fff7e6', borderRadius: 12, border: '1px solid #ffd591' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+                <span style={{ fontWeight: 600, color: '#d46b08', whiteSpace: 'nowrap' }}>标签打印：</span>
+                <Radio.Group value={labelSize} onChange={e => setLabelSize(e.target.value)}>
+                  <Radio.Button value="40x70">4 × 7 cm</Radio.Button>
+                  <Radio.Button value="50x100">5 × 10 cm</Radio.Button>
+                </Radio.Group>
+                <span style={{ whiteSpace: 'nowrap' }}>每组份数：</span>
+                <InputNumber min={1} max={200} value={labelCount} onChange={v => setLabelCount(v ?? 1)} style={{ width: 80 }} />
+                <Button type="primary" icon={<PrinterOutlined />} loading={labelPrinting} onClick={handleLabelPrint}>
+                  打印标签{labelItems.length > 0 ? ` (${labelItems.length * labelCount}张)` : ''}
+                </Button>
+              </div>
+              {labelItems.length > 0 && (
+                <div style={{ marginTop: 8, fontSize: 14, color: '#8c6d1f' }}>
+                  检测到 {[...new Set(labelItems.map(i => i.color))].length} 颜色
+                  {[...new Set(labelItems.map(i => i.size).filter(Boolean))].length > 0
+                    ? ` × ${[...new Set(labelItems.map(i => i.size).filter(Boolean))].length} 码数`
+                    : ''}
+                  {' '}= {labelItems.length} 组，每组 {labelCount} 份，共 {labelItems.length * labelCount} 张标签
+                </div>
+              )}
+            </div>
+          )}
+          {/* 打印内容预览区域 */}
+          <div className="style-print-content" id="style-print-content" style={{ background: 'var(--color-bg-base)', padding: 20, border: '1px solid var(--color-border)', borderRadius: 12 }}>
           <style>{`
             .print-section { margin-bottom: 24px; }
             .print-section-title { font-size: 16px; font-weight: 600; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 2px solid #1890ff; }
@@ -355,8 +366,8 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
               <div style={{ display: 'flex', gap: 24, padding: 16, borderBottom: '2px solid var(--color-border-antd)', background: 'var(--color-bg-container)', borderRadius: 8 }}>
                 {resolvedCover && (
                   <div style={{ flexShrink: 0, width: 120, height: 120 }}>
-                    <img src={getFullAuthedFileUrl(resolvedCover)} alt={styleNo}
-                      style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 8, border: '1px solid var(--color-border)' }} />
+                    <Image src={getFullAuthedFileUrl(resolvedCover)} alt={styleNo}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 8, border: '1px solid var(--color-border)' }} preview={{ cover: <span>预览</span> }} />
                   </div>
                 )}
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -367,8 +378,11 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
                     <div style={{ marginBottom: 16, padding: '12px 14px', background: '#fafafa', borderRadius: 6, border: '1px solid #e8e8e8' }}>
                       <div style={{ fontWeight: 600, color: '#1f2937', marginBottom: 8, fontSize: 14 }}>款号信息</div>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 24px', fontSize: "var(--font-size-base)" }}>
-                        {category && <div><span style={{ color: 'var(--color-text-secondary)' }}>品类：</span><strong>{toCategoryCn(category)}</strong></div>}
-                        {season && <div><span style={{ color: 'var(--color-text-secondary)' }}>季节：</span><strong>{toSeasonCn(season)}</strong></div>}
+                        <div><span style={{ color: 'var(--color-text-secondary)' }}>款号：</span><strong>{styleNo}</strong></div>
+                        <div><span style={{ color: 'var(--color-text-secondary)' }}>SKC：</span><strong>{(data.productionSheet as any)?.skc || ''}</strong></div>
+                        <div><span style={{ color: 'var(--color-text-secondary)' }}>款名：</span><strong>{styleName}</strong></div>
+                        <div><span style={{ color: 'var(--color-text-secondary)' }}>品类：</span><strong>{toCategoryCn(category || (data.productionSheet as any)?.category)}</strong></div>
+                        <div><span style={{ color: 'var(--color-text-secondary)' }}>季节：</span><strong>{toSeasonCn(season || (data.productionSheet as any)?.season)}</strong></div>
                         {(data.productionSheet as any)?.uCode && <div><span style={{ color: 'var(--color-text-secondary)' }}>U码：</span><strong>{(data.productionSheet as any)?.uCode}</strong></div>}
                         {(data.productionSheet as any)?.fabricComposition && <div><span style={{ color: 'var(--color-text-secondary)' }}>面料成分：</span><strong>{(data.productionSheet as any)?.fabricComposition}</strong></div>}
                       </div>
@@ -380,10 +394,10 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
                     <div style={{ marginBottom: 16, padding: '12px 14px', background: '#fafafa', borderRadius: 6, border: '1px solid #e8e8e8' }}>
                       <div style={{ fontWeight: 600, color: '#1f2937', marginBottom: 8, fontSize: 14 }}>客户信息</div>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 24px', fontSize: "var(--font-size-base)" }}>
-                        {(data.productionSheet as any)?.customerName && <div><span style={{ color: 'var(--color-text-secondary)' }}>客户：</span><strong>{(data.productionSheet as any)?.customerName}</strong></div>}
-                        {(data.productionSheet as any)?.merchandiser && <div><span style={{ color: 'var(--color-text-secondary)' }}>跟单员：</span><strong>{(data.productionSheet as any)?.merchandiser}</strong></div>}
-                        {(data.productionSheet as any)?.designer && <div><span style={{ color: 'var(--color-text-secondary)' }}>设计师：</span><strong>{(data.productionSheet as any)?.designer}</strong></div>}
-                        {(data.productionSheet as any)?.price && <div><span style={{ color: 'var(--color-text-secondary)' }}>打板价：</span><strong>{formatMoney((data.productionSheet as any)?.price)}</strong></div>}
+                        <div><span style={{ color: 'var(--color-text-secondary)' }}>客户：</span><strong>{(data.productionSheet as any)?.customer || ''}</strong></div>
+                        <div><span style={{ color: 'var(--color-text-secondary)' }}>跟单员：</span><strong>{(data.productionSheet as any)?.orderType || ''}</strong></div>
+                        <div><span style={{ color: 'var(--color-text-secondary)' }}>设计师：</span><strong>{(data.productionSheet as any)?.sampleNo || ''}</strong></div>
+                        <div><span style={{ color: 'var(--color-text-secondary)' }}>打板价：</span><strong>{(data.productionSheet as any)?.price ? formatMoney((data.productionSheet as any)?.price) : ''}</strong></div>
                       </div>
                     </div>
                   )}
@@ -393,10 +407,10 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
                     <div style={{ marginBottom: 16, padding: '12px 14px', background: '#fafafa', borderRadius: 6, border: '1px solid #e8e8e8' }}>
                       <div style={{ fontWeight: 600, color: '#1f2937', marginBottom: 8, fontSize: 14 }}>版次信息</div>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 24px', fontSize: "var(--font-size-base)" }}>
-                        {(data.productionSheet as any)?.sampleType && <div><span style={{ color: 'var(--color-text-secondary)' }}>版类：</span><strong>{(data.productionSheet as any)?.sampleType}</strong></div>}
-                        {(data.productionSheet as any)?.patternMaker && <div><span style={{ color: 'var(--color-text-secondary)' }}>纸样师：</span><strong>{(data.productionSheet as any)?.patternMaker}</strong></div>}
-                        {(data.productionSheet as any)?.patternNo && <div><span style={{ color: 'var(--color-text-secondary)' }}>纸样号：</span><strong>{(data.productionSheet as any)?.patternNo}</strong></div>}
-                        {(data.productionSheet as any)?.sampleMaker && <div><span style={{ color: 'var(--color-text-secondary)' }}>车板师：</span><strong>{(data.productionSheet as any)?.sampleMaker}</strong></div>}
+                        <div><span style={{ color: 'var(--color-text-secondary)' }}>版类：</span><strong>{(data.productionSheet as any)?.plateType || ''}</strong></div>
+                        <div><span style={{ color: 'var(--color-text-secondary)' }}>纸样师：</span><strong>{(data.productionSheet as any)?.sampleSupplier || ''}</strong></div>
+                        <div><span style={{ color: 'var(--color-text-secondary)' }}>纸样号：</span><strong>{(data.productionSheet as any)?.patternNo || ''}</strong></div>
+                        <div><span style={{ color: 'var(--color-text-secondary)' }}>车板师：</span><strong>{(data.productionSheet as any)?.plateWorker || ''}</strong></div>
                       </div>
                     </div>
                   )}
@@ -406,9 +420,9 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
                     <div style={{ marginBottom: 16, padding: '12px 14px', background: '#fafafa', borderRadius: 6, border: '1px solid #e8e8e8' }}>
                       <div style={{ fontWeight: 600, color: '#1f2937', marginBottom: 8, fontSize: 14 }}>时间信息</div>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 24px', fontSize: "var(--font-size-base)" }}>
-                        {(data.productionSheet as any)?.createTime && <div><span style={{ color: 'var(--color-text-secondary)' }}>创建时间：</span><strong>{formatDateTime((data.productionSheet as any)?.createTime)}</strong></div>}
-                        {(data.productionSheet as any)?.completeTime && <div><span style={{ color: 'var(--color-text-secondary)' }}>完成时间：</span><strong>{formatDateTime((data.productionSheet as any)?.completeTime)}</strong></div>}
-                        {(data.productionSheet as any)?.deliveryDate && <div><span style={{ color: 'var(--color-text-secondary)' }}>交板日期：</span><strong>{formatDateTime((data.productionSheet as any)?.deliveryDate)}</strong></div>}
+                        <div><span style={{ color: 'var(--color-text-secondary)' }}>创建时间：</span><strong>{(data.productionSheet as any)?.createTime ? formatDateTime((data.productionSheet as any)?.createTime) : ''}</strong></div>
+                        <div><span style={{ color: 'var(--color-text-secondary)' }}>完成时间：</span><strong>{(data.productionSheet as any)?.completedTime ? formatDateTime((data.productionSheet as any)?.completedTime) : ''}</strong></div>
+                        <div><span style={{ color: 'var(--color-text-secondary)' }}>交板日期：</span><strong>{(data.productionSheet as any)?.deliveryDate ? formatDateTime((data.productionSheet as any)?.deliveryDate) : ''}</strong></div>
                       </div>
                     </div>
                   )}
@@ -418,8 +432,11 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
                     <div style={{ marginBottom: 16, padding: '12px 14px', background: '#fafafa', borderRadius: 6, border: '1px solid #e8e8e8' }}>
                       <div style={{ fontWeight: 600, color: '#1f2937', marginBottom: 8, fontSize: 14 }}>款号信息</div>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 24px', fontSize: "var(--font-size-base)" }}>
-                        {category && <div><span style={{ color: 'var(--color-text-secondary)' }}>品类：</span><strong>{toCategoryCn(category)}</strong></div>}
-                        {season && <div><span style={{ color: 'var(--color-text-secondary)' }}>季节：</span><strong>{toSeasonCn(season)}</strong></div>}
+                        <div><span style={{ color: 'var(--color-text-secondary)' }}>款号：</span><strong>{styleNo}</strong></div>
+                        <div><span style={{ color: 'var(--color-text-secondary)' }}>SKC：</span><strong>{(data.productionSheet as any)?.skc || ''}</strong></div>
+                        <div><span style={{ color: 'var(--color-text-secondary)' }}>款名：</span><strong>{styleName}</strong></div>
+                        <div><span style={{ color: 'var(--color-text-secondary)' }}>品类：</span><strong>{toCategoryCn(category || (data.productionSheet as any)?.category)}</strong></div>
+                        <div><span style={{ color: 'var(--color-text-secondary)' }}>季节：</span><strong>{toSeasonCn(season || (data.productionSheet as any)?.season)}</strong></div>
                         {(data.productionSheet as any)?.uCode && <div><span style={{ color: 'var(--color-text-secondary)' }}>U码：</span><strong>{(data.productionSheet as any)?.uCode}</strong></div>}
                         {(data.productionSheet as any)?.fabricComposition && <div><span style={{ color: 'var(--color-text-secondary)' }}>面料成分：</span><strong>{(data.productionSheet as any)?.fabricComposition}</strong></div>}
                       </div>
@@ -431,10 +448,10 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
                     <div style={{ marginBottom: 16, padding: '12px 14px', background: '#fafafa', borderRadius: 6, border: '1px solid #e8e8e8' }}>
                       <div style={{ fontWeight: 600, color: '#1f2937', marginBottom: 8, fontSize: 14 }}>订单信息</div>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 24px', fontSize: "var(--font-size-base)" }}>
-                        {orderNo && <div><span style={{ color: 'var(--color-text-secondary)' }}>订单号：</span><strong>{orderNo}</strong></div>}
-                        {quantity !== undefined && <div><span style={{ color: 'var(--color-text-secondary)' }}>订单数量：</span><strong>{quantity}</strong></div>}
-                        {(data.productionSheet as any)?.customerName && <div><span style={{ color: 'var(--color-text-secondary)' }}>客户：</span><strong>{(data.productionSheet as any)?.customerName}</strong></div>}
-                        {(data.productionSheet as any)?.merchandiser && <div><span style={{ color: 'var(--color-text-secondary)' }}>跟单员：</span><strong>{(data.productionSheet as any)?.merchandiser}</strong></div>}
+                        <div><span style={{ color: 'var(--color-text-secondary)' }}>订单号：</span><strong>{orderNo || ''}</strong></div>
+                        <div><span style={{ color: 'var(--color-text-secondary)' }}>订单数量：</span><strong>{quantity !== undefined ? quantity : ''}</strong></div>
+                        <div><span style={{ color: 'var(--color-text-secondary)' }}>客户：</span><strong>{(data.productionSheet as any)?.customer || ''}</strong></div>
+                        <div><span style={{ color: 'var(--color-text-secondary)' }}>跟单员：</span><strong>{(data.productionSheet as any)?.orderType || ''}</strong></div>
                       </div>
                     </div>
                   )}
@@ -444,10 +461,9 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
                     <div style={{ marginBottom: 16, padding: '12px 14px', background: '#fafafa', borderRadius: 6, border: '1px solid #e8e8e8' }}>
                       <div style={{ fontWeight: 600, color: '#1f2937', marginBottom: 8, fontSize: 14 }}>生产信息</div>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 24px', fontSize: "var(--font-size-base)" }}>
-                        {(data.productionSheet as any)?.factoryName && <div><span style={{ color: 'var(--color-text-secondary)' }}>加工厂：</span><strong>{(data.productionSheet as any)?.factoryName}</strong></div>}
-                        {(extraInfo as any)?.加工厂 && <div><span style={{ color: 'var(--color-text-secondary)' }}>加工厂：</span><strong>{(extraInfo as any)?.加工厂}</strong></div>}
-                        {(data.productionSheet as any)?.designer && <div><span style={{ color: 'var(--color-text-secondary)' }}>设计师：</span><strong>{(data.productionSheet as any)?.designer}</strong></div>}
-                        {color && <div><span style={{ color: 'var(--color-text-secondary)' }}>颜色：</span><strong>{color}</strong></div>}
+                        <div><span style={{ color: 'var(--color-text-secondary)' }}>加工厂：</span><strong>{(data.productionSheet as any)?.factoryName || (extraInfo as any)?.加工厂 || ''}</strong></div>
+                        <div><span style={{ color: 'var(--color-text-secondary)' }}>设计师：</span><strong>{(data.productionSheet as any)?.sampleNo || ''}</strong></div>
+                        <div><span style={{ color: 'var(--color-text-secondary)' }}>颜色：</span><strong>{color || ''}</strong></div>
                       </div>
                     </div>
                   )}
@@ -457,24 +473,22 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
                     <div style={{ marginBottom: 16, padding: '12px 14px', background: '#fafafa', borderRadius: 6, border: '1px solid #e8e8e8' }}>
                       <div style={{ fontWeight: 600, color: '#1f2937', marginBottom: 8, fontSize: 14 }}>时间信息</div>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 24px', fontSize: "var(--font-size-base)" }}>
-                        {(extraInfo as any)?.交期 && <div><span style={{ color: 'var(--color-text-secondary)' }}>交期：</span><strong>{formatDateTime((extraInfo as any)?.交期)}</strong></div>}
-                        {(data.productionSheet as any)?.createTime && <div><span style={{ color: 'var(--color-text-secondary)' }}>创建时间：</span><strong>{formatDateTime((data.productionSheet as any)?.createTime)}</strong></div>}
-                        {(data.productionSheet as any)?.completeTime && <div><span style={{ color: 'var(--color-text-secondary)' }}>完成时间：</span><strong>{formatDateTime((data.productionSheet as any)?.completeTime)}</strong></div>}
+                        <div><span style={{ color: 'var(--color-text-secondary)' }}>交期：</span><strong>{(extraInfo as any)?.交期 ? formatDateTime((extraInfo as any)?.交期) : ''}</strong></div>
+                        <div><span style={{ color: 'var(--color-text-secondary)' }}>创建时间：</span><strong>{(data.productionSheet as any)?.createTime ? formatDateTime((data.productionSheet as any)?.createTime) : ''}</strong></div>
+                        <div><span style={{ color: 'var(--color-text-secondary)' }}>完成时间：</span><strong>{(data.productionSheet as any)?.completedTime ? formatDateTime((data.productionSheet as any)?.completedTime) : ''}</strong></div>
                       </div>
                     </div>
                   )}
                   
                   {/* 款式描述 */}
-                  {((data.productionSheet as any)?.description || (data.productionSheet as any)?.descriptionReturnComment) && (
+                  {options.remarkBlock && (
                     <div style={{ marginTop: 12, border: '1px solid var(--color-border)', padding: '12px 14px', borderRadius: 6 }}>
-                      {(data.productionSheet as any)?.description && (
-                        <div>
-                          <span style={{ color: 'var(--color-text-secondary)', fontWeight: 600 }}>备注：</span>
-                          <div style={{ marginTop: 4, fontSize: 14, whiteSpace: 'pre-wrap', lineHeight: 1.8 }}>
-                            {(data.productionSheet as any)?.description}
-                          </div>
+                      <div>
+                        <span style={{ color: 'var(--color-text-secondary)', fontWeight: 600 }}>备注：</span>
+                        <div style={{ marginTop: 4, fontSize: 14, whiteSpace: 'pre-wrap', lineHeight: 1.8 }}>
+                          {(data.productionSheet as any)?.description || '-'}
                         </div>
-                      )}
+                      </div>
                     </div>
                   )}
                   
@@ -717,7 +731,7 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
                             {row.chunkImgs.length > 0
                               ? <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'stretch' }}>
                                   {row.chunkImgs.map((url: string) => (
-                                    <img key={url} src={getFullAuthedFileUrl(url)} style={{ width: '100%', height: row.chunkImgs.length > 1 ? 120 : 220, objectFit: 'contain', borderRadius: 8, border: '1px solid #eee', background: 'var(--color-bg-base)', padding: 4, boxSizing: 'border-box' as const }} />
+                                    <Image key={url} src={getFullAuthedFileUrl(url)} style={{ width: '100%', height: row.chunkImgs.length > 1 ? 120 : 220, objectFit: 'contain', borderRadius: 8, border: '1px solid #eee', background: 'var(--color-bg-base)', padding: 4, boxSizing: 'border-box' as const }} preview={{ cover: <span>预览</span> }} />
                                   ))}
                                 </div>
                               : <span style={{ color: '#ccc', fontSize: 14 }}>无图</span>
@@ -773,7 +787,7 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
                       return (
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
                           {imgs.map((url: string) => (
-                            <img key={url} src={getFullAuthedFileUrl(url)} style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 3, border: '1px solid #eee' }} />
+                            <Image key={url} src={getFullAuthedFileUrl(url)} style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 3, border: '1px solid #eee' }} preview={{ cover: <span>预览</span> }} />
                           ))}
                         </div>
                       );
@@ -817,8 +831,9 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
             </div>
           )}
         </div>
-      </Spin>
-    </StandardModal>
+        </Spin>
+      </div>
+    </Drawer>
   );
 };
 
