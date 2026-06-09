@@ -364,7 +364,7 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
           {options.basicInfo && (
             <div className="print-section">
               {/* 标题行 */}
-              <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 12, color: '#111', padding: '10px 16px', background: 'linear-gradient(90deg, #f0f5ff 0%, #e6f7ff 100%)', borderRadius: 6, border: '1px solid #91d5ff' }}>
+              <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 10, color: '#111', padding: '8px 14px', background: 'linear-gradient(90deg, #f0f5ff 0%, #e6f7ff 100%)', borderRadius: 6, border: '1px solid #91d5ff' }}>
                 {styleNo} - {styleName}
               </div>
               {/* 主体：左列（图片+二维码） + 右列（信息） */}
@@ -487,7 +487,7 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
                     // 渲染分组：标题 + 横向字段（标签:值 同一行）
                     const cellStyle: React.CSSProperties = {
                       border: '1px solid #e8e8e8',
-                      padding: '8px 10px',
+                      padding: '6px 8px',
                       background: '#fafafa',
                       borderRadius: 4,
                       minWidth: 0,
@@ -496,13 +496,13 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
                       gap: 4,
                     };
                     const labelCellStyle: React.CSSProperties = {
-                      fontSize: 13,
+                      fontSize: 12,
                       color: '#666',
                       whiteSpace: 'nowrap',
                       flexShrink: 0,
                     };
                     const valueCellStyle: React.CSSProperties = {
-                      fontSize: 13,
+                      fontSize: 12,
                       color: '#111',
                       fontWeight: 600,
                       overflow: 'hidden',
@@ -515,7 +515,7 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
                       <>
                         {groups.map((group, gi) => (
                           <div key={gi} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                            <div style={{ fontSize: 13, fontWeight: 600, color: '#1890ff' }}>{group.title}</div>
+                            <div style={{ fontSize: 12, fontWeight: 600, color: '#1890ff' }}>{group.title}</div>
                             <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(group.fields.length, 5)}, 1fr)`, gap: 8 }}>
                               {group.fields.map((f, fi) => (
                                 <div key={fi} style={cellStyle}>
@@ -529,8 +529,8 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
                         {/* 面料成分 — 总是显示标签 */}
                         {options.styleInfoBlock && (
                           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                            <div style={{ fontSize: 13, fontWeight: 600, color: '#1890ff' }}>面料成分</div>
-                            <div style={{ padding: '8px 10px', background: '#fafafa', border: '1px solid #e8e8e8', borderRadius: 4, fontSize: 13, color: '#111', lineHeight: 1.6 }}>
+                            <div style={{ fontSize: 12, fontWeight: 600, color: '#1890ff' }}>面料成分</div>
+                            <div style={{ padding: '6px 8px', background: '#fafafa', border: '1px solid #e8e8e8', borderRadius: 4, fontSize: 12, color: '#111', lineHeight: 1.5 }}>
                               {fabricVal || empty}
                             </div>
                           </div>
@@ -538,8 +538,8 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
                         {/* 备注 — 总是显示标签 */}
                         {options.remarkBlock && (
                           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                            <div style={{ fontSize: 13, fontWeight: 600, color: '#1890ff' }}>备注</div>
-                            <div style={{ padding: '8px 10px', background: '#fafafa', border: '1px solid #e8e8e8', borderRadius: 4, fontSize: 13, color: '#111', lineHeight: 1.6 }}>
+                            <div style={{ fontSize: 12, fontWeight: 600, color: '#1890ff' }}>备注</div>
+                            <div style={{ padding: '6px 8px', background: '#fafafa', border: '1px solid #e8e8e8', borderRadius: 4, fontSize: 12, color: '#111', lineHeight: 1.5 }}>
                               {(data.productionSheet as any)?.description || empty}
                             </div>
                           </div>
@@ -553,9 +553,9 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
               {/* 码数/颜色/数量配置表（如果有） */}
               {sizeColorMatrix && sizeColorMatrix.sizes.length > 0 && (
                 <div style={{ marginTop: 12, padding: 16, border: '1px solid var(--color-border-antd)', background: '#fff', borderRadius: 8 }}>
-                  <div style={{ fontWeight: 600, color: '#1f2937', marginBottom: 10, fontSize: 14, paddingBottom: 6, borderBottom: '1px solid #e8e8e8' }}>码数/颜色/数量配置</div>
+                  <div style={{ fontWeight: 600, color: '#1f2937', marginBottom: 8, fontSize: 12, paddingBottom: 6, borderBottom: '1px solid #e8e8e8' }}>码数/颜色/数量配置</div>
                   <div style={{ overflowX: 'auto' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
                       <thead>
                         <tr>
                           <th style={{ border: '1px solid var(--color-border-antd)', padding: '8px 12px', background: 'var(--color-bg-container)', fontWeight: 600, whiteSpace: 'nowrap', textAlign: 'left', width: 100 }}>颜色/尺码</th>
