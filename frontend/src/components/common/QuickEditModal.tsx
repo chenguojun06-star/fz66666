@@ -86,6 +86,13 @@ const QuickEditModal: React.FC<QuickEditModalProps> = ({
       onCancel={handleCancel}
       confirmLoading={loading}
       destroyOnHidden
+      styles={{
+        body: {
+          maxHeight: 'calc(90vh - 120px)',
+          overflowY: 'auto',
+          paddingTop: 16,
+        },
+      }}
     >
       <Form form={form} layout="vertical" onFinish={handleOk} style={{ marginTop: 16 }}>
         <Form.Item label="紧急程度" name="urgencyLevel">

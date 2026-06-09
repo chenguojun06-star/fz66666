@@ -6,11 +6,12 @@ export const SMALL_MODAL_WIDTH = 880;
 
 const SmallModal: React.FC<ModalProps> = ({ centered, destroyOnHidden, width, styles, ...rest }) => {
   const resolvedStyles = React.useMemo(() => {
-    const nextStyles = (styles || {}) as Record<string, React.CSSProperties>;
+    const passed = (styles || {}) as Record<string, React.CSSProperties>;
+    const bodyStyle = passed.body || {};
     return {
-      ...nextStyles,
+      ...passed,
       body: {
-        ...(nextStyles.body || {}),
+        ...bodyStyle,
         paddingTop: 16,
       },
     } as ModalProps['styles'];
