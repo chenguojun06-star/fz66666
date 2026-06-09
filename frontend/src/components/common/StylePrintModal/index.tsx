@@ -386,71 +386,103 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
                   <div style={{ fontSize: 11, color: '#999', textAlign: 'center' }}>扫码查看详情</div>
                 </div>
 
-                {/* 右侧：4个分组，每组标题 + 横向一排字段（标签在上、值在下） */}
+                {/* 右侧：4个分组，每组标题 + 横向一排字段（标签:值 同行） */}
                 <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 14 }}>
                   {(() => {
-                    // 构建所有分组
+                    // 构建所有分组 — 所有标签不管有没有值都显示
                     const groups: {
                       title: string;
                       fields: { label: string; value: React.ReactNode }[];
                     }[] = [];
 
-                    // 款号信息
-                    const styleFields: { label: string; value: React.ReactNode }[] = [];
-                    styleFields.push({ label: '款号', value: styleNo });
-                    if ((data.productionSheet as any)?.skc) styleFields.push({ label: 'SKC', value: (data.productionSheet as any).skc });
-                    styleFields.push({ label: '款名', value: styleName });
-                    styleFields.push({ label: '品类', value: toCategoryCn(category || (data.productionSheet as any)?.category) });
-                    styleFields.push({ label: '季节', value: toSeasonCn(season || (data.productionSheet as any)?.season) });
-                    if ((data.productionSheet as any)?.uCode) styleFields.push({ label: 'U码', value: (data.productionSheet as any).uCode });
-                    const fabricVal = (data.productionSheet as any)?.fabricComposition;
+                    const empty = '';
+
+                    // 款号信息（sample 模式）
+                    if (mode === 'sample' && options.styleInfoBlock) {
+                      const styleFields: { label: string; value: React.ReactNode }[] = [];
+                      styleFields.push({ label: '款号', value: styleNo || empty });
+                      styleFields.push({ label: 'SKC', value: (data.productionSheet as any)?.skc || empty });
+                      styleFields.push({ label: '款名', value: styleName || empty });
+                      styleFields.push({ label: '品类', value: toCategoryCn(category || (data.productionSheet as any)?.category) || empty });
+                      styleFields.push({ label: '季节', value: toSeasonCn(season || (data.productionSheet as any)?.season) || empty });
+                      if ((data.productionSheet as any)?.uCode) styleFields.push({ label: 'U码', value: (data.productionSheet as any).uCode });
+                      groups.push({ title: '款号信息', fields: styleFields });
+                    }
+
+                    // 款号信息（production/order 模式）
+                    if ((mode === 'production' || mode === 'order') && options.styleInfoBlock) {
+                      const styleFields: { label: string; value: React.ReactNode }[] = [];
+                      styleFields.push({ label: '款号', value: styleNo || empty });
+                      styleFields.push({ label: 'SKC', value: (data.productionSheet as any)?.skc || empty });
+                      styleFields.push({ label: '款名', value: styleName || empty });
+                      styleFields.push({ label: '品类', value: toCategoryCn(category || (data.productionSheet as any)?.category) || empty });
+                      groups.push({ title: '款号信息', fields: styleFields });
+                    }
 
                     // 客户信息
-                    const customerFields: { label: string; value: React.ReactNode }[] = [];
-                    if (mode === 'sample') {
-                      if ((data.productionSheet as any)?.customer) customerFields.push({ label: '客户', value: (data.productionSheet as any).customer });
-                      if ((data.productionSheet as any)?.orderType) customerFields.push({ label: '跟单员', value: (data.productionSheet as any).orderType });
-                      if ((data.productionSheet as any)?.sampleNo) customerFields.push({ label: '设计师', value: (data.productionSheet as any).sampleNo });
-                      if ((data.productionSheet as any)?.price) customerFields.push({ label: '打板价', value: `¥${Number((data.productionSheet as any).price).toFixed(2)}` });
-                    } else {
-                      if (orderNo) customerFields.push({ label: '订单号', value: orderNo });
-                      if (quantity !== undefined) customerFields.push({ label: '订单数量', value: quantity });
-                      if ((data.productionSheet as any)?.customer) customerFields.push({ label: '客户', value: (data.productionSheet as any).customer });
-                      if ((data.productionSheet as any)?.orderType) customerFields.push({ label: '跟单员', value: (data.productionSheet as any).orderType });
+                    if (options.customerInfoBlock) {
+                      if (mode === 'sample') {
+                        const fields: { label: string; value: React.ReactNode }[] = [
+                          { label: '客户', value: (data.productionSheet as any)?.customer || empty },
+                          { label: '跟单员', value: (data.productionSheet as any)?.orderType || empty },
+                          { label: '设计师', value: (data.productionSheet as any)?.sampleNo || empty },
+                          { label: '打板价', value: (data.productionSheet as any)?.price ? `¥${Number((data.productionSheet as any).price).toFixed(2)}` : empty },
+                        ];
+                        groups.push({ title: '客户信息', fields });
+                      } else {
+                        // production/order: 订单号 + 颜色尺码矩阵 + 客户 + 跟单员
+                        const fields: { label: string; value: React.ReactNode }[] = [
+                          { label: '订单号', value: orderNo || empty },
+                        ];
+                        // 如果有尺码矩阵，渲染成小表格
+                        if (sizeColorMatrix && sizeColorMatrix.sizes.length > 0) {
+                          fields.push({ label: '颜色尺码', value: '（见下方矩阵）' });
+                        } else {
+                          fields.push({ label: '订单数量', value: quantity !== undefined ? String(quantity) : empty });
+                        }
+                        fields.push({ label: '客户', value: (data.productionSheet as any)?.customer || empty });
+                        fields.push({ label: '跟单员', value: (data.productionSheet as any)?.orderType || empty });
+                        groups.push({ title: '客户信息', fields });
+                      }
                     }
 
                     // 版次信息
-                    const patternFields: { label: string; value: React.ReactNode }[] = [];
-                    if (mode === 'sample') {
-                      if ((data.productionSheet as any)?.plateType) patternFields.push({ label: '板类', value: (data.productionSheet as any).plateType });
-                      if ((data.productionSheet as any)?.sampleSupplier) patternFields.push({ label: '纸样师', value: (data.productionSheet as any).sampleSupplier });
-                      if ((data.productionSheet as any)?.patternNo) patternFields.push({ label: '纸样号', value: (data.productionSheet as any).patternNo });
-                      if ((data.productionSheet as any)?.plateWorker) patternFields.push({ label: '车板师', value: (data.productionSheet as any).plateWorker });
-                    } else {
-                      if ((data.productionSheet as any)?.factoryName) patternFields.push({ label: '加工厂', value: (data.productionSheet as any).factoryName });
-                      else if ((extraInfo as any)?.加工厂) patternFields.push({ label: '加工厂', value: (extraInfo as any).加工厂 });
-                      if ((data.productionSheet as any)?.sampleNo) patternFields.push({ label: '设计师', value: (data.productionSheet as any).sampleNo });
+                    if (options.patternInfoBlock) {
+                      if (mode === 'sample') {
+                        const fields: { label: string; value: React.ReactNode }[] = [
+                          { label: '板类', value: (data.productionSheet as any)?.plateType || empty },
+                          { label: '纸样师', value: (data.productionSheet as any)?.sampleSupplier || empty },
+                          { label: '纸样号', value: (data.productionSheet as any)?.patternNo || empty },
+                          { label: '车板师', value: (data.productionSheet as any)?.plateWorker || empty },
+                        ];
+                        groups.push({ title: '版次信息', fields });
+                      } else {
+                        const factoryName = (data.productionSheet as any)?.factoryName || (extraInfo as any)?.加工厂 || empty;
+                        const fields: { label: string; value: React.ReactNode }[] = [
+                          { label: '加工厂', value: factoryName },
+                          { label: '设计师', value: (data.productionSheet as any)?.sampleNo || empty },
+                        ];
+                        groups.push({ title: '版次信息', fields });
+                      }
                     }
 
                     // 时间信息
-                    const timeFields: { label: string; value: React.ReactNode }[] = [];
-                    if (mode === 'sample') {
-                      if ((data.productionSheet as any)?.createTime) timeFields.push({ label: '创建时间', value: formatDateTime((data.productionSheet as any).createTime) });
-                      if ((data.productionSheet as any)?.deliveryDate) timeFields.push({ label: '交板日期', value: formatDateTime((data.productionSheet as any).deliveryDate) });
-                      if ((data.productionSheet as any)?.completedTime) timeFields.push({ label: '完成时间', value: formatDateTime((data.productionSheet as any).completedTime) });
-                    } else {
-                      if ((extraInfo as any)?.交期) timeFields.push({ label: '交期', value: formatDateTime((extraInfo as any).交期) });
-                      if ((data.productionSheet as any)?.createTime) timeFields.push({ label: '创建时间', value: formatDateTime((data.productionSheet as any).createTime) });
-                      if ((data.productionSheet as any)?.completedTime) timeFields.push({ label: '完成时间', value: formatDateTime((data.productionSheet as any).completedTime) });
+                    if (options.timeInfoBlock) {
+                      const fields: { label: string; value: React.ReactNode }[] = [];
+                      if (mode === 'sample') {
+                        fields.push({ label: '创建时间', value: (data.productionSheet as any)?.createTime ? formatDateTime((data.productionSheet as any).createTime) : empty });
+                        fields.push({ label: '交板日期', value: (data.productionSheet as any)?.deliveryDate ? formatDateTime((data.productionSheet as any).deliveryDate) : empty });
+                        fields.push({ label: '完成时间', value: (data.productionSheet as any)?.completedTime ? formatDateTime((data.productionSheet as any).completedTime) : empty });
+                      } else {
+                        fields.push({ label: '交期', value: (extraInfo as any)?.交期 ? formatDateTime((extraInfo as any).交期) : empty });
+                        fields.push({ label: '创建时间', value: (data.productionSheet as any)?.createTime ? formatDateTime((data.productionSheet as any).createTime) : empty });
+                        fields.push({ label: '完成时间', value: (data.productionSheet as any)?.completedTime ? formatDateTime((data.productionSheet as any).completedTime) : empty });
+                      }
+                      groups.push({ title: '时间信息', fields });
                     }
 
-                    // 按配置的开关收集分组
-                    if (options.styleInfoBlock && styleFields.length) groups.push({ title: '款号信息', fields: styleFields });
-                    if (options.customerInfoBlock && customerFields.length) groups.push({ title: '客户信息', fields: customerFields });
-                    if (options.patternInfoBlock && patternFields.length) groups.push({ title: '版次信息', fields: patternFields });
-                    if (options.timeInfoBlock && timeFields.length) groups.push({ title: '时间信息', fields: timeFields });
-
-                    const remarkVal = options.remarkBlock ? (data.productionSheet as any)?.description : null;
+                    // 面料成分（总是显示标签）
+                    const fabricVal = (data.productionSheet as any)?.fabricComposition;
 
                     // 渲染分组：标题 + 横向字段（标签:值 同一行）
                     const cellStyle: React.CSSProperties = {
@@ -488,25 +520,27 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
                               {group.fields.map((f, fi) => (
                                 <div key={fi} style={cellStyle}>
                                   <span style={labelCellStyle}>{f.label}：</span>
-                                  <span style={valueCellStyle}>{f.value || '-'}</span>
+                                  <span style={valueCellStyle}>{f.value}</span>
                                 </div>
                               ))}
                             </div>
                           </div>
                         ))}
-                        {fabricVal && (
+                        {/* 面料成分 — 总是显示标签 */}
+                        {options.styleInfoBlock && (
                           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                             <div style={{ fontSize: 13, fontWeight: 600, color: '#1890ff' }}>面料成分</div>
                             <div style={{ padding: '8px 10px', background: '#fafafa', border: '1px solid #e8e8e8', borderRadius: 4, fontSize: 13, color: '#111', lineHeight: 1.6 }}>
-                              {fabricVal}
+                              {fabricVal || empty}
                             </div>
                           </div>
                         )}
-                        {remarkVal && (
+                        {/* 备注 — 总是显示标签 */}
+                        {options.remarkBlock && (
                           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                             <div style={{ fontSize: 13, fontWeight: 600, color: '#1890ff' }}>备注</div>
                             <div style={{ padding: '8px 10px', background: '#fafafa', border: '1px solid #e8e8e8', borderRadius: 4, fontSize: 13, color: '#111', lineHeight: 1.6 }}>
-                              {remarkVal}
+                              {(data.productionSheet as any)?.description || empty}
                             </div>
                           </div>
                         )}
