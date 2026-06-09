@@ -363,183 +363,166 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
           {/* 基本信息 */}
           {options.basicInfo && (
             <div className="print-section">
-              <div style={{ display: 'flex', gap: 24, padding: 16, borderBottom: '2px solid var(--color-border-antd)', background: 'var(--color-bg-container)', borderRadius: 8 }}>
-                {resolvedCover && (
-                  <div style={{ flexShrink: 0, width: 120, height: 120 }}>
-                    <Image src={getFullAuthedFileUrl(resolvedCover)} alt={styleNo}
-                      style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 8, border: '1px solid var(--color-border)' }} preview={{ cover: <span>预览</span> }} />
-                  </div>
-                )}
+              <div style={{ display: 'flex', gap: 16, padding: 12, border: '1px solid var(--color-border-antd)', background: '#fff', borderRadius: 8 }}>
+                {/* 左侧：所有信息紧凑排列 */}
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: "var(--font-size-xxl)", fontWeight: 600, marginBottom: 16 }}>{styleNo} - {styleName}</div>
-                  
-                  {/* 款号信息区块 */}
-                  {options.styleInfoBlock && mode === 'sample' && (
-                    <div style={{ marginBottom: 16, padding: '12px 14px', background: '#fafafa', borderRadius: 6, border: '1px solid #e8e8e8' }}>
-                      <div style={{ fontWeight: 600, color: '#1f2937', marginBottom: 8, fontSize: 14 }}>款号信息</div>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 24px', fontSize: "var(--font-size-base)" }}>
-                        <div><span style={{ color: 'var(--color-text-secondary)' }}>款号：</span><strong>{styleNo}</strong></div>
-                        <div><span style={{ color: 'var(--color-text-secondary)' }}>SKC：</span><strong>{(data.productionSheet as any)?.skc || ''}</strong></div>
-                        <div><span style={{ color: 'var(--color-text-secondary)' }}>款名：</span><strong>{styleName}</strong></div>
-                        <div><span style={{ color: 'var(--color-text-secondary)' }}>品类：</span><strong>{toCategoryCn(category || (data.productionSheet as any)?.category)}</strong></div>
-                        <div><span style={{ color: 'var(--color-text-secondary)' }}>季节：</span><strong>{toSeasonCn(season || (data.productionSheet as any)?.season)}</strong></div>
-                        {(data.productionSheet as any)?.uCode && <div><span style={{ color: 'var(--color-text-secondary)' }}>U码：</span><strong>{(data.productionSheet as any)?.uCode}</strong></div>}
-                        {(data.productionSheet as any)?.fabricComposition && <div><span style={{ color: 'var(--color-text-secondary)' }}>面料成分：</span><strong>{(data.productionSheet as any)?.fabricComposition}</strong></div>}
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* 客户信息区块 */}
-                  {options.customerInfoBlock && mode === 'sample' && (
-                    <div style={{ marginBottom: 16, padding: '12px 14px', background: '#fafafa', borderRadius: 6, border: '1px solid #e8e8e8' }}>
-                      <div style={{ fontWeight: 600, color: '#1f2937', marginBottom: 8, fontSize: 14 }}>客户信息</div>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 24px', fontSize: "var(--font-size-base)" }}>
-                        <div><span style={{ color: 'var(--color-text-secondary)' }}>客户：</span><strong>{(data.productionSheet as any)?.customer || ''}</strong></div>
-                        <div><span style={{ color: 'var(--color-text-secondary)' }}>跟单员：</span><strong>{(data.productionSheet as any)?.orderType || ''}</strong></div>
-                        <div><span style={{ color: 'var(--color-text-secondary)' }}>设计师：</span><strong>{(data.productionSheet as any)?.sampleNo || ''}</strong></div>
-                        <div><span style={{ color: 'var(--color-text-secondary)' }}>打板价：</span><strong>{(data.productionSheet as any)?.price ? formatMoney((data.productionSheet as any)?.price) : ''}</strong></div>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* 版次信息区块 */}
-                  {options.patternInfoBlock && mode === 'sample' && (
-                    <div style={{ marginBottom: 16, padding: '12px 14px', background: '#fafafa', borderRadius: 6, border: '1px solid #e8e8e8' }}>
-                      <div style={{ fontWeight: 600, color: '#1f2937', marginBottom: 8, fontSize: 14 }}>版次信息</div>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 24px', fontSize: "var(--font-size-base)" }}>
-                        <div><span style={{ color: 'var(--color-text-secondary)' }}>版类：</span><strong>{(data.productionSheet as any)?.plateType || ''}</strong></div>
-                        <div><span style={{ color: 'var(--color-text-secondary)' }}>纸样师：</span><strong>{(data.productionSheet as any)?.sampleSupplier || ''}</strong></div>
-                        <div><span style={{ color: 'var(--color-text-secondary)' }}>纸样号：</span><strong>{(data.productionSheet as any)?.patternNo || ''}</strong></div>
-                        <div><span style={{ color: 'var(--color-text-secondary)' }}>车板师：</span><strong>{(data.productionSheet as any)?.plateWorker || ''}</strong></div>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* 时间信息区块 */}
-                  {options.timeInfoBlock && mode === 'sample' && (
-                    <div style={{ marginBottom: 16, padding: '12px 14px', background: '#fafafa', borderRadius: 6, border: '1px solid #e8e8e8' }}>
-                      <div style={{ fontWeight: 600, color: '#1f2937', marginBottom: 8, fontSize: 14 }}>时间信息</div>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 24px', fontSize: "var(--font-size-base)" }}>
-                        <div><span style={{ color: 'var(--color-text-secondary)' }}>创建时间：</span><strong>{(data.productionSheet as any)?.createTime ? formatDateTime((data.productionSheet as any)?.createTime) : ''}</strong></div>
-                        <div><span style={{ color: 'var(--color-text-secondary)' }}>完成时间：</span><strong>{(data.productionSheet as any)?.completedTime ? formatDateTime((data.productionSheet as any)?.completedTime) : ''}</strong></div>
-                        <div><span style={{ color: 'var(--color-text-secondary)' }}>交板日期：</span><strong>{(data.productionSheet as any)?.deliveryDate ? formatDateTime((data.productionSheet as any)?.deliveryDate) : ''}</strong></div>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* 大货/下单模式：款号信息区块 */}
-                  {options.styleInfoBlock && (mode === 'production' || mode === 'order') && (
-                    <div style={{ marginBottom: 16, padding: '12px 14px', background: '#fafafa', borderRadius: 6, border: '1px solid #e8e8e8' }}>
-                      <div style={{ fontWeight: 600, color: '#1f2937', marginBottom: 8, fontSize: 14 }}>款号信息</div>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 24px', fontSize: "var(--font-size-base)" }}>
-                        <div><span style={{ color: 'var(--color-text-secondary)' }}>款号：</span><strong>{styleNo}</strong></div>
-                        <div><span style={{ color: 'var(--color-text-secondary)' }}>SKC：</span><strong>{(data.productionSheet as any)?.skc || ''}</strong></div>
-                        <div><span style={{ color: 'var(--color-text-secondary)' }}>款名：</span><strong>{styleName}</strong></div>
-                        <div><span style={{ color: 'var(--color-text-secondary)' }}>品类：</span><strong>{toCategoryCn(category || (data.productionSheet as any)?.category)}</strong></div>
-                        <div><span style={{ color: 'var(--color-text-secondary)' }}>季节：</span><strong>{toSeasonCn(season || (data.productionSheet as any)?.season)}</strong></div>
-                        {(data.productionSheet as any)?.uCode && <div><span style={{ color: 'var(--color-text-secondary)' }}>U码：</span><strong>{(data.productionSheet as any)?.uCode}</strong></div>}
-                        {(data.productionSheet as any)?.fabricComposition && <div><span style={{ color: 'var(--color-text-secondary)' }}>面料成分：</span><strong>{(data.productionSheet as any)?.fabricComposition}</strong></div>}
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* 大货/下单模式：订单信息区块 */}
-                  {options.customerInfoBlock && (mode === 'production' || mode === 'order') && (
-                    <div style={{ marginBottom: 16, padding: '12px 14px', background: '#fafafa', borderRadius: 6, border: '1px solid #e8e8e8' }}>
-                      <div style={{ fontWeight: 600, color: '#1f2937', marginBottom: 8, fontSize: 14 }}>订单信息</div>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 24px', fontSize: "var(--font-size-base)" }}>
-                        <div><span style={{ color: 'var(--color-text-secondary)' }}>订单号：</span><strong>{orderNo || ''}</strong></div>
-                        <div><span style={{ color: 'var(--color-text-secondary)' }}>订单数量：</span><strong>{quantity !== undefined ? quantity : ''}</strong></div>
-                        <div><span style={{ color: 'var(--color-text-secondary)' }}>客户：</span><strong>{(data.productionSheet as any)?.customer || ''}</strong></div>
-                        <div><span style={{ color: 'var(--color-text-secondary)' }}>跟单员：</span><strong>{(data.productionSheet as any)?.orderType || ''}</strong></div>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* 大货/下单模式：生产信息区块 */}
-                  {options.patternInfoBlock && (mode === 'production' || mode === 'order') && (
-                    <div style={{ marginBottom: 16, padding: '12px 14px', background: '#fafafa', borderRadius: 6, border: '1px solid #e8e8e8' }}>
-                      <div style={{ fontWeight: 600, color: '#1f2937', marginBottom: 8, fontSize: 14 }}>生产信息</div>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 24px', fontSize: "var(--font-size-base)" }}>
-                        <div><span style={{ color: 'var(--color-text-secondary)' }}>加工厂：</span><strong>{(data.productionSheet as any)?.factoryName || (extraInfo as any)?.加工厂 || ''}</strong></div>
-                        <div><span style={{ color: 'var(--color-text-secondary)' }}>设计师：</span><strong>{(data.productionSheet as any)?.sampleNo || ''}</strong></div>
-                        <div><span style={{ color: 'var(--color-text-secondary)' }}>颜色：</span><strong>{color || ''}</strong></div>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* 大货/下单模式：时间信息区块 */}
-                  {options.timeInfoBlock && (mode === 'production' || mode === 'order') && (
-                    <div style={{ marginBottom: 16, padding: '12px 14px', background: '#fafafa', borderRadius: 6, border: '1px solid #e8e8e8' }}>
-                      <div style={{ fontWeight: 600, color: '#1f2937', marginBottom: 8, fontSize: 14 }}>时间信息</div>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 24px', fontSize: "var(--font-size-base)" }}>
-                        <div><span style={{ color: 'var(--color-text-secondary)' }}>交期：</span><strong>{(extraInfo as any)?.交期 ? formatDateTime((extraInfo as any)?.交期) : ''}</strong></div>
-                        <div><span style={{ color: 'var(--color-text-secondary)' }}>创建时间：</span><strong>{(data.productionSheet as any)?.createTime ? formatDateTime((data.productionSheet as any)?.createTime) : ''}</strong></div>
-                        <div><span style={{ color: 'var(--color-text-secondary)' }}>完成时间：</span><strong>{(data.productionSheet as any)?.completedTime ? formatDateTime((data.productionSheet as any)?.completedTime) : ''}</strong></div>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* 款式描述 */}
-                  {options.remarkBlock && (
-                    <div style={{ marginTop: 12, border: '1px solid var(--color-border)', padding: '12px 14px', borderRadius: 6 }}>
-                      <div>
-                        <span style={{ color: 'var(--color-text-secondary)', fontWeight: 600 }}>备注：</span>
-                        <div style={{ marginTop: 4, fontSize: 14, whiteSpace: 'pre-wrap', lineHeight: 1.8 }}>
-                          {(data.productionSheet as any)?.description || '-'}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* 颜色×码数×数量矩阵 */}
-                  {sizeColorMatrix && sizeColorMatrix.sizes.length > 0 && (
-                    <div style={{ marginTop: 16, overflowX: 'auto' }}>
-                      <div style={{ fontWeight: 600, color: '#1f2937', marginBottom: 8, fontSize: 14 }}>码数/颜色/数量配置</div>
-                      <table style={{ borderCollapse: 'collapse', fontSize: 14, minWidth: 300 }}>
-                        <thead>
-                          <tr>
-                            <th style={{ border: '1px solid var(--color-border-antd)', padding: '6px 10px', background: 'var(--color-bg-container)', fontWeight: 600 }}>颜色/尺码</th>
-                            {sizeColorMatrix.sizes.map(s => <th key={s} style={{ border: '1px solid var(--color-border-antd)', padding: '6px 10px', background: 'var(--color-bg-container)', fontWeight: 600, textAlign: 'center' }}>{s}</th>)}
-                            <th style={{ border: '1px solid var(--color-border-antd)', padding: '6px 10px', background: 'var(--color-bg-container)', fontWeight: 600, textAlign: 'center' }}>合计</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {sizeColorMatrix.matrixRows.map((row, i) => {
-                            const rowTotal = row.quantities.reduce((s, q) => s + q, 0);
-                            return (
-                              <tr key={row.color || i}>
-                                <td style={{ border: '1px solid var(--color-border-antd)', padding: '6px 10px', fontWeight: 500 }}>{row.color || '-'}</td>
-                                {sizeColorMatrix.sizes.map((_, ci) => <td key={ci} style={{ border: '1px solid var(--color-border-antd)', padding: '6px 10px', textAlign: 'center' }}>{row.quantities[ci] || 0}</td>)}
-                                <td style={{ border: '1px solid var(--color-border-antd)', padding: '6px 10px', textAlign: 'center', fontWeight: 600 }}>{rowTotal}</td>
+                  {/* 标题行 */}
+                  <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 10, color: '#111', borderBottom: '1px solid #e8e8e8', paddingBottom: 6 }}>
+                    {styleNo} - {styleName}
+                  </div>
+                  {/* 紧凑信息表格 */}
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                    {options.styleInfoBlock && mode === 'sample' && (data.productionSheet as any) && [
+                      { label: '款号', value: styleNo },
+                      { label: 'SKC', value: (data.productionSheet as any)?.skc },
+                      { label: '款名', value: styleName },
+                      { label: '品类', value: toCategoryCn(category || (data.productionSheet as any)?.category) },
+                      { label: '季节', value: toSeasonCn(season || (data.productionSheet as any)?.season) },
+                      (data.productionSheet as any)?.uCode ? { label: 'U码', value: (data.productionSheet as any)?.uCode } : null,
+                      (data.productionSheet as any)?.fabricComposition ? { label: '面料成分', value: (data.productionSheet as any)?.fabricComposition } : null,
+                    ].filter(Boolean).map((item, i) => (
+                      <tr key={`si-${i}`}>
+                        <td style={{ padding: '2px 8px 2px 0', color: '#666', whiteSpace: 'nowrap', width: '1%' }}>{item!.label}：</td>
+                        <td style={{ padding: '2px 0', fontWeight: 600, color: '#111' }}>{item!.value}</td>
+                      </tr>
+                    ))}
+                    {options.customerInfoBlock && mode === 'sample' && (data.productionSheet as any) && [
+                      { label: '客户', value: (data.productionSheet as any)?.customer },
+                      { label: '跟单员', value: (data.productionSheet as any)?.orderType },
+                      { label: '设计师', value: (data.productionSheet as any)?.sampleNo },
+                      { label: '打板价', value: (data.productionSheet as any)?.price ? `¥${Number((data.productionSheet as any)?.price).toFixed(2)}` : '' },
+                    ].filter(r => r.value).map((item, i) => (
+                      <tr key={`ci-${i}`}>
+                        <td style={{ padding: '2px 8px 2px 0', color: '#666', whiteSpace: 'nowrap', width: '1%' }}>{item!.label}：</td>
+                        <td style={{ padding: '2px 0', fontWeight: 600, color: '#111' }}>{item!.value}</td>
+                      </tr>
+                    ))}
+                    {options.patternInfoBlock && mode === 'sample' && (data.productionSheet as any) && [
+                      { label: '版类', value: (data.productionSheet as any)?.plateType },
+                      { label: '纸样师', value: (data.productionSheet as any)?.sampleSupplier },
+                      { label: '纸样号', value: (data.productionSheet as any)?.patternNo },
+                      { label: '车板师', value: (data.productionSheet as any)?.plateWorker },
+                    ].filter(r => r.value).map((item, i) => (
+                      <tr key={`pi-${i}`}>
+                        <td style={{ padding: '2px 8px 2px 0', color: '#666', whiteSpace: 'nowrap', width: '1%' }}>{item!.label}：</td>
+                        <td style={{ padding: '2px 0', fontWeight: 600, color: '#111' }}>{item!.value}</td>
+                      </tr>
+                    ))}
+                    {options.timeInfoBlock && mode === 'sample' && (data.productionSheet as any) && [
+                      { label: '创建时间', value: (data.productionSheet as any)?.createTime ? formatDateTime((data.productionSheet as any)?.createTime) : '' },
+                      { label: '完成时间', value: (data.productionSheet as any)?.completedTime ? formatDateTime((data.productionSheet as any)?.completedTime) : '' },
+                      { label: '交板日期', value: (data.productionSheet as any)?.deliveryDate ? formatDateTime((data.productionSheet as any)?.deliveryDate) : '' },
+                    ].filter(r => r.value).map((item, i) => (
+                      <tr key={`ti-${i}`}>
+                        <td style={{ padding: '2px 8px 2px 0', color: '#666', whiteSpace: 'nowrap', width: '1%' }}>{item!.label}：</td>
+                        <td style={{ padding: '2px 0', fontWeight: 600, color: '#111' }}>{item!.value}</td>
+                      </tr>
+                    ))}
+                    {/* 大货/下单模式信息 */}
+                    {options.styleInfoBlock && (mode === 'production' || mode === 'order') && (data.productionSheet as any) && [
+                      { label: '款号', value: styleNo },
+                      { label: 'SKC', value: (data.productionSheet as any)?.skc },
+                      { label: '款名', value: styleName },
+                      { label: '品类', value: toCategoryCn(category || (data.productionSheet as any)?.category) },
+                      { label: '季节', value: toSeasonCn(season || (data.productionSheet as any)?.season) },
+                    ].map((item, i) => (
+                      <tr key={`si-prod-${i}`}>
+                        <td style={{ padding: '2px 8px 2px 0', color: '#666', whiteSpace: 'nowrap', width: '1%' }}>{item.label}：</td>
+                        <td style={{ padding: '2px 0', fontWeight: 600, color: '#111' }}>{item.value}</td>
+                      </tr>
+                    ))}
+                    {options.customerInfoBlock && (mode === 'production' || mode === 'order') && [
+                      { label: '订单号', value: orderNo },
+                      { label: '订单数量', value: quantity !== undefined ? String(quantity) : '' },
+                      { label: '客户', value: (data.productionSheet as any)?.customer },
+                      { label: '跟单员', value: (data.productionSheet as any)?.orderType },
+                    ].filter(r => r.value).map((item, i) => (
+                      <tr key={`ci-prod-${i}`}>
+                        <td style={{ padding: '2px 8px 2px 0', color: '#666', whiteSpace: 'nowrap', width: '1%' }}>{item.label}：</td>
+                        <td style={{ padding: '2px 0', fontWeight: 600, color: '#111' }}>{item.value}</td>
+                      </tr>
+                    ))}
+                    {options.patternInfoBlock && (mode === 'production' || mode === 'order') && [
+                      { label: '加工厂', value: (data.productionSheet as any)?.factoryName || (extraInfo as any)?.加工厂 },
+                      { label: '设计师', value: (data.productionSheet as any)?.sampleNo },
+                      { label: '颜色', value: color },
+                    ].filter(r => r.value).map((item, i) => (
+                      <tr key={`pi-prod-${i}`}>
+                        <td style={{ padding: '2px 8px 2px 0', color: '#666', whiteSpace: 'nowrap', width: '1%' }}>{item.label}：</td>
+                        <td style={{ padding: '2px 0', fontWeight: 600, color: '#111' }}>{item.value}</td>
+                      </tr>
+                    ))}
+                    {options.timeInfoBlock && (mode === 'production' || mode === 'order') && [
+                      { label: '交期', value: (extraInfo as any)?.交期 ? formatDateTime((extraInfo as any)?.交期) : '' },
+                      { label: '创建时间', value: (data.productionSheet as any)?.createTime ? formatDateTime((data.productionSheet as any)?.createTime) : '' },
+                      { label: '完成时间', value: (data.productionSheet as any)?.completedTime ? formatDateTime((data.productionSheet as any)?.completedTime) : '' },
+                    ].filter(r => r.value).map((item, i) => (
+                      <tr key={`ti-prod-${i}`}>
+                        <td style={{ padding: '2px 8px 2px 0', color: '#666', whiteSpace: 'nowrap', width: '1%' }}>{item.label}：</td>
+                        <td style={{ padding: '2px 0', fontWeight: 600, color: '#111' }}>{item.value}</td>
+                      </tr>
+                    ))}
+                    {/* 备注 */}
+                    {options.remarkBlock && (data.productionSheet as any)?.description && (
+                      <tr key="remark">
+                        <td style={{ padding: '4px 8px 2px 0', color: '#666', whiteSpace: 'nowrap', verticalAlign: 'top' }}>备注：</td>
+                        <td style={{ padding: '4px 0', color: '#111', lineHeight: 1.6 }}>{(data.productionSheet as any)?.description}</td>
+                      </tr>
+                    )}
+                    {/* 码数/颜色/数量配置 */}
+                    {sizeColorMatrix && sizeColorMatrix.sizes.length > 0 && (
+                      <tr key="sizecolor">
+                        <td colSpan={2} style={{ padding: '8px 0 0 0' }}>
+                          <div style={{ fontWeight: 600, color: '#1f2937', marginBottom: 6, fontSize: 13 }}>码数/颜色/数量配置</div>
+                          <table style={{ borderCollapse: 'collapse', fontSize: 13, minWidth: 300 }}>
+                            <thead>
+                              <tr>
+                                <th style={{ border: '1px solid var(--color-border-antd)', padding: '4px 8px', background: 'var(--color-bg-container)', fontWeight: 600, fontSize: 12 }}>颜色/尺码</th>
+                                {sizeColorMatrix.sizes.map(s => <th key={s} style={{ border: '1px solid var(--color-border-antd)', padding: '4px 8px', background: 'var(--color-bg-container)', fontWeight: 600, textAlign: 'center', fontSize: 12 }}>{s}</th>)}
+                                <th style={{ border: '1px solid var(--color-border-antd)', padding: '4px 8px', background: 'var(--color-bg-container)', fontWeight: 600, textAlign: 'center', fontSize: 12 }}>合计</th>
                               </tr>
-                            );
-                          })}
-                          <tr>
-                            <td style={{ border: '1px solid var(--color-border-antd)', padding: '6px 10px', background: 'rgba(37,99,235,0.04)', fontWeight: 700 }}>合计</td>
-                            {sizeColorMatrix.sizes.map((_, ci) => {
-                              const colTotal = sizeColorMatrix.matrixRows.reduce((s, r) => s + (r.quantities[ci] || 0), 0);
-                              return <td key={ci} style={{ border: '1px solid var(--color-border-antd)', padding: '6px 10px', textAlign: 'center', background: 'rgba(37,99,235,0.04)', fontWeight: 700 }}>{colTotal}</td>;
-                            })}
-                            <td style={{ border: '1px solid var(--color-border-antd)', padding: '6px 10px', textAlign: 'center', background: 'rgba(37,99,235,0.04)', fontWeight: 700 }}>
-                              {sizeColorMatrix.matrixRows.reduce((s, r) => s + r.quantities.reduce((a, b) => a + b, 0), 0)}
-                            </td>
-                          </tr>
-                        </tbody>
-                      </table>
+                            </thead>
+                            <tbody>
+                              {sizeColorMatrix.matrixRows.map((row, i) => {
+                                const rowTotal = row.quantities.reduce((s, q) => s + q, 0);
+                                return (
+                                  <tr key={row.color || i}>
+                                    <td style={{ border: '1px solid var(--color-border-antd)', padding: '3px 8px', fontWeight: 500, fontSize: 12 }}>{row.color || '-'}</td>
+                                    {sizeColorMatrix.sizes.map((_, ci) => <td key={ci} style={{ border: '1px solid var(--color-border-antd)', padding: '3px 8px', textAlign: 'center', fontSize: 12 }}>{row.quantities[ci] || 0}</td>)}
+                                    <td style={{ border: '1px solid var(--color-border-antd)', padding: '3px 8px', textAlign: 'center', fontWeight: 600, fontSize: 12 }}>{rowTotal}</td>
+                                  </tr>
+                                );
+                              })}
+                              <tr>
+                                <td style={{ border: '1px solid var(--color-border-antd)', padding: '3px 8px', background: 'rgba(37,99,235,0.04)', fontWeight: 700, fontSize: 12 }}>合计</td>
+                                {sizeColorMatrix.sizes.map((_, ci) => {
+                                  const colTotal = sizeColorMatrix.matrixRows.reduce((s, r) => s + (r.quantities[ci] || 0), 0);
+                                  return <td key={ci} style={{ border: '1px solid var(--color-border-antd)', padding: '3px 8px', textAlign: 'center', background: 'rgba(37,99,235,0.04)', fontWeight: 700, fontSize: 12 }}>{colTotal}</td>;
+                                })}
+                                <td style={{ border: '1px solid var(--color-border-antd)', padding: '3px 8px', textAlign: 'center', background: 'rgba(37,99,235,0.04)', fontWeight: 700, fontSize: 12 }}>
+                                  {sizeColorMatrix.matrixRows.reduce((s, r) => s + r.quantities.reduce((a, b) => a + b, 0), 0)}
+                                </td>
+                              </tr>
+                            </tbody>
+                          </table>
+                        </td>
+                      </tr>
+                    )}
+                  </table>
+                </div>
+                {/* 右侧：图片+二维码并排 */}
+                <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center' }}>
+                  {resolvedCover && (
+                    <div style={{ width: 90, height: 90 }}>
+                      <Image src={getFullAuthedFileUrl(resolvedCover)} alt={styleNo}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 6, border: '1px solid var(--color-border)' }} preview={{ cover: <span>预览</span> }} />
                     </div>
                   )}
-                </div>
-                <div style={{ flexShrink: 0, textAlign: 'center' }}>
-                  {/* 必须使用 PNG dataURL 的 <img>，不能用 antd <QRCode type="svg">：
-                      SVG 元素通过 innerHTML 序列化到打印 iframe 后命名空间会丢失，导致打印预览中二维码不显示。 */}
+                  {/* 二维码正常大小 */}
                   {qrPngDataUrl
-                    ? <img src={qrPngDataUrl} alt="QR" style={{ width: 160, height: 160, display: 'block' }} />
-                    : <QRCode value={qrValue} size={160} />}
+                    ? <img src={qrPngDataUrl} alt="QR" style={{ width: 80, height: 80, display: 'block' }} />
+                    : <QRCode value={qrValue} size={80} />}
                 </div>
-              </div>
-              <div style={{ textAlign: 'right', marginTop: 8, color: 'var(--color-text-tertiary)', fontSize: "var(--font-size-xs)" }}>
-                打印时间：{formatDateTime(new Date())}
               </div>
             </div>
           )}
