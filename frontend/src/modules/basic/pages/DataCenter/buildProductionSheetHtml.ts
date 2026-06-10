@@ -148,7 +148,7 @@ export const buildProductionSheetHtml = (payload: any, tenantName?: string) => {
     <div class="header">
       <img class="cover" src="${esc(coverUrl)}" onerror="this.style.display='none'" />
       <div>
-        ${buildPrintHeader('', '大货生产单')}
+        ${buildPrintHeader(tenantName, '大货生产单')}
         <div class="meta">
           <div>款号：${esc(style.styleNo || '')}</div>
           <div>款名：${esc(style.styleName || '')}</div>
