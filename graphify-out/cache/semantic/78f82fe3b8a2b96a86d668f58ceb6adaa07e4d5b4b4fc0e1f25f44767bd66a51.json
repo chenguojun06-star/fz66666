@@ -1,1 +1,0 @@
-{"nodes": [{"id": "ai_agent_orchestrator", "label": "AiAgentOrchestrator", "file_type": "code", "source_file": "backend/src/main/java/com/fashion/supplychain/intelligence/orchestration/AiAgentOrchestrator.java", "source_location": null, "source_url": null, "captured_at": null, "author": null, "contributor": null}], "edges": [], "hyperedges": []}

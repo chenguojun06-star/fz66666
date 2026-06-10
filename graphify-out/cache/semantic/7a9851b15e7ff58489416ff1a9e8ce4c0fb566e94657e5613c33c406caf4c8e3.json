@@ -1,1 +1,0 @@
-{"nodes": [{"id": "execution_engine_orchestrator", "label": "ExecutionEngineOrchestrator", "file_type": "code", "source_file": "backend/src/main/java/com/fashion/supplychain/intelligence/orchestration/ExecutionEngineOrchestrator.java", "source_location": null, "source_url": null, "captured_at": null, "author": null, "contributor": null}], "edges": [], "hyperedges": []}
