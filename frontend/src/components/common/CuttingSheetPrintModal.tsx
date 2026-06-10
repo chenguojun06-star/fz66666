@@ -115,28 +115,12 @@ const CuttingSheetPrintModal: React.FC<CuttingSheetPrintModalProps> = ({
               ` : '<div class="no-image">无图片</div>'}
             </div>
 
-            <!-- 右边：订单号、款号、码数、数量、床号 -->
+            <!-- 右边：订单号、床号 -->
             <div class="header-right">
               <div class="info-grid">
                 <div class="info-item">
                   <span class="info-label">订单号：</span>
                   <span class="info-value">${orderNo}</span>
-                </div>
-                <div class="info-item">
-                  <span class="info-label">款号：</span>
-                  <span class="info-value">${firstBundle.styleNo || '-'}</span>
-                </div>
-                <div class="info-item">
-                  <span class="info-label">码数：</span>
-                  <span class="info-value">${sizeDisplay}</span>
-                </div>
-                <div class="info-item">
-                  <span class="info-label">数量：</span>
-                  <span class="info-value highlight">${totalQuantity}件</span>
-                </div>
-                <div class="info-item bed-no-item">
-                  <span class="info-label">床号：</span>
-                  <span class="info-value bed-no-value">${bedNoDisplay}</span>
                 </div>
                 ${expectedShipDate ? `
                 <div class="info-item delivery-date-item">
@@ -144,6 +128,10 @@ const CuttingSheetPrintModal: React.FC<CuttingSheetPrintModalProps> = ({
                   <span class="info-value delivery-date-value">${expectedShipDate}</span>
                 </div>
                 ` : ''}
+                <div class="info-item bed-no-item">
+                  <span class="info-label">床号：</span>
+                  <span class="info-value bed-no-value">${bedNoDisplay}</span>
+                </div>
               </div>
             </div>
           </div>
@@ -259,7 +247,7 @@ const CuttingSheetPrintModal: React.FC<CuttingSheetPrintModalProps> = ({
             align-items: center;
             justify-content: center;
             color: #999;
-            font-size: 14px;
+            font-size: 12px;
           }
           .header-right {
             flex: 1;
@@ -268,7 +256,7 @@ const CuttingSheetPrintModal: React.FC<CuttingSheetPrintModalProps> = ({
             gap: 8px;
           }
           .company-name {
-            font-size: 20px;
+            font-size: 12px;
             font-weight: 700;
             color: #000;
             margin-bottom: 8px;
@@ -293,7 +281,7 @@ const CuttingSheetPrintModal: React.FC<CuttingSheetPrintModalProps> = ({
             flex: 1;
           }
           .info-value.highlight {
-            font-size: 16px;
+            font-size: 12px;
             font-weight: 700;
             color: #2D7FF9;
           }
@@ -319,7 +307,7 @@ const CuttingSheetPrintModal: React.FC<CuttingSheetPrintModalProps> = ({
             margin-top: 4px;
           }
           .delivery-date-value {
-            font-size: 16px;
+            font-size: 12px;
             font-weight: 700;
             color: #fa8c16 !important;
           }

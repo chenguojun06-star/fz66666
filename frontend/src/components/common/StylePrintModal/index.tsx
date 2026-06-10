@@ -136,7 +136,7 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
     const htmlContent = buildPrintHtml({
       headerInfo, printerInfo, printDate, styleNo, bodyHtml: printContent.innerHTML,
       tenantName: user?.tenantName,
-      pageTitle: mode === 'sample' ? '样衣开发单' : '款式信息单',
+      pageTitle: '',
     });
     safePrint(htmlContent, `打印预览-${styleNo}`);
     } finally { setPrintLoading(false); }
@@ -348,7 +348,7 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
                 </Button>
               </div>
               {labelItems.length > 0 && (
-                <div style={{ marginTop: 8, fontSize: 14, color: '#8c6d1f' }}>
+                <div style={{ marginTop: 8, fontSize: 12, color: '#8c6d1f' }}>
                   检测到 {[...new Set(labelItems.map(i => i.color))].length} 颜色
                   {[...new Set(labelItems.map(i => i.size).filter(Boolean))].length > 0
                     ? ` × ${[...new Set(labelItems.map(i => i.size).filter(Boolean))].length} 码数`
@@ -361,16 +361,12 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
           {/* 打印内容预览区域 */}
           <div className="style-print-content" id="style-print-content" style={{ background: 'var(--color-bg-base)', padding: 20, border: '1px solid var(--color-border)', borderRadius: 12 }}>
           <style>{`
-            .print-section { margin-bottom: 24px; }
-            .print-section-title { font-size: 16px; font-weight: 600; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 2px solid #1890ff; }
+            .print-section { margin-bottom: 16px; }
+            .print-section-title { font-size: 12px; font-weight: 600; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 2px solid #1890ff; }
           `}</style>
           {/* 基本信息 */}
           {options.basicInfo && (
             <div className="print-section">
-              {/* 标题行 */}
-              <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 10, color: '#111', padding: '8px 14px', background: 'linear-gradient(90deg, #f0f5ff 0%, #e6f7ff 100%)', borderRadius: 6, border: '1px solid #91d5ff' }}>
-                {styleNo} - {styleName}
-              </div>
               {/* 主体：左列（图片+二维码） + 右列（信息） */}
               <div style={{ display: 'flex', gap: 20, padding: 16, border: '1px solid var(--color-border-antd)', background: '#fff', borderRadius: 8 }}>
                 {/* 左侧：图片 + 二维码（纵向排列） */}
@@ -615,7 +611,7 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
               <div className="print-section">
                 <div className="print-section-title">样衣审核</div>
                 <div style={{ border: '1px solid var(--color-border)', padding: '12px 14px', borderRadius: 6 }}>
-                  <div style={{ fontSize: 14, lineHeight: '24px' }}>
+                  <div style={{ fontSize: 12, lineHeight: '20px' }}>
                     <div>
                       <span style={{ color: 'var(--color-text-secondary)' }}>审核状态：</span>
                       <span style={{ fontWeight: 600 }}>{reviewLabel || '-'}</span>
@@ -790,7 +786,7 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
                                     <Image key={url} src={getFullAuthedFileUrl(url)} style={{ width: '100%', height: row.chunkImgs.length > 1 ? 120 : 220, objectFit: 'contain', borderRadius: 8, border: '1px solid #eee', background: 'var(--color-bg-base)', padding: 4, boxSizing: 'border-box' as const }} preview={{ cover: <span>预览</span> }} />
                                   ))}
                                 </div>
-                              : <span style={{ color: '#ccc', fontSize: 14 }}>无图</span>
+                              : <span style={{ color: '#ccc', fontSize: 12 }}>无图</span>
                             }
                           </td>
                         )}

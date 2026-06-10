@@ -122,7 +122,7 @@ export const buildProductionSheetHtml = (payload: any, tenantName?: string) => {
     .cover { width: 220px; height: 220px; object-fit: cover; border-radius: 10px; border: 1px solid rgba(0,0,0,0.08); }
     .h1 { font-size: 22px; font-weight: 700; margin: 0 0 8px; }
     .meta { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 16px; }
-    .meta div { font-size: 13px; color: rgba(0,0,0,0.85); }
+    .meta div { font-size: 12px; color: rgba(0,0,0,0.85); }
     .muted { color: rgba(0,0,0,0.55); }
     .btn { height: 32px; padding: 4px 14px; border-radius: 6px; border: 1px solid rgba(0,0,0,0.15); background: #fff; font-size: 14px; font-weight: 600; cursor: pointer; }
     .btn:hover { border-color: #2D7FF9; color: #2D7FF9; }
@@ -148,7 +148,7 @@ export const buildProductionSheetHtml = (payload: any, tenantName?: string) => {
     <div class="header">
       <img class="cover" src="${esc(coverUrl)}" onerror="this.style.display='none'" />
       <div>
-        ${buildPrintHeader(tenantName, '大货生产单')}
+        ${buildPrintHeader('', '大货生产单')}
         <div class="meta">
           <div>款号：${esc(style.styleNo || '')}</div>
           <div>款名：${esc(style.styleName || '')}</div>

@@ -37,16 +37,10 @@ export function buildPrintHtml({
             --color-text-secondary: #666666;
             --color-text-tertiary: #999999;
             --color-text-quaternary: #bbbbbb;
-            --font-size-xxl: 24px;
-            --font-size-xl: 20px;
-            --font-size-lg: 16px;
-            --font-size-base: 14px;
-            --font-size-sm: 13px;
-            --font-size-xs: 12px;
           }
 
           @page {
-            margin: 15mm 10mm 12mm 10mm;
+            margin: 10mm 8mm 8mm 8mm;
             size: A4;
           }
 
@@ -117,15 +111,15 @@ export function buildPrintHtml({
 
           /* 打印内容样式 */
           .print-section {
-            margin-bottom: 20px;
+            margin-bottom: 16px;
             page-break-inside: avoid;
           }
           .print-section-title {
-            font-size: 14px;
+            font-size: 12px;
             font-weight: 600;
             color: #1a1a1a;
-            margin-bottom: 12px;
-            padding-bottom: 8px;
+            margin-bottom: 10px;
+            padding-bottom: 6px;
             border-bottom: 2px solid #1890ff;
           }
 
@@ -133,12 +127,12 @@ export function buildPrintHtml({
           table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 13px;
+            font-size: 12px;
             margin-bottom: 16px;
           }
           th, td {
             border: 1px solid #d9d9d9;
-            padding: 8px 10px;
+            padding: 6px 8px;
             text-align: left;
             vertical-align: top;
           }

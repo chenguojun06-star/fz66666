@@ -23,7 +23,7 @@ export function buildPrintHeader(tenantName?: string, pageTitle?: string): strin
   const title = pageTitle?.trim() || '';
   if (!factory && !title) return '';
   const displayText = title ? (factory ? `${factory} - ${title}` : title) : factory;
-  return `<div style="text-align:center;font-size:22px;font-weight:700;color:#000;margin-bottom:14px;padding-bottom:10px;border-bottom:2px solid #000;letter-spacing:1px;">${escapeHtml(displayText)}</div>`;
+  return `<div style="text-align:center;font-size:12px;font-weight:700;color:#000;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #000;">${escapeHtml(displayText)}</div>`;
 }
 
 function escapeHtml(str: string): string {
