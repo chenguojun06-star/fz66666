@@ -137,32 +137,30 @@ const DelayedStageBreakdown: React.FC<DelayedStageBreakdownProps> = ({ forceTab,
     setExpandedStage(prev => prev === stageName ? null : stageName);
   }, []);
 
-  // stageFilter 模式下的总计数（必须在 shouldHide 判断前定义，保证 hooks 数量一致）
+  // stageFilter 模式下的总计数
   const stageTotal = useMemo(() => {
     if (!data) return 0;
     return currentGroups.reduce((sum, g) => sum + g.count, 0);
   }, [data, currentGroups]);
 
-  // 空状态判断：forceTab 模式下只关心对应类型的数量；stageFilter 模式下只关心该环节的数量
-  const shouldHide = useMemo(() => {
-    if (loading || !data) return !loading && !data;
-    const groups = currentGroups;
+  // 是否有可显示的延期数据：用普通变量计算，避免 early return 破坏 hooks 顺序
+  const hasVisibleData = (() => {
+    if (!data) return false;
     if (stageFilter) {
-      // stageFilter 模式：检查过滤后是否有数据
-      const totalCount = groups.reduce((sum, g) => sum + g.count, 0);
-      return totalCount === 0;
+      const totalCount = currentGroups.reduce((sum, g) => sum + g.count, 0);
+      return totalCount > 0;
     }
-    if (forceTab === 'bulk') return data.bulkTotal === 0;
-    if (forceTab === 'sample') return data.sampleTotal === 0;
-    return data.sampleTotal === 0 && data.bulkTotal === 0;
-  }, [loading, data, forceTab, stageFilter, currentGroups]);
-
-  if (shouldHide) {
-    return null;
-  }
+    if (forceTab === 'bulk') return data.bulkTotal > 0;
+    if (forceTab === 'sample') return data.sampleTotal > 0;
+    return data.sampleTotal > 0 || data.bulkTotal > 0;
+  })();
 
   const titleText = stageFilter ? `${stageFilter}延期提醒` : (title || '智能延期提醒');
-  const tabLabel = activeTab === 'bulk' ? '大货生产' : '样衣开发';
+
+  // 没有可显示数据时返回 null（用条件渲染保证 hooks 数量始终一致）
+  if (!hasVisibleData) {
+    return null;
+  }
 
   return (
     <Card
