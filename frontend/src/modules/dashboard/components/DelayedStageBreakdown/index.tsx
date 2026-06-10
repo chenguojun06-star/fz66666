@@ -4,7 +4,6 @@ import {
   ClockCircleOutlined,
   ExperimentOutlined,
   InboxOutlined,
-  RightOutlined,
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import api from '@/utils/api';
@@ -58,12 +57,6 @@ const STAGE_COLOR_MAP: Record<string, string> = {
   '样衣制作': '#52c41a',
 };
 
-const getOverdueLevel = (days: number): { color: string; label: string } => {
-  if (days > 7) return { color: '#ff4d4f', label: '严重' };
-  if (days > 3) return { color: '#fa8c16', label: '紧急' };
-  return { color: '#faad14', label: '轻度' };
-};
-
 interface DelayedStageBreakdownProps {
   /** 强制锁定某个 Tab（用于嵌入到对应页面，不显示 Tab 切换） */
   forceTab?: TabKey;
@@ -78,7 +71,6 @@ const DelayedStageBreakdown: React.FC<DelayedStageBreakdownProps> = ({ forceTab,
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<DelayedStageBreakdownData | null>(null);
   const [activeTab, setActiveTab] = useState<TabKey>(forceTab || 'bulk');
-  const [expandedStage, setExpandedStage] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -109,10 +101,17 @@ const DelayedStageBreakdown: React.FC<DelayedStageBreakdownProps> = ({ forceTab,
     return groups;
   }, [data, activeTab, stageFilter]);
 
-  const currentTotal = useMemo(() => {
-    if (!data) return 0;
-    return activeTab === 'bulk' ? data.bulkTotal : data.sampleTotal;
-  }, [data, activeTab]);
+  // 是否有可显示的延期数据：用普通变量计算
+  const hasVisibleData = (() => {
+    if (!data) return false;
+    if (stageFilter) {
+      const totalCount = currentGroups.reduce((sum, g) => sum + g.count, 0);
+      return totalCount > 0;
+    }
+    if (forceTab === 'bulk') return data.bulkTotal > 0;
+    if (forceTab === 'sample') return data.sampleTotal > 0;
+    return data.sampleTotal > 0 || data.bulkTotal > 0;
+  })();
 
   const handleItemClick = useCallback((item: DelayedItem) => {
     if (item.type === 'bulk') {
@@ -133,204 +132,176 @@ const DelayedStageBreakdown: React.FC<DelayedStageBreakdownProps> = ({ forceTab,
     }
   }, [navigate]);
 
-  const toggleStage = useCallback((stageName: string) => {
-    setExpandedStage(prev => prev === stageName ? null : stageName);
-  }, []);
-
-  // stageFilter 模式下的总计数
-  const stageTotal = useMemo(() => {
-    if (!data) return 0;
-    return currentGroups.reduce((sum, g) => sum + g.count, 0);
-  }, [data, currentGroups]);
-
-  // 是否有可显示的延期数据：用普通变量计算，避免 early return 破坏 hooks 顺序
-  const hasVisibleData = (() => {
-    if (!data) return false;
-    if (stageFilter) {
-      const totalCount = currentGroups.reduce((sum, g) => sum + g.count, 0);
-      return totalCount > 0;
-    }
-    if (forceTab === 'bulk') return data.bulkTotal > 0;
-    if (forceTab === 'sample') return data.sampleTotal > 0;
-    return data.sampleTotal > 0 || data.bulkTotal > 0;
-  })();
-
   const titleText = stageFilter ? `${stageFilter}延期提醒` : (title || '智能延期提醒');
 
-  // 没有可显示数据时返回 null（用条件渲染保证 hooks 数量始终一致）
-  if (!hasVisibleData) {
-    return null;
-  }
+  // stageFilter 模式下的总计数（用 IIFE 计算）
+  const stageTotal = (() => {
+    if (!data) return 0;
+    return currentGroups.reduce((sum, g) => sum + g.count, 0);
+  })();
+
+  const totalCount = (() => {
+    if (!data) return 0;
+    return activeTab === 'bulk' ? data.bulkTotal : data.sampleTotal;
+  })();
 
   return (
-    <Card
-      className="delayed-stage-breakdown-card"
-      variant="borderless"
-      title={
-        <div className="delayed-stage-header">
-          <div className="delayed-stage-header-left">
-            <ClockCircleOutlined style={{ color: 'var(--color-error, #ff4d4f)' }} />
-            <span>{titleText}</span>
-          </div>
-          <div className="delayed-stage-header-right">
-            {stageFilter && data && stageTotal > 0 && (
-              <Tag color="red">延期 {stageTotal} 项</Tag>
-            )}
-            {!forceTab && !stageFilter && data && data.sampleTotal > 0 && (
-              <Tag color="orange">样衣 {data.sampleTotal}</Tag>
-            )}
-            {!forceTab && !stageFilter && data && data.bulkTotal > 0 && (
-              <Tag color="red">大货 {data.bulkTotal}</Tag>
-            )}
-            {forceTab && !stageFilter && data && (
-              <Tag color={forceTab === 'bulk' ? 'red' : 'orange'}>
-                {forceTab === 'bulk' ? `大货 ${data.bulkTotal}` : `样衣 ${data.sampleTotal}`}
-              </Tag>
-            )}
-          </div>
-        </div>
-      }
-    >
-      <Spin spinning={loading}>
-        {!forceTab && (
-          <div className="delayed-stage-tabs">
-            {TAB_CONFIG.map(tab => {
-              const count = tab.key === 'bulk' ? (data?.bulkTotal || 0) : (data?.sampleTotal || 0);
-              return (
-                <div
-                  key={tab.key}
-                  className={`delayed-stage-tab ${activeTab === tab.key ? 'active' : ''}`}
-                  onClick={() => { setActiveTab(tab.key); setExpandedStage(null); }}
-                >
-                  {tab.icon}
-                  <span>{tab.label}</span>
-                  {count > 0 && (
-                    <Badge
-                      count={count}
-                      size="small"
-                      style={{ backgroundColor: tab.key === 'bulk' ? '#ff4d4f' : '#fa8c16' }}
-                    />
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        <div className="delayed-stage-list">
-          {currentGroups.length === 0 ? (
-            <div className="delayed-stage-empty">
-              暂无{activeTab === 'bulk' ? '大货生产' : '样衣开发'}延期项
+    <>
+      {/* 用条件渲染替代 early return，保证 hooks 数量一致 */}
+      {hasVisibleData ? (
+        <Card
+          className="delayed-stage-breakdown-card"
+          variant="borderless"
+          title={
+            <div className="delayed-stage-header">
+              <div className="delayed-stage-header-left">
+                <ClockCircleOutlined style={{ color: 'var(--color-error, #ff4d4f)' }} />
+                <span>{titleText}</span>
+              </div>
+              <div className="delayed-stage-header-right">
+                {stageFilter && stageTotal > 0 && (
+                  <Tag color="red">延期 {stageTotal} 项</Tag>
+                )}
+                {!forceTab && !stageFilter && data && data.sampleTotal > 0 && (
+                  <Tag color="orange">样衣 {data.sampleTotal}</Tag>
+                )}
+                {!forceTab && !stageFilter && data && data.bulkTotal > 0 && (
+                  <Tag color="red">大货 {data.bulkTotal}</Tag>
+                )}
+                {forceTab && !stageFilter && data && (
+                  <Tag color={forceTab === 'bulk' ? 'red' : 'orange'}>
+                    {forceTab === 'bulk' ? `大货 ${data.bulkTotal}` : `样衣 ${data.sampleTotal}`}
+                  </Tag>
+                )}
+              </div>
             </div>
-          ) : (
-            currentGroups.map(group => {
-              const isExpanded = expandedStage === group.stageName;
-              const stageColor = STAGE_COLOR_MAP[group.stageName] || '#8c8c8c';
-              return (
-                <div key={group.stageName} className="delayed-stage-group">
-                  <div
-                    className="delayed-stage-group-header"
-                    onClick={() => toggleStage(group.stageName)}
-                  >
-                    <div className="delayed-stage-group-left">
-                      <span
-                        className="delayed-stage-dot"
-                        style={{ backgroundColor: stageColor }}
-                      />
-                      <span className="delayed-stage-name">{group.stageName}</span>
-                      <Badge
-                        count={group.count}
-                        style={{ backgroundColor: stageColor }}
-                        overflowCount={99}
-                      />
+          }
+        >
+          <Spin spinning={loading}>
+            {!forceTab && (
+              <div className="delayed-stage-tabs">
+                {TAB_CONFIG.map(tab => {
+                  const count = tab.key === 'bulk' ? (data?.bulkTotal || 0) : (data?.sampleTotal || 0);
+                  return (
+                    <div
+                      key={tab.key}
+                      className={`delayed-stage-tab ${activeTab === tab.key ? 'active' : ''}`}
+                      onClick={() => setActiveTab(tab.key)}
+                    >
+                      {tab.icon}
+                      <span>{tab.label}</span>
+                      {count > 0 && (
+                        <Badge
+                          count={count}
+                          size="small"
+                          style={{ backgroundColor: tab.key === 'bulk' ? '#ff4d4f' : '#fa8c16' }}
+                        />
+                      )}
                     </div>
-                    <RightOutlined
-                      className={`delayed-stage-arrow ${isExpanded ? 'expanded' : ''}`}
-                    />
-                  </div>
-                  {isExpanded && (
-                    <div className="delayed-stage-items">
-                      {group.items.map(item => {
-                        const level = getOverdueLevel(item.overdueDays);
-                        return (
-                          <div
-                            key={item.id}
-                            className="delayed-stage-item"
-                            onClick={() => handleItemClick(item)}
-                          >
-                            <div className="delayed-stage-item-top">
-                              <span className="delayed-stage-item-no">{item.no}</span>
-                              <Tag
-                                color={level.color}
-                                className="delayed-stage-item-level"
-                              >
-                                延{item.overdueDays}天
-                              </Tag>
-                            </div>
-                            <div className="delayed-stage-item-bottom">
-                              <span className="delayed-stage-item-name">
-                                {item.name || '-'}
-                              </span>
-                              {item.type === 'bulk' && item.factoryName && (
-                                <span className="delayed-stage-item-factory">
-                                  {item.factoryName}
-                                </span>
-                              )}
-                              {item.type === 'bulk' && item.quantity > 0 && (
-                                <span className="delayed-stage-item-qty">
-                                  {item.quantity}件
-                                </span>
-                              )}
-                            </div>
-                            {item.progress > 0 && (
-                              <div className="delayed-stage-item-progress">
-                                <div
-                                  className="delayed-stage-item-progress-bar"
-                                  style={{ width: `${Math.min(item.progress, 100)}%` }}
-                                />
-                                <span className="delayed-stage-item-progress-text">
-                                  {item.progress}%
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              );
-            })
-          )}
-        </div>
+                  );
+                })}
+              </div>
+            )}
 
-        {currentTotal > 0 && (
-          <div
-            className="delayed-stage-view-all"
-            onClick={() => {
-              if (stageFilter) {
-                // stageFilter 模式：跳转到对应环节页面
-                const stagePathMap: Record<string, string> = {
-                  '裁剪': '/production/cutting',
-                  '采购': '/production/material',
-                  '车缝': '/production',
-                  '尾部': '/production',
-                  '二次工艺': '/production',
-                  '入库': '/production/warehousing',
-                };
-                navigate(stagePathMap[stageFilter] || '/production');
-              } else if (activeTab === 'bulk') {
-                navigate('/production?filter=overdue');
-              } else {
-                navigate('/style-info');
-              }
-            }}
-          >
-            查看全部 {currentTotal} 项 →
-          </div>
-        )}
-      </Spin>
-    </Card>
+            {/* 横向表格排列：每个环节一列，点击跳转 */}
+            {currentGroups.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '16px 0', color: '#999', fontSize: 12 }}>
+                暂无{activeTab === 'bulk' ? '大货生产' : '样衣开发'}延期项
+              </div>
+            ) : (
+              <div style={{
+                display: 'flex',
+                gap: 0,
+                border: '1px solid #000',
+                borderRadius: 4,
+                overflow: 'hidden',
+                marginTop: 8,
+              }}>
+                {currentGroups.map((group, idx) => {
+                  const stageColor = STAGE_COLOR_MAP[group.stageName] || '#8c8c8c';
+                  const isClickable = group.items.length > 0;
+                  return (
+                    <div
+                      key={group.stageName}
+                      onClick={() => isClickable && handleItemClick(group.items[0])}
+                      style={{
+                        flex: 1,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '12px 8px',
+                        borderRight: idx < currentGroups.length - 1 ? '1px solid #000' : 'none',
+                        cursor: isClickable ? 'pointer' : 'default',
+                        background: isClickable ? '#fff' : '#f5f5f5',
+                        minWidth: 0,
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                        <span
+                          style={{
+                            width: 8, height: 8, borderRadius: '50%',
+                            backgroundColor: isClickable ? stageColor : '#ccc',
+                            flexShrink: 0,
+                          }}
+                        />
+                        <span style={{
+                          fontSize: 12, fontWeight: 600,
+                          color: isClickable ? '#111' : '#999',
+                          whiteSpace: 'nowrap'
+                        }}>
+                          {group.stageName}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <span style={{
+                          fontSize: 18, fontWeight: 700,
+                          color: isClickable ? stageColor : '#ccc',
+                          lineHeight: 1
+                        }}>
+                          {group.count}
+                        </span>
+                        <span style={{ fontSize: 11, color: '#999' }}>项</span>
+                      </div>
+                      {isClickable && (
+                        <div style={{ fontSize: 10, color: '#1890ff', marginTop: 2 }}>点击查看 →</div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* 查看全部链接 */}
+            {totalCount > 0 && (
+              <div
+                className="delayed-stage-view-all"
+                onClick={() => {
+                  if (stageFilter) {
+                    // stageFilter 模式：跳转到对应环节页面
+                    const stagePathMap: Record<string, string> = {
+                      '裁剪': '/production/cutting',
+                      '采购': '/production/material',
+                      '车缝': '/production',
+                      '尾部': '/production',
+                      '二次工艺': '/production',
+                      '入库': '/production/warehousing',
+                    };
+                    navigate(stagePathMap[stageFilter] || '/production');
+                  } else if (activeTab === 'bulk') {
+                    navigate('/production?filter=overdue');
+                  } else {
+                    navigate('/style-info');
+                  }
+                }}
+              >
+                查看全部 {totalCount} 项 →
+              </div>
+            )}
+          </Spin>
+        </Card>
+      ) : null}
+    </>
   );
 };
 
