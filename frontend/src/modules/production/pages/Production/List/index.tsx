@@ -51,6 +51,7 @@ import ProductionModals from './components/ProductionModals';
 import ProductionFilterBar from './components/ProductionFilterBar';
 import { buildCommonOrderActions } from '../components/buildCommonOrderActions';
 import SmartReceiveModal from '../MaterialPurchase/components/SmartReceiveModal';
+import DelayedStageBreakdown from '@/modules/dashboard/components/DelayedStageBreakdown';
 
 const ProductionList: React.FC = () => {
   const { message } = App.useApp();
@@ -323,6 +324,8 @@ const ProductionList: React.FC = () => {
             viewMode, setViewMode, factoryTypeOptions,
           }).filterRight}
         >
+          {/* 智能延期提醒（仅显示大货延期项） */}
+          <DelayedStageBreakdown forceTab="bulk" />
           {viewMode === 'smart' ? (
             <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
             <ExternalFactorySmartView

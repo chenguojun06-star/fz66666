@@ -69,9 +69,11 @@ interface DelayedStageBreakdownProps {
   forceTab?: TabKey;
   /** 自定义标题，不填时用默认"智能延期提醒" */
   title?: string;
+  /** 只显示指定环节的延期项（如"裁剪"、"采购"），用于嵌入到对应环节页面 */
+  stageFilter?: string;
 }
 
-const DelayedStageBreakdown: React.FC<DelayedStageBreakdownProps> = ({ forceTab, title }) => {
+const DelayedStageBreakdown: React.FC<DelayedStageBreakdownProps> = ({ forceTab, title, stageFilter }) => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<DelayedStageBreakdownData | null>(null);
@@ -99,8 +101,13 @@ const DelayedStageBreakdown: React.FC<DelayedStageBreakdownProps> = ({ forceTab,
 
   const currentGroups = useMemo(() => {
     if (!data) return [];
-    return activeTab === 'bulk' ? data.bulkDelayed : data.sampleDelayed;
-  }, [data, activeTab]);
+    let groups = activeTab === 'bulk' ? data.bulkDelayed : data.sampleDelayed;
+    // stageFilter：只显示指定环节的延期项（如嵌入裁剪页面时传"裁剪"）
+    if (stageFilter) {
+      groups = groups.filter(g => g.stageName === stageFilter);
+    }
+    return groups;
+  }, [data, activeTab, stageFilter]);
 
   const currentTotal = useMemo(() => {
     if (!data) return 0;
@@ -109,8 +116,17 @@ const DelayedStageBreakdown: React.FC<DelayedStageBreakdownProps> = ({ forceTab,
 
   const handleItemClick = useCallback((item: DelayedItem) => {
     if (item.type === 'bulk') {
-      // 大货生产：跳转到生产订单列表，带上订单号筛选
-      navigate(`/production?orderNo=${encodeURIComponent(item.no)}`);
+      // 大货生产：根据环节跳转到对应页面
+      const stagePathMap: Record<string, string> = {
+        '裁剪': '/production/cutting',
+        '采购': '/production/material',
+        '车缝': '/production',
+        '尾部': '/production',
+        '二次工艺': '/production',
+        '入库': '/production/warehousing',
+      };
+      const path = stagePathMap[item.stage] || '/production';
+      navigate(`${path}?orderNo=${encodeURIComponent(item.no)}`);
     } else {
       // 样衣开发：跳转到款号详情页
       navigate(`/style-info/${encodeURIComponent(item.id)}`);
@@ -121,19 +137,32 @@ const DelayedStageBreakdown: React.FC<DelayedStageBreakdownProps> = ({ forceTab,
     setExpandedStage(prev => prev === stageName ? null : stageName);
   }, []);
 
-  // 空状态判断：forceTab 模式下只关心对应类型的数量
-  const shouldHide = !loading && (!data ||
-    (forceTab === 'bulk'
-      ? data.bulkTotal === 0
-      : forceTab === 'sample'
-        ? data.sampleTotal === 0
-        : data.sampleTotal === 0 && data.bulkTotal === 0));
+  // 空状态判断：forceTab 模式下只关心对应类型的数量；stageFilter 模式下只关心该环节的数量
+  const shouldHide = useMemo(() => {
+    if (loading || !data) return !loading && !data;
+    const groups = currentGroups;
+    if (stageFilter) {
+      // stageFilter 模式：检查过滤后是否有数据
+      const totalCount = groups.reduce((sum, g) => sum + g.count, 0);
+      return totalCount === 0;
+    }
+    if (forceTab === 'bulk') return data.bulkTotal === 0;
+    if (forceTab === 'sample') return data.sampleTotal === 0;
+    return data.sampleTotal === 0 && data.bulkTotal === 0;
+  }, [loading, data, forceTab, stageFilter, currentGroups]);
+
   if (shouldHide) {
     return null;
   }
 
-  const titleText = title || '智能延期提醒';
+  const titleText = stageFilter ? `${stageFilter}延期提醒` : (title || '智能延期提醒');
   const tabLabel = activeTab === 'bulk' ? '大货生产' : '样衣开发';
+
+  // stageFilter 模式下的总计数
+  const stageTotal = useMemo(() => {
+    if (!data) return 0;
+    return currentGroups.reduce((sum, g) => sum + g.count, 0);
+  }, [data, currentGroups]);
 
   return (
     <Card
@@ -146,13 +175,16 @@ const DelayedStageBreakdown: React.FC<DelayedStageBreakdownProps> = ({ forceTab,
             <span>{titleText}</span>
           </div>
           <div className="delayed-stage-header-right">
-            {!forceTab && data && data.sampleTotal > 0 && (
+            {stageFilter && data && stageTotal > 0 && (
+              <Tag color="red">延期 {stageTotal} 项</Tag>
+            )}
+            {!forceTab && !stageFilter && data && data.sampleTotal > 0 && (
               <Tag color="orange">样衣 {data.sampleTotal}</Tag>
             )}
-            {!forceTab && data && data.bulkTotal > 0 && (
+            {!forceTab && !stageFilter && data && data.bulkTotal > 0 && (
               <Tag color="red">大货 {data.bulkTotal}</Tag>
             )}
-            {forceTab && data && (
+            {forceTab && !stageFilter && data && (
               <Tag color={forceTab === 'bulk' ? 'red' : 'orange'}>
                 {forceTab === 'bulk' ? `大货 ${data.bulkTotal}` : `样衣 ${data.sampleTotal}`}
               </Tag>
@@ -278,7 +310,18 @@ const DelayedStageBreakdown: React.FC<DelayedStageBreakdownProps> = ({ forceTab,
           <div
             className="delayed-stage-view-all"
             onClick={() => {
-              if (activeTab === 'bulk') {
+              if (stageFilter) {
+                // stageFilter 模式：跳转到对应环节页面
+                const stagePathMap: Record<string, string> = {
+                  '裁剪': '/production/cutting',
+                  '采购': '/production/material',
+                  '车缝': '/production',
+                  '尾部': '/production',
+                  '二次工艺': '/production',
+                  '入库': '/production/warehousing',
+                };
+                navigate(stagePathMap[stageFilter] || '/production');
+              } else if (activeTab === 'bulk') {
                 navigate('/production?filter=overdue');
               } else {
                 navigate('/style-info');
