@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { InputNumber, Modal, Space, Tooltip } from 'antd';
+import { InputNumber, Space, Tooltip } from 'antd';
 import { App } from 'antd';
 import dayjs from 'dayjs';
 import { ProductionOrder } from '@/types/production';
@@ -7,7 +7,6 @@ import { computeStageBudgetHint, getStageConfig } from '@/utils/progressTimeBudg
 import { computeStageTimeline, type StageTimelineItem } from '@/components/common/StageTimelineHint';
 import {
   calculateActualDuration,
-  calculateWaitingDuration,
   computeBudgetStatus,
   formatBudgetHours,
 } from '@/utils/workingTimeCalculator';
@@ -25,23 +24,6 @@ interface BudgetDaysEditorProps {
   budgetHours?: number | null;
   /** 保存预算工时的回调 */
   onBudgetHoursChange?: (hours: number) => Promise<void>;
-}
-
-function formatGapDuration(ms: number): string {
-  const totalMinutes = Math.floor(ms / 60000);
-  const days = Math.floor(totalMinutes / 1440);
-  const hours = Math.floor((totalMinutes % 1440) / 60);
-  const mins = totalMinutes % 60;
-  if (days > 0) return `${days}天${hours}时`;
-  if (hours > 0) return `${hours}时${mins}分`;
-  if (mins > 0) return `${mins}分`;
-  return '<1分';
-}
-
-function gapColorForDays(days: number): string {
-  if (days >= 3) return '#ff7875';
-  if (days >= 1) return '#faad14';
-  return 'var(--color-text-quaternary, #bfbfbf)';
 }
 
 const BudgetDaysEditor: React.FC<BudgetDaysEditorProps> = ({

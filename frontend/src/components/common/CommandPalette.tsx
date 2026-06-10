@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Spin, Upload } from 'antd';
 import {
@@ -15,7 +15,7 @@ import {
 } from '@ant-design/icons';
 import { globalSearchApi } from '@/services/production/productionApi';
 import type { GlobalSearchOrderItem, GlobalSearchStyleItem, GlobalSearchWorkerItem } from '@/services/production/productionApi';
-import { menuConfig, paths } from '@/routeConfig';
+import { menuConfig } from '@/routeConfig';
 import SmartImage from './SmartImage';
 import api from '@/utils/api';
 import './CommandPalette.css';

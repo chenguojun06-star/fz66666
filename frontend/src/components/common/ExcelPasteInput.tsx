@@ -1,6 +1,6 @@
 import React, { useCallback, useRef } from 'react';
-import { InputNumber, Tooltip, message } from 'antd';
-import { CopyOutlined, TableOutlined } from '@ant-design/icons';
+import { InputNumber, message } from 'antd';
+import { TableOutlined } from '@ant-design/icons';
 
 /**
  * 解析从 Excel / Google Sheets 复制的文本为二维数组

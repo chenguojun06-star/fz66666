@@ -614,7 +614,7 @@ const UrgeReplyInline: React.FC<{
   urgeRecordId: string;
   orderNo: string;
   onReplied: () => void;
-}> = ({ urgeRecordId, orderNo, onReplied }) => {
+}> = ({ urgeRecordId, orderNo: _orderNo, onReplied }) => {
   const [replyContent, setReplyContent] = React.useState('');
   const [expectedShipDate, setExpectedShipDate] = React.useState('');
   const [submitting, setSubmitting] = React.useState(false);
