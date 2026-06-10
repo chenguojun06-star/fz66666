@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Input, InputNumber, Select, Button, Space, Card, Row, Col, Tag, message, Descriptions, Drawer } from 'antd';
-import StandardModal from '@/components/common/StandardModal';
 import { ScanOutlined, InboxOutlined, LogoutOutlined, SearchOutlined } from '@ant-design/icons';
 import { materialWarehouseApi } from '../../../../services/warehouse/inventoryCheckApi';
 import { useWarehouseAreaOptions, useWarehouseLocationByArea } from '../../../../hooks/useWarehouseAreaOptions';

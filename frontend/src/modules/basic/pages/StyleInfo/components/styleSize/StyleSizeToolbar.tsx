@@ -44,6 +44,7 @@ const StyleSizeToolbar: React.FC<Props> = ({
   styleId, onSizeTableRecognized,
 }) => {
   const isReadonly = Boolean(readOnly);
+  const { modal } = App.useApp();
   const sizeSearchTimerRef = useRef<ReturnType<typeof setTimeout>>();
   const [ocrModalOpen, setOcrModalOpen] = useState(false);
   const [ocrLoading, setOcrLoading] = useState(false);
@@ -128,7 +129,7 @@ const StyleSizeToolbar: React.FC<Props> = ({
             <Button
               disabled={saving}
               onClick={() => {
-                App.useApp().modal.confirm({ width: '30vw', title: '放弃未保存的修改？', onOk: exitEdit });
+                modal.confirm({ width: '30vw', title: '放弃未保存的修改？', onOk: exitEdit });
               }}
             >取消</Button>
           </>

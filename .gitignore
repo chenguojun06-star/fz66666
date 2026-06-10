@@ -169,3 +169,4 @@ analyze_methods*.py
 scan_*.py
 refactor_*.py
 .github_token_local
+graphify-out/

@@ -11,8 +11,6 @@
 
 /** 工作日每日工作秒数：14小时 */
 const WEEKDAY_WORK_SECONDS = 14 * 3600;
-/** 周六每日工作秒数：9小时 */
-const SATURDAY_WORK_SECONDS = 9 * 3600;
 
 /** 工作开始时间（小时） */
 const WORK_START_HOUR = 8;
@@ -162,7 +160,7 @@ export function computeBudgetStatus(
   // 1. 新方式：computeBudgetStatus(hours, availableTime, startTime, completedTime)
   // 2. 旧方式：computeBudgetStatus(hours, startTime, completedTime)
   const availableTime = availableTimeOrStartTime;
-  const startTime = completedTime !== undefined ? startTimeOrCompletedTime : null;
+  const _startTime = completedTime !== undefined ? startTimeOrCompletedTime : null;
   const completedTimeFinal = completedTime !== undefined ? completedTime : startTimeOrCompletedTime;
 
   if (!availableTime) return { text: '', color: '' };

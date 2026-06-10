@@ -5,7 +5,6 @@ import RowActions from '@/components/common/RowActions';
 import ResizableTable from '@/components/common/ResizableTable';
 import { SampleLoan, SampleStock } from './types';
 import api from '@/utils/api';
-import dayjs from 'dayjs';
 import { formatDateTime } from '@/utils/datetime';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';

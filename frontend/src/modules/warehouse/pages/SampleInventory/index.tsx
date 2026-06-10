@@ -23,7 +23,7 @@ import InboundModal from './InboundModal';
 import LoanModal from './LoanModal';
 import LoanHistoryModal from './LoanHistoryModal';
 import TransferToOutstockModal from './TransferToOutstockModal';
-import dayjs, { type Dayjs } from 'dayjs';
+import { type Dayjs } from 'dayjs';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';

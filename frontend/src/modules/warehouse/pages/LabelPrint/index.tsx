@@ -7,7 +7,7 @@ import { safePrint } from '@/utils/safePrint';
 import api, { parseProductionOrderLines, sortSizeNames } from '@/utils/api';
 import { formatMoney } from '@/utils/format';
 import { buildWashLabelPrintHtml, buildWashLabelMultiPageHtml, getDefaultDateText, compositionFromSections, washTextFromInstructions, type WashLabelPrintData } from '@/utils/washLabelPrintTemplate';
-import { parseCareIconCodes, getEffectiveCareIconCodes, CARE_ICONS } from '@/utils/careIcons';
+import { getEffectiveCareIconCodes, CARE_ICONS } from '@/utils/careIcons';
 import BarcodeSvg from '@/components/common/BarcodeSvg';
 import { printTemplateApi } from '@/services/system/printTemplateApi';
 
@@ -370,7 +370,7 @@ ${codeImgHtml}
 <div class="i"><div class="c">${sku}</div>${bar.showName ? `<div class="n">${selectedOrder.styleName}</div>` : ''}<div class="s">${selectedColor} / ${selectedSize}</div></div>
 </div>`).join('\n')}
 </body></html>`;
-  }, [selectedOrder, selectedColor, selectedSize, bar]);
+  }, [selectedOrder, selectedColor, selectedSize, bar, generateBarcodeSvgString]);
 
   const generateWashlabelHtml = useCallback(async (count: number) => {
     if (!selectedOrder) return '';

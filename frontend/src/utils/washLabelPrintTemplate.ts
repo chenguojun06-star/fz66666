@@ -10,7 +10,7 @@ export interface WashLabelPrintData {
   dateText: string;
 }
 
-function buildCareIconsHtml(codes: string[], iconSize: number): string {
+function buildCareIconsHtml(codes: string[], _iconSize: number): string {
   if (!codes.length) return '';
   const categoryOrder = ['wash', 'bleach', 'dry', 'iron', 'dryclean', 'naturaldry', 'special'];
   const ordered: string[] = [];

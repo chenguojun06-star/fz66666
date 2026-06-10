@@ -10,7 +10,6 @@ import type { RowAction } from '@/components/common/RowActions';
 import { useTablePagination } from '@/hooks';
 import api from '@/utils/api';
 import type { ProductOutstock } from '@/types/production';
-import dayjs from 'dayjs';
 import { formatDateTime } from '@/utils/datetime';
 
 const OutstockReceive: React.FC = () => {

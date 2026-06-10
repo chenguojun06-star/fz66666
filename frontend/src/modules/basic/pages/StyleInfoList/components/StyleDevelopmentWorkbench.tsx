@@ -63,7 +63,7 @@ const resolvePreferredSection = (detail: StyleInfo | null | undefined): Workbenc
 };
 
 const StyleDevelopmentWorkbench: React.FC<Props> = ({ record, onClose, initialSection, onSync }) => {
-  const { message } = App.useApp();
+  const { message, modal } = App.useApp();
   const [loading, setLoading] = useState(false);
   const [activeSection, setActiveSection] = useState<WorkbenchSection>('bom');
   const [productionSaving, setProductionSaving] = useState(false);
@@ -237,7 +237,7 @@ const StyleDevelopmentWorkbench: React.FC<Props> = ({ record, onClose, initialSe
     let draftDays = initDays;
     let draftHours = initHours;
 
-    App.useApp().modal.confirm({
+    modal.confirm({
       title: currentHours != null ? `调整「${stageTitle}」预算工时` : `设定「${stageTitle}」预算工时`,
       width: 400,
       okText: '确认',

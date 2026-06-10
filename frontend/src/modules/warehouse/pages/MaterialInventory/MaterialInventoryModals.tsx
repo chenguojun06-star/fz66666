@@ -16,7 +16,6 @@ import { useWarehouseAreaOptions, useWarehouseLocationByArea } from '@/hooks/use
 import {
   ScanOutlined,
 } from '@ant-design/icons';
-import ResizableTable from '@/components/common/ResizableTable';
 import SupplierSelect from '@/components/common/SupplierSelect';
 import { getBaseMaterialTypeLabel, getMaterialTypeCategory } from '@/utils/materialType';
 import MaterialOutboundPrintModal from './components/MaterialOutboundPrintModal';

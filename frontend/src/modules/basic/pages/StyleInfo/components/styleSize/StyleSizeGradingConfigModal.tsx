@@ -4,7 +4,7 @@ import { DeleteOutlined, PlusOutlined, CheckCircleFilled, BulbOutlined } from '@
 import Drawer from 'antd/es/drawer';
 import { GradingZone, MatrixRow } from './shared';
 import { toNumberSafe } from '@/utils/api';
-import { GRADING_PRESETS, matchPresetSteps, inferCategory } from './gradingPresets';
+import { GRADING_PRESETS, matchPresetSteps } from './gradingPresets';
 
 interface Props {
   open: boolean;
@@ -81,7 +81,7 @@ const StyleSizeGradingConfigModal: React.FC<Props> = ({
   // 实时预览数据
   const previewData = useMemo(() => {
     if (baseIndex < 0 || baseSizeValue === null) return [];
-    const preview = computePreview(toNumberSafe(baseSizeValue), baseIndex, sizeColumns, gradingDraftZones);
+    const _preview = computePreview(toNumberSafe(baseSizeValue), baseIndex, sizeColumns, gradingDraftZones);
     return rows
       .filter((row) => {
         if (gradingTargetRowKey === 'batch') return true;
@@ -152,7 +152,7 @@ const StyleSizeGradingConfigModal: React.FC<Props> = ({
       dataIndex: sn,
       width: 60,
       align: 'center' as const,
-      render: (val: number, record: Record<string, any>) => {
+      render: (val: number, _record: Record<string, any>) => {
         const isBase = sn === gradingDraftBaseSize;
         return (
           <span style={{
