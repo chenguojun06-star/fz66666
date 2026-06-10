@@ -511,40 +511,28 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
                       minWidth: 0,
                     };
 
+                    // WPS表格样式：所有字段合并成一个表格，去掉分组标题
+                    const allFields: { label: string; value: React.ReactNode }[] = [];
+                    groups.forEach(g => allFields.push(...g.fields));
+                    // 面料成分和备注也加入表格
+                    if (options.styleInfoBlock) {
+                      allFields.push({ label: '面料成分', value: fabricVal || empty });
+                    }
+                    if (options.remarkBlock) {
+                      allFields.push({ label: '备注', value: (data.productionSheet as any)?.description || empty });
+                    }
+
                     return (
-                      <>
-                        {groups.map((group, gi) => (
-                          <div key={gi} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                            <div style={{ fontSize: 12, fontWeight: 600, color: '#1890ff' }}>{group.title}</div>
-                            <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(group.fields.length, 5)}, 1fr)`, gap: 8 }}>
-                              {group.fields.map((f, fi) => (
-                                <div key={fi} style={cellStyle}>
-                                  <span style={labelCellStyle}>{f.label}：</span>
-                                  <span style={valueCellStyle}>{f.value}</span>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        ))}
-                        {/* 面料成分 — 总是显示标签 */}
-                        {options.styleInfoBlock && (
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                            <div style={{ fontSize: 12, fontWeight: 600, color: '#1890ff' }}>面料成分</div>
-                            <div style={{ padding: '6px 8px', background: '#fafafa', border: '1px solid #e8e8e8', borderRadius: 4, fontSize: 12, color: '#111', lineHeight: 1.5 }}>
-                              {fabricVal || empty}
-                            </div>
-                          </div>
-                        )}
-                        {/* 备注 — 总是显示标签 */}
-                        {options.remarkBlock && (
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                            <div style={{ fontSize: 12, fontWeight: 600, color: '#1890ff' }}>备注</div>
-                            <div style={{ padding: '6px 8px', background: '#fafafa', border: '1px solid #e8e8e8', borderRadius: 4, fontSize: 12, color: '#111', lineHeight: 1.5 }}>
-                              {(data.productionSheet as any)?.description || empty}
-                            </div>
-                          </div>
-                        )}
-                      </>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, marginBottom: 12 }}>
+                        <tbody>
+                          {allFields.map((f, fi) => (
+                            <tr key={fi}>
+                              <td style={{ border: '1px solid #000', padding: '4px 8px', background: '#f5f5f5', fontWeight: 500, width: 100, whiteSpace: 'nowrap' }}>{f.label}</td>
+                              <td style={{ border: '1px solid #000', padding: '4px 8px' }}>{f.value}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     );
                   })()}
                 </div>
@@ -608,33 +596,28 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
                     : sampleReviewStatus === 'PENDING' ? '待审核'
                       : '';
             return (
-              <div className="print-section">
-                <div className="print-section-title">样衣审核</div>
-                <div style={{ border: '1px solid var(--color-border)', padding: '12px 14px', borderRadius: 6 }}>
-                  <div style={{ fontSize: 12, lineHeight: '20px' }}>
-                    <div>
-                      <span style={{ color: 'var(--color-text-secondary)' }}>审核状态：</span>
-                      <span style={{ fontWeight: 600 }}>{reviewLabel || '-'}</span>
-                    </div>
-                    <div style={{ marginTop: 4 }}>
-                      <span style={{ color: 'var(--color-text-secondary)' }}>审核人：</span>
-                      <span>{sampleReviewer || '-'}</span>
-                    </div>
-                    <div style={{ marginTop: 4 }}>
-                      <span style={{ color: 'var(--color-text-secondary)' }}>审核时间：</span>
-                      <span>{sampleReviewTime ? formatDateTime(sampleReviewTime) : '-'}</span>
-                    </div>
-                    {sampleReviewComment && (
-                      <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--color-border-light)' }}>
-                        <span style={{ color: 'var(--color-text-secondary)' }}>审核评语：</span>
-                        <div style={{ marginTop: 4, fontSize: 14, whiteSpace: 'pre-wrap', lineHeight: 1.8 }}>
-                          {sampleReviewComment}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, marginBottom: 12 }}>
+                <tbody>
+                  <tr>
+                    <td style={{ border: '1px solid #000', padding: '4px 8px', background: '#f5f5f5', fontWeight: 500, width: 100 }}>审核状态</td>
+                    <td style={{ border: '1px solid #000', padding: '4px 8px' }}>{reviewLabel || '-'}</td>
+                  </tr>
+                  <tr>
+                    <td style={{ border: '1px solid #000', padding: '4px 8px', background: '#f5f5f5', fontWeight: 500 }}>审核人</td>
+                    <td style={{ border: '1px solid #000', padding: '4px 8px' }}>{sampleReviewer || '-'}</td>
+                  </tr>
+                  <tr>
+                    <td style={{ border: '1px solid #000', padding: '4px 8px', background: '#f5f5f5', fontWeight: 500 }}>审核时间</td>
+                    <td style={{ border: '1px solid #000', padding: '4px 8px' }}>{sampleReviewTime ? formatDateTime(sampleReviewTime) : '-'}</td>
+                  </tr>
+                  {sampleReviewComment && (
+                    <tr>
+                      <td style={{ border: '1px solid #000', padding: '4px 8px', background: '#f5f5f5', fontWeight: 500 }}>审核评语</td>
+                      <td style={{ border: '1px solid #000', padding: '4px 8px', whiteSpace: 'pre-wrap' }}>{sampleReviewComment}</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             );
           })()}
 
@@ -642,12 +625,14 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
           {options.productionSheet && (() => {
             const description = data.productionSheet?.description || '';
             return (
-              <div className="print-section">
-                <div className="print-section-title"> 生产要求</div>
-                <div style={{ border: '1px solid var(--color-border)', padding: '12px 14px', borderRadius: 4, fontSize: 'var(--font-size-xs)', whiteSpace: 'pre-wrap', lineHeight: 1.8, minHeight: 40 }}>
-                  {description || <span style={{ color: 'var(--color-text-quaternary)' }}>暂无生产要求</span>}
-                </div>
-              </div>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, marginBottom: 12 }}>
+                <tbody>
+                  <tr>
+                    <td style={{ border: '1px solid #000', padding: '4px 8px', background: '#f5f5f5', fontWeight: 500, width: 100 }}>生产要求</td>
+                    <td style={{ border: '1px solid #000', padding: '4px 8px', whiteSpace: 'pre-wrap', minHeight: 40 }}>{description || '-'}</td>
+                  </tr>
+                </tbody>
+              </table>
             );
           })()}
 
@@ -661,35 +646,32 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
             colors.forEach(c => { colorTotals[c] = sizeDetails.filter(d => d.color === c).reduce((sum, d) => sum + d.quantity, 0); });
             const grandTotal = sizeDetails.reduce((sum, d) => sum + d.quantity, 0);
             return (
-              <div className="print-section">
-                <div className="print-section-title"> 码数明细</div>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: "var(--font-size-sm)" }}>
-                  <thead>
-                    <tr style={{ background: 'var(--color-bg-container)' }}>
-                      <th style={{ border: '1px solid var(--color-border)', padding: '6px 8px', textAlign: 'left', width: 60 }}>颜色</th>
-                      {colors.map(color => <th key={color} style={{ border: '1px solid var(--color-border)', padding: '6px 8px', textAlign: 'center' }}>{color}</th>)}
-                      <th style={{ border: '1px solid var(--color-border)', padding: '6px 8px', textAlign: 'center', width: 80, background: '#e6f7ff' }}>合计</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td style={{ border: '1px solid var(--color-border)', padding: '6px 8px', fontWeight: 600 }}>尺码</td>
-                      {colors.map(color => <td key={color} style={{ border: '1px solid var(--color-border)', padding: '6px 8px', textAlign: 'center' }}>{sizes.join(' / ')}</td>)}
-                      <td style={{ border: '1px solid var(--color-border)', padding: '6px 8px', textAlign: 'center', background: '#e6f7ff' }}>-</td>
-                    </tr>
-                    <tr>
-                      <td style={{ border: '1px solid var(--color-border)', padding: '6px 8px', fontWeight: 600 }}>数量</td>
-                      {colors.map(color => <td key={color} style={{ border: '1px solid var(--color-border)', padding: '6px 8px', textAlign: 'center' }}>{sizes.map(size => dataMap[size]?.[color] || 0).join(' / ')}</td>)}
-                      <td style={{ border: '1px solid var(--color-border)', padding: '6px 8px', textAlign: 'center', fontWeight: 600, background: '#e6f7ff' }}>{grandTotal}</td>
-                    </tr>
-                    <tr style={{ background: 'var(--color-bg-container)' }}>
-                      <td style={{ border: '1px solid var(--color-border)', padding: '6px 8px', fontWeight: 600 }}>小计</td>
-                      {colors.map(color => <td key={color} style={{ border: '1px solid var(--color-border)', padding: '6px 8px', textAlign: 'center', fontWeight: 600 }}>{colorTotals[color]}</td>)}
-                      <td style={{ border: '1px solid var(--color-border)', padding: '6px 8px', textAlign: 'center', fontWeight: 700, background: '#e6f7ff', color: 'var(--color-primary)' }}>{grandTotal}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, marginBottom: 12 }}>
+                <thead>
+                  <tr style={{ background: '#f5f5f5' }}>
+                    <th style={{ border: '1px solid #000', padding: '4px 8px', textAlign: 'left', width: 60 }}>颜色</th>
+                    {colors.map(color => <th key={color} style={{ border: '1px solid #000', padding: '4px 8px', textAlign: 'center' }}>{color}</th>)}
+                    <th style={{ border: '1px solid #000', padding: '4px 8px', textAlign: 'center', width: 80 }}>合计</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td style={{ border: '1px solid #000', padding: '4px 8px', fontWeight: 600 }}>尺码</td>
+                    {colors.map(color => <td key={color} style={{ border: '1px solid #000', padding: '4px 8px', textAlign: 'center' }}>{sizes.join(' / ')}</td>)}
+                    <td style={{ border: '1px solid #000', padding: '4px 8px', textAlign: 'center' }}>-</td>
+                  </tr>
+                  <tr>
+                    <td style={{ border: '1px solid #000', padding: '4px 8px', fontWeight: 600 }}>数量</td>
+                    {colors.map(color => <td key={color} style={{ border: '1px solid #000', padding: '4px 8px', textAlign: 'center' }}>{sizes.map(size => dataMap[size]?.[color] || 0).join(' / ')}</td>)}
+                    <td style={{ border: '1px solid #000', padding: '4px 8px', textAlign: 'center', fontWeight: 600 }}>{grandTotal}</td>
+                  </tr>
+                  <tr style={{ background: '#f5f5f5' }}>
+                    <td style={{ border: '1px solid #000', padding: '4px 8px', fontWeight: 600 }}>小计</td>
+                    {colors.map(color => <td key={color} style={{ border: '1px solid #000', padding: '4px 8px', textAlign: 'center', fontWeight: 600 }}>{colorTotals[color]}</td>)}
+                    <td style={{ border: '1px solid #000', padding: '4px 8px', textAlign: 'center', fontWeight: 700 }}>{grandTotal}</td>
+                  </tr>
+                </tbody>
+              </table>
             );
           })()}
 
@@ -757,122 +739,112 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
               });
             });
 
-            const thS: React.CSSProperties = { border: '1px solid var(--color-border)', padding: '6px 8px', textAlign: 'center', background: 'var(--color-bg-container)', whiteSpace: 'nowrap' as const };
-            const tdS: React.CSSProperties = { border: '1px solid var(--color-border)', padding: '6px 8px', verticalAlign: 'middle', fontSize: 'var(--font-size-xs)' };
+            const thS: React.CSSProperties = { border: '1px solid #000', padding: '4px 8px', textAlign: 'center', background: '#f5f5f5', whiteSpace: 'nowrap' as const };
+            const tdS: React.CSSProperties = { border: '1px solid #000', padding: '4px 8px', verticalAlign: 'middle', fontSize: 12 };
 
             return (
-              <div className="print-section">
-                <div className="print-section-title"> 尺寸表</div>
-                {/* table-layout:fixed + 只固定图片/分组列宽，其余列自动均分剩余空间 */}
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--font-size-xs)', tableLayout: 'fixed' }}>
-                  <thead>
-                    <tr>
-                      <th style={{ ...thS, width: 160 }}>参考图</th>
-                      <th style={{ ...thS, width: 60 }}>分组</th>
-                      <th style={{ ...thS, width: 60, textAlign: 'left' }}>部位(cm)</th>
-                      <th style={{ ...thS, width: 100 }}>度量方式</th>
-                      {sortedSizeNames.map((sn: string) => <th key={sn} style={{ ...thS, width: 60 }}>{sn}</th>)}
-                      <th style={{ ...thS, width: 60 }}>公差(+/-)</th>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, marginBottom: 12, tableLayout: 'fixed' }}>
+                <thead>
+                  <tr>
+                    <th style={{ ...thS, width: 160 }}>参考图</th>
+                    <th style={{ ...thS, width: 60 }}>分组</th>
+                    <th style={{ ...thS, width: 60, textAlign: 'left' }}>部位(cm)</th>
+                    <th style={{ ...thS, width: 100 }}>度量方式</th>
+                    {sortedSizeNames.map((sn: string) => <th key={sn} style={{ ...thS, width: 60 }}>{sn}</th>)}
+                    <th style={{ ...thS, width: 60 }}>公差(+/-)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {flatRows.map(row => (
+                    <tr key={row.key}>
+                      {row.isImgStart && (
+                        <td rowSpan={row.imgSpan} style={{ ...tdS, verticalAlign: 'top', textAlign: 'center', padding: 6 }}>
+                          {row.chunkImgs.length > 0
+                            ? <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'stretch' }}>
+                                {row.chunkImgs.map((url: string) => (
+                                  <Image key={url} src={getFullAuthedFileUrl(url)} style={{ width: '100%', height: row.chunkImgs.length > 1 ? 120 : 220, objectFit: 'contain', borderRadius: 8, border: '1px solid #eee', background: '#fff', padding: 4, boxSizing: 'border-box' as const }} preview={{ cover: <span>预览</span> }} />
+                                ))}
+                              </div>
+                            : <span style={{ color: '#ccc', fontSize: 12 }}>无图</span>
+                          }
+                        </td>
+                      )}
+                      {row.isGroupStart && (
+                        <td rowSpan={row.groupSpan} style={{ ...tdS, verticalAlign: 'top', textAlign: 'center', fontWeight: 600 }}>
+                          {row.resolvedGroupName}
+                        </td>
+                      )}
+                      <td style={tdS}>{row.partName}</td>
+                      <td style={{ ...tdS, textAlign: 'center' }}>{row.measureMethod || '平量'}</td>
+                      {sortedSizeNames.map((sn: string) => (
+                        <td key={sn} style={{ ...tdS, textAlign: 'center' }}>{row.cells[sn] != null ? row.cells[sn] : '-'}</td>
+                      ))}
+                      <td style={{ ...tdS, textAlign: 'center' }}>{row.tolerance != null ? `±${row.tolerance}` : '-'}</td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {flatRows.map(row => (
-                      <tr key={row.key}>
-                        {row.isImgStart && (
-                          <td rowSpan={row.imgSpan} style={{ ...tdS, verticalAlign: 'top', textAlign: 'center', padding: 6 }}>
-                            {row.chunkImgs.length > 0
-                              ? <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'stretch' }}>
-                                  {row.chunkImgs.map((url: string) => (
-                                    <Image key={url} src={getFullAuthedFileUrl(url)} style={{ width: '100%', height: row.chunkImgs.length > 1 ? 120 : 220, objectFit: 'contain', borderRadius: 8, border: '1px solid #eee', background: 'var(--color-bg-base)', padding: 4, boxSizing: 'border-box' as const }} preview={{ cover: <span>预览</span> }} />
-                                  ))}
-                                </div>
-                              : <span style={{ color: '#ccc', fontSize: 12 }}>无图</span>
-                            }
-                          </td>
-                        )}
-                        {row.isGroupStart && (
-                          <td rowSpan={row.groupSpan} style={{ ...tdS, verticalAlign: 'top', textAlign: 'center', fontWeight: 600 }}>
-                            {row.resolvedGroupName}
-                          </td>
-                        )}
-                        <td style={tdS}>{row.partName}</td>
-                        <td style={{ ...tdS, textAlign: 'center' }}>{row.measureMethod || '平量'}</td>
-                        {sortedSizeNames.map((sn: string) => (
-                          <td key={sn} style={{ ...tdS, textAlign: 'center' }}>{row.cells[sn] != null ? row.cells[sn] : '-'}</td>
-                        ))}
-                        <td style={{ ...tdS, textAlign: 'center' }}>{row.tolerance != null ? `±${row.tolerance}` : '-'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                  ))}
+                </tbody>
+              </table>
             );
           })()}
 
           {/* BOM表 */}
           {options.bomTable && data.bom.length > 0 && (
-            <div className="print-section">
-              <div className="print-section-title"> BOM物料清单</div>
-              <ResizableTable
-                storageKey="print-bom"
-                className="print-table"
-                dataSource={data.bom}
-                rowKey="id"
-               
-                pagination={false}
-                bordered
-                columns={[
-                  { title: '物料类型', dataIndex: 'materialType', key: 'materialType', width: 100,
-                    render: (v: unknown) => getMaterialTypeLabel(v) },
-                  { title: '物料名称', dataIndex: 'materialName', key: 'materialName', width: 150 },
-                  { title: '物料编码', dataIndex: 'materialCode', key: 'materialCode', width: 120 },
-                  { title: '规格', dataIndex: 'specifications', key: 'specifications', width: 100 },
-                  { title: '单位', dataIndex: 'unit', key: 'unit', width: 60 },
-                  { title: '用量', dataIndex: 'quantity', key: 'quantity', width: 80, align: 'right' as const },
-                  ...(showPrice ? [{ title: '单价', dataIndex: 'unitPrice', key: 'unitPrice', width: 80, align: 'right' as const,
-                    render: (v: number) => v ? formatMoney(Number(v)) : '-' }] : []),
-                  { title: '备注', dataIndex: 'remark', key: 'remark' },
-                  { title: '图片', dataIndex: 'imageUrls', key: 'image', width: 90,
-                    render: (v: string) => {
-                      const imgs: string[] = (() => { try { return JSON.parse(v || '[]'); } catch { return []; } })();
-                      if (!imgs.length) return null;
-                      return (
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                          {imgs.map((url: string) => (
-                            <Image key={url} src={getFullAuthedFileUrl(url)} style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 3, border: '1px solid #eee' }} preview={{ cover: <span>预览</span> }} />
-                          ))}
-                        </div>
-                      );
-                    }
-                  },
-                ]}
-              />
-            </div>
+            <ResizableTable
+              storageKey="print-bom"
+              className="print-table"
+              dataSource={data.bom}
+              rowKey="id"
+             
+              pagination={false}
+              bordered
+              columns={[
+                { title: '物料类型', dataIndex: 'materialType', key: 'materialType', width: 100,
+                  render: (v: unknown) => getMaterialTypeLabel(v) },
+                { title: '物料名称', dataIndex: 'materialName', key: 'materialName', width: 150 },
+                { title: '物料编码', dataIndex: 'materialCode', key: 'materialCode', width: 120 },
+                { title: '规格', dataIndex: 'specifications', key: 'specifications', width: 100 },
+                { title: '单位', dataIndex: 'unit', key: 'unit', width: 60 },
+                { title: '用量', dataIndex: 'quantity', key: 'quantity', width: 80, align: 'right' as const },
+                ...(showPrice ? [{ title: '单价', dataIndex: 'unitPrice', key: 'unitPrice', width: 80, align: 'right' as const,
+                  render: (v: number) => v ? formatMoney(Number(v)) : '-' }] : []),
+                { title: '备注', dataIndex: 'remark', key: 'remark' },
+                { title: '图片', dataIndex: 'imageUrls', key: 'image', width: 90,
+                  render: (v: string) => {
+                    const imgs: string[] = (() => { try { return JSON.parse(v || '[]'); } catch { return []; } })();
+                    if (!imgs.length) return null;
+                    return (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                        {imgs.map((url: string) => (
+                          <Image key={url} src={getFullAuthedFileUrl(url)} style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 3, border: '1px solid #eee' }} preview={{ cover: <span>预览</span> }} />
+                        ))}
+                      </div>
+                    );
+                  }
+                },
+              ]}
+            />
           )}
 
           {/* 工序表 */}
           {options.processTable && data.process.length > 0 && (
-            <div className="print-section">
-              <div className="print-section-title"> 工序表</div>
-              <ResizableTable
-                storageKey="print-process"
-                className="print-table"
-                dataSource={data.process}
-                rowKey="id"
-               
-                pagination={false}
-                bordered
-                columns={[
-                  { title: '序号', dataIndex: 'sortOrder', key: 'sortOrder', width: 60 },
-                  { title: '工序名称', dataIndex: 'processName', key: 'processName', width: 150 },
-                  { title: '工序编码', dataIndex: 'processCode', key: 'processCode', width: 100 },
-                  { title: '工时(秒)', dataIndex: 'standardTime', key: 'standardTime', width: 80, align: 'right' as const },
-                  ...(showPrice ? [{ title: '单价', dataIndex: 'price', key: 'price', width: 80, align: 'right' as const,
-                    render: (v: number) => v ? formatMoney(Number(v)) : '-' }] : []),
-                  { title: '备注', dataIndex: 'remark', key: 'remark' },
-                ]}
-              />
-            </div>
+            <ResizableTable
+              storageKey="print-process"
+              className="print-table"
+              dataSource={data.process}
+              rowKey="id"
+             
+              pagination={false}
+              bordered
+              columns={[
+                { title: '序号', dataIndex: 'sortOrder', key: 'sortOrder', width: 60 },
+                { title: '工序名称', dataIndex: 'processName', key: 'processName', width: 150 },
+                { title: '工序编码', dataIndex: 'processCode', key: 'processCode', width: 100 },
+                { title: '工时(秒)', dataIndex: 'standardTime', key: 'standardTime', width: 80, align: 'right' as const },
+                ...(showPrice ? [{ title: '单价', dataIndex: 'price', key: 'price', width: 80, align: 'right' as const,
+                  render: (v: number) => v ? formatMoney(Number(v)) : '-' }] : []),
+                { title: '备注', dataIndex: 'remark', key: 'remark' },
+              ]}
+            />
           )}
 
           {/* 无数据提示 */}
