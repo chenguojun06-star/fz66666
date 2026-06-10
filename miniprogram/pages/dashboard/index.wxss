@@ -498,11 +498,15 @@
   flex-wrap: wrap;
 }
 .act-btn {
-  font-size: 11px;
-  padding: 6px 12px;
+  font-size: 13px;
+  padding: 10px 16px;
   border-radius: 6px;
   color: var(--color-text-secondary);
   background: rgba(0, 0, 0, 0.04);
+  line-height: 1;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
 }
 .act-btn--primary {
   color: var(--color-primary);

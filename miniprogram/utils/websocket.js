@@ -330,7 +330,13 @@ function connectViaCloudContainer() {
     if (DEBUG) console.warn('[WebSocket] wx.cloud.connectContainer 返回空');
     return false;
   } catch (e) {
-    console.error('[WebSocket] 云托管通道连接异常:', e.message || e);
+    // 云托管专用通道失败（未初始化/无权限/网络等），回退到标准WebSocket
+    var errMsg = e.message || (e.errMsg || '');
+    if (errMsg.includes('Cloud API') || errMsg.includes('wx.cloud') || errMsg.includes('wx.cloud.init')) {
+      if (DEBUG) console.warn('[WebSocket] 云托管通道不可用，将回退到标准WebSocket:', errMsg);
+      return false;
+    }
+    console.error('[WebSocket] 云托管通道连接异常:', errMsg);
     return false;
   }
 }

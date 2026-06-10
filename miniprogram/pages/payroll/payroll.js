@@ -231,14 +231,14 @@ Page({
     try {
       const { startDate, endDate } = this.data;
 
-      const res = await api.payrollSettlement.operatorSummary({
+      const data = await api.payrollSettlement.operatorSummary({
           startTime: `${startDate} 00:00:00`,
           endTime: `${endDate} 23:59:59`,
           includeSettled: true,
         });
 
-      if (res.code === 200 && Array.isArray(res.data)) {
-        this.processData(res.data);
+      if (Array.isArray(data)) {
+        this.processData(data);
       } else {
         toast.error('加载失败');
       }

@@ -506,6 +506,34 @@ public class QdrantService {
     }
 
     /**
+     * 公开诊断方法 — 返回 Agnes/DeepSeek 配置状态，用于 /visual/diag 端点排查问题
+     */
+    public Map<String, Object> getVectorDimInfo() {
+        Map<String, Object> info = new java.util.LinkedHashMap<>();
+        boolean hasAgnes = agnesApiKey != null && !agnesApiKey.isEmpty();
+        boolean hasDeepSeek = deepseekApiKey != null && !deepseekApiKey.isEmpty();
+        boolean hasInferenceOrch = inferenceOrchestrator != null;
+        info.put("hasAgnesKey", hasAgnes);
+        info.put("agnesModel", agnesModel);
+        info.put("agnesApiUrl", agnesApiUrl);
+        info.put("hasDeepSeekKey", hasDeepSeek);
+        info.put("deepseekBaseUrl", deepseekBaseUrl);
+        info.put("deepseekEmbeddingModel", embeddingModel);
+        info.put("hasInferenceOrchestrator", hasInferenceOrch);
+        info.put("currentVectorDim", getVectorDim());
+        info.put("realVectorDim", VECTOR_DIM_REAL);
+        info.put("pseudoVectorDim", VECTOR_DIM_PSEUDO);
+        if (hasAgnes && hasInferenceOrch) {
+            info.put("recommendedMode", "agnes_vision_and_embedding (最佳质量)");
+        } else if (hasDeepSeek) {
+            info.put("recommendedMode", "deepseek_text_embedding (基础质量)");
+        } else {
+            info.put("recommendedMode", "pseudo_hashing (最低质量，不建议生产)");
+        }
+        return info;
+    }
+
+    /**
      * 伪向量生成（基于字符哈希），仅在 Embedding API 不可用时降级使用。
      */
     private float[] pseudoEmbedding(String text) {
@@ -543,49 +571,68 @@ public class QdrantService {
      * <p>向量生成优先级（尽量只用 AGNES_API_KEY 一个 Key）：
      * 1. Agnes 视觉分析 + Agnes Embedding（图片→描述→向量，只需 AGNES_API_KEY）
      * 2. Agnes 视觉分析 + DeepSeek Embedding（图片→描述→向量，需两个 Key）
-     * 3. Voyage 多模态 API（图片→向量，需单独配置 Voyage Key）
-     * 4. DeepSeek 纯文本 Embedding（用图片 URL 文本生成向量，质量一般）
-     * 5. 伪向量（哈希）— 最低质量，仅兜底
+     * 3. DeepSeek 纯文本 Embedding（用图片 URL 文本生成向量，质量一般）
+     * 4. 伪向量（哈希）— 最低质量，仅兜底
      */
     public float[] computeMultimodalEmbedding(String imageUrl) {
         if (imageUrl == null || imageUrl.isBlank()) {
             throw new IllegalArgumentException("imageUrl 不能为空");
         }
 
-        // 优先：Agnes 视觉分析 → 文字描述 → Embedding 向量
-        if (agnesApiKey != null && !agnesApiKey.isEmpty()) {
+        // ========== 运行时诊断：打印当前配置状态 ==========
+        boolean hasAgnesKey = agnesApiKey != null && !agnesApiKey.isEmpty();
+        boolean hasDeepSeekKey = deepseekApiKey != null && !deepseekApiKey.isEmpty();
+        boolean hasInferenceOrch = inferenceOrchestrator != null;
+        log.info("[Qdrant] 向量生成启动 imageUrlLen={} hasAgnesKey={} hasDeepSeekKey={} hasInferenceOrch={}",
+                imageUrl.length(), hasAgnesKey, hasDeepSeekKey, hasInferenceOrch);
+
+        // ========== 第 1 级：Agnes 视觉分析 → 文字描述 → Embedding 向量 ==========
+        if (hasAgnesKey && hasInferenceOrch) {
             try {
+                log.info("[Qdrant] 尝试方案1: Agnes视觉描述 + Agnes Embedding (模型={})", agnesModel);
                 String visualDescription = describeImageWithAgnes(imageUrl);
                 if (visualDescription != null && !visualDescription.isBlank()) {
-                    // 尝试用 Agnes Embedding（OpenAI 兼容，可能支持 /v1/embeddings）
+                    log.info("[Qdrant] Agnes视觉描述成功 descLen={}", visualDescription.length());
+                    // 方案1a: 尝试用 Agnes Embedding
                     float[] vec = tryAgnesEmbedding(visualDescription);
                     if (vec != null) {
-                        log.info("[Qdrant] Agnes视觉+Agnes Embedding 向量生成成功 维度={}", vec.length);
+                        log.info("[Qdrant] ✓ 方案1成功 Agnes视觉+Agnes Embedding 维度={}", vec.length);
                         return vec;
                     }
-                    // Agnes Embedding 不支持，降级到 DeepSeek Embedding
-                    if (deepseekApiKey != null && !deepseekApiKey.isEmpty()) {
+                    // 方案1b: Agnes Embedding 不支持，降级到 DeepSeek Embedding
+                    if (hasDeepSeekKey) {
                         vec = callEmbeddingApi(visualDescription);
-                        log.info("[Qdrant] Agnes视觉+DeepSeek Embedding 向量生成成功 维度={}", vec.length);
+                        log.info("[Qdrant] ✓ 方案2成功 Agnes视觉+DeepSeek Embedding 维度={}", vec.length);
                         return vec;
                     }
+                    // 方案1c: 只有 Agnes Key，用 Agnes Embedding 重试一次（兜底特殊路径）
+                    log.warn("[Qdrant] 已获取视觉描述但无可用 Embedding endpoint，继续降级");
+                } else {
+                    log.warn("[Qdrant] Agnes视觉描述返回空");
                 }
             } catch (Exception e) {
-                log.warn("[Qdrant] Agnes视觉+Embedding 失败，尝试降级: {}", e.getMessage());
+                log.warn("[Qdrant] Agnes视觉+Embedding 失败: {}", e.getMessage());
+            }
+        } else {
+            log.warn("[Qdrant] 跳过 Agnes 链路: hasAgnesKey={} hasInferenceOrch={}", hasAgnesKey, hasInferenceOrch);
+        }
+
+        // ========== 第 2 级：DeepSeek 纯文本 Embedding（用图片 URL 文本生成向量） ==========
+        if (hasDeepSeekKey) {
+            log.info("[Qdrant] 尝试方案3: DeepSeek 文本 Embedding（用 imageUrl 文本）");
+            try {
+                float[] vec = callEmbeddingApi(imageUrl);
+                log.info("[Qdrant] ✓ 方案3成功 DeepSeek 文本 Embedding 维度={}", vec.length);
+                return vec;
+            } catch (Exception e) {
+                log.warn("[Qdrant] DeepSeek Embedding 失败: {}", e.getMessage());
             }
         }
 
-        // 降级：DeepSeek 纯文本 Embedding（用图片 URL 文本生成向量）
-        if (deepseekApiKey != null && !deepseekApiKey.isEmpty()) {
-            log.info("[Qdrant] Agnes 不可用，降级使用 DeepSeek 文本 Embedding");
-            try {
-                return callEmbeddingApi(imageUrl);
-            } catch (Exception e) {
-                log.warn("[Qdrant] DeepSeek Embedding 也失败: {}", e.getMessage());
-            }
-        }
-        // 兜底：伪向量
-        log.warn("[Qdrant] 所有 Embedding 方案不可用，使用伪向量（搜索质量极低）");
+        // ========== 第 3 级：伪向量兜底 ==========
+        log.error("[Qdrant] ⚠ 所有 Embedding 方案不可用，降级为伪向量（搜索质量极低）！" +
+                "建议：1)在微信云【环境变量】配置 AGNES_API_KEY 以启用视觉分析；" +
+                "2)或配置 DEEPSEEK_API_KEY 启用文本 Embedding");
         return pseudoEmbedding(imageUrl);
     }
 

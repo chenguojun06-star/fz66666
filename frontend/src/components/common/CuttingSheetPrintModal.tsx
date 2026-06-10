@@ -3,7 +3,7 @@ import { Modal, Button, Space, Radio } from 'antd';
 import { message } from '@/utils/antdStatic';
 import type { CuttingBundleRow } from '@/modules/production/pages/Production/Cutting/hooks';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
-import { safePrint } from '@/utils/safePrint';
+import { safePrint, buildPrintHeader } from '@/utils/safePrint';
 
 interface CuttingSheetPrintModalProps {
   open: boolean;
@@ -98,8 +98,14 @@ const CuttingSheetPrintModal: React.FC<CuttingSheetPrintModalProps> = ({
         </tr>
       `).join('');
 
+      const factoryName = companyName || '';
+      const pageTitle = '裁剪单';
+      const headerHtml = buildPrintHeader(factoryName, pageTitle);
+
       return `
         <div class="cutting-sheet-page">
+          <!-- 顶部大标题 -->
+          ${headerHtml}
           <!-- 顶部：左边款式图 + 右边信息 -->
           <div class="header-container">
             <!-- 左边：款式图片 -->
@@ -109,9 +115,8 @@ const CuttingSheetPrintModal: React.FC<CuttingSheetPrintModalProps> = ({
               ` : '<div class="no-image">无图片</div>'}
             </div>
 
-            <!-- 右边：公司、订单号、款号、码数、数量、床号 -->
+            <!-- 右边：订单号、款号、码数、数量、床号 -->
             <div class="header-right">
-              <div class="company-name">${companyName || '服装供应链管理系统'}</div>
               <div class="info-grid">
                 <div class="info-item">
                   <span class="info-label">订单号：</span>

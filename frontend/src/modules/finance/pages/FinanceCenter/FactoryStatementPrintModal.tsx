@@ -271,8 +271,11 @@ const FactoryStatementPrintModal: React.FC<FactoryStatementPrintModalProps> = ({
                         const details = detailsMap[factory.factoryId] || [];
                         return (
                             <div key={getFactoryKey(factory)} className="slip-container">
-                                <div className="header">{factory.factoryName}</div>
-                                <div className="sub-header">加工费结算对账单{printVersion === 'simple' ? '（简版）' : ''}</div>
+                                <div className="header" style={{ fontSize: 22, fontWeight: 700, textAlign: 'center', marginBottom: 4 }}>
+                                    {factory.factoryName} - 加工费结算对账单{printVersion === 'simple' ? '（简版）' : ''}
+                                </div>
+                                <div className="sub-header" style={{ fontSize: 14, marginBottom: 16, paddingBottom: 12, borderBottom: '2px solid #000' }}>
+                                </div>
                                 <div className="info-row">
                                     <span><strong>结算周期：</strong>{dateRange[0]} 至 {dateRange[1]}</span>
                                     <span><strong>打印时间：</strong>{dayjs().format('YYYY-MM-DD')}</span>

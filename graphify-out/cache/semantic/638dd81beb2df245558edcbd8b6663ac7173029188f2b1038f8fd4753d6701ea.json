@@ -1,0 +1,1 @@
+{"nodes": [{"id": "tenant_interceptor", "label": "TenantInterceptor", "file_type": "code", "source_file": "backend/src/main/java/com/fashion/supplychain/common/tenant/TenantInterceptor.java", "source_location": null, "source_url": null, "captured_at": null, "author": null, "contributor": null}], "edges": [], "hyperedges": []}

@@ -83,9 +83,10 @@ Page({
   onShow: function () {
     const app = getApp();
     if (app.requireAuth && !app.requireAuth()) return;
+    // 首次加载已在 onLoad 处理，后续从子页面返回时只刷新统计数据，不重载订单列表
+    // 避免：展开卡片→点击采购→返回→列表重载→卡片全部收起→「乱跳」体验
     if (this._loaded) {
       this.refreshCards();
-      this.loadOrders(true);
     }
     this._loaded = true;
     this._bindWsEvents();
@@ -254,8 +255,17 @@ Page({
   /* ======== 展开/收起订单卡片 ======== */
   onCardToggle: function (e) {
     const idx = e.currentTarget.dataset.index;
+    const now = Date.now();
+    // 200ms 内同一卡片不重复切换，避免双击闪烁
+    const last = this._lastToggleTime || {};
+    if (last[idx] && now - last[idx] < 200) return;
+    last[idx] = now;
+    this._lastToggleTime = last;
     const path = 'orders.list[' + idx + '].expanded';
     this.setData({ [path]: !this.data.orders.list[idx].expanded });
+  },
+  onExpandNoop: function () {
+    // 阻止展开区的冒泡，避免误触折叠
   },
 
   /* ======== 封面图预览 ======== */

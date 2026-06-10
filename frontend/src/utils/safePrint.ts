@@ -10,6 +10,30 @@
  * 4. 智能图片等待：dataURL/blob 图片立即打印，外部图片最多等 1.5s
  */
 
+/**
+ * 生成打印页面顶部大标题
+ * 格式：「工厂名 - 页面标题」，如「东方制衣厂 - 裁剪单」
+ * 至少显示工厂名（如果 tenantName 存在）；title 可为空字符串
+ *
+ * @param tenantName 租户/工厂名称，如「东方制衣厂」
+ * @param pageTitle 页面单据标题，如「裁剪单」「生产制单」
+ */
+export function buildPrintHeader(tenantName?: string, pageTitle?: string): string {
+  const factory = tenantName?.trim() || '';
+  const title = pageTitle?.trim() || '';
+  if (!factory && !title) return '';
+  const displayText = title ? (factory ? `${factory} - ${title}` : title) : factory;
+  return `<div style="text-align:center;font-size:22px;font-weight:700;color:#000;margin-bottom:14px;padding-bottom:10px;border-bottom:2px solid #000;letter-spacing:1px;">${escapeHtml(displayText)}</div>`;
+}
+
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
 const PRINT_FIX_CSS = `
 <style>
   :root {

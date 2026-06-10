@@ -5,6 +5,7 @@ import { StyleInfo, StyleQueryParams } from '@/types/style';
 import { useDebouncedValue } from '@/hooks/usePerformance';
 import { readPageSize } from '@/utils/pageSizeStore';
 import { buildProductionSheetHtml } from './buildProductionSheetHtml';
+import { useUser } from '@/utils/AuthContext';
 
 interface DataCenterStats {
   styleCount: number;
@@ -28,6 +29,7 @@ export const normalizeUploadFileList = (event: any) => {
 };
 
 export function useDataCenterActions() {
+  const { user } = useUser();
   const { message } = App.useApp();
 
   const [stats, setStats] = useState<DataCenterStats>({
@@ -126,7 +128,7 @@ export function useDataCenterActions() {
         message.error(res.message || '获取生产制单失败');
         return;
       }
-      const html = buildProductionSheetHtml(res.data);
+      const html = buildProductionSheetHtml(res.data, user?.tenantName);
       downloadFile(`生产制单-${style.styleNo}.html`, html, 'text/html;charset=utf-8');
       message.success('已下载生产制单');
     } catch (e: unknown) {

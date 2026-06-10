@@ -2,9 +2,11 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { App, Card, Form, Tabs } from 'antd';
 import { useLocation, useNavigate } from 'react-router-dom';
 import PageLayout from '@/components/common/PageLayout';
+import PageStatCards from '@/components/common/PageStatCards';
 import StylePrintModal from '@/components/common/StylePrintModal';
 import RemarkTimelineModal from '@/components/common/RemarkTimelineModal';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
+import dayjs from 'dayjs';
 import { usePersistentState } from '@/hooks/usePersistentState';
 import { readPageSize } from '@/utils/pageSizeStore';
 import { getMaterialTypeCategory } from '@/utils/materialType';
@@ -23,6 +25,7 @@ import type { StyleBom } from '@/types/style';
 import OrderRankingDashboard from './components/OrderRankingDashboard';
 import OrderAnalysisTab from './components/OrderAnalysisTab';
 import OrderListContent from './components/OrderListContent';
+import DelayedStageBreakdown from '@/modules/dashboard/components/DelayedStageBreakdown';
 import OrderCreateModal from './components/OrderCreateModal';
 
 import { OrderLine, ProgressNode, defaultProgressNodes } from './types';
@@ -64,6 +67,7 @@ const OrderManagement: React.FC = () => {
     onlyCompleted: true, pushedToOrderOnly: true, keyword: '',
   });
   const [factoryMode, setFactoryMode] = useState<'INTERNAL' | 'EXTERNAL'>('INTERNAL');
+  const [smartFilter, setSmartFilter] = useState<'all' | 'overdue' | 'warning'>('all');
 
   const [visible, setVisible] = useState(false);
   const [selectedStyle, setSelectedStyle] = useState<StyleInfo | null>(null);
@@ -169,6 +173,57 @@ const OrderManagement: React.FC = () => {
     [orderLines],
   );
 
+  // 已延期 / 临近交期 的款式过滤（基于交板日期 deliveryDate）
+  const overdueStyles = useMemo(() => {
+    return styles.filter((s) => {
+      if (!s.deliveryDate) return false;
+      return dayjs(s.deliveryDate).endOf('day').isBefore(dayjs());
+    });
+  }, [styles]);
+
+  const warningStyles = useMemo(() => {
+    return styles.filter((s) => {
+      if (!s.deliveryDate) return false;
+      const d = dayjs(s.deliveryDate).endOf('day');
+      return d.isAfter(dayjs()) && d.isBefore(dayjs().add(3, 'day'));
+    });
+  }, [styles]);
+
+  const handleSmartFilterClick = (
+    target: 'overdue' | 'warning',
+    records: StyleInfo[],
+  ) => {
+    if (smartFilter === target) {
+      setSmartFilter('all');
+      return;
+    }
+    setSmartFilter(target);
+    // 滚动到第一个匹配项
+    const firstMatch = records[0];
+    if (firstMatch?.id) {
+      setTimeout(() => {
+        const node = document.querySelector(`#style-row-${firstMatch.id}`) as HTMLElement | null;
+        if (node) {
+          node.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 100);
+    }
+  };
+
+  const displayStyles = useMemo(() => {
+    if (smartFilter === 'overdue') {
+      return overdueStyles;
+    }
+    if (smartFilter === 'warning') {
+      return warningStyles;
+    }
+    return styles;
+  }, [smartFilter, styles, overdueStyles, warningStyles]);
+
+  const handleClearSmartFilter = () => {
+    setSmartFilter('all');
+  };
+
   const {
     deliverySuggestion, suggestionLoading, quotationUnitPrice,
     totalCostUnitPrice, suggestedQuotationUnitPrice, orderLearningLoading,
@@ -234,11 +289,40 @@ const OrderManagement: React.FC = () => {
     <>
       <PageLayout
         title="下单管理"
-        headerContent={showSmartErrorNotice && smartError ? (
-          <Card style={{ marginBottom: 12 }}>
-            <SmartErrorNotice error={smartError} onFix={fetchStyles} />
-          </Card>
-        ) : null}
+        headerContent={
+          <>
+            {showSmartErrorNotice && smartError ? (
+              <Card style={{ marginBottom: 12 }}>
+                <SmartErrorNotice error={smartError} onFix={fetchStyles} />
+              </Card>
+            ) : null}
+
+            <PageStatCards
+              cards={[]}
+              hints={[
+                {
+                  key: 'overdue',
+                  count: overdueStyles.length,
+                  tone: 'red',
+                  label: '已延期',
+                  hint: overdueStyles[0]?.styleNo ? `点击定位到 ${overdueStyles[0].styleNo}` : '点击定位到延期款号',
+                  active: smartFilter === 'overdue',
+                  onClick: () => handleSmartFilterClick('overdue', overdueStyles),
+                },
+                {
+                  key: 'warning',
+                  count: warningStyles.length,
+                  tone: 'orange',
+                  label: '临近交期',
+                  hint: warningStyles[0]?.styleNo ? `点击定位到 ${warningStyles[0].styleNo}` : '点击定位到临近交期款号',
+                  active: smartFilter === 'warning',
+                  onClick: () => handleSmartFilterClick('warning', warningStyles),
+                },
+              ]}
+              onClearHints={smartFilter !== 'all' ? handleClearSmartFilter : undefined}
+            />
+          </>
+        }
       >
         <Tabs defaultActiveKey="list" items={[
           {
@@ -246,13 +330,14 @@ const OrderManagement: React.FC = () => {
             label: '下单管理',
             children: (
               <>
+                <DelayedStageBreakdown forceTab="bulk" title="按生产环节查看" />
                 <OrderRankingDashboard onOrderClick={openCreate} />
                 <OrderListContent
                   viewMode={viewMode}
                   setViewMode={setViewMode}
                   queryParams={queryParams}
                   setQueryParams={setQueryParams}
-                  styles={styles}
+                  styles={displayStyles}
                   total={total}
                   loading={loading}
                   columns={columns as any}

@@ -133,7 +133,11 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
     ].filter(Boolean).join('  |  ');
     const printDate = new Date().toLocaleString('zh-CN');
     const printerInfo = printerAccount ? `打印人: ${printerName} (${printerAccount})` : `打印人: ${printerName}`;
-    const htmlContent = buildPrintHtml({ headerInfo, printerInfo, printDate, styleNo, bodyHtml: printContent.innerHTML });
+    const htmlContent = buildPrintHtml({
+      headerInfo, printerInfo, printDate, styleNo, bodyHtml: printContent.innerHTML,
+      tenantName: user?.tenantName,
+      pageTitle: mode === 'sample' ? '样衣开发单' : '款式信息单',
+    });
     safePrint(htmlContent, `打印预览-${styleNo}`);
     } finally { setPrintLoading(false); }
   };

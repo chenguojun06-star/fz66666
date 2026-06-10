@@ -5,6 +5,7 @@ import { PrinterOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { safePrint } from '@/utils/safePrint';
 import { formatMoney } from '@/utils/format';
+import { useUser } from '@/utils/AuthContext';
 
 interface WageSlipPrintModalProps {
     visible: boolean;
@@ -49,6 +50,7 @@ const WageSlipPrintModal: React.FC<WageSlipPrintModalProps> = ({
     const [printVersion, setPrintVersion] = useState<'simple' | 'detail'>('detail');
     const [printLoading, setPrintLoading] = useState(false);
     const [selectedWorkerNames, setSelectedWorkerNames] = useState<string[]>([]);
+    const { user } = useUser();
 
     React.useEffect(() => {
         if (visible && workerData.length > 0) {
@@ -200,7 +202,9 @@ const WageSlipPrintModal: React.FC<WageSlipPrintModalProps> = ({
             <div ref={printRef} style={{ maxHeight: '55vh', overflowY: 'auto', paddingRight: 10 }}>
                 {selectedWorkers.map((worker) => (
                     <div key={worker.operatorName} className="slip-container">
-                        <div className="header">员工计件工资条{printVersion === 'simple' ? '（简版）' : ''}</div>
+                        <div className="header" style={{ fontSize: 22, fontWeight: 700, textAlign: 'center', marginBottom: 4 }}>
+                            {user?.tenantName ? `${user.tenantName} - ` : ''}员工计件工资条{printVersion === 'simple' ? '（简版）' : ''}
+                        </div>
                         <div className="info-row">
                             <span><strong>姓名：</strong>{worker.operatorName}</span>
                             <span><strong>结算周期：</strong>{dateRange[0]} 至 {dateRange[1]}</span>

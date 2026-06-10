@@ -108,7 +108,7 @@
       </view>
 
       <!-- 展开区域 -->
-      <view class="order-expand" wx:if="{{item.expanded}}" catchtap="">
+      <view class="order-expand" wx:if="{{item.expanded}}" catchtap="onExpandNoop">
         <!-- 工序进度明细 -->
         <view class="expand-section" wx:if="{{item.processNodes.length > 0}}">
           <text class="expand-title">工序进度</text>

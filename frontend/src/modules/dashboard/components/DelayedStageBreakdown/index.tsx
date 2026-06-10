@@ -64,11 +64,18 @@ const getOverdueLevel = (days: number): { color: string; label: string } => {
   return { color: '#faad14', label: '轻度' };
 };
 
-const DelayedStageBreakdown: React.FC = () => {
+interface DelayedStageBreakdownProps {
+  /** 强制锁定某个 Tab（用于嵌入到对应页面，不显示 Tab 切换） */
+  forceTab?: TabKey;
+  /** 自定义标题，不填时用默认"智能延期提醒" */
+  title?: string;
+}
+
+const DelayedStageBreakdown: React.FC<DelayedStageBreakdownProps> = ({ forceTab, title }) => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<DelayedStageBreakdownData | null>(null);
-  const [activeTab, setActiveTab] = useState<TabKey>('bulk');
+  const [activeTab, setActiveTab] = useState<TabKey>(forceTab || 'bulk');
   const [expandedStage, setExpandedStage] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
@@ -114,9 +121,19 @@ const DelayedStageBreakdown: React.FC = () => {
     setExpandedStage(prev => prev === stageName ? null : stageName);
   }, []);
 
-  if (!loading && (!data || (data.sampleTotal === 0 && data.bulkTotal === 0))) {
+  // 空状态判断：forceTab 模式下只关心对应类型的数量
+  const shouldHide = !loading && (!data ||
+    (forceTab === 'bulk'
+      ? data.bulkTotal === 0
+      : forceTab === 'sample'
+        ? data.sampleTotal === 0
+        : data.sampleTotal === 0 && data.bulkTotal === 0));
+  if (shouldHide) {
     return null;
   }
+
+  const titleText = title || '智能延期提醒';
+  const tabLabel = activeTab === 'bulk' ? '大货生产' : '样衣开发';
 
   return (
     <Card
@@ -126,42 +143,49 @@ const DelayedStageBreakdown: React.FC = () => {
         <div className="delayed-stage-header">
           <div className="delayed-stage-header-left">
             <ClockCircleOutlined style={{ color: 'var(--color-error, #ff4d4f)' }} />
-            <span>智能延期提醒</span>
+            <span>{titleText}</span>
           </div>
           <div className="delayed-stage-header-right">
-            {data && data.sampleTotal > 0 && (
+            {!forceTab && data && data.sampleTotal > 0 && (
               <Tag color="orange">样衣 {data.sampleTotal}</Tag>
             )}
-            {data && data.bulkTotal > 0 && (
+            {!forceTab && data && data.bulkTotal > 0 && (
               <Tag color="red">大货 {data.bulkTotal}</Tag>
+            )}
+            {forceTab && data && (
+              <Tag color={forceTab === 'bulk' ? 'red' : 'orange'}>
+                {forceTab === 'bulk' ? `大货 ${data.bulkTotal}` : `样衣 ${data.sampleTotal}`}
+              </Tag>
             )}
           </div>
         </div>
       }
     >
       <Spin spinning={loading}>
-        <div className="delayed-stage-tabs">
-          {TAB_CONFIG.map(tab => {
-            const count = tab.key === 'bulk' ? (data?.bulkTotal || 0) : (data?.sampleTotal || 0);
-            return (
-              <div
-                key={tab.key}
-                className={`delayed-stage-tab ${activeTab === tab.key ? 'active' : ''}`}
-                onClick={() => { setActiveTab(tab.key); setExpandedStage(null); }}
-              >
-                {tab.icon}
-                <span>{tab.label}</span>
-                {count > 0 && (
-                  <Badge
-                    count={count}
-                    size="small"
-                    style={{ backgroundColor: tab.key === 'bulk' ? '#ff4d4f' : '#fa8c16' }}
-                  />
-                )}
-              </div>
-            );
-          })}
-        </div>
+        {!forceTab && (
+          <div className="delayed-stage-tabs">
+            {TAB_CONFIG.map(tab => {
+              const count = tab.key === 'bulk' ? (data?.bulkTotal || 0) : (data?.sampleTotal || 0);
+              return (
+                <div
+                  key={tab.key}
+                  className={`delayed-stage-tab ${activeTab === tab.key ? 'active' : ''}`}
+                  onClick={() => { setActiveTab(tab.key); setExpandedStage(null); }}
+                >
+                  {tab.icon}
+                  <span>{tab.label}</span>
+                  {count > 0 && (
+                    <Badge
+                      count={count}
+                      size="small"
+                      style={{ backgroundColor: tab.key === 'bulk' ? '#ff4d4f' : '#fa8c16' }}
+                    />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
 
         <div className="delayed-stage-list">
           {currentGroups.length === 0 ? (

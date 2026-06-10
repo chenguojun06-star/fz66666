@@ -39,6 +39,8 @@ interface WsInstance {
   stopFallbackPolling: () => void;
   pendingMessages: WsMessage[];
   flushTimer: ReturnType<typeof setTimeout> | undefined;
+  flushRafId: number | null;
+  clearFlushTimers: () => void;
 }
 
 let globalInstance: WsInstance | null = null;
@@ -79,6 +81,8 @@ function getOrCreateInstance(options: UseWebSocketOptions): WsInstance {
     stopFallbackPolling: () => {},
     pendingMessages: [],
     flushTimer: undefined,
+    flushRafId: null,
+    clearFlushTimers: () => {},
   };
   globalInstance = inst;
 
@@ -103,15 +107,30 @@ function getOrCreateInstance(options: UseWebSocketOptions): WsInstance {
     }
     const batch = inst.pendingMessages.splice(0);
     if (batch.length === 0) return;
-    requestAnimationFrame(() => {
-      batch.forEach(msg => dispatchMessage(msg));
+    if (inst.flushRafId != null) return;
+    inst.flushRafId = window.requestAnimationFrame(() => {
+      inst.flushRafId = null;
+      for (let i = 0; i < batch.length; i++) {
+        try { dispatchMessage(batch[i]); } catch { /* ignore */ }
+      }
     });
   };
 
   const enqueueMessage = (msg: WsMessage) => {
     inst.pendingMessages.push(msg);
     if (!inst.flushTimer) {
-      inst.flushTimer = setTimeout(flushPendingMessages, 0);
+      inst.flushTimer = setTimeout(flushPendingMessages, 16);
+    }
+  };
+
+  inst.clearFlushTimers = () => {
+    if (inst.flushTimer) {
+      window.clearTimeout(inst.flushTimer);
+      inst.flushTimer = undefined;
+    }
+    if (inst.flushRafId != null) {
+      window.cancelAnimationFrame(inst.flushRafId);
+      inst.flushRafId = null;
     }
   };
 
@@ -276,10 +295,10 @@ export function useWebSocket(options: UseWebSocketOptions) {
     return () => {
       inst.subscriberCount--;
       if (inst.subscriberCount <= 0) {
-        if (inst.reconnectTimer) clearTimeout(inst.reconnectTimer);
-        if (inst.heartbeatTimer) clearInterval(inst.heartbeatTimer);
-        if (inst.connectDebounceTimer) clearTimeout(inst.connectDebounceTimer);
-        if (inst.flushTimer) clearTimeout(inst.flushTimer);
+        if (inst.reconnectTimer) window.clearTimeout(inst.reconnectTimer);
+        if (inst.heartbeatTimer) window.clearInterval(inst.heartbeatTimer);
+        if (inst.connectDebounceTimer) window.clearTimeout(inst.connectDebounceTimer);
+        inst.clearFlushTimers();
         inst.stopFallbackPolling();
         if (inst.ws) {
           const ws = inst.ws;

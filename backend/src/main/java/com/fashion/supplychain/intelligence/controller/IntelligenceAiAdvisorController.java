@@ -37,6 +37,19 @@ public class IntelligenceAiAdvisorController {
     @Value("${app.upload.max-size:5242880}")
     private long uploadMaxSize;
 
+    // 诊断用：Agnes/DeepSeek 配置读取
+    @Value("${ai.agnes.api-key:}")
+    private String agnesApiKey;
+
+    @Value("${ai.agnes.model:agnes-2.0-flash}")
+    private String agnesModel;
+
+    @Value("${ai.deepseek.api-key:}")
+    private String deepseekApiKey;
+
+    @Value("${ai.deepseek.model:deepseek-v4-flash}")
+    private String deepseekModel;
+
     private final StringRedisTemplate stringRedisTemplate;
     private final AiAgentOrchestrator aiAgentOrchestrator;
     private final AiAdvisorChatResponseOrchestrator aiAdvisorChatResponseOrchestrator;
@@ -270,7 +283,68 @@ public class IntelligenceAiAdvisorController {
         if (imageUrl == null || imageUrl.isBlank()) {
             return Result.fail("imageUrl 不能为空");
         }
-        return Result.success(visualStyleSearch(imageUrl, topK));
+
+        // 运行时诊断：记录调用上下文
+        Long tenantId = null;
+        try { tenantId = UserContext.tenantId(); } catch (Exception ignored) {}
+        log.info("[以图搜款] 请求 tenantId={} imageUrlLen={} qdrantServiceReady={}",
+                tenantId, imageUrl.length(), (qdrantService != null));
+
+        try {
+            if (qdrantService == null) {
+                log.error("[以图搜款] ❌ QdrantService 未注入（Spring 依赖注入失败）");
+                return Result.fail("以图搜款服务未就绪（依赖注入失败）");
+            }
+            Map<String, Object> result = visualStyleSearch(imageUrl, topK);
+            if (result != null && Boolean.FALSE.equals(result.get("success"))) {
+                String err = (String) result.getOrDefault("error", "未知错误");
+                log.warn("[以图搜款] ⚠ 内部失败: {}", err);
+                return Result.fail("以图搜款服务异常: " + err);
+            }
+            return Result.success(result);
+        } catch (Exception e) {
+            log.error("[以图搜款] ❌ 异常: {}", e.getMessage(), e);
+            return Result.fail("以图搜款服务异常: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 运行时诊断端点 — 排查 Agnes/DeepSeek 配置是否正确注入
+     * 浏览器访问: GET /api/intelligence/visual/diag
+     */
+    @GetMapping("/visual/diag")
+    public Result<Map<String, Object>> visualDiag() {
+        Map<String, Object> diag = new java.util.LinkedHashMap<>();
+        try {
+            diag.put("tenantId", UserContext.tenantId());
+        } catch (Exception e) { diag.put("tenantId", "ERROR: " + e.getMessage()); }
+
+        // 读取 QdrantService 配置状态（通过反射或调用公开方法）
+        diag.put("qdrantServiceReady", qdrantService != null);
+        if (qdrantService != null) {
+            // 探测向量生成路径
+            try {
+                diag.put("vectorDim", qdrantService.getVectorDimInfo());
+            } catch (Exception e) {
+                diag.put("vectorDim", "ERROR: " + e.getMessage());
+            }
+        }
+
+        // 读取 InferenceOrchestrator 的视觉模型状态
+        diag.put("visualAIOrchReady", visualAIOrchestrator != null);
+
+        // Spring 环境变量原始值探测
+        diag.put("agnesKeyConfigured",
+                org.springframework.util.StringUtils.hasText(agnesApiKey) && !agnesApiKey.trim().isEmpty());
+        diag.put("deepseekKeyConfigured",
+                org.springframework.util.StringUtils.hasText(deepseekApiKey) && !deepseekApiKey.trim().isEmpty());
+
+        diag.put("agnesModel", agnesModel);
+        diag.put("deepseekModel", deepseekModel);
+
+        diag.put("hint",
+                "如果 agnesKeyConfigured=false，请在微信云部署→环境变量中添加 AGNES_API_KEY=你的key");
+        return Result.success(diag);
     }
 
     private Map<String, Object> visualStyleSearch(String imageUrl, int topK) {

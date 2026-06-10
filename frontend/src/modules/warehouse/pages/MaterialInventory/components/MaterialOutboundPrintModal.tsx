@@ -3,7 +3,7 @@ import { Button, Divider, Empty, Space, Tag } from 'antd';
 import { PrinterOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import StandardModal from '@/components/common/StandardModal';
-import { safePrint } from '@/utils/safePrint';
+import { safePrint, buildPrintHeader } from '@/utils/safePrint';
 import { formatMoney } from '@/utils/format';
 
 export interface MaterialOutboundPrintItem {
@@ -61,7 +61,7 @@ const usageTypeLabelMap: Record<string, string> = {
   OTHER: '其他',
 };
 
-const buildPrintHtml = (data: MaterialOutboundPrintPayload) => {
+const buildPrintHtml = (data: MaterialOutboundPrintPayload, tenantName?: string) => {
   const itemRows = data.items.map((item, index) => `
     <tr>
       <td>${index + 1}</td>
@@ -75,6 +75,8 @@ const buildPrintHtml = (data: MaterialOutboundPrintPayload) => {
       <td>${item.unitPrice != null ? formatMoney(item.unitPrice) : '-'}</td>
     </tr>
   `).join('');
+
+  const pageHeader = buildPrintHeader(tenantName, '面辅料出库单');
 
   return `
     <!DOCTYPE html>
@@ -104,7 +106,7 @@ const buildPrintHtml = (data: MaterialOutboundPrintPayload) => {
       </head>
       <body>
         <div class="page">
-          <div class="title">面辅料出库单</div>
+          ${pageHeader}
           <div class="meta">
             <div class="meta-item"><span class="meta-label">出库单号</span>${data.outboundNo}</div>
             <div class="meta-item"><span class="meta-label">出库时间</span>${data.outboundTime}</div>
@@ -182,7 +184,8 @@ const MaterialOutboundPrintModal: React.FC<MaterialOutboundPrintModalProps> = ({
           disabled={!data}
           onClick={() => {
             if (!data) return;
-            printWithWindow(buildPrintHtml(data));
+            const tenantName = data.factoryName || undefined;
+            printWithWindow(buildPrintHtml(data, tenantName));
           }}
         >
           直接打印

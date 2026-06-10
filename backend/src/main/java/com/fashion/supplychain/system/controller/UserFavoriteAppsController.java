@@ -1,5 +1,6 @@
 package com.fashion.supplychain.system.controller;
 
+import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.system.service.UserFavoriteAppsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -19,21 +20,21 @@ public class UserFavoriteAppsController {
      * 获取我的收藏应用
      */
     @GetMapping
-    public Map<String, Object> getMyFavorites() {
+    public Result<Map<String, String>> getMyFavorites() {
         String favoriteData = userFavoriteAppsService.getMyFavorites();
-        return Map.of("favoriteData", favoriteData);
+        return Result.success(Map.of("favoriteData", favoriteData));
     }
 
     /**
      * 保存我的收藏应用
      */
     @PutMapping
-    public Map<String, Object> saveMyFavorites(@RequestBody Map<String, String> body) {
+    public Result<Map<String, Boolean>> saveMyFavorites(@RequestBody Map<String, String> body) {
         String favoriteData = body.get("favoriteData");
         if (favoriteData == null || favoriteData.isEmpty()) {
             favoriteData = "[]";
         }
         userFavoriteAppsService.saveMyFavorites(favoriteData);
-        return Map.of("success", true);
+        return Result.success(Map.of("success", true));
     }
 }

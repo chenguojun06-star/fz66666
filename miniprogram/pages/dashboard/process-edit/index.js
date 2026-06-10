@@ -97,7 +97,7 @@ Page({
 
       const processes = that._extractProcesses(order);
       that._buildStages(processes);
-      this._originalProcesses = JSON.parse(JSON.stringify(processes));
+      that._originalProcesses = JSON.parse(JSON.stringify(processes));
       that._deletedIds = [];
       that._newProcesses = [];
       that.setData({ loading: false });
@@ -392,7 +392,7 @@ Page({
       that._deletedIds = [];
       that._newProcesses = [];
       that.setData({ hasChanges: false });
-      that._buildStages(nodes.map(function (n, i) {
+      that._buildStages(nodes.map(function (n) {
         return {
           id: n.id,
           processName: n.name,
@@ -405,7 +405,7 @@ Page({
           sortOrder: n.sortOrder,
         };
       }));
-      that._originalProcesses = JSON.parse(JSON.stringify(nodes.map(function (n, i) {
+      that._originalProcesses = JSON.parse(JSON.stringify(nodes.map(function (n) {
         return {
           id: n.id, processName: n.name, processCode: n.processCode,
           progressStage: n.progressStage, machineType: n.machineType,

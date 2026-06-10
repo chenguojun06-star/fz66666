@@ -1,8 +1,15 @@
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { toCategoryCn } from '@/utils/styleCategory';
 import { sortSizeNames } from '@/utils/api';
+import { buildPrintHeader } from '@/utils/safePrint';
 
-export const buildProductionSheetHtml = (payload: any) => {
+/**
+ * 生成生产制单打印 HTML
+ *
+ * @param payload 款式数据（包含 style 等字段）
+ * @param tenantName 租户/工厂名称（如「东方制衣厂」），可选
+ */
+export const buildProductionSheetHtml = (payload: any, tenantName?: string) => {
   const style = payload?.style || {};
   const sizeList = Array.isArray(payload?.sizeList) ? payload.sizeList : [];
   const attachments = Array.isArray(payload?.attachments) ? payload.attachments : [];
@@ -141,7 +148,7 @@ export const buildProductionSheetHtml = (payload: any) => {
     <div class="header">
       <img class="cover" src="${esc(coverUrl)}" onerror="this.style.display='none'" />
       <div>
-        <div class="h1">生产制单</div>
+        ${buildPrintHeader(tenantName, '大货生产单')}
         <div class="meta">
           <div>款号：${esc(style.styleNo || '')}</div>
           <div>款名：${esc(style.styleName || '')}</div>

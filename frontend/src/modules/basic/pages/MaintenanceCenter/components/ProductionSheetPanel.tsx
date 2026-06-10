@@ -179,7 +179,7 @@ const ProductionSheetPanel: React.FC<ProductionSheetPanelProps> = ({ styleNo, on
     try {
       const res = await api.get<{ code: number; data: any }>('/data-center/production-sheet', { params: { styleNo: style.styleNo } });
       if (res.code === 200 && res.data) {
-        const html = buildProductionSheetHtml(res.data);
+        const html = buildProductionSheetHtml(res.data, user?.tenantName);
         downloadFile(`${style.styleNo}_制单.html`, html);
       } else { message.error('获取制单数据失败'); }
     } catch { message.error('获取制单数据失败'); }

@@ -9,6 +9,7 @@ import { safePrint } from '@/utils/safePrint';
 import SmallModal from '@/components/common/SmallModal';
 import StyleStageControlBar from './StyleStageControlBar';
 import { message } from '@/utils/antdStatic';
+import { useUser } from '@/utils/AuthContext';
 
 const REVIEW_STATUS_OPTIONS = [
   { label: ' 通过', value: 'PASS' },
@@ -86,6 +87,7 @@ const StyleProductionTab: React.FC<Props> = ({
   sampleQuantity,
 }) => {
   const navigate = useNavigate();
+  const { user } = useUser();
 
   // ---- 样衣审核 Modal ----
   const [reviewModalVisible, setReviewModalVisible] = useState(false);
@@ -157,7 +159,7 @@ const StyleProductionTab: React.FC<Props> = ({
   };
 
   const buildWorkorderHtml = (payload: any) => {
-    if (!productionReqEditable) return buildProductionSheetHtml(payload);
+    if (!productionReqEditable) return buildProductionSheetHtml(payload, user?.tenantName);
     // 直接取用户原文，不做任何 trim / 过滤
     const desc = String(productionReqRows[0] ?? '');
     const next = {
@@ -167,7 +169,7 @@ const StyleProductionTab: React.FC<Props> = ({
         description: desc,
       },
     };
-    return buildProductionSheetHtml(next);
+    return buildProductionSheetHtml(next, user?.tenantName);
   };
 
   const downloadWorkorder = async () => {

@@ -7,6 +7,7 @@ import RejectReasonModal from '@/components/common/RejectReasonModal';
 import SmallModal from '@/components/common/SmallModal';
 import StylePrintModal from '@/components/common/StylePrintModal';
 import PageStatCards from '@/components/common/PageStatCards';
+import DelayedStageBreakdown from '@/modules/dashboard/components/DelayedStageBreakdown';
 import api from '@/utils/api';
 import { StyleInfo } from '@/types/style';
 import { getStyleCardSizeText, getStyleCardColorText, getStyleCardQuantityText } from '@/utils/cardSizeQuantity';
@@ -431,6 +432,9 @@ const StyleInfoListPage: React.FC = () => {
                 setFocusedStyleId(null);
               } : undefined}
             />
+
+            {/* 按环节分组的延期提醒 */}
+            <DelayedStageBreakdown forceTab="sample" title="按开发环节查看" />
           </>
         }
         filterBar={

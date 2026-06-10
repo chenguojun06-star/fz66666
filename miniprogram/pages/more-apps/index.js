@@ -1,14 +1,14 @@
-const { safeNavigate, toast } = require('../../utils/uiHelper');
+const { safeNavigate } = require('../../utils/uiHelper');
 const api = require('../../utils/api');
 
 // 所有应用配置
 const ALL_APPS = [
   { group: '📝 开发下单', items: [
     { id: 'orderCreate', name: '下单管理', iconClass: 'icon-menu-order', circleClass: 'menu-icon-circle--blue', route: '/pages/order/create/index' },
-    { id: 'smartOps', name: '运营看板', iconClass: 'icon-menu-stats', circleClass: 'menu-icon-circle--purple', route: '/pages/smart-ops/index' },
+    { id: 'smartOps', name: '运营看板', iconClass: 'icon-menu-ai', circleClass: 'menu-icon-circle--purple', route: '/pages/smart-ops/index' },
   ]},
   { group: '🏭 生产模块', items: [
-    { id: 'dashboard', name: '生产管理', iconClass: 'icon-menu-progress', circleClass: 'menu-icon-circle--teal', route: '/pages/dashboard/index' },
+    { id: 'dashboard', name: '生产管理', iconClass: 'icon-menu-production', circleClass: 'menu-icon-circle--teal', route: '/pages/dashboard/index' },
     { id: 'processEdit', name: '生产进度', iconClass: 'icon-menu-production', circleClass: 'menu-icon-circle--blue', route: '/pages/dashboard/process-edit/index' },
     { id: 'sampleDev', name: '样衣开发', iconClass: 'icon-menu-garment', circleClass: 'menu-icon-circle--teal', route: '/pages/sample-development/index/index' },
     { id: 'cuttingTask', name: '裁剪任务', iconClass: 'icon-menu-cutting', circleClass: 'menu-icon-circle--rose', route: '/pages/cutting/task-list/index' },
@@ -69,30 +69,32 @@ Page({
 
   loadFavorites: function () {
     const that = this;
-    // 优先从服务端加载，失败则用本地缓存
-    api.system.getFavoriteApps().then(function (res) {
+    // 先读本地缓存快速渲染
+    let localFavorites = [];
+    try { localFavorites = wx.getStorageSync('favoriteApps') || []; } catch (e) { /* ignore */ }
+    if (localFavorites.length > 0) {
+      that.setData({ favoriteApps: localFavorites });
+      that.filterApps(that.data.searchKeyword, localFavorites);
+    }
+    // 再从服务端加载最新数据
+    api.system.getFavoriteApps().then(function (data) {
       let favorites = [];
       try {
-        // request.js resolve(body)，body = { code: 200, data: { favoriteData: "..." } }
-        const raw = res && res.data && res.data.favoriteData ? res.data.favoriteData : (res && res.favoriteData ? res.favoriteData : (typeof res === 'string' ? res : '[]'));
+        const raw = data && data.favoriteData ? data.favoriteData : (typeof data === 'string' ? data : '[]');
         favorites = JSON.parse(raw);
         if (!Array.isArray(favorites)) favorites = [];
       } catch (e) {
         favorites = [];
       }
-      // 同步到本地缓存
+      // 服务器返回空但本地有数据：保留本地
+      if (favorites.length === 0 && localFavorites.length > 0) {
+        favorites = localFavorites;
+      }
       try { wx.setStorageSync('favoriteApps', favorites); } catch (e) { /* ignore */ }
       that.setData({ favoriteApps: favorites });
       that.filterApps(that.data.searchKeyword, favorites);
     }).catch(function () {
-      // 网络失败时用本地缓存
-      try {
-        const favorites = wx.getStorageSync('favoriteApps') || [];
-        that.setData({ favoriteApps: favorites });
-        that.filterApps(that.data.searchKeyword, favorites);
-      } catch (e) {
-        console.error('Load favorites failed', e);
-      }
+      // 网络失败时用本地缓存，已在上面 setData 过
     });
   },
 

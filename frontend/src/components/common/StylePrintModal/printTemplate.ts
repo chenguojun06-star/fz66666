@@ -4,9 +4,23 @@ export interface PrintHtmlParams {
   printDate: string;
   styleNo: string;
   bodyHtml: string;
+  /** 租户/工厂名称，如「东方制衣厂」 */
+  tenantName?: string;
+  /** 页面打印标题，如「样衣开发单」 */
+  pageTitle?: string;
 }
 
-export function buildPrintHtml({ headerInfo, printerInfo, printDate, styleNo, bodyHtml }: PrintHtmlParams): string {
+export function buildPrintHtml({
+  headerInfo, printerInfo, printDate, styleNo, bodyHtml, tenantName, pageTitle
+}: PrintHtmlParams): string {
+  const printHeader = (() => {
+    const factory = tenantName?.trim() || '';
+    const title = pageTitle?.trim() || '';
+    if (!factory && !title) return '';
+    const displayText = title ? (factory ? `${factory} - ${title}` : title) : factory;
+    return `<div style="text-align:center;font-size:22px;font-weight:700;color:#000;margin-bottom:14px;padding-bottom:10px;border-bottom:2px solid #000;letter-spacing:1px;">${displayText.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>`;
+  })();
+
   return `
       <!DOCTYPE html>
       <html>
@@ -190,6 +204,8 @@ export function buildPrintHtml({ headerInfo, printerInfo, printDate, styleNo, bo
           <span class="print-header-left">${headerInfo}</span>
           <span class="print-header-right">${printerInfo}  |  打印时间: ${printDate}</span>
         </div>
+        <!-- 页面顶部大标题 -->
+        ${printHeader}
         <!-- 内容区域 -->
         <div class="print-body">
           ${bodyHtml}

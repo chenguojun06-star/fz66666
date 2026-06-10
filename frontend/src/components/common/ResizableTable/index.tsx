@@ -117,13 +117,18 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
 
   const shellRef = React.useRef<HTMLDivElement>(null);
   const [isScrollable, setIsScrollable] = React.useState(false);
+  const lastScrollableRef = React.useRef<boolean>(false);
+  const scrollRafRef = React.useRef<number | null>(null);
 
   const checkScrollable = React.useCallback(() => {
     const shell = shellRef.current;
     if (!shell) return;
     const tableBody = shell.querySelector('.ant-table-body') as HTMLElement | null;
     if (!tableBody) return;
-    setIsScrollable(tableBody.scrollWidth > tableBody.clientWidth + 2);
+    const next = tableBody.scrollWidth > tableBody.clientWidth + 2;
+    if (lastScrollableRef.current === next) return;
+    lastScrollableRef.current = next;
+    setIsScrollable(next);
   }, []);
 
   const responsiveTableSize = React.useMemo(() => {
@@ -329,12 +334,29 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
     const tableBody = shell.querySelector('.ant-table-body') as HTMLElement | null;
     if (!tableBody) return;
 
-    const ro = new ResizeObserver(() => { checkScrollable(); });
+    const ro = new ResizeObserver(() => {
+      if (scrollRafRef.current !== null) return;
+      scrollRafRef.current = window.requestAnimationFrame(() => {
+        scrollRafRef.current = null;
+        checkScrollable();
+      });
+    });
     ro.observe(tableBody);
-    tableBody.addEventListener('scroll', checkScrollable, { passive: true });
+    const onScroll = () => {
+      if (scrollRafRef.current !== null) return;
+      scrollRafRef.current = window.requestAnimationFrame(() => {
+        scrollRafRef.current = null;
+        checkScrollable();
+      });
+    };
+    tableBody.addEventListener('scroll', onScroll, { passive: true });
     return () => {
       ro.disconnect();
-      tableBody.removeEventListener('scroll', checkScrollable);
+      tableBody.removeEventListener('scroll', onScroll);
+      if (scrollRafRef.current !== null) {
+        window.cancelAnimationFrame(scrollRafRef.current);
+        scrollRafRef.current = null;
+      }
     };
   }, [checkScrollable, finalColumns]);
 
