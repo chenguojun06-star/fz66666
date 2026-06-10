@@ -40,7 +40,7 @@ export function buildPrintHtml({
           }
 
           @page {
-            margin: 10mm 8mm 8mm 8mm;
+            margin: 5mm 5mm 5mm 5mm;
             size: A4;
           }
 

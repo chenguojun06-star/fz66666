@@ -264,7 +264,7 @@ function buildPrintHtml(
       <meta charset="UTF-8">
       <title>库位贴打印</title>
       <style>
-        @page { size: A4; margin: 10mm; }
+        @page { size: A4; margin: 5mm; }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", system-ui, sans-serif; color: #000; background: #fff; }
         .page { width: 190mm; height: 277mm; display: grid; grid-template-columns: repeat(${layout.cols}, ${width}mm); grid-template-rows: repeat(${layout.rows}, ${height}mm); gap: 0; page-break-after: always; }

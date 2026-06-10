@@ -115,7 +115,7 @@ export const buildProductionSheetHtml = (payload: any, tenantName?: string) => {
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>生产制单-${esc(style.styleNo || '')}</title>
   <style>
-    @page { margin: 10mm; }
+    @page { margin: 5mm; }
     body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "'Segoe UI'", Roboto, "'Helvetica Neue'", Arial, "'Noto Sans'", "'Microsoft YaHei'", "'PingFang SC'", serif; color: #111; }
     .page { max-width: 980px; margin: 0 auto; padding: 0; }
     .header { display: grid; grid-template-columns: 220px 1fr; gap: 16px; align-items: start; }

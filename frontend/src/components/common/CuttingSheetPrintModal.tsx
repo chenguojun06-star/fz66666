@@ -194,7 +194,7 @@ const CuttingSheetPrintModal: React.FC<CuttingSheetPrintModalProps> = ({
         <style>
           @page {
             size: A4 ${orientation};
-            margin: 15mm;
+            margin: 5mm;
           }
           * {
             margin: 0;

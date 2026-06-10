@@ -100,7 +100,7 @@ const buildPrintHtml = (data: MaterialOutboundPrintPayload, tenantName?: string)
           @media print {
             body { padding: 0; }
             .page { border: 0; padding: 0; }
-            @page { margin: 12mm; }
+            @page { margin: 5mm; }
           }
         </style>
       </head>
