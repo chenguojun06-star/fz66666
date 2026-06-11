@@ -321,8 +321,14 @@ const ProductionList: React.FC = () => {
                   tone: 'red' as const,
                   label: `${h.stageName}延期`,
                   hint: `点击查看${h.stageName}延期订单`,
-                  active: false,
-                  onClick: () => navigate(h.buildNavigateUrl()),
+                  active: focusOrderIds.size > 0 && h.items.some(item => focusOrderIds.has(String(item.id))),
+                  onClick: () => {
+                    // 已在当前页面，直接设置筛选，不走 navigate
+                    const ids = h.items.map(item => String(item.id));
+                    setFocusOrderIds(new Set(ids));
+                    setSmartQueueFilter('all');
+                    setQueryParams(prev => ({ ...prev, page: 1 }));
+                  },
                 })),
               ]}
               onClearHints={smartQueueFilter !== 'all' || focusOrderIds.size > 0 ? () => { setSmartQueueFilter('all'); setFocusOrderIds(new Set()); } : undefined}

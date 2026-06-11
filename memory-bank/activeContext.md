@@ -14,6 +14,19 @@
 
 ## 最近变更
 
+### 2026-06-12 P0事故：CloudBase Liveness Probe initialDelaySeconds 导致部署失败
+
+**事故编号**：INC-20260611-003
+**等级**：P0（部署阻断）
+**根因**：`cloudbaserc.json` 未配置 `initialDelaySeconds`，CloudBase 默认 2s，应用启动需 70s+，探针过早检测 → connection refused → 部署失败
+
+**修复**：
+| 文件 | 修改 |
+|------|------|
+| `cloudbaserc.json` | 添加 `initialDelaySeconds: 120` |
+
+**关键发现**：CloudBase 不使用 Docker HEALTHCHECK 的 start-period，平台有自己的探针配置
+
 ### 2026-06-11 P0事故：socat IPv6 导致全线 502
 
 **事故编号**：INC-20260611-001

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { App, Button, Input } from 'antd';
 import { AppstoreOutlined, ArrowUpOutlined, ArrowDownOutlined, RadarChartOutlined } from '@ant-design/icons';
 import PageLayout from '@/components/common/PageLayout';
@@ -40,6 +40,7 @@ type StyleSmartFilter = 'all' | 'overdue' | 'warning';
 const StyleInfoListPage: React.FC = () => {
   const { message } = App.useApp();
   const navigate = useNavigate();
+  const location = useLocation();
   useCardGridLayout(10);
 
   // 使用现有Hooks
@@ -93,8 +94,9 @@ const StyleInfoListPage: React.FC = () => {
   const [focusStyleIds, setFocusStyleIds] = useState<Set<string>>(new Set());
 
   // 从 URL 读取 styleIds 参数（延期环节跳转携带）
+  // ⚠️ 必须监听 location.search 变化，否则同页面 navigate 只改 URL 不触发重渲染
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
+    const params = new URLSearchParams(location.search);
     const styleIdsParam = (params.get('styleIds') || '').trim();
     if (styleIdsParam) {
       const ids = styleIdsParam.split(',').map(id => id.trim()).filter(Boolean);
@@ -102,7 +104,7 @@ const StyleInfoListPage: React.FC = () => {
     } else {
       setFocusStyleIds(new Set());
     }
-  }, []);
+  }, [location.search]);
 
   // 款式成本明细侧滑弹窗状态
   const [costDetailVisible, setCostDetailVisible] = useState(false);
@@ -453,8 +455,14 @@ const StyleInfoListPage: React.FC = () => {
                   tone: 'orange' as const,
                   label: `${h.stageName}延期`,
                   hint: `点击查看${h.stageName}延期款式`,
-                  active: false,
-                  onClick: () => navigate(h.buildNavigateUrl()),
+                  active: focusStyleIds.size > 0 && h.items.some(item => focusStyleIds.has(String(item.id))),
+                  onClick: () => {
+                    // 已在当前页面，直接设置筛选，不走 navigate
+                    const ids = h.items.map(item => String(item.id));
+                    setFocusStyleIds(new Set(ids));
+                    setSmartFilter('all');
+                    setQueryParams(prev => ({ ...prev, page: 1 }));
+                  },
                 })),
               ]}
               onClearHints={smartFilter !== 'all' || focusStyleIds.size > 0 ? () => {

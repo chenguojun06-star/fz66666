@@ -231,7 +231,7 @@ export function useProductionListData() {
     });
     return filtered;
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [smartQueueOrders, sortField, sortOrder, showDelayedOnly, activeStatFilter]);
+  }, [smartQueueOrders, sortField, sortOrder, showDelayedOnly, activeStatFilter, focusOrderIds]);
 
   const urlFocusApplied = useRef(false);
 
