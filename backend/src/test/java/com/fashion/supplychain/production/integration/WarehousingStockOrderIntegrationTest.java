@@ -340,7 +340,7 @@ class WarehousingStockOrderIntegrationTest {
         }
 
         @Test
-        @DisplayName("入库保存应触发后置动作（进度重算、WebSocket通知等）")
+        @DisplayName("入库保存应触发后置动作（进度重算等）")
         void warehousingSave_triggersPostActions() {
             ProductWarehousing w = buildWarehousing(50);
             ProductionOrder order = buildOrder(100, 0, "in_production");

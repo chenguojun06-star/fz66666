@@ -13,7 +13,7 @@ import com.fashion.supplychain.production.orchestration.OrderImageOrchestrator;
 import com.fashion.supplychain.production.service.OrderImageService;
 import com.fashion.supplychain.production.service.OrderImageSnapshotService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
-import com.fashion.supplychain.websocket.RealTimeWebSocketHandler;
+
 import org.apache.ibatis.builder.MapperBuilderAssistant;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -44,9 +44,6 @@ class OrderImageOrchestratorTest {
     private OrderImageSnapshotService orderImageSnapshotService;
     @Mock
     private ProductionOrderService productionOrderService;
-    @Mock
-    private RealTimeWebSocketHandler webSocketHandler;
-
     @Mock
     private LambdaQueryChainWrapper<OrderImage> mockOrderImageQuery;
     @Mock
@@ -158,7 +155,6 @@ class OrderImageOrchestratorTest {
         assertThat(result).isNotNull();
         verify(orderImageService).save(any(OrderImage.class));
         verify(orderImageSnapshotService).save(any(OrderImageSnapshot.class));
-        verify(webSocketHandler).broadcastToTenant(eq(1L), any());
     }
 
     @Test
