@@ -306,7 +306,12 @@ const StyleInfoListPage: React.FC = () => {
       if (status === 'archived' || status === 'scrapped') return false;
       const progressNode = String(item.progressNode || '').trim();
       const sampleStatus = String(item.sampleStatus || '').trim().toUpperCase();
-      return progressNode !== '样衣完成' && progressNode !== '开发样报废' && sampleStatus !== 'COMPLETED';
+      const sampleReviewStatus = String((item as any).sampleReviewStatus || '').trim().toUpperCase();
+      // 排除已完成的样衣：进度节点完成 / 样衣状态完成 / 审核通过
+      if (progressNode === '样衣完成' || progressNode === '开发样报废') return false;
+      if (sampleStatus === 'COMPLETED') return false;
+      if (sampleReviewStatus === 'PASS' || sampleReviewStatus === 'APPROVED') return false;
+      return true;
     });
   }, [data]);
 
