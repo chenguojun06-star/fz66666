@@ -151,7 +151,8 @@ public class SampleWorkflowTool extends AbstractAgentTool {
         StyleInfo style = findStyle(args);
         String reviewStatus = required(args, "reviewStatus");
         String reviewComment = text(args.get("reviewComment"));
-        StyleInfo latest = styleInfoOrchestrator.saveSampleReview(style.getId(), reviewStatus, reviewComment);
+        Object reviewImages = args.get("reviewImages");
+        StyleInfo latest = styleInfoOrchestrator.saveSampleReview(style.getId(), reviewStatus, reviewComment, reviewImages);
         return ok("已保存样衣审核结论", Map.of("style", toStyleDto(latest)));
     }
 

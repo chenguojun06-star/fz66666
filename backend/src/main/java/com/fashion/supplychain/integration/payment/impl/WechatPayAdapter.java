@@ -5,6 +5,8 @@ import com.fashion.supplychain.integration.payment.PaymentGateway;
 import com.fashion.supplychain.integration.payment.PaymentRequest;
 import com.fashion.supplychain.integration.payment.PaymentResponse;
 import com.fashion.supplychain.integration.util.IntegrationHttpClient;
+import com.wechat.pay.java.core.RSAAutoCertificateConfig;
+import com.wechat.pay.java.core.notification.NotificationParser;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -192,26 +194,59 @@ public class WechatPayAdapter implements PaymentGateway {
             return true;
         }
 
-        // ============================================================
-        // === 真实接入 ===
-        // ============================================================
-        //
-        // // 微信 V3 回调验签（从 HTTP Header 中获取 Wechatpay-Signature 等）
-        // // PaymentCallbackController 已提取 header 信息，callbackData 为请求体
-        // // 使用 wechatpay-java SDK 的 NotificationParser 解析
-        // //
-        // // RSAAutoCertificateConfig config = buildConfig();
-        // // NotificationConfig notificationConfig = new RSAAutoCertificateConfig.Builder()
-        // //     .merchantId(wechatPayConfig.getMchId())
-        // //     ...build();
-        // // NotificationParser parser = new NotificationParser(config);
-        // // Transaction transaction = parser.parse(requestParam, Transaction.class);
-        // // return transaction != null;
-        //
-        // ============================================================
+        try {
+            // 解析 callbackData 格式：timestamp|nonce|body|signature|serial
+            String[] parts = callbackData.split("\\|", 5);
+            if (parts.length != 5) {
+                log.warn("[微信支付] 回调数据格式错误，期望5段数据");
+                return false;
+            }
 
-        log.error("[微信支付] 密钥已配置但 verifyCallback 未实现，拒绝回调（安全起见）");
-        return false;
+            String timestamp = parts[0];
+            String nonce = parts[1];
+            String body = parts[2];
+            String signature = parts[3];
+            String serial = parts[4];
+
+            // 构建验签请求
+            com.wechat.pay.java.core.notification.RequestParam requestParam =
+                    new com.wechat.pay.java.core.notification.RequestParam.Builder()
+                    .serialNumber(serial)
+                    .nonce(nonce)
+                    .timestamp(timestamp)
+                    .signature(signature)
+                    .body(body)
+                    .build();
+
+            // 使用 SDK 验签（自动下载平台证书并验证）
+            RSAAutoCertificateConfig config = buildConfig();
+            NotificationParser parser = new NotificationParser(config);
+
+            // 解析并验签支付通知（解密后的交易信息）
+            parser.parse(requestParam, com.wechat.pay.java.service.payments.model.Transaction.class);
+
+            log.info("[微信支付] 回调验签成功");
+            return true;
+
+        } catch (NumberFormatException e) {
+            log.warn("[微信支付] 时间戳格式错误: {}", callbackData, e);
+            return false;
+        } catch (Exception e) {
+            log.error("[微信支付] 回调验签失败", e);
+            return false;
+        }
+    }
+
+    /**
+     * 构建微信支付 RSA 配置（自动下载平台证书）
+     */
+    private RSAAutoCertificateConfig buildConfig() {
+        return new RSAAutoCertificateConfig.Builder()
+                .merchantId(wechatPayConfig.getMchId())
+                .privateKeyFromPath(wechatPayConfig.getPrivateKeyPath())
+                .merchantSerialNumber(wechatPayConfig.getSerialNo())
+                .apiV3Key(wechatPayConfig.getApiV3Key())
+                .build();
     }
 
     // -----------------------------------------------

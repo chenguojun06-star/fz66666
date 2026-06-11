@@ -1,17 +1,24 @@
 package com.fashion.supplychain.integration.util;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
+import java.net.URI;
 import java.util.Map;
 
 /**
  * 第三方集成专用 HTTP 客户端
  *
- * 统一处理：超时控制、错误日志、请求日志、重试
+ * 统一处理：超时控制、错误日志、请求日志、HTTPS安全校验
+ *
+ * 安全特性：
+ * - 生产环境强制 HTTPS
+ * - 超时保护（5s连接，15s读取）
+ * - SSL证书验证（使用系统默认信任库）
  *
  * 使用示例（在 Adapter 中）：
  * <pre>
@@ -35,14 +42,41 @@ import java.util.Map;
 public class IntegrationHttpClient {
 
     private final RestTemplate restTemplate;
+    private final boolean httpsRequired;
 
-    public IntegrationHttpClient() {
+    public IntegrationHttpClient(
+            @Value("${app.integration.https-required:true}") boolean httpsRequired) {
+        this.httpsRequired = httpsRequired;
         // 超时配置：5s连接，15s读取（适合国内API）
         org.springframework.http.client.SimpleClientHttpRequestFactory factory =
                 new org.springframework.http.client.SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(5_000);
         factory.setReadTimeout(15_000);
+        // 使用默认 RestTemplate，它会验证 SSL 证书
         this.restTemplate = new RestTemplate(factory);
+    }
+
+    /**
+     * 校验 URL 安全性（强制 HTTPS）
+     */
+    private void validateUrl(String url) {
+        if (url == null || url.isBlank()) {
+            throw new IntegrationException("请求URL不能为空");
+        }
+        try {
+            URI uri = URI.create(url);
+            String scheme = uri.getScheme();
+            if (scheme == null || (!scheme.equalsIgnoreCase("https") && !scheme.equalsIgnoreCase("http"))) {
+                throw new IntegrationException("URL协议必须为 http 或 https: " + url);
+            }
+            // 生产环境强制 HTTPS
+            if (httpsRequired && scheme.equalsIgnoreCase("http")) {
+                log.warn("[集成HTTP] 生产环境禁止使用HTTP协议，请使用HTTPS: {}", url);
+                throw new IntegrationException("生产环境禁止使用HTTP协议，请使用HTTPS: " + url);
+            }
+        } catch (IllegalArgumentException e) {
+            throw new IntegrationException("URL格式无效: " + url, e);
+        }
     }
 
     // =====================================================
@@ -59,6 +93,8 @@ public class IntegrationHttpClient {
      */
     public <T> T postJson(String url, Object body, Class<T> responseType,
                           Map<String, String> headers) {
+        validateUrl(url);
+
         HttpHeaders httpHeaders = new HttpHeaders();
         httpHeaders.setContentType(MediaType.APPLICATION_JSON);
         if (headers != null) {
@@ -90,6 +126,8 @@ public class IntegrationHttpClient {
      * POST 表单请求（application/x-www-form-urlencoded）
      */
     public <T> T postForm(String url, Map<String, String> formParams, Class<T> responseType) {
+        validateUrl(url);
+
         HttpHeaders httpHeaders = new HttpHeaders();
         httpHeaders.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
 
@@ -118,6 +156,8 @@ public class IntegrationHttpClient {
      * GET 请求（带Header）
      */
     public <T> T get(String url, Class<T> responseType, Map<String, String> headers) {
+        validateUrl(url);
+
         HttpHeaders httpHeaders = new HttpHeaders();
         if (headers != null) {
             headers.forEach(httpHeaders::set);

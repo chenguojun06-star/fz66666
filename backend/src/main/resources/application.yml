@@ -211,15 +211,15 @@ app:
         read-timeout-seconds: ${APP_AUTH_SMS_LOGIN_TENCENT_READ_TIMEOUT_SECONDS:10}
         write-timeout-seconds: ${APP_AUTH_SMS_LOGIN_TENCENT_WRITE_TIMEOUT_SECONDS:10}
   security:
+    pii-encryption-key: ${APP_PII_ENCRYPTION_KEY:defaultKeyChangeMe12345678}
     trusted-ips:
       - "127.0.0.1"
       - "::1"
       - "0:0:0:0:0:0:0:1"
     trusted-ip-prefixes:
       - "127."
-      - "0:0:0:0:0:0:0:1"
-      - "::1"
-    pii-encryption-key: ${APP_SECURITY_PII_ENCRYPTION_KEY:defaultKeyChangeMe12345678}
+  integration:
+    https-required: ${APP_INTEGRATION_HTTPS_REQUIRED:false}  # 生产环境建议设为 true
   cors:
     allowed-origin-patterns: ${APP_CORS_ALLOWED_ORIGIN_PATTERNS:http://localhost:*,http://127.0.0.1:*,http://192.168.*:*,http://10.*:*}
     allow-credentials: ${APP_CORS_ALLOW_CREDENTIALS:true}

@@ -1,5 +1,6 @@
 package com.fashion.supplychain.integration.ecommerce.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fashion.supplychain.integration.ecommerce.entity.EcommerceOrder;
 import com.fashion.supplychain.integration.ecommerce.mapper.EcommerceOrderMapper;
@@ -10,4 +11,11 @@ import org.springframework.stereotype.Service;
 public class EcommerceOrderServiceImpl
         extends ServiceImpl<EcommerceOrderMapper, EcommerceOrder>
         implements EcommerceOrderService {
+
+    @Override
+    public void updateWarehouseStatus(Long orderId, Integer status) {
+        update(null, new LambdaUpdateWrapper<EcommerceOrder>()
+                .eq(EcommerceOrder::getId, orderId)
+                .set(EcommerceOrder::getWarehouseStatus, status));
+    }
 }

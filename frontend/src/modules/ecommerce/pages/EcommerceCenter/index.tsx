@@ -6,7 +6,7 @@ import {
   CheckCircleOutlined, WarningOutlined, CloseCircleOutlined,
   ApiOutlined, ShopOutlined, ShoppingCartOutlined, DollarOutlined,
   SyncOutlined, CloudOutlined, InboxOutlined, ArrowRightOutlined, CloudUploadOutlined,
-  CreditCardOutlined, CarOutlined, BellOutlined,
+  CreditCardOutlined, CarOutlined, BellOutlined, StockOutlined,
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { usePlatformConnector, type ShopStats } from '../../../integration/pages/IntegrationCenter/usePlatformConnector';
@@ -14,6 +14,7 @@ import { PLATFORM_LIST, type PlatformMeta } from '../../../integration/pages/Int
 import PaymentRecordsTab from '../../../integration/pages/IntegrationCenter/PaymentRecordsTab';
 import LogisticsRecordsTab from '../../../integration/pages/IntegrationCenter/LogisticsRecordsTab';
 import CallbackLogsTab from '../../../integration/pages/IntegrationCenter/CallbackLogsTab';
+import SmartStockTab from './SmartStockTab';
 import { usePersistentState } from '@/hooks/usePersistentState';
 import { paths } from '@/routeConfig';
 
@@ -247,6 +248,11 @@ const EcommerceCenter: React.FC = () => {
       key: 'callback-logs',
       label: <span><BellOutlined /> 回调日志</span>,
       children: <CallbackLogsTab active={activeTab === 'callback-logs'} />,
+    },
+    {
+      key: 'smart-stock',
+      label: <span><StockOutlined /> 智能库存</span>,
+      children: <SmartStockTab />,
     },
   ];
 

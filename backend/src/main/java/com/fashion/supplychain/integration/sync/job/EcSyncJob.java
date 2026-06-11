@@ -39,6 +39,9 @@ public class EcSyncJob {
     @Autowired
     private com.fashion.supplychain.integration.sync.service.EcStockCalculator stockCalculator;
 
+    @Autowired
+    private com.fashion.supplychain.integration.ecommerce.orchestration.EcStockOrchestrator ecStockOrchestrator;
+
     @Scheduled(fixedRate = 300000, initialDelay = 60000)
     public void stockSyncJob() {
         log.debug("[定时同步] 库存增量同步开始");
@@ -50,6 +53,12 @@ public class EcSyncJob {
             } catch (Exception e) {
                 log.warn("[定时同步] 库存同步失败 平台={}", config.getPlatformCode(), e);
             }
+        }
+        // 检查库存预警
+        try {
+            ecStockOrchestrator.checkAndCreateAlerts(com.fashion.supplychain.common.UserContext.tenantId());
+        } catch (Exception e) {
+            log.warn("[EcSyncJob] 预警检查失败", e);
         }
     }
 

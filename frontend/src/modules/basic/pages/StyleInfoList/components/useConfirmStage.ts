@@ -21,6 +21,7 @@ interface UseConfirmStageParams {
 export default function useConfirmStage({ selectedStage, setSelectedStage, message, onRefresh }: UseConfirmStageParams) {
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
   const [reviewSaving, setReviewSaving] = useState(false);
+  const [reviewImages, setReviewImages] = useState<string[]>([]);
   const [reviewForm] = Form.useForm();
 
   const selectedStageRecordScrapped = useMemo(
@@ -96,6 +97,17 @@ export default function useConfirmStage({ selectedStage, setSelectedStage, messa
 
   const handleOpenReviewModal = useCallback(() => {
     if (!selectedStage) return;
+    const sampleReviewImages = String(selectedStage.record.sampleReviewImages || '').trim();
+    let images: string[] = [];
+    if (sampleReviewImages) {
+      try {
+        images = JSON.parse(sampleReviewImages);
+        if (!Array.isArray(images)) images = [];
+      } catch {
+        images = [];
+      }
+    }
+    setReviewImages(images);
     reviewForm.setFieldsValue({
       reviewStatus: selectedStage.record.sampleReviewStatus || undefined,
       reviewComment: selectedStage.record.sampleReviewComment || '',
@@ -111,12 +123,14 @@ export default function useConfirmStage({ selectedStage, setSelectedStage, messa
       await api.post(`/style/info/${selectedStage.record.id}/sample-review`, {
         reviewStatus: values.reviewStatus,
         reviewComment: values.reviewComment || null,
+        reviewImages: reviewImages.length > 0 ? reviewImages : null,
       });
       const now = formatDateTimeSecond(new Date());
       const nextRecord = {
         ...selectedStage.record,
         sampleReviewStatus: values.reviewStatus,
         sampleReviewComment: values.reviewComment || null,
+        sampleReviewImages: reviewImages.length > 0 ? JSON.stringify(reviewImages) : null,
         sampleReviewTime: now,
       } as StyleInfo;
       const nextStage = buildSmartStages(nextRecord).find((item) => item.key === selectedStage.stage.key) || selectedStage.stage;
@@ -130,13 +144,15 @@ export default function useConfirmStage({ selectedStage, setSelectedStage, messa
     } finally {
       setReviewSaving(false);
     }
-  }, [message, onRefresh, reviewForm, selectedStage, setSelectedStage]);
+  }, [message, onRefresh, reviewForm, reviewImages, selectedStage, setSelectedStage]);
 
   return {
     reviewModalOpen,
     setReviewModalOpen,
     reviewSaving,
     reviewForm,
+    reviewImages,
+    setReviewImages,
     confirmReviewStatus,
     isConfirmReviewPassed,
     isConfirmInboundCompleted,

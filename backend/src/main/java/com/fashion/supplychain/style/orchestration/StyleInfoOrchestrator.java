@@ -637,7 +637,7 @@ public class StyleInfoOrchestrator {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public StyleInfo saveSampleReview(Long id, String reviewStatus, String reviewComment) {
+    public StyleInfo saveSampleReview(Long id, String reviewStatus, String reviewComment, Object reviewImages) {
         StyleInfo style = styleInfoService.getById(id);
         if (style == null) {
             throw new RuntimeException("款式不存在：" + id);
@@ -647,9 +647,17 @@ public class StyleInfoOrchestrator {
         style.setSampleReviewComment(reviewComment);
         style.setSampleReviewer(UserContext.username());
         style.setSampleReviewTime(LocalDateTime.now());
+        if (reviewImages != null) {
+            try {
+                com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                style.setSampleReviewImages(mapper.writeValueAsString(reviewImages));
+            } catch (Exception e) {
+                log.warn("Failed to serialize reviewImages: {}", e.getMessage());
+            }
+        }
         styleInfoService.updateById(style);
 
-        syncPatternProductionReviewFields(id, reviewStatus, reviewComment);
+        syncPatternProductionReviewFields(id, reviewStatus, reviewComment, reviewImages);
 
         if ("PASS".equalsIgnoreCase(reviewStatus)) {
             autoGenerateSkusIfNeeded(id);
@@ -685,7 +693,7 @@ public class StyleInfoOrchestrator {
         }
     }
 
-    private void syncPatternProductionReviewFields(Long styleId, String reviewStatus, String reviewComment) {
+    private void syncPatternProductionReviewFields(Long styleId, String reviewStatus, String reviewComment, Object reviewImages) {
         try {
             PatternProduction pattern = patternProductionService.lambdaQuery()
                     .eq(PatternProduction::getStyleId, String.valueOf(styleId))
@@ -709,6 +717,14 @@ public class StyleInfoOrchestrator {
             pattern.setReviewBy(UserContext.username());
             pattern.setReviewById(UserContext.userId());
             pattern.setReviewTime(LocalDateTime.now());
+            if (reviewImages != null) {
+                try {
+                    com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                    pattern.setReviewImages(mapper.writeValueAsString(reviewImages));
+                } catch (Exception e) {
+                    log.warn("Failed to serialize reviewImages for PatternProduction: {}", e.getMessage());
+                }
+            }
             patternProductionService.updateById(pattern);
         } catch (Exception e) {
             log.error("PC审核同步到PatternProduction失败: styleId={}", styleId, e);

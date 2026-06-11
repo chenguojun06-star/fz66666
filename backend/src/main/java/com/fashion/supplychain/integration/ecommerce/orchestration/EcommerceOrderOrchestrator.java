@@ -43,6 +43,9 @@ public class EcommerceOrderOrchestrator {
     @Autowired
     private ProductSkuService productSkuService;
 
+    @Autowired
+    private EcOrderProcessOrchestrator orderProcessOrchestrator;
+
     @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> receiveOrder(String platformCode, Map<String, Object> body) {
         Long tenantId = UserContext.tenantId();
@@ -131,6 +134,17 @@ public class EcommerceOrderOrchestrator {
             }
         } catch (Exception e) {
             log.warn("[EC自动匹配] SKU匹配异常，不阻断接单: {}", e.getMessage());
+        }
+
+        // 智能仓库分配
+        try {
+            EcOrderProcessOrchestrator.OrderProcessResult result = orderProcessOrchestrator.processOrder(
+                    tenantId, order.getId(), order.getOrderNo(),
+                    null, null, order.getSkuCode(), order.getQuantity() != null ? order.getQuantity() : 0);
+            log.info("[EcommerceOrderOrchestrator] 订单处理结果: orderNo={}, fullyAllocated={}, unfulfilled={}",
+                    order.getOrderNo(), result.fullyAllocated(), result.unfulfilledQty());
+        } catch (Exception e) {
+            log.warn("[EcommerceOrderOrchestrator] 仓库分配失败，订单仍保留: orderNo={}", order.getOrderNo(), e);
         }
 
         return Map.of("id", order.getId(), "orderNo", order.getOrderNo(), "duplicate", false);

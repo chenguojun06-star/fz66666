@@ -456,4 +456,20 @@ public class ProductSkuServiceImpl extends ServiceImpl<ProductSkuMapper, Product
             }
         }
     }
+
+    @Override
+    public ProductSku getBySkuCode(String skuCode) {
+        if (!StringUtils.hasText(skuCode)) return null;
+        Long tenantId = UserContext.tenantId();
+        return getOne(new LambdaQueryWrapper<ProductSku>()
+                .eq(ProductSku::getTenantId, tenantId)
+                .eq(ProductSku::getSkuCode, skuCode)
+                .last("LIMIT 1"), false);
+    }
+
+    @Override
+    public List<ProductSku> listByTenantId(Long tenantId) {
+        return list(new LambdaQueryWrapper<ProductSku>()
+                .eq(ProductSku::getTenantId, tenantId));
+    }
 }

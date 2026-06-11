@@ -1,13 +1,18 @@
 package com.fashion.supplychain.integration.payment.callback;
 
+import com.fashion.supplychain.integration.config.WechatPayProperties;
 import com.fashion.supplychain.integration.payment.PaymentGateway;
 import com.fashion.supplychain.integration.payment.PaymentManager;
 import com.fashion.supplychain.integration.record.entity.IntegrationCallbackLog;
 import com.fashion.supplychain.integration.record.service.IntegrationRecordService;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.service.ProductionOrderService;
+import com.wechat.pay.java.core.RSAAutoCertificateConfig;
+import com.wechat.pay.java.core.notification.NotificationParser;
+import com.wechat.pay.java.service.payments.model.Transaction;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -35,13 +40,19 @@ public class PaymentCallbackController {
     private final PaymentManager paymentManager;
     private final IntegrationRecordService recordService;
     private final ProductionOrderService productionOrderService;
+    private final WechatPayProperties wechatPayProperties;
+
+    @Value("${spring.profiles.active:dev}")
+    private String activeProfile;
 
     public PaymentCallbackController(PaymentManager paymentManager,
                                       IntegrationRecordService recordService,
-                                      @Autowired(required = false) ProductionOrderService productionOrderService) {
+                                      @Autowired(required = false) ProductionOrderService productionOrderService,
+                                      @Autowired(required = false) WechatPayProperties wechatPayProperties) {
         this.paymentManager = paymentManager;
         this.recordService = recordService;
         this.productionOrderService = productionOrderService;
+        this.wechatPayProperties = wechatPayProperties;
     }
 
     // =====================================================
@@ -125,33 +136,78 @@ public class PaymentCallbackController {
                 "PAYMENT", "WECHAT_PAY", body, null);
 
         try {
-            // Step 1: 验证签名
-            // 将Header信息拼接后传入验证（AdapterImpl中使用SDK验证）
-            String callbackData = String.join("|", timestamp, nonce, body, signature, serial);
-            boolean valid = paymentManager.verifyCallback(callbackData, PaymentGateway.PaymentType.WECHAT_PAY);
-
-            if (!valid) {
-                log.warn("[微信支付回调] 签名验证失败");
-                recordService.updateCallbackResult(cbLog.getId(), false, false, null, "签名验证失败");
-                return Map.of("code", "FAIL", "message", "签名验证失败");
+            // 检查是否配置了微信支付
+            if (wechatPayProperties == null || !wechatPayProperties.isConfigured()) {
+                log.warn("[微信支付回调] 微信支付未配置，跳过处理");
+                recordService.updateCallbackResult(cbLog.getId(), false, false, null, "微信支付未配置");
+                return Map.of("code", "FAIL", "message", "微信支付未配置");
             }
 
-            // Step 2: 解密并解析回调数据
-            // 待接入微信SDK（wechatpay-java），使用 NotificationParser 解密 body
-            // DecryptNotifyResult result = parser.parse(headers, body, DecryptNotifyResult.class);
-            // String orderId = result.getOutTradeNo();
-            // String transactionId = result.getTransactionId();
-            // String tradeState = result.getTradeState();
+            // Step 1: 构建验签请求
+            com.wechat.pay.java.core.notification.RequestParam requestParam =
+                    new com.wechat.pay.java.core.notification.RequestParam.Builder()
+                    .serialNumber(serial)
+                    .nonce(nonce)
+                    .timestamp(timestamp)
+                    .signature(signature)
+                    .body(body)
+                    .build();
 
-            log.info("[微信支付回调] 处理成功（需实现解密逻辑）");
-            recordService.updateCallbackResult(cbLog.getId(), true, true, null, null);
-            return Map.of("code", "SUCCESS", "message", "成功");
+            // Step 2: 使用 SDK 验签并解密
+            RSAAutoCertificateConfig config = buildWechatConfig();
+            NotificationParser parser = new NotificationParser(config);
 
+            // 验签并解密支付通知（SDK 会自动解密并返回 Transaction 对象）
+            Transaction transaction = parser.parse(requestParam, Transaction.class);
+
+            log.info("[微信支付回调] 验签解密成功 | outTradeNo={} transactionId={} tradeState={}",
+                    transaction.getOutTradeNo(), transaction.getTransactionId(), transaction.getTradeState());
+
+            // Step 3: 根据交易状态处理业务
+            String orderId = transaction.getOutTradeNo();
+            String thirdPartyNo = transaction.getTransactionId();
+
+            if ("SUCCESS".equals(transaction.getTradeState())) {
+                // 支付成功
+                log.info("[微信支付回调] 支付成功 | orderId={} wechatNo={}", orderId, thirdPartyNo);
+                handlePaymentSuccess(orderId, thirdPartyNo, PaymentGateway.PaymentType.WECHAT_PAY, null);
+                recordService.updateCallbackResult(cbLog.getId(), true, true, orderId, null);
+                return Map.of("code", "SUCCESS", "message", "成功");
+            } else if ("CLOSED".equals(transaction.getTradeState())) {
+                // 交易关闭
+                log.info("[微信支付回调] 交易关闭 | orderId={}", orderId);
+                handlePaymentClosed(orderId, PaymentGateway.PaymentType.WECHAT_PAY);
+                recordService.updateCallbackResult(cbLog.getId(), true, true, orderId, null);
+                return Map.of("code", "SUCCESS", "message", "成功");
+            } else {
+                // 其他状态（NOTPAY, PAY_ERROR 等），记录但不更新订单
+                log.info("[微信支付回调] 交易状态: {} | orderId={}", transaction.getTradeState(), orderId);
+                recordService.updateCallbackResult(cbLog.getId(), true, false, orderId,
+                        "交易状态: " + transaction.getTradeState());
+                return Map.of("code", "SUCCESS", "message", "成功");
+            }
+
+        } catch (NumberFormatException e) {
+            log.warn("[微信支付回调] 时间戳格式错误: {}", timestamp, e);
+            recordService.updateCallbackResult(cbLog.getId(), false, false, null, "时间戳格式错误");
+            return Map.of("code", "FAIL", "message", "时间戳格式错误");
         } catch (Exception e) {
             log.error("[微信支付回调] 处理异常", e);
             recordService.updateCallbackResult(cbLog.getId(), false, false, null, e.getMessage());
             return Map.of("code", "FAIL", "message", e.getMessage());
         }
+    }
+
+    /**
+     * 构建微信支付 RSA 配置（自动下载平台证书）
+     */
+    private RSAAutoCertificateConfig buildWechatConfig() {
+        return new RSAAutoCertificateConfig.Builder()
+                .merchantId(wechatPayProperties.getMchId())
+                .privateKeyFromPath(wechatPayProperties.getPrivateKeyPath())
+                .merchantSerialNumber(wechatPayProperties.getSerialNo())
+                .apiV3Key(wechatPayProperties.getApiV3Key())
+                .build();
     }
 
     // =====================================================

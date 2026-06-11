@@ -320,6 +320,10 @@ public class StyleInfo {
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime sampleReviewTime;
 
+    /** 样衣审核图片（JSON数组格式，存储图片URL列表） */
+    @TableField("sample_review_images")
+    private String sampleReviewImages;
+
     /** 开发来源类型：SELF_DEVELOPED / SELECTION_CENTER */
     private String developmentSourceType;
 

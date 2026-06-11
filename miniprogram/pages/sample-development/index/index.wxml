@@ -89,6 +89,7 @@
 
           <view class="detail-action">
             <button class="action-btn scan-btn" data-item="{{item}}" bindtap="onGoScan" catchtap="onGoScan">扫码操作</button>
+            <button class="action-btn manual-btn" data-item="{{item}}" bindtap="onManualOperate" catchtap="onManualOperate">手工操作</button>
             <button class="action-btn detail-btn" data-item="{{item}}" bindtap="onGoDetail" catchtap="onGoDetail">查看详情</button>
           </view>
         </view>

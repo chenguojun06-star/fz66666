@@ -149,17 +149,29 @@ public class SecurityConfig implements WebMvcConfigurer {
 
             String dsUser = environment == null ? null : environment.getProperty("spring.datasource.username");
             String dsPass = environment == null ? null : environment.getProperty("spring.datasource.password");
-            if (!org.springframework.util.StringUtils.hasText(dsUser)) {
-                log.warn("数据库用户名未配置，将使用默认配置尝试连接");
+            String activeProfile = environment == null ? "" : String.valueOf(environment.getProperty("spring.profiles.active", ""));
+            boolean isProd = activeProfile.contains("prod");
+
+            // 数据库密码校验：生产环境必须配置
+            if (!org.springframework.util.StringUtils.hasText(dsPass) || dsPass.trim().isEmpty()) {
+                if (isProd) {
+                    throw new IllegalStateException("生产环境数据库密码未配置，建议通过 SPRING_DATASOURCE_PASSWORD 环境变量设置");
+                } else {
+                    log.warn("数据库密码未配置，将使用空密码尝试连接");
+                }
             }
-            if (!org.springframework.util.StringUtils.hasText(dsPass)) {
-                log.warn("数据库密码未配置，将使用空密码尝试连接");
+
+            // 数据库用户名校验
+            if (!org.springframework.util.StringUtils.hasText(dsUser)) {
+                if (isProd) {
+                    log.warn("数据库用户名未配置，将使用默认配置尝试连接");
+                } else {
+                    log.warn("数据库用户名未配置，将使用默认配置尝试连接");
+                }
             }
 
             String piiKey = environment == null ? null : environment.getProperty("app.security.pii-encryption-key");
             String pk = piiKey == null ? "" : piiKey.trim();
-            String activeProfile = environment == null ? "" : String.valueOf(environment.getProperty("spring.profiles.active", ""));
-            boolean isProd = activeProfile.contains("prod");
             if (!org.springframework.util.StringUtils.hasText(pk) || "defaultKeyChangeMe12345678".equals(pk)
                     || (pk.startsWith("{{") && pk.endsWith("}}"))) {
                 if (isProd) {

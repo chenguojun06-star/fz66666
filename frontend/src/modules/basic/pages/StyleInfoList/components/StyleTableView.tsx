@@ -6,6 +6,7 @@ import { SMART_CARD_OVERLAY_WIDTH } from '@/components/common/DecisionInsightCar
 import CardCoverSwitcher from '@/components/common/CardCoverSwitcher';
 import SmallModal from '@/components/common/SmallModal';
 import StandardPagination from '@/components/common/StandardPagination';
+import MultiImageUploadBox from '@/components/common/MultiImageUploadBox';
 import StyleDevelopmentWorkbench from './StyleDevelopmentWorkbench';
 import SmartStyleHoverCard from './SmartStyleHoverCard';
 import { StyleInfo, WorkbenchSection } from '@/types/style';
@@ -817,6 +818,13 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
             label="审核意见"
           >
             <Input.TextArea rows={4} placeholder="可填写审核意见或返修要求" />
+          </Form.Item>
+          <Form.Item name="reviewImages" label="审核图片">
+            <MultiImageUploadBox
+              maxCount={9}
+              value={confirm.reviewImages}
+              onChange={(urls) => confirm.setReviewImages(urls)}
+            />
           </Form.Item>
         </Form>
       </SmallModal>

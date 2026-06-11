@@ -1,7 +1,7 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-06-01
+> 最后更新：2026-06-11
 
 ---
 
@@ -10,8 +10,28 @@
 - ✅ 采购车系统全链路（后端+前端+小程序）
 - ✅ 数据安全修复（tenant_id 隔离 + 事务原子性 + 字段名一致性）
 - ✅ ProductionOrderController 深度审查
+- ✅ 安全审计修复（微信支付回调签名验证 + 数据库密码校验 + HTTPS 强制）
 
 ## 最近变更
+
+### 2026-06-11 安全审计修复
+
+**发现并修复的安全问题**：
+
+| # | 严重度 | 问题 | 修复 | 文件 |
+|---|--------|------|------|------|
+| 高-1 | 🔴 | 微信支付回调验签逻辑不完整 | 使用 wechatpay-java SDK 实现正确验签 | PaymentCallbackController.java, WechatPayAdapter.java |
+| 高-2 | 🔴 | WechatPayAdapter.verifyCallback() 直接返回 false | 实现完整的 SDK 验签 | WechatPayAdapter.java |
+| 中-1 | 🟡 | 数据库密码未校验 | 生产环境强制要求配置密码 | SecurityConfig.java |
+| 低-1 | 🟢 | IntegrationHttpClient 无 HTTPS 强制校验 | 添加 HTTPS URL 校验 | IntegrationHttpClient.java |
+
+**修改的文件**：
+1. `backend/pom.xml` — 添加 wechatpay-java SDK 依赖
+2. `backend/.../payment/callback/PaymentCallbackController.java` — 微信支付回调验签+解密
+3. `backend/.../payment/impl/WechatPayAdapter.java` — verifyCallback() SDK 验签
+4. `backend/.../config/SecurityConfig.java` — 生产环境数据库密码校验
+5. `backend/.../util/IntegrationHttpClient.java` — HTTPS URL 强制校验
+6. `backend/src/main/resources/application.yml` — 添加 integration.https-required 配置
 
 ### 2026-06-01 数据安全修复 + ProductionOrderController 深度审查
 

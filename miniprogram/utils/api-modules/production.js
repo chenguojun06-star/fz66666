@@ -191,13 +191,14 @@ const production = {
   submitPatternScan(payload) {
     return ok('/api/production/pattern/scan', 'POST', payload || {});
   },
-  reviewPattern(patternId, result, remark) {
+  reviewPattern(patternId, result, remark, images) {
     const id = String(patternId || '').trim();
     const action = encodeURIComponent('review');
-    return ok(`/api/production/pattern/${encodeURIComponent(id)}/workflow-action?action=${action}`, 'POST', {
-      result,
-      remark,
-    });
+    const payload = { result, remark };
+    if (images && Array.isArray(images) && images.length > 0) {
+      payload.images = images;
+    }
+    return ok(`/api/production/pattern/${encodeURIComponent(id)}/workflow-action?action=${action}`, 'POST', payload);
   },
   receivePattern(patternId, remark, extra) {
     const id = String(patternId || '').trim();

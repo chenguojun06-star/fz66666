@@ -66,6 +66,8 @@ Page({
     warehouseAreaId: '',
     warehouseLocationCode: '',
     locationOptions: [],
+    reviewImages: [],
+    maxImages: 9,
   },
 
   onLoad() {
@@ -373,6 +375,89 @@ Page({
     wx.previewImage({ urls: [url], current: url });
   },
 
+  previewReviewImage(e) {
+    const index = e.currentTarget.dataset.index;
+    const images = this.data.reviewImages || [];
+    if (images.length === 0 || index >= images.length) return;
+    wx.previewImage({
+      urls: images,
+      current: images[index],
+    });
+  },
+
+  chooseReviewImage() {
+    const images = this.data.reviewImages || [];
+    const remaining = this.data.maxImages - images.length;
+    if (remaining <= 0) {
+      toast.warning('最多只能上传' + this.data.maxImages + '张图片');
+      return;
+    }
+
+    wx.chooseImage({
+      count: remaining,
+      sizeType: ['compressed'],
+      sourceType: ['album', 'camera'],
+      success: (res) => {
+        const tempFilePaths = res.tempFilePaths || [];
+        if (tempFilePaths.length === 0) return;
+
+        this._uploadImages(tempFilePaths);
+      },
+      fail: (err) => {
+        console.error('[PatternPage] 选择图片失败:', err);
+        toast.error('选择图片失败');
+      },
+    });
+  },
+
+  _uploadImages(filePaths) {
+    const uploadPromises = filePaths.map((filePath) => {
+      return new Promise((resolve, reject) => {
+        wx.uploadFile({
+          url: `${getApp().globalData.baseUrl}/api/common/upload/image`,
+          filePath: filePath,
+          name: 'file',
+          success: (res) => {
+            try {
+              const data = JSON.parse(res.data);
+              if (data && data.code === 200 && data.data) {
+                resolve(data.data);
+              } else {
+                reject(new Error(data?.message || '上传失败'));
+              }
+            } catch (e) {
+              reject(e);
+            }
+          },
+          fail: (err) => {
+            reject(err);
+          },
+        });
+      });
+    });
+
+    toast.loading('上传中...');
+    Promise.all(uploadPromises)
+      .then((results) => {
+        const newImages = results.filter((url) => url && typeof url === 'string');
+        const updatedImages = [...this.data.reviewImages, ...newImages];
+        this.setData({ reviewImages: updatedImages });
+        toast.success('上传成功');
+      })
+      .catch((err) => {
+        console.error('[PatternPage] 图片上传失败:', err);
+        toast.error('上传失败');
+      });
+  },
+
+  removeReviewImage(e) {
+    const index = e.currentTarget.dataset.index;
+    const images = this.data.reviewImages || [];
+    if (index >= images.length) return;
+    const updatedImages = images.filter((_, i) => i !== index);
+    this.setData({ reviewImages: updatedImages });
+  },
+
   goBack() {
     wx.navigateBack();
   },
@@ -437,7 +522,8 @@ Page({
 
       if (operationType === 'REVIEW') {
         const reviewResult = d.reviewResult || 'PASS';
-        const res = await api.production.reviewPattern(d.patternId, reviewResult, remark);
+        const images = this.data.reviewImages || [];
+        const res = await api.production.reviewPattern(d.patternId, reviewResult, remark, images);
         const resultMsg = reviewResult === 'PASS' ? '审核通过' : reviewResult === 'REWORK' ? '审核返修，请扫码返修' : '审核已驳回';
         result = res ? { success: true, message: resultMsg } : { success: false, message: '审核提交失败' };
 

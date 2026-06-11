@@ -90,6 +90,23 @@
       </view>
     </view>
 
+    <!-- 审核图片上传（审核操作时显示） -->
+    <view wx:if="{{detail.operationType === 'REVIEW'}}" class="review-images-section">
+      <text class="input-label">审核图片（最多{{maxImages}}张）</text>
+      <view class="review-images-list">
+        <!-- 已上传的图片 -->
+        <view wx:for="{{reviewImages}}" wx:key="*this" class="review-image-item">
+          <image src="{{item}}" mode="aspectFill" class="review-image" bindtap="previewReviewImage" data-index="{{index}}" />
+          <view class="review-image-remove" bindtap="removeReviewImage" data-index="{{index}}">✕</view>
+        </view>
+        <!-- 添加按钮 -->
+        <view wx:if="{{reviewImages.length < maxImages}}" class="review-image-add" bindtap="chooseReviewImage">
+          <text class="add-icon">+</text>
+          <text class="add-text">添加图片</text>
+        </view>
+      </view>
+    </view>
+
     <!-- 多色多码选择（当有 skuList 时显示） -->
     <view wx:if="{{skuList.length > 0 && detail.operationType !== 'COMPLETE' && detail.operationType !== 'REVIEW'}}" class="section-card" style="margin-top: 0; padding: 0; background: transparent;">
       <text class="section-title">扫码明细（{{skuList.length}}项）</text>

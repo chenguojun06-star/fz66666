@@ -294,6 +294,29 @@ Page({
     }).catch(() => {});
   },
 
+  /** 手工进入流程操作（不扫码） */
+  onManualOperate: function (e) {
+    const item = e.currentTarget.dataset.item;
+    if (!item) return;
+    const app = getApp();
+    if (app && app.globalData) {
+      // 构建手工进入的数据，跳过扫码直接进入操作页面
+      app.globalData.patternScanData = {
+        ...item,
+        // 强制设置 operationType 为 RECEIVE，让用户可以选择工序
+        operationType: item.operationType || 'RECEIVE',
+        // 如果有审核状态，设置当前操作为审核
+        patternDetail: {
+          reviewStatus: item.reviewStatus || '',
+          reviewResult: item.reviewResult || '',
+        },
+      };
+    }
+    safeNavigate({
+      url: '/pages/scan/pattern/index?patternId=' + encodeURIComponent(item.id || '') + '&manual=1',
+    }).catch(() => {});
+  },
+
   onPreviewImage: function (e) {
     const url = e.currentTarget.dataset.src;
     if (!url) return;

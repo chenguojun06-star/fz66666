@@ -324,6 +324,11 @@
   background: #1677ff;
 }
 
+.action-btn.manual-btn {
+  color: #fff;
+  background: #52c41a;
+}
+
 .action-btn.detail-btn {
   color: #1677ff;
   background: #e6f4ff;

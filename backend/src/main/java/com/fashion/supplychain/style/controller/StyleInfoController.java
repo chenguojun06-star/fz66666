@@ -249,7 +249,7 @@ public class StyleInfoController {
     /**
      * 保存样衣审核结论（评语选填）
      * 调用方式：POST /api/style/info/{id}/sample-review
-     * Body：{ "reviewStatus": "PASS|REWORK|REJECT", "reviewComment": "..." }
+     * Body：{ "reviewStatus": "PASS|REWORK|REJECT", "reviewComment": "...", "reviewImages": ["url1", "url2"] }
      */
     @PostMapping("/{id}/sample-review")
     public Result<?> saveSampleReview(
@@ -257,7 +257,8 @@ public class StyleInfoController {
             @RequestBody(required = false) Map<String, Object> body) {
         String reviewStatus  = body != null ? (String) body.get("reviewStatus")  : null;
         String reviewComment = body != null ? (String) body.get("reviewComment") : null;
-        return Result.success(styleInfoOrchestrator.saveSampleReview(id, reviewStatus, reviewComment));
+        Object reviewImages = body != null ? body.get("reviewImages") : null;
+        return Result.success(styleInfoOrchestrator.saveSampleReview(id, reviewStatus, reviewComment, reviewImages));
     }
 
     /**

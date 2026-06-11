@@ -150,6 +150,12 @@ public class PatternProduction {
      */
     private LocalDateTime reviewTime;
 
+    /**
+     * 审核图片（JSON数组格式，存储图片URL列表）
+     */
+    @TableField("review_images")
+    private String reviewImages;
+
     // ==================== 操作人字段（自动填充）====================
 
     private String receiverId;

@@ -1,11 +1,20 @@
 # 进度跟踪
 
 > 本文件由 AI 助手自动维护，记录项目开发进度
-> 最后更新：2026-06-01
+> 最后更新：2026-06-11
 
 ---
 
 ## 已完成
+
+### 2026-06-11
+- [x] 🔴 安全修复：微信支付回调验签逻辑不完整 → 使用 wechatpay-java SDK 实现正确验签
+- [x] 🔴 安全修复：WechatPayAdapter.verifyCallback() 直接返回 false → 实现完整的 SDK 验签
+- [x] 🟡 安全修复：数据库密码未校验 → 生产环境强制要求配置密码
+- [x] 🟢 安全增强：IntegrationHttpClient 添加 HTTPS URL 强制校验
+- [x] 🔧 修复：SampleWorkflowTool.saveSampleReview() 参数不匹配问题
+- [x] 后端 mvn compile BUILD SUCCESS
+- [x] Flyway SQL 校验通过
 
 ### 2026-06-01
 - [x] 🔴 P0修复：getByOrderNo() 无 tenant_id 过滤 — 跨租户数据泄露
