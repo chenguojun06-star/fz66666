@@ -6,7 +6,7 @@
       "name": "fashion-backend",
       "dockerfile": "./backend/Dockerfile",
       "containerPort": 8088,
-      "initialDelaySeconds": 120,
+      "InitialDelaySeconds": 150,
       "minNum": 1,
       "maxNum": 5,
       "cpu": 1,
