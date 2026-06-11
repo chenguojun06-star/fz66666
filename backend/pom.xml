@@ -25,7 +25,7 @@
         <!-- 8.4.0 LTS 修复 CVE-2023-22102（高危：8.1.0 及以下受影响） -->
         <mysql-connector.version>8.4.0</mysql-connector.version>
         <springdoc-openapi.version>2.6.0</springdoc-openapi.version>
-        <hutool.version>5.8.27</hutool.version>
+        <hutool.version>5.8.44</hutool.version>
         <poi.version>5.3.0</poi.version>
         <lombok.version>1.18.38</lombok.version>
         <!-- 编译和构建 -->
