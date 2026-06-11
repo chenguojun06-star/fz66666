@@ -42,7 +42,7 @@
           <view class="sel-cover-box" catchtap="onPreviewSelImage" data-url="{{item.styleCoverUrl}}">
             <image wx:if="{{item.styleCoverUrl}}" class="sel-cover-img" src="{{item.styleCoverUrl}}" mode="aspectFill" lazy-load="{{true}}" />
             <view wx:else class="sel-cover-empty">
-              <text class="cover-abbr">{{item.styleNo ? item.styleNo.substring(0,2) : '--'}}</text>
+              <text class="cover-abbr">{{item._styleAbbr || '--'}}</text>
             </view>
           </view>
           <!-- 订单信息 -->
@@ -90,7 +90,7 @@
               mode="aspectFill"
             />
             <view wx:else class="cover-placeholder">
-              <text class="cover-abbr">{{orderInfo.styleNo ? orderInfo.styleNo.substring(0,2) : '--'}}</text>
+              <text class="cover-abbr">{{orderInfo._styleAbbr || '--'}}</text>
             </view>
           </view>
           <!-- 右侧信息网格 -->

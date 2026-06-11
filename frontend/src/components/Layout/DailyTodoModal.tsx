@@ -265,7 +265,14 @@ const DailyTodoModal: React.FC = () => {
         timeout: 8000, signal: ac.signal,
       }) as ApiResult<BriefData>;
       if (!ac.signal.aborted && res.code === 200) setBrief(res.data ?? null);
-    } catch { /* 网络失败仍弹出 */ } finally {
+      else if (!ac.signal.aborted) { markShownToday(); setOpen(false); }
+    } catch {
+      /* 网络失败自动关闭弹窗，避免只显示灰色遮罩 */
+      if (!ac.signal.aborted) {
+        markShownToday();
+        setOpen(false);
+      }
+    } finally {
       if (!ac.signal.aborted) setLoading(false);
     }
   }, []);

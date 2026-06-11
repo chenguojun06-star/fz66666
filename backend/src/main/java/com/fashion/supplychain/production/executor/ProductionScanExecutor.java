@@ -16,7 +16,6 @@ import com.fashion.supplychain.style.service.StyleInfoService;
 import com.fashion.supplychain.style.service.SecondaryProcessService;
 import com.fashion.supplychain.production.orchestration.ProductionProcessTrackingOrchestrator;
 import com.fashion.supplychain.template.service.TemplateLibraryService;
-import com.fashion.supplychain.websocket.service.WebSocketService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DuplicateKeyException;
@@ -50,7 +49,6 @@ public class ProductionScanExecutor {
     private final ProcessParentMappingService processParentMappingService;
     private final ProductionProcessTrackingOrchestrator processTrackingOrchestrator;
     private final ProductionProcessTrackingService trackingService;
-    private final WebSocketService webSocketService;
 
     private final ScanExecutorSupport executorSupport;
 
@@ -237,31 +235,7 @@ public class ProductionScanExecutor {
             sr.setScanResult("failure");
             sr.setRemark("风控拦截：" + e.getMessage());
             scanRecordService.saveScanRecord(sr);
-            pushRiskAlert(operatorName, quantity, processCode, sr.getTotalAmount());
             throw new IllegalStateException("AI 财务风控拦截：单次扫码金额/数量过大，请拆分批次或联系厂长核实。");
-        }
-    }
-
-    private void pushRiskAlert(String operatorName, int quantity, String processCode, BigDecimal totalAmount) {
-        com.fashion.supplychain.intelligence.dto.TraceableAdvice advice = com.fashion.supplychain.intelligence.dto.TraceableAdvice.builder()
-                .traceId(java.util.UUID.randomUUID().toString())
-                .title("🚨 财务风控：检测到异常高产/高薪扫码")
-                .summary("工人 " + operatorName + " 提交了 " + quantity + " 件 " + processCode + " 扫码，单次计件金额高达 " + totalAmount + " 元。")
-                .reasoningChain(java.util.List.of(
-                    "本次提交数量：" + quantity + " 件",
-                    "本次计件金额：" + totalAmount + " 元",
-                    "判定结果：超出系统设定的单笔安全阈值，已自动拦截并冻结计件。"))
-                .confidenceScore(5)
-                .proposedActions(java.util.List.of(
-                    com.fashion.supplychain.intelligence.dto.TraceableAdvice.ProposedAction.builder()
-                        .label("立即核实并警告").actionCommand("send_notification")
-                        .actionParams(Map.of("toUser", operatorName, "content", "您的扫码数据异常，已被系统拦截，请联系厂长。")).build(),
-                    com.fashion.supplychain.intelligence.dto.TraceableAdvice.ProposedAction.builder()
-                        .label("忽略").actionCommand("IGNORE").build()))
-                .build();
-        String userId = com.fashion.supplychain.common.UserContext.userId();
-        if (userId != null) {
-            webSocketService.sendToUser(userId, com.fashion.supplychain.websocket.enums.WebSocketMessageType.TRACEABLE_ADVICE, advice);
         }
     }
 

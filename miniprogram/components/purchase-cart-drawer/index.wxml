@@ -30,7 +30,7 @@
       <!-- 购物车物料列表 -->
       <view class="cart-item" wx:for="{{ cart.items }}" wx:key="id">
         <view class="item-left">
-          <checkbox checked="{{ selectedItems.indexOf(item.id) !== -1 }}" bindtap="onToggleItem" data-id="{{ item.id }}" />
+          <checkbox checked="{{ item._selected }}" bindtap="onToggleItem" data-id="{{ item.id }}" />
         </view>
         <view class="item-center">
           <view class="item-name">{{ item.materialName }}</view>

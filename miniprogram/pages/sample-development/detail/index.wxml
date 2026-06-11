@@ -174,7 +174,7 @@
           <view class="list-item attachment-item" wx:for="{{attachmentList}}" wx:key="id" data-url="{{item.url || item.fileUrl}}" bindtap="onAttachmentTap">
             <view class="item-main">
               <text class="item-title">{{item.fileName || item.name || '文件'}}</text>
-              <text class="item-sub">{{item.fileType || item.type || ''}} {{item.fileSize ? (item.fileSize > 1024*1024 ? (item.fileSize/1024/1024).toFixed(1) + 'MB' : (item.fileSize/1024).toFixed(0) + 'KB') : ''}}</text>
+              <text class="item-sub">{{item.fileType || item.type || ''}} {{item.fileSizeText}}</text>
             </view>
             <view class="item-right">
               <text class="attachment-action">查看</text>

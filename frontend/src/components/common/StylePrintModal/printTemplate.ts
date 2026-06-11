@@ -113,6 +113,7 @@ export function buildPrintHtml({
           .print-section {
             margin-bottom: 16px;
             page-break-inside: avoid;
+            break-inside: avoid;
           }
           .print-section-title {
             font-size: 12px;
@@ -129,6 +130,12 @@ export function buildPrintHtml({
             border-collapse: collapse;
             font-size: 12px;
             margin-bottom: 16px;
+            page-break-inside: avoid;
+            break-inside: avoid;
+          }
+          thead, tbody, tr, th, td {
+            page-break-inside: avoid;
+            break-inside: avoid;
           }
           th, td {
             border: 1px solid #d9d9d9;

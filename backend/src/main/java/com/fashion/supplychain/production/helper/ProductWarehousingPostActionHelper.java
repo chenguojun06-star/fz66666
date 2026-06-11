@@ -8,7 +8,6 @@ import com.fashion.supplychain.production.service.ProductionOrderScanRecordDomai
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.system.entity.OrderRemark;
 import com.fashion.supplychain.system.service.OrderRemarkService;
-import com.fashion.supplychain.websocket.service.WebSocketService;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Map;
@@ -34,9 +33,6 @@ public class ProductWarehousingPostActionHelper {
     private OrderRemarkService orderRemarkService;
 
     @Autowired
-    private WebSocketService webSocketService;
-
-    @Autowired
     private com.fashion.supplychain.integration.openapi.service.WebhookPushService webhookPushService;
 
     @Autowired
@@ -51,7 +47,6 @@ public class ProductWarehousingPostActionHelper {
         }
         ensureFinanceAndProgress(orderId, w != null ? w.getId() : null, "save");
         computeSpc(orderId);
-        pushWebSocketNotification(w);
         writeQualityRemark(w);
         pushWebhookQualityResult(w);
         applyDefectDeductionIfNeeded(w);
@@ -160,24 +155,6 @@ public class ProductWarehousingPostActionHelper {
             log.info("[SPC] orderId={}, records={}, cpk={}, ppk={}", orderId, records.size(), cpk, ppk);
         } catch (Exception ex) {
             log.warn("[SPC] 入库后Cpk计算失败（不阻断入库）: orderId={}, error={}", orderId, ex.getMessage());
-        }
-    }
-
-    private void pushWebSocketNotification(ProductWarehousing w) {
-        if (w == null) return;
-        try {
-            String whOrderNo = w.getOrderNo() != null ? w.getOrderNo() : "";
-            String bNo = w.getCuttingBundleNo() != null ? String.valueOf(w.getCuttingBundleNo()) : "";
-            String opName = w.getWarehousingOperatorName() != null ? w.getWarehousingOperatorName() : "";
-            int qty = w.getQualifiedQuantity() != null ? w.getQualifiedQuantity() : 0;
-            String processLabel = qty > 0 && (w.getUnqualifiedQuantity() == null || w.getUnqualifiedQuantity() <= 0)
-                    ? "质检入库" : "质检记录";
-            String whOperatorId = w.getWarehousingOperatorId() != null ? w.getWarehousingOperatorId() : "";
-            if (StringUtils.hasText(whOperatorId)) {
-                webSocketService.notifyProcessStageCompleted(whOperatorId, whOrderNo, processLabel, opName, bNo, "", "", qty);
-            }
-        } catch (Exception e) {
-            log.debug("save: 工序通知推送失败(不阻断): orderNo={}", w.getOrderNo(), e);
         }
     }
 

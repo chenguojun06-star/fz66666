@@ -134,8 +134,8 @@
         <input class="add-inp flex-1" value="{{colorInput}}" bindinput="onColorInput" bindconfirm="onColorAdd" placeholder="输入颜色名，回车添加" confirm-type="done" />
         <view class="f-btn" bindtap="onColorAdd"><text>添加</text></view>
       </view>
-      <view class="chip-wrap" wx:if="{{colorOptions.length > 0}}">
-        <view class="chip {{selectedColors.indexOf(item) !== -1 ? 'on' : ''}}" wx:for="{{colorOptions}}" wx:key="*this" data-c="{{item}}" bindtap="onColorToggle">{{item}}<text wx:if="{{selectedColors.indexOf(item) !== -1}}" style="margin-left:2px;font-size:10px;">✓</text></view>
+      <view class="chip-wrap" wx:if="{{_colorOptItems.length > 0}}">
+        <view class="chip {{item._selected ? 'on' : ''}}" wx:for="{{_colorOptItems}}" wx:key="value" data-c="{{item.value}}" bindtap="onColorToggle">{{item.value}}<text wx:if="{{item._selected}}" style="margin-left:2px;font-size:10px;">✓</text></view>
       </view>
 
       <view class="add-row">
@@ -143,8 +143,8 @@
         <input class="add-inp flex-1" value="{{sizeInput}}" bindinput="onSizeInput" bindconfirm="onSizeAdd" placeholder="输入码数，回车添加" confirm-type="done" />
         <view class="f-btn" bindtap="onSizeAdd"><text>添加</text></view>
       </view>
-      <view class="chip-wrap" wx:if="{{sizeOptions.length > 0}}">
-        <view class="chip {{selectedSizes.indexOf(item) !== -1 ? 'on' : ''}}" wx:for="{{sizeOptions}}" wx:key="*this" data-s="{{item}}" bindtap="onSizeToggle">{{item}}<text wx:if="{{selectedSizes.indexOf(item) !== -1}}" style="margin-left:2px;font-size:10px;">✓</text></view>
+      <view class="chip-wrap" wx:if="{{_sizeOptItems.length > 0}}">
+        <view class="chip {{item._selected ? 'on' : ''}}" wx:for="{{_sizeOptItems}}" wx:key="value" data-s="{{item.value}}" bindtap="onSizeToggle">{{item.value}}<text wx:if="{{item._selected}}" style="margin-left:2px;font-size:10px;">✓</text></view>
       </view>
 
       <view class="qfill" wx:if="{{orderLines.length > 0}}">

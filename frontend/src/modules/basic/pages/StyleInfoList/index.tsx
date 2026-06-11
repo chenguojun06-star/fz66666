@@ -7,7 +7,7 @@ import RejectReasonModal from '@/components/common/RejectReasonModal';
 import SmallModal from '@/components/common/SmallModal';
 import StylePrintModal from '@/components/common/StylePrintModal';
 import PageStatCards from '@/components/common/PageStatCards';
-import DelayedStageBreakdown from '@/modules/dashboard/components/DelayedStageBreakdown';
+import { useDelayedStageBreakdown } from '@/modules/dashboard/components/DelayedStageBreakdown/useDelayedStageBreakdown';
 import api from '@/utils/api';
 import { StyleInfo } from '@/types/style';
 import { getStyleCardSizeText, getStyleCardColorText, getStyleCardQuantityText } from '@/utils/cardSizeQuantity';
@@ -64,6 +64,9 @@ const StyleInfoListPage: React.FC = () => {
 
   const { handleScrap, confirmScrap, cancelScrap, pendingScrapId, scrapLoading, handleToggleTop: _handleToggleTop, handlePrint: _handlePrint } = useStyleActions(fetchList);
 
+  // 延期环节数据（内联到智能提示标签）
+  const { stageHints: delayedHints } = useDelayedStageBreakdown({ forceTab: 'sample' });
+
   // 视图模式（持久化）
   const { viewMode, setViewMode } = useStyleViewMode();
 
@@ -85,6 +88,21 @@ const StyleInfoListPage: React.FC = () => {
   const [focusedStyleId, setFocusedStyleId] = useState<string | null>(null);
   const [dateSortAsc, setDateSortAsc] = useState(false);
   const focusClearTimerRef = useRef<number | null>(null);
+
+  // 延期环节跳转带来的精确款式 ID 筛选（来自 /dashboard/delayed-stage-breakdown）
+  const [focusStyleIds, setFocusStyleIds] = useState<Set<string>>(new Set());
+
+  // 从 URL 读取 styleIds 参数（延期环节跳转携带）
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const styleIdsParam = (params.get('styleIds') || '').trim();
+    if (styleIdsParam) {
+      const ids = styleIdsParam.split(',').map(id => id.trim()).filter(Boolean);
+      if (ids.length > 0) setFocusStyleIds(new Set(ids));
+    } else {
+      setFocusStyleIds(new Set());
+    }
+  }, []);
 
   // 款式成本明细侧滑弹窗状态
   const [costDetailVisible, setCostDetailVisible] = useState(false);
@@ -317,6 +335,10 @@ const StyleInfoListPage: React.FC = () => {
     let base = smartFilter === 'overdue' ? overdueStyles
              : smartFilter === 'warning' ? warningStyles
              : data;
+    // 延期环节跳转：精确筛选到具体款式 ID（与后端 delayed-stage-breakdown 数据 100% 一致）
+    if (focusStyleIds.size > 0) {
+      base = base.filter(s => focusStyleIds.has(String(s.id)));
+    }
     if (base.length > 1) {
       base = [...base].sort((a, b) => {
         // 报废款式始终排在最后，不受日期排序方向影响
@@ -329,7 +351,7 @@ const StyleInfoListPage: React.FC = () => {
       });
     }
     return base;
-  }, [smartFilter, data, overdueStyles, warningStyles, dateSortAsc]);
+  }, [smartFilter, data, overdueStyles, warningStyles, dateSortAsc, focusStyleIds]);
 
   const displayTotal = smartFilter !== 'all' ? displayData.length : total;
 
@@ -425,16 +447,24 @@ const StyleInfoListPage: React.FC = () => {
                   active: smartFilter === 'warning',
                   onClick: () => handleSmartFilterClick('warning', warningStyles),
                 },
+                ...delayedHints.map(h => ({
+                  key: h.key,
+                  count: h.count,
+                  tone: 'orange' as const,
+                  label: `${h.stageName}延期`,
+                  hint: `点击查看${h.stageName}延期款式`,
+                  active: false,
+                  onClick: () => navigate(h.buildNavigateUrl()),
+                })),
               ]}
-              onClearHints={smartFilter !== 'all' ? () => {
+              onClearHints={smartFilter !== 'all' || focusStyleIds.size > 0 ? () => {
                 setSmartFilter('all');
+                setFocusStyleIds(new Set());
                 setPendingFocusStyleId(null);
                 setFocusedStyleId(null);
               } : undefined}
             />
 
-            {/* 按环节分组的延期提醒 */}
-            <DelayedStageBreakdown forceTab="sample" title="按开发环节查看" />
           </>
         }
         filterBar={

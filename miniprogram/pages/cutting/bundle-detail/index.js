@@ -177,6 +177,7 @@ Page({
         list = list.map(order => ({
           ...order,
           styleCoverUrl: getAuthedImageUrl(order.styleCover || order.styleImageUrl || order.coverImage || ''),
+          _styleAbbr: order.styleNo ? String(order.styleNo).slice(0, 2) : '--',
           // 交期兜底：PC 端下单用 plannedEndDate，统一归一到 deliveryDate 供模板显示
           deliveryDate: order.expectedShipDate || order.deliveryDate
             || (order.plannedEndDate ? order.plannedEndDate.slice(0, 10) : ''),
@@ -264,8 +265,9 @@ Page({
 
       this._orderMatrix = orderMatrix;
       this._orderSimpleRows = orderSimpleRows;
+      const orderWithAbbr = Object.assign({}, order, { _styleAbbr: order && order.styleNo ? String(order.styleNo).slice(0, 2) : '--' });
       this.setData({
-        orderInfo: order,
+        orderInfo: orderWithAbbr,
         coverImage,
         orderTotal,
       });

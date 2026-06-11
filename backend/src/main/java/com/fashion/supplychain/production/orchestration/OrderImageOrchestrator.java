@@ -9,9 +9,6 @@ import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.service.OrderImageService;
 import com.fashion.supplychain.production.service.OrderImageSnapshotService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
-import com.fashion.supplychain.websocket.RealTimeWebSocketHandler;
-import com.fashion.supplychain.websocket.dto.WebSocketMessage;
-import com.fashion.supplychain.websocket.enums.WebSocketMessageType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,9 +36,6 @@ public class OrderImageOrchestrator {
 
     @Autowired
     private ProductionOrderService productionOrderService;
-
-    @Autowired
-    private RealTimeWebSocketHandler webSocketHandler;
 
     public List<OrderImage> listByOrderNo(String orderNo) {
         Long tenantId = TenantAssert.requireTenantId();
@@ -212,14 +206,6 @@ public class OrderImageOrchestrator {
     }
 
     private void notifyImageUpdate(String orderNo, Long tenantId) {
-        try {
-            WebSocketMessage<Map<String, Object>> message = WebSocketMessage.create(
-                    WebSocketMessageType.DATA_CHANGED,
-                    Map.of("entityType", "orderImage", "orderNo", orderNo, "timestamp", System.currentTimeMillis())
-            );
-            webSocketHandler.broadcastToTenant(tenantId, message);
-        } catch (Exception e) {
-            log.debug("[OrderImage] WebSocket通知失败: {}", e.getMessage());
-        }
+        // 全局广播已移除，图片更新由操作者本地直接感知
     }
 }

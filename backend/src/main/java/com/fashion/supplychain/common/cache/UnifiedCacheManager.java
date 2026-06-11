@@ -4,11 +4,9 @@ import com.fashion.supplychain.common.UserContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
-import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
@@ -18,7 +16,6 @@ import java.util.concurrent.TimeUnit;
 public class UnifiedCacheManager {
 
     private final RedisTemplate<String, Object> redisTemplate;
-    private final RealTimePushService realTimePushService;
 
     private static final String CACHE_KEY_PREFIX = "fashion:cache:";
     private static final String LOCK_PREFIX = "fashion:lock:";
@@ -57,8 +54,6 @@ public class UnifiedCacheManager {
         try {
             Boolean deleted = redisTemplate.delete(fullKey);
             log.debug("[Cache] Evict cacheName={}, key={}, success={}", cacheName, key, deleted);
-
-            pushEvictionEvent(cacheName, Collections.singleton(key));
         } catch (Exception e) {
             log.warn("[Cache] Evict failed, cacheName={}, key={}", cacheName, key, e);
         }
@@ -71,7 +66,6 @@ public class UnifiedCacheManager {
             if (keys != null && !keys.isEmpty()) {
                 Long count = redisTemplate.delete(keys);
                 log.info("[Cache] Evict by pattern, cacheName={}, pattern={}, count={}", cacheName, pattern, count);
-                pushEvictionEvent(cacheName, keys);
             }
         } catch (Exception e) {
             log.warn("[Cache] Evict by pattern failed, cacheName={}, pattern={}", cacheName, pattern, e);
@@ -118,14 +112,6 @@ public class UnifiedCacheManager {
         }
     }
 
-    public void publishDataSync(DataSyncEvent event) {
-        try {
-            realTimePushService.publishDataSync(event);
-        } catch (Exception e) {
-            log.warn("[Sync] Publish data sync failed, event={}", event, e);
-        }
-    }
-
     private String buildKey(String cacheName, String key) {
         Long tenantIdLong = UserContext.tenantId();
         String tenantId = tenantIdLong != null ? String.valueOf(tenantIdLong) : null;
@@ -133,22 +119,5 @@ public class UnifiedCacheManager {
             return CACHE_KEY_PREFIX + tenantId + ":" + cacheName + ":" + key;
         }
         return CACHE_KEY_PREFIX + cacheName + ":" + key;
-    }
-
-    private void pushEvictionEvent(String cacheName, Set<String> keys) {
-        try {
-            Long tenantIdLong = UserContext.tenantId();
-            String tenantId = tenantIdLong != null ? String.valueOf(tenantIdLong) : null;
-            CacheEvictionEvent event = CacheEvictionEvent.builder()
-                    .cacheName(cacheName)
-                    .keys(keys)
-                    .tenantId(tenantId)
-                    .source("backend")
-                    .timestamp(System.currentTimeMillis())
-                    .build();
-            realTimePushService.publishCacheEviction(event);
-        } catch (Exception e) {
-            log.warn("[Sync] Push eviction event failed", e);
-        }
     }
 }

@@ -93,9 +93,6 @@ public class ProductionOrderOrchestrator {
     @Autowired
     private OrderListCacheHelper orderListCacheHelper;
 
-    @Autowired(required = false)
-    private com.fashion.supplychain.websocket.service.WebSocketService webSocketService;
-
     // ======================= 查询类方法 =======================
 
     public IPage<ProductionOrder> queryPage(Map<String, Object> params) {
@@ -348,9 +345,6 @@ public class ProductionOrderOrchestrator {
         boolean result = progressOrchestrationService.updateProductionProgress(id, progress, rollbackRemark,
                 rollbackToProcessName);
         evictCacheAfterCommit(id);
-        if (result) {
-            tryNotifyProgressChanged(id);
-        }
         return result;
     }
 
@@ -550,23 +544,5 @@ public class ProductionOrderOrchestrator {
                 }
             }
         });
-    }
-
-    private void tryNotifyProgressChanged(String orderId) {
-        try {
-            if (webSocketService == null) return;
-            String operatorId = UserContext.userId();
-            if (operatorId == null || operatorId.isEmpty()) return;
-            ProductionOrder order = productionOrderQueryService.getDetailById(orderId);
-            if (order == null) return;
-            webSocketService.sendToUser(operatorId,
-                    com.fashion.supplychain.websocket.enums.WebSocketMessageType.ORDER_PROGRESS_CHANGED,
-                    java.util.Map.of("orderNo", order.getOrderNo(),
-                            "progress", order.getProductionProgress() != null ? order.getProductionProgress() : 0,
-                            "currentStage", order.getCurrentProcessName() != null ? order.getCurrentProcessName() : "",
-                            "timestamp", System.currentTimeMillis()));
-        } catch (Exception e) {
-            log.debug("[ProgressNotify] 进度变更WebSocket通知失败（不阻断）: orderId={}, err={}", orderId, e.getMessage());
-        }
     }
 }

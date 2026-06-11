@@ -26,9 +26,6 @@ public class ProactivePatrolAgent {
     private MultiAgentDebateOrchestrator debateOrchestrator;
 
     @Autowired
-    private com.fashion.supplychain.websocket.service.WebSocketService webSocketService;
-
-    @Autowired
     private com.fashion.supplychain.intelligence.service.WxAlertNotifyService wxAlertNotifyService;
 
     @Autowired(required = false)
@@ -93,7 +90,6 @@ public class ProactivePatrolAgent {
                         if (isAtRisk(order, context)) {
                             log.info("[ProactivePatrol] 发现高危订单: {}, 移交多智能体进行会诊", order.getOrderNo());
                             SmartNotification notification = debateOrchestrator.diagnoseOrderWithMultiAgent(order, context);
-                            pushToMessageCenter(notification);
                             diagnosed++;
                         }
                     } catch (Exception e) {
@@ -151,52 +147,5 @@ public class ProactivePatrolAgent {
             if (daysToDeadline <= 7 && order.getProductionProgress() < 20) return true;
         }
         return false;
-    }
-
-    private void pushToMessageCenter(SmartNotification notification) {
-        com.fashion.supplychain.intelligence.dto.TraceableAdvice advice = com.fashion.supplychain.intelligence.dto.TraceableAdvice.builder()
-                .traceId(notification.getNotificationId())
-                .title("🚨 " + notification.getTitle())
-                .summary(notification.getContent())
-                .reasoningChain(java.util.List.of(
-                        "基于系统后台数据主动巡检",
-                        "PMC、财务、品控多智能体联合诊断得出结论",
-                        "⚠️ 此建议仅供参考，需人工确认后才可执行"
-                ))
-                .proposedActions(java.util.List.of(
-                        com.fashion.supplychain.intelligence.dto.TraceableAdvice.ProposedAction.builder()
-                                .label("采纳建议并执行")
-                                .actionCommand(notification.getRecommendedAction())
-                                .riskWarning("执行前请确认，此操作会影响生产排期")
-                                .build(),
-                        com.fashion.supplychain.intelligence.dto.TraceableAdvice.ProposedAction.builder()
-                                .label("暂时忽略")
-                                .actionCommand("IGNORE")
-                                .build()
-                ))
-                .confidenceScore(notification.getPriority() != null && notification.getPriority().equals("high") ? 5 : 3)
-                .build();
-
-        String userId = UserContext.userId();
-        if (userId != null) {
-            webSocketService.sendToUser(userId,
-                com.fashion.supplychain.websocket.enums.WebSocketMessageType.TRACEABLE_ADVICE,
-                advice);
-        }
-        log.info("[ProactivePatrol] 已推送智能预警至小云聊天窗口：{}", notification.getTitle());
-
-        if ("high".equals(notification.getPriority())) {
-            try {
-                wxAlertNotifyService.notifyAlert(
-                    notification.getTenantId(),
-                    "高危异常预警",
-                    notification.getContent(),
-                    notification.getOrderId(),
-                    "/pages/intelligence/index"
-                );
-            } catch (Exception e) {
-                log.warn("[ProactivePatrol] 微信通知发送失败: {}", e.getMessage());
-            }
-        }
     }
 }

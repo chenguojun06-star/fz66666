@@ -66,6 +66,9 @@ export function useProductionListData() {
   const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
   const showSmartErrorNotice = useMemo(() => isSmartFeatureEnabled('smart.production.precheck.enabled'), []);
 
+  // 延期环节跳转带来的精确订单 ID 筛选（来自 /dashboard/delayed-stage-breakdown）
+  const [focusOrderIds, setFocusOrderIds] = useState<Set<string>>(new Set());
+
   const orderFocusRef = useRef<{ triggerOrderFocus: (...args: any[]) => void; clearSmartFocus: () => void } | null>(null);
   const {
     clearAllBoardCache, boardStatsByOrder: _boardStatsByOrder, boardTimesByOrder,
@@ -170,6 +173,13 @@ export function useProductionListData() {
     if (['overdue', 'urgent', 'behind', 'stagnant'].includes(filterParam)) {
       setSmartQueueFilter(filterParam as 'overdue' | 'urgent' | 'behind' | 'stagnant');
     }
+    const orderIdsParam = (params.get('orderIds') || '').trim();
+    if (orderIdsParam) {
+      const ids = orderIdsParam.split(',').map(id => id.trim()).filter(Boolean);
+      if (ids.length > 0) setFocusOrderIds(new Set(ids));
+    } else {
+      setFocusOrderIds(new Set());
+    }
     const factoryNameParam = (params.get('factoryName') || '').trim();
     if (factoryNameParam) {
       setQueryParams((prev) => {
@@ -200,7 +210,12 @@ export function useProductionListData() {
   }, [fetchProductionList]);
 
   const sortedProductionList = useMemo(() => {
-    const filtered = [...smartQueueOrders];
+    // 延期环节跳转：直接用后端返回的精确订单 ID，从原始数据中筛选
+    // ⚠️ 不用 smartQueueOrders！因为 smartQueueOrders 会用前端自己的延期标准二次过滤，
+    //    可能把后端认为延期的订单错误排除，导致数字对不上
+    let filtered = focusOrderIds.size > 0
+      ? productionList.filter(o => focusOrderIds.has(String(o.id)))
+      : [...smartQueueOrders];
     filtered.sort((a: any, b: any) => {
       const aStatus = String(a.status || '').trim().toLowerCase();
       const bStatus = String(b.status || '').trim().toLowerCase();
@@ -233,5 +248,6 @@ export function useProductionListData() {
     deliveryRiskMap, stagnantOrderIds, smartActionItems, smartQueueOrders,
     fetchProductionList, sortedProductionList, urlFocusApplied,
     wsRefreshRef,
+    focusOrderIds, setFocusOrderIds,
   };
 }

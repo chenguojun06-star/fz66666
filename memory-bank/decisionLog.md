@@ -1,7 +1,7 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-06-01
+> 最后更新：2026-06-11
 
 ---
 
@@ -125,3 +125,63 @@
   1. 所有 `getById` 后必须 `TenantAssert.assertBelongsToCurrentTenant()`
   2. 所有批量查询必须先过滤租户归属
   3. Code Review 时检查所有新增的读接口
+
+## D-015：容器内禁止使用 localhost 作为网络目标
+
+- **上下文**：P0 事故 INC-20260611-001，docker-entrypoint.sh 中 socat 用 `localhost` 转发到 Tomcat，Ubuntu 24.04 解析 `localhost` 为 IPv6 `::1`，Tomcat 只监听 IPv4 `0.0.0.0`，导致 Connection refused → 全线 502
+- **决策**：容器内所有网络目标地址必须使用明确的 IP 地址，禁止使用 `localhost`
+- **理由**：
+  1. `localhost` 的 IPv4/IPv6 解析行为依赖 glibc 版本和 `/etc/gai.conf` 配置，不可预测
+  2. Ubuntu 24.04 (Noble) 默认 IPv6 优先，旧版可能不同
+  3. 明确 IP 地址消除了歧义，行为可预测
+- **执行规则**：
+  1. 容器内回环连接用 `127.0.0.1`，不用 `localhost`
+  2. HEALTHCHECK 中用 `127.0.0.1`
+  3. 代理/转发配置用 `127.0.0.1`
+  4. 本地开发脚本（不在容器内）可继续用 `localhost`
+
+## D-016：去掉不必要的 socat 代理层
+
+- **上下文**：docker-entrypoint.sh 用 socat 做端口转发（外部 8088 → 内部 8089），但 Spring Boot 的 `server.port=${PORT:8088}` 已能直接读取 PORT 环境变量
+- **决策**：去掉 socat 代理层，让 Tomcat 直接监听 PORT 环境变量指定的端口
+- **理由**：
+  1. socat 代理完全多余，Spring Boot 本身支持动态端口
+  2. 代理层增加了故障点（本次 P0 事故就是 socat 引起的）
+  3. 减少镜像体积（不需要安装 socat）
+  4. 减少启动复杂度（少一个进程管理）
+- **附加**：JVM 启动参数加 `-Djava.net.preferIPv4Stack=true` 作为防御性措施
+
+## D-017：永久移除 WebSocket 全局广播
+
+- **上下文**：用户多次明确表示不需要全局广播通知（"别人扫了码其他人也能看到"），只保留本地提示（"自己操作自己看到本地提示"）。PC 端已砍，小程序端和后端需彻底清理。
+- **决策**：永久移除所有 WebSocket 全局广播代码，禁止加回
+- **理由**：
+  1. 全局广播对业务无实际价值，干扰用户
+  2. WebSocket 连接错误（"未完成的操作"）影响小程序稳定性
+  3. 减少后端资源消耗（广播推送）
+- **已删除文件**：
+  - `backend/.../websocket/` 目录（7个文件）
+  - `WebSocketConfig.java`
+  - `RealTimePushService.java`
+  - `DataSyncAspect.java`
+- **已清理字段的 文件**（13个）：
+  - `ScanRecordOrchestrator.java`
+  - `ProductionOrderOrchestrator.java`
+  - `CuttingBundleSplitTransferOrchestrator.java`
+  - `ScanUndoHelper.java`
+  - `ProductionScanExecutor.java`
+  - `MaterialPurchaseStatusHelper.java`
+  - `ProductWarehousingServiceImpl.java`
+  - `WarehousingWriteHelper.java`
+  - `ProductWarehousingPostActionHelper.java`
+  - `WagePaymentOrchestrator.java`
+  - `ChangeApprovalOrchestrator.java`
+  - `ProactivePatrolAgent.java`
+  - `UnifiedCacheManager.java`
+  - `OrderRemarkController.java` ← 本次清理
+  - `OrderImageOrchestrator.java` ← 本次清理
+- **小程序端**：已删除 `websocket.js`，`app.js` 移除连接代码
+- **执行规则**：
+  1. 禁止在任何新代码中引入 WebSocket 全局广播
+  2. 禁止在代码审查中批准涉及全局广播的 PR
+  3. 业务通知走操作结果返回本地提示，不走广播

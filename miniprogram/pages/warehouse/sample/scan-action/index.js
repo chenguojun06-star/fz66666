@@ -72,6 +72,9 @@ Page({
     successMsg: '',
     stockInfo: null,
     actions: [],
+    _showInbound: false,
+    _showLoan: false,
+    _showReturn: false,
     showPrivacy: false,
     warehouseOptions: [],
     warehouseAreaId: '',
@@ -221,9 +224,13 @@ Page({
         if (d.stock) {
           d.stock._imageUrl = buildImageUrl(d.stock.imageUrl || d.stock.coverImage || '');
         }
+        const actionsArr = d.actions || [];
         this.setData({
           stockInfo: d,
-          actions: d.actions || [],
+          actions: actionsArr,
+          _showInbound: actionsArr.indexOf('inbound') !== -1,
+          _showLoan: actionsArr.indexOf('loan') !== -1,
+          _showReturn: actionsArr.indexOf('return') !== -1,
           loading: false,
         });
       })

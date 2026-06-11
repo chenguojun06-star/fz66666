@@ -234,12 +234,27 @@ Page({
     this.setData({ quotationLoading: false });
   },
 
+  /** 格式化文件大小（字节 → 1.2MB / 500KB） */
+  formatFileSize(bytes) {
+    if (!bytes) return '';
+    const size = Number(bytes) || 0;
+    if (size >= 1024 * 1024) {
+      return (size / 1024 / 1024).toFixed(1) + 'MB';
+    }
+    if (size >= 1024) {
+      return (size / 1024).toFixed(0) + 'KB';
+    }
+    return '';
+  },
+
   async loadAttachments() {
     if (this.data.attachmentList.length > 0) return;
     this.setData({ attachmentLoading: true });
     try {
       const res = await style.listAttachments({ styleId: this.data.styleId });
-      this.setData({ attachmentList: res?.data?.records || res?.data || res?.records || [] });
+      let list = res?.data?.records || res?.data || res?.records || [];
+      list = list.map(it => ({ ...it, fileSizeText: this.formatFileSize(it.fileSize || it.size || 0) }));
+      this.setData({ attachmentList: list });
     } catch (e) { console.error('附件加载失败', e); }
     this.setData({ attachmentLoading: false });
   },

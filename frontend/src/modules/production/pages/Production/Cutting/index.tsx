@@ -24,8 +24,6 @@ import StickyFilterBar from '@/components/common/StickyFilterBar';
 import CuttingSheetPrintModal from '@/components/common/CuttingSheetPrintModal';
 import RejectReasonModal from '@/components/common/RejectReasonModal';
 import ProcessDetailModal from '@/components/production/ProcessDetailModal';
-import DelayedStageBreakdown from '@/modules/dashboard/components/DelayedStageBreakdown';
-
 import { useProcessDetail } from '../List/hooks';
 import { productionOrderApi } from '@/services/production/productionApi';
 
@@ -315,8 +313,7 @@ const CuttingManagement: React.FC = () => {
               />
               </StickyFilterBar>
 
-              {/* 裁剪延期提醒（仅显示裁剪环节延期项） */}
-              <DelayedStageBreakdown forceTab="bulk" stageFilter="裁剪" />
+              {/* 裁剪延期提醒已内联到 PageStatCards hints */}
 
               <ResizableTable<CuttingTask>
                 stickyHeader

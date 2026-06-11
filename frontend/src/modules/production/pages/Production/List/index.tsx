@@ -51,7 +51,7 @@ import ProductionModals from './components/ProductionModals';
 import ProductionFilterBar from './components/ProductionFilterBar';
 import { buildCommonOrderActions } from '../components/buildCommonOrderActions';
 import SmartReceiveModal from '../MaterialPurchase/components/SmartReceiveModal';
-import DelayedStageBreakdown from '@/modules/dashboard/components/DelayedStageBreakdown';
+import { useDelayedStageBreakdown } from '@/modules/dashboard/components/DelayedStageBreakdown/useDelayedStageBreakdown';
 
 const ProductionList: React.FC = () => {
   const { message } = App.useApp();
@@ -68,6 +68,9 @@ const ProductionList: React.FC = () => {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const location = useLocation();
   const { factoryTypeOptions } = useOrganizationFilterOptions();
+
+  // 延期环节数据（内联到智能提示标签）
+  const { stageHints: delayedHints } = useDelayedStageBreakdown({ forceTab: 'bulk' });
 
   // ===== 打印弹窗状态 =====
   const [printModalVisible, setPrintModalVisible] = useState(false);
@@ -116,6 +119,7 @@ const ProductionList: React.FC = () => {
     fetchProductionList, sortedProductionList, urlFocusApplied,
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     wsRefreshRef,
+    focusOrderIds, setFocusOrderIds,
   } = useProductionListData();
 
   // ===== 提取的 Hooks =====
@@ -309,8 +313,19 @@ const ProductionList: React.FC = () => {
                 activeColor: 'var(--color-primary)',
               },
             ]}
-            hints={smartActionItems.map((item) => ({ ...item, count: item.value }))}
-            onClearHints={smartQueueFilter !== 'all' ? () => setSmartQueueFilter('all') : undefined}
+            hints={[
+              ...smartActionItems.map((item) => ({ ...item, count: item.value })),
+              ...delayedHints.map(h => ({
+                  key: h.key,
+                  count: h.count,
+                  tone: 'red' as const,
+                  label: `${h.stageName}延期`,
+                  hint: `点击查看${h.stageName}延期订单`,
+                  active: false,
+                  onClick: () => navigate(h.buildNavigateUrl()),
+                })),
+              ]}
+              onClearHints={smartQueueFilter !== 'all' || focusOrderIds.size > 0 ? () => { setSmartQueueFilter('all'); setFocusOrderIds(new Set()); } : undefined}
           />
           </>}
           filterLeft={ProductionFilterBar({
@@ -324,8 +339,6 @@ const ProductionList: React.FC = () => {
             viewMode, setViewMode, factoryTypeOptions,
           }).filterRight}
         >
-          {/* 智能延期提醒（仅显示大货延期项） */}
-          <DelayedStageBreakdown forceTab="bulk" />
           {viewMode === 'smart' ? (
             <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
             <ExternalFactorySmartView

@@ -17,7 +17,6 @@ import com.fashion.supplychain.production.service.CuttingBundleSplitLogService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.ProductionProcessTrackingService;
 import com.fashion.supplychain.production.service.ScanRecordService;
-import com.fashion.supplychain.websocket.service.WebSocketService;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -32,8 +31,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.util.StringUtils;
 
 @Service
@@ -52,9 +49,6 @@ public class CuttingBundleSplitTransferOrchestrator {
     private CuttingBundleSplitLogService splitLogService;
     @Autowired
     private QrCodeSigner qrCodeSigner;
-    @Autowired
-    @Lazy
-    private WebSocketService webSocketService;
 
     @Transactional(rollbackFor = Exception.class)
     public CuttingBundleSplitTransferResponse splitAndTransfer(CuttingBundleSplitTransferRequest request) {
@@ -103,7 +97,6 @@ public class CuttingBundleSplitTransferOrchestrator {
         archiveSourceBundle(source, splitProcessName, currentOrder);
         splitLogService.save(buildSplitLog(source, completedBundle, transferBundle, request));
         CuttingBundleSplitTransferResponse response = buildResponse(source, rootBundleId, request, completedBundle, transferBundle);
-        registerPostCommitNotification(source, request, completedBundle, transferBundle);
         return response;
     }
 
@@ -124,7 +117,6 @@ public class CuttingBundleSplitTransferOrchestrator {
         CuttingBundleSplitLog logEntry = buildSplitLog(source, null, null, request);
         logEntry.setSplitStatus("PENDING");
         splitLogService.save(logEntry);
-        registerPostCommitNotificationForRequest(source, request, logEntry);
         CuttingBundleSplitTransferResponse response = new CuttingBundleSplitTransferResponse();
         response.setSuccess(true);
         response.setAction("split_request");
@@ -192,7 +184,6 @@ public class CuttingBundleSplitTransferOrchestrator {
         splitLogService.updateById(splitLog);
         CuttingBundleSplitTransferResponse response = buildResponse(source, rootBundleId, request, completedBundle, transferBundle);
         response.setMessage("拆菲转派成功，后续可按子菲号继续扫码或打印");
-        registerPostCommitNotificationForConfirm(source, splitLog, completedBundle, transferBundle);
         return response;
     }
 
@@ -483,57 +474,6 @@ public class CuttingBundleSplitTransferOrchestrator {
         cuttingBundleService.updateById(source);
     }
 
-    private void registerPostCommitNotification(CuttingBundle source, CuttingBundleSplitTransferRequest request,
-                                                 CuttingBundle completedBundle, CuttingBundle transferBundle) {
-        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
-            sendSplitNotifications(source, request, completedBundle, transferBundle);
-            return;
-        }
-        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-            @Override
-            public void afterCommit() {
-                sendSplitNotifications(source, request, completedBundle, transferBundle);
-            }
-        });
-    }
-
-    private void sendSplitNotifications(CuttingBundle source, CuttingBundleSplitTransferRequest request,
-                                         CuttingBundle completedBundle, CuttingBundle transferBundle) {
-        try {
-            String orderNo = source.getProductionOrderNo();
-            String styleNo = source.getStyleNo();
-            String color = source.getColor();
-            String size = source.getSize();
-            String bundleLabel = resolveBundleLabel(source);
-            String fromOperatorId = source.getOperatorId();
-            String fromOperatorName = source.getOperatorName();
-            String toOperatorId = request.getToWorkerId();
-            String toOperatorName = request.getToWorkerName();
-            int transferQty = request.getTransferQuantity() != null ? request.getTransferQuantity() : 0;
-            int remainQty = request.getCompletedQuantity() != null ? request.getCompletedQuantity() : 0;
-            String processName = request.getCurrentProcessName();
-
-            // 通知接手方：收到拆菲转派
-            if (StringUtils.hasText(toOperatorId)) {
-                webSocketService.notifyScanSuccess(toOperatorId, orderNo, styleNo,
-                        processName, transferQty, toOperatorName, transferBundle.getBundleLabel());
-                log.info("[拆菲通知] 已通知接手方: toWorkerId={}, toWorkerName={}, bundleLabel={}, qty={}",
-                        toOperatorId, toOperatorName, transferBundle.getBundleLabel(), transferQty);
-            }
-
-            // 通知原持有者：菲号已拆分（带拆分详情）
-            if (StringUtils.hasText(fromOperatorId)) {
-                webSocketService.notifyDataChanged(fromOperatorId, "bundle_split",
-                        String.valueOf(source.getId()), "split_transfer");
-                log.info("[拆菲通知] 已通知原持有者: fromWorkerId={}, fromWorkerName={}, bundleLabel={}, 剩余={}, 转出={}",
-                        fromOperatorId, fromOperatorName, bundleLabel, remainQty, transferQty);
-            }
-        } catch (Exception e) {
-            log.warn("[拆菲通知] 推送失败（不阻断主流程）: bundleId={}, error={}",
-                    source.getId(), e.getMessage(), e);
-        }
-    }
-
     private void restoreSourceBundle(CuttingBundle source, CuttingBundleSplitLog splitLog, int currentOrder, List<ProductionProcessTracking> sourceTrackings) {
         source.setSplitStatus("normal");
         source.setSplitProcessName(null);
@@ -704,85 +644,6 @@ public class CuttingBundleSplitTransferOrchestrator {
         req.setToWorkerName(log.getToWorkerName());
         req.setReason(log.getReason());
         return req;
-    }
-
-    private void registerPostCommitNotificationForRequest(CuttingBundle source, CuttingBundleSplitTransferRequest request,
-                                                           CuttingBundleSplitLog logEntry) {
-        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
-            sendRequestNotification(source, request, logEntry);
-            return;
-        }
-        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-            @Override
-            public void afterCommit() {
-                sendRequestNotification(source, request, logEntry);
-            }
-        });
-    }
-
-    private void sendRequestNotification(CuttingBundle source, CuttingBundleSplitTransferRequest request,
-                                          CuttingBundleSplitLog logEntry) {
-        try {
-            String toOperatorId = request.getToWorkerId();
-            String toOperatorName = request.getToWorkerName();
-            int transferQty = request.getTransferQuantity() != null ? request.getTransferQuantity() : 0;
-            String orderNo = source.getProductionOrderNo();
-            String styleNo = source.getStyleNo();
-            String bundleLabel = resolveBundleLabel(source);
-            String processName = request.getCurrentProcessName();
-            if (StringUtils.hasText(toOperatorId)) {
-                webSocketService.notifyDataChanged(toOperatorId, "bundle_split_pending",
-                        logEntry.getId(), "split_requested");
-                log.info("[拆菲请求] 已通知接手方确认: toWorkerId={}, toWorkerName={}, splitLogId={}",
-                        toOperatorId, toOperatorName, logEntry.getId());
-            }
-        } catch (Exception e) {
-            log.warn("[拆菲请求] 通知推送失败（不阻断主流程）: splitLogId={}, error={}",
-                    logEntry.getId(), e.getMessage(), e);
-        }
-    }
-
-    private void registerPostCommitNotificationForConfirm(CuttingBundle source, CuttingBundleSplitLog splitLog,
-                                                           CuttingBundle completedBundle, CuttingBundle transferBundle) {
-        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
-            sendConfirmNotification(source, splitLog, completedBundle, transferBundle);
-            return;
-        }
-        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-            @Override
-            public void afterCommit() {
-                sendConfirmNotification(source, splitLog, completedBundle, transferBundle);
-            }
-        });
-    }
-
-    private void sendConfirmNotification(CuttingBundle source, CuttingBundleSplitLog splitLog,
-                                          CuttingBundle completedBundle, CuttingBundle transferBundle) {
-        try {
-            String fromOperatorId = splitLog.getFromWorkerId();
-            String fromOperatorName = splitLog.getFromWorkerName();
-            String toOperatorId = splitLog.getToWorkerId();
-            String toOperatorName = splitLog.getToWorkerName();
-            String orderNo = source.getProductionOrderNo();
-            String styleNo = source.getStyleNo();
-            String processName = splitLog.getCurrentProcessName();
-            int transferQty = splitLog.getTransferQuantity() != null ? splitLog.getTransferQuantity() : 0;
-            // 通知接手方：拆菲已确认，菲号已转给ta
-            if (StringUtils.hasText(toOperatorId)) {
-                webSocketService.notifyScanSuccess(toOperatorId, orderNo, styleNo,
-                        processName, transferQty, toOperatorName, transferBundle.getBundleLabel());
-            }
-            // 通知原持有者：对方已确认
-            if (StringUtils.hasText(fromOperatorId)) {
-                webSocketService.notifyDataChanged(fromOperatorId, "bundle_split",
-                        String.valueOf(source.getId()), "split_confirmed");
-            }
-            log.info("[拆菲确认] 双方通知已发送: from={}, to={}, bundleLabel={}, qty={}",
-                    fromOperatorName, toOperatorName, resolveBundleLabel(source), transferQty);
-        } catch (Exception e) {
-            log.warn("[拆菲确认] 通知推送失败（不阻断主流程）: splitLogId={}, error={}",
-                    splitLog.getId(), e.getMessage(), e);
-        }
     }
 
     private CuttingBundleSplitLog buildSplitLog(CuttingBundle source, CuttingBundle completedBundle, CuttingBundle transferBundle, CuttingBundleSplitTransferRequest request) {

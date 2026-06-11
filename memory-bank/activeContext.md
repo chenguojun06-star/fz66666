@@ -14,6 +14,22 @@
 
 ## 最近变更
 
+### 2026-06-11 P0事故：socat IPv6 导致全线 502
+
+**事故编号**：INC-20260611-001
+**等级**：P0（全站不可用，持续整天）
+**根因**：`docker-entrypoint.sh` 中 socat 用 `localhost` 转发，Ubuntu 24.04 解析为 IPv6 `::1`，Tomcat 只监听 IPv4 → Connection refused → 502
+
+**修复**：
+| 文件 | 修改 |
+|------|------|
+| `backend/docker-entrypoint.sh` | 去掉 socat 代理，Tomcat 直接监听 PORT；加 `-Djava.net.preferIPv4Stack=true` |
+| `backend/Dockerfile` | 去掉 socat 安装；HEALTHCHECK localhost→127.0.0.1 |
+| `Dockerfile`（根目录） | 去掉 socat 安装；HEALTHCHECK localhost→127.0.0.1 |
+| `h5-web/Dockerfile` | HEALTHCHECK localhost→127.0.0.1 |
+
+**新增铁律**：容器内禁止使用 `localhost` 作为网络目标，必须用 `127.0.0.1`
+
 ### 2026-06-11 安全审计修复
 
 **发现并修复的安全问题**：
@@ -68,7 +84,10 @@
 
 ## 当前进行中
 
-- 无
+- ✅ WebSocket 全局广播彻底清理（2026-06-11 完成）
+  - 后端 15 个文件清理完毕（含本次 `OrderRemarkController.java`、`OrderImageOrchestrator.java`）
+  - 小程序端 `websocket.js` 已删除
+  - 决策已记录：`D-017` 永久禁止加回
 
 ## 已知问题（待优化）
 

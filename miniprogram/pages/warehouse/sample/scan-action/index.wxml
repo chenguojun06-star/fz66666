@@ -220,7 +220,7 @@
       <!-- 操作按钮区域 -->
       <view class="action-area" wx:if="{{!successMsg}}">
         <!-- 仓库区域选择（入库时显示） -->
-        <view wx:if="{{actions.indexOf('inbound') !== -1}}" class="warehouse-section">
+        <view wx:if="{{_showInbound}}" class="warehouse-section">
           <view class="warehouse-label">入库仓库：</view>
           <view class="warehouse-option-row">
             <view
@@ -272,21 +272,21 @@
         
         <view
           class="btn-inbound {{submitting ? 'btn-disabled' : ''}}"
-          wx:if="{{actions.indexOf('inbound') !== -1}}"
+          wx:if="{{_showInbound}}"
           bindtap="onInbound"
         >
           入库
         </view>
         <view
           class="btn-loan {{submitting ? 'btn-disabled' : ''}}"
-          wx:if="{{actions.indexOf('loan') !== -1}}"
+          wx:if="{{_showLoan}}"
           bindtap="onLoan"
         >
           借调
         </view>
         <view
           class="btn-return {{submitting ? 'btn-disabled' : ''}}"
-          wx:if="{{actions.indexOf('return') !== -1}}"
+          wx:if="{{_showReturn}}"
           bindtap="onReturn"
         >
           归还

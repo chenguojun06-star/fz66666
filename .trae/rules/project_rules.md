@@ -1,7 +1,7 @@
 # 项目铁律速查（唯一真相源）
 
 > 合并自 project_rules.md + 开发必读项.md + DATA_SAFETY_CHECKLIST.md
-> 最后更新：2026-06-08
+> 最后更新：2026-06-11
 > **任何修改前必须对照此文件检查！**
 
 ---
@@ -95,6 +95,14 @@
 - ✅ 每次对话开始前，必须读取 `memory-bank/`
 - ✅ 对话结束时，必须更新 activeContext.md + progress.md
 - ❌ 禁止推送含 TODO/FIXME 标记或未处理兼容代码的变更
+
+### 11. 容器内禁止使用 localhost（INC-20260611-001 血的教训）
+
+- ✅ 容器内网络目标必须用 `127.0.0.1`，不用 `localhost`
+- ✅ HEALTHCHECK 用 `127.0.0.1`
+- ✅ 代理/转发配置用 `127.0.0.1`
+- ❌ 禁止容器内使用 `localhost`（IPv6/IPv4 解析不可预测，Ubuntu 24.04 默认 IPv6 优先）
+- ❌ 禁止不必要的代理层（socat 等），Spring Boot 直接监听 PORT 环境变量
 
 ---
 

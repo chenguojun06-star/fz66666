@@ -41,7 +41,6 @@ import com.fashion.supplychain.intelligence.orchestration.SmartNotificationOrche
 import com.fashion.supplychain.intelligence.orchestration.ScanPrecheckFeedbackOrchestrator;
 import com.fashion.supplychain.intelligence.orchestration.OrderRiskTrackingOrchestrator;
 import com.fashion.supplychain.common.lock.DistributedLockService;
-import com.fashion.supplychain.websocket.service.WebSocketService;
 
 @Service
 @Slf4j
@@ -71,7 +70,6 @@ public class ScanRecordOrchestrator {
     @Autowired private ScanRescanHelper scanRescanHelper;
     @Autowired(required = false) private ScanPrecheckFeedbackOrchestrator scanPrecheckFeedbackOrchestrator;
     @Autowired(required = false) private OrderRiskTrackingOrchestrator orderRiskTrackingOrchestrator;
-    @Autowired(required = false) private WebSocketService webSocketService;
     @Autowired private com.fashion.supplychain.production.helper.OrderListCacheHelper orderListCacheHelper;
 
     public Map<String, Object> execute(Map<String, Object> params) {
@@ -94,7 +92,6 @@ public class ScanRecordOrchestrator {
             appendBundleStatusHints(safeParams, result);
             recordScanFeedbackSafely(safeParams, result);
             evictOrderCache(safeParams, result);
-            tryNotifyProgressChanged(safeParams, result);
             return result;
         });
     }
@@ -453,33 +450,6 @@ public class ScanRecordOrchestrator {
             orderListCacheHelper.evictTenantListCache();
         } catch (Exception e) {
             log.debug("[ScanCache] 缓存清除失败（不阻断）: {}", e.getMessage());
-        }
-    }
-
-    private void tryNotifyProgressChanged(Map<String, Object> params, Map<String, Object> result) {
-        try {
-            if (webSocketService == null) return;
-            if (result == null || !Boolean.TRUE.equals(result.get("success"))) return;
-            String operatorId = UserContext.userId();
-            if (!hasText(operatorId)) return;
-            String orderNo = TextUtils.safeText(params.get("orderNo"));
-            if (!hasText(orderNo)) return;
-            String orderId = TextUtils.safeText(params.get("orderId"));
-            int progress = 0;
-            String currentStage = "";
-            if (hasText(orderId)) {
-                ProductionOrder order = productionOrderService.getById(orderId);
-                if (order != null) {
-                    progress = order.getProductionProgress() != null ? order.getProductionProgress() : 0;
-                    currentStage = order.getCurrentProcessName() != null ? order.getCurrentProcessName() : "";
-                }
-            }
-            webSocketService.sendToUser(operatorId,
-                    com.fashion.supplychain.websocket.enums.WebSocketMessageType.ORDER_PROGRESS_CHANGED,
-                    java.util.Map.of("orderNo", orderNo, "progress", progress,
-                            "currentStage", currentStage, "timestamp", System.currentTimeMillis()));
-        } catch (Exception e) {
-            log.debug("[ScanNotifyProgress] 扫码进度变更WebSocket通知失败（不阻断）: {}", e.getMessage());
         }
     }
 }

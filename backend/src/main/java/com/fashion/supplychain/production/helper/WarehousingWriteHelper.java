@@ -32,7 +32,6 @@ public class WarehousingWriteHelper {
     private final ProductionOrderService productionOrderService;
     private final CuttingBundleService cuttingBundleService;
     private final ProductWarehousingHelper helper;
-    private final com.fashion.supplychain.websocket.service.WebSocketService webSocketService;
     private final StockChangeLogService stockChangeLogService;
 
     public ProductionOrder validateOrderForSave(ProductWarehousing pw) {
@@ -195,7 +194,6 @@ public class WarehousingWriteHelper {
         syncOrderCompletedQuantity(pw.getOrderId());
         upsertScanRecords(pw, order, bundle, now);
         updateSkuStockAfterSave(pw, order, bundle);
-        broadcastWarehousingNotification(pw, order);
     }
 
     public void updateBundleAfterSave(CuttingBundle bundle, ProductWarehousing pw,
@@ -278,20 +276,6 @@ public class WarehousingWriteHelper {
         return prefix + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))
                 + Integer.toHexString(ThreadLocalRandom.current().nextInt(0x1000, 0x10000))
                 .toUpperCase();
-    }
-
-    public void broadcastWarehousingNotification(ProductWarehousing pw, ProductionOrder order) {
-        try {
-            String orderNo = pw.getOrderNo() != null ? pw.getOrderNo() : order.getOrderNo();
-            String warehouse = pw.getWarehouse() != null ? pw.getWarehouse() : "";
-            int qty = pw.getQualifiedQuantity() != null ? pw.getQualifiedQuantity() : 0;
-            String operatorId = pw.getQualityOperatorId() != null ? pw.getQualityOperatorId() : "";
-            webSocketService.notifyWarehouseIn(operatorId, orderNo, qty, warehouse);
-            webSocketService.notifyOrderProgressChanged(operatorId, orderNo, 0, "入库");
-            webSocketService.notifyDataChanged(operatorId, "ProductWarehousing", pw.getId(), "create");
-        } catch (Exception e) {
-            log.warn("入库WebSocket广播失败（不阻断入库）: orderId={}", pw.getOrderId(), e);
-        }
     }
 
     public void validateOrderNotTerminal(String orderId) {

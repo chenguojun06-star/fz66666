@@ -12,7 +12,6 @@ import com.fashion.supplychain.finance.service.PaymentAccountService;
 import com.fashion.supplychain.finance.service.PayableService;
 import com.fashion.supplychain.finance.service.WagePaymentService;
 import org.springframework.util.StringUtils;
-import com.fashion.supplychain.websocket.service.WebSocketService;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -33,7 +32,6 @@ public class WagePaymentOrchestrator {
 
     private final PaymentAccountService paymentAccountService;
     private final WagePaymentService wagePaymentService;
-    private final WebSocketService webSocketService;
     private final WagePaymentCallbackHelper callbackHelper;
     private final PayableAggregationHelper payableAggregationHelper;
     private final PayableService payableService;
@@ -150,8 +148,6 @@ public class WagePaymentOrchestrator {
                  payment.getPaymentNo(), payment.getPayeeName(),
                  payment.getPaymentMethod(), payment.getAmount());
 
-        notifyPaymentCreated(payment);
-
         return payment;
     }
 
@@ -175,8 +171,6 @@ public class WagePaymentOrchestrator {
 
         wagePaymentService.updateById(payment);
         log.info("[工资支付] 确认线下支付: id={}, no={}", paymentId, payment.getPaymentNo());
-
-        notifyPaymentSuccess(payment);
 
         return payment;
     }
@@ -453,45 +447,6 @@ public class WagePaymentOrchestrator {
 
     public java.util.Map<String, Object> getDashboardStats(String startDate, String endDate) {
         return dashboardHelper.getDashboardStats(startDate, endDate);
-    }
-
-    private void notifyPaymentCreated(WagePayment payment) {
-        try {
-            java.util.Map<String, Object> payload = new java.util.HashMap<>();
-            payload.put("payeeId", payment.getPayeeId());
-            payload.put("payeeName", payment.getPayeeName());
-            payload.put("amount", payment.getAmount());
-            payload.put("paymentMethod", payment.getPaymentMethod());
-            payload.put("paymentNo", payment.getPaymentNo());
-            payload.put("timestamp", System.currentTimeMillis());
-            webSocketService.sendToUser(payment.getPayeeId(),
-                com.fashion.supplychain.websocket.enums.WebSocketMessageType.PAYMENT_CREATED,
-                payload);
-            payment.setNotifyStatus("sent");
-            payment.setNotifyTime(LocalDateTime.now());
-            wagePaymentService.updateById(payment);
-        } catch (Exception e) {
-            log.error("[工资支付] 通知发送失败: paymentNo={}", payment.getPaymentNo(), e);
-            payment.setNotifyStatus("failed");
-            wagePaymentService.updateById(payment);
-        }
-    }
-
-    private void notifyPaymentSuccess(WagePayment payment) {
-        try {
-            java.util.Map<String, Object> payload = new java.util.HashMap<>();
-            payload.put("payeeId", payment.getPayeeId());
-            payload.put("payeeName", payment.getPayeeName());
-            payload.put("amount", payment.getAmount());
-            payload.put("paymentMethod", payment.getPaymentMethod());
-            payload.put("paymentNo", payment.getPaymentNo());
-            payload.put("timestamp", System.currentTimeMillis());
-            webSocketService.sendToUser(payment.getPayeeId(),
-                com.fashion.supplychain.websocket.enums.WebSocketMessageType.PAYMENT_SUCCESS,
-                payload);
-        } catch (Exception e) {
-            log.error("[工资支付] 支付成功通知失败: paymentNo={}", payment.getPaymentNo(), e);
-        }
     }
 
     private String generatePaymentNo() {

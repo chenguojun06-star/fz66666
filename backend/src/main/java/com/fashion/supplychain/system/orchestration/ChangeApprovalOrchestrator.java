@@ -10,7 +10,6 @@ import com.fashion.supplychain.system.entity.User;
 import com.fashion.supplychain.system.service.ChangeApprovalService;
 import com.fashion.supplychain.system.service.OrganizationUnitService;
 import com.fashion.supplychain.system.service.UserService;
-import com.fashion.supplychain.websocket.service.WebSocketService;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.LocalDateTime;
@@ -48,9 +47,6 @@ public class ChangeApprovalOrchestrator {
 
     @Autowired
     private ObjectMapper objectMapper;
-
-    @Autowired
-    private WebSocketService webSocketService;
 
     // 延迟注入，防止循环依赖
     @Lazy
@@ -121,8 +117,6 @@ public class ChangeApprovalOrchestrator {
         String dataJson = serializeOperationData(operationData);
         ChangeApproval approval = createApprovalRecord(ctx, operationType, targetId, targetNo, dataJson, reason, user, approver);
 
-        notifyApproverPending(approver, ctx, operationType, targetNo, reason);
-
         Map<String, Object> resp = new HashMap<>();
         resp.put("needApproval", true);
         resp.put("approvalId", approval.getId());
@@ -187,16 +181,6 @@ public class ChangeApprovalOrchestrator {
         return approval;
     }
 
-    private void notifyApproverPending(User approver, UserContext ctx, String operationType, String targetNo, String reason) {
-        try {
-            webSocketService.notifyApprovalPending(
-                    String.valueOf(approver.getId()), approver.getUsername(),
-                    ctx.getUsername(), operationType, targetNo, reason);
-        } catch (Exception e) {
-            log.warn("[ChangeApproval] 推送审批通知失败（不影响审批创建）: {}", e.getMessage());
-        }
-    }
-
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     // 审批操作
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -220,9 +204,6 @@ public class ChangeApprovalOrchestrator {
         // 执行真实操作
         Map<String, Object> execResult = executeApprovedOperation(approval);
 
-        // 通知申请人审批已通过
-        notifyApplicant(approval, true, remark);
-
         Map<String, Object> resp = new HashMap<>();
         resp.put("approved", true);
         resp.put("executeResult", execResult);
@@ -245,8 +226,6 @@ public class ChangeApprovalOrchestrator {
 
         log.info("[ChangeApproval] 审批驳回 id={} reason={}", approvalId, reason);
 
-        // 通知申请人审批已驳回
-        notifyApplicant(approval, false, reason);
     }
 
     /**
@@ -308,18 +287,6 @@ public class ChangeApprovalOrchestrator {
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     // 内部辅助方法
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-    /** 通知申请人审批结果（通过/驳回） */
-    private void notifyApplicant(ChangeApproval approval, boolean approved, String remark) {
-        try {
-            String approverName = UserContext.get() != null ? UserContext.get().getUsername() : approval.getApproverName();
-            webSocketService.notifyApprovalResult(
-                    approval.getApplicantId(), approval.getOperationType(),
-                    approval.getTargetNo(), approved, approverName, remark);
-        } catch (Exception e) {
-            log.warn("[ChangeApproval] 推送审批结果通知失败（不影响审批操作）: {}", e.getMessage());
-        }
-    }
 
     /**
      * 沿组织层级向上查找审批人（有 managerUserId 的最近祖先节点的管理人）。

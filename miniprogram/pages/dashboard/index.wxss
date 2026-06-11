@@ -491,22 +491,24 @@
 /* 快捷操作 */
 .expand-actions {
   display: flex;
-  gap: 8px;
-  padding-top: 12px;
+  gap: 6px;
+  padding-top: 10px;
   border-top: 1px solid rgba(0, 0, 0, 0.04);
   margin-top: 4px;
   flex-wrap: wrap;
 }
 .act-btn {
-  font-size: 13px;
-  padding: 10px 16px;
-  border-radius: 6px;
+  font-size: 12px;
+  padding: 5px 12px;
+  border-radius: 4px;
   color: var(--color-text-secondary);
   background: rgba(0, 0, 0, 0.04);
-  line-height: 1;
-  min-height: 44px;
-  display: flex;
+  line-height: 18px;
+  min-height: auto;
+  display: inline-flex;
   align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
 }
 .act-btn--primary {
   color: var(--color-primary);
@@ -542,4 +544,4 @@
   color: var(--color-text-tertiary);
 }
 
-.act-btn--remark { color: #1677ff; border-color: #1677ff; }
+.act-btn--remark { color: #1677ff; background: rgba(22, 119, 255, 0.08); border-color: transparent; }

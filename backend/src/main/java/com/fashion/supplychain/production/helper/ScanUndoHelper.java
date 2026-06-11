@@ -16,7 +16,6 @@ import com.fashion.supplychain.production.service.CuttingTaskService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.ProductionProcessTrackingService;
 import com.fashion.supplychain.production.service.ScanRecordService;
-import com.fashion.supplychain.websocket.service.WebSocketService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.AccessDeniedException;
@@ -44,7 +43,6 @@ public class ScanUndoHelper {
     @Autowired private ScanRecordPermissionHelper scanRecordPermissionHelper;
     @Autowired private ScanRecordEnrichHelper scanRecordEnrichHelper;
     @Autowired private DistributedLockService distributedLockService;
-    @Autowired private WebSocketService webSocketService;
 
     public Map<String, Object> undo(Map<String, Object> params) {
         TenantAssert.assertTenantContext();
@@ -57,7 +55,6 @@ public class ScanUndoHelper {
             return doUndo(safeParams);
         });
 
-        broadcastUndoNotification(safeParams);
         return result;
     }
 
@@ -300,43 +297,6 @@ public class ScanUndoHelper {
         resp.put("success", true);
         resp.put("message", "已撤销");
         return resp;
-    }
-
-    private void broadcastUndoNotification(Map<String, Object> safeParams) {
-        try {
-            String orderNo = TextUtils.safeText(safeParams.get("orderNo"));
-            if (!hasText(orderNo)) orderNo = TextUtils.safeText(safeParams.get("_resolvedOrderNo"));
-            String undoOperatorId = UserContext.userId();
-            String undoOperatorName = UserContext.username();
-            String undoProcessName = TextUtils.safeText(safeParams.get("processName"));
-            String undoBundleNo = TextUtils.safeText(safeParams.get("bundleNo"));
-            if (hasText(undoOperatorId)) {
-                webSocketService.notifyScanUndo(undoOperatorId, orderNo, TextUtils.safeText(safeParams.get("scanType")),
-                        undoOperatorName, undoProcessName, undoBundleNo);
-            }
-            webSocketService.notifyDataChanged(undoOperatorId, "ScanRecord", null, "delete");
-            broadcastUndoProgressNotification(undoOperatorId, orderNo, safeParams);
-        } catch (Exception wsEx) {
-            log.warn("[Undo] WebSocket broadcast failed (non-blocking): {}", wsEx.getMessage());
-        }
-    }
-
-    private void broadcastUndoProgressNotification(String undoOperatorId, String orderNo, Map<String, Object> safeParams) {
-        if (!hasText(orderNo)) return;
-        try {
-            String oid = TextUtils.safeText(safeParams.get("orderId"));
-            if (!hasText(oid)) oid = TextUtils.safeText(safeParams.get("_resolvedOrderId"));
-            if (hasText(oid)) {
-                ProductionOrder po = productionOrderService.getById(oid);
-                int curProgress = po != null && po.getProductionProgress() != null ? po.getProductionProgress() : 0;
-                webSocketService.notifyOrderProgressChanged(undoOperatorId, orderNo, curProgress, "撤销");
-            } else {
-                webSocketService.notifyOrderProgressChanged(undoOperatorId, orderNo, 0, "撤销");
-            }
-        } catch (Exception e) {
-            log.warn("[ScanUndoHelper] 进度查询失败，降级通知: orderNo={}", orderNo, e);
-            webSocketService.notifyOrderProgressChanged(undoOperatorId, orderNo, 0, "撤销");
-        }
     }
 
     private void resetTrackingByScanRecord(String scanRecordId) {

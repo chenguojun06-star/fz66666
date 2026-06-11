@@ -23,7 +23,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.annotation.Propagation;
 import lombok.extern.slf4j.Slf4j;
 import java.util.List;
-import com.fashion.supplychain.websocket.service.WebSocketService;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.production.helper.WarehousingWriteHelper;
@@ -43,9 +42,6 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
 
     @Autowired
     private ProductWarehousingHelper helper;
-
-    @Autowired
-    private WebSocketService webSocketService;
 
     @Autowired
     private WarehousingWriteHelper writeHelper;

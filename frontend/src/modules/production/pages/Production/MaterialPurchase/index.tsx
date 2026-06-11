@@ -16,7 +16,6 @@ import RemarkTimelineModal from '@/components/common/RemarkTimelineModal';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { PurchaseCartDrawer } from '@/components/common/PurchaseCartDrawer';
 import { usePurchaseCartActions } from '@/hooks/usePurchaseCart';
-import DelayedStageBreakdown from '@/modules/dashboard/components/DelayedStageBreakdown';
 import '../../../styles.css';
 import { useMaterialPurchase } from './hooks/useMaterialPurchase';
 import { formatMaterialQuantity } from './utils';
@@ -249,9 +248,6 @@ const MaterialPurchase: React.FC = () => {
                         currentOrderNo={String(queryParams.orderNo || '').trim() || undefined}
                       />
                     )}
-
-                    {/* 采购延期提醒（仅显示采购环节延期项） */}
-                    <DelayedStageBreakdown forceTab="bulk" stageFilter="采购" />
 
                     <MaterialTable
                       loading={loading}

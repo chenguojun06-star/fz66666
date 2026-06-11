@@ -42,6 +42,7 @@ Page({
     gridRows: [], gridSizes: [],
     colorInput: '', sizeInput: '',
     colorOptions: [], sizeOptions: [],
+    _colorOptItems: [], _sizeOptItems: [],
     plateTypeOptions: ['自动判断', '首单', '翻单'],
     factoryList: [], orgUnitList: [], categoryOptions: [],
     quickFillQty: 1, submitting: false,
@@ -75,6 +76,8 @@ Page({
       sizeOptions: sizes,
       selectedColors: colors.slice(),
       selectedSizes: sizes.slice(),
+      _colorOptItems: colors.map(function (c) { return { value: c, _selected: true }; }),
+      _sizeOptItems: sizes.map(function (s) { return { value: s, _selected: true }; }),
     });
 
     if (!isNoData && colors.length && sizes.length) { this._rebuildLines(); }
@@ -269,6 +272,11 @@ Page({
   onPatternMakerInput: function (e) { this.setData({ patternMaker: e.detail.value }); },
   onMerchandiserInput: function (e) { this.setData({ merchandiser: e.detail.value }); },
 
+  _buildOptItems: function (opts, sel) {
+    const o = opts || []; const s = sel || [];
+    return o.map(function (v) { return { value: v, _selected: s.indexOf(v) !== -1 }; });
+  },
+
   /* ═══ 颜色 / 码数 ═══ */
   onColorInput: function (e) { this.setData({ colorInput: e.detail.value }); },
   onColorAdd: function () {
@@ -278,7 +286,10 @@ Page({
     if (opts.indexOf(v) === -1) opts.push(v);
     const sel = this.data.selectedColors.slice();
     if (sel.indexOf(v) === -1) sel.push(v);
-    this.setData({ colorOptions: opts, selectedColors: sel, colorInput: '' });
+    this.setData({
+      colorOptions: opts, selectedColors: sel, colorInput: '',
+      _colorOptItems: this._buildOptItems(opts, sel),
+    });
     this._rebuildLines();
   },
 
@@ -287,7 +298,7 @@ Page({
     const sel = this.data.selectedColors.slice();
     const i = sel.indexOf(c);
     if (i === -1) sel.push(c); else sel.splice(i, 1);
-    this.setData({ selectedColors: sel });
+    this.setData({ selectedColors: sel, _colorOptItems: this._buildOptItems(this.data.colorOptions, sel) });
     this._rebuildLines();
   },
 
@@ -299,7 +310,10 @@ Page({
     if (opts.indexOf(v) === -1) opts.push(v);
     const sel = this.data.selectedSizes.slice();
     if (sel.indexOf(v) === -1) sel.push(v);
-    this.setData({ sizeOptions: opts, selectedSizes: sel, sizeInput: '' });
+    this.setData({
+      sizeOptions: opts, selectedSizes: sel, sizeInput: '',
+      _sizeOptItems: this._buildOptItems(opts, sel),
+    });
     this._rebuildLines();
   },
 
@@ -308,7 +322,7 @@ Page({
     const sel = this.data.selectedSizes.slice();
     const i = sel.indexOf(s);
     if (i === -1) sel.push(s); else sel.splice(i, 1);
-    this.setData({ selectedSizes: sel });
+    this.setData({ selectedSizes: sel, _sizeOptItems: this._buildOptItems(this.data.sizeOptions, sel) });
     this._rebuildLines();
   },
 

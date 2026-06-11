@@ -106,13 +106,6 @@ App({
       });
     }
 
-    // 初始化WebSocket实时同步
-    try {
-      const ws = require('./utils/websocket');
-      ws.connect();
-    } catch (e) {
-      console.warn('[App] WebSocket初始化失败:', e.message || e);
-    }
   },
 
   onShow() {
@@ -123,14 +116,6 @@ App({
       }, 1000);
     } catch (e) {
       console.error('检查提醒失败', e);
-    }
-
-    // 页面重新可见时，如果 WebSocket 断开则自动重连
-    try {
-      const ws = require('./utils/websocket');
-      ws.onPageShow();
-    } catch (e) {
-      // WebSocket 模块加载失败不影响其他功能
     }
   },
 
