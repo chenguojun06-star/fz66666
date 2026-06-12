@@ -47,6 +47,8 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
   const [printLoading, setPrintLoading] = useState(false);
   const [autoPatternId, setAutoPatternId] = useState<string | null>(null);
   const [qrPngDataUrl, setQrPngDataUrl] = useState<string>('');
+  const [orderCreatorName, setOrderCreatorName] = useState<string>('');
+  const [tenantLogo, setTenantLogo] = useState<string>('');
   const resolvedPatternId = propPatternId ? String(propPatternId) : autoPatternId;
   type LabelSize = '40x70' | '50x100';
 
@@ -95,6 +97,30 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
         }).catch((err) => { console.warn('[StylePrint] 附件列表加载失败:', err?.message || err); }));
         await Promise.all(promises);
         setData(newData);
+
+        // 大货/下单模式：查询订单创建人
+        if (mode !== 'sample' && styleId) {
+          try {
+            // 优先用 orderId 查详情，否则用 styleId 查列表
+            if (orderId) {
+              const orderRes = await api.get(`/production/order/detail/${orderId}`);
+              if (orderRes.code === 200 && orderRes.data) {
+                setOrderCreatorName(orderRes.data.createdByName || '');
+              }
+            } else {
+              const orderRes = await api.get('/production/order/list', { params: { styleId, page: 1, pageSize: 1 } });
+              if (orderRes.code === 200 && orderRes.data?.records?.length > 0) {
+                setOrderCreatorName(orderRes.data.records[0].createdByName || '');
+              }
+            }
+          } catch { /* ignore */ }
+        } else {
+          setOrderCreatorName('');
+        }
+
+        // 获取租户Logo
+        setTenantLogo((user as any)?.tenantLogo || (user as any)?.logo || '');
+
         if (!cover) {
           const styleData = newData.productionSheet as any;
           if (styleData?.cover) { setResolvedCover(styleData.cover); }
@@ -323,9 +349,9 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
                   }}
                   style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 16px' }}
                 >
-                  <Checkbox value="styleInfoBlock">款号信息</Checkbox>
-                  <Checkbox value="customerInfoBlock">客户信息</Checkbox>
-                  <Checkbox value="patternInfoBlock">版次信息</Checkbox>
+                  <Checkbox value="styleInfoBlock">{mode === 'sample' ? '款号信息' : '款式信息'}</Checkbox>
+                  <Checkbox value="customerInfoBlock">{mode === 'sample' ? '客户信息' : '下单信息'}</Checkbox>
+                  <Checkbox value="patternInfoBlock">{mode === 'sample' ? '版次信息' : '加工信息'}</Checkbox>
                   <Checkbox value="timeInfoBlock">时间信息</Checkbox>
                   <Checkbox value="remarkBlock">备注信息</Checkbox>
                 </Checkbox.Group>
@@ -393,165 +419,114 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
                     const empty = '';
                     const fabricVal = (data.productionSheet as any)?.fabricComposition;
 
-                    // 通用字段（样衣和大货都显示）
-                    const basicFields: { label: string; value: React.ReactNode }[] = [];
+                    // 所有字段合并到一个数组，渲染成一张连续表格
+                    const allFields: { label: string; value: React.ReactNode }[] = [];
+
+                    // 款式信息
                     if (options.styleInfoBlock) {
-                      basicFields.push({ label: '款号', value: styleNo || empty });
-                      basicFields.push({ label: 'SKC', value: (data.productionSheet as any)?.skc || empty });
-                      basicFields.push({ label: '款名', value: styleName || empty });
-                      basicFields.push({ label: '品类', value: toCategoryCn(category || (data.productionSheet as any)?.category) || empty });
+                      allFields.push({ label: '款号', value: styleNo || empty });
+                      allFields.push({ label: 'SKC', value: (data.productionSheet as any)?.skc || empty });
+                      allFields.push({ label: '款名', value: styleName || empty });
+                      allFields.push({ label: '品类', value: toCategoryCn(category || (data.productionSheet as any)?.category) || empty });
                       if (mode === 'sample') {
-                        basicFields.push({ label: '季节', value: toSeasonCn(season || (data.productionSheet as any)?.season) || empty });
+                        allFields.push({ label: '季节', value: toSeasonCn(season || (data.productionSheet as any)?.season) || empty });
                         if ((data.productionSheet as any)?.uCode) {
-                          basicFields.push({ label: 'U码', value: (data.productionSheet as any).uCode });
+                          allFields.push({ label: 'U码', value: (data.productionSheet as any).uCode });
                         }
                       }
                     }
 
-                    // 客户字段（样衣模式）
-                    const customerFields: { label: string; value: React.ReactNode }[] = [];
+                    // 客户信息（样衣模式）
                     if (options.customerInfoBlock && mode === 'sample') {
-                      customerFields.push({ label: '客户', value: (data.productionSheet as any)?.customer || empty });
-                      customerFields.push({ label: '跟单员', value: (data.productionSheet as any)?.orderType || empty });
-                      customerFields.push({ label: '设计师', value: (data.productionSheet as any)?.sampleNo || empty });
-                      customerFields.push({ label: '打板价', value: (data.productionSheet as any)?.price ? `¥${Number((data.productionSheet as any).price).toFixed(2)}` : empty });
+                      allFields.push({ label: '客户', value: (data.productionSheet as any)?.customer || empty });
+                      allFields.push({ label: '跟单员', value: (data.productionSheet as any)?.orderType || empty });
+                      allFields.push({ label: '设计师', value: (data.productionSheet as any)?.sampleNo || empty });
+                      allFields.push({ label: '打板价', value: (data.productionSheet as any)?.price ? `¥${Number((data.productionSheet as any).price).toFixed(2)}` : empty });
                     }
 
-                    // 订单字段（大货模式）
-                    const orderFields: { label: string; value: React.ReactNode }[] = [];
+                    // 下单信息（大货模式）
                     if (options.customerInfoBlock && mode !== 'sample') {
-                      orderFields.push({ label: '订单号', value: orderNo || empty });
-                      orderFields.push({ label: '客户', value: (data.productionSheet as any)?.customer || empty });
-                      orderFields.push({ label: '下单人员', value: (extraInfo as any)?.下单人员 || (data.productionSheet as any)?.createdBy || empty });
-                      orderFields.push({ label: '跟单员', value: (data.productionSheet as any)?.orderType || empty });
+                      allFields.push({ label: '订单号', value: orderNo || empty });
+                      allFields.push({ label: '客户', value: (data.productionSheet as any)?.customer || empty });
+                      allFields.push({ label: '下单人员', value: orderCreatorName || (extraInfo as any)?.下单人员 || empty });
+                      allFields.push({ label: '跟单员', value: (data.productionSheet as any)?.orderType || empty });
                       if (sizeColorMatrix && sizeColorMatrix.sizes.length > 0) {
-                        orderFields.push({ label: '颜色尺码', value: '（见下方矩阵）' });
+                        allFields.push({ label: '颜色尺码', value: '（见下方矩阵）' });
                       } else {
-                        orderFields.push({ label: '订单数量', value: quantity !== undefined ? String(quantity) : empty });
+                        allFields.push({ label: '订单数量', value: quantity !== undefined ? String(quantity) : empty });
                       }
                     }
 
                     // 纸样/加工信息
-                    const patternFields: { label: string; value: React.ReactNode }[] = [];
                     if (options.patternInfoBlock) {
                       if (mode === 'sample') {
-                        patternFields.push({ label: '板类', value: (data.productionSheet as any)?.plateType || empty });
-                        patternFields.push({ label: '纸样师', value: (data.productionSheet as any)?.sampleSupplier || empty });
-                        patternFields.push({ label: '纸样号', value: (data.productionSheet as any)?.patternNo || empty });
-                        patternFields.push({ label: '车板师', value: (data.productionSheet as any)?.plateWorker || empty });
+                        allFields.push({ label: '板类', value: (data.productionSheet as any)?.plateType || empty });
+                        allFields.push({ label: '纸样师', value: (data.productionSheet as any)?.sampleSupplier || empty });
+                        allFields.push({ label: '纸样号', value: (data.productionSheet as any)?.patternNo || empty });
+                        allFields.push({ label: '车板师', value: (data.productionSheet as any)?.plateWorker || empty });
                       } else {
                         const factoryName = (data.productionSheet as any)?.factoryName || (extraInfo as any)?.加工厂 || empty;
-                        patternFields.push({ label: '加工厂', value: factoryName });
-                        patternFields.push({ label: '设计师', value: (data.productionSheet as any)?.sampleNo || empty });
-                        patternFields.push({ label: '板类', value: (data.productionSheet as any)?.plateType || empty });
-                        patternFields.push({ label: '纸样号', value: (data.productionSheet as any)?.patternNo || empty });
+                        allFields.push({ label: '加工厂', value: factoryName });
+                        allFields.push({ label: '设计师', value: (data.productionSheet as any)?.sampleNo || empty });
+                        allFields.push({ label: '板类', value: (data.productionSheet as any)?.plateType || empty });
+                        allFields.push({ label: '纸样号', value: (data.productionSheet as any)?.patternNo || empty });
                       }
                     }
 
-                    // 时间字段
-                    const timeFields: { label: string; value: React.ReactNode }[] = [];
+                    // 时间信息
                     if (options.timeInfoBlock) {
                       if (mode === 'sample') {
-                        timeFields.push({ label: '创建时间', value: (data.productionSheet as any)?.createTime ? formatDateTime((data.productionSheet as any).createTime) : empty });
-                        timeFields.push({ label: '交板日期', value: (data.productionSheet as any)?.deliveryDate ? formatDateTime((data.productionSheet as any).deliveryDate) : empty });
-                        timeFields.push({ label: '完成时间', value: (data.productionSheet as any)?.completedTime ? formatDateTime((data.productionSheet as any).completedTime) : empty });
+                        allFields.push({ label: '创建时间', value: (data.productionSheet as any)?.createTime ? formatDateTime((data.productionSheet as any).createTime) : empty });
+                        allFields.push({ label: '交板日期', value: (data.productionSheet as any)?.deliveryDate ? formatDateTime((data.productionSheet as any).deliveryDate) : empty });
+                        allFields.push({ label: '完成时间', value: (data.productionSheet as any)?.completedTime ? formatDateTime((data.productionSheet as any).completedTime) : empty });
                       } else {
-                        timeFields.push({ label: '交期', value: (extraInfo as any)?.交期 ? formatDateTime((extraInfo as any).交期) : empty });
-                        timeFields.push({ label: '创建时间', value: (data.productionSheet as any)?.createTime ? formatDateTime((data.productionSheet as any).createTime) : empty });
-                        timeFields.push({ label: '完成时间', value: (data.productionSheet as any)?.completedTime ? formatDateTime((data.productionSheet as any).completedTime) : empty });
+                        allFields.push({ label: '交期', value: (extraInfo as any)?.交期 ? formatDateTime((extraInfo as any).交期) : empty });
+                        allFields.push({ label: '创建时间', value: (data.productionSheet as any)?.createTime ? formatDateTime((data.productionSheet as any).createTime) : empty });
+                        allFields.push({ label: '完成时间', value: (data.productionSheet as any)?.completedTime ? formatDateTime((data.productionSheet as any).completedTime) : empty });
                       }
                     }
 
                     // 面料和备注
-                    const extraFields: { label: string; value: React.ReactNode }[] = [];
                     if (options.styleInfoBlock) {
-                      extraFields.push({ label: '面料成分', value: fabricVal || empty });
+                      allFields.push({ label: '面料成分', value: fabricVal || empty });
                     }
                     if (options.remarkBlock) {
-                      extraFields.push({ label: '备注', value: (data.productionSheet as any)?.description || empty });
+                      allFields.push({ label: '备注', value: (data.productionSheet as any)?.description || empty });
                     }
 
-                    // 渲染字段表格（每行2组字段）
-                    const renderFieldTable = (fields: { label: string; value: React.ReactNode }[]) => {
-                      if (fields.length === 0) return null;
-                      const rows: { label: string; value: React.ReactNode }[][] = [];
-                      for (let i = 0; i < fields.length; i += 2) {
-                        rows.push(fields.slice(i, i + 2));
-                      }
-                      return (
-                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, tableLayout: 'fixed', breakInside: 'avoid' }}>
-                          <colgroup>
-                            <col style={{ width: '12%' }} />
-                            <col style={{ width: '38%' }} />
-                            <col style={{ width: '12%' }} />
-                            <col style={{ width: '38%' }} />
-                          </colgroup>
-                          <tbody>
-                            {rows.map((row, ri) => (
-                              <tr key={ri}>
-                                {row.map((f, fi) => (
-                                  <React.Fragment key={fi}>
-                                    <td style={{ border: '1px solid #d0d0d0', padding: '5px 8px', background: '#fafafa', fontWeight: 500, color: '#333', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.label}</td>
-                                    <td style={{ border: '1px solid #d0d0d0', padding: '5px 8px', color: '#111', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.value}</td>
-                                  </React.Fragment>
-                                ))}
-                                {row.length === 1 && (
-                                  <>
-                                    <td style={{ border: '1px solid #d0d0d0', padding: '5px 8px', background: '#fafafa' }}></td>
-                                    <td style={{ border: '1px solid #d0d0d0', padding: '5px 8px' }}></td>
-                                  </>
-                                )}
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      );
-                    };
-
-                    // 渲染区块标题
-                    const sectionTitle = (title: string) => (
-                      <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-primary, #1677ff)', paddingBottom: 4, borderBottom: '1px solid var(--color-border-antd, #d9d9d9)', marginBottom: 6 }}>{title}</div>
-                    );
+                    // 所有字段合并成一张连续表格
+                    const rows: { label: string; value: React.ReactNode }[][] = [];
+                    for (let i = 0; i < allFields.length; i += 2) {
+                      rows.push(allFields.slice(i, i + 2));
+                    }
 
                     return (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                        {basicFields.length > 0 && (
-                          <>
-                            {sectionTitle('款式信息')}
-                            {renderFieldTable(basicFields)}
-                          </>
-                        )}
-                        {customerFields.length > 0 && (
-                          <>
-                            {sectionTitle('客户信息')}
-                            {renderFieldTable(customerFields)}
-                          </>
-                        )}
-                        {orderFields.length > 0 && (
-                          <>
-                            {sectionTitle('下单信息')}
-                            {renderFieldTable(orderFields)}
-                          </>
-                        )}
-                        {patternFields.length > 0 && (
-                          <>
-                            {sectionTitle(mode === 'sample' ? '纸样信息' : '加工信息')}
-                            {renderFieldTable(patternFields)}
-                          </>
-                        )}
-                        {timeFields.length > 0 && (
-                          <>
-                            {sectionTitle('时间信息')}
-                            {renderFieldTable(timeFields)}
-                          </>
-                        )}
-                        {extraFields.length > 0 && (
-                          <>
-                            {sectionTitle('其他信息')}
-                            {renderFieldTable(extraFields)}
-                          </>
-                        )}
-                      </div>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, tableLayout: 'fixed' }}>
+                        <colgroup>
+                          <col style={{ width: '12%' }} />
+                          <col style={{ width: '38%' }} />
+                          <col style={{ width: '12%' }} />
+                          <col style={{ width: '38%' }} />
+                        </colgroup>
+                        <tbody>
+                          {rows.map((row, ri) => (
+                            <tr key={ri}>
+                              {row.map((f, fi) => (
+                                <React.Fragment key={fi}>
+                                  <td style={{ border: '1px solid #d0d0d0', padding: '5px 8px', background: '#fafafa', fontWeight: 500, color: '#333', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.label}</td>
+                                  <td style={{ border: '1px solid #d0d0d0', padding: '5px 8px', color: '#111', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.value}</td>
+                                </React.Fragment>
+                              ))}
+                              {row.length === 1 && (
+                                <>
+                                  <td style={{ border: '1px solid #d0d0d0', padding: '5px 8px', background: '#fafafa' }}></td>
+                                  <td style={{ border: '1px solid #d0d0d0', padding: '5px 8px' }}></td>
+                                </>
+                              )}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     );
                   })()}
                 </div>

@@ -53,7 +53,7 @@ const PRINT_FIX_CSS = `
   }
   html, body { background: var(--color-bg-base) !important; color: #000 !important; }
 
-  table, thead, tbody, tr, th, td { break-inside: avoid !important; page-break-inside: avoid !important; }
+  table, thead, tr { break-inside: avoid !important; page-break-inside: avoid !important; }
 
   * {
     font-family: 'Heiti SC', 'Hiragino Sans GB', 'Arial Unicode MS', 'Songti SC', 'STSong', serif !important;

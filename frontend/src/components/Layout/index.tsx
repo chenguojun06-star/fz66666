@@ -16,6 +16,7 @@ import DailyTodoModal from './DailyTodoModal';
 import FactoryPersonalCenterModal from './FactoryPersonalCenterModal';
 import GlobalAiAssistant from '../common/GlobalAiAssistant';
 import SideMenu from './SideMenu';
+import AnnouncementBanner from './AnnouncementBanner';
 import { useMenuBadgeCounts } from './useMenuBadgeCounts';
 import { useLayoutAuth, normalizePath } from './useLayoutAuth';
 import { useActivePath, useActiveSectionKey, useRecentPages, resolveRecentTitle } from './router';
@@ -253,6 +254,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           </div>
         </div>
       </header>
+
+      <AnnouncementBanner />
 
       <div className="layout-main">
         <SideMenu

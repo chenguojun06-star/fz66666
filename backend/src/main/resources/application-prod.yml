@@ -1,9 +1,14 @@
 # 生产环境配置
 # 所有敏感配置通过环境变量注入，不要在此文件中硬编码
 
+server:
+  address: 0.0.0.0
+  port: ${PORT:8088}
+
 spring:
   main:
     lazy-initialization: true
+    banner-mode: "off"
   autoconfigure:
     exclude:
       - org.springframework.ai.model.openai.autoconfigure.OpenAiAudioSpeechAutoConfiguration

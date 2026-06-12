@@ -130,10 +130,12 @@ export function buildPrintHtml({
             border-collapse: collapse;
             font-size: 12px;
             margin-bottom: 16px;
+          }
+          thead {
             page-break-inside: avoid;
             break-inside: avoid;
           }
-          thead, tbody, tr, th, td {
+          tr {
             page-break-inside: avoid;
             break-inside: avoid;
           }
