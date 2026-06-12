@@ -108,15 +108,15 @@ jobs:
         # 7. 检查 cloudbaserc.json 探针配置（P0：INC-20260612-001）
         echo ""
         echo "🔍 检查 cloudbaserc.json 探针配置..."
-        INITIAL_DELAY=$(grep -o '"InitialDelaySeconds": *[0-9]*' cloudbaserc.json | grep -o '[0-9]*' | head -1)
+        INITIAL_DELAY=$(grep -oE '"initialDelaySeconds"[[:space:]]*:[[:space:]]*[0-9]+' cloudbaserc.json | grep -oE '[0-9]+' | head -1)
         if [ -z "$INITIAL_DELAY" ]; then
-          echo "❌ cloudbaserc.json 缺少 InitialDelaySeconds 配置"
+          echo "❌ cloudbaserc.json 缺少 initialDelaySeconds 配置"
           ERRORS=$((ERRORS + 1))
         elif [ "$INITIAL_DELAY" -lt 200 ]; then
-          echo "❌ InitialDelaySeconds=$INITIAL_DELAY 太小（应用启动需 90s+，建议 ≥300）"
+          echo "❌ initialDelaySeconds=$INITIAL_DELAY 太小（应用启动需 90s+，建议 ≥300）"
           ERRORS=$((ERRORS + 1))
         else
-          echo "✅ InitialDelaySeconds=$INITIAL_DELAY"
+          echo "✅ initialDelaySeconds=$INITIAL_DELAY"
         fi
 
         # 8. 检查前端是否有生产环境不应有的console.log
@@ -268,12 +268,33 @@ jobs:
       run: |
         sed -i "s/ARG BUILD_DATE=unknown/ARG BUILD_DATE=$BUILD_DATE/" frontend/Dockerfile
 
-    - name: 部署到腾讯云 CloudBase
-      uses: TencentCloudBase/cloudbase-action@v2
-      with:
-        secretId: ${{ secrets.CLOUDBASE_SECRET_ID }}
-        secretKey: ${{ secrets.CLOUDBASE_SECRET_KEY }}
-        envId: ${{ secrets.CLOUDBASE_ENV_ID }}
+    - name: 部署到腾讯云 CloudBase（显式 CLI + 非交互模式
+      run: |
+        echo "=== 部署 CloudBase：framework.plugins 格式 ==="
+        python3 -c "
+import json
+with open('cloudbaserc.json') as f:
+    data = json.load(f)
+print('framework.name =', data['framework']['name'])
+print('plugins =', list(data['framework']['plugins'].keys()))
+for name, plugin in data['framework']['plugins'].items():
+    inp = plugin['inputs']
+    print(f'  - {name}: {inp[\"serviceName\"]}, port={inp[\"containerPort\"]}, initialDelaySeconds={inp[\"initialDelaySeconds\"]}')
+"
+        echo ""
+        echo "=== 安装 CloudBase CLI ==="
+        sudo npm install -g @cloudbase/cli --loglevel=error
+        echo ""
+        echo "=== 登录 CloudBase ==="
+        tcb login --apiKeyId ${{ secrets.CLOUDBASE_SECRET_ID }} --apiKey ${{ secrets.CLOUDBASE_SECRET_KEY }}
+        echo ""
+        echo "=== 开始部署 ==="
+        # tcb framework deploy 在 CI 环境会要求输入应用名，通过 printf 管道回答提示符
+        # framework.name=fashion-supplychain 已在 cloudbaserc.json 中声明
+        printf 'fashion-supplychain\n' | tcb framework deploy -e ${{ secrets.CLOUDBASE_ENV_ID }} --verbose 2>&1 || \
+        printf 'fashion-supplychain\n' | tcb framework deploy --name fashion-supplychain -e ${{ secrets.CLOUDBASE_ENV_ID }} --verbose
+      env:
+        CI: "true"
 
   create-release-tag:
     name: 创建发布标签
