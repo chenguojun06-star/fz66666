@@ -268,19 +268,10 @@ jobs:
       run: |
         sed -i "s/ARG BUILD_DATE=unknown/ARG BUILD_DATE=$BUILD_DATE/" frontend/Dockerfile
 
-    - name: 部署到腾讯云 CloudBase（显式 CLI + 非交互模式
+    - name: 部署到腾讯云 CloudBase（显式 CLI + 非交互模式）
       run: |
         echo "=== 部署 CloudBase：framework.plugins 格式 ==="
-        python3 -c "
-import json
-with open('cloudbaserc.json') as f:
-    data = json.load(f)
-print('framework.name =', data['framework']['name'])
-print('plugins =', list(data['framework']['plugins'].keys()))
-for name, plugin in data['framework']['plugins'].items():
-    inp = plugin['inputs']
-    print(f'  - {name}: {inp[\"serviceName\"]}, port={inp[\"containerPort\"]}, initialDelaySeconds={inp[\"initialDelaySeconds\"]}')
-"
+        python3 -c "import json; data=json.load(open('cloudbaserc.json')); print('framework.name =', data['framework']['name']); print('plugins =', list(data['framework']['plugins'].keys()))"
         echo ""
         echo "=== 安装 CloudBase CLI ==="
         sudo npm install -g @cloudbase/cli --loglevel=error
