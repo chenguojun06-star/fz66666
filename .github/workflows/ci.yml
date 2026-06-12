@@ -105,7 +105,21 @@ jobs:
           echo "⚠️  生产配置中存在'你的域名'占位符"
         fi
 
-        # 7. 检查前端是否有生产环境不应有的console.log（非DEV守卫）
+        # 7. 检查 cloudbaserc.json 探针配置（P0：INC-20260612-001）
+        echo ""
+        echo "🔍 检查 cloudbaserc.json 探针配置..."
+        INITIAL_DELAY=$(grep -o '"InitialDelaySeconds": *[0-9]*' cloudbaserc.json | grep -o '[0-9]*' | head -1)
+        if [ -z "$INITIAL_DELAY" ]; then
+          echo "❌ cloudbaserc.json 缺少 InitialDelaySeconds 配置"
+          ERRORS=$((ERRORS + 1))
+        elif [ "$INITIAL_DELAY" -lt 200 ]; then
+          echo "❌ InitialDelaySeconds=$INITIAL_DELAY 太小（应用启动需 90s+，建议 ≥300）"
+          ERRORS=$((ERRORS + 1))
+        else
+          echo "✅ InitialDelaySeconds=$INITIAL_DELAY"
+        fi
+
+        # 8. 检查前端是否有生产环境不应有的console.log
         BARE_CONSOLE=$(grep -rn "console\.log" frontend/src/ --include="*.ts" --include="*.tsx" 2>/dev/null \
           | grep -v "isDev\|import.meta.env.DEV\|logger\|errorHandling\|wrap(\|//.*console\|console\.log(res\|console\.log(stats\|console\.log(config" || true)
         if [ -n "$BARE_CONSOLE" ]; then
