@@ -308,7 +308,7 @@ export const resolveNodesForOrder = (
   const sn = String((order as any)?.styleNo || '').trim();
   if (sn && progressNodesByStyleNo[sn]?.length) {
     return sortNodesByProcessCode(applySubProcessRemapToNodes(
-      progressNodesByStyleNo[sn].filter(n => (Number(n.unitPrice) || 0) > 0),
+      progressNodesByStyleNo[sn],
       order,
     ));
   }

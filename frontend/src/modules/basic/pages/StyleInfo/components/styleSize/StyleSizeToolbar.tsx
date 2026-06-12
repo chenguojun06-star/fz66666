@@ -69,10 +69,20 @@ const StyleSizeToolbar: React.FC<Props> = ({
       } else {
         let rawJson = res.data?.rawJson || '{}';
         console.log('[AI识别] 原始返回:', rawJson);
-        
-        // 清理可能的Markdown代码块
+
+        // 从任意文本中提取第一个 { 到最后一个 } 之间的内容
+        const extractJson = (text: string): string => {
+          const s = String(text || '').trim();
+          const firstOpen = s.indexOf('{');
+          const lastClose = s.lastIndexOf('}');
+          if (firstOpen !== -1 && lastClose !== -1 && lastClose > firstOpen) {
+            return s.slice(firstOpen, lastClose + 1);
+          }
+          return s;
+        };
+
+        // 清理 Markdown 代码块标记
         rawJson = rawJson.trim();
-        // 移除 ```json 和 ``` 包裹
         if (rawJson.startsWith('```json')) {
           rawJson = rawJson.slice(7);
         }
@@ -83,19 +93,29 @@ const StyleSizeToolbar: React.FC<Props> = ({
           rawJson = rawJson.slice(0, -3);
         }
         rawJson = rawJson.trim();
-        
-        // 尝试解析JSON
-        try {
-          const parsed = JSON.parse(rawJson);
+
+        let parsed: any = null;
+        for (const attempt of [rawJson, extractJson(rawJson)]) {
+          try {
+            parsed = JSON.parse(attempt);
+            if (parsed && typeof parsed === 'object') break;
+            parsed = null;
+          } catch {
+            parsed = null;
+          }
+        }
+
+        if (parsed && typeof parsed === 'object') {
           console.log('[AI识别] 解析成功:', parsed);
           onSizeTableRecognized(parsed);
           setOcrModalOpen(false);
           setOcrFile(null);
           antMessage.success('尺寸表识别成功！');
-        } catch (e) {
-          console.error('[AI识别] JSON解析失败:', e);
-          console.error('[AI识别] 清理后的JSON:', rawJson);
-          antMessage.error('AI返回格式异常，请重试');
+        } else {
+          console.error('[AI识别] JSON解析失败，原始文本:', rawJson);
+          // AI 返回了非 JSON 自然语言（如"此图片不是一张尺寸表"），提取可读提示
+          const plainText = String(rawJson || '').replace(/^[`\s]+|[`\s]+$/g, '').slice(0, 80);
+          antMessage.error(plainText ? `AI返回：${plainText}（请上传尺码表图片重试）` : 'AI返回格式异常，请重试');
         }
       }
     } catch (e: unknown) {

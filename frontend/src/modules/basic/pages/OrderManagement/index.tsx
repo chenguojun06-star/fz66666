@@ -25,7 +25,6 @@ import type { StyleBom } from '@/types/style';
 import OrderRankingDashboard from './components/OrderRankingDashboard';
 import OrderAnalysisTab from './components/OrderAnalysisTab';
 import OrderListContent from './components/OrderListContent';
-import { useDelayedStageBreakdown } from '@/modules/dashboard/components/DelayedStageBreakdown/useDelayedStageBreakdown';
 import OrderCreateModal from './components/OrderCreateModal';
 
 import { OrderLine, ProgressNode, defaultProgressNodes } from './types';
@@ -50,9 +49,6 @@ const OrderManagement: React.FC = () => {
   const { columns: cardColumns } = useCardGridLayout(10);
 
   const cuttingCreateTask = useCuttingCreateTask({ message, navigate, fetchTasks: async () => {} });
-
-  // 延期环节数据（内联到智能提示标签）
-  const { stageHints: delayedHints } = useDelayedStageBreakdown({ forceTab: 'bulk' });
 
   const tooltipTheme = useMemo(() => {
     const theme = typeof document !== 'undefined' ? document.documentElement.getAttribute('data-theme') : '';
@@ -321,15 +317,6 @@ const OrderManagement: React.FC = () => {
                   active: smartFilter === 'warning',
                   onClick: () => handleSmartFilterClick('warning', warningStyles),
                 },
-                ...delayedHints.map(h => ({
-                  key: h.key,
-                  count: h.count,
-                  tone: 'red' as const,
-                  label: `${h.stageName}延期`,
-                  hint: `点击查看${h.stageName}延期订单`,
-                  active: false,
-                  onClick: () => navigate(h.buildNavigateUrl()),
-                })),
               ]}
               onClearHints={smartFilter !== 'all' ? handleClearSmartFilter : undefined}
             />
