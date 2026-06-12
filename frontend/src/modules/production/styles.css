@@ -365,7 +365,24 @@
 
 .progress-row__cover {
   flex: 0 0 auto;
+  max-width: 460px;
   min-height: 64px;
+  overflow: hidden;
+}
+
+/* 列表视图 cover 区：OrderInfoGrid(Descriptions) 自适应宽度 */
+.progress-row__cover .ant-descriptions {
+  min-width: 0 !important;
+}
+
+.progress-row__cover .ant-descriptions-row > td,
+.progress-row__cover .ant-descriptions-row > th {
+  padding-bottom: 2px !important;
+  padding-top: 2px !important;
+}
+
+.progress-row__cover .ant-descriptions .ant-descriptions-item-content {
+  min-width: 0 !important;
 }
 
 .progress-row__body {

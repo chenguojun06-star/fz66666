@@ -1,6 +1,4 @@
 <view class="container">
-  <custom-nav title="质检" show-back="{{true}}" />
-
   <view class="card">
     <view class="filter-row">
       <view class="filter-pill {{activeFilter === 'all' ? 'filter-pill-active' : ''}}" data-filter="all" bindtap="onFilter">全部</view>

@@ -1,6 +1,4 @@
 <view class="container">
-  <custom-nav title="裁剪任务" show-back="{{true}}" />
-
   <!-- 状态筛选 Tab -->
   <view class="filter-tabs">
     <view

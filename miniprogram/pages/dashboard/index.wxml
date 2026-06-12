@@ -1,5 +1,4 @@
 <!-- 生产管理 · 美团风格订单卡片 -->
-<custom-nav title="生产管理" show-back="{{true}}" />
 
 <view class="page">
   <!-- 今日概览 · 紧凑横条 -->

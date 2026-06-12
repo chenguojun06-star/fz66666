@@ -180,6 +180,7 @@ export function createOrderSummaryRender(ctx: OrderSummaryContext) {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0, paddingTop: 2, textAlign: 'left' }}>
             <OrderInfoGrid
               fontSize={12}
+              column={1}
               items={[
                 {
                   label: '生产方',

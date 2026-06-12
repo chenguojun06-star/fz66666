@@ -273,7 +273,7 @@ public interface ScanRecordMapper extends BaseMapper<ScanRecord> {
                 "  COALESCE(SUM(sr.quantity), 0) AS totalQty, " +
                 "  COALESCE(SUM(COALESCE(NULLIF(sr.total_amount,0), NULLIF(sr.scan_cost,0), sr.unit_price*sr.quantity, 0)), 0) AS totalAmount " +
                 "FROM t_scan_record sr " +
-                "WHERE sr.tenant_id=#{tenantId} AND sr.scan_result='success' AND sr.quantity>0 " +
+                "WHERE sr.tenant_id=#{tenantId,jdbcType=BIGINT} AND sr.scan_result='success' AND sr.quantity>0 " +
                 "  AND sr.scan_type != 'orchestration' " +
                 "  AND sr.scan_time >= #{startTime} AND sr.scan_time < #{endTime} " +
                 "  AND NOT EXISTS (SELECT 1 FROM t_production_order po " +

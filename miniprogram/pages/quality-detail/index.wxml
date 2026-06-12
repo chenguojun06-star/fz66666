@@ -1,6 +1,4 @@
 <view class="container" wx:if="{{detail}}">
-  <custom-nav title="质检详情" show-back="{{true}}" />
-
   <view class="detail-card">
     <view class="card-header">
       <view class="order-info">
