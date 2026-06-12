@@ -362,14 +362,13 @@ public class DashboardOrderQueryHelper {
 
         LocalDateTime now = LocalDateTime.now();
         // 查询所有未完成的样衣开发款号
-        // 排除条件：sampleStatus=COMPLETED / sampleReviewStatus=PASS或APPROVED / sampleCompletedTime已填
+        // 只排除已完成的样衣（sampleStatus=COMPLETED），不限制审核状态和完成时间
+        // 因为审核通过不代表开发完成，完成时间为空是正常状态
         List<StyleInfo> styles = styleInfoService.lambdaQuery()
                 .eq(StyleInfo::getTenantId, tenantId)
                 .eq(StyleInfo::getStatus, "ENABLED")
                 .isNotNull(StyleInfo::getSampleStatus)
                 .ne(StyleInfo::getSampleStatus, "COMPLETED")
-                .notIn(StyleInfo::getSampleReviewStatus, "PASS", "APPROVED")
-                .isNull(StyleInfo::getSampleCompletedTime)
                 .last("LIMIT 5000")
                 .list();
 
