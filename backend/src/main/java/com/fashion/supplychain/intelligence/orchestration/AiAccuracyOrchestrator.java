@@ -11,6 +11,7 @@ import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 
 /**
  * AI 准确率量化编排器
@@ -27,6 +28,7 @@ import org.springframework.stereotype.Service;
  */
 @Slf4j
 @Service
+@Lazy
 @RequiredArgsConstructor
 public class AiAccuracyOrchestrator {
 

@@ -3,6 +3,7 @@ package com.fashion.supplychain.intelligence.orchestration;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Lazy;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -15,6 +16,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * 而无需硬编码到每个 Agent 中。</p>
  */
 @Component
+@Lazy
 @Slf4j
 public class ModelRoutingConfig {
 

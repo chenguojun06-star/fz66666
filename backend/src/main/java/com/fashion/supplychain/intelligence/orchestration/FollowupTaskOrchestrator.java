@@ -3,6 +3,7 @@ package com.fashion.supplychain.intelligence.orchestration;
 import com.fashion.supplychain.intelligence.dto.ActionCenterResponse;
 import com.fashion.supplychain.intelligence.dto.IntelligenceBrainSnapshotResponse;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -13,6 +14,7 @@ import java.time.format.DateTimeFormatter;
  * <p>职责：把风险信号统一转换为动作中心任务与大脑动作。</p>
  */
 @Service
+@Lazy
 public class FollowupTaskOrchestrator {
 
     public ActionCenterResponse.ActionTask buildTask(String taskCode,

@@ -74,6 +74,11 @@ public class StreamingAgentLoopCallback implements AgentLoopCallback {
         emitSse("answer_chunk", Map.of("chunk", chunk));
     }
 
+    /** 推送进度百分比事件 — 让前端知道AI执行到哪一步了 */
+    public void onProgress(int percent, String message) {
+        emitSse("progress", Map.of("percent", percent, "message", message));
+    }
+
     @Override
     public void onFollowUpActions(List<?> actions) {
         emitSse("follow_up_actions", Map.of("actions", actions));

@@ -7,6 +7,7 @@ import com.fashion.supplychain.intelligence.orchestration.AiSandboxOrchestrator;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Lazy;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -18,6 +19,7 @@ import java.util.Map;
  */
 @Slf4j
 @Component
+@Lazy
 public class NewOrderSimulationTool extends AbstractAgentTool {
 
     @Autowired

@@ -8,6 +8,7 @@ import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 
 /**
  * 自我反思引擎编排器 — Hybrid Graph MAS 第二节点（Reflect-Critique）。
@@ -19,6 +20,7 @@ import org.springframework.stereotype.Service;
  */
 @Slf4j
 @Service
+@Lazy
 public class ReflectionEngineOrchestrator {
 
     private static final ObjectMapper JSON = new ObjectMapper();

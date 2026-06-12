@@ -6,6 +6,7 @@ import com.fashion.supplychain.intelligence.mapper.AiLongMemoryMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -15,6 +16,7 @@ import java.util.regex.Pattern;
 
 @Slf4j
 @Service
+@Lazy
 public class EntityMemoryContextService {
 
     private static final Pattern ORDER_NO_PATTERN = Pattern.compile("PO\\d{14}|[A-Z]{2,4}\\d{8,}");

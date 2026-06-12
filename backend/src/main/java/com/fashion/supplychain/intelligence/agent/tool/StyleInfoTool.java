@@ -15,6 +15,7 @@ import java.util.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Lazy;
 
 /**
  * 款式信息 AI 工具（查询 + 写操作）
@@ -29,6 +30,7 @@ import org.springframework.stereotype.Component;
  */
 @Slf4j
 @Component
+@Lazy
 public class StyleInfoTool extends AbstractAgentTool {
 
     @Autowired private StyleInfoService styleInfoService;

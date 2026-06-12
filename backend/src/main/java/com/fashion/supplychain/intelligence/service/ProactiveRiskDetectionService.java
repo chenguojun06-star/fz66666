@@ -3,6 +3,7 @@ package com.fashion.supplychain.intelligence.service;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -12,6 +13,7 @@ import java.util.regex.Pattern;
 
 @Slf4j
 @Service
+@Lazy
 public class ProactiveRiskDetectionService {
 
     private static final Pattern OVERDUE_PATTERN = Pattern.compile("(逾期|超期|过期|延迟|延期|推迟)");

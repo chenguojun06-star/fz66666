@@ -11,12 +11,14 @@ import java.util.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Lazy;
 
 /**
  * AI对话工具 — 规律发现：当用户询问"有什么规律"、"趋势分析"时从历史日志挖掘模式。
  */
 @Slf4j
 @Component
+@Lazy
 public class PatternDiscoveryTool extends AbstractAgentTool {
 
     @Autowired private PatternDiscoveryOrchestrator patternOrchestrator;

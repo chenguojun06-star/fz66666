@@ -19,6 +19,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import org.springframework.context.annotation.Lazy;
 
 /**
  * 供应链健康指数编排器 — 0~100 综合健康得分
@@ -33,6 +34,7 @@ import org.springframework.util.StringUtils;
  * </ol>
  */
 @Service
+@Lazy
 @Slf4j
 public class HealthIndexOrchestrator {
 

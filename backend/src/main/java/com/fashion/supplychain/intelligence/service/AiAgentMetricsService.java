@@ -3,6 +3,7 @@ package com.fashion.supplychain.intelligence.service;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -13,6 +14,7 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @Service
+@Lazy
 public class AiAgentMetricsService {
 
     private final ConcurrentHashMap<String, AtomicLong> toolCallCounts = new ConcurrentHashMap<>();

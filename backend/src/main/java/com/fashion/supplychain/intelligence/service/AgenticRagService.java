@@ -319,7 +319,7 @@ public class AgenticRagService {
         };
     }
 
-    // ── 策略1：事实类 — KB优先 + 语义补充 ──
+    // ── 策略1：事实类 — KB优先 + 语义补充（优先混合检索） ──
 
     private RagResult factualRetrieve(Long tenantId, String query) {
         StringBuilder ctx = new StringBuilder();
@@ -335,9 +335,9 @@ public class AgenticRagService {
             sourceCount += kbResults.size();
         }
 
-        // 语义向量补充
+        // 语义向量补充（优先混合检索，不可用时回退纯稠密检索）
         if (qdrantService != null) {
-            List<KnowledgeBase> semanticResults = searchSemanticKB(tenantId, query, 3);
+            List<KnowledgeBase> semanticResults = searchSemanticKBWithHybrid(tenantId, query, 3);
             Set<String> seenIds = kbResults.stream().map(KnowledgeBase::getId).collect(Collectors.toSet());
             List<KnowledgeBase> newResults = semanticResults.stream()
                     .filter(kb -> !seenIds.contains(kb.getId()))
@@ -387,7 +387,7 @@ public class AgenticRagService {
         return new RagResult(trim(ctx.toString()), QuestionType.OPERATIONAL, sourceCount, "operational");
     }
 
-    // ── 策略3：分析类 — KB + 记忆 + 图谱 ──
+    // ── 策略3：分析类 — KB + 记忆 + 图谱（优先混合检索） ──
 
     private RagResult analyticalRetrieve(Long tenantId, String query) {
         StringBuilder ctx = new StringBuilder();
@@ -401,6 +401,23 @@ public class AgenticRagService {
                 ctx.append(formatKB(kb));
             }
             sourceCount += kbResults.size();
+        }
+
+        // 语义向量补充（优先混合检索，不可用时回退纯稠密检索）
+        if (qdrantService != null && qdrantService.isHybridSearchAvailable()) {
+            List<KnowledgeBase> hybridResults = searchSemanticKBWithHybrid(tenantId, query, 3);
+            Set<String> seenIds = kbResults.stream().map(KnowledgeBase::getId).collect(Collectors.toSet());
+            List<KnowledgeBase> newResults = hybridResults.stream()
+                    .filter(kb -> !seenIds.contains(kb.getId()))
+                    .limit(2)
+                    .toList();
+            if (!newResults.isEmpty()) {
+                ctx.append("【语义关联】\n");
+                for (KnowledgeBase kb : newResults) {
+                    ctx.append(formatKB(kb));
+                }
+                sourceCount += newResults.size();
+            }
         }
 
         // 历史记忆
@@ -530,6 +547,35 @@ public class AgenticRagService {
         } catch (Exception e) {
             log.debug("[AgenticRAG] 语义检索异常: {}", e.getMessage());
             return List.of();
+        }
+    }
+
+    /**
+     * 语义检索（优先混合检索，不可用时回退纯稠密检索）。
+     * 混合检索结合稀疏关键词匹配和稠密语义相似度，提升召回率。
+     */
+    private List<KnowledgeBase> searchSemanticKBWithHybrid(Long tenantId, String query, int limit) {
+        if (qdrantService == null) return List.of();
+        try {
+            // 优先使用混合检索
+            List<ScoredPoint> hits;
+            if (qdrantService.isHybridSearchAvailable()) {
+                hits = qdrantService.hybridSearch(tenantId, query, limit * 2);
+            } else {
+                hits = qdrantService.search(tenantId, query, limit * 2);
+            }
+            List<String> kbIds = hits.stream()
+                    .filter(h -> h.getPointId() != null && h.getPointId().startsWith("kb_"))
+                    .map(h -> h.getPointId().substring(3))
+                    .distinct().limit(limit)
+                    .toList();
+            if (kbIds.isEmpty()) return List.of();
+            return knowledgeBaseService.list(new QueryWrapper<KnowledgeBase>()
+                    .in("id", kbIds)
+                    .eq("delete_flag", 0));
+        } catch (Exception e) {
+            log.debug("[AgenticRAG] 混合语义检索异常，回退纯稠密检索: {}", e.getMessage());
+            return searchSemanticKB(tenantId, query, limit);
         }
     }
 

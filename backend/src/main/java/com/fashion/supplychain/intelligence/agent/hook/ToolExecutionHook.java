@@ -1,5 +1,7 @@
 package com.fashion.supplychain.intelligence.agent.hook;
 
+import org.springframework.context.annotation.Lazy;
+
 /**
  * AI Agent 工具执行钩子接口。
  * 实现此接口并注册为 @Component 即可拦截所有 Agent 工具调用。

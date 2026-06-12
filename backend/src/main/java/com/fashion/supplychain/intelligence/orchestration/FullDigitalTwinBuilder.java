@@ -6,6 +6,7 @@ import com.fashion.supplychain.common.UserContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 
 import java.io.StringWriter;
 import java.time.LocalDate;
@@ -31,6 +32,7 @@ import java.util.concurrent.*;
  */
 @Slf4j
 @Service
+@Lazy
 @RequiredArgsConstructor
 public class FullDigitalTwinBuilder {
 

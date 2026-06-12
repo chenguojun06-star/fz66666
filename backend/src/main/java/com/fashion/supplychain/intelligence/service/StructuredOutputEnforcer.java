@@ -2,6 +2,7 @@ package com.fashion.supplychain.intelligence.service;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 
 /**
  * 结构化输出强制执行器 — 确保AI回答格式符合预期。
@@ -16,6 +17,7 @@ import org.springframework.stereotype.Service;
  * <p>设计原则：薄服务层，格式规则外置，不依赖LLM做格式判断。
  */
 @Service
+@Lazy
 @Slf4j
 public class StructuredOutputEnforcer {
 

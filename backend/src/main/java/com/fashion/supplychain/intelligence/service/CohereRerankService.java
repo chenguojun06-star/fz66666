@@ -7,6 +7,7 @@ import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.context.annotation.Lazy;
 
 import java.util.*;
 
@@ -27,6 +28,7 @@ import java.util.*;
  */
 @Slf4j
 @Service
+@Lazy
 public class CohereRerankService {
 
     @Value("${ai.cohere.rerank.enabled:false}")

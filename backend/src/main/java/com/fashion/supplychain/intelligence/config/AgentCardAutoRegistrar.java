@@ -6,11 +6,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Lazy;
 
 import java.util.List;
 
 @Slf4j
 @Component
+@Lazy
 @RequiredArgsConstructor
 public class AgentCardAutoRegistrar {
 

@@ -18,6 +18,7 @@ import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 
 /**
  * 款式报价建议编排器 — 基于历史订单与BOM数据提供报价参考
@@ -30,6 +31,7 @@ import org.springframework.stereotype.Service;
  * </ol>
  */
 @Service
+@Lazy
 @Slf4j
 public class StyleQuoteSuggestionOrchestrator {
 

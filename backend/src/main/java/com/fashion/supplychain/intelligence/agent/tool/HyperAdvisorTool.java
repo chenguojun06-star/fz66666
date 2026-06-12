@@ -14,9 +14,11 @@ import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Lazy;
 
 @Slf4j
 @Component
+@Lazy
 public class HyperAdvisorTool extends AbstractAgentTool {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();

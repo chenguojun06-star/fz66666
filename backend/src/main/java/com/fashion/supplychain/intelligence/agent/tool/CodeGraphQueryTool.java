@@ -5,6 +5,7 @@ import com.fashion.supplychain.intelligence.service.CodeIndexService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Lazy;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -12,6 +13,7 @@ import java.util.Map;
 
 @Slf4j
 @Component
+@Lazy
 @AgentToolDef(
     name = "code_index_search",
     description = "代码索引搜索：快速定位Agent工具、Service方法、Controller端点的位置和功能。在需要查找系统能力或确定调用哪个工具时优先使用。",

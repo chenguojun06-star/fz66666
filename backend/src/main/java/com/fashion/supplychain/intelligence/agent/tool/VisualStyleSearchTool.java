@@ -6,6 +6,7 @@ import com.fashion.supplychain.intelligence.service.QdrantService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Lazy;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -17,6 +18,7 @@ import java.util.Map;
  */
 @Slf4j
 @Component
+@Lazy
 @AgentToolDef(
         name = "tool_visual_style_search",
         description = "以图搜款：根据服装图片URL搜索系统中视觉相似的历史款式，返回匹配的款号、难度等级和相似度",

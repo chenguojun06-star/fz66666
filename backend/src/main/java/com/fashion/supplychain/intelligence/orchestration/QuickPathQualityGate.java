@@ -4,6 +4,7 @@ import com.fashion.supplychain.intelligence.service.DataTruthGuard;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Lazy;
 
 import java.util.List;
 
@@ -18,6 +19,7 @@ import java.util.List;
  * </ul>
  */
 @Component
+@Lazy
 @Slf4j
 public class QuickPathQualityGate {
 

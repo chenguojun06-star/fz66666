@@ -17,6 +17,7 @@ import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 
 /**
  * 超级顾问 — 风险量化编排器
@@ -30,6 +31,7 @@ import org.springframework.stereotype.Service;
  * </ul>
  */
 @Service
+@Lazy
 @Slf4j
 public class AdvisorRiskOrchestrator {
 

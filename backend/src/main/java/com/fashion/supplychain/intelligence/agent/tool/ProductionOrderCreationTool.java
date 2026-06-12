@@ -20,6 +20,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
+import org.springframework.context.annotation.Lazy;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeParseException;
@@ -40,6 +41,7 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @Component
+@Lazy
 public class ProductionOrderCreationTool extends AbstractAgentTool {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();

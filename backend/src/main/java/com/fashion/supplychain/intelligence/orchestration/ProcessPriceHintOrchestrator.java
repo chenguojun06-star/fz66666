@@ -17,6 +17,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import org.springframework.context.annotation.Lazy;
 
 /**
  * 工序单价 AI 提示编排器
@@ -32,6 +33,7 @@ import org.springframework.util.StringUtils;
  * </ol>
  */
 @Service
+@Lazy
 @Slf4j
 public class ProcessPriceHintOrchestrator {
 

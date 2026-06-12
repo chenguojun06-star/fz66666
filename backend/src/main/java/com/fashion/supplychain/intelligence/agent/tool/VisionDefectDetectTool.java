@@ -5,6 +5,7 @@ import com.fashion.supplychain.intelligence.service.VisionAnalysisService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Lazy;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -15,6 +16,7 @@ import java.util.Map;
  */
 @Slf4j
 @Component
+@Lazy
 @AgentToolDef(
         name = "tool_vision_defect_detect",
         description = "服装缺陷检测：分析服装/布料/成品图片，检测破洞、污渍、色差、线头、跳针等质量缺陷",

@@ -9,6 +9,7 @@ import java.util.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Lazy;
 
 /**
  * 出货对账 AI 工具
@@ -22,6 +23,7 @@ import org.springframework.stereotype.Component;
  */
 @Slf4j
 @Component
+@Lazy
 public class ShipmentReconciliationTool extends AbstractAgentTool {
 
     @Autowired

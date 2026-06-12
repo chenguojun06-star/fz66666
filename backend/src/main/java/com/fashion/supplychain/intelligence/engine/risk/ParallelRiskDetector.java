@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Lazy;
 
 import java.util.ArrayList;
 import java.util.EnumMap;
@@ -15,6 +16,7 @@ import java.util.concurrent.Executors;
 
 @Slf4j
 @Component
+@Lazy
 @RequiredArgsConstructor
 public class ParallelRiskDetector {
 

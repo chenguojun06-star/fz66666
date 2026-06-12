@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 import org.yaml.snakeyaml.Yaml;
 
 import jakarta.annotation.PostConstruct;
@@ -14,6 +15,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 @Service
+@Lazy
 @RequiredArgsConstructor
 public class SpecialistPersonaService {
 

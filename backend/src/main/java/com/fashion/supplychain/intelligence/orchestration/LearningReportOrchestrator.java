@@ -15,6 +15,7 @@ import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 
 /**
  * AI 学习报告编排器
@@ -23,6 +24,7 @@ import org.springframework.stereotype.Service;
  * 样本数、置信度、各工序学习进度、预测准确率趋势。
  */
 @Service
+@Lazy
 @Slf4j
 public class LearningReportOrchestrator {
 

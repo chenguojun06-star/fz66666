@@ -10,11 +10,13 @@ import com.fashion.supplychain.intelligence.service.HighRiskAuditService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Lazy;
 
 import java.util.Set;
 
 @Slf4j
 @Component
+@Lazy
 public class HighRiskAuditHook implements ToolExecutionHook {
 
     private static final Set<String> SAFE_AUTO_EXECUTE = Set.of(

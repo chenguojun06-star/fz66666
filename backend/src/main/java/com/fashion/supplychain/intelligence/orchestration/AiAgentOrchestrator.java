@@ -24,6 +24,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+import org.springframework.context.annotation.Lazy;
 
 import java.util.Collections;
 import java.util.List;
@@ -39,6 +40,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 @Slf4j
 @Service
+@Lazy
 public class AiAgentOrchestrator {
 
     @Autowired private AgentLoopContextBuilder contextBuilder;
@@ -669,7 +671,8 @@ public class AiAgentOrchestrator {
         java.util.concurrent.atomic.AtomicReference<ScheduledFuture<?>> futureRef = new java.util.concurrent.atomic.AtomicReference<>();
         ScheduledFuture<?> future = SHARED_HEARTBEAT_SCHEDULER.scheduleAtFixedRate(() -> {
             try {
-                emitter.send(SseEmitter.event().comment("heartbeat " + System.currentTimeMillis()));
+                // 发送命名心跳事件，前端可据此重置不活跃计时器
+                emitter.send(SseEmitter.event().name("heartbeat").data("{}"));
             } catch (Exception e) {
                 log.debug("[AiAgent-Stream] 心跳发送失败，连接已断开，中断Agent执行");
                 cancelled.set(true);

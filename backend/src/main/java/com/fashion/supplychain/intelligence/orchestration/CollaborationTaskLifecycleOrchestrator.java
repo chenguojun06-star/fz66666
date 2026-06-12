@@ -19,9 +19,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import org.springframework.context.annotation.Lazy;
 
 @Slf4j
 @Service
+@Lazy
 public class CollaborationTaskLifecycleOrchestrator {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();

@@ -53,12 +53,21 @@ export interface XiaoyunMoodEvent {
   elapsedMs: number;
 }
 
+export interface ProgressEvent {
+  percent: number;
+  message: string;
+}
+
 export interface XiaoyunCallbacks {
   onStepProgress?: (e: StepProgressEvent) => void;
   onToolExecuting?: (e: ToolExecutingEvent) => void;
   onDataCard?: (e: DataCardEvent) => void;
   onTimeBudget?: (e: TimeBudgetEvent) => void;
   onXiaoyunMood?: (e: XiaoyunMoodEvent) => void;
+  /** 进度百分比事件 */
+  onProgress?: (e: ProgressEvent) => void;
+  /** 心跳事件 — 用于重置不活跃计时器 */
+  onHeartbeat?: () => void;
   /** 原有事件 */
   onThinking?: (message: string) => void;
   onToolCall?: (tool: string, args: string) => void;
@@ -120,6 +129,14 @@ export function createXiaoyunHandler(callbacks: XiaoyunCallbacks) {
 
         case 'xiaoyun_mood':
           callbacks.onXiaoyunMood?.(data as XiaoyunMoodEvent);
+          break;
+
+        case 'progress':
+          callbacks.onProgress?.(data as ProgressEvent);
+          break;
+
+        case 'heartbeat':
+          callbacks.onHeartbeat?.();
           break;
 
         // ===== 原有事件（兼容） =====

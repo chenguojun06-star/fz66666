@@ -10,6 +10,7 @@ import com.fashion.supplychain.system.mapper.ChangeApprovalMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
@@ -23,6 +24,7 @@ import java.util.Map;
  * 给出 APPROVE / REJECT / ESCALATE 智能建议及风险等级。
  */
 @Service
+@Lazy
 @Slf4j
 public class ApprovalAdvisorOrchestrator {
 

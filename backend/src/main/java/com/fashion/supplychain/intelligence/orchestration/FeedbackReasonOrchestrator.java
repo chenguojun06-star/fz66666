@@ -12,8 +12,10 @@ import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import org.springframework.context.annotation.Lazy;
 
 @Service
+@Lazy
 public class FeedbackReasonOrchestrator {
 
     @Autowired

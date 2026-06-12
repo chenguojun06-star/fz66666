@@ -5,6 +5,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.context.annotation.Lazy;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -19,6 +20,7 @@ import java.util.stream.Collectors;
  * <p>配置项由 {@link IntelligenceModelGatewayOrchestrator} 统一持有，本编排器通过注入读取。
  */
 @Service
+@Lazy
 @Slf4j
 public class LiteLLMAdminOrchestrator {
 

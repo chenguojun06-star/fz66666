@@ -18,6 +18,7 @@ import java.util.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 
 /**
  * 实时成本追踪编排器
@@ -31,6 +32,7 @@ import org.springframework.stereotype.Service;
  * </ol>
  */
 @Service
+@Lazy
 @Slf4j
 public class LiveCostTrackerOrchestrator {
 

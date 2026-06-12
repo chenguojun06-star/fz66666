@@ -4,6 +4,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicIntegerArray;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 
 /**
  * 智能升级编排器 — 支持从历史数据中学习升级策略
@@ -17,6 +18,7 @@ import org.springframework.stereotype.Service;
  */
 @Slf4j
 @Service
+@Lazy
 public class SmartEscalationOrchestrator {
 
     private static final int MIN_HISTORY_SAMPLES = 5;

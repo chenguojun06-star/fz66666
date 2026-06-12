@@ -3,6 +3,7 @@ package com.fashion.supplychain.intelligence.helper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Lazy;
 import org.yaml.snakeyaml.Yaml;
 
 import jakarta.annotation.PostConstruct;
@@ -12,6 +13,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 @Component
+@Lazy
 public class PromptTemplateLoader {
 
     private final Map<String, Map<String, Object>> templates = new ConcurrentHashMap<>();

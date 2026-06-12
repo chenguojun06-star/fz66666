@@ -9,6 +9,7 @@ import com.fashion.supplychain.intelligence.mapper.ConversationReflectionMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -17,6 +18,7 @@ import java.util.*;
 
 @Slf4j
 @Service
+@Lazy
 @RequiredArgsConstructor
 public class SkillEvolutionOrchestrator {
 

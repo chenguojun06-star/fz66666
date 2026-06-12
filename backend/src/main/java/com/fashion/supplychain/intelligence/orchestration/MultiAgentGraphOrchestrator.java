@@ -15,6 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+import org.springframework.context.annotation.Lazy;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -33,6 +34,7 @@ import java.util.concurrent.CompletableFuture;
  */
 @Slf4j
 @Service
+@Lazy
 public class MultiAgentGraphOrchestrator {
 
     private static final int CONFIDENCE_THRESHOLD = 70;

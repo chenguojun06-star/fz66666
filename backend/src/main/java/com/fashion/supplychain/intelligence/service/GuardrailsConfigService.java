@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 import org.yaml.snakeyaml.Yaml;
 
 import jakarta.annotation.PostConstruct;
@@ -17,6 +18,7 @@ import java.util.regex.Pattern;
  * 引擎：{@link EvolutionSafetyGuard} 的补充，专注于输出内容过滤。
  */
 @Service
+@Lazy
 @Slf4j
 public class GuardrailsConfigService {
 

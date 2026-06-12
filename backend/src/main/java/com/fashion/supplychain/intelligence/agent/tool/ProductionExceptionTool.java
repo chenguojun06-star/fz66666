@@ -10,12 +10,14 @@ import com.fashion.supplychain.production.service.ProductionExceptionReportServi
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Lazy;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
 @Slf4j
 @Component
+@Lazy
 @AgentToolDef(name = "tool_production_exception", description = "生产异常上报与分析", domain = ToolDomain.PRODUCTION, timeoutMs = 15000, readOnly = false)
 @McpToolAnnotation(
         name = "tool_production_exception",

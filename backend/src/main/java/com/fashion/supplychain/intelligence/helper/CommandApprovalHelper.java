@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
+import org.springframework.context.annotation.Lazy;
 
 /**
  * 命令审批辅助 — 从 IntelligenceExecutionController 提取审批角色映射逻辑
@@ -17,6 +18,7 @@ import org.springframework.util.StringUtils;
  *   - 从租户角色中筛选有权限的审批人
  */
 @Component
+@Lazy
 @Slf4j
 public class CommandApprovalHelper {
 

@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -36,6 +37,7 @@ import java.util.regex.Pattern;
  * <p>评分低于阈值时，自动生成反馈记录并触发实时学习闭环。</p>
  */
 @Service
+@Lazy
 @Slf4j
 public class SelfCriticService {
 

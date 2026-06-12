@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
+import org.springframework.context.annotation.Lazy;
 
 /**
  * 工序统计引擎 — 智能预判的"学习大脑"
@@ -37,6 +38,7 @@ import org.springframework.util.StringUtils;
  * </ul>
  */
 @Service
+@Lazy
 @Slf4j
 public class ProcessStatsEngine {
 

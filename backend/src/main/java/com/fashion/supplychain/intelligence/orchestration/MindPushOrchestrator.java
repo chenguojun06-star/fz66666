@@ -22,6 +22,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.context.annotation.Lazy;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -44,6 +45,7 @@ import java.util.stream.Collectors;
  * <p>独立编排器，不混入 SmartNotificationOrchestrator。
  */
 @Service
+@Lazy
 @Slf4j
 public class MindPushOrchestrator {
 

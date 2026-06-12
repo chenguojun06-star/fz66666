@@ -2,12 +2,14 @@ package com.fashion.supplychain.intelligence.upgrade.phase2;
 
 import lombok.Data;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 
 @Service
+@Lazy
 public class AdaptiveTimeoutService {
 
     private static final int MAX_SAMPLES = 200;

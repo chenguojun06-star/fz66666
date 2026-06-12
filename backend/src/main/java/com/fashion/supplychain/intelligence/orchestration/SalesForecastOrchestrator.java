@@ -13,8 +13,10 @@ import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 
 @Service
+@Lazy
 @Slf4j
 public class SalesForecastOrchestrator {
 

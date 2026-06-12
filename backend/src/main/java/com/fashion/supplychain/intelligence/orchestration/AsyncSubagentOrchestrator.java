@@ -6,6 +6,7 @@ import com.fashion.supplychain.intelligence.orchestration.specialist.SpecialistA
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -14,6 +15,7 @@ import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Service
+@Lazy
 @RequiredArgsConstructor
 public class AsyncSubagentOrchestrator {
 

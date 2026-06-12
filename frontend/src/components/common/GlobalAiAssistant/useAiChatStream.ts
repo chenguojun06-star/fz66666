@@ -17,6 +17,7 @@ export interface LiveStatus {
   step?: { step: number; total: number; phase: string; message: string };
   toolExecuting?: { tool: string; icon?: string; message?: string; parallel?: number };
   elapsedMs?: number;
+  progress?: { percent: number; message: string };
   visible: boolean;
 }
 
@@ -90,6 +91,8 @@ export function useAiChatStream(config: StreamConfig) {
       }),
       onXiaoyunMood: (e) => updateLiveStatus({ mood: e.mood }),
       onTimeBudget: (e) => updateLiveStatus({ elapsedMs: e.elapsedMs }),
+      onProgress: (e) => updateLiveStatus({ progress: { percent: e.percent, message: e.message } }),
+      onHeartbeat: () => resetInactivityTimer(),
       onThinking: () => updateLiveStatus({ mood: 'thinking' }),
       onToolCall: (tool) => updateLiveStatus({ mood: 'searching', toolExecuting: { tool } }),
       onToolResult: () => updateLiveStatus({ toolExecuting: undefined }),
@@ -335,6 +338,16 @@ export function useAiChatStream(config: StreamConfig) {
               if (existing) return prev.map(m => m.id === aiMsgId ? { ...m, text: toolStatus } : m);
               return [...prev, { id: aiMsgId, role: 'ai' as const, text: toolStatus }];
             });
+          } else if (event.type === 'progress') {
+            const progressMsg = event.data.message || '';
+            const progressPercent = event.data.percent || 0;
+            if (progressMsg) {
+              setMessages(prev => {
+                const existing = prev.find(m => m.id === aiMsgId);
+                if (existing) return prev.map(m => m.id === aiMsgId ? { ...m, text: `小云正在分析（${progressPercent}%）— ${progressMsg}` } : m);
+                return [...prev, { id: aiMsgId, role: 'ai' as const, text: `小云正在分析（${progressPercent}%）— ${progressMsg}` }];
+              });
+            }
           } else if (event.type === 'answer_chunk') {
             const chunk = String(event.data.chunk || '');
             if (chunk) {

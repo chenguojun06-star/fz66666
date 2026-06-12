@@ -7,11 +7,13 @@ import com.fashion.supplychain.style.mapper.StyleInfoMapper;
 import com.fashion.supplychain.style.mapper.StyleProcessMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Lazy;
 
 import java.util.ArrayList;
 import java.util.List;
 
 @Component
+@Lazy
 @RequiredArgsConstructor
 public class ContainsRelationExtractor implements RelationExtractor {
 

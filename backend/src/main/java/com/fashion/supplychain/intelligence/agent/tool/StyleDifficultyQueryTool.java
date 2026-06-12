@@ -11,6 +11,7 @@ import com.fashion.supplychain.style.service.StyleInfoService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Lazy;
 
 import java.util.HashMap;
 import java.util.List;
@@ -29,6 +30,7 @@ import java.util.Map;
  */
 @Slf4j
 @Component
+@Lazy
 public class StyleDifficultyQueryTool extends AbstractAgentTool {
 
     @Autowired

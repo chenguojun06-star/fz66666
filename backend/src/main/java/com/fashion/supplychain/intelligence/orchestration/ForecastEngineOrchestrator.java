@@ -12,6 +12,7 @@ import com.fashion.supplychain.production.service.ProductionOrderService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -25,6 +26,7 @@ import java.util.List;
  * 使用加权移动平均（WMA）+ LLM文字摘要
  */
 @Service
+@Lazy
 @Slf4j
 public class ForecastEngineOrchestrator {
 

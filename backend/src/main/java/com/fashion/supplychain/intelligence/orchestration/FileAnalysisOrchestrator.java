@@ -11,6 +11,7 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.context.annotation.Lazy;
 
 import java.io.BufferedReader;
 import java.io.InputStream;
@@ -26,6 +27,7 @@ import java.util.List;
  */
 @Slf4j
 @Service
+@Lazy
 public class FileAnalysisOrchestrator {
 
     private static final long MAX_FILE_SIZE = 5 * 1024 * 1024L; // 5MB

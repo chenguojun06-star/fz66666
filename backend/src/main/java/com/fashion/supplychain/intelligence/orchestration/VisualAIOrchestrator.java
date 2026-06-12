@@ -10,6 +10,7 @@ import com.fashion.supplychain.intelligence.service.VisionAnalysisService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -27,6 +28,7 @@ import java.util.regex.Pattern;
  * LLM 返回 JSON 片段，解析后持久化到 t_visual_ai_log
  */
 @Service
+@Lazy
 @Slf4j
 public class VisualAIOrchestrator {
 

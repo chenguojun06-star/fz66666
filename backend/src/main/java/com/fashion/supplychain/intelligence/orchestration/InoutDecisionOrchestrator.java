@@ -4,6 +4,7 @@ import com.fashion.supplychain.intelligence.dto.InoutRecommendRequest;
 import com.fashion.supplychain.intelligence.dto.InoutRecommendResponse;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import org.springframework.context.annotation.Lazy;
 
 /**
  * 出入库智能分流建议编排器
@@ -19,6 +20,7 @@ import org.springframework.util.StringUtils;
  * {@code /api/production/purchase/smart-receive-all} 完成。
  */
 @Service
+@Lazy
 public class InoutDecisionOrchestrator {
 
     public InoutRecommendResponse recommend(InoutRecommendRequest request) {

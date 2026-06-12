@@ -14,9 +14,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
+import org.springframework.context.annotation.Lazy;
 
 @Slf4j
 @Component
+@Lazy
 @AgentToolDef(
         name = "tool_order_timeline",
         description = "订单操作时间线查询工具",

@@ -5,6 +5,7 @@ import com.fashion.supplychain.intelligence.orchestration.ProcessRewardOrchestra
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 
 import java.util.*;
 import java.util.regex.Pattern;
@@ -12,6 +13,7 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @Service
+@Lazy
 public class AiAgentToolAdvisor {
 
     /**

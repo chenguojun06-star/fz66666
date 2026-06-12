@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Lazy;
 
 /**
  * 智能学习任务 — 打通反馈闭环的最后一环
@@ -27,6 +28,7 @@ import org.springframework.stereotype.Component;
  */
 @Slf4j
 @Component
+@Lazy
 public class IntelligenceLearningJob {
 
     private static final int HIGH_BIAS_THRESHOLD_MINUTES = 60;

@@ -12,6 +12,7 @@ import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 
 /**
  * 可解释决策卡编排器
@@ -20,6 +21,7 @@ import org.springframework.stereotype.Service;
  */
 @Slf4j
 @Service
+@Lazy
 public class DecisionCardOrchestrator {
 
     @Autowired

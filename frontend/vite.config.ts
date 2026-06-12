@@ -50,7 +50,7 @@ export default defineConfig({
             if (id.includes('react/') || id.includes('react-dom/') || id.includes('scheduler/')
                 || id.includes('antd/') || id.includes('@ant-design/') || id.includes('rc-') || id.includes('@rc-component/')
                 || id.includes('clsx/')) return 'vendor-react-antd';
-            if (id.includes('@antv/')) return 'vendor-antv';
+            if (id.includes('@antv/') || id.includes('@ant-design/charts')) return 'vendor-antv';
             if (id.includes('react-router') || id.includes('@remix-run/')) return 'vendor-router';
             if (id.includes('dayjs/')) return 'vendor-dayjs';
             if (id.includes('axios/')) return 'vendor-axios';
@@ -58,7 +58,14 @@ export default defineConfig({
             if (id.includes('dompurify/')) return 'vendor-dompurify';
             if (id.includes('qrcode')) return 'vendor-qrcode';
             if (id.includes('zustand/')) return 'vendor-zustand';
+            if (id.includes('react-virtuoso/')) return 'vendor-virtuoso';
+            if (id.includes('jsbarcode/')) return 'vendor-jsbarcode';
           }
+          // AI/智能模块单独打包，避免首屏加载
+          if (id.includes('/src/modules/intelligence/')) return 'module-intelligence';
+          if (id.includes('/src/components/common/GlobalAiAssistant/')) return 'module-ai-assistant';
+          if (id.includes('/src/services/intelligence/')) return 'module-ai-assistant';
+          if (id.includes('/src/stores/useAgentGraphStore')) return 'module-ai-assistant';
         },
       },
     },

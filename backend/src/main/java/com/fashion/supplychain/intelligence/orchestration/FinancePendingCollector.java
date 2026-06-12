@@ -15,11 +15,13 @@ import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Lazy;
 
 /**
  * 财务域待办采集 — 工资结算/物料对账/费用报销
  */
 @Component
+@Lazy
 @Slf4j
 public class FinancePendingCollector {
 

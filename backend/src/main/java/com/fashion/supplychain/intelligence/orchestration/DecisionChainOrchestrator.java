@@ -12,6 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.context.annotation.Lazy;
 
 /**
  * 决策闭环编排器 — 阶段1-4核心：记住 → 追踪 → 教训。
@@ -23,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
  */
 @Slf4j
 @Service
+@Lazy
 public class DecisionChainOrchestrator {
 
     @Autowired private DecisionMemoryMapper decisionMemoryMapper;

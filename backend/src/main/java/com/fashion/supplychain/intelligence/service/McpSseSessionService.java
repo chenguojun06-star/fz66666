@@ -3,6 +3,7 @@ package com.fashion.supplychain.intelligence.service;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+import org.springframework.context.annotation.Lazy;
 
 import java.io.IOException;
 import java.util.UUID;
@@ -27,6 +28,7 @@ import java.util.concurrent.TimeUnit;
  */
 @Slf4j
 @Service
+@Lazy
 public class McpSseSessionService {
 
     /** sessionId → SseEmitter 映射 */

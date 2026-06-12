@@ -14,7 +14,7 @@ import { resolveSmartGlobalGuide } from '@/smart/core/globalGuide';
 import SmartAlertBell from './SmartAlertBell';
 import DailyTodoModal from './DailyTodoModal';
 import FactoryPersonalCenterModal from './FactoryPersonalCenterModal';
-import GlobalAiAssistant from '../common/GlobalAiAssistant';
+const GlobalAiAssistant = React.lazy(() => import('../common/GlobalAiAssistant'));
 import SideMenu from './SideMenu';
 import AnnouncementBanner from './AnnouncementBanner';
 import { useMenuBadgeCounts } from './useMenuBadgeCounts';
@@ -290,7 +290,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         </div>
       </div>
 
-      <GlobalAiAssistant />
+      <React.Suspense fallback={null}><GlobalAiAssistant /></React.Suspense>
     </div>
   );
 };

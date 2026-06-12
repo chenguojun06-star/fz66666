@@ -6,11 +6,13 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fashion.supplychain.intelligence.agent.AiTool;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 
 import java.util.List;
 import java.util.Set;
 
 @Service
+@Lazy
 public class StructuredOutputService {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();

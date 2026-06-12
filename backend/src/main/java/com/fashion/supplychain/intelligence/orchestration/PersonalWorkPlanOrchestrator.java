@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import org.springframework.context.annotation.Lazy;
 
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
@@ -29,6 +30,7 @@ import jakarta.annotation.PreDestroy;
  * 结合AI生成个性化的每日工作优先级安排。
  */
 @Service
+@Lazy
 @Slf4j
 @RequiredArgsConstructor
 public class PersonalWorkPlanOrchestrator {

@@ -7,6 +7,7 @@ import com.fashion.supplychain.intelligence.mapper.AiJobRunLogMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 
 import java.time.LocalDateTime;
 import java.util.Collections;
@@ -27,6 +28,7 @@ import java.util.List;
  */
 @Slf4j
 @Service
+@Lazy
 public class AiJobRunLogService extends ServiceImpl<AiJobRunLogMapper, AiJobRunLog> {
 
     /** 熔断状态：表是否可写 */

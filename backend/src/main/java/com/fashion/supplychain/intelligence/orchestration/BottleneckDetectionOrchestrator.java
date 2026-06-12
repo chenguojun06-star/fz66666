@@ -15,6 +15,7 @@ import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 
 /**
  * 工序瓶颈自动发现引擎
@@ -31,6 +32,7 @@ import org.springframework.stereotype.Service;
  * </pre>
  */
 @Service
+@Lazy
 @Slf4j
 public class BottleneckDetectionOrchestrator {
 

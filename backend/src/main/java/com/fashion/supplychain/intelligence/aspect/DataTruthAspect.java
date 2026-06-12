@@ -9,12 +9,14 @@ import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Lazy;
 
 import java.util.Map;
 
 @Slf4j
 @Aspect
 @Component
+@Lazy
 public class DataTruthAspect {
 
     private final DataTruthGuard dataTruthGuard;

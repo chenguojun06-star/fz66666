@@ -6,12 +6,14 @@ import com.fashion.supplychain.intelligence.agent.tool.AgentTool;
 import com.fashion.supplychain.intelligence.agent.tool.ToolDomain;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import org.springframework.context.annotation.Lazy;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 @Service
+@Lazy
 public class AiAgentToolAccessService {
 
     private static final LinkedHashMap<String, ToolRule> TOOL_RULES = new LinkedHashMap<>();

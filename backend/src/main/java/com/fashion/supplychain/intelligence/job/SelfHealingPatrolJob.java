@@ -3,11 +3,13 @@ package com.fashion.supplychain.intelligence.job;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Lazy;
 
 import java.util.List;
 
 @Slf4j
 @Component
+@Lazy
 public class SelfHealingPatrolJob extends AbstractPatrolJob {
 
     @Scheduled(cron = "0 15 3 * * ?")

@@ -11,6 +11,7 @@ import com.fashion.supplychain.intelligence.agent.tool.AgentToolDef;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Lazy;
 
 import java.util.HashMap;
 import java.util.List;
@@ -19,6 +20,7 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @Component
+@Lazy
 @AgentToolDef(name = "ec_stock_query", description = "查询电商跨平台库存、预警和采购建议")
 public class EcStockQueryTool {
 

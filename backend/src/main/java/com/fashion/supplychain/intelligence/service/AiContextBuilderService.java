@@ -15,6 +15,7 @@ import com.fashion.supplychain.style.mapper.ProductSkuMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -38,6 +39,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * </ul>
  */
 @Service
+@Lazy
 @Slf4j
 @RequiredArgsConstructor
 public class AiContextBuilderService {

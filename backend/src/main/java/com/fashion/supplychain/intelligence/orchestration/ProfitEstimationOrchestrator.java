@@ -16,6 +16,7 @@ import java.util.Collections;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 import com.fashion.supplychain.production.helper.OrderPriceFillHelper;
 
 /**
@@ -31,6 +32,7 @@ import com.fashion.supplychain.production.helper.OrderPriceFillHelper;
  * </ul>
  */
 @Service
+@Lazy
 @Slf4j
 public class ProfitEstimationOrchestrator {
 

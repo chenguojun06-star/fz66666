@@ -3,6 +3,7 @@ package com.fashion.supplychain.intelligence.routing;
 import com.fashion.supplychain.intelligence.agent.tool.ToolDomain;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 
 import java.util.*;
 import java.util.regex.Pattern;
@@ -17,6 +18,7 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @Service
+@Lazy
 public class AiAgentDomainRouter {
 
     private static final Map<ToolDomain, List<Pattern>> DOMAIN_PATTERNS;

@@ -14,11 +14,13 @@ import com.fashion.supplychain.production.mapper.ScanRecordMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 
 import java.util.List;
 
 @Slf4j
 @Service
+@Lazy
 @RequiredArgsConstructor
 public class ComplianceSpecialistAgent implements SpecialistAgent {
 

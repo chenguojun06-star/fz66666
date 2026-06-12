@@ -14,9 +14,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 
 @Slf4j
 @Service
+@Lazy
 @Primary
 public class AiInferenceRouter implements AiInferenceGateway {
 

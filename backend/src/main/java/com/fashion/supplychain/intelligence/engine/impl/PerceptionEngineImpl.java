@@ -7,6 +7,7 @@ import com.fashion.supplychain.intelligence.engine.risk.RiskItem;
 import com.fashion.supplychain.intelligence.engine.risk.RiskType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -14,6 +15,7 @@ import java.util.List;
 import java.util.Map;
 
 @Service
+@Lazy
 public class PerceptionEngineImpl implements PerceptionEngine {
 
     @Autowired(required = false)

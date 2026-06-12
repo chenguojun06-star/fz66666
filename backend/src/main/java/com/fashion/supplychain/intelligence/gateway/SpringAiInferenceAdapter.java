@@ -25,9 +25,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Lazy;
 
 @Slf4j
 @Component
+@Lazy
 @ConditionalOnProperty(name = "spring-ai.adapter.enabled", havingValue = "true")
 public class SpringAiInferenceAdapter implements AiInferenceGateway {
 

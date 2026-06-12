@@ -2,13 +2,16 @@ package com.fashion.supplychain.intelligence.orchestration.agent;
 
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.intelligence.dto.SmartNotification;
+import com.fashion.supplychain.intelligence.service.ProactiveInsightService;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.common.lock.DistributedLockService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
@@ -16,6 +19,7 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 @Service
+@Lazy
 @Slf4j
 public class ProactivePatrolAgent {
 
@@ -33,6 +37,9 @@ public class ProactivePatrolAgent {
 
     @Autowired
     private com.fashion.supplychain.intelligence.orchestration.AiAgentTraceOrchestrator traceOrchestrator;
+
+    @Autowired
+    private ObjectProvider<ProactiveInsightService> proactiveInsightServiceProvider;
 
     @Scheduled(cron = "0 5 * * * ?")
     public void runPatrolTask() {
@@ -91,6 +98,8 @@ public class ProactivePatrolAgent {
                             log.info("[ProactivePatrol] 发现高危订单: {}, 移交多智能体进行会诊", order.getOrderNo());
                             SmartNotification notification = debateOrchestrator.diagnoseOrderWithMultiAgent(order, context);
                             diagnosed++;
+                            // 记录主动洞察，让用户在AI助手中能看到
+                            recordRiskInsight(tenantId, order, context);
                         }
                     } catch (Exception e) {
                         log.error("[ProactivePatrol] 巡检订单 {} 时发生异常", order.getOrderNo(), e);
@@ -147,5 +156,24 @@ public class ProactivePatrolAgent {
             if (daysToDeadline <= 7 && order.getProductionProgress() < 20) return true;
         }
         return false;
+    }
+
+    private void recordRiskInsight(Long tenantId, ProductionOrder order, String context) {
+        try {
+            ProactiveInsightService insightService = proactiveInsightServiceProvider.getIfAvailable();
+            if (insightService == null) return;
+
+            long daysToDeadline = order.getPlannedEndDate() != null
+                    ? ChronoUnit.DAYS.between(LocalDateTime.now(), order.getPlannedEndDate()) : 0;
+            String severity = daysToDeadline < 0 ? "critical" : "warning";
+            String type = daysToDeadline < 0 ? "delay_risk" : "combo_risk";
+            String title = daysToDeadline < 0
+                    ? "订单逾期风险: " + order.getOrderNo()
+                    : "订单交期预警: " + order.getOrderNo();
+
+            insightService.recordInsight(tenantId, type, title, context, severity);
+        } catch (Exception e) {
+            log.debug("[ProactivePatrol] 记录洞察失败（不影响巡检）: {}", e.getMessage());
+        }
     }
 }

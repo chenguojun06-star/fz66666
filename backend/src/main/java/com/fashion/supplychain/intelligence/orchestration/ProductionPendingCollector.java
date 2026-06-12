@@ -17,11 +17,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
+import org.springframework.context.annotation.Lazy;
 
 /**
  * 生产域待办采集 — 裁剪/质检/返修/采购到货
  */
 @Component
+@Lazy
 @Slf4j
 public class ProductionPendingCollector {
 

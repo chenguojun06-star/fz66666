@@ -21,6 +21,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
+import org.springframework.context.annotation.Lazy;
 
 /**
  * NL 查询数据处理器 — 从 NlQueryOrchestrator 抽取的数据查询方法
@@ -29,6 +30,7 @@ import org.springframework.util.StringUtils;
  *   订单查询、逾期查询、对比/趋势、产量、质检、入库、裁剪、概要、帮助、AI兜底
  */
 @Component
+@Lazy
 @Slf4j
 public class NlQueryDataHandlers {
 

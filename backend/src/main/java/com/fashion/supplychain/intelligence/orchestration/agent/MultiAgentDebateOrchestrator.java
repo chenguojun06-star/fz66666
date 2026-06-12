@@ -7,6 +7,7 @@ import com.fashion.supplychain.production.entity.ProductionOrder;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -21,6 +22,7 @@ import java.util.concurrent.CompletableFuture;
  * 这对现有 UI 完全透明，但能大幅提升 AI 输出建议的全局观和深度。
  */
 @Service
+@Lazy
 @Slf4j
 public class MultiAgentDebateOrchestrator {
 

@@ -13,9 +13,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 
 @Slf4j
 @Service
+@Lazy
 public class AiOperationAuditOrchestrator {
 
     private static final Set<String> HIGH_RISK_TOOLS = Set.of(

@@ -4,6 +4,7 @@ import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.mapper.ProductionOrderMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Lazy;
 
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
@@ -13,6 +14,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @Component
+@Lazy
 @RequiredArgsConstructor
 public class FactoryRiskDetector implements RiskDetector {
 

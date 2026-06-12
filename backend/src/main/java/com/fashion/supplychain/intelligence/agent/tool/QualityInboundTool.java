@@ -13,6 +13,7 @@ import com.fashion.supplychain.production.orchestration.ProductWarehousingOrches
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Lazy;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -29,6 +30,7 @@ import java.util.*;
  */
 @Slf4j
 @Component
+@Lazy
 public class QualityInboundTool extends AbstractAgentTool {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();

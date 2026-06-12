@@ -5,6 +5,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 
 import java.util.Arrays;
 import java.util.HashSet;
@@ -13,6 +14,7 @@ import java.util.Set;
 
 @Slf4j
 @Service
+@Lazy
 public class ClosedOrderAiDataCleanupService {
 
     @Autowired

@@ -16,6 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.context.annotation.Lazy;
 
 /**
  * 统一信号采集编排器 — 感知即分析
@@ -32,6 +33,7 @@ import org.springframework.transaction.annotation.Transactional;
  * <p>降级：上游任何检测器失败均跳过，不影响整体响应。
  */
 @Service
+@Lazy
 @Slf4j
 public class IntelligenceSignalOrchestrator {
 

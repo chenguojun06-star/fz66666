@@ -8,12 +8,14 @@ import com.fashion.supplychain.system.service.OrderRemarkService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Lazy;
 
 import java.util.*;
 import java.util.regex.Pattern;
 
 @Slf4j
 @Component
+@Lazy
 public class OrderRemarkTool extends AbstractAgentTool {
 
     private static final Set<String> URGENCY_KEYWORDS = Set.of(

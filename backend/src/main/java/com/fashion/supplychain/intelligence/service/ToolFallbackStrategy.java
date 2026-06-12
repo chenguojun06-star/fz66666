@@ -6,6 +6,7 @@ import com.fashion.supplychain.intelligence.agent.tool.AgentTool;
 import com.fashion.supplychain.intelligence.helper.AiAgentToolExecHelper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 
 import java.util.*;
 
@@ -22,6 +23,7 @@ import java.util.*;
  */
 @Slf4j
 @Service
+@Lazy
 public class ToolFallbackStrategy {
 
     // 工具替代映射（主要工具 -> 备用工具列表）

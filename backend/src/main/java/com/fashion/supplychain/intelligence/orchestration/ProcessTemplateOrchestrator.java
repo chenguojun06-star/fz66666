@@ -25,6 +25,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import org.springframework.context.annotation.Lazy;
 
 /**
  * 工序模板AI补全编排器
@@ -33,6 +34,7 @@ import org.springframework.util.StringUtils;
  * 或者结合系统 IE 标准库调用 AI 动态规划并将结果返回给前端自动填充。
  */
 @Service
+@Lazy
 @Slf4j
 public class ProcessTemplateOrchestrator {
 

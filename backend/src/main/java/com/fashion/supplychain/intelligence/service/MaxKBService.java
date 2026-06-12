@@ -14,6 +14,7 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.context.annotation.Lazy;
 
 /**
  * MaxKB 企业知识库接入服务
@@ -34,6 +35,7 @@ import org.springframework.web.client.RestTemplate;
  * <p>MaxKB 未配置时所有方法优雅降级，不抛异常。
  */
 @Service
+@Lazy
 @Slf4j
 public class MaxKBService {
 

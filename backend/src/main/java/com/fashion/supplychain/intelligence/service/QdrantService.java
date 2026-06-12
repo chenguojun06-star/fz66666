@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -13,6 +14,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.security.MessageDigest;
+import java.util.stream.Collectors;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,6 +27,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.context.annotation.Lazy;
 
 /**
  * Qdrant 向量库接入服务
@@ -53,6 +56,7 @@ import org.springframework.web.client.RestTemplate;
  * </pre>
  */
 @Service
+@Lazy
 @Slf4j
 public class QdrantService {
 
@@ -61,6 +65,8 @@ public class QdrantService {
     private static final int VECTOR_DIM_PSEUDO = 128;
     /** 款式图片单独集合，与文字记忆集合分离 */
     private static final String STYLE_IMAGE_COLLECTION = "style_images";
+    /** 稀疏向量名称，与 Qdrant 集合的 sparse_vectors 配置对应 */
+    private static final String SPARSE_VECTOR_NAME = "text-sparse";
 
     @Value("${intelligence.qdrant.url:http://localhost:6333}")
     private String qdrantUrl;
@@ -105,6 +111,8 @@ public class QdrantService {
 
     private final AtomicBoolean collectionVerified = new AtomicBoolean(false);
     private final AtomicBoolean styleImageCollectionVerified = new AtomicBoolean(false);
+    /** 混合检索降级标记：true 表示 Qdrant 不支持混合检索，后续直接走纯稠密检索 */
+    private final AtomicBoolean hybridSearchDegraded = new AtomicBoolean(false);
 
     private static class EmbeddingCacheEntry {
         final float[] vector;
@@ -293,6 +301,202 @@ public class QdrantService {
         return payload;
     }
 
+    // ──────────────────────────────────────────────────────────────
+    //  混合检索（稀疏+稠密）
+    // ──────────────────────────────────────────────────────────────
+
+    /**
+     * 混合检索：同时执行稠密向量检索和稀疏关键词检索，合并结果按综合分数排序。
+     *
+     * <p>使用 Qdrant 的 /points/query 端点，支持稀疏+稠密混合检索。
+     * 如果 Qdrant 不支持混合检索（旧版本），自动降级到纯稠密检索。
+     *
+     * @param tenantId  租户ID（必须非null，否则拒绝搜索）
+     * @param queryText 查询文本
+     * @param topK      返回条数
+     * @return 匹配点列表（按综合分数降序）
+     */
+    public List<ScoredPoint> hybridSearch(Long tenantId, String queryText, int topK) {
+        if (tenantId == null) {
+            log.warn("[Qdrant] hybridSearch拒绝: tenantId为null，跳过搜索以防止跨租户数据泄漏");
+            return new ArrayList<>();
+        }
+
+        // 如果已确认不支持混合检索，直接降级
+        if (hybridSearchDegraded.get()) {
+            log.debug("[Qdrant] hybridSearch降级: Qdrant不支持混合检索，走纯稠密检索");
+            return search(tenantId, queryText, topK);
+        }
+
+        try {
+            ensureCollectionExists();
+
+            // 1. 生成稠密向量
+            float[] denseVector = computeEmbedding(queryText);
+            if (denseVector == null) {
+                log.warn("[Qdrant] hybridSearch跳过：查询文本为空无法生成向量");
+                return new ArrayList<>();
+            }
+
+            // 2. 生成稀疏向量
+            SparseVector sparseVector = computeSparseVector(queryText);
+
+            // 3. 构造 /points/query 请求体
+            ObjectNode body = objectMapper.createObjectNode();
+
+            // 稠密向量
+            ArrayNode queryArr = body.putArray("query");
+            for (float v : denseVector) {
+                queryArr.add(v);
+            }
+
+            // 稀疏向量
+            if (sparseVector != null && !sparseVector.indices.isEmpty()) {
+                ObjectNode sparseNode = body.putObject("sparse_vector");
+                ArrayNode indicesArr = sparseNode.putArray("indices");
+                ArrayNode valuesArr = sparseNode.putArray("values");
+                for (int i = 0; i < sparseVector.indices.size(); i++) {
+                    indicesArr.add(sparseVector.indices.get(i));
+                    valuesArr.add(sparseVector.values.get(i));
+                }
+            }
+
+            body.put("limit", topK);
+            body.put("with_payload", true);
+            body.put("score_threshold", 0.3);
+
+            // 租户隔离过滤
+            ObjectNode filter = body.putObject("filter");
+            ArrayNode should = filter.putArray("should");
+
+            ObjectNode tenantCond = should.addObject();
+            tenantCond.put("key", "tenant_id");
+            ObjectNode tenantMatchVal = tenantCond.putObject("match");
+            tenantMatchVal.put("integer", tenantId);
+
+            ObjectNode publicCond = should.addObject();
+            publicCond.put("key", "tenant_id");
+            ObjectNode publicMatchVal = publicCond.putObject("match");
+            publicMatchVal.put("integer", 0);
+
+            // 4. 调用 /points/query 端点
+            String url = qdrantUrl + "/collections/" + collectionName + "/points/query";
+            HttpEntity<String> entity = jsonEntity(body.toString());
+            ResponseEntity<String> resp = restTemplate.postForEntity(url, entity, String.class);
+
+            if (resp.getStatusCode().is2xxSuccessful() && resp.getBody() != null) {
+                List<ScoredPoint> results = new ArrayList<>();
+                JsonNode root = objectMapper.readTree(resp.getBody());
+                JsonNode resultNode = root.path("result");
+                if (resultNode.isArray()) {
+                    for (JsonNode item : resultNode) {
+                        ScoredPoint sp = new ScoredPoint();
+                        sp.setPointId(item.path("id").asText());
+                        sp.setScore((float) item.path("score").asDouble());
+                        sp.setPayload(readPayload(item.path("payload")));
+                        results.add(sp);
+                    }
+                }
+                log.debug("[Qdrant] hybridSearch成功 tenantId={} 结果数={}", tenantId, results.size());
+                return results;
+            }
+        } catch (Exception e) {
+            String msg = e.getMessage();
+            // 判断是否为不支持混合检索的错误
+            if (msg != null && (msg.contains("sparse") || msg.contains("not found")
+                    || msg.contains("not supported") || msg.contains("404")
+                    || msg.contains("No sparse vector"))) {
+                log.warn("[Qdrant] hybridSearch降级: Qdrant不支持混合检索，后续将走纯稠密检索 - {}", msg);
+                hybridSearchDegraded.set(true);
+                return search(tenantId, queryText, topK);
+            }
+            log.warn("[Qdrant] hybridSearch失败 tenantId={}: {}，降级到纯稠密检索", tenantId, msg);
+        }
+
+        // 降级到纯稠密检索
+        return search(tenantId, queryText, topK);
+    }
+
+    /**
+     * 检查混合检索是否可用（供外部判断是否使用混合检索）。
+     */
+    public boolean isHybridSearchAvailable() {
+        return !hybridSearchDegraded.get();
+    }
+
+    /**
+     * 稀疏向量内部表示
+     */
+    private static class SparseVector {
+        final List<Integer> indices = new ArrayList<>();
+        final List<Float> values = new ArrayList<>();
+    }
+
+    /**
+     * BM25风格稀疏向量生成：对查询文本分词，生成 token-id:tf 键值对。
+     *
+     * <p>分词策略：中文按双字符滑动窗口 + 单字符，英文按空格分词。
+     * token-id 通过字符串哈希映射到正整数空间。
+     * tf（词频）归一化到 [0, 1] 区间。
+     */
+    private SparseVector computeSparseVector(String text) {
+        if (text == null || text.isBlank()) return null;
+        try {
+            // 分词：中文双字符窗口 + 单字符 + 英文单词
+            Map<String, Integer> termFreq = new HashMap<>();
+            String trimmed = text.trim();
+
+            // 英文分词（按空格/标点分割）
+            String[] words = trimmed.split("[\\s,，。.!！?？;；:：、/\\\\()（）\\[\\]【】{}]+");
+            for (String word : words) {
+                if (word.isEmpty()) continue;
+                String lower = word.toLowerCase();
+                termFreq.merge(lower, 1, Integer::sum);
+            }
+
+            // 中文双字符滑动窗口（bigram）
+            for (int i = 0; i < trimmed.length() - 1; i++) {
+                char c1 = trimmed.charAt(i);
+                char c2 = trimmed.charAt(i + 1);
+                if (isChineseChar(c1) && isChineseChar(c2)) {
+                    String bigram = "" + c1 + c2;
+                    termFreq.merge(bigram, 1, Integer::sum);
+                }
+            }
+
+            // 中文单字符（仅对高频字单独建索引）
+            for (int i = 0; i < trimmed.length(); i++) {
+                char c = trimmed.charAt(i);
+                if (isChineseChar(c)) {
+                    String single = String.valueOf(c);
+                    termFreq.merge(single, 1, Integer::sum);
+                }
+            }
+
+            if (termFreq.isEmpty()) return null;
+
+            // 找最大词频用于归一化
+            int maxFreq = termFreq.values().stream().mapToInt(Integer::intValue).max().orElse(1);
+
+            // 构建 SparseVector
+            SparseVector sv = new SparseVector();
+            for (Map.Entry<String, Integer> entry : termFreq.entrySet()) {
+                int tokenId = Math.abs(entry.getKey().hashCode()) % 100000 + 1;
+                float tf = (float) entry.getValue() / maxFreq;
+                sv.indices.add(tokenId);
+                sv.values.add(tf);
+            }
+            return sv;
+        } catch (Exception e) {
+            log.debug("[Qdrant] 稀疏向量生成失败: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    private boolean isChineseChar(char c) {
+        return c >= '\u4e00' && c <= '\u9fff';
+    }
+
     /** 删除指定向量点（需提供 tenantId 校验归属，tenantId 为 null 时拒绝删除） */
     public void deleteVector(String pointId, Long tenantId) {
         if (tenantId == null) {
@@ -399,13 +603,31 @@ public class QdrantService {
                 ObjectNode params = body.putObject("vectors");
                 params.put("size", getVectorDim());
                 params.put("distance", "Cosine");
+                // 添加稀疏向量支持
+                ObjectNode sparseVectors = body.putObject("sparse_vectors");
+                sparseVectors.putObject(SPARSE_VECTOR_NAME);
                 restTemplate.postForEntity(
                         qdrantUrl + "/collections/" + collectionName,
                         jsonEntity(body.toString()), String.class);
-                log.info("[Qdrant] 集合 {} 已自动创建", collectionName);
+                log.info("[Qdrant] 集合 {} 已自动创建（含稀疏向量支持）", collectionName);
                 collectionVerified.set(true);
             } catch (Exception ex) {
-                log.warn("[Qdrant] 集合创建失败: {}", ex.getMessage());
+                // 稀疏向量配置可能不被旧版 Qdrant 支持，尝试不带稀疏向量创建
+                log.warn("[Qdrant] 集合创建（含稀疏向量）失败，尝试不带稀疏向量创建: {}", ex.getMessage());
+                try {
+                    ObjectNode body2 = objectMapper.createObjectNode();
+                    ObjectNode params2 = body2.putObject("vectors");
+                    params2.put("size", getVectorDim());
+                    params2.put("distance", "Cosine");
+                    restTemplate.postForEntity(
+                            qdrantUrl + "/collections/" + collectionName,
+                            jsonEntity(body2.toString()), String.class);
+                    log.info("[Qdrant] 集合 {} 已自动创建（不含稀疏向量，旧版Qdrant）", collectionName);
+                    collectionVerified.set(true);
+                    hybridSearchDegraded.set(true);
+                } catch (Exception ex2) {
+                    log.warn("[Qdrant] 集合创建失败: {}", ex2.getMessage());
+                }
             }
         }
     }

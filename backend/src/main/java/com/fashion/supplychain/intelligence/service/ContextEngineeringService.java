@@ -6,6 +6,7 @@ import com.fashion.supplychain.intelligence.helper.AiAgentToolExecHelper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -15,6 +16,7 @@ import java.util.regex.Pattern;
 
 @Slf4j
 @Service
+@Lazy
 public class ContextEngineeringService {
 
     @Value("${xiaoyun.context.max-tool-result-chars:2000}")

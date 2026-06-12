@@ -9,8 +9,10 @@ import com.fashion.supplychain.intelligence.service.IntelligencePainPointService
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 
 @Service
+@Lazy
 public class PainPointViewOrchestrator {
 
     @Autowired

@@ -15,6 +15,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 
 /**
  * AI 自然语言查询编排器 — 意图识别 + 路由分发
@@ -23,6 +24,7 @@ import org.springframework.stereotype.Service;
  * 高级智能查询委托给 {@link NlQuerySmartHandlers}。
  */
 @Service
+@Lazy
 @Slf4j
 public class NlQueryOrchestrator {
 

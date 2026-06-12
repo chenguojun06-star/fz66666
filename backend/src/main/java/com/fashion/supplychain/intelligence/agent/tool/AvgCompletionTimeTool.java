@@ -5,11 +5,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Lazy;
 
 import java.util.*;
 
 @Slf4j
 @Component
+@Lazy
 @AgentToolDef(name = "tool_avg_completion_time", description = "查询历史已完成订单的平均完成时间(天)，按工厂/品类分组统计。返回：平均天数、中位数、最快、最慢、准时率、样本量。", domain = ToolDomain.ANALYSIS, timeoutMs = 15000, readOnly = true)
 @McpToolAnnotation(
         name = "tool_avg_completion_time",

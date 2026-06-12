@@ -18,6 +18,7 @@ import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 
 /**
  * 工厂绩效排行榜编排器 — 四维评分 + 金银铜排名
@@ -32,6 +33,7 @@ import org.springframework.stereotype.Service;
  * 综合分 = (capacity + delivery + quality + efficiency) / 4
  */
 @Service
+@Lazy
 @Slf4j
 public class FactoryLeaderboardOrchestrator {
 

@@ -9,6 +9,7 @@ import com.fashion.supplychain.style.mapper.StyleInfoMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Lazy;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -17,6 +18,7 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @Component
+@Lazy
 @AgentToolDef(name = "tool_unit_price_query", description = "开发单价查询工具", domain = ToolDomain.FINANCE, timeoutMs = 15000)
 @McpToolAnnotation(
         name = "tool_unit_price_query",

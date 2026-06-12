@@ -21,6 +21,7 @@ import com.fashion.supplychain.style.service.StyleInfoService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Lazy;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -34,6 +35,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * Orchestrator 仅保留入口调度、审计、级联、通知逻辑。
  */
 @Component
+@Lazy
 @Slf4j
 public class CommandExecutorHelper {
 

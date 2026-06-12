@@ -11,6 +11,7 @@ import com.fashion.supplychain.intelligence.mapper.IntelligenceAuditLogMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Lazy;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -26,6 +27,7 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @Component
+@Lazy
 public class WarehouseOpLogTool extends AbstractAgentTool {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();

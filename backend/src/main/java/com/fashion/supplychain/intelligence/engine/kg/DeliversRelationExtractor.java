@@ -7,6 +7,7 @@ import com.fashion.supplychain.system.entity.Factory;
 import com.fashion.supplychain.system.mapper.FactoryMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Lazy;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -14,6 +15,7 @@ import java.util.List;
 import java.util.Set;
 
 @Component
+@Lazy
 @RequiredArgsConstructor
 public class DeliversRelationExtractor implements RelationExtractor {
 

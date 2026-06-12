@@ -13,11 +13,13 @@ import com.fashion.supplychain.style.mapper.StyleProcessMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 
 import java.util.List;
 
 @Slf4j
 @Service
+@Lazy
 @RequiredArgsConstructor
 public class ProductionSpecialistAgent implements SpecialistAgent {
 

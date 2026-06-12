@@ -21,6 +21,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import org.springframework.context.annotation.Lazy;
 
 /**
  * 供应商智能评分卡编排器
@@ -34,6 +35,7 @@ import org.springframework.util.StringUtils;
  * <p>评级：S（≥90）/ A（≥75）/ B（≥60）/ C（<60）
  */
 @Service
+@Lazy
 @Slf4j
 public class SupplierScorecardOrchestrator {
 

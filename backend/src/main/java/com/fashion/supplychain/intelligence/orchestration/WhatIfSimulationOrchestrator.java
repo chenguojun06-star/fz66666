@@ -13,6 +13,7 @@ import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -30,6 +31,7 @@ import java.util.stream.Collectors;
  * 纯计算（无持久化），结合 LLM 生成综合建议。
  */
 @Service
+@Lazy
 @Slf4j
 public class WhatIfSimulationOrchestrator {
 

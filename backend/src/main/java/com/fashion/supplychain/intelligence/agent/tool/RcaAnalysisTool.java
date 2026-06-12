@@ -9,12 +9,14 @@ import java.util.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Lazy;
 
 /**
  * AI对话工具 — 根因分析：当用户询问"为什么XX出问题"、"原因分析"时自动触发5-Why根因分析。
  */
 @Slf4j
 @Component
+@Lazy
 public class RcaAnalysisTool extends AbstractAgentTool {
 
     @Autowired private RootCauseAnalysisOrchestrator rcaOrchestrator;

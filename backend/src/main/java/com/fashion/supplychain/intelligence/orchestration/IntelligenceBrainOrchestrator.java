@@ -19,6 +19,7 @@ import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 
 /**
  * 智能中枢编排器
@@ -27,6 +28,7 @@ import org.springframework.stereotype.Service;
  * 统一聚合为一个可直接消费的“大脑快照”。</p>
  */
 @Service
+@Lazy
 @Slf4j
 public class IntelligenceBrainOrchestrator {
 

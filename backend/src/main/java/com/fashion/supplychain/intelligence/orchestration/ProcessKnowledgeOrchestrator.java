@@ -23,6 +23,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import org.springframework.context.annotation.Lazy;
 
 /**
  * 工序知识库编排器
@@ -33,6 +34,7 @@ import org.springframework.util.StringUtils;
  * <p>数据不落库，实时聚合查询，无副作用。
  */
 @Service
+@Lazy
 @Slf4j
 public class ProcessKnowledgeOrchestrator {
 

@@ -10,9 +10,11 @@ import java.util.concurrent.ConcurrentLinkedDeque;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Lazy;
 
 @Slf4j
 @Component
+@Lazy
 public class CompensatingTransactionManager {
 
     private static final long SESSION_TTL_MINUTES = 30;

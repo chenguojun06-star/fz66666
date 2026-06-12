@@ -13,11 +13,13 @@ import java.util.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 
 /**
  * 延期趋势分析编排器 — 按周/月粒度统计延期趋势（生产+样板合并）
  */
 @Service
+@Lazy
 @Slf4j
 public class DelayTrendOrchestrator {
 

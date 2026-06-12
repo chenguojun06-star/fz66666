@@ -13,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.context.annotation.Lazy;
 
 /**
  * 目标拆解编排器 — 阶段9核心：接收高层目标，AI递归分解为可执行子目标。
@@ -22,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
  */
 @Slf4j
 @Service
+@Lazy
 public class GoalDecompositionOrchestrator {
 
     @Autowired private GoalDecompositionMapper goalMapper;

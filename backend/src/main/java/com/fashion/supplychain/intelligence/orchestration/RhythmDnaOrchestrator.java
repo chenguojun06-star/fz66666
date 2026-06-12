@@ -14,6 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import org.springframework.context.annotation.Lazy;
 
 /**
  * 生产节奏DNA编排器 — 工序耗时占比基因图
@@ -22,6 +23,7 @@ import org.springframework.util.StringUtils;
  * 从开始到完成的耗时，生成色带宽度=耗时占比的DNA条形图。
  */
 @Service
+@Lazy
 @Slf4j
 public class RhythmDnaOrchestrator {
 

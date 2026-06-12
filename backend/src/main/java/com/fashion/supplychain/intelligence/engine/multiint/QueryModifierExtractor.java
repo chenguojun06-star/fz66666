@@ -1,11 +1,13 @@
 package com.fashion.supplychain.intelligence.engine.multiint;
 
 import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Lazy;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @Component
+@Lazy
 public class QueryModifierExtractor {
 
     private static final Pattern TIME_RANGE_PATTERN = Pattern.compile(

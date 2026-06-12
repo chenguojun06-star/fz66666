@@ -5,6 +5,7 @@ import com.fashion.supplychain.intelligence.service.VisionAnalysisService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Lazy;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -24,6 +25,7 @@ import java.util.Map;
  */
 @Slf4j
 @Component
+@Lazy
 @AgentToolDef(
         name = "tool_vision_analyze",
         description = "通用视觉AI分析：分析服装/布料/款式图片，支持缺陷检测、款式识别、颜色检测等多种视觉任务",

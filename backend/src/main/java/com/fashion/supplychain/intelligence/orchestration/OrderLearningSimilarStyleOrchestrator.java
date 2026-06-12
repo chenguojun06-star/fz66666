@@ -16,8 +16,10 @@ import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import org.springframework.context.annotation.Lazy;
 
 @Service
+@Lazy
 @RequiredArgsConstructor
 public class OrderLearningSimilarStyleOrchestrator {
 

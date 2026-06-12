@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 
 import jakarta.annotation.PostConstruct;
 import java.util.LinkedHashMap;
@@ -19,6 +20,7 @@ import java.util.Map;
  * <p>配置项：{@code intelligence.qdrant.*}（已在 application.yml 定义）
  */
 @Service
+@Lazy
 @Slf4j
 public class QdrantAdminOrchestrator {
 

@@ -12,6 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 
 /**
  * 超级 AI 业务顾问 — 中枢编排器
@@ -27,6 +28,7 @@ import org.springframework.stereotype.Service;
  * </pre>
  */
 @Service
+@Lazy
 @Slf4j
 public class HyperAdvisorOrchestrator {
 

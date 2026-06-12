@@ -9,8 +9,10 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 
 @Service
+@Lazy
 public class IntelligenceReasonLibraryService {
 
     public String buildOrderRiskReason(ProductionOrder order, TenantPreferenceProfile tenantProfile) {

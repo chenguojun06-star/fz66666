@@ -23,6 +23,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.context.annotation.Lazy;
 
 /**
  * 智能记忆编排器
@@ -37,6 +38,7 @@ import org.springframework.transaction.annotation.Transactional;
  * <p>降级：Qdrant 不可用时仅写 MySQL，检索退化为 MySQL 关键词 LIKE。
  */
 @Service
+@Lazy
 @Slf4j
 public class IntelligenceMemoryOrchestrator {
 

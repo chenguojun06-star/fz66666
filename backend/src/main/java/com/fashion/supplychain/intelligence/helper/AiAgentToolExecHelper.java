@@ -12,6 +12,7 @@ import com.fashion.supplychain.intelligence.service.AiAgentIdempotencyService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Lazy;
 
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
@@ -30,6 +31,7 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @Component
+@Lazy
 public class AiAgentToolExecHelper {
 
     private static final int STUCK_MAX_REPEAT = 3;

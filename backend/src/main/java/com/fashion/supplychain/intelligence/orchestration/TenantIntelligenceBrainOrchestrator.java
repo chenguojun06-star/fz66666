@@ -17,6 +17,7 @@ import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 
 /**
  * 租户智能大脑统一编排器
@@ -32,6 +33,7 @@ import org.springframework.stereotype.Service;
  * 在 signals / actions 列表中追加来自新基础设施的数据。
  */
 @Service
+@Lazy
 @Slf4j
 public class TenantIntelligenceBrainOrchestrator {
 

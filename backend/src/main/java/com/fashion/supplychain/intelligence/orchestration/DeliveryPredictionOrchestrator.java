@@ -23,6 +23,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 
 /**
  * 完工日期AI预测编排器 — 加权移动平均 + 三档置信区间
@@ -38,6 +39,7 @@ import org.springframework.stereotype.Service;
  * </pre>
  */
 @Service
+@Lazy
 @Slf4j
 public class DeliveryPredictionOrchestrator {
 

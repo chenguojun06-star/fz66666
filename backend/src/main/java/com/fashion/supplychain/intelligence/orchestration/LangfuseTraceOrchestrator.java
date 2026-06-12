@@ -8,6 +8,7 @@ import org.springframework.http.*;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.context.annotation.Lazy;
 
 import java.time.Instant;
 import java.util.*;
@@ -34,6 +35,7 @@ import java.util.*;
  * </pre>
  */
 @Service
+@Lazy
 @Slf4j
 public class LangfuseTraceOrchestrator {
 

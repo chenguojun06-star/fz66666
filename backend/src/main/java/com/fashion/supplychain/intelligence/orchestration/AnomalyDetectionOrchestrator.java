@@ -14,6 +14,7 @@ import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 
 /**
  * 异常行为检测引擎
@@ -27,6 +28,7 @@ import org.springframework.stereotype.Service;
  * </ul>
  */
 @Service
+@Lazy
 @Slf4j
 public class AnomalyDetectionOrchestrator {
 

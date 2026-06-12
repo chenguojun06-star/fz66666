@@ -4,6 +4,7 @@ import com.fashion.supplychain.intelligence.service.SelfCriticService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -17,6 +18,7 @@ import java.util.concurrent.ThreadLocalRandom;
 
 @Slf4j
 @Service
+@Lazy
 public class PromptVariantService {
 
     private static final int MIN_SAMPLES_FOR_PROMOTION = 10;

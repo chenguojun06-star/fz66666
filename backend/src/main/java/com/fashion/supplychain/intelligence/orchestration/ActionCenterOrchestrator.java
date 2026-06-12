@@ -19,6 +19,7 @@ import com.fashion.supplychain.intelligence.entity.AiLongMemory;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 
 /**
  * 动作中心编排器。
@@ -26,6 +27,7 @@ import org.springframework.stereotype.Service;
  * <p>职责：聚合多域风险，并通过独立升级策略与任务编排，生成统一动作列表。</p>
  */
 @Service
+@Lazy
 @Slf4j
 public class ActionCenterOrchestrator {
 

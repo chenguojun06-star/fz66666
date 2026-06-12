@@ -10,12 +10,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Lazy;
 
 /**
  * 自主Agent定时任务 — 每天凌晨3点自动挖掘规律（按租户隔离）。
  */
 @Slf4j
 @Component
+@Lazy
 public class AutonomousAgentJob {
 
     @Autowired private PatternDiscoveryOrchestrator patternOrchestrator;

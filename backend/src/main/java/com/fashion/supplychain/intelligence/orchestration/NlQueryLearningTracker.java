@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Lazy;
 
 import jakarta.annotation.PostConstruct;
 import java.time.LocalDateTime;
@@ -16,6 +17,7 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 @Component
+@Lazy
 @Slf4j
 @RequiredArgsConstructor
 public class NlQueryLearningTracker {

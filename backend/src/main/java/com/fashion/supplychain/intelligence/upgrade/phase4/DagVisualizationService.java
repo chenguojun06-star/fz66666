@@ -4,10 +4,12 @@ import com.fashion.supplychain.intelligence.agent.dag.DagGraph;
 import com.fashion.supplychain.intelligence.agent.dag.DagNode;
 import lombok.Data;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 
 import java.util.*;
 
 @Service
+@Lazy
 public class DagVisualizationService {
 
     public DagVisualResult visualize(DagGraph graph) {

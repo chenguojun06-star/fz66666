@@ -17,6 +17,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Lazy;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -34,6 +35,7 @@ import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Component
+@Lazy
 public class AiAgentMemoryHelper {
 
     private static final int MAX_MEMORY_TURNS = 15;

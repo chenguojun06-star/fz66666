@@ -4,6 +4,7 @@ import com.fashion.supplychain.intelligence.agent.AiToolCall;
 import com.fashion.supplychain.intelligence.helper.AiAgentToolExecHelper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 
 import java.time.Instant;
 import java.util.*;
@@ -23,6 +24,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 @Slf4j
 @Service
+@Lazy
 public class ToolTraceService {
 
     // 会话追踪记录

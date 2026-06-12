@@ -11,6 +11,7 @@ import com.fashion.supplychain.style.service.StyleQuotationService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Lazy;
 
 import java.math.BigDecimal;
 import java.util.LinkedHashMap;
@@ -19,6 +20,7 @@ import java.util.Map;
 
 @Slf4j
 @Component
+@Lazy
 public class StyleQuotationTool extends AbstractAgentTool {
 
     @Autowired

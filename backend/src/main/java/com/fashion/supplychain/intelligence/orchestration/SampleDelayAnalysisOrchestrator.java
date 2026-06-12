@@ -12,11 +12,13 @@ import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 
 /**
  * 样板延期分析编排器 — 分析打样/交板延期情况，按纸样师维度统计
  */
 @Service
+@Lazy
 @Slf4j
 public class SampleDelayAnalysisOrchestrator {
 

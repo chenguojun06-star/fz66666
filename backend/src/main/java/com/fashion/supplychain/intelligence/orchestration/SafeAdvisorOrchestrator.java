@@ -9,6 +9,7 @@ import com.fashion.supplychain.intelligence.service.CragEvaluator;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 
 /**
  * SafeAdvisorOrchestrator — RAG 增强版智能顾问编排器
@@ -25,6 +26,7 @@ import org.springframework.stereotype.Service;
  * <p>知识库检索失败时自动降级，直接透传原始问题，保证可用性。
  */
 @Service
+@Lazy
 @Slf4j
 public class SafeAdvisorOrchestrator {
 

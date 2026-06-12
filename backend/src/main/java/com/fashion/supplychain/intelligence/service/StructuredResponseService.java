@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -14,6 +15,7 @@ import java.util.regex.Pattern;
 
 @Slf4j
 @Service
+@Lazy
 public class StructuredResponseService {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();

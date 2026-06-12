@@ -10,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Lazy;
 
 /**
  * 智能信号定期采集任务
@@ -20,6 +21,7 @@ import org.springframework.stereotype.Component;
  * <p>需要为每个租户模拟 UserContext（因为 collectAndAnalyze 依赖 UserContext.tenantId()）。
  */
 @Component
+@Lazy
 @Slf4j
 public class IntelligenceSignalCollectionJob {
 

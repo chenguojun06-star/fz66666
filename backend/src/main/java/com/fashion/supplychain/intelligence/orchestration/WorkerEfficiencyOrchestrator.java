@@ -14,6 +14,7 @@ import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 
 /**
  * 工人效率画像编排器 — 五维雷达评分
@@ -28,6 +29,7 @@ import org.springframework.stereotype.Service;
  * </ul>
  */
 @Service
+@Lazy
 @Slf4j
 public class WorkerEfficiencyOrchestrator {
 

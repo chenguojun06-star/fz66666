@@ -6,6 +6,7 @@ import com.fashion.supplychain.intelligence.dto.AgentState;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+import org.springframework.context.annotation.Lazy;
 
 import java.util.*;
 import java.util.concurrent.*;
@@ -13,6 +14,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 @Slf4j
 @Component
+@Lazy
 public class DagExecutionEngine {
 
     private final Map<String, DagNodeExecutor> executorRegistry = new ConcurrentHashMap<>();

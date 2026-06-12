@@ -8,6 +8,7 @@ import com.fashion.supplychain.production.service.ProductionOrderService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
@@ -18,6 +19,7 @@ import java.util.*;
  */
 @Slf4j
 @Service
+@Lazy
 public class DeliverySpecialistAgent implements SpecialistAgent {
 
     @Autowired

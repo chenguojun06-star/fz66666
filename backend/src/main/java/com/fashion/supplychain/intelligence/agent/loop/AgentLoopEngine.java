@@ -29,15 +29,19 @@ import com.fashion.supplychain.intelligence.service.AgentStateStore;
 import com.fashion.supplychain.intelligence.service.DataTruthGuard;
 import com.fashion.supplychain.intelligence.service.EntityFactChecker;
 import com.fashion.supplychain.intelligence.service.GroundedGenerationGuard;
+import com.fashion.supplychain.intelligence.service.SemanticCacheService;
 import com.fashion.supplychain.intelligence.service.SelfConsistencyVerifier;
+import com.fashion.supplychain.intelligence.service.ConversationMemoryService;
 import com.fashion.supplychain.intelligence.service.ContextEngineeringService;
 import com.fashion.supplychain.intelligence.service.StructuredResponseService;
 import com.fashion.supplychain.intelligence.service.MemoryHierarchyService;
 import com.fashion.supplychain.intelligence.service.ProactiveRiskDetectionService;
+import com.fashion.supplychain.intelligence.service.ProactiveInsightService;
 import com.fashion.supplychain.intelligence.service.PromptEvolutionService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Lazy;
 
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -47,6 +51,7 @@ import java.util.Set;
 
 @Slf4j
 @Component
+@Lazy
 public class AgentLoopEngine {
 
     @Autowired private AiInferenceGateway inferenceGateway;
@@ -71,15 +76,36 @@ public class AgentLoopEngine {
     @Autowired private org.springframework.beans.factory.ObjectProvider<StructuredResponseService> structuredResponseServiceProvider;
     @Autowired private org.springframework.beans.factory.ObjectProvider<MemoryHierarchyService> memoryHierarchyServiceProvider;
     @Autowired private org.springframework.beans.factory.ObjectProvider<ProactiveRiskDetectionService> riskDetectionServiceProvider;
+    @Autowired private org.springframework.beans.factory.ObjectProvider<ProactiveInsightService> proactiveInsightServiceProvider;
     @Autowired private org.springframework.beans.factory.ObjectProvider<PromptEvolutionService> promptEvolutionServiceProvider;
     @Autowired private org.springframework.beans.factory.ObjectProvider<AgentSkillRegistry> skillRegistryProvider;
     @Autowired private org.springframework.beans.factory.ObjectProvider<AgentCheckpointManager> checkpointManagerProvider;
     @Autowired private org.springframework.beans.factory.ObjectProvider<HandoffEngine> handoffEngineProvider;
+    @Autowired private org.springframework.beans.factory.ObjectProvider<ConversationMemoryService> conversationMemoryServiceProvider;
+    @Autowired private org.springframework.beans.factory.ObjectProvider<SemanticCacheService> semanticCacheServiceProvider;
 
     public String run(AgentLoopContext ctx, AgentLoopCallback cb) {
         String sessionId = ctx.getCommandId();
         compensatingTxManager.beginSession(sessionId);
         try {
+            // 加载跨会话对话记忆上下文
+            injectConversationMemory(ctx);
+
+            // 语义缓存查找：命中则直接返回，跳过整个Agent循环
+            SemanticCacheService semanticCacheService = semanticCacheServiceProvider.getIfAvailable();
+            if (semanticCacheService != null && ctx.getTenantId() != null) {
+                try {
+                    String cached = semanticCacheService.lookup(ctx.getTenantId(), ctx.getUserMessage());
+                    if (cached != null) {
+                        log.info("[AgentLoop] 语义缓存命中，跳过Agent循环 tenantId={} queryLen={}",
+                                ctx.getTenantId(), ctx.getUserMessage().length());
+                        return handleFinalAnswer(ctx, cached, cb);
+                    }
+                } catch (Exception e) {
+                    log.warn("[AgentLoop] 语义缓存查找异常，继续主流程: {}", e.getMessage());
+                }
+            }
+
             HandoffEngine handoffEngine = handoffEngineProvider.getIfAvailable();
             HandoffEngine.HandoffResult handoffResult = tryHandoffIfNeeded(ctx, cb);
             if (handoffResult != null && handoffResult.isDelegated()) {
@@ -153,6 +179,13 @@ public class AgentLoopEngine {
     }
 
     private String runSingleTurn(AgentLoopContext ctx, AgentLoopCallback cb, int iter) {
+        // 推送进度事件：让前端知道当前执行到哪一步
+        if (cb instanceof StreamingAgentLoopCallback streamCb) {
+            int maxIter = ctx.getMaxIterations();
+            int progressPercent = Math.min(100, (int) ((iter / (double) maxIter) * 100));
+            streamCb.onProgress(progressPercent, "第 " + iter + "/" + maxIter + " 轮推理");
+        }
+
         IntelligenceInferenceResult result = performInference(ctx, cb, iter);
         if (!result.isSuccess()) {
             return handleInferenceError(ctx, result, cb);
@@ -176,10 +209,9 @@ public class AgentLoopEngine {
 
     private IntelligenceInferenceResult performInference(AgentLoopContext ctx, AgentLoopCallback cb, int iter) {
         cb.onThinking(iter, "正在调用推理模型，请稍候…");
-        boolean isLikelyFinalRound = (iter >= ctx.getMaxIterations() - 1)
-                || (iter == 1 && ctx.getMaxIterations() <= 3);
 
-        if (isLikelyFinalRound && cb instanceof StreamingAgentLoopCallback) {
+        // 所有轮次均使用流式输出，实时推送中间思考内容，提升用户等待体验
+        if (cb instanceof StreamingAgentLoopCallback) {
             return inferenceGateway.chatStream("agent-loop", ctx.getMessages(), ctx.getVisibleApiTools(),
                     (chunk, done) -> {
                         if (!chunk.isEmpty()) {
@@ -416,6 +448,16 @@ public class AgentLoopEngine {
         cb.onAnswer(revisedContent, ctx.getCommandId());
         cb.onToolExecRecords(ctx.getAllExecRecords());
 
+        // 语义缓存存储：将最终回答写入缓存
+        if (semanticCacheServiceProvider.getIfAvailable() != null && ctx.getTenantId() != null) {
+            try {
+                semanticCacheServiceProvider.getIfAvailable()
+                        .store(ctx.getTenantId(), ctx.getUserMessage(), revisedContent);
+            } catch (Exception e) {
+                log.debug("[AgentLoop] 语义缓存存储失败（不影响主流程）: {}", e.getMessage());
+            }
+        }
+
         try {
             List<FollowUpAction> followUps = followUpSuggestionEngine.generate(ctx.getAllExecRecords(), ctx.getUserMessage());
             if (!followUps.isEmpty()) {
@@ -424,6 +466,9 @@ public class AgentLoopEngine {
         } catch (Exception ex) {
             log.warn("[AgentLoop] 生成后续建议失败，不影响主流程", ex);
         }
+
+        // 持久化对话记忆到 Redis（跨会话保持）
+        saveConversationMemory(ctx, revisedContent);
 
         completeSession(ctx, revisedContent);
         return revisedContent;
@@ -623,6 +668,16 @@ public class AgentLoopEngine {
                 }
             }
 
+            // 主动洞察注入：将巡检发现的风险注入到AI上下文中
+            ProactiveInsightService proactiveInsightService = proactiveInsightServiceProvider.getIfAvailable();
+            if (proactiveInsightService != null && ctx.getTenantId() != null) {
+                String insightInjection = proactiveInsightService.buildInsightInjection(ctx.getTenantId());
+                if (!insightInjection.isBlank()) {
+                    ctx.getMessages().add(1, AiMessage.system(insightInjection));
+                    log.info("[AgentLoop] 主动洞察已注入: tenant={}", ctx.getTenantId());
+                }
+            }
+
         } catch (Exception e) {
             log.warn("[AgentLoop] 规划/风险/记忆/技能注入失败（继续执行）: {}", e.getMessage());
         }
@@ -674,5 +729,39 @@ public class AgentLoopEngine {
             sb.append("• 无法回滚: ").append(String.join(", ", result.getUnrecoverable())).append("\n");
         }
         return sb.toString().trim();
+    }
+
+    /**
+     * 注入跨会话对话记忆上下文到消息列表
+     */
+    private void injectConversationMemory(AgentLoopContext ctx) {
+        if (ctx.getTenantId() == null || ctx.getUserId() == null) return;
+        ConversationMemoryService convMemory = conversationMemoryServiceProvider.getIfAvailable();
+        if (convMemory == null) return;
+        try {
+            String conversationContext = convMemory.loadConversationContext(ctx.getTenantId(), ctx.getUserId());
+            if (conversationContext != null && !conversationContext.isBlank()) {
+                ctx.getMessages().add(1, AiMessage.system(
+                        "【跨会话对话记忆】\n" + conversationContext +
+                        "\n（以上为历史对话记忆，关键数据请通过工具查询确认）"));
+                log.debug("[AgentLoop] 跨会话对话记忆已注入: tenant={} user={}", ctx.getTenantId(), ctx.getUserId());
+            }
+        } catch (Exception e) {
+            log.debug("[AgentLoop] 对话记忆注入失败（静默降级）: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * 保存对话轮次到跨会话记忆
+     */
+    private void saveConversationMemory(AgentLoopContext ctx, String assistantContent) {
+        if (ctx.getTenantId() == null || ctx.getUserId() == null) return;
+        ConversationMemoryService convMemory = conversationMemoryServiceProvider.getIfAvailable();
+        if (convMemory == null) return;
+        try {
+            convMemory.saveTurn(ctx.getTenantId(), ctx.getUserId(), ctx.getUserMessage(), assistantContent);
+        } catch (Exception e) {
+            log.debug("[AgentLoop] 对话记忆保存失败（不影响主流程）: {}", e.getMessage());
+        }
     }
 }

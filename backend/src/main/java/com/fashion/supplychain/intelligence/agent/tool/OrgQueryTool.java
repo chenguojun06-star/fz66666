@@ -14,6 +14,7 @@ import com.fashion.supplychain.system.orchestration.OrganizationUnitOrchestrator
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Lazy;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -26,6 +27,7 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @Component
+@Lazy
 public class OrgQueryTool extends AbstractAgentTool {
 
     @Autowired

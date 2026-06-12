@@ -20,6 +20,7 @@ import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 
 /**
  * 自动排产建议编排器 — 根据工厂真实历史数据建议排产方案
@@ -34,6 +35,7 @@ import org.springframework.stereotype.Service;
  * <p>无历史数据时，后三项分别给 18/12/6（各维度 60% 中等默认分），不再使用硬编码常量。
  */
 @Service
+@Lazy
 @Slf4j
 public class SchedulingSuggestionOrchestrator {
 

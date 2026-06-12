@@ -12,11 +12,13 @@ import java.util.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Lazy;
 
 /**
  * 质量/入库/物料缺口查询处理器
  */
 @Component
+@Lazy
 @Slf4j
 public class QualityWarehouseHandler {
 

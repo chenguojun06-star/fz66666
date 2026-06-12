@@ -10,6 +10,7 @@ import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 
 /**
  * 超级顾问 — 会话连续性编排器
@@ -22,6 +23,7 @@ import org.springframework.stereotype.Service;
  * </ol>
  */
 @Service
+@Lazy
 @Slf4j
 public class AdvisorSessionOrchestrator {
 

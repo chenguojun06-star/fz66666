@@ -5,6 +5,7 @@ import com.fashion.supplychain.intelligence.mapper.PromptVariantMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -14,6 +15,7 @@ import java.util.concurrent.ConcurrentMap;
 
 @Slf4j
 @Service
+@Lazy
 @RequiredArgsConstructor
 public class PromptVariantPersistenceService {
 

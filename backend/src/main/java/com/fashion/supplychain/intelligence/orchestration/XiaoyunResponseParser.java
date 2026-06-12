@@ -7,6 +7,7 @@ import com.fashion.supplychain.intelligence.dto.XiaoyunStructuredResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Lazy;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -14,6 +15,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @Component
+@Lazy
 @Slf4j
 @RequiredArgsConstructor
 public class XiaoyunResponseParser {

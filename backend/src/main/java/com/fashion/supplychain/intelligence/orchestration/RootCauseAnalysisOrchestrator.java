@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.context.annotation.Lazy;
 
 /**
  * 根因分析编排器 — 阶段9核心：5-Why递归 + 鱼骨图6M分类。
@@ -20,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
  */
 @Slf4j
 @Service
+@Lazy
 public class RootCauseAnalysisOrchestrator {
 
     private static final int MAX_WHY_DEPTH = 5;

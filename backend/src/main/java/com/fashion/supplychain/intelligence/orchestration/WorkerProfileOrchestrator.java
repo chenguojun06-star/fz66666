@@ -18,6 +18,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.context.annotation.Lazy;
 
 /**
  * 工人效率画像编排器
@@ -27,6 +28,7 @@ import org.springframework.scheduling.annotation.Scheduled;
  * </p>
  */
 @Service
+@Lazy
 @Slf4j
 public class WorkerProfileOrchestrator {
 

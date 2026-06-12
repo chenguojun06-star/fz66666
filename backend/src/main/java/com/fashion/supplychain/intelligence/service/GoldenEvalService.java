@@ -8,6 +8,7 @@ import com.fashion.supplychain.intelligence.orchestration.IntelligenceInferenceO
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -20,6 +21,7 @@ import java.util.regex.Pattern;
  * 前端可通过 /api/intelligence/golden-eval 触发评估。
  */
 @Service
+@Lazy
 @Slf4j
 public class GoldenEvalService {
 

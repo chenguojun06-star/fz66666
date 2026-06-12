@@ -13,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
+import org.springframework.context.annotation.Lazy;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -20,6 +21,7 @@ import java.util.Map;
 
 @Slf4j
 @Component
+@Lazy
 @AgentToolDef(name = "tool_sourcing_expert", description = "采购供应商专家工具", domain = ToolDomain.WAREHOUSE, timeoutMs = 15000)
 @McpToolAnnotation(
         name = "tool_sourcing_expert",

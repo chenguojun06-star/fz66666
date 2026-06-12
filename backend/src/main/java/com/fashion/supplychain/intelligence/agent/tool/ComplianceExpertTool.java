@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
+import org.springframework.context.annotation.Lazy;
 
 import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
@@ -19,6 +20,7 @@ import java.util.Map;
 
 @Slf4j
 @Component
+@Lazy
 @AgentToolDef(name = "tool_compliance_expert", description = "合规专家工具", domain = ToolDomain.PRODUCTION, timeoutMs = 15000)
 @McpToolAnnotation(
         name = "tool_compliance_expert",

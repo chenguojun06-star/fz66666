@@ -7,6 +7,7 @@ import com.fashion.supplychain.intelligence.dto.ReplenishmentAdvisorResponse.Rep
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -17,6 +18,7 @@ import java.util.List;
  * 结合物料紧迫级别与供应商信息，生成补料采购优先级建议。
  */
 @Service
+@Lazy
 @Slf4j
 public class ReplenishmentAdvisorOrchestrator {
 

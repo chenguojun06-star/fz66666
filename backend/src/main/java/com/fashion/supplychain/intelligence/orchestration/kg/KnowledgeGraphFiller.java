@@ -4,6 +4,7 @@ import com.fashion.supplychain.intelligence.service.GraphRagService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Lazy;
 
 /**
  * 知识图谱自动填充器——从各业务模块的实际数据中自动构建知识图谱实体与关系。
@@ -20,6 +21,7 @@ import org.springframework.stereotype.Component;
  */
 @Slf4j
 @Component
+@Lazy
 @RequiredArgsConstructor
 public class KnowledgeGraphFiller {
 

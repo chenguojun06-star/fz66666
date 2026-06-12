@@ -20,12 +20,14 @@ import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Lazy;
 
 /**
  * 信号采集辅助类 — 从 IntelligenceSignalOrchestrator 拆分而来。
  * 包含：异常检测、交付风险、物料短缺、服装专属信号（BOM/跳序/停滞/未启动）。
  */
 @Component
+@Lazy
 @Slf4j
 public class SignalCollectorHelper {
 

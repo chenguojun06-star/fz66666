@@ -17,6 +17,7 @@ import java.util.stream.Collectors;
 import com.fashion.supplychain.common.ProcessSynonymMapping;
 import com.fashion.supplychain.production.constants.ProductionConstants;
 import org.springframework.util.StringUtils;
+import org.springframework.context.annotation.Lazy;
 
 /**
  * 工厂工序瓶颈分析编排器
@@ -32,6 +33,7 @@ import org.springframework.util.StringUtils;
  * </pre>
  */
 @Service
+@Lazy
 @Slf4j
 public class FactoryBottleneckOrchestrator {
 

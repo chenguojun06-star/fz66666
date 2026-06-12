@@ -13,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import org.springframework.context.annotation.Lazy;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -27,6 +28,7 @@ import java.util.stream.Collectors;
  * 核心原则：基于这个款的实际面辅料/工序/工艺，精准、少、专业
  */
 @Service
+@Lazy
 @Slf4j
 public class ScanTipsOrchestrator {
 

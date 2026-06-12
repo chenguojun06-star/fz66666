@@ -14,12 +14,14 @@ import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 
 /**
  * 涓诲姩宸℃闂幆缂栨帓鍣? * <p>宸℃鍙戠幇 鈫?寤鸿 鈫?瀹℃壒/鑷姩鎵ц 鈫?鍏抽棴锛岀粺璁?MTTR銆傜鎴峰唴鍙鑷韩璁板綍锛? * 瓒呯鑱氬悎 MTTR/issue 鍒嗗竷浣滀负骞冲彴鎶ゅ煄娌炽€?/p>
  */
 @Slf4j
 @Service
+@Lazy
 public class PatrolClosedLoopOrchestrator {
 
     @Autowired

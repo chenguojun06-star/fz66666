@@ -21,6 +21,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import org.springframework.context.annotation.Lazy;
 
 /**
  * 进度预测编排器 — 基于真实扫码件数驱动的预判（与进度球同源逻辑）
@@ -38,6 +39,7 @@ import org.springframework.util.StringUtils;
  * </pre>
  */
 @Service
+@Lazy
 @Slf4j
 public class ProgressPredictOrchestrator {
 

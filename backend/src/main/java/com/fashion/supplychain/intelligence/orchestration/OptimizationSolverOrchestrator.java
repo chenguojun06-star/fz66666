@@ -4,11 +4,13 @@ import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 
 import java.util.*;
 
 @Slf4j
 @Service
+@Lazy
 @RequiredArgsConstructor
 public class OptimizationSolverOrchestrator {
 

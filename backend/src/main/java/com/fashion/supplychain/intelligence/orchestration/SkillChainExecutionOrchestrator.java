@@ -7,6 +7,7 @@ import com.fashion.supplychain.intelligence.dto.SkillChainDef.SkillChainStep;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 
 import java.util.List;
 import java.util.Map;
@@ -25,6 +26,7 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @Service
+@Lazy
 public class SkillChainExecutionOrchestrator {
 
     // ── 内置技能注册表（未来可扩展为数据库） ─────────────────────────────────

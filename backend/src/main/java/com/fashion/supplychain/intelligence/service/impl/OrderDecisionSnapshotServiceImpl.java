@@ -5,8 +5,10 @@ import com.fashion.supplychain.intelligence.entity.OrderDecisionSnapshot;
 import com.fashion.supplychain.intelligence.mapper.OrderDecisionSnapshotMapper;
 import com.fashion.supplychain.intelligence.service.OrderDecisionSnapshotService;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 
 @Service
+@Lazy
 public class OrderDecisionSnapshotServiceImpl
         extends ServiceImpl<OrderDecisionSnapshotMapper, OrderDecisionSnapshot>
         implements OrderDecisionSnapshotService {

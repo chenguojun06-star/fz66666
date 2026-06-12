@@ -15,6 +15,7 @@ import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 
 /**
  * 超级顾问 — 轻量数字孪生模拟编排器
@@ -30,6 +31,7 @@ import org.springframework.stereotype.Service;
  * <p>不依赖 LLM，全部确定性计算
  */
 @Service
+@Lazy
 @Slf4j
 public class AdvisorSimulationOrchestrator {
 

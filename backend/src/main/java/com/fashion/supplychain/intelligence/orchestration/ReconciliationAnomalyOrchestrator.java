@@ -10,6 +10,7 @@ import com.fashion.supplychain.intelligence.dto.ReconciliationAnomalyResponse.Re
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -25,6 +26,7 @@ import java.util.List;
  * 按优先分 = |扣款额| × 挂账天数 × 类型权重 降序排列，供智能驾驶舱展示。
  */
 @Service
+@Lazy
 @Slf4j
 public class ReconciliationAnomalyOrchestrator {
 

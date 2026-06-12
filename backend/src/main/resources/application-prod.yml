@@ -147,3 +147,9 @@ xiaoyun:
     tool-animation: ${XIAOYUN_STREAMING_TOOL_ANIMATION:true}
     mood-updates: ${XIAOYUN_STREAMING_MOOD:true}
     time-budget: ${XIAOYUN_STREAMING_TIME_BUDGET:true}
+  # 对话记忆持久化与智能压缩
+  conversation-memory:
+    enabled: ${XIAOYUN_CONVERSATION_MEMORY_ENABLED:true}
+    max-turns: ${XIAOYUN_CONVERSATION_MAX_TURNS:20}
+    compress-threshold: ${XIAOYUN_CONVERSATION_COMPRESS_THRESHOLD:10}
+    ttl-hours: ${XIAOYUN_CONVERSATION_TTL_HOURS:24}

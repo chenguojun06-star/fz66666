@@ -18,6 +18,7 @@ import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 
 /**
  * 实时生产脉搏编排器 — 全工厂心跳监测
@@ -26,6 +27,7 @@ import org.springframework.stereotype.Service;
  * 生成时序脉搏图 + 识别停滞工厂（60分钟无扫码视为工序卡点）。
  */
 @Service
+@Lazy
 @Slf4j
 public class LivePulseOrchestrator {
 

@@ -5,6 +5,7 @@ import com.fashion.supplychain.intelligence.service.VisionAnalysisService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Lazy;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -15,6 +16,7 @@ import java.util.Map;
  */
 @Slf4j
 @Component
+@Lazy
 @AgentToolDef(
         name = "tool_vision_style_identify",
         description = "服装款式识别：分析服装图片的领型、袖型、版型、面料质感、颜色、图案、风格等款式特征",

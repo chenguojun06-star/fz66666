@@ -2,6 +2,7 @@ package com.fashion.supplychain.intelligence.upgrade.phase2;
 
 import lombok.Data;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -10,6 +11,7 @@ import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.atomic.AtomicLong;
 
 @Service
+@Lazy
 public class LlmObservabilityService {
 
     private static final int MAX_TRACES = 1000;

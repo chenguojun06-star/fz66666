@@ -19,6 +19,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Lazy;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -27,6 +28,7 @@ import java.util.Set;
 
 @Slf4j
 @Component
+@Lazy
 public class AgentLoopContextBuilder {
 
     @Autowired private IntelligenceInferenceOrchestrator inferenceOrchestrator;

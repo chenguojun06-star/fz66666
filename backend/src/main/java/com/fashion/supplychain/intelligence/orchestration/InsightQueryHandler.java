@@ -17,11 +17,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
+import org.springframework.context.annotation.Lazy;
 
 /**
  * 洞察/对比/概览/帮助/AI兜底 查询处理器
  */
 @Component
+@Lazy
 @Slf4j
 public class InsightQueryHandler {
 

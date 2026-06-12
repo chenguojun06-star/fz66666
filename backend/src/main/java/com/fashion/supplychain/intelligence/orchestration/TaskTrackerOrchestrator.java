@@ -9,12 +9,14 @@ import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Lazy;
 
 /**
  * AI任务追踪器 — 把AI"说"变成"做+追踪"。
  * 每次工具执行写操作时自动记录任务，定时检查完成状态。
  */
 @Component
+@Lazy
 @RequiredArgsConstructor
 @Slf4j
 public class TaskTrackerOrchestrator {

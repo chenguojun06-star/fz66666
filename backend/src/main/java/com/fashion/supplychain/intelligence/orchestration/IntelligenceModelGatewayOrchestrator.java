@@ -4,6 +4,7 @@ import com.fashion.supplychain.intelligence.dto.IntelligenceBrainSnapshotRespons
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -19,6 +20,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * 冷却期过後自动恢复（半开探测）。调用方通过 {@link #isCircuitOpen()} 判断网关是否可用。</p>
  */
 @Service
+@Lazy
 @Slf4j
 public class IntelligenceModelGatewayOrchestrator {
 

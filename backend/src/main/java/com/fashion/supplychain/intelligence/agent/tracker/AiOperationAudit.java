@@ -4,6 +4,7 @@ import com.fashion.supplychain.common.UserContext;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Lazy;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -11,6 +12,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 @Component
+@Lazy
 public class AiOperationAudit {
 
     private static final ThreadLocal<Map<String, AuditEntry>> ENTRIES =

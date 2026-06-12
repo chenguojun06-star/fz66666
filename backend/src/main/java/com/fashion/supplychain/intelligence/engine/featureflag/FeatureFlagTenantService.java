@@ -3,11 +3,13 @@ package com.fashion.supplychain.intelligence.engine.featureflag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 
 import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 @Service
+@Lazy
 public class FeatureFlagTenantService {
 
     @Autowired(required = false)

@@ -22,6 +22,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import org.springframework.context.annotation.Lazy;
 
 /**
  * 财务审核智能编排器 — 一站式审核看板
@@ -30,6 +31,7 @@ import org.springframework.util.StringUtils;
  * <p>只读分析，不修改任何业务数据
  */
 @Service
+@Lazy
 @Slf4j
 public class FinanceAuditOrchestrator {
 

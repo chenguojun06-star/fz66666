@@ -13,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.context.annotation.Lazy;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -27,6 +28,7 @@ import java.util.List;
  * 绝不读取其他租户的原始订单数据，也不做跨租户聚合。</p>
  */
 @Service
+@Lazy
 @Slf4j
 public class CrossTenantBenchmarkOrchestrator {
 

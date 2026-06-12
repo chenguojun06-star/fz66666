@@ -17,6 +17,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import org.springframework.context.annotation.Lazy;
 
 /**
  * 反馈闭环编排器 — 完成数据飞轮的最后一环
@@ -31,6 +32,7 @@ import org.springframework.util.StringUtils;
  * <p><b>降级：</b>无论持久化是否成功，反馈接叫不报错。
  */
 @Service
+@Lazy
 @Slf4j
 public class FeedbackLearningOrchestrator {
 

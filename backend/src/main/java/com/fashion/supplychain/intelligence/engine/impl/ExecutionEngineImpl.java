@@ -17,6 +17,7 @@ import com.fashion.supplychain.intelligence.prompt.PromptVariantService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -25,6 +26,7 @@ import java.util.Map;
 
 @Slf4j
 @Service
+@Lazy
 public class ExecutionEngineImpl implements ExecutionEngine {
 
     private final DagExecutor dagExecutor = new DagExecutor();

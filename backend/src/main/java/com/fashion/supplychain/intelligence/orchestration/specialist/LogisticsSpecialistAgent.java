@@ -12,11 +12,13 @@ import com.fashion.supplychain.production.mapper.ProductOutstockMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 
 import java.util.List;
 
 @Slf4j
 @Service
+@Lazy
 @RequiredArgsConstructor
 public class LogisticsSpecialistAgent implements SpecialistAgent {
 

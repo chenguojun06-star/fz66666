@@ -7,6 +7,7 @@ import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Lazy;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -25,6 +26,7 @@ import java.util.regex.Pattern;
  */
 @Slf4j
 @Component
+@Lazy
 @AgentToolDef(name = "tool_flyway_safety_check", description = "Flyway迁移安全检查工具", domain = ToolDomain.SYSTEM, timeoutMs = 15000)
 @McpToolAnnotation(
         name = "tool_flyway_safety_check",

@@ -9,6 +9,7 @@ import com.fashion.supplychain.intelligence.dto.*;
 import com.fashion.supplychain.intelligence.orchestration.*;
 import com.fashion.supplychain.intelligence.service.AiAgentMetricsService;
 import com.fashion.supplychain.intelligence.service.AiAdvisorService;
+import com.fashion.supplychain.intelligence.service.ProactiveInsightService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -75,6 +76,9 @@ public class IntelligenceAiAdvisorController {
 
     @Autowired
     private com.fashion.supplychain.intelligence.mapper.IntelligenceMetricsMapper intelligenceMetricsMapper;
+
+    @Autowired
+    private ProactiveInsightService proactiveInsightService;
 
     @GetMapping("/ai-advisor/status")
     public Result<?> aiAdvisorStatus() {
@@ -438,5 +442,26 @@ public class IntelligenceAiAdvisorController {
     @PostMapping("/learning/loop")
     public Result<LearningLoopResponse> runLearningLoop() {
         return Result.success(learningLoopOrchestrator.runLoop());
+    }
+
+    /** 获取当前租户的未读主动洞察列表 */
+    @GetMapping("/insights")
+    public Result<java.util.List<ProactiveInsightService.InsightItem>> getUnreadInsights() {
+        Long tenantId = UserContext.tenantId();
+        if (tenantId == null) {
+            return Result.fail("租户信息缺失");
+        }
+        return Result.success(proactiveInsightService.getUnreadInsights(tenantId));
+    }
+
+    /** 标记洞察已读 */
+    @PostMapping("/insights/{id}/read")
+    public Result<Void> markInsightAsRead(@PathVariable String id) {
+        Long tenantId = UserContext.tenantId();
+        if (tenantId == null) {
+            return Result.fail("租户信息缺失");
+        }
+        proactiveInsightService.markAsRead(tenantId, id);
+        return Result.success(null);
     }
 }

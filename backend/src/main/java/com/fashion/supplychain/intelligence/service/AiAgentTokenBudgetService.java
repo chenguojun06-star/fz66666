@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 
 import java.time.Duration;
 import java.time.LocalDate;
@@ -15,6 +16,7 @@ import java.util.List;
 
 @Slf4j
 @Service
+@Lazy
 public class AiAgentTokenBudgetService {
 
     private static final String KEY_PREFIX = "ai:budget:";

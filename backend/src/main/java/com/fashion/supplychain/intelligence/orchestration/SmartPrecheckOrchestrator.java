@@ -13,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import org.springframework.context.annotation.Lazy;
 
 /**
  * 扫码预检编排器 — 数据驱动的预检规则
@@ -28,6 +29,7 @@ import org.springframework.util.StringUtils;
  * <p>所有预检选项均为“只提示不拦截”：副作用调用，旧扫码流程不受影响。
  */
 @Service
+@Lazy
 @Slf4j
 public class SmartPrecheckOrchestrator {
 

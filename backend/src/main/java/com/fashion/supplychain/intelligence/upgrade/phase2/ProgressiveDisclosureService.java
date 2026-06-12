@@ -2,10 +2,12 @@ package com.fashion.supplychain.intelligence.upgrade.phase2;
 
 import lombok.Data;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 
 import java.util.*;
 
 @Service
+@Lazy
 public class ProgressiveDisclosureService {
 
     public DisclosureResponse build(String summary, int confidence,

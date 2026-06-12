@@ -14,6 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.context.annotation.Lazy;
 
 /**
  * 规律发现编排器 — 阶段9核心：从历史执行日志中挖掘租户维度的时序模式与异常。
@@ -24,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
  */
 @Slf4j
 @Service
+@Lazy
 public class PatternDiscoveryOrchestrator {
 
     @Autowired private PatternDiscoveryMapper patternMapper;

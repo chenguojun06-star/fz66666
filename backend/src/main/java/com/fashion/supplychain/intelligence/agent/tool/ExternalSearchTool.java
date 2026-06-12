@@ -5,6 +5,7 @@ import com.fashion.supplychain.intelligence.agent.AiTool;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Lazy;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -17,6 +18,7 @@ import java.util.*;
 
 @Slf4j
 @Component
+@Lazy
 @AgentToolDef(
     name = "external_search",
     description = "搜索外部互联网信息：行业政策、市场行情、竞品动态、供应链资讯等。当用户问题超出系统内部数据范围时调用。",

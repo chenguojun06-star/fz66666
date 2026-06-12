@@ -13,6 +13,7 @@ import com.fashion.supplychain.stock.service.SampleStockService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Lazy;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -27,6 +28,7 @@ import java.util.*;
  */
 @Slf4j
 @Component
+@Lazy
 public class SampleLoanTool extends AbstractAgentTool {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();

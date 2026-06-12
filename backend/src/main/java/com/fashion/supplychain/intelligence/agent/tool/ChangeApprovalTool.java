@@ -11,6 +11,7 @@ import com.fashion.supplychain.system.orchestration.ChangeApprovalOrchestrator;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Lazy;
 
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -21,6 +22,7 @@ import java.util.*;
  */
 @Slf4j
 @Component
+@Lazy
 public class ChangeApprovalTool extends AbstractAgentTool {
 
     @Autowired

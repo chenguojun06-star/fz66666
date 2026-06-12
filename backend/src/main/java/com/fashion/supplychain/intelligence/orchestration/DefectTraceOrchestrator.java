@@ -16,6 +16,7 @@ import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 
 /**
  * 次品溯源编排器 — 按订单聚合质检入库的缺陷数据
@@ -30,6 +31,7 @@ import org.springframework.stereotype.Service;
  * </ol>
  */
 @Service
+@Lazy
 @Slf4j
 public class DefectTraceOrchestrator {
 

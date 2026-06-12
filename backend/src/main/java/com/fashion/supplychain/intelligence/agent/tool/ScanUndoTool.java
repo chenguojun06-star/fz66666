@@ -11,11 +11,13 @@ import com.fashion.supplychain.production.service.ScanRecordService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Lazy;
 
 import java.util.*;
 
 @Slf4j
 @Component
+@Lazy
 @AgentToolDef(name = "tool_scan_undo", description = "撤回扫码记录", domain = ToolDomain.PRODUCTION, timeoutMs = 15000, readOnly = false)
 @McpToolAnnotation(
         name = "tool_scan_undo",

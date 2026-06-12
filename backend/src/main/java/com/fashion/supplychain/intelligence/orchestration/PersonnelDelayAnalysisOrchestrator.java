@@ -12,11 +12,13 @@ import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 
 /**
  * 人员延期分析编排器 — 按跟单员/纸样师/工厂维度分析延期情况
  */
 @Service
+@Lazy
 @Slf4j
 public class PersonnelDelayAnalysisOrchestrator {
 

@@ -10,6 +10,7 @@ import java.util.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Lazy;
 
 /**
  * NlQuery 智能处理器 — 接入全系统 15 个智能编排器，为 AI 助手提供深度分析能力。
@@ -19,6 +20,7 @@ import org.springframework.stereotype.Component;
  * 排程建议 / 智能通知 / 自愈诊断 / 学习报告
  */
 @Component
+@Lazy
 @Slf4j
 public class NlQuerySmartHandlers {
 

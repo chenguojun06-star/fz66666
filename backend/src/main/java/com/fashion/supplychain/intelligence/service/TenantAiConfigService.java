@@ -11,12 +11,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Slf4j
 @Service
+@Lazy
 public class TenantAiConfigService {
 
     @Autowired private TenantAiConfigMapper configMapper;

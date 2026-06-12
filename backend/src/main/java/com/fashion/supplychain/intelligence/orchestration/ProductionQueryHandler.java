@@ -14,11 +14,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
+import org.springframework.context.annotation.Lazy;
 
 /**
  * 生产域查询处理器 — 订单查询、产量查询、裁剪查询
  */
 @Component
+@Lazy
 @Slf4j
 public class ProductionQueryHandler {
 

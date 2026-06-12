@@ -5,11 +5,13 @@ import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.mapper.ProductionOrderMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Lazy;
 
 import java.util.ArrayList;
 import java.util.List;
 
 @Component
+@Lazy
 @RequiredArgsConstructor
 public class InspectsRelationExtractor implements RelationExtractor {
 
