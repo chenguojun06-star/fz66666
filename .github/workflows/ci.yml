@@ -282,8 +282,7 @@ jobs:
         echo "=== 开始部署 ==="
         # tcb framework deploy 在 CI 环境会要求输入应用名，通过 printf 管道回答提示符
         # framework.name=fashion-supplychain 已在 cloudbaserc.json 中声明
-        printf 'fashion-supplychain\n' | tcb framework deploy -e ${{ secrets.CLOUDBASE_ENV_ID }} --verbose 2>&1 || \
-        printf 'fashion-supplychain\n' | tcb framework deploy --name fashion-supplychain -e ${{ secrets.CLOUDBASE_ENV_ID }} --verbose
+        printf 'fashion-supplychain\n' | tcb framework deploy -e ${{ secrets.CLOUDBASE_ENV_ID }} --verbose
       env:
         CI: "true"
 
