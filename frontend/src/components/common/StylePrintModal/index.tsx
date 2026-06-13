@@ -25,6 +25,18 @@ import { buildPrintHtml } from './printTemplate';
 import { safePrint } from '@/utils/safePrint';
 import { LABEL_SIZE_MAP, parseSizeColorMatrix, resolveLabelItems } from './printDataTransform';
 
+/** 板类翻译：数据库存码值，打印显示中文 */
+const PLATE_TYPE_MAP: Record<string, string> = {
+  FIRST: '首单',
+  REORDER: '翻单',
+  首单: '首单',
+  翻单: '翻单',
+  首板: '首单',
+  首翻单: '首单',
+  复板: '翻单',
+};
+const translatePlateType = (v?: string | null) => (v ? (PLATE_TYPE_MAP[v] || v) : '-');
+
 const StylePrintModal: React.FC<StylePrintModalProps> = ({
   visible, onClose, styleId, orderId, orderNo,
   styleNo = '', styleName = '', cover, color, quantity,
@@ -464,7 +476,7 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
                     // 纸样/加工信息
                     if (options.patternInfoBlock) {
                       if (mode === 'sample') {
-                        allFields.push({ label: '板类', value: (data.productionSheet as any)?.plateType || empty });
+                        allFields.push({ label: '板类', value: translatePlateType((data.productionSheet as any)?.plateType) });
                         allFields.push({ label: '纸样师', value: (data.productionSheet as any)?.sampleSupplier || empty });
                         allFields.push({ label: '纸样号', value: (data.productionSheet as any)?.patternNo || empty });
                         allFields.push({ label: '车板师', value: (data.productionSheet as any)?.plateWorker || empty });
@@ -472,7 +484,7 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
                         const factoryName = (data.productionSheet as any)?.factoryName || (extraInfo as any)?.加工厂 || empty;
                         allFields.push({ label: '加工厂', value: factoryName });
                         allFields.push({ label: '设计师', value: (data.productionSheet as any)?.sampleNo || empty });
-                        allFields.push({ label: '板类', value: (data.productionSheet as any)?.plateType || empty });
+                        allFields.push({ label: '板类', value: translatePlateType((data.productionSheet as any)?.plateType) });
                         allFields.push({ label: '纸样号', value: (data.productionSheet as any)?.patternNo || empty });
                       }
                     }
