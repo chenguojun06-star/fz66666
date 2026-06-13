@@ -260,6 +260,28 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
               { label: '急单', value: 'urgent' },
             ]}
           />
+          <span>下单员</span>
+          <Select
+            value={createTask.createOrderPlacer || undefined}
+            onChange={(v) => createTask.setCreateOrderPlacer(v || '')}
+            placeholder="默认当前用户"
+            allowClear
+            showSearch
+            optionFilterProp="label"
+            style={{ width: 160 }}
+            options={createTask.tenantUsers.map(u => ({ value: u.name || u.username, label: u.name || u.username }))}
+          />
+          <span>跟单员</span>
+          <Select
+            value={createTask.createMerchandiser || undefined}
+            onChange={(v) => createTask.setCreateMerchandiser(v || '')}
+            placeholder="选择跟单员"
+            allowClear
+            showSearch
+            optionFilterProp="label"
+            style={{ width: 160 }}
+            options={createTask.tenantUsers.map(u => ({ value: u.name || u.username, label: u.name || u.username }))}
+          />
         </Space>
         <div style={{ marginTop: 8 }}>
           <span style={{ color: 'rgba(0,0,0,0.65)', fontSize: 14 }}>备注</span>

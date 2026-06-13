@@ -52,6 +52,8 @@ public class CuttingOrderFactory {
         String customerName = getTrimmedText(body, "customerName");
         String remarks = getTrimmedText(body, "remarks");
         String urgencyLevel = getTrimmedText(body, "urgencyLevel");
+        String merchandiser = getTrimmedText(body, "merchandiser");
+        String orderPlacer = getTrimmedText(body, "orderPlacer");
         LocalDateTime requestedOrderDate = parseDate(body, "orderDate", false);
         LocalDateTime requestedDeliveryDate = parseDate(body, "deliveryDate", true);
         List<Map<String, Object>> requestedOrderLines = resolveRequestedOrderLines(body);
@@ -97,7 +99,7 @@ public class CuttingOrderFactory {
 
         ProductionOrder order = buildProductionOrder(baseOrderNo, styleNo, resolvedStyleId, resolvedStyleName,
                 requestedOrderLines, totalOrderQuantity, requestedOrderDate, requestedDeliveryDate,
-                progressWorkflowJson, factoryCtx, customerName, remarks, urgencyLevel);
+                progressWorkflowJson, factoryCtx, customerName, remarks, urgencyLevel, merchandiser, orderPlacer);
 
         boolean orderOk = productionOrderService.save(order);
         if (!orderOk) {
@@ -177,7 +179,7 @@ public class CuttingOrderFactory {
             String resolvedStyleName, List<Map<String, Object>> requestedOrderLines, int totalOrderQuantity,
             LocalDateTime requestedOrderDate, LocalDateTime requestedDeliveryDate,
             String progressWorkflowJson, CuttingFactoryContextHelper.FactoryContext factoryCtx,
-            String customerName, String remarks, String urgencyLevel) {
+            String customerName, String remarks, String urgencyLevel, String merchandiser, String orderPlacer) {
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime orderCreateTime = requestedOrderDate != null ? requestedOrderDate : now;
         UserContext ctx = UserContext.get();
@@ -223,6 +225,12 @@ public class CuttingOrderFactory {
             order.setRemarks(remarks);
         }
         order.setUrgencyLevel("urgent".equalsIgnoreCase(urgencyLevel) ? "urgent" : "normal");
+        if (StringUtils.hasText(merchandiser)) {
+            order.setMerchandiser(merchandiser);
+        }
+        if (StringUtils.hasText(orderPlacer)) {
+            order.setCreatedByName(orderPlacer);
+        }
         return order;
     }
 

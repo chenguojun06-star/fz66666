@@ -95,7 +95,7 @@ interface UseCuttingCreateTaskOptions {
 }
 
 export function useCuttingCreateTask({ message, navigate, fetchTasks }: UseCuttingCreateTaskOptions) {
-  useUser();
+  const { user } = useUser();
 
   const [createTaskOpen, setCreateTaskOpen] = useState(false);
   const [createTaskSubmitting, setCreateTaskSubmitting] = useState(false);
@@ -121,6 +121,11 @@ export function useCuttingCreateTask({ message, navigate, fetchTasks }: UseCutti
   const [factoryCapacities, setFactoryCapacities] = useState<FactoryCapacityItem[]>([]);
   const [dynamicProcessMapping, setDynamicProcessMapping] = useState<Record<string, string>>({});
   const mappingLoadedRef = useRef(false);
+
+  // 跟单员/下单员
+  const [tenantUsers, setTenantUsers] = useState<Array<{ id: number; name: string; username: string }>>([]);
+  const [createMerchandiser, setCreateMerchandiser] = useState<string>('');
+  const [createOrderPlacer, setCreateOrderPlacer] = useState<string>('');
 
   useEffect(() => {
     if (mappingLoadedRef.current) return;
@@ -214,6 +219,32 @@ export function useCuttingCreateTask({ message, navigate, fetchTasks }: UseCutti
       setCreateInternalUnitOptions([]);
     } finally {
       setCreateFactoryLoading(false);
+    }
+  };
+
+  const fetchTenantUsers = async () => {
+    try {
+      const orgUsers = await organizationApi.assignableUsers();
+      if (orgUsers.length > 0) {
+        const mapped = orgUsers
+          .filter(u => u.name || u.username)
+          .map(u => ({ id: Number(u.id) || 0, name: u.name || u.username, username: u.username }));
+        const seen = new Set<string>();
+        setTenantUsers(mapped.filter(u => {
+          if (seen.has(u.name)) return false;
+          seen.add(u.name);
+          return true;
+        }));
+        return;
+      }
+    } catch { /* 组织成员加载失败，回退到用户列表 */ }
+    try {
+      const response = await api.get<{ code: number; data: { records: Array<{ id: number; name: string; username: string }> } }>('/system/user/list', { params: { page: 1, pageSize: 1000, status: 'active' } });
+      if (response.code === 200) {
+        setTenantUsers(response.data.records || []);
+      }
+    } catch {
+      setTenantUsers([]);
     }
   };
 
@@ -348,9 +379,12 @@ export function useCuttingCreateTask({ message, navigate, fetchTasks }: UseCutti
     setCreateStyleImageUrl(null);
     setCreateCategory('');
     setCreateUrgencyLevel('normal');
+    setCreateMerchandiser('');
+    setCreateOrderPlacer(user?.name || user?.username || '');
     setCreateTaskOpen(true);
     fetchStyleInfoOptions('');
     fetchInternalUnitOptions();
+    fetchTenantUsers();
   };
 
   const updateCreateOrderLine = (index: number, field: keyof CuttingCreateOrderLine, value: string | number | null) => {
@@ -426,6 +460,8 @@ export function useCuttingCreateTask({ message, navigate, fetchTasks }: UseCutti
         remarks: String(createRemarks || '').trim() || undefined,
         urgencyLevel: createUrgencyLevel,
         productCategory: normalizeCategoryQuery(createCategory) || undefined,
+        merchandiser: String(createMerchandiser || '').trim() || undefined,
+        orderPlacer: String(createOrderPlacer || '').trim() || undefined,
       });
       if (res.code === 200) {
         message.success('新建裁剪任务成功');
@@ -467,6 +503,9 @@ export function useCuttingCreateTask({ message, navigate, fetchTasks }: UseCutti
     createRemarks, setCreateRemarks,
     createUrgencyLevel, setCreateUrgencyLevel,
     createCategory, setCreateCategory,
+    createMerchandiser, setCreateMerchandiser,
+    createOrderPlacer, setCreateOrderPlacer,
+    tenantUsers,
     categoryOptions: CATEGORY_CODE_OPTIONS,
     selectedFactoryStat,
     addProcessNode, addProcessNodeToStage, removeProcessNode, updateProcessNode,
