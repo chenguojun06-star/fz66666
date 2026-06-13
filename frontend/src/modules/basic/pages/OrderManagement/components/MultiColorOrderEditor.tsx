@@ -1,14 +1,36 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Button, Empty, InputNumber, Select, Space, Tag } from 'antd';
+import api from '@/utils/api';
 import type { OrderLine } from '../types';
 
 interface MultiColorOrderEditorProps {
+  styleId: string | number | null;
   availableColors: string[];
   availableSizes: string[];
   orderLines: OrderLine[];
   totalQuantity: number;
   isMobile: boolean;
   onChange: (lines: OrderLine[]) => void;
+}
+
+interface FullAvailabilityResponse {
+  code: number;
+  data: {
+    matrix?: Record<string, Record<string, Record<string, number>>>;
+    summary?: {
+      totalInProduction?: number;
+      totalStock?: number;
+      totalPendingSales?: number;
+    };
+    colors?: string[];
+    sizes?: string[];
+  };
+}
+
+interface AvailabilityInfo {
+  inProduction: number;
+  stock: number;
+  pendingSales: number;
 }
 
 const normalizeKey = (value: unknown) => String(value || '').trim().toLowerCase();
@@ -60,6 +82,7 @@ const buildLinesFromSelection = (colors: string[], sizes: string[], previousLine
 };
 
 const MultiColorOrderEditor: React.FC<MultiColorOrderEditorProps> = ({
+  styleId,
   availableColors,
   availableSizes,
   orderLines,
@@ -70,6 +93,62 @@ const MultiColorOrderEditor: React.FC<MultiColorOrderEditorProps> = ({
   const [selectedColors, setSelectedColors] = useState<string[]>([]);
   const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
   const [quickFillQty, setQuickFillQty] = useState<number>(1);
+  const [availabilityMatrix, setAvailabilityMatrix] = useState<Record<string, Record<string, AvailabilityInfo>>>({});
+  const [summary, setSummary] = useState<{ inProduction: number; stock: number; pendingSales: number } | null>(null);
+  const [availabilityLoading, setAvailabilityLoading] = useState(false);
+
+  // 查询综合可用性（在途+库存+欠数）
+  useEffect(() => {
+    if (!styleId) {
+      setAvailabilityMatrix({});
+      setSummary(null);
+      return;
+    }
+    let cancelled = false;
+    setAvailabilityLoading(true);
+    api.get<FullAvailabilityResponse>(`/order-management/full-availability`, {
+      params: { styleId: String(styleId) },
+    }).then((res) => {
+      if (cancelled) return;
+      if (res.code === 200 && res.data) {
+        // 对 matrix 做 key 归一化（颜色/尺码大小写、空格差异）
+        const normalized: Record<string, Record<string, AvailabilityInfo>> = {};
+        const rawMatrix = res.data.matrix || {};
+        Object.entries(rawMatrix).forEach(([color, sizes]) => {
+          const ck = normalizeKey(color);
+          normalized[ck] = normalized[ck] || {};
+          Object.entries(sizes).forEach(([size, info]) => {
+            const sk = normalizeKey(size);
+            normalized[ck][sk] = normalized[ck][sk] || { inProduction: 0, stock: 0, pendingSales: 0 };
+            const rawInfo = info as Record<string, number>;
+            normalized[ck][sk].inProduction += rawInfo.inProduction || 0;
+            normalized[ck][sk].stock += rawInfo.stock || 0;
+            normalized[ck][sk].pendingSales += rawInfo.pendingSales || 0;
+          });
+        });
+        setAvailabilityMatrix(normalized);
+        const s = res.data.summary || {};
+        setSummary({
+          inProduction: s.totalInProduction || 0,
+          stock: s.totalStock || 0,
+          pendingSales: s.totalPendingSales || 0,
+        });
+      }
+    }).catch(() => {
+      if (cancelled) return;
+      setAvailabilityMatrix({});
+      setSummary(null);
+    }).finally(() => {
+      if (!cancelled) setAvailabilityLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, [styleId]);
+
+  const getAvailability = (color: string, size: string): AvailabilityInfo => {
+    const byColor = availabilityMatrix[normalizeKey(color)];
+    if (!byColor) return { inProduction: 0, stock: 0, pendingSales: 0 };
+    return byColor[normalizeKey(size)] || { inProduction: 0, stock: 0, pendingSales: 0 };
+  };
   const optionSignature = useMemo(
     () => `${availableColors.map((item) => normalizeKey(item)).join('|')}::${availableSizes.map((item) => normalizeKey(item)).join('|')}`,
     [availableColors, availableSizes],
@@ -198,6 +277,22 @@ const MultiColorOrderEditor: React.FC<MultiColorOrderEditorProps> = ({
         <Button type="primary" ghost onClick={() => applyQuickFill(quickFillQty)}>全部铺量</Button>
       </Space>
 
+      {(summary && (summary.inProduction > 0 || summary.stock > 0 || summary.pendingSales > 0)) || availabilityLoading ? (
+        <div style={{ marginBottom: 10, padding: '8px 12px', borderRadius: 6, background: summary && (summary.inProduction > 0 || summary.pendingSales > 0) ? '#fff7e6' : 'var(--color-bg-container)', border: `1px solid ${summary && (summary.inProduction > 0 || summary.pendingSales > 0) ? '#ffd591' : 'var(--color-border-light)'}`, color: '#d46b08' }}>
+          {availabilityLoading ? (
+            <span>正在查询该款式的在途、库存、销售欠数...</span>
+          ) : summary ? (
+            <span>
+              ⚠️ 该款式当前：
+              {summary.inProduction > 0 && <strong style={{ fontSize: 15 }}>在途 {summary.inProduction}</strong>}
+              {summary.stock > 0 && <strong style={{ fontSize: 15, marginLeft: 8 }}>库存 {summary.stock}</strong>}
+              {summary.pendingSales > 0 && <strong style={{ fontSize: 15, marginLeft: 8, color: '#cf1322' }}>欠数 {summary.pendingSales}</strong>}
+              ，请合理安排本次下单数量
+            </span>
+          ) : null}
+        </div>
+      ) : null}
+
       {!selectedColors.length || !selectedSizes.length ? (
         <div style={{ border: '1px dashed var(--color-border-antd)', borderRadius: 8, padding: '24px 12px', background: 'var(--color-bg-container)' }}>
           <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="先选颜色和码数" />
@@ -220,16 +315,27 @@ const MultiColorOrderEditor: React.FC<MultiColorOrderEditorProps> = ({
                   <td style={{ padding: '6px 6px', borderBottom: '1px solid #f5f5f5', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.color}</td>
                   {selectedSizes.map((size) => {
                     const matched = orderLines.find((line) => buildComboKey(line.color, line.size) === buildComboKey(row.color, size));
+                    const avail = getAvailability(row.color, size);
+                    const hasInfo = avail.inProduction > 0 || avail.stock > 0 || avail.pendingSales > 0;
                     return (
                       <td key={`${row.key}-${size}`} style={{ padding: 2, borderBottom: '1px solid #f5f5f5' }}>
-                        <InputNumber
-                          min={0}
-                          value={matched?.quantity || 0}
-                          style={{ width: '100%' }}
-                          controls={false}
-                         
-                          onChange={(value) => updateMatrixQty(row.color, size, Number(value) || 0)}
-                        />
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                          <InputNumber
+                            min={0}
+                            value={matched?.quantity || 0}
+                            style={{ width: '100%' }}
+                            controls={false}
+                           
+                            onChange={(value) => updateMatrixQty(row.color, size, Number(value) || 0)}
+                          />
+                          {hasInfo ? (
+                            <div style={{ fontSize: 11, textAlign: 'center', lineHeight: 1.4, display: 'flex', gap: 4, justifyContent: 'center' }}>
+                              {avail.inProduction > 0 && <span style={{ color: '#d46b08' }}>在途{avail.inProduction}</span>}
+                              {avail.stock > 0 && <span style={{ color: '#52c41a' }}>库存{avail.stock}</span>}
+                              {avail.pendingSales > 0 && <span style={{ color: '#cf1322' }}>欠{avail.pendingSales}</span>}
+                            </div>
+                          ) : null}
+                        </div>
                       </td>
                     );
                   })}

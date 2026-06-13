@@ -254,6 +254,7 @@ const OrderCreateModal: React.FC<Props> = (p) => {
             <div style={{ marginBottom: 12 }}>
               <div style={{ marginBottom: 8 }}><span style={{ fontWeight: 600 }}> 下单数量</span></div>
               <MultiColorOrderEditor
+                styleId={selectedStyle?.id ?? null}
                 availableColors={selectableColors}
                 availableSizes={selectableSizes}
                 orderLines={orderLines}

@@ -1,6 +1,7 @@
 package com.fashion.supplychain.warehouse.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fashion.supplychain.production.entity.ProductWarehousing;
@@ -9,6 +10,8 @@ import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.mapper.ProductWarehousingMapper;
 import com.fashion.supplychain.production.service.ProductOutstockService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
+import com.fashion.supplychain.integration.ecommerce.entity.EcommerceOrder;
+import com.fashion.supplychain.integration.ecommerce.service.EcommerceOrderService;
 import com.fashion.supplychain.style.entity.ProductSku;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.service.ProductSkuService;
@@ -51,6 +54,9 @@ public class FinishedInventoryOrchestrator {
     @Autowired(required = false)
     private com.fashion.supplychain.intelligence.orchestration.WarehouseIntelligenceOrchestrator warehouseIntelligenceOrchestrator;
 
+    @Autowired(required = false)
+    private EcommerceOrderService ecommerceOrderService;
+
     /**
      * 分页查询成品库存
      */
@@ -88,6 +94,10 @@ public class FinishedInventoryOrchestrator {
         Map<String, ProductOutstock> latestOutstockByStyleNo = new HashMap<>();
         Map<String, Integer> totalInboundQtyMap = new HashMap<>();
         Map<String, List<ProductSku>> styleSkuMap = new HashMap<>();
+        // 在途生产数量缓存: key = styleId-color-size (normalized)
+        Map<String, Integer> inProductionQtyMap = new HashMap<>();
+        // 电商订单欠数缓存: key = styleNo-color-size (normalized)
+        Map<String, Integer> pendingSalesQtyMap = new HashMap<>();
     }
 
     private IPage<ProductSku> querySkuPage(int page, int pageSize, String styleNo) {
@@ -137,9 +147,71 @@ public class FinishedInventoryOrchestrator {
         batchLoadProductionOrders(ctx);
         batchLoadOutstockRecords(ctx, styleIds, styleNos);
         computeTotalInboundQty(ctx, styleIds);
+        Long tid = UserContext.tenantId();
+        batchLoadInProductionQty(ctx, styleIds, tid);
+        batchLoadPendingSalesQty(ctx, styleNos, tid);
         ctx.styleSkuMap = skuPageResult.getRecords().stream()
                 .collect(Collectors.groupingBy(ProductSku::getStyleNo));
         return ctx;
+    }
+
+    private void batchLoadInProductionQty(InventoryLookupContext ctx, List<Long> styleIds, Long tenantId) {
+        if (styleIds.isEmpty()) return;
+        Set<String> inProgressStatuses = new HashSet<>();
+        inProgressStatuses.add("pending");
+        inProgressStatuses.add("production");
+        inProgressStatuses.add("delayed");
+        inProgressStatuses.add("paused");
+        inProgressStatuses.add("returned");
+        try {
+            List<ProductionOrder> orders = productionOrderService.list(new QueryWrapper<ProductionOrder>()
+                    .in("style_id", styleIds.stream().map(String::valueOf).collect(Collectors.toList()))
+                    .in("status", inProgressStatuses)
+                    .eq("delete_flag", 0)
+                    .eq("tenant_id", tenantId)
+                    .isNotNull("color")
+                    .isNotNull("size"));
+            for (ProductionOrder order : orders) {
+                String color = order.getColor() == null ? "" : order.getColor().trim().toLowerCase();
+                String size = order.getSize() == null ? "" : order.getSize().trim().toLowerCase();
+                if (color.isEmpty() || size.isEmpty()) continue;
+                String styleIdStr = order.getStyleId() == null ? "" : String.valueOf(order.getStyleId());
+                String key = styleIdStr + "-" + color + "-" + size;
+                Integer orderQty = order.getOrderQuantity();
+                Integer completedQty = order.getCompletedQuantity();
+                int remaining = (orderQty == null ? 0 : orderQty) - (completedQty == null ? 0 : completedQty);
+                if (remaining <= 0) continue;
+                ctx.inProductionQtyMap.merge(key, remaining, Integer::sum);
+            }
+        } catch (Exception e) {
+            log.warn("[FinishedInventory] 在途生产数量查询异常: {}", e.getMessage());
+        }
+    }
+
+    private void batchLoadPendingSalesQty(InventoryLookupContext ctx, List<String> styleNos, Long tenantId) {
+        if (styleNos.isEmpty() || ecommerceOrderService == null) return;
+        try {
+            List<EcommerceOrder> pendingOrders = ecommerceOrderService.list(new LambdaQueryWrapper<EcommerceOrder>()
+                    .eq(EcommerceOrder::getTenantId, tenantId)
+                    .eq(EcommerceOrder::getStatus, 1) // 待发货
+                    .isNull(EcommerceOrder::getProductionOrderId)
+                    .in(EcommerceOrder::getSkuCode, styleNos) // skuCode 包含 styleNo
+                    .isNotNull(EcommerceOrder::getSkuCode));
+            for (EcommerceOrder order : pendingOrders) {
+                String skuCode = order.getSkuCode();
+                if (skuCode == null || !skuCode.contains("-")) continue;
+                String[] parts = skuCode.split("-");
+                if (parts.length < 3) continue;
+                String styleNo = parts[0].trim().toLowerCase();
+                String color = parts[parts.length - 2].trim().toLowerCase();
+                String size = parts[parts.length - 1].trim().toLowerCase();
+                String key = styleNo + "-" + color + "-" + size;
+                int qty = order.getQuantity() != null ? order.getQuantity() : 1;
+                ctx.pendingSalesQtyMap.merge(key, qty, Integer::sum);
+            }
+        } catch (Exception e) {
+            log.warn("[FinishedInventory] 电商订单欠数查询异常: {}", e.getMessage());
+        }
     }
 
     private void batchLoadStyleInfoAndCovers(InventoryLookupContext ctx, List<Long> styleIds) {
@@ -417,6 +489,19 @@ public class FinishedInventoryOrchestrator {
                     .filter(StringUtils::hasText).distinct().collect(Collectors.toList()));
             dto.setSizes(styleSKUs.stream().map(ProductSku::getSize)
                     .filter(StringUtils::hasText).distinct().collect(Collectors.toList()));
+        }
+        // 填充在途生产数量和电商欠数
+        String colorNorm = dto.getColor() == null ? "" : dto.getColor().trim().toLowerCase();
+        String sizeNorm = dto.getSize() == null ? "" : dto.getSize().trim().toLowerCase();
+        String dtoStyleIdStr = dto.getStyleId() == null ? "" : dto.getStyleId();
+        String styleNoNorm = dto.getStyleNo() == null ? "" : dto.getStyleNo().trim().toLowerCase();
+        if (!colorNorm.isEmpty() && !sizeNorm.isEmpty()) {
+            String inProdKey = dtoStyleIdStr + "-" + colorNorm + "-" + sizeNorm;
+            Integer inProdQty = ctx.inProductionQtyMap.get(inProdKey);
+            dto.setInProductionQty(inProdQty != null ? inProdQty : 0);
+            String pendingKey = styleNoNorm + "-" + colorNorm + "-" + sizeNorm;
+            Integer pendingQty = ctx.pendingSalesQtyMap.get(pendingKey);
+            dto.setPendingSalesQty(pendingQty != null ? pendingQty : 0);
         }
         return dto;
     }

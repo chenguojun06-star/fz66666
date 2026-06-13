@@ -8,9 +8,11 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.security.access.prepost.PreAuthorize;
 
@@ -53,6 +55,36 @@ public class OrderManagementController {
     } catch (Exception e) {
       log.error("推送到下单管理失败: styleId={}", styleId, e);
       return Result.fail("推送失败：" + e.getMessage());
+    }
+  }
+
+  /**
+   * 查询指定款式的在途生产数量（按颜色x尺码分组）
+   * 用于下单时提示用户哪些码数已有在途生产，避免重复下单
+   */
+  @GetMapping("/in-production-quantities")
+  public Result<?> getInProductionQuantities(@RequestParam("styleId") String styleId) {
+    try {
+      Map<String, Object> data = orderManagementOrchestrator.getStyleInProductionQuantities(styleId);
+      return Result.success(data);
+    } catch (Exception e) {
+      log.error("查询在途生产数量失败: styleId={}", styleId, e);
+      return Result.fail("查询失败：" + e.getMessage());
+    }
+  }
+
+  /**
+   * 综合查询：在途生产 + 库存 + 销售欠数（按颜色x尺码分组）
+   * 用于下单时全面展示款式状态，避免超量或漏订
+   */
+  @GetMapping("/full-availability")
+  public Result<?> getFullAvailability(@RequestParam("styleId") String styleId) {
+    try {
+      Map<String, Object> data = orderManagementOrchestrator.getStyleFullAvailability(styleId);
+      return Result.success(data);
+    } catch (Exception e) {
+      log.error("综合查询失败: styleId={}", styleId, e);
+      return Result.fail("查询失败：" + e.getMessage());
     }
   }
 

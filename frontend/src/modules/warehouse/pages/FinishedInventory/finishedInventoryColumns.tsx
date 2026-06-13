@@ -22,6 +22,8 @@ export interface SKUDetail {
   priceAdjustmentReason?: string;
   outboundQty?: number;
   selected?: boolean;
+  inProductionQty?: number;
+  pendingSalesQty?: number;
 }
 
 export interface FinishedInventory {
@@ -57,6 +59,8 @@ export interface FinishedInventory {
   salesPrice?: number;
   colors?: string[];
   sizes?: string[];
+  inProductionQty?: number;
+  pendingSalesQty?: number;
 }
 
 export function getMainColumns(handlers: {
@@ -315,6 +319,28 @@ export function getSkuColumns(handlers: {
       render: (qty: number) => (
         <span style={{ color: 'var(--color-success)', fontWeight: 600 }}>{qty}</span>
       ),
+    },
+    {
+      title: '在途生产',
+      dataIndex: 'inProductionQty',
+      key: 'inProductionQty',
+      width: 100,
+      align: 'center',
+      render: (qty: number) => {
+        if (!qty || qty <= 0) return <span style={{ color: 'var(--neutral-text-disabled)' }}>-</span>;
+        return <span style={{ color: '#d46b08', fontWeight: 600 }}>{qty}</span>;
+      },
+    },
+    {
+      title: '销售欠数',
+      dataIndex: 'pendingSalesQty',
+      key: 'pendingSalesQty',
+      width: 100,
+      align: 'center',
+      render: (qty: number) => {
+        if (!qty || qty <= 0) return <span style={{ color: 'var(--neutral-text-disabled)' }}>-</span>;
+        return <span style={{ color: '#cf1322', fontWeight: 600 }}>{qty}</span>;
+      },
     },
     {
       title: '锁定库存',

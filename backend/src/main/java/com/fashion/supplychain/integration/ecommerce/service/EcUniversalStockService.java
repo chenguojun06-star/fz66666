@@ -1,14 +1,17 @@
 package com.fashion.supplychain.integration.ecommerce.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fashion.supplychain.integration.ecommerce.entity.EcommerceOrder;
 import com.fashion.supplychain.integration.ecommerce.entity.EcUniversalStock;
 import com.fashion.supplychain.integration.ecommerce.mapper.EcUniversalStockMapper;
 import com.fashion.supplychain.production.entity.ProductOutstock;
 import com.fashion.supplychain.production.entity.ProductWarehousing;
+import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.service.ProductOutstockService;
 import com.fashion.supplychain.production.service.ProductWarehousingService;
+import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.style.entity.ProductSku;
 import com.fashion.supplychain.style.service.ProductSkuService;
 import lombok.extern.slf4j.Slf4j;
@@ -16,7 +19,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Slf4j
 @Service
@@ -30,6 +35,9 @@ public class EcUniversalStockService extends ServiceImpl<EcUniversalStockMapper,
 
     @Autowired
     private EcommerceOrderService ecommerceOrderService;
+
+    @Autowired(required = false)
+    private ProductionOrderService productionOrderService;
 
     @Autowired
     private ProductSkuService productSkuService;
@@ -87,16 +95,56 @@ public class EcUniversalStockService extends ServiceImpl<EcUniversalStockMapper,
         int totalIn = hasAnyWarehouseData ? sumWarehoused(tenantId, safeStyleId, skuCode, null) : 0;
         int totalOut = hasAnyWarehouseData ? sumOutstocked(tenantId, safeStyleId, skuCode, null) : 0;
         int pending = sumPendingShip(tenantId, skuCode);
+        int onWayProd = calculateOnWayProduction(tenantId, safeStyleId, sku);
         int buffer = 5;
         total.setTotalWarehoused(totalIn);
         total.setTotalOutstock(totalOut);
         total.setPendingOrders(pending);
+        total.setOnWayProduction(onWayProd);
         total.setAvailableStock(Math.max(0, totalIn - totalOut - pending - buffer));
         total.setLastSyncTime(LocalDateTime.now());
         updateById(total);
 
-        log.info("[EcUniversalStock] 重新计算库存: tenantId={}, skuId={}, skuCode={}, 可售={}",
-                tenantId, skuId, skuCode, total.getAvailableStock());
+        log.info("[EcUniversalStock] 重新计算库存: tenantId={}, skuId={}, skuCode={}, 可售={}, 在途生产={}",
+                tenantId, skuId, skuCode, total.getAvailableStock(), onWayProd);
+    }
+
+    private int calculateOnWayProduction(Long tenantId, Long styleId, ProductSku sku) {
+        if (productionOrderService == null || styleId == null) return 0;
+        Set<String> inProgressStatuses = new HashSet<>();
+        inProgressStatuses.add("pending");
+        inProgressStatuses.add("production");
+        inProgressStatuses.add("delayed");
+        inProgressStatuses.add("paused");
+        inProgressStatuses.add("returned");
+        try {
+            List<ProductionOrder> orders = productionOrderService.list(new QueryWrapper<ProductionOrder>()
+                    .eq("style_id", String.valueOf(styleId))
+                    .in("status", inProgressStatuses)
+                    .eq("delete_flag", 0)
+                    .eq("tenant_id", tenantId));
+            int total = 0;
+            String skuColor = sku != null ? sku.getColor() : null;
+            String skuSize = sku != null ? sku.getSize() : null;
+            for (ProductionOrder order : orders) {
+                String orderColor = order.getColor() == null ? "" : order.getColor().trim().toLowerCase();
+                String orderSize = order.getSize() == null ? "" : order.getSize().trim().toLowerCase();
+                // 如果 SKU 有颜色/尺码，只匹配同色同码；否则汇总全部
+                if (skuColor != null && skuSize != null) {
+                    String normSkuColor = skuColor.trim().toLowerCase();
+                    String normSkuSize = skuSize.trim().toLowerCase();
+                    if (!orderColor.equals(normSkuColor) || !orderSize.equals(normSkuSize)) continue;
+                }
+                Integer orderQty = order.getOrderQuantity();
+                Integer completedQty = order.getCompletedQuantity();
+                int remaining = (orderQty == null ? 0 : orderQty) - (completedQty == null ? 0 : completedQty);
+                if (remaining > 0) total += remaining;
+            }
+            return total;
+        } catch (Exception e) {
+            log.warn("[EcUniversalStock] 在途生产计算异常: styleId={}, {}", styleId, e.getMessage());
+            return 0;
+        }
     }
 
     private List<String> listWarehousesForStyle(Long tenantId, Long styleId, String skuCode) {

@@ -153,4 +153,14 @@ public class FinishedInventoryDTO {
      * 销售价（来源：t_product_sku.sales_price）
      */
     private java.math.BigDecimal salesPrice;
+
+    /**
+     * 在途生产数量（同款同色同码的生产订单中未完成数量）
+     */
+    private Integer inProductionQty;
+
+    /**
+     * 电商销售欠数（待发货订单中未关联生产的数量）
+     */
+    private Integer pendingSalesQty;
 }
