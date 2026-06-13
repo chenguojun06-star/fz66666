@@ -572,6 +572,48 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
               </div>
             </div>
           )}
+          {/* 码数明细 IIFE — 移至审核上方，作为独立板块 */}
+          {options.basicInfo && sizeDetails && sizeDetails.length > 0 && (() => {
+            const colors = [...new Set(sizeDetails.map(d => d.color))];
+            const sizes = [...new Set(sizeDetails.map(d => d.size))];
+            const dataMap: Record<string, Record<string, number>> = {};
+            sizeDetails.forEach(d => { if (!dataMap[d.size]) dataMap[d.size] = {}; dataMap[d.size][d.color] = (dataMap[d.size][d.color] || 0) + d.quantity; });
+            const colorTotals: Record<string, number> = {};
+            colors.forEach(c => { colorTotals[c] = sizeDetails.filter(d => d.color === c).reduce((sum, d) => sum + d.quantity, 0); });
+            const grandTotal = sizeDetails.reduce((sum, d) => sum + d.quantity, 0);
+            return (
+              <div className="print-section" style={{ padding: 16, border: '1px solid var(--color-border-antd)', background: '#fff', borderRadius: 8, breakInside: 'avoid', marginBottom: 12 }}>
+                <div style={{ fontWeight: 600, color: '#1f2937', marginBottom: 8, fontSize: 12, paddingBottom: 6, borderBottom: '1px solid #e8e8e8' }}>下单明细</div>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                  <thead>
+                    <tr style={{ background: '#f5f5f5' }}>
+                      <th style={{ border: '1px solid #000', padding: '4px 8px', textAlign: 'left', width: 60 }}>颜色</th>
+                      {colors.map(color => <th key={color} style={{ border: '1px solid #000', padding: '4px 8px', textAlign: 'center' }}>{color}</th>)}
+                      <th style={{ border: '1px solid #000', padding: '4px 8px', textAlign: 'center', width: 80 }}>合计</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td style={{ border: '1px solid #000', padding: '4px 8px', fontWeight: 600 }}>尺码</td>
+                      {colors.map(color => <td key={color} style={{ border: '1px solid #000', padding: '4px 8px', textAlign: 'center' }}>{sizes.join(' / ')}</td>)}
+                      <td style={{ border: '1px solid #000', padding: '4px 8px', textAlign: 'center' }}>-</td>
+                    </tr>
+                    <tr>
+                      <td style={{ border: '1px solid #000', padding: '4px 8px', fontWeight: 600 }}>数量</td>
+                      {colors.map(color => <td key={color} style={{ border: '1px solid #000', padding: '4px 8px', textAlign: 'center' }}>{sizes.map(size => dataMap[size]?.[color] || 0).join(' / ')}</td>)}
+                      <td style={{ border: '1px solid #000', padding: '4px 8px', textAlign: 'center', fontWeight: 600 }}>{grandTotal}</td>
+                    </tr>
+                    <tr style={{ background: '#f5f5f5' }}>
+                      <td style={{ border: '1px solid #000', padding: '4px 8px', fontWeight: 600 }}>小计</td>
+                      {colors.map(color => <td key={color} style={{ border: '1px solid #000', padding: '4px 8px', textAlign: 'center', fontWeight: 600 }}>{colorTotals[color]}</td>)}
+                      <td style={{ border: '1px solid #000', padding: '4px 8px', textAlign: 'center', fontWeight: 700 }}>{grandTotal}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            );
+          })()}
+
           {/* 样衣审核 */}
           {options.sampleReview && (() => {
             const sampleReviewStatus = String((data.productionSheet as any)?.sampleReviewStatus || '').trim().toUpperCase();
@@ -619,45 +661,6 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
                   <tr>
                     <td style={{ border: '1px solid #000', padding: '4px 8px', background: '#f5f5f5', fontWeight: 500, width: 100 }}>生产要求</td>
                     <td style={{ border: '1px solid #000', padding: '4px 8px', whiteSpace: 'pre-wrap', minHeight: 40 }}>{description || '-'}</td>
-                  </tr>
-                </tbody>
-              </table>
-            );
-          })()}
-
-          {/* 码数明细 IIFE */}
-          {options.basicInfo && sizeDetails && sizeDetails.length > 0 && (() => {
-            const colors = [...new Set(sizeDetails.map(d => d.color))];
-            const sizes = [...new Set(sizeDetails.map(d => d.size))];
-            const dataMap: Record<string, Record<string, number>> = {};
-            sizeDetails.forEach(d => { if (!dataMap[d.size]) dataMap[d.size] = {}; dataMap[d.size][d.color] = (dataMap[d.size][d.color] || 0) + d.quantity; });
-            const colorTotals: Record<string, number> = {};
-            colors.forEach(c => { colorTotals[c] = sizeDetails.filter(d => d.color === c).reduce((sum, d) => sum + d.quantity, 0); });
-            const grandTotal = sizeDetails.reduce((sum, d) => sum + d.quantity, 0);
-            return (
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, marginBottom: 12 }}>
-                <thead>
-                  <tr style={{ background: '#f5f5f5' }}>
-                    <th style={{ border: '1px solid #000', padding: '4px 8px', textAlign: 'left', width: 60 }}>颜色</th>
-                    {colors.map(color => <th key={color} style={{ border: '1px solid #000', padding: '4px 8px', textAlign: 'center' }}>{color}</th>)}
-                    <th style={{ border: '1px solid #000', padding: '4px 8px', textAlign: 'center', width: 80 }}>合计</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td style={{ border: '1px solid #000', padding: '4px 8px', fontWeight: 600 }}>尺码</td>
-                    {colors.map(color => <td key={color} style={{ border: '1px solid #000', padding: '4px 8px', textAlign: 'center' }}>{sizes.join(' / ')}</td>)}
-                    <td style={{ border: '1px solid #000', padding: '4px 8px', textAlign: 'center' }}>-</td>
-                  </tr>
-                  <tr>
-                    <td style={{ border: '1px solid #000', padding: '4px 8px', fontWeight: 600 }}>数量</td>
-                    {colors.map(color => <td key={color} style={{ border: '1px solid #000', padding: '4px 8px', textAlign: 'center' }}>{sizes.map(size => dataMap[size]?.[color] || 0).join(' / ')}</td>)}
-                    <td style={{ border: '1px solid #000', padding: '4px 8px', textAlign: 'center', fontWeight: 600 }}>{grandTotal}</td>
-                  </tr>
-                  <tr style={{ background: '#f5f5f5' }}>
-                    <td style={{ border: '1px solid #000', padding: '4px 8px', fontWeight: 600 }}>小计</td>
-                    {colors.map(color => <td key={color} style={{ border: '1px solid #000', padding: '4px 8px', textAlign: 'center', fontWeight: 600 }}>{colorTotals[color]}</td>)}
-                    <td style={{ border: '1px solid #000', padding: '4px 8px', textAlign: 'center', fontWeight: 700 }}>{grandTotal}</td>
                   </tr>
                 </tbody>
               </table>
