@@ -300,4 +300,22 @@ public class VisualAIOrchestrator {
             log.info("[VisualAI] parseStyleFields 耗时: {}ms", System.currentTimeMillis() - startTime);
         }
     }
+
+    /**
+     * 发票/收据/采购单据 OCR 结构化解析：返回金额、日期、发票号、开票单位、费用类型、税率等。
+     */
+    public VisionAnalysisService.ReceiptParseResult parseReceipt(String imageUrl) {
+        long startTime = System.currentTimeMillis();
+        try {
+            return visionAnalysisService.parseReceipt(imageUrl);
+        } catch (Exception e) {
+            log.warn("[VisualAI] parseReceipt 异常: {}", e.getMessage(), e);
+            VisionAnalysisService.ReceiptParseResult r = new VisionAnalysisService.ReceiptParseResult();
+            r.setAvailable(false);
+            r.setErrorMessage("识别异常：" + e.getMessage());
+            return r;
+        } finally {
+            log.info("[VisualAI] parseReceipt 耗时: {}ms", System.currentTimeMillis() - startTime);
+        }
+    }
 }

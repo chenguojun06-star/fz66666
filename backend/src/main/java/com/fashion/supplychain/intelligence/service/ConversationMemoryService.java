@@ -41,6 +41,7 @@ public class ConversationMemoryService {
 
     private static final String CONVERSATION_PREFIX = "ai:conv:";
     private static final String SUMMARY_PREFIX = "ai:conv:summary:";
+    private static final String COMPRESS_LOCK_PREFIX = "ai:conv:lock:compress:";
 
     /** 实体提取正则模式 — 与 LongTermMemoryOrchestrator 保持一致 */
     private static final Pattern ORDER_PATTERN = Pattern.compile("PO\\d{6,}");
@@ -124,15 +125,42 @@ public class ConversationMemoryService {
             stringRedisTemplate.opsForList().rightPush(convKey, assistantJson);
             stringRedisTemplate.expire(convKey, Duration.ofHours(ttlHours));
 
-            long turnCount = stringRedisTemplate.opsForList().size(convKey) / 2;
+            Long sizeAfter = stringRedisTemplate.opsForList().size(convKey);
+            long turnCount = (sizeAfter == null) ? 0L : sizeAfter / 2L;
             if (turnCount > compressThreshold) {
-                compressOldTurns(tenantId, sessionId);
+                compressOldTurnsSafe(tenantId, sessionId);
             }
 
             log.debug("[ConvMemory] 保存对话轮次: tenant={} session={} totalTurns={}",
                     tenantId, sessionId, turnCount);
         } catch (Exception e) {
             log.debug("[ConvMemory] 保存对话轮次失败（不影响主流程）: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * 带轻量级分布式锁的压缩入口：防止并发 saveTurn 时重复/错误压缩。
+     * SETNX + 短 TTL 作为锁，失败则静默跳过（下一轮 saveTurn 再触发）。
+     */
+    private void compressOldTurnsSafe(Long tenantId, String sessionId) {
+        String lockKey = COMPRESS_LOCK_PREFIX + tenantId + ":" + sessionId;
+        Boolean acquired = stringRedisTemplate.opsForValue()
+                .setIfAbsent(lockKey, "1", Duration.ofSeconds(5));
+        if (acquired == null || !acquired) {
+            log.debug("[ConvMemory] 并发压缩跳过: tenant={} session={}", tenantId, sessionId);
+            return;
+        }
+        try {
+            // 二次检查：其他线程可能已经压缩过
+            String convKey = buildConversationKey(tenantId, sessionId);
+            Long currentSize = stringRedisTemplate.opsForList().size(convKey);
+            long currentTurns = (currentSize == null) ? 0L : currentSize / 2L;
+            if (currentTurns <= compressThreshold) {
+                return;
+            }
+            compressOldTurns(tenantId, sessionId);
+        } finally {
+            try { stringRedisTemplate.delete(lockKey); } catch (Exception ignored) {}
         }
     }
 

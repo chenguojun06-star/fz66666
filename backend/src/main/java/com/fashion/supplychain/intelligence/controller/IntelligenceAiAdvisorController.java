@@ -290,6 +290,16 @@ public class IntelligenceAiAdvisorController {
         return Result.success(visualAIOrchestrator.parseStyleFields(imageUrl));
     }
 
+    @PostMapping("/visual/receipt-parse")
+    @DataTruth(source = DataTruth.Source.AI_DERIVED, description = "发票/收据/采购单据 OCR 识别结果由视觉AI生成")
+    public Result<VisionAnalysisService.ReceiptParseResult> receiptParse(@RequestBody Map<String, Object> body) {
+        String imageUrl = (String) body.get("imageUrl");
+        if (imageUrl == null || imageUrl.isBlank()) {
+            return Result.fail("imageUrl 不能为空");
+        }
+        return Result.success(visualAIOrchestrator.parseReceipt(imageUrl));
+    }
+
     @PostMapping("/visual/style-search")
     @DataTruth(source = DataTruth.Source.AI_DERIVED, description = "以图搜款由多模态向量搜索生成")
     public Result<Map<String, Object>> styleSearchByImage(@RequestBody Map<String, Object> body) {

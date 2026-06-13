@@ -84,7 +84,7 @@ public class ExpenseDocOrchestrator {
         }
 
         // 3. 解析AI结果
-        Map<String, String> parsed = parseAiResult(aiRaw);
+        Map<String, Object> parsed = parseAiResult(aiRaw);
 
         // 4. 保存凭证记录到DB
         ExpenseReimbursementDoc doc = new ExpenseReimbursementDoc();
@@ -94,21 +94,23 @@ public class ExpenseDocOrchestrator {
         doc.setUploaderId(userId);
         doc.setUploaderName(username);
 
-        String amountStr = parsed.get("amount");
-        if (amountStr != null) {
-            try { doc.setRecognizedAmount(new BigDecimal(amountStr)); }
-            catch (NumberFormatException e) {
-                log.warn("[ExpenseDoc] 金额解析失败，amountStr={}: {}", amountStr, e.getMessage());
+        Object amountObj = parsed.get("amount");
+        if (amountObj != null) {
+            try {
+                String amountStr = amountObj.toString().replaceAll("[^0-9.]", "");
+                if (!amountStr.isEmpty()) doc.setRecognizedAmount(new BigDecimal(amountStr));
+            } catch (NumberFormatException e) {
+                log.warn("[ExpenseDoc] 金额解析失败，amountStr={}: {}", amountObj, e.getMessage());
             }
         }
-        doc.setRecognizedDate(parsed.get("date"));
-        doc.setRecognizedTitle(parsed.get("title"));
-        doc.setRecognizedType(parsed.get("expenseType"));
+        doc.setRecognizedDate((String) parsed.get("date"));
+        doc.setRecognizedTitle((String) parsed.get("title"));
+        doc.setRecognizedType((String) parsed.get("expenseType"));
 
         docService.save(doc);
         log.info("[ExpenseDocRecognize] 凭证已保存 docId={}, tenantId={}", doc.getId(), tenantId);
 
-        // 5. 返回给前端
+        // 5. 返回给前端（含新增字段：supplierName, invoiceNo, taxRate, taxAmount, items）
         Map<String, Object> result = new HashMap<>();
         result.put("docId", doc.getId());
         result.put("imageUrl", imageUrl);
@@ -117,6 +119,11 @@ public class ExpenseDocOrchestrator {
         result.put("recognizedDate", doc.getRecognizedDate());
         result.put("recognizedTitle", doc.getRecognizedTitle());
         result.put("recognizedType", doc.getRecognizedType());
+        result.put("recognizedSupplierName", parsed.get("supplier"));
+        result.put("recognizedInvoiceNo", parsed.get("invoiceNo"));
+        result.put("recognizedTaxRate", parsed.get("taxRate"));
+        result.put("recognizedTaxAmount", parsed.get("taxAmount"));
+        result.put("recognizedItems", parsed.get("items"));
         return result;
     }
 
@@ -149,15 +156,19 @@ public class ExpenseDocOrchestrator {
                "当用户提供图片URL时，请识别图片中的发票/收据/报销凭证内容，提取关键报销信息。\n" +
                "必须以纯JSON格式返回（不要有任何其他说明文字），格式如下：\n" +
                "{\n" +
-               "  \"amount\": 金额数字（仅数字，如123.50，识别不到填null）,\n" +
-               "  \"date\": \"费用发生日期，格式YYYY-MM-DD，识别不到填null\",\n" +
+               "  \"amount\": 金额数字（含税金额，仅数字，如123.50，识别不到填null）,\n" +
+               "  \"date\": \"费用发生日期或开票日期，格式YYYY-MM-DD，识别不到填null\",\n" +
                "  \"title\": \"费用简要描述，如：餐饮费、出租车费、机票、酒店住宿等，识别不到填null\",\n" +
-               "  \"expenseType\": \"推断费用类型：meal（餐饮）/ taxi（打车）/ travel（差旅交通）/" +
+               "  \"expenseType\": \"推断费用类型：taxi（打车）/ travel（差旅交通）/" +
                "accommodation（住宿）/ office（办公用品）/ entertainment（招待）/ material_advance（材料垫付）/" +
                "other（其他），无法判断填null\",\n" +
-               "  \"supplier\": \"商户/供应商名称，识别不到填null\"\n" +
+               "  \"supplier\": \"商户/开票单位名称，识别不到填null\",\n" +
+               "  \"invoiceNo\": \"发票号码/单据编号，识别不到填null\",\n" +
+               "  \"taxRate\": \"税率，如13%、6%、3%等，识别不到填null\",\n" +
+               "  \"taxAmount\": 税额数字（仅数字，如15.60，识别不到填null）,\n" +
+               "  \"items\": [\"物品或服务明细项目名称，可填多个，识别不到填空数组\"]\n" +
                "}\n" +
-               "只返回JSON，不要有其他说明文字。如果图片无法识别，返回所有字段均为null的JSON。";
+               "只返回JSON，不要有其他说明文字。如果图片无法识别，返回所有字段均为null或空数组的JSON。";
     }
 
     private String buildUserMessage(String imageUrl) {
@@ -172,8 +183,8 @@ public class ExpenseDocOrchestrator {
     // AI 结果解析
     // ─────────────────────────────────────────────────────────────────
 
-    private Map<String, String> parseAiResult(String raw) {
-        Map<String, String> result = new HashMap<>();
+    private Map<String, Object> parseAiResult(String raw) {
+        Map<String, Object> result = new HashMap<>();
         if (raw == null || raw.isBlank()) return result;
 
         try {
@@ -183,6 +194,10 @@ public class ExpenseDocOrchestrator {
             result.put("title", extractStrField(json, "title"));
             result.put("expenseType", extractStrField(json, "expenseType"));
             result.put("supplier", extractStrField(json, "supplier"));
+            result.put("invoiceNo", extractStrField(json, "invoiceNo"));
+            result.put("taxRate", extractStrField(json, "taxRate"));
+            result.put("taxAmount", extractField(json, "taxAmount"));
+            result.put("items", extractListField(json, "items"));
         } catch (Exception e) {
             log.warn("[ExpenseDocRecognize] 解析AI结果失败: {}", e.getMessage());
         }
@@ -213,11 +228,27 @@ public class ExpenseDocOrchestrator {
 
     /** 提取数值字段（支持直接数字或带引号） */
     private String extractField(String json, String key) {
-        // 先尝试不带引号的数字
         Pattern p = Pattern.compile("\"" + key + "\"\\s*:\\s*([0-9]+(?:\\.[0-9]+)?)");
         Matcher m = p.matcher(json);
         if (m.find()) return m.group(1);
-        // 再尝试带引号
         return extractStrField(json, key);
+    }
+
+    /** 提取数组字段（简单数组，如 ["a","b"]） */
+    private java.util.List<String> extractListField(String json, String key) {
+        java.util.List<String> result = new java.util.ArrayList<>();
+        Pattern p = Pattern.compile("\"" + key + "\"\\s*:\\s*\\[([^\\]]*)\\]");
+        Matcher m = p.matcher(json);
+        if (m.find()) {
+            String content = m.group(1).trim();
+            if (!content.isEmpty()) {
+                Pattern itemP = Pattern.compile("\"([^\"]+?)\"");
+                Matcher itemM = itemP.matcher(content);
+                while (itemM.find()) {
+                    result.add(itemM.group(1).trim());
+                }
+            }
+        }
+        return result;
     }
 }

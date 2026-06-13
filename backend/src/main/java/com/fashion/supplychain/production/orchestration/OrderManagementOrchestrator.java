@@ -200,10 +200,12 @@ public class OrderManagementOrchestrator {
         inProgressStatuses.add("returned");
 
         try {
+            Long tid = UserContext.tenantId();
             QueryWrapper<ProductionOrder> query = new QueryWrapper<>();
             query.eq("style_id", styleId);
             query.in("status", inProgressStatuses);
             query.eq("delete_flag", 0);
+            query.eq("tenant_id", tid);
             query.isNotNull("color");
             query.isNotNull("size");
             List<ProductionOrder> orders = productionOrderService.list(query);
@@ -237,8 +239,8 @@ public class OrderManagementOrchestrator {
             result.put("sizes", new ArrayList<>(sizes));
             result.put("totalInProduction", total);
             result.put("orderCount", orders.size());
-            log.info("[OrderManagement] 在途数量查询: styleId={}, 匹配订单数={}, 在途总数={}",
-                    styleId, orders.size(), total);
+            log.info("[OrderManagement] 在途数量查询: styleId={}, tenantId={}, 匹配订单数={}, 在途总数={}",
+                    styleId, tid, orders.size(), total);
         } catch (Exception e) {
             log.warn("[OrderManagement] 在途数量查询异常: styleId={}, {}", styleId, e.getMessage());
             result.put("matrix", new HashMap<String, Map<String, Integer>>());

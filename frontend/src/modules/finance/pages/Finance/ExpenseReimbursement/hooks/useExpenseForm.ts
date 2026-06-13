@@ -57,9 +57,29 @@ export const useExpenseForm = (onRefresh: () => void, reportSmartError: (title: 
         if (d.recognizedDate && !form.getFieldValue('expenseDate')) fields.expenseDate = dayjs(d.recognizedDate);
         if (d.recognizedTitle && !form.getFieldValue('title')) fields.title = d.recognizedTitle;
         if (d.recognizedType && !form.getFieldValue('expenseType')) fields.expenseType = d.recognizedType;
+        if ((d as any).recognizedSupplierName && !form.getFieldValue('supplierName')) {
+          fields.supplierName = (d as any).recognizedSupplierName;
+        }
+        if ((d as any).recognizedInvoiceNo && !form.getFieldValue('orderNo') && !form.getFieldValue('description')) {
+          fields.orderNo = (d as any).recognizedInvoiceNo;
+        }
+        // 税率/税额信息合并到 description 中
+        const extraBits: string[] = [];
+        if ((d as any).recognizedTaxRate) extraBits.push(`税率：${(d as any).recognizedTaxRate}`);
+        if ((d as any).recognizedTaxAmount) extraBits.push(`税额：¥${(d as any).recognizedTaxAmount}`);
+        if ((d as any).recognizedItems && Array.isArray((d as any).recognizedItems)) {
+          extraBits.push(`明细：${(d as any).recognizedItems.slice(0, 3).join('、')}`);
+        }
+        if (extraBits.length > 0) {
+          const existingDesc = form.getFieldValue('description') || '';
+          fields.description = existingDesc
+            ? `${existingDesc}\n${extraBits.join('；')}`
+            : extraBits.join('；');
+        }
         if (Object.keys(fields).length > 0) {
           form.setFieldsValue(fields);
-          message.success('AI已自动识别凭证信息，请确认后提交');
+          const filled = Object.keys(fields).filter(k => fields[k] !== undefined).length;
+          message.success(`AI已自动识别${filled}项信息，请确认后提交`);
         } else {
           message.success('凭证上传成功');
         }

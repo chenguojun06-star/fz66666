@@ -450,11 +450,7 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
                       allFields.push({ label: '客户', value: (data.productionSheet as any)?.customer || empty });
                       allFields.push({ label: '下单人员', value: orderCreatorName || (extraInfo as any)?.下单人员 || empty });
                       allFields.push({ label: '跟单员', value: (data.productionSheet as any)?.orderType || empty });
-                      if (sizeColorMatrix && sizeColorMatrix.sizes.length > 0) {
-                        allFields.push({ label: '颜色尺码', value: '（见下方矩阵）' });
-                      } else {
-                        allFields.push({ label: '订单数量', value: quantity !== undefined ? String(quantity) : empty });
-                      }
+                      // 注意："下单数量 已移到基础信息表格下方单独显示（大货模式专属）
                     }
 
                     // 纸样/加工信息
@@ -532,48 +528,47 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
                 </div>
               </div>
 
-              {/* 码数/颜色/数量配置表（如果有） */}
-              {sizeColorMatrix && sizeColorMatrix.sizes.length > 0 && (
-                <div style={{ marginTop: 12, padding: 16, border: '1px solid var(--color-border-antd)', background: '#fff', borderRadius: 8, breakInside: 'avoid' }}>
-                  <div style={{ fontWeight: 600, color: '#1f2937', marginBottom: 8, fontSize: 12, paddingBottom: 6, borderBottom: '1px solid #e8e8e8' }}>码数/颜色/数量配置</div>
-                  <div style={{ overflowX: 'auto' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, breakInside: 'avoid' }}>
-                      <thead>
-                        <tr>
-                          <th style={{ border: '1px solid var(--color-border-antd)', padding: '8px 12px', background: 'var(--color-bg-container)', fontWeight: 600, whiteSpace: 'nowrap', textAlign: 'left', width: 100 }}>颜色/尺码</th>
-                          {sizeColorMatrix.sizes.map(s => <th key={s} style={{ border: '1px solid var(--color-border-antd)', padding: '8px 12px', background: 'var(--color-bg-container)', fontWeight: 600, textAlign: 'center', whiteSpace: 'nowrap' }}>{s}</th>)}
-                          <th style={{ border: '1px solid var(--color-border-antd)', padding: '8px 12px', background: 'var(--color-bg-container)', fontWeight: 600, textAlign: 'center', whiteSpace: 'nowrap' }}>合计</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {sizeColorMatrix.matrixRows.map((row, i) => {
-                          const rowTotal = row.quantities.reduce((s, q) => s + q, 0);
-                          return (
-                            <tr key={row.color || i}>
-                              <td style={{ border: '1px solid var(--color-border-antd)', padding: '6px 12px', fontWeight: 500 }}>{row.color || '-'}</td>
-                              {sizeColorMatrix.sizes.map((_, ci) => <td key={ci} style={{ border: '1px solid var(--color-border-antd)', padding: '6px 12px', textAlign: 'center' }}>{row.quantities[ci] || 0}</td>)}
-                              <td style={{ border: '1px solid var(--color-border-antd)', padding: '6px 12px', textAlign: 'center', fontWeight: 600 }}>{rowTotal}</td>
-                            </tr>
-                          );
-                        })}
-                        <tr>
-                          <td style={{ border: '1px solid var(--color-border-antd)', padding: '6px 12px', background: 'rgba(37,99,235,0.04)', fontWeight: 700 }}>合计</td>
-                          {sizeColorMatrix.sizes.map((_, ci) => {
-                            const colTotal = sizeColorMatrix.matrixRows.reduce((s, r) => s + (r.quantities[ci] || 0), 0);
-                            return <td key={ci} style={{ border: '1px solid var(--color-border-antd)', padding: '6px 12px', textAlign: 'center', background: 'rgba(37,99,235,0.04)', fontWeight: 700 }}>{colTotal}</td>;
-                          })}
-                          <td style={{ border: '1px solid var(--color-border-antd)', padding: '6px 12px', textAlign: 'center', background: 'rgba(37,99,235,0.08)', fontWeight: 700, color: '#1890ff' }}>
-                            {sizeColorMatrix.matrixRows.reduce((s, r) => s + r.quantities.reduce((a, b) => a + b, 0), 0)}
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-
               <div style={{ textAlign: 'right', marginTop: 8, color: '#999', fontSize: 12 }}>
                 打印时间：{formatDateTime(new Date())}
+              </div>
+            </div>
+          )}
+          {/* 下单明细（码数/颜色/数量配置表） */}
+          {options.basicInfo && sizeColorMatrix && sizeColorMatrix.sizes.length > 0 && (
+            <div className="print-section" style={{ padding: 16, border: '1px solid var(--color-border-antd)', background: '#fff', borderRadius: 8, breakInside: 'avoid' }}>
+              <div style={{ fontWeight: 600, color: '#1f2937', marginBottom: 8, fontSize: 12, paddingBottom: 6, borderBottom: '1px solid #e8e8e8' }}>下单明细</div>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, breakInside: 'avoid' }}>
+                  <thead>
+                    <tr>
+                      <th style={{ border: '1px solid var(--color-border-antd)', padding: '8px 12px', background: 'var(--color-bg-container)', fontWeight: 600, whiteSpace: 'nowrap', textAlign: 'left', width: 100 }}>颜色/尺码</th>
+                      {sizeColorMatrix.sizes.map(s => <th key={s} style={{ border: '1px solid var(--color-border-antd)', padding: '8px 12px', background: 'var(--color-bg-container)', fontWeight: 600, textAlign: 'center', whiteSpace: 'nowrap' }}>{s}</th>)}
+                      <th style={{ border: '1px solid var(--color-border-antd)', padding: '8px 12px', background: 'var(--color-bg-container)', fontWeight: 600, textAlign: 'center', whiteSpace: 'nowrap' }}>合计</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sizeColorMatrix.matrixRows.map((row, i) => {
+                      const rowTotal = row.quantities.reduce((s, q) => s + q, 0);
+                      return (
+                        <tr key={row.color || i}>
+                          <td style={{ border: '1px solid var(--color-border-antd)', padding: '6px 12px', fontWeight: 500 }}>{row.color || '-'}</td>
+                          {sizeColorMatrix.sizes.map((_, ci) => <td key={ci} style={{ border: '1px solid var(--color-border-antd)', padding: '6px 12px', textAlign: 'center' }}>{row.quantities[ci] || 0}</td>)}
+                          <td style={{ border: '1px solid var(--color-border-antd)', padding: '6px 12px', textAlign: 'center', fontWeight: 600 }}>{rowTotal}</td>
+                        </tr>
+                      );
+                    })}
+                    <tr>
+                      <td style={{ border: '1px solid var(--color-border-antd)', padding: '6px 12px', background: 'rgba(37,99,235,0.04)', fontWeight: 700 }}>合计</td>
+                      {sizeColorMatrix.sizes.map((_, ci) => {
+                        const colTotal = sizeColorMatrix.matrixRows.reduce((s, r) => s + (r.quantities[ci] || 0), 0);
+                        return <td key={ci} style={{ border: '1px solid var(--color-border-antd)', padding: '6px 12px', textAlign: 'center', background: 'rgba(37,99,235,0.04)', fontWeight: 700 }}>{colTotal}</td>;
+                      })}
+                      <td style={{ border: '1px solid var(--color-border-antd)', padding: '6px 12px', textAlign: 'center', background: 'rgba(37,99,235,0.08)', fontWeight: 700, color: '#1890ff' }}>
+                        {sizeColorMatrix.matrixRows.reduce((s, r) => s + r.quantities.reduce((a, b) => a + b, 0), 0)}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
             </div>
           )}

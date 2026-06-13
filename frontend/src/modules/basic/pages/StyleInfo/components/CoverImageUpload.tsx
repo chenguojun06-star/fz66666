@@ -16,6 +16,9 @@ interface CoverImageUploadProps {
   refreshTrigger?: number;
   onCoverChange?: (url: string | null) => void;
   onStyleParseResult?: (result: StyleFieldParseResult) => void;  // 智能识别结果
+  onAutoParseStart?: () => void;           // 自动识别开始回调
+  onAutoParseResult?: (result: StyleFieldParseResult) => void; // 自动识别结果回传
+  autoParseEnabled?: boolean;               // 是否启用自动识别（默认 true）
 }
 
 /**
@@ -32,6 +35,9 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
   refreshTrigger = 0,
   onCoverChange,
   onStyleParseResult,
+  onAutoParseStart,
+  onAutoParseResult,
+  autoParseEnabled = true,
 }) => {
   const { message } = App.useApp();
   const [images, setImages] = useState<any[]>([]);
@@ -43,8 +49,20 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
   // 以图搜款
   const [searching, setSearching] = useState(false);
   const [searchResult, setSearchResult] = useState<any>(null);
+  const [searchExpanded, setSearchExpanded] = useState(false);
   // 智能识别
   const [parsing, setParsing] = useState(false);
+  const [autoParseAttempted, setAutoParseAttempted] = useState(false);
+  const [autoParseError, setAutoParseError] = useState<string | null>(null);
+
+  // 新建模式使用本地预览，否则使用服务器图片
+  // 服务器无附件时：若有 coverUrl（来自选品中心下板），合成一条虚拟条目作为细节图1兜底展示
+  const displayImages = isNewMode
+    ? localPreviewUrls.map((url, i) => ({ fileUrl: url, id: `local-${i}`, isLocal: true, localIndex: i }))
+    : images.length > 0
+      ? images
+      : (coverUrl ? [{ fileUrl: coverUrl, id: 'cover-fallback', isCoverFallback: true as const }] : []);
+  const currentImage = displayImages[currentIndex];
 
   // 生成本地预览URL
   useEffect(() => {
@@ -94,7 +112,42 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
     }
   }, [fetchImages, isNewMode, refreshTrigger]);
 
+  // 自动识别（编辑模式下首次加载时自动触发一次）
+  useEffect(() => {
+    if (isNewMode) return;
+    if (!styleId) return;
+    if (!enabled) return;
+    if (!onStyleParseResult) return;
+    if (!autoParseEnabled) return;
+    if (autoParseAttempted) return;
+    const currentFileUrl = currentImage?.fileUrl;
+    if (!currentFileUrl) return;
+    if (currentFileUrl.startsWith('blob:') || currentFileUrl.startsWith('data:')) return;
 
+    const imgUrl = getFullAuthedFileUrl(currentFileUrl);
+    if (!imgUrl || imgUrl.startsWith('blob:') || imgUrl.startsWith('data:')) return;
+
+    setAutoParseAttempted(true);
+    onAutoParseStart?.();
+    setParsing(true);
+    setAutoParseError(null);
+    (async () => {
+      try {
+        const res = await styleParseFromImage(imgUrl);
+        if (res?.available) {
+          onStyleParseResult?.(res);
+          onAutoParseResult?.(res);
+        } else {
+          setAutoParseError(res?.errorMessage || '识别失败，请人工填写');
+        }
+      } catch {
+        setAutoParseError('智能识别服务暂不可用');
+      } finally {
+        setParsing(false);
+      }
+    })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [styleId, enabled, isNewMode, currentImage, autoParseAttempted, autoParseEnabled, onStyleParseResult]);
 
   // 删除本地预览图片
   const handleRemoveLocalFile = (index: number) => {
@@ -178,14 +231,6 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
     return { label: '参考图', color: 'var(--color-text-tertiary)' };
   };
 
-  // 新建模式使用本地预览，否则使用服务器图片
-  // 服务器无附件时：若有 coverUrl（来自选品中心下板），合成一条虚拟条目作为细节图1兜底显示
-  const displayImages = isNewMode
-    ? localPreviewUrls.map((url, i) => ({ fileUrl: url, id: `local-${i}`, isLocal: true, localIndex: i }))
-    : images.length > 0
-      ? images
-      : (coverUrl ? [{ fileUrl: coverUrl, id: 'cover-fallback', isCoverFallback: true as const }] : []);
-  const currentImage = displayImages[currentIndex];
   const currentAssetMeta = resolveAssetMeta(currentImage, currentIndex);
   return (
     <div style={{ marginBottom: 12 }}>
@@ -219,72 +264,95 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
             {currentImage && !currentImage.isLocal && (
               <>
                 <div
-                  onClick={async () => {
-                    if (parsing || searching) return;
-                    const imgUrl = getFullAuthedFileUrl(currentImage.fileUrl);
-                    if (!imgUrl || imgUrl.startsWith('blob:') || imgUrl.startsWith('data:')) {
-                      message.warning('当前图片不支持智能识别（需要公网可访问的图片）');
-                      return;
-                    }
-                    setParsing(true);
-                    try {
-                      const res = await styleParseFromImage(imgUrl);
-                      if (res?.available) {
-                        message.success(`识别完成（置信度 ${res.overallConfidence}%）`);
-                        onStyleParseResult?.(res);
-                      } else {
-                        message.warning(res?.errorMessage || '识别失败，请人工填写');
-                      }
-                    } catch {
-                      message.warning('智能识别服务暂不可用');
-                    } finally {
-                      setParsing(false);
-                    }
-                  }}
                   style={{
-                    position: 'absolute', right: 10, top: 10, padding: '3px 8px', borderRadius: 999,
-                    background: parsing ? 'rgba(0,0,0,0.3)' : 'rgba(234,88,12,0.85)', color: '#fff',
-                    fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4,
-                    transition: 'background 0.15s',
+                    position: 'absolute', right: 10, top: 10,
+                    display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end',
                   }}
-                  title="智能识别图片中的款式特征并自动填充表单"
                 >
-                  <BulbOutlined style={{ fontSize: 11 }} />
-                  {parsing ? '识别中...' : '智能识别'}
+                  {!autoParseAttempted && parsing && (
+                    <div
+                      style={{
+                        padding: '3px 8px', borderRadius: 999,
+                        background: 'rgba(234,88,12,0.95)', color: '#fff',
+                        fontSize: 12, fontWeight: 600,
+                        display: 'flex', alignItems: 'center', gap: 4,
+                      }}
+                    >
+                      <BulbOutlined style={{ fontSize: 11 }} />
+                      正在自动识别...
+                    </div>
+                  )}
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <div
+                      onClick={async () => {
+                        if (parsing || searching) return;
+                        const imgUrl = getFullAuthedFileUrl(currentImage.fileUrl);
+                        if (!imgUrl || imgUrl.startsWith('blob:') || imgUrl.startsWith('data:')) {
+                          message.warning('当前图片不支持智能识别（需要公网可访问的图片）');
+                          return;
+                        }
+                        setParsing(true);
+                        try {
+                          const res = await styleParseFromImage(imgUrl);
+                          if (res?.available) {
+                            message.success(`识别完成（置信度 ${res.overallConfidence}%）`);
+                            onStyleParseResult?.(res);
+                          } else {
+                            message.warning(res?.errorMessage || '识别失败，请人工填写');
+                          }
+                        } catch {
+                          message.warning('智能识别服务暂不可用');
+                        } finally {
+                          setParsing(false);
+                        }
+                      }}
+                      style={{
+                        padding: '3px 8px', borderRadius: 999,
+                        background: parsing ? 'rgba(0,0,0,0.3)' : 'rgba(234,88,12,0.85)', color: '#fff',
+                        fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4,
+                        transition: 'background 0.15s',
+                      }}
+                      title="智能识别图片中的款式特征并自动填充表单"
+                    >
+                      <BulbOutlined style={{ fontSize: 11 }} />
+                      {parsing ? '识别中...' : '智能识别'}
+                    </div>
+                    <div
+                      onClick={async () => {
+                        if (searching) return;
+                        const imgUrl = getFullAuthedFileUrl(currentImage.fileUrl);
+                        if (!imgUrl || imgUrl.startsWith('blob:') || imgUrl.startsWith('data:')) {
+                          message.warning('当前图片不支持以图搜款（需要公网可访问的图片）');
+                          return;
+                        }
+                        setSearching(true);
+                        try {
+                          const res = await styleSearchByImage(imgUrl);
+                          if (res.success && res.matchCount > 0) {
+                            setSearchResult(res);
+                            setSearchExpanded(true);
+                          } else {
+                            message.info(res.success ? '未找到视觉相似的历史款式' : (res.error || '以图搜款服务暂不可用'));
+                          }
+                        } catch {
+                          message.warning('以图搜款服务暂不可用');
+                        } finally {
+                          setSearching(false);
+                        }
+                      }}
+                      style={{
+                        padding: '3px 8px', borderRadius: 999,
+                        background: searching ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.45)', color: '#fff',
+                        fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4,
+                        transition: 'background 0.15s',
+                      }}
+                      title="以图搜款：搜索视觉相似的历史款式"
+                    >
+                      <SearchOutlined style={{ fontSize: 11 }} />
+                      {searching ? '搜索中...' : '搜相似'}
+                    </div>
+                  </div>
                 </div>
-                <div
-                  onClick={async () => {
-                  if (searching) return;
-                  const imgUrl = getFullAuthedFileUrl(currentImage.fileUrl);
-                  if (!imgUrl || imgUrl.startsWith('blob:') || imgUrl.startsWith('data:')) {
-                    message.warning('当前图片不支持以图搜款（需要公网可访问的图片）');
-                    return;
-                  }
-                  setSearching(true);
-                  try {
-                    const res = await styleSearchByImage(imgUrl);
-                    if (res.success && res.matchCount > 0) {
-                      setSearchResult(res);
-                    } else {
-                      message.info(res.success ? '未找到视觉相似的历史款式' : (res.error || '以图搜款服务暂不可用'));
-                    }
-                  } catch {
-                    message.warning('以图搜款服务暂不可用');
-                  } finally {
-                    setSearching(false);
-                  }
-                }}
-                style={{
-                  position: 'absolute', right: 10, top: 10, padding: '3px 8px', borderRadius: 999,
-                  background: searching ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.45)', color: '#fff',
-                  fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4,
-                  transition: 'background 0.15s',
-                }}
-                title="以图搜款：搜索视觉相似的历史款式"
-              >
-                <SearchOutlined style={{ fontSize: 11 }} />
-                {searching ? '搜索中...' : '搜相似'}
-              </div>
               </>
             )}
           </div>
@@ -462,46 +530,93 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
         </div>
       )}
 
-      {/* 以图搜款结果弹窗 */}
-      <Modal
-        title="以图搜款结果"
-        open={!!searchResult}
-        onCancel={() => setSearchResult(null)}
-        footer={null}
-        width={480}
-      >
-        {searchResult && (
-          <div>
-            <div style={{ marginBottom: 12, color: 'var(--color-text-secondary)' }}>
-              找到 {searchResult.matchCount} 个视觉相似款式
+      {/* 以图搜款结果：可折叠卡片 */}
+      {searchResult && (
+        <div
+          style={{
+            width: '100%',
+            maxWidth: 400,
+            marginBottom: 10,
+            border: '1px solid var(--color-border-antd)',
+            borderRadius: 8,
+            background: 'var(--color-bg-container)',
+            overflow: 'hidden',
+          }}
+        >
+          <div
+            onClick={() => setSearchExpanded(!searchExpanded)}
+            style={{
+              padding: '10px 12px',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              cursor: 'pointer',
+              fontWeight: 600,
+              fontSize: 13,
+              userSelect: 'none',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <SearchOutlined style={{ color: 'var(--primary-color)' }} />
+              <span>相似款式推荐</span>
+              <span style={{ color: 'var(--color-text-tertiary)', fontWeight: 400, fontSize: 12 }}>
+                （{searchResult.matchCount} 个）
+              </span>
             </div>
-            {searchResult.matches?.map((m: any, i: number) => (
-              <div key={i} style={{
-                padding: '8px 12px', marginBottom: 8, borderRadius: 6,
-                background: 'var(--color-bg-container)', border: '1px solid var(--color-border-antd)',
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-              }}>
-                <div>
-                  <span style={{ fontWeight: 600, marginRight: 8 }}>{m.styleNo || '[无款号]'}</span>
-                  <span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>
-                    难度 {m.difficultyScore}/10（{m.difficultyLevel}）
+            <RightOutlined
+              style={{
+                color: 'var(--color-text-tertiary)',
+                fontSize: 10,
+                transform: searchExpanded ? 'rotate(90deg)' : 'rotate(0deg)',
+                transition: 'transform 0.2s',
+              }}
+            />
+          </div>
+          {searchExpanded && (
+            <div
+              style={{
+                padding: '4px 12px 12px 12px',
+                borderTop: '1px solid var(--color-border-antd)',
+                background: 'var(--color-bg-base)',
+              }}
+            >
+              {searchResult.matches?.map((m: any, i: number) => (
+                <div key={i} style={{
+                  padding: '8px 10px', marginBottom: 6, borderRadius: 6,
+                  background: 'var(--color-bg-container)', border: '1px solid var(--color-border-antd)',
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                }}>
+                  <div>
+                    <span style={{ fontWeight: 600, marginRight: 8 }}>{m.styleNo || '[无款号]'}</span>
+                    <span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>
+                      难度 {m.difficultyScore}/10（{m.difficultyLevel}）
+                    </span>
+                  </div>
+                  <span style={{
+                    padding: '2px 8px', borderRadius: 4, fontSize: 12, fontWeight: 600,
+                    background: parseInt(m.similarity) >= 72 ? 'var(--color-success-bg, #f6ffed)' : 'var(--color-bg-container)',
+                    color: parseInt(m.similarity) >= 72 ? 'var(--color-success, #52c41a)' : 'var(--color-text-secondary)',
+                  }}>
+                    {m.similarity}
                   </span>
                 </div>
-                <span style={{
-                  padding: '2px 8px', borderRadius: 4, fontSize: 12, fontWeight: 600,
-                  background: parseInt(m.similarity) >= 72 ? 'var(--color-success-bg, #f6ffed)' : 'var(--color-bg-container)',
-                  color: parseInt(m.similarity) >= 72 ? 'var(--color-success, #52c41a)' : 'var(--color-text-secondary)',
-                }}>
-                  相似度 {m.similarity}
-                </span>
+              ))}
+              <div style={{ fontSize: 12, color: 'var(--color-text-quaternary)', marginTop: 6 }}>
+                相似度≥72%为高相似，可重点关注
               </div>
-            ))}
-            <div style={{ fontSize: 12, color: 'var(--color-text-quaternary)', marginTop: 8 }}>
-              相似度≥72%为高相似，可重点关注
             </div>
-          </div>
-        )}
-      </Modal>
+          )}
+        </div>
+      )}
+
+      {/* 自动识别错误提示（静默展示，不打断用户） */}
+      {autoParseError && autoParseAttempted && !parsing && (
+        <div style={{
+          fontSize: 12, color: 'var(--color-text-tertiary)', marginBottom: 6, maxWidth: 400,
+        }}>
+          自动识别未成功：{autoParseError}（可手动点击"智能识别"重试）
+        </div>
+      )}
     </div>
   );
 };

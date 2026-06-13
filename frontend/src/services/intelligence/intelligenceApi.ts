@@ -845,6 +845,25 @@ export const intelligenceApi = {
     return (response as any)?.data ?? { available: false, errorMessage: '返回为空', colors: [], overallConfidence: 0 };
   },
 
+  /** 发票/收据/采购单据 OCR 识别：返回金额、开票日期、发票号、开票单位、费用类型、税率 */
+  receiptParse: async (imageUrl: string): Promise<{
+    imageUrl: string;
+    available: boolean;
+    errorMessage?: string;
+    confidence?: number;
+    amount?: number;
+    invoiceDate?: string;
+    invoiceNo?: string;
+    supplierName?: string;
+    expenseType?: string;
+    taxRate?: string;
+    taxAmount?: number;
+    items?: string[];
+  }> => {
+    const response = await api.post<ApiResult<any>>('/intelligence/visual/receipt-parse', { imageUrl });
+    return (response as any)?.data ?? { available: false, errorMessage: '返回为空' };
+  },
+
   // ── 巡检 ──
 
   getPatrolActionsByTarget: async (targetType: string, targetId: string, limit = 10): Promise<PatrolAction[]> => {

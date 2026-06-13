@@ -272,32 +272,12 @@ export function useAiChatStream(config: StreamConfig) {
           if (existing) return prev.map(m => m.id === aiMsgId ? { ...m, ...msgData } : m);
           return [...prev, { id: aiMsgId, role: 'ai' as const, ...msgData }];
         });
-
-        const syncErrMsg = (err as any)?.message || String(err);
-        const isSyncAuthError = syncErrMsg.includes('401') || syncErrMsg.includes('登录已过期') || syncErrMsg.includes('过期');
-        if (isSyncAuthError) {
-          setMessages(prev => {
-            const existing = prev.find(m => m.id === aiMsgId);
-            const errText = '登录已过期，请重新登录';
-            if (existing) return prev.map(m => m.id === aiMsgId ? { ...m, text: errText } : m);
-            return [...prev, { id: aiMsgId, role: 'ai' as const, text: errText }];
-          });
-          return;
-        }
-
-        await runRetryLoop();
-      } catch (syncErr) {
-        const syncErrMsg2 = (syncErr as any)?.message || String(syncErr);
-        const isSyncAuthError2 = syncErrMsg2.includes('401') || syncErrMsg2.includes('登录已过期') || syncErrMsg2.includes('过期');
-        if (isSyncAuthError2) {
-          setMessages(prev => {
-            const existing = prev.find(m => m.id === aiMsgId);
-            const errText = '登录已过期，请重新登录';
-            if (existing) return prev.map(m => m.id === aiMsgId ? { ...m, text: errText } : m);
-            return [...prev, { id: aiMsgId, role: 'ai' as const, text: errText }];
-          });
-          return;
-        }
+        finishTyping();
+        return;
+      } catch (_syncErr) {
+        // 同步回退也失败了，进入重试循环
+      }
+      try {
         await runRetryLoop();
       } finally {
         finishTyping();

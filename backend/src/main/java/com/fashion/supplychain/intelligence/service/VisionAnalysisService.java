@@ -286,12 +286,36 @@ public class VisionAnalysisService {
 
     private int extractInt(Map<String, Object> map, String key, int defaultValue) {
         Object val = map.get(key);
+        if (val == null) return defaultValue;
         if (val instanceof Number) {
-            return ((Number) val).intValue();
+            // 支持 Double/Float/Integer/Long/BigDecimal，统一安全取值，并钳制到 0-100
+            double d = ((Number) val).doubleValue();
+            if (Double.isNaN(d) || Double.isInfinite(d)) return defaultValue;
+            int v = (int) Math.round(d);
+            if (v < 0) return 0;
+            if (v > 100) return 100;
+            return v;
         } else if (val instanceof String) {
+            String s = ((String) val).trim();
+            if (s.isEmpty()) return defaultValue;
             try {
-                return Integer.parseInt(val.toString().replaceAll("[^0-9]", ""));
-            } catch (Exception e) {
+                // 支持 "98.5" / "98%" / "0.95" 等常见形式
+                double d;
+                if (s.endsWith("%")) {
+                    d = Double.parseDouble(s.substring(0, s.length() - 1).replaceAll("[^0-9.\\-]", ""));
+                } else if (s.contains(".")) {
+                    double parsed = Double.parseDouble(s.replaceAll("[^0-9.\\-]", ""));
+                    // 形如 "0.95" 视为比例值 -> *100；其他视作已在 0-100 区间
+                    d = (parsed > 0 && parsed <= 1 && !s.startsWith("1.")) ? parsed * 100.0 : parsed;
+                } else {
+                    d = Double.parseDouble(s.replaceAll("[^0-9\\-]", ""));
+                }
+                if (Double.isNaN(d) || Double.isInfinite(d)) return defaultValue;
+                int v = (int) Math.round(d);
+                if (v < 0) return 0;
+                if (v > 100) return 100;
+                return v;
+            } catch (NumberFormatException e) {
                 return defaultValue;
             }
         }
@@ -477,6 +501,125 @@ public class VisionAnalysisService {
         log.info("[VisionAnalysis] parseStyleFields done: imageUrl={}, colors={}, category={}, season={}, confidence={}",
                 imageUrl, r.getColors(), r.getCategory(), r.getSeason(), r.getOverallConfidence());
         return r;
+    }
+
+    /**
+     * 发票/收据/采购单据 OCR 结构化解析
+     * 返回：金额、开票日期、发票号、开票单位、费用类型、税率
+     */
+    public ReceiptParseResult parseReceipt(String imageUrl) {
+        ReceiptParseResult r = new ReceiptParseResult();
+        r.setImageUrl(imageUrl);
+        if (!isAvailable()) {
+            r.setAvailable(false);
+            r.setErrorMessage("视觉AI模型未启用，请联系管理员配置");
+            return r;
+        }
+
+        try {
+            VisionResult vision = analyzeDefect(imageUrl, "请识别这张单据/发票/收据上的关键信息。重点识别：金额、开票日期、发票号、开票单位、费用类型、税率。");
+            String raw = vision.getReport() != null ? vision.getReport() : "";
+
+            // 尝试从 raw 中提取 JSON 片段
+            String json = extractJsonFragment(raw);
+            if (json != null) {
+                Map<String, Object> map = MAPPER.readValue(json, Map.class);
+                r.setAmount(extractAmount(map, "amount", "amountWithTax", "total", "价税合计"));
+                r.setInvoiceDate(extractStringField(map, "date", "invoiceDate", "开票日期", "date"));
+                r.setInvoiceNo(extractStringField(map, "invoiceNo", "invoiceNumber", "发票号", "no"));
+                r.setSupplierName(extractStringField(map, "supplier", "seller", "开票单位", "company", "provider"));
+                r.setExpenseType(extractStringField(map, "expenseType", "type", "费用类型", "category"));
+                r.setTaxRate(extractStringField(map, "taxRate", "rate", "税率"));
+                r.setTaxAmount(extractAmount(map, "taxAmount", "tax", "税额"));
+                r.setItems(extractItems(map));
+            }
+
+            // 使用关键词兜底提取（如果 JSON 解析失败）
+            if (r.getAmount() == null || r.getAmount() <= 0) {
+                // 尝试关键词提取
+                java.util.regex.Pattern amountP = java.util.regex.Pattern.compile("(?:金额|合计|总计|￥|¥|RMB)\\s*[:：]?\\s*(\\d+(?:[.,]\\d+)?)");
+                java.util.regex.Matcher amountM = amountP.matcher(raw);
+                if (amountM.find()) {
+                    try { r.setAmount(Double.parseDouble(amountM.group(1).replace(",", ""))); } catch (Exception ignored) {}
+                }
+
+                java.util.regex.Pattern dateP = java.util.regex.Pattern.compile("(\\d{4})[年./\\-](\\d{1,2})[月./\\-](\\d{1,2})");
+                java.util.regex.Matcher dateM = dateP.matcher(raw);
+                if (dateM.find()) {
+                    r.setInvoiceDate(dateM.group(1) + "-" + String.format("%02d", Integer.parseInt(dateM.group(2))) + "-" + String.format("%02d", Integer.parseInt(dateM.group(3))));
+                }
+            }
+
+            r.setConfidence(vision.getConfidence() > 0 ? vision.getConfidence() : 70);
+            r.setAvailable(true);
+            log.info("[VisionAnalysis] parseReceipt done: imageUrl={}, amount={}, date={}, supplier={}, confidence={}",
+                    imageUrl, r.getAmount(), r.getInvoiceDate(), r.getSupplierName(), r.getConfidence());
+        } catch (Exception e) {
+            log.warn("[VisionAnalysis] parseReceipt failed: {}", e.getMessage());
+            r.setAvailable(false);
+            r.setErrorMessage("识别失败：" + e.getMessage());
+        }
+        return r;
+    }
+
+    @lombok.Data
+    public static class ReceiptParseResult {
+        private String imageUrl;
+        private boolean available = true;
+        private String errorMessage;
+        private Integer confidence = 0;
+        private Double amount;           // 金额
+        private String invoiceDate;      // 开票日期
+        private String invoiceNo;        // 发票号
+        private String supplierName;     // 开票单位
+        private String expenseType;      // 费用类型
+        private String taxRate;          // 税率
+        private Double taxAmount;        // 税额
+        private java.util.List<String> items; // 物品明细
+    }
+
+    // ---------- helpers ----------
+
+    private Double extractAmount(Map<String, Object> map, String... keys) {
+        for (String key : keys) {
+            Object v = map.get(key);
+            if (v != null) {
+                try {
+                    return Double.parseDouble(String.valueOf(v).replaceAll("[^0-9.]", ""));
+                } catch (Exception ignored) {}
+            }
+        }
+        return null;
+    }
+
+    private String extractStringField(Map<String, Object> map, String... keys) {
+        for (String key : keys) {
+            Object v = map.get(key);
+            if (v != null && !String.valueOf(v).isBlank()) {
+                return String.valueOf(v).trim();
+            }
+        }
+        return null;
+    }
+
+    private java.util.List<String> extractItems(Map<String, Object> map) {
+        Object itemsObj = map.get("items");
+        if (itemsObj instanceof java.util.List) {
+            java.util.List<String> result = new java.util.ArrayList<>();
+            for (Object item : (java.util.List<?>) itemsObj) {
+                if (item != null) result.add(String.valueOf(item));
+            }
+            return result.size() > 0 ? result : null;
+        }
+        return null;
+    }
+
+    private String extractJsonFragment(String raw) {
+        if (raw == null) return null;
+        int start = raw.indexOf('{');
+        int end = raw.lastIndexOf('}');
+        if (start >= 0 && end > start) return raw.substring(start, end + 1);
+        return null;
     }
 
     private String str(Object o, String def) {

@@ -137,6 +137,61 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
       _form.setFieldsValue(updates);
     }
 
+    // 颜色列表自动填充（仅当当前颜色表为空时）
+    if (result.colors && result.colors.length > 0 && !color1 && !color2 && !color3 && !color4 && !color5) {
+      const colorSetterFns = [setColor1, setColor2, setColor3, setColor4, setColor5];
+      result.colors.slice(0, 5).forEach((colorName: string, idx: number) => {
+        colorSetterFns[idx]?.(colorName);
+      });
+      // 同时更新颜色选项列表（让这些颜色出现在颜色选择器中）
+      const newColorOptions = result.colors.slice(0, 5).filter((c: string) =>
+        !commonColors.includes(c)
+      );
+      if (newColorOptions.length > 0) {
+        setCommonColors([...commonColors, ...newColorOptions]);
+      }
+    }
+
+    // 尺码推荐：根据品类推荐常用尺码（当尺码未配置时）
+    const defaultSizeMap: Record<string, string[]> = {
+      'T恤': ['S', 'M', 'L', 'XL', 'XXL'],
+      '衬衫': ['S', 'M', 'L', 'XL', 'XXL'],
+      '裤子': ['28', '30', '32', '34', '36'],
+      '连衣裙': ['S', 'M', 'L', 'XL'],
+      '外套': ['M', 'L', 'XL', 'XXL'],
+      '大衣': ['S', 'M', 'L', 'XL', 'XXL'],
+      '卫衣': ['S', 'M', 'L', 'XL', 'XXL'],
+      '毛衣': ['S', 'M', 'L', 'XL', 'XXL'],
+      '夹克': ['M', 'L', 'XL', 'XXL'],
+      '西装': ['S', 'M', 'L', 'XL'],
+    };
+
+    if (!size1 && !size2 && !size3 && !size4 && !size5 && result.category) {
+      const recommended = defaultSizeMap[result.category] || ['S', 'M', 'L', 'XL'];
+      const sizeSetterFns = [setSize1, setSize2, setSize3, setSize4, setSize5];
+      recommended.slice(0, 5).forEach((sizeVal: string, idx: number) => {
+        sizeSetterFns[idx]?.(sizeVal);
+      });
+      // 同步到尺码选项列表
+      const newSizeOptions = recommended.filter((s: string) => !commonSizes.includes(s));
+      if (newSizeOptions.length > 0) {
+        setCommonSizes([...commonSizes, ...newSizeOptions]);
+      }
+    }
+
+    // 备注字段：综合识别结果填充
+    if (!_form.getFieldValue('remark')) {
+      const remarkParts: string[] = [];
+      if (result.pattern) remarkParts.push(`图案:${result.pattern}`);
+      if (result.fabric) remarkParts.push(`面料:${result.fabric}`);
+      if (result.sleeveType) remarkParts.push(`袖型:${result.sleeveType}`);
+      if (result.neckline) remarkParts.push(`领型:${result.neckline}`);
+      if (result.version) remarkParts.push(`版型:${result.version}`);
+      if (remarkParts.length > 0) {
+        _form.setFieldsValue({ remark: remarkParts.join(' | ') });
+      }
+    }
+
     // 向上透传（由父组件决定是否填充更多字段）
     onStyleParseResult?.(result);
   };

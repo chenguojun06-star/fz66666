@@ -157,6 +157,36 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
     const factoryId = (user as any)?.factoryId;
     const factoryName = (user as any)?.factoryName;
 
+    // 页面上下文感知：提取当前页面信息并注入对话上下文
+    const path = location.pathname;
+    const pageContextParts: string[] = [];
+    const pageContextMap: Record<string, string> = {
+      '/production': '生产管理模块',
+      '/style-info': '款式样衣管理',
+      '/finance': '财务管理',
+      '/warehouse': '仓库管理',
+      '/system': '系统管理',
+      '/crm': '客户关系管理',
+      '/cockpit': '智能决策中心',
+      '/dashboard': '驾驶舱',
+    };
+    for (const prefix in pageContextMap) {
+      if (path.startsWith(prefix)) {
+        pageContextParts.push(pageContextMap[prefix]);
+        break;
+      }
+    }
+    // 提取 URL 查询参数中的重要ID（如 orderNo/styleId等）
+    const searchParams = new URLSearchParams(location.search);
+    for (const [k, v] of Array.from(searchParams.entries())) {
+      if (['orderNo', 'styleId', 'orderId', 'styleNo', 'order'].includes(k)) {
+        pageContextParts.push(`${k}:${v}`);
+      }
+    }
+    const pageContext = pageContextParts.length > 0
+      ? `[当前页面:${pageContextParts.join(' / ')}] `
+      : '';
+
     // 检测用户是否发送了图片URL，如果是则附加视觉提示
     const imageUrlPattern = /^https?:\/\/\S+\.(jpg|jpeg|png|gif|webp|bmp)(\?.*)?$/i;
     const isImageUrl = imageUrlPattern.test(text);
@@ -165,8 +195,8 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
       : '';
 
     const contextualText = factoryId
-      ? `[工厂ID:${factoryId} 工厂名:${factoryName || ''}] ${text}${visionHint}`
-      : `${text}${visionHint}`;
+      ? `${pageContext}[工厂ID:${factoryId} 工厂名:${factoryName || ''}] ${text}${visionHint}`
+      : `${pageContext}${text}${visionHint}`;
 
     setMessages(prev => [...prev, { id: `u-${Date.now()}`, role: 'user', text }]);
     if (!manualText) setInputValue('');
