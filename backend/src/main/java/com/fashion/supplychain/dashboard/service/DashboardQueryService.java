@@ -1,6 +1,7 @@
 package com.fashion.supplychain.dashboard.service;
 
 import com.fashion.supplychain.dashboard.dto.DelayedStageGroup;
+import com.fashion.supplychain.dashboard.dto.SampleStageStatsDto;
 import com.fashion.supplychain.production.entity.MaterialPurchase;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
@@ -119,4 +120,9 @@ public interface DashboardQueryService {
      * 获取样衣开发延期款号，按当前开发环节分组
      */
     List<DelayedStageGroup> listDelayedSampleStylesByStage();
+
+    /**
+     * 获取样衣开发各环节进行中款号统计（不限于延期，所有未完成款号）
+     */
+    List<SampleStageStatsDto> getSampleStageStats();
 }

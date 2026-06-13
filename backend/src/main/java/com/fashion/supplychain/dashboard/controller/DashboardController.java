@@ -115,4 +115,15 @@ public class DashboardController {
     public Result<?> delayedStageBreakdown() {
         return Result.success(dashboardOrchestrator.getDelayedStageBreakdown());
     }
+
+    /**
+     * 获取样衣开发各环节进行中款号统计
+     * - 每个环节的进行中款号数量和ID/编号列表
+     * - 环节：纸样开发、BOM配置、尺码表、工序配置、二次工艺、生产制单、样衣制作
+     */
+    @GetMapping("/sample-stage-stats")
+    @PreAuthorize("isAuthenticated()")
+    public Result<?> sampleStageStats() {
+        return Result.success(dashboardOrchestrator.getSampleStageStats());
+    }
 }

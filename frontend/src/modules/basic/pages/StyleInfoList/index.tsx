@@ -8,6 +8,7 @@ import SmallModal from '@/components/common/SmallModal';
 import StylePrintModal from '@/components/common/StylePrintModal';
 import PageStatCards from '@/components/common/PageStatCards';
 import { useDelayedStageBreakdown } from '@/modules/dashboard/components/DelayedStageBreakdown/useDelayedStageBreakdown';
+import { useSampleStageStats } from './hooks/useSampleStageStats';
 import api from '@/utils/api';
 import { StyleInfo } from '@/types/style';
 import { getStyleCardSizeText, getStyleCardColorText, getStyleCardQuantityText } from '@/utils/cardSizeQuantity';
@@ -67,6 +68,9 @@ const StyleInfoListPage: React.FC = () => {
 
   // 延期环节数据（内联到智能提示标签）
   const { stageHints: delayedHints } = useDelayedStageBreakdown({ forceTab: 'sample' });
+
+  // 各环节进行中款号统计（BOM/纸样/尺码/工序/制单/二次工艺）
+  const { stats: sampleStageStats } = useSampleStageStats();
 
   // 视图模式（持久化）
   const { viewMode, setViewMode } = useStyleViewMode();
@@ -454,6 +458,21 @@ const StyleInfoListPage: React.FC = () => {
                   active: smartFilter === 'warning',
                   onClick: () => handleSmartFilterClick('warning', warningStyles),
                 },
+                // 各环节进行中款号统计（可点击筛选到该环节的款号）
+                ...sampleStageStats.map(s => ({
+                  key: `stage-${s.stageName}`,
+                  count: s.count,
+                  tone: 'cyan' as const,
+                  label: s.stageName,
+                  hint: `点击查看${s.stageName}中的 ${s.count} 个款号`,
+                  active: focusStyleIds.size > 0 && s.styleIds.some(id => focusStyleIds.has(id)),
+                  onClick: () => {
+                    setFocusStyleIds(new Set(s.styleIds));
+                    setSmartFilter('all');
+                    setQueryParams(prev => ({ ...prev, page: 1 }));
+                  },
+                })),
+                // 延期环节（更细粒度的延期提示）
                 ...delayedHints.map(h => ({
                   key: h.key,
                   count: h.count,
@@ -462,7 +481,6 @@ const StyleInfoListPage: React.FC = () => {
                   hint: `点击查看${h.stageName}延期款式`,
                   active: focusStyleIds.size > 0 && h.items.some(item => focusStyleIds.has(String(item.id))),
                   onClick: () => {
-                    // 已在当前页面，直接设置筛选，不走 navigate
                     const ids = h.items.map(item => String(item.id));
                     setFocusStyleIds(new Set(ids));
                     setSmartFilter('all');

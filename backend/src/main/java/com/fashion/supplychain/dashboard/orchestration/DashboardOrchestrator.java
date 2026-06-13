@@ -10,6 +10,7 @@ import com.fashion.supplychain.dashboard.dto.DeliveryAlertResponse;
 import com.fashion.supplychain.dashboard.dto.OrderCuttingChartResponse;
 import com.fashion.supplychain.dashboard.dto.OverdueOrderDto;
 import com.fashion.supplychain.dashboard.dto.QualityStatsResponse;
+import com.fashion.supplychain.dashboard.dto.SampleStageStatsDto;
 import com.fashion.supplychain.dashboard.dto.ScanCountChartResponse;
 import com.fashion.supplychain.dashboard.dto.TopStatsResponse;
 import com.fashion.supplychain.production.dto.MaterialStockAlertDto;
@@ -507,5 +508,12 @@ public class DashboardOrchestrator {
         response.setSampleTotal(sampleGroups.stream().mapToInt(DelayedStageGroup::getCount).sum());
 
         return response;
+    }
+
+    /**
+     * 获取样衣开发各环节进行中款号统计
+     */
+    public List<SampleStageStatsDto> getSampleStageStats() {
+        return dashboardQueryService.getSampleStageStats();
     }
 }

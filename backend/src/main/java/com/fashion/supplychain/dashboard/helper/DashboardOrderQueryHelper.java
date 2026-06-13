@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fashion.supplychain.dashboard.dto.DelayedItemDto;
 import com.fashion.supplychain.dashboard.dto.DelayedStageGroup;
+import com.fashion.supplychain.dashboard.dto.SampleStageStatsDto;
 import com.fashion.supplychain.production.entity.MaterialPurchase;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.mapper.ProductionOrderMapper;
@@ -476,6 +477,58 @@ public class DashboardOrderQueryHelper {
             case "样衣制作": return style.getSampleStartTime();
             default: return null;
         }
+    }
+
+    /**
+     * 获取样衣开发各环节进行中款号统计（不限于延期，所有未完成款号）
+     */
+    public List<SampleStageStatsDto> getSampleStageStats() {
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        if (tenantId == null) return Collections.emptyList();
+
+        List<StyleInfo> styles = styleInfoService.lambdaQuery()
+                .eq(StyleInfo::getTenantId, tenantId)
+                .eq(StyleInfo::getStatus, "ENABLED")
+                .isNotNull(StyleInfo::getSampleStatus)
+                .ne(StyleInfo::getSampleStatus, "COMPLETED")
+                .select(StyleInfo::getId, StyleInfo::getStyleNo,
+                        StyleInfo::getPatternCompletedTime, StyleInfo::getBomCompletedTime,
+                        StyleInfo::getSizeCompletedTime, StyleInfo::getProcessCompletedTime,
+                        StyleInfo::getSecondaryCompletedTime, StyleInfo::getProductionCompletedTime)
+                .last("LIMIT 5000")
+                .list();
+
+        Map<String, List<StyleInfo>> stageMap = new LinkedHashMap<>();
+        for (String stage : SAMPLE_STAGES) {
+            stageMap.put(stage, new ArrayList<>());
+        }
+
+        for (StyleInfo style : styles) {
+            String currentStage = resolveSampleCurrentStage(style);
+            if (currentStage == null) continue;
+            if (!stageMap.containsKey(currentStage)) {
+                stageMap.put(currentStage, new ArrayList<>());
+            }
+            stageMap.get(currentStage).add(style);
+        }
+
+        List<SampleStageStatsDto> result = new ArrayList<>();
+        for (Map.Entry<String, List<StyleInfo>> entry : stageMap.entrySet()) {
+            List<StyleInfo> stageStyles = entry.getValue();
+            if (stageStyles.isEmpty()) continue;
+
+            SampleStageStatsDto dto = new SampleStageStatsDto();
+            dto.setStageName(entry.getKey());
+            dto.setCount(stageStyles.size());
+            dto.setStyleIds(stageStyles.stream()
+                    .map(StyleInfo::getId)
+                    .collect(java.util.stream.Collectors.toList()));
+            dto.setStyleNos(stageStyles.stream()
+                    .map(StyleInfo::getStyleNo)
+                    .collect(java.util.stream.Collectors.toList()));
+            result.add(dto);
+        }
+        return result;
     }
 
     /**

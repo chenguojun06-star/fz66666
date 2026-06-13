@@ -350,7 +350,7 @@ const ProductionList: React.FC = () => {
             <ExternalFactorySmartView
               data={sortedProductionList}
               loading={loading}
-              total={total}
+              total={smartQueueFilter !== 'all' || focusOrderIds.size > 0 ? sortedProductionList.length : total}
               currentPage={queryParams.page}
               pageSize={queryParams.pageSize}
               onPageChange={handlePageChange}
@@ -388,8 +388,8 @@ const ProductionList: React.FC = () => {
               pagination={{
                 current: queryParams.page,
                 pageSize: queryParams.pageSize,
-                total: total,
-                showTotal: (total) => `共 ${total} 条`,
+                total: smartQueueFilter !== 'all' || focusOrderIds.size > 0 ? sortedProductionList.length : total,
+                showTotal: (t) => `共 ${t} 条${smartQueueFilter !== 'all' || focusOrderIds.size > 0 ? '（已筛选）' : ''}`,
                 showSizeChanger: true,
                 pageSizeOptions: [...DEFAULT_PAGE_SIZE_OPTIONS],
                 onChange: handlePageChange,
@@ -496,9 +496,8 @@ const ProductionList: React.FC = () => {
             <StandardPagination
               current={queryParams.page}
               pageSize={queryParams.pageSize}
-              total={total}
+              total={smartQueueFilter !== 'all' || focusOrderIds.size > 0 ? sortedProductionList.length : total}
               wrapperStyle={{ paddingTop: 12, paddingBottom: 4 }}
-              showQuickJumper={false}
               onChange={handlePageChange}
             />
             </>

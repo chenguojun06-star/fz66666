@@ -1,6 +1,7 @@
 package com.fashion.supplychain.dashboard.service.impl;
 
 import com.fashion.supplychain.dashboard.dto.DelayedStageGroup;
+import com.fashion.supplychain.dashboard.dto.SampleStageStatsDto;
 import com.fashion.supplychain.dashboard.helper.DashboardInventoryQueryHelper;
 import com.fashion.supplychain.dashboard.helper.DashboardOrderQueryHelper;
 import com.fashion.supplychain.dashboard.helper.DashboardReconciliationQueryHelper;
@@ -228,5 +229,10 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
     @Override
     public List<DelayedStageGroup> listDelayedSampleStylesByStage() {
         return orderHelper.listDelayedSampleStylesByStage();
+    }
+
+    @Override
+    public List<SampleStageStatsDto> getSampleStageStats() {
+        return orderHelper.getSampleStageStats();
     }
 }
