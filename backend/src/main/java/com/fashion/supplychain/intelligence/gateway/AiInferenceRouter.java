@@ -92,16 +92,35 @@ public class AiInferenceRouter implements AiInferenceGateway {
 
     @Override
     public IntelligenceInferenceResult chatWithVision(String scene, String systemPrompt, String userMessage, String imageUrl) {
-        AiInferenceGateway gateway = resolveGateway(scene);
-        IntelligenceInferenceResult result = gateway.chatWithVision(scene, systemPrompt, userMessage, imageUrl);
-        trackSpringAiHealth(result);
-        if (isSpringAiCircuitOpen() && !"legacy".equals(gateway.getProviderName())) {
-            log.info("[AiInferenceRouter] Spring AI 熔断触发，降级到 legacy 重试 scene={}", scene);
-            result = legacyAdapter.chatWithVision(scene, systemPrompt, userMessage, imageUrl);
-            result.setFallbackUsed(true);
+        // 视觉调用优先走 legacy adapter — Agnes视觉模型支持真正的image_url格式，
+        // 比Spring AI适配器的文本嵌入方式更可靠
+        if (legacyAdapter != null && legacyAdapter.isAvailable()) {
+            try {
+                IntelligenceInferenceResult result =
+                        legacyAdapter.chatWithVision(scene, systemPrompt, userMessage, imageUrl);
+                if (result != null && result.isSuccess() && hasText(result.getContent())) {
+                    recordCostAndAudit(scene, result);
+                    return result;
+                }
+                log.warn("[AiInferenceRouter] legacy视觉调用未返回有效内容，fallback到Spring AI");
+            } catch (Exception e) {
+                log.warn("[AiInferenceRouter] legacy视觉调用异常，fallback到Spring AI: {}", e.getMessage());
+            }
         }
-        recordCostAndAudit(scene, result);
-        return result;
+        // Spring AI 作为第二路径
+        if (springAiAdapter != null && !isSpringAiCircuitOpen() && springAiAdapter.isAvailable()) {
+            IntelligenceInferenceResult result = springAiAdapter.chatWithVision(scene, systemPrompt, userMessage, imageUrl);
+            trackSpringAiHealth(result);
+            recordCostAndAudit(scene, result);
+            return result;
+        }
+        // 最后兜底返回空结果
+        IntelligenceInferenceResult empty = new IntelligenceInferenceResult();
+        empty.setSuccess(false);
+        empty.setProvider("none");
+        empty.setErrorMessage("没有可用的视觉模型（请配置AGNES_API_KEY或DEEPSEEK_API_KEY）");
+        recordCostAndAudit(scene, empty);
+        return empty;
     }
 
     @Override
@@ -278,5 +297,9 @@ public class AiInferenceRouter implements AiInferenceGateway {
             return modelConsortiumRouter.getModelParams(complexity);
         }
         return new ModelConsortiumRouter.ModelParams(0.5, 1024, 30);
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.trim().isEmpty();
     }
 }

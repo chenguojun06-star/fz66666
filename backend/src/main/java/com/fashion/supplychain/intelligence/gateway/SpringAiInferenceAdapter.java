@@ -30,7 +30,7 @@ import org.springframework.context.annotation.Lazy;
 @Slf4j
 @Component
 @Lazy
-@ConditionalOnProperty(name = "spring-ai.adapter.enabled", havingValue = "true")
+@ConditionalOnProperty(name = "spring-ai.adapter.enabled", havingValue = "true", matchIfMissing = true)
 public class SpringAiInferenceAdapter implements AiInferenceGateway {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();

@@ -358,6 +358,11 @@ ai:
     # 格式: VISION_MODEL_{N}_API_KEY, VISION_MODEL_{N}_API_URL, VISION_MODEL_{N}_MODEL, VISION_MODEL_{N}_TIMEOUT_SECONDS
   spring-ai:
     enabled: ${AI_SPRING_AI_ENABLED:true}
+    adapter:
+      enabled: ${SPRING_AI_ADAPTER_ENABLED:true}
+      base-url: ${SPRING_AI_ADAPTER_BASE_URL:https://api.deepseek.com}
+      api-key: ${SPRING_AI_ADAPTER_API_KEY:${DEEPSEEK_API_KEY:${ai.deepseek.api-key:}}}
+      model: ${SPRING_AI_ADAPTER_MODEL:deepseek-v4-flash}
     chat:
       default-provider: ${AI_SPRING_AI_CHAT_DEFAULT_PROVIDER:deepseek}
       options:
@@ -367,7 +372,7 @@ ai:
       enabled: ${AI_SPRING_AI_EMBEDDING_ENABLED:false}
       default-provider: ${AI_SPRING_AI_EMBEDDING_DEFAULT_PROVIDER:agnes}
   gateway:
-    routing-strategy: ${AI_GATEWAY_ROUTING_STRATEGY:legacy}   # legacy / spring-ai / failover / weighted
+    routing-strategy: ${AI_GATEWAY_ROUTING_STRATEGY:failover}   # legacy / spring-ai / failover / weighted
     fallback-enabled: ${AI_GATEWAY_FALLBACK_ENABLED:true}
     litellm:
       enabled: ${AI_LITELLM_ENABLED:false}
@@ -494,12 +499,12 @@ serpapi:
   api-key: ${SERPAPI_KEY:}
   enabled: ${SERPAPI_ENABLED:false}
 
-# Spring AI 适配器配置（默认禁用，需配置DEEPSEEK_API_KEY后手动开启SPRING_AI_ADAPTER_ENABLED=true）
+# Spring AI 适配器配置（默认启用，API key从DEEPSEEK_API_KEY环境变量读取）
 spring-ai:
   adapter:
-    enabled: ${SPRING_AI_ADAPTER_ENABLED:false}
+    enabled: ${SPRING_AI_ADAPTER_ENABLED:true}
     base-url: ${SPRING_AI_ADAPTER_BASE_URL:https://api.deepseek.com}
-    api-key: ${DEEPSEEK_API_KEY:}
+    api-key: ${DEEPSEEK_API_KEY:${SPRING_AI_ADAPTER_API_KEY:}}
     model: ${SPRING_AI_ADAPTER_MODEL:deepseek-v4-flash}
 
 tts:

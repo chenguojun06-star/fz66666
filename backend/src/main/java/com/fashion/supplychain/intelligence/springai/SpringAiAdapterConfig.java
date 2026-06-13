@@ -12,7 +12,7 @@ import org.springframework.context.annotation.Configuration;
 
 @Slf4j
 @Configuration
-@ConditionalOnProperty(name = "spring-ai.adapter.enabled", havingValue = "true")
+@ConditionalOnProperty(name = "spring-ai.adapter.enabled", havingValue = "true", matchIfMissing = true)
 public class SpringAiAdapterConfig {
 
     @Value("${spring-ai.adapter.base-url:https://api.deepseek.com}")

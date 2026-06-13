@@ -180,7 +180,10 @@ public class IntelligenceInferenceOrchestrator {
     }
 
     public boolean isAnyModelEnabled() {
-        return intelligenceModelGatewayOrchestrator.isGatewayReady() || hasText(directApiKey);
+        return intelligenceModelGatewayOrchestrator.isGatewayReady()
+                || hasText(directApiKey)
+                || hasText(agnesApiKey)
+                || hasText(agnes2ApiKey);
     }
 
     @FunctionalInterface
