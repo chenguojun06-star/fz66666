@@ -10,6 +10,7 @@ import com.fashion.supplychain.intelligence.orchestration.*;
 import com.fashion.supplychain.intelligence.service.AiAgentMetricsService;
 import com.fashion.supplychain.intelligence.service.AiAdvisorService;
 import com.fashion.supplychain.intelligence.service.ProactiveInsightService;
+import com.fashion.supplychain.intelligence.service.VisionAnalysisService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -277,6 +278,16 @@ public class IntelligenceAiAdvisorController {
     @DataTruth(source = DataTruth.Source.AI_DERIVED, description = "视觉AI分析由LLM生成")
     public Result<VisualAIResponse> visualAnalyze(@RequestBody VisualAIRequest req) {
         return Result.success(visualAIOrchestrator.analyze(req));
+    }
+
+    @PostMapping("/visual/style-parse")
+    @DataTruth(source = DataTruth.Source.AI_DERIVED, description = "样衣图片结构化字段识别由视觉AI生成")
+    public Result<VisionAnalysisService.StyleFieldParseResult> visualStyleParse(@RequestBody Map<String, Object> body) {
+        String imageUrl = (String) body.get("imageUrl");
+        if (imageUrl == null || imageUrl.isBlank()) {
+            return Result.fail("imageUrl 不能为空");
+        }
+        return Result.success(visualAIOrchestrator.parseStyleFields(imageUrl));
     }
 
     @PostMapping("/visual/style-search")

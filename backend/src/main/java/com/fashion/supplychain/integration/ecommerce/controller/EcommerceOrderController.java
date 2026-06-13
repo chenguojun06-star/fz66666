@@ -43,6 +43,10 @@ public class EcommerceOrderController {
             @RequestHeader(value = "X-App-Key", required = false) String appKey,
             @RequestBody Map<String, Object> body) {
         try {
+            if (appKey == null || appKey.isBlank()) {
+                log.warn("[EC Webhook] 拒绝缺少 X-App-Key 的请求: platform={}", platform);
+                return Result.fail("缺少 X-App-Key");
+            }
             Long tenantId = resolveTenantFromConfig(platform, appKey);
             if (tenantId == null) {
                 log.warn("[EC Webhook] 无法识别平台来源: platform={}, appKey={}", platform, appKey);
@@ -100,12 +104,12 @@ public class EcommerceOrderController {
     }
 
     private Long resolveTenantFromConfig(String platform, String appKey) {
-        if (appKey != null) {
+        if (appKey != null && !appKey.isBlank()) {
             var config = ecPlatformConfigService.getByAppKey(appKey);
-            if (config != null) return config.getTenantId();
+            if (config != null && platform.equalsIgnoreCase(config.getPlatformCode())) {
+                return config.getTenantId();
+            }
         }
-        var configs = ecPlatformConfigService.listByPlatformCode(platform);
-        if (!configs.isEmpty()) return configs.get(0).getTenantId();
         return null;
     }
 

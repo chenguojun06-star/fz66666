@@ -217,9 +217,19 @@ public class ImAiWebhookController {
         ctx.setUsername(user.getUsername());
         ctx.setRole(user.getRoleName());
         ctx.setTenantId(user.getTenantId());
-        ctx.setTenantOwner("admin".equals(user.getRoleName()) || "管理员".equals(user.getRoleName()));
+        boolean isAdmin = "admin".equals(user.getRoleName()) || "管理员".equals(user.getRoleName())
+                || Boolean.TRUE.equals(user.getIsTenantOwner());
+        ctx.setTenantOwner(isAdmin);
         ctx.setSuperAdmin(false);
-        ctx.setPermissionRange("all");
+        if (isAdmin) {
+            ctx.setPermissionRange("all");
+        } else {
+            String userRange = user.getPermissionRange();
+            ctx.setPermissionRange(userRange != null && !userRange.isBlank() ? userRange : "own");
+        }
+        if (user.getFactoryId() != null && !user.getFactoryId().isBlank()) {
+            ctx.setFactoryId(user.getFactoryId());
+        }
         return ctx;
     }
 

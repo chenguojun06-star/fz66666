@@ -328,6 +328,17 @@ public class TenantAppOrchestrator {
             throw new SecurityException("应用已过期");
         }
 
+        if (timestamp != null && !timestamp.isBlank()) {
+            try {
+                long ts = Long.parseLong(timestamp);
+                if (Math.abs(System.currentTimeMillis() - ts * 1000) > 5 * 60 * 1000) {
+                    throw new SecurityException("签名时间戳过期，请重新签名");
+                }
+            } catch (NumberFormatException e) {
+                throw new SecurityException("时间戳格式错误");
+            }
+        }
+
         String decryptedSecret = aesEncryptor.decrypt(app.getAppSecret());
         String expectedSignature = hmacSha256(decryptedSecret, timestamp + (body != null ? body : ""));
         if (!expectedSignature.equals(signature)) {

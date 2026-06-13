@@ -282,4 +282,22 @@ public class VisualAIOrchestrator {
             return null;
         }
     }
+
+    /**
+     * 样衣图片结构化字段解析：返回款名建议、颜色列表、品类、季节、图案、面料、袖型、领型、版型。
+     */
+    public VisionAnalysisService.StyleFieldParseResult parseStyleFields(String imageUrl) {
+        long startTime = System.currentTimeMillis();
+        try {
+            return visionAnalysisService.parseStyleFields(imageUrl);
+        } catch (Exception e) {
+            log.warn("[VisualAI] parseStyleFields 异常: {}", e.getMessage(), e);
+            VisionAnalysisService.StyleFieldParseResult r = new VisionAnalysisService.StyleFieldParseResult();
+            r.setAvailable(false);
+            r.setErrorMessage("识别异常：" + e.getMessage());
+            return r;
+        } finally {
+            log.info("[VisualAI] parseStyleFields 耗时: {}ms", System.currentTimeMillis() - startTime);
+        }
+    }
 }

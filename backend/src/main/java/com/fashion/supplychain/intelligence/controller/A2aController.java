@@ -28,7 +28,8 @@ public class A2aController {
     private final TenantAppOrchestrator tenantAppOrchestrator;
     private final AuthTokenService authTokenService;
 
-    private static final Duration A2A_TOKEN_TTL = Duration.ofDays(90);
+    private static final Duration A2A_TOKEN_TTL = Duration.ofHours(24);
+    private static final long SIGNATURE_TOLERANCE_MS = 5 * 60 * 1000; // 5分钟
 
     @GetMapping("/.well-known/agent.json")
     public AgentCard getAgentCard(HttpServletRequest request) {
@@ -44,6 +45,17 @@ public class A2aController {
             @RequestHeader("X-App-Key") String appKey,
             @RequestHeader("X-Timestamp") String timestamp,
             @RequestHeader("X-Signature") String signature) {
+
+        try {
+            long ts = Long.parseLong(timestamp);
+            if (Math.abs(System.currentTimeMillis() - ts * 1000) > SIGNATURE_TOLERANCE_MS) {
+                log.warn("[A2A/token] 签名时间戳过期: appKey={} timestamp={}", appKey, timestamp);
+                return Result.fail("签名时间戳过期");
+            }
+        } catch (NumberFormatException e) {
+            log.warn("[A2A/token] 时间戳格式错误: appKey={} timestamp={}", appKey, timestamp);
+            return Result.fail("时间戳格式错误");
+        }
 
         TenantApp app;
         try {
@@ -61,12 +73,13 @@ public class A2aController {
         subject.setTenantId(app.getTenantId());
         subject.setTenantOwner(false);
         subject.setSuperAdmin(false);
-        subject.setPermissionRange("all");
+        subject.setPermissionRange("app");
+        subject.setOpenid("appKey:" + app.getAppKey());
 
         String token = authTokenService.issueToken(subject, A2A_TOKEN_TTL);
 
-        log.info("[A2A/token] issued appKey={} appName={} tenantId={} expiresIn={}d",
-                appKey, app.getAppName(), app.getTenantId(), A2A_TOKEN_TTL.toDays());
+        log.info("[A2A/token] issued appKey={} appName={} tenantId={} expiresIn={}h",
+                appKey, app.getAppName(), app.getTenantId(), A2A_TOKEN_TTL.toHours());
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("a2aToken", token);

@@ -89,8 +89,15 @@ public class SystemUserTool extends AbstractAgentTool {
                 query.like("role_name", roleName);
             }
             TenantAssert.assertTenantContext();
-        Long tenantId = UserContext.tenantId();
+            Long tenantId = UserContext.tenantId();
             query.eq("tenant_id", tenantId);
+
+            if (!UserContext.isTopAdmin()) {
+                String factoryId = UserContext.factoryId();
+                if (factoryId != null && !factoryId.isBlank()) {
+                    query.eq("factory_id", factoryId);
+                }
+            }
 
             query.last("LIMIT 10");
 

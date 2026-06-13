@@ -1,10 +1,10 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { App, Modal, Image } from 'antd';
-import { DeleteOutlined, StarFilled, StarOutlined, LeftOutlined, RightOutlined, SearchOutlined } from '@ant-design/icons';
+import { DeleteOutlined, StarFilled, StarOutlined, LeftOutlined, RightOutlined, SearchOutlined, BulbOutlined } from '@ant-design/icons';
 import api, { type ApiResult, isApiSuccess, getApiMessage } from '@/utils/api';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { setStyleCoverOverride } from '@/components/StyleAssets';
-import { styleSearchByImage } from '@/services/intelligence/intelligenceApi';
+import { styleSearchByImage, styleParseFromImage, type StyleFieldParseResult } from '@/services/intelligence/intelligenceApi';
 
 interface CoverImageUploadProps {
   styleId?: string | number;
@@ -15,6 +15,7 @@ interface CoverImageUploadProps {
   coverUrl?: string | null;  // 兜底封面URL（选品中心下板时写入cover字段，无附件时展示）
   refreshTrigger?: number;
   onCoverChange?: (url: string | null) => void;
+  onStyleParseResult?: (result: StyleFieldParseResult) => void;  // 智能识别结果
 }
 
 /**
@@ -30,6 +31,7 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
   coverUrl,
   refreshTrigger = 0,
   onCoverChange,
+  onStyleParseResult,
 }) => {
   const { message } = App.useApp();
   const [images, setImages] = useState<any[]>([]);
@@ -41,6 +43,8 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
   // 以图搜款
   const [searching, setSearching] = useState(false);
   const [searchResult, setSearchResult] = useState<any>(null);
+  // 智能识别
+  const [parsing, setParsing] = useState(false);
 
   // 生成本地预览URL
   useEffect(() => {
@@ -213,8 +217,43 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
               {currentAssetMeta.label}
             </div>
             {currentImage && !currentImage.isLocal && (
-              <div
-                onClick={async () => {
+              <>
+                <div
+                  onClick={async () => {
+                    if (parsing || searching) return;
+                    const imgUrl = getFullAuthedFileUrl(currentImage.fileUrl);
+                    if (!imgUrl || imgUrl.startsWith('blob:') || imgUrl.startsWith('data:')) {
+                      message.warning('当前图片不支持智能识别（需要公网可访问的图片）');
+                      return;
+                    }
+                    setParsing(true);
+                    try {
+                      const res = await styleParseFromImage(imgUrl);
+                      if (res?.available) {
+                        message.success(`识别完成（置信度 ${res.overallConfidence}%）`);
+                        onStyleParseResult?.(res);
+                      } else {
+                        message.warning(res?.errorMessage || '识别失败，请人工填写');
+                      }
+                    } catch {
+                      message.warning('智能识别服务暂不可用');
+                    } finally {
+                      setParsing(false);
+                    }
+                  }}
+                  style={{
+                    position: 'absolute', right: 10, top: 10, padding: '3px 8px', borderRadius: 999,
+                    background: parsing ? 'rgba(0,0,0,0.3)' : 'rgba(234,88,12,0.85)', color: '#fff',
+                    fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4,
+                    transition: 'background 0.15s',
+                  }}
+                  title="智能识别图片中的款式特征并自动填充表单"
+                >
+                  <BulbOutlined style={{ fontSize: 11 }} />
+                  {parsing ? '识别中...' : '智能识别'}
+                </div>
+                <div
+                  onClick={async () => {
                   if (searching) return;
                   const imgUrl = getFullAuthedFileUrl(currentImage.fileUrl);
                   if (!imgUrl || imgUrl.startsWith('blob:') || imgUrl.startsWith('data:')) {
@@ -246,6 +285,7 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
                 <SearchOutlined style={{ fontSize: 11 }} />
                 {searching ? '搜索中...' : '搜相似'}
               </div>
+              </>
             )}
           </div>
         ) : coverUrl ? (

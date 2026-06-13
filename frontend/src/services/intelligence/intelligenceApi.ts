@@ -62,6 +62,7 @@ import type {
   SupplierScorecardResponse,
   VisualAIRequest,
   VisualAIResponse,
+  StyleFieldParseResult,
   WhatIfParams,
   WhatIfResult,
   WorkerEfficiencyResponse,
@@ -838,6 +839,12 @@ export const intelligenceApi = {
     return (response as any)?.data ?? { success: false, matchCount: 0, matches: [] };
   },
 
+  /** 样衣图片结构化字段解析：返回款名建议、颜色列表、品类、季节、图案、面料、袖型、领型、版型 */
+  styleParseFromImage: async (imageUrl: string): Promise<StyleFieldParseResult> => {
+    const response = await api.post<ApiResult<StyleFieldParseResult>>('/intelligence/visual/style-parse', { imageUrl });
+    return (response as any)?.data ?? { available: false, errorMessage: '返回为空', colors: [], overallConfidence: 0 };
+  },
+
   // ── 巡检 ──
 
   getPatrolActionsByTarget: async (targetType: string, targetId: string, limit = 10): Promise<PatrolAction[]> => {
@@ -888,6 +895,7 @@ export const getPatrolSummary = intelligenceApi.getPatrolSummary;
 export const getGraphAbStats = intelligenceApi.getGraphAbStats;
 export const visualAnalyze = intelligenceApi.visualAnalyze;
 export const styleSearchByImage = intelligenceApi.styleSearchByImage;
+export const styleParseFromImage = intelligenceApi.styleParseFromImage;
 export const runMultiAgentGraph = intelligenceApi.runMultiAgentGraph;
 export const getGraphHistory = intelligenceApi.getGraphHistory;
 export const submitGraphFeedback = intelligenceApi.submitGraphFeedback;

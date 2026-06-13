@@ -65,3 +65,25 @@ export interface VisualAIResponse {
   logId?: number;
   errorMessage?: string;
 }
+
+/** 样衣图片结构化字段识别结果 — 用于自动填充表单 */
+export interface StyleFieldParseResult {
+  imageUrl: string;
+  available: boolean;
+  errorMessage?: string;
+  overallConfidence: number;
+  styleConfidence: number;
+  colorConfidence: number;
+  needManualReview: boolean;
+  reviewHint?: string;
+  styleName?: string;
+  colors: string[];
+  category?: string;
+  season?: string;
+  pattern?: string;
+  fabric?: string;
+  sleeveType?: string;
+  neckline?: string;
+  version?: string;
+  summary?: string;
+}

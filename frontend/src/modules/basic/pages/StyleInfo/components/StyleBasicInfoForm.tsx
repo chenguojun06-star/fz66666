@@ -1,5 +1,5 @@
 import React from 'react';
-import { Form, Input, InputNumber, Row, Col, FormInstance, Select } from 'antd';
+import { Form, Input, InputNumber, Row, Col, FormInstance, Select, App } from 'antd';
 import { UnifiedDatePicker } from '@/components/common/UnifiedDatePicker';
 import DictAutoComplete from '@/components/common/DictAutoComplete';
 import CustomerSelect from '@/components/common/CustomerSelect';
@@ -8,6 +8,7 @@ import StyleColorSizeTable from './StyleColorSizeTable';
 import { StyleInfo } from '@/types/style';
 import { CATEGORY_CODE_OPTIONS, SEASON_CODE_OPTIONS } from '@/utils/styleCategory';
 import { useDictOptions } from '@/hooks/useDictOptions';
+import { type StyleFieldParseResult } from '@/services/intelligence/intelligenceApi';
 
 interface StyleBasicInfoFormProps {
   _form: FormInstance;
@@ -63,6 +64,7 @@ interface StyleBasicInfoFormProps {
   setCommonSizes: (v: string[]) => void;
   commonColors: string[];
   setCommonColors: (v: string[]) => void;
+  onStyleParseResult?: (result: StyleFieldParseResult) => void;
 }
 
 /**
@@ -87,8 +89,10 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
   commonSizes, setCommonSizes, commonColors, setCommonColors,
   onColorImageSync,
   onColorImageClear,
-  onSkcClick
+  onSkcClick,
+  onStyleParseResult,
 }) => {
+  const { message } = App.useApp();
   const { options: categoryOptions } = useDictOptions('category', CATEGORY_CODE_OPTIONS);
   const { options: seasonOptions } = useDictOptions('season', SEASON_CODE_OPTIONS);
 
@@ -100,6 +104,41 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
     marginLeft: 42,
     paddingLeft: 8,
     lineHeight: '20px',
+  };
+
+  // 智能识别结果填充
+  const handleStyleParseResult = (result: StyleFieldParseResult) => {
+    if (!result || result.available === false) return;
+
+    const updates: Record<string, any> = {};
+
+    // 款名：仅在当前为空时填充
+    if (result.styleName && !_form.getFieldValue('styleName')) {
+      updates.styleName = result.styleName;
+    }
+
+    // 品类：匹配字典项后填充
+    if (result.category && !_form.getFieldValue('category')) {
+      const cat = categoryOptions.find((o: any) =>
+        o.value === result.category || String(o.label || '').includes(result.category!)
+      );
+      if (cat) updates.category = cat.value;
+    }
+
+    // 季节：匹配字典项后填充
+    if (result.season && !_form.getFieldValue('season')) {
+      const sea = seasonOptions.find((o: any) =>
+        o.value === result.season || String(o.label || '').includes(result.season!)
+      );
+      if (sea) updates.season = sea.value;
+    }
+
+    if (Object.keys(updates).length > 0) {
+      _form.setFieldsValue(updates);
+    }
+
+    // 向上透传（由父组件决定是否填充更多字段）
+    onStyleParseResult?.(result);
   };
 
   return (
@@ -115,6 +154,7 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
             coverUrl={currentStyle?.cover}
             refreshTrigger={coverRefreshToken}
             onCoverChange={onCoverChange}
+            onStyleParseResult={handleStyleParseResult}
           />
         </Col>
 

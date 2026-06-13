@@ -1,7 +1,7 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-06-11
+> 最后更新：2026-06-13
 
 ---
 
@@ -11,8 +11,39 @@
 - ✅ 数据安全修复（tenant_id 隔离 + 事务原子性 + 字段名一致性）
 - ✅ ProductionOrderController 深度审查
 - ✅ 安全审计修复（微信支付回调签名验证 + 数据库密码校验 + HTTPS 强制）
+- ✅ 小云AI全面智能化升级（8大优化模块，2026-06-13完成）
 
 ## 最近变更
+
+### 2026-06-13 小云AI全面智能化升级（8大优化模块）
+
+**commit**: fc10d435e | 481 files changed, +2582/-236 lines
+
+| 优先级 | 优化模块 | 核心变更 | 效果 |
+|--------|---------|---------|------|
+| P0-1 | Spring Boot启动优化 | 465个AI模块Bean添加@Lazy | 首次使用才初始化，启动时间大幅缩短 |
+| P0-2 | RAG升级 | Qdrant Hybrid Search（BM25稀疏+语义稠密混合检索） | 检索召回率提升，支持关键词+语义双路召回 |
+| P1-1 | 语义缓存 | SemanticCacheService双层缓存（精确SHA+语义向量） | 相同/相似问题直接返回缓存，减少LLM调用 |
+| P1-2 | 记忆系统 | ConversationMemoryService对话持久化+规则化压缩 | 跨会话记忆保留，长对话自动压缩 |
+| P1-3 | 前端优化 | GlobalAiAssistant懒加载+Vite manualChunks分割 | AI模块独立chunk，首屏不加载AI代码 |
+| P2-1 | 流式响应 | 全轮次流式输出+进度百分比事件+心跳命名事件 | 用户实时看到AI思考过程，不再空白等待 |
+| P2-2 | 主动智能 | ProactiveInsightService巡检洞察推送+API端点 | 巡检发现异常主动推送，AI回答时主动提及 |
+
+**新增文件**：
+- `intelligence/service/SemanticCacheService.java`
+- `intelligence/service/ConversationMemoryService.java`
+- `intelligence/service/ProactiveInsightService.java`
+
+**新增配置**（application.yml）：
+- `xiaoyun.semantic-cache.*` — 语义缓存开关/TTL/阈值
+- `xiaoyun.conversation-memory.*` — 对话记忆开关/轮次/压缩/过期
+- `xiaoyun.proactive-insight.*` — 主动洞察开关/上限/过期
+
+**新增API端点**：
+- `GET /api/intelligence/insights` — 获取未读洞察
+- `POST /api/intelligence/insights/{id}/read` — 标记已读
+
+**编译验证**：mvn compile BUILD SUCCESS + tsc --noEmit 0 errors
 
 ### 2026-06-12 P0事故：CloudBase Liveness Probe initialDelaySeconds 导致部署失败
 
@@ -97,10 +128,7 @@
 
 ## 当前进行中
 
-- ✅ WebSocket 全局广播彻底清理（2026-06-11 完成）
-  - 后端 15 个文件清理完毕（含本次 `OrderRemarkController.java`、`OrderImageOrchestrator.java`）
-  - 小程序端 `websocket.js` 已删除
-  - 决策已记录：`D-017` 永久禁止加回
+- 无进行中任务（小云AI升级已完成并推送）
 
 ## 已知问题（待优化）
 
@@ -120,6 +148,7 @@
 
 ## 下一步
 
+- 小云AI全链路测试（验证8大优化模块实际效果）
 - ProductionOrderController 业务逻辑下沉到 Orchestrator 层
-- 小云AI全链路测试
 - 订单列表查询缓存
+- 监控部署后启动时间变化（@Lazy优化效果）
