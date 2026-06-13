@@ -53,7 +53,7 @@ public class VisionAnalysisService {
     @Value("${smart.vision.confidence-threshold:70}")
     private Integer confidenceThreshold;
 
-    @Value("${smart.vision.real-model.enabled:false}")
+    @Value("${smart.vision.real-model.enabled:true}")
     private Boolean realModelEnabled;
 
     public boolean isAvailable() {

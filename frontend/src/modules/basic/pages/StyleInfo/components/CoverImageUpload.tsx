@@ -261,7 +261,7 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
             <div style={{ position: 'absolute', left: 10, top: 10, padding: '3px 8px', borderRadius: 999, background: currentAssetMeta.color, color: '#fff', fontSize: 14, fontWeight: 600 }}>
               {currentAssetMeta.label}
             </div>
-            {currentImage && !currentImage.isLocal && (
+            {currentImage && (
               <>
                 <div
                   style={{
@@ -286,11 +286,41 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
                     <div
                       onClick={async () => {
                         if (parsing || searching) return;
-                        const imgUrl = getFullAuthedFileUrl(currentImage.fileUrl);
-                        if (!imgUrl || imgUrl.startsWith('blob:') || imgUrl.startsWith('data:')) {
-                          message.warning('当前图片不支持智能识别（需要公网可访问的图片）');
+                        let imgUrl = '';
+
+                        // 新建模式：本地图片需要先上传获取服务器URL
+                        if (currentImage.isLocal && isNewMode && pendingFiles[currentImage.localIndex]) {
+                          setParsing(true);
+                          try {
+                            const file = pendingFiles[currentImage.localIndex];
+                            const formData = new FormData();
+                            formData.append('file', file);
+                            const uploadRes = await api.post<ApiResult<{ fileUrl?: string }>>('/style/attachment/upload', formData, { timeout: 60000 } as any);
+                            if (isApiSuccess(uploadRes) && uploadRes?.data?.fileUrl) {
+                              imgUrl = getFullAuthedFileUrl(uploadRes.data.fileUrl);
+                            } else {
+                              message.error('图片上传失败，无法进行智能识别');
+                              return;
+                            }
+                          } catch {
+                            message.error('图片上传失败，无法进行智能识别');
+                            return;
+                          }
+                        } else {
+                          // 编辑模式：直接使用服务器图片URL
+                          const fullUrl = getFullAuthedFileUrl(currentImage.fileUrl);
+                          if (!fullUrl || fullUrl.startsWith('blob:') || fullUrl.startsWith('data:')) {
+                            message.warning('当前图片不支持智能识别（需要公网可访问的图片）');
+                            return;
+                          }
+                          imgUrl = fullUrl;
+                        }
+
+                        if (!imgUrl) {
+                          message.warning('无法获取图片URL，无法进行智能识别');
                           return;
                         }
+
                         setParsing(true);
                         try {
                           const res = await styleParseFromImage(imgUrl);
@@ -320,11 +350,41 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
                     <div
                       onClick={async () => {
                         if (searching) return;
-                        const imgUrl = getFullAuthedFileUrl(currentImage.fileUrl);
-                        if (!imgUrl || imgUrl.startsWith('blob:') || imgUrl.startsWith('data:')) {
-                          message.warning('当前图片不支持以图搜款（需要公网可访问的图片）');
+                        let imgUrl = '';
+
+                        // 新建模式：本地图片需要先上传获取服务器URL
+                        if (currentImage.isLocal && isNewMode && pendingFiles[currentImage.localIndex]) {
+                          setSearching(true);
+                          try {
+                            const file = pendingFiles[currentImage.localIndex];
+                            const formData = new FormData();
+                            formData.append('file', file);
+                            const uploadRes = await api.post<ApiResult<{ fileUrl?: string }>>('/style/attachment/upload', formData, { timeout: 60000 } as any);
+                            if (isApiSuccess(uploadRes) && uploadRes?.data?.fileUrl) {
+                              imgUrl = getFullAuthedFileUrl(uploadRes.data.fileUrl);
+                            } else {
+                              message.error('图片上传失败，无法进行以图搜款');
+                              return;
+                            }
+                          } catch {
+                            message.error('图片上传失败，无法进行以图搜款');
+                            return;
+                          }
+                        } else {
+                          // 编辑模式：直接使用服务器图片URL
+                          const fullUrl = getFullAuthedFileUrl(currentImage.fileUrl);
+                          if (!fullUrl || fullUrl.startsWith('blob:') || fullUrl.startsWith('data:')) {
+                            message.warning('当前图片不支持以图搜款（需要公网可访问的图片）');
+                            return;
+                          }
+                          imgUrl = fullUrl;
+                        }
+
+                        if (!imgUrl) {
+                          message.warning('无法获取图片URL，无法进行以图搜款');
                           return;
                         }
+
                         setSearching(true);
                         try {
                           const res = await styleSearchByImage(imgUrl);

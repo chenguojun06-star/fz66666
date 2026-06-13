@@ -20,10 +20,10 @@ export const useSampleStageStats = () => {
     setLoading(true);
     try {
       const result = await api.get('/dashboard/sample-stage-stats');
-      const resp = result?.data || result;
-      if (Array.isArray(resp)) {
-        setStats(resp);
-      }
+      // api.get 返回 axios response，result.data = { code: 200, data: [...] }
+      const raw = result?.data;
+      const resp = Array.isArray(raw?.data) ? raw.data : Array.isArray(raw) ? raw : [];
+      setStats(resp);
     } catch (error) {
       console.error('Failed to load sample stage stats:', error);
     } finally {

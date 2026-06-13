@@ -32,11 +32,13 @@ function isToday(ts: number): boolean {
 }
 
 const POLL_INTERVAL = 30_000;
+const MAX_FAIL_COUNT = 3; // 连续失败3次后停止轮询
 
 export function useMenuBadgeCounts() {
   const [badgeCounts, setBadgeCounts] = useState<Record<string, number>>({});
   const [viewVersion, setViewVersion] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const failCountRef = useRef(0);
 
   const fetchBadges = useCallback(async () => {
     try {
@@ -47,9 +49,15 @@ export function useMenuBadgeCounts() {
           normalized[k] = Number(v) || 0;
         }
         setBadgeCounts(normalized);
+        failCountRef.current = 0; // 成功后重置失败计数
       }
     } catch {
-      /* silent fail - badge counts are non-critical */
+      failCountRef.current += 1;
+      /* 连续失败多次后停止轮询，避免无效请求 */
+      if (failCountRef.current >= MAX_FAIL_COUNT && timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
     }
   }, []);
 

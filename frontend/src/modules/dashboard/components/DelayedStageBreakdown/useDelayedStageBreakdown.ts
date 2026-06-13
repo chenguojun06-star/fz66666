@@ -77,8 +77,10 @@ export const useDelayedStageBreakdown = (options: UseDelayedStageBreakdownOption
     setLoading(true);
     try {
       const result = await api.get('/dashboard/delayed-stage-breakdown');
-      const resp = result?.data || result;
-      if (resp && typeof resp === 'object') {
+      // api.get 返回 axios response，result.data = { code: 200, data: { bulkDelayed: [...], ... } }
+      const raw = result?.data;
+      const resp = raw?.data && typeof raw.data === 'object' ? raw.data : raw && typeof raw === 'object' ? raw : null;
+      if (resp) {
         setData(resp as DelayedStageBreakdownData);
       }
     } catch (error) {

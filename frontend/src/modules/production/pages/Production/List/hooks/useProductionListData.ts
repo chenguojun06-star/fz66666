@@ -1,5 +1,5 @@
 import React from 'react';
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { App } from 'antd';
 import { ProductionOrder, ProductionQueryParams } from '@/types/production';
 import type { PaginatedResponse } from '@/types/api';
@@ -62,7 +62,15 @@ export function useProductionListData() {
   };
   const [showDelayedOnly, setShowDelayedOnly] = useState(false);
   const [activeStatFilter, setActiveStatFilter] = useState<'production' | 'delayed' | 'today'>('production');
-  const [smartQueueFilter, setSmartQueueFilter] = useState<'all' | 'urgent' | 'behind' | 'stagnant' | 'overdue'>('all');
+  const [smartQueueFilter, setSmartQueueFilterRaw] = useState<'all' | 'urgent' | 'behind' | 'stagnant' | 'overdue'>('all');
+  const setSmartQueueFilter = useCallback((filter: 'all' | 'urgent' | 'behind' | 'stagnant' | 'overdue') => {
+    setSmartQueueFilterRaw(filter);
+    // 切换智能筛选时：重置分页到第1页 + 清除延期环节的 focusOrderIds（两种筛选互斥）
+    setQueryParams(prev => ({ ...prev, page: 1 }));
+    if (filter !== 'all') {
+      setFocusOrderIds(new Set());
+    }
+  }, []);
   const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
   const showSmartErrorNotice = useMemo(() => isSmartFeatureEnabled('smart.production.precheck.enabled'), []);
 
