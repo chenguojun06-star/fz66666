@@ -48,10 +48,10 @@ export default defineConfig({
             if (id.includes('echarts/') || id.includes('zrender/') || id.includes('echarts-for-react/')) return 'vendor-echarts';
             if (id.includes('exceljs/')) return 'vendor-exceljs';
             if (id.includes('react/') || id.includes('react-dom/') || id.includes('scheduler/')
+                || id.includes('react-router') || id.includes('@remix-run/')
                 || id.includes('antd/') || id.includes('@ant-design/') || id.includes('rc-') || id.includes('@rc-component/')
                 || id.includes('clsx/')) return 'vendor-react-antd';
             if (id.includes('@antv/') || id.includes('@ant-design/charts')) return 'vendor-antv';
-            if (id.includes('react-router') || id.includes('@remix-run/')) return 'vendor-router';
             if (id.includes('dayjs/')) return 'vendor-dayjs';
             if (id.includes('axios/')) return 'vendor-axios';
             if (id.includes('@dnd-kit/')) return 'vendor-dndkit';
