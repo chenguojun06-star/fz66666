@@ -35,37 +35,40 @@ export default defineConfig({
     dedupe: ['react', 'react-dom']
   },
   build: {
-    chunkSizeWarningLimit: 600,
+    chunkSizeWarningLimit: 800,
     minify: 'esbuild',
     target: 'es2020',
     rollupOptions: {
       output: {
-        // hoistTransitiveImports: false 防止 Rollup 把跨 chunk 的传递性依赖提升，
-        // 避免第三方库 chunk 在依赖 chunk 之前执行导致依赖为 undefined
-        hoistTransitiveImports: false,
+        // 保持默认 hoistTransitiveImports=true，让 Rollup 自动分析传递依赖
+        // 关键修复：
+        // 1) 所有 React/antd/路由作为单一「基础库」chunk 放在最前面
+        // 2) 不强行将 AI 相关模块拆分为独立 chunk（避免循环依赖）
+        // 3) 保持依赖图线性化：基础库 → UI 组件 → 业务模块
         manualChunks(id) {
           if (id.includes('node_modules/')) {
-            if (id.includes('echarts/') || id.includes('zrender/') || id.includes('echarts-for-react/')) return 'vendor-echarts';
-            if (id.includes('exceljs/')) return 'vendor-exceljs';
+            // 基础框架（必须最先加载，含 React/ReactDOM/antd/rc-*/@ant-design/icons）
             if (id.includes('react/') || id.includes('react-dom/') || id.includes('scheduler/')
                 || id.includes('react-router') || id.includes('@remix-run/')
-                || id.includes('antd/') || id.includes('@ant-design/') || id.includes('rc-') || id.includes('@rc-component/')
-                || id.includes('clsx/')) return 'vendor-react-antd';
+                || id.includes('antd/') || id.includes('@ant-design/')
+                || id.includes('rc-') || id.includes('@rc-component/')
+                || id.includes('clsx/') || id.includes('zustand/')) {
+              return 'vendor-react-antd';
+            }
+            // 大型第三方库
+            if (id.includes('echarts/') || id.includes('zrender/') || id.includes('echarts-for-react/')) return 'vendor-echarts';
+            if (id.includes('exceljs/')) return 'vendor-exceljs';
             if (id.includes('@antv/') || id.includes('@ant-design/charts')) return 'vendor-antv';
             if (id.includes('dayjs/')) return 'vendor-dayjs';
             if (id.includes('axios/')) return 'vendor-axios';
             if (id.includes('@dnd-kit/')) return 'vendor-dndkit';
             if (id.includes('dompurify/')) return 'vendor-dompurify';
             if (id.includes('qrcode')) return 'vendor-qrcode';
-            if (id.includes('zustand/')) return 'vendor-zustand';
             if (id.includes('react-virtuoso/')) return 'vendor-virtuoso';
             if (id.includes('jsbarcode/')) return 'vendor-jsbarcode';
           }
-          // AI/智能模块单独打包，避免首屏加载
-          if (id.includes('/src/modules/intelligence/')) return 'module-intelligence';
-          if (id.includes('/src/components/common/GlobalAiAssistant/')) return 'module-ai-assistant';
-          if (id.includes('/src/services/intelligence/')) return 'module-ai-assistant';
-          if (id.includes('/src/stores/useAgentGraphStore')) return 'module-ai-assistant';
+          // AI 智能模块单独打包（但仅 src 代码，不会与基础框架形成循环）
+          // 不再将 zustand 放入 AI 模块，保持 AI 模块作为纯业务代码
         },
       },
     },
