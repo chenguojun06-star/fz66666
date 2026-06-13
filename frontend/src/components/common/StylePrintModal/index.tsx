@@ -389,12 +389,20 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
           <style>{`
             .print-section { margin-bottom: 16px; }
             .print-section-title { font-size: 12px; font-weight: 600; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 2px solid #1890ff; }
+            /* 统一打印表格样式 */
+            .pt { width: 100%; border-collapse: collapse; font-size: 12px; }
+            .pt th, .pt td { border: 1px solid #333; padding: 6px 10px; vertical-align: middle; }
+            .pt th { background: #f0f0f0; font-weight: 600; text-align: center; white-space: nowrap; }
+            .pt td { color: #111; }
+            .pt .label-cell { background: #f0f0f0; font-weight: 500; color: #333; width: 100px; white-space: nowrap; }
+            .pt .total-row td { background: #f0f0f0; font-weight: 700; }
+            .pt .highlight-cell { font-weight: 700; color: #1890ff; }
           `}</style>
           {/* 基本信息 */}
           {options.basicInfo && (
             <div className="print-section">
               {/* 主体：左列（图片+二维码） + 右列（信息） */}
-              <div style={{ display: 'flex', gap: 20, padding: 16, border: '1px solid var(--color-border-antd)', background: '#fff', borderRadius: 8, breakInside: 'avoid' }}>
+              <div style={{ display: 'flex', gap: 20, padding: 16, border: '1px solid #333', background: '#fff', borderRadius: 8, breakInside: 'avoid' }}>
                 {/* 左侧：图片 + 二维码（纵向排列） */}
                 <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center', width: 120 }}>
                   {resolvedCover ? (
@@ -497,7 +505,7 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
                     }
 
                     return (
-                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, tableLayout: 'fixed' }}>
+                      <table className="pt" style={{ tableLayout: 'fixed' }}>
                         <colgroup>
                           <col style={{ width: '12%' }} />
                           <col style={{ width: '38%' }} />
@@ -509,14 +517,14 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
                             <tr key={ri}>
                               {row.map((f, fi) => (
                                 <React.Fragment key={fi}>
-                                  <td style={{ border: '1px solid #d0d0d0', padding: '5px 8px', background: '#fafafa', fontWeight: 500, color: '#333', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.label}</td>
-                                  <td style={{ border: '1px solid #d0d0d0', padding: '5px 8px', color: '#111', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.value}</td>
+                                  <td className="label-cell" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.label}</td>
+                                  <td style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.value}</td>
                                 </React.Fragment>
                               ))}
                               {row.length === 1 && (
                                 <>
-                                  <td style={{ border: '1px solid #d0d0d0', padding: '5px 8px', background: '#fafafa' }}></td>
-                                  <td style={{ border: '1px solid #d0d0d0', padding: '5px 8px' }}></td>
+                                  <td className="label-cell"></td>
+                                  <td></td>
                                 </>
                               )}
                             </tr>
@@ -535,15 +543,15 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
           )}
           {/* 下单明细（码数/颜色/数量配置表） */}
           {options.basicInfo && sizeColorMatrix && sizeColorMatrix.sizes.length > 0 && (
-            <div className="print-section" style={{ padding: 16, border: '1px solid var(--color-border-antd)', background: '#fff', borderRadius: 8, breakInside: 'avoid' }}>
+            <div className="print-section" style={{ padding: 16, border: '1px solid #333', background: '#fff', borderRadius: 8, breakInside: 'avoid' }}>
               <div style={{ fontWeight: 600, color: '#1f2937', marginBottom: 8, fontSize: 12, paddingBottom: 6, borderBottom: '1px solid #e8e8e8' }}>下单明细</div>
               <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, breakInside: 'avoid' }}>
+                <table className="pt" style={{ breakInside: 'avoid' }}>
                   <thead>
                     <tr>
-                      <th style={{ border: '1px solid var(--color-border-antd)', padding: '8px 12px', background: 'var(--color-bg-container)', fontWeight: 600, whiteSpace: 'nowrap', textAlign: 'left', width: 100 }}>颜色/尺码</th>
-                      {sizeColorMatrix.sizes.map(s => <th key={s} style={{ border: '1px solid var(--color-border-antd)', padding: '8px 12px', background: 'var(--color-bg-container)', fontWeight: 600, textAlign: 'center', whiteSpace: 'nowrap' }}>{s}</th>)}
-                      <th style={{ border: '1px solid var(--color-border-antd)', padding: '8px 12px', background: 'var(--color-bg-container)', fontWeight: 600, textAlign: 'center', whiteSpace: 'nowrap' }}>合计</th>
+                      <th style={{ textAlign: 'left', width: 100 }}>颜色/尺码</th>
+                      {sizeColorMatrix.sizes.map(s => <th key={s}>{s}</th>)}
+                      <th>合计</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -551,19 +559,19 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
                       const rowTotal = row.quantities.reduce((s, q) => s + q, 0);
                       return (
                         <tr key={row.color || i}>
-                          <td style={{ border: '1px solid var(--color-border-antd)', padding: '6px 12px', fontWeight: 500 }}>{row.color || '-'}</td>
-                          {sizeColorMatrix.sizes.map((_, ci) => <td key={ci} style={{ border: '1px solid var(--color-border-antd)', padding: '6px 12px', textAlign: 'center' }}>{row.quantities[ci] || 0}</td>)}
-                          <td style={{ border: '1px solid var(--color-border-antd)', padding: '6px 12px', textAlign: 'center', fontWeight: 600 }}>{rowTotal}</td>
+                          <td style={{ fontWeight: 500 }}>{row.color || '-'}</td>
+                          {sizeColorMatrix.sizes.map((_, ci) => <td key={ci}>{row.quantities[ci] || 0}</td>)}
+                          <td style={{ fontWeight: 600 }}>{rowTotal}</td>
                         </tr>
                       );
                     })}
-                    <tr>
-                      <td style={{ border: '1px solid var(--color-border-antd)', padding: '6px 12px', background: 'rgba(37,99,235,0.04)', fontWeight: 700 }}>合计</td>
+                    <tr className="total-row">
+                      <td>合计</td>
                       {sizeColorMatrix.sizes.map((_, ci) => {
                         const colTotal = sizeColorMatrix.matrixRows.reduce((s, r) => s + (r.quantities[ci] || 0), 0);
-                        return <td key={ci} style={{ border: '1px solid var(--color-border-antd)', padding: '6px 12px', textAlign: 'center', background: 'rgba(37,99,235,0.04)', fontWeight: 700 }}>{colTotal}</td>;
+                        return <td key={ci}>{colTotal}</td>;
                       })}
-                      <td style={{ border: '1px solid var(--color-border-antd)', padding: '6px 12px', textAlign: 'center', background: 'rgba(37,99,235,0.08)', fontWeight: 700, color: '#1890ff' }}>
+                      <td className="highlight-cell">
                         {sizeColorMatrix.matrixRows.reduce((s, r) => s + r.quantities.reduce((a, b) => a + b, 0), 0)}
                       </td>
                     </tr>
@@ -582,31 +590,31 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
             colors.forEach(c => { colorTotals[c] = sizeDetails.filter(d => d.color === c).reduce((sum, d) => sum + d.quantity, 0); });
             const grandTotal = sizeDetails.reduce((sum, d) => sum + d.quantity, 0);
             return (
-              <div className="print-section" style={{ padding: 16, border: '1px solid var(--color-border-antd)', background: '#fff', borderRadius: 8, breakInside: 'avoid', marginBottom: 12 }}>
+              <div className="print-section" style={{ padding: 16, border: '1px solid #333', background: '#fff', borderRadius: 8, breakInside: 'avoid', marginBottom: 12 }}>
                 <div style={{ fontWeight: 600, color: '#1f2937', marginBottom: 8, fontSize: 12, paddingBottom: 6, borderBottom: '1px solid #e8e8e8' }}>下单明细</div>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                <table className="pt">
                   <thead>
-                    <tr style={{ background: '#f5f5f5' }}>
-                      <th style={{ border: '1px solid #000', padding: '4px 8px', textAlign: 'left', width: 60 }}>颜色</th>
-                      {colors.map(color => <th key={color} style={{ border: '1px solid #000', padding: '4px 8px', textAlign: 'center' }}>{color}</th>)}
-                      <th style={{ border: '1px solid #000', padding: '4px 8px', textAlign: 'center', width: 80 }}>合计</th>
+                    <tr>
+                      <th style={{ textAlign: 'left', width: 60 }}>颜色</th>
+                      {colors.map(color => <th key={color}>{color}</th>)}
+                      <th style={{ width: 80 }}>合计</th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr>
-                      <td style={{ border: '1px solid #000', padding: '4px 8px', fontWeight: 600 }}>尺码</td>
-                      {colors.map(color => <td key={color} style={{ border: '1px solid #000', padding: '4px 8px', textAlign: 'center' }}>{sizes.join(' / ')}</td>)}
-                      <td style={{ border: '1px solid #000', padding: '4px 8px', textAlign: 'center' }}>-</td>
+                      <td className="label-cell">尺码</td>
+                      {colors.map(color => <td key={color}>{sizes.join(' / ')}</td>)}
+                      <td>-</td>
                     </tr>
                     <tr>
-                      <td style={{ border: '1px solid #000', padding: '4px 8px', fontWeight: 600 }}>数量</td>
-                      {colors.map(color => <td key={color} style={{ border: '1px solid #000', padding: '4px 8px', textAlign: 'center' }}>{sizes.map(size => dataMap[size]?.[color] || 0).join(' / ')}</td>)}
-                      <td style={{ border: '1px solid #000', padding: '4px 8px', textAlign: 'center', fontWeight: 600 }}>{grandTotal}</td>
+                      <td className="label-cell">数量</td>
+                      {colors.map(color => <td key={color}>{sizes.map(size => dataMap[size]?.[color] || 0).join(' / ')}</td>)}
+                      <td style={{ fontWeight: 600 }}>{grandTotal}</td>
                     </tr>
-                    <tr style={{ background: '#f5f5f5' }}>
-                      <td style={{ border: '1px solid #000', padding: '4px 8px', fontWeight: 600 }}>小计</td>
-                      {colors.map(color => <td key={color} style={{ border: '1px solid #000', padding: '4px 8px', textAlign: 'center', fontWeight: 600 }}>{colorTotals[color]}</td>)}
-                      <td style={{ border: '1px solid #000', padding: '4px 8px', textAlign: 'center', fontWeight: 700 }}>{grandTotal}</td>
+                    <tr className="total-row">
+                      <td>小计</td>
+                      {colors.map(color => <td key={color}>{colorTotals[color]}</td>)}
+                      <td className="highlight-cell">{grandTotal}</td>
                     </tr>
                   </tbody>
                 </table>
@@ -627,24 +635,24 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
                     : sampleReviewStatus === 'PENDING' ? '待审核'
                       : '';
             return (
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, marginBottom: 12 }}>
+              <table className="pt" style={{ marginBottom: 12 }}>
                 <tbody>
                   <tr>
-                    <td style={{ border: '1px solid #000', padding: '4px 8px', background: '#f5f5f5', fontWeight: 500, width: 100 }}>审核状态</td>
-                    <td style={{ border: '1px solid #000', padding: '4px 8px' }}>{reviewLabel || '-'}</td>
+                    <td className="label-cell">审核状态</td>
+                    <td>{reviewLabel || '-'}</td>
                   </tr>
                   <tr>
-                    <td style={{ border: '1px solid #000', padding: '4px 8px', background: '#f5f5f5', fontWeight: 500 }}>审核人</td>
-                    <td style={{ border: '1px solid #000', padding: '4px 8px' }}>{sampleReviewer || '-'}</td>
+                    <td className="label-cell">审核人</td>
+                    <td>{sampleReviewer || '-'}</td>
                   </tr>
                   <tr>
-                    <td style={{ border: '1px solid #000', padding: '4px 8px', background: '#f5f5f5', fontWeight: 500 }}>审核时间</td>
-                    <td style={{ border: '1px solid #000', padding: '4px 8px' }}>{sampleReviewTime ? formatDateTime(sampleReviewTime) : '-'}</td>
+                    <td className="label-cell">审核时间</td>
+                    <td>{sampleReviewTime ? formatDateTime(sampleReviewTime) : '-'}</td>
                   </tr>
                   {sampleReviewComment && (
                     <tr>
-                      <td style={{ border: '1px solid #000', padding: '4px 8px', background: '#f5f5f5', fontWeight: 500 }}>审核评语</td>
-                      <td style={{ border: '1px solid #000', padding: '4px 8px', whiteSpace: 'pre-wrap' }}>{sampleReviewComment}</td>
+                      <td className="label-cell">审核评语</td>
+                      <td style={{ whiteSpace: 'pre-wrap' }}>{sampleReviewComment}</td>
                     </tr>
                   )}
                 </tbody>
@@ -656,11 +664,11 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
           {options.productionSheet && (() => {
             const description = data.productionSheet?.description || '';
             return (
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, marginBottom: 12 }}>
+              <table className="pt" style={{ marginBottom: 12 }}>
                 <tbody>
                   <tr>
-                    <td style={{ border: '1px solid #000', padding: '4px 8px', background: '#f5f5f5', fontWeight: 500, width: 100 }}>生产要求</td>
-                    <td style={{ border: '1px solid #000', padding: '4px 8px', whiteSpace: 'pre-wrap', minHeight: 40 }}>{description || '-'}</td>
+                    <td className="label-cell">生产要求</td>
+                    <td style={{ whiteSpace: 'pre-wrap', minHeight: 40 }}>{description || '-'}</td>
                   </tr>
                 </tbody>
               </table>
@@ -731,26 +739,23 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
               });
             });
 
-            const thS: React.CSSProperties = { border: '1px solid #000', padding: '4px 8px', textAlign: 'center', background: '#f5f5f5', whiteSpace: 'nowrap' as const };
-            const tdS: React.CSSProperties = { border: '1px solid #000', padding: '4px 8px', verticalAlign: 'middle', fontSize: 12 };
-
             return (
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, marginBottom: 12, tableLayout: 'fixed' }}>
+              <table className="pt" style={{ marginBottom: 12, tableLayout: 'fixed' }}>
                 <thead>
                   <tr>
-                    <th style={{ ...thS, width: 160 }}>参考图</th>
-                    <th style={{ ...thS, width: 60 }}>分组</th>
-                    <th style={{ ...thS, width: 60, textAlign: 'left' }}>部位(cm)</th>
-                    <th style={{ ...thS, width: 100 }}>度量方式</th>
-                    {sortedSizeNames.map((sn: string) => <th key={sn} style={{ ...thS, width: 60 }}>{sn}</th>)}
-                    <th style={{ ...thS, width: 60 }}>公差(+/-)</th>
+                    <th style={{ width: 160 }}>参考图</th>
+                    <th style={{ width: 60 }}>分组</th>
+                    <th style={{ width: 60, textAlign: 'left' }}>部位(cm)</th>
+                    <th style={{ width: 100 }}>度量方式</th>
+                    {sortedSizeNames.map((sn: string) => <th key={sn} style={{ width: 60 }}>{sn}</th>)}
+                    <th style={{ width: 60 }}>公差(+/-)</th>
                   </tr>
                 </thead>
                 <tbody>
                   {flatRows.map(row => (
                     <tr key={row.key}>
                       {row.isImgStart && (
-                        <td rowSpan={row.imgSpan} style={{ ...tdS, verticalAlign: 'top', textAlign: 'center', padding: 6 }}>
+                        <td rowSpan={row.imgSpan} style={{ verticalAlign: 'top', textAlign: 'center', padding: 6 }}>
                           {row.chunkImgs.length > 0
                             ? <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'stretch' }}>
                                 {row.chunkImgs.map((url: string) => (
@@ -762,16 +767,16 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
                         </td>
                       )}
                       {row.isGroupStart && (
-                        <td rowSpan={row.groupSpan} style={{ ...tdS, verticalAlign: 'top', textAlign: 'center', fontWeight: 600 }}>
+                        <td rowSpan={row.groupSpan} style={{ verticalAlign: 'top', textAlign: 'center', fontWeight: 600 }}>
                           {row.resolvedGroupName}
                         </td>
                       )}
-                      <td style={tdS}>{row.partName}</td>
-                      <td style={{ ...tdS, textAlign: 'center' }}>{row.measureMethod || '平量'}</td>
+                      <td>{row.partName}</td>
+                      <td style={{ textAlign: 'center' }}>{row.measureMethod || '平量'}</td>
                       {sortedSizeNames.map((sn: string) => (
-                        <td key={sn} style={{ ...tdS, textAlign: 'center' }}>{row.cells[sn] != null ? row.cells[sn] : '-'}</td>
+                        <td key={sn} style={{ textAlign: 'center' }}>{row.cells[sn] != null ? row.cells[sn] : '-'}</td>
                       ))}
-                      <td style={{ ...tdS, textAlign: 'center' }}>{row.tolerance != null ? `±${row.tolerance}` : '-'}</td>
+                      <td style={{ textAlign: 'center' }}>{row.tolerance != null ? `±${row.tolerance}` : '-'}</td>
                     </tr>
                   ))}
                 </tbody>
