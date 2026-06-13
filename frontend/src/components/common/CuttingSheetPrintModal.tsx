@@ -83,7 +83,7 @@ const CuttingSheetPrintModal: React.FC<CuttingSheetPrintModalProps> = ({
 
       // 统计码数和总数量
       const sizes = [...new Set(orderBundles.map(b => b.size).filter(Boolean))];
-      const sizeDisplay = sizes.length > 0 ? sizes.join(', ') : '-';
+      const _sizeDisplay = sizes.length > 0 ? sizes.join(', ') : '-';
       const totalQuantity = orderBundles.reduce((sum, b) => sum + (b.quantity || 0), 0);
 
       // 生成表格行（格式：款号、码数、菲号、颜色、数量）按菲号数字升序排列

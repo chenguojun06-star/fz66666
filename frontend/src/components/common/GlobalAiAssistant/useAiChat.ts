@@ -211,14 +211,14 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
     }
 
     startStream(contextualText, text, reportTypeToDownload);
-  }, [inputValue, isTyping, user, startStream, handleDownloadReport]);
+  }, [inputValue, isTyping, user, startStream, handleDownloadReport, location.pathname, location.search]);
 
   // 检查是否是图片文件
-  const isImageFile = (file: File): boolean => {
+  const isImageFile = useCallback((file: File): boolean => {
     const imageExts = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp'];
     const ext = '.' + (file.name.split('.').pop() ?? '').toLowerCase();
     return imageExts.includes(ext);
-  };
+  }, []);
 
   const handleFileSelect = useCallback((e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -314,7 +314,7 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
         imageUrl: previewImage || undefined
       }]);
       setInputValue('');
-      const fileToUpload = attachedFile;
+      const _fileToUpload = attachedFile;
       setAttachedFile(null);
       setPreviewImage(null);
       

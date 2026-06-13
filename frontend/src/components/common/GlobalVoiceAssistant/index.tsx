@@ -4,7 +4,6 @@ import {
   AudioOutlined,
   CloseCircleOutlined,
   RobotOutlined,
-  SendOutlined,
   StopOutlined
 } from '@ant-design/icons';
 import './styles.css';
@@ -74,7 +73,7 @@ const GlobalVoiceAssistant: React.FC<VoiceAssistantProps> = ({ className }) => {
   }, [isListening]);
 
   // 处理音频
-  const processAudio = async (audioBlob: Blob) => {
+  const processAudio = async (_audioBlob: Blob) => {
     setIsProcessing(true);
     try {
       // 模拟语音识别（实际项目中调用后端API）

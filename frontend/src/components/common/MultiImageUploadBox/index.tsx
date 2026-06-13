@@ -43,7 +43,7 @@ function MultiImageUploadBox({
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewIndex, setPreviewIndex] = useState(0);
 
-  const urls = Array.isArray(value) ? value : [];
+  const urls = useMemo(() => Array.isArray(value) ? value : [], [value]);
 
   const doUpload = useCallback(async (file: File) => {
     if (urls.length >= maxCount) {
