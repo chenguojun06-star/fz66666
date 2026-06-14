@@ -22,7 +22,11 @@ public class DailyBriefingController {
     @GetMapping("/today")
     public Result<DailyBriefing> getToday() {
         Long tenantId = UserContext.tenantId();
-        return Result.success(service.getToday(tenantId));
+        DailyBriefing briefing = service.getToday(tenantId);
+        if (briefing == null) {
+            briefing = service.generate(tenantId);
+        }
+        return Result.success(briefing);
     }
 
     @PostMapping("/refresh")

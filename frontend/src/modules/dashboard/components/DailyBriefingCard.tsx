@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Button, Card, Col, Row, Skeleton, Space, Tag, Tooltip, Typography } from 'antd';
-import { ReloadOutlined, WarningOutlined, ThunderboltOutlined, InboxOutlined, FundOutlined, ClockCircleOutlined, AlertOutlined, DollarOutlined } from '@ant-design/icons';
+import { ReloadOutlined, WarningOutlined, ThunderboltOutlined, InboxOutlined, FundOutlined, ClockCircleOutlined, AlertOutlined } from '@ant-design/icons';
 import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
 import type { DailyBriefing } from '@/services/intelligence/intelligenceApi';
 
@@ -30,11 +30,6 @@ const formatPercent = (value?: number): string => {
   return `${v.toFixed(1)}%`;
 };
 
-const formatCurrency = (value?: number): string => {
-  if (value == null || Number.isNaN(value)) return '-';
-  return `¥ ${value.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-};
-
 interface MetricItem {
   key: keyof DailyBriefing;
   label: string;
@@ -50,7 +45,6 @@ const METRICS: MetricItem[] = [
   { key: 'totalProductionProgress', label: '整体生产进度', icon: <FundOutlined />, formatter: formatPercent, accent: 'var(--color-success, #52c41a)' },
   { key: 'delayedStyleCount', label: '延期款数', icon: <AlertOutlined />, formatter: formatNumber, accent: 'var(--color-error, #ff4d4f)' },
   { key: 'lowStockItems', label: '低库存物料', icon: <ThunderboltOutlined />, formatter: formatNumber, accent: 'var(--color-warning, #faad14)' },
-  { key: 'wagePendingAmount', label: '待发工资', icon: <DollarOutlined />, formatter: formatCurrency, accent: 'var(--color-info, #13c2c2)' },
 ];
 
 const DailyBriefingCard: React.FC = () => {
@@ -78,7 +72,7 @@ const DailyBriefingCard: React.FC = () => {
     void fetchData();
   }, [fetchData]);
 
-  const isEmpty = !loading && !error && (!data || (data.totalOrders === 0 && data.summary === undefined));
+  const isEmpty = !loading && !error && !data;
 
   const renderContent = () => {
     if (loading) {
