@@ -170,3 +170,6 @@ scan_*.py
 refactor_*.py
 .github_token_local
 graphify-out/
+
+# 项目专属 fashion-* skill 仅本地使用，不入库（lark-* 等团队共享的仍入库）
+.agents/skills/fashion-*
