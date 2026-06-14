@@ -382,6 +382,7 @@ public class StyleIntelligenceProfileOrchestrator {
         stages.add(buildStage("secondary", "二次工艺", style.getSecondaryAssignee(), style.getSecondaryStartTime(), style.getSecondaryCompletedTime()));
         stages.add(buildStage("process", "工序单价", style.getProcessAssignee(), style.getProcessStartTime(), style.getProcessCompletedTime()));
         stages.add(buildStage("sizePrice", "码数单价", style.getSizePriceAssignee(), style.getSizePriceStartTime(), style.getSizePriceCompletedTime()));
+        stages.add(buildStage("sample", "样衣生产", style.getSampleSupplier(), style.getSampleStartTime(), style.getSampleCompletedTime(), style.getSampleStatus()));
         return stages;
     }
 

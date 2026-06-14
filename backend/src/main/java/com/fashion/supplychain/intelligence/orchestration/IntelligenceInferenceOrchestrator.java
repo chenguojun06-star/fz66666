@@ -85,6 +85,9 @@ public class IntelligenceInferenceOrchestrator {
     @Value("${ai.fallback.qwen.model:qwen-plus}") private String qwenModel;
     @Value("${ai.fallback.qwen.timeout-seconds:30}") private int qwenTimeoutSeconds;
     @Value("${ai.fallback.keyword-enabled:true}") private boolean keywordFallbackEnabled;
+    // 视觉模型请求参数（识别/质检类任务要稳，不要创意）
+    @Value("${ai.vision.max-tokens:2048}") private int visionMaxTokens;
+    @Value("${ai.vision.temperature:0.2}") private double visionTemperature;
 
     @Autowired private IntelligenceModelGatewayOrchestrator intelligenceModelGatewayOrchestrator;
     @Autowired private IntelligenceObservabilityOrchestrator intelligenceObservabilityOrchestrator;
@@ -93,7 +96,11 @@ public class IntelligenceInferenceOrchestrator {
 
     @PostConstruct
     public void initHttpClient() {
-        sharedHttpClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
+        // 加 redirect(NORMAL)：图片CDN/API 发生 301/302 跳转时自动跟随，避免直接失败
+        sharedHttpClient = HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(10))
+                .followRedirects(HttpClient.Redirect.NORMAL)
+                .build();
         visionExecutor = Executors.newFixedThreadPool(Math.min(10, Runtime.getRuntime().availableProcessors() * 2));
         initVisionModels();
     }
@@ -369,20 +376,53 @@ public class IntelligenceInferenceOrchestrator {
 
     private String invokeVisionModel(VisionModelConfig model, String imageUrl, String textPrompt) throws Exception {
         String payload = buildVisionPayload(model.model, imageUrl, textPrompt);
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(model.apiUrl))
-                .header("Content-Type", "application/json")
-                .header("Authorization", "Bearer " + model.apiKey)
-                .timeout(Duration.ofSeconds(model.timeoutSeconds))
-                .POST(HttpRequest.BodyPublishers.ofString(payload))
-                .build();
-        HttpResponse<String> response = sharedHttpClient.send(request, HttpResponse.BodyHandlers.ofString());
-        return extractVisionResponse(response, model.name);
+        // 视觉调用加 1 次重试：仅对超时(IOException) 和 5xx 重试，4xx（鉴权/参数错）不重试
+        int maxAttempts = 2;
+        Exception lastException = null;
+        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(model.apiUrl))
+                    .header("Content-Type", "application/json")
+                    .header("Authorization", "Bearer " + model.apiKey)
+                    .timeout(Duration.ofSeconds(model.timeoutSeconds))
+                    .POST(HttpRequest.BodyPublishers.ofString(payload))
+                    .build();
+            try {
+                HttpResponse<String> response = sharedHttpClient.send(request, HttpResponse.BodyHandlers.ofString());
+                int code = response.statusCode();
+                // 成功 或 4xx（不重试：鉴权/参数错，重试也是同样错）
+                if (code < 500) {
+                    if (attempt == 2 && code >= 200 && code < 300) {
+                        log.info("[Vision] {} 第2次重试成功", model.name);
+                    }
+                    return extractVisionResponse(response, model.name);
+                }
+                // 5xx：服务端错误，记录后重试
+                log.warn("[Vision] {} 第{}/{} 次调用 5xx status={}，{}",
+                        model.name, attempt, maxAttempts, code,
+                        attempt < maxAttempts ? "将重试1次" : "放弃换下一个模型");
+                lastException = new RuntimeException("HTTP " + code);
+            } catch (java.io.IOException e) {
+                // 超时/网络抖动，重试
+                lastException = e;
+                log.warn("[Vision] {} 第{}/{} 次调用网络异常: {}，{}",
+                        model.name, attempt, maxAttempts, e.getMessage(),
+                        attempt < maxAttempts ? "将重试1次" : "放弃换下一个模型");
+                if (attempt < maxAttempts) {
+                    try { Thread.sleep(500L); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+                }
+            }
+        }
+        if (lastException != null) throw lastException;
+        return null;
     }
 
     private String buildVisionPayload(String modelName, String imageUrl, String textPrompt) throws Exception {
         var root = MAPPER.createObjectNode();
         root.put("model", modelName);
+        // 加 max_tokens：防超长返回省 token；加 temperature:0.2：识别/质检要稳不要创意
+        root.put("max_tokens", visionMaxTokens);
+        root.put("temperature", visionTemperature);
         var messagesArr = root.putArray("messages");
         var userMsg = messagesArr.addObject();
         userMsg.put("role", "user");

@@ -190,7 +190,10 @@ fashion:
     auto-sync-timeout: ${FASHION_TEMPLATE_AUTO_SYNC_TIMEOUT:30}  # 同步超时时间（秒，默认：30）
 
 app:
-  public-base-url: ${APP_PUBLIC_BASE_URL:}
+  # 公网基础URL：Agnes视觉模型需要用完整HTTP URL拉取图片，相对路径(/files/xx.jpg)会拼接此base
+  # 本地开发在 .run/backend.env 配 APP_PUBLIC_BASE_URL=http://127.0.0.1:8088
+  # 云端生产配 APP_PUBLIC_BASE_URL=https://api.webyszl.cn
+  public-base-url: ${APP_PUBLIC_BASE_URL:https://api.webyszl.cn}
   auth:
     jwt-secret: ${APP_AUTH_JWT_SECRET:ThisIsA_LocalJwtSecret_OnlyForDev_0123456789}
     jwt-ttl-hours: ${APP_AUTH_JWT_TTL_HOURS:4}
