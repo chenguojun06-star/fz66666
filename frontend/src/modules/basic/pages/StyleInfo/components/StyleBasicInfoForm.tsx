@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useImperativeHandle } from 'react';
 import { Form, Input, InputNumber, Row, Col, FormInstance, Select, App } from 'antd';
 import { UnifiedDatePicker } from '@/components/common/UnifiedDatePicker';
 import DictAutoComplete from '@/components/common/DictAutoComplete';
@@ -9,6 +9,10 @@ import { StyleInfo } from '@/types/style';
 import { CATEGORY_CODE_OPTIONS, SEASON_CODE_OPTIONS } from '@/utils/styleCategory';
 import { useDictOptions } from '@/hooks/useDictOptions';
 import { type StyleFieldParseResult } from '@/services/intelligence/intelligenceApi';
+
+export interface StyleBasicInfoFormRef {
+  applyStyleParseResult: (result: StyleFieldParseResult) => void;
+}
 
 interface StyleBasicInfoFormProps {
   _form: FormInstance;
@@ -65,6 +69,7 @@ interface StyleBasicInfoFormProps {
   commonColors: string[];
   setCommonColors: (v: string[]) => void;
   onStyleParseResult?: (result: StyleFieldParseResult) => void;
+  forwardedRef?: React.Ref<StyleBasicInfoFormRef>;
 }
 
 /**
@@ -91,6 +96,7 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
   onColorImageClear,
   onSkcClick,
   onStyleParseResult,
+  forwardedRef,
 }) => {
   const { message } = App.useApp();
   const { options: categoryOptions } = useDictOptions('category', CATEGORY_CODE_OPTIONS);
@@ -106,8 +112,8 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
     lineHeight: '20px',
   };
 
-  // 智能识别结果填充
-  const handleStyleParseResult = (result: StyleFieldParseResult) => {
+  // 智能识别结果填充：款名/品类/季节/颜色/尺码，面料袖型领型版型图案放备注
+  const applyStyleParseResult = (result: StyleFieldParseResult) => {
     if (!result || result.available === false) return;
 
     const updates: Record<string, any> = {};
@@ -143,7 +149,6 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
       result.colors.slice(0, 5).forEach((colorName: string, idx: number) => {
         colorSetterFns[idx]?.(colorName);
       });
-      // 同时更新颜色选项列表（让这些颜色出现在颜色选择器中）
       const newColorOptions = result.colors.slice(0, 5).filter((c: string) =>
         !commonColors.includes(c)
       );
@@ -172,14 +177,13 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
       recommended.slice(0, 5).forEach((sizeVal: string, idx: number) => {
         sizeSetterFns[idx]?.(sizeVal);
       });
-      // 同步到尺码选项列表
       const newSizeOptions = recommended.filter((s: string) => !commonSizes.includes(s));
       if (newSizeOptions.length > 0) {
         setCommonSizes([...commonSizes, ...newSizeOptions]);
       }
     }
 
-    // 备注字段：综合识别结果填充
+    // 备注字段：综合面料/袖型/领型/版型/图案 + 置信度
     if (!_form.getFieldValue('remark')) {
       const remarkParts: string[] = [];
       if (result.pattern) remarkParts.push(`图案:${result.pattern}`);
@@ -187,14 +191,25 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
       if (result.sleeveType) remarkParts.push(`袖型:${result.sleeveType}`);
       if (result.neckline) remarkParts.push(`领型:${result.neckline}`);
       if (result.version) remarkParts.push(`版型:${result.version}`);
+      if (typeof result.overallConfidence === 'number') {
+        remarkParts.push(`置信度:${result.overallConfidence}%`);
+      }
       if (remarkParts.length > 0) {
         _form.setFieldsValue({ remark: remarkParts.join(' | ') });
       }
     }
+  };
 
-    // 向上透传（由父组件决定是否填充更多字段）
+  useImperativeHandle(forwardedRef, () => ({
+    applyStyleParseResult,
+  }));
+
+  // 智能识别结果填充：内部回调，也会向上透传给父组件
+  const handleStyleParseResult = (result: StyleFieldParseResult) => {
+    applyStyleParseResult(result);
     onStyleParseResult?.(result);
   };
+
 
   return (
     <Row gutter={16} className="square-inputs">

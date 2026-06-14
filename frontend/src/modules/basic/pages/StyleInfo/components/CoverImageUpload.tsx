@@ -54,6 +54,8 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
   const [parsing, setParsing] = useState(false);
   const [autoParseAttempted, setAutoParseAttempted] = useState(false);
   const [autoParseError, setAutoParseError] = useState<string | null>(null);
+  // 新建模式下最近一次成功识别的置信度，用于状态展示
+  const [parseSuccessConfidence, setParseSuccessConfidence] = useState<number | null>(null);
 
   // 新建模式使用本地预览，否则使用服务器图片
   // 服务器无附件时：若有 coverUrl（来自选品中心下板），合成一条虚拟条目作为细节图1兜底展示
@@ -112,7 +114,48 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
     }
   }, [fetchImages, isNewMode, refreshTrigger]);
 
-  // 自动识别（编辑模式下首次加载时自动触发一次）
+  // 统一的识别流程：根据当前图片和模式，自动上传（如需要）并调用 styleParseFromImage
+  const runStyleParseFromCurrentImage = useCallback(async (): Promise<StyleFieldParseResult | null> => {
+    const current = displayImages[currentIndex];
+    if (!current) return null;
+
+    let imgUrl = '';
+
+    // 新建模式：本地图片需要先上传获取服务器URL
+    if (isNewMode && current.isLocal && pendingFiles[current.localIndex]) {
+      try {
+        const file = pendingFiles[current.localIndex];
+        const formData = new FormData();
+        formData.append('file', file);
+        const uploadRes = await api.post<ApiResult<{ fileUrl?: string }>>('/style/attachment/upload', formData, { timeout: 60000 } as any);
+        if (isApiSuccess(uploadRes) && uploadRes?.data?.fileUrl) {
+          imgUrl = getFullAuthedFileUrl(uploadRes.data.fileUrl);
+        } else {
+          return null;
+        }
+      } catch {
+        return null;
+      }
+    } else {
+      // 编辑模式：直接使用服务器图片URL
+      const fullUrl = getFullAuthedFileUrl(current.fileUrl);
+      if (!fullUrl || fullUrl.startsWith('blob:') || fullUrl.startsWith('data:')) {
+        return null;
+      }
+      imgUrl = fullUrl;
+    }
+
+    if (!imgUrl) return null;
+
+    try {
+      const res = await styleParseFromImage(imgUrl);
+      return res;
+    } catch {
+      return null;
+    }
+  }, [displayImages, currentIndex, isNewMode, pendingFiles]);
+
+  // 编辑模式下首次加载时自动触发一次识别（保持原有行为）
   useEffect(() => {
     if (isNewMode) return;
     if (!styleId) return;
@@ -137,6 +180,7 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
         if (res?.available) {
           onStyleParseResult?.(res);
           onAutoParseResult?.(res);
+          setParseSuccessConfidence(res.overallConfidence ?? null);
         } else {
           setAutoParseError(res?.errorMessage || '识别失败，请人工填写');
         }
@@ -148,6 +192,35 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
     })();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [styleId, enabled, isNewMode, currentImage, autoParseAttempted, autoParseEnabled, onStyleParseResult]);
+
+  // 新建模式下：本地图片加载完成后，自动触发识别（一次）
+  useEffect(() => {
+    if (!isNewMode) return;
+    if (!onStyleParseResult) return;
+    if (!autoParseEnabled) return;
+    if (autoParseAttempted) return;
+    if (parsing) return;
+    const current = displayImages[currentIndex];
+    if (!current) return;
+
+    setAutoParseAttempted(true);
+    onAutoParseStart?.();
+    setParsing(true);
+    setAutoParseError(null);
+    setParseSuccessConfidence(null);
+    (async () => {
+      const res = await runStyleParseFromCurrentImage();
+      if (res?.available) {
+        onStyleParseResult?.(res);
+        onAutoParseResult?.(res);
+        setParseSuccessConfidence(res.overallConfidence ?? null);
+      } else {
+        setAutoParseError(res?.errorMessage || '识别失败，可手动填写');
+      }
+      setParsing(false);
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isNewMode, currentImage?.fileUrl, displayImages.length, currentIndex]);
 
   // 删除本地预览图片
   const handleRemoveLocalFile = (index: number) => {
@@ -269,7 +342,7 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
                     display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end',
                   }}
                 >
-                  {!autoParseAttempted && parsing && (
+                  {parsing && (
                     <div
                       style={{
                         padding: '3px 8px', borderRadius: 999,
@@ -279,59 +352,54 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
                       }}
                     >
                       <BulbOutlined style={{ fontSize: 11 }} />
-                      正在自动识别...
+                      正在智能识别...
+                    </div>
+                  )}
+                  {!parsing && parseSuccessConfidence !== null && (
+                    <div
+                      style={{
+                        padding: '3px 8px', borderRadius: 999,
+                        background: 'rgba(34,197,94,0.95)', color: '#fff',
+                        fontSize: 12, fontWeight: 600,
+                        display: 'flex', alignItems: 'center', gap: 4,
+                      }}
+                    >
+                      ✅ 已识别：置信度 {parseSuccessConfidence}%
+                    </div>
+                  )}
+                  {!parsing && parseSuccessConfidence === null && autoParseError && (
+                    <div
+                      style={{
+                        padding: '3px 8px', borderRadius: 999,
+                        background: 'rgba(245,158,11,0.95)', color: '#fff',
+                        fontSize: 12, fontWeight: 600,
+                        display: 'flex', alignItems: 'center', gap: 4,
+                      }}
+                    >
+                      ⚠️ 识别失败，可手动填写
                     </div>
                   )}
                   <div style={{ display: 'flex', gap: 6 }}>
                     <div
                       onClick={async () => {
                         if (parsing || searching) return;
-                        let imgUrl = '';
-
-                        // 新建模式：本地图片需要先上传获取服务器URL
-                        if (currentImage.isLocal && isNewMode && pendingFiles[currentImage.localIndex]) {
-                          setParsing(true);
-                          try {
-                            const file = pendingFiles[currentImage.localIndex];
-                            const formData = new FormData();
-                            formData.append('file', file);
-                            const uploadRes = await api.post<ApiResult<{ fileUrl?: string }>>('/style/attachment/upload', formData, { timeout: 60000 } as any);
-                            if (isApiSuccess(uploadRes) && uploadRes?.data?.fileUrl) {
-                              imgUrl = getFullAuthedFileUrl(uploadRes.data.fileUrl);
-                            } else {
-                              message.error('图片上传失败，无法进行智能识别');
-                              return;
-                            }
-                          } catch {
-                            message.error('图片上传失败，无法进行智能识别');
-                            return;
-                          }
-                        } else {
-                          // 编辑模式：直接使用服务器图片URL
-                          const fullUrl = getFullAuthedFileUrl(currentImage.fileUrl);
-                          if (!fullUrl || fullUrl.startsWith('blob:') || fullUrl.startsWith('data:')) {
-                            message.warning('当前图片不支持智能识别（需要公网可访问的图片）');
-                            return;
-                          }
-                          imgUrl = fullUrl;
-                        }
-
-                        if (!imgUrl) {
-                          message.warning('无法获取图片URL，无法进行智能识别');
-                          return;
-                        }
-
                         setParsing(true);
+                        setAutoParseError(null);
+                        setParseSuccessConfidence(null);
                         try {
-                          const res = await styleParseFromImage(imgUrl);
+                          const res = await runStyleParseFromCurrentImage();
                           if (res?.available) {
                             message.success(`识别完成（置信度 ${res.overallConfidence}%）`);
                             onStyleParseResult?.(res);
+                            onAutoParseResult?.(res);
+                            setParseSuccessConfidence(res.overallConfidence ?? null);
                           } else {
                             message.warning(res?.errorMessage || '识别失败，请人工填写');
+                            setAutoParseError(res?.errorMessage || '识别失败');
                           }
                         } catch {
                           message.warning('智能识别服务暂不可用');
+                          setAutoParseError('智能识别服务暂不可用');
                         } finally {
                           setParsing(false);
                         }

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { App, AutoComplete, Button, Checkbox, Space } from 'antd';
+import { App, AutoComplete, Button, Checkbox, Col, Row, Space } from 'antd';
 import ResizableModal from '@/components/common/ResizableModal';
 import {
   AccountBookOutlined,
@@ -21,6 +21,9 @@ import StandardToolbar from '@/components/common/StandardToolbar';
 import OrderCuttingChart from '../../components/OrderCuttingChart';
 import ScanCountChart from '../../components/ScanCountChart';
 import OverdueOrderTable from '../../components/OverdueOrderTable';
+import DailyBriefingCard from '../../components/DailyBriefingCard';
+import DeliveryRiskCard from '../../components/DeliveryRiskCard';
+import RestockSuggestionCard from '../../components/RestockSuggestionCard';
 
 import { useDashboardStats } from './useDashboardStats';
 import './styles.css';
@@ -298,6 +301,23 @@ const Dashboard: React.FC = () => {
 
         {/* AI 智能洞察摘要 */}
         <DashboardAiInsight />
+
+        {/* 今日简报卡片 */}
+        <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
+          <Col span={24}>
+            <DailyBriefingCard />
+          </Col>
+        </Row>
+
+        {/* 高风险订单 + 补货建议 */}
+        <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
+          <Col xs={24} lg={12}>
+            <DeliveryRiskCard />
+          </Col>
+          <Col xs={24} lg={12}>
+            <RestockSuggestionCard />
+          </Col>
+        </Row>
 
         {/* 数据分析区域 */}
         <div className="dashboard-analysis-section">

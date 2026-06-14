@@ -35,6 +35,42 @@ export interface DeliveryRiskResponse {
   warningCount: number;
 }
 
+export interface DailyBriefing {
+  totalOrders: number;
+  pendingOrders: number;
+  atRiskOrders: number;
+  totalProductionProgress: number;
+  delayedStyleCount: number;
+  lowStockItems: number;
+  wagePendingAmount: number;
+  summary: string;
+}
+
+export interface PredictionDeliveryRiskItem {
+  orderNo: string;
+  styleName: string;
+  customerName: string;
+  deliveryDate: string;
+  predictedCompletionDate: string;
+  riskLevel: 'HIGH' | 'MEDIUM' | 'LOW';
+  riskScore: number;
+  delayDays: number;
+  reason: string;
+  currentProgress: number;
+}
+
+export interface PredictionRestockSuggestionItem {
+  materialName: string;
+  materialCode: string;
+  currentStock: number;
+  safetyStock: number;
+  avgDailyUsage: number;
+  daysUntilShortage: number;
+  suggestedQuantity: number;
+  priority: 'HIGH' | 'MEDIUM' | 'LOW';
+  reason: string;
+}
+
 export interface AnomalyItem {
   type: 'output_spike' | 'quality_spike' | 'idle_worker' | 'night_scan';
   severity: 'critical' | 'warning' | 'info';

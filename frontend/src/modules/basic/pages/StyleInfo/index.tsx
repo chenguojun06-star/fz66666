@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { App, Card, Checkbox, Form, Input, Tabs } from 'antd';
 import ResizableModal from '@/components/common/ResizableModal';
@@ -8,7 +8,7 @@ import { useStyleFormActions } from './hooks/useStyleFormActions';
 import { useStyleColorSize } from './hooks/useStyleColorSize';
 import { useStyleProduction } from './hooks/useStyleProduction';
 import { useStylePushOrder } from './hooks/useStylePushOrder';
-import StyleBasicInfoForm from './components/StyleBasicInfoForm';
+import StyleBasicInfoForm, { type StyleBasicInfoFormRef } from './components/StyleBasicInfoForm';
 import StyleActionButtons from './components/StyleActionButtons';
 
 import StyleBomTab from './components/StyleBomTab';
@@ -25,6 +25,7 @@ import StyleIntelligenceProfileCard from './components/StyleIntelligenceProfileC
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
+import { type StyleFieldParseResult } from '@/services/intelligence/intelligenceApi';
 
 import './styles.css';
 
@@ -55,6 +56,11 @@ const StyleInfoDetailPage: React.FC = () => {
   const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
   const showSmartErrorNotice = React.useMemo(() => isSmartFeatureEnabled('smart.production.precheck.enabled'), []);
   const [bomAreaTabKey, setBomAreaTabKey] = useState('bom');
+  const basicInfoFormRef = useRef<StyleBasicInfoFormRef | null>(null);
+
+  const handleStyleParseResult = (result: StyleFieldParseResult) => {
+    basicInfoFormRef.current?.applyStyleParseResult(result);
+  };
 
   const reportSmartError = (title: string, reason?: string, code?: string) => {
     if (!showSmartErrorNotice) return;
@@ -151,6 +157,8 @@ const StyleInfoDetailPage: React.FC = () => {
               onPendingImagesChange={colorSize.setPendingImages}
               coverRefreshToken={colorSize.coverRefreshToken}
               onCoverChange={colorSize.handleCoverChange}
+              forwardedRef={basicInfoFormRef}
+              onStyleParseResult={handleStyleParseResult}
               size1={colorSize.size1}
               setSize1={colorSize.setSize1}
               size2={colorSize.size2}

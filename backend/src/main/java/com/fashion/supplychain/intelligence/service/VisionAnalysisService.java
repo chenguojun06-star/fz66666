@@ -468,34 +468,47 @@ public class VisionAnalysisService {
         // 缺陷/关键词兜底填充（从 report 文本提取）
         fillFromReport(r, report);
 
-        // 款名建议
+        // 款名建议（颜色 + 袖型 + 品类 + 季节款）
         if (r.getStyleName() == null || r.getStyleName().isBlank()) {
             StringBuilder sb = new StringBuilder();
-            if (r.getColors().size() > 0) sb.append(String.join("/", r.getColors().subList(0, Math.min(2, r.getColors().size()))));
+            if (r.getColors().size() > 0) {
+                sb.append(String.join("/", r.getColors().subList(0, Math.min(2, r.getColors().size()))));
+            }
             if (r.getSleeveType() != null) sb.append(r.getSleeveType());
             if (r.getCategory() != null) sb.append(r.getCategory());
+            if (sb.length() > 0) {
+                String season = r.getSeason();
+                if (season != null && !season.isBlank()) {
+                    sb.append("-").append(season).append("款");
+                }
+            }
             r.setStyleName(sb.length() > 0 ? sb.toString() : "");
         }
 
-        // 备注
-        StringBuilder remark = new StringBuilder();
-        remark.append("AI识别【").append(r.getStyleName()).append("】｜");
-        remark.append("颜色：").append(String.join(",", r.getColors())).append("｜");
-        if (r.getPattern() != null) remark.append("图案：").append(r.getPattern()).append("｜");
-        if (r.getFabric() != null) remark.append("面料：").append(r.getFabric()).append("｜");
-        if (r.getSleeveType() != null) remark.append("袖型：").append(r.getSleeveType()).append("｜");
-        if (r.getNeckline() != null) remark.append("领型：").append(r.getNeckline()).append("｜");
-        if (r.getVersion() != null) remark.append("版型：").append(r.getVersion()).append("｜");
-        r.setSummary(remark.toString());
+        // 综合描述 summary（更丰富，便于前端写入备注）
+        StringBuilder summary = new StringBuilder();
+        summary.append("AI识别【").append(r.getStyleName()).append("】｜");
+        summary.append("颜色：").append(r.getColors().isEmpty() ? "未识别" : String.join("/", r.getColors())).append("｜");
+        if (r.getCategory() != null) summary.append("品类：").append(r.getCategory()).append("｜");
+        if (r.getSeason() != null) summary.append("季节：").append(r.getSeason()).append("｜");
+        if (r.getPattern() != null) summary.append("图案：").append(r.getPattern()).append("｜");
+        if (r.getFabric() != null) summary.append("面料：").append(r.getFabric()).append("｜");
+        if (r.getSleeveType() != null) summary.append("袖型：").append(r.getSleeveType()).append("｜");
+        if (r.getNeckline() != null) summary.append("领型：").append(r.getNeckline()).append("｜");
+        if (r.getVersion() != null) summary.append("版型：").append(r.getVersion()).append("｜");
+        if (report != null && !report.isBlank()) {
+            summary.append("原始分析：").append(report.length() > 200 ? report.substring(0, 200) + "..." : report);
+        }
+        r.setSummary(summary.toString());
 
-        // 整体置信度（取两个较低的一个，保守）
-        int minConf = Math.min(style.getConfidence(), color.getConfidence());
-        r.setOverallConfidence(minConf);
+        // 整体置信度（平均值）：0.0 - 1.0
+        double overallConf = (style.getConfidence() + color.getConfidence()) / 200.0;
+        r.setOverallConfidence(overallConf);
 
-        // 低置信度提示人工复核
-        if (minConf < 70) {
+        // 低置信度提示人工复核（overallConfidence < 0.7 即需人工复核）
+        if (overallConf < 0.7) {
             r.setNeedManualReview(true);
-            r.setReviewHint("识别置信度较低（" + minConf + "/100），请人工复核后再保存。");
+            r.setReviewHint("识别置信度较低（" + String.format("%.0f", overallConf * 100) + "%），请人工复核后再保存。");
         }
 
         log.info("[VisionAnalysis] parseStyleFields done: imageUrl={}, colors={}, category={}, season={}, confidence={}",
@@ -667,20 +680,42 @@ public class VisionAnalysisService {
         return null;
     }
 
-    /** 从文本 report 中做最后一轮兜底填充 */
+    /** 从文本 report 中做最后一轮兜底填充（提取更广的关键词） */
     private void fillFromReport(StyleFieldParseResult r, String report) {
         if (report == null || report.isBlank()) return;
+        String text = report;
+
         if (r.getColors().isEmpty()) {
-            String[] colorKeys = {"黑色","白色","灰色","红色","粉色","蓝色","绿色","黄色","橙色","紫色","棕色","米色","驼色","藏青","杏色","卡其","米白"};
-            for (String c : colorKeys) if (report.contains(c)) r.addColor(c);
+            String[] colorKeys = {"黑色","白色","灰色","红色","粉色","蓝色","绿色","黄色","橙色","紫色","棕色","米色","驼色","藏青","杏色","卡其","米白","军绿","咖啡色","深蓝","浅蓝","深灰","浅灰","暗红","宝蓝","浅粉","嫩绿"};
+            for (String c : colorKeys) if (text.contains(c)) r.addColor(normalizeColor(c));
         }
         if (r.getCategory() == null) {
-            String[] catKeys = {"T恤","衬衫","裤子","牛仔裤","连衣裙","半身裙","外套","大衣","卫衣","毛衣","夹克","西装","POLO衫"};
-            for (String c : catKeys) if (report.contains(c)) { r.setCategory(c); break; }
+            String[] catKeys = {"T恤","衬衫","裤子","牛仔裤","短裤","连衣裙","半身裙","外套","大衣","卫衣","毛衣","针织衫","夹克","西装","马甲","POLO衫","背心","运动裤"};
+            for (String c : catKeys) if (text.contains(c)) { r.setCategory(c); break; }
         }
         if (r.getSeason() == null) {
             String[] sKeys = {"夏季","春夏","冬季","秋冬","春秋","春装","夏装","秋装","冬装"};
-            for (String s : sKeys) if (report.contains(s)) { r.setSeason(s.replace("季", "").replace("装", "")); break; }
+            for (String s : sKeys) if (text.contains(s)) { r.setSeason(s.replace("季", "").replace("装", "")); break; }
+        }
+        if (r.getPattern() == null) {
+            String[] pKeys = {"纯色","条纹","格子","格纹","印花","绣花","提花","波点","动物纹","字母","logo","豹纹"};
+            for (String p : pKeys) if (text.contains(p)) { r.setPattern(p); break; }
+        }
+        if (r.getFabric() == null) {
+            String[] fKeys = {"棉质","纯棉","棉麻","亚麻","真丝","桑蚕丝","羊毛","针织","牛仔","涤纶","呢子","灯芯绒","灯芯","皮革","雪纺","毛绒","摇粒绒","天鹅绒"};
+            for (String f : fKeys) if (text.contains(f)) { r.setFabric(f); break; }
+        }
+        if (r.getSleeveType() == null) {
+            String[] slKeys = {"长袖","短袖","七分袖","五分袖","无袖","中袖"};
+            for (String s : slKeys) if (text.contains(s)) { r.setSleeveType(s); break; }
+        }
+        if (r.getNeckline() == null) {
+            String[] nKeys = {"圆领","V领","立领","POLO领","翻领","衬衫领","方领","一字领","吊带领","吊带"};
+            for (String n : nKeys) if (text.contains(n)) { r.setNeckline(n); break; }
+        }
+        if (r.getVersion() == null) {
+            String[] vKeys = {"修身","宽松","直筒","常规","oversize","H型","A字","收腰"};
+            for (String v : vKeys) if (text.contains(v)) { r.setVersion(v); break; }
         }
     }
 
@@ -692,7 +727,7 @@ public class VisionAnalysisService {
         private String imageUrl;
         private boolean available = true;
         private String errorMessage;
-        private int overallConfidence;
+        private double overallConfidence;
         private int styleConfidence;
         private int colorConfidence;
         private boolean needManualReview;

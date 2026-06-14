@@ -25,6 +25,9 @@ import type {
   DeliveryDateSuggestionResponse,
   DeliveryPredictionResponse,
   DeliveryRiskResponse,
+  DailyBriefing,
+  PredictionDeliveryRiskItem,
+  PredictionRestockSuggestionItem,
   DifficultyAssessment,
   ExecutionConfig,
   ExecutionStats,
@@ -906,6 +909,29 @@ export const intelligenceApi = {
   /** 热更新安全规则 */
   reloadGuardrails: () =>
     api.post<{ status: string; message: string }>('/intelligence/guardrails/reload'),
+
+  // ── 仪表盘卡片专用预测接口 ──
+
+  getDailyBriefing: (): Promise<DailyBriefing> =>
+    api
+      .get<{ code: number; data: DailyBriefing }>('/intelligence/prediction/daily-briefing')
+      .then((r) => (r?.data ?? ({} as DailyBriefing))),
+
+  getDeliveryRisks: (topN = 10): Promise<PredictionDeliveryRiskItem[]> =>
+    api
+      .get<{ code: number; data: PredictionDeliveryRiskItem[] }>(
+        '/intelligence/prediction/delivery-risks',
+        { params: { topN } },
+      )
+      .then((r) => (Array.isArray(r?.data) ? r.data : [])),
+
+  getRestockSuggestions: (topN = 10): Promise<PredictionRestockSuggestionItem[]> =>
+    api
+      .get<{ code: number; data: PredictionRestockSuggestionItem[] }>(
+        '/intelligence/prediction/restock-suggestions',
+        { params: { topN } },
+      )
+      .then((r) => (Array.isArray(r?.data) ? r.data : [])),
 
 };
 
