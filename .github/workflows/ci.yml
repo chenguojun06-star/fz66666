@@ -273,15 +273,25 @@ jobs:
         npm install -g @cloudbase/cli@latest 2>/dev/null || true
         which tcb && tcb --version || echo "tcb CLI not found, will use action fallback"
 
-    - name: 部署到腾讯云 CloudBase（非交互模式）
+    - name: 登录腾讯云 CloudBase
       env:
         TENCENTCLOUD_SECRETID: ${{ secrets.CLOUDBASE_SECRET_ID }}
         TENCENTCLOUD_SECRETKEY: ${{ secrets.CLOUDBASE_SECRET_KEY }}
       run: |
+        tcb login --secretId "$TENCENTCLOUD_SECRETID" --secretKey "$TENCENTCLOUD_SECRETKEY" 2>&1 || {
+          echo "⚠️ tcb login 失败，尝试环境变量方式..."
+        }
+
+    - name: 部署到腾讯云 CloudBase（非交互模式）
+      env:
+        TENCENTCLOUD_SECRETID: ${{ secrets.CLOUDBASE_SECRET_ID }}
+        TENCENTCLOUD_SECRETKEY: ${{ secrets.CLOUDBASE_SECRET_KEY }}
+        TCB_LOGIN: ${{ secrets.CLOUDBASE_SECRET_ID }},${{ secrets.CLOUDBASE_SECRET_KEY }}
+      run: |
         echo "=== 开始部署 ==="
         echo "应用标识: fashion-supplychain"
         echo "环境ID: ${{ secrets.CLOUDBASE_ENV_ID }}"
-        # 使用 printf 管道预填交互提示，确保 CI 环境中非交互部署
+        # 方式1：tcb framework deploy 带 -e 和 --verbose
         printf 'fashion-supplychain\n' | tcb framework deploy -e ${{ secrets.CLOUDBASE_ENV_ID }} --verbose 2>&1 || {
           echo "⚠️ tcb CLI 部署失败，尝试 cloudbase-action 兜底..."
           exit 1
