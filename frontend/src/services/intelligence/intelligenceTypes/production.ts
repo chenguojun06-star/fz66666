@@ -47,6 +47,7 @@ export interface DailyBriefing {
 }
 
 export interface PredictionDeliveryRiskItem {
+  orderId: string;
   orderNo: string;
   styleName: string;
   customerName: string;
@@ -60,6 +61,8 @@ export interface PredictionDeliveryRiskItem {
 }
 
 export interface PredictionRestockSuggestionItem {
+  id?: number | string;
+  materialId?: number | string;
   materialName: string;
   materialCode: string;
   currentStock: number;
@@ -69,6 +72,25 @@ export interface PredictionRestockSuggestionItem {
   suggestedQuantity: number;
   priority: 'HIGH' | 'MEDIUM' | 'LOW';
   reason: string;
+}
+
+export interface GeneratePurchaseRequestPayload {
+  materialId?: number | string;
+  materialName: string;
+  materialCode: string;
+  currentStock: number;
+  quantity: number;
+  remark?: string;
+  priority?: 'HIGH' | 'MEDIUM' | 'LOW';
+}
+
+export interface GeneratePurchaseRequestResult {
+  requestId?: string;
+  materialName: string;
+  materialCode: string;
+  quantity: number;
+  remark?: string;
+  createdAt?: string;
 }
 
 export interface AnomalyItem {

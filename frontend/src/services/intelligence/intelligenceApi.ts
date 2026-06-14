@@ -28,6 +28,8 @@ import type {
   DailyBriefing,
   PredictionDeliveryRiskItem,
   PredictionRestockSuggestionItem,
+  GeneratePurchaseRequestPayload,
+  GeneratePurchaseRequestResult,
   DifficultyAssessment,
   ExecutionConfig,
   ExecutionStats,
@@ -932,6 +934,14 @@ export const intelligenceApi = {
         { params: { topN } },
       )
       .then((r) => (Array.isArray(r?.data) ? r.data : [])),
+
+  generatePurchaseRequest: (payload: GeneratePurchaseRequestPayload): Promise<GeneratePurchaseRequestResult> =>
+    api
+      .post<{ code: number; data: GeneratePurchaseRequestResult }>(
+        '/intelligence/prediction/purchase-request/generate',
+        payload,
+      )
+      .then((r) => (r?.data as GeneratePurchaseRequestResult) ?? ({} as GeneratePurchaseRequestResult)),
 
 };
 

@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Button, Card, List, Progress, Skeleton, Space, Tag, Tooltip, Typography } from 'antd';
 import { ReloadOutlined, ExclamationCircleFilled, CheckCircleFilled, WarningFilled } from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
 import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
 import type { PredictionDeliveryRiskItem } from '@/services/intelligence/intelligenceApi';
 
@@ -25,6 +26,7 @@ const riskConfig: Record<PredictionDeliveryRiskItem['riskLevel'], { color: strin
 const clamp = (value: number, min = 0, max = 100): number => Math.max(min, Math.min(max, value));
 
 const DeliveryRiskCard: React.FC<DeliveryRiskCardProps> = ({ topN = 10 }) => {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [items, setItems] = useState<PredictionDeliveryRiskItem[]>([]);
@@ -48,6 +50,13 @@ const DeliveryRiskCard: React.FC<DeliveryRiskCardProps> = ({ topN = 10 }) => {
     void fetchData();
   }, [fetchData]);
 
+  const handleGoToDetail = useCallback(
+    (item: PredictionDeliveryRiskItem) => {
+      navigate(`/production/progress-detail?orderNo=${encodeURIComponent(item.orderNo)}`);
+    },
+    [navigate],
+  );
+
   const sortedItems = useMemo(() => {
     const order: Record<PredictionDeliveryRiskItem['riskLevel'], number> = { HIGH: 0, MEDIUM: 1, LOW: 2 };
     return [...items].sort((a, b) => {
@@ -61,8 +70,28 @@ const DeliveryRiskCard: React.FC<DeliveryRiskCardProps> = ({ topN = 10 }) => {
     const cfg = riskConfig[item.riskLevel];
     const progress = clamp(item.currentProgress ?? 0);
     const isHigh = item.riskLevel === 'HIGH';
+    const handleRowClick = () => handleGoToDetail(item);
+    const handleButtonClick = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      handleGoToDetail(item);
+    };
     return (
-      <List.Item style={{ padding: '12px 4px', borderBlockEnd: '1px solid var(--color-border-secondary, #f0f0f0)' }}>
+      <List.Item
+        onClick={handleRowClick}
+        style={{
+          padding: '12px 8px',
+          borderBlockEnd: '1px solid var(--color-border-secondary, #f0f0f0)',
+          cursor: 'pointer',
+          transition: 'background-color 0.2s ease',
+          borderRadius: 6,
+        }}
+        onMouseEnter={(e) => {
+          (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--color-fill-1, #fafafa)';
+        }}
+        onMouseLeave={(e) => {
+          (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
+        }}
+      >
         <div style={{ width: '100%' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
@@ -83,6 +112,9 @@ const DeliveryRiskCard: React.FC<DeliveryRiskCardProps> = ({ topN = 10 }) => {
                   {item.delayDays && item.delayDays > 0 ? `延误 ${item.delayDays} 天` : '按时'}
                 </Tag>
               </Tooltip>
+              <Button type="link" size="small" onClick={handleButtonClick}>
+                查看详情
+              </Button>
             </div>
           </div>
 

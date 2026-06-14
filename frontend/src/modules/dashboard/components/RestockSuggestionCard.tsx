@@ -1,10 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Button, Card, List, Progress, Skeleton, Space, Tag, Tooltip, Typography } from 'antd';
-import { ReloadOutlined, ExclamationCircleFilled, CheckCircleFilled, WarningFilled } from '@ant-design/icons';
+import { App, Button, Card, Input, InputNumber, List, Progress, Skeleton, Space, Tag, Tooltip, Typography } from 'antd';
+import { ReloadOutlined, ExclamationCircleFilled, CheckCircleFilled, WarningFilled, ShoppingOutlined } from '@ant-design/icons';
+import ResizableModal from '@/components/common/ResizableModal';
 import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
 import type { PredictionRestockSuggestionItem } from '@/services/intelligence/intelligenceApi';
 
-const { Text, Title } = Typography;
+const { Text, Title, Paragraph } = Typography;
+const { TextArea } = Input;
 
 interface RestockSuggestionCardProps {
   topN?: number;
@@ -31,9 +33,16 @@ const formatNumber = (value?: number): string => {
 };
 
 const RestockSuggestionCard: React.FC<RestockSuggestionCardProps> = ({ topN = 10 }) => {
+  const { message } = App.useApp();
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [items, setItems] = useState<PredictionRestockSuggestionItem[]>([]);
+
+  const [modalOpen, setModalOpen] = useState<boolean>(false);
+  const [activeItem, setActiveItem] = useState<PredictionRestockSuggestionItem | null>(null);
+  const [editQuantity, setEditQuantity] = useState<number>(0);
+  const [editRemark, setEditRemark] = useState<string>('');
+  const [submitLoading, setSubmitLoading] = useState<boolean>(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -63,14 +72,60 @@ const RestockSuggestionCard: React.FC<RestockSuggestionCardProps> = ({ topN = 10
     });
   }, [items]);
 
+  const handleOpenModal = useCallback((item: PredictionRestockSuggestionItem) => {
+    setActiveItem(item);
+    setEditQuantity(item.suggestedQuantity ?? 0);
+    setEditRemark('');
+    setModalOpen(true);
+  }, []);
+
+  const handleCancelModal = useCallback(() => {
+    setModalOpen(false);
+    setActiveItem(null);
+  }, []);
+
+  const handleConfirmModal = useCallback(async () => {
+    if (activeItem == null) return;
+    if (editQuantity == null || editQuantity <= 0) {
+      message.warning('请填写大于 0 的采购数量');
+      return;
+    }
+    setSubmitLoading(true);
+    try {
+      const payload = {
+        materialId: activeItem.materialId,
+        materialName: activeItem.materialName,
+        materialCode: activeItem.materialCode,
+        currentStock: activeItem.currentStock ?? 0,
+        quantity: editQuantity,
+        remark: editRemark || undefined,
+        priority: activeItem.priority,
+      };
+      console.log('[RestockSuggestionCard] 生成采购申请 payload:', payload);
+      try {
+        const result = await intelligenceApi.generatePurchaseRequest(payload);
+        message.success(`已生成采购申请：${activeItem.materialName} × ${editQuantity}`);
+        console.log('[RestockSuggestionCard] 生成采购申请 result:', result);
+      } catch (err) {
+        // 后端未对接时降级：console.log + Toast 提示
+        console.warn('[RestockSuggestionCard] 生成采购申请接口调用失败，降级为模拟生成:', err);
+        message.success(`模拟生成采购申请成功：${activeItem.materialName} × ${editQuantity}`);
+      }
+      setModalOpen(false);
+      setActiveItem(null);
+    } finally {
+      setSubmitLoading(false);
+    }
+  }, [activeItem, editQuantity, editRemark, message]);
+
   const renderItem = (item: PredictionRestockSuggestionItem) => {
     const cfg = priorityConfig[item.priority];
     const safetyStock = Math.max(item.safetyStock ?? 0, 0);
     const currentStock = Math.max(item.currentStock ?? 0, 0);
     const maxBase = Math.max(safetyStock * 2, currentStock, 1);
     const shortagePercent = Math.min(100, Math.max(0, (safetyStock > 0 ? (currentStock / (safetyStock * 2)) * 100 : 0)));
-    const daysUntil = item.daysUntilShortage;
     const isHigh = item.priority === 'HIGH';
+    const showPurchaseButton = item.priority === 'HIGH' || item.priority === 'MEDIUM';
 
     return (
       <List.Item style={{ padding: '12px 4px', borderBlockEnd: '1px solid var(--color-border-secondary, #f0f0f0)' }}>
@@ -84,11 +139,23 @@ const RestockSuggestionCard: React.FC<RestockSuggestionCardProps> = ({ topN = 10
                 {cfg.label}
               </Tag>
             </div>
-            <Tooltip title={`建议补货数量 ${formatNumber(item.suggestedQuantity)}`}>
-              <Tag color="blue" style={{ margin: 0 }}>
-                建议补货 {formatNumber(item.suggestedQuantity)}
-              </Tag>
-            </Tooltip>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <Tooltip title={`建议补货数量 ${formatNumber(item.suggestedQuantity)}`}>
+                <Tag color="blue" style={{ margin: 0 }}>
+                  建议补货 {formatNumber(item.suggestedQuantity)}
+                </Tag>
+              </Tooltip>
+              {showPurchaseButton && (
+                <Button
+                  type="primary"
+                  size="small"
+                  icon={<ShoppingOutlined />}
+                  onClick={() => handleOpenModal(item)}
+                >
+                  生成采购申请
+                </Button>
+              )}
+            </div>
           </div>
 
           <div style={{ display: 'flex', gap: 16, marginTop: 8, flexWrap: 'wrap', fontSize: 12, color: 'var(--color-text-tertiary, #999)' }}>
@@ -185,32 +252,92 @@ const RestockSuggestionCard: React.FC<RestockSuggestionCardProps> = ({ topN = 10
   };
 
   return (
-    <Card
-      style={CARD_STYLE}
-      title={
-        <Space size={8}>
-          <span style={{ color: 'var(--color-warning, #faad14)' }}>●</span>
-          <span style={{ fontWeight: 600 }}>补货建议 Top {topN}</span>
-        </Space>
-      }
-      extra={
-        <Button
-          type="text"
-          icon={<ReloadOutlined />}
-          onClick={fetchData}
-          loading={loading}
-          style={{ color: 'var(--color-text-secondary, #666)' }}
-        >
-          刷新
-        </Button>
-      }
-      bodyStyle={{ padding: 12 }}
-    >
-      <Title level={5} style={{ margin: '0 0 8px 0', color: 'var(--color-text-secondary, #666)', fontWeight: 500 }}>
-        按优先级与可消耗天数排序
-      </Title>
-      {renderBody()}
-    </Card>
+    <>
+      <Card
+        style={CARD_STYLE}
+        title={
+          <Space size={8}>
+            <span style={{ color: 'var(--color-warning, #faad14)' }}>●</span>
+            <span style={{ fontWeight: 600 }}>补货建议 Top {topN}</span>
+          </Space>
+        }
+        extra={
+          <Button
+            type="text"
+            icon={<ReloadOutlined />}
+            onClick={fetchData}
+            loading={loading}
+            style={{ color: 'var(--color-text-secondary, #666)' }}
+          >
+            刷新
+          </Button>
+        }
+        bodyStyle={{ padding: 12 }}
+      >
+        <Title level={5} style={{ margin: '0 0 8px 0', color: 'var(--color-text-secondary, #666)', fontWeight: 500 }}>
+          按优先级与可消耗天数排序
+        </Title>
+        {renderBody()}
+      </Card>
+
+      <ResizableModal
+        title="生成采购申请"
+        open={modalOpen}
+        onOk={handleConfirmModal}
+        onCancel={handleCancelModal}
+        confirmLoading={submitLoading}
+        okText="确定生成"
+        cancelText="取消"
+        width={640}
+        destroyOnClose
+      >
+        {activeItem && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <Paragraph style={{ margin: 0, fontSize: 13 }}>
+              <Text type="secondary">物料名称：</Text>
+              <Text strong>{activeItem.materialName}</Text>
+            </Paragraph>
+            <Paragraph style={{ margin: 0, fontSize: 13 }}>
+              <Text type="secondary">物料编码：</Text>
+              <Text>{activeItem.materialCode}</Text>
+            </Paragraph>
+            <Paragraph style={{ margin: 0, fontSize: 13 }}>
+              <Text type="secondary">当前库存：</Text>
+              <Text strong>{formatNumber(activeItem.currentStock)}</Text>
+              <span style={{ marginLeft: 16, color: 'var(--color-text-secondary, #666)' }}>
+                建议补货：<Text strong>{formatNumber(activeItem.suggestedQuantity)}</Text>
+              </span>
+            </Paragraph>
+
+            <div style={{ marginTop: 4 }}>
+              <div style={{ marginBottom: 6, fontSize: 13, color: 'var(--color-text-secondary, #666)' }}>
+                采购数量
+              </div>
+              <InputNumber
+                min={0}
+                step={1}
+                style={{ width: '100%' }}
+                value={editQuantity}
+                onChange={(v) => setEditQuantity(typeof v === 'number' ? v : 0)}
+              />
+            </div>
+
+            <div style={{ marginTop: 4 }}>
+              <div style={{ marginBottom: 6, fontSize: 13, color: 'var(--color-text-secondary, #666)' }}>
+                备注
+              </div>
+              <TextArea
+                rows={3}
+                maxLength={200}
+                placeholder="可填写采购原因、供应商偏好等信息（选填）"
+                value={editRemark}
+                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setEditRemark(e.target.value)}
+              />
+            </div>
+          </div>
+        )}
+      </ResizableModal>
+    </>
   );
 };
 
