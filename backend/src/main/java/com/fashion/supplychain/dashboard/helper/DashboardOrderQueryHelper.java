@@ -489,7 +489,6 @@ public class DashboardOrderQueryHelper {
         List<StyleInfo> styles = styleInfoService.lambdaQuery()
                 .eq(StyleInfo::getTenantId, tenantId)
                 .eq(StyleInfo::getStatus, "ENABLED")
-                .isNotNull(StyleInfo::getSampleStatus)
                 .ne(StyleInfo::getSampleStatus, "COMPLETED")
                 .select(StyleInfo::getId, StyleInfo::getStyleNo,
                         StyleInfo::getPatternCompletedTime, StyleInfo::getBomCompletedTime,
