@@ -108,6 +108,11 @@ public class ImAiWebhookController {
                 String challenge = extractJsonValue(workingBody, "challenge");
                 if (challenge != null) {
                     log.info("[IM-AI/Feishu] URL verification challenge received");
+                    // 如果原始 body 是加密的，返回也需要加密
+                    if (body.contains("\"encrypt\"") && feishuEncryptKey != null && !feishuEncryptKey.isBlank()) {
+                        String encrypted = encryptFeishuBody("{\"challenge\":\"" + challenge + "\"}", feishuEncryptKey);
+                        return ResponseEntity.ok(Map.of("challenge", challenge, "encrypt", encrypted));
+                    }
                     return ResponseEntity.ok(Map.of("challenge", challenge));
                 }
             } catch (Exception e) {
@@ -469,6 +474,32 @@ public class ImAiWebhookController {
         } catch (Exception e) {
             log.error("[IM-AI/Feishu] decrypt body error: {}", e.getMessage());
             throw new RuntimeException("decrypt failed", e);
+        }
+    }
+
+    /**
+     * 飞书 AES 加密（加密策略开启时，URL 验证返回需要加密）
+     */
+    private String encryptFeishuBody(String plaintext, String key) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] keyBytes = digest.digest(key.getBytes(StandardCharsets.UTF_8));
+            // 生成随机 16 字节 IV
+            byte[] ivBytes = new byte[16];
+            new java.security.SecureRandom().nextBytes(ivBytes);
+            Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+            SecretKeySpec secretKey = new SecretKeySpec(keyBytes, "AES");
+            IvParameterSpec iv = new IvParameterSpec(ivBytes);
+            cipher.init(Cipher.ENCRYPT_MODE, secretKey, iv);
+            byte[] encrypted = cipher.doFinal(plaintext.getBytes(StandardCharsets.UTF_8));
+            // 拼接 IV + 密文，Base64 编码
+            byte[] combined = new byte[ivBytes.length + encrypted.length];
+            System.arraycopy(ivBytes, 0, combined, 0, ivBytes.length);
+            System.arraycopy(encrypted, 0, combined, ivBytes.length, encrypted.length);
+            return Base64.getEncoder().encodeToString(combined);
+        } catch (Exception e) {
+            log.error("[IM-AI/Feishu] encrypt body error: {}", e.getMessage());
+            throw new RuntimeException("encrypt failed", e);
         }
     }
 
