@@ -249,7 +249,10 @@ public class CrmClientController {
 
     @GetMapping("/purchases")
     @PreAuthorize("isAuthenticated()")
-    public Result<Map<String, Object>> getPurchases(@RequestParam(required = false) String status) {
+    public Result<Map<String, Object>> getPurchases(
+            @RequestParam(required = false) String status,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "20") int pageSize) {
         String customerId = resolveCustomerId();
         Long tenantId = UserContext.tenantId();
         if (customerId == null || tenantId == null) {
@@ -263,8 +266,14 @@ public class CrmClientController {
             Map<String, Object> empty = new HashMap<>();
             empty.put("list", Collections.emptyList());
             empty.put("total", 0);
+            empty.put("page", page);
+            empty.put("pageSize", pageSize);
+            empty.put("totalPages", 0);
             return Result.success(empty);
         }
+
+        if (page < 1) page = 1;
+        if (pageSize < 1 || pageSize > 200) pageSize = 20;
 
         LambdaQueryWrapper<MaterialPurchase> purchaseWrapper = new LambdaQueryWrapper<>();
         purchaseWrapper.in(MaterialPurchase::getOrderId, orderIds)
@@ -273,14 +282,20 @@ public class CrmClientController {
             purchaseWrapper.eq(MaterialPurchase::getStatus, status);
         }
         purchaseWrapper.orderByDesc(MaterialPurchase::getCreateTime);
-        purchaseWrapper.last("LIMIT 500");
-        List<MaterialPurchase> purchases = materialPurchaseService.list(purchaseWrapper);
 
-        Map<String, Object> pageResult = new HashMap<>();
-        pageResult.put("list", purchases.stream().map(this::buildPurchaseView).collect(Collectors.toList()));
-        pageResult.put("total", purchases.size());
+        com.baomidou.mybatisplus.extension.plugins.pagination.Page<MaterialPurchase> pageObj =
+                new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>(page, pageSize);
+        com.baomidou.mybatisplus.extension.plugins.pagination.Page<MaterialPurchase> pageResult =
+                materialPurchaseService.page(pageObj, purchaseWrapper);
 
-        return Result.success(pageResult);
+        Map<String, Object> result = new HashMap<>();
+        result.put("list", pageResult.getRecords().stream().map(this::buildPurchaseView).collect(Collectors.toList()));
+        result.put("total", (int) pageResult.getTotal());
+        result.put("page", page);
+        result.put("pageSize", pageSize);
+        result.put("totalPages", (int) Math.ceil(pageResult.getTotal() * 1.0 / pageSize));
+
+        return Result.success(result);
     }
 
     @GetMapping("/purchases/{purchaseId}")
@@ -312,12 +327,18 @@ public class CrmClientController {
 
     @GetMapping("/receivables")
     @PreAuthorize("isAuthenticated()")
-    public Result<Map<String, Object>> getReceivables(@RequestParam(required = false) String status) {
+    public Result<Map<String, Object>> getReceivables(
+            @RequestParam(required = false) String status,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "20") int pageSize) {
         String customerId = resolveCustomerId();
         Long tenantId = UserContext.tenantId();
         if (customerId == null || tenantId == null) {
             return Result.fail("请先登录");
         }
+
+        if (page < 1) page = 1;
+        if (pageSize < 1 || pageSize > 200) pageSize = 20;
 
         LambdaQueryWrapper<Receivable> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(Receivable::getCustomerId, customerId)
@@ -327,14 +348,20 @@ public class CrmClientController {
             wrapper.eq(Receivable::getStatus, status);
         }
         wrapper.orderByDesc(Receivable::getCreateTime);
-        wrapper.last("LIMIT 500");
-        List<Receivable> receivables = receivableService.list(wrapper);
 
-        Map<String, Object> pageResult = new HashMap<>();
-        pageResult.put("list", receivables.stream().map(this::buildReceivableView).collect(Collectors.toList()));
-        pageResult.put("total", receivables.size());
+        com.baomidou.mybatisplus.extension.plugins.pagination.Page<Receivable> pageObj =
+                new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>(page, pageSize);
+        com.baomidou.mybatisplus.extension.plugins.pagination.Page<Receivable> pageResult =
+                receivableService.page(pageObj, wrapper);
 
-        return Result.success(pageResult);
+        Map<String, Object> result = new HashMap<>();
+        result.put("list", pageResult.getRecords().stream().map(this::buildReceivableView).collect(Collectors.toList()));
+        result.put("total", (int) pageResult.getTotal());
+        result.put("page", page);
+        result.put("pageSize", pageSize);
+        result.put("totalPages", (int) Math.ceil(pageResult.getTotal() * 1.0 / pageSize));
+
+        return Result.success(result);
     }
 
     @GetMapping("/receivables/{receivableId}")

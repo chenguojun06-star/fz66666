@@ -180,12 +180,17 @@ public class SupplierPortalController {
     @PreAuthorize("isAuthenticated()")
     public Result<Map<String, Object>> getPurchases(
             @RequestParam(required = false) String status,
-            @RequestParam(required = false) String keyword) {
+            @RequestParam(required = false) String keyword,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "20") int pageSize) {
         String supplierId = resolveSupplierId();
         Long tenantId = UserContext.tenantId();
         if (supplierId == null || tenantId == null) {
             return Result.fail(403, "供应商门户仅限供应商账号访问");
         }
+
+        if (page < 1) page = 1;
+        if (pageSize < 1 || pageSize > 200) pageSize = 20;
 
         LambdaQueryWrapper<MaterialPurchase> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(MaterialPurchase::getSupplierId, supplierId)
@@ -200,12 +205,18 @@ public class SupplierPortalController {
                     .or().like(MaterialPurchase::getOrderNo, keyword));
         }
         wrapper.orderByDesc(MaterialPurchase::getCreateTime);
-        wrapper.last("LIMIT 500");
-        List<MaterialPurchase> purchases = materialPurchaseService.list(wrapper);
+
+        com.baomidou.mybatisplus.extension.plugins.pagination.Page<MaterialPurchase> pageObj =
+                new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>(page, pageSize);
+        com.baomidou.mybatisplus.extension.plugins.pagination.Page<MaterialPurchase> pageResult =
+                materialPurchaseService.page(pageObj, wrapper);
 
         Map<String, Object> result = new HashMap<>();
-        result.put("list", purchases.stream().map(this::buildPurchaseView).collect(Collectors.toList()));
-        result.put("total", purchases.size());
+        result.put("list", pageResult.getRecords().stream().map(this::buildPurchaseView).collect(Collectors.toList()));
+        result.put("total", (int) pageResult.getTotal());
+        result.put("page", page);
+        result.put("pageSize", pageSize);
+        result.put("totalPages", (int) Math.ceil(pageResult.getTotal() * 1.0 / pageSize));
         return Result.success(result);
     }
 
@@ -287,12 +298,17 @@ public class SupplierPortalController {
     @PreAuthorize("isAuthenticated()")
     public Result<Map<String, Object>> getInventory(
             @RequestParam(required = false) String keyword,
-            @RequestParam(required = false) String alert) {
+            @RequestParam(required = false) String alert,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "20") int pageSize) {
         String supplierId = resolveSupplierId();
         Long tenantId = UserContext.tenantId();
         if (supplierId == null || tenantId == null) {
             return Result.fail(403, "供应商门户仅限供应商账号访问");
         }
+
+        if (page < 1) page = 1;
+        if (pageSize < 1 || pageSize > 200) pageSize = 20;
 
         LambdaQueryWrapper<MaterialStock> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(MaterialStock::getSupplierId, supplierId)
@@ -306,23 +322,35 @@ public class SupplierPortalController {
             wrapper.apply("quantity <= safety_stock");
         }
         wrapper.orderByDesc(MaterialStock::getUpdateTime);
-        wrapper.last("LIMIT 500");
-        List<MaterialStock> stocks = materialStockService.list(wrapper);
+
+        com.baomidou.mybatisplus.extension.plugins.pagination.Page<MaterialStock> pageObj =
+                new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>(page, pageSize);
+        com.baomidou.mybatisplus.extension.plugins.pagination.Page<MaterialStock> pageResult =
+                materialStockService.page(pageObj, wrapper);
 
         Map<String, Object> result = new HashMap<>();
-        result.put("list", stocks.stream().map(this::buildStockView).collect(Collectors.toList()));
-        result.put("total", stocks.size());
+        result.put("list", pageResult.getRecords().stream().map(this::buildStockView).collect(Collectors.toList()));
+        result.put("total", (int) pageResult.getTotal());
+        result.put("page", page);
+        result.put("pageSize", pageSize);
+        result.put("totalPages", (int) Math.ceil(pageResult.getTotal() * 1.0 / pageSize));
         return Result.success(result);
     }
 
     @GetMapping("/payables")
     @PreAuthorize("isAuthenticated()")
-    public Result<Map<String, Object>> getPayables(@RequestParam(required = false) String status) {
+    public Result<Map<String, Object>> getPayables(
+            @RequestParam(required = false) String status,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "20") int pageSize) {
         String supplierId = resolveSupplierId();
         Long tenantId = UserContext.tenantId();
         if (supplierId == null || tenantId == null) {
             return Result.fail(403, "供应商门户仅限供应商账号访问");
         }
+
+        if (page < 1) page = 1;
+        if (pageSize < 1 || pageSize > 200) pageSize = 20;
 
         LambdaQueryWrapper<Payable> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(Payable::getSupplierId, supplierId)
@@ -332,23 +360,36 @@ public class SupplierPortalController {
             wrapper.eq(Payable::getStatus, status);
         }
         wrapper.orderByDesc(Payable::getCreateTime);
-        wrapper.last("LIMIT 500");
-        List<Payable> payables = payableService.list(wrapper);
+
+        com.baomidou.mybatisplus.extension.plugins.pagination.Page<Payable> pageObj =
+                new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>(page, pageSize);
+        com.baomidou.mybatisplus.extension.plugins.pagination.Page<Payable> pageResult =
+                payableService.page(pageObj, wrapper);
 
         Map<String, Object> result = new HashMap<>();
-        result.put("list", payables.stream().map(this::buildPayableView).collect(Collectors.toList()));
-        result.put("total", payables.size());
+        result.put("list", pageResult.getRecords().stream().map(this::buildPayableView).collect(Collectors.toList()));
+        result.put("total", (int) pageResult.getTotal());
+        result.put("page", page);
+        result.put("pageSize", pageSize);
+        result.put("totalPages", (int) Math.ceil(pageResult.getTotal() * 1.0 / pageSize));
+
         return Result.success(result);
     }
 
     @GetMapping("/reconciliations")
     @PreAuthorize("isAuthenticated()")
-    public Result<Map<String, Object>> getReconciliations(@RequestParam(required = false) String status) {
+    public Result<Map<String, Object>> getReconciliations(
+            @RequestParam(required = false) String status,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "20") int pageSize) {
         String supplierId = resolveSupplierId();
         Long tenantId = UserContext.tenantId();
         if (supplierId == null || tenantId == null) {
             return Result.fail(403, "供应商门户仅限供应商账号访问");
         }
+
+        if (page < 1) page = 1;
+        if (pageSize < 1 || pageSize > 200) pageSize = 20;
 
         LambdaQueryWrapper<MaterialReconciliation> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(MaterialReconciliation::getSupplierId, supplierId)
@@ -358,12 +399,19 @@ public class SupplierPortalController {
             wrapper.eq(MaterialReconciliation::getStatus, status);
         }
         wrapper.orderByDesc(MaterialReconciliation::getCreateTime);
-        wrapper.last("LIMIT 500");
-        List<MaterialReconciliation> recons = materialReconciliationService.list(wrapper);
+
+        com.baomidou.mybatisplus.extension.plugins.pagination.Page<MaterialReconciliation> pageObj =
+                new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>(page, pageSize);
+        com.baomidou.mybatisplus.extension.plugins.pagination.Page<MaterialReconciliation> pageResult =
+                materialReconciliationService.page(pageObj, wrapper);
 
         Map<String, Object> result = new HashMap<>();
-        result.put("list", recons.stream().map(this::buildReconView).collect(Collectors.toList()));
-        result.put("total", recons.size());
+        result.put("list", pageResult.getRecords().stream().map(this::buildReconView).collect(Collectors.toList()));
+        result.put("total", (int) pageResult.getTotal());
+        result.put("page", page);
+        result.put("pageSize", pageSize);
+        result.put("totalPages", (int) Math.ceil(pageResult.getTotal() * 1.0 / pageSize));
+
         return Result.success(result);
     }
 
