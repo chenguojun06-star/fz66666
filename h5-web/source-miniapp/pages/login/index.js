@@ -1,4 +1,4 @@
-const { getToken, setToken, setUserInfo, isTokenExpired } = require('../../utils/storage');
+const { getToken, setToken, setRefreshToken, setUserInfo, isTokenExpired } = require('../../utils/storage');
 const { getBaseUrl, setBaseUrl } = require('../../config');
 const api = require('../../utils/api');
 const i18n = require('../../utils/i18n/index');
@@ -25,6 +25,9 @@ async function tryAutoWechatLogin() {
     const resp = await api.wechat.miniProgramLogin({ code });
     if (resp && resp.code === 200 && resp.data && resp.data.token) {
       setToken(resp.data.token);
+      if (resp.data.refreshToken) {
+        setRefreshToken(resp.data.refreshToken);
+      }
       if (resp.data.user) {
         setUserInfo(resp.data.user);
       }
@@ -60,9 +63,12 @@ function clearBusinessCaches() {
   });
 }
 
-function finishLogin(user, token) {
+function finishLogin(user, token, refreshToken) {
   clearBusinessCaches();
   setToken(token);
+  if (refreshToken) {
+    setRefreshToken(refreshToken);
+  }
   if (user) {
     setUserInfo(user);
   }
@@ -195,7 +201,7 @@ async function executeLogin(params, options = {}) {
         toast.error('当前微信已绑定其他公司账号，请改用账号密码登录或先解绑微信');
         return { success: false, tenantMismatch: true };
       }
-      finishLogin(loginUser, resp.data.token);
+      finishLogin(loginUser, resp.data.token, resp.data.refreshToken);
       return { success: true };
     }
 
@@ -368,6 +374,7 @@ Page({
     }
     if (token && isTokenExpired()) {
       try { wx.removeStorageSync('auth_token'); } catch (_) { /* ignore */ }
+      try { wx.removeStorageSync('auth_refresh_token'); } catch (_) { /* ignore */ }
     }
 
     const envVersion = resolveEnvVersion();
@@ -472,15 +479,17 @@ Page({
           showTenantResults: false,
           filteredTenants: [],
         });
-        // 注意：此处不再自动触发 onWechatLogin
-        // tryAutoWechatLogin 已经在 onShow 中尝试过（openid 未绑定才会走到这里）
-        // 用户需手动选择公司并输入账号密码完成首次绑定
       } else {
         this.setData({ tenantsLoading: false });
       }
-    } catch (_e) {
-      console.error('[Login] 加载租户列表失败:', _e);
+    } catch (e) {
+      const errMsg = (e && (e.errMsg || e.message)) || '';
+      const isTimeout = errMsg.includes('timeout') || errMsg.includes('超时') || errMsg.includes('request:fail');
+      console.error('[Login] 加载租户列表失败:', e);
       this.setData({ tenantsLoading: false });
+      if (isTimeout) {
+        toast.error('服务器响应超时，请检查网络或稍后重试');
+      }
     }
   },
 
@@ -629,7 +638,7 @@ Page({
       if (code && !code.startsWith('mock_')) {
         const result = await executeLogin(
           { code, username, password, tenantId },
-          { expectedTenantId: tenantId }
+          { expectedTenantId: tenantId },
         );
         if (result.success) return;
         // needBind 不应出现（已传账号密码），其他错误 executeLogin 内部已 toast
@@ -639,7 +648,7 @@ Page({
       // 无法获取 code（开发工具 / 模拟器）→ 走传统密码登录
       const resp = await api.system.login({ username, password, tenantId });
       if (resp && resp.code === 200 && resp.data && resp.data.token) {
-        finishLogin(resp.data.user || null, resp.data.token);
+        finishLogin(resp.data.user || null, resp.data.token, resp.data.refreshToken);
         return;
       }
       toast.error((resp && resp.message) || i18n.t('login.loginFailed'));

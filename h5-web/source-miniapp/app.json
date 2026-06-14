@@ -2,7 +2,7 @@
   "pages": [
     "pages/login/index",
     "pages/home/index",
-    "pages/work/index",
+    "pages/defect/index",
     "pages/scan/index",
     "pages/admin/index"
   ],
@@ -10,16 +10,6 @@
     {
       "root": "pages/register",
       "name": "pkg-register",
-      "pages": ["index"]
-    },
-    {
-      "root": "pages/work/inbox",
-      "name": "pkg-work-inbox",
-      "pages": ["index"]
-    },
-    {
-      "root": "pages/work/ai-assistant",
-      "name": "pkg-work-ai",
       "pages": ["index"]
     },
     {
@@ -42,7 +32,8 @@
       "name": "pkg-warehouse",
       "pages": [
         "material/scan/index",
-        "sample/scan-action/index"
+        "sample/scan-action/index",
+        "location-scan/index"
       ]
     },
     {
@@ -63,12 +54,12 @@
     {
       "root": "pages/cutting",
       "name": "pkg-cutting",
-      "pages": ["task-list/index", "task-detail/index"]
+      "pages": ["task-list/index", "bundle-detail/index"]
     },
     {
       "root": "pages/procurement",
       "name": "pkg-procurement",
-      "pages": ["task-detail/index"]
+      "pages": ["task-list/index", "task-detail/index"]
     },
     {
       "root": "pages/scan/pattern",
@@ -96,21 +87,56 @@
       "pages": ["index"]
     },
     {
-      "root": "pages/dashboard",
-      "name": "pkg-dashboard",
+      "root": "pages/quality-detail",
+      "name": "pkg-quality-detail",
       "pages": ["index"]
     },
+    {
+        "root": "pages/dashboard",
+        "name": "pkg-dashboard",
+        "pages": ["index", "process-edit/index"]
+      },
     {
       "root": "pages/smart-ops",
       "name": "pkg-smart-ops",
       "pages": ["index"]
+    },
+    {
+      "root": "pages/order",
+      "name": "pkg-order",
+      "pages": ["create/index", "create/form/index", "remark/index", "no-data-create/index"]
+    },
+    {
+      "root": "pages/more-apps",
+      "name": "pkg-more-apps",
+      "pages": ["index"]
+    },
+    {
+      "root": "pages/advance",
+      "name": "pkg-advance",
+      "pages": ["list/index"]
+    },
+    {
+      "root": "pages/factory",
+      "name": "pkg-factory",
+      "pages": ["shipment/index"]
+    },
+    {
+      "root": "pages/finance",
+      "name": "pkg-finance",
+      "pages": ["payment/index"]
+    },
+    {
+      "root": "pages/sample-development",
+      "name": "pkg-sample-dev",
+      "pages": ["index/index", "detail/index"]
     }
   ],
   "preloadRule": {
-    "pages/home/index":  { "network": "wifi", "packages": ["pkg-warehouse", "pkg-register", "pkg-bundle-split", "pkg-dashboard", "pkg-smart-ops"] },
-    "pages/work/index":  { "network": "wifi", "packages": ["pkg-work-inbox", "pkg-work-ai", "pkg-bundle-split", "pkg-cutting", "pkg-procurement"] },
+    "pages/home/index":  { "network": "wifi", "packages": ["pkg-warehouse", "pkg-register", "pkg-bundle-split", "pkg-dashboard", "pkg-smart-ops", "pkg-more-apps"] },
+    "pages/defect/index":  { "network": "wifi", "packages": ["pkg-bundle-split", "pkg-cutting", "pkg-procurement"] },
     "pages/scan/index":  { "network": "wifi", "packages": ["pkg-scan-history", "pkg-scan-pattern", "pkg-scan-rescan", "pkg-scan-result", "pkg-scan-confirm", "pkg-scan-quality"] },
-    "pages/admin/index": { "network": "wifi", "packages": ["pkg-admin-approval", "pkg-payroll", "pkg-privacy", "pkg-admin-misc"] }
+    "pages/admin/index": { "network": "wifi", "packages": ["pkg-admin-approval", "pkg-payroll", "pkg-privacy", "pkg-admin-misc", "pkg-advance", "pkg-finance"] }
   },
   "tabBar": {
     "color": "#999999",
@@ -125,16 +151,16 @@
         "selectedIconPath": "/assets/tabbar/home-active.png"
       },
       {
-        "pagePath": "pages/work/index",
-        "text": "生产",
-        "iconPath": "/assets/tabbar/work.png",
-        "selectedIconPath": "/assets/tabbar/work-active.png"
-      },
-      {
         "pagePath": "pages/scan/index",
         "text": "扫码",
         "iconPath": "/assets/tabbar/scan.png",
         "selectedIconPath": "/assets/tabbar/scan-active.png"
+      },
+      {
+        "pagePath": "pages/defect/index",
+        "text": "质检",
+        "iconPath": "/assets/tabbar/defect.png",
+        "selectedIconPath": "/assets/tabbar/defect-active.png"
       },
       {
         "pagePath": "pages/admin/index",
@@ -145,9 +171,9 @@
     ]
   },
   "window": {
-    "navigationBarTitleText": "生产管理",
-    "navigationBarBackgroundColor": "#ffffff",
-    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "衣智链",
+    "navigationBarBackgroundColor": "#2563EB",
+    "navigationBarTextStyle": "white",
     "backgroundTextStyle": "light"
   },
   "lazyCodeLoading": "requiredComponents",

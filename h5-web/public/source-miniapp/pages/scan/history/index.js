@@ -3,7 +3,6 @@
  * 支持"按月"和"自定义"两种时间筛选模式
  */
 const api = require('../../../utils/api');
-const { request } = require('../../../utils/request');
 const { eventBus, Events } = require('../../../utils/eventBus');
 
 function _normalizeQualityName(processName) {
@@ -102,6 +101,8 @@ Page({
     this._records = [];
     this._patternRecords = [];
     this._updateMonthDisplay();
+    // 未登录时跳过数据加载，避免触发 401 请求
+    if (!(wx.getStorageSync('auth_token') || '')) return;
     this.loadData(true);
   },
 
@@ -235,14 +236,10 @@ Page({
         if (end) patternParams.endTime = end + ' 23:59:59';
         requests.push(api.production.myPatternScanHistory(patternParams));
         // 并行调用工资 API 获取准确工资总额
-        requests.push(request({
-          url: '/api/finance/payroll-settlement/operator-summary',
-          method: 'POST',
-          data: {
-            startTime: start + ' 00:00:00',
-            endTime: end + ' 23:59:59',
-            includeSettled: true,
-          },
+        requests.push(api.payrollSettlement.operatorSummary({
+          startTime: start + ' 00:00:00',
+          endTime: end + ' 23:59:59',
+          includeSettled: true,
         }));
       }
 
@@ -253,7 +250,7 @@ Page({
         : (this._patternRecords || []);
 
       const newRecords = (result?.records || []).filter(
-        (item) => (item.scanResult || '').toLowerCase() !== 'failure'
+        (item) => (item.scanResult || '').toLowerCase() !== 'failure',
       );
       const formatted = newRecords.map((item) => ({
         ...item,
@@ -276,14 +273,14 @@ Page({
         // 金额优先级与后端 selectPayrollAggregation SQL 一致：totalAmount → scanCost → unitPrice×quantity
         lineAmount: Number(item.totalAmount) || Number(item.scanCost) || ((Number(item.unitPrice) || 0) * (Number(item.quantity) || 0)),
         displayLineAmount: (function() {
-          var amt = Number(item.totalAmount) || Number(item.scanCost) || ((Number(item.unitPrice) || 0) * (Number(item.quantity) || 0));
+          const amt = Number(item.totalAmount) || Number(item.scanCost) || ((Number(item.unitPrice) || 0) * (Number(item.quantity) || 0));
           return amt > 0 ? amt.toFixed(2) : '-';
         })(),
         displayPriceAmount: (function() {
-          var price = item.unitPrice == null || item.unitPrice === '' ? null : Number(item.unitPrice);
-          var amt = Number(item.totalAmount) || Number(item.scanCost) || ((Number(item.unitPrice) || 0) * (Number(item.quantity) || 0));
-          var priceText = price == null ? '-' : '¥' + price.toFixed(2);
-          var amtText = amt > 0 ? '¥' + amt.toFixed(2) : '-';
+          const price = item.unitPrice == null || item.unitPrice === '' ? null : Number(item.unitPrice);
+          const amt = Number(item.totalAmount) || Number(item.scanCost) || ((Number(item.unitPrice) || 0) * (Number(item.quantity) || 0));
+          const priceText = price == null ? '-' : '¥' + price.toFixed(2);
+          const amtText = amt > 0 ? '¥' + amt.toFixed(2) : '-';
           return priceText + ' / ' + amtText;
         })(),
         isPayable: (Number(item.totalAmount) > 0) || (Number(item.scanCost) > 0) || ((Number(item.unitPrice) || 0) > 0 && (Number(item.quantity) || 0) > 0),
@@ -321,7 +318,7 @@ Page({
       if (totalWage === 0) {
         // 工资 API 不可用时回退到客户端估算（与后端 COALESCE 优先级一致）
         merged.forEach((r) => {
-          var amt = Number(r.totalAmount) || Number(r.scanCost) || ((Number(r.unitPrice) || 0) * (Number(r.quantity) || 0));
+          const amt = Number(r.totalAmount) || Number(r.scanCost) || ((Number(r.unitPrice) || 0) * (Number(r.quantity) || 0));
           if (amt > 0) {
             totalWage += amt;
           }

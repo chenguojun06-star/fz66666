@@ -1,0 +1,185 @@
+<view class="page">
+  <view class="section">
+    <view class="section-title">📋 基本信息</view>
+    
+    <!-- 款号输入 - 带搜索 -->
+    <view class="form-item search-input-wrapper">
+      <text class="label required">款号</text>
+      <view class="search-input-container">
+        <input 
+          class="input search-input" 
+          placeholder="输入款号搜索..." 
+          value="{{styleSearchKeyword}}" 
+          bindinput="onStyleNoInput"
+          bindfocus="onStyleNoFocus"
+          bindblur="onStyleNoBlur"
+        />
+        <view class="search-loading" wx:if="{{styleSearching}}">
+          <text>搜索中...</text>
+        </view>
+        <view class="clear-icon" wx:if="{{styleSearchKeyword && !styleSearching}}" bindtap="onStyleNoInput" data-clear="true">✕</view>
+      </view>
+      <!-- 款号搜索下拉框 -->
+      <view class="search-dropdown" wx:if="{{showStyleDropdown && styleSearchResults.length > 0}}">
+        <view 
+          class="search-dropdown-item" 
+          wx:for="{{styleSearchResults}}" 
+          wx:key="styleNo"
+          data-item="{{item}}"
+          bindtap="selectStyle"
+        >
+          <view class="dropdown-item-main">{{item.styleNo}}</view>
+          <view class="dropdown-item-sub" wx:if="{{item.styleName}}">{{item.styleName}}</view>
+        </view>
+      </view>
+    </view>
+    
+    <view class="form-item">
+      <text class="label">款名</text>
+      <input class="input" placeholder="请输入款名" value="{{styleName}}" bindinput="onStyleNameInput" />
+    </view>
+    
+    <view class="form-row">
+      <view class="form-item half">
+        <text class="label required">下单日期</text>
+        <picker mode="date" value="{{orderDate}}" bindchange="onOrderDateChange">
+          <view class="picker">{{orderDate || '请选择'}}</view>
+        </picker>
+      </view>
+      <view class="form-item half">
+        <text class="label">交货日期</text>
+        <picker mode="date" value="{{deliveryDate}}" bindchange="onDeliveryDateChange">
+          <view class="picker">{{deliveryDate || '请选择'}}</view>
+        </picker>
+      </view>
+    </view>
+    
+    <!-- 客户输入 - 带搜索 -->
+    <view class="form-item search-input-wrapper">
+      <text class="label">客户</text>
+      <view class="search-input-container">
+        <input 
+          class="input search-input" 
+          placeholder="输入客户名称搜索..." 
+          value="{{customerSearchKeyword}}" 
+          bindinput="onCustomerInput"
+          bindfocus="onCustomerFocus"
+          bindblur="onCustomerBlur"
+        />
+        <view class="search-loading" wx:if="{{customerSearching}}">
+          <text>搜索中...</text>
+        </view>
+        <view class="clear-icon" wx:if="{{customerSearchKeyword && !customerSearching}}" bindtap="onCustomerInput" data-clear="true">✕</view>
+      </view>
+      <!-- 客户搜索下拉框 -->
+      <view class="search-dropdown" wx:if="{{showCustomerDropdown && customerSearchResults.length > 0}}">
+        <view 
+          class="search-dropdown-item" 
+          wx:for="{{customerSearchResults}}" 
+          wx:key="id"
+          data-item="{{item}}"
+          bindtap="selectCustomer"
+        >
+          <view class="dropdown-item-main">{{item.name}}</view>
+        </view>
+      </view>
+    </view>
+    
+    <view class="form-item">
+      <text class="label">品类</text>
+      <picker range="{{categoryOptions}}" range-key="label" value="{{categoryIndex}}" bindchange="onCategoryChange">
+        <view class="picker">{{categoryLabel || '请选择'}}</view>
+      </picker>
+    </view>
+    
+    <view class="form-item">
+      <text class="label">急单</text>
+      <radio-group class="radio-group" bindchange="onUrgencyChange">
+        <radio value="normal" checked="{{urgencyLevel === 'normal'}}" />普通
+        <radio value="urgent" checked="{{urgencyLevel === 'urgent'}}" />急单
+      </radio-group>
+    </view>
+  </view>
+
+  <view class="section">
+    <view class="section-title">🏭 生产方</view>
+    <radio-group class="mode-radio-group" bindchange="onFactoryModeChange">
+      <label class="mode-radio">
+        <radio value="INTERNAL" checked="{{factoryMode === 'INTERNAL'}}" />内部工厂
+      </label>
+      <label class="mode-radio">
+        <radio value="EXTERNAL" checked="{{factoryMode === 'EXTERNAL'}}" />外发加工
+      </label>
+    </radio-group>
+    
+    <view class="form-item" wx:if="{{factoryMode === 'INTERNAL'}}">
+      <text class="label required">生产组/车间</text>
+      <picker range="{{internalUnitOptions}}" range-key="label" value="{{orgUnitIndex}}" bindchange="onOrgUnitChange">
+        <view class="picker">{{orgUnitLabel || '请选择'}}</view>
+      </picker>
+    </view>
+    
+    <!-- 外发工厂 - 带搜索 -->
+    <view class="form-item" wx:if="{{factoryMode === 'EXTERNAL'}}">
+      <text class="label required">外发工厂</text>
+      <view class="search-input-container">
+        <input 
+          class="input search-input" 
+          placeholder="搜索工厂名称..." 
+          value="{{factorySearchKeyword}}" 
+          bindinput="onFactorySearchInput"
+        />
+      </view>
+      <picker range="{{factoryOptions}}" range-key="label" value="{{factoryIndex}}" bindchange="onFactoryChange">
+        <view class="picker">{{factoryLabel || '从下方选择工厂'}}</view>
+      </picker>
+    </view>
+  </view>
+
+  <view class="section">
+    <view class="section-title">📷 款式图片</view>
+    <view class="image-upload" bindtap="chooseImage">
+      <image wx:if="{{styleImageUrl}}" src="{{styleImageUrl}}" mode="aspectFill" bindtap="previewImage" catchtap="previewImage" />
+      <view wx:else class="upload-placeholder">
+        <text class="upload-icon">📷</text>
+        <text>点击上传款式图片</text>
+      </view>
+      <view class="delete-image" wx:if="{{styleImageUrl}}" bindtap="deleteImage" catchtap="deleteImage">
+        <text>✕</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="section">
+    <view class="section-header">
+      <text class="section-title">📝 下单明细</text>
+      <text class="add-btn" bindtap="addOrderLine">+ 添加</text>
+    </view>
+    <view class="order-lines">
+      <view class="order-line" wx:for="{{orderLines}}" wx:key="index">
+        <view class="line-item">
+          <text class="line-label">颜色</text>
+          <input class="line-input" placeholder="必填" value="{{item.color}}" data-index="{{index}}" data-field="color" bindinput="onOrderLineInput" />
+        </view>
+        <view class="line-item">
+          <text class="line-label">尺码</text>
+          <input class="line-input" placeholder="必填" value="{{item.size}}" data-index="{{index}}" data-field="size" bindinput="onOrderLineInput" />
+        </view>
+        <view class="line-item">
+          <text class="line-label">数量</text>
+          <input class="line-input" type="number" placeholder="必填" value="{{item.quantity}}" data-index="{{index}}" data-field="quantity" bindinput="onOrderLineInput" />
+        </view>
+        <view class="line-del" wx:if="{{orderLines.length > 1}}" data-index="{{index}}" bindtap="removeOrderLine">✕</view>
+      </view>
+    </view>
+  </view>
+
+  <view class="section">
+    <view class="section-title">📝 备注</view>
+    <textarea class="textarea" placeholder="输入订单备注..." value="{{remarks}}" bindinput="onRemarksInput" />
+  </view>
+
+  <view class="submit-wrap">
+    <button class="submit-btn" loading="{{submitting}}" bindtap="submitOrder">创建订单</button>
+  </view>
+</view>

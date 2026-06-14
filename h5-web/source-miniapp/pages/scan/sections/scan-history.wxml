@@ -9,6 +9,9 @@
     <view wx:for="{{my.groupedHistory}}" wx:key="id" class="hist-group">
       <view class="hist-group-header" hover-class="hist-group-header-hover" hover-stay-time="100" bindtap="toggleGroupExpand" data-group-id="{{item.id}}">
         <view class="hgh-top">
+          <view class="hgh-cover" wx:if="{{item.coverImage}}" catchtap="onPreviewCover" data-url="{{item.coverImage}}">
+            <image class="hgh-cover-img" src="{{item.coverImage}}" mode="aspectFill" lazy-load />
+          </view>
           <view class="hgh-main">
             <text class="hgh-order">{{item.orderNo}}</text>
             <text class="hgh-style">{{item.styleNo}}</text>

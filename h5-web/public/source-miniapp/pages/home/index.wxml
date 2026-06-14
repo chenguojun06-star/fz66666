@@ -1,15 +1,12 @@
-<view class="page" style="padding-top: {{statusBarHeight + 12}}px;">
-  <!-- 顶部问候 -->
-    <view class="header">
-      <view class="greeting-name">{{userName}}，{{greeting}}</view>
-      <view class="greeting-sub">欢迎使用衣智链</view>
-    </view>
+<view class="page">
+  <view class="header">
+    <view class="greeting-name">{{userName}}，{{greeting}}</view>
+    <view class="greeting-sub">{{orgName ? orgName + '，欢迎使用衣智链' : '欢迎使用衣智链'}}</view>
+  </view>
 
-  <!-- 日期卡片 -->
   <view class="weather-card">
     <view class="weather-top">
       <view class="weather-left">
-        <text class="weather-emoji">{{dateInfo.icon}}</text>
         <view class="weather-temp-wrap">
           <text class="weather-temp">{{dateInfo.date}}</text>
           <text class="weather-desc">{{dateInfo.day}}</text>
@@ -20,18 +17,38 @@
     <view class="weather-tip">{{dateInfo.dailyTip}}</view>
   </view>
 
-  <!-- 全部菜单 -->
+  <!-- 常用应用 -->
   <view class="menu-section">
     <view class="section-header">
-      <text class="section-title">全部菜单</text>
+      <text class="section-title">常用应用</text>
+      <text class="section-more" bindtap="onMoreAppsTap">管理</text>
     </view>
+    
     <view class="menu-grid">
-      <view class="menu-item" wx:for="{{menuItems}}" wx:key="id" bindtap="onMenuTap" data-index="{{index}}">
+      <view 
+        class="menu-item {{draggingIndex === index ? 'menu-item--dragging' : ''}}" 
+        wx:for="{{favoriteApps}}" 
+        wx:key="id" 
+        bindtap="onFavoriteTap" 
+        data-index="{{index}}"
+        data-app="{{item}}"
+        bindtouchstart="onTouchStart"
+        bindtouchmove="onTouchMove"
+        bindtouchend="onTouchEnd"
+        hover-class="menu-item-hover" 
+        hover-stay-time="100"
+      >
         <view class="menu-icon-circle {{item.circleClass}}">
           <view class="line-icon line-icon--lg {{item.iconClass}}"></view>
+          <text wx:if="{{item.badge}}" class="menu-badge">{{item.badge}}</text>
         </view>
         <text class="menu-name">{{item.name}}</text>
       </view>
+    </view>
+    
+    <view class="empty-hint" wx:if="{{favoriteApps.length === 0}}">
+      <text class="empty-icon">📱</text>
+      <text class="empty-text">还没有添加常用应用，点击「管理」添加吧</text>
     </view>
   </view>
 

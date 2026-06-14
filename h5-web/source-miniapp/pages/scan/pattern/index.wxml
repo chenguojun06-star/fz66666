@@ -90,8 +90,53 @@
       </view>
     </view>
 
-    <!-- 数量输入（完成/返修操作时隐藏） -->
-    <view wx:if="{{detail.operationType !== 'COMPLETE' && detail.operationType !== 'REVIEW'}}" class="input-row">
+    <!-- 审核图片上传（审核操作时显示） -->
+    <view wx:if="{{detail.operationType === 'REVIEW'}}" class="review-images-section">
+      <text class="input-label">审核图片（最多{{maxImages}}张）</text>
+      <view class="review-images-list">
+        <!-- 已上传的图片 -->
+        <view wx:for="{{reviewImages}}" wx:key="*this" class="review-image-item">
+          <image src="{{item}}" mode="aspectFill" class="review-image" bindtap="previewReviewImage" data-index="{{index}}" />
+          <view class="review-image-remove" bindtap="removeReviewImage" data-index="{{index}}">✕</view>
+        </view>
+        <!-- 添加按钮 -->
+        <view wx:if="{{reviewImages.length < maxImages}}" class="review-image-add" bindtap="chooseReviewImage">
+          <text class="add-icon">+</text>
+          <text class="add-text">添加图片</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 多色多码选择（当有 skuList 时显示） -->
+    <view wx:if="{{skuList.length > 0 && detail.operationType !== 'COMPLETE' && detail.operationType !== 'REVIEW'}}" class="section-card" style="margin-top: 0; padding: 0; background: transparent;">
+      <text class="section-title">扫码明细（{{skuList.length}}项）</text>
+      <view class="sku-list">
+        <view wx:for="{{skuList}}" wx:key="id" class="sku-item">
+          <view class="sku-info">
+            <text class="sku-label">{{item.label}}</text>
+            <text class="sku-total">订单 {{item.totalQuantity}} 件</text>
+          </view>
+          <view class="sku-qty-wrap">
+            <input class="sku-qty-input" type="number"
+                   value="{{item.inputQuantity}}"
+                   data-index="{{index}}" bindinput="onSkuInput"
+                   placeholder="数量" />
+            <text class="sku-unit">件</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 数量汇总（当有 skuList 时显示） -->
+    <view wx:if="{{skuList.length > 0 && detail.operationType !== 'COMPLETE' && detail.operationType !== 'REVIEW'}}" class="summary-card">
+      <view class="summary-row">
+        <text class="summary-label">总数量</text>
+        <text class="summary-value">{{summary.totalQuantity}} 件</text>
+      </view>
+    </view>
+
+    <!-- 数量输入（完成/返修操作时隐藏，且没有 skuList 时显示） -->
+    <view wx:if="{{(!skuList || skuList.length === 0) && detail.operationType !== 'COMPLETE' && detail.operationType !== 'REVIEW'}}" class="input-row">
       <text class="input-label">数量</text>
       <input
         class="input-field"
@@ -100,17 +145,57 @@
         value="{{detail.quantity}}"
         bindinput="onQuantityInput"
       />
-      <text class="input-suffix">件</text>
+      <text class="input-suffix">件（最多{{detail.maxQuantity || detail.quantity || 0}}件）</text>
     </view>
 
     <!-- 仓位编号（仓库操作时显示） -->
-    <view wx:if="{{detail.requiresWarehouseInput}}" class="input-row">
-      <text class="input-label">仓位编号</text>
+    <view wx:if="{{detail.requiresWarehouseInput}}" class="warehouse-section">
+      <view class="input-label">入库仓库</view>
+      <view class="warehouse-option-row">
+        <view
+          wx:for="{{warehouseOptions}}"
+          wx:key="index"
+          class="warehouse-chip {{detail.warehouseCode === item ? 'warehouse-chip--active' : ''}}"
+          bindtap="onWarehouseChipTap"
+          data-value="{{item}}"
+          hover-class="warehouse-chip-hover"
+        >{{item}}</view>
+        <view
+          class="warehouse-chip warehouse-chip--clear {{detail.warehouseCode ? '' : 'warehouse-chip--disabled'}}"
+          bindtap="onWarehouseClear"
+          hover-class="warehouse-chip-hover"
+        >清除</view>
+      </view>
       <input
         class="input-field"
-        placeholder="例如 A-01-01"
+        placeholder="或手动输入仓库编号"
         value="{{detail.warehouseCode}}"
         bindinput="onWarehouseInput"
+      />
+
+      <!-- 库位选择（仓库选择后出现） -->
+      <view wx:if="{{detail.warehouseCode && locationOptions.length > 0}}" class="input-label" style="margin-top: 16rpx;">入库库位</view>
+      <view wx:if="{{detail.warehouseCode && locationOptions.length > 0}}" class="warehouse-option-row">
+        <view
+          wx:for="{{locationOptions}}"
+          wx:key="index"
+          class="warehouse-chip {{warehouseLocationCode === item ? 'warehouse-chip--active' : ''}}"
+          bindtap="onLocationChipTap"
+          data-value="{{item}}"
+          hover-class="warehouse-chip-hover"
+        >{{item}}</view>
+        <view
+          class="warehouse-chip warehouse-chip--clear {{warehouseLocationCode ? '' : 'warehouse-chip--disabled'}}"
+          bindtap="onLocationClear"
+          hover-class="warehouse-chip-hover"
+        >清除</view>
+      </view>
+      <input
+        wx:if="{{detail.warehouseCode}}"
+        class="input-field"
+        placeholder="或手动输入库位编号"
+        value="{{warehouseLocationCode}}"
+        bindinput="onLocationCodeInput"
       />
     </view>
 

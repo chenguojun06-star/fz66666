@@ -1,0 +1,7 @@
+{
+  "navigationBarTitleText": "裁剪",
+  "usingComponents": {
+    "image-preview": "/components/common/image-preview/index",
+    "sku-matrix": "/components/sku-matrix/index"
+  }
+}

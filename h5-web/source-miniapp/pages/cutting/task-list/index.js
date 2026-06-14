@@ -1,6 +1,6 @@
 const api = require('../../../utils/api');
 const { getUserInfo } = require('../../../utils/storage');
-const { toast } = require('../../../utils/uiHelper');
+const { toast, safeNavigate } = require('../../../utils/uiHelper');
 const { eventBus, Events } = require('../../../utils/eventBus');
 
 Page({
@@ -18,10 +18,15 @@ Page({
   },
 
   onLoad() {
+    // 未登录时拒绝访问：裁剪任务页需要身份验证
+    const app = getApp();
+    if (app && typeof app.requireAuth === 'function' && !app.requireAuth()) return;
     this.loadTasks();
   },
 
   onShow() {
+    const app = getApp();
+    if (app && typeof app.requireAuth === 'function' && !app.requireAuth()) return;
     this.loadTasks();
     this._bindWsEvents();
   },
@@ -94,22 +99,33 @@ Page({
     }
   },
 
-  /* ---- 跳转详情页 ---- */
+  /* ---- 跳转详情页（裁剪分扎） ---- */
   goDetail(e) {
     const task = e.currentTarget.dataset.task;
     if (!task) return;
     const orderNo = task.productionOrderNo || task.orderNo || '';
     const orderId = task.productionOrderId || task.orderId || '';
-    wx.navigateTo({
-      url: `/pages/cutting/task-detail/index?taskId=${task.id}&orderNo=${encodeURIComponent(orderNo)}&orderId=${encodeURIComponent(orderId)}`,
-    });
+    safeNavigate({
+      url: `/pages/cutting/bundle-detail/index?taskId=${task.id}&orderNo=${encodeURIComponent(orderNo)}&orderId=${encodeURIComponent(orderId)}`,
+    }).catch(() => {});
+  },
+
+  /* ---- 跳转裁剪单明细页（数量矩阵总览） ---- */
+  goMatrix(e) {
+    const task = e.currentTarget.dataset.task;
+    if (!task) return;
+    const orderNo = task.productionOrderNo || task.orderNo || '';
+    const orderId = task.productionOrderId || task.orderId || '';
+    if (!orderNo) return toast.error('缺少订单号');
+    safeNavigate({
+      url: `/pages/cutting/bundle-detail/index?orderNo=${encodeURIComponent(orderNo)}&orderId=${encodeURIComponent(orderId)}`,
+    }).catch(() => {});
   },
 
   /* ---- 辅助方法 ---- */
   _normalizeList(res) {
     if (Array.isArray(res)) return res;
     if (res && Array.isArray(res.records)) return res.records;
-    if (res && Array.isArray(res.data)) return res.data;
     return [];
   },
 

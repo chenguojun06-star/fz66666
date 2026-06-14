@@ -16,10 +16,10 @@ function handleCuttingTask(task) {
   const orderId = task.orderId || task.productionOrderId || '';
 
   if (taskId && orderNo) {
-    const url = `/pages/cutting/task-detail/index?taskId=${taskId}&orderNo=${encodeURIComponent(orderNo)}&orderId=${encodeURIComponent(orderId)}`;
+    const url = `/pages/cutting/bundle-detail/index?taskId=${taskId}&orderNo=${encodeURIComponent(orderNo)}&orderId=${encodeURIComponent(orderId)}`;
     safeNavigate({ url }, 'navigateTo').catch(() => {});
   } else {
-    safeNavigate({ url: '/pages/cutting/task-list/index' }, 'navigateTo').catch(() => {});
+    safeNavigate({ url: '/pages/cutting/bundle-detail/index' }, 'navigateTo').catch(() => {});
   }
 }
 
@@ -36,7 +36,7 @@ function handleProcurementTask(task) {
     const url = `/pages/procurement/task-detail/index?orderNo=${encodeURIComponent(orderNo)}&styleNo=${encodeURIComponent(styleNo)}`;
     safeNavigate({ url }, 'navigateTo').catch(() => {});
   } else {
-    safeNavigate({ url: '/pages/work/index' }, 'switchTab').catch(() => {});
+    safeNavigate({ url: '/pages/defect/index' }, 'switchTab').catch(() => {});
   }
 }
 
@@ -217,15 +217,14 @@ function handleReminderTask(task) {
 
   // 采购提醒 → 跳转工作台（采购任务列表页已移除）
   if (type === '采购') {
-    safeNavigate({ url: '/pages/work/index' }, 'switchTab').catch(() => {});
+    safeNavigate({ url: '/pages/defect/index' }, 'switchTab').catch(() => {});
     return;
   }
 
   // 裁剪提醒 → 跳转裁剪任务列表页
   if (type === '裁剪') {
-    safeNavigate({ url: '/pages/cutting/task-list/index' }, 'navigateTo').catch(() => {});
-    return;
-  }
+    safeNavigate({ url: '/pages/cutting/bundle-detail/index' }, 'navigateTo').catch(() => {});
+    return;}
 
   // 其他提醒类型 → 直接跳转扫码页，扫码页 onShow 自动读取 pending_order_hint
   try {
@@ -252,17 +251,19 @@ function handleUrgentEvent(_task) { // eslint-disable-line no-unused-vars
  */
 function handleOverdueOrder(task) {
   const orderNo = task.orderNo || '';
+  const orderId = task.id || '';
   try {
-    // 存储订单提示
     wx.setStorageSync('pending_order_hint', orderNo);
-    // 存储延期订单信息，用于高亮显示
     wx.setStorageSync('highlight_order_no', orderNo);
   } catch (e) {
     console.error('存储失败', e);
   }
 
-  // 跳转到工作页面
-  safeNavigate({ url: '/pages/work/index' }, 'switchTab').catch(() => {});
+  if (orderId) {
+    safeNavigate({ url: '/pages/dashboard/index?orderId=' + encodeURIComponent(orderId) }, 'navigateTo').catch(() => {});
+  } else {
+    safeNavigate({ url: '/pages/smart-ops/index' }, 'navigateTo').catch(() => {});
+  }
 }
 
 /**

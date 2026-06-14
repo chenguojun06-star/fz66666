@@ -1,6 +1,7 @@
 // pages/payroll/payroll.js
-const { request } = require('../../utils/request');
-const { toast } = require('../../utils/uiHelper');
+const api = require('../../utils/api');
+const { toast, safeNavigate } = require('../../utils/uiHelper');
+const { hasFeaturePermission } = require('../../utils/permission');
 
 // 日期格式化工具函数（重构版 - 消除重复代码）
 
@@ -74,6 +75,13 @@ function _orderStatusText(status) {
   return s || '-';
 }
 
+function _paymentStatusText(status) {
+  if (!status) return '未发放';
+  if (status === 'success') return '已发放';
+  if (status === 'pending') return '待支付';
+  return status;
+}
+
 Page({
   data: {
     // 筛选条件
@@ -107,6 +115,15 @@ Page({
 
   // 每次进入页面（包括首次、从子页面返回）都刷新最新工资数据
   onShow() {
+    // 未登录时拒绝访问：工资数据属于敏感个人信息，必须验证身份后才能加载
+    const app = getApp();
+    if (app && typeof app.requireAuth === 'function' && !app.requireAuth()) return;
+    // 权限校验：无查看工资权限则提示并返回
+    if (!hasFeaturePermission('view_payroll')) {
+      toast('您没有查看工资的权限');
+      wx.navigateBack({ delta: 1, fail: function () { wx.switchTab({ url: '/pages/index/index' }); } });
+      return;
+    }
     this.loadData();
   },
 
@@ -169,7 +186,7 @@ Page({
         if (filter !== 'custom') {
           this.loadData();
         }
-      }
+      },
     );
   },
 
@@ -183,7 +200,7 @@ Page({
       },
       () => {
         this.loadData();
-      }
+      },
     );
   },
 
@@ -197,7 +214,7 @@ Page({
       },
       () => {
         this.loadData();
-      }
+      },
     );
   },
 
@@ -214,18 +231,14 @@ Page({
     try {
       const { startDate, endDate } = this.data;
 
-      const res = await request({
-        url: '/api/finance/payroll-settlement/operator-summary',
-        method: 'POST',
-        data: {
+      const data = await api.payrollSettlement.operatorSummary({
           startTime: `${startDate} 00:00:00`,
           endTime: `${endDate} 23:59:59`,
           includeSettled: true,
-        },
-      });
+        });
 
-      if (res.code === 200 && Array.isArray(res.data)) {
-        this.processData(res.data);
+      if (Array.isArray(data)) {
+        this.processData(data);
       } else {
         toast.error('加载失败');
       }
@@ -276,6 +289,9 @@ Page({
         actualOperatorName: item.actualOperatorName || '',
         orderStatus: item.orderStatus || '',
         orderStatusText: _orderStatusText(item.orderStatus),
+        paymentStatus: item.paymentStatus || '',
+        paymentStatusText: _paymentStatusText(item.paymentStatus),
+        settlementId: item.settlementId || '',
         quantity: qty,
         unitPrice: (Number(item.unitPrice) || 0).toFixed(2),
         totalAmount: amt.toFixed(2),
@@ -349,6 +365,6 @@ Page({
   },
 
   goFeedback() {
-    wx.navigateTo({ url: '/pages/payroll/feedback/index' });
+    safeNavigate({ url: '/pages/payroll/feedback/index' }).catch(() => {});
   },
 });

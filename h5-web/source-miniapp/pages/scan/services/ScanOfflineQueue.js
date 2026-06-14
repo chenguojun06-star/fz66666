@@ -131,7 +131,7 @@ const ScanOfflineQueue = {
       scanData: _deepClone(scanData),
     };
     queue.push(item);
-    var saved = _save(queue);
+    const saved = _save(queue);
     if (!saved) {
       wx.showToast({ title: '离线数据保存失败，请检查存储空间', icon: 'none', duration: 3000 });
       return false;
@@ -201,7 +201,7 @@ const ScanOfflineQueue = {
       for (const item of queue) {
         try {
           const res = await api.production.executeScan(item.scanData);
-          if (res && (res.success === true || res.code === 200 || res.scanRecord)) {
+          if (res && (res.scanRecord || res.success === true)) {
             const saved = this.dequeue(item.queueId);
             if (saved) {
               submitted++;
@@ -217,7 +217,18 @@ const ScanOfflineQueue = {
         } catch (e) {
           failed++;
           const errMsg = (e && (e.errMsg || e.message)) || '';
-          if (DEBUG) console.warn('[ScanOfflineQueue] 上传异常:', errMsg);
+          const errType = e && e.type;
+          if (DEBUG) console.warn('[ScanOfflineQueue] 上传异常:', errMsg, 'type:', errType);
+          if (
+            errType === 'auth' ||
+            errType === 'forbidden' ||
+            errMsg.includes('未登录') ||
+            errMsg.includes('登录已过期') ||
+            errMsg.includes('无权限')
+          ) {
+            if (DEBUG) console.log('[ScanOfflineQueue] 认证失败，停止上传（保留队列等待重新登录）');
+            break;
+          }
           if (
             errMsg.includes('timeout') ||
             errMsg.includes('errcode:-101') ||

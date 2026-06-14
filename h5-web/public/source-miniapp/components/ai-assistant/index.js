@@ -2,7 +2,7 @@ const api = require('../../utils/api.js');
 const bellTaskLoader = require('./bellTaskLoader.js');
 const bellTaskActions = require('./bellTaskActions.js');
 
-var TOOL_NAMES = {
+const TOOL_NAMES = {
   tool_query_production_progress: '生产进度', tool_order_edit: '订单编辑',
   tool_query_warehouse_stock: '库存查询', tool_finished_product_stock: '成品库存',
   tool_deep_analysis: '深度分析', tool_knowledge_search: '知识搜索',
@@ -23,6 +23,25 @@ var TOOL_NAMES = {
   tool_defective_board: '次品看板', tool_production_exception: '生产异常',
   tool_order_factory_transfer: '订单转厂', tool_style_template: '模板库',
   tool_warehouse_op_log: '仓库日志', tool_org_query: '组织架构',
+  tool_order_timeline: '订单时间线', bargain_price_tool: '还价管理',
+  tool_unit_price_query: '单价查询', tool_style_quotation: '款式报价',
+  tool_management_dashboard: '经营面板', tool_inventory_summary: '库存汇总',
+  tool_quality_statistics: '质量统计', tool_avg_completion_time: '完成时间',
+  tool_supplier_scorecard: '供应商评分', tool_supplier: '供应商',
+  tool_ecommerce_order: '电商订单', tool_ec_sales_revenue: '电商营收',
+  tool_invoice: '发票管理', tool_tax_config: '税务配置',
+  tool_pattern_discovery: '模式发现', tool_pattern_production: '样板生产',
+  tool_pattern_revision: '样衣改版', tool_material_roll: '物料卷',
+  tool_material_quality_issue: '物料质量', tool_material_doc_receive: '单据收货',
+  tool_inventory_check: '盘点管理', tool_dict: '数据字典',
+  tool_query_system_user: '系统用户', tool_query_crm_customer: 'CRM客户',
+  tool_simulate_new_order: '新单模拟', tool_sample_delay_analysis: '样板延期',
+  tool_personnel_delay_analysis: '人员延期', tool_secondary_process: '二次工序',
+  tool_order_factory_transfer_undo: '撤回转厂', tool_query_order_remarks: '订单备注',
+  tool_order_comparison: '订单对比', tool_order_learning: '下单学习',
+  tool_query_financial_payroll: '计件工资', tool_payroll_anomaly_detector: '工资异常',
+  tool_financial_report: '财务报表', tool_ai_accuracy_query: 'AI准确率',
+  tool_think: '思考', tool_hyper_advisor: '高级顾问', tool_skill_execute: '技能执行',
 };
 
 function describeTool(name) {
@@ -30,11 +49,11 @@ function describeTool(name) {
 }
 
 function parseAiCards(text) {
-  var actions = [];
-  var insightCards = [];
-  var clarificationHints = [];
-  var charts = [];
-  var stepWizardCards = [];
+  let actions = [];
+  let insightCards = [];
+  let clarificationHints = [];
+  let charts = [];
+  let stepWizardCards = [];
 
   function safeParse(str) {
     try { return JSON.parse(str); } catch (e) { return null; }
@@ -43,51 +62,58 @@ function parseAiCards(text) {
     return item && typeof item === 'object' && item.title;
   }
 
-  var acMatch = text.match(/【ACTIONS】([\s\S]*?)【\/ACTIONS】/);
+  const acMatch = text.match(/【ACTIONS】([\s\S]*?)【\/ACTIONS】/);
   if (acMatch) {
     text = text.replace(acMatch[0], '');
-    var acData = safeParse(acMatch[1]);
+    const acData = safeParse(acMatch[1]);
     if (Array.isArray(acData)) actions = acData.filter(validateCard);
     else if (acData && acData.actions) actions = acData.actions;
   }
 
-  var insightRe = /【INSIGHT_CARDS】([\s\S]*?)【\/INSIGHT_CARDS】/g;
-  var m;
+  const insightRe = /【INSIGHT_CARDS】([\s\S]*?)【\/INSIGHT_CARDS】/g;
+  let m;
   while ((m = insightRe.exec(text)) !== null) {
-    var ip = safeParse(m[1]);
+    const ip = safeParse(m[1]);
     if (Array.isArray(ip)) insightCards = insightCards.concat(ip.filter(validateCard));
     else if (validateCard(ip)) insightCards.push(ip);
   }
   text = text.replace(/【INSIGHT_CARDS】[\s\S]*?【\/INSIGHT_CARDS】/g, '');
 
-  var clarifRe = /【CLARIFICATION】([\s\S]*?)【\/CLARIFICATION】/g;
+  const clarifRe = /【CLARIFICATION】([\s\S]*?)【\/CLARIFICATION】/g;
   while ((m = clarifRe.exec(text)) !== null) {
-    var clp = safeParse(m[1]);
+    const clp = safeParse(m[1]);
     if (Array.isArray(clp)) clarificationHints = clarificationHints.concat(clp.filter(function(x) { return typeof x === 'string'; }));
   }
   text = text.replace(/【CLARIFICATION】[\s\S]*?【\/CLARIFICATION】/g, '');
 
-  var chartRe = /【CHART】([\s\S]*?)【\/CHART】/g;
+  const chartRe = /【CHART】([\s\S]*?)【\/CHART】/g;
   while ((m = chartRe.exec(text)) !== null) {
-    var cp = safeParse(m[1]);
+    const cp = safeParse(m[1]);
     if (Array.isArray(cp)) charts = charts.concat(cp.filter(validateCard));
     else if (validateCard(cp)) charts.push(cp);
   }
   text = text.replace(/【CHART】[\s\S]*?【\/CHART】/g, '');
 
-  var wizRe = /【STEP_WIZARD】([\s\S]*?)【\/STEP_WIZARD】/g;
+  const wizRe = /【STEP_WIZARD】([\s\S]*?)【\/STEP_WIZARD】/g;
   while ((m = wizRe.exec(text)) !== null) {
-    var wp = safeParse(m[1]);
+    const wp = safeParse(m[1]);
     if (Array.isArray(wp)) stepWizardCards = stepWizardCards.concat(wp);
     else if (wp) stepWizardCards.push(wp);
   }
   text = text.replace(/【STEP_WIZARD】[\s\S]*?【\/STEP_WIZARD】/g, '');
 
+  let teamStatusCards = [];
+  const tsRe = /【TEAM_STATUS】([\s\S]*?)【\/TEAM_STATUS】/g;
+  while ((m = tsRe.exec(text)) !== null) {
+    const tsp = safeParse(m[1]);
+    if (Array.isArray(tsp)) teamStatusCards = teamStatusCards.concat(tsp);
+    else if (tsp) teamStatusCards.push(tsp);
+  }
   text = text.replace(/【TEAM_STATUS】[\s\S]*?【\/TEAM_STATUS】/g, '');
   text = text.replace(/【BUNDLE_SPLIT】[\s\S]*?【\/BUNDLE_SPLIT】/g, '');
   text = text.replace(/```ACTIONS_JSON\s*\n[\s\S]*?\n```/g, '');
 
-  return { text: text.trim(), actions: actions, insightCards: insightCards, clarificationHints: clarificationHints, charts: charts, stepWizardCards: stepWizardCards };
+  return { text: text.trim(), actions: actions, insightCards: insightCards, clarificationHints: clarificationHints, charts: charts, stepWizardCards: stepWizardCards, teamStatusCards: teamStatusCards };
 }
 
 Component({
@@ -118,6 +144,7 @@ Component({
     pageSuggestions: [],
     conversationId: '',
     dynamicSuggestions: [],
+    wizardStates: {},
   },
   lifetimes: {
     attached() {
@@ -153,14 +180,14 @@ Component({
           }
         } catch (_e) { /* ignore invalid saved trigger position */ }
 
-        var conversationId = 'mp_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6);
-        var savedMessages = [];
+        const conversationId = 'mp_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6);
+        let savedMessages = [];
         try {
           savedMessages = wx.getStorageSync('ai_chat_history') || [];
           if (!Array.isArray(savedMessages) || savedMessages.length === 0) savedMessages = [];
         } catch (_e) { /* ignore unreadable chat history */ }
 
-        var initMsgs = savedMessages.length > 0 ? savedMessages : [{
+        const initMsgs = savedMessages.length > 0 ? savedMessages : [{
           id: Date.now(), role: 'ai', content: greeting,
         }];
         this._setMessages(initMsgs, {
@@ -182,7 +209,7 @@ Component({
   },
   pageLifetimes: {
     show() {
-      var now = Date.now();
+      const now = Date.now();
       if (!this._lastLoadTime || now - this._lastLoadTime > 30000) {
         this._lastLoadTime = now;
         setTimeout(() => this.loadTasks(), 0);
@@ -218,9 +245,9 @@ Component({
 
   methods: {
     _setMessages(msgs, extra) {
-      var MAX_VISIBLE = 30;
-      var visible = msgs.length > MAX_VISIBLE ? msgs.slice(msgs.length - MAX_VISIBLE) : msgs;
-      var data = { messages: msgs, visibleMessages: visible };
+      const MAX_VISIBLE = 30;
+      const visible = msgs.length > MAX_VISIBLE ? msgs.slice(msgs.length - MAX_VISIBLE) : msgs;
+      const data = { messages: msgs, visibleMessages: visible };
       if (extra) Object.assign(data, extra);
       this.setData(data);
     },
@@ -324,11 +351,13 @@ Component({
     },
 
     _loadDynamicSuggestions() {
-      var self = this;
+      // 未登录或 token 不存在时跳过，避免触发 401 请求
+      if (!(wx.getStorageSync('auth_token') || '')) return;
+      const self = this;
       api.intelligence.getMyPendingTaskSummary().then(function (res) {
-        var data = res && res.data ? res.data : res;
+        const data = res && res.data ? res.data : res;
         if (!data) return;
-        var suggestions = [];
+        const suggestions = [];
         if (data.overdueOrderCount > 0) {
           suggestions.push({ icon: 'icon-alert', label: '🚨 ' + data.overdueOrderCount + '个逾期', question: '当前有哪些逾期订单？帮我分析一下' });
         }
@@ -346,7 +375,7 @@ Component({
 
     _saveChatHistory() {
       try {
-        var msgs = this.data.messages.slice(-20);
+        const msgs = this.data.messages.slice(-20);
         wx.setStorageSync('ai_chat_history', msgs);
       } catch (_e) { /* ignore chat history save failure */ }
     },
@@ -359,6 +388,7 @@ Component({
     },
 
     async loadTasks() {
+      if (!(wx.getStorageSync('auth_token') || '')) return;
       if (this.data.taskLoading) return;
       this.setData({ taskLoading: true });
       try {
@@ -366,19 +396,27 @@ Component({
           data: { loading: false },
           setData: (newData) => {
             if (newData.totalCount !== undefined) {
+              const dismissed = this._getDismissedKeys();
+              const q = (newData.qualityTasks || []).filter(function(t) { return dismissed.indexOf('quality:' + t.orderId) === -1; });
+              const c = (newData.cuttingTasks || []).filter(function(t) { return dismissed.indexOf('cutting:' + t.orderId) === -1; });
+              const p = (newData.procurementTasks || []).filter(function(t) { return dismissed.indexOf('purchase:' + t.id) === -1; });
+              const r = (newData.repairTasks || []).filter(function(t) { return dismissed.indexOf('repair:' + t.id) === -1; });
+              const o = (newData.overdueOrders || []).filter(function(t) { return dismissed.indexOf('overdue:' + t.id) === -1; });
+              const tm = (newData.timeoutReminders || []).filter(function(t) { return dismissed.indexOf('timeout:' + t.id) === -1; });
+              const total = q.length + c.length + p.length + r.length + o.length + tm.length + (newData.pendingUsers || []).length + (newData.pendingRegistrations || []).length;
               this.setData({
-                qualityTasks: newData.qualityTasks || [],
-                cuttingTasks: newData.cuttingTasks || [],
-                purchaseTasks: newData.procurementTasks || [],
-                repairTasks: newData.repairTasks || [],
-                overdueOrders: newData.overdueOrders || [],
+                qualityTasks: q,
+                cuttingTasks: c,
+                purchaseTasks: p,
+                repairTasks: r,
+                overdueOrders: o,
                 overdueSummary: newData.overdueSummary || null,
                 pendingUsers: newData.pendingUsers || [],
                 pendingRegistrations: newData.pendingRegistrations || [],
-                timeoutReminders: newData.timeoutReminders || [],
+                timeoutReminders: tm,
                 isAdmin: newData.isAdmin || false,
                 isTenantOwner: newData.isTenantOwner || false,
-                totalTasks: newData.totalCount || 0,
+                totalTasks: total,
               });
             }
           },
@@ -386,6 +424,32 @@ Component({
         await bellTaskLoader.loadAllTasks(mockCtx);
       } catch (err) { console.error('[AiAssistant] loadTasks error', err); }
       finally { this.setData({ taskLoading: false }); }
+    },
+
+    _getDismissedKeys() {
+      try {
+        const raw = wx.getStorageSync('task_dismissed_items') || '{}';
+        const obj = JSON.parse(raw);
+        const today = new Date().toISOString().slice(0, 10);
+        if (obj.date !== today) { wx.setStorageSync('task_dismissed_items', '{}'); return []; }
+        return obj.keys || [];
+      } catch (_e) { return []; }
+    },
+
+    dismissTask(e) {
+      const type = e.currentTarget.dataset.type;
+      const id = e.currentTarget.dataset.id;
+      if (!type || !id) return;
+      try {
+        const raw = wx.getStorageSync('task_dismissed_items') || '{}';
+        let obj = JSON.parse(raw);
+        const today = new Date().toISOString().slice(0, 10);
+        if (obj.date !== today) { obj = { date: today, keys: [] }; }
+        const key = type + ':' + id;
+        if (obj.keys.indexOf(key) === -1) { obj.keys.push(key); }
+        wx.setStorageSync('task_dismissed_items', JSON.stringify(obj));
+      } catch (_e) {}
+      this.loadTasks();
     },
 
     handleQualityTask(e) { const t = e.currentTarget.dataset.item; if (!t) return; this.setData({ isOpen: false }); bellTaskActions.handleQualityTask(t); },
@@ -412,12 +476,17 @@ Component({
     onInput(e) { this.setData({ inputValue: e.detail.value }); },
 
     async sendMessage() {
-      var text = this.data.inputValue.trim();
-      if (!text || this.data.isLoading) return;
+      const text = this.data.inputValue.trim();
+      if (!text) return;
 
       this.setData({ inputValue: '' });
 
-      var userMsg = {
+      if (this.data.isLoading) {
+        this._abortStream();
+        this._setMessages(this.data.messages, { isLoading: false, streamingText: '', streamingTool: '' });
+      }
+
+      const userMsg = {
         id: Date.now(), role: 'user',
         content: text,
       };
@@ -425,50 +494,51 @@ Component({
       this.scrollToBottom();
 
       try {
-        var chatContext = this.data.isManager ? 'manager_assistant' : 'worker_assistant';
-        var streamPayload = {
+        const chatContext = this.data.isManager ? 'manager_assistant' : 'worker_assistant';
+        const streamPayload = {
           question: text,
           pageContext: chatContext,
           conversationId: this.data.conversationId,
         };
 
-        var self = this;
-        var accumulatedText = '';
-        var streamStarted = false;
-        var pendingFollowUpActions = null;
-        var _streamPendingUpdate = false;
-        var _streamUpdateTimer = null;
+        const self = this;
+        let accumulatedText = '';
+        let streamStarted = false;
+        let pendingFollowUpActions = null;
 
-        var aiMsgId = Date.now() + 1;
+        const aiMsgId = Date.now() + 1;
 
-        var requestTask = api.intelligence.aiAdvisorChatStream(
+        const requestTask = api.intelligence.aiAdvisorChatStream(
           streamPayload,
           function (event) {
             streamStarted = true;
             if (event.type === 'thinking') {
-              self.setData({ streamingTool: '小云正在整理思路…' });
+              self.setData({ streamingTool: '小云正在思考中...' });
             } else if (event.type === 'tool_call') {
-              var toolName = describeTool(String(event.data.tool || ''));
-              self.setData({ streamingTool: '正在处理：' + toolName + '…' });
+              const toolName = event.data.tool ? describeTool(event.data.tool) : '工具';
+              self.setData({ streamingTool: '正在使用「' + toolName + '」...' });
             } else if (event.type === 'tool_result') {
-              var tn = describeTool(String(event.data.tool || ''));
-              if (event.data.success) {
-                self.setData({ streamingTool: tn + ' 已完成，继续整理…' });
-              } else {
-                self.setData({ streamingTool: tn + ' 未成功，重新组织…' });
+              self.setData({ streamingTool: '' });
+            } else if (event.type === 'answer_chunk') {
+              const chunk = String(event.data.chunk || '');
+              if (chunk) {
+                accumulatedText += chunk;
+                self.setData({ streamingText: accumulatedText });
               }
             } else if (event.type === 'answer') {
-              var content = String(event.data.content || '');
+              const content = String(event.data.content || '');
               if (content) {
-                accumulatedText += content;
-                if (!_streamPendingUpdate) {
-                  _streamPendingUpdate = true;
-                  _streamUpdateTimer = setTimeout(function () {
-                    _streamPendingUpdate = false;
-                    _streamUpdateTimer = null;
-                    self.setData({ streamingText: accumulatedText, streamingTool: '' });
-                  }, 100);
-                }
+                accumulatedText = content;
+                self.setData({ streamingText: accumulatedText });
+              }
+              if (event.data.commandId) {
+                self._latestCommandId = String(event.data.commandId);
+              }
+              if (event.data.charts && Array.isArray(event.data.charts)) {
+                self._latestCharts = event.data.charts;
+              }
+              if (event.data.insightCards && Array.isArray(event.data.insightCards)) {
+                self._latestInsightCards = event.data.insightCards;
               }
             } else if (event.type === 'follow_up_actions') {
               if (event.data && event.data.actions) {
@@ -478,33 +548,43 @@ Component({
           },
           function () {
             self._streamTask = null;
-            var parsed = parseAiCards(accumulatedText || '抱歉，我现在无法回答这个问题。');
-            var recommendPills = [];
+            const parsed = parseAiCards(accumulatedText || '抱歉，我现在无法回答这个问题。');
+            let recommendPills = [];
             if (parsed.text.includes('【推荐追问】：')) {
-              var parts = parsed.text.split('【推荐追问】：');
+              const parts = parsed.text.split('【推荐追问】：');
               parsed.text = parts[0].trim();
               if (parts[1]) recommendPills = parts[1].split('|').map(function (p) { return p.trim(); }).filter(function (p) { return !!p; });
             }
-            var actions = parsed.actions && parsed.actions.length > 0 ? parsed.actions : null;
+            let actions = parsed.actions && parsed.actions.length > 0 ? parsed.actions : null;
             if (!actions && pendingFollowUpActions && pendingFollowUpActions.length > 0) {
               actions = pendingFollowUpActions.map(function (a) {
+                const actType = a.actionType ? String(a.actionType).toLowerCase() : 'navigate';
+                // 过滤掉NAVIGATE动作手机端看不到,只保留ASK/EXECUTE
+                if (actType === 'navigate') return null;
                 return {
                   label: a.label || a.command || '',
-                  type: a.actionType ? String(a.actionType).toLowerCase() : 'navigate',
+                  type: actType,
                   description: a.dataSummary || '',
                   command: a.command || '',
                   urgency: a.icon === 'alert' ? 'high' : 'medium',
-                  buttonText: a.actionType === 'EXECUTE' ? '执行' : a.actionType === 'ASK' ? '追问' : '查看',
+                  buttonText: actType === 'execute' ? '执行' : '追问',
                 };
-              });
+              }).filter(Boolean);
             }
-            var completedAiMsg = {
+            const completedAiMsg = {
               id: aiMsgId, role: 'ai', content: parsed.text,
               recommendPills: recommendPills,
               actions: actions,
-              insightCards: parsed.insightCards || [],
+              insightCards: self._latestInsightCards || parsed.insightCards || [],
               clarificationHints: parsed.clarificationHints || [],
+              stepWizardCards: parsed.stepWizardCards && parsed.stepWizardCards.length > 0 ? parsed.stepWizardCards : null,
+              teamStatusCards: parsed.teamStatusCards && parsed.teamStatusCards.length > 0 ? parsed.teamStatusCards : null,
+              charts: self._latestCharts || parsed.charts || null,
+              commandId: self._latestCommandId || null,
             };
+            self._latestCommandId = null;
+            self._latestCharts = null;
+            self._latestInsightCards = null;
             self._setMessages([].concat(self.data.messages, [completedAiMsg]), { isLoading: false, streamingText: '', streamingTool: '' });
             self.scrollToBottom();
             self._saveChatHistory();
@@ -513,18 +593,18 @@ Component({
             console.warn('[XiaoYun] SSE failed, fallback to sync:', err);
             self._streamTask = null;
             if (streamStarted && accumulatedText) {
-              var streamFallbackMsg = { id: aiMsgId, role: 'ai', content: accumulatedText };
+              const streamFallbackMsg = { id: aiMsgId, role: 'ai', content: accumulatedText };
               self._setMessages([].concat(self.data.messages, [streamFallbackMsg]), { isLoading: false, streamingText: '', streamingTool: '' });
               self.scrollToBottom();
               self._saveChatHistory();
               return;
             }
             try {
-              var chatParams = { question: text, context: chatContext };
-              var chatRes = await api.intelligence.aiAdvisorChat(chatParams);
-              var aiResponse = '';
-              var syncActions = null;
-              var syncSuggestions = [];
+              const chatParams = { question: text, context: chatContext };
+              const chatRes = await api.intelligence.aiAdvisorChat(chatParams);
+              let aiResponse = '';
+              let syncActions = null;
+              let syncSuggestions = [];
               if (chatRes && typeof chatRes === 'object') {
                 aiResponse = chatRes.displayAnswer || chatRes.answer || chatRes.content || chatRes.reply || chatRes.message || '';
                 if (chatRes.followUpActions && chatRes.followUpActions.length > 0) {
@@ -547,55 +627,183 @@ Component({
               }
               if (!aiResponse) aiResponse = '抱歉，我现在无法回答这个问题。';
 
-              var parsed = parseAiCards(aiResponse);
-              var recommendPills = syncSuggestions.length > 0 ? syncSuggestions : [];
+              const parsed = parseAiCards(aiResponse);
+              let recommendPills = syncSuggestions.length > 0 ? syncSuggestions : [];
               if (parsed.text.includes('【推荐追问】：')) {
-                var parts = parsed.text.split('【推荐追问】：');
+                const parts = parsed.text.split('【推荐追问】：');
                 parsed.text = parts[0].trim();
                 if (parts[1]) {
-                  var extraPills = parts[1].split('|').map(function (p) { return p.trim(); }).filter(function (p) { return !!p; });
+                  const extraPills = parts[1].split('|').map(function (p) { return p.trim(); }).filter(function (p) { return !!p; });
                   recommendPills = recommendPills.concat(extraPills);
                 }
               }
-              var actions = parsed.actions && parsed.actions.length > 0 ? parsed.actions : syncActions;
-              var syncAiMsg = {
+              const actions = parsed.actions && parsed.actions.length > 0 ? parsed.actions : syncActions;
+              const syncAiMsg = {
                 id: aiMsgId, role: 'ai', content: parsed.text,
                 recommendPills: recommendPills.length > 0 ? recommendPills : null,
                 actions: actions,
                 insightCards: parsed.insightCards || [],
                 clarificationHints: parsed.clarificationHints || [],
+                stepWizardCards: parsed.stepWizardCards && parsed.stepWizardCards.length > 0 ? parsed.stepWizardCards : null,
+                teamStatusCards: parsed.teamStatusCards && parsed.teamStatusCards.length > 0 ? parsed.teamStatusCards : null,
               };
               self._setMessages([].concat(self.data.messages, [syncAiMsg]), { isLoading: false, streamingText: '', streamingTool: '' });
               self.scrollToBottom();
               self._saveChatHistory();
             } catch (syncErr) {
-              var errMsg = { id: aiMsgId, role: 'ai', content: '服务暂时无法响应，请稍后再试。' };
+              const errMsg = { id: aiMsgId, role: 'ai', content: '服务暂时无法响应，请稍后再试。' };
               self._setMessages([].concat(self.data.messages, [errMsg]), { isLoading: false, streamingText: '', streamingTool: '' });
               self.scrollToBottom();
             }
-          }
+          },
         );
         this._streamTask = requestTask;
 
       } catch (err) {
         console.error('[XiaoYun] sendMessage error:', err);
-        var errContent = (err && err.errMsg && err.errMsg !== 'undefined') ? err.errMsg : '服务暂时无法响应，请稍后再试。';
-        var errMsg = { id: Date.now(), role: 'ai', content: errContent };
+        const errContent = (err && err.errMsg && err.errMsg !== 'undefined') ? err.errMsg : '服务暂时无法响应，请稍后再试。';
+        const errMsg = { id: Date.now(), role: 'ai', content: errContent };
         this._setMessages([].concat(this.data.messages, [errMsg]), { isLoading: false, streamingText: '', streamingTool: '' });
         this.scrollToBottom();
       }
     },
 
     onActionTap(e) {
-      var action = e.currentTarget.dataset.action;
+      const action = e.currentTarget.dataset.action;
       if (!action) return;
-      if (action.type === 'execute' || action.type === 'urge_order' || action.type === 'mark_urgent') {
+      if (action.type === 'execute') {
+        this._executeAction(action);
+      } else if (action.type === 'urge_order' || action.type === 'mark_urgent') {
         this.setData({ inputValue: action.label || action.command || '', isOpen: true });
       } else if (action.actionCommand && action.actionCommand !== 'IGNORE') {
         this.setData({ inputValue: action.actionCommand }, () => { this.sendMessage(); });
       } else if (action.command) {
         this.setData({ inputValue: action.command }, () => { this.sendMessage(); });
       }
+    },
+
+    _executeAction(action) {
+      const self = this;
+      const command = action.command || action.label || '';
+      if (!command) return;
+      wx.showModal({
+        title: '确认执行',
+        content: command,
+        confirmText: '执行',
+        confirmColor: '#1677FF',
+        success: function (res) {
+          if (!res.confirm) return;
+          wx.showLoading({ title: '执行中...' });
+          api.intelligence.naturalLanguageExecute({ text: command }).then(function (res) {
+            wx.hideLoading();
+            const data = res && res.data ? res.data : res;
+            if (data && data.status === 'SUCCESS') {
+              wx.showToast({ title: '执行成功', icon: 'success' });
+              self.sendMessage();
+            } else if (data && data.status === 'REQUIRES_APPROVAL') {
+              wx.showModal({ title: '需要审批', content: data.reason || '高风险操作需审批后执行', showCancel: false });
+            } else {
+              wx.showToast({ title: (data && data.message) || '执行失败', icon: 'none' });
+            }
+          }).catch(function () {
+            wx.hideLoading();
+            wx.showToast({ title: '执行失败', icon: 'none' });
+          });
+        },
+      });
+    },
+
+    onWizardOptionTap(e) {
+      const ds = e.currentTarget.dataset;
+      const key = ds.msgId + '_' + ds.fieldKey;
+      const update = {};
+      update['wizardStates.' + key] = ds.value;
+      this.setData(update);
+    },
+
+    onWizardMultiOptionTap(e) {
+      const ds = e.currentTarget.dataset;
+      const key = ds.msgId + '_' + ds.fieldKey;
+      const current = this.data.wizardStates[key] || [];
+      const idx = current.indexOf(ds.value);
+      const next = idx >= 0 ? current.filter(function (v) { return v !== ds.value; }) : current.concat([ds.value]);
+      const update = {};
+      update['wizardStates.' + key] = next;
+      this.setData(update);
+    },
+
+    onWizardInput(e) {
+      const ds = e.currentTarget.dataset;
+      const key = ds.msgId + '_' + ds.fieldKey;
+      const update = {};
+      update['wizardStates.' + key] = e.detail.value;
+      this.setData(update);
+    },
+
+    onWizardDateTap(e) {
+      const self = this;
+      const ds = e.currentTarget.dataset;
+      const key = ds.msgId + '_' + ds.fieldKey;
+      wx.showModal({
+        title: '输入日期',
+        editable: true,
+        placeholderText: '如 2026-05-10',
+        content: this.data.wizardStates[key] || '',
+        success: function (res) {
+          if (res.confirm && res.content) {
+            const update = {};
+            update['wizardStates.' + key] = res.content.trim();
+            self.setData(update);
+          }
+        },
+      });
+    },
+
+    onWizardSubmit(e) {
+      const ds = e.currentTarget.dataset;
+      const msgId = ds.msgId;
+      const wizIdx = ds.wizardIdx;
+      let msg = null;
+      for (let i = 0; i < this.data.messages.length; i++) {
+        if (this.data.messages[i].id === msgId) { msg = this.data.messages[i]; break; }
+      }
+      if (!msg || !msg.stepWizardCards || !msg.stepWizardCards[wizIdx]) return;
+      const wizard = msg.stepWizardCards[wizIdx];
+      const parts = [];
+      for (let si = 0; si < wizard.steps.length; si++) {
+        const step = wizard.steps[si];
+        for (let fi = 0; fi < step.fields.length; fi++) {
+          const field = step.fields[fi];
+          const stateKey = msgId + '_' + field.key;
+          const value = this.data.wizardStates[stateKey];
+          if (value) {
+            if (field.inputType === 'select' && field.options) {
+              for (let oi = 0; oi < field.options.length; oi++) {
+                if (field.options[oi].value === value) {
+                  parts.push(field.label + '=' + field.options[oi].label);
+                  break;
+                }
+              }
+            } else if (field.inputType === 'multi_select' && Array.isArray(value) && field.options) {
+              const labels = [];
+              for (let vi = 0; vi < value.length; vi++) {
+                for (let oi2 = 0; oi2 < field.options.length; oi2++) {
+                  if (field.options[oi2].value === value[vi]) { labels.push(field.options[oi2].label); break; }
+                }
+              }
+              if (labels.length > 0) parts.push(field.label + '=' + labels.join(','));
+            } else {
+              parts.push(field.label + '=' + value);
+            }
+          }
+        }
+      }
+      if (parts.length === 0) {
+        wx.showToast({ title: '请至少填写一项', icon: 'none' });
+        return;
+      }
+      const command = (wizard.submitCommand || wizard.title) + '：' + parts.join('，');
+      this.setData({ inputValue: command }, function () { this.sendMessage(); }.bind(this));
     },
 
     clearMessages() {
@@ -609,7 +817,7 @@ Component({
         /* ignore greeting name read failure */
       }
       const greeting = userName ? 'Hi ' + userName + '，这里是小云帮助中心。' : 'Hi，这里是小云帮助中心。';
-      var newConvId = 'mp_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6);
+      const newConvId = 'mp_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6);
       this._setMessages([{ id: Date.now(), role: 'ai', content: greeting }], { inputValue: '', conversationId: newConvId });
       try { wx.removeStorageSync('ai_chat_history'); } catch (_e) { /* ignore storage cleanup failure */ }
     },

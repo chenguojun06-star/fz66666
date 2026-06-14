@@ -76,7 +76,7 @@ class ScanStageProcessor {
       // 当前订单处于生产阶段（车缝/尾部/二次工艺等），必须使用菲号二维码扫码。
       // 历史 bug：此处曾错误调用 detectNextStage，导致 ORDER 码被识别为任意生产工序。
       throw new Error(
-        `当前订单处于【${currentProcessName || '生产阶段'}】，订单码只能用于采购/裁剪，请扫描菲号二维码`
+        `当前订单处于【${currentProcessName || '生产阶段'}】，订单码只能用于采购/裁剪，请扫描菲号二维码`,
       );
     }
   }

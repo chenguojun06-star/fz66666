@@ -1,9 +1,11 @@
 const { getBaseUrl } = require('../config');
-const { getToken, clearToken, isTokenExpired } = require('./storage');
+const { getToken, setToken, clearToken, isTokenExpired, getRefreshToken, setRefreshToken, clearRefreshToken } = require('./storage');
 const { REQUEST_TIMEOUT, REQUEST_RETRY_COUNT, UPLOAD_TIMEOUT } = require('../config/debug');
 
 let redirectingToLogin = false;
 let redirectResetTimer = null;
+let isRefreshing = false;
+let refreshSubscribers = [];
 
 function getCurrentRoutePath() {
   try {
@@ -72,6 +74,66 @@ function triggerLoginRedirect() {
   fallbackRedirectToLogin();
 }
 
+/**
+ * 尝试使用 refreshToken 刷新 access token
+ * 全局锁防止并发刷新，刷新成功后通知所有等待的请求
+ * @returns {Promise<string|null>} 新 token 或 null
+ */
+function refreshTokenRequest() {
+  return new Promise((resolve) => {
+    if (isRefreshing) {
+      refreshSubscribers.push(resolve);
+      return;
+    }
+    isRefreshing = true;
+    const refreshToken = getRefreshToken();
+    if (!refreshToken) {
+      isRefreshing = false;
+      clearToken();
+      clearRefreshToken();
+      resolve(null);
+      return;
+    }
+    const baseUrl = getBaseUrl();
+    wx.request({
+      url: `${baseUrl}/api/system/user/refresh-token`,
+      method: 'POST',
+      data: { refreshToken },
+      timeout: 10000,
+      header: { 'content-type': 'application/json' },
+      success(res) {
+        const body = res.data;
+        if (body && body.code === 200 && body.data && body.data.token) {
+          setToken(body.data.token);
+          if (body.data.refreshToken) {
+            setRefreshToken(body.data.refreshToken);
+          }
+          isRefreshing = false;
+          const newToken = body.data.token;
+          refreshSubscribers.forEach(cb => cb(newToken));
+          refreshSubscribers = [];
+          resolve(newToken);
+        } else {
+          isRefreshing = false;
+          clearToken();
+          clearRefreshToken();
+          refreshSubscribers.forEach(cb => cb(null));
+          refreshSubscribers = [];
+          resolve(null);
+        }
+      },
+      fail() {
+        isRefreshing = false;
+        clearToken();
+        clearRefreshToken();
+        refreshSubscribers.forEach(cb => cb(null));
+        refreshSubscribers = [];
+        resolve(null);
+      },
+    });
+  });
+}
+
 function createError(errMsg, extra) {
   const msg = errMsg ? String(errMsg) : '请求失败';
   const e = { errMsg: msg, message: msg };
@@ -110,11 +172,25 @@ function extractServerMessage(body) {
 }
 
 /**
- * 处理401未授权错误
+ * 处理401未授权错误 — 先尝试静默刷新 token，失败后再跳转登录
  */
-function handle401Error(statusCode, body, skipAuthRedirect, reject) {
-  clearToken();
+async function handle401Error({ statusCode, body, skipAuthRedirect, reject, resolve, options }) {
+  const retryOn401 = options && options._retryOn401;
+  if (!skipAuthRedirect && !retryOn401) {
+    const newToken = await refreshTokenRequest();
+    if (newToken) {
+      request({ ...options, _retryOn401: true }).then(resolve).catch(reject);
+      return true;
+    }
+    clearToken();
+    clearRefreshToken();
+    triggerLoginRedirect();
+    reject(createError('未登录', { type: 'auth', statusCode, data: body }));
+    return true;
+  }
   if (!skipAuthRedirect) {
+    clearToken();
+    clearRefreshToken();
     triggerLoginRedirect();
     reject(createError('未登录', { type: 'auth', statusCode, data: body }));
     return true;
@@ -129,6 +205,7 @@ function handle403Error({ statusCode, body, token, serverMessage, skipAuthRedire
   // 如果没有token，403可能是未登录
   if (!token) {
     clearToken();
+    clearRefreshToken();
     if (!skipAuthRedirect) {
       triggerLoginRedirect();
       reject(
@@ -136,7 +213,7 @@ function handle403Error({ statusCode, body, token, serverMessage, skipAuthRedire
           type: 'auth',
           statusCode,
           data: body,
-        })
+        }),
       );
       return true;
     }
@@ -154,6 +231,7 @@ function handle403Error({ statusCode, body, token, serverMessage, skipAuthRedire
 
   if (isExpiredByMessage || isExpiredByJwt) {
     clearToken();
+    clearRefreshToken();
     if (!skipAuthRedirect) {
       triggerLoginRedirect();
       reject(createError('登录已过期，请重新登录', { type: 'auth', statusCode, data: body }));
@@ -199,7 +277,7 @@ function handleHttpError({ statusCode, serverMessage, body, url, method, reject 
 
   if (statusCode === 400 && body && typeof body === 'object') {
     if (body.errors && Array.isArray(body.errors)) {
-      const fieldErrors = body.errors.map(function(e) { return e.defaultMessage || e.message }).filter(Boolean);
+      const fieldErrors = body.errors.map(function(e) { return e.defaultMessage || e.message; }).filter(Boolean);
       if (fieldErrors.length > 0) {
         detailMsg = fieldErrors.join('；');
       }
@@ -214,16 +292,16 @@ function handleHttpError({ statusCode, serverMessage, body, url, method, reject 
 /**
  * 处理请求成功的响应
  */
-function handleSuccess(res, context) {
-  const { url, method, skipAuthRedirect, token, resolve, reject } = context;
+async function handleSuccess(res, context) {
+  const { url, method, skipAuthRedirect, token, resolve, reject, options } = context;
   const statusCode = res && typeof res.statusCode === 'number' ? res.statusCode : 0;
   const body = res && res.data;
   const code = parseResponseCode(body);
   const serverMessage = extractServerMessage(body);
 
-  // 处理401未授权
+  // 处理401未授权 — 先尝试刷新 token
   if (statusCode === 401 || code === 401) {
-    if (handle401Error(statusCode, body, skipAuthRedirect, reject)) {
+    if (await handle401Error({ statusCode, body, skipAuthRedirect, reject, resolve, options })) {
       return;
     }
   }
@@ -261,6 +339,26 @@ function mapNetworkErrorMessage(errMsg, isDevEnv) {
     return isDevEnv
       ? 'HTTPS 证书或 TLS 版本不符合要求，请改用合法 https 域名或本地代理'
       : 'HTTPS 证书或 TLS 版本不符合要求';
+  }
+
+  if (lower.includes('timeout') || lower.includes('超时')) {
+    return '请求超时，请检查网络连接';
+  }
+
+  if (lower.includes('network') || lower.includes('network') || lower.includes('网络')) {
+    return '网络异常，请检查网络连接';
+  }
+
+  if (lower.includes('dns') || lower.includes('resolve')) {
+    return '域名解析失败，请检查网络设置';
+  }
+
+  if (lower.includes('refused') || lower.includes('拒绝') || lower.includes('connect')) {
+    return '服务器连接被拒绝，请稍后重试';
+  }
+
+  if (lower.includes('abort') || lower.includes('cancel')) {
+    return '请求已取消';
   }
 
   return errMsg;
@@ -332,7 +430,7 @@ function _buildHeaders(token, customHeader) {
 }
 
 function request(options) {
-  return new Promise((resolve, reject) => {
+  return new Promise(async (resolve, reject) => {
     const url = (options && options.url) || '';
     const method = (options && options.method) || 'GET';
     const data = (options && options.data) || undefined;
@@ -340,18 +438,22 @@ function request(options) {
     const skipAuthRedirect = !!(options && options.skipAuthRedirect);
     const retryCount = (options && options._retryCount) || 0;
 
-    const token = getToken();
+    let token = getToken();
     const baseUrl = getBaseUrl();
     const envVersion = resolveEnvVersion();
     const isDevEnv = !envVersion || envVersion === 'develop';
 
     if (token && isTokenExpired()) {
-      clearToken();
-      if (!skipAuthRedirect) {
-        triggerLoginRedirect();
+      const newToken = await refreshTokenRequest();
+      if (newToken) {
+        token = newToken;
+      } else {
+        if (!skipAuthRedirect) {
+          triggerLoginRedirect();
+        }
+        reject(createError('登录已过期，请重新登录', { type: 'auth' }));
+        return;
       }
-      reject(createError('登录已过期，请重新登录', { type: 'auth' }));
-      return;
     }
     // 开发调试时允许HTTP，生产/体验环境强制HTTPS
     const requireHttps = !isDevEnv;
@@ -374,7 +476,7 @@ function request(options) {
       timeout: (options && options.timeout) || REQUEST_TIMEOUT,
       header: headers,
       success(res) {
-        handleSuccess(res, { url, method, skipAuthRedirect, token, resolve, reject });
+        handleSuccess(res, { url, method, skipAuthRedirect, token, resolve, reject, options });
       },
       fail(err) {
         handleFail(err, { url, method, options, retryCount, resolve, reject, isDevEnv });
@@ -393,7 +495,7 @@ function request(options) {
  * @returns {Promise<string>} - 上传成功后的图片URL
  */
 function uploadFile(options) {
-  return new Promise((resolve, reject) => {
+  return new Promise(async (resolve, reject) => {
     const { filePath, name = 'file', formData = {}, url = '/api/common/upload' } = options || {};
 
     if (!filePath) {
@@ -401,13 +503,23 @@ function uploadFile(options) {
       return;
     }
 
-    const token = getToken();
+    let token = getToken();
     const baseUrl = getBaseUrl();
 
-    // 验证baseUrl
     if (!baseUrl) {
       reject(createError('未配置有效的 API 地址', { type: 'config' }));
       return;
+    }
+
+    if (token && isTokenExpired()) {
+      const newToken = await refreshTokenRequest();
+      if (newToken) {
+        token = newToken;
+      } else {
+        triggerLoginRedirect();
+        reject(createError('登录已过期，请重新登录', { type: 'auth' }));
+        return;
+      }
     }
 
     const headers = token ? { Authorization: `Bearer ${token}` } : {};
@@ -423,7 +535,6 @@ function uploadFile(options) {
         try {
           const statusCode = res.statusCode || 0;
 
-          // 解析响应数据
           let body;
           try {
             body = res.data ? JSON.parse(res.data) : {};
@@ -431,17 +542,29 @@ function uploadFile(options) {
             body = { message: res.data };
           }
 
-          // 处理401未授权
           if (statusCode === 401) {
+            const retryOn401 = options && options._retryOn401;
+            if (!retryOn401) {
+              refreshTokenRequest().then(newToken => {
+                if (newToken) {
+                  uploadFile({ ...options, _retryOn401: true }).then(resolve).catch(reject);
+                } else {
+                  clearToken();
+                  clearRefreshToken();
+                  triggerLoginRedirect();
+                  reject(createError('未登录', { type: 'auth', statusCode }));
+                }
+              });
+              return;
+            }
             clearToken();
+            clearRefreshToken();
             triggerLoginRedirect();
             reject(createError('未登录', { type: 'auth', statusCode }));
             return;
           }
 
-          // 处理业务成功
           if (statusCode === 200 && body.code === 200) {
-            // 返回上传后的文件URL
             const fileUrl = body.data?.url || body.data?.fileUrl || body.data;
             if (fileUrl) {
               resolve(fileUrl);
@@ -451,7 +574,6 @@ function uploadFile(options) {
             return;
           }
 
-          // 处理业务错误
           const serverMessage = extractServerMessage(body);
           reject(createError(serverMessage || '上传失败', { type: 'biz', statusCode, body }));
         } catch (err) {
@@ -461,8 +583,8 @@ function uploadFile(options) {
       fail(err) {
         const errMsg = (err && err.errMsg) || '上传失败';
         const mappedMsg = errMsg.includes('timeout') ? '上传超时，请检查网络' :
-                         errMsg.includes('request:fail') ? '网络异常，请重试' :
-                         '上传失败';
+          errMsg.includes('request:fail') ? '网络异常，请重试' :
+            '上传失败';
         reject(createError(mappedMsg, { type: 'network', raw: err }));
       },
     });

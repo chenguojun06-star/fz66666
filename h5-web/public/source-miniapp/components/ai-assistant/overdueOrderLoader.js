@@ -99,7 +99,7 @@ async function loadOverdueOrders() {
         return !TERMINAL_STATUSES.includes(status);
       })
       .map(item => {
-        const overdueDays = calculateOverdueDays(item.deadline || item.deliveryDate);
+        const overdueDays = calculateOverdueDays(item.plannedEndDate || item.deadline || item.deliveryDate);
 
         if (overdueDays <= 0) return null; // 未超期，过滤掉
 
@@ -115,7 +115,7 @@ async function loadOverdueOrders() {
           completedQuantity: item.completedQuantity || 0,
           currentProcessName: item.currentProcessName || '未知',
           progress: item.progress || 0,
-          deadline: item.deadline || item.deliveryDate,
+          deadline: item.plannedEndDate || item.deadline || item.deliveryDate,
           overdueDays,
           overdueText: overdueInfo.text,
           overdueLevel: overdueInfo.level,

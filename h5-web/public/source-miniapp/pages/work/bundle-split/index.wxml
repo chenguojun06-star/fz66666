@@ -1,13 +1,20 @@
+<wxs module="fmt">
+function abbr(str) {
+  if (!str) return '?';
+  return str.substring(0, 2);
+}
+module.exports = { abbr: abbr };
+</wxs>
 <view class="container">
-  <custom-nav title="拆菲号 / 单价调整" show-back="{{true}}" show-search="{{false}}" />
 
   <!-- ======== Tab 切换栏 ======== -->
   <view class="tab-bar">
     <view class="tab-item {{activeTab === 0 ? 'tab-active' : ''}}" data-tab="0" bindtap="switchTab">拆菲号</view>
-    <view class="tab-item {{activeTab === 1 ? 'tab-active' : ''}}" data-tab="1" bindtap="switchTab">单价调整</view>
+    <view class="tab-item {{activeTab === 1 ? 'tab-active' : ''}}" data-tab="1" bindtap="switchTab">待确认</view>
+    <view class="tab-item {{activeTab === 2 ? 'tab-active' : ''}}" data-tab="2" bindtap="switchTab">单价调整</view>
   </view>
 
-  <!-- ======== Panel 0: 菲号单价 ======== -->
+  <!-- ======== Panel 0: 拆菲号 ======== -->
   <view wx:if="{{activeTab === 0}}">
 
     <!-- 搜索订单 -->
@@ -15,6 +22,12 @@
       <view class="search-bar-row">
         <input class="search-bar-input" placeholder="输入订单号或扫码查单" value="{{searchOrderNo}}" bindinput="onSearchInput" confirm-type="search" bindconfirm="doSearch" />
         <view class="search-bar-btn" bindtap="doSearch" hover-class="search-bar-btn-hover">查询</view>
+      </view>
+      <view class="scan-bundle-bar">
+        <view class="scan-bundle-btn" bindtap="scanBundleQr" hover-class="scan-bundle-btn-hover">
+          <text class="scan-icon">📷</text>
+          <text>扫码菲号直接拆</text>
+        </view>
       </view>
     </view>
 
@@ -25,27 +38,66 @@
           <text class="order-label">订单号</text>
           <text class="order-no">{{orderNo}}</text>
         </view>
-        <view class="change-btn" bindtap="changeOrder" hover-class="change-btn-hover">换单</view>
+        <view class="order-bar-actions">
+          <view class="scan-bundle-btn-inline" bindtap="scanBundleQr" hover-class="change-btn-hover">📷 扫菲号</view>
+          <view class="change-btn" bindtap="changeOrder" hover-class="change-btn-hover">换单</view>
+        </view>
       </view>
 
       <view wx:if="{{loading}}" class="loading-state"><text>加载菲号中...</text></view>
 
       <view wx:elif="{{bundles.length}}" class="bundle-list">
         <view wx:for="{{bundles}}" wx:key="id" class="bundle-card {{selectedIdx === index ? 'selected' : ''}}" bindtap="selectBundle" data-idx="{{index}}">
-          <view class="bundle-row">
-            <text class="bundle-no">{{item.bundleLabel || item.bundleNo}}</text>
-            <text class="bundle-qty">{{item.quantity}} 件</text>
+          <!-- 卡片头部：左图右信息 -->
+          <view class="bundle-card-hd">
+            <!-- 左侧款式图 -->
+            <view class="bundle-thumb" catchtap="onCoverPreview" data-url="{{orderStyleCover}}">
+              <image wx:if="{{orderStyleCover}}" class="bundle-thumb-img" src="{{orderStyleCover}}" mode="aspectFill" lazy-load="{{true}}" />
+              <view wx:else class="bundle-thumb-placeholder">
+                <text class="thumb-abbr">{{fmt.abbr(item.styleNo)}}</text>
+              </view>
+            </view>
+            <!-- 右侧 3 行信息 -->
+            <view class="bundle-info">
+              <!-- 第 1 行：订单号 -->
+              <view class="bundle-info-row">
+                <text class="bi-label">订单号</text>
+                <text class="bi-val bi-order-no">{{item.productionOrderNo || orderNo}}</text>
+              </view>
+              <!-- 第 2 行：款号 · 颜色 -->
+              <view class="bundle-info-row">
+                <text class="bi-val bi-style-no">{{item.styleNo || '-'}}</text>
+                <text class="bi-dot"> · </text>
+                <text class="bi-val bi-color">{{item.color || '-'}}</text>
+              </view>
+              <!-- 第 3 行：菲号 + 数量徽章 -->
+              <view class="bundle-info-row">
+                <text class="bi-label">菲号</text>
+                <text class="bi-val bi-bundle-label">{{item.bundleLabel || item.bundleNo}}</text>
+                <text class="bi-badge">{{item.quantity}}件</text>
+              </view>
+            </view>
           </view>
-          <view class="bundle-meta">
-            <text>{{item.color || '-'}}</text>
-            <text class="meta-sep">/</text>
-            <text>{{item.size || '-'}}</text>
+          <!-- 持有人（可选） -->
+          <view wx:if="{{item.operatorName}}" class="bundle-holder">
+            <text class="holder-icon">👤</text>
+            <text class="holder-label">持有：</text>
+            <text class="holder-name">{{item.operatorName}}</text>
           </view>
 
           <view wx:if="{{selectedIdx === index}}" class="split-form" catchtap="">
             <view class="form-row">
               <text class="form-label">转出数量</text>
               <input class="form-input" type="number" placeholder="输入件数" value="{{splitQty}}" bindinput="onQtyInput" />
+            </view>
+            <view class="form-row">
+              <text class="form-label">当前工序</text>
+              <picker mode="selector" range="{{processes}}" range-key="processName" value="{{processIdx}}" bindchange="onProcessChange">
+                <view class="picker-box">
+                  <text class="{{processIdx >= 0 ? '' : 'placeholder'}}">{{processIdx >= 0 ? processes[processIdx].processName : '选择工序'}}</text>
+                  <text class="arrow">›</text>
+                </view>
+              </picker>
             </view>
             <view class="form-row">
               <text class="form-label">接手工人</text>
@@ -56,6 +108,9 @@
                 </view>
               </picker>
             </view>
+            <view class="split-summary" wx:if="{{processIdx >= 0 && splitQty}}">
+              <text>剩余 {{(bundles[selectedIdx].quantity || 0) - splitQty}} 件保留，{{splitQty}} 件转给 {{workers[workerIdx].workerName || '--'}}</text>
+            </view>
             <view class="submit-btn {{submitting ? 'disabled' : ''}}" bindtap="submitSplit" hover-class="submit-hover">{{submitting ? '提交中...' : '确认拆分'}}</view>
           </view>
         </view>
@@ -64,7 +119,7 @@
       <view wx:else class="empty-state empty-state-card">
         <text class="empty-icon">📦</text>
         <text class="empty-text">该订单暂无菲号</text>
-        <text class="empty-hint">请确认订单号是否正确</text>
+        <text class="empty-hint">请确认订单号是否正确，或扫码菲号直接拆</text>
       </view>
     </block>
 
@@ -87,8 +142,51 @@
     </view>
   </view>
 
-  <!-- ======== Panel 1: 工序单价调整 ======== -->
+  <!-- ======== Panel 1: 待确认 ======== -->
   <view wx:if="{{activeTab === 1}}">
+    <view wx:if="{{pendingLoading}}" class="loading-state"><text>加载中...</text></view>
+
+    <view wx:elif="{{pendingSplits.length}}" class="pending-list">
+      <view wx:for="{{pendingSplits}}" wx:key="id" class="pending-card">
+        <view class="pending-header">
+          <text class="pending-label">拆菲请求</text>
+          <text class="pending-status pending">{{item.splitStatus}}</text>
+        </view>
+        <view class="pending-row">
+          <text class="pending-key">订单号</text>
+          <text class="pending-val">{{item.orderNo || '-'}}</text>
+        </view>
+        <view class="pending-row">
+          <text class="pending-key">菲号</text>
+          <text class="pending-val">{{item.sourceBundleName || item.sourceBundleLabel || '-'}}</text>
+        </view>
+        <view class="pending-row">
+          <text class="pending-key">工序</text>
+          <text class="pending-val">{{item.currentProcessName || '-'}}</text>
+        </view>
+        <view class="pending-row">
+          <text class="pending-key">数量</text>
+          <text class="pending-val highlight">{{item.transferQuantity || 0}} 件</text>
+        </view>
+        <view class="pending-row">
+          <text class="pending-key">来自</text>
+          <text class="pending-val">{{item.fromWorkerName || '-'}}</text>
+        </view>
+        <view class="confirm-btn {{confirmingId === item.id ? 'disabled' : ''}}" data-id="{{item.id}}" bindtap="confirmPendingSplit" hover-class="submit-hover">
+          {{confirmingId === item.id ? '确认中...' : '接收并确认'}}
+        </view>
+      </view>
+    </view>
+
+    <view wx:else class="empty-state empty-state-card">
+      <text class="empty-icon">📥</text>
+      <text class="empty-text">暂无待确认的拆菲请求</text>
+      <text class="empty-hint">当有工友向你拆菲转派时会显示在这里</text>
+    </view>
+  </view>
+
+  <!-- ======== Panel 2: 单价调整 ======== -->
+  <view wx:if="{{activeTab === 2}}">
 
     <!-- 搜索订单 -->
     <view class="search-bar-wrap">
@@ -101,8 +199,8 @@
     <!-- 工序列表 -->
     <view wx:if="{{priceLoading}}" class="loading-state"><text>加载工序中...</text></view>
 
-    <view wx:elif="{{processes.length}}" class="process-list">
-      <view wx:for="{{processes}}" wx:key="processName" class="process-card {{selectedProcessIdx === index ? 'selected' : ''}}" bindtap="selectProcess" data-idx="{{index}}">
+    <view wx:elif="{{priceProcesses.length}}" class="process-list">
+      <view wx:for="{{priceProcesses}}" wx:key="processName" class="process-card {{selectedProcessIdx === index ? 'selected' : ''}}" bindtap="selectPriceProcess" data-idx="{{index}}">
         <view class="process-row">
           <text class="process-name">{{item.processName}}</text>
           <text class="process-price">¥{{item.unitPrice || '0.00'}}</text>

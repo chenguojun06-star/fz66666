@@ -109,6 +109,15 @@ const production = {
   myRepairTasks() {
     return ok('/api/production/warehousing/pending-repair-tasks', 'GET', {});
   },
+  startBundleRepair(bundleId, operatorName) {
+    return ok('/api/production/warehousing/mark-bundle-repairing', 'POST', { bundleId: bundleId, operatorName: operatorName || '' });
+  },
+  completeBundleRepair(bundleId) {
+    return ok('/api/production/warehousing/mark-bundle-repaired', 'POST', { bundleId: bundleId });
+  },
+  scrapBundle(bundleId) {
+    return ok('/api/production/warehousing/scrap-bundle', 'POST', { bundleId: bundleId });
+  },
   getCuttingBundle(orderNo, bundleNo) {
     return ok('/api/production/cutting/list', 'GET', { orderNo, bundleNo });
   },
@@ -130,9 +139,33 @@ const production = {
   splitTransfer(data) {
     return ok('/api/production/cutting/split-transfer', 'POST', data);
   },
-  splitRollback(data) {
-    return ok('/api/production/cutting/split-rollback', 'POST', data);
+
+  requestSplit(body) {
+    return ok('/api/production/cutting/split-transfer/request', 'POST', body);
   },
+
+  confirmSplit(splitLogId) {
+    return ok('/api/production/cutting/split-transfer/confirm', 'POST', { splitLogId });
+  },
+
+  listPendingSplits() {
+    return ok('/api/production/cutting/split-transfer/pending-for-me', 'GET', {});
+  },
+
+  /* -------- 转单（order-level transfer） -------- */
+  transferSearchFactories(keyword, page, pageSize) {
+    return ok('/api/production/order/transfer/search-factories', 'GET', { keyword: keyword || '', page: page || 1, pageSize: pageSize || 20 });
+  },
+  transferSearchUsers(keyword, page, pageSize) {
+    return ok('/api/production/order/transfer/search-users', 'GET', { keyword: keyword || '', page: page || 1, pageSize: pageSize || 20 });
+  },
+  transferCreate(data) {
+    return ok('/api/production/order/transfer/create', 'POST', data);
+  },
+  transferCreateToFactory(data) {
+    return ok('/api/production/order/transfer/create-to-factory', 'POST', data);
+  },
+
   getBundleFamily(bundleId) {
     return ok(`/api/production/cutting/family/${bundleId}`, 'GET', {});
   },
@@ -140,9 +173,16 @@ const production = {
     const id = String(patternId || '').trim();
     return ok(`/api/production/pattern/${encodeURIComponent(id)}`, 'GET', {});
   },
+  listPatterns(params) {
+    return ok('/api/production/pattern/list', 'GET', params || {});
+  },
   getPatternProcessConfig(patternId) {
     const id = String(patternId || '').trim();
     return ok(`/api/production/pattern/${encodeURIComponent(id)}/process-config`, 'GET', {});
+  },
+  getPatternLinkedOrder(patternId) {
+    const id = String(patternId || '').trim();
+    return ok(`/api/production/pattern/${encodeURIComponent(id)}/linked-order`, 'GET', {});
   },
   getPatternScanRecords(patternId) {
     const id = String(patternId || '').trim();
@@ -151,28 +191,34 @@ const production = {
   submitPatternScan(payload) {
     return ok('/api/production/pattern/scan', 'POST', payload || {});
   },
-  reviewPattern(patternId, result, remark) {
+  reviewPattern(patternId, result, remark, images) {
     const id = String(patternId || '').trim();
     const action = encodeURIComponent('review');
-    return ok(`/api/production/pattern/${encodeURIComponent(id)}/workflow-action?action=${action}`, 'POST', {
-      result,
-      remark,
-    });
+    const payload = { result, remark };
+    if (images && Array.isArray(images) && images.length > 0) {
+      payload.images = images;
+    }
+    return ok(`/api/production/pattern/${encodeURIComponent(id)}/workflow-action?action=${action}`, 'POST', payload);
   },
-  receivePattern(patternId, remark) {
+  receivePattern(patternId, remark, extra) {
     const id = String(patternId || '').trim();
-    return ok(`/api/production/pattern/${encodeURIComponent(id)}/workflow-action?action=receive`, 'POST', {
-      remark: remark || '',
-    });
+    const payload = { remark: remark || '' };
+    if (extra) {
+      if (extra.color) payload.color = extra.color;
+      if (extra.quantity) payload.quantity = extra.quantity;
+    }
+    return ok(`/api/production/pattern/${encodeURIComponent(id)}/workflow-action?action=receive`, 'POST', payload);
   },
   completePatternByTask(patternId) {
     const id = String(patternId || '').trim();
     return ok(`/api/production/pattern/${encodeURIComponent(id)}/complete`, 'POST', {});
   },
-  warehouseIn(patternId, warehouseCode, remark) {
+  warehouseIn(patternId, warehouseCode, warehouseAreaId, warehouseLocationCode, remark) {
     const id = String(patternId || '').trim();
     return ok(`/api/production/pattern/${encodeURIComponent(id)}/workflow-action?action=warehouse-in`, 'POST', {
       warehouseCode: warehouseCode || '',
+      warehouseAreaId: warehouseAreaId || '',
+      warehouseLocationCode: warehouseLocationCode || '',
       remark: remark || '',
     });
   },
@@ -189,6 +235,70 @@ const production = {
   },
   priceAdjustHistory(orderNo) {
     return ok(`/api/production/process-price/history?orderNo=${encodeURIComponent(orderNo)}`, 'GET', {});
+  },
+
+  getProcessStatus(orderId) {
+    return ok('/api/production/order/process-status/' + encodeURIComponent(orderId), 'GET', {});
+  },
+  getOrderTracking(orderId) {
+    return ok('/api/production/process-tracking/order/' + encodeURIComponent(orderId), 'GET', {});
+  },
+  getNodeOperations(orderId) {
+    return ok('/api/production/order/node-operations/' + encodeURIComponent(orderId), 'GET', {});
+  },
+  saveNodeOperations(payload) {
+    return ok('/api/production/order/node-operations', 'POST', payload || {});
+  },
+  delegateProcess(payload) {
+    return ok('/api/production/order/delegate-process', 'POST', payload || {});
+  },
+  listStyleProcesses(styleId) {
+    return ok('/api/style/process/list', 'GET', { styleId: styleId });
+  },
+  saveStyleProcess(payload) {
+    return ok('/api/style/process', payload.id ? 'PUT' : 'POST', payload || {});
+  },
+  deleteStyleProcess(id) {
+    return ok('/api/style/process/' + encodeURIComponent(id), 'DELETE', {});
+  },
+  listSizePrices(styleId) {
+    return ok('/api/style/size-price/list', 'GET', { styleId: styleId });
+  },
+  batchSaveSizePrices(payload) {
+    return ok('/api/style/size-price/batch-save', 'POST', payload || {});
+  },
+
+  listOrderRemarks(targetType, targetNo) {
+    return ok('/api/system/order-remark/list', 'POST', { targetType: targetType, targetNo: targetNo });
+  },
+
+  addOrderRemark(targetType, targetNo, content, authorRole, imageUrls) {
+    const payload = { targetType: targetType, targetNo: targetNo, content: content };
+    if (authorRole) payload.authorRole = authorRole;
+    if (imageUrls) payload.imageUrls = imageUrls;
+    return ok('/api/system/order-remark/add', 'POST', payload);
+  },
+
+  listOrderImages(orderNo) {
+    return ok('/api/production/order-image/list', 'POST', { orderNo: orderNo });
+  },
+
+  addOrderImage(orderNo, imageUrl, thumbnailUrl) {
+    const payload = { orderNo: orderNo, imageUrl: imageUrl };
+    if (thumbnailUrl) payload.thumbnailUrl = thumbnailUrl;
+    return ok('/api/production/order-image', 'POST', payload);
+  },
+
+  deleteOrderImage(imageId) {
+    return ok('/api/production/order-image/' + imageId, 'DELETE', {});
+  },
+
+  listOrderImageSnapshots(orderNo) {
+    return ok('/api/production/order-image/snapshots', 'POST', { orderNo: orderNo });
+  },
+
+  createCuttingTask(payload) {
+    return ok('/api/production/cutting-task/custom/create', 'POST', payload || {});
   },
 };
 

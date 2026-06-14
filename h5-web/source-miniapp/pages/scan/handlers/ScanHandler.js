@@ -62,7 +62,7 @@ class ScanHandler {
     this.stageProcessor = new ScanStageProcessor(
       api,
       this.modeResolver,
-      () => this.scanType // 传递 scanType getter
+      () => this.scanType, // 传递 scanType getter
     );
     this.submitter = new ScanSubmitter(api);
 
@@ -129,7 +129,7 @@ class ScanHandler {
         parsedData,
         orderDetail,
         this._detectStage.bind(this),
-        this.SCAN_MODE.ORDER
+        this.SCAN_MODE.ORDER,
       );
     }
 
@@ -237,7 +237,7 @@ class ScanHandler {
 
     const orderDetail = await this.dataProcessor.getOrderDetail(parsedData.orderNo, parsedData.orderId);
     if (!orderDetail) {
-      return { earlyReturn: this._errorResult('订单不存在或已删除') };
+      return { earlyReturn: this._errorResult('订单不存在或已删除[' + (parsedData.orderNo || 'orderNo为空') + ']') };
     }
 
     // 保证 parsedData/orderDetail 的订单号字段一致且不为空
@@ -463,15 +463,6 @@ class ScanHandler {
    */
   async _handlePatternScan(parsedData, manualScanType) {
     return PatternScanProcessor.handlePatternScan(this, parsedData, manualScanType);
-  }
-
-  /**
-   * 提交样板生产扫码
-   * @param {Object} data - 扫码数据
-   * @returns {Promise<Object>} 提交结果
-   */
-  async submitPatternScan(data) {
-    return PatternScanProcessor.submitPatternScan(this, data);
   }
 }
 

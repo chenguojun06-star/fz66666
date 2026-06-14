@@ -1,4 +1,5 @@
 const TOKEN_KEY = 'auth_token';
+const REFRESH_TOKEN_KEY = 'auth_refresh_token';
 const USER_INFO_KEY = 'user_info';
 
 function base64Decode(str) {
@@ -43,6 +44,31 @@ function clearToken() {
     wx.removeStorageSync(TOKEN_KEY);
   } catch (e) {
     console.warn('[storage] clearToken失败:', e.message || e);
+  }
+}
+
+function getRefreshToken() {
+  try {
+    return wx.getStorageSync(REFRESH_TOKEN_KEY) || '';
+  } catch (e) {
+    console.warn('[storage] getRefreshToken失败:', e.message || e);
+    return '';
+  }
+}
+
+function setRefreshToken(token) {
+  try {
+    wx.setStorageSync(REFRESH_TOKEN_KEY, token || '');
+  } catch (e) {
+    console.error('[storage] setRefreshToken失败:', e.message || e);
+  }
+}
+
+function clearRefreshToken() {
+  try {
+    wx.removeStorageSync(REFRESH_TOKEN_KEY);
+  } catch (e) {
+    console.warn('[storage] clearRefreshToken失败:', e.message || e);
   }
 }
 
@@ -124,8 +150,8 @@ function setStorageValue(key, value) {
 
 function utf8Decode(str) {
   try {
-    var bytes = new Uint8Array(str.length);
-    for (var i = 0; i < str.length; i++) bytes[i] = str.charCodeAt(i);
+    const bytes = new Uint8Array(str.length);
+    for (let i = 0; i < str.length; i++) bytes[i] = str.charCodeAt(i);
     return new TextDecoder('utf-8').decode(bytes);
   } catch (_e) {
     return decodeURIComponent(escape(str));
@@ -154,6 +180,9 @@ module.exports = {
   getToken,
   setToken,
   clearToken,
+  getRefreshToken,
+  setRefreshToken,
+  clearRefreshToken,
   getUserInfo,
   setUserInfo,
   clearUserInfo,

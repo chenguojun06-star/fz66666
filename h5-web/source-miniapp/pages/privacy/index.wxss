@@ -1,5 +1,5 @@
 .page {
-  padding: 16px;
+  padding: 12rpx var(--page-padding-x);
   background: var(--color-bg-page);
 }
 

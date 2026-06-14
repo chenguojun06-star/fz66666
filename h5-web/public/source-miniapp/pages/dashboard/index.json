@@ -1,9 +1,7 @@
 {
-  "navigationBarTitleText": "进度看板",
-  "navigationStyle": "custom",
+  "navigationBarTitleText": "生产管理",
   "enablePullDownRefresh": true,
   "usingComponents": {
-    "custom-nav": "/components/common/custom-nav/index",
     "ai-assistant": "/components/ai-assistant/index"
   }
 }

@@ -9,6 +9,8 @@
  *   必须通过含 open-type="agreePrivacyAuthorization" 按钮的完成授权，
  *   wx.showModal / wx.alert 不可替代该按钮。
  */
+const { safeNavigate } = require('../../utils/uiHelper');
+
 Component({
   properties: {},
 
@@ -49,15 +51,14 @@ Component({
     onViewPrivacy() {
       wx.openPrivacyContract({
         fail: () => {
-          // 平台隐私协议未配置时，跳转小程序内置隐私政策页
-          wx.navigateTo({ url: '/pages/privacy/index' });
+          safeNavigate({ url: '/pages/privacy/index' }).catch(() => {});
         },
       });
     },
 
     /** 查看用户服务协议 */
     onViewService() {
-      wx.navigateTo({ url: '/pages/privacy/service/index' });
+      safeNavigate({ url: '/pages/privacy/service/index' }).catch(() => {});
     },
   },
 });

@@ -1,0 +1,104 @@
+<view class="page-container">
+  <view class="search-bar">
+    <view class="search-input-wrap">
+      <text class="search-icon">🔍</text>
+      <input class="search-input" placeholder="搜索款号/款式名" value="{{keyword}}" bindinput="onSearchInput" confirm-type="search" />
+      <text wx:if="{{keyword}}" class="search-clear" data-clear="1" bindtap="onSearchInput">✕</text>
+    </view>
+  </view>
+
+  <scroll-view class="filter-tabs" scroll-x="true">
+    <view class="tab-item {{activeFilter === item.key ? 'active' : ''}}" wx:for="{{statusTabs}}" wx:key="key" data-key="{{item.key}}" bindtap="onFilterTap">
+      {{item.label}}
+    </view>
+  </scroll-view>
+
+  <view class="count-bar">
+    <text>共 {{total}} 条</text>
+  </view>
+
+  <view wx:if="{{loading}}" class="loading-wrap">
+    <view class="loading-spinner"></view>
+    <text class="loading-text">加载中...</text>
+  </view>
+
+  <view wx:elif="{{list.length === 0}}" class="empty-wrap">
+    <text class="empty-icon">📭</text>
+    <text class="empty-text">暂无样衣开发记录</text>
+  </view>
+
+  <view wx:else class="list">
+    <view class="card {{expandedId === item.id ? 'expanded' : ''}}" wx:for="{{list}}" wx:key="id" data-id="{{item.id}}" data-item="{{item}}" bindtap="onCardTap">
+      <view class="card-header">
+        <image wx:if="{{item._cover}}" class="card-cover" src="{{item._cover}}" mode="aspectFill" data-src="{{item._cover}}" catchtap="onPreviewImage" />
+        <view wx:else class="card-cover-placeholder">
+          <text>👔</text>
+        </view>
+        <view class="card-info">
+          <view class="card-title-row">
+            <text class="card-title">{{item.styleNo || '-'}}</text>
+            <view class="status-badge" style="background:{{item._statusColor}}">{{item._statusLabel}}</view>
+          </view>
+          <text wx:if="{{item.styleName}}" class="card-subtitle">{{item.styleName}}</text>
+          <view class="card-meta">
+            <text wx:if="{{item.color}}">颜色: {{item.color}}</text>
+            <text wx:if="{{item.quantity}}">数量: {{item.quantity}}件</text>
+            <text wx:if="{{item.patternMaker}}">纸样: {{item.patternMaker}}</text>
+          </view>
+          <view class="card-dates">
+            <text wx:if="{{item._createDate}}">发放: {{item._createDate}}</text>
+            <text wx:if="{{item._deliveryDate}}" class="delivery-date">交期: {{item._deliveryDate}}</text>
+          </view>
+        </view>
+        <text class="card-arrow">{{expandedId === item.id ? '▾' : '▸'}}</text>
+      </view>
+
+      <view wx:if="{{expandedId === item.id}}" class="card-detail">
+        <view wx:if="{{detailLoading}}" class="detail-loading">加载详情中...</view>
+
+        <view wx:else class="stages">
+          <view class="stage-section">
+            <text class="section-title">开发阶段</text>
+            <view class="stage-row">
+              <view class="stage-node {{s.completed ? 'done' : ''}}" wx:for="{{item._devStages}}" wx:key="key" wx:for-item="s">
+                <view class="stage-dot"></view>
+                <text class="stage-name">{{s.name}}</text>
+              </view>
+            </view>
+          </view>
+
+          <view wx:if="{{item._scanStages.length > 0}}" class="stage-section">
+            <text class="section-title">生产阶段</text>
+            <view class="stage-row">
+              <view class="stage-node {{s.completed ? 'done' : ''}}" wx:for="{{item._scanStages}}" wx:key="name" wx:for-item="s">
+                <view class="stage-dot"></view>
+                <text class="stage-name">{{s.name}}</text>
+                <text wx:if="{{s.time}}" class="stage-time">{{s.time}}</text>
+              </view>
+            </view>
+          </view>
+
+          <view wx:if="{{patternDetail}}" class="detail-more">
+            <view wx:if="{{patternDetail.reviewStatus}}" class="detail-row">
+              <text>审核状态: {{patternDetail._reviewStatusLabel || patternDetail.reviewStatus}}</text>
+            </view>
+            <view wx:if="{{patternDetail.procurementProgress && patternDetail.procurementProgress.total > 0}}" class="detail-row">
+              <text>采购进度: {{patternDetail.procurementProgress.completed}}/{{patternDetail.procurementProgress.total}} ({{patternDetail.procurementProgress.percent}}%)</text>
+            </view>
+          </view>
+
+          <view class="detail-action">
+            <button class="action-btn scan-btn" data-item="{{item}}" bindtap="onGoScan" catchtap="onGoScan">扫码操作</button>
+            <button class="action-btn manual-btn" data-item="{{item}}" bindtap="onManualOperate" catchtap="onManualOperate">手工操作</button>
+            <button class="action-btn detail-btn" data-item="{{item}}" bindtap="onGoDetail" catchtap="onGoDetail">查看详情</button>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <view wx:if="{{hasMore}}" class="load-more">
+      <text wx:if="{{loadingMore}}">加载中...</text>
+      <text wx:else bindtap="loadMore">加载更多</text>
+    </view>
+  </view>
+</view>

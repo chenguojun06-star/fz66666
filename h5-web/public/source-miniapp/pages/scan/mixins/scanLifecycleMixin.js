@@ -95,14 +95,29 @@ const scanLifecycleMixin = Behavior({
    */
   async onShow() {
     if (typeof this.getTabBar === 'function' && this.getTabBar()) {
-      this.getTabBar().setData({ selected: 2 });
+      this.getTabBar().setData({ selected: 1 });
     }
 
-    // 从扫码确认页返回时，读取最新扫码结果并显示在扫码按钮上方
+    // 从扫码确认页返回时，读取最新扫码结果并显示成功提示
     try {
-      const lastResult = getApp().globalData.lastScanResult;
-      if (lastResult) {
-        this.setData({ lastLocalScanRecord: lastResult });
+      const lastScanRes = getApp().globalData.lastScanResult;
+      if (lastScanRes) {
+        const isSuccess = lastScanRes.success !== false;
+        const processName = lastScanRes.processName || '';
+        // 构建 scan-result.wxml 所需的 lastResult 格式（同 handleScanSuccess）
+        const formattedResult = {
+          success: isSuccess,
+          statusText: isSuccess ? '扫码成功' : '扫码失败',
+          message: processName
+            ? (isSuccess ? processName + ' 已完成' : processName + ' 提交失败')
+            : (isSuccess ? '扫码成功' : '扫码失败'),
+          processName: processName,
+          orderNo: lastScanRes.orderNo || '',
+          quantity: lastScanRes.quantity || 0,
+          processCode: lastScanRes.processCode || '',
+        };
+        this.setData({ lastResult: formattedResult, lastLocalScanRecord: lastScanRes });
+        this._startResultDismissTimer();
         getApp().globalData.lastScanResult = null;
       }
     } catch (_) { /* ignore */ }
@@ -155,6 +170,7 @@ const scanLifecycleMixin = Behavior({
     if (this._flushTimerId) { clearTimeout(this._flushTimerId); this._flushTimerId = null; }
     if (this._scanRefreshTimer) { clearTimeout(this._scanRefreshTimer); this._scanRefreshTimer = null; }
     if (this._myPanelRevalidateTimer) { clearTimeout(this._myPanelRevalidateTimer); this._myPanelRevalidateTimer = null; }
+    if (this._resultDismissTimer) { clearTimeout(this._resultDismissTimer); this._resultDismissTimer = null; }
     this.stopUndoTimer();
   },
 
@@ -166,6 +182,7 @@ const scanLifecycleMixin = Behavior({
     if (this._flushTimerId) { clearTimeout(this._flushTimerId); this._flushTimerId = null; }
     if (this._scanRefreshTimer) { clearTimeout(this._scanRefreshTimer); this._scanRefreshTimer = null; }
     if (this._myPanelRevalidateTimer) { clearTimeout(this._myPanelRevalidateTimer); this._myPanelRevalidateTimer = null; }
+    if (this._resultDismissTimer) { clearTimeout(this._resultDismissTimer); this._resultDismissTimer = null; }
 
     // 取消订阅
     if (this.unsubscribeEvents) {
@@ -283,20 +300,61 @@ const scanLifecycleMixin = Behavior({
      */
     async _loadWarehouseOptions() {
       try {
-        // 加载成品仓库库位（默认）
-        const res = await api.system.getDictList('finished_warehouse_location');
-        const records = Array.isArray(res) ? res : ((res && res.records) ? res.records : (res?.data || []));
-        if (Array.isArray(records) && records.length > 0) {
-          const options = records
-            .filter(item => item.dictLabel)
-            .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0))
-            .map(item => item.dictLabel);
+        const res = await api.warehouse.listWarehouseAreas('FINISHED');
+        const data = res?.data || res;
+        const list = Array.isArray(data) ? data : [];
+        if (list.length > 0) {
+          const areaMap = {};
+          const options = [];
+          const sorted = list
+            .filter(function(item) { return item.areaName && item.id; })
+            .sort(function(a, b) { return (a.sort || 0) - (b.sort || 0); });
+          for (let i = 0; i < sorted.length; i++) {
+            const item = sorted[i];
+            options.push(item.areaName);
+            areaMap[item.areaName] = item.id;
+          }
           if (options.length > 0) {
             this.setData({ warehouseOptions: options });
+            this._warehouseAreaMap = areaMap;
           }
         }
       } catch (e) {
         console.warn('[scan] 加载仓库选项失败，仓库选择不可用', e);
+      }
+    },
+
+    async _loadLocationOptions(areaId) {
+      if (!areaId) {
+        this.setData({ locationOptions: [] });
+        this._locationMap = {};
+        return;
+      }
+      try {
+        const res = await api.warehouse.listLocations('FINISHED', areaId);
+        const data = res?.data || res;
+        const list = Array.isArray(data) ? data : [];
+        if (list.length > 0) {
+          const locMap = {};
+          const options = [];
+          for (let i = 0; i < list.length; i++) {
+            const item = list[i];
+            const label = item.locationCode || item.locationName || '';
+            if (label) {
+              options.push(label);
+              locMap[label] = item.locationCode || label;
+            }
+          }
+          this.setData({ locationOptions: options });
+          this._locationMap = locMap;
+        } else {
+          this.setData({ locationOptions: [] });
+          this._locationMap = {};
+        }
+      } catch (e) {
+        console.warn('[scan] 加载库位选项失败', e);
+        this.setData({ locationOptions: [] });
+        this._locationMap = {};
       }
     },
   },

@@ -22,8 +22,17 @@ const { getAuthedImageUrl } = require('../../../utils/fileUrl');
  */
 function calcDeliveryInfo(dateStr) {
   if (!dateStr) return {};
-  const d = String(dateStr).substring(0, 10);
-  const parts = d.split('-');
+  const s = String(dateStr);
+  const dateOnly = s.substring(0, 10);
+  let displayStr = dateOnly;
+  if (s.length > 10) {
+    const d = new Date(s.replace(/-/g, '/'));
+    if (!isNaN(d.getTime())) {
+      const pad = n => String(n).padStart(2, '0');
+      displayStr = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+    }
+  }
+  const parts = dateOnly.split('-');
   if (parts.length !== 3) return {};
 
   const today = new Date();
@@ -51,7 +60,7 @@ function calcDeliveryInfo(dateStr) {
     remainDaysClass = 'days-overdue';
   }
 
-  return { deliveryDateStr: d, remainDays, remainDaysText, remainDaysClass };
+  return { deliveryDateStr: displayStr, remainDays, remainDaysText, remainDaysClass };
 }
 
 // ==================== 分组辅助方法 ====================
@@ -215,6 +224,11 @@ function _addRecordToGroup(group, record) {
     cuttingBundleId: record.cuttingBundleId || '',
     coverImage: getAuthedImageUrl(record.coverImage || record.styleImage || ''),
     styleImage: getAuthedImageUrl(record.styleImage || record.coverImage || ''),
+    // 质检领取待处理：质检扫码 + quality_receive + 尚未确认（confirmTime 为空）
+    // 决定 scan-history.wxml 中"处理"按钮是否显示
+    isQualityReceive: String(record.scanType || '').toLowerCase() === 'quality'
+      && record.processCode === 'quality_receive'
+      && !record.confirmTime,
   });
 }
 

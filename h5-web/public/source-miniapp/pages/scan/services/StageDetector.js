@@ -21,13 +21,13 @@
  * @date 2026-02-10
  */
 
-var shared = require('../../shared/stageDetection');
-var inferScanType = shared.inferScanType;
-var parseDefectQtyFromRemark = shared.parseDefectQtyFromRemark;
-var extractQualityMeta = shared.extractQualityMeta;
-var SCAN_TYPE_RULES = shared.SCAN_TYPE_RULES;
-var VALID_SCAN_TYPES = shared.VALID_SCAN_TYPES;
-var DEFAULT_SCAN_TYPE = shared.DEFAULT_SCAN_TYPE;
+const shared = require('../../../shared/stageDetection');
+const inferScanType = shared.inferScanType;
+const parseDefectQtyFromRemark = shared.parseDefectQtyFromRemark;
+const extractQualityMeta = shared.extractQualityMeta;
+const SCAN_TYPE_RULES = shared.SCAN_TYPE_RULES;
+const VALID_SCAN_TYPES = shared.VALID_SCAN_TYPES;
+const DEFAULT_SCAN_TYPE = shared.DEFAULT_SCAN_TYPE;
 
 class StageDetector {
   /**
@@ -155,7 +155,7 @@ class StageDetector {
       orderDetail.production_order_no ||
       orderDetail.orderCode ||
       orderDetail.order_code ||
-      ''
+      '',
     ).trim().replace(/[-_]/g, '');
     const currentProgress =
       orderDetail.currentProcessName ||
@@ -193,7 +193,7 @@ class StageDetector {
 
     // 在配置中查找当前工序位置（按 processName 或 progressStage 匹配）
     const currentIndex = config.findIndex(
-      p => p.processName === currentProgress || p.progressStage === currentProgress
+      p => p.processName === currentProgress || p.progressStage === currentProgress,
     );
 
     if (currentIndex < 0) {
@@ -242,7 +242,7 @@ class StageDetector {
     const accurateQuantity = await this._getAccurateBundleQuantity(
       orderNo,
       bundleNo,
-      bundleQuantity
+      bundleQuantity,
     );
 
     // === 步骤2：加载订单的动态工序配置 ===
@@ -250,7 +250,7 @@ class StageDetector {
 
     // 过滤出菲号扫码相关的工序（排除采购和裁剪，它们通过其他流程处理）
     const bundleProcesses = allProcesses.filter(
-      p => p.scanType !== 'procurement' && p.scanType !== 'cutting'
+      p => p.scanType !== 'procurement' && p.scanType !== 'cutting',
     );
 
     if (bundleProcesses.length === 0) {
@@ -294,10 +294,10 @@ class StageDetector {
             return qualityIsFullyDone;
           }
           return true;
-        })
+        }),
     );
     const remainingProcesses = countableProcesses.filter(
-      p => !scannedProcessNames.has(p.processName)
+      p => !scannedProcessNames.has(p.processName),
     );
 
     // === 步骤4：根据已扫工序过滤，返回第一个未完成的工序 ===
@@ -639,37 +639,37 @@ class StageDetector {
    * @private
    */
   async _getScanHistory(orderNo, bundleNo) {
-    var allRecords = [];
-    var page = 1;
-    var pageSize = 200;
-    var maxPages = 5;
+    let allRecords = [];
+    let page = 1;
+    const pageSize = 200;
+    const maxPages = 5;
     while (page <= maxPages) {
-      var historyRes = await this.api.production.listScans({
+      const historyRes = await this.api.production.listScans({
         page: page,
         pageSize: pageSize,
         orderNo: orderNo,
         bundleNo: bundleNo,
       });
-      var records = historyRes && historyRes.records ? historyRes.records : [];
+      const records = historyRes && historyRes.records ? historyRes.records : [];
       if (records.length === 0) break;
       allRecords = allRecords.concat(records);
       if (records.length < pageSize) break;
       page++;
     }
 
-    var manualRecords = allRecords.filter(function(record) {
-      var requestId = (record.requestId || '').trim();
-      var scanType = (record.scanType || '').toLowerCase();
+    const manualRecords = allRecords.filter(function(record) {
+      const requestId = (record.requestId || '').trim();
+      const scanType = (record.scanType || '').toLowerCase();
 
-      var isSystemGenerated =
+      const isSystemGenerated =
         requestId.startsWith('ORDER_CREATED:') ||
         requestId.startsWith('CUTTING_BUNDLED:') ||
         requestId.startsWith('ORDER_PROCUREMENT:') ||
         requestId.startsWith('WAREHOUSING:') ||
         requestId.startsWith('SYSTEM:');
 
-      var isValidScan = scanType === 'production' || scanType === 'quality' || scanType === 'cutting' || scanType === 'warehouse';
-      var isSuccess = record.scanResult === 'success';
+      const isValidScan = scanType === 'production' || scanType === 'quality' || scanType === 'cutting' || scanType === 'warehouse';
+      const isSuccess = record.scanResult === 'success';
 
       return !isSystemGenerated && isValidScan && isSuccess;
     });

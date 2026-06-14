@@ -1,7 +1,6 @@
 {
-  "navigationStyle": "custom",
+  "navigationBarTitleText": "裁剪任务",
   "usingComponents": {
-    "custom-nav": "/components/common/custom-nav/index",
     "empty-state": "/components/empty-state/empty-state"
   }
 }

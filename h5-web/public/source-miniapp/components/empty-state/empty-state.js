@@ -5,6 +5,6 @@ Component({
     iconEmoji: { type: String,  value: '' },               // emoji; overrides icon/iconSize if set
     text:      { type: String,  value: '' },
     hint:      { type: String,  value: '' },
-    card:      { type: Boolean, value: false }
-  }
+    card:      { type: Boolean, value: false },
+  },
 });

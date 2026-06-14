@@ -1,18 +1,18 @@
 const api = require('../../../utils/api');
 const { toast } = require('../../../utils/uiHelper');
 
-/**
- * 简易 toast 函数包装
- * @param {string} msg 提示文字
- */
 function showTip(msg) { toast.info(msg); }
 
 Page({
-  data: {
-    /* ---- Tab 切换 ---- */
-    activeTab: 0,                // 0=菲号单价  1=单价调整
+  onCoverPreview: function (e) {
+    const url = e.currentTarget.dataset.url;
+    if (url) wx.previewImage({ current: url, urls: [url] });
+  },
 
-    /* ---- Tab0 菲号单价 ---- */
+  data: {
+    activeTab: 0,
+
+    /* ---- Tab0 拆菲号 ---- */
     orderNo: '',
     bundles: [],
     selectedIdx: -1,
@@ -20,15 +20,23 @@ Page({
     workers: [],
     workerIdx: -1,
     loading: false,
+    orderStyleCover: '',
     submitting: false,
     needSearch: false,
     searchOrderNo: '',
     splitRecords: [],
+    processes: [],
+    processIdx: -1,
 
-    /* ---- Tab1 单价调整 ---- */
+    /* ---- Tab1 待确认 ---- */
+    pendingSplits: [],
+    pendingLoading: false,
+    confirmingId: '',
+
+    /* ---- Tab2 单价调整 ---- */
     priceOrderNo: '',
     priceSearchInput: '',
-    processes: [],
+    priceProcesses: [],
     priceLoading: false,
     selectedProcessIdx: -1,
     adjustPrice: '',
@@ -37,15 +45,15 @@ Page({
     adjustHistory: [],
     isAdmin: false,
 
-    /* ---- 通用 ---- */
     unreadNoticeCount: 0,
   },
 
   onShow() {
-    var app = getApp();
+    const app = getApp();
     if (app.requireAuth && !app.requireAuth()) return;
     this._loadUnreadCount();
     this._checkAdmin();
+    this.loadPendingSplits();
   },
 
   onLoad(options) {
@@ -60,6 +68,7 @@ Page({
     this.setData({ orderNo, needSearch: false });
     this.fetchBundles();
     this.loadWorkers();
+    this.fetchOrderCover(orderNo);
   },
 
   /* ========== Tab 切换 ========== */
@@ -68,7 +77,7 @@ Page({
     this.setData({ activeTab: tab });
   },
 
-  /* ========== Tab0 菲号单价 ========== */
+  /* ========== Tab0 拆菲号 ========== */
 
   onSearchInput(e) {
     this.setData({ searchOrderNo: e.detail.value || '' });
@@ -79,6 +88,8 @@ Page({
     if (!orderNo) return showTip('请输入订单号');
     this.setData({ orderNo, needSearch: false });
     this.fetchBundles();
+    this.fetchProcesses(orderNo);
+    this.fetchOrderCover(orderNo);
   },
 
   scanOrderQr() {
@@ -89,27 +100,141 @@ Page({
         if (!code) return showTip('未识别到内容');
         this.setData({ orderNo: code, needSearch: false, searchOrderNo: code });
         this.fetchBundles();
+        this.fetchProcesses(code);
+        this.fetchOrderCover(code);
       },
       fail: () => showTip('扫码取消'),
     });
   },
 
+  scanBundleQr() {
+    wx.scanCode({
+      onlyFromCamera: false,
+      success: (res) => {
+        const code = (res.result || '').trim();
+        if (!code) return showTip('未识别到内容');
+        this._handleBundleScan(code);
+      },
+      fail: () => showTip('扫码取消'),
+    });
+  },
+
+  async _handleBundleScan(qrCode) {
+    this.setData({ loading: true, bundles: [], selectedIdx: -1 });
+    try {
+      const bundle = await api.production.getBundleByCode(qrCode);
+      const data = bundle || {};
+      if (!data || !data.id) {
+        showTip('未找到该菲号，请确认扫的是菲号二维码');
+        this.setData({ loading: false });
+        return;
+      }
+      const orderNo = data.productionOrderNo || data.orderNo || '';
+      // 扫码后自动展开表单（selectedIdx:0），用户无需再点击
+      this.setData({
+        orderNo: orderNo,
+        needSearch: false,
+        searchOrderNo: orderNo,
+        bundles: [data],
+        selectedIdx: 0,
+        loading: false,
+        splitQty: '',
+        processIdx: -1,
+        workerIdx: -1,
+      });
+      this.loadWorkers();
+      this.fetchOrderCover(orderNo);
+      // 传入 bundle 的 splitProcessName 作为工序自动识别提示
+      this.fetchProcesses(orderNo, data.splitProcessName || data.currentProcess || '');
+    } catch (e) {
+      console.error('[bundle-split] scanBundle fail', e);
+      let msg = '扫码识别失败，请重试';
+      if (e && e.message) {
+        if (e.message.indexOf('不存在') >= 0) msg = '未找到该菲号，请确认二维码正确';
+        else if (e.message.indexOf('400') >= 0 || e.message.indexOf('参数') >= 0) msg = '二维码格式不正确，请确认扫的是菲号';
+        else if (e.message.indexOf('网络') >= 0 || e.message.indexOf('timeout') >= 0) msg = '网络连接失败，请检查网络后重试';
+        else msg = e.message.length > 30 ? '扫码识别失败' : e.message;
+      }
+      showTip(msg);
+      this.setData({ loading: false });
+    }
+  },
+
   changeOrder() {
-    this.setData({ needSearch: true, orderNo: '', bundles: [], selectedIdx: -1 });
+    this.setData({
+      needSearch: true, orderNo: '',
+      bundles: [], selectedIdx: -1,
+      processes: [], processIdx: -1,
+      orderStyleCover: '',
+    });
+  },
+
+  async fetchOrderCover(orderNo) {
+    if (!orderNo) return;
+    try {
+      const res = await api.production.orderDetail(orderNo);
+      const records = (res && res.records) || (Array.isArray(res) ? res : []);
+      const cover = records.length > 0 ? (records[0].styleCover || '') : '';
+      this.setData({ orderStyleCover: cover });
+    } catch (e) {
+      // 封面图获取失败不影响主功能
+      this.setData({ orderStyleCover: '' });
+    }
   },
 
   async fetchBundles() {
     this.setData({ loading: true, bundles: [], selectedIdx: -1 });
     try {
       const res = await api.production.listBundles(this.data.orderNo);
-      const raw = (res && res.data && res.data.records) || (res && res.data) || res || [];
+      const raw = Array.isArray(res) ? res : (res && res.records) || [];
       const list = Array.isArray(raw) ? raw : [];
-      this.setData({ bundles: list, loading: false });
+      // 仅一条菲号时自动选中，直接展示表单
+      const autoIdx = list.length === 1 ? 0 : -1;
+      this.setData({ bundles: list, selectedIdx: autoIdx, loading: false });
       if (!list.length) showTip('该订单暂无菲号');
     } catch (e) {
       console.error('[bundle-split] fetch fail', e);
-      showTip('加载失败');
+      let msg = '加载菲号列表失败';
+      if (e && e.message) msg = e.message.length > 20 ? msg : e.message;
+      showTip(msg);
       this.setData({ loading: false });
+    }
+  },
+
+  // 裁剪/采购/质检入库是顶层阶段名，不适合作为拆菲工序选项，默认过滤
+  _HIDDEN_STAGES: ['裁剪', '采购', '质检入库', '质检', '入库'],
+
+  async fetchProcesses(orderNo, hintProcessName) {
+    if (!orderNo) return;
+    try {
+      const res = await api.production.queryOrderProcesses(orderNo);
+      const raw = Array.isArray(res) ? res : (res || []);
+      const hiddenStages = this._HIDDEN_STAGES;
+      // 过滤顶层阶段名（裁剪/采购/质检入库等）
+      const list = (Array.isArray(raw) ? raw : []).filter(p => {
+        const name = (p.processName || '').trim();
+        return !hiddenStages.includes(name);
+      });
+      // 自动识别当前工序：优先用 hintProcessName 精确匹配，再模糊匹配
+      let autoIdx = -1;
+      const hint = (hintProcessName || '').trim();
+      if (hint) {
+        autoIdx = list.findIndex(p => p.processName === hint);
+        if (autoIdx < 0) {
+          autoIdx = list.findIndex(p =>
+            (p.processName || '').includes(hint) || hint.includes(p.processName || ''));
+        }
+      }
+      this.setData({
+        processes: list.map(p => ({
+          processName: p.processName,
+          progressStage: p.progressStage,
+          unitPrice: p.unitPrice,
+        })),
+        processIdx: autoIdx,
+      });
+    } catch (e) {
+      console.warn('[bundle-split] fetchProcesses fail', e);
     }
   },
 
@@ -119,7 +244,7 @@ Page({
       const factoryId = (app.globalData && app.globalData.factoryId) || '';
       if (!factoryId) return;
       const res = await api.factoryWorker.list(factoryId);
-      const list = Array.isArray(res) ? res : (res && res.data ? res.data : []);
+      const list = Array.isArray(res) ? res : [];
       this.setData({ workers: list });
     } catch (e) {
       console.warn('[bundle-split] loadWorkers fail', e);
@@ -132,6 +257,7 @@ Page({
       selectedIdx: this.data.selectedIdx === idx ? -1 : idx,
       splitQty: '',
       workerIdx: -1,
+      processIdx: -1,
     });
   },
 
@@ -141,6 +267,10 @@ Page({
 
   onWorkerChange(e) {
     this.setData({ workerIdx: Number(e.detail.value) });
+  },
+
+  onProcessChange(e) {
+    this.setData({ processIdx: Number(e.detail.value) });
   },
 
   loadSplitRecords() {
@@ -173,7 +303,7 @@ Page({
   },
 
   async submitSplit() {
-    const { bundles, selectedIdx, splitQty, workers, workerIdx } = this.data;
+    const { bundles, selectedIdx, splitQty, workers, workerIdx, processes, processIdx } = this.data;
     const bundle = bundles[selectedIdx];
     if (!bundle) return showTip('请先选择菲号');
 
@@ -184,6 +314,9 @@ Page({
     const worker = workers[workerIdx];
     if (!worker) return showTip('请选择接手工人');
 
+    const process = processes[processIdx];
+    if (!process) return showTip('请选择当前工序');
+
     this.setData({ submitting: true });
     try {
       const body = {
@@ -191,25 +324,67 @@ Page({
         qrCode: bundle.qrCode || '',
         orderNo: bundle.productionOrderNo || this.data.orderNo,
         bundleNo: bundle.bundleNo,
+        currentProcessName: process.processName,
         completedQuantity: (bundle.quantity || 0) - qty,
         transferQuantity: qty,
         toWorkerId: worker.id,
         toWorkerName: worker.workerName,
         reason: '',
       };
-      await api.production.splitTransfer(body);
-      showTip('拆分成功');
+      const res = await api.production.requestSplit(body);
+      const data = res || {};
+      showTip(data.message || '已发送拆菲请求，等待 ' + worker.workerName + ' 确认');
       this.saveSplitRecord(body.orderNo, bundle.bundleNo || bundle.bundleLabel, qty, worker.workerName);
-      this.setData({ submitting: false, selectedIdx: -1, splitQty: '', workerIdx: -1 });
+      this.setData({ submitting: false, selectedIdx: -1, splitQty: '', workerIdx: -1, processIdx: -1 });
       this.fetchBundles();
     } catch (e) {
-      console.error('[bundle-split] split fail', e);
-      showTip('拆分失败');
+      console.error('[bundle-split] request fail', e);
+      let msg = '拆菲请求失败';
+      if (e && e.message) {
+        if (e.message.indexOf('关单') >= 0 || e.message.indexOf('关闭') >= 0) msg = e.message;
+        else if (e.message.indexOf('已完成') >= 0 || e.message.indexOf('取消') >= 0) msg = e.message;
+        else if (e.message.indexOf('生产') >= 0) msg = e.message;
+        else if (e.message.indexOf('工资') >= 0 || e.message.indexOf('结算') >= 0) msg = e.message;
+        else if (e.message.length <= 30) msg = e.message;
+      }
+      showTip(msg);
       this.setData({ submitting: false });
     }
   },
 
+
   /* ========== Tab1 工序单价调整 ========== */
+
+  async loadPendingSplits() {
+    this.setData({ pendingLoading: true });
+    try {
+      const res = await api.production.listPendingSplits();
+      const list = Array.isArray(res) ? res : (res || []);
+      this.setData({ pendingSplits: Array.isArray(list) ? list : [], pendingLoading: false });
+    } catch (e) {
+      console.warn('[bundle-split] loadPendingSplits fail', e);
+      this.setData({ pendingLoading: false });
+    }
+  },
+
+  async confirmPendingSplit(e) {
+    const splitLogId = e.currentTarget.dataset.id;
+    if (!splitLogId) return showTip('请求记录无效');
+    this.setData({ confirmingId: splitLogId });
+    try {
+      const res = await api.production.confirmSplit(splitLogId);
+      const data = res || {};
+      showTip(data.message || '已确认接收，菲号已转到你的名下');
+      this.loadPendingSplits();
+    } catch (err) {
+      console.error('[bundle-split] confirmPendingSplit fail', err);
+      let msg = '确认失败，请重试';
+      if (err && err.message) msg = err.message.length > 30 ? msg : err.message;
+      showTip(msg);
+    } finally {
+      this.setData({ confirmingId: '' });
+    }
+  },
 
   _checkAdmin() {
     const app = getApp();
@@ -227,7 +402,7 @@ Page({
     const orderNo = (this.data.priceSearchInput || '').trim();
     if (!orderNo) return showTip('请输入订单号');
     this.setData({ priceOrderNo: orderNo, selectedProcessIdx: -1, adjustPrice: '', adjustReason: '' });
-    this.fetchProcesses();
+    this.fetchPriceProcesses();
     this.fetchAdjustHistory();
   },
 
@@ -238,24 +413,24 @@ Page({
         const code = (res.result || '').trim();
         if (!code) return showTip('未识别到内容');
         this.setData({ priceOrderNo: code, priceSearchInput: code, selectedProcessIdx: -1, adjustPrice: '', adjustReason: '' });
-        this.fetchProcesses();
+        this.fetchPriceProcesses();
         this.fetchAdjustHistory();
       },
       fail: () => showTip('扫码取消'),
     });
   },
 
-  async fetchProcesses() {
+  async fetchPriceProcesses() {
     const orderNo = this.data.priceOrderNo;
     if (!orderNo) return;
-    this.setData({ priceLoading: true, processes: [] });
+    this.setData({ priceLoading: true, priceProcesses: [] });
     try {
       const res = await api.production.queryOrderProcesses(orderNo);
-      const list = (res && res.data) || res || [];
-      this.setData({ processes: Array.isArray(list) ? list : [], priceLoading: false });
+      const list = Array.isArray(res) ? res : (res || []);
+      this.setData({ priceProcesses: Array.isArray(list) ? list : [], priceLoading: false });
       if (!list.length) showTip('该订单暂无工序数据');
     } catch (e) {
-      console.error('[price-adjust] fetchProcesses fail', e);
+      console.error('[price-adjust] fetchPriceProcesses fail', e);
       showTip('加载工序失败');
       this.setData({ priceLoading: false });
     }
@@ -266,19 +441,19 @@ Page({
     if (!orderNo) return;
     try {
       const res = await api.production.priceAdjustHistory(orderNo);
-      const list = (res && res.data) || res || [];
+      const list = Array.isArray(res) ? res : (res || []);
       this.setData({ adjustHistory: Array.isArray(list) ? list.slice(0, 20) : [] });
     } catch (e) {
       console.warn('[price-adjust] fetchHistory fail', e);
     }
   },
 
-  selectProcess(e) {
+  selectPriceProcess(e) {
     const idx = Number(e.currentTarget.dataset.idx);
     const isSame = this.data.selectedProcessIdx === idx;
     this.setData({
       selectedProcessIdx: isSame ? -1 : idx,
-      adjustPrice: isSame ? '' : String(this.data.processes[idx].unitPrice || ''),
+      adjustPrice: isSame ? '' : String(this.data.priceProcesses[idx].unitPrice || ''),
       adjustReason: '',
     });
   },
@@ -294,8 +469,8 @@ Page({
   async submitAdjust() {
     if (!this.data.isAdmin) return showTip('仅管理员可调整单价');
 
-    const { processes, selectedProcessIdx, adjustPrice, adjustReason, priceOrderNo } = this.data;
-    const proc = processes[selectedProcessIdx];
+    const { priceProcesses, selectedProcessIdx, adjustPrice, adjustReason, priceOrderNo } = this.data;
+    const proc = priceProcesses[selectedProcessIdx];
     if (!proc) return showTip('请先选择工序');
 
     const price = parseFloat(adjustPrice);
@@ -312,7 +487,7 @@ Page({
       });
       showTip('调整成功');
       this.setData({ adjustSubmitting: false, selectedProcessIdx: -1, adjustPrice: '', adjustReason: '' });
-      this.fetchProcesses();
+      this.fetchPriceProcesses();
       this.fetchAdjustHistory();
     } catch (e) {
       console.error('[price-adjust] submit fail', e);
@@ -322,13 +497,12 @@ Page({
     }
   },
 
-  /* -------- 通知数量（小云 AI 助手浮标） -------- */
   _loadUnreadCount() {
     api.notice.unreadCount()
       .then(res => {
-        const count = (res && res.data != null) ? Number(res.data) : (Number(res) || 0);
+        const count = Number(res) || 0;
         this.setData({ unreadNoticeCount: count });
       })
-      .catch(e => { console.warn('[bundle-split] _loadUnreadCount失败:', e.message || e); });
+      .catch(e => { console.warn('[bundle-split] _loadUnreadCount fail:', e.message || e); });
   },
 });

@@ -28,7 +28,7 @@
         <text class="field-value">{{detail.cuttingDateDisplay}}</text>
       </view>
       <view wx:if="{{detail.deliveryDateDisplay}}" class="field-row">
-        <text class="field-label">交货日期</text>
+        <text class="field-label">交期</text>
         <text class="field-value">{{detail.deliveryDateDisplay}}</text>
       </view>
     </view>
@@ -93,13 +93,39 @@
         value="{{warehouseCode}}"
         bindinput="onWarehouseInput"
       />
+
+      <!-- 库位选择 -->
+      <view wx:if="{{warehouseCode && locationOptions.length > 0}}" class="warehouse-option-row" style="margin-top: 16rpx;">
+        <view
+          wx:for="{{locationOptions}}"
+          wx:key="index"
+          class="warehouse-chip {{warehouseLocationCode === item ? 'warehouse-chip--active' : ''}}"
+          bindtap="onLocationChipTap"
+          data-value="{{item}}"
+          hover-class="warehouse-chip-hover"
+          hover-stay-time="100"
+        >{{item}}</view>
+        <view
+          class="warehouse-chip warehouse-chip--clear {{warehouseLocationCode ? '' : 'warehouse-chip--disabled'}}"
+          bindtap="onLocationClear"
+          hover-class="warehouse-chip-hover"
+          hover-stay-time="100"
+        >清除</view>
+      </view>
+      <input
+        wx:if="{{warehouseCode}}"
+        class="input-box"
+        placeholder="或手动输入库位编号"
+        value="{{warehouseLocationCode}}"
+        bindinput="onLocationInput"
+      />
     </view>
   </view>
 
   <view class="footer-bar">
     <view class="btn-cancel" hover-class="footer-bar-hover" bindtap="goBack">取消</view>
     <view class="btn-submit {{loading || selectedCount === 0 ? 'btn-disabled' : ''}}" hover-class="footer-bar-hover" bindtap="submitScanResult">
-      {{loading ? '提交中...' : (isQualityReceive ? '领取质检' : '确认提交')}}
+      {{loading ? '提交中...' : (isQualityReceive ? '质检录入' : '确认提交')}}
     </view>
   </view>
 </view>

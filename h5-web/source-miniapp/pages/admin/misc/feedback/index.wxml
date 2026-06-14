@@ -1,6 +1,4 @@
 <view class="container">
-  <custom-nav title="问题反馈" show-back="{{true}}" show-search="{{false}}" />
-
   <view class="tab-bar">
     <view class="tab-item {{activeTab === 'submit' ? 'active' : ''}}" bindtap="switchTab" data-tab="submit">提交反馈</view>
     <view class="tab-item {{activeTab === 'list' ? 'active' : ''}}" bindtap="switchTab" data-tab="list">我的反馈</view>
@@ -23,10 +21,6 @@
     <view class="form-field">
       <text class="form-label">详细描述</text>
       <textarea class="form-textarea" placeholder="请详细描述您遇到的问题或建议" bindinput="onContentInput" value="{{form.content}}" maxlength="500" auto-height />
-    </view>
-    <view class="form-field">
-      <text class="form-label">联系方式（选填）</text>
-      <input class="form-input" placeholder="手机号或微信号" bindinput="onContactInput" value="{{form.contact}}" maxlength="30" />
     </view>
     <view class="form-actions">
       <view class="btn-submit {{submitting ? 'disabled' : ''}}" hover-class="btn-submit-hover" bindtap="onSubmitFeedback">

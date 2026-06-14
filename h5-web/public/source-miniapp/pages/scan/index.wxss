@@ -1,5 +1,4 @@
 /* 极简紧凑风格 */
-@import './scan-result-modal.wxss';
 @import '../../styles/inline-selector.wxss';
 
 page {
@@ -8,7 +7,7 @@ page {
   padding-bottom: calc(60px + env(safe-area-inset-bottom));
 }
 .page {
-  padding: 10px;
+  padding: var(--page-padding-x);
 }
 
 /* ===== 拆分样式文件（按原始顺序导入，禁止调换顺序） ===== */
@@ -17,8 +16,5 @@ page {
 @import './styles/scan-result.wxss';     /* 扫码结果 + 区块通用 + 统计 */
 @import './styles/history.wxss';         /* 历史记录 */
 @import './styles/history-group.wxss';   /* 聚合历史记录 */
-@import './styles/modals-base.wxss';     /* 弹窗基础 + AI提示 + QC选项 */
-@import './styles/modal-forms.wxss';     /* 次品/BOM弹窗列表 + CF项 + 弹窗按钮 */
-@import './styles/modal-quality.wxss';   /* 质检处理弹窗 */
-@import './styles/pattern-rescan.wxss';  /* 样板生产确认 + 退回重扫 */
+@import './styles/pattern-rescan.wxss';  /* 撤回按钮 */
 @import './styles/extras.wxss';          /* 交期标签 + 工序统计条 + 离线提示 + AI质检助手 */

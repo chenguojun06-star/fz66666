@@ -98,9 +98,10 @@
 .form-textarea {
   width: 100%;
   padding: 10px;
-  border: 1px solid var(--color-bg-gray);
+  border: 1px solid var(--input-border);
   border-radius: 5px;
   font-size: var(--font-size-md);
+  background: var(--input-bg);
   box-sizing: border-box;
 }
 

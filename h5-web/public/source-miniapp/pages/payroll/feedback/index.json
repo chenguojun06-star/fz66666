@@ -1,4 +1,5 @@
 {
   "navigationBarTitleText": "工资结算反馈",
+  "enablePullDownRefresh": true,
   "usingComponents": {}
 }

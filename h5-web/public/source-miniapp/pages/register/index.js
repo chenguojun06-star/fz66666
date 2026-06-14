@@ -54,7 +54,7 @@ Page({
 
   _loadTenants() {
     api.tenant.publicList().then((res) => {
-      var list = [];
+      let list = [];
       if (res && res.data && Array.isArray(res.data)) {
         list = res.data;
       } else if (Array.isArray(res)) {
@@ -73,7 +73,7 @@ Page({
 
   // ========== 输入事件 ==========
   onTenantCodeInput(e) {
-    var val = (e && e.detail && e.detail.value) || '';
+    const val = (e && e.detail && e.detail.value) || '';
     this.setData({ tenantCode: val, selectedFactory: null, factorySearch: val });
     this._filterTenants(val);
   },
@@ -83,11 +83,11 @@ Page({
       this.setData({ filteredTenants: [], showFactoryDropdown: false });
       return;
     }
-    var kw = keyword.trim().toLowerCase();
-    var tenants = this.data.tenants;
-    var filtered = tenants.filter(function(t) {
-      var tName = (t.tenantName || t.name || '').toLowerCase();
-      var tCode = (t.tenantCode || '').toLowerCase();
+    const kw = keyword.trim().toLowerCase();
+    const tenants = this.data.tenants;
+    const filtered = tenants.filter(function(t) {
+      const tName = (t.tenantName || t.name || '').toLowerCase();
+      const tCode = (t.tenantCode || '').toLowerCase();
       return tName.indexOf(kw) !== -1 || tCode.indexOf(kw) !== -1;
     });
     this.setData({
@@ -97,8 +97,8 @@ Page({
   },
 
   onPickFactory(e) {
-    var idx = e.currentTarget.dataset.index;
-    var factory = this.data.filteredTenants[idx];
+    const idx = e.currentTarget.dataset.index;
+    const factory = this.data.filteredTenants[idx];
     if (!factory) return;
     this.setData({
       tenantCode: factory.tenantCode || '',
@@ -255,7 +255,7 @@ Page({
     }
 
     if (!name.trim()) {
-      toast.error('请输入真实姓名');
+      toast.error('请输入姓名');
       return false;
     }
 

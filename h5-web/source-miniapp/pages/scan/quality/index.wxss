@@ -3,7 +3,7 @@
   min-height: 100vh;
   background: radial-gradient(ellipse at 20% 0%, rgba(var(--color-primary-rgb,37,99,235),0.06) 0%, transparent 60%),
               var(--page-bg);
-  padding: 24rpx 24rpx calc(env(safe-area-inset-bottom) + 160rpx);
+  padding: var(--page-padding-x) var(--page-padding-x) calc(env(safe-area-inset-bottom) + 160rpx);
 }
 
 /* ---- info-card ---- */
@@ -88,9 +88,10 @@
 }
 .form-label { font-size: var(--font-size-sm); color: var(--color-text-primary); flex-shrink: 0; }
 .form-input {
-  width: 260rpx; height: 64rpx; text-align: right;
-  border: 2rpx solid var(--color-border); border-radius: 10rpx;
+  width: 260rpx; height: 72rpx; text-align: right;
+  border: 2rpx solid var(--input-border); border-radius: 10rpx;
   padding: 0 16rpx; font-size: var(--font-size-md);
+  background: var(--input-bg);
 }
 .form-picker {
   display: flex; align-items: center; gap: 8rpx;

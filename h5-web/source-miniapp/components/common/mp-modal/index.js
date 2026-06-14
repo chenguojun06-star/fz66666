@@ -4,12 +4,12 @@ Component({
     /** 是否显示弹窗 */
     visible: {
       type: Boolean,
-      value: false
+      value: false,
     },
     /** 弹窗标题 */
     title: {
       type: String,
-      value: ''
+      value: '',
     },
     /**
      * 弹窗尺寸
@@ -18,18 +18,18 @@ Component({
      */
     size: {
       type: String,
-      value: 'normal'
+      value: 'normal',
     },
     /** 是否显示右上角 × 关闭按钮 */
     showClose: {
       type: Boolean,
-      value: true
+      value: true,
     },
     /** 是否支持点击遮罩关闭 */
     maskClosable: {
       type: Boolean,
-      value: false
-    }
+      value: false,
+    },
   },
 
   methods: {
@@ -43,6 +43,6 @@ Component({
       }
     },
     /** 阻止内容区冒泡到遮罩 */
-    stopProp() {}
-  }
+    stopProp() {},
+  },
 });

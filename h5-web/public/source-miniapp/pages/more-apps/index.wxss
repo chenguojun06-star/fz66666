@@ -1,0 +1,292 @@
+/* ============ 更多应用页面 ============ */
+page {
+  background: var(--color-bg-page);
+}
+
+.page {
+  padding-bottom: calc(60px + env(safe-area-inset-bottom));
+}
+
+/* -- 搜索栏 -- */
+.search-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-lg) var(--page-padding-x);
+  background: var(--color-bg-card);
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sticky);
+}
+
+.search-box {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  height: var(--input-height-sm);
+  background: var(--color-bg-gray);
+  border-radius: var(--radius-full);
+  padding: 0 var(--spacing-md);
+}
+
+.search-icon {
+  font-size: 16px;
+  opacity: 0.6;
+}
+
+.search-input {
+  flex: 1;
+  height: 100%;
+  font-size: var(--font-size-md);
+  color: var(--color-text-primary);
+}
+
+.search-clear {
+  font-size: 16px;
+  color: var(--color-text-tertiary);
+  padding: 4px;
+}
+
+.edit-btn {
+  font-size: var(--font-size-md);
+  color: var(--color-primary);
+  padding: 6px 12px;
+  border-radius: var(--radius-full);
+  background: var(--color-primary-bg);
+}
+
+.edit-btn-active {
+  background: var(--color-primary);
+  color: var(--color-text-white);
+}
+
+/* -- 内容区域 -- */
+.fav-section,
+.all-apps-section {
+  background: var(--color-bg-card);
+  margin-top: var(--spacing-md);
+  padding: var(--spacing-lg) var(--page-padding-x);
+}
+
+.fav-section {
+  background: linear-gradient(135deg, #FFF9E6 0%, #FFFFFF 100%);
+  border: 1px solid #FFE58F;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--spacing-md);
+}
+
+.section-title-row {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.section-title {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.section-count {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  background: var(--color-bg-gray);
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+}
+
+.clear-btn {
+  font-size: var(--font-size-sm);
+  color: var(--color-danger);
+}
+
+/* -- 应用网格 -- */
+.app-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  row-gap: var(--spacing-xl);
+}
+
+.app-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-sm);
+  position: relative;
+}
+
+.menu-icon-circle {
+  width: 53px;
+  height: 53px;
+  border-radius: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.15s ease;
+  position: relative;
+}
+
+.menu-icon-circle .line-icon--lg {
+  width: 28px;
+  height: 28px;
+  background-size: 28px 28px;
+}
+
+.menu-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: #EF4444;
+  color: white;
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 10px;
+  line-height: 1.2;
+  font-weight: var(--font-weight-semibold);
+}
+
+.fav-star {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  opacity: 0.6;
+  z-index: 2;
+}
+
+.fav-star-active {
+  opacity: 1;
+}
+
+.app-name {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  text-align: center;
+  line-height: var(--line-height-tight);
+  max-width: 72px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.remove-btn {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 20px;
+  height: 20px;
+  background: var(--color-danger);
+  color: var(--color-text-white);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+}
+
+/* -- 应用分组 -- */
+.app-group {
+  margin-bottom: var(--spacing-xxl);
+}
+
+.app-group:last-child {
+  margin-bottom: 0;
+}
+
+.group-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  margin-bottom: var(--spacing-md);
+  padding-bottom: var(--spacing-sm);
+  border-bottom: 1px solid var(--color-divider);
+}
+
+.group-count {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-normal);
+  color: var(--color-text-secondary);
+}
+
+/* -- 空状态 -- */
+.empty-result {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-xxl) 0;
+}
+
+.empty-icon {
+  font-size: 48px;
+}
+
+.empty-text {
+  font-size: var(--font-size-md);
+  color: var(--color-text-secondary);
+}
+
+/* -- 图标渐变色 -- */
+.menu-icon-circle--purple {
+  background: linear-gradient(135deg, #7C3AED, #8B5CF6);
+  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
+}
+
+.menu-icon-circle--blue {
+  background: linear-gradient(135deg, #2563EB, #3B82F6);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+
+.menu-icon-circle--teal {
+  background: linear-gradient(135deg, #0D9488, #14B8A6);
+  box-shadow: 0 4px 12px rgba(13, 148, 136, 0.3);
+}
+
+.menu-icon-circle--amber {
+  background: linear-gradient(135deg, #D97706, #F59E0B);
+  box-shadow: 0 4px 12px rgba(217, 119, 6, 0.3);
+}
+
+.menu-icon-circle--green {
+  background: linear-gradient(135deg, #059669, #10B981);
+  box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
+}
+
+.menu-icon-circle--orange {
+  background: linear-gradient(135deg, #EA580C, #F97316);
+  box-shadow: 0 4px 12px rgba(234, 88, 12, 0.3);
+}
+
+.menu-icon-circle--rose {
+  background: linear-gradient(135deg, #E11D48, #F43F5E);
+  box-shadow: 0 4px 12px rgba(225, 29, 72, 0.3);
+}
+
+.menu-icon-circle--indigo {
+  background: linear-gradient(135deg, #4F46E5, #6366F1);
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+}
+
+.menu-icon-circle--cyan {
+  background: linear-gradient(135deg, #0891B2, #06B6D4);
+  box-shadow: 0 4px 12px rgba(8, 145, 178, 0.3);
+}
+
+.menu-icon-circle--gray {
+  background: linear-gradient(135deg, #6B7280, #9CA3AF);
+  box-shadow: 0 4px 12px rgba(107, 114, 128, 0.3);
+}

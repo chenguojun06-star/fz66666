@@ -2,7 +2,7 @@
 .container {
   min-height: 100vh;
   background: var(--color-bg-page);
-  padding: 20rpx 24rpx calc(env(safe-area-inset-bottom) + 160rpx);
+  padding: var(--page-padding-x) var(--page-padding-x) calc(env(safe-area-inset-bottom) + 160rpx);
 }
 
 /* ===== 头部卡片 ===== */
@@ -154,7 +154,7 @@
   background: var(--color-bg-gray);
   border-radius: var(--radius-md);
   padding: 20rpx;
-  border-left: 6rpx solid var(--color-warning);
+  border-left: 1px solid var(--color-warning);
 }
 .process-item-header {
   display: flex;
@@ -208,14 +208,14 @@
 }
 .process-detail-text {
   font-size: var(--font-size-xs);
-  color: var(--color-text-tertiary);
+  color: var(--color-text-secondary);
 }
 .process-item-remark {
   margin-top: 8rpx;
 }
 .process-remark-text {
   font-size: var(--font-size-xs);
-  color: var(--color-text-tertiary);
+  color: var(--color-text-secondary);
   font-style: italic;
 }
 
@@ -277,7 +277,7 @@
 .qty-val.pending { color: var(--color-warning); }
 .qty-lbl {
   font-size: var(--font-size-sm);
-  color: var(--color-text-tertiary);
+  color: var(--color-text-secondary);
 }
 
 /* ===== 裁剪任务信息 ===== */
@@ -293,7 +293,7 @@
 }
 .cutting-lbl {
   font-size: var(--font-size-sm);
-  color: var(--color-text-tertiary);
+  color: var(--color-text-secondary);
   width: 80rpx;
   flex-shrink: 0;
 }
@@ -402,13 +402,18 @@
 }
 .sku-qty-input {
   width: 100rpx;
-  height: 56rpx;
+  height: 64rpx;
   text-align: center;
-  border: 1rpx solid var(--color-border);
+  border: 1rpx solid var(--input-border);
   border-radius: var(--radius-xs);
   font-size: var(--font-size-base);
   font-weight: var(--font-weight-semibold);
-  background: var(--color-bg-card);
+  background: var(--input-bg);
+}
+.sku-qty-readonly {
+  background: var(--color-bg-page, #f5f5f5);
+  color: var(--color-text-secondary);
+  border-color: transparent;
 }
 .sku-unit {
   font-size: var(--font-size-xs);
@@ -421,7 +426,7 @@
   padding: 20rpx 24rpx;
   border-radius: 16rpx;
   background: var(--color-info-bg);
-  border-left: 6rpx solid var(--color-primary);
+  border-left: 1px solid var(--color-primary);
   position: relative;
 }
 .ai-bubble-high {

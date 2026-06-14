@@ -1,0 +1,53 @@
+<view class="location-scan-page">
+  <view class="header">
+    <view class="location-code">{{locationInfo.locationCode || locationCode}}</view>
+    <view class="zone-name" wx:if="{{locationInfo.zoneName}}">{{locationInfo.zoneName}}</view>
+  </view>
+
+  <view wx:if="{{loading}}" class="loading-container">
+    <text>加载中...</text>
+  </view>
+
+  <view wx:if="{{error}}" class="error-container">
+    <text>{{error}}</text>
+    <button size="mini" bindtap="onRetry">重试</button>
+  </view>
+
+  <view wx:if="{{!loading && !error && locationInfo}}" class="info-card">
+    <view class="info-row">
+      <text class="label">仓库名称</text>
+      <text class="value">{{locationInfo.warehouseTypeLabel}}</text>
+    </view>
+    <view class="info-row">
+      <text class="label">库位名称</text>
+      <text class="value">{{locationInfo.locationName || '-'}}</text>
+    </view>
+    <view class="info-row">
+      <text class="label">容量</text>
+      <text class="value">{{locationInfo.usedCapacity}}/{{locationInfo.capacity || '∞'}}</text>
+    </view>
+  </view>
+
+  <view wx:if="{{!loading && !error && items.length > 0}}" class="items-list">
+    <view class="list-header">
+      <text>库存明细</text>
+      <text class="count">{{items.length}} 件</text>
+    </view>
+    <view class="item-row" wx:for="{{items}}" wx:key="skuCode">
+      <view class="item-main">
+        <text class="style-no">{{item.styleNo || '-'}}</text>
+        <view class="tags">
+          <text class="tag color">{{item.color || '-'}}</text>
+          <text class="tag size">{{item.size || '-'}}</text>
+        </view>
+      </view>
+      <view class="item-qty">
+        <text class="qty">{{item.stockQuantity}}</text>
+      </view>
+    </view>
+  </view>
+
+  <view wx:if="{{!loading && !error && items.length === 0}}" class="empty-container">
+    <text>该库位暂无库存</text>
+  </view>
+</view>

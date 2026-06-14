@@ -1,7 +1,6 @@
 {
-  "navigationStyle": "custom",
+  "navigationBarTitleText": "拆菲号 / 单价调整",
   "usingComponents": {
-    "custom-nav": "/components/common/custom-nav/index",
     "ai-assistant": "/components/ai-assistant/index"
   }
 }

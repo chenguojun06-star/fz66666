@@ -4,11 +4,12 @@
 .container {
   min-height: 100vh;
   background: var(--color-bg-page);
-  padding-top: env(safe-area-inset-top);
+  padding: var(--page-padding-x) var(--page-padding-x) 0;
+  padding-top: calc(var(--page-padding-x) + env(safe-area-inset-top));
 }
 
 .card {
-  margin: 16px;
+  margin: 0 0 var(--card-gap-y);
   background: var(--color-bg-card);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);

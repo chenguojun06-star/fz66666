@@ -5,12 +5,11 @@
       <view wx:if="{{showBack}}" class="back-btn" bindtap="onBack">
         <text class="back-icon">‹</text>
       </view>
-      <text wx:if="{{title}}" class="nav-title-left">{{title}}</text>
     </view>
 
     <view wx:if="{{showSearch}}" class="nav-center">
       <view class="search-box">
-        <view class="line-icon line-icon--sm icon-search search-icon"></view>
+        <view class="line-icon line-icon--sm icon-search search-icon" style="filter: brightness(0) invert(1);"></view>
         <input
           class="search-input"
           placeholder="{{searchPlaceholder}}"
@@ -22,6 +21,8 @@
         <text wx:if="{{searchKeyword}}" class="clear-icon" bindtap="onSearchClear">✕</text>
       </view>
     </view>
+
+    <text wx:if="{{title && !showSearch}}" class="nav-title-left">{{title}}</text>
 
     <view class="nav-right">
       <slot name="right"></slot>

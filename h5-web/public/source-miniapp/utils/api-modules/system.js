@@ -30,7 +30,7 @@ const system = {
     return ok('/api/system/user/online-count', 'GET', {});
   },
   listOrganizationDepartments() {
-    return ok('/api/system/organization/departments', 'GET', {});
+    return ok('/api/system/organization/production-groups', 'GET', {});
   },
   changePassword(data) {
     return ok('/api/system/user/me/change-password', 'POST', data || {});
@@ -44,11 +44,44 @@ const system = {
   getDictList(type) {
     return ok('/api/system/dict/list-by-type', 'POST', { type });
   },
+  getMiniprogramMenuConfig() {
+    return ok('/api/system/tenant-miniprogram-menu/my-menus', 'GET', {});
+  },
+  saveMiniprogramMenuConfig(menus) {
+    return ok('/api/system/tenant-miniprogram-menu', 'PUT', { menus });
+  },
+  getMiniprogramMenuRoles() {
+    return ok('/api/system/tenant-miniprogram-menu/menu-roles', 'GET', {});
+  },
+  getMiniprogramMenuMeta() {
+    return ok('/api/system/tenant-miniprogram-menu/menu-meta', 'GET', {});
+  },
+  saveMiniprogramMenuRoleConfig(roleMenus) {
+    return ok('/api/system/tenant-miniprogram-menu/menu-roles', 'PUT', { roleMenus });
+  },
+  // 收藏应用API
+  _favFailCount: 0,
+  getFavoriteApps() {
+    // ok() 返回 resp.data = { favoriteData: "..." }
+    return ok('/api/system/user/favorite-apps', 'GET', {}).then(function (data) {
+      system._favFailCount = 0;
+      return data;
+    }).catch(function (e) {
+      system._favFailCount++;
+      // 不返回空数组覆盖本地缓存，抛异常让调用方走 fallback
+      throw e;
+    });
+  },
+  saveFavoriteApps(favoriteData) {
+    return ok('/api/system/user/favorite-apps', 'PUT', { favoriteData: favoriteData }).catch(function () {
+      return { success: false };
+    });
+  },
 };
 
 const serial = {
-  generate(type) {
-    return ok('/api/system/serial/generate', 'GET', { type });
+  generate(ruleCode) {
+    return ok('/api/system/serial/generate', 'GET', { ruleCode });
   },
 };
 
@@ -62,11 +95,8 @@ const factoryWorker = {
   list(factoryId) {
     return ok('/api/factory-worker/list', 'GET', { factoryId });
   },
-  create(data) {
+  save(data) {
     return ok('/api/factory-worker', 'POST', data || {});
-  },
-  update(id, data) {
-    return ok(`/api/factory-worker/${id}`, 'PUT', data || {});
   },
   remove(id) {
     return ok(`/api/factory-worker/${id}`, 'DELETE', {});

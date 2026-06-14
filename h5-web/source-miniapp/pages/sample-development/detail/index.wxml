@@ -1,0 +1,193 @@
+<view class="page-container">
+  <!-- 加载中 -->
+  <view wx:if="{{loading}}" class="loading-wrap">
+    <view class="loading-spinner"></view>
+    <text class="loading-text">加载中...</text>
+  </view>
+
+  <block wx:else>
+    <!-- 顶部款式信息 -->
+    <view class="style-header">
+      <view class="style-name">{{styleInfo.styleName || styleInfo.name || '未命名款式'}}</view>
+      <view class="style-no">{{styleInfo.styleNo || styleInfo.styleCode || ''}}</view>
+    </view>
+
+    <!-- 阶段进度条 -->
+    <view class="progress-section" wx:if="{{stages.length > 0}}">
+      <view class="progress-title">开发进度</view>
+      <view class="progress-list">
+        <view class="progress-item" wx:for="{{stages}}" wx:key="key">
+          <view class="progress-dot progress-dot-{{item.status}}"></view>
+          <view class="progress-content">
+            <view class="progress-name">{{item.name}}</view>
+            <view class="progress-meta">
+              <text class="progress-status progress-status-{{item.status}}">{{item.statusText}}</text>
+              <text wx:if="{{item.assignee}}" class="progress-assignee"> · {{item.assignee}}</text>
+              <text wx:if="{{item.budgetHours}}" class="progress-hours"> · 预估{{item.budgetHours}}h</text>
+              <text wx:if="{{item.actualHours}}" class="progress-hours"> / 实际{{item.actualHours}}h</text>
+            </view>
+            <view wx:if="{{item.completedAt}}" class="progress-time">完成于 {{item.completedAt}}</view>
+          </view>
+          <view wx:if="{{item.status !== 'completed'}}" class="progress-action" data-key="{{item.key}}" bindtap="onStageConfirm">确认</view>
+        </view>
+      </view>
+    </view>
+
+    <!-- Tab导航 -->
+    <view class="tab-nav">
+      <view wx:for="{{tabs}}" wx:key="key" class="tab-item {{activeTab === index ? 'active' : ''}}" data-index="{{index}}" bindtap="onTabTap">
+        <text class="tab-icon">{{item.icon}}</text>
+        <text class="tab-text">{{item.name}}</text>
+      </view>
+    </view>
+
+    <!-- Tab内容 -->
+    <view class="tab-content">
+
+      <!-- 概览 -->
+      <block wx:if="{{activeTab === 0}}">
+        <view class="section">
+          <view class="section-title">款式信息</view>
+          <view class="info-card">
+            <view class="info-row"><text class="info-label">款号</text><text class="info-value">{{styleInfo.styleNo || '-'}}</text></view>
+            <view class="info-row"><text class="info-label">品类</text><text class="info-value">{{styleInfo.category || '-'}}</text></view>
+            <view class="info-row"><text class="info-label">季节</text><text class="info-value">{{styleInfo.season || '-'}}</text></view>
+            <view class="info-row"><text class="info-label">设计师</text><text class="info-value">{{styleInfo.designer || '-'}}</text></view>
+            <view class="info-row"><text class="info-label">开发状态</text><text class="info-value">{{styleInfo.developmentStatus || styleInfo.status || '-'}}</text></view>
+          </view>
+        </view>
+      </block>
+
+      <!-- BOM清单 -->
+      <block wx:if="{{activeTab === 1}}">
+        <view wx:if="{{bomLoading}}" class="loading-inline">加载中...</view>
+        <view wx:elif="{{bomList.length === 0}}" class="empty-inline">暂无BOM数据</view>
+        <view wx:else class="list-card">
+          <view class="list-item" wx:for="{{bomList}}" wx:key="id">
+            <view class="item-main">
+              <text class="item-title">{{item.materialName || item.name}}</text>
+              <text class="item-sub">{{item.spec || item.specification || ''}} {{item.color || ''}}</text>
+            </view>
+            <view class="item-right">
+              <text class="item-qty">{{item.quantity || 0}}{{item.unit || ''}}</text>
+            </view>
+          </view>
+        </view>
+      </block>
+
+      <!-- 工序单价 -->
+      <block wx:if="{{activeTab === 2}}">
+        <view wx:if="{{processLoading}}" class="loading-inline">加载中...</view>
+        <view wx:elif="{{processList.length === 0}}" class="empty-inline">暂无工序数据</view>
+        <view wx:else class="process-list">
+          <view class="process-item" wx:for="{{processList}}" wx:key="id">
+            <view class="process-left">
+              <text class="process-name">{{item.processName || item.name}}</text>
+              <text class="process-code">{{item.processCode || ''}}</text>
+            </view>
+            <view class="process-right">
+              <text class="process-price">¥{{item.unitPrice || 0}}</text>
+              <text class="process-unit">/件</text>
+            </view>
+          </view>
+        </view>
+      </block>
+
+      <!-- 二次工艺 -->
+      <block wx:if="{{activeTab === 3}}">
+        <view wx:if="{{secondaryLoading}}" class="loading-inline">加载中...</view>
+        <view wx:elif="{{secondaryList.length === 0}}" class="empty-inline">暂无二次工艺数据</view>
+        <view wx:else class="list-card">
+          <view class="list-item" wx:for="{{secondaryList}}" wx:key="id">
+            <view class="item-main">
+              <text class="item-title">{{item.processName || item.name}}</text>
+              <text class="item-sub">{{item.type || item.processType || ''}} {{item.position || ''}}</text>
+            </view>
+            <view class="item-right">
+              <text class="item-price">¥{{item.unitPrice || item.price || 0}}</text>
+            </view>
+          </view>
+        </view>
+      </block>
+
+      <!-- 纸样 -->
+      <block wx:if="{{activeTab === 4}}">
+        <view wx:if="{{patternLoading}}" class="loading-inline">加载中...</view>
+        <view wx:elif="{{!patternData}}" class="empty-inline">暂无纸样数据</view>
+        <view wx:else class="section">
+          <view class="section-title">纸样信息</view>
+          <view class="info-card">
+            <view class="info-row"><text class="info-label">版本</text><text class="info-value">{{patternData.revision || patternData.version || '-'}}</text></view>
+            <view class="info-row"><text class="info-label">状态</text><text class="info-value">{{patternData.status || '-'}}</text></view>
+            <view class="info-row"><text class="info-label">制版师</text><text class="info-value">{{patternData.patternMaker || patternData.assignee || '-'}}</text></view>
+            <view class="info-row" wx:if="{{patternData.notes}}"><text class="info-label">备注</text><text class="info-value">{{patternData.notes}}</text></view>
+          </view>
+        </view>
+      </block>
+
+      <!-- 生产制单 -->
+      <block wx:if="{{activeTab === 5}}">
+        <view wx:if="{{productionLoading}}" class="loading-inline">加载中...</view>
+        <view wx:elif="{{!productionData}}" class="empty-inline">暂无制单数据</view>
+        <view wx:else class="section">
+          <view class="section-title">生产制单</view>
+          <view class="info-card">
+            <view wx:if="{{productionData.productionNotes}}" class="info-block">
+              <text class="info-label">生产备注</text>
+              <text class="info-block-value">{{productionData.productionNotes}}</text>
+            </view>
+            <view wx:if="{{productionData.techSpec}}" class="info-block">
+              <text class="info-label">工艺要求</text>
+              <text class="info-block-value">{{productionData.techSpec}}</text>
+            </view>
+            <view wx:if="{{productionData.sizeSpec}}" class="info-block">
+              <text class="info-label">尺码规格</text>
+              <text class="info-block-value">{{productionData.sizeSpec}}</text>
+            </view>
+            <view wx:if="{{!productionData.productionNotes && !productionData.techSpec && !productionData.sizeSpec}}" class="empty-inline">暂无制单内容</view>
+          </view>
+        </view>
+      </block>
+
+      <!-- 报价单 -->
+      <block wx:if="{{activeTab === 6}}">
+        <view wx:if="{{quotationLoading}}" class="loading-inline">加载中...</view>
+        <view wx:elif="{{!quotationData}}" class="empty-inline">暂无报价数据</view>
+        <view wx:else class="section">
+          <view class="section-title">报价明细</view>
+          <view class="info-card">
+            <view class="info-row" wx:if="{{quotationData.materialCost}}"><text class="info-label">物料成本</text><text class="info-value quotation-value">¥{{quotationData.materialCost}}</text></view>
+            <view class="info-row" wx:if="{{quotationData.processCost}}"><text class="info-label">加工成本</text><text class="info-value quotation-value">¥{{quotationData.processCost}}</text></view>
+            <view class="info-row" wx:if="{{quotationData.secondaryProcessCost}}"><text class="info-label">二次工艺成本</text><text class="info-value quotation-value">¥{{quotationData.secondaryProcessCost}}</text></view>
+            <view class="info-row" wx:if="{{quotationData.otherCost}}"><text class="info-label">其他成本</text><text class="info-value quotation-value">¥{{quotationData.otherCost}}</text></view>
+            <view class="info-row total-row" wx:if="{{quotationData.totalCost}}"><text class="info-label">总成本</text><text class="info-value quotation-total">¥{{quotationData.totalCost}}</text></view>
+            <view class="info-row" wx:if="{{quotationData.suggestedPrice}}"><text class="info-label">建议售价</text><text class="info-value quotation-suggest">¥{{quotationData.suggestedPrice}}</text></view>
+          </view>
+        </view>
+      </block>
+
+      <!-- 附件文件 -->
+      <block wx:if="{{activeTab === 7}}">
+        <view wx:if="{{attachmentLoading}}" class="loading-inline">加载中...</view>
+        <view wx:elif="{{attachmentList.length === 0}}" class="empty-inline">暂无附件</view>
+        <view wx:else class="list-card">
+          <view class="list-item attachment-item" wx:for="{{attachmentList}}" wx:key="id" data-url="{{item.url || item.fileUrl}}" bindtap="onAttachmentTap">
+            <view class="item-main">
+              <text class="item-title">{{item.fileName || item.name || '文件'}}</text>
+              <text class="item-sub">{{item.fileType || item.type || ''}} {{item.fileSizeText}}</text>
+            </view>
+            <view class="item-right">
+              <text class="attachment-action">查看</text>
+            </view>
+          </view>
+        </view>
+      </block>
+
+    </view>
+  </block>
+
+  <!-- 底部操作栏 -->
+  <view class="bottom-bar">
+    <button class="refresh-btn" bindtap="onRefresh">刷新</button>
+  </view>
+</view>

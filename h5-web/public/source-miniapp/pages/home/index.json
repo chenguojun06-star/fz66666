@@ -1,7 +1,8 @@
 {
-  "navigationStyle": "custom",
+  "navigationBarTitleText": "衣智链",
   "enablePullDownRefresh": true,
   "usingComponents": {
-    "ai-assistant": "/components/ai-assistant/index"
+    "ai-assistant": "/components/ai-assistant/index",
+    "purchase-cart-drawer": "/components/purchase-cart-drawer/index"
   }
 }

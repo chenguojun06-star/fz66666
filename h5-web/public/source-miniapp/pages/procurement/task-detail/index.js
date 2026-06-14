@@ -6,7 +6,7 @@ const { triggerDataRefresh } = require('../../../utils/eventBus');
 const MATERIAL_TYPE_MAP = {
   fabricA: '主面料', fabricB: '辅面料',
   liningA: '里料', liningB: '夹里', liningC: '衬布/粘合衬',
-  accessoryA: '拉链', accessoryB: '纽扣', accessoryC: '配件'
+  accessoryA: '拉链', accessoryB: '纽扣', accessoryC: '配件',
 };
 
 Page({
@@ -20,6 +20,7 @@ Page({
     remark: '',
     hasInput: false,
     canConfirmProcurement: false,
+    hasReturnConfirmed: false,
     overallArrivalRate: -1,
   },
 
@@ -28,6 +29,9 @@ Page({
     const styleNo = decodeURIComponent(options.styleNo || '');
     this.setData({ orderNo: this.orderNo, styleNo });
     if (this.orderNo) this._loadDetail();
+  },
+
+  onShow() {
   },
 
   onPullDownRefresh() {
@@ -46,6 +50,7 @@ Page({
       let totalPurchased = 0;
       let totalArrived = 0;
       let hasUnconfirmed = false;
+      let hasReturnConfirmed = false;
 
       const materialPurchases = list.map(item => {
         const status = this._normalizeStatus(item.status);
@@ -60,6 +65,7 @@ Page({
         totalPurchased += purchaseQty;
         totalArrived += arrivedQty;
         if (!returnConfirmed) hasUnconfirmed = true;
+        if (returnConfirmed) hasReturnConfirmed = true;
 
         const returnConfirmTimeText = item.returnConfirmTime
           ? item.returnConfirmTime.substring(5, 16)
@@ -85,7 +91,7 @@ Page({
       const overallArrivalRate = totalPurchased > 0 ? Math.round(totalArrived / totalPurchased * 100) : 0;
       const canConfirmProcurement = hasUnconfirmed && overallArrivalRate >= 50;
 
-      this.setData({ orderId, materialPurchases, loading: false, overallArrivalRate, canConfirmProcurement });
+      this.setData({ orderId, materialPurchases, loading: false, overallArrivalRate, canConfirmProcurement, hasReturnConfirmed });
     } catch (e) {
       console.error('加载采购详情失败:', e);
       this.setData({ loading: false });
@@ -111,6 +117,11 @@ Page({
   },
 
   async onReceiveAll() {
+    if (this.data.hasReturnConfirmed) {
+      toast.warning('已有物料完成回料确认，无法继续采购');
+      return;
+    }
+
     const userInfo = getUserInfo() || {};
     const receiverId = String(userInfo.id || userInfo.userId || '').trim();
     const receiverName = String(userInfo.name || userInfo.username || '').trim();
@@ -132,8 +143,8 @@ Page({
         api.production.receivePurchase({
           purchaseId: item.id || item.purchaseId,
           receiverId,
-          receiverName
-        })
+          receiverName,
+        }),
       ));
       wx.hideLoading();
       toast.success(`已采购 ${pendingItems.length} 项`);
@@ -145,16 +156,28 @@ Page({
   },
 
   async onReturnConfirm(e) {
-    const { id, name, arrived, unit } = e.currentTarget.dataset;
+    const { id, name, arrived, purchase, unit } = e.currentTarget.dataset;
     if (!id) return;
+
+    const defaultQty = (Number(arrived) > 0 ? Number(arrived) : Number(purchase)) || 0;
 
     wx.showModal({
       title: '确认回料',
-      content: `确认「${name || '该物料'}」回料 ${arrived || 0}${unit || ''}？`,
+      content: `确认「${name || '该物料'}」回料数量（可修改）:`,
+      editable: true,
+      placeholderText: String(defaultQty),
       confirmText: '确认回料',
       confirmColor: '#1677ff',
       success: async (res) => {
         if (!res.confirm) return;
+
+        const qty = (res.content !== undefined && res.content !== '')
+          ? Number(res.content)
+          : defaultQty;
+        if (isNaN(qty) || qty < 0) {
+          toast.error('请输入有效的回料数量');
+          return;
+        }
 
         const userInfo = getUserInfo() || {};
         const confirmerId = String(userInfo.id || userInfo.userId || '').trim();
@@ -166,7 +189,7 @@ Page({
             purchaseId: id,
             confirmerId,
             confirmerName,
-            returnQuantity: Number(arrived) || 0,
+            returnQuantity: qty,
           });
           wx.hideLoading();
           toast.success('回料确认成功');
@@ -178,11 +201,16 @@ Page({
           wx.hideLoading();
           toast.error(err.errMsg || err.message || '确认失败');
         }
-      }
+      },
     });
   },
 
   async onConfirmProcurement() {
+    if (this.data.hasReturnConfirmed) {
+      toast.warning('已有物料完成回料确认，无需再次确认');
+      return;
+    }
+
     const { orderId, orderNo, overallArrivalRate } = this.data;
     if (!orderNo) return;
 
@@ -214,11 +242,16 @@ Page({
           wx.hideLoading();
           toast.error(err.errMsg || err.message || '确认失败');
         }
-      }
+      },
     });
   },
 
   async onSubmit() {
+    if (this.data.hasReturnConfirmed) {
+      toast.warning('已有物料完成回料确认，无法继续到货登记');
+      return;
+    }
+
     const { materialPurchases, remark } = this.data;
 
     const hasAny = materialPurchases.some(m => m.inputQuantity && Number(m.inputQuantity) > 0);
@@ -273,7 +306,7 @@ Page({
       updates.push({
         id: item.id || item.purchaseId,
         arrivedQuantity: newArrived,
-        remark: remarkText || ''
+        remark: remarkText || '',
       });
     });
     return updates;
@@ -291,7 +324,7 @@ Page({
       const shortageQty = purchaseQty - newArrived;
       throw new Error(
         `「${materialName}」到货率仅${arrivalRate}%（${newArrived}/${purchaseQty}），` +
-        `还差${shortageQty}，请填写备注说明原因`
+        `还差${shortageQty}，请填写备注说明原因`,
       );
     }
     return remark;
@@ -300,7 +333,6 @@ Page({
   _normalizeToArray(res) {
     if (Array.isArray(res)) return res;
     if (res && Array.isArray(res.records)) return res.records;
-    if (res && Array.isArray(res.data)) return res.data;
     return [];
   },
 
@@ -323,7 +355,7 @@ Page({
     const map = {
       pending: 'orange', received: 'blue', partial: 'blue',
       partial_arrival: 'blue', awaiting_confirm: 'gold', completed: 'green',
-      cancelled: 'gray', warehouse_pending: 'cyan',
+      cancelled: 'red', warehouse_pending: 'cyan',
       waiting_procurement: 'orange', procurement_in_progress: 'blue',
       procurement_completed: 'green',
     };
@@ -354,5 +386,7 @@ Page({
     if (receiverId && existingId) return receiverId === existingId;
     if (receiverName && existingName) return receiverName === existingName;
     return false;
-  }
+  },
+
+
 });

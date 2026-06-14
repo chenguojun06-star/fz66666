@@ -58,6 +58,7 @@ class QRCodeParser {
 
     // 尝试解析（传入原始扫码内容用于 scanCode 字段）
     const result = this._tryParseFormats(parseTarget, first, skuNo, raw);
+    console.log('[DEBUG] QRCodeParser: raw=', raw, 'parseTarget=', parseTarget, 'result=', JSON.stringify(result));
     if (result) {
       return result;
     }

@@ -1,0 +1,91 @@
+<view class="container">
+  <!-- 状态筛选 Tab -->
+  <view class="filter-tabs">
+    <view
+      wx:for="{{statusTabs}}"
+      wx:key="key"
+      class="filter-tab {{activeFilter === item.key ? 'active' : ''}}"
+      bindtap="onFilterTap"
+      data-key="{{item.key}}"
+    >
+      <text>{{item.label}}</text>
+      <text wx:if="{{item.count > 0}}" class="tab-badge">{{item.count}}</text>
+    </view>
+  </view>
+
+  <!-- 加载中 -->
+  <view wx:if="{{loading && !filteredGroups.length}}" class="loading-state">
+    <text>加载采购任务中…</text>
+  </view>
+
+  <!-- 空状态 -->
+  <view wx:elif="{{filteredGroups.length === 0}}" class="empty-state">
+    <text class="empty-icon">🛒</text>
+    <text class="empty-text">暂无采购任务</text>
+    <text class="empty-hint">当有物料需要采购时，任务将出现在这里</text>
+  </view>
+
+  <!-- 任务列表 -->
+  <block wx:else>
+    <view
+      wx:for="{{filteredGroups}}"
+      wx:key="orderNo"
+      class="task-card"
+      data-group="{{item}}"
+      bindtap="onGroupTap"
+      hover-class="task-card-hover"
+    >
+      <!-- 头部：图标 + 订单号 + 状态标签 -->
+      <view class="card-header">
+        <view class="card-header-left">
+          <view class="card-icon-circle card-icon-circle--orange">
+            <text class="iconfont icon-menu-cart"></text>
+          </view>
+          <view class="card-title-area">
+            <text class="order-no">{{item.orderNo}}</text>
+            <text class="style-no" wx:if="{{item.styleNo}}">{{item.styleNo}}</text>
+          </view>
+        </view>
+        <text class="status-tag tag tag-{{item.statusColor}}">{{item.statusText}}</text>
+      </view>
+
+      <!-- 信息行 -->
+      <view class="card-body">
+        <view class="info-row">
+          <text class="info-label">物料</text>
+          <text class="info-value bold">{{item.totalCount}} 项</text>
+        </view>
+        <view class="info-row">
+          <text class="info-label">到货率</text>
+          <text class="info-value {{item.arrivalRate >= 100 ? 'arrived' : ''}}">{{item.arrivalRate}}%</text>
+        </view>
+        <view wx:if="{{item.pendingCount > 0}}" class="info-row">
+          <text class="info-label">待采购</text>
+          <text class="info-value pending">{{item.pendingCount}} 项</text>
+        </view>
+        <view wx:if="{{item.receivedCount > 0}}" class="info-row">
+          <text class="info-label">采购中</text>
+          <text class="info-value">{{item.receivedCount}} 项</text>
+        </view>
+      </view>
+
+      <!-- 进度条 -->
+      <view class="progress-wrapper">
+        <view class="progress-bar">
+          <view class="progress-fill" style="width: {{item.arrivalRate > 100 ? 100 : item.arrivalRate}}%"></view>
+        </view>
+      </view>
+
+      <!-- 底部操作 -->
+      <view class="card-footer">
+        <view class="btn-action btn-primary" hover-class="btn-primary-hover" hover-stay-time="100">
+          查看详情
+        </view>
+        <text class="card-arrow">›</text>
+      </view>
+    </view>
+
+    <!-- 底部提示 -->
+    <view class="no-more">已显示全部任务</view>
+  </block>
+</view>

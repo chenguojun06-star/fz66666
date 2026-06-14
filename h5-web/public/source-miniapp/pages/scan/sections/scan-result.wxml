@@ -2,9 +2,14 @@
   <wxs src="../../../utils/money.wxs" module="money" />
   <view wx:if="{{lastResult}}" class="result {{lastResult.success ? 'ok' : 'err'}}">
     <view class="res-top">
-      <text class="res-tag {{lastResult.success ? 'ok' : 'err'}}">{{lastResult.success ? '成功' : '失败'}}</text>
-      <text class="res-msg">{{lastResult.message}}</text>
-      <text wx:if="{{lastResult.success && undo.canUndo}}" class="res-undo" hover-class="res-undo-hover" hover-stay-time="100" bindtap="onUndoLast">{{undo.loading ? '...' : '撤销'}}</text>
+      <view class="res-cover" wx:if="{{lastResult.coverImage}}" catchtap="onPreviewCover" data-url="{{lastResult.coverImage}}">
+        <image class="res-cover-img" src="{{lastResult.coverImage}}" mode="aspectFill" lazy-load />
+      </view>
+      <view class="res-top-text">
+        <text class="res-tag {{lastResult.success ? 'ok' : 'err'}}">{{lastResult.success ? '成功' : '失败'}}</text>
+        <text class="res-msg">{{lastResult.message}}</text>
+        <text wx:if="{{lastResult.success && undo.canUndo}}" class="res-undo" hover-class="res-undo-hover" hover-stay-time="100" bindtap="onUndoLast">{{undo.loading ? '...' : '撤销'}}</text>
+      </view>
     </view>
     <view class="res-info">
       <text wx:if="{{lastResult.orderNo}}" class="res-order">{{lastResult.orderNo}}</text>

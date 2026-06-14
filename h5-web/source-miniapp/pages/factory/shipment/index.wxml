@@ -1,0 +1,227 @@
+<view class="page">
+  <view class="tab-bar">
+    <view class="tab-item {{activeTab===0?'tab-active':''}}" data-tab="0" bindtap="switchTab">我的订单</view>
+    <view class="tab-item {{activeTab===1?'tab-active':''}}" data-tab="1" bindtap="switchTab">发货记录</view>
+  </view>
+
+  <view class="search-bar">
+    <view class="search-box">
+      <text class="search-emoji">🔍</text>
+      <input class="search-input" placeholder="搜索订单号 / 款号" value="{{keyword}}" bindinput="onKeywordInput" confirm-type="search" bindconfirm="onKeywordSearch" />
+    </view>
+  </view>
+
+  <view wx:if="{{activeTab===0}}" class="tab-content">
+    <view wx:if="{{orders.length===0 && !orderLoading}}" class="empty">
+      <text class="empty-icon">📋</text>
+      <text class="empty-text">暂无订单数据</text>
+    </view>
+
+    <view class="order-list" wx:if="{{orders.length > 0}}">
+      <view class="order-card {{item.expanded ? 'order-card--open' : ''}} {{item.remainDaysClass === 'days-overdue' ? 'order-card--overdue' : ''}}"
+            wx:for="{{orders}}" wx:key="id">
+
+        <view class="order-main" data-index="{{index}}" bindtap="onCardToggle">
+          <view class="order-cover" catchtap="onCoverPreview" data-url="{{item.styleCoverUrl}}">
+            <image wx:if="{{item.styleCoverUrl}}" class="cover-pic" src="{{item.styleCoverUrl}}" mode="aspectFill" lazy-load />
+            <view wx:else class="cover-placeholder">
+              <text class="cover-ph-text">📦</text>
+            </view>
+          </view>
+
+          <view class="order-info">
+            <view class="info-line1">
+              <text class="order-no">{{item.orderNo}}</text>
+              <text wx:if="{{item.urgencyTagText === '急'}}" class="badge badge-urgent">急</text>
+              <text wx:if="{{item.plateTypeTagText}}" class="badge badge-blue">{{item.plateTypeTagText}}</text>
+            </view>
+            <view class="info-line2">
+              <text class="info-style">{{item.styleNo || '暂无款号'}}</text>
+              <text class="info-divider" wx:if="{{item.factoryName}}">|</text>
+              <text class="info-factory" wx:if="{{item.factoryName}}">{{item.factoryName}}</text>
+            </view>
+            <view class="info-line3" wx:if="{{item.deliveryDateStr}}">
+              <text class="info-delivery">交期 {{item.deliveryDateStr}}</text>
+              <text class="info-remain {{item.remainDaysClass}}" wx:if="{{item.remainDaysText}}">{{item.remainDaysText}}</text>
+            </view>
+            <view class="info-qty-row">
+              <text class="iq-num">{{item.cuttingQty || item.totalQuantity || item.orderQuantity || 0}}</text>
+              <text class="iq-lbl">总数</text>
+              <text class="iq-num iq-num--done">{{item.completedQuantity || 0}}</text>
+              <text class="iq-lbl">已完成</text>
+              <text class="iq-num iq-num--remain">{{item.remainQuantity || 0}}</text>
+              <text class="iq-lbl">剩余</text>
+            </view>
+            <view class="info-progress">
+              <view class="ip-bar">
+                <view class="ip-fill {{item.remainDaysClass === 'days-overdue' ? 'ip-fill--overdue' : ''}}" style="width:{{item.calculatedProgress > 100 ? 100 : item.calculatedProgress}}%"></view>
+              </view>
+              <text class="ip-pct">{{item.calculatedProgress || 0}}%</text>
+            </view>
+          </view>
+
+          <view class="order-arrow">
+            <text class="arrow-icon {{item.expanded ? 'arrow-icon--up' : ''}}">›</text>
+          </view>
+        </view>
+
+        <view class="order-expand" wx:if="{{item.expanded}}" catchtap="">
+          <view class="expand-section" wx:if="{{item.processNodes.length > 0}}">
+            <text class="expand-title">工序进度</text>
+            <view class="process-node" wx:for="{{item.processNodes}}" wx:for-item="node" wx:key="name">
+              <view class="node-hd">
+                <text class="node-name">{{node.name}}</text>
+                <text class="node-pct {{node.percent >= 100 ? 'node-pct--done' : ''}}">{{node.percent}}%</text>
+              </view>
+              <view class="node-bar-bg">
+                <text class="node-bundle" wx:if="{{node.bundleInfo}}">{{node.bundleInfo.scanned}}/{{node.bundleInfo.total}}菲</text>
+                <view class="node-bar-fill {{node.percent >= 100 ? 'node-bar-fill--done' : ''}}" style="width:{{node.percent}}%"></view>
+              </view>
+            </view>
+          </view>
+
+          <view class="expand-actions">
+            <view class="act-btn act-btn--primary" catchtap="onGoOrderProcurement" data-index="{{index}}">采购</view>
+            <view class="act-btn act-btn--primary" catchtap="onGoOrderCutting" data-index="{{index}}">裁剪</view>
+            <view class="act-btn act-btn--primary" catchtap="onGoOrderProcessEdit" data-index="{{index}}">工序</view>
+            <view class="act-btn act-btn--ship" catchtap="onOpenShip" data-index="{{index}}" wx:if="{{isFactory}}">发货</view>
+            <view class="act-btn act-btn--remark" catchtap="onOpenRemark" data-index="{{index}}">备注</view>
+            <view class="act-btn" catchtap="onCopyOrderNo" data-order-no="{{item.orderNo}}">复制单号</view>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <view class="load-tip" wx:if="{{orderLoading}}">加载中…</view>
+    <view class="load-tip load-tip--end" wx:if="{{!orderHasMore && orders.length>0}}">— 没有更多了 —</view>
+  </view>
+
+  <view wx:if="{{activeTab===1}}" class="tab-content">
+    <view wx:if="{{shipments.length===0 && !shipmentLoading}}" class="empty">
+      <text class="empty-icon">📦</text>
+      <text class="empty-text">暂无发货记录</text>
+    </view>
+    <view wx:for="{{shipments}}" wx:key="id" class="shipment-card" data-index="{{index}}" bindtap="onTapShipment">
+      <view class="shipment-top">
+        <text class="shipment-no">{{item.orderNo || item.shipmentNo || ''}}</text>
+        <text class="shipment-status {{item.statusCls}}">{{item.statusText}}</text>
+      </view>
+      <view class="shipment-info">
+        <text>发货: {{item.totalQuantity || 0}}件</text>
+        <text>{{item.shipDate || item.createdAt || ''}}</text>
+      </view>
+    </view>
+    <view class="load-tip" wx:if="{{shipmentLoading}}">加载中…</view>
+    <view class="load-tip load-tip--end" wx:if="{{!shipmentHasMore && shipments.length>0}}">— 没有更多了 —</view>
+  </view>
+</view>
+
+<view class="modal-mask" wx:if="{{showShipModal}}" bindtap="onCancelShip">
+  <view class="modal-content" catchtap="">
+    <view class="modal-header">
+      <text class="modal-title">发货 - {{currentOrder.orderNo}}</text>
+      <text class="modal-close" bindtap="onCancelShip">✕</text>
+    </view>
+    <scroll-view scroll-y class="modal-body">
+      <view wx:if="{{shippableInfo}}" class="ship-remaining">剩余可发: {{shippableInfo.remaining || 0}} 件</view>
+      <view class="ship-table-header">
+        <text class="st-col">颜色</text>
+        <text class="st-col">尺码</text>
+        <text class="st-col">下单</text>
+        <text class="st-col">已发</text>
+        <text class="st-col">发货数</text>
+      </view>
+      <view wx:for="{{shipDetails}}" wx:key="index" class="ship-table-row">
+        <text class="st-col">{{item.color || '-'}}</text>
+        <text class="st-col">{{item.sizeName || '-'}}</text>
+        <text class="st-col">{{item.ordered}}</text>
+        <text class="st-col">{{item.shipped}}</text>
+        <input class="st-col st-input" type="number" placeholder="0" value="{{item.quantity}}" data-index="{{index}}" bindinput="onShipDetailQtyInput" />
+      </view>
+      <view class="ship-form">
+        <view class="sf-row">
+          <text class="sf-label">发货方式</text>
+          <radio-group bindchange="onShipMethodChange">
+            <label class="radio-label"><radio value="SELF_DELIVERY" checked="{{shipForm.shipMethod==='SELF_DELIVERY'}}" /> 自送</label>
+            <label class="radio-label"><radio value="EXPRESS" checked="{{shipForm.shipMethod==='EXPRESS'}}" /> 快递</label>
+          </radio-group>
+        </view>
+        <view wx:if="{{shipForm.shipMethod==='EXPRESS'}}" class="sf-row">
+          <text class="sf-label">快递公司</text>
+          <input class="sf-input" placeholder="请输入" value="{{shipForm.expressCompany}}" data-field="expressCompany" bindinput="onShipFieldInput" />
+        </view>
+        <view wx:if="{{shipForm.shipMethod==='EXPRESS'}}" class="sf-row">
+          <text class="sf-label">快递单号</text>
+          <input class="sf-input" placeholder="请输入" value="{{shipForm.trackingNo}}" data-field="trackingNo" bindinput="onShipFieldInput" />
+        </view>
+        <view class="sf-row">
+          <text class="sf-label">备注</text>
+          <textarea class="sf-textarea" placeholder="选填" value="{{shipForm.remark}}" data-field="remark" bindinput="onShipFieldInput" />
+        </view>
+      </view>
+    </scroll-view>
+    <view class="modal-footer">
+      <view class="btn btn-cancel" bindtap="onCancelShip">取消</view>
+      <view class="btn btn-primary" bindtap="onSubmitShip">确认发货</view>
+    </view>
+  </view>
+</view>
+
+<view class="modal-mask" wx:if="{{showDetailModal}}" bindtap="onCloseDetail">
+  <view class="modal-content" catchtap="">
+    <view class="modal-header">
+      <text class="modal-title">发货详情</text>
+      <text class="modal-close" bindtap="onCloseDetail">✕</text>
+    </view>
+    <scroll-view scroll-y class="modal-body">
+      <view wx:if="{{currentShipment}}" class="detail-info">
+        <view class="di-row"><text class="di-label">状态</text><text class="di-value {{currentShipment.statusCls}}">{{currentShipment.statusText}}</text></view>
+        <view class="di-row"><text class="di-label">发货数量</text><text class="di-value">{{currentShipment.totalQuantity || 0}} 件</text></view>
+      </view>
+      <view wx:if="{{detailItems.length > 0}}">
+        <view class="ship-table-header">
+          <text class="st-col">颜色</text>
+          <text class="st-col">尺码</text>
+          <text class="st-col">数量</text>
+        </view>
+        <view wx:for="{{detailItems}}" wx:key="index" class="ship-table-row">
+          <text class="st-col">{{item.color || '-'}}</text>
+          <text class="st-col">{{item.sizeName || '-'}}</text>
+          <text class="st-col">{{item.quantity}}</text>
+        </view>
+      </view>
+    </scroll-view>
+    <view class="modal-footer">
+      <view wx:if="{{currentShipment.receiveStatus==='pending' && isFactory}}" class="btn btn-danger" bindtap="onDeleteShipment">删除</view>
+      <view wx:if="{{currentShipment.receiveStatus==='pending' && isTenantAdmin}}" class="btn btn-primary" bindtap="onOpenReceiveModal">收货确认</view>
+      <view class="btn btn-cancel" bindtap="onCloseDetail">关闭</view>
+    </view>
+  </view>
+</view>
+
+<view class="modal-mask" wx:if="{{showReceiveModal}}" bindtap="onCancelReceive">
+  <view class="modal-content" catchtap="">
+    <view class="modal-header">
+      <text class="modal-title">收货确认</text>
+      <text class="modal-close" bindtap="onCancelReceive">✕</text>
+    </view>
+    <scroll-view scroll-y class="modal-body">
+      <view class="ship-table-header">
+        <text class="st-col">颜色</text>
+        <text class="st-col">尺码</text>
+        <text class="st-col">发货数</text>
+        <text class="st-col">到货数</text>
+      </view>
+      <view wx:for="{{receiveForm.receivedDetails}}" wx:key="index" class="ship-table-row">
+        <text class="st-col">{{item.color || '-'}}</text>
+        <text class="st-col">{{item.sizeName || '-'}}</text>
+        <text class="st-col">{{item.quantity}}</text>
+        <input class="st-col st-input" type="number" placeholder="0" value="{{item.receivedQuantity}}" data-index="{{index}}" bindinput="onReceiveDetailQtyInput" />
+      </view>
+    </scroll-view>
+    <view class="modal-footer">
+      <view class="btn btn-cancel" bindtap="onCancelReceive">取消</view>
+      <view class="btn btn-primary" bindtap="onSubmitReceive">确认收货</view>
+    </view>
+  </view>
+</view>

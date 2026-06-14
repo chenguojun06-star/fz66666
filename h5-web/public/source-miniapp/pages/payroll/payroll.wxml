@@ -57,6 +57,7 @@
       </view>
       <view class="record-detail">
         <text class="color-size">{{item.color}} {{item.size}}</text>
+        <text wx:if="{{item.cuttingBundleNo}}" class="bundle-no">菲号{{item.cuttingBundleNo}}</text>
         <text class="process">{{item.processName}}</text>
         <text wx:if="{{item.scanTypeText && item.scanTypeText !== '-'}}" class="scan-type-tag">{{item.scanTypeText}}</text>
       </view>
@@ -74,7 +75,10 @@
           <text class="equals">=</text>
           <text class="amount" user-select>¥{{item.totalAmount}}</text>
         </view>
-        <text class="time">{{item.scanTime}}</text>
+        <view class="footer-right">
+          <text class="payment-status payment-status-{{item.paymentStatus || 'none'}}">{{item.paymentStatusText}}</text>
+          <text class="time">{{item.scanTime}}</text>
+        </view>
       </view>
     </view>
 

@@ -105,9 +105,3 @@
   background-color: rgba(239, 68, 68, 0.1);
   color: var(--color-error);
 }
-
-/* 哑光灰 — 已完成 / 次要状态 */
-.tag-muted {
-  background-color: rgba(156, 163, 175, 0.15);
-  color: var(--color-text-secondary);
-}

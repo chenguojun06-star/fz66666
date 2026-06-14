@@ -1,15 +1,15 @@
 Component({
   options: {
-    styleIsolation: 'apply-shared'
+    styleIsolation: 'apply-shared',
   },
   properties: {
     sizeMatrix: {
       type: Object,
-      value: { sizes: [], rows: [] }
+      value: { sizes: [], rows: [] },
     },
     mode: {
       type: String,
-      value: 'compact'
-    }
-  }
+      value: 'compact',
+    },
+  },
 });

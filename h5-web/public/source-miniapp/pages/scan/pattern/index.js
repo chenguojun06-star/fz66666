@@ -6,8 +6,9 @@ const toast = require('../../../utils/uiHelper').toast;
 const api = require('../../../utils/api');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 const { triggerDataRefresh } = require('../../../utils/eventBus');
+const SKUProcessor = require('../processors/SKUProcessor');
 
-// ---- 常量（与 PatternHandler.js 保持一致） ----
+// ---- 常量（样板操作类型定义） ----
 const OPERATION_LABELS = {
   RECEIVE: '领取样板',
   PLATE: '车板扫码',
@@ -58,7 +59,15 @@ function normalizePositiveInt(value, fallback) {
 Page({
   data: {
     detail: {},
+    skuList: [],
+    summary: {},
     loading: false,
+    warehouseOptions: [],
+    warehouseAreaId: '',
+    warehouseLocationCode: '',
+    locationOptions: [],
+    reviewImages: [],
+    maxImages: 9,
   },
 
   onLoad() {
@@ -70,7 +79,7 @@ Page({
       return;
     }
 
-    // 复用 PatternHandler.showPatternConfirmModal 的构建逻辑
+    // 构建样板详情页数据
     const patternDetail = data.patternDetail || {};
     const rawOptions = Array.isArray(data.operationOptions) ? data.operationOptions : [];
     // 四步扫码：领取 → 完成 → 审核 → 入库（与PC端对齐）
@@ -99,6 +108,7 @@ Page({
         styleNo: data.styleNo,
         color: data.color,
         quantity: normalizePositiveInt(data.quantity, 1),
+        maxQuantity: normalizePositiveInt(data.quantity, 1),
         warehouseCode: '',
         status: status,
         statusLabel: STATUS_LABELS[status] || data.statusLabel || status || '-',
@@ -125,14 +135,19 @@ Page({
         submitLabel: submitLabel,
         remark: '',
         reviewResult: 'PASS',
+        hasProcessSystem: !!data.hasProcessSystem,
+        orderId: data.orderId || '',
+        orderNo: data.orderNo || '',
+        stageGroups: data.stageGroups || [],
       },
     });
 
     // Process size/color matrix for table display + aggregated text (matching PC端 cardSizeQuantity.ts)
     const matrix = patternDetail.sizeColorMatrix;
-    var matrixSizes = (matrix && Array.isArray(matrix.sizes) && matrix.sizes.length > 0)
+    const matrixSizes = (matrix && Array.isArray(matrix.sizes) && matrix.sizes.length > 0)
       ? matrix.sizes
       : (matrix && Array.isArray(matrix.commonSizes) ? matrix.commonSizes : []);
+    const matrixItems = [];
     if (matrix && Array.isArray(matrix.matrixRows)
         && matrixSizes.length > 0 && matrix.matrixRows.length > 0) {
       const matrixRows = matrix.matrixRows.map(row => {
@@ -146,40 +161,51 @@ Page({
       const grandTotal = matrixRows.reduce((s, r) => s + r.rowTotal, 0);
 
       // Build aggregated items (replicating PC端 buildStyleMatrixItems logic)
-      var items = [];
       matrix.matrixRows.forEach(function(row) {
-        var color = row.color || '';
-        var qtys = Array.isArray(row.quantities) ? row.quantities : [];
+        const color = row.color || '';
+        const qtys = Array.isArray(row.quantities) ? row.quantities : [];
         matrixSizes.forEach(function(size, idx) {
-          var qty = Number(qtys[idx]) || 0;
+          const qty = Number(qtys[idx]) || 0;
           if (size && qty > 0) {
-            items.push({ color: color, size: size, quantity: qty });
+            matrixItems.push({ color: color, size: size, quantity: qty });
           }
         });
       });
 
-      var matrixUpdate = {
+      const matrixUpdate = {
         'detail.hasMatrix': true,
         'detail.matrixSizes': matrixSizes,
         'detail.matrixRows': matrixRows,
         'detail.matrixTotal': grandTotal,
+        'detail.maxQuantity': grandTotal > 0 ? grandTotal : (this.data.detail.maxQuantity || 1),
       };
 
-      if (items.length > 0) {
-        var uniqueColors = [];
-        items.forEach(function(item) {
+      if (matrixItems.length > 0) {
+        const uniqueColors = [];
+        matrixItems.forEach(function(item) {
           if (item.color && uniqueColors.indexOf(item.color) === -1) {
             uniqueColors.push(item.color);
           }
         });
         matrixUpdate['detail.colorText'] = uniqueColors.join(' / ');
-        matrixUpdate['detail.sizeText'] = items.map(function(i) { return i.size; }).join(' / ');
-        matrixUpdate['detail.quantityText'] = items.map(function(i) { return String(i.quantity); }).join(' / ');
+        matrixUpdate['detail.sizeText'] = matrixItems.map(function(i) { return i.size; }).join(' / ');
+        matrixUpdate['detail.quantityText'] = matrixItems.map(function(i) { return String(i.quantity); }).join(' / ');
         matrixUpdate['detail.totalQuantity'] = grandTotal;
       }
 
       this.setData(matrixUpdate);
     }
+
+    // 构建 SKU 列表用于多色多码选择
+    if (matrixItems.length > 0 || (data.orderItems && data.orderItems.length > 0)) {
+      const skuItems = matrixItems.length > 0 ? matrixItems : (data.orderItems || []);
+      const normalized = SKUProcessor.normalizeOrderItems(skuItems, data.orderNo, data.styleNo);
+      const formItems = SKUProcessor.buildSKUInputList(normalized);
+      const summary = SKUProcessor.getSummary(formItems);
+      this.setData({ skuList: formItems, summary: summary });
+    }
+
+    this._loadWarehouseOptions();
   },
 
   onUnload() {
@@ -214,7 +240,24 @@ Page({
   },
 
   onQuantityInput(e) {
-    this.setData({ 'detail.quantity': e.detail.value });
+    const maxQty = this.data.detail.maxQuantity || this.data.detail.quantity || 999999;
+    const inputQty = parseInt(e.detail.value, 10) || 0;
+    // 如果输入超过最大值，自动修正
+    if (inputQty > maxQty) {
+      toast.warning('数量不能超过最大数量 ' + maxQty + ' 件');
+      this.setData({ 'detail.quantity': maxQty });
+    } else {
+      this.setData({ 'detail.quantity': e.detail.value });
+    }
+  },
+
+  onSkuInput(e) {
+    const idx = e.currentTarget.dataset.index;
+    const val = parseInt(e.detail.value, 10) || 0;
+    const key = 'skuList[' + idx + '].inputQuantity';
+    this.setData({ [key]: val });
+    const summary = SKUProcessor.getSummary(this.data.skuList);
+    this.setData({ summary: summary });
   },
 
   onWarehouseInput(e) {
@@ -223,6 +266,102 @@ Page({
 
   onRemarkInput(e) {
     this.setData({ 'detail.remark': e.detail.value });
+  },
+
+  /* ====== 仓库区域 + 库位选择 ====== */
+
+  async _loadWarehouseOptions() {
+    try {
+      const res = await api.warehouse.listWarehouseAreas('SAMPLE');
+      const data = res?.data || res;
+      const list = Array.isArray(data) ? data : [];
+      if (list.length > 0) {
+        const areaMap = {};
+        const options = [];
+        const sorted = list
+          .filter(function(item) { return item.areaName && item.id; })
+          .sort(function(a, b) { return (a.sort || 0) - (b.sort || 0); });
+        for (let i = 0; i < sorted.length; i++) {
+          const item = sorted[i];
+          options.push(item.areaName);
+          areaMap[item.areaName] = item.id;
+        }
+        if (options.length > 0) {
+          this.setData({ warehouseOptions: options });
+          this._warehouseAreaMap = areaMap;
+        }
+      }
+    } catch (e) {
+      console.warn('[PatternPage] 加载仓库选项失败', e);
+    }
+  },
+
+  onWarehouseChipTap(e) {
+    const value = e.currentTarget.dataset.value;
+    const areaId = this._warehouseAreaMap && this._warehouseAreaMap[value];
+    this.setData({
+      'detail.warehouseCode': value,
+      warehouseAreaId: areaId || '',
+      warehouseLocationCode: '',
+      locationOptions: [],
+    });
+    if (areaId) this._loadLocationOptions(areaId);
+  },
+
+  onWarehouseClear() {
+    this.setData({
+      'detail.warehouseCode': '',
+      warehouseAreaId: '',
+      warehouseLocationCode: '',
+      locationOptions: [],
+    });
+  },
+
+  async _loadLocationOptions(areaId) {
+    if (!areaId) {
+      this.setData({ locationOptions: [] });
+      this._locationMap = {};
+      return;
+    }
+    try {
+      const res = await api.warehouse.listLocations('SAMPLE', areaId);
+      const data = res?.data || res;
+      const list = Array.isArray(data) ? data : [];
+      if (list.length > 0) {
+        const locMap = {};
+        const options = [];
+        for (let i = 0; i < list.length; i++) {
+          const item = list[i];
+          const label = item.locationCode || item.locationName || '';
+          if (label) {
+            options.push(label);
+            locMap[label] = item.locationCode || label;
+          }
+        }
+        this.setData({ locationOptions: options });
+        this._locationMap = locMap;
+      } else {
+        this.setData({ locationOptions: [] });
+        this._locationMap = {};
+      }
+    } catch (e) {
+      console.warn('[PatternPage] 加载库位选项失败', e);
+      this.setData({ locationOptions: [] });
+      this._locationMap = {};
+    }
+  },
+
+  onLocationChipTap(e) {
+    const value = e.currentTarget.dataset.value;
+    this.setData({ warehouseLocationCode: value });
+  },
+
+  onLocationClear() {
+    this.setData({ warehouseLocationCode: '' });
+  },
+
+  onLocationCodeInput(e) {
+    this.setData({ warehouseLocationCode: e.detail.value });
   },
 
   onReviewResultChange(e) {
@@ -236,11 +375,94 @@ Page({
     wx.previewImage({ urls: [url], current: url });
   },
 
+  previewReviewImage(e) {
+    const index = e.currentTarget.dataset.index;
+    const images = this.data.reviewImages || [];
+    if (images.length === 0 || index >= images.length) return;
+    wx.previewImage({
+      urls: images,
+      current: images[index],
+    });
+  },
+
+  chooseReviewImage() {
+    const images = this.data.reviewImages || [];
+    const remaining = this.data.maxImages - images.length;
+    if (remaining <= 0) {
+      toast.warning('最多只能上传' + this.data.maxImages + '张图片');
+      return;
+    }
+
+    wx.chooseImage({
+      count: remaining,
+      sizeType: ['compressed'],
+      sourceType: ['album', 'camera'],
+      success: (res) => {
+        const tempFilePaths = res.tempFilePaths || [];
+        if (tempFilePaths.length === 0) return;
+
+        this._uploadImages(tempFilePaths);
+      },
+      fail: (err) => {
+        console.error('[PatternPage] 选择图片失败:', err);
+        toast.error('选择图片失败');
+      },
+    });
+  },
+
+  _uploadImages(filePaths) {
+    const uploadPromises = filePaths.map((filePath) => {
+      return new Promise((resolve, reject) => {
+        wx.uploadFile({
+          url: `${getApp().globalData.baseUrl}/api/common/upload/image`,
+          filePath: filePath,
+          name: 'file',
+          success: (res) => {
+            try {
+              const data = JSON.parse(res.data);
+              if (data && data.code === 200 && data.data) {
+                resolve(data.data);
+              } else {
+                reject(new Error(data?.message || '上传失败'));
+              }
+            } catch (e) {
+              reject(e);
+            }
+          },
+          fail: (err) => {
+            reject(err);
+          },
+        });
+      });
+    });
+
+    toast.loading('上传中...');
+    Promise.all(uploadPromises)
+      .then((results) => {
+        const newImages = results.filter((url) => url && typeof url === 'string');
+        const updatedImages = [...this.data.reviewImages, ...newImages];
+        this.setData({ reviewImages: updatedImages });
+        toast.success('上传成功');
+      })
+      .catch((err) => {
+        console.error('[PatternPage] 图片上传失败:', err);
+        toast.error('上传失败');
+      });
+  },
+
+  removeReviewImage(e) {
+    const index = e.currentTarget.dataset.index;
+    const images = this.data.reviewImages || [];
+    if (index >= images.length) return;
+    const updatedImages = images.filter((_, i) => i !== index);
+    this.setData({ reviewImages: updatedImages });
+  },
+
   goBack() {
     wx.navigateBack();
   },
 
-  // ---- 提交逻辑（直接调用 API，不依赖 scanHandler） ----
+  // ---- 提交逻辑（样衣使用独立逻辑，不走菲号系统） ----
 
   async submitOp() {
     const d = this.data.detail;
@@ -254,17 +476,44 @@ Page({
     const qty = normalizePositiveInt(d.quantity, 0);
     const remark = String(d.remark || '').trim();
 
+    if (operationType === 'ALL_COMPLETED') {
+      toast.info('全部工序已完成');
+      return;
+    }
+
+    // 样衣有自己独立的父子关系逻辑，不走大货的菲号系统
+    // 优先使用工序系统（如果有），否则使用传统样衣流程
+    if (d.hasProcessSystem) {
+      return await this._submitProcessScan(d, operationType, qty, remark);
+    }
+
+    // 传统样衣流程：领取 → 完成 → 审核 → 入库
     if (operationType !== 'REVIEW' && operationType !== 'COMPLETE' && qty <= 0) {
       toast.error('请输入正确数量');
+      return;
+    }
+    const maxQty = d.maxQuantity || d.quantity || 999999;
+    if (operationType !== 'REVIEW' && operationType !== 'COMPLETE' && qty > maxQty) {
+      toast.error('数量不能超过最大数量 ' + maxQty + ' 件');
       return;
     }
     if (operationType === 'REVIEW' && !remark) {
       toast.error('请填写审核备注');
       return;
     }
-    if (WAREHOUSE_OPERATIONS.has(operationType) && !String(d.warehouseCode || '').trim()) {
-      toast.error('仓库操作请填写仓位编号');
-      return;
+    if (WAREHOUSE_OPERATIONS.has(operationType)) {
+      if (!String(d.warehouseCode || '').trim()) {
+        toast.error('请选择入库仓库');
+        return;
+      }
+      if (!this.data.warehouseAreaId) {
+        toast.error('请选择仓库区域');
+        return;
+      }
+      if (!this.data.warehouseLocationCode) {
+        toast.error('请选择库位');
+        return;
+      }
     }
 
     this.setData({ loading: true });
@@ -273,7 +522,8 @@ Page({
 
       if (operationType === 'REVIEW') {
         const reviewResult = d.reviewResult || 'PASS';
-        const res = await api.production.reviewPattern(d.patternId, reviewResult, remark);
+        const images = this.data.reviewImages || [];
+        const res = await api.production.reviewPattern(d.patternId, reviewResult, remark, images);
         const resultMsg = reviewResult === 'PASS' ? '审核通过' : reviewResult === 'REWORK' ? '审核返修，请扫码返修' : '审核已驳回';
         result = res ? { success: true, message: resultMsg } : { success: false, message: '审核提交失败' };
 
@@ -282,33 +532,27 @@ Page({
         result = res ? { success: true, message: '制作完成' } : { success: false, message: '完成操作失败' };
 
       } else if (operationType === 'WAREHOUSE_IN') {
-        // 入库前自动审核（如尚未审核通过）
-        const latestDetail = await api.production.getPatternDetail(d.patternId);
-        const reviewApproved =
-          latestDetail?.reviewStatus === 'APPROVED' || latestDetail?.reviewResult === 'APPROVED';
-        if (!reviewApproved) {
-          const reviewRes = await api.production.reviewPattern(d.patternId, 'APPROVED', remark);
-          if (!reviewRes) {
-            result = { success: false, message: '入库前自动审核失败' };
-          }
-        }
-        if (!result) {
-          const wiRes = await api.production.warehouseIn(d.patternId, d.warehouseCode || '', remark);
-          result = wiRes ? { success: true, message: '样衣入库成功' } : { success: false, message: '入库失败' };
-        }
+        // 入库操作，不再自动审核
+        const wiRes = await api.production.warehouseIn(d.patternId, d.warehouseCode || '',
+          this.data.warehouseAreaId, this.data.warehouseLocationCode, remark);
+        result = wiRes ? { success: true, message: '样衣入库成功' } : { success: false, message: '入库失败' };
 
       } else if (operationType === 'RECEIVE') {
-        const rcvRes = await api.production.receivePattern(d.patternId, remark);
+        const receiveExtra = {};
+        if (d.color) receiveExtra.color = d.color;
+        if (qty > 0) receiveExtra.quantity = qty;
+        const rcvRes = await api.production.receivePattern(d.patternId, remark, receiveExtra);
         result = rcvRes ? { success: true, message: '领取成功' } : { success: false, message: '领取样板失败' };
 
       } else {
-        // COMPLETE、PLATE、FOLLOW_UP 等走通用扫码接口
         const scanRes = await api.production.submitPatternScan({
           patternId: d.patternId,
           operationType: operationType,
           operatorRole: 'PLATE_WORKER',
           quantity: qty,
           warehouseCode: d.warehouseCode,
+          warehouseAreaId: this.data.warehouseAreaId,
+          warehouseLocationCode: this.data.warehouseLocationCode,
           remark: remark,
         });
         result = {
@@ -330,6 +574,109 @@ Page({
       toast.error(e.errMsg || e.message || '提交失败');
     } finally {
       this.setData({ loading: false });
+    }
+  },
+
+  async _submitProcessScan(d, operationType, qty, remark) {
+    const selectedOption = (d.operationOptions || []).find(function(o) { return o.value === operationType; });
+    const processName = selectedOption && selectedOption.processName || operationType;
+    const progressStage = selectedOption && selectedOption.progressStage || operationType;
+    const scanType = selectedOption && selectedOption.scanType || 'production';
+
+    // 检查是否有多色多码选择
+    const hasSkuList = this.data.skuList && this.data.skuList.length > 0;
+    if (hasSkuList) {
+      const validation = SKUProcessor.validateSKUInputBatch(this.data.skuList);
+      if (!validation.valid) {
+        toast.error((validation.errors && validation.errors[0]) || '请检查输入');
+        return;
+      }
+      if (validation.validList.length === 0) {
+        toast.error('请至少输入一个数量');
+        return;
+      }
+
+      this.setData({ loading: true });
+      try {
+        const requests = SKUProcessor.generateScanRequests(
+          validation.validList,
+          d.orderNo,
+          d.styleNo,
+          progressStage,
+          {
+            scanCode: d.patternId || '',
+            sourceBizType: 'SAMPLE',
+            operatorRole: 'PLATE_WORKER',
+            orderId: d.orderId,
+            processName: processName,
+            remark: remark || '',
+          },
+        );
+
+        // 添加仓库信息到每个请求
+        requests.forEach(function(req) {
+          req.scanType = scanType;
+          req.bundleNo = d.bundleNo || '01';
+          if (d.warehouseCode) req.warehouse = d.warehouseCode;
+          if (this.data.warehouseAreaId) req.warehouseAreaId = this.data.warehouseAreaId;
+          if (this.data.warehouseLocationCode) req.warehouseLocationCode = this.data.warehouseLocationCode;
+        }.bind(this));
+
+        const tasks = requests.map(function(req) {
+          return api.production.executeScan(req);
+        });
+
+        await Promise.all(tasks);
+        toast.success((selectedOption && selectedOption.label) || processName + ' 完成（' + tasks.length + '条）');
+        this._emitRefresh();
+        wx.navigateBack();
+      } catch (e) {
+        console.error('[样板页] 工序扫码提交失败:', e);
+        toast.error(e.errMsg || e.message || '工序扫码失败');
+      } finally {
+        this.setData({ loading: false });
+      }
+    } else {
+      if (qty <= 0) {
+        toast.error('请输入正确数量');
+        return;
+      }
+      const maxQty = d.maxQuantity || d.quantity || 999999;
+      if (qty > maxQty) {
+        toast.error('数量不能超过最大数量 ' + maxQty + ' 件');
+        return;
+      }
+
+      this.setData({ loading: true });
+      try {
+        const scanData = {
+          orderNo: d.orderNo || '',
+          orderId: d.orderId || '',
+          bundleNo: d.bundleNo || '01',
+          processName: processName,
+          progressStage: progressStage,
+          scanType: scanType,
+          quantity: qty,
+          scanCode: d.patternId || '',
+          sourceBizType: 'SAMPLE',
+          operatorRole: 'PLATE_WORKER',
+          remark: remark || '',
+        };
+
+        if (d.warehouseCode) scanData.warehouse = d.warehouseCode;
+        if (this.data.warehouseAreaId) scanData.warehouseAreaId = this.data.warehouseAreaId;
+        if (this.data.warehouseLocationCode) scanData.warehouseLocationCode = this.data.warehouseLocationCode;
+
+        await api.production.executeScan(scanData);
+        toast.success((selectedOption && selectedOption.label) || processName + ' 完成');
+        this._emitRefresh();
+        wx.navigateBack();
+      } catch (e) {
+        console.error('[样板页] 工序扫码提交失败:', e);
+        toast.error(e.errMsg || e.message || '工序扫码失败');
+      } finally {
+        this.setData({ loading: false });
+      }
     }
   },
 

@@ -4,7 +4,7 @@
   <view class="privacy-box">
     <view class="privacy-title">隐私保护说明</view>
     <view class="privacy-content">
-      <text>感谢您使用{{appName || '云裳智链'}}。\n\n为实现登录认证、工序扫码、生产追踪与消息通知，我们会在必要范围内收集并使用账号信息与业务数据。\n\n本小程序仅在扫码场景使用摄像头权限，不会用于与业务无关的用途，也不会向第三方出售您的个人信息。\n\n请先阅读并同意《用户服务协议》与《隐私政策》后继续使用。</text>
+      <text>感谢您使用{{appName || '衣智链'}}。\n\n为实现登录认证、工序扫码、生产追踪与消息通知，我们会在必要范围内收集并使用账号信息与业务数据。\n\n本小程序仅在扫码场景使用摄像头权限，不会用于与业务无关的用途，也不会向第三方出售您的个人信息。\n\n请先阅读并同意《用户服务协议》与《隐私政策》后继续使用。</text>
     </view>
     <view class="privacy-link" bindtap="onViewService">查看《用户服务协议》</view>
     <view class="privacy-link" bindtap="onViewPrivacy">查看《隐私政策》</view>

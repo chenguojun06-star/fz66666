@@ -15,7 +15,6 @@ function getFrontendOrigin() {
 Page({
   data: {
     tenantCode: '',
-    tenantName: '',
     qrUrl: '',
     loading: false,
   },
@@ -40,7 +39,8 @@ Page({
       this._inviteToken = qrData.inviteToken || '';
       this._expiresAt = qrData.expiresAt || '';
 
-      this.setData({ tenantCode, tenantName, qrUrl: qrCodeBase64 });
+      this.setData({ tenantCode, qrUrl: qrCodeBase64 });
+      this._tenantName = tenantName;
     } catch (err) {
       console.error('[invite] loadTenantInfo failed', err);
       wx.showToast({ title: '加载失败，请重试', icon: 'none' });
@@ -63,7 +63,7 @@ Page({
 
   onCopyInviteUrl() {
     const code = this.data.tenantCode;
-    const name = this.data.tenantName;
+    const name = this._tenantName || '工厂';
     if (!code) {
       wx.showToast({ title: '暂无邀请码', icon: 'none' });
       return;
@@ -78,7 +78,7 @@ Page({
   },
 
   onShareAppMessage() {
-    const name = this.data.tenantName || '工厂';
+    const name = this._tenantName || '工厂';
     return {
       title: name + ' · 邀请你加入',
       path: '/pages/login/index?inviteToken=' + encodeURIComponent(this._inviteToken || ''),

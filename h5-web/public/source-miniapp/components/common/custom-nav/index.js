@@ -23,9 +23,13 @@ Component({
       type: Boolean,
       value: false,
     },
+    interceptBack: {
+      type: Boolean,
+      value: false,
+    },
     bgColor: {
       type: String,
-      value: '#ffffff',
+      value: '#2563EB',
     },
   },
   data: {
@@ -57,13 +61,16 @@ Component({
       this.triggerEvent('searchclear');
     },
     onBack() {
+      if (this.data.interceptBack) {
+        this.triggerEvent('back');
+        return;
+      }
       const pages = getCurrentPages();
       if (pages.length > 1) {
         wx.navigateBack();
       } else {
         wx.switchTab({ url: '/pages/home/index' });
       }
-      this.triggerEvent('back');
     },
   },
 });

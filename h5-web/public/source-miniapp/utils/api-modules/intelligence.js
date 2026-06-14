@@ -13,12 +13,12 @@ const intelligence = {
     return ok('/api/intelligence/ai-advisor/chat', 'POST', payload || {}, { timeout: 90000 });
   },
   aiAdvisorChatStream(payload, onEvent, onDone, onError) {
-    var doneCalled = false;
-    var token = getToken();
-    var question = encodeURIComponent(payload.question || '');
-    var pageContext = payload.pageContext ? encodeURIComponent(payload.pageContext) : '';
-    var conversationId = payload.conversationId || '';
-    var url = '/api/intelligence/ai-advisor/chat/stream?question=' + question;
+    let doneCalled = false;
+    const token = getToken();
+    const question = encodeURIComponent(payload.question || '');
+    const pageContext = payload.pageContext ? encodeURIComponent(payload.pageContext) : '';
+    const conversationId = payload.conversationId || '';
+    let url = '/api/intelligence/ai-advisor/chat/stream?question=' + question;
     if (pageContext) url += '&pageContext=' + pageContext;
     if (conversationId) url += '&conversationId=' + encodeURIComponent(conversationId);
     if (payload.imageUrl) url += '&imageUrl=' + encodeURIComponent(payload.imageUrl);
@@ -26,18 +26,18 @@ const intelligence = {
     if (payload.processName) url += '&processName=' + encodeURIComponent(payload.processName);
     if (payload.stage) url += '&stage=' + encodeURIComponent(payload.stage);
 
-    var safeDone = function () {
+    const safeDone = function () {
       if (doneCalled) return;
       doneCalled = true;
       if (onDone) onDone();
     };
-    var safeError = function (err) {
+    const safeError = function (err) {
       if (doneCalled) return;
       doneCalled = true;
       if (onError) onError(err);
     };
 
-    var requestTask = wx.request({
+    const requestTask = wx.request({
       url: config.getBaseUrl() + url,
       method: 'GET',
       header: { 'Authorization': token ? 'Bearer ' + token : '' },
@@ -53,17 +53,17 @@ const intelligence = {
     });
 
     if (requestTask && requestTask.onChunkReceived) {
-      var buf = '';
-      var eventName = '';
+      let buf = '';
+      let eventName = '';
       requestTask.onChunkReceived(function (res) {
         try {
-          var str = '';
+          let str = '';
           if (res.data && res.data instanceof ArrayBuffer) {
-            var arr = new Uint8Array(res.data);
-            for (var i = 0; i < arr.length; i++) str += String.fromCharCode(arr[i]);
+            const arr = new Uint8Array(res.data);
+            for (let i = 0; i < arr.length; i++) str += String.fromCharCode(arr[i]);
             try {
-              var bytes = new Uint8Array(str.length);
-              for (var j = 0; j < str.length; j++) bytes[j] = str.charCodeAt(j);
+              const bytes = new Uint8Array(str.length);
+              for (let j = 0; j < str.length; j++) bytes[j] = str.charCodeAt(j);
               str = new TextDecoder('utf-8').decode(bytes);
             } catch (_de) {
               str = decodeURIComponent(escape(str));
@@ -73,20 +73,20 @@ const intelligence = {
           }
           if (!str) return;
           buf += str;
-          var lines = buf.split('\n');
+          const lines = buf.split('\n');
           buf = lines.pop() || '';
-          for (var li = 0; li < lines.length; li++) {
-            var line = lines[li];
+          for (let li = 0; li < lines.length; li++) {
+            const line = lines[li];
             if (line.startsWith('event:')) {
               eventName = line.slice(6).trim();
             } else if (line.startsWith('data:') && eventName) {
-              var dataStr = line.slice(5).trim();
+              const dataStr = line.slice(5).trim();
               try {
-                var parsed = JSON.parse(dataStr);
+                const parsed = JSON.parse(dataStr);
                 if (eventName === 'done') {
                   safeDone();
                 } else {
-                    if (onEvent) onEvent({ type: eventName, data: parsed });
+                  if (onEvent) onEvent({ type: eventName, data: parsed });
                 }
               } catch (_pe) {
                 if (onEvent) onEvent({ type: eventName, data: { content: dataStr } });
@@ -153,7 +153,11 @@ const intelligence = {
     return ok('/api/intelligence/forecast', 'POST', payload || {});
   },
   getLivePulse() {
-    return ok('/api/intelligence/live-pulse', 'POST', {});
+    return ok('/api/intelligence/live-pulse', 'POST', {}).catch(function(e) {
+      console.warn('[intelligence] live-pulse 接口异常:', e.message || e);
+      // 返回空数据而不是抛出错误，避免影响页面加载
+      return { data: null, error: true };
+    });
   },
   getHealthIndex() {
     return ok('/api/intelligence/health-index', 'POST', {});
