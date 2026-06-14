@@ -104,6 +104,22 @@
 - ❌ 禁止容器内使用 `localhost`（IPv6/IPv4 解析不可预测，Ubuntu 24.04 默认 IPv6 优先）
 - ❌ 禁止不必要的代理层（socat 等），Spring Boot 直接监听 PORT 环境变量
 
+### 12. CI/CD 部署禁止更换部署方式（INC-20260614 血的教训）
+
+- ✅ 部署必须使用 `TencentCloudBase/cloudbase-action@v2`，配置如下：
+  ```yaml
+  - name: 部署到腾讯云 CloudBase
+    uses: TencentCloudBase/cloudbase-action@v2
+    with:
+      secretId: ${{ secrets.CLOUDBASE_SECRET_ID }}
+      secretKey: ${{ secrets.CLOUDBASE_SECRET_KEY }}
+      envId: ${{ secrets.CLOUDBASE_ENV_ID }}
+  ```
+- ❌ 禁止改用 `tcb framework deploy` 直接调用（缺少认证，CI 环境无法交互登录）
+- ❌ 禁止改用 `tcb login` + `tcb framework deploy`（认证不稳定）
+- ❌ 禁止修改 `.github/workflows/ci.yml` 中的部署步骤，除非用户明确要求
+- ❌ 禁止添加 `npm install -g @cloudbase/cli` 等 CLI 安装步骤（action 内部已包含）
+
 ---
 
 ## 代码薄原则（强制上限）

@@ -190,6 +190,7 @@ fashion:
     auto-sync-timeout: ${FASHION_TEMPLATE_AUTO_SYNC_TIMEOUT:30}  # 同步超时时间（秒，默认：30）
 
 app:
+  public-base-url: ${APP_PUBLIC_BASE_URL:}
   auth:
     jwt-secret: ${APP_AUTH_JWT_SECRET:ThisIsA_LocalJwtSecret_OnlyForDev_0123456789}
     jwt-ttl-hours: ${APP_AUTH_JWT_TTL_HOURS:4}

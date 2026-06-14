@@ -72,6 +72,7 @@ public class IntelligenceInferenceOrchestrator {
     @Value("${ai.agnes2.api-url:https://apihub.agnes-ai.com/v1/chat/completions}") private String agnes2ApiUrl;
     @Value("${ai.agnes2.model:agnes-2.0-flash}") private String agnes2Model;
     @Value("${ai.agnes2.timeout-seconds:60}") private int agnes2TimeoutSeconds;
+    @Value("${app.public-base-url:}") private String appPublicBaseUrl;
     @Value("${ai.vision-models.strategy:failover}") private String visionModelStrategy;
 
     private List<VisionModelConfig> visionModels = new ArrayList<>();
@@ -249,6 +250,9 @@ public class IntelligenceInferenceOrchestrator {
             log.warn("[Vision] 缺少必要参数：imageUrl 为空");
             return null;
         }
+
+        // 规范化 imageUrl：相对路径 → 完整 HTTP URL（Agnes 要求 http/https/data 开头）
+        imageUrl = resolveImageUrl(imageUrl);
 
         if (visionModels.isEmpty()) {
             log.warn("[Vision] 没有可用的视觉模型");
@@ -832,4 +836,31 @@ public class IntelligenceInferenceOrchestrator {
 
     private int length(String value) { return value == null ? 0 : value.length(); }
     private boolean hasText(String value) { return value != null && !value.trim().isEmpty(); }
+
+    /**
+     * 规范化 imageUrl：相对路径 → 完整 HTTP URL
+     * Agnes/视觉模型要求 image_url 必须以 http:// https:// 或 data: 开头
+     * 前端在云托管环境传的是相对路径如 /api/file/xxx?token=yyy，需要拼接公网域名
+     */
+    private String resolveImageUrl(String imageUrl) {
+        if (!hasText(imageUrl)) return imageUrl;
+        // 已经是完整URL或base64，直接返回
+        if (imageUrl.startsWith("http://") || imageUrl.startsWith("https://") || imageUrl.startsWith("data:")) {
+            return imageUrl;
+        }
+        // 相对路径：拼接公网基础URL
+        String baseUrl = appPublicBaseUrl;
+        if (!hasText(baseUrl)) {
+            // 兜底：从请求上下文获取（如果没有则用环境变量）
+            baseUrl = System.getenv("APP_PUBLIC_BASE_URL");
+        }
+        if (hasText(baseUrl)) {
+            String resolved = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
+            resolved += imageUrl.startsWith("/") ? imageUrl : "/" + imageUrl;
+            log.info("[Vision] imageUrl 规范化: {} → {}", imageUrl.substring(0, Math.min(60, imageUrl.length())), resolved.substring(0, Math.min(80, resolved.length())));
+            return resolved;
+        }
+        log.warn("[Vision] imageUrl 是相对路径但未配置 app.public-base-url，视觉模型可能无法访问: {}", imageUrl.substring(0, Math.min(60, imageUrl.length())));
+        return imageUrl;
+    }
 }
