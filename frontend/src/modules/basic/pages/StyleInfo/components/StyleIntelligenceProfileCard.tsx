@@ -21,6 +21,7 @@ const STAGE_MAP = [
   { key: 'secondary', label: '二次工艺', done: (style: StyleInfo) => Boolean((style as any)?.secondaryCompletedTime) },
   { key: 'process', label: '工序单价', done: (style: StyleInfo) => Boolean((style as any)?.processCompletedTime) },
   { key: 'sizePrice', label: '码数单价', done: (style: StyleInfo) => Boolean((style as any)?.sizePriceCompletedTime) },
+  { key: 'sample', label: '样衣生产', done: (style: StyleInfo) => Boolean((style as any)?.sampleCompletedTime) || String((style as any)?.sampleStatus || '').trim().toUpperCase() === 'COMPLETED' },
 ] as const;
 
 const fmtMoney = (value?: number | null) => {
@@ -142,6 +143,7 @@ const SEVERITY_COLOR: Record<string, string> = {
 const StyleIntelligenceProfileCard: React.FC<Props> = ({ style }) => {
   const [loading, setLoading] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const [userToggled, setUserToggled] = useState(false);
   const [quoteSuggestion, setQuoteSuggestion] = useState<StyleQuoteSuggestionResponse | null>(null);
   const [profile, setProfile] = useState<StyleIntelligenceProfileResponse | null>(null);
   const [difficultyLoading, setDifficultyLoading] = useState(false);
@@ -198,6 +200,23 @@ const StyleIntelligenceProfileCard: React.FC<Props> = ({ style }) => {
     () => (profile?.insights?.length ? profile.insights : buildFallbackInsights(style || { styleNo: '', styleName: '', category: '', price: 0, cycle: 0 }, quoteSuggestion)),
     [profile?.insights, style, quoteSuggestion],
   );
+
+  // C. 高风险款式自动展开：已延期 / 即将超期 / 利润为负 / 开发完成度<40%
+  const isHighRisk = useMemo(() => {
+    if (deliveryMeta.label === '已延期' || deliveryMeta.label === '即将超期') return true;
+    const grossMargin = Number(profile?.finance?.estimatedGrossMargin);
+    if (Number.isFinite(grossMargin) && grossMargin < 0) return true;
+    const completion = profile?.developmentCompletionRate ?? progressMeta.percent;
+    if (Number.isFinite(completion) && completion < 40) return true;
+    return false;
+  }, [deliveryMeta.label, profile?.finance?.estimatedGrossMargin, profile?.developmentCompletionRate, progressMeta.percent]);
+
+  // 数据加载完成后，高风险款式自动展开一次；用户手动收起后不再强制弹开
+  useEffect(() => {
+    if (!loading && !userToggled && isHighRisk && !expanded) {
+      setExpanded(true);
+    }
+  }, [loading, userToggled, isHighRisk, expanded]);
 
   const handleAiImageAnalysis = useCallback(async () => {
     if (!styleId) return;
@@ -328,7 +347,7 @@ const StyleIntelligenceProfileCard: React.FC<Props> = ({ style }) => {
     >
       {/* ── 标题栏（常驻，点击折叠/展开） ── */}
       <div
-        onClick={() => setExpanded((v) => !v)}
+        onClick={() => { setUserToggled(true); setExpanded((v) => !v); }}
         style={{
           display: 'flex',
           alignItems: 'center',
@@ -344,6 +363,11 @@ const StyleIntelligenceProfileCard: React.FC<Props> = ({ style }) => {
         {/* 关键摘要 */}
         <Tag color={deliveryMeta.color} style={{ margin: 0 }}>{deliveryMeta.label}</Tag>
         <span style={{ fontSize: 14, color: '#595959' }}>完成度 <b style={{ color: '#1677ff' }}>{completionRate}%</b></span>
+        {doneCount < stageTags.length ? (
+          <span style={{ fontSize: 14, color: '#595959' }}>剩 <b style={{ color: '#ff4d4f' }}>{stageTags.length - doneCount}</b> 环节未完成</span>
+        ) : (
+          <span style={{ fontSize: 14, color: '#52c41a' }}>✓ {stageTags.length} 环节已全部完成</span>
+        )}
         <span style={{ fontSize: 14, color: '#595959' }}>订单 <b style={{ color: '#722ed1' }}>{orderCount} 单</b></span>
         {/* 难度徽章 */}
         {activeDifficulty && (
