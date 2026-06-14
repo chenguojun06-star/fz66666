@@ -916,7 +916,7 @@ export const intelligenceApi = {
 
   getDailyBriefing: (): Promise<DailyBriefing> =>
     api
-      .get<{ code: number; data: DailyBriefing }>('/intelligence/prediction/daily-briefing')
+      .get<{ code: number; data: DailyBriefing }>('/dashboard/briefing/today')
       .then((r) => (r?.data ?? ({} as DailyBriefing))),
 
   getDeliveryRisks: (topN = 10): Promise<PredictionDeliveryRiskItem[]> =>

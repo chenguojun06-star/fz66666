@@ -37,6 +37,7 @@ const RestockSuggestionCard: React.FC<RestockSuggestionCardProps> = ({ topN = 10
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [items, setItems] = useState<PredictionRestockSuggestionItem[]>([]);
+  const [collapsed, setCollapsed] = useState<boolean>(true);
 
   const [modalOpen, setModalOpen] = useState<boolean>(false);
   const [activeItem, setActiveItem] = useState<PredictionRestockSuggestionItem | null>(null);
@@ -256,28 +257,39 @@ const RestockSuggestionCard: React.FC<RestockSuggestionCardProps> = ({ topN = 10
       <Card
         style={CARD_STYLE}
         title={
-          <Space size={8}>
+          <Space size={8} style={{ cursor: 'pointer' }} onClick={() => setCollapsed(!collapsed)}>
             <span style={{ color: 'var(--color-warning, #faad14)' }}>●</span>
             <span style={{ fontWeight: 600 }}>补货建议 Top {topN}</span>
+            <span style={{ fontSize: 12, color: 'var(--color-text-tertiary, #999)', marginLeft: 4 }}>
+              {collapsed ? '点击展开' : '点击收起'}
+            </span>
           </Space>
         }
         extra={
-          <Button
-            type="text"
-            icon={<ReloadOutlined />}
-            onClick={fetchData}
-            loading={loading}
-            style={{ color: 'var(--color-text-secondary, #666)' }}
-          >
-            刷新
-          </Button>
+          <Space size={4}>
+            {!collapsed && (
+              <Button
+                type="text"
+                icon={<ReloadOutlined />}
+                onClick={fetchData}
+                loading={loading}
+                style={{ color: 'var(--color-text-secondary, #666)' }}
+              >
+                刷新
+              </Button>
+            )}
+          </Space>
         }
         bodyStyle={{ padding: 12 }}
       >
-        <Title level={5} style={{ margin: '0 0 8px 0', color: 'var(--color-text-secondary, #666)', fontWeight: 500 }}>
-          按优先级与可消耗天数排序
-        </Title>
-        {renderBody()}
+        {!collapsed && (
+          <>
+            <Title level={5} style={{ margin: '0 0 8px 0', color: 'var(--color-text-secondary, #666)', fontWeight: 500 }}>
+              按优先级与可消耗天数排序
+            </Title>
+            {renderBody()}
+          </>
+        )}
       </Card>
 
       <ResizableModal
