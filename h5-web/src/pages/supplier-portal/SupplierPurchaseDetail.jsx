@@ -9,6 +9,8 @@ const SupplierPurchaseDetail = () => {
   const [loading, setLoading] = useState(true);
   const [shipping, setShipping] = useState(false);
   const [shipQty, setShipQty] = useState('');
+  const [shipCompany, setShipCompany] = useState('');
+  const [shipTrackingNo, setShipTrackingNo] = useState('');
   const [shipRemark, setShipRemark] = useState('');
 
   useEffect(() => { loadDetail(); }, [purchaseId]);
@@ -19,18 +21,27 @@ const SupplierPurchaseDetail = () => {
     finally { setLoading(false); }
   };
 
+  const clearShipFields = () => {
+    setShipQty('');
+    setShipCompany('');
+    setShipTrackingNo('');
+    setShipRemark('');
+  };
+
   const handleShip = async () => {
     if (!shipQty || parseInt(shipQty) <= 0) { alert('请输入发货数量'); return; }
     setShipping(true);
     try {
-      await supplierPortal.updateShipment(purchaseId, {
+      const payload = {
         status: 'partial_arrival',
         shipQuantity: parseInt(shipQty),
-        remark: shipRemark,
-      });
+      };
+      if (shipCompany.trim()) payload.expressCompany = shipCompany.trim();
+      if (shipTrackingNo.trim()) payload.trackingNo = shipTrackingNo.trim();
+      if (shipRemark.trim()) payload.remark = shipRemark.trim();
+      await supplierPortal.updateShipment(purchaseId, payload);
       alert('发货信息已更新');
-      setShipQty('');
-      setShipRemark('');
+      clearShipFields();
       loadDetail();
     } catch (err) { alert('更新失败: ' + (err?.message || '')); }
     finally { setShipping(false); }
@@ -40,8 +51,13 @@ const SupplierPurchaseDetail = () => {
     if (!confirm('确认该采购单已全部发货？')) return;
     setShipping(true);
     try {
-      await supplierPortal.updateShipment(purchaseId, { status: 'completed', remark: '供应商确认全部发货' });
+      const payload = { status: 'completed' };
+      if (shipCompany.trim()) payload.expressCompany = shipCompany.trim();
+      if (shipTrackingNo.trim()) payload.trackingNo = shipTrackingNo.trim();
+      payload.remark = '供应商确认全部发货' + (shipRemark.trim() ? ' | ' + shipRemark.trim() : '');
+      await supplierPortal.updateShipment(purchaseId, payload);
       alert('已标记为全部发货');
+      clearShipFields();
       loadDetail();
     } catch (err) { alert('更新失败'); }
     finally { setShipping(false); }
@@ -79,8 +95,16 @@ const SupplierPurchaseDetail = () => {
             <input type="number" value={shipQty} onChange={(e) => setShipQty(e.target.value)} placeholder="输入数量" style={s.input} />
           </div>
           <div style={s.field}>
-            <label style={s.label}>备注</label>
-            <input type="text" value={shipRemark} onChange={(e) => setShipRemark(e.target.value)} placeholder="物流单号等" style={s.input} />
+            <label style={s.label}>快递公司</label>
+            <input type="text" value={shipCompany} onChange={(e) => setShipCompany(e.target.value)} placeholder="例如：顺丰、德邦、京东物流" style={s.input} />
+          </div>
+          <div style={s.field}>
+            <label style={s.label}>运单号</label>
+            <input type="text" value={shipTrackingNo} onChange={(e) => setShipTrackingNo(e.target.value)} placeholder="请输入物流运单号" style={s.input} />
+          </div>
+          <div style={s.field}>
+            <label style={s.label}>备注（可选）</label>
+            <input type="text" value={shipRemark} onChange={(e) => setShipRemark(e.target.value)} placeholder="其他备注信息" style={s.input} />
           </div>
           <div style={s.btnGroup}>
             <button onClick={handleShip} disabled={shipping} style={s.shipBtn}>{shipping ? '提交中...' : '登记发货'}</button>

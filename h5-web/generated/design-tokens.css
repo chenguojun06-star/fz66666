@@ -1,86 +1,77 @@
 /**
- * 服装供应链系统 - 设计 Token  v7.0
+ * 服装供应链系统 - 统一设计 Token  v8.0
  *
- * 严格对齐 WeUI v2.6.25 官方设计规范
- * 保持品牌蓝色主色调不变，结构色完全对齐 WeUI
+ * 对齐 WeUI v2.6.25 官方设计规范
+ * 融合 xiaoyun-tokens，统一为单一 Token 体系
  *
- * WeUI 源码参考: https://cdnjs.cloudflare.com/ajax/libs/weui/2.6.25/style/weui.min.css
- * WeUI 变量体系: --weui-FG-0/1/2/3/4, --weui-BG-0/1/2, --weui-BRAND 等
- *
- * @version 7.0
- * @date 2026-04-15
+ * @version 8.0
+ * @date 2026-05-17
  */
 
 :root {
-  /* ========== 颜色系统（对齐 WeUI v2.6.25） ========== */
-
+  /* ========== 品牌色 ========== */
   --color-primary: #2563eb;
   --color-primary-light: #3b82f6;
   --color-primary-dark: #1d4ed8;
   --color-primary-rgb: 37, 99, 235;
+  --color-primary-bg: rgba(37, 99, 235, 0.06);
+  --color-primary-border: rgba(37, 99, 235, 0.2);
 
   --gradient-progress: linear-gradient(90deg, #10b981 0%, #2563eb 100%);
 
-  --color-blue: #2563eb;
-  --color-blue-light: rgba(37, 99, 235, 0.08);
-  --color-blue-lighter: rgba(37, 99, 235, 0.04);
-
+  /* ========== 语义色 ========== */
   --color-success: #07c160;
+  --color-success-bg: rgba(7, 193, 96, 0.08);
+  --color-success-border: rgba(7, 193, 96, 0.2);
+
   --color-warning: #fa9d3b;
-  --color-error: #fa5151;
+  --color-warning-bg: rgba(250, 157, 59, 0.08);
+  --color-warning-border: rgba(250, 157, 59, 0.2);
+
   --color-danger: #fa5151;
+  --color-danger-bg: rgba(250, 81, 81, 0.08);
+  --color-danger-border: rgba(250, 81, 81, 0.2);
+
   --color-info: #10aeff;
-  --color-purple: #6467f0;
+  --color-info-bg: rgba(16, 174, 255, 0.08);
+  --color-info-border: rgba(16, 174, 255, 0.2);
 
-  --color-warning-bg: rgba(250, 157, 59, 0.1);
-  --color-error-bg: rgba(250, 81, 81, 0.1);
-  --color-success-bg: rgba(6, 174, 86, 0.1);
-  --color-info-bg: rgba(16, 174, 255, 0.1);
+  --color-link: #576b95;
 
-  --color-warning-border: #fde68a;
-  --color-error-border: #fca5a5;
-  --color-success-border: #a7f3d0;
-  --color-info-border: #93c5fd;
-
+  /* ========== 背景色 ========== */
   --color-bg-page: #ededed;
   --color-bg-card: #ffffff;
   --color-bg-gray: #f7f7f7;
   --color-bg-light: #fafbfc;
-  --color-bg-hover: rgba(0, 0, 0, 0.02);
+  --color-bg-hover: rgba(0, 0, 0, 0.03);
   --color-bg-active: #ececec;
 
+  /* ========== 文字色 ========== */
+  --color-text-primary: rgba(0, 0, 0, 0.9);
+  --color-text-secondary: rgba(0, 0, 0, 0.55);
+  --color-text-tertiary: rgba(0, 0, 0, 0.4);
+  --color-text-placeholder: rgba(0, 0, 0, 0.3);
+  --color-text-disabled: rgba(0, 0, 0, 0.2);
+  --color-text-white: #ffffff;
+
+  /* ========== 边框色 ========== */
   --color-border: rgba(0, 0, 0, 0.1);
   --color-border-light: rgba(0, 0, 0, 0.05);
   --color-border-blue: rgba(37, 99, 235, 0.2);
+  --color-divider: rgba(0, 0, 0, 0.08);
 
-  --color-divider: rgba(0, 0, 0, 0.1);
-
-  --color-text-primary: rgba(0, 0, 0, 0.9);
-  --color-text-secondary: rgba(0, 0, 0, 0.55);
-  --color-text-tertiary: rgba(0, 0, 0, 0.3);
-  --color-text-placeholder: rgba(0, 0, 0, 0.3);
-  --color-text-disabled: rgba(0, 0, 0, 0.15);
-  --color-text-white: #ffffff;
-
-  --color-link: #576b95;
-
-  --color-tag-bg-orange: rgba(250, 157, 59, 0.1);
-  --color-tag-bg-green: rgba(6, 174, 86, 0.1);
-  --color-tag-bg-red: rgba(250, 81, 81, 0.1);
-  --color-tag-bg-blue: rgba(16, 174, 255, 0.1);
-  --color-tag-bg-black: rgba(0, 0, 0, 0.05);
-
+  /* ========== 遮罩 ========== */
   --color-overlay: rgba(0, 0, 0, 0.5);
 
-  /* ========== 圆角系统（对齐 WeUI） ========== */
-  --radius-sm: 4px;
-  --radius-xs: 6px;
+  /* ========== 圆角系统 ========== */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
   --radius-md: 8px;
   --radius-lg: 12px;
-  --radius-xl: 12px;
+  --radius-xl: 16px;
   --radius-full: 999px;
 
-  /* ========== 间距系统（对齐 WeUI 16px 基准） ========== */
+  /* ========== 间距系统（8px 基准） ========== */
   --spacing-xs: 4px;
   --spacing-sm: 8px;
   --spacing-md: 12px;
@@ -88,25 +79,21 @@
   --spacing-xl: 20px;
   --spacing-xxl: 24px;
 
-  /* ========== 阴影系统（WeUI 极简风格） ========== */
-  --shadow-sm: 0 0 1px 0 rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 0 1px 0 rgba(0, 0, 0, 0.05), 0 2px 4px 0 rgba(0, 0, 0, 0.08);
-  --shadow-lg: 0 0 1px 0 rgba(0, 0, 0, 0.05), 0 4px 8px 0 rgba(0, 0, 0, 0.08);
-  --shadow-xl: 0 0 1px 0 rgba(0, 0, 0, 0.05), 0 8px 16px 0 rgba(0, 0, 0, 0.1);
+  /* ========== 阴影系统 ========== */
+  --shadow-sm: 0 0 1px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 0 1px rgba(0, 0, 0, 0.04), 0 2px 4px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 0 1px rgba(0, 0, 0, 0.04), 0 4px 8px rgba(0, 0, 0, 0.08);
+  --shadow-xl: 0 0 1px rgba(0, 0, 0, 0.04), 0 8px 16px rgba(0, 0, 0, 0.1);
   --shadow-modal: 0 16px 48px rgba(0, 0, 0, 0.12);
 
-  /* ========== 字体系统（对齐 WeUI） ========== */
-  --font-size-2xs: 10px;
-  --font-size-xxs: 11px;
-  --font-size-xs: 12px;
-  --font-size-sm: 13px;
+  /* ========== 字体系统 ========== */
+  --font-size-xs: 11px;
+  --font-size-sm: 12px;
   --font-size-md: 14px;
   --font-size-base: 15px;
-  --font-size-md-lg: 16px;
-  --font-size-lg: 17px;
-  --font-size-lg-xl: 18px;
-  --font-size-xl: 20px;
-  --font-size-2xl: 22px;
+  --font-size-lg: 16px;
+  --font-size-xl: 17px;
+  --font-size-2xl: 20px;
   --font-size-3xl: 24px;
   --font-size-4xl: 32px;
   --font-size-5xl: 40px;
@@ -122,13 +109,25 @@
   --line-height-medium: 1.5;
   --line-height-relaxed: 1.6;
 
-  --btn-height: 44px;
-  --btn-height-medium: 40px;
-  --btn-height-small: 32px;
-  --btn-font-size: 17px;
-  --btn-border-radius: 8px;
-  --btn-padding: 12px 24px;
+  /* ========== 输入框系统 ========== */
+  --input-height: 44px;
+  --input-height-sm: 36px;
+  --input-height-xs: 28px;
+  --input-bg: var(--color-bg-card);
+  --input-border: var(--color-border);
+  --input-focus-border: var(--color-primary);
+  --input-placeholder: var(--color-text-placeholder);
+  --input-radius: var(--radius-sm);
 
+  /* ========== 按钮系统 ========== */
+  --btn-height-lg: 48px;
+  --btn-height-md: 44px;
+  --btn-height-sm: 36px;
+  --btn-height-xs: 28px;
+  --btn-font-size: 16px;
+  --btn-radius: 8px;
+
+  /* ========== 层级系统 ========== */
   --z-base: 1;
   --z-dropdown: 100;
   --z-sticky: 200;
@@ -140,4 +139,44 @@
   --z-float-trigger: 9000;
   --z-float-badge: 9001;
   --z-float-panel: 9002;
+
+  /* ========== 页面布局 ========== */
+  --page-padding-x: 12px;
+  --page-padding-y: 12px;
+  --card-gap: 12px;
+  --nav-bar-height: 44px;
+
+  /* ========== 兼容别名（xiaoyun → 统一） ========== */
+  --color-error: var(--color-danger);
+  --color-error-bg: var(--color-danger-bg);
+  --xiaoyun-primary: var(--color-primary);
+  --xiaoyun-primary-bg: var(--color-primary-bg);
+  --xiaoyun-primary-border: var(--color-primary-border);
+  --xiaoyun-success: var(--color-success);
+  --xiaoyun-success-bg: var(--color-success-bg);
+  --xiaoyun-success-border: var(--color-success-border);
+  --xiaoyun-warning: var(--color-warning);
+  --xiaoyun-warning-bg: var(--color-warning-bg);
+  --xiaoyun-warning-border: var(--color-warning-border);
+  --xiaoyun-danger: var(--color-danger);
+  --xiaoyun-danger-bg: var(--color-danger-bg);
+  --xiaoyun-danger-border: var(--color-danger-border);
+  --xiaoyun-text-primary: var(--color-text-primary);
+  --xiaoyun-text-secondary: var(--color-text-secondary);
+  --xiaoyun-text-tertiary: var(--color-text-tertiary);
+  --xiaoyun-bg-card: var(--color-bg-card);
+  --xiaoyun-bg-page: var(--color-bg-page);
+  --xiaoyun-border-card: var(--color-border-light);
+  --xiaoyun-radius-sm: var(--radius-sm);
+  --xiaoyun-radius-md: var(--radius-md);
+  --xiaoyun-radius-lg: var(--radius-lg);
+  --xiaoyun-font-xs: 10px;
+  --xiaoyun-font-sm: 11px;
+  --xiaoyun-font-base: 12px;
+  --xiaoyun-font-lg: 14px;
+  --xiaoyun-font-xl: 17px;
+  --xiaoyun-spacing-xs: 4px;
+  --xiaoyun-spacing-sm: 8px;
+  --xiaoyun-spacing-md: 12px;
+  --xiaoyun-spacing-lg: 16px;
 }

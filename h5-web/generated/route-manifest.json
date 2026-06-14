@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-04-30T10:48:37.821Z",
+  "generatedAt": "2026-06-14T03:12:06.028Z",
   "tabBar": {
     "color": "#999999",
     "selectedColor": "#3b82f6",
@@ -13,16 +13,16 @@
         "selectedIconPath": "/assets/tabbar/home-active.png"
       },
       {
-        "pagePath": "pages/work/index",
-        "text": "生产",
-        "iconPath": "/assets/tabbar/work.png",
-        "selectedIconPath": "/assets/tabbar/work-active.png"
-      },
-      {
         "pagePath": "pages/scan/index",
         "text": "扫码",
         "iconPath": "/assets/tabbar/scan.png",
         "selectedIconPath": "/assets/tabbar/scan-active.png"
+      },
+      {
+        "pagePath": "pages/defect/index",
+        "text": "质检",
+        "iconPath": "/assets/tabbar/defect.png",
+        "selectedIconPath": "/assets/tabbar/defect-active.png"
       },
       {
         "pagePath": "pages/admin/index",
@@ -33,9 +33,9 @@
     ]
   },
   "window": {
-    "navigationBarTitleText": "生产管理",
-    "navigationBarBackgroundColor": "#ffffff",
-    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "衣智链",
+    "navigationBarBackgroundColor": "#2563EB",
+    "navigationBarTextStyle": "white",
     "backgroundTextStyle": "light"
   },
   "preloadRule": {
@@ -46,14 +46,13 @@
         "pkg-register",
         "pkg-bundle-split",
         "pkg-dashboard",
-        "pkg-smart-ops"
+        "pkg-smart-ops",
+        "pkg-more-apps"
       ]
     },
-    "pages/work/index": {
+    "pages/defect/index": {
       "network": "wifi",
       "packages": [
-        "pkg-work-inbox",
-        "pkg-work-ai",
         "pkg-bundle-split",
         "pkg-cutting",
         "pkg-procurement"
@@ -76,7 +75,9 @@
         "pkg-admin-approval",
         "pkg-payroll",
         "pkg-privacy",
-        "pkg-admin-misc"
+        "pkg-admin-misc",
+        "pkg-advance",
+        "pkg-finance"
       ]
     }
   },
@@ -92,8 +93,8 @@
       "type": "tab"
     },
     {
-      "source": "pages/work/index",
-      "h5Path": "/work",
+      "source": "pages/defect/index",
+      "h5Path": "/defect",
       "type": "tab"
     },
     {
@@ -111,18 +112,6 @@
       "h5Path": "/register",
       "type": "subpackage",
       "packageName": "pkg-register"
-    },
-    {
-      "source": "pages/work/inbox/index",
-      "h5Path": "/work/inbox",
-      "type": "subpackage",
-      "packageName": "pkg-work-inbox"
-    },
-    {
-      "source": "pages/work/ai-assistant/index",
-      "h5Path": "/work/ai-assistant",
-      "type": "subpackage",
-      "packageName": "pkg-work-ai"
     },
     {
       "source": "pages/scan/history/index",
@@ -157,6 +146,12 @@
     {
       "source": "pages/warehouse/sample/scan-action/index",
       "h5Path": "/warehouse/sample/scan-action",
+      "type": "subpackage",
+      "packageName": "pkg-warehouse"
+    },
+    {
+      "source": "pages/warehouse/location-scan/index",
+      "h5Path": "/warehouse/location-scan",
       "type": "subpackage",
       "packageName": "pkg-warehouse"
     },
@@ -203,10 +198,16 @@
       "packageName": "pkg-cutting"
     },
     {
-      "source": "pages/cutting/task-detail/index",
-      "h5Path": "/cutting/task-detail",
+      "source": "pages/cutting/bundle-detail/index",
+      "h5Path": "/cutting/bundle-detail",
       "type": "subpackage",
       "packageName": "pkg-cutting"
+    },
+    {
+      "source": "pages/procurement/task-list/index",
+      "h5Path": "/procurement/task-list",
+      "type": "subpackage",
+      "packageName": "pkg-procurement"
     },
     {
       "source": "pages/procurement/task-detail/index",
@@ -245,8 +246,20 @@
       "packageName": "pkg-scan-quality"
     },
     {
+      "source": "pages/quality-detail/index",
+      "h5Path": "/quality-detail",
+      "type": "subpackage",
+      "packageName": "pkg-quality-detail"
+    },
+    {
       "source": "pages/dashboard/index",
       "h5Path": "/dashboard",
+      "type": "subpackage",
+      "packageName": "pkg-dashboard"
+    },
+    {
+      "source": "pages/dashboard/process-edit/index",
+      "h5Path": "/dashboard/process-edit",
       "type": "subpackage",
       "packageName": "pkg-dashboard"
     },
@@ -255,6 +268,66 @@
       "h5Path": "/smart-ops",
       "type": "subpackage",
       "packageName": "pkg-smart-ops"
+    },
+    {
+      "source": "pages/order/create/index",
+      "h5Path": "/order/create",
+      "type": "subpackage",
+      "packageName": "pkg-order"
+    },
+    {
+      "source": "pages/order/create/form/index",
+      "h5Path": "/order/create/form",
+      "type": "subpackage",
+      "packageName": "pkg-order"
+    },
+    {
+      "source": "pages/order/remark/index",
+      "h5Path": "/order/remark",
+      "type": "subpackage",
+      "packageName": "pkg-order"
+    },
+    {
+      "source": "pages/order/no-data-create/index",
+      "h5Path": "/order/no-data-create",
+      "type": "subpackage",
+      "packageName": "pkg-order"
+    },
+    {
+      "source": "pages/more-apps/index",
+      "h5Path": "/more-apps",
+      "type": "subpackage",
+      "packageName": "pkg-more-apps"
+    },
+    {
+      "source": "pages/advance/list/index",
+      "h5Path": "/advance/list",
+      "type": "subpackage",
+      "packageName": "pkg-advance"
+    },
+    {
+      "source": "pages/factory/shipment/index",
+      "h5Path": "/factory/shipment",
+      "type": "subpackage",
+      "packageName": "pkg-factory"
+    },
+    {
+      "source": "pages/finance/payment/index",
+      "h5Path": "/finance/payment",
+      "type": "subpackage",
+      "packageName": "pkg-finance"
+    },
+    {
+      "source": "pages/sample-development/index/index",
+      "h5Path": "/sample-development/index",
+      "type": "subpackage",
+      "packageName": "pkg-sample-dev"
+    },
+    {
+      "source": "pages/sample-development/detail/index",
+      "h5Path": "/sample-development/detail",
+      "type": "subpackage",
+      "packageName": "pkg-sample-dev"
     }
   ]
 }

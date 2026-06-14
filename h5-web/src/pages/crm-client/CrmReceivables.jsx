@@ -6,25 +6,32 @@ const CrmReceivables = () => {
   const navigate = useNavigate();
   const [receivables, setReceivables] = useState([]);
   const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [page, setPage] = useState(1);
+  const [pageSize] = useState(20);
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState('');
 
-  useEffect(() => { loadReceivables(); }, [status]);
+  useEffect(() => { loadReceivables(); }, [status, page]);
 
   const loadReceivables = async () => {
     try {
       setLoading(true);
-      const params = {};
+      const params = { page, pageSize };
       if (status) params.status = status;
       const res = await crmClient.getReceivables(params);
       setReceivables(res?.list || []);
       setTotal(res?.total || 0);
+      setTotalPages(res?.totalPages || 0);
     } catch (err) {
       console.error('加载应收失败:', err);
     } finally {
       setLoading(false);
     }
   };
+
+  const goPrev = () => { if (page > 1) { setPage(page - 1); window.scrollTo({ top: 0, behavior: 'smooth' }); } };
+  const goNext = () => { if (page < totalPages) { setPage(page + 1); window.scrollTo({ top: 0, behavior: 'smooth' }); } };
 
   const statusFilters = [
     { label: '全部', value: '' },
@@ -60,6 +67,13 @@ const CrmReceivables = () => {
           <div style={s.cardRow}><span style={s.cardLabel}>到期日</span><span style={s.cardVal}>{r.dueDate || '-'}</span></div>
         </div>
       ))}
+      {totalPages > 1 && (
+        <div style={s.pagination}>
+          <button onClick={goPrev} disabled={page <= 1} style={{ ...s.pagBtn, opacity: page <= 1 ? 0.4 : 1 }}>上一页</button>
+          <span style={s.pagInfo}>第 {page} / {totalPages} 页 · 共 {total} 条</span>
+          <button onClick={goNext} disabled={page >= totalPages} style={{ ...s.pagBtn, opacity: page >= totalPages ? 0.4 : 1 }}>下一页</button>
+        </div>
+      )}
     </div>
   );
 };
@@ -79,6 +93,9 @@ const s = {
   cardRow: { display: 'flex', justifyContent: 'space-between', fontSize: '13px', padding: '3px 0' },
   cardLabel: { color: '#888' },
   cardVal: { color: '#333', fontWeight: '500' },
+  pagination: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', padding: '16px 8px 24px' },
+  pagBtn: { padding: '6px 16px', background: '#667eea', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '13px', cursor: 'pointer' },
+  pagInfo: { fontSize: '13px', color: '#888' },
 };
 
 export default CrmReceivables;
