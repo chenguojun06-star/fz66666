@@ -425,6 +425,8 @@ ai:
       enabled: ${AI_IM_AI_FEISHU_ENABLED:false}
       verification-token: ${AI_IM_AI_FEISHU_VERIFICATION_TOKEN:}
       encrypt-key: ${AI_IM_AI_FEISHU_ENCRYPT_KEY:}
+      app-id: ${AI_IM_AI_FEISHU_APP_ID:}
+      app-secret: ${AI_IM_AI_FEISHU_APP_SECRET:}
     dingtalk:
       enabled: ${AI_IM_AI_DINGTALK_ENABLED:false}
       app-secret: ${AI_IM_AI_DINGTALK_APP_SECRET:}
