@@ -64,6 +64,23 @@ public class ImAiWebhookController {
 
     // ==================== 飞书回调 ====================
 
+    /**
+     * 飞书回调 URL 验证（GET 请求）
+     * 飞书配置回调地址时，会先发 GET 请求验证 URL 有效性，要求返回 challenge 参数
+     */
+    @GetMapping("/feishu/callback")
+    public ResponseEntity<?> feishuCallbackVerification(
+            @RequestParam(value = "challenge", required = false) String challenge,
+            @RequestParam(value = "token", required = false) String token) {
+        if (challenge != null && !challenge.isBlank()) {
+            log.info("[IM-AI/Feishu] URL verification GET challenge received");
+            return ResponseEntity.ok(Map.of("challenge", challenge));
+        }
+        // 飞书可能不带 challenge 参数的 GET 探测，返回 200 即可
+        log.info("[IM-AI/Feishu] GET callback without challenge, returning ok");
+        return ResponseEntity.ok(Map.of("status", "ok"));
+    }
+
     @PostMapping("/feishu/callback")
     public ResponseEntity<?> feishuCallback(@RequestBody String body,
                                             @RequestHeader(value = "X-Lark-Signature", required = false) String signature,
