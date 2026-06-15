@@ -129,11 +129,15 @@ public class ImAiWebhookController {
             log.error("[IM-AI/Feishu] encrypt-key not configured, rejecting callback for safety");
             return ResponseEntity.status(500).body(Map.of("error", "server misconfiguration"));
         }
-        String expected = hmacSha256(feishuEncryptKey, timestamp + nonce + body);
-        if (!expected.equals(signature)) {
-            log.warn("[IM-AI/Feishu] signature verification failed");
+        // 飞书签名算法：SHA256(timestamp + nonce + encrypt_key)，十六进制小写
+        String expected = sha256Hex(timestamp + nonce + feishuEncryptKey);
+        if (!expected.equalsIgnoreCase(signature)) {
+            log.warn("[IM-AI/Feishu] signature verification failed: expected={} actual={}",
+                    expected.length() > 20 ? expected.substring(0, 20) + "..." : expected,
+                    signature != null && signature.length() > 20 ? signature.substring(0, 20) + "..." : signature);
             return ResponseEntity.status(401).body(Map.of("error", "signature mismatch"));
         }
+        log.info("[IM-AI/Feishu] signature verified OK");
 
         try {
             // 解析事件
@@ -532,6 +536,27 @@ public class ImAiWebhookController {
             return Base64.getEncoder().encodeToString(hash);
         } catch (Exception e) {
             log.error("[IM-AI] HMAC-SHA256 error: {}", e.getMessage());
+            return "";
+        }
+    }
+
+    /**
+     * 计算 SHA-256 哈希，返回十六进制小写字符串
+     * 用于飞书签名验证：SHA256(timestamp + nonce + encrypt_key)
+     */
+    private String sha256Hex(String data) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(data.getBytes(StandardCharsets.UTF_8));
+            StringBuilder hex = new StringBuilder(hash.length * 2);
+            for (byte b : hash) {
+                String h = Integer.toHexString(0xff & b);
+                if (h.length() == 1) hex.append('0');
+                hex.append(h);
+            }
+            return hex.toString();
+        } catch (Exception e) {
+            log.error("[IM-AI] SHA256 error: {}", e.getMessage());
             return "";
         }
     }
