@@ -214,14 +214,12 @@ public class QualityScanExecutor {
         result.put("nextScanType", "warehouse");
         result.put("nextStageHint", "下一环节: warehouse");
 
-        try {
+        ExceptionHandler.runRecoverable("质检领取/验收工序跟踪更新", () -> {
             if (processTrackingOrchestrator != null && bundle != null && hasText(bundle.getId())) {
                 processTrackingOrchestrator.updateScanRecord(
                     bundle.getId(), "质检", operatorId, operatorName, sr.getId());
             }
-        } catch (Exception e) {
-            log.debug("质检领取/验收工序跟踪更新失败(不阻断): bundleId={}", bundle != null ? bundle.getId() : null, e);
-        }
+        }, e -> log.debug("质检领取/验收工序跟踪更新失败(不阻断): bundleId={}", bundle != null ? bundle.getId() : null, e));
 
         return result;
     }
@@ -302,14 +300,12 @@ public class QualityScanExecutor {
 
     private void updateQualityProcessTracking(Map<String, Object> params, CuttingBundle bundle,
                                                String operatorId, String operatorName, String recordId) {
-        try {
+        ExceptionHandler.runRecoverable("质检工序跟踪更新", () -> {
             String processName = TextUtils.safeText(params.get("processName"));
             if (!hasText(processName)) processName = "质检";
             processTrackingOrchestrator.updateScanRecord(
                 bundle.getId(), processName, operatorId, operatorName, recordId);
-        } catch (Exception e) {
-            log.warn("质检工序跟踪更新失败（不影响主流程）: bundleId={}", bundle.getId(), e);
-        }
+        }, e -> log.warn("质检工序跟踪更新失败（不影响主流程）: bundleId={}", bundle.getId(), e));
     }
 
     private Map<String, Object> buildConfirmResult(ScanRecord existed, ProductionOrder order,
@@ -422,7 +418,7 @@ public class QualityScanExecutor {
 
     private void notifyDefectiveQuality(ProductionOrder order, CuttingBundle bundle, int defectQty,
                                        String qualityOperatorName, String defectCategory) {
-        try {
+        ExceptionHandler.runRecoverable("质检不合格推送", () -> {
             if (wxAlertNotifyService == null) {
                 log.debug("[质检通知] WxAlertNotifyService 未配置，跳过推送");
                 return;
@@ -448,10 +444,8 @@ public class QualityScanExecutor {
             wxAlertNotifyService.notifyAlert(tenantId, title, content, order.getOrderNo(), page);
             log.info("[质检通知] 菲号质检不合格推送完成: bundleNo={}, defectQty={}, category={}",
                     bundleNo, defectQty, categoryLabel);
-        } catch (Exception e) {
-            log.warn("[质检通知] 推送失败（不阻断主流程）: bundleId={}, error={}",
-                    bundle.getId(), e.getMessage(), e);
-        }
+        }, e -> log.warn("[质检通知] 推送失败（不阻断主流程）: bundleId={}, error={}",
+                bundle.getId(), e.getMessage(), e));
     }
 
     /**

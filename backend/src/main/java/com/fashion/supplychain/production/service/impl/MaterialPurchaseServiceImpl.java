@@ -7,6 +7,7 @@ import com.fashion.supplychain.production.service.MaterialPurchaseService;
 import com.fashion.supplychain.production.service.MaterialStockService;
 import com.fashion.supplychain.common.constant.MaterialConstants;
 import com.fashion.supplychain.common.ParamUtils;
+import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.production.service.helper.MaterialPurchaseHelper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -459,6 +460,18 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
     public boolean receivePurchase(String purchaseId, String receiverId, String receiverName) {
         if (!StringUtils.hasText(purchaseId)) {
             return false;
+        }
+        // 职务软校验（宽松规则：只记日志不阻断）
+        // 主管/管理员/租户主 全放行；非采购岗位的普通员工领取时记 warn 日志便于追溯
+        try {
+            if (!UserContext.isSupervisorOrAbove()) {
+                String role = UserContext.role();
+                if (StringUtils.hasText(role) && !role.contains("采购") && !role.contains("purchaser")) {
+                    log.warn("采购任务跨岗位领取: purchaseId={}, receiverId={}, role={}", purchaseId, receiverId, role);
+                }
+            }
+        } catch (Exception ignored) {
+            // UserContext 不可用时（如异步线程）跳过校验，不阻断业务
         }
         MaterialPurchase existed = this.getById(purchaseId);
         if (existed == null) {

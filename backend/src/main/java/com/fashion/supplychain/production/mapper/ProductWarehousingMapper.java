@@ -50,31 +50,36 @@ public interface ProductWarehousingMapper extends BaseMapper<ProductWarehousing>
 
     /**
      * 查询最近7天入库数量（按日期分组）
+     * 用范围查询替代 DATE() 函数，允许走 warehousing_end_time 索引
      */
     @Select("SELECT DATE(warehousing_end_time) as date, CAST(SUM(qualified_quantity) AS SIGNED) as count " +
             "FROM t_product_warehousing " +
-            "WHERE warehousing_end_time >= DATE_SUB(#{today}, INTERVAL 7 DAY) AND delete_flag = 0 " +
+            "WHERE warehousing_end_time >= DATE_SUB(#{today}, INTERVAL 7 DAY) " +
+            "AND warehousing_end_time < DATE_ADD(#{today}, INTERVAL 1 DAY) AND delete_flag = 0 " +
             "AND tenant_id = #{tenantId} " +
             "GROUP BY DATE(warehousing_end_time)")
     List<Map<String, Object>> selectLast7DaysInbound(@Param("today") LocalDate today, @Param("tenantId") Long tenantId);
 
     /**
      * 查询最近30天入库数量（按日期分组）
+     * 用范围查询替代 YEAR()/MONTH() 函数，允许走索引
      */
     @Select("SELECT DAY(warehousing_end_time) as day, CAST(SUM(qualified_quantity) AS SIGNED) as count " +
             "FROM t_product_warehousing " +
-            "WHERE YEAR(warehousing_end_time) = YEAR(#{today}) " +
-            "AND MONTH(warehousing_end_time) = MONTH(#{today}) AND delete_flag = 0 " +
+            "WHERE warehousing_end_time >= DATE_FORMAT(#{today}, '%Y-%m-01') " +
+            "AND warehousing_end_time < DATE_ADD(DATE_FORMAT(#{today}, '%Y-%m-01'), INTERVAL 1 MONTH) AND delete_flag = 0 " +
             "AND tenant_id = #{tenantId} " +
             "GROUP BY DAY(warehousing_end_time)")
     List<Map<String, Object>> selectLast30DaysInbound(@Param("today") LocalDate today, @Param("tenantId") Long tenantId);
 
     /**
      * 查询年度入库数量（按月分组）
+     * 用范围查询替代 YEAR() 函数，允许走索引
      */
     @Select("SELECT MONTH(warehousing_end_time) as month, CAST(SUM(qualified_quantity) AS SIGNED) as count " +
             "FROM t_product_warehousing " +
-            "WHERE YEAR(warehousing_end_time) = #{year} AND delete_flag = 0 " +
+            "WHERE warehousing_end_time >= CONCAT(#{year}, '-01-01 00:00:00') " +
+            "AND warehousing_end_time < CONCAT(#{year} + 1, '-01-01 00:00:00') AND delete_flag = 0 " +
             "AND tenant_id = #{tenantId} " +
             "GROUP BY MONTH(warehousing_end_time)")
     List<Map<String, Object>> selectYearInboundByMonth(@Param("year") int year, @Param("tenantId") Long tenantId);

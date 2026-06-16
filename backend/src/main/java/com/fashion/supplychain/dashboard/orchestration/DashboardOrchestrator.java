@@ -297,6 +297,10 @@ public class DashboardOrchestrator {
     }
 
     public DeliveryAlertResponse getDeliveryAlert() {
+        String cacheKey = "delivery_alert";
+        DeliveryAlertResponse cached = cacheHelper.getFromCache(cacheKey);
+        if (cached != null) return cached;
+
         DeliveryAlertResponse response = new DeliveryAlertResponse();
         LocalDate today = LocalDate.now();
 
@@ -331,10 +335,15 @@ public class DashboardOrchestrator {
 
         response.setUrgentOrders(urgentOrders);
         response.setWarningOrders(warningOrders);
+        cacheHelper.putToCache(cacheKey, response);
         return response;
     }
 
     public QualityStatsResponse getQualityStats(String range) {
+        String cacheKey = "quality_stats_" + range;
+        QualityStatsResponse cached = cacheHelper.getFromCache(cacheKey);
+        if (cached != null) return cached;
+
         QualityStatsResponse response = new QualityStatsResponse();
         LocalDateTime startTime = calculateStartTime(range);
         LocalDateTime endTime = LocalDateTime.now();
@@ -353,6 +362,7 @@ public class DashboardOrchestrator {
             response.setQualifiedRate(0.0);
         }
         response.setRepairIssues(dashboardQueryService.countRepairIssuesBetween(startTime, endTime));
+        cacheHelper.putToCache(cacheKey, response);
         return response;
     }
 
@@ -434,6 +444,10 @@ public class DashboardOrchestrator {
     }
 
     public OrderCuttingChartResponse getOrderCuttingChart() {
+        String cacheKey = "order_cutting_chart";
+        OrderCuttingChartResponse cached = cacheHelper.getFromCache(cacheKey);
+        if (cached != null) return cached;
+
         LocalDate today = LocalDate.now();
         LocalDateTime startTime = LocalDateTime.of(today.minusDays(29), LocalTime.MIN);
         LocalDateTime endTime = LocalDateTime.of(today, LocalTime.MAX);
@@ -446,10 +460,16 @@ public class DashboardOrchestrator {
         for (int i = 0; i < 30; i++) {
             dates.add(startTime.plusDays(i).format(dateFormatter));
         }
-        return new OrderCuttingChartResponse(dates, orderQuantities, cuttingQuantities);
+        OrderCuttingChartResponse result = new OrderCuttingChartResponse(dates, orderQuantities, cuttingQuantities);
+        cacheHelper.putToCache(cacheKey, result);
+        return result;
     }
 
     public ScanCountChartResponse getScanCountChart() {
+        String cacheKey = "scan_count_chart";
+        ScanCountChartResponse cached = cacheHelper.getFromCache(cacheKey);
+        if (cached != null) return cached;
+
         LocalDate today = LocalDate.now();
         LocalDateTime startTime = LocalDateTime.of(today.minusDays(29), LocalTime.MIN);
         LocalDateTime endTime = LocalDateTime.of(today, LocalTime.MAX);
@@ -462,10 +482,16 @@ public class DashboardOrchestrator {
         for (int i = 0; i < 30; i++) {
             dates.add(startTime.plusDays(i).format(dateFormatter));
         }
-        return new ScanCountChartResponse(dates, scanCounts, scanQuantities);
+        ScanCountChartResponse result = new ScanCountChartResponse(dates, scanCounts, scanQuantities);
+        cacheHelper.putToCache(cacheKey, result);
+        return result;
     }
 
     public List<OverdueOrderDto> getOverdueOrders() {
+        String cacheKey = "overdue_orders";
+        List<OverdueOrderDto> cached = cacheHelper.getFromCache(cacheKey);
+        if (cached != null) return cached;
+
         List<ProductionOrder> orders = dashboardQueryService.listAllOverdueOrders();
         List<OverdueOrderDto> result = new ArrayList<>();
         LocalDateTime now = LocalDateTime.now();
@@ -486,6 +512,7 @@ public class DashboardOrchestrator {
             dto.setFactoryName(order.getFactoryName());
             result.add(dto);
         }
+        cacheHelper.putToCache(cacheKey, result);
         return result;
     }
 
@@ -497,6 +524,10 @@ public class DashboardOrchestrator {
      * 获取延期环节统计（样衣开发+大货生产，按环节分组）
      */
     public DelayedStageBreakdownResponse getDelayedStageBreakdown() {
+        String cacheKey = "delayed_stage_breakdown";
+        DelayedStageBreakdownResponse cached = cacheHelper.getFromCache(cacheKey);
+        if (cached != null) return cached;
+
         DelayedStageBreakdownResponse response = new DelayedStageBreakdownResponse();
 
         List<DelayedStageGroup> bulkGroups = dashboardQueryService.listDelayedBulkOrdersByStage();
@@ -507,6 +538,7 @@ public class DashboardOrchestrator {
         response.setBulkTotal(bulkGroups.stream().mapToInt(DelayedStageGroup::getCount).sum());
         response.setSampleTotal(sampleGroups.stream().mapToInt(DelayedStageGroup::getCount).sum());
 
+        cacheHelper.putToCache(cacheKey, response);
         return response;
     }
 

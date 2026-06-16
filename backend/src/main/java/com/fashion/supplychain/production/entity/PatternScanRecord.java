@@ -49,6 +49,21 @@ public class PatternScanRecord {
     private String operationType;
 
     /**
+     * 工序名称（中文），如：裁剪、车缝、入库等
+     */
+    private String processName;
+
+    /**
+     * 进度阶段（中文），与前端工序配置对齐
+     */
+    private String progressStage;
+
+    /**
+     * 工序编码，与 operationType 一致
+     */
+    private String processCode;
+
+    /**
      * 操作员ID
      */
     private String operatorId;

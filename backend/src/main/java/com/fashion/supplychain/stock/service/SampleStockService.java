@@ -29,6 +29,11 @@ public interface SampleStockService extends IService<SampleStock> {
      */
     void returnSample(String loanId, Integer returnQuantity, String remark);
 
+    /**
+     * 转借样衣
+     */
+    void transferLoan(String sourceLoanId, SampleLoan newLoan);
+
     void destroy(String stockId, String remark);
 
     /**

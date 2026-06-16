@@ -237,6 +237,20 @@ public class SampleStockServiceImpl extends ServiceImpl<SampleStockMapper, Sampl
              throw new IllegalArgumentException("借出数量必须大于0");
         }
 
+        // 借入人必填：借给谁
+        boolean hasLendTo = StringUtils.hasText(loan.getLendTo());
+        boolean hasLendToFactory = StringUtils.hasText(loan.getLendToFactoryId()) || StringUtils.hasText(loan.getLendToFactoryName());
+        if (!hasLendTo && !hasLendToFactory) {
+            throw new IllegalArgumentException("借入人或借入工厂不能为空，请填写借给谁");
+        }
+
+        // 自动补全 lendToType
+        if (hasLendToFactory && !StringUtils.hasText(loan.getLendToType())) {
+            loan.setLendToType("factory");
+        } else if (hasLendTo && !StringUtils.hasText(loan.getLendToType())) {
+            loan.setLendToType("person");
+        }
+
         // Check available stock
         int available = (stock.getQuantity() == null ? 0 : stock.getQuantity()) -
                         (stock.getLoanedQuantity() == null ? 0 : stock.getLoanedQuantity());
@@ -252,6 +266,16 @@ public class SampleStockServiceImpl extends ServiceImpl<SampleStockMapper, Sampl
         loan.setStatus("borrowed");
         loan.setDeleteFlag(0);
         loan.setTenantId(currentTenantId);
+        loan.setRemainingQuantity(loanQty);
+        loan.setOperatorId(UserContext.userId());
+        loan.setOperatorName(UserContext.username());
+        // 如果借用人未填，默认为操作人
+        if (!StringUtils.hasText(loan.getBorrower())) {
+            loan.setBorrower(UserContext.username());
+        }
+        if (!StringUtils.hasText(loan.getBorrowerId())) {
+            loan.setBorrowerId(UserContext.userId());
+        }
         if (StringUtils.hasText(loan.getWarehouseAreaId()) && !StringUtils.hasText(loan.getWarehouseAreaName())) {
             try {
                 WarehouseArea area = warehouseAreaService.getById(loan.getWarehouseAreaId());
@@ -275,15 +299,16 @@ public class SampleStockServiceImpl extends ServiceImpl<SampleStockMapper, Sampl
                 scanRecord.setOperatorName(UserContext.username());
                 scanRecord.setOperatorRole("WAREHOUSE");
                 scanRecord.setScanTime(LocalDateTime.now());
-                scanRecord.setRemark("PC端样衣借出");
+                String lendToDesc = buildLendToDesc(loan);
+                scanRecord.setRemark("样衣借出 → " + lendToDesc);
                 scanRecord.setCreateTime(LocalDateTime.now());
                 scanRecord.setDeleteFlag(0);
                 patternScanRecordService.save(scanRecord);
 
                 patternStatusHelper.updatePatternStatusByOperation(loanPattern, "WAREHOUSE_OUT", UserContext.username());
-                log.info("PC端借出同步PatternProduction状态: patternId={}", loanPattern.getId());
+                log.info("样衣借出同步PatternProduction状态: patternId={}, lendTo={}", loanPattern.getId(), lendToDesc);
             } catch (Exception e) {
-                log.error("PC端借出同步PatternProduction状态失败: styleNo={}", stock.getStyleNo(), e);
+                log.error("样衣借出同步PatternProduction状态失败: styleNo={}", stock.getStyleNo(), e);
             }
         }
     }
@@ -303,17 +328,23 @@ public class SampleStockServiceImpl extends ServiceImpl<SampleStockMapper, Sampl
              throw new IllegalStateException("该记录已归还或非借出状态");
         }
 
-        int qty = returnQuantity == null ? loan.getQuantity() : returnQuantity;
-        if (qty > loan.getQuantity()) {
-             throw new IllegalArgumentException("归还数量不能大于借出数量");
+        int remaining = loan.getRemainingQuantity() != null ? loan.getRemainingQuantity() : loan.getQuantity();
+        int qty = returnQuantity == null ? remaining : returnQuantity;
+        if (qty <= 0) {
+            throw new IllegalArgumentException("归还数量必须大于0");
+        }
+        if (qty > remaining) {
+            throw new IllegalArgumentException("归还数量不能大于剩余未还数量(" + remaining + ")");
         }
 
+        int newRemaining = remaining - qty;
+
         // Update loan status
-        // For simplicity, we assume full return or mark as returned.
-        // If partial return is needed, we might need split logic or just update status if qty matches.
-        // Here assuming full return or final return for this record.
-        loan.setStatus("returned");
-        loan.setReturnDate(LocalDateTime.now());
+        if (newRemaining == 0) {
+            loan.setStatus("returned");
+            loan.setReturnDate(LocalDateTime.now());
+        }
+        loan.setRemainingQuantity(newRemaining);
         loan.setUpdateTime(LocalDateTime.now());
         if (StringUtils.hasText(remark)) {
             String existingRemark = loan.getRemark();
@@ -345,18 +376,101 @@ public class SampleStockServiceImpl extends ServiceImpl<SampleStockMapper, Sampl
                     scanRecord.setOperatorName(UserContext.username());
                     scanRecord.setOperatorRole("WAREHOUSE");
                     scanRecord.setScanTime(LocalDateTime.now());
-                    scanRecord.setRemark("PC端样衣归还");
+                    scanRecord.setRemark("样衣归还 " + qty + " 件");
                     scanRecord.setCreateTime(LocalDateTime.now());
                     scanRecord.setDeleteFlag(0);
                     patternScanRecordService.save(scanRecord);
 
                     patternStatusHelper.updatePatternStatusByOperation(returnPattern, "WAREHOUSE_RETURN", UserContext.username());
-                    log.info("PC端归还同步PatternProduction状态: patternId={}", returnPattern.getId());
+                    log.info("样衣归还同步PatternProduction状态: patternId={}", returnPattern.getId());
                 } catch (Exception e) {
-                    log.error("PC端归还同步PatternProduction状态失败: stockId={}", loan.getSampleStockId(), e);
+                    log.error("样衣归还同步PatternProduction状态失败: stockId={}", loan.getSampleStockId(), e);
                 }
             }
         }
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void transferLoan(String sourceLoanId, SampleLoan newLoan) {
+        TenantAssert.assertTenantContext();
+        Long currentTenantId = com.fashion.supplychain.common.UserContext.tenantId();
+
+        // 1. 校验来源借调记录
+        SampleLoan sourceLoan = sampleLoanMapper.selectOne(new LambdaQueryWrapper<SampleLoan>()
+                .eq(SampleLoan::getId, sourceLoanId)
+                .eq(SampleLoan::getTenantId, currentTenantId));
+        if (sourceLoan == null) {
+            throw new IllegalArgumentException("原借调记录不存在");
+        }
+        if (!"borrowed".equals(sourceLoan.getStatus())) {
+            throw new IllegalStateException("仅借出中状态可转借");
+        }
+
+        int sourceRemaining = sourceLoan.getRemainingQuantity() != null ? sourceLoan.getRemainingQuantity() : sourceLoan.getQuantity();
+        int transferQty = newLoan.getQuantity() == null ? sourceRemaining : newLoan.getQuantity();
+        if (transferQty <= 0 || transferQty > sourceRemaining) {
+            throw new IllegalArgumentException("转借数量无效，剩余可转借 " + sourceRemaining + " 件");
+        }
+
+        // 借入人必填
+        boolean hasLendTo = StringUtils.hasText(newLoan.getLendTo());
+        boolean hasLendToFactory = StringUtils.hasText(newLoan.getLendToFactoryId()) || StringUtils.hasText(newLoan.getLendToFactoryName());
+        if (!hasLendTo && !hasLendToFactory) {
+            throw new IllegalArgumentException("转借入人或工厂不能为空，请填写转借给谁");
+        }
+
+        // 2. 创建新的借调记录
+        newLoan.setSampleStockId(sourceLoan.getSampleStockId());
+        newLoan.setLoanDate(LocalDateTime.now());
+        newLoan.setCreateTime(LocalDateTime.now());
+        newLoan.setUpdateTime(LocalDateTime.now());
+        newLoan.setStatus("borrowed");
+        newLoan.setDeleteFlag(0);
+        newLoan.setTenantId(currentTenantId);
+        newLoan.setQuantity(transferQty);
+        newLoan.setRemainingQuantity(transferQty);
+        newLoan.setTransferFromLoanId(sourceLoanId);
+        newLoan.setOperatorId(UserContext.userId());
+        newLoan.setOperatorName(UserContext.username());
+        if (!StringUtils.hasText(newLoan.getBorrower())) {
+            newLoan.setBorrower(sourceLoan.getLendTo());
+        }
+        if (!StringUtils.hasText(newLoan.getBorrowerId())) {
+            newLoan.setBorrowerId(sourceLoan.getLendToId());
+        }
+        if (StringUtils.hasText(newLoan.getWarehouseAreaId()) && !StringUtils.hasText(newLoan.getWarehouseAreaName())) {
+            try {
+                WarehouseArea area = warehouseAreaService.getById(newLoan.getWarehouseAreaId());
+                if (area != null) newLoan.setWarehouseAreaName(area.getAreaName());
+            } catch (Exception ignored) {}
+        }
+        sampleLoanMapper.insert(newLoan);
+
+        // 3. 更新原借调记录
+        int newSourceRemaining = sourceRemaining - transferQty;
+        sourceLoan.setRemainingQuantity(newSourceRemaining);
+        sourceLoan.setUpdateTime(LocalDateTime.now());
+        if (newSourceRemaining == 0) {
+            sourceLoan.setStatus("transferred");
+        }
+        String transferDesc = "转借 " + transferQty + " 件 → " + buildLendToDesc(newLoan);
+        if (StringUtils.hasText(sourceLoan.getRemark())) {
+            sourceLoan.setRemark(sourceLoan.getRemark() + " | " + transferDesc);
+        } else {
+            sourceLoan.setRemark(transferDesc);
+        }
+        sampleLoanMapper.updateById(sourceLoan);
+
+        log.info("样衣转借完成: sourceLoanId={}, newLoanId={}, qty={}, lendTo={}",
+                sourceLoanId, newLoan.getId(), transferQty, buildLendToDesc(newLoan));
+    }
+
+    private String buildLendToDesc(SampleLoan loan) {
+        if (StringUtils.hasText(loan.getLendToFactoryName())) {
+            return loan.getLendToFactoryName() + (StringUtils.hasText(loan.getLendTo()) ? "(" + loan.getLendTo() + ")" : "");
+        }
+        return loan.getLendTo() != null ? loan.getLendTo() : "未知";
     }
 
     @Override

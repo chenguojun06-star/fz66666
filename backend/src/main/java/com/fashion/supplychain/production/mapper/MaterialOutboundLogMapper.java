@@ -56,9 +56,14 @@ public interface MaterialOutboundLogMapper extends BaseMapper<MaterialOutboundLo
             "GROUP BY DAY(COALESCE(outbound_time, create_time))")
     List<Map<String, Object>> selectLast30DaysOutbound(@Param("startDate") LocalDate startDate, @Param("today") LocalDate today, @Param("tenantId") Long tenantId);
 
+    /**
+     * 查询年度出库数量（按月分组）
+     * 用范围查询替代 YEAR() 函数，允许走索引
+     */
     @Select("SELECT MONTH(COALESCE(outbound_time, create_time)) AS month, COUNT(*) AS count " +
             "FROM t_material_outbound_log " +
-            "WHERE YEAR(COALESCE(outbound_time, create_time)) = #{year} " +
+            "WHERE COALESCE(outbound_time, create_time) >= CONCAT(#{year}, '-01-01 00:00:00') " +
+            "AND COALESCE(outbound_time, create_time) < CONCAT(#{year} + 1, '-01-01 00:00:00') " +
             "AND (delete_flag IS NULL OR delete_flag = 0) " +
             "AND tenant_id = #{tenantId} " +
             "GROUP BY MONTH(COALESCE(outbound_time, create_time))")
@@ -109,11 +114,16 @@ public interface MaterialOutboundLogMapper extends BaseMapper<MaterialOutboundLo
             "GROUP BY DAY(COALESCE(m.outbound_time, m.create_time))")
     List<Map<String, Object>> selectLast30DaysOutboundByType(@Param("startDate") LocalDate startDate, @Param("today") LocalDate today, @Param("materialType") String materialType, @Param("tenantId") Long tenantId);
 
+    /**
+     * 按物料类型查询年度出库数量（按月分组）
+     * 用范围查询替代 YEAR() 函数，允许走索引
+     */
     @InterceptorIgnore(tenantLine = "true")
     @Select("SELECT MONTH(COALESCE(m.outbound_time, m.create_time)) AS month, COUNT(*) AS count " +
             "FROM t_material_outbound_log m " +
             "JOIN t_material_stock s ON m.stock_id = s.id " +
-            "WHERE YEAR(COALESCE(m.outbound_time, m.create_time)) = #{year} " +
+            "WHERE COALESCE(m.outbound_time, m.create_time) >= CONCAT(#{year}, '-01-01 00:00:00') " +
+            "AND COALESCE(m.outbound_time, m.create_time) < CONCAT(#{year} + 1, '-01-01 00:00:00') " +
             "AND (s.material_type LIKE CONCAT(#{materialType}, '%') " +
             "     OR (#{materialType} = 'fabric' AND s.material_type LIKE 'lining%') " +
             "     OR (#{materialType} = 'fabric' AND s.material_type = '面料') " +

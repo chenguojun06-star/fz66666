@@ -50,23 +50,19 @@ public class ScanExecutorSupport {
     }
 
     public void recomputeProgressSync(String orderId) {
-        try {
+        ExceptionHandler.runRecoverable("订单进度同步重算", () -> {
             if (productionOrderService != null) {
                 productionOrderService.recomputeProgressFromRecords(orderId);
             }
-        } catch (Exception e) {
-            log.warn("订单进度同步重算失败(不阻断): orderId={}", orderId, e);
-        }
+        }, e -> log.warn("订单进度同步重算失败(不阻断): orderId={}", orderId, e));
     }
 
     public void recomputeProgressAsync(String orderId) {
-        try {
+        ExceptionHandler.runRecoverable("订单进度异步重算", () -> {
             if (productionOrderService != null) {
                 productionOrderService.recomputeProgressAsync(orderId);
             }
-        } catch (Exception e) {
-            log.warn("订单进度异步重算失败(不阻断): orderId={}", orderId, e);
-        }
+        }, e -> log.warn("订单进度异步重算失败(不阻断): orderId={}", orderId, e));
     }
 
     public Map<String, Object> buildOrderInfo(ProductionOrder order) {

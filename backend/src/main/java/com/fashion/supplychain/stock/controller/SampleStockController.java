@@ -58,6 +58,27 @@ public class SampleStockController {
         return Result.success();
     }
 
+    @PostMapping("/transfer")
+    public Result<Void> transferLoan(@RequestBody Map<String, Object> params) {
+        String sourceLoanId = (String) params.get("sourceLoanId");
+        SampleLoan newLoan = new SampleLoan();
+        newLoan.setLendTo((String) params.get("lendTo"));
+        newLoan.setLendToId(params.get("lendToId") != null ? String.valueOf(params.get("lendToId")) : null);
+        newLoan.setLendToType((String) params.get("lendToType"));
+        newLoan.setLendToFactoryId(params.get("lendToFactoryId") != null ? String.valueOf(params.get("lendToFactoryId")) : null);
+        newLoan.setLendToFactoryName((String) params.get("lendToFactoryName"));
+        newLoan.setQuantity(params.get("quantity") != null ? Integer.parseInt(String.valueOf(params.get("quantity"))) : null);
+        newLoan.setBorrower((String) params.get("borrower"));
+        newLoan.setBorrowerId(params.get("borrowerId") != null ? String.valueOf(params.get("borrowerId")) : null);
+        newLoan.setExpectedReturnDate(params.get("expectedReturnDate") != null
+                ? java.time.LocalDateTime.parse((String) params.get("expectedReturnDate"), java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+                : null);
+        newLoan.setRemark((String) params.get("remark"));
+        newLoan.setWarehouseAreaId(params.get("warehouseAreaId") != null ? String.valueOf(params.get("warehouseAreaId")) : null);
+        sampleStockService.transferLoan(sourceLoanId, newLoan);
+        return Result.success();
+    }
+
     @PostMapping("/destroy")
     public Result<Void> destroy(@RequestBody Map<String, Object> params) {
         String stockId = params.get("stockId") == null ? null : String.valueOf(params.get("stockId"));

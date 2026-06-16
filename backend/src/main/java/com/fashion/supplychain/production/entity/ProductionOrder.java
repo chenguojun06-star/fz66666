@@ -166,6 +166,30 @@ public class ProductionOrder {
     private String customerName;
 
     /**
+     * 销售渠道：天猫/抖音/京东/拼多多/线下门店/私域/定制/其他（从样衣开发带入）
+     */
+    @TableField("sales_channel")
+    private String salesChannel;
+
+    /**
+     * 客户联系人（从样衣开发带入）
+     */
+    @TableField("customer_contact")
+    private String customerContact;
+
+    /**
+     * 客户联系电话（从样衣开发带入）
+     */
+    @TableField("customer_phone")
+    private String customerPhone;
+
+    /**
+     * 客户收货地址（从样衣开发带入，用于打印单据）
+     */
+    @TableField("customer_address")
+    private String customerAddress;
+
+    /**
      * 品类（从样衣开发带入，可修改）
      */
     @TableField("product_category")

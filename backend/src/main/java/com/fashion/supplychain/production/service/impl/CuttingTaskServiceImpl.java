@@ -83,6 +83,18 @@ public class CuttingTaskServiceImpl extends ServiceImpl<CuttingTaskMapper, Cutti
         String taskIdTrim = taskId.trim();
         if (!StringUtils.hasText(taskIdTrim)) return false;
 
+        // 职务软校验（宽松规则：只记日志不阻断）
+        try {
+            if (!UserContext.isSupervisorOrAbove()) {
+                String role = UserContext.role();
+                if (StringUtils.hasText(role) && !role.contains("裁剪") && !role.contains("cutter")) {
+                    log.warn("裁剪任务跨岗位领取: taskId={}, receiverId={}, role={}", taskIdTrim, receiverId, role);
+                }
+            }
+        } catch (Exception ignored) {
+            // UserContext 不可用时跳过校验，不阻断业务
+        }
+
         CuttingTask task = this.getById(taskIdTrim);
         if (task == null) return false;
 

@@ -174,15 +174,11 @@ public class WarehouseScanExecutor {
                                                         int qty, String operatorId, String operatorName,
                                                         String warehouse) {
         validateDefectiveReentryQty(order.getId(), bundle, qty);
-        try {
-            productWarehousingService.saveRepairReturnDeclaration(
-                    bundle, order, qty, "返修完成", operatorId, operatorName, warehouse);
-        } catch (IllegalArgumentException | IllegalStateException e) {
-            throw e;
-        } catch (Exception e) {
-            log.warn("返修申报保存失败（不阻断流程）: orderId={}, bundle={}, error={}",
-                    order.getId(), bundle.getBundleNo(), e.getMessage(), e);
-        }
+        ExceptionHandler.runRecoverable("返修申报保存", () ->
+                productWarehousingService.saveRepairReturnDeclaration(
+                        bundle, order, qty, "返修完成", operatorId, operatorName, warehouse),
+                e -> log.warn("返修申报保存失败（不阻断流程）: orderId={}, bundle={}, error={}",
+                        order.getId(), bundle.getBundleNo(), e.getMessage(), e));
         executorSupport.recomputeProgressSync(order.getId());
         Map<String, Object> repairResult = new HashMap<>();
         repairResult.put("success", true);
@@ -280,28 +276,24 @@ public class WarehouseScanExecutor {
         if (bundle == null || !hasText(bundle.getId())) {
             return;
         }
-        try {
+        ExceptionHandler.runRecoverable("更新入库工序跟踪记录", () -> {
             boolean trackingUpdated = processTrackingOrchestrator.updateScanRecord(
                 bundle.getId(), "入库", operatorId, operatorName, sr.getId());
             if (trackingUpdated) {
                 log.info("入库工序跟踪记录更新成功: bundleId={}, orderId={}", bundle.getId(), order.getId());
             } else {
                 log.info("入库工序跟踪记录未找到，尝试追加初始化并重试更新: bundleId={}, orderId={}", bundle.getId(), order.getId());
-                try {
+                ExceptionHandler.runRecoverable("追加并更新入库工序跟踪记录", () -> {
                     processTrackingOrchestrator.appendProcessTracking(order.getId(), List.of(bundle));
                     boolean retryUpdated = processTrackingOrchestrator.updateScanRecord(
                             bundle.getId(), "入库", operatorId, operatorName, sr.getId());
                     if (retryUpdated) {
                         log.info("入库工序跟踪记录重试更新成功: bundleId={}, orderId={}", bundle.getId(), order.getId());
                     }
-                } catch (Exception createEx) {
-                    log.warn("追加并更新入库工序跟踪记录失败（不阻断入库）: bundleId={}, orderId={}, msg={}",
-                            bundle.getId(), order.getId(), createEx.getMessage());
-                }
+                }, e -> log.warn("追加并更新入库工序跟踪记录失败（不阻断入库）: bundleId={}, orderId={}, msg={}",
+                        bundle.getId(), order.getId(), e.getMessage()));
             }
-        } catch (Exception e) {
-            log.warn("更新入库工序跟踪记录失败（不阻断入库）: bundleId={}, msg={}", bundle.getId(), e.getMessage());
-        }
+        }, e -> log.warn("更新入库工序跟踪记录失败（不阻断入库）: bundleId={}, msg={}", bundle.getId(), e.getMessage()));
     }
 
     private Map<String, Object> buildResult(CuttingBundle bundle, ProductionOrder order, ScanRecord sr) {

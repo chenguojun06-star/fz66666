@@ -73,6 +73,9 @@ public class StyleInfoOrchestrator {
     private StyleListEnrichmentHelper styleListEnrichmentHelper;
 
     @Autowired
+    private com.fashion.supplychain.style.helper.StyleCustomerSyncHelper styleCustomerSyncHelper;
+
+    @Autowired
     private ProductionOrderService productionOrderService;
 
     @Autowired
@@ -221,6 +224,8 @@ public class StyleInfoOrchestrator {
                             : "租户信息异常，请退出重新登录后再试");
         }
         styleSelectionSourceHelper.normalizeManualSourceFields(styleInfo);
+        // 同步客户信息到款号冗余字段
+        styleCustomerSyncHelper.syncCustomerInfo(styleInfo);
         validateStyleInfo(styleInfo);
         if (styleInfo.getId() == null && StringUtils.hasText(styleInfo.getStyleNo())) {
             styleInfo.setStyleNo(generateUniqueStyleNo(styleInfo.getStyleNo()));
@@ -266,6 +271,8 @@ public class StyleInfoOrchestrator {
     @Transactional(rollbackFor = Exception.class)
     public boolean update(StyleInfo styleInfo) {
         styleSelectionSourceHelper.normalizeManualSourceFields(styleInfo);
+        // 同步客户信息到款号冗余字段
+        styleCustomerSyncHelper.syncCustomerInfo(styleInfo);
         validateStyleInfo(styleInfo);
         try {
             if (styleInfo.getId() != null) {

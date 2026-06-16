@@ -143,6 +143,25 @@ public class PatternProductionOrchestrator {
 
         patternProductionService.updateById(record);
 
+        // 创建样衣领取扫码记录，使前端工序进度能匹配"采购"阶段
+        PatternScanRecord receiveRecord = new PatternScanRecord();
+        receiveRecord.setPatternProductionId(id);
+        receiveRecord.setStyleId(record.getStyleId());
+        receiveRecord.setStyleNo(record.getStyleNo());
+        receiveRecord.setColor(record.getColor());
+        receiveRecord.setOperationType("RECEIVE");
+        receiveRecord.setProcessName(patternOperationLabel("RECEIVE"));
+        receiveRecord.setProgressStage(mapOperationTypeToProgressStage("RECEIVE"));
+        receiveRecord.setProcessCode("RECEIVE");
+        receiveRecord.setOperatorId(UserContext.userId());
+        receiveRecord.setOperatorName(currentUser);
+        receiveRecord.setOperatorRole("PLATE_WORKER");
+        receiveRecord.setScanTime(LocalDateTime.now());
+        receiveRecord.setRemark("领取样板");
+        receiveRecord.setCreateTime(LocalDateTime.now());
+        receiveRecord.setDeleteFlag(0);
+        patternScanRecordService.save(receiveRecord);
+
         createPatternScanRecordForWage(record, "领取样板", UserContext.userId(), currentUser, LocalDateTime.now());
 
         statusHelper.syncStyleInfoOnReceive(record.getStyleId(), currentUser);
@@ -211,7 +230,11 @@ public class PatternProductionOrchestrator {
         scanRecord.setStyleId(pattern.getStyleId());
         scanRecord.setStyleNo(pattern.getStyleNo());
         scanRecord.setColor(pattern.getColor());
-        scanRecord.setOperationType(wasRework ? "REWORK" : "COMPLETE");
+        String opType = wasRework ? "REWORK" : "COMPLETE";
+        scanRecord.setOperationType(opType);
+        scanRecord.setProcessName(patternOperationLabel(opType));
+        scanRecord.setProgressStage(mapOperationTypeToProgressStage(opType));
+        scanRecord.setProcessCode(opType);
         scanRecord.setOperatorId(currentUserId);
         scanRecord.setOperatorName(operatorName);
         scanRecord.setOperatorRole("PLATE_WORKER");
@@ -304,6 +327,11 @@ public class PatternProductionOrchestrator {
         scanRecord.setStyleNo(pattern.getStyleNo());
         scanRecord.setColor(pattern.getColor());
         scanRecord.setOperationType(operationType);
+        // 补充 processName 和 progressStage，解决前端工序完成度匹配问题
+        String processLabel = patternOperationLabel(operationType);
+        scanRecord.setProcessName(processLabel);
+        scanRecord.setProgressStage(mapOperationTypeToProgressStage(operationType));
+        scanRecord.setProcessCode(operationType);
         scanRecord.setOperatorId(operatorId);
         scanRecord.setOperatorName(operatorName);
         scanRecord.setOperatorRole(operatorRole);
@@ -505,6 +533,30 @@ public class PatternProductionOrchestrator {
             case "WAREHOUSE_OUT":    return "样衣出库";
             case "WAREHOUSE_RETURN": return "样衣归还";
             default:                 return "样衣操作";
+        }
+    }
+
+    /** 将 operationType 映射为标准 progressStage（中文），与前端工序配置对齐 */
+    private String mapOperationTypeToProgressStage(String operationType) {
+        if (operationType == null) return null;
+        switch (operationType.trim().toUpperCase()) {
+            case "RECEIVE":
+            case "PROCUREMENT":      return "采购";
+            case "CUTTING":          return "裁剪";
+            case "SECONDARY":        return "二次工艺";
+            case "SEWING":           return "车缝";
+            case "TAIL":             return "尾部";
+            case "WAREHOUSE_IN":     return "入库";
+            case "WAREHOUSE_OUT":    return "出库";
+            case "WAREHOUSE_RETURN": return "归还";
+            case "IRONING":          return "整烫";
+            case "QUALITY":          return "质检";
+            case "PACKAGING":        return "包装";
+            case "PLATE":            return "车板";
+            case "FOLLOW_UP":        return "跟单确认";
+            case "COMPLETE":         return "完成确认";
+            case "REWORK":           return "返修";
+            default:                 return operationType;
         }
     }
 

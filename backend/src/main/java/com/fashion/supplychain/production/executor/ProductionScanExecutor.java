@@ -241,7 +241,7 @@ public class ProductionScanExecutor {
 
     private void updateProcessTracking(CuttingBundle bundle, String childProcessName, String progressStage, String processCode, String operatorId, String operatorName, String scanRecordId) {
         if (bundle == null || !hasText(bundle.getId())) return;
-        try {
+        ExceptionHandler.runClassified("工序跟踪更新", () -> {
             boolean updated = processTrackingOrchestrator.updateScanRecord(bundle.getId(), childProcessName, operatorId, operatorName, scanRecordId);
             if (!updated && hasText(progressStage) && !childProcessName.equals(progressStage)) {
                 updated = processTrackingOrchestrator.updateScanRecord(bundle.getId(), progressStage, operatorId, operatorName, scanRecordId);
@@ -249,13 +249,10 @@ public class ProductionScanExecutor {
             }
             if (updated) log.info("工序跟踪记录更新成功: bundleId={}, processCode={}, progressStage={}", bundle.getId(), processCode, progressStage);
             else log.warn("工序跟踪记录未找到（不阻断扫码）: bundleId={}, processCode={}, progressStage={}", bundle.getId(), processCode, progressStage);
-        } catch (BusinessException be) {
-            log.warn("工序跟踪拒绝领取（不阻断扫码）: bundleId={}, processCode={}, msg={}", bundle.getId(), processCode, be.getMessage());
-        } catch (IllegalStateException ise) {
-            log.warn("工序跟踪状态冲突（不阻断扫码）: bundleId={}, processCode={}, msg={}", bundle.getId(), processCode, ise.getMessage());
-        } catch (Exception e) {
-            log.error("工序跟踪记录更新失败（非业务异常）: bundleId={}, processCode={}", bundle.getId(), processCode, e);
-        }
+        },
+        be -> log.warn("工序跟踪拒绝领取（不阻断扫码）: bundleId={}, processCode={}, msg={}", bundle.getId(), processCode, be.getMessage()),
+        ise -> log.warn("工序跟踪状态冲突（不阻断扫码）: bundleId={}, processCode={}, msg={}", bundle.getId(), processCode, ise.getMessage()),
+        e -> log.error("工序跟踪记录更新失败（非业务异常）: bundleId={}, processCode={}", bundle.getId(), processCode, e));
     }
 
     private Map<String, Object> buildSuccessResult(ScanRecord sr, ScanContext ctx, boolean isCutting) {

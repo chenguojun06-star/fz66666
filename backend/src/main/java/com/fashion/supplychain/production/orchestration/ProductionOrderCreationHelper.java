@@ -251,6 +251,26 @@ public class ProductionOrderCreationHelper {
             newOrder.setPatternMaker(patternMakerFromStyle.trim());
         }
 
+        // 从样衣同步销售渠道和客户信息
+        if (StringUtils.hasText(style.getSalesChannel())) {
+            newOrder.setSalesChannel(style.getSalesChannel());
+        }
+        if (style.getCustomerId() != null) {
+            newOrder.setCustomerId(String.valueOf(style.getCustomerId()));
+        }
+        if (StringUtils.hasText(style.getCustomerName())) {
+            newOrder.setCustomerName(style.getCustomerName());
+        }
+        if (StringUtils.hasText(style.getCustomerContact())) {
+            newOrder.setCustomerContact(style.getCustomerContact());
+        }
+        if (StringUtils.hasText(style.getCustomerPhone())) {
+            newOrder.setCustomerPhone(style.getCustomerPhone());
+        }
+        if (StringUtils.hasText(style.getCustomerAddress())) {
+            newOrder.setCustomerAddress(style.getCustomerAddress());
+        }
+
         // 记录创建人信息
         String currentUserId = UserContext.userId();
         String currentUsername = UserContext.username();

@@ -127,6 +127,15 @@ public class OrderManagementOrchestrator {
         data.put("styleNo", style.getStyleNo());
         data.put("status", "ready_for_order");
         data.put("message", "已推送到下单管理，请在下单管理页面创建订单");
+        // 返回客户信息（用于下单时带入）
+        if (style.getCustomerId() != null) {
+            data.put("salesChannel", style.getSalesChannel());
+            data.put("customerId", style.getCustomerId());
+            data.put("customerName", style.getCustomerName());
+            data.put("customerContact", style.getCustomerContact());
+            data.put("customerPhone", style.getCustomerPhone());
+            data.put("customerAddress", style.getCustomerAddress());
+        }
         return data;
     }
 

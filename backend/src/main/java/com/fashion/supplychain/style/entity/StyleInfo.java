@@ -330,6 +330,32 @@ public class StyleInfo {
     /** 开发来源明细：自主开发 / 外部市场 / 供应商 / 客户定制 / 内部选品 */
     private String developmentSourceDetail;
 
+    // ==================== 销售渠道与客户信息 ====================
+
+    /** 销售渠道：天猫/抖音/京东/拼多多/线下门店/私域/定制/其他 */
+    @TableField("sales_channel")
+    private String salesChannel;
+
+    /** 客户ID，关联客户资料表 */
+    @TableField("customer_id")
+    private Long customerId;
+
+    /** 客户名称（冗余存储，用于打印和展示） */
+    @TableField("customer_name")
+    private String customerName;
+
+    /** 客户联系人 */
+    @TableField("customer_contact")
+    private String customerContact;
+
+    /** 客户联系电话 */
+    @TableField("customer_phone")
+    private String customerPhone;
+
+    /** 客户收货地址（用于打印单据） */
+    @TableField("customer_address")
+    private String customerAddress;
+
     @TableField(exist = false)
     private String progressNode;
 

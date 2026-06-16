@@ -355,16 +355,28 @@ public class DashboardOrderQueryHelper {
     }
 
     /**
-     * 获取样衣开发延期款号，按当前开发环节分组
+     * 判断样衣是否所有子环节都已完成（不应再出现在统计中）
+     * 即使 sampleStatus 未及时更新为 COMPLETED，只要所有子环节完成时间都有值，就视为已完成
+     */
+    private boolean isAllSampleSubStagesCompleted(StyleInfo style) {
+        return style.getPatternCompletedTime() != null
+                && style.getBomCompletedTime() != null
+                && style.getSizeCompletedTime() != null
+                && style.getProcessCompletedTime() != null
+                && style.getSecondaryCompletedTime() != null
+                && style.getProductionCompletedTime() != null;
+    }
+
+    /**
+     * 获取样衣开发延期款号，按各环节独立分组
+     * 每个环节独立判断延期：只要该环节未完成且超期，就归入该环节的延期组
+     * 排除所有子环节都已完成的款号（不管 sampleStatus 是否已更新）
      */
     public List<DelayedStageGroup> listDelayedSampleStylesByStage() {
         Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
         if (tenantId == null) return Collections.emptyList();
 
         LocalDateTime now = LocalDateTime.now();
-        // 查询所有未完成的样衣开发款号
-        // 只排除已完成的样衣（sampleStatus=COMPLETED），不限制审核状态和完成时间
-        // 因为审核通过不代表开发完成，完成时间为空是正常状态
         List<StyleInfo> styles = styleInfoService.lambdaQuery()
                 .eq(StyleInfo::getTenantId, tenantId)
                 .eq(StyleInfo::getStatus, "ENABLED")
@@ -379,52 +391,16 @@ public class DashboardOrderQueryHelper {
         }
 
         for (StyleInfo style : styles) {
-            String currentStage = resolveSampleCurrentStage(style);
-            if (currentStage == null) continue;
+            // 所有子环节都已完成 → 排除，不再统计
+            if (isAllSampleSubStagesCompleted(style)) continue;
 
-            // 判断是否延期：基于当前环节的开始时间
-            Integer cycle = style.getCycle();
-            boolean isDelayed = false;
-            int overdueDays = 0;
-
-            // 获取当前环节的开始时间
-            LocalDateTime stageStartTime = resolveSampleStageStartTime(style, currentStage);
-
-            if (stageStartTime != null) {
-                // 当前环节已开始，按各环节预算工时判断延期
-                int expectedHours = resolveSampleStageExpectedHours(style, currentStage);
-                LocalDateTime expectedEnd = stageStartTime.plusHours(expectedHours);
-                if (now.isAfter(expectedEnd)) {
-                    isDelayed = true;
-                    overdueDays = (int) Math.max(1, ChronoUnit.DAYS.between(expectedEnd, now));
-                }
-            } else if (style.getCreateTime() != null) {
-                // 创建超过3天还没开始当前环节
-                LocalDateTime expectedStart = style.getCreateTime().plusDays(3);
-                if (now.isAfter(expectedStart)) {
-                    isDelayed = true;
-                    overdueDays = (int) ChronoUnit.DAYS.between(expectedStart, now);
-                }
-            }
-
-            if (!isDelayed) continue;
-
-            DelayedStageGroup group = stageMap.get(currentStage);
-            if (group == null) continue;
-
-            DelayedItemDto item = new DelayedItemDto();
-            item.setId(style.getId() != null ? style.getId().toString() : "");
-            item.setNo(style.getStyleNo());
-            item.setName(style.getStyleName());
-            item.setStage(currentStage);
-            item.setOverdueDays(overdueDays);
-            item.setPlannedEndDate(stageStartTime != null
-                    ? stageStartTime.plusHours(resolveSampleStageExpectedHours(style, currentStage)).toLocalDate().toString() : "");
-            item.setFactoryName("");
-            item.setType("sample");
-            item.setProgress(style.getSampleProgress() != null ? style.getSampleProgress() : 0);
-            item.setQuantity(0);
-            group.addItem(item);
+            // 每个环节独立判断延期
+            checkStageDelay(style, "纸样开发", style.getPatternCompletedTime(), style.getPatternStartTime(), now, stageMap);
+            checkStageDelay(style, "BOM配置", style.getBomCompletedTime(), style.getBomStartTime(), now, stageMap);
+            checkStageDelay(style, "尺码表", style.getSizeCompletedTime(), style.getSizeStartTime(), now, stageMap);
+            checkStageDelay(style, "工序配置", style.getProcessCompletedTime(), style.getProcessStartTime(), now, stageMap);
+            checkStageDelay(style, "二次工艺", style.getSecondaryCompletedTime(), style.getSecondaryStartTime(), now, stageMap);
+            checkStageDelay(style, "生产制单", style.getProductionCompletedTime(), style.getProductionStartTime(), now, stageMap);
         }
 
         List<DelayedStageGroup> result = new ArrayList<>();
@@ -434,6 +410,53 @@ public class DashboardOrderQueryHelper {
             }
         }
         return result;
+    }
+
+    /** 判断某个环节是否延期，如果延期则加入 stageMap */
+    private void checkStageDelay(StyleInfo style, String stageName,
+                                  LocalDateTime completedTime, LocalDateTime startTime,
+                                  LocalDateTime now, Map<String, DelayedStageGroup> stageMap) {
+        // 已完成的环节不判断延期
+        if (completedTime != null) return;
+
+        boolean isDelayed = false;
+        int overdueDays = 0;
+        int expectedHours = resolveSampleStageExpectedHours(style, stageName);
+
+        if (startTime != null) {
+            // 已开始：按预算工时判断
+            LocalDateTime expectedEnd = startTime.plusHours(expectedHours);
+            if (now.isAfter(expectedEnd)) {
+                isDelayed = true;
+                overdueDays = (int) Math.max(1, ChronoUnit.DAYS.between(expectedEnd, now));
+            }
+        } else if (style.getCreateTime() != null) {
+            // 未开始：创建超过3天还没开始
+            LocalDateTime expectedStart = style.getCreateTime().plusDays(3);
+            if (now.isAfter(expectedStart)) {
+                isDelayed = true;
+                overdueDays = (int) ChronoUnit.DAYS.between(expectedStart, now);
+            }
+        }
+
+        if (!isDelayed) return;
+
+        DelayedStageGroup group = stageMap.get(stageName);
+        if (group == null) return;
+
+        DelayedItemDto item = new DelayedItemDto();
+        item.setId(style.getId() != null ? style.getId().toString() : "");
+        item.setNo(style.getStyleNo());
+        item.setName(style.getStyleName());
+        item.setStage(stageName);
+        item.setOverdueDays(overdueDays);
+        item.setPlannedEndDate(startTime != null
+                ? startTime.plusHours(expectedHours).toLocalDate().toString() : "");
+        item.setFactoryName("");
+        item.setType("sample");
+        item.setProgress(style.getSampleProgress() != null ? style.getSampleProgress() : 0);
+        item.setQuantity(0);
+        group.addItem(item);
     }
 
     /**
@@ -481,6 +504,8 @@ public class DashboardOrderQueryHelper {
 
     /**
      * 获取样衣开发各环节进行中款号统计（不限于延期，所有未完成款号）
+     * 每个环节独立统计：只要该环节未完成就计入
+     * 排除所有子环节都已完成的款号（不管 sampleStatus 是否已更新）
      */
     public List<SampleStageStatsDto> getSampleStageStats() {
         Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
@@ -497,18 +522,40 @@ public class DashboardOrderQueryHelper {
                 .last("LIMIT 5000")
                 .list();
 
+        // 每个环节独立统计未完成的款号
         Map<String, List<StyleInfo>> stageMap = new LinkedHashMap<>();
         for (String stage : SAMPLE_STAGES) {
             stageMap.put(stage, new ArrayList<>());
         }
 
         for (StyleInfo style : styles) {
-            String currentStage = resolveSampleCurrentStage(style);
-            if (currentStage == null) continue;
-            if (!stageMap.containsKey(currentStage)) {
-                stageMap.put(currentStage, new ArrayList<>());
+            // 所有子环节都已完成 → 排除，不再统计
+            if (isAllSampleSubStagesCompleted(style)) continue;
+
+            // 纸样开发未完成
+            if (style.getPatternCompletedTime() == null) {
+                stageMap.get("纸样开发").add(style);
             }
-            stageMap.get(currentStage).add(style);
+            // BOM配置未完成
+            if (style.getBomCompletedTime() == null) {
+                stageMap.get("BOM配置").add(style);
+            }
+            // 尺码表未完成
+            if (style.getSizeCompletedTime() == null) {
+                stageMap.get("尺码表").add(style);
+            }
+            // 工序配置未完成
+            if (style.getProcessCompletedTime() == null) {
+                stageMap.get("工序配置").add(style);
+            }
+            // 二次工艺未完成
+            if (style.getSecondaryCompletedTime() == null) {
+                stageMap.get("二次工艺").add(style);
+            }
+            // 生产制单未完成
+            if (style.getProductionCompletedTime() == null) {
+                stageMap.get("生产制单").add(style);
+            }
         }
 
         List<SampleStageStatsDto> result = new ArrayList<>();
