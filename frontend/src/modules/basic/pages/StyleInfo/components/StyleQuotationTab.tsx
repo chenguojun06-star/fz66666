@@ -358,33 +358,38 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, styleNo, readOnly, onSave
   <meta charset="UTF-8">
   <title>报价单 - ${esc(styleNo || '')}</title>
   <style>
-    @page { margin: 10mm; }
-    body { font-family: system-ui, -apple-system, "Microsoft YaHei", "PingFang SC", sans-serif; font-size: 12px; color: #333; padding: 20px; background: #fff; line-height: 1.6; }
-    .title { text-align: center; font-size: 22px; font-weight: 700; margin-bottom: 4px; letter-spacing: 2px; }
-    .subtitle { text-align: center; font-size: 12px; color: #999; margin-bottom: 20px; }
-    .info-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px 24px; margin-bottom: 20px; padding: 12px 16px; background: #fafafa; border: 1px solid #e8e8e8; }
-    .info-item { display: flex; gap: 8px; }
-    .info-label { color: #666; min-width: 80px; }
-    .info-value { font-weight: 500; }
-    .section { margin-bottom: 20px; page-break-inside: avoid; }
-    .section-title { font-size: 14px; font-weight: 600; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 2px solid #1890ff; color: #1a1a1a; }
+    @page { margin: 12mm; }
+    body { font-family: system-ui, -apple-system, "Microsoft YaHei", "PingFang SC", sans-serif; font-size: 13px; color: #1a1a1a; padding: 24px; background: #fff; line-height: 1.7; }
+    .title { text-align: center; font-size: 26px; font-weight: 700; margin-bottom: 6px; letter-spacing: 3px; color: #1a1a1a; }
+    .subtitle { text-align: center; font-size: 12px; color: #999; margin-bottom: 24px; }
+    .info-bar { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: #f8f9fa; border: 1px solid #e8e8e8; margin-bottom: 24px; font-size: 13px; }
+    .info-item { display: flex; gap: 6px; }
+    .info-label { color: #666; }
+    .info-value { font-weight: 600; }
+    .section { margin-bottom: 24px; page-break-inside: avoid; }
+    .section-title { font-size: 15px; font-weight: 600; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 2px solid #1890ff; color: #1a1a1a; display: flex; align-items: center; gap: 6px; }
     table { width: 100%; border-collapse: collapse; font-size: 12px; }
-    th, td { border: 1px solid #d9d9d9; padding: 6px 8px; vertical-align: middle; text-align: left; }
-    th { background: #fafafa; font-weight: 600; color: #262626; text-align: center; }
-    tr.summary-row td { background: #f5f5f5 !important; font-weight: 700; }
-    .cost-summary { margin-top: 20px; padding: 16px; background: #f9f9f9; border: 1px solid #d9d9d9; }
-    .cost-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px 16px; margin-bottom: 12px; }
-    .cost-item { padding: 8px 12px; background: #fff; border: 1px solid #e8e8e8; }
-    .cost-label { font-size: 11px; color: #666; margin-bottom: 4px; }
-    .cost-value { font-size: 16px; font-weight: 700; color: #1a1a1a; }
-    .cost-value.price { color: #f5222d; }
-    .cost-value.profit { color: #52c41a; }
-    .footer { margin-top: 30px; text-align: center; font-size: 11px; color: #999; }
+    th, td { border: 1px solid #d0d0d0; padding: 7px 10px; vertical-align: middle; }
+    th { background: #f4f6f8; font-weight: 600; color: #262626; text-align: center; }
+    tbody tr:hover { background: #fafcff; }
+    /* ---- 汇总区 ---- */
+    .summary-section { margin-top: 32px; padding: 20px; background: linear-gradient(135deg, #f0f7ff 0%, #e8f4ff 100%); border: 2px solid #1890ff; border-radius: 8px; page-break-inside: avoid; }
+    .summary-title { text-align: center; font-size: 16px; font-weight: 700; margin-bottom: 16px; padding-bottom: 10px; border-bottom: 1px dashed #1890ff; color: #1890ff; letter-spacing: 1px; }
+    .summary-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; border-bottom: 1px solid #d0e8ff; }
+    .summary-row:last-child { border-bottom: none; }
+    .summary-row-label { color: #444; font-size: 13px; }
+    .summary-row-value { font-weight: 700; font-size: 15px; color: #1a1a1a; }
+    .summary-row.highlight { background: #fff3e0; border-radius: 6px; padding: 12px 16px; margin: 4px 0; }
+    .summary-row.highlight .summary-row-value { font-size: 18px; color: #d4380d; }
+    .summary-row.profit .summary-row-value { color: #52c41a; }
+    .footer { margin-top: 40px; text-align: center; font-size: 11px; color: #999; padding-top: 16px; border-top: 1px solid #eee; }
     .print-btn-bar { position: fixed; top: 10px; right: 10px; z-index: 999; }
     .print-btn { padding: 8px 16px; background: #1890ff; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; }
     @media print {
       .no-print { display: none !important; }
       .print-btn-bar { display: none; }
+      .summary-section { background: #f8f9fa !important; border-color: #999 !important; }
+      .summary-row.highlight { background: #fff3e0 !important; }
     }
   </style>
 </head>
@@ -396,115 +401,102 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, styleNo, readOnly, onSave
   <div class="title">报 价 单</div>
   <div class="subtitle">Quotation Sheet</div>
 
-  <div class="info-grid">
+  <div class="info-bar">
     <div class="info-item"><span class="info-label">款号：</span><span class="info-value">${esc(styleNo || '-')}</span></div>
     <div class="info-item"><span class="info-label">打印时间：</span><span class="info-value">${printDate}</span></div>
   </div>
 
+  ${bomList.length > 0 ? `
   <div class="section">
-    <div class="section-title">一、物料明细（BOM）</div>
+    <div class="section-title">📦 物料明细（BOM）</div>
     <table>
       <thead>
         <tr>
-          <th style="width:50px">序号</th>
-          <th style="width:80px">类型</th>
-          <th style="width:110px">物料编码</th>
+          <th style="width:40px">#</th>
+          <th style="width:70px">类型</th>
+          <th style="width:100px">物料编码</th>
           <th>物料名称</th>
-          <th style="width:100px">规格/幅宽</th>
-          <th style="width:60px">单位</th>
-          <th style="width:80px">用量</th>
-          <th style="width:80px">损耗率</th>
-          <th style="width:90px">单价</th>
-          <th style="width:100px">总价</th>
+          <th style="width:90px">规格</th>
+          <th style="width:50px">单位</th>
+          <th style="width:70px">用量</th>
+          <th style="width:60px">损耗</th>
+          <th style="width:80px">单价</th>
+          <th style="width:90px">金额</th>
         </tr>
       </thead>
       <tbody>
         ${bomRows}
-        <tr class="summary-row">
-          <td colspan="9" style="text-align:right">物料成本合计：</td>
-          <td style="text-align:right">${formatMoney(materialCost)}</td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-
-  <div class="section">
-    <div class="section-title">二、工序明细</div>
-    <table>
-      <thead>
-        <tr>
-          <th style="width:50px">序号</th>
-          <th>进度阶段</th>
-          <th style="width:140px">工序合计</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${processRows}
-        <tr class="summary-row">
-          <td colspan="2" style="text-align:right">工序成本合计：</td>
-          <td style="text-align:right">${formatMoney(totalProcessCost)}</td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-
-  ${secondaryProcessList.length > 0 ? `
-  <div class="section">
-    <div class="section-title">三、二次工艺明细</div>
-    <table>
-      <thead>
-        <tr>
-          <th style="width:50px">序号</th>
-          <th>工艺名称</th>
-          <th style="width:140px">单价</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${secRows}
-        <tr class="summary-row">
-          <td colspan="2" style="text-align:right">二次工艺成本合计：</td>
-          <td style="text-align:right">${formatMoney(totalSecCost)}</td>
-        </tr>
       </tbody>
     </table>
   </div>` : ''}
 
-  <div class="cost-summary">
-    <div class="section-title" style="border-bottom-color:#52c41a">四、成本与报价汇总</div>
-    <div class="cost-grid">
-      <div class="cost-item">
-        <div class="cost-label">物料成本</div>
-        <div class="cost-value">${formatMoney(materialCost)}</div>
-      </div>
-      <div class="cost-item">
-        <div class="cost-label">工序成本</div>
-        <div class="cost-value">${formatMoney(processCost)}</div>
-      </div>
-      <div class="cost-item">
-        <div class="cost-label">其他成本</div>
-        <div class="cost-value">${formatMoney(otherCost)}</div>
-      </div>
-      <div class="cost-item">
-        <div class="cost-label">单件总成本</div>
-        <div class="cost-value">${formatMoney(totalCost)}</div>
-      </div>
-      <div class="cost-item">
-        <div class="cost-label">单件利润</div>
-        <div class="cost-value profit">${formatMoney(profit)}</div>
-      </div>
-      <div class="cost-item">
-        <div class="cost-label">单件报价</div>
-        <div class="cost-value price">${formatMoney(totalPrice)}</div>
-      </div>
+  ${processList.length > 0 ? `
+  <div class="section">
+    <div class="section-title">🔧 工序明细</div>
+    <table>
+      <thead>
+        <tr>
+          <th style="width:40px">#</th>
+          <th>工序名称</th>
+          <th style="width:120px">金额</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${processRows}
+      </tbody>
+    </table>
+  </div>` : ''}
+
+  ${secondaryProcessList.length > 0 ? `
+  <div class="section">
+    <div class="section-title">🎨 二次工艺</div>
+    <table>
+      <thead>
+        <tr>
+          <th style="width:40px">#</th>
+          <th>工艺名称</th>
+          <th style="width:120px">单价</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${secRows}
+      </tbody>
+    </table>
+  </div>` : ''}
+
+  <div class="summary-section">
+    <div class="summary-title">📊 成本与报价汇总</div>
+    <div class="summary-row">
+      <span class="summary-row-label">💰 物料成本</span>
+      <span class="summary-row-value">${formatMoney(materialCost)}</span>
     </div>
-    <div style="text-align:right;font-size:13px;color:#666;margin-top:8px">
-      利润率：${actualProfitRate}%
+    <div class="summary-row">
+      <span class="summary-row-label">🔧 工序成本</span>
+      <span class="summary-row-value">${formatMoney(processCost)}</span>
+    </div>
+    <div class="summary-row">
+      <span class="summary-row-label">📋 其他成本</span>
+      <span class="summary-row-value">${formatMoney(otherCost)}</span>
+    </div>
+    <div class="summary-row highlight">
+      <span class="summary-row-label">🏷️ 单件总成本</span>
+      <span class="summary-row-value">${formatMoney(totalCost)}</span>
+    </div>
+    <div class="summary-row profit">
+      <span class="summary-row-label">💵 单件利润</span>
+      <span class="summary-row-value">${formatMoney(profit)}</span>
+    </div>
+    <div class="summary-row highlight">
+      <span class="summary-row-label">🏆 单件报价（对外）</span>
+      <span class="summary-row-value">${formatMoney(totalPrice)}</span>
+    </div>
+    <div class="summary-row" style="justify-content: flex-end; margin-top: 8px;">
+      <span class="summary-row-label">利润率：</span>
+      <span class="summary-row-value profit">${actualProfitRate}%</span>
     </div>
   </div>
 
-  <div class="footer">
-    —— 本报价单由系统自动生成，最终报价以双方确认为准 ——
-  </div>
+  <div class="footer">本报价单由系统自动生成 · 仅供参考 · 最终报价以双方确认为准</div>
 </body>
 </html>`;
   }, [bomList, processList, secondaryProcessList, styleNo, materialCost, processCost, otherCost, totalCost, totalPrice, profit, actualProfitRate]);
