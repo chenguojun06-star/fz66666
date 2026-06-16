@@ -1,9 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Form, Row, Col, App, Input } from 'antd';
+import { Form, Row, Col, App, Input, Button } from 'antd';
+import { PrinterOutlined } from '@ant-design/icons';
 import ResizableModal from '@/components/common/ResizableModal';
 import { StyleQuotation, StyleBom, StyleProcess } from '@/types/style';
 import api from '@/utils/api';
+import { formatMoney } from '@/utils/format';
 import { useUser, isAdmin } from '@/utils/AuthContext';
+import { getMaterialTypeLabel } from '@/utils/materialType';
 import QuotationBomSection, { type BomColorCosts } from './styleQuotation/QuotationBomSection';
 import QuotationProcessSection from './styleQuotation/QuotationProcessSection';
 import QuotationSecondarySection from './styleQuotation/QuotationSecondarySection';
@@ -292,11 +295,246 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, styleNo, readOnly, onSave
   const isAuditLocked = auditStatus === 1 && !isAdmin(user);
   const effectiveLocked = isLocked || isAuditLocked;
 
+  // ===== 打印功能 =====
+  const buildQuotationPrintHtml = useCallback(() => {
+    const esc = (v: any) => String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+    // BOM表行
+    const bomRows = bomList.length > 0 ? bomList.map((item: any, idx: number) => {
+      const usage = Number(item.usageAmount) || 0;
+      const loss = Number(item.lossRate) || 0;
+      const unitPrice = Number(item.unitPrice) || 0;
+      let rowTotal: number;
+      const rawTotal = item.totalPrice;
+      const hasTotal = rawTotal !== undefined && rawTotal !== null && String(rawTotal).trim() !== '';
+      if (hasTotal) {
+        const n = typeof rawTotal === 'number' ? rawTotal : Number(rawTotal);
+        rowTotal = Number.isFinite(n) ? n : (usage * (1 + loss / 100) * unitPrice);
+      } else {
+        rowTotal = usage * (1 + loss / 100) * unitPrice;
+      }
+      return `<tr>
+        <td style="text-align:center">${idx + 1}</td>
+        <td>${esc(getMaterialTypeLabel(item.materialType))}</td>
+        <td>${esc(item.materialCode)}</td>
+        <td>${esc(item.materialName)}</td>
+        <td>${esc(item.specification)}</td>
+        <td>${esc(item.unit)}</td>
+        <td style="text-align:right">${usage.toFixed(2)}</td>
+        <td style="text-align:right">${loss.toFixed(1)}%</td>
+        <td style="text-align:right">${formatMoney(unitPrice)}</td>
+        <td style="text-align:right;font-weight:600">${formatMoney(rowTotal)}</td>
+      </tr>`;
+    }).join('') : `<tr><td colspan="10" style="text-align:center;color:#999;padding:16px">暂无物料明细</td></tr>`;
+
+    // 工序表行
+    const processRows = processList.length > 0 ? processList.map((item: any, idx: number) => {
+      const price = (Number(item.price) || 0) * (Number(item.rateMultiplier) || 1);
+      return `<tr>
+        <td style="text-align:center">${idx + 1}</td>
+        <td>${esc(item.progressStage || item.processName)}</td>
+        <td style="text-align:right">${formatMoney(price)}</td>
+      </tr>`;
+    }).join('') : `<tr><td colspan="3" style="text-align:center;color:#999;padding:16px">暂无工序明细</td></tr>`;
+
+    // 二次工艺表行
+    const secRows = secondaryProcessList.length > 0 ? secondaryProcessList.map((item: any, idx: number) => {
+      return `<tr>
+        <td style="text-align:center">${idx + 1}</td>
+        <td>${esc(item.processName)}</td>
+        <td style="text-align:right">${formatMoney(Number(item.unitPrice) || 0)}</td>
+      </tr>`;
+    }).join('') : `<tr><td colspan="3" style="text-align:center;color:#999;padding:16px">暂无二次工艺明细</td></tr>`;
+
+    const totalProcessCost = processList.reduce((s: number, i: any) => s + (Number(i.price) || 0) * (Number(i.rateMultiplier) || 1), 0);
+    const totalSecCost = secondaryProcessList.reduce((s: number, i: any) => s + (Number(i.unitPrice) || 0), 0);
+
+    const now = new Date();
+    const printDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+    return `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>报价单 - ${esc(styleNo || '')}</title>
+  <style>
+    @page { margin: 10mm; }
+    body { font-family: system-ui, -apple-system, "Microsoft YaHei", "PingFang SC", sans-serif; font-size: 12px; color: #333; padding: 20px; background: #fff; line-height: 1.6; }
+    .title { text-align: center; font-size: 22px; font-weight: 700; margin-bottom: 4px; letter-spacing: 2px; }
+    .subtitle { text-align: center; font-size: 12px; color: #999; margin-bottom: 20px; }
+    .info-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px 24px; margin-bottom: 20px; padding: 12px 16px; background: #fafafa; border: 1px solid #e8e8e8; }
+    .info-item { display: flex; gap: 8px; }
+    .info-label { color: #666; min-width: 80px; }
+    .info-value { font-weight: 500; }
+    .section { margin-bottom: 20px; page-break-inside: avoid; }
+    .section-title { font-size: 14px; font-weight: 600; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 2px solid #1890ff; color: #1a1a1a; }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    th, td { border: 1px solid #d9d9d9; padding: 6px 8px; vertical-align: middle; text-align: left; }
+    th { background: #fafafa; font-weight: 600; color: #262626; text-align: center; }
+    tr.summary-row td { background: #f5f5f5 !important; font-weight: 700; }
+    .cost-summary { margin-top: 20px; padding: 16px; background: #f9f9f9; border: 1px solid #d9d9d9; }
+    .cost-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px 16px; margin-bottom: 12px; }
+    .cost-item { padding: 8px 12px; background: #fff; border: 1px solid #e8e8e8; }
+    .cost-label { font-size: 11px; color: #666; margin-bottom: 4px; }
+    .cost-value { font-size: 16px; font-weight: 700; color: #1a1a1a; }
+    .cost-value.price { color: #f5222d; }
+    .cost-value.profit { color: #52c41a; }
+    .footer { margin-top: 30px; text-align: center; font-size: 11px; color: #999; }
+    .print-btn-bar { position: fixed; top: 10px; right: 10px; z-index: 999; }
+    .print-btn { padding: 8px 16px; background: #1890ff; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; }
+    @media print {
+      .no-print { display: none !important; }
+      .print-btn-bar { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="print-btn-bar no-print">
+    <button class="print-btn" onclick="window.print()">🖨️ 打印</button>
+  </div>
+
+  <div class="title">报 价 单</div>
+  <div class="subtitle">Quotation Sheet</div>
+
+  <div class="info-grid">
+    <div class="info-item"><span class="info-label">款号：</span><span class="info-value">${esc(styleNo || '-')}</span></div>
+    <div class="info-item"><span class="info-label">打印时间：</span><span class="info-value">${printDate}</span></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">一、物料明细（BOM）</div>
+    <table>
+      <thead>
+        <tr>
+          <th style="width:50px">序号</th>
+          <th style="width:80px">类型</th>
+          <th style="width:110px">物料编码</th>
+          <th>物料名称</th>
+          <th style="width:100px">规格/幅宽</th>
+          <th style="width:60px">单位</th>
+          <th style="width:80px">用量</th>
+          <th style="width:80px">损耗率</th>
+          <th style="width:90px">单价</th>
+          <th style="width:100px">总价</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${bomRows}
+        <tr class="summary-row">
+          <td colspan="9" style="text-align:right">物料成本合计：</td>
+          <td style="text-align:right">${formatMoney(materialCost)}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="section">
+    <div class="section-title">二、工序明细</div>
+    <table>
+      <thead>
+        <tr>
+          <th style="width:50px">序号</th>
+          <th>进度阶段</th>
+          <th style="width:140px">工序合计</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${processRows}
+        <tr class="summary-row">
+          <td colspan="2" style="text-align:right">工序成本合计：</td>
+          <td style="text-align:right">${formatMoney(totalProcessCost)}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  ${secondaryProcessList.length > 0 ? `
+  <div class="section">
+    <div class="section-title">三、二次工艺明细</div>
+    <table>
+      <thead>
+        <tr>
+          <th style="width:50px">序号</th>
+          <th>工艺名称</th>
+          <th style="width:140px">单价</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${secRows}
+        <tr class="summary-row">
+          <td colspan="2" style="text-align:right">二次工艺成本合计：</td>
+          <td style="text-align:right">${formatMoney(totalSecCost)}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>` : ''}
+
+  <div class="cost-summary">
+    <div class="section-title" style="border-bottom-color:#52c41a">四、成本与报价汇总</div>
+    <div class="cost-grid">
+      <div class="cost-item">
+        <div class="cost-label">物料成本</div>
+        <div class="cost-value">${formatMoney(materialCost)}</div>
+      </div>
+      <div class="cost-item">
+        <div class="cost-label">工序成本</div>
+        <div class="cost-value">${formatMoney(processCost)}</div>
+      </div>
+      <div class="cost-item">
+        <div class="cost-label">其他成本</div>
+        <div class="cost-value">${formatMoney(otherCost)}</div>
+      </div>
+      <div class="cost-item">
+        <div class="cost-label">单件总成本</div>
+        <div class="cost-value">${formatMoney(totalCost)}</div>
+      </div>
+      <div class="cost-item">
+        <div class="cost-label">单件利润</div>
+        <div class="cost-value profit">${formatMoney(profit)}</div>
+      </div>
+      <div class="cost-item">
+        <div class="cost-label">单件报价</div>
+        <div class="cost-value price">${formatMoney(totalPrice)}</div>
+      </div>
+    </div>
+    <div style="text-align:right;font-size:13px;color:#666;margin-top:8px">
+      利润率：${actualProfitRate}%
+    </div>
+  </div>
+
+  <div class="footer">
+    —— 本报价单由系统自动生成，最终报价以双方确认为准 ——
+  </div>
+</body>
+</html>`;
+  }, [bomList, processList, secondaryProcessList, styleNo, materialCost, processCost, otherCost, totalCost, totalPrice, profit, actualProfitRate]);
+
+  const handlePrintQuotation = useCallback(() => {
+    if (bomList.length === 0 && processList.length === 0) {
+      message.warning('暂无可打印的报价数据');
+      return;
+    }
+    const html = buildQuotationPrintHtml();
+    const printWindow = window.open('', '_blank', 'width=1000,height=800');
+    if (!printWindow) {
+      message.warning('请允许弹出窗口以进行打印');
+      return;
+    }
+    printWindow.document.write(html);
+    printWindow.document.close();
+  }, [bomList, processList, message, buildQuotationPrintHtml]);
+
   return (
     <div className="style-quotation" style={{ padding: '0 8px' }}>
       {styleNo && (
-        <div style={{ marginBottom: 12, fontWeight: 600, fontSize: 15, color: 'var(--color-text-primary)' }}>
-          款号：{styleNo}
+        <div style={{
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          marginBottom: 12,
+        }}>
+          <div style={{ fontWeight: 600, fontSize: 15, color: 'var(--color-text-primary)' }}>
+            款号：{styleNo}
+          </div>
+          <Button icon={<PrinterOutlined />} onClick={handlePrintQuotation}>打印报价单</Button>
         </div>
       )}
       <ResizableModal

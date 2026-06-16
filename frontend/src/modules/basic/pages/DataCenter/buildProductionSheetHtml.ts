@@ -9,7 +9,7 @@ import { buildPrintHeader } from '@/utils/safePrint';
  * @param payload 款式数据（包含 style 等字段）
  * @param tenantName 租户/工厂名称（如「东方制衣厂」），可选
  */
-export const buildProductionSheetHtml = (payload: any, tenantName?: string) => {
+export const buildProductionSheetHtml = (payload: any, tenantName?: string, extra?: any) => {
   const style = payload?.style || {};
   const sizeList = Array.isArray(payload?.sizeList) ? payload.sizeList : [];
   const attachments = Array.isArray(payload?.attachments) ? payload.attachments : [];
@@ -156,6 +156,8 @@ export const buildProductionSheetHtml = (payload: any, tenantName?: string) => {
           <div>季节：${esc(seasonText)}</div>
           <div>颜色：${esc(style.color || '')}</div>
           <div>码数：${esc(style.size || '')}</div>
+          ${(style.salesChannel || extra?.salesChannel) ? `<div>销售渠道：${esc(style.salesChannel || extra?.salesChannel || '')}</div>` : ''}
+          ${(style.customerName || extra?.customerName) ? `<div>客户：${esc(style.customerName || extra?.customerName || '')}</div>` : ''}
         </div>
       </div>
     </div>

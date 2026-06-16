@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Button, Card, Input, Select, Form, Row, Col, InputNumber } from 'antd';
+import { PrinterOutlined } from '@ant-design/icons';
 import StandardModal from '@/components/common/StandardModal';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
 import RejectReasonModal from '@/components/common/RejectReasonModal';
@@ -9,6 +10,8 @@ import { useUser } from '@/utils/AuthContext';
 import ResizableTable from '@/components/common/ResizableTable';
 import { MaterialDatabase } from '@/types/production';
 import api from '@/utils/api';
+import { formatMoney } from '@/utils/format';
+import { getMaterialTypeLabel } from '@/utils/materialType';
 import { useViewport } from '@/utils/useViewport';
 import { useTablePagination } from '@/hooks';
 import SupplierSelect from '@/components/common/SupplierSelect';
@@ -73,6 +76,154 @@ const MaterialDatabasePage: React.FC = () => {
     openDialog, handleComplete, handleDelete, handleReturn, handleDisable, handleEnable, user,
   });
 
+  // ===== 打印功能 =====
+  const buildMaterialPrintHtml = useCallback(() => {
+    const esc = (v: any) => String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+    // 计算各类型数量
+    const statsByType: Record<string, { count: number; totalQty: number }> = {};
+    const rows = dataList.map((item: any, idx: number) => {
+      const type = item.materialType || 'other';
+      if (!statsByType[type]) statsByType[type] = { count: 0, totalQty: 0 };
+      statsByType[type].count += 1;
+      const qty = Number(item.quantity) || 0;
+      statsByType[type].totalQty += qty;
+      const unitPrice = Number(item.unitPrice) || 0;
+      return `<tr>
+        <td style="text-align:center">${idx + 1}</td>
+        <td>${esc(item.materialCode)}</td>
+        <td>${esc(item.materialName)}</td>
+        <td>${esc(item.styleNo)}</td>
+        <td style="text-align:center">${esc(getMaterialTypeLabel(item.materialType))}</td>
+        <td>${esc(item.color)}</td>
+        <td>${esc(item.specifications)}</td>
+        <td style="text-align:center">${esc(item.unit)}</td>
+        <td style="text-align:right">${qty.toFixed(2)}</td>
+        <td style="text-align:right">${formatMoney(unitPrice)}</td>
+        <td style="text-align:right;font-weight:600">${formatMoney(qty * unitPrice)}</td>
+        <td>${esc(item.supplierName)}</td>
+      </tr>`;
+    }).join('');
+
+    const totalCount = dataList.length;
+    let totalQty = 0;
+    let totalValue = 0;
+    dataList.forEach((item: any) => {
+      const qty = Number(item.quantity) || 0;
+      const unitPrice = Number(item.unitPrice) || 0;
+      totalQty += qty;
+      totalValue += qty * unitPrice;
+    });
+
+    // 类型汇总行
+    const typeSummaryRows = Object.keys(statsByType).map(type => {
+      const s = statsByType[type];
+      return `<tr><td colspan="8" style="text-align:right;background:#fafafa;font-weight:600">${esc(getMaterialTypeLabel(type))} 小计：${s.count} 项 / ${s.totalQty.toFixed(2)} 单位</td><td style="text-align:right;background:#fafafa;font-weight:600">${s.totalQty.toFixed(2)}</td><td colspan="2" style="text-align:right;background:#fafafa;font-weight:600">—</td><td style="background:#fafafa"></td></tr>`;
+    }).join('');
+
+    const now = new Date();
+    const printDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+    return `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>物料资料库清单</title>
+  <style>
+    @page { margin: 10mm; }
+    body { font-family: system-ui, -apple-system, "Microsoft YaHei", "PingFang SC", sans-serif; font-size: 12px; color: #333; padding: 20px; background: #fff; line-height: 1.6; }
+    .title { text-align: center; font-size: 22px; font-weight: 700; margin-bottom: 4px; letter-spacing: 2px; }
+    .subtitle { text-align: center; font-size: 12px; color: #999; margin-bottom: 20px; }
+    .summary-bar { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; }
+    .summary-item { padding: 12px 16px; background: #f9f9f9; border: 1px solid #e8e8e8; text-align: center; }
+    .summary-label { font-size: 11px; color: #666; margin-bottom: 4px; }
+    .summary-value { font-size: 18px; font-weight: 700; color: #1a1a1a; }
+    .section { margin-bottom: 20px; page-break-inside: avoid; }
+    table { width: 100%; border-collapse: collapse; font-size: 11px; }
+    th, td { border: 1px solid #d9d9d9; padding: 5px 6px; vertical-align: middle; text-align: left; }
+    th { background: #fafafa; font-weight: 600; color: #262626; text-align: center; }
+    tr.summary-row td { background: #fffbe6 !important; font-weight: 700; color: #d48806; }
+    .footer { margin-top: 30px; text-align: center; font-size: 11px; color: #999; }
+    .print-btn-bar { position: fixed; top: 10px; right: 10px; z-index: 999; }
+    .print-btn { padding: 8px 16px; background: #1890ff; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; }
+    @media print { .no-print { display: none !important; } .print-btn-bar { display: none; } }
+  </style>
+</head>
+<body>
+  <div class="print-btn-bar no-print">
+    <button class="print-btn" onclick="window.print()">🖨️ 打印</button>
+  </div>
+
+  <div class="title">物 料 资 料 库</div>
+  <div class="subtitle">Material Database Inventory</div>
+
+  <div class="summary-bar">
+    <div class="summary-item">
+      <div class="summary-label">物料总项数</div>
+      <div class="summary-value">${totalCount}</div>
+    </div>
+    <div class="summary-item">
+      <div class="summary-label">总数量</div>
+      <div class="summary-value">${totalQty.toFixed(2)}</div>
+    </div>
+    <div class="summary-item">
+      <div class="summary-label">总金额（估算）</div>
+      <div class="summary-value" style="color:#f5222d">${formatMoney(totalValue)}</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <table>
+      <thead>
+        <tr>
+          <th style="width:40px">序号</th>
+          <th style="width:110px">物料编号</th>
+          <th>物料名称</th>
+          <th style="width:100px">款号</th>
+          <th style="width:70px">类型</th>
+          <th style="width:80px">颜色</th>
+          <th style="width:100px">规格/幅宽</th>
+          <th style="width:50px">单位</th>
+          <th style="width:70px">数量</th>
+          <th style="width:80px">单价</th>
+          <th style="width:90px">金额</th>
+          <th style="width:120px">供应商</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows || '<tr><td colspan="12" style="text-align:center;color:#999;padding:20px">暂无物料数据</td></tr>'}
+        ${typeSummaryRows}
+        <tr class="summary-row">
+          <td colspan="8" style="text-align:right">全库合计：${totalCount} 项 / ${totalQty.toFixed(2)} 单位</td>
+          <td style="text-align:right">${totalQty.toFixed(2)}</td>
+          <td>—</td>
+          <td style="text-align:right">${formatMoney(totalValue)}</td>
+          <td></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="footer">
+    打印时间：${printDate} &nbsp;&nbsp;|&nbsp;&nbsp; 本清单数据仅供参考，实际数量以盘点为准
+  </div>
+</body>
+</html>`;
+  }, [dataList]);
+
+  const handlePrintMaterialDatabase = useCallback(() => {
+    if (dataList.length === 0) {
+      return;
+    }
+    const html = buildMaterialPrintHtml();
+    const printWindow = window.open('', '_blank', 'width=1200,height=800');
+    if (!printWindow) {
+      return;
+    }
+    printWindow.document.write(html);
+    printWindow.document.close();
+  }, [dataList, buildMaterialPrintHtml]);
+
   return (
     <>
       {showSmartErrorNotice && smartError ? (
@@ -81,7 +232,13 @@ const MaterialDatabasePage: React.FC = () => {
         </Card>
       ) : null}
       <Card>
-        <div style={{ marginBottom: 16 }}><h2 style={{ margin: 0 }}> 物料资料库</h2></div>
+        <div style={{
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          marginBottom: 16,
+        }}>
+          <h2 style={{ margin: 0 }}> 物料资料库</h2>
+          <Button icon={<PrinterOutlined />} onClick={handlePrintMaterialDatabase}>打印清单</Button>
+        </div>
         <Card style={{ marginBottom: 16, background: 'var(--color-bg-container)' }}>
           <StandardToolbar
             left={(
