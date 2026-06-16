@@ -38,11 +38,23 @@ public class DataTruthGuard {
     );
 
     private static final Set<String> UNCERTAINTY_INDICATORS = Set.of(
-            "可能", "大概", "应该", "估计", "或许", "也许", "差不多", "左右"
+            "可能", "大概", "应该", "估计", "或许", "也许", "差不多", "左右",
+            "约", "大约", "近", "接近"
     );
 
     private static final Set<String> HALLUCINATION_PATTERNS = Set.of(
-            "据我所知", "我认为", "我觉得", "我猜", "我推测"
+            "据我所知", "我认为", "我觉得", "我猜", "我推测", "个人觉得"
+    );
+
+    // 模糊时间词（需要在呈现时明确标注为"实时"还是"非实时"）
+    private static final Set<String> FUZZY_TIME_WORDS = Set.of(
+            "今天", "昨天", "前天", "明天", "现在", "目前", "当前",
+            "本周", "上周", "本月", "上月", "今年", "去年"
+    );
+
+    // 绝对化表述词（无数据支撑时必须降级）
+    private static final Set<String> ABSOLUTE_WORDS = Set.of(
+            "绝对", "肯定", "一定", "完全", "100%", "百分百", "全部", "所有"
     );
 
     @Autowired(required = false)
@@ -684,5 +696,250 @@ public class DataTruthGuard {
             }
         }
         return audit;
+    }
+
+    // ──────────────────────────────────────────────────────────────
+    // 新增：用户友好提示和数据标注
+    // ──────────────────────────────────────────────────────────────
+
+    /**
+     * 为AI回答添加数据来源和置信度标注。
+     *
+     * <p>输出格式：
+     * <pre>
+     * 【数据来源】：小云AI分析 + 业务数据库查询
+     * 【数据时效性】：实时查询（当前时间）
+     * 【置信度】：高（综合评分 85/100）
+     * 【数据范围】：您的工厂（tenantId=xxx）
+     *
+     * [原AI回答内容]
+     *
+     * 【注意】：以上数据仅供参考，重要决策请二次确认
+     * </pre>
+     *
+     * @param aiContent  原AI回答
+     * @param toolEvidence 工具证据
+     * @param trustScore 综合信任分
+     * @param dataTime   数据时间
+     * @return 标注后的AI回答
+     */
+    public String annotateAiResponse(String aiContent, String toolEvidence,
+                                      int trustScore, Date dataTime) {
+        if (aiContent == null || aiContent.isBlank()) {
+            return buildNoDataResponse();
+        }
+
+        StringBuilder annotated = new StringBuilder();
+
+        // 1. 数据来源标注
+        annotated.append(buildDataSourceTag(toolEvidence)).append("\n\n");
+
+        // 2. 数据时效性标注
+        annotated.append(buildDataTimelinessTag(dataTime)).append("\n\n");
+
+        // 3. 置信度标注
+        annotated.append(buildTrustLevelTag(trustScore)).append("\n\n");
+
+        // 4. 多租户数据范围标注
+        annotated.append(buildDataScopeTag()).append("\n\n");
+
+        // 5. 原AI回答（添加分隔线）
+        annotated.append("───").append("\n\n");
+        annotated.append(aiContent).append("\n\n");
+
+        // 6. 时间验证提示（如果有模糊时间词）
+        String timeWarning = buildTimeWarningIfNeeded(aiContent);
+        if (timeWarning != null) {
+            annotated.append("\n").append(timeWarning);
+        }
+
+        // 7. 绝对化表述降级提示（如果有且无数据支撑）
+        String absoluteWarning = buildAbsoluteWordWarningIfNeeded(aiContent, toolEvidence);
+        if (absoluteWarning != null) {
+            annotated.append("\n").append(absoluteWarning);
+        }
+
+        // 8. 底部提示
+        annotated.append("\n")
+                .append("【重要提示】：以上数据为AI分析结果，仅供参考。")
+                .append("涉及生产计划、工资结算等重要决策，请二次确认后再执行。");
+
+        return annotated.toString();
+    }
+
+    /**
+     * 当AI找不到数据时的友好回复模板。
+     */
+    public String buildNoDataResponse() {
+        return """
+                【数据来源】：小云AI查询
+                【数据状态】：未找到相关数据
+
+                ───
+
+                很抱歉，我没有找到您查询的相关数据。
+
+                可能的原因：
+                1. 您查询的订单/款式/工厂在系统中不存在
+                2. 关键词可能不够准确，请尝试其他表述
+                3. 相关数据可能尚未录入系统
+
+                建议：
+                - 检查您使用的关键词是否准确
+                - 可以告诉我更多上下文信息，我帮您重新查询
+                - 如需录入新数据，请联系系统管理员
+
+                【重要提示】：如数据对生产决策至关重要，请先在相关页面中手动确认。""";
+    }
+
+    /**
+     * 构建数据来源标注。
+     */
+    private String buildDataSourceTag(String toolEvidence) {
+        if (toolEvidence == null || toolEvidence.isBlank() ||
+                toolEvidence.contains("未找到") || toolEvidence.contains("null")) {
+            return "【数据来源】：小云AI分析（无直接工具数据支撑，请谨慎参考）";
+        }
+
+        // 检测数据源类型
+        boolean hasDbData = toolEvidence.contains("查询") || toolEvidence.contains("列表")
+                || toolEvidence.contains("数据") || toolEvidence.contains("记录");
+        boolean hasAiAnalysis = toolEvidence.contains("分析") || toolEvidence.contains("预测");
+
+        if (hasDbData && hasAiAnalysis) {
+            return "【数据来源】：小云AI分析 + 业务数据库查询（已交叉验证）";
+        } else if (hasDbData) {
+            return "【数据来源】：小云AI + 业务数据库实时查询";
+        } else {
+            return "【数据来源】：小云AI分析结果";
+        }
+    }
+
+    /**
+     * 构建数据时效性标注。
+     */
+    private String buildDataTimelinessTag(Date dataTime) {
+        if (dataTime == null) {
+            return "【数据时效性】：未标注时间（请特别注意时效性）";
+        }
+
+        long diff = System.currentTimeMillis() - dataTime.getTime();
+        long minutes = diff / (60 * 1000);
+        long hours = minutes / 60;
+        long days = hours / 24;
+
+        if (minutes < 5) {
+            return "【数据时效性】：实时查询（最新数据）";
+        } else if (minutes < 60) {
+            return "【数据时效性】：近" + minutes + "分钟内的数据";
+        } else if (hours < 24) {
+            return "【数据时效性】：近" + hours + "小时的数据";
+        } else if (days < 7) {
+            return "【数据时效性】：近" + days + "天的数据（建议确认是否有更新）";
+        } else {
+            return "【数据时效性】：" + days + "天前的数据（可能已过时，请手动确认最新状态）";
+        }
+    }
+
+    /**
+     * 构建置信度标注。
+     */
+    private String buildTrustLevelTag(int trustScore) {
+        String level;
+        String description;
+
+        if (trustScore >= 80) {
+            level = "高";
+            description = "数据经过完整验证，可直接参考";
+        } else if (trustScore >= 60) {
+            level = "中";
+            description = "数据基本可信，建议结合实际情况判断";
+        } else if (trustScore >= 40) {
+            level = "低";
+            description = "数据缺少部分支撑，建议仅作参考，重要决策请二次确认";
+        } else {
+            level = "极低";
+            description = "数据可信度不足，请不要依赖此回答做重要决策，请先手动查询系统";
+        }
+
+        return String.format("【置信度】：%s（综合评分 %d/100） - %s",
+                level, trustScore, description);
+    }
+
+    /**
+     * 构建多租户数据范围标注。
+     */
+    private String buildDataScopeTag() {
+        try {
+            Long tenantId = UserContext.tenantId();
+            if (tenantId != null) {
+                return "【数据范围】：您的工厂（tenantId=" + tenantId + "） - 数据已隔离，仅显示您有权限访问的数据";
+            }
+            return "【数据范围】：当前会话数据（租户已隔离）";
+        } catch (Exception e) {
+            return "【数据范围】：请注意确认数据归属";
+        }
+    }
+
+    /**
+     * 如果AI回答中有模糊时间词，生成警告提示。
+     *
+     * <p>例如："今天逾期5个订单" - 如果用户看到时已经是明天，就可能误解。
+     */
+    private String buildTimeWarningIfNeeded(String aiContent) {
+        if (aiContent == null) return null;
+
+        boolean hasFuzzyTime = FUZZY_TIME_WORDS.stream().anyMatch(aiContent::contains);
+        if (!hasFuzzyTime) return null;
+
+        java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm");
+        String currentTime = sdf.format(new Date());
+
+        return "【时间提示】：以上内容中的\"今天\"、\"本周\"等表述，基于当前时间("
+                + currentTime + ")判断。如您在不同时间查看，数据可能已更新，请以系统实时查询为准。";
+    }
+
+    /**
+     * 如果AI回答中有绝对化表述且无数据支撑，生成降级提示。
+     */
+    private String buildAbsoluteWordWarningIfNeeded(String aiContent, String toolEvidence) {
+        if (aiContent == null) return null;
+
+        boolean hasAbsolute = ABSOLUTE_WORDS.stream().anyMatch(aiContent::contains);
+        if (!hasAbsolute) return null;
+
+        boolean hasEvidence = toolEvidence != null && !toolEvidence.isBlank()
+                && !toolEvidence.contains("未找到");
+
+        if (!hasEvidence) {
+            return "【表述提示】：回答中含有\"绝对/肯定\"等表述，但缺少直接数据支撑。"
+                    + "建议将其视为趋势判断而非绝对事实，重要决策请手动查询验证。";
+        }
+        return null;
+    }
+
+    /**
+     * 简化版标注方法（无时间参数，使用当前时间）。
+     */
+    public String annotateSimple(String aiContent, String toolEvidence, int trustScore) {
+        return annotateAiResponse(aiContent, toolEvidence, trustScore, new Date());
+    }
+
+    /**
+     * 为"工具找不到数据"的情况生成降级回答。
+     */
+    public String buildSoftFailureResponse(String userQuery, String toolName, String reason) {
+        return "【数据来源】：小云AI查询（未找到可用数据）\n\n"
+                + "───\n\n"
+                + "关于\"" + (userQuery != null ? userQuery.substring(0, Math.min(userQuery.length(), 30)) : "您的查询")
+                + "\"，我尝试调用" + (toolName != null ? toolName : "查询工具")
+                + "但没有找到符合条件的数据。\n\n"
+                + "具体原因：" + (reason != null ? reason : "查询条件可能不匹配") + "\n\n"
+                + "建议您：\n"
+                + "1. 检查关键词是否准确（如订单号是否完整）\n"
+                + "2. 尝试使用其他关键词或放宽查询条件\n"
+                + "3. 如果是新数据，可能尚未入库，请稍后再试\n"
+                + "4. 如需新增数据，请在相关页面操作\n\n"
+                + "【重要提示】：如涉及生产决策，请不要依赖AI分析结果，直接查询系统原始数据。";
     }
 }

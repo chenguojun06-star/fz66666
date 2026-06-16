@@ -78,15 +78,20 @@ public class DailyBriefingService {
     private void fillRealData(DailyBriefing b, Long tenantId) {
         String factoryId = UserContext.factoryId();
 
-        // 查询所有未删除的生产订单
-        List<ProductionOrder> allOrders = productionOrderService.lambdaQuery()
-                .eq(ProductionOrder::getTenantId, tenantId)
-                .eq(ProductionOrder::getDeleteFlag, 0)
-                .select(ProductionOrder::getId, ProductionOrder::getOrderNo,
+        // 查询所有未删除的生产订单（根据权限过滤工厂）
+        LambdaQueryWrapper<ProductionOrder> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(ProductionOrder::getTenantId, tenantId)
+                .eq(ProductionOrder::getDeleteFlag, 0);
+        // 如果有工厂限制，只查询本工厂数据
+        if (factoryId != null && !factoryId.isBlank()) {
+            wrapper.eq(ProductionOrder::getFactoryId, factoryId);
+        }
+        wrapper.select(ProductionOrder::getId, ProductionOrder::getOrderNo,
                         ProductionOrder::getStatus, ProductionOrder::getProductionProgress,
                         ProductionOrder::getPlannedEndDate, ProductionOrder::getFactoryId)
-                .last("LIMIT 5000")
-                .list();
+                .last("LIMIT 5000");
+
+        List<ProductionOrder> allOrders = productionOrderService.list(wrapper);
 
         int totalOrders = allOrders.size();
 
