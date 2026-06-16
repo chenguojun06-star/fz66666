@@ -342,7 +342,7 @@ export default function MarketHotItems({ onAdded }: { onAdded?: () => void }) {
                           {item.thumbnail
                             ? (
                               <div style={{ width: '100%', height: 190, background: 'var(--color-bg-container)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 6 }}>
-                                <Image src={item.thumbnail} alt={item.title} style={{ width: '100%', height: '100%', objectFit: 'contain' }} loading="lazy" referrerPolicy="no-referrer" />
+                                <Image src={item.thumbnail} alt={item.title} style={{ width: '100%', height: '100%', objectFit: 'contain' }} loading="lazy" referrerPolicy="no-referrer" fallback="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'%3E%3Crect fill='%23f5f5f5' width='120' height='120'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%23ccc' font-size='14'%3E%E5%8A%A0%E8%BD%BD%E5%A4%B1%E8%B4%A5%3C/text%3E%3C/svg%3E" />
                               </div>
                             )
                             : <div style={{ height: 80, background: 'var(--color-bg-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-quaternary)', fontSize: 14 }}>暂无图片</div>}
@@ -439,13 +439,13 @@ export default function MarketHotItems({ onAdded }: { onAdded?: () => void }) {
                       overflow: 'hidden', transition: 'box-shadow .2s, transform .15s',
                       display: 'flex', flexDirection: 'column', height: '100%', cursor: 'default',
                     }}
-                    onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.1)'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
-                    onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.transform = 'none'; }}
+                    onMouseEnter={e => { e.currentTarget.classList.add('market-item-hovered'); }}
+                    onMouseLeave={e => { e.currentTarget.classList.remove('market-item-hovered'); }}
                   >
                     {/* 商品图片 */}
                     {item.thumbnail ? (
                       <div style={{ height: 280, background: 'var(--color-bg-container)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 6 }}>
-                        <Image src={item.thumbnail} alt={item.title} style={{ width: '100%', height: '100%', objectFit: 'contain' }} loading="lazy" referrerPolicy="no-referrer" />
+                        <Image src={item.thumbnail} alt={item.title} style={{ width: '100%', height: '100%', objectFit: 'contain' }} loading="lazy" referrerPolicy="no-referrer" fallback="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'%3E%3Crect fill='%23f5f5f5' width='120' height='120'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%23ccc' font-size='14'%3E%E5%8A%A0%E8%BD%BD%E5%A4%B1%E8%B4%A5%3C/text%3E%3C/svg%3E" />
                       </div>
                     ) : (
                       <div style={{ height: 100, background: 'var(--color-bg-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-quaternary)', fontSize: 14 }}>暂无图片</div>

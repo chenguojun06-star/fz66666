@@ -125,10 +125,12 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
     if (!shell) return;
     const tableBody = shell.querySelector('.ant-table-body') as HTMLElement | null;
     if (!tableBody) return;
+    // 读取布局属性后，延迟 setState 到下一帧，避免 Forced reflow
     const next = tableBody.scrollWidth > tableBody.clientWidth + 2;
     if (lastScrollableRef.current === next) return;
     lastScrollableRef.current = next;
-    setIsScrollable(next);
+    // 用 microtask 延迟 setState，让浏览器先完成当前帧的布局计算
+    Promise.resolve().then(() => setIsScrollable(next));
   }, []);
 
   const responsiveTableSize = React.useMemo(() => {

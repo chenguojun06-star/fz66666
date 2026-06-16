@@ -1,0 +1,236 @@
+/* ==========================================================================
+ * LightSense 光感交互组件库
+ * --------------------------------------------------------------------------
+ * 性能原则：
+ *   1. 所有动画走 CSS keyframes，不依赖 JS setState 驱动
+ *   2. 只用 transform / opacity 动画（GPU 合成层，不触发 layout / paint）
+ *   3. box-shadow / backdrop-filter 等高成本属性，仅在激活态开启
+ *   4. will-change 仅在 hover/动画期间设置，不常驻 GPU 合成层
+ * ==========================================================================
+ */
+
+/* --------------------------------------------------------------------------
+ * 全局设计变量（可被应用主题覆盖）
+ * -------------------------------------------------------------------------- */
+
+.light-sense-root {
+  --ls-primary: 59, 130, 246;     /* 主色 - 蓝色光感 */
+  --ls-urgent: 239, 68, 68;       /* 紧急色 - 红色 */
+  --ls-success: 34, 197, 94;      /* 成功色 - 绿色 */
+  --ls-warning: 245, 158, 11;     /* 警告色 - 橙色 */
+  --ls-info: 139, 92, 246;        /* 信息色 - 紫色 */
+
+  --ls-duration-fast: 160ms;       /* 快速反馈 */
+  --ls-duration: 260ms;            /* 标准过渡 */
+  --ls-duration-slow: 520ms;       /* 慢速过渡 */
+
+  --ls-easing: cubic-bezier(0.23, 1, 0.32, 1);
+  --ls-easing-in: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* --------------------------------------------------------------------------
+ * LightSenseModal - 光感弹窗动画
+ * -------------------------------------------------------------------------- */
+
+.light-sense-modal .ant-modal-content {
+  border-radius: 16px;
+}
+
+.light-sense-modal .ant-modal-body {
+  padding: 20px 24px;
+}
+
+/* 入场 */
+.light-sense-fade-enter-active .ant-modal-content {
+  will-change: transform, opacity;
+  animation: ls-modal-in var(--ls-duration-slow) var(--ls-easing) forwards;
+}
+
+/* 出场 */
+.light-sense-fade-leave-active .ant-modal-content {
+  will-change: transform, opacity;
+  animation: ls-modal-out var(--ls-duration-slow) var(--ls-easing-in) forwards;
+}
+
+/* mask 遮罩动画 */
+.light-sense-fade-enter-active .ant-modal-mask {
+  animation: ls-mask-in var(--ls-duration-slow) var(--ls-easing) forwards;
+}
+
+.light-sense-fade-leave-active .ant-modal-mask {
+  animation: ls-mask-out var(--ls-duration-slow) var(--ls-easing-in) forwards;
+}
+
+@keyframes ls-modal-in {
+  0% {
+    opacity: 0;
+    transform: translateY(16px) scale(0.96);
+  }
+  60% {
+    transform: translateY(-2px) scale(1.005);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes ls-modal-out {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+}
+
+@keyframes ls-mask-in {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+@keyframes ls-mask-out {
+  0% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* 不同 modalType 的差异化光晕 */
+.light-sense-default .ant-modal-content {
+  box-shadow: 0 20px 60px rgba(var(--ls-primary), 0.18), 0 4px 16px rgba(0, 0, 0, 0.06);
+}
+
+.light-sense-urgent .ant-modal-content {
+  box-shadow: 0 20px 60px rgba(var(--ls-urgent), 0.18), 0 4px 16px rgba(0, 0, 0, 0.06);
+}
+
+.light-sense-success .ant-modal-content {
+  box-shadow: 0 20px 60px rgba(var(--ls-success), 0.18), 0 4px 16px rgba(0, 0, 0, 0.06);
+}
+
+.light-sense-warning .ant-modal-content {
+  box-shadow: 0 20px 60px rgba(var(--ls-warning), 0.18), 0 4px 16px rgba(0, 0, 0, 0.06);
+}
+
+.light-sense-info .ant-modal-content {
+  box-shadow: 0 20px 60px rgba(var(--ls-info), 0.18), 0 4px 16px rgba(0, 0, 0, 0.06);
+}
+
+/* --------------------------------------------------------------------------
+ * 全局卡片效果
+ * -------------------------------------------------------------------------- */
+
+/* 仪表板卡片 */
+.dashboard-card {
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.04);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+  transition: transform var(--ls-duration) var(--ls-easing),
+              box-shadow var(--ls-duration) var(--ls-easing);
+}
+
+.dashboard-card:hover {
+  will-change: transform;
+  transform: translateY(-2px);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.1);
+}
+
+/* antd Card 全局升级 */
+.ant-card {
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.04);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  transition: transform var(--ls-duration) var(--ls-easing),
+              box-shadow var(--ls-duration) var(--ls-easing);
+}
+
+.ant-card-hoverable:hover {
+  will-change: transform;
+  transform: translateY(-4px);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.08);
+}
+
+/* --------------------------------------------------------------------------
+ * 页面入场动画
+ * -------------------------------------------------------------------------- */
+
+.ls-page-in {
+  animation: page-slide-up 420ms var(--ls-easing) both;
+}
+
+@keyframes page-slide-up {
+  0% {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* --------------------------------------------------------------------------
+ * IntelligencePanel agent-card 动画
+ * -------------------------------------------------------------------------- */
+
+.intelligence-agent-card {
+  display: flex;
+  align-items: center;
+  padding: 14px;
+  border-radius: 12px;
+  background: #fafafa;
+  cursor: pointer;
+  transition: transform var(--ls-duration) var(--ls-easing),
+              background-color var(--ls-duration-fast) var(--ls-easing-in),
+              box-shadow var(--ls-duration) var(--ls-easing);
+  animation: card-fade-in 300ms var(--ls-easing) both;
+  /* will-change 仅 hover 时设置，避免常驻 GPU 合成层 */
+  border: 1px solid transparent;
+}
+
+.intelligence-agent-card:hover {
+  will-change: transform;
+  background: #f4f7ff;
+  transform: translateX(4px);
+  box-shadow: 0 4px 14px rgba(var(--ls-primary), 0.08);
+}
+
+@keyframes card-fade-in {
+  from {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* --------------------------------------------------------------------------
+ * 选品中心商品卡片 hover 效果
+ * --------------------------------------------------------------------------
+ * 用 CSS class 切换替代 inline style 修改，避免 Forced reflow
+ * -------------------------------------------------------------------------- */
+
+.market-item-hovered {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1) !important;
+  transform: translateY(-2px) !important;
+}
+
+/* --------------------------------------------------------------------------
+ * 降低动效偏好（尊重用户系统设置）
+ * -------------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .light-sense-modal *,
+  .dashboard-card,
+  .ant-card,
+  .intelligence-agent-card,
+  .ls-page-in {
+    animation: none !important;
+    transition: none !important;
+    will-change: auto;
+  }
+}

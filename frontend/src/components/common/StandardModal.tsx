@@ -1,5 +1,5 @@
 import React from 'react';
-import ResizableModal, { ResizableModalProps } from '@/components/common/ResizableModal';
+import ResizableModal, { ResizableModalProps, LightSenseType } from '@/components/common/ResizableModal';
 
 /**
  * 弹窗尺寸规范
@@ -17,12 +17,15 @@ const sizeConfig: Record<StandardModalSize, { width: string; minWidth: number; h
 
 export type StandardModalProps = ResizableModalProps & {
   size?: StandardModalSize;
+  /** LightSense 光感效果，默认 'default' */
+  lightSense?: LightSenseType;
 };
 
 const StandardModal: React.FC<StandardModalProps> = ({
   size = 'md',
   maskClosable,
   forceRender,
+  lightSense = 'default',
   ...rest
 }) => {
   const cfg = sizeConfig[size];
@@ -39,6 +42,7 @@ const StandardModal: React.FC<StandardModalProps> = ({
       initialHeight={initialHeight}
       maskClosable={maskClosable ?? (rest.onOk ? false : true)}
       forceRender={forceRender}
+      lightSense={lightSense}
       {...rest}
     />
   );

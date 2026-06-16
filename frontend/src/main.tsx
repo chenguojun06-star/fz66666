@@ -96,6 +96,7 @@ import './styles/dark-theme-global.css';
 import './styles/button-override.css';
 import './styles/animations.css';
 import './components/common/GlobalAiAssistant/xiaoyun-tokens.css';
+import './styles/lightSense.css';
 
 const themeStorageKey = 'app.theme';
 const fallbackTheme = 'white';

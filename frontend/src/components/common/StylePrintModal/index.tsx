@@ -456,20 +456,41 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
                       }
                     }
 
-                    // 客户信息（样衣模式）
+                    // 客户与销售渠道信息（样衣模式）
                     if (options.customerInfoBlock && mode === 'sample') {
-                      allFields.push({ label: '客户', value: (data.productionSheet as any)?.customer || empty });
-                      allFields.push({ label: '跟单员', value: (data.productionSheet as any)?.orderType || empty });
-                      allFields.push({ label: '设计师', value: (data.productionSheet as any)?.sampleNo || empty });
-                      allFields.push({ label: '打板价', value: (data.productionSheet as any)?.price ? `¥${Number((data.productionSheet as any).price).toFixed(2)}` : empty });
+                      const prodSheet = data.productionSheet as any;
+                      // 销售渠道
+                      allFields.push({ label: '销售渠道', value: prodSheet?.salesChannel || empty });
+                      // 客户详情（客户名称、联系人、电话、地址）
+                      if (prodSheet?.customerName) {
+                        allFields.push({ label: '客户', value: prodSheet?.customerName || empty });
+                      } else {
+                        allFields.push({ label: '客户', value: prodSheet?.customer || empty });
+                      }
+                      allFields.push({ label: '联系人', value: prodSheet?.customerContact || empty });
+                      allFields.push({ label: '电话', value: prodSheet?.customerPhone || empty });
+                      allFields.push({ label: '地址', value: prodSheet?.customerAddress || empty });
+                      allFields.push({ label: '跟单员', value: prodSheet?.orderType || empty });
+                      allFields.push({ label: '设计师', value: prodSheet?.sampleNo || empty });
+                      allFields.push({ label: '打板价', value: prodSheet?.price ? `¥${Number(prodSheet.price).toFixed(2)}` : empty });
                     }
 
                     // 下单信息（大货模式）
                     if (options.customerInfoBlock && mode !== 'sample') {
+                      const prodSheet = data.productionSheet as any;
                       allFields.push({ label: '订单号', value: orderNo || empty });
-                      allFields.push({ label: '客户', value: (data.productionSheet as any)?.customer || empty });
+                      allFields.push({ label: '销售渠道', value: prodSheet?.salesChannel || empty });
+                      // 客户详情
+                      if (prodSheet?.customerName) {
+                        allFields.push({ label: '客户', value: prodSheet?.customerName || empty });
+                      } else {
+                        allFields.push({ label: '客户', value: prodSheet?.customer || empty });
+                      }
+                      allFields.push({ label: '联系人', value: prodSheet?.customerContact || empty });
+                      allFields.push({ label: '电话', value: prodSheet?.customerPhone || empty });
+                      allFields.push({ label: '地址', value: prodSheet?.customerAddress || empty });
                       allFields.push({ label: '下单人员', value: orderCreatorName || (extraInfo as any)?.下单人员 || empty });
-                      allFields.push({ label: '跟单员', value: (data.productionSheet as any)?.orderType || empty });
+                      allFields.push({ label: '跟单员', value: prodSheet?.orderType || empty });
                       // 注意："下单数量 已移到基础信息表格下方单独显示（大货模式专属）
                     }
 

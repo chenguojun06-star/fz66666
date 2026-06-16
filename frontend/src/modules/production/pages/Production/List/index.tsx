@@ -72,28 +72,11 @@ const ProductionList: React.FC = () => {
   // 延期环节数据（内联到智能提示标签）
   const { stageHints: delayedHints } = useDelayedStageBreakdown({ forceTab: 'bulk' });
 
-  // ===== 打印弹窗状态 =====
-  const [printModalVisible, setPrintModalVisible] = useState(false);
-  const [printingRecord, setPrintingRecord] = useState<ProductionOrder | null>(null);
-
-  // ===== 裁剪订单工序编辑弹窗状态 =====
-  const [workflowEditorVisible, setWorkflowEditorVisible] = useState(false);
-  const [workflowEditorStyleNo, setWorkflowEditorStyleNo] = useState('');
-
-  const [inspectDrawerVisible, setInspectDrawerVisible] = useState(false);
-  const [inspectDrawerOrderId, setInspectDrawerOrderId] = useState('');
-  const openInspectDrawer = useCallback((orderId: string) => {
-    setInspectDrawerOrderId(orderId);
-    setInspectDrawerVisible(true);
-  }, []);
-  const closeInspectDrawer = useCallback(() => {
-    setInspectDrawerVisible(false);
-    setInspectDrawerOrderId('');
-  }, []);
-
-  // ===== 智能领取弹窗（入库/出库） =====
-  const [smartReceiveVisible, setSmartReceiveVisible] = useState(false);
-  const [smartReceiveOrderNo, setSmartReceiveOrderNo] = useState('');
+  // ===== 统一弹窗状态管理（useModal） =====
+  const printModal = useModal<ProductionOrder>();
+  const workflowEditorModal = useModal<string>();
+  const inspectDrawerModal = useModal<string>();
+  const smartReceiveModal = useModal<string>();
 
     // ===== Hook 提取：进度/弹窗/打印/聚焦 =====
     const { nodeDetailVisible, nodeDetailOrder, nodeDetailType, nodeDetailName, nodeDetailStats, nodeDetailUnitPrice, nodeDetailProcessList, openNodeDetail, closeNodeDetail } = useNodeDetailModal();
@@ -193,7 +176,8 @@ const ProductionList: React.FC = () => {
     sortField, sortOrder, handleSort,
     handleCloseOrder, handleScrapOrder, handleCopyOrder,
     navigate, openProcessDetail, openNodeDetail, syncProcessFromTemplate,
-    setPrintModalVisible, setPrintingRecord,
+    setPrintModalVisible: (v: boolean) => { if (!v) printModal.close(); },
+    setPrintingRecord: (r: ProductionOrder | null) => { if (r) printModal.open(r); else printModal.close(); },
     setRemarkPopoverId, setRemarkText,
     quickEditModal, isSupervisorOrAbove, renderCompletionTimeTag,
     deliveryRiskMap,
@@ -204,13 +188,10 @@ const ProductionList: React.FC = () => {
     openSubProcessRemap,
     isFactoryAccount,
     getStageCompletionTime,
-    openWorkflowEditor: (styleNo?: string) => {
-      setWorkflowEditorStyleNo(styleNo || '');
-      setWorkflowEditorVisible(true);
-    },
+    openWorkflowEditor: (styleNo?: string) => workflowEditorModal.open(styleNo || ''),
     onOpenRemark: (record: ProductionOrder, defaultRole?: string) => setRemarkTarget({ open: true, orderNo: record.orderNo || '', defaultRole, merchandiser: record.merchandiser }),
-    onOpenInspectDrawer: openInspectDrawer,
-    onOpenSmartReceive: (orderNo: string) => { setSmartReceiveOrderNo(orderNo); setSmartReceiveVisible(true); },
+    onOpenInspectDrawer: (orderId: string) => inspectDrawerModal.open(orderId),
+    onOpenSmartReceive: (orderNo: string) => smartReceiveModal.open(orderNo),
   });
 
   // 根据 visibleColumns 过滤列
@@ -359,8 +340,8 @@ const ProductionList: React.FC = () => {
               openProcessDetail={openProcessDetail}
               openNodeDetail={openNodeDetail}
               syncProcessFromTemplate={syncProcessFromTemplate}
-              setPrintModalVisible={setPrintModalVisible}
-              setPrintingRecord={setPrintingRecord}
+              setPrintModalVisible={(v: boolean) => { if (!v) printModal.close(); }}
+              setPrintingRecord={(r: ProductionOrder | null) => { if (r) printModal.open(r); else printModal.close(); }}
               quickEditModal={quickEditModal}
               handleShareOrder={handleShareOrder}
               handlePrintLabel={handlePrintLabel}
@@ -480,11 +461,11 @@ const ProductionList: React.FC = () => {
                 });
                 return [
                   { key: 'detail', label: '详情', title: '查看订单详情', onClick: () => navigate(withQuery('/production/order-flow', { orderId: record.id, orderNo: record.orderNo, styleNo: record.styleNo })) },
-                  { key: 'print', label: '打印', disabled: frozen, title: frozen ? frozenTitle : '打印', onClick: () => { setPrintingRecord(record); setPrintModalVisible(true); } },
+                  { key: 'print', label: '打印', disabled: frozen, title: frozen ? frozenTitle : '打印', onClick: () => printModal.open(record) },
                   { key: 'printLabel', label: '打印标签', disabled: frozen, title: frozen ? frozenTitle : '打印标签', onClick: () => void handlePrintLabel(record) },
                   ...(!isFactoryAccount ? [{ key: 'process', label: '工序', disabled: frozen, title: frozen ? frozenTitle : '工序', onClick: () => openProcessDetail(record, 'all') }] : []),
                   ...(isFactoryAccount ? [{ key: 'subProcessRemap', label: '子工序', disabled: frozen, title: frozen ? frozenTitle : '子工序单价配置', onClick: () => openSubProcessRemap(record) }] : []),
-                  { key: 'receive', label: '入库/出库', title: '面辅料智能领取（入库/出库）', onClick: () => { setSmartReceiveOrderNo(record.orderNo || ''); setSmartReceiveVisible(true); } },
+                  { key: 'receive', label: '入库/出库', title: '面辅料智能领取（入库/出库）', onClick: () => smartReceiveModal.open(record.orderNo || '') },
                   ...commonActions,
                   ...(isFactoryAccount ? [{ key: 'orderFlow', label: '全流程', title: '查看订单全流程记录', onClick: () => navigate(withQuery('/production/order-flow', { orderId: record.id, orderNo: record.orderNo, styleNo: record.styleNo })) }] : []),
                 ];
@@ -575,10 +556,10 @@ const ProductionList: React.FC = () => {
           remapSaving={remapSaving}
           saveRemap={saveRemap}
           closeRemap={closeRemap}
-          printModalVisible={printModalVisible}
-          setPrintModalVisible={setPrintModalVisible}
-          printingRecord={printingRecord}
-          setPrintingRecord={setPrintingRecord}
+          printModalVisible={printModal.visible}
+          setPrintModalVisible={(v: boolean) => v ? undefined : printModal.close()}
+          printingRecord={printModal.data}
+          setPrintingRecord={(r: ProductionOrder | null) => r !== null ? printModal.open(r) : printModal.close()}
           pendingCloseOrder={pendingCloseOrder}
           closeOrderLoading={closeOrderLoading}
           confirmCloseOrder={confirmCloseOrder}
@@ -587,21 +568,21 @@ const ProductionList: React.FC = () => {
           scrapOrderLoading={scrapOrderLoading}
           confirmScrapOrder={confirmScrapOrder}
           cancelScrapOrder={cancelScrapOrder}
-          workflowEditorVisible={workflowEditorVisible}
-          workflowEditorStyleNo={workflowEditorStyleNo}
-          closeWorkflowEditor={() => setWorkflowEditorVisible(false)}
+          workflowEditorVisible={workflowEditorModal.visible}
+          workflowEditorStyleNo={workflowEditorModal.data ?? ''}
+          closeWorkflowEditor={() => workflowEditorModal.close()}
           onWorkflowSaved={() => { void fetchProductionList(); }}
-          onOpenInspectDrawer={openInspectDrawer}
-          inspectDrawerVisible={inspectDrawerVisible}
-          inspectDrawerOrderId={inspectDrawerOrderId}
-          closeInspectDrawer={closeInspectDrawer}
+          onOpenInspectDrawer={(orderId: string) => inspectDrawerModal.open(orderId)}
+          inspectDrawerVisible={inspectDrawerModal.visible}
+          inspectDrawerOrderId={inspectDrawerModal.data ?? ''}
+          closeInspectDrawer={() => inspectDrawerModal.close()}
         />
 
         {/* 智能领取弹窗（入库/出库） */}
         <SmartReceiveModal
-          open={smartReceiveVisible}
-          orderNo={smartReceiveOrderNo}
-          onCancel={() => { setSmartReceiveVisible(false); setSmartReceiveOrderNo(''); }}
+          open={smartReceiveModal.visible}
+          orderNo={smartReceiveModal.data ?? ''}
+          onCancel={() => smartReceiveModal.close()}
           onSuccess={() => { void fetchProductionList(); }}
           isSupervisorOrAbove={isSupervisorOrAbove}
           userId={user?.id as any}

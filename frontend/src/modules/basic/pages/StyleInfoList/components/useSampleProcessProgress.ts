@@ -47,6 +47,7 @@ export default function useSampleProcessProgress(
       let loadedOrderId: string | null = null;
       let loadedOrderNo: string | null = null;
       let scannedNames = new Set<string>();
+      let scannedStages = new Set<string>();
 
       if (productionOrderId) {
         const orderRes: any = await api.get(`/production/order/${productionOrderId}`);
@@ -94,6 +95,17 @@ export default function useSampleProcessProgress(
             const records = Array.isArray(scanRes?.data?.records) ? scanRes.data.records : Array.isArray(scanRes?.data) ? scanRes.data : [];
             for (const r of records) {
               if (r.processName && r.success !== false) scannedNames.add(r.processName);
+              // 同时收集 operationType 和规范化后的 key
+              if (r.operationType && r.success !== false) {
+                scannedNames.add(r.operationType);
+                const normalized = normalizeOperationType(r.operationType);
+                if (normalized) {
+                  scannedNames.add(normalized);
+                  scannedStages.add(normalized);
+                }
+              }
+              // 收集 progressStage（标准阶段名，用于匹配自定义工序名）
+              if (r.progressStage) scannedStages.add(r.progressStage);
             }
           } catch { /* ignore */ }
         }
@@ -120,7 +132,17 @@ export default function useSampleProcessProgress(
           const scanRes: any = await api.get(`/production/pattern/${patternProductionId}/scan-records`);
           const records = Array.isArray(scanRes?.data) ? scanRes.data : Array.isArray(scanRes) ? scanRes : [];
           for (const r of records) {
-            if (r.processName && r.success !== false) scannedNames.add(r.processName);
+            // 样衣扫码记录中 processName 可能为 NULL，需同时收集 operationType
+            if (r.processName) scannedNames.add(r.processName);
+            if (r.operationType) scannedNames.add(r.operationType);
+            // 同时收集规范化后的 key（英文大写 → 中文映射）
+            const normalized = normalizeOperationType(r.operationType);
+            if (normalized) {
+              scannedNames.add(normalized);
+              scannedStages.add(normalized);
+            }
+            // 收集 progressStage（标准阶段名，用于匹配自定义工序名）
+            if (r.progressStage) scannedStages.add(r.progressStage);
           }
         } catch { /* ignore */ }
 
@@ -131,10 +153,17 @@ export default function useSampleProcessProgress(
         setTrackingStats({});
       }
 
-      const markedNodes = nodes.map((n) => ({
-        ...n,
-        completed: scannedNames.has(n.name) || scannedNames.has(n.processCode || ''),
-      }));
+      const markedNodes = nodes.map((n) => {
+        const normName = normalizeOperationType(n.name);
+        const normCode = normalizeOperationType(n.processCode || '');
+        return {
+          ...n,
+          completed: scannedNames.has(n.name) || scannedNames.has(n.processCode || '')
+            || !!normName && scannedNames.has(normName)
+            || !!normCode && scannedNames.has(normCode)
+            || !!(n.progressStage && scannedStages.has(n.progressStage)),
+        };
+      });
       setWorkflowNodes(markedNodes);
       setOrderId(loadedOrderId);
       setOrderNo(loadedOrderNo);
@@ -231,4 +260,31 @@ function resolveStageKey(name: string): string {
     }
   }
   return 'tail';
+}
+
+/** 样衣扫码 operationType（英文大写）→ 中文工序名 映射 */
+const OP_TYPE_TO_CHINESE: Record<string, string> = {
+  RECEIVE: '采购',
+  CUTTING: '裁剪',
+  SECONDARY: '二次工艺',
+  SEWING: '车缝',
+  TAIL: '尾部',
+  WAREHOUSE_IN: '入库',
+  WAREHOUSE_OUT: '出库',
+  WAREHOUSE_RETURN: '归还',
+  PLATE: '车板',
+  FOLLOW_UP: '跟单确认',
+  COMPLETE: '完成确认',
+  REVIEW: '审核',
+  REWORK: '返修',
+  PROCUREMENT: '采购',
+  IRONING: '整烫',
+  QUALITY: '质检',
+  PACKAGING: '包装',
+};
+
+function normalizeOperationType(opType: string | null | undefined): string | null {
+  if (!opType) return null;
+  const upper = opType.trim().toUpperCase();
+  return OP_TYPE_TO_CHINESE[upper] || null;
 }

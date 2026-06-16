@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { App, AutoComplete, Button, Checkbox, Space } from 'antd';
 import ResizableModal from '@/components/common/ResizableModal';
+
 import {
   AccountBookOutlined,
   ApartmentOutlined,
@@ -48,6 +49,8 @@ const ALL_QUICK_ENTRIES: QuickEntryConfig[] = [
 ];
 
 const STORAGE_KEY = 'dashboard_quick_entries';
+
+
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();

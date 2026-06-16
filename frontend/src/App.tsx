@@ -12,6 +12,7 @@ import RouteErrorBoundary from './components/common/RouteErrorBoundary';
 import { paths } from './routeConfig';
 import { useViewport } from './utils/useViewport';
 import CommandPalette from './components/common/CommandPalette';
+import KeyboardShortcuts from './components/common/KeyboardShortcuts';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import { PurchaseCartProvider } from './context/PurchaseCartContext';
@@ -82,19 +83,18 @@ const GlobalImagePreview: React.FC = () => {
 
     const onClickCapture = (e: MouseEvent) => {
       const target = e.target;
-      if (!(target instanceof Element)) return;
-      const img = target.closest('img');
-      if (!(img instanceof HTMLImageElement)) return;
-      if (isIgnored(img)) return;
+      // 快速跳过非 img 元素，避免对每次点击都执行 closest DOM 查询
+      if (!(target instanceof HTMLImageElement)) return;
+      if (isIgnored(target)) return;
 
-      const nextSrc = pickSrc(img);
+      const nextSrc = pickSrc(target);
       if (!nextSrc) return;
 
       e.preventDefault();
       e.stopPropagation();
 
       setSrc(nextSrc);
-      setAlt(img.getAttribute('alt') || undefined);
+      setAlt(target.getAttribute('alt') || undefined);
       setOpen(true);
     };
 
@@ -306,6 +306,7 @@ const AppRoutes: React.FC = () => {
       ) : null}
 
       <GlobalAiAssistant />
+      <KeyboardShortcuts />
       <GlobalImagePreview />
     </>
   );

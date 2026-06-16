@@ -96,8 +96,10 @@ const OrderInfoGrid: React.FC<OrderInfoGridProps> = ({
       column={column}
       size={size ?? 'default'}
       bordered={bordered}
-      styles={mergedStyles}
-      contentStyle={{ ...mergedStyles.content, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 4 }}
+      styles={{
+        ...mergedStyles,
+        content: { ...mergedStyles.content, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 4 },
+      }}
     >
       {descriptionsItems.map((item) => (
         <Descriptions.Item key={item.key} label={item.label}>

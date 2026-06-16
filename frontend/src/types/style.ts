@@ -40,6 +40,14 @@ export interface StyleInfo extends Record<string, unknown> {
   developmentSourceType?: 'SELF_DEVELOPED' | 'SELECTION_CENTER' | string;
   developmentSourceDetail?: string;
 
+  // 销售渠道与客户信息
+  salesChannel?: string;
+  customerId?: number;
+  customerName?: string;
+  customerContact?: string;
+  customerPhone?: string;
+  customerAddress?: string;
+
   maintenanceTime?: string;
   maintenanceMan?: string;
   maintenanceRemark?: string;

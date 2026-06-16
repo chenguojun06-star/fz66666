@@ -3,6 +3,12 @@ import { Modal } from 'antd';
 import type { ModalProps } from 'antd';
 
 /**
+ * LightSense 光感类型
+ * 不同类型对应不同颜色的光晕效果
+ */
+export type LightSenseType = 'default' | 'urgent' | 'success' | 'warning' | 'info';
+
+/**
  * 尺寸类型定义
  */
 type Size = {
@@ -136,6 +142,10 @@ export type ResizableModalProps = ModalProps & {
   /** 初始高度 */
   initialHeight?: number;
   contentPadding?: ContentPadding;
+  /** LightSense 光感效果类型，启用后弹窗获得鸿蒙7风格的光晕+模糊遮罩+入场动画 */
+  lightSense?: LightSenseType;
+  /** 是否启用遮罩模糊效果（backdrop-filter），默认关闭以节省性能 */
+  blurMask?: boolean;
   /** 允许传入额外的自定义属性 */
   [key: string]: any;
 };
@@ -161,6 +171,8 @@ const ResizableModal: React.FC<ResizableModalProps> = ({
   title,
   destroyOnHidden,
   forceRender,
+  lightSense = 'default',
+  blurMask = false,
   ...rest
 }) => {
   // 模态框尺寸状态
@@ -321,6 +333,15 @@ const ResizableModal: React.FC<ResizableModalProps> = ({
     };
   }, [stopResize]);
 
+  // LightSense 光感颜色映射
+  const glowColorMap: Record<LightSenseType, string> = {
+    default: '59, 130, 246',
+    urgent: '239, 68, 68',
+    success: '34, 197, 94',
+    warning: '245, 158, 11',
+    info: '139, 92, 246',
+  };
+
   return (
     <Modal
       {...rest}
@@ -332,12 +353,21 @@ const ResizableModal: React.FC<ResizableModalProps> = ({
       forceRender={forceRender}
       centered={centered}
       width={Math.round(size.width)}
+      className={`light-sense-modal light-sense-${lightSense}${rest.className ? ' ' + rest.className : ''}`}
+      transitionName="light-sense-fade"
       styles={{
         ...styles,
+        mask: {
+          background: `linear-gradient(135deg, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.25) 100%)`,
+          ...(blurMask ? { backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' } : {}),
+          ...(styles as any)?.mask,
+        },
         body: {
           ...(styles as any)?.body,
           overflow: 'auto',
           minHeight: 0,
+          borderRadius: 16,
+          boxShadow: `0 20px 60px rgba(${glowColorMap[lightSense]}, 0.18), 0 4px 16px rgba(0, 0, 0, 0.06)`,
         },
       }}
       modalRender={(modal) => {

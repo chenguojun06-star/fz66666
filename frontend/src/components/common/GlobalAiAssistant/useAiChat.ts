@@ -8,7 +8,7 @@ import { useUser } from '@/utils/AuthContext';
 import type { AiTraceCardData, PurchaseDocCardData } from './AgentCards';
 import type { Message } from './types';
 import { genSessionId, saveSession, loadSession } from './sessionUtils';
-import { INITIAL_MSG } from './constants';
+import { INITIAL_MSG, getPageSuggestions } from './constants';
 import { extractOrderNo, isPurchaseDocFile, shouldAutoInbound, shouldAutoArrival, buildReportInsight } from './helpers';
 import { speakText } from './speechUtils';
 import { useAiChatStream } from './useAiChatStream';
@@ -157,37 +157,85 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
     const factoryId = (user as any)?.factoryId;
     const factoryName = (user as any)?.factoryName;
 
-    // 页面上下文感知：提取当前页面信息并注入对话上下文
     const path = location.pathname;
-    const pageContextParts: string[] = [];
+    
+    // 增强页面上下文感知：更详细的页面映射
     const pageContextMap: Record<string, string> = {
       '/production': '生产管理模块',
+      '/production/list': '生产订单列表',
+      '/production/detail': '生产订单详情',
+      '/production/progress': '工序跟进',
+      '/production/cutting': '裁剪管理',
+      '/production/purchase': '物料采购',
+      '/production/warehousing': '成品入库',
+      '/production/inspection': '质检管理',
       '/style-info': '款式样衣管理',
+      '/style-info/list': '款式列表',
+      '/style-info/detail': '款式详情',
+      '/style-info/sample': '样衣开发',
       '/finance': '财务管理',
+      '/finance/reconciliation': '对账管理',
+      '/finance/wage': '工资结算',
+      '/finance/expense': '费用报销',
       '/warehouse': '仓库管理',
+      '/warehouse/inventory': '库存管理',
+      '/warehouse/material': '物料库',
+      '/warehouse/finished': '成品库存',
+      '/warehouse/sample': '样衣库存',
+      '/warehouse/check': '库存盘点',
       '/system': '系统管理',
+      '/system/user': '用户管理',
+      '/system/role': '角色权限',
+      '/system/tenant': '租户管理',
+      '/system/log': '系统日志',
       '/crm': '客户关系管理',
+      '/crm/receivable': '应收管理',
       '/cockpit': '智能决策中心',
-      '/dashboard': '驾驶舱',
+      '/cockpit/trace': '执行轨迹',
+      '/dashboard': '数据驾驶舱',
+      '/dashboard/main': '主仪表盘',
+      '/dashboard/sample': '样衣进度',
+      '/selection': '选品中心',
+      '/ecommerce': '电商运营',
+      '/ecommerce/order': '电商订单',
+      '/intelligence': '智能中心',
+      '/intelligence/center': 'AI功能中心',
+      '/intelligence/trace': '智能执行记录',
     };
-    for (const prefix in pageContextMap) {
+    
+    let pageContext = '';
+    for (const [prefix, label] of Object.entries(pageContextMap)) {
       if (path.startsWith(prefix)) {
-        pageContextParts.push(pageContextMap[prefix]);
+        pageContext = label;
         break;
       }
     }
-    // 提取 URL 查询参数中的重要ID（如 orderNo/styleId等）
+    
+    // 提取 URL 查询参数中的重要ID
     const searchParams = new URLSearchParams(location.search);
+    const paramContext: string[] = [];
     for (const [k, v] of Array.from(searchParams.entries())) {
-      if (['orderNo', 'styleId', 'orderId', 'styleNo', 'order'].includes(k)) {
-        pageContextParts.push(`${k}:${v}`);
+      if (['orderNo', 'styleId', 'orderId', 'styleNo', 'order', 'id', 'bundleId', 'batchId'].includes(k)) {
+        paramContext.push(`${k}:${v}`);
       }
     }
-    const pageContext = pageContextParts.length > 0
-      ? `[当前页面:${pageContextParts.join(' / ')}] `
+    
+    // 获取页面建议
+    const suggestions = getPageSuggestions(path);
+    const suggestionsHint = suggestions.length > 0 
+      ? `\n[页面快捷操作建议：${suggestions.slice(0, 3).join('；')}]`
+      : '';
+    
+    // 构建历史对话摘要（最近5条）
+    const recentHistory = messages.slice(-5).filter(m => m.role === 'user').map(m => m.text).join(' | ');
+    const historyHint = recentHistory.length > 0 
+      ? `\n[历史对话摘要：${recentHistory.substring(0, 100)}...]`
       : '';
 
-    // 检测用户是否发送了图片URL，如果是则附加视觉提示
+    const fullContext = pageContext 
+      ? `[当前页面:${pageContext}${paramContext.length > 0 ? ' | ' + paramContext.join(', ') : ''}]`
+      : '';
+
     const imageUrlPattern = /^https?:\/\/\S+\.(jpg|jpeg|png|gif|webp|bmp)(\?.*)?$/i;
     const isImageUrl = imageUrlPattern.test(text);
     const visionHint = isImageUrl
@@ -195,8 +243,8 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
       : '';
 
     const contextualText = factoryId
-      ? `${pageContext}[工厂ID:${factoryId} 工厂名:${factoryName || ''}] ${text}${visionHint}`
-      : `${pageContext}${text}${visionHint}`;
+      ? `${fullContext}[工厂ID:${factoryId} 工厂名:${factoryName || ''}] ${text}${visionHint}${suggestionsHint}${historyHint}`
+      : `${fullContext}${text}${visionHint}${suggestionsHint}${historyHint}`;
 
     setMessages(prev => [...prev, { id: `u-${Date.now()}`, role: 'user', text }]);
     if (!manualText) setInputValue('');
@@ -211,7 +259,7 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
     }
 
     startStream(contextualText, text, reportTypeToDownload);
-  }, [inputValue, isTyping, user, startStream, handleDownloadReport, location.pathname, location.search]);
+  }, [inputValue, isTyping, user, startStream, handleDownloadReport, location.pathname, location.search, messages]);
 
   // 检查是否是图片文件
   const isImageFile = useCallback((file: File): boolean => {

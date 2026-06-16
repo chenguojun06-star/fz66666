@@ -291,13 +291,13 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
             </Row>
           </div>
 
-          {/* 客户信息区域 */}
+          {/* 客户与销售渠道信息区域 */}
           <div style={{ marginBottom: 16 }}>
             <div style={{ ...sectionTitleBaseStyle, borderLeft: '3px solid #52C41A' }}>
-              客户信息
+              客户与销售渠道
             </div>
             <Row gutter={[16, 0]}>
-              <Col xs={24} md={6}>
+              <Col xs={24} md={5}>
                 <Form.Item name="customerId" noStyle hidden>
                   <Input id="customerId" />
                 </Form.Item>
@@ -316,17 +316,38 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
                   />
                 </Form.Item>
               </Col>
-              <Col xs={24} md={6}>
+              <Col xs={24} md={4}>
+                <Form.Item name="salesChannel" label="销售渠道">
+                  <Select
+                    id="salesChannel"
+                    placeholder="选择销售渠道"
+                    disabled={editLocked}
+                    allowClear
+                    style={{ width: '100%' }}
+                    options={[
+                      { label: '天猫', value: '天猫' },
+                      { label: '抖音', value: '抖音' },
+                      { label: '京东', value: '京东' },
+                      { label: '拼多多', value: '拼多多' },
+                      { label: '线下门店', value: '线下门店' },
+                      { label: '私域', value: '私域' },
+                      { label: '定制', value: '定制' },
+                      { label: '其他', value: '其他' },
+                    ]}
+                  />
+                </Form.Item>
+              </Col>
+              <Col xs={24} md={5}>
                 <Form.Item name="orderType" label="跟单员">
                   <Input id="orderType" placeholder="请输入跟单员" disabled={isFieldLocked((currentStyle as any)?.orderType)} />
                 </Form.Item>
               </Col>
-              <Col xs={24} md={6}>
+              <Col xs={24} md={5}>
                 <Form.Item name="sampleNo" label="设计师">
                   <Input id="sampleNo" placeholder="请输入设计师" disabled={editLocked} />
                 </Form.Item>
               </Col>
-              <Col xs={24} md={6}>
+              <Col xs={24} md={5}>
                 <Form.Item name="price" label="打板价">
                   <InputNumber id="price" style={{ width: '100%' }} min={0} prefix="¥" precision={2} disabled />
                 </Form.Item>

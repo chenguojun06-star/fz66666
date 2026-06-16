@@ -7,6 +7,7 @@ import type { ProgressNode } from '../types';
 import type { FormInstance } from 'antd';
 import type { InputRef } from 'antd';
 import type { MessageInstance } from 'antd/es/message/interface';
+import { useScanSound } from '@/hooks/useScanSound';
 
 interface UseScanExecutionParams {
   scanConfirmState: {
@@ -51,6 +52,9 @@ export function useScanExecution({
   scanSubmittingRef,
   lastFailedRequestRef,
 }: UseScanExecutionParams) {
+  // 声音反馈
+  const { playSuccess, playError, playDuplicate, playWarning } = useScanSound();
+
   const closeScanConfirm = (silent?: boolean) => {
     closeScanConfirmState();
     setScanSubmitting(false);
@@ -76,14 +80,17 @@ export function useScanExecution({
         const serverMsg = String((result?.data as any)?.message || '').trim();
         const exceed = serverMsg.includes('裁剪') && serverMsg.includes('超出');
         if (exceed) {
+          playWarning(); // 数量超出警告音
           message.error('数量超出无法入库');
           closeScanConfirm(true);
           return;
         }
         const isDuplicate = isDuplicateScanMessage(serverMsg);
         if (isDuplicate) {
+          playDuplicate(); // 重复扫码提示音
           message.info('已处理');
         } else {
+          playSuccess(); // 扫码成功提示音
           message.success(serverMsg || '扫码成功');
           submitScanFeedback({
             orderId: String(activeOrder.id || ''),
@@ -116,10 +123,13 @@ export function useScanExecution({
         const msg = String(result.message || '').trim();
         const exceed = msg.includes('裁剪') && msg.includes('超出');
         if (exceed) {
+          playWarning(); // 数量超出警告音
           message.error('数量超出无法入库');
         } else if (msg) {
+          playError(); // 扫码失败提示音
           message.error(msg);
         } else {
+          playError(); // 系统繁忙提示音
           message.error('系统繁忙');
         }
       }
@@ -130,10 +140,12 @@ export function useScanExecution({
         if (attemptKey && attemptRequestId) {
           lastFailedRequestRef.current = { key: attemptKey, requestId: attemptRequestId };
         }
+        playError(); // 连接失败提示音
         message.error('连接失败');
       } else {
         lastFailedRequestRef.current = null;
         console.error('scan_execute_failed', error);
+        playError(); // 系统繁忙提示音
         message.error('系统繁忙');
       }
     } finally {
