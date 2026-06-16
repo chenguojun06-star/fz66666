@@ -23,12 +23,14 @@
             <view class="progress-meta">
               <text class="progress-status progress-status-{{item.status}}">{{item.statusText}}</text>
               <text wx:if="{{item.assignee}}" class="progress-assignee"> · {{item.assignee}}</text>
-              <text wx:if="{{item.budgetHours}}" class="progress-hours"> · 预估{{item.budgetHours}}h</text>
-              <text wx:if="{{item.actualHours}}" class="progress-hours"> / 实际{{item.actualHours}}h</text>
             </view>
+            <view wx:if="{{item.startTime && item.status === 'in_progress'}}" class="progress-time">领取于 {{item.startTime}}</view>
             <view wx:if="{{item.completedAt}}" class="progress-time">完成于 {{item.completedAt}}</view>
           </view>
-          <view wx:if="{{item.status !== 'completed'}}" class="progress-action" data-key="{{item.key}}" bindtap="onStageConfirm">确认</view>
+          <!-- 可操作子工序：领取 / 完成 -->
+          <view wx:if="{{item.canReceive}}" class="progress-action progress-action-receive" data-key="{{item.key}}" bindtap="onStageReceive">领取</view>
+          <view wx:elif="{{item.canComplete}}" class="progress-action" data-key="{{item.key}}" bindtap="onStageConfirm">完成</view>
+          <view wx:elif="{{item.status === 'completed'}}" class="progress-done-icon">✓</view>
         </view>
       </view>
     </view>
@@ -54,6 +56,17 @@
             <view class="info-row"><text class="info-label">季节</text><text class="info-value">{{styleInfo.season || '-'}}</text></view>
             <view class="info-row"><text class="info-label">设计师</text><text class="info-value">{{styleInfo.designer || '-'}}</text></view>
             <view class="info-row"><text class="info-label">开发状态</text><text class="info-value">{{styleInfo.developmentStatus || styleInfo.status || '-'}}</text></view>
+          </view>
+        </view>
+        <!-- 销售渠道与客户信息 -->
+        <view class="section" wx:if="{{styleInfo.salesChannel || styleInfo.customerId || styleInfo.customerName || styleInfo.customerContact || styleInfo.customerPhone}}">
+          <view class="section-title">销售渠道与客户信息</view>
+          <view class="info-card">
+            <view class="info-row" wx:if="{{styleInfo.salesChannel}}"><text class="info-label">销售渠道</text><text class="info-value">{{styleInfo.salesChannel || '-'}}</text></view>
+            <view class="info-row" wx:if="{{styleInfo.customerName || styleInfo.customer}}"><text class="info-label">客户</text><text class="info-value">{{styleInfo.customerName || styleInfo.customer || '-'}}</text></view>
+            <view class="info-row" wx:if="{{styleInfo.customerContact}}"><text class="info-label">联系人</text><text class="info-value">{{styleInfo.customerContact || '-'}}</text></view>
+            <view class="info-row" wx:if="{{styleInfo.customerPhone}}"><text class="info-label">电话</text><text class="info-value">{{styleInfo.customerPhone || '-'}}</text></view>
+            <view class="info-row" wx:if="{{styleInfo.customerAddress}}"><text class="info-label">地址</text><text class="info-value">{{styleInfo.customerAddress || '-'}}</text></view>
           </view>
         </view>
       </block>

@@ -291,6 +291,63 @@ page {
   box-shadow: 0 2px 4px rgba(0,0,0,0.15);
 }
 
-
-
+/* 我的待办卡片 */
+.todo-section {
+  margin: 12px 12px 4px;
+  background: #fff;
+  border-radius: 12px;
+  padding: 12px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+.todo-header {
+  margin-bottom: 8px;
+}
+.todo-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1f1f1f;
+}
+.todo-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.todo-card {
+  display: flex;
+  align-items: center;
+  padding: 10px 12px;
+  background: #f7f9fc;
+  border-radius: 8px;
+  border: 1px solid rgba(45,127,249,0.1);
+}
+.todo-icon {
+  font-size: 20px;
+  margin-right: 10px;
+}
+.todo-info {
+  flex: 1;
+  min-width: 0;
+}
+.todo-name {
+  font-size: 14px;
+  color: #262626;
+  font-weight: 500;
+}
+.todo-count {
+  min-width: 28px;
+  height: 20px;
+  line-height: 20px;
+  text-align: center;
+  background: #ff4d4f;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 10px;
+  padding: 0 6px;
+  margin-right: 4px;
+}
+.todo-arrow {
+  font-size: 18px;
+  color: #bfbfbf;
+}
 

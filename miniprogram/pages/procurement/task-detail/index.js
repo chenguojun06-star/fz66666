@@ -2,6 +2,7 @@ const api = require('../../../utils/api');
 const { getUserInfo } = require('../../../utils/storage');
 const { toast } = require('../../../utils/uiHelper');
 const { triggerDataRefresh } = require('../../../utils/eventBus');
+const permission = require('../../../utils/permission');
 
 const MATERIAL_TYPE_MAP = {
   fabricA: '主面料', fabricB: '辅面料',
@@ -117,6 +118,20 @@ Page({
   },
 
   async onReceiveAll() {
+    // 软校验：非采购员且非主管，提示但不阻断
+    if (!permission.canReceiveTask('procurement')) {
+      const allowed = await new Promise(resolve => {
+        wx.showModal({
+          title: '岗位提示',
+          content: `您当前职务「${permission.getRoleDisplayName()}」非采购岗，确定代领？`,
+          confirmText: '确定代领',
+          cancelText: '取消',
+          success: res => resolve(!!res.confirm),
+        });
+      });
+      if (!allowed) return;
+    }
+
     if (this.data.hasReturnConfirmed) {
       toast.warning('已有物料完成回料确认，无法继续采购');
       return;

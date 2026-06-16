@@ -223,10 +223,16 @@ public class WeChatMiniProgramAuthOrchestrator {
     private String getRoleCode(Long roleId, String roleName) {
         // 如果有角色名称，根据名称推断角色代码
         if (StringUtils.hasText(roleName)) {
-            String name = roleName.trim().toLowerCase();
+            // 注意：用原始 roleName 做中文匹配（toLowerCase 对中文无影响，但保留以兼容英文）
+            String raw = roleName.trim();
+            String name = raw.toLowerCase();
             // 管理员
             if (name.contains("管理员") || name.contains("admin")) {
                 return "admin";
+            }
+            // 全能管理/综合管理/全栈/全权 → 按主管级对待（拥有跨岗位操作权限）
+            if (raw.contains("全能") || raw.contains("综合") || raw.contains("全栈") || raw.contains("全权")) {
+                return "supervisor";
             }
             // 主管/经理
             if (name.contains("主管") || name.contains("经理") || name.contains("supervisor") || name.contains("manager")) {
@@ -239,6 +245,10 @@ public class WeChatMiniProgramAuthOrchestrator {
             // 裁剪工
             if (name.contains("裁剪") || name.contains("cutter")) {
                 return "cutter";
+            }
+            // 样衣开发员/纸样师/制版师
+            if (name.contains("样衣") || name.contains("纸样") || name.contains("制版") || name.contains("sample_developer")) {
+                return "sample_developer";
             }
             // 车缝工
             if (name.contains("车缝") || name.contains("缝制") || name.contains("sewing")) {
@@ -255,6 +265,10 @@ public class WeChatMiniProgramAuthOrchestrator {
             // 仓管员
             if (name.contains("仓管") || name.contains("仓库") || name.contains("warehouse")) {
                 return "warehouse";
+            }
+            // 车间工人/工人/员工/外发工厂 → 默认归生产岗（可扫码工序）
+            if (raw.contains("工人") || raw.contains("员工") || raw.contains("外发") || raw.contains("生产员")) {
+                return "sewing";
             }
         }
 

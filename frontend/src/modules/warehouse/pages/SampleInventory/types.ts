@@ -25,11 +25,20 @@ export interface SampleLoan {
   sampleStockId: string;
   borrower: string;
   borrowerId?: string;
+  lendTo?: string;
+  lendToId?: string;
+  lendToType?: string; // person/factory/customer
+  lendToFactoryId?: string;
+  lendToFactoryName?: string;
+  transferFromLoanId?: string;
   loanDate: string;
   expectedReturnDate?: string;
   returnDate?: string;
   quantity: number;
-  status: string; // borrowed, returned, lost
+  remainingQuantity?: number;
+  operatorId?: string;
+  operatorName?: string;
+  status: string; // borrowed, returned, lost, transferred
   remark?: string;
   createTime?: string;
 }

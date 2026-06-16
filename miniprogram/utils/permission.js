@@ -17,6 +17,7 @@ const ROLES = {
   TEAM_LEADER: 'team_leader', // 组长/班长
   PURCHASER: 'purchaser', // 采购员 - 只看物料采购
   CUTTER: 'cutter', // 裁剪员 - 只看裁剪任务和裁剪单
+  SAMPLE_DEVELOPER: 'sample_developer', // 样衣开发员 - 样衣子工序领取
   SEWING: 'sewing', // 车缝员 - 只看车缝/生产扫码
   PACKAGER: 'packager', // 包装员 - 只看包装扫码
   QUALITY: 'quality', // 质检员 - 只看质检相关
@@ -474,6 +475,23 @@ function buildScopedParams(params = {}) {
   return enhanced;
 }
 
+/**
+ * 检查用户是否能领取指定岗位的任务（宽松规则：同岗位优先 + 主管以上全放行）
+ * @param {'procurement'|'cutting'|'sample'} jobType - 任务类型
+ * @returns {boolean} true=可直接领取（本岗位或主管以上），false=跨岗位需提示
+ */
+function canReceiveTask(jobType) {
+  // 主管/管理员/租户主/工厂主 全放行
+  if (isAdminOrSupervisor()) return true;
+  const role = getCurrentRole();
+  // 本岗位直接放行
+  if (jobType === 'procurement') return role === ROLES.PURCHASER;
+  if (jobType === 'cutting') return role === ROLES.CUTTER;
+  if (jobType === 'sample') return role === ROLES.SAMPLE_DEVELOPER;
+  // 其他类型默认放行
+  return true;
+}
+
 module.exports = {
   ROLES,
   WORK_NODES,
@@ -481,6 +499,7 @@ module.exports = {
   isAdminOrSupervisor,
   isManagerLevel,
   canAccessNode,
+  canReceiveTask,
   filterWorkNodes,
   filterOrders,
   getAllowedScanTypes,

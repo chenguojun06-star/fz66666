@@ -81,6 +81,27 @@ Page({
     warehouseLocationCode: '',
     warehouse: '',
     locationOptions: [],
+
+    // 借调表单
+    showLoanForm: false,
+    loanLendToType: 'person',  // 'person' | 'factory' | 'customer'
+    loanLendTo: '',
+    loanLendToFactoryName: '',
+    loanBorrower: '',
+    loanQuantity: 1,
+    loanRemark: '',
+
+    // 归还选择
+    showReturnPicker: false,
+    selectedLoanId: '',
+
+    // 转借表单
+    showTransferForm: false,
+    transferLoanId: '',
+    transferLendTo: '',
+    transferLendToFactoryName: '',
+    transferQuantity: 1,
+    transferRemark: '',
   },
 
   onLoad(options) {
@@ -280,22 +301,62 @@ Page({
   onLoan() {
     if (this.data.submitting) return;
     const userInfo = getApp().globalData.userInfo || {};
-    wx.showModal({
-      title: '确认借调',
-      content: `借调 ${this.data.styleNo} ${this.data.color} ${this.data.size}，确认？`,
-      success: (modal) => {
-        if (!modal.confirm) return;
-        const stock = (this.data.stockInfo && this.data.stockInfo.stock) || {};
-        this._doAction('loan', () =>
-          api.sampleStock.loan({
-            sampleStockId: stock.id,
-            borrower: userInfo.name || userInfo.username || '',
-            borrowerId: userInfo.id ? String(userInfo.id) : '',
-            quantity: 1,
-          }),
-        );
-      },
+    this.setData({
+      showLoanForm: true,
+      loanLendToType: 'person',
+      loanLendTo: '',
+      loanLendToFactoryName: '',
+      loanBorrower: userInfo.name || userInfo.username || '',
+      loanQuantity: 1,
+      loanRemark: '',
     });
+  },
+
+  onLoanLendToTypeChange(e) {
+    this.setData({ loanLendToType: e.detail.value });
+  },
+
+  onLoanLendToInput(e) {
+    this.setData({ loanLendTo: e.detail.value });
+  },
+
+  onLoanFactoryInput(e) {
+    this.setData({ loanLendToFactoryName: e.detail.value });
+  },
+
+  onLoanBorrowerInput(e) {
+    this.setData({ loanBorrower: e.detail.value });
+  },
+
+  onLoanRemarkInput(e) {
+    this.setData({ loanRemark: e.detail.value });
+  },
+
+  onLoanFormCancel() {
+    this.setData({ showLoanForm: false });
+  },
+
+  onLoanFormConfirm() {
+    const { loanLendTo, loanLendToFactoryName, loanLendToType, loanBorrower, loanQuantity, loanRemark } = this.data;
+    if (!loanLendTo && !loanLendToFactoryName) {
+      wx.showToast({ title: '请填写借入人或工厂', icon: 'none' });
+      return;
+    }
+    const stock = (this.data.stockInfo && this.data.stockInfo.stock) || {};
+    const userInfo = getApp().globalData.userInfo || {};
+    this.setData({ showLoanForm: false });
+    this._doAction('loan', () =>
+      api.sampleStock.loan({
+        sampleStockId: stock.id,
+        borrower: loanBorrower || userInfo.name || userInfo.username || '',
+        borrowerId: userInfo.id ? String(userInfo.id) : '',
+        lendTo: loanLendToType === 'factory' ? '' : loanLendTo,
+        lendToType: loanLendToType,
+        lendToFactoryName: loanLendToType === 'factory' ? loanLendToFactoryName : '',
+        quantity: loanQuantity || 1,
+        remark: loanRemark,
+      }),
+    );
   },
 
   onReturn() {
@@ -305,20 +366,97 @@ Page({
       wx.showToast({ title: '无借调记录', icon: 'none' });
       return;
     }
-    const loan = loans[0];
+    // 只有一条记录直接归还
+    if (loans.length === 1) {
+      this._doReturnLoan(loans[0]);
+      return;
+    }
+    // 多条记录，显示选择
+    this.setData({ showReturnPicker: true, selectedLoanId: loans[0].id });
+  },
+
+  onReturnLoanSelect(e) {
+    this.setData({ selectedLoanId: e.currentTarget.dataset.id });
+  },
+
+  onReturnPickerConfirm() {
+    const loans = (this.data.stockInfo && this.data.stockInfo.activeLoans) || [];
+    const loan = loans.find(l => l.id === this.data.selectedLoanId);
+    if (!loan) {
+      wx.showToast({ title: '请选择归还记录', icon: 'none' });
+      return;
+    }
+    this.setData({ showReturnPicker: false });
+    this._doReturnLoan(loan);
+  },
+
+  onReturnPickerCancel() {
+    this.setData({ showReturnPicker: false });
+  },
+
+  _doReturnLoan(loan) {
     wx.showModal({
       title: '确认归还',
-      content: `归还 ${this.data.styleNo} ${this.data.color} ${this.data.size}，确认？`,
+      content: `归还 ${this.data.styleNo} ${this.data.color} ${this.data.size}，借入人: ${loan.lendTo || loan.lendToFactoryName || loan.borrower || '未知'}，剩余 ${loan.remainingQuantity || loan.quantity || 1} 件`,
       success: (modal) => {
         if (!modal.confirm) return;
         this._doAction('return', () =>
           api.sampleStock.returnSample({
             loanId: loan.id,
-            quantity: loan.quantity || 1,
+            returnQuantity: loan.remainingQuantity || loan.quantity || 1,
           }),
         );
       },
     });
+  },
+
+  onTransfer(e) {
+    const loanId = e.currentTarget.dataset.id;
+    const loans = (this.data.stockInfo && this.data.stockInfo.activeLoans) || [];
+    const loan = loans.find(l => l.id === loanId);
+    if (!loan) return;
+    this.setData({
+      showTransferForm: true,
+      transferLoanId: loanId,
+      transferLendTo: '',
+      transferLendToFactoryName: '',
+      transferQuantity: loan.remainingQuantity || loan.quantity || 1,
+      transferRemark: '',
+    });
+  },
+
+  onTransferLendToInput(e) {
+    this.setData({ transferLendTo: e.detail.value });
+  },
+
+  onTransferFactoryInput(e) {
+    this.setData({ transferLendToFactoryName: e.detail.value });
+  },
+
+  onTransferRemarkInput(e) {
+    this.setData({ transferRemark: e.detail.value });
+  },
+
+  onTransferFormCancel() {
+    this.setData({ showTransferForm: false });
+  },
+
+  onTransferFormConfirm() {
+    const { transferLoanId, transferLendTo, transferLendToFactoryName, transferQuantity, transferRemark } = this.data;
+    if (!transferLendTo && !transferLendToFactoryName) {
+      wx.showToast({ title: '请填写转借入人或工厂', icon: 'none' });
+      return;
+    }
+    this.setData({ showTransferForm: false });
+    this._doAction('转借', () =>
+      api.sampleStock.transfer({
+        sourceLoanId: transferLoanId,
+        lendTo: transferLendTo,
+        lendToFactoryName: transferLendToFactoryName,
+        quantity: transferQuantity,
+        remark: transferRemark,
+      }),
+    );
   },
 
   _doAction(actionName, apiFn) {

@@ -2,6 +2,7 @@ const api = require('../../../utils/api');
 const { toast, safeNavigate } = require('../../../utils/uiHelper');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 const { eventBus, Events } = require('../../../utils/eventBus');
+const permission = require('../../../utils/permission');
 
 const STATUS_LABELS = {
   PENDING: '待领取',
@@ -85,9 +86,14 @@ Page({
     patternDetail: null,
     patternScanRecords: null,
     detailLoading: false,
+    roleHint: '', // 跨岗位提示
   },
 
   onLoad: function () {
+    // 职务提示：非样衣岗且非主管以上，显示跨岗位提示
+    if (!permission.canReceiveTask('sample')) {
+      this.setData({ roleHint: `您当前职务「${permission.getRoleDisplayName()}」非样衣岗，如需代领请知会主管` });
+    }
     this.loadData(true);
   },
 

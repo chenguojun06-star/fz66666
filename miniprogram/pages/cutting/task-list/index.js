@@ -2,6 +2,7 @@ const api = require('../../../utils/api');
 const { getUserInfo } = require('../../../utils/storage');
 const { toast, safeNavigate } = require('../../../utils/uiHelper');
 const { eventBus, Events } = require('../../../utils/eventBus');
+const permission = require('../../../utils/permission');
 
 Page({
   data: {
@@ -9,6 +10,7 @@ Page({
     tasks: [],
     filteredTasks: [],
     activeStatus: 'all',
+    roleHint: '', // 跨岗位提示
     statusTabs: [
       { key: 'all', label: '全部', count: 0 },
       { key: 'pending', label: '待领取', count: 0 },
@@ -21,6 +23,10 @@ Page({
     // 未登录时拒绝访问：裁剪任务页需要身份验证
     const app = getApp();
     if (app && typeof app.requireAuth === 'function' && !app.requireAuth()) return;
+    // 职务提示：非裁剪员且非主管以上，显示跨岗位提示
+    if (!permission.canReceiveTask('cutting')) {
+      this.setData({ roleHint: `您当前职务「${permission.getRoleDisplayName()}」非裁剪岗，如需代领请知会主管` });
+    }
     this.loadTasks();
   },
 
@@ -83,6 +89,20 @@ Page({
   async onReceive(e) {
     const task = e.currentTarget.dataset.task;
     if (!task || !task.id) return;
+
+    // 软校验：非裁剪员且非主管，弹窗确认但不阻断
+    if (!permission.canReceiveTask('cutting')) {
+      const allowed = await new Promise(resolve => {
+        wx.showModal({
+          title: '岗位提示',
+          content: `您当前职务「${permission.getRoleDisplayName()}」非裁剪岗，确定代领？`,
+          confirmText: '确定代领',
+          cancelText: '取消',
+          success: res => resolve(!!res.confirm),
+        });
+      });
+      if (!allowed) return;
+    }
 
     const userInfo = getUserInfo();
     if (!userInfo || !userInfo.id) {

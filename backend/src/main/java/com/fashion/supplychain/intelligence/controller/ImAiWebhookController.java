@@ -129,6 +129,20 @@ public class ImAiWebhookController {
             log.error("[IM-AI/Feishu] encrypt-key not configured, rejecting callback for safety");
             return ResponseEntity.status(500).body(Map.of("error", "server misconfiguration"));
         }
+
+        // 验证时间戳（防止重放攻击，5分钟窗口）
+        try {
+            long ts = Long.parseLong(timestamp);
+            long now = System.currentTimeMillis() / 1000;
+            if (Math.abs(now - ts) > 300) {
+                log.warn("[IM-AI/Feishu] timestamp expired: ts={} now={} diff={}s", ts, now, Math.abs(now - ts));
+                return ResponseEntity.status(401).body(Map.of("error", "timestamp expired"));
+            }
+        } catch (NumberFormatException e) {
+            log.warn("[IM-AI/Feishu] invalid timestamp format: {}", timestamp);
+            return ResponseEntity.status(401).body(Map.of("error", "invalid timestamp"));
+        }
+
         // 飞书签名算法：SHA256(timestamp + nonce + encrypt_key)，十六进制小写
         String expected = sha256Hex(timestamp + nonce + feishuEncryptKey);
         if (!expected.equalsIgnoreCase(signature)) {

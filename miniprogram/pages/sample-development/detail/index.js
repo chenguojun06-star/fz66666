@@ -1,5 +1,9 @@
 const { style } = require('../../../utils/api-modules/style-warehouse');
 const { production } = require('../../../utils/api-modules/production');
+const permission = require('../../../utils/permission');
+
+// 可手动领取/完成的子工序（其他只展示）
+const ACTIONABLE_STAGES = new Set(['pattern', 'bom', 'process', 'secondary', 'production']);
 
 Page({
   data: {
@@ -102,29 +106,41 @@ Page({
     }
   },
 
-  /** 构建阶段进度数据 */
+  /** 构建阶段进度数据 — 基于 startTime/completedTime 判断真实状态 */
   buildStages(info) {
     const stageConfig = [
-      { key: 'bom', name: 'BOM清单', field: 'bomStage' },
-      { key: 'pattern', name: '纸样开发', field: 'patternStage' },
-      { key: 'process', name: '工序单价', field: 'processStage' },
-      { key: 'secondary', name: '二次工艺', field: 'secondaryStage' },
-      { key: 'production', name: '生产制单', field: 'productionStage' },
-      { key: 'quotation', name: '报价单', field: 'quotationStage' },
-      { key: 'attachment', name: '附件文件', field: 'attachmentStage' },
+      { key: 'bom', name: 'BOM清单' },
+      { key: 'pattern', name: '纸样开发' },
+      { key: 'process', name: '工序单价' },
+      { key: 'secondary', name: '二次工艺' },
+      { key: 'production', name: '生产制单' },
+      { key: 'quotation', name: '报价单' },
+      { key: 'attachment', name: '附件文件' },
     ];
     const stages = stageConfig.map(s => {
-      const raw = info[s.field] || info[`${s.key}Stage`] || 'not_started';
-      const status = this.normalizeStatus(raw);
+      // 用实际时间字段判断状态（比 xxxStage 字段更可靠）
+      const completedTime = info[`${s.key}CompletedTime`] || '';
+      const startTime = info[`${s.key}StartTime`] || '';
+      let status;
+      if (completedTime) {
+        status = 'completed';
+      } else if (startTime) {
+        status = 'in_progress';
+      } else {
+        status = 'not_started';
+      }
+      const actionable = ACTIONABLE_STAGES.has(s.key);
       return {
         key: s.key,
         name: s.name,
         status,
         statusText: this.statusText(status),
-        assignee: info[`${s.key}Assignee`] || info[`${s.key}AssigneeName`] || '',
-        completedAt: info[`${s.key}CompletedAt`] || info[`${s.key}CompletedTime`] || '',
-        budgetHours: info[`${s.key}BudgetHours`] || '',
-        actualHours: info[`${s.key}ActualHours`] || '',
+        assignee: info[`${s.key}Assignee`] || '',
+        startTime: startTime ? String(startTime).substring(0, 16) : '',
+        completedAt: completedTime ? String(completedTime).substring(0, 16) : '',
+        actionable,
+        canReceive: actionable && status === 'not_started',
+        canComplete: actionable && status === 'in_progress',
       };
     });
     this.setData({ stages });
@@ -277,11 +293,45 @@ Page({
     }
   },
 
+  /** 领取子工序 */
+  onStageReceive(e) {
+    const stageKey = e.currentTarget.dataset.key;
+    const stage = this.data.stages.find(s => s.key === stageKey);
+    if (!stage || !stage.canReceive) return;
+
+    // 软校验：非样衣岗且非主管，提示但不阻断
+    const doReceive = async () => {
+      try {
+        await style.stageAction(this.data.styleId, stageKey, 'start');
+        wx.showToast({ title: '领取成功', icon: 'success' });
+        this.loadStyleDetail();
+      } catch (e) {
+        wx.showToast({ title: '领取失败', icon: 'none' });
+      }
+    };
+
+    if (!permission.canReceiveTask('sample')) {
+      wx.showModal({
+        title: '岗位提示',
+        content: `您当前职务「${permission.getRoleDisplayName()}」非样衣岗，确定代领「${stage.name}」？`,
+        confirmText: '确定代领',
+        cancelText: '取消',
+        success: (res) => { if (res.confirm) doReceive(); },
+      });
+    } else {
+      wx.showModal({
+        title: '领取确认',
+        content: `确认领取「${stage.name}」工序？`,
+        success: (res) => { if (res.confirm) doReceive(); },
+      });
+    }
+  },
+
   /** 阶段完成确认 */
   onStageConfirm(e) {
     const stageKey = e.currentTarget.dataset.key;
     const stage = this.data.stages.find(s => s.key === stageKey);
-    if (!stage || stage.status === 'completed') return;
+    if (!stage || !stage.canComplete) return;
 
     wx.showModal({
       title: '确认完成',

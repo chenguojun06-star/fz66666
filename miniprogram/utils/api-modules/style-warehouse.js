@@ -244,6 +244,8 @@ const sampleStock = {
   inbound(data) { return ok('/api/stock/sample/inbound', 'POST', data); },
   loan(data) { return ok('/api/stock/sample/loan', 'POST', data); },
   returnSample(data) { return ok('/api/stock/sample/return', 'POST', data); },
+  transfer(data) { return ok('/api/stock/sample/transfer', 'POST', data); },
+  loanList(params) { return ok('/api/stock/sample/loan/list', 'GET', params || {}); },
 };
 
 module.exports = { style, warehouse, material, materialRoll, orderManagement, sampleStock };

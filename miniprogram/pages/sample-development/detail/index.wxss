@@ -377,6 +377,17 @@
   font-size: 24rpx;
   flex-shrink: 0;
 }
+.progress-action-receive {
+  background: #faad14;
+  color: #fff;
+}
+.progress-done-icon {
+  color: #52c41a;
+  font-size: 32rpx;
+  font-weight: 700;
+  flex-shrink: 0;
+  padding: 8rpx 16rpx;
+}
 
 /* 信息块（制单/纸样） */
 .info-block {

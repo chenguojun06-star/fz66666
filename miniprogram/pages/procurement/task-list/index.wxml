@@ -1,4 +1,10 @@
 <view class="container">
+  <!-- 跨岗位提示条 -->
+  <view wx:if="{{roleHint}}" class="role-hint-bar">
+    <text class="role-hint-icon">⚠️</text>
+    <text class="role-hint-text">{{roleHint}}</text>
+  </view>
+
   <!-- 状态筛选 Tab -->
   <view class="filter-tabs">
     <view

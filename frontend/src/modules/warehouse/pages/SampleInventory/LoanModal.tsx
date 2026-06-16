@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { Form, Input, InputNumber, DatePicker, Select } from 'antd';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Form, Input, InputNumber, DatePicker, Select, Radio } from 'antd';
 import ResizableModal from '@/components/common/ResizableModal';
 import { SampleStock } from './types';
 import api from '@/utils/api';
@@ -10,6 +10,7 @@ import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
 import { message } from '@/utils/antdStatic';
 import { useWarehouseAreaOptions, useWarehouseLocationByArea } from '@/hooks/useWarehouseAreaOptions';
+import { factoryApi } from '@/services/system/factoryApi';
 
 interface LoanModalProps {
   visible: boolean;
@@ -20,11 +21,13 @@ interface LoanModalProps {
 
 const LoanModal: React.FC<LoanModalProps> = ({ visible, stock, onCancel, onSuccess }) => {
   const [form] = Form.useForm();
-  const [loading, setLoading] = React.useState(false);
-  const [smartError, setSmartError] = React.useState<SmartErrorInfo | null>(null);
-  const showSmartErrorNotice = React.useMemo(() => isSmartFeatureEnabled('smart.production.precheck.enabled'), []);
+  const [loading, setLoading] = useState(false);
+  const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
+  const showSmartErrorNotice = useMemo(() => isSmartFeatureEnabled('smart.production.precheck.enabled'), []);
+  const [factoryOptions, setFactoryOptions] = useState<{ label: string; value: string }[]>([]);
 
   const warehouseAreaId = Form.useWatch('warehouseAreaId', form);
+  const lendToType = Form.useWatch('lendToType', form);
   const { selectOptions: areaOptions } = useWarehouseAreaOptions('SAMPLE');
   const { selectOptions: locationOptions } = useWarehouseLocationByArea('SAMPLE', warehouseAreaId);
 
@@ -36,19 +39,47 @@ const LoanModal: React.FC<LoanModalProps> = ({ visible, stock, onCancel, onSucce
   useEffect(() => {
     if (visible && stock) {
       form.resetFields();
+      form.setFieldValue('lendToType', 'person');
     }
   }, [visible, stock, form]);
+
+  useEffect(() => {
+    if (visible) {
+      factoryApi.list({ page: 1, pageSize: 500, status: 'active' }).then(res => {
+        const records = res?.data?.records || [];
+        setFactoryOptions(records.map((f: any) => ({
+          label: f.factoryName || f.name || f.id,
+          value: f.id,
+        })));
+      }).catch(() => {});
+    }
+  }, [visible]);
 
   const handleOk = async () => {
     try {
       const values = await form.validateFields();
       setLoading(true);
 
-      const payload = {
+      const payload: Record<string, any> = {
         sampleStockId: stock?.id,
-        ...values,
-        expectedReturnDate: values.expectedReturnDate ? formatDateTimeSecond(values.expectedReturnDate) : undefined
+        borrower: values.borrower,
+        quantity: values.quantity,
+        expectedReturnDate: values.expectedReturnDate ? formatDateTimeSecond(values.expectedReturnDate) : undefined,
+        remark: values.remark,
+        warehouseAreaId: values.warehouseAreaId,
+        warehouseLocation: values.warehouseLocation,
+        lendToType: values.lendToType,
       };
+
+      if (values.lendToType === 'factory') {
+        payload.lendToFactoryId = values.lendToFactoryId;
+        const factoryOpt = factoryOptions.find(f => f.value === values.lendToFactoryId);
+        payload.lendToFactoryName = factoryOpt?.label || '';
+        payload.lendTo = values.lendToContact || '';
+      } else {
+        payload.lendTo = values.lendTo || '';
+        payload.lendToId = values.lendToId || '';
+      }
 
       const res = await api.post('/stock/sample/loan', payload);
       if (res.code === 200) {
@@ -92,11 +123,49 @@ const LoanModal: React.FC<LoanModalProps> = ({ visible, stock, onCancel, onSucce
       <Form form={form} layout="vertical" onFinish={handleOk}>
         <Form.Item
           name="borrower"
-          label="借用人"
-          rules={[{ required: true, message: '请输入借用人' }]}
+          label="操作人（借出人）"
+          rules={[{ required: true, message: '请输入借出人' }]}
         >
-          <Input placeholder="请输入借用人姓名" />
+          <Input placeholder="谁操作的借出" />
         </Form.Item>
+
+        <Form.Item name="lendToType" label="借给谁" rules={[{ required: true, message: '请选择借入类型' }]}>
+          <Radio.Group>
+            <Radio value="person">个人</Radio>
+            <Radio value="factory">工厂</Radio>
+            <Radio value="customer">客户</Radio>
+          </Radio.Group>
+        </Form.Item>
+
+        {lendToType === 'factory' ? (
+          <>
+            <Form.Item
+              name="lendToFactoryId"
+              label="借入工厂"
+              rules={[{ required: true, message: '请选择借入工厂' }]}
+            >
+              <Select
+                placeholder="选择工厂"
+                allowClear
+                showSearch
+                optionFilterProp="label"
+                options={factoryOptions}
+              />
+            </Form.Item>
+            <Form.Item name="lendToContact" label="工厂联系人">
+              <Input placeholder="工厂对接人姓名（选填）" />
+            </Form.Item>
+          </>
+        ) : (
+          <Form.Item
+            name="lendTo"
+            label="借入人"
+            rules={[{ required: true, message: '请输入借入人姓名' }]}
+          >
+            <Input placeholder="借给谁" />
+          </Form.Item>
+        )}
+
         <Form.Item
           name="quantity"
           label={`借出数量 (可用: ${available})`}
