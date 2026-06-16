@@ -207,7 +207,7 @@ const TaxExport: React.FC = () => {
         <FileExcelOutlined style={{ marginRight: 8, color: '#52c41a' }} />
         财税管理
       </Title>
-      <Text type="secondary" style={{ display: 'block', marginBottom: 20 }}>
+      <Text type="secondary" style={{ display: 'block', marginBottom: 12 }}>
         数据导出、发票台账、应付账款、税率配置一站式管理
       </Text>
       <Tabs items={tabs} defaultActiveKey="export" />

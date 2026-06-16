@@ -163,7 +163,7 @@ const EcommerceCenter: React.FC = () => {
 
   const overviewContent = (
     <div style={{ padding: '0 8px' }}>
-      <Row gutter={16} style={{ marginBottom: 24, marginTop: 16 }}>
+      <Row gutter={16} style={{ marginBottom: 12, marginTop: 8 }}>
           <Col span={6}>
             <Card variant="borderless" style={{ background: 'linear-gradient(135deg, #e6f7ff 0%, #f0f5ff 100%)', borderRadius: 12 }}>
               <Statistic title="已对接平台" value={globalStats.connected} suffix={`/ ${PLATFORM_LIST.length}`} prefix={<ApiOutlined style={{ color: '#1677ff' }} />} styles={{ content: { color: '#1677ff' } }} />
@@ -197,7 +197,7 @@ const EcommerceCenter: React.FC = () => {
         )}
 
         {connectedPlatforms.length > 0 && (
-          <div style={{ marginBottom: 24 }}>
+          <div style={{ marginBottom: 12 }}>
             <div style={{ display: 'flex', alignItems: 'center', marginBottom: 14 }}>
               <CheckCircleOutlined style={{ color: '#52c41a', marginRight: 8, fontSize: 18 }} />
               <Text strong style={{ fontSize: 17 }}>已对接平台</Text>

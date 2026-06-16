@@ -78,7 +78,7 @@ const AiQualityDashboard: React.FC = () => {
 
   return (
     <div style={{ padding: 24 }}>
-      <h2 style={{ marginBottom: 24 }}>小云AI 质量评估看板</h2>
+      <h2 style={{ marginBottom: 12 }}>小云AI 质量评估看板</h2>
 
       {/* 操作栏 */}
       <div style={{ marginBottom: 16, display: 'flex', gap: 12 }}>
@@ -97,7 +97,7 @@ const AiQualityDashboard: React.FC = () => {
 
       {/* 统计卡片 */}
       {evalData && (
-        <Row gutter={16} style={{ marginBottom: 24 }}>
+        <Row gutter={16} style={{ marginBottom: 12 }}>
           <Col span={6}>
             <Card>
               <Statistic title="测试总数" value={evalData.total} suffix="项" />

@@ -184,9 +184,22 @@ export default function useSampleProcessProgress(
   const stages = useMemo<ProcessStageProgress[]>(() => {
     const stageMap = new Map<string, ProcessNodeInfo[]>();
     for (const node of workflowNodes) {
+      // 优先使用 progressStage（后端已解析的父阶段名，如"车缝"），
+      // 仅在 progressStage 为空时回退到 name（子工序名，如"侧缝"）
       const stageKey = resolveStageKey(node.progressStage || node.name);
       if (!stageMap.has(stageKey)) stageMap.set(stageKey, []);
       stageMap.get(stageKey)!.push(node);
+    }
+
+    // 将 unknown 阶段的工序归入尾部（兜底，正常情况后端已正确解析 progressStage）
+    const unknownSubs = stageMap.get('unknown') || [];
+    if (unknownSubs.length > 0 && !stageMap.has('tail')) {
+      stageMap.set('tail', []);
+    }
+    if (unknownSubs.length > 0) {
+      const tailSubs = stageMap.get('tail') || [];
+      stageMap.set('tail', [...tailSubs, ...unknownSubs]);
+      stageMap.delete('unknown');
     }
 
     return SAMPLE_PARENT_STAGES.map((stage) => {
@@ -249,17 +262,27 @@ const STAGE_KEY_MAP: Record<string, string> = {
   'sewing': 'sewing',
   'tail': 'tail',
   'warehousing': 'warehousing',
+  // 同义词映射
+  '缝制': 'sewing',
+  '后整': 'tail',
+  '下板': 'cutting',
+  '裁床': 'cutting',
 };
 
 function resolveStageKey(name: string): string {
+  if (!name) return 'tail';
+  // 1. 精确匹配
   if (STAGE_KEY_MAP[name]) return STAGE_KEY_MAP[name];
+  // 2. 模糊匹配（名称包含已知阶段关键词）
   const lower = name.toLowerCase();
   for (const [key, val] of Object.entries(STAGE_KEY_MAP)) {
     if (lower.includes(key.toLowerCase()) || lower.includes(val.toLowerCase())) {
       return val;
     }
   }
-  return 'tail';
+  // 3. 无法匹配时不默认归入尾部，保持原始名称对应的未知阶段
+  //    返回 'unknown' 让调用方可以识别未映射的工序
+  return 'unknown';
 }
 
 /** 样衣扫码 operationType（英文大写）→ 中文工序名 映射 */

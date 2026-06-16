@@ -154,12 +154,13 @@ Page({
   // 无资料下单：选择图片
   chooseNoDataImage: function () {
     var self = this;
-    wx.chooseImage({
+    wx.chooseMedia({
       count: 1,
-      sizeType: ['compressed'],
+      mediaType: ['image'],
       sourceType: ['album', 'camera'],
+      sizeType: ['compressed'],
       success: function (res) {
-        var tempPath = res.tempFilePaths[0];
+        var tempPath = res.tempFiles[0].tempFilePath;
         console.log('[无资料下单] 选择图片:', tempPath);
         self.setData({ noDataUploadedImage: tempPath });
       },

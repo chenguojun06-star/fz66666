@@ -53,7 +53,7 @@ const FEATURES = [
 const LockedView: React.FC<{ onGoStore: () => void }> = ({ onGoStore }) => (
   <>
     <Card
-      style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', border: 'none', marginBottom: 24 }}
+      style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', border: 'none', marginBottom: 12 }}
       styles={{ body: { padding: '32px 40px' } }}
     >
       <Row align="middle" gutter={24}>
@@ -93,7 +93,7 @@ const LockedView: React.FC<{ onGoStore: () => void }> = ({ onGoStore }) => (
         </Col>
       ))}
     </Row>
-    <Card style={{ marginTop: 24, background: '#f8f9fa' }} variant="borderless">
+    <Card style={{ marginTop: 12, background: '#f8f9fa' }} variant="borderless">
       <Row gutter={24} align="middle">
         <Col span={16}>
           <Text strong>为什么比鼎普便宜5倍？</Text>
@@ -340,7 +340,7 @@ const CustomerManagement: React.FC = () => {
   return (
     <>
       {/* 统计卡片 */}
-      <Row gutter={16} style={{ marginBottom: 20 }}>
+      <Row gutter={16} style={{ marginBottom: 12 }}>
         {[
           { icon: <TeamOutlined />, label: '客户总数', value: stats.total, color: '#1677ff' },
           { icon: <CheckCircleOutlined />, label: '合作中', value: stats.activeCount, color: '#52c41a' },

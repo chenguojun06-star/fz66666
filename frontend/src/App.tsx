@@ -4,7 +4,6 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from
 import { Button, Image } from 'antd';
 import PrivateRoute from './components/PrivateRoute';
 import XiaoyunPageLoader from './components/common/XiaoyunPageLoader';
-import GlobalAiAssistant from './components/common/GlobalAiAssistant';
 import { useAuthState } from './utils/AuthContext';
 import ResizableModal from './components/common/ResizableModal';
 import ErrorBoundary from './components/common/ErrorBoundary';
@@ -305,7 +304,6 @@ const AppRoutes: React.FC = () => {
         </Routes>
       ) : null}
 
-      <GlobalAiAssistant />
       <KeyboardShortcuts />
       <GlobalImagePreview />
     </>

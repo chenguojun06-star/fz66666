@@ -262,12 +262,12 @@ const MaterialDatabasePage: React.FC = () => {
       <Card>
         <div style={{
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-          marginBottom: 16,
+          marginBottom: 12,
         }}>
           <h2 style={{ margin: 0 }}> 物料资料库</h2>
           <Button icon={<PrinterOutlined />} onClick={handlePrintMaterialDatabase}>打印清单</Button>
         </div>
-        <Card style={{ marginBottom: 16, background: 'var(--color-bg-container)' }}>
+        <Card style={{ marginBottom: 12, background: 'var(--color-bg-container)' }}>
           <StandardToolbar
             left={(
               <StandardSearchBar

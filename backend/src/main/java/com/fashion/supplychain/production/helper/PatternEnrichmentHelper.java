@@ -1,12 +1,14 @@
 package com.fashion.supplychain.production.helper;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.fashion.supplychain.common.ProcessSynonymMapping;
 import com.fashion.supplychain.production.entity.MaterialPurchase;
 import com.fashion.supplychain.production.entity.PatternProduction;
 import com.fashion.supplychain.production.entity.PatternScanRecord;
 import com.fashion.supplychain.production.service.MaterialPurchaseService;
 import com.fashion.supplychain.production.service.PatternProductionService;
 import com.fashion.supplychain.production.service.PatternScanRecordService;
+import com.fashion.supplychain.production.service.ProcessParentMappingService;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.entity.StyleProcess;
 import com.fashion.supplychain.style.service.StyleInfoService;
@@ -45,6 +47,9 @@ public class PatternEnrichmentHelper {
 
     @Autowired
     private TemplateLibraryService templateLibraryService;
+
+    @Autowired
+    private ProcessParentMappingService processParentMappingService;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -335,9 +340,7 @@ public class PatternEnrichmentHelper {
                 continue;
             }
 
-            String progressStage = StringUtils.hasText(process.getProgressStage())
-                    ? process.getProgressStage().trim()
-                    : processName;
+            String progressStage = resolveProgressStage(process.getProgressStage(), processName);
 
             Map<String, Object> item = new LinkedHashMap<>();
             item.put("operationType", processName);
@@ -381,10 +384,9 @@ public class PatternEnrichmentHelper {
                 String processName = String.valueOf(node.getOrDefault("name", "")).trim();
                 if (!StringUtils.hasText(processName)) continue;
 
-                String progressStage = String.valueOf(node.getOrDefault("progressStage", "")).trim();
-                if (!StringUtils.hasText(progressStage) || progressStage.equals(processName)) {
-                    progressStage = processName;
-                }
+                String progressStage = resolveProgressStage(
+                        String.valueOf(node.getOrDefault("progressStage", "")).trim(),
+                        processName);
 
                 BigDecimal unitPrice = BigDecimal.ZERO;
                 Object priceObj = node.get("unitPrice");
@@ -424,6 +426,55 @@ public class PatternEnrichmentHelper {
             return "warehouse";
         }
         return "production";
+    }
+
+    private static final List<String> FIXED_PARENT_STAGES = List.of("采购", "裁剪", "二次工艺", "车缝", "尾部", "入库");
+
+    /**
+     * 解析工序的父阶段名。
+     * 优先使用 progressStage（如果它是标准父阶段名），
+     * 否则通过 ProcessSynonymMapping / ProcessParentMappingService 解析。
+     */
+    private String resolveProgressStage(String progressStage, String processName) {
+        // 1. 如果 progressStage 是标准父阶段名，直接使用
+        if (StringUtils.hasText(progressStage) && isFixedParentStage(progressStage.trim())) {
+            return progressStage.trim();
+        }
+        // 2. 如果 progressStage 是同义词（如"缝制"→"车缝"），标准化后使用
+        if (StringUtils.hasText(progressStage) && !progressStage.trim().equals(processName)) {
+            String normalized = ProcessSynonymMapping.normalize(progressStage.trim());
+            if (isFixedParentStage(normalized)) {
+                return normalized;
+            }
+        }
+        // 3. 通过动态映射表解析 processName → 父阶段
+        if (StringUtils.hasText(processName)) {
+            String mapped = processParentMappingService.resolveParentNode(processName.trim());
+            if (StringUtils.hasText(mapped)) {
+                String normalized = ProcessSynonymMapping.normalize(mapped.trim());
+                if (isFixedParentStage(normalized)) {
+                    return normalized;
+                }
+                if (StringUtils.hasText(mapped.trim())) {
+                    return mapped.trim();
+                }
+            }
+            // 4. 同义词标准化 processName 本身
+            String normalized = ProcessSynonymMapping.normalize(processName.trim());
+            if (isFixedParentStage(normalized)) {
+                return normalized;
+            }
+        }
+        // 5. 兜底：返回 progressStage 或 processName
+        return StringUtils.hasText(progressStage) ? progressStage.trim() : processName;
+    }
+
+    private boolean isFixedParentStage(String name) {
+        if (!StringUtils.hasText(name)) return false;
+        for (String stage : FIXED_PARENT_STAGES) {
+            if (stage.equals(name)) return true;
+        }
+        return false;
     }
 
     public Long parseStyleId(String styleIdStr) {

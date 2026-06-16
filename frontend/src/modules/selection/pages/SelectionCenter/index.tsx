@@ -43,7 +43,7 @@ export default function SelectionCenter() {
       )}
 
       {activeTab === 'mine' && (<>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
         <Space wrap>
           <StandardSearchBar searchValue={search} onSearchChange={setSearch} searchPlaceholder="搜索款式名 / 候选款号" showDate={false} showStatus={false} />
           <Select placeholder="全部状态" value={statusFilter || undefined} onChange={v => setStatusFilter(v ?? '')} allowClear style={{ width: 120 }}

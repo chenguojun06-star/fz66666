@@ -52,7 +52,7 @@ const AppStore: React.FC = () => {
     if (myApps.length === 0) return null;
     const needSetup = myApps.filter(a => !a.configured && !a.isExpired);
     return (
-      <div style={{ marginBottom: 24 }}>
+      <div style={{ marginBottom: 12 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
           <div style={{ fontWeight: 600, fontSize: 15 }}><ApiOutlined style={{ marginRight: 6 }} />我的已开通应用{needSetup.length > 0 && <Tag color="orange" style={{ marginLeft: 8, fontSize: 14 }}>{needSetup.length} 个待配置</Tag>}</div>
           <Button type="link" onClick={() => navigate('/system/tenant?tab=apps')}>管理全部 →</Button>
@@ -127,7 +127,7 @@ const AppStore: React.FC = () => {
       {/* 一键开通设置向导 */}
       <ResizableModal title={<div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><RocketOutlined style={{ color: 'var(--color-success)' }} /><span>{wizardData.appName} - 智能配置向导</span></div>}
         open={wizardVisible} onCancel={handleSetupSkip} width="40vw" footer={null} maskClosable={false}>
-        <Steps current={wizardStep} style={{ marginBottom: 20, padding: '0 20px' }} items={[{ title: 'API凭证' }, { title: '配置地址' }, { title: '完成' }]} />
+        <Steps current={wizardStep} style={{ marginBottom: 12, padding: '0 20px' }} items={[{ title: 'API凭证' }, { title: '配置地址' }, { title: '完成' }]} />
         {wizardStep === 0 && (<div>
           {wizardData.appKey && wizardData.appSecret ? (<>
             <Alert type="success" showIcon icon={<CheckCircleOutlined />} title="API凭证已自动生成！" description="系统已为您自动创建API密钥并配置好所有内部接口端点。" style={{ marginBottom: 16 }} />
@@ -163,8 +163,8 @@ const AppStore: React.FC = () => {
         {wizardStep === 2 && (<div style={{ textAlign: 'center', padding: '20px 0' }}>
           <CheckCircleOutlined style={{ fontSize: 48, color: 'var(--color-success)', marginBottom: 16 }} />
           <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}> 对接配置完成！</div>
-          <div style={{ fontSize: 14, color: 'var(--color-text-secondary)', marginBottom: 24 }}>{wizardData.appName} 已开通{wizardData.trialDays ? ` ${wizardData.trialDays} 天试用` : ''}，API端点已就绪。</div>
-          <Row gutter={16} style={{ textAlign: 'left', marginBottom: 24 }}>
+          <div style={{ fontSize: 14, color: 'var(--color-text-secondary)', marginBottom: 12 }}>{wizardData.appName} 已开通{wizardData.trialDays ? ` ${wizardData.trialDays} 天试用` : ''}，API端点已就绪。</div>
+          <Row gutter={16} style={{ textAlign: 'left', marginBottom: 12 }}>
             <Col span={12}><Card style={{ borderLeft: '3px solid var(--color-success)' }}><div style={{ fontWeight: 600, marginBottom: 4 }}> 已完成</div><ul style={{ margin: 0, paddingLeft: 16, fontSize: 14, color: 'var(--color-text-secondary)', lineHeight: 1.8 }}><li>API凭证自动生成</li><li>内部端点自动匹配</li><li>接口地址已配置</li></ul></Card></Col>
             <Col span={12}><Card style={{ borderLeft: '3px solid var(--color-primary)' }}><div style={{ fontWeight: 600, marginBottom: 4 }}> 下一步</div><ul style={{ margin: 0, paddingLeft: 16, fontSize: 14, color: 'var(--color-text-secondary)', lineHeight: 1.8 }}><li>查看对接教程了解详情</li><li>在您的系统中集成API</li><li>发送第一个请求测试</li></ul></Card></Col>
           </Row>

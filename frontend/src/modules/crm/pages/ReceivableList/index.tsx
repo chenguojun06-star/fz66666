@@ -484,7 +484,7 @@ const ReceivableList: React.FC = () => {
     <>
       <div style={{ padding: 24 }}>
         {/* 统计卡片 */}
-        <Row gutter={16} style={{ marginBottom: 20 }}>
+        <Row gutter={16} style={{ marginBottom: 12 }}>
           <Col span={6}>
             <Card>
               <Statistic

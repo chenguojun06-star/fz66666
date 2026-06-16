@@ -127,7 +127,7 @@ const StyleInfoDetailPage: React.FC = () => {
         <StyleIntelligenceProfileCard style={currentStyle} />
         <Card
           title="样衣详情"
-          style={{ marginBottom: 24 }}
+          style={{ marginBottom: 12 }}
           extra={
             <StyleActionButtons
               saving={saving}
@@ -205,7 +205,7 @@ const StyleInfoDetailPage: React.FC = () => {
           </Form>
         </Card>
 
-        <div style={{ marginTop: 24 }}>
+        <div style={{ marginTop: 12 }}>
           <Tabs
             activeKey={bomAreaTabKey}
             onChange={setBomAreaTabKey}
@@ -222,7 +222,7 @@ const StyleInfoDetailPage: React.FC = () => {
                     bomCompletedTime={(currentStyle as any)?.bomCompletedTime}
                     onRefresh={() => { void fetchDetail(styleIdParam!); }}
                   />
-                  <Card title="纸样开发" id="section-pattern" style={{ marginTop: 16 }}>
+                  <Card title="纸样开发" id="section-pattern" style={{ marginTop: 8 }}>
                     <StylePatternTab
                       styleId={currentStyle?.id ?? ''}
                       sizeColorConfig={colorSize.sizeColorConfig}
@@ -238,7 +238,7 @@ const StyleInfoDetailPage: React.FC = () => {
                       onRefresh={() => { void fetchDetail(styleIdParam!); }}
                     />
                   </Card>
-                  <Card title="生产制单" id="section-production" style={{ marginTop: 16 }}>
+                  <Card title="生产制单" id="section-production" style={{ marginTop: 8 }}>
                     <StyleProductionTab
                       styleId={currentStyle?.id ?? ''}
                       styleNo={currentStyle?.styleNo ?? ''}
@@ -269,7 +269,7 @@ const StyleInfoDetailPage: React.FC = () => {
                       sampleQuantity={(currentStyle as any)?.sampleQuantity}
                     />
                   </Card>
-                  <Card title="二次工艺" id="section-secondary" style={{ marginTop: 16 }}>
+                  <Card title="二次工艺" id="section-secondary" style={{ marginTop: 8 }}>
                     <StyleSecondaryProcessTab
                       styleId={currentStyle?.id ?? ''}
                       styleNo={currentStyle?.styleNo ?? ''}
@@ -281,7 +281,7 @@ const StyleInfoDetailPage: React.FC = () => {
                       onRefresh={() => { void fetchDetail(styleIdParam!); }}
                     />
                   </Card>
-                  <Card title="工序单价" id="section-process" style={{ marginTop: 16 }}>
+                  <Card title="工序单价" id="section-process" style={{ marginTop: 8 }}>
                     <StyleProcessTab
                       styleId={currentStyle?.id ?? ''}
                       styleNo={currentStyle?.styleNo ?? ''}

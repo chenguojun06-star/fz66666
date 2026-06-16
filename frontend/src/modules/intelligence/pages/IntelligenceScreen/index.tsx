@@ -190,7 +190,7 @@ export default function IntelligenceScreen() {
 
               {shortage?.items?.length > 0 && (
                 <>
-                  <div className="screen-panel-title" style={{ marginTop: 24 }}> 物料缺口</div>
+                  <div className="screen-panel-title" style={{ marginTop: 12 }}> 物料缺口</div>
                   {shortage.items.slice(0, 5).map((m: any, i: number) => (
                     <div key={i} className="screen-notify-row">
                       <span style={{ color: '#fa8c16', fontSize: 14 }}>缺</span>

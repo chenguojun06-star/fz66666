@@ -57,15 +57,15 @@
   --shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.06);
   --shadow-xl: 0 8px 24px rgba(0, 0, 0, 0.08);
 
-  /* 间距系统（Taste Skill Soft 留白呼吸感） */
+  /* 间距系统 — 紧凑工整，视觉对齐 */
   --spacing-xs: 4px;
   --spacing-sm: 8px;
   --spacing-base: 12px;
   --spacing-md: 16px;
   --spacing-lg: 20px;
-  --spacing-xl: 28px;
-  --spacing-xxl: 36px;
-  --spacing-xxxl: 48px;
+  --spacing-xl: 24px;
+  --spacing-xxl: 32px;
+  --spacing-xxxl: 40px;
 
   /* 圆角系统 — 精致商务风：收紧圆角 */
   --radius-xs: 3px;
@@ -329,7 +329,7 @@ html.dark-mode {
 
 /* 卡片头部 */
 .card-header-glass {
-  padding: var(--spacing-md) var(--spacing-md);
+  padding: var(--spacing-base) var(--spacing-md);
   border-bottom: 1px solid var(--color-border-light);
   background: var(--color-bg-container);
 }
@@ -615,7 +615,7 @@ html.dark-mode {
   align-items: center;
   flex-wrap: wrap;
   gap: var(--spacing-sm);
-  padding: var(--spacing-sm) 0;
+  padding: var(--spacing-xs) 0;
 }
 .unified-search-bar .ant-input-affix-wrapper,
 .unified-search-bar .ant-input {
@@ -684,7 +684,7 @@ html.dark-mode {
   font-weight: 600;
   color: var(--color-text-primary);
   padding-left: 12px;
-  margin: var(--spacing-md) 0 var(--spacing-base);
+  margin: var(--spacing-md) 0 var(--spacing-sm);
   position: relative;
   border-left: 3px solid var(--color-primary);
   line-height: 1.4;
@@ -703,7 +703,7 @@ html.dark-mode {
   background: var(--color-bg-card);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-base);
-  padding: var(--spacing-md);
+  padding: var(--spacing-base) var(--spacing-md);
   transition: box-shadow var(--duration-fast) var(--ease-smooth), border-color var(--duration-fast) var(--ease-smooth);
 }
 .unified-stat-card:hover {
@@ -732,7 +732,7 @@ html.dark-mode {
   display: flex;
   align-items: center;
   gap: var(--spacing-base);
-  padding: var(--spacing-md);
+  padding: var(--spacing-base) var(--spacing-md);
   background: var(--color-bg-card);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-base);
@@ -745,8 +745,8 @@ html.dark-mode {
   transform: translateY(-1px);
 }
 .unified-action-card__icon {
-  width: 44px;
-  height: 44px;
+  width: 36px;
+  height: 36px;
   border-radius: var(--radius-base);
   background: var(--color-bg-highlight);
   display: flex;
@@ -775,7 +775,7 @@ html.dark-mode {
   overflow: hidden;
 }
 .unified-content-card__header {
-  padding: var(--spacing-base) var(--spacing-md);
+  padding: var(--spacing-sm) var(--spacing-md);
   border-bottom: 1px solid var(--color-border-light);
   background: var(--color-bg-container);
   display: flex;
@@ -791,7 +791,7 @@ html.dark-mode {
   border-left: 3px solid var(--color-primary);
 }
 .unified-content-card__body {
-  padding: var(--spacing-md);
+  padding: var(--spacing-base);
 }
 
 /* ── 表单行统一间距 ── */
@@ -828,7 +828,7 @@ html.dark-mode {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: var(--spacing-xxl) var(--spacing-md);
+  padding: var(--spacing-xl) var(--spacing-md);
   color: var(--color-text-quaternary);
 }
 .unified-empty__icon {
@@ -874,7 +874,7 @@ html.dark-mode {
 }
 .purchase-cart-table .ant-table-tbody > tr > td {
   border-bottom: 1px solid var(--color-border-light);
-  padding: 12px 12px;
+  padding: 8px 12px;
 }
 .purchase-cart-table .ant-table-tbody > tr:hover > td {
   background: var(--color-bg-stripe) !important;

@@ -34,38 +34,6 @@ const fmtPercent = (value?: number | null) => {
   return `${Number(value).toFixed(1)}%`;
 };
 
-const costPressureLabel = (value?: string | null) => {
-  if (value === 'PROCESS') return '工序成本';
-  if (value === 'MATERIAL') return '物料成本';
-  if (value === 'OTHER') return '其他成本';
-  return '成本';
-};
-
-const riskTone = (level: 'high' | 'medium' | 'low') => {
-  if (level === 'high') {
-    return {
-      border: '1px solid rgba(255,77,79,0.22)',
-      background: 'rgba(255,77,79,0.06)',
-      tagBg: '#fff1f0',
-      tagColor: '#cf1322',
-    };
-  }
-  if (level === 'medium') {
-    return {
-      border: '1px solid rgba(250,140,22,0.22)',
-      background: 'rgba(250,140,22,0.06)',
-      tagBg: '#fff7e6',
-      tagColor: '#d46b08',
-    };
-  }
-  return {
-    border: '1px solid rgba(82,196,26,0.22)',
-    background: 'rgba(82,196,26,0.06)',
-    tagBg: '#f6ffed',
-    tagColor: '#389e0d',
-  };
-};
-
 const getDeliveryMeta = (deliveryDate?: string, warningDays = 3) => {
   if (!deliveryDate) {
     return { label: '待补交期', color: 'default' as const, detail: '当前还没有设置交板日期' };
@@ -143,7 +111,6 @@ const SEVERITY_COLOR: Record<string, string> = {
 const StyleIntelligenceProfileCard: React.FC<Props> = ({ style }) => {
   const [loading, setLoading] = useState(false);
   const [expanded, setExpanded] = useState(false);
-  const [userToggled, setUserToggled] = useState(false);
   const [quoteSuggestion, setQuoteSuggestion] = useState<StyleQuoteSuggestionResponse | null>(null);
   const [profile, setProfile] = useState<StyleIntelligenceProfileResponse | null>(null);
   const [difficultyLoading, setDifficultyLoading] = useState(false);
@@ -196,27 +163,8 @@ const StyleIntelligenceProfileCard: React.FC<Props> = ({ style }) => {
     [profile?.deliveryDate, profile?.tenantProfile?.deliveryWarningDays, style?.deliveryDate],
   );
   const progressMeta = useMemo(() => getProgressMeta(style || { styleNo: '', styleName: '', category: '', price: 0, cycle: 0 }), [style]);
-  const insights = useMemo(
-    () => (profile?.insights?.length ? profile.insights : buildFallbackInsights(style || { styleNo: '', styleName: '', category: '', price: 0, cycle: 0 }, quoteSuggestion)),
-    [profile?.insights, style, quoteSuggestion],
-  );
 
-  // C. 高风险款式自动展开：已延期 / 即将超期 / 利润为负 / 开发完成度<40%
-  const isHighRisk = useMemo(() => {
-    if (deliveryMeta.label === '已延期' || deliveryMeta.label === '即将超期') return true;
-    const grossMargin = Number(profile?.finance?.estimatedGrossMargin);
-    if (Number.isFinite(grossMargin) && grossMargin < 0) return true;
-    const completion = profile?.developmentCompletionRate ?? progressMeta.percent;
-    if (Number.isFinite(completion) && completion < 40) return true;
-    return false;
-  }, [deliveryMeta.label, profile?.finance?.estimatedGrossMargin, profile?.developmentCompletionRate, progressMeta.percent]);
-
-  // 数据加载完成后，高风险款式自动展开一次；用户手动收起后不再强制弹开
-  useEffect(() => {
-    if (!loading && !userToggled && isHighRisk && !expanded) {
-      setExpanded(true);
-    }
-  }, [loading, userToggled, isHighRisk, expanded]);
+  // 默认折叠，用户点击才展开，不再自动展开
 
   const handleAiImageAnalysis = useCallback(async () => {
     if (!styleId) return;
@@ -259,76 +207,6 @@ const StyleIntelligenceProfileCard: React.FC<Props> = ({ style }) => {
     return STAGE_MAP.map((item) => ({ key: item.key, label: item.label, done: item.done(style || { styleNo: '', styleName: '', category: '', price: 0, cycle: 0 }) }));
   }, [profile?.stages, style]);
 
-  const diagnosticCards = useMemo(() => {
-    const production = profile?.production;
-    const scan = profile?.scan;
-    const finance = profile?.finance;
-    const cards: Array<{
-      key: string;
-      title: string;
-      level: 'high' | 'medium' | 'low';
-      issue: string;
-      cause: string;
-    }> = [];
-
-    cards.push({
-      key: 'production',
-      title: '拖期订单',
-      level: production?.topRiskOrderNo ? (production?.delayedOrderCount ? 'high' : 'medium') : 'low',
-      issue: production?.topRiskOrderNo
-        ? `订单 ${production.topRiskOrderNo} 是当前最容易拖慢这款的生产单。`
-        : production?.latestOrderNo
-          ? '当前还没有出现明确的拖期订单。'
-          : '当前还没有形成生产订单。',
-      cause: production?.topRiskOrderNo
-        ? (production.topRiskReason || '这张订单的进度、状态或交期窗口已经出现风险信号。')
-        : production?.latestOrderNo
-          ? `${production?.topRiskFactoryName ? `当前主要风险工厂是 ${production.topRiskFactoryName}。` : ''}${production?.topRiskFactoryReason || `最近订单 ${production.latestOrderNo} 状态 ${production.latestOrderStatus || '未知'}，平均生产进度 ${production?.avgProductionProgress ?? 0}%。`}`
-          : '没有订单，就暂时无法判断哪一张生产单在拖慢这款。',
-    });
-
-    cards.push({
-      key: 'scan',
-      title: '异常工序',
-      level: (scan?.failedRecords ?? 0) >= (profile?.tenantProfile?.anomalyWarningCount ?? 5) ? 'high' : (scan?.failedRecords ?? 0) > 0 ? 'medium' : 'low',
-      issue: scan?.topAnomalyProcessName
-        ? `${scan.topAnomalyStage ? `${scan.topAnomalyStage} / ` : ''}${scan.topAnomalyProcessName} 是当前最异常的工序。`
-        : scan?.latestProgressStage
-          ? '当前还没有识别到集中异常工序。'
-          : '当前还没有扫码轨迹。',
-      cause: scan?.topAnomalyProcessName
-        ? `该工序累计出现 ${scan.topAnomalyCount ?? 0} 条异常记录，${(scan.topAnomalyCount ?? 0) >= (profile?.tenantProfile?.anomalyWarningCount ?? 5) ? '已经达到该租户的异常预警线。' : '异常已开始重复出现。'}`
-        : scan?.latestProgressStage
-          ? `最近扫码停留在 ${scan.latestProgressStage}${scan.latestProcessName ? ` / ${scan.latestProcessName}` : ''}，但还未形成异常聚集。`
-          : '没有扫码数据，就暂时无法判断哪道工序最容易出错。',
-    });
-
-    const grossMargin = Number(finance?.estimatedGrossMargin ?? 0);
-    const quotationGap = Math.abs(Number(finance?.quotationGap ?? 0));
-    cards.push({
-      key: 'finance',
-      title: '利润压力',
-      level: grossMargin < 0 ? 'high' : grossMargin < Number(profile?.tenantProfile?.lowMarginThreshold ?? 5) || quotationGap >= 1 ? 'medium' : 'low',
-      issue: grossMargin < Number(profile?.tenantProfile?.lowMarginThreshold ?? 5)
-        ? `当前预计毛利率只有 ${fmtPercent(finance?.estimatedGrossMargin)}。`
-        : quotationGap >= 1
-          ? `当前报价和 AI 建议已经偏离 ${fmtMoney(finance?.quotationGap)}。`
-          : '当前没有明显的利润压力。',
-      cause: finance?.costPressureSource
-        ? `${costPressureLabel(finance.costPressureSource)}占压最明显，当前测算规模约 ${fmtMoney(finance.costPressureAmount)}，${grossMargin < Number(profile?.tenantProfile?.lowMarginThreshold ?? 5) ? `已经低于该租户的利润安全线 ${fmtPercent(profile?.tenantProfile?.lowMarginThreshold)}。` : '是当前最主要的利润挤压来源。'}`
-        : '当前报价、成本和加工价之间没有看到明显的单点挤压。',
-    });
-
-    const goal = profile?.tenantProfile?.primaryGoal;
-    const priorityMap: Record<string, number> = goal === 'PROFIT'
-      ? { finance: 0, production: 1, scan: 2 }
-      : goal === 'CASHFLOW'
-        ? { finance: 0, scan: 1, production: 2 }
-        : { production: 0, scan: 1, finance: 2 };
-
-    return cards.sort((a, b) => (priorityMap[a.key] ?? 99) - (priorityMap[b.key] ?? 99));
-  }, [profile?.finance, profile?.production, profile?.scan, profile?.tenantProfile?.anomalyWarningCount, profile?.tenantProfile?.lowMarginThreshold, profile?.tenantProfile?.primaryGoal]);
-
   if (!style?.id) return null;
 
   const doneCount = stageTags.filter((item) => item.done).length;
@@ -347,7 +225,7 @@ const StyleIntelligenceProfileCard: React.FC<Props> = ({ style }) => {
     >
       {/* ── 标题栏（常驻，点击折叠/展开） ── */}
       <div
-        onClick={() => { setUserToggled(true); setExpanded((v) => !v); }}
+        onClick={() => { setExpanded((v) => !v); }}
         style={{
           display: 'flex',
           alignItems: 'center',
@@ -391,7 +269,7 @@ const StyleIntelligenceProfileCard: React.FC<Props> = ({ style }) => {
       {expanded && (
         <div style={{ padding: '0 12px 8px' }}>
           {/* 基本信息行 */}
-          <div style={{ color: 'var(--color-text-tertiary)', fontSize: 14, lineHeight: 1.6, marginBottom: 6, borderBottom: '1px solid rgba(0,0,0,0.04)', paddingBottom: 5 }}>
+          <div style={{ color: 'var(--color-text-tertiary)', fontSize: 12, lineHeight: 1.6, marginBottom: 6, borderBottom: '1px solid rgba(0,0,0,0.04)', paddingBottom: 5 }}>
             <span>节点：{profile?.progressNode || style.progressNode || '未启动'} · {deliveryMeta.detail}</span>
             {' · '}
             <span>最新订单：{profile?.production?.latestOrderNo || style.latestOrderNo || '暂无'} · 进度 {profile?.production?.latestProductionProgress != null ? `${profile.production.latestProductionProgress}%` : style.latestProductionProgress != null ? `${style.latestProductionProgress}%` : '—'}</span>
@@ -400,7 +278,7 @@ const StyleIntelligenceProfileCard: React.FC<Props> = ({ style }) => {
           {/* 左右两栏主体 */}
           <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
 
-            {/* 左栏：4指标 + 节点标签 + 难度 */}
+            {/* 左栏：4指标 + 节点标签 */}
             <div style={{ flex: '0 0 42%', minWidth: 0 }}>
               {/* 4个指标 — 紧凑 2x2 */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 5, marginBottom: 6 }}>
@@ -442,118 +320,90 @@ const StyleIntelligenceProfileCard: React.FC<Props> = ({ style }) => {
                 ].map((item) => (
                   <div key={item.key} style={{ padding: '5px 7px', borderRadius: 6, background: 'var(--color-bg-base)', border: '1px solid rgba(0,0,0,0.06)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 3, marginBottom: 1 }}>
-                      <span style={{ color: item.color, fontSize: 14 }}>{item.icon}</span>
-                      <span style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>{item.title}</span>
+                      <span style={{ color: item.color, fontSize: 12 }}>{item.icon}</span>
+                      <span style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>{item.title}</span>
                     </div>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: item.color, lineHeight: 1.3 }}>{item.value}</div>
-                    <div style={{ fontSize: 14, color: 'var(--color-text-quaternary)', marginTop: 1, lineHeight: 1.3, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{item.extra}</div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: item.color, lineHeight: 1.3 }}>{item.value}</div>
+                    <div style={{ fontSize: 11, color: 'var(--color-text-quaternary)', marginTop: 1, lineHeight: 1.3, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{item.extra}</div>
                   </div>
                 ))}
               </div>
 
               {/* 节点标签 */}
-              <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap', marginBottom: 6 }}>
+              <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
                 {stageTags.map((item) => (
-                  <Tag key={item.key} color={item.done ? 'success' : 'default'} style={{ margin: 0, fontSize: 14, lineHeight: '18px', padding: '0 5px' }}>
+                  <Tag key={item.key} color={item.done ? 'success' : 'default'} style={{ margin: 0, fontSize: 12, lineHeight: '18px', padding: '0 5px' }}>
                     {item.label}{item.done ? ' ' : ''}
                   </Tag>
                 ))}
               </div>
+            </div>
 
-              {/* 难度评估 — 紧凑版 */}
-              {activeDifficulty ? (
-                <div style={{ padding: '5px 7px', borderRadius: 6, background: 'var(--color-bg-base)', border: '1px solid rgba(0,0,0,0.06)' }}>
+            {/* 右栏：难度评估 */}
+            <div style={{ flex: 1, minWidth: 0, padding: '6px 8px', borderRadius: 7, background: 'rgba(114,46,209,0.04)', border: '1px solid rgba(114,46,209,0.12)' }}>
+              <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 5, color: '#722ed1' }}>难度评估</div>
+              {loading ? (
+                <Spin />
+              ) : activeDifficulty ? (
+                <div>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 3 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                      <ExperimentOutlined style={{ color: '#722ed1', fontSize: 13 }} />
-                      <span style={{ fontSize: 14, color: '#595959' }}>难度评估</span>
-                      <Tag color={difficultyColor(activeDifficulty.difficultyLevel)} style={{ margin: 0, fontSize: 14, lineHeight: '18px', padding: '0 5px' }}>{activeDifficulty.difficultyLabel}</Tag>
-                      {activeDifficulty.assessmentSource === 'AI_ENHANCED' && <Tag color="purple" style={{ margin: 0, fontSize: 14, lineHeight: '18px', padding: '0 5px' }}>AI增强</Tag>}
+                      <Tag color={difficultyColor(activeDifficulty.difficultyLevel)} style={{ margin: 0, fontSize: 12, lineHeight: '18px', padding: '0 5px' }}>{activeDifficulty.difficultyLabel}</Tag>
+                      {activeDifficulty.assessmentSource === 'AI_ENHANCED' && <Tag color="purple" style={{ margin: 0, fontSize: 12, lineHeight: '18px', padding: '0 5px' }}>AI增强</Tag>}
                     </div>
-                    <Button icon={<ExperimentOutlined />} loading={difficultyLoading} onClick={handleAiImageAnalysis} disabled={!styleId} style={{ fontSize: 14, height: 20, padding: '0 5px' }}>图像分析</Button>
+                    <Button icon={<ExperimentOutlined />} loading={difficultyLoading} onClick={handleAiImageAnalysis} disabled={!styleId} style={{ fontSize: 12, height: 20, padding: '0 5px' }}>图像分析</Button>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
                     <Progress percent={activeDifficulty.difficultyScore * 10} showInfo={false}
                       strokeColor={difficultyColor(activeDifficulty.difficultyLevel) === 'green' ? '#52c41a' : difficultyColor(activeDifficulty.difficultyLevel) === 'orange' ? '#fa8c16' : '#ff4d4f'}
                       style={{ flex: 1, margin: 0 }} />
-                    <span style={{ fontSize: 14, color: '#595959', whiteSpace: 'nowrap' }}><b>{activeDifficulty.difficultyScore}</b>/10 ×<b style={{ color: '#722ed1' }}>{activeDifficulty.pricingMultiplier}</b></span>
+                    <span style={{ fontSize: 12, color: '#595959', whiteSpace: 'nowrap' }}><b>{activeDifficulty.difficultyScore}</b>/10 ×<b style={{ color: '#722ed1' }}>{activeDifficulty.pricingMultiplier}</b></span>
                   </div>
-                  <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginTop: 2 }}>BOM {activeDifficulty.bomCount}种 · 工序 {activeDifficulty.processCount}道{activeDifficulty.hasSecondaryProcess ? ' · 含二次工艺' : ''}</div>
+                  <div style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>BOM {activeDifficulty.bomCount}种 · 工序 {activeDifficulty.processCount}道{activeDifficulty.hasSecondaryProcess ? ' · 含二次工艺' : ''}</div>
                   {activeDifficulty.imageInsight && (() => {
                     const insight = activeDifficulty.imageInsight as string;
                     const isError = insight.includes('未开通') || insight.includes('读取失败') || insight.includes('未配置') || insight.includes('未上传');
                     return (
-                      <div style={{ fontSize: 14, color: isError ? '#8c8c8c' : '#595959', marginTop: 3, lineHeight: 1.5, background: isError ? 'rgba(0,0,0,0.02)' : 'rgba(114,46,209,0.03)', borderRadius: 4, padding: '3px 5px' }}>
-                        {isError ? '' : ''} {insight}
+                      <div style={{ fontSize: 12, color: isError ? '#8c8c8c' : '#595959', marginTop: 3, lineHeight: 1.5, background: isError ? 'rgba(0,0,0,0.02)' : 'rgba(114,46,209,0.03)', borderRadius: 4, padding: '3px 5px' }}>
+                        {insight}
                       </div>
                     );
                   })()}
                   {visualResult && (
                     <div style={{ marginTop: 4, padding: '4px 6px', borderRadius: 4, background: 'rgba(0,229,255,0.05)', border: '1px solid rgba(0,229,255,0.15)' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 3 }}>
-                        <span style={{ fontSize: 14, color: '#00bcd4', fontWeight: 600 }}> 视觉AI</span>
+                        <span style={{ fontSize: 12, color: '#00bcd4', fontWeight: 600 }}>视觉AI</span>
                         {visualResult.severity && visualResult.severity !== 'NONE' && (
-                          <Tag style={{ margin: 0, fontSize: 14, lineHeight: '16px', padding: '0 4px' }} color={SEVERITY_COLOR[visualResult.severity] ?? 'default'}>{visualResult.severity}</Tag>
+                          <Tag style={{ margin: 0, fontSize: 11, lineHeight: '16px', padding: '0 4px' }} color={SEVERITY_COLOR[visualResult.severity] ?? 'default'}>{visualResult.severity}</Tag>
                         )}
-                        <span style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginLeft: 'auto' }}>置信度 {Math.round(visualResult.confidence * 100)}%</span>
+                        <span style={{ fontSize: 11, color: 'var(--color-text-tertiary)', marginLeft: 'auto' }}>置信度 {Math.round(visualResult.confidence * 100)}%</span>
                       </div>
-                      <div style={{ fontSize: 14, color: '#595959', lineHeight: 1.5 }}>{visualResult.summary}</div>
+                      <div style={{ fontSize: 12, color: '#595959', lineHeight: 1.5 }}>{visualResult.summary}</div>
                       {visualResult.defects && visualResult.defects.length > 0 && (
                         <div style={{ marginTop: 3 }}>
                           {visualResult.defects.slice(0, 3).map((d, i) => (
-                            <div key={i} style={{ fontSize: 14, color: 'var(--color-text-tertiary)', lineHeight: 1.4 }}>• [{d.level}] {d.type} — {d.description}{d.location ? ` @ ${d.location}` : ''}</div>
+                            <div key={i} style={{ fontSize: 11, color: 'var(--color-text-tertiary)', lineHeight: 1.4 }}>• [{d.level}] {d.type} — {d.description}{d.location ? ` @ ${d.location}` : ''}</div>
                           ))}
                         </div>
                       )}
                       {visualResult.styleFeatures && Object.keys(visualResult.styleFeatures).length > 0 && (
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, marginTop: 3 }}>
                           {Object.entries(visualResult.styleFeatures).slice(0, 4).map(([k, v]) => (
-                            <Tag key={k} style={{ margin: 0, fontSize: 14, lineHeight: '16px', padding: '0 4px' }}>{k}: {v}</Tag>
+                            <Tag key={k} style={{ margin: 0, fontSize: 11, lineHeight: '16px', padding: '0 4px' }}>{k}: {v}</Tag>
                           ))}
                         </div>
                       )}
                       {visualResult.suggestion && (
-                        <div style={{ fontSize: 14, color: '#722ed1', marginTop: 3 }}> {visualResult.suggestion}</div>
+                        <div style={{ fontSize: 12, color: '#722ed1', marginTop: 3 }}>{visualResult.suggestion}</div>
                       )}
                     </div>
                   )}
                 </div>
               ) : (
-                <Button icon={<ExperimentOutlined />} loading={difficultyLoading} onClick={handleAiImageAnalysis} disabled={!styleId} style={{ fontSize: 14 }}>AI 难度分析</Button>
-              )}
-            </div>
-
-            {/* 右栏：AI全链路判断 */}
-            <div style={{ flex: 1, minWidth: 0, padding: '6px 8px', borderRadius: 7, background: 'rgba(24,144,255,0.05)', border: '1px solid rgba(24,144,255,0.1)' }}>
-              <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 5, color: '#1677ff' }}>AI全链路判断</div>
-              {loading ? (
-                <Spin />
-              ) : diagnosticCards.length ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                  {diagnosticCards.map((item) => {
-                    const tone = riskTone(item.level);
-                    return (
-                      <div key={item.key} style={{ padding: '5px 7px', borderRadius: 6, ...tone }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 3 }}>
-                          <span style={{ fontSize: 14, fontWeight: 700, color: '#262626' }}>{item.title}</span>
-                          <span style={{ padding: '0 5px', borderRadius: 999, background: tone.tagBg, color: tone.tagColor, fontSize: 14, fontWeight: 600 }}>
-                            {item.level === 'high' ? '高风险' : item.level === 'medium' ? '需关注' : '已识别'}
-                          </span>
-                        </div>
-                        <div style={{ fontSize: 14, color: '#262626', lineHeight: 1.5 }}>{item.issue}</div>
-                        <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', lineHeight: 1.4, marginTop: 2 }}>{item.cause}</div>
-                      </div>
-                    );
-                  })}
+                <div style={{ textAlign: 'center', padding: '12px 0' }}>
+                  <Button icon={<ExperimentOutlined />} loading={difficultyLoading} onClick={handleAiImageAnalysis} disabled={!styleId} style={{ fontSize: 12 }}>AI 难度分析</Button>
+                  <div style={{ fontSize: 11, color: 'var(--color-text-quaternary)', marginTop: 4 }}>分析款式图片，评估制作难度与定价倍率</div>
                 </div>
-              ) : insights.length ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                  {insights.slice(0, 3).map((item) => (
-                    <div key={item} style={{ fontSize: 14, color: '#434343', lineHeight: 1.6 }}>• {item}</div>
-                  ))}
-                </div>
-              ) : (
-                <div style={{ fontSize: 14, color: '#595959' }}>当前款式信息较完整，建议继续按节点推进。</div>
               )}
             </div>
           </div>

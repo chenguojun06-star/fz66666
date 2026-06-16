@@ -86,6 +86,7 @@ body {
 .ant-modal {
   top: 0 !important;
   padding-bottom: 0;
+  max-width: calc(100vw - 24px);
 }
 
 /* ============================================
@@ -254,11 +255,13 @@ body {
   --user-avatar-gradient-start: #2d7ff9;
   --user-avatar-gradient-end: #0b2d5c;
   /* 功能色已迁移到 design-system.css，使用 --color-* 命名 */
-  /* 间距规范 */
-  --spacing-xs: 8px;
-  --spacing-sm: 16px;
-  --spacing-md: 24px;
-  --spacing-lg: 32px;
+  /* 间距规范 — 与 design-system.css 统一，紧凑工整 */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-base: 12px;
+  --spacing-md: 16px;
+  --spacing-lg: 20px;
+  --spacing-xl: 24px;
   /* 字体大小 - 三级层级规范 */
   /* 一级（标题/重点）：页面标题、弹窗标题、KPI数值 */
   --font-size-title: 15px;
@@ -292,7 +295,7 @@ body {
   --kpi-change-size: 12px;
 
   --card-header-bg: #fafafa;
-  --card-header-padding: 12px 16px;
+  --card-header-padding: 10px 16px;
   --card-title-indicator: 3px solid #2D7FF9;
 
   --radius-sm: 4px;
@@ -809,7 +812,7 @@ body {
 }
 
 .page-card > .ant-card-body {
-  padding: 16px;
+  padding: 12px;
 }
 
 /* 筛选卡片 - 透明背景 */
@@ -822,7 +825,7 @@ body {
 }
 
 .filter-card > .ant-card-body {
-  padding: 12px 12px 8px;
+  padding: 8px 12px 4px;
   background: transparent !important;
   background-color: transparent !important;
 }
@@ -839,12 +842,12 @@ body {
 .filter-section .filter-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px 16px;
+  gap: 4px 12px;
   align-items: center;
 }
 
 .filter-card .ant-form .ant-form-item {
-  margin-bottom: 8px;
+  margin-bottom: 4px;
 }
 
 .filter-card .ant-form .ant-form-item.filter-actions,
@@ -861,18 +864,6 @@ body {
 
 .ant-modal-title { font-size: var(--font-size-lg); font-weight: 600; line-height: 1.4; letter-spacing: -0.01em; }
 .ant-modal-body { font-size: var(--font-size-base); line-height: 1.5; }
-
-.ant-modal-wrap {
-  overflow: auto;
-}
-
-.ant-modal {
-  max-width: calc(100vw - 24px);
-  min-width: min(760px, calc(100vw - 32px));
-  /* 强制所有设备居中显示，不要底部弹出 */
-  top: 0 !important;
-  padding-bottom: 0 !important;
-}
 
 /* 确保centered属性在移动端也生效 */
 .ant-modal-wrap .ant-modal.ant-modal-centered {
@@ -907,7 +898,7 @@ body {
   justify-content: flex-end;
   align-items: center;
   gap: 8px;
-  padding: 12px 16px !important;
+  padding: 10px 16px !important;
 }
 
 .ant-modal-footer .ant-btn {
@@ -1337,7 +1328,7 @@ body {
   bottom: 0;
   background: var(--neutral-white);
   z-index: var(--z-local);
-  padding: 12px 16px;
+  padding: 8px 12px;
   margin: 0 !important;
   border-top: 1px solid var(--table-border-light);
   border-radius: 0 0 8px 8px;
@@ -2079,7 +2070,7 @@ body {
 /* ── 7. 卡片头部分隔线更细腻 ── */
 .ant-card-head {
   border-bottom-color: var(--neutral-medium) !important;
-  min-height: 44px !important;
+  min-height: 40px !important;
 }
 
 /* ── 8. 弹窗标题区底部分隔线更轻 ── */
@@ -2216,9 +2207,9 @@ body {
   background: var(--table-row-hover-bg, #f3f4f6) !important;
 }
 
-/* Modal — 统一圆角 */
+/* Modal — 统一圆角（不覆盖 light-sense-modal 的圆角） */
 .ant-modal-content {
-  border-radius: var(--radius-base, 6px) !important;
+  border-radius: 12px;
 }
 
 /* Input / Select / Picker — 统一圆角 + 高度（已有部分覆盖，这里补齐遗漏的组件） */
@@ -2276,8 +2267,8 @@ body {
 .ant-card-head {
   background: var(--card-header-bg, #fafafa);
   border-bottom: 1px solid var(--color-border-light);
-  padding: var(--card-header-padding, 12px 16px);
-  min-height: 44px;
+  padding: var(--card-header-padding, 10px 16px);
+  min-height: 40px;
 }
 .ant-card-head-title {
   font-size: 13px !important;

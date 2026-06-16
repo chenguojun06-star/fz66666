@@ -11,9 +11,11 @@
 
 /* --------------------------------------------------------------------------
  * 全局设计变量（可被应用主题覆盖）
+ * 注意：弹窗通过 portal 渲染到 body 下，不在 .light-sense-root 内，
+ * 所以动画变量必须定义在 :root 上才能在弹窗关闭动画中生效
  * -------------------------------------------------------------------------- */
 
-.light-sense-root {
+:root {
   --ls-primary: 59, 130, 246;     /* 主色 - 蓝色光感 */
   --ls-urgent: 239, 68, 68;       /* 紧急色 - 红色 */
   --ls-success: 34, 197, 94;      /* 成功色 - 绿色 */
@@ -28,8 +30,25 @@
   --ls-easing-in: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+.light-sense-root {
+  --ls-primary: 59, 130, 246;
+  --ls-urgent: 239, 68, 68;
+  --ls-success: 34, 197, 94;
+  --ls-warning: 245, 158, 11;
+  --ls-info: 139, 92, 246;
+  --ls-duration-fast: 160ms;
+  --ls-duration: 260ms;
+  --ls-duration-slow: 520ms;
+  --ls-easing: cubic-bezier(0.23, 1, 0.32, 1);
+  --ls-easing-in: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
 /* --------------------------------------------------------------------------
- * LightSenseModal - 光感弹窗动画
+ * LightSenseModal - 光感弹窗样式
+ * --------------------------------------------------------------------------
+ * 注意：不使用自定义 transitionName，让 antd 原生处理弹窗开关动画。
+ * 自定义 transitionName 会导致 mask 关闭动画与内容动画不同步，
+ * 造成"关闭后还有一层遮罩"的问题。
  * -------------------------------------------------------------------------- */
 
 .light-sense-modal .ant-modal-content {
@@ -38,62 +57,6 @@
 
 .light-sense-modal .ant-modal-body {
   padding: 20px 24px;
-}
-
-/* 入场 */
-.light-sense-fade-enter-active .ant-modal-content {
-  will-change: transform, opacity;
-  animation: ls-modal-in var(--ls-duration-slow) var(--ls-easing) forwards;
-}
-
-/* 出场 */
-.light-sense-fade-leave-active .ant-modal-content {
-  will-change: transform, opacity;
-  animation: ls-modal-out var(--ls-duration-slow) var(--ls-easing-in) forwards;
-}
-
-/* mask 遮罩动画 */
-.light-sense-fade-enter-active .ant-modal-mask {
-  animation: ls-mask-in var(--ls-duration-slow) var(--ls-easing) forwards;
-}
-
-.light-sense-fade-leave-active .ant-modal-mask {
-  animation: ls-mask-out var(--ls-duration-slow) var(--ls-easing-in) forwards;
-}
-
-@keyframes ls-modal-in {
-  0% {
-    opacity: 0;
-    transform: translateY(16px) scale(0.96);
-  }
-  60% {
-    transform: translateY(-2px) scale(1.005);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-@keyframes ls-modal-out {
-  0% {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-  100% {
-    opacity: 0;
-    transform: translateY(10px) scale(0.98);
-  }
-}
-
-@keyframes ls-mask-in {
-  0% { opacity: 0; }
-  100% { opacity: 1; }
-}
-
-@keyframes ls-mask-out {
-  0% { opacity: 1; }
-  100% { opacity: 0; }
 }
 
 /* 不同 modalType 的差异化光晕 */

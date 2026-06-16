@@ -318,7 +318,7 @@ const heroCardStyle: React.CSSProperties = {
   padding: '28px 28px 24px',
   boxShadow: '0 24px 60px rgba(15, 23, 42, 0.10)',
   border: '1px solid rgba(255,255,255,0.75)',
-  marginBottom: 20,
+  marginBottom: 12,
 };
 
 const heroHeaderStyle: React.CSSProperties = {
@@ -392,7 +392,7 @@ const panelStyle: React.CSSProperties = {
   padding: '24px',
   boxShadow: '0 8px 32px rgba(15, 23, 42, 0.06)',
   border: '1px solid rgba(255,255,255,0.75)',
-  marginBottom: 20,
+  marginBottom: 12,
 };
 
 const panelTitleStyle: React.CSSProperties = {

@@ -194,11 +194,11 @@ const SystemTutorial: React.FC = () => {
         }
         type="info"
         showIcon
-        style={{ marginBottom: 24 }}
+        style={{ marginBottom: 12 }}
       />
 
       {/* 搜索和分类 */}
-      <Card style={{ marginBottom: 24 }}>
+      <Card style={{ marginBottom: 12 }}>
         <Space orientation="vertical" size={16} style={{ width: '100%' }}>
           <StandardSearchBar
             searchValue={searchText}
@@ -340,7 +340,7 @@ const SystemTutorial: React.FC = () => {
       )}
 
       {/* 底部帮助 */}
-      <Card style={{ marginTop: 24 }}>
+      <Card style={{ marginTop: 12 }}>
         <Space orientation="vertical" size={12} style={{ width: '100%' }}>
           <Title level={4}>
             <QuestionCircleOutlined /> 需要更多帮助？

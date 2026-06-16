@@ -455,7 +455,7 @@ const [expressModalOpen, setExpressModalOpen] = useState(false);
         </div>
 
         {configured && stats && (
-          <Row gutter={16} style={{ marginBottom: 20 }}>
+          <Row gutter={16} style={{ marginBottom: 12 }}>
             <Col span={6}>
               <Card variant="borderless" style={{ background: 'linear-gradient(135deg, #e6f7ff 0%, #f0f5ff 100%)', borderRadius: 12 }}>
                 <Statistic title="今日订单" value={stats.todayOrders} suffix="单" prefix={<ShoppingCartOutlined style={{ color: '#1677ff' }} />} styles={{ content: { color: '#1677ff' } }} />

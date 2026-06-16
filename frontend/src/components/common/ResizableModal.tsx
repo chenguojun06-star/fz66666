@@ -169,7 +169,7 @@ const ResizableModal: React.FC<ResizableModalProps> = ({
   contentPadding,
   footer,
   title,
-  destroyOnHidden,
+  destroyOnHidden = true,
   forceRender,
   lightSense = 'default',
   blurMask = false,
@@ -354,7 +354,6 @@ const ResizableModal: React.FC<ResizableModalProps> = ({
       centered={centered}
       width={Math.round(size.width)}
       className={`light-sense-modal light-sense-${lightSense}${rest.className ? ' ' + rest.className : ''}`}
-      transitionName="light-sense-fade"
       styles={{
         ...styles,
         mask: {
