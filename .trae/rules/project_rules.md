@@ -236,9 +236,51 @@ else if (successObj instanceof Number) { success = ((Number) successObj).intValu
 - ❌ `jwt.secret: ${JWT_SECRET:}` → 环境变量未设置时启动失败
 - ✅ `jwt.secret: ${JWT_SECRET:ThisIsA_LocalJwtSecret_OnlyForDev_0123456789}`
 
+### MySQL 8.0 不支持 MariaDB 语法（P0 血的教训 2026-06-15）
+
+```sql
+-- ❌ MySQL 8.0 不支持，语法错误 → Flyway 迁移失败 → Unknown column → 500
+ALTER TABLE t_xxx ADD COLUMN IF NOT EXISTS new_col VARCHAR(100);
+CREATE INDEX IF NOT EXISTS idx_xxx ON t_xxx(col);
+
+-- ✅ 用 information_schema + 存储过程实现幂等
+DROP PROCEDURE IF EXISTS _add_columns;
+DELIMITER //
+CREATE PROCEDURE _add_columns()
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.COLUMNS
+                   WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='t_xxx' AND COLUMN_NAME='new_col') THEN
+        ALTER TABLE t_xxx ADD COLUMN new_col VARCHAR(100) DEFAULT NULL COMMENT '说明';
+    END IF;
+END //
+DELIMITER ;
+CALL _add_columns();
+DROP PROCEDURE IF EXISTS _add_columns;
+```
+
+**关键规则**：
+- ❌ 禁止在 Flyway SQL 中使用 `IF NOT EXISTS`（ADD COLUMN / CREATE INDEX）
+- ✅ 必须用 `information_schema` 查询 + 存储过程实现幂等
+- ✅ 写完 Flyway 后必须本地验证：`mvn compile` → 检查 `flyway_schema_history` 中 `success=1`
+- ✅ 新增 Entity 字段后，必须确认对应 Flyway 迁移已成功执行
+
+### Flyway 迁移失败后必须修复 flyway_schema_history
+
+- Flyway 迁移失败会在 `flyway_schema_history` 中插入 `success=0` 的记录
+- 后续迁移会被阻塞（Flyway 拒绝执行失败版本之后的迁移）
+- ✅ 修复步骤：1) 删除 `success=0` 的记录 2) 修复 SQL 3) 手动执行 ALTER TABLE 4) 插入 `success=1` 的记录
+- ❌ 禁止忽略 `success=0` 的记录直接重启（会导致数据不一致）
+
+### antd 5.x 废弃 API 替换
+
+- ❌ `Descriptions` 的 `contentStyle` → 废弃警告
+- ✅ 使用 `styles={{ content: {...} }}` 替代
+- ❌ `Table` 的 `columns` 中 `render` 返回非 ReactNode → 控制台警告
+- ✅ 确保所有 `render` 返回 `ReactNode | null`
+
 ---
 
-## 常见陷阱 TOP 10
+## 常见陷阱 TOP 15
 
 | # | 陷阱 | 预防 |
 |---|------|------|
@@ -252,6 +294,11 @@ else if (successObj instanceof Number) { success = ((Number) successObj).intValu
 | 8 | 部署后全站 404 白屏 | 错误恢复代码必须内联在 index.html `<head>` 中 |
 | 9 | Hook返回裸对象/裸函数 → 无限循环 | Hook返回值必须 useMemo/useCallback 包裹 |
 | 10 | JacksonConfig Long→String 计数拼接 | 计数返回 int；前端 `Number()` 包裹 |
+| 11 | **MySQL 8.0 不支持 `IF NOT EXISTS`**（ADD COLUMN/CREATE INDEX） | 用 `information_schema` + 存储过程实现幂等 |
+| 12 | **Flyway 迁移 `success=0` 阻塞后续迁移** | 写完必须验证 `flyway_schema_history` 中 `success=1` |
+| 13 | **新增 Entity 字段但 Flyway 未执行** → Unknown column 500 | 推送前 `grep -r "新列名" db/migration/` 必须有结果 |
+| 14 | **antd `contentStyle` 废弃** → 控制台警告刷屏 | 用 `styles={{ content: {...} }}` 替代 |
+| 15 | **容器内 `localhost` 解析为 IPv6** → 502 | 容器内网络目标必须用 `127.0.0.1` |
 
 ---
 
@@ -265,11 +312,17 @@ cd frontend && npx tsc --noEmit       # 0 errors
 # 2. Flyway SQL 校验（P0 强制）
 python3 scripts/check-flyway-sql.py
 
-# 3. git 全量检查
+# 3. Flyway 迁移执行验证（P0 强制，新增 2026-06-15）
+#    确认新迁移已成功执行，避免 Unknown column 500
+docker exec fashion-mysql-simple mysql -u root -p<password> fashion_supplychain \
+  -e "SELECT version, success FROM flyway_schema_history WHERE version='<新版本号>'"
+#    success 必须为 1，否则修复后再推送
+
+# 4. git 全量检查
 git status && git diff --stat HEAD
 git add <每个文件路径>           # ❌ 禁止 git add .
 
-# 4. 数据库检查（有 Entity/表结构改动时）
+# 5. 数据库检查（有 Entity/表结构改动时）
 grep -r "${新列名}" db/migration/  # 必须有结果
 ```
 

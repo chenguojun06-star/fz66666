@@ -1,5 +1,6 @@
 package com.fashion.supplychain.config;
 
+import com.fashion.supplychain.common.audit.AuditInterceptor;
 import com.fashion.supplychain.common.interceptor.RequestLoggingInterceptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -19,15 +20,25 @@ public class WebConfig implements WebMvcConfigurer {
     @NonNull
     private RequestLoggingInterceptor requestLoggingInterceptor;
 
+    @Autowired
+    @NonNull
+    private AuditInterceptor auditInterceptor;
+
     @Value("${fashion.upload-path}")
     private String uploadPath;
 
     @Override
     public void addInterceptors(@NonNull InterceptorRegistry registry) {
-        // 注册请求日志拦截器，拦截所有请求
+        // 注册审计拦截器（最先执行，记录所有请求）
+        registry.addInterceptor(auditInterceptor)
+                .addPathPatterns("/**")
+                // 排除静态资源
+                .excludePathPatterns("/swagger-resources/**", "/webjars/**", "/v3/api-docs/**", "/swagger-ui/**",
+                        "/swagger-ui.html", "/upload/**");
+
+        // 注册请求日志拦截器
         registry.addInterceptor(requestLoggingInterceptor)
                 .addPathPatterns("/**")
-                // 排除静态资源和接口文档
                 .excludePathPatterns("/swagger-resources/**", "/webjars/**", "/v3/api-docs/**", "/swagger-ui/**",
                         "/swagger-ui.html", "/upload/**");
     }
