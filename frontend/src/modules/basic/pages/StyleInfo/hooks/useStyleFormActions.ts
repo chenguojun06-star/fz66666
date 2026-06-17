@@ -55,6 +55,58 @@ export const useStyleFormActions = ({
   const [pushingToOrder, setPushingToOrder] = useState(false);
 
   /**
+   * 规范化提交到后端的字段值：
+   * - 日期/时间字段（dayjs/Date）→ yyyy-MM-dd HH:mm:ss 字符串
+   * - 空字符串 → null（避免 Jackson 将 "" 解析为 Integer/LocalDateTime 失败）
+   * - 布尔/字符串/数字保持原值
+   */
+  const normalizePayload = (obj: Record<string, any>): Record<string, any> => {
+    const result: Record<string, any> = {};
+    const isDateLike = (v: any): boolean =>
+      v !== null && v !== undefined && (
+        v instanceof Date ||
+        (typeof v === 'object' && typeof v.toDate === 'function') || // dayjs/moment
+        (typeof v === 'object' && v.$d instanceof Date) // dayjs internal
+      );
+
+    for (const key of Object.keys(obj)) {
+      const raw = obj[key];
+      if (raw === undefined) continue;
+
+      // 1) dayjs/Date → yyyy-MM-dd HH:mm:ss
+      if (isDateLike(raw)) {
+        try {
+          result[key] = formatDateTimeSecond(raw);
+        } catch {
+          result[key] = null;
+        }
+        continue;
+      }
+
+      // 2) 空字符串 → null（后端 Integer/LocalDateTime 都不能解析 ""）
+      if (typeof raw === 'string' && raw.trim() === '') {
+        result[key] = null;
+        continue;
+      }
+
+      // 3) 嵌套对象 / 数组：递归规范化（但跳过 Blob/File 等二进制对象）
+      if (raw !== null && typeof raw === 'object' && !(raw instanceof File) && !(raw instanceof Blob)) {
+        if (Array.isArray(raw)) {
+          result[key] = raw.map((item) =>
+            item !== null && typeof item === 'object' ? normalizePayload(item as Record<string, any>) : item
+          );
+        } else {
+          result[key] = normalizePayload(raw);
+        }
+        continue;
+      }
+
+      result[key] = raw;
+    }
+    return result;
+  };
+
+  /**
    * 保存基础信息
    */
   const handleSave = async () => {
@@ -123,7 +175,7 @@ export const useStyleFormActions = ({
         delete payload.pushedToOrder;
         delete payload.pushedToOrderTime;
         delete payload.description;
-        res = await api.put('/style/info', payload);
+        res = await api.put('/style/info', normalizePayload(payload));
       } else {
         // 新建：自动生成款号（如果未填写）
         let styleNo = normalizedValues.styleNo?.trim() || '';
@@ -163,7 +215,7 @@ export const useStyleFormActions = ({
           message.info(`款号 ${styleNo} 已存在，自动调整为 ${finalStyleNo}`);
         }
 
-        res = await api.post('/style/info', normalizedValues);
+        res = await api.post('/style/info', normalizePayload(normalizedValues));
       }
 
       if (res.code === 200) {
