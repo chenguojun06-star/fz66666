@@ -490,7 +490,10 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
         ) : (
           <div style={{ textAlign: 'center', padding: '20px' }}>
             {isNewMode ? (
-              <span style={{ color: 'var(--neutral-text-disabled)' }}>请在下方颜色/尺码表上传图片</span>
+              <>
+                <div style={{ color: 'var(--primary-color)', fontSize: "var(--font-size-base)", marginBottom: 4 }}>上传设计稿或款式照片</div>
+                <div style={{ color: 'var(--neutral-text-disabled)', fontSize: "var(--font-size-xs)" }}>可点击"智能识别"自动填充款号信息</div>
+              </>
             ) : !styleId ? (
               <>
                 <div style={{ color: 'var(--primary-color)', fontSize: "var(--font-size-base)", marginBottom: 4 }}>上传设计稿或款式照片</div>

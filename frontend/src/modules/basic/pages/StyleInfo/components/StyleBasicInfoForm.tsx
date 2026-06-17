@@ -217,7 +217,7 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
         <Col xs={24} lg={4}>
           <CoverImageUpload
             styleId={currentStyle?.id}
-            enabled={Boolean(currentStyle?.id) && !editLocked}
+            enabled={isNewPage || (Boolean(currentStyle?.id) && !editLocked)}
             isNewMode={isNewPage}
             pendingFiles={pendingImages}
             onPendingFilesChange={onPendingImagesChange}
