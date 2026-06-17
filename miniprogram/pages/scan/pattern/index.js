@@ -397,7 +397,6 @@ Page({
       count: remaining,
       mediaType: ['image'],
       sourceType: ['album', 'camera'],
-      sizeType: ['compressed'],
       success: (res) => {
         const tempFilePaths = (res.tempFiles || []).map(f => f.tempFilePath);
         if (tempFilePaths.length === 0) return;

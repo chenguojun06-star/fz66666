@@ -1,4 +1,10 @@
 <view class="page-container">
+  <!-- 跨岗位提示条 -->
+  <view wx:if="{{roleHint}}" class="role-hint-bar">
+    <text class="role-hint-icon">⚠️</text>
+    <text class="role-hint-text">{{roleHint}}</text>
+  </view>
+
   <view class="search-bar">
     <view class="search-input-wrap">
       <text class="search-icon">🔍</text>

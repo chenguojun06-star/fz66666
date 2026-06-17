@@ -15,9 +15,44 @@ Page({
     
     // 无资料下单：上传的图片
     noDataUploadedImage: '',
+
+    // 隐私协议
+    showPrivacy: false,
   },
 
   onLoad: function () {
+    // 隐私授权监听（wx.chooseMedia 需要隐私协议授权）
+    if (wx.onNeedPrivacyAuthorization) {
+      this._privacyCb = (resolve) => {
+        this._resolvePrivacy = resolve;
+        this.setData({ showPrivacy: true });
+      };
+      wx.onNeedPrivacyAuthorization(this._privacyCb);
+    }
+    this._initPage();
+  },
+
+  onUnload() {
+    if (wx.offNeedPrivacyAuthorization && this._privacyCb) {
+      wx.offNeedPrivacyAuthorization(this._privacyCb);
+    }
+  },
+
+  onPrivacyAgree() {
+    this.setData({ showPrivacy: false });
+    if (this._resolvePrivacy) {
+      this._resolvePrivacy({ buttonId: 'agree-btn', event: 'agree' });
+    }
+  },
+
+  onPrivacyDisagree() {
+    this.setData({ showPrivacy: false });
+    if (this._resolvePrivacy) {
+      this._resolvePrivacy({ buttonId: 'disagree-btn', event: 'disagree' });
+    }
+  },
+
+  _initPage: function () {
     if (!isAdminOrSupervisor() && !isFactoryOwner()) {
       wx.showToast({ title: '无下单权限', icon: 'none' });
       return setTimeout(function () { wx.navigateBack(); }, 1500);
@@ -154,17 +189,20 @@ Page({
   // 无资料下单：选择图片
   chooseNoDataImage: function () {
     var self = this;
-    wx.chooseImage({
+    wx.chooseMedia({
       count: 1,
-      sizeType: ['compressed'],
+      mediaType: ['image'],
       sourceType: ['album', 'camera'],
       success: function (res) {
-        var tempPath = res.tempFilePaths[0];
+        var tempPath = res.tempFiles[0].tempFilePath;
         console.log('[无资料下单] 选择图片:', tempPath);
         self.setData({ noDataUploadedImage: tempPath });
       },
-      fail: function () {
-        toast.error('选择图片失败');
+      fail: function (err) {
+        console.error('[无资料下单] 选择图片失败:', err);
+        if (err && err.errMsg && err.errMsg.indexOf('cancel') === -1) {
+          wx.showToast({ title: '选择图片失败', icon: 'none' });
+        }
       }
     });
   },

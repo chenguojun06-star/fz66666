@@ -1,6 +1,7 @@
 const api = require('../../../utils/api');
 const { toast, safeNavigate } = require('../../../utils/uiHelper');
 const { eventBus, Events } = require('../../../utils/eventBus');
+const permission = require('../../../utils/permission');
 
 const STATUS_TABS = [
   { key: '', label: '全部' },
@@ -15,11 +16,16 @@ Page({
     activeFilter: '',
     statusTabs: STATUS_TABS,
     groups: [],
+    roleHint: '', // 跨岗位提示（空=本岗位或主管，无提示）
   },
 
   onLoad() {
     const app = getApp();
     if (app && typeof app.requireAuth === 'function' && !app.requireAuth()) return;
+    // 职务提示：非采购员且非主管以上，显示跨岗位提示
+    if (!permission.canReceiveTask('procurement')) {
+      this.setData({ roleHint: `您当前职务「${permission.getRoleDisplayName()}」非采购岗，如需代领请知会主管` });
+    }
     this.loadData();
   },
 

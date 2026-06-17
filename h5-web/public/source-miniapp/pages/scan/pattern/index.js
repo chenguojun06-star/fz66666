@@ -393,12 +393,12 @@ Page({
       return;
     }
 
-    wx.chooseImage({
+    wx.chooseMedia({
       count: remaining,
-      sizeType: ['compressed'],
+      mediaType: ['image'],
       sourceType: ['album', 'camera'],
       success: (res) => {
-        const tempFilePaths = res.tempFilePaths || [];
+        const tempFilePaths = (res.tempFiles || []).map(f => f.tempFilePath);
         if (tempFilePaths.length === 0) return;
 
         this._uploadImages(tempFilePaths);

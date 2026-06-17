@@ -148,7 +148,7 @@ Page({
   },
 
   /**
-   * 处理采购任务（已迁移到独立分包 pkg-procurement）
+   * 处理采购任务（跳转到采购任务列表页）
    * WXML: scan-history.wxml bindtap="onHandleProcurement"
    */
   onHandleProcurement(e) {
@@ -156,7 +156,7 @@ Page({
     const recordIdx = e.currentTarget.dataset.recordIdx;
     const app = getApp();
     app.globalData.procurementScanData = { groupId, recordIdx };
-    safeNavigate({ url: '/pkg-procurement/pages/task/index' }).catch(() => {});
+    safeNavigate({ url: '/pages/procurement/task-list/index' }).catch(() => {});
   },
 
   // ==================== 快捷导航（历史记录 / 当月记录） ====================

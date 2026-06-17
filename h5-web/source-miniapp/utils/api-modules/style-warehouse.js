@@ -113,12 +113,19 @@ const style = {
 
   // 纸样
   getPatternRevision(styleId) {
+    // 通过款式详情获取styleNo，再查纸样列表取最新一条
     const id = String(styleId || '').trim();
-    return ok(`/api/style/info/${encodeURIComponent(id)}/pattern-revision`, 'GET', {});
+    return ok(`/api/style/info/${encodeURIComponent(id)}`, 'GET', {}).then(detail => {
+      const styleNo = detail?.styleNo || detail?.styleCode || '';
+      if (!styleNo) return null;
+      return ok('/api/pattern-revision/list', 'GET', { styleNo, pageSize: 1 }).then(pageData => {
+        const records = pageData?.records || [];
+        return records.length > 0 ? records[0] : null;
+      });
+    });
   },
   savePatternRevision(styleId, payload) {
-    const id = String(styleId || '').trim();
-    return ok(`/api/style/info/${encodeURIComponent(id)}/pattern-revision`, 'POST', payload || {});
+    return ok('/api/pattern-revision', 'POST', payload || {});
   },
   lockPatternRevision(styleId) {
     const id = String(styleId || '').trim();
@@ -244,6 +251,8 @@ const sampleStock = {
   inbound(data) { return ok('/api/stock/sample/inbound', 'POST', data); },
   loan(data) { return ok('/api/stock/sample/loan', 'POST', data); },
   returnSample(data) { return ok('/api/stock/sample/return', 'POST', data); },
+  transfer(data) { return ok('/api/stock/sample/transfer', 'POST', data); },
+  loanList(params) { return ok('/api/stock/sample/loan/list', 'GET', params || {}); },
 };
 
 module.exports = { style, warehouse, material, materialRoll, orderManagement, sampleStock };

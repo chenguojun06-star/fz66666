@@ -150,33 +150,37 @@
       
       <!-- 已有库存记录 -->
       <view class="info-card" wx:if="{{stockInfo.found && stockInfo.stock}}">
-        <image wx:if="{{stockInfo.stock._imageUrl}}" class="detail-image" src="{{stockInfo.stock._imageUrl}}" mode="aspectFill" bindtap="onPreviewImage" data-src="{{stockInfo.stock._imageUrl}}" />
-        <view class="info-row">
-          <text class="info-label">状态</text>
-          <text class="info-value">
-            <text class="status-tag tag-green" wx:if="{{stockInfo.availableQuantity > 0}}">在库</text>
-            <text class="status-tag tag-orange" wx:else>全部借出</text>
-          </text>
-        </view>
-        <view class="info-row">
-          <text class="info-label">款号</text>
-          <text class="info-value bold">{{stockInfo.stock.styleNo}}</text>
-        </view>
-        <view class="info-row" wx:if="{{stockInfo.stock.styleName}}">
-          <text class="info-label">款名</text>
-          <text class="info-value">{{stockInfo.stock.styleName}}</text>
-        </view>
-        <view class="info-row">
-          <text class="info-label">颜色</text>
-          <text class="info-value">{{stockInfo.stock.color}}</text>
-        </view>
-        <view class="info-row">
-          <text class="info-label">尺码</text>
-          <text class="info-value">{{stockInfo.stock.size}}</text>
-        </view>
-        <view class="info-row" wx:if="{{stockInfo.stock.sampleType}}">
-          <text class="info-label">类型</text>
-          <text class="info-value">{{stockInfo.stock._sampleTypeLabel || stockInfo.stock.sampleType}}</text>
+        <view class="detail-header">
+          <view class="detail-info">
+            <view class="info-row">
+              <text class="info-label">状态</text>
+              <text class="info-value">
+                <text class="status-tag tag-green" wx:if="{{stockInfo.availableQuantity > 0}}">在库</text>
+                <text class="status-tag tag-orange" wx:else>全部借出</text>
+              </text>
+            </view>
+            <view class="info-row">
+              <text class="info-label">款号</text>
+              <text class="info-value bold">{{stockInfo.stock.styleNo}}</text>
+            </view>
+            <view class="info-row" wx:if="{{stockInfo.stock.styleName}}">
+              <text class="info-label">款名</text>
+              <text class="info-value">{{stockInfo.stock.styleName}}</text>
+            </view>
+            <view class="info-row">
+              <text class="info-label">颜色</text>
+              <text class="info-value">{{stockInfo.stock.color}}</text>
+            </view>
+            <view class="info-row">
+              <text class="info-label">尺码</text>
+              <text class="info-value">{{stockInfo.stock.size}}</text>
+            </view>
+            <view class="info-row" wx:if="{{stockInfo.stock.sampleType}}">
+              <text class="info-label">类型</text>
+              <text class="info-value">{{stockInfo.stock._sampleTypeLabel || stockInfo.stock.sampleType}}</text>
+            </view>
+          </view>
+          <image wx:if="{{stockInfo.stock._imageUrl}}" class="detail-thumb" src="{{stockInfo.stock._imageUrl}}" mode="aspectFill" bindtap="onPreviewImage" data-src="{{stockInfo.stock._imageUrl}}" />
         </view>
         <view class="info-row" wx:if="{{stockInfo.stock.location}}">
           <text class="info-label">仓位</text>
@@ -203,16 +207,31 @@
         </view>
         <view class="loan-item" wx:for="{{stockInfo.activeLoans}}" wx:key="id">
           <view class="info-row">
-            <text class="info-label">借调人</text>
+            <text class="info-label">借出人</text>
             <text class="info-value">{{item.borrower}}</text>
+          </view>
+          <view class="info-row">
+            <text class="info-label">借给谁</text>
+            <text class="info-value">{{item.lendToFactoryName || item.lendTo || '-'}}</text>
           </view>
           <view class="info-row">
             <text class="info-label">数量</text>
             <text class="info-value">{{item.quantity}} 件</text>
           </view>
           <view class="info-row">
+            <text class="info-label">剩余未还</text>
+            <text class="info-value">{{item.remainingQuantity || item.quantity}} 件</text>
+          </view>
+          <view class="info-row">
             <text class="info-label">时间</text>
-            <text class="info-value">{{item.createTime}}</text>
+            <text class="info-value">{{item.loanDate || item.createTime}}</text>
+          </view>
+          <view class="info-row" wx:if="{{item.transferFromLoanId}}">
+            <text class="info-label">来源</text>
+            <text class="info-value transfer-tag">转借</text>
+          </view>
+          <view class="loan-actions" wx:if="{{item.status === 'borrowed'}}">
+            <view class="btn-transfer-sm" bindtap="onTransfer" data-id="{{item.id}}">转借</view>
           </view>
         </view>
       </view>
@@ -277,12 +296,63 @@
         >
           入库
         </view>
+        <!-- 借调内联表单（替代弹窗，点击"借调"按钮展开/收起） -->
+        <view class="loan-inline" wx:if="{{showLoanForm}}">
+          <view class="loan-inline-row">
+            <text class="loan-inline-label">借给谁</text>
+            <radio-group class="loan-inline-radios" bindchange="onLoanLendToTypeChange">
+              <label class="radio-item"><radio value="person" checked="{{loanLendToType==='person'}}" /> 个人</label>
+              <label class="radio-item"><radio value="factory" checked="{{loanLendToType==='factory'}}" /> 工厂</label>
+            </radio-group>
+          </view>
+          <!-- 个人：搜索租户人员 -->
+          <block wx:if="{{loanLendToType === 'person'}}">
+            <view class="loan-inline-row">
+              <text class="loan-inline-label">姓名</text>
+              <input class="loan-inline-input" placeholder="搜索人员姓名" value="{{loanUserSearch}}" bindinput="onLoanUserSearch" />
+            </view>
+            <!-- 已选中显示 -->
+            <view class="loan-inline-selected" wx:if="{{loanLendTo}}">已选: {{loanLendTo}}</view>
+            <!-- 搜索结果列表 -->
+            <view class="loan-inline-list" wx:if="{{_filteredLoanUsers.length > 0}}">
+              <view class="loan-inline-option" wx:for="{{_filteredLoanUsers}}" wx:key="id"
+                bindtap="onLoanUserSelect" data-idx="{{index}}">
+                {{item.name || item.username}}
+              </view>
+            </view>
+          </block>
+          <!-- 工厂：搜索外发工厂 -->
+          <block wx:if="{{loanLendToType === 'factory'}}">
+            <view class="loan-inline-row">
+              <text class="loan-inline-label">工厂</text>
+              <input class="loan-inline-input" placeholder="搜索工厂名称" value="{{loanFactorySearch}}" bindinput="onLoanFactorySearch" />
+            </view>
+            <!-- 已选中显示 -->
+            <view class="loan-inline-selected" wx:if="{{loanLendToFactoryName}}">已选: {{loanLendToFactoryName}}</view>
+            <!-- 搜索结果列表 -->
+            <view class="loan-inline-list" wx:if="{{_filteredLoanFactories.length > 0}}">
+              <view class="loan-inline-option" wx:for="{{_filteredLoanFactories}}" wx:key="id"
+                bindtap="onLoanFactorySelect" data-idx="{{index}}">
+                {{item.factoryName || item.name}}
+              </view>
+            </view>
+          </block>
+          <view class="loan-inline-row">
+            <text class="loan-inline-label">备注</text>
+            <input class="loan-inline-input" placeholder="选填" value="{{loanRemark}}" bindinput="onLoanRemarkInput" />
+          </view>
+          <view class="loan-inline-actions">
+            <view class="loan-inline-btn loan-inline-btn--cancel" bindtap="onLoanFormCancel">取消</view>
+            <view class="loan-inline-btn loan-inline-btn--confirm" bindtap="onLoanFormConfirm">确认借调</view>
+          </view>
+        </view>
+
         <view
           class="btn-loan {{submitting ? 'btn-disabled' : ''}}"
-          wx:if="{{_showLoan}}"
+          wx:if="{{_showLoan && !successMsg}}"
           bindtap="onLoan"
         >
-          借调
+          {{showLoanForm ? '收起' : '借调'}}
         </view>
         <view
           class="btn-return {{submitting ? 'btn-disabled' : ''}}"
@@ -295,6 +365,50 @@
     </block>
   </view>
   
+  <!-- 归还选择弹窗 -->
+  <view class="modal-mask" wx:if="{{showReturnPicker}}" bindtap="onReturnPickerCancel">
+    <view class="modal-content" catchtap="">
+      <view class="modal-title">选择归还记录</view>
+      <view class="modal-body">
+        <view class="return-pick-item {{selectedLoanId === item.id ? 'return-pick-item--active' : ''}}"
+          wx:for="{{stockInfo.activeLoans}}" wx:key="id"
+          bindtap="onReturnLoanSelect" data-id="{{item.id}}">
+          <text>{{item.lendToFactoryName || item.lendTo || item.borrower || '未知'}}</text>
+          <text>剩余 {{item.remainingQuantity || item.quantity}} 件</text>
+        </view>
+      </view>
+      <view class="modal-actions">
+        <view class="modal-btn-cancel" bindtap="onReturnPickerCancel">取消</view>
+        <view class="modal-btn-confirm" bindtap="onReturnPickerConfirm">确认归还</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 转借表单弹窗 -->
+  <view class="modal-mask" wx:if="{{showTransferForm}}" bindtap="onTransferFormCancel">
+    <view class="modal-content" catchtap="">
+      <view class="modal-title">转借样衣</view>
+      <view class="modal-body">
+        <view class="form-item">
+          <text class="form-label">转借入人姓名</text>
+          <input class="form-input" placeholder="转借给谁" value="{{transferLendTo}}" bindinput="onTransferLendToInput" />
+        </view>
+        <view class="form-item">
+          <text class="form-label">转借入工厂名称</text>
+          <input class="form-input" placeholder="工厂名称（选填）" value="{{transferLendToFactoryName}}" bindinput="onTransferFactoryInput" />
+        </view>
+        <view class="form-item">
+          <text class="form-label">备注</text>
+          <input class="form-input" placeholder="转借原因（选填）" value="{{transferRemark}}" bindinput="onTransferRemarkInput" />
+        </view>
+      </view>
+      <view class="modal-actions">
+        <view class="modal-btn-cancel" bindtap="onTransferFormCancel">取消</view>
+        <view class="modal-btn-confirm" bindtap="onTransferFormConfirm">确认转借</view>
+      </view>
+    </view>
+  </view>
+
   <!-- 隐私协议 -->
   <privacy-dialog
     wx:if="{{showPrivacy}}"

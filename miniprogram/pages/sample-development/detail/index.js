@@ -46,6 +46,8 @@ Page({
     // 附件
     attachmentList: [],
     attachmentLoading: false,
+    // 款式图片（cover + 附件中的图片）
+    styleImages: [],
   },
 
   onLoad(options) {
@@ -97,6 +99,7 @@ Page({
       const styleInfo = res?.data || res || {};
       this.setData({ styleInfo, loading: false });
       this.buildStages(styleInfo);
+      this.buildStyleImages(styleInfo);
       // 默认加载概览数据
       this.loadTabData(0);
     } catch (e) {
@@ -130,6 +133,7 @@ Page({
         status = 'not_started';
       }
       const actionable = ACTIONABLE_STAGES.has(s.key);
+      const canRollback = actionable && status === 'completed' && permission.isAdminOrSupervisor();
       return {
         key: s.key,
         name: s.name,
@@ -141,9 +145,18 @@ Page({
         actionable,
         canReceive: actionable && status === 'not_started',
         canComplete: actionable && status === 'in_progress',
+        canRollback,
       };
     });
     this.setData({ stages });
+  },
+
+  /** 构建款式图片列表（cover + 附件中的图片） */
+  buildStyleImages(info) {
+    const images = [];
+    if (info.cover) images.push(info.cover);
+    // 附件中的图片在加载附件后补充
+    this.setData({ styleImages: images });
   },
 
   normalizeStatus(raw) {
@@ -218,7 +231,8 @@ Page({
     this.setData({ patternLoading: true });
     try {
       const res = await style.getPatternRevision(this.data.styleId);
-      this.setData({ patternData: res?.data || res || null });
+      // getPatternRevision 直接返回纸样对象或null
+      this.setData({ patternData: res || null });
     } catch (e) { console.error('纸样加载失败', e); }
     this.setData({ patternLoading: false });
   },
@@ -271,11 +285,34 @@ Page({
       let list = res?.data?.records || res?.data || res?.records || [];
       list = list.map(it => ({ ...it, fileSizeText: this.formatFileSize(it.fileSize || it.size || 0) }));
       this.setData({ attachmentList: list });
+      // 把图片附件补充到 styleImages
+      const imageUrls = list
+        .filter(it => /\.(jpg|jpeg|png|gif|webp|bmp)$/i.test(it.url || it.fileUrl || ''))
+        .map(it => it.url || it.fileUrl);
+      if (imageUrls.length > 0) {
+        const existing = this.data.styleImages || [];
+        const merged = [...new Set([...existing, ...imageUrls])];
+        this.setData({ styleImages: merged });
+      }
     } catch (e) { console.error('附件加载失败', e); }
     this.setData({ attachmentLoading: false });
   },
 
   // === 交互方法 ===
+
+  /** 封面图点击预览 */
+  onCoverTap() {
+    const cover = this.data.styleInfo?.cover;
+    if (!cover) return;
+    wx.previewImage({ urls: this.data.styleImages.length > 0 ? this.data.styleImages : [cover], current: cover });
+  },
+
+  /** 款式图片点击预览 */
+  onImagePreview(e) {
+    const url = e.currentTarget.dataset.url;
+    if (!url) return;
+    wx.previewImage({ urls: this.data.styleImages, current: url });
+  },
 
   /** 预览附件 */
   onAttachmentTap(e) {
@@ -344,6 +381,31 @@ Page({
           this.loadStyleDetail();
         } catch (e) {
           wx.showToast({ title: '操作失败', icon: 'none' });
+        }
+      }
+    });
+  },
+
+  /** 退回修改（主管） */
+  onStageRollback(e) {
+    const stageKey = e.currentTarget.dataset.key;
+    const stage = this.data.stages.find(s => s.key === stageKey);
+    if (!stage || !stage.canRollback) return;
+
+    wx.showModal({
+      title: '退回修改',
+      content: `退回「${stage.name}」后需重新完成，确认退回？`,
+      editable: true,
+      placeholderText: '请输入退回原因（选填）',
+      success: async (res) => {
+        if (!res.confirm) return;
+        try {
+          const reason = (res.content || '').trim();
+          await style.stageAction(this.data.styleId, stageKey, 'reset', reason || undefined);
+          wx.showToast({ title: '已退回', icon: 'success' });
+          this.loadStyleDetail();
+        } catch (e) {
+          wx.showToast({ title: '退回失败', icon: 'none' });
         }
       }
     });

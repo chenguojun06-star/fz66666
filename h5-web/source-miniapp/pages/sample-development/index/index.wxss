@@ -4,6 +4,20 @@
   padding-bottom: 20rpx;
 }
 
+/* 跨岗位提示条 */
+.role-hint-bar {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+  margin: 16rpx 24rpx 0;
+  padding: 16rpx 24rpx;
+  background: #fff7e6;
+  border-radius: 16rpx;
+  border: 1rpx solid #ffe58f;
+}
+.role-hint-icon { font-size: 26rpx; flex-shrink: 0; }
+.role-hint-text { font-size: 24rpx; color: #d46b08; line-height: 1.5; }
+
 .search-bar {
   padding: 16rpx 24rpx;
   background: #fff;

@@ -4,6 +4,7 @@
  */
 const api = require('../../../../utils/api');
 const { getAuthedImageUrl } = require('../../../../utils/fileUrl');
+const { ok } = require('../../../../utils/api-modules/helpers');
 
 const SAMPLE_TYPE_MAP = {
   'development': '开发样',
@@ -84,12 +85,21 @@ Page({
 
     // 借调表单
     showLoanForm: false,
-    loanLendToType: 'person',  // 'person' | 'factory' | 'customer'
+    loanLendToType: 'person',  // 'person' | 'factory'
     loanLendTo: '',
+    loanLendToId: '',
+    loanLendToFactoryId: '',
     loanLendToFactoryName: '',
     loanBorrower: '',
     loanQuantity: 1,
     loanRemark: '',
+    // 人员和工厂搜索
+    loanUserList: [],
+    loanFactoryList: [],
+    loanUserSearch: '',
+    loanFactorySearch: '',
+    _filteredLoanUsers: [],
+    _filteredLoanFactories: [],
 
     // 归还选择
     showReturnPicker: false,
@@ -300,15 +310,83 @@ Page({
 
   onLoan() {
     if (this.data.submitting) return;
+    // 切换内联表单显示
+    if (this.data.showLoanForm) {
+      this.setData({ showLoanForm: false });
+      return;
+    }
     const userInfo = getApp().globalData.userInfo || {};
     this.setData({
       showLoanForm: true,
       loanLendToType: 'person',
       loanLendTo: '',
+      loanLendToId: '',
+      loanLendToFactoryId: '',
       loanLendToFactoryName: '',
       loanBorrower: userInfo.name || userInfo.username || '',
       loanQuantity: 1,
       loanRemark: '',
+      loanUserSearch: '',
+      loanFactorySearch: '',
+    });
+    // 加载租户人员列表和外发工厂列表
+    this._loadLoanOptions();
+  },
+
+  _loadLoanOptions() {
+    // 加载租户人员
+    ok('/api/system/user/list', 'GET', { pageSize: 200 }).then(records => {
+      const list = Array.isArray(records) ? records : (records?.records || []);
+      this.setData({ loanUserList: list });
+    }).catch(() => {
+      this.setData({ loanUserList: [] });
+    });
+    // 加载外发工厂
+    api.factory.list({ pageSize: 200, status: 'active' }).then(records => {
+      const list = Array.isArray(records) ? records : (records?.records || []);
+      this.setData({ loanFactoryList: list });
+    }).catch(() => {
+      this.setData({ loanFactoryList: [] });
+    });
+  },
+
+  onLoanUserSearch(e) {
+    const keyword = (e.detail.value || '').trim().toLowerCase();
+    this.setData({ loanUserSearch: keyword });
+    const filtered = keyword
+      ? this.data.loanUserList.filter(u => (u.name || u.username || '').toLowerCase().includes(keyword))
+      : this.data.loanUserList;
+    this.setData({ _filteredLoanUsers: filtered.slice(0, 20) });
+  },
+
+  onLoanFactorySearch(e) {
+    const keyword = (e.detail.value || '').trim().toLowerCase();
+    this.setData({ loanFactorySearch: keyword });
+    const filtered = keyword
+      ? this.data.loanFactoryList.filter(f => (f.factoryName || f.name || '').toLowerCase().includes(keyword))
+      : this.data.loanFactoryList;
+    this.setData({ _filteredLoanFactories: filtered.slice(0, 20) });
+  },
+
+  onLoanUserSelect(e) {
+    const idx = e.currentTarget.dataset.idx;
+    const user = this.data._filteredLoanUsers[idx];
+    if (!user) return;
+    this.setData({
+      loanLendTo: user.name || user.username || '',
+      loanLendToId: String(user.id || ''),
+      loanUserSearch: '',
+    });
+  },
+
+  onLoanFactorySelect(e) {
+    const idx = e.currentTarget.dataset.idx;
+    const factory = this.data._filteredLoanFactories[idx];
+    if (!factory) return;
+    this.setData({
+      loanLendToFactoryId: String(factory.id || ''),
+      loanLendToFactoryName: factory.factoryName || factory.name || '',
+      loanFactorySearch: '',
     });
   },
 
@@ -337,9 +415,9 @@ Page({
   },
 
   onLoanFormConfirm() {
-    const { loanLendTo, loanLendToFactoryName, loanLendToType, loanBorrower, loanQuantity, loanRemark } = this.data;
+    const { loanLendTo, loanLendToId, loanLendToFactoryId, loanLendToFactoryName, loanLendToType, loanBorrower, loanQuantity, loanRemark } = this.data;
     if (!loanLendTo && !loanLendToFactoryName) {
-      wx.showToast({ title: '请填写借入人或工厂', icon: 'none' });
+      wx.showToast({ title: '请选择借入人或工厂', icon: 'none' });
       return;
     }
     const stock = (this.data.stockInfo && this.data.stockInfo.stock) || {};
@@ -351,7 +429,9 @@ Page({
         borrower: loanBorrower || userInfo.name || userInfo.username || '',
         borrowerId: userInfo.id ? String(userInfo.id) : '',
         lendTo: loanLendToType === 'factory' ? '' : loanLendTo,
+        lendToId: loanLendToType === 'factory' ? '' : (loanLendToId || ''),
         lendToType: loanLendToType,
+        lendToFactoryId: loanLendToType === 'factory' ? (loanLendToFactoryId || '') : '',
         lendToFactoryName: loanLendToType === 'factory' ? loanLendToFactoryName : '',
         quantity: loanQuantity || 1,
         remark: loanRemark,

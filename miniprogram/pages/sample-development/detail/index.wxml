@@ -8,37 +8,16 @@
   <block wx:else>
     <!-- 顶部款式信息 -->
     <view class="style-header">
-      <view class="style-name">{{styleInfo.styleName || styleInfo.name || '未命名款式'}}</view>
-      <view class="style-no">{{styleInfo.styleNo || styleInfo.styleCode || ''}}</view>
-    </view>
-
-    <!-- 阶段进度条 -->
-    <view class="progress-section" wx:if="{{stages.length > 0}}">
-      <view class="progress-title">开发进度</view>
-      <view class="progress-list">
-        <view class="progress-item" wx:for="{{stages}}" wx:key="key">
-          <view class="progress-dot progress-dot-{{item.status}}"></view>
-          <view class="progress-content">
-            <view class="progress-name">{{item.name}}</view>
-            <view class="progress-meta">
-              <text class="progress-status progress-status-{{item.status}}">{{item.statusText}}</text>
-              <text wx:if="{{item.assignee}}" class="progress-assignee"> · {{item.assignee}}</text>
-            </view>
-            <view wx:if="{{item.startTime && item.status === 'in_progress'}}" class="progress-time">领取于 {{item.startTime}}</view>
-            <view wx:if="{{item.completedAt}}" class="progress-time">完成于 {{item.completedAt}}</view>
-          </view>
-          <!-- 可操作子工序：领取 / 完成 -->
-          <view wx:if="{{item.canReceive}}" class="progress-action progress-action-receive" data-key="{{item.key}}" bindtap="onStageReceive">领取</view>
-          <view wx:elif="{{item.canComplete}}" class="progress-action" data-key="{{item.key}}" bindtap="onStageConfirm">完成</view>
-          <view wx:elif="{{item.status === 'completed'}}" class="progress-done-icon">✓</view>
-        </view>
+      <image wx:if="{{styleInfo.cover}}" class="style-cover" src="{{styleInfo.cover}}" mode="aspectFill" bindtap="onCoverTap" />
+      <view class="style-header-info">
+        <view class="style-name">{{styleInfo.styleName || styleInfo.name || '未命名款式'}}</view>
+        <view class="style-no">{{styleInfo.styleNo || styleInfo.styleCode || ''}}</view>
       </view>
     </view>
 
     <!-- Tab导航 -->
     <view class="tab-nav">
       <view wx:for="{{tabs}}" wx:key="key" class="tab-item {{activeTab === index ? 'active' : ''}}" data-index="{{index}}" bindtap="onTabTap">
-        <text class="tab-icon">{{item.icon}}</text>
         <text class="tab-text">{{item.name}}</text>
       </view>
     </view>
@@ -46,10 +25,14 @@
     <!-- Tab内容 -->
     <view class="tab-content">
 
-      <!-- 概览 -->
+      <!-- 概览 + 开发进度（合并） -->
       <block wx:if="{{activeTab === 0}}">
         <view class="section">
           <view class="section-title">款式信息</view>
+          <!-- 款式图片 -->
+          <view wx:if="{{styleImages.length > 0}}" class="style-images">
+            <image wx:for="{{styleImages}}" wx:key="index" class="style-image-thumb" src="{{item}}" mode="aspectFill" data-url="{{item}}" bindtap="onImagePreview" />
+          </view>
           <view class="info-card">
             <view class="info-row"><text class="info-label">款号</text><text class="info-value">{{styleInfo.styleNo || '-'}}</text></view>
             <view class="info-row"><text class="info-label">品类</text><text class="info-value">{{styleInfo.category || '-'}}</text></view>
@@ -67,6 +50,32 @@
             <view class="info-row" wx:if="{{styleInfo.customerContact}}"><text class="info-label">联系人</text><text class="info-value">{{styleInfo.customerContact || '-'}}</text></view>
             <view class="info-row" wx:if="{{styleInfo.customerPhone}}"><text class="info-label">电话</text><text class="info-value">{{styleInfo.customerPhone || '-'}}</text></view>
             <view class="info-row" wx:if="{{styleInfo.customerAddress}}"><text class="info-label">地址</text><text class="info-value">{{styleInfo.customerAddress || '-'}}</text></view>
+          </view>
+        </view>
+        <!-- 开发进度（含领取/完成操作） -->
+        <view class="section" wx:if="{{stages.length > 0}}">
+          <view class="section-title">开发进度</view>
+          <view class="info-card">
+            <view class="progress-item" wx:for="{{stages}}" wx:key="key">
+              <view class="progress-left">
+                <view class="progress-dot progress-dot-{{item.status}}"></view>
+                <view class="progress-content">
+                  <view class="progress-name">{{item.name}}</view>
+                  <view class="progress-meta">
+                    <text class="progress-status progress-status-{{item.status}}">{{item.statusText}}</text>
+                    <text wx:if="{{item.assignee}}" class="progress-assignee"> · {{item.assignee}}</text>
+                  </view>
+                  <view wx:if="{{item.startTime && item.status === 'in_progress'}}" class="progress-time">领取于 {{item.startTime}}</view>
+                  <view wx:if="{{item.completedAt}}" class="progress-time">完成于 {{item.completedAt}}</view>
+                </view>
+              </view>
+              <view wx:if="{{item.canReceive}}" class="progress-action progress-action-receive" data-key="{{item.key}}" bindtap="onStageReceive">领取</view>
+              <view wx:elif="{{item.canComplete}}" class="progress-action" data-key="{{item.key}}" bindtap="onStageConfirm">完成</view>
+              <view wx:elif="{{item.status === 'completed'}}" class="progress-done-wrap">
+                <text class="progress-done-icon">✓</text>
+                <text wx:if="{{item.canRollback}}" class="progress-action-rollback" data-key="{{item.key}}" bindtap="onStageRollback">退回</text>
+              </view>
+            </view>
           </view>
         </view>
       </block>

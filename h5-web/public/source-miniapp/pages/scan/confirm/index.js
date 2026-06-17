@@ -6,6 +6,7 @@ const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 const { getUserInfo } = require('../../../utils/storage');
 const { triggerDataRefresh } = require('../../../utils/eventBus');
 const { sortSizeNames } = require('../../../utils/orderParser');
+const permission = require('../../../utils/permission');
 
 Page({
   data: {
@@ -253,6 +254,21 @@ Page({
       return;
     }
 
+    // 职务校验（宽松规则）：非采购岗位且非主管以上，弹窗确认后再领
+    if (!permission.canReceiveTask('procurement')) {
+      const confirmed = await new Promise(resolve => {
+        wx.showModal({
+          title: '跨岗位领取确认',
+          content: `您当前职务「${permission.getRoleDisplayName()}」非采购岗，确定代领？`,
+          confirmText: '确定代领',
+          cancelText: '取消',
+          success: r => resolve(r.confirm),
+          fail: () => resolve(false),
+        });
+      });
+      if (!confirmed) return;
+    }
+
     const userInfo = getUserInfo() || {};
     const receiverId = String(userInfo.id || userInfo.userId || '').trim();
     const receiverName = String(userInfo.name || userInfo.username || '').trim();
@@ -311,6 +327,21 @@ Page({
       toast.info('该任务已被领取');
       wx.navigateBack();
       return;
+    }
+
+    // 职务校验（宽松规则）：非裁剪岗位且非主管以上，弹窗确认后再领
+    if (!permission.canReceiveTask('cutting')) {
+      const confirmed = await new Promise(resolve => {
+        wx.showModal({
+          title: '跨岗位领取确认',
+          content: `您当前职务「${permission.getRoleDisplayName()}」非裁剪岗，确定代领？`,
+          confirmText: '确定代领',
+          cancelText: '取消',
+          success: r => resolve(r.confirm),
+          fail: () => resolve(false),
+        });
+      });
+      if (!confirmed) return;
     }
 
     const userInfo = getUserInfo() || {};

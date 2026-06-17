@@ -200,7 +200,14 @@ Page({
           return item;
         });
 
-        const newList = reset ? list : (that.data.list || []).concat(list);
+        const merged = reset ? list : (that.data.list || []).concat(list);
+        // 按 id 去重，避免 wx:key 重复警告
+        const seen = new Set();
+        const newList = merged.filter(function (item) {
+          if (seen.has(item.id)) return false;
+          seen.add(item.id);
+          return true;
+        });
         that.setData({
           list: newList,
           total: total,

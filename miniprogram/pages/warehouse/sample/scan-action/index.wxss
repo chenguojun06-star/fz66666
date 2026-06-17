@@ -289,11 +289,20 @@
   box-shadow: 0 1px 4px rgba(0,0,0,0.06);
 }
 
-.detail-image {
-  width: 100%;
-  height: 360rpx;
+.detail-header {
+  display: flex;
+  align-items: flex-start;
+}
+.detail-info {
+  flex: 1;
+  min-width: 0;
+}
+.detail-thumb {
+  width: 120rpx;
+  height: 120rpx;
   border-radius: 8rpx;
-  margin-bottom: 12rpx;
+  margin-left: 16rpx;
+  flex-shrink: 0;
   background: var(--color-bg-light);
 }
 
@@ -404,6 +413,85 @@
   font-weight: bold;
   box-shadow: 0 2px 8px rgba(24,144,255,0.25);
   margin-bottom: 8px;
+}
+
+/* ==================== 借调内联表单 ==================== */
+.loan-inline {
+  background: var(--color-bg-base);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  margin-bottom: 8px;
+}
+.loan-inline-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.loan-inline-label {
+  font-size: 26rpx;
+  color: var(--color-text-secondary);
+  width: 120rpx;
+  flex-shrink: 0;
+}
+.loan-inline-radios {
+  display: flex;
+  gap: 16px;
+}
+.loan-inline-input {
+  flex: 1;
+  font-size: 28rpx;
+  padding: 8px 12px;
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-white);
+}
+.loan-inline-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+.loan-inline-btn {
+  flex: 1;
+  text-align: center;
+  padding: 10px 0;
+  border-radius: var(--radius-sm);
+  font-size: 28rpx;
+  font-weight: bold;
+}
+.loan-inline-btn--cancel {
+  background: var(--color-bg-subtle);
+  color: var(--color-text-secondary);
+}
+.loan-inline-btn--confirm {
+  background: var(--color-primary);
+  color: var(--color-text-white);
+}
+.loan-inline-selected {
+  font-size: 26rpx;
+  color: var(--color-primary);
+  background: rgba(24,144,255,0.08);
+  padding: 6px 10px;
+  border-radius: var(--radius-xs);
+  margin-bottom: 8px;
+}
+.loan-inline-list {
+  max-height: 200rpx;
+  overflow-y: auto;
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-sm);
+  margin-bottom: 8px;
+}
+.loan-inline-option {
+  padding: 8px 12px;
+  font-size: 26rpx;
+  border-bottom: 1px solid var(--color-border-light);
+}
+.loan-inline-option:last-child {
+  border-bottom: none;
+}
+.loan-inline-option:active {
+  background: rgba(24,144,255,0.08);
 }
 
 .btn-return {

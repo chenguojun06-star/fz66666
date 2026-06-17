@@ -8,6 +8,20 @@
   padding: 0 var(--page-padding-x) calc(40rpx + env(safe-area-inset-bottom));
 }
 
+/* ---- 跨岗位提示条 ---- */
+.role-hint-bar {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+  margin: 20rpx 0 0;
+  padding: 16rpx 24rpx;
+  background: var(--color-warning-bg, #fff7e6);
+  border-radius: var(--radius-lg, 16rpx);
+  border: 1rpx solid var(--color-warning-border, #ffe58f);
+}
+.role-hint-icon { font-size: var(--font-size-sm); flex-shrink: 0; }
+.role-hint-text { font-size: var(--font-size-xs); color: var(--color-warning, #d46b08); line-height: 1.5; }
+
 /* ---- 筛选 Tab ---- */
 .filter-tabs {
   display: flex;
