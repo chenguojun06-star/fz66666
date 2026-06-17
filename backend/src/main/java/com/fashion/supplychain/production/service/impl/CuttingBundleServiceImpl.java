@@ -18,7 +18,6 @@ import com.fashion.supplychain.production.service.ProductionOrderService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.util.StringUtils;
@@ -132,7 +131,6 @@ public class CuttingBundleServiceImpl extends ServiceImpl<CuttingBundleMapper, C
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public List<CuttingBundle> generateBundles(String orderId, List<Map<String, Object>> bundles) {
         ProductionOrder order = resolveOrder(orderId);
         if (order == null || bundles == null || bundles.isEmpty()) {

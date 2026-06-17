@@ -12,8 +12,8 @@ import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.helper.InventoryValidator;
 import com.fashion.supplychain.production.helper.lookup.BundleLookupContext;
 import com.fashion.supplychain.production.service.impl.ProductWarehousingHelper;
-import com.fashion.supplychain.production.orchestration.ProductionProcessTrackingOrchestrator;
 import com.fashion.supplychain.production.service.*;
+import com.fashion.supplychain.production.service.SKUService;
 import com.fashion.supplychain.style.entity.ProductSku;
 import com.fashion.supplychain.style.service.ProductSkuService;
 import lombok.extern.slf4j.Slf4j;
@@ -61,9 +61,6 @@ public class WarehouseScanExecutor {
 
     @Autowired
     private InventoryValidator inventoryValidator;
-
-    @Autowired
-    private ProductionProcessTrackingOrchestrator processTrackingOrchestrator;
 
     @Autowired
     private SKUService skuService;
@@ -273,27 +270,7 @@ public class WarehouseScanExecutor {
 
     private void updateProcessTrackingForWarehouse(CuttingBundle bundle, ProductionOrder order,
                                                     String operatorId, String operatorName, ScanRecord sr) {
-        if (bundle == null || !hasText(bundle.getId())) {
-            return;
-        }
-        ExceptionHandler.runRecoverable("更新入库工序跟踪记录", () -> {
-            boolean trackingUpdated = processTrackingOrchestrator.updateScanRecord(
-                bundle.getId(), "入库", operatorId, operatorName, sr.getId());
-            if (trackingUpdated) {
-                log.info("入库工序跟踪记录更新成功: bundleId={}, orderId={}", bundle.getId(), order.getId());
-            } else {
-                log.info("入库工序跟踪记录未找到，尝试追加初始化并重试更新: bundleId={}, orderId={}", bundle.getId(), order.getId());
-                ExceptionHandler.runRecoverable("追加并更新入库工序跟踪记录", () -> {
-                    processTrackingOrchestrator.appendProcessTracking(order.getId(), List.of(bundle));
-                    boolean retryUpdated = processTrackingOrchestrator.updateScanRecord(
-                            bundle.getId(), "入库", operatorId, operatorName, sr.getId());
-                    if (retryUpdated) {
-                        log.info("入库工序跟踪记录重试更新成功: bundleId={}, orderId={}", bundle.getId(), order.getId());
-                    }
-                }, e -> log.warn("追加并更新入库工序跟踪记录失败（不阻断入库）: bundleId={}, orderId={}, msg={}",
-                        bundle.getId(), order.getId(), e.getMessage()));
-            }
-        }, e -> log.warn("更新入库工序跟踪记录失败（不阻断入库）: bundleId={}, msg={}", bundle.getId(), e.getMessage()));
+        executorSupport.updateProcessTracking(bundle, "入库", operatorId, operatorName, sr.getId(), order);
     }
 
     private Map<String, Object> buildResult(CuttingBundle bundle, ProductionOrder order, ScanRecord sr) {

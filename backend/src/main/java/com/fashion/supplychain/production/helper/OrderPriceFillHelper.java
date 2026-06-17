@@ -166,13 +166,7 @@ public class OrderPriceFillHelper {
         }
 
         // 收集所有 styleId（Long）
-        Set<Long> styleIds = new LinkedHashSet<>();
-        for (ProductionOrder o : records) {
-            if (o == null) continue;
-            String sidRaw = o.getStyleId();
-            if (!StringUtils.hasText(sidRaw)) continue;
-            try { styleIds.add(Long.parseLong(sidRaw.trim())); } catch (Exception e) { log.debug("Non-critical error: {}", e.getMessage()); }
-        }
+        Set<Long> styleIds = collectStyleIds(records);
 
         if (styleIds.isEmpty()) {
             for (ProductionOrder o : records) {
@@ -183,6 +177,28 @@ public class OrderPriceFillHelper {
 
         // 从 t_style_quotation 读取 profitRate（用于计算含利润的单价）
         // 注意：不使用存储的 total_price，因为该值在BOM录入后未及时更新可能已过时
+        Map<Long, BigDecimal> profitRateByStyle = loadProfitRateByStyle(styleIds);
+
+        // 实时从 BOM、工序、二次工艺计算当前真实成本（不依赖报价单存储的过时 material_cost）
+        Map<Long, BigDecimal> bomSum = computeBomSum(styleIds);
+        Map<Long, BigDecimal> processSum = computeProcessSum(styleIds);
+        Map<Long, BigDecimal> secondarySum = computeSecondarySum(styleIds);
+
+        applyQuotationUnitPriceToOrders(records, profitRateByStyle, bomSum, processSum, secondarySum);
+    }
+
+    private Set<Long> collectStyleIds(List<ProductionOrder> records) {
+        Set<Long> styleIds = new LinkedHashSet<>();
+        for (ProductionOrder o : records) {
+            if (o == null) continue;
+            String sidRaw = o.getStyleId();
+            if (!StringUtils.hasText(sidRaw)) continue;
+            try { styleIds.add(Long.parseLong(sidRaw.trim())); } catch (Exception e) { log.debug("Non-critical error: {}", e.getMessage()); }
+        }
+        return styleIds;
+    }
+
+    private Map<Long, BigDecimal> loadProfitRateByStyle(Set<Long> styleIds) {
         Map<Long, BigDecimal> profitRateByStyle = new HashMap<>();
         try {
             List<com.fashion.supplychain.style.entity.StyleQuotation> allQuotations =
@@ -216,11 +232,11 @@ public class OrderPriceFillHelper {
         } catch (Exception e) {
             log.warn("Failed to load profitRate for fillQuotationUnitPrice: styleIdsCount={}", styleIds.size(), e);
         }
+        return profitRateByStyle;
+    }
 
-        // 实时从 BOM、工序、二次工艺计算当前真实成本（不依赖报价单存储的过时 material_cost）
+    private Map<Long, BigDecimal> computeBomSum(Set<Long> styleIds) {
         Map<Long, BigDecimal> bomSum = new HashMap<>();
-        Map<Long, BigDecimal> processSum = new HashMap<>();
-        Map<Long, BigDecimal> secondarySum = new HashMap<>();
         try {
             styleBomService.lambdaQuery().in(StyleBom::getStyleId, styleIds).list()
                     .forEach(b -> {
@@ -237,6 +253,11 @@ public class OrderPriceFillHelper {
         } catch (Exception e) {
             log.warn("Failed to compute BOM cost for fillQuotationUnitPrice", e);
         }
+        return bomSum;
+    }
+
+    private Map<Long, BigDecimal> computeProcessSum(Set<Long> styleIds) {
+        Map<Long, BigDecimal> processSum = new HashMap<>();
         try {
             styleProcessService.lambdaQuery().in(StyleProcess::getStyleId, styleIds).list()
                     .forEach(p -> {
@@ -247,6 +268,11 @@ public class OrderPriceFillHelper {
         } catch (Exception e) {
             log.warn("Failed to compute process cost for fillQuotationUnitPrice", e);
         }
+        return processSum;
+    }
+
+    private Map<Long, BigDecimal> computeSecondarySum(Set<Long> styleIds) {
+        Map<Long, BigDecimal> secondarySum = new HashMap<>();
         try {
             secondaryProcessService.lambdaQuery().in(SecondaryProcess::getStyleId, styleIds).list()
                     .forEach(s -> {
@@ -257,7 +283,14 @@ public class OrderPriceFillHelper {
         } catch (Exception e) {
             log.warn("Failed to compute secondary cost for fillQuotationUnitPrice", e);
         }
+        return secondarySum;
+    }
 
+    private void applyQuotationUnitPriceToOrders(List<ProductionOrder> records,
+                                                 Map<Long, BigDecimal> profitRateByStyle,
+                                                 Map<Long, BigDecimal> bomSum,
+                                                 Map<Long, BigDecimal> processSum,
+                                                 Map<Long, BigDecimal> secondarySum) {
         for (ProductionOrder o : records) {
             if (o == null) continue;
             BigDecimal snapshotPrice = OrderPricingSnapshotUtils.resolveQuotationUnitPrice(o.getOrderDetails());

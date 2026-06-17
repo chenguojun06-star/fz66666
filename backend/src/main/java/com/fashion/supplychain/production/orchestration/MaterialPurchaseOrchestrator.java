@@ -408,6 +408,7 @@ public class MaterialPurchaseOrchestrator {
         if (current == null || (current.getDeleteFlag() != null && current.getDeleteFlag() != 0)) {
             throw new NoSuchElementException("采购任务不存在");
         }
+        com.fashion.supplychain.common.tenant.TenantAssert.assertBelongsToCurrentTenant(current.getTenantId(), "采购任务");
         boolean ok = materialPurchaseService.deleteById(key);
         if (!ok) {
             throw new IllegalStateException("删除失败");

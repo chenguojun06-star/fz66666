@@ -380,7 +380,6 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
         return baseMapper.selectWarehousingStats(com.fashion.supplychain.common.UserContext.tenantId());
     }
 
-    @Transactional(rollbackFor = Exception.class)
     public boolean saveRepairReturnDeclaration(CuttingBundle bundle, ProductionOrder order,
             int qty, String repairRemark, String operatorId, String operatorName, String warehouse) {
         if (bundle == null || !StringUtils.hasText(bundle.getId())) {

@@ -17,7 +17,6 @@ import com.fashion.supplychain.production.service.ProductWarehousingService;
 import com.fashion.supplychain.production.service.SKUService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.ScanRecordService;
-import com.fashion.supplychain.production.orchestration.ProductionProcessTrackingOrchestrator;
 import com.fashion.supplychain.template.service.TemplateLibraryService;
 import com.fashion.supplychain.intelligence.service.WxAlertNotifyService;
 import com.fashion.supplychain.common.UserContext;
@@ -69,9 +68,6 @@ public class QualityScanExecutor {
 
     @Autowired
     private TemplateLibraryService templateLibraryService;
-
-    @Autowired
-    private ProductionProcessTrackingOrchestrator processTrackingOrchestrator;
 
     @Autowired(required = false)
     private WxAlertNotifyService wxAlertNotifyService;
@@ -214,12 +210,7 @@ public class QualityScanExecutor {
         result.put("nextScanType", "warehouse");
         result.put("nextStageHint", "下一环节: warehouse");
 
-        ExceptionHandler.runRecoverable("质检领取/验收工序跟踪更新", () -> {
-            if (processTrackingOrchestrator != null && bundle != null && hasText(bundle.getId())) {
-                processTrackingOrchestrator.updateScanRecord(
-                    bundle.getId(), "质检", operatorId, operatorName, sr.getId());
-            }
-        }, e -> log.debug("质检领取/验收工序跟踪更新失败(不阻断): bundleId={}", bundle != null ? bundle.getId() : null, e));
+        executorSupport.updateProcessTracking(bundle, "质检", operatorId, operatorName, sr.getId(), order);
 
         return result;
     }
@@ -281,7 +272,7 @@ public class QualityScanExecutor {
             recordFactory.createQualifiedScanRecord(order, bundle, qty, operatorId, operatorName);
         }
 
-        updateQualityProcessTracking(params, bundle, operatorId, operatorName, existed.getId());
+        updateQualityProcessTracking(params, bundle, operatorId, operatorName, existed.getId(), order);
 
         return buildConfirmResult(existed, order, bundle, isUnqualified, isScrap, operatorId, operatorName, qty);
     }
@@ -299,13 +290,11 @@ public class QualityScanExecutor {
     }
 
     private void updateQualityProcessTracking(Map<String, Object> params, CuttingBundle bundle,
-                                               String operatorId, String operatorName, String recordId) {
-        ExceptionHandler.runRecoverable("质检工序跟踪更新", () -> {
-            String processName = TextUtils.safeText(params.get("processName"));
-            if (!hasText(processName)) processName = "质检";
-            processTrackingOrchestrator.updateScanRecord(
-                bundle.getId(), processName, operatorId, operatorName, recordId);
-        }, e -> log.warn("质检工序跟踪更新失败（不影响主流程）: bundleId={}", bundle.getId(), e));
+                                               String operatorId, String operatorName, String recordId,
+                                               ProductionOrder order) {
+        String processName = TextUtils.safeText(params.get("processName"));
+        if (!hasText(processName)) processName = "质检";
+        executorSupport.updateProcessTracking(bundle, processName, operatorId, operatorName, recordId, order);
     }
 
     private Map<String, Object> buildConfirmResult(ScanRecord existed, ProductionOrder order,

@@ -32,7 +32,6 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import java.time.LocalDateTime;
 
@@ -88,7 +87,6 @@ public class ProductionOrderServiceImpl extends ServiceImpl<ProductionOrderMappe
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public boolean saveOrUpdateOrder(ProductionOrder productionOrder) {
         LocalDateTime now = LocalDateTime.now();
 

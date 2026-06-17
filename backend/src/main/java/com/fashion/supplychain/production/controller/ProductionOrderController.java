@@ -19,6 +19,9 @@ import com.fashion.supplychain.production.orchestration.SysNoticeOrchestrator;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.service.StyleInfoService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -43,6 +46,7 @@ import java.util.Map;
 @RequestMapping({"/api/production/order", "/api/production/orders"})
 @PreAuthorize("isAuthenticated()")
 @RequiredArgsConstructor
+@Tag(name = "生产订单", description = "生产订单的创建、查询、更新、删除、导出等操作")
 public class ProductionOrderController {
     private final ProductionOrderOrchestrator productionOrderOrchestrator;
     private final ProductionOrderService productionOrderService;
@@ -61,7 +65,8 @@ public class ProductionOrderController {
      * 导出生产订单列表为Excel
      */
     @GetMapping("/export-excel")
-    public ResponseEntity<byte[]> exportExcel(@RequestParam Map<String, Object> params) {
+    @Operation(summary = "导出生产订单Excel", description = "导出生产订单列表为Excel文件，支持按条件筛选")
+    public ResponseEntity<byte[]> exportExcel(@Parameter(description = "查询参数") @RequestParam Map<String, Object> params) {
         byte[] data = exportOrchestrator.exportProductionOrders(params);
         String fileName = "生产订单导出_" + System.currentTimeMillis() + ".xlsx";
         String encodedName = URLEncoder.encode(fileName, StandardCharsets.UTF_8).replace("+", "%20");
@@ -85,7 +90,8 @@ public class ProductionOrderController {
      * @since 2026-02-01 优化版本
      */
     @GetMapping("/list")
-    public Result<?> list(@RequestParam Map<String, Object> params) {
+    @Operation(summary = "查询生产订单列表", description = "分页查询生产订单列表，支持按订单号、状态、款号、工厂等条件筛选")
+    public Result<?> list(@Parameter(description = "查询参数（id/orderNo/status/styleNo/factoryId/page/size）") @RequestParam Map<String, Object> params) {
         // 如果指定了id参数，直接返回单条详情（优化：减少前端判断）
         if (params.containsKey("id") && params.get("id") != null) {
             String id = params.get("id").toString();
@@ -600,7 +606,6 @@ public class ProductionOrderController {
     }
 
     @PostMapping("/urge")
-    @Transactional(rollbackFor = Exception.class)
     public Result<?> urge(@RequestBody Map<String, Object> payload) {
         String orderId = payload == null ? null : String.valueOf(payload.getOrDefault("orderId", "")).trim();
         String remark = payload != null ? (String) payload.getOrDefault("remark", "") : "";
@@ -608,38 +613,19 @@ public class ProductionOrderController {
             return Result.fail("缺少orderId参数");
         }
 
-        ProductionOrder order = productionOrderService.getById(orderId);
-        if (order == null) {
-            return Result.fail("订单不存在");
-        }
-        TenantAssert.assertBelongsToCurrentTenant(order.getTenantId(), "订单");
-
-        if (!StringUtils.hasText(order.getMerchandiser())) {
-            return Result.fail("该订单未设置跟单员，无法发送催单通知");
-        }
-
-        Long tenantId = UserContext.tenantId();
-        String senderUsername = UserContext.username();
-        String senderName = sysNoticeOrchestrator.resolveDisplayName(senderUsername, tenantId);
-
-        com.fashion.supplychain.production.entity.UrgeRecord record = new com.fashion.supplychain.production.entity.UrgeRecord();
-        record.setTenantId(tenantId);
-        record.setOrderId(orderId);
-        record.setOrderNo(order.getOrderNo());
-        record.setSenderName(senderName);
-        record.setReceiverName(order.getMerchandiser());
-        record.setRemark(remark);
-        record.setStatus("pending");
-        record.setCreatedAt(java.time.LocalDateTime.now());
-        urgeRecordService.save(record);
-
-        order.setUrgencyLevel("urgent");
-        order.setUrgeCount(order.getUrgeCount() != null ? order.getUrgeCount() + 1 : 1);
-        order.setLastUrgeTime(java.time.LocalDateTime.now());
-        productionOrderService.updateById(order);
-
         try {
-            sysNoticeOrchestrator.sendWithUrgeRecord(order.getOrderNo(), "urge_order", record.getId());
+            com.fashion.supplychain.production.entity.UrgeRecord record = productionOrderOrchestrator.urge(orderId, remark);
+            com.fashion.supplychain.production.entity.ProductionOrder order = productionOrderService.getById(orderId);
+            if (order == null) {
+                return Result.fail("订单不存在");
+            }
+            TenantAssert.assertBelongsToCurrentTenant(order.getTenantId(), "生产订单");
+            Integer urgeCount = order.getUrgeCount();
+            return Result.success(Map.of(
+                    "message", "催单通知已发送",
+                    "urgeRecordId", record.getId(),
+                    "urgeCount", urgeCount
+            ));
         } catch (IllegalArgumentException e) {
             log.warn("[urge] 催单失败 orderId={} msg={}", orderId, e.getMessage());
             return Result.fail(e.getMessage());
@@ -647,12 +633,6 @@ public class ProductionOrderController {
             log.error("[urge] 催单异常 orderId={}", orderId, e);
             return Result.fail("催单通知发送失败");
         }
-
-        return Result.success(Map.of(
-                "message", "催单通知已发送",
-                "urgeRecordId", record.getId(),
-                "urgeCount", order.getUrgeCount()
-        ));
     }
 
     @PostMapping("/urge/reply")

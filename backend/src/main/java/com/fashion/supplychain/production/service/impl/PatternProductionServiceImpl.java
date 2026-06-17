@@ -58,37 +58,68 @@ public class PatternProductionServiceImpl extends ServiceImpl<PatternProductionM
 
         // 计算时间范围
         LocalDateTime now = LocalDateTime.now();
-        LocalDateTime startTime;
+        LocalDateTime startTime = calculateStartTime(rangeType, now);
         LocalDateTime endTime = now;
 
-        switch (rangeType) {
-            case "day":
-                startTime = now.with(LocalTime.MIN);
-                break;
-            case "week":
-                startTime = now.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)).with(LocalTime.MIN);
-                break;
-            case "month":
-                startTime = now.with(TemporalAdjusters.firstDayOfMonth()).with(LocalTime.MIN);
-                break;
-            default:
-                startTime = now.with(LocalTime.MIN);
-        }
-
         // 1. 统计样衣列表（同时用于数量统计和费用计算）
-        LambdaQueryWrapper<PatternProduction> ppWrapper = new LambdaQueryWrapper<>();
-        ppWrapper.eq(PatternProduction::getDeleteFlag, 0)
-                .ge(PatternProduction::getCreateTime, startTime)
-                .le(PatternProduction::getCreateTime, endTime)
-                .eq(PatternProduction::getTenantId, UserContext.tenantId());
-        List<PatternProduction> patterns = this.list(ppWrapper);
+        List<PatternProduction> patterns = queryPatterns(startTime, endTime);
         stats.setPatternCount(patterns.size());
+
+        // 按款式分组统计开发时间
+        Map<String, Long> styleDevelopmentTimeMap = calculateStyleDevelopmentTime(patterns);
 
         // 用于存储每款成本明细的 Map：styleId -> StyleCostDetailDTO.Builder
         Map<String, StyleCostDetailDTO.StyleCostDetailDTOBuilder> styleCostMap = new LinkedHashMap<>();
 
-        // 按款式分组统计开发时间
-        Map<String, Long> styleDevelopmentTimeMap = patterns.stream()
+        // 2. 统计面辅料费用（只统计样衣采购，即 sourceType='sample' 或 patternProductionId 不为空）
+        BigDecimal materialCost = calculateMaterialCost(startTime, endTime);
+        stats.setMaterialCost(materialCost);
+
+        // 3. 工序单价费用：样衣件数 × 该款式所有工序单价之和
+        stats.setProcessCost(calculateProcessCost(patterns, styleCostMap));
+
+        // 4. 二次工艺费用：样衣件数 × 该款式所有二次工艺单价之和
+        stats.setSecondaryProcessCost(calculateSecondaryProcessCost(patterns, styleCostMap));
+
+        // 5. 计算每款总费用并添加到列表
+        stats.setStyleCostDetails(buildStyleCostDetails(styleCostMap, styleDevelopmentTimeMap));
+
+        // 6. 计算开发时间统计（从最早到最晚）
+        calculateTotalDevelopmentTime(patterns, stats);
+
+        // 7. 计算总费用
+        BigDecimal totalCost = materialCost
+                .add(stats.getProcessCost())
+                .add(stats.getSecondaryProcessCost());
+        stats.setTotalCost(totalCost);
+
+        return stats;
+    }
+
+    private LocalDateTime calculateStartTime(String rangeType, LocalDateTime now) {
+        switch (rangeType) {
+            case "day":
+                return now.with(LocalTime.MIN);
+            case "week":
+                return now.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)).with(LocalTime.MIN);
+            case "month":
+                return now.with(TemporalAdjusters.firstDayOfMonth()).with(LocalTime.MIN);
+            default:
+                return now.with(LocalTime.MIN);
+        }
+    }
+
+    private List<PatternProduction> queryPatterns(LocalDateTime startTime, LocalDateTime endTime) {
+        LambdaQueryWrapper<PatternProduction> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(PatternProduction::getDeleteFlag, 0)
+                .ge(PatternProduction::getCreateTime, startTime)
+                .le(PatternProduction::getCreateTime, endTime)
+                .eq(PatternProduction::getTenantId, UserContext.tenantId());
+        return this.list(wrapper);
+    }
+
+    private Map<String, Long> calculateStyleDevelopmentTime(List<PatternProduction> patterns) {
+        return patterns.stream()
                 .filter(pp -> pp.getStyleId() != null && pp.getCreateTime() != null)
                 .collect(Collectors.groupingBy(
                         PatternProduction::getStyleId,
@@ -104,23 +135,24 @@ public class PatternProductionServiceImpl extends ServiceImpl<PatternProductionM
                                 }
                         )
                 ));
+    }
 
-        // 2. 统计面辅料费用（只统计样衣采购，即 sourceType='sample' 或 patternProductionId 不为空）
-        LambdaQueryWrapper<MaterialPurchase> mpWrapper = new LambdaQueryWrapper<>();
-        mpWrapper.eq(MaterialPurchase::getDeleteFlag, 0)
+    private BigDecimal calculateMaterialCost(LocalDateTime startTime, LocalDateTime endTime) {
+        LambdaQueryWrapper<MaterialPurchase> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(MaterialPurchase::getDeleteFlag, 0)
                 .ge(MaterialPurchase::getCreateTime, startTime)
                 .le(MaterialPurchase::getCreateTime, endTime)
                 .eq(MaterialPurchase::getTenantId, UserContext.tenantId())
                 .and(w -> w.eq(MaterialPurchase::getSourceType, "sample")
                         .or().isNotNull(MaterialPurchase::getPatternProductionId));
-
-        List<MaterialPurchase> purchases = materialPurchaseService.list(mpWrapper);
-        BigDecimal materialCost = purchases.stream()
+        List<MaterialPurchase> purchases = materialPurchaseService.list(wrapper);
+        return purchases.stream()
                 .map(mp -> mp.getTotalAmount() != null ? mp.getTotalAmount() : BigDecimal.ZERO)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-        stats.setMaterialCost(materialCost);
+    }
 
-        // 3. 工序单价费用：样衣件数 × 该款式所有工序单价之和
+    private BigDecimal calculateProcessCost(List<PatternProduction> patterns,
+                                            Map<String, StyleCostDetailDTO.StyleCostDetailDTOBuilder> styleCostMap) {
         BigDecimal processCost = BigDecimal.ZERO;
         for (PatternProduction pp : patterns) {
             if (pp.getStyleId() == null || pp.getQuantity() == null || pp.getQuantity() == 0) continue;
@@ -144,9 +176,11 @@ public class PatternProductionServiceImpl extends ServiceImpl<PatternProductionM
                 log.warn("[PatternProduction] 工序成本计算失败，styleId={}: {}", pp.getStyleId(), e.getMessage());
             }
         }
-        stats.setProcessCost(processCost);
+        return processCost;
+    }
 
-        // 4. 二次工艺费用：样衣件数 × 该款式所有二次工艺单价之和
+    private BigDecimal calculateSecondaryProcessCost(List<PatternProduction> patterns,
+                                                     Map<String, StyleCostDetailDTO.StyleCostDetailDTOBuilder> styleCostMap) {
         BigDecimal secondaryProcessCost = BigDecimal.ZERO;
         for (PatternProduction pp : patterns) {
             if (pp.getStyleId() == null || pp.getQuantity() == null || pp.getQuantity() == 0) continue;
@@ -168,75 +202,71 @@ public class PatternProductionServiceImpl extends ServiceImpl<PatternProductionM
                 log.warn("[PatternProduction] 二次工艺成本计算失败，styleId={}: {}", pp.getStyleId(), e.getMessage());
             }
         }
-        stats.setSecondaryProcessCost(secondaryProcessCost);
+        return secondaryProcessCost;
+    }
 
-        // 5. 计算每款总费用并添加到列表
-        List<StyleCostDetailDTO> styleCostDetails = styleCostMap.entrySet().stream()
-                .map(entry -> {
-                    String styleId = entry.getKey();
-                    StyleCostDetailDTO.StyleCostDetailDTOBuilder builder = entry.getValue();
-                    
-                    // 设置开发时间
-                    Long devSeconds = styleDevelopmentTimeMap.get(styleId);
-                    if (devSeconds != null && devSeconds > 0) {
-                        long days = devSeconds / 86400;
-                        long hours = (devSeconds % 86400) / 3600;
-                        String devTime;
-                        if (days > 0) {
-                            devTime = days + "天" + hours + "小时";
-                        } else {
-                            devTime = hours + "小时";
-                        }
-                        builder.developmentTime(devTime);
-                    }
-                    
-                    // 获取款式图片
-                    try {
-                        Long styleIdLong = Long.parseLong(styleId);
-                        StyleInfo styleInfo = styleInfoService.getById(styleIdLong);
-                        if (styleInfo != null && styleInfo.getCover() != null) {
-                            builder.styleImage(styleInfo.getCover());
-                        }
-                    } catch (NumberFormatException e) {
-                        // styleId 不是数字，忽略
-                    }
-                    
-                    StyleCostDetailDTO dto = builder.build();
-                    dto.setTotalCost(
-                            (dto.getMaterialCost() != null ? dto.getMaterialCost() : BigDecimal.ZERO)
-                            .add(dto.getProcessCost() != null ? dto.getProcessCost() : BigDecimal.ZERO)
-                            .add(dto.getSecondaryProcessCost() != null ? dto.getSecondaryProcessCost() : BigDecimal.ZERO)
-                    );
-                    return dto;
-                })
+    private List<StyleCostDetailDTO> buildStyleCostDetails(Map<String, StyleCostDetailDTO.StyleCostDetailDTOBuilder> styleCostMap,
+                                                            Map<String, Long> styleDevelopmentTimeMap) {
+        return styleCostMap.entrySet().stream()
+                .map(entry -> buildSingleStyleCostDetail(entry.getKey(), entry.getValue(), styleDevelopmentTimeMap))
                 .sorted((a, b) -> b.getTotalCost().compareTo(a.getTotalCost())) // 按总费用降序排列
                 .collect(Collectors.toList());
-        stats.setStyleCostDetails(styleCostDetails);
+    }
 
-        // 6. 计算开发时间统计（从最早到最晚）
-        if (patterns != null && !patterns.isEmpty()) {
-            LocalDateTime earliest = patterns.stream()
-                    .map(PatternProduction::getCreateTime)
-                    .filter(t -> t != null)
-                    .min(LocalDateTime::compareTo)
-                    .orElse(null);
-            LocalDateTime latest = patterns.stream()
-                    .map(PatternProduction::getCreateTime)
-                    .filter(t -> t != null)
-                    .max(LocalDateTime::compareTo)
-                    .orElse(null);
-            if (earliest != null && latest != null) {
-                long seconds = java.time.Duration.between(earliest, latest).getSeconds();
-                stats.setTotalDevelopmentTimeSeconds(seconds);
+    private StyleCostDetailDTO buildSingleStyleCostDetail(String styleId,
+                                                          StyleCostDetailDTO.StyleCostDetailDTOBuilder builder,
+                                                          Map<String, Long> styleDevelopmentTimeMap) {
+        // 设置开发时间
+        Long devSeconds = styleDevelopmentTimeMap.get(styleId);
+        if (devSeconds != null && devSeconds > 0) {
+            long days = devSeconds / 86400;
+            long hours = (devSeconds % 86400) / 3600;
+            String devTime;
+            if (days > 0) {
+                devTime = days + "天" + hours + "小时";
+            } else {
+                devTime = hours + "小时";
             }
+            builder.developmentTime(devTime);
         }
 
-        // 7. 计算总费用
-        BigDecimal totalCost = materialCost
-                .add(stats.getProcessCost())
-                .add(stats.getSecondaryProcessCost());
-        stats.setTotalCost(totalCost);
+        // 获取款式图片
+        try {
+            Long styleIdLong = Long.parseLong(styleId);
+            StyleInfo styleInfo = styleInfoService.getById(styleIdLong);
+            if (styleInfo != null && styleInfo.getCover() != null) {
+                builder.styleImage(styleInfo.getCover());
+            }
+        } catch (NumberFormatException e) {
+            // styleId 不是数字，忽略
+        }
 
-        return stats;
+        StyleCostDetailDTO dto = builder.build();
+        dto.setTotalCost(
+                (dto.getMaterialCost() != null ? dto.getMaterialCost() : BigDecimal.ZERO)
+                .add(dto.getProcessCost() != null ? dto.getProcessCost() : BigDecimal.ZERO)
+                .add(dto.getSecondaryProcessCost() != null ? dto.getSecondaryProcessCost() : BigDecimal.ZERO)
+        );
+        return dto;
+    }
+
+    private void calculateTotalDevelopmentTime(List<PatternProduction> patterns, PatternDevelopmentStatsDTO stats) {
+        if (patterns == null || patterns.isEmpty()) {
+            return;
+        }
+        LocalDateTime earliest = patterns.stream()
+                .map(PatternProduction::getCreateTime)
+                .filter(t -> t != null)
+                .min(LocalDateTime::compareTo)
+                .orElse(null);
+        LocalDateTime latest = patterns.stream()
+                .map(PatternProduction::getCreateTime)
+                .filter(t -> t != null)
+                .max(LocalDateTime::compareTo)
+                .orElse(null);
+        if (earliest != null && latest != null) {
+            long seconds = java.time.Duration.between(earliest, latest).getSeconds();
+            stats.setTotalDevelopmentTimeSeconds(seconds);
+        }
     }
 }

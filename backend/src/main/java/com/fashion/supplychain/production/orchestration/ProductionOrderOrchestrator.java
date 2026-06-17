@@ -2,9 +2,12 @@ package com.fashion.supplychain.production.orchestration;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.fashion.supplychain.production.entity.ProductionOrder;
+import com.fashion.supplychain.production.entity.UrgeRecord;
 import com.fashion.supplychain.intelligence.orchestration.OrderDecisionCaptureOrchestrator;
 import com.fashion.supplychain.intelligence.orchestration.OrderLearningOutcomeOrchestrator;
 import com.fashion.supplychain.production.service.ProductionOrderQueryService;
+import com.fashion.supplychain.production.service.ProductionOrderService;
+import com.fashion.supplychain.production.service.UrgeRecordService;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.production.helper.OrderListCacheHelper;
 import com.fashion.supplychain.common.lock.DistributedLockService;
@@ -75,6 +78,15 @@ public class ProductionOrderOrchestrator {
 
     @Autowired
     private com.fashion.supplychain.production.service.ProductWarehousingService productWarehousingService;
+
+    @Autowired
+    private ProductionOrderService productionOrderService;
+
+    @Autowired
+    private UrgeRecordService urgeRecordService;
+
+    @Autowired
+    private SysNoticeOrchestrator sysNoticeOrchestrator;
 
     // ---------- Helper 依赖 ----------
 
@@ -463,6 +475,47 @@ public class ProductionOrderOrchestrator {
 
     public ProductionOrderFlowOrchestrationService.OrderFlowResponse getOrderFlow(String orderId) {
         return flowOrchestrationService.getOrderFlow(orderId);
+    }
+
+    // ======================= 催单 =======================
+
+    @Transactional(rollbackFor = Exception.class)
+    public UrgeRecord urge(String orderId, String remark) {
+        TenantAssert.assertTenantContext();
+
+        ProductionOrder order = productionOrderService.getById(orderId);
+        if (order == null) {
+            throw new IllegalArgumentException("订单不存在");
+        }
+        TenantAssert.assertBelongsToCurrentTenant(order.getTenantId(), "订单");
+
+        if (!StringUtils.hasText(order.getMerchandiser())) {
+            throw new IllegalArgumentException("该订单未设置跟单员，无法发送催单通知");
+        }
+
+        Long tenantId = UserContext.tenantId();
+        String senderUsername = UserContext.username();
+        String senderName = sysNoticeOrchestrator.resolveDisplayName(senderUsername, tenantId);
+
+        UrgeRecord record = new UrgeRecord();
+        record.setTenantId(tenantId);
+        record.setOrderId(orderId);
+        record.setOrderNo(order.getOrderNo());
+        record.setSenderName(senderName);
+        record.setReceiverName(order.getMerchandiser());
+        record.setRemark(remark);
+        record.setStatus("pending");
+        record.setCreatedAt(LocalDateTime.now());
+        urgeRecordService.save(record);
+
+        order.setUrgencyLevel("urgent");
+        order.setUrgeCount(order.getUrgeCount() != null ? order.getUrgeCount() + 1 : 1);
+        order.setLastUrgeTime(LocalDateTime.now());
+        productionOrderService.updateById(order);
+
+        sysNoticeOrchestrator.sendWithUrgeRecord(order.getOrderNo(), "urge_order", record.getId());
+
+        return record;
     }
 
     // ======================= 状态查询 → helper =======================

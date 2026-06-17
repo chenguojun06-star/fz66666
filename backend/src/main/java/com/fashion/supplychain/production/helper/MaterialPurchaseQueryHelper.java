@@ -199,31 +199,52 @@ public class MaterialPurchaseQueryHelper {
         wrapper.eq(MaterialPurchase::getTenantId, qTenantId);
 
         // 工厂账号进一步隔离：只统计该工厂的采购记录
-        if (StringUtils.hasText(qFactoryId)) {
-            List<String> factoryOrderIds = productionOrderService.list(
-                    new LambdaQueryWrapper<ProductionOrder>()
-                            .select(ProductionOrder::getId)
-                            .eq(ProductionOrder::getTenantId, qTenantId)
-                            .eq(ProductionOrder::getFactoryId, qFactoryId)
-                            .ne(ProductionOrder::getStatus, "scrapped")
-                            .and(w -> w.isNull(ProductionOrder::getDeleteFlag).or().eq(ProductionOrder::getDeleteFlag, 0))
-            ).stream().map(ProductionOrder::getId).collect(Collectors.toList());
-            if (factoryOrderIds.isEmpty()) {
-                return Map.of(
-                        "pendingCount", 0,
-                        "receivedCount", 0,
-                        "partialCount", 0,
-                        "completedCount", 0,
-                        "cancelledCount", 0,
-                        "totalCount", 0,
-                        "totalQuantity", 0
-                );
-            }
-            wrapper.in(MaterialPurchase::getOrderId, factoryOrderIds);
+        if (shouldReturnEmptyForFactory(wrapper, qTenantId, qFactoryId)) {
+            return emptyStats();
         }
 
         // 复用 queryPage 的筛选逻辑，但不分页
+        applyStatusStatsFilters(wrapper, params);
 
+        wrapper.last("LIMIT 5000");
+        List<MaterialPurchase> all = materialPurchaseService.list(wrapper);
+
+        return computeStatusStats(all);
+    }
+
+    private boolean shouldReturnEmptyForFactory(LambdaQueryWrapper<MaterialPurchase> wrapper,
+                                                Long qTenantId, String qFactoryId) {
+        if (!StringUtils.hasText(qFactoryId)) {
+            return false;
+        }
+        List<String> factoryOrderIds = productionOrderService.list(
+                new LambdaQueryWrapper<ProductionOrder>()
+                        .select(ProductionOrder::getId)
+                        .eq(ProductionOrder::getTenantId, qTenantId)
+                        .eq(ProductionOrder::getFactoryId, qFactoryId)
+                        .ne(ProductionOrder::getStatus, "scrapped")
+                        .and(w -> w.isNull(ProductionOrder::getDeleteFlag).or().eq(ProductionOrder::getDeleteFlag, 0))
+        ).stream().map(ProductionOrder::getId).collect(Collectors.toList());
+        if (factoryOrderIds.isEmpty()) {
+            return true;
+        }
+        wrapper.in(MaterialPurchase::getOrderId, factoryOrderIds);
+        return false;
+    }
+
+    private Map<String, Object> emptyStats() {
+        return Map.of(
+                "pendingCount", 0,
+                "receivedCount", 0,
+                "partialCount", 0,
+                "completedCount", 0,
+                "cancelledCount", 0,
+                "totalCount", 0,
+                "totalQuantity", 0
+        );
+    }
+
+    private void applyStatusStatsFilters(LambdaQueryWrapper<MaterialPurchase> wrapper, Map<String, Object> params) {
         String orderNo = params == null ? "" : String.valueOf(params.getOrDefault("orderNo", "")).trim();
         String materialType = params == null ? "" : String.valueOf(params.getOrDefault("materialType", "")).trim();
         String sourceType = params == null ? "" : String.valueOf(params.getOrDefault("sourceType", "")).trim();
@@ -244,27 +265,35 @@ public class MaterialPurchaseQueryHelper {
                 wrapper.eq(MaterialPurchase::getSourceType, sourceType);
             }
         }
-        if (StringUtils.hasText(materialType)) {
-            String mt = materialType;
-            if (MaterialConstants.TYPE_FABRIC.equals(mt) || MaterialConstants.TYPE_LINING.equals(mt)
-                    || MaterialConstants.TYPE_ACCESSORY.equals(mt)) {
-                wrapper.and(w -> {
-                    w.likeRight(MaterialPurchase::getMaterialType, mt);
-                    if (MaterialConstants.TYPE_FABRIC.equals(mt)) {
-                        w.or().likeRight(MaterialPurchase::getMaterialType, MaterialConstants.TYPE_FABRIC_CN);
-                    } else if (MaterialConstants.TYPE_LINING.equals(mt)) {
-                        w.or().likeRight(MaterialPurchase::getMaterialType, MaterialConstants.TYPE_LINING_CN);
-                    } else if (MaterialConstants.TYPE_ACCESSORY.equals(mt)) {
-                        w.or().likeRight(MaterialPurchase::getMaterialType, MaterialConstants.TYPE_ACCESSORY_CN);
-                    }
-                });
-            } else {
-                wrapper.eq(MaterialPurchase::getMaterialType, mt);
-            }
-        }
+        applyMaterialTypeFilter(wrapper, materialType);
+        applyFactoryTypeFilter(wrapper, factoryType);
+    }
 
-        // factoryType 过滤：通过子查询匹配关联订单工厂类型
-        // 🔒 PC端默认隔离：未指定工厂类型时，跟单员/管理员只统计内部工厂采购数据
+    private void applyMaterialTypeFilter(LambdaQueryWrapper<MaterialPurchase> wrapper, String materialType) {
+        if (!StringUtils.hasText(materialType)) {
+            return;
+        }
+        String mt = materialType;
+        if (MaterialConstants.TYPE_FABRIC.equals(mt) || MaterialConstants.TYPE_LINING.equals(mt)
+                || MaterialConstants.TYPE_ACCESSORY.equals(mt)) {
+            wrapper.and(w -> {
+                w.likeRight(MaterialPurchase::getMaterialType, mt);
+                if (MaterialConstants.TYPE_FABRIC.equals(mt)) {
+                    w.or().likeRight(MaterialPurchase::getMaterialType, MaterialConstants.TYPE_FABRIC_CN);
+                } else if (MaterialConstants.TYPE_LINING.equals(mt)) {
+                    w.or().likeRight(MaterialPurchase::getMaterialType, MaterialConstants.TYPE_LINING_CN);
+                } else if (MaterialConstants.TYPE_ACCESSORY.equals(mt)) {
+                    w.or().likeRight(MaterialPurchase::getMaterialType, MaterialConstants.TYPE_ACCESSORY_CN);
+                }
+            });
+        } else {
+            wrapper.eq(MaterialPurchase::getMaterialType, mt);
+        }
+    }
+
+    // factoryType 过滤：通过子查询匹配关联订单工厂类型
+    // 🔒 PC端默认隔离：未指定工厂类型时，跟单员/管理员只统计内部工厂采购数据
+    private void applyFactoryTypeFilter(LambdaQueryWrapper<MaterialPurchase> wrapper, String factoryType) {
         String effectiveFactoryType = StringUtils.hasText(factoryType) ? factoryType :
                 (!DataPermissionHelper.isFactoryAccount() ? "INTERNAL" : "");
         if (StringUtils.hasText(effectiveFactoryType)) {
@@ -272,10 +301,9 @@ public class MaterialPurchaseQueryHelper {
                     "(SELECT id FROM t_production_order WHERE factory_type = {0} AND (delete_flag IS NULL OR delete_flag = 0)))",
                     effectiveFactoryType.toUpperCase());
         }
+    }
 
-        wrapper.last("LIMIT 5000");
-        List<MaterialPurchase> all = materialPurchaseService.list(wrapper);
-
+    private Map<String, Object> computeStatusStats(List<MaterialPurchase> all) {
         int totalCount = all.size();
         int pendingCount = 0;
         int receivedCount = 0;

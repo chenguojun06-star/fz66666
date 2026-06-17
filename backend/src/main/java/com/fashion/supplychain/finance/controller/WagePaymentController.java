@@ -2,6 +2,7 @@ package com.fashion.supplychain.finance.controller;
 
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.finance.entity.PaymentAccount;
 import com.fashion.supplychain.finance.entity.WagePayment;
 import com.fashion.supplychain.finance.orchestration.WagePaymentOrchestrator;
@@ -358,6 +359,9 @@ public class WagePaymentController {
             if (org.springframework.util.StringUtils.hasText(bizId)) {
                 // 优先按ID查（UUID），查不到再按名字查（降级兜底：factoryId为空时bizId=factoryName）
                 Factory factory = factoryService.getById(bizId);
+                if (factory != null) {
+                    TenantAssert.assertBelongsToCurrentTenant(factory.getTenantId(), "工厂");
+                }
                 if (factory == null) {
                     factory = factoryService.getOne(
                         new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<Factory>()
@@ -439,6 +443,9 @@ public class WagePaymentController {
             // 工厂账号只能搜索自己工厂
             if (request.getPayeeType() == null || "FACTORY".equals(request.getPayeeType())) {
                 Factory factory = factoryService.getById(ctxFactoryId);
+                if (factory != null) {
+                    TenantAssert.assertBelongsToCurrentTenant(factory.getTenantId(), "工厂");
+                }
                 if (factory != null && factory.getDeleteFlag() != null && factory.getDeleteFlag() == 0) {
                     String fn = factory.getFactoryName();
                     if (fn != null && fn.toLowerCase().contains(keyword.toLowerCase())) {
@@ -497,6 +504,7 @@ public class WagePaymentController {
                 Long uid = Long.valueOf(payeeId);
                 User user = userService.getById(uid);
                 if (user != null) {
+                    TenantAssert.assertBelongsToCurrentTenant(user.getTenantId(), "员工");
                     return user.getName() != null ? user.getName() : user.getUsername();
                 }
             } catch (NumberFormatException ignored) {
@@ -505,8 +513,11 @@ public class WagePaymentController {
         }
         if ("FACTORY".equals(payeeType)) {
             Factory factory = factoryService.getById(payeeId);
-            if (factory != null && factory.getDeleteFlag() != null && factory.getDeleteFlag() == 0) {
-                return factory.getFactoryName();
+            if (factory != null) {
+                TenantAssert.assertBelongsToCurrentTenant(factory.getTenantId(), "工厂");
+                if (factory.getDeleteFlag() != null && factory.getDeleteFlag() == 0) {
+                    return factory.getFactoryName();
+                }
             }
             return null;
         }

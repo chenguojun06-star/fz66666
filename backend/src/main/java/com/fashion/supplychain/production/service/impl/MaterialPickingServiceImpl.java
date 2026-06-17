@@ -13,7 +13,6 @@ import com.fashion.supplychain.production.service.MaterialPickingService;
 import com.fashion.supplychain.production.service.MaterialStockService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -34,7 +33,6 @@ public class MaterialPickingServiceImpl extends ServiceImpl<MaterialPickingMappe
     private MaterialOutboundLogMapper materialOutboundLogMapper;
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public String createPicking(MaterialPicking picking, List<MaterialPickingItem> items) {
         if (picking == null || items == null || items.isEmpty()) {
             throw new IllegalArgumentException("领料信息不能为空");
@@ -95,7 +93,6 @@ public class MaterialPickingServiceImpl extends ServiceImpl<MaterialPickingMappe
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public String savePendingPicking(MaterialPicking picking, List<MaterialPickingItem> items) {
         if (picking == null) throw new IllegalArgumentException("领料信息不能为空");
         if (picking.getPickingNo() == null) {

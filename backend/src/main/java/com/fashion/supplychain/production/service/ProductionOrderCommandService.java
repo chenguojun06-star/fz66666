@@ -59,7 +59,6 @@ public class ProductionOrderCommandService {
     /**
      * 保存或更新订单
      */
-    @Transactional(rollbackFor = Exception.class)
     public boolean saveOrUpdateOrder(ProductionOrder productionOrder) {
         if (productionOrder == null) {
             throw new IllegalArgumentException("参数错误");
@@ -121,7 +120,6 @@ public class ProductionOrderCommandService {
     /**
      * 根据ID删除订单
      */
-    @Transactional(rollbackFor = Exception.class)
     public boolean deleteById(String id) {
         if (!StringUtils.hasText(id)) {
             throw new IllegalArgumentException("订单ID不能为空");
@@ -144,7 +142,6 @@ public class ProductionOrderCommandService {
     /**
      * 报废订单
      */
-    @Transactional(rollbackFor = Exception.class)
     public boolean scrapOrder(String id, String reason) {
         if (!StringUtils.hasText(id)) {
             throw new IllegalArgumentException("订单ID不能为空");

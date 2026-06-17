@@ -6,7 +6,6 @@ import com.fashion.supplychain.finance.entity.FinishedSettlementApprovalStatus;
 import com.fashion.supplychain.finance.mapper.FinishedSettlementApprovalStatusMapper;
 import com.fashion.supplychain.finance.service.FinishedSettlementApprovalStatusService;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.Set;
@@ -21,7 +20,6 @@ public class FinishedSettlementApprovalStatusServiceImpl
         implements FinishedSettlementApprovalStatusService {
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public void markApproved(String settlementId, Long tenantId, String approverId, String approverName) {
         LambdaQueryWrapper<FinishedSettlementApprovalStatus> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(FinishedSettlementApprovalStatus::getSettlementId, settlementId);

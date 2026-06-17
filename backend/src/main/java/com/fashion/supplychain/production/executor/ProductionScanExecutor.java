@@ -14,7 +14,6 @@ import com.fashion.supplychain.production.helper.lookup.BundleLookupContext;
 import com.fashion.supplychain.production.service.*;
 import com.fashion.supplychain.style.service.StyleInfoService;
 import com.fashion.supplychain.style.service.SecondaryProcessService;
-import com.fashion.supplychain.production.orchestration.ProductionProcessTrackingOrchestrator;
 import com.fashion.supplychain.template.service.TemplateLibraryService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -47,7 +46,6 @@ public class ProductionScanExecutor {
     private final StyleInfoService styleInfoService;
     private final SecondaryProcessService secondaryProcessService;
     private final ProcessParentMappingService processParentMappingService;
-    private final ProductionProcessTrackingOrchestrator processTrackingOrchestrator;
     private final ProductionProcessTrackingService trackingService;
 
     private final ScanExecutorSupport executorSupport;
@@ -104,7 +102,7 @@ public class ProductionScanExecutor {
                     sr.getOrderId(), sr.getCuttingBundleId(), sr.getScanType(), sr.getProgressStage(), sr.getQuantity(), sr.getOperatorId());
             scanRecordService.saveScanRecord(sr);
             log.info("[ScanSave] 扫码记录写入成功: recordId={}", sr.getId());
-            updateProcessTracking(ctx.bundle, ctx.childProcessName, ctx.progressStage, ctx.processCode, operatorId, operatorName, sr.getId());
+            updateProcessTracking(ctx.bundle, ctx.childProcessName, ctx.progressStage, ctx.processCode, operatorId, operatorName, sr.getId(), ctx.order);
         } catch (DuplicateKeyException dke) {
             log.info("生产扫码记录重复: requestId={}, scanCode={}", requestId, ctx.scanCode, dke);
             Map<String, Object> retryResult = tryUpdateExistingBundleScanRecord(
@@ -239,20 +237,22 @@ public class ProductionScanExecutor {
         }
     }
 
-    private void updateProcessTracking(CuttingBundle bundle, String childProcessName, String progressStage, String processCode, String operatorId, String operatorName, String scanRecordId) {
+    private void updateProcessTracking(CuttingBundle bundle, String childProcessName, String progressStage,
+                                        String processCode, String operatorId, String operatorName,
+                                        String scanRecordId, ProductionOrder order) {
         if (bundle == null || !hasText(bundle.getId())) return;
-        ExceptionHandler.runClassified("工序跟踪更新", () -> {
-            boolean updated = processTrackingOrchestrator.updateScanRecord(bundle.getId(), childProcessName, operatorId, operatorName, scanRecordId);
-            if (!updated && hasText(progressStage) && !childProcessName.equals(progressStage)) {
-                updated = processTrackingOrchestrator.updateScanRecord(bundle.getId(), progressStage, operatorId, operatorName, scanRecordId);
-                if (updated) log.info("工序跟踪记录更新成功（回退到父节点名）: bundleId={}, progressStage={}", bundle.getId(), progressStage);
+
+        // 优先按子工序名称更新；统一方法内部已包含重试（appendProcessTracking）和分类异常处理
+        executorSupport.updateProcessTracking(bundle, childProcessName, operatorId, operatorName, scanRecordId, order);
+
+        // 若子工序未命中且存在父进度节点，再按父节点名回退匹配一次
+        if (hasText(progressStage) && !childProcessName.equals(progressStage)) {
+            executorSupport.updateProcessTracking(bundle, progressStage, operatorId, operatorName, scanRecordId, order);
+            if (hasText(processCode)) {
+                log.info("工序跟踪按父节点名回退匹配完成: bundleId={}, processCode={}, progressStage={}",
+                        bundle.getId(), processCode, progressStage);
             }
-            if (updated) log.info("工序跟踪记录更新成功: bundleId={}, processCode={}, progressStage={}", bundle.getId(), processCode, progressStage);
-            else log.warn("工序跟踪记录未找到（不阻断扫码）: bundleId={}, processCode={}, progressStage={}", bundle.getId(), processCode, progressStage);
-        },
-        be -> log.warn("工序跟踪拒绝领取（不阻断扫码）: bundleId={}, processCode={}, msg={}", bundle.getId(), processCode, be.getMessage()),
-        ise -> log.warn("工序跟踪状态冲突（不阻断扫码）: bundleId={}, processCode={}, msg={}", bundle.getId(), processCode, ise.getMessage()),
-        e -> log.error("工序跟踪记录更新失败（非业务异常）: bundleId={}, processCode={}", bundle.getId(), processCode, e));
+        }
     }
 
     private Map<String, Object> buildSuccessResult(ScanRecord sr, ScanContext ctx, boolean isCutting) {

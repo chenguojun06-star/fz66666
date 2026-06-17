@@ -279,118 +279,134 @@ public class OrderManagementOrchestrator {
         }
 
         Long tid = UserContext.tenantId();
-        Map<String, Map<String, Map<String, Integer>>> matrix = new HashMap<>();
-        Set<String> colors = new java.util.LinkedHashSet<>();
-        Set<String> sizes = new java.util.LinkedHashSet<>();
-        int totalInProd = 0, totalStock = 0, totalPending = 0;
+        AvailabilityContext ctx = new AvailabilityContext();
 
         // 1. 在途生产数量（复用已有逻辑）
+        mergeInProductionData(ctx, styleId);
+        // 2. SKU库存（ProductSku.stockQuantity）
+        mergeSkuStock(ctx, styleId, tid);
+        // 3. 电商库存（EcUniversalStock.availableStock + pendingOrders）
+        mergeEcUniversalStock(ctx, styleId, tid);
+        // 4. 电商订单欠数（EcommerceOrder.status=1待发货，未关联生产订单的）
+        mergeEcommercePendingOrders(ctx, tid, styleId);
+
+        result.put("matrix", ctx.matrix);
+        result.put("colors", new ArrayList<>(ctx.colors));
+        result.put("sizes", new ArrayList<>(ctx.sizes));
+        result.put("summary", buildSummary(ctx.totalInProd, ctx.totalStock, ctx.totalPending));
+        log.info("[OrderManagement] 综合查询完成: styleId={}, 在途={}, 库存={}, 欠数={}, 颜色={}, 尺码={}",
+                styleId, ctx.totalInProd, ctx.totalStock, ctx.totalPending, ctx.colors.size(), ctx.sizes.size());
+        return result;
+    }
+
+    private void mergeInProductionData(AvailabilityContext ctx, String styleId) {
         Map<String, Object> inProdData = getStyleInProductionQuantities(styleId);
         Map<String, Map<String, Integer>> inProdMatrix = (Map<String, Map<String, Integer>>) inProdData.getOrDefault("matrix", new HashMap<>());
         for (Map.Entry<String, Map<String, Integer>> colorEntry : inProdMatrix.entrySet()) {
             String color = normalizeKey(colorEntry.getKey());
-            colors.add(color);
+            ctx.colors.add(color);
             for (Map.Entry<String, Integer> sizeEntry : colorEntry.getValue().entrySet()) {
                 String size = normalizeKey(sizeEntry.getKey());
-                sizes.add(size);
+                ctx.sizes.add(size);
                 int qty = sizeEntry.getValue();
-                Map<String, Map<String, Integer>> colorMap = matrix.computeIfAbsent(color, k -> new HashMap<>());
+                Map<String, Map<String, Integer>> colorMap = ctx.matrix.computeIfAbsent(color, k -> new HashMap<>());
                 Map<String, Integer> sizeMap = colorMap.computeIfAbsent(size, k -> new HashMap<>());
                 sizeMap.merge("inProduction", Integer.valueOf(qty), Integer::sum);
-                totalInProd += qty;
+                ctx.totalInProd += qty;
             }
         }
+    }
 
-        // 2. SKU库存（ProductSku.stockQuantity）
-        if (productSkuService != null) {
-            try {
-                List<ProductSku> skus = productSkuService.list(new LambdaQueryWrapper<ProductSku>()
-                        .eq(ProductSku::getStyleId, Long.parseLong(styleId))
-                        .eq(ProductSku::getTenantId, tid)
-                        .gt(ProductSku::getStockQuantity, 0));
-                for (ProductSku sku : skus) {
-                    String color = normalizeKey(sku.getColor());
-                    String size = normalizeKey(sku.getSize());
-                    if (color.isEmpty() || size.isEmpty()) continue;
-                    colors.add(color);
-                    sizes.add(size);
-                    int qty = sku.getStockQuantity() != null ? sku.getStockQuantity() : 0;
-                    Map<String, Map<String, Integer>> colorMap = matrix.computeIfAbsent(color, k -> new HashMap<>());
-                    Map<String, Integer> sizeMap = colorMap.computeIfAbsent(size, k -> new HashMap<>());
-                    sizeMap.merge("stock", Integer.valueOf(qty), Integer::sum);
-                    totalStock += qty;
-                }
-            } catch (Exception e) {
-                log.warn("[OrderManagement] SKU库存查询异常: styleId={}, {}", styleId, e.getMessage());
+    private void mergeSkuStock(AvailabilityContext ctx, String styleId, Long tid) {
+        if (productSkuService == null) return;
+        try {
+            List<ProductSku> skus = productSkuService.list(new LambdaQueryWrapper<ProductSku>()
+                    .eq(ProductSku::getStyleId, Long.parseLong(styleId))
+                    .eq(ProductSku::getTenantId, tid)
+                    .gt(ProductSku::getStockQuantity, 0));
+            for (ProductSku sku : skus) {
+                String color = normalizeKey(sku.getColor());
+                String size = normalizeKey(sku.getSize());
+                if (color.isEmpty() || size.isEmpty()) continue;
+                ctx.colors.add(color);
+                ctx.sizes.add(size);
+                int qty = sku.getStockQuantity() != null ? sku.getStockQuantity() : 0;
+                Map<String, Map<String, Integer>> colorMap = ctx.matrix.computeIfAbsent(color, k -> new HashMap<>());
+                Map<String, Integer> sizeMap = colorMap.computeIfAbsent(size, k -> new HashMap<>());
+                sizeMap.merge("stock", Integer.valueOf(qty), Integer::sum);
+                ctx.totalStock += qty;
             }
+        } catch (Exception e) {
+            log.warn("[OrderManagement] SKU库存查询异常: styleId={}, {}", styleId, e.getMessage());
         }
+    }
 
-        // 3. 电商库存（EcUniversalStock.availableStock + pendingOrders）
-        if (ecUniversalStockService != null) {
-            try {
-                List<EcUniversalStock> ecStocks = ecUniversalStockService.list(new LambdaQueryWrapper<EcUniversalStock>()
-                        .eq(EcUniversalStock::getStyleId, Long.parseLong(styleId))
-                        .eq(EcUniversalStock::getTenantId, tid));
-                for (EcUniversalStock ec : ecStocks) {
-                    // EcUniversalStock 没有 color/size，需要通过 skuId 关联 ProductSku
-                    if (ec.getSkuId() != null && productSkuService != null) {
-                        ProductSku sku = productSkuService.getById(ec.getSkuId());
-                        if (sku == null) continue;
-                        String color = normalizeKey(sku.getColor());
-                        String size = normalizeKey(sku.getSize());
-                        if (color.isEmpty() || size.isEmpty()) continue;
-                        colors.add(color);
-                        sizes.add(size);
-                        Integer avail = ec.getAvailableStock() != null ? ec.getAvailableStock() : Integer.valueOf(0);
-                        Integer pending = ec.getPendingOrders() != null ? ec.getPendingOrders() : Integer.valueOf(0);
-                        Map<String, Integer> sizeMap = matrix.computeIfAbsent(color, k -> new HashMap<>())
-                              .computeIfAbsent(size, k -> new HashMap<>());
-                        sizeMap.merge("ecAvailable", avail, Integer::sum);
-                        sizeMap.merge("pendingSales", pending, Integer::sum);
-                        totalPending += pending;
-                    }
-                }
-            } catch (Exception e) {
-                log.warn("[OrderManagement] 电商库存查询异常: styleId={}, {}", styleId, e.getMessage());
+    private void mergeEcUniversalStock(AvailabilityContext ctx, String styleId, Long tid) {
+        if (ecUniversalStockService == null) return;
+        try {
+            List<EcUniversalStock> ecStocks = ecUniversalStockService.list(new LambdaQueryWrapper<EcUniversalStock>()
+                    .eq(EcUniversalStock::getStyleId, Long.parseLong(styleId))
+                    .eq(EcUniversalStock::getTenantId, tid));
+            for (EcUniversalStock ec : ecStocks) {
+                // EcUniversalStock 没有 color/size，需要通过 skuId 关联 ProductSku
+                if (ec.getSkuId() == null || productSkuService == null) continue;
+                ProductSku sku = productSkuService.getById(ec.getSkuId());
+                if (sku == null) continue;
+                String color = normalizeKey(sku.getColor());
+                String size = normalizeKey(sku.getSize());
+                if (color.isEmpty() || size.isEmpty()) continue;
+                ctx.colors.add(color);
+                ctx.sizes.add(size);
+                Integer avail = ec.getAvailableStock() != null ? ec.getAvailableStock() : Integer.valueOf(0);
+                Integer pending = ec.getPendingOrders() != null ? ec.getPendingOrders() : Integer.valueOf(0);
+                Map<String, Integer> sizeMap = ctx.matrix.computeIfAbsent(color, k -> new HashMap<>())
+                      .computeIfAbsent(size, k -> new HashMap<>());
+                sizeMap.merge("ecAvailable", avail, Integer::sum);
+                sizeMap.merge("pendingSales", pending, Integer::sum);
+                ctx.totalPending += pending;
             }
+        } catch (Exception e) {
+            log.warn("[OrderManagement] 电商库存查询异常: styleId={}, {}", styleId, e.getMessage());
         }
+    }
 
-        // 4. 电商订单欠数（EcommerceOrder.status=1待发货，未关联生产订单的）
-        if (ecommerceOrderService != null) {
-            try {
-                List<EcommerceOrder> pendingOrders = ecommerceOrderService.list(new LambdaQueryWrapper<EcommerceOrder>()
-                        .eq(EcommerceOrder::getTenantId, tid)
-                        .eq(EcommerceOrder::getStatus, 1) // 待发货
-                        .isNull(EcommerceOrder::getProductionOrderId) // 未关联生产订单
-                        .isNotNull(EcommerceOrder::getSkuCode));
-                for (EcommerceOrder order : pendingOrders) {
-                    String skuCode = order.getSkuCode();
-                    if (skuCode == null || !skuCode.contains("-")) continue;
-                    // skuCode 格式: 款号-颜色-尺码
-                    String[] parts = skuCode.split("-");
-                    if (parts.length < 3) continue;
-                    String color = normalizeKey(parts[parts.length - 2]);
-                    String size = normalizeKey(parts[parts.length - 1]);
-                    colors.add(color);
-                    sizes.add(size);
-                    int qty = order.getQuantity() != null ? order.getQuantity() : 1;
-                    Map<String, Map<String, Integer>> colorMap = matrix.computeIfAbsent(color, k -> new HashMap<>());
-                    Map<String, Integer> sizeMap = colorMap.computeIfAbsent(size, k -> new HashMap<>());
-                    sizeMap.merge("pendingSales", Integer.valueOf(qty), Integer::sum);
-                    totalPending += qty;
-                }
-            } catch (Exception e) {
-                log.warn("[OrderManagement] 电商订单欠数查询异常: styleId={}, {}", styleId, e.getMessage());
+    private void mergeEcommercePendingOrders(AvailabilityContext ctx, Long tid, String styleId) {
+        if (ecommerceOrderService == null) return;
+        try {
+            List<EcommerceOrder> pendingOrders = ecommerceOrderService.list(new LambdaQueryWrapper<EcommerceOrder>()
+                    .eq(EcommerceOrder::getTenantId, tid)
+                    .eq(EcommerceOrder::getStatus, 1) // 待发货
+                    .isNull(EcommerceOrder::getProductionOrderId) // 未关联生产订单
+                    .isNotNull(EcommerceOrder::getSkuCode));
+            for (EcommerceOrder order : pendingOrders) {
+                String skuCode = order.getSkuCode();
+                if (skuCode == null || !skuCode.contains("-")) continue;
+                // skuCode 格式: 款号-颜色-尺码
+                String[] parts = skuCode.split("-");
+                if (parts.length < 3) continue;
+                String color = normalizeKey(parts[parts.length - 2]);
+                String size = normalizeKey(parts[parts.length - 1]);
+                ctx.colors.add(color);
+                ctx.sizes.add(size);
+                int qty = order.getQuantity() != null ? order.getQuantity() : 1;
+                Map<String, Map<String, Integer>> colorMap = ctx.matrix.computeIfAbsent(color, k -> new HashMap<>());
+                Map<String, Integer> sizeMap = colorMap.computeIfAbsent(size, k -> new HashMap<>());
+                sizeMap.merge("pendingSales", Integer.valueOf(qty), Integer::sum);
+                ctx.totalPending += qty;
             }
+        } catch (Exception e) {
+            log.warn("[OrderManagement] 电商订单欠数查询异常: styleId={}, {}", styleId, e.getMessage());
         }
+    }
 
-        result.put("matrix", matrix);
-        result.put("colors", new ArrayList<>(colors));
-        result.put("sizes", new ArrayList<>(sizes));
-        result.put("summary", buildSummary(totalInProd, totalStock, totalPending));
-        log.info("[OrderManagement] 综合查询完成: styleId={}, 在途={}, 库存={}, 欠数={}, 颜色={}, 尺码={}",
-                styleId, totalInProd, totalStock, totalPending, colors.size(), sizes.size());
-        return result;
+    /** 可用性查询的共享状态上下文（仅在 getStyleFullAvailability 拆薄内部使用） */
+    private static class AvailabilityContext {
+        final Map<String, Map<String, Map<String, Integer>>> matrix = new HashMap<>();
+        final Set<String> colors = new java.util.LinkedHashSet<>();
+        final Set<String> sizes = new java.util.LinkedHashSet<>();
+        int totalInProd = 0;
+        int totalStock = 0;
+        int totalPending = 0;
     }
 
     private String normalizeKey(String value) {

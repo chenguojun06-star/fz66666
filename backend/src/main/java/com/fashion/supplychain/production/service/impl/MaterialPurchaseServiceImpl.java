@@ -11,12 +11,10 @@ import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.production.service.helper.MaterialPurchaseHelper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
@@ -431,7 +429,6 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public List<MaterialPurchase> generateDemandByOrderId(String orderId, boolean overwrite) {
         if (!StringUtils.hasText(orderId)) {
             throw new IllegalArgumentException("orderId不能为空");
