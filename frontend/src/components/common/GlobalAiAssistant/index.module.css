@@ -20,19 +20,20 @@
   height: var(--xiaoyun-panel-height, 820px);
   background: var(--xiaoyun-bg-card);
   border-radius: 20px;
-  box-shadow: 0 12px 32px rgba(0, 83, 204, 0.15), 0 4px 12px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12), 0 4px 12px rgba(0, 0, 0, 0.06);
   display: flex;
   flex-direction: column;
   overflow: hidden;
   transition: width 0.3s, height 0.3s, border-radius 0.3s;
   pointer-events: auto;
   animation: popupBounce 0.35s var(--ease-smooth) forwards;
-  border: 1px solid var(--xiaoyun-primary-border);
+  border: 1px solid var(--color-border-antd, rgba(0, 0, 0, 0.08));
 }
 
 .panelHeader {
   height: 90px;
-  background: var(--xiaoyun-primary);
+  background: var(--xiaoyun-bg-card);
+  border-bottom: 1px solid var(--color-border-antd, rgba(0, 0, 0, 0.08));
   display: flex;
   align-items: center;
   padding: 0 20px;
@@ -43,12 +44,12 @@
 .avatarContainer {
   width: 60px;
   height: 60px;
-  background: var(--xiaoyun-bg-card);
+  background: var(--xiaoyun-primary-bg);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 12px rgba(24, 144, 255, 0.2);
+  box-shadow: 0 4px 12px rgba(24, 144, 255, 0.12);
   margin-right: 16px;
   font-size: 18px;
   animation: floatAvatar 3s ease-in-out infinite;
@@ -66,13 +67,13 @@
 .headerTitle {
   font-size: 18px;
   font-weight: 600;
-  color: #ffffff;
+  color: var(--xiaoyun-text-primary, rgba(0, 0, 0, 0.88));
   margin-bottom: 4px;
 }
 
 .headerSubtitle {
   font-size: 14px;
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--xiaoyun-text-secondary, rgba(0, 0, 0, 0.55));
 }
 
 .headerActions {
@@ -84,7 +85,7 @@
 
 .headerActionBtn {
   font-size: 13px;
-  color: rgba(255, 255, 255, 0.75);
+  color: var(--xiaoyun-text-secondary, rgba(0, 0, 0, 0.55));
   cursor: pointer;
   transition: all 0.2s;
   padding: 4px;
@@ -92,8 +93,8 @@
 }
 
 .headerActionBtn:hover {
-  color: #ffffff;
-  background: rgba(255, 255, 255, 0.12);
+  color: var(--xiaoyun-text-primary, rgba(0, 0, 0, 0.88));
+  background: var(--xiaoyun-primary-bg);
 }
 
 .headerActionBtn.closeBtnIcon:hover {
@@ -462,16 +463,18 @@
   box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
 }
 :root[data-theme="dark"] .panelHeader {
-  background: #0d2847;
+  background: var(--xiaoyun-bg-card);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
-:root[data-theme="dark"] .headerTitle { color: #e0e8f0; }
+:root[data-theme="dark"] .headerTitle { color: rgba(255, 255, 255, 0.88); }
 :root[data-theme="dark"] .headerSubtitle { color: rgba(255, 255, 255, 0.55); }
 :root[data-theme="dark"] .headerActionBtn {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.06);
   color: rgba(255, 255, 255, 0.65);
 }
 :root[data-theme="dark"] .headerActionBtn:hover {
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--xiaoyun-primary-bg);
+  color: rgba(255, 255, 255, 0.88);
 }
 :root[data-theme="dark"] .chatArea {
   background: rgba(0, 0, 0, 0.15);
