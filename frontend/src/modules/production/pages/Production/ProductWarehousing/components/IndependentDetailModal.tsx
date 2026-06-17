@@ -123,6 +123,7 @@ const IndependentDetailModal: React.FC<IndependentDetailModalProps> = ({
                   styleId={entryWarehousing?.styleId}
                   styleNo={entryWarehousing?.styleNo}
                   src={orderDetail?.styleCover || entryWarehousing?.styleCover || null}
+                  color={entryWarehousing?.color} // 传入颜色，优先显示SKU颜色图片
                   size={84}
                   borderRadius={12}
                 />

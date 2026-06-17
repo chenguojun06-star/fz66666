@@ -100,7 +100,13 @@ const WarehousingTable: React.FC<WarehousingTableProps> = ({
       key: 'cover',
       width: 56,
       render: (_: any, record: any) => (
-        <StyleCoverThumb styleId={record.styleId} styleNo={record.styleNo} size={40} borderRadius={4} />
+        <StyleCoverThumb 
+          styleId={record.styleId} 
+          styleNo={record.styleNo} 
+          color={record.color} // 传入颜色，优先显示SKU颜色图片
+          size={40} 
+          borderRadius={4} 
+        />
       )
     },
     {

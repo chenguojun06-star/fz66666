@@ -47,7 +47,14 @@ export function useBundleColumns(activeTask: CuttingTask | null) {
       key: 'cover',
       width: 72,
       render: (_: any, record: any) => (
-        <StyleCoverThumb src={activeTask?.styleCover || null} styleId={activeTask?.styleId} styleNo={record.styleNo || activeTask?.styleNo} size={24} borderRadius={4} />
+        <StyleCoverThumb 
+          src={activeTask?.styleCover || null} 
+          styleId={activeTask?.styleId} 
+          styleNo={record.styleNo || activeTask?.styleNo} 
+          color={record.color} // 传入颜色，优先显示SKU颜色图片
+          size={24} 
+          borderRadius={4} 
+        />
       )
     },
     {

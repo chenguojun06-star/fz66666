@@ -71,7 +71,14 @@ const WarehousingList: React.FC<WarehousingListProps> = ({ hook }) => {
       dataIndex: 'styleCover',
       key: 'styleCover',
       width: 60,
-      render: (cover: string, record: PendingBundleRow) => <StyleCoverThumb src={cover || null} styleNo={record.styleNo} size={40} />,
+      render: (cover: string, record: PendingBundleRow) => (
+        <StyleCoverThumb 
+          src={cover || null} 
+          styleNo={record.styleNo} 
+          color={record.color} // 传入颜色，优先显示SKU颜色图片
+          size={40} 
+        />
+      ),
     },
     { title: '订单号', dataIndex: 'orderNo', key: 'orderNo', width: 140 },
     { title: '款号', dataIndex: 'styleNo', key: 'styleNo', width: 120 },

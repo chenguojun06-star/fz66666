@@ -179,4 +179,37 @@ public class ProductSkuController {
         productSkuOrchestrator.saveRollbackRemark(styleId, remark);
         return Result.success();
     }
+
+    /**
+     * 获取指定款号所有颜色的图片映射
+     */
+    @GetMapping("/color-images/{styleNo}")
+    public Result<Map<String, String>> getStyleColorImages(@PathVariable String styleNo) {
+        TenantAssert.assertTenantContext();
+        return Result.success(productSkuService.getStyleColorImages(styleNo));
+    }
+
+    /**
+     * 根据款号和颜色获取单个SKU的颜色图片
+     */
+    @GetMapping("/color-image")
+    public Result<String> getSkuColorImage(
+            @RequestParam String styleNo,
+            @RequestParam String color) {
+        TenantAssert.assertTenantContext();
+        return Result.success(productSkuService.getSkuColorImage(styleNo, color));
+    }
+
+    /**
+     * 批量更新SKU颜色图片（按款号+颜色匹配）
+     */
+    @PutMapping("/color-images/{styleId}")
+    public Result<Void> updateSkuColorImages(@PathVariable Long styleId, @RequestBody Map<String, String> colorImageMap) {
+        TenantAssert.assertTenantContext();
+        if (colorImageMap == null || colorImageMap.isEmpty()) {
+            return Result.success();
+        }
+        productSkuOrchestrator.updateSkuColorImages(styleId, colorImageMap);
+        return Result.success();
+    }
 }

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { App, Switch, Button, Input, InputNumber, Space, Popconfirm, Tooltip, Tag, Dropdown, Form, Popover } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
-import { SyncOutlined, PlusOutlined, DeleteOutlined, SaveOutlined, CloudUploadOutlined, EditOutlined, RollbackOutlined, BarcodeOutlined } from '@ant-design/icons';
+import { SyncOutlined, PlusOutlined, DeleteOutlined, SaveOutlined, CloudUploadOutlined, EditOutlined, RollbackOutlined, BarcodeOutlined, PictureOutlined } from '@ant-design/icons';
 import api from '@/utils/api';
 import { formatMoney } from '@/utils/format';
 import type { ProductSku } from '@/types/style';
@@ -9,6 +9,7 @@ import type { MenuProps } from 'antd';
 import SmallModal from '@/components/common/SmallModal';
 import { confirmAction } from '@/utils/confirm';
 import BarcodeSvg from '@/components/common/BarcodeSvg';
+import StyleSkuColorImages from './StyleSkuColorImages';
 
 interface StyleSkuTabProps {
   styleId: string;
@@ -42,6 +43,7 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = ({ styleId, styleNo, skc: initia
   const [skcSaving, setSkcSaving] = useState(false);
   const [rollbackOpen, setRollbackOpen] = useState(false);
   const [rollbackForm] = Form.useForm();
+  const [colorImageMode, setColorImageMode] = useState(false);
 
   const fetchSkus = useCallback(async () => {
     if (!styleId) return;
@@ -400,6 +402,15 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = ({ styleId, styleNo, skc: initia
               </Button>
             </>
           )}
+          <Tooltip title="管理SKU颜色图片，支持批量上传到多个颜色">
+            <Button
+              icon={<PictureOutlined />}
+              onClick={() => setColorImageMode(true)}
+              type={colorImageMode ? 'primary' : 'default'}
+            >
+              颜色图片
+            </Button>
+          </Tooltip>
           <Tooltip title="将当前SKU信息同步到关联的大货订单">
             <Button icon={<CloudUploadOutlined />} onClick={handleSyncToProduction} loading={syncing}>
               同步到大货
@@ -432,22 +443,42 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = ({ styleId, styleNo, skc: initia
         </Space>
       </div>
 
-      <ResizableTable
-        dataSource={skus}
-        columns={columns}
-        rowKey={(record) => String(getRowKey(record))}
-        loading={loading}
-       
-        pagination={false}
-        scroll={{ y: 400 }}
-        rowClassName={(_, index) => (index % 2 === 1 ? 'ant-table-row-striped' : '')}
-      />
+      {/* 颜色图片管理模式 */}
+      {colorImageMode ? (
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <span style={{ fontWeight: 600, color: 'var(--color-primary)' }}>SKU颜色图片管理</span>
+            <Button onClick={() => setColorImageMode(false)}>返回SKU列表</Button>
+          </div>
+          <StyleSkuColorImages
+            styleId={styleId}
+            styleNo={styleNo}
+            onSaved={() => {
+              fetchSkus();
+              onRefresh?.();
+            }}
+          />
+        </div>
+      ) : (
+        <>
+          <ResizableTable
+            dataSource={skus}
+            columns={columns}
+            rowKey={(record) => String(getRowKey(record))}
+            loading={loading}
 
-      <div style={{ marginTop: 12, fontSize: 14, color: 'var(--color-text-tertiary, #8c8c8c)', lineHeight: 1.8 }}>
-        <div>自动生成模式：SKU编码按「款号+颜色+尺码」规则自动生成，如 {styleNo}-红色-S</div>
-        <div>手动编辑模式：可自由修改SKU编码、颜色、尺码等信息，保存后系统不会覆盖您的修改</div>
-        <div>新增SKU：鼠标悬停可选择「快速生成」（自动填充款号前缀）或「自编辑」（手动输入完整编码）</div>
-      </div>
+            pagination={false}
+            scroll={{ y: 400 }}
+            rowClassName={(_, index) => (index % 2 === 1 ? 'ant-table-row-striped' : '')}
+          />
+
+          <div style={{ marginTop: 12, fontSize: 14, color: 'var(--color-text-tertiary, #8c8c8c)', lineHeight: 1.8 }}>
+            <div>自动生成模式：SKU编码按「款号+颜色+尺码」规则自动生成，如 {styleNo}-红色-S</div>
+            <div>手动编辑模式：可自由修改SKU编码、颜色、尺码等信息，保存后系统不会覆盖您的修改</div>
+            <div>新增SKU：鼠标悬停可选择「快速生成」（自动填充款号前缀）或「自编辑」（手动输入完整编码）</div>
+          </div>
+        </>
+      )}
       <SmallModal
         open={rollbackOpen}
         title="退回编辑"

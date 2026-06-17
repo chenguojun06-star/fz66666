@@ -9,3 +9,4 @@ export const EmployeeAdvance = React.lazy(() => import('./pages/Finance/Employee
 export const WagePayment = React.lazy(() => import('./pages/Finance/WagePayment'));
 export const EcSalesRevenue = React.lazy(() => import('./pages/EcSalesRevenue'));
 export const TaxExport = React.lazy(() => import('./pages/TaxExport'));
+export const OrderWasteAnalysis = React.lazy(() => import('./pages/Finance/OrderWasteAnalysis'));

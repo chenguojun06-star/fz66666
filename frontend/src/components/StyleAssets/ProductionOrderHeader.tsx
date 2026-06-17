@@ -172,6 +172,7 @@ const ProductionOrderHeader: React.FC<{
                 styleId={resolvedStyleId}
                 styleNo={resolvedStyleNo}
                 src={resolvedCover}
+                color={color} // 传入颜色，优先显示SKU颜色图片
                 size={coverSize}
                 borderRadius={8}
               />

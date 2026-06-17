@@ -167,7 +167,7 @@ function SkuTable({ open, order, styleInfo, printColLabel, onPrint, onClose }: S
     {
       title: '款式图片', key: 'styleImage', width: 68,
       render: (_: unknown, r: SkuRow) => (
-        <StyleCoverThumb src={r.styleImageUrl || null} styleId={r.styleId} styleNo={r.styleNo} size={48} borderRadius={4} />
+        <StyleCoverThumb src={r.styleImageUrl || null} styleId={r.styleId} styleNo={r.styleNo} color={r.color} size={48} borderRadius={4} />
       ),
     },
     {

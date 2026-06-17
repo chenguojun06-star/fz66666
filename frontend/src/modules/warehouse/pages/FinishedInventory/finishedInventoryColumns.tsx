@@ -77,6 +77,7 @@ export function getMainColumns(handlers: {
         <StyleCoverThumb
           src={record.styleImage || null}
           styleNo={record.styleNo}
+          color={record.color} // 传入颜色，优先显示SKU颜色图片
           size={48}
           borderRadius={4}
         />

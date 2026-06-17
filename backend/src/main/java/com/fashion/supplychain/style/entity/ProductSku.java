@@ -46,6 +46,16 @@ public class ProductSku {
     private String color;
 
     /**
+     * SKU颜色图片URL（款号+颜色级别）
+     */
+    private String skuColorImage;
+
+    /**
+     * SKU颜色图片备注
+     */
+    private String skuColorRemark;
+
+    /**
      * 尺码
      */
     private String size;

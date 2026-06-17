@@ -325,7 +325,14 @@ const CuttingManagement: React.FC = () => {
                     key: 'cover',
                     width: 72,
                     render: (_: any, record: any) => (
-                      <StyleCoverThumb src={record.styleCover || null} styleId={record.styleId} styleNo={record.styleNo} size={48} borderRadius={6} />
+                      <StyleCoverThumb 
+                        src={record.styleCover || null} 
+                        styleId={record.styleId} 
+                        styleNo={record.styleNo} 
+                        color={record.color} // 传入颜色，优先显示SKU颜色图片
+                        size={48} 
+                        borderRadius={6} 
+                      />
                     )
                   },
                   {

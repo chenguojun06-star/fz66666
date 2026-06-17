@@ -27,4 +27,19 @@ public interface ProductSkuService extends IService<ProductSku> {
     ProductSku getBySkuCode(String skuCode);
 
     List<ProductSku> listByTenantId(Long tenantId);
+
+    /**
+     * 根据款号和颜色获取SKU颜色图片
+     * @param styleNo 款号
+     * @param color 颜色
+     * @return 颜色图片URL，如果没有则返回null
+     */
+    String getSkuColorImage(String styleNo, String color);
+
+    /**
+     * 根据款号获取该款所有颜色的图片映射
+     * @param styleNo 款号
+     * @return Map<颜色, 图片URL>
+     */
+    java.util.Map<String, String> getStyleColorImages(String styleNo);
 }

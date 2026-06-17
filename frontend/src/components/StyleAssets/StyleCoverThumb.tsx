@@ -52,7 +52,8 @@ const StyleCoverThumb: React.FC<{
   borderRadius?: number;
   fit?: 'cover' | 'contain';
   onClick?: (e: React.MouseEvent) => void;
-}> = ({ styleId, styleNo, src, size = 40, borderRadius = 6, fit = 'cover', onClick }) => {
+  color?: string; // 新增：颜色参数，传入后优先显示SKU颜色图片
+}> = ({ styleId, styleNo, src, size = 40, borderRadius = 6, fit = 'cover', onClick, color }) => {
   const isFill = size === 'fill';
   const numSize = (!isFill && typeof size === 'number' && !isNaN(size) && size > 0) ? size : 40;
   const preferredUrl = React.useMemo(() => {
@@ -107,13 +108,33 @@ const StyleCoverThumb: React.FC<{
     (async () => {
       setLoading(true);
       try {
-        const res = await api.get<{ code: number; data: any[] }>('/style/attachment/list', { params: { styleId, styleNo } });
-        if (res.code === 200) {
-          const images = (res.data || []).filter((f: any) => String(f.fileType || '').includes('image'));
-          const first = (images[0] as any)?.fileUrl || null;
-          if (mounted) {
-            setUrl((prev) => prev === first ? prev : first);
+        let imageUrl: string | null = null;
+        
+        // 优先获取SKU颜色图片（如果有color参数）
+        if (color && styleNo) {
+          try {
+            const colorRes = await api.get<{ code: number; data: string | null }>('/style/sku/color-image', {
+              params: { styleNo, color },
+            });
+            if (colorRes.code === 200 && colorRes.data) {
+              imageUrl = colorRes.data;
+            }
+          } catch {
+            // 忽略颜色图片获取失败，继续获取款号封面图
           }
+        }
+        
+        // 如果没有SKU颜色图片，获取款号封面图
+        if (!imageUrl) {
+          const res = await api.get<{ code: number; data: any[] }>('/style/attachment/list', { params: { styleId, styleNo } });
+          if (res.code === 200) {
+            const images = (res.data || []).filter((f: any) => String(f.fileType || '').includes('image'));
+            imageUrl = (images[0] as any)?.fileUrl || null;
+          }
+        }
+        
+        if (mounted) {
+          setUrl((prev) => prev === imageUrl ? prev : imageUrl);
         }
       } catch {
         if (mounted) {
@@ -124,7 +145,7 @@ const StyleCoverThumb: React.FC<{
       }
     })();
     return () => { mounted = false; };
-  }, [fallbackFailed, preferredUrl, srcFailed, styleId, styleNo]);
+  }, [fallbackFailed, preferredUrl, srcFailed, styleId, styleNo, color]);
 
   return (
     <div

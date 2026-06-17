@@ -95,7 +95,14 @@ export function useProductionColumns({
       key: 'styleCover',
       width: 60,
       render: (_: any, record: any) => (
-        <StyleCoverThumb styleId={record.styleId} styleNo={record.styleNo} src={record.styleCover || null} size={48} borderRadius={6} />
+        <StyleCoverThumb 
+          styleId={record.styleId} 
+          styleNo={record.styleNo} 
+          src={record.styleCover || null} 
+          color={record.color} // 传入颜色，优先显示SKU颜色图片
+          size={48} 
+          borderRadius={6} 
+        />
       )
     },
     {

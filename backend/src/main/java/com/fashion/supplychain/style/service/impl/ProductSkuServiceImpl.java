@@ -472,4 +472,36 @@ public class ProductSkuServiceImpl extends ServiceImpl<ProductSkuMapper, Product
         return list(new LambdaQueryWrapper<ProductSku>()
                 .eq(ProductSku::getTenantId, tenantId));
     }
+
+    @Override
+    public String getSkuColorImage(String styleNo, String color) {
+        if (!StringUtils.hasText(styleNo) || !StringUtils.hasText(color)) {
+            return null;
+        }
+        Long tenantId = UserContext.tenantId();
+        ProductSku sku = getOne(new LambdaQueryWrapper<ProductSku>()
+                .eq(tenantId != null, ProductSku::getTenantId, tenantId)
+                .eq(ProductSku::getStyleNo, styleNo.trim())
+                .eq(ProductSku::getColor, color.trim())
+                .isNotNull(ProductSku::getSkuColorImage)
+                .ne(ProductSku::getSkuColorImage, "")
+                .last("LIMIT 1"), false);
+        return sku != null ? sku.getSkuColorImage() : null;
+    }
+
+    @Override
+    public Map<String, String> getStyleColorImages(String styleNo) {
+        if (!StringUtils.hasText(styleNo)) {
+            return Map.of();
+        }
+        Long tenantId = UserContext.tenantId();
+        List<ProductSku> skus = list(new LambdaQueryWrapper<ProductSku>()
+                .eq(tenantId != null, ProductSku::getTenantId, tenantId)
+                .eq(ProductSku::getStyleNo, styleNo.trim())
+                .isNotNull(ProductSku::getSkuColorImage)
+                .ne(ProductSku::getSkuColorImage, ""));
+        return skus.stream()
+                .filter(s -> StringUtils.hasText(s.getColor()) && StringUtils.hasText(s.getSkuColorImage()))
+                .collect(Collectors.toMap(ProductSku::getColor, ProductSku::getSkuColorImage, (a, b) -> a));
+    }
 }

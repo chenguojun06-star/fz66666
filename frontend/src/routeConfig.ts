@@ -71,6 +71,7 @@ export const paths = {
   wagePayment: '/finance/wage-payment',
   ecSalesRevenue: '/finance/ec-revenue',
   financeTaxExport: '/finance/tax-export',
+  orderWasteAnalysis: '/finance/order-waste-analysis',
 
   materialInventory: '/warehouse/material',
   materialDatabase: '/warehouse/material-database',
@@ -279,6 +280,7 @@ export const menuConfig: MenuSection[] = [
       { label: '费用报销', path: paths.expenseReimbursement, icon: React.createElement(AccountBookOutlined) },
       { label: '员工借支', path: paths.employeeAdvance, icon: React.createElement(AccountBookOutlined) },
       { label: '收付款中心', path: paths.wagePayment, icon: React.createElement(DollarOutlined) },
+      { label: '订单损耗分析', path: paths.orderWasteAnalysis, icon: React.createElement(RadarChartOutlined) },
       { label: '财税导出', path: paths.financeTaxExport, icon: React.createElement(DollarOutlined) },
     ],
   },

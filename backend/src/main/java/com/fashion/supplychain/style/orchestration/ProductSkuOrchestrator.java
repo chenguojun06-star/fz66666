@@ -177,4 +177,41 @@ public class ProductSkuOrchestrator {
                         .set(ProductSku::getRemark, remark.trim()));
         log.info("Saved rollback remark for styleId={}, affected {} SKUs", styleId, rows);
     }
+
+    /**
+     * 批量更新SKU颜色图片（按款号+颜色匹配）
+     * @param styleId 款式ID
+     * @param colorImageMap Map<颜色, 图片URL>
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void updateSkuColorImages(Long styleId, java.util.Map<String, String> colorImageMap) {
+        if (styleId == null) {
+            throw new IllegalArgumentException("styleId不能为空");
+        }
+        if (colorImageMap == null || colorImageMap.isEmpty()) {
+            return;
+        }
+        StyleInfo style = styleInfoMapper.selectById(styleId);
+        if (style == null) {
+            throw new IllegalArgumentException("款式不存在: " + styleId);
+        }
+        Long tenantId = UserContext.tenantId();
+        int updatedCount = 0;
+        for (java.util.Map.Entry<String, String> entry : colorImageMap.entrySet()) {
+            String color = entry.getKey();
+            String imageUrl = entry.getValue();
+            if (!StringUtils.hasText(color)) {
+                continue;
+            }
+            int rows = productSkuMapper.update(null,
+                    new LambdaUpdateWrapper<ProductSku>()
+                            .eq(ProductSku::getStyleId, styleId)
+                            .eq(tenantId != null, ProductSku::getTenantId, tenantId)
+                            .eq(ProductSku::getColor, color.trim())
+                            .set(StringUtils.hasText(imageUrl), ProductSku::getSkuColorImage, imageUrl.trim())
+                            .set(!StringUtils.hasText(imageUrl), ProductSku::getSkuColorImage, (String) null));
+            updatedCount += rows;
+        }
+        log.info("Updated SKU color images for styleId={}, updated {} SKUs", styleId, updatedCount);
+    }
 }
