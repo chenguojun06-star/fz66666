@@ -84,7 +84,7 @@ export function useEcStock() {
   const fetchStock = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await api.get<ApiResult<UniversalStock[]>>('/api/ec/stock/list');
+      const res = await api.get<ApiResult<UniversalStock[]>>('/ec/stock/list');
       setStockList(res?.data ?? []);
     } finally { setLoading(false); }
   }, []);
@@ -92,66 +92,66 @@ export function useEcStock() {
   const fetchLowStock = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await api.get<ApiResult<UniversalStock[]>>('/api/ec/stock/low-stock');
+      const res = await api.get<ApiResult<UniversalStock[]>>('/ec/stock/low-stock');
       setStockList(res?.data ?? []);
     } finally { setLoading(false); }
   }, []);
 
   const fetchAlerts = useCallback(async (unresolvedOnly = true) => {
     try {
-      const res = await api.get<ApiResult<StockAlert[]>>(`/api/ec/stock/alerts?unresolvedOnly=${unresolvedOnly}`);
+      const res = await api.get<ApiResult<StockAlert[]>>(`/ec/stock/alerts?unresolvedOnly=${unresolvedOnly}`);
       setAlerts(res?.data ?? []);
     } catch { /* handled */ }
   }, []);
 
   const fetchSuggestions = useCallback(async (pendingOnly = true) => {
     try {
-      const res = await api.get<ApiResult<PurchaseSuggestion[]>>(`/api/ec/stock/suggestions?pendingOnly=${pendingOnly}`);
+      const res = await api.get<ApiResult<PurchaseSuggestion[]>>(`/ec/stock/suggestions?pendingOnly=${pendingOnly}`);
       setSuggestions(res?.data ?? []);
     } catch { /* handled */ }
   }, []);
 
   const fetchAllocations = useCallback(async () => {
     try {
-      const res = await api.get<ApiResult<WarehouseAllocation[]>>('/api/ec/stock/allocations');
+      const res = await api.get<ApiResult<WarehouseAllocation[]>>('/ec/stock/allocations');
       setAllocations(res?.data ?? []);
     } catch { /* handled */ }
   }, []);
 
   const fetchSplits = useCallback(async () => {
     try {
-      const res = await api.get<ApiResult<OrderSplit[]>>('/api/ec/stock/splits');
+      const res = await api.get<ApiResult<OrderSplit[]>>('/ec/stock/splits');
       setSplits(res?.data ?? []);
     } catch { /* handled */ }
   }, []);
 
   const syncAll = useCallback(async () => {
-    await api.post('/api/ec/stock/sync');
+    await api.post('/ec/stock/sync');
     await fetchStock();
   }, [fetchStock]);
 
   const generateSuggestions = useCallback(async () => {
-    await api.post('/api/ec/stock/suggestions/generate');
+    await api.post('/ec/stock/suggestions/generate');
     await fetchSuggestions();
   }, [fetchSuggestions]);
 
   const approveSuggestion = useCallback(async (id: number) => {
-    await api.post(`/api/ec/stock/suggestions/${id}/approve`);
+    await api.post(`/ec/stock/suggestions/${id}/approve`);
     await fetchSuggestions();
   }, [fetchSuggestions]);
 
   const rejectSuggestion = useCallback(async (id: number) => {
-    await api.post(`/api/ec/stock/suggestions/${id}/reject`);
+    await api.post(`/ec/stock/suggestions/${id}/reject`);
     await fetchSuggestions();
   }, [fetchSuggestions]);
 
   const resolveAlert = useCallback(async (id: number) => {
-    await api.post(`/api/ec/stock/alerts/${id}/resolve`);
+    await api.post(`/ec/stock/alerts/${id}/resolve`);
     await fetchAlerts();
   }, [fetchAlerts]);
 
   const updateSafeStock = useCallback(async (skuId: number, safeStock: number) => {
-    await api.put('/api/ec/stock/safe-stock', { skuId, safeStock });
+    await api.put('/ec/stock/safe-stock', { skuId, safeStock });
     await fetchStock();
   }, [fetchStock]);
 
