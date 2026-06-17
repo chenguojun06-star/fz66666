@@ -47,8 +47,8 @@ public class AiAgentPromptHelper {
     private com.fashion.supplychain.intelligence.service.StructuredOutputEnforcer outputEnforcer;
 
     private final ExecutorService promptBuildExecutor = new ThreadPoolExecutor(
-            4, 8, 60L, TimeUnit.SECONDS,
-            new LinkedBlockingQueue<>(32),
+            8, 16, 60L, TimeUnit.SECONDS,
+            new LinkedBlockingQueue<>(64),
             r -> {
                 Thread t = new Thread(r, "ai-prompt-build-" + System.identityHashCode(r) % 1000);
                 t.setDaemon(true);
@@ -225,6 +225,27 @@ public class AiAgentPromptHelper {
     private String safeJoinWithTimeout(CompletableFuture<String> future, long timeoutMs, String label) {
         try { return future.get(timeoutMs, TimeUnit.MILLISECONDS); }
         catch (Exception e) { log.debug("[AiAgent-Prompt] {}注入超时跳过", label); return ""; }
+    }
+
+    /**
+     * 记忆系统局限性声明（STABLE 层，借鉴 CL4R1T4S 显式 Limitations 设计）。
+     * 让 AI 知道自己的记忆边界，从而在记忆可能失效时主动用工具查证或反问。
+     */
+    private String buildMemoryLimitationsBlock() {
+        return "<!--BLOCK:memoryLimitations-->"
+            + "## 记忆系统边界（你必须知晓并遵守）\n"
+            + "你拥有四层记忆，但每层都有局限。涉及业务数据时，**记忆仅作参考，必须用工具查实时数据**：\n"
+            + "- 对话记忆（Redis）：TTL 24小时，跨天的对话上下文可能已丢失。用户说\"刚才那个订单\"时，若不确定指哪个，必须反问。\n"
+            + "- 语义缓存：相似度阈值 0.86，表述差异较大的问题可能不命中。不要假设\"上次回答过\"就一定正确。\n"
+            + "- 长期记忆（PostgreSQL）：可能不完整或过时。涉及金额/日期/状态等关键字段时，必须用工具验证。\n"
+            + "- 工厂画像/知识库：基于历史数据学习，可能未反映最新变化。产能/工序/人员变动需查实时数据。\n"
+            + "- 知识图谱/Qdrant：覆盖范围有限，冷门实体可能检索不到。\n\n"
+            + "**行为准则**：\n"
+            + "1. 涉及订单号/款号/金额/日期/库存/工资等具体业务数据时，**先查工具，再回答**，禁止凭记忆编造。\n"
+            + "2. 记忆与工具结果冲突时，**以工具结果为准**。\n"
+            + "3. 不确定记忆是否过时时，明确告知用户\"我需要查询确认\"，禁止\"可能/大概/应该是\"式模糊回答。\n"
+            + "4. 用户引用历史对话但你无记录时，坦诚说明\"我没有找到相关记录\"，并主动用工具补查。\n"
+            + "<!--/BLOCK:memoryLimitations-->\n\n";
     }
 
     private String buildMasInsightBlock() {
@@ -420,6 +441,7 @@ public class AiAgentPromptHelper {
         prompt.append(promptTemplateLoader.getFollowupFormat()).append("\n\n");
         prompt.append(promptTemplateLoader.getRichMediaFormat()).append("\n\n");
         prompt.append(promptTemplateLoader.getSelfCritiqueFeedback()).append("\n\n");
+        prompt.append(buildMemoryLimitationsBlock());
         prompt.append("<!--CACHE_STABLE_END-->");
 
         // ── 第2层：工具/领域（半稳定，工具集变化时刷新）────

@@ -14,6 +14,11 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Component
@@ -24,33 +29,47 @@ public class AgentCheckpointManager {
     private final AgentCheckpointMapper checkpointMapper;
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
+    // checkpoint 异步写入线程池（响应慢根因TOP4优化：每轮同步DB insert → 异步）
+    private final ExecutorService checkpointExecutor = new ThreadPoolExecutor(
+            2, 4, 30L, TimeUnit.SECONDS,
+            new LinkedBlockingQueue<>(128),
+            r -> {
+                Thread t = new Thread(r, "ai-checkpoint-" + System.identityHashCode(r) % 100);
+                t.setDaemon(true);
+                return t;
+            },
+            new ThreadPoolExecutor.DiscardOldestPolicy());
+
     public void saveCheckpoint(String threadId, Long tenantId, int iteration,
                                 String action, String toolName, String toolResult,
                                 int toolCallCount, long totalTokens) {
-        try {
-            Map<String, Object> state = new HashMap<>();
-            state.put("action", action);
-            state.put("toolName", toolName);
-            state.put("toolResult", toolResult);
-            state.put("toolCallCount", toolCallCount);
-            state.put("totalTokens", totalTokens);
+        // 异步写入，不阻塞 AgentLoop 主流程
+        CompletableFuture.runAsync(() -> {
+            try {
+                Map<String, Object> state = new HashMap<>();
+                state.put("action", action);
+                state.put("toolName", toolName);
+                state.put("toolResult", toolResult);
+                state.put("toolCallCount", toolCallCount);
+                state.put("totalTokens", totalTokens);
 
-            Map<String, Object> metadata = new HashMap<>();
-            metadata.put("iteration", iteration);
+                Map<String, Object> metadata = new HashMap<>();
+                metadata.put("iteration", iteration);
 
-            AgentCheckpoint cp = new AgentCheckpoint();
-            cp.setTenantId(tenantId);
-            cp.setThreadId(threadId);
-            cp.setNodeName(action);
-            cp.setStateJson(objectMapper.writeValueAsString(state));
-            cp.setMetadataJson(objectMapper.writeValueAsString(metadata));
-            cp.setStepIndex(iteration);
-            cp.setStatus("ACTIVE");
-            cp.setCreatedAt(LocalDateTime.now());
-            checkpointMapper.insert(cp);
-        } catch (Exception e) {
-            log.warn("[Checkpoint] 保存失败: thread={} action={}", threadId, action, e);
-        }
+                AgentCheckpoint cp = new AgentCheckpoint();
+                cp.setTenantId(tenantId);
+                cp.setThreadId(threadId);
+                cp.setNodeName(action);
+                cp.setStateJson(objectMapper.writeValueAsString(state));
+                cp.setMetadataJson(objectMapper.writeValueAsString(metadata));
+                cp.setStepIndex(iteration);
+                cp.setStatus("ACTIVE");
+                cp.setCreatedAt(LocalDateTime.now());
+                checkpointMapper.insert(cp);
+            } catch (Exception e) {
+                log.warn("[Checkpoint] 保存失败: thread={} action={}", threadId, action, e);
+            }
+        }, checkpointExecutor);
     }
 
     public AgentCheckpoint loadLatestCheckpoint(String threadId) {

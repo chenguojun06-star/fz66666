@@ -79,12 +79,15 @@ public final class XiaoyunPatterns {
     }
 
     public static int estimateMaxIterations(String msg) {
-        if (msg == null || msg.length() < 8) return 3;
+        if (msg == null || msg.length() < 8) return 2;
         String trimmed = msg.trim();
-        if (trimmed.length() < 25 && isGreeting(trimmed)) return 2;
-        if (IDENTITY_QUERY.matcher(trimmed).matches()) return 2;
-        if (COMPLEX_OP_PATTERN.matcher(trimmed).matches()) return 8;
-        if (COMPLEX_ANALYSIS_PATTERN.matcher(trimmed).matches()) return 6;
-        return 5;
+        // 问候/身份类：1轮（直接回复，不走工具循环）
+        if (trimmed.length() < 25 && isGreeting(trimmed)) return 1;
+        if (IDENTITY_QUERY.matcher(trimmed).matches()) return 1;
+        // 复杂操作/分析：保持较高轮次
+        if (COMPLEX_OP_PATTERN.matcher(trimmed).matches()) return 6;
+        if (COMPLEX_ANALYSIS_PATTERN.matcher(trimmed).matches()) return 4;
+        // 默认：3轮（原5轮，响应慢根因TOP1优化）
+        return 3;
     }
 }

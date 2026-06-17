@@ -519,36 +519,44 @@ public class AiAgentOrchestrator {
 
         RealTimeLearningLoop realTimeLearningLoop = realTimeLearningLoopProvider.getIfAvailable();
         if (realTimeLearningLoop != null) {
-            try {
-                realTimeLearningLoop.trigger(
-                        conversationId, userMessage, assistantResponse,
-                        selfScore, tenantId);
-            } catch (Exception e) {
-                log.debug("[AiAgent] RealTimeLearning触发失败（非关键）: {}", e.getMessage());
-            }
+            final double scoreForLearning = finalSelfScore;
+            postTurnExecutor.execute(UserContext.wrap(() -> {
+                try {
+                    realTimeLearningLoop.trigger(
+                            conversationId, userMessage, assistantResponse,
+                            scoreForLearning, tenantId);
+                } catch (Exception e) {
+                    log.debug("[AiAgent] RealTimeLearning触发失败（非关键）: {}", e.getMessage());
+                }
+            }));
         }
 
         com.fashion.supplychain.intelligence.service.MemoryBankService memoryBankService = memoryBankServiceProvider.getIfAvailable();
         if (memoryBankService != null) {
-            try {
-                memoryBankService.onFocusChange(tenantId,
-                        userMessage.length() > 100 ? userMessage.substring(0, 100) : userMessage);
-            } catch (Exception e) {
-                log.debug("[AiAgent] MemoryBank更新失败（非关键）: {}", e.getMessage());
-            }
+            final String focusMsg = userMessage.length() > 100 ? userMessage.substring(0, 100) : userMessage;
+            postTurnExecutor.execute(UserContext.wrap(() -> {
+                try {
+                    memoryBankService.onFocusChange(tenantId, focusMsg);
+                } catch (Exception e) {
+                    log.debug("[AiAgent] MemoryBank更新失败（非关键）: {}", e.getMessage());
+                }
+            }));
         }
 
         com.fashion.supplychain.intelligence.service.SkillAutoCreationService skillAutoCreationService = skillAutoCreationServiceProvider.getIfAvailable();
         ConversationReflectionOrchestrator reflectionOrchestrator = reflectionOrchestratorProvider.getIfAvailable();
         if (skillAutoCreationService != null && reflectionOrchestrator == null
                 && toolRecords != null && toolRecords.size() >= 3) {
-            try {
-                skillAutoCreationService.tryAutoCreateFromTask(
-                        tenantId, conversationId, userMessage,
-                        toolResultsStr, assistantResponse, 0.75);
-            } catch (Exception e) {
-                log.debug("[AiAgent] SkillAutoCreation触发失败（非关键）: {}", e.getMessage());
-            }
+            final String finalToolResultsForSkill = toolResultsStr;
+            postTurnExecutor.execute(UserContext.wrap(() -> {
+                try {
+                    skillAutoCreationService.tryAutoCreateFromTask(
+                            tenantId, conversationId, userMessage,
+                            finalToolResultsForSkill, assistantResponse, 0.75);
+                } catch (Exception e) {
+                    log.debug("[AiAgent] SkillAutoCreation触发失败（非关键）: {}", e.getMessage());
+                }
+            }));
         }
 
         if (reflectionOrchestrator != null) {
@@ -563,9 +571,15 @@ public class AiAgentOrchestrator {
 
         com.fashion.supplychain.intelligence.service.SessionSearchService sessionSearchService = sessionSearchServiceProvider.getIfAvailable();
         if (sessionSearchService != null) {
-            sessionSearchService.indexConversation(
-                    tenantId, userId, sessionId, conversationId,
-                    userMessage, assistantResponse);
+            postTurnExecutor.execute(UserContext.wrap(() -> {
+                try {
+                    sessionSearchService.indexConversation(
+                            tenantId, userId, sessionId, conversationId,
+                            userMessage, assistantResponse);
+                } catch (Exception e) {
+                    log.debug("[AiAgent] SessionSearch索引失败（非关键）: {}", e.getMessage());
+                }
+            }));
         }
 
         List<String> toolNames = new java.util.ArrayList<>();

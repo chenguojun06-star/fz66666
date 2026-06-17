@@ -23,6 +23,7 @@ import com.fashion.supplychain.intelligence.orchestration.DecisionCardOrchestrat
 import com.fashion.supplychain.intelligence.orchestration.FollowUpSuggestionEngine;
 import com.fashion.supplychain.intelligence.orchestration.LongTermMemoryOrchestrator;
 import com.fashion.supplychain.intelligence.orchestration.ProcessRewardOrchestrator;
+import com.fashion.supplychain.intelligence.orchestration.SelfCritiqueGate;
 import com.fashion.supplychain.intelligence.orchestration.XiaoyunInsightCardOrchestrator;
 import com.fashion.supplychain.intelligence.orchestration.XiaoyunResponseParser;
 import com.fashion.supplychain.intelligence.service.AgentStateStore;
@@ -78,6 +79,7 @@ public class AgentLoopEngine {
     @Autowired private org.springframework.beans.factory.ObjectProvider<ProactiveRiskDetectionService> riskDetectionServiceProvider;
     @Autowired private org.springframework.beans.factory.ObjectProvider<ProactiveInsightService> proactiveInsightServiceProvider;
     @Autowired private org.springframework.beans.factory.ObjectProvider<PromptEvolutionService> promptEvolutionServiceProvider;
+    @Autowired private org.springframework.beans.factory.ObjectProvider<SelfCritiqueGate> selfCritiqueGateProvider;
     @Autowired private org.springframework.beans.factory.ObjectProvider<AgentSkillRegistry> skillRegistryProvider;
     @Autowired private org.springframework.beans.factory.ObjectProvider<AgentCheckpointManager> checkpointManagerProvider;
     @Autowired private org.springframework.beans.factory.ObjectProvider<HandoffEngine> handoffEngineProvider;
@@ -385,6 +387,23 @@ public class AgentLoopEngine {
         revisedContent = evidenceHelper.appendStepWizardCards(revisedContent, ctx.getStepWizardCards());
         revisedContent = evidenceHelper.appendReportPreviewCards(revisedContent, ctx.getReportPreviewCards());
         revisedContent = xiaoyunInsightCardOrchestrator.appendToContent(revisedContent, ctx.getXiaoyunInsightCards());
+
+        // SelfCritiqueGate：输出前硬门控（≤1轮，不达标降级，符合 AI Hard Limit）
+        SelfCritiqueGate selfCritiqueGate = selfCritiqueGateProvider.getIfAvailable();
+        if (selfCritiqueGate != null) {
+            try {
+                SelfCritiqueGate.GateResult gateResult = selfCritiqueGate.check(ctx, revisedContent);
+                if (gateResult.isHardFail()) {
+                    log.warn("[AgentLoop] SelfCritiqueGate HARD_FAIL，使用兜底回复 score={}", gateResult.getScore());
+                    revisedContent = gateResult.getContent();
+                } else if (!gateResult.isPassed()) {
+                    log.info("[AgentLoop] SelfCritiqueGate SOFT_FAIL，已加免责声明 score={}", gateResult.getScore());
+                    revisedContent = gateResult.getContent();
+                }
+            } catch (Exception e) {
+                log.debug("[AgentLoop] SelfCritiqueGate 异常，放行: {}", e.getMessage());
+            }
+        }
 
         String guardWarnings = runDataTruthGuards(ctx, revisedContent);
         if (!guardWarnings.isEmpty()) {

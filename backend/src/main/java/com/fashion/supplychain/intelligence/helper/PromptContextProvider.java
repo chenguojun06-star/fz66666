@@ -236,8 +236,18 @@ public class PromptContextProvider {
         }
     }
 
+    // MAS insight 缓存（30s TTL，避免每次对话都跑多Agent LLM，响应慢根因TOP3优化）
+    private volatile String masInsightCache = "";
+    private volatile long masInsightCacheTime = 0L;
+    private static final long MAS_INSIGHT_CACHE_TTL_MS = 30_000L;
+
     public String buildMasInsightContext(Long tenantId, String userMessage) {
         if (multiAgentGraphOrchestrator == null) return "";
+        // 命中缓存直接返回（30s内同一进程不重复跑多Agent LLM）
+        long now = System.currentTimeMillis();
+        if (!masInsightCache.isEmpty() && (now - masInsightCacheTime) < MAS_INSIGHT_CACHE_TTL_MS) {
+            return masInsightCache;
+        }
         try {
             com.fashion.supplychain.intelligence.dto.MultiAgentRequest req =
                     new com.fashion.supplychain.intelligence.dto.MultiAgentRequest();
@@ -259,7 +269,10 @@ public class PromptContextProvider {
                 insight.append("综合建议：").append(result.getOptimizationSuggestion()).append("\n");
             }
             insight.append("（以上为多Agent专家协同分析，请结合工具查询实时数据）\n");
-            return insight.toString();
+            String result_str = insight.toString();
+            masInsightCache = result_str;
+            masInsightCacheTime = now;
+            return result_str;
         } catch (Exception e) {
             log.debug("[AiAgent] MAS insight加载跳过: {}", e.getMessage());
             return "";

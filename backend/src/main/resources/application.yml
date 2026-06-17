@@ -493,7 +493,7 @@ xiaoyun:
   semantic-cache:
     enabled: ${XIAOYUN_SEMANTIC_CACHE_ENABLED:true}
     ttl-minutes: ${XIAOYUN_SEMANTIC_CACHE_TTL:30}
-    similarity-threshold: ${XIAOYUN_SEMANTIC_CACHE_THRESHOLD:0.92}
+    similarity-threshold: ${XIAOYUN_SEMANTIC_CACHE_THRESHOLD:0.86}
   # 主动洞察推送（巡检发现风险后推送给用户）
   proactive-insight:
     enabled: ${XIAOYUN_PROACTIVE_INSIGHT_ENABLED:true}

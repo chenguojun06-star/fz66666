@@ -45,7 +45,7 @@ public class SemanticCacheService {
     @Value("${xiaoyun.semantic-cache.ttl-minutes:${XIAOYUN_SEMANTIC_CACHE_TTL:30}}")
     private int cacheTtlMinutes;
 
-    @Value("${xiaoyun.semantic-cache.similarity-threshold:${XIAOYUN_SEMANTIC_CACHE_THRESHOLD:0.92}}")
+    @Value("${xiaoyun.semantic-cache.similarity-threshold:${XIAOYUN_SEMANTIC_CACHE_THRESHOLD:0.86}}")
     private float similarityThreshold;
 
     private static final String CACHE_PREFIX = "semantic:llm:";
