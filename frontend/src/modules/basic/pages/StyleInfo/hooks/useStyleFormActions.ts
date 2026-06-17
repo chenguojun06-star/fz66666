@@ -132,6 +132,8 @@ export const useStyleFormActions = ({
       delete normalizedValues.completedTime;
       delete normalizedValues.pushedToOrder;
       delete normalizedValues.pushedToOrderTime;
+      delete normalizedValues.remark; // 后端 StyleInfo 无此字段
+      delete normalizedValues.customer; // 后端用 customerId，不识别 customer，避免发送未知属性
 
       // 处理 deliveryDate 字段
       const dd = normalizedValues.deliveryDate;
@@ -175,6 +177,8 @@ export const useStyleFormActions = ({
         delete payload.pushedToOrder;
         delete payload.pushedToOrderTime;
         delete payload.description;
+        delete payload.remark; // 后端 StyleInfo 无此字段
+        delete payload.customer; // 后端用 customerId
         res = await api.put('/style/info', normalizePayload(payload));
       } else {
         // 新建：自动生成款号（如果未填写）
