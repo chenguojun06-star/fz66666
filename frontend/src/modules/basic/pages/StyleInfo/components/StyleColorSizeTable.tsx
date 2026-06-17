@@ -81,12 +81,8 @@ const StyleColorSizeTable: React.FC<StyleColorSizeTableProps> = ({
 }) => {
   const { message } = App.useApp();
 
-  const [showColorInput, setShowColorInput] = useState(false);
-  const [showSizeInput, setShowSizeInput] = useState(false);
   const [quickColorDraft, setQuickColorDraft] = useState('');
   const [quickSizeDraft, setQuickSizeDraft] = useState('');
-  const [newColor, setNewColor] = useState('');
-  const [newSize, setNewSize] = useState('');
 
   const selectedSizes = useMemo(
     () => sizeOptions.map((item) => String(item || '').trim()).filter(Boolean),
@@ -186,34 +182,6 @@ const StyleColorSizeTable: React.FC<StyleColorSizeTableProps> = ({
     setColorOptions(selectedColors.filter((item) => item !== color));
   };
 
-  const handleAddNewSize = () => {
-    const value = newSize.trim();
-    if (!value) return;
-    if (!commonSizes.includes(value)) {
-      setCommonSizes([...commonSizes, value]);
-    }
-    if (!selectedSizes.includes(value)) {
-      setSizeOptions([...selectedSizes, value]);
-    }
-    autoCollectDictEntry('size', value);
-    setNewSize('');
-    setShowSizeInput(false);
-  };
-
-  const handleAddNewColor = () => {
-    const value = newColor.trim();
-    if (!value) return;
-    if (!commonColors.includes(value)) {
-      setCommonColors([...commonColors, value]);
-    }
-    if (!selectedColors.includes(value)) {
-      setColorOptions([...selectedColors, value]);
-    }
-    autoCollectDictEntry('color', value);
-    setNewColor('');
-    setShowColorInput(false);
-  };
-
   const updateCell = (rowIndex: number, columnIndex: number, value: number) => {
     const nextRows = matrixRows.map((row, index) => (
       index === rowIndex
@@ -283,19 +251,6 @@ const StyleColorSizeTable: React.FC<StyleColorSizeTableProps> = ({
                 </Button>
               </Space.Compact>
             ) : null}
-            {!editLocked && (
-              !showColorInput ? (
-                <Button type="text" style={{ color: 'var(--color-text-tertiary)' }} onClick={() => setShowColorInput(true)}>
-                  新增颜色
-                </Button>
-              ) : (
-                <Space.Compact>
-                  <Input placeholder="新颜色" value={newColor} onChange={(e) => setNewColor(e.target.value)} onPressEnter={handleAddNewColor} style={{ width: 88 }} />
-                  <Button type="primary" onClick={handleAddNewColor}></Button>
-                  <Button onClick={() => { setNewColor(''); setShowColorInput(false); }}></Button>
-                </Space.Compact>
-              )
-            )}
           </div>
         </div>
 
@@ -337,19 +292,6 @@ const StyleColorSizeTable: React.FC<StyleColorSizeTableProps> = ({
                 </Button>
               </Space.Compact>
             ) : null}
-            {!editLocked && (
-              !showSizeInput ? (
-                <Button type="text" style={{ color: 'var(--color-text-tertiary)' }} onClick={() => setShowSizeInput(true)}>
-                  新增码数
-                </Button>
-              ) : (
-                <Space.Compact>
-                  <Input placeholder="新码数" value={newSize} onChange={(e) => setNewSize(e.target.value)} onPressEnter={handleAddNewSize} style={{ width: 88 }} />
-                  <Button type="primary" onClick={handleAddNewSize}></Button>
-                  <Button onClick={() => { setNewSize(''); setShowSizeInput(false); }}></Button>
-                </Space.Compact>
-              )
-            )}
           </div>
         </div>
 
