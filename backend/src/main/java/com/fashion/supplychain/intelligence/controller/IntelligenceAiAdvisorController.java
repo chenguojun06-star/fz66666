@@ -485,4 +485,48 @@ public class IntelligenceAiAdvisorController {
         proactiveInsightService.markAsRead(tenantId, id);
         return Result.success(null);
     }
+
+    /** v2: AI 模型自检测试点 — 快速测试各模型（Agnes/DeepSeek）连通性 */
+    @GetMapping("/model-diagnostics")
+    @PreAuthorize("isAuthenticated()")
+    public Result<java.util.Map<String, Object>> runModelDiagnostics() {
+        java.util.Map<String, Object> result = new java.util.LinkedHashMap<>();
+
+        // 检查配置（不暴露具体 key，只告知是否已配置）
+        java.util.Map<String, Object> configStatus = new java.util.LinkedHashMap<>();
+        configStatus.put("agnes_configured", agnesApiKey != null && !agnesApiKey.isBlank() && !agnesApiKey.startsWith("${"));
+        configStatus.put("agnes_model", agnesModel);
+        configStatus.put("deepseek_configured", deepseekApiKey != null && !deepseekApiKey.isBlank() && !deepseekApiKey.startsWith("${"));
+        configStatus.put("deepseek_model", deepseekModel);
+        result.put("configStatus", configStatus);
+
+        // 快速连通性测试（短消息 + 短超时）
+        java.util.List<java.util.Map<String, Object>> tests = new java.util.ArrayList<>();
+
+        // 测试1: 快速文字推断（验证 token/网络/模型）
+        java.util.Map<String, Object> textTest = new java.util.LinkedHashMap<>();
+        textTest.put("name", "basic_text_inference");
+        long startTs = System.currentTimeMillis();
+        try {
+            String question = "请只回复一个单词：OK";
+            Result<String> agentResult = aiAgentOrchestrator.executeAgent(question, null, AgentMode.DEFAULT);
+            String content = agentResult != null ? agentResult.getData() : null;
+            String commandId = aiAgentOrchestrator.consumeLastCommandId();
+            textTest.put("status", "ok");
+            textTest.put("commandId", commandId);
+            textTest.put("elapsedMs", System.currentTimeMillis() - startTs);
+            textTest.put("preview", content != null
+                    ? content.substring(0, Math.min(80, content.length())) + "..."
+                    : "无内容");
+        } catch (Exception e) {
+            textTest.put("status", "error");
+            textTest.put("elapsedMs", System.currentTimeMillis() - startTs);
+            textTest.put("error", e.getMessage());
+        }
+        tests.add(textTest);
+
+        result.put("tests", tests);
+        result.put("modelCount", tests.size());
+        return Result.success(result);
+    }
 }

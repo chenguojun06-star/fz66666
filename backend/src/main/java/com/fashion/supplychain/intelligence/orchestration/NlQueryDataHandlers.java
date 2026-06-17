@@ -40,8 +40,11 @@ public class NlQueryDataHandlers {
     @Autowired private AiAdvisorService aiAdvisorService;
     @Autowired private NlQuerySmartHandlers smartHandlers;
     @Autowired private MaterialShortageOrchestrator materialShortageOrchestrator;
+    @Autowired private com.fashion.supplychain.crm.orchestration.ReceivableOrchestrator receivableOrchestrator;
 
     static final Pattern ORDER_NO_PATTERN = Pattern.compile("PO\\d{8,}");
+    /** 款号关键词匹配：如 ABC2025-001 / S202501 / SF-123 / KF001 等 */
+    private static final Pattern STYLE_NO_LIKE_PATTERN = Pattern.compile("[A-Za-z0-9\\-]{3,15}");
 
     private static final java.util.Set<String> TERMINAL_STATUSES = java.util.Set.of("completed", "cancelled", "scrapped", "archived", "closed");
 
@@ -730,6 +733,68 @@ public class NlQueryDataHandlers {
             log.warn("[NlQuery] 物料缺口查询失败 traceId={}: {}", traceId, e.getMessage());
             resp.setErrorTraceId(traceId);
             resp.setAnswer("面料缺口数据查询失败（追踪ID: " + traceId + "），请稍后重试");
+            resp.setConfidence(20);
+        }
+        return resp;
+    }
+
+    // ── 按款号查询收款状态 ──
+
+    /** 从用户问题中提取款号 */
+    private String extractStyleNoFromQuestion(String question) {
+        if (!StringUtils.hasText(question)) return null;
+
+        // 模式1："款号 xxx" / "款号: xxx"
+        java.util.regex.Matcher m1 = Pattern.compile("款号[是为\\s：:]*([A-Za-z0-9\\-]{3,15})").matcher(question);
+        if (m1.find()) return m1.group(1);
+
+        // 模式2："xxx 的收款" / "xxx 应收"
+        java.util.regex.Matcher m2 = Pattern.compile("([A-Za-z0-9\\-]{3,15})\\s*(?:的|收款|应收|回款)").matcher(question);
+        if (m2.find()) return m2.group(1);
+
+        // 模式3：第一个看起来像款号的 token（仅当含"收款/应收/款号"关键词时）
+        if (containsAny(question, "收款", "应收", "款号", "回款")) {
+            java.util.regex.Matcher m3 = STYLE_NO_LIKE_PATTERN.matcher(question);
+            while (m3.find()) {
+                String tok = m3.group();
+                if (tok.matches(".*[A-Za-z].*") && tok.matches(".*\\d.*")) { // 必须同时包含字母和数字
+                    return tok;
+                }
+            }
+        }
+        return null;
+    }
+
+    private static boolean containsAny(String text, String... keywords) {
+        if (text == null) return false;
+        for (String kw : keywords) if (text.contains(kw)) return true;
+        return false;
+    }
+
+    public NlQueryResponse handleReceivableByStyleNo(String question) {
+        NlQueryResponse resp = new NlQueryResponse();
+        resp.setIntent("receivable_by_style_no");
+        try {
+            String styleNo = extractStyleNoFromQuestion(question);
+            if (!StringUtils.hasText(styleNo)) {
+                // 引导用户给出款号
+                resp.setAnswer("请告诉我您要查询的款号，例如：「款号 ABC2025-001 的收款情况如何？」");
+                resp.setConfidence(60);
+                resp.setSuggestions(Arrays.asList("查询某款应收", "收款统计", "逾期应收"));
+                return resp;
+            }
+
+            Map<String, Object> result = receivableOrchestrator.queryByStyleNo(styleNo);
+            String summary = result.get("summary") != null ? result.get("summary").toString() : "查询无结果";
+            resp.setAnswer("💰 " + summary);
+            resp.setData(result);
+            resp.setConfidence(90);
+            resp.setSuggestions(Arrays.asList("查询其他款号", "查看应收列表", "查看逾期应收"));
+        } catch (Exception e) {
+            String traceId = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 8);
+            log.error("[NlQuery] 按款号查询收款失败 traceId={}: {}", traceId, e.getMessage(), e);
+            resp.setErrorTraceId(traceId);
+            resp.setAnswer("查询失败（追踪ID: " + traceId + "），请稍后重试");
             resp.setConfidence(20);
         }
         return resp;

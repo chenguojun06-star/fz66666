@@ -282,6 +282,11 @@ public class NlQueryOrchestrator {
 
     /** 21.1)~21.7) 报价/供应商/派工/执行/财务/工资/费用 */
     private NlQueryResponse matchFinanceQueries(String question) {
+        // 21.0) v2: 按款号查询收款状态（优先级最高，用户典型询问）
+        if (containsAny(question, "款号", "收款", "应收", "回款")
+                || containsAny(question, "款号") && containsAny(question, "状态", "情况", "多少", "收了", "到账")) {
+            return dataHandlers.handleReceivableByStyleNo(question);
+        }
         // 21.1) 报价建议 → 成本查询（报价核心数据源相同）
         if (containsAny(question, "报价", "估价", "估算")) {
             return smartHandlers.handleCostQuery();

@@ -84,6 +84,14 @@ public class VisionAnalysisService {
         return analyze(imageUrl, prompt, "GENERIC");
     }
 
+    /**
+     * 以自定义 prompt 进行视觉分析（不添加额外的任务包装）。
+     * 用于色卡识别等需要精确控制 prompt 结构的场景。
+     */
+    public VisionResult analyzeWithPrompt(String imageUrl, String prompt, String taskType) {
+        return analyze(imageUrl, prompt, taskType != null ? taskType : "CUSTOM");
+    }
+
     // ==================== 核心分析逻辑 ====================
 
     private VisionResult analyze(String imageUrl, String textPrompt, String taskType) {

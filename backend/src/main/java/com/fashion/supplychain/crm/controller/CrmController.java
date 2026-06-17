@@ -96,6 +96,13 @@ public class CrmController {
         return Result.success(receivableOrchestrator.getStats());
     }
 
+    /** v2: 按款号查询收款状态（AI 智能问答专用） */
+    @GetMapping("/receivables/by-style-no")
+    @PreAuthorize("isAuthenticated()")
+    public Result<?> queryReceivableByStyleNo(@RequestParam String styleNo) {
+        return Result.success(receivableOrchestrator.queryByStyleNo(styleNo));
+    }
+
     /** 新建应收单 */
     @PostMapping("/receivables")
     public Result<Receivable> createReceivable(@RequestBody Receivable receivable) {

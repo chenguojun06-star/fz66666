@@ -59,6 +59,7 @@ public class ReceivableOrchestrator {
         String keyword = strOf(params.get("keyword"));
         String sourceBizType = strOf(params.get("sourceBizType"));
         String sourceBizNo = strOf(params.get("sourceBizNo"));
+        String styleNo = strOf(params.get("styleNo"));
 
         Long tenantId = UserContext.tenantId();
 
@@ -69,6 +70,8 @@ public class ReceivableOrchestrator {
                 .eq(StringUtils.hasText(status), Receivable::getStatus, status)
                 .eq(StringUtils.hasText(sourceBizType), Receivable::getSourceBizType, sourceBizType)
                 .like(StringUtils.hasText(sourceBizNo), Receivable::getSourceBizNo, sourceBizNo)
+                // 【v2】支持款号精确/模糊搜索（orderNo 通常承载款号）
+                .like(StringUtils.hasText(styleNo), Receivable::getOrderNo, styleNo)
                 .and(StringUtils.hasText(keyword), q -> q
                         .like(Receivable::getReceivableNo, keyword)
                         .or().like(Receivable::getCustomerName, keyword)
@@ -77,6 +80,77 @@ public class ReceivableOrchestrator {
                 .orderByDesc(Receivable::getCreateTime);
 
         return receivableService.page(new Page<>(page, pageSize), qw);
+    }
+
+    /** v2: 按款号(或部分款号)查询收款状态 */
+    public Map<String, Object> queryByStyleNo(String styleNo) {
+        TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("styleNo", styleNo);
+
+        if (!StringUtils.hasText(styleNo)) {
+            result.put("error", "请提供款号");
+            return result;
+        }
+
+        List<Receivable> list = receivableService.lambdaQuery()
+                .eq(Receivable::getTenantId, tenantId)
+                .eq(Receivable::getDeleteFlag, 0)
+                .like(Receivable::getOrderNo, styleNo)
+                .last("LIMIT 20")
+                .list();
+
+        result.put("total", list.size());
+        if (list.isEmpty()) {
+            result.put("summary", "未找到该款号对应的应收单，请确认款号是否正确。");
+            return result;
+        }
+
+        BigDecimal totalAmount = BigDecimal.ZERO;
+        BigDecimal totalReceived = BigDecimal.ZERO;
+        int pendingCount = 0, partialCount = 0, paidCount = 0, overdueCount = 0;
+        java.util.List<Map<String, Object>> items = new java.util.ArrayList<>();
+
+        for (Receivable r : list) {
+            totalAmount = totalAmount.add(safeAmount(r.getAmount()));
+            totalReceived = totalReceived.add(safeAmount(r.getReceivedAmount()));
+            switch (r.getStatus()) {
+                case "PENDING" -> pendingCount++;
+                case "PARTIAL" -> partialCount++;
+                case "PAID" -> paidCount++;
+                case "OVERDUE" -> overdueCount++;
+            }
+            Map<String, Object> item = new HashMap<>();
+            item.put("receivableNo", r.getReceivableNo());
+            item.put("orderNo", r.getOrderNo());
+            item.put("customerName", r.getCustomerName());
+            item.put("amount", safeAmount(r.getAmount()));
+            item.put("receivedAmount", safeAmount(r.getReceivedAmount()));
+            item.put("status", r.getStatus());
+            item.put("dueDate", r.getDueDate());
+            items.add(item);
+        }
+
+        result.put("items", items);
+        result.put("totalAmount", totalAmount);
+        result.put("totalReceivedAmount", totalReceived);
+        result.put("pendingCount", pendingCount);
+        result.put("partialCount", partialCount);
+        result.put("paidCount", paidCount);
+        result.put("overdueCount", overdueCount);
+        result.put("summary", String.format(
+                "款号 [%s] 共 %d 笔应收：总额 %.2f，已收 %.2f，待收款 %.2f。状态分布：待收款 %d，部分到账 %d，已结清 %d，逾期 %d。",
+                styleNo, list.size(), totalAmount, totalReceived,
+                totalAmount.subtract(totalReceived),
+                pendingCount, partialCount, paidCount, overdueCount
+        ));
+        return result;
+    }
+
+    private static BigDecimal safeAmount(BigDecimal val) {
+        return val != null ? val : BigDecimal.ZERO;
     }
 
     public Receivable getById(String id) {

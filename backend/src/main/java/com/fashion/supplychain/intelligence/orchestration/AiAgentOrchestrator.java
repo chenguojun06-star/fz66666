@@ -184,21 +184,27 @@ public class AiAgentOrchestrator {
         return executeAgent(userMessage, null);
     }
 
+    /** v2: 三参数版本（mode 暂未用到，保持与 controller 签名兼容） */
+    public Result<String> executeAgent(String userMessage, String pageContext, AgentMode mode) {
+        return executeAgent(userMessage, pageContext);
+    }
+
     public Result<String> executeAgent(String userMessage, String pageContext) {
-        // 先尝试关键词匹配
-        String keywordAnswer = matchKeywordIntent(userMessage);
-        if (keywordAnswer != null) {
-            return Result.success(keywordAnswer);
+        // 【v2 修复】反转优先级：先尝试 AI 完整回答，失败后才走关键词模板
+        // 旧逻辑：关键词匹配 → 短路返回（用户感觉"不像AI"）
+        // 新逻辑：关键词提取 hint → AI 基于 hint + 真实数据回答 → AI 失败才走模板兜底
+
+        String keywordHint = extractKeywordDataHint(userMessage);  // 只提取 hint，不直接返回
+        String augmentedPageContext = buildAugmentedPageContext(userMessage, pageContext);
+        if (keywordHint != null && !keywordHint.isBlank()) {
+            augmentedPageContext = "[关键词识别提示]\n" + keywordHint + "\n\n" + augmentedPageContext;
         }
 
-        // 如果没有关键词匹配，再检查模型是否启用
+        // 如果模型未启用，回退到模板回答（保留可用性）
         if (!contextBuilder.isModelEnabled()) {
-            // 模型未启用时提供友好的默认回答
             String defaultAnswer = getDefaultAnswer(userMessage);
             return Result.success(defaultAnswer);
         }
-
-        String augmentedPageContext = buildAugmentedPageContext(userMessage, pageContext);
 
         // P1升级: 复杂问题先用ToT/GoT生成推理摘要，注入到AgentLoop上下文中（不直接返回，确保工具正常执行）
         String reasoningHint = tryAdvancedReasoning(userMessage, pageContext);
@@ -249,26 +255,36 @@ public class AiAgentOrchestrator {
         }
     }
 
-    private String matchKeywordIntent(String userMessage) {
+    /** v2: 只提取关键词→数据路由提示，不直接返回模板。让 AI 基于真实数据回答。 */
+    private String extractKeywordDataHint(String userMessage) {
         if (userMessage == null || userMessage.isBlank()) return null;
         String msg = userMessage.toLowerCase();
-        if (msg.contains("订单") && (msg.contains("进度") || msg.contains("状态")))
-            return "您可以在订单管理页面查看订单进度，或告诉我具体的订单号，我帮您查询。";
-        if (msg.contains("延期") || msg.contains("逾期"))
-            return "延期订单信息已同步到待办中心，您可以查看详情或告诉我订单号我帮您分析。";
-        if (msg.contains("扫码") || msg.contains("产量"))
-            return "扫码记录会实时同步，您可以在生产进度页面查看当前产量统计。";
-        if (msg.contains("工资") || msg.contains("结算"))
-            return "工资结算信息在工资管理页面，您可以查看明细或选择特定时间段查询。";
-        if (msg.contains("库存") || msg.contains("入库"))
-            return "库存信息在仓储管理页面，您可以查看实时库存和入库记录。";
-        if (msg.contains("你好") || msg.contains("hi") || msg.contains("hello"))
-            return "你好！我是小云，你的服装供应链智能助手。有什么可以帮到你的？";
-        if (msg.contains("帮助") || msg.contains("怎么"))
-            return "你可以问我关于订单进度、扫码统计、工资结算、库存查询等问题，我会尽力帮你解答！";
-        return null;
+        StringBuilder hint = new StringBuilder();
+        if (msg.contains("订单") && (msg.contains("进度") || msg.contains("状态"))) {
+            hint.append("- 用户问订单状态/进度 → 优先查询 production_order 表，字段：order_no/status/delivery_date\n");
+        }
+        if (msg.contains("延期") || msg.contains("逾期")) {
+            hint.append("- 用户问延期/逾期 → 从 dashboard_delay_stats 或 production_order 筛选 delay_days > 0\n");
+        }
+        if (msg.contains("扫码") || msg.contains("产量")) {
+            hint.append("- 用户问扫码/产量 → 查询 scan_record 表，按 order_no/group 聚合产量\n");
+        }
+        if (msg.contains("工资") || msg.contains("结算")) {
+            hint.append("- 用户问工资结算 → 查询 wage_settlement 表，按 operator_id/period 汇总\n");
+        }
+        if (msg.contains("库存") || msg.contains("入库")) {
+            hint.append("- 用户问库存/入库 → 查询 product_stock/material_stock 表\n");
+        }
+        if (msg.contains("收款") || msg.contains("应收") || msg.contains("款号")) {
+            hint.append("- 用户问收款/款号 → 查询 crm_receivable 表，字段：style_no/received_amount/status\n");
+        }
+        if (msg.contains("尺寸表") || msg.contains("尺码") || msg.contains("规格")) {
+            hint.append("- 用户问尺寸表/尺码 → 若提供了图片URL，调用 parseSizeChart; 否则查询 style_size_spec 表\n");
+        }
+        return hint.length() > 0 ? hint.toString() : null;
     }
 
+    /** 保留：模型未启用时的纯模板回答（仅当模型不可用时走） */
     private String getDefaultAnswer(String userMessage) {
         if (userMessage == null || userMessage.isBlank()) {
             return "你好！我是小云，你的服装供应链智能助手。有什么可以帮到你的？";
@@ -276,13 +292,8 @@ public class AiAgentOrchestrator {
         return "我正在学习中，暂时无法回答这个问题。你可以尝试问我关于订单进度、扫码统计、工资结算、库存查询等问题。";
     }
 
-    public Result<String> executeAgent(String userMessage, String pageContext, AgentMode mode) {
-        AgentModeContext.set(mode);
-        return executeAgent(userMessage, pageContext);
-    }
-
+    /** 流式对话中同样反转优先级（四参数版本，兼容流式接口） */
     public void executeAgentStreaming(String userMessage, String pageContext, AgentMode mode, SseEmitter emitter) {
-        AgentModeContext.set(mode);
         executeAgentStreaming(userMessage, pageContext, emitter);
     }
 
@@ -291,23 +302,17 @@ public class AiAgentOrchestrator {
         ScheduledFuture<?> heartbeatFuture = null;
         AtomicBoolean cancelled = new AtomicBoolean(false);
         try {
-            // 先尝试关键词匹配
-            String keywordAnswer = matchKeywordIntent(userMessage);
-            if (keywordAnswer != null) {
-                // 关键词兜底不需要完整的 context，直接生成一个简单的 commandId
-                String simpleCommandId = "cmd-" + System.currentTimeMillis();
-                emitSse(emitter, "answer", java.util.Map.of("content", keywordAnswer, "commandId", simpleCommandId));
-                emitSse(emitter, "done", java.util.Map.of());
-                emitter.complete();
-                return;
+            // 【v2】关键词只作为路由 hint，不直接短路
+            String keywordHint = extractKeywordDataHint(userMessage);
+            String augmentedCtx = pageContext != null ? pageContext : "";
+            if (keywordHint != null && !keywordHint.isBlank()) {
+                augmentedCtx = "[关键词识别提示]\n" + keywordHint + "\n\n" + augmentedCtx;
             }
 
-            // 如果没有关键词匹配，再检查模型是否启用
+            // 模型未启用：降级为模板回答（但不中断流）
             if (!contextBuilder.isModelEnabled()) {
-                // 模型未启用时提供友好的默认回答
-                String defaultAnswer = getDefaultAnswer(userMessage);
                 String simpleCommandId = "cmd-" + System.currentTimeMillis();
-                emitSse(emitter, "answer", java.util.Map.of("content", defaultAnswer, "commandId", simpleCommandId));
+                emitSse(emitter, "answer", java.util.Map.of("content", getDefaultAnswer(userMessage), "commandId", simpleCommandId));
                 emitSse(emitter, "done", java.util.Map.of());
                 emitter.complete();
                 return;
@@ -335,9 +340,11 @@ public class AiAgentOrchestrator {
 
             heartbeatFuture = startHeartbeat(emitter, sseHeartbeatIntervalS, cancelled);
 
+            // 【v2】keyword hint 注入 augmentedPageContext（之前已经生成过一次，复用）
             String augmentedPageContext = buildAugmentedPageContext(userMessage, pageContext);
-
-            // P1升级: 复杂问题先用ToT/GoT生成推理摘要，注入到AgentLoop上下文中
+            if (keywordHint != null && !keywordHint.isBlank()) {
+                augmentedPageContext = "[关键词识别提示]\n" + keywordHint + "\n\n" + augmentedPageContext;
+            }
             String reasoningHint = tryAdvancedReasoning(userMessage, pageContext);
             if (reasoningHint != null && !reasoningHint.isBlank()) {
                 augmentedPageContext = "[高级推理参考]\n" + reasoningHint + "\n\n" + augmentedPageContext;
