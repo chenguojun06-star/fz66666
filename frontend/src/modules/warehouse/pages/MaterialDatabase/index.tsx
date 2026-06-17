@@ -21,6 +21,7 @@ import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
 import { useMaterialDatabaseActions } from './useMaterialDatabaseActions';
 import { getMaterialDatabaseColumns } from './materialDatabaseColumns';
+import MaterialColorCardRecognizer from '@/components/common/MaterialColorCardRecognizer';
 
 const { Option } = Select;
 
@@ -300,6 +301,19 @@ const MaterialDatabasePage: React.FC = () => {
           </Button>,
         ]}
       >
+        <div style={{ marginBottom: 12, paddingBottom: 12, borderBottom: '1px solid #eee' }}>
+          <MaterialColorCardRecognizer
+            form={form}
+            onMaterialTypeRecognized={(type) => fetchMaterialCode(type)}
+            onImageSelected={(url) => {
+              form.setFieldsValue({ image: url });
+              setImageFiles([{ uid: '-1', name: 'image', status: 'done' as const, url }]);
+            }}
+          />
+          <span style={{ color: '#999', fontSize: 12, marginLeft: 12 }}>
+            提示：拍照色卡图片，AI 自动识别物料信息，识别后可编辑再保存
+          </span>
+        </div>
         <Form form={form} layout="vertical" size={isMobile ? 'small' : 'middle'}>
           <Row gutter={[12, 8]}>
             <Col xs={24} sm={8} md={6} lg={4} xl={4}>

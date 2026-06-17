@@ -1,7 +1,9 @@
 package com.fashion.supplychain.production.controller;
 
 import com.fashion.supplychain.common.Result;
+import com.fashion.supplychain.production.dto.MaterialColorCardRecognitionResult;
 import com.fashion.supplychain.production.entity.MaterialDatabase;
+import com.fashion.supplychain.production.orchestration.MaterialColorCardOrchestrator;
 import com.fashion.supplychain.production.orchestration.MaterialDatabaseOrchestrator;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import java.util.Map;
@@ -17,6 +19,9 @@ public class MaterialDatabaseController {
     @Autowired
     private MaterialDatabaseOrchestrator materialDatabaseOrchestrator;
 
+    @Autowired(required = false)
+    private MaterialColorCardOrchestrator materialColorCardOrchestrator;
+
     @GetMapping("/list")
     public Result<IPage<MaterialDatabase>> list(@RequestParam Map<String, Object> params) {
         return Result.success(materialDatabaseOrchestrator.list(params));
@@ -25,6 +30,22 @@ public class MaterialDatabaseController {
     @GetMapping("/generate-code")
     public Result<String> generateCode(@RequestParam(required = false, defaultValue = "accessory") String materialType) {
         return Result.success(materialDatabaseOrchestrator.generateMaterialCode(materialType));
+    }
+
+    /**
+     * 拍照识别物料色卡信息
+     * 入参：已上传的图片 URL
+     * 返回：物料各字段识别结果（含置信度），由前端自动填充表单并让用户确认
+     */
+    @PostMapping("/recognize-color-card")
+    public Result<MaterialColorCardRecognitionResult> recognizeColorCard(@RequestBody Map<String, Object> body) {
+        String imageUrl = (String) body.get("imageUrl");
+        if (materialColorCardOrchestrator == null) {
+            MaterialColorCardRecognitionResult fallback = new MaterialColorCardRecognitionResult();
+            fallback.setErrorMessage("视觉识别模块未启用，请手动输入");
+            return Result.success(fallback);
+        }
+        return Result.success(materialColorCardOrchestrator.recognizeFromImage(imageUrl));
     }
 
     @GetMapping("/{id}")
