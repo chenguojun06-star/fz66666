@@ -249,9 +249,12 @@ const sampleStock = {
   list(params) { return ok('/api/stock/sample/list', 'GET', params || {}); },
   scanQuery(data) { return ok('/api/stock/sample/scan-query', 'POST', data); },
   inbound(data) { return ok('/api/stock/sample/inbound', 'POST', data); },
+  inboundBatch(data) { return ok('/api/stock/sample/inbound/batch', 'POST', data); },
   loan(data) { return ok('/api/stock/sample/loan', 'POST', data); },
   returnSample(data) { return ok('/api/stock/sample/return', 'POST', data); },
   transfer(data) { return ok('/api/stock/sample/transfer', 'POST', data); },
+  destroy(data) { return ok('/api/stock/sample/destroy', 'POST', data); },
+  transferToOutstock(data) { return ok('/api/stock/sample/transfer-to-outstock', 'POST', data); },
   loanList(params) { return ok('/api/stock/sample/loan/list', 'GET', params || {}); },
 };
 

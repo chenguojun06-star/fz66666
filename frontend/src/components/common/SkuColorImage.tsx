@@ -115,6 +115,8 @@ const SkuColorImage: React.FC<SkuColorImageProps> = ({
     <img
       src={fullUrl}
       alt={color}
+      loading="lazy"
+      decoding="async"
       style={{
         width: size,
         height: size,

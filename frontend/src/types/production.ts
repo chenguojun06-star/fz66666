@@ -258,6 +258,7 @@ export interface CuttingTask {
   createTime?: string;
   updateTime?: string;
   orderCreatorName?: string;
+  creatorName?: string;
   orderTime?: string;
   remarks?: string;
   expectedShipDate?: string;

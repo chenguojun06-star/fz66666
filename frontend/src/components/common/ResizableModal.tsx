@@ -261,17 +261,21 @@ const ResizableModal: React.FC<ResizableModalProps> = ({
 
   const rafIdRef = React.useRef<number | null>(null);
 
-  // 停止调整大小
+  // 停止调整大小（使用 ref 标志避免关闭后触发 setState）
+  const mountedRef = React.useRef(true);
   const stopResize = React.useCallback(() => {
-    // 清理待处理的动画帧
     if (rafIdRef.current !== null) {
       cancelAnimationFrame(rafIdRef.current);
       rafIdRef.current = null;
     }
     resizeSessionRef.current = null;
-    setIsResizing(false);
-    document.body.style.cursor = '';
-    document.body.style.userSelect = '';
+    if (mountedRef.current) {
+      setIsResizing(false);
+    }
+    if (typeof document !== 'undefined') {
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    }
   }, []);
 
   // 打开时初始化大小
@@ -321,14 +325,22 @@ const ResizableModal: React.FC<ResizableModalProps> = ({
     return () => window.removeEventListener('resize', handleResize);
   }, [minWidth, minHeight, open]);
 
-  // 组件卸载时清理
+  // open 变为 false 时同步清理所有状态（避免关闭后状态更新导致遮罩残留）
   React.useEffect(() => {
+    if (!open) {
+      stopResize();
+    }
+  }, [open, stopResize]);
+
+  // 组件卸载时清理 + 标记已卸载标志
+  React.useEffect(() => {
+    mountedRef.current = true;
     return () => {
+      mountedRef.current = false;
       try {
         stopResize();
       } catch {
-    // Intentionally empty
-      // 忽略错误
+        // 忽略错误
       }
     };
   }, [stopResize]);

@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 
 /**
  * 扫码声音反馈Hook
@@ -16,8 +16,33 @@ import { useCallback, useRef } from 'react';
  */
 export const useScanSound = () => {
   const audioContextRef = useRef<AudioContext | null>(null);
+  const timersRef = useRef<number[]>([]);
 
-  // 获取或创建AudioContext
+  const scheduleTimer = useCallback((fn: () => void, delay: number) => {
+    const id = window.setTimeout(fn, delay);
+    timersRef.current.push(id);
+    return id;
+  }, []);
+
+  const clearAllTimers = useCallback(() => {
+    timersRef.current.forEach((id) => window.clearTimeout(id));
+    timersRef.current = [];
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      clearAllTimers();
+      if (audioContextRef.current) {
+        try {
+          audioContextRef.current.close();
+        } catch {
+          // 忽略关闭错误
+        }
+        audioContextRef.current = null;
+      }
+    };
+  }, [clearAllTimers]);
+
   const getAudioContext = useCallback(() => {
     if (!audioContextRef.current) {
       try {
@@ -137,7 +162,7 @@ export const useScanSound = () => {
       oscillator.start(ctx.currentTime);
       oscillator.stop(ctx.currentTime + 0.1);
 
-      setTimeout(() => {
+      scheduleTimer(() => {
         const osc2 = ctx.createOscillator();
         const gain2 = ctx.createGain();
         osc2.connect(gain2);
@@ -152,7 +177,7 @@ export const useScanSound = () => {
     } catch (e) {
       console.debug('播放重复音效失败:', e);
     }
-  }, [getAudioContext]);
+  }, [getAudioContext, scheduleTimer]);
 
   /**
    * 播放警告提示音
@@ -169,7 +194,7 @@ export const useScanSound = () => {
 
       // 播放三声警告
       for (let i = 0; i < 3; i++) {
-        setTimeout(() => {
+        scheduleTimer(() => {
           const oscillator = ctx.createOscillator();
           const gainNode = ctx.createGain();
           oscillator.connect(gainNode);
@@ -185,7 +210,7 @@ export const useScanSound = () => {
     } catch (e) {
       console.debug('播放警告音效失败:', e);
     }
-  }, [getAudioContext]);
+  }, [getAudioContext, scheduleTimer]);
 
   return {
     playSuccess,

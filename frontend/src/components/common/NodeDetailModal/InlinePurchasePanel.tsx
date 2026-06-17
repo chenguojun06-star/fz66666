@@ -625,12 +625,17 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = ({ orderId, orde
   const handleWarehousePick = useCallback(async (record: MaterialPurchase, pickQty: number) => {
     const purchaseId = String(record?.id || '').trim();
     if (!purchaseId) return;
+    const safePickQty = Number.isFinite(pickQty) ? Math.floor(pickQty) : 0;
+    if (safePickQty <= 0) {
+      message.error('领取数量无效，请检查库存数据');
+      return;
+    }
     const receiverId = String(user?.id || '').trim();
     const receiverName = String(user?.name || user?.username || '').trim();
     try {
       const res = await api.post<{ code: number; message?: string }>('/production/purchase/warehouse-pick', {
         purchaseId,
-        pickQty,
+        pickQty: safePickQty,
         receiverId,
         receiverName,
       });
@@ -1044,8 +1049,14 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = ({ orderId, orde
             title={hasStock ? '点击出库领取' : undefined}
             onClick={() => {
               if (hasStock) {
-                const pickQty = Math.min(stock, Number(r.purchaseQuantity || 0));
-                handleWarehousePick(r, pickQty);
+                const safeStock = Number.isFinite(stock) ? Math.floor(stock as number) : 0;
+                const requiredQty = Number.isFinite(Number(r.purchaseQuantity)) && Number(r.purchaseQuantity) > 0
+                  ? Math.floor(Number(r.purchaseQuantity))
+                  : safeStock;
+                const pickQty = Math.min(safeStock, requiredQty);
+                if (pickQty > 0) {
+                  handleWarehousePick(r, pickQty);
+                }
               }
             }}
           >
@@ -1131,8 +1142,14 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = ({ orderId, orde
                 disabled={status !== MATERIAL_PURCHASE_STATUS.PENDING || (bomIncomplete && !hasStock)}
                 onClick={() => {
                   if (hasStock) {
-                    const pickQty = Math.min(stock, Number(record.purchaseQuantity || 0));
-                    handleWarehousePick(record, pickQty);
+                    const safeStock = Number.isFinite(stock) ? Math.floor(stock as number) : 0;
+                    const requiredQty = Number.isFinite(Number(record.purchaseQuantity)) && Number(record.purchaseQuantity) > 0
+                      ? Math.floor(Number(record.purchaseQuantity))
+                      : safeStock;
+                    const pickQty = Math.min(safeStock, requiredQty);
+                    if (pickQty > 0) {
+                      handleWarehousePick(record, pickQty);
+                    }
                   } else {
                     handleReceive(record);
                   }

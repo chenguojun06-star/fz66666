@@ -53,7 +53,7 @@ interface SkuRow {
 
 async function loadSkuRows(order: ProductionOrder): Promise<SkuRow[]> {
   try {
-    const res = await (api as any).get(
+    const res = await api.get(
       `/production/scan/sku/query?type=list&orderNo=${encodeURIComponent(order.orderNo || '')}`
     );
     const list: any[] = Array.isArray(res) ? res : (Array.isArray(res?.data) ? res.data : []);
@@ -356,7 +356,7 @@ export default function LabelPrintModal({ open, onClose, order, styleInfo }: Pro
 
   useEffect(() => {
     if (!open || !order?.factoryId) { setOrderFactoryCode(''); return; }
-    void (api as any).get(`/system/factory/${order.factoryId}`)
+    void api.get(`/system/factory/${order.factoryId}`)
       .then((res: ApiResult<Record<string, any>>) => {
         const d = res?.data ?? res ?? {};
         setOrderFactoryCode(String(d.factoryCode || ''));

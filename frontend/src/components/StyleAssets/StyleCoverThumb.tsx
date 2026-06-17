@@ -111,10 +111,12 @@ const StyleCoverThumb: React.FC<{
         let imageUrl: string | null = null;
         
         // 优先获取SKU颜色图片（如果有color参数）
+        // color参数可能是逗号分隔的多颜色值（如"白色,蓝色,黑色"），只取第一个颜色查询
         if (color && styleNo) {
           try {
+            const firstColor = String(color).split(',')[0].trim();
             const colorRes = await api.get<{ code: number; data: string | null }>('/style/sku/color-image', {
-              params: { styleNo, color },
+              params: { styleNo: String(styleNo).trim(), color: firstColor },
             });
             if (colorRes.code === 200 && colorRes.data) {
               imageUrl = colorRes.data;

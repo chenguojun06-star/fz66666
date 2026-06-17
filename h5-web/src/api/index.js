@@ -371,7 +371,9 @@ const sampleStock = {
   inboundBatch: (data) => http.post('/api/stock/sample/inbound/batch', data),
   loan: (data) => http.post('/api/stock/sample/loan', data),
   returnSample: (data) => http.post('/api/stock/sample/return', data),
+  transfer: (data) => http.post('/api/stock/sample/transfer', data),
   destroy: (data) => http.post('/api/stock/sample/destroy', data),
+  transferToOutstock: (data) => http.post('/api/stock/sample/transfer-to-outstock', data),
   loanList: (params) => http.get('/api/stock/sample/loan/list', { params: params || {} }),
 };
 

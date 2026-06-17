@@ -217,6 +217,7 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
         <Col xs={24} lg={4}>
           <CoverImageUpload
             styleId={currentStyle?.id}
+            styleNo={currentStyle?.styleNo || _form.getFieldValue('styleNo')}
             enabled={isNewPage || (Boolean(currentStyle?.id) && !editLocked)}
             isNewMode={isNewPage}
             pendingFiles={pendingImages}
@@ -305,7 +306,7 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
                   <CustomerSelect
                     id="customer"
                     placeholder="搜索或输入客户名称"
-                    disabled={isFieldLocked((currentStyle as any)?.customer)}
+                    disabled={isFieldLocked(currentStyle?.customer)}
                     onChange={(_value, option) => {
                       if (option?.customerId) {
                         _form.setFieldsValue({ customerId: option.customerId });
@@ -339,7 +340,7 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
               </Col>
               <Col xs={24} md={5}>
                 <Form.Item name="orderType" label="跟单员">
-                  <Input id="orderType" placeholder="请输入跟单员" disabled={isFieldLocked((currentStyle as any)?.orderType)} />
+                  <Input id="orderType" placeholder="请输入跟单员" disabled={isFieldLocked(currentStyle?.orderType)} />
                 </Form.Item>
               </Col>
               <Col xs={24} md={5}>
@@ -363,22 +364,22 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
             <Row gutter={[16, 0]}>
               <Col xs={24} md={6}>
                 <Form.Item name="plateType" label="板类">
-                  <DictAutoComplete dictType="plate_type" placeholder="请选择板类" disabled={isFieldLocked((currentStyle as any)?.plateType)} style={{ width: '100%' }} id="plateType" />
+                  <DictAutoComplete dictType="plate_type" placeholder="请选择板类" disabled={isFieldLocked(currentStyle?.plateType)} style={{ width: '100%' }} id="plateType" />
                 </Form.Item>
               </Col>
               <Col xs={24} md={6}>
                 <Form.Item name="sampleSupplier" label="纸样师">
-                  <Input id="sampleSupplier" placeholder="请输入纸样师" disabled={isFieldLocked((currentStyle as any)?.sampleSupplier)} />
+                  <Input id="sampleSupplier" placeholder="请输入纸样师" disabled={isFieldLocked(currentStyle?.sampleSupplier)} />
                 </Form.Item>
               </Col>
               <Col xs={24} md={6}>
                 <Form.Item name="patternNo" label="纸样号">
-                  <Input id="patternNo" placeholder="请输入纸样号" disabled={isFieldLocked((currentStyle as any)?.patternNo)} />
+                  <Input id="patternNo" placeholder="请输入纸样号" disabled={isFieldLocked(currentStyle?.patternNo)} />
                 </Form.Item>
               </Col>
               <Col xs={24} md={6}>
                 <Form.Item name="plateWorker" label="车板师">
-                  <Input id="plateWorker" placeholder="请输入车板师" disabled={isFieldLocked((currentStyle as any)?.plateWorker)} />
+                  <Input id="plateWorker" placeholder="请输入车板师" disabled={isFieldLocked(currentStyle?.plateWorker)} />
                 </Form.Item>
               </Col>
             </Row>
@@ -420,7 +421,7 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
                 <Form.Item name="deliveryDate" label="交板日期" rules={[{ required: true, message: '请选择交板日期' }]}>
                   <UnifiedDatePicker
                     id="deliveryDate"
-                    disabled={isFieldLocked((currentStyle as any)?.deliveryDate)}
+                    disabled={isFieldLocked(currentStyle?.deliveryDate)}
                     allowClear
                     showTime
                     placeholder="请选择交板日期"
@@ -431,7 +432,7 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
               </Col>
               <Col xs={24} md={6}>
                 <Form.Item name="remark" label="备注">
-                  <Input.TextArea id="remark" rows={2} placeholder="请输入备注" disabled={isFieldLocked((currentStyle as any)?.remark)} />
+                  <Input.TextArea id="remark" rows={2} placeholder="请输入备注" disabled={isFieldLocked(currentStyle?.remark)} />
                 </Form.Item>
               </Col>
             </Row>

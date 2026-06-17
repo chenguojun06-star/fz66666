@@ -8,6 +8,7 @@ import { styleSearchByImage, styleParseFromImage, type StyleFieldParseResult } f
 
 interface CoverImageUploadProps {
   styleId?: string | number;
+  styleNo?: string;
   enabled: boolean;
   isNewMode?: boolean;  // 新建模式
   pendingFiles?: File[];  // 待上传的文件列表
@@ -27,6 +28,7 @@ interface CoverImageUploadProps {
  */
 const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
   styleId,
+  styleNo,
   enabled,
   isNewMode = false,
   pendingFiles = [],
@@ -123,11 +125,18 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
 
     // 新建模式：本地图片需要先上传获取服务器URL
     if (isNewMode && current.isLocal && pendingFiles[current.localIndex]) {
+      // 新建模式下必须先保存款式才能上传图片（后端要求 styleId 或 styleNo）
+      if (!styleId && !styleNo) {
+        message.warning('请先保存基础信息，再使用智能识别');
+        return null;
+      }
       try {
         const file = pendingFiles[current.localIndex];
         const formData = new FormData();
         formData.append('file', file);
-        const uploadRes = await api.post<ApiResult<{ fileUrl?: string }>>('/style/attachment/upload', formData, { timeout: 60000 } as any);
+        if (styleId) formData.append('styleId', String(styleId));
+        if (styleNo) formData.append('styleNo', styleNo);
+        const uploadRes = await api.post<ApiResult<{ fileUrl?: string }>>('/style/attachment/upload', formData, { timeout: 60000 });
         if (isApiSuccess(uploadRes) && uploadRes?.data?.fileUrl) {
           imgUrl = getFullAuthedFileUrl(uploadRes.data.fileUrl);
         } else {
@@ -244,9 +253,9 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
       const res = await api.delete<ApiResult<boolean>>(`/style/attachment/${attachmentId}`);
       if (isApiSuccess(res) && res?.data === true) {
         message.success('删除成功');
-        const deletedUrl = String((displayImages.find((item) => String(item?.id) === String(attachmentId)) as any)?.fileUrl || '');
-        if (deletedUrl === String(coverUrl || '')) {
-          const nextCover = (displayImages.find((item) => String(item?.id) !== String(attachmentId) && !(item as any)?.isCoverFallback) as any)?.fileUrl || null;
+        const deletedUrl = String(displayImages.find((item) => String(item?.id) === String(attachmentId))?.fileUrl || '');
+        if (!deletedUrl || deletedUrl === currentImage?.fileUrl) {
+          const nextCover = displayImages.find((item) => String(item?.id) !== String(attachmentId) && !(item as { isCoverFallback?: boolean })?.isCoverFallback)?.fileUrl || null;
           onCoverChange?.(nextCover);
           setStyleCoverOverride(styleId, undefined, nextCover);
         }
@@ -268,7 +277,7 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
       return;
     }
     // 兜底封面（选品中心 Google 图）不是真实附件，无法设为封面
-    if ((img as any).isCoverFallback) {
+    if ((img as { isCoverFallback?: boolean }).isCoverFallback) {
       message.warning('请先上传图片，再设置主图');
       return;
     }
@@ -292,7 +301,7 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
     if (String(img.fileUrl || '') === String(coverUrl || '')) {
       return { label: '主图', color: 'var(--color-warning)' };
     }
-    if ((img as any).isCoverFallback) {
+    if (img.isCoverFallback) {
       return { label: '参考图', color: 'var(--color-text-tertiary)' };
     }
     if (String(img.bizType || '').startsWith('color_image::')) {
@@ -422,12 +431,19 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
 
                         // 新建模式：本地图片需要先上传获取服务器URL
                         if (currentImage.isLocal && isNewMode && pendingFiles[currentImage.localIndex]) {
+                          // 新建模式下必须先保存款式才能上传图片（后端要求 styleId 或 styleNo）
+                          if (!styleId && !styleNo) {
+                            message.warning('请先保存基础信息，再使用以图搜款');
+                            return;
+                          }
                           setSearching(true);
                           try {
                             const file = pendingFiles[currentImage.localIndex];
                             const formData = new FormData();
                             formData.append('file', file);
-                            const uploadRes = await api.post<ApiResult<{ fileUrl?: string }>>('/style/attachment/upload', formData, { timeout: 60000 } as any);
+                            if (styleId) formData.append('styleId', String(styleId));
+                            if (styleNo) formData.append('styleNo', styleNo);
+                            const uploadRes = await api.post<ApiResult<{ fileUrl?: string }>>('/style/attachment/upload', formData, { timeout: 60000 });
                             if (isApiSuccess(uploadRes) && uploadRes?.data?.fileUrl) {
                               imgUrl = getFullAuthedFileUrl(uploadRes.data.fileUrl);
                             } else {
@@ -546,7 +562,7 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
           {displayImages.map((img, idx) => {
             const hover = hoverIndex === idx;
             const canOperate = isNewMode || enabled;
-            const isCoverFallback = !!(img as any)?.isCoverFallback;
+            const isCoverFallback = !!(img as { isCoverFallback?: boolean })?.isCoverFallback;
             const assetMeta = resolveAssetMeta(img, idx);
             return (
               <div

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
+import type { ApiResult } from '@/utils/api';
 
 const POLL_INTERVAL = 30_000;
 const MAX_BACKOFF = 5 * 60_000;
@@ -44,12 +45,12 @@ export function useSmartAlerts(): UseSmartAlertsResult {
   const fetchAlerts = useCallback(async () => {
     try {
       const anomalyRes = await intelligenceApi.detectAnomalies();
-      const anomalyData = (anomalyRes as any)?.data;
+      const anomalyData = (anomalyRes?.data as { items?: Array<{ id?: string; severity?: string; title?: string; description?: string; message?: string; targetName?: string; targetType?: string; targetId?: string; timestamp?: number; actionUrl?: string }> } | undefined) ?? undefined;
       const anomalyAlerts: AlertItem[] = [];
 
       if (anomalyData?.items && Array.isArray(anomalyData.items)) {
         for (const item of anomalyData.items) {
-          const alertType = ALERT_TYPE_MAP[item.severity] || 'warning';
+          const alertType = ALERT_TYPE_MAP[item.severity ?? ''] || 'warning';
           anomalyAlerts.push({
             id: `anomaly-${item.id || Date.now()}`,
             type: alertType,
@@ -66,9 +67,9 @@ export function useSmartAlerts(): UseSmartAlertsResult {
       }
 
       const pendingRes = await intelligenceApi.getMyPendingTasks();
-      const pendingData: any[] = (pendingRes as any)?.code === 200
-        ? (pendingRes as any).data
-        : ((pendingRes as any)?.data ?? pendingRes ?? []);
+      const pendingData: any[] = Number((pendingRes as ApiResult<any>).code) === 200
+        ? ((pendingRes as ApiResult<any>).data as any[])
+        : ((pendingRes as ApiResult<any>).data as any[]) ?? (Array.isArray(pendingRes) ? pendingRes : []);
 
       const pendingAlerts: AlertItem[] = [];
       for (const task of pendingData) {

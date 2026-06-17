@@ -48,7 +48,7 @@ const CuttingManagement: React.FC = () => {
   const { modalWidth } = useViewport();
   const params = useParams();
   const routeOrderNo = useMemo(() => {
-    const raw = String((params as unknown as any)?.orderNo || '').trim();
+    const raw = String(params?.orderNo || '').trim();
     if (!raw) return '';
     try {
       return decodeURIComponent(raw);
@@ -97,8 +97,8 @@ const CuttingManagement: React.FC = () => {
     const orderNo = String(record.productionOrderNo || '').trim();
     if (!orderNo) { message.warning('该裁剪任务缺少订单号'); return; }
     try {
-      const res = await productionOrderApi.list({ orderNo, page: 1, pageSize: 1 } as any);
-      const order = (res as any)?.data?.records?.[0];
+      const res = await productionOrderApi.list({ orderNo, page: 1, pageSize: 1 });
+      const order = (res?.data?.records ?? [])[0];
       if (!order) { message.warning('未找到对应生产订单'); return; }
       processDetail.openProcessDetail(order, 'all');
     } catch {
@@ -459,7 +459,7 @@ const CuttingManagement: React.FC = () => {
                     key: 'action',
                     width: 120,
                     render: (_: any, record: CuttingTask) => {
-                      const orderNo = String((record as unknown as any)?.productionOrderNo || '').trim();
+                      const orderNo = String(record.productionOrderNo || '').trim();
                       const frozen = tasks.isOrderFrozenById(orderNo);
                       const isPending = record.status === 'pending';
                       const isReceived = record.status === 'received';
@@ -582,7 +582,7 @@ const CuttingManagement: React.FC = () => {
                           danger
                           onClick={() => handleRollbackActive(activeTask)}
                           loading={tasks.rollbackTaskLoading}
-                          disabled={tasks.isOrderFrozenById((activeTask as unknown as any)?.productionOrderNo) || !!activeTask?.hasScanRecords}
+                          disabled={tasks.isOrderFrozenById(activeTask?.productionOrderNo ?? '') || !!activeTask?.hasScanRecords}
                         >
                           退回
                         </Button>
@@ -714,7 +714,7 @@ const CuttingManagement: React.FC = () => {
 
               <ResizableTable<CuttingBundleRow>
                 storageKey="cutting-bundle-table"
-                columns={columns as any}
+                columns={columns}
                 dataSource={bundles.dataSource}
                 rowKey={(row) => row.id || `${row.productionOrderNo}-${row.bundleNo}-${row.color}-${row.size}`}
                
@@ -770,10 +770,10 @@ const CuttingManagement: React.FC = () => {
             styleImageUrl={activeTask?.styleCover}
             companyName={user?.tenantName}
             cuttingTask={activeTask ? {
-              receiverName: (activeTask as any).receiverName,
-              creatorName: (activeTask as any).creatorName,
-              orderCreatorName: (activeTask as any).orderCreatorName,
-              expectedShipDate: (activeTask as any).expectedShipDate,
+              receiverName: activeTask?.receiverName,
+              creatorName: activeTask?.creatorName,
+              orderCreatorName: activeTask?.orderCreatorName,
+              expectedShipDate: activeTask?.expectedShipDate,
             } : undefined}
           />
 

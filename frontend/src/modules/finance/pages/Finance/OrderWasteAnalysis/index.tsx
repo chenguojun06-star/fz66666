@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { App, Table, Tag, Statistic, Card, Row, Col, DatePicker, Input, Select } from 'antd';
+import { App, Tag, Statistic, Card, Row, Col, DatePicker, Input, Select } from 'antd';
 import PageLayout from '@/components/common/PageLayout';
 import ResizableTable from '@/components/common/ResizableTable';
 import StandardPagination from '@/components/common/StandardPagination';
@@ -306,7 +306,9 @@ const OrderWasteAnalysis: React.FC = () => {
 
         {summary && summary.wasteByFactory.length > 0 && (
           <Card title="按工厂分析损耗" style={{ marginBottom: 20 }}>
-            <Table
+            <ResizableTable
+              storageKey="order-waste-by-factory"
+              size="small"
               columns={[
                 { title: '工厂名称', dataIndex: 'factoryName', key: 'factoryName' },
                 { title: '下单数量', dataIndex: 'orderQuantity', key: 'orderQuantity', align: 'right' },
@@ -323,7 +325,9 @@ const OrderWasteAnalysis: React.FC = () => {
 
         {summary && summary.wasteByStyle.length > 0 && (
           <Card title="按款式分析损耗">
-            <Table
+            <ResizableTable
+              storageKey="order-waste-by-style"
+              size="small"
               columns={[
                 { title: '款号', dataIndex: 'styleNo', key: 'styleNo' },
                 { title: '款名', dataIndex: 'styleName', key: 'styleName' },

@@ -1,5 +1,17 @@
 import axios, { type AxiosInstance, type AxiosRequestConfig } from 'axios';
 
+/**
+ * 核心 API 超时配置（毫秒）
+ * - 普通请求：15秒
+ * - 扫码提交：10秒（快速失败，便于用户重试）
+ * - AI/图片识别：30秒（可能需要长耗时处理）
+ * - 文件上传：60秒
+ */
+export const API_TIMEOUT_MS = 15000;
+export const SCAN_API_TIMEOUT_MS = 10000;
+export const AI_VISION_TIMEOUT_MS = 30000;
+export const FILE_UPLOAD_TIMEOUT_MS = 60000;
+
 export type ApiResult<T = unknown> = {
   code: number;
   data: T;
@@ -174,7 +186,7 @@ export const clearApiCache = (pattern?: string) => {
 export const createApiClient = (): ApiClient => {
   const client = axios.create({
     baseURL: resolveApiBaseUrl(),
-    timeout: 30000,
+    timeout: API_TIMEOUT_MS,
     headers: {
       'Content-Type': 'application/json'
     }
@@ -186,6 +198,26 @@ export const createApiClient = (): ApiClient => {
       const url = config.url || '';
       const method = config.method || 'get';
       const cacheKey = getCacheKey(url, config.params);
+
+      // 按路径覆盖超时（更细粒度的控制）
+      if (typeof config.timeout !== 'number' || config.timeout <= 0) {
+        if (/\/scan\//i.test(url) || /scan.*execute/i.test(url)) {
+          config.timeout = SCAN_API_TIMEOUT_MS; // 扫码请求：10秒
+        } else if (/ocr|vision|recognize|extract/.test(url)) {
+          config.timeout = AI_VISION_TIMEOUT_MS; // AI/图片识别：30秒
+        } else if (/upload|import|excel/.test(url) && method === 'post') {
+          config.timeout = FILE_UPLOAD_TIMEOUT_MS; // 文件上传：60秒
+        }
+      }
+      // 请求 ID（用于追踪超时）
+      if (!config.headers || !(config.headers as any)['x-request-id']) {
+        const requestId = generateRequestId();
+        if (typeof config.headers?.set === 'function') {
+          (config.headers as any).set('x-request-id', requestId);
+        } else if (typeof (config.headers as any) === 'object') {
+          (config.headers as any)['x-request-id'] = requestId;
+        }
+      }
 
       if (isCacheable(url, method)) {
         const cached = responseCache.get(cacheKey);
@@ -465,7 +497,21 @@ export const createApiClient = (): ApiClient => {
             errorMessage = msg || `请求失败 (${status})`;
         }
       } else if (error.request) {
-        errorMessage = '服务器无响应';
+        // 区分超时和网络错误，给用户更准确的提示
+        const code = String(error.code || '').toUpperCase();
+        const msg = String(error.message || '').toLowerCase();
+        if (code === 'ECONNABORTED' || msg.includes('timeout') || code === 'ETIMEDOUT') {
+          const urlForHint = config?.url || '';
+          if (/\/scan\//i.test(urlForHint) || /scan.*execute/i.test(urlForHint)) {
+            errorMessage = '扫码请求超时，请检查网络或稍后重试';
+          } else if (/ocr|vision|recognize/.test(urlForHint)) {
+            errorMessage = '图片识别请求超时，请重试';
+          } else {
+            errorMessage = '请求超时，请检查网络或稍后重试';
+          }
+        } else {
+          errorMessage = '服务器无响应，请稍后重试';
+        }
       } else {
         errorMessage = error.message;
       }

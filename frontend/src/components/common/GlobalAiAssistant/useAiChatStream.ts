@@ -1,4 +1,4 @@
-import { useRef, useCallback } from 'react';
+import { useRef, useCallback, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
 import { normalizeXiaoyunChatPayload } from '@/services/intelligence/xiaoyunChatAdapter';
@@ -37,14 +37,53 @@ export function useAiChatStream(config: StreamConfig) {
   const streamAbortRef = useRef<AbortController | null>(null);
   const subRequestAbortRef = useRef<AbortController | null>(null);
   const requestSeqRef = useRef(0);
+  const timersRef = useRef<number[]>([]);
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  const scheduleTimer = useCallback((fn: () => void, delay: number) => {
+    const id = window.setTimeout(fn, delay);
+    timersRef.current.push(id as unknown as number);
+    return id;
+  }, []);
+
+  const clearAllTimers = useCallback(() => {
+    timersRef.current.forEach((id) => window.clearTimeout(id as unknown as number));
+    timersRef.current = [];
+  }, []);
+
+  const safeSetMessages = useCallback((updater: (prev: Message[]) => Message[]) => {
+    if (mountedRef.current) {
+      config.setMessages(updater);
+    }
+  }, [config]);
+
+  const safeSetIsTyping = useCallback((value: boolean) => {
+    if (mountedRef.current) {
+      config.setIsTyping(value);
+    }
+  }, [config]);
+
+  const safeUpdateLiveStatus = useCallback((status: LiveStatus) => {
+    if (mountedRef.current) {
+      config.onLiveStatusChange(status);
+    }
+  }, [config]);
 
   const abort = useCallback(() => {
     streamAbortRef.current?.abort();
     streamAbortRef.current = null;
     subRequestAbortRef.current?.abort();
     subRequestAbortRef.current = null;
-    onLiveStatusChange({ visible: false });
-  }, [onLiveStatusChange]);
+    clearAllTimers();
+    safeUpdateLiveStatus({ visible: false });
+  }, [clearAllTimers, safeUpdateLiveStatus]);
 
   const startStream = useCallback((
     contextualText: string,
@@ -62,10 +101,10 @@ export function useAiChatStream(config: StreamConfig) {
     subRequestAbortRef.current = new AbortController();
 
     const currentSeq = ++requestSeqRef.current;
-    setIsTyping(true);
+    safeSetIsTyping(true);
 
     const aiMsgId = `a-${Date.now()}`;
-    let inactivityTimer: ReturnType<typeof setTimeout> | undefined;
+    let inactivityTimer: number | undefined;
     let accumulatedText = '';
     let completed = false;
     let answerReceived = false;
@@ -74,7 +113,7 @@ export function useAiChatStream(config: StreamConfig) {
     let currentLiveStatus: LiveStatus = { visible: true };
     const updateLiveStatus = (partial: Partial<LiveStatus>) => {
       currentLiveStatus = { ...currentLiveStatus, ...partial };
-      onLiveStatusChange({ ...currentLiveStatus });
+      safeUpdateLiveStatus({ ...currentLiveStatus });
     };
     updateLiveStatus({ mood: 'thinking', visible: true, step: undefined, toolExecuting: undefined, elapsedMs: undefined });
 
@@ -105,15 +144,15 @@ export function useAiChatStream(config: StreamConfig) {
 
     const finishTyping = () => {
       if (requestSeqRef.current !== currentSeq) return;
-      setIsTyping(false);
+      safeSetIsTyping(false);
     };
 
     const resetInactivityTimer = () => {
       if (inactivityTimer) clearTimeout(inactivityTimer);
-      inactivityTimer = setTimeout(() => {
+      inactivityTimer = scheduleTimer(() => {
         if (requestSeqRef.current === currentSeq) {
           if (!answerReceived && !completed) {
-            setMessages(prev => {
+            safeSetMessages(prev => {
               const existing = prev.find(m => m.id === aiMsgId);
               const errText = accumulatedText || '小云思考时间较长，请稍后再问一次试试 🤔';
               if (existing) return prev.map(m => m.id === aiMsgId ? { ...m, text: errText } : m);
@@ -136,7 +175,7 @@ export function useAiChatStream(config: StreamConfig) {
           const ha: HyperAdvisorResponse | undefined = (resp as any)?.code === 200
             ? (resp as any).data : ((resp as any)?.data || resp) as HyperAdvisorResponse;
           if (!ha) return;
-          setMessages(prev => prev.map(m => m.id === aiMsgId ? {
+          safeSetMessages(prev => prev.map(m => m.id === aiMsgId ? {
             ...m, riskIndicators: ha.riskIndicators, simulation: ha.simulation,
             needsClarification: ha.needsClarification, traceId: ha.traceId,
             advisorSessionId: ha.sessionId, userQuery: text,
@@ -154,7 +193,7 @@ export function useAiChatStream(config: StreamConfig) {
           if (signal?.aborted) return;
           const d = (res as any)?.data ?? res;
           if (d && d.factoryGroups?.length) {
-            setMessages(prev => prev.map(m => m.id === aiMsgId ? { ...m, overdueFactoryCard: d } : m));
+            safeSetMessages(prev => prev.map(m => m.id === aiMsgId ? { ...m, overdueFactoryCard: d } : m));
           }
         })
         .catch(() => {});
@@ -180,7 +219,7 @@ export function useAiChatStream(config: StreamConfig) {
             const { displayText: dt, charts: ch, cards: pc, actionCards: ac, quickActions: qa, teamStatusCards: tsc, bundleSplitCards: bsc, stepWizardCards: swc, overdueFactoryCard: ofc, reportPreview: rp, reportType: rpt } = parseAiResponse(retryAnswer);
             const retryCards = retryPayload?.cards || [];
             const retryFollowUp = (retryPayload as Record<string, unknown>)?.followUpActions as FollowUpAction[] | undefined;
-            setMessages(prev => prev.map(m => m.id === aiMsgId ? {
+            safeSetMessages(prev => prev.map(m => m.id === aiMsgId ? {
               ...m, text: retryDisplay || dt, intent: retryPayload?.source,
               charts: ch, cards: retryCards.length ? retryCards : pc,
               actionCards: ac, quickActions: qa, teamStatusCards: tsc, bundleSplitCards: bsc,
@@ -194,7 +233,7 @@ export function useAiChatStream(config: StreamConfig) {
         } catch (_retryErr) {
         }
       }
-      setMessages(prev => {
+      safeSetMessages(prev => {
         const existing = prev.find(m => m.id === aiMsgId);
         const errText = '当前连不到数据服务，请稍后再试。';
         if (existing) return prev.map(m => m.id === aiMsgId ? { ...m, text: errText } : m);
@@ -208,7 +247,7 @@ export function useAiChatStream(config: StreamConfig) {
       if (inactivityTimer) { clearTimeout(inactivityTimer); inactivityTimer = undefined; }
       if (!answerReceived) {
         if (!accumulatedText) {
-          setMessages(prev => {
+          safeSetMessages(prev => {
             const existing = prev.find(m => m.id === aiMsgId);
             const errText = '小云未返回有效回答，请重试或换个问法 🤔';
             if (existing) return prev.map(m => m.id === aiMsgId ? { ...m, text: errText } : m);
@@ -217,8 +256,8 @@ export function useAiChatStream(config: StreamConfig) {
         }
         finishTyping();
       }
-      updateLiveStatus({ mood: 'done' });
-      setTimeout(() => updateLiveStatus({ visible: false }), 2000);
+      safeUpdateLiveStatus({ ...currentLiveStatus, mood: 'done' });
+      scheduleTimer(() => safeUpdateLiveStatus({ ...currentLiveStatus, visible: false }), 2000);
       fireRiskAnalysis();
       fireOverdueFactory();
     };
@@ -231,7 +270,7 @@ export function useAiChatStream(config: StreamConfig) {
 
       const isAuthError = typeof err === 'string' && (err.includes('401') || err.includes('登录已过期'));
       if (isAuthError) {
-        setMessages(prev => {
+        safeSetMessages(prev => {
           const existing = prev.find(m => m.id === aiMsgId);
           const errText = '登录已过期，请重新登录';
           if (existing) return prev.map(m => m.id === aiMsgId ? { ...m, text: errText } : m);
@@ -241,7 +280,7 @@ export function useAiChatStream(config: StreamConfig) {
         return;
       }
       if (streamStarted) {
-        setMessages(prev => {
+        safeSetMessages(prev => {
           const existing = prev.find(m => m.id === aiMsgId);
           const errText = accumulatedText || '网络中断，请重试 🌧️';
           if (existing) return prev.map(m => m.id === aiMsgId ? { ...m, text: errText } : m);
@@ -258,7 +297,7 @@ export function useAiChatStream(config: StreamConfig) {
         const { displayText, charts, cards: parsedCards, actionCards, quickActions, teamStatusCards, bundleSplitCards, stepWizardCards: parsedStepWizardCards, overdueFactoryCard: parsedOverdueCard, reportPreview: parsedReportPreview, reportType: parsedReportType } = parseAiResponse(rawAnswer);
         const cards = payload?.cards || [];
         const followUpActions = (payload as Record<string, unknown>)?.followUpActions as FollowUpAction[] | undefined;
-        setMessages(prev => {
+        safeSetMessages(prev => {
           const existing = prev.find(m => m.id === aiMsgId);
           const msgData = {
             text: displayAnswer || displayText, intent: payload?.source,
@@ -297,14 +336,14 @@ export function useAiChatStream(config: StreamConfig) {
           try { unifiedHandler(event.type, JSON.stringify(event.data)); } catch {}
           if (event.type === 'thinking') {
             const toolStatus = '小云正在整理思路，准备给你结论…';
-            setMessages(prev => {
+            safeSetMessages(prev => {
               const existing = prev.find(m => m.id === aiMsgId);
               if (existing) return prev.map(m => m.id === aiMsgId ? { ...m, text: toolStatus } : m);
               return [...prev, { id: aiMsgId, role: 'ai' as const, text: toolStatus }];
             });
           } else if (event.type === 'tool_call') {
             const toolStatus = `小云正在处理：${describeToolName(String(event.data.tool || ''), isSuperAdmin)}…`;
-            setMessages(prev => {
+            safeSetMessages(prev => {
               const existing = prev.find(m => m.id === aiMsgId);
               if (existing) return prev.map(m => m.id === aiMsgId ? { ...m, text: toolStatus } : m);
               return [...prev, { id: aiMsgId, role: 'ai' as const, text: toolStatus }];
@@ -313,7 +352,7 @@ export function useAiChatStream(config: StreamConfig) {
             const toolStatus = event.data.success
               ? `${describeToolName(String(event.data.tool || ''), isSuperAdmin)} 已处理完成，小云继续整理结果…`
               : `${describeToolName(String(event.data.tool || ''), isSuperAdmin)} 这一步没处理成功，小云正在重新组织答案…`;
-            setMessages(prev => {
+            safeSetMessages(prev => {
               const existing = prev.find(m => m.id === aiMsgId);
               if (existing) return prev.map(m => m.id === aiMsgId ? { ...m, text: toolStatus } : m);
               return [...prev, { id: aiMsgId, role: 'ai' as const, text: toolStatus }];
@@ -322,7 +361,7 @@ export function useAiChatStream(config: StreamConfig) {
             const progressMsg = event.data.message || '';
             const progressPercent = event.data.percent || 0;
             if (progressMsg) {
-              setMessages(prev => {
+              safeSetMessages(prev => {
                 const existing = prev.find(m => m.id === aiMsgId);
                 if (existing) return prev.map(m => m.id === aiMsgId ? { ...m, text: `小云正在分析（${progressPercent}%）— ${progressMsg}` } : m);
                 return [...prev, { id: aiMsgId, role: 'ai' as const, text: `小云正在分析（${progressPercent}%）— ${progressMsg}` }];
@@ -332,7 +371,7 @@ export function useAiChatStream(config: StreamConfig) {
             const chunk = String(event.data.chunk || '');
             if (chunk) {
               accumulatedText += chunk;
-              setMessages(prev => {
+              safeSetMessages(prev => {
                 const existing = prev.find(m => m.id === aiMsgId);
                 const currentText = accumulatedText;
                 if (existing) return prev.map(m => m.id === aiMsgId ? { ...m, text: currentText } : m);
@@ -347,7 +386,7 @@ export function useAiChatStream(config: StreamConfig) {
               displayText = '小云暂时无法给出回答，请稍后再试。如果持续出现，请联系管理员检查 AI 模型配置。';
             }
             accumulatedText = displayText;
-            setMessages(prev => {
+            safeSetMessages(prev => {
               const existing = prev.find(m => m.id === aiMsgId);
               const msgData = {
                 text: accumulatedText,
@@ -367,7 +406,7 @@ export function useAiChatStream(config: StreamConfig) {
           } else if (event.type === 'follow_up_actions') {
             const actions = ((event.data as Record<string, unknown>)?.actions as FollowUpAction[] | undefined) ?? [];
             if (actions.length) {
-              setMessages(prev => {
+              safeSetMessages(prev => {
                 const existing = prev.find(m => m.id === aiMsgId);
                 if (existing) return prev.map(m => m.id === aiMsgId ? { ...m, followUpActions: actions } : m);
                 return [...prev, { id: aiMsgId, role: 'ai' as const, text: '', followUpActions: actions }];
@@ -375,7 +414,7 @@ export function useAiChatStream(config: StreamConfig) {
             }
           } else if (event.type === 'error') {
             accumulatedText = String(event.data.message || '智能分析暂时异常，请稍后再试。');
-            setMessages(prev => {
+            safeSetMessages(prev => {
               const existing = prev.find(m => m.id === aiMsgId);
               if (existing) return prev.map(m => m.id === aiMsgId ? { ...m, text: accumulatedText } : m);
               return [...prev, { id: aiMsgId, role: 'ai' as const, text: accumulatedText }];
@@ -387,7 +426,7 @@ export function useAiChatStream(config: StreamConfig) {
       );
       streamAbortRef.current = ctrl;
     } catch (_error) {
-      setMessages(prev => [...prev, { id: aiMsgId, role: 'ai' as const, text: '当前连不到数据服务，请稍后再试。' }]);
+      safeSetMessages(prev => [...prev, { id: aiMsgId, role: 'ai' as const, text: '当前连不到数据服务，请稍后再试。' }]);
       if (inactivityTimer) { clearTimeout(inactivityTimer); inactivityTimer = undefined; }
       finishTyping();
     }
