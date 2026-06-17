@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { App, Switch, Button, Input, InputNumber, Space, Popconfirm, Tooltip, Tag, Dropdown, Form, Popover } from 'antd';
+import { App, Switch, Button, Input, InputNumber, Space, Popconfirm, Tooltip, Tag, Dropdown, Form, Popover, Image } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
 import { SyncOutlined, PlusOutlined, DeleteOutlined, SaveOutlined, CloudUploadOutlined, EditOutlined, RollbackOutlined, BarcodeOutlined, PictureOutlined } from '@ant-design/icons';
 import api from '@/utils/api';
 import { formatMoney } from '@/utils/format';
+import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import type { ProductSku } from '@/types/style';
 import type { MenuProps } from 'antd';
 import SmallModal from '@/components/common/SmallModal';
@@ -263,6 +264,29 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = ({ styleId, styleNo, skc: initia
   const canEdit = isEditing;
 
   const columns = [
+    {
+      title: '图片', dataIndex: 'skuColorImage', key: 'skuColorImage', width: 80, fixed: 'left' as const,
+      render: (_: string, record: ProductSku) => {
+        if (record.skuColorImage) {
+          const fullUrl = getFullAuthedFileUrl(record.skuColorImage);
+          return (
+            <Image
+              src={fullUrl}
+              alt=""
+              width={44}
+              height={44}
+              style={{ objectFit: 'cover', borderRadius: 4, cursor: 'pointer' }}
+              preview={{ mask: <span style={{ fontSize: 10 }}>查看</span> }}
+            />
+          );
+        }
+        return (
+          <div style={{ width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f5f5f5', borderRadius: 4, color: '#ccc' }}>
+            <PictureOutlined />
+          </div>
+        );
+      },
+    },
     {
       title: 'SKU编码', dataIndex: 'skuCode', key: 'skuCode', width: 220,
       render: (_: string, record: ProductSku) => {

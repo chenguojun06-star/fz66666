@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Button, Form, Input, Select, InputNumber, Row, Col, App, Drawer, Descriptions, Divider, Space, Popconfirm, Table } from 'antd';
+import { Button, Form, Input, Select, InputNumber, Row, Col, App, Drawer, Descriptions, Divider, Space, Popconfirm, Table, Image } from 'antd';
 import { PlusOutlined, LoginOutlined, PrinterOutlined, EditOutlined, SwapOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
 import PageLayout from '@/components/common/PageLayout';
@@ -12,6 +12,7 @@ import ResizableModal from '@/components/common/ResizableModal';
 import { useViewport } from '@/utils/useViewport';
 import { useNavigate } from 'react-router-dom';
 import api from '@/utils/api';
+import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { toCategoryCn, toSeasonCn, CATEGORY_CODE_OPTIONS, SEASON_CODE_OPTIONS } from '@/utils/styleCategory';
 import { formatMoney } from '@/utils/format';
 import { StyleInfo } from '@/types/style';
@@ -21,6 +22,7 @@ interface SkuRow {
   id: number;
   skuCode: string;
   color: string;
+  skuColorImage?: string | null;
   size: string;
   costPrice?: number;
   salesPrice?: number;
@@ -269,6 +271,24 @@ const ProductInfoPage: React.FC = () => {
   ];
 
   const skuColumns = [
+    {
+      title: '图片', key: 'skuColorImage', width: 70,
+      render: (_: unknown, record: SkuRow) => {
+        if (record.skuColorImage) {
+          return (
+            <Image
+              src={getFullAuthedFileUrl(record.skuColorImage)}
+              alt=""
+              width={36}
+              height={36}
+              style={{ objectFit: 'cover', borderRadius: 4 }}
+              preview={{ mask: <span style={{ fontSize: 10 }}>查看</span> }}
+            />
+          );
+        }
+        return <div style={{ width: 36, height: 36, background: '#f5f5f5', borderRadius: 4 }} />;
+      },
+    },
     { title: '颜色', dataIndex: 'color', key: 'color', width: 80, render: (v: unknown) => <span style={{ fontWeight: 500 }}>{v ? String(v) : '-'}</span> },
     { title: '尺码', dataIndex: 'size', key: 'size', width: 70, render: (v: unknown) => <span>{v ? String(v) : '-'}</span> },
     { title: 'SKU编码', dataIndex: 'skuCode', key: 'skuCode', width: 180, ellipsis: true },

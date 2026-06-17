@@ -263,6 +263,8 @@ export interface ProductSku {
   styleId?: number;
   styleNo?: string;
   color: string;
+  skuColorImage?: string | null;
+  skuColorRemark?: string | null;
   size: string;
   barcode?: string;
   externalSkuId?: string;
