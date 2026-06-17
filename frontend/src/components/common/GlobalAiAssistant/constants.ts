@@ -179,7 +179,7 @@ export function getPageSuggestions(pathname: string): string[] {
 /** 业务实体识别正则 */
 export const ENTITY_PATTERNS = {
   ORDER_NO: /([A-Z]{2,}\d{6,}|\d{10,}|订单[：:]?[A-Z0-9]+)/g,
-  STYLE_NO: /(款号[：:]?[A-Z0-9\-]+|[A-Z]{2,}[-]?\d{3,}[-]?\w*)/g,
+  STYLE_NO: /(款号[：:]?[A-Z0-9-]+|[A-Z]{2,}[-]?\d{3,}[-]?\w*)/g,
   FACTORY_NAME: /(东方制衣|云裳|智联|锦和|恒润|华鑫)/g,
   PHONE: /(1[3-9]\d{9}|\d{3,4}[-]?\d{7,8})/g,
 };

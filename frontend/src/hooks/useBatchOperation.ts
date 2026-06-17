@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { message } from '@/utils/antdStatic';
+import { message, modal } from '@/utils/antdStatic';
 
 /**
  * 批量操作Hook - 统一封装
@@ -216,7 +216,6 @@ export function useBatchOperation<T>(options: UseBatchOperationOptions<T>) {
       // 显示确认对话框
       const confirmed = await new Promise<boolean>((resolve) => {
         if (confirmContent) {
-          const { modal } = require('@/utils/antdStatic');
           modal.confirm({
             title: confirmTitle,
             content: confirmContent.replace('{count}', String(ids.length)),

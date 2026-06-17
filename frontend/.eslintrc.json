@@ -14,6 +14,7 @@
   },
   "plugins": ["@typescript-eslint", "react-hooks"],
   "extends": ["eslint:recommended"],
+  "ignorePatterns": ["**/__tests__/**", "**/*.test.ts", "**/*.test.tsx"],
   "rules": {
     "no-empty": "off",
     "no-unused-vars": "off",
@@ -44,6 +45,13 @@
       "files": ["**/*.ts", "**/*.tsx"],
       "rules": {
         "no-undef": "off"
+      }
+    },
+    {
+      "files": ["**/__tests__/**", "**/*.test.ts", "**/*.test.tsx"],
+      "rules": {
+        "no-useless-escape": "off",
+        "@typescript-eslint/no-var-requires": "off"
       }
     },
     {
