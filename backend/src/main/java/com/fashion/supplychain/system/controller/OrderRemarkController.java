@@ -11,6 +11,7 @@ import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.service.StyleInfoService;
 import com.fashion.supplychain.system.entity.OrderRemark;
+import com.fashion.supplychain.system.orchestration.OrderRemarkOrchestrator;
 import com.fashion.supplychain.system.service.OrderRemarkService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -33,6 +34,9 @@ public class OrderRemarkController {
 
     @Autowired
     private OrderRemarkService orderRemarkService;
+
+    @Autowired
+    private OrderRemarkOrchestrator orderRemarkOrchestrator;
 
     @Autowired
     private ProductionOrderService productionOrderService;
@@ -267,20 +271,9 @@ public class OrderRemarkController {
             return Result.fail("备注内容不能为空");
         }
 
-        UserContext ctx = UserContext.get();
-        if (ctx != null) {
-            remark.setAuthorId(ctx.getUserId());
-            remark.setAuthorName(ctx.getUsername());
-            if (!StringUtils.hasText(remark.getAuthorRole())) {
-                remark.setAuthorRole(ctx.getRole());
-            }
-            remark.setTenantId(ctx.getTenantId());
-        }
-        remark.setCreateTime(LocalDateTime.now());
-        remark.setDeleteFlag(0);
-
-        orderRemarkService.save(remark);
-        return Result.success(remark);
+        // 写操作统一走 Orchestrator，确保事务一致性与多租户上下文校验
+        OrderRemark saved = orderRemarkOrchestrator.save(remark);
+        return Result.success(saved);
     }
 
     @PostMapping("/batch-latest")
