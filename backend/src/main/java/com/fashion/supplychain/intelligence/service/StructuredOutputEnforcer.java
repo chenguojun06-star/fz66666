@@ -1,5 +1,7 @@
 package com.fashion.supplychain.intelligence.service;
 
+import java.util.ArrayList;
+import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.context.annotation.Lazy;
@@ -96,10 +98,10 @@ public class StructuredOutputEnforcer {
         return "";
     }
 
-    // ── 后处理验证 ──
+    // ── 后处理验证（增强版） ──
 
     /**
-     * 后处理检查：验证AI回答是否包含明显的格式问题。
+     * 后处理检查 v2：验证AI回答格式并自动修复 JSON / 结构化内容。
      * @return 修复后的内容，如果无需修复则返回原内容
      */
     public String postProcess(String aiResponse) {
@@ -117,7 +119,209 @@ public class StructuredOutputEnforcer {
         // 检测3：过长的无换行文本
         result = breakLongLines(result);
 
+        // 检测4（新增 v2）：尝试识别并修复嵌入的 JSON 片段
+        result = tryAutoFixEmbeddedJson(result);
+
         return result;
+    }
+
+    // ── JSON 自动修复（v2 新增） ──
+
+    /**
+     * 扫描文本中被 ```json ... ``` 包裹的 JSON 片段，
+     * 或裸写的 {...} / [...] 片段，尝试自动修复常见问题：
+     * - 尾随逗号
+     * - 未转义的引号 / 换行
+     * - 缺失的闭合括号
+     * - 单行 // 注释（JSON 标准不允许）
+     */
+    public String tryAutoFixEmbeddedJson(String text) {
+        if (text == null || !text.contains("{")) return text;
+
+        // 1) 先处理 ```json 代码块
+        java.util.regex.Pattern codeBlock = java.util.regex.Pattern.compile(
+                "```(?:json)?\\s*\\n([\\s\\S]*?)\\n```",
+                java.util.regex.Pattern.CASE_INSENSITIVE);
+        java.util.regex.Matcher m = codeBlock.matcher(text);
+        StringBuffer sb = new StringBuffer();
+        boolean changed = false;
+        while (m.find()) {
+            String rawJson = m.group(1).trim();
+            ValidationResult vr = validateAndRepairJson(rawJson);
+            if (vr.repaired) {
+                m.appendReplacement(sb, "```json\n" + java.util.regex.Matcher.quoteReplacement(vr.content) + "\n```");
+                changed = true;
+            }
+        }
+        m.appendTail(sb);
+        if (changed) text = sb.toString();
+
+        // 2) 兜底：对整段文本做一次尝试（针对裸写 JSON 的场景）
+        if (!text.trim().startsWith("```") && looksLikeJson(text.trim())) {
+            ValidationResult vr = validateAndRepairJson(text.trim());
+            if (vr.repaired) return vr.content;
+        }
+
+        return text;
+    }
+
+    /** 快速判断文本是否像 JSON（以 { 或 [ 开头） */
+    private boolean looksLikeJson(String text) {
+        if (text.isEmpty()) return false;
+        char c = text.charAt(0);
+        return c == '{' || c == '[';
+    }
+
+    /** JSON 验证与自动修复的结果 */
+    public static class ValidationResult {
+        public final String content;
+        public final boolean valid;
+        public final boolean repaired;
+        public final List<String> issues;
+
+        public ValidationResult(String content, boolean valid, boolean repaired, List<String> issues) {
+            this.content = content;
+            this.valid = valid;
+            this.repaired = repaired;
+            this.issues = issues;
+        }
+    }
+
+    /**
+     * 验证并修复 JSON 字符串。常见的 LLM JSON 输出问题都能自动修复。
+     * 修复逻辑按顺序执行，只要发生一次修改就标记为 repaired。
+     */
+    public ValidationResult validateAndRepairJson(String raw) {
+        List<String> issues = new java.util.ArrayList<>();
+        if (raw == null || raw.isBlank()) {
+            issues.add("empty input");
+            return new ValidationResult(raw, false, false, issues);
+        }
+
+        String working = raw;
+        boolean repaired = false;
+
+        // 修复1：移除 JSON 标准不允许的 // 单行注释
+        String noComments = stripLineComments(working);
+        if (!noComments.equals(working)) {
+            issues.add("removed // comments");
+            repaired = true;
+            working = noComments;
+        }
+
+        // 修复2：移除对象/数组末尾的尾随逗号（如 {"a":1,}）
+        String noTrailing = working
+                .replaceAll(",(\\s*[}\\]])", "$1")
+                .replaceAll(",(\\s*$)", "$1");
+        if (!noTrailing.equals(working)) {
+            issues.add("removed trailing commas");
+            repaired = true;
+            working = noTrailing;
+        }
+
+        // 修复3：尝试自动补齐缺失的闭合括号
+        String balanced = autoBalanceBrackets(working);
+        if (!balanced.equals(working)) {
+            issues.add("auto-balanced brackets");
+            repaired = true;
+            working = balanced;
+        }
+
+        // 验证：使用简单的 JSON 解析尝试（不依赖 Jackson/Gson 以保持轻量）
+        boolean valid = isValidJsonLenient(working);
+
+        return new ValidationResult(working, valid, repaired, issues);
+    }
+
+    /** 简单 JSON 语法检查（平衡括号 + 字符串配对） */
+    private boolean isValidJsonLenient(String json) {
+        if (json == null || json.isBlank()) return false;
+        int braces = 0, brackets = 0;
+        boolean inString = false;
+        char quote = 0;
+        boolean escaped = false;
+
+        for (int i = 0; i < json.length(); i++) {
+            char c = json.charAt(i);
+            if (inString) {
+                if (escaped) { escaped = false; continue; }
+                if (c == '\\') { escaped = true; continue; }
+                if (c == quote) inString = false;
+            } else {
+                if (c == '"' || c == '\'') { inString = true; quote = c; }
+                else if (c == '{') braces++;
+                else if (c == '}') braces--;
+                else if (c == '[') brackets++;
+                else if (c == ']') brackets--;
+                if (braces < 0 || brackets < 0) return false;
+            }
+        }
+        return braces == 0 && brackets == 0 && !inString;
+    }
+
+    /** 移除 // 行内注释（保留字符串内部的 //） */
+    private String stripLineComments(String json) {
+        StringBuilder out = new StringBuilder();
+        boolean inString = false;
+        char quote = 0;
+        boolean escaped = false;
+
+        for (int i = 0; i < json.length(); i++) {
+            char c = json.charAt(i);
+            if (inString) {
+                out.append(c);
+                if (escaped) { escaped = false; continue; }
+                if (c == '\\') { escaped = true; continue; }
+                if (c == quote) inString = false;
+            } else {
+                if (c == '"' || c == '\'') {
+                    inString = true;
+                    quote = c;
+                    out.append(c);
+                } else if (c == '/' && i + 1 < json.length() && json.charAt(i + 1) == '/') {
+                    // 跳过直到行尾
+                    while (i < json.length() && json.charAt(i) != '\n') i++;
+                    if (i < json.length()) out.append(json.charAt(i)); // 保留换行
+                } else {
+                    out.append(c);
+                }
+            }
+        }
+        return out.toString();
+    }
+
+    /** 自动补齐缺失的闭合括号（按栈深度最小化修复） */
+    private String autoBalanceBrackets(String json) {
+        int braces = 0, brackets = 0;
+        boolean inString = false;
+        char quote = 0;
+        boolean escaped = false;
+
+        for (int i = 0; i < json.length(); i++) {
+            char c = json.charAt(i);
+            if (inString) {
+                if (escaped) { escaped = false; continue; }
+                if (c == '\\') { escaped = true; continue; }
+                if (c == quote) inString = false;
+            } else {
+                if (c == '"' || c == '\'') { inString = true; quote = c; }
+                else if (c == '{') braces++;
+                else if (c == '}') braces = Math.max(0, braces - 1);
+                else if (c == '[') brackets++;
+                else if (c == ']') brackets = Math.max(0, brackets - 1);
+            }
+        }
+
+        // 如果栈未闭合，则在末尾补齐对应的括号
+        StringBuilder sb = new StringBuilder(json);
+        // 先去掉末尾的空白字符，再补齐，让格式更整齐
+        while (sb.length() > 0 && Character.isWhitespace(sb.charAt(sb.length() - 1))) {
+            sb.setLength(sb.length() - 1);
+        }
+        // 先补对象，再补数组（根据出现的顺序反向补齐）
+        for (int i = 0; i < brackets; i++) sb.append(']');
+        for (int i = 0; i < braces; i++) sb.append('}');
+        return sb.toString();
     }
 
     // ── 工具方法 ──

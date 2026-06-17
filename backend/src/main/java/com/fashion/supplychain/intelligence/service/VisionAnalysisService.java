@@ -516,6 +516,218 @@ public class VisionAnalysisService {
         return r;
     }
 
+    // ==================== 尺寸表解析（新增 v2） ====================
+
+    /**
+     * 从尺寸表图片中提取结构化尺码数据。
+     *
+     * <p>典型尺寸表图片包含列标题行（如"尺码/胸围/衣长/袖长/肩宽"）
+     * 和若干尺码行（如"S/84/62/58/38"）。本方法：
+     * <ol>
+     *   <li>调用视觉模型识别图片中的表格结构</li>
+     *   <li>提取列名和数值行，映射到标准字段</li>
+     *   <li>返回结构化 SizeChartResult</li>
+     * </ol>
+     *
+     * <p>支持的列名变体（自动归一化）：
+     * <ul>
+     *   <li>尺码：码/SIZE/Size/size/s/M/L/XL/XXL</li>
+     *   <li>胸围：胸围/胸/bust/BUST</li>
+     *   <li>腰围：腰围/腰/waist/WAIST</li>
+     *   <li>臀围：臀围/臀/hip/HIP</li>
+     *   <li>衣长：衣长/身长/length/LENGTH</li>
+     *   <li>袖长：袖长/袖/sleeve/SLEEVE</li>
+     *   <li>肩宽：肩宽/肩宽/shoulder/SHOULDER</li>
+     *   <li>领围：领围/领围/neck/NECK</li>
+     * </ul>
+     */
+    public SizeChartParseResult parseSizeChart(String imageUrl) {
+        SizeChartParseResult r = new SizeChartParseResult();
+        r.setImageUrl(imageUrl);
+
+        if (!isAvailable()) {
+            r.setAvailable(false);
+            r.setErrorMessage("视觉AI模型未启用，请联系管理员配置");
+            return r;
+        }
+
+        try {
+            // 构建尺码表专用 Prompt
+            String prompt = buildSizeChartPrompt();
+            IntelligenceInferenceResult inference = aiInferenceGateway.chatWithVision(
+                    "vision-analysis",
+                    "你是服装尺寸表OCR专家。请仔细识别这张尺寸表图片，提取所有尺码行的数据。",
+                    prompt,
+                    imageUrl
+            );
+
+            if (inference == null || !inference.isSuccess()) {
+                r.setAvailable(false);
+                r.setErrorMessage("尺寸表识别失败：" + (inference != null ? inference.getErrorMessage() : "未知错误"));
+                return r;
+            }
+
+            String raw = inference.getContent();
+            r.setConfidence(inference.getPromptTokens() + inference.getCompletionTokens() > 0 ? 80 : 50);
+
+            // 优先解析 JSON
+            String jsonFragment = extractJsonFragment(raw);
+            if (jsonFragment != null) {
+                Map<String, Object> map = MAPPER.readValue(jsonFragment, Map.class);
+                parseSizeChartFromMap(map, r);
+            } else {
+                // 无 JSON → 降级为关键词文本提取
+                parseSizeChartFromText(raw, r);
+            }
+
+            r.setAvailable(true);
+            log.info("[VisionAnalysis] parseSizeChart done: imageUrl={}, sizes={}, cols={}, confidence={}",
+                    imageUrl, r.getSizes().size(), r.getColumns(), r.getConfidence());
+
+        } catch (Exception e) {
+            log.warn("[VisionAnalysis] parseSizeChart failed: {}", e.getMessage());
+            r.setAvailable(false);
+            r.setErrorMessage("尺寸表识别异常：" + e.getMessage());
+        }
+        return r;
+    }
+
+    private String buildSizeChartPrompt() {
+        return """
+            请仔细分析这张尺寸表图片，提取所有尺码数据。
+
+            要求：
+            1. 识别表格结构：列名（尺码/胸围/衣长等）和数据行（S/M/L/XL等）
+            2. 每个尺码行提取所有列的数值（单位为厘米cm，如无标注默认为cm）
+            3. 如果某格为空，填 null
+
+            返回严格的JSON格式（不要markdown包裹，不要解释文字）：
+            {
+              "columns": ["尺码","胸围","腰围","臀围","衣长","袖长","肩宽"],
+              "rows": [
+                {"尺码": "S", "胸围": 84, "腰围": 66, "臀围": 88, "衣长": 62, "袖长": 58, "肩宽": 38},
+                {"尺码": "M", "胸围": 88, "腰围": 70, "臀围": 92, "衣长": 64, "袖长": 60, "肩宽": 40}
+              ]
+            }
+
+            重要：
+            - 只返回JSON，不要任何解释文字
+            - 数值必须是数字，不要带"cm"单位
+            - 如果图片不清晰或无法识别，返回空JSON：{"columns":[], "rows":[]}
+            """;
+    }
+
+    private void parseSizeChartFromMap(Map<String, Object> map, SizeChartParseResult r) {
+        Object colsObj = map.get("columns");
+        if (colsObj instanceof List) {
+            @SuppressWarnings("unchecked")
+            List<String> cols = (List<String>) colsObj;
+            r.setColumns(cols);
+        }
+
+        Object rowsObj = map.get("rows");
+        if (rowsObj instanceof List) {
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> rows = (List<Map<String, Object>>) rowsObj;
+            for (Map<String, Object> row : rows) {
+                String size = normalizeSizeLabel(extractStringField(row, "尺码", "SIZE", "Size", "size", "码"));
+                if (size == null || size.isBlank()) continue;
+
+                SizeRow sizeRow = new SizeRow();
+                sizeRow.setSize(size);
+                sizeRow.setBust(extractNumber(row, "胸围", "bust", "BUST", "胸"));
+                sizeRow.setWaist(extractNumber(row, "腰围", "waist", "WAIST", "腰"));
+                sizeRow.setHip(extractNumber(row, "臀围", "hip", "HIP", "臀"));
+                sizeRow.setLength(extractNumber(row, "衣长", "length", "LENGTH", "身长", "身"));
+                sizeRow.setSleeve(extractNumber(row, "袖长", "sleeve", "SLEEVE", "袖"));
+                sizeRow.setShoulder(extractNumber(row, "肩宽", "shoulder", "SHOULDER"));
+                sizeRow.setNeck(extractNumber(row, "领围", "neck", "NECK", "领"));
+                r.getSizes().add(sizeRow);
+            }
+        }
+    }
+
+    /** 文本降级解析：从原始文本中提取尺码数据 */
+    private void parseSizeChartFromText(String raw, SizeChartParseResult r) {
+        // 尝试匹配常见尺码格式：S/84/62/58/38 或 S 84 62 58 38
+        java.util.regex.Pattern sizeRow = java.util.regex.Pattern.compile(
+                "([A-Za-z0-9/\\-]+)\\s*[/\\s]+\\s*(\\d+(?:\\.\\d+)?)\\s*[/\\s]+\\s*(\\d+(?:\\.\\d+)?)\\s*[/\\s]+\\s*(\\d+(?:\\.\\d+)?)");
+        java.util.regex.Matcher m = sizeRow.matcher(raw);
+        List<String> autoCols = new ArrayList<>();
+        int count = 0;
+        while (m.find() && count++ < 10) {
+            String size = normalizeSizeLabel(m.group(1).trim());
+            if (size == null) continue;
+            SizeRow sr = new SizeRow();
+            sr.setSize(size);
+            try { sr.setBust(Double.parseDouble(m.group(2))); } catch (Exception ignored) {}
+            try { sr.setWaist(Double.parseDouble(m.group(3))); } catch (Exception ignored) {}
+            try { sr.setHip(Double.parseDouble(m.group(4))); } catch (Exception ignored) {}
+            if (autoCols.isEmpty()) {
+                autoCols.add("尺码"); autoCols.add("胸围"); autoCols.add("腰围"); autoCols.add("臀围");
+            }
+            r.getSizes().add(sr);
+        }
+        if (!autoCols.isEmpty()) r.setColumns(autoCols);
+    }
+
+    private String normalizeSizeLabel(String raw) {
+        if (raw == null || raw.isBlank()) return null;
+        String s = raw.trim().toUpperCase().replaceAll("\\s+", "");
+        java.util.Map<String, String> sizeMap = new java.util.LinkedHashMap<>();
+        sizeMap.put("XXXS", "XXXS"); sizeMap.put("XXS", "XXS"); sizeMap.put("XS", "XS");
+        sizeMap.put("S", "S"); sizeMap.put("M", "M"); sizeMap.put("L", "L");
+        sizeMap.put("XL", "XL"); sizeMap.put("XXL", "XXL"); sizeMap.put("XXXL", "XXXL");
+        sizeMap.put("4XL", "4XL"); sizeMap.put("5XL", "5XL"); sizeMap.put("6XL", "6XL");
+        sizeMap.put("小", "S"); sizeMap.put("中", "M"); sizeMap.put("大", "L");
+        sizeMap.put("加大", "XL"); sizeMap.put("加加大", "XXL");
+        for (java.util.Map.Entry<String, String> e : sizeMap.entrySet()) {
+            if (s.contains(e.getKey()) || e.getKey().contains(s)) return e.getValue();
+        }
+        if (s.matches("\\d+")) return null; // 纯数字尺码暂不支持
+        return raw.trim();
+    }
+
+    private Double extractNumber(Map<String, Object> row, String... keys) {
+        for (String key : keys) {
+            Object v = row.get(key);
+            if (v == null) continue;
+            try {
+                double d = Double.parseDouble(String.valueOf(v).replaceAll("[^0-9.]", ""));
+                if (d > 0 && d < 500) return d; // 合理范围 0-500cm
+            } catch (Exception ignored) {}
+        }
+        return null;
+    }
+
+    /**
+     * 尺寸表解析结果
+     */
+    @lombok.Data
+    public static class SizeChartParseResult {
+        private String imageUrl;
+        private boolean available = true;
+        private String errorMessage;
+        private int confidence;
+        /** 列名列表，如 ["尺码","胸围","腰围","臀围","衣长"] */
+        private List<String> columns = new ArrayList<>();
+        /** 尺码行列表 */
+        private List<SizeRow> sizes = new ArrayList<>();
+    }
+
+    @lombok.Data
+    public static class SizeRow {
+        /** 尺码标签，如 S/M/L/XL */
+        private String size;
+        private Double bust;    // 胸围 cm
+        private Double waist;  // 腰围 cm
+        private Double hip;    // 臀围 cm
+        private Double length; // 衣长 cm
+        private Double sleeve; // 袖长 cm
+        private Double shoulder;// 肩宽 cm
+        private Double neck;   // 领围 cm
+    }
+
     /**
      * 发票/收据/采购单据 OCR 结构化解析
      * 返回：金额、开票日期、发票号、开票单位、费用类型、税率

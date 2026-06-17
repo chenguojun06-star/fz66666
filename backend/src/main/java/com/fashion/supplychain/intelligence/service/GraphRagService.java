@@ -8,7 +8,6 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.context.annotation.Lazy;
 
 import java.time.LocalDateTime;
@@ -136,7 +135,6 @@ public class GraphRagService {
      * @param targetExternalId 目标实体业务ID
      * @param relationType     关系类型
      */
-    @Transactional(rollbackFor = Exception.class)
     public void recordRelation(
             Long tenantId,
             String sourceEntityType, String sourceEntityName, String sourceExternalId,

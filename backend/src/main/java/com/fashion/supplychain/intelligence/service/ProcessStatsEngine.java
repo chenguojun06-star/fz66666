@@ -10,7 +10,6 @@ import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.context.annotation.Lazy;
 
@@ -56,7 +55,6 @@ public class ProcessStatsEngine {
      * @param tenantId 目标租户ID
      * @return 更新或新增的统计条目数
      */
-    @Transactional(rollbackFor = Exception.class)
     public int recomputeForTenant(Long tenantId) {
         log.info("[智能学习] 开始计算租户 {} 工序统计...", tenantId);
 

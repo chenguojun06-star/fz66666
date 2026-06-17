@@ -96,28 +96,53 @@ public class TrendAnalysisOrchestrator {
         // ① SerpApi：拉取该款式关键词的 Google Trends 实时热度
         String serpKeyword = buildTrendKeyword(candidate);
         int serpTrendScore = serpApiTrendService != null ? serpApiTrendService.fetchTrendScore(serpKeyword) : -1;
-        String serpTrendContext = "";
-        if (serpTrendScore >= 0) {
-            serpTrendContext = "\nGoogle Trends 实时指数（近3个月, geo=CN）: "
-                    + serpKeyword + " = " + serpTrendScore + "/100";
-            // 自动保存为 TrendSnapshot 记录，供趋势看板展示
-            saveSerpTrendSnapshot(serpKeyword, serpTrendScore, tenantId);
-            log.info("[TrendAnalysis] SerpApi 趋势分获取成功 keyword={} score={}", serpKeyword, serpTrendScore);
-        }
+        String serpTrendContext = buildSerpTrendContext(serpKeyword, serpTrendScore, tenantId);
 
         // ② 获取近期趋势摘要（含刚写入的 SerpApi 快照）
+        String trendContext = fetchRecentTrendContext(tenantId);
+
+        // ③ 构建 AI Prompt
+        String prompt = buildScorePrompt(candidate, trendContext, serpTrendContext);
+
+        // ④ 构建 result 基础字段（含 SerpApi 趋势分透传）
+        Map<String, Object> result = buildBaseResult(candidateId, candidate, serpKeyword, serpTrendScore);
+
+        // ⑤ 评分分支：AI 未配置走规则评分，已配置走模型评分
+        if (inferenceOrchestrator == null || !inferenceOrchestrator.isAnyModelEnabled()) {
+            applyRuleBasedScoring(result, candidate, serpTrendScore);
+            return result;
+        }
+        applyAiModelScoring(result, candidate, prompt);
+        return result;
+    }
+
+    /** 构建 SerpApi 趋势上下文，并在趋势分有效时保存快照 */
+    private String buildSerpTrendContext(String serpKeyword, int serpTrendScore, Long tenantId) {
+        if (serpTrendScore < 0) return "";
+        // 自动保存为 TrendSnapshot 记录，供趋势看板展示
+        saveSerpTrendSnapshot(serpKeyword, serpTrendScore, tenantId);
+        log.info("[TrendAnalysis] SerpApi 趋势分获取成功 keyword={} score={}", serpKeyword, serpTrendScore);
+        return "\nGoogle Trends 实时指数（近3个月, geo=CN）: "
+                + serpKeyword + " = " + serpTrendScore + "/100";
+    }
+
+    /** 获取近30天 TOP10 趋势摘要文本 */
+    private String fetchRecentTrendContext(Long tenantId) {
         List<TrendSnapshot> recentTrends = snapshotService.list(
                 new LambdaQueryWrapper<TrendSnapshot>()
                         .eq(TrendSnapshot::getTenantId, tenantId)
                         .ge(TrendSnapshot::getSnapshotDate, LocalDate.now().minusDays(30))
                         .orderByDesc(TrendSnapshot::getHeatScore)
                         .last("LIMIT 10"));
-
         String trendContext = recentTrends.stream()
                 .map(t -> t.getKeyword() + "(热度:" + t.getHeatScore() + ")")
                 .collect(Collectors.joining(", "));
         if (trendContext.isEmpty()) trendContext = "暂无最新趋势数据，请基于通用服装行业2026年趋势判断";
+        return trendContext;
+    }
 
+    /** 构建款式描述 + AI 评分 Prompt */
+    private String buildScorePrompt(SelectionCandidate candidate, String trendContext, String serpTrendContext) {
         String styleDesc = String.format(
                 "款式名：%s，品类：%s，颜色系：%s，面料：%s，预计报价：%s元，风格标签：%s",
                 candidate.getStyleName(),
@@ -126,8 +151,7 @@ public class TrendAnalysisOrchestrator {
                 candidate.getFabricType() != null ? candidate.getFabricType() : "未知",
                 candidate.getTargetPrice() != null ? candidate.getTargetPrice().toString() : "未定",
                 candidate.getStyleTags() != null ? candidate.getStyleTags() : "无");
-
-        String prompt = "你是一名专业的服装买手，请对以下候选款式进行趋势契合度评分。\n\n"
+        return "你是一名专业的服装买手，请对以下候选款式进行趋势契合度评分。\n\n"
                 + "当前趋势热词: " + trendContext + serpTrendContext + "\n\n"
                 + "候选款信息: " + styleDesc + "\n\n"
                 + "请从以下4个维度打分(每项0-100)，并给出总分和建议：\n"
@@ -136,89 +160,74 @@ public class TrendAnalysisOrchestrator {
                 + "3. 生产可行性（工艺难度与稳定性）\n"
                 + "4. 客户接受度（买家/终端消费者接受程度）\n\n"
                 + "请以JSON格式返回：{\"trend\":85,\"market\":78,\"craft\":90,\"acceptance\":82,\"total\":84,\"suggestion\":\"建议意见\"}";
+    }
 
+    /** 构建 result 基础字段，并将 SerpApi 趋势分透传给前端 */
+    private Map<String, Object> buildBaseResult(Long candidateId, SelectionCandidate candidate,
+                                                String serpKeyword, int serpTrendScore) {
         Map<String, Object> result = new HashMap<>();
         result.put("candidateId", candidateId);
         result.put("candidateNo", candidate.getCandidateNo());
-        // 将 SerpApi 趋势分透传给前端
         if (serpTrendScore >= 0) {
             result.put("serpTrendScore", serpTrendScore);
             result.put("serpKeyword", serpKeyword);
         }
+        return result;
+    }
 
-        if (inferenceOrchestrator == null || !inferenceOrchestrator.isAnyModelEnabled()) {
-            // AI未配置时：优先用 SerpApi 真实分数，否则基于规则
-            int baseScore;
-            String reason;
-            String scoringMode;
-            if (serpTrendScore >= 0) {
-                baseScore = serpTrendScore;
-                // 利润率和数量加成（最多+10）
-                if (candidate.getProfitEstimate() != null && candidate.getProfitEstimate().doubleValue() > 25) baseScore = Math.min(100, baseScore + 5);
-                if (candidate.getTargetQty() != null && candidate.getTargetQty() > 100) baseScore = Math.min(100, baseScore + 5);
-                reason = "规则评分：基于 Google Trends 实时热度指数 " + serpTrendScore + "/100，并结合利润率、预计数量做加权。";
-                scoringMode = "RULE_GOOGLE_TRENDS";
-            } else {
-                baseScore = 70;
-                if (candidate.getProfitEstimate() != null && candidate.getProfitEstimate().doubleValue() > 25) baseScore += 5;
-                if (candidate.getTargetQty() != null && candidate.getTargetQty() > 100) baseScore += 5;
-                reason = "规则评分：AI模型未配置，当前仅按利润率和预计数量做基础评估。";
-                scoringMode = "RULE_LOCAL_FALLBACK";
-            }
-            result.put("score", baseScore);
-            result.put("reason", reason);
-            result.put("aiEnabled", false);
-            result.put("scoringMode", scoringMode);
-            candidate.setTrendScore(baseScore);
-            candidate.setTrendScoreReason(reason);
-            candidateService.updateById(candidate);
-            return result;
+    /** AI 未配置时的规则评分：优先用 SerpApi 真实分数，否则基于利润率/数量做基础评估 */
+    private void applyRuleBasedScoring(Map<String, Object> result, SelectionCandidate candidate, int serpTrendScore) {
+        int baseScore;
+        String reason;
+        String scoringMode;
+        if (serpTrendScore >= 0) {
+            baseScore = serpTrendScore;
+            // 利润率和数量加成（最多+10）
+            if (candidate.getProfitEstimate() != null && candidate.getProfitEstimate().doubleValue() > 25) baseScore = Math.min(100, baseScore + 5);
+            if (candidate.getTargetQty() != null && candidate.getTargetQty() > 100) baseScore = Math.min(100, baseScore + 5);
+            reason = "规则评分：基于 Google Trends 实时热度指数 " + serpTrendScore + "/100，并结合利润率、预计数量做加权。";
+            scoringMode = "RULE_GOOGLE_TRENDS";
+        } else {
+            baseScore = 70;
+            if (candidate.getProfitEstimate() != null && candidate.getProfitEstimate().doubleValue() > 25) baseScore += 5;
+            if (candidate.getTargetQty() != null && candidate.getTargetQty() > 100) baseScore += 5;
+            reason = "规则评分：AI模型未配置，当前仅按利润率和预计数量做基础评估。";
+            scoringMode = "RULE_LOCAL_FALLBACK";
         }
+        result.put("score", baseScore);
+        result.put("reason", reason);
+        result.put("aiEnabled", false);
+        result.put("scoringMode", scoringMode);
+        candidate.setTrendScore(baseScore);
+        candidate.setTrendScoreReason(reason);
+        candidateService.updateById(candidate);
+    }
 
+    /** AI 已配置时的模型评分：调用推理器并解析 JSON 结果 */
+    private void applyAiModelScoring(Map<String, Object> result, SelectionCandidate candidate, String prompt) {
         try {
             List<AiMessage> messages = new ArrayList<>();
             messages.add(AiMessage.user(prompt));
             var inferResult = inferenceOrchestrator.chat("selection-score", messages, null);
             String content = inferResult.getContent();
 
-            // 尝试解析JSON得到总分
-            int totalScore = 75; // 默认分
-            String suggestion = content;
-            if (content != null && content.contains("\"total\"")) {
-                try {
-                    com.fasterxml.jackson.databind.ObjectMapper om = new com.fasterxml.jackson.databind.ObjectMapper();
-                    // 提取JSON片段
-                    int jsonStart = content.indexOf('{');
-                    int jsonEnd = content.lastIndexOf('}');
-                    if (jsonStart >= 0 && jsonEnd > jsonStart) {
-                        String json = content.substring(jsonStart, jsonEnd + 1);
-                        Map<?, ?> parsed = om.readValue(json, Map.class);
-                        if (parsed.get("total") instanceof Number) {
-                            totalScore = ((Number) parsed.get("total")).intValue();
-                        }
-                        if (parsed.get("suggestion") != null) {
-                            suggestion = parsed.get("suggestion").toString();
-                        }
-                    }
-                } catch (Exception e) {
-                    log.warn("[TrendAnalysis] AI分数JSON解析失败，使用原始内容", e);
-                }
-            }
+            Map<String, Object> parsed = parseAiScoreContent(content);
+            int totalScore = (int) parsed.get("totalScore");
+            String suggestion = (String) parsed.get("suggestion");
 
-            result.put("score", totalScore);
-                String normalizedSuggestion = suggestion != null && suggestion.startsWith("AI模型分析：")
+            String normalizedSuggestion = suggestion != null && suggestion.startsWith("AI模型分析：")
                     ? suggestion
                     : "AI模型分析：" + suggestion;
-                result.put("reason", normalizedSuggestion);
+            result.put("score", totalScore);
+            result.put("reason", normalizedSuggestion);
             result.put("rawContent", content);
             result.put("aiEnabled", true);
-                result.put("scoringMode", "AI_MODEL");
+            result.put("scoringMode", "AI_MODEL");
 
             // 回写
             candidate.setTrendScore(totalScore);
-                candidate.setTrendScoreReason(normalizedSuggestion);
+            candidate.setTrendScoreReason(normalizedSuggestion);
             candidateService.updateById(candidate);
-
         } catch (Exception e) {
             log.error("[TrendAnalysis] AI打分失败", e);
             result.put("score", 70);
@@ -226,7 +235,36 @@ public class TrendAnalysisOrchestrator {
             result.put("aiEnabled", false);
             result.put("scoringMode", "RULE_LOCAL_FALLBACK");
         }
-        return result;
+    }
+
+    /** 解析 AI 返回内容中的 JSON 片段，提取 totalScore 与 suggestion */
+    private Map<String, Object> parseAiScoreContent(String content) {
+        Map<String, Object> parsed = new HashMap<>();
+        int totalScore = 75; // 默认分
+        String suggestion = content;
+        if (content != null && content.contains("\"total\"")) {
+            try {
+                com.fasterxml.jackson.databind.ObjectMapper om = new com.fasterxml.jackson.databind.ObjectMapper();
+                // 提取JSON片段
+                int jsonStart = content.indexOf('{');
+                int jsonEnd = content.lastIndexOf('}');
+                if (jsonStart >= 0 && jsonEnd > jsonStart) {
+                    String json = content.substring(jsonStart, jsonEnd + 1);
+                    Map<?, ?> jsonMap = om.readValue(json, Map.class);
+                    if (jsonMap.get("total") instanceof Number) {
+                        totalScore = ((Number) jsonMap.get("total")).intValue();
+                    }
+                    if (jsonMap.get("suggestion") != null) {
+                        suggestion = jsonMap.get("suggestion").toString();
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("[TrendAnalysis] AI分数JSON解析失败，使用原始内容", e);
+            }
+        }
+        parsed.put("totalScore", totalScore);
+        parsed.put("suggestion", suggestion);
+        return parsed;
     }
 
     // ─────────────── SerpApi 辅助方法 ───────────────

@@ -110,17 +110,38 @@ public class NlQueryOrchestrator {
     /** 意图识别路由（LLM优先 → 关键词兜底） */
     private NlQueryResponse routeIntent(String question, Long tenantId, String factoryId, String sessionKey) {
         String contextPrompt = buildContextPrompt(sessionKey);
+
         // ── 优先尝试 LLM 意图分类（快速超时，失败降级关键词） ──
-        String llmIntent = classifyIntentByLlm(question, tenantId, contextPrompt);
-        if (llmIntent != null) {
-            NlQueryResponse resp = dispatchByIntent(llmIntent, question, tenantId, factoryId);
-            if (resp != null) {
-                log.info("[NlQuery] LLM意图命中: intent={}", llmIntent);
-                return resp;
-            }
-        }
+        NlQueryResponse llmResp = tryLlmRoute(question, tenantId, factoryId, contextPrompt);
+        if (llmResp != null) return llmResp;
 
         // ── 关键词匹配兜底 ──
+        NlQueryResponse resp;
+        if ((resp = matchOrderAndDelay(question, tenantId, factoryId)) != null) return resp;
+        if ((resp = matchSystemHealth(question, tenantId, factoryId)) != null) return resp;
+        if ((resp = matchFactoryAndWorker(question, tenantId, factoryId)) != null) return resp;
+        if ((resp = matchProductionOps(question, tenantId, factoryId)) != null) return resp;
+        if ((resp = matchAdvancedAnalysis(question)) != null) return resp;
+        if ((resp = matchFinanceQueries(question)) != null) return resp;
+        if ((resp = matchApprovalAndMaterial(question, tenantId, factoryId)) != null) return resp;
+        if ((resp = matchDirectActionAndHelp(question, tenantId, factoryId)) != null) return resp;
+
+        // ── 智能底：调用 DeepSeek 处理无法匹配关键词的自由问题
+        return dataHandlers.handleAiDeepFallback(question, tenantId, factoryId);
+    }
+
+    /** LLM 意图分类并分发，未命中返回 null */
+    private NlQueryResponse tryLlmRoute(String question, Long tenantId, String factoryId, String contextPrompt) {
+        String llmIntent = classifyIntentByLlm(question, tenantId, contextPrompt);
+        if (llmIntent == null) return null;
+        NlQueryResponse resp = dispatchByIntent(llmIntent, question, tenantId, factoryId);
+        if (resp == null) return null;
+        log.info("[NlQuery] LLM意图命中: intent={}", llmIntent);
+        return resp;
+    }
+
+    /** 1) 订单查询 / 2) 延期分析（人员/样板/趋势/通用兜底） */
+    private NlQueryResponse matchOrderAndDelay(String question, Long tenantId, String factoryId) {
         // 1) 具体订单查询（含订单号或"订单+进度"）
         if (NlQueryDataHandlers.ORDER_NO_PATTERN.matcher(question).find()
                 || (containsAny(question, "订单") && containsAny(question, "进度", "多少", "怎样", "如何", "状态",
@@ -143,6 +164,11 @@ public class NlQueryOrchestrator {
         if (containsAny(question, "延期", "逾期", "超期", "过期")) {
             return dataHandlers.handleOverdueQuery(tenantId, factoryId);
         }
+        return null;
+    }
+
+    /** 3)~9) 对比/健康/瓶颈/风险/异常/产量/质检 */
+    private NlQueryResponse matchSystemHealth(String question, Long tenantId, String factoryId) {
         // 3) 对比/趋势
         if (containsAny(question, "昨天", "昨日", "环比", "同比", "对比", "比较", "趋势", "变化")) {
             return dataHandlers.handleCompareQuery(tenantId, factoryId);
@@ -174,6 +200,11 @@ public class NlQueryOrchestrator {
         if (containsAny(question, "质检", "质量", "通过率", "良品率", "合格率", "不良")) {
             return dataHandlers.handleQualityQuery(tenantId, factoryId);
         }
+        return null;
+    }
+
+    /** 10)~13) 工厂排名/产能脉搏/员工效率/入库仓库 */
+    private NlQueryResponse matchFactoryAndWorker(String question, Long tenantId, String factoryId) {
         // 10) 工厂（升级为排行榜）
         if (containsAny(question, "工厂", "车间", "哪个厂", "哪家")) {
             return smartHandlers.handleFactoryRankingQuery();
@@ -192,6 +223,11 @@ public class NlQueryOrchestrator {
         if (containsAny(question, "入库", "仓库", "出库", "库存")) {
             return dataHandlers.handleWarehousingQuery(tenantId, factoryId);
         }
+        return null;
+    }
+
+    /** 14)~20) 裁剪/成本/节拍/排程/通知/自检/学习 */
+    private NlQueryResponse matchProductionOps(String question, Long tenantId, String factoryId) {
         // 14) 裁剪
         if (containsAny(question, "裁剪", "裁片", "菲号")) {
             return dataHandlers.handleCuttingQuery(question, tenantId, factoryId);
@@ -220,6 +256,11 @@ public class NlQueryOrchestrator {
         if (containsAny(question, "学习", "学了什么", "置信度", "训练")) {
             return smartHandlers.handleLearningReportQuery();
         }
+        return null;
+    }
+
+    /** 20.1)~20.4) 根因/规律/目标/例会 高级分析 */
+    private NlQueryResponse matchAdvancedAnalysis(String question) {
         // 20.1) 根因分析
         if (containsAny(question, "根因", "原因分析", "为什么会", "为什么", "背后原因")) {
             return smartHandlers.handleRootCauseQuery(question);
@@ -236,7 +277,11 @@ public class NlQueryOrchestrator {
         if (containsAny(question, "例会", "会议", "讨论", "辩论", "共识")) {
             return smartHandlers.handleMeetingQuery(question);
         }
+        return null;
+    }
 
+    /** 21.1)~21.7) 报价/供应商/派工/执行/财务/工资/费用 */
+    private NlQueryResponse matchFinanceQueries(String question) {
         // 21.1) 报价建议 → 成本查询（报价核心数据源相同）
         if (containsAny(question, "报价", "估价", "估算")) {
             return smartHandlers.handleCostQuery();
@@ -253,14 +298,6 @@ public class NlQueryOrchestrator {
         if (containsAny(question, "AI命令", "执行命令", "执行")) {
             return smartHandlers.handleRiskQuery();
         }
-        // 21.4b) 变更审批（路由到AI对话，由 tool_change_approval 处理）
-        if (containsAny(question, "待审批", "审批")) {
-            NlQueryResponse resp = new NlQueryResponse();
-            resp.setIntent("ai_chat");
-            resp.setAnswer("审批相关操作已集成到小云AI对话中 💬\n\n请在AI对话框中输入「帮我看看审批」，小云会为您列出待审批申请，并支持直接通过或驳回。");
-            resp.setConfidence(90);
-            return resp;
-        }
         // 21.5) 财务/资金审核 → 成本分析（财务核心查询）
         if (containsAny(question, "资金异常", "资金流向", "资金分析", "财务分析", "回款异常", "对账")) {
             return smartHandlers.handleCostQuery();
@@ -273,6 +310,19 @@ public class NlQueryOrchestrator {
         if (containsAny(question, "费用明细", "花多少钱", "花了多少", "总支出", "开支", "物料费")) {
             return smartHandlers.handleExpenseBreakdownQuery();
         }
+        return null;
+    }
+
+    /** 21.4b/21.7a/21.8) 变更审批/面料缺口/周期对比 */
+    private NlQueryResponse matchApprovalAndMaterial(String question, Long tenantId, String factoryId) {
+        // 21.4b) 变更审批（路由到AI对话，由 tool_change_approval 处理）
+        if (containsAny(question, "待审批", "审批")) {
+            NlQueryResponse resp = new NlQueryResponse();
+            resp.setIntent("ai_chat");
+            resp.setAnswer("审批相关操作已集成到小云AI对话中 💬\n\n请在AI对话框中输入「帮我看看审批」，小云会为您列出待审批申请，并支持直接通过或驳回。");
+            resp.setConfidence(90);
+            return resp;
+        }
         // 21.7a) 面料缺口
         if (containsAny(question, "面料缺口", "缺料", "物料缺口", "库存不够", "物料不够")
                 || (containsAny(question, "面料", "物料") && containsAny(question, "缺", "不够", "够吗", "够不够"))) {
@@ -282,7 +332,11 @@ public class NlQueryOrchestrator {
         if (containsAny(question, "上周", "本周", "这周", "这个月", "上个月", "环比")) {
             return dataHandlers.handleCompareQuery(tenantId, factoryId);
         }
+        return null;
+    }
 
+    /** 22)~23) 直达操作/帮助总览 */
+    private NlQueryResponse matchDirectActionAndHelp(String question, Long tenantId, String factoryId) {
         // 22) 直达操作（发工资/改状态/审批/派工 — 路由到小云AI执行）
         if (containsAny(question, "给", "帮", "把") && containsAny(question,
                 "发工资", "审批", "通过", "驳回", "改", "改成", "加急", "紧急", "派", "分配", "关单", "取消", "删除", "备注", "标记")) {
@@ -298,9 +352,7 @@ public class NlQueryOrchestrator {
         if (containsAny(question, "总览", "概况", "汇总", "情况", "怎么样", "报告", "整体")) {
             return dataHandlers.handleSummaryQuery(tenantId, factoryId);
         }
-
-        // ── 智能底：调用 DeepSeek 处理无法匹配关键词的自由问题
-        return dataHandlers.handleAiDeepFallback(question, tenantId, factoryId);
+        return null;
     }
 
     // ── 工具方法 ──

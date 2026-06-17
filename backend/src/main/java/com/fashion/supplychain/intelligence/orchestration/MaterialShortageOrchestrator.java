@@ -52,12 +52,7 @@ public class MaterialShortageOrchestrator {
         MaterialShortageResponse resp = new MaterialShortageResponse();
 
         // 1. 查询所有在产订单
-        QueryWrapper<ProductionOrder> orderQw = new QueryWrapper<>();
-        orderQw.eq("tenant_id", tenantId)
-               .eq("delete_flag", 0)
-               .in("status", "production", "cutting", "draft");
-        List<ProductionOrder> activeOrders = productionOrderMapper.selectList(orderQw);
-
+        List<ProductionOrder> activeOrders = queryActiveOrders(tenantId);
         if (activeOrders.isEmpty()) {
             resp.setShortageItems(Collections.emptyList());
             resp.setSufficientCount(0);
@@ -65,23 +60,69 @@ public class MaterialShortageOrchestrator {
             resp.setSummary("当前无在产订单，无需预测");
             return resp;
         }
-
         resp.setCoveredOrderCount(activeOrders.size());
 
         // 2. 收集所有 styleId，批量查 BOM
-        Set<Long> styleIds = activeOrders.stream()
-                .map(ProductionOrder::getStyleId)
-                .filter(Objects::nonNull)
-                .map(s -> { try { return Long.parseLong(s); } catch (Exception e) { log.debug("[MaterialShortage] styleId解析失败: {}", s); return null; } })
-                .filter(Objects::nonNull)
-                .collect(Collectors.toSet());
-
+        Set<Long> styleIds = extractStyleIds(activeOrders);
         if (styleIds.isEmpty()) {
             resp.setShortageItems(Collections.emptyList());
             resp.setSummary("订单未绑定款式，无法计算面料需求");
             return resp;
         }
 
+        Map<Long, List<StyleBom>> bomByStyle = queryBomByStyle(tenantId, styleIds);
+        Map<Long, Integer> qtyByStyle = accumulateQuantityByStyle(activeOrders);
+
+        // 3. 计算各物料总需求量 key = materialCode + "|" + color
+        DemandResult demandResult = calculateDemandMap(qtyByStyle, bomByStyle);
+        if (demandResult.demandMap.isEmpty()) {
+            resp.setShortageItems(Collections.emptyList());
+            resp.setSummary("BOM 中无物料数据");
+            return resp;
+        }
+
+        // 4. 批量查库存
+        Set<String> materialCodes = demandResult.demandMap.keySet().stream()
+                .map(k -> k.split("\\|")[0])
+                .collect(Collectors.toSet());
+        Map<String, Integer> stockMap = queryStockMap(tenantId, materialCodes);
+
+        // 5. 计算缺口
+        ShortageResult result = buildShortageItems(demandResult, stockMap);
+
+        resp.setShortageItems(result.shortageItems);
+        resp.setSufficientCount(result.sufficientCount);
+
+        long highCount = result.shortageItems.stream().filter(i -> "HIGH".equals(i.getRiskLevel())).count();
+        resp.setSummary(String.format("共 %d 种物料面临缺货（其中 %d 种高风险），建议立即采购",
+                result.shortageItems.size(), highCount));
+
+        log.info("[MaterialShortage] tenantId={} 订单数={} 缺口物料数={} 高风险={}",
+                tenantId, activeOrders.size(), result.shortageItems.size(), highCount);
+        return resp;
+    }
+
+    /** 查询租户内所有在产订单 */
+    private List<ProductionOrder> queryActiveOrders(Long tenantId) {
+        QueryWrapper<ProductionOrder> orderQw = new QueryWrapper<>();
+        orderQw.eq("tenant_id", tenantId)
+               .eq("delete_flag", 0)
+               .in("status", "production", "cutting", "draft");
+        return productionOrderMapper.selectList(orderQw);
+    }
+
+    /** 从订单中提取有效 styleId 集合 */
+    private Set<Long> extractStyleIds(List<ProductionOrder> activeOrders) {
+        return activeOrders.stream()
+                .map(ProductionOrder::getStyleId)
+                .filter(Objects::nonNull)
+                .map(s -> { try { return Long.parseLong(s); } catch (Exception e) { log.debug("[MaterialShortage] styleId解析失败: {}", s); return null; } })
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+    }
+
+    /** 批量查询 BOM 并按 styleId 分组 */
+    private Map<Long, List<StyleBom>> queryBomByStyle(Long tenantId, Set<Long> styleIds) {
         QueryWrapper<StyleBom> bomQw = new QueryWrapper<>();
         bomQw.select(
             "id",
@@ -109,12 +150,11 @@ public class MaterialShortageOrchestrator {
              .in("style_id", styleIds);
         // 注意：t_style_bom 表无 delete_flag 列，不可加此条件
         List<StyleBom> bomList = styleBomMapper.selectList(bomQw);
+        return bomList.stream().collect(Collectors.groupingBy(StyleBom::getStyleId));
+    }
 
-        // styleId → BOM列表
-        Map<Long, List<StyleBom>> bomByStyle = bomList.stream()
-                .collect(Collectors.groupingBy(StyleBom::getStyleId));
-
-        // styleId(String) → orderQuantity 累加
+    /** 按 styleId 累加订单数量 */
+    private Map<Long, Integer> accumulateQuantityByStyle(List<ProductionOrder> activeOrders) {
         Map<Long, Integer> qtyByStyle = new HashMap<>();
         for (ProductionOrder order : activeOrders) {
             if (order.getStyleId() == null) continue;
@@ -124,8 +164,11 @@ public class MaterialShortageOrchestrator {
                 qtyByStyle.merge(sid, qty, Integer::sum);
             } catch (NumberFormatException e) { log.debug("数字解析失败: {}", e.getMessage()); }
         }
+        return qtyByStyle;
+    }
 
-        // 3. 计算各物料总需求量 key = materialCode + "|" + color
+    /** 计算各物料总需求量，并保留 BOM 元信息 */
+    private DemandResult calculateDemandMap(Map<Long, Integer> qtyByStyle, Map<Long, List<StyleBom>> bomByStyle) {
         Map<String, Double> demandMap = new LinkedHashMap<>();
         Map<String, StyleBom> bomMetaMap = new LinkedHashMap<>();
 
@@ -146,84 +189,96 @@ public class MaterialShortageOrchestrator {
                 bomMetaMap.putIfAbsent(key, bom);
             }
         }
+        return new DemandResult(demandMap, bomMetaMap);
+    }
 
-        if (demandMap.isEmpty()) {
-            resp.setShortageItems(Collections.emptyList());
-            resp.setSummary("BOM 中无物料数据");
-            return resp;
-        }
-
-        // 4. 批量查库存
-        Set<String> materialCodes = demandMap.keySet().stream()
-                .map(k -> k.split("\\|")[0])
-                .collect(Collectors.toSet());
-
+    /** 批量查询库存，按 materialCode|color 聚合 */
+    private Map<String, Integer> queryStockMap(Long tenantId, Set<String> materialCodes) {
         QueryWrapper<MaterialStock> stockQw = new QueryWrapper<>();
         stockQw.eq("tenant_id", tenantId)
                .in("material_code", materialCodes)
                .eq("delete_flag", 0);
         List<MaterialStock> stocks = materialStockMapper.selectList(stockQw);
 
-        // key = materialCode + "|" + color → 库存量
         Map<String, Integer> stockMap = new HashMap<>();
         for (MaterialStock s : stocks) {
             String k = s.getMaterialCode() + "|" + (s.getColor() != null ? s.getColor() : "");
             stockMap.merge(k, s.getQuantity() != null ? s.getQuantity() : 0, Integer::sum);
         }
+        return stockMap;
+    }
 
-        // 5. 计算缺口
+    /** 计算缺口并构建 ShortageItem 列表 */
+    private ShortageResult buildShortageItems(DemandResult demandResult, Map<String, Integer> stockMap) {
         List<ShortageItem> shortageItems = new ArrayList<>();
         int sufficientCount = 0;
 
-        for (Map.Entry<String, Double> entry : demandMap.entrySet()) {
+        for (Map.Entry<String, Double> entry : demandResult.demandMap.entrySet()) {
             String key = entry.getKey();
             int demand = (int) Math.ceil(entry.getValue());
             int stock = stockMap.getOrDefault(key, 0);
             int shortage = demand - stock;
-
-            StyleBom meta = bomMetaMap.get(key);
 
             if (shortage <= 0) {
                 sufficientCount++;
                 continue;
             }
 
-            ShortageItem item = new ShortageItem();
-            item.setMaterialCode(meta.getMaterialCode());
-            item.setMaterialName(meta.getMaterialName());
-            item.setUnit(meta.getUnit());
-            item.setSpec(meta.getColor() != null ? meta.getColor() : meta.getSpecification());
-            item.setCurrentStock(stock);
-            item.setDemandQuantity(demand);
-            item.setShortageQuantity(shortage);
-            item.setSupplierName(meta.getSupplier());
-            item.setSupplierContact(meta.getSupplierContactPerson());
-            item.setSupplierPhone(meta.getSupplierContactPhone());
-
-            // 风险分级：缺口 > 需求50% HIGH，> 20% MEDIUM，其余 LOW
-            double shortageRatio = (double) shortage / demand;
-            if (shortageRatio > 0.5) {
-                item.setRiskLevel("HIGH");
-            } else if (shortageRatio > 0.2) {
-                item.setRiskLevel("MEDIUM");
-            } else {
-                item.setRiskLevel("LOW");
-            }
-            shortageItems.add(item);
+            StyleBom meta = demandResult.bomMetaMap.get(key);
+            shortageItems.add(buildShortageItem(meta, demand, stock, shortage));
         }
 
         // 按缺口量降序
         shortageItems.sort(Comparator.comparingInt(ShortageItem::getShortageQuantity).reversed());
+        return new ShortageResult(shortageItems, sufficientCount);
+    }
 
-        resp.setShortageItems(shortageItems);
-        resp.setSufficientCount(sufficientCount);
+    /** 构建单个 ShortageItem，含风险分级 */
+    private ShortageItem buildShortageItem(StyleBom meta, int demand, int stock, int shortage) {
+        ShortageItem item = new ShortageItem();
+        item.setMaterialCode(meta.getMaterialCode());
+        item.setMaterialName(meta.getMaterialName());
+        item.setUnit(meta.getUnit());
+        item.setSpec(meta.getColor() != null ? meta.getColor() : meta.getSpecification());
+        item.setCurrentStock(stock);
+        item.setDemandQuantity(demand);
+        item.setShortageQuantity(shortage);
+        item.setSupplierName(meta.getSupplier());
+        item.setSupplierContact(meta.getSupplierContactPerson());
+        item.setSupplierPhone(meta.getSupplierContactPhone());
+        item.setRiskLevel(determineRiskLevel(shortage, demand));
+        return item;
+    }
 
-        long highCount = shortageItems.stream().filter(i -> "HIGH".equals(i.getRiskLevel())).count();
-        resp.setSummary(String.format("共 %d 种物料面临缺货（其中 %d 种高风险），建议立即采购",
-                shortageItems.size(), highCount));
+    /** 风险分级：缺口 > 需求50% HIGH，> 20% MEDIUM，其余 LOW */
+    private String determineRiskLevel(int shortage, int demand) {
+        double shortageRatio = (double) shortage / demand;
+        if (shortageRatio > 0.5) {
+            return "HIGH";
+        } else if (shortageRatio > 0.2) {
+            return "MEDIUM";
+        } else {
+            return "LOW";
+        }
+    }
 
-        log.info("[MaterialShortage] tenantId={} 订单数={} 缺口物料数={} 高风险={}",
-                tenantId, activeOrders.size(), shortageItems.size(), highCount);
-        return resp;
+    /** 需求计算结果（demandMap + bomMetaMap） */
+    private static class DemandResult {
+        final Map<String, Double> demandMap;
+        final Map<String, StyleBom> bomMetaMap;
+        DemandResult(Map<String, Double> demandMap, Map<String, StyleBom> bomMetaMap) {
+            this.demandMap = demandMap;
+            this.bomMetaMap = bomMetaMap;
+        }
+    }
+
+    /** 缺口计算结果（shortageItems + sufficientCount） */
+    private static class ShortageResult {
+        final List<ShortageItem> shortageItems;
+        final int sufficientCount;
+        ShortageResult(List<ShortageItem> shortageItems, int sufficientCount) {
+            this.shortageItems = shortageItems;
+            this.sufficientCount = sufficientCount;
+        }
     }
 }

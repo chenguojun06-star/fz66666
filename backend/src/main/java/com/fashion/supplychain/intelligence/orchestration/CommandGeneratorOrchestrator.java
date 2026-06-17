@@ -53,135 +53,186 @@ public class CommandGeneratorOrchestrator {
 
         log.info("[CommandGenerator] 解析通知: orderId={}, action={}", orderId, action);
 
+        appendOrderStateCommands(action, orderId, tenantId, notification, commands);
+        appendOrderEditCommands(action, orderId, tenantId, notification, commands);
+        appendStyleCommands(action, orderId, tenantId, notification, commands);
+        appendQualityDefectiveCommands(action, orderId, tenantId, notification, commands);
+        appendFinanceCommands(action, orderId, tenantId, notification, commands);
+        appendPurchaseCommands(action, orderId, tenantId, notification, commands);
+        appendScanCuttingCommands(action, orderId, tenantId, notification, commands);
+        appendProcessFactoryCommands(action, orderId, tenantId, notification, commands);
+        appendMaterialNotificationCommands(action, orderId, tenantId, notification, commands);
+
+        log.info("[CommandGenerator] 生成了 {} 个命令", commands.size());
+        return commands;
+    }
+
+    /**
+     * 订单状态类命令：暂停/加快/恢复/审核通过/退回
+     */
+    private void appendOrderStateCommands(String action, String orderId, Long tenantId,
+                                          SmartNotification notification, List<ExecutableCommand> commands) {
         // 模式1：暂停订单
         if (action.contains("暂停订单") || action.contains("hold") || action.contains("pause")) {
             commands.add(createOrderHoldCommand(orderId, tenantId, notification));
         }
-
         // 模式2：加快订单
         if (action.contains("加快") || action.contains("加速") || action.contains("expedite")) {
             commands.add(createOrderExpediteCommand(orderId, tenantId, notification));
         }
-
         // 模式3：恢复订单
         if (action.contains("恢复") || action.contains("resume") || action.contains("激活")) {
             commands.add(createOrderResumeCommand(orderId, tenantId, notification));
         }
-
         // 模式4：审核通过订单
         if (action.contains("审核通过") || action.contains("approve") || action.contains("批准订单")) {
             commands.add(createOrderApproveCommand(orderId, tenantId, notification));
         }
-
         // 模式5：退回订单
         if (action.contains("退回订单") || action.contains("reject") || action.contains("驳回订单")) {
             commands.add(createOrderRejectCommand(orderId, tenantId, notification));
         }
+    }
 
-        // 模式6：款式审核通过
-        if (action.contains("款式通过") || action.contains("样衣通过") || action.contains("style approve")
-                || action.contains("批准款式")) {
-            commands.add(createStyleApproveCommand(orderId, tenantId, notification));
-        }
-
-        // 模式7：退回款式重新开发
-        if (action.contains("退回款式") || action.contains("款式返工") || action.contains("样衣退回")
-                || action.contains("style return")) {
-            commands.add(createStyleReturnCommand(orderId, tenantId, notification));
-        }
-
-        // 模式8：质检不合格退回
-        if (action.contains("质检不合格") || action.contains("质检退回") || action.contains("quality reject")
-                || action.contains("质量不合格")) {
-            commands.add(createQualityRejectCommand(orderId, tenantId, notification));
-        }
-
-        // 模式9：对账/结算审批
-        if (action.contains("结算审批") || action.contains("对账审批") || action.contains("工资审批")
-                || action.contains("settlement approve")) {
-            commands.add(createSettlementApproveCommand(orderId, tenantId, notification));
-        }
-
-        // 模式10：自动创建采购单
-        if (action.contains("创建采购") || action.contains("自动采购") || action.contains("补货")
-                || action.contains("purchase create")) {
-            commands.add(createPurchaseCreateCommand(orderId, tenantId, notification));
-        }
-
+    /**
+     * 订单编辑类命令：修改交期/添加备注/订单编辑
+     */
+    private void appendOrderEditCommands(String action, String orderId, Long tenantId,
+                                         SmartNotification notification, List<ExecutableCommand> commands) {
         // 模式11：修改交期
         if (action.contains("修改交期") || action.contains("改交期") || action.contains("调整交期")
                 || action.contains("改交货") || action.contains("ship date") || action.contains("change delivery")) {
             commands.add(createOrderShipDateCommand(orderId, tenantId, notification));
         }
-
         // 模式12：添加备注
         if (action.contains("添加备注") || action.contains("加备注") || action.contains("写备注")
                 || action.contains("备注一下") || action.contains("add note") || action.contains("add remark")) {
             commands.add(createOrderAddNoteCommand(orderId, tenantId, notification));
         }
-
-        // 模式13：采购下单
-        if (action.contains("采购下单") || action.contains("下单采购") || action.contains("采购货物")
-                || action.contains("procurement order") || action.contains("order goods")) {
-            commands.add(createProcurementOrderGoodsCommand(orderId, tenantId, notification));
-        }
-
-        // 模式14：扫码撤回
-        if (action.contains("撤回扫码") || action.contains("撤销扫码") || action.contains("扫码撤回")
-                || action.contains("撤销扫描") || action.contains("scan undo") || action.contains("undo scan")) {
-            commands.add(createScanUndoCommand(orderId, tenantId, notification));
-        }
-
-        // 模式15：创建裁剪单
-        if (action.contains("创建裁剪") || action.contains("开裁剪单") || action.contains("新建裁剪")
-                || action.contains("cutting create") || action.contains("create cutting")) {
-            commands.add(createCuttingCreateCommand(orderId, tenantId, notification));
-        }
-
         // 模式16：订单编辑
         if (action.contains("编辑订单") || action.contains("修改订单") || action.contains("改订单")
                 || action.contains("order edit") || action.contains("edit order")) {
             commands.add(createOrderEditCommand(orderId, tenantId, notification));
         }
+    }
 
-        // 模式17：工资审批
-        if (action.contains("工资审批") || action.contains("审批工资") || action.contains("结算审批")
-                || action.contains("payroll approve") || action.contains("approve payroll")) {
-            commands.add(createPayrollApproveCommand(orderId, tenantId, notification));
+    /**
+     * 款式类命令：款式审核通过/退回款式
+     */
+    private void appendStyleCommands(String action, String orderId, Long tenantId,
+                                     SmartNotification notification, List<ExecutableCommand> commands) {
+        // 模式6：款式审核通过
+        if (action.contains("款式通过") || action.contains("样衣通过") || action.contains("style approve")
+                || action.contains("批准款式")) {
+            commands.add(createStyleApproveCommand(orderId, tenantId, notification));
         }
+        // 模式7：退回款式重新开发
+        if (action.contains("退回款式") || action.contains("款式返工") || action.contains("样衣退回")
+                || action.contains("style return")) {
+            commands.add(createStyleReturnCommand(orderId, tenantId, notification));
+        }
+    }
 
+    /**
+     * 质检+次品类命令：质检不合格退回/次品处理
+     */
+    private void appendQualityDefectiveCommands(String action, String orderId, Long tenantId,
+                                                SmartNotification notification, List<ExecutableCommand> commands) {
+        // 模式8：质检不合格退回
+        if (action.contains("质检不合格") || action.contains("质检退回") || action.contains("quality reject")
+                || action.contains("质量不合格")) {
+            commands.add(createQualityRejectCommand(orderId, tenantId, notification));
+        }
         // 模式18：次品处理
         if (action.contains("次品处理") || action.contains("处理次品") || action.contains("返修处理")
                 || action.contains("报废处理") || action.contains("defective handle") || action.contains("handle defective")) {
             commands.add(createDefectiveHandleCommand(orderId, tenantId, notification));
         }
+    }
 
+    /**
+     * 财务类命令：对账/结算审批/工资审批
+     */
+    private void appendFinanceCommands(String action, String orderId, Long tenantId,
+                                       SmartNotification notification, List<ExecutableCommand> commands) {
+        // 模式9：对账/结算审批
+        if (action.contains("结算审批") || action.contains("对账审批") || action.contains("工资审批")
+                || action.contains("settlement approve")) {
+            commands.add(createSettlementApproveCommand(orderId, tenantId, notification));
+        }
+        // 模式17：工资审批
+        if (action.contains("工资审批") || action.contains("审批工资") || action.contains("结算审批")
+                || action.contains("payroll approve") || action.contains("approve payroll")) {
+            commands.add(createPayrollApproveCommand(orderId, tenantId, notification));
+        }
+    }
+
+    /**
+     * 采购类命令：自动创建采购单/采购下单
+     */
+    private void appendPurchaseCommands(String action, String orderId, Long tenantId,
+                                        SmartNotification notification, List<ExecutableCommand> commands) {
+        // 模式10：自动创建采购单
+        if (action.contains("创建采购") || action.contains("自动采购") || action.contains("补货")
+                || action.contains("purchase create")) {
+            commands.add(createPurchaseCreateCommand(orderId, tenantId, notification));
+        }
+        // 模式13：采购下单
+        if (action.contains("采购下单") || action.contains("下单采购") || action.contains("采购货物")
+                || action.contains("procurement order") || action.contains("order goods")) {
+            commands.add(createProcurementOrderGoodsCommand(orderId, tenantId, notification));
+        }
+    }
+
+    /**
+     * 扫码+裁剪类命令：扫码撤回/创建裁剪单
+     */
+    private void appendScanCuttingCommands(String action, String orderId, Long tenantId,
+                                           SmartNotification notification, List<ExecutableCommand> commands) {
+        // 模式14：扫码撤回
+        if (action.contains("撤回扫码") || action.contains("撤销扫码") || action.contains("扫码撤回")
+                || action.contains("撤销扫描") || action.contains("scan undo") || action.contains("undo scan")) {
+            commands.add(createScanUndoCommand(orderId, tenantId, notification));
+        }
+        // 模式15：创建裁剪单
+        if (action.contains("创建裁剪") || action.contains("开裁剪单") || action.contains("新建裁剪")
+                || action.contains("cutting create") || action.contains("create cutting")) {
+            commands.add(createCuttingCreateCommand(orderId, tenantId, notification));
+        }
+    }
+
+    /**
+     * 工序+工厂类命令：工序重分配/工厂催单
+     */
+    private void appendProcessFactoryCommands(String action, String orderId, Long tenantId,
+                                              SmartNotification notification, List<ExecutableCommand> commands) {
         // 模式19：工序重分配
         if (action.contains("工序重分配") || action.contains("重新分配") || action.contains("转派工序")
                 || action.contains("process reassign") || action.contains("reassign process")) {
             commands.add(createProcessReassignCommand(orderId, tenantId, notification));
         }
-
         // 模式20：工厂催单
         if (action.contains("催单") || action.contains("催工厂") || action.contains("催一下")
                 || action.contains("factory urge") || action.contains("urge factory") || action.contains("催促")) {
             commands.add(createFactoryUrgeCommand(orderId, tenantId, notification));
         }
+    }
 
+    /**
+     * 物料+通知类命令：物料安全库存/通知推送
+     */
+    private void appendMaterialNotificationCommands(String action, String orderId, Long tenantId,
+                                                    SmartNotification notification, List<ExecutableCommand> commands) {
         // 模式21：物料安全库存
         if (action.contains("安全库存") || action.contains("库存预警") || action.contains("补货提醒")
                 || action.contains("safety stock") || action.contains("stock alert")) {
             commands.add(createMaterialSafetyStockCommand(orderId, tenantId, notification));
         }
-
         // 模式22：通知推送
         if (action.contains("推送通知") || action.contains("发通知") || action.contains("通知一下")
                 || action.contains("push notification") || action.contains("send notification")) {
             commands.add(createNotificationPushCommand(orderId, tenantId, notification));
         }
-
-        log.info("[CommandGenerator] 生成了 {} 个命令", commands.size());
-        return commands;
     }
 
     /**

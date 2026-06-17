@@ -54,6 +54,14 @@ public class SemanticCacheService {
     /** 最小缓存响应长度（低于此长度的响应不缓存，避免缓存简单问候语） */
     private static final int MIN_RESPONSE_LENGTH = 50;
 
+    // ── 命中率监控计数器（线程安全） ──
+    private final java.util.concurrent.atomic.AtomicLong totalLookups = new java.util.concurrent.atomic.AtomicLong(0);
+    private final java.util.concurrent.atomic.AtomicLong exactHits = new java.util.concurrent.atomic.AtomicLong(0);
+    private final java.util.concurrent.atomic.AtomicLong semanticHits = new java.util.concurrent.atomic.AtomicLong(0);
+    private final java.util.concurrent.atomic.AtomicLong totalStores = new java.util.concurrent.atomic.AtomicLong(0);
+    /** 统计重置时间戳，用于计算命中率的时间窗口 */
+    private volatile long statsResetAt = System.currentTimeMillis();
+
     /**
      * 查找语义缓存的 LLM 响应
      *
@@ -66,10 +74,13 @@ public class SemanticCacheService {
             return null;
         }
         try {
+            totalLookups.incrementAndGet();
+
             // 1. 精确匹配：SHA-256 查 Redis
             String exactKey = buildExactKey(tenantId, query);
             String cached = lookupExact(exactKey);
             if (cached != null) {
+                exactHits.incrementAndGet();
                 log.debug("[SemanticCache] 精确命中 tenantId={} queryLen={}", tenantId, query.length());
                 return cached;
             }
@@ -77,6 +88,7 @@ public class SemanticCacheService {
             // 2. 语义匹配：Qdrant 搜索相似查询
             String semanticResult = lookupSemantic(tenantId, query);
             if (semanticResult != null) {
+                semanticHits.incrementAndGet();
                 log.info("[SemanticCache] 语义命中 tenantId={} queryLen={}", tenantId, query.length());
                 return semanticResult;
             }
@@ -104,6 +116,8 @@ public class SemanticCacheService {
             return;
         }
         try {
+            totalStores.incrementAndGet();
+
             // 1. 精确缓存：Redis 存储 query_hash -> response
             String exactKey = buildExactKey(tenantId, query);
             storeExact(exactKey, response);
@@ -113,6 +127,100 @@ public class SemanticCacheService {
         } catch (Exception e) {
             log.warn("[SemanticCache] store失败，静默降级 tenantId={}: {}", tenantId, e.getMessage());
         }
+    }
+
+    // ──────────────────────────────────────────────────────────────
+    //  命中率监控与管理
+    // ──────────────────────────────────────────────────────────────
+
+    /**
+     * 返回当前缓存统计快照（命中率、查询数等）
+     */
+    public CacheStats getStats() {
+        long lookups = totalLookups.get();
+        long exact = exactHits.get();
+        long semantic = semanticHits.get();
+        long hits = exact + semantic;
+        double hitRate = lookups > 0 ? (hits * 100.0) / lookups : 0.0;
+        double exactRate = lookups > 0 ? (exact * 100.0) / lookups : 0.0;
+        double semanticRate = lookups > 0 ? (semantic * 100.0) / lookups : 0.0;
+        long uptimeMinutes = Math.max(1, (System.currentTimeMillis() - statsResetAt) / 60000);
+        return new CacheStats(enabled, lookups, hits, exact, semantic,
+                totalStores.get(), hitRate, exactRate, semanticRate, uptimeMinutes,
+                cacheTtlMinutes, similarityThreshold);
+    }
+
+    /**
+     * 重置命中率计数器（用于A/B测试新缓存策略）
+     */
+    public void resetStats() {
+        totalLookups.set(0);
+        exactHits.set(0);
+        semanticHits.set(0);
+        totalStores.set(0);
+        statsResetAt = System.currentTimeMillis();
+        log.info("[SemanticCache] 命中率计数器已重置");
+    }
+
+    /**
+     * 动态调整相似度阈值（运行时可调整，无需重启）
+     */
+    public void setSimilarityThreshold(float threshold) {
+        if (threshold < 0.5f || threshold > 0.99f) {
+            throw new IllegalArgumentException("相似度阈值必须在 0.5 ~ 0.99 之间");
+        }
+        this.similarityThreshold = threshold;
+        log.info("[SemanticCache] 相似度阈值已调整为 {}", threshold);
+    }
+
+    /**
+     * 缓存统计快照 DTO（内部类，便于 JSON 序列化）
+     */
+    public static class CacheStats {
+        private final boolean enabled;
+        private final long totalLookups;
+        private final long totalHits;
+        private final long exactHits;
+        private final long semanticHits;
+        private final long totalStores;
+        private final double hitRatePercent;
+        private final double exactRatePercent;
+        private final double semanticRatePercent;
+        private final long uptimeMinutes;
+        private final int ttlMinutes;
+        private final float similarityThreshold;
+
+        public CacheStats(boolean enabled, long totalLookups, long totalHits,
+                          long exactHits, long semanticHits, long totalStores,
+                          double hitRatePercent, double exactRatePercent,
+                          double semanticRatePercent, long uptimeMinutes,
+                          int ttlMinutes, float similarityThreshold) {
+            this.enabled = enabled;
+            this.totalLookups = totalLookups;
+            this.totalHits = totalHits;
+            this.exactHits = exactHits;
+            this.semanticHits = semanticHits;
+            this.totalStores = totalStores;
+            this.hitRatePercent = hitRatePercent;
+            this.exactRatePercent = exactRatePercent;
+            this.semanticRatePercent = semanticRatePercent;
+            this.uptimeMinutes = uptimeMinutes;
+            this.ttlMinutes = ttlMinutes;
+            this.similarityThreshold = similarityThreshold;
+        }
+
+        public boolean isEnabled() { return enabled; }
+        public long getTotalLookups() { return totalLookups; }
+        public long getTotalHits() { return totalHits; }
+        public long getExactHits() { return exactHits; }
+        public long getSemanticHits() { return semanticHits; }
+        public long getTotalStores() { return totalStores; }
+        public double getHitRatePercent() { return Math.round(hitRatePercent * 100.0) / 100.0; }
+        public double getExactRatePercent() { return Math.round(exactRatePercent * 100.0) / 100.0; }
+        public double getSemanticRatePercent() { return Math.round(semanticRatePercent * 100.0) / 100.0; }
+        public long getUptimeMinutes() { return uptimeMinutes; }
+        public int getTtlMinutes() { return ttlMinutes; }
+        public float getSimilarityThreshold() { return similarityThreshold; }
     }
 
     /**

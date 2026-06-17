@@ -68,41 +68,17 @@ public class FactoryBottleneckOrchestrator {
         String factoryId = UserContext.factoryId();
 
         // 1. 查询活跃订单（非已完成、非已取消、非软删除）
-        List<ProductionOrder> orders = productionOrderService.list(
-                new LambdaQueryWrapper<ProductionOrder>()
-                        .eq(ProductionOrder::getTenantId, tenantId)
-                        .eq(StringUtils.hasText(factoryId), ProductionOrder::getFactoryId, factoryId)
-                        .notIn(ProductionOrder::getStatus, "completed", "cancelled", "scrapped", "archived", "closed")
-                        .eq(ProductionOrder::getDeleteFlag, 0)
-                        .isNotNull(ProductionOrder::getFactoryName)
-                        .ne(ProductionOrder::getFactoryName, "")
-        );
-
+        List<ProductionOrder> orders = queryActiveOrders(tenantId, factoryId);
         if (orders.isEmpty()) return Collections.emptyList();
 
         // 2. 收集订单ID，批量查成功扫码记录（一次查询，不逐单查）
         List<String> orderIds = orders.stream()
                 .map(o -> String.valueOf(o.getId()))
                 .collect(Collectors.toList());
-
-        List<ScanRecord> scans = scanRecordService.list(
-                new LambdaQueryWrapper<ScanRecord>()
-                        .eq(ScanRecord::getTenantId, tenantId)
-                        .eq(StringUtils.hasText(factoryId), ScanRecord::getFactoryId, factoryId)
-                        .in(ScanRecord::getOrderId, orderIds)
-                        .eq(ScanRecord::getScanResult, "success")
-                        .ne(ScanRecord::getScanType, "orchestration")
-        );
+        List<ScanRecord> scans = querySuccessScans(tenantId, factoryId, orderIds);
 
         // 3. orderId → stageLabel → quantity 汇总
-        Map<String, Map<String, Integer>> scanQtyMap = new HashMap<>();
-        for (ScanRecord s : scans) {
-            if (s.getOrderId() == null || s.getQuantity() == null || s.getQuantity() <= 0) continue;
-            String stage = mapToStageLabel(s.getProgressStage(), s.getScanType());
-            if (stage == null) continue;
-            scanQtyMap.computeIfAbsent(s.getOrderId(), k -> new HashMap<>())
-                    .merge(stage, s.getQuantity(), Integer::sum);
-        }
+        Map<String, Map<String, Integer>> scanQtyMap = buildScanQtyMap(scans);
 
         // 4. 按工厂分组
         Map<String, List<ProductionOrder>> byFactory = orders.stream()
@@ -112,100 +88,14 @@ public class FactoryBottleneckOrchestrator {
         List<FactoryBottleneckItem> result = new ArrayList<>();
         for (Map.Entry<String, List<ProductionOrder>> entry : byFactory.entrySet()) {
             List<ProductionOrder> group = entry.getValue();
-
-            // 计算各工序平均完成率
-            int[] stageAvgs = new int[STAGE_LABELS.length];
-            for (int si = 0; si < STAGE_LABELS.length; si++) {
-                String stage = STAGE_LABELS[si];
-                int sumPct = 0;
-                for (ProductionOrder o : group) {
-                    String oid = String.valueOf(o.getId());
-                    int total = o.getOrderQuantity() != null && o.getOrderQuantity() > 0
-                            ? o.getOrderQuantity() : 1;
-                    Map<String, Integer> orderScans = scanQtyMap.getOrDefault(oid, Collections.emptyMap());
-                    int scanned = orderScans.getOrDefault(stage, 0);
-                    int pct = Math.min(100, scanned * 100 / total);
-
-                    // 后续工序有扫码 → 当前工序必然已完成（避免"采购"因从不扫码而误判为卡点）
-                    if (pct < 100) {
-                        for (int j = si + 1; j < STAGE_LABELS.length; j++) {
-                            if (orderScans.getOrDefault(STAGE_LABELS[j], 0) > 0) {
-                                pct = 100;
-                                break;
-                            }
-                        }
-                    }
-
-                    sumPct += pct;
-                }
-                stageAvgs[si] = sumPct / group.size();
-            }
-
-            // 找"当前活跃工序"：从后往前找最后一个进度在 (0%, 100%) 之间的工序。
-            // 这才是工厂正在推进的真实瓶颈，避免把"尚未启动的质检/入库"误判为卡点。
-            // 例：车缝50% → stuckStage=车缝（而不是质检0%）
-            int activeIdx = -1;
-            for (int si = STAGE_LABELS.length - 1; si >= 0; si--) {
-                if (stageAvgs[si] > 0 && stageAvgs[si] < 100) {
-                    activeIdx = si;
-                    break;
-                }
-            }
-
-            String minStage;
-            int minAvg;
-            if (activeIdx >= 0) {
-                // 有部分完成工序 → 该工序为实际瓶颈
-                minStage = STAGE_LABELS[activeIdx];
-                minAvg = stageAvgs[activeIdx];
-            } else {
-                // 所有工序要么 0% 要么 100%：找最后已完成工序的下一工序（即当前待启动阶段）
-                int lastDone = -1;
-                for (int si = 0; si < STAGE_LABELS.length; si++) {
-                    if (stageAvgs[si] >= 100) lastDone = si;
-                }
-                int nextIdx = lastDone + 1;
-                if (nextIdx < STAGE_LABELS.length) {
-                    minStage = STAGE_LABELS[nextIdx];
-                    minAvg = stageAvgs[nextIdx];
-                } else {
-                    minStage = STAGE_LABELS[STAGE_LABELS.length - 1];
-                    minAvg = 100;
-                }
-            }
-
-            // 取该工序中完成率 < 80% 的前3单（按完成率升序）
-            final String finalStage = minStage;
-            List<WorstOrderItem> allStuckOrders = group.stream()
-                    .map(o -> {
-                        String oid = String.valueOf(o.getId());
-                        int total = o.getOrderQuantity() != null && o.getOrderQuantity() > 0
-                                ? o.getOrderQuantity() : 1;
-                        int scanned = scanQtyMap
-                                .getOrDefault(oid, Collections.emptyMap())
-                                .getOrDefault(finalStage, 0);
-                        int pct = Math.min(100, scanned * 100 / total);
-                        WorstOrderItem w = new WorstOrderItem();
-                        w.setOrderNo(o.getOrderNo() != null ? o.getOrderNo() : oid);
-                        w.setPct(pct);
-                        return w;
-                    })
-                    .filter(w -> w.getPct() < 80)
-                    .sorted(Comparator.comparingInt(WorstOrderItem::getPct))
-                    .collect(Collectors.toList());
-            // 实际卡点单数（完整数量，用于前端显示）
+            int[] stageAvgs = computeStageAverages(group, scanQtyMap);
+            BottleneckResult bottleneck = determineBottleneck(stageAvgs);
+            List<WorstOrderItem> allStuckOrders = collectWorstOrders(group, scanQtyMap, bottleneck.getStage());
             int stuckCount = allStuckOrders.size();
             // 卡点最差的前3单（用于前端芯片展示）
             List<WorstOrderItem> worstOrders = allStuckOrders.stream().limit(3).collect(Collectors.toList());
-
-            FactoryBottleneckItem item = new FactoryBottleneckItem();
-            item.setFactoryName(entry.getKey());
-            item.setOrderCount(group.size());
-            item.setStuckOrderCount(stuckCount);
-            item.setStuckStage(minStage);
-            item.setStuckPct(minAvg);
-            item.setWorstOrders(worstOrders);
-            result.add(item);
+            result.add(buildBottleneckItem(entry.getKey(), group.size(), stuckCount,
+                    bottleneck.getStage(), bottleneck.getAvgPct(), worstOrders));
         }
 
         // 按瓶颈完成率升序（最差工厂排前面）
@@ -213,6 +103,157 @@ public class FactoryBottleneckOrchestrator {
 
         log.debug("[FactoryBottleneck] tenantId={} factories={}", tenantId, result.size());
         return result;
+    }
+
+    /** 查询租户内活跃订单（非 completed / cancelled / scrapped / archived / closed） */
+    private List<ProductionOrder> queryActiveOrders(Long tenantId, String factoryId) {
+        return productionOrderService.list(
+                new LambdaQueryWrapper<ProductionOrder>()
+                        .eq(ProductionOrder::getTenantId, tenantId)
+                        .eq(StringUtils.hasText(factoryId), ProductionOrder::getFactoryId, factoryId)
+                        .notIn(ProductionOrder::getStatus, "completed", "cancelled", "scrapped", "archived", "closed")
+                        .eq(ProductionOrder::getDeleteFlag, 0)
+                        .isNotNull(ProductionOrder::getFactoryName)
+                        .ne(ProductionOrder::getFactoryName, "")
+        );
+    }
+
+    /** 批量查询这批订单的成功扫码记录（一次查询，避免 N+1） */
+    private List<ScanRecord> querySuccessScans(Long tenantId, String factoryId, List<String> orderIds) {
+        return scanRecordService.list(
+                new LambdaQueryWrapper<ScanRecord>()
+                        .eq(ScanRecord::getTenantId, tenantId)
+                        .eq(StringUtils.hasText(factoryId), ScanRecord::getFactoryId, factoryId)
+                        .in(ScanRecord::getOrderId, orderIds)
+                        .eq(ScanRecord::getScanResult, "success")
+                        .ne(ScanRecord::getScanType, "orchestration")
+        );
+    }
+
+    /** 构建 orderId → stageLabel → quantity 汇总 */
+    private Map<String, Map<String, Integer>> buildScanQtyMap(List<ScanRecord> scans) {
+        Map<String, Map<String, Integer>> scanQtyMap = new HashMap<>();
+        for (ScanRecord s : scans) {
+            if (s.getOrderId() == null || s.getQuantity() == null || s.getQuantity() <= 0) continue;
+            String stage = mapToStageLabel(s.getProgressStage(), s.getScanType());
+            if (stage == null) continue;
+            scanQtyMap.computeIfAbsent(s.getOrderId(), k -> new HashMap<>())
+                    .merge(stage, s.getQuantity(), Integer::sum);
+        }
+        return scanQtyMap;
+    }
+
+    /** 计算各工序平均完成率 */
+    private int[] computeStageAverages(List<ProductionOrder> group, Map<String, Map<String, Integer>> scanQtyMap) {
+        int[] stageAvgs = new int[STAGE_LABELS.length];
+        for (int si = 0; si < STAGE_LABELS.length; si++) {
+            String stage = STAGE_LABELS[si];
+            int sumPct = 0;
+            for (ProductionOrder o : group) {
+                sumPct += computeOrderStagePct(o, scanQtyMap, stage, si);
+            }
+            stageAvgs[si] = sumPct / group.size();
+        }
+        return stageAvgs;
+    }
+
+    /** 计算单单工序完成率（含后续工序推断：后续工序有扫码 → 当前工序必然已完成） */
+    private int computeOrderStagePct(ProductionOrder o, Map<String, Map<String, Integer>> scanQtyMap,
+                                     String stage, int si) {
+        String oid = String.valueOf(o.getId());
+        int total = o.getOrderQuantity() != null && o.getOrderQuantity() > 0
+                ? o.getOrderQuantity() : 1;
+        Map<String, Integer> orderScans = scanQtyMap.getOrDefault(oid, Collections.emptyMap());
+        int scanned = orderScans.getOrDefault(stage, 0);
+        int pct = Math.min(100, scanned * 100 / total);
+        // 后续工序有扫码 → 当前工序必然已完成（避免"采购"因从不扫码而误判为卡点）
+        if (pct < 100) {
+            for (int j = si + 1; j < STAGE_LABELS.length; j++) {
+                if (orderScans.getOrDefault(STAGE_LABELS[j], 0) > 0) {
+                    pct = 100;
+                    break;
+                }
+            }
+        }
+        return pct;
+    }
+
+    /** 确定瓶颈工序：优先取当前活跃工序，否则取待启动阶段 */
+    private BottleneckResult determineBottleneck(int[] stageAvgs) {
+        // 找"当前活跃工序"：从后往前找最后一个进度在 (0%, 100%) 之间的工序。
+        // 这才是工厂正在推进的真实瓶颈，避免把"尚未启动的质检/入库"误判为卡点。
+        // 例：车缝50% → stuckStage=车缝（而不是质检0%）
+        int activeIdx = -1;
+        for (int si = stageAvgs.length - 1; si >= 0; si--) {
+            if (stageAvgs[si] > 0 && stageAvgs[si] < 100) {
+                activeIdx = si;
+                break;
+            }
+        }
+        BottleneckResult r = new BottleneckResult();
+        if (activeIdx >= 0) {
+            // 有部分完成工序 → 该工序为实际瓶颈
+            r.setStage(STAGE_LABELS[activeIdx]);
+            r.setAvgPct(stageAvgs[activeIdx]);
+            return r;
+        }
+        // 所有工序要么 0% 要么 100%：找最后已完成工序的下一工序（即当前待启动阶段）
+        int lastDone = -1;
+        for (int si = 0; si < stageAvgs.length; si++) {
+            if (stageAvgs[si] >= 100) lastDone = si;
+        }
+        int nextIdx = lastDone + 1;
+        if (nextIdx < stageAvgs.length) {
+            r.setStage(STAGE_LABELS[nextIdx]);
+            r.setAvgPct(stageAvgs[nextIdx]);
+        } else {
+            r.setStage(STAGE_LABELS[stageAvgs.length - 1]);
+            r.setAvgPct(100);
+        }
+        return r;
+    }
+
+    /** 取该工序中完成率 < 80% 的订单（按完成率升序） */
+    private List<WorstOrderItem> collectWorstOrders(List<ProductionOrder> group,
+                                                    Map<String, Map<String, Integer>> scanQtyMap,
+                                                    String minStage) {
+        return group.stream()
+                .map(o -> {
+                    String oid = String.valueOf(o.getId());
+                    int total = o.getOrderQuantity() != null && o.getOrderQuantity() > 0
+                            ? o.getOrderQuantity() : 1;
+                    int scanned = scanQtyMap
+                            .getOrDefault(oid, Collections.emptyMap())
+                            .getOrDefault(minStage, 0);
+                    int pct = Math.min(100, scanned * 100 / total);
+                    WorstOrderItem w = new WorstOrderItem();
+                    w.setOrderNo(o.getOrderNo() != null ? o.getOrderNo() : oid);
+                    w.setPct(pct);
+                    return w;
+                })
+                .filter(w -> w.getPct() < 80)
+                .sorted(Comparator.comparingInt(WorstOrderItem::getPct))
+                .collect(Collectors.toList());
+    }
+
+    /** 构建 FactoryBottleneckItem */
+    private FactoryBottleneckItem buildBottleneckItem(String factoryName, int orderCount, int stuckCount,
+                                                      String minStage, int minAvg, List<WorstOrderItem> worstOrders) {
+        FactoryBottleneckItem item = new FactoryBottleneckItem();
+        item.setFactoryName(factoryName);
+        item.setOrderCount(orderCount);
+        item.setStuckOrderCount(stuckCount);
+        item.setStuckStage(minStage);
+        item.setStuckPct(minAvg);
+        item.setWorstOrders(worstOrders);
+        return item;
+    }
+
+    /** 瓶颈工序结果（内部传递用） */
+    @Data
+    private static class BottleneckResult {
+        private String stage;
+        private int avgPct;
     }
 
     /**
