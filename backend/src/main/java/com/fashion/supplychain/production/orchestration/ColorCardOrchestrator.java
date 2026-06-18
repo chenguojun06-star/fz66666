@@ -376,9 +376,45 @@ public class ColorCardOrchestrator {
 
     // ==================== 辅助 ====================
 
-    private String generateCardCode() {
-        long ts = System.currentTimeMillis();
-        return "CC" + String.valueOf(ts).substring(5);
+    /**
+     * 生成色卡本编号（格式：CC + 年月日 + 序号）
+     */
+    public String generateCardCode() {
+        Long tenantId = UserContext.tenantId();
+        // 查找当天的最大编号
+        String today = java.time.LocalDate.now().toString().replace("-", "");
+        List<ColorCard> todayCards = colorCardMapper.selectByQuery(tenantId, null, null, 0, 1000);
+        int maxSeq = 0;
+        for (ColorCard card : todayCards) {
+            String code = card.getColorCardCode();
+            if (code != null && code.startsWith("CC" + today)) {
+                try {
+                    int seq = Integer.parseInt(code.substring(("CC" + today).length()));
+                    if (seq > maxSeq) maxSeq = seq;
+                } catch (NumberFormatException ignored) {}
+            }
+        }
+        return "CC" + today + String.format("%02d", maxSeq + 1);
+    }
+
+    /**
+     * 生成下一个颜色编号（格式：C001, C002...）
+     */
+    public String generateNextColorNo(String cardId) {
+        if (!StringUtils.hasText(cardId)) throw new IllegalArgumentException("cardId不能为空");
+        Long tenantId = UserContext.tenantId();
+        List<ColorCardItem> existing = colorCardItemMapper.selectByCardId(cardId, tenantId);
+        int maxSeq = 0;
+        for (ColorCardItem item : existing) {
+            String no = item.getColorNo();
+            if (no != null && no.matches("C\\d+")) {
+                try {
+                    int seq = Integer.parseInt(no.substring(1));
+                    if (seq > maxSeq) maxSeq = seq;
+                } catch (NumberFormatException ignored) {}
+            }
+        }
+        return "C" + String.format("%03d", maxSeq + 1);
     }
 
     /** 内部返回 DTO: 色卡本 + 颜色条目列表 */

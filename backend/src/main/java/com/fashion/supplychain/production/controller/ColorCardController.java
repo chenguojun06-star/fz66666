@@ -95,6 +95,24 @@ public class ColorCardController {
         return Result.success(colorCardOrchestrator.generateMaterialsFromCard(cardId));
     }
 
+    // ==================== 编号生成 ====================
+
+    /**
+     * 生成下一个可用色卡本编号
+     */
+    @GetMapping("/generate-code")
+    public Result<String> generateCode() {
+        return Result.success(colorCardOrchestrator.generateCardCode());
+    }
+
+    /**
+     * 生成下一个可用颜色编号
+     */
+    @GetMapping("/{cardId}/generate-color-no")
+    public Result<String> generateColorNo(@PathVariable String cardId) {
+        return Result.success(colorCardOrchestrator.generateNextColorNo(cardId));
+    }
+
     // ==================== 色卡本物料查询 ====================
 
     /**
