@@ -1,5 +1,5 @@
--- V202606181002: 修复 t_color_card 表列名（fabric_width/fabric_weight/fabric_composition）
--- 修复 V20260617003 中错误的列名（width_cm/weight_gsm/composition）
+-- V202606191002: 修复 t_color_card 表列名（fabric_width/fabric_weight/fabric_composition）
+-- 替代失败的 V202606181002（该迁移因 IF else 分支返回整数导致 PREPARE stmt FROM 1 语法错误，已删除）
 -- 幂等写法：如果列已存在（正确列名）则跳过，如果存在旧列名则重命名
 -- 注意：IF 的 else 分支必须返回有效 SQL 字符串 'SELECT 1'，不能返回整数
 
