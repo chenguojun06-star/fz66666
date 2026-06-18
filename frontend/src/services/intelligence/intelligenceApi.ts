@@ -379,9 +379,12 @@ export const intelligenceApi = {
     onEvent: (event: { type: string; data: Record<string, unknown> }) => void,
     onDone: () => void,
     onError: (err: string) => void,
+    imageUrl?: string,
   ) => {
     const token = localStorage.getItem('authToken') || '';
-    const url = `/api/intelligence/ai-advisor/chat/stream?question=${encodeURIComponent(question)}${pageContext ? `&pageContext=${encodeURIComponent(pageContext)}` : ''}`;
+    let url = `/api/intelligence/ai-advisor/chat/stream?question=${encodeURIComponent(question)}`;
+    if (pageContext) url += `&pageContext=${encodeURIComponent(pageContext)}`;
+    if (imageUrl && imageUrl.startsWith('http')) url += `&imageUrl=${encodeURIComponent(imageUrl)}`;
     const ctrl = new AbortController();
     fetch(url, {
       headers: { Authorization: token ? `Bearer ${token}` : '' },

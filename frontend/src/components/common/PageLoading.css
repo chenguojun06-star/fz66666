@@ -1,0 +1,41 @@
+/* ==========================================
+   全局统一加载样式
+   简洁科技感，不喧宾夺主
+   ========================================== */
+
+.page-loading-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 0;
+  width: 100%;
+}
+
+.page-loading-wrapper .ant-spin {
+  color: #666;
+}
+
+.page-loading-wrapper .ant-spin-dot-item {
+  background-color: #999;
+}
+
+.page-loading-wrapper .ant-spin-text {
+  color: #999;
+  font-size: 13px;
+  margin-top: 12px;
+}
+
+/* 全屏遮罩 */
+.page-loading-fullscreen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(4px);
+}

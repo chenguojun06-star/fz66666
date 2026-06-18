@@ -419,6 +419,9 @@ const MaterialDatabasePage: React.FC = () => {
                     <Form.Item name="fabricWeight" label="克重"><Input placeholder="如：200g/m²" /></Form.Item>
                   </Col>
                   <Col xs={24} sm={8} md={6} lg={5} xl={4}>
+                    <Form.Item name="fabricWidth" label="幅宽"><Input placeholder="如：150cm" /></Form.Item>
+                  </Col>
+                  <Col xs={24} sm={8} md={6} lg={5} xl={4}>
                     <Form.Item name="fabricComposition" label="成分"><Input placeholder="如：100%棉" /></Form.Item>
                   </Col>
                 </Row>

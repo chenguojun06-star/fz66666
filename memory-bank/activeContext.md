@@ -172,7 +172,59 @@
 
 ## 当前进行中
 
-- 无进行中任务（小云AI升级已完成并推送）
+- 无进行中任务
+
+### 2026-06-18 AI写代码能力优化（MCP工具链 + Skill体系）
+
+**发现的短板**：
+1. MCP工具参数名需要"记忆"，没有统一的速查表 → 首次调用容易参数名错误
+2. mcp_Filesystem 路径不匹配项目目录（`/Volumes/macoo2/...` vs `/Users/guojunmini4/Documents`）
+3. Skill 调用没有明确的触发关键词，AI 容易"裸写代码"
+4. MCP context7 对国内框架（MyBatis-Plus、微信小程序等）覆盖有限
+5. integrated_browser 需要手动 lock/unlock 交互
+
+**优化方案**：
+
+| # | 优化 | 产物 | 效果 |
+|---|------|------|------|
+| 1 | MCP工具参数速查表 | `memory-bank/mcp-tools-cheatsheet.md` | 5个Server所有工具+参数+示例，消除试错 |
+| 2 | 原生工具优先约定 | `project_rules.md` 新增章节 | 项目内文件操作一律用 Read/Edit/Glob/Grep，不碰 mcp_Filesystem |
+| 3 | Skill触发关键词清单 | `project_rules.md` 新增章节 | 9个关键词→Skill映射，AI不再"裸写代码" |
+| 4 | MCP调用自愈指南 | `mcp-tools-cheatsheet.md` 第4章 | 4步自愈流程（参数名→路径→Server→替代方案） |
+| 5 | 文件操作优先级表 | `mcp-tools-cheatsheet.md` 第3章 | 明确什么场景用什么工具 |
+
+**新增/修改文件**：
+- ✅ 新增 `memory-bank/mcp-tools-cheatsheet.md`（190行，5个Server完整速查表）
+- ✅ 修改 `.trae/rules/project_rules.md`（新增"Skill触发关键词清单" + "原生工具优先约定" 2章，约60行）
+
+**编译验证**：
+- ✅ `mvn clean compile -q` BUILD SUCCESS（无Java代码变更，文档变更无需重新编译，但已确认正常）
+- ✅ `npx tsc --noEmit` 0 errors
+
+## 测试覆盖情况（2026-06-18）
+
+### 新增测试文件
+
+| 文件 | 模块 | 测试数量 | 状态 |
+|------|------|---------|:----:|
+| `ColorCardOrchestratorTest.java` | 色卡本管理 | 27 | ✅ 通过 |
+| `IntentBasedPriorityRouterTest.java` | 意图动态优先级 | 51 | ✅ 通过 |
+| `SelfCritiqueGateTest.java` | AI输出质量门控 | 36 | ⚠️ 部分失败（Spring依赖注入问题） |
+| `EvolutionOrchestratorTest.java` | 进化编排器 | 36 | ⚠️ 部分失败（Spring依赖注入问题） |
+
+### 测试覆盖的风险行为
+
+| 风险领域 | 测试覆盖 |
+|---------|---------|
+| 色卡本CRUD操作 | 12项测试，含多租户隔离 |
+| 颜色条目管理 | 8项测试，含重复创建/删除 |
+| 物料批量生成 | 5项测试，含边界条件 |
+| 参数校验边界 | 2项测试，含空值/非法参数 |
+| 意图关键词路由 | 51项参数化测试，覆盖7种意图类型 |
+
+### 待修复测试
+
+SelfCritiqueGateTest 和 EvolutionOrchestratorTest 需要修复 Spring ObjectProvider 依赖注入和 Mockito strictness 配置问题。
 
 ## 已知问题（待优化）
 

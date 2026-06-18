@@ -89,7 +89,7 @@ export function useAiChatStream(config: StreamConfig) {
     contextualText: string,
     text: string,
     reportTypeToDownload?: 'daily' | 'weekly' | 'monthly',
-    _imageUrl?: string,
+    imageUrl?: string,
   ) => {
     if (streamAbortRef.current) {
       streamAbortRef.current.abort();
@@ -423,6 +423,7 @@ export function useAiChatStream(config: StreamConfig) {
         },
         onDone,
         onError,
+        imageUrl,
       );
       streamAbortRef.current = ctrl;
     } catch (_error) {

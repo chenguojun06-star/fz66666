@@ -49,6 +49,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ForkJoinPool;
 
 @Slf4j
 @Component
@@ -365,118 +366,124 @@ public class AgentLoopEngine {
 
     private String handleFinalAnswer(AgentLoopContext ctx, String rawContent, AgentLoopCallback cb) {
         log.info("[AgentLoop] 完成任务，进入自反思审查层");
-        String revisedContent;
 
-        if (XiaoyunPatterns.shouldSkipCritic(ctx.getUserMessage(), ctx.getAllExecRecords().size(), rawContent.length())) {
-            log.info("[AgentLoop] 简单场景跳过Critic审查 (iter={}, tools={})",
-                    ctx.getCurrentIteration(), ctx.getAllExecRecords().size());
-            revisedContent = rawContent;
-        } else {
-            cb.onCriticThinking();
-            try {
-                revisedContent = criticOrchestrator.reviewAndRevise(
-                        ctx.getUserMessage(), rawContent, ctx.getAllExecRecords());
-            } catch (Exception e) {
-                log.warn("[AgentLoop] Critic审查异常，使用原始回答: {}", e.getMessage());
-                revisedContent = rawContent;
-            }
-        }
+        // ★ 关键优化：立即追加数据卡片（无LLM调用），让用户立即看到带数据的回答
+        // 后续Critic审查和LLM洞察卡全部异步执行，不阻塞首次响应
+        String fastContent = evidenceHelper.appendTeamDispatchCards(rawContent, ctx.getTeamDispatchCards());
+        fastContent = evidenceHelper.appendBundleSplitCards(fastContent, ctx.getBundleSplitCards());
+        fastContent = evidenceHelper.appendStepWizardCards(fastContent, ctx.getStepWizardCards());
+        fastContent = evidenceHelper.appendReportPreviewCards(fastContent, ctx.getReportPreviewCards());
+        fastContent = enrichWithRiskDetection(ctx, fastContent);
 
-        revisedContent = evidenceHelper.appendTeamDispatchCards(revisedContent, ctx.getTeamDispatchCards());
-        revisedContent = evidenceHelper.appendBundleSplitCards(revisedContent, ctx.getBundleSplitCards());
-        revisedContent = evidenceHelper.appendStepWizardCards(revisedContent, ctx.getStepWizardCards());
-        revisedContent = evidenceHelper.appendReportPreviewCards(revisedContent, ctx.getReportPreviewCards());
-        revisedContent = xiaoyunInsightCardOrchestrator.appendToContent(revisedContent, ctx.getXiaoyunInsightCards());
-
-        // SelfCritiqueGate：输出前硬门控（≤1轮，不达标降级，符合 AI Hard Limit）
-        SelfCritiqueGate selfCritiqueGate = selfCritiqueGateProvider.getIfAvailable();
-        if (selfCritiqueGate != null) {
-            try {
-                SelfCritiqueGate.GateResult gateResult = selfCritiqueGate.check(ctx, revisedContent);
-                if (gateResult.isHardFail()) {
-                    log.warn("[AgentLoop] SelfCritiqueGate HARD_FAIL，使用兜底回复 score={}", gateResult.getScore());
-                    revisedContent = gateResult.getContent();
-                } else if (!gateResult.isPassed()) {
-                    log.info("[AgentLoop] SelfCritiqueGate SOFT_FAIL，已加免责声明 score={}", gateResult.getScore());
-                    revisedContent = gateResult.getContent();
-                }
-            } catch (Exception e) {
-                log.debug("[AgentLoop] SelfCritiqueGate 异常，放行: {}", e.getMessage());
-            }
-        }
-
-        String guardWarnings = runDataTruthGuards(ctx, revisedContent);
-        if (!guardWarnings.isEmpty()) {
-            revisedContent += guardWarnings;
-        }
-
-        StructuredResponseService structuredResponseService = structuredResponseServiceProvider.getIfAvailable();
-        if (structuredResponseService != null) {
-            revisedContent = structuredResponseService.enrichWithStructuredFormat(revisedContent);
-        }
-
-        ProactiveRiskDetectionService riskDetectionService = riskDetectionServiceProvider.getIfAvailable();
-        if (riskDetectionService != null) {
-            ProactiveRiskDetectionService.RiskScanResult respRisk =
-                    riskDetectionService.scanAiResponse(ctx.getUserMessage(), revisedContent);
-            if (respRisk.hasRisks()) {
-                String riskWarnings = respRisk.getRisks().stream()
-                        .map(r -> "> " + r.getEmoji() + " AI自检: " + r.getDescription())
-                        .reduce("", (a, b) -> a.isEmpty() ? b : a + "\n" + b);
-                if (!riskWarnings.isBlank()) {
-                    revisedContent += "\n\n" + riskWarnings;
-                }
-            }
-        }
-
-        PromptEvolutionService promptEvolutionService = promptEvolutionServiceProvider.getIfAvailable();
-        if (promptEvolutionService != null && ctx.getTenantId() != null) {
-            promptEvolutionService.recordFeedback(
-                    ctx.getCommandId(), ctx.getUserMessage(), revisedContent, 75.0, null);
-        }
-
-        boolean usedHighRiskTool = ctx.getAllExecRecords().stream()
-                .anyMatch(r -> selfConsistencyVerifier.isHighRiskScene(r.toolName));
-        if (usedHighRiskTool) {
-            SelfConsistencyVerifier.SelfConsistencyResult scResult =
-                    selfConsistencyVerifier.verify("agent-high-risk", ctx.getMessages(), ctx.getVisibleApiTools());
-            if (scResult.isVerified() && !scResult.isHighConfidence()) {
-                log.warn("[AgentLoop] Self-Consistency 一致性不足: agreement={}/{}={}",
-                        scResult.getSuccessCount(), scResult.getSampleCount(),
-                        String.format("%.2f", scResult.getAgreement()));
-                revisedContent += "\n\n> ⚠️ AI 自检提示：本次回答经过多路径验证，一致性较低，建议人工复核。";
-            } else if (scResult.isVerified() && scResult.isHighConfidence()) {
-                log.info("[AgentLoop] Self-Consistency 验证通过: agreement={}",
-                        String.format("%.2f", scResult.getAgreement()));
-            }
-        }
-
-        if (revisedContent == null || revisedContent.isBlank()) {
+        if (fastContent == null || fastContent.isBlank()) {
             String toolSummary = ctx.getAllExecRecords().stream()
                     .map(r -> r.toolName + ": " + (r.evidence != null && r.evidence.length() > 100 ? r.evidence.substring(0, 100) + "..." : r.evidence))
                     .reduce("", (a, b) -> a.isEmpty() ? b : a + "\n" + b);
-            revisedContent = "抱歉，我暂时无法给出完整的分析结果。"
+            fastContent = "抱歉，我暂时无法给出完整的分析结果。"
                     + (toolSummary.isEmpty() ? "" : "\n\n已查询到的信息：\n" + toolSummary)
                     + "\n\n请尝试换个方式描述您的问题，或联系管理员检查模型配置。";
             log.warn("[AgentLoop] 最终回答为空，工具记录={}条，返回兜底提示", ctx.getAllExecRecords().size());
         }
 
-        aiAgentTraceOrchestrator.finishRequest(ctx.getCommandId(), revisedContent, null,
+        // ★ 立即发送回答并关闭SSE，用户几乎零等待
+        aiAgentTraceOrchestrator.finishRequest(ctx.getCommandId(), fastContent, null,
                 System.currentTimeMillis() - ctx.getRequestStartAt());
-
-        cb.onAnswer(revisedContent, ctx.getCommandId());
+        cb.onAnswer(fastContent, ctx.getCommandId());
         cb.onToolExecRecords(ctx.getAllExecRecords());
 
-        // 语义缓存存储：将最终回答写入缓存
+        // 语义缓存
         if (semanticCacheServiceProvider.getIfAvailable() != null && ctx.getTenantId() != null) {
             try {
                 semanticCacheServiceProvider.getIfAvailable()
-                        .store(ctx.getTenantId(), ctx.getUserMessage(), revisedContent);
+                        .store(ctx.getTenantId(), ctx.getUserMessage(), fastContent);
             } catch (Exception e) {
                 log.debug("[AgentLoop] 语义缓存存储失败（不影响主流程）: {}", e.getMessage());
             }
         }
 
+        // ★ 全部异步后处理：Critic审查 + Insight卡 + SelfCritiqueGate + 自我一致性 + 建议 + 记忆
+        final String finalFastContent = fastContent;
+        final AgentLoopCallback finalCb = cb;
+        ForkJoinPool.commonPool().execute(() -> {
+            try {
+                asyncPostProcess(ctx, finalFastContent, finalCb);
+            } catch (Exception ex) {
+                log.debug("[AgentLoop] 异步后处理异常（不影响用户）: {}", ex.getMessage());
+            }
+        });
+
+        return fastContent;
+    }
+
+    /**
+     * 异步后处理：在SSE关闭后运行，不阻塞用户响应
+     * 包含：Critic审查(LLM) + Insight卡(LLM) + SelfCritiqueGate(LLM) + 自我一致性 + 后续建议 + 记忆
+     */
+    private void asyncPostProcess(AgentLoopContext ctx, String fastContent, AgentLoopCallback cb) {
+        String content = fastContent;
+
+        // ★ Critic审查：最大延迟源（LLM调用约3-8秒），异步执行
+        boolean shouldCritic = !XiaoyunPatterns.shouldSkipCritic(
+                ctx.getUserMessage(), ctx.getAllExecRecords().size(), fastContent.length());
+        if (shouldCritic) {
+            try {
+                cb.onCriticThinking();
+                String critiquedContent = criticOrchestrator.reviewAndRevise(
+                        ctx.getUserMessage(), content, ctx.getAllExecRecords());
+                if (critiquedContent != null && !critiquedContent.isBlank()
+                        && !critiquedContent.equals(content)) {
+                    content = critiquedContent;
+                }
+            } catch (Exception e) {
+                log.warn("[AsyncPost] Critic审查异常: {}", e.getMessage());
+            }
+        }
+
+        // Insight Card Orchestrator（LLM调用，约1-3秒）
+        try {
+            String enrichedContent = xiaoyunInsightCardOrchestrator.appendToContent(content, ctx.getXiaoyunInsightCards());
+            if (enrichedContent != null && !enrichedContent.equals(content)) {
+                content = enrichedContent;
+            }
+        } catch (Exception e) {
+            log.debug("[AsyncPost] InsightCard LLM失败: {}", e.getMessage());
+        }
+
+        // SelfCritiqueGate（LLM调用，约1-2秒）
+        SelfCritiqueGate selfCritiqueGate = selfCritiqueGateProvider.getIfAvailable();
+        if (selfCritiqueGate != null) {
+            try {
+                SelfCritiqueGate.GateResult gateResult = selfCritiqueGate.check(ctx, content);
+                if (gateResult.isHardFail()) {
+                    log.warn("[AsyncPost] SelfCritiqueGate HARD_FAIL score={}", gateResult.getScore());
+                    content = gateResult.getContent();
+                } else if (!gateResult.isPassed()) {
+                    log.info("[AsyncPost] SelfCritiqueGate SOFT_FAIL score={}", gateResult.getScore());
+                    content = gateResult.getContent();
+                }
+            } catch (Exception e) {
+                log.debug("[AsyncPost] SelfCritiqueGate 异常: {}", e.getMessage());
+            }
+        }
+
+        // 自我一致性验证（仅高风险工具，约1-2秒）
+        try {
+            boolean usedHighRiskTool = ctx.getAllExecRecords().stream()
+                    .anyMatch(r -> selfConsistencyVerifier.isHighRiskScene(r.toolName));
+            if (usedHighRiskTool) {
+                SelfConsistencyVerifier.SelfConsistencyResult scResult =
+                        selfConsistencyVerifier.verify("agent-high-risk", ctx.getMessages(), ctx.getVisibleApiTools());
+                if (scResult.isVerified() && !scResult.isHighConfidence()) {
+                    log.warn("[AsyncPost] Self-Consistency 一致性不足: {}",
+                            String.format("%.2f", scResult.getAgreement()));
+                    content += "\n\n> ⚠️ AI 自检提示：本次回答经过多路径验证，一致性较低，建议人工复核。";
+                }
+            }
+        } catch (Exception e) {
+            log.debug("[AsyncPost] SelfConsistency 异常: {}", e.getMessage());
+        }
+
+        // 后续建议（可能有LLM调用）
         try {
             List<FollowUpAction> followUps = followUpSuggestionEngine.generate(ctx.getAllExecRecords(), ctx.getUserMessage());
             if (!followUps.isEmpty()) {
@@ -486,11 +493,30 @@ public class AgentLoopEngine {
             log.warn("[AgentLoop] 生成后续建议失败，不影响主流程", ex);
         }
 
-        // 持久化对话记忆到 Redis（跨会话保持）
-        saveConversationMemory(ctx, revisedContent);
+        // 持久化对话记忆
+        saveConversationMemory(ctx, content);
+        completeSession(ctx, content);
+    }
 
-        completeSession(ctx, revisedContent);
-        return revisedContent;
+    private String enrichWithRiskDetection(AgentLoopContext ctx, String content) {
+        ProactiveRiskDetectionService riskDetectionService = riskDetectionServiceProvider.getIfAvailable();
+        if (riskDetectionService != null) {
+            try {
+                ProactiveRiskDetectionService.RiskScanResult respRisk =
+                        riskDetectionService.scanAiResponse(ctx.getUserMessage(), content);
+                if (respRisk.hasRisks()) {
+                    String riskWarnings = respRisk.getRisks().stream()
+                            .map(r -> "> " + r.getEmoji() + " AI自检: " + r.getDescription())
+                            .reduce("", (a, b) -> a.isEmpty() ? b : a + "\n" + b);
+                    if (!riskWarnings.isBlank()) {
+                        content += "\n\n" + riskWarnings;
+                    }
+                }
+            } catch (Exception e) {
+                log.debug("[AgentLoop] 风险检测异常: {}", e.getMessage());
+            }
+        }
+        return content;
     }
 
     private String runDataTruthGuards(AgentLoopContext ctx, String content) {

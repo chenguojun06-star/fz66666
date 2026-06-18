@@ -25,6 +25,7 @@ public class StreamingAgentLoopCallback implements AgentLoopCallback {
 
     private String finalContent;
     private List<AiAgentToolExecHelper.ToolExecRecord> execRecords;
+    private volatile boolean emitterClosed = false;
 
     public StreamingAgentLoopCallback(SseEmitter emitter,
                                        AgentLoopContext ctx,
@@ -67,6 +68,15 @@ public class StreamingAgentLoopCallback implements AgentLoopCallback {
 
         memoryHelper.saveConversationTurn(ctx.getUserId(), ctx.getTenantId(), ctx.getUserMessage(), content);
         memoryHelper.enhanceMemoryAsync(ctx.getUserId(), ctx.getTenantId(), ctx.getUserMessage(), content);
+
+        // 幂等关闭：只有未关闭时才关闭SSE（异步后处理可能重复调用onAnswer）
+        if (!emitterClosed) {
+            emitterClosed = true;
+            emitSse("done", Map.of());
+            try { emitter.complete(); } catch (Exception e) {
+                log.debug("[StreamCallback] SSE complete异常(answer): {}", e.getMessage());
+            }
+        }
     }
 
     @Override
@@ -81,23 +91,31 @@ public class StreamingAgentLoopCallback implements AgentLoopCallback {
 
     @Override
     public void onFollowUpActions(List<?> actions) {
-        emitSse("follow_up_actions", Map.of("actions", actions));
+        if (!emitterClosed) {
+            emitSse("follow_up_actions", Map.of("actions", actions));
+        }
     }
 
     @Override
     public void onDone() {
-        emitSse("done", Map.of());
-        try { emitter.complete(); } catch (Exception e) {
-            log.debug("[StreamCallback] SSE complete异常: {}", e.getMessage());
+        if (!emitterClosed) {
+            emitterClosed = true;
+            emitSse("done", Map.of());
+            try { emitter.complete(); } catch (Exception e) {
+                log.debug("[StreamCallback] SSE complete异常: {}", e.getMessage());
+            }
         }
     }
 
     @Override
     public void onError(String message) {
-        emitSse("error", Map.of("message", message));
-        emitSse("done", Map.of());
-        try { emitter.complete(); } catch (Exception e) {
-            log.debug("[StreamCallback] SSE complete异常: {}", e.getMessage());
+        if (!emitterClosed) {
+            emitterClosed = true;
+            emitSse("error", Map.of("message", message));
+            emitSse("done", Map.of());
+            try { emitter.complete(); } catch (Exception e) {
+                log.debug("[StreamCallback] SSE complete异常: {}", e.getMessage());
+            }
         }
     }
 

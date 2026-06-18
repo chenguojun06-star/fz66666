@@ -194,6 +194,12 @@ export const MaterialColorCardRecognizer: React.FC<Props> = ({
       valuesToSet['image'] = result.imageUrl;
     }
 
+    // description 双向写入：description + remark（让用户都能看到AI识别内容）
+    const descVal = valuesToSet['description'] as string | undefined;
+    if (descVal !== undefined) {
+      valuesToSet['remark'] = descVal;
+    }
+
     form.setFieldsValue(valuesToSet);
 
     // 识别物料类型后触发生成物料编号

@@ -142,7 +142,7 @@ public class PayrollSettlementController {
     /**
      * 审核单条工资工序明细（持久化）
      */
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAnyAuthority('ROLE_admin', 'ROLE_ADMIN', 'ROLE_1', 'ROLE_tenant_owner', 'ROLE_管理员', 'ROLE_主管', 'ROLE_SUPER_ADMIN')")
     @PostMapping("/detail-approval/{approvalId}/approve")
     public Result<Void> approveDetail(@PathVariable String approvalId) {
         if (!UserContext.isSupervisorOrAbove()) {
@@ -170,7 +170,7 @@ public class PayrollSettlementController {
      * @param id     结算单ID（路径参数）
      * @param params 请求体，包含 remark（审核备注）
      */
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAnyAuthority('ROLE_admin', 'ROLE_ADMIN', 'ROLE_1', 'ROLE_tenant_owner', 'ROLE_管理员', 'ROLE_主管', 'ROLE_SUPER_ADMIN')")
     @PostMapping("/{id}/approve")
     public Result<Void> approve(@PathVariable String id, @RequestBody(required = false) Map<String, Object> params) {
         if (!UserContext.isSupervisorOrAbove()) {
@@ -188,7 +188,7 @@ public class PayrollSettlementController {
      * @param id     结算单ID（路径参数）
      * @param params 请求体，包含 remark（取消原因）
      */
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAnyAuthority('ROLE_admin', 'ROLE_ADMIN', 'ROLE_1', 'ROLE_tenant_owner', 'ROLE_管理员', 'ROLE_主管', 'ROLE_SUPER_ADMIN')")
     @PostMapping("/{id}/cancel")
     public Result<Void> cancel(@PathVariable String id, @RequestBody(required = false) Map<String, Object> params) {
         if (!UserContext.isSupervisorOrAbove()) {
@@ -205,7 +205,7 @@ public class PayrollSettlementController {
      *
      * @param id 结算单ID（路径参数）
      */
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAnyAuthority('ROLE_admin', 'ROLE_ADMIN', 'ROLE_1', 'ROLE_tenant_owner', 'ROLE_管理员', 'ROLE_主管', 'ROLE_SUPER_ADMIN')")
     @DeleteMapping("/{id}")
     public Result<Void> delete(@PathVariable String id) {
         if (!UserContext.isSupervisorOrAbove()) {
@@ -215,7 +215,7 @@ public class PayrollSettlementController {
         return Result.success(null);
     }
 
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAnyAuthority('ROLE_admin', 'ROLE_ADMIN', 'ROLE_1', 'ROLE_tenant_owner', 'ROLE_管理员', 'ROLE_主管', 'ROLE_SUPER_ADMIN')")
     @PutMapping("/{id}/payment")
     public Result<Void> recordPayment(@PathVariable String id, @RequestBody Map<String, Object> body) {
         if (!UserContext.isSupervisorOrAbove()) {
@@ -228,7 +228,7 @@ public class PayrollSettlementController {
         return Result.success(null);
     }
 
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAnyAuthority('ROLE_admin', 'ROLE_ADMIN', 'ROLE_1', 'ROLE_tenant_owner', 'ROLE_管理员', 'ROLE_主管', 'ROLE_SUPER_ADMIN')")
     @PostMapping("/{id}/deduction")
     public Result<Void> applyDeduction(@PathVariable String id, @RequestBody Map<String, Object> body) {
         if (!UserContext.isSupervisorOrAbove()) {

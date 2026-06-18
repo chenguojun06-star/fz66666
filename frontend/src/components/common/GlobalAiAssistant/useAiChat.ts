@@ -348,30 +348,44 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
     
     // 处理图片上传
     if (isImageFile(attachedFile)) {
-      // 生成用户消息
+      // 生成用户消息（先用本地预览，服务器URL等上传后再替换）
       const userMsgText = question 
         ? `📷 我上传了一张图片\n${question}`
         : '📷 我上传了一张图片，请帮我分析';
       
-      // 添加用户消息（包含图片URL（暂不修改消息
       const userMessageId = `u-${Date.now()}`;
+      const localPreviewUrl = previewImage || undefined;
       setMessages(prev => [...prev, { 
         id: userMessageId, 
         role: 'user' as const, 
         text: userMsgText,
-        imageUrl: previewImage || undefined
+        imageUrl: localPreviewUrl
       }]);
       setInputValue('');
-      const _fileToUpload = attachedFile;
+      const fileToUpload = attachedFile;
       setAttachedFile(null);
       setPreviewImage(null);
       
       try {
-        // 构造专门处理图片
-        // 使用视觉分析
+        // 关键修复：先上传图片到服务端，拿到可访问的HTTP URL
+        const formData = new FormData();
+        formData.append('file', fileToUpload);
+        const uploadResp = await api.post<{ code: number; data: string; message?: string }>(
+          '/common/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } },
+        );
+        
+        let serverImageUrl = '';
+        if (uploadResp.code === 200 && uploadResp.data) {
+          serverImageUrl = String(uploadResp.data);
+        } else {
+          // 上传失败，但不要阻断，用户仍可看本地预览
+          console.warn('[小云AI] 图片上传失败，将用本地base64预览发送');
+          serverImageUrl = localPreviewUrl || '';
+        }
+        
         const factoryId = (user as any)?.factoryId;
         const factoryName = (user as any)?.factoryName;
-        const visionInstruction = previewImage 
+        const visionInstruction = serverImageUrl
           ? '\n[系统提示：用户上传了一张图片，请主动调用视觉工具进行分析（款式识别/缺陷检测/色差检测/以图搜款]'
           : '';
         const contextualText = factoryId
@@ -379,7 +393,16 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
           : `${question || '请帮我分析这张图片'}${visionInstruction}`;
         
         setUploadingFile(false);
-        startStream(contextualText, question || '图片分析', undefined, previewImage || '');
+        // 传递服务端URL（非base64），SSE请求会把imageUrl拼到query参数
+        startStream(contextualText, question || '图片分析', undefined, serverImageUrl);
+        
+        // 上传成功后，替换消息中的图片为服务端URL（用于展示）
+        setTimeout(() => {
+          if (serverImageUrl && serverImageUrl.startsWith('http')) {
+            setMessages(prev => prev.map(m => m.id === userMessageId 
+              ? { ...m, imageUrl: serverImageUrl } : m));
+          }
+        }, 1000);
       } catch {
         setUploadingFile(false);
         setMessages(prev => [...prev, { id: `err-${Date.now()}`, role: 'ai' as const, text: `❌ 图片上传失败，请稍后重试。` }]);

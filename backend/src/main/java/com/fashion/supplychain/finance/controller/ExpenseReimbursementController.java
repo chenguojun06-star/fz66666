@@ -71,6 +71,7 @@ public class ExpenseReimbursementController {
     /**
      * 创建报销单
      */
+    @PreAuthorize("isAuthenticated()")
     @PostMapping
     public Result<ExpenseReimbursement> create(@RequestBody ExpenseReimbursement entity) {
         try {
@@ -85,6 +86,7 @@ public class ExpenseReimbursementController {
     /**
      * 更新报销单
      */
+    @PreAuthorize("isAuthenticated()")
     @PutMapping
     public Result<ExpenseReimbursement> update(@RequestBody ExpenseReimbursement entity) {
         try {
@@ -99,7 +101,7 @@ public class ExpenseReimbursementController {
     /**
      * 删除报销单（软删除）
      */
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAnyAuthority('ROLE_admin', 'ROLE_ADMIN', 'ROLE_1', 'ROLE_tenant_owner', 'ROLE_管理员', 'ROLE_主管', 'ROLE_SUPER_ADMIN')")
     @DeleteMapping("/{id}")
     public Result<Boolean> delete(@PathVariable String id) {
         try {
@@ -115,7 +117,7 @@ public class ExpenseReimbursementController {
      * 审批操作（批准/驳回）
      * action: approve=批准, reject=驳回
      */
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAnyAuthority('ROLE_admin', 'ROLE_ADMIN', 'ROLE_1', 'ROLE_tenant_owner', 'ROLE_管理员', 'ROLE_主管', 'ROLE_SUPER_ADMIN')")
     @PostMapping("/{id}/approve")
     public Result<ExpenseReimbursement> approve(
             @PathVariable String id,
@@ -133,7 +135,7 @@ public class ExpenseReimbursementController {
     /**
      * 批量审批（全部批准）
      */
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAnyAuthority('ROLE_admin', 'ROLE_ADMIN', 'ROLE_1', 'ROLE_tenant_owner', 'ROLE_管理员', 'ROLE_主管', 'ROLE_SUPER_ADMIN')")
     @PostMapping("/batch-approve")
     public Result<List<ExpenseReimbursement>> batchApprove(@RequestBody Map<String, Object> body) {
         try {
@@ -154,7 +156,7 @@ public class ExpenseReimbursementController {
     /**
      * 确认付款
      */
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAnyAuthority('ROLE_admin', 'ROLE_ADMIN', 'ROLE_1', 'ROLE_tenant_owner', 'ROLE_管理员', 'ROLE_主管', 'ROLE_SUPER_ADMIN')")
     @PostMapping("/{id}/pay")
     public Result<ExpenseReimbursement> pay(
             @PathVariable String id,
