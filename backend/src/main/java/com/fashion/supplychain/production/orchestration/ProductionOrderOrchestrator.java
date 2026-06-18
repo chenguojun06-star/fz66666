@@ -508,10 +508,17 @@ public class ProductionOrderOrchestrator {
         record.setCreatedAt(LocalDateTime.now());
         urgeRecordService.save(record);
 
-        order.setUrgencyLevel("urgent");
-        order.setUrgeCount(order.getUrgeCount() != null ? order.getUrgeCount() + 1 : 1);
-        order.setLastUrgeTime(LocalDateTime.now());
-        productionOrderService.updateById(order);
+        // ★ 使用数据库原子递增，避免 read-modify-write 竞态条件
+        // 即使并发催单，计数也不会丢失
+        int updated = productionOrderService.getBaseMapper().update(null,
+                new com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<ProductionOrder>()
+                        .eq(ProductionOrder::getId, orderId)
+                        .set(ProductionOrder::getUrgencyLevel, "urgent")
+                        .setSql("urge_count = IFNULL(urge_count, 0) + 1")
+                        .set(ProductionOrder::getLastUrgeTime, LocalDateTime.now()));
+        if (updated <= 0) {
+            log.warn("[催单] 订单原子更新失败，可能已被删除: orderId={}", orderId);
+        }
 
         sysNoticeOrchestrator.sendWithUrgeRecord(order.getOrderNo(), "urge_order", record.getId());
 

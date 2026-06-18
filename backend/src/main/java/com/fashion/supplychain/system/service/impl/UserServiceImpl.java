@@ -135,6 +135,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         }
 
         QueryWrapper<User> queryWrapper = new QueryWrapper<User>()
+                .select("id", "username", "password", "name", "role_id", "role_name", "tenant_id", "is_tenant_owner", "is_super_admin", "status", "approval_status", "factory_id", "permission_range")
                 .eq("username", u)
                 .in("status", "active", "ENABLED");
         if (tenantId != null) {
@@ -148,6 +149,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         // 平台超管（is_super_admin=1）没有 tenant_id 归属，可以从任意公司入口登录
         if (user == null && tenantId != null) {
             QueryWrapper<User> superAdminQuery = new QueryWrapper<User>()
+                    .select("id", "username", "password", "name", "role_id", "role_name", "tenant_id", "is_tenant_owner", "is_super_admin", "status", "approval_status", "factory_id", "permission_range")
                     .eq("username", u)
                     .in("status", "active", "ENABLED")
                     .eq("is_super_admin", true)
@@ -191,6 +193,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         }
 
         QueryWrapper<User> queryWrapper = new QueryWrapper<User>()
+                .select("id", "username", "password", "name", "role_id", "role_name", "tenant_id", "is_tenant_owner", "is_super_admin", "status", "approval_status", "factory_id", "permission_range", "phone")
                 .eq("phone", normalizedPhone)
                 .in("status", "active", "ENABLED");
         if (tenantId != null) {

@@ -216,10 +216,11 @@ public class ColorCardOrchestrator {
 
         colorCardItemMapper.insert(item);
 
-        // 更新颜色数量
+        // 更新颜色数量（必须带 tenantId，避免跨租户统计）
         long count = colorCardItemMapper.selectCount(
                 new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<ColorCardItem>()
                         .eq(ColorCardItem::getColorCardId, cardId)
+                        .eq(ColorCardItem::getTenantId, card.getTenantId())
                         .and(w -> w.isNull(ColorCardItem::getDeleteFlag).or().eq(ColorCardItem::getDeleteFlag, 0)));
         ColorCard patch = new ColorCard();
         patch.setId(cardId);
@@ -264,10 +265,11 @@ public class ColorCardOrchestrator {
         patch.setUpdateTime(LocalDateTime.now());
         colorCardItemMapper.updateById(patch);
 
-        // 更新色卡本颜色数量
+        // 更新色卡本颜色数量（必须带 tenantId，避免跨租户统计）
         long count = colorCardItemMapper.selectCount(
                 new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<ColorCardItem>()
                         .eq(ColorCardItem::getColorCardId, current.getColorCardId())
+                        .eq(ColorCardItem::getTenantId, current.getTenantId())
                         .and(w -> w.isNull(ColorCardItem::getDeleteFlag).or().eq(ColorCardItem::getDeleteFlag, 0)));
         ColorCard cardPatch = new ColorCard();
         cardPatch.setId(current.getColorCardId());
