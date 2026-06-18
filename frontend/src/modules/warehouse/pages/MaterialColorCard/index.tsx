@@ -256,24 +256,13 @@ const MaterialColorCardPage: React.FC = () => {
       styles={{ body: { flex: 1, display: 'flex', flexDirection: 'column', padding: 0 } }}
       title={
         <div style={{ padding: '0 16px' }}>
-          <Space size={8} align="center">
-            <Avatar
-              size={40}
-              shape="square"
-              src={card.coverImage ? getFullAuthedFileUrl(card.coverImage) : undefined}
-              icon={!card.coverImage ? <FileTextOutlined /> : undefined}
-              style={{ backgroundColor: '#f0f5ff', color: '#1677ff' }}
-            />
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{
-                fontWeight: 600, fontSize: 14, whiteSpace: 'nowrap',
-                overflow: 'hidden', textOverflow: 'ellipsis',
-              }} title={card.cardName}>
-                {card.cardName}
-              </div>
-              <div style={{ color: '#8c8c8c', fontSize: 12 }}>{card.cardCode}</div>
-            </div>
-          </Space>
+          <div style={{
+            fontWeight: 600, fontSize: 14,
+            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+          }} title={card.cardName}>
+            {card.cardName}
+          </div>
+          <div style={{ color: '#8c8c8c', fontSize: 12 }}>{card.cardCode}</div>
         </div>
       }
       extra={
@@ -285,50 +274,69 @@ const MaterialColorCardPage: React.FC = () => {
         </Space>
       }
     >
-      <div style={{ padding: '8px 16px 16px 16px', flex: 1, display: 'flex', flexDirection: 'column' }}>
-        {/* 供应商信息 */}
-        <div style={{ marginBottom: 12 }}>
-          <div style={{ color: '#595959', fontSize: 13, marginBottom: 6 }}>
-            <span style={{ color: '#8c8c8c' }}>供应商：</span>
-            <span style={{ fontWeight: 500 }}>{card.supplierName || '-'}</span>
-          </div>
-          {card.supplierContactPerson && (
-            <div style={{ color: '#595959', fontSize: 12 }}>
-              <span style={{ color: '#8c8c8c' }}>联系人：</span>{card.supplierContactPerson}
-              {card.supplierContactPhone && <span> · {card.supplierContactPhone}</span>}
+      <div style={{ padding: '12px 16px 16px 16px', flex: 1, display: 'flex', flexDirection: 'column' }}>
+        {/* 封面图 + 供应商信息 */}
+        <div style={{ display: 'flex', gap: 12, marginBottom: 14 }}>
+          {/* 封面缩略图 */}
+          {card.coverImage ? (
+            <Image
+              src={getFullAuthedFileUrl(card.coverImage)}
+              width={96}
+              height={96}
+              style={{ objectFit: 'cover', borderRadius: 8, flexShrink: 0, border: '1px solid #f0f0f0' }}
+              preview
+            />
+          ) : (
+            <div style={{
+              width: 96, height: 96, flexShrink: 0,
+              borderRadius: 8, border: '1px dashed #e5e7eb',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: '#f8fafc', color: '#94a3b8',
+            }}>
+              <FileTextOutlined style={{ fontSize: 28 }} />
             </div>
           )}
+
+          {/* 右侧信息 */}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ color: '#595959', fontSize: 13, marginBottom: 6 }}>
+              <span style={{ color: '#8c8c8c' }}>供应商：</span>
+              <span style={{ fontWeight: 500 }}>{card.supplierName || '-'}</span>
+            </div>
+            {card.supplierContactPerson && (
+              <div style={{ color: '#595959', fontSize: 12, marginBottom: 4 }}>
+                <span style={{ color: '#8c8c8c' }}>联系人：</span>{card.supplierContactPerson}
+                {card.supplierContactPhone && <span> · {card.supplierContactPhone}</span>}
+              </div>
+            )}
+            <Tag color="blue" style={{ marginTop: 4 }}>{getMaterialTypeLabel(card.materialType)}</Tag>
+            <Tag color={card.materialCount && card.materialCount > 0 ? 'green' : 'default'} style={{ marginTop: 4 }}>
+              {card.materialCount || 0} 条物料
+            </Tag>
+          </div>
         </div>
 
         {/* 物料属性概览 */}
-        <div style={{
-          padding: 10, background: '#fafafa', borderRadius: 6, marginBottom: 12,
-          fontSize: 12, color: '#595959',
-        }}>
-          <Row gutter={[8, 6]}>
-            <Col xs={12} sm={12}>
-              <Tag color="blue" style={{ margin: 0 }}>{getMaterialTypeLabel(card.materialType)}</Tag>
-            </Col>
-            {card.fabricWidth && <Col xs={12} sm={12}>幅宽：{card.fabricWidth}</Col>}
-            {card.fabricWeight && <Col xs={12} sm={12}>克重：{card.fabricWeight}</Col>}
-            {card.specifications && <Col xs={12} sm={12}>规格：{card.specifications}</Col>}
-            {card.fabricComposition && (
-              <Col xs={24} sm={24}>成分：{card.fabricComposition}</Col>
-            )}
-          </Row>
-        </div>
+        {(card.fabricWidth || card.fabricWeight || card.specifications || card.fabricComposition) && (
+          <div style={{
+            padding: 10, background: '#fafafa', borderRadius: 6, marginBottom: 12,
+            fontSize: 12, color: '#595959',
+          }}>
+            <Row gutter={[8, 6]}>
+              {card.fabricWidth && <Col xs={12} sm={12}>幅宽：{card.fabricWidth}</Col>}
+              {card.fabricWeight && <Col xs={12} sm={12}>克重：{card.fabricWeight}</Col>}
+              {card.specifications && <Col xs={12} sm={12}>规格：{card.specifications}</Col>}
+              {card.fabricComposition && (
+                <Col xs={24} sm={24}>成分：{card.fabricComposition}</Col>
+              )}
+            </Row>
+          </div>
+        )}
 
-        {/* 物料数量 + 操作按钮 */}
+        {/* 操作按钮 */}
         <div style={{ marginTop: 'auto' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-            <div>
-              <Tag color={card.materialCount && card.materialCount > 0 ? 'green' : 'default'} style={{ margin: 0 }}>
-                {card.materialCount || 0} 条物料
-              </Tag>
-            </div>
-            <div style={{ color: '#8c8c8c', fontSize: 12 }}>
-              {card.createTime?.slice(0, 10)}
-            </div>
+            <span style={{ color: '#8c8c8c', fontSize: 12 }}>创建：{card.createTime?.slice(0, 10)}</span>
           </div>
 
           <Space size={8} wrap>

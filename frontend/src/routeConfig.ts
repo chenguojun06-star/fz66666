@@ -82,9 +82,6 @@ export const paths = {
   labelPrint: '/warehouse/label-print',
   productInfo: '/warehouse/product-info',
   warehouseLocationMap: '/warehouse/location-map',
-  colorCard: '/warehouse/color-card',
-  materialColorCard: '/warehouse/material-color-card',
-
   profile: '/system/profile',
   user: '/system/user',
   userApproval: '/system/user-approval',
@@ -146,9 +143,6 @@ export const permissionCodes = {
   labelPrint: 'MENU_LABEL_PRINT',
   productInfo: 'MENU_PRODUCT_INFO',
   warehouseLocationMap: 'MENU_WAREHOUSE_LOCATION_MAP',
-  colorCard: 'MENU_MATERIAL_DATABASE',
-  materialColorCard: 'MENU_MATERIAL_DATABASE',
-
   user: 'MENU_USER',
   userApproval: 'MENU_USER_APPROVAL',
   role: 'MENU_ROLE',
@@ -222,8 +216,6 @@ export const menuConfig: MenuSection[] = [
       { label: '物料采购', path: paths.materialPurchase, icon: React.createElement(ShoppingCartOutlined) },
       { label: '物料出入库', path: paths.materialInventory, icon: React.createElement(InboxOutlined) },
       { label: '物料新增', path: paths.materialDatabase, icon: React.createElement(DatabaseOutlined) },
-      { label: '色卡管理', path: paths.colorCard, icon: React.createElement(BookOutlined) },
-      { label: '物料色卡', path: paths.materialColorCard, icon: React.createElement(AppstoreOutlined) },
     ],
   },
   {
@@ -355,8 +347,6 @@ export const routeToPermissionCode: Record<string, string> = {
   [paths.labelPrint]: permissionCodes.labelPrint,
   [paths.productInfo]: permissionCodes.productInfo,
   [paths.warehouseLocationMap]: permissionCodes.warehouseLocationMap,
-  [paths.colorCard]: permissionCodes.materialDatabase,
-  [paths.materialColorCard]: permissionCodes.materialDatabase,
 
 
   [paths.productionList]: permissionCodes.productionList,
