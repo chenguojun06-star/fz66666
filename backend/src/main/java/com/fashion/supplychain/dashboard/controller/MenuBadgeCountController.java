@@ -5,7 +5,6 @@ import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.production.entity.MaterialPicking;
 import com.fashion.supplychain.production.entity.MaterialPurchase;
 import com.fashion.supplychain.production.entity.MaterialStock;
-import com.fashion.supplychain.production.orchestration.SysNoticeOrchestrator;
 import com.fashion.supplychain.production.service.MaterialPickingService;
 import com.fashion.supplychain.production.service.MaterialPurchaseService;
 import com.fashion.supplychain.production.service.MaterialStockService;
@@ -31,9 +30,6 @@ public class MenuBadgeCountController {
     @Autowired
     private MaterialPurchaseService materialPurchaseService;
 
-    @Autowired
-    private SysNoticeOrchestrator sysNoticeOrchestrator;
-
     @GetMapping("/menu-badge-counts")
     public Result<Map<String, Long>> getMenuBadgeCounts() {
         Long tenantId = UserContext.tenantId();
@@ -56,8 +52,6 @@ public class MenuBadgeCountController {
                 .eq(MaterialPicking::getDeleteFlag, 0)
                 .eq(MaterialPicking::getStatus, "pending")
                 .count());
-
-        counts.put("/production/notice", sysNoticeOrchestrator.getUnreadCount());
 
         return Result.success(counts);
     }
