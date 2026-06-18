@@ -189,13 +189,12 @@ public class UserPermissionHelper {
         String username = ctx == null ? null : safeTrim(ctx.getUsername());
         User byId = null;
         if (StringUtils.hasText(userId)) {
-            try { byId = userService.getById(Long.valueOf(userId)); } catch (Exception e) { log.warn("Failed to resolve current user by userId: userId={}", userId, e); }
+            try { byId = userService.getCoreById(Long.valueOf(userId)); }
+            catch (Exception e) { log.warn("Failed to resolve current user by userId: userId={}", userId, e); }
         }
         if (byId != null) return byId;
         if (!StringUtils.hasText(username)) return null;
-        QueryWrapper<User> q = new QueryWrapper<>();
-        q.eq("username", username);
-        return userService.getOne(q, false);
+        return userService.getCoreByUsername(username);
     }
 
     public void sanitizeUser(User user) { if (user != null) user.setPassword(null); }

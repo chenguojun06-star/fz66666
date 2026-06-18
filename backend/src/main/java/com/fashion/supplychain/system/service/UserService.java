@@ -97,4 +97,19 @@ public interface UserService extends IService<User> {
      * @return 是否成功
      */
     boolean bindOpenid(Long userId, String openid);
+
+    /**
+     * 按ID查询核心字段（不依赖可能缺失的扩展字段，避免SQL错误）
+     * 用于登录后获取当前用户信息
+     * @param id 用户ID
+     * @return 用户信息（仅核心字段）
+     */
+    User getCoreById(Long id);
+
+    /**
+     * 按用户名查询核心字段（不依赖可能缺失的扩展字段，避免SQL错误）
+     * @param username 用户名
+     * @return 用户信息（仅核心字段）
+     */
+    User getCoreByUsername(String username);
 }

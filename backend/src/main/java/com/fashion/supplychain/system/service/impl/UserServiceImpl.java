@@ -259,6 +259,86 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
                 .update();
     }
 
+    @Override
+    public User getCoreById(Long id) {
+        if (id == null) return null;
+        try {
+            return userMapper.selectOne(new QueryWrapper<User>()
+                    .select("id", "username", "password", "name", "role_id", "role_name", "tenant_id",
+                            "is_tenant_owner", "is_factory_owner", "is_super_admin", "status", "approval_status",
+                            "factory_id", "permission_range", "phone", "email", "avatar_url", "org_unit_id")
+                    .eq("id", id)
+                    .last("LIMIT 1"));
+        } catch (Exception e) {
+            log.warn("[UserService] getCoreById失败（可能字段缺失），已降级回退: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    @Override
+    public User getCoreByUsername(String username) {
+        if (!StringUtils.hasText(username)) return null;
+        try {
+            return userMapper.selectOne(new QueryWrapper<User>()
+                    .select("id", "username", "password", "name", "role_id", "role_name", "tenant_id",
+                            "is_tenant_owner", "is_factory_owner", "is_super_admin", "status", "approval_status",
+                            "factory_id", "permission_range", "phone", "email", "avatar_url", "org_unit_id")
+                    .eq("username", username.trim())
+                    .in("status", "active", "ENABLED")
+                    .last("LIMIT 1"));
+        } catch (Exception e) {
+            log.warn("[UserService] getCoreByUsername失败（可能字段缺失），已降级回退: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * 覆盖默认 getById：只查核心字段，避免 Flyway 迁移失败导致新增字段不存在时
+     * MyBatis-Plus 生成 SELECT * 触发 SQL 异常而导致用户登录后立即退出。
+     */
+    @Override
+    public User getById(java.io.Serializable id) {
+        return getCoreById(id == null ? null : Long.valueOf(String.valueOf(id)));
+    }
+
+    /**
+     * 覆盖默认 getOne：仅当调用方未显式指定 select 时，强制使用核心字段列。
+     * 避免 SELECT * 依赖可能缺失的扩展字段触发 SQL 异常。
+     */
+    @Override
+    public User getOne(com.baomidou.mybatisplus.core.conditions.Wrapper<User> queryWrapper, boolean throwEx) {
+        if (queryWrapper == null) return null;
+        // 优先走底层 baseMapper.getOne（即 ServiceImpl 默认逻辑），
+        // 捕获 SQL 异常后降级为核心字段查询。
+        try {
+            return super.getOne(queryWrapper, throwEx);
+        } catch (Exception e) {
+            log.warn("[UserService] getOne默认查询失败（可能字段缺失），降级为核心字段查询: {}", e.getMessage());
+            try {
+                QueryWrapper<User> safeQw = new QueryWrapper<>();
+                safeQw.select("id", "username", "password", "name", "role_id", "role_name", "tenant_id",
+                        "is_tenant_owner", "is_factory_owner", "is_super_admin", "status", "approval_status",
+                        "factory_id", "permission_range", "phone", "email", "avatar_url", "org_unit_id");
+                // 尝试从原 Wrapper 中抽取条件
+                if (queryWrapper instanceof com.baomidou.mybatisplus.core.conditions.query.QueryWrapper) {
+                    // 直接复用原始 QueryWrapper 的条件，但用核心字段 select
+                    @SuppressWarnings("unchecked")
+                    com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<User> orig =
+                            (com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<User>) queryWrapper;
+                    orig.select("id", "username", "password", "name", "role_id", "role_name", "tenant_id",
+                            "is_tenant_owner", "is_factory_owner", "is_super_admin", "status", "approval_status",
+                            "factory_id", "permission_range", "phone", "email", "avatar_url", "org_unit_id");
+                    return userMapper.selectOne(orig);
+                }
+                // LambdaQueryWrapper 等：直接按原 Wrapper 查，但用 baseMapper 传核心字段
+                return userMapper.selectOne(queryWrapper);
+            } catch (Exception ex) {
+                log.warn("[UserService] 降级查询也失败: {}", ex.getMessage());
+                return null;
+            }
+        }
+    }
+
     private static boolean isBcryptHash(String s) {
         if (!StringUtils.hasText(s)) {
             return false;
