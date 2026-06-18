@@ -22,6 +22,8 @@ import type { SmartErrorInfo } from '@/smart/core/types';
 import { useMaterialDatabaseActions } from './useMaterialDatabaseActions';
 import { getMaterialDatabaseColumns } from './materialDatabaseColumns';
 import MaterialColorCardRecognizer from '@/components/common/MaterialColorCardRecognizer';
+import UniversalCardView from '@/components/common/UniversalCardView';
+import '@/components/common/UniversalCardView/style.css';
 
 const { Option } = Select;
 
@@ -262,98 +264,61 @@ const MaterialDatabasePage: React.FC = () => {
         </Space.Compact>
       </Card>
 
-      {/* 卡片网格 */}
-      {cardDataList.length === 0 && !cardLoading ? (
-        <Card style={{ textAlign: 'center', padding: '60px 0', color: '#8c8c8c' }}>
+      {/* 通用卡片网格 */}
+      <UniversalCardView
+        dataSource={cardDataList}
+        loading={cardLoading}
+        titleField="cardName"
+        subtitleField="cardCode"
+        coverField="coverImage"
+        coverPlaceholder="暂无封面"
+        columns={4}
+        fields={[
+          { label: '供应商', key: 'supplierName', format: (v) => v || '-' },
+          { label: '联系人', key: 'supplierContactPerson', format: (v, r) => v ? `${v}${r?.supplierContactPhone ? ' · ' + r.supplierContactPhone : ''}` : '-' },
+          { label: '幅宽', key: 'fabricWidth', format: (v) => v || '-' },
+          { label: '克重', key: 'fabricWeight', format: (v) => v || '-' },
+          { label: '规格', key: 'specifications', format: (v) => v || '-' },
+          { label: '成分', key: 'fabricComposition', format: (v) => v || '-' },
+        ]}
+        titleTags={(record) => (
+          <>
+            <Tag color="blue">{getMaterialTypeLabel(record.materialType)}</Tag>
+            <Tag color={record.materialCount && record.materialCount > 0 ? 'green' : 'default'}>
+              {record.materialCount || 0} 条物料
+            </Tag>
+          </>
+        )}
+        actions={(record) => [
+          { key: 'manage', label: '物料管理', icon: <AppstoreAddOutlined />, onClick: () => openCardItemsDialog(record) },
+          { key: 'generate', label: '生成物料', icon: <EyeOutlined />, onClick: () => handleGenerateCardMaterials(record) },
+          { key: 'edit', label: '编辑', icon: <EditOutlined />, onClick: () => openCardEditDialog(record) },
+          { key: 'delete', label: '删除', icon: <DeleteOutlined />, danger: true, onClick: () => handleCardDelete(record.id) },
+        ]}
+        maxInlineActions={2}
+        pagination={{
+          current: cardPage,
+          pageSize: cardPageSize,
+          total: cardTotal,
+          onChange: (p) => setCardPage(p),
+          showTotal: (t) => `共 ${t} 条`,
+        }}
+        hoverRender={(record) => (
+          <div style={{ maxWidth: 400 }}>
+            {record.remark && <div style={{ marginBottom: 8, color: '#874d00' }}>备注：{record.remark}</div>}
+            {record.supplierContactPerson && <div>联系人：{record.supplierContactPerson}</div>}
+            {record.supplierContactPhone && <div>电话：{record.supplierContactPhone}</div>}
+            <div>创建时间：{record.createTime?.slice(0, 19).replace('T', ' ')}</div>
+          </div>
+        )}
+      />
+
+      {/* 空状态 */}
+      {cardDataList.length === 0 && !cardLoading && (
+        <Card style={{ textAlign: 'center', padding: '60px 0', color: '#8c8c8c', marginTop: 12 }}>
           <FileTextOutlined style={{ fontSize: 48, marginBottom: 12 }} />
           <div>暂无物料色卡，点击右上角"新建物料色卡"开始创建</div>
         </Card>
-      ) : (
-        <Row gutter={[16, 16]}>
-          {cardDataList.map((card) => (
-            <Col xs={24} sm={24} md={12} lg={8} xl={6} key={card.id}>
-              <Card
-                hoverable
-                style={{ height: '100%', display: 'flex', flexDirection: 'column' }}
-                styles={{ body: { flex: 1, display: 'flex', flexDirection: 'column', padding: 0 } }}
-                title={
-                  <div style={{ padding: '0 8px' }}>
-                    <div style={{ fontWeight: 600, fontSize: 14, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={card.cardName}>{card.cardName}</div>
-                    <div style={{ color: '#8c8c8c', fontSize: 12 }}>{card.cardCode}</div>
-                  </div>
-                }
-                extra={
-                  <Space size={4}>
-                    <Button size="small" type="link" icon={<EditOutlined />} onClick={() => openCardEditDialog(card)} />
-                    <Popconfirm title="确认删除？" onConfirm={() => handleCardDelete(card.id)} okText="确认" cancelText="取消">
-                      <Button size="small" type="link" danger icon={<DeleteOutlined />} />
-                    </Popconfirm>
-                  </Space>
-                }
-              >
-                <div style={{ padding: '10px 14px 14px', flex: 1, display: 'flex', flexDirection: 'column' }}>
-                  {/* 封面图 + 供应商 */}
-                  <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
-                    {card.coverImage ? (
-                      <Image src={getFullAuthedFileUrl(card.coverImage)} width={80} height={80}
-                        style={{ objectFit: 'cover', borderRadius: 6, flexShrink: 0 }} preview />
-                    ) : (
-                      <div style={{ width: 80, height: 80, borderRadius: 6, border: '1px dashed #e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8fafc', color: '#94a3b8', flexShrink: 0 }}>
-                        <FileTextOutlined style={{ fontSize: 22 }} />
-                      </div>
-                    )}
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 13, color: '#595959', marginBottom: 4 }}>
-                        <span style={{ color: '#8c8c8c' }}>供应商：</span><span style={{ fontWeight: 500 }}>{card.supplierName || '-'}</span>
-                      </div>
-                      {card.supplierContactPerson && (
-                        <div style={{ fontSize: 12, color: '#595959', marginBottom: 4 }}>
-                          <span style={{ color: '#8c8c8c' }}>联系人：</span>{card.supplierContactPerson}{card.supplierContactPhone && <span> · {card.supplierContactPhone}</span>}
-                        </div>
-                      )}
-                      <Space size={4} wrap>
-                        <Tag color="blue">{getMaterialTypeLabel(card.materialType)}</Tag>
-                        <Tag color={card.materialCount && card.materialCount > 0 ? 'green' : 'default'}>{card.materialCount || 0} 条物料</Tag>
-                      </Space>
-                    </div>
-                  </div>
-                  {/* 属性 */}
-                  {(card.fabricWidth || card.fabricWeight || card.specifications) && (
-                    <div style={{ padding: 8, background: '#fafafa', borderRadius: 6, fontSize: 12, color: '#595959', marginBottom: 12 }}>
-                      <Row gutter={[8, 4]}>
-                        {card.fabricWidth && <Col xs={12}>幅宽：{card.fabricWidth}</Col>}
-                        {card.fabricWeight && <Col xs={12}>克重：{card.fabricWeight}</Col>}
-                        {card.specifications && <Col xs={12}>规格：{card.specifications}</Col>}
-                      </Row>
-                    </div>
-                  )}
-                  {/* 操作 */}
-                  <div style={{ marginTop: 'auto' }}>
-                    <div style={{ color: '#8c8c8c', fontSize: 12, marginBottom: 8 }}>创建：{card.createTime?.slice(0, 10)}</div>
-                    <Space size={6} wrap>
-                      <Button size="small" type="primary" icon={<AppstoreAddOutlined />} onClick={() => openCardItemsDialog(card)}>物料管理</Button>
-                      <Button size="small" icon={<EyeOutlined />} onClick={() => handleGenerateCardMaterials(card)}>生成物料</Button>
-                    </Space>
-                    {card.remark && (
-                      <div style={{ marginTop: 8, padding: 6, background: '#fffbe6', borderRadius: 4, fontSize: 12, color: '#874d00' }}>备注：{card.remark}</div>
-                    )}
-                  </div>
-                </div>
-              </Card>
-            </Col>
-          ))}
-        </Row>
-      )}
-
-      {/* 分页 */}
-      {cardTotal > cardPageSize && (
-        <div style={{ marginTop: 16, textAlign: 'center' }}>
-          <Space>
-            <Button disabled={cardPage <= 1} onClick={() => setCardPage(cardPage - 1)}>上一页</Button>
-            <span>第 {cardPage} 页 / 共 {Math.ceil(cardTotal / cardPageSize)} 页</span>
-            <Button disabled={cardPage >= Math.ceil(cardTotal / cardPageSize)} onClick={() => setCardPage(cardPage + 1)}>下一页</Button>
-          </Space>
-        </div>
       )}
     </>
   );
