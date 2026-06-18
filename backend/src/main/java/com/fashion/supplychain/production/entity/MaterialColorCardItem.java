@@ -5,56 +5,49 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import lombok.Data;
 
+/**
+ * 物料色卡子条目 - 具体的物料资料
+ */
 @Data
-@TableName("t_color_card")
-public class ColorCard {
+@TableName("t_material_color_card_item")
+public class MaterialColorCardItem {
 
     @TableId(type = IdType.ASSIGN_UUID)
     private String id;
 
-    private String colorCardCode;
+    private String materialColorCardId;
 
-    private String colorCardName;
+    private String materialId;
+
+    private String materialCode;
+
+    private String materialName;
 
     private String materialType;
 
-    /**
-     * 幅宽 (cm)
-     */
+    private String color;
+
     private String fabricWidth;
+
+    private String fabricWeight;
+
+    private String fabricComposition;
 
     private String specifications;
 
-    /**
-     * 克重 (GSM)
-     */
-    private String fabricWeight;
-
-    /**
-     * 成分含量
-     */
-    private String fabricComposition;
-
     private String unit;
 
-    private String supplierId;
-
-    private String supplierName;
-
-    private String supplierContactPerson;
-
-    private String supplierContactPhone;
+    private BigDecimal unitPrice;
 
     private String image;
 
     private String remark;
 
-    private String status;
-
-    private Integer colorCount;
+    private Integer sortOrder;
 
     private LocalDateTime createTime;
 
@@ -64,6 +57,4 @@ public class ColorCard {
 
     @TableField(fill = FieldFill.INSERT)
     private Long tenantId;
-
-    private String materialId;
 }

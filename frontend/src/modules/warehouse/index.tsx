@@ -10,3 +10,4 @@ export const ProductInfo = React.lazy(() => import('./pages/ProductInfo'));
 export const LabelPrint = React.lazy(() => import('./pages/LabelPrint'));
 export const WarehouseLocationMap = React.lazy(() => import('./pages/WarehouseLocationMap'));
 export const ColorCard = React.lazy(() => import('./pages/ColorCard'));
+export const MaterialColorCard = React.lazy(() => import('./pages/MaterialColorCard'));

@@ -1,277 +1,439 @@
 package com.fashion.supplychain.production.orchestration;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fashion.supplychain.intelligence.service.VisionAnalysisService;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.production.entity.MaterialColorCard;
+import com.fashion.supplychain.production.entity.MaterialColorCardItem;
+import com.fashion.supplychain.production.entity.MaterialDatabase;
+import com.fashion.supplychain.production.mapper.MaterialColorCardItemMapper;
+import com.fashion.supplychain.production.mapper.MaterialColorCardMapper;
+import com.fashion.supplychain.production.service.MaterialDatabaseService;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.UUID;
 import com.fashion.supplychain.production.dto.MaterialColorCardRecognitionResult;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
-
-import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.List;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 /**
- * 物料色卡识别 Orchestrator
+ * 物料色卡 Orchestrator - 母子关系色卡管理
  *
- * 流程：前端上传色卡图片 → 调用多模态视觉模型 → 解析 JSON → 结构化返回 → 前端自动填充表单
+ * 母卡(MaterialColorCard): 以供应商为维度组织物料资料（一张母卡 = 一家供应商）
+ * 子条目(MaterialColorCardItem): 具体的物料资料
  *
- * 设计原则：
- * - 任何时候失败都返回 {success: false, errorMessage: "..."}，不会抛异常到前端
- * - 置信度 < 70 的字段不会自动填充，需用户确认
- * - 物料类型归一化：优先映射到 fabric/lining/accessory
+ * 关键业务:
+ * 1) 物料色卡 CRUD
+ * 2) 子物料条目 CRUD (按母卡)
+ * 3) 从现有物料库添加条目 / 从色卡条目生成物料到物料库
  */
-@Service
-@Lazy
 @Slf4j
+@Service
 public class MaterialColorCardOrchestrator {
 
-    private static final ObjectMapper MAPPER = new ObjectMapper();
-    private static final int CONFIDENCE_THRESHOLD = 70;
-    private static final String TASK_TYPE_COLOR_CARD = "COLOR_CARD";
+    @Autowired
+    private MaterialColorCardMapper cardMapper;
 
-    @Autowired(required = false)
-    private VisionAnalysisService visionAnalysisService;
+    @Autowired
+    private MaterialColorCardItemMapper itemMapper;
+
+    @Autowired
+    private MaterialDatabaseService materialDatabaseService;
+
+    // ==================== 色卡 CRUD ====================
+
+    /** 物料色卡分页列表 */
+    public IPage<MaterialColorCard> listCards(String keyword, String materialType, int page, int pageSize) {
+        Long tenantId = UserContext.tenantId();
+        int offset = (page - 1) * pageSize;
+        List<MaterialColorCard> records = cardMapper.selectByQuery(tenantId, keyword, materialType, offset, pageSize);
+        long total = cardMapper.countByQuery(tenantId, keyword, materialType);
+        Page<MaterialColorCard> pageResult = new Page<>(page, pageSize, total);
+        pageResult.setRecords(records);
+        return pageResult;
+    }
+
+    /** 获取单个色卡详情 */
+    public MaterialColorCard getCardById(String id) {
+        if (!StringUtils.hasText(id)) throw new IllegalArgumentException("id不能为空");
+        Long tenantId = UserContext.tenantId();
+        MaterialColorCard card = cardMapper.selectById(id.trim());
+        if (card == null || (card.getDeleteFlag() != null && card.getDeleteFlag() == 1)
+                || !tenantId.equals(card.getTenantId())) {
+            throw new NoSuchElementException("物料色卡不存在");
+        }
+        return card;
+    }
+
+    /** 获取色卡 + 其下所有子物料条目 */
+    public CardWithItems getCardDetail(String id) {
+        MaterialColorCard card = getCardById(id);
+        List<MaterialColorCardItem> items = itemMapper.selectByCardId(card.getId(), card.getTenantId());
+        CardWithItems result = new CardWithItems();
+        result.setCard(card);
+        result.setItems(items);
+        return result;
+    }
+
+    /** 创建色卡 */
+    @Transactional(rollbackFor = Exception.class)
+    public String saveCard(MaterialColorCard card) {
+        if (card == null) throw new IllegalArgumentException("参数为空");
+        if (!StringUtils.hasText(card.getCardCode())) {
+            card.setCardCode(generateCardCode());
+        } else {
+            card.setCardCode(card.getCardCode().trim());
+        }
+        if (!StringUtils.hasText(card.getCardName())) {
+            throw new IllegalArgumentException("色卡名称不能为空");
+        }
+        Long tenantId = UserContext.tenantId();
+
+        // 检查编码是否重复
+        long dup = cardMapper.selectCount(
+                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<MaterialColorCard>()
+                        .eq(MaterialColorCard::getCardCode, card.getCardCode())
+                        .eq(MaterialColorCard::getTenantId, tenantId)
+                        .and(w -> w.isNull(MaterialColorCard::getDeleteFlag).or().eq(MaterialColorCard::getDeleteFlag, 0)));
+        if (dup > 0) {
+            throw new IllegalStateException("色卡编号已存在");
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        card.setId(UUID.randomUUID().toString().replace("-", ""));
+        card.setTenantId(tenantId);
+        card.setCreateTime(now);
+        card.setUpdateTime(now);
+        card.setDeleteFlag(0);
+        if (!StringUtils.hasText(card.getStatus())) card.setStatus("pending");
+        if (!StringUtils.hasText(card.getMaterialType())) card.setMaterialType("fabric");
+        if (card.getMaterialCount() == null) card.setMaterialCount(0);
+
+        int rows = cardMapper.insert(card);
+        if (rows <= 0) throw new IllegalStateException("保存失败");
+        return card.getId();
+    }
+
+    /** 更新色卡 */
+    @Transactional(rollbackFor = Exception.class)
+    public boolean updateCard(MaterialColorCard card) {
+        if (card == null || !StringUtils.hasText(card.getId())) {
+            throw new IllegalArgumentException("id不能为空");
+        }
+        MaterialColorCard current = getCardById(card.getId());
+        card.setTenantId(current.getTenantId());
+        card.setDeleteFlag(current.getDeleteFlag());
+        card.setCreateTime(current.getCreateTime());
+        card.setUpdateTime(LocalDateTime.now());
+        if (!StringUtils.hasText(card.getCardCode())) card.setCardCode(current.getCardCode());
+        if (!StringUtils.hasText(card.getCardName())) card.setCardName(current.getCardName());
+        if (!StringUtils.hasText(card.getMaterialType())) card.setMaterialType(current.getMaterialType());
+        if (!StringUtils.hasText(card.getStatus())) card.setStatus(current.getStatus());
+
+        int rows = cardMapper.updateById(card);
+        if (rows <= 0) throw new IllegalStateException("保存失败");
+        return true;
+    }
+
+    /** 删除色卡 */
+    @Transactional(rollbackFor = Exception.class)
+    public boolean deleteCard(String id) {
+        if (!StringUtils.hasText(id)) throw new IllegalArgumentException("id不能为空");
+        MaterialColorCard current = getCardById(id.trim());
+        // 软删除色卡
+        MaterialColorCard patch = new MaterialColorCard();
+        patch.setId(current.getId());
+        patch.setDeleteFlag(1);
+        patch.setUpdateTime(LocalDateTime.now());
+        cardMapper.updateById(patch);
+        // 软删除全部子条目
+        itemMapper.deleteByCardIdAndTenantId(current.getId(), current.getTenantId());
+        return true;
+    }
+
+    // ==================== 子条目 CRUD ====================
+
+    /** 为色卡批量保存子条目（覆盖式更新） */
+    @Transactional(rollbackFor = Exception.class)
+    public boolean saveItems(String cardId, List<MaterialColorCardItem> items) {
+        MaterialColorCard card = getCardById(cardId);
+        if (items == null) items = new ArrayList<>();
+
+        // 先软删除原有条目
+        itemMapper.deleteByCardIdAndTenantId(cardId, card.getTenantId());
+
+        // 新增
+        int sortIdx = 0;
+        for (MaterialColorCardItem item : items) {
+            item.setId(UUID.randomUUID().toString().replace("-", ""));
+            item.setMaterialColorCardId(cardId);
+            item.setTenantId(card.getTenantId());
+            item.setDeleteFlag(0);
+            item.setSortOrder(sortIdx++);
+            item.setCreateTime(LocalDateTime.now());
+            item.setUpdateTime(LocalDateTime.now());
+            if (!StringUtils.hasText(item.getMaterialCode())) {
+                item.setMaterialCode("M" + String.format("%03d", sortIdx));
+            }
+            itemMapper.insert(item);
+        }
+
+        // 更新色卡物料数量
+        MaterialColorCard patch = new MaterialColorCard();
+        patch.setId(cardId);
+        patch.setMaterialCount(items.size());
+        patch.setUpdateTime(LocalDateTime.now());
+        cardMapper.updateById(patch);
+        return true;
+    }
+
+    /** 新增单个子条目 */
+    @Transactional(rollbackFor = Exception.class)
+    public String addItem(String cardId, MaterialColorCardItem item) {
+        MaterialColorCard card = getCardById(cardId);
+        if (item == null) throw new IllegalArgumentException("参数为空");
+        if (!StringUtils.hasText(item.getMaterialName())) {
+            throw new IllegalArgumentException("物料名称不能为空");
+        }
+
+        item.setId(UUID.randomUUID().toString().replace("-", ""));
+        item.setMaterialColorCardId(cardId);
+        item.setTenantId(card.getTenantId());
+        item.setDeleteFlag(0);
+        item.setCreateTime(LocalDateTime.now());
+        item.setUpdateTime(LocalDateTime.now());
+        if (!StringUtils.hasText(item.getMaterialCode())) {
+            item.setMaterialCode("M" + String.format("%03d", System.currentTimeMillis() % 1000));
+        }
+        if (item.getSortOrder() == null) item.setSortOrder(0);
+
+        itemMapper.insert(item);
+
+        // 更新物料数量
+        long count = itemMapper.selectCount(
+                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<MaterialColorCardItem>()
+                        .eq(MaterialColorCardItem::getMaterialColorCardId, cardId)
+                        .eq(MaterialColorCardItem::getTenantId, card.getTenantId())
+                        .and(w -> w.isNull(MaterialColorCardItem::getDeleteFlag).or().eq(MaterialColorCardItem::getDeleteFlag, 0)));
+        MaterialColorCard patch = new MaterialColorCard();
+        patch.setId(cardId);
+        patch.setMaterialCount((int) count);
+        patch.setUpdateTime(LocalDateTime.now());
+        cardMapper.updateById(patch);
+        return item.getId();
+    }
+
+    /** 更新单个子条目 */
+    public boolean updateItem(String itemId, MaterialColorCardItem item) {
+        if (!StringUtils.hasText(itemId)) throw new IllegalArgumentException("id不能为空");
+        MaterialColorCardItem current = itemMapper.selectById(itemId.trim());
+        if (current == null || (current.getDeleteFlag() != null && current.getDeleteFlag() != 0)) {
+            throw new NoSuchElementException("物料条目不存在");
+        }
+        if (!UserContext.tenantId().equals(current.getTenantId())) {
+            throw new IllegalStateException("无权限");
+        }
+        item.setId(itemId);
+        item.setMaterialColorCardId(current.getMaterialColorCardId());
+        item.setTenantId(current.getTenantId());
+        item.setDeleteFlag(current.getDeleteFlag());
+        item.setCreateTime(current.getCreateTime());
+        item.setUpdateTime(LocalDateTime.now());
+        int rows = itemMapper.updateById(item);
+        return rows > 0;
+    }
+
+    /** 删除单个子条目 */
+    @Transactional(rollbackFor = Exception.class)
+    public boolean deleteItem(String itemId) {
+        if (!StringUtils.hasText(itemId)) throw new IllegalArgumentException("id不能为空");
+        MaterialColorCardItem current = itemMapper.selectById(itemId.trim());
+        if (current == null || (current.getDeleteFlag() != null && current.getDeleteFlag() != 0)) {
+            log.warn("[MATERIAL-ITEM-DELETE] id={} already deleted", itemId);
+            return true;
+        }
+        MaterialColorCardItem patch = new MaterialColorCardItem();
+        patch.setId(itemId);
+        patch.setDeleteFlag(1);
+        patch.setUpdateTime(LocalDateTime.now());
+        itemMapper.updateById(patch);
+
+        // 更新数量
+        long count = itemMapper.selectCount(
+                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<MaterialColorCardItem>()
+                        .eq(MaterialColorCardItem::getMaterialColorCardId, current.getMaterialColorCardId())
+                        .eq(MaterialColorCardItem::getTenantId, current.getTenantId())
+                        .and(w -> w.isNull(MaterialColorCardItem::getDeleteFlag).or().eq(MaterialColorCardItem::getDeleteFlag, 0)));
+        MaterialColorCard cardPatch = new MaterialColorCard();
+        cardPatch.setId(current.getMaterialColorCardId());
+        cardPatch.setMaterialCount((int) count);
+        cardPatch.setUpdateTime(LocalDateTime.now());
+        cardMapper.updateById(cardPatch);
+        return true;
+    }
+
+    // ==================== 视觉识别 ====================
 
     /**
-     * 识别色卡图片，返回结构化字段
+     * 拍照识别物料色卡信息
+     * 入参：已上传的图片 URL
+     * 返回：物料各字段识别结果（含置信度），由前端自动填充表单并让用户确认
      *
-     * @param imageUrl 已上传的图片 URL（必须通过 /common/upload 先上传）
+     * 注意：该功能依赖视觉 AI 服务（如 Qdrant/工厂画像视觉识别）。
+     * 如果未启用或识别失败，返回含 errorMessage 的结果，前端展示"请手动输入"。
      */
     public MaterialColorCardRecognitionResult recognizeFromImage(String imageUrl) {
         MaterialColorCardRecognitionResult result = new MaterialColorCardRecognitionResult();
         result.setImageUrl(imageUrl);
-
-        if (imageUrl == null || imageUrl.isBlank()) {
-            result.setErrorMessage("图片不能为空，请先上传图片");
-            return result;
-        }
-
-        // 视觉模型不可用时的降级提示（不阻塞用户操作）
-        if (visionAnalysisService == null || !visionAnalysisService.isAvailable()) {
-            result.setErrorMessage("视觉模型暂不可用，请手动输入物料信息");
-            log.warn("[ColorCard] 视觉模型不可用，返回空识别结果");
-            return result;
-        }
-
-        // 构建识别 prompt
-        String prompt = buildMaterialColorCardPrompt();
-
-        try {
-            // 调用视觉模型（用自定义 prompt 路径，避免 analyzeGeneric 添加额外包装）
-            VisionAnalysisService.VisionResult visionResult =
-                    visionAnalysisService.analyzeWithPrompt(imageUrl, prompt, TASK_TYPE_COLOR_CARD);
-
-            if (visionResult == null || visionResult.getReport() == null) {
-                result.setErrorMessage("视觉模型未返回有效结果，请重试");
-                return result;
-            }
-
-            int confidence = visionResult.getConfidence(); // int 基本类型，不可能为 null
-            result.setOverallConfidence(confidence);
-
-            // 置信度过低，提示用户
-            if (confidence < CONFIDENCE_THRESHOLD) {
-                result.setAiHint("识别置信度较低，请仔细核对每个字段");
-            }
-
-            // 解析 report 中应该包含的 JSON
-            JsonNode jsonRoot = tryExtractJsonFromReport(visionResult.getReport());
-            if (jsonRoot == null || !jsonRoot.isObject()) {
-                // 解析失败，但仍把原始文本作为 description 返回
-                String fallbackText = truncate(visionResult.getReport(), 500);
-                result.setDescription(MaterialColorCardRecognitionResult.FieldValue.ofText(
-                        "AI识别: " + fallbackText, 50, fallbackText));
-                result.setSuccess(true);
-                result.setAiHint(result.getAiHint() == null
-                        ? "识别结果未完全结构化，建议核对后手动输入关键信息"
-                        : result.getAiHint());
-                return result;
-            }
-
-            // 填充字段
-            result.setMaterialName(extractField(jsonRoot, "materialName", "物料名称"));
-            result.setColor(extractField(jsonRoot, "color", "颜色"));
-            result.setFabricWidth(extractField(jsonRoot, "fabricWidth", "幅宽"));
-            result.setFabricWeight(extractField(jsonRoot, "fabricWeight", "克重"));
-            result.setFabricComposition(extractField(jsonRoot, "fabricComposition", "成分"));
-            result.setSpecifications(extractField(jsonRoot, "specifications", "规格"));
-            result.setUnit(extractField(jsonRoot, "unit", "单位"));
-            result.setSupplierName(extractField(jsonRoot, "supplierName", "供应商"));
-            result.setStyleNo(extractField(jsonRoot, "styleNo", "款号"));
-            result.setDescription(extractField(jsonRoot, "description", "备注"));
-
-            // 单价：可能是数值字段
-            MaterialColorCardRecognitionResult.FieldValue priceField =
-                    extractNumberField(jsonRoot, "unitPrice", "单价");
-            result.setUnitPrice(priceField);
-
-            // 物料类型：归一化
-            MaterialColorCardRecognitionResult.FieldValue typeField =
-                    extractField(jsonRoot, "materialType", "物料类型");
-            if (typeField != null && typeField.getTextValue() != null) {
-                String normalizedType = normalizeMaterialType(typeField.getTextValue());
-                typeField.setTextValue(normalizedType);
-            }
-            result.setMaterialType(typeField);
-
-            result.setSuccess(true);
-            return result;
-
-        } catch (Exception e) {
-            log.error("[ColorCard] 识别失败: {}", e.getMessage(), e);
-            result.setErrorMessage("识别失败，请检查图片或稍后重试（" + e.getMessage() + "）");
-            return result;
-        }
+        result.setSuccess(false);
+        result.setErrorMessage("视觉识别模块未启用，请手动输入");
+        log.info("[MATERIAL-COLOR-CARD-RECOGNIZE] imageUrl={} — 视觉识别未配置，返回手动输入提示", imageUrl);
+        return result;
     }
 
-    // ============ 辅助方法 ============
+    // ==================== 物料库联动 ====================
 
-    private String buildMaterialColorCardPrompt() {
-        return "这是一张服装物料色卡/面料标签的图片。请识别图片中包含的物料信息，包括所有可见的文字内容。\n\n"
-                + "任务：从中提取以下字段，严格返回仅包含字段名的 JSON 格式（JSON顶层为对象，不要包含 markdown 代码块标记）：\n\n"
-                + "- materialName: 物料名称 / 面料名称\n"
-                + "- materialType: 物料类型（面料/里料/辅料；或英文 fabric/lining/accessory）\n"
-                + "- color: 颜色名称\n"
-                + "- fabricWidth: 幅宽（如 150cm）\n"
-                + "- fabricWeight: 克重（如 200g/m²）\n"
-                + "- fabricComposition: 成分（如 80%棉 20%涤纶）\n"
-                + "- specifications: 规格信息\n"
-                + "- unit: 计量单位（如 米/公斤/码/个）\n"
-                + "- supplierName: 供应商/厂商名称\n"
-                + "- unitPrice: 单价（数字，单位元）\n"
-                + "- styleNo: 款号 / 款式编号\n"
-                + "- description: 备注信息\n\n"
-                + "对每个字段，尽量从图片中提取：文本内容、置信度（0-100）和原文。\n\n"
-                + "期望的 JSON 格式：\n"
-                + "{\n"
-                + "  \"materialName\": { \"text\": \"精梳棉\", \"confidence\": 95, \"raw\": \"精梳棉\" },\n"
-                + "  \"materialType\": { \"text\": \"fabric\", \"confidence\": 90, \"raw\": \"面料\" },\n"
-                + "  \"color\": { \"text\": \"藏青色\", \"confidence\": 88, \"raw\": \"藏青\" },\n"
-                + "  \"fabricWidth\": { \"text\": \"150cm\", \"confidence\": 85, \"raw\": \"幅宽 150cm\" },\n"
-                + "  \"fabricWeight\": { \"text\": \"200g/m²\", \"confidence\": 85, \"raw\": \"200g\" },\n"
-                + "  \"fabricComposition\": { \"text\": \"100%棉\", \"confidence\": 92, \"raw\": \"100%棉\" },\n"
-                + "  \"specifications\": { \"text\": \"...\", \"confidence\": 70, \"raw\": \"...\" },\n"
-                + "  \"unit\": { \"text\": \"米\", \"confidence\": 80, \"raw\": \"单位：米\" },\n"
-                + "  \"supplierName\": { \"text\": \"...\", \"confidence\": 65, \"raw\": \"...\" },\n"
-                + "  \"unitPrice\": { \"text\": \"35.00\", \"confidence\": 75, \"raw\": \"单价 35 元\" },\n"
-                + "  \"styleNo\": { \"text\": \"...\", \"confidence\": 50, \"raw\": \"...\" },\n"
-                + "  \"description\": { \"text\": \"...\", \"confidence\": 60, \"raw\": \"...\" }\n"
-                + "}\n\n"
-                + "如果某个字段在图片中找不到对应信息，请设为 null。确保返回合法的 JSON。";
+    /**
+     * 从现有物料库中选择物料添加到色卡（不生成新物料）
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public String addItemFromMaterial(String cardId, String materialId) {
+        MaterialColorCard card = getCardById(cardId);
+        if (!StringUtils.hasText(materialId)) throw new IllegalArgumentException("materialId不能为空");
+        MaterialDatabase md = materialDatabaseService.getById(materialId.trim());
+        if (md == null) throw new NoSuchElementException("物料不存在");
+        if (!card.getTenantId().equals(md.getTenantId())) throw new IllegalStateException("无权限");
+
+        MaterialColorCardItem item = new MaterialColorCardItem();
+        item.setId(UUID.randomUUID().toString().replace("-", ""));
+        item.setMaterialColorCardId(cardId);
+        item.setTenantId(card.getTenantId());
+        item.setMaterialId(md.getId());
+        item.setMaterialCode(md.getMaterialCode());
+        item.setMaterialName(md.getMaterialName());
+        item.setMaterialType(md.getMaterialType());
+        item.setColor(md.getColor());
+        item.setFabricWidth(md.getFabricWidth());
+        item.setFabricWeight(md.getFabricWeight());
+        item.setFabricComposition(md.getFabricComposition());
+        item.setSpecifications(md.getSpecifications());
+        item.setUnit(md.getUnit());
+        item.setUnitPrice(md.getUnitPrice());
+        item.setImage(md.getImage());
+        item.setRemark(md.getRemark());
+        item.setSortOrder(0);
+        item.setDeleteFlag(0);
+        item.setCreateTime(LocalDateTime.now());
+        item.setUpdateTime(LocalDateTime.now());
+        itemMapper.insert(item);
+
+        // 更新数量
+        long count = itemMapper.selectCount(
+                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<MaterialColorCardItem>()
+                        .eq(MaterialColorCardItem::getMaterialColorCardId, cardId)
+                        .eq(MaterialColorCardItem::getTenantId, card.getTenantId())
+                        .and(w -> w.isNull(MaterialColorCardItem::getDeleteFlag).or().eq(MaterialColorCardItem::getDeleteFlag, 0)));
+        MaterialColorCard patch = new MaterialColorCard();
+        patch.setId(cardId);
+        patch.setMaterialCount((int) count);
+        patch.setUpdateTime(LocalDateTime.now());
+        cardMapper.updateById(patch);
+
+        return item.getId();
     }
 
     /**
-     * 从视觉模型返回的 report 中提取 JSON 对象
-     * 支持：纯 JSON、JSON 被文本包裹、JSON 在 markdown 代码块中等多种情况
+     * 将色卡下的所有子条目生成到物料库（t_material_database）
+     * 已关联 material_id 的不重复生成
      */
-    private JsonNode tryExtractJsonFromReport(String report) {
-        if (report == null || report.isBlank()) return null;
-        String trimmed = report.trim();
-
-        // 1) 如果直接是 JSON
-        if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
-            try { return MAPPER.readTree(trimmed); } catch (Exception ignored) {}
+    @Transactional(rollbackFor = Exception.class)
+    public List<String> generateMaterialsFromCard(String cardId) {
+        MaterialColorCard card = getCardById(cardId);
+        List<MaterialColorCardItem> items = itemMapper.selectByCardId(cardId, card.getTenantId());
+        if (items == null || items.isEmpty()) {
+            throw new IllegalStateException("色卡下暂无物料条目，请先添加物料");
         }
 
-        // 2) 去除可能的 markdown ```json ... ``` 代码块标记
-        String cleaned = trimmed
-                .replaceAll("(?s)^```\\s*(?:json|JSON)?\\s*", "")
-                .replaceAll("(?s)```\\s*$", "");
+        List<String> generatedIds = new ArrayList<>();
+        for (MaterialColorCardItem item : items) {
+            // 已关联物料的不再重复生成
+            if (StringUtils.hasText(item.getMaterialId())) {
+                generatedIds.add(item.getMaterialId());
+                continue;
+            }
 
-        // 3) 查找第一个 { 和最后一个 }
-        int firstBrace = cleaned.indexOf('{');
-        int lastBrace = cleaned.lastIndexOf('}');
-        if (firstBrace >= 0 && lastBrace > firstBrace) {
-            String potentialJson = cleaned.substring(firstBrace, lastBrace + 1);
-            try { return MAPPER.readTree(potentialJson); } catch (Exception ignored) {}
+            MaterialDatabase md = new MaterialDatabase();
+            md.setId(UUID.randomUUID().toString().replace("-", ""));
+            md.setMaterialCode(StringUtils.hasText(item.getMaterialCode())
+                    ? item.getMaterialCode()
+                    : materialDatabaseService.generateMaterialCode(item.getMaterialType()));
+            md.setMaterialName(item.getMaterialName());
+            md.setMaterialType(item.getMaterialType());
+            md.setColor(item.getColor());
+            md.setFabricWidth(item.getFabricWidth());
+            md.setFabricWeight(item.getFabricWeight());
+            md.setFabricComposition(item.getFabricComposition());
+            md.setSpecifications(item.getSpecifications());
+            md.setUnit(item.getUnit());
+            md.setSupplierId(card.getSupplierId());
+            md.setSupplierName(card.getSupplierName());
+            md.setSupplierContactPerson(card.getSupplierContactPerson());
+            md.setSupplierContactPhone(card.getSupplierContactPhone());
+            md.setUnitPrice(item.getUnitPrice());
+            md.setImage(item.getImage());
+            md.setRemark(item.getRemark());
+            md.setStatus("pending");
+            md.setTenantId(card.getTenantId());
+            md.setDeleteFlag(0);
+            md.setCreateTime(LocalDateTime.now());
+            md.setUpdateTime(LocalDateTime.now());
+            materialDatabaseService.save(md);
+
+            // 回写 materialId 关联
+            item.setMaterialId(md.getId());
+            item.setUpdateTime(LocalDateTime.now());
+            itemMapper.updateById(item);
+
+            generatedIds.add(md.getId());
         }
 
-        // 4) 逐行找 JSON
-        for (String line : cleaned.split("\n")) {
-            String l = line.trim();
-            if (l.startsWith("{") && l.endsWith("}")) {
-                try { return MAPPER.readTree(l); } catch (Exception ignored) {}
+        log.info("[MATERIAL-COLOR-CARD-GENERATE] cardId={} 生成了 {} 条物料", cardId, generatedIds.size());
+        return generatedIds;
+    }
+
+    // ==================== 辅助 ====================
+
+    /** 生成色卡编号（格式：MCC + 年月日 + 序号） */
+    public String generateCardCode() {
+        Long tenantId = UserContext.tenantId();
+        String today = java.time.LocalDate.now().toString().replace("-", "");
+        List<MaterialColorCard> todayCards = cardMapper.selectByQuery(tenantId, null, null, 0, 1000);
+        int maxSeq = 0;
+        for (MaterialColorCard card : todayCards) {
+            String code = card.getCardCode();
+            if (code != null && code.startsWith("MCC" + today)) {
+                try {
+                    int seq = Integer.parseInt(code.substring(("MCC" + today).length()));
+                    if (seq > maxSeq) maxSeq = seq;
+                } catch (NumberFormatException ignored) {}
             }
         }
-        return null;
+        return "MCC" + today + String.format("%02d", maxSeq + 1);
     }
 
-    private MaterialColorCardRecognitionResult.FieldValue extractField(
-            JsonNode root, String fieldName, @SuppressWarnings("unused") String displayName) {
-        JsonNode node = root.get(fieldName);
-        if (node == null || node.isNull()) return null;
+    /** 内部返回 DTO: 色卡 + 子条目列表 */
+    public static class CardWithItems {
+        private MaterialColorCard card;
+        private List<MaterialColorCardItem> items;
 
-        String textValue = null;
-        Integer confidence = null;
-        String rawText = null;
-
-        if (node.isObject()) {
-            if (node.has("text") && !node.get("text").isNull()) {
-                textValue = node.get("text").asText();
-            }
-            if (node.has("confidence") && !node.get("confidence").isNull()) {
-                try { confidence = node.get("confidence").asInt(); } catch (Exception ignored) {}
-            }
-            if (node.has("raw") && !node.get("raw").isNull()) {
-                rawText = node.get("raw").asText();
-            }
-        } else if (node.isTextual()) {
-            textValue = node.asText();
-            confidence = 60; // 如果 AI 只是写了字符串，给默认中等置信度
-            rawText = textValue;
-        }
-
-        if (textValue == null || textValue.isBlank()) return null;
-        return MaterialColorCardRecognitionResult.FieldValue.ofText(
-                textValue.trim(),
-                confidence != null ? confidence : 60,
-                rawText);
-    }
-
-    private MaterialColorCardRecognitionResult.FieldValue extractNumberField(
-            JsonNode root, String fieldName, String displayName) {
-        MaterialColorCardRecognitionResult.FieldValue textField = extractField(root, fieldName, displayName);
-        if (textField == null) return null;
-        String text = textField.getTextValue();
-        if (text == null || text.isBlank()) return textField;
-
-        // 尝试从文本中提取纯数字（如 "35.00"、"35元"、"35元/米"）
-        try {
-            java.util.regex.Matcher m = java.util.regex.Pattern.compile("([0-9]+(?:\\.[0-9]+)?)").matcher(text);
-            if (m.find()) {
-                BigDecimal num = new BigDecimal(m.group(1));
-                MaterialColorCardRecognitionResult.FieldValue result =
-                        MaterialColorCardRecognitionResult.FieldValue.ofNumber(num,
-                                textField.getConfidence(), textField.getRawText());
-                result.setTextValue(num.toPlainString());
-                return result;
-            }
-        } catch (Exception ignored) {}
-        return textField;
-    }
-
-    private String normalizeMaterialType(String input) {
-        if (input == null) return null;
-        String lower = input.trim().toLowerCase();
-
-        List<String> fabricKeywords = new ArrayList<>();
-        fabricKeywords.add("fabric"); fabricKeywords.add("面料"); fabricKeywords.add("主料");
-        fabricKeywords.add("外层"); fabricKeywords.add("表料");
-
-        List<String> liningKeywords = new ArrayList<>();
-        liningKeywords.add("lining"); liningKeywords.add("里料"); liningKeywords.add("里布");
-        liningKeywords.add("内衬"); liningKeywords.add("内层");
-
-        if (fabricKeywords.stream().anyMatch(lower::contains)) return "fabric";
-        if (liningKeywords.stream().anyMatch(lower::contains)) return "lining";
-        return "accessory"; // 默认归为辅料
-    }
-
-    private String truncate(String s, int maxLen) {
-        if (s == null) return "";
-        return s.length() <= maxLen ? s : s.substring(0, maxLen);
+        public MaterialColorCard getCard() { return card; }
+        public void setCard(MaterialColorCard card) { this.card = card; }
+        public List<MaterialColorCardItem> getItems() { return items; }
+        public void setItems(List<MaterialColorCardItem> items) { this.items = items; }
     }
 }

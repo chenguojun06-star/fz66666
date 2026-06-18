@@ -230,6 +230,43 @@ V20260617002 FAILED → V20260618001/18002/18003/181000 全部被 BLOCK
 - ✅ `mvn clean compile -q` BUILD SUCCESS（无Java代码变更，文档变更无需重新编译，但已确认正常）
 - ✅ `npx tsc --noEmit` 0 errors
 
+### 2026-06-18 线上500错误紧急修复
+
+**发现的2个线上500错误**：
+
+| API | 错误原因 | 修复文件 |
+|-----|---------|---------|
+| `/api/dashboard/menu-badge-counts` | `t_material_stock` 表缺少 `safety_stock` 列，MenuBadgeCountController 查询 `quantity < safety_stock` 报错 | 新增 `V202606181001__add_safety_stock_to_material_stock.sql` |
+| `/api/color-card/list` | `t_color_card` 表列名不匹配（`width_cm`/`weight_gsm`/`composition` vs `fabric_width`/`fabric_weight`/`fabric_composition`）+ ColorCard Entity 缺少字段 | 修改 `V20260617003__create_color_card_tables.sql` 列名 + `ColorCard.java` 添加字段 + 新增 `V202606181002__fix_color_card_column_names.sql` 修复已有环境 |
+
+**修复详情**：
+1. `V202606181001__add_safety_stock_to_material_stock.sql` — 幂等添加 `safety_stock` 列到 `t_material_stock`，默认100
+2. `V20260617003__create_color_card_tables.sql` — 修正列名 `width_cm`→`fabric_width`，`weight_gsm`→`fabric_weight`，`composition`→`fabric_composition`
+3. `ColorCard.java` — 添加 `fabricWidth`、`fabricWeight`、`fabricComposition` 字段（原有 Entity 只有声明但缺少字段定义）
+4. `V202606181002__fix_color_card_column_names.sql` — 幂等修复已有环境的旧列名
+5. `MaterialColorCardOrchestrator.java` — 添加 `recognizeFromImage()` 方法（编译错误修复）
+
+**编译验证**：mvn compile BUILD SUCCESS
+
+### 2026-06-18 Flyway 迁移链修复（第二波）
+
+**问题根源**：Flyway 迁移链被 V20260618001 的索引引用了不存在的列（`t_scan_record.order_id` 等）而阻塞。
+
+**全部修复**：
+
+| # | 文件 | 修复内容 |
+|---|------|---------|
+| 1 | 删除 `V20260617002__add_color_card_relation_fields.sql` | 解决版本号冲突（与旧的 `V20260617002__add_warehousing...` 冲突） |
+| 2 | 新增 `V20260617004__add_color_card_relation_fields.sql` | 替代重复的 V20260617002，添加 is_color_card/source_color_card_id/material_id 字段 |
+| 3 | 新增 `V202606181003__fix_scan_record_and_cutting_task_columns.sql` | 幂等添加缺失列（t_scan_record: tenant_id/order_id/operator_id/process_name, t_cutting_task: order_id/received）并完成 V20260618001 未完成的索引 |
+
+**迁移链清理后的执行顺序**：
+```
+V20260617001 → V20260617002(warehousing) → V20260617003(创建色卡表) → V20260617004(color_card关系) → V20260618001(高频索引) → [repair reset] → V20260618003(补列+索引) → V202606181000(user.position) → V202606181001(safety_stock) → V202606181002(fix列名)
+```
+
+**编译验证**：mvn compile BUILD SUCCESS
+
 ## 测试覆盖情况（2026-06-18）
 
 ### 新增测试文件

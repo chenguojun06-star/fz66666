@@ -20,7 +20,7 @@ import { StyleInfo, StyleInfoList, OrderManagement, DataCenter, TemplateCenter, 
 import { MaterialReconciliation, PayrollOperatorSummary, FinanceCenter, ExpenseReimbursement, EmployeeAdvance, WagePayment, EcSalesRevenue, TaxExport, OrderWasteAnalysis } from './modules/finance';
 import { CrmDashboard, ReceivableList } from './modules/crm';
 import { SelectionCenter } from './modules/selection';
-import { MaterialInventory, MaterialDatabase, FinishedInventory, SampleInventory, EcommerceOrders, InventoryCheck, LabelPrint, ProductInfo, WarehouseLocationMap, ColorCard } from './modules/warehouse';
+import { MaterialInventory, MaterialDatabase, FinishedInventory, SampleInventory, EcommerceOrders, InventoryCheck, LabelPrint, ProductInfo, WarehouseLocationMap, ColorCard, MaterialColorCard } from './modules/warehouse';
 import { Dashboard } from './modules/dashboard';
 import { UserList, UserApproval, RoleList, OrganizationTree, PartnerManagement, FactoryList, FactoryWorkerList, LoginLogList, SystemLogs, Profile, DictManage, Tutorial, TenantManagement, CustomerManagement, AppStore, DataImport, SystemIssueBoard, OrphanDataPage } from './modules/system';
 import { EcommerceCenter, PlatformDetail } from './modules/ecommerce';
@@ -240,6 +240,7 @@ const AppRoutes: React.FC = () => {
           <Route path={paths.productInfo} element={<RouteErrorBoundary pageName="成品资料"><Suspense fallback={routeFallback}><ProductInfo /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.warehouseLocationMap} element={<RouteErrorBoundary pageName="库位地图"><Suspense fallback={routeFallback}><WarehouseLocationMap /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.colorCard} element={<RouteErrorBoundary pageName="色卡管理"><Suspense fallback={routeFallback}><ColorCard /></Suspense></RouteErrorBoundary>} />
+          <Route path={paths.materialColorCard} element={<RouteErrorBoundary pageName="物料色卡"><Suspense fallback={routeFallback}><MaterialColorCard /></Suspense></RouteErrorBoundary>} />
 
           <Route path={paths.user} element={<RouteErrorBoundary pageName="用户管理"><Suspense fallback={routeFallback}><UserList /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.dict} element={<RouteErrorBoundary pageName="字典管理"><Suspense fallback={routeFallback}><DictManage /></Suspense></RouteErrorBoundary>} />
