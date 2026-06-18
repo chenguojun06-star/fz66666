@@ -174,6 +174,35 @@
 
 - 无进行中任务
 
+### 2026-06-18 数据库迁移连环爆炸 — 全面修复
+
+**根因分析**：commit `e1676f30f`（06:34）新增 `V20260617002` 创建索引时假设所有表都有 `delete_flag` 列，
+但 `t_scan_record` 从未定义此列 → 迁移失败 → BLOCK 所有后续迁移（V20260618*）→ `t_user.position` 列未添加 → 登录 500
+
+**连锁故障链**：
+```
+V20260617002 FAILED → V20260618001/18002/18003/181000 全部被 BLOCK
+→ t_user.position 始终缺失 → SELECT * → Unknown column 'position' → 登录 500
+```
+
+**修复方案**（3个新迁移，全部通过 CI）：
+
+| 文件 | 修复内容 | 状态 |
+|------|---------|:----:|
+| `V20260618004` | 防御式创建5个索引，每列先检查存在性，缺失自动降级 | ✅ |
+| `V20260618005` | 防御式修复 V202607192305 的 scan_record 索引（scan_time+tenant_id均不存在） | ✅ |
+| `V20260618006` | 为 t_scan_record 添加 tenant_id 列（Entity有字段但DB无列） | ✅ |
+
+**全面审计发现的其他问题**：
+- `V202607192305` 引用 `t_scan_record.scan_time`（不存在，实际列名是 `create_time`）+ `tenant_id`（不存在）
+- `ScanRecord` Entity 的 `tenantId` 字段被 `FactoryBottleneckOrchestrator` 等智能分析模块用于 WHERE 查询，但 DB 无此列
+- `t_scan_record` 是唯一一个没有 `tenant_id` 的核心业务表（其他所有表都有）
+
+**新增 Flyway 铁律**：
+1. 引用任何列前必须 `SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS` 验证存在
+2. 永远不修改已存在的迁移文件（CI gate 强制拦截）
+3. 创建索引时每个列都必须单独检查存在性，不能假设
+
 ### 2026-06-18 AI写代码能力优化（MCP工具链 + Skill体系）
 
 **发现的短板**：
@@ -241,6 +270,12 @@ SelfCritiqueGateTest 和 EvolutionOrchestratorTest 需要修复 Spring ObjectPro
 3. cutting-task/by-style-no 旧式端点
 4. 前端硬编码颜色值约555处
 5. Service层@Transactional违规约70处（含上述P0-2项）
+
+### 已解决（2026-06-18）
+1. ✅ V20260617002 delete_flag 引用问题 → V20260618004 防御式修复
+2. ✅ V202607192305 scan_time+tenant_id 引用问题 → V20260618005 防御式修复
+3. ✅ t_scan_record 无 tenant_id 列 → V20260618006 补列
+4. ✅ t_user.position 列缺失 → V202606181000 已修复
 
 ## 下一步
 
