@@ -7,7 +7,7 @@ import RowActions from '@/components/common/RowActions';
 import SupplierSelect from '@/components/common/SupplierSelect';
 import SupplierNameTooltip from '@/components/common/SupplierNameTooltip';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
-import { getMaterialTypeLabel } from '@/utils/materialType';
+import { getMaterialTypeLabel, getMaterialCodePrefix } from '@/utils/materialType';
 import { DEFAULT_PAGE_SIZE_OPTIONS } from '@/utils/pageSizeStore';
 
 interface StyleBomMaterialModalProps {
@@ -251,6 +251,17 @@ const StyleBomMaterialModal: React.FC<StyleBomMaterialModalProps> = ({
                       { value: 'lining', label: 'lining' },
                       { value: 'accessory', label: 'accessory' },
                     ]}
+                    onChange={(value) => {
+                      // 选物料类型时联动填充前缀字母到编码（统一规则：面料M/里料L/辅料F）
+                      const prefix = getMaterialCodePrefix(value);
+                      const currentCode = String(materialCreateForm.getFieldValue('materialCode') || '').trim();
+                      if (!currentCode) {
+                        materialCreateForm.setFieldsValue({ materialCode: prefix });
+                      } else if (!/^[MLF]/.test(currentCode)) {
+                        // 当前编码开头不是有效前缀，自动补前缀
+                        materialCreateForm.setFieldsValue({ materialCode: prefix + currentCode });
+                      }
+                    }}
                   />
                 </Form.Item>
                 <Form.Item name="color" label="颜色">

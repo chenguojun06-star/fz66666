@@ -338,13 +338,22 @@ public class AiAgentToolExecHelper {
 
     private String buildConfirmMessage(ConfirmLevel level, String label) {
         if (level == ConfirmLevel.HIGH_RISK) {
+            // 结构化 suggest payload（借鉴 CL4R1T4S opt-in 哲学：AI 建议、用户选择执行）
             return "{\"success\":false,\"needsConfirmation\":true,\"confirmLevel\":\"high_risk\","
+                    + "\"suggest\":true,"
                     + "\"operationLabel\":\"" + label + "\","
-                    + "\"message\":\"⚠️ " + label + "为高风险操作，需要确认。请用1-2句话展示操作摘要，然后问用户是否确认。用户确认后用相同参数再次调用即可。不要长篇大论，不要重复解释风险。\"}";
+                    + "\"summary\":\"" + label + "（高风险操作）\","
+                    + "\"impact\":\"此操作可能影响订单/库存/工资等核心业务数据，执行后可能不可逆\","
+                    + "\"message\":\"⚠️ " + label + "为高风险操作，需要您确认。请按以下格式向用户建议：\\n"
+                    + "1. 用1-2句话说明即将执行什么操作（基于工具参数）\\n"
+                    + "2. 说明影响范围（如'将修改订单X的状态'）\\n"
+                    + "3. 问用户是否确认执行\\n"
+                    + "用户确认后用相同参数再次调用即可。禁止长篇大论，禁止重复解释风险，禁止伪造执行结果。\"}";
         } else {
             return "{\"success\":false,\"needsConfirmation\":true,\"confirmLevel\":\"write\","
+                    + "\"suggest\":true,"
                     + "\"operationLabel\":\"" + label + "\","
-                    + "\"message\":\"" + label + "需要确认。请简洁展示操作摘要，用户确认后用相同参数再次调用即可。\"}";
+                    + "\"message\":\"" + label + "需要确认。请简洁展示操作摘要（1-2句话），用户确认后用相同参数再次调用即可。\"}";
         }
     }
 }

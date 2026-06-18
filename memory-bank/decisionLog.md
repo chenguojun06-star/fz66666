@@ -185,3 +185,27 @@
   1. 禁止在任何新代码中引入 WebSocket 全局广播
   2. 禁止在代码审查中批准涉及全局广播的 PR
   3. 业务通知走操作结果返回本地提示，不走广播
+
+## D-018：CloudBase 探针配置强制入版本控制
+
+- **上下文**：cloudbaserc.json 历史上无 InitialDelaySeconds，CloudBase 默认 2s，Spring Boot 启动需 90s+，探针过早检测导致容器判死重启
+- **决策**：所有 CloudBase 探针参数必须在 cloudbaserc.json 中明确声明（InitialDelaySeconds: 300, PeriodSeconds: 30, TimeoutSeconds: 10, FailureThreshold: 5）
+- **理由**：依赖云端默认值导致 P0 事故（INC-20260612-001）
+
+## D-019：禁止使用 socat 做探针"作弊"
+
+- **上下文**：socat 代理层绕过探针检测，让应用处于不健康状态但"看起来健康"
+- **决策**：禁止使用 socat 来"伪造"健康状态，探针必须检测真实应用端口
+- **理由**：socat 掩盖了探针配置缺失问题，正确做法是配置 InitialDelaySeconds
+
+## D-020：MCP resources 多租户隔离
+
+- **上下文**：MCP resources 启用后，MemoryBank/KnowledgeBase/FactoryProfile 暴露为 resources，存在跨租户读取风险
+- **决策**：所有 McpResourceProvider 实现必须 list/read 带 tenantId，校验资源归属当前租户，从 UserContext.tenantId() 获取（不信任 URI 中嵌入的 tenantId）
+- **理由**：A 工厂读取 B 工厂的记忆 = P0 事故（P0 铁律 4 + 15）
+
+## D-021：自我进化组件必须有统一可观测
+
+- **上下文**：12个自我进化组件散落各处，无统一 metrics 汇总，"自我进化空转"无法被发现（DynamicFollowUpEngine 孤儿、MemoryNudge.expireOldNudges 死代码、EvolutionEnginePatrolJob 空壳）
+- **决策**：12个进化组件必须通过 EvolutionOrchestrator.getUnifiedMetrics() 汇总指标；新增进化组件时必须在 EvolutionOrchestrator 注册并暴露量化指标
+- **理由**：统一可观测是"自我进化"的前提，散落各处时无法发现空转

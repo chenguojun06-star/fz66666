@@ -6,6 +6,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 /**
  * MCP 协议控制器 — Model Context Protocol v2024-11-05
  *
@@ -39,5 +41,18 @@ public class McpProtocolController {
     @PostMapping("/tools/call")
     public Result<McpProtocolService.McpToolResult> callTool(@RequestBody McpProtocolService.McpToolCallRequest request) {
         return Result.success(mcpProtocolService.callTool(request));
+    }
+
+    /** MCP resources/list — 列出所有可用资源（memory:// / knowledge:// / factory://） */
+    @PostMapping("/resources/list")
+    public Result<McpProtocolService.McpResourcesResponse> listResources() {
+        return Result.success(mcpProtocolService.listResources());
+    }
+
+    /** MCP resources/read — 读取指定 URI 的资源内容 */
+    @PostMapping("/resources/read")
+    public Result<McpProtocolService.McpResourceReadResult> readResource(@RequestBody Map<String, String> request) {
+        String uri = request != null ? request.get("uri") : null;
+        return Result.success(mcpProtocolService.readResource(uri));
     }
 }

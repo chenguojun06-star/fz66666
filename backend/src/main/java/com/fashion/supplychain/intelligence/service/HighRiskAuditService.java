@@ -37,8 +37,8 @@ import java.util.concurrent.TimeUnit;
 @Lazy
 public class HighRiskAuditService extends ServiceImpl<HighRiskAuditLogMapper, HighRiskAuditLog> {
 
-    /** Redis pending 标记 TTL：60 秒（与旧 CONFIRM_WINDOW_MS 保持一致） */
-    private static final long PENDING_TTL_SECONDS = 60L;
+    /** Redis pending 标记 TTL：300 秒（5分钟，给用户足够思考时间，原 60s 过短） */
+    private static final long PENDING_TTL_SECONDS = 300L;
 
     /** Redis key 前缀 */
     private static final String PENDING_KEY_PREFIX = "ai:hra:pending:";

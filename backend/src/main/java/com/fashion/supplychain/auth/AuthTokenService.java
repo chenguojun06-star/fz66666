@@ -64,6 +64,9 @@ public class AuthTokenService {
         if (subject.getOrgUnitId() != null) {
             payload.put("orgUnitId", subject.getOrgUnitId()); // 组织单元ID
         }
+        if (subject.getPosition() != null) {
+            payload.put("position", subject.getPosition()); // 职位
+        }
         payload.put("iat", new Date(nowMillis));
         payload.put("exp", new Date(nowMillis + safeTtl.toMillis()));
 
@@ -184,6 +187,10 @@ public class AuthTokenService {
         Object orgUnitIdObj = jwt.getPayload("orgUnitId");
         if (orgUnitIdObj != null) {
             subject.setOrgUnitId(String.valueOf(orgUnitIdObj));
+        }
+        Object positionObj = jwt.getPayload("position");
+        if (positionObj != null) {
+            subject.setPosition(String.valueOf(positionObj));
         }
         Object superAdminObj = jwt.getPayload("superAdmin");
         subject.setSuperAdmin(Boolean.TRUE.equals(superAdminObj));

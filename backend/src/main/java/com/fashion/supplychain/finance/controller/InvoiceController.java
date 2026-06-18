@@ -48,19 +48,19 @@ public class InvoiceController {
         return Result.success(invoiceOrchestrator.update(invoice));
     }
 
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAnyAuthority('ROLE_admin', 'ROLE_ADMIN', 'ROLE_1', 'ROLE_tenant_owner', 'ROLE_管理员', 'ROLE_主管', 'ROLE_SUPER_ADMIN')")
     @PostMapping("/{id}/issue")
     public Result<Invoice> issue(@PathVariable String id) {
         return Result.success(invoiceOrchestrator.issue(id));
     }
 
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAnyAuthority('ROLE_admin', 'ROLE_ADMIN', 'ROLE_1', 'ROLE_tenant_owner', 'ROLE_管理员', 'ROLE_主管', 'ROLE_SUPER_ADMIN')")
     @PostMapping("/{id}/cancel")
     public Result<Invoice> cancel(@PathVariable String id) {
         return Result.success(invoiceOrchestrator.cancel(id));
     }
 
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAnyAuthority('ROLE_admin', 'ROLE_ADMIN', 'ROLE_1', 'ROLE_tenant_owner', 'ROLE_管理员', 'ROLE_主管', 'ROLE_SUPER_ADMIN')")
     @DeleteMapping("/{id}")
     public Result<Void> delete(@PathVariable String id) {
         invoiceOrchestrator.delete(id);

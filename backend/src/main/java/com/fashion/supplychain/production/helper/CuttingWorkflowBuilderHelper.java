@@ -42,11 +42,8 @@ public class CuttingWorkflowBuilderHelper {
         if (StringUtils.hasText(progressWorkflowJson) && !isBlankWorkflow(progressWorkflowJson)) {
             return progressWorkflowJson;
         }
-        progressWorkflowJson = buildProgressWorkflowJson(styleNo);
-        if (StringUtils.hasText(progressWorkflowJson)) {
-            return progressWorkflowJson;
-        }
-        return buildCuttingDefaultWorkflowJson();
+        // 未配置子工序时返回 buildProgressWorkflowJson 的结果（可能为 null），不再硬塞默认流程
+        return buildProgressWorkflowJson(styleNo);
     }
 
     private boolean isBlankWorkflow(String json) {
@@ -64,9 +61,7 @@ public class CuttingWorkflowBuilderHelper {
 
     public String buildProgressWorkflowJson(String styleNo) {
         List<Map<String, Object>> nodes = resolveFromStyleProcess(styleNo);
-        if (nodes == null || nodes.isEmpty()) {
-            nodes = templateLibraryService.resolveProgressNodeUnitPrices(styleNo);
-        }
+        // 未配置子工序时直接返回 null，不再走模板兜底硬塞默认流程
         if (nodes == null || nodes.isEmpty()) return null;
 
         List<Map<String, Object>> normalizedNodes = new ArrayList<>();

@@ -1,5 +1,17 @@
 export type MaterialTypeCategory = 'fabric' | 'lining' | 'accessory';
 
+/**
+ * 物料编码前缀映射（与后端 MaterialConstants.resolveCodePrefix 保持一致）。
+ * 面料 fabric → M，里料 lining → L，辅料 accessory 及其他 → F。
+ * 所有物料新增入口统一使用此前缀规则。
+ */
+export const getMaterialCodePrefix = (materialType: unknown): string => {
+  const category = getMaterialTypeCategory(materialType);
+  if (category === 'lining') return 'L';
+  if (category === 'fabric') return 'M';
+  return 'F';
+};
+
 export const getBaseMaterialType = <T extends string = string>(v: unknown): T => {
   const category = getMaterialTypeCategory(v);
   if (category === 'lining') return 'lining' as T;

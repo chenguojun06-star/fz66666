@@ -685,6 +685,7 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
                       <SampleProcessList
                         stages={sampleProcessProgress.stages}
                         loading={sampleProcessProgress.loading}
+                        needsConfig={sampleProcessProgress.needsConfig}
                         orderId={sampleProcessProgress.orderId}
                         orderNo={sampleProcessProgress.orderNo}
                         styleNo={selectedStage?.record?.styleNo}

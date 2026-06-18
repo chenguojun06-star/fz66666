@@ -4,7 +4,7 @@ import type { UploadFile } from 'antd/es/upload/interface';
 import { MaterialDatabase } from '@/types/production';
 import api, { unwrapApiData } from '@/utils/api';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
-import { getBaseMaterialType } from '@/utils/materialType';
+import { getBaseMaterialType, getMaterialCodePrefix } from '@/utils/materialType';
 import { useModal, useRequest } from '@/hooks';
 
 const toLocalDateTimeInputValue = (): string => {
@@ -30,10 +30,9 @@ export function useMaterialDatabaseActions(deps: {
   const [returnLoading, setReturnLoading] = useState(false);
 
   const generateLocalMaterialCode = useCallback((materialType: string): string => {
-    const prefixMap: Record<string, string> = { fabric: 'M', lining: 'L', accessory: 'F' };
+    const prefix = getMaterialCodePrefix(materialType);
     const baseType = (materialType || 'accessory').toLowerCase().startsWith('lining') ? 'lining'
       : (materialType || 'accessory').toLowerCase().startsWith('fabric') ? 'fabric' : 'accessory';
-    const prefix = prefixMap[baseType] || 'F';
     const now = new Date();
     const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
     const existingCodes = dataList

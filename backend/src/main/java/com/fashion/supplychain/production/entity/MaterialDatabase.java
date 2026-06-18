@@ -82,4 +82,8 @@ public class MaterialDatabase {
 
     @TableField(fill = FieldFill.INSERT)
     private Long tenantId;
+
+    private Integer isColorCard;
+
+    private String sourceColorCardId;
 }

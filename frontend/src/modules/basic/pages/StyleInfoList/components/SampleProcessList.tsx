@@ -1,5 +1,5 @@
 import React, { useCallback, useState, useMemo, useRef, useEffect } from 'react';
-import { App, Button, Drawer, Modal, Table, Tag, Form, Input, InputNumber, Select, Space, Tooltip } from 'antd';
+import { Alert, App, Button, Drawer, Modal, Table, Tag, Form, Input, InputNumber, Select, Space, Tooltip } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { CheckCircleOutlined, ClockCircleOutlined, PlayCircleOutlined, UserAddOutlined, EditOutlined, CloseOutlined, SaveOutlined } from '@ant-design/icons';
 import RowActions from '@/components/common/RowActions';
@@ -99,6 +99,7 @@ const InlineEditableField: React.FC<{
 interface SampleProcessListProps {
   stages: ProcessStageProgress[];
   loading: boolean;
+  needsConfig?: boolean;
   orderId: string | null;
   orderNo: string | null;
   styleNo?: string;
@@ -165,7 +166,7 @@ interface SubProcessRow {
 }
 
 export default function SampleProcessList({
-  stages, loading, orderId, orderNo,
+  stages, loading, needsConfig, orderId, orderNo,
   styleNo = '', color = '', quantity, size = '',
   receiver = '', receiveTime = '',
   patternProductionId,
@@ -191,6 +192,7 @@ export default function SampleProcessList({
 
   const subTableData = useMemo<SubProcessRow[]>(() => {
     if (!currentStage) return [];
+    if (needsConfig) return [];
     const isDone = currentStage.percent >= 100;
     const isActive = currentStage.percent > 0 && currentStage.percent < 100;
     let qtyLabel = '-';
@@ -238,7 +240,7 @@ export default function SampleProcessList({
         unitPrice: sub.unitPrice,
       };
     });
-  }, [currentStage, styleNo, color, size, quantity, receiver, receiveTime]);
+  }, [currentStage, needsConfig, styleNo, color, size, quantity, receiver, receiveTime]);
 
   const handleManualComplete = useCallback(async (row: SubProcessRow) => {
     if (!patternProductionId) {
@@ -595,6 +597,16 @@ export default function SampleProcessList({
           );
         })}
       </div>
+
+      {needsConfig ? (
+        <Alert
+          type="warning"
+          showIcon
+          message="该款号尚未配置子工序"
+          description="请先在「款式工序配置」中添加子工序，配置后才会显示工序列表。"
+          style={{ marginBottom: 12 }}
+        />
+      ) : null}
 
       <Table<SubProcessRow>
         columns={columns}

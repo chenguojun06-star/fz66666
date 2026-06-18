@@ -288,9 +288,9 @@ const ColorCardPage: React.FC = () => {
 
   const handleGenerateMaterials = async (card: ColorCard) => {
     Modal.confirm({
-      title: '确认生成物料',
-      content: `将把色卡本"${card.colorCardName}"下的所有颜色条目生成到物料资料库，每条颜色对应一条物料记录。是否继续？`,
-      okText: '确认生成',
+      title: '确认收录到物料库',
+      content: `将把色卡本"${card.colorCardName}"作为一条物料记录收录到物料库，颜色信息保留在色卡本中。是否继续？`,
+      okText: '确认收录',
       cancelText: '取消',
       onOk: async () => {
         try {
@@ -298,7 +298,7 @@ const ColorCardPage: React.FC = () => {
             `/color-card/${card.id}/generate-materials`, {},
           );
           if (res.code === 200) {
-            antdMessage.success(`成功生成 ${res.data.length} 条物料记录`);
+            antdMessage.success('已成功收录，一本色卡 = 一条物料记录');
           }
         } catch (err: any) {
           antdMessage.error(err?.message || '生成失败');

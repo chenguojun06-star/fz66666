@@ -239,11 +239,11 @@ const UserList: React.FC = () => {
                         },
                         {
                           key: 'role',
-                          label: '职位',
+                          label: '角色',
                           type: 'select',
                           width: 150,
                           options: [
-                            { label: '全部职位', value: '' },
+                            { label: '全部角色', value: '' },
                             ...roleOptions.map(r => ({
                               label: r.roleName || '系统角色',
                               value: String(r.id),
@@ -340,18 +340,15 @@ const UserList: React.FC = () => {
                 </Form.Item>
               </Col>
               <Col span={8}>
+                <Form.Item name="position" label="职位">
+                  <Input placeholder="如：缝纫一组组长、车间主任" />
+                </Form.Item>
+              </Col>
+              <Col span={8}>
                 <Form.Item name="gender" label="性别">
                   <Select placeholder="请选择性别" allowClear>
                     <Option value="male">男</Option>
                     <Option value="female">女</Option>
-                  </Select>
-                </Form.Item>
-              </Col>
-              <Col span={8}>
-                <Form.Item name="status" label="状态" rules={formRules.status}>
-                  <Select placeholder="请选择状态">
-                    <Option value="active">启用</Option>
-                    <Option value="inactive">停用</Option>
                   </Select>
                 </Form.Item>
               </Col>
@@ -380,12 +377,20 @@ const UserList: React.FC = () => {
             </Row>
 
             <Row gutter={16} className="mt-sm">
-              <Col span={16}>
+              <Col span={8}>
                 <Form.Item name="permissionRange" label="数据权限" rules={formRules.permissionRange}>
                   <Select placeholder="请选择数据权限范围">
                     <Option value="all"><Tag color="blue" style={{ marginRight: 4 }}>全部</Tag>查看全厂数据</Option>
                     <Option value="team"><Tag color="green" style={{ marginRight: 4 }}>团队</Tag>查看团队数据</Option>
                     <Option value="own"><Tag color="orange" style={{ marginRight: 4 }}>个人</Tag>仅查看自己数据</Option>
+                  </Select>
+                </Form.Item>
+              </Col>
+              <Col span={8}>
+                <Form.Item name="status" label="状态" rules={formRules.status}>
+                  <Select placeholder="请选择状态">
+                    <Option value="active">启用</Option>
+                    <Option value="inactive">停用</Option>
                   </Select>
                 </Form.Item>
               </Col>

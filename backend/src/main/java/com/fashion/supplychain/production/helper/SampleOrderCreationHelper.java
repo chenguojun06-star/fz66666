@@ -119,9 +119,8 @@ public class SampleOrderCreationHelper {
         String workflow = cuttingWorkflowBuilderHelper.buildProgressWorkflowJson(pattern.getStyleNo());
         if (StringUtils.hasText(workflow)) {
             order.setProgressWorkflowJson(workflow);
-        } else {
-            order.setProgressWorkflowJson(buildSampleDefaultWorkflow());
         }
+        // 未配置子工序时不塞默认流程，progressWorkflowJson 留空，由前端提醒用户配置
 
         return order;
     }

@@ -151,6 +151,11 @@ public class McpSseController {
                     toolReq.setArguments(args);
                     result = mcpProtocolService.callTool(toolReq);
                 }
+                case "resources/list" -> result = mcpProtocolService.listResources();
+                case "resources/read" -> {
+                    String uri = (String) params.get("uri");
+                    result = mcpProtocolService.readResource(uri);
+                }
                 default -> result = Map.of("error", Map.of("code", -32601, "message", "Method not found: " + method));
             }
 

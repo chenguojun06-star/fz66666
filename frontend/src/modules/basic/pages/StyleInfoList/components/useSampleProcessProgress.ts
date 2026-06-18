@@ -25,6 +25,7 @@ export interface SampleProcessProgressData {
   orderNo: string | null;
   stages: ProcessStageProgress[];
   loading: boolean;
+  needsConfig: boolean;
   trackingStats?: Record<string, { completed: number; total: number }>;
   refresh: () => Promise<void>;
   completeProcess: (processCode: string) => Promise<void>;
@@ -238,11 +239,14 @@ export default function useSampleProcessProgress(
     await loadProgress();
   }, [orderId, loadProgress]);
 
+  const needsConfig = !loading && workflowNodes.length === 0;
+
   return {
     orderId,
     orderNo,
     stages,
     loading,
+    needsConfig,
     trackingStats,
     refresh: loadProgress,
     completeProcess,

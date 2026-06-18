@@ -55,4 +55,6 @@ public class ColorCard {
 
     @TableField(fill = FieldFill.INSERT)
     private Long tenantId;
+
+    private String materialId;
 }

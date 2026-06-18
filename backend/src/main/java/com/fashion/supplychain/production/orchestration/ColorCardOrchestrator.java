@@ -8,7 +8,7 @@ import com.fashion.supplychain.production.entity.ColorCardItem;
 import com.fashion.supplychain.production.entity.MaterialDatabase;
 import com.fashion.supplychain.production.mapper.ColorCardItemMapper;
 import com.fashion.supplychain.production.mapper.ColorCardMapper;
-import com.fashion.supplychain.production.mapper.MaterialDatabaseMapper;
+import com.fashion.supplychain.production.service.MaterialDatabaseService;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -42,7 +42,7 @@ public class ColorCardOrchestrator {
     private ColorCardItemMapper colorCardItemMapper;
 
     @Autowired
-    private MaterialDatabaseMapper materialDatabaseMapper;
+    private MaterialDatabaseService materialDatabaseService;
 
     // ==================== 色卡本 CRUD ====================
 
@@ -284,52 +284,98 @@ public class ColorCardOrchestrator {
     // ==================== 批量生成物料 ====================
 
     /**
-     * 将色卡本下所有颜色条目批量生成到 t_material_database
-     * 每条颜色条目 → 一条物料记录
+     * 将色卡本收录为一条物料记录（每本一料，不再每色一料）
+     * 颜色信息保留在 t_color_card_item 中，物料库只生成一条记录
      */
     @Transactional(rollbackFor = Exception.class)
     public List<String> generateMaterialsFromCard(String cardId) {
         ColorCard card = getCardById(cardId);
         List<ColorCardItem> items = colorCardItemMapper.selectByCardId(cardId);
         if (items == null || items.isEmpty()) {
-            throw new IllegalStateException("色卡本下暂无颜色条目");
+            throw new IllegalStateException("色卡本下暂无颜色条目，请先添加颜色");
         }
 
-        List<String> generatedIds = new ArrayList<>();
-        LocalDateTime now = LocalDateTime.now();
-        int seq = 1;
-        for (ColorCardItem item : items) {
-            MaterialDatabase md = new MaterialDatabase();
-            md.setId(UUID.randomUUID().toString().replace("-", ""));
-            md.setMaterialCode(card.getColorCardCode() + "-" + item.getColorNo());
-            md.setMaterialName(StringUtils.hasText(item.getColorName())
-                    ? card.getColorCardName() + " " + item.getColorName()
-                    : card.getColorCardName() + " " + item.getColorNo());
-            md.setMaterialType(card.getMaterialType());
-            md.setColor(StringUtils.hasText(item.getColorName()) ? item.getColorName() : item.getColorNo());
-            md.setFabricWidth(card.getFabricWidth());
-            md.setFabricWeight(card.getFabricWeight());
-            md.setFabricComposition(card.getFabricComposition());
-            md.setSpecifications(card.getSpecifications());
-            md.setUnit(card.getUnit());
-            md.setSupplierId(card.getSupplierId());
-            md.setSupplierName(card.getSupplierName());
-            md.setSupplierContactPerson(card.getSupplierContactPerson());
-            md.setSupplierContactPhone(card.getSupplierContactPhone());
-            md.setUnitPrice(item.getUnitPrice());
-            md.setImage(item.getImage());
-            md.setRemark(StringUtils.hasText(item.getRemark()) ? item.getRemark() : card.getRemark());
-            md.setStatus("pending");
-            md.setTenantId(card.getTenantId());
-            md.setDeleteFlag(0);
-            md.setCreateTime(now);
-            md.setUpdateTime(now);
-            materialDatabaseMapper.insert(md);
-            generatedIds.add(md.getId());
-            seq++;
+        // 如果已有物料关联，直接返回，不再重复生成
+        if (StringUtils.hasText(card.getMaterialId())) {
+            log.info("[COLOR-CARD-GENERATE] cardId={} 已关联物料={}，跳过重复生成", cardId, card.getMaterialId());
+            List<String> result = new ArrayList<>();
+            result.add(card.getMaterialId());
+            return result;
         }
-        log.info("[COLOR-CARD-GENERATE] cardId={}, generated={} materials", cardId, generatedIds.size());
+
+        // 按统一编码规则生成物料编号
+        String materialCode = materialDatabaseService.generateMaterialCode(card.getMaterialType());
+
+        // 生成一条物料记录，将颜色信息挂在备注或依赖于色卡本表
+        StringBuilder colorSummary = new StringBuilder();
+        for (ColorCardItem item : items) {
+            if (colorSummary.length() > 0) colorSummary.append("、");
+            colorSummary.append(item.getColorNo());
+            if (item.getColorName() != null) colorSummary.append("(").append(item.getColorName()).append(")");
+        }
+
+        MaterialDatabase md = new MaterialDatabase();
+        md.setId(UUID.randomUUID().toString().replace("-", ""));
+        md.setMaterialCode(materialCode);
+        md.setMaterialName(card.getColorCardName());
+        md.setMaterialType(card.getMaterialType());
+        md.setFabricWidth(card.getFabricWidth());
+        md.setFabricWeight(card.getFabricWeight());
+        md.setFabricComposition(card.getFabricComposition());
+        md.setSpecifications(card.getSpecifications());
+        md.setUnit(card.getUnit());
+        md.setSupplierId(card.getSupplierId());
+        md.setSupplierName(card.getSupplierName());
+        md.setSupplierContactPerson(card.getSupplierContactPerson());
+        md.setSupplierContactPhone(card.getSupplierContactPhone());
+        md.setImage(card.getImage());
+        md.setRemark(StringUtils.hasText(card.getRemark())
+                ? "色卡本物料，颜色：" + colorSummary + " | " + card.getRemark()
+                : "色卡本物料，颜色：" + colorSummary);
+        md.setStatus("pending");
+        md.setIsColorCard(1);
+        md.setSourceColorCardId(cardId);
+        md.setTenantId(card.getTenantId());
+        md.setDeleteFlag(0);
+        md.setCreateTime(LocalDateTime.now());
+        md.setUpdateTime(LocalDateTime.now());
+        materialDatabaseService.save(md);
+
+        // 回写色卡本的 materialId，实现双向关联
+        ColorCard patch = new ColorCard();
+        patch.setId(cardId);
+        patch.setMaterialId(md.getId());
+        patch.setUpdateTime(LocalDateTime.now());
+        colorCardMapper.updateById(patch);
+
+        log.info("[COLOR-CARD-GENERATE] cardId={} 生成物料={}，共{}种颜色", cardId, materialCode, items.size());
+
+        List<String> generatedIds = new ArrayList<>();
+        generatedIds.add(md.getId());
         return generatedIds;
+    }
+
+    /**
+     * 根据物料ID查询色卡本详情及全部颜色条目
+     */
+    public ColorCardWithItems getCardDetailByMaterialId(String materialId) {
+        if (!StringUtils.hasText(materialId)) {
+            throw new IllegalArgumentException("materialId不能为空");
+        }
+        Long tenantId = UserContext.tenantId();
+        ColorCard card = colorCardMapper.selectOne(
+                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<ColorCard>()
+                        .eq(ColorCard::getMaterialId, materialId.trim())
+                        .eq(ColorCard::getTenantId, tenantId)
+                        .and(w -> w.isNull(ColorCard::getDeleteFlag).or().eq(ColorCard::getDeleteFlag, 0)));
+        if (card == null) {
+            throw new NoSuchElementException("该物料非色卡本来源");
+        }
+        List<ColorCardItem> items = colorCardItemMapper.selectByCardId(card.getId());
+        ColorCardWithItems result = new ColorCardWithItems();
+        result.setCard(card);
+        result.setItems(items);
+        return result;
     }
 
     // ==================== 辅助 ====================

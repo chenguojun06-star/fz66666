@@ -1,7 +1,7 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-06-13
+> 最后更新：2026-06-18
 
 ---
 
@@ -12,8 +12,52 @@
 - ✅ ProductionOrderController 深度审查
 - ✅ 安全审计修复（微信支付回调签名验证 + 数据库密码校验 + HTTPS 强制）
 - ✅ 小云AI全面智能化升级（8大优化模块，2026-06-13完成）
+- ✅ 小云AI CL4R1T4S 借鉴升级（6项优化，2026-06-18完成）
 
 ## 最近变更
+
+### 2026-06-18 小云AI CL4R1T4S 借鉴升级（6项优化）
+
+**借鉴来源**：CL4R1T4S 仓库 CLAUDE-FABLE-5.md（三大设计哲学：Prompt工程/MCP工具调用/记忆系统）
+
+| 优先级 | 优化模块 | 核心变更 | 效果 |
+|--------|---------|---------|------|
+| P0-1 | SelfCritiqueGate 输出前硬门控 | 新建 SelfCritiqueGate.java，接入 AgentLoopEngine.handleFinalAnswer | 三档决策 PASS/SOFT_FAIL/HARD_FAIL，堵住幻觉输出 |
+| P0-2 | memory_limitations 上下文块 | AiAgentPromptHelper 新增 buildMemoryLimitationsBlock() | AI 显式知道四层记忆边界，减少越界回答 |
+| P0-3 | 响应延迟优化 | 5项同步操作改异步 + 线程池扩容 + 缓存阈值降低 + Checkpoint异步 + MAS缓存 | PostTurnHooks 不再阻塞主流程，响应时间显著缩短 |
+| P1-1 | HIGH_RISK 工具 opt-in + 反例规则 | buildConfirmMessage 结构化 + TTL 60→300 + YAML 7条反例规则 + PromptTemplateLoader.getToolAntiPatterns | HIGH_RISK 工具确认更清晰，AI 遵守反例规则 |
+| P1-2 | 上下文块意图动态优先级 | 新建 IntentBasedPriorityRouter.java，接入 AiAgentPromptHelper | 意图相关块不被缩减，复杂场景上下文完整度提升 |
+| P2-1 | EvolutionOrchestrator 统一12组件 | 新建 EvolutionOrchestrator.java，统一 metrics 汇总 + 健康巡检 + 补 MemoryNudge @Scheduled | 解决"自我进化空转"，12组件可观测 |
+| P2-2 | MCP resources 启用 | McpCapabilities.resources=true + 3个ResourceProvider + SSE/HTTP路由 | 小云成为可被外部编排的能力节点（memory:// knowledge:// factory://） |
+
+**新增文件**（7个）：
+- `intelligence/orchestration/SelfCritiqueGate.java` — 输出前硬门控
+- `intelligence/helper/IntentBasedPriorityRouter.java` — 意图动态优先级
+- `intelligence/orchestration/EvolutionOrchestrator.java` — 统一进化编排
+- `intelligence/agent/resource/McpResourceProvider.java` — MCP Resource 接口
+- `intelligence/agent/resource/MemoryBankResourceProvider.java` — 5类记忆暴露
+- `intelligence/agent/resource/KnowledgeBaseResourceProvider.java` — 知识库暴露
+- `intelligence/agent/resource/FactoryProfileResourceProvider.java` — 工厂画像暴露
+
+**修改文件**（10个）：
+- `intelligence/helper/XiaoyunPatterns.java` — 迭代上限降低（5→3/8→6/6→4）
+- `intelligence/service/SemanticCacheService.java` — 缓存阈值 0.92→0.86
+- `intelligence/helper/AiAgentPromptHelper.java` — 线程池扩容 + memory_limitations + 反例规则 + 意图路由
+- `intelligence/orchestration/AiAgentOrchestrator.java` — PostTurnHooks 异步化
+- `intelligence/helper/PromptContextProvider.java` — MAS 缓存 30s
+- `intelligence/agent/checkpoint/AgentCheckpointManager.java` — Checkpoint 异步写
+- `intelligence/agent/loop/AgentLoopEngine.java` — 接入 SelfCritiqueGate
+- `intelligence/helper/AiAgentToolExecHelper.java` — 结构化 suggest payload
+- `intelligence/service/HighRiskAuditService.java` — TTL 60→300
+- `intelligence/service/McpProtocolService.java` — resources 能力开启 + DTO + 方法
+- `intelligence/controller/McpSseController.java` — resources/list + resources/read 路由
+- `intelligence/controller/McpProtocolController.java` — HTTP 端点
+- `intelligence/service/MemoryBankService.java` — Category 添加 public getter
+- `resources/prompts/xiaoyun-base-prompt.yaml` — tool_anti_patterns_text 7条反例
+- `intelligence/helper/PromptTemplateLoader.java` — getToolAntiPatterns()
+- `application.yml` — 缓存阈值 0.92→0.86
+
+**编译验证**：mvn clean compile -q BUILD SUCCESS（3次验证）
 
 ### 2026-06-13 小云AI全面智能化升级（8大优化模块）
 

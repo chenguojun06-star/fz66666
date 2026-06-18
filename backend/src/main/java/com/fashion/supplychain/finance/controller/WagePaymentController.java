@@ -105,7 +105,7 @@ public class WagePaymentController {
      * 删除收款账户
      * DELETE /api/finance/payment-accounts/{id}
      */
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAnyAuthority('ROLE_admin', 'ROLE_ADMIN', 'ROLE_1', 'ROLE_tenant_owner', 'ROLE_管理员', 'ROLE_主管', 'ROLE_SUPER_ADMIN')")
     @DeleteMapping("/payment-accounts/{id}")
     public Result<Void> removeAccount(@PathVariable String id) {
         wagePaymentOrchestrator.removeAccount(id);
@@ -120,7 +120,7 @@ public class WagePaymentController {
      * 发起支付
      * POST /api/finance/wage-payments/initiate
      */
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAnyAuthority('ROLE_admin', 'ROLE_ADMIN', 'ROLE_1', 'ROLE_tenant_owner', 'ROLE_管理员', 'ROLE_主管', 'ROLE_SUPER_ADMIN')")
     @PostMapping("/wage-payments/initiate")
     public Result<WagePayment> initiatePayment(@RequestBody PaymentInitiateRequest request) {
         if (!UserContext.isSupervisorOrAbove()) {
@@ -162,7 +162,7 @@ public class WagePaymentController {
      * 确认线下支付（上传凭证）
      * POST /api/finance/wage-payments/{id}/confirm-offline
      */
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAnyAuthority('ROLE_admin', 'ROLE_ADMIN', 'ROLE_1', 'ROLE_tenant_owner', 'ROLE_管理员', 'ROLE_主管', 'ROLE_SUPER_ADMIN')")
     @PostMapping("/wage-payments/{id}/confirm-offline")
     public Result<WagePayment> confirmOffline(
             @PathVariable String id,

@@ -1,11 +1,24 @@
 # 进度跟踪
 
 > 本文件由 AI 助手自动维护，记录项目开发进度
-> 最后更新：2026-06-11
+> 最后更新：2026-06-18
 
 ---
 
 ## 已完成
+
+### 2026-06-18 小云AI CL4R1T4S 借鉴升级（6项优化）
+- [x] P0-1 SelfCritiqueGate 输出前硬门控（PASS/SOFT_FAIL/HARD_FAIL 三档决策）
+- [x] P0-2 memory_limitations 上下文块（四层记忆边界声明）
+- [x] P0-3 响应延迟优化（PostTurnHooks异步 + 线程池扩容 + 缓存阈值降低 + Checkpoint异步 + MAS缓存）
+- [x] P1-1 HIGH_RISK 工具 opt-in + 7条反例规则（结构化suggest + TTL 60→300）
+- [x] P1-2 上下文块意图动态优先级（IntentBasedPriorityRouter）
+- [x] P2-1 EvolutionOrchestrator 统一12组件 + 量化评估 + 补MemoryNudge @Scheduled
+- [x] P2-2 MCP resources 启用（memory:// knowledge:// factory:// + 3个ResourceProvider）
+- [x] 后端 mvn clean compile -q BUILD SUCCESS（3次验证）
+- [x] 更新 memory-bank/activeContext.md + decisionLog.md + progress.md
+- [x] 新建 optimization-log-20260618.md
+- [x] 新增铁律 D-020（MCP resources 多租户隔离）+ D-021（自我进化组件统一可观测）
 
 ### 2026-06-11
 - [x] 🔴 安全修复：微信支付回调验签逻辑不完整 → 使用 wechatpay-java SDK 实现正确验签

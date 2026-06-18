@@ -302,6 +302,7 @@ public class ProductionOrderController {
     /**
      * 根据ID删除生产订单（RESTful标准）— 非管理员需审批
      */
+    @PreAuthorize("hasAnyAuthority('ROLE_admin', 'ROLE_ADMIN', 'ROLE_1', 'ROLE_tenant_owner', 'ROLE_管理员', 'ROLE_主管', 'ROLE_SUPER_ADMIN')")
     @DeleteMapping("/{id}")
     public Result<?> deleteById(@PathVariable String id,
                                 @RequestParam(required = false) String reason) {

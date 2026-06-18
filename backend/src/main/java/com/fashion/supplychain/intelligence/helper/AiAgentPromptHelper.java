@@ -31,6 +31,7 @@ public class AiAgentPromptHelper {
     @Autowired private PromptContextProvider contextProvider;
     @Autowired private AiAgentToolAccessService aiAgentToolAccessService;
     @Autowired private PromptTemplateLoader promptTemplateLoader;
+    @Autowired private IntentBasedPriorityRouter intentPriorityRouter;
     @Autowired(required = false)
     private com.fashion.supplychain.intelligence.orchestration.XiaoyunCoreUpgrade coreUpgrade;
     @Autowired(required = false)
@@ -142,7 +143,7 @@ public class AiAgentPromptHelper {
         if (prompt.length() > maxSystemPromptChars) {
             int excess = prompt.length() - maxSystemPromptChars;
             log.warn("[AiAgent] systemPrompt过长({}字符 > {}上限)，超出{}字符，按优先级缩减", prompt.length(), maxSystemPromptChars, excess);
-            String[] lowPriorityLabels = {"proceduralMem", "userBehavior", "longTermMem", "masInsight", "contextFile", "selfCritique", "graphRag", "factoryProfile"};
+            String[] lowPriorityLabels = intentPriorityRouter.routeLowPriority(userMessage);
             // 第一轮：缩短低优先级块至200字符
             for (String label : lowPriorityLabels) {
                 if (prompt.length() <= maxSystemPromptChars) break;
@@ -292,6 +293,10 @@ public class AiAgentPromptHelper {
             .append("- 当前用户：").append(userName != null ? userName : "未知").append("\n")
             .append("- 用户角色：").append(userRole != null ? userRole : "普通用户")
             .append(isSuperAdmin ? "（超级管理员）" : isTenantOwner ? "（租户老板）" : isManager ? "（管理人员）" : "（生产员工）").append("\n");
+        String position = UserContext.position();
+        if (position != null && !position.isBlank()) {
+            ctx.append("- 用户职位：").append(position).append("（请据此调整沟通风格与关注点）\n");
+        }
         String permissionRange = UserContext.getDataScope();
         if (permissionRange != null && !permissionRange.isBlank()) {
             String rangeLabel;
@@ -435,6 +440,7 @@ public class AiAgentPromptHelper {
         prompt.append("<!--BLOCK:principles-->").append(promptTemplateLoader.getBasePrinciples()).append("<!--/BLOCK:principles-->\n\n");
         prompt.append(promptTemplateLoader.getCollaborationRules()).append("\n\n");
         prompt.append(promptTemplateLoader.getToolStrategy()).append("\n\n");
+        prompt.append(promptTemplateLoader.getToolAntiPatterns()).append("\n\n");
         prompt.append(promptTemplateLoader.getThinkToolGuide()).append("\n\n");
         prompt.append(promptTemplateLoader.getOutputRequirements()).append("\n\n");
         prompt.append(promptTemplateLoader.getExecutionRules()).append("\n\n");

@@ -5,6 +5,8 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fashion.supplychain.common.ParamUtils;
+import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.constant.MaterialConstants;
 import com.fashion.supplychain.production.entity.MaterialDatabase;
 import com.fashion.supplychain.production.mapper.MaterialDatabaseMapper;
 import com.fashion.supplychain.production.service.MaterialDatabaseService;
@@ -68,24 +70,13 @@ public class MaterialDatabaseServiceImpl extends ServiceImpl<MaterialDatabaseMap
 
     @Override
     public String generateMaterialCode(String materialType) {
-        String prefix;
-        String baseType;
-        if (materialType != null && materialType.toLowerCase().startsWith("lining")) {
-            prefix = "L";
-            baseType = "lining";
-        } else if (materialType != null && materialType.toLowerCase().startsWith("fabric")) {
-            prefix = "M";
-            baseType = "fabric";
-        } else {
-            prefix = "F";
-            baseType = "accessory";
-        }
-
+        String prefix = MaterialConstants.resolveCodePrefix(materialType);
         String dateStr = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
         String codePrefix = prefix + dateStr;
 
         LambdaQueryWrapper<MaterialDatabase> wrapper = new LambdaQueryWrapper<MaterialDatabase>()
                 .eq(MaterialDatabase::getDeleteFlag, 0)
+                .eq(MaterialDatabase::getTenantId, UserContext.tenantId())
                 .likeRight(MaterialDatabase::getMaterialCode, codePrefix)
                 .orderByDesc(MaterialDatabase::getMaterialCode)
                 .last("LIMIT 1");

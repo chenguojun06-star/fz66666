@@ -94,4 +94,14 @@ public class ColorCardController {
     public Result<List<String>> generateMaterials(@PathVariable String cardId) {
         return Result.success(colorCardOrchestrator.generateMaterialsFromCard(cardId));
     }
+
+    // ==================== 色卡本物料查询 ====================
+
+    /**
+     * 根据物料ID查询色卡本详情及全部颜色条目（一本色卡 = 一条物料，颜色为子属性）
+     */
+    @GetMapping("/by-material/{materialId}")
+    public Result<ColorCardOrchestrator.ColorCardWithItems> getCardByMaterialId(@PathVariable String materialId) {
+        return Result.success(colorCardOrchestrator.getCardDetailByMaterialId(materialId));
+    }
 }

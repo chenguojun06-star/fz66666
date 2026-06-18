@@ -294,6 +294,9 @@ public class SecurityConfig implements WebMvcConfigurer {
                 if (subject.getOrgUnitId() != null) {
                     ctx.setOrgUnitId(subject.getOrgUnitId());
                 }
+                if (subject.getPosition() != null) {
+                    ctx.setPosition(subject.getPosition());
+                }
 
             } else {
                 // 回退：从SecurityContext获取基本信息

@@ -236,6 +236,9 @@ public class UserLoginHelper {
         subject.setTenantId(user.getTenantId());
         subject.setTenantOwner(Boolean.TRUE.equals(user.getIsTenantOwner()));
         subject.setSuperAdmin(Boolean.TRUE.equals(user.getIsSuperAdmin()));
+        if (StringUtils.hasText(user.getPosition())) {
+            subject.setPosition(user.getPosition());
+        }
         long pwdVersion = 0L;
         if (stringRedisTemplate != null && user.getId() != null) {
             try {

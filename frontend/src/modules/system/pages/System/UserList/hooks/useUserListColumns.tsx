@@ -71,7 +71,14 @@ export function useUserListColumns(props: UseUserListColumnsProps) {
       render: (v: string) => v || '-',
     },
     {
-      title: '职位权限',
+      title: '职位',
+      dataIndex: 'position',
+      key: 'position',
+      width: 140,
+      render: (v: string) => v ? <Tag color="purple">{v}</Tag> : '-',
+    },
+    {
+      title: '角色权限',
       dataIndex: 'roleName',
       key: 'roleName',
       width: 120,

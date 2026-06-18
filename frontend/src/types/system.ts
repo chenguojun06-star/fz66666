@@ -30,6 +30,8 @@ export interface User extends Record<string, unknown> {
   hireDate?: string;
   /** 在职状态: normal=正式, probation=试用期, temporary=临时工 */
   employmentStatus?: string;
+  /** 职位（如"缝纫一组组长"、"车间主任"），区别于角色 */
+  position?: string;
 }
 
 export interface Role {

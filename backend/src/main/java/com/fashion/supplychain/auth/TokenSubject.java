@@ -123,4 +123,15 @@ public class TokenSubject {
     public void setOrgUnitId(String orgUnitId) {
         this.orgUnitId = orgUnitId;
     }
+
+    /** 职位（如"缝纫一组组长"、"车间主任"），区别于角色权限 */
+    private String position;
+
+    public String getPosition() {
+        return position;
+    }
+
+    public void setPosition(String position) {
+        this.position = position;
+    }
 }

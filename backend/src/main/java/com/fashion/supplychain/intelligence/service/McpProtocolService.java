@@ -1,12 +1,15 @@
 package com.fashion.supplychain.intelligence.service;
 
 import com.fashion.supplychain.intelligence.agent.AiTool;
+import com.fashion.supplychain.intelligence.agent.resource.McpResourceProvider;
 import com.fashion.supplychain.intelligence.agent.tool.AgentTool;
+import com.fashion.supplychain.common.UserContext;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.context.annotation.Lazy;
@@ -34,6 +37,9 @@ public class McpProtocolService {
 
     private final List<AgentTool> registeredTools;
     private final ObjectMapper objectMapper;
+
+    @Autowired(required = false)
+    private List<McpResourceProvider> resourceProviders = Collections.emptyList();
 
     @Value("${spring.application.name:fashion-supplychain}")
     private String appName;
@@ -89,8 +95,8 @@ public class McpProtocolService {
     public static class McpCapabilities {
         /** 是否支持工具调用 */
         private McpCapabilityFlag tools = new McpCapabilityFlag(true, false);
-        /** 是否支持资源访问（暂未实现） */
-        private McpCapabilityFlag resources = new McpCapabilityFlag(false, false);
+        /** 是否支持资源访问（已实现：memory:// / knowledge:// / factory://） */
+        private McpCapabilityFlag resources = new McpCapabilityFlag(true, false);
         /** 是否支持提示词模板（暂未实现） */
         private McpCapabilityFlag prompts = new McpCapabilityFlag(false, false);
     }
@@ -109,6 +115,28 @@ public class McpProtocolService {
         private String name;
         private String version;
         McpServerInfo(String name, String version) { this.name = name; this.version = version; }
+    }
+
+    /** MCP resource 元数据（resources/list 响应项） */
+    @Data
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public static class McpResource {
+        private String uri;
+        private String name;
+        private String description;
+        private String mimeType;
+    }
+
+    /** MCP resources/list 响应 */
+    @Data
+    public static class McpResourcesResponse {
+        private List<McpResource> resources;
+    }
+
+    /** MCP resources/read 响应 */
+    @Data
+    public static class McpResourceReadResult {
+        private List<Map<String, Object>> contents;
     }
 
     // ─────────────────────────────────────────────────────────────────────
@@ -172,6 +200,89 @@ public class McpProtocolService {
             log.warn("[McpProtocol] callTool {} failed: {}", request.getName(), e.getMessage());
         }
         return result;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // 私有：工具 → MCP 格式转换
+    // ─────────────────────────────────────────────────────────────────────
+
+    /**
+     * 列出所有可用资源（MCP resources/list）。
+     *
+     * <p>聚合所有 {@link McpResourceProvider} 的资源列表。
+     * 多租户隔离：从 {@link UserContext#tenantId()} 获取当前租户。
+     */
+    public McpResourcesResponse listResources() {
+        McpResourcesResponse response = new McpResourcesResponse();
+        Long tenantId = safeTenantId();
+        List<McpResource> all = new ArrayList<>();
+        for (McpResourceProvider provider : resourceProviders) {
+            try {
+                all.addAll(provider.listResources(tenantId));
+            } catch (Exception e) {
+                log.warn("[McpProtocol] listResources provider={} failed: {}",
+                        provider.getClass().getSimpleName(), e.getMessage());
+            }
+        }
+        response.setResources(all);
+        return response;
+    }
+
+    /**
+     * 读取指定 URI 的资源内容（MCP resources/read）。
+     *
+     * <p>按 URI 前缀路由到对应的 {@link McpResourceProvider}。
+     * 多租户隔离：从 {@link UserContext#tenantId()} 获取当前租户。
+     */
+    public McpResourceReadResult readResource(String uri) {
+        if (uri == null || uri.isBlank()) {
+            McpResourceReadResult err = new McpResourceReadResult();
+            err.setContents(List.of(Map.of(
+                    "uri", "",
+                    "mimeType", "text/plain",
+                    "text", "URI 不能为空"
+            )));
+            return err;
+        }
+
+        Long tenantId = safeTenantId();
+        for (McpResourceProvider provider : resourceProviders) {
+            if (provider.supports(uri)) {
+                try {
+                    return provider.readResource(uri, tenantId);
+                } catch (Exception e) {
+                    log.warn("[McpProtocol] readResource uri={} provider={} failed: {}",
+                            uri, provider.getClass().getSimpleName(), e.getMessage());
+                    McpResourceReadResult err = new McpResourceReadResult();
+                    err.setContents(List.of(Map.of(
+                            "uri", uri,
+                            "mimeType", "text/plain",
+                            "text", "读取失败：" + e.getMessage()
+                    )));
+                    return err;
+                }
+            }
+        }
+
+        McpResourceReadResult notFound = new McpResourceReadResult();
+        notFound.setContents(List.of(Map.of(
+                "uri", uri,
+                "mimeType", "text/plain",
+                "text", "无 Provider 支持该 URI：" + uri
+        )));
+        return notFound;
+    }
+
+    /**
+     * 安全获取当前租户 ID（MCP 端点可能无用户上下文，降级为 1L）。
+     */
+    private Long safeTenantId() {
+        try {
+            Long tid = UserContext.tenantId();
+            return tid != null ? tid : 1L;
+        } catch (Exception e) {
+            return 1L;
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────

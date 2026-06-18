@@ -327,7 +327,8 @@ public class PatternEnrichmentHelper {
                 .orderByAsc(StyleProcess::getId);
         List<StyleProcess> processes = styleProcessService.list(wrapper);
         if (processes == null || processes.isEmpty()) {
-            return resolveFromTemplate(pattern);
+            // 未配置子工序时返回空，由前端提醒用户配置，不再走模板兜底硬塞默认流程
+            return Collections.emptyList();
         }
 
         List<Map<String, Object>> result = new ArrayList<>();
@@ -355,7 +356,8 @@ public class PatternEnrichmentHelper {
         }
 
         if (result.isEmpty()) {
-            return resolveFromTemplate(pattern);
+            // 子工序数据存在但全部无有效名称，同样返回空由前端提醒配置
+            return Collections.emptyList();
         }
         return result;
     }

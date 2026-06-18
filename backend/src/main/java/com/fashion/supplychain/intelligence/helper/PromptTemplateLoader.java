@@ -57,6 +57,10 @@ public class PromptTemplateLoader {
         return getSection("xiaoyun-base-prompt", "tool_strategy_text");
     }
 
+    public String getToolAntiPatterns() {
+        return getSection("xiaoyun-base-prompt", "tool_anti_patterns_text");
+    }
+
     public String getThinkToolGuide() {
         return getSection("xiaoyun-base-prompt", "think_tool_guide_text");
     }

@@ -53,20 +53,20 @@ public class PayableController {
         return Result.success(payableOrchestrator.create(payable));
     }
 
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAnyAuthority('ROLE_admin', 'ROLE_ADMIN', 'ROLE_1', 'ROLE_tenant_owner', 'ROLE_管理员', 'ROLE_主管', 'ROLE_SUPER_ADMIN')")
     @PostMapping("/{id}/mark-paid")
     public Result<Payable> markPaid(@PathVariable String id,
                                     @RequestParam(required = false) BigDecimal amount) {
         return Result.success(payableOrchestrator.markPaid(id, amount));
     }
 
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAnyAuthority('ROLE_admin', 'ROLE_ADMIN', 'ROLE_1', 'ROLE_tenant_owner', 'ROLE_管理员', 'ROLE_主管', 'ROLE_SUPER_ADMIN')")
     @PostMapping("/mark-overdue")
     public Result<Integer> markOverdue() {
         return Result.success(payableOrchestrator.markOverdue());
     }
 
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAnyAuthority('ROLE_admin', 'ROLE_ADMIN', 'ROLE_1', 'ROLE_tenant_owner', 'ROLE_管理员', 'ROLE_主管', 'ROLE_SUPER_ADMIN')")
     @DeleteMapping("/{id}")
     public Result<Void> delete(@PathVariable String id) {
         payableOrchestrator.delete(id);

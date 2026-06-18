@@ -27,6 +27,9 @@ public class UserContext {
     /** 所属组织单元ID（用于team数据权限过滤） */
     private String orgUnitId;
 
+    /** 职位（如"缝纫一组组长"、"车间主任"），区别于角色权限 */
+    private String position;
+
     public static void set(UserContext ctx) {
         HOLDER.set(ctx);
     }
@@ -210,6 +213,7 @@ public class UserContext {
         copy.setSuperAdmin(this.superAdmin);
         copy.setFactoryId(this.factoryId);
         copy.setOrgUnitId(this.orgUnitId);
+        copy.setPosition(this.position);
         return copy;
     }
 
@@ -363,5 +367,19 @@ public class UserContext {
 
     public void setOrgUnitId(String orgUnitId) {
         this.orgUnitId = orgUnitId;
+    }
+
+    /** 获取当前用户职位（如"缝纫一组组长"、"车间主任"），可用于个性化对话 */
+    public static String position() {
+        UserContext ctx = get();
+        return ctx == null ? null : ctx.getPosition();
+    }
+
+    public String getPosition() {
+        return position;
+    }
+
+    public void setPosition(String position) {
+        this.position = position;
     }
 }

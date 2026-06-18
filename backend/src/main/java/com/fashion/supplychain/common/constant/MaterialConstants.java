@@ -24,6 +24,33 @@ public class MaterialConstants {
     public static final String TYPE_LINING_CN = "里料";
     public static final String TYPE_ACCESSORY_CN = "辅料";
 
+    // ==================== 物料编码前缀（全局统一规则）====================
+    /** 面料前缀 */
+    public static final String CODE_PREFIX_FABRIC = "M";
+    /** 里料前缀 */
+    public static final String CODE_PREFIX_LINING = "L";
+    /** 辅料前缀 */
+    public static final String CODE_PREFIX_ACCESSORY = "F";
+
+    /**
+     * 根据物料类型解析编码前缀字母（全局统一规则）。
+     * 面料(fabric*) → M，里料(lining*) → L，其他(含 accessory) → F。
+     * 所有物料新增入口（物料管理/BOM/裁剪BOM/色卡本/模板）统一调用此方法。
+     */
+    public static String resolveCodePrefix(String materialType) {
+        if (materialType == null) {
+            return CODE_PREFIX_ACCESSORY;
+        }
+        String lower = materialType.trim().toLowerCase();
+        if (lower.startsWith("lining")) {
+            return CODE_PREFIX_LINING;
+        }
+        if (lower.startsWith("fabric")) {
+            return CODE_PREFIX_FABRIC;
+        }
+        return CODE_PREFIX_ACCESSORY;
+    }
+
     // ==================== 业务规则常量 ====================
     public static final int DATE_LENGTH_FULL = 19;
     public static final int DATE_LENGTH_MINUTE = 16;

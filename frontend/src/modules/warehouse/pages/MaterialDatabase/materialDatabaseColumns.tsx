@@ -17,11 +17,12 @@ export interface MaterialColumnActions {
   handleReturn: (record: MaterialDatabase) => void;
   handleDisable: (record: MaterialDatabase) => void;
   handleEnable: (record: MaterialDatabase) => void;
+  viewColorItems: (record: MaterialDatabase) => void;
   user: any;
 }
 
 export const getMaterialDatabaseColumns = (actions: MaterialColumnActions): ColumnsType<MaterialDatabase> => {
-  const { openDialog, handleComplete, handleDelete, handleReturn, handleDisable, handleEnable, user } = actions;
+  const { openDialog, handleComplete, handleDelete, handleReturn, handleDisable, handleEnable, viewColorItems, user } = actions;
 
   return [
     {
@@ -69,6 +70,22 @@ export const getMaterialDatabaseColumns = (actions: MaterialColumnActions): Colu
         const st = String(v || 'pending').trim().toLowerCase();
         if (st === 'completed') return <Tag color="default">已完成</Tag>;
         return <Tag color="warning">待完成</Tag>;
+      },
+    },
+    {
+      title: '标签', key: 'tags', width: 110,
+      render: (_: unknown, record: MaterialDatabase) => {
+        const isColorCard = (record as any).isColorCard === 1;
+        if (!isColorCard) return <span style={{ color: 'var(--color-text-tertiary)' }}>-</span>;
+        return (
+          <Tag
+            color="geekblue"
+            style={{ cursor: 'pointer' }}
+            onClick={() => viewColorItems(record)}
+          >
+            色卡本物料
+          </Tag>
+        );
       },
     },
     {

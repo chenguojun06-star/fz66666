@@ -48,6 +48,9 @@ public class MemoryBankService {
             this.key = key;
             this.description = description;
         }
+
+        public String getKey() { return key; }
+        public String getDescription() { return description; }
     }
 
     public String read(Long tenantId, Category category) {

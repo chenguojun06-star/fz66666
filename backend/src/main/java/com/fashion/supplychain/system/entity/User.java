@@ -116,6 +116,9 @@ public class User {
 
     private String employmentStatus;
 
+    /** 职位（如"缝纫一组组长"、"车间主任"），区别于 roleName（角色权限） */
+    private String position;
+
     public interface Create {}
     public interface Register {}
 }

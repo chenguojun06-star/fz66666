@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Button, Card, Input, Select, Form, Row, Col, InputNumber } from 'antd';
+import { Button, Card, Input, Select, Form, Row, Col, InputNumber, Modal, Tag, message, Drawer } from 'antd';
 import { PrinterOutlined } from '@ant-design/icons';
-import StandardModal from '@/components/common/StandardModal';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
 import RejectReasonModal from '@/components/common/RejectReasonModal';
 import StandardToolbar from '@/components/common/StandardToolbar';
@@ -73,8 +72,31 @@ const MaterialDatabasePage: React.FC = () => {
     handleDisable, handleEnable, toLocalDateTimeInputValue,
   } = useMaterialDatabaseActions({ dataList, fetchList });
 
+  const [colorItemsVisible, setColorItemsVisible] = useState(false);
+  const [colorItemsData, setColorItemsData] = useState<any>(null);
+  const [colorItemsLoading, setColorItemsLoading] = useState(false);
+
+  const viewColorItems = useCallback(async (record: MaterialDatabase) => {
+    if (!record?.id) return;
+    setColorItemsLoading(true);
+    try {
+      const res = await api.get<any>(`/color-card/by-material/${record.id}`);
+      const result = res as any;
+      if (result.code === 200) {
+        setColorItemsData(result.data);
+        setColorItemsVisible(true);
+      } else {
+        message.error(result.message || '加载失败');
+      }
+    } catch (e: any) {
+      message.error(e?.message || '加载失败');
+    } finally {
+      setColorItemsLoading(false);
+    }
+  }, []);
+
   const columns = getMaterialDatabaseColumns({
-    openDialog, handleComplete, handleDelete, handleReturn, handleDisable, handleEnable, user,
+    openDialog, handleComplete, handleDelete, handleReturn, handleDisable, handleEnable, viewColorItems, user,
   });
 
   // ===== 打印功能 =====
@@ -291,9 +313,12 @@ const MaterialDatabasePage: React.FC = () => {
           pagination={{ ...pagination, simple: false, showTotal: (t) => `共 ${t} 条`, showSizeChanger: true, pageSizeOptions: ['20', '50', '100', '200'], onChange, size: isMobile ? 'small' : 'default' }}
         />
       </Card>
-      <StandardModal
+      <Drawer
         title={currentMaterial?.id ? '编辑物料信息' : (currentMaterial ? '复制物料信息' : '新增物料信息')}
-        open={visible} onCancel={closeDialog} size="lg"
+        open={visible}
+        onClose={closeDialog}
+        width="85%"
+        bodyStyle={{ padding: 16 }}
         footer={[
           <Button key="cancel" onClick={closeDialog}>取消</Button>,
           <Button key="submit" type="primary" loading={submitLoading} onClick={() => handleSubmit()}>
@@ -428,13 +453,53 @@ const MaterialDatabasePage: React.FC = () => {
             </Col>
           </Row>
         </Form>
-      </StandardModal>
+      </Drawer>
       <RejectReasonModal
         open={returnTarget !== null} title="确认退回编辑"
         description="退回后该物料将恢复为待处理状态，可重新编辑。"
         fieldLabel="退回原因" placeholder="请填写退回原因（可选）" required={false}
         okText="确认退回" loading={returnLoading} onOk={handleReturnConfirm} onCancel={() => setReturnTarget(null)}
       />
+      <Modal
+        title={
+          colorItemsData?.card?.colorCardName
+            ? `色卡本 "${colorItemsData.card.colorCardName}" - 颜色详情`
+            : '色卡本颜色详情'
+        }
+        open={colorItemsVisible}
+        onCancel={() => setColorItemsVisible(false)}
+        footer={null}
+        width={720}
+      >
+        {colorItemsLoading && <div style={{ textAlign: 'center', padding: 20, color: 'var(--color-text-secondary)' }}>加载中...</div>}
+        {!colorItemsLoading && colorItemsData?.card && (
+          <>
+            <div style={{ marginBottom: 16, color: 'var(--color-text-secondary)', fontSize: 13 }}>
+              色卡本编号：{colorItemsData.card.colorCardCode || '-'} · 共 {Array.isArray(colorItemsData.items) ? colorItemsData.items.length : 0} 种颜色
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {Array.isArray(colorItemsData.items) && colorItemsData.items.map((item: any, idx: number) => (
+                <Card key={item.id || idx} size="small" style={{ border: '1px solid var(--color-border)' }}>
+                  <Row gutter={12} align="middle">
+                    <Col xs={24} sm={2} style={{ fontWeight: 600, color: '#1677ff' }}>#{idx + 1}</Col>
+                    <Col xs={24} sm={5}>颜色编号：{item.colorNo || '-'}</Col>
+                    <Col xs={24} sm={5}>颜色名称：{item.colorName || '-'}</Col>
+                    <Col xs={24} sm={6}>
+                      {item.unitPrice != null && item.unitPrice !== undefined ? `单价：${item.unitPrice} 元` : '-'}
+                    </Col>
+                    <Col xs={24} sm={6} style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>
+                      {item.remark || ''}
+                    </Col>
+                  </Row>
+                </Card>
+              ))}
+              {Array.isArray(colorItemsData.items) && colorItemsData.items.length === 0 && (
+                <div style={{ textAlign: 'center', padding: 40, color: 'var(--color-text-tertiary)' }}>暂无颜色信息</div>
+              )}
+            </div>
+          </>
+        )}
+      </Modal>
     </>
   );
 };
