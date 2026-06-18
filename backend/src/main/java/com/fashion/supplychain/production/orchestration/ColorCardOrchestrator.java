@@ -74,7 +74,7 @@ public class ColorCardOrchestrator {
     /** 获取色卡本 + 其下所有颜色条目 */
     public ColorCardWithItems getCardDetail(String id) {
         ColorCard card = getCardById(id);
-        List<ColorCardItem> items = colorCardItemMapper.selectByCardId(card.getId());
+        List<ColorCardItem> items = colorCardItemMapper.selectByCardId(card.getId(), card.getTenantId());
         ColorCardWithItems result = new ColorCardWithItems();
         result.setCard(card);
         result.setItems(items);
@@ -146,11 +146,7 @@ public class ColorCardOrchestrator {
     @Transactional(rollbackFor = Exception.class)
     public boolean deleteCard(String id) {
         if (!StringUtils.hasText(id)) throw new IllegalArgumentException("id不能为空");
-        ColorCard current = colorCardMapper.selectById(id.trim());
-        if (current == null || (current.getDeleteFlag() != null && current.getDeleteFlag() != 0)) {
-            log.warn("[COLOR-CARD-DELETE] id={} already deleted", id);
-            return true;
-        }
+        ColorCard current = getCardById(id.trim());
         // 软删除色卡本
         ColorCard patch = new ColorCard();
         patch.setId(current.getId());
@@ -158,7 +154,7 @@ public class ColorCardOrchestrator {
         patch.setUpdateTime(LocalDateTime.now());
         colorCardMapper.updateById(patch);
         // 软删除全部颜色条目
-        colorCardItemMapper.deleteByCardId(current.getId());
+        colorCardItemMapper.deleteByCardIdAndTenantId(current.getId(), current.getTenantId());
         return true;
     }
 
@@ -171,7 +167,7 @@ public class ColorCardOrchestrator {
         if (items == null) items = new ArrayList<>();
 
         // 先软删除原有条目
-        colorCardItemMapper.deleteByCardId(cardId);
+        colorCardItemMapper.deleteByCardIdAndTenantId(cardId, card.getTenantId());
 
         // 新增
         int sortIdx = 0;
@@ -290,7 +286,7 @@ public class ColorCardOrchestrator {
     @Transactional(rollbackFor = Exception.class)
     public List<String> generateMaterialsFromCard(String cardId) {
         ColorCard card = getCardById(cardId);
-        List<ColorCardItem> items = colorCardItemMapper.selectByCardId(cardId);
+        List<ColorCardItem> items = colorCardItemMapper.selectByCardId(cardId, card.getTenantId());
         if (items == null || items.isEmpty()) {
             throw new IllegalStateException("色卡本下暂无颜色条目，请先添加颜色");
         }
@@ -371,7 +367,7 @@ public class ColorCardOrchestrator {
         if (card == null) {
             throw new NoSuchElementException("该物料非色卡本来源");
         }
-        List<ColorCardItem> items = colorCardItemMapper.selectByCardId(card.getId());
+        List<ColorCardItem> items = colorCardItemMapper.selectByCardId(card.getId(), card.getTenantId());
         ColorCardWithItems result = new ColorCardWithItems();
         result.setCard(card);
         result.setItems(items);

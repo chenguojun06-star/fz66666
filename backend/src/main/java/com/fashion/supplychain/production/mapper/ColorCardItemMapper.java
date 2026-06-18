@@ -12,11 +12,11 @@ import org.apache.ibatis.annotations.Select;
 @Mapper
 public interface ColorCardItemMapper extends BaseMapper<ColorCardItem> {
 
-    @Select("SELECT * FROM t_color_card_item WHERE color_card_id = #{colorCardId} AND delete_flag = 0 ORDER BY sort_order ASC, create_time ASC")
-    List<ColorCardItem> selectByCardId(@Param("colorCardId") String colorCardId);
+    @Select("SELECT * FROM t_color_card_item WHERE color_card_id = #{colorCardId} AND tenant_id = #{tenantId} AND delete_flag = 0 ORDER BY sort_order ASC, create_time ASC")
+    List<ColorCardItem> selectByCardId(@Param("colorCardId") String colorCardId, @Param("tenantId") Long tenantId);
 
-    @Delete("UPDATE t_color_card_item SET delete_flag = 1 WHERE color_card_id = #{colorCardId}")
-    int deleteByCardId(@Param("colorCardId") String colorCardId);
+    @Delete("UPDATE t_color_card_item SET delete_flag = 1 WHERE color_card_id = #{colorCardId} AND tenant_id = #{tenantId}")
+    int deleteByCardIdAndTenantId(@Param("colorCardId") String colorCardId, @Param("tenantId") Long tenantId);
 
     @Insert("<script>" +
             "<foreach collection='items' item='item' separator=';'>" +
