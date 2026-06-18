@@ -10,6 +10,7 @@ import {
 import ResizableTable from '@/components/common/ResizableTable';
 import api from '@/utils/api';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
+import { getMaterialTypeLabel } from '@/utils/materialType';
 
 interface ColorCardItem {
   id?: string;
@@ -312,7 +313,7 @@ const ColorCardPage: React.FC = () => {
     { title: '色卡本编号', dataIndex: 'colorCardCode', width: 140, fixed: 'left' as const },
     { title: '色卡本名称', dataIndex: 'colorCardName', width: 180 },
     { title: '物料类型', dataIndex: 'materialType', width: 90,
-      render: (v: string) => v === 'fabric' ? '面料' : v === 'lining' ? '里料' : v === 'accessory' ? '辅料' : '-' },
+      render: (v: string) => getMaterialTypeLabel(v) },
     { title: '幅宽', dataIndex: 'fabricWidth', width: 90 },
     { title: '规格', dataIndex: 'specifications', width: 110 },
     { title: '成分', dataIndex: 'fabricComposition', width: 140 },
