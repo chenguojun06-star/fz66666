@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Button, Card, Input, Select, Form, Row, Col, InputNumber, Modal, Tag, message, Drawer, Segmented, Space, Popconfirm, Image } from 'antd';
-import { PrinterOutlined, UnorderedListOutlined, AppstoreOutlined, PlusOutlined, EditOutlined, DeleteOutlined, ReloadOutlined, FileTextOutlined, AppstoreAddOutlined, EyeOutlined } from '@ant-design/icons';
+import { PrinterOutlined, UnorderedListOutlined, AppstoreOutlined, PlusOutlined, EditOutlined, DeleteOutlined, ReloadOutlined, FileTextOutlined, AppstoreAddOutlined, EyeOutlined, BookOutlined } from '@ant-design/icons';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
 import RejectReasonModal from '@/components/common/RejectReasonModal';
 import StandardToolbar from '@/components/common/StandardToolbar';
@@ -88,8 +88,8 @@ const MaterialDatabasePage: React.FC = () => {
   const currentPage = pagination.current;
   const currentPageSize = pagination.pageSize;
 
-  // ===== 视图切换：列表 / 卡片 =====
-  const [viewMode, setViewMode] = useState<'list' | 'card'>('list');
+  // ===== 视图切换：列表 / 物料卡片 / 供应商色卡 =====
+  const [viewMode, setViewMode] = useState<'list' | 'materialCard' | 'supplierCard'>('list');
 
   // ===== 卡片视图数据 =====
   const [cardDataList, setCardDataList] = useState<MaterialColorCard[]>([]);
@@ -131,9 +131,9 @@ const MaterialDatabasePage: React.FC = () => {
     }
   }, [cardKeyword, cardMaterialType, cardPage, cardPageSize]);
 
-  // 切换到卡片视图时加载数据
+  // 切换到供应商色卡时加载数据
   useEffect(() => {
-    if (viewMode === 'card') fetchCardList();
+    if (viewMode === 'supplierCard') fetchCardList();
   }, [viewMode, fetchCardList]);
 
   const openCardItemsDialog = async (card: MaterialColorCard) => {
@@ -574,10 +574,11 @@ const MaterialDatabasePage: React.FC = () => {
           <Space>
             <Segmented
               value={viewMode}
-              onChange={(v) => setViewMode(v as 'list' | 'card')}
+              onChange={(v) => setViewMode(v as 'list' | 'materialCard' | 'supplierCard')}
               options={[
                 { value: 'list', label: <span><UnorderedListOutlined /> 列表</span> },
-                { value: 'card', label: <span><AppstoreOutlined /> 卡片</span> },
+                { value: 'materialCard', label: <span><AppstoreOutlined /> 物料卡片</span> },
+                { value: 'supplierCard', label: <span><BookOutlined /> 供应商色卡</span> },
               ]}
             />
             {viewMode === 'list' && (
@@ -615,8 +616,72 @@ const MaterialDatabasePage: React.FC = () => {
         </Card>
       )}
 
-      {/* 卡片视图 */}
-      {viewMode === 'card' && (
+      {/* 物料卡片视图 */}
+      {viewMode === 'materialCard' && (
+        <Card style={{ marginTop: 12 }}>
+          <Card style={{ marginBottom: 12, background: 'var(--color-bg-container)' }}>
+            <StandardToolbar
+              left={(
+                <StandardSearchBar
+                  searchValue={searchKeyword} onSearchChange={setSearchKeyword}
+                  searchPlaceholder="搜索物料编号/名称" dateValue={dateRange} onDateChange={setDateRange}
+                  statusValue={statusValue} onStatusChange={setStatusValue} showDatePresets={false}
+                  statusOptions={[
+                    { label: '全部', value: '' }, { label: '面料', value: 'fabric' },
+                    { label: '里料', value: 'lining' }, { label: '辅料', value: 'accessory' },
+                    { label: '已停用', value: 'disabled' },
+                  ]}
+                />
+              )}
+              right={<Button type="primary" onClick={() => openDialog('create')}>新增物料信息</Button>}
+            />
+          </Card>
+          <UniversalCardView
+            dataSource={dataList}
+            loading={loading}
+            titleField="materialName"
+            subtitleField="materialCode"
+            coverField="image"
+            coverPlaceholder="暂无图片"
+            fields={[
+              { label: '类型', key: 'materialType', format: (v) => getMaterialTypeLabel(v) },
+              { label: '颜色', key: 'color', format: (v) => v || '-' },
+              { label: '幅宽', key: 'fabricWidth', format: (v) => v || '-' },
+              { label: '克重', key: 'fabricWeight', format: (v) => v || '-' },
+              { label: '规格', key: 'specifications', format: (v) => v || '-' },
+              { label: '成分', key: 'fabricComposition', format: (v) => v || '-' },
+              { label: '单价', key: 'unitPrice', format: (v) => v != null ? `¥${v}` : '-' },
+              { label: '单位', key: 'unit', format: (v) => v || '-' },
+            ]}
+            titleTags={(record) => (
+              <>
+                <Tag color="blue">{getMaterialTypeLabel(record.materialType)}</Tag>
+                {record.disabled === 1 && <Tag color="default">已停用</Tag>}
+              </>
+            )}
+            actions={(record) => [
+              { key: 'edit', label: '编辑', icon: <EditOutlined />, onClick: () => openDialog('edit', record) },
+              { key: 'delete', label: '删除', icon: <DeleteOutlined />, danger: true, onClick: () => handleDelete(record) },
+            ]}
+            maxInlineActions={2}
+            pagination={{
+              ...pagination, showTotal: (t) => `共 ${t} 条`, showSizeChanger: true,
+              pageSizeOptions: ['20', '50', '100', '200'], onChange, size: isMobile ? 'small' : 'default',
+            }}
+            hoverRender={(record) => (
+              <div style={{ maxWidth: 400 }}>
+                {record.supplierName && <div style={{ marginBottom: 6 }}>供应商：{record.supplierName}</div>}
+                {record.supplierContactPerson && <div>联系人：{record.supplierContactPerson}{record.supplierContactPhone ? ` · ${record.supplierContactPhone}` : ''}</div>}
+                {record.description && <div style={{ marginTop: 6, color: '#666' }}>{record.description}</div>}
+                {record.remark && <div style={{ marginTop: 6, color: '#874d00' }}>备注：{record.remark}</div>}
+              </div>
+            )}
+          />
+        </Card>
+      )}
+
+      {/* 供应商色卡视图 */}
+      {viewMode === 'supplierCard' && (
         <Card style={{ marginTop: 12 }}>
           {renderCardView()}
         </Card>
