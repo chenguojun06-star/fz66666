@@ -358,7 +358,7 @@ public class VisionAnalysisService {
 
         public static VisionResult error(String msg) {
             VisionResult r = new VisionResult();
-            r.available = true;
+            r.available = false;  // 修复：error 状态应标记为不可用
             r.errorMessage = msg;
             r.confidence = 0;
             r.severity = "NONE";
