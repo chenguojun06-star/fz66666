@@ -431,9 +431,11 @@ ai:
       enabled: ${AI_IM_AI_DINGTALK_ENABLED:false}
       app-secret: ${AI_IM_AI_DINGTALK_APP_SECRET:}
 
-# Qdrant 向量库配置（QdrantService @Value 读取）
+# Qdrant 向量库配置（需显式启用，默认禁用避免 Connection refused 报错）
+# 启用方式：设置 QDRANT_ENABLED=true 并配置 QDRANT_URL
 intelligence:
   qdrant:
+    enabled: ${QDRANT_ENABLED:false}
     url: ${QDRANT_URL:http://localhost:6333}
     collection: ${QDRANT_COLLECTION:fashion_memory}
     vector-size: ${QDRANT_VECTOR_SIZE:1024}

@@ -83,6 +83,9 @@ public class QdrantService {
     @Value("${ai.deepseek.base-url:https://api.deepseek.com}")
     private String deepseekBaseUrl;
 
+    @Value("${intelligence.qdrant.enabled:false}")
+    private boolean qdrantEnabled;
+
     @Value("${intelligence.qdrant.timeout-seconds:10}")
     private int qdrantTimeoutSeconds;
 
@@ -149,6 +152,10 @@ public class QdrantService {
     /** F4: 启动时校验 Qdrant 集合向量维度是否与当前配置一致 */
     @PostConstruct
     void validateCollectionDimension() {
+        if (!qdrantEnabled) {
+            log.info("[Qdrant] 已禁用（intelligence.qdrant.enabled=false），跳过向量库初始化。如需要启用请配置 QDRANT_URL 并设 intelligence.qdrant.enabled=true");
+            return;
+        }
         try {
             ResponseEntity<String> resp = restTemplate.getForEntity(
                     qdrantUrl + "/collections/" + collectionName, String.class);
@@ -185,6 +192,7 @@ public class QdrantService {
      */
     public boolean upsertVector(String pointId, Long tenantId, String content,
             java.util.Map<String, Object> payload) {
+        if (!qdrantEnabled) return false;
         if (tenantId == null) {
             log.warn("[Qdrant] upsert拒绝：tenantId为null，禁止写入孤儿向量 pointId={}", pointId);
             return false;
@@ -233,6 +241,7 @@ public class QdrantService {
      * @return 匹配点的 pointId 列表（按相似度降序）
      */
     public List<ScoredPoint> search(Long tenantId, String queryText, int topK) {
+        if (!qdrantEnabled) return Collections.emptyList();
         List<ScoredPoint> results = new ArrayList<>();
         try {
             float[] vector = computeEmbedding(queryText);
@@ -317,6 +326,7 @@ public class QdrantService {
      * @return 匹配点列表（按综合分数降序）
      */
     public List<ScoredPoint> hybridSearch(Long tenantId, String queryText, int topK) {
+        if (!qdrantEnabled) return new ArrayList<>();
         if (tenantId == null) {
             log.warn("[Qdrant] hybridSearch拒绝: tenantId为null，跳过搜索以防止跨租户数据泄漏");
             return new ArrayList<>();
@@ -522,6 +532,7 @@ public class QdrantService {
     }
 
     public boolean isAvailable() {
+        if (!qdrantEnabled) return false;
         try {
             ResponseEntity<String> resp = restTemplate.getForEntity(
                     qdrantUrl + "/healthz", String.class);
@@ -536,6 +547,7 @@ public class QdrantService {
      * @return true=新建了集合；false=集合已存在或 Qdrant 不可用
      */
     public boolean ensureCollection() {
+        if (!qdrantEnabled) return false;
         try {
             restTemplate.getForEntity(
                     qdrantUrl + "/collections/" + collectionName, String.class);
@@ -797,6 +809,7 @@ public class QdrantService {
      * 4. 伪向量（哈希）— 最低质量，仅兜底
      */
     public float[] computeMultimodalEmbedding(String imageUrl) {
+        if (!qdrantEnabled) return null;
         if (imageUrl == null || imageUrl.isBlank()) {
             throw new IllegalArgumentException("imageUrl 不能为空");
         }
@@ -948,6 +961,7 @@ public class QdrantService {
      * 搜索视觉相似的历史款式（仅在 style_images 集合中检索）。
      */
     public List<SimilarStyle> searchSimilarStyleImages(float[] embedding, int topK, Long tenantId) {
+        if (!qdrantEnabled) return Collections.emptyList();
         List<SimilarStyle> results = new ArrayList<>();
         try {
             ObjectNode body = objectMapper.createObjectNode();

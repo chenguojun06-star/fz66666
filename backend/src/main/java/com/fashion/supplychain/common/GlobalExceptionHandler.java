@@ -240,11 +240,17 @@ public class GlobalExceptionHandler {
         /**
          * 处理 SecurityException（业务层用于租户隔离/权限拦截）。
          * 返回 403 + 中文提示，避免前端看到空白页或默认错误栈。
+         * SSE 流已提交时静默返回 null，避免"response is already committed"错误日志刷屏。
          */
         @ExceptionHandler(SecurityException.class)
-        public ResponseEntity<Result<?>> handleSecurityException(SecurityException e, HttpServletRequest request) {
+        public ResponseEntity<Result<?>> handleSecurityException(SecurityException e, HttpServletRequest request,
+                        HttpServletResponse response) {
                 logger.warn("安全检查未通过: {} {} - {}", request == null ? "" : request.getMethod(),
                                 request == null ? "" : request.getRequestURI(), e.getMessage());
+                if (response != null && response.isCommitted()) {
+                        logger.debug("响应已提交（SSE/流场景），跳过异常响应写入");
+                        return null;
+                }
                 String safeMessage = sanitizeClientMessage(e.getMessage());
                 if (safeMessage == null || safeMessage.isEmpty()) {
                         safeMessage = "权限不足，请联系管理员";
@@ -331,9 +337,17 @@ public class GlobalExceptionHandler {
          * @return 标准化错误响应
          */
         @ExceptionHandler(Exception.class)
-        public ResponseEntity<Result<?>> handleSystemException(Exception e, HttpServletRequest request) {
+        public ResponseEntity<Result<?>> handleSystemException(Exception e, HttpServletRequest request,
+                        HttpServletResponse response) {
                 String method = request == null ? "" : request.getMethod();
                 String uri = request == null ? "" : request.getRequestURI();
+
+                // SSE/流场景：响应已提交时降级为 debug 日志，避免"response is already committed"反复刷屏
+                if (response != null && response.isCommitted()) {
+                        logger.debug("响应已提交（SSE/流场景），异常: {} {} - {}", method, uri, e.getMessage());
+                        return null;
+                }
+
                 logger.error("系统异常: {} {}", method, uri, e);
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                                 .body(Result.fail(500, "系统内部错误，请联系管理员"));

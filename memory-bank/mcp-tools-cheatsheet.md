@@ -1,7 +1,46 @@
 # MCP 工具参数速查表
 
 > 每轮对话开始时加载到上下文，消除 MCP 工具调用的参数试错环节
+> 最后更新：2026-06-19
 > 规则：调用 MCP 前先查表，第一次就用正确参数名
+
+---
+
+## 0. 我应该用原生工具还是 MCP？
+
+**快速决策树（Yes/No）
+
+```
+是否需要操作代码或文件？
+   ├─ YES → 使用原生工具（Read / Edit / Write / Glob / SearchCodebase）
+   │   └─ 项目内文件操作 → 永久禁调用 MCP Filesystem（P0 铁律
+   │
+是否需要打开真实浏览器测试前端页面？
+   ├─ YES → integrated_browser（browser_navigate → browser_snapshot → browser_click）
+   │
+是否需要查第三方库官方文档？
+   ├─ YES → mcp_context7（通过 libraryId 检索）
+   │
+是否需要操作 Docker 容器/镜像/网络/卷？
+   ├─ YES → mcp_docker（list_containers / build_image / 等
+   │
+是否需要显式分步推理拆解复杂问题？
+   ├─ YES → mcp_Sequential_Thinking（thought + thoughtNumber + totalThoughts
+   │
+以上都不是？
+   └─ 使用 TodoWrite + 自身推理能力
+```
+
+**5 类高频场景的工具建议
+
+| 场景 | 推荐工具 | 说明 |
+|------|---------|------|
+| 读单个文件 | **Read | 直接读取，最快速
+| 按关键词搜代码 | **SearchCodebase / **Grep | 支持中文关键词，带行号
+| 测试前端页面 | integrated_browser | 真实浏览器测试
+| 操作 MySQL 数据库 | RunCommand + SQL | 执行查询
+| 查 Spring Boot API | mcp_context7 + resolve-library-id("Spring Boot"
+
 
 ---
 

@@ -39,6 +39,13 @@ public class ConversationReflectionOrchestrator {
 
             String criticPrompt = buildCriticPrompt(userMessage, assistantResponse, toolResults);
             String criticResult = inferenceRouter.chatSimple(criticPrompt);
+
+            // P0防御：AI反思内容为null时跳过DB写入，避免text NOT NULL约束违反导致炸库
+            if (criticResult == null || criticResult.isBlank()) {
+                log.warn("[Reflection] 反思引擎返回空内容，跳过存储 conversationId={}", conversationId);
+                return;
+            }
+
             reflection.setReflectionContent(criticResult);
 
             BigDecimal score = extractScore(criticResult);

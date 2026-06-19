@@ -1,11 +1,28 @@
 # 进度跟踪
 
 > 本文件由 AI 助手自动维护，记录项目开发进度
-> 最后更新：2026-06-18
+> 最后更新：2026-06-19
 
 ---
 
 ## 已完成
+
+### 2026-06-19 Controller 事务边界全面治理 + 文档体系更新
+- [x] 🔴 P0-1：PatternRevisionController → PatternRevisionOrchestrator 化（save/update/remove 全部下沉
+- [x] 🔴 P0-2：PatternProductionController → PatternProductionOrchestrator 化
+- [x] 🔴 P0-3：ProductionOrderNodeController → ProductionOrderOrchestrator.saveNodeOperations
+- [x] 🔴 P0-4：SupplierUser / SupplierPortal Controller → SupplierUserOrchestrator 化
+- [x] 🔴 P0-5：MaterialPickingController.audit() → MaterialPickingOrchestrator.audit
+- [x] 🔴 P0-6：PaymentCallbackController → PaymentCallbackOrchestrator 化
+- [x] 🔴 P0-7：AiMetricsOrchestrator.generateSnapshot() 加 @Transactional
+- [x] 🔴 P0-8：ClosedOrderAiDataCleanupService 加 assertTenantOwnership 租户校验
+- [x] 🟡 P1-1：GlobalExceptionHandler 新增 SecurityException 处理器（403 + 友好提示）
+- [x] 🟡 P1-2：文档全面更新（decisionLog / productContext / project_rules / mcp-tools-cheatsheet）
+- [x] 🟡 P1-3：新建 optimization-log-20260619.md（完整记录本轮治理
+- [x] 🟢 P2-1：新增 memory-bank-updater Skill（.trae/skills/memory-bank-updater/SKILL.md）
+- [x] 🟢 P2-2：新增 ci-rollback Skill（.trae/skills/ci-rollback/SKILL.md）
+- [x] 后端 mvn compile BUILD SUCCESS（编译验证）
+- [x] 更新 memory-bank/activeContext.md + decisionLog.md + progress.md
 
 ### 2026-06-18 小云AI CL4R1T4S 借鉴升级（6项优化）
 - [x] P0-1 SelfCritiqueGate 输出前硬门控（PASS/SOFT_FAIL/HARD_FAIL 三档决策）
