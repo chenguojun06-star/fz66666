@@ -6,6 +6,10 @@
 # Backend (Maven)
 backend/target/
 
+# Python 缓存目录
+__pycache__/
+*.pyc
+
 # Frontend (Vite)
 frontend/node_modules/
 frontend/dist/

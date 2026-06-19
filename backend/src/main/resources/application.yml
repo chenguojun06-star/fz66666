@@ -225,7 +225,7 @@ app:
   integration:
     https-required: ${APP_INTEGRATION_HTTPS_REQUIRED:false}  # 生产环境建议设为 true
   cors:
-    allowed-origin-patterns: ${APP_CORS_ALLOWED_ORIGIN_PATTERNS:http://localhost:*,http://127.0.0.1:*,http://192.168.*:*,http://10.*:*}
+    allowed-origin-patterns: ${APP_CORS_ALLOWED_ORIGIN_PATTERNS:https://webyszl.cn,https://*.webyszl.cn,http://localhost:*,http://127.0.0.1:*,http://192.168.*:*,http://10.*:*}
     allow-credentials: ${APP_CORS_ALLOW_CREDENTIALS:true}
   performance-monitor:
     default-warn-threshold-ms: ${APP_PERF_DEFAULT_WARN_THRESHOLD_MS:1000}

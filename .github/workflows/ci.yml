@@ -294,10 +294,11 @@ jobs:
 
     - name: 运行部署后冒烟测试
       env:
-        SMOKE_BASE_URL: ${{ secrets.SMOKE_BASE_URL }}
-        SMOKE_USERNAME: ${{ secrets.SMOKE_USERNAME }}
-        SMOKE_PASSWORD: ${{ secrets.SMOKE_PASSWORD }}
-        SMOKE_TENANT_ID: ${{ secrets.SMOKE_TENANT_ID }}
+        # 未配置 SMOKE_BASE_URL secret 时，回退到生产域名
+        SMOKE_BASE_URL: ${{ secrets.SMOKE_BASE_URL || 'https://api.webyszl.cn' }}
+        SMOKE_USERNAME: ${{ secrets.SMOKE_USERNAME || 'admin' }}
+        SMOKE_PASSWORD: ${{ secrets.SMOKE_PASSWORD || 'admin123' }}
+        SMOKE_TENANT_ID: ${{ secrets.SMOKE_TENANT_ID || '1' }}
         SMOKE_FEISHU_WEBHOOK: ${{ secrets.FEISHU_WEBHOOK }}
         SMOKE_MAX_RETRIES: '12'
       run: python3 scripts/postdeploy-smoke-test.py
