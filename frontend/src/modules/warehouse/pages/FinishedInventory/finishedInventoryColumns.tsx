@@ -111,9 +111,9 @@ export function getMainColumns(handlers: {
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'center' }}>
             {record.sizes && record.sizes.length > 0 ? (
-              record.sizes.map((s, i) => <Tag key={i} style={{ margin: 0, background: '#f0f0f0', border: '1px solid var(--color-border-antd)' }}>{s}</Tag>)
+              record.sizes.map((s, i) => <Tag key={i} style={{ margin: 0, background: 'var(--color-border-light)', border: '1px solid var(--color-border-antd)' }}>{s}</Tag>)
             ) : (
-              <Tag style={{ margin: 0, background: '#f0f0f0', border: '1px solid var(--color-border-antd)' }}>{record.size}</Tag>
+              <Tag style={{ margin: 0, background: 'var(--color-border-light)', border: '1px solid var(--color-border-antd)' }}>{record.size}</Tag>
             )}
           </div>
         </div>
@@ -159,7 +159,7 @@ export function getMainColumns(handlers: {
       width: 90,
       align: 'center' as const,
       render: (v: number | null) => v != null
-        ? <span style={{ fontSize: 14, fontWeight: 700, color: '#cf1322' }}>{formatMoney(Number(v))}</span>
+        ? <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--color-error)' }}>{formatMoney(Number(v))}</span>
         : <span style={{ color: 'var(--neutral-text-disabled)' }}>-</span>,
     },
     {
@@ -340,7 +340,7 @@ export function getSkuColumns(handlers: {
       align: 'center',
       render: (qty: number) => {
         if (!qty || qty <= 0) return <span style={{ color: 'var(--neutral-text-disabled)' }}>-</span>;
-        return <span style={{ color: '#cf1322', fontWeight: 600 }}>{qty}</span>;
+        return <span style={{ color: 'var(--color-error)', fontWeight: 600 }}>{qty}</span>;
       },
     },
     {

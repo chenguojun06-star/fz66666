@@ -125,7 +125,7 @@ export function useProductionColumns({
             >
             <a
               className="order-no-wrap"
-              style={{ cursor: 'pointer', color: 'var(--primary-color, #1677ff)' }}
+              style={{ cursor: 'pointer', color: 'var(--primary-color, var(--color-primary))' }}
               onClick={(e) => {
                 e.preventDefault();
                 navigate(withQuery('/production/order-flow', { orderId, orderNo, styleNo }));
@@ -472,10 +472,10 @@ export function useProductionColumns({
         const remain = getRemainingDaysDisplay(record.plannedEndDate as string, record.createTime, record.actualEndDate, record.status);
         const aiRisk = deliveryRiskMap?.get(String(record.orderNo || ''));
         const slaMap: Record<string, { color: string; label: string }> = {
-          on_track: { color: '#52c41a', label: '正常' },
-          at_risk: { color: '#faad14', label: '预警' },
-          breached: { color: '#ff4d4f', label: '超期' },
-          completed: { color: '#1890ff', label: '达标' },
+          on_track: { color: 'var(--color-success)', label: '正常' },
+          at_risk: { color: 'var(--color-warning)', label: '预警' },
+          breached: { color: 'var(--color-danger)', label: '超期' },
+          completed: { color: 'var(--color-info)', label: '达标' },
         };
         const sla = slaMap[record.deliverySlaStatus || ''] || null;
         return (
@@ -491,8 +491,8 @@ export function useProductionColumns({
             </div>
             {stagnantDays !== undefined && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                <span style={{ display: 'inline-block', width: 5, height: 5, borderRadius: '50%', background: '#ff4d4f', animation: 'pulse-dot 1.5s infinite' }} />
-                <span style={{ fontSize: 12, color: '#ff4d4f', fontWeight: 500 }}>停滞{stagnantDays}天</span>
+                <span style={{ display: 'inline-block', width: 5, height: 5, borderRadius: '50%', background: 'var(--color-danger)', animation: 'pulse-dot 1.5s infinite' }} />
+                <span style={{ fontSize: 12, color: 'var(--color-danger)', fontWeight: 500 }}>停滞{stagnantDays}天</span>
               </div>
             )}
             {sla && (

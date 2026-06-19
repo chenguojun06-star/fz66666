@@ -4,17 +4,15 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.procurement.entity.SupplierUser;
+import com.fashion.supplychain.procurement.orchestration.SupplierUserOrchestrator;
 import com.fashion.supplychain.procurement.service.SupplierUserService;
 import com.fashion.supplychain.system.entity.Factory;
 import com.fashion.supplychain.system.service.FactoryService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -26,10 +24,12 @@ public class SupplierUserController {
 
     @Autowired
     private SupplierUserService supplierUserService;
+
+    @Autowired
+    private SupplierUserOrchestrator supplierUserOrchestrator;
+
     @Autowired
     private FactoryService factoryService;
-    @Autowired
-    private PasswordEncoder passwordEncoder;
 
     @GetMapping("/list")
     public Result<List<Map<String, Object>>> list(@RequestParam String supplierId) {
@@ -69,7 +69,7 @@ public class SupplierUserController {
         String contactPhone = request.get("contactPhone");
         String contactEmail = request.get("contactEmail");
 
-        if (!StringUtils.hasText(supplierId) || !StringUtils.hasText(username) || !StringUtils.hasText(password)) {
+        if (supplierId == null || supplierId.isEmpty() || username == null || username.isEmpty() || password == null || password.isEmpty()) {
             return Result.fail("供应商ID、用户名和密码不能为空");
         }
         if (username.trim().length() < 3 || username.trim().length() > 50) {
@@ -79,37 +79,12 @@ public class SupplierUserController {
             return Result.fail("密码需6-20位");
         }
 
-        Factory supplier = factoryService.getById(supplierId);
-        if (supplier == null || !tenantId.equals(supplier.getTenantId())) {
-            return Result.fail("供应商不存在");
+        SupplierUser user;
+        try {
+            user = supplierUserOrchestrator.createUser(supplierId, username, password, contactPerson, contactPhone, contactEmail);
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            return Result.fail(e.getMessage());
         }
-        if (!"MATERIAL".equals(supplier.getSupplierType())) {
-            return Result.fail("仅面辅料供应商支持创建账号");
-        }
-
-        LambdaQueryWrapper<SupplierUser> existWrapper = new LambdaQueryWrapper<>();
-        existWrapper.eq(SupplierUser::getUsername, username.trim())
-                .eq(SupplierUser::getDeleteFlag, 0);
-        if (supplierUserService.count(existWrapper) > 0) {
-            return Result.fail("用户名已存在");
-        }
-
-        SupplierUser user = new SupplierUser();
-        user.setSupplierId(supplierId);
-        user.setTenantId(tenantId);
-        user.setUsername(username.trim());
-        user.setPasswordHash(passwordEncoder.encode(password));
-        user.setContactPerson(contactPerson);
-        user.setContactPhone(contactPhone);
-        user.setContactEmail(contactEmail);
-        user.setStatus("ACTIVE");
-        user.setDeleteFlag(0);
-        user.setCreateTime(LocalDateTime.now());
-        user.setUpdateTime(LocalDateTime.now());
-        supplierUserService.save(user);
-
-        log.info("[供应商账号] 创建成功: username={}, supplierId={}, tenantId={}, operator={}",
-                username, supplierId, tenantId, UserContext.username());
 
         Map<String, Object> result = buildUserView(user);
         result.put("initialPassword", password);
@@ -126,23 +101,19 @@ public class SupplierUserController {
         String userId = request.get("userId");
         String newPassword = request.get("newPassword");
 
-        if (!StringUtils.hasText(userId) || !StringUtils.hasText(newPassword)) {
+        if (userId == null || userId.isEmpty() || newPassword == null || newPassword.isEmpty()) {
             return Result.fail("用户ID和新密码不能为空");
         }
         if (newPassword.length() < 6 || newPassword.length() > 20) {
             return Result.fail("密码需6-20位");
         }
 
-        SupplierUser user = supplierUserService.getById(userId);
-        if (user == null || !tenantId.equals(user.getTenantId()) || (user.getDeleteFlag() != null && user.getDeleteFlag() == 1)) {
-            return Result.fail("用户不存在");
+        SupplierUser user;
+        try {
+            user = supplierUserOrchestrator.resetPassword(userId, newPassword);
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            return Result.fail(e.getMessage());
         }
-
-        user.setPasswordHash(passwordEncoder.encode(newPassword));
-        user.setUpdateTime(LocalDateTime.now());
-        supplierUserService.updateById(user);
-
-        log.info("[供应商账号] 密码重置: userId={}, operator={}", userId, UserContext.username());
 
         Map<String, Object> result = new HashMap<>();
         result.put("id", user.getId());
@@ -159,23 +130,16 @@ public class SupplierUserController {
         }
 
         String userId = request.get("userId");
-        if (!StringUtils.hasText(userId)) {
+        if (userId == null || userId.isEmpty()) {
             return Result.fail("用户ID不能为空");
         }
 
-        SupplierUser user = supplierUserService.getById(userId);
-        if (user == null || !tenantId.equals(user.getTenantId()) || (user.getDeleteFlag() != null && user.getDeleteFlag() == 1)) {
-            return Result.fail("用户不存在");
+        try {
+            supplierUserOrchestrator.toggleStatus(userId);
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            return Result.fail(e.getMessage());
         }
 
-        String oldStatus = user.getStatus();
-        String newStatus = "ACTIVE".equals(oldStatus) ? "INACTIVE" : "ACTIVE";
-        user.setStatus(newStatus);
-        user.setUpdateTime(LocalDateTime.now());
-        supplierUserService.updateById(user);
-
-        log.info("[供应商账号] 状态变更: userId={}, {} -> {}, operator={}",
-                userId, oldStatus, newStatus, UserContext.username());
         return Result.success(null);
     }
 
@@ -186,16 +150,12 @@ public class SupplierUserController {
             return Result.fail("请先登录");
         }
 
-        SupplierUser user = supplierUserService.getById(userId);
-        if (user == null || !tenantId.equals(user.getTenantId()) || (user.getDeleteFlag() != null && user.getDeleteFlag() == 1)) {
-            return Result.fail("用户不存在");
+        try {
+            supplierUserOrchestrator.deleteUser(userId);
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            return Result.fail(e.getMessage());
         }
 
-        user.setDeleteFlag(1);
-        user.setUpdateTime(LocalDateTime.now());
-        supplierUserService.updateById(user);
-
-        log.info("[供应商账号] 删除: userId={}, operator={}", userId, UserContext.username());
         return Result.success(null);
     }
 

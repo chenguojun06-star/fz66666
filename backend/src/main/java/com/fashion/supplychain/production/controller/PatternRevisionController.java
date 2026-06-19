@@ -7,14 +7,13 @@ import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.production.entity.PatternRevision;
+import com.fashion.supplychain.production.orchestration.PatternRevisionOrchestrator;
 import com.fashion.supplychain.production.service.PatternRevisionService;
-import com.fashion.supplychain.style.orchestration.StyleInfoOrchestrator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -29,7 +28,7 @@ public class PatternRevisionController {
     private PatternRevisionService patternRevisionService;
 
     @Autowired
-    private StyleInfoOrchestrator styleInfoOrchestrator;
+    private PatternRevisionOrchestrator patternRevisionOrchestrator;
 
     /**
      * 分页查询
@@ -77,32 +76,12 @@ public class PatternRevisionController {
      */
     @PostMapping
     public Result<?> create(@RequestBody PatternRevision revision) {
-        // 自动生成版本号
-        if (!StringUtils.hasText(revision.getRevisionNo()) && StringUtils.hasText(revision.getStyleNo())) {
-            String nextVersion = patternRevisionService.generateNextRevisionNo(revision.getStyleNo());
-            revision.setRevisionNo(nextVersion);
+        try {
+            Map<String, Object> result = patternRevisionOrchestrator.create(revision);
+            return Result.success(result);
+        } catch (Exception e) {
+            return Result.fail(e.getMessage());
         }
-
-        // 设置初始状态
-        if (!StringUtils.hasText(revision.getStatus())) {
-            revision.setStatus("DRAFT");
-        }
-
-        boolean success = patternRevisionService.save(revision);
-        if (!success) {
-            return Result.fail("创建失败");
-        }
-        if (!StringUtils.hasText(revision.getStyleId())) {
-            return Result.fail("缺少款式ID");
-        }
-
-        styleInfoOrchestrator.lockPatternRevision(Long.valueOf(revision.getStyleId()));
-        Map<String, Object> result = new HashMap<>();
-        result.put("revision", revision);
-        result.put("styleId", revision.getStyleId());
-        result.put("styleNo", revision.getStyleNo());
-        result.put("patternRevLocked", 1);
-        return Result.success(result);
     }
 
     /**
@@ -110,28 +89,12 @@ public class PatternRevisionController {
      */
     @PutMapping("/{id}")
     public Result<?> update(@PathVariable String id, @RequestBody PatternRevision revision) {
-        TenantAssert.assertTenantContext();
-        Long tenantId = UserContext.tenantId();
-        PatternRevision existing = patternRevisionService.lambdaQuery()
-                .eq(PatternRevision::getId, id)
-                .eq(PatternRevision::getTenantId, tenantId)
-                .one();
-        if (existing == null) {
-            return Result.fail("记录不存在");
+        try {
+            PatternRevision updated = patternRevisionOrchestrator.update(id, revision);
+            return Result.success(updated);
+        } catch (Exception e) {
+            return Result.fail(e.getMessage());
         }
-        TenantAssert.assertBelongsToCurrentTenant(existing.getTenantId(), "纸样改版记录");
-
-        // 只有草稿状态才能修改
-        if (!"DRAFT".equals(existing.getStatus())) {
-            return Result.fail("只有草稿状态才能修改");
-        }
-
-        revision.setId(id);
-        boolean success = patternRevisionService.updateById(revision);
-        if (!success) {
-            return Result.fail("更新失败");
-        }
-        return Result.success(revision);
     }
 
     /**
@@ -139,36 +102,16 @@ public class PatternRevisionController {
      */
     @DeleteMapping("/{id}")
     public Result<?> delete(@PathVariable String id) {
-        TenantAssert.assertTenantContext();
-        Long tenantId = UserContext.tenantId();
-        PatternRevision existing = patternRevisionService.lambdaQuery()
-                .eq(PatternRevision::getId, id)
-                .eq(PatternRevision::getTenantId, tenantId)
-                .one();
-        if (existing == null) {
-            return Result.fail("记录不存在");
+        try {
+            patternRevisionOrchestrator.delete(id);
+            return Result.success();
+        } catch (Exception e) {
+            return Result.fail(e.getMessage());
         }
-        TenantAssert.assertBelongsToCurrentTenant(existing.getTenantId(), "纸样改版记录");
-
-        // 只有草稿状态才能删除
-        if (!"DRAFT".equals(existing.getStatus())) {
-            return Result.fail("只有草稿状态才能删除");
-        }
-
-        boolean success = patternRevisionService.removeById(id);
-        if (!success) {
-            return Result.fail("删除失败");
-        }
-        return Result.success();
     }
 
     /**
-     * 统一的工作流操作端点（替代4个分散端点）
-     *
-     * @param id 纸样修改记录ID
-     * @param action 操作类型：submit/approve/reject/complete
-     * @param params 可选参数（用于approve和reject的comment）
-     * @return 操作结果
+     * 统一的工作流操作端点
      */
     @PostMapping("/{id}/workflow")
     public Result<?> workflow(
@@ -177,7 +120,6 @@ public class PatternRevisionController {
             @RequestBody(required = false) Map<String, String> params) {
 
         try {
-            // 智能路由到对应的Service方法
             switch (action.toLowerCase()) {
                 case "submit":
                     boolean submitSuccess = patternRevisionService.submitForApproval(id);

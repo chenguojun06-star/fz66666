@@ -346,7 +346,7 @@ const AiAgentTraceCenter: React.FC = () => {
                       {typeof item.durationMs === 'number' ? <span>{item.durationMs}ms</span> : null}
                     </Space>
                     {item.reason ? <div style={{ marginTop: 6, color: '#595959' }}>{item.reason}</div> : null}
-                    {item.errorMessage ? <div style={{ marginTop: 6, color: '#cf1322' }}>{item.errorMessage}</div> : null}
+                    {item.errorMessage ? <div style={{ marginTop: 6, color: 'var(--color-error)' }}>{item.errorMessage}</div> : null}
                     {item.status === 'FAILED' ? <div style={{ marginTop: 6, color: '#d46b08' }}>补救建议：{buildSuggestion(item)}</div> : null}
                     {item.resultData ? (
                       <pre style={{ marginTop: 8, background: 'var(--color-bg-container)', padding: 10, borderRadius: 6, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>

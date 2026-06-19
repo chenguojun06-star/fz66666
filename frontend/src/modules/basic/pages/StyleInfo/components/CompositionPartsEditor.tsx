@@ -113,7 +113,7 @@ export default function CompositionPartsEditor({ value, onChange, disabled }: Pr
                 key={partLabel}
                 style={{
                   display: 'flex', gap: 8, alignItems: 'flex-start',
-                  padding: '8px 0', borderBottom: '1px solid #f5f5f5',
+                  padding: '8px 0', borderBottom: '1px solid var(--color-bg-subtle)',
                 }}
               >
                 {/* 品类 */}

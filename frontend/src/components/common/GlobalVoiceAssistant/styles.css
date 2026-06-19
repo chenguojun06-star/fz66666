@@ -12,7 +12,7 @@
   height: 64px !important;
   font-size: 28px !important;
   box-shadow: 0 8px 24px rgba(45, 127, 249, 0.25);
-  background: #2D7FF9; /* Impeccable: 纯色，不用渐变 */
+  background: var(--color-primary); /* Impeccable: 纯色，不用渐变 */
   border: none;
   transition: all 0.3s var(--ease-smooth);
   animation: float 3s ease-in-out infinite;
@@ -44,7 +44,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 16px 20px;
-  background: #2D7FF9; /* Impeccable: 纯色，不用渐变 */
+  background: var(--color-primary); /* Impeccable: 纯色，不用渐变 */
   color: white;
 }
 
@@ -78,7 +78,7 @@
 
 .recording-bar {
   width: 8px;
-  background: #2D7FF9; /* Impeccable: 纯色，不用渐变 */
+  background: var(--color-primary); /* Impeccable: 纯色，不用渐变 */
   border-radius: 4px;
   animation: wave 0.8s ease-in-out infinite;
 }
@@ -95,7 +95,7 @@
 .recording-time {
   font-size: 32px;
   font-weight: 700;
-  color: #1890ff;
+  color: var(--color-info);
   margin-bottom: 8px;
 }
 
@@ -112,7 +112,7 @@
 
 .idle-icon {
   font-size: 72px;
-  color: #d9d9d9;
+  color: var(--color-border-antd);
   margin-bottom: 16px;
 }
 
@@ -151,8 +151,8 @@
 .processing-spinner {
   width: 40px;
   height: 40px;
-  border: 3px solid #f0f0f0;
-  border-top-color: #1890ff;
+  border: 3px solid var(--color-border-light);
+  border-top-color: var(--color-info);
   border-radius: 50%;
   margin: 0 auto 16px;
   animation: spin 1s linear infinite;
@@ -185,13 +185,13 @@
 .quick-command-btn {
   background: #f0f5ff !important;
   border: 1px solid #91caff !important;
-  color: #1890ff !important;
+  color: var(--color-info) !important;
   border-radius: 20px !important;
   font-size: 13px !important;
 }
 
 .quick-command-btn:hover {
-  background: #1890ff !important;
+  background: var(--color-info) !important;
   color: white !important;
 }
 
@@ -199,7 +199,7 @@
 .voice-footer {
   padding: 16px 20px;
   background: white;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--color-border-light);
 }
 
 /* 快捷键提示 */

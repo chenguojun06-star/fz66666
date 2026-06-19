@@ -71,7 +71,7 @@ const IntegrationOverviewTab: React.FC = () => {
                 hoverable
                 style={{
                   borderTop: `3px solid ${cfg.color}`,
-                  background: mod.connected ? '#fff' : '#fafafa',
+                  background: mod.connected ? 'var(--color-bg-base)' : 'var(--color-bg-container)',
                   minHeight: 220,
                 }}
               >

@@ -163,12 +163,12 @@ const SmartStyleInsightCard: React.FC<Props> = ({ styleNo, factoryName, capacity
     return items;
   }, [activeOrderCount, atRiskCount, avgCycleDays, avgDailyOutput, displayOnTimeRate, factoryTotalOrders, freqPerYear, isFactoryHighRisk, isFactoryMedRisk, overdueCount, recommendLeadDays]);
   const metricItems = [
-    { value: orderCount, suffix: freqPerYear > 0 ? `${freqPerYear.toFixed(1)}次/年` : '', label: '历史下单', color: '#1677ff' },
-    { value: avgCycleDays > 0 ? avgCycleDays : '-', suffix: recommendLeadDays > 0 ? `提前${recommendLeadDays}天` : '', label: '平均周期', color: avgCycleDays > 45 ? '#ff4d4f' : avgCycleDays > 30 ? '#faad14' : '#52c41a' },
-    { value: displayOnTimeRate >= 0 ? `${displayOnTimeRate}%` : '-', suffix: capacityData ? '工厂达成' : '本款达成', label: '交期达成', color: displayOnTimeRate >= 80 ? '#52c41a' : displayOnTimeRate >= 60 ? '#faad14' : displayOnTimeRate >= 0 ? '#ff4d4f' : '#d9d9d9' },
+    { value: orderCount, suffix: freqPerYear > 0 ? `${freqPerYear.toFixed(1)}次/年` : '', label: '历史下单', color: 'var(--color-primary)' },
+    { value: avgCycleDays > 0 ? avgCycleDays : '-', suffix: recommendLeadDays > 0 ? `提前${recommendLeadDays}天` : '', label: '平均周期', color: avgCycleDays > 45 ? 'var(--color-danger)' : avgCycleDays > 30 ? 'var(--color-warning)' : 'var(--color-success)' },
+    { value: displayOnTimeRate >= 0 ? `${displayOnTimeRate}%` : '-', suffix: capacityData ? '工厂达成' : '本款达成', label: '交期达成', color: displayOnTimeRate >= 80 ? 'var(--color-success)' : displayOnTimeRate >= 60 ? 'var(--color-warning)' : displayOnTimeRate >= 0 ? 'var(--color-danger)' : 'var(--color-border-antd)' },
     avgDailyOutput > 0
-      ? { value: Math.round(avgDailyOutput), suffix: estimatedDays > 0 ? `${estimatedDays}天` : '', label: '日产/排期', color: '#722ed1' }
-      : { value: activeOrderCount, suffix: '在产', label: '本款在产', color: activeOrderCount >= 3 ? '#ff4d4f' : activeOrderCount >= 1 ? '#faad14' : '#52c41a' },
+      ? { value: Math.round(avgDailyOutput), suffix: estimatedDays > 0 ? `${estimatedDays}天` : '', label: '日产/排期', color: 'var(--color-accent-purple)' }
+      : { value: activeOrderCount, suffix: '在产', label: '本款在产', color: activeOrderCount >= 3 ? 'var(--color-danger)' : activeOrderCount >= 1 ? 'var(--color-warning)' : 'var(--color-success)' },
   ];
   const quickTags = [
     recommendLeadDays > 0 ? `提前${recommendLeadDays}天` : '',
@@ -216,7 +216,7 @@ const SmartStyleInsightCard: React.FC<Props> = ({ styleNo, factoryName, capacity
       marginTop: 8,
     }}>
       <div onClick={() => setCollapsed(!collapsed)} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: collapsed ? 0 : 8, cursor: 'pointer' }}>
-        <span style={{ fontWeight: 700, fontSize: 14, color: '#1677ff' }}>
+        <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--color-primary)' }}>
           {styleNo} 下单分析
         </span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -235,13 +235,13 @@ const SmartStyleInsightCard: React.FC<Props> = ({ styleNo, factoryName, capacity
       {!collapsed && <>
       {factoryName && capacityData && (isFactoryHighRisk || isFactoryMedRisk) && (
         <div style={{
-          background: isFactoryHighRisk ? '#fff2f0' : '#fffbe6',
+          background: isFactoryHighRisk ? '#F6FFED' : '#FFFBE6',
           border: `1px solid ${isFactoryHighRisk ? '#ffccc7' : '#ffe58f'}`,
           borderRadius: 6, padding: '6px 10px',
           marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6,
         }}>
-          <WarningOutlined style={{ color: isFactoryHighRisk ? '#ff4d4f' : '#faad14' }} />
-          <span style={{ color: isFactoryHighRisk ? '#cf1322' : '#874d00', fontSize: 14, flex: 1 }}>
+          <WarningOutlined style={{ color: isFactoryHighRisk ? 'var(--color-danger)' : 'var(--color-warning)' }} />
+          <span style={{ color: isFactoryHighRisk ? 'var(--color-error)' : '#874d00', fontSize: 14, flex: 1 }}>
             {isFactoryHighRisk
               ? `${factoryName} 当前接单紧张：${overdueCount > 0 ? `${overdueCount} 单逾期` : ''}${atRiskCount > 0 ? `、${atRiskCount} 单高风险` : ''}，建议提前沟通排期`
               : `${factoryName} 在产 ${factoryTotalOrders} 单${atRiskCount > 0 ? `，其中 ${atRiskCount} 单偏慢` : ''}，排产较满`}
@@ -287,7 +287,7 @@ const SmartStyleInsightCard: React.FC<Props> = ({ styleNo, factoryName, capacity
           padding: '10px 12px', marginTop: 4,
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-            <span style={{ fontWeight: 600, fontSize: 14, color: '#1677ff' }}>
+            <span style={{ fontWeight: 600, fontSize: 14, color: 'var(--color-primary)' }}>
               <XiaoyunCloudAvatar size={16} active /> AI 下单建议
             </span>
             <Space size={8}>

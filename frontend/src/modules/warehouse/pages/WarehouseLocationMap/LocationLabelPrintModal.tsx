@@ -204,7 +204,7 @@ const LocationLabelPrintModal: React.FC<Props> = ({
               <img src={previewQrUrl} alt="QR预览" style={{ width: 36, height: 36 }} />
             ) : (
               <Spin size="small">
-                <div style={{ width: 36, height: 36, background: '#f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 8 }}>
+                <div style={{ width: 36, height: 36, background: 'var(--color-border-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 8 }}>
                   <QrcodeOutlined />
                 </div>
               </Spin>
@@ -266,7 +266,7 @@ function buildPrintHtml(
       <style>
         @page { size: A4; margin: 5mm; }
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", system-ui, sans-serif; color: #000; background: #fff; }
+        body { font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", system-ui, sans-serif; color: #000; background: var(--color-bg-base); }
         .page { width: 190mm; height: 277mm; display: grid; grid-template-columns: repeat(${layout.cols}, ${width}mm); grid-template-rows: repeat(${layout.rows}, ${height}mm); gap: 0; page-break-after: always; }
         .page:last-child { page-break-after: auto; }
         .label { border: 0.5pt solid #333; display: flex; align-items: center; justify-content: center; padding: 1mm; }
@@ -275,7 +275,7 @@ function buildPrintHtml(
         .zone-name { font-size: ${fontSize - 1}pt; color: #888; margin-bottom: 0.5mm; }
         .location-code { font-size: ${fontSize + 2}pt; font-weight: 700; margin-bottom: 1mm; }
         .qr-container { display: flex; align-items: center; justify-content: center; }
-        @media print { body { background: #fff; } }
+        @media print { body { background: var(--color-bg-base); } }
       </style>
     </head>
     <body>

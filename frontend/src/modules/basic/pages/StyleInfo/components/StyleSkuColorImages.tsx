@@ -238,7 +238,7 @@ const StyleSkuColorImages: React.FC<StyleSkuColorImagesProps> = ({ styleId, styl
       </div>
 
       {/* 说明 */}
-      <div style={{ marginBottom: 16, padding: '8px 12px', background: '#f5f5f5', borderRadius: 4, fontSize: 12, color: '#666' }}>
+      <div style={{ marginBottom: 16, padding: '8px 12px', background: 'var(--color-bg-subtle)', borderRadius: 4, fontSize: 12, color: '#666' }}>
         💡 提示：勾选颜色后可批量应用同一张图片到多个颜色；也可以点击单个颜色上传专属图片。
         <br />
         图片将同步显示在订单、库存、电商等所有SKU展示位置。
@@ -256,11 +256,11 @@ const StyleSkuColorImages: React.FC<StyleSkuColorImagesProps> = ({ styleId, styl
                   size="small"
                   hoverable
                   style={{
-                    border: selectedColors.has(item.color) ? '2px solid #1890ff' : '1px solid #f0f0f0',
+                    border: selectedColors.has(item.color) ? '2px solid var(--color-info)' : '1px solid var(--color-border-light)',
                     position: 'relative',
                   }}
                   cover={
-                    <div style={{ height: 160, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fafafa', position: 'relative' }}>
+                    <div style={{ height: 160, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--color-bg-container)', position: 'relative' }}>
                       <Checkbox
                         checked={selectedColors.has(item.color)}
                         onChange={() => toggleColor(item.color)}

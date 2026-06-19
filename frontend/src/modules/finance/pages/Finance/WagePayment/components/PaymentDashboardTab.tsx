@@ -87,13 +87,13 @@ const PaymentDashboard: React.FC = () => {
         name: '付款',
         type: 'bar' as const,
         data: stats?.trendPaid ?? [],
-        itemStyle: { color: '#ff4d4f' },
+        itemStyle: { color: 'var(--color-danger)' },
       },
       {
         name: '收款',
         type: 'bar' as const,
         data: stats?.trendReceived ?? [],
-        itemStyle: { color: '#52c41a' },
+        itemStyle: { color: 'var(--color-success)' },
       },
     ],
   };
@@ -112,7 +112,7 @@ const PaymentDashboard: React.FC = () => {
         itemStyle: { shadowBlur: 10, shadowOffsetX: 0, shadowColor: 'rgba(0,0,0,0.5)' },
       },
     }],
-    color: ['#52c41a', '#1890ff', '#faad14', '#ff7a45', '#ff4d4f'],
+    color: ['var(--color-success)', 'var(--color-info)', 'var(--color-warning)', '#ff7a45', 'var(--color-danger)'],
   };
 
   const agingColumns = [
@@ -144,7 +144,7 @@ const PaymentDashboard: React.FC = () => {
               value={totalPaid}
               precision={2}
               prefix="¥"
-              styles={{ content: { color: '#ff4d4f' } }}
+              styles={{ content: { color: 'var(--color-danger)' } }}
             />
           </Card>
         </Col>
@@ -155,7 +155,7 @@ const PaymentDashboard: React.FC = () => {
               value={totalPending}
               precision={2}
               prefix="¥"
-              styles={{ content: { color: '#faad14' } }}
+              styles={{ content: { color: 'var(--color-warning)' } }}
             />
           </Card>
         </Col>
@@ -166,7 +166,7 @@ const PaymentDashboard: React.FC = () => {
               value={totalReceived}
               precision={2}
               prefix="¥"
-              styles={{ content: { color: '#52c41a' } }}
+              styles={{ content: { color: 'var(--color-success)' } }}
             />
           </Card>
         </Col>
@@ -176,7 +176,7 @@ const PaymentDashboard: React.FC = () => {
               title="逾期笔数"
               value={overdueCount}
               suffix="笔"
-              styles={{ content: { color: overdueCount > 0 ? '#cf1322' : undefined } }}
+              styles={{ content: { color: overdueCount > 0 ? 'var(--color-error)' : undefined } }}
               prefix={overdueCount > 0 ? <WarningOutlined style={{ marginRight: 4 }} /> : <CheckCircleOutlined style={{ marginRight: 4 }} />}
             />
           </Card>

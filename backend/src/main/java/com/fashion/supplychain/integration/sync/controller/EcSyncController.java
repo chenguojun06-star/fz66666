@@ -9,6 +9,7 @@ import com.fashion.supplychain.integration.sync.adapter.EcPlatformAdapterRegistr
 import com.fashion.supplychain.integration.sync.entity.EcProductMapping;
 import com.fashion.supplychain.integration.sync.entity.EcSyncConfig;
 import com.fashion.supplychain.integration.sync.entity.EcSyncLog;
+import com.fashion.supplychain.integration.sync.orchestration.EcSyncOrchestrator;
 import com.fashion.supplychain.integration.sync.orchestration.ProductSyncOrchestrator;
 import com.fashion.supplychain.integration.sync.service.EcProductMappingService;
 import com.fashion.supplychain.integration.sync.service.EcSyncConfigService;
@@ -28,6 +29,9 @@ public class EcSyncController {
 
     @Autowired
     private ProductSyncOrchestrator syncOrchestrator;
+
+    @Autowired
+    private EcSyncOrchestrator ecSyncOrchestrator;
 
     @Autowired
     private EcSyncConfigService syncConfigService;
@@ -147,13 +151,8 @@ public class EcSyncController {
     @PostMapping("/config")
     public Result<EcSyncConfig> saveConfig(@RequestBody EcSyncConfig config) {
         Long tenantId = TenantAssert.requireTenantId();
-        config.setTenantId(tenantId);
-        config.setDeleteFlag(0);
-        if (config.getEnabled() == null) config.setEnabled(true);
-        if (config.getRateLimitPerMin() == null) config.setRateLimitPerMin(60);
-        if (config.getConfigType() == null) config.setConfigType("ECOMMERCE");
-        syncConfigService.saveOrUpdate(config);
-        return Result.success(config);
+        EcSyncConfig saved = ecSyncOrchestrator.saveOrUpdateConfig(tenantId, config);
+        return Result.success(saved);
     }
 
     @GetMapping("/config")
@@ -164,14 +163,10 @@ public class EcSyncController {
 
     @PostMapping("/dead-letter/retry/{logId}")
     public Result<Map<String, Object>> retryDeadLetter(@PathVariable Long logId) {
-        EcSyncLog syncLog = syncLogService.getById(logId);
-        if (syncLog == null || !"DEAD_LETTER".equals(syncLog.getStatus())) {
+        boolean success = ecSyncOrchestrator.retryDeadLetter(logId);
+        if (!success) {
             return Result.fail("非死信记录或记录不存在");
         }
-        syncLog.setRetryCount(0);
-        syncLog.setStatus("PENDING");
-        syncLog.setNextRetryAt(java.time.LocalDateTime.now());
-        syncLogService.updateById(syncLog);
         return Result.success(Map.of("logId", logId, "retried", true));
     }
 }

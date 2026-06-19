@@ -19,15 +19,15 @@ const AiQualityHelperCard: React.FC<Props> = ({ aiSuggestion, aiLoading, actualD
       title={
         <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <XiaoyunCloudAvatar size={18} active />
-          <span style={{ fontWeight: 600, color: '#1677ff' }}>智能质检助手</span>
+          <span style={{ fontWeight: 600, color: 'var(--color-primary)' }}>智能质检助手</span>
           {aiSuggestion?.historicalDefectRate !== undefined && (
             <span style={{
               fontSize: 14, fontWeight: 400, padding: '1px 7px',
               borderRadius: 10, background:
-                aiSuggestion.historicalDefectRate > 0.05 ? '#fff1f0'
-                  : aiSuggestion.historicalDefectRate > 0.02 ? '#fff7e6' : '#f6ffed',
-              color: aiSuggestion.historicalDefectRate > 0.05 ? '#ff4d4f'
-                : aiSuggestion.historicalDefectRate > 0.02 ? '#fa8c16' : '#52c41a',
+                aiSuggestion.historicalDefectRate > 0.05 ? '#FFF1F0'
+                  : aiSuggestion.historicalDefectRate > 0.02 ? '#FFF7E6' : '#f6ffed',
+              color: aiSuggestion.historicalDefectRate > 0.05 ? 'var(--color-danger)'
+                : aiSuggestion.historicalDefectRate > 0.02 ? 'var(--color-warning)' : 'var(--color-success)',
             }}>
               历史次品率 {toPercent(aiSuggestion.historicalDefectRate)}
             </span>
@@ -46,7 +46,7 @@ const AiQualityHelperCard: React.FC<Props> = ({ aiSuggestion, aiLoading, actualD
         <div style={{ fontSize: 14, lineHeight: 1.8 }}>
           {aiSuggestion.urgentTip && (
             <div style={{
-              padding: '6px 12px', background: '#fff7e6',
+              padding: '6px 12px', background: '#FFF7E6',
               border: '1px solid #ffd591', borderRadius: 6,
               marginBottom: 10, color: '#d46b08', fontWeight: 600, fontSize: 14,
             }}>
@@ -61,8 +61,8 @@ const AiQualityHelperCard: React.FC<Props> = ({ aiSuggestion, aiLoading, actualD
               return (
                 <div key={i} style={{
                   padding: '6px 10px',
-                  background: isRed ? '#fff1f0' : isYellow ? '#fffbe6' : '#f6ffed',
-                  borderLeft: `3px solid ${isRed ? '#ff4d4f' : isYellow ? '#faad14' : '#52c41a'}`,
+                  background: isRed ? '#FFF1F0' : isYellow ? '#FFFBE6' : '#f6ffed',
+                  borderLeft: `3px solid ${isRed ? 'var(--color-danger)' : isYellow ? 'var(--color-warning)' : 'var(--color-success)'}`,
                   borderRadius: '0 4px 4px 0',
                   color: 'var(--color-text-primary)', fontSize: 14,
                 }}>
@@ -79,7 +79,7 @@ const AiQualityHelperCard: React.FC<Props> = ({ aiSuggestion, aiLoading, actualD
                   <span style={{ fontWeight: 400, fontSize: 14, color: '#aaa', marginLeft: 6 }}>（本批暂无次品）</span>
                 )}
                 {actualDefectSet.size > 0 && (
-                  <span style={{ fontWeight: 400, fontSize: 14, color: '#f5222d', marginLeft: 6 }}> 本批已发现 {actualDefectSet.size} 类缺陷</span>
+                  <span style={{ fontWeight: 400, fontSize: 14, color: 'var(--color-error)', marginLeft: 6 }}> 本批已发现 {actualDefectSet.size} 类缺陷</span>
                 )}
               </div>
               {Object.entries(aiSuggestion.defectSuggestions)
@@ -89,15 +89,15 @@ const AiQualityHelperCard: React.FC<Props> = ({ aiSuggestion, aiLoading, actualD
                   return (
                     <div key={defect} style={{
                       marginBottom: 6, padding: '6px 10px',
-                      background: isActual ? '#fff2f0' : '#fafafa',
-                      borderLeft: `3px solid ${isActual ? '#ff4d4f' : '#e8e8e8'}`,
+                      background: isActual ? '#F6FFED' : 'var(--color-bg-container)',
+                      borderLeft: `3px solid ${isActual ? 'var(--color-danger)' : '#e8e8e8'}`,
                       borderRadius: '0 4px 4px 0',
                     }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
                         {isActual && (
-                          <span style={{ background: '#ff4d4f', color: '#fff', fontSize: 14, padding: '1px 5px', borderRadius: 2, flexShrink: 0 }}>本批已发现</span>
+                          <span style={{ background: 'var(--color-danger)', color: 'var(--color-bg-base)', fontSize: 14, padding: '1px 5px', borderRadius: 2, flexShrink: 0 }}>本批已发现</span>
                         )}
-                        <span style={{ fontWeight: 600, color: isActual ? '#cf1322' : '#595959', fontSize: 14 }}>
+                        <span style={{ fontWeight: 600, color: isActual ? 'var(--color-error)' : '#595959', fontSize: 14 }}>
                           {getDefectCategoryLabel(defect)}
                         </span>
                       </div>

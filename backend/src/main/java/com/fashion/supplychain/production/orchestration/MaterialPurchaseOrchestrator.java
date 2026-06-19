@@ -132,6 +132,7 @@ public class MaterialPurchaseOrchestrator {
 
     // ── Write ───────────────────────────────────────────────
 
+    @Transactional(rollbackFor = Exception.class)
     public boolean save(MaterialPurchase materialPurchase) {
         if (materialPurchase == null) {
             throw new IllegalArgumentException("参数错误");
@@ -143,6 +144,7 @@ public class MaterialPurchaseOrchestrator {
         return true;
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public boolean update(MaterialPurchase materialPurchase) {
         if (materialPurchase == null || !StringUtils.hasText(materialPurchase.getId())) {
             throw new IllegalArgumentException("参数错误");
@@ -159,6 +161,7 @@ public class MaterialPurchaseOrchestrator {
         return true;
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public boolean batch(List<MaterialPurchase> purchases) {
         if (purchases == null || purchases.isEmpty()) {
             throw new IllegalArgumentException("采购明细不能为空");
@@ -193,6 +196,7 @@ public class MaterialPurchaseOrchestrator {
         return true;
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public boolean updateArrivedQuantity(Map<String, Object> params) {
         String id = params == null ? null : (params.get("id") == null ? null : String.valueOf(params.get("id")));
         Integer arrivedQuantity = helper.coerceInt(params == null ? null : params.get("arrivedQuantity"));
@@ -227,6 +231,7 @@ public class MaterialPurchaseOrchestrator {
         return true;
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public MaterialPurchase createInstruction(Map<String, Object> params) {
         Map<String, Object> safeParams = params == null ? new java.util.LinkedHashMap<>() : params;
         String materialId = ParamUtils.toTrimmedString(safeParams.get("materialId"));
@@ -570,5 +575,70 @@ public class MaterialPurchaseOrchestrator {
             statusHelper.syncAfterPurchaseChanged(updated);
         }
         return true;
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void updateShipmentBySupplier(String purchaseId, String supplierId, Long tenantId,
+                                         String newStatus, Integer shipQuantity,
+                                         String trackingNo, String expressCompany, String remark) {
+        MaterialPurchase purchase = materialPurchaseService.getById(purchaseId);
+        if (purchase == null
+                || (supplierId != null && !supplierId.equals(purchase.getSupplierId()))
+                || (tenantId != null && !tenantId.equals(purchase.getTenantId()))) {
+            throw new IllegalArgumentException("采购单不存在");
+        }
+
+        boolean changed = false;
+        if (StringUtils.hasText(newStatus)) {
+            if ("partial_arrival".equals(newStatus) || "shipped".equals(newStatus)) {
+                purchase.setStatus("partial_arrival");
+                changed = true;
+            } else if ("completed".equals(newStatus)) {
+                purchase.setStatus(MaterialConstants.STATUS_AWAITING_CONFIRM);
+                purchase.setActualArrivalDate(LocalDateTime.now());
+                changed = true;
+            }
+        }
+
+        if (shipQuantity != null) {
+            int currentArrived = purchase.getArrivedQuantity() != null ? purchase.getArrivedQuantity() : 0;
+            purchase.setArrivedQuantity(currentArrived + shipQuantity);
+            changed = true;
+        }
+
+        boolean hasDeliveryInfo = StringUtils.hasText(trackingNo)
+                || StringUtils.hasText(expressCompany)
+                || StringUtils.hasText(remark);
+        if (hasDeliveryInfo) {
+            StringBuilder deliveryInfo = new StringBuilder("[供应商发货]");
+            if (StringUtils.hasText(expressCompany)) deliveryInfo.append(" 快递:").append(expressCompany);
+            if (StringUtils.hasText(trackingNo)) deliveryInfo.append(" 单号:").append(trackingNo);
+            if (StringUtils.hasText(remark)) deliveryInfo.append(" ").append(remark);
+            String existingRemark = purchase.getRemark() != null ? purchase.getRemark() : "";
+            purchase.setRemark(existingRemark.isEmpty()
+                    ? deliveryInfo.toString()
+                    : existingRemark + "\n" + deliveryInfo);
+            changed = true;
+        }
+
+        if (changed) {
+            purchase.setUpdateTime(LocalDateTime.now());
+            materialPurchaseService.updateById(purchase);
+            log.info("[供应商门户] 发货更新: purchaseId={}, supplierId={}, status={}",
+                    purchaseId, supplierId, purchase.getStatus());
+        }
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public boolean updateInvoiceUrls(String purchaseId, String invoiceUrls) {
+        if (purchaseId == null || purchaseId.isBlank()) {
+            throw new IllegalArgumentException("purchaseId 不能为空");
+        }
+        MaterialPurchase record = new MaterialPurchase();
+        record.setId(purchaseId);
+        record.setInvoiceUrls(invoiceUrls);
+        boolean ok = materialPurchaseService.updateById(record);
+        log.info("[采购单] 更新发票URL: purchaseId={}, ok={}", purchaseId, ok);
+        return ok;
     }
 }

@@ -49,9 +49,9 @@ interface StyleDevelopmentProgressBannerProps {
 
 const getProgressColor = (meta: ProgressStage['meta']) => {
   switch (meta.color) {
-    case 'success': return '#52c41a';
-    case 'processing': return '#1890ff';
-    default: return '#d9d9d9';
+    case 'success': return 'var(--color-success)';
+    case 'processing': return 'var(--color-info)';
+    default: return 'var(--color-border-antd)';
   }
 };
 
@@ -66,13 +66,13 @@ const StyleDevelopmentProgressBanner: React.FC<StyleDevelopmentProgressBannerPro
       let budgetLabel: BudgetLabel | undefined = undefined;
       if (item.budgetField && item.budgetHours != null) {
         if (!item.budgetCustomized) {
-          budgetLabel = { text: `默认${formatBudgetHours(item.budgetHours)}`, color: '#bfbfbf' };
+          budgetLabel = { text: `默认${formatBudgetHours(item.budgetHours)}`, color: 'var(--color-text-quaternary)' };
         } else {
           const status = computeBudgetStatus(item.budgetHours, item.availableTime || null, item.startTime || null, item.endTime || null);
           if (status?.text) {
             budgetLabel = { text: `预算${formatBudgetHours(item.budgetHours)} · ${status.text}`, color: status.color };
           } else {
-            budgetLabel = { text: `预算${formatBudgetHours(item.budgetHours)}`, color: '#bfbfbf' };
+            budgetLabel = { text: `预算${formatBudgetHours(item.budgetHours)}`, color: 'var(--color-text-quaternary)' };
           }
         }
       }
@@ -93,10 +93,10 @@ const StyleDevelopmentProgressBanner: React.FC<StyleDevelopmentProgressBannerPro
   return (
     <div 
       style={{ 
-        background: 'var(--color-bg-subtle, #fafafa)',
+        background: 'var(--color-bg-subtle, var(--color-bg-container))',
         borderRadius: 10,
         padding: '16px 20px',
-        border: '1px solid var(--color-border-light, #f0f0f0)',
+        border: '1px solid var(--color-border-light, var(--color-border-light))',
         ...style 
       }}
     >
@@ -119,13 +119,13 @@ const StyleDevelopmentProgressBanner: React.FC<StyleDevelopmentProgressBannerPro
                 flex: '0 0 auto',
                 minWidth: 180,
                 maxWidth: 220,
-                background: isActive ? 'white' : 'var(--color-bg-container, #fff)',
+                background: isActive ? 'white' : 'var(--color-bg-container, var(--color-bg-base))',
                 borderRadius: 8,
                 padding: 12,
                 cursor: 'pointer',
                 border: isActive 
-                  ? '2px solid var(--color-primary, #1890ff)' 
-                  : '1px solid var(--color-border-light, #f0f0f0)',
+                  ? '2px solid var(--color-primary, var(--color-info))' 
+                  : '1px solid var(--color-border-light, var(--color-border-light))',
                 boxShadow: isActive ? '0 2px 8px rgba(0,0,0,0.06)' : 'none',
                 transition: 'all 0.2s ease',
               }}

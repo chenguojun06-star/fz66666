@@ -419,7 +419,7 @@ const ResizableModal: React.FC<ResizableModalProps> = ({
                   fontSize: 'var(--font-size-sm)',
                   lineHeight: '16px',
                   background: 'rgba(0,0,0,0.55)',
-                  color: '#fff',
+                  color: 'var(--color-bg-base)',
                   borderRadius: 999,
                   zIndex: 2147483647,
                   pointerEvents: 'none',

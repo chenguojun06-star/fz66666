@@ -88,6 +88,53 @@ public class ProductionOrderOrchestrator {
     @Autowired
     private SysNoticeOrchestrator sysNoticeOrchestrator;
 
+    @Autowired
+    private ProductionProcessTrackingOrchestrator processTrackingOrchestrator;
+
+    @Autowired
+    private org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
+
+    // ---------- updateBasicInfo 相关常量 ----------
+
+    private static final java.util.Set<String> BASIC_INFO_EDITABLE_FIELDS = java.util.Set.of(
+            "styleNo", "styleName", "skc", "color", "size", "sku", "orderLines", "skuAutoGenerate");
+
+    private static final java.util.Map<String, String> FIELD_TO_COLUMN = java.util.Map.of(
+            "styleNo", "style_no",
+            "styleName", "style_name",
+            "skc", "skc",
+            "color", "color",
+            "size", "size",
+            "sku", "sku",
+            "orderLines", "order_details",
+            "skuAutoGenerate", "sku_auto_generate");
+
+    private static final java.util.List<String[]> STYLE_NO_DOWNSTREAM_TABLES = java.util.List.of(
+            new String[]{"t_cutting_bundle", "order_id"},
+            new String[]{"t_cutting_task", "order_id"},
+            new String[]{"t_material_purchase", "order_no"},
+            new String[]{"t_scan_record", "order_id"},
+            new String[]{"t_product_warehousing", "order_id"},
+            new String[]{"t_product_outstock", "order_id"},
+            new String[]{"t_cutting_bom", "order_id"},
+            new String[]{"t_factory_shipment", "order_no"},
+            new String[]{"t_material_picking", "order_id"});
+
+    private static final java.util.List<String[]> COLOR_DOWNSTREAM_TABLES = java.util.List.of(
+            new String[]{"t_cutting_bundle", "order_id"},
+            new String[]{"t_cutting_task", "order_id"});
+
+    private static final java.util.List<String[]> SKU_DOWNSTREAM_TABLES = java.util.List.of(
+            new String[]{"t_cutting_bundle", "order_id"},
+            new String[]{"t_cutting_task", "order_id"},
+            new String[]{"t_scan_record", "order_id"},
+            new String[]{"t_product_warehousing", "order_id"});
+
+    private static final java.util.List<String[]> SIZE_DOWNSTREAM_TABLES = java.util.List.of(
+            new String[]{"t_cutting_bundle", "order_id"},
+            new String[]{"t_cutting_task", "order_id"},
+            new String[]{"t_scan_record", "order_id"});
+
     // ---------- Helper 依赖 ----------
 
     @Autowired
@@ -525,6 +572,307 @@ public class ProductionOrderOrchestrator {
         return record;
     }
 
+    // ======================= quickEdit / updateBasicInfo / urgeReply =======================
+
+    /**
+     * 快速编辑订单（备注、预计出货日期、工序数据、紧急程度、预算工时等）
+     *
+     * @param payload 前端提交的数据（包含 id / remarks / expectedShipDate /
+     *                progressWorkflowJson / urgencyLevel / 各预算工时字段 / sendUrgeNotice 等）
+     * @return 更新是否成功
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public boolean quickEdit(Map<String, Object> payload) {
+        String id = (String) payload.get("id");
+        if (id == null || id.trim().isEmpty()) {
+            throw new IllegalArgumentException("缺少id参数");
+        }
+
+        ProductionOrder order = productionOrderService.getById(id);
+        if (order == null) {
+            throw new IllegalArgumentException("订单不存在");
+        }
+
+        Object clientVersion = payload.get("version");
+        if (clientVersion != null) {
+            int expected = Integer.parseInt(String.valueOf(clientVersion));
+            int actual = order.getVersion() != null ? order.getVersion() : 0;
+            if (expected != actual) {
+                throw new IllegalArgumentException("订单已被其他人修改，请刷新后重试");
+            }
+        }
+
+        if (payload.containsKey("remarks")) {
+            String remarks = (String) payload.get("remarks");
+            order.setRemarks(remarks);
+        }
+
+        if (payload.containsKey("expectedShipDate")) {
+            String expectedShipDate = (String) payload.get("expectedShipDate");
+            if (expectedShipDate != null && !expectedShipDate.isEmpty()) {
+                try {
+                    order.setExpectedShipDate(LocalDateTime.parse(expectedShipDate,
+                            java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")));
+                } catch (Exception e1) {
+                    try {
+                        order.setExpectedShipDate(java.time.LocalDate.parse(expectedShipDate).atTime(18, 0));
+                    } catch (Exception e2) {
+                        order.setExpectedShipDate(null);
+                    }
+                }
+            } else {
+                order.setExpectedShipDate(null);
+            }
+        }
+
+        boolean workflowUpdated = false;
+        if (payload.containsKey("progressWorkflowJson")) {
+            String progressWorkflowJson = (String) payload.get("progressWorkflowJson");
+            order.setProgressWorkflowJson(progressWorkflowJson);
+            workflowUpdated = true;
+        }
+
+        if (payload.containsKey("urgencyLevel")) {
+            String urgencyLevel = (String) payload.get("urgencyLevel");
+            order.setUrgencyLevel(StringUtils.hasText(urgencyLevel) ? urgencyLevel : "normal");
+        }
+
+        String[] budgetHourFields = {
+                "procurementBudgetHours", "cuttingBudgetHours", "secondaryProcessBudgetHours",
+                "carSewingBudgetHours", "ironingBudgetHours", "packagingBudgetHours",
+                "qualityBudgetHours", "warehousingBudgetHours"};
+        for (String field : budgetHourFields) {
+            if (payload.containsKey(field)) {
+                Object val = payload.get(field);
+                Integer hours = val != null ? Integer.parseInt(String.valueOf(val)) : null;
+                switch (field) {
+                    case "procurementBudgetHours" -> order.setProcurementBudgetHours(hours);
+                    case "cuttingBudgetHours" -> order.setCuttingBudgetHours(hours);
+                    case "secondaryProcessBudgetHours" -> order.setSecondaryProcessBudgetHours(hours);
+                    case "carSewingBudgetHours" -> order.setCarSewingBudgetHours(hours);
+                    case "ironingBudgetHours" -> order.setIroningBudgetHours(hours);
+                    case "packagingBudgetHours" -> order.setPackagingBudgetHours(hours);
+                    case "qualityBudgetHours" -> order.setQualityBudgetHours(hours);
+                    case "warehousingBudgetHours" -> order.setWarehousingBudgetHours(hours);
+                }
+            }
+        }
+
+        boolean success = productionOrderService.updateById(order);
+
+        if (success && workflowUpdated) {
+            try {
+                processTrackingOrchestrator.syncUnitPrices(id);
+            } catch (Exception e) {
+                log.warn("[quickEdit] 同步工序跟踪单价失败: {}", e.getMessage());
+            }
+        }
+
+        if (success && Boolean.TRUE.equals(payload.get("sendUrgeNotice"))) {
+            try {
+                sysNoticeOrchestrator.send(order.getOrderNo(), "urge_order");
+            } catch (Exception e) {
+                log.warn("[quickEdit] 催单通知发送失败: {}", e.getMessage());
+            }
+        }
+
+        if (success) {
+            evictCacheAfterCommit(id);
+        }
+        return success;
+    }
+
+    /**
+     * 更新订单基本信息（款号、颜色、尺码、SKU等），并同步到下游关联表
+     *
+     * @param payload 包含 id / field / value / operationRemark
+     * @return 同步的下游记录数
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public int updateBasicInfo(Map<String, Object> payload) {
+        String id = (String) payload.get("id");
+        String field = (String) payload.get("field");
+        String value = (String) payload.get("value");
+        String operationRemark = (String) payload.get("operationRemark");
+
+        if (id == null || id.trim().isEmpty()) {
+            throw new IllegalArgumentException("缺少id参数");
+        }
+        if (field == null || !BASIC_INFO_EDITABLE_FIELDS.contains(field)) {
+            throw new IllegalArgumentException("不支持编辑的字段: " + field);
+        }
+        if (value == null) {
+            throw new IllegalArgumentException("值不能为空");
+        }
+
+        ProductionOrder order = productionOrderService.getById(id);
+        if (order == null) {
+            throw new IllegalArgumentException("订单不存在");
+        }
+
+        String terminalStatuses = "closed,scrapped,cancelled,archived";
+        if (terminalStatuses.contains(order.getStatus())) {
+            throw new IllegalArgumentException("终态订单不允许编辑基本信息");
+        }
+
+        String oldValue = getFieldValue(order, field);
+        if (value.trim().equals(oldValue != null ? oldValue.trim() : "")) {
+            return 0;
+        }
+
+        setFieldValue(order, field, value.trim());
+
+        String remark = operationRemark != null ? operationRemark
+                : String.format("修改%s：%s → %s", fieldLabel(field), oldValue, value.trim());
+        appendRemark(order, remark);
+
+        if (!productionOrderService.updateById(order)) {
+            throw new IllegalStateException("更新失败");
+        }
+
+        int syncedCount = syncDownstream(order, field, value.trim());
+
+        log.info("[updateBasicInfo] orderId={} field={} old={} new={} synced={}",
+                id, field, oldValue, value.trim(), syncedCount);
+
+        evictCacheAfterCommit(id);
+        return syncedCount;
+    }
+
+    /**
+     * 回复催单（更新催单记录回复内容，并在包含回复交期时同步更新订单的预计出货日期）
+     *
+     * @param payload 包含 urgeRecordId / replyContent / expectedShipDate
+     * @return 是否成功
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public boolean urgeReply(Map<String, Object> payload) {
+        String urgeRecordId = payload == null ? null : (String) payload.get("urgeRecordId");
+        if (!StringUtils.hasText(urgeRecordId)) {
+            throw new IllegalArgumentException("缺少urgeRecordId参数");
+        }
+
+        UrgeRecord record = urgeRecordService.getById(urgeRecordId);
+        if (record == null) {
+            throw new IllegalArgumentException("催单记录不存在");
+        }
+
+        String replyContent = (String) payload.getOrDefault("replyContent", "");
+        String expectedShipDateStr = (String) payload.get("expectedShipDate");
+
+        record.setReplyContent(replyContent);
+        record.setReplyTime(LocalDateTime.now());
+        record.setStatus("replied");
+
+        if (StringUtils.hasText(expectedShipDateStr)) {
+            try {
+                record.setReplyExpectedShipDate(java.time.LocalDate.parse(expectedShipDateStr).atTime(18, 0));
+            } catch (Exception e) {
+                throw new IllegalArgumentException("日期格式错误，请使用yyyy-MM-dd格式");
+            }
+        }
+        urgeRecordService.updateById(record);
+
+        if (record.getReplyExpectedShipDate() != null) {
+            ProductionOrder order = productionOrderService.lambdaQuery()
+                    .eq(ProductionOrder::getOrderNo, record.getOrderNo())
+                    .eq(ProductionOrder::getTenantId, record.getTenantId())
+                    .eq(ProductionOrder::getDeleteFlag, 0)
+                    .one();
+            if (order != null) {
+                order.setExpectedShipDate(record.getReplyExpectedShipDate());
+                productionOrderService.updateById(order);
+                evictCacheAfterCommit(order.getId());
+            }
+        }
+
+        return true;
+    }
+
+    // ---------- updateBasicInfo 辅助方法 ----------
+
+    private String getFieldValue(ProductionOrder order, String field) {
+        return switch (field) {
+            case "styleNo" -> order.getStyleNo();
+            case "styleName" -> order.getStyleName();
+            case "skc" -> order.getSkc();
+            case "color" -> order.getColor();
+            case "size" -> order.getSize();
+            case "sku" -> order.getSku();
+            case "orderLines" -> order.getOrderDetails();
+            case "skuAutoGenerate" -> order.getSkuAutoGenerate() != null ? order.getSkuAutoGenerate().toString() : null;
+            default -> null;
+        };
+    }
+
+    private void setFieldValue(ProductionOrder order, String field, String value) {
+        switch (field) {
+            case "styleNo" -> order.setStyleNo(value);
+            case "styleName" -> order.setStyleName(value);
+            case "skc" -> order.setSkc(value);
+            case "color" -> order.setColor(value);
+            case "size" -> order.setSize(value);
+            case "sku" -> order.setSku(value);
+            case "orderLines" -> order.setOrderDetails(value);
+            case "skuAutoGenerate" -> order.setSkuAutoGenerate("true".equalsIgnoreCase(value) || "1".equals(value));
+        }
+    }
+
+    private String fieldLabel(String field) {
+        return java.util.Map.of(
+                "styleNo", "款号",
+                "styleName", "款名",
+                "skc", "SKC",
+                "color", "颜色",
+                "size", "尺码",
+                "sku", "SKU",
+                "orderLines", "颜色尺码明细",
+                "skuAutoGenerate", "自动生成SKU"
+        ).getOrDefault(field, field);
+    }
+
+    private void appendRemark(ProductionOrder order, String remark) {
+        String existing = order.getRemarks();
+        String timestamp = LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
+        String entry = String.format("[%s] %s", timestamp, remark);
+        order.setRemarks(existing != null && !existing.isEmpty() ? existing + "\n" + entry : entry);
+    }
+
+    private int syncDownstream(ProductionOrder order, String field, String newValue) {
+        String column = FIELD_TO_COLUMN.get(field);
+        if (column == null) return 0;
+
+        int total = 0;
+
+        java.util.List<String[]> tables;
+        if ("styleNo".equals(field)) {
+            tables = STYLE_NO_DOWNSTREAM_TABLES;
+        } else if ("color".equals(field)) {
+            tables = COLOR_DOWNSTREAM_TABLES;
+        } else if ("sku".equals(field)) {
+            tables = SKU_DOWNSTREAM_TABLES;
+        } else if ("size".equals(field)) {
+            tables = SIZE_DOWNSTREAM_TABLES;
+        } else {
+            return 0;
+        }
+
+        for (String[] tableInfo : tables) {
+            String table = tableInfo[0];
+            String refColumn = tableInfo[1];
+            String refValue = "order_id".equals(refColumn) ? order.getId() : order.getOrderNo();
+            try {
+                int count = jdbcTemplate.update(
+                        "UPDATE " + table + " SET " + column + " = ? WHERE " + refColumn + " = ? AND delete_flag = 0 AND tenant_id = ?",
+                        newValue, refValue, order.getTenantId());
+                total += count;
+            } catch (Exception e) {
+                log.warn("[syncDownstream] 同步失败: table={} column={} ref={}", table, column, refColumn, e);
+            }
+        }
+        return total;
+    }
+
     // ======================= 状态查询 → helper =======================
 
     /**
@@ -604,5 +952,25 @@ public class ProductionOrderOrchestrator {
                 }
             }
         });
+    }
+
+    /**
+     * 保存订单节点操作记录（工序节点备注等）
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public boolean saveNodeOperations(String id, String nodeOperations) {
+        if (!StringUtils.hasText(id)) {
+            throw new IllegalArgumentException("id不能为空");
+        }
+        ProductionOrder order = productionOrderService.lambdaQuery()
+                .eq(ProductionOrder::getId, id)
+                .eq(ProductionOrder::getDeleteFlag, 0)
+                .one();
+        if (order == null) {
+            throw new IllegalArgumentException("订单不存在");
+        }
+        assertOrderBelongsToCurrentTenant(id, "生产订单");
+        order.setNodeOperations(nodeOperations);
+        return productionOrderService.updateById(order);
     }
 }

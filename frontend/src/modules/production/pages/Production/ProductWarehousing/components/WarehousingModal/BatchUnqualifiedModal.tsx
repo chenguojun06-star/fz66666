@@ -58,7 +58,7 @@ const BatchUnqualifiedModal: React.FC<BatchUnqualifiedModalProps> = ({
             cancelText="再想想"
             okButtonProps={{ danger: true }}
           >
-            <Button type="primary" loading={submitLoading} style={{ color: '#ff4d4f', background: 'var(--color-bg-base)', borderColor: '#ff4d4f' }}>
+            <Button type="primary" loading={submitLoading} style={{ color: 'var(--color-danger)', background: 'var(--color-bg-base)', borderColor: 'var(--color-danger)' }}>
               确认批量不合格
             </Button>
           </Popconfirm>

@@ -130,10 +130,10 @@ const TaxExport: React.FC = () => {
             return (
               <Col xs={24} md={8} key={opt.value}>
                 <div onClick={() => handleFormatClick(opt)} style={{
-                  border: `2px solid ${selected ? '#1890ff' : locked ? '#f0f0f0' : '#d9d9d9'}`,
+                  border: `2px solid ${selected ? 'var(--color-info)' : locked ? 'var(--color-border-light)' : 'var(--color-border-antd)'}`,
                   borderRadius: 8, padding: '12px 16px',
                   cursor: locked ? 'not-allowed' : 'pointer',
-                  background: selected ? '#e6f7ff' : locked ? '#fafafa' : '#fff',
+                  background: selected ? '#e6f7ff' : locked ? 'var(--color-bg-container)' : 'var(--color-bg-base)',
                   transition: 'all 0.2s', position: 'relative',
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
@@ -145,7 +145,7 @@ const TaxExport: React.FC = () => {
                         </Tag>}
                   </div>
                   <Text type="secondary" style={{ fontSize: 14 }}>{opt.desc}</Text>
-                  {selected && <CheckCircleOutlined style={{ position: 'absolute', top: 10, right: 10, color: '#1890ff' }} />}
+                  {selected && <CheckCircleOutlined style={{ position: 'absolute', top: 10, right: 10, color: 'var(--color-info)' }} />}
                 </div>
               </Col>
             );
@@ -187,7 +187,7 @@ const TaxExport: React.FC = () => {
         </Row>
         <Divider style={{ margin: '20px 0 12px' }} />
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <FileExcelOutlined style={{ color: '#52c41a', fontSize: 16 }} />
+          <FileExcelOutlined style={{ color: 'var(--color-success)', fontSize: 16 }} />
           <Text type="secondary" style={{ fontSize: 14 }}>导出文件为 .xlsx 格式 · 金蝶/用友格式当前为基础凭证导入列模板，如客户账套科目编码有差异，仍需按企业实际会计科目校准。</Text>
         </div>
       </Card>
@@ -204,7 +204,7 @@ const TaxExport: React.FC = () => {
   return (
     <div style={pageShellStyle}>
       <Title level={4} style={{ marginBottom: 4 }}>
-        <FileExcelOutlined style={{ marginRight: 8, color: '#52c41a' }} />
+        <FileExcelOutlined style={{ marginRight: 8, color: 'var(--color-success)' }} />
         财税管理
       </Title>
       <Text type="secondary" style={{ display: 'block', marginBottom: 12 }}>

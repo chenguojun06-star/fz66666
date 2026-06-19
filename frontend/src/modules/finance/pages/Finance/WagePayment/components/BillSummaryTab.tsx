@@ -195,11 +195,11 @@ const BillSummaryTab: React.FC = () => {
             suffix={<span style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>{stats.pendingCount ?? 0}笔</span>} />
         </Card>
         <Card style={{ flex: 1 }}>
-          <Statistic title="已确认" value={stats.confirmedAmount ?? 0} prefix="¥" precision={2} styles={{ content: { color: '#1677ff' } }}
+          <Statistic title="已确认" value={stats.confirmedAmount ?? 0} prefix="¥" precision={2} styles={{ content: { color: 'var(--color-primary)' } }}
             suffix={<span style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>{stats.confirmedCount ?? 0}笔</span>} />
         </Card>
         <Card style={{ flex: 1 }}>
-          <Statistic title="已结清" value={stats.settledAmount ?? 0} prefix="¥" precision={2} styles={{ content: { color: '#52c41a' } }}
+          <Statistic title="已结清" value={stats.settledAmount ?? 0} prefix="¥" precision={2} styles={{ content: { color: 'var(--color-success)' } }}
             suffix={<span style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>{stats.settledCount ?? 0}笔</span>} />
         </Card>
       </div>

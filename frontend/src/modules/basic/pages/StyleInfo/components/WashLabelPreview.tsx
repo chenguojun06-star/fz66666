@@ -100,9 +100,9 @@ const WashLabelPreview: React.FC<Props> = ({
   return (
     <div style={{
       padding: 16,
-      background: 'var(--color-bg-container, #fafafa)',
+      background: 'var(--color-bg-container, var(--color-bg-container))',
       borderRadius: 8,
-      border: '1px solid var(--color-border-light, #f0f0f0)',
+      border: '1px solid var(--color-border-light, var(--color-border-light))',
     }}>
       {isMultiPart ? (
         <div>
@@ -111,7 +111,7 @@ const WashLabelPreview: React.FC<Props> = ({
               <div style={{
                 fontSize: 14,
                 fontWeight: 600,
-                color: 'var(--color-primary, #1677ff)',
+                color: 'var(--color-primary, var(--color-primary))',
                 marginBottom: 6,
               }}>
                 {section.label}
@@ -132,7 +132,7 @@ const WashLabelPreview: React.FC<Props> = ({
             <div>预览尺寸：{width}×{height}mm × {sections.length}张</div>
             <div>护理图标：{careIconCodes.length}个/张</div>
             <div>部位：{sections.map(s => s.label).join(' / ')}</div>
-            <div style={{ color: 'var(--color-primary, #1677ff)', marginTop: 4 }}>
+            <div style={{ color: 'var(--color-primary, var(--color-primary))', marginTop: 4 }}>
               套装多件：每个部位将打印独立的洗水唛标签
             </div>
           </div>

@@ -39,7 +39,7 @@ const QuotationAuditSection: React.FC<Props> = ({
     <div style={{ marginBottom: 16 }}>
       <div style={{
         fontSize: 15, fontWeight: 600, padding: '8px 0 6px',
-        borderBottom: '1px solid var(--color-border-light, #f0f0f0)', marginBottom: 12, color: 'var(--color-text-primary, #1a1a1a)',
+        borderBottom: '1px solid var(--color-border-light, var(--color-border-light))', marginBottom: 12, color: 'var(--color-text-primary, var(--color-text-primary))',
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
       }}>
         <span>报价审核</span>

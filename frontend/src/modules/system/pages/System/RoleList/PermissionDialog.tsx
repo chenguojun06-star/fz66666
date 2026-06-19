@@ -151,8 +151,8 @@ const PermissionDialog = forwardRef<PermissionDialogHandle, PermissionDialogProp
             const allBtnIds = [...module.groups.flatMap(g => [g.groupId, ...g.buttons.map(b => b.id)]), ...module.directButtons.map(b => b.id)];
             return (
               <div key={module.moduleId} style={{ minWidth: 130, maxWidth: 200, border: '1px solid #d1d5db', borderRadius: 4, overflow: 'hidden', fontSize: 14, flexShrink: 0 }}>
-                <div style={{ background: 'var(--primary-color, #1677ff)', padding: '4px 8px' }}>
-                  <Checkbox checked={checkedPermIds.has(module.moduleId)} onChange={(e) => { const next = new Set(checkedPermIds); if (e.target.checked) { next.add(module.moduleId); allBtnIds.forEach(id => next.add(id)); } else { next.delete(module.moduleId); allBtnIds.forEach(id => next.delete(id)); } setCheckedPermIds(next); }} style={{ color: '#fff', fontSize: 14, fontWeight: 600 }}>{module.moduleName}</Checkbox>
+                <div style={{ background: 'var(--primary-color, var(--color-primary))', padding: '4px 8px' }}>
+                  <Checkbox checked={checkedPermIds.has(module.moduleId)} onChange={(e) => { const next = new Set(checkedPermIds); if (e.target.checked) { next.add(module.moduleId); allBtnIds.forEach(id => next.add(id)); } else { next.delete(module.moduleId); allBtnIds.forEach(id => next.delete(id)); } setCheckedPermIds(next); }} style={{ color: 'var(--color-bg-base)', fontSize: 14, fontWeight: 600 }}>{module.moduleName}</Checkbox>
                 </div>
                 {module.groups.map(group => (
                   <div key={group.groupId} style={{ borderBottom: '1px solid var(--color-border-light)' }}>

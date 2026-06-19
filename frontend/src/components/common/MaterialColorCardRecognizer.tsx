@@ -25,10 +25,10 @@ interface Props {
 const CONFIDENCE_THRESHOLD = 70;
 
 const confidenceColor = (c?: number) => {
-  if (!c) return '#d9d9d9';
-  if (c >= 85) return '#52c41a';
-  if (c >= CONFIDENCE_THRESHOLD) return '#faad14';
-  return '#ff4d4f';
+  if (!c) return 'var(--color-border-antd)';
+  if (c >= 85) return 'var(--color-success)';
+  if (c >= CONFIDENCE_THRESHOLD) return 'var(--color-warning)';
+  return 'var(--color-danger)';
 };
 
 const confidenceLabel = (c?: number) => {
@@ -266,7 +266,7 @@ export const MaterialColorCardRecognizer: React.FC<Props> = ({
               </div>
             ) : (
               <div style={{
-                width: 220, height: 220, margin: '0 auto', border: '2px dashed #d9d9d9',
+                width: 220, height: 220, margin: '0 auto', border: '2px dashed var(--color-border-antd)',
                 borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center',
                 color: '#999',
               }}>
@@ -346,7 +346,7 @@ export const MaterialColorCardRecognizer: React.FC<Props> = ({
                       return (
                         <div key={key as string} style={{
                           padding: 8, border: '1px solid #e8e8e8',
-                          borderRadius: 4, background: '#fafafa',
+                          borderRadius: 4, background: 'var(--color-bg-container)',
                         }}>
                           <div style={{ fontSize: 12, color: '#666', display: 'flex', justifyContent: 'space-between' }}>
                             <span>{label}</span>

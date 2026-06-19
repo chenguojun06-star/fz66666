@@ -209,7 +209,7 @@ const ExpenseReimbursementPage: React.FC = () => {
                           {doc.recognizing ? (<div style={{ width: 72, height: 72, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px dashed var(--color-border-antd)', borderRadius: 6, background: 'var(--color-bg-container)' }}><Spin /></div>)
                             : doc.imageUrl ? (<Image src={getFullAuthedFileUrl(doc.imageUrl)} width={72} height={72} style={{ objectFit: 'cover', borderRadius: 6 }} />) : null}
                           <Button type="text" danger icon={<CloseCircleOutlined />}
-                            style={{ position: 'absolute', top: -8, right: -8, padding: 0, minWidth: 18, height: 18, background: 'var(--color-bg-base)', borderRadius: '50%', border: '1px solid #ff4d4f' }}
+                            style={{ position: 'absolute', top: -8, right: -8, padding: 0, minWidth: 18, height: 18, background: 'var(--color-bg-base)', borderRadius: '50%', border: '1px solid var(--color-danger)' }}
                             onClick={() => setUploadedDocs(prev => prev.filter((_, i) => i !== idx))}
                           />
                         </div>

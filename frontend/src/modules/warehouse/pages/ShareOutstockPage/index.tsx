@@ -71,7 +71,7 @@ const formatDateTime = (value?: string | number | Date) => {
 };
 
 const paymentLabel = (status?: string) => {
-  if (status === 'paid') return { text: '已收款', color: '#10b981' };
+  if (status === 'paid') return { text: '已收款', color: 'var(--color-accent-emerald)' };
   if (status === 'partial') return { text: '部分收款', color: '#f59e0b' };
   return { text: '待收款', color: 'var(--color-text-tertiary)' };
 };
@@ -168,13 +168,13 @@ const ShareOutstockPage: React.FC = () => {
               icon={<DollarOutlined />}
               label="合计金额"
               value={data.totalAmount != null ? formatMoney(data.totalAmount) : '—'}
-              color="#10b981"
+              color="var(--color-accent-emerald)"
             />
             <SummaryCard
               icon={<CheckCircleOutlined />}
               label="收款进度"
               value={`${paidCount} / ${totalItems}`}
-              color={paidCount === totalItems && totalItems > 0 ? '#10b981' : '#f59e0b'}
+              color={paidCount === totalItems && totalItems > 0 ? 'var(--color-accent-emerald)' : '#f59e0b'}
             />
             <SummaryCard
               icon={<CalendarOutlined />}
@@ -248,7 +248,7 @@ const ShareOutstockPage: React.FC = () => {
             <span style={{ fontWeight: 700, fontSize: 14 }}>
               {data.totalQuantity ?? 0} 件
               {data.totalAmount != null && (
-                <span style={{ marginLeft: 16, color: '#10b981' }}>{formatMoney(data.totalAmount)}</span>
+                <span style={{ marginLeft: 16, color: 'var(--color-accent-emerald)' }}>{formatMoney(data.totalAmount)}</span>
               )}
             </span>
           </div>

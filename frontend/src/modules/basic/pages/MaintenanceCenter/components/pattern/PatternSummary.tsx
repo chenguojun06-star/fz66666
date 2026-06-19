@@ -56,7 +56,7 @@ export const PatternSummary: React.FC<PatternSummaryProps> = ({
   const statusPillStyle = locked
     ? { ...statusPillBaseStyle, color: '#0958d9', background: '#e6f4ff', border: '1px solid #91caff' }
     : unlockRemark
-      ? { ...statusPillBaseStyle, color: '#ad6800', background: '#fff7e6', border: '1px solid #ffd591' }
+      ? { ...statusPillBaseStyle, color: '#ad6800', background: '#FFF7E6', border: '1px solid #ffd591' }
       : { ...statusPillBaseStyle, color: '#135200', background: '#f6ffed', border: '1px solid #b7eb8f' };
 
   return (
@@ -109,7 +109,7 @@ export const PatternSummary: React.FC<PatternSummaryProps> = ({
             </div>
           </div>
           {currentPatternFile?.fileUrl ? (
-            <a href={getFullAuthedFileUrl(currentPatternFile.fileUrl)} target="_blank" rel="noreferrer" title="下载当前纸样文件（大货读取版本）" style={{ fontSize: 14, color: '#1677ff', whiteSpace: 'nowrap' }}>↓ 下载</a>
+            <a href={getFullAuthedFileUrl(currentPatternFile.fileUrl)} target="_blank" rel="noreferrer" title="下载当前纸样文件（大货读取版本）" style={{ fontSize: 14, color: 'var(--color-primary)', whiteSpace: 'nowrap' }}>↓ 下载</a>
           ) : null}
         </div>
         <div style={{ ...directMetaStyle, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
@@ -123,14 +123,14 @@ export const PatternSummary: React.FC<PatternSummaryProps> = ({
         <div style={{ border: '1px solid var(--color-border-light)', borderRadius: 10, overflow: 'hidden' }}>
           <div style={{ padding: '8px 12px', background: 'var(--color-bg-container)', borderBottom: '1px solid var(--color-border-light)', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
             <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-text-primary)' }}>历史封存版本</span>
-            <span style={{ fontSize: 14, color: 'var(--color-text-tertiary)', background: '#fff7e6', padding: '1px 8px', borderRadius: 4, border: '1px solid #ffd591' }}>已封存 · 仅供参考 · 不参与大货生产</span>
+            <span style={{ fontSize: 14, color: 'var(--color-text-tertiary)', background: '#FFF7E6', padding: '1px 8px', borderRadius: 4, border: '1px solid #ffd591' }}>已封存 · 仅供参考 · 不参与大货生产</span>
           </div>
           <div>
             {patternVersionList
               .filter(v => v.status === 'archived')
               .sort((a, b) => (b.version || 0) - (a.version || 0))
               .map((ver, idx) => (
-                <div key={(ver as any).id || idx} style={{ padding: '8px 12px', borderBottom: '1px solid #f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                <div key={(ver as any).id || idx} style={{ padding: '8px 12px', borderBottom: '1px solid var(--color-bg-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                       <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-text-primary)', flexShrink: 0 }}>V{ver.version || '-'}</span>
@@ -142,8 +142,8 @@ export const PatternSummary: React.FC<PatternSummaryProps> = ({
                     </div>
                   </div>
                   {ver.fileUrl ? (
-                    <a href={getFullAuthedFileUrl(ver.fileUrl)} target="_blank" rel="noreferrer" title="下载此封存版本" style={{ fontSize: 14, color: '#1677ff', flexShrink: 0, whiteSpace: 'nowrap' }}>↓ 下载</a>
-                  ) : <span style={{ fontSize: 14, color: '#d9d9d9', flexShrink: 0 }}>无文件</span>}
+                    <a href={getFullAuthedFileUrl(ver.fileUrl)} target="_blank" rel="noreferrer" title="下载此封存版本" style={{ fontSize: 14, color: 'var(--color-primary)', flexShrink: 0, whiteSpace: 'nowrap' }}>↓ 下载</a>
+                  ) : <span style={{ fontSize: 14, color: 'var(--color-border-antd)', flexShrink: 0 }}>无文件</span>}
                 </div>
               ))}
           </div>

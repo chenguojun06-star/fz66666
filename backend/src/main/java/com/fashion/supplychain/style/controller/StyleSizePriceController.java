@@ -1,15 +1,12 @@
 package com.fashion.supplychain.style.controller;
 
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.style.entity.StyleSizePrice;
+import com.fashion.supplychain.style.orchestration.StyleSizePriceOrchestrator;
 import com.fashion.supplychain.style.service.StyleSizePriceService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-
-import com.fashion.supplychain.common.UserContext;
-import com.fashion.supplychain.common.tenant.TenantAssert;
 
 import java.util.List;
 
@@ -24,6 +21,9 @@ public class StyleSizePriceController {
     @Autowired
     private StyleSizePriceService styleSizePriceService;
 
+    @Autowired
+    private StyleSizePriceOrchestrator styleSizePriceOrchestrator;
+
     /**
      * 根据款号ID查询多码单价列表
      */
@@ -35,14 +35,7 @@ public class StyleSizePriceController {
         if (resolvedStyleId == null) {
             return Result.success(java.util.Collections.emptyList());
         }
-        TenantAssert.assertTenantContext();
-        Long tid = UserContext.tenantId();
-        QueryWrapper<StyleSizePrice> qw = new QueryWrapper<>();
-        qw.eq("style_id", resolvedStyleId);
-        qw.eq("tenant_id", tid);
-        qw.orderByAsc("process_code", "size");
-        List<StyleSizePrice> list = styleSizePriceService.list(qw);
-        return Result.success(list);
+        return Result.success(styleSizePriceOrchestrator.listByStyleId(resolvedStyleId));
     }
 
     /**
@@ -53,20 +46,11 @@ public class StyleSizePriceController {
         if (list == null || list.isEmpty()) {
             return Result.fail("数据不能为空");
         }
-
-        Long styleId = list.get(0).getStyleId();
-        if (styleId == null) {
-            return Result.fail("styleId不能为空");
+        boolean success = styleSizePriceOrchestrator.batchSave(list);
+        if (!success) {
+            return Result.fail("保存失败");
         }
-        TenantAssert.assertTenantContext();
-        Long tid = UserContext.tenantId();
-        QueryWrapper<StyleSizePrice> qw = new QueryWrapper<>();
-        qw.eq("style_id", styleId);
-        qw.eq("tenant_id", tid);
-        styleSizePriceService.remove(qw);
-
-        boolean success = styleSizePriceService.saveBatch(list);
-        return Result.success(success);
+        return Result.success(true);
     }
 
     /**
@@ -74,7 +58,10 @@ public class StyleSizePriceController {
      */
     @DeleteMapping("/{id}")
     public Result<Boolean> delete(@PathVariable String id) {
-        boolean success = styleSizePriceService.removeById(id);
+        boolean success = styleSizePriceOrchestrator.delete(id);
+        if (!success) {
+            return Result.fail("删除失败");
+        }
         return Result.success(success);
     }
 }

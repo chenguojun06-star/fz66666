@@ -119,13 +119,7 @@ public class EcStockController {
         Long tenantId = UserContext.tenantId();
         Long skuId = Long.valueOf(body.get("skuId").toString());
         Integer safeStock = Integer.valueOf(body.get("safeStock").toString());
-        List<EcUniversalStock> stocks = universalStockService.list(new LambdaQueryWrapper<EcUniversalStock>()
-                .eq(EcUniversalStock::getTenantId, tenantId)
-                .eq(EcUniversalStock::getSkuId, skuId));
-        for (EcUniversalStock stock : stocks) {
-            stock.setSafeStock(safeStock);
-            universalStockService.updateById(stock);
-        }
+        stockOrchestrator.updateSafeStock(tenantId, skuId, safeStock);
         return Result.success();
     }
 }

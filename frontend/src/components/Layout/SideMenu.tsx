@@ -155,7 +155,7 @@ const SideMenu: React.FC<SideMenuProps> = ({
                       <Badge
                         count={badgeCount}
                         size="small"
-                        style={{ backgroundColor: '#ff4d4f', boxShadow: 'none' }}
+                        style={{ backgroundColor: 'var(--color-danger)', boxShadow: 'none' }}
                       />
                     )}
                   </span>

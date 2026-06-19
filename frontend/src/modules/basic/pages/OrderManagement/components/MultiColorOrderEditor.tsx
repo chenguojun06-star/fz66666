@@ -236,10 +236,10 @@ const MultiColorOrderEditor: React.FC<MultiColorOrderEditorProps> = ({
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', marginBottom: 12, flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-<Tag style={{ marginInlineEnd: 0, color: '#1677ff', background: '#e6f4ff', borderColor: '#91caff' }}>开发色 {availableColors.length}</Tag>
-              <Tag style={{ marginInlineEnd: 0, color: '#1677ff', background: '#e6f4ff', borderColor: '#91caff' }}>开发码 {availableSizes.length}</Tag>
-              <Tag style={{ marginInlineEnd: 0, color: '#1677ff', background: '#e6f4ff', borderColor: '#91caff' }}>已选 {selectedColors.length} 色 / {selectedSizes.length} 码</Tag>
-              <Tag style={{ marginInlineEnd: 0, color: '#1677ff', background: '#e6f4ff', borderColor: '#91caff' }}>组合 {orderLines.length}</Tag>
+<Tag style={{ marginInlineEnd: 0, color: 'var(--color-primary)', background: '#e6f4ff', borderColor: '#91caff' }}>开发色 {availableColors.length}</Tag>
+              <Tag style={{ marginInlineEnd: 0, color: 'var(--color-primary)', background: '#e6f4ff', borderColor: '#91caff' }}>开发码 {availableSizes.length}</Tag>
+              <Tag style={{ marginInlineEnd: 0, color: 'var(--color-primary)', background: '#e6f4ff', borderColor: '#91caff' }}>已选 {selectedColors.length} 色 / {selectedSizes.length} 码</Tag>
+              <Tag style={{ marginInlineEnd: 0, color: 'var(--color-primary)', background: '#e6f4ff', borderColor: '#91caff' }}>组合 {orderLines.length}</Tag>
         </div>
         <div style={{ color: 'var(--neutral-text-light)' }}>
           总数量：<span style={{ fontWeight: 600 }}>{totalQuantity}</span>
@@ -278,7 +278,7 @@ const MultiColorOrderEditor: React.FC<MultiColorOrderEditorProps> = ({
       </Space>
 
       {(summary && (summary.inProduction > 0 || summary.stock > 0 || summary.pendingSales > 0)) || availabilityLoading ? (
-        <div style={{ marginBottom: 10, padding: '8px 12px', borderRadius: 6, background: summary && (summary.inProduction > 0 || summary.pendingSales > 0) ? '#fff7e6' : 'var(--color-bg-container)', border: `1px solid ${summary && (summary.inProduction > 0 || summary.pendingSales > 0) ? '#ffd591' : 'var(--color-border-light)'}`, color: '#d46b08' }}>
+        <div style={{ marginBottom: 10, padding: '8px 12px', borderRadius: 6, background: summary && (summary.inProduction > 0 || summary.pendingSales > 0) ? '#FFF7E6' : 'var(--color-bg-container)', border: `1px solid ${summary && (summary.inProduction > 0 || summary.pendingSales > 0) ? '#ffd591' : 'var(--color-border-light)'}`, color: '#d46b08' }}>
           {availabilityLoading ? (
             <span>正在查询该款式的在途、库存、销售欠数...</span>
           ) : summary ? (
@@ -286,7 +286,7 @@ const MultiColorOrderEditor: React.FC<MultiColorOrderEditorProps> = ({
               ⚠️ 该款式当前：
               {summary.inProduction > 0 && <strong style={{ fontSize: 15 }}>在途 {summary.inProduction}</strong>}
               {summary.stock > 0 && <strong style={{ fontSize: 15, marginLeft: 8 }}>库存 {summary.stock}</strong>}
-              {summary.pendingSales > 0 && <strong style={{ fontSize: 15, marginLeft: 8, color: '#cf1322' }}>欠数 {summary.pendingSales}</strong>}
+              {summary.pendingSales > 0 && <strong style={{ fontSize: 15, marginLeft: 8, color: 'var(--color-error)' }}>欠数 {summary.pendingSales}</strong>}
               ，请合理安排本次下单数量
             </span>
           ) : null}
@@ -312,13 +312,13 @@ const MultiColorOrderEditor: React.FC<MultiColorOrderEditorProps> = ({
             <tbody>
               {matrixRows.map((row) => (
                 <tr key={row.key}>
-                  <td style={{ padding: '6px 6px', borderBottom: '1px solid #f5f5f5', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.color}</td>
+                  <td style={{ padding: '6px 6px', borderBottom: '1px solid var(--color-bg-subtle)', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.color}</td>
                   {selectedSizes.map((size) => {
                     const matched = orderLines.find((line) => buildComboKey(line.color, line.size) === buildComboKey(row.color, size));
                     const avail = getAvailability(row.color, size);
                     const hasInfo = avail.inProduction > 0 || avail.stock > 0 || avail.pendingSales > 0;
                     return (
-                      <td key={`${row.key}-${size}`} style={{ padding: 2, borderBottom: '1px solid #f5f5f5' }}>
+                      <td key={`${row.key}-${size}`} style={{ padding: 2, borderBottom: '1px solid var(--color-bg-subtle)' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                           <InputNumber
                             min={0}
@@ -331,15 +331,15 @@ const MultiColorOrderEditor: React.FC<MultiColorOrderEditorProps> = ({
                           {hasInfo ? (
                             <div style={{ fontSize: 11, textAlign: 'center', lineHeight: 1.4, display: 'flex', gap: 4, justifyContent: 'center' }}>
                               {avail.inProduction > 0 && <span style={{ color: '#d46b08' }}>在途{avail.inProduction}</span>}
-                              {avail.stock > 0 && <span style={{ color: '#52c41a' }}>库存{avail.stock}</span>}
-                              {avail.pendingSales > 0 && <span style={{ color: '#cf1322' }}>欠{avail.pendingSales}</span>}
+                              {avail.stock > 0 && <span style={{ color: 'var(--color-success)' }}>库存{avail.stock}</span>}
+                              {avail.pendingSales > 0 && <span style={{ color: 'var(--color-error)' }}>欠{avail.pendingSales}</span>}
                             </div>
                           ) : null}
                         </div>
                       </td>
                     );
                   })}
-                  <td style={{ padding: '6px 6px', borderBottom: '1px solid #f5f5f5', textAlign: 'center', fontWeight: 600 }}>{row.total}</td>
+                  <td style={{ padding: '6px 6px', borderBottom: '1px solid var(--color-bg-subtle)', textAlign: 'center', fontWeight: 600 }}>{row.total}</td>
                 </tr>
               ))}
               <tr>

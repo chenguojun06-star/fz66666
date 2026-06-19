@@ -66,7 +66,7 @@ const AccountManagementModal: React.FC<AccountManagementModalProps> = ({
         <Card
           key={acc.id}
          
-          style={{ marginBottom: 8, border: acc.isDefault === 1 ? '2px solid var(--primary-color, #1677ff)' : undefined }}
+          style={{ marginBottom: 8, border: acc.isDefault === 1 ? '2px solid var(--primary-color, var(--color-primary))' : undefined }}
           extra={
             <Space>
               <Button type="link" onClick={() => onEditAccount(acc)}>编辑</Button>

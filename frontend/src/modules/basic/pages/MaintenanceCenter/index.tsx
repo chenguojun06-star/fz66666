@@ -243,7 +243,7 @@ const MaintenanceCenter: React.FC = () => {
                     padding: '10px 12px',
                     border: '1px solid var(--color-border-light, #e8edf4)',
                     borderRadius: 6,
-                    background: 'var(--color-bg-base, #fff)',
+                    background: 'var(--color-bg-base, var(--color-bg-base))',
                   }}>
                     <Input.Search
                       placeholder="按款号搜索"

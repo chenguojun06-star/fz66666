@@ -134,13 +134,13 @@ const PayableTab: React.FC = () => {
   return (
     <>
       <style>{`
-        .ap-row-overdue td { background: #fff1f0 !important; }
-        .ap-row-warning td { background: #fffbe6 !important; }
+        .ap-row-overdue td { background: #FFF1F0 !important; }
+        .ap-row-warning td { background: #FFFBE6 !important; }
       `}</style>
       <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
-        <Col xs={24} sm={6}><Card><Statistic title="待付款(元)" value={(stats.pendingAmount || 0).toFixed(2)} styles={{ content: { color: '#fa8c16' } }} /></Card></Col>
-        <Col xs={24} sm={6}><Card><Statistic title="逾期金额(元)" value={(stats.overdueAmount || 0).toFixed(2)} styles={{ content: { color: '#f5222d' } }} suffix={stats.overdueCount ? <span style={{ fontSize: 14, color: '#f5222d' }}>/{stats.overdueCount}笔</span> : undefined} /></Card></Col>
-        <Col xs={24} sm={6}><Card><Statistic title="本月已付(元)" value={(stats.paidAmount || 0).toFixed(2)} styles={{ content: { color: '#52c41a' } }} /></Card></Col>
+        <Col xs={24} sm={6}><Card><Statistic title="待付款(元)" value={(stats.pendingAmount || 0).toFixed(2)} styles={{ content: { color: 'var(--color-warning)' } }} /></Card></Col>
+        <Col xs={24} sm={6}><Card><Statistic title="逾期金额(元)" value={(stats.overdueAmount || 0).toFixed(2)} styles={{ content: { color: 'var(--color-error)' } }} suffix={stats.overdueCount ? <span style={{ fontSize: 14, color: 'var(--color-error)' }}>/{stats.overdueCount}笔</span> : undefined} /></Card></Col>
+        <Col xs={24} sm={6}><Card><Statistic title="本月已付(元)" value={(stats.paidAmount || 0).toFixed(2)} styles={{ content: { color: 'var(--color-success)' } }} /></Card></Col>
         <Col xs={24} sm={6}><Card><Statistic title="本月新增(笔)" value={stats.newThisMonth || 0} /></Card></Col>
       </Row>
       <Card style={{ marginBottom: 12 }}>
@@ -206,7 +206,7 @@ const PayableTab: React.FC = () => {
         <div style={{ padding: '12px 0' }}>
           <p style={{ marginBottom: 4 }}>应付金额：<strong>{payRecord?.amount?.toFixed(2)}</strong> 元</p>
           <p style={{ marginBottom: 4 }}>已付金额：<strong>{(payRecord?.paidAmount || 0).toFixed(2)}</strong> 元</p>
-          <p style={{ marginBottom: 16 }}>剩余未付：<strong style={{ color: '#fa8c16' }}>{((payRecord?.amount || 0) - (payRecord?.paidAmount || 0)).toFixed(2)}</strong> 元</p>
+          <p style={{ marginBottom: 16 }}>剩余未付：<strong style={{ color: 'var(--color-warning)' }}>{((payRecord?.amount || 0) - (payRecord?.paidAmount || 0)).toFixed(2)}</strong> 元</p>
           <div>
             <span style={{ marginRight: 8 }}>本次付款金额：</span>
             <InputNumber

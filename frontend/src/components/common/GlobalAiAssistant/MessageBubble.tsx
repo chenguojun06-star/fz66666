@@ -61,7 +61,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
               maxWidth: '100%',
               maxHeight: 300,
               borderRadius: 8,
-              border: '1px solid #e5e7eb',
+              border: '1px solid var(--color-border)',
               objectFit: 'contain'
             }}
           />

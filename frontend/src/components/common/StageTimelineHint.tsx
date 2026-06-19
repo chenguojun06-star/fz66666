@@ -47,8 +47,8 @@ function computeGapMs(prevEnd: string | null | undefined, currStart: string | nu
 
 function gapColorForDays(days: number): string {
   if (days >= 3) return '#ff7875';
-  if (days >= 1) return '#faad14';
-  return 'var(--color-text-quaternary, #bfbfbf)';
+  if (days >= 1) return 'var(--color-warning)';
+  return 'var(--color-text-quaternary, var(--color-text-quaternary))';
 }
 
 export function computeStageTimeline(
@@ -68,7 +68,7 @@ export function computeStageTimeline(
     });
 
     let gapText: string | null = null;
-    let gapColor = 'var(--color-text-quaternary, #bfbfbf)';
+    let gapColor = 'var(--color-text-quaternary, var(--color-text-quaternary))';
     let gapFrom = '';
 
     if (i > 0) {
@@ -96,7 +96,7 @@ export function computeStageTimeline(
     return {
       name: stage.name,
       budgetText: budget?.text ?? null,
-      budgetColor: budget?.color ?? 'var(--color-text-quaternary, #bfbfbf)',
+      budgetColor: budget?.color ?? 'var(--color-text-quaternary, var(--color-text-quaternary))',
       gapText,
       gapColor,
       gapFrom,

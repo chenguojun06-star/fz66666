@@ -54,7 +54,7 @@ public class TenantController {
     private TenantAiConfigService tenantAiConfigService;
 
     @Autowired(required = false)
-    private com.fashion.supplychain.intelligence.mapper.TenantAiConfigMapper tenantAiConfigMapper;
+    private com.fashion.supplychain.system.orchestration.TenantAiConfigOrchestrator tenantAiConfigOrchestrator;
 
     // ========== 超级管理员：租户管理 ==========
 
@@ -694,7 +694,7 @@ public class TenantController {
             config.setTextModel(null);
             config.setTextBaseUrl(null);
             config.setAiEnabled(1);
-            if (tenantAiConfigMapper != null) tenantAiConfigMapper.updateById(config);
+            if (tenantAiConfigOrchestrator != null) tenantAiConfigOrchestrator.updateById(config);
         } else {
             return Result.fail("未知操作: " + action);
         }

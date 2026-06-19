@@ -196,9 +196,9 @@ const darkThemeTokens = {
 // 蓝色主题 token 配置
 const blueThemeTokens = {
   borderRadius: 6,
-  colorPrimary: '#2D7FF9',
-  colorBgContainer: '#ffffff',
-  colorBgElevated: '#ffffff',
+  colorPrimary: 'var(--color-primary)',
+  colorBgContainer: 'var(--color-bg-base)',
+  colorBgElevated: 'var(--color-bg-base)',
   colorBgLayout: '#eaf1ff',
   colorBorder: 'rgba(45, 127, 249, 0.18)',
   colorBorderSecondary: 'rgba(45, 127, 249, 0.12)',
@@ -220,15 +220,15 @@ const lightBlueThemeTokens = {
   colorPrimaryTextHover: '#60a5fa',
   colorPrimaryText: '#3b82f6',
   colorPrimaryTextActive: '#2563eb',
-  colorBgContainer: '#ffffff',
-  colorBgElevated: '#ffffff',
+  colorBgContainer: 'var(--color-bg-base)',
+  colorBgElevated: 'var(--color-bg-base)',
   colorBgLayout: '#eaf1ff', // @design-system: 纯色浅蓝背景（禁止渐变）
   colorBgSpotlight: 'rgba(224, 242, 254, 0.8)',
   colorBorder: 'rgba(147, 197, 253, 0.5)',
   colorBorderSecondary: 'rgba(224, 242, 254, 0.6)',
   colorText: '#111827',
-  colorTextSecondary: '#6b7280',
-  colorTextTertiary: '#9ca3af',
+  colorTextSecondary: 'var(--color-text-secondary)',
+  colorTextTertiary: 'var(--color-text-tertiary)',
   colorTextQuaternary: 'rgba(17, 24, 39, 0.45)',
   colorFill: 'rgba(224, 242, 254, 0.3)',
   colorFillSecondary: 'rgba(224, 242, 254, 0.2)',
@@ -237,7 +237,7 @@ const lightBlueThemeTokens = {
   colorBgTextActive: 'rgba(224, 242, 254, 0.7)',
   controlItemBgHover: 'rgba(59, 130, 246, 0.08)',
   controlItemBgActive: 'rgba(59, 130, 246, 0.15)',
-  colorSuccess: '#10b981',
+  colorSuccess: 'var(--color-accent-emerald)',
   colorWarning: '#f59e0b',
   colorError: '#ef4444',
   colorInfo: '#3b82f6',
@@ -419,7 +419,7 @@ const AppWrapper: React.FC = () => {
         },
         Modal: {
           headerBg: 'rgba(224, 242, 254, 0.2)',
-          contentBg: '#ffffff',
+          contentBg: 'var(--color-bg-base)',
           footerBg: 'rgba(224, 242, 254, 0.1)',
         },
         Select: {
@@ -443,18 +443,18 @@ const AppWrapper: React.FC = () => {
           headerFontSize: 12,
         },
         Card: {
-          colorBgContainer: '#ffffff',
+          colorBgContainer: 'var(--color-bg-base)',
         },
         Modal: {
           headerBg: '#f9fafb',
-          contentBg: '#ffffff',
+          contentBg: 'var(--color-bg-base)',
           footerBg: '#f9fafb',
         },
         Select: {
           optionSelectedBg: 'rgba(45, 127, 249, 0.08)',
         },
         Input: {
-          activeBorderColor: '#2D7FF9',
+          activeBorderColor: 'var(--color-primary)',
           hoverBorderColor: '#6ba3ff',
         },
         Button: {

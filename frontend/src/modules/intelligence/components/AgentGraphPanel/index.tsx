@@ -15,10 +15,10 @@ const SCENES = [
 
 const ROUTE_MAP: Record<string, [string, string]> = {
   delivery_risk: ['货期风险路由', '#ff7875'],
-  sourcing:      ['采购路由',     '#1890ff'],
-  compliance:    ['合规路由',     '#52c41a'],
-  logistics:     ['物流路由',     '#13c2c2'],
-  full:          ['全面路由',     '#722ed1'],
+  sourcing:      ['采购路由',     'var(--color-info)'],
+  compliance:    ['合规路由',     'var(--color-success)'],
+  logistics:     ['物流路由',     'var(--color-accent-cyan)'],
+  full:          ['全面路由',     'var(--color-accent-purple)'],
 };
 
 const NODE_LABELS: Record<string, [string, string]> = {
@@ -30,7 +30,7 @@ const NODE_LABELS: Record<string, [string, string]> = {
 };
 
 const confColor = (v: number) =>
-  v >= 80 ? '#52c41a' : v >= 60 ? '#faad14' : '#ff7875';
+  v >= 80 ? 'var(--color-success)' : v >= 60 ? 'var(--color-warning)' : '#ff7875';
 
 const RouteTag: React.FC<{ route?: string }> = ({ route }) => {
   const [label, color] = ROUTE_MAP[route ?? ''] ?? [route ?? '—', '#999'];
@@ -314,7 +314,7 @@ const AgentGraphPanel: React.FC = () => {
               {/* 自我反思 */}
               {result.reflection && (
                 <div style={{ marginBottom: 8 }}>
-                  <div style={{ fontSize: 14, color: '#faad14', fontWeight: 600, marginBottom: 4 }}>
+                  <div style={{ fontSize: 14, color: 'var(--color-warning)', fontWeight: 600, marginBottom: 4 }}>
                      自我反思（置信评估）
                   </div>
                   <div style={{

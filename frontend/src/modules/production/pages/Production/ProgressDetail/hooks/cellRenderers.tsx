@@ -70,13 +70,13 @@ export const formatCompletionTime = (timeStr: string): string => {
 };
 
 export const getNodeColor = (expectedShipDate: any, isColor2 = false): string => {
-  if (!expectedShipDate) return isColor2 ? '#95de64' : '#52c41a';
+  if (!expectedShipDate) return isColor2 ? '#95de64' : 'var(--color-success)';
   const now = new Date();
   const delivery = new Date(expectedShipDate as string);
   const diffDays = Math.ceil((delivery.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-  if (diffDays < 0) return isColor2 ? '#ff7875' : '#ff4d4f';
-  if (diffDays <= 3) return isColor2 ? '#ffc53d' : '#faad14';
-  return isColor2 ? '#95de64' : '#52c41a';
+  if (diffDays < 0) return isColor2 ? '#ff7875' : 'var(--color-danger)';
+  if (diffDays <= 3) return isColor2 ? '#ffc53d' : 'var(--color-warning)';
+  return isColor2 ? '#95de64' : 'var(--color-success)';
 };
 
 export const colorWithAlpha = (hex: string, alpha: number): string => {
@@ -97,7 +97,7 @@ export const ShipmentSumCell: React.FC<{ orderId: string }> = ({ orderId }) => {
       .then(res => { if (res?.data?.length) setData(res.data); })
       .catch((err) => { console.warn('[Progress] 发货汇总加载失败:', err?.message || err); });
   }, [orderId]);
-  if (!data) return <span style={{ color: '#d9d9d9', fontSize: 12 }}>-</span>;
+  if (!data) return <span style={{ color: 'var(--color-border-antd)', fontSize: 12 }}>-</span>;
   return (
     <div style={{ fontSize: 12, lineHeight: '18px' }}>
       {data.map(row => (
@@ -418,7 +418,7 @@ export function createProgressNodesRender(ctx: ProgressNodesContext) {
                   cursor: orderMatrix.hasData ? 'pointer' : 'default',
                 }}>
                   <LiquidProgressLottie progress={100} size={68} nodeName="下单"
-                    paused={frozen} color1={isCompletedOrClosed ? '#52c41a' : (frozen ? '#9ca3af' : '#52c41a')} color2={isCompletedOrClosed ? '#95de64' : (frozen ? '#d1d5db' : '#95de64')} />
+                    paused={frozen} color1={isCompletedOrClosed ? 'var(--color-success)' : (frozen ? 'var(--color-text-tertiary)' : 'var(--color-success)')} color2={isCompletedOrClosed ? '#95de64' : (frozen ? '#d1d5db' : '#95de64')} />
                   <div style={{
                     position: 'absolute',
                     top: 'calc(50% + 39px)',
@@ -454,9 +454,9 @@ export function createProgressNodesRender(ctx: ProgressNodesContext) {
               </Popover>
               <div style={{ flex: 1, alignSelf: 'center', display: 'flex', alignItems: 'center', paddingLeft: 2, paddingRight: 2, minWidth: 16 }}>
                 <div style={{ flex: 1, position: 'relative', height: 1, borderRadius: 999,
-                  background: colorWithAlpha(isCompletedOrClosed ? '#95de64' : (frozen ? '#d1d5db' : '#52c41a'), 0.28), overflow: 'hidden' }}>
+                  background: colorWithAlpha(isCompletedOrClosed ? '#95de64' : (frozen ? '#d1d5db' : 'var(--color-success)'), 0.28), overflow: 'hidden' }}>
                   <div style={{ width: '100%', height: '100%', borderRadius: 999,
-                    background: isCompletedOrClosed ? '#52c41a' : (frozen ? '#9ca3af' : '#52c41a'), transition: 'width 0.25s ease' }} />
+                    background: isCompletedOrClosed ? 'var(--color-success)' : (frozen ? 'var(--color-text-tertiary)' : 'var(--color-success)'), transition: 'width 0.25s ease' }} />
                 </div>
               </div>
             </div>
@@ -522,7 +522,7 @@ export function createProgressNodesRender(ctx: ProgressNodesContext) {
           const operatorDisplay = workerNames.length > 0 ? workerNames.slice(0, 3).join('、') + (workerNames.length > 3 ? `等${workerNames.length}人` : '') : '';
           const completionTimeDisplay = completionTime ? completionTime.slice(0, 16).replace('T', ' ') : '';
           const segmentProgress = Math.min(1, percent / 100);
-          const nodePrimaryColor = isCompletedOrClosed ? '#52c41a' : (frozen ? '#9ca3af' : getNodeColor(record.expectedShipDate || record.plannedEndDate));
+          const nodePrimaryColor = isCompletedOrClosed ? 'var(--color-success)' : (frozen ? 'var(--color-text-tertiary)' : getNodeColor(record.expectedShipDate || record.plannedEndDate));
           const nodeSecondaryColor = isCompletedOrClosed ? '#95de64' : (frozen ? '#d1d5db' : getNodeColor(record.expectedShipDate || record.plannedEndDate, true));
 
           return (

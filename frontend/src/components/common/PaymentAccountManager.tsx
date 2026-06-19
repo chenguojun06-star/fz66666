@@ -200,7 +200,7 @@ const PaymentAccountManager: React.FC<PaymentAccountManagerProps> = ({
              
               style={{
                 marginBottom: 8,
-                border: acc.isDefault === 1 ? '2px solid var(--primary-color, #1677ff)' : undefined,
+                border: acc.isDefault === 1 ? '2px solid var(--primary-color, var(--color-primary))' : undefined,
               }}
               extra={
                 <Space>

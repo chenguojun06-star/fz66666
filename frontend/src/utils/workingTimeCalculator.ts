@@ -171,7 +171,7 @@ export function computeBudgetStatus(
   if (completedTimeFinal) {
     const actualSeconds = calculateWorkingSeconds(availableTime, completedTimeFinal);
     if (actualSeconds <= budgetSeconds) {
-      return { text: '准时', color: 'var(--color-success, #52c41a)' };
+      return { text: '准时', color: 'var(--color-success, var(--color-success))' };
     }
     const overSeconds = actualSeconds - budgetSeconds;
     return { text: `超${formatWorkingDuration(overSeconds)}`, color: 'var(--color-error, #ff7875)' };
@@ -181,10 +181,10 @@ export function computeBudgetStatus(
   const elapsedSeconds = calculateWorkingSeconds(availableTime, new Date().toISOString());
   const remainingSeconds = budgetSeconds - elapsedSeconds;
   if (remainingSeconds > 0) {
-    return { text: `剩${formatWorkingDuration(remainingSeconds)}`, color: 'var(--color-text-quaternary, #bfbfbf)' };
+    return { text: `剩${formatWorkingDuration(remainingSeconds)}`, color: 'var(--color-text-quaternary, var(--color-text-quaternary))' };
   }
   if (remainingSeconds > -3600) {
-    return { text: '即将超时', color: 'var(--color-warning, #faad14)' };
+    return { text: '即将超时', color: 'var(--color-warning, var(--color-warning))' };
   }
   return { text: `超${formatWorkingDuration(-remainingSeconds)}`, color: 'var(--color-error, #ff7875)' };
 }

@@ -54,11 +54,11 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ open, user, unitNameMap, on
     >
       {user && (
         <div>
-          <div style={{ textAlign: 'center', paddingBottom: 16, borderBottom: `1px solid var(--color-border-light, #f0f0f0)`, marginBottom: 16 }}>
+          <div style={{ textAlign: 'center', paddingBottom: 16, borderBottom: `1px solid var(--color-border-light, var(--color-border-light))`, marginBottom: 16 }}>
             <Avatar
               size={64}
               icon={<UserOutlined />}
-              style={{ backgroundColor: user.isFactoryOwner ? 'var(--color-warning, #faad14)' : 'var(--primary-color, #1677ff)', display: 'block', margin: '0 auto 12px' }}
+              style={{ backgroundColor: user.isFactoryOwner ? 'var(--color-warning, var(--color-warning))' : 'var(--primary-color, var(--color-primary))', display: 'block', margin: '0 auto 12px' }}
             />
             <div style={{ fontSize: 16, fontWeight: 600 }}>
               {user.name || user.username}
@@ -81,7 +81,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ open, user, unitNameMap, on
             </Descriptions.Item>
           </Descriptions>
           {user.factoryId && (
-            <div style={{ marginTop: 16, paddingTop: 12, borderTop: `1px solid var(--color-border-light, #f0f0f0)` }}>
+            <div style={{ marginTop: 16, paddingTop: 12, borderTop: `1px solid var(--color-border-light, var(--color-border-light))` }}>
               {!resetPwdVisible ? (
                 <Button block icon={<LockOutlined />} onClick={() => { setResetPwdValue(''); setResetPwdVisible(true); }}>
                   重置密码

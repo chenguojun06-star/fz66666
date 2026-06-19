@@ -7,6 +7,7 @@ import com.fashion.supplychain.production.orchestration.ProductionProcessTrackin
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.ProductWarehousingService;
 import com.fashion.supplychain.style.entity.ProductSku;
+import com.fashion.supplychain.style.orchestration.ProductSkuOrchestrator;
 import com.fashion.supplychain.style.service.ProductSkuService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,6 +46,9 @@ public class InternalMaintenanceController {
 
     @Autowired
     private ProductSkuService productSkuService;
+
+    @Autowired
+    private ProductSkuOrchestrator productSkuOrchestrator;
 
     /**
      * 批量同步所有订单的工序单价
@@ -339,55 +343,7 @@ public class InternalMaintenanceController {
     public Result<?> recalculateSkuStock() {
         log.warn("开始重新计算SKU库存（管理员维护操作 - 修复双重更新bug）");
         try {
-            List<ProductSku> allSkus = productSkuService.lambdaQuery()
-                    .last("LIMIT 5000")
-                    .list();
-            int fixed = 0;
-            int unchanged = 0;
-            List<Map<String, Object>> details = new ArrayList<>();
-
-            for (ProductSku sku : allSkus) {
-                int inboundTotal = 0;
-                List<ProductWarehousing> inboundRecords = productWarehousingService.lambdaQuery()
-                        .eq(ProductWarehousing::getStyleNo, sku.getStyleNo())
-                        .eq(ProductWarehousing::getDeleteFlag, 0)
-                        .eq(ProductWarehousing::getColor, sku.getColor())
-                        .eq(ProductWarehousing::getSize, sku.getSize())
-                        .last("LIMIT 5000")
-                        .list();
-                for (ProductWarehousing pw : inboundRecords) {
-                    if (pw.getQualifiedQuantity() != null && pw.getQualifiedQuantity() > 0) {
-                        inboundTotal += pw.getQualifiedQuantity();
-                    }
-                }
-
-                int oldStock = sku.getStockQuantity() != null ? sku.getStockQuantity() : 0;
-                if (oldStock != inboundTotal) {
-                    sku.setStockQuantity(inboundTotal);
-                    productSkuService.updateById(sku);
-                    fixed++;
-                    Map<String, Object> d = new HashMap<>();
-                    d.put("skuCode", sku.getSkuCode());
-                    d.put("styleNo", sku.getStyleNo());
-                    d.put("color", sku.getColor());
-                    d.put("size", sku.getSize());
-                    d.put("oldStock", oldStock);
-                    d.put("newStock", inboundTotal);
-                    details.add(d);
-                    log.info("SKU库存修正: {} {} {} {} {} -> {}",
-                            sku.getSkuCode(), sku.getStyleNo(), sku.getColor(), sku.getSize(),
-                            oldStock, inboundTotal);
-                } else {
-                    unchanged++;
-                }
-            }
-
-            Map<String, Object> result = new HashMap<>();
-            result.put("totalSkus", allSkus.size());
-            result.put("fixed", fixed);
-            result.put("unchanged", unchanged);
-            result.put("details", details);
-            log.warn("SKU库存重新计算完成：共{}个SKU，修正{}个，未变{}个", allSkus.size(), fixed, unchanged);
+            Map<String, Object> result = productSkuOrchestrator.recalculateSkuStock();
             return Result.success(result);
         } catch (Exception e) {
             log.error("SKU库存重新计算失败", e);

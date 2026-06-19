@@ -198,7 +198,7 @@ const StyleWashLabelTab: React.FC<Props> = ({
     color: 'var(--color-text-primary, #333)',
     marginBottom: 8,
     paddingBottom: 6,
-    borderBottom: '2px solid var(--color-primary, #1677ff)',
+    borderBottom: '2px solid var(--color-primary, var(--color-primary))',
     display: 'inline-block',
   };
 
@@ -212,20 +212,20 @@ const StyleWashLabelTab: React.FC<Props> = ({
           alignItems: 'center',
           marginBottom: 16,
           padding: '10px 14px',
-          background: isEditing ? 'var(--color-primary-bg, #e6f4ff)' : 'var(--color-bg-container, #fafafa)',
+          background: isEditing ? 'var(--color-primary-bg, #e6f4ff)' : 'var(--color-bg-container, var(--color-bg-container))',
           borderRadius: 8,
-          border: isEditing ? '1px solid var(--color-primary, #1677ff)' : '1px solid var(--color-border-light, #f0f0f0)',
+          border: isEditing ? '1px solid var(--color-primary, var(--color-primary))' : '1px solid var(--color-border-light, var(--color-border-light))',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             {isEditing ? (
-              <EditOutlined style={{ color: 'var(--color-primary, #1677ff)' }} />
+              <EditOutlined style={{ color: 'var(--color-primary, var(--color-primary))' }} />
             ) : (
-              <LockOutlined style={{ color: 'var(--color-text-quaternary, #bfbfbf)' }} />
+              <LockOutlined style={{ color: 'var(--color-text-quaternary, var(--color-text-quaternary))' }} />
             )}
             <span style={{
               fontSize: 14,
               fontWeight: 600,
-              color: isEditing ? 'var(--color-primary, #1677ff)' : 'var(--color-text-tertiary, #8c8c8c)',
+              color: isEditing ? 'var(--color-primary, var(--color-primary))' : 'var(--color-text-tertiary, #8c8c8c)',
             }}>
               {isEditing ? '编辑中' : '已锁定'}
             </span>
@@ -294,7 +294,7 @@ const StyleWashLabelTab: React.FC<Props> = ({
             style={{ resize: 'none' }}
             disabled={!isEditing}
           />
-          <div style={{ fontSize: 14, color: 'var(--color-text-quaternary, #bfbfbf)', marginTop: 4 }}>
+          <div style={{ fontSize: 14, color: 'var(--color-text-quaternary, var(--color-text-quaternary))', marginTop: 4 }}>
             全局洗涤说明会显示在所有部位成分下方；如果某部位已单独填写洗涤说明，则优先使用部位说明
           </div>
         </div>
@@ -308,7 +308,7 @@ const StyleWashLabelTab: React.FC<Props> = ({
             maxLength={64}
             disabled={!isEditing}
           />
-          <div style={{ fontSize: 14, color: 'var(--color-text-quaternary, #bfbfbf)', marginTop: 4 }}>
+          <div style={{ fontSize: 14, color: 'var(--color-text-quaternary, var(--color-text-quaternary))', marginTop: 4 }}>
             U编码是品质追溯的唯一标识，打印U码标签时会自动使用此编码
           </div>
         </div>
@@ -333,7 +333,7 @@ const StyleWashLabelTab: React.FC<Props> = ({
             placeholder="MADE IN CHINA"
             disabled={!isEditing}
           />
-          <div style={{ fontSize: 14, color: 'var(--color-text-quaternary, #bfbfbf)', marginTop: 4 }}>
+          <div style={{ fontSize: 14, color: 'var(--color-text-quaternary, var(--color-text-quaternary))', marginTop: 4 }}>
             产地信息，默认 MADE IN CHINA，可按需修改；日期自动生成（{getDefaultDateText()}）
           </div>
         </div>
@@ -343,7 +343,7 @@ const StyleWashLabelTab: React.FC<Props> = ({
           justifyContent: 'flex-end',
           alignItems: 'center',
           padding: '12px 0',
-          borderTop: '1px solid var(--color-border-light, #f0f0f0)',
+          borderTop: '1px solid var(--color-border-light, var(--color-border-light))',
         }}>
           <Space>
             <span style={{ color: 'var(--color-text-secondary)', fontSize: 14 }}>预览纸张宽</span>
@@ -375,7 +375,7 @@ const StyleWashLabelTab: React.FC<Props> = ({
           <EyeOutlined style={{ marginRight: 6 }} />
           洗水唛预览
         </div>
-        <div style={{ fontSize: 14, color: 'var(--color-text-quaternary, #bfbfbf)', marginBottom: 8 }}>
+        <div style={{ fontSize: 14, color: 'var(--color-text-quaternary, var(--color-text-quaternary))', marginBottom: 8 }}>
           实时预览打印效果，修改左侧内容后自动更新
         </div>
         <WashLabelPreview

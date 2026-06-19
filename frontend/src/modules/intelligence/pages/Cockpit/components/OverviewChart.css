@@ -22,7 +22,7 @@
   flex-direction: column;
   gap: 3px;
   font-size: 14px;
-  color: var(--bi-text-secondary, #6b7280);
+  color: var(--bi-text-secondary, var(--color-text-secondary));
 }
 
 .overview-pies {
@@ -102,7 +102,7 @@
 
 .stat-unit {
   font-size: calc(11px * var(--ov-scale));
-  color: #9ca3af;
+  color: var(--color-text-tertiary);
 }
 
 .overview-trend {
@@ -202,7 +202,7 @@
 
 .chart-label {
   font-size: 14px;
-  color: #9ca3af;
+  color: var(--color-text-tertiary);
 }
 
 .overview-legend {

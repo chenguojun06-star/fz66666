@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.integration.ecommerce.entity.EcommerceOrder;
+import com.fashion.supplychain.integration.ecommerce.orchestration.EcPlatformConfigOrchestrator;
 import com.fashion.supplychain.integration.ecommerce.service.EcommerceOrderService;
 import com.fashion.supplychain.integration.ecommerce.service.JushuitanSyncService;
 import com.fashion.supplychain.system.entity.EcPlatformConfig;
@@ -23,6 +24,9 @@ import java.util.*;
 /**
  * 外部平台对接管理 Controller
  * 提供连接测试、店铺发现、手动同步等"傻瓜式"操作
+ *
+ * <p>⚠️ 所有数据库写操作必须通过 {@link EcPlatformConfigOrchestrator} 执行，
+ * 禁止直接在 Controller 中调用 Service 的 save/update/delete 方法。
  */
 @Slf4j
 @RestController
@@ -33,6 +37,9 @@ public class PlatformConnectorController {
 
     @Autowired
     private EcPlatformConfigService ecPlatformConfigService;
+
+    @Autowired
+    private EcPlatformConfigOrchestrator ecPlatformConfigOrchestrator;
 
     @Autowired
     private JushuitanSyncService jushuitanSyncService;
@@ -66,27 +73,8 @@ public class PlatformConnectorController {
             return Result.fail("不支持的平台: " + platformCode);
         }
 
-        EcPlatformConfig existing = ecPlatformConfigService.getByTenantAndPlatform(tenantId, platformCode);
-        if (existing != null) {
-            existing.setAppKey(appKey);
-            if (appSecret != null && !appSecret.equals("****")) {
-                existing.setAppSecret(appSecret);
-            }
-            if (shopName != null) existing.setShopName(shopName);
-            if (callbackUrl != null) existing.setCallbackUrl(callbackUrl);
-            existing.setStatus("ACTIVE");
-            ecPlatformConfigService.updateById(existing);
-        } else {
-            EcPlatformConfig config = new EcPlatformConfig();
-            config.setTenantId(tenantId);
-            config.setPlatformCode(platformCode);
-            config.setAppKey(appKey);
-            config.setAppSecret(appSecret);
-            config.setShopName(shopName);
-            config.setCallbackUrl(callbackUrl);
-            config.setStatus("ACTIVE");
-            ecPlatformConfigService.save(config);
-        }
+        ecPlatformConfigOrchestrator.saveOrUpdateConfig(tenantId, platformCode,
+                appKey, appSecret, shopName, callbackUrl);
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("saved", true);

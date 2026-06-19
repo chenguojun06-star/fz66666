@@ -204,6 +204,7 @@ public class ProcurementOrchestrator {
     /**
      * 更新发票/单据图片URL列表（财务留底）
      */
+    @Transactional(rollbackFor = Exception.class)
     public void updateInvoiceUrls(String purchaseId, String invoiceUrls) {
         MaterialPurchase record = new MaterialPurchase();
         record.setId(purchaseId);

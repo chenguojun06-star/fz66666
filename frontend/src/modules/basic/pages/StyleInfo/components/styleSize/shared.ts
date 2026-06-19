@@ -55,18 +55,18 @@ const GROUP_TONE_METAS: Record<GroupToneMeta['key'], GroupToneMeta> = {
     key: 'upper',
     tint: '#f7fbff',
     tagBg: '#e8f3ff',
-    tagColor: '#1677ff',
+    tagColor: 'var(--color-primary)',
   },
   lower: {
     key: 'lower',
-    tint: '#fffaf2',
-    tagBg: '#fff1db',
+    tint: '#f0fff0',
+    tagBg: '#e6fff0',
     tagColor: '#d48806',
   },
   other: {
     key: 'other',
-    tint: '#fafafa',
-    tagBg: '#f0f0f0',
+    tint: 'var(--color-bg-container)',
+    tagBg: 'var(--color-border-light)',
     tagColor: '#595959',
   },
 };

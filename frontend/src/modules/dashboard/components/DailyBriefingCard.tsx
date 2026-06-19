@@ -7,14 +7,14 @@ import type { DailyBriefing } from '@/services/intelligence/intelligenceApi';
 const { Text, Title } = Typography;
 
 const CARD_STYLE: React.CSSProperties = {
-  background: 'var(--color-bg-elevated, #fff)',
-  borderColor: 'var(--color-border-secondary, #f0f0f0)',
+  background: 'var(--color-bg-elevated, var(--color-bg-base))',
+  borderColor: 'var(--color-border-secondary, var(--color-border-light))',
   borderRadius: 12,
 };
 
 const METRIC_CARD_STYLE: React.CSSProperties = {
-  background: 'var(--color-bg-container, #fafafa)',
-  borderColor: 'var(--color-border-secondary, #f0f0f0)',
+  background: 'var(--color-bg-container, var(--color-bg-container))',
+  borderColor: 'var(--color-border-secondary, var(--color-border-light))',
   borderRadius: 8,
   padding: 12,
 };
@@ -39,12 +39,12 @@ interface MetricItem {
 }
 
 const METRICS: MetricItem[] = [
-  { key: 'totalOrders', label: '总订单数', icon: <InboxOutlined />, formatter: formatNumber, accent: 'var(--color-primary, #1677ff)' },
-  { key: 'pendingOrders', label: '待处理订单', icon: <ClockCircleOutlined />, formatter: formatNumber, accent: 'var(--color-warning, #faad14)' },
-  { key: 'atRiskOrders', label: '风险订单', icon: <WarningOutlined />, formatter: formatNumber, accent: 'var(--color-error, #ff4d4f)' },
-  { key: 'totalProductionProgress', label: '整体生产进度', icon: <FundOutlined />, formatter: formatPercent, accent: 'var(--color-success, #52c41a)' },
-  { key: 'delayedStyleCount', label: '延期款数', icon: <AlertOutlined />, formatter: formatNumber, accent: 'var(--color-error, #ff4d4f)' },
-  { key: 'lowStockItems', label: '低库存物料', icon: <ThunderboltOutlined />, formatter: formatNumber, accent: 'var(--color-warning, #faad14)' },
+  { key: 'totalOrders', label: '总订单数', icon: <InboxOutlined />, formatter: formatNumber, accent: 'var(--color-primary, var(--color-primary))' },
+  { key: 'pendingOrders', label: '待处理订单', icon: <ClockCircleOutlined />, formatter: formatNumber, accent: 'var(--color-warning, var(--color-warning))' },
+  { key: 'atRiskOrders', label: '风险订单', icon: <WarningOutlined />, formatter: formatNumber, accent: 'var(--color-error, var(--color-danger))' },
+  { key: 'totalProductionProgress', label: '整体生产进度', icon: <FundOutlined />, formatter: formatPercent, accent: 'var(--color-success, var(--color-success))' },
+  { key: 'delayedStyleCount', label: '延期款数', icon: <AlertOutlined />, formatter: formatNumber, accent: 'var(--color-error, var(--color-danger))' },
+  { key: 'lowStockItems', label: '低库存物料', icon: <ThunderboltOutlined />, formatter: formatNumber, accent: 'var(--color-warning, var(--color-warning))' },
 ];
 
 const DailyBriefingCard: React.FC = () => {
@@ -96,7 +96,7 @@ const DailyBriefingCard: React.FC = () => {
     if (error) {
       return (
         <div style={{ padding: 24, textAlign: 'center', color: 'var(--color-text-secondary, #666)' }}>
-          <WarningOutlined style={{ color: 'var(--color-error, #ff4d4f)', fontSize: 28 }} />
+          <WarningOutlined style={{ color: 'var(--color-error, var(--color-danger))', fontSize: 28 }} />
           <div style={{ marginTop: 8 }}>{error}</div>
           <Button type="primary" icon={<ReloadOutlined />} onClick={fetchData} style={{ marginTop: 12 }}>
             重试
@@ -122,8 +122,8 @@ const DailyBriefingCard: React.FC = () => {
           style={{
             padding: '12px 16px',
             borderRadius: 8,
-            background: 'linear-gradient(90deg, var(--color-primary-bg, #e6f4ff) 0%, var(--color-bg-container, #fafafa) 100%)',
-            border: '1px solid var(--color-border-secondary, #f0f0f0)',
+            background: 'linear-gradient(90deg, var(--color-primary-bg, #e6f4ff) 0%, var(--color-bg-container, var(--color-bg-container)) 100%)',
+            border: '1px solid var(--color-border-secondary, var(--color-border-light))',
           }}
         >
           <Space>
@@ -179,7 +179,7 @@ const DailyBriefingCard: React.FC = () => {
       style={CARD_STYLE}
       title={
         <Space size={8} style={{ cursor: 'pointer' }} onClick={() => setCollapsed(!collapsed)}>
-          <span style={{ color: 'var(--color-primary, #1677ff)' }}>●</span>
+          <span style={{ color: 'var(--color-primary, var(--color-primary))' }}>●</span>
           <span style={{ fontWeight: 600 }}>今日简报</span>
           <Tag color="green" style={{ marginLeft: 8 }}>
             系统健康

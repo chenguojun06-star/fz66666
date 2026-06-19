@@ -217,9 +217,9 @@ const BudgetDaysEditor: React.FC<BudgetDaysEditorProps> = ({
   const budgetColor = (() => {
     if (budgetHours != null && budgetHours > 0) {
       const status = computeBudgetStatus(budgetHours, stageStartTime ?? null, stageEndTime ?? null);
-      return status.color || 'var(--color-text-quaternary, #bfbfbf)';
+      return status.color || 'var(--color-text-quaternary, var(--color-text-quaternary))';
     }
-    return hint?.color ?? 'var(--color-text-quaternary, #bfbfbf)';
+    return hint?.color ?? 'var(--color-text-quaternary, var(--color-text-quaternary))';
   })();
 
   return (

@@ -155,7 +155,7 @@ export function buildProcessColumns(opts: BuildProcessColumnsOptions): any[] {
         const stage = record.progressStage || '车缝';
         return (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-            <Tag style={{ background: STAGE_ACCENT, color: '#fff', border: 'none', fontWeight: 600, fontSize: 14 }}>{stage}</Tag>
+            <Tag style={{ background: STAGE_ACCENT, color: 'var(--color-bg-base)', border: 'none', fontWeight: 600, fontSize: 14 }}>{stage}</Tag>
             <span style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>{info.count} 个工序</span>
             {editableMode && (
               <Button type="link" icon={<PlusOutlined />} onClick={() => handleAdd(stage)} style={{ fontSize: 14, padding: 0 }}>
@@ -280,8 +280,8 @@ export function buildProcessColumns(opts: BuildProcessColumnsOptions): any[] {
                     updateField(record.id!, 'price', hint.suggestedPrice);
                   }}
                 >
-                  <BulbOutlined style={{ fontSize: 13, color: '#2D7FF9' }} />
-                  <span style={{ fontSize: 14, color: '#2D7FF9' }}>
+                  <BulbOutlined style={{ fontSize: 13, color: 'var(--color-primary)' }} />
+                  <span style={{ fontSize: 14, color: 'var(--color-primary)' }}>
                     建议 ¥{Number(hint.suggestedPrice).toFixed(2)}
                   </span>
                   <Tag

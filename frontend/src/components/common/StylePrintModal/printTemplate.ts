@@ -30,10 +30,10 @@ export function buildPrintHtml({
         <style>
           /* 打印上下文 CSS 变量定义（iframe 不继承主页面变量，必须在此声明） */
           :root {
-            --color-bg-base: #ffffff;
-            --color-bg-container: #fafafa;
-            --color-border: #d9d9d9;
-            --color-primary: #1890ff;
+            --color-bg-base: var(--color-bg-base);
+            --color-bg-container: var(--color-bg-container);
+            --color-border: var(--color-border-antd);
+            --color-primary: var(--color-info);
             --color-text-secondary: #666666;
             --color-text-tertiary: #999999;
             --color-text-quaternary: #bbbbbb;
@@ -48,7 +48,7 @@ export function buildPrintHtml({
           html, body {
             color: #000000 !important;
             
-            background: #ffffff !important;
+            background: var(--color-bg-base) !important;
           }
           /* 注意：不要加 * { color: inherit !important }，否则会覆盖业务内联颜色，
              同时和 -webkit-text-fill-color 互相干扰，导致中文文本被某些浏览器视为透明 */
@@ -61,7 +61,7 @@ export function buildPrintHtml({
               left: 0;
               right: 0;
               height: 25px;
-              background: #fff;
+              background: var(--color-bg-base);
               border-bottom: 1px solid #e8e8e8;
               display: flex;
               justify-content: space-between;
@@ -81,7 +81,7 @@ export function buildPrintHtml({
               left: 0;
               right: 0;
               height: 20px;
-              background: #fff;
+              background: var(--color-bg-base);
               border-top: 1px solid #e8e8e8;
               display: flex;
               justify-content: center;
@@ -105,7 +105,7 @@ export function buildPrintHtml({
             line-height: 1.6;
             color: #333;
             padding: 20px;
-            background: #fff;
+            background: var(--color-bg-base);
             -webkit-font-smoothing: antialiased;
           }
 
@@ -118,10 +118,10 @@ export function buildPrintHtml({
           .print-section-title {
             font-size: 12px;
             font-weight: 600;
-            color: #1a1a1a;
+            color: var(--color-text-primary);
             margin-bottom: 10px;
             padding-bottom: 6px;
-            border-bottom: 2px solid #1890ff;
+            border-bottom: 2px solid var(--color-info);
           }
 
           /* 表格样式 */
@@ -140,18 +140,18 @@ export function buildPrintHtml({
             break-inside: avoid;
           }
           th, td {
-            border: 1px solid #d9d9d9;
+            border: 1px solid var(--color-border-antd);
             padding: 6px 8px;
             text-align: left;
             vertical-align: top;
           }
           th {
-            background: #fafafa;
+            background: var(--color-bg-container);
             font-weight: 600;
             color: #262626;
           }
           tr:nth-child(even) {
-            background: #fafafa;
+            background: var(--color-bg-container);
           }
 
           /* 信息网格 */

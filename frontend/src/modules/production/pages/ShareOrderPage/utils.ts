@@ -4,11 +4,11 @@ import type { StageStatus } from './types';
 export const getRiskTone = (riskLevel?: 'LOW' | 'MEDIUM' | 'HIGH') => {
   if (riskLevel === 'HIGH') return { label: '高风险预警', color: '#ef4444', softColor: 'rgba(239,68,68,0.12)' };
   if (riskLevel === 'MEDIUM') return { label: '中风险关注', color: '#f59e0b', softColor: 'rgba(245,158,11,0.12)' };
-  return { label: '低风险可控', color: '#10b981', softColor: 'rgba(16,185,129,0.12)' };
+  return { label: '低风险可控', color: 'var(--color-accent-emerald)', softColor: 'rgba(16,185,129,0.12)' };
 };
 
 export const getStageTone = (status: StageStatus) => {
-  if (status === 'DONE') return { color: '#10b981', tagColor: 'success', label: '已完成', helper: '该节点已完成' as const, shadow: 'rgba(16,185,129,0.16)' };
+  if (status === 'DONE') return { color: 'var(--color-accent-emerald)', tagColor: 'success', label: '已完成', helper: '该节点已完成' as const, shadow: 'rgba(16,185,129,0.16)' };
   if (status === 'ACTIVE') return { color: '#3b82f6', tagColor: 'processing', label: '进行中', helper: '该节点正在推进' as const, shadow: 'rgba(59,130,246,0.16)' };
   return { color: 'var(--color-text-tertiary)', tagColor: 'default', label: '待开始', helper: '该节点尚未开始' as const, shadow: 'rgba(148,163,184,0.12)' };
 };

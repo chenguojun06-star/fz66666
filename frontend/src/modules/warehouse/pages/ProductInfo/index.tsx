@@ -252,8 +252,8 @@ const ProductInfoPage: React.FC = () => {
       title: '状态', dataIndex: 'status', key: 'status', width: 60,
       render: (v: string) => {
         if (v === 'ENABLED') return <span style={{ color: '#16a34a', fontWeight: 500 }}>启用</span>;
-        if (v === 'DISABLED') return <span style={{ color: '#9ca3af', fontWeight: 400 }}>停用</span>;
-        return <span style={{ color: '#9ca3af' }}>{v || '-'}</span>;
+        if (v === 'DISABLED') return <span style={{ color: 'var(--color-text-tertiary)', fontWeight: 400 }}>停用</span>;
+        return <span style={{ color: 'var(--color-text-tertiary)' }}>{v || '-'}</span>;
       },
     },
     {
@@ -286,7 +286,7 @@ const ProductInfoPage: React.FC = () => {
             />
           );
         }
-        return <div style={{ width: 36, height: 36, background: '#f5f5f5', borderRadius: 4 }} />;
+        return <div style={{ width: 36, height: 36, background: 'var(--color-bg-subtle)', borderRadius: 4 }} />;
       },
     },
     { title: '颜色', dataIndex: 'color', key: 'color', width: 80, render: (v: unknown) => <span style={{ fontWeight: 500 }}>{v ? String(v) : '-'}</span> },
@@ -432,7 +432,7 @@ const ProductInfoPage: React.FC = () => {
               <Descriptions.Item label="客户">{String(d.customer ?? '-')}</Descriptions.Item>
               <Descriptions.Item label="面料成分" span={3}>{String(d.fabricComposition ?? '-')}</Descriptions.Item>
               <Descriptions.Item label="状态">
-                <span style={{ color: d.status === 'ENABLED' ? '#16a34a' : '#9ca3af', fontWeight: 500 }}>
+                <span style={{ color: d.status === 'ENABLED' ? '#16a34a' : 'var(--color-text-tertiary)', fontWeight: 500 }}>
                   {d.status === 'ENABLED' ? '启用' : d.status === 'DISABLED' ? '停用' : d.status || '-'}
                 </span>
               </Descriptions.Item>

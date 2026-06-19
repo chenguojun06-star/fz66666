@@ -199,9 +199,9 @@ const StyleProcessKnowledgeTab: React.FC<StyleProcessKnowledgeTabProps> = ({
       render: (_, r) =>
         r.minPrice != null && r.maxPrice != null ? (
           <Space size={4}>
-            <span style={{ color: '#52c41a' }}>{formatMoney(r.minPrice)}</span>
+            <span style={{ color: 'var(--color-success)' }}>{formatMoney(r.minPrice)}</span>
             <span style={{ color: 'var(--color-text-tertiary)' }}>~</span>
-            <span style={{ color: '#f5222d' }}>{formatMoney(r.maxPrice)}</span>
+            <span style={{ color: 'var(--color-error)' }}>{formatMoney(r.maxPrice)}</span>
           </Space>
         ) : (
           '-'
@@ -227,7 +227,7 @@ const StyleProcessKnowledgeTab: React.FC<StyleProcessKnowledgeTabProps> = ({
       width: 110,
       render: (v) =>
         v != null ? (
-          <span style={{ color: '#1677ff', fontWeight: 600 }}>{formatMoney(v)}</span>
+          <span style={{ color: 'var(--color-primary)', fontWeight: 600 }}>{formatMoney(v)}</span>
         ) : (
           '-'
         ),

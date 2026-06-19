@@ -20,7 +20,7 @@ const { RangePicker } = DatePicker;
 const renderChange = (change: number, prefix = '') => {
   if (change === 0) return <span style={{ color: 'var(--color-text-tertiary)', fontSize: 14 }}>{prefix}持平</span>;
   const isUp = change > 0;
-  return <span style={{ color: isUp ? '#52c41a' : '#ff4d4f', fontSize: 14 }}>{prefix}{isUp ? <ArrowUpOutlined /> : <ArrowDownOutlined />} {Math.abs(change).toFixed(1)}%</span>;
+  return <span style={{ color: isUp ? 'var(--color-success)' : 'var(--color-danger)', fontSize: 14 }}>{prefix}{isUp ? <ArrowUpOutlined /> : <ArrowDownOutlined />} {Math.abs(change).toFixed(1)}%</span>;
 };
 
 const DashboardContent: React.FC = () => {
@@ -36,10 +36,10 @@ const DashboardContent: React.FC = () => {
       { type: 'value', name: '数量', position: 'right' },
     ],
     series: [
-      { name: '总金额', type: 'line', smooth: true, data: chartData.amounts, yAxisIndex: 0, areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: 'rgba(24,144,255,0.3)' }, { offset: 1, color: 'rgba(24,144,255,0.02)' }]) }, itemStyle: { color: '#1890ff' } },
-      { name: '入库数量', type: 'line', smooth: true, data: chartData.inboundQuantities, yAxisIndex: 1, areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: 'rgba(82,196,26,0.3)' }, { offset: 1, color: 'rgba(82,196,26,0.02)' }]) }, itemStyle: { color: '#52c41a' } },
-      { name: '订单数量', type: 'line', smooth: true, data: chartData.orderCounts, yAxisIndex: 1, areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: 'rgba(250,173,20,0.3)' }, { offset: 1, color: 'rgba(250,173,20,0.02)' }]) }, itemStyle: { color: '#faad14' } },
-      { name: '次品数量', type: 'line', smooth: true, data: chartData.defectQuantities, yAxisIndex: 1, areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: 'rgba(255,77,79,0.3)' }, { offset: 1, color: 'rgba(255,77,79,0.02)' }]) }, itemStyle: { color: '#ff4d4f' } },
+      { name: '总金额', type: 'line', smooth: true, data: chartData.amounts, yAxisIndex: 0, areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: 'rgba(24,144,255,0.3)' }, { offset: 1, color: 'rgba(24,144,255,0.02)' }]) }, itemStyle: { color: 'var(--color-info)' } },
+      { name: '入库数量', type: 'line', smooth: true, data: chartData.inboundQuantities, yAxisIndex: 1, areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: 'rgba(82,196,26,0.3)' }, { offset: 1, color: 'rgba(82,196,26,0.02)' }]) }, itemStyle: { color: 'var(--color-success)' } },
+      { name: '订单数量', type: 'line', smooth: true, data: chartData.orderCounts, yAxisIndex: 1, areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: 'rgba(250,173,20,0.3)' }, { offset: 1, color: 'rgba(250,173,20,0.02)' }]) }, itemStyle: { color: 'var(--color-warning)' } },
+      { name: '次品数量', type: 'line', smooth: true, data: chartData.defectQuantities, yAxisIndex: 1, areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: 'rgba(255,77,79,0.3)' }, { offset: 1, color: 'rgba(255,77,79,0.02)' }]) }, itemStyle: { color: 'var(--color-danger)' } },
     ],
   }), [chartData]);
 
@@ -50,12 +50,12 @@ const DashboardContent: React.FC = () => {
       {smartError && <Card style={{ marginBottom: 12 }}><SmartErrorNotice error={smartError} onFix={loadData} /></Card>}
       {healthData && !healthCollapsed && (
         <Card style={{ marginBottom: 12, background: 'linear-gradient(135deg, #f0f5ff 0%, #e6f7ff 100%)', border: '1px solid #bae7ff' }}
-          title={<span><DashboardOutlined /> 系统健康指数 <b style={{ fontSize: 15, color: healthData.score >= 80 ? '#52c41a' : healthData.score >= 60 ? '#faad14' : '#ff4d4f' }}>{healthData.score}</b> 分</span>}
+          title={<span><DashboardOutlined /> 系统健康指数 <b style={{ fontSize: 15, color: healthData.score >= 80 ? 'var(--color-success)' : healthData.score >= 60 ? 'var(--color-warning)' : 'var(--color-danger)' }}>{healthData.score}</b> 分</span>}
           extra={<Button type="link" style={{ padding: 0, height: 'auto' }} onClick={() => setHealthCollapsed(true)}>收起</Button>}>
           <Row gutter={16}>
-            <Col span={4}><div style={{ textAlign: 'center' }}><div style={{ fontSize: 16, fontWeight: 700, color: healthData.score >= 80 ? '#52c41a' : healthData.score >= 60 ? '#faad14' : '#ff4d4f' }}>{healthData.score >= 80 ? 'A' : healthData.score >= 60 ? 'B' : 'C'}</div><div style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>等级</div></div></Col>
-            {healthData.subScores?.map((sub: any, i: number) => <Col key={i} span={4}><div style={{ textAlign: 'center' }}><div style={{ fontSize: 13, fontWeight: 600, color: sub.score >= 80 ? '#52c41a' : sub.score >= 60 ? '#faad14' : '#ff4d4f' }}>{sub.score}</div><div style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>{sub.name}</div></div></Col>)}
-            <Col span={4}>{healthData.topRisk && <div><Tooltip title={healthData.topRisk.detail}><span style={{ color: '#ff4d4f' }}><WarningOutlined /> {healthData.topRisk.name}</span></Tooltip></div>}{healthData.suggestion && <div style={{ fontSize: 14, color: 'var(--color-text-secondary)', marginTop: 4 }}><CheckCircleOutlined /> {healthData.suggestion}</div>}</Col>
+            <Col span={4}><div style={{ textAlign: 'center' }}><div style={{ fontSize: 16, fontWeight: 700, color: healthData.score >= 80 ? 'var(--color-success)' : healthData.score >= 60 ? 'var(--color-warning)' : 'var(--color-danger)' }}>{healthData.score >= 80 ? 'A' : healthData.score >= 60 ? 'B' : 'C'}</div><div style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>等级</div></div></Col>
+            {healthData.subScores?.map((sub: any, i: number) => <Col key={i} span={4}><div style={{ textAlign: 'center' }}><div style={{ fontSize: 13, fontWeight: 600, color: sub.score >= 80 ? 'var(--color-success)' : sub.score >= 60 ? 'var(--color-warning)' : 'var(--color-danger)' }}>{sub.score}</div><div style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>{sub.name}</div></div></Col>)}
+            <Col span={4}>{healthData.topRisk && <div><Tooltip title={healthData.topRisk.detail}><span style={{ color: 'var(--color-danger)' }}><WarningOutlined /> {healthData.topRisk.name}</span></Tooltip></div>}{healthData.suggestion && <div style={{ fontSize: 14, color: 'var(--color-text-secondary)', marginTop: 4 }}><CheckCircleOutlined /> {healthData.suggestion}</div>}</Col>
           </Row>
         </Card>
       )}
@@ -64,7 +64,7 @@ const DashboardContent: React.FC = () => {
           <Col>
             <Space>
               {(['day', 'week', 'month', 'year'] as TimeRangeType[]).map(r => (
-                <span key={r} onClick={() => setTimeRange(r)} style={{ cursor: 'pointer', padding: '4px 12px', borderRadius: 4, background: timeRange === r ? '#1890ff' : '#f0f0f0', color: timeRange === r ? '#fff' : '#333', fontWeight: timeRange === r ? 600 : 400 }}>{r === 'day' ? '日' : r === 'week' ? '周' : r === 'month' ? '月' : '年'}</span>
+                <span key={r} onClick={() => setTimeRange(r)} style={{ cursor: 'pointer', padding: '4px 12px', borderRadius: 4, background: timeRange === r ? 'var(--color-info)' : 'var(--color-border-light)', color: timeRange === r ? 'var(--color-bg-base)' : '#333', fontWeight: timeRange === r ? 600 : 400 }}>{r === 'day' ? '日' : r === 'week' ? '周' : r === 'month' ? '月' : '年'}</span>
               ))}
               <RangePicker value={customRange as any} onChange={(dates) => { if (dates && dates[0] && dates[1]) { setCustomRange([dates[0] as Dayjs, dates[1] as Dayjs]); setTimeRange('custom'); } }} style={{ width: 240 }} />
             </Space>
@@ -78,7 +78,7 @@ const DashboardContent: React.FC = () => {
             <Col span={6}><Card><div style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>总金额</div><div style={{ fontSize: 15, fontWeight: 700 }}>¥{(statData.totalAmount || 0).toLocaleString()}</div>{renderChange(statData.totalAmountChange, compareLabel)}</Card></Col>
             <Col span={6}><Card><div style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>入库数量</div><div style={{ fontSize: 15, fontWeight: 700 }}>{(statData.inboundQuantity || 0).toLocaleString()}</div>{renderChange(statData.inboundQuantityChange, compareLabel)}</Card></Col>
             <Col span={6}><Card><div style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>订单数量</div><div style={{ fontSize: 15, fontWeight: 700 }}>{statData.orderCount || 0}</div>{renderChange(statData.orderCountChange, compareLabel)}</Card></Col>
-            <Col span={6}><Card><div style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>次品数量</div><div style={{ fontSize: 15, fontWeight: 700, color: '#ff4d4f' }}>{statData.defectQuantity || 0}</div>{renderChange(statData.defectQuantityChange, compareLabel)}</Card></Col>
+            <Col span={6}><Card><div style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>次品数量</div><div style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-danger)' }}>{statData.defectQuantity || 0}</div>{renderChange(statData.defectQuantityChange, compareLabel)}</Card></Col>
           </Row>
           <Card title="趋势分析"><ReactEChartsCore echarts={echarts} option={chartOption} style={{ height: 320 }} /></Card>
         </Col>
@@ -86,7 +86,7 @@ const DashboardContent: React.FC = () => {
           <Card title="工厂金额排名 Top 10" style={{ height: '100%' }}>
             {rankData.length > 0 ? rankData.map(r => (
               <div key={r.rank} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid var(--color-border-light)' }}>
-                <span><b style={{ color: r.rank <= 3 ? '#1890ff' : '#999', marginRight: 8 }}>{r.rank}</b>{r.name}</span>
+                <span><b style={{ color: r.rank <= 3 ? 'var(--color-info)' : '#999', marginRight: 8 }}>{r.rank}</b>{r.name}</span>
                 <span style={{ fontWeight: 600 }}>¥{r.value.toLocaleString()}</span>
               </div>
             )) : <div style={{ textAlign: 'center', color: 'var(--color-text-tertiary)', padding: 20 }}>暂无数据</div>}
@@ -99,8 +99,8 @@ const DashboardContent: React.FC = () => {
         <Col span={4}><Card><div style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>入库数量</div><div style={{ fontSize: 13, fontWeight: 700 }}>{(statData.inboundQuantity || 0).toLocaleString()}</div></Card></Col>
         <Col span={4}><Card><div style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>面辅料总价</div><div style={{ fontSize: 13, fontWeight: 700 }}>¥{(statData.materialCost || 0).toLocaleString()}</div></Card></Col>
         <Col span={4}><Card><div style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>生产总价</div><div style={{ fontSize: 13, fontWeight: 700 }}>¥{(statData.productionCost || 0).toLocaleString()}</div></Card></Col>
-        <Col span={2}><Card><div style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>利润</div><div style={{ fontSize: 13, fontWeight: 700, color: (statData.profit || 0) >= 0 ? '#52c41a' : '#ff4d4f' }}>¥{(statData.profit || 0).toLocaleString()}</div></Card></Col>
-        <Col span={2}><Card><div style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>利润率</div><div style={{ fontSize: 13, fontWeight: 700, color: (statData.profitRate || 0) >= 0 ? '#52c41a' : '#ff4d4f' }}>{statData.profitRate || 0}%</div></Card></Col>
+        <Col span={2}><Card><div style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>利润</div><div style={{ fontSize: 13, fontWeight: 700, color: (statData.profit || 0) >= 0 ? 'var(--color-success)' : 'var(--color-danger)' }}>¥{(statData.profit || 0).toLocaleString()}</div></Card></Col>
+        <Col span={2}><Card><div style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>利润率</div><div style={{ fontSize: 13, fontWeight: 700, color: (statData.profitRate || 0) >= 0 ? 'var(--color-success)' : 'var(--color-danger)' }}>{statData.profitRate || 0}%</div></Card></Col>
       </Row>
     </Spin>
   );

@@ -86,14 +86,14 @@ const buildPrintHtml = (data: MaterialOutboundPrintPayload, tenantName?: string)
         <title>面辅料出库单</title>
         <style>
           body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "'Segoe UI'", Roboto, "'Helvetica Neue'", Arial, "'Noto Sans'", "'Microsoft YaHei'", "'PingFang SC'", serif; color: #111; padding: 20px; }
-          .page { border: 1px solid #d9d9d9; padding: 20px; }
+          .page { border: 1px solid var(--color-border-antd); padding: 20px; }
           .title { text-align: center; font-size: 12px; font-weight: 700; margin-bottom: 16px; }
           .meta { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px 16px; margin-bottom: 16px; }
           .meta-item { font-size: 12px; line-height: 1.6; }
           .meta-label { color: #666; display: inline-block; min-width: 88px; }
           table { width: 100%; border-collapse: collapse; margin-top: 12px; }
           th, td { border: 1px solid #111; padding: 6px 8px; font-size: 12px; text-align: left; }
-          th { background: #f5f5f5; }
+          th { background: var(--color-bg-subtle); }
           .remark { margin-top: 14px; font-size: 12px; line-height: 1.6; min-height: 40px; }
           .signatures { display: flex; justify-content: space-between; margin-top: 32px; font-size: 12px; }
           .signature { width: 28%; border-top: 1px solid #111; padding-top: 8px; text-align: center; }

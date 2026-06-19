@@ -103,7 +103,7 @@ export default function SampleStageExpandedContent({
     return Math.round(stages.reduce((sum, s) => sum + s.percent, 0) / stages.length);
   }, [stages]);
 
-  const overallColor = overallPercent >= 100 ? '#52c41a' : '#2d7ff9';
+  const overallColor = overallPercent >= 100 ? 'var(--color-success)' : 'var(--color-primary)';
 
   return (
     <div className="sample-stage-expanded">

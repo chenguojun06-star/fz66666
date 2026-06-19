@@ -42,13 +42,31 @@
 
 .garment, .hanger {
   position: absolute;
+  opacity: 0;
+}
+
+@keyframes fallFromTop {
+  0% {
+    opacity: 0;
+    transform: translateY(var(--fall-from, -300px)) translateX(var(--offset-x, 0)) rotate(calc(var(--rot, 0deg) * 0.5));
+  }
+  60% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) translateX(var(--offset-x, 0)) rotate(var(--rot, 0deg));
+  }
 }
 
 .garment-dress {
   width: clamp(36px, 4vw, 64px);
   top: 38%;
   left: 42%;
-  transform: rotate(-18deg);
+  --rot: -18deg;
+  --fall-delay: 0.15s;
+  --fall-from: -280px;
+  animation: fallFromTop 0.9s cubic-bezier(0.34, 1.56, 0.64, 1) var(--fall-delay) forwards;
   color: rgba(130, 142, 162, 0.25);
   filter: url(#pencil-texture);
 }
@@ -57,7 +75,10 @@
   width: clamp(44px, 5vw, 80px);
   top: 52%;
   left: 32%;
-  transform: rotate(14deg);
+  --rot: 14deg;
+  --fall-delay: 0.05s;
+  --fall-from: -320px;
+  animation: fallFromTop 1s cubic-bezier(0.34, 1.56, 0.64, 1) var(--fall-delay) forwards;
   color: rgba(122, 134, 155, 0.28);
   filter: url(#pencil-texture);
 }
@@ -66,7 +87,10 @@
   width: clamp(60px, 6.5vw, 110px);
   top: 8%;
   left: 24%;
-  transform: rotate(-5deg);
+  --rot: -5deg;
+  --fall-delay: 0s;
+  --fall-from: -240px;
+  animation: fallFromTop 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) var(--fall-delay) forwards;
   color: rgba(150, 158, 175, 0.24);
   filter: url(#pencil-texture);
 }
@@ -75,7 +99,10 @@
   width: clamp(38px, 4.2vw, 68px);
   top: 10%;
   right: 14%;
-  transform: rotate(6deg);
+  --rot: 6deg;
+  --fall-delay: 0.1s;
+  --fall-from: -260px;
+  animation: fallFromTop 0.85s cubic-bezier(0.34, 1.56, 0.64, 1) var(--fall-delay) forwards;
   color: rgba(144, 154, 172, 0.24);
   filter: url(#pencil-texture);
 }
@@ -84,7 +111,10 @@
   width: clamp(54px, 6vw, 100px);
   top: 35%;
   right: 26%;
-  transform: rotate(12deg);
+  --rot: 12deg;
+  --fall-delay: 0.25s;
+  --fall-from: -300px;
+  animation: fallFromTop 0.95s cubic-bezier(0.34, 1.56, 0.64, 1) var(--fall-delay) forwards;
   color: rgba(145, 154, 170, 0.22);
   filter: url(#pencil-texture);
 }
@@ -93,7 +123,10 @@
   width: clamp(34px, 3.8vw, 60px);
   top: 48%;
   right: 7%;
-  transform: rotate(-8deg);
+  --rot: -8deg;
+  --fall-delay: 0.2s;
+  --fall-from: -340px;
+  animation: fallFromTop 1.05s cubic-bezier(0.34, 1.56, 0.64, 1) var(--fall-delay) forwards;
   color: rgba(125, 136, 158, 0.26);
   filter: url(#pencil-texture);
 }
@@ -102,7 +135,10 @@
   width: clamp(60px, 7vw, 120px);
   bottom: 18%;
   left: 2%;
-  transform: rotate(5deg);
+  --rot: 5deg;
+  --fall-delay: 0.3s;
+  --fall-from: -360px;
+  animation: fallFromTop 1.1s cubic-bezier(0.34, 1.56, 0.64, 1) var(--fall-delay) forwards;
   color: rgba(105, 116, 140, 0.28);
   filter: url(#pencil-texture);
 }
@@ -111,7 +147,10 @@
   width: clamp(68px, 7.5vw, 130px);
   bottom: 26%;
   right: 3%;
-  transform: rotate(-10deg);
+  --rot: -10deg;
+  --fall-delay: 0.35s;
+  --fall-from: -400px;
+  animation: fallFromTop 1.15s cubic-bezier(0.34, 1.56, 0.64, 1) var(--fall-delay) forwards;
   color: rgba(115, 126, 148, 0.30);
   filter: url(#pencil-texture);
 }
@@ -120,7 +159,11 @@
   width: clamp(80px, 9vw, 160px);
   bottom: 3%;
   left: 50%;
-  transform: translateX(-50%) rotate(-3deg);
+  --rot: -3deg;
+  --offset-x: -50%;
+  --fall-delay: 0.4s;
+  --fall-from: -440px;
+  animation: fallFromTop 1.2s cubic-bezier(0.34, 1.56, 0.64, 1) var(--fall-delay) forwards;
   color: rgba(88, 100, 128, 0.36);
   filter: url(#pencil-texture);
 }
@@ -134,7 +177,10 @@
   width: clamp(24px, 2.8vw, 44px);
   top: 22%;
   left: 14%;
-  transform: rotate(25deg);
+  --rot: 25deg;
+  --fall-delay: 0.18s;
+  --fall-from: -300px;
+  animation: fallFromTop 0.9s cubic-bezier(0.34, 1.56, 0.64, 1) var(--fall-delay) forwards;
   color: rgba(145, 154, 172, 0.22);
 }
 
@@ -347,7 +393,7 @@
   padding: clamp(2px, 0.3vw, 5px) clamp(6px, 0.6vw, 10px);
   border-radius: 999px;
   background: linear-gradient(135deg, #3a89f6, #1f75ea);
-  color: #fff;
+  color: var(--color-bg-base);
   font-size: clamp(8px, 0.7vw, 12px);
   font-weight: 800;
   letter-spacing: 1px;
@@ -527,7 +573,7 @@
 .login-form-wrapper .ant-input:-webkit-autofill:hover,
 .login-form-wrapper .ant-input:-webkit-autofill:focus,
 .login-form-wrapper .ant-input-affix-wrapper input:-webkit-autofill {
-  -webkit-box-shadow: 0 0 0 1000px #fff inset !important;
+  -webkit-box-shadow: 0 0 0 1000px var(--color-bg-base) inset !important;
   -webkit-text-fill-color: #22384a !important;
   transition: background-color 5000s ease-in-out 0s;
 }

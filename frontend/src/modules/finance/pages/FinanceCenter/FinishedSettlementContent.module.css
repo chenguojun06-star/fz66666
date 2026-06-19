@@ -44,7 +44,7 @@
 
 .costValue {
   font-weight: 500;
-  color: #ff4d4f;
+  color: var(--color-danger);
 }
 
 .profitValue {
@@ -52,15 +52,15 @@
 }
 
 .profitPositive {
-  color: #52c41a;
+  color: var(--color-success);
 }
 
 .profitNegative {
-  color: #ff4d4f;
+  color: var(--color-danger);
 }
 
 .modalNote {
-  background: var(--color-bg-gray, #f5f5f5);
+  background: var(--color-bg-gray, var(--color-bg-subtle));
   padding: 12px;
   border-radius: 8px;
 }

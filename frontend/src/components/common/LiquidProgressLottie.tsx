@@ -35,7 +35,7 @@ function ensureAnimCSS() {
 const LiquidProgressLottie: React.FC<LiquidProgressLottieProps> = ({
   progress,
   size = 60,
-  color1 = '#52c41a',
+  color1 = 'var(--color-success)',
   color2,
   width,
   height,

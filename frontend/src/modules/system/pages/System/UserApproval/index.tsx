@@ -510,7 +510,7 @@ const UserApproval: React.FC = () => {
               批准外发工厂员工"<strong>{currentUser?.name || currentUser?.username}</strong>"
             </p>
             {Boolean(currentUser?.factoryName) && (
-              <p style={{ color: '#1677ff' }}>所属工厂：{String(currentUser?.factoryName as string)}</p>
+              <p style={{ color: 'var(--color-primary)' }}>所属工厂：{String(currentUser?.factoryName as string)}</p>
             )}
             <p style={{ color: 'var(--neutral-text-disabled)', fontSize: "var(--font-size-xs)", marginBottom: 16 }}>
               批准后该员工可以正常登录系统
@@ -554,7 +554,7 @@ const UserApproval: React.FC = () => {
               确定拒绝外发工厂员工"<strong>{currentUser?.name || currentUser?.username}</strong>"吗？
             </p>
             {Boolean(currentUser?.factoryName) && (
-              <p style={{ color: '#1677ff' }}>所属工厂：{String(currentUser?.factoryName as string)}</p>
+              <p style={{ color: 'var(--color-primary)' }}>所属工厂：{String(currentUser?.factoryName as string)}</p>
             )}
             <p style={{ color: 'var(--neutral-text-disabled)', fontSize: "var(--font-size-xs)" }}>拒绝后该员工将无法登录系统</p>
           </div>

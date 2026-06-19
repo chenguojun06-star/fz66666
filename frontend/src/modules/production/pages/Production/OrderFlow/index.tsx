@@ -447,7 +447,7 @@ const OrderFlow: React.FC = () => {
                                 const skuVal = skuEditMap[key] !== undefined ? skuEditMap[key] : (line.skuNo || '');
                                 const isOdd = idx % 2 === 1;
                                 return (
-                                  <tr key={idx} style={{ background: isOdd ? 'var(--color-bg-stripe, #fafafa)' : undefined }}>
+                                  <tr key={idx} style={{ background: isOdd ? 'var(--color-bg-stripe, var(--color-bg-container))' : undefined }}>
                                     <td style={{ padding: '5px 10px', borderBottom: '1px solid var(--color-border-light)' }}>
                                       <Tag style={{ margin: 0, fontSize: 12, borderRadius: 4 }}>{line.color || '-'}</Tag>
                                     </td>

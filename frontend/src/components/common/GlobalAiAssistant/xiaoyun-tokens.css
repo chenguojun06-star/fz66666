@@ -1,22 +1,22 @@
 :root {
-  --xiaoyun-primary: #1677ff;
+  --xiaoyun-primary: var(--color-primary);
   --xiaoyun-primary-hover: #0958d9;
   --xiaoyun-primary-bg: #e6f4ff;
   --xiaoyun-primary-border: #91caff;
 
-  --xiaoyun-success: #52c41a;
+  --xiaoyun-success: var(--color-success);
   --xiaoyun-success-bg: #f6ffed;
   --xiaoyun-success-border: #b7eb8f;
 
-  --xiaoyun-warning: #fa8c16;
-  --xiaoyun-warning-bg: #fff7e6;
+  --xiaoyun-warning: var(--color-warning);
+  --xiaoyun-warning-bg: #FFF7E6;
   --xiaoyun-warning-border: #ffd591;
 
-  --xiaoyun-danger: #ff4d4f;
-  --xiaoyun-danger-bg: #fff1f0;
+  --xiaoyun-danger: var(--color-danger);
+  --xiaoyun-danger-bg: #FFF1F0;
   --xiaoyun-danger-border: #ffa39e;
 
-  --xiaoyun-info: #1677ff;
+  --xiaoyun-info: var(--color-primary);
   --xiaoyun-info-bg: #f0f5ff;
   --xiaoyun-info-border: #adc6ff;
 
@@ -24,12 +24,12 @@
   --xiaoyun-text-secondary: rgba(0, 0, 0, 0.65);
   --xiaoyun-text-tertiary: rgba(0, 0, 0, 0.45);
 
-  --xiaoyun-bg-card: #ffffff;
-  --xiaoyun-bg-page: #f5f5f5;
-  --xiaoyun-bg-ai-bubble: #ffffff;
-  --xiaoyun-bg-user-bubble: #1677ff;
+  --xiaoyun-bg-card: var(--color-bg-base);
+  --xiaoyun-bg-page: var(--color-bg-subtle);
+  --xiaoyun-bg-ai-bubble: var(--color-bg-base);
+  --xiaoyun-bg-user-bubble: var(--color-primary);
 
-  --xiaoyun-border-card: #f0f0f0;
+  --xiaoyun-border-card: var(--color-border-light);
   --xiaoyun-border-radius-sm: 6px;
   --xiaoyun-border-radius-md: 8px;
   --xiaoyun-border-radius-lg: 12px;
@@ -49,12 +49,12 @@
   --xiaoyun-spacing-lg: 16px;
   --xiaoyun-spacing-xl: 24px;
 
-  --xiaoyun-chart-1: #1677ff;
-  --xiaoyun-chart-2: #52c41a;
-  --xiaoyun-chart-3: #fa8c16;
-  --xiaoyun-chart-4: #ff4d4f;
-  --xiaoyun-chart-5: #722ed1;
-  --xiaoyun-chart-6: #13c2c2;
+  --xiaoyun-chart-1: var(--color-primary);
+  --xiaoyun-chart-2: var(--color-success);
+  --xiaoyun-chart-3: var(--color-warning);
+  --xiaoyun-chart-4: var(--color-danger);
+  --xiaoyun-chart-5: var(--color-accent-purple);
+  --xiaoyun-chart-6: var(--color-accent-cyan);
   --xiaoyun-chart-7: #eb2f96;
 }
 
@@ -66,7 +66,7 @@
   --xiaoyun-bg-card: #1f1f1f;
   --xiaoyun-bg-page: #141414;
   --xiaoyun-bg-ai-bubble: #1f1f1f;
-  --xiaoyun-bg-user-bubble: #1677ff;
+  --xiaoyun-bg-user-bubble: var(--color-primary);
 
   --xiaoyun-border-card: #303030;
 

@@ -37,13 +37,13 @@ export const formatCompletionTime = (timeStr: string): string => {
 };
 
 export const getNodeColor = (expectedShipDate: any, isColor2 = false): string => {
-  if (!expectedShipDate) return isColor2 ? '#95de64' : '#52c41a';
+  if (!expectedShipDate) return isColor2 ? '#95de64' : 'var(--color-success)';
   const now = new Date();
   const delivery = new Date(expectedShipDate as string);
   const diffDays = Math.ceil((delivery.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-  if (diffDays < 0) return isColor2 ? '#ff7875' : '#ff4d4f';
-  if (diffDays <= 3) return isColor2 ? '#ffc53d' : '#faad14';
-  return isColor2 ? '#95de64' : '#52c41a';
+  if (diffDays < 0) return isColor2 ? '#ff7875' : 'var(--color-danger)';
+  if (diffDays <= 3) return isColor2 ? '#ffc53d' : 'var(--color-warning)';
+  return isColor2 ? '#95de64' : 'var(--color-success)';
 };
 
 export const colorWithAlpha = (hex: string, alpha: number): string => {

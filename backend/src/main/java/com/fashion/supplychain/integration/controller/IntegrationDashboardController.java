@@ -12,7 +12,6 @@ import com.fashion.supplychain.integration.record.entity.IntegrationCallbackLog;
 import com.fashion.supplychain.integration.record.entity.IntegrationChannelConfig;
 import com.fashion.supplychain.integration.record.entity.LogisticsRecord;
 import com.fashion.supplychain.integration.record.entity.PaymentRecord;
-import com.fashion.supplychain.integration.record.mapper.IntegrationChannelConfigMapper;
 import com.fashion.supplychain.integration.record.service.IntegrationRecordService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -44,7 +43,7 @@ public class IntegrationDashboardController {
     private final SFExpressProperties sfProps;
     private final STOProperties stoProps;
     private final IntegrationRecordService recordService;
-    private final IntegrationChannelConfigMapper channelConfigMapper;
+    private final com.fashion.supplychain.integration.orchestration.ChannelConfigOrchestrator channelConfigOrchestrator;
 
     /** 渠道元数据定义 */
     private static final List<Map<String, String>> CHANNEL_META = List.of(
@@ -113,7 +112,7 @@ public class IntegrationDashboardController {
     private Map<String, IntegrationChannelConfig> loadDbConfigs(Long tenantId) {
         if (tenantId == null) return Collections.emptyMap();
         try {
-            List<IntegrationChannelConfig> list = channelConfigMapper.selectList(
+            List<IntegrationChannelConfig> list = channelConfigOrchestrator.selectList(
                     new LambdaQueryWrapper<IntegrationChannelConfig>()
                             .eq(IntegrationChannelConfig::getTenantId, tenantId));
             Map<String, IntegrationChannelConfig> map = new HashMap<>();
@@ -162,7 +161,7 @@ public class IntegrationDashboardController {
         if (tenantId == null) return Result.fail("未登录");
 
         try {
-            IntegrationChannelConfig cfg = channelConfigMapper.selectOne(
+            IntegrationChannelConfig cfg = channelConfigOrchestrator.selectOne(
                     new LambdaQueryWrapper<IntegrationChannelConfig>()
                             .eq(IntegrationChannelConfig::getTenantId, tenantId)
                             .eq(IntegrationChannelConfig::getChannelCode, channelCode)
@@ -228,7 +227,7 @@ public class IntegrationDashboardController {
         String extraConfig = (String) params.get("extraConfig");
 
         try {
-            IntegrationChannelConfig existing = channelConfigMapper.selectOne(
+            IntegrationChannelConfig existing = channelConfigOrchestrator.selectOne(
                     new LambdaQueryWrapper<IntegrationChannelConfig>()
                             .eq(IntegrationChannelConfig::getTenantId, tenantId)
                             .eq(IntegrationChannelConfig::getChannelCode, channelCode)
@@ -244,7 +243,7 @@ public class IntegrationDashboardController {
                 if (notifyUrl != null) existing.setNotifyUrl(notifyUrl);
                 if (extraConfig != null) existing.setExtraConfig(extraConfig);
                 existing.setUpdateTime(LocalDateTime.now());
-                channelConfigMapper.updateById(existing);
+                channelConfigOrchestrator.updateById(existing);
                 log.info("更新渠道配置: tenant={}, channel={}, enabled={}", tenantId, channelCode, enabled);
             } else {
                 // 新增
@@ -262,7 +261,7 @@ public class IntegrationDashboardController {
                         .updateTime(LocalDateTime.now())
                         .deleteFlag(0)
                         .build();
-                channelConfigMapper.insert(cfg);
+                channelConfigOrchestrator.insert(cfg);
                 log.info("新增渠道配置: tenant={}, channel={}, enabled={}", tenantId, channelCode, enabled);
             }
 

@@ -101,7 +101,7 @@ export function useStyleSizeColumns({
                     {editableMode && (
                       <DeleteOutlined
                         onClick={() => setChunkImageUrls(record.chunkRowKeys, imgs.filter((_, ii) => ii !== i))}
-                        style={{ position: 'absolute', top: -4, right: -4, background: 'rgba(0,0,0,0.55)', color: '#fff', borderRadius: '50%', padding: 2, fontSize: 14, cursor: 'pointer' }}
+                        style={{ position: 'absolute', top: -4, right: -4, background: 'rgba(0,0,0,0.55)', color: 'var(--color-bg-base)', borderRadius: '50%', padding: 2, fontSize: 14, cursor: 'pointer' }}
                       />
                     )}
                   </div>

@@ -1,5 +1,9 @@
 package com.fashion.supplychain.intelligence.service;
 
+import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
+import com.fashion.supplychain.production.entity.ProductionOrder;
+import com.fashion.supplychain.production.service.ProductionOrderService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -20,6 +24,9 @@ public class ClosedOrderAiDataCleanupService {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
+    @Autowired
+    private ProductionOrderService productionOrderService;
+
     private static final Set<String> TERMINAL_STATUSES = new HashSet<>(Arrays.asList("closed", "scrapped", "completed"));
 
     private static final List<String> CLEANUP_QUERIES_BY_ORDER_ID = Arrays.asList(
@@ -38,10 +45,37 @@ public class ClosedOrderAiDataCleanupService {
 
     @Async("aiSelfCriticExecutor")
     public void cleanupAsync(String orderId, String orderNo) {
+        // 租户归属校验，防止跨租户数据破坏
+        assertTenantOwnership(orderId, orderNo);
         try {
             cleanup(orderId, orderNo);
         } catch (Exception e) {
             log.warn("[ClosedOrderCleanup] 异步清理失败 orderId={} orderNo={}: {}", orderId, orderNo, e.getMessage());
+        }
+    }
+
+    /**
+     * 校验 orderId/orderNo 对应的生产订单属于当前租户
+     */
+    private void assertTenantOwnership(String orderId, String orderNo) {
+        Long tenantId = UserContext.tenantId();
+        if (tenantId == null) {
+            throw new SecurityException("租户上下文缺失");
+        }
+        if (orderId != null) {
+            ProductionOrder order = productionOrderService.getById(orderId);
+            if (order != null) {
+                TenantAssert.assertBelongsToCurrentTenant(order.getTenantId(), "生产订单");
+                return;
+            }
+        }
+        if (orderNo != null) {
+            ProductionOrder order = productionOrderService.lambdaQuery()
+                    .eq(ProductionOrder::getOrderNo, orderNo)
+                    .one();
+            if (order != null) {
+                TenantAssert.assertBelongsToCurrentTenant(order.getTenantId(), "生产订单");
+            }
         }
     }
 

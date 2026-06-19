@@ -127,4 +127,28 @@ public class EcStockOrchestrator {
         int onWay = stock.getOnWayProduction() != null ? stock.getOnWayProduction() : 0;
         return Math.max(0, safe * 2 - avail - onWay);
     }
+
+    /**
+     * 批量更新指定 SKU 下所有库存记录的安全库存值
+     *
+     * @param tenantId  租户ID
+     * @param skuId     SKU ID
+     * @param safeStock 新的安全库存值
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void updateSafeStock(Long tenantId, Long skuId, Integer safeStock) {
+        if (tenantId == null || skuId == null || safeStock == null) {
+            throw new IllegalArgumentException("tenantId, skuId 和 safeStock 不能为空");
+        }
+        List<EcUniversalStock> stocks = universalStockService.list(
+                new LambdaQueryWrapper<EcUniversalStock>()
+                        .eq(EcUniversalStock::getTenantId, tenantId)
+                        .eq(EcUniversalStock::getSkuId, skuId));
+        for (EcUniversalStock stock : stocks) {
+            stock.setSafeStock(safeStock);
+            universalStockService.updateById(stock);
+        }
+        log.info("[EcStockOrchestrator] 安全库存更新完成: tenantId={}, skuId={}, count={}",
+                tenantId, skuId, stocks.size());
+    }
 }

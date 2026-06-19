@@ -127,7 +127,7 @@ const WarehousePieChart: React.FC<WarehousePieChartProps> = ({ mode = 'sidebar',
 
     const stageQuantities: PieSegment[] = [
       { key: 'pending', label: '待入库', color: 'var(--color-text-tertiary)', count: Math.round(totalPendingInbound) },
-      { key: 'instock', label: '已入库', color: '#10b981', count: Math.round(totalInStock) },
+      { key: 'instock', label: '已入库', color: 'var(--color-accent-emerald)', count: Math.round(totalInStock) },
       { key: 'outstock', label: '已出库', color: '#3b82f6', count: Math.round(totalOutStock) },
     ];
 

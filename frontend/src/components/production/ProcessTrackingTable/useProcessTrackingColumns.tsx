@@ -81,7 +81,7 @@ export function useProcessTrackingColumns(ctx: ColumnContext) {
           pending: { color: 'var(--color-warning)', label: '待扫码' },
           reset: { color: 'var(--color-danger)', label: '已重置' },
         };
-        const cfg = sm[status] || { color: '#d9d9d9', label: '未知' };
+        const cfg = sm[status] || { color: 'var(--color-border-antd)', label: '未知' };
         return <Tag color={cfg.color} style={{ fontSize: 14, margin: 0 }}>{cfg.label}</Tag>;
       },
     },

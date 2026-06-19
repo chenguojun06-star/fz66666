@@ -13,8 +13,8 @@ interface TaskAggregationPanelProps {
 }
 
 const PRIORITY_CONFIG: Record<string, { label: string; color: string; bg: string; border: string }> = {
-  high: { label: '紧急', color: '#cf1322', bg: '#fff1f0', border: '#ffa39e' },
-  medium: { label: '一般', color: '#d48806', bg: '#fffbe6', border: '#ffe58f' },
+  high: { label: '紧急', color: 'var(--color-error)', bg: '#FFF1F0', border: '#ffa39e' },
+  medium: { label: '一般', color: '#d48806', bg: '#FFFBE6', border: '#ffe58f' },
   low: { label: '低', color: '#389e0d', bg: '#f6ffed', border: '#b7eb8f' },
 };
 
@@ -145,7 +145,7 @@ const TaskAggregationPanel: React.FC<TaskAggregationPanelProps> = ({ tasks, onCl
           <button
             className={`${styles.filterChip} ${activeFilter === '__high__' ? styles.filterChipActive : ''}`}
             onClick={() => setActiveFilter(activeFilter === '__high__' ? 'all' : '__high__')}
-            style={activeFilter === '__high__' ? { background: '#fff1f0', borderColor: '#ffa39e', color: '#cf1322' } : {}}
+            style={activeFilter === '__high__' ? { background: '#FFF1F0', borderColor: '#ffa39e', color: 'var(--color-error)' } : {}}
           >
             🔴 紧急 ({highCount})
           </button>

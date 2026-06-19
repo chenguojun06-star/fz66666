@@ -17,7 +17,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
@@ -171,7 +170,6 @@ public class ProductionOrderCommandService {
     /**
      * 从样衣创建订单
      */
-    @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> createOrderFromStyle(String styleId, String color, String size) {
         if (!StringUtils.hasText(styleId)) {
             throw new IllegalArgumentException("样衣ID不能为空");

@@ -444,7 +444,7 @@ const MyBillingTab: React.FC<MyBillingTabProps> = ({ embedded = false }) => {
               <Descriptions.Item label="套餐">{PLAN_LABELS[payingBill.planType] || payingBill.planType}</Descriptions.Item>
               <Descriptions.Item label="应付金额" span={2}>
                 <Space align="center">
-                  <Text strong style={{ color: '#f5222d', fontSize: 22 }}>
+                  <Text strong style={{ color: 'var(--color-error)', fontSize: 22 }}>
                     {formatMoney(payingBill.totalAmount)}
                   </Text>
                   <Button type="text" icon={<CopyOutlined />}
@@ -472,13 +472,13 @@ const MyBillingTab: React.FC<MyBillingTabProps> = ({ embedded = false }) => {
                 </Descriptions.Item>
                 <Descriptions.Item label="付款金额">
                   <Space>
-                    <Text strong style={{ color: '#f5222d' }}>{formatMoney(payingBill.totalAmount)}</Text>
+                    <Text strong style={{ color: 'var(--color-error)' }}>{formatMoney(payingBill.totalAmount)}</Text>
                     <Button type="text" icon={<CopyOutlined />}
                       onClick={() => copyText(String(payingBill.totalAmount?.toFixed(2)), '金额')} />
                   </Space>
                 </Descriptions.Item>
               </Descriptions>
-              <div style={{ marginTop: 12, padding: '10px 12px', background: '#fffbe6', borderRadius: 6, fontSize: 14, color: '#ad6800' }}>
+              <div style={{ marginTop: 12, padding: '10px 12px', background: '#FFFBE6', borderRadius: 6, fontSize: 14, color: '#ad6800' }}>
                  请联系管理员获取收款账号/收款码，并在转账备注中填写账单编号。
               </div>
             </Card>

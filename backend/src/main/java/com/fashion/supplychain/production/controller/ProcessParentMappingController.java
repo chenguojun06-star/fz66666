@@ -1,16 +1,14 @@
 package com.fashion.supplychain.production.controller;
 
 import com.fashion.supplychain.common.Result;
-import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.production.entity.ProcessParentMapping;
-import com.fashion.supplychain.production.mapper.ProcessParentMappingMapper;
+import com.fashion.supplychain.production.orchestration.ProcessParentMappingOrchestrator;
 import com.fashion.supplychain.production.service.ProcessParentMappingService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
-import java.util.Objects;
 
 /**
  * 工序→父节点动态映射管理接口
@@ -30,7 +28,7 @@ public class ProcessParentMappingController {
     private ProcessParentMappingService mappingService;
 
     @Autowired
-    private ProcessParentMappingMapper mappingMapper;
+    private ProcessParentMappingOrchestrator mappingOrchestrator;
 
     /** 获取全部映射（前端进度球匹配使用） */
     @GetMapping("/list")
@@ -41,48 +39,14 @@ public class ProcessParentMappingController {
     /** 新增映射 */
     @PostMapping
     public Result<String> create(@RequestBody ProcessParentMapping mapping) {
-        if (mapping.getProcessKeyword() == null || mapping.getProcessKeyword().trim().isEmpty()) {
-            return Result.fail("processKeyword 不能为空");
-        }
-        if (mapping.getParentNode() == null || mapping.getParentNode().trim().isEmpty()) {
-            return Result.fail("parentNode 不能为空");
-        }
-        mapping.setProcessKeyword(mapping.getProcessKeyword().trim());
-        mapping.setParentNode(mapping.getParentNode().trim());
-
-        // 关键：必须按当前用户绑定 tenant_id，否则会被 SHARED 模式错误共享给所有租户
-        UserContext ctx = UserContext.get();
-        if (ctx == null) {
-            return Result.fail("用户未登录");
-        }
-        if (ctx.isSuperAdmin()) {
-            // 平台超管添加 = 系统默认（所有租户共享）
-            mapping.setTenantId(null);
-        } else {
-            // 普通租户 = 自己的私有映射
-            mapping.setTenantId(ctx.getTenantId());
-        }
-
-        mappingMapper.insert(mapping);
-        mappingService.reload();
-        return Result.success("已添加: " + mapping.getProcessKeyword() + " → " + mapping.getParentNode());
+        ProcessParentMapping created = mappingOrchestrator.create(mapping);
+        return Result.success("已添加: " + created.getProcessKeyword() + " → " + created.getParentNode());
     }
 
     /** 删除映射 */
     @DeleteMapping("/{id}")
     public Result<String> delete(@PathVariable Long id) {
-        // 必须先校验归属，防止跨租户删除
-        ProcessParentMapping existing = mappingMapper.selectById(id);
-        if (existing == null) {
-            return Result.fail("映射不存在");
-        }
-        UserContext ctx = UserContext.get();
-        if (ctx != null && !ctx.isSuperAdmin()
-                && !Objects.equals(existing.getTenantId(), ctx.getTenantId())) {
-            return Result.fail("无权删除其他租户的映射");
-        }
-        mappingMapper.deleteById(id);
-        mappingService.reload();
+        mappingOrchestrator.delete(id);
         return Result.success("已删除");
     }
 

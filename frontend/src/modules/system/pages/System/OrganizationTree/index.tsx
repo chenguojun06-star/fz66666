@@ -233,9 +233,9 @@ const OrganizationTreePage: React.FC = () => {
       content: (
         <div>
           <p>仅允许删除没有子节点的部门，删除后该部门下成员将自动释放。</p>
-          <p style={{ color: 'var(--color-error, #ff4d4f)', fontWeight: 500 }}>若该部门/工厂有未完成的生产订单，将无法删除。</p>
+          <p style={{ color: 'var(--color-error, var(--color-danger))', fontWeight: 500 }}>若该部门/工厂有未完成的生产订单，将无法删除。</p>
           <div style={{ marginTop: 16 }}>
-            <span style={{ color: 'var(--color-error, #ff4d4f)' }}>*</span> 删除原因：
+            <span style={{ color: 'var(--color-error, var(--color-danger))' }}>*</span> 删除原因：
             <Input.TextArea
               id="deleteDeptReason"
               rows={3}
@@ -407,7 +407,7 @@ const OrganizationTreePage: React.FC = () => {
           <Avatar
             size={24}
             icon={<UserOutlined />}
-            style={{ backgroundColor: r.isFactoryOwner ? 'var(--color-warning, #faad14)' : 'var(--color-success, #52c41a)', flexShrink: 0, cursor: 'pointer' }}
+            style={{ backgroundColor: r.isFactoryOwner ? 'var(--color-warning, var(--color-warning))' : 'var(--color-success, var(--color-success))', flexShrink: 0, cursor: 'pointer' }}
             onClick={() => setProfileUser(r)}
           />
           {v || r.username}
@@ -462,7 +462,7 @@ const OrganizationTreePage: React.FC = () => {
       width: 120,
       render: (v: string, r: User) => (
         <Space size={6}>
-          <Avatar size={24} icon={<UserOutlined />} style={{ backgroundColor: 'var(--primary-color, #1677ff)', flexShrink: 0, cursor: 'pointer' }} onClick={() => setProfileUser(r)} />
+          <Avatar size={24} icon={<UserOutlined />} style={{ backgroundColor: 'var(--primary-color, var(--color-primary))', flexShrink: 0, cursor: 'pointer' }} onClick={() => setProfileUser(r)} />
           {v || r.username}
           {selectedUnit?.managerUserId && String(r.id) === String(selectedUnit.managerUserId) && (
             <Tag color="blue" style={{ fontSize: 14 }}>领取人</Tag>
@@ -565,11 +565,11 @@ const OrganizationTreePage: React.FC = () => {
           <span style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
             {currentFactoryName ? (
               <>
-                <BankOutlined style={{ marginRight: 6, color: 'var(--primary-color, #1677ff)', fontSize: 22 }} />
-                <span style={{ fontSize: 22, fontWeight: 700, color: 'var(--primary-color, #1677ff)', marginRight: 14 }}>
+                <BankOutlined style={{ marginRight: 6, color: 'var(--primary-color, var(--color-primary))', fontSize: 22 }} />
+                <span style={{ fontSize: 22, fontWeight: 700, color: 'var(--primary-color, var(--color-primary))', marginRight: 14 }}>
                   {currentFactoryName}
                 </span>
-                <span style={{ color: 'var(--color-border-antd, #d9d9d9)', fontWeight: 300, fontSize: 20, marginRight: 14 }}>|</span>
+                <span style={{ color: 'var(--color-border-antd, var(--color-border-antd))', fontWeight: 300, fontSize: 20, marginRight: 14 }}>|</span>
               </>
             ) : null}
             <ApartmentOutlined style={{ marginRight: 8 }} />

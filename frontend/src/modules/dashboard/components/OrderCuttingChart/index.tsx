@@ -80,16 +80,16 @@ const OrderCuttingChart: React.FC = () => {
       formatter: (params: any) => {
         if (!params || params.length === 0) return '';
         const date = params[0].axisValue;
-        let html = `<div style="padding: 4px 0; font-weight: 600; color: #1a1a1a;">${date}</div>`;
+        let html = `<div style="padding: 4px 0; font-weight: 600; color: var(--color-text-primary);">${date}</div>`;
         params.forEach((item: any) => {
           const value = item.value !== undefined && item.value !== null ? item.value : 0;
           html += `
             <div style="display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 2px 0;">
               <span style="display: flex; align-items: center; gap: 8px;">
                 <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: ${item.color};"></span>
-                <span style="color: #1a1a1a;">${item.seriesName}</span>
+                <span style="color: var(--color-text-primary);">${item.seriesName}</span>
               </span>
-              <span style="font-weight: 600; color: #1a1a1a;">${value.toLocaleString()}</span>
+              <span style="font-weight: 600; color: var(--color-text-primary);">${value.toLocaleString()}</span>
             </div>
           `;
         });
@@ -117,7 +117,7 @@ const OrderCuttingChart: React.FC = () => {
       data: data.dates,
       axisLine: {
         lineStyle: {
-          color: '#e5e7eb',
+          color: 'var(--color-border)',
         },
       },
       axisLabel: {
@@ -140,7 +140,7 @@ const OrderCuttingChart: React.FC = () => {
       },
       splitLine: {
         lineStyle: {
-          color: '#f0f0f0',
+          color: 'var(--color-border-light)',
         },
       },
     },

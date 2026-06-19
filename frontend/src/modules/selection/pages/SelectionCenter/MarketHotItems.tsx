@@ -301,10 +301,10 @@ export default function MarketHotItems({ onAdded }: { onAdded?: () => void }) {
   return (
     <div>
       {/* 今日热榜 */}
-      <div style={{ marginBottom: 16, border: '1px solid var(--color-border-light)', borderRadius: 8, padding: '12px 16px', background: '#fffbf0' }}>
+      <div style={{ marginBottom: 16, border: '1px solid var(--color-border-light)', borderRadius: 8, padding: '12px 16px', background: '#F6FFED' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
           <Space size={6}>
-            <FireOutlined style={{ color: '#fa8c16' }} />
+            <FireOutlined style={{ color: 'var(--color-warning)' }} />
             <Text strong style={{ fontSize: 14 }}>今日热榜</Text>
             {dailyHot?.date && <Text type="secondary" style={{ fontSize: 14 }}>（{dailyHot.date} 数据）</Text>}
             {dailyHot?.cached && <Tag color="green" style={{ fontSize: 14 }}>已缓存</Tag>}
@@ -349,7 +349,7 @@ export default function MarketHotItems({ onAdded }: { onAdded?: () => void }) {
                           <div style={{ padding: '8px 10px' }}>
                             <Tooltip title={item.title}><div style={{ fontSize: 14, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 4 }}>{item.title}</div></Tooltip>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                              {item.price && <Text strong style={{ fontSize: 14, color: '#ff4d4f' }}>{item.price}</Text>}
+                              {item.price && <Text strong style={{ fontSize: 14, color: 'var(--color-danger)' }}>{item.price}</Text>}
                               {item.sourceLabel && <Tag color="blue" style={{ fontSize: 14, margin: 0 }}>{item.sourceLabel}</Tag>}
                             </div>
                             {item.rankScore != null && <Text type="secondary" style={{ fontSize: 14 }}>权重 {item.rankScore}</Text>}
@@ -456,7 +456,7 @@ export default function MarketHotItems({ onAdded }: { onAdded?: () => void }) {
                         <div style={{ fontWeight: 600, fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.title}</div>
                       </Tooltip>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                              {item.price && <Text strong style={{ fontSize: 13, color: '#ff4d4f' }}>{item.price}</Text>}
+                              {item.price && <Text strong style={{ fontSize: 13, color: 'var(--color-danger)' }}>{item.price}</Text>}
                         {item.sourceLabel && <Tag color="blue" style={{ fontSize: 14, margin: 0 }}>{item.sourceLabel}</Tag>}
                       </div>
                       {item.rankScore != null && <Text type="secondary" style={{ fontSize: 14 }}>榜单权重 {item.rankScore}</Text>}

@@ -596,8 +596,8 @@ const WarehouseLocationMap: React.FC = () => {
     switch (status) {
       case 'empty': return 'var(--color-bg-container)';
       case 'normal': return '#f6ffed';
-      case 'full': return '#fffbe6';
-      case 'locked': return '#fff2f0';
+      case 'full': return '#FFFBE6';
+      case 'locked': return '#F6FFED';
       default: return 'var(--color-bg-container)';
     }
   };
@@ -1278,14 +1278,14 @@ const WarehouseLocationMap: React.FC = () => {
                   const groupTotalAmount = groupSelected.reduce((s, i) => s + (i.outboundQty * (i.adjustedPrice ?? i.salesPrice ?? 0)), 0);
                   return (
                     <div key={styleNo} style={{
-                      marginBottom: 16, border: '1px solid var(--color-border-secondary, #f0f0f0)',
+                      marginBottom: 16, border: '1px solid var(--color-border-secondary, var(--color-border-light))',
                       borderRadius: 8, overflow: 'hidden',
                     }}>
                       {/* 款号头部 */}
                       <div style={{
-                        padding: '8px 12px', backgroundColor: 'var(--color-bg-container, #fafafa)',
+                        padding: '8px 12px', backgroundColor: 'var(--color-bg-container, var(--color-bg-container))',
                         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                        borderBottom: '1px solid var(--color-border-secondary, #f0f0f0)',
+                        borderBottom: '1px solid var(--color-border-secondary, var(--color-border-light))',
                       }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                           <Checkbox
@@ -1314,7 +1314,7 @@ const WarehouseLocationMap: React.FC = () => {
                         <div style={{
                           display: 'grid', gridTemplateColumns: '60px 1fr 80px 80px 100px 80px',
                           padding: '6px 12px', fontSize: 12, color: 'var(--color-text-tertiary)',
-                          borderBottom: '1px solid var(--color-border-secondary, #f0f0f0)',
+                          borderBottom: '1px solid var(--color-border-secondary, var(--color-border-light))',
                         }}>
                           <div>选择</div>
                           <div>颜色 / 尺码</div>
@@ -1332,7 +1332,7 @@ const WarehouseLocationMap: React.FC = () => {
                             <div key={item.skuCode} style={{
                               display: 'grid', gridTemplateColumns: '60px 1fr 80px 80px 100px 80px',
                               padding: '8px 12px', alignItems: 'center',
-                              borderBottom: '1px solid var(--color-border-secondary, #f0f0f0)',
+                              borderBottom: '1px solid var(--color-border-secondary, var(--color-border-light))',
                               backgroundColor: item.selected ? 'var(--color-bg-highlight, #e6f4ff)' : 'transparent',
                             }}>
                               <div>
@@ -1409,8 +1409,8 @@ const WarehouseLocationMap: React.FC = () => {
                   return (
                     <div style={{
                       padding: '12px 16px', marginBottom: 16,
-                      backgroundColor: 'var(--color-bg-container, #fafafa)',
-                      borderRadius: 8, border: '1px solid var(--color-border-secondary, #f0f0f0)',
+                      backgroundColor: 'var(--color-bg-container, var(--color-bg-container))',
+                      borderRadius: 8, border: '1px solid var(--color-border-secondary, var(--color-border-light))',
                       display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                     }}>
                       <span style={{ fontWeight: 600 }}>出库汇总</span>
@@ -1427,7 +1427,7 @@ const WarehouseLocationMap: React.FC = () => {
 
               {/* 客户信息 */}
               <div style={{
-                marginTop: 16, borderTop: '1px solid var(--color-border-secondary, #f0f0f0)',
+                marginTop: 16, borderTop: '1px solid var(--color-border-secondary, var(--color-border-light))',
                 paddingTop: 16,
               }}>
                 <div style={{ fontWeight: 600, marginBottom: 12 }}>客户/收货信息</div>

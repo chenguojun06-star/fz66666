@@ -57,7 +57,7 @@ export const getRemainingDaysDisplay = (
   const s = (status || '').toLowerCase();
   if (s === 'scrapped') return { text: '已报废', color: 'var(--color-text-tertiary)' };
   if (s === 'closed' || s === 'archived') return { text: '已关单', color: 'var(--color-text-tertiary)' };
-  if (s === 'completed') return { text: '已完成', color: '#52c41a' };
+  if (s === 'completed') return { text: '已完成', color: 'var(--color-success)' };
   if (s === 'cancelled') return { text: '已取消', color: 'var(--color-text-tertiary)' };
   if (actualEndDate) return { text: '已关单', color: 'var(--color-text-tertiary)' };
 
@@ -66,21 +66,21 @@ export const getRemainingDaysDisplay = (
   const diff = Math.ceil((deadline.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 
   // 逾期
-  if (diff < 0) return { text: `逾${Math.abs(diff)}天`, color: '#ff4d4f' };
-  if (diff === 0) return { text: '今天', color: '#ff4d4f' };
+  if (diff < 0) return { text: `逾${Math.abs(diff)}天`, color: 'var(--color-danger)' };
+  if (diff === 0) return { text: '今天', color: 'var(--color-danger)' };
 
   // 基于比例的颜色计算
   if (createTime) {
     const start = new Date(createTime);
     const totalDays = Math.ceil((deadline.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) || 1;
     const ratio = diff / totalDays;
-    if (ratio <= 0.2) return { text: `${diff}天`, color: '#ff4d4f' };
-    if (ratio <= 0.5) return { text: `${diff}天`, color: '#faad14' };
-    return { text: `${diff}天`, color: '#52c41a' };
+    if (ratio <= 0.2) return { text: `${diff}天`, color: 'var(--color-danger)' };
+    if (ratio <= 0.5) return { text: `${diff}天`, color: 'var(--color-warning)' };
+    return { text: `${diff}天`, color: 'var(--color-success)' };
   }
 
   // 退化：固定阈值
-  if (diff <= 3) return { text: `${diff}天`, color: '#ff4d4f' };
-  if (diff <= 7) return { text: `${diff}天`, color: '#faad14' };
-  return { text: `${diff}天`, color: '#52c41a' };
+  if (diff <= 3) return { text: `${diff}天`, color: 'var(--color-danger)' };
+  if (diff <= 7) return { text: `${diff}天`, color: 'var(--color-warning)' };
+  return { text: `${diff}天`, color: 'var(--color-success)' };
 };

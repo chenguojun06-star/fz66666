@@ -163,7 +163,7 @@ const InventoryCheck: React.FC = () => {
     }
   };
 
-  const renderDiff = (v: number) => v ? <span style={{ color: v > 0 ? '#cf1322' : '#1890ff' }}>{v > 0 ? `+${v}` : v}</span> : '-';
+  const renderDiff = (v: number) => v ? <span style={{ color: v > 0 ? 'var(--color-error)' : 'var(--color-info)' }}>{v > 0 ? `+${v}` : v}</span> : '-';
 
   const renderDiffType = (v: string) => { const m = DIFF_TYPE_MAP[v] || { label: v || '-', color: 'default' }; return <Tag color={m.color}>{m.label}</Tag>; };
 
@@ -213,7 +213,7 @@ const InventoryCheck: React.FC = () => {
             <>
               <Button type="link" onClick={() => handleOpenFill(record)}>填写实盘</Button>
               <Popconfirm title="确认盘点？确认后将自动调整库存" onConfirm={() => handleConfirm(record.id)}>
-                <Button type="link" icon={<CheckCircleOutlined />} style={{ color: '#52c41a' }}>确认</Button>
+                <Button type="link" icon={<CheckCircleOutlined />} style={{ color: 'var(--color-success)' }}>确认</Button>
               </Popconfirm>
               <Popconfirm title="确定取消此盘点单？" onConfirm={() => handleCancel(record.id)}>
                 <Button type="link" danger icon={<CloseCircleOutlined />}>取消</Button>
@@ -285,7 +285,7 @@ const InventoryCheck: React.FC = () => {
         <Col span={6}><Card><Statistic title="物料库存品种" value={summary.materialStockCount ?? '-'} /></Card></Col>
         <Col span={6}><Card><Statistic title="成品库存SKU" value={summary.skuStockCount ?? '-'} /></Card></Col>
         <Col span={6}><Card><Statistic title="样衣库存" value={summary.sampleStockCount ?? '-'} /></Card></Col>
-        <Col span={6}><Card><Statistic title="待处理盘点" value={summary.pendingChecks ?? 0} styles={{ content: { color: summary.pendingChecks > 0 ? '#faad14' : undefined } }} /></Card></Col>
+        <Col span={6}><Card><Statistic title="待处理盘点" value={summary.pendingChecks ?? 0} styles={{ content: { color: summary.pendingChecks > 0 ? 'var(--color-warning)' : undefined } }} /></Card></Col>
       </Row>
 
       <Card

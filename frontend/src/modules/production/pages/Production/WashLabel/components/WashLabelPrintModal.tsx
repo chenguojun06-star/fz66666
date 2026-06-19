@@ -222,7 +222,7 @@ export default function WashLabelPrintModal({ open, onCancel, order }: Props) {
   <style>
     @page { size: ${labelW}mm ${labelH}mm; margin: 0; }
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body { width: ${labelW}mm; height: ${labelH}mm; font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", system-ui, sans-serif; color: #000; background: #fff; -webkit-font-smoothing: antialiased; }
+    html, body { width: ${labelW}mm; height: ${labelH}mm; font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", system-ui, sans-serif; color: #000; background: var(--color-bg-base); -webkit-font-smoothing: antialiased; }
     .print-page {
       width: ${labelW}mm; height: ${labelH}mm; padding: 2mm;
       page-break-after: always;
@@ -233,7 +233,7 @@ export default function WashLabelPrintModal({ open, onCancel, order }: Props) {
       width: ${labelW - 4}mm; height: ${labelH - 4}mm;
       border: 0.8pt solid #333;
       display: flex; flex-direction: row;
-      padding: 2mm 3mm; gap: 0; background: #fff;
+      padding: 2mm 3mm; gap: 0; background: var(--color-bg-base);
     }
     .qr { flex: 0 0 ${printQrSize + 2.5}mm; display: flex; align-items: center; justify-content: center; }
     .qr img { width: ${printQrSize}mm; height: ${printQrSize}mm; }

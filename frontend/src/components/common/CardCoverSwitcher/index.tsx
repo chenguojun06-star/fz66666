@@ -188,7 +188,7 @@ function CardCoverSwitcher({
             onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(0,0,0,0.55)'; }}
             onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(0,0,0,0.3)'; }}
           >
-            <LeftOutlined style={{ color: '#fff', fontSize: 12 }} />
+            <LeftOutlined style={{ color: 'var(--color-bg-base)', fontSize: 12 }} />
           </div>
           <div
             onClick={goToNext}
@@ -196,7 +196,7 @@ function CardCoverSwitcher({
             onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(0,0,0,0.55)'; }}
             onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(0,0,0,0.3)'; }}
           >
-            <RightOutlined style={{ color: '#fff', fontSize: 12 }} />
+            <RightOutlined style={{ color: 'var(--color-bg-base)', fontSize: 12 }} />
           </div>
           <div style={{
             position: 'absolute', bottom: 6, left: '50%', transform: 'translateX(-50%)',
@@ -207,7 +207,7 @@ function CardCoverSwitcher({
                 key={idx}
                 style={{
                   width: 6, height: 6, borderRadius: '50%',
-                  background: idx === currentIndex ? '#fff' : 'rgba(255,255,255,0.5)',
+                  background: idx === currentIndex ? 'var(--color-bg-base)' : 'rgba(255,255,255,0.5)',
                   transition: 'background 0.2s',
                 }}
               />

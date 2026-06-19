@@ -150,7 +150,7 @@ const InvoiceTab: React.FC = () => {
       />
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col xs={24} md={6}><Card><Statistic title="草稿" value={stats.draftCount} /></Card></Col>
-        <Col xs={24} md={6}><Card><Statistic title="已开票" value={stats.issuedCount} styles={{ content: { color: '#52c41a' } }} /></Card></Col>
+        <Col xs={24} md={6}><Card><Statistic title="已开票" value={stats.issuedCount} styles={{ content: { color: 'var(--color-success)' } }} /></Card></Col>
         <Col xs={24} md={6}><Card><Statistic title="本月开票额(元)" value={formatCurrency(stats.monthAmount)} /></Card></Col>
         <Col xs={24} md={6}><Card><Statistic title="累计开票额(元)" value={formatCurrency(stats.totalIssued)} /></Card></Col>
       </Row>
@@ -214,7 +214,7 @@ const InvoiceTab: React.FC = () => {
             </div>
           </ModalFieldRow>
           <ModalFieldRow label="价税合计">
-            <div style={{ lineHeight: '32px', fontWeight: 600, color: '#1890ff', fontSize: 15 }}>{calcTotal.toFixed(2)} 元</div>
+            <div style={{ lineHeight: '32px', fontWeight: 600, color: 'var(--color-info)', fontSize: 15 }}>{calcTotal.toFixed(2)} 元</div>
           </ModalFieldRow>
           <ModalFieldRow label="开票日期"><Form.Item name="issueDate" noStyle><DatePicker style={{ width: '100%' }} format="YYYY-MM-DD" /></Form.Item></ModalFieldRow>
           <ModalFieldRow label="销方名称"><Form.Item name="sellerName" noStyle><Input placeholder="本公司抬头" /></Form.Item></ModalFieldRow>

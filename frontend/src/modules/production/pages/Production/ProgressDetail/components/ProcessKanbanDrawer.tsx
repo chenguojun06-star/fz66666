@@ -130,8 +130,8 @@ interface TrackingRecord {
 }
 
 const STAGE_COLORS: Record<string, string> = {
-  '采购': '#1890ff', '裁剪': '#52c41a', '二次工艺': '#722ed1',
-  '车缝': '#fa8c16', '尾部': '#eb2f96', '入库': '#13c2c2',
+  '采购': 'var(--color-info)', '裁剪': 'var(--color-success)', '二次工艺': 'var(--color-accent-purple)',
+  '车缝': 'var(--color-warning)', '尾部': '#eb2f96', '入库': 'var(--color-accent-cyan)',
 };
 
 const DEFECT_CATEGORIES = [
@@ -503,7 +503,7 @@ const ProcessKanbanDrawer: React.FC<ProcessKanbanDrawerProps> = ({
     if (!orderId) {
       return (
         <div style={{ textAlign: 'center', padding: 60 }}>
-          <ExclamationCircleOutlined style={{ fontSize: 48, color: '#faad14', marginBottom: 16 }} />
+          <ExclamationCircleOutlined style={{ fontSize: 48, color: 'var(--color-warning)', marginBottom: 16 }} />
           <div style={{ fontSize: 16, fontWeight: 500, marginBottom: 8 }}>请先选择一个订单</div>
           <div style={{ color: 'var(--color-text-tertiary)' }}>在进度详情页点击某个订单的「看板」按钮，即可对该订单的菲号进行质检</div>
         </div>
@@ -566,7 +566,7 @@ const ProcessKanbanDrawer: React.FC<ProcessKanbanDrawerProps> = ({
               >
                 全选
               </Checkbox>
-              {selectedIds.size > 0 && <span style={{ color: '#1890ff', fontWeight: 500 }}>已选 {selectedIds.size} 条</span>}
+              {selectedIds.size > 0 && <span style={{ color: 'var(--color-info)', fontWeight: 500 }}>已选 {selectedIds.size} 条</span>}
             </Space>
             <Space>
               <Button
@@ -666,8 +666,8 @@ const ProcessKanbanDrawer: React.FC<ProcessKanbanDrawerProps> = ({
                             style={{
                               display: 'flex', alignItems: 'center', gap: 12,
                               padding: '10px 14px',
-                              borderBottom: '1px solid #f5f5f5',
-                              background: isSelected ? '#e6f7ff' : isUnqualified ? '#fff2f0' : isLocked ? '#fafafa' : '#fff',
+                              borderBottom: '1px solid var(--color-bg-subtle)',
+                              background: isSelected ? '#e6f7ff' : isUnqualified ? '#F6FFED' : isLocked ? 'var(--color-bg-container)' : 'var(--color-bg-base)',
                             }}
                           >
                             {isPendingQc && qcFilter === 'pending' && (
@@ -763,11 +763,11 @@ const ProcessKanbanDrawer: React.FC<ProcessKanbanDrawerProps> = ({
             }
             style={{ minWidth: 220, flex: '0 0 auto' }}
           >
-            <Progress percent={stage.completionRate} strokeColor={STAGE_COLORS[stage.stageName] || '#1890ff'} style={{ marginBottom: 8 }} />
+            <Progress percent={stage.completionRate} strokeColor={STAGE_COLORS[stage.stageName] || 'var(--color-info)'} style={{ marginBottom: 8 }} />
             <div style={{ fontSize: 14, color: 'var(--color-text-secondary)' }}>
               <div>总记录: {stage.totalRecords}</div>
-              <div style={{ color: '#52c41a' }}>已完成: {stage.scannedRecords}</div>
-              <div style={{ color: '#ff4d4f' }}>待完成: {stage.pendingRecords}</div>
+              <div style={{ color: 'var(--color-success)' }}>已完成: {stage.scannedRecords}</div>
+              <div style={{ color: 'var(--color-danger)' }}>待完成: {stage.pendingRecords}</div>
             </div>
             {stage.processBreakdown && Object.keys(stage.processBreakdown).length > 0 && (
               <div style={{ marginTop: 8, borderTop: '1px solid var(--color-border-light)', paddingTop: 8 }}>
@@ -776,7 +776,7 @@ const ProcessKanbanDrawer: React.FC<ProcessKanbanDrawerProps> = ({
                   const { total, completed, pending } = detail;
                   const isAllDone = completed === total;
                   const hasPending = pending > 0;
-                  const tagColor = isAllDone ? '#52c41a' : hasPending ? '#ff4d4f' : '#faad14';
+                  const tagColor = isAllDone ? 'var(--color-success)' : hasPending ? 'var(--color-danger)' : 'var(--color-warning)';
                   const tagBg = isAllDone ? 'rgba(82, 196, 26, 0.1)' : hasPending ? 'rgba(255, 77, 79, 0.1)' : 'rgba(250, 173, 20, 0.1)';
                   return (
                     <div key={name} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
@@ -785,12 +785,12 @@ const ProcessKanbanDrawer: React.FC<ProcessKanbanDrawerProps> = ({
                       </Tag>
                       <Space size={4}>
                         {pending > 0 && (
-                          <span style={{ color: '#ff4d4f', fontSize: 12 }}>
+                          <span style={{ color: 'var(--color-danger)', fontSize: 12 }}>
                             <CheckCircleOutlined /> {pending}
                           </span>
                         )}
                         {completed > 0 && (
-                          <span style={{ color: '#52c41a', fontSize: 12 }}>
+                          <span style={{ color: 'var(--color-success)', fontSize: 12 }}>
                             {completed}
                           </span>
                         )}
@@ -869,9 +869,9 @@ const ProcessKanbanDrawer: React.FC<ProcessKanbanDrawerProps> = ({
                       }}
                     >
                       <Radio.Button value="qualified">
-                        <CheckCircleOutlined style={{ color: '#52c41a' }} /> 合格
+                        <CheckCircleOutlined style={{ color: 'var(--color-success)' }} /> 合格
                       </Radio.Button>
-                      <Radio.Button value="unqualified" style={qcResult === 'unqualified' ? { color: '#ff4d4f', borderColor: '#ff4d4f' } : { color: '#ff4d4f' }}>
+                      <Radio.Button value="unqualified" style={qcResult === 'unqualified' ? { color: 'var(--color-danger)', borderColor: 'var(--color-danger)' } : { color: 'var(--color-danger)' }}>
                         <CloseCircleOutlined /> 不合格
                       </Radio.Button>
                     </Radio.Group>
@@ -912,7 +912,7 @@ const ProcessKanbanDrawer: React.FC<ProcessKanbanDrawerProps> = ({
                     <Form.Item name="lockBundle" valuePropName="checked" style={{ marginBottom: 0 }}>
                       <Space>
                         <Switch checkedChildren={<LockOutlined />} unCheckedChildren={<UnlockOutlined />} />
-                        <span style={{ color: '#cf1322', fontWeight: 500 }}>锁定菲号，阻止下游扫码</span>
+                        <span style={{ color: 'var(--color-error)', fontWeight: 500 }}>锁定菲号，阻止下游扫码</span>
                       </Space>
                     </Form.Item>
                   </div>
@@ -946,12 +946,12 @@ const ProcessKanbanDrawer: React.FC<ProcessKanbanDrawerProps> = ({
                 返回菲号列表
               </Button>
               <Divider orientation="vertical" />
-              <span style={{ fontWeight: 600, fontSize: 15, color: '#cf1322' }}>
+              <span style={{ fontWeight: 600, fontSize: 15, color: 'var(--color-error)' }}>
                 <CloseCircleOutlined style={{ marginRight: 4 }} />批量不合格 — 已选 {selectedIds.size} 条菲号
               </span>
             </div>
-            <div style={{ marginBottom: 12, padding: '10px 14px', background: '#fff2f0', borderRadius: 8, border: '1px solid #ffccc7' }}>
-              <span style={{ color: '#cf1322', fontWeight: 500 }}>
+            <div style={{ marginBottom: 12, padding: '10px 14px', background: '#F6FFED', borderRadius: 8, border: '1px solid #ffccc7' }}>
+              <span style={{ color: 'var(--color-error)', fontWeight: 500 }}>
                 将对选中的 {selectedIds.size} 条菲号统一标记为不合格，请填写次品信息：
               </span>
             </div>
@@ -985,7 +985,7 @@ const ProcessKanbanDrawer: React.FC<ProcessKanbanDrawerProps> = ({
                 <Form.Item name="lockBundle" valuePropName="checked" style={{ marginBottom: 0 }}>
                   <Space>
                     <Switch checkedChildren={<LockOutlined />} unCheckedChildren={<UnlockOutlined />} />
-                    <span style={{ color: '#cf1322', fontWeight: 500 }}>锁定菲号，阻止下游扫码</span>
+                    <span style={{ color: 'var(--color-error)', fontWeight: 500 }}>锁定菲号，阻止下游扫码</span>
                   </Space>
                 </Form.Item>
               </div>

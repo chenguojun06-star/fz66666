@@ -30,9 +30,9 @@ function KpiCard({ label, value, unit, color, icon }: {
 function RiskBadge({ level }: { level: string }) {
   const map: Record<string, { color: string; label: string }> = {
     critical: { color: '#ff7875', label: '高危' },
-    high:     { color: '#fa8c16', label: '高风险' },
+    high:     { color: 'var(--color-warning)', label: '高风险' },
     medium:   { color: '#fadb14', label: '关注' },
-    low:      { color: '#52c41a', label: '正常' },
+    low:      { color: 'var(--color-success)', label: '正常' },
   };
   const { color, label } = map[level] || map.low;
   return <span style={{ color, fontSize: 14, fontWeight: 600 }}>{label}</span>;
@@ -113,13 +113,13 @@ export default function IntelligenceScreen() {
             <KpiCard label="今日扫码" value={todayScan} unit="次"
               color="#36cfc9" icon={<ThunderboltOutlined />} />
             <KpiCard label="健康指数" value={healthIdx} unit="/100"
-              color={Number(healthIdx) >= 70 ? '#52c41a' : '#fa8c16'} icon={<SafetyOutlined />} />
+              color={Number(healthIdx) >= 70 ? 'var(--color-success)' : 'var(--color-warning)'} icon={<SafetyOutlined />} />
             <KpiCard label="活跃工人" value={activeWks} unit="人"
               color="#9254de" icon={<TeamOutlined />} />
             <KpiCard label="高风险订单" value={riskOrders} unit="单"
-              color={Number(riskOrders) > 0 ? '#ff7875' : '#52c41a'} icon={<AlertOutlined />} />
+              color={Number(riskOrders) > 0 ? '#ff7875' : 'var(--color-success)'} icon={<AlertOutlined />} />
             <KpiCard label="物料缺口" value={shortage?.items?.length ?? 0} unit="项"
-              color={shortage?.items?.length > 0 ? '#fa8c16' : '#52c41a'} icon={<AlertOutlined />} />
+              color={shortage?.items?.length > 0 ? 'var(--color-warning)' : 'var(--color-success)'} icon={<AlertOutlined />} />
           </section>
 
           {/* 三列内容区 */}
@@ -163,7 +163,7 @@ export default function IntelligenceScreen() {
                     <div className="screen-progress-bar"
                       style={{
                         width: `${prog}%`,
-                        background: prog >= 80 ? '#52c41a'
+                        background: prog >= 80 ? 'var(--color-success)'
                           : prog >= 40 ? '#fadb14' : '#ff7875',
                       }} />
                   </div>
@@ -193,7 +193,7 @@ export default function IntelligenceScreen() {
                   <div className="screen-panel-title" style={{ marginTop: 12 }}> 物料缺口</div>
                   {shortage.items.slice(0, 5).map((m: any, i: number) => (
                     <div key={i} className="screen-notify-row">
-                      <span style={{ color: '#fa8c16', fontSize: 14 }}>缺</span>
+                      <span style={{ color: 'var(--color-warning)', fontSize: 14 }}>缺</span>
                       <span style={{ marginLeft: 6, fontSize: 14, color: '#ddd' }}>
                         {m.materialName} · 缺 {m.shortageQty}{m.unit}
                       </span>

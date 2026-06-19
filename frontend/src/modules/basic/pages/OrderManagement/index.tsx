@@ -54,8 +54,8 @@ const OrderManagement: React.FC = () => {
     const theme = typeof document !== 'undefined' ? document.documentElement.getAttribute('data-theme') : '';
     const isDark = theme === 'dark';
     return {
-      background: isDark ? '#ffffff' : '#111827',
-      text: isDark ? '#1f1f1f' : '#f8fafc',
+      background: isDark ? 'var(--color-bg-base)' : '#111827',
+      text: isDark ? '#1f1f1f' : 'var(--color-bg-page)',
       border: isDark ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.18)',
       divider: isDark ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.2)',
     };

@@ -12,10 +12,10 @@ export const STAGE_ACCENT = '#4b5563';
 export const STAGE_ACCENT_LIGHT = '#f7f8f9';
 
 /** 边框色：浅灰，用于分隔线、边框 */
-export const STAGE_BORDER = '#e5e7eb';
+export const STAGE_BORDER = 'var(--color-border)';
 
 /** 启用/激活状态蓝（Ant Design 标准蓝） */
-export const STAGE_ACTIVE = '#1677ff';
+export const STAGE_ACTIVE = 'var(--color-primary)';
 
 /** 辉光色：用于卡片悬停/选中发光效果 */
 export const STAGE_GLOW = 'rgba(75, 85, 99, 0.15)';

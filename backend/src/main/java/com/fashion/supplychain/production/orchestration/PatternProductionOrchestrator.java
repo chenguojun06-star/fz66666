@@ -3,6 +3,7 @@ package com.fashion.supplychain.production.orchestration;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.production.entity.PatternProduction;
 import com.fashion.supplychain.production.entity.PatternScanRecord;
 import com.fashion.supplychain.production.entity.ScanRecord;
@@ -675,6 +676,80 @@ public class PatternProductionOrchestrator {
 
         log.info("[样衣指派] patternId={} assignee={} oldStatus={} newStatus={}",
                 patternId, assignee, currentStatus, pattern.getStatus());
+    }
+
+    /**
+     * 更新是否有二次工艺标志
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void updateSecondaryFlag(String id, int hasSecondaryProcess) {
+        PatternProduction record = patternProductionService.getById(id);
+        if (record == null) {
+            throw new IllegalArgumentException("记录不存在");
+        }
+        TenantAssert.assertBelongsToCurrentTenant(record.getTenantId(), "纸样");
+        record.setHasSecondaryProcess(hasSecondaryProcess);
+        record.setUpdateTime(LocalDateTime.now());
+        record.setUpdateBy(UserContext.username());
+        patternProductionService.updateById(record);
+    }
+
+    /**
+     * 删除样板（软删除）
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void delete(String id) {
+        PatternProduction record = patternProductionService.getById(id);
+        if (record == null) {
+            throw new IllegalArgumentException("记录不存在");
+        }
+        TenantAssert.assertBelongsToCurrentTenant(record.getTenantId(), "纸样");
+        patternProductionService.removeById(id);
+        log.info("Pattern production deleted: id={}", id);
+    }
+
+    /**
+     * 更新样板基本信息（款号/颜色/尺码）
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void updateBasicInfo(String id, String field, String value) {
+        if (!StringUtils.hasText(field) || value == null) {
+            throw new IllegalArgumentException("field 和 value 不能为空");
+        }
+        if (!java.util.List.of("styleNo", "color", "size").contains(field)) {
+            throw new IllegalArgumentException("不支持的编辑字段: " + field + "，仅支持 styleNo / color / size");
+        }
+
+        PatternProduction record = patternProductionService.getById(id);
+        if (record == null || record.getDeleteFlag() == 1) {
+            throw new IllegalArgumentException("记录不存在");
+        }
+        TenantAssert.assertBelongsToCurrentTenant(record.getTenantId(), "纸样");
+
+        long scanCount = patternScanRecordService.count(
+                new LambdaQueryWrapper<PatternScanRecord>()
+                        .eq(PatternScanRecord::getPatternProductionId, id)
+                        .eq(PatternScanRecord::getDeleteFlag, 0)
+                        .eq(PatternScanRecord::getTenantId, UserContext.tenantId()));
+        if (scanCount > 0) {
+            throw new IllegalStateException("已有扫码记录，不可编辑基本字段");
+        }
+
+        switch (field) {
+            case "styleNo":
+                record.setStyleNo(value.trim());
+                break;
+            case "color":
+                record.setColor(value.trim());
+                break;
+            case "size":
+                record.setSize(value.trim());
+                break;
+        }
+        record.setUpdateTime(LocalDateTime.now());
+        record.setUpdateBy(UserContext.username());
+        patternProductionService.updateById(record);
+        log.info("样板基本信息已更新: id={} field={} value={}", id, field, value);
     }
 
     private PatternProduction getPatternWithTenant(String id) {

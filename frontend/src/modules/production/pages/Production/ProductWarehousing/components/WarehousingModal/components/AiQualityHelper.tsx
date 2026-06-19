@@ -19,9 +19,9 @@ interface AiQualityHelperProps {
 }
 
 const verdictColor: Record<string, string> = {
-  good: '#52c41a',
-  warn: '#faad14',
-  critical: '#ff4d4f',
+  good: 'var(--color-success)',
+  warn: 'var(--color-warning)',
+  critical: 'var(--color-danger)',
 };
 const verdictLabel: Record<string, string> = {
   good: '历史良好',
@@ -68,7 +68,7 @@ const AiQualityHelper: React.FC<AiQualityHelperProps> = ({ orderId, defectCatego
       {/* 标题行 */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
         <XiaoyunCloudAvatar size={16} active />
-        <Text strong style={{ fontSize: 14, color: '#1677ff' }}>AI质检助手</Text>
+        <Text strong style={{ fontSize: 14, color: 'var(--color-primary)' }}>AI质检助手</Text>
         {loading && <Spin style={{ marginLeft: 4 }} />}
         {data && data.historicalVerdict && (
           <Tag color={verdictColor[data.historicalVerdict]} style={{ marginLeft: 'auto', fontSize: 14 }}>
@@ -115,8 +115,8 @@ const AiQualityHelper: React.FC<AiQualityHelperProps> = ({ orderId, defectCatego
               return (
                 <div key={idx} style={{
                   padding: '4px 8px', fontSize: 14,
-                  background: isRed ? '#fff1f0' : isYellow ? '#fffbe6' : '#f0f7ff',
-                  borderLeft: `3px solid ${isRed ? '#ff4d4f' : isYellow ? '#faad14' : '#1677ff'}`,
+                  background: isRed ? '#FFF1F0' : isYellow ? '#FFFBE6' : '#f0f7ff',
+                  borderLeft: `3px solid ${isRed ? 'var(--color-danger)' : isYellow ? 'var(--color-warning)' : 'var(--color-primary)'}`,
                   borderRadius: '0 4px 4px 0', color: 'var(--color-text-primary)',
                 }}>{point}</div>
               );
@@ -128,9 +128,9 @@ const AiQualityHelper: React.FC<AiQualityHelperProps> = ({ orderId, defectCatego
       {/* 异常建议 + 采纳按钮 */}
       {defectCategory && !loading && (
         suggestion ? (
-          <div style={{ marginTop: 8, padding: '8px 10px', background: '#fffbe6', borderRadius: 4, border: '1px solid #ffe58f' }}>
+          <div style={{ marginTop: 8, padding: '8px 10px', background: '#FFFBE6', borderRadius: 4, border: '1px solid #ffe58f' }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-              <CheckCircleOutlined style={{ color: '#faad14', marginTop: 2, flexShrink: 0 }} />
+              <CheckCircleOutlined style={{ color: 'var(--color-warning)', marginTop: 2, flexShrink: 0 }} />
               <Text style={{ fontSize: 14, flex: 1 }}>{suggestion}</Text>
               <Button
                 type="primary"

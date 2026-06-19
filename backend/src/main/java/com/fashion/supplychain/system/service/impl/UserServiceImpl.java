@@ -9,7 +9,7 @@ import com.fashion.supplychain.system.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+
 import org.springframework.util.StringUtils;
 import lombok.extern.slf4j.Slf4j;
 
@@ -53,7 +53,6 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public boolean saveUser(User user) {
         if (user == null) {
             return false;
@@ -69,7 +68,6 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public boolean updateUser(User user) {
         if (user == null || user.getId() == null) {
             return false;
@@ -116,7 +114,6 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public boolean deleteUser(Long id) {
         return removeById(id);
     }

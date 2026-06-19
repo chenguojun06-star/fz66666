@@ -112,7 +112,7 @@ export function usePaymentColumns(props: UsePaymentColumnsProps) {
         align: 'right',
         render: (v: number, record: PayableItem) => (
           <span
-            style={{ fontWeight: 600, color: '#cf1322', cursor: 'pointer', textDecoration: 'underline' }}
+            style={{ fontWeight: 600, color: 'var(--color-error)', cursor: 'pointer', textDecoration: 'underline' }}
             title="点击查看明细"
             onClick={() => onAmountClick?.(record)}
           >
@@ -246,7 +246,7 @@ export function usePaymentColumns(props: UsePaymentColumnsProps) {
         key: 'amount',
         width: 120,
         align: 'right',
-        render: (v: number) => <span style={{ fontWeight: 600, color: '#cf1322' }}>{formatMoney(v)}</span>,
+        render: (v: number) => <span style={{ fontWeight: 600, color: 'var(--color-error)' }}>{formatMoney(v)}</span>,
       },
       {
         title: '状态',

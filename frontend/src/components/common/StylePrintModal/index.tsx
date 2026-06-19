@@ -255,7 +255,7 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
 
       const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
 @page{size:${w}mm ${h}mm;margin:0}*{margin:0;padding:0;box-sizing:border-box}
-html,body{width:${w}mm;min-height:${h}mm;color:#000!important;background:#fff!important}
+html,body{width:${w}mm;min-height:${h}mm;color:#000!important;background:var(--color-bg-base)!important}
 body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial,serif}
 .page{width:${w}mm;height:${h}mm;display:flex;align-items:center;justify-content:center;page-break-after:always}
 .page:last-child{page-break-after:auto}
@@ -372,7 +372,7 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
           </div>
           {/* 标签打印选项 */}
           {labelPrintMode && (
-            <div style={{ marginBottom: 16, padding: '12px 16px', background: '#fff7e6', borderRadius: 12, border: '1px solid #ffd591' }}>
+            <div style={{ marginBottom: 16, padding: '12px 16px', background: '#FFF7E6', borderRadius: 12, border: '1px solid #ffd591' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
                 <span style={{ fontWeight: 600, color: '#d46b08', whiteSpace: 'nowrap' }}>标签打印：</span>
                 <Radio.Group value={labelSize} onChange={e => setLabelSize(e.target.value)}>
@@ -400,35 +400,35 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
           <div className="style-print-content" id="style-print-content" style={{ background: 'var(--color-bg-base)', padding: 20, border: '1px solid var(--color-border)', borderRadius: 12 }}>
           <style>{`
             .print-section { margin-bottom: 16px; }
-            .print-section-title { font-size: 12px; font-weight: 600; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 2px solid #1890ff; }
+            .print-section-title { font-size: 12px; font-weight: 600; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 2px solid var(--color-info); }
             /* 统一打印表格样式 */
             .pt { width: 100%; border-collapse: collapse; font-size: 12px; }
             .pt th, .pt td { border: 1px solid #333; padding: 6px 10px; vertical-align: middle; }
-            .pt th { background: #f0f0f0; font-weight: 600; text-align: center; white-space: nowrap; }
+            .pt th { background: var(--color-border-light); font-weight: 600; text-align: center; white-space: nowrap; }
             .pt td { color: #111; }
-            .pt .label-cell { background: #f0f0f0; font-weight: 500; color: #333; width: 100px; white-space: nowrap; }
-            .pt .total-row td { background: #f0f0f0; font-weight: 700; }
-            .pt .highlight-cell { font-weight: 700; color: #1890ff; }
+            .pt .label-cell { background: var(--color-border-light); font-weight: 500; color: #333; width: 100px; white-space: nowrap; }
+            .pt .total-row td { background: var(--color-border-light); font-weight: 700; }
+            .pt .highlight-cell { font-weight: 700; color: var(--color-info); }
           `}</style>
           {/* 基本信息 */}
           {options.basicInfo && (
             <div className="print-section">
               {/* 主体：左列（图片+二维码） + 右列（信息） */}
-              <div style={{ display: 'flex', gap: 20, padding: 16, border: '1px solid #333', background: '#fff', borderRadius: 8, breakInside: 'avoid' }}>
+              <div style={{ display: 'flex', gap: 20, padding: 16, border: '1px solid #333', background: 'var(--color-bg-base)', borderRadius: 8, breakInside: 'avoid' }}>
                 {/* 左侧：图片 + 二维码（纵向排列） */}
                 <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center', width: 120 }}>
                   {resolvedCover ? (
                     <Image src={getFullAuthedFileUrl(resolvedCover)} alt={styleNo}
                       style={{ width: 120, height: 120, objectFit: 'cover', borderRadius: 6, border: '1px solid var(--color-border)' }} preview={{ cover: <span>预览</span> }} />
                   ) : (
-                    <div style={{ width: 120, height: 120, borderRadius: 6, border: '1px dashed #ccc', background: '#fafafa', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#999', fontSize: 12 }}>无图片</div>
+                    <div style={{ width: 120, height: 120, borderRadius: 6, border: '1px dashed #ccc', background: 'var(--color-bg-container)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#999', fontSize: 12 }}>无图片</div>
                   )}
                   {/* 二维码 */}
-                  <div style={{ width: 120, height: 120, padding: 6, border: '1px solid var(--color-border-antd)', borderRadius: 6, background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+                  <div style={{ width: 120, height: 120, padding: 6, border: '1px solid var(--color-border-antd)', borderRadius: 6, background: 'var(--color-bg-base)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
                     {qrPngDataUrl
                       ? <img src={qrPngDataUrl} alt="QR" style={{ width: 100, height: 100, display: 'block' }} />
                       : <QRCode value={qrValue} size={100} />}
-                    {user?.tenantLogo || user?.logo ? <img src={(user?.tenantLogo || user?.logo) as string} alt="logo" style={{ position: 'absolute', width: 24, height: 24, borderRadius: '50%', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', objectFit: 'contain', background: '#fff' }} /> : null}
+                    {user?.tenantLogo || user?.logo ? <img src={(user?.tenantLogo || user?.logo) as string} alt="logo" style={{ position: 'absolute', width: 24, height: 24, borderRadius: '50%', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', objectFit: 'contain', background: 'var(--color-bg-base)' }} /> : null}
                   </div>
                   <div style={{ fontSize: 11, color: '#999', textAlign: 'center' }}>扫码查看详情</div>
                 </div>
@@ -467,9 +467,6 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
                       } else {
                         allFields.push({ label: '客户', value: prodSheet?.customer || empty });
                       }
-                      allFields.push({ label: '联系人', value: prodSheet?.customerContact || empty });
-                      allFields.push({ label: '电话', value: prodSheet?.customerPhone || empty });
-                      allFields.push({ label: '地址', value: prodSheet?.customerAddress || empty });
                       allFields.push({ label: '跟单员', value: prodSheet?.orderType || empty });
                       allFields.push({ label: '设计师', value: prodSheet?.sampleNo || empty });
                       allFields.push({ label: '打板价', value: prodSheet?.price ? `¥${Number(prodSheet.price).toFixed(2)}` : empty });
@@ -576,7 +573,7 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
           )}
           {/* 下单明细（码数/颜色/数量配置表） */}
           {options.basicInfo && sizeColorMatrix && sizeColorMatrix.sizes.length > 0 && (
-            <div className="print-section" style={{ padding: 16, border: '1px solid #333', background: '#fff', borderRadius: 8, breakInside: 'avoid' }}>
+            <div className="print-section" style={{ padding: 16, border: '1px solid #333', background: 'var(--color-bg-base)', borderRadius: 8, breakInside: 'avoid' }}>
               <div style={{ fontWeight: 600, color: '#1f2937', marginBottom: 8, fontSize: 12, paddingBottom: 6, borderBottom: '1px solid #e8e8e8' }}>下单明细</div>
               <div style={{ overflowX: 'auto' }}>
                 <table className="pt" style={{ breakInside: 'avoid' }}>
@@ -623,7 +620,7 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
             colors.forEach(c => { colorTotals[c] = sizeDetails.filter(d => d.color === c).reduce((sum, d) => sum + d.quantity, 0); });
             const grandTotal = sizeDetails.reduce((sum, d) => sum + d.quantity, 0);
             return (
-              <div className="print-section" style={{ padding: 16, border: '1px solid #333', background: '#fff', borderRadius: 8, breakInside: 'avoid', marginBottom: 12 }}>
+              <div className="print-section" style={{ padding: 16, border: '1px solid #333', background: 'var(--color-bg-base)', borderRadius: 8, breakInside: 'avoid', marginBottom: 12 }}>
                 <div style={{ fontWeight: 600, color: '#1f2937', marginBottom: 8, fontSize: 12, paddingBottom: 6, borderBottom: '1px solid #e8e8e8' }}>下单明细</div>
                 <table className="pt">
                   <thead>
@@ -792,7 +789,7 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
                           {row.chunkImgs.length > 0
                             ? <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'stretch' }}>
                                 {row.chunkImgs.map((url: string) => (
-                                  <Image key={url} src={getFullAuthedFileUrl(url)} style={{ width: '100%', height: row.chunkImgs.length > 1 ? 120 : 220, objectFit: 'contain', borderRadius: 8, border: '1px solid #eee', background: '#fff', padding: 4, boxSizing: 'border-box' as const }} preview={{ cover: <span>预览</span> }} />
+                                  <Image key={url} src={getFullAuthedFileUrl(url)} style={{ width: '100%', height: row.chunkImgs.length > 1 ? 120 : 220, objectFit: 'contain', borderRadius: 8, border: '1px solid #eee', background: 'var(--color-bg-base)', padding: 4, boxSizing: 'border-box' as const }} preview={{ cover: <span>预览</span> }} />
                                 ))}
                               </div>
                             : <span style={{ color: '#ccc', fontSize: 12 }}>无图</span>

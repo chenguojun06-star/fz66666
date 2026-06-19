@@ -13,8 +13,8 @@ interface RestockSuggestionCardProps {
 }
 
 const CARD_STYLE: React.CSSProperties = {
-  background: 'var(--color-bg-elevated, #fff)',
-  borderColor: 'var(--color-border-secondary, #f0f0f0)',
+  background: 'var(--color-bg-elevated, var(--color-bg-base))',
+  borderColor: 'var(--color-border-secondary, var(--color-border-light))',
   borderRadius: 12,
 };
 
@@ -22,9 +22,9 @@ const priorityConfig: Record<
   PredictionRestockSuggestionItem['priority'],
   { color: string; label: string; icon: React.ReactNode }
 > = {
-  HIGH: { color: 'var(--color-error, #ff4d4f)', label: '高优先级', icon: <ExclamationCircleFilled /> },
-  MEDIUM: { color: 'var(--color-warning, #faad14)', label: '中优先级', icon: <WarningFilled /> },
-  LOW: { color: 'var(--color-success, #52c41a)', label: '低优先级', icon: <CheckCircleFilled /> },
+  HIGH: { color: 'var(--color-error, var(--color-danger))', label: '高优先级', icon: <ExclamationCircleFilled /> },
+  MEDIUM: { color: 'var(--color-warning, var(--color-warning))', label: '中优先级', icon: <WarningFilled /> },
+  LOW: { color: 'var(--color-success, var(--color-success))', label: '低优先级', icon: <CheckCircleFilled /> },
 };
 
 const formatNumber = (value?: number): string => {
@@ -129,7 +129,7 @@ const RestockSuggestionCard: React.FC<RestockSuggestionCardProps> = ({ topN = 10
     const showPurchaseButton = item.priority === 'HIGH' || item.priority === 'MEDIUM';
 
     return (
-      <List.Item style={{ padding: '12px 4px', borderBlockEnd: '1px solid var(--color-border-secondary, #f0f0f0)' }}>
+      <List.Item style={{ padding: '12px 4px', borderBlockEnd: '1px solid var(--color-border-secondary, var(--color-border-light))' }}>
         <div style={{ width: '100%' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
@@ -193,7 +193,7 @@ const RestockSuggestionCard: React.FC<RestockSuggestionCardProps> = ({ topN = 10
                 top: -14,
               }}
             >
-              <span style={{ position: 'absolute', left: `${Math.min(50, 100)}%`, top: -6, width: 2, height: 14, background: 'var(--color-warning, #faad14)' }} />
+              <span style={{ position: 'absolute', left: `${Math.min(50, 100)}%`, top: -6, width: 2, height: 14, background: 'var(--color-warning, var(--color-warning))' }} />
             </div>
             {/* 避免对未使用变量 maxBase 的警告 */}
             <span aria-hidden style={{ display: 'none' }}>{maxBase}</span>
@@ -223,7 +223,7 @@ const RestockSuggestionCard: React.FC<RestockSuggestionCardProps> = ({ topN = 10
     if (error) {
       return (
         <div style={{ padding: 24, textAlign: 'center', color: 'var(--color-text-secondary, #666)' }}>
-          <ExclamationCircleFilled style={{ color: 'var(--color-error, #ff4d4f)', fontSize: 28 }} />
+          <ExclamationCircleFilled style={{ color: 'var(--color-error, var(--color-danger))', fontSize: 28 }} />
           <div style={{ marginTop: 8 }}>{error}</div>
           <Button type="primary" icon={<ReloadOutlined />} onClick={fetchData} style={{ marginTop: 12 }}>
             重试
@@ -235,7 +235,7 @@ const RestockSuggestionCard: React.FC<RestockSuggestionCardProps> = ({ topN = 10
     if (sortedItems.length === 0) {
       return (
         <div style={{ padding: 32, textAlign: 'center', color: 'var(--color-text-tertiary, #999)' }}>
-          <CheckCircleFilled style={{ fontSize: 32, color: 'var(--color-success, #52c41a)' }} />
+          <CheckCircleFilled style={{ fontSize: 32, color: 'var(--color-success, var(--color-success))' }} />
           <div style={{ marginTop: 8 }}>暂无补货建议</div>
           <div style={{ fontSize: 12, marginTop: 4 }}>库存水位健康</div>
         </div>
@@ -258,7 +258,7 @@ const RestockSuggestionCard: React.FC<RestockSuggestionCardProps> = ({ topN = 10
         style={CARD_STYLE}
         title={
           <Space size={8} style={{ cursor: 'pointer' }} onClick={() => setCollapsed(!collapsed)}>
-            <span style={{ color: 'var(--color-warning, #faad14)' }}>●</span>
+            <span style={{ color: 'var(--color-warning, var(--color-warning))' }}>●</span>
             <span style={{ fontWeight: 600 }}>补货建议 Top {topN}</span>
             <span style={{ fontSize: 12, color: 'var(--color-text-tertiary, #999)', marginLeft: 4 }}>
               {collapsed ? '点击展开' : '点击收起'}

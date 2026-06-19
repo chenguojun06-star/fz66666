@@ -113,7 +113,7 @@ const QuickEditModal: React.FC<QuickEditModalProps> = ({
               AI巡检记录（不可编辑）
             </div>
             <div style={{
-              background: 'var(--color-bg-layout, #f5f5f5)',
+              background: 'var(--color-bg-layout, var(--color-bg-subtle))',
               borderRadius: 6,
               padding: '8px 12px',
               maxHeight: 120,

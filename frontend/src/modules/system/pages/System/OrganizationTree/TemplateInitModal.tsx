@@ -57,11 +57,11 @@ const TemplateInitModal: React.FC<TemplateInitModalProps> = ({
             onClick={() => setTplModal((prev) => ({ ...prev, type: tpl.type }))}
             style={{
               flex: 1,
-              border: `2px solid ${tplModal.type === tpl.type ? 'var(--primary-color, #1677ff)' : '#d9d9d9'}`,
+              border: `2px solid ${tplModal.type === tpl.type ? 'var(--primary-color, var(--color-primary))' : 'var(--color-border-antd)'}`,
               borderRadius: 8,
               padding: '14px 16px',
               cursor: 'pointer',
-              background: tplModal.type === tpl.type ? '#f0f5ff' : '#fafafa',
+              background: tplModal.type === tpl.type ? '#f0f5ff' : 'var(--color-bg-container)',
               transition: 'border-color .2s, background .2s',
             }}
           >

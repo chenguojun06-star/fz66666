@@ -136,7 +136,7 @@
   justify-content: center;
   height: 100%;
   color: var(--color-text-tertiary);
-  background: var(--color-bg-stripe, #f5f5f5);
+  background: var(--color-bg-stripe, var(--color-bg-subtle));
   border-radius: 4px;
   min-height: 50px;
 }
@@ -404,7 +404,7 @@
 }
 
 .style-smart-row--scrapped .style-smart-row__timeline-progress {
-  background: #9ca3af;
+  background: var(--color-text-tertiary);
 }
 
 .style-smart-row__timeline {
@@ -432,7 +432,7 @@
 
 .style-smart-stage__time {
   min-height: 16px;
-  color: #10b981;
+  color: var(--color-accent-emerald);
   font-size: 11px;
   line-height: 1.35;
   font-weight: 600;
@@ -468,13 +468,13 @@
 }
 
 .style-smart-stage__time-sep {
-  color: #9ca3af;
+  color: var(--color-text-tertiary);
   margin: 0 1px;
   font-size: 11px;
 }
 
 .style-smart-stage__time-end-inline {
-  color: #10b981;
+  color: var(--color-accent-emerald);
   font-weight: 600;
   font-size: 11px;
 }
@@ -552,7 +552,7 @@
 }
 
 .style-smart-stage--done .style-smart-stage__ring {
-  border-color: #52c41a;
+  border-color: var(--color-success);
   background: var(--color-bg-base);
   border-width: 3px;
   box-shadow: 0 0 0 1px rgba(82, 196, 26, 0.08);
@@ -574,8 +574,8 @@
 .style-smart-stage--done .style-smart-stage__check {
   opacity: 1;
   transform: translateY(-2px) rotate(45deg) scale(0.9);
-  border-right: 2px solid #52c41a;
-  border-bottom: 2px solid #52c41a;
+  border-right: 2px solid var(--color-success);
+  border-bottom: 2px solid var(--color-success);
 }
 
 .style-smart-stage--active .style-smart-stage__time,
@@ -585,7 +585,7 @@
 
 .style-smart-stage--active .style-smart-stage__ring {
   border-color: rgba(96, 165, 250, 0.72);
-  background: #ebf2ff;
+  background: var(--color-bg-highlight);
 }
 
 .style-smart-stage--waiting .style-smart-stage__ring {
@@ -610,7 +610,7 @@
 
 .style-smart-stage--risk .style-smart-stage__ring {
   border-color: rgba(252, 165, 165, 0.92);
-  background: #fff1f2;
+  background: #F0FFF0;
 }
 
 .style-smart-stage--risk .style-smart-stage__orbit {
@@ -649,7 +649,7 @@
 }
 
 .style-smart-row--scrapped .style-smart-row__overview-value {
-  color: #9ca3af;
+  color: var(--color-text-tertiary);
 }
 
 .style-smart-row--scrapped .style-smart-row__overview-value {

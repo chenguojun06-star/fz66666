@@ -45,7 +45,7 @@ const SystemStatusTab: React.FC = () => {
   }, [autoRefresh, fetchOverview]);
 
   const heapPercent = overview?.heapUsedPercent || 0;
-  const heapColor = heapPercent >= 90 ? '#ff4d4f' : heapPercent >= 70 ? '#faad14' : '#52c41a';
+  const heapColor = heapPercent >= 90 ? 'var(--color-danger)' : heapPercent >= 70 ? 'var(--color-warning)' : 'var(--color-success)';
   const dbUp = overview?.database?.status === 'UP';
 
   return (
@@ -86,7 +86,7 @@ const SystemStatusTab: React.FC = () => {
               <Card>
                 <Statistic title="CPU 负载" value={overview.systemLoadAverage} precision={2}
                   suffix={`/ ${overview.availableProcessors} 核`}
-                  styles={{ content: { fontSize: 20, color: overview.systemLoadAverage > overview.availableProcessors ? '#ff4d4f' : undefined } }}
+                  styles={{ content: { fontSize: 20, color: overview.systemLoadAverage > overview.availableProcessors ? 'var(--color-danger)' : undefined } }}
                 />
               </Card>
             </Col>
@@ -94,7 +94,7 @@ const SystemStatusTab: React.FC = () => {
               <Card>
                 <Statistic title="数据库"
                   value={dbUp ? '正常' : '异常'}
-                  styles={{ content: { color: dbUp ? '#52c41a' : '#ff4d4f', fontSize: 20 } }}
+                  styles={{ content: { color: dbUp ? 'var(--color-success)' : 'var(--color-danger)', fontSize: 20 } }}
                 />
                 {dbUp && <Text type="secondary" style={{ fontSize: 14 }}>{overview.database.product} {overview.database.version?.split('-')[0]}</Text>}
               </Card>

@@ -6,7 +6,7 @@ const MODULE_ORDER = ['sample', 'order', 'production', 'procurement', 'warehouse
 
 const COLORS = [
   '#3b82f6',
-  '#10b981',
+  'var(--color-accent-emerald)',
   '#f59e0b',
   '#8b5cf6',
   '#ec4899',
@@ -119,7 +119,7 @@ const StyleLinkLines: React.FC = () => {
                   cy={point.y}
                   r="4"
                   fill={link.color}
-                  stroke="#ffffff"
+                  stroke="var(--color-bg-base)"
                   strokeWidth="2"
                 />
                 {i === 0 && (

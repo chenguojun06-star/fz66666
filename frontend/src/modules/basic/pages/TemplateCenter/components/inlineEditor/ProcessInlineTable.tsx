@@ -184,7 +184,7 @@ const ProcessInlineTable: React.FC<ProcessInlineTableProps> = ({
         const stage = record.progressStage || '车缝';
         return (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-            <Tag style={{ background: STAGE_ACCENT, color: '#fff', border: 'none', fontWeight: 600, fontSize: compact ? 12 : 13, marginInlineEnd: 0 }}>
+            <Tag style={{ background: STAGE_ACCENT, color: 'var(--color-bg-base)', border: 'none', fontWeight: 600, fontSize: compact ? 12 : 13, marginInlineEnd: 0 }}>
               {stage}
             </Tag>
             <span style={{ fontSize: compact ? 11 : 12, color: 'var(--color-text-tertiary)' }}>{info.count} 个工序</span>

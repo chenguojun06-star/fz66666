@@ -59,12 +59,25 @@ public class PayrollSettlementController {
             return Result.success(java.util.Collections.emptyList());
         }
 
-        String orderNo = (String) params.get("orderNo");
-        String operatorName = (String) params.get("operatorName");
-        String processName = (String) params.get("processName");
-        String startTimeStr = (String) params.get("startTime");
-        String endTimeStr = (String) params.get("endTime");
-        Boolean includeSettled = (Boolean) params.getOrDefault("includeSettled", true);
+        Object orderNoObj = params.get("orderNo");
+        String orderNo = orderNoObj != null ? String.valueOf(orderNoObj).trim() : null;
+        Object operatorNameObj = params.get("operatorName");
+        String operatorName = operatorNameObj != null ? String.valueOf(operatorNameObj).trim() : null;
+        Object processNameObj = params.get("processName");
+        String processName = processNameObj != null ? String.valueOf(processNameObj).trim() : null;
+        Object startTimeObj = params.get("startTime");
+        String startTimeStr = startTimeObj != null ? String.valueOf(startTimeObj).trim() : null;
+        Object endTimeObj = params.get("endTime");
+        String endTimeStr = endTimeObj != null ? String.valueOf(endTimeObj).trim() : null;
+        Object includeSettledObj = params.getOrDefault("includeSettled", true);
+        Boolean includeSettled;
+        if (includeSettledObj instanceof Boolean) {
+            includeSettled = (Boolean) includeSettledObj;
+        } else if (includeSettledObj != null) {
+            includeSettled = Boolean.parseBoolean(String.valueOf(includeSettledObj).trim());
+        } else {
+            includeSettled = true;
+        }
 
         // 解析时间，支持两种格式："yyyy-MM-dd HH:mm:ss" 和 ISO格式
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
@@ -176,7 +189,8 @@ public class PayrollSettlementController {
         if (!UserContext.isSupervisorOrAbove()) {
             return Result.fail("仅主管及以上可审核工资结算单");
         }
-        String remark = params == null ? null : (String) params.get("remark");
+        Object remarkObj = params == null ? null : params.get("remark");
+        String remark = remarkObj != null ? String.valueOf(remarkObj).trim() : null;
         payrollSettlementOrchestrator.approve(id, remark);
         return Result.success(null);
     }
@@ -194,7 +208,8 @@ public class PayrollSettlementController {
         if (!UserContext.isSupervisorOrAbove()) {
             return Result.fail("仅主管及以上可取消工资结算单");
         }
-        String remark = params == null ? null : (String) params.get("remark");
+        Object remarkObj = params == null ? null : params.get("remark");
+        String remark = remarkObj != null ? String.valueOf(remarkObj).trim() : null;
         payrollSettlementOrchestrator.cancel(id, remark);
         return Result.success(null);
     }
@@ -221,9 +236,17 @@ public class PayrollSettlementController {
         if (!UserContext.isSupervisorOrAbove()) {
             return Result.fail("仅主管及以上可记录打款");
         }
-        BigDecimal amount = body != null && body.get("amount") != null
-                ? new BigDecimal(String.valueOf(body.get("amount")))
-                : null;
+        BigDecimal amount = null;
+        if (body != null) {
+            Object amountObj = body.get("amount");
+            if (amountObj != null) {
+                try {
+                    amount = new BigDecimal(amountObj.toString().trim());
+                } catch (NumberFormatException e) {
+                    return Result.fail("金额格式不正确");
+                }
+            }
+        }
         payrollSettlementOrchestrator.recordPayment(id, amount);
         return Result.success(null);
     }
@@ -235,12 +258,22 @@ public class PayrollSettlementController {
             return Result.fail("仅主管及以上可添加扣款");
         }
         BigDecimal amount = null;
+        String type = null;
+        String desc = null;
         if (body != null) {
             Object raw = body.getOrDefault("deductionAmount", body.get("amount"));
-            amount = raw != null ? new BigDecimal(String.valueOf(raw)) : null;
+            if (raw != null) {
+                try {
+                    amount = new BigDecimal(raw.toString().trim());
+                } catch (NumberFormatException e) {
+                    return Result.fail("金额格式不正确");
+                }
+            }
+            Object typeObj = body.getOrDefault("deductionType", body.get("type"));
+            type = typeObj != null ? String.valueOf(typeObj).trim() : null;
+            Object descObj = body.get("description");
+            desc = descObj != null ? String.valueOf(descObj).trim() : null;
         }
-        String type = body != null ? (String) body.getOrDefault("deductionType", body.get("type")) : null;
-        String desc = body != null ? (String) body.get("description") : null;
         payrollSettlementOrchestrator.applyDeduction(id, amount, type, desc);
         return Result.success(null);
     }

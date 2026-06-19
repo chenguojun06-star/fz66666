@@ -164,7 +164,7 @@ const CuttingFreeBundlePanel: React.FC<CuttingFreeBundlePanelProps> = ({
                 const filledQty = filledQtyByKey[csKey] || 0;
                 const overOrder = orderQty > 0 && filledQty > orderQty;
                 return (
-                  <tr key={row.key} style={{ borderBottom: '1px solid var(--color-border-light)', background: overOrder ? '#fff2f0' : undefined }}>
+                  <tr key={row.key} style={{ borderBottom: '1px solid var(--color-border-light)', background: overOrder ? '#F6FFED' : undefined }}>
                     <td style={{ padding: '6px 12px', color: 'var(--color-text-tertiary)' }}>{idx + 1}</td>
                     <td style={{ padding: '6px 12px' }}>
                       <AutoComplete
@@ -191,7 +191,7 @@ const CuttingFreeBundlePanel: React.FC<CuttingFreeBundlePanelProps> = ({
                       />
                     </td>
                     <td style={{ padding: '6px 12px', textAlign: 'center' }}>
-                      <Text style={{ color: orderQty > 0 ? '#1677ff' : '#ccc', fontWeight: orderQty > 0 ? 500 : 400, fontSize: 14 }}>
+                      <Text style={{ color: orderQty > 0 ? 'var(--color-primary)' : '#ccc', fontWeight: orderQty > 0 ? 500 : 400, fontSize: 14 }}>
                         {orderQty > 0 ? orderQty : '-'}
                       </Text>
                     </td>

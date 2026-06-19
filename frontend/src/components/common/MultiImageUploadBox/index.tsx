@@ -18,10 +18,10 @@ export interface MultiImageUploadBoxProps {
   style?: React.CSSProperties;
 }
 
-const THUMB_BORDER = '1px solid #e5e7eb';
+const THUMB_BORDER = '1px solid var(--color-border)';
 const OVERLAY_BG = 'var(--color-text-tertiary)';
 const ADD_BORDER = '1px dashed #cbd5e1';
-const ADD_BG = '#f8fafc';
+const ADD_BG = 'var(--color-bg-page)';
 const MUTED_COLOR = '#94a3b8';
 
 function MultiImageUploadBox({
@@ -245,10 +245,10 @@ function MultiImageUploadBox({
                     onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.opacity = '1'; }}
                     onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.opacity = '0'; }}
                   >
-                    <EyeOutlined style={{ color: '#fff', fontSize: 12 }} />
+                    <EyeOutlined style={{ color: 'var(--color-bg-base)', fontSize: 12 }} />
                   </div>
                   <div onClick={(e) => handleRemove(idx, e)} style={delBtnStyle}>
-                    <DeleteOutlined style={{ color: '#fff', fontSize: 12 }} />
+                    <DeleteOutlined style={{ color: 'var(--color-bg-base)', fontSize: 12 }} />
                   </div>
                 </>
               )}

@@ -281,7 +281,7 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = ({ styleId, styleNo, skc: initia
           );
         }
         return (
-          <div style={{ width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f5f5f5', borderRadius: 4, color: '#ccc' }}>
+          <div style={{ width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--color-bg-subtle)', borderRadius: 4, color: '#ccc' }}>
             <PictureOutlined />
           </div>
         );
@@ -373,7 +373,7 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = ({ styleId, styleNo, skc: initia
           <Input value={val || ''} onChange={e => handleFieldChange(key, 'remark', e.target.value)} placeholder="备注" />
         ) : (
           <Tooltip title={record.remark} placement="topLeft">
-            <span style={{ color: record.remark ? 'var(--color-text-primary, #333)' : 'var(--color-text-quaternary, #bfbfbf)' }}>
+            <span style={{ color: record.remark ? 'var(--color-text-primary, #333)' : 'var(--color-text-quaternary, var(--color-text-quaternary))' }}>
               {record.remark || '-'}
             </span>
           </Tooltip>
@@ -446,7 +446,7 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = ({ styleId, styleNo, skc: initia
         </Space>
       </div>
 
-      <div style={{ marginBottom: 16, padding: '12px 16px', background: 'var(--color-bg-container, #fafafa)', borderRadius: 6, border: '1px solid var(--color-border-light, #f0f0f0)' }}>
+      <div style={{ marginBottom: 16, padding: '12px 16px', background: 'var(--color-bg-container, var(--color-bg-container))', borderRadius: 6, border: '1px solid var(--color-border-light, var(--color-border-light))' }}>
         <Space size="middle" align="center">
           <span style={{ fontWeight: 500, fontSize: 14 }}>SKC编号：</span>
           {skcEditing ? (

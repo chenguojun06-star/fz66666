@@ -43,7 +43,7 @@ const processingBannerStyle = {
   padding: '8px 10px',
   borderRadius: 8,
   border: '1px solid #ffd591',
-  background: '#fff7e6',
+  background: '#FFF7E6',
   display: 'grid',
   gap: 4,
 } as const;
@@ -181,7 +181,7 @@ const BomPanel: React.FC<BomPanelProps> = ({ styleNo, onSaved }) => {
                  
                   loading={rollbackLoading}
                   onClick={handleDirectRollback}
-                  style={{ background: 'var(--color-bg-base)', color: '#ff4d4f', borderColor: '#ff4d4f' }}
+                  style={{ background: 'var(--color-bg-base)', color: 'var(--color-danger)', borderColor: 'var(--color-danger)' }}
                 >
                   确认退回
                 </Button>

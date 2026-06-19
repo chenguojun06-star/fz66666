@@ -562,9 +562,9 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = ({ orderId, orde
         <p>确认回料以下 {returnable.length} 项物料：</p>
         <div style={{ maxHeight: 220, overflowY: 'auto', marginTop: 8, fontSize: 12 }}>
           {returnable.map((item, idx) => (
-            <div key={idx} style={{ padding: '6px 0', borderBottom: '1px solid #f0f0f0', display: 'flex', justifyContent: 'space-between' }}>
+            <div key={idx} style={{ padding: '6px 0', borderBottom: '1px solid var(--color-border-light)', display: 'flex', justifyContent: 'space-between' }}>
               <span>{item.materialName || item.materialCode} · {item.color || '-'}</span>
-              <span style={{ color: '#1677ff' }}>到货 {item.arrivedQuantity || item.purchaseQuantity}{item.unit || ''}</span>
+              <span style={{ color: 'var(--color-primary)' }}>到货 {item.arrivedQuantity || item.purchaseQuantity}{item.unit || ''}</span>
             </div>
           ))}
         </div>

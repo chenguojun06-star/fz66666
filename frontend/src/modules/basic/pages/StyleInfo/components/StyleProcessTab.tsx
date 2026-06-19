@@ -89,15 +89,15 @@ const StyleProcessTab: React.FC<StyleProcessTabProps> = ({
           <Popover trigger="click" placement="bottomRight" open={aiOpen} onOpenChange={(v) => { if (!aiLoading) setAiOpen(v); }}
             content={
               <div style={{ width: 260 }}>
-                <div style={{ marginBottom: 8, fontWeight: 600, color: '#722ed1' }}> AI 智能 IE 指导价 & 全套工序生成</div>
+                <div style={{ marginBottom: 8, fontWeight: 600, color: 'var(--color-accent-purple)' }}> AI 智能 IE 指导价 & 全套工序生成</div>
                 <div style={{ marginBottom: 8, fontSize: 14, color: '#888' }}>选择品类，系统将基于 IE 数据库为您直接生成全套标准工序与智能指导单价。</div>
                 <Select style={{ width: '100%', marginBottom: 8 }} placeholder="选择衣服品类（必选）" allowClear showSearch optionFilterProp="label" value={aiCategory} onChange={setAiCategory} options={categoryOptions} />
-                <Button type="primary" block loading={aiLoading} disabled={aiLoading || !aiCategory} style={{ borderColor: '#722ed1', color: '#722ed1' }} onClick={() => handleAiTemplate(setData)}>{aiLoading ? '生成中…' : ' 一键生成全套工序与指导价'}</Button>
+                <Button type="primary" block loading={aiLoading} disabled={aiLoading || !aiCategory} style={{ borderColor: 'var(--color-accent-purple)', color: 'var(--color-accent-purple)' }} onClick={() => handleAiTemplate(setData)}>{aiLoading ? '生成中…' : ' 一键生成全套工序与指导价'}</Button>
               </div>
             }>
             <Button type="primary" disabled={Boolean(readOnly) || !editMode || loading || saving}
               icon={aiLoading ? <LoadingOutlined /> : <span style={{ marginRight: 4 }}></span>}
-              style={{ background: 'linear-gradient(135deg, #722ed1, #2f54eb)', borderColor: 'transparent', fontWeight: 500, boxShadow: '0 2px 6px rgba(114, 46, 209, 0.3)' }}>AI建议单价</Button>
+              style={{ background: 'linear-gradient(135deg, var(--color-accent-purple), #2f54eb)', borderColor: 'transparent', fontWeight: 500, boxShadow: '0 2px 6px rgba(114, 46, 209, 0.3)' }}>AI建议单价</Button>
           </Popover>
           {editMode && !readOnly && sizes.length > 0 && (
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>

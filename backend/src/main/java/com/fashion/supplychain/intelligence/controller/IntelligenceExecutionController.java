@@ -18,7 +18,6 @@ import java.time.LocalDateTime;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fashion.supplychain.intelligence.entity.IntelligenceAuditLog;
-import com.fashion.supplychain.intelligence.mapper.IntelligenceAuditLogMapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
@@ -58,7 +57,7 @@ public class IntelligenceExecutionController {
 
     private final AuditTrailOrchestrator auditTrail;
 
-    private final IntelligenceAuditLogMapper auditLogMapper;
+    private final AuditLogOrchestrator auditLogOrchestrator;
 
     private final ObjectMapper objectMapper;
 
@@ -126,7 +125,7 @@ public class IntelligenceExecutionController {
                 pending.setRequiresApproval(true);
                 pending.setResultData(objectMapper.writeValueAsString(command));
                 pending.setCreatedAt(LocalDateTime.now());
-                auditLogMapper.insert(pending);
+                auditLogOrchestrator.insert(pending);
 
                 return Result.success(Map.of(
                     "status", "REQUIRES_APPROVAL",
@@ -190,7 +189,7 @@ public class IntelligenceExecutionController {
             QueryWrapper<IntelligenceAuditLog> qw = new QueryWrapper<>();
             qw.eq("command_id", commandId).eq("status", "PENDING_APPROVAL")
               .eq("tenant_id", tenantId);
-            IntelligenceAuditLog pendingLog = auditLogMapper.selectOne(qw);
+            IntelligenceAuditLog pendingLog = auditLogOrchestrator.selectOne(qw);
             if (pendingLog == null) {
                 return Result.fail("待审批命令不存在或已处理: " + commandId);
             }
@@ -204,7 +203,7 @@ public class IntelligenceExecutionController {
             pendingLog.setApprovedBy(userId);
             pendingLog.setApprovedAt(LocalDateTime.now());
             pendingLog.setApprovalRemark(remark != null ? remark : "用户已批准");
-            auditLogMapper.updateById(pendingLog);
+            auditLogOrchestrator.updateById(pendingLog);
 
             // 执行命令
             Long userIdLong = userId != null ? Long.parseLong(userId) : null;
@@ -249,7 +248,7 @@ public class IntelligenceExecutionController {
             QueryWrapper<IntelligenceAuditLog> qw = new QueryWrapper<>();
             qw.eq("command_id", commandId).eq("status", "PENDING_APPROVAL")
               .eq("tenant_id", tenantId);
-            IntelligenceAuditLog pendingLog = auditLogMapper.selectOne(qw);
+            IntelligenceAuditLog pendingLog = auditLogOrchestrator.selectOne(qw);
             if (pendingLog == null) {
                 return Result.fail("待审批命令不存在或已处理: " + commandId);
             }
@@ -258,7 +257,7 @@ public class IntelligenceExecutionController {
             pendingLog.setApprovedBy(userId);
             pendingLog.setApprovedAt(LocalDateTime.now());
             pendingLog.setApprovalRemark(rejectReason != null ? rejectReason : "用户已拒绝");
-            auditLogMapper.updateById(pendingLog);
+            auditLogOrchestrator.updateById(pendingLog);
 
             log.info("[Controller] 命令 {} 已拒绝", commandId);
             return Result.success(Map.of(
@@ -309,7 +308,7 @@ public class IntelligenceExecutionController {
               .eq("status", "PENDING_APPROVAL")
               .orderByDesc("created_at")
               .last("LIMIT 500");
-            List<IntelligenceAuditLog> logs = auditLogMapper.selectList(qw);
+            List<IntelligenceAuditLog> logs = auditLogOrchestrator.selectList(qw);
 
             List<Map<String, Object>> pendingCommands = logs.stream().map(l -> {
                 Map<String, Object> cmd = new HashMap<>();
@@ -450,7 +449,7 @@ public class IntelligenceExecutionController {
             qw.eq("command_id", commandId)
               .eq("tenant_id", tenantId)
               .orderByDesc("created_at").last("LIMIT 1");
-            IntelligenceAuditLog auditLog = auditLogMapper.selectOne(qw);
+            IntelligenceAuditLog auditLog = auditLogOrchestrator.selectOne(qw);
             if (auditLog == null) {
                 return Result.fail("命令记录不存在: " + commandId);
             }

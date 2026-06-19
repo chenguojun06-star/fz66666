@@ -145,12 +145,12 @@ export default function WashCareLabelModal({ open, onCancel, order }: Props) {
                     style={{
                       display: 'inline-flex', alignItems: 'center', gap: 3,
                       padding: '2px 6px', borderRadius: 4,
-                      border: '1.5px solid #1677ff',
+                      border: '1.5px solid var(--color-primary)',
                       background: '#e6f4ff',
                     }}
                   >
                     <span dangerouslySetInnerHTML={{ __html: icon?.svg || '' }} style={{ display: 'inline-block', width: 18, height: 18, flexShrink: 0 }} />
-                    <span style={{ fontSize: 12, color: '#1677ff', whiteSpace: 'nowrap' }}>{icon?.label || code}</span>
+                    <span style={{ fontSize: 12, color: 'var(--color-primary)', whiteSpace: 'nowrap' }}>{icon?.label || code}</span>
                   </div>
                 );
               })}

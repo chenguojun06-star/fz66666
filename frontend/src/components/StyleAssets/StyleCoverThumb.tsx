@@ -185,7 +185,7 @@ const StyleCoverThumb: React.FC<{
             height: '100%',
             objectFit: fit,
             display: 'block',
-            background: isFill ? '#f5f5f5' : undefined,
+            background: isFill ? 'var(--color-bg-subtle)' : undefined,
           }}
           onError={() => {
             if (url === preferredUrl && preferredUrl && !srcFailed) {

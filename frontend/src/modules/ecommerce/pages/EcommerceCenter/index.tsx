@@ -80,18 +80,18 @@ const EcommerceCenter: React.FC = () => {
     const statsData = shopStatsMap[p.code];
 
     const statusConfig = !status
-      ? { color: '#d9d9d9', icon: <CloseCircleOutlined />, text: '未配置' }
+      ? { color: 'var(--color-border-antd)', icon: <CloseCircleOutlined />, text: '未配置' }
       : isConfigured && isConnected
-        ? { color: '#52c41a', icon: <CheckCircleOutlined />, text: '已连接' }
+        ? { color: 'var(--color-success)', icon: <CheckCircleOutlined />, text: '已连接' }
         : isConfigured
-          ? { color: '#fa8c16', icon: <WarningOutlined />, text: '已配置' }
-          : { color: '#d9d9d9', icon: <CloseCircleOutlined />, text: '未配置' };
+          ? { color: 'var(--color-warning)', icon: <WarningOutlined />, text: '已配置' }
+          : { color: 'var(--color-border-antd)', icon: <CloseCircleOutlined />, text: '未配置' };
 
     return (
       <Card
         key={p.code}
         hoverable
-        style={{ borderRadius: 12, border: `1px solid ${isConnected ? '#b7eb8f' : isConfigured ? '#ffe58f' : '#f0f0f0'}` }}
+        style={{ borderRadius: 12, border: `1px solid ${isConnected ? '#b7eb8f' : isConfigured ? '#ffe58f' : 'var(--color-border-light)'}` }}
         styles={{ body: { padding: 20 } }}
         onClick={() => navigate(`${paths.ecommercePlatform}/${p.code}`)}
       >
@@ -99,7 +99,7 @@ const EcommerceCenter: React.FC = () => {
           <Space size={10}>
             <span style={{
               width: 42, height: 42, borderRadius: 10,
-              background: isConnected ? '#f6ffed' : isConfigured ? '#fff7e6' : '#f5f5f5',
+              background: isConnected ? '#f6ffed' : isConfigured ? '#FFF7E6' : 'var(--color-bg-subtle)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 20, color: p.color,
             }}>
@@ -117,15 +117,15 @@ const EcommerceCenter: React.FC = () => {
           <Row gutter={8}>
             <Col span={8}>
               <div style={{ fontSize: 14, color: '#888', marginBottom: 2 }}>今日订单</div>
-              <Text strong style={{ color: '#1677ff', fontSize: 20 }}>{statsData.todayOrders}</Text>
+              <Text strong style={{ color: 'var(--color-primary)', fontSize: 20 }}>{statsData.todayOrders}</Text>
             </Col>
             <Col span={8}>
               <div style={{ fontSize: 14, color: '#888', marginBottom: 2 }}>今日销售</div>
-              <Text strong style={{ color: '#52c41a', fontSize: 20 }}>¥{parseFloat(statsData.todaySales).toFixed(0)}</Text>
+              <Text strong style={{ color: 'var(--color-success)', fontSize: 20 }}>¥{parseFloat(statsData.todaySales).toFixed(0)}</Text>
             </Col>
             <Col span={8}>
               <div style={{ fontSize: 14, color: '#888', marginBottom: 2 }}>待发货</div>
-              <Text strong style={{ color: statsData.pendingShip > 0 ? '#fa8c16' : '#999', fontSize: 20 }}>{statsData.pendingShip}</Text>
+              <Text strong style={{ color: statsData.pendingShip > 0 ? 'var(--color-warning)' : '#999', fontSize: 20 }}>{statsData.pendingShip}</Text>
             </Col>
           </Row>
         ) : (
@@ -166,31 +166,31 @@ const EcommerceCenter: React.FC = () => {
       <Row gutter={16} style={{ marginBottom: 12, marginTop: 8 }}>
           <Col span={6}>
             <Card variant="borderless" style={{ background: 'linear-gradient(135deg, #e6f7ff 0%, #f0f5ff 100%)', borderRadius: 12 }}>
-              <Statistic title="已对接平台" value={globalStats.connected} suffix={`/ ${PLATFORM_LIST.length}`} prefix={<ApiOutlined style={{ color: '#1677ff' }} />} styles={{ content: { color: '#1677ff' } }} />
+              <Statistic title="已对接平台" value={globalStats.connected} suffix={`/ ${PLATFORM_LIST.length}`} prefix={<ApiOutlined style={{ color: 'var(--color-primary)' }} />} styles={{ content: { color: 'var(--color-primary)' } }} />
             </Card>
           </Col>
           <Col span={6}>
             <Card variant="borderless" style={{ background: 'linear-gradient(135deg, #f6ffed 0%, #fcffe6 100%)', borderRadius: 12 }}>
-              <Statistic title="今日总订单" value={globalStats.todayOrders} suffix="单" prefix={<ShoppingCartOutlined style={{ color: '#52c41a' }} />} styles={{ content: { color: '#52c41a' } }} />
+              <Statistic title="今日总订单" value={globalStats.todayOrders} suffix="单" prefix={<ShoppingCartOutlined style={{ color: 'var(--color-success)' }} />} styles={{ content: { color: 'var(--color-success)' } }} />
             </Card>
           </Col>
           <Col span={6}>
-            <Card variant="borderless" style={{ background: 'linear-gradient(135deg, #fff7e6 0%, #fffbe6 100%)', borderRadius: 12 }}>
-              <Statistic title="今日销售额" value={globalStats.todaySales.toFixed(2)} prefix={<DollarOutlined style={{ color: '#fa8c16' }} />} suffix="元" styles={{ content: { color: '#fa8c16' } }} />
+            <Card variant="borderless" style={{ background: 'linear-gradient(135deg, #FFF7E6 0%, #FFFBE6 100%)', borderRadius: 12 }}>
+              <Statistic title="今日销售额" value={globalStats.todaySales.toFixed(2)} prefix={<DollarOutlined style={{ color: 'var(--color-warning)' }} />} suffix="元" styles={{ content: { color: 'var(--color-warning)' } }} />
             </Card>
           </Col>
           <Col span={6}>
-            <Card variant="borderless" style={{ background: globalStats.pendingShip > 0 ? 'linear-gradient(135deg, #fff1f0 0%, #ffccc7 100%)' : 'linear-gradient(135deg, #f9f0ff 0%, #efdbff 100%)', borderRadius: 12 }}>
-              <Statistic title="待发货" value={globalStats.pendingShip} suffix="单" prefix={<InboxOutlined style={{ color: globalStats.pendingShip > 0 ? '#ff4d4f' : '#722ed1' }} />} styles={{ content: { color: globalStats.pendingShip > 0 ? '#ff4d4f' : '#722ed1' } }} />
+            <Card variant="borderless" style={{ background: globalStats.pendingShip > 0 ? 'linear-gradient(135deg, #FFF1F0 0%, #ffccc7 100%)' : 'linear-gradient(135deg, #f9f0ff 0%, #efdbff 100%)', borderRadius: 12 }}>
+              <Statistic title="待发货" value={globalStats.pendingShip} suffix="单" prefix={<InboxOutlined style={{ color: globalStats.pendingShip > 0 ? 'var(--color-danger)' : 'var(--color-accent-purple)' }} />} styles={{ content: { color: globalStats.pendingShip > 0 ? 'var(--color-danger)' : 'var(--color-accent-purple)' } }} />
             </Card>
           </Col>
         </Row>
 
         {globalStats.noStockWarn > 0 && (
-          <Card style={{ marginBottom: 16, borderRadius: 8, border: '1px solid #ffa39e', background: '#fff1f0' }} styles={{ body: { padding: '10px 16px' } }}>
+          <Card style={{ marginBottom: 16, borderRadius: 8, border: '1px solid #ffa39e', background: '#FFF1F0' }} styles={{ body: { padding: '10px 16px' } }}>
             <Space>
-              <WarningOutlined style={{ color: '#ff4d4f', fontSize: 18 }} />
-              <Text strong style={{ color: '#ff4d4f', fontSize: 14 }}>缺货预警：{globalStats.noStockWarn} 单未匹配到生产单，需人工确认库存或创建生产计划</Text>
+              <WarningOutlined style={{ color: 'var(--color-danger)', fontSize: 18 }} />
+              <Text strong style={{ color: 'var(--color-danger)', fontSize: 14 }}>缺货预警：{globalStats.noStockWarn} 单未匹配到生产单，需人工确认库存或创建生产计划</Text>
               <Button type="link" size="small" onClick={() => navigate('/warehouse/ecommerce')}>查看详情 →</Button>
             </Space>
           </Card>
@@ -199,7 +199,7 @@ const EcommerceCenter: React.FC = () => {
         {connectedPlatforms.length > 0 && (
           <div style={{ marginBottom: 12 }}>
             <div style={{ display: 'flex', alignItems: 'center', marginBottom: 14 }}>
-              <CheckCircleOutlined style={{ color: '#52c41a', marginRight: 8, fontSize: 18 }} />
+              <CheckCircleOutlined style={{ color: 'var(--color-success)', marginRight: 8, fontSize: 18 }} />
               <Text strong style={{ fontSize: 17 }}>已对接平台</Text>
               <Tag color="green" style={{ marginLeft: 8 }}>{connectedPlatforms.length} 个</Tag>
             </div>
@@ -212,7 +212,7 @@ const EcommerceCenter: React.FC = () => {
         {unconnectedPlatforms.length > 0 && (
           <div>
             <div style={{ display: 'flex', alignItems: 'center', marginBottom: 14 }}>
-              <CloudUploadOutlined style={{ color: '#fa8c16', marginRight: 8, fontSize: 18 }} />
+              <CloudUploadOutlined style={{ color: 'var(--color-warning)', marginRight: 8, fontSize: 18 }} />
               <Text strong style={{ fontSize: 17 }}>待对接平台</Text>
               <Tag color="orange" style={{ marginLeft: 8 }}>{unconnectedPlatforms.length} 个</Tag>
             </div>

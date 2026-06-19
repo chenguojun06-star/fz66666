@@ -36,7 +36,7 @@ function buildLabelCss(w: number, h: number, iconSize: number): string {
   return `@page{size:${w}mm ${h}mm;margin:0}
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{width:${w}mm;min-height:${h}mm}
-body{font-family:"PingFang SC","Microsoft YaHei","Noto Sans SC",system-ui,sans-serif;color:#000;background:#fff;-webkit-font-smoothing:antialiased}
+body{font-family:"PingFang SC","Microsoft YaHei","Noto Sans SC",system-ui,sans-serif;color:#000;background:var(--color-bg-base);-webkit-font-smoothing:antialiased}
 .label-page{position:relative;width:${w}mm;height:${h}mm;padding:2mm 2.2mm ${bottomSafe}mm;page-break-after:always;display:flex;flex-direction:column;align-items:center}
 .label-page:last-child{page-break-after:auto}
 .dash-sep{border:none;border-top:0.8pt dashed #555;width:calc(100% + 2mm);margin-left:-1mm;flex:0 0 auto}

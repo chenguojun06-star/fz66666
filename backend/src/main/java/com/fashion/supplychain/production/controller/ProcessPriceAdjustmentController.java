@@ -38,10 +38,22 @@ public class ProcessPriceAdjustmentController {
      */
     @PostMapping("/adjust")
     public Result<Map<String, Object>> adjustPrice(@RequestBody Map<String, Object> body) {
-        String orderNo = (String) body.get("orderNo");
-        String processName = (String) body.get("processName");
-        BigDecimal newPrice = new BigDecimal(String.valueOf(body.get("newPrice")));
-        String reason = (String) body.get("reason");
+        Object orderNoObj = body.get("orderNo");
+        String orderNo = orderNoObj != null ? String.valueOf(orderNoObj).trim() : null;
+        Object processNameObj = body.get("processName");
+        String processName = processNameObj != null ? String.valueOf(processNameObj).trim() : null;
+        Object reasonObj = body.get("reason");
+        String reason = reasonObj != null ? String.valueOf(reasonObj).trim() : null;
+
+        BigDecimal newPrice = null;
+        Object newPriceObj = body.get("newPrice");
+        if (newPriceObj != null) {
+            try {
+                newPrice = new BigDecimal(newPriceObj.toString().trim());
+            } catch (NumberFormatException e) {
+                return Result.fail("金额格式不正确");
+            }
+        }
 
         return Result.success(orchestrator.adjustPrice(orderNo, processName, newPrice, reason));
     }

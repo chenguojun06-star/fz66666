@@ -78,7 +78,7 @@ function LevelDot({ level }: { level?: string }) {
       <span
         style={{
           display: 'inline-block', width: 8, height: 8, borderRadius: '50%',
-          background: '#52c41a', cursor: 'pointer', flexShrink: 0,
+          background: 'var(--color-success)', cursor: 'pointer', flexShrink: 0,
         }}
       />
     );
@@ -88,7 +88,7 @@ function LevelDot({ level }: { level?: string }) {
       <span
         style={{
           display: 'inline-block', width: 8, height: 8, borderRadius: '50%',
-          background: '#ff4d4f', cursor: 'pointer', flexShrink: 0,
+          background: 'var(--color-danger)', cursor: 'pointer', flexShrink: 0,
         }}
       />
     );
@@ -98,7 +98,7 @@ function LevelDot({ level }: { level?: string }) {
     <span
       style={{
         display: 'inline-block', width: 7, height: 7, borderRadius: '50%',
-        background: '#d9d9d9', cursor: 'pointer', flexShrink: 0,
+        background: 'var(--color-border-antd)', cursor: 'pointer', flexShrink: 0,
       }}
     />
   );
@@ -109,7 +109,7 @@ function LevelDot({ level }: { level?: string }) {
 function StageRow({ sp }: { sp: StageProfile }) {
   const diff = sp.vsFactoryAvgPct;
   const sign  = diff >= 0 ? '+' : '';
-  const color = diff >= 0 ? '#52c41a' : '#faad14';
+  const color = diff >= 0 ? 'var(--color-success)' : 'var(--color-warning)';
   const arrow = diff >= 0 ? '▲' : '▼';
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12,

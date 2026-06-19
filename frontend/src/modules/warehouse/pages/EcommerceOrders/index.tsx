@@ -223,7 +223,7 @@ const OrdersTab: React.FC = () => {
       render: (_: unknown, r: EcOrder) => (
         <div>
           <div style={{ fontSize: 14 }}>{r.productName || '-'} <Text type="secondary">×{r.quantity}</Text></div>
-          {r.skuCode && <div style={{ fontSize: 14, color: '#52c41a' }}>SKU {r.skuCode}</div>}
+          {r.skuCode && <div style={{ fontSize: 14, color: 'var(--color-success)' }}>SKU {r.skuCode}</div>}
           <div style={{ fontSize: 14, color: '#888' }}>{r.buyerNick || r.receiverName}</div>
         </div>
       ),
@@ -233,7 +233,7 @@ const OrdersTab: React.FC = () => {
       render: (_: unknown, r: EcOrder) => (
         <div>
           {r.unitPrice ? <div style={{ fontSize: 14, color: '#888' }}>单价 ¥{r.unitPrice} × {r.quantity}</div> : null}
-          <div style={{ color: '#fa8c16', fontWeight: 600 }}>实付 ¥{r.payAmount ?? '-'}</div>
+          <div style={{ color: 'var(--color-warning)', fontWeight: 600 }}>实付 ¥{r.payAmount ?? '-'}</div>
           {r.freight ? <div style={{ fontSize: 14, color: '#aaa' }}>运费 ¥{r.freight}</div> : null}
         </div>
       ),
@@ -293,17 +293,17 @@ const OrdersTab: React.FC = () => {
       <Row gutter={12} style={{ marginBottom: 14 }}>
         {[
           { title: '本页订单', value: total, suffix: '单', color: undefined, key: 'total' },
-          { title: '待处理',   value: pendingHandle, suffix: '单', color: '#ff4d4f', key: 'pending', alert: true },
-          { title: '待发货',   value: pendingShip, suffix: '单', color: '#fa8c16', key: 'ship' },
-          { title: '已出库',   value: shipped,     suffix: '单', color: '#52c41a', key: 'out' },
-          { title: '已关联排产', value: linked,    suffix: '单', color: '#1677ff', key: 'link' },
+          { title: '待处理',   value: pendingHandle, suffix: '单', color: 'var(--color-danger)', key: 'pending', alert: true },
+          { title: '待发货',   value: pendingShip, suffix: '单', color: 'var(--color-warning)', key: 'ship' },
+          { title: '已出库',   value: shipped,     suffix: '单', color: 'var(--color-success)', key: 'out' },
+          { title: '已关联排产', value: linked,    suffix: '单', color: 'var(--color-primary)', key: 'link' },
         ].map((s, i) => (
           <Col span={Math.floor(24 / 5)} key={i}>
             <Card
               styles={{ body: { padding: '8px 12px', cursor: s.key === 'pending' ? 'pointer' : undefined } }}
               style={s.key === 'pending'
                 ? (isFilteringPending
-                    ? { border: '2px solid #ff4d4f', background: 'rgba(255,77,79,0.06)' }
+                    ? { border: '2px solid var(--color-danger)', background: 'rgba(255,77,79,0.06)' }
                     : { border: '1px solid rgba(255,77,79,0.3)', background: 'rgba(255,77,79,0.03)' })
                 : undefined}
               onClick={s.key === 'pending'
@@ -391,7 +391,7 @@ const OrdersTab: React.FC = () => {
               <Descriptions.Item label="商品单价">¥{detail.unitPrice ?? '-'}</Descriptions.Item>
               <Descriptions.Item label="订单总额">¥{detail.totalAmount ?? '-'}</Descriptions.Item>
               <Descriptions.Item label="实付金额">
-                <Text style={{ color: '#fa8c16', fontWeight: 700 }}>¥{detail.payAmount ?? '-'}</Text>
+                <Text style={{ color: 'var(--color-warning)', fontWeight: 700 }}>¥{detail.payAmount ?? '-'}</Text>
               </Descriptions.Item>
               <Descriptions.Item label="运费">¥{detail.freight ?? 0}</Descriptions.Item>
               <Descriptions.Item label="优惠">-¥{detail.discount ?? 0}</Descriptions.Item>
@@ -530,11 +530,11 @@ const PricingTab: React.FC = () => {
     { title: '尺码',   dataIndex: 'size',    width: 70 },
     {
       title: 'SKU编码', dataIndex: 'skuCode', width: 190,
-      render: v => <Text style={{ fontSize: 14, color: '#52c41a' }}>{v}</Text>,
+      render: v => <Text style={{ fontSize: 14, color: 'var(--color-success)' }}>{v}</Text>,
     },
     {
       title: '库存', dataIndex: 'stockQuantity', width: 70,
-      render: v => <Badge count={v} showZero color={v > 0 ? '#52c41a' : '#aaa'} />,
+      render: v => <Badge count={v} showZero color={v > 0 ? 'var(--color-success)' : '#aaa'} />,
     },
     {
       title: '成本价 (¥)', dataIndex: 'costPrice', width: 140,
@@ -550,7 +550,7 @@ const PricingTab: React.FC = () => {
         ? <InputNumber value={editRow.salesPrice ?? undefined} min={0} precision={2}
             style={{ width: 110 }}
             onChange={val => setEditRow(prev => prev ? { ...prev, salesPrice: val } : null)} />
-        : <Text style={{ color: '#fa8c16', fontWeight: 600 }}>{v != null ? `¥${v}` : <Text type="secondary">—</Text>}</Text>,
+        : <Text style={{ color: 'var(--color-warning)', fontWeight: 600 }}>{v != null ? `¥${v}` : <Text type="secondary">—</Text>}</Text>,
     },
     {
       title: '毛利率', width: 80,
@@ -617,10 +617,10 @@ const EcommerceOrders: React.FC = () => (
       description={
         <Steps style={{ marginTop: 8 }}
           items={[
-            { title: '配置平台',  content: '应用商店填写 AppKey/Secret',    icon: <ShopOutlined style={{ color: '#1677ff' }} /> },
-            { title: '平台推单',  content: 'Webhook 自动接收，自动匹配款号',  icon: <ApiOutlined style={{ color: '#fa8c16' }} /> },
-            { title: '待处理',    content: '未匹配到的点「待处理」卡片筛选处理', icon: <ShoppingCartOutlined style={{ color: '#ff4d4f' }} /> },
-            { title: '关联/出库', content: '关联排产或现货直发→自动扣库存',   icon: <CarOutlined style={{ color: '#13c2c2' }} /> },
+            { title: '配置平台',  content: '应用商店填写 AppKey/Secret',    icon: <ShopOutlined style={{ color: 'var(--color-primary)' }} /> },
+            { title: '平台推单',  content: 'Webhook 自动接收，自动匹配款号',  icon: <ApiOutlined style={{ color: 'var(--color-warning)' }} /> },
+            { title: '待处理',    content: '未匹配到的点「待处理」卡片筛选处理', icon: <ShoppingCartOutlined style={{ color: 'var(--color-danger)' }} /> },
+            { title: '关联/出库', content: '关联排产或现货直发→自动扣库存',   icon: <CarOutlined style={{ color: 'var(--color-accent-cyan)' }} /> },
             { title: '自动核算',  content: '出库自动生成收入+回传物流+对账',   icon: <RiseOutlined style={{ color: '#eb2f96' }} /> },
           ]}
         />

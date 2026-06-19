@@ -27,10 +27,10 @@ export interface DecisionInsight {
 }
 
 const paletteMap: Record<NonNullable<DecisionInsight['level']>, { bg: string; border: string; title: string; dot: string }> = {
-  danger: { bg: '#fff1f0', border: '#ffccc7', title: '#cf1322', dot: '#ff4d4f' },
-  warning: { bg: '#fff7e6', border: '#ffd591', title: '#d46b08', dot: '#fa8c16' },
-  info: { bg: '#f0f5ff', border: '#adc6ff', title: '#1d39c4', dot: '#1677ff' },
-  success: { bg: '#f6ffed', border: '#b7eb8f', title: '#389e0d', dot: '#52c41a' },
+  danger: { bg: '#FFF1F0', border: '#ffccc7', title: 'var(--color-error)', dot: 'var(--color-danger)' },
+  warning: { bg: '#FFF7E6', border: '#ffd591', title: '#d46b08', dot: 'var(--color-warning)' },
+  info: { bg: '#f0f5ff', border: '#adc6ff', title: '#1d39c4', dot: 'var(--color-primary)' },
+  success: { bg: '#f6ffed', border: '#b7eb8f', title: '#389e0d', dot: 'var(--color-success)' },
 };
 
 const DecisionInsightCard: React.FC<{
@@ -96,7 +96,7 @@ const DecisionInsightCard: React.FC<{
         {/* 卡点 → 最强调色（danger=红/warning=橙/info=蓝/success=绿） */}
         {row(tone.title, insight.painPoint, tone.title)}
         {/* 下一步 → 始终蓝色点（可执行动作） */}
-        {row('#1677ff', insight.execute, '#595959')}
+        {row('var(--color-primary)', insight.execute, '#595959')}
         {/* 数据 → 灰色点（中性事实） */}
         {evidence.map((item, i) => (
           <React.Fragment key={`ev-${i}`}>
@@ -104,7 +104,7 @@ const DecisionInsightCard: React.FC<{
           </React.Fragment>
         ))}
         {/* 补充 → 浅灰点（次要信息） */}
-        {row('#bfbfbf', insight.note, '#8c8c8c')}
+        {row('var(--color-text-quaternary)', insight.note, '#8c8c8c')}
       </div>
 
       {/* 操作按钮 */}

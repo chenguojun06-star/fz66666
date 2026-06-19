@@ -240,7 +240,7 @@ const SizeInlineTable: React.FC<SizeInlineTableProps> = ({ value, onChange, read
             )}
             {!readOnly && value.sizes.length > 1 && (
               <Popconfirm title="删除此尺码列？" onConfirm={() => handleRemoveSize(size)} okText="删除" cancelText="取消">
-                <DeleteOutlined style={{ color: '#ff4d4f', cursor: 'pointer', fontSize: 13 }} />
+                <DeleteOutlined style={{ color: 'var(--color-danger)', cursor: 'pointer', fontSize: 13 }} />
               </Popconfirm>
             )}
           </div>

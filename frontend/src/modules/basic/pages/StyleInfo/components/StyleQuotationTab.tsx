@@ -359,37 +359,37 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, styleNo, readOnly, onSave
   <title>报价单 - ${esc(styleNo || '')}</title>
   <style>
     @page { margin: 12mm; }
-    body { font-family: system-ui, -apple-system, "Microsoft YaHei", "PingFang SC", sans-serif; font-size: 13px; color: #1a1a1a; padding: 24px; background: #fff; line-height: 1.7; }
-    .title { text-align: center; font-size: 26px; font-weight: 700; margin-bottom: 6px; letter-spacing: 3px; color: #1a1a1a; }
+    body { font-family: system-ui, -apple-system, "Microsoft YaHei", "PingFang SC", sans-serif; font-size: 13px; color: var(--color-text-primary); padding: 24px; background: var(--color-bg-base); line-height: 1.7; }
+    .title { text-align: center; font-size: 26px; font-weight: 700; margin-bottom: 6px; letter-spacing: 3px; color: var(--color-text-primary); }
     .subtitle { text-align: center; font-size: 12px; color: #999; margin-bottom: 24px; }
     .info-bar { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: #f8f9fa; border: 1px solid #e8e8e8; margin-bottom: 24px; font-size: 13px; }
     .info-item { display: flex; gap: 6px; }
     .info-label { color: #666; }
     .info-value { font-weight: 600; }
     .section { margin-bottom: 24px; page-break-inside: avoid; }
-    .section-title { font-size: 15px; font-weight: 600; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 2px solid #1890ff; color: #1a1a1a; display: flex; align-items: center; gap: 6px; }
+    .section-title { font-size: 15px; font-weight: 600; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 2px solid var(--color-info); color: var(--color-text-primary); display: flex; align-items: center; gap: 6px; }
     table { width: 100%; border-collapse: collapse; font-size: 12px; }
     th, td { border: 1px solid #d0d0d0; padding: 7px 10px; vertical-align: middle; }
     th { background: #f4f6f8; font-weight: 600; color: #262626; text-align: center; }
     tbody tr:hover { background: #fafcff; }
     /* ---- 汇总区 ---- */
-    .summary-section { margin-top: 32px; padding: 20px; background: linear-gradient(135deg, #f0f7ff 0%, #e8f4ff 100%); border: 2px solid #1890ff; border-radius: 8px; page-break-inside: avoid; }
-    .summary-title { text-align: center; font-size: 16px; font-weight: 700; margin-bottom: 16px; padding-bottom: 10px; border-bottom: 1px dashed #1890ff; color: #1890ff; letter-spacing: 1px; }
+    .summary-section { margin-top: 32px; padding: 20px; background: linear-gradient(135deg, #f0f7ff 0%, #e8f4ff 100%); border: 2px solid var(--color-info); border-radius: 8px; page-break-inside: avoid; }
+    .summary-title { text-align: center; font-size: 16px; font-weight: 700; margin-bottom: 16px; padding-bottom: 10px; border-bottom: 1px dashed var(--color-info); color: var(--color-info); letter-spacing: 1px; }
     .summary-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; border-bottom: 1px solid #d0e8ff; }
     .summary-row:last-child { border-bottom: none; }
     .summary-row-label { color: #444; font-size: 13px; }
-    .summary-row-value { font-weight: 700; font-size: 15px; color: #1a1a1a; }
-    .summary-row.highlight { background: #fff3e0; border-radius: 6px; padding: 12px 16px; margin: 4px 0; }
+    .summary-row-value { font-weight: 700; font-size: 15px; color: var(--color-text-primary); }
+    .summary-row.highlight { background: #F6FFED; border-radius: 6px; padding: 12px 16px; margin: 4px 0; }
     .summary-row.highlight .summary-row-value { font-size: 18px; color: #d4380d; }
-    .summary-row.profit .summary-row-value { color: #52c41a; }
+    .summary-row.profit .summary-row-value { color: var(--color-success); }
     .footer { margin-top: 40px; text-align: center; font-size: 11px; color: #999; padding-top: 16px; border-top: 1px solid #eee; }
     .print-btn-bar { position: fixed; top: 10px; right: 10px; z-index: 999; }
-    .print-btn { padding: 8px 16px; background: #1890ff; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; }
+    .print-btn { padding: 8px 16px; background: var(--color-info); color: var(--color-bg-base); border: none; border-radius: 4px; cursor: pointer; font-size: 13px; }
     @media print {
       .no-print { display: none !important; }
       .print-btn-bar { display: none; }
       .summary-section { background: #f8f9fa !important; border-color: #999 !important; }
-      .summary-row.highlight { background: #fff3e0 !important; }
+      .summary-row.highlight { background: #F6FFED !important; }
     }
   </style>
 </head>

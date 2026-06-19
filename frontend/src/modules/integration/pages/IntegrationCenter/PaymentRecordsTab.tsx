@@ -96,7 +96,7 @@ const PaymentRecordsTab: React.FC<Props> = ({ active }) => {
       render: (v: string | null) => v ? formatDateTimeSecond(v) : '-' },
     { title: '错误信息', dataIndex: 'errorMessage', ellipsis: true,
       render: (v: string | null) => v
-        ? <Tooltip title={v}><span style={{ color: '#ff4d4f' }}>{v.substring(0, 30)}...</span></Tooltip>
+        ? <Tooltip title={v}><span style={{ color: 'var(--color-danger)' }}>{v.substring(0, 30)}...</span></Tooltip>
         : '-' },
   ];
 

@@ -59,7 +59,7 @@ const TASK_STATUS_MAP: Record<string, { text: string; color: string }> = {
 
 const StatusTag: React.FC<{ status: string; map: Record<string, { text: string; color: string }> }> = ({ status, map }) => {
   const s = map[status] || { text: status || '未知', color: 'default' };
-  return <span style={{ padding: '1px 6px', borderRadius: 3, fontSize: 14, background: `var(--ant-${s.color}-1, #f0f0f0)`, color: `var(--ant-${s.color}-6, #333)` }}>{s.text}</span>;
+  return <span style={{ padding: '1px 6px', borderRadius: 3, fontSize: 14, background: `var(--ant-${s.color}-1, var(--color-border-light))`, color: `var(--ant-${s.color}-6, #333)` }}>{s.text}</span>;
 };
 
 const FlowStepRenderer: React.FC<Props> = ({
@@ -193,7 +193,7 @@ const FlowStepRenderer: React.FC<Props> = ({
         try {
           const map: Record<string, string> = JSON.parse(record.sizeUsageMap);
           const entries = Object.entries(map);
-          if (entries.length > 0) return <div style={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>{entries.map(([sz, usage]) => <span key={sz} style={{ fontSize: 14, background: '#f0f0f0', padding: '0 4px', borderRadius: 2 }}>{sz}: {Number(usage).toFixed(2)}{record.unit || ''}</span>)}</div>;
+          if (entries.length > 0) return <div style={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>{entries.map(([sz, usage]) => <span key={sz} style={{ fontSize: 14, background: 'var(--color-border-light)', padding: '0 4px', borderRadius: 2 }}>{sz}: {Number(usage).toFixed(2)}{record.unit || ''}</span>)}</div>;
         } catch { /* ignore */ }
       }
       return <span style={{ color: 'var(--color-text-tertiary)' }}>{record.size || '-'}</span>;
@@ -358,7 +358,7 @@ const FlowStepRenderer: React.FC<Props> = ({
                           try {
                             const map: Record<string, string> = JSON.parse(record.sizeUsageMap);
                             const entries = Object.entries(map);
-                            if (entries.length > 0) return <div style={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>{entries.map(([sz, usage]) => <span key={sz} style={{ fontSize: 12, background: '#f0f0f0', padding: '0 4px', borderRadius: 2 }}>{sz}: {Number(usage).toFixed(2)}{record.unit || ''}</span>)}</div>;
+                            if (entries.length > 0) return <div style={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>{entries.map(([sz, usage]) => <span key={sz} style={{ fontSize: 12, background: 'var(--color-border-light)', padding: '0 4px', borderRadius: 2 }}>{sz}: {Number(usage).toFixed(2)}{record.unit || ''}</span>)}</div>;
                           } catch { /* ignore */ }
                         }
                         return <span style={{ color: 'var(--color-text-tertiary)' }}>{record.size || '-'}</span>;

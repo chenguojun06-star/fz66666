@@ -20,7 +20,7 @@ const PredictionCard: React.FC<PredictionCardProps> = ({
     <div style={{
       background: 'var(--color-bg-base)',
       border: '1px solid #d6e8ff',
-      borderLeft: '4px solid #1677ff',
+      borderLeft: '4px solid var(--color-primary)',
       borderRadius: 6,
       padding: '8px 12px',
       marginBottom: 8,
@@ -33,13 +33,13 @@ const PredictionCard: React.FC<PredictionCardProps> = ({
         ) : prediction?.predictedFinishTime ? (
           <div>
             <span style={{ color: 'var(--color-text-primary)' }}>
-              预计完工：<b style={{ color: '#1677ff', fontSize: 14 }}>
+              预计完工：<b style={{ color: 'var(--color-primary)', fontSize: 14 }}>
                 {dayjs(prediction.predictedFinishTime).format('MM-DD')}
               </b>
             </span>
             {(prediction.confidence != null) && (
               <span style={{ color: 'var(--color-text-secondary)', marginLeft: 4 }}>
-                置信 <b style={{ color: prediction.confidence >= 70 ? '#52c41a' : prediction.confidence >= 40 ? '#fa8c16' : '#ff4d4f' }}>
+                置信 <b style={{ color: prediction.confidence >= 70 ? 'var(--color-success)' : prediction.confidence >= 40 ? 'var(--color-warning)' : 'var(--color-danger)' }}>
                   {prediction.confidence}%
                 </b>
               </span>

@@ -890,6 +890,77 @@ public class AppStoreOrchestrator {
         return order;
     }
 
+    /**
+     * 【管理员】查询所有租户的应用购买订单
+     * 使用 JdbcTemplate 原生 SQL，彻底绕开 MyBatis-Plus 租户拦截器
+     * 超管必须能看到全部租户的订单，不受任何租户过滤影响
+     */
+    public List<AppOrder> adminOrderList(Map<String, Object> params) {
+        if (jdbcTemplate == null) {
+            throw new RuntimeException("数据库连接不可用");
+        }
+        StringBuilder sql = new StringBuilder(
+            "SELECT id, order_no, tenant_id, tenant_name, app_id, app_code, app_name, " +
+            "order_type, subscription_type, user_count, unit_price, total_amount, " +
+            "discount_amount, actual_amount, status, payment_method, payment_time, " +
+            "contact_name, contact_phone, contact_email, company_name, " +
+            "invoice_required, invoice_title, invoice_tax_no, remark, created_by, " +
+            "create_time, update_time " +
+            "FROM t_app_order WHERE delete_flag = 0"
+        );
+        List<Object> args = new ArrayList<>();
+
+        String statusFilter = (params != null && params.containsKey("status") && params.get("status") != null)
+                ? params.get("status").toString().trim() : "";
+        if (!statusFilter.isEmpty()) {
+            sql.append(" AND status = ?");
+            args.add(statusFilter);
+        }
+        sql.append(" ORDER BY create_time DESC");
+
+        List<AppOrder> orders = jdbcTemplate.query(
+            sql.toString(), args.toArray(),
+            new org.springframework.jdbc.core.BeanPropertyRowMapper<>(AppOrder.class)
+        );
+        log.info("[AdminOrderList] 超管查询全量订单：共 {} 条，状态过滤={}",
+                orders.size(), statusFilter.isEmpty() ? "全部" : statusFilter);
+        return orders;
+    }
+
+    /**
+     * 【管理员】获取通知配置（Server酱 Key，支持脱敏返回）
+     */
+    public String getNotifyServerChanKey() {
+        if (jdbcTemplate == null) {
+            return "";
+        }
+        try {
+            List<String> rows = jdbcTemplate.queryForList(
+                "SELECT param_value FROM t_param_config WHERE param_key = 'notify.serverchan.key' LIMIT 1",
+                String.class);
+            return rows.isEmpty() ? "" : (rows.get(0) == null ? "" : rows.get(0));
+        } catch (Exception e) {
+            log.warn("读取通知配置失败: {}", e.getMessage());
+            return "";
+        }
+    }
+
+    /**
+     * 【管理员】保存 Server酱 通知 Key（保存到数据库，热更新无需重启）
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void saveNotifyServerChanKey(String key) {
+        if (jdbcTemplate == null) {
+            throw new RuntimeException("数据库连接不可用");
+        }
+        jdbcTemplate.update(
+            "INSERT INTO t_param_config (param_key, param_value, param_desc) VALUES (?, ?, ?) " +
+            "ON DUPLICATE KEY UPDATE param_value = VALUES(param_value)",
+            "notify.serverchan.key", key,
+            "Server酱微信推送Key（在 sct.ftqq.com 获取）");
+        log.info("[通知配置] 超管更新Server酱Key: configured={}", !key.isBlank());
+    }
+
     private String fixMojibakeString(String text) {
         if (text == null || text.isEmpty()) return text;
         boolean hasLatin1Ext = false;

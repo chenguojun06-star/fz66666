@@ -74,7 +74,7 @@ const columns: ColumnsType<SystemIssueItem> = [
       <Badge
         count={count}
         overflowCount={9999}
-        style={{ backgroundColor: record.level === 'ERROR' ? '#ff4d4f' : record.level === 'WARN' ? '#faad14' : '#1677ff' }}
+        style={{ backgroundColor: record.level === 'ERROR' ? 'var(--color-danger)' : record.level === 'WARN' ? 'var(--color-warning)' : 'var(--color-primary)' }}
       />
     ),
   },
@@ -185,22 +185,22 @@ export default function SystemIssueBoard() {
       {error && <Alert title="检查失败" description={error} type="error" showIcon style={{ marginBottom: 16 }} />}
       <Row gutter={16} style={{ marginBottom: 20 }}>
         <Col span={8}>
-          <Card style={{ borderColor: errCount > 0 ? '#ff4d4f' : '#d9d9d9' }}>
+          <Card style={{ borderColor: errCount > 0 ? 'var(--color-danger)' : 'var(--color-border-antd)' }}>
             <Space>
-              <BugOutlined style={{ fontSize: 22, color: errCount > 0 ? '#ff4d4f' : '#aaa' }} />
+              <BugOutlined style={{ fontSize: 22, color: errCount > 0 ? 'var(--color-danger)' : '#aaa' }} />
               <div>
-                <div style={{ fontSize: 24, fontWeight: 700, color: errCount > 0 ? '#ff4d4f' : '#aaa' }}>{errCount}</div>
+                <div style={{ fontSize: 24, fontWeight: 700, color: errCount > 0 ? 'var(--color-danger)' : '#aaa' }}>{errCount}</div>
                 <div style={{ fontSize: 14, color: '#888' }}>紧急问题</div>
               </div>
             </Space>
           </Card>
         </Col>
         <Col span={8}>
-          <Card style={{ borderColor: warnCount > 0 ? '#faad14' : '#d9d9d9' }}>
+          <Card style={{ borderColor: warnCount > 0 ? 'var(--color-warning)' : 'var(--color-border-antd)' }}>
             <Space>
-              <WarningOutlined style={{ fontSize: 22, color: warnCount > 0 ? '#faad14' : '#aaa' }} />
+              <WarningOutlined style={{ fontSize: 22, color: warnCount > 0 ? 'var(--color-warning)' : '#aaa' }} />
               <div>
-                <div style={{ fontSize: 24, fontWeight: 700, color: warnCount > 0 ? '#faad14' : '#aaa' }}>{warnCount}</div>
+                <div style={{ fontSize: 24, fontWeight: 700, color: warnCount > 0 ? 'var(--color-warning)' : '#aaa' }}>{warnCount}</div>
                 <div style={{ fontSize: 14, color: '#888' }}>警告问题</div>
               </div>
             </Space>
@@ -209,9 +209,9 @@ export default function SystemIssueBoard() {
         <Col span={8}>
           <Card>
             <Space>
-              <CheckCircleOutlined style={{ fontSize: 22, color: infoCount > 0 ? '#1677ff' : '#aaa' }} />
+              <CheckCircleOutlined style={{ fontSize: 22, color: infoCount > 0 ? 'var(--color-primary)' : '#aaa' }} />
               <div>
-                <div style={{ fontSize: 24, fontWeight: 700, color: '#1677ff' }}>{infoCount}</div>
+                <div style={{ fontSize: 24, fontWeight: 700, color: 'var(--color-primary)' }}>{infoCount}</div>
                 <div style={{ fontSize: 14, color: '#888' }}>提示信息</div>
               </div>
             </Space>
@@ -265,7 +265,7 @@ export default function SystemIssueBoard() {
     <div style={{ padding: '24px', maxWidth: 1100 }}>
       <Space style={{ marginBottom: 16, width: '100%', justifyContent: 'space-between' }} wrap>
         <Title level={4} style={{ margin: 0 }}>
-          <BugOutlined style={{ marginRight: 8, color: errCount > 0 ? '#ff4d4f' : '#1677ff' }} />
+          <BugOutlined style={{ marginRight: 8, color: errCount > 0 ? 'var(--color-danger)' : 'var(--color-primary)' }} />
           系统问题看板
         </Title>
         <Space>
@@ -289,7 +289,7 @@ export default function SystemIssueBoard() {
               <span>
                 <BugOutlined />
                 系统问题
-                {errCount > 0 && <Badge count={errCount} style={{ marginLeft: 6, backgroundColor: '#ff4d4f' }} />}
+                {errCount > 0 && <Badge count={errCount} style={{ marginLeft: 6, backgroundColor: 'var(--color-danger)' }} />}
               </span>
             ),
             children: issueTab,
@@ -300,7 +300,7 @@ export default function SystemIssueBoard() {
               <span>
                 <CodeOutlined />
                 前端异常
-                {feErrors.length > 0 && <Badge count={feErrors.length} overflowCount={99} style={{ marginLeft: 6, backgroundColor: '#faad14' }} />}
+                {feErrors.length > 0 && <Badge count={feErrors.length} overflowCount={99} style={{ marginLeft: 6, backgroundColor: 'var(--color-warning)' }} />}
               </span>
             ),
             children: feTab,
@@ -309,8 +309,8 @@ export default function SystemIssueBoard() {
       />
 
       <style>{`
-        .issue-row-error td { background: #fff2f0 !important; }
-        .issue-row-warn  td { background: #fffbe6 !important; }
+        .issue-row-error td { background: #F6FFED !important; }
+        .issue-row-warn  td { background: #FFFBE6 !important; }
       `}</style>
     </div>
   );

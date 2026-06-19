@@ -53,7 +53,7 @@ public class ProductSkuController {
         if (stockUpdate.getQuantity() == null) {
             return Result.fail("Quantity cannot be null");
         }
-        productSkuService.updateStock(stockUpdate.getSkuCode(), stockUpdate.getQuantity());
+        productSkuOrchestrator.updateStock(stockUpdate.getSkuCode(), stockUpdate.getQuantity());
         return Result.success();
     }
 

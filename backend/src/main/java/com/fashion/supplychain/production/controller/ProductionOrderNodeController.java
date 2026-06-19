@@ -16,7 +16,7 @@ import java.util.Map;
 
 /**
  * 生产订单节点Controller
- * 处理节点操作记录、工序状态查询等
+ * 处理节点操作记录、工序状态查询等。写操作委托给 ProductionOrderOrchestrator。
  */
 @RestController
 @RequestMapping("/api/production/order")
@@ -49,7 +49,6 @@ public class ProductionOrderNodeController {
 
     /**
      * 获取订单的采购完成状态（用于工序明细显示）
-     * 返回采购完成率、操作人、完成时间等信息
      */
     @GetMapping("/procurement-status/{orderId}")
     public Result<?> getProcurementStatus(@PathVariable String orderId) {
@@ -59,7 +58,6 @@ public class ProductionOrderNodeController {
 
     /**
      * 获取订单的所有工序节点状态（裁剪、车缝、尾部、入库等）
-     * 用于工序明细显示完成数量、剩余数量、操作人等信息
      */
     @GetMapping("/process-status/{orderId}")
     public Result<?> getAllProcessStatus(@PathVariable String orderId) {
@@ -72,20 +70,12 @@ public class ProductionOrderNodeController {
      */
     @PostMapping("/node-operations")
     public Result<?> saveNodeOperations(@Valid @RequestBody SaveNodeOperationsRequest body) {
-        TenantAssert.assertTenantContext();
-        Long tenantId = UserContext.tenantId();
-        ProductionOrder order = productionOrderService.lambdaQuery()
-                .eq(ProductionOrder::getId, body.getId())
-                .eq(ProductionOrder::getTenantId, tenantId)
-                .eq(ProductionOrder::getDeleteFlag, 0)
-                .one();
-        if (order == null) {
-            return Result.fail("订单不存在");
+        try {
+            boolean success = productionOrderOrchestrator.saveNodeOperations(body.getId(), body.getNodeOperations());
+            return success ? Result.success("保存成功") : Result.fail("保存失败");
+        } catch (Exception e) {
+            return Result.fail(e.getMessage());
         }
-        TenantAssert.assertBelongsToCurrentTenant(order.getTenantId(), "生产订单");
-        order.setNodeOperations(body.getNodeOperations());
-        boolean success = productionOrderService.updateById(order);
-        return success ? Result.success("保存成功") : Result.fail("保存失败");
     }
 
     public static class SaveNodeOperationsRequest {

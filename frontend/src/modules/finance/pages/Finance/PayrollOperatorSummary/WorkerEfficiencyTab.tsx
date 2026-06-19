@@ -5,13 +5,13 @@ import type { WorkerEfficiencyItem } from '@/services/intelligence/intelligenceA
 import { readPageSize } from '@/utils/pageSizeStore';
 
 const TREND_ICON: Record<string, { icon: string; color: string }> = {
-    up:   { icon: '↑', color: '#52c41a' },
-    down: { icon: '↓', color: '#ff4d4f' },
+    up:   { icon: '↑', color: 'var(--color-success)' },
+    down: { icon: '↓', color: 'var(--color-danger)' },
     flat: { icon: '→', color: 'var(--color-text-tertiary)' },
 };
 
 function ScoreCell({ value }: { value: number }) {
-    const color = value >= 80 ? '#52c41a' : value >= 60 ? '#faad14' : '#ff4d4f';
+    const color = value >= 80 ? 'var(--color-success)' : value >= 60 ? 'var(--color-warning)' : 'var(--color-danger)';
     return (
         <span style={{ fontVariantNumeric: 'tabular-nums', color, fontWeight: 600 }}>
             {value}
@@ -46,7 +46,7 @@ const WorkerEfficiencyTab: React.FC<WorkerEfficiencyTabProps> = ({ list, loading
                     <Progress
                         percent={v ?? 0}
                        
-                        strokeColor={v >= 80 ? '#52c41a' : v >= 60 ? '#faad14' : '#ff4d4f'}
+                        strokeColor={v >= 80 ? 'var(--color-success)' : v >= 60 ? 'var(--color-warning)' : 'var(--color-danger)'}
                         format={() => <span style={{ fontSize: 14 }}>{v}</span>}
                         style={{ flex: 1, minWidth: 80 }}
                     />

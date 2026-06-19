@@ -76,7 +76,7 @@ public class IntelligenceAiAdvisorController {
     private com.fashion.supplychain.intelligence.service.QdrantService qdrantService;
 
     @Autowired
-    private com.fashion.supplychain.intelligence.mapper.IntelligenceMetricsMapper intelligenceMetricsMapper;
+    private com.fashion.supplychain.intelligence.orchestration.IntelligenceMetricsOrchestrator intelligenceMetricsOrchestrator;
 
     @Autowired
     private ProactiveInsightService proactiveInsightService;
@@ -193,7 +193,7 @@ public class IntelligenceAiAdvisorController {
         m.setCommandId(commandId);
         m.setFeedbackScore(score);
         m.setUserFeedback(comment);
-        intelligenceMetricsMapper.update(m,
+        intelligenceMetricsOrchestrator.update(m,
                 new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<com.fashion.supplychain.intelligence.entity.IntelligenceMetrics>()
                         .eq("command_id", commandId));
         log.info("[AiFeedback] commandId={} score={} comment={}", commandId, score, comment);

@@ -164,7 +164,7 @@ const CuttingRatioPanel: React.FC<CuttingRatioPanelProps> = ({
       render: (_: unknown, row: BundleRow) => {
         const alreadyCut = (existingCutQtyByKey ?? {})[`${row.color}-${row.size}`] ?? 0;
         return (
-          <Text style={{ color: alreadyCut > 0 ? '#1677ff' : '#999', fontWeight: alreadyCut > 0 ? 500 : 400 }}>
+          <Text style={{ color: alreadyCut > 0 ? 'var(--color-primary)' : '#999', fontWeight: alreadyCut > 0 ? 500 : 400 }}>
             {alreadyCut} 件
           </Text>
         );
@@ -179,7 +179,7 @@ const CuttingRatioPanel: React.FC<CuttingRatioPanelProps> = ({
         const alreadyCut = (existingCutQtyByKey ?? {})[`${row.color}-${row.size}`] ?? 0;
         const remaining = row.quantity - alreadyCut;
         return (
-          <Text style={{ color: remaining < 0 ? '#cf1322' : remaining === 0 ? '#999' : '#389e0d' }}>
+          <Text style={{ color: remaining < 0 ? 'var(--color-error)' : remaining === 0 ? '#999' : '#389e0d' }}>
             {remaining} 件
           </Text>
         );
@@ -210,7 +210,7 @@ const CuttingRatioPanel: React.FC<CuttingRatioPanelProps> = ({
         const prefix = record.bundles > 1 ? `${record.bundles - 1}×${bs} + ` : '';
         return (
           <Space size={2} align="center">
-            <Text style={{ color: '#1677ff', fontWeight: 500 }}>{prefix}1×</Text>
+            <Text style={{ color: 'var(--color-primary)', fontWeight: 500 }}>{prefix}1×</Text>
             <InputNumber
               min={1}
               max={9999}
@@ -222,7 +222,7 @@ const CuttingRatioPanel: React.FC<CuttingRatioPanelProps> = ({
               onChange={(v) => handleLastBundleChange(record.key, v)}
               style={{ width: 64 }}
             />
-            <Text style={{ color: '#1677ff', fontWeight: 500 }}>件（{record.bundles} 扎）</Text>
+            <Text style={{ color: 'var(--color-primary)', fontWeight: 500 }}>件（{record.bundles} 扎）</Text>
           </Space>
         );
       },

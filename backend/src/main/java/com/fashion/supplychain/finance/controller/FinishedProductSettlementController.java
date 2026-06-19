@@ -6,6 +6,7 @@ import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.finance.entity.FinishedProductSettlement;
+import com.fashion.supplychain.finance.orchestration.SettlementOrchestrator;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.mapper.ProductionOrderMapper;
 import com.fashion.supplychain.production.service.ProductionOrderService;
@@ -57,6 +58,7 @@ public class FinishedProductSettlementController {
     private final FinishedProductSettlementService settlementService;
     private final FinishedProductSettlementExportService exportService;
     private final FinishedSettlementApprovalStatusService approvalStatusService;
+    private final SettlementOrchestrator settlementOrchestrator;
     private final FactoryService factoryService;
     /** 绕过租户拦截器查询订单，用于超管跨租户查看成品结算。 */
     private final ProductionOrderMapper productionOrderMapper;
@@ -274,12 +276,15 @@ public class FinishedProductSettlementController {
             tenantId = UserContext.tenantId();
         }
 
-        approvalStatusService.markApproved(
+        boolean approved = settlementOrchestrator.markApproved(
                 id,
                 tenantId,
                 UserContext.userId(),
                 UserContext.username()
         );
+        if (!approved) {
+            return Result.fail("审批失败");
+        }
 
         return Result.success();
     }
@@ -630,11 +635,10 @@ public class FinishedProductSettlementController {
             return Result.fail("该结算单已取消，无需重复操作");
         }
 
-        FinishedProductSettlement patch = new FinishedProductSettlement();
-        patch.setOrderId(settlement.getOrderId());
-        patch.setStatus("cancelled");
-        patch.setUpdateTime(LocalDateTime.now());
-        settlementService.updateById(patch);
+        boolean success = settlementOrchestrator.cancelSettlement(id);
+        if (!success) {
+            return Result.fail("取消失败");
+        }
 
         return Result.success(null);
     }

@@ -3,10 +3,9 @@ package com.fashion.supplychain.integration.payment.callback;
 import com.fashion.supplychain.integration.config.WechatPayProperties;
 import com.fashion.supplychain.integration.payment.PaymentGateway;
 import com.fashion.supplychain.integration.payment.PaymentManager;
+import com.fashion.supplychain.integration.payment.orchestration.PaymentCallbackOrchestrator;
 import com.fashion.supplychain.integration.record.entity.IntegrationCallbackLog;
 import com.fashion.supplychain.integration.record.service.IntegrationRecordService;
-import com.fashion.supplychain.production.entity.ProductionOrder;
-import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.wechat.pay.java.core.RSAAutoCertificateConfig;
 import com.wechat.pay.java.core.notification.NotificationParser;
 import com.wechat.pay.java.service.payments.model.Transaction;
@@ -30,6 +29,7 @@ import java.util.Map;
  * - 此 Controller 不需要登录认证（第三方平台直接调用）
  * - 通过签名验证防止伪造
  * - 支付成功后，在 handlePaymentSuccess() 中触发业务逻辑
+ * - 所有数据库写操作通过 PaymentCallbackOrchestrator 执行（事务保护）
  * ============================================================
  */
 @Slf4j
@@ -39,7 +39,7 @@ public class PaymentCallbackController {
 
     private final PaymentManager paymentManager;
     private final IntegrationRecordService recordService;
-    private final ProductionOrderService productionOrderService;
+    private final PaymentCallbackOrchestrator paymentCallbackOrchestrator;
     private final WechatPayProperties wechatPayProperties;
 
     @Value("${spring.profiles.active:dev}")
@@ -47,11 +47,11 @@ public class PaymentCallbackController {
 
     public PaymentCallbackController(PaymentManager paymentManager,
                                       IntegrationRecordService recordService,
-                                      @Autowired(required = false) ProductionOrderService productionOrderService,
+                                      @Autowired(required = false) PaymentCallbackOrchestrator paymentCallbackOrchestrator,
                                       @Autowired(required = false) WechatPayProperties wechatPayProperties) {
         this.paymentManager = paymentManager;
         this.recordService = recordService;
-        this.productionOrderService = productionOrderService;
+        this.paymentCallbackOrchestrator = paymentCallbackOrchestrator;
         this.wechatPayProperties = wechatPayProperties;
     }
 
@@ -234,35 +234,15 @@ public class PaymentCallbackController {
         log.info("[支付成功] orderId={} channel={} thirdPartyNo={}",
                 orderId, paymentType.getDisplayName(), thirdPartyNo);
 
-        recordService.updatePaymentStatus(thirdPartyNo, "SUCCESS", null);
-
-        if (productionOrderService != null) {
+        if (paymentCallbackOrchestrator != null) {
             try {
-                ProductionOrder order = productionOrderService.getByOrderNo(orderId);
-                if (order != null) {
-                    String currentStatus = order.getStatus();
-                    if ("pending".equals(currentStatus) || "not_started".equals(currentStatus)) {
-                        order.setStatus("pending");
-                        order.setUpdateTime(java.time.LocalDateTime.now());
-                        String payRemark = "支付成功[" + paymentType.getDisplayName() + "] 流水号:" + thirdPartyNo;
-                        String existingRemark = order.getRemarks();
-                        order.setRemarks(existingRemark != null && !existingRemark.isEmpty()
-                                ? existingRemark + "\n" + payRemark : payRemark);
-                        productionOrderService.updateById(order);
-                        log.info("[支付成功] 订单状态已更新: orderNo={}, status=pending, channel={}",
-                                orderId, paymentType.getDisplayName());
-                    } else {
-                        log.warn("[支付成功] 订单不在可支付状态，跳过状态更新: orderNo={}, currentStatus={}",
-                                orderId, currentStatus);
-                    }
-                } else {
-                    log.warn("[支付成功] 未找到对应生产订单: orderNo={}", orderId);
-                }
+                paymentCallbackOrchestrator.updatePaymentStatus(thirdPartyNo, "SUCCESS");
+                paymentCallbackOrchestrator.handlePaymentSuccess(orderId, thirdPartyNo, paymentType);
             } catch (Exception e) {
-                log.error("[支付成功] 更新订单状态失败: orderNo={}", orderId, e);
+                log.error("[支付成功] 订单状态更新失败: orderNo={}", orderId, e);
             }
         } else {
-            log.warn("[支付成功] ProductionOrderService 不可用，跳过订单状态更新: orderNo={}", orderId);
+            log.warn("[支付成功] PaymentCallbackOrchestrator 不可用，跳过订单状态更新: orderNo={}", orderId);
         }
     }
 
@@ -271,17 +251,11 @@ public class PaymentCallbackController {
      */
     private void handlePaymentClosed(String orderId, PaymentGateway.PaymentType paymentType) {
         log.info("[支付关闭] orderId={} channel={}", orderId, paymentType.getDisplayName());
-        if (productionOrderService != null) {
+        if (paymentCallbackOrchestrator != null) {
             try {
-                ProductionOrder order = productionOrderService.getByOrderNo(orderId);
-                if (order != null && "pending".equals(order.getStatus())) {
-                    order.setStatus("cancelled");
-                    order.setUpdateTime(java.time.LocalDateTime.now());
-                    productionOrderService.updateById(order);
-                    log.info("[支付关闭] 订单已取消: orderNo={}", orderId);
-                }
+                paymentCallbackOrchestrator.handlePaymentClosed(orderId, paymentType);
             } catch (Exception e) {
-                log.error("[支付关闭] 更新订单状态失败: orderNo={}", orderId, e);
+                log.error("[支付关闭] 订单状态更新失败: orderNo={}", orderId, e);
             }
         }
     }

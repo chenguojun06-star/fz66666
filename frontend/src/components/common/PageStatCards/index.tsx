@@ -24,7 +24,7 @@ export interface StatCard {
   items: StatValue | StatValue[];
   /** 点击回调（有此属性时显示为可点击样式） */
   onClick?: () => void;
-  /** 选中时的高亮颜色（如 '#2D7FF9' 或 'var(--color-primary)'），仅在可点击时生效 */
+  /** 选中时的高亮颜色（如 'var(--color-primary)' 或 'var(--color-primary)'），仅在可点击时生效 */
   activeColor?: string;
 }
 
@@ -63,10 +63,10 @@ interface PageStatCardsProps {
 // ===== 色调映射（与 SmartPredictionStrip 保持一致） =====
 const toneColorMap: Record<HintTone, string> = {
   orange: '#d46b08',
-  red: '#cf1322',
+  red: 'var(--color-error)',
   cyan: '#08979c',
   green: '#389e0d',
-  danger: '#cf1322',
+  danger: 'var(--color-error)',
   warning: '#d46b08',
 };
 
@@ -79,7 +79,7 @@ const TAG_FONT_SIZE = '12px';
 const VALUE_FONT_WEIGHT = 600;
 const LABEL_COLOR = 'var(--text-secondary)';
 const BORDER_COLOR = 'var(--border-color)';
-const NEUTRAL_BORDER = '#d9d9d9';
+const NEUTRAL_BORDER = 'var(--color-border-antd)';
 
 /**
  * 页面顶部统计 + 智能提示通用组件
@@ -151,7 +151,7 @@ const PageStatCards: React.FC<PageStatCardsProps> = ({
             : `1px solid ${BORDER_COLOR}`,
           background: isActive && card.activeColor
             ? `${card.activeColor}14`
-            : '#f5f5f5',
+            : 'var(--color-bg-subtle)',
           cursor: isClickable ? 'pointer' : 'default',
           fontSize: TAG_FONT_SIZE,
           lineHeight: 1.5,
@@ -208,7 +208,7 @@ const PageStatCards: React.FC<PageStatCardsProps> = ({
           display: 'inline-flex',
           alignItems: 'center',
           border: `1px solid ${item.active ? color : NEUTRAL_BORDER}`,
-          background: item.active ? `${color}14` : '#fff',
+          background: item.active ? `${color}14` : 'var(--color-bg-base)',
           color,
           borderRadius: TAG_BORDER_RADIUS,
           padding: TAG_PADDING,

@@ -80,7 +80,7 @@ const SkuColorImage: React.FC<SkuColorImageProps> = ({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            background: '#f5f5f5',
+            background: 'var(--color-bg-subtle)',
             borderRadius: 4,
             color: '#ccc',
             fontSize: size * 0.5,

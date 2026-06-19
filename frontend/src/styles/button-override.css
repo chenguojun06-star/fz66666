@@ -26,8 +26,8 @@
 /* ========== 主按钮 - 描边蓝色 ========== */
 .ant-btn-primary:not(.ant-btn-background-ghost) {
   background: transparent !important;
-  border: 1px solid var(--color-primary, #2D7FF9) !important;
-  color: var(--color-primary, #2D7FF9) !important;
+  border: 1px solid var(--color-primary, var(--color-primary)) !important;
+  color: var(--color-primary, var(--color-primary)) !important;
   box-shadow: none !important;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
@@ -47,8 +47,8 @@
 .ant-btn-primary:disabled:not(.ant-btn-background-ghost),
 .ant-btn-primary.ant-btn-disabled:not(.ant-btn-background-ghost),
 .ant-btn-primary[disabled]:not(.ant-btn-background-ghost) {
-  background: var(--color-bg-disabled, #d9d9d9) !important;
-  border-color: var(--color-bg-disabled, #d9d9d9) !important;
+  background: var(--color-bg-disabled, var(--color-border-antd)) !important;
+  border-color: var(--color-bg-disabled, var(--color-border-antd)) !important;
   color: rgba(0, 0, 0, 0.25) !important;
   box-shadow: none !important;
   cursor: not-allowed !important;
@@ -56,13 +56,13 @@
 
 /* ========== 次要按钮 ========== */
 .ant-btn-default {
-  border-color: var(--color-border, #d9d9d9) !important;
+  border-color: var(--color-border, var(--color-border-antd)) !important;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
 
 .ant-btn-default:hover {
-  border-color: var(--color-primary, #2D7FF9) !important;
-  color: var(--color-primary, #2D7FF9) !important;
+  border-color: var(--color-primary, var(--color-primary)) !important;
+  color: var(--color-primary, var(--color-primary)) !important;
   background: rgba(45, 127, 249, 0.04) !important;
 }
 
@@ -73,32 +73,32 @@
 
 /* ========== 危险按钮 - 描边红色 ========== */
 .ant-btn-dangerous {
-  color: var(--color-danger, #ff4d4f) !important;
-  border-color: var(--color-danger, #ff4d4f) !important;
+  color: var(--color-danger, var(--color-danger)) !important;
+  border-color: var(--color-danger, var(--color-danger)) !important;
   background: transparent !important;
 }
 
 .ant-btn-dangerous:hover {
-  color: var(--color-danger-dark, #cf1322) !important;
-  border-color: var(--color-danger-dark, #cf1322) !important;
+  color: var(--color-danger-dark, var(--color-error)) !important;
+  border-color: var(--color-danger-dark, var(--color-error)) !important;
   background: rgba(255, 77, 79, 0.06) !important;
 }
 
 .ant-btn-dangerous.ant-btn-primary {
   background: transparent !important;
-  border-color: var(--color-danger, #ff4d4f) !important;
-  color: var(--color-danger, #ff4d4f) !important;
+  border-color: var(--color-danger, var(--color-danger)) !important;
+  color: var(--color-danger, var(--color-danger)) !important;
 }
 
 .ant-btn-dangerous.ant-btn-primary:hover {
   background: rgba(255, 77, 79, 0.06) !important;
-  border-color: var(--color-danger-dark, #cf1322) !important;
-  color: var(--color-danger-dark, #cf1322) !important;
+  border-color: var(--color-danger-dark, var(--color-error)) !important;
+  color: var(--color-danger-dark, var(--color-error)) !important;
 }
 
 /* ========== 链接按钮 ========== */
 .ant-btn-link {
-  color: var(--color-primary, #2D7FF9) !important;
+  color: var(--color-primary, var(--color-primary)) !important;
 }
 
 .ant-btn-link:hover {
@@ -107,8 +107,8 @@
 
 /* ========== 幽灵按钮 ========== */
 .ant-btn-background-ghost {
-  border-color: var(--color-primary, #2D7FF9) !important;
-  color: var(--color-primary, #2D7FF9) !important;
+  border-color: var(--color-primary, var(--color-primary)) !important;
+  color: var(--color-primary, var(--color-primary)) !important;
 }
 
 .ant-btn-background-ghost:hover {
@@ -117,17 +117,17 @@
 
 /* ========== 虚线按钮 ========== */
 .ant-btn-dashed {
-  border-color: var(--color-border, #d9d9d9) !important;
+  border-color: var(--color-border, var(--color-border-antd)) !important;
 }
 
 .ant-btn-dashed:hover {
-  border-color: var(--color-primary, #2D7FF9) !important;
-  color: var(--color-primary, #2D7FF9) !important;
+  border-color: var(--color-primary, var(--color-primary)) !important;
+  color: var(--color-primary, var(--color-primary)) !important;
 }
 
 /* ========== 文字按钮 ========== */
 .ant-btn-text:hover {
-  background: var(--color-bg-container, #f5f5f5) !important;
+  background: var(--color-bg-container, var(--color-bg-subtle)) !important;
 }
 
 /* ========== 按钮组内按钮无独立圆角 ========== */

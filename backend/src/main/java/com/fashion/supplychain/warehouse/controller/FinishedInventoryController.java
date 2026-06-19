@@ -88,11 +88,21 @@ public class FinishedInventoryController {
      */
     @PostMapping("/confirm-payment")
     public Result<Void> confirmPayment(@RequestBody Map<String, Object> params) {
-        String id = (String) params.get("id");
+        Object idObj = params.get("id");
+        String id = idObj != null ? String.valueOf(idObj).trim() : null;
+        BigDecimal paidAmount = null;
         Object amountObj = params.get("paidAmount");
-        BigDecimal paidAmount = amountObj instanceof Number
-                ? BigDecimal.valueOf(((Number) amountObj).doubleValue())
-                : new BigDecimal(String.valueOf(amountObj));
+        if (amountObj != null) {
+            if (amountObj instanceof Number) {
+                paidAmount = BigDecimal.valueOf(((Number) amountObj).doubleValue());
+            } else {
+                try {
+                    paidAmount = new BigDecimal(amountObj.toString().trim());
+                } catch (NumberFormatException e) {
+                    return Result.fail("金额格式不正确");
+                }
+            }
+        }
         finishedInventoryOrchestrator.confirmPayment(id, paidAmount);
         return Result.success(null);
     }
@@ -148,15 +158,23 @@ public class FinishedInventoryController {
 
     @PostMapping("/scan-inbound")
     public Result<ProductWarehousing> scanInbound(@RequestBody Map<String, Object> params) {
-        String scanCode = (String) params.get("scanCode");
+        Object scanCodeObj = params.get("scanCode");
+        String scanCode = scanCodeObj != null ? String.valueOf(scanCodeObj).trim() : null;
         Integer quantity = params.get("quantity") instanceof Number ? ((Number) params.get("quantity")).intValue() : 1;
-        String warehouseLocation = (String) params.get("warehouseLocation");
-        String warehouseAreaId = params.get("warehouseAreaId") != null ? String.valueOf(params.get("warehouseAreaId")) : null;
-        String sourceType = (String) params.get("sourceType");
-        String remark = (String) params.get("remark");
-        String styleNo = (String) params.get("styleNo");
-        String color = (String) params.get("color");
-        String size = (String) params.get("size");
+        Object warehouseLocationObj = params.get("warehouseLocation");
+        String warehouseLocation = warehouseLocationObj != null ? String.valueOf(warehouseLocationObj).trim() : null;
+        Object warehouseAreaIdObj = params.get("warehouseAreaId");
+        String warehouseAreaId = warehouseAreaIdObj != null ? String.valueOf(warehouseAreaIdObj).trim() : null;
+        Object sourceTypeObj = params.get("sourceType");
+        String sourceType = sourceTypeObj != null ? String.valueOf(sourceTypeObj).trim() : null;
+        Object remarkObj = params.get("remark");
+        String remark = remarkObj != null ? String.valueOf(remarkObj).trim() : null;
+        Object styleNoObj = params.get("styleNo");
+        String styleNo = styleNoObj != null ? String.valueOf(styleNoObj).trim() : null;
+        Object colorObj = params.get("color");
+        String color = colorObj != null ? String.valueOf(colorObj).trim() : null;
+        Object sizeObj = params.get("size");
+        String size = sizeObj != null ? String.valueOf(sizeObj).trim() : null;
         ProductWarehousing result = finishedWarehouseOperationOrchestrator.scanInbound(
                 scanCode, quantity, warehouseLocation, warehouseAreaId, sourceType, remark,
                 styleNo, color, size);
@@ -165,11 +183,15 @@ public class FinishedInventoryController {
 
     @PostMapping("/scan-outbound")
     public Result<ProductOutstock> scanOutbound(@RequestBody Map<String, Object> params) {
-        String scanCode = (String) params.get("scanCode");
+        Object scanCodeObj = params.get("scanCode");
+        String scanCode = scanCodeObj != null ? String.valueOf(scanCodeObj).trim() : null;
         Integer quantity = params.get("quantity") instanceof Number ? ((Number) params.get("quantity")).intValue() : 1;
-        String outstockType = (String) params.get("outstockType");
-        String warehouseAreaId = params.get("warehouseAreaId") != null ? String.valueOf(params.get("warehouseAreaId")) : null;
-        String remark = (String) params.get("remark");
+        Object outstockTypeObj = params.get("outstockType");
+        String outstockType = outstockTypeObj != null ? String.valueOf(outstockTypeObj).trim() : null;
+        Object warehouseAreaIdObj = params.get("warehouseAreaId");
+        String warehouseAreaId = warehouseAreaIdObj != null ? String.valueOf(warehouseAreaIdObj).trim() : null;
+        Object remarkObj = params.get("remark");
+        String remark = remarkObj != null ? String.valueOf(remarkObj).trim() : null;
         ProductOutstock result = finishedWarehouseOperationOrchestrator.scanOutbound(scanCode, quantity, outstockType, warehouseAreaId, remark);
         return Result.success(result);
     }
@@ -196,7 +218,8 @@ public class FinishedInventoryController {
 
     @PostMapping("/edit")
     public Result<ProductWarehousing> edit(@RequestBody Map<String, Object> params) {
-        String warehousingId = (String) params.get("warehousingId");
+        Object warehousingIdObj = params.get("warehousingId");
+        String warehousingId = warehousingIdObj != null ? String.valueOf(warehousingIdObj).trim() : null;
         @SuppressWarnings("unchecked")
         Map<String, Object> changes = (Map<String, Object>) params.get("changes");
         ProductWarehousing updated = finishedWarehouseOperationOrchestrator.edit(warehousingId, changes);

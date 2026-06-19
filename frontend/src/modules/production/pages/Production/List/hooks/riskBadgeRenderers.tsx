@@ -123,10 +123,10 @@ export function renderStagnantBadge(stagnantDays: number | undefined) {
 
 export function renderSlaStatus(record: ProductionOrder) {
   const slaMap: Record<string, { color: string; text: string }> = {
-    on_track: { color: '#52c41a', text: '正常' },
-    at_risk: { color: '#faad14', text: '预警' },
-    breached: { color: '#ff4d4f', text: '超期' },
-    completed: { color: '#1890ff', text: '达标' },
+    on_track: { color: 'var(--color-success)', text: '正常' },
+    at_risk: { color: 'var(--color-warning)', text: '预警' },
+    breached: { color: 'var(--color-danger)', text: '超期' },
+    completed: { color: 'var(--color-info)', text: '达标' },
   };
   const sla = slaMap[record.deliverySlaStatus || ''] || null;
   if (!sla) return null;

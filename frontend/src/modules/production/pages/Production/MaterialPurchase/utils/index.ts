@@ -312,8 +312,8 @@ export const buildPurchaseSheetHtml = (
           .block{margin-top:14px}
           .size-table{border-collapse:collapse;font-size:12px}
           .size-table th,.size-table td{border:1px solid #d1d5db;padding:6px 8px;white-space:nowrap;vertical-align:middle;text-align:center}
-          .size-table .row-head{background:#fafafa}
-          .size-table .total-cell{min-width:140px;text-align:center;background:#fafafa}
+          .size-table .row-head{background:var(--color-bg-container)}
+          .size-table .total-cell{min-width:140px;text-align:center;background:var(--color-bg-container)}
           .section{margin-top:18px}
           .section h3{margin:0 0 8px 0;font-size:14px}
           .data-table{width:100%;border-collapse:collapse;font-size:12px}

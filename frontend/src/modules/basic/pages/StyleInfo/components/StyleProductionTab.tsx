@@ -262,7 +262,7 @@ const StyleProductionTab: React.FC<Props> = ({
 
       {/* ===== 样衣审核区域 ===== */}
       <div style={{
-        border: '1px solid var(--color-border, #e5e7eb)',
+        border: '1px solid var(--color-border, var(--color-border))',
         borderRadius: 6,
         padding: '12px 16px',
         marginBottom: 16,
@@ -272,11 +272,11 @@ const StyleProductionTab: React.FC<Props> = ({
             ? 'rgba(250,173,20,0.05)'
             : sampleReviewStatus === 'REJECT'
               ? 'rgba(255,77,79,0.04)'
-              : 'var(--color-bg-card, #fafafa)',
+              : 'var(--color-bg-card, var(--color-bg-container))',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: sampleReviewStatus ? 8 : 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontWeight: 600, fontSize: 14, paddingLeft: 10, borderLeft: '3px solid #2D7FF9' }}>样衣审核</span>
+            <span style={{ fontWeight: 600, fontSize: 14, paddingLeft: 10, borderLeft: '3px solid var(--color-primary)' }}>样衣审核</span>
             {reviewStatusTag(sampleReviewStatus)}
             {!sampleReviewStatus && !sampleCompleted && !productionCompletedTime && (
               <span style={{ color: 'var(--neutral-text-secondary)', fontSize: 'var(--font-size-xs)' }}>
@@ -327,11 +327,11 @@ const StyleProductionTab: React.FC<Props> = ({
       </div>
 
       <div style={{
-        border: '1px solid var(--color-border, #e5e7eb)',
+        border: '1px solid var(--color-border, var(--color-border))',
         borderRadius: 6,
         padding: '16px',
         marginBottom: 16,
-        background: 'var(--color-bg-card, #fff)',
+        background: 'var(--color-bg-card, var(--color-bg-base))',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -340,7 +340,7 @@ const StyleProductionTab: React.FC<Props> = ({
               fontSize: 15,
               letterSpacing: 0.5,
               paddingLeft: 10,
-              borderLeft: '3px solid #2D7FF9',
+              borderLeft: '3px solid var(--color-primary)',
             }}>生产要求</span>
           </div>
           <Space size={8} wrap>
@@ -366,7 +366,7 @@ const StyleProductionTab: React.FC<Props> = ({
             )}
           </Space>
         </div>
-        <div style={{ color: 'var(--color-text-tertiary, #6b7280)', fontSize: 14, marginBottom: 8 }}>
+        <div style={{ color: 'var(--color-text-tertiary, var(--color-text-secondary))', fontSize: 14, marginBottom: 8 }}>
           提示：相关文件请在"文件管理"标签页统一上传
         </div>
         <Input.TextArea
@@ -466,7 +466,7 @@ const StyleProductionTab: React.FC<Props> = ({
             transition: 'border-color 0.3s', marginBottom: 12, outline: 'none',
           }}
           onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--primary-color)'; }}
-          onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = '#d9d9d9'; }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--color-border-antd)'; }}
         >
           {ocrFile ? (
             <div>
@@ -498,7 +498,7 @@ const StyleProductionTab: React.FC<Props> = ({
           开始 AI 识别
         </Button>
         {ocrError && (
-          <div style={{ color: 'var(--error-color, #ff4d4f)', marginTop: 8, fontSize: 'var(--font-size-xs)' }}>
+          <div style={{ color: 'var(--error-color, var(--color-danger))', marginTop: 8, fontSize: 'var(--font-size-xs)' }}>
             {ocrError}
           </div>
         )}

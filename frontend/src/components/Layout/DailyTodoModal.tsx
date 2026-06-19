@@ -85,11 +85,11 @@ const isInPopupWindow = () => {
 
 // ── 颜色常量 ─────────────────────────────────────────────────────────
 const LEVEL_COLOR: Record<string, string> = {
-  danger: '#ff4d4f', warning: '#fa8c16', info: '#1677ff', success: '#52c41a',
+  danger: 'var(--color-danger)', warning: 'var(--color-warning)', info: 'var(--color-primary)', success: 'var(--color-success)',
 };
 
 const LEVEL_BG: Record<string, string> = {
-  danger: '#fff1f0', warning: '#fff7e6', info: '#e6f4ff', success: '#f6ffed',
+  danger: '#FFF1F0', warning: '#FFF7E6', info: '#e6f4ff', success: '#f6ffed',
 };
 
 const LEVEL_BORDER: Record<string, string> = {
@@ -115,8 +115,8 @@ const MetricCard: React.FC<{
 const DecisionCardRow: React.FC<{
   card: DecisionCard; onNav: (path: string) => void;
 }> = ({ card, onNav }) => {
-  const borderColor = LEVEL_BORDER[card.level] || '#d9d9d9';
-  const bgColor = LEVEL_BG[card.level] || '#fafafa';
+  const borderColor = LEVEL_BORDER[card.level] || 'var(--color-border-antd)';
+  const bgColor = LEVEL_BG[card.level] || 'var(--color-bg-container)';
   const accentColor = LEVEL_COLOR[card.level] || '#595959';
 
   return (
@@ -192,29 +192,29 @@ function buildTrendOption(trend: TrendPoint[]) {
       axisLabel: { fontSize: 14, color: 'var(--color-text-tertiary)' },
     },
     yAxis: {
-      type: 'value' as const, splitLine: { lineStyle: { color: '#f5f5f5' } },
+      type: 'value' as const, splitLine: { lineStyle: { color: 'var(--color-bg-subtle)' } },
       axisLabel: { fontSize: 14, color: 'var(--color-text-tertiary)' },
     },
     series: [
       {
         name: '扫码次数', type: 'line', data: scans, smooth: true,
         symbol: 'circle', symbolSize: 5,
-        lineStyle: { width: 2, color: '#1677ff' },
-        itemStyle: { color: '#1677ff' },
+        lineStyle: { width: 2, color: 'var(--color-primary)' },
+        itemStyle: { color: 'var(--color-primary)' },
         areaStyle: { color: 'rgba(22,119,255,0.08)' },
       },
       {
         name: '入库单数', type: 'line', data: wh, smooth: true,
         symbol: 'circle', symbolSize: 5,
-        lineStyle: { width: 2, color: '#52c41a' },
-        itemStyle: { color: '#52c41a' },
+        lineStyle: { width: 2, color: 'var(--color-success)' },
+        itemStyle: { color: 'var(--color-success)' },
         areaStyle: { color: 'rgba(82,196,26,0.08)' },
       },
       {
         name: '下单数', type: 'line', data: orders, smooth: true,
         symbol: 'circle', symbolSize: 5,
-        lineStyle: { width: 2, color: '#fa8c16' },
-        itemStyle: { color: '#fa8c16' },
+        lineStyle: { width: 2, color: 'var(--color-warning)' },
+        itemStyle: { color: 'var(--color-warning)' },
         areaStyle: { color: 'rgba(250,140,22,0.08)' },
       },
     ],
@@ -225,10 +225,10 @@ function buildTrendOption(trend: TrendPoint[]) {
 function getHealthLevel(brief: BriefData): { label: string; color: string; tagColor: string } {
   const overdue = Number(brief.overdueOrderCount) || 0;
   const risk = Number(brief.highRiskOrderCount) || 0;
-  if (overdue > 3 || risk > 5) return { label: '需紧急处理', color: '#ff4d4f', tagColor: 'error' };
-  if (overdue > 0 || risk > 2) return { label: '有待办需关注', color: '#fa8c16', tagColor: 'warning' };
-  if (risk > 0) return { label: '整体可控', color: '#1677ff', tagColor: 'processing' };
-  return { label: '运行良好', color: '#52c41a', tagColor: 'success' };
+  if (overdue > 3 || risk > 5) return { label: '需紧急处理', color: 'var(--color-danger)', tagColor: 'error' };
+  if (overdue > 0 || risk > 2) return { label: '有待办需关注', color: 'var(--color-warning)', tagColor: 'warning' };
+  if (risk > 0) return { label: '整体可控', color: 'var(--color-primary)', tagColor: 'processing' };
+  return { label: '运行良好', color: 'var(--color-success)', tagColor: 'success' };
 }
 
 // ── 趋势箭头 ──────────────────────────────────────────────────────────
@@ -241,7 +241,7 @@ function TrendArrow({ trend }: { trend: TrendPoint[] }) {
   if (pct === 0) return null;
   const up = pct > 0;
   return (
-    <span style={{ fontSize: 14, color: up ? '#52c41a' : '#ff4d4f', marginLeft: 6 }}>
+    <span style={{ fontSize: 14, color: up ? 'var(--color-success)' : 'var(--color-danger)', marginLeft: 6 }}>
       {up ? <ArrowUpOutlined /> : <ArrowDownOutlined />} {Math.abs(pct)}%
     </span>
   );
@@ -350,19 +350,19 @@ const DailyTodoModal: React.FC = () => {
           {/* ── 核心指标卡片 ── */}
           <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
             <MetricCard
-              label="逾期订单" color="#ff4d4f" bg="#fff1f0"
+              label="逾期订单" color="var(--color-danger)" bg="#FFF1F0"
               value={Number(brief.overdueOrderCount) || 0} suffix="单"
             />
             <MetricCard
-              label="高风险订单" color="#fa8c16" bg="#fff7e6"
+              label="高风险订单" color="var(--color-warning)" bg="#FFF7E6"
               value={Number(brief.highRiskOrderCount) || 0} suffix="单"
             />
             <MetricCard
-              label="今日扫码" color="#1677ff" bg="#e6f4ff"
+              label="今日扫码" color="var(--color-primary)" bg="#e6f4ff"
               value={Number(brief.todayScanCount) || 0} suffix="次"
             />
             <MetricCard
-              label="昨日入库" color="#52c41a" bg="#f6ffed"
+              label="昨日入库" color="var(--color-success)" bg="#f6ffed"
               value={Number(brief.yesterdayWarehousingCount) || 0} suffix="单"
             />
           </div>
@@ -414,14 +414,14 @@ const DailyTodoModal: React.FC = () => {
               </div>
               {(Number(brief.overdueOrderCount) || 0) > 0 && (
                 <ActionRow
-                  icon={<ExclamationCircleOutlined />} color="#ff4d4f"
+                  icon={<ExclamationCircleOutlined />} color="var(--color-danger)"
                   title={`${brief.overdueOrderCount} 单逾期 — 需立即联系工厂确认进度并推动出货`}
                   path="/production/progress-detail" onNav={handleNav}
                 />
               )}
               {(Number(brief.highRiskOrderCount) || 0) > 0 && (
                 <ActionRow
-                  icon={<WarningOutlined />} color="#fa8c16"
+                  icon={<WarningOutlined />} color="var(--color-warning)"
                   title={`${brief.highRiskOrderCount} 单高风险 — 7天内截止但进度不足50%，今日必须跟进`}
                   path="/production/progress-detail" onNav={handleNav}
                 />
@@ -458,7 +458,7 @@ const DailyTodoModal: React.FC = () => {
                   <span style={{
                     position: 'absolute', left: 0, top: 3,
                     width: 5, height: 5, borderRadius: '50%',
-                    background: '#722ed1',
+                    background: 'var(--color-accent-purple)',
                   }} />
                   {s}
                 </div>
@@ -488,7 +488,7 @@ const ActionRow: React.FC<{
       marginBottom: 8, cursor: 'pointer', transition: 'background 0.15s',
     }}
     onMouseEnter={e => ((e.currentTarget as HTMLDivElement).style.background = '#f0f5ff')}
-    onMouseLeave={e => ((e.currentTarget as HTMLDivElement).style.background = '#fafafa')}
+    onMouseLeave={e => ((e.currentTarget as HTMLDivElement).style.background = 'var(--color-bg-container)')}
   >
     <span style={{ fontSize: 13, color }}>{icon}</span>
     <span style={{ flex: 1, fontSize: 14, color: '#262626' }}>{title}</span>

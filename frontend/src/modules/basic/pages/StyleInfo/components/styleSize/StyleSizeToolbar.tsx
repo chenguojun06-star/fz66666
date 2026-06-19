@@ -314,7 +314,7 @@ const StyleSizeToolbar: React.FC<Props> = ({
             
             {!ocrLoading && ocrFile && (
               <div style={{ marginTop: 16, padding: 12, background: '#f6ffed', borderRadius: 8, border: '1px solid #b7eb8f' }}>
-                <p style={{ margin: 0, color: '#52c41a', fontWeight: 500 }}>
+                <p style={{ margin: 0, color: 'var(--color-success)', fontWeight: 500 }}>
                   已选择: {ocrFile.name}
                 </p>
                 <p style={{ margin: '8px 0 0', color: '#8c8c8c', fontSize: 12 }}>

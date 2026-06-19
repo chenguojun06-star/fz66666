@@ -11,8 +11,8 @@ const STATUS_TABS = [
 ];
 
 const PRIORITY_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
-  high: { label: '紧急', color: '#cf1322', bg: '#fff1f0' },
-  medium: { label: '一般', color: '#d48806', bg: '#fffbe6' },
+  high: { label: '紧急', color: 'var(--color-error)', bg: '#FFF1F0' },
+  medium: { label: '一般', color: '#d48806', bg: '#FFFBE6' },
   low: { label: '低', color: '#389e0d', bg: '#f6ffed' },
 };
 
@@ -76,7 +76,7 @@ const TaskListView: React.FC<Props> = ({ tasks, loading, onClaim, onComplete, on
   const getOrderLinkStatusColor = (status?: string) => {
     switch (status) {
       case 'LINKED': return '#389e0d';
-      case 'ORDER_NOT_FOUND': return '#cf1322';
+      case 'ORDER_NOT_FOUND': return 'var(--color-error)';
       default: return '#8c8c8c';
     }
   };
@@ -119,7 +119,7 @@ const TaskListView: React.FC<Props> = ({ tasks, loading, onClaim, onComplete, on
                     {getOrderLinkStatusLabel(task.orderLinkStatus)}
                   </span>
                 )}
-                {task.progressChangeMonitorEnabled && <span className={styles.sysTag} style={{ background: '#e6f7ff', color: '#1890ff' }}>监控中</span>}
+                {task.progressChangeMonitorEnabled && <span className={styles.sysTag} style={{ background: '#e6f7ff', color: 'var(--color-info)' }}>监控中</span>}
                 <span className={styles.taskTitle}>{task.title}</span>
               </div>
               <div className={styles.taskCardBottom}>

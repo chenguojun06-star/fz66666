@@ -192,7 +192,7 @@ const TenantListTab: React.FC = () => {
       <div style={{ marginBottom: 12 }}>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
           {[{ key: '', label: '全部' }, { key: 'pending_review', label: '待审核', color: 'orange' }, { key: 'active', label: '正常', color: 'green' }, { key: 'disabled', label: '停用', color: 'red' }, { key: 'rejected', label: '已拒绝', color: 'default' }].map(tab => (
-            <Tag key={tab.key} color={statusTab === tab.key ? (tab.color || 'blue') : undefined} style={{ cursor: 'pointer', padding: '3px 12px', fontSize: 14, border: statusTab === tab.key ? undefined : '1px solid #d9d9d9' }} onClick={() => { setStatusTab(tab.key); setQueryParams(p => ({ ...p, status: tab.key, page: 1 })); }}>{tab.label}</Tag>
+            <Tag key={tab.key} color={statusTab === tab.key ? (tab.color || 'blue') : undefined} style={{ cursor: 'pointer', padding: '3px 12px', fontSize: 14, border: statusTab === tab.key ? undefined : '1px solid var(--color-border-antd)' }} onClick={() => { setStatusTab(tab.key); setQueryParams(p => ({ ...p, status: tab.key, page: 1 })); }}>{tab.label}</Tag>
           ))}
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -263,7 +263,7 @@ const TenantListTab: React.FC = () => {
                 const opts = MODULE_OPTIONS.filter(o => o.category === cat);
                 return (
                   <div key={cat} style={{ marginBottom: 16 }}>
-                    <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--color-text-secondary, #666)', marginBottom: 8, paddingBottom: 4, borderBottom: '1px solid var(--color-border-light, #f0f0f0)' }}>{cat}</div>
+                    <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--color-text-secondary, #666)', marginBottom: 8, paddingBottom: 4, borderBottom: '1px solid var(--color-border-light, var(--color-border-light))' }}>{cat}</div>
                     {opts.map(opt => {
                       const isActive = activeSubs.has(opt.value);
                       const sub = subMap.get(opt.value);
@@ -278,9 +278,9 @@ const TenantListTab: React.FC = () => {
                           </div>
                           <Space size={4}>
                             {!isActive && !willGrant && <Button type="link" onClick={() => setGrantAppCodes([...grantAppCodes, opt.value])}>开通</Button>}
-                            {willGrant && <Button type="link" style={{ color: '#52c41a' }} onClick={() => setGrantAppCodes(grantAppCodes.filter(c => c !== opt.value))}>✓ 将开通</Button>}
+                            {willGrant && <Button type="link" style={{ color: 'var(--color-success)' }} onClick={() => setGrantAppCodes(grantAppCodes.filter(c => c !== opt.value))}>✓ 将开通</Button>}
                             {isActive && !willRevoke && <Button type="link" danger onClick={() => setRevokeAppCodes([...revokeAppCodes, opt.value])}>撤销</Button>}
-                            {willRevoke && <Button type="link" style={{ color: '#ff4d4f' }} onClick={() => setRevokeAppCodes(revokeAppCodes.filter(c => c !== opt.value))}>✓ 将撤销</Button>}
+                            {willRevoke && <Button type="link" style={{ color: 'var(--color-danger)' }} onClick={() => setRevokeAppCodes(revokeAppCodes.filter(c => c !== opt.value))}>✓ 将撤销</Button>}
                           </Space>
                         </div>
                       );
@@ -301,7 +301,7 @@ const TenantListTab: React.FC = () => {
           <div style={{ marginTop: 12, fontSize: 14, color: 'var(--color-text-tertiary)' }}>
             {grantAppCodes.length > 0 && <span>将开通 {grantAppCodes.length} 个应用</span>}
             {grantAppCodes.length > 0 && revokeAppCodes.length > 0 && <span> · </span>}
-            {revokeAppCodes.length > 0 && <span style={{ color: '#ff4d4f' }}>将撤销 {revokeAppCodes.length} 个应用</span>}
+            {revokeAppCodes.length > 0 && <span style={{ color: 'var(--color-danger)' }}>将撤销 {revokeAppCodes.length} 个应用</span>}
           </div>
         )}
       </ResizableModal>

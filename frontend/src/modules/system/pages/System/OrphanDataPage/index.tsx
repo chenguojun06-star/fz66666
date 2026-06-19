@@ -66,7 +66,7 @@ const OrphanDataPage: React.FC = () => {
     if (!selectedTable || selectedRowKeys.length === 0) return;
     Modal.confirm({
       title: '确认删除孤立数据',
-      icon: <WarningOutlined style={{ color: '#ff4d4f' }} />,
+      icon: <WarningOutlined style={{ color: 'var(--color-danger)' }} />,
       content: `确定要删除选中的 ${selectedRowKeys.length} 条孤立数据吗？此操作不可撤销。`,
       okText: '确认删除',
       okType: 'danger',
@@ -91,7 +91,7 @@ const OrphanDataPage: React.FC = () => {
 
   const columns = [
     { title: '订单号', dataIndex: 'orderNo', key: 'orderNo', width: 140,
-      render: (v: string) => v ? <span style={{ color: '#1890ff', fontWeight: 500 }}>{v}</span> : <span style={{ color: 'var(--color-text-quaternary)' }}>-</span> },
+      render: (v: string) => v ? <span style={{ color: 'var(--color-info)', fontWeight: 500 }}>{v}</span> : <span style={{ color: 'var(--color-text-quaternary)' }}>-</span> },
     { title: '款号', dataIndex: 'styleNo', key: 'styleNo', width: 120,
       render: (v: string) => v || <span style={{ color: 'var(--color-text-quaternary)' }}>-</span> },
     { title: '摘要', dataIndex: 'summary', key: 'summary', ellipsis: true },
@@ -113,7 +113,7 @@ const OrphanDataPage: React.FC = () => {
       }
     },
     { title: '孤立原因', dataIndex: 'orphanReason', key: 'orphanReason', width: 120,
-      render: (v: string) => <span style={{ color: '#fa8c16', fontSize: 14 }}>{v}</span> },
+      render: (v: string) => <span style={{ color: 'var(--color-warning)', fontSize: 14 }}>{v}</span> },
     { title: '创建时间', dataIndex: 'createTime', key: 'createTime', width: 160,
       render: (v: string) => v ? new Date(v).toLocaleString('zh-CN') : '-' },
   ];
@@ -135,7 +135,7 @@ const OrphanDataPage: React.FC = () => {
             <Col span={8}>
               <Card>
                 <Statistic title="孤立数据总量" value={scanResult.totalOrphanCount} suffix="条"
-                  styles={{ content: { color: scanResult.totalOrphanCount > 0 ? '#cf1322' : '#52c41a' } }} />
+                  styles={{ content: { color: scanResult.totalOrphanCount > 0 ? 'var(--color-error)' : 'var(--color-success)' } }} />
               </Card>
             </Col>
             <Col span={8}>

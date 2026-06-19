@@ -27,7 +27,7 @@ const StagePopoverContent: React.FC<StagePopoverInfo & { open?: boolean }> = ({
   let aiLabel = '';
   let aiColor = '#595959';
   if (status === 'done' || progress >= 100) {
-    aiLabel = '已完成'; aiColor = '#52c41a';
+    aiLabel = '已完成'; aiColor = 'var(--color-success)';
   } else if (status === 'scrapped') {
     aiLabel = '已报废'; aiColor = '#8c8c8c';
   } else if (status === 'waiting') {
@@ -36,23 +36,23 @@ const StagePopoverContent: React.FC<StagePopoverInfo & { open?: boolean }> = ({
     const target = expectedShipDate || plannedEndDate;
     const deliveryLeft = target ? dayjs(target).diff(dayjs(), 'day') : null;
     if (deliveryLeft !== null && deliveryLeft < 0) {
-      aiLabel = ' 已逾期'; aiColor = '#f5222d';
+      aiLabel = ' 已逾期'; aiColor = 'var(--color-error)';
     } else if (scanData.dailyRate7d > 0 && leftQty > 0) {
       const daysNeeded = Math.ceil(leftQty / scanData.dailyRate7d);
       if (deliveryLeft !== null) {
-        if (daysNeeded <= deliveryLeft) { aiLabel = `约 ${daysNeeded} 天 · 可按期`; aiColor = '#52c41a'; }
-        else { aiLabel = `预计偏晚 ${daysNeeded - deliveryLeft} 天`; aiColor = '#fa8c16'; }
+        if (daysNeeded <= deliveryLeft) { aiLabel = `约 ${daysNeeded} 天 · 可按期`; aiColor = 'var(--color-success)'; }
+        else { aiLabel = `预计偏晚 ${daysNeeded - deliveryLeft} 天`; aiColor = 'var(--color-warning)'; }
       } else {
-        aiLabel = `约 ${daysNeeded} 天完成`; aiColor = '#1677ff';
+        aiLabel = `约 ${daysNeeded} 天完成`; aiColor = 'var(--color-primary)';
       }
     } else if (scanData.loading) {
-      aiLabel = '加载中…'; aiColor = '#bfbfbf';
+      aiLabel = '加载中…'; aiColor = 'var(--color-text-quaternary)';
     } else if (scanData.workerCount > 0 && scanData.dailyRate7d === 0) {
-      aiLabel = '数据积累中'; aiColor = '#1677ff';
+      aiLabel = '数据积累中'; aiColor = 'var(--color-primary)';
     } else if (status === 'risk') {
-      aiLabel = ' 进度滞后'; aiColor = '#fa8c16';
+      aiLabel = ' 进度滞后'; aiColor = 'var(--color-warning)';
     } else if (scanData.totalScanned > 0) {
-      aiLabel = '近7天无扫码'; aiColor = '#fa8c16';
+      aiLabel = '近7天无扫码'; aiColor = 'var(--color-warning)';
     } else {
       aiLabel = '暂无扫码数据'; aiColor = '#8c8c8c';
     }
@@ -68,11 +68,11 @@ const StagePopoverContent: React.FC<StagePopoverInfo & { open?: boolean }> = ({
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, marginBottom: 4 }}>
         <span style={{ color: 'var(--color-text-tertiary)' }}>还剩</span>
-        <span style={{ color: leftQty > 0 ? '#595959' : '#52c41a', fontWeight: 600 }}>{leftQty} 件</span>
+        <span style={{ color: leftQty > 0 ? '#595959' : 'var(--color-success)', fontWeight: 600 }}>{leftQty} 件</span>
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, marginBottom: 8 }}>
         <span style={{ color: 'var(--color-text-tertiary)' }}>近7天工人</span>
-        <span style={{ color: scanData.workerCount > 0 ? '#262626' : '#bfbfbf', fontWeight: 600 }}>
+        <span style={{ color: scanData.workerCount > 0 ? '#262626' : 'var(--color-text-quaternary)', fontWeight: 600 }}>
           {scanData.loading ? '…' : scanData.workerCount > 0 ? `${scanData.workerCount} 人` : '-'}
         </span>
       </div>
@@ -87,7 +87,7 @@ const StagePopoverContent: React.FC<StagePopoverInfo & { open?: boolean }> = ({
           {scanData.subProcesses.map(sp => (
             <div key={sp.name} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, marginBottom: 3 }}>
               <span style={{ color: '#595959', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 120 }}>{sp.name}</span>
-              <span style={{ color: '#1677ff', fontWeight: 600, flexShrink: 0 }}>{sp.qty}</span>
+              <span style={{ color: 'var(--color-primary)', fontWeight: 600, flexShrink: 0 }}>{sp.qty}</span>
             </div>
           ))}
         </div>

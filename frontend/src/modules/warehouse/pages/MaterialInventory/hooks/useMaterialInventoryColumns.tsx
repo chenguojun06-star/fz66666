@@ -166,7 +166,7 @@ export function useMaterialInventoryColumns({
                 onClick={() => onPickStock?.(record)}
                 title={onPickStock ? '点击领取库存' : undefined}
               >
-                <div className="stock-label">可用库存 <span style={{fontSize:14,color:'#1890ff'}}>📦领</span></div>
+                <div className="stock-label">可用库存 <span style={{fontSize:14,color:'var(--color-info)'}}>📦领</span></div>
                 <div className="stock-value stock-value--ok">
                   {availableQty.toLocaleString()}
                 </div>
@@ -199,12 +199,12 @@ export function useMaterialInventoryColumns({
             </div>
             {isLow && (
               <div style={{
-                background: '#fff7e6',
+                background: '#FFF7E6',
                 border: '1px solid #ffd591',
                 borderRadius: 4,
                 padding: '2px 6px',
                 fontSize: "var(--font-size-xs)",
-                color: '#fa8c16',
+                color: 'var(--color-warning)',
               }}>
                 建议补货 <strong>{Math.max(0, safetyStock * 2 - availableQty - inTransitQty).toLocaleString()}</strong> {record.unit}
               </div>

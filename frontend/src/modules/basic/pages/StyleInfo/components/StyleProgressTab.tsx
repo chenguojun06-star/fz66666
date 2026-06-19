@@ -68,16 +68,16 @@ const StageNode: React.FC<{
   isLast: boolean;
 }> = ({ name, startTime, completeTime, assignee, isCompleted, isActive, isLast }) => {
   let icon = <ClockCircleOutlined />;
-  let color = 'var(--color-text-quaternary, #bfbfbf)';
-  let bgColor = 'var(--color-bg-subtle, #f5f5f5)';
+  let color = 'var(--color-text-quaternary, var(--color-text-quaternary))';
+  let bgColor = 'var(--color-bg-subtle, var(--color-bg-subtle))';
   if (isCompleted) {
     icon = <CheckCircleOutlined />;
-    color = '#fff';
-    bgColor = '#52c41a';
+    color = 'var(--color-bg-base)';
+    bgColor = 'var(--color-success)';
   } else if (isActive) {
     icon = <PlayCircleOutlined />;
-    color = '#fff';
-    bgColor = '#1677ff';
+    color = 'var(--color-bg-base)';
+    bgColor = 'var(--color-primary)';
   }
 
   return (
@@ -106,7 +106,7 @@ const StageNode: React.FC<{
           </div>
         )}
         {completeTime && (
-          <div style={{ fontSize: 10, color: '#52c41a', textAlign: 'center' }}>
+          <div style={{ fontSize: 10, color: 'var(--color-success)', textAlign: 'center' }}>
             完成：{fmt(completeTime)}
           </div>
         )}
@@ -127,7 +127,7 @@ const StageNode: React.FC<{
         }}>
           <div style={{
             width: '100%', height: 2,
-            background: isCompleted ? '#52c41a' : 'var(--color-border, #e8e8e8)',
+            background: isCompleted ? 'var(--color-success)' : 'var(--color-border, #e8e8e8)',
             borderRadius: 1,
           }} />
         </div>
@@ -242,7 +242,7 @@ const StyleProgressTab: React.FC<Props> = ({ styleId, styleNo }) => {
       <div style={{
         display: 'flex', alignItems: 'center', gap: 16,
         padding: '12px 16px', marginBottom: 16,
-        background: 'var(--color-bg-subtle, #fafafa)',
+        background: 'var(--color-bg-subtle, var(--color-bg-container))',
         borderRadius: 8, flexWrap: 'wrap',
       }}>
         <div style={{ fontSize: 14, fontWeight: 600 }}>
@@ -259,9 +259,9 @@ const StyleProgressTab: React.FC<Props> = ({ styleId, styleNo }) => {
           </div>
         )}
         {pattern?.deliveryTime && (
-          <div style={{ fontSize: 13, color: overdueDays > 0 ? '#ff4d4f' : 'var(--color-text-secondary)' }}>
+          <div style={{ fontSize: 13, color: overdueDays > 0 ? 'var(--color-danger)' : 'var(--color-text-secondary)' }}>
             交期：{dayjs(String(pattern.deliveryTime)).format('YYYY-MM-DD')}
-            {overdueDays > 0 && <span style={{ marginLeft: 4, color: '#ff4d4f', fontWeight: 600 }}>逾{overdueDays}天</span>}
+            {overdueDays > 0 && <span style={{ marginLeft: 4, color: 'var(--color-danger)', fontWeight: 600 }}>逾{overdueDays}天</span>}
           </div>
         )}
         {pattern?.patternMaker && (

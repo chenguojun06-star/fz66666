@@ -5,16 +5,17 @@ import com.fashion.supplychain.auth.AuthTokenService;
 import com.fashion.supplychain.auth.TokenSubject;
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.common.UserContext;
-import com.fashion.supplychain.common.constant.MaterialConstants;
 import com.fashion.supplychain.finance.entity.MaterialReconciliation;
 import com.fashion.supplychain.finance.entity.Payable;
 import com.fashion.supplychain.finance.service.MaterialReconciliationService;
 import com.fashion.supplychain.finance.service.PayableService;
 import com.fashion.supplychain.production.entity.MaterialPurchase;
 import com.fashion.supplychain.production.entity.MaterialStock;
+import com.fashion.supplychain.production.orchestration.MaterialPurchaseOrchestrator;
 import com.fashion.supplychain.production.service.MaterialPurchaseService;
 import com.fashion.supplychain.production.service.MaterialStockService;
 import com.fashion.supplychain.procurement.entity.SupplierUser;
+import com.fashion.supplychain.procurement.orchestration.SupplierUserOrchestrator;
 import com.fashion.supplychain.procurement.service.SupplierUserService;
 import com.fashion.supplychain.system.entity.Factory;
 import com.fashion.supplychain.system.service.FactoryService;
@@ -27,7 +28,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 import java.time.Duration;
-import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -39,8 +39,10 @@ public class SupplierPortalController {
     private static final String SUPPLIER_ROLE = "supplier";
 
     @Autowired private SupplierUserService supplierUserService;
+    @Autowired private SupplierUserOrchestrator supplierUserOrchestrator;
     @Autowired private FactoryService factoryService;
     @Autowired private MaterialPurchaseService materialPurchaseService;
+    @Autowired private MaterialPurchaseOrchestrator materialPurchaseOrchestrator;
     @Autowired private MaterialStockService materialStockService;
     @Autowired private PayableService payableService;
     @Autowired private MaterialReconciliationService materialReconciliationService;
@@ -88,8 +90,7 @@ public class SupplierPortalController {
             return Result.fail("用户租户信息缺失，请联系管理员");
         }
 
-        user.setLastLoginTime(LocalDateTime.now());
-        supplierUserService.updateById(user);
+        supplierUserOrchestrator.updateLastLoginTime(user.getId());
 
         TokenSubject subject = new TokenSubject();
         subject.setUserId(user.getId());
@@ -248,49 +249,20 @@ public class SupplierPortalController {
             return Result.fail(403, "供应商门户仅限供应商账号访问");
         }
 
-        MaterialPurchase purchase = materialPurchaseService.getById(purchaseId);
-        if (purchase == null || !supplierId.equals(purchase.getSupplierId()) || !tenantId.equals(purchase.getTenantId())) {
-            return Result.fail("采购单不存在");
-        }
-
         String newStatus = (String) request.get("status");
-        Integer shipQuantity = request.get("shipQuantity") != null ? Integer.parseInt(String.valueOf(request.get("shipQuantity"))) : null;
+        Integer shipQuantity = request.get("shipQuantity") != null
+                ? Integer.parseInt(String.valueOf(request.get("shipQuantity"))) : null;
         String trackingNo = (String) request.get("trackingNo");
         String expressCompany = (String) request.get("expressCompany");
         String remark = (String) request.get("remark");
 
-        if (StringUtils.hasText(newStatus)) {
-            if ("partial_arrival".equals(newStatus) || "shipped".equals(newStatus)) {
-                purchase.setStatus("partial_arrival");
-            } else if ("completed".equals(newStatus)) {
-                purchase.setStatus(MaterialConstants.STATUS_AWAITING_CONFIRM);
-                purchase.setActualArrivalDate(LocalDateTime.now());
-            }
+        try {
+            materialPurchaseOrchestrator.updateShipmentBySupplier(
+                    purchaseId, supplierId, tenantId, newStatus, shipQuantity, trackingNo, expressCompany, remark);
+        } catch (IllegalArgumentException e) {
+            return Result.fail(e.getMessage());
         }
 
-        if (shipQuantity != null) {
-            int currentArrived = purchase.getArrivedQuantity() != null ? purchase.getArrivedQuantity() : 0;
-            purchase.setArrivedQuantity(currentArrived + shipQuantity);
-        }
-
-        // 将快递公司、运单号、备注一起写入 remark 字段
-        boolean hasDeliveryInfo = StringUtils.hasText(trackingNo)
-                || StringUtils.hasText(expressCompany)
-                || StringUtils.hasText(remark);
-        if (hasDeliveryInfo) {
-            StringBuilder deliveryInfo = new StringBuilder("[供应商发货]");
-            if (StringUtils.hasText(expressCompany)) deliveryInfo.append(" 快递:").append(expressCompany);
-            if (StringUtils.hasText(trackingNo)) deliveryInfo.append(" 单号:").append(trackingNo);
-            if (StringUtils.hasText(remark)) deliveryInfo.append(" ").append(remark);
-            String existingRemark = purchase.getRemark() != null ? purchase.getRemark() : "";
-            purchase.setRemark(existingRemark.isEmpty()
-                    ? deliveryInfo.toString()
-                    : existingRemark + "\n" + deliveryInfo);
-        }
-
-        materialPurchaseService.updateById(purchase);
-
-        log.info("[供应商门户] 发货更新: purchaseId={}, supplierId={}, status={}", purchaseId, supplierId, purchase.getStatus());
         return Result.success(null);
     }
 

@@ -3,9 +3,9 @@ import { InfoCircleFilled, ExclamationCircleFilled, WarningFilled } from '@ant-d
 import { announcementApi, PlatformAnnouncement } from '@/services/system/announcementApi';
 
 const TYPE_CONFIG = {
-  info: { icon: InfoCircleFilled, cls: 'info', color: '#1677ff' },
-  warning: { icon: ExclamationCircleFilled, cls: 'warning', color: '#fa8c16' },
-  important: { icon: WarningFilled, cls: 'important', color: '#f5222d' },
+  info: { icon: InfoCircleFilled, cls: 'info', color: 'var(--color-primary)' },
+  warning: { icon: ExclamationCircleFilled, cls: 'warning', color: 'var(--color-warning)' },
+  important: { icon: WarningFilled, cls: 'important', color: 'var(--color-error)' },
 } as const;
 
 const POLL_MS = 60_000;

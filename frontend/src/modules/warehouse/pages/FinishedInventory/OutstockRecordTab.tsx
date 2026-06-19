@@ -192,7 +192,7 @@ const OutstockRecordTab: React.FC = () => {
       align: 'center' as const,
       render: (val: number) => {
         const sale = Number(val) || 0;
-        return <span style={{ color: '#cf1322', fontWeight: 600 }}>{formatMoney(sale)}</span>;
+        return <span style={{ color: 'var(--color-error)', fontWeight: 600 }}>{formatMoney(sale)}</span>;
       },
     },
     {
@@ -213,7 +213,7 @@ const OutstockRecordTab: React.FC = () => {
       width: 110,
       align: 'right',
       render: (val) => val != null ? (
-        <span style={{ color: '#cf1322', fontWeight: 600 }}>{formatMoney(Number(val))}</span>
+        <span style={{ color: 'var(--color-error)', fontWeight: 600 }}>{formatMoney(Number(val))}</span>
       ) : '-',
     },
     {

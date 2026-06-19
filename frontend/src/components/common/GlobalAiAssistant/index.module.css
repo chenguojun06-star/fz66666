@@ -198,7 +198,7 @@
 }
 
 .sendBtn:disabled {
-  background: #d9d9d9;
+  background: var(--color-border-antd);
   cursor: not-allowed;
 }
 
@@ -214,7 +214,7 @@
   line-height: 1;
 }
 .uploadBtn:hover { color: var(--xiaoyun-primary); }
-.uploadBtn:disabled { color: #d9d9d9; cursor: not-allowed; }
+.uploadBtn:disabled { color: var(--color-border-antd); cursor: not-allowed; }
 
 .traceBtn {
   min-width: 42px;
@@ -297,10 +297,10 @@
   cursor: pointer;
   transition: all 0.2s;
 }
-.actionBtnPrimary { background: var(--xiaoyun-primary); color: #fff; }
+.actionBtnPrimary { background: var(--xiaoyun-primary); color: var(--color-bg-base); }
 .actionBtnPrimary:hover { background: var(--xiaoyun-primary-hover); }
-.actionBtnDanger { background: var(--xiaoyun-danger); color: #fff; }
-.actionBtnDanger:hover { background: #cf1322; }
+.actionBtnDanger { background: var(--xiaoyun-danger); color: var(--color-bg-base); }
+.actionBtnDanger:hover { background: var(--color-error); }
 
 .panelBody {
   display: flex;
@@ -345,7 +345,7 @@
 
 .sidebarItemActive {
   background: var(--xiaoyun-primary);
-  color: #fff;
+  color: var(--color-bg-base);
 }
 
 .sidebarLabel {
@@ -361,7 +361,7 @@
   height: 16px;
   border-radius: 8px;
   background: var(--xiaoyun-danger);
-  color: #fff;
+  color: var(--color-bg-base);
   font-size: 10px;
   line-height: 16px;
   text-align: center;
@@ -413,7 +413,7 @@
   height: 14px;
   border-radius: 7px;
   background: var(--xiaoyun-danger);
-  color: #fff;
+  color: var(--color-bg-base);
   font-size: 9px;
   line-height: 14px;
   text-align: center;

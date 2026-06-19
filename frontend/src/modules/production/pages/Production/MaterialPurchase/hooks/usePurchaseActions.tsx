@@ -441,7 +441,7 @@ export function usePurchaseActions({
             <p>即将采购以下 <strong>{pending.length}</strong> 项物料：</p>
             <div style={{ maxHeight: 200, overflow: 'auto', marginTop: 8, fontSize: 14 }}>
               {pending.map((p, i) => (
-                <div key={i} style={{ padding: '4px 0', borderBottom: i < pending.length - 1 ? '1px solid #f0f0f0' : 'none', display: 'flex', justifyContent: 'space-between' }}>
+                <div key={i} style={{ padding: '4px 0', borderBottom: i < pending.length - 1 ? '1px solid var(--color-border-light)' : 'none', display: 'flex', justifyContent: 'space-between' }}>
                   <span>{p.materialName || p.materialCode} {p.color ? `(${p.color})` : ''}</span>
                   <span style={{ color: 'var(--color-primary)' }}>{formatMaterialQuantity(p.purchaseQuantity)}{p.unit || ''}</span>
                 </div>
@@ -479,7 +479,7 @@ export function usePurchaseActions({
           </p>
           <div style={{ maxHeight: 200, overflow: 'auto', marginTop: 8, fontSize: 14 }}>
             {[...withStock, ...noStock].map((m, i) => (
-              <div key={i} style={{ padding: '4px 0', borderBottom: '1px solid #f0f0f0', display: 'flex', justifyContent: 'space-between' }}>
+              <div key={i} style={{ padding: '4px 0', borderBottom: '1px solid var(--color-border-light)', display: 'flex', justifyContent: 'space-between' }}>
                 <span>{m.materialName || m.materialCode} {m.color ? `(${m.color})` : ''}</span>
                 <span style={{ color: Number(m.availableStock ?? 0) > 0 ? 'var(--color-success)' : 'var(--color-primary)' }}>
                   {Number(m.availableStock ?? 0) > 0 ? `出库 ${m.canPickQty}` : `采购 ${m.purchaseQuantity}`}{m.unit || ''}

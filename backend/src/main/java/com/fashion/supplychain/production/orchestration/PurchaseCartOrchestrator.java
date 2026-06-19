@@ -145,6 +145,30 @@ public class PurchaseCartOrchestrator {
         purchaseCartItemMapper.updateById(item);
         recalculateCartTotal(item.getCartId());
     }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void deleteItem(Long tenantId, String itemId) {
+        PurchaseCartItem item = purchaseCartItemMapper.selectById(itemId);
+        if (item == null) {
+            throw new BusinessException("购物车物料不存在");
+        }
+        if (!item.getTenantId().equals(tenantId)) {
+            throw new BusinessException("无权操作此物料");
+        }
+        String cartId = item.getCartId();
+        purchaseCartItemMapper.deleteById(itemId);
+        recalculateCartTotal(cartId);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void clearCart(Long tenantId, String userId) {
+        PurchaseCart cart = purchaseCartService.getOrCreateCart(tenantId, userId);
+        LambdaQueryWrapper<PurchaseCartItem> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(PurchaseCartItem::getCartId, cart.getId())
+               .eq(PurchaseCartItem::getDeleteFlag, 0);
+        purchaseCartItemMapper.delete(wrapper);
+        recalculateCartTotal(cart.getId());
+    }
     
     @Transactional
     public void mergeItems(Long tenantId, MergeRequest request) {

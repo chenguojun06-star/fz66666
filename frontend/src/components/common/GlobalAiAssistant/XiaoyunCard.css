@@ -164,7 +164,7 @@
 
 .xy-action-btn:hover {
   background: var(--xiaoyun-primary);
-  color: #fff;
+  color: var(--color-bg-base);
 }
 
 .xy-evidence-list {

@@ -40,7 +40,7 @@ const CustomerInfoSection: React.FC<CustomerInfoSectionProps> = ({
         <Typography.Text strong style={{ display: 'block', marginBottom: 8 }}>客户信息</Typography.Text>
         <Space wrap style={{ width: '100%' }}>
           <span>
-            <span style={{ color: '#ff4d4f' }}>*</span> 客户名称：
+            <span style={{ color: 'var(--color-danger)' }}>*</span> 客户名称：
             <CustomerSelect
               value={customerName}
               onChange={handleCustomerSelect}
@@ -78,7 +78,7 @@ const CustomerInfoSection: React.FC<CustomerInfoSectionProps> = ({
       </div>
       <Row gutter={12}>
         <Col span={8}>
-          <div style={{ fontSize: 14, color: '#888', marginBottom: 4 }}><span style={{ color: '#ff4d4f' }}>*</span> 客户名称</div>
+          <div style={{ fontSize: 14, color: '#888', marginBottom: 4 }}><span style={{ color: 'var(--color-danger)' }}>*</span> 客户名称</div>
           <CustomerSelect
             value={customerName}
             onChange={handleCustomerSelect}

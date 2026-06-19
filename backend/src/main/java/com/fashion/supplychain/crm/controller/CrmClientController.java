@@ -9,6 +9,7 @@ import com.fashion.supplychain.crm.entity.Customer;
 import com.fashion.supplychain.crm.entity.CustomerClientUser;
 import com.fashion.supplychain.crm.entity.Receivable;
 import com.fashion.supplychain.crm.entity.ReceivableReceiptLog;
+import com.fashion.supplychain.crm.orchestration.CrmClientOrchestrator;
 import com.fashion.supplychain.crm.service.CustomerClientUserService;
 import com.fashion.supplychain.crm.service.CustomerService;
 import com.fashion.supplychain.crm.service.ReceivableReceiptLogService;
@@ -39,6 +40,7 @@ public class CrmClientController {
 
     @Autowired private CustomerService customerService;
     @Autowired private CustomerClientUserService customerClientUserService;
+    @Autowired private CrmClientOrchestrator crmClientOrchestrator;
     @Autowired private ProductionOrderService productionOrderService;
     @Autowired private MaterialPurchaseService materialPurchaseService;
     @Autowired private ReceivableService receivableService;
@@ -85,8 +87,7 @@ public class CrmClientController {
             return Result.fail("客户信息不存在");
         }
 
-        user.setLastLoginTime(LocalDateTime.now());
-        customerClientUserService.updateById(user);
+        crmClientOrchestrator.updateLastLoginTime(user);
 
         TokenSubject subject = new TokenSubject();
         subject.setUserId(user.getId());

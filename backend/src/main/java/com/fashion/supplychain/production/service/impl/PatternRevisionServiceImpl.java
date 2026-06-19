@@ -7,7 +7,6 @@ import com.fashion.supplychain.production.mapper.PatternRevisionMapper;
 import com.fashion.supplychain.production.service.PatternRevisionService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
@@ -29,7 +28,6 @@ public class PatternRevisionServiceImpl extends ServiceImpl<PatternRevisionMappe
     private AuthTokenService authTokenService;
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public boolean submitForApproval(String id) {
         if (!StringUtils.hasText(id)) {
             throw new IllegalArgumentException("记录ID不能为空");
@@ -57,7 +55,6 @@ public class PatternRevisionServiceImpl extends ServiceImpl<PatternRevisionMappe
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public boolean approve(String id, String comment) {
         if (!StringUtils.hasText(id)) {
             throw new IllegalArgumentException("记录ID不能为空");
@@ -86,7 +83,6 @@ public class PatternRevisionServiceImpl extends ServiceImpl<PatternRevisionMappe
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public boolean reject(String id, String comment) {
         if (!StringUtils.hasText(id)) {
             throw new IllegalArgumentException("记录ID不能为空");
@@ -115,7 +111,6 @@ public class PatternRevisionServiceImpl extends ServiceImpl<PatternRevisionMappe
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public boolean complete(String id) {
         if (!StringUtils.hasText(id)) {
             throw new IllegalArgumentException("记录ID不能为空");

@@ -101,11 +101,11 @@ const difficultyColor = (level?: string) => {
 };
 
 const SEVERITY_COLOR: Record<string, string> = {
-  CRITICAL: '#ff4d4f',
+  CRITICAL: 'var(--color-danger)',
   HIGH: '#ff7a45',
-  MEDIUM: '#faad14',
-  LOW: '#52c41a',
-  NONE: '#d9d9d9',
+  MEDIUM: 'var(--color-warning)',
+  LOW: 'var(--color-success)',
+  NONE: 'var(--color-border-antd)',
 };
 
 const StyleIntelligenceProfileCard: React.FC<Props> = ({ style }) => {
@@ -236,17 +236,17 @@ const StyleIntelligenceProfileCard: React.FC<Props> = ({ style }) => {
           flexWrap: 'wrap',
         }}
       >
-        <RadarChartOutlined style={{ color: '#1677ff', fontSize: 15 }} />
+        <RadarChartOutlined style={{ color: 'var(--color-primary)', fontSize: 15 }} />
         <span style={{ fontSize: 14, fontWeight: 700, color: '#1f1f1f' }}>款式智能档案卡</span>
         {/* 关键摘要 */}
         <Tag color={deliveryMeta.color} style={{ margin: 0 }}>{deliveryMeta.label}</Tag>
-        <span style={{ fontSize: 14, color: '#595959' }}>完成度 <b style={{ color: '#1677ff' }}>{completionRate}%</b></span>
+        <span style={{ fontSize: 14, color: '#595959' }}>完成度 <b style={{ color: 'var(--color-primary)' }}>{completionRate}%</b></span>
         {doneCount < stageTags.length ? (
-          <span style={{ fontSize: 14, color: '#595959' }}>剩 <b style={{ color: '#ff4d4f' }}>{stageTags.length - doneCount}</b> 环节未完成</span>
+          <span style={{ fontSize: 14, color: '#595959' }}>剩 <b style={{ color: 'var(--color-danger)' }}>{stageTags.length - doneCount}</b> 环节未完成</span>
         ) : (
-          <span style={{ fontSize: 14, color: '#52c41a' }}>✓ {stageTags.length} 环节已全部完成</span>
+          <span style={{ fontSize: 14, color: 'var(--color-success)' }}>✓ {stageTags.length} 环节已全部完成</span>
         )}
-        <span style={{ fontSize: 14, color: '#595959' }}>订单 <b style={{ color: '#722ed1' }}>{orderCount} 单</b></span>
+        <span style={{ fontSize: 14, color: '#595959' }}>订单 <b style={{ color: 'var(--color-accent-purple)' }}>{orderCount} 单</b></span>
         {/* 难度徽章 */}
         {activeDifficulty && (
           <Tooltip title={`难度分 ${activeDifficulty.difficultyScore}/10，定价倍率 ×${activeDifficulty.pricingMultiplier}`}>
@@ -289,7 +289,7 @@ const StyleIntelligenceProfileCard: React.FC<Props> = ({ style }) => {
                     title: '交期风险',
                     value: deliveryMeta.label,
                     extra: deliveryMeta.detail,
-                    color: deliveryMeta.color === 'error' ? '#ff4d4f' : deliveryMeta.color === 'warning' ? '#fa8c16' : '#52c41a',
+                    color: deliveryMeta.color === 'error' ? 'var(--color-danger)' : deliveryMeta.color === 'warning' ? 'var(--color-warning)' : 'var(--color-success)',
                   },
                   {
                     key: 'progress',
@@ -297,7 +297,7 @@ const StyleIntelligenceProfileCard: React.FC<Props> = ({ style }) => {
                     title: '开发完成度',
                     value: `${completionRate}%`,
                     extra: `${doneCount}/${stageTags.length} 节点完成`,
-                    color: '#1677ff',
+                    color: 'var(--color-primary)',
                   },
                   {
                     key: 'quote',
@@ -315,7 +315,7 @@ const StyleIntelligenceProfileCard: React.FC<Props> = ({ style }) => {
                     title: '系统联动',
                     value: `${orderCount} 单`,
                     extra: profile?.production?.latestOrderStatus || style.latestOrderStatus || '暂无订单',
-                    color: '#722ed1',
+                    color: 'var(--color-accent-purple)',
                   },
                 ].map((item) => (
                   <div key={item.key} style={{ padding: '5px 7px', borderRadius: 6, background: 'var(--color-bg-base)', border: '1px solid rgba(0,0,0,0.06)' }}>
@@ -341,7 +341,7 @@ const StyleIntelligenceProfileCard: React.FC<Props> = ({ style }) => {
 
             {/* 右栏：难度评估 */}
             <div style={{ flex: 1, minWidth: 0, padding: '6px 8px', borderRadius: 7, background: 'rgba(114,46,209,0.04)', border: '1px solid rgba(114,46,209,0.12)' }}>
-              <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 5, color: '#722ed1' }}>难度评估</div>
+              <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 5, color: 'var(--color-accent-purple)' }}>难度评估</div>
               {loading ? (
                 <Spin />
               ) : activeDifficulty ? (
@@ -355,9 +355,9 @@ const StyleIntelligenceProfileCard: React.FC<Props> = ({ style }) => {
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
                     <Progress percent={activeDifficulty.difficultyScore * 10} showInfo={false}
-                      strokeColor={difficultyColor(activeDifficulty.difficultyLevel) === 'green' ? '#52c41a' : difficultyColor(activeDifficulty.difficultyLevel) === 'orange' ? '#fa8c16' : '#ff4d4f'}
+                      strokeColor={difficultyColor(activeDifficulty.difficultyLevel) === 'green' ? 'var(--color-success)' : difficultyColor(activeDifficulty.difficultyLevel) === 'orange' ? 'var(--color-warning)' : 'var(--color-danger)'}
                       style={{ flex: 1, margin: 0 }} />
-                    <span style={{ fontSize: 12, color: '#595959', whiteSpace: 'nowrap' }}><b>{activeDifficulty.difficultyScore}</b>/10 ×<b style={{ color: '#722ed1' }}>{activeDifficulty.pricingMultiplier}</b></span>
+                    <span style={{ fontSize: 12, color: '#595959', whiteSpace: 'nowrap' }}><b>{activeDifficulty.difficultyScore}</b>/10 ×<b style={{ color: 'var(--color-accent-purple)' }}>{activeDifficulty.pricingMultiplier}</b></span>
                   </div>
                   <div style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>BOM {activeDifficulty.bomCount}种 · 工序 {activeDifficulty.processCount}道{activeDifficulty.hasSecondaryProcess ? ' · 含二次工艺' : ''}</div>
                   {activeDifficulty.imageInsight && (() => {
@@ -394,7 +394,7 @@ const StyleIntelligenceProfileCard: React.FC<Props> = ({ style }) => {
                         </div>
                       )}
                       {visualResult.suggestion && (
-                        <div style={{ fontSize: 12, color: '#722ed1', marginTop: 3 }}>{visualResult.suggestion}</div>
+                        <div style={{ fontSize: 12, color: 'var(--color-accent-purple)', marginTop: 3 }}>{visualResult.suggestion}</div>
                       )}
                     </div>
                   )}

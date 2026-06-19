@@ -60,7 +60,7 @@ const InlineEditableField: React.FC<{
           disabled={saving}
           style={{
             width: 100,
-            border: '1px solid #1677ff',
+            border: '1px solid var(--color-primary)',
             borderRadius: 4,
             padding: '2px 6px',
             fontSize: 13,
@@ -68,7 +68,7 @@ const InlineEditableField: React.FC<{
           }}
         />
         <Tooltip title="确定">
-          <Button size="small" type="link" icon={<SaveOutlined />} onClick={handleSave} loading={saving} style={{ padding: 0, color: '#52c41a' }} />
+          <Button size="small" type="link" icon={<SaveOutlined />} onClick={handleSave} loading={saving} style={{ padding: 0, color: 'var(--color-success)' }} />
         </Tooltip>
         <Tooltip title="取消">
           <Button size="small" type="link" icon={<CloseOutlined />} onClick={() => { setEditing(false); setDraft(value); }} style={{ padding: 0, color: '#999' }} />
@@ -83,7 +83,7 @@ const InlineEditableField: React.FC<{
       style={{
         fontSize: 13,
         lineHeight: '22px',
-        borderBottom: '1px dashed #1677ff',
+        borderBottom: '1px dashed var(--color-primary)',
         cursor: 'pointer',
         padding: '2px 2px',
         transition: 'background 0.2s',
@@ -133,12 +133,12 @@ function parseSizeDisplay(sizeRaw: string | undefined): string {
 }
 
 const STAGE_COLORS: Record<string, string> = {
-  procurement: '#1890ff',
-  cutting: '#722ed1',
+  procurement: 'var(--color-info)',
+  cutting: 'var(--color-accent-purple)',
   secondary: '#eb2f96',
-  sewing: '#fa8c16',
-  tail: '#13c2c2',
-  warehousing: '#52c41a',
+  sewing: 'var(--color-warning)',
+  tail: 'var(--color-accent-cyan)',
+  warehousing: 'var(--color-success)',
 };
 
 const OPERATION_TYPE_MAP: Record<string, string> = {
@@ -380,10 +380,10 @@ export default function SampleProcessList({
       width: 90,
       render: (val: string, record: SubProcessRow) => {
         const icon = record.status === 'completed'
-          ? <CheckCircleOutlined style={{ color: '#52c41a', fontSize: 12, marginRight: 4 }} />
+          ? <CheckCircleOutlined style={{ color: 'var(--color-success)', fontSize: 12, marginRight: 4 }} />
           : record.status === 'in_progress'
-            ? <PlayCircleOutlined style={{ color: STAGE_COLORS[activeTab] || '#1890ff', fontSize: 12, marginRight: 4 }} />
-            : <ClockCircleOutlined style={{ color: '#bfbfbf', fontSize: 12, marginRight: 4 }} />;
+            ? <PlayCircleOutlined style={{ color: STAGE_COLORS[activeTab] || 'var(--color-info)', fontSize: 12, marginRight: 4 }} />
+            : <ClockCircleOutlined style={{ color: 'var(--color-text-quaternary)', fontSize: 12, marginRight: 4 }} />;
         return <span>{icon}{val}</span>;
       },
     },
@@ -509,7 +509,7 @@ export default function SampleProcessList({
 
       {editing ? (
         <div style={{
-          background: '#fafafa',
+          background: 'var(--color-bg-container)',
           borderRadius: 6,
           padding: '8px 12px',
           marginBottom: 12,
@@ -577,7 +577,7 @@ export default function SampleProcessList({
                 cursor: 'pointer',
                 fontSize: 13,
                 fontWeight: isActive ? 600 : 400,
-                color: isActive ? c : isDone ? '#52c41a' : 'var(--color-text-secondary)',
+                color: isActive ? c : isDone ? 'var(--color-success)' : 'var(--color-text-secondary)',
                 borderBottom: isActive ? `2px solid ${c}` : '2px solid transparent',
                 marginBottom: -2,
                 transition: 'all 0.2s',

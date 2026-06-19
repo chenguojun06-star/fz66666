@@ -513,9 +513,9 @@ export function usePurchaseDetailPage(styleNoParam: string, orderNoParam: string
       React.createElement('p', null, `确认批量采购以下 ${pending.length} 项物料：`),
       React.createElement('div', { style: { maxHeight: 220, overflowY: 'auto', marginTop: 8, fontSize: 12 } },
         pending.map((item, idx) =>
-          React.createElement('div', { key: idx, style: { padding: '6px 0', borderBottom: '1px solid #f0f0f0', display: 'flex', justifyContent: 'space-between' } },
+          React.createElement('div', { key: idx, style: { padding: '6px 0', borderBottom: '1px solid var(--color-border-light)', display: 'flex', justifyContent: 'space-between' } },
             React.createElement('span', null, `${item.materialName || item.materialCode} · ${item.color || '-'}`),
-            React.createElement('span', { style: { color: '#1677ff' } }, `采购 ${item.purchaseQuantity}${item.unit || ''}`)
+            React.createElement('span', { style: { color: 'var(--color-primary)' } }, `采购 ${item.purchaseQuantity}${item.unit || ''}`)
           )
         )
       )
@@ -558,9 +558,9 @@ export function usePurchaseDetailPage(styleNoParam: string, orderNoParam: string
       React.createElement('p', null, `确认回料以下 ${returnable.length} 项物料：`),
       React.createElement('div', { style: { maxHeight: 220, overflowY: 'auto', marginTop: 8, fontSize: 12 } },
         returnable.map((item, idx) =>
-          React.createElement('div', { key: idx, style: { padding: '6px 0', borderBottom: '1px solid #f0f0f0', display: 'flex', justifyContent: 'space-between' } },
+          React.createElement('div', { key: idx, style: { padding: '6px 0', borderBottom: '1px solid var(--color-border-light)', display: 'flex', justifyContent: 'space-between' } },
             React.createElement('span', null, `${item.materialName || item.materialCode} · ${item.color || '-'}`),
-            React.createElement('span', { style: { color: '#1677ff' } }, `到货 ${item.arrivedQuantity || item.purchaseQuantity}${item.unit || ''}`)
+            React.createElement('span', { style: { color: 'var(--color-primary)' } }, `到货 ${item.arrivedQuantity || item.purchaseQuantity}${item.unit || ''}`)
           )
         )
       )

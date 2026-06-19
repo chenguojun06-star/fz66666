@@ -12,15 +12,15 @@ interface DeliveryRiskCardProps {
 }
 
 const CARD_STYLE: React.CSSProperties = {
-  background: 'var(--color-bg-elevated, #fff)',
-  borderColor: 'var(--color-border-secondary, #f0f0f0)',
+  background: 'var(--color-bg-elevated, var(--color-bg-base))',
+  borderColor: 'var(--color-border-secondary, var(--color-border-light))',
   borderRadius: 12,
 };
 
 const riskConfig: Record<PredictionDeliveryRiskItem['riskLevel'], { color: string; label: string; icon: React.ReactNode }> = {
-  HIGH: { color: 'var(--color-error, #ff4d4f)', label: '高风险', icon: <ExclamationCircleFilled /> },
-  MEDIUM: { color: 'var(--color-warning, #faad14)', label: '中风险', icon: <WarningFilled /> },
-  LOW: { color: 'var(--color-success, #52c41a)', label: '低风险', icon: <CheckCircleFilled /> },
+  HIGH: { color: 'var(--color-error, var(--color-danger))', label: '高风险', icon: <ExclamationCircleFilled /> },
+  MEDIUM: { color: 'var(--color-warning, var(--color-warning))', label: '中风险', icon: <WarningFilled /> },
+  LOW: { color: 'var(--color-success, var(--color-success))', label: '低风险', icon: <CheckCircleFilled /> },
 };
 
 const clamp = (value: number, min = 0, max = 100): number => Math.max(min, Math.min(max, value));
@@ -81,13 +81,13 @@ const DeliveryRiskCard: React.FC<DeliveryRiskCardProps> = ({ topN = 10 }) => {
         onClick={handleRowClick}
         style={{
           padding: '12px 8px',
-          borderBlockEnd: '1px solid var(--color-border-secondary, #f0f0f0)',
+          borderBlockEnd: '1px solid var(--color-border-secondary, var(--color-border-light))',
           cursor: 'pointer',
           transition: 'background-color 0.2s ease',
           borderRadius: 6,
         }}
         onMouseEnter={(e) => {
-          (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--color-fill-1, #fafafa)';
+          (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--color-fill-1, var(--color-bg-container))';
         }}
         onMouseLeave={(e) => {
           (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
@@ -162,7 +162,7 @@ const DeliveryRiskCard: React.FC<DeliveryRiskCardProps> = ({ topN = 10 }) => {
     if (error) {
       return (
         <div style={{ padding: 24, textAlign: 'center', color: 'var(--color-text-secondary, #666)' }}>
-          <ExclamationCircleFilled style={{ color: 'var(--color-error, #ff4d4f)', fontSize: 28 }} />
+          <ExclamationCircleFilled style={{ color: 'var(--color-error, var(--color-danger))', fontSize: 28 }} />
           <div style={{ marginTop: 8 }}>{error}</div>
           <Button type="primary" icon={<ReloadOutlined />} onClick={fetchData} style={{ marginTop: 12 }}>
             重试
@@ -174,7 +174,7 @@ const DeliveryRiskCard: React.FC<DeliveryRiskCardProps> = ({ topN = 10 }) => {
     if (sortedItems.length === 0) {
       return (
         <div style={{ padding: 32, textAlign: 'center', color: 'var(--color-text-tertiary, #999)' }}>
-          <CheckCircleFilled style={{ fontSize: 32, color: 'var(--color-success, #52c41a)' }} />
+          <CheckCircleFilled style={{ fontSize: 32, color: 'var(--color-success, var(--color-success))' }} />
           <div style={{ marginTop: 8 }}>暂无高风险订单</div>
           <div style={{ fontSize: 12, marginTop: 4 }}>生产进度正常</div>
         </div>
@@ -196,7 +196,7 @@ const DeliveryRiskCard: React.FC<DeliveryRiskCardProps> = ({ topN = 10 }) => {
       style={CARD_STYLE}
       title={
         <Space size={8} style={{ cursor: 'pointer' }} onClick={() => setCollapsed(!collapsed)}>
-          <span style={{ color: 'var(--color-error, #ff4d4f)' }}>●</span>
+          <span style={{ color: 'var(--color-error, var(--color-danger))' }}>●</span>
           <span style={{ fontWeight: 600 }}>高风险订单 Top {topN}</span>
           <span style={{ fontSize: 12, color: 'var(--color-text-tertiary, #999)', marginLeft: 4 }}>
             {collapsed ? '点击展开' : '点击收起'}

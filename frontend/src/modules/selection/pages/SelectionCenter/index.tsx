@@ -33,7 +33,7 @@ export default function SelectionCenter() {
         onChange={setActiveTab}
         style={{ marginBottom: 16 }}
         items={[
-          { key: 'market', label: <span><FireOutlined style={{ color: '#ff4d4f' }} /> 市场热品发现</span> },
+          { key: 'market', label: <span><FireOutlined style={{ color: 'var(--color-danger)' }} /> 市场热品发现</span> },
           { key: 'mine',   label: <span><CheckCircleOutlined /> 我的选品库</span> },
         ]}
       />
@@ -94,7 +94,7 @@ export default function SelectionCenter() {
                           )}
                           <div style={{ position: 'absolute', top: 8, right: 8 }}><Tag color={color} style={{ margin: 0, fontSize: 14 }}>{label}</Tag></div>
                           {item.trendScore != null && (
-                            <div style={{ position: 'absolute', top: 8, left: 8, background: 'rgba(114,46,209,0.88)', borderRadius: 4, padding: '2px 8px', color: '#fff', fontSize: 14, fontWeight: 700 }}>
+                            <div style={{ position: 'absolute', top: 8, left: 8, background: 'rgba(114,46,209,0.88)', borderRadius: 4, padding: '2px 8px', color: 'var(--color-bg-base)', fontSize: 14, fontWeight: 700 }}>
                               <ThunderboltOutlined /> {item.trendScore}
                             </div>
                           )}
@@ -117,7 +117,7 @@ export default function SelectionCenter() {
                           </div>
                           <Space size={6} style={{ width: '100%' }}>
                             {(item.status === 'PENDING' || item.status === 'HOLD') && (
-                              <Tooltip title="填写审核结果：通过或不通过"><Button onClick={() => openReviewModal(item)} style={{ borderColor: '#1677ff', color: '#1677ff', fontSize: 14 }}>审核</Button></Tooltip>
+                              <Tooltip title="填写审核结果：通过或不通过"><Button onClick={() => openReviewModal(item)} style={{ borderColor: 'var(--color-primary)', color: 'var(--color-primary)', fontSize: 14 }}>审核</Button></Tooltip>
                             )}
                             {item.status === 'APPROVED' && !item.createdStyleId && (
                               <Tooltip title="生成正式款式，进入样衣开发流程"><Button type="primary" icon={<SendOutlined />} onClick={() => handleCreateStyle(item.id, item.styleName)} style={{ fontSize: 14 }}>下版到样衣</Button></Tooltip>

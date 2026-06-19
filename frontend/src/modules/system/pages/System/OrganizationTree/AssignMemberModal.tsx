@@ -68,7 +68,7 @@ const AssignMemberModal: React.FC<AssignMemberModalProps> = ({
                 return (
                   <Space size={6}>
                     <Avatar size={28} icon={<UserOutlined />}
-                      style={{ backgroundColor: alreadyIn ? '#ccc' : '#1677ff', flexShrink: 0 }} />
+                      style={{ backgroundColor: alreadyIn ? '#ccc' : 'var(--color-primary)', flexShrink: 0 }} />
                     <div>
                       <div style={{ fontWeight: 500 }}>{r.name || r.username}</div>
                       <div style={{ fontSize: 14, color: 'var(--neutral-text-secondary)' }}>

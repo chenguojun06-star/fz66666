@@ -287,13 +287,11 @@ public class MaterialPurchaseController {
     public Result<?> updateInvoiceUrls(@RequestBody Map<String, Object> body) {
         String purchaseId = (String) body.get("purchaseId");
         String invoiceUrls = (String) body.get("invoiceUrls");
-        if (purchaseId == null || purchaseId.isBlank()) {
-            return Result.fail("purchaseId 不能为空");
+        try {
+            materialPurchaseOrchestrator.updateInvoiceUrls(purchaseId, invoiceUrls);
+        } catch (IllegalArgumentException e) {
+            return Result.fail(e.getMessage());
         }
-        MaterialPurchase record = new MaterialPurchase();
-        record.setId(purchaseId);
-        record.setInvoiceUrls(invoiceUrls);
-        materialPurchaseService.updateById(record);
         return Result.success(null);
     }
 }

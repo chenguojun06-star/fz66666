@@ -40,9 +40,9 @@ const IntegrationGuideTab: React.FC = () => (
       <Row gutter={[16, 16]}>
         <Col xs={24} sm={12}><FlowCard icon={<SendOutlined />} title=" 下单对接 (ORDER_SYNC)" desc="客户ERP系统自动推送订单 → 本系统创建生产订单。支持查询订单状态和进度。" color="var(--color-info)" /></Col>
         <Col xs={24} sm={12}><FlowCard icon={<CheckCircleOutlined />} title=" 质检反馈 (QUALITY_FEEDBACK)" desc="入库质检完成 → 自动Webhook推送质检结果到客户系统。支持API主动查询质检报告。" color="var(--color-success)" /></Col>
-        <Col xs={24} sm={12}><FlowCard icon={<CloudUploadOutlined />} title=" 物流对接 (LOGISTICS_SYNC)" desc="成品出库操作 → 自动推送物流信息（出库单号、物流公司、运单号）到客户系统。" color="#722ed1" /></Col>
-        <Col xs={24} sm={12}><FlowCard icon={<ThunderboltOutlined />} title=" 付款对接 (PAYMENT_SYNC)" desc="对账审批通过 → 推送结算通知。客户可通过API确认付款，双向同步对账状态。" color="#fa8c16" /></Col>
-        <Col xs={24} sm={12}><FlowCard icon={<LinkOutlined />} title=" 面辅料供应对接 (MATERIAL_SUPPLY)" desc="向供应商推送采购订单，查询供应商库存。接收供应商订单确认、价格更新、发货通知。" color="#13c2c2" /></Col>
+        <Col xs={24} sm={12}><FlowCard icon={<CloudUploadOutlined />} title=" 物流对接 (LOGISTICS_SYNC)" desc="成品出库操作 → 自动推送物流信息（出库单号、物流公司、运单号）到客户系统。" color="var(--color-accent-purple)" /></Col>
+        <Col xs={24} sm={12}><FlowCard icon={<ThunderboltOutlined />} title=" 付款对接 (PAYMENT_SYNC)" desc="对账审批通过 → 推送结算通知。客户可通过API确认付款，双向同步对账状态。" color="var(--color-warning)" /></Col>
+        <Col xs={24} sm={12}><FlowCard icon={<LinkOutlined />} title=" 面辅料供应对接 (MATERIAL_SUPPLY)" desc="向供应商推送采购订单，查询供应商库存。接收供应商订单确认、价格更新、发货通知。" color="var(--color-accent-cyan)" /></Col>
       </Row>
       <Divider />
       <Title level={5}>数据流向说明</Title>

@@ -5,7 +5,7 @@
 .tabs :global(.ant-tabs-nav) {
   margin-bottom: 0;
   padding: 0 16px;
-  background: var(--color-bg-card, #fff);
+  background: var(--color-bg-card, var(--color-bg-base));
 }
 
 .tabs :global(.ant-tabs-tab) {
@@ -15,17 +15,17 @@
 }
 
 .tabs :global(.ant-tabs-tab-active .ant-tabs-tab-btn) {
-  color: var(--primary-color, #1890ff);
+  color: var(--primary-color, var(--color-info));
 }
 
 .tabs :global(.ant-tabs-ink-bar) {
-  background: var(--primary-color, #1890ff);
+  background: var(--primary-color, var(--color-info));
   height: 2px;
 }
 
 .tabs :global(.ant-tabs-content-holder) {
   padding: 12px;
-  background: var(--color-bg-page, #f5f5f5);
+  background: var(--color-bg-page, var(--color-bg-subtle));
 }
 
 .tabLabel {
@@ -81,7 +81,7 @@
 
 .infoIcon {
   font-size: 14px;
-  color: var(--neutral-text-lighter, #bfbfbf);
+  color: var(--neutral-text-lighter, var(--color-text-quaternary));
   cursor: pointer;
 }
 
@@ -89,7 +89,7 @@
 .statValue {
   font-size: 18px;
   font-weight: 700;
-  color: var(--neutral-text, #1a1a1a);
+  color: var(--neutral-text, var(--color-text-primary));
   line-height: 1.2;
   letter-spacing: -0.5px;
   margin-bottom: 12px;
@@ -145,7 +145,7 @@
   gap: 8px;
   font-size: 16px;
   color: var(--neutral-text, #333);
-  border-top: 1px solid var(--color-border-light, #f0f0f0);
+  border-top: 1px solid var(--color-border-light, var(--color-border-light));
   padding-top: 12px;
   margin-top: auto;
 }
@@ -158,7 +158,7 @@
 
 /* 周同比/日同比变化 */
 .changeUp {
-  color: #52c41a;
+  color: var(--color-success);
   font-size: 14px;
   font-weight: 700;
   display: inline-flex;
@@ -171,7 +171,7 @@
 }
 
 .changeDown {
-  color: #f5222d;
+  color: var(--color-error);
   font-size: 17px;
   font-weight: 700;
   display: inline-flex;
@@ -216,11 +216,11 @@
 
 /* 利润率颜色样式 */
 .profitPositive :global(.ant-statistic-content-value) {
-  color: #52c41a !important;
+  color: var(--color-success) !important;
 }
 
 .profitNegative :global(.ant-statistic-content-value) {
-  color: #f5222d !important;
+  color: var(--color-error) !important;
 }
 
 .chartHeader {
@@ -228,7 +228,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 12px 16px;
-  border-bottom: 1px solid var(--color-border-light, #f0f0f0);
+  border-bottom: 1px solid var(--color-border-light, var(--color-border-light));
   gap: 12px;
 }
 
@@ -253,12 +253,12 @@
 }
 
 .timeOption:hover {
-  color: var(--primary-color, #1890ff);
+  color: var(--primary-color, var(--color-info));
   background: var(--color-primary-light, #f0f7ff);
 }
 
 .timeOption.active {
-  color: var(--primary-color, #1890ff);
+  color: var(--primary-color, var(--color-info));
   font-weight: 700;
   background: var(--color-primary-light, #e6f4ff);
   border-color: var(--primary-color, #91caff);
@@ -270,7 +270,7 @@
 
 .rankSection {
   padding: 16px;
-  border-left: 1px solid var(--color-border-light, #f0f0f0);
+  border-left: 1px solid var(--color-border-light, var(--color-border-light));
   height: 100%;
 }
 
@@ -305,7 +305,7 @@
 
 .rankNum.topRank {
   background: var(--primary-color, #314659);
-  color: #fff;
+  color: var(--color-bg-base);
   border-radius: 50%;
 }
 

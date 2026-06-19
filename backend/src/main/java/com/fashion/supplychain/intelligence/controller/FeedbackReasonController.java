@@ -3,8 +3,8 @@ package com.fashion.supplychain.intelligence.controller;
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.intelligence.entity.KnowledgeBase;
-import com.fashion.supplychain.intelligence.mapper.KnowledgeBaseMapper;
 import com.fashion.supplychain.intelligence.orchestration.FeedbackReasonOrchestrator;
+import com.fashion.supplychain.intelligence.orchestration.KnowledgeBaseOrchestrator;
 import com.fashion.supplychain.intelligence.orchestration.ProcessRewardOrchestrator;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
@@ -31,12 +31,8 @@ public class FeedbackReasonController {
     @Autowired
     private ProcessRewardOrchestrator processRewardOrchestrator;
 
-    /**
-     * P1: 自动知识沉淀 — 用户点赞后，将该轮 Q&A 异步收录进租户知识库。
-     * 两个好处：① RAG 检索时能找到这条经验；② 知识库随使用自动增长。
-     */
     @Autowired(required = false)
-    private KnowledgeBaseMapper knowledgeBaseMapper;
+    private KnowledgeBaseOrchestrator knowledgeBaseOrchestrator;
 
     @GetMapping("/list")
     public Result<?> list(@RequestParam(defaultValue = "20") int limit) {
@@ -84,7 +80,7 @@ public class FeedbackReasonController {
      * 同租户 + 同标题不重复插入（简单去重）。
      */
     private void harvestToKnowledgeBase(AiMessageFeedbackRequest req, Long tenantId) {
-        if (knowledgeBaseMapper == null) return;
+        if (knowledgeBaseOrchestrator == null) return;
         String query = req.getUserQuery();
         String content = req.getAiContent();
         if (query == null || content == null) return;
@@ -95,7 +91,7 @@ public class FeedbackReasonController {
         String title = query.length() > 60 ? query.substring(0, 60) : query;
 
         try {
-            Long exists = knowledgeBaseMapper.selectCount(
+            Long exists = knowledgeBaseOrchestrator.selectCount(
                     new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<KnowledgeBase>()
                             .eq(KnowledgeBase::getTenantId, tenantId)
                             .eq(KnowledgeBase::getTitle, title)
@@ -116,7 +112,7 @@ public class FeedbackReasonController {
             kb.setDeleteFlag(0);
             kb.setCreateTime(LocalDateTime.now());
             kb.setUpdateTime(LocalDateTime.now());
-            knowledgeBaseMapper.insert(kb);
+            knowledgeBaseOrchestrator.insert(kb);
             log.info("[KnowledgeHarvest] 自动沉淀租户{}知识条目: {}", tenantId, title);
         } catch (Exception e) {
             log.warn("[KnowledgeHarvest] 沉淀失败，跳过: {}", e.getMessage());

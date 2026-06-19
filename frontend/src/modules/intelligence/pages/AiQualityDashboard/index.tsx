@@ -110,7 +110,7 @@ const AiQualityDashboard: React.FC = () => {
           </Col>
           <Col span={6}>
             <Card>
-              <Statistic title="通过率" value={passRate} suffix="%" valueStyle={{ color: passRate >= 80 ? '#3f8600' : '#cf1322' }} />
+              <Statistic title="通过率" value={passRate} suffix="%" valueStyle={{ color: passRate >= 80 ? '#3f8600' : 'var(--color-error)' }} />
             </Card>
           </Col>
           <Col span={6}>
@@ -138,7 +138,7 @@ const AiQualityDashboard: React.FC = () => {
       {guardrails && (
         <Card title="安全护栏规则（Guardrails）">
           <pre style={{
-            background: 'var(--color-bg-container, #f5f5f5)',
+            background: 'var(--color-bg-container, var(--color-bg-subtle))',
             padding: 16,
             borderRadius: 8,
             maxHeight: 400,

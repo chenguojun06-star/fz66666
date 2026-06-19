@@ -110,7 +110,7 @@ const CuttingPrintPreviewModal: React.FC<Props> = ({ modalWidth, print, bundles 
         style={{
           padding: '10px 16px',
           background: 'var(--primary-color)',
-          color: '#fff',
+          color: 'var(--color-bg-base)',
           marginBottom: '8px',
           borderRadius: '4px',
           fontSize: '13px',
@@ -147,7 +147,7 @@ const CuttingPrintPreviewModal: React.FC<Props> = ({ modalWidth, print, bundles 
         <div
           style={{
             padding: '10px 16px',
-            background: '#fff7e6',
+            background: '#FFF7E6',
             color: '#ad6800',
             marginBottom: '12px',
             borderRadius: '4px',
@@ -204,7 +204,7 @@ const CuttingPrintPreviewModal: React.FC<Props> = ({ modalWidth, print, bundles 
                   {b.qrCode ? (
                     <QRCodeCanvas value={b.qrCode} size={qrDisplaySize} includeMargin />
                   ) : (
-                    <div style={{ width: qrDisplaySize, height: qrDisplaySize, background: '#f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: 'var(--color-text-tertiary)' }}>
+                    <div style={{ width: qrDisplaySize, height: qrDisplaySize, background: 'var(--color-border-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: 'var(--color-text-tertiary)' }}>
                       无QR
                     </div>
                   )}

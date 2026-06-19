@@ -160,15 +160,15 @@ const WarehousingList: React.FC<WarehousingListProps> = ({ hook }) => {
               },
               {
                 key: 'pendingPackaging',
-                items: { label: '待包装', value: warehousingStats.pendingPackagingBundles ?? 0, unit: '个菲号', color: '#722ed1' },
+                items: { label: '待包装', value: warehousingStats.pendingPackagingBundles ?? 0, unit: '个菲号', color: 'var(--color-accent-purple)' },
                 onClick: () => handleStatusFilterChange(statusFilter === 'pendingPackaging' ? 'all' : 'pendingPackaging'),
-                activeColor: '#722ed1',
+                activeColor: 'var(--color-accent-purple)',
               },
               {
                 key: 'pendingWarehouse',
                 items: { label: '待入库', value: warehousingStats.pendingWarehouseBundles, unit: '个菲号', color: 'var(--color-primary)' },
                 onClick: () => handleStatusFilterChange(statusFilter === 'pendingWarehouse' ? 'all' : 'pendingWarehouse'),
-                activeColor: '#2D7FF9',
+                activeColor: 'var(--color-primary)',
               },
             ]}
           />

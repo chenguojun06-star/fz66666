@@ -48,7 +48,7 @@ const SmartReceiveModal: React.FC<SmartReceiveModalProps> = ({
           <Button onClick={onCancel}>关闭</Button>
           <Button icon={<SendOutlined />} loading={actionLoading._batchPurchase} disabled={pendingMaterials.filter((m) => m.availableStock <= 0).length === 0} onClick={() => handleBatchPurchaseAll(materials)} style={{ borderColor: 'var(--color-primary)', color: 'var(--color-primary)' }}>一键采购全部{noStockCount > 0 ? `（${noStockCount}项）` : ''}</Button>
           <Tooltip title={pendingMaterials.filter((m) => m.availableStock > 0).length === 0 ? '当前所有待处理物料均无可用库存，无需跳过库存' : ''}>
-            <Button icon={<ExclamationCircleOutlined />} loading={!!actionLoading._forcePurchase} disabled={pendingMaterials.filter((m) => m.availableStock > 0).length === 0 || !!actionLoading._forcePurchase} onClick={() => handleForcePurchaseAll(materials)} style={{ color: '#fa8c16', borderColor: '#fa8c16' }}>忽略库存全部外采（{pendingMaterials.length}项）</Button>
+            <Button icon={<ExclamationCircleOutlined />} loading={!!actionLoading._forcePurchase} disabled={pendingMaterials.filter((m) => m.availableStock > 0).length === 0 || !!actionLoading._forcePurchase} onClick={() => handleForcePurchaseAll(materials)} style={{ color: 'var(--color-warning)', borderColor: 'var(--color-warning)' }}>忽略库存全部外采（{pendingMaterials.length}项）</Button>
           </Tooltip>
           <Tooltip title={pendingMaterials.length > 0 && noStockCount === pendingMaterials.length ? `全部 ${noStockCount} 项物料库存为零，请先点"一键采购全部"完成采购入库后再领取` : ''}>
             <Button type="primary" icon={<CheckCircleOutlined />} loading={actionLoading._all} disabled={pendingMaterials.length === 0 || noStockCount === pendingMaterials.length || actionLoading._all} onClick={() => handleSmartReceiveAll(orderNo, pendingCount)}>一键智能领取</Button>
@@ -99,8 +99,8 @@ const SmartReceiveModal: React.FC<SmartReceiveModalProps> = ({
       )}
 
       <style>{`
-        .row-no-stock { background: #fff2f0 !important; }
-        .row-partial { background: #fffbe6 !important; }
+        .row-no-stock { background: #F6FFED !important; }
+        .row-partial { background: #FFFBE6 !important; }
         .row-done { background: #f6f6f6 !important; }
         .row-cancelled { opacity: 0.5; }
         .row-no-stock:hover td, .row-partial:hover td, .row-done:hover td { background: inherit !important; }

@@ -85,7 +85,7 @@
   align-items: center;
   gap: 6px;
   padding: 6px 8px;
-  background: linear-gradient(135deg, #fff1f0 0%, #ffccc7 100%);
+  background: linear-gradient(135deg, #FFF1F0 0%, #ffccc7 100%);
   border: 1px solid #ffa39e;
   border-radius: 8px;
   cursor: pointer;
@@ -115,7 +115,7 @@
 
 .bubbleUrgentArrow {
   font-size: 14px;
-  color: #cf1322;
+  color: var(--color-error);
   flex-shrink: 0;
 }
 
@@ -133,14 +133,14 @@
 }
 
 .bubbleStatTotal strong {
-  color: #1890ff;
+  color: var(--color-info);
   font-size: 14px;
 }
 
 .bubbleStatHigh {
   font-size: 14px;
   color: #ff7875;
-  background: #fff1f0;
+  background: #FFF1F0;
   border: 1px solid #ffa39e;
   border-radius: 8px;
   padding: 1px 6px;
@@ -150,7 +150,7 @@
 .bubbleViewAll {
   margin-left: auto;
   font-size: 14px;
-  color: #1890ff;
+  color: var(--color-info);
   font-weight: 500;
   transition: color 0.2s;
 }

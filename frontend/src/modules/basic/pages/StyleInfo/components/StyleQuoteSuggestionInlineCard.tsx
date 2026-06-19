@@ -78,7 +78,7 @@ const StyleQuoteSuggestionInlineCard: React.FC<Props> = ({ styleNo, sourceStyleN
           alignItems: 'center',
           gap: 8,
           padding: '10px 14px',
-          background: 'linear-gradient(90deg, #fffdf4 0%, #fff7e6 100%)',
+          background: 'linear-gradient(90deg, #F0FFF4 0%, #FFF7E6 100%)',
           cursor: 'pointer',
         }}
       >
@@ -110,7 +110,7 @@ const StyleQuoteSuggestionInlineCard: React.FC<Props> = ({ styleNo, sourceStyleN
           ) : loading ? (
             <div style={{ padding: '12px 0', textAlign: 'center' }}><Spin /></div>
           ) : error ? (
-            <div style={{ fontSize: 14, color: '#cf1322' }}>{error}</div>
+            <div style={{ fontSize: 14, color: 'var(--color-error)' }}>{error}</div>
           ) : data ? (
             <>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 8, marginBottom: 10 }}>
@@ -125,7 +125,7 @@ const StyleQuoteSuggestionInlineCard: React.FC<Props> = ({ styleNo, sourceStyleN
                     style={{
                       padding: '8px 10px',
                       borderRadius: 6,
-                      border: item.highlight ? '1px solid #faad14' : '1px solid rgba(0,0,0,0.06)',
+                      border: item.highlight ? '1px solid var(--color-warning)' : '1px solid rgba(0,0,0,0.06)',
                       background: item.highlight ? 'rgba(250,173,20,0.08)' : 'rgba(255,255,255,0.55)',
                     }}
                   >

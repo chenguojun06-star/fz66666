@@ -211,7 +211,7 @@
   gap: 5px;
   padding: 4px 12px;
   border-radius: 6px;
-  background: #f0f0f0;
+  background: var(--color-border-light);
   cursor: pointer;
   transition: background 0.18s, color 0.18s, border-color 0.18s;
   font-size: 12px;
@@ -227,13 +227,13 @@
 }
 
 .overdue-factory-row.active {
-  background: #ff4d4f;
-  color: #fff;
-  border-color: #ff4d4f;
+  background: var(--color-danger);
+  color: var(--color-bg-base);
+  border-color: var(--color-danger);
 }
 
 .overdue-factory-row-total {
-  background: #fff2e8;
+  background: #F6FFED;
   border-color: #ffbb96;
   color: #d4380d;
   font-weight: 600;
@@ -241,14 +241,14 @@
 
 .overdue-factory-row-total:hover {
   background: #ff7875;
-  color: #fff;
+  color: var(--color-bg-base);
   border-color: #ff7875;
 }
 
 .overdue-factory-row-total.active {
-  background: #ff4d4f;
-  color: #fff;
-  border-color: #ff4d4f;
+  background: var(--color-danger);
+  color: var(--color-bg-base);
+  border-color: var(--color-danger);
 }
 
 .overdue-factory-label {
@@ -267,7 +267,7 @@
 .overdue-factory-nav-btn {
   margin-left: auto;
   font-size: 12px;
-  color: #1677ff;
+  color: var(--color-primary);
   cursor: pointer;
   padding: 4px 8px;
   border-radius: 8px;
@@ -299,7 +299,7 @@
 
 :root[data-theme="dark"] .overdue-factory-row.active {
   background: #a8071a;
-  color: #fff;
+  color: var(--color-bg-base);
   border-color: #a8071a;
 }
 
@@ -311,5 +311,5 @@
 
 :root[data-theme="dark"] .overdue-factory-row-total:hover {
   background: #a8071a;
-  color: #fff;
+  color: var(--color-bg-base);
 }

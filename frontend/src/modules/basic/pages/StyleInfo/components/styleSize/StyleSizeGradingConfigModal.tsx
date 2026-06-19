@@ -157,7 +157,7 @@ const StyleSizeGradingConfigModal: React.FC<Props> = ({
         return (
           <span style={{
             fontWeight: isBase ? 700 : 400,
-            color: isBase ? 'var(--color-primary, #1677ff)' : undefined,
+            color: isBase ? 'var(--color-primary, var(--color-primary))' : undefined,
           }}>
             {val ?? '-'}
           </span>
@@ -185,7 +185,7 @@ const StyleSizeGradingConfigModal: React.FC<Props> = ({
       {/* 行业预设模板 */}
       <div style={{ marginBottom: 20 }}>
         <div style={{ fontWeight: 600, marginBottom: 8, fontSize: 15, display: 'flex', alignItems: 'center', gap: 6 }}>
-          <BulbOutlined style={{ color: '#faad14' }} />
+          <BulbOutlined style={{ color: 'var(--color-warning)' }} />
           快速应用行业预设
         </div>
         <div style={{ color: 'var(--color-text-tertiary)', fontSize: 13, marginBottom: 8 }}>
@@ -352,8 +352,8 @@ const StyleSizeGradingConfigModal: React.FC<Props> = ({
                             userSelect: 'none',
                             opacity: checked ? 1 : 0.45,
                             background: checked ? '#e6f4ff' : undefined,
-                            borderColor: checked ? '#1677ff' : undefined,
-                            color: checked ? '#1677ff' : undefined,
+                            borderColor: checked ? 'var(--color-primary)' : undefined,
+                            color: checked ? 'var(--color-primary)' : undefined,
                             fontWeight: checked ? 600 : 400,
                           }}
                           onClick={() => setGradingDraftZones((prev) => prev.map((item) => {
@@ -399,8 +399,8 @@ const StyleSizeGradingConfigModal: React.FC<Props> = ({
                             userSelect: 'none',
                             opacity: checked ? 1 : 0.45,
                             background: checked ? '#f6ffed' : undefined,
-                            borderColor: checked ? '#52c41a' : undefined,
-                            color: checked ? '#52c41a' : undefined,
+                            borderColor: checked ? 'var(--color-success)' : undefined,
+                            color: checked ? 'var(--color-success)' : undefined,
                             fontWeight: checked ? 600 : 400,
                           }}
                           onClick={() => setGradingDraftZones((prev) => prev.map((item) => {
@@ -450,9 +450,9 @@ const StyleSizeGradingConfigModal: React.FC<Props> = ({
                                 cursor: 'pointer',
                                 userSelect: 'none',
                                 opacity: checked ? 1 : 0.45,
-                                background: checked ? '#fff7e6' : undefined,
-                                borderColor: checked ? '#fa8c16' : undefined,
-                                color: checked ? '#fa8c16' : undefined,
+                                background: checked ? '#FFF7E6' : undefined,
+                                borderColor: checked ? 'var(--color-warning)' : undefined,
+                                color: checked ? 'var(--color-warning)' : undefined,
                                 fontWeight: checked ? 600 : 400,
                               }}
                               onClick={() => toggleSizeInColumn(zone.key, col.key, size)}
@@ -527,7 +527,7 @@ const StyleSizeGradingConfigModal: React.FC<Props> = ({
           <Divider style={{ margin: '12px 0' }} />
           <div style={{ marginBottom: 16 }}>
             <div style={{ fontWeight: 600, marginBottom: 8, fontSize: 15, display: 'flex', alignItems: 'center', gap: 6 }}>
-              <CheckCircleFilled style={{ color: '#52c41a' }} />
+              <CheckCircleFilled style={{ color: 'var(--color-success)' }} />
               实时预览
             </div>
             <div style={{ color: 'var(--color-text-tertiary)', fontSize: 13, marginBottom: 8 }}>

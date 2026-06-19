@@ -91,7 +91,7 @@
 
 .office-dept-tab--active {
   background: var(--tab-color, #4a6cf7);
-  color: #fff;
+  color: var(--color-bg-base);
   border-color: var(--tab-color, #4a6cf7);
 }
 
@@ -138,7 +138,7 @@
   gap: 8px;
   padding: 10px 16px;
   background: linear-gradient(135deg, var(--dept-color, #4a6cf7) 0%, var(--dept-color, #4a6cf7) 100%);
-  color: #fff;
+  color: var(--color-bg-base);
 }
 
 .dept-icon {
@@ -225,7 +225,7 @@
 }
 
 .ws-station--working {
-  background: linear-gradient(135deg, #fff 0%, color-mix(in srgb, var(--agent-color) 5%, #fff) 100%);
+  background: linear-gradient(135deg, var(--color-bg-base) 0%, color-mix(in srgb, var(--agent-color) 5%, var(--color-bg-base)) 100%);
 }
 
 .ws-station--sleeping {
@@ -428,7 +428,7 @@
 
 .ws-char-eyes {
   font-size: 8px;
-  color: #fff;
+  color: var(--color-bg-base);
   letter-spacing: 2px;
   font-weight: 700;
 }
@@ -565,7 +565,7 @@
 .ws-current-task {
   font-size: 14px;
   color: var(--agent-color, #4a6cf7);
-  background: color-mix(in srgb, var(--agent-color) 8%, #fff);
+  background: color-mix(in srgb, var(--agent-color) 8%, var(--color-bg-base));
   padding: 3px 8px;
   border-radius: 6px;
   border-left: 3px solid;
@@ -616,7 +616,7 @@
   justify-content: center;
   font-size: 18px;
   font-weight: 700;
-  color: #fff;
+  color: var(--color-bg-base);
   flex-shrink: 0;
 }
 
@@ -679,7 +679,7 @@
 .agent-detail-task {
   margin-top: 12px;
   padding: 8px 14px;
-  background: color-mix(in srgb, var(--agent-color) 6%, #fff);
+  background: color-mix(in srgb, var(--agent-color) 6%, var(--color-bg-base));
   border-radius: 8px;
   border-left: 4px solid;
   font-size: 14px;
@@ -707,5 +707,5 @@
 }
 
 .office-alert--critical { border-left-color: #ef4444; background: #fef2f2; }
-.office-alert--warning { border-left-color: #f59e0b; background: #fffbeb; }
+.office-alert--warning { border-left-color: #f59e0b; background: #F0FFF0; }
 .office-alert--info { border-left-color: #4a6cf7; }

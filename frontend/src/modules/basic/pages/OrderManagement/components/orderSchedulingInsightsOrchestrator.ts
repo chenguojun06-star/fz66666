@@ -29,10 +29,10 @@ const formatInt = (value: unknown) => {
 
 const resolveSourceMeta = (plan: SchedulePlan) => {
   if (plan.capacitySource === 'real') {
-    return { label: '实测', tone: '#1677ff' };
+    return { label: '实测', tone: 'var(--color-primary)' };
   }
   if (plan.capacitySource === 'configured') {
-    return { label: '已配置', tone: '#52c41a' };
+    return { label: '已配置', tone: 'var(--color-success)' };
   }
   return { label: '估算', tone: '#d48806' };
 };

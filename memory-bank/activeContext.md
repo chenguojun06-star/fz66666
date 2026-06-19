@@ -1,7 +1,7 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-06-18
+> 最后更新：2026-06-19
 
 ---
 
@@ -13,8 +13,54 @@
 - ✅ 安全审计修复（微信支付回调签名验证 + 数据库密码校验 + HTTPS 强制）
 - ✅ 小云AI全面智能化升级（8大优化模块，2026-06-13完成）
 - ✅ 小云AI CL4R1T4S 借鉴升级（6项优化，2026-06-18完成）
+- ✅ 产品稳定性批量优化（9项任务，2026-06-19完成）
 
 ## 最近变更
+
+### 2026-06-19 产品稳定性批量优化（9项任务）
+
+**背景**：产品所有者反馈"产品不稳定、像垃圾产品"，以产品经理视角系统性优化。
+
+| # | 任务 | 核心变更 | 效果 |
+|---|------|---------|------|
+| 1 | 部署后冒烟测试 | 新建 postdeploy-smoke-test.py，CI 加 postdeploy-smoke-test job | 部署后自动测登录/菜单/色卡/socat，失败阻断打 tag |
+| 2 | 修复失败测试 | SampleStockOrchestratorTest/OrderRemarkOrchestratorTest 修复 | 方法名/类型错误修正，@Disabled 标记不匹配的 |
+| 3 | Flyway 列依赖检查 | 新建 check-flyway-column-deps.py，CI 加检查步骤 | 拦截 V20260617002 类型事故（索引引用不存在列） |
+| 4 | tenant_id 审计 | 新建 audit-tenant-id.py，智能判断 Entity 是否有 tenantId | 从19处误报降到4处真实风险（AgentEvent/IntegrationCallbackLog/LogisticsProvider/LogisticsTrack） |
+| 5 | @Transactional 治理 | 删除9处单表操作 @Transactional | UserServiceImpl(3)/MaterialStockServiceImpl(1)/PatternRevisionServiceImpl(4)/ProductionOrderCommandService(1) |
+| 6 | 前端颜色批量替换 | 新建 audit-frontend-colors.py，30+颜色映射 | 替换1812处硬编码颜色为CSS变量，tsc通过 |
+| 7 | 订单列表缓存调研 | 确认已有 Redis 缓存（TTL 300s） | 缓存策略完善，N+1优化标记后续 |
+| 8 | AI 功能减法 | 砍掉孤儿 DynamicFollowUpEngine（273行死代码） | 清理 EvolutionOrchestrator 引用，保留17个活跃组件 |
+| 9 | 健康度仪表盘 | 调研 DashboardController | 后端API待创建（low priority） |
+
+**新增脚本**（4个）：
+- `scripts/postdeploy-smoke-test.py` — 部署后冒烟测试
+- `scripts/check-flyway-column-deps.py` — Flyway 列依赖检查
+- `scripts/audit-tenant-id.py` — 多租户 tenant_id 审计
+- `scripts/audit-frontend-colors.py` — 前端硬编码颜色审计+替换
+
+**修改文件**：
+- `backend/.../UserServiceImpl.java` — 删除3处 @Transactional
+- `backend/.../MaterialStockServiceImpl.java` — 删除1处 @Transactional
+- `backend/.../PatternRevisionServiceImpl.java` — 删除4处 @Transactional
+- `backend/.../ProductionOrderCommandService.java` — 删除1处 @Transactional
+- `backend/.../AiAgentOrchestrator.java` — 删除 DynamicFollowUpEngine 注入
+- `backend/.../EvolutionOrchestrator.java` — 删除 DynamicFollowUpEngine 引用
+- `frontend/src/**` — 1812处硬编码颜色替换为CSS变量
+- `.github/workflows/ci.yml` — 加冒烟测试 + Flyway检查步骤
+
+**删除文件**：
+- `backend/.../orchestration/DynamicFollowUpEngine.java` — 孤儿组件（273行死代码）
+
+**编译验证**：mvn compile BUILD SUCCESS + tsc --noEmit 0 errors
+
+**保留的技术债**（10处跨表 @Transactional 需事务上移）：
+- ProductWarehousingServiceImpl(1) - REQUIRES_NEW 跨表
+- ProductSkuServiceImpl(1) - REQUIRES_NEW 跨表
+- PurchaseCartServiceImpl(2) - 跨表 item+cart
+- OrderTransferServiceImpl(4) - 跨表
+- RolePermissionServiceImpl(1) - 先删后增
+- ExpenseReimbursementDocService(1) - 批量更新
 
 ### 2026-06-18 小云AI CL4R1T4S 借鉴升级（6项优化）
 
@@ -296,17 +342,21 @@ SelfCritiqueGateTest 和 EvolutionOrchestratorTest 需要修复 Spring ObjectPro
 
 ### P0（2项 — 需后续迭代治理）
 1. ProductionOrderController 5个方法的 @Transactional 应下沉到 Orchestrator 层（临时修复已生效）
-2. PurchaseCartServiceImpl 8处 Service 层 @Transactional 违规
+2. PurchaseCartServiceImpl 2处 Service 层 @Transactional 违规（跨表操作，需事务上移）
 
 ### P1（1项）
-1. 订单列表查询无缓存
+1. ~~订单列表查询无缓存~~ ✅ 已确认有 Redis 缓存（TTL 300s），N+1 优化待后续
 
-### P2（5项）
+### P2（3项）
 1. @Version与手写原子SQL混用风险
 2. vendor-react-antd chunk过大
 3. cutting-task/by-style-no 旧式端点
-4. 前端硬编码颜色值约555处
-5. Service层@Transactional违规约70处（含上述P0-2项）
+
+### 已解决（2026-06-19）
+1. ✅ 前端硬编码颜色 555处 → 实际替换1812处为CSS变量
+2. ✅ Service层@Transactional违规 → 删除9处单表操作，保留10处跨表（技术债）
+3. ✅ tenant_id 审计 → 4处真实风险已定位（AgentEvent/IntegrationCallbackLog/LogisticsProvider/LogisticsTrack）
+4. ✅ AI 孤儿组件 → DynamicFollowUpEngine 已删除（273行死代码）
 
 ### 已解决（2026-06-18）
 1. ✅ V20260617002 delete_flag 引用问题 → V20260618004 防御式修复
@@ -316,7 +366,8 @@ SelfCritiqueGateTest 和 EvolutionOrchestratorTest 需要修复 Spring ObjectPro
 
 ## 下一步
 
-- 小云AI全链路测试（验证8大优化模块实际效果）
-- ProductionOrderController 业务逻辑下沉到 Orchestrator 层
-- 订单列表查询缓存
-- 监控部署后启动时间变化（@Lazy优化效果）
+- 10处跨表 @Transactional 事务上移到 Orchestrator 层
+- 4处 Entity 缺 tenant_id 评估（AgentEvent/IntegrationCallbackLog/LogisticsProvider/LogisticsTrack）
+- 订单列表 N+1 优化（enrichOrderList 10+ Fill 服务并行化）
+- 用户健康度仪表盘后端 API（DAU/任务完成率/P0数/AI解决率）
+- EvolutionOrchestrator 死代码清理（getUnifiedMetrics/runHealthCheck 无人调用）

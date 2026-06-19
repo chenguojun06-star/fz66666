@@ -12,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
 @Service
@@ -55,6 +56,7 @@ public class AiMetricsOrchestrator {
         return metrics;
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public void generateSnapshot() {
         try {
             AiMetricsSnapshot snapshot = new AiMetricsSnapshot();

@@ -45,9 +45,9 @@ interface OrderTrackData {
   aiPrediction?: AiPrediction;
 }
 
-const RISK_COLOR = { LOW: '#52c41a', MEDIUM: '#faad14', HIGH: '#ff4d4f' } as const;
+const RISK_COLOR = { LOW: 'var(--color-success)', MEDIUM: 'var(--color-warning)', HIGH: 'var(--color-danger)' } as const;
 const RISK_LABEL = { LOW: '低风险', MEDIUM: '中风险', HIGH: '高风险' } as const;
-const STATUS_COLOR = { PENDING: '#d9d9d9', ACTIVE: '#1677ff', DONE: '#52c41a' } as const;
+const STATUS_COLOR = { PENDING: 'var(--color-border-antd)', ACTIVE: 'var(--color-primary)', DONE: 'var(--color-success)' } as const;
 
 function getDaysLeft(dateText?: string): number | null {
   if (!dateText) return null;
@@ -186,7 +186,7 @@ const ShareOrderPage: React.FC = () => {
               <div style={{ fontSize: 14, color: '#79a8c7', marginBottom: 2 }}>订单编号</div>
               <div style={{ fontSize: 16, fontWeight: 700, color: '#f2fbff', fontFamily: 'monospace' }}>{data.orderNo}</div>
             </div>
-            <Tag color={pageRiskTone.color} style={{ fontSize: 14, padding: '2px 10px', borderRadius: 20, border: 'none', color: '#fff', boxShadow: `0 0 18px ${pageRiskTone.color}33` }}>
+            <Tag color={pageRiskTone.color} style={{ fontSize: 14, padding: '2px 10px', borderRadius: 20, border: 'none', color: 'var(--color-bg-base)', boxShadow: `0 0 18px ${pageRiskTone.color}33` }}>
               {pageRiskTone.label}
             </Tag>
           </div>
@@ -246,8 +246,8 @@ const ShareOrderPage: React.FC = () => {
               <Progress
                 percent={s.rate}
                 showInfo={false}
-                strokeColor={s.status === 'DONE' ? '#52c41a' : s.status === 'ACTIVE' ? '#1677ff' : '#d9d9d9'}
-                trailColor="#f0f0f0"
+                strokeColor={s.status === 'DONE' ? 'var(--color-success)' : s.status === 'ACTIVE' ? 'var(--color-primary)' : 'var(--color-border-antd)'}
+                trailColor="var(--color-border-light)"
                 strokeWidth={6}
               />
             </div>

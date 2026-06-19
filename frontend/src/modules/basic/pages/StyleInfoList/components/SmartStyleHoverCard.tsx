@@ -66,11 +66,11 @@ const SmartStyleHoverCard: React.FC<Props> = ({ record }) => {
     return latest ? dayjs(latest).format('MM-DD') : null;
   }, [isCompleted, record]);
 
-  const riskColor = isCompleted ? '#52c41a'
+  const riskColor = isCompleted ? 'var(--color-success)'
     : daysLeft === null ? '#888'
-    : daysLeft <= 0 ? '#ff4d4f'
-    : daysLeft <= 3 ? '#fa8c16'
-    : '#52c41a';
+    : daysLeft <= 0 ? 'var(--color-danger)'
+    : daysLeft <= 3 ? 'var(--color-warning)'
+    : 'var(--color-success)';
 
   const riskLabel = isCompleted ? null
     : daysLeft === null ? null
@@ -135,7 +135,7 @@ const SmartStyleHoverCard: React.FC<Props> = ({ record }) => {
               </span>
               <span style={{
                 flex: 1,
-                color: s.done ? '#888' : isNext ? '#1677ff' : '#bbb',
+                color: s.done ? '#888' : isNext ? 'var(--color-primary)' : '#bbb',
                 fontWeight: isNext ? 600 : 400,
               }}>
                 {s.label}
@@ -162,7 +162,7 @@ const SmartStyleHoverCard: React.FC<Props> = ({ record }) => {
         justifyContent: 'space-between',
         alignItems: 'center',
       }}>
-        <span style={{ color: isCompleted ? '#52c41a' : '#888' }}>
+        <span style={{ color: isCompleted ? 'var(--color-success)' : '#888' }}>
           {isCompleted
             ? ` ${completedTimeStr ? completedTimeStr + ' 完成' : '全部完成'}`
             : doneCount === 0

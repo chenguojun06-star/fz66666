@@ -132,7 +132,7 @@ const FactoryShipModal: React.FC<FactoryShipModalProps> = ({
         <span>已发：<b style={{ color: '#096dd9' }}>{alreadyShipped}</b></span>
         <span>剩余可发：<b style={{ color: '#389e0d' }}>{canShip}</b></span>
         {currentTotal > 0 && (
-          <span>本次发货：<b style={{ color: currentTotal > canShip ? '#cf1322' : '#d46b08' }}>{currentTotal}</b>
+          <span>本次发货：<b style={{ color: currentTotal > canShip ? 'var(--color-error)' : '#d46b08' }}>{currentTotal}</b>
             {currentTotal > canShip && <Tag color="red" style={{ marginLeft: 6, fontSize: 14 }}>超出可发数量</Tag>}
           </span>
         )}
@@ -195,7 +195,7 @@ const FactoryShipModal: React.FC<FactoryShipModalProps> = ({
             padding: '6px 10px', marginBottom: 12, maxHeight: 120, overflowY: 'auto',
           }}>
             {shipHistory.map((rec, i) => (
-              <div key={i} style={{ display: 'flex', gap: 10, padding: '3px 0', fontSize: 14, borderBottom: i < shipHistory.length - 1 ? '1px solid #f5f5f5' : 'none' }}>
+              <div key={i} style={{ display: 'flex', gap: 10, padding: '3px 0', fontSize: 14, borderBottom: i < shipHistory.length - 1 ? '1px solid var(--color-bg-subtle)' : 'none' }}>
                 <span style={{ color: '#888', minWidth: 80 }}>
                   {rec.shipTime ? dayjs(rec.shipTime).format('MM-DD HH:mm') : '-'}
                 </span>

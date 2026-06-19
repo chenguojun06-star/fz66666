@@ -142,9 +142,9 @@ const FeedbackTab: React.FC = () => {
       {stats && (
         <Row gutter={16} style={{ marginBottom: 16 }}>
           <Col span={6}><Card><Statistic title="总反馈" value={stats.total} /></Card></Col>
-          <Col span={6}><Card><Statistic title="待处理" value={stats.pending} styles={{ content: { color: stats.pending > 0 ? '#ff4d4f' : undefined } }} /></Card></Col>
-          <Col span={6}><Card><Statistic title="处理中" value={stats.processing} styles={{ content: { color: '#1890ff' } }} /></Card></Col>
-          <Col span={6}><Card><Statistic title="已解决" value={stats.resolved} styles={{ content: { color: '#52c41a' } }} /></Card></Col>
+          <Col span={6}><Card><Statistic title="待处理" value={stats.pending} styles={{ content: { color: stats.pending > 0 ? 'var(--color-danger)' : undefined } }} /></Card></Col>
+          <Col span={6}><Card><Statistic title="处理中" value={stats.processing} styles={{ content: { color: 'var(--color-info)' } }} /></Card></Col>
+          <Col span={6}><Card><Statistic title="已解决" value={stats.resolved} styles={{ content: { color: 'var(--color-success)' } }} /></Card></Col>
         </Row>
       )}
 
@@ -226,7 +226,7 @@ const FeedbackTab: React.FC = () => {
             {detailModal.data.reply && (
               <>
                 <Descriptions.Item label="管理员回复" span={2}>
-                  <div style={{ whiteSpace: 'pre-wrap', color: '#1890ff' }}>{detailModal.data.reply}</div>
+                  <div style={{ whiteSpace: 'pre-wrap', color: 'var(--color-info)' }}>{detailModal.data.reply}</div>
                 </Descriptions.Item>
                 <Descriptions.Item label="回复时间" span={2}>{detailModal.data.replyTime}</Descriptions.Item>
               </>

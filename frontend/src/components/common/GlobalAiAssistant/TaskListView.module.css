@@ -21,7 +21,7 @@
 
 .createBtn {
   height: 32px; padding: 0 14px; border-radius: 16px;
-  background: var(--xiaoyun-primary); color: #fff; border: none;
+  background: var(--xiaoyun-primary); color: var(--color-bg-base); border: none;
   cursor: pointer; font-size: 14px; font-weight: 500;
   white-space: nowrap; transition: all 0.15s; display: flex; align-items: center; gap: 4px;
 }
@@ -37,7 +37,7 @@
   white-space: nowrap; transition: all 0.15s;
 }
 .filterChip:hover { border-color: var(--xiaoyun-primary-border); }
-.filterChipActive { background: var(--xiaoyun-primary); color: #fff; border-color: var(--xiaoyun-primary); }
+.filterChipActive { background: var(--xiaoyun-primary); color: var(--color-bg-base); border-color: var(--xiaoyun-primary); }
 
 .listArea { flex: 1; overflow-y: auto; padding: 8px; }
 
@@ -85,9 +85,9 @@
   transition: all 0.15s; white-space: nowrap;
 }
 .claimBtn { background: var(--xiaoyun-primary-bg); color: var(--xiaoyun-primary); }
-.claimBtn:hover { background: var(--xiaoyun-primary); color: #fff; }
+.claimBtn:hover { background: var(--xiaoyun-primary); color: var(--color-bg-base); }
 .completeBtn { background: #f6ffed; color: #389e0d; border: 1px solid #b7eb8f; }
-.completeBtn:hover { background: #389e0d; color: #fff; }
+.completeBtn:hover { background: #389e0d; color: var(--color-bg-base); }
 .editBtn { background: var(--xiaoyun-bg-page); color: var(--xiaoyun-text-secondary); }
 .editBtn:hover { background: var(--xiaoyun-border-card); }
 

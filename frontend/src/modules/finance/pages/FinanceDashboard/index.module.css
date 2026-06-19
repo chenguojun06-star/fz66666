@@ -40,11 +40,11 @@
 }
 
 .changeUp {
-  color: #f5222d;
+  color: var(--color-error);
 }
 
 .changeDown {
-  color: #52c41a;
+  color: var(--color-success);
 }
 
 .dailyInfo {
@@ -78,13 +78,13 @@
 
 .miniBarChart {
   height: 100%;
-  background: #d9d9d9;
+  background: var(--color-border-antd);
   border-radius: 8px;
 }
 
 .progressBar {
   height: 8px;
-  background: #f0f0f0;
+  background: var(--color-border-light);
   border-radius: 8px;
   margin-top: 12px;
   overflow: hidden;
@@ -124,12 +124,12 @@
 }
 
 .tabs :global(.ant-tabs-tab-active .ant-tabs-tab-btn) {
-  color: #1890ff;
+  color: var(--color-info);
   font-weight: 500;
 }
 
 .tabs :global(.ant-tabs-ink-bar) {
-  background: #1890ff;
+  background: var(--color-info);
 }
 
 .timeSelector {
@@ -147,11 +147,11 @@
 }
 
 .timeOption:hover {
-  color: #1890ff;
+  color: var(--color-info);
 }
 
 .timeOption.active {
-  color: #1890ff;
+  color: var(--color-info);
   font-weight: 500;
 }
 
@@ -196,7 +196,7 @@
 
 .rankNum.topRank {
   background: #314659;
-  color: #fff;
+  color: var(--color-bg-base);
   border-radius: 50%;
 }
 

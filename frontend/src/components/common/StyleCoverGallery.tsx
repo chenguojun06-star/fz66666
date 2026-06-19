@@ -257,7 +257,7 @@ const StyleCoverGallery: React.FC<StyleCoverGalleryProps> = ({
               onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(0,0,0,0.55)'; }}
               onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(0,0,0,0.35)'; }}
             >
-              <LeftOutlined style={{ color: '#fff', fontSize: 12 }} />
+              <LeftOutlined style={{ color: 'var(--color-bg-base)', fontSize: 12 }} />
             </div>
             <div
               onClick={(e) => { e.stopPropagation(); goToNext(); }}
@@ -279,7 +279,7 @@ const StyleCoverGallery: React.FC<StyleCoverGalleryProps> = ({
               onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(0,0,0,0.55)'; }}
               onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(0,0,0,0.35)'; }}
             >
-              <RightOutlined style={{ color: '#fff', fontSize: 12 }} />
+              <RightOutlined style={{ color: 'var(--color-bg-base)', fontSize: 12 }} />
             </div>
           </>
         )}
@@ -303,7 +303,7 @@ const StyleCoverGallery: React.FC<StyleCoverGalleryProps> = ({
                   height: 32,
                   borderRadius: 6,
                   overflow: 'hidden',
-                  border: isSelected ? '2px solid var(--color-primary)' : '1px solid #d9d9d9',
+                  border: isSelected ? '2px solid var(--color-primary)' : '1px solid var(--color-border-antd)',
                   background: 'var(--color-bg-subtle)',
                   cursor: 'pointer',
                   flexShrink: 0,
@@ -323,7 +323,7 @@ const StyleCoverGallery: React.FC<StyleCoverGalleryProps> = ({
                       position: 'absolute',
                       inset: 0,
                       background: 'rgba(0, 0, 0, 0.45)',
-                      color: '#fff',
+                      color: 'var(--color-bg-base)',
                       fontSize: 14,
                       fontWeight: 600,
                       display: 'flex',

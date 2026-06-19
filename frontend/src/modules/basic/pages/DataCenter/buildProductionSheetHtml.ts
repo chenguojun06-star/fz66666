@@ -90,9 +90,9 @@ export const buildProductionSheetHtml = (payload: any, tenantName?: string, extr
   const seasonText = toSeasonCn(style.season);
 
   const reviewStatusLabel = (s: unknown) => {
-    if (s === 'PASS')   return '<span style="color:#52c41a;font-weight:600"> 通过</span>';
-    if (s === 'REWORK') return '<span style="color:#faad14;font-weight:600"> 需修改</span>';
-    if (s === 'REJECT') return '<span style="color:#ff4d4f;font-weight:600"> 不通过</span>';
+    if (s === 'PASS')   return '<span style="color:var(--color-success);font-weight:600"> 通过</span>';
+    if (s === 'REWORK') return '<span style="color:var(--color-warning);font-weight:600"> 需修改</span>';
+    if (s === 'REJECT') return '<span style="color:var(--color-danger);font-weight:600"> 不通过</span>';
     return '<span style="color:#aaa">未审核</span>';
   };
   const sampleReviewHtml = style.sampleReviewStatus ? `
@@ -124,8 +124,8 @@ export const buildProductionSheetHtml = (payload: any, tenantName?: string, extr
     .meta { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 16px; }
     .meta div { font-size: 12px; color: rgba(0,0,0,0.85); }
     .muted { color: rgba(0,0,0,0.55); }
-    .btn { height: 32px; padding: 4px 14px; border-radius: 6px; border: 1px solid rgba(0,0,0,0.15); background: #fff; font-size: 14px; font-weight: 600; cursor: pointer; }
-    .btn:hover { border-color: #2D7FF9; color: #2D7FF9; }
+    .btn { height: 32px; padding: 4px 14px; border-radius: 6px; border: 1px solid rgba(0,0,0,0.15); background: var(--color-bg-base); font-size: 14px; font-weight: 600; cursor: pointer; }
+    .btn:hover { border-color: var(--color-primary); color: var(--color-primary); }
     .btn:active { transform: translateY(0.5px); }
     .section { margin-top: 18px; }
     .section-title { font-weight: 700; font-size: 14px; margin-bottom: 8px; }
@@ -164,7 +164,7 @@ export const buildProductionSheetHtml = (payload: any, tenantName?: string, extr
 
     <div class="section">
       <div class="section-title">生产要求</div>
-      <div style="line-height:1.8;padding:8px 10px;border:1px solid #d9d9d9;border-radius:4px;min-height:40px;font-size:13px">${productionReqHtml || '<span style="color:#bfbfbf">暂无生产要求</span>'}</div>
+      <div style="line-height:1.8;padding:8px 10px;border:1px solid var(--color-border-antd);border-radius:4px;min-height:40px;font-size:13px">${productionReqHtml || '<span style="color:var(--color-text-quaternary)">暂无生产要求</span>'}</div>
     </div>
 
     ${sampleReviewHtml}

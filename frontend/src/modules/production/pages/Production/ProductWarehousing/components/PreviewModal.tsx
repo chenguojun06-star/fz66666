@@ -68,7 +68,7 @@ const PreviewModal: React.FC<PreviewModalProps> = ({ open, url, title, onClose }
             display: 'flex',
             justifyContent: 'center',
             alignItems: 'center',
-            background: '#f0f0f0',
+            background: 'var(--color-border-light)',
           }}
         >
           <img

@@ -1,14 +1,14 @@
 .cockpit-workbench {
   --bi-bg: #f5f7fa;
-  --bi-surface: #ffffff;
-  --bi-border: #e5e7eb;
+  --bi-surface: var(--color-bg-base);
+  --bi-border: var(--color-border);
   --bi-border-light: #f0f1f3;
   --bi-text-primary: #1f2937;
-  --bi-text-secondary: #6b7280;
-  --bi-text-muted: #9ca3af;
+  --bi-text-secondary: var(--color-text-secondary);
+  --bi-text-muted: var(--color-text-tertiary);
   --bi-accent: #3b82f6;
   --bi-accent-light: #eff6ff;
-  --bi-success: #10b981;
+  --bi-success: var(--color-accent-emerald);
   --bi-warning: #f59e0b;
   --bi-danger: #ef4444;
   --bi-purple: #8b5cf6;

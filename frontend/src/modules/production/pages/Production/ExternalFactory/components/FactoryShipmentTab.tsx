@@ -293,7 +293,7 @@ const FactoryShipmentTab: React.FC<FactoryShipmentTabProps> = ({ selectedFactory
             key: 'delete',
             label: (
               <Popconfirm title="确认删除此发货记录？" onConfirm={() => handleDelete(record)} okText="删除" cancelText="取消" okButtonProps={{ danger: true }}>
-                <span style={{ color: '#ff4d4f' }}>删除</span>
+                <span style={{ color: 'var(--color-danger)' }}>删除</span>
               </Popconfirm>
             ),
             danger: true,
@@ -404,7 +404,7 @@ const FactoryShipmentTab: React.FC<FactoryShipmentTabProps> = ({ selectedFactory
               <Descriptions.Item label="裁剪总数">{shippableInfo.cuttingTotal}</Descriptions.Item>
               <Descriptions.Item label="已发货">{shippableInfo.shippedTotal}</Descriptions.Item>
               <Descriptions.Item label="可发货">
-                <span style={{ color: shippableInfo.remaining > 0 ? '#52c41a' : '#ff4d4f', fontWeight: 600 }}>
+                <span style={{ color: shippableInfo.remaining > 0 ? 'var(--color-success)' : 'var(--color-danger)', fontWeight: 600 }}>
                   {shippableInfo.remaining}
                 </span>
               </Descriptions.Item>

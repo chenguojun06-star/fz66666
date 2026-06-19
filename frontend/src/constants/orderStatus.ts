@@ -54,9 +54,9 @@ export const STYLE_ORDER_STATUS_LABEL: Record<string, string> = {
 };
 
 export const STYLE_ORDER_STATUS_COLOR: Record<string, string> = {
-  COMPLETED:   '#52c41a',
-  WAREHOUSED:  '#52c41a',
-  IN_PROGRESS: '#1677ff',
-  DRAFT:       '#d9d9d9',
-  CANCELLED:   '#ff4d4f',
+  COMPLETED:   'var(--color-success)',
+  WAREHOUSED:  'var(--color-success)',
+  IN_PROGRESS: 'var(--color-primary)',
+  DRAFT:       'var(--color-border-antd)',
+  CANCELLED:   'var(--color-danger)',
 };

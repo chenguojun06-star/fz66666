@@ -26,7 +26,7 @@ import java.util.stream.Collectors;
 /**
  * 样板生产控制器
  * <p>
- * 跨服务业务逻辑委托给 PatternProductionOrchestrator
+ * 写操作委托给 PatternProductionOrchestrator，Controller 仅负责参数校验与返回包装
  */
 @RestController
 @RequestMapping("/api/production/pattern")
@@ -110,15 +110,12 @@ public class PatternProductionController {
     }
 
     /**
-     * @deprecated 样衣不再自动创建大货订单。样衣独立走完流程后，
-     *             通过样式开发页面的"推送到下单管理"按钮把资料同步到下游，
-     *             用户在"下单管理"页面手动创建大货订单。
-     *             保留端点仅作历史兼容，不再执行业务逻辑。
+     * @deprecated 样衣不再自动创建大货订单。保留端点仅作历史兼容。
      */
     @Deprecated
     @PostMapping("/{id}/create-sample-order")
     public Result<Map<String, Object>> createSampleOrder(@PathVariable String id) {
-        log.warn("[Deprecated] /api/production/pattern/{}/create-sample-order 已废弃：样衣不再自动创建大货订单", id);
+        log.warn("[Deprecated] /api/production/pattern/{}/create-sample-order 已废弃", id);
         Map<String, Object> result = new HashMap<>();
         result.put("deprecated", true);
         result.put("orderId", null);
@@ -129,13 +126,12 @@ public class PatternProductionController {
     }
 
     /**
-     * @deprecated 样衣不再自动关联大货订单。保留端点仅作历史兼容，
-     *             不再返回关联大货订单信息（固定返回 linked=false）。
+     * @deprecated 样衣不再自动关联大货订单。
      */
     @Deprecated
     @GetMapping("/{id}/linked-order")
     public Result<Map<String, Object>> getLinkedOrder(@PathVariable String id) {
-        log.warn("[Deprecated] /api/production/pattern/{}/linked-order 已废弃：样衣不再关联大货订单", id);
+        log.warn("[Deprecated] /api/production/pattern/{}/linked-order 已废弃", id);
         Map<String, Object> data = new HashMap<>();
         data.put("linked", false);
         data.put("deprecated", true);
@@ -144,7 +140,7 @@ public class PatternProductionController {
     }
 
     /**
-     * 获取指定样衣的扫码记录（供小程序工序判定使用）
+     * 获取指定样衣的扫码记录
      */
     @GetMapping("/{id}/scan-records")
     public Result<List<Map<String, Object>>> getScanRecords(@PathVariable String id) {
@@ -183,7 +179,7 @@ public class PatternProductionController {
     }
 
     /**
-     * 统一的样板工作流操作端点（替代5个分散端点）
+     * 统一的样板工作流操作端点
      */
     @PostMapping("/{id}/workflow-action")
     public Result<?> workflowAction(
@@ -197,7 +193,7 @@ public class PatternProductionController {
                     return Result.success(receiveMsg);
                 case "complete":
                     Map<String, Object> completeResult = patternProductionOrchestrator.submitScan(
-                        id, "COMPLETE", "PLATE_WORKER", null, null, null, null, null, null);
+                            id, "COMPLETE", "PLATE_WORKER", null, null, null, null, null, null);
                     return Result.success(completeResult);
                 case "warehouse-in":
                     String remark = request != null ? (String) request.get("remark") : null;
@@ -208,9 +204,9 @@ public class PatternProductionController {
                             id, remark, warehouseCode, warehouseAreaId, warehouseLocationCode);
                     return Result.success(whResult);
                 case "review":
-                    String result = request != null ? (String) request.get("result") : null;
+                    String reviewResultVal = request != null ? (String) request.get("result") : null;
                     String reviewRemark = request != null ? (String) request.get("remark") : null;
-                    Map<String, Object> reviewResult = patternProductionOrchestrator.reviewPattern(id, result, reviewRemark);
+                    Map<String, Object> reviewResult = patternProductionOrchestrator.reviewPattern(id, reviewResultVal, reviewRemark);
                     return Result.success(reviewResult);
                 case "maintenance":
                     if (request == null || !request.containsKey("reason")) {
@@ -270,22 +266,18 @@ public class PatternProductionController {
     }
 
     /**
-     * 更新是否有二次工艺标志（0=无，1=有）
+     * 更新是否有二次工艺标志
      */
     @PostMapping("/{id}/secondary-flag")
     public Result<String> updateSecondaryFlag(
             @PathVariable String id,
             @RequestParam(defaultValue = "1") int hasSecondaryProcess) {
-        PatternProduction record = patternProductionService.getById(id);
-        if (record == null) {
-            return Result.fail("记录不存在");
+        try {
+            patternProductionOrchestrator.updateSecondaryFlag(id, hasSecondaryProcess);
+            return Result.success(hasSecondaryProcess == 1 ? "已设置有二次工艺" : "已设置无二次工艺");
+        } catch (Exception e) {
+            return Result.fail(e.getMessage());
         }
-        TenantAssert.assertBelongsToCurrentTenant(record.getTenantId(), "纸样");
-        record.setHasSecondaryProcess(hasSecondaryProcess);
-        record.setUpdateTime(LocalDateTime.now());
-        record.setUpdateBy(UserContext.username());
-        patternProductionService.updateById(record);
-        return Result.success(hasSecondaryProcess == 1 ? "已设置有二次工艺" : "已设置无二次工艺");
     }
 
     /**
@@ -293,16 +285,12 @@ public class PatternProductionController {
      */
     @DeleteMapping("/{id}")
     public Result<String> delete(@PathVariable String id) {
-        PatternProduction record = patternProductionService.getById(id);
-        if (record == null) {
-            return Result.fail("记录不存在");
+        try {
+            patternProductionOrchestrator.delete(id);
+            return Result.success("删除成功");
+        } catch (Exception e) {
+            return Result.fail(e.getMessage());
         }
-        TenantAssert.assertBelongsToCurrentTenant(record.getTenantId(), "纸样");
-
-        patternProductionService.removeById(id);
-
-        log.info("Pattern production deleted: id={}", id);
-        return Result.success("删除成功");
     }
 
     // ==================== 扫码记录相关API ====================
@@ -317,7 +305,7 @@ public class PatternProductionController {
             String operationType = (String) request.get("operationType");
             String operatorRole = (String) request.get("operatorRole");
             String remark = (String) request.get("remark");
-                String warehouseCode = request.get("warehouseCode") == null
+            String warehouseCode = request.get("warehouseCode") == null
                     ? null
                     : String.valueOf(request.get("warehouseCode"));
             String warehouseAreaId = request.get("warehouseAreaId") == null
@@ -351,8 +339,7 @@ public class PatternProductionController {
 
 
     /**
-     * 获取当前员工的样板扫码历史（供小程序历史记录页展示）
-     * 返回格式与 /api/production/scan/list 保持一致，便于前端合并渲染
+     * 获取当前员工的样板扫码历史
      */
     @GetMapping("/scan-records/my-history")
     public Result<List<Map<String, Object>>> myPatternScanHistory(
@@ -447,8 +434,7 @@ public class PatternProductionController {
     }
 
     /**
-     * 编辑样衣基本信息（款号/颜色/尺码）
-     * 锁定规则：有扫码记录或已入库 → 禁止编辑
+     * 编辑样衣基本信息
      */
     @PutMapping("/{id}/basic-info")
     public Result<String> updateBasicInfo(
@@ -457,39 +443,7 @@ public class PatternProductionController {
         try {
             String field = request.get("field");
             String value = request.get("value");
-            if (!StringUtils.hasText(field) || value == null) {
-                return Result.fail("field 和 value 不能为空");
-            }
-            if (!List.of("styleNo", "color", "size").contains(field)) {
-                return Result.fail("不支持的编辑字段: " + field + "，仅支持 styleNo / color / size");
-            }
-
-            PatternProduction record = patternProductionService.getById(id);
-            if (record == null || record.getDeleteFlag() == 1) {
-                return Result.fail("记录不存在");
-            }
-            TenantAssert.assertBelongsToCurrentTenant(record.getTenantId(), "纸样");
-
-            // 锁定规则：有扫码记录 → 禁止编辑
-            long scanCount = patternScanRecordService.count(
-                new LambdaQueryWrapper<PatternScanRecord>()
-                    .eq(PatternScanRecord::getPatternProductionId, id)
-                    .eq(PatternScanRecord::getDeleteFlag, 0)
-                    .eq(PatternScanRecord::getTenantId, UserContext.tenantId()));
-            if (scanCount > 0) {
-                return Result.fail("已有扫码记录，不可编辑基本字段");
-            }
-
-            switch (field) {
-                case "styleNo": record.setStyleNo(value.trim()); break;
-                case "color":   record.setColor(value.trim()); break;
-                case "size":    record.setSize(value.trim()); break;
-            }
-            record.setUpdateTime(LocalDateTime.now());
-            record.setUpdateBy(UserContext.username());
-            patternProductionService.updateById(record);
-
-            log.info("样板基本信息已更新: id={} field={} value={}", id, field, value);
+            patternProductionOrchestrator.updateBasicInfo(id, field, value);
             return Result.success("更新成功");
         } catch (IllegalArgumentException | IllegalStateException e) {
             return Result.fail(e.getMessage());
@@ -536,4 +490,3 @@ public class PatternProductionController {
     }
 
 }
-

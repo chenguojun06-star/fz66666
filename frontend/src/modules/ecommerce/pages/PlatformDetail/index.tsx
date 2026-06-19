@@ -222,7 +222,7 @@ const [expressModalOpen, setExpressModalOpen] = useState(false);
       render: (_: unknown, r: EcOrder) => (
         <div>
           <div>{r.productName || '-'} <Text type="secondary">×{r.quantity}</Text></div>
-          {r.skuCode && <div style={{ fontSize: 14, color: '#52c41a' }}>SKU {r.skuCode}</div>}
+          {r.skuCode && <div style={{ fontSize: 14, color: 'var(--color-success)' }}>SKU {r.skuCode}</div>}
           <div style={{ fontSize: 14, color: '#888' }}>{r.buyerNick || r.receiverName}</div>
         </div>
       ),
@@ -231,7 +231,7 @@ const [expressModalOpen, setExpressModalOpen] = useState(false);
       title: '金额', width: 130,
       render: (_: unknown, r: EcOrder) => (
         <div>
-          <div style={{ color: '#fa8c16', fontWeight: 600 }}>¥{r.payAmount ?? '-'}</div>
+          <div style={{ color: 'var(--color-warning)', fontWeight: 600 }}>¥{r.payAmount ?? '-'}</div>
           {r.freight ? <div style={{ fontSize: 14, color: '#aaa' }}>运费 ¥{r.freight}</div> : null}
         </div>
       ),
@@ -278,9 +278,9 @@ const [expressModalOpen, setExpressModalOpen] = useState(false);
           <Row gutter={12} style={{ marginBottom: 14 }}>
             {[
               { title: '总订单', value: stats?.totalOrders ?? 0, suffix: '单', color: undefined },
-              { title: '待发货', value: stats?.pendingShip ?? 0, suffix: '单', color: '#fa8c16' },
-              { title: '待拣货', value: stats?.pendingPick ?? 0, suffix: '单', color: '#1677ff' },
-              { title: '已出库', value: stats?.shippedToday ?? 0, suffix: '单', color: '#52c41a' },
+              { title: '待发货', value: stats?.pendingShip ?? 0, suffix: '单', color: 'var(--color-warning)' },
+              { title: '待拣货', value: stats?.pendingPick ?? 0, suffix: '单', color: 'var(--color-primary)' },
+              { title: '已出库', value: stats?.shippedToday ?? 0, suffix: '单', color: 'var(--color-success)' },
             ].map((s, i) => (
               <Col span={6} key={i}>
                 <Card styles={{ body: { padding: '8px 12px' } }}>
@@ -314,7 +314,7 @@ const [expressModalOpen, setExpressModalOpen] = useState(false);
               <Row gutter={24}>
                 <Col span={12}>
                   <Card style={{ borderRadius: 6, border: '1px solid #91caff', background: '#f0f9ff' }}>
-                    <div style={{ fontWeight: 600, marginBottom: 6, color: '#1677ff' }}>📦 链路一：成品仓（有生产单）</div>
+                    <div style={{ fontWeight: 600, marginBottom: 6, color: 'var(--color-primary)' }}>📦 链路一：成品仓（有生产单）</div>
                     <div style={{ fontSize: 14, color: 'var(--color-text-secondary)', lineHeight: 1.8 }}>
                       订单 → SKU匹配款号 → <Tag color="blue">关联生产单</Tag> → 生产加工 → 完工入库 → 出库发货 → 物流回传
                     </div>
@@ -323,7 +323,7 @@ const [expressModalOpen, setExpressModalOpen] = useState(false);
                 </Col>
                 <Col span={12}>
                   <Card style={{ borderRadius: 6, border: '1px solid #b7eb8f', background: '#f6ffed' }}>
-                    <div style={{ fontWeight: 600, marginBottom: 6, color: '#52c41a' }}>🛒 链路二：电商仓（现货发货）</div>
+                    <div style={{ fontWeight: 600, marginBottom: 6, color: 'var(--color-success)' }}>🛒 链路二：电商仓（现货发货）</div>
                     <div style={{ fontSize: 14, color: 'var(--color-text-secondary)', lineHeight: 1.8 }}>
                       订单 → <Tag color="orange">待拣货</Tag> → 仓库拣货 → 复核包装 → 出库发货 → 物流回传
                     </div>
@@ -338,23 +338,23 @@ const [expressModalOpen, setExpressModalOpen] = useState(false);
           />
           <Row gutter={12} style={{ marginBottom: 16 }}>
             <Col span={6}>
-              <Card style={{ background: '#fff7e6', borderRadius: 8, border: '1px solid #ffd591' }}>
-                <Statistic title="待拣货" value={stats?.pendingPick ?? 0} suffix="单" styles={{ content: { color: '#fa8c16', fontSize: 20 } }} prefix={<ShoppingCartOutlined />} />
+              <Card style={{ background: '#FFF7E6', borderRadius: 8, border: '1px solid #ffd591' }}>
+                <Statistic title="待拣货" value={stats?.pendingPick ?? 0} suffix="单" styles={{ content: { color: 'var(--color-warning)', fontSize: 20 } }} prefix={<ShoppingCartOutlined />} />
               </Card>
             </Col>
             <Col span={6}>
               <Card style={{ background: '#e6f7ff', borderRadius: 8, border: '1px solid #91caff' }}>
-                <Statistic title="备货中" value={stats?.preparing ?? 0} suffix="单" styles={{ content: { color: '#1677ff', fontSize: 20 } }} prefix={<SyncOutlined />} />
+                <Statistic title="备货中" value={stats?.preparing ?? 0} suffix="单" styles={{ content: { color: 'var(--color-primary)', fontSize: 20 } }} prefix={<SyncOutlined />} />
               </Card>
             </Col>
             <Col span={6}>
               <Card style={{ background: '#f6ffed', borderRadius: 8, border: '1px solid #95de64' }}>
-                <Statistic title="已出库" value={stats?.shippedToday ?? 0} suffix="单" styles={{ content: { color: '#52c41a', fontSize: 20 } }} prefix={<CheckCircleOutlined />} />
+                <Statistic title="已出库" value={stats?.shippedToday ?? 0} suffix="单" styles={{ content: { color: 'var(--color-success)', fontSize: 20 } }} prefix={<CheckCircleOutlined />} />
               </Card>
             </Col>
             <Col span={6}>
-              <Card style={{ background: (stats?.noStockWarn ?? 0) > 0 ? '#fff1f0' : '#f9f0ff', borderRadius: 8, border: (stats?.noStockWarn ?? 0) > 0 ? '1px solid #ffa39e' : '1px solid #d3adf7' }}>
-                <Statistic title="缺货预警" value={stats?.noStockWarn ?? 0} suffix="单" styles={{ content: { color: (stats?.noStockWarn ?? 0) > 0 ? '#ff4d4f' : '#722ed1', fontSize: 20 } }} prefix={<WarningOutlined />} />
+              <Card style={{ background: (stats?.noStockWarn ?? 0) > 0 ? '#FFF1F0' : '#f9f0ff', borderRadius: 8, border: (stats?.noStockWarn ?? 0) > 0 ? '1px solid #ffa39e' : '1px solid #d3adf7' }}>
+                <Statistic title="缺货预警" value={stats?.noStockWarn ?? 0} suffix="单" styles={{ content: { color: (stats?.noStockWarn ?? 0) > 0 ? 'var(--color-danger)' : 'var(--color-accent-purple)', fontSize: 20 } }} prefix={<WarningOutlined />} />
               </Card>
             </Col>
           </Row>
@@ -435,7 +435,7 @@ const [expressModalOpen, setExpressModalOpen] = useState(false);
           <Button type="text" icon={<ArrowLeftOutlined />} onClick={() => navigate(paths.ecommerceCenter)} style={{ marginRight: 8 }} />
           <span style={{
             width: 40, height: 40, borderRadius: 10,
-            background: configured ? '#f6ffed' : '#fff7e6',
+            background: configured ? '#f6ffed' : '#FFF7E6',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontSize: 20, color: platform.color, marginRight: 12,
           }}>
@@ -458,22 +458,22 @@ const [expressModalOpen, setExpressModalOpen] = useState(false);
           <Row gutter={16} style={{ marginBottom: 12 }}>
             <Col span={6}>
               <Card variant="borderless" style={{ background: 'linear-gradient(135deg, #e6f7ff 0%, #f0f5ff 100%)', borderRadius: 12 }}>
-                <Statistic title="今日订单" value={stats.todayOrders} suffix="单" prefix={<ShoppingCartOutlined style={{ color: '#1677ff' }} />} styles={{ content: { color: '#1677ff' } }} />
+                <Statistic title="今日订单" value={stats.todayOrders} suffix="单" prefix={<ShoppingCartOutlined style={{ color: 'var(--color-primary)' }} />} styles={{ content: { color: 'var(--color-primary)' } }} />
               </Card>
             </Col>
             <Col span={6}>
               <Card variant="borderless" style={{ background: 'linear-gradient(135deg, #f6ffed 0%, #fcffe6 100%)', borderRadius: 12 }}>
-                <Statistic title="今日销售" value={formatMoney(parseFloat(stats.todaySales))} styles={{ content: { color: '#52c41a' } }} />
+                <Statistic title="今日销售" value={formatMoney(parseFloat(stats.todaySales))} styles={{ content: { color: 'var(--color-success)' } }} />
               </Card>
             </Col>
             <Col span={6}>
-              <Card variant="borderless" style={{ background: 'linear-gradient(135deg, #fff7e6 0%, #fffbe6 100%)', borderRadius: 12 }}>
-                <Statistic title="待发货" value={stats.pendingShip} suffix="单" prefix={<InboxOutlined style={{ color: '#fa8c16' }} />} styles={{ content: { color: '#fa8c16' } }} />
+              <Card variant="borderless" style={{ background: 'linear-gradient(135deg, #FFF7E6 0%, #FFFBE6 100%)', borderRadius: 12 }}>
+                <Statistic title="待发货" value={stats.pendingShip} suffix="单" prefix={<InboxOutlined style={{ color: 'var(--color-warning)' }} />} styles={{ content: { color: 'var(--color-warning)' } }} />
               </Card>
             </Col>
             <Col span={6}>
-              <Card variant="borderless" style={{ background: (stats.noStockWarn ?? 0) > 0 ? 'linear-gradient(135deg, #fff1f0 0%, #ffccc7 100%)' : 'linear-gradient(135deg, #f9f0ff 0%, #efdbff 100%)', borderRadius: 12 }}>
-                <Statistic title="缺货预警" value={stats.noStockWarn} suffix="单" prefix={<WarningOutlined style={{ color: (stats.noStockWarn ?? 0) > 0 ? '#ff4d4f' : '#722ed1' }} />} styles={{ content: { color: (stats.noStockWarn ?? 0) > 0 ? '#ff4d4f' : '#722ed1' } }} />
+              <Card variant="borderless" style={{ background: (stats.noStockWarn ?? 0) > 0 ? 'linear-gradient(135deg, #FFF1F0 0%, #ffccc7 100%)' : 'linear-gradient(135deg, #f9f0ff 0%, #efdbff 100%)', borderRadius: 12 }}>
+                <Statistic title="缺货预警" value={stats.noStockWarn} suffix="单" prefix={<WarningOutlined style={{ color: (stats.noStockWarn ?? 0) > 0 ? 'var(--color-danger)' : 'var(--color-accent-purple)' }} />} styles={{ content: { color: (stats.noStockWarn ?? 0) > 0 ? 'var(--color-danger)' : 'var(--color-accent-purple)' } }} />
               </Card>
             </Col>
           </Row>

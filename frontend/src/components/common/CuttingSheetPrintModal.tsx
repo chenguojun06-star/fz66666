@@ -92,7 +92,7 @@ const CuttingSheetPrintModal: React.FC<CuttingSheetPrintModalProps> = ({
         <tr>
           <td style="text-align: center;">${bundle.styleNo || '-'}</td>
           <td style="text-align: center; font-weight: 600;">${bundle.size || '-'}</td>
-          <td style="text-align: center; font-weight: 600; color: #2D7FF9;">${bundle.bundleNo || '-'}</td>
+          <td style="text-align: center; font-weight: 600; color: var(--color-primary);">${bundle.bundleNo || '-'}</td>
           <td style="text-align: center;">${bundle.color || '-'}</td>
           <td style="text-align: center; font-weight: 600;">${bundle.quantity || 0}</td>
         </tr>
@@ -232,7 +232,7 @@ const CuttingSheetPrintModal: React.FC<CuttingSheetPrintModalProps> = ({
             border: 1px solid #ddd;
             border-radius: 4px;
             overflow: hidden;
-            background: #fafafa;
+            background: var(--color-bg-container);
           }
           .style-image {
             width: 100%;
@@ -283,11 +283,11 @@ const CuttingSheetPrintModal: React.FC<CuttingSheetPrintModalProps> = ({
           .info-value.highlight {
             font-size: 12px;
             font-weight: 700;
-            color: #2D7FF9;
+            color: var(--color-primary);
           }
           .bed-no-item {
             grid-column: 1 / -1;
-            border: 2px solid #2D7FF9;
+            border: 2px solid var(--color-primary);
             padding: 8px 12px;
             border-radius: 4px;
             background: #f0f7ff;
@@ -296,20 +296,20 @@ const CuttingSheetPrintModal: React.FC<CuttingSheetPrintModalProps> = ({
           .bed-no-value {
             font-size: 18px;
             font-weight: 700;
-            color: #2D7FF9 !important;
+            color: var(--color-primary) !important;
           }
           .delivery-date-item {
             grid-column: 1 / -1;
-            border: 2px solid #fa8c16;
+            border: 2px solid var(--color-warning);
             padding: 8px 12px;
             border-radius: 4px;
-            background: #fff7e6;
+            background: #FFF7E6;
             margin-top: 4px;
           }
           .delivery-date-value {
             font-size: 12px;
             font-weight: 700;
-            color: #fa8c16 !important;
+            color: var(--color-warning) !important;
           }
 
           /* 明细表格 */
@@ -326,15 +326,15 @@ const CuttingSheetPrintModal: React.FC<CuttingSheetPrintModalProps> = ({
             text-align: left;
           }
           .detail-table thead th {
-            background-color: #f5f5f5;
+            background-color: var(--color-bg-subtle);
             font-weight: 700;
             text-align: center;
           }
           .detail-table tbody tr:nth-child(even) {
-            background-color: #fafafa;
+            background-color: var(--color-bg-container);
           }
           .detail-table tfoot td {
-            background-color: #f0f0f0;
+            background-color: var(--color-border-light);
             font-weight: 600;
           }
 
@@ -359,7 +359,7 @@ const CuttingSheetPrintModal: React.FC<CuttingSheetPrintModalProps> = ({
             min-width: 80px;
             margin-left: 8px;
             font-weight: 600;
-            color: #2D7FF9;
+            color: var(--color-primary);
           }
 
           @media print {

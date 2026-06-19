@@ -37,9 +37,9 @@ const QuotationBomSection: React.FC<Props> = ({ bomList, bomColorCosts, material
         fontSize: 15,
         fontWeight: 600,
         padding: '8px 0 6px',
-        borderBottom: '1px solid var(--color-border-light, #f0f0f0)',
+        borderBottom: '1px solid var(--color-border-light, var(--color-border-light))',
         marginBottom: 12,
-        color: 'var(--color-text-primary, #1a1a1a)',
+        color: 'var(--color-text-primary, var(--color-text-primary))',
       }}>
         物料明细（BOM）
         <span style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginLeft: 8, fontWeight: 400 }}>

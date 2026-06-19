@@ -50,8 +50,8 @@ export const TreeItem: React.FC<TreeItemProps> = ({
         </span>
         <span className="tree-node-label" onClick={() => onSelect(String(node.id))}>
           {isFactory
-            ? <BankOutlined style={{ color: 'var(--primary-color, #1677ff)', marginRight: 4 }} />
-            : <ApartmentOutlined style={{ color: 'var(--color-accent-purple, #722ed1)', marginRight: 4 }} />
+            ? <BankOutlined style={{ color: 'var(--primary-color, var(--color-primary))', marginRight: 4 }} />
+            : <ApartmentOutlined style={{ color: 'var(--color-accent-purple, var(--color-accent-purple))', marginRight: 4 }} />
           }
           <span className="tree-node-name">{node.unitName}</span>
           {node.managerUserName && (

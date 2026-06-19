@@ -113,7 +113,7 @@ const OrderCreateModal: React.FC<Props> = (p) => {
             style={{
               minWidth: 0, flex: isMobile ? '1 1 100%' : '1 1 72%', maxWidth: '100%',
               overflow: 'hidden',
-              borderLeft: isMobile ? 'none' : '1px solid #f0f0f0',
+              borderLeft: isMobile ? 'none' : '1px solid var(--color-border-light)',
               paddingLeft: isMobile ? 0 : 20,
             }}
           >

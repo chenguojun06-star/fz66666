@@ -62,7 +62,7 @@ const LockedView: React.FC<{ onGoStore: () => void }> = ({ onGoStore }) => (
             <LockOutlined style={{ fontSize: 22, color: 'rgba(255,255,255,0.85)' }} />
             <Tag color="gold" style={{ fontWeight: 600 }}>付费模块 · ¥599/月</Tag>
           </div>
-          <Title level={3} style={{ color: '#fff', margin: '0 0 8px' }}>客户管理 CRM</Title>
+          <Title level={3} style={{ color: 'var(--color-bg-base)', margin: '0 0 8px' }}>客户管理 CRM</Title>
           <Paragraph style={{ color: 'rgba(255,255,255,0.85)', margin: 0, fontSize: 14 }}>
             深度整合您的生产数据，让每位B端客户都能实时追踪到自己的订单进度。低价对标鼎普 CRM（¥3000+/月），专为中小服装工厂设计。
           </Paragraph>
@@ -342,10 +342,10 @@ const CustomerManagement: React.FC = () => {
       {/* 统计卡片 */}
       <Row gutter={16} style={{ marginBottom: 12 }}>
         {[
-          { icon: <TeamOutlined />, label: '客户总数', value: stats.total, color: '#1677ff' },
-          { icon: <CheckCircleOutlined />, label: '合作中', value: stats.activeCount, color: '#52c41a' },
-          { icon: <TrophyOutlined />, label: 'VIP客户', value: stats.vip, color: '#fa8c16' },
-          { icon: <UserOutlined />, label: '本月新增', value: stats.newThisMonth, color: '#722ed1' },
+          { icon: <TeamOutlined />, label: '客户总数', value: stats.total, color: 'var(--color-primary)' },
+          { icon: <CheckCircleOutlined />, label: '合作中', value: stats.activeCount, color: 'var(--color-success)' },
+          { icon: <TrophyOutlined />, label: 'VIP客户', value: stats.vip, color: 'var(--color-warning)' },
+          { icon: <UserOutlined />, label: '本月新增', value: stats.newThisMonth, color: 'var(--color-accent-purple)' },
         ].map(s => (
           <Col span={6} key={s.label}>
             <Card styles={{ body: { display: 'flex', alignItems: 'center', gap: 16, padding: '16px 20px' } }}>
@@ -479,7 +479,7 @@ const CustomerManagement: React.FC = () => {
                           <Progress
                             percent={Number(v) || 0}
                            
-                            strokeColor={Number(v) >= 100 ? '#52c41a' : undefined}
+                            strokeColor={Number(v) >= 100 ? 'var(--color-success)' : undefined}
                           />
                         ),
                       },

@@ -16,7 +16,7 @@ const LiquidProgressBar: React.FC<LiquidProgressBarProps> = ({
   width = '100%',
   height = 16,
   color,
-  backgroundColor = '#f0f0f0',
+  backgroundColor = 'var(--color-border-light)',
   status = 'normal',
   isCompleted: externalIsCompleted,
   minVisiblePercent = 0,
@@ -29,20 +29,20 @@ const LiquidProgressBar: React.FC<LiquidProgressBarProps> = ({
 
   const getColors = () => {
     if (isFrozen) {
-      return { liquidColor: '#9ca3af', liquidColor2: '#d1d5db' };
+      return { liquidColor: 'var(--color-text-tertiary)', liquidColor2: '#d1d5db' };
     }
     if (color) {
       return { liquidColor: color, liquidColor2: color };
     }
     if (isCompleted) {
-      return { liquidColor: '#52c41a', liquidColor2: '#95de64' };
+      return { liquidColor: 'var(--color-success)', liquidColor2: '#95de64' };
     }
     if (status === 'danger') {
-      return { liquidColor: '#ff4d4f', liquidColor2: '#ff7875' };
+      return { liquidColor: 'var(--color-danger)', liquidColor2: '#ff7875' };
     } else if (status === 'warning') {
-      return { liquidColor: '#faad14', liquidColor2: '#ffc53d' };
+      return { liquidColor: 'var(--color-warning)', liquidColor2: '#ffc53d' };
     } else {
-      return { liquidColor: '#52c41a', liquidColor2: '#95de64' };
+      return { liquidColor: 'var(--color-success)', liquidColor2: '#95de64' };
     }
   };
 

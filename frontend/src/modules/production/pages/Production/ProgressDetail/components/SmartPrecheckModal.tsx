@@ -36,7 +36,7 @@ export interface PrecheckData {
 const IssueCard: React.FC<{ issue: PrecheckIssue; isHigh: boolean }> = ({ issue, isHigh }) => (
   <div
     style={{
-      background: isHigh ? '#fff1f0' : '#fffbe6',
+      background: isHigh ? '#FFF1F0' : '#FFFBE6',
       border: `1px solid ${isHigh ? '#ffccc7' : '#ffe58f'}`,
       borderRadius: 8,
       padding: '10px 14px',
@@ -46,7 +46,7 @@ const IssueCard: React.FC<{ issue: PrecheckIssue; isHigh: boolean }> = ({ issue,
       <Tag color={isHigh ? 'error' : 'warning'} style={{ marginRight: 6, fontWeight: 600 }}>
         {issue.level || (isHigh ? 'HIGH' : 'MEDIUM')}
       </Tag>
-      <Text strong style={{ color: isHigh ? '#cf1322' : '#ad6800' }}>
+      <Text strong style={{ color: isHigh ? 'var(--color-error)' : '#ad6800' }}>
         {issue.title || '未知风险项'}
       </Text>
     </div>
@@ -77,7 +77,7 @@ const ModalContent: React.FC<{ data: PrecheckData; isHigh: boolean }> = ({ data,
         <>
           {issues.length > 0 && <Divider style={{ margin: '4px 0' }} />}
           <div style={{ color: 'var(--color-text-tertiary)', fontSize: 14, lineHeight: '18px' }}>
-            <BulbOutlined style={{ marginRight: 4, color: '#faad14' }} />
+            <BulbOutlined style={{ marginRight: 4, color: 'var(--color-warning)' }} />
             <Text type="secondary">智能建议：</Text>
             {suggestions.join('；')}
           </div>
@@ -112,10 +112,10 @@ export function confirmPrecheckRisk(data: PrecheckData): Promise<boolean> {
     Modal.confirm({
       width: '30vw',
       icon: isHigh
-        ? <StopOutlined style={{ color: '#ff4d4f' }} />
-        : <WarningOutlined style={{ color: '#faad14' }} />,
+        ? <StopOutlined style={{ color: 'var(--color-danger)' }} />
+        : <WarningOutlined style={{ color: 'var(--color-warning)' }} />,
       title: (
-        <span style={{ color: isHigh ? '#cf1322' : '#ad6800', fontWeight: 700 }}>
+        <span style={{ color: isHigh ? 'var(--color-error)' : '#ad6800', fontWeight: 700 }}>
           {isHigh ? ' 高风险预警 — 建议暂停' : ' 中等风险提示'}
         </span>
       ),

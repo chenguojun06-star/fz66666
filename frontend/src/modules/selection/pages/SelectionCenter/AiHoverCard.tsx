@@ -28,7 +28,7 @@ const AiHoverCard: React.FC<{
       {latestReview?.comment && (
         <div style={{
           marginBottom: 10, padding: '8px 10px',
-          background: latestReview.decision === 'APPROVE' ? '#f6ffed' : '#fff2f0',
+          background: latestReview.decision === 'APPROVE' ? '#f6ffed' : '#F6FFED',
           border: `1px solid ${latestReview.decision === 'APPROVE' ? '#b7eb8f' : '#ffccc7'}`,
           borderRadius: 6, fontSize: 14,
         }}>
@@ -43,13 +43,13 @@ const AiHoverCard: React.FC<{
         <>
           <div style={{ marginBottom: 4 }}>
             <Space size={4}>
-              <ThunderboltOutlined style={{ color: '#722ed1' }} />
+              <ThunderboltOutlined style={{ color: 'var(--color-accent-purple)' }} />
               <Text type="secondary" style={{ fontSize: 14 }}>趋势评分</Text>
               <Tooltip title={scoreMeta.title}>
                 <Tag color={scoreMeta.color} style={{ margin: 0, fontSize: 14 }}>{scoreMeta.label}</Tag>
               </Tooltip>
               <Text strong style={{
-                color: record.trendScore! >= 75 ? '#52c41a' : record.trendScore! >= 50 ? '#fa8c16' : '#ff4d4f',
+                color: record.trendScore! >= 75 ? 'var(--color-success)' : record.trendScore! >= 50 ? 'var(--color-warning)' : 'var(--color-danger)',
               }}>
                 {record.trendScore} 分
               </Text>
@@ -57,7 +57,7 @@ const AiHoverCard: React.FC<{
           </div>
           <Progress
             percent={record.trendScore}
-            strokeColor={record.trendScore! >= 75 ? '#52c41a' : record.trendScore! >= 50 ? '#fa8c16' : '#ff4d4f'}
+            strokeColor={record.trendScore! >= 75 ? 'var(--color-success)' : record.trendScore! >= 50 ? 'var(--color-warning)' : 'var(--color-danger)'}
            
             style={{ marginBottom: 8 }}
           />
@@ -85,13 +85,13 @@ const AiHoverCard: React.FC<{
         {record.targetPrice != null && (
           <Col span={12}>
             <Text type="secondary" style={{ fontSize: 14 }}>目标报价</Text>
-            <div style={{ fontSize: 14, fontWeight: 600, color: '#52c41a' }}>¥{record.targetPrice}</div>
+            <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-success)' }}>¥{record.targetPrice}</div>
           </Col>
         )}
         {record.profitEstimate != null && (
           <Col span={12}>
             <Text type="secondary" style={{ fontSize: 14 }}>预估利润率</Text>
-            <div style={{ fontSize: 14, fontWeight: 600, color: record.profitEstimate >= 30 ? '#52c41a' : '#fa8c16' }}>
+            <div style={{ fontSize: 14, fontWeight: 600, color: record.profitEstimate >= 30 ? 'var(--color-success)' : 'var(--color-warning)' }}>
               {record.profitEstimate}%
             </div>
           </Col>

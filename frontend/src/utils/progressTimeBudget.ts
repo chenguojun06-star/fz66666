@@ -64,19 +64,19 @@ export function computeStageBudgetHint(params: {
       stageStartTime ? dayjs(stageStartTime) : create, 'day'
     );
     if (actualDays <= budgetDays) {
-      return { text: `预算${budgetDays}天 · 准时`, color: 'var(--color-text-quaternary, #bfbfbf)', budgetDays };
+      return { text: `预算${budgetDays}天 · 准时`, color: 'var(--color-text-quaternary, var(--color-text-quaternary))', budgetDays };
     }
-    return { text: `预算${budgetDays}天 · 超${actualDays - budgetDays}天`, color: 'var(--color-text-quaternary, #bfbfbf)', budgetDays };
+    return { text: `预算${budgetDays}天 · 超${actualDays - budgetDays}天`, color: 'var(--color-text-quaternary, var(--color-text-quaternary))', budgetDays };
   }
 
   if (stageStartTime) {
     const elapsed = now.diff(dayjs(stageStartTime), 'day');
     const remaining = budgetDays - elapsed;
     if (remaining > 0) {
-      return { text: `预算${budgetDays}天 · 剩${remaining}天`, color: 'var(--color-text-quaternary, #bfbfbf)', budgetDays };
+      return { text: `预算${budgetDays}天 · 剩${remaining}天`, color: 'var(--color-text-quaternary, var(--color-text-quaternary))', budgetDays };
     }
     if (remaining === 0) {
-      return { text: `预算${budgetDays}天 · 今天到期`, color: '#faad14', budgetDays };
+      return { text: `预算${budgetDays}天 · 今天到期`, color: 'var(--color-warning)', budgetDays };
     }
     return { text: `预算${budgetDays}天 · 超${Math.abs(remaining)}天`, color: '#ff7875', budgetDays };
   }
@@ -88,5 +88,5 @@ export function computeStageBudgetHint(params: {
     }
   }
 
-  return { text: `预算${budgetDays}天`, color: 'var(--color-text-quaternary, #bfbfbf)', budgetDays };
+  return { text: `预算${budgetDays}天`, color: 'var(--color-text-quaternary, var(--color-text-quaternary))', budgetDays };
 }

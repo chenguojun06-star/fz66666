@@ -99,7 +99,7 @@ const InspectFormPanel: React.FC<InspectFormPanelProps> = ({
                   if (hints.length === 0) return tagEl;
                   return (
                     <Tooltip title={<div style={{ lineHeight: '22px' }}>{hints.map((h, i) => <div key={i}>{h}</div>)}</div>}>
-                      <Space size={4}>{tagEl}<InfoCircleOutlined style={{ color: '#1890ff', fontSize: 12 }} /></Space>
+                      <Space size={4}>{tagEl}<InfoCircleOutlined style={{ color: 'var(--color-info)', fontSize: 12 }} /></Space>
                     </Tooltip>
                   );
                 },

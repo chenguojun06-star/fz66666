@@ -283,9 +283,9 @@ const SmartAlertBell: React.FC = () => {
 
   // ── 渲染 ──────────────────────────────────────────────────
   const patrolSeverityColor = (severity: string) => {
-    if (severity === 'HIGH') return '#cf1322';
-    if (severity === 'MEDIUM') return '#fa8c16';
-    return '#faad14';
+    if (severity === 'HIGH') return 'var(--color-error)';
+    if (severity === 'MEDIUM') return 'var(--color-warning)';
+    return 'var(--color-warning)';
   };
 
   const riskLevel = (brief?.overdueOrderCount ?? 0) > 0 || (patrolSummary?.highRiskPending ?? 0) > 0 ? 'high'
@@ -354,15 +354,15 @@ const SmartAlertBell: React.FC = () => {
             {patrolSummary && (patrolSummary.autoExecutedToday > 0 || patrolSummary.recentActions.length > 0) && (
               <div className="sap-section">
                 <div className="sap-section-title">
-                  <RobotOutlined style={{ color: '#722ed1' }} /> AI巡检简报
+                  <RobotOutlined style={{ color: 'var(--color-accent-purple)' }} /> AI巡检简报
                   {patrolSummary.autoExecutedToday > 0 && (
-                    <span style={{ marginLeft: 8, fontSize: 11, color: '#722ed1', background: '#f9f0ff', borderRadius: 10, padding: '1px 8px' }}>
+                    <span style={{ marginLeft: 8, fontSize: 11, color: 'var(--color-accent-purple)', background: '#f9f0ff', borderRadius: 10, padding: '1px 8px' }}>
                       今日自动执行 {patrolSummary.autoExecutedToday} 次
                     </span>
                   )}
                   {patrolSummary.highRiskPending > 0 && (
                     <Badge count={patrolSummary.highRiskPending} size="small"
-                      style={{ marginLeft: 8, background: '#cf1322', boxShadow: 'none' }} />
+                      style={{ marginLeft: 8, background: 'var(--color-error)', boxShadow: 'none' }} />
                   )}
                 </div>
                 {patrolSummary.recentActions.slice(0, 5).map((action, idx) => (
@@ -374,7 +374,7 @@ const SmartAlertBell: React.FC = () => {
                     </span>
                     <span style={{
                       fontSize: 11,
-                      color: action.status === 'PENDING' ? '#fa8c16' : '#722ed1',
+                      color: action.status === 'PENDING' ? 'var(--color-warning)' : 'var(--color-accent-purple)',
                       marginLeft: 'auto',
                       flexShrink: 0,
                     }}>
@@ -525,7 +525,7 @@ const SmartAlertBell: React.FC = () => {
                 <div className="sap-section-title">
                   <span style={{ color: '#d46b08' }}></span> 我的通知
                   {unreadNoticeCount > 0 && (
-                    <span style={{ marginLeft: 4, fontSize: 11, background: '#ffa940', color: '#fff', borderRadius: 10, padding: '1px 8px' }}>
+                    <span style={{ marginLeft: 4, fontSize: 11, background: '#ffa940', color: 'var(--color-bg-base)', borderRadius: 10, padding: '1px 8px' }}>
                       {unreadNoticeCount} 未读
                     </span>
                   )}
@@ -542,8 +542,8 @@ const SmartAlertBell: React.FC = () => {
                 {visibleNotices.slice(0, 8).map(n => (
                   <div key={n.id} className="sap-notice-row"
                     style={{
-                      background: n.isRead ? '#fafafa' : '#fff7e6',
-                      borderLeft: `3px solid ${n.isRead ? '#ddd' : n.actionType === 'urge_order' ? '#cf1322' : '#ffa940'}`,
+                      background: n.isRead ? 'var(--color-bg-container)' : '#FFF7E6',
+                      borderLeft: `3px solid ${n.isRead ? '#ddd' : n.actionType === 'urge_order' ? 'var(--color-error)' : '#ffa940'}`,
                     }}
                     onClick={() => {
                       if (!n.isRead) {
@@ -649,7 +649,7 @@ const UrgeReplyInline: React.FC<{
           type="date"
           value={expectedShipDate}
           onChange={(e) => setExpectedShipDate(e.target.value)}
-          style={{ fontSize: 12, padding: '2px 4px', border: '1px solid #d9d9d9', borderRadius: 4, width: 130 }}
+          style={{ fontSize: 12, padding: '2px 4px', border: '1px solid var(--color-border-antd)', borderRadius: 4, width: 130 }}
           placeholder="预计出货日"
         />
         <input
@@ -657,7 +657,7 @@ const UrgeReplyInline: React.FC<{
           value={replyContent}
           onChange={(e) => setReplyContent(e.target.value)}
           placeholder="回复备注..."
-          style={{ fontSize: 12, padding: '2px 4px', border: '1px solid #d9d9d9', borderRadius: 4, flex: 1, minWidth: 80 }}
+          style={{ fontSize: 12, padding: '2px 4px', border: '1px solid var(--color-border-antd)', borderRadius: 4, flex: 1, minWidth: 80 }}
         />
       </div>
       <button
@@ -666,8 +666,8 @@ const UrgeReplyInline: React.FC<{
         style={{
           fontSize: 11,
           padding: '2px 8px',
-          background: '#cf1322',
-          color: '#fff',
+          background: 'var(--color-error)',
+          color: 'var(--color-bg-base)',
           border: 'none',
           borderRadius: 4,
           cursor: submitting ? 'not-allowed' : 'pointer',

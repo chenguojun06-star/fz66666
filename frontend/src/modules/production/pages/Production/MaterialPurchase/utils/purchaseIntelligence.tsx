@@ -174,7 +174,7 @@ export function analyzePurchase(orderRecs: MaterialPurchaseType[]): PurchaseInsi
   };
 }
 
-const VERDICT_COLOR = { good: '#52c41a', warn: '#fa8c16', critical: '#ff4d4f' } as const;
+const VERDICT_COLOR = { good: 'var(--color-success)', warn: 'var(--color-warning)', critical: 'var(--color-danger)' } as const;
 const VERDICT_LABEL = { good: '可开工', warn: '需关注', critical: '阻塞中' } as const;
 
 /** 渲染智能分析 Tooltip 内容 */
@@ -186,7 +186,7 @@ export function renderPurchaseTooltip(insight: PurchaseInsight, _orderNo: string
         <span> 智能采购分析</span>
         <span style={{
           fontSize: 14, padding: '1px 6px', borderRadius: 4,
-          background: VERDICT_COLOR[insight.verdict], color: '#fff',
+          background: VERDICT_COLOR[insight.verdict], color: 'var(--color-bg-base)',
         }}>{VERDICT_LABEL[insight.verdict]}</span>
       </div>
 
@@ -225,7 +225,7 @@ export function renderPurchaseTooltip(insight: PurchaseInsight, _orderNo: string
       {insight.impact.length > 0 && (
         <div style={{ marginBottom: 6 }}>
           {insight.impact.map((line, i) => (
-            <div key={`i${i}`} style={{ color: '#1677ff' }}> {line}</div>
+            <div key={`i${i}`} style={{ color: 'var(--color-primary)' }}> {line}</div>
           ))}
         </div>
       )}

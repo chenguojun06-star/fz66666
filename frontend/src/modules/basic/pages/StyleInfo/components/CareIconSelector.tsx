@@ -30,7 +30,7 @@ const CareIconSelector: React.FC<Props> = ({ value, onChange, disabled }) => {
             color: 'var(--color-text-secondary, #666)',
             marginBottom: 8,
             paddingBottom: 4,
-            borderBottom: '1px solid var(--color-border-light, #f0f0f0)',
+            borderBottom: '1px solid var(--color-border-light, var(--color-border-light))',
           }}>
             {cat.label}
           </div>
@@ -50,11 +50,11 @@ const CareIconSelector: React.FC<Props> = ({ value, onChange, disabled }) => {
                       padding: '4px 6px',
                       borderRadius: 6,
                       border: isSelected
-                        ? '1.5px solid var(--color-primary, #1677ff)'
-                        : '1px solid var(--color-border-light, #f0f0f0)',
+                        ? '1.5px solid var(--color-primary, var(--color-primary))'
+                        : '1px solid var(--color-border-light, var(--color-border-light))',
                       background: isSelected
                         ? 'var(--color-primary-bg, #e6f4ff)'
-                        : 'var(--color-bg-container, #fafafa)',
+                        : 'var(--color-bg-container, var(--color-bg-container))',
                       cursor: disabled ? 'not-allowed' : 'pointer',
                       opacity: disabled ? 0.6 : 1,
                       transition: 'all 0.2s ease',
@@ -76,7 +76,7 @@ const CareIconSelector: React.FC<Props> = ({ value, onChange, disabled }) => {
                     <span style={{
                       fontSize: 12,
                       color: isSelected
-                        ? 'var(--color-primary, #1677ff)'
+                        ? 'var(--color-primary, var(--color-primary))'
                         : 'var(--color-text-tertiary, #8c8c8c)',
                       textAlign: 'center',
                       lineHeight: 1.3,

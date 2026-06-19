@@ -1,7 +1,6 @@
 package com.fashion.supplychain.production.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.fashion.supplychain.production.dto.*;
 import com.fashion.supplychain.production.entity.PurchaseCart;
 import com.fashion.supplychain.production.entity.PurchaseCartItem;
@@ -9,15 +8,12 @@ import com.fashion.supplychain.production.mapper.PurchaseCartMapper;
 import com.fashion.supplychain.production.mapper.PurchaseCartItemMapper;
 import com.fashion.supplychain.production.orchestration.PurchaseCartOrchestrator;
 import com.fashion.supplychain.production.service.PurchaseCartService;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -100,20 +96,8 @@ public class PurchaseCartServiceImpl implements PurchaseCartService {
     }
     
     @Override
-    @Transactional
     public void deleteItem(Long tenantId, String itemId) {
-        // 验证物料属于当前租户
-        PurchaseCartItem item = purchaseCartItemMapper.selectById(itemId);
-        if (item == null) {
-            throw new com.fashion.supplychain.common.BusinessException("购物车物料不存在");
-        }
-        if (!item.getTenantId().equals(tenantId)) {
-            throw new com.fashion.supplychain.common.BusinessException("无权操作此物料");
-        }
-        
-        String cartId = item.getCartId();
-        purchaseCartItemMapper.deleteById(itemId);
-        recalculateCartTotal(cartId);
+        purchaseCartOrchestrator.deleteItem(tenantId, itemId);
     }
     
     @Override
@@ -137,33 +121,12 @@ public class PurchaseCartServiceImpl implements PurchaseCartService {
     }
     
     @Override
-    @Transactional
     public void clearCart(Long tenantId, String userId) {
-        PurchaseCart cart = getOrCreateCart(tenantId, userId);
-        LambdaQueryWrapper<PurchaseCartItem> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(PurchaseCartItem::getCartId, cart.getId())
-               .eq(PurchaseCartItem::getDeleteFlag, 0);
-        purchaseCartItemMapper.delete(wrapper);
-        recalculateCartTotal(cart.getId());
+        purchaseCartOrchestrator.clearCart(tenantId, userId);
     }
     
     @Override
     public List<MergeSuggestionDto> getMergeSuggestions(Long tenantId, String userId) {
         return purchaseCartOrchestrator.getMergeSuggestions(tenantId, userId);
-    }
-    
-    private void recalculateCartTotal(String cartId) {
-        PurchaseCart cart = purchaseCartMapper.selectById(cartId);
-        if (cart == null) {
-            return;
-        }
-        List<PurchaseCartItem> items = purchaseCartItemMapper.selectByCartId(cartId);
-        
-        cart.setTotalItems(items.size());
-        cart.setTotalAmount(items.stream()
-            .map(PurchaseCartItem::getTotalAmount)
-            .filter(amount -> amount != null)
-            .reduce(BigDecimal.ZERO, BigDecimal::add));
-        purchaseCartMapper.updateById(cart);
     }
 }

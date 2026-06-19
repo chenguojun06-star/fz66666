@@ -54,7 +54,7 @@
 .panelTitle {
   font-size: 14px;
   font-weight: 600;
-  color: #ffffff;
+  color: var(--color-bg-base);
 }
 
 .panelSubtitle {
@@ -77,7 +77,7 @@
 }
 
 .panelBackBtn:hover {
-  color: #ffffff;
+  color: var(--color-bg-base);
   background: rgba(255, 255, 255, 0.12);
 }
 
@@ -92,7 +92,7 @@
 }
 
 .panelCloseBtn:hover {
-  color: #ffffff;
+  color: var(--color-bg-base);
   background: rgba(255, 255, 255, 0.12);
 }
 
@@ -147,14 +147,14 @@
 
 .filterChip:hover {
   border-color: #91d5ff;
-  color: #1890ff;
+  color: var(--color-info);
   background: #e6f7ff;
 }
 
 .filterChipActive {
-  border-color: #1890ff;
+  border-color: var(--color-info);
   background: #e6f7ff;
-  color: #1890ff;
+  color: var(--color-info);
   font-weight: 600;
 }
 
@@ -239,7 +239,7 @@
 .taskModuleTag {
   font-size: 14px;
   color: var(--color-text-tertiary);
-  background: #f0f0f0;
+  background: var(--color-border-light);
   border-radius: 4px;
   padding: 1px 5px;
   white-space: nowrap;
@@ -278,7 +278,7 @@
 
 .taskRefNo {
   font-size: 14px;
-  color: #1890ff;
+  color: var(--color-info);
   background: #e6f7ff;
   border-radius: 4px;
   padding: 1px 5px;
@@ -310,7 +310,7 @@
 
 .emptyText {
   font-size: 14px;
-  color: #52c41a;
+  color: var(--color-success);
   font-weight: 500;
 }
 

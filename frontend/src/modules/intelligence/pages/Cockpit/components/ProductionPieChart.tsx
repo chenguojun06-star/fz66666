@@ -10,7 +10,7 @@ import './ProductionPieChart.css';
 const PROCESS_STAGES = [
   { key: 'cutting', label: '裁剪', color: '#3b82f6', rateField: 'cuttingCompletionRate' },
   { key: 'secondaryProcess', label: '二次工艺', color: '#f59e0b', rateField: 'secondaryProcessRate' },
-  { key: 'sewing', label: '车缝', color: '#10b981', rateField: 'sewingCompletionRate' },
+  { key: 'sewing', label: '车缝', color: 'var(--color-accent-emerald)', rateField: 'sewingCompletionRate' },
   { key: 'tail', label: '尾部', color: '#8b5cf6', rateField: 'tailProcessRate' },
 ];
 

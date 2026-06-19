@@ -303,7 +303,7 @@ const LabelPrint: React.FC = () => {
 @page{size:${hang.w}mm ${hang.h}mm;margin:0}
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{width:${hang.w}mm;min-height:${hang.h}mm}
-body{font-family:"PingFang SC","Microsoft YaHei","Noto Sans SC",sans-serif;color:#1a1a1a;background:#fff;-webkit-font-smoothing:antialiased}
+body{font-family:"PingFang SC","Microsoft YaHei","Noto Sans SC",sans-serif;color:var(--color-text-primary);background:var(--color-bg-base);-webkit-font-smoothing:antialiased}
 .tag{width:${hang.w}mm;height:${hang.h}mm;page-break-after:always;display:flex;flex-direction:column;overflow:hidden;position:relative}
 .tag:last-child{page-break-after:auto}
 .tag::before{content:'';position:absolute;inset:0;border:1.2pt solid #222;pointer-events:none}
@@ -318,7 +318,7 @@ body{font-family:"PingFang SC","Microsoft YaHei","Noto Sans SC",sans-serif;color
 .row{display:flex;align-items:baseline;padding:0.7mm 0;border-bottom:0.2pt solid #e0e0e0;font-size:${isz}pt;line-height:1.5}
 .row:last-child{border-bottom:none}
 .lbl{color:#888;min-width:13mm;white-space:nowrap;font-weight:400;flex-shrink:0}
-.val{font-weight:600;color:#1a1a1a;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.val{font-weight:600;color:var(--color-text-primary);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cert-box{margin-top:auto;border:0.6pt solid #555;padding:1.5mm 2.5mm;position:relative}
 .cert-title{font-size:${isz + 0.5}pt;font-weight:700;text-align:center;letter-spacing:2mm;color:#222;margin-bottom:1mm;padding-bottom:0.8mm;border-bottom:0.3pt solid #bbb}
 .cert-row{display:flex;align-items:baseline;font-size:${isz - 0.3}pt;padding:0.3mm 0}
@@ -354,7 +354,7 @@ ${hang.showBarcode ? `<div class="barcode">${barcodeSvgStr}</div>` : ''}
 @page{size:${bar.w}mm ${bar.h}mm;margin:0}
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{width:${bar.w}mm;min-height:${bar.h}mm}
-body{font-family:"PingFang SC","Microsoft YaHei","Noto Sans SC",sans-serif;color:#000;background:#fff;-webkit-font-smoothing:antialiased}
+body{font-family:"PingFang SC","Microsoft YaHei","Noto Sans SC",sans-serif;color:#000;background:var(--color-bg-base);-webkit-font-smoothing:antialiased}
 .lb{width:${bar.w}mm;height:${bar.h}mm;page-break-after:always;display:flex;align-items:center;padding:1.5mm 2.5mm;border:0.6pt solid #333;position:relative}
 .lb:last-child{page-break-after:auto}
 .lb img{height:${bar.h * 0.65}mm;width:auto;margin-right:2.5mm;flex-shrink:0}
@@ -637,7 +637,7 @@ ${codeImgHtml}
               <Card>
                 <Row gutter={24}>
                   <Col span={7}>
-                    <div style={{ border: '1px solid #eee', borderRadius: 8, padding: 12, textAlign: 'center', minHeight: 220, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fafafa' }}>
+                    <div style={{ border: '1px solid #eee', borderRadius: 8, padding: 12, textAlign: 'center', minHeight: 220, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--color-bg-container)' }}>
                       {coverBase64 ? (
                         <Image src={coverBase64} style={{ maxHeight: 200, objectFit: 'contain' }} />
                       ) : (
@@ -647,7 +647,7 @@ ${codeImgHtml}
                   </Col>
                   <Col span={17}>
                     <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>{selectedOrder.styleName || selectedOrder.styleNo}</div>
-                    <div style={{ color: 'var(--color-text-secondary)', marginBottom: 4 }}>款号: <span style={{ color: '#1890ff' }}>{selectedOrder.styleNo}</span></div>
+                    <div style={{ color: 'var(--color-text-secondary)', marginBottom: 4 }}>款号: <span style={{ color: 'var(--color-info)' }}>{selectedOrder.styleNo}</span></div>
                     <div style={{ color: 'var(--color-text-secondary)', marginBottom: 12 }}>订单号: {selectedOrder.orderNo}</div>
                     <Divider style={{ margin: '10px 0' }} />
                     {selectedOrder.colors.length > 0 && (
@@ -762,11 +762,11 @@ ${codeImgHtml}
                                     <div key={code} style={{
                                       display: 'inline-flex', alignItems: 'center', gap: 4,
                                       padding: '3px 8px', borderRadius: 6,
-                                      border: '1.5px solid #1677ff',
+                                      border: '1.5px solid var(--color-primary)',
                                       background: '#e6f4ff',
                                     }}>
                                       <span dangerouslySetInnerHTML={{ __html: icon?.svg || '' }} style={{ display: 'inline-block', width: 22, height: 22, flexShrink: 0 }} />
-                                      <span style={{ fontSize: 14, color: '#1677ff', whiteSpace: 'nowrap' }}>{icon?.label || code}</span>
+                                      <span style={{ fontSize: 14, color: 'var(--color-primary)', whiteSpace: 'nowrap' }}>{icon?.label || code}</span>
                                     </div>
                                   );
                                 })}

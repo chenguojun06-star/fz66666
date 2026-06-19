@@ -243,7 +243,7 @@ const AppOrderTab: React.FC<{ onOrderActivated?: () => void }> = ({ onOrderActiv
         <Button icon={<ReloadOutlined />} onClick={fetchData} loading={loading}>刷新</Button>
         <Tooltip title={notifyConfigured ? `微信通知已开启 (${notifyMaskedKey})` : '未配置微信通知，客户下单后您不会收到提醒'}>
           <Button
-            icon={notifyConfigured ? <BellFilled style={{ color: '#52c41a' }} /> : <BellOutlined />}
+            icon={notifyConfigured ? <BellFilled style={{ color: 'var(--color-success)' }} /> : <BellOutlined />}
             onClick={() => { setServerChanKey(''); notifyModal.open(null); }}
           >
             {notifyConfigured ? '通知已开启' : '设置通知'}

@@ -36,11 +36,11 @@ const STATUS_COLOR: Record<string, string> = {
   production: '#0ea5e9',
   completed:  '#22c55e',
   delayed:    '#f59e0b',
-  scrapped:   '#6b7280',
-  cancelled:  '#6b7280',
-  canceled:   '#6b7280',
+  scrapped:   'var(--color-text-secondary)',
+  cancelled:  'var(--color-text-secondary)',
+  canceled:   'var(--color-text-secondary)',
   paused:     '#f59e0b',
-  returned:   '#fa8c16',
+  returned:   'var(--color-warning)',
 };
 
 const STATUS_LABEL_ZH: Record<string, string> = {

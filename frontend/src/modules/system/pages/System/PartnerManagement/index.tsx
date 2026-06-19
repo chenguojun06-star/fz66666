@@ -66,7 +66,7 @@ const ExternalTreeItem: React.FC<{
           {expanded ? '▼' : '▶'}
         </span>
         <span className="partner-tree-label" onClick={() => onSelect(String(node.id))}>
-          <BankOutlined style={{ color: 'var(--primary-color, #1677ff)', marginRight: 4 }} />
+          <BankOutlined style={{ color: 'var(--primary-color, var(--color-primary))', marginRight: 4 }} />
           <span className="partner-tree-name">{node.unitName}</span>
         </span>
       </div>
@@ -191,7 +191,7 @@ const PartnerManagement: React.FC = () => {
           <Avatar
             size={24}
             icon={<UserOutlined />}
-            style={{ backgroundColor: r.isFactoryOwner ? 'var(--color-warning, #faad14)' : 'var(--color-success, #52c41a)', flexShrink: 0, cursor: 'pointer' }}
+            style={{ backgroundColor: r.isFactoryOwner ? 'var(--color-warning, var(--color-warning))' : 'var(--color-success, var(--color-success))', flexShrink: 0, cursor: 'pointer' }}
             onClick={() => setProfileUser(r)}
           />
           {v || r.username}
@@ -247,7 +247,7 @@ const PartnerManagement: React.FC = () => {
       <PageLayout
         title={
           <span style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
-            <BankOutlined style={{ marginRight: 8, color: 'var(--primary-color, #1677ff)', fontSize: 20 }} />
+            <BankOutlined style={{ marginRight: 8, color: 'var(--primary-color, var(--color-primary))', fontSize: 20 }} />
             合作企业管理
           </span>
         }

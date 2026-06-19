@@ -5,16 +5,14 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
-import com.fashion.supplychain.system.entity.Tenant;
 import com.fashion.supplychain.system.entity.UserFeedback;
-import com.fashion.supplychain.system.service.TenantService;
+import com.fashion.supplychain.system.orchestration.UserFeedbackOrchestrator;
 import com.fashion.supplychain.system.service.UserFeedbackService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDateTime;
 import java.util.Map;
 
 /**
@@ -31,7 +29,7 @@ public class UserFeedbackController {
     private UserFeedbackService userFeedbackService;
 
     @Autowired
-    private TenantService tenantService;
+    private UserFeedbackOrchestrator userFeedbackOrchestrator;
 
     /**
      * 提交反馈（所有登录用户可用，PC端和小程序统一入口）
@@ -45,33 +43,8 @@ public class UserFeedbackController {
             return Result.fail("内容不能为空");
         }
 
-        UserContext ctx = UserContext.get();
-        if (ctx != null) {
-            feedback.setUserId(ctx.getUserId() != null ? Long.parseLong(ctx.getUserId()) : null);
-            feedback.setUserName(ctx.getUsername());
-            feedback.setTenantId(ctx.getTenantId());
-            // 冗余存储租户名称，方便管理端查询
-            if (ctx.getTenantId() != null) {
-                Tenant tenant = tenantService.getById(ctx.getTenantId());
-                if (tenant != null) {
-                    feedback.setTenantName(tenant.getTenantName());
-                }
-            }
-        }
-
-        // 设置默认值
-        if (!StringUtils.hasText(feedback.getSource())) {
-            feedback.setSource("PC");
-        }
-        if (!StringUtils.hasText(feedback.getCategory())) {
-            feedback.setCategory("BUG");
-        }
-        feedback.setStatus("PENDING");
-        feedback.setCreateTime(LocalDateTime.now());
-        feedback.setUpdateTime(LocalDateTime.now());
-
-        userFeedbackService.save(feedback);
-        return Result.success(feedback);
+        UserFeedback saved = userFeedbackOrchestrator.submit(feedback);
+        return Result.success(saved);
     }
 
     /**
@@ -149,21 +122,14 @@ public class UserFeedbackController {
             return Result.fail("回复内容不能为空");
         }
 
-        UserFeedback feedback = userFeedbackService.getById(id);
-        if (feedback == null) {
+        UserFeedback existing = userFeedbackService.getById(id);
+        if (existing == null) {
             return Result.fail("反馈不存在");
         }
-        TenantAssert.assertBelongsToCurrentTenant(feedback.getTenantId(), "用户反馈");
+        TenantAssert.assertBelongsToCurrentTenant(existing.getTenantId(), "用户反馈");
 
-        UserContext ctx = UserContext.get();
-        feedback.setReply(reply);
-        feedback.setReplyTime(LocalDateTime.now());
-        feedback.setReplyUserId(ctx != null && ctx.getUserId() != null ? Long.parseLong(ctx.getUserId()) : null);
-        feedback.setStatus(StringUtils.hasText(status) ? status : "RESOLVED");
-        feedback.setUpdateTime(LocalDateTime.now());
-
-        userFeedbackService.updateById(feedback);
-        return Result.success(feedback);
+        UserFeedback updated = userFeedbackOrchestrator.reply(id, reply, status);
+        return Result.success(updated);
     }
 
     /**
@@ -177,16 +143,14 @@ public class UserFeedbackController {
             return Result.fail("状态不能为空");
         }
 
-        UserFeedback feedback = userFeedbackService.getById(id);
-        if (feedback == null) {
+        UserFeedback existing = userFeedbackService.getById(id);
+        if (existing == null) {
             return Result.fail("反馈不存在");
         }
-        TenantAssert.assertBelongsToCurrentTenant(feedback.getTenantId(), "用户反馈");
+        TenantAssert.assertBelongsToCurrentTenant(existing.getTenantId(), "用户反馈");
 
-        feedback.setStatus(status);
-        feedback.setUpdateTime(LocalDateTime.now());
-        userFeedbackService.updateById(feedback);
-        return Result.success(feedback);
+        UserFeedback updated = userFeedbackOrchestrator.updateStatus(id, status);
+        return Result.success(updated);
     }
 
     /**

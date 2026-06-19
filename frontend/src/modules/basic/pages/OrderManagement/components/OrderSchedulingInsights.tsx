@@ -59,10 +59,10 @@ const OrderSchedulingInsights: React.FC<OrderSchedulingInsightsProps> = ({
               <div
                 key={item.key}
                 style={{
-                  border: item.selected ? '1px solid #91caff' : '1px solid #f0f0f0',
+                  border: item.selected ? '1px solid #91caff' : '1px solid var(--color-border-light)',
                   borderRadius: 8,
                   padding: 10,
-                  background: item.selected ? '#f6ffed' : '#fafafa',
+                  background: item.selected ? '#f6ffed' : 'var(--color-bg-container)',
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>

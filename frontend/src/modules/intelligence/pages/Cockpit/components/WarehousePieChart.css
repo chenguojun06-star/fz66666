@@ -7,6 +7,6 @@
 .style-stats-item:hover { border-color: #3b82f6; }
 .style-no { font-weight: 600; color: #1f2937; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .style-percent { font-weight: 700; color: #3b82f6; min-width: 40px; text-align: right; }
-.style-detail { color: #9ca3af; min-width: 50px; text-align: center; }
-.style-instock { color: #10b981; font-weight: 500; }
+.style-detail { color: var(--color-text-tertiary); min-width: 50px; text-align: center; }
+.style-instock { color: var(--color-accent-emerald); font-weight: 500; }
 .style-outstock { color: #3b82f6; font-weight: 500; }

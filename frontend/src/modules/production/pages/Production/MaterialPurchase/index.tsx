@@ -210,7 +210,7 @@ const MaterialPurchase: React.FC = () => {
                           key: 'partial',
                           items: [{ label: '部分到货', value: purchaseStats.partialCount, unit: '条', color: 'var(--color-warning)' }],
                           onClick: () => handleStatClick('partial'),
-                          activeColor: '#fa8c16',
+                          activeColor: 'var(--color-warning)',
                         },
                         {
                           key: 'completed',
@@ -220,9 +220,9 @@ const MaterialPurchase: React.FC = () => {
                         },
                         {
                           key: 'overdue',
-                          items: [{ label: '逆期未到', value: overdueCount, unit: '条', color: 'var(--error-color, #ff4d4f)' }],
+                          items: [{ label: '逆期未到', value: overdueCount, unit: '条', color: 'var(--error-color, var(--color-danger))' }],
                           onClick: () => handleStatClick('overdue'),
-                          activeColor: 'var(--error-color, #ff4d4f)',
+                          activeColor: 'var(--error-color, var(--color-danger))',
                         },
                       ]}
                     />
@@ -582,7 +582,7 @@ const MaterialPurchase: React.FC = () => {
                     textAlign: 'center', cursor: 'pointer', background: 'var(--color-bg-container)', transition: 'border-color 0.3s',
                   }}
                   onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--primary-color)'; }}
-                  onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = '#d9d9d9'; }}
+                  onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--color-border-antd)'; }}
                 >
                   <p className="ant-upload-drag-icon" style={{ marginBottom: 4 }}>
                     <InboxOutlined style={{ fontSize: 24, color: 'var(--primary-color)' }} />
@@ -600,7 +600,7 @@ const MaterialPurchase: React.FC = () => {
                           style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                         />
                         <span
-                          style={{ position: 'absolute', top: 0, right: 0, width: 16, height: 16, background: 'rgba(0,0,0,0.5)', color: '#fff', fontSize: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                          style={{ position: 'absolute', top: 0, right: 0, width: 16, height: 16, background: 'rgba(0,0,0,0.5)', color: 'var(--color-bg-base)', fontSize: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
                           onClick={(e) => {
                             e.stopPropagation();
                             setReturnEvidenceFiles((prev: any[]) => prev.filter((x: any) => x.uid !== f.uid));

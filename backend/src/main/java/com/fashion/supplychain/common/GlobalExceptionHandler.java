@@ -224,7 +224,7 @@ public class GlobalExceptionHandler {
         }
 
         /**
-         * 处理权限不足。
+         * 处理权限不足（Spring Security）。
          */
         @ExceptionHandler(AccessDeniedException.class)
         public ResponseEntity<Result<?>> handleAccessDenied(AccessDeniedException e, HttpServletRequest request,
@@ -235,6 +235,21 @@ public class GlobalExceptionHandler {
                         return null;
                 }
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Result.fail(403, sanitizeClientMessage(e.getMessage())));
+        }
+
+        /**
+         * 处理 SecurityException（业务层用于租户隔离/权限拦截）。
+         * 返回 403 + 中文提示，避免前端看到空白页或默认错误栈。
+         */
+        @ExceptionHandler(SecurityException.class)
+        public ResponseEntity<Result<?>> handleSecurityException(SecurityException e, HttpServletRequest request) {
+                logger.warn("安全检查未通过: {} {} - {}", request == null ? "" : request.getMethod(),
+                                request == null ? "" : request.getRequestURI(), e.getMessage());
+                String safeMessage = sanitizeClientMessage(e.getMessage());
+                if (safeMessage == null || safeMessage.isEmpty()) {
+                        safeMessage = "权限不足，请联系管理员";
+                }
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Result.fail(403, safeMessage));
         }
 
         /**

@@ -1,7 +1,7 @@
 .kb-modal {
   .ant-modal-header {
     padding: 16px 24px;
-    border-bottom: 1px solid #f0f0f0;
+    border-bottom: 1px solid var(--color-border-light);
   }
 
   .ant-modal-title {
@@ -25,7 +25,7 @@
 
   .kb-icon {
     font-size: 20px;
-    color: #1890ff;
+    color: var(--color-info);
   }
 }
 
@@ -40,7 +40,7 @@
     margin: 0 0 12px 0;
     font-size: 13px;
     font-weight: 500;
-    color: #6b7280;
+    color: var(--color-text-secondary);
     text-transform: uppercase;
     letter-spacing: 0.5px;
   }
@@ -72,7 +72,7 @@
 }
 
 .kb-plus {
-  color: #9ca3af;
+  color: var(--color-text-tertiary);
   font-size: 12px;
   margin: 0 2px;
 }
@@ -84,7 +84,7 @@
   min-width: 28px;
   height: 28px;
   padding: 0 8px;
-  background: linear-gradient(180deg, #ffffff 0%, #f5f5f5 100%);
+  background: linear-gradient(180deg, var(--color-bg-base) 0%, var(--color-bg-subtle) 100%);
   border: 1px solid #d1d5db;
   border-radius: 4px;
   font-size: 12px;
@@ -95,7 +95,7 @@
 
   .kb-cmd {
     font-size: 14px;
-    color: #6b7280;
+    color: var(--color-text-secondary);
   }
 }
 
@@ -113,6 +113,6 @@
 
   .kb-hint {
     font-size: 13px;
-    color: #9ca3af;
+    color: var(--color-text-tertiary);
   }
 }

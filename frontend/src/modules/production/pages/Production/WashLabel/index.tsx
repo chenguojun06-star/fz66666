@@ -265,7 +265,7 @@ const WashLabelPage: React.FC = () => {
         if (cached === undefined) return <span style={{ color: 'var(--color-text-quaternary)' }}>--</span>;
         return cached.fabricComposition
           ? <Tooltip title={cached.fabricComposition}><span>{cached.fabricComposition}</span></Tooltip>
-          : <span style={{ color: '#fa8c16' }}>未填写</span>;
+          : <span style={{ color: 'var(--color-warning)' }}>未填写</span>;
       },
     },
     {
@@ -282,7 +282,7 @@ const WashLabelPage: React.FC = () => {
         if (cached === undefined) return <span style={{ color: 'var(--color-text-quaternary)' }}>--</span>;
         return cached.washInstructions
           ? <Tooltip title={cached.washInstructions}><span>{cached.washInstructions}</span></Tooltip>
-          : <span style={{ color: '#fa8c16' }}>未填写</span>;
+          : <span style={{ color: 'var(--color-warning)' }}>未填写</span>;
       },
     },
     {
@@ -296,7 +296,7 @@ const WashLabelPage: React.FC = () => {
       render: (_: unknown, record: ProductionOrder) => {
         const lineCount = getOrderLines(record).length;
         if (lineCount > 1) {
-          return <span style={{ color: '#1677ff', fontWeight: 600 }}>{`按SKU生成 ${lineCount} 条`}</span>;
+          return <span style={{ color: 'var(--color-primary)', fontWeight: 600 }}>{`按SKU生成 ${lineCount} 条`}</span>;
         }
         return (
           <Input

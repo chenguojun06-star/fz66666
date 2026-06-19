@@ -113,13 +113,13 @@ const WageFeedbackTab: React.FC = () => {
           <Card><Statistic title="总反馈" value={stats.totalCount ?? 0} prefix={<MessageOutlined />} /></Card>
         </Col>
         <Col span={6}>
-          <Card><Statistic title="待处理" value={stats.pendingCount ?? 0} styles={{ content: { color: '#faad14' } }} /></Card>
+          <Card><Statistic title="待处理" value={stats.pendingCount ?? 0} styles={{ content: { color: 'var(--color-warning)' } }} /></Card>
         </Col>
         <Col span={6}>
-          <Card><Statistic title="已解决" value={stats.resolvedCount ?? 0} styles={{ content: { color: '#52c41a' } }} /></Card>
+          <Card><Statistic title="已解决" value={stats.resolvedCount ?? 0} styles={{ content: { color: 'var(--color-success)' } }} /></Card>
         </Col>
         <Col span={6}>
-          <Card><Statistic title="已驳回" value={stats.rejectedCount ?? 0} styles={{ content: { color: '#ff4d4f' } }} /></Card>
+          <Card><Statistic title="已驳回" value={stats.rejectedCount ?? 0} styles={{ content: { color: 'var(--color-danger)' } }} /></Card>
         </Col>
       </Row>
 

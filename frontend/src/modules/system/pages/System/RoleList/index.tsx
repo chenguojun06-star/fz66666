@@ -399,7 +399,7 @@ const RoleList: React.FC = () => {
       key: 'name',
       render: (v: string, r: any) => (
         <Space size={6}>
-          <Avatar size={24} icon={<UserOutlined />} style={{ backgroundColor: 'var(--primary-color, #1677ff)', flexShrink: 0 }} />
+          <Avatar size={24} icon={<UserOutlined />} style={{ backgroundColor: 'var(--primary-color, var(--color-primary))', flexShrink: 0 }} />
           {v || r.username}
         </Space>
       ),
@@ -464,7 +464,7 @@ const RoleList: React.FC = () => {
                     className={`role-list-item${isActive ? ' role-list-item-active' : ''}`}
                     onClick={() => { setSelectedRole(role); setEditingRoleName(false); }}
                   >
-                    <span className="role-list-item-icon" style={{ color: isActive ? 'var(--primary-color, #1677ff)' : 'var(--color-text-tertiary, #999)' }}>
+                    <span className="role-list-item-icon" style={{ color: isActive ? 'var(--primary-color, var(--color-primary))' : 'var(--color-text-tertiary, #999)' }}>
                       {getRoleIcon(role.roleName || '')}
                     </span>
                     <span className="role-list-item-name">{role.roleName}</span>
@@ -499,7 +499,7 @@ const RoleList: React.FC = () => {
                       </Space>
                     ) : (
                       <span
-                        style={{ fontSize: 16, fontWeight: 600, cursor: 'pointer', borderBottom: '1px dashed var(--color-border-antd, #d9d9d9)' }}
+                        style={{ fontSize: 16, fontWeight: 600, cursor: 'pointer', borderBottom: '1px dashed var(--color-border-antd, var(--color-border-antd))' }}
                         onClick={() => { setEditingRoleName(true); setRoleNameValue(selectedRole.roleName || ''); }}
                         title="点击编辑职位名称"
                       >

@@ -251,7 +251,7 @@ export function analyzeProgress(
   return { bottleneck, personnelNotes, resourceSuggestions, followUpPoints, riskPredictions, verdict };
 }
 
-const V_COLOR = { good: '#52c41a', warn: '#fa8c16', critical: '#ff4d4f' } as const;
+const V_COLOR = { good: 'var(--color-success)', warn: 'var(--color-warning)', critical: 'var(--color-danger)' } as const;
 const V_LABEL = { good: '进展良好', warn: '需关注', critical: '风险预警' } as const;
 
 function hashSeed(input: string): number {
@@ -332,7 +332,7 @@ export function renderProgressInsight(insight: ProgressInsight): React.ReactNode
         <span> 小云实时推演</span>
         <span style={{
           fontSize: 6, padding: '0 5px', borderRadius: 3,
-          background: V_COLOR[verdict], color: '#fff',
+          background: V_COLOR[verdict], color: 'var(--color-bg-base)',
         }}>{V_LABEL[verdict]}</span>
       </div>
       <DecisionInsightCard

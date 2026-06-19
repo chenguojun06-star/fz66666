@@ -16,7 +16,6 @@ import com.fashion.supplychain.system.service.TenantSubscriptionService;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
@@ -49,9 +48,6 @@ public class AppStoreController {
 
     @Autowired
     private AppStoreOrchestrator appStoreOrchestrator;
-
-    @Autowired(required = false)
-    private JdbcTemplate jdbcTemplate;
 
     /**
      * 获取应用列个表
@@ -269,31 +265,7 @@ public class AppStoreController {
     @PostMapping("/admin/order-list")
     public Result<List<AppOrder>> adminOrderList(@RequestBody(required = false) Map<String, Object> params) {
         try {
-            StringBuilder sql = new StringBuilder(
-                "SELECT id, order_no, tenant_id, tenant_name, app_id, app_code, app_name, " +
-                "order_type, subscription_type, user_count, unit_price, total_amount, " +
-                "discount_amount, actual_amount, status, payment_method, payment_time, " +
-                "contact_name, contact_phone, contact_email, company_name, " +
-                "invoice_required, invoice_title, invoice_tax_no, remark, created_by, " +
-                "create_time, update_time " +
-                "FROM t_app_order WHERE delete_flag = 0"
-            );
-            List<Object> args = new ArrayList<>();
-
-            String statusFilter = (params != null && params.containsKey("status") && params.get("status") != null)
-                    ? params.get("status").toString().trim() : "";
-            if (!statusFilter.isEmpty()) {
-                sql.append(" AND status = ?");
-                args.add(statusFilter);
-            }
-            sql.append(" ORDER BY create_time DESC");
-
-            List<AppOrder> orders = jdbcTemplate.query(
-                sql.toString(), args.toArray(),
-                new org.springframework.jdbc.core.BeanPropertyRowMapper<>(AppOrder.class)
-            );
-            log.info("[AdminOrderList] 超管查询全量订单：共 {} 条，状态过滤={}",
-                    orders.size(), statusFilter.isEmpty() ? "全部" : statusFilter);
+            List<AppOrder> orders = appStoreOrchestrator.adminOrderList(params);
             return Result.success(orders);
         } catch (Exception e) {
             log.error("[AdminOrderList] 查询失败", e);
@@ -308,18 +280,7 @@ public class AppStoreController {
     @GetMapping("/admin/notify-config")
     public Result<Map<String, Object>> getNotifyConfig() {
         Map<String, Object> config = new java.util.HashMap<>();
-        String key = "";
-        if (jdbcTemplate != null) {
-            try {
-                java.util.List<String> rows = jdbcTemplate.queryForList(
-                    "SELECT param_value FROM t_param_config WHERE param_key = 'notify.serverchan.key' LIMIT 1",
-                    String.class);
-                key = rows.isEmpty() ? "" : (rows.get(0) == null ? "" : rows.get(0));
-            } catch (Exception e) {
-                log.warn("读取通知配置失败: {}", e.getMessage());
-            }
-        }
-        // 脱敏：只显示前6位和后4位
+        String key = appStoreOrchestrator.getNotifyServerChanKey();
         String masked = key.isBlank() ? "" :
             (key.length() > 10 ? key.substring(0, 6) + "****" + key.substring(key.length() - 4) : "已配置");
         config.put("configured", !key.isBlank());
@@ -334,16 +295,8 @@ public class AppStoreController {
     @PostMapping("/admin/notify-config")
     public Result<Void> saveNotifyConfig(@RequestBody Map<String, String> body) {
         String key = body.getOrDefault("serverChanKey", "").trim();
-        if (jdbcTemplate == null) {
-            return Result.fail("数据库连接不可用");
-        }
         try {
-            jdbcTemplate.update(
-                "INSERT INTO t_param_config (param_key, param_value, param_desc) VALUES (?, ?, ?) " +
-                "ON DUPLICATE KEY UPDATE param_value = VALUES(param_value)",
-                "notify.serverchan.key", key,
-                "Server酱微信推送Key（在 sct.ftqq.com 获取）");
-            log.info("[通知配置] 超管更新Server酱Key: configured={}", !key.isBlank());
+            appStoreOrchestrator.saveNotifyServerChanKey(key);
             return Result.success(null);
         } catch (Exception e) {
             log.error("保存通知配置失败", e);

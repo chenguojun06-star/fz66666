@@ -139,7 +139,7 @@ const EcSalesRevenue: React.FC = () => {
       width: 100,
       align: 'right',
       render: (v: number) => (
-        <Text style={{ color: '#52c41a', fontWeight: 600 }}>
+        <Text style={{ color: 'var(--color-success)', fontWeight: 600 }}>
           {formatMoney(v)}
         </Text>
       ),
@@ -233,20 +233,20 @@ const EcSalesRevenue: React.FC = () => {
           <Col span={8}>
             <Card>
               <Statistic
-                title={<><CheckCircleOutlined style={{ color: '#1677ff', marginRight: 4 }} />已核账</>}
+                title={<><CheckCircleOutlined style={{ color: 'var(--color-primary)', marginRight: 4 }} />已核账</>}
                 value={fmtAmt(summary?.confirmedAmount)}
                 suffix={<Text type="secondary" style={{ fontSize: 14 }}>（{summary?.confirmedCount ?? 0} 笔）</Text>}
-                styles={{ content: { color: '#1677ff', fontSize: 18 } }}
+                styles={{ content: { color: 'var(--color-primary)', fontSize: 18 } }}
               />
             </Card>
           </Col>
           <Col span={8}>
             <Card>
               <Statistic
-                title={<><DollarOutlined style={{ color: '#52c41a', marginRight: 4 }} />已入账净收入</>}
+                title={<><DollarOutlined style={{ color: 'var(--color-success)', marginRight: 4 }} />已入账净收入</>}
                 value={fmtAmt(summary?.netIncome)}
                 suffix={<Text type="secondary" style={{ fontSize: 14 }}>（{summary?.reconciledCount ?? 0} 笔）</Text>}
-                styles={{ content: { color: '#52c41a', fontSize: 18 } }}
+                styles={{ content: { color: 'var(--color-success)', fontSize: 18 } }}
               />
             </Card>
           </Col>

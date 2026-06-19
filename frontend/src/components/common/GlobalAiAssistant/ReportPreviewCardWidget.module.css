@@ -52,7 +52,7 @@
 }
 
 .kpiCard {
-  background: linear-gradient(135deg, #fafafa 0%, #f0f5ff 100%);
+  background: linear-gradient(135deg, var(--color-bg-container) 0%, #f0f5ff 100%);
   border: 1px solid var(--color-border);
   border-radius: 8px;
   padding: 8px 10px;
@@ -67,7 +67,7 @@
 .kpiValue {
   font-size: 14px;
   font-weight: 700;
-  color: #1890ff;
+  color: var(--color-info);
   line-height: 1.2;
 }
 
@@ -83,8 +83,8 @@
   font-weight: 600;
 }
 
-.kpiChangeUp { color: #52c41a; }
-.kpiChangeDown { color: #ff4d4f; }
+.kpiChangeUp { color: var(--color-success); }
+.kpiChangeDown { color: var(--color-danger); }
 .kpiChangeFlat { color: var(--color-text-tertiary); }
 
 .distRow {
@@ -103,7 +103,7 @@
 }
 
 .distChip strong {
-  color: #1890ff;
+  color: var(--color-info);
   margin: 0 2px;
 }
 
@@ -127,8 +127,8 @@
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: #1890ff;
-  color: #fff;
+  background: var(--color-info);
+  color: var(--color-bg-base);
   text-align: center;
   line-height: 18px;
   font-size: 12px;
@@ -136,8 +136,8 @@
   flex-shrink: 0;
 }
 
-.rankBadge1 { background: #faad14; }
-.rankBadge2 { background: #bfbfbf; }
+.rankBadge1 { background: var(--color-warning); }
+.rankBadge2 { background: var(--color-text-quaternary); }
 .rankBadge3 { background: #d4380d; }
 
 .rankName {
@@ -161,7 +161,7 @@
 }
 
 .riskChip {
-  background: #fff7e6;
+  background: #FFF7E6;
   border: 1px solid #ffd591;
   border-radius: 8px;
   padding: 6px;
@@ -169,17 +169,17 @@
 }
 
 .riskChipDanger {
-  background: #fff1f0;
+  background: #FFF1F0;
   border-color: #ffa39e;
 }
 
 .riskValue {
   font-size: 13px;
   font-weight: 700;
-  color: #fa8c16;
+  color: var(--color-warning);
 }
 
-.riskChipDanger .riskValue { color: #cf1322; }
+.riskChipDanger .riskValue { color: var(--color-error); }
 
 .riskLabel {
   font-size: 12px;
@@ -198,11 +198,11 @@
   padding: 4px 6px;
   background: var(--color-bg-container);
   border-radius: 6px;
-  border-left: 3px solid #ff4d4f;
+  border-left: 3px solid var(--color-danger);
 }
 
 .orderItem.highRisk {
-  border-left-color: #faad14;
+  border-left-color: var(--color-warning);
 }
 
 .orderNo {

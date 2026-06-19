@@ -40,6 +40,9 @@ public class MaterialPickingController {
     @Autowired
     private com.fashion.supplychain.production.service.MaterialPurchaseService materialPurchaseService;
 
+    @Autowired
+    private com.fashion.supplychain.production.orchestration.MaterialPickingOrchestrator materialPickingOrchestrator;
+
     @PostMapping
     public Result<String> create(@RequestBody PickingRequest request) {
         return Result.success(materialPickingService.createPicking(request.getPicking(), request.getItems()));
@@ -194,71 +197,7 @@ public class MaterialPickingController {
      */
     @PostMapping("/{id}/cancel-pending")
     public Result<Void> cancelPending(@PathVariable String id) {
-        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
-        MaterialPicking picking = materialPickingService.lambdaQuery()
-                .eq(MaterialPicking::getId, id)
-                .eq(MaterialPicking::getTenantId, tenantId)
-                .eq(MaterialPicking::getDeleteFlag, 0)
-                .one();
-        if (picking == null) {
-            throw new java.util.NoSuchElementException("领料单不存在");
-        }
-        if (!UserContext.isSuperAdmin()) {
-            if (tenantId == null || !tenantId.equals(picking.getTenantId())) {
-                throw new IllegalStateException("无权操作此领料单");
-            }
-        }
-        if (!"pending".equals(picking.getStatus())) {
-            throw new IllegalStateException("仅待出库状态的领料单可取消");
-        }
-
-        List<MaterialPickingItem> items = materialPickingItemMapper.selectList(
-                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<MaterialPickingItem>()
-                        .eq(MaterialPickingItem::getPickingId, id));
-
-        for (MaterialPickingItem item : items) {
-            if (item.getMaterialStockId() != null && item.getQuantity() != null && item.getQuantity() > 0) {
-                try {
-                    materialStockService.unlockStock(item.getMaterialStockId(), item.getQuantity());
-                    log.info("[Picking] 取消待出库: 解锁库存 stockId={}, qty={}", item.getMaterialStockId(), item.getQuantity());
-                } catch (Exception e) {
-                    log.warn("[Picking] 取消待出库: 解锁库存失败 stockId={}, qty={}, error={}",
-                            item.getMaterialStockId(), item.getQuantity(), e.getMessage());
-                }
-            }
-        }
-
-        String cancelPurchaseId = picking.getPurchaseId();
-        if (cancelPurchaseId == null || cancelPurchaseId.isEmpty()) {
-            String remark = picking.getRemark();
-            if (remark != null && remark.contains("purchaseId=")) {
-                cancelPurchaseId = remark.substring(remark.indexOf("purchaseId=") + "purchaseId=".length()).trim();
-            }
-        }
-        if (cancelPurchaseId != null && !cancelPurchaseId.isEmpty()) {
-            try {
-                com.fashion.supplychain.production.entity.MaterialPurchase purchase = materialPurchaseService.getById(cancelPurchaseId);
-                if (purchase != null) {
-                    TenantAssert.assertBelongsToCurrentTenant(purchase.getTenantId(), "采购单");
-                }
-                if (purchase != null && "WAREHOUSE_PENDING".equals(purchase.getStatus())) {
-                    purchase.setStatus("pending");
-                    purchase.setReceiverId(null);
-                    purchase.setReceiverName(null);
-                    purchase.setUpdateTime(java.time.LocalDateTime.now());
-                    materialPurchaseService.updateById(purchase);
-                    log.info("[Picking] 取消待出库: 恢复采购单状态 purchaseId={}", cancelPurchaseId);
-                }
-            } catch (Exception e) {
-                log.warn("[Picking] 取消待出库: 恢复采购单状态失败 purchaseId={}, error={}", cancelPurchaseId, e.getMessage());
-            }
-        }
-
-        materialPickingItemMapper.delete(
-                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<MaterialPickingItem>()
-                        .eq(MaterialPickingItem::getPickingId, id));
-        materialPickingService.removeById(id);
-        log.info("[Picking] 取消待出库领料单: pickingNo={}", picking.getPickingNo());
+        materialPickingOrchestrator.cancelPending(id);
         return Result.success(null);
     }
 
@@ -270,44 +209,11 @@ public class MaterialPickingController {
 
     @PostMapping("/{id}/audit")
     public Result<Void> audit(@PathVariable String id, @RequestBody java.util.Map<String, Object> body) {
-        MaterialPicking picking = materialPickingService.getById(id);
-        if (picking == null) throw new java.util.NoSuchElementException("领料单不存在");
-        Long tenantId = UserContext.tenantId();
-        if (!UserContext.isSuperAdmin()) {
-            if (tenantId == null || !tenantId.equals(picking.getTenantId())) throw new IllegalStateException("无权操作此领料单");
+        try {
+            materialPickingOrchestrator.audit(id, body);
+        } catch (Exception e) {
+            return Result.fail(e.getMessage());
         }
-        if (!"completed".equals(picking.getStatus())) throw new IllegalStateException("仅已出库的领料单可审核");
-
-        String action = body.get("action") == null ? "approve" : String.valueOf(body.get("action")).trim();
-        String remark = body.get("remark") == null ? null : String.valueOf(body.get("remark")).trim();
-        String userId = com.fashion.supplychain.common.UserContext.userId();
-        String userName = com.fashion.supplychain.common.UserContext.username();
-
-        if ("approve".equalsIgnoreCase(action)) {
-            picking.setAuditStatus("APPROVED");
-            picking.setAuditorId(userId);
-            picking.setAuditorName(userName);
-            picking.setAuditTime(java.time.LocalDateTime.now());
-            picking.setAuditRemark(remark);
-            String factoryType = resolveFactoryType(picking);
-            if ("EXTERNAL".equalsIgnoreCase(factoryType)) {
-                picking.setFinanceStatus("PENDING");
-                picking.setFinanceRemark("外发工厂领料审核通过，待生成应收账单");
-            } else {
-                picking.setFinanceStatus("SETTLED");
-                picking.setFinanceRemark(remark != null ? "内部领料审核通过（内部平账）：" + remark : "内部领料审核通过，已做内部平账处理");
-            }
-            syncAuditToPickupRecords(id, remark);
-        } else {
-            picking.setAuditStatus("REJECTED");
-            picking.setAuditorId(userId);
-            picking.setAuditorName(userName);
-            picking.setAuditTime(java.time.LocalDateTime.now());
-            picking.setAuditRemark(remark);
-        }
-        picking.setUpdateTime(java.time.LocalDateTime.now());
-        materialPickingService.updateById(picking);
-        log.info("[Picking] 审核领料单: pickingNo={}, action={}", picking.getPickingNo(), action);
         return Result.success(null);
     }
 

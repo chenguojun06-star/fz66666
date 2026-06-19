@@ -152,7 +152,7 @@ export function useCuttingPrint({ message }: UseCuttingPrintOptions) {
         <style>
           * { margin: 0; padding: 0; box-sizing: border-box; }
           @page { size: ${pageSize}; margin: 0; }
-          html, body { width: ${labelW}mm; height: ${labelH}mm; color: #000; background: #fff; }
+          html, body { width: ${labelW}mm; height: ${labelH}mm; color: #000; background: var(--color-bg-base); }
           .print-page {
             width: ${labelW}mm;
             height: ${labelH}mm;

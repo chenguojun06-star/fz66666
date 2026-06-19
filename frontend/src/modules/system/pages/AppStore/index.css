@@ -82,7 +82,7 @@
 .price-value {
   font-size: 20px;
   font-weight: 600;
-  color: #ff4d4f;
+  color: var(--color-danger);
 }
 
 .price-unit {
@@ -137,8 +137,8 @@
 }
 
 .price-card.recommended {
-  border: 2px solid #faad14;
-  background: linear-gradient(135deg, #fff9e6 0%, #fff 100%);
+  border: 2px solid var(--color-warning);
+  background: linear-gradient(135deg, #F6FFED 0%, var(--color-bg-base) 100%);
 }
 
 .price-title {
@@ -162,7 +162,7 @@
 .price-save {
   margin-top: 8px;
   font-size: 14px;
-  color: #52c41a;
+  color: var(--color-success);
   font-weight: 600;
 }
 
@@ -174,7 +174,7 @@
   background: linear-gradient(135deg, #f6ffed 0%, #e6ffe6 100%);
   border: 1px solid #b7eb8f;
   border-radius: 12px;
-  color: #52c41a;
+  color: var(--color-success);
   font-size: 14px;
   font-weight: 600;
   margin-bottom: 8px;
@@ -182,14 +182,14 @@
 
 /* 试用价格卡片 */
 .trial-card {
-  border: 2px solid #52c41a !important;
-  background: linear-gradient(135deg, #f6ffed 0%, #fff 100%) !important;
+  border: 2px solid var(--color-success) !important;
+  background: linear-gradient(135deg, #f6ffed 0%, var(--color-bg-base) 100%) !important;
 }
 
 .trial-note {
   margin-top: 4px;
   font-size: 14px;
-  color: #52c41a;
+  color: var(--color-success);
   font-weight: 500;
 }
 

@@ -407,7 +407,7 @@ const IntelligenceCenter: React.FC = () => {
                         const alpha = cell ? Math.min(cell.intensity, 0.9) : 0;
                         return (
                           <div key={fac} className="c-heat-cell"
-                            style={{ background: `rgba(224,48,48,${alpha})`, color: alpha > 0.45 ? '#fff' : '#aaa' }}>
+                            style={{ background: `rgba(224,48,48,${alpha})`, color: alpha > 0.45 ? 'var(--color-bg-base)' : '#aaa' }}>
                             {cell?.defectCount || ''}
                           </div>
                         );
@@ -449,10 +449,10 @@ const IntelligenceCenter: React.FC = () => {
                   <span className="c-heal-detail">{item.detail}</span>
                   <span style={{ marginLeft: 'auto', flexShrink: 0 }}>
                     {item.autoFixed
-                      ? <Tag style={{ fontSize: 14, background: '#1677ff22', color: '#4096ff', borderColor: '#4096ff55' }}>已自修</Tag>
+                      ? <Tag style={{ fontSize: 14, background: 'rgba(45, 127, 249, 0.13)', color: '#4096ff', borderColor: '#4096ff55' }}>已自修</Tag>
                       : item.status !== 'OK'
                         ? <Tag style={{ fontSize: 14, background: '#d4880622', color: '#d48806', borderColor: '#d4880655' }}>需处理</Tag>
-                        : <Tag style={{ fontSize: 14, background: '#52c41a22', color: '#73d13d', borderColor: '#73d13d55' }}>正常</Tag>
+                        : <Tag style={{ fontSize: 14, background: 'rgba(82, 196, 26, 0.13)', color: '#73d13d', borderColor: '#73d13d55' }}>正常</Tag>
                     }
                   </span>
                 </div>
@@ -464,8 +464,8 @@ const IntelligenceCenter: React.FC = () => {
                   onClick={handleRepair}
                   disabled={repairing}
                   style={{
-                    background: 'transparent', color: '#1677ff',
-                    border: '1px solid #1677ff', borderRadius: 6, padding: '5px 16px', cursor: repairing ? 'wait' : 'pointer',
+                    background: 'transparent', color: 'var(--color-primary)',
+                    border: '1px solid var(--color-primary)', borderRadius: 6, padding: '5px 16px', cursor: repairing ? 'wait' : 'pointer',
                     fontSize: 14, fontWeight: 600, opacity: repairing ? 0.6 : 1,
                   }}
                 >
@@ -528,8 +528,8 @@ const IntelligenceCenter: React.FC = () => {
 
             <div style={{ padding: '0 24px 4px' }}>
               <div className="c-card-title" style={{ cursor: 'pointer', padding: '8px 0', marginBottom: 0 }} onClick={() => toggleCollapse('abtest')}>
-                <span style={{ fontSize: 14, color: '#38bdf8', fontWeight: 600 }}> A/B 测试统计</span>
-                <span className="c-card-badge" style={{ marginLeft: 8, background: 'rgba(56,189,248,0.15)', color: '#38bdf8' }}>
+                <span style={{ fontSize: 14, color: 'var(--color-accent-sky)', fontWeight: 600 }}> A/B 测试统计</span>
+                <span className="c-card-badge" style={{ marginLeft: 8, background: 'rgba(56,189,248,0.15)', color: 'var(--color-accent-sky)' }}>
                   Scene Comparison
                 </span>
                 <CollapseChevron panelKey="abtest" collapsed={!!collapsedPanels['abtest']} />

@@ -42,7 +42,6 @@ import java.util.Map;
  *   <li>SelfCriticService — 自我批评（overallScore 0-100）</li>
  *   <li>DataTruthGuard — 数据真实性（trustScore 0-100）</li>
  *   <li>QuickPathQualityGate — 快速通道质量门（trustScore 0-100）</li>
- *   <li>DynamicFollowUpEngine — 动态追问（孤儿，待确认废弃）</li>
  *   <li>RealTimeLearningLoop — 实时学习（consecutiveLowScore）</li>
  *   <li>EvolutionPipeline — 进化管道（totalCycles/totalImprovements）</li>
  *   <li>SystemDataMiner — 数据挖掘（DataSnapshot.stats）</li>
@@ -69,7 +68,6 @@ public class EvolutionOrchestrator {
     @Autowired private ObjectProvider<SkillEvolutionOrchestrator> skillEvolutionProvider;
     @Autowired private ObjectProvider<SkillAutoCreationService> skillAutoCreationProvider;
     @Autowired private ObjectProvider<ConversationReflectionOrchestrator> conversationReflectionProvider;
-    @Autowired private ObjectProvider<DynamicFollowUpEngine> dynamicFollowUpEngineProvider;
     @Autowired private JdbcTemplate jdbc;
 
     /**
@@ -147,16 +145,6 @@ public class EvolutionOrchestrator {
         metrics.put("conversationReflection", safeCall("conversationReflection",
                 () -> aggregateConversationReflectionStats(tenantId)));
 
-        // 12. DynamicFollowUpEngine（孤儿组件状态）
-        metrics.put("dynamicFollowUpEngine", safeCall("dynamicFollowUpEngine", () -> {
-            DynamicFollowUpEngine engine = dynamicFollowUpEngineProvider.getIfAvailable();
-            return Map.of(
-                    "available", engine != null,
-                    "orphan", true,
-                    "note", "组件存在但全代码库无调用方，待确认是否废弃"
-            );
-        }));
-
         return metrics;
     }
 
@@ -186,17 +174,6 @@ public class EvolutionOrchestrator {
         checkComponentAvailable(components, "skillEvolution", skillEvolutionProvider);
         checkComponentAvailable(components, "skillAutoCreation", skillAutoCreationProvider);
         checkComponentAvailable(components, "conversationReflection", conversationReflectionProvider);
-        checkComponentAvailable(components, "dynamicFollowUpEngine", dynamicFollowUpEngineProvider);
-
-        // 检测已知问题
-        if (dynamicFollowUpEngineProvider.getIfAvailable() != null) {
-            issues.add(Map.of(
-                    "severity", "WARN",
-                    "component", "dynamicFollowUpEngine",
-                    "issue", "孤儿组件：已注入但全代码库无调用方",
-                    "suggestion", "确认是否废弃，或补接调用方"
-            ));
-        }
 
         // 检测 MemoryNudge PENDING 堆积
         try {

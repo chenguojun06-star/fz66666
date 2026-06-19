@@ -27,10 +27,10 @@ interface StyleQuoteData {
 
 /* ===== 状态色 ===== */
 const statusMap: Record<string, { text: string; color: string }> = {
-  IN_PROGRESS: { text: '进行中', color: '#1677ff' },
-  COMPLETED: { text: '已完成', color: '#52c41a' },
-  DRAFT: { text: '草稿', color: '#d9d9d9' },
-  CANCELLED: { text: '已取消', color: '#ff4d4f' },
+  IN_PROGRESS: { text: '进行中', color: 'var(--color-primary)' },
+  COMPLETED: { text: '已完成', color: 'var(--color-success)' },
+  DRAFT: { text: '草稿', color: 'var(--color-border-antd)' },
+  CANCELLED: { text: '已取消', color: 'var(--color-danger)' },
 };
 
 /* ===== 组件 ===== */
@@ -104,11 +104,11 @@ const StyleQuotePopover: React.FC<{
           background: '#f6ffed', border: '1px solid #b7eb8f', borderRadius: 4,
           padding: '8px 10px', marginBottom: 8,
         }}>
-          <div style={{ fontSize: 14, color: '#52c41a', fontWeight: 600, marginBottom: 4 }}>成本拆解</div>
+          <div style={{ fontSize: 14, color: 'var(--color-success)', fontWeight: 600, marginBottom: 4 }}>成本拆解</div>
           <div style={{ display: 'flex', gap: 16, fontSize: 14 }}>
             <span>面料 <b>{fmt(data.materialCost)}</b></span>
             <span>工序 <b>{fmt(data.processCost)}</b></span>
-            <span>合计 <b style={{ color: '#52c41a' }}>{fmt(data.totalCost)}</b></span>
+            <span>合计 <b style={{ color: 'var(--color-success)' }}>{fmt(data.totalCost)}</b></span>
           </div>
         </div>
       )}
@@ -116,12 +116,12 @@ const StyleQuotePopover: React.FC<{
       {/* 建议价格 */}
       {data.suggestedPrice != null && (
         <div style={{
-          background: '#fff7e6', border: '1px solid #ffd591', borderRadius: 4,
+          background: '#FFF7E6', border: '1px solid #ffd591', borderRadius: 4,
           padding: '8px 10px', marginBottom: 8,
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
         }}>
-          <span style={{ fontSize: 14, color: '#fa8c16', fontWeight: 600 }}>建议报价</span>
-          <span style={{ fontSize: 18, fontWeight: 700, color: '#fa8c16' }}>{fmt(data.suggestedPrice)}</span>
+          <span style={{ fontSize: 14, color: 'var(--color-warning)', fontWeight: 600 }}>建议报价</span>
+          <span style={{ fontSize: 18, fontWeight: 700, color: 'var(--color-warning)' }}>{fmt(data.suggestedPrice)}</span>
         </div>
       )}
 
@@ -140,14 +140,14 @@ const StyleQuotePopover: React.FC<{
           </div>
           <div style={{ maxHeight: 120, overflowY: 'auto' }}>
             {data.recentOrders.slice(0, 5).map((o, i) => {
-              const st = statusMap[o.status] || { text: o.status, color: '#d9d9d9' };
+              const st = statusMap[o.status] || { text: o.status, color: 'var(--color-border-antd)' };
               return (
                 <div key={i} style={{ display: 'flex', gap: 6, alignItems: 'center', padding: '2px 0', fontSize: 14 }}>
                   <span style={{ fontWeight: 500, width: 100, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {o.orderNo}
                   </span>
                   <span>{o.quantity}件</span>
-                  <span style={{ color: '#fa8c16' }}>{fmt(o.unitPrice)}</span>
+                  <span style={{ color: 'var(--color-warning)' }}>{fmt(o.unitPrice)}</span>
                   <Tag color={st.color} style={{ fontSize: 14, lineHeight: '16px', padding: '0 4px', marginLeft: 'auto' }}>
                     {st.text}
                   </Tag>

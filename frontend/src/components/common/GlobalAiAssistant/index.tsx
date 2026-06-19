@@ -561,14 +561,14 @@ const GlobalAiAssistant: React.FC = () => {
                             height: 60,
                             objectFit: 'cover',
                             borderRadius: 6,
-                            border: '1px solid #e5e7eb'
+                            border: '1px solid var(--color-border)'
                           }}
                         />
                         <div style={{ flex: 1 }}>
                           <div style={{ fontSize: 13, color: '#374151', fontWeight: 500 }}>
                             {attachedFile?.name || '图片'}
                           </div>
-                          <div style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>
+                          <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginTop: 2 }}>
                             即将上传并分析
                           </div>
                         </div>
@@ -582,7 +582,7 @@ const GlobalAiAssistant: React.FC = () => {
                             padding: '4px 8px',
                             border: 'none',
                             background: 'transparent',
-                            color: '#6b7280',
+                            color: 'var(--color-text-secondary)',
                             fontSize: 16,
                             cursor: 'pointer'
                           }}
@@ -665,7 +665,7 @@ const GlobalAiAssistant: React.FC = () => {
                 <div className={styles.auxStatItem}><span>待处理</span><span className={styles.auxStatValue}>{taskStats.pending}</span></div>
                 <div className={styles.auxStatItem}><span>进行中</span><span className={styles.auxStatValue}>{taskStats.inProgress}</span></div>
                 <div className={styles.auxStatItem}><span>已完成</span><span className={styles.auxStatValue}>{taskStats.completed}</span></div>
-                <div className={styles.auxStatItem}><span>紧急</span><span className={styles.auxStatValue} style={{ color: '#cf1322' }}>{taskStats.highPriority}</span></div>
+                <div className={styles.auxStatItem}><span>紧急</span><span className={styles.auxStatValue} style={{ color: 'var(--color-error)' }}>{taskStats.highPriority}</span></div>
                 <div className={styles.auxSectionTitle} style={{ marginTop: 20 }}>快捷操作</div>
                 <button className={`${styles.actionBtn} ${styles.actionBtnPrimary}`} style={{ width: '100%', marginTop: 8 }} onClick={handleTaskCreate}>
                   + 新建任务

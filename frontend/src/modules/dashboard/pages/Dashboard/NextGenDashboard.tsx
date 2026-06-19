@@ -108,7 +108,7 @@ const NextGenDashboard: React.FC = () => {
       title: '3个订单即将逾期',
       description: '订单 PO-2024-00123 距离交货还有2天',
       icon: <WarningOutlined />,
-      color: '#faad14',
+      color: 'var(--color-warning)',
       action: {
         label: '查看详情',
         onClick: () => navigate('/production')
@@ -121,7 +121,7 @@ const NextGenDashboard: React.FC = () => {
       title: '物料库存不足',
       description: '纯棉面料库存仅剩120米',
       icon: <ShoppingCartOutlined />,
-      color: '#f5222d',
+      color: 'var(--color-error)',
       action: {
         label: '立即采购',
         onClick: () => navigate('/production/material')
@@ -134,7 +134,7 @@ const NextGenDashboard: React.FC = () => {
       title: '待审批事项',
       description: '2个工资单等待您审批',
       icon: <CheckCircleOutlined />,
-      color: '#52c41a',
+      color: 'var(--color-success)',
       action: {
         label: '去审批',
         onClick: () => navigate('/finance/wage-payment')
@@ -147,7 +147,7 @@ const NextGenDashboard: React.FC = () => {
       title: 'AI发现',
       description: 'A款在过去30天重复下单率提升23%',
       icon: <RiseOutlined />,
-      color: '#1890ff',
+      color: 'var(--color-info)',
       action: {
         label: '查看分析',
         onClick: () => navigate('/cockpit')
@@ -185,11 +185,11 @@ const NextGenDashboard: React.FC = () => {
 
   // 快捷操作
   const quickActions = [
-    { icon: <TagOutlined />, label: '新建款式', onClick: () => navigate('/style-info/new'), color: '#1890ff' },
-    { icon: <FileTextOutlined />, label: '新建订单', onClick: () => navigate('/order-management'), color: '#52c41a' },
-    { icon: <ShoppingCartOutlined />, label: '物料采购', onClick: () => navigate('/production/material'), color: '#fa8c16' },
-    { icon: <InboxOutlined />, label: '质检入库', onClick: () => navigate('/production/warehousing'), color: '#722ed1' },
-    { icon: <ScissorOutlined />, label: '裁剪管理', onClick: () => navigate('/production/cutting'), color: '#13c2c2' },
+    { icon: <TagOutlined />, label: '新建款式', onClick: () => navigate('/style-info/new'), color: 'var(--color-info)' },
+    { icon: <FileTextOutlined />, label: '新建订单', onClick: () => navigate('/order-management'), color: 'var(--color-success)' },
+    { icon: <ShoppingCartOutlined />, label: '物料采购', onClick: () => navigate('/production/material'), color: 'var(--color-warning)' },
+    { icon: <InboxOutlined />, label: '质检入库', onClick: () => navigate('/production/warehousing'), color: 'var(--color-accent-purple)' },
+    { icon: <ScissorOutlined />, label: '裁剪管理', onClick: () => navigate('/production/cutting'), color: 'var(--color-accent-cyan)' },
     { icon: <ApartmentOutlined />, label: '工厂管理', onClick: () => navigate('/system/factory'), color: '#eb2f96' }
   ];
 
@@ -265,7 +265,7 @@ const NextGenDashboard: React.FC = () => {
               <Row gutter={24}>
                 <Col span={6}>
                   <div className="stat-item">
-                    <div className="stat-icon" style={{ background: '#e6f7ff', color: '#1890ff' }}>
+                    <div className="stat-icon" style={{ background: '#e6f7ff', color: 'var(--color-info)' }}>
                       <FileTextOutlined />
                     </div>
                     <div className="stat-content">
@@ -276,7 +276,7 @@ const NextGenDashboard: React.FC = () => {
                 </Col>
                 <Col span={6}>
                   <div className="stat-item">
-                    <div className="stat-icon" style={{ background: '#f6ffed', color: '#52c41a' }}>
+                    <div className="stat-icon" style={{ background: '#f6ffed', color: 'var(--color-success)' }}>
                       <InboxOutlined />
                     </div>
                     <div className="stat-content">
@@ -287,7 +287,7 @@ const NextGenDashboard: React.FC = () => {
                 </Col>
                 <Col span={6}>
                   <div className="stat-item">
-                    <div className="stat-icon" style={{ background: '#fff7e6', color: '#fa8c16' }}>
+                    <div className="stat-icon" style={{ background: '#FFF7E6', color: 'var(--color-warning)' }}>
                       <ShoppingCartOutlined />
                     </div>
                     <div className="stat-content">
@@ -298,7 +298,7 @@ const NextGenDashboard: React.FC = () => {
                 </Col>
                 <Col span={6}>
                   <div className="stat-item">
-                    <div className="stat-icon" style={{ background: '#f9f0ff', color: '#722ed1' }}>
+                    <div className="stat-icon" style={{ background: '#f9f0ff', color: 'var(--color-accent-purple)' }}>
                       <DollarOutlined />
                     </div>
                     <div className="stat-content">
@@ -314,7 +314,7 @@ const NextGenDashboard: React.FC = () => {
             <div className="smart-cards-section" style={{ marginTop: 16 }}>
               <div className="section-header">
                 <Title level={4} style={{ margin: 0 }}>
-                  <ThunderboltOutlined style={{ color: '#1890ff', marginRight: 8 }} />
+                  <ThunderboltOutlined style={{ color: 'var(--color-info)', marginRight: 8 }} />
                   小云智能提醒
                 </Title>
               </div>
@@ -325,7 +325,7 @@ const NextGenDashboard: React.FC = () => {
                       className="smart-card"
                       style={{
                         borderLeft: `4px solid ${card.color}`,
-                        background: card.type === 'warning' ? '#fffbf0' : '#fff'
+                        background: card.type === 'warning' ? '#F6FFED' : 'var(--color-bg-base)'
                       }}
                       hoverable
                       onClick={card.action?.onClick}
@@ -351,7 +351,7 @@ const NextGenDashboard: React.FC = () => {
             <div className="wizards-section" style={{ marginTop: 16 }}>
               <div className="section-header">
                 <Title level={4} style={{ margin: 0 }}>
-                  <RobotOutlined style={{ color: '#722ed1', marginRight: 8 }} />
+                  <RobotOutlined style={{ color: 'var(--color-accent-purple)', marginRight: 8 }} />
                   智能流程向导
                 </Title>
                 <Text type="secondary">点击开始，小云引导您一步完成</Text>
@@ -399,7 +399,7 @@ const NextGenDashboard: React.FC = () => {
               size="small"
               title={
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <RobotOutlined style={{ color: '#1890ff' }} />
+                  <RobotOutlined style={{ color: 'var(--color-info)' }} />
                   <span>小云AI助手</span>
                   <Tag color="green" style={{ marginLeft: 'auto' }}>在线</Tag>
                 </div>
@@ -446,7 +446,7 @@ const NextGenDashboard: React.FC = () => {
                   dataSource={recentActivities}
                   renderItem={(item) => (
                     <List.Item className="activity-item-mini">
-                      <div className="mini-icon" style={{ background: '#f0f0f0', borderRadius: 4, padding: 6 }}>
+                      <div className="mini-icon" style={{ background: 'var(--color-border-light)', borderRadius: 4, padding: 6 }}>
                         {item.icon}
                       </div>
                       <div className="mini-content">

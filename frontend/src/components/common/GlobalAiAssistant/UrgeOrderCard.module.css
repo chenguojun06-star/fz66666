@@ -1,5 +1,5 @@
 .urgeOrderCard {
-  background: #fff7e6;
+  background: #FFF7E6;
   border: 1.5px solid #ffd591;
   border-radius: 12px;
   padding: 12px 14px;
@@ -43,14 +43,14 @@
   border-radius: 6px;
   padding: 6px 10px;
   font-size: 14px;
-  background: #fffbf0;
+  background: #F6FFED;
   color: var(--color-text-primary);
   outline: none;
   width: 100%;
   box-sizing: border-box;
 }
 .urgeFormInput:focus {
-  border-color: #fa8c16;
+  border-color: var(--color-warning);
   box-shadow: 0 0 0 2px rgba(250, 140, 22, 0.2);
 }
 .urgeFormTextarea {
@@ -58,7 +58,7 @@
   border-radius: 6px;
   padding: 6px 10px;
   font-size: 14px;
-  background: #fffbf0;
+  background: #F6FFED;
   color: var(--color-text-primary);
   resize: none;
   outline: none;
@@ -67,21 +67,21 @@
   box-sizing: border-box;
 }
 .urgeFormTextarea:focus {
-  border-color: #fa8c16;
+  border-color: var(--color-warning);
   box-shadow: 0 0 0 2px rgba(250, 140, 22, 0.2);
 }
 .urgeCardError {
   font-size: 14px;
-  color: #cf1322;
-  background: #fff1f0;
+  color: var(--color-error);
+  background: #FFF1F0;
   border: 1px solid #ffa39e;
   border-radius: 6px;
   padding: 4px 8px;
 }
 .urgeSubmitBtn {
   margin-top: 6px;
-  background: #fa8c16;
-  color: #fff;
+  background: var(--color-warning);
+  color: var(--color-bg-base);
   border: none;
   border-radius: 8px;
   padding: 7px 0;

@@ -223,7 +223,7 @@
   flex-shrink: 0;
   background: var(--color-bg-container);
   font-size: 13px;
-  color: #d9d9d9;
+  color: var(--color-border-antd);
 }
 .ofh-info {
   flex: 1;
@@ -285,7 +285,7 @@
   text-overflow: ellipsis;
 }
 .ofh-kv-value--num {
-  color: var(--primary-color, #1677ff);
+  color: var(--primary-color, var(--color-primary));
 }
 .ofh-kv-value--time {
   font-size: 11px;
@@ -307,7 +307,7 @@
 }
 
 .smart-order-focus-row > td {
-  background: #fff7e6 !important;
+  background: #FFF7E6 !important;
   transition: background-color 0.25s ease;
 }
 
@@ -635,7 +635,7 @@
 .order-flow-h-stage-toggle {
   border: none;
   background: transparent;
-  color: #1677ff;
+  color: var(--color-primary);
   font-size: 11px;
   cursor: pointer;
   padding: 4px 6px;

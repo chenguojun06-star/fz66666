@@ -671,7 +671,7 @@ const ColorCardPage: React.FC = () => {
             </div>
           ) : (
             <div style={{ width: 240, height: 240, margin: '0 auto 16px',
-              border: '2px dashed #d9d9d9', borderRadius: 8,
+              border: '2px dashed var(--color-border-antd)', borderRadius: 8,
               display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#999' }}>
               请选择色卡图片
             </div>
@@ -699,7 +699,7 @@ const ColorCardPage: React.FC = () => {
         ]}
       >
         {previewCard && (
-          <div style={{ marginBottom: 16, padding: 12, background: '#f5f5f5', borderRadius: 8 }}>
+          <div style={{ marginBottom: 16, padding: 12, background: 'var(--color-bg-subtle)', borderRadius: 8 }}>
             <Space split={<span style={{ color: '#ccc' }}>|</span>}>
               <span>编号：<b>{previewCard.colorCardCode}</b></span>
               <span>类型：<b>{getMaterialTypeLabel(previewCard.materialType)}</b></span>

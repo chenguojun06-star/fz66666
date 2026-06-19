@@ -16,12 +16,12 @@
 }
 
 :root[data-theme="dark"] .ant-card-head-title {
-  color: #ffffff !important;
+  color: var(--color-bg-base) !important;
   font-weight: 600 !important;
 }
 
 :root[data-theme="dark"] .ant-card-body {
-  color: #f5f5f5 !important;
+  color: var(--color-bg-subtle) !important;
 }
 
 /* Table表格 - 全局深色背景（最高优先级） */
@@ -30,7 +30,7 @@
 :root[data-theme="dark"] div.ant-table,
 :root[data-theme="dark"] .ant-table-wrapper {
   background: transparent !important;
-  color: #f5f5f5 !important;
+  color: var(--color-bg-subtle) !important;
 }
 
 /* 表格容器背景 */
@@ -46,7 +46,7 @@
 :root[data-theme="dark"] .ant-table-wrapper .ant-table-thead > tr > th,
 :root[data-theme="dark"] div.ant-table .ant-table-thead > tr > th {
   background: rgba(255, 255, 255, 0.08) !important;
-  color: #ffffff !important;
+  color: var(--color-bg-base) !important;
   font-weight: 600 !important;
   border-bottom-color: rgba(255, 255, 255, 0.15) !important;
 }
@@ -57,7 +57,7 @@
 :root[data-theme="dark"] div.ant-table .ant-table-tbody > tr > td {
   background: transparent !important;
   border-bottom-color: rgba(255, 255, 255, 0.08) !important;
-  color: #f5f5f5 !important;
+  color: var(--color-bg-subtle) !important;
   font-size: 14px !important;
 }
 
@@ -84,7 +84,7 @@
 /* 分页 */
 :root[data-theme="dark"] .ant-table-pagination,
 :root[data-theme="dark"] .ant-table-wrapper .ant-table-pagination {
-  color: #f5f5f5 !important;
+  color: var(--color-bg-subtle) !important;
 }
 
 /* 空状态 */
@@ -97,7 +97,7 @@
 :root[data-theme="dark"] .ant-table-summary > tr > td,
 :root[data-theme="dark"] .ant-table-wrapper .ant-table-summary > tr > td {
   background: rgba(255, 255, 255, 0.05) !important;
-  color: #ffffff !important;
+  color: var(--color-bg-base) !important;
   font-weight: 600 !important;
   border-top-color: rgba(255, 255, 255, 0.15) !important;
 }
@@ -126,12 +126,12 @@
 
 /* Form表单 */
 :root[data-theme="dark"] .ant-form-item-label > label {
-  color: #ffffff !important;
+  color: var(--color-bg-base) !important;
   font-weight: 500 !important;
 }
 
 :root[data-theme="dark"] .ant-form-item-required::before {
-  color: #ff4d4f !important;
+  color: var(--color-danger) !important;
 }
 
 /* Input输入框 - 全局深色（最高优先级） */
@@ -144,7 +144,7 @@
 :root[data-theme="dark"] textarea.ant-input {
   background: #1a1d24 !important;
   border-color: rgba(255, 255, 255, 0.2) !important;
-  color: #ffffff !important;
+  color: var(--color-bg-base) !important;
 }
 
 :root[data-theme="dark"] .ant-input::placeholder,
@@ -178,14 +178,14 @@
 :root[data-theme="dark"] .ant-select-dropdown,
 :root[data-theme="dark"] .ant-select-dropdown .ant-select-item {
   background: #1a1d24 !important;
-  color: #f5f5f5 !important;
+  color: var(--color-bg-subtle) !important;
 }
 
 :root[data-theme="dark"] .ant-select-selector,
 :root[data-theme="dark"] .ant-select .ant-select-selector {
   background: #1a1d24 !important;
   border-color: rgba(255, 255, 255, 0.2) !important;
-  color: #ffffff !important;
+  color: var(--color-bg-base) !important;
 }
 
 :root[data-theme="dark"] .ant-select-item-option-selected,
@@ -213,7 +213,7 @@
 
 :root[data-theme="dark"] .ant-dropdown-menu-item,
 :root[data-theme="dark"] .ant-dropdown .ant-dropdown-menu-item {
-  color: #f5f5f5 !important;
+  color: var(--color-bg-subtle) !important;
 }
 
 :root[data-theme="dark"] .ant-dropdown-menu-item:hover,
@@ -339,13 +339,13 @@
 :root[data-theme="dark"] .ant-btn-default {
   background: rgba(255, 255, 255, 0.08) !important;
   border-color: rgba(255, 255, 255, 0.2) !important;
-  color: #ffffff !important;
+  color: var(--color-bg-base) !important;
 }
 
 :root[data-theme="dark"] .ant-btn-default:hover {
   background: rgba(255, 255, 255, 0.15) !important;
   border-color: rgba(255, 255, 255, 0.3) !important;
-  color: #ffffff !important;
+  color: var(--color-bg-base) !important;
 }
 
 :root[data-theme="dark"] .ant-btn-primary {
@@ -364,28 +364,28 @@
 :root[data-theme="dark"] .ant-message-notice-content,
 :root[data-theme="dark"] .ant-notification-notice {
   background: #1a1d24 !important;
-  color: #ffffff !important;
+  color: var(--color-bg-base) !important;
   border: 1px solid rgba(255, 255, 255, 0.1) !important;
 }
 
 :root[data-theme="dark"] .ant-message-success .anticon,
 :root[data-theme="dark"] .ant-notification-notice-success .ant-notification-notice-icon {
-  color: #52c41a !important;
+  color: var(--color-success) !important;
 }
 
 :root[data-theme="dark"] .ant-message-error .anticon,
 :root[data-theme="dark"] .ant-notification-notice-error .ant-notification-notice-icon {
-  color: #ff4d4f !important;
+  color: var(--color-danger) !important;
 }
 
 :root[data-theme="dark"] .ant-message-warning .anticon,
 :root[data-theme="dark"] .ant-notification-notice-warning .ant-notification-notice-icon {
-  color: #faad14 !important;
+  color: var(--color-warning) !important;
 }
 
 :root[data-theme="dark"] .ant-message-info .anticon,
 :root[data-theme="dark"] .ant-notification-notice-info .ant-notification-notice-icon {
-  color: #1890ff !important;
+  color: var(--color-info) !important;
 }
 
 /* Popover气泡卡片 */
@@ -486,13 +486,13 @@
 :root[data-theme="dark"] .section-title,
 :root[data-theme="dark"] .page-title,
 :root[data-theme="dark"] .card-title {
-  color: #ffffff !important;
+  color: var(--color-bg-base) !important;
   font-weight: 600 !important;
 }
 
 /* UniversalCardView 组件字体优化 */
 :root[data-theme="dark"] .universal-card-title {
-  color: #ffffff !important;
+  color: var(--color-bg-base) !important;
   font-weight: 700 !important;
 }
 
@@ -502,12 +502,12 @@
 }
 
 :root[data-theme="dark"] .universal-card .field-label {
-  color: #9ca3af !important;
+  color: var(--color-text-tertiary) !important;
   font-weight: 500 !important;
 }
 
 :root[data-theme="dark"] .universal-card .field-value {
-  color: #f5f5f5 !important;
+  color: var(--color-bg-subtle) !important;
   font-weight: 600 !important;
 }
 
@@ -518,7 +518,7 @@
 }
 
 :root[data-theme="dark"] .ant-statistic-content {
-  color: #ffffff !important;
+  color: var(--color-bg-base) !important;
   font-weight: 700 !important;
 }
 
@@ -569,7 +569,7 @@
 :root[data-theme="dark"] h4,
 :root[data-theme="dark"] h5,
 :root[data-theme="dark"] h6 {
-  color: #ffffff !important;
+  color: var(--color-bg-base) !important;
   font-weight: 600 !important;
 }
 
@@ -593,7 +593,7 @@
 :root[data-theme="dark"] .ant-picker-input > input {
   background: #1a1d24 !important;
   border-color: rgba(255, 255, 255, 0.2) !important;
-  color: #ffffff !important;
+  color: var(--color-bg-base) !important;
 }
 
 :root[data-theme="dark"] .ant-picker-dropdown,
@@ -608,17 +608,17 @@
 
 :root[data-theme="dark"] .ant-picker-header,
 :root[data-theme="dark"] .ant-picker-header button {
-  color: #ffffff !important;
+  color: var(--color-bg-base) !important;
   border-color: rgba(255, 255, 255, 0.1) !important;
 }
 
 :root[data-theme="dark"] .ant-picker-content th,
 :root[data-theme="dark"] .ant-picker-cell {
-  color: #f5f5f5 !important;
+  color: var(--color-bg-subtle) !important;
 }
 
 :root[data-theme="dark"] .ant-picker-cell-in-view {
-  color: #f5f5f5 !important;
+  color: var(--color-bg-subtle) !important;
 }
 
 :root[data-theme="dark"] .ant-picker-cell:hover:not(.ant-picker-cell-selected) .ant-picker-cell-inner {
@@ -627,7 +627,7 @@
 
 :root[data-theme="dark"] .ant-picker-cell-selected .ant-picker-cell-inner {
   background: #6ba3ff !important;
-  color: #ffffff !important;
+  color: var(--color-bg-base) !important;
 }
 
 /* ========== Switch 开关 ========== */
@@ -641,7 +641,7 @@
 
 /* ========== Checkbox 复选框 ========== */
 :root[data-theme="dark"] .ant-checkbox-wrapper {
-  color: #f5f5f5 !important;
+  color: var(--color-bg-subtle) !important;
 }
 
 :root[data-theme="dark"] .ant-checkbox-inner {
@@ -656,7 +656,7 @@
 
 /* ========== Radio 单选框 ========== */
 :root[data-theme="dark"] .ant-radio-wrapper {
-  color: #f5f5f5 !important;
+  color: var(--color-bg-subtle) !important;
 }
 
 :root[data-theme="dark"] .ant-radio-inner {
@@ -846,12 +846,12 @@
 }
 
 :root[data-theme="dark"] .ant-drawer-title {
-  color: #ffffff !important;
+  color: var(--color-bg-base) !important;
 }
 
 :root[data-theme="dark"] .ant-drawer-body {
   background: #1a1d24 !important;
-  color: #f5f5f5 !important;
+  color: var(--color-bg-subtle) !important;
 }
 
 :root[data-theme="dark"] .ant-drawer-footer {
@@ -866,7 +866,7 @@
 }
 
 :root[data-theme="dark"] .ant-pagination-item a {
-  color: #ffffff !important;
+  color: var(--color-bg-base) !important;
 }
 
 :root[data-theme="dark"] .ant-pagination-item-active {
@@ -875,14 +875,14 @@
 }
 
 :root[data-theme="dark"] .ant-pagination-item-active a {
-  color: #ffffff !important;
+  color: var(--color-bg-base) !important;
 }
 
 :root[data-theme="dark"] .ant-pagination-prev .ant-pagination-item-link,
 :root[data-theme="dark"] .ant-pagination-next .ant-pagination-item-link {
   background: rgba(255, 255, 255, 0.08) !important;
   border-color: rgba(255, 255, 255, 0.2) !important;
-  color: #ffffff !important;
+  color: var(--color-bg-base) !important;
 }
 
 /* ========== DatePicker 日期选择器 ========== */
@@ -896,7 +896,7 @@
 }
 
 :root[data-theme="dark"] .ant-picker-header {
-  color: #ffffff !important;
+  color: var(--color-bg-base) !important;
   border-bottom-color: rgba(255, 255, 255, 0.1) !important;
 }
 
@@ -905,7 +905,7 @@
 }
 
 :root[data-theme="dark"] .ant-picker-cell {
-  color: #f5f5f5 !important;
+  color: var(--color-bg-subtle) !important;
 }
 
 :root[data-theme="dark"] .ant-picker-cell:hover:not(.ant-picker-cell-selected):not(.ant-picker-cell-disabled) .ant-picker-cell-inner {
@@ -914,7 +914,7 @@
 
 :root[data-theme="dark"] .ant-picker-cell-selected .ant-picker-cell-inner {
   background: #6ba3ff !important;
-  color: #ffffff !important;
+  color: var(--color-bg-base) !important;
 }
 
 :root[data-theme="dark"] .ant-picker-cell-today .ant-picker-cell-inner::before {
@@ -928,7 +928,7 @@
 }
 
 :root[data-theme="dark"] .ant-upload-list-item-name {
-  color: #f5f5f5 !important;
+  color: var(--color-bg-subtle) !important;
 }
 
 :root[data-theme="dark"] .ant-upload-drag {
@@ -942,13 +942,13 @@
 
 /* ========== Spin 加载中 ========== */
 :root[data-theme="dark"] .ant-spin-text {
-  color: #f5f5f5 !important;
+  color: var(--color-bg-subtle) !important;
 }
 
 /* ========== Radio/Checkbox 单选/多选 ========== */
 :root[data-theme="dark"] .ant-radio-wrapper,
 :root[data-theme="dark"] .ant-checkbox-wrapper {
-  color: #f5f5f5 !important;
+  color: var(--color-bg-subtle) !important;
 }
 
 :root[data-theme="dark"] .ant-radio-inner {
@@ -991,14 +991,14 @@
 
 :root[data-theme="dark"] .ant-slider-handle {
   border-color: #6ba3ff !important;
-  background: #ffffff !important;
+  background: var(--color-bg-base) !important;
 }
 
 /* ========== InputNumber 数字输入框 ========== */
 :root[data-theme="dark"] .ant-input-number {
   background: #1a1d24 !important;
   border-color: rgba(255, 255, 255, 0.2) !important;
-  color: #ffffff !important;
+  color: var(--color-bg-base) !important;
 }
 
 :root[data-theme="dark"] .ant-input-number-handler {

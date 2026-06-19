@@ -31,7 +31,7 @@
 .quick-actions-card {
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-  border: 1px solid #f0f0f0;
+  border: 1px solid var(--color-border-light);
 }
 
 .quick-actions-grid {
@@ -59,8 +59,8 @@
 }
 
 .quick-action-btn.more-btn {
-  border: 1px dashed #d9d9d9;
-  background: #fafafa;
+  border: 1px dashed var(--color-border-antd);
+  background: var(--color-bg-container);
 }
 
 .quick-action-btn .action-icon {
@@ -84,7 +84,7 @@
 .stats-card {
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-  border: 1px solid #f0f0f0;
+  border: 1px solid var(--color-border-light);
 }
 
 .stat-item {
@@ -137,7 +137,7 @@
 .smart-card {
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-  border: 1px solid #f0f0f0;
+  border: 1px solid var(--color-border-light);
   transition: all 0.3s ease;
 }
 
@@ -172,7 +172,7 @@
 .wizard-card {
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-  border: 1px solid #f0f0f0;
+  border: 1px solid var(--color-border-light);
 }
 
 .wizard-header {
@@ -210,22 +210,22 @@
   width: 12px;
   height: 12px;
   border-radius: 50%;
-  background: #d9d9d9;
+  background: var(--color-border-antd);
   margin-top: 6px;
   flex-shrink: 0;
 }
 
 .step-dot.pending {
-  background: #d9d9d9;
+  background: var(--color-border-antd);
 }
 
 .step-dot.active {
-  background: #1890ff;
+  background: var(--color-info);
   box-shadow: 0 0 0 4px rgba(24, 144, 255, 0.15);
 }
 
 .step-dot.completed {
-  background: #52c41a;
+  background: var(--color-success);
 }
 
 .step-text {
@@ -248,7 +248,7 @@
 .ai-assistant-panel {
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-  border: 1px solid #f0f0f0;
+  border: 1px solid var(--color-border-light);
   overflow: hidden;
 }
 
@@ -263,7 +263,7 @@
 .activities-card {
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-  border: 1px solid #f0f0f0;
+  border: 1px solid var(--color-border-light);
 }
 
 .activity-item-mini {
@@ -275,7 +275,7 @@
 
 .mini-icon {
   flex-shrink: 0;
-  color: #1890ff;
+  color: var(--color-info);
 }
 
 .mini-content {

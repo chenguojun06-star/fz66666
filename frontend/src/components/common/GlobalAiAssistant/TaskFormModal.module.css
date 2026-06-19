@@ -58,7 +58,7 @@
 
 .saveBtn {
   height: 34px; padding: 0 20px; border-radius: 8px;
-  border: none; background: var(--xiaoyun-primary); color: #fff;
+  border: none; background: var(--xiaoyun-primary); color: var(--color-bg-base);
   cursor: pointer; font-size: 14px; font-weight: 500;
 }
 .saveBtn:hover { background: var(--xiaoyun-primary-hover); }
@@ -66,7 +66,7 @@
 
 .deleteBtn {
   height: 34px; padding: 0 16px; border-radius: 8px; margin-right: auto;
-  border: 1px solid #ffa39e; background: #fff1f0; color: #cf1322;
+  border: 1px solid #ffa39e; background: #FFF1F0; color: var(--color-error);
   cursor: pointer; font-size: 14px; display: flex; align-items: center; gap: 4px;
 }
-.deleteBtn:hover { background: #ffa39e; color: #fff; }
+.deleteBtn:hover { background: #ffa39e; color: var(--color-bg-base); }

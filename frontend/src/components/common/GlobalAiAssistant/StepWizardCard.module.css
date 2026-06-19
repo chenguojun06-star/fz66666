@@ -59,13 +59,13 @@
 
 .stepActive {
   background: #e6f4ff;
-  color: #1677ff;
+  color: var(--color-primary);
   font-weight: 600;
 }
 
 .stepDone {
   background: #f0faf0;
-  color: #52c41a;
+  color: var(--color-success);
 }
 
 .stepNum {
@@ -76,17 +76,17 @@
   align-items: center;
   justify-content: center;
   font-size: 14px;
-  background: #d9d9d9;
-  color: #fff;
+  background: var(--color-border-antd);
+  color: var(--color-bg-base);
   flex-shrink: 0;
 }
 
 .stepActive .stepNum {
-  background: #1677ff;
+  background: var(--color-primary);
 }
 
 .stepDone .stepNum {
-  background: #52c41a;
+  background: var(--color-success);
 }
 
 .stepLabel {
@@ -104,7 +104,7 @@
   padding: 8px 10px;
   background: var(--color-bg-container);
   border-radius: 8px;
-  border-left: 3px solid #1677ff;
+  border-left: 3px solid var(--color-primary);
 }
 
 .fieldGroup {
@@ -152,9 +152,9 @@
 }
 
 .optionSelected {
-  border-color: #1677ff;
+  border-color: var(--color-primary);
   background: #e6f4ff;
-  box-shadow: 0 0 0 1px #1677ff;
+  box-shadow: 0 0 0 1px var(--color-primary);
 }
 
 .optIcon {
@@ -176,7 +176,7 @@
   position: absolute;
   top: 4px;
   right: 6px;
-  color: #1677ff;
+  color: var(--color-primary);
   font-size: 14px;
   font-weight: 700;
 }
@@ -194,7 +194,7 @@
 }
 
 .textInput:focus {
-  border-color: #1677ff;
+  border-color: var(--color-primary);
   box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.1);
 }
 
@@ -227,8 +227,8 @@
   padding: 7px 22px;
   border: none;
   border-radius: 8px;
-  background: #1677ff;
-  color: #fff;
+  background: var(--color-primary);
+  color: var(--color-bg-base);
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
@@ -240,7 +240,7 @@
 }
 
 .nextDisabled {
-  background: #d9d9d9;
+  background: var(--color-border-antd);
   cursor: not-allowed;
 }
 
@@ -253,6 +253,6 @@
 .successText {
   text-align: center;
   font-size: 14px;
-  color: #52c41a;
+  color: var(--color-success);
   font-weight: 500;
 }

@@ -31,7 +31,7 @@ const PRINT_STYLES = `
     .info-row { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 14px; }
     table { width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 12px; }
     th, td { border: 1px solid #000; padding: 6px; text-align: center; }
-    th { background-color: #f0f0f0; }
+    th { background-color: var(--color-border-light); }
     .footer { display: flex; justify-content: space-between; font-size: 14px; font-weight: bold; margin-top: 10px; }
     .sign-area { display: flex; justify-content: space-between; margin-top: 30px; font-size: 14px; }
     @media print {

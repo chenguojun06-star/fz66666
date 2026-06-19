@@ -322,9 +322,9 @@
 .skeleton-row {
   background: linear-gradient(
     90deg,
-    #f0f0f0 25%,
+    var(--color-border-light) 25%,
     #e6e6e6 37%,
-    #f0f0f0 63%
+    var(--color-border-light) 63%
   );
   background-size: 600px 100%;
   animation: shimmer 1.5s ease-in-out infinite;
@@ -437,7 +437,7 @@
   .skeleton-shimmer,
   .skeleton-row {
     animation: none;
-    background: #f0f0f0;
+    background: var(--color-border-light);
   }
 
   [data-theme="dark"] .skeleton-shimmer,

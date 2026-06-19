@@ -207,7 +207,7 @@ body {
 /* 颜色规范 */
 :root {
   /* 主色 */
-  --primary-color: #2D7FF9;
+  --primary-color: var(--color-primary);
   --glass-radius: 999px;
   --glass-border-width: 1px;
   --glass-border: rgba(17, 24, 39, 0.14);
@@ -218,21 +218,21 @@ body {
   --glass-text: rgba(17, 24, 39, 0.88);
   --glass-text-muted: rgba(17, 24, 39, 0.56);
   /* 中性色 - 浅色主题深色文字 */
-  --neutral-white: #FFFFFF;
+  --neutral-white: var(--color-bg-base);
   --neutral-light: #FAFAFA;
   --neutral-medium: #F0F0F0;
   --neutral-dark: #E0E0E0;
-  --neutral-text: #1a1a1a;
+  --neutral-text: var(--color-text-primary);
   --neutral-text-light: #4a4a4a;
   --neutral-text-lighter: #6b6b6b;
   --app-bg: #F8FAFC;
-  --table-header-bg: #fafafa;
-  --table-row-stripe-bg: #fafafa;
+  --table-header-bg: var(--color-bg-container);
+  --table-row-stripe-bg: var(--color-bg-container);
   --table-row-hover-bg: #f3f4f6;
   /* 侧边栏 - 纯色深蓝背景（禁止渐变） */
   --sidebar-bg: #0b2d5c; /* @design-system: 纯色深蓝 */
   --sidebar-text: rgba(255, 255, 255, 0.95);
-  --sidebar-text-strong: #ffffff;
+  --sidebar-text-strong: var(--color-bg-base);
   --sidebar-text-active: #ffd700;
   --sidebar-text-muted: rgba(255, 255, 255, 0.75);
   --sidebar-text-disabled: rgba(255, 255, 255, 0.45);
@@ -252,7 +252,7 @@ body {
   --header-user-bg: rgba(255, 255, 255, 0.7);
   --header-user-bg-hover: rgba(255, 255, 255, 0.9);
   --header-caret: rgba(11, 45, 92, 0.65);
-  --user-avatar-gradient-start: #2d7ff9;
+  --user-avatar-gradient-start: var(--color-primary);
   --user-avatar-gradient-end: #0b2d5c;
   /* 功能色已迁移到 design-system.css，使用 --color-* 命名 */
   /* 间距规范 — 与 design-system.css 统一，紧凑工整 */
@@ -294,9 +294,9 @@ body {
   --kpi-label-size: 12px;
   --kpi-change-size: 12px;
 
-  --card-header-bg: #fafafa;
+  --card-header-bg: var(--color-bg-container);
   --card-header-padding: 10px 16px;
-  --card-title-indicator: 3px solid #2D7FF9;
+  --card-title-indicator: 3px solid var(--color-primary);
 
   --radius-sm: 4px;
   --radius-base: 6px;
@@ -313,13 +313,13 @@ body {
 }
 
 :root[data-theme="blue"] {
-  --primary-color: #2D7FF9;
+  --primary-color: var(--color-primary);
   /* 浅色主题 - 深色文字 */
-  --neutral-white: #ffffff;
+  --neutral-white: var(--color-bg-base);
   --neutral-light: #eef4ff;
   --neutral-medium: #e3ebfb;
   --neutral-dark: #cdd8ee;
-  --neutral-text: #1a1a1a;
+  --neutral-text: var(--color-text-primary);
   --neutral-text-light: #4a4a4a;
   --neutral-text-lighter: #6b6b6b;
   --app-bg: #eaf1ff;
@@ -329,7 +329,7 @@ body {
   /* 侧边栏 - 纯色深蓝 */
   --sidebar-bg: #0b2d5c;
   --sidebar-text: rgba(255, 255, 255, 0.95);
-  --sidebar-text-strong: #ffffff;
+  --sidebar-text-strong: var(--color-bg-base);
   --sidebar-text-active: #ffd700;
   --sidebar-text-muted: rgba(255, 255, 255, 0.75);
   --sidebar-text-disabled: rgba(255, 255, 255, 0.45);
@@ -342,24 +342,24 @@ body {
 /* 浅蓝色主题（与小程序统一） */
 :root[data-theme="lightblue"] {
   /* 主色调 - 纯蓝色（禁止渐变） */
-  --primary-color: #2D7FF9;
+  --primary-color: var(--color-primary);
   --color-primary-light: rgba(45, 127, 249, 0.1);
   --color-primary-lighter: rgba(45, 127, 249, 0.05);
   /* @design-system: 禁止使用渐变，已删除 --gradient-primary 和 --gradient-primary-alpha */
 
   /* 中性色 */
-  --neutral-white: #ffffff;
+  --neutral-white: var(--color-bg-base);
   --neutral-light: rgba(224, 242, 254, 0.5);
   --neutral-medium: rgba(224, 242, 254, 0.3);
   --neutral-dark: rgba(147, 197, 253, 0.5);
   --neutral-text: #111827;
-  --neutral-text-light: #6b7280;
-  --neutral-text-lighter: #9ca3af;
+  --neutral-text-light: var(--color-text-secondary);
+  --neutral-text-lighter: var(--color-text-tertiary);
 
   /* 背景色 */
   --app-bg: #f7f8fa;
   --color-bg-page: #f7f8fa;
-  --color-bg-card: #ffffff;
+  --color-bg-card: var(--color-bg-base);
   --color-bg-gray: #f3f4f6;
   --color-bg-light: #f9fafb;
 
@@ -378,7 +378,7 @@ body {
   --sidebar-bg: #e0f2fe;
   --sidebar-text: #000000;
   --sidebar-text-strong: #000000;
-  --sidebar-text-active: #2D7FF9;
+  --sidebar-text-active: var(--color-primary);
   --sidebar-text-muted: rgba(0, 0, 0, 0.7);
   --sidebar-text-disabled: rgba(0, 0, 0, 0.4);
   --sidebar-item-bg-hover: rgba(59, 130, 246, 0.08);
@@ -416,15 +416,15 @@ body {
 }
 
 :root[data-theme="white"] {
-  --primary-color: #2D7FF9;
+  --primary-color: var(--color-primary);
   /* 浅灰底+白卡片 — 层次分明的白色主题 */
-  --neutral-white: #ffffff;
+  --neutral-white: var(--color-bg-base);
   --neutral-light: #f9fafb;
   --neutral-medium: #eef0f4;
   --neutral-dark: #dde1e8;
-  --neutral-text: #1a1a1a;
+  --neutral-text: var(--color-text-primary);
   --neutral-text-light: #4a4a4a;
-  --neutral-text-lighter: #6b7280;
+  --neutral-text-lighter: var(--color-text-secondary);
   --app-bg: #f5f7fa;
   --table-header-bg: #eaeff6;
   --table-row-stripe-bg: #f8f9fc;
@@ -436,9 +436,9 @@ body {
   /* 字体渲染优化 */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  --sidebar-text: #1a1a1a;
+  --sidebar-text: var(--color-text-primary);
   --sidebar-text-strong: #000000;
-  --sidebar-text-active: #2D7FF9;
+  --sidebar-text-active: var(--color-primary);
   --sidebar-text-muted: rgba(0, 0, 0, 0.65);
   --sidebar-text-disabled: rgba(0, 0, 0, 0.35);
   --sidebar-item-bg-hover: rgba(45, 127, 249, 0.08);
@@ -471,7 +471,7 @@ body {
   --neutral-light: #0f1115;
   --neutral-medium: rgba(255, 255, 255, 0.08);
   --neutral-dark: rgba(255, 255, 255, 0.15);
-  --neutral-text: #ffffff;
+  --neutral-text: var(--color-bg-base);
   --neutral-text-light: #f0f2f5;
   --neutral-text-lighter: #d1d5db;
 
@@ -1843,20 +1843,20 @@ body {
 /* 用于统一全站状态和业务颜色，避免硬编码 */
 :root {
   /* 状态颜色 */
-  --color-success: #52c41a;      /* 成功/已完成/正常 */
-  --color-warning: #faad14;      /* 警告/剩余/临近交期 */
-  --color-error: #f5222d;        /* 错误/危险/延期 */
-  --color-info: #1890ff;         /* 信息/进行中 */
-  --color-processing: #1890ff;   /* 处理中（与 info 相同） */
+  --color-success: var(--color-success);      /* 成功/已完成/正常 */
+  --color-warning: var(--color-warning);      /* 警告/剩余/临近交期 */
+  --color-error: var(--color-error);        /* 错误/危险/延期 */
+  --color-info: var(--color-info);         /* 信息/进行中 */
+  --color-processing: var(--color-info);   /* 处理中（与 info 相同） */
 }
 
 /* === 转单弹窗：已领取/已质检菲号灰色样式 === */
 .transfer-bundle-row-disabled td {
-  color: var(--color-text-quaternary, #bfbfbf) !important;
-  background: var(--color-bg-layout, #f5f5f5) !important;
+  color: var(--color-text-quaternary, var(--color-text-quaternary)) !important;
+  background: var(--color-bg-layout, var(--color-bg-subtle)) !important;
 }
 .transfer-bundle-row-disabled:hover td {
-  background: var(--color-bg-layout, #f0f0f0) !important;
+  background: var(--color-bg-layout, var(--color-border-light)) !important;
 }
 
 /* ================================================================
@@ -1877,7 +1877,7 @@ body {
   gap: 5px;
   font-size: 13px;
   font-weight: 600;
-  color: #ff4d4f;
+  color: var(--color-danger);
   background: rgba(255, 77, 79, 0.08);
   border-radius: 4px;
   padding: 1px 6px 1px 4px;
@@ -1890,7 +1890,7 @@ body {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #ff4d4f;
+  background: var(--color-danger);
   flex-shrink: 0;
   animation: stagnant-dot-blink 1.8s ease-in-out infinite;
 }
@@ -2188,7 +2188,7 @@ body {
 }
 .ant-card:hover {
   box-shadow: var(--shadow-base, 0 1px 3px rgba(0,0,0,0.08)) !important;
-  border-color: var(--color-border-antd, #d9d9d9) !important;
+  border-color: var(--color-border-antd, var(--color-border-antd)) !important;
 }
 .ant-card-bordered {
   border: 1px solid var(--color-border, rgba(0,0,0,0.06)) !important;
@@ -2265,7 +2265,7 @@ body {
    ============================================ */
 
 .ant-card-head {
-  background: var(--card-header-bg, #fafafa);
+  background: var(--card-header-bg, var(--color-bg-container));
   border-bottom: 1px solid var(--color-border-light);
   padding: var(--card-header-padding, 10px 16px);
   min-height: 40px;
@@ -2273,14 +2273,14 @@ body {
 .ant-card-head-title {
   font-size: 13px !important;
   font-weight: 600 !important;
-  color: var(--color-text-primary, #1a1a1a);
+  color: var(--color-text-primary, var(--color-text-primary));
 }
 .ant-card-head-title::before {
   content: '';
   display: inline-block;
   width: 3px;
   height: 14px;
-  background: #2D7FF9;
+  background: var(--color-primary);
   border-radius: 2px;
   margin-right: 8px;
   vertical-align: middle;
@@ -2291,7 +2291,7 @@ body {
 }
 .ant-progress-inner {
   border-radius: 4px !important;
-  background: #f0f0f0;
+  background: var(--color-border-light);
 }
 
 .ant-statistic-content-value {

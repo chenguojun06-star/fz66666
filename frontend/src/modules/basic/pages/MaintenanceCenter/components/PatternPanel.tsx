@@ -104,7 +104,7 @@ const PatternPanel: React.FC<PatternPanelProps> = ({ styleNo, onSaved }) => {
                 </Form.Item>
               </Form>
               <div style={actionBarStyle}>
-                <Button danger type="default" loading={returnPatternSaving} onClick={handleReturnPatternSave} style={{ background: 'var(--color-bg-base)', color: '#ff4d4f', borderColor: '#ff4d4f' }}>确认退回</Button>
+                <Button danger type="default" loading={returnPatternSaving} onClick={handleReturnPatternSave} style={{ background: 'var(--color-bg-base)', color: 'var(--color-danger)', borderColor: 'var(--color-danger)' }}>确认退回</Button>
               </div>
             </div>
             <div style={directCardStyle}><PatternSummary record={directRow} readOnly {...summaryProps} /></div>
@@ -163,7 +163,7 @@ const PatternPanel: React.FC<PatternPanelProps> = ({ styleNo, onSaved }) => {
         onCancel={() => { setReturnPatternModalVisible(false); returnPatternForm.resetFields(); }}
         footer={<Space><Button onClick={() => { setReturnPatternModalVisible(false); returnPatternForm.resetFields(); }}>取消</Button><Button danger loading={returnPatternSaving} onClick={handleReturnPatternSave}>确认退回</Button></Space>}>
         {returnPatternRecord?.patternRevReturnComment && (
-          <div style={{ marginBottom: 12, padding: '8px 12px', background: '#fff7e6', border: '1px solid #ffd591', borderRadius: 4, fontSize: 14 }}>
+          <div style={{ marginBottom: 12, padding: '8px 12px', background: '#FFF7E6', border: '1px solid #ffd591', borderRadius: 4, fontSize: 14 }}>
             上次退回：{returnPatternRecord.patternRevReturnComment}（{returnPatternRecord.patternRevReturnBy}）
           </div>
         )}

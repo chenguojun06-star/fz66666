@@ -228,7 +228,7 @@ export const ColorSizeMatrixPopoverContent: React.FC<{
           <React.Fragment key={row.label}>
             <span style={{ color: '#98a2b3', textAlign: 'left' }}>{row.label}</span>
             {model.sizes.map(s => (
-              <span key={`${row.label}-${s}`} style={{ color: '#1677ff', fontWeight: 600 }}>
+              <span key={`${row.label}-${s}`} style={{ color: 'var(--color-primary)', fontWeight: 600 }}>
                 {row.quantityMap.get(s) || 0}
               </span>
             ))}

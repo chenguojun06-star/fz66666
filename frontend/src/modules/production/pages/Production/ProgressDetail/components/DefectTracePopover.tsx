@@ -36,7 +36,7 @@ interface DefectTraceData {
 }
 
 /* ===== 样式常量 ===== */
-const riskColor: Record<string, string> = { low: '#52c41a', medium: '#faad14', high: '#ff4d4f' };
+const riskColor: Record<string, string> = { low: 'var(--color-success)', medium: 'var(--color-warning)', high: 'var(--color-danger)' };
 const riskLabel: Record<string, string> = { low: '低风险', medium: '中风险', high: '高风险' };
 
 /* ===== 组件 ===== */
@@ -89,7 +89,7 @@ const DefectTracePopover: React.FC<{
 
       {/* 总览 */}
       <div style={{ display: 'flex', gap: 12, marginBottom: 8, fontSize: 14, color: '#595959' }}>
-        <span>次品 <b style={{ color: '#ff4d4f' }}>{data.totalDefects}</b> 次</span>
+        <span>次品 <b style={{ color: 'var(--color-danger)' }}>{data.totalDefects}</b> 次</span>
         <span>总扫码 <b>{data.totalScans}</b> 次</span>
       </div>
 
@@ -123,7 +123,7 @@ const DefectTracePopover: React.FC<{
           {data.hotProcesses.map((p, i) => (
             <div key={i} style={{ display: 'flex', gap: 8, padding: '2px 0', fontSize: 14 }}>
               <span style={{ fontWeight: 500 }}>{p.processName}</span>
-              <span style={{ color: '#ff4d4f' }}>{p.defectCount}次</span>
+              <span style={{ color: 'var(--color-danger)' }}>{p.defectCount}次</span>
               <span style={{ color: 'var(--color-text-tertiary)' }}>({p.defectRate}%)</span>
             </div>
           ))}
@@ -144,7 +144,7 @@ const DefectTracePopover: React.FC<{
                     style={{
                       width: '100%',
                       height: h,
-                      background: t.defectCount > 0 ? '#ff4d4f' : '#e8e8e8',
+                      background: t.defectCount > 0 ? 'var(--color-danger)' : '#e8e8e8',
                       borderRadius: 2,
                       opacity: t.defectCount > 0 ? 0.8 : 0.3,
                     }}
@@ -180,7 +180,7 @@ const DefectTracePopover: React.FC<{
           <span style={{
             position: 'absolute', top: -2, right: -2, zIndex: 2,
             width: 10, height: 10, borderRadius: '50%',
-            background: '#ff4d4f', border: '1.5px solid #fff',
+            background: 'var(--color-danger)', border: '1.5px solid var(--color-bg-base)',
           }} />
         )}
       </span>

@@ -127,7 +127,7 @@ const GlobalVoiceAssistant: React.FC<VoiceAssistantProps> = ({ className }) => {
     <div className="voice-panel">
       <div className="voice-header">
         <div className="voice-title">
-          <RobotOutlined style={{ marginRight: 8, color: '#1890ff' }} />
+          <RobotOutlined style={{ marginRight: 8, color: 'var(--color-info)' }} />
           小云语音助手
         </div>
         <Button

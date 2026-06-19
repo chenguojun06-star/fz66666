@@ -260,6 +260,33 @@ public class UserOrchestrator {
         permissionHelper.ownerResetMemberPasswordToDefault(userId);
     }
 
+    @org.springframework.transaction.annotation.Transactional(rollbackFor = Exception.class)
+    public User register(User registerData) {
+        if (registerData == null || registerData.getUsername() == null || registerData.getUsername().isBlank()) {
+            throw new IllegalArgumentException("用户名不能为空");
+        }
+        com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<User> wrapper =
+            new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<>();
+        wrapper.eq(User::getUsername, registerData.getUsername());
+        User existing = userService.getOne(wrapper);
+        if (existing != null) {
+            throw new IllegalStateException("用户名已存在");
+        }
+        User newUser = new User();
+        newUser.setUsername(registerData.getUsername());
+        newUser.setName(registerData.getUsername());
+        newUser.setPassword(passwordEncoder.encode(registerData.getPassword()));
+        newUser.setPhone(registerData.getPhone());
+        newUser.setEmail(registerData.getEmail());
+        newUser.setStatus("DISABLED");
+        newUser.setApprovalStatus("PENDING");
+        boolean saved = userService.save(newUser);
+        if (!saved) {
+            throw new IllegalStateException("注册失败，请稍后重试");
+        }
+        return newUser;
+    }
+
     private void syncRoleFields(User user) {
         if (user != null && user.getRoleId() != null) {
             Role role = roleService.getById(user.getRoleId());

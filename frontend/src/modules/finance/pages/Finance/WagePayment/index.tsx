@@ -181,7 +181,7 @@ const PaymentCenterPage: React.FC = () => {
                     }}>
                       <div style={{ textAlign: 'center', flex: 1, borderRight: '1px solid var(--color-border)' }}>
                         <div style={{ color: 'var(--color-text-tertiary)', fontSize: 14, marginBottom: 4 }}>待收付款总额</div>
-                        <div style={{ fontSize: 16, fontWeight: 'bold', color: '#cf1322' }}>¥ {Number(data.pendingStats.totalAmount || 0).toLocaleString('zh-CN', {minimumFractionDigits: 2})}</div>
+                        <div style={{ fontSize: 16, fontWeight: 'bold', color: 'var(--color-error)' }}>¥ {Number(data.pendingStats.totalAmount || 0).toLocaleString('zh-CN', {minimumFractionDigits: 2})}</div>
                       </div>
                       <div style={{ textAlign: 'center', flex: 1, borderRight: '1px solid var(--color-border)' }}>
                         <div style={{ color: 'var(--color-text-tertiary)', fontSize: 14, marginBottom: 4 }}>工厂对账</div>
@@ -249,7 +249,7 @@ const PaymentCenterPage: React.FC = () => {
                         </Button>
                         {data.selectedPayableKeys.length > 0 && (
                           <>
-                            <span style={{ color: '#1677ff', marginLeft: 8 }}>
+                            <span style={{ color: 'var(--color-primary)', marginLeft: 8 }}>
                               已选 {data.selectedPayableKeys.length} 笔
                               （{formatMoney(data.filteredPayables.filter(p => data.selectedPayableKeys.includes(`${p.bizType}-${p.bizId}`)).reduce((s, p) => s + Number(p.amount ?? 0), 0))}）
                             </span>
@@ -454,7 +454,7 @@ const PaymentCenterPage: React.FC = () => {
                   <Descriptions.Item label="单据编号">{pay.currentPayable.bizNo}</Descriptions.Item>
                   <Descriptions.Item label="收款方">{pay.currentPayable.payeeName}</Descriptions.Item>
                   <Descriptions.Item label="应付金额">
-                    <span style={{ fontWeight: 600, color: '#cf1322' }}>{formatMoney(pay.currentPayable.amount)}</span>
+                    <span style={{ fontWeight: 600, color: 'var(--color-error)' }}>{formatMoney(pay.currentPayable.amount)}</span>
                   </Descriptions.Item>
                 </Descriptions>
               </Card>
@@ -510,7 +510,7 @@ const PaymentCenterPage: React.FC = () => {
                       key={opt.value}
                       onClick={() => pay.handleMethodSelect(opt.value)}
                       style={{
-                        border: `2px solid ${pay.selectedMethod === opt.value ? 'var(--primary-color, #1677ff)' : 'var(--color-border-antd)'}`,
+                        border: `2px solid ${pay.selectedMethod === opt.value ? 'var(--primary-color, var(--color-primary))' : 'var(--color-border-antd)'}`,
                         borderRadius: 8,
                         padding: '16px 12px',
                         cursor: 'pointer',
@@ -559,13 +559,13 @@ const PaymentCenterPage: React.FC = () => {
                           {pay.selectedAccount.qrCodeUrl ? (
                             <Image src={getFullAuthedFileUrl(pay.selectedAccount.qrCodeUrl)} width={200} alt="收款二维码" />
                           ) : (
-                            <span style={{ color: '#ff4d4f' }}>该账户未上传收款二维码</span>
+                            <span style={{ color: 'var(--color-danger)' }}>该账户未上传收款二维码</span>
                           )}
                         </div>
                       )}
                     </div>
                   ) : (
-                    <span style={{ color: '#faad14' }}>
+                    <span style={{ color: 'var(--color-warning)' }}>
                       收款方暂无{pay.selectedMethod === 'BANK' ? '银行卡' : pay.selectedMethod === 'WECHAT' ? '微信' : '支付宝'}账户，
                       <Button type="link" style={{ padding: 0, height: 'auto', fontSize: 'inherit' }} onClick={() => {
                         const pt = pay.payForm.getFieldValue('payeeType');
@@ -656,7 +656,7 @@ const PaymentCenterPage: React.FC = () => {
                   </Space>
                 </Descriptions.Item>
                 <Descriptions.Item label="金额">
-                  <span style={{ fontWeight: 600, color: '#cf1322' }}>{formatMoney(detailRecord.amount)}</span>
+                  <span style={{ fontWeight: 600, color: 'var(--color-error)' }}>{formatMoney(detailRecord.amount)}</span>
                 </Descriptions.Item>
                 <Descriptions.Item label="操作人">{detailRecord.operatorName}</Descriptions.Item>
                 <Descriptions.Item label="创建时间">{formatDateTime(detailRecord.createTime)}</Descriptions.Item>
@@ -744,7 +744,7 @@ const PaymentCenterPage: React.FC = () => {
               {amountDetailTarget.payeeType === 'WORKER' ? '员工' : '工厂/供应商'}
             </Descriptions.Item>
             <Descriptions.Item label="应付金额">
-              <span style={{ fontWeight: 600, color: '#cf1322' }}>{formatMoney(amountDetailTarget.amount)}</span>
+              <span style={{ fontWeight: 600, color: 'var(--color-error)' }}>{formatMoney(amountDetailTarget.amount)}</span>
             </Descriptions.Item>
             <Descriptions.Item label="已付金额">
               <span style={{ color: '#389e0d' }}>{formatMoney(amountDetailTarget.paidAmount || 0)}</span>

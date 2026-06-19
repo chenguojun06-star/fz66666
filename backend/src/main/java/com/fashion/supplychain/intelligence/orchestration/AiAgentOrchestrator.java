@@ -64,7 +64,6 @@ public class AiAgentOrchestrator {
     @Autowired private org.springframework.beans.factory.ObjectProvider<SelfCriticService> selfCriticServiceProvider;
     @Autowired private org.springframework.beans.factory.ObjectProvider<RealTimeLearningLoop> realTimeLearningLoopProvider;
     @Autowired private org.springframework.beans.factory.ObjectProvider<QuickPathQualityGate> quickPathQualityGateProvider;
-    @Autowired private org.springframework.beans.factory.ObjectProvider<DynamicFollowUpEngine> dynamicFollowUpEngineProvider;
     @Autowired private org.springframework.beans.factory.ObjectProvider<com.fashion.supplychain.intelligence.service.GoldenEvalService> goldenEvalServiceProvider;
     @Autowired private org.springframework.beans.factory.ObjectProvider<com.fashion.supplychain.intelligence.service.GuardrailsConfigService> guardrailsConfigServiceProvider;
     /** P2升级: 结构化输出后处理 */

@@ -233,7 +233,7 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
         <Col xs={24} lg={20} style={{ paddingLeft: '24px' }}>
           {/* 款号信息区域 */}
           <div style={{ marginBottom: 16 }}>
-            <div style={{ ...sectionTitleBaseStyle, borderLeft: '3px solid #2D7FF9' }}>
+            <div style={{ ...sectionTitleBaseStyle, borderLeft: '3px solid var(--color-primary)' }}>
               款号信息
             </div>
             <Row gutter={[16, 0]}>

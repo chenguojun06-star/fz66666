@@ -4,8 +4,9 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fashion.supplychain.finance.entity.ExpenseReimbursementDoc;
 import com.fashion.supplychain.finance.mapper.ExpenseReimbursementDocMapper;
+import com.fashion.supplychain.finance.orchestration.ExpenseReimbursementDocOrchestrator;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -15,6 +16,9 @@ import java.util.List;
 @Service
 public class ExpenseReimbursementDocService
         extends ServiceImpl<ExpenseReimbursementDocMapper, ExpenseReimbursementDoc> {
+
+    @Autowired
+    private ExpenseReimbursementDocOrchestrator orchestrator;
 
     /**
      * 查询报销单下的所有凭证
@@ -29,17 +33,9 @@ public class ExpenseReimbursementDocService
 
     /**
      * 批量将未关联的凭证 doc 绑定到指定报销单
+     * 事务处理委托给 {@link ExpenseReimbursementDocOrchestrator}
      */
-    @Transactional(rollbackFor = Exception.class)
     public void linkDocs(List<String> docIds, String reimbursementId, String reimbursementNo) {
-        if (docIds == null || docIds.isEmpty()) return;
-        for (String docId : docIds) {
-            ExpenseReimbursementDoc doc = getById(docId);
-            if (doc != null && doc.getReimbursementId() == null) {
-                doc.setReimbursementId(reimbursementId);
-                doc.setReimbursementNo(reimbursementNo);
-                updateById(doc);
-            }
-        }
+        orchestrator.linkDocs(docIds, reimbursementId, reimbursementNo);
     }
 }

@@ -2,8 +2,10 @@ package com.fashion.supplychain.style.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.production.entity.ProductWarehousing;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.mapper.ProductionOrderMapper;
+import com.fashion.supplychain.production.service.ProductWarehousingService;
 import com.fashion.supplychain.style.entity.ProductSku;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.mapper.ProductSkuMapper;
@@ -15,7 +17,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @Slf4j
@@ -32,6 +37,9 @@ public class ProductSkuOrchestrator {
 
     @Autowired
     private ProductSkuMapper productSkuMapper;
+
+    @Autowired
+    private ProductWarehousingService productWarehousingService;
 
     public List<ProductSku> listByStyleId(Long styleId) {
         if (styleId == null) {
@@ -178,6 +186,11 @@ public class ProductSkuOrchestrator {
         log.info("Saved rollback remark for styleId={}, affected {} SKUs", styleId, rows);
     }
 
+    @Transactional(rollbackFor = Exception.class)
+    public void updateStock(String skuCode, int quantity) {
+        productSkuService.updateStock(skuCode, quantity);
+    }
+
     /**
      * 批量更新SKU颜色图片（按款号+颜色匹配）
      * @param styleId 款式ID
@@ -213,5 +226,67 @@ public class ProductSkuOrchestrator {
             updatedCount += rows;
         }
         log.info("Updated SKU color images for styleId={}, updated {} SKUs", styleId, updatedCount);
+    }
+
+    /**
+     * 重新计算所有SKU的库存（根据入库单汇总进行修正）
+     *
+     * <p>返回包含 totalSkus、fixed、unchanged 和 details 的 Map，便于调用方统计。
+     *
+     * @return 修正结果汇总
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public Map<String, Object> recalculateSkuStock() {
+        List<ProductSku> allSkus = productSkuService.lambdaQuery()
+                .last("LIMIT 5000")
+                .list();
+        int fixed = 0;
+        int unchanged = 0;
+        List<Map<String, Object>> details = new ArrayList<>();
+
+        for (ProductSku sku : allSkus) {
+            int inboundTotal = 0;
+            List<ProductWarehousing> inboundRecords = productWarehousingService.lambdaQuery()
+                    .eq(ProductWarehousing::getStyleNo, sku.getStyleNo())
+                    .eq(ProductWarehousing::getDeleteFlag, 0)
+                    .eq(ProductWarehousing::getColor, sku.getColor())
+                    .eq(ProductWarehousing::getSize, sku.getSize())
+                    .last("LIMIT 5000")
+                    .list();
+            for (ProductWarehousing pw : inboundRecords) {
+                if (pw.getQualifiedQuantity() != null && pw.getQualifiedQuantity() > 0) {
+                    inboundTotal += pw.getQualifiedQuantity();
+                }
+            }
+
+            int oldStock = sku.getStockQuantity() != null ? sku.getStockQuantity() : 0;
+            if (oldStock != inboundTotal) {
+                sku.setStockQuantity(inboundTotal);
+                productSkuService.updateById(sku);
+                fixed++;
+                Map<String, Object> d = new HashMap<>();
+                d.put("skuCode", sku.getSkuCode());
+                d.put("styleNo", sku.getStyleNo());
+                d.put("color", sku.getColor());
+                d.put("size", sku.getSize());
+                d.put("oldStock", oldStock);
+                d.put("newStock", inboundTotal);
+                details.add(d);
+                log.info("[ProductSkuOrchestrator] SKU库存修正: {} {} {} {} {} -> {}",
+                        sku.getSkuCode(), sku.getStyleNo(), sku.getColor(), sku.getSize(),
+                        oldStock, inboundTotal);
+            } else {
+                unchanged++;
+            }
+        }
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("totalSkus", allSkus.size());
+        result.put("fixed", fixed);
+        result.put("unchanged", unchanged);
+        result.put("details", details);
+        log.info("[ProductSkuOrchestrator] SKU库存重新计算完成：共{}个SKU，修正{}个，未变{}个",
+                allSkus.size(), fixed, unchanged);
+        return result;
     }
 }

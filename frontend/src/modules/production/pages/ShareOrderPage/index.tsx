@@ -97,7 +97,7 @@ const ShareOrderPage: React.FC = () => {
             <div style={S.progressSummaryTitleStyle}>总进度 {progress}%</div>
             <div style={S.progressSummaryMetaStyle}>{completedSummaryText}</div>
           </div>
-          <Progress percent={progress} strokeColor={{ '0%': '#3b82f6', '50%': '#10b981', '100%': '#22c55e' }} trailColor="rgba(148, 163, 184, 0.18)" size={progressBarSize} showInfo={false} />
+          <Progress percent={progress} strokeColor={{ '0%': '#3b82f6', '50%': 'var(--color-accent-emerald)', '100%': '#22c55e' }} trailColor="rgba(148, 163, 184, 0.18)" size={progressBarSize} showInfo={false} />
           <div style={S.metricGridStyle}>
             <MetricCard icon={<CalendarOutlined />} label="计划交期" value={plannedDateText} />
             <MetricCard icon={<FieldTimeOutlined />} label="预计完成" value={predictedDateText} highlightColor={riskTone.color} />

@@ -373,7 +373,7 @@ const InboundModal: React.FC<InboundModalProps> = ({ visible, onCancel, onSucces
                     style={{ objectFit: 'cover', borderRadius: 8 }}
                   />
                 ) : (
-                  <div style={{ width: 96, height: 96, borderRadius: 8, background: '#f3f4f6', color: '#9ca3af', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>
+                  <div style={{ width: 96, height: 96, borderRadius: 8, background: '#f3f4f6', color: 'var(--color-text-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>
                     暂无图片
                   </div>
                 )}

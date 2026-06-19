@@ -183,7 +183,7 @@ const OrderImageManager: React.FC<OrderImageManagerProps> = ({ orderNo, editable
     top: '50%',
     transform: 'translateY(-50%)',
     background: 'rgba(0,0,0,0.45)',
-    color: '#fff',
+    color: 'var(--color-bg-base)',
     border: 'none',
     width: 28,
     height: 28,
@@ -250,7 +250,7 @@ const OrderImageManager: React.FC<OrderImageManagerProps> = ({ orderNo, editable
 
             <div style={{
               position: 'absolute', bottom: 6, left: '50%', transform: 'translateX(-50%)',
-              background: 'rgba(0,0,0,0.45)', color: '#fff', fontSize: 11, padding: '1px 8px',
+              background: 'rgba(0,0,0,0.45)', color: 'var(--color-bg-base)', fontSize: 11, padding: '1px 8px',
               borderRadius: 10, lineHeight: '18px', pointerEvents: 'none',
             }}>
               {currentIdx + 1}/{totalCount}
@@ -304,7 +304,7 @@ const OrderImageManager: React.FC<OrderImageManagerProps> = ({ orderNo, editable
             {currentImg?.isCover && (
               <span style={{
                 position: 'absolute', top: 4, left: 4, fontSize: 10, padding: '0 5px',
-                background: 'rgba(0,0,0,0.5)', color: '#fff', borderRadius: 3, lineHeight: '18px',
+                background: 'rgba(0,0,0,0.5)', color: 'var(--color-bg-base)', borderRadius: 3, lineHeight: '18px',
               }}>
                 封面
               </span>

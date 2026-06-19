@@ -101,7 +101,7 @@ const MaterialReconciliation: React.FC = () => {
         {showSmartErrorNotice && (
           <Card style={{ marginBottom: 12, background: '#f0f5ff', border: '1px solid #adc6ff' }} styles={{ body: { padding: '8px 12px' } }}
             extra={<Button type="link" loading={auditLoading} onClick={fetchFinanceAudit} style={{ padding: 0 }}>{financeAudit ? '重新分析' : ' AI分析'}</Button>}
-            title={<span style={{ fontSize: 14, color: '#1677ff' }}> 智能财务审核助手</span>}
+            title={<span style={{ fontSize: 14, color: 'var(--color-primary)' }}> 智能财务审核助手</span>}
           >
             {!financeAudit ? (
               <span style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>点击「AI分析」自动检测对账差异并给出审核建议</span>

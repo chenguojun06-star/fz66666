@@ -19,9 +19,9 @@ interface OverviewChartProps {
 }
 
 const COLORS = {
-  order: { ring: '#3b82f6', text: '#6b7280' },
-  production: { ring: '#10b981', text: '#6b7280' },
-  inbound: { ring: '#8b5cf6', text: '#6b7280' },
+  order: { ring: '#3b82f6', text: 'var(--color-text-secondary)' },
+  production: { ring: 'var(--color-accent-emerald)', text: 'var(--color-text-secondary)' },
+  inbound: { ring: '#8b5cf6', text: 'var(--color-text-secondary)' },
 };
 
 const OverviewChart: React.FC<OverviewChartProps> = ({ mode = 'sidebar', moduleKey, position }) => {
@@ -392,7 +392,7 @@ const OverviewChart: React.FC<OverviewChartProps> = ({ mode = 'sidebar', moduleK
                           cy={getY(trendData[hoverIndex].orderCount, maxValue, 120, 10)}
                           r={3}
                           fill={COLORS.order.ring}
-                          stroke="#fff"
+                          stroke="var(--color-bg-base)"
                           strokeWidth={1.5}
                         />
                         <circle
@@ -400,7 +400,7 @@ const OverviewChart: React.FC<OverviewChartProps> = ({ mode = 'sidebar', moduleK
                           cy={getY(trendData[hoverIndex].productionCount, maxValue, 120, 10)}
                           r={3}
                           fill={COLORS.production.ring}
-                          stroke="#fff"
+                          stroke="var(--color-bg-base)"
                           strokeWidth={1.5}
                         />
                         <circle
@@ -408,7 +408,7 @@ const OverviewChart: React.FC<OverviewChartProps> = ({ mode = 'sidebar', moduleK
                           cy={getY(trendData[hoverIndex].inboundCount, maxValue, 120, 10)}
                           r={3}
                           fill={COLORS.inbound.ring}
-                          stroke="#fff"
+                          stroke="var(--color-bg-base)"
                           strokeWidth={1.5}
                         />
                       </>

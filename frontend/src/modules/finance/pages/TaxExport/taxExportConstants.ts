@@ -9,10 +9,10 @@ export const FORMAT_OPTIONS = [
 ];
 
 export const EXPORT_TYPES = [
-  { key: 'payroll', title: '工资结算汇总', desc: '导出指定周期内所有结算单数据，含结算金额、操作工姓名、工序明细', icon: '', color: '#52c41a' },
-  { key: 'material', title: '物料对账单', desc: '导出面辅料采购、出入库、对账数据，与供应商对账一目了然', icon: '', color: '#1890ff' },
-  { key: 'supplier-payment', title: '供应商付款汇总', desc: '导出应付账款、已付款、逾期明细，便于对账审计及供应商信用评估', icon: '', color: '#722ed1' },
-  { key: 'tax-summary', title: '月度税务汇总', desc: '导出本期开票金额、税种税率、税额合计，可直接用于月度税务申报附表', icon: '', color: '#fa8c16' },
+  { key: 'payroll', title: '工资结算汇总', desc: '导出指定周期内所有结算单数据，含结算金额、操作工姓名、工序明细', icon: '', color: 'var(--color-success)' },
+  { key: 'material', title: '物料对账单', desc: '导出面辅料采购、出入库、对账数据，与供应商对账一目了然', icon: '', color: 'var(--color-info)' },
+  { key: 'supplier-payment', title: '供应商付款汇总', desc: '导出应付账款、已付款、逾期明细，便于对账审计及供应商信用评估', icon: '', color: 'var(--color-accent-purple)' },
+  { key: 'tax-summary', title: '月度税务汇总', desc: '导出本期开票金额、税种税率、税额合计，可直接用于月度税务申报附表', icon: '', color: 'var(--color-warning)' },
 ];
 
 export const INVOICE_TYPES = [

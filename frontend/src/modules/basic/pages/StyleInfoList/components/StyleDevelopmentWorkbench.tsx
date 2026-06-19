@@ -487,9 +487,9 @@ const StyleDevelopmentWorkbench: React.FC<Props> = ({ record, onClose, initialSe
           <div style={{
             display: 'flex', alignItems: 'center', gap: 12,
             padding: '8px 12px', margin: '8px 0',
-            background: 'var(--color-bg-subtle, #fafafa)',
+            background: 'var(--color-bg-subtle, var(--color-bg-container))',
             borderRadius: 6, fontSize: 13,
-            border: '1px solid var(--color-border-light, #f0f0f0)',
+            border: '1px solid var(--color-border-light, var(--color-border-light))',
           }}>
             <span style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>{activeCard.title}</span>
             <span style={{ color: 'var(--color-text-tertiary)' }}>|</span>

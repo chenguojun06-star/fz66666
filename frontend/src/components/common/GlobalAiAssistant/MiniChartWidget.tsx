@@ -23,13 +23,13 @@ export interface ChartSpec {
   indicators?: Array<{ name: string; max: number }>; // radar 图维度定义
 }
 
-const CHART_COLORS = ['#1890ff', '#52c41a', '#fa8c16', '#e8686a', '#722ed1', '#13c2c2', '#eb2f96'];
+const CHART_COLORS = ['var(--color-info)', 'var(--color-success)', 'var(--color-warning)', '#e8686a', 'var(--color-accent-purple)', 'var(--color-accent-cyan)', '#eb2f96'];
 
 const MiniChartWidget: React.FC<{ chart: ChartSpec }> = ({ chart }) => {
   // ── progress：纯 CSS，无 ECharts，最轻量 ───────────────────────────────
   if (chart.type === 'progress') {
     const pct = Math.min(chart.value ?? 0, 100);
-    const pctColor = pct >= 80 ? '#52c41a' : pct >= 60 ? '#faad14' : '#ff7875';
+    const pctColor = pct >= 80 ? 'var(--color-success)' : pct >= 60 ? 'var(--color-warning)' : '#ff7875';
     return (
       <div className={styles.miniProgressChart}>
         <div className={styles.miniChartTitle}>
@@ -55,7 +55,7 @@ const MiniChartWidget: React.FC<{ chart: ChartSpec }> = ({ chart }) => {
     const val = chart.value ?? 0;
     const maxVal = chart.target ?? 100;
     const pctOfMax = maxVal > 0 ? val / maxVal : 0;
-    const gaugeColor = pctOfMax >= 0.8 ? '#52c41a' : pctOfMax >= 0.6 ? '#faad14' : '#ff7875';
+    const gaugeColor = pctOfMax >= 0.8 ? 'var(--color-success)' : pctOfMax >= 0.6 ? 'var(--color-warning)' : '#ff7875';
     option = {
       series: [{
         type: 'gauge',
@@ -65,7 +65,7 @@ const MiniChartWidget: React.FC<{ chart: ChartSpec }> = ({ chart }) => {
         min: 0,
         max: maxVal,
         progress: { show: true, width: 10, itemStyle: { color: gaugeColor } },
-        axisLine: { lineStyle: { width: 10, color: [[1, '#f0f0f0']] } },
+        axisLine: { lineStyle: { width: 10, color: [[1, 'var(--color-border-light)']] } },
         axisTick: { show: false },
         splitLine: { show: false },
         axisLabel: { fontSize: 9, distance: 14 },
@@ -143,7 +143,7 @@ const MiniChartWidget: React.FC<{ chart: ChartSpec }> = ({ chart }) => {
         indicator: indicators,
         radius: '55%',
         center: ['50%', (chart.series ?? []).length > 1 ? '58%' : '52%'],
-        splitArea: { areaStyle: { color: ['#fff', '#f5f7ff'] } },
+        splitArea: { areaStyle: { color: ['var(--color-bg-base)', '#f5f7ff'] } },
         axisName: { fontSize: 14, color: '#595959' },
       },
       series: [{
@@ -269,7 +269,7 @@ const MiniChartWidget: React.FC<{ chart: ChartSpec }> = ({ chart }) => {
       yAxis: { type: 'value', axisLabel: { fontSize: 14, formatter: `{value}${chart.unit ?? ''}` }, splitLine: { lineStyle: { type: 'dashed' as const } } },
       series: [
         { type: 'bar', name: '辅助', stack: 'total', itemStyle: { color: 'transparent', borderColor: 'transparent' }, data: placeholders },
-        { type: 'bar', name: '增加', stack: 'total', itemStyle: { color: '#52c41a', borderRadius: [4, 4, 0, 0] }, data: positives, label: { show: true, position: 'top', fontSize: 9, formatter: `{c}${chart.unit ?? ''}` } },
+        { type: 'bar', name: '增加', stack: 'total', itemStyle: { color: 'var(--color-success)', borderRadius: [4, 4, 0, 0] }, data: positives, label: { show: true, position: 'top', fontSize: 9, formatter: `{c}${chart.unit ?? ''}` } },
         { type: 'bar', name: '减少', stack: 'total', itemStyle: { color: '#ff7875', borderRadius: [4, 4, 0, 0] }, data: negatives, label: { show: true, position: 'top', fontSize: 9, formatter: `{c}${chart.unit ?? ''}` } },
       ],
     };

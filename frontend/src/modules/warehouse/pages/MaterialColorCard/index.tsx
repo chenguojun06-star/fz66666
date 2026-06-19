@@ -283,15 +283,15 @@ const MaterialColorCardPage: React.FC = () => {
               src={getFullAuthedFileUrl(card.coverImage)}
               width={96}
               height={96}
-              style={{ objectFit: 'cover', borderRadius: 8, flexShrink: 0, border: '1px solid #f0f0f0' }}
+              style={{ objectFit: 'cover', borderRadius: 8, flexShrink: 0, border: '1px solid var(--color-border-light)' }}
               preview
             />
           ) : (
             <div style={{
               width: 96, height: 96, flexShrink: 0,
-              borderRadius: 8, border: '1px dashed #e5e7eb',
+              borderRadius: 8, border: '1px dashed var(--color-border)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: '#f8fafc', color: '#94a3b8',
+              background: 'var(--color-bg-page)', color: '#94a3b8',
             }}>
               <FileTextOutlined style={{ fontSize: 28 }} />
             </div>
@@ -319,7 +319,7 @@ const MaterialColorCardPage: React.FC = () => {
         {/* 物料属性概览 */}
         {(card.fabricWidth || card.fabricWeight || card.specifications || card.fabricComposition) && (
           <div style={{
-            padding: 10, background: '#fafafa', borderRadius: 6, marginBottom: 12,
+            padding: 10, background: 'var(--color-bg-container)', borderRadius: 6, marginBottom: 12,
             fontSize: 12, color: '#595959',
           }}>
             <Row gutter={[8, 6]}>
@@ -350,7 +350,7 @@ const MaterialColorCardPage: React.FC = () => {
 
           {card.remark && (
             <div style={{
-              marginTop: 10, padding: 8, background: '#fffbe6', borderRadius: 4,
+              marginTop: 10, padding: 8, background: '#FFFBE6', borderRadius: 4,
               fontSize: 12, color: '#874d00',
             }}>
               备注：{card.remark}

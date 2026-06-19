@@ -425,7 +425,7 @@ const MaterialDatabasePage: React.FC = () => {
     // 类型汇总行
     const typeSummaryRows = Object.keys(statsByType).map(type => {
       const s = statsByType[type];
-      return `<tr><td colspan="8" style="text-align:right;background:#fafafa;font-weight:600">${esc(getMaterialTypeLabel(type))} 小计：${s.count} 项 / ${s.totalQty.toFixed(2)} 单位</td><td style="text-align:right;background:#fafafa;font-weight:600">${s.totalQty.toFixed(2)}</td><td colspan="2" style="text-align:right;background:#fafafa;font-weight:600">—</td><td style="background:#fafafa"></td></tr>`;
+      return `<tr><td colspan="8" style="text-align:right;background:var(--color-bg-container);font-weight:600">${esc(getMaterialTypeLabel(type))} 小计：${s.count} 项 / ${s.totalQty.toFixed(2)} 单位</td><td style="text-align:right;background:var(--color-bg-container);font-weight:600">${s.totalQty.toFixed(2)}</td><td colspan="2" style="text-align:right;background:var(--color-bg-container);font-weight:600">—</td><td style="background:var(--color-bg-container)"></td></tr>`;
     }).join('');
 
     const now = new Date();
@@ -451,7 +451,7 @@ const MaterialDatabasePage: React.FC = () => {
   <title>物料资料库清单</title>
   <style>
     @page { margin: 12mm; }
-    body { font-family: system-ui, -apple-system, "Microsoft YaHei", "PingFang SC", sans-serif; font-size: 13px; color: #1a1a1a; padding: 24px; background: #fff; line-height: 1.7; }
+    body { font-family: system-ui, -apple-system, "Microsoft YaHei", "PingFang SC", sans-serif; font-size: 13px; color: var(--color-text-primary); padding: 24px; background: var(--color-bg-base); line-height: 1.7; }
     .title { text-align: center; font-size: 26px; font-weight: 700; margin-bottom: 6px; letter-spacing: 3px; }
     .subtitle { text-align: center; font-size: 12px; color: #999; margin-bottom: 20px; }
     .info-bar { display: flex; justify-content: space-between; padding: 10px 16px; background: #f8f9fa; border: 1px solid #e8e8e8; margin-bottom: 20px; font-size: 12px; }
@@ -459,13 +459,13 @@ const MaterialDatabasePage: React.FC = () => {
     .summary-section { margin-bottom: 24px; }
     .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
     .summary-card { padding: 14px 16px; background: #f4f6f8; border: 1px solid #e0e0e0; text-align: center; border-radius: 6px; }
-    .summary-card.highlight { background: linear-gradient(135deg, #fff2e8, #ffd4b8); border-color: #ff7a45; }
+    .summary-card.highlight { background: linear-gradient(135deg, #F6FFED, #ffd4b8); border-color: #ff7a45; }
     .summary-card-label { font-size: 11px; color: #666; margin-bottom: 6px; }
-    .summary-card-value { font-size: 18px; font-weight: 700; color: #1a1a1a; }
+    .summary-card-value { font-size: 18px; font-weight: 700; color: var(--color-text-primary); }
     .summary-card.highlight .summary-card-value { color: #d4380d; font-size: 20px; }
     .type-stats { display: flex; flex-wrap: wrap; gap: 8px; }
     .type-stat { display: flex; align-items: center; gap: 8px; padding: 6px 12px; background: #f0f7ff; border: 1px solid #91d5ff; border-radius: 4px; font-size: 12px; }
-    .type-name { font-weight: 600; color: #1890ff; }
+    .type-name { font-weight: 600; color: var(--color-info); }
     .type-count, .type-qty { color: #666; }
     .section { page-break-inside: avoid; }
     table { width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 16px; }
@@ -474,11 +474,11 @@ const MaterialDatabasePage: React.FC = () => {
     tbody tr:hover { background: #fafcff; }
     .footer { margin-top: 30px; text-align: center; font-size: 11px; color: #999; padding-top: 12px; border-top: 1px solid #eee; }
     .print-btn-bar { position: fixed; top: 10px; right: 10px; z-index: 999; }
-    .print-btn { padding: 8px 16px; background: #1890ff; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; }
+    .print-btn { padding: 8px 16px; background: var(--color-info); color: var(--color-bg-base); border: none; border-radius: 4px; cursor: pointer; font-size: 13px; }
     @media print {
       .no-print { display: none !important; }
       .print-btn-bar { display: none; }
-      .summary-card.highlight { background: #fff3e0 !important; border-color: #999 !important; }
+      .summary-card.highlight { background: #F6FFED !important; border-color: #999 !important; }
     }
   </style>
 </head>
@@ -859,7 +859,7 @@ const MaterialDatabasePage: React.FC = () => {
               {Array.isArray(colorItemsData.items) && colorItemsData.items.map((item: any, idx: number) => (
                 <Card key={item.id || idx} size="small" style={{ border: '1px solid var(--color-border)' }}>
                   <Row gutter={12} align="middle">
-                    <Col xs={24} sm={2} style={{ fontWeight: 600, color: '#1677ff' }}>#{idx + 1}</Col>
+                    <Col xs={24} sm={2} style={{ fontWeight: 600, color: 'var(--color-primary)' }}>#{idx + 1}</Col>
                     <Col xs={24} sm={5}>颜色编号：{item.colorNo || '-'}</Col>
                     <Col xs={24} sm={5}>颜色名称：{item.colorName || '-'}</Col>
                     <Col xs={24} sm={6}>

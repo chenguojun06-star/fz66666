@@ -37,7 +37,7 @@ const PRINT_STYLES = `
     .info-row { display: flex; justify-content: space-between; margin-bottom: 15px; font-size: 14px; }
     table { width: 100%; border-collapse: collapse; margin-bottom: 15px; font-size: 13px; }
     th, td { border: 1px solid #000; padding: 8px; text-align: center; }
-    th { background-color: #f0f0f0; }
+    th { background-color: var(--color-border-light); }
     .footer { display: flex; justify-content: space-between; font-size: 16px; font-weight: bold; margin-top: 15px; }
     .amount-words { margin-top: 10px; font-size: 14px; }
     .sign-area { display: flex; justify-content: space-between; margin-top: 50px; font-size: 14px; }

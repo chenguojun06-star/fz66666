@@ -12,6 +12,7 @@ import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.context.annotation.Lazy;
 
 @Slf4j
@@ -23,6 +24,7 @@ public class OrderRiskTrackingOrchestrator {
 
     @Autowired private OrderRiskTrackingMapper riskTrackingMapper;
 
+    @Transactional(rollbackFor = Exception.class)
     public Long createRisk(String orderNo, String riskLevel, List<String> riskFactors, String assignedTo) {
         // 守卫：必填字段不能为空（表列 NOT NULL 约束）
         if (orderNo == null || orderNo.isBlank()) {
@@ -55,6 +57,7 @@ public class OrderRiskTrackingOrchestrator {
         }
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public boolean resolveRisk(Long riskId, String handlingAction, String handlingResult) {
         try {
             OrderRiskTracking tracking = riskTrackingMapper.selectById(riskId);
@@ -73,6 +76,7 @@ public class OrderRiskTrackingOrchestrator {
         }
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public boolean escalateRisk(Long riskId, String newAssignedTo) {
         try {
             OrderRiskTracking tracking = riskTrackingMapper.selectById(riskId);

@@ -184,7 +184,7 @@ const ProgressModals: React.FC<ProgressModalsProps> = (props) => {
         description={pendingCloseOrder ? (
           <div>
             {pendingCloseOrder.isSpecial && (
-              <div style={{ color: '#faad14', marginBottom: 8 }}>
+              <div style={{ color: 'var(--color-warning)', marginBottom: 8 }}>
                 ⚠️ 该订单未满足关单条件（合格入库 {pendingCloseOrder.warehousingQualified}/{pendingCloseOrder.minRequired}），特需关单不可撤销，请填写原因。
               </div>
             )}

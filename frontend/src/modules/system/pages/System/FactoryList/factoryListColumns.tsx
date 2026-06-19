@@ -142,7 +142,7 @@ export const getFactoryColumns = (actions: FactoryColumnActions): ColumnsType<Fa
       dataIndex: 'overallScore',
       key: 'overallScore',
       width: 80,
-      render: (v: number) => v != null ? <span style={{ fontWeight: 600, color: v >= 90 ? '#52c41a' : v >= 75 ? '#1890ff' : v >= 60 ? '#faad14' : '#ff4d4f' }}>{v.toFixed(1)}</span> : '-',
+      render: (v: number) => v != null ? <span style={{ fontWeight: 600, color: v >= 90 ? 'var(--color-success)' : v >= 75 ? 'var(--color-info)' : v >= 60 ? 'var(--color-warning)' : 'var(--color-danger)' }}>{v.toFixed(1)}</span> : '-',
     },
     { title: '联系人', dataIndex: 'contactPerson', key: 'contactPerson', width: 120 },
     { title: '联系电话', dataIndex: 'contactPhone', key: 'contactPhone', width: 140 },

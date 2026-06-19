@@ -34,7 +34,7 @@ const AnomalyBanner: React.FC<AnomalyBannerProps> = ({ visible, items, onClose, 
         description={
           <div style={{ marginTop: 4, display: 'flex', flexDirection: 'column', gap: 3 }}>
             {items.slice(0, 5).map((item, idx) => {
-              const severityColor = item.severity === 'critical' ? '#ff4d4f' : '#fa8c16';
+              const severityColor = item.severity === 'critical' ? 'var(--color-danger)' : 'var(--color-warning)';
               return (
                 <button
                   key={idx}

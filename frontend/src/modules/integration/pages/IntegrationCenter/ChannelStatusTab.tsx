@@ -83,18 +83,18 @@ const ChannelStatusTab: React.FC<Props> = ({ active }) => {
         <Row gutter={16} style={{ marginBottom: 24, marginTop: 16 }}>
           <Col span={8}>
             <Card variant="borderless" style={{ background: '#f6ffed', borderRadius: 8 }}>
-              <Statistic title="迗7天支付流水" value={stats.paymentCount7d} suffix="笔" styles={{ content: { color: '#52c41a' } }} />
+              <Statistic title="迗7天支付流水" value={stats.paymentCount7d} suffix="笔" styles={{ content: { color: 'var(--color-success)' } }} />
             </Card>
           </Col>
           <Col span={8}>
             <Card variant="borderless" style={{ background: '#e6f4ff', borderRadius: 8 }}>
-              <Statistic title="迗7天物流运单" value={stats.logisticsCount7d} suffix="件" styles={{ content: { color: '#1677ff' } }} />
+              <Statistic title="迗7天物流运单" value={stats.logisticsCount7d} suffix="件" styles={{ content: { color: 'var(--color-primary)' } }} />
             </Card>
           </Col>
           <Col span={8}>
-            <Card variant="borderless" style={{ background: stats.unprocessedCallbacks > 0 ? '#fff7e6' : '#f9f9f9', borderRadius: 8 }}>
+            <Card variant="borderless" style={{ background: stats.unprocessedCallbacks > 0 ? '#FFF7E6' : '#f9f9f9', borderRadius: 8 }}>
               <Statistic title="待处理回调" value={stats.unprocessedCallbacks} suffix="条"
-                styles={{ content: { color: stats.unprocessedCallbacks > 0 ? '#fa8c16' : '#999' } }} />
+                styles={{ content: { color: stats.unprocessedCallbacks > 0 ? 'var(--color-warning)' : '#999' } }} />
             </Card>
           </Col>
         </Row>
@@ -123,10 +123,10 @@ const ChannelStatusTab: React.FC<Props> = ({ active }) => {
                   styles={{ body: { paddingTop: 12 } }}
                 >
                   {ch.mode === 'LIVE' && (
-                    <p style={{ color: '#52c41a', margin: '0 0 8px' }}> 密钥已配置，正在调用真实接口</p>
+                    <p style={{ color: 'var(--color-success)', margin: '0 0 8px' }}> 密钥已配置，正在调用真实接口</p>
                   )}
                   {ch.mode === 'MOCK' && (
-                    <p style={{ color: '#fa8c16', margin: '0 0 8px' }}>尚未填写密钥，当前以模拟模式运行</p>
+                    <p style={{ color: 'var(--color-warning)', margin: '0 0 8px' }}>尚未填写密钥，当前以模拟模式运行</p>
                   )}
                   {ch.mode === 'DISABLED' && (
                     <p style={{ color: 'var(--color-text-tertiary)', margin: '0 0 8px' }}>配置文件中已禁用（enabled=false）</p>

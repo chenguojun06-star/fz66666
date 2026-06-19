@@ -372,7 +372,7 @@ const StylePatternTab: React.FC<Props> = ({
       cols.push({
         title: (
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-            <span style={{ fontWeight: 600, color: 'var(--primary-color, #1677ff)' }}>{size}</span>
+            <span style={{ fontWeight: 600, color: 'var(--primary-color, var(--color-primary))' }}>{size}</span>
             {!childReadOnly && extraSizes.includes(size) && (
               <Button
                
@@ -447,7 +447,7 @@ const StylePatternTab: React.FC<Props> = ({
                 style={{
                   fontSize: '12px',
                   color: 'var(--color-warning)',
-                  backgroundColor: '#fffbe6',
+                  backgroundColor: '#FFFBE6',
                   border: '1px solid #ffe58f',
                   padding: '2px 8px',
                   borderRadius: '4px',

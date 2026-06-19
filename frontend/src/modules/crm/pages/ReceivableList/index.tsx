@@ -492,7 +492,7 @@ const ReceivableList: React.FC = () => {
                 value={Number(stats.totalPending)}
                 precision={2}
                 prefix={<DollarOutlined />}
-                styles={{ content: { color: '#1677ff' } }}
+                styles={{ content: { color: 'var(--color-primary)' } }}
                 formatter={v => `¥ ${toMoneyLocale(Number(v))}`}
               />
             </Card>
@@ -504,7 +504,7 @@ const ReceivableList: React.FC = () => {
                 value={Number(stats.totalOverdue)}
                 precision={2}
                 prefix={<WarningOutlined />}
-                styles={{ content: { color: '#ff4d4f' } }}
+                styles={{ content: { color: 'var(--color-danger)' } }}
                 formatter={v => `¥ ${toMoneyLocale(Number(v))}`}
               />
             </Card>
@@ -515,7 +515,7 @@ const ReceivableList: React.FC = () => {
                 title="逾期笔数"
                 value={stats.overdueCount}
                 prefix={<ExclamationCircleOutlined />}
-                styles={{ content: { color: '#fa8c16' } }}
+                styles={{ content: { color: 'var(--color-warning)' } }}
                 suffix="笔"
               />
             </Card>
@@ -526,7 +526,7 @@ const ReceivableList: React.FC = () => {
                 title="本月新增应收"
                 value={stats.newThisMonth}
                 prefix={<CheckCircleOutlined />}
-                styles={{ content: { color: '#52c41a' } }}
+                styles={{ content: { color: 'var(--color-success)' } }}
                 suffix="笔"
               />
             </Card>

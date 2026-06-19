@@ -53,7 +53,7 @@ const processingBannerStyle = {
   padding: '8px 10px',
   borderRadius: 8,
   border: '1px solid #ffd591',
-  background: '#fff7e6',
+  background: '#FFF7E6',
   display: 'grid',
   gap: 4,
 } as const;
@@ -273,7 +273,7 @@ const ProductionSheetPanel: React.FC<ProductionSheetPanelProps> = ({ styleNo, on
               </Form.Item>
             </Form>
             <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-              <Button danger type="default" loading={returnDescSaving} onClick={handleReturnDescSave} style={{ background: 'var(--color-bg-base)', color: '#ff4d4f', borderColor: '#ff4d4f' }}>确认退回</Button>
+              <Button danger type="default" loading={returnDescSaving} onClick={handleReturnDescSave} style={{ background: 'var(--color-bg-base)', color: 'var(--color-danger)', borderColor: 'var(--color-danger)' }}>确认退回</Button>
             </div>
           </div>
           <div style={directCardStyle}>
@@ -356,7 +356,7 @@ const ProductionSheetPanel: React.FC<ProductionSheetPanelProps> = ({ styleNo, on
         onCancel={() => { setReturnDescVisible(false); returnDescForm.resetFields(); }}
         footer={<Space><Button onClick={() => { setReturnDescVisible(false); returnDescForm.resetFields(); }}>取消</Button><Button danger loading={returnDescSaving} onClick={handleReturnDescSave}>确认退回</Button></Space>}>
         {returnDescRecord?.descriptionReturnComment && (
-          <div style={{ marginBottom: 12, padding: '8px 12px', background: '#fff7e6', border: '1px solid #ffd591', borderRadius: 4, fontSize: 14 }}>
+          <div style={{ marginBottom: 12, padding: '8px 12px', background: '#FFF7E6', border: '1px solid #ffd591', borderRadius: 4, fontSize: 14 }}>
             上次退回：{returnDescRecord.descriptionReturnComment}（{(returnDescRecord as any).descriptionReturnBy}）
           </div>
         )}

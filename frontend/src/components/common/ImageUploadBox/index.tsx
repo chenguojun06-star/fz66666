@@ -24,8 +24,8 @@ export interface ImageUploadBoxProps {
 
 const MUTED_COLOR = '#94a3b8';
 const LIGHT_GRAY = '#d1d5db';
-const ADD_BG = '#f8fafc';
-const BORDER_COLOR = '#e5e7eb';
+const ADD_BG = 'var(--color-bg-page)';
+const BORDER_COLOR = 'var(--color-border)';
 const DASHED_BORDER = '#cbd5e1';
 
 function ImageUploadBox({

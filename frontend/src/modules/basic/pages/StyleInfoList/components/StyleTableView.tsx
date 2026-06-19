@@ -257,7 +257,7 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
                     percent={overallProgress}
                     showInfo={false}
                    
-                    strokeColor={isScrappedRow(record) ? '#9ca3af' : overallProgress >= 100 ? '#52c41a' : '#2d7ff9'}
+                    strokeColor={isScrappedRow(record) ? 'var(--color-text-tertiary)' : overallProgress >= 100 ? 'var(--color-success)' : 'var(--color-primary)'}
                     className="style-smart-row__progress-bar"
                   />
                 </div>
@@ -451,7 +451,7 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
                     percent={selectedStage.stage.progress}
                     showInfo={false}
                    
-                    strokeColor="#2d7ff9"
+                    strokeColor="var(--color-primary)"
                   />
                 </div>
                 <div className="style-smart-stage-modal__meta">
@@ -575,7 +575,7 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
                       <div className="style-smart-stage-modal__fact">
                         <span>领取人</span>
                         <strong
-                          style={{ cursor: sample.sampleReceiverLabel !== '-' ? 'pointer' : 'default', color: sample.sampleReceiverLabel !== '-' ? '#1677ff' : undefined, textDecoration: sample.sampleReceiverLabel !== '-' ? 'underline' : undefined }}
+                          style={{ cursor: sample.sampleReceiverLabel !== '-' ? 'pointer' : 'default', color: sample.sampleReceiverLabel !== '-' ? 'var(--color-primary)' : undefined, textDecoration: sample.sampleReceiverLabel !== '-' ? 'underline' : undefined }}
                           onClick={() => sample.sampleReceiverLabel !== '-' && setRemarkTarget({ open: true, styleNo: selectedStage?.record?.styleNo || '', defaultRole: '领取人 — ' + sample.sampleReceiverLabel })}
                         >{sample.sampleReceiverLabel}</strong>
                       </div>
@@ -667,7 +667,7 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
                       <div style={{ marginTop: '16px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                           <span style={{ fontSize: '14px', fontWeight: 500 }}>样衣生产进度</span>
-                          <span style={{ fontSize: '14px', fontWeight: 600, color: '#2d7ff9' }}>
+                          <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--color-primary)' }}>
                             {Math.round(sample.sampleStageProgressItems.reduce((sum, item) => sum + item.percent, 0) / sample.sampleStageProgressItems.length)}%
                           </span>
                         </div>
@@ -675,7 +675,7 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
                           percent={Math.round(sample.sampleStageProgressItems.reduce((sum, item) => sum + item.percent, 0) / sample.sampleStageProgressItems.length)}
                           showInfo={false}
                           size={8}
-                          strokeColor={sample.sampleStageProgressItems.reduce((sum, item) => sum + item.percent, 0) / sample.sampleStageProgressItems.length >= 100 ? '#52c41a' : '#2d7ff9'}
+                          strokeColor={sample.sampleStageProgressItems.reduce((sum, item) => sum + item.percent, 0) / sample.sampleStageProgressItems.length >= 100 ? 'var(--color-success)' : 'var(--color-primary)'}
                         />
                       </div>
                     ) : null}
@@ -716,7 +716,7 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
                   <div className="style-smart-stage-modal__fact">
                     <span>审核人</span>
                     <strong
-                      style={{ cursor: confirm.confirmReviewerLabel !== '-' ? 'pointer' : 'default', color: confirm.confirmReviewerLabel !== '-' ? '#1677ff' : undefined, textDecoration: confirm.confirmReviewerLabel !== '-' ? 'underline' : undefined }}
+                      style={{ cursor: confirm.confirmReviewerLabel !== '-' ? 'pointer' : 'default', color: confirm.confirmReviewerLabel !== '-' ? 'var(--color-primary)' : undefined, textDecoration: confirm.confirmReviewerLabel !== '-' ? 'underline' : undefined }}
                       onClick={() => confirm.confirmReviewerLabel !== '-' && setRemarkTarget({ open: true, styleNo: selectedStage?.record?.styleNo || '', defaultRole: '审核人 — ' + confirm.confirmReviewerLabel })}
                     >{confirm.confirmReviewerLabel}</strong>
                   </div>

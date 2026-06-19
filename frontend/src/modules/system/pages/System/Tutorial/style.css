@@ -54,12 +54,12 @@
 }
 
 .tutorial-card .ant-steps-item-finish .ant-steps-item-icon {
-  background-color: #52c41a;
-  border-color: #52c41a;
+  background-color: var(--color-success);
+  border-color: var(--color-success);
 }
 
 .tutorial-card .ant-steps-item-finish .ant-steps-item-icon > .ant-steps-icon {
-  color: #fff;
+  color: var(--color-bg-base);
 }
 
 .tutorial-card .ant-alert {
