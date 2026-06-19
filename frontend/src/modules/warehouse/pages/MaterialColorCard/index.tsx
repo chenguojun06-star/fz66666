@@ -1,14 +1,15 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   Button, Card, Input, Select, Form, Row, Col, InputNumber, Image, Tag,
-  Modal, Space, message as antdMessage, Popconfirm, Avatar,
+  Modal, Space, message as antdMessage, Popconfirm, Avatar, Descriptions,
 } from 'antd';
 import {
   PlusOutlined, EditOutlined, DeleteOutlined, ReloadOutlined,
-  FileTextOutlined, EyeOutlined, AppstoreAddOutlined,
+  FileTextOutlined, EyeOutlined, AppstoreAddOutlined, ScanOutlined,
 } from '@ant-design/icons';
 import ImageUploadBox from '@/components/common/ImageUploadBox';
 import SupplierSelect from '@/components/common/SupplierSelect';
+// 注：MaterialColorCardRecognizer 组件用于物料库页面使用，此处使用内联按钮实现色卡本的母卡识别
 import api from '@/utils/api';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { getMaterialTypeLabel } from '@/utils/materialType';
@@ -75,6 +76,11 @@ const MaterialColorCardPage: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [coverImageFiles, setCoverImageFiles] = useState<any[]>([]);
 
+  // 查看颜色详情弹窗
+  const [colorDetailVisible, setColorDetailVisible] = useState(false);
+  const [colorDetailItem, setColorDetailItem] = useState<MaterialColorCardItem | null>(null);
+  const [colorDetailParent, setColorDetailParent] = useState<MaterialColorCard | null>(null);
+
   // 物料管理弹窗
   const [itemVisible, setItemVisible] = useState(false);
   const [currentItems, setCurrentItems] = useState<MaterialColorCardItem[]>([]);
@@ -102,6 +108,13 @@ const MaterialColorCardPage: React.FC = () => {
   }, [keyword, materialType, page, pageSize]);
 
   useEffect(() => { fetchList(); }, [fetchList]);
+
+  // 打开颜色详情（合并母卡+颜色信息）
+  const openColorDetail = (card: MaterialColorCard, item: MaterialColorCardItem) => {
+    setColorDetailParent(card);
+    setColorDetailItem(item);
+    setColorDetailVisible(true);
+  };
 
   // ==================== 母卡 CRUD ====================
   const openCreateDialog = async () => {
@@ -177,6 +190,7 @@ const MaterialColorCardPage: React.FC = () => {
   const openItemsDialog = async (card: MaterialColorCard) => {
     setCurrentCardId(card.id);
     setCurrentCardName(card.cardName);
+    setColorDetailParent(card);
     try {
       const res = await api.get<{ code: number; data: any }>(`/material-color-card/${card.id}`);
       if (res.code === 200) {
@@ -341,7 +355,7 @@ const MaterialColorCardPage: React.FC = () => {
 
           <Space size={8} wrap>
             <Button size="small" type="primary" icon={<AppstoreAddOutlined />} onClick={() => openItemsDialog(card)}>
-              物料管理
+              颜色管理 ({card.materialCount || 0})
             </Button>
             <Button size="small" icon={<EyeOutlined />} onClick={() => handleGenerateMaterials(card)}>
               生成到物料资料
@@ -425,6 +439,76 @@ const MaterialColorCardPage: React.FC = () => {
         confirmLoading={submitting}
       >
         <Form form={form} layout="vertical" size="middle">
+          <div style={{
+            padding: 12, marginBottom: 16, background: 'var(--color-bg-container)',
+            borderRadius: 8, border: '1px dashed var(--color-border-light)',
+          }}>
+            <Space>
+              <Button type="primary" icon={<ScanOutlined />} onClick={() => {
+                // 打开色卡识别器
+                // 临时创建一个不依赖外部 prop 的识别入口
+                (async () => {
+                  // 用隐藏组件方式不行，直接复用 MaterialColorCardRecognizer
+                  // 简单方案：打开一个临时识别弹窗
+                  const input = document.createElement('input');
+                  input.type = 'file';
+                  input.accept = 'image/*';
+                  const file: File = await new Promise((resolve) => {
+                    input.onchange = (ev: any) => resolve(ev.target.files[0]);
+                    input.click();
+                  });
+                  if (!file) return;
+                  const formData = new FormData();
+                  formData.append('file', file);
+                  const uploadRes = await api.post<{ code: number; data: string }>(
+                    '/common/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } },
+                  );
+                  if (uploadRes.code !== 200 || !uploadRes.data) {
+                    antdMessage.error('图片上传失败');
+                    return;
+                  }
+                  const serverImageUrl = String(uploadRes.data);
+                  form.setFieldsValue({ coverImage: serverImageUrl });
+                  setCoverImageFiles([{ url: serverImageUrl }]);
+                  const recRes = await api.post<{ code: number; data: any }>(
+                    '/material/database/recognize-color-card', { imageUrl: serverImageUrl },
+                  );
+                  if (recRes.code === 200 && recRes.data && recRes.data.success) {
+                    const d = recRes.data;
+                    const values: Record<string, string> = {};
+                    const fieldMap: [string, string][] = [
+                      ['materialName', 'cardName'], ['materialType', 'materialType'],
+                      ['fabricWidth', 'fabricWidth'], ['fabricWeight', 'fabricWeight'],
+                      ['fabricComposition', 'fabricComposition'],
+                      ['specifications', 'specifications'], ['unit', 'unit'],
+                      ['supplierName', 'supplierName'], ['description', 'remark'],
+                    ];
+                    fieldMap.forEach(([from, to]) => {
+                      const fv = d[from];
+                      if (fv && fv.textValue) values[to] = fv.textValue;
+                    });
+                    // 色卡名
+                    if (!values.cardName && d.materialName) values.cardName = d.materialName.textValue;
+                    if (!values.cardName) values.cardName = '新色卡 ' + new Date().toISOString().slice(0, 10);
+                    // 自动生成编号
+                    try {
+                      const genRes = await api.get<{ code: number; data: string }>(
+                        '/material-color-card/generate-code',
+                      );
+                      if (genRes.code === 200 && genRes.data) values.cardCode = genRes.data;
+                    } catch {}
+                    form.setFieldsValue(values);
+                    antdMessage.success('已自动填充识别结果，请核对后保存');
+                  } else {
+                    antdMessage.warning(recRes.data?.errorMessage || '识别失败，请手动输入');
+                  }
+                })();
+              }}>
+                AI 拍照识别色卡
+              </Button>
+              <span style={{ color: '#888', fontSize: 12 }}>上传色卡/吊牌照片，自动识别物料类型、规格、成分等信息</span>
+            </Space>
+          </div>
           <Row gutter={12}>
             <Col xs={24} sm={8}>
               <Form.Item name="cardCode" label="色卡编号" rules={[{ required: true, message: '请输入编号' }]}>
@@ -536,53 +620,48 @@ const MaterialColorCardPage: React.FC = () => {
         ]}
       >
         <Space style={{ marginBottom: 12 }}>
-          <Button type="primary" icon={<PlusOutlined />} onClick={addEmptyItem}>+ 添加物料</Button>
+          <Button type="primary" icon={<PlusOutlined />} onClick={addEmptyItem}>+ 添加颜色</Button>
           <span style={{ color: '#888' }}>共 {currentItems.length} 条</span>
+          <span style={{ color: '#bbb', fontSize: 12 }}>规格/成分/幅宽继承自母卡</span>
         </Space>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 500, overflowY: 'auto' }}>
           {currentItems.length === 0 && (
             <div style={{ padding: 40, textAlign: 'center', color: '#999' }}>
-              暂无物料条目，点击"添加物料"开始添加
+              暂无颜色条目，点击"+ 添加颜色"开始录入
             </div>
           )}
           {currentItems.map((item, idx) => (
             <Card key={idx} size="small" style={{ border: '1px solid #eee' }}>
               <Row gutter={[8, 8]} align="middle">
                 <Col xs={24} sm={1}>
-                  <Tag color="blue">#{idx + 1}</Tag>
-                </Col>
-                <Col xs={24} sm={3}>
-                  <Input placeholder="物料编号" value={item.materialCode || ''}
-                    onChange={(e) => updateItem(idx, 'materialCode', e.target.value)} size="small" />
-                </Col>
-                <Col xs={24} sm={4}>
-                  <Input placeholder="物料名称*" value={item.materialName || ''}
-                    onChange={(e) => updateItem(idx, 'materialName', e.target.value)} size="small" />
+                  <Tag color="blue" style={{ cursor: 'pointer' }}
+                    title="查看完整信息"
+                    onClick={() => colorDetailParent && openColorDetail(colorDetailParent, item)}>#{idx + 1}</Tag>
                 </Col>
                 <Col xs={24} sm={3}>
                   <Input placeholder="颜色" value={item.color || ''}
                     onChange={(e) => updateItem(idx, 'color', e.target.value)} size="small" />
                 </Col>
-                <Col xs={24} sm={3}>
+                <Col xs={24} sm={4}>
+                  <Input placeholder="物料名称*" value={item.materialName || ''}
+                    onChange={(e) => updateItem(idx, 'materialName', e.target.value)} size="small" />
+                </Col>
+                <Col xs={24} sm={2}>
+                  <Input placeholder="编号" value={item.materialCode || ''}
+                    onChange={(e) => updateItem(idx, 'materialCode', e.target.value)} size="small" />
+                </Col>
+                <Col xs={24} sm={2}>
                   <InputNumber placeholder="单价" value={item.unitPrice}
                     onChange={(v) => updateItem(idx, 'unitPrice', v)}
                     min={0} step={0.01} style={{ width: '100%' }} size="small" />
                 </Col>
                 <Col xs={24} sm={3}>
-                  <Select placeholder="物料类型" value={item.materialType || undefined}
-                    onChange={(v) => updateItem(idx, 'materialType', v)} size="small" style={{ width: '100%' }}>
-                    {MATERIAL_TYPE_OPTIONS.map((o) => (
-                      <Select.Option key={o.value} value={o.value}>{o.label}</Select.Option>
-                    ))}
-                  </Select>
-                </Col>
-                <Col xs={24} sm={5}>
                   <Space.Compact>
                     <Button size="small" icon={<PlusOutlined />} onClick={async () => {
                       const input = document.createElement('input');
                       input.type = 'file';
                       input.accept = 'image/*';
-                      const file: File = await new Promise((resolve, reject) => {
+                      const file: File = await new Promise((resolve) => {
                         input.onchange = (ev: any) => resolve(ev.target.files[0]);
                         input.click();
                       });
@@ -604,10 +683,74 @@ const MaterialColorCardPage: React.FC = () => {
                 <Col xs={24} sm={1}>
                   <Button type="link" danger size="small" onClick={() => removeItem(idx)}>删除</Button>
                 </Col>
+                <Col xs={24} sm={8}>
+                  <Input placeholder="备注" value={item.remark || ''}
+                    onChange={(e) => updateItem(idx, 'remark', e.target.value)} size="small" />
+                </Col>
               </Row>
             </Card>
           ))}
         </div>
+      </Modal>
+
+      {/* ===== 颜色详情弹窗（合并母卡+颜色信息） ===== */}
+      <Modal
+        title={`颜色详情 - ${colorDetailParent?.cardName || ''}`}
+        open={colorDetailVisible}
+        onCancel={() => setColorDetailVisible(false)}
+        footer={[
+          <Button key="close" onClick={() => setColorDetailVisible(false)}>关闭</Button>,
+        ]}
+        width={720}
+      >
+        {colorDetailItem && colorDetailParent && (
+          <div>
+            {/* 左侧图片 + 右侧信息 */}
+            <div style={{ display: 'flex', gap: 20, marginBottom: 16 }}>
+              <div style={{ width: 180, flexShrink: 0 }}>
+                {colorDetailItem.image ? (
+                  <Image
+                    src={getFullAuthedFileUrl(colorDetailItem.image)}
+                    width={180}
+                    height={180}
+                    style={{ objectFit: 'cover', borderRadius: 8, border: '1px solid var(--color-border-light)' }}
+                  />
+                ) : (
+                  <div style={{
+                    width: 180, height: 180, borderRadius: 8,
+                    border: '1px dashed var(--color-border)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    background: 'var(--color-bg-page)', color: '#94a3b8',
+                  }}>
+                    <FileTextOutlined style={{ fontSize: 40 }} />
+                  </div>
+                )}
+              </div>
+
+              <div style={{ flex: 1 }}>
+                <Descriptions column={1} size="small" bordered>
+                  <Descriptions.Item label="颜色">{colorDetailItem.color || '-'}</Descriptions.Item>
+                  <Descriptions.Item label="物料名称">{colorDetailItem.materialName || '-'}</Descriptions.Item>
+                  <Descriptions.Item label="物料编号">{colorDetailItem.materialCode || '-'}</Descriptions.Item>
+                  <Descriptions.Item label="单价">{colorDetailItem.unitPrice != null ? `¥${colorDetailItem.unitPrice}` : '-'}</Descriptions.Item>
+                  <Descriptions.Item label="物料类型">{getMaterialTypeLabel(colorDetailParent.materialType)}</Descriptions.Item>
+                  <Descriptions.Item label="供应商">
+                    {colorDetailParent.supplierName || '-'}
+                    {colorDetailParent.supplierContactPerson && ` (${colorDetailParent.supplierContactPerson})`}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="幅宽">{colorDetailParent.fabricWidth || '-'}</Descriptions.Item>
+                  <Descriptions.Item label="克重">{colorDetailParent.fabricWeight || '-'}</Descriptions.Item>
+                  <Descriptions.Item label="规格">{colorDetailParent.specifications || '-'}</Descriptions.Item>
+                  <Descriptions.Item label="成分">{colorDetailParent.fabricComposition || '-'}</Descriptions.Item>
+                  <Descriptions.Item label="单位">{colorDetailParent.unit || '-'}</Descriptions.Item>
+                  {colorDetailItem.remark && (
+                    <Descriptions.Item label="备注">{colorDetailItem.remark}</Descriptions.Item>
+                  )}
+                </Descriptions>
+              </div>
+            </div>
+          </div>
+        )}
       </Modal>
     </>
   );

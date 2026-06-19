@@ -162,17 +162,10 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
     const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
     const printerName = userInfo.name || userInfo.username || '未知用户';
     const printerAccount = userInfo.username || '';
-    const headerInfo = [
-      styleNo ? `款号: ${styleNo}` : '',
-      styleName ? `款名: ${styleName}` : '',
-      color ? `颜色: ${color}` : '',
-      (propSizes || (extraInfo as any)?.sizes) ? `码数: ${propSizes || (extraInfo as any)?.sizes}` : '',
-      (orderNo || orderId) ? `订单号: ${orderNo || orderId}` : '',
-    ].filter(Boolean).join('  |  ');
     const printDate = new Date().toLocaleString('zh-CN');
     const printerInfo = printerAccount ? `打印人: ${printerName} (${printerAccount})` : `打印人: ${printerName}`;
     const htmlContent = buildPrintHtml({
-      headerInfo, printerInfo, printDate, styleNo, bodyHtml: printContent.innerHTML,
+      headerInfo: '', printerInfo, printDate, styleNo, bodyHtml: printContent.innerHTML,
       tenantName: user?.tenantName,
       pageTitle: mode === 'sample' ? '样衣开发单' : mode === 'production' ? '大货生产单' : '下单管理单',
     });
@@ -400,35 +393,35 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
           <div className="style-print-content" id="style-print-content" style={{ background: 'var(--color-bg-base)', padding: 20, border: '1px solid var(--color-border)', borderRadius: 12 }}>
           <style>{`
             .print-section { margin-bottom: 16px; }
-            .print-section-title { font-size: 12px; font-weight: 600; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 2px solid var(--color-info); }
+            .print-section-title { font-size: 12px; font-weight: 600; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 0.75px solid #ccc; }
             /* 统一打印表格样式 */
             .pt { width: 100%; border-collapse: collapse; font-size: 12px; }
-            .pt th, .pt td { border: 1px solid #333; padding: 6px 10px; vertical-align: middle; }
-            .pt th { background: var(--color-border-light); font-weight: 600; text-align: center; white-space: nowrap; }
-            .pt td { color: #111; }
-            .pt .label-cell { background: var(--color-border-light); font-weight: 500; color: #333; width: 100px; white-space: nowrap; }
-            .pt .total-row td { background: var(--color-border-light); font-weight: 700; }
-            .pt .highlight-cell { font-weight: 700; color: var(--color-info); }
+            .pt th, .pt td { border: 0.5px solid #d0d0d0; padding: 5px 8px; vertical-align: middle; }
+            .pt th { background: #f5f5f5; font-weight: 600; text-align: center; white-space: nowrap; }
+            .pt td { color: #333; }
+            .pt .label-cell { background: #f5f5f5; font-weight: 500; color: #333; width: 100px; white-space: nowrap; }
+            .pt .total-row td { background: #f5f5f5; font-weight: 700; }
+            .pt .highlight-cell { font-weight: 700; color: #1d39c4; }
           `}</style>
           {/* 基本信息 */}
           {options.basicInfo && (
             <div className="print-section">
               {/* 主体：左列（图片+二维码） + 右列（信息） */}
-              <div style={{ display: 'flex', gap: 20, padding: 16, border: '1px solid #333', background: 'var(--color-bg-base)', borderRadius: 8, breakInside: 'avoid' }}>
+              <div style={{ display: 'flex', gap: 20, padding: 16, border: '0.5px solid #d0d0d0', background: 'var(--color-bg-base)', borderRadius: 8, breakInside: 'avoid' }}>
                 {/* 左侧：图片 + 二维码（纵向排列） */}
-                <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center', width: 120 }}>
+                <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center', width: 100 }}>
                   {resolvedCover ? (
                     <Image src={getFullAuthedFileUrl(resolvedCover)} alt={styleNo}
-                      style={{ width: 120, height: 120, objectFit: 'cover', borderRadius: 6, border: '1px solid var(--color-border)' }} preview={{ cover: <span>预览</span> }} />
+                      style={{ width: 90, height: 90, objectFit: 'cover', borderRadius: 6, border: '1px solid #e0e0e0' }} preview={{ cover: <span>预览</span> }} />
                   ) : (
-                    <div style={{ width: 120, height: 120, borderRadius: 6, border: '1px dashed #ccc', background: 'var(--color-bg-container)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#999', fontSize: 12 }}>无图片</div>
+                    <div style={{ width: 90, height: 90, borderRadius: 6, border: '1px dashed #ccc', background: '#fafafa', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#999', fontSize: 12 }}>无图片</div>
                   )}
                   {/* 二维码 */}
-                  <div style={{ width: 120, height: 120, padding: 6, border: '1px solid var(--color-border-antd)', borderRadius: 6, background: 'var(--color-bg-base)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+                  <div style={{ width: 90, height: 90, padding: 4, border: '1px solid #e0e0e0', borderRadius: 6, background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
                     {qrPngDataUrl
-                      ? <img src={qrPngDataUrl} alt="QR" style={{ width: 100, height: 100, display: 'block' }} />
-                      : <QRCode value={qrValue} size={100} />}
-                    {user?.tenantLogo || user?.logo ? <img src={(user?.tenantLogo || user?.logo) as string} alt="logo" style={{ position: 'absolute', width: 24, height: 24, borderRadius: '50%', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', objectFit: 'contain', background: 'var(--color-bg-base)' }} /> : null}
+                      ? <img src={qrPngDataUrl} alt="QR" style={{ width: 80, height: 80, display: 'block' }} />
+                      : <QRCode value={qrValue} size={80} />}
+                    {user?.tenantLogo || user?.logo ? <img src={(user?.tenantLogo || user?.logo) as string} alt="logo" style={{ position: 'absolute', width: 20, height: 20, borderRadius: '50%', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', objectFit: 'contain', background: '#fff' }} /> : null}
                   </div>
                   <div style={{ fontSize: 11, color: '#999', textAlign: 'center' }}>扫码查看详情</div>
                 </div>
@@ -459,14 +452,7 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
                     // 客户与销售渠道信息（样衣模式）
                     if (options.customerInfoBlock && mode === 'sample') {
                       const prodSheet = data.productionSheet as any;
-                      // 销售渠道
                       allFields.push({ label: '销售渠道', value: prodSheet?.salesChannel || empty });
-                      // 客户详情（客户名称、联系人、电话、地址）
-                      if (prodSheet?.customerName) {
-                        allFields.push({ label: '客户', value: prodSheet?.customerName || empty });
-                      } else {
-                        allFields.push({ label: '客户', value: prodSheet?.customer || empty });
-                      }
                       allFields.push({ label: '跟单员', value: prodSheet?.orderType || empty });
                       allFields.push({ label: '设计师', value: prodSheet?.sampleNo || empty });
                       allFields.push({ label: '打板价', value: prodSheet?.price ? `¥${Number(prodSheet.price).toFixed(2)}` : empty });
@@ -477,18 +463,8 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
                       const prodSheet = data.productionSheet as any;
                       allFields.push({ label: '订单号', value: orderNo || empty });
                       allFields.push({ label: '销售渠道', value: prodSheet?.salesChannel || empty });
-                      // 客户详情
-                      if (prodSheet?.customerName) {
-                        allFields.push({ label: '客户', value: prodSheet?.customerName || empty });
-                      } else {
-                        allFields.push({ label: '客户', value: prodSheet?.customer || empty });
-                      }
-                      allFields.push({ label: '联系人', value: prodSheet?.customerContact || empty });
-                      allFields.push({ label: '电话', value: prodSheet?.customerPhone || empty });
-                      allFields.push({ label: '地址', value: prodSheet?.customerAddress || empty });
                       allFields.push({ label: '下单人员', value: orderCreatorName || (extraInfo as any)?.下单人员 || empty });
                       allFields.push({ label: '跟单员', value: prodSheet?.orderType || empty });
-                      // 注意："下单数量 已移到基础信息表格下方单独显示（大货模式专属）
                     }
 
                     // 纸样/加工信息
@@ -573,8 +549,8 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
           )}
           {/* 下单明细（码数/颜色/数量配置表） */}
           {options.basicInfo && sizeColorMatrix && sizeColorMatrix.sizes.length > 0 && (
-            <div className="print-section" style={{ padding: 16, border: '1px solid #333', background: 'var(--color-bg-base)', borderRadius: 8, breakInside: 'avoid' }}>
-              <div style={{ fontWeight: 600, color: '#1f2937', marginBottom: 8, fontSize: 12, paddingBottom: 6, borderBottom: '1px solid #e8e8e8' }}>下单明细</div>
+            <div className="print-section" style={{ padding: 16, border: '0.5px solid #d0d0d0', background: 'var(--color-bg-base)', borderRadius: 8, breakInside: 'avoid' }}>
+              <div style={{ fontWeight: 600, color: '#333', marginBottom: 8, fontSize: 12, paddingBottom: 6, borderBottom: '0.75px solid #ccc' }}>下单明细</div>
               <div style={{ overflowX: 'auto' }}>
                 <table className="pt" style={{ breakInside: 'avoid' }}>
                   <thead>
@@ -597,10 +573,7 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
                     })}
                     <tr className="total-row">
                       <td>合计</td>
-                      {sizeColorMatrix.sizes.map((_, ci) => {
-                        const colTotal = sizeColorMatrix.matrixRows.reduce((s, r) => s + (r.quantities[ci] || 0), 0);
-                        return <td key={ci}>{colTotal}</td>;
-                      })}
+                      {sizeColorMatrix.sizes.map((_, ci) => <td key={ci}></td>)}
                       <td className="highlight-cell">
                         {sizeColorMatrix.matrixRows.reduce((s, r) => s + r.quantities.reduce((a, b) => a + b, 0), 0)}
                       </td>
@@ -620,8 +593,8 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
             colors.forEach(c => { colorTotals[c] = sizeDetails.filter(d => d.color === c).reduce((sum, d) => sum + d.quantity, 0); });
             const grandTotal = sizeDetails.reduce((sum, d) => sum + d.quantity, 0);
             return (
-              <div className="print-section" style={{ padding: 16, border: '1px solid #333', background: 'var(--color-bg-base)', borderRadius: 8, breakInside: 'avoid', marginBottom: 12 }}>
-                <div style={{ fontWeight: 600, color: '#1f2937', marginBottom: 8, fontSize: 12, paddingBottom: 6, borderBottom: '1px solid #e8e8e8' }}>下单明细</div>
+              <div className="print-section" style={{ padding: 16, border: '0.5px solid #d0d0d0', background: 'var(--color-bg-base)', borderRadius: 8, breakInside: 'avoid', marginBottom: 12 }}>
+                <div style={{ fontWeight: 600, color: '#333', marginBottom: 8, fontSize: 12, paddingBottom: 6, borderBottom: '0.75px solid #ccc' }}>下单明细</div>
                 <table className="pt">
                   <thead>
                     <tr>
@@ -642,8 +615,8 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
                       <td style={{ fontWeight: 600 }}>{grandTotal}</td>
                     </tr>
                     <tr className="total-row">
-                      <td>小计</td>
-                      {colors.map(color => <td key={color}>{colorTotals[color]}</td>)}
+                      <td>合计</td>
+                      {colors.map(color => <td key={color}></td>)}
                       <td className="highlight-cell">{grandTotal}</td>
                     </tr>
                   </tbody>

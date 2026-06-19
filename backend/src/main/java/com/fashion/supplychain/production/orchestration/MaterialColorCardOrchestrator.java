@@ -2,16 +2,23 @@ package com.fashion.supplychain.production.orchestration;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.fashion.supplychain.common.CosService;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.intelligence.orchestration.IntelligenceInferenceOrchestrator;
 import com.fashion.supplychain.production.entity.MaterialColorCard;
 import com.fashion.supplychain.production.entity.MaterialColorCardItem;
 import com.fashion.supplychain.production.entity.MaterialDatabase;
 import com.fashion.supplychain.production.mapper.MaterialColorCardItemMapper;
 import com.fashion.supplychain.production.mapper.MaterialColorCardMapper;
 import com.fashion.supplychain.production.service.MaterialDatabaseService;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.UUID;
 import com.fashion.supplychain.production.dto.MaterialColorCardRecognitionResult;
@@ -44,6 +51,14 @@ public class MaterialColorCardOrchestrator {
 
     @Autowired
     private MaterialDatabaseService materialDatabaseService;
+
+    @Autowired
+    private CosService cosService;
+
+    @Autowired
+    private IntelligenceInferenceOrchestrator inferenceOrchestrator;
+
+    private static final ObjectMapper jsonMapper = new ObjectMapper();
 
     // ==================== 色卡 CRUD ====================
 
@@ -283,17 +298,196 @@ public class MaterialColorCardOrchestrator {
      * 拍照识别物料色卡信息
      * 入参：已上传的图片 URL
      * 返回：物料各字段识别结果（含置信度），由前端自动填充表单并让用户确认
-     *
-     * 注意：该功能依赖视觉 AI 服务（如 Qdrant/工厂画像视觉识别）。
-     * 如果未启用或识别失败，返回含 errorMessage 的结果，前端展示"请手动输入"。
      */
     public MaterialColorCardRecognitionResult recognizeFromImage(String imageUrl) {
         MaterialColorCardRecognitionResult result = new MaterialColorCardRecognitionResult();
         result.setImageUrl(imageUrl);
-        result.setSuccess(false);
-        result.setErrorMessage("视觉识别模块未启用，请手动输入");
-        log.info("[MATERIAL-COLOR-CARD-RECOGNIZE] imageUrl={} — 视觉识别未配置，返回手动输入提示", imageUrl);
+        if (!StringUtils.hasText(imageUrl)) {
+            result.setErrorMessage("图片地址为空，请先上传图片");
+            return result;
+        }
+
+        // 1. 调用 Agnes Vision 视觉识别（图片内容真正被读取）
+        String aiRaw;
+        try {
+            if (inferenceOrchestrator != null && inferenceOrchestrator.isVisionEnabled()) {
+                String visionPrompt = buildColorCardSystemPrompt()
+                        + "\n请仔细阅读这张物料色卡/面料吊牌图片，按下方 JSON 格式返回识别结果。";
+                aiRaw = inferenceOrchestrator.chatWithVision(imageUrl, visionPrompt);
+                log.info("[ColorCardRecognize] Vision识别完成, 结果长度={}",
+                        aiRaw == null ? 0 : aiRaw.length());
+            } else {
+                // 降级：文本模式（效果有限，但仍可返回提示）
+                log.warn("[ColorCardRecognize] Agnes Vision 未配置或不可用");
+                result.setErrorMessage("视觉识别未配置，请手动输入信息");
+                return result;
+            }
+        } catch (Exception e) {
+            log.warn("[ColorCardRecognize] AI调用异常: {}", e.getMessage());
+            result.setErrorMessage("识别服务暂时不可用，请稍后重试或手动输入");
+            return result;
+        }
+
+        // 2. 解析 AI 返回的 JSON 为结构化结果
+        parseAiResultToFields(aiRaw, result);
+
+        if (!result.isSuccess()) {
+            result.setErrorMessage("未能从图片中识别出物料信息，请换一张清晰的图片或手动输入");
+        }
+        log.info("[ColorCardRecognize] 完成 success={} overallConfidence={}",
+                result.isSuccess(), result.getOverallConfidence());
         return result;
+    }
+
+    /** 色卡识别系统提示词（中文，明确字段含义 + JSON 模板） */
+    private String buildColorCardSystemPrompt() {
+        return "你是一名面料行业专家，负责识别物料色卡/吊牌信息。"
+                + "请从图片中提取以下字段，按如下 JSON 格式严格返回（不要输出额外文字或 markdown 代码块）：\n"
+                + "{\n"
+                + "  \"overallConfidence\": 0-100（整体识别置信度）,\n"
+                + "  \"aiHint\": \"可疑/不确定字段的提示（可空）\",\n"
+                + "  \"materialName\": {\"textValue\": \"物料名称（如 60支全棉贡缎）\", \"confidence\": 0-100, \"rawText\": \"\"},\n"
+                + "  \"materialType\": {\"textValue\": \"只允许 fabric/里料 或 lining/辅料 或 accessory 之一\", \"confidence\": 0-100, \"rawText\": \"\"},\n"
+                + "  \"color\": {\"textValue\": \"颜色名称或编号（如 米白 / 21#）\", \"confidence\": 0-100, \"rawText\": \"\"},\n"
+                + "  \"fabricWidth\": {\"textValue\": \"幅宽，含单位（如 150cm 或 58\\\"）\", \"confidence\": 0-100, \"rawText\": \"\"},\n"
+                + "  \"fabricWeight\": {\"textValue\": \"克重，含单位（如 210gsm）\", \"confidence\": 0-100, \"rawText\": \"\"},\n"
+                + "  \"fabricComposition\": {\"textValue\": \"成分含量（如 100%棉 或 70%棉 30%涤）\", \"confidence\": 0-100, \"rawText\": \"\"},\n"
+                + "  \"specifications\": {\"textValue\": \"规格/门幅（如 150cm*200cm）\", \"confidence\": 0-100, \"rawText\": \"\"},\n"
+                + "  \"unit\": {\"textValue\": \"单位（如 米/m/码/公斤/片）\", \"confidence\": 0-100, \"rawText\": \"\"},\n"
+                + "  \"supplierName\": {\"textValue\": \"供应商/厂家名称\", \"confidence\": 0-100, \"rawText\": \"\"},\n"
+                + "  \"unitPrice\": {\"numberValue\": 数值, \"textValue\": \"原始金额文本\", \"confidence\": 0-100, \"rawText\": \"\"},\n"
+                + "  \"styleNo\": {\"textValue\": \"款号/批次号\", \"confidence\": 0-100, \"rawText\": \"\"},\n"
+                + "  \"description\": {\"textValue\": \"其他描述或备注\", \"confidence\": 0-100, \"rawText\": \"\"}\n"
+                + "}\n"
+                + "规则：\n"
+                + "1) 图片中找不到的字段不要瞎填，直接返回空字符串，confidence=0\n"
+                + "2) materialType 必须是 fabric / lining / accessory 三个英文值之一\n"
+                + "3) 单位统一写成中文常用表达（米、公斤、码、片等）\n"
+                + "4) 数值字段请同时提供 numberValue（数值）和 textValue（原始文本）\n"
+                + "5) 只返回一个合法的 JSON 对象，不要任何解释文字和代码块标签。";
+    }
+
+    /** 把 AI 返回的文本解析成结构化的识别结果字段 */
+    private void parseAiResultToFields(String aiRaw, MaterialColorCardRecognitionResult result) {
+        if (!StringUtils.hasText(aiRaw)) {
+            return;
+        }
+
+        // 尝试提取 JSON：去掉可能的 ```json ``` 代码块
+        String jsonStr = extractJson(aiRaw);
+        if (!StringUtils.hasText(jsonStr)) {
+            return;
+        }
+
+        try {
+            JsonNode root = jsonMapper.readTree(jsonStr);
+            if (root.has("overallConfidence")) {
+                result.setOverallConfidence(root.get("overallConfidence").asInt());
+            }
+            if (root.has("aiHint") && !root.get("aiHint").isNull()) {
+                result.setAiHint(root.get("aiHint").asText());
+            }
+
+            Map<String, String> textKeys = new HashMap<>();
+            textKeys.put("materialName", "materialName");
+            textKeys.put("materialType", "materialType");
+            textKeys.put("color", "color");
+            textKeys.put("fabricWidth", "fabricWidth");
+            textKeys.put("fabricWeight", "fabricWeight");
+            textKeys.put("fabricComposition", "fabricComposition");
+            textKeys.put("specifications", "specifications");
+            textKeys.put("unit", "unit");
+            textKeys.put("supplierName", "supplierName");
+            textKeys.put("styleNo", "styleNo");
+            textKeys.put("description", "description");
+
+            for (Map.Entry<String, String> entry : textKeys.entrySet()) {
+                String key = entry.getKey();
+                String fieldName = entry.getValue();
+                if (root.has(key)) {
+                    JsonNode node = root.get(key);
+                    if (node.isObject() && node.has("textValue")) {
+                        String textValue = node.get("textValue").asText();
+                        int confidence = node.has("confidence") ? node.get("confidence").asInt() : 50;
+                        String rawText = node.has("rawText") ? node.get("rawText").asText() : textValue;
+                        if (StringUtils.hasText(textValue)) {
+                            MaterialColorCardRecognitionResult.FieldValue fv =
+                                    MaterialColorCardRecognitionResult.FieldValue.ofText(textValue, confidence, rawText);
+                            setFieldValue(result, fieldName, fv);
+                        }
+                    }
+                }
+            }
+
+            // 数值字段：unitPrice
+            if (root.has("unitPrice")) {
+                JsonNode node = root.get("unitPrice");
+                if (node.isObject()) {
+                    try {
+                        int confidence = node.has("confidence") ? node.get("confidence").asInt() : 50;
+                        String rawText = node.has("rawText") ? node.get("rawText").asText() : "";
+                        String textValue = node.has("textValue") ? node.get("textValue").asText() : rawText;
+                        BigDecimal numberValue = node.has("numberValue") && !node.get("numberValue").isNull()
+                                ? new BigDecimal(node.get("numberValue").asText())
+                                : null;
+                        if (numberValue != null || StringUtils.hasText(textValue)) {
+                            MaterialColorCardRecognitionResult.FieldValue fv =
+                                    new MaterialColorCardRecognitionResult.FieldValue();
+                            fv.setTextValue(textValue);
+                            fv.setNumberValue(numberValue);
+                            fv.setConfidence(confidence);
+                            fv.setRawText(rawText);
+                            result.setUnitPrice(fv);
+                        }
+                    } catch (NumberFormatException ignored) {
+                        // 忽略异常，unitPrice 没识别到就留空
+                    }
+                }
+            }
+
+            // 至少识别到一个非空字段视为成功
+            boolean hasAny = result.getMaterialName() != null
+                    || result.getMaterialType() != null
+                    || result.getColor() != null
+                    || result.getFabricWidth() != null
+                    || result.getFabricWeight() != null
+                    || result.getFabricComposition() != null
+                    || result.getSpecifications() != null
+                    || result.getUnit() != null
+                    || result.getSupplierName() != null
+                    || result.getUnitPrice() != null
+                    || result.getStyleNo() != null
+                    || result.getDescription() != null;
+            result.setSuccess(hasAny);
+        } catch (Exception e) {
+            log.warn("[ColorCardRecognize] 解析AI结果失败: {}", e.getMessage());
+        }
+    }
+
+    /** 按字段名反射设置结果对象 */
+    private static void setFieldValue(MaterialColorCardRecognitionResult result, String fieldName,
+                                      MaterialColorCardRecognitionResult.FieldValue fv) {
+        try {
+            String setter = "set" + Character.toUpperCase(fieldName.charAt(0)) + fieldName.substring(1);
+            java.lang.reflect.Method m = MaterialColorCardRecognitionResult.class.getMethod(
+                    setter, MaterialColorCardRecognitionResult.FieldValue.class);
+            m.invoke(result, fv);
+        } catch (Exception e) {
+            log.warn("[ColorCardRecognize] 无法设置字段 {}: {}", fieldName, e.getMessage());
+        }
+    }
+
+    /** 从 AI 文本中提取 JSON 部分（去掉 ```json 包裹） */
+    private static String extractJson(String text) {
+        if (text == null) return null;
+        String cleaned = text.trim();
+
+        int start = cleaned.indexOf('{');
+        int end = cleaned.lastIndexOf('}');
+        if (start >= 0 && end > start) {
+            return cleaned.substring(start, end + 1);
+        }
+        return null;
     }
 
     // ==================== 物料库联动 ====================

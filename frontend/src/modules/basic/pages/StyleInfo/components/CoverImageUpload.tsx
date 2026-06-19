@@ -125,11 +125,6 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
 
     // 新建模式：本地图片需要先上传获取服务器URL
     if (isNewMode && current.isLocal && pendingFiles[current.localIndex]) {
-      // 新建模式下必须先保存款式才能上传图片（后端要求 styleId 或 styleNo）
-      if (!styleId && !styleNo) {
-        message.warning('请先保存基础信息，再使用智能识别');
-        return null;
-      }
       try {
         const file = pendingFiles[current.localIndex];
         const formData = new FormData();
@@ -162,7 +157,7 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
     } catch {
       return null;
     }
-  }, [displayImages, currentIndex, isNewMode, pendingFiles]);
+  }, [displayImages, currentIndex, isNewMode, pendingFiles, styleId, styleNo]);
 
   // 编辑模式下首次加载时自动触发一次识别（保持原有行为）
   useEffect(() => {
@@ -431,11 +426,6 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
 
                         // 新建模式：本地图片需要先上传获取服务器URL
                         if (currentImage.isLocal && isNewMode && pendingFiles[currentImage.localIndex]) {
-                          // 新建模式下必须先保存款式才能上传图片（后端要求 styleId 或 styleNo）
-                          if (!styleId && !styleNo) {
-                            message.warning('请先保存基础信息，再使用以图搜款');
-                            return;
-                          }
                           setSearching(true);
                           try {
                             const file = pendingFiles[currentImage.localIndex];

@@ -104,13 +104,15 @@ public class StyleAttachmentOrchestrator {
         if (file == null || file.isEmpty()) {
             throw new IllegalArgumentException("文件为空");
         }
-        String resolvedStyleId = resolveStyleId(styleId, styleNo);
 
         // ✅ 租户上下文校验
         TenantAssert.assertTenantContext();
 
+        // 特殊：无 styleId 且无 styleNo 时，仅上传文件（返回 fileUrl，供 AI 视觉识别使用）
+        String resolvedStyleId = resolveStyleIdSafe(styleId, styleNo);
+        boolean hasStyleContext = resolvedStyleId != null;
+
         String type = StringUtils.hasText(bizType) ? bizType.trim() : "general";
-        // 纸样锁定检查已移除：全部开放，不限制已完成状态的款式上传
 
         try {
             String originalFilename = file.getOriginalFilename();
@@ -129,6 +131,18 @@ public class StyleAttachmentOrchestrator {
                 File dest = TenantFilePathResolver.resolveStoragePath(uploadPath, newFilename);
                 file.transferTo(dest);
                 cosService.safeRefreshTenantStorageUsage(com.fashion.supplychain.common.UserContext.tenantId());
+            }
+
+            String fileUrl = TenantFilePathResolver.buildDownloadUrl(newFilename);
+
+            // 无 style 上下文：仅返回 fileUrl（不写 StyleAttachment 表）
+            if (!hasStyleContext) {
+                StyleAttachment temp = new StyleAttachment();
+                temp.setFileUrl(fileUrl);
+                temp.setFileName(safeOriginal);
+                temp.setFileSize(file.getSize());
+                temp.setFileType(file.getContentType());
+                return temp;
             }
 
             StyleAttachment latest = styleAttachmentService.getLatestPattern(resolvedStyleId, type);
@@ -500,6 +514,26 @@ public class StyleAttachmentOrchestrator {
                 .last("limit 1"), false);
         if (style == null || style.getId() == null) {
             throw new IllegalArgumentException("请先保存基础信息，再上传图片");
+        }
+        return String.valueOf(style.getId());
+    }
+
+    /** 与 resolveStyleId 相同，但在 styleId/styleNo 都为空时返回 null 而非抛异常（用于新建模式下的 AI 视觉识别） */
+    private String resolveStyleIdSafe(String styleId, String styleNo) {
+        String normalizedStyleId = normalizeNullable(styleId);
+        if (StringUtils.hasText(normalizedStyleId)) {
+            return normalizedStyleId;
+        }
+        String normalizedStyleNo = normalizeNullable(styleNo);
+        if (!StringUtils.hasText(normalizedStyleNo)) {
+            return null;
+        }
+        StyleInfo style = styleInfoService.getOne(new LambdaQueryWrapper<StyleInfo>()
+                .select(StyleInfo::getId)
+                .eq(StyleInfo::getStyleNo, normalizedStyleNo)
+                .last("limit 1"), false);
+        if (style == null || style.getId() == null) {
+            return null;
         }
         return String.valueOf(style.getId());
     }

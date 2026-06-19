@@ -301,7 +301,7 @@ public class IntelligenceAiAdvisorController {
     }
 
     @PostMapping("/visual/style-search")
-    @DataTruth(source = DataTruth.Source.AI_DERIVED, description = "以图搜款由多模态向量搜索生成")
+    @DataTruth(source = DataTruth.Source.AI_DERIVED, description = "以图搜款由视觉AI识别+关键词搜索生成")
     public Result<Map<String, Object>> styleSearchByImage(@RequestBody Map<String, Object> body) {
         String imageUrl = (String) body.get("imageUrl");
         Integer topK = body.get("topK") != null ? ((Number) body.get("topK")).intValue() : 5;
@@ -309,18 +309,14 @@ public class IntelligenceAiAdvisorController {
             return Result.fail("imageUrl 不能为空");
         }
 
-        // 运行时诊断：记录调用上下文
         Long tenantId = null;
         try { tenantId = UserContext.tenantId(); } catch (Exception ignored) {}
-        log.info("[以图搜款] 请求 tenantId={} imageUrlLen={} qdrantServiceReady={}",
-                tenantId, imageUrl.length(), (qdrantService != null));
+        log.info("[以图搜款] 请求 tenantId={} imageUrlLen={} 算法=Agnes识别+MySQL关键词搜索",
+                tenantId, imageUrl.length());
 
         try {
-            if (qdrantService == null) {
-                log.error("[以图搜款] ❌ QdrantService 未注入（Spring 依赖注入失败）");
-                return Result.fail("以图搜款服务未就绪（依赖注入失败）");
-            }
-            Map<String, Object> result = visualStyleSearch(imageUrl, topK);
+            // Agnes 识别图片 → 提取关键词 → MySQL 关键词搜索
+            Map<String, Object> result = visualAIOrchestrator.searchSimilarStylesByImage(imageUrl, topK);
             if (result != null && Boolean.FALSE.equals(result.get("success"))) {
                 String err = (String) result.getOrDefault("error", "未知错误");
                 log.warn("[以图搜款] ⚠ 内部失败: {}", err);
@@ -330,6 +326,25 @@ public class IntelligenceAiAdvisorController {
         } catch (Exception e) {
             log.error("[以图搜款] ❌ 异常: {}", e.getMessage(), e);
             return Result.fail("以图搜款服务异常: " + e.getMessage());
+        }
+    }
+
+    @PostMapping("/visual/size-chart-parse")
+    @DataTruth(source = DataTruth.Source.AI_DERIVED, description = "尺码表OCR识别由视觉AI生成")
+    public Result<VisionAnalysisService.SizeChartParseResult> sizeChartParse(@RequestBody Map<String, Object> body) {
+        String imageUrl = (String) body.get("imageUrl");
+        if (imageUrl == null || imageUrl.isBlank()) {
+            return Result.fail("imageUrl 不能为空");
+        }
+        try {
+            VisionAnalysisService.SizeChartParseResult result = visualAIOrchestrator.parseSizeChart(imageUrl);
+            if (result == null || !result.isAvailable()) {
+                return Result.fail(result != null ? result.getErrorMessage() : "尺码表识别失败");
+            }
+            return Result.success(result);
+        } catch (Exception e) {
+            log.error("[尺码表识别] 异常: {}", e.getMessage(), e);
+            return Result.fail("尺码表识别服务异常: " + e.getMessage());
         }
     }
 
@@ -373,38 +388,14 @@ public class IntelligenceAiAdvisorController {
     }
 
     private Map<String, Object> visualStyleSearch(String imageUrl, int topK) {
+        // 已废弃：之前用 Qdrant 向量搜索，现在用 Agnes 识别 + MySQL 关键词搜索
+        // 见 visualAIOrchestrator.searchSimilarStylesByImage
         Map<String, Object> result = new java.util.LinkedHashMap<>();
-        try {
-            Long tenantId = UserContext.tenantId();
-            if (tenantId == null) {
-                result.put("success", false);
-                result.put("error", "租户信息缺失");
-                return result;
-            }
-            float[] embedding = qdrantService.computeMultimodalEmbedding(imageUrl);
-            if (embedding == null || embedding.length == 0) {
-                result.put("success", false);
-                result.put("error", "向量生成失败");
-                return result;
-            }
-            java.util.List<com.fashion.supplychain.intelligence.service.QdrantService.SimilarStyle> similar =
-                    qdrantService.searchSimilarStyleImages(embedding, topK, tenantId);
-            result.put("success", true);
-            result.put("matchCount", similar.size());
-            result.put("matches", similar.stream().map(ss -> {
-                Map<String, Object> m = new java.util.LinkedHashMap<>();
-                m.put("styleNo", ss.getStyleNo());
-                m.put("difficultyLevel", ss.getDifficultyLevel());
-                m.put("difficultyScore", ss.getDifficultyScore());
-                m.put("similarity", String.format("%.0f%%", ss.getSimilarity() * 100));
-                return m;
-            }).toList());
-        } catch (Exception e) {
-            result.put("success", false);
-            result.put("error", e.getMessage());
-        }
+        result.put("success", false);
+        result.put("error", "方法已废弃，请使用新的 visualAIOrchestrator.searchSimilarStylesByImage");
         return result;
     }
+
 
     @GetMapping("/benchmark/performance")
     public Result<CrossTenantBenchmarkResponse> benchmarkPerformance() {

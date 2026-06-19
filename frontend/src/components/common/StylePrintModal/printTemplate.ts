@@ -18,7 +18,7 @@ export function buildPrintHtml({
     const title = pageTitle?.trim() || '';
     if (!factory && !title) return '';
     const displayText = title ? (factory ? `${factory} - ${title}` : title) : factory;
-    return `<div style="text-align:center;font-size:22px;font-weight:700;color:#000;margin-bottom:14px;padding-bottom:10px;border-bottom:2px solid #000;letter-spacing:1px;">${displayText.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>`;
+    return `<div style="text-align:center;font-size:22px;font-weight:700;color:#000;margin-bottom:14px;letter-spacing:1px;">${displayText.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>`;
   })();
 
   return `
@@ -53,48 +53,37 @@ export function buildPrintHtml({
           /* 注意：不要加 * { color: inherit !important }，否则会覆盖业务内联颜色，
              同时和 -webkit-text-fill-color 互相干扰，导致中文文本被某些浏览器视为透明 */
 
-          /* 页眉 - 每页顶部显示 */
-          @media print {
-            .print-header {
-              position: fixed;
-              top: 0;
-              left: 0;
-              right: 0;
-              height: 25px;
-              background: var(--color-bg-base);
-              border-bottom: 1px solid #e8e8e8;
-              display: flex;
-              justify-content: space-between;
-              align-items: center;
-              font-size: 12px;
-              color: #666;
-              padding: 0 5mm;
-              z-index: 1000;
-            }
-            .print-header-left { font-weight: 500; }
-            .print-header-right { color: #999; }
+          /* 页脚 - 屏幕预览 + 打印都需要 */
+          .print-footer {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            font-size: 11px;
+            color: #999;
+            padding: 6px 5mm;
+            margin-top: 16px;
+            background: var(--color-bg-base);
+            border-top: 0.5px solid #d0d0d0;
+          }
+          .print-footer-right {
+            white-space: nowrap;
+          }
 
-            /* 页脚 - 每页底部显示 */
+          /* 打印时页脚固定到每页 */
+          @media print {
             .print-footer {
               position: fixed;
               bottom: 0;
               left: 0;
               right: 0;
+              margin-top: 0;
               height: 20px;
-              background: var(--color-bg-base);
-              border-top: 1px solid #e8e8e8;
-              display: flex;
-              justify-content: center;
-              align-items: center;
-              font-size: 9px;
-              color: #999;
+              padding: 0 5mm;
               z-index: 1000;
             }
-
-            /* 内容区域 */
+            /* 内容区域留出页脚位置 */
             .print-body {
-              margin-top: 30px;
-              margin-bottom: 25px;
+              margin-bottom: 30px;
             }
           }
 
@@ -121,7 +110,7 @@ export function buildPrintHtml({
             color: var(--color-text-primary);
             margin-bottom: 10px;
             padding-bottom: 6px;
-            border-bottom: 2px solid var(--color-info);
+            border-bottom: 0.75px solid #ccc;
           }
 
           /* 表格样式 */
@@ -140,18 +129,18 @@ export function buildPrintHtml({
             break-inside: avoid;
           }
           th, td {
-            border: 1px solid var(--color-border-antd);
-            padding: 6px 8px;
+            border: 0.5px solid #d0d0d0;
+            padding: 5px 7px;
             text-align: left;
             vertical-align: top;
           }
           th {
-            background: var(--color-bg-container);
+            background: #f5f5f5;
             font-weight: 600;
-            color: #262626;
+            color: #333;
           }
           tr:nth-child(even) {
-            background: var(--color-bg-container);
+            background: #fafafa;
           }
 
           /* 信息网格 */
@@ -202,20 +191,15 @@ export function buildPrintHtml({
         </style>
       </head>
       <body>
-        <!-- 固定页眉 -->
-        <div class="print-header">
-          <span class="print-header-left">${headerInfo}</span>
-          <span class="print-header-right">${printerInfo}  |  打印时间: ${printDate}</span>
-        </div>
         <!-- 页面顶部大标题 -->
         ${printHeader}
         <!-- 内容区域 -->
         <div class="print-body">
           ${bodyHtml}
         </div>
-        <!-- 固定页脚 -->
+        <!-- 固定页脚：打印人 + 打印时间 -->
         <div class="print-footer">
-          打印预览 - ${styleNo}
+          <span class="print-footer-right">${printerInfo}  |  打印时间: ${printDate}</span>
         </div>
       </body>
       </html>
