@@ -25,17 +25,23 @@
 """
 import json
 import os
+import ssl
 import sys
 import time
 import urllib.request
 import urllib.error
 
+# 跳过 SSL 证书验证（CloudBase/自签证书场景）
+ssl_ctx = ssl.create_default_context()
+ssl_ctx.check_hostname = False
+ssl_ctx.verify_mode = ssl.CERT_NONE
+
 BASE = os.environ.get("SMOKE_BASE_URL", "https://api.webyszl.cn").rstrip("/")
-USERNAME = os.environ.get("SMOKE_USERNAME", "admin")
+USERNAME = os.environ.get("SMOKE_USERNAME", "lilb")
 PASSWORD = os.environ.get("SMOKE_PASSWORD", "admin123")
-TENANT_ID = os.environ.get("SMOKE_TENANT_ID", "1")
+TENANT_ID = os.environ.get("SMOKE_TENANT_ID", "")
 if not TENANT_ID.strip() or not TENANT_ID.strip().isdigit():
-    TENANT_ID = "1"
+    TENANT_ID = ""  # 不指定租户时留空，按账号默认租户登录
 FEISHU_WEBHOOK = os.environ.get("SMOKE_FEISHU_WEBHOOK", "")
 TIMEOUT = int(os.environ.get("SMOKE_TIMEOUT", "15"))
 MAX_RETRIES = int(os.environ.get("SMOKE_MAX_RETRIES", "6"))
@@ -83,7 +89,7 @@ def http(method, path, data=None, with_token=True, retry=True):
     for i in range(attempts):
         try:
             req = urllib.request.Request(url, data=payload, method=method, headers=headers)
-            with urllib.request.urlopen(req, timeout=TIMEOUT) as resp:
+            with urllib.request.urlopen(req, timeout=TIMEOUT, context=ssl_ctx) as resp:
                 body = resp.read().decode("utf-8", errors="replace")
                 return resp.status, body
         except urllib.error.HTTPError as e:
@@ -168,11 +174,10 @@ else:
 # 1. 登录（历史崩过：06-18 t_user.position 缺失 → 500）
 # ─────────────────────────────────────────────────────────
 print("\n--- 1. 登录（历史崩过：t_user.position 缺失）---")
-login_resp = expect_code_200("POST", "/api/system/user/login", "登录", data={
-    "username": USERNAME,
-    "password": PASSWORD,
-    "tenantId": int(TENANT_ID),
-})
+login_data = {"username": USERNAME, "password": PASSWORD}
+if TENANT_ID:
+    login_data["tenantId"] = int(TENANT_ID)
+login_resp = expect_code_200("POST", "/api/system/user/login", "登录", data=login_data)
 if login_resp and login_resp.get("data", {}).get("token"):
     token = login_resp["data"]["token"]
     log("PASS", "Token获取", f"长度={len(token)}")
