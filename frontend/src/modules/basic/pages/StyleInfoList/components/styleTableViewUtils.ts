@@ -54,6 +54,41 @@ export interface StageQuickAction {
   onClick: () => void;
 }
 
+// ── Unified Completion Check ───────────────────────────
+
+export const isStyleInfoCompleted = (record: StyleRecord | Partial<StyleInfo> | null | undefined): boolean => {
+  if (!record) return false;
+
+  const sampleStatus = String((record as StyleRecord).sampleStatus || '').trim().toUpperCase();
+  const progressNode = String((record as StyleRecord).progressNode || '').trim();
+  const sampleReviewStatus = String((record as StyleRecord).sampleReviewStatus || '').trim().toUpperCase();
+  const sampleCompletedTime = (record as StyleRecord).sampleCompletedTime;
+  const sampleReviewTime = (record as StyleRecord).sampleReviewTime;
+  const completedTime = (record as StyleRecord).completedTime;
+
+  // 1. 状态直接标记完成
+  if (sampleStatus === 'COMPLETED' || sampleStatus === 'DONE') return true;
+  // 2. 进度节点显示样衣完成
+  if (progressNode === '样衣完成' || /^样衣完成/.test(progressNode)) return true;
+  // 3. 样衣审核通过
+  if (sampleReviewStatus === 'PASS' || sampleReviewStatus === 'APPROVED') return true;
+  // 4. 有样衣完成时间或样衣审核时间
+  if (sampleCompletedTime || sampleReviewTime) return true;
+  // 5. 有整体完成时间
+  if (completedTime) return true;
+
+  // 6. 所有 6 个开发阶段都已完成（BOM/纸样/尺寸/工序/生产制单/二次工艺）
+  const hasBom = Boolean((record as StyleRecord).bomCompletedTime);
+  const hasPattern = Boolean((record as StyleRecord).patternCompletedTime);
+  const hasSize = Boolean((record as StyleRecord).sizePriceCompletedTime) || Boolean((record as StyleRecord).sizeCompletedTime);
+  const hasProcess = Boolean((record as StyleRecord).processCompletedTime);
+  const hasProduction = Boolean((record as StyleRecord).productionCompletedTime);
+  const hasSecondary = Boolean((record as StyleRecord).secondaryCompletedTime);
+  if (hasBom && hasPattern && hasSize && hasProcess && hasProduction && hasSecondary) return true;
+
+  return false;
+};
+
 // ── Constants ──────────────────────────────────────────
 
 export const REVIEW_STATUS_OPTIONS = [

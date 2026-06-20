@@ -3,6 +3,7 @@ import { Button, Card, Progress, Spin, Tag, Tooltip } from 'antd';
 import { BulbOutlined, CalendarOutlined, ExperimentOutlined, NodeIndexOutlined, RadarChartOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import type { StyleInfo } from '@/types/style';
+import { isStyleInfoCompleted } from '../../StyleInfoList/components/styleTableViewUtils';
 import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
 import type { DifficultyAssessment, StyleIntelligenceProfileResponse, StyleQuoteSuggestionResponse } from '@/services/intelligence/intelligenceApi';
 import { visualAnalyze } from '@/services/intelligence/intelligenceApi';
@@ -34,7 +35,12 @@ const fmtPercent = (value?: number | null) => {
   return `${Number(value).toFixed(1)}%`;
 };
 
-const getDeliveryMeta = (deliveryDate?: string, warningDays = 3) => {
+const getDeliveryMeta = (style: StyleInfo | null | undefined, warningDays = 3) => {
+  // 完成态款式不再显示任何延期/交期提示
+  if (style && isStyleInfoCompleted(style)) {
+    return { label: '开发完成', color: 'success' as const, detail: '款式开发节点已走完，交期提示不再适用。' };
+  }
+  const deliveryDate = style?.deliveryDate;
   if (!deliveryDate) {
     return { label: '待补交期', color: 'default' as const, detail: '当前还没有设置交板日期' };
   }
@@ -62,7 +68,7 @@ const getProgressMeta = (style: StyleInfo) => {
 
 const buildFallbackInsights = (style: StyleInfo, quote: StyleQuoteSuggestionResponse | null) => {
   const insights: string[] = [];
-  const deliveryMeta = getDeliveryMeta(style.deliveryDate);
+  const deliveryMeta = getDeliveryMeta(style);
   const orderCount = Number(style.orderCount || 0);
   const latestProgress = Number(style.latestProductionProgress || 0);
 
@@ -159,8 +165,8 @@ const StyleIntelligenceProfileCard: React.FC<Props> = ({ style }) => {
   }, [loadProfile]);
 
   const deliveryMeta = useMemo(
-    () => getDeliveryMeta(profile?.deliveryDate || style?.deliveryDate, profile?.tenantProfile?.deliveryWarningDays ?? 3),
-    [profile?.deliveryDate, profile?.tenantProfile?.deliveryWarningDays, style?.deliveryDate],
+    () => getDeliveryMeta(style, profile?.tenantProfile?.deliveryWarningDays ?? 3),
+    [style, profile?.tenantProfile?.deliveryWarningDays],
   );
   const progressMeta = useMemo(() => getProgressMeta(style || { styleNo: '', styleName: '', category: '', price: 0, cycle: 0 }), [style]);
 

@@ -12,6 +12,7 @@ import { Tag } from 'antd';
 import dayjs from 'dayjs';
 import type { StyleInfo } from '@/types/style';
 import DecisionInsightCard, { SMART_CARD_CONTENT_WIDTH, type DecisionInsight } from '@/components/common/DecisionInsightCard';
+import { isStyleInfoCompleted } from './styleTableViewUtils';
 
 interface Props {
   record: StyleInfo;
@@ -42,21 +43,20 @@ const SmartStyleHoverCard: React.FC<Props> = ({ record }) => {
 
   const doneCount = stages.filter(s => s.done).length;
   const nextStage  = stages.find(s => !s.done);
-  // 已完成判断（三重保险）：
-  //   1. sampleStatus=COMPLETED（最可靠，真实DB字段，永远存在）
-  //   2. progressNode=样衣完成（虚拟字段，列表接口填充时有效）
-  //   3. doneCount=6（6个时间戳全部有值）
-  // 任意一个成立 => 已完成，不显示逾期
-  const sampleStatus = record.sampleStatus;
-  const isCompleted = (!!sampleStatus && sampleStatus.toUpperCase() === 'COMPLETED')
-    || progressNode === '样衣完成'
-    || doneCount === STAGES.length;
+  // 已完成判断（统一使用 isStyleInfoCompleted，含多维度检查：状态/节点/审核/时间戳）
+  const isCompleted = isStyleInfoCompleted(record);
 
-  // 已完成时显示的完成日期：优先取 sampleCompletedTime，其次取最晚一个阶段时间
+  // 已完成时显示的完成日期：优先取 sampleCompletedTime/sampleReviewTime，其次取最晚一个阶段时间
   const completedTimeStr = useMemo(() => {
     if (!isCompleted) return null;
     if (record.sampleCompletedTime) {
       return dayjs(record.sampleCompletedTime).format('MM-DD');
+    }
+    if ((record as any).sampleReviewTime) {
+      return dayjs((record as any).sampleReviewTime).format('MM-DD');
+    }
+    if ((record as any).completedTime) {
+      return dayjs((record as any).completedTime).format('MM-DD');
     }
     let latest: string | null = null;
     for (const s of STAGES) {

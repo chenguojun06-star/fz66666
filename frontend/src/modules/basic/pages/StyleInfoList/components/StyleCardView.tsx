@@ -16,6 +16,7 @@ import { getStyleCardColorText, getStyleCardQuantityText, getStyleCardSizeQuanti
 import { DEFAULT_PAGE_SIZE_OPTIONS } from '@/utils/pageSizeStore';
 import { getStyleSourceText } from '@/utils/styleSource';
 import { useCardGridLayout } from '@/hooks/useCardGridLayout';
+import { isStyleInfoCompleted } from './styleTableViewUtils';
 
 interface StyleCardViewProps {
   data: StyleInfo[];
@@ -143,11 +144,9 @@ const StyleCardView: React.FC<StyleCardViewProps> = ({
           if (isScrappedRow(record as StyleInfo)) {
             return 'warning';
           }
-          // 已完成状态直接返回 success，不参与逾期判断
-          const node = String((record as any).progressNode || '').trim();
-          const sampleStatus = String((record as any).sampleStatus || '').trim().toUpperCase();
-          if (node === '样衣完成' || sampleStatus === 'COMPLETED') {
-            return 'normal'; // 绿色（完成，不再标危险色）
+          // 已完成状态直接返回 normal（不再标红色），不参与逾期判断
+          if (isStyleInfoCompleted(record as StyleInfo)) {
+            return 'normal';
           }
 
           // 根据交板日期判断状态颜色

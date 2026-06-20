@@ -16,7 +16,7 @@ import {
   CATEGORY_MAP, SEASON_MAP, SAMPLE_PARENT_STAGES, STAGE_MIN_SLOT_WIDTH, REVIEW_STATUS_OPTIONS,
   buildConfirmStage, isScrappedStyle, resolveDisplayColor, resolveDisplaySize, resolveDisplayQuantity,
   buildSmartStages, isMaintainedAfterCompletion, getDeliveryMeta,
-  getProgressNodeColor, clampPercent,
+  getProgressNodeColor, clampPercent, isStyleInfoCompleted,
 } from './styleTableViewUtils';
 import { useNavigate } from 'react-router-dom';
 import { isSupervisorOrAboveUser, useUser } from '@/utils/AuthContext';
@@ -139,12 +139,13 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
       const progressNode = String((normalizedRecord as StyleRecord).progressNode || '未开始').trim() || '未开始';
       const stages = buildSmartStages(normalizedRecord as StyleInfo);
       const allStagesCompleted = stages.length > 0 && stages.every((item) => item.status === 'done');
-      const maintainedAfterCompletion = isMaintainedAfterCompletion(normalizedRecord as StyleRecord, allStagesCompleted);
-      const deliveryMeta = getDeliveryMeta(normalizedRecord as StyleRecord, allStagesCompleted);
+      const completed = allStagesCompleted || isStyleInfoCompleted(normalizedRecord as StyleRecord);
+      const maintainedAfterCompletion = isMaintainedAfterCompletion(normalizedRecord as StyleRecord, completed);
+      const deliveryMeta = getDeliveryMeta(normalizedRecord as StyleRecord, completed);
       const baseProgress = clampPercent(
         stages.reduce((sum, item) => sum + item.progress, 0) / Math.max(stages.length, 1),
       );
-      const overallProgress = allStagesCompleted ? 100 : baseProgress;
+      const overallProgress = completed ? 100 : baseProgress;
       const rowState = isScrappedRow(record) ? 'scrapped' : deliveryMeta.tone;
       const metaItems = [
         { label: '来源', value: sourceMeta.label },
