@@ -8,9 +8,17 @@ interface StatusTagProps {
   fallback?: { text: string; color: string };
 }
 
+/**
+ * 状态标签组件
+ * 大小写兼容：优先精确匹配 → 小写 → 大写 → fallback
+ */
 const StatusTag: React.FC<StatusTagProps> = ({ status, statusMap, fallback }) => {
-  const info = statusMap[status] || fallback || { text: status || '未知', color: 'default' };
-  return <Tag color={info.color}>{info.text}</Tag>;
+  const k = String(status ?? '').trim();
+  const info = k
+    ? (statusMap[k] ?? statusMap[k.toLowerCase()] ?? statusMap[k.toUpperCase()] ?? fallback)
+    : fallback;
+  const resolved = info ?? { text: k || '未知', color: 'default' };
+  return <Tag color={resolved.color}>{resolved.text}</Tag>;
 };
 
 export default React.memo(StatusTag);

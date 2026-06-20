@@ -8,16 +8,19 @@ export const MATERIAL_ARRIVAL_RATE_THRESHOLD = 50;
 // 备注最小长度
 export const REMARK_MIN_LENGTH = 10;
 
-// 物料采购状态
+// 物料采购状态（与后端 MaterialConstants.java 保持一致）
 export const MATERIAL_PURCHASE_STATUS = {
   PENDING: 'pending',
+  PROCUREMENT: 'procurement',
+  PURCHASING: 'purchasing',
+  MATERIAL_PREPARATION: 'material_preparation',
   RECEIVED: 'received',
   PARTIAL: 'partial',
   PARTIAL_ARRIVAL: 'partial_arrival',
   AWAITING_CONFIRM: 'awaiting_confirm',
+  WAREHOUSE_PENDING: 'warehouse_pending',
   COMPLETED: 'completed',
   CANCELLED: 'cancelled',
-  WAREHOUSE_PENDING: 'warehouse_pending',
 } as const;
 
 // 物料类型

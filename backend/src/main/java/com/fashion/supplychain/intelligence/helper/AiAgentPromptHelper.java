@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.context.annotation.Lazy;
 
+import jakarta.annotation.PostConstruct;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -59,15 +60,29 @@ public class AiAgentPromptHelper {
     @Autowired(required = false)
     private com.fashion.supplychain.intelligence.service.StructuredOutputEnforcer outputEnforcer;
 
-    private final ExecutorService promptBuildExecutor = new ThreadPoolExecutor(
-            8, 16, 60L, TimeUnit.SECONDS,
-            new LinkedBlockingQueue<>(64),
-            r -> {
-                Thread t = new Thread(r, "ai-prompt-build-" + System.identityHashCode(r) % 1000);
-                t.setDaemon(true);
-                return t;
-            },
-            new ThreadPoolExecutor.CallerRunsPolicy());
+    @Value("${xiaoyun.agent.prompt-executor.core-pool-size:12}")
+    private int promptCorePoolSize;
+    @Value("${xiaoyun.agent.prompt-executor.max-pool-size:24}")
+    private int promptMaxPoolSize;
+    @Value("${xiaoyun.agent.prompt-executor.queue-capacity:128}")
+    private int promptQueueCapacity;
+
+    private ExecutorService promptBuildExecutor;
+
+    @PostConstruct
+    public void initPromptExecutor() {
+        promptBuildExecutor = new ThreadPoolExecutor(
+                promptCorePoolSize, promptMaxPoolSize, 60L, TimeUnit.SECONDS,
+                new LinkedBlockingQueue<>(promptQueueCapacity),
+                r -> {
+                    Thread t = new Thread(r, "ai-prompt-build-" + System.identityHashCode(r) % 1000);
+                    t.setDaemon(true);
+                    return t;
+                },
+                new ThreadPoolExecutor.CallerRunsPolicy());
+        log.info("[AiAgent-Config] Prompt构建线程池初始化: core={}, max={}, queue={}",
+                promptCorePoolSize, promptMaxPoolSize, promptQueueCapacity);
+    }
 
     public int estimateMaxIterations(String userMessage) {
         return XiaoyunPatterns.estimateMaxIterations(userMessage);
@@ -121,33 +136,48 @@ public class AiAgentPromptHelper {
         // L5 归档记忆：用户问"之前/历史/上次"时召回冷数据
         CompletableFuture<String> archivalMemCtx = supplyAsync(() -> buildArchivalMemoryBlock(tenantIdForSop, userMessageForSop));
 
-        String intelligenceContext = safeJoin(intelligenceCtx, "实时经营上下文");
-        String workerProfileBlock = safeJoin(workerProfile, "工人画像");
-        String mgmtInsightBlock = safeJoin(mgmtInsight, "管理层快照");
-        String longTermMemBlock = safeJoin(longTermMem, "长期记忆");
-        String memoryContext = safeJoin(memoryCtx, "历史对话");
-        // 重查询块（RAG/EntityMemory/GraphRag 涉及 DB+Qdrant）单独设置 1.5s 更短超时，避免慢查询阻塞
-        String ragContext = safeJoinWithTimeout(ragCtx, 1500, "RAG检索");
-        String userBehaviorBlock = safeJoin(userBehavior, "行为画像");
-        String activePatrolBlock = safeJoinWithTimeout(activePatrol, 800, "巡查风险");
-        String exceptionReportBlock = safeJoin(exceptionReport, "异常报告");
-        String contextFileBlockStr = safeJoin(contextFileBlock, "上下文文件");
-        String userProfileBlockStr = safeJoin(userProfileBlock, "用户画像");
-        String memoryBankBlockStr = safeJoin(memoryBankBlock, "MemoryBank");
-        String selfCritiqueBlock = safeJoin(selfCritiqueCtx, "自我评分反馈");
-        String entityMemoryBlock = safeJoinWithTimeout(entityMemCtx, 1500, "实体记忆");
-        String graphRagBlock = safeJoinWithTimeout(graphRagCtx, 1500, "知识图谱");
-        String factoryProfileBlock = safeJoin(factoryProfileCtx, "工厂画像");
-        String proceduralMemBlock = safeJoin(proceduralMemCtx, "程序记忆");
-        String proceduralSopBlock = safeJoin(proceduralSopCtx, "L4程序性SOP");
-        String archivalMemBlock = safeJoin(archivalMemCtx, "L5归档记忆");
+        // 按优先级分批等待：HIGH优先级块先等3s（影响回答质量的关键上下文）
+        // MEDIUM优先级块等2s（知识/记忆类）
+        // LOW优先级块等1s（锦上添花，缺失不影响）
+        // 分批获取避免串行等待所有块，关键块先到先用
+        // HIGH: factoryProfile/entityMemory/proceduralSop/longTermMem/pageContext
+        // MEDIUM: rag/graphRag/intelligence/memoryBank/mgmtInsight/userProfile/contextFile
+        // LOW: userBehavior/activePatrol/workerProfile(self)/exceptionReport/selfCritique/archival
+        long highTimeout = 3000L;
+        long mediumTimeout = 1800L;
+        long lowTimeout = 1000L;
 
-        String masFromFuture = safeJoin(masInsightCtx, "多Agent分析");
+        // HIGH 优先级块（3s）
+        String factoryProfileBlock = safeJoinWithTimeout(factoryProfileCtx, highTimeout, "工厂画像(HIGH)");
+        String entityMemoryBlock = safeJoinWithTimeout(entityMemCtx, highTimeout, "实体记忆(HIGH)");
+        String proceduralSopBlock = safeJoinWithTimeout(proceduralSopCtx, highTimeout, "L4程序性SOP(HIGH)");
+        String longTermMemBlock = safeJoinWithTimeout(longTermMem, highTimeout, "长期记忆(HIGH)");
+        String contextBlock = buildContextBlock(userName, userRole, isSuperAdmin, isTenantOwner, isManager);
+        String pageCtxBlock = buildPageContextBlock(pageContext);
+
+        // MEDIUM 优先级块（1.8s）
+        String ragContext = safeJoinWithTimeout(ragCtx, mediumTimeout, "RAG检索(MEDIUM)");
+        String graphRagBlock = safeJoinWithTimeout(graphRagCtx, mediumTimeout, "知识图谱(MEDIUM)");
+        String intelligenceContext = safeJoinWithTimeout(intelligenceCtx, mediumTimeout, "实时经营上下文(MEDIUM)");
+        String memoryBankBlockStr = safeJoinWithTimeout(memoryBankBlock, mediumTimeout, "MemoryBank(MEDIUM)");
+        String mgmtInsightBlock = safeJoinWithTimeout(mgmtInsight, mediumTimeout, "管理层快照(MEDIUM)");
+        String userProfileBlockStr = safeJoinWithTimeout(userProfileBlock, mediumTimeout, "用户画像(MEDIUM)");
+        String contextFileBlockStr = safeJoinWithTimeout(contextFileBlock, mediumTimeout, "上下文文件(MEDIUM)");
+        String memoryContext = safeJoinWithTimeout(memoryCtx, mediumTimeout, "历史对话(MEDIUM)");
+        String proceduralMemBlock = safeJoinWithTimeout(proceduralMemCtx, mediumTimeout, "程序记忆(MEDIUM)");
+
+        // LOW 优先级块（1s）
+        String userBehaviorBlock = safeJoinWithTimeout(userBehavior, lowTimeout, "行为画像(LOW)");
+        String activePatrolBlock = safeJoinWithTimeout(activePatrol, lowTimeout, "巡查风险(LOW)");
+        String workerProfileBlock = safeJoinWithTimeout(workerProfile, lowTimeout, "工人画像(LOW)");
+        String exceptionReportBlock = safeJoinWithTimeout(exceptionReport, lowTimeout, "异常报告(LOW)");
+        String selfCritiqueBlock = safeJoinWithTimeout(selfCritiqueCtx, lowTimeout, "自我评分反馈(LOW)");
+        String archivalMemBlock = safeJoinWithTimeout(archivalMemCtx, lowTimeout, "L5归档记忆(LOW)");
+
+        String masFromFuture = safeJoinWithTimeout(masInsightCtx, mediumTimeout, "多Agent分析(MEDIUM)");
         String masFromCache = buildMasInsightBlock();
         String masInsightBlock = !masFromFuture.isBlank() ? masFromFuture
                 : (!masFromCache.isBlank() ? masFromCache : "");
-        String contextBlock = buildContextBlock(userName, userRole, isSuperAdmin, isTenantOwner, isManager);
-        String pageCtxBlock = buildPageContextBlock(pageContext);
         // 智能工具筛选：工具太多时用 RAG 选最相关的
         List<AgentTool> effectiveTools = applyToolDiscovery(visibleTools, userMessage, pageContext);
         String toolGuide = aiAgentToolAccessService.buildToolGuide(effectiveTools);

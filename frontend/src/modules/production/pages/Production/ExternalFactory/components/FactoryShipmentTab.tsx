@@ -10,17 +10,12 @@ import type { FactoryShipment, FactoryShipmentDetail } from '@/types/production'
 import { factoryShipmentApi, type ShipDetailItem, type ShipParams, type ShippableInfo } from '@/services/production/factoryShipmentApi';
 import { productionOrderApi } from '@/services/production/productionApi';
 import type { ProductionOrder } from '@/types/production';
+import DisplayStatusTag from '@/components/common/DisplayStatusTag';
+import { displayDate } from '@/utils/display';
 
 interface FactoryShipmentTabProps {
   selectedFactoryId: string | null;
 }
-
-const STATUS_MAP: Record<string, { color: string; label: string }> = {
-  pending: { color: 'orange', label: '待收货' },
-  received: { color: 'blue', label: '已收货' },
-  quality_checked: { color: 'purple', label: '已质检' },
-  partially_returned: { color: 'red', label: '部分退回返修' },
-};
 
 const FactoryShipmentTab: React.FC<FactoryShipmentTabProps> = ({ selectedFactoryId }) => {
   const { message, modal: _modal } = App.useApp();
@@ -242,7 +237,7 @@ const FactoryShipmentTab: React.FC<FactoryShipmentTabProps> = ({ selectedFactory
       dataIndex: 'shipTime',
       key: 'shipTime',
       width: 160,
-      render: (val: string) => val ? new Date(val).toLocaleString('zh-CN') : '-',
+      render: (val: string) => displayDate(val, 'datetime'),
     },
     {
       title: '发货方式',
@@ -263,17 +258,14 @@ const FactoryShipmentTab: React.FC<FactoryShipmentTabProps> = ({ selectedFactory
       dataIndex: 'receiveStatus',
       key: 'receiveStatus',
       width: 100,
-      render: (val: string) => {
-        const info = STATUS_MAP[val] || { color: 'default', label: '未知' };
-        return <Tag color={info.color}>{info.label}</Tag>;
-      },
+      render: (val: string) => <DisplayStatusTag status={val} variant="shipment" />,
     },
     {
       title: '收货时间',
       dataIndex: 'receiveTime',
       key: 'receiveTime',
       width: 160,
-      render: (val: string) => val ? new Date(val).toLocaleString('zh-CN') : '-',
+      render: (val: string) => displayDate(val, 'datetime'),
     },
     {
       title: '操作',

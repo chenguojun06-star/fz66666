@@ -11,13 +11,14 @@ import SmartOrderHoverCard from '../../ProgressDetail/components/SmartOrderHover
 import { StyleCoverThumb, StyleAttachmentsButton } from '@/components/StyleAssets';
 import BudgetDaysEditor from '@/components/common/BudgetDaysEditor';
 import { isDirectCuttingOrder, isOrderFrozenByStatus, isOrderFrozenByStatusOrStock, withQuery } from '@/utils/api';
-import { formatDateTime } from '@/utils/datetime';
 import { formatMoney } from '@/utils/format';
 import SupplierNameTooltip from '@/components/common/SupplierNameTooltip';
 import FactoryTypeTag from '@/components/common/FactoryTypeTag';
 import { toCategoryCn } from '@/utils/styleCategory';
 import { getRemainingDaysDisplay } from '@/utils/progressColor';
-import { getStatusConfig, safeString } from '../utils';
+import { safeString } from '../utils';
+import { displayOrderStatus, displayDate, displayAmount } from '@/utils/display';
+import DisplayStatusTag from '@/components/common/DisplayStatusTag';
 import { buildCommonOrderActions } from '../../components/buildCommonOrderActions';
 import { calcOrderProgress } from '@/modules/production/utils/calcOrderProgress';
 import dayjs from 'dayjs';
@@ -78,7 +79,7 @@ export function useProductionColumns({
   onOpenInspectDrawer,
   onOpenSmartReceive,
 }: UseProductionColumnsProps) {
-  const renderStageTime = (value: unknown) => value ? formatDateTime(value) : '-';
+  const renderStageTime = (value: unknown) => displayDate(value, 'datetime');
 
   const stageProgressCtx: StageProgressContext = {
     openNodeDetail,
@@ -259,7 +260,7 @@ export function useProductionColumns({
       render: (_: any, record: any) => {
         const v = Number(record?.factoryUnitPrice);
         return (Number.isFinite(v) && v > 0)
-          ? <span style={{ fontWeight: 500 }}>{formatMoney(v)}</span>
+          ? <span style={{ fontWeight: 500 }}>{displayAmount(v)}</span>
           : <span style={{ color: 'var(--color-text-tertiary)' }}>-</span>;
       },
     },
@@ -297,7 +298,7 @@ export function useProductionColumns({
       dataIndex: 'expectedShipDate',
       key: 'expectedShipDate',
       width: 100,
-      render: (v: any) => v ? formatDateTime(v) : '-',
+      render: (v: any) => displayDate(v, 'datetime'),
     },
     {
       title: '采购',
@@ -465,10 +466,10 @@ export function useProductionColumns({
       key: 'status',
       width: 110,
       render: (status: ProductionOrder['status'], record: ProductionOrder) => {
-        const { text, color } = getStatusConfig(status);
+        const { text, color } = displayOrderStatus(status);
         const stagnantDays = stagnantOrderIds?.get(String(record.id));
         const progress = calcOrderProgress(record);
-        const deliveryDate = record.plannedEndDate ? dayjs(record.plannedEndDate as string).format('MM-DD') : '';
+        const deliveryDate = displayDate(record.plannedEndDate, 'month-day');
         const remain = getRemainingDaysDisplay(record.plannedEndDate as string, record.createTime, record.actualEndDate, record.status);
         const aiRisk = deliveryRiskMap?.get(String(record.orderNo || ''));
         const slaMap: Record<string, { color: string; label: string }> = {
@@ -483,7 +484,7 @@ export function useProductionColumns({
             <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
               <Tag color={color} style={{ margin: 0, fontSize: 12, lineHeight: '18px', padding: '0 4px' }}>{text}</Tag>
               <span style={{ fontSize: 12, color: 'var(--color-text-secondary)', fontWeight: 500 }}>{progress}%</span>
-              {deliveryDate && <span style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>{deliveryDate}</span>}
+              {deliveryDate !== '-' && <span style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>{deliveryDate}</span>}
               {remain.text && remain.text !== '-' && (
                 <span style={{ fontSize: 12, fontWeight: 600, color: remain.color }}>{remain.text}</span>
               )}
@@ -502,7 +503,7 @@ export function useProductionColumns({
             )}
             {aiRisk && aiRisk.riskLevel !== 'safe' && aiRisk.predictedEndDate && (
               <span style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>
-                AI预测 {dayjs(aiRisk.predictedEndDate).format('M/D')}{aiRisk.riskLevel === 'overdue' ? ' ⚠' : ''}
+                AI预测 {displayDate(aiRisk.predictedEndDate, 'month-day')}{aiRisk.riskLevel === 'overdue' ? ' ⚠' : ''}
               </span>
             )}
           </div>

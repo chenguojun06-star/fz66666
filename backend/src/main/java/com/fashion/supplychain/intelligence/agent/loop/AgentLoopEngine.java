@@ -378,15 +378,26 @@ public class AgentLoopEngine {
             return "plan_mode";
         }
 
+        int totalTools = result.getToolCalls() != null ? result.getToolCalls().size() : 0;
+        java.util.concurrent.atomic.AtomicInteger completedCount = new java.util.concurrent.atomic.AtomicInteger(0);
         for (AiToolCall toolCall : result.getToolCalls()) {
             cb.onToolCall(toolCall);
         }
-        cb.onThinking(iter, "正在执行工具查询，请稍候…");
+        cb.onThinking(iter, String.format("正在执行工具查询(0/%d)，请稍候…", totalTools));
 
+        // 使用流式工具执行：每完成一个就推送进度，用户能看到实时变化
         List<AiAgentToolExecHelper.ToolExecRecord> execRecords =
-                toolExecHelper.executeToolsConcurrently(
+                toolExecHelper.executeToolsWithStreaming(
                         result.getToolCalls(), ctx.getVisibleToolMap(),
-                        ctx.getCommandId(), ctx.getToolResultCache());
+                        ctx.getCommandId(), ctx.getToolResultCache(),
+                        rec -> {
+                            int done = completedCount.incrementAndGet();
+                            String status = (rec.rawResult != null && rec.rawResult.startsWith("{\"error\""))
+                                    ? "失败"
+                                    : "完成";
+                            cb.onThinking(iter, String.format("正在执行工具查询(%d/%d) [%s: %s]…",
+                                    done, totalTools, status, rec.toolName));
+                        });
 
         recordCompensableExecs(ctx.getCommandId(), ctx.getVisibleToolMap(), execRecords);
 

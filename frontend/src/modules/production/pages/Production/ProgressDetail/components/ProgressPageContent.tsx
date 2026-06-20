@@ -9,7 +9,8 @@ import { createOrderColorSizeGridFieldGroups } from '@/components/common/CardSiz
 import { isOrderFrozenByStatus } from '@/utils/api';
 import { calcOrderProgress } from '@/modules/production/utils/calcOrderProgress';
 import { getProgressColorStatus, getRemainingDaysDisplay } from '@/utils/progressColor';
-import { ORDER_STATUS_LABEL, ORDER_STATUS_COLOR } from '@/constants/orderStatus';
+import DisplayStatusTag from '@/components/common/DisplayStatusTag';
+import { displayDate } from '@/utils/display';
 import { getOrderCardSizeQuantityItems } from '@/utils/cardSizeQuantity';
 import { DEFAULT_PAGE_SIZE_OPTIONS, savePageSize } from '@/utils/pageSizeStore';
 import type { ProductionOrder, ProductionQueryParams } from '@/types/production';
@@ -162,7 +163,7 @@ const ProgressPageContent: React.FC<ProgressPageContentProps> = ({
 
   const productionCardFieldGroups = useMemo(() => [
     [
-      { label: '交期', key: 'plannedEndDate', render: (val: any) => val ? dayjs(val as string).format('MM-DD') : '-' },
+      { label: '交期', key: 'plannedEndDate', render: (val: any) => displayDate(val, 'month-day') },
     ],
     ...createOrderColorSizeGridFieldGroups<ProductionOrder>({
       gridKey: 'cardColorSizeGrid',
@@ -172,16 +173,14 @@ const ProgressPageContent: React.FC<ProgressPageContentProps> = ({
       getFallbackQuantity: (record) => Number(record.orderQuantity) || 0,
     }),
     [
-      { label: '下单', key: 'createTime', render: (val: any) => val ? dayjs(val as string).format('MM-DD') : '-' },
+      { label: '下单', key: 'createTime', render: (val: any) => displayDate(val, 'month-day') },
     ],
     [
       { label: '', key: 'statusTags', render: (_val: any, record: any) => {
-        const status = ORDER_STATUS_LABEL[String(record?.status || '').trim().toLowerCase()] || record?.status || '-';
-        const statusColor = ORDER_STATUS_COLOR[String(record?.status || '').trim().toLowerCase()] || 'default';
         const { text: remainText, color: remainColor } = getRemainingDaysDisplay(record?.plannedEndDate as string, record?.createTime as string, record?.actualEndDate as string, record?.status as string);
         return (
           <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap', alignItems: 'center' }}>
-            <Tag color={statusColor} style={{ margin: 0, fontSize: 14, padding: '0 4px', lineHeight: '18px', height: 18 }}>{status}</Tag>
+            <DisplayStatusTag status={record?.status} variant="order" style={{ margin: 0, fontSize: 14, padding: '0 4px', lineHeight: '18px', height: 18 }} />
             {record?.urgencyLevel === 'urgent' && <Tag color="red" style={{ margin: 0, fontSize: 14, padding: '0 4px', lineHeight: '18px', height: 18 }}>急</Tag>}
             {String(record?.plateType || '').toUpperCase() === 'FIRST' && <Tag color="blue" style={{ margin: 0, fontSize: 14, padding: '0 4px', lineHeight: '18px', height: 18 }}>首单</Tag>}
             {String(record?.plateType || '').toUpperCase() === 'REORDER' && <Tag color="gold" style={{ margin: 0, fontSize: 14, padding: '0 4px', lineHeight: '18px', height: 18 }}>翻单</Tag>}

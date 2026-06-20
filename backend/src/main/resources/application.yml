@@ -459,7 +459,15 @@ xiaoyun:
     token-budget: ${XIAOYUN_TOKEN_BUDGET:30000}
     timeout-ms: ${XIAOYUN_AGENT_TIMEOUT_MS:180000}
     context-refresh-ms: ${XIAOYUN_CONTEXT_REFRESH_MS:600000}
-    quick-path-timeout-ms: ${XIAOYUN_QUICK_PATH_TIMEOUT_MS:15000}
+    quick-path-timeout-ms: ${XIAOYUN_QUICK_PATH_TIMEOUT_MS:25000}
+    tool-executor:
+      core-pool-size: ${XIAOYUN_TOOL_EXECUTOR_CORE:16}
+      max-pool-size: ${XIAOYUN_TOOL_EXECUTOR_MAX:32}
+      queue-capacity: ${XIAOYUN_TOOL_EXECUTOR_QUEUE:256}
+    prompt-executor:
+      core-pool-size: ${XIAOYUN_PROMPT_EXECUTOR_CORE:12}
+      max-pool-size: ${XIAOYUN_PROMPT_EXECUTOR_MAX:24}
+      queue-capacity: ${XIAOYUN_PROMPT_EXECUTOR_QUEUE:128}
     sse-heartbeat-interval-s: ${XIAOYUN_SSE_HEARTBEAT_INTERVAL:15}
     rag:
       recall-top-k: ${XIAOYUN_RAG_RECALL_TOP_K:3}

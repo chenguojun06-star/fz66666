@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Button, Select, Popover, Checkbox, Segmented } from 'antd';
 import { SettingOutlined, AppstoreOutlined, UnorderedListOutlined, RadarChartOutlined } from '@ant-design/icons';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
@@ -6,6 +6,31 @@ import ExportButton from '@/components/common/ExportButton';
 import { useCustomerOptions } from '@/hooks/useCustomerOptions';
 import { ProductionQueryParams } from '@/types/production';
 import type { Dayjs } from 'dayjs';
+import { displayOrderStatus } from '@/utils/display';
+
+// 按业务顺序排列的生产订单状态筛选选项
+const PRODUCTION_STATUS_VALUES = [
+  'not_started',
+  'pending',
+  'production',
+  'delayed',
+  'paused',
+  'returned',
+  'completed',
+  'cancelled',
+  'closed',
+  'scrapped',
+  'archived',
+];
+
+const buildProductionStatusOptions = () => {
+  const options = PRODUCTION_STATUS_VALUES.map((value) => {
+    const { text } = displayOrderStatus(value);
+    // 与 displayOrderStatus 保持一致，如果 text 回退为 value 本身，保持原值
+    return { label: text, value };
+  });
+  return [{ label: '全部', value: '' }, ...options];
+};
 
 type DateRange = [Dayjs | null, Dayjs | null] | null;
 
@@ -64,15 +89,7 @@ function buildFilterBar(props: ProductionFilterBarProps) {
           onDateChange={setDateRange}
           statusValue={queryParams.status || ''}
           onStatusChange={(value) => setQueryParams({ ...queryParams, status: value || undefined, includeScrapped: value === 'scrapped' ? true : queryParams.includeScrapped, excludeTerminal: value ? undefined : true, page: 1 })}
-          statusOptions={[
-            { label: '全部', value: '' },
-            { label: '待生产', value: 'pending' },
-            { label: '生产中', value: 'production' },
-            { label: '已完成', value: 'completed' },
-            { label: '已报废', value: 'scrapped' },
-            { label: '已逾期', value: 'delayed' },
-            { label: '已取消', value: 'cancelled' },
-          ]}
+          statusOptions={buildProductionStatusOptions()}
         />
         <Select
           value={queryParams.factoryType || ''}

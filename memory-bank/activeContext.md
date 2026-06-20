@@ -16,8 +16,43 @@
 - ✅ 产品稳定性批量优化（9项任务，2026-06-19上午完成）
 - ✅ 小程序错误处理统一优化（2026-06-19下午完成）
 - ✅ 小云AI 6大升级 + 开发效能体系（2026-06-20完成）
+- ✅ 小云AI响应速度全面提速（2026-06-20晚：解决"一两分钟才回答"的核心痛点）
 
 ## 最近变更
+
+### 2026-06-20晚 小云AI响应速度全面提速 — 解决"一两分钟才回答"
+
+**背景**：用户多次反馈"发一个信息过去，很久，一两分钟才回答"。分析发现核心瓶颈不是LLM本身，而是工具调用/上下文构建/等待聚合的串行低效。
+
+**优化总览**（P0级4项 + P1级4项）：
+
+| 优先级 | 优化模块 | 核心变更 | 验证 |
+|--------|---------|---------|:----:|
+| P0-1 | 线程池配置化 | `application.yml` 新增 tool-executor(16→32) + prompt-executor(12→24) 可调线程池；`AiAgentToolExecHelper.init()` 用 @Value 读取，不再硬编码 | ✅ |
+| P0-2 | QuickPath扩容+增强 | `isQuickPathEligible()` 消息阈值 500→800；支持 SIMPLE_QUERY 和短 COMPLEX_ANALYSIS；IntentType 7类细分（闲聊/知识询问/数据查询/简单查询/复杂分析/动作指令/状态查询） | ✅ |
+| P0-3 | Prompt块优先级路由 | `safeJoinWithTimeout()` 三级超时（HIGH 3s / MEDIUM 1.8s / LOW 1s）；工厂画像/实体记忆/当前问题不被缩减；RAG/知识图谱可降级；行为画像/历史洞察快速放弃 | ✅ |
+| P1-4 | 工具结果流式聚合 | `executeToolsWithStreaming()` 用 `CompletableFuture.anyOf()` 逐工具推送，`AgentLoopEngine.onThinking()` 显示 `(1/5) [完成: query_order]…`，用户不再看到大片空白等待 | ✅ |
+
+**修改的核心文件**：
+- `backend/.../resources/application.yml` — tool-executor/prompt-executor 配置块
+- `backend/.../helper/AiAgentToolExecHelper.java` — @Value 注入 + executeToolsWithStreaming() 流式方法（~270行）
+- `backend/.../helper/AiAgentPromptHelper.java` — 三级超时 safeJoinWithTimeout，jakarta.annotation.PostConstruct import 修复
+- `backend/.../orchestration/AiAgentOrchestrator.java` — isQuickPathEligible 扩容，消息阈值提升
+- `backend/.../agent/loop/AgentLoopEngine.java` — 接入流式进度回调
+
+**编译验证**：mvn compile BUILD SUCCESS ✅
+
+**新增铁律/模式**：
+- **D-026**：线程池大小必须可配置（@Value + application.yml），禁止硬编码
+- **D-027**：多工具并发调用必须有流式进度（anyOf 模式完成一个推送一个）
+- **D-028**：Prompt上下文块必须有优先级，关键块设置更高超时保护
+
+**设计决策记录**：
+- 放弃 Tree of Thoughts / TaskGraph 本轮落地：这两个虽能提升复杂问题质量，但会增加 2-3 倍 LLM 调用，与"提速"目标冲突，留作后续质量迭代
+- 流式进度选择 CompletableFuture.anyOf 而非 Java 21 Virtual Threads：兼容性优先，anyOf + 轮询足够简洁
+- QuickPath 不引入独立小模型：当前 per-call model selection 已有 ECONOMY 级别，复用即可，不必再增加模型配置复杂度
+
+---
 
 ### 2026-06-20 小云AI 6大升级 + 开发效能体系
 

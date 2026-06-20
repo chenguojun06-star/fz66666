@@ -12,7 +12,8 @@ import BudgetDaysEditor from '@/components/common/BudgetDaysEditor';
 import CardCoverSwitcher from '@/components/common/CardCoverSwitcher';
 import SmartOrderHoverCard from '../components/SmartOrderHoverCard';
 import DefectTracePopover from '../components/DefectTracePopover';
-import { getOrderStatusConfig } from '@/components/common/OrderStatusTag';
+import { displayOrderStatus, displayDate } from '@/utils/display';
+import DisplayStatusTag from '@/components/common/DisplayStatusTag';
 import FactoryTypeTag from '@/components/common/FactoryTypeTag';
 import { isDirectCuttingOrder, isOrderFrozenByStatus } from '@/utils/api';
 import { factoryShipmentApi } from '@/services/production/factoryShipmentApi';
@@ -120,10 +121,10 @@ export interface OrderSummaryContext {
 export function createOrderSummaryRender(ctx: OrderSummaryContext) {
   const { stagnantOrderIds, openRemarkModal, deliveryRiskMap } = ctx;
   return (_: any, record: ProductionOrder) => {
-    const status = getOrderStatusConfig(record.status);
+    const status = displayOrderStatus(record.status);
     const stagnantDays = stagnantOrderIds?.get(String(record.id));
     const shipTimeValue = getOrderShipTime(record);
-    const shipDate = shipTimeValue ? dayjs(shipTimeValue).format('YYYY-MM-DD') : '-';
+    const shipDate = displayDate(shipTimeValue, 'date');
     const quantity = Number(record.orderQuantity || 0);
     const { text, color } = getRemainingDaysDisplay(record.plannedEndDate, record.createTime, record.actualEndDate, record.status);
     const aiRisk = deliveryRiskMap?.get(String(record.orderNo || ''));
@@ -132,7 +133,7 @@ export function createOrderSummaryRender(ctx: OrderSummaryContext) {
     const customerName = String((record as Record<string, unknown>).company || '').trim();
     const remark = String((record as Record<string, unknown>).remarks || '').trim();
     const expectedShipDateRaw = (record as Record<string, unknown>).expectedShipDate;
-    const expectedShipDate = expectedShipDateRaw ? dayjs(String(expectedShipDateRaw)).format('YYYY-MM-DD HH:mm') : '-';
+    const expectedShipDate = displayDate(expectedShipDateRaw, 'datetime');
     const softTagBaseStyle: CSSProperties = {
       margin: 0,
       fontSize: 12,
@@ -165,7 +166,7 @@ export function createOrderSummaryRender(ctx: OrderSummaryContext) {
               />
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', minHeight: 24 }}>
-              <Tag color={status.color} style={{ margin: 0, fontSize: 12 }}>{status.label}</Tag>
+              <Tag color={status.color} style={{ margin: 0, fontSize: 12 }}>{status.text}</Tag>
               {record.urgencyLevel === 'urgent' && <Tag color="red" style={{ margin: 0, fontSize: 12 }}>急单</Tag>}
               {String(record.plateType || '').toUpperCase() === 'FIRST' && <Tag color="blue" style={{ margin: 0, fontSize: 12 }}>首单</Tag>}
               {String(record.plateType || '').toUpperCase() === 'REORDER' && <Tag color="gold" style={{ margin: 0, fontSize: 12 }}>翻单</Tag>}
@@ -447,7 +448,7 @@ export function createProgressNodesRender(ctx: ProgressNodesContext) {
                       textAlign: 'center',
                       whiteSpace: 'nowrap',
                     }}>
-                      {record.createTime ? dayjs(record.createTime as string).format('MM-DD') : '--'}
+                      {displayDate(record.createTime, 'month-day')}
                     </div>
                   </div>
                 </div>

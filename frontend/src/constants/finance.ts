@@ -4,10 +4,12 @@
 
 /**
  * 获取物料对账状态配置
+ * 颜色与 statusMaps.ts MATERIAL_RECON_STATUS_MAP 保持一致
  * @param status 状态值
  * @returns 状态配置对象，包含文本和颜色
  */
 export const getMaterialReconStatusConfig = (status: any) => {
+  // verified→processing(蓝)，approved→success(绿)，paid→success(绿)，rejected→error(红)
   const statusMap: Record<string, { text: string; color: string }> = {
     pending: { text: '待核实', color: 'default' },
     verified: { text: '已核实', color: 'processing' },
@@ -16,7 +18,8 @@ export const getMaterialReconStatusConfig = (status: any) => {
     rejected: { text: '已驳回', color: 'error' },
   };
   const key = String(status || '').trim();
-  return statusMap[key] || { text: '未知', color: 'default' };
+  // 大小写兼容
+  return statusMap[key] ?? statusMap[key.toLowerCase()] ?? statusMap[key.toUpperCase()] ?? { text: key || '未知', color: 'default' };
 };
 
 /**

@@ -12,6 +12,7 @@ import com.fashion.supplychain.intelligence.service.AiAgentIdempotencyService;
 import com.fashion.supplychain.intelligence.service.CostExplosionGuard;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.context.annotation.Lazy;
 
@@ -37,6 +38,13 @@ public class AiAgentToolExecHelper {
 
     private static final int STUCK_MAX_REPEAT = 3;
 
+    @Value("${xiaoyun.agent.tool-executor.core-pool-size:16}")
+    private int toolCorePoolSize;
+    @Value("${xiaoyun.agent.tool-executor.max-pool-size:32}")
+    private int toolMaxPoolSize;
+    @Value("${xiaoyun.agent.tool-executor.queue-capacity:256}")
+    private int toolQueueCapacity;
+
     @Autowired private AiAgentTraceOrchestrator aiAgentTraceOrchestrator;
     @Autowired private AiAgentEvidenceHelper evidenceHelper;
     @Autowired private AiAgentToolAccessService aiAgentToolAccessService;
@@ -48,22 +56,26 @@ public class AiAgentToolExecHelper {
 
     private Map<String, AgentTool> toolMap;
 
-    private final ExecutorService toolExecutor = new ThreadPoolExecutor(
-            8, 16, 60L, TimeUnit.SECONDS,
-            new LinkedBlockingQueue<>(128),
-            new ThreadFactory() {
-                private final AtomicInteger seq = new AtomicInteger(1);
-                @Override
-                public Thread newThread(Runnable r) {
-                    Thread t = new Thread(r, "ai-tool-" + seq.getAndIncrement());
-                    t.setDaemon(true);
-                    return t;
-                }
-            },
-            new ThreadPoolExecutor.CallerRunsPolicy());
+    private ExecutorService toolExecutor;
 
     @PostConstruct
     public void init() {
+        toolExecutor = new ThreadPoolExecutor(
+                toolCorePoolSize, toolMaxPoolSize, 60L, TimeUnit.SECONDS,
+                new LinkedBlockingQueue<>(toolQueueCapacity),
+                new ThreadFactory() {
+                    private final AtomicInteger seq = new AtomicInteger(1);
+                    @Override
+                    public Thread newThread(Runnable r) {
+                        Thread t = new Thread(r, "ai-tool-" + seq.getAndIncrement());
+                        t.setDaemon(true);
+                        return t;
+                    }
+                },
+                new ThreadPoolExecutor.CallerRunsPolicy());
+        log.info("[AiAgent-Config] 工具执行线程池初始化: core={}, max={}, queue={}",
+                toolCorePoolSize, toolMaxPoolSize, toolQueueCapacity);
+
         toolMap = new HashMap<>();
         if (registeredTools != null) {
             for (AgentTool tool : registeredTools) {
@@ -170,6 +182,88 @@ public class AiAgentToolExecHelper {
                 records.add(new ToolExecRecord("err", "unknown", "",
                         "{\"error\":\"工具执行异常: " + e.getMessage() + "\"}",
                         "【工具证据】\n- 状态: 异常\n- 错误: " + e.getMessage(), 0));
+            }
+        }
+        return records;
+    }
+
+    /**
+     * 流式工具执行：每个工具完成后立即回调，不等全部完成。
+     * 提升用户体验：让用户看到实时进度，而不是最后一起显示。
+     */
+    public List<ToolExecRecord> executeToolsWithStreaming(
+            List<AiToolCall> toolCalls,
+            Map<String, AgentTool> visibleToolMap,
+            String commandId,
+            Map<String, ToolExecRecord> toolResultCache,
+            java.util.function.Consumer<ToolExecRecord> onSingleToolDone) {
+
+        if (toolCalls.size() == 1) {
+            AiToolCall tc = toolCalls.get(0);
+            String cacheKey = tc.getFunction().getName() + ":" + tc.getFunction().getArguments();
+            ToolExecRecord cached = toolResultCache.get(cacheKey);
+            if (cached != null) {
+                log.info("[AiAgent-Cache] 工具缓存命中: {}", tc.getFunction().getName());
+                ToolExecRecord result = new ToolExecRecord(tc.getId(), cached.toolName, cached.args,
+                        cached.rawResult, cached.evidence, 0);
+                if (onSingleToolDone != null) onSingleToolDone.accept(result);
+                return List.of(result);
+            }
+            ToolExecRecord rec = executeSingleTool(tc, visibleToolMap, commandId);
+            toolResultCache.put(cacheKey, rec);
+            if (onSingleToolDone != null) onSingleToolDone.accept(rec);
+            return List.of(rec);
+        }
+
+        // 并发执行 + 流式回调（完成一个推送一个）
+        java.util.List<CompletableFuture<ToolExecRecord>> futures = new java.util.ArrayList<>();
+        for (AiToolCall toolCall : toolCalls) {
+            String cacheKey = toolCall.getFunction().getName() + ":" + toolCall.getFunction().getArguments();
+            ToolExecRecord cached = toolResultCache.get(cacheKey);
+            if (cached != null) {
+                log.info("[AiAgent-Cache] 工具缓存命中: {}", toolCall.getFunction().getName());
+                ToolExecRecord cachedCopy = new ToolExecRecord(toolCall.getId(), cached.toolName,
+                        cached.args, cached.rawResult, cached.evidence, 0);
+                futures.add(CompletableFuture.completedFuture(cachedCopy));
+            } else {
+                futures.add(CompletableFuture.supplyAsync(
+                        UserContext.wrapSupplier(() -> executeSingleTool(toolCall, visibleToolMap, commandId)),
+                        toolExecutor));
+            }
+        }
+
+        java.util.List<ToolExecRecord> records = new java.util.ArrayList<>();
+        // 使用 CompletableFuture.anyOf 模式：完成一个处理一个，不等待最慢的
+        java.util.Set<CompletableFuture<ToolExecRecord>> remaining = new java.util.HashSet<>(futures);
+        while (!remaining.isEmpty()) {
+            try {
+                CompletableFuture.anyOf(remaining.toArray(new CompletableFuture[0])).join();
+            } catch (Exception ignored) {}
+
+            java.util.Iterator<CompletableFuture<ToolExecRecord>> it = remaining.iterator();
+            while (it.hasNext()) {
+                CompletableFuture<ToolExecRecord> f = it.next();
+                if (f.isDone()) {
+                    try {
+                        ToolExecRecord rec = f.join();
+                        records.add(rec);
+                        String cacheKey = rec.toolName + ":" + rec.args;
+                        toolResultCache.putIfAbsent(cacheKey, rec);
+                        if (onSingleToolDone != null) {
+                            try {
+                                onSingleToolDone.accept(rec);
+                            } catch (Exception ex) {
+                                log.debug("[AiAgent] 流式回调异常: {}", ex.getMessage());
+                            }
+                        }
+                    } catch (Exception e) {
+                        log.error("[AiAgent] 并发工具执行异常: {}", e.getMessage());
+                        records.add(new ToolExecRecord("err", "unknown", "",
+                                "{\"error\":\"工具执行异常: " + e.getMessage() + "\"}",
+                                "【工具证据】\n- 状态: 异常\n- 错误: " + e.getMessage(), 0));
+                    }
+                    it.remove();
+                }
             }
         }
         return records;

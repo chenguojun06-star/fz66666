@@ -780,13 +780,15 @@ public class AiAgentOrchestrator {
 
 
     private boolean isQuickPathEligible(String userMessage) {
-        if (userMessage == null || userMessage.length() > 500) return false;
+        if (userMessage == null || userMessage.length() > 800) return false;
         XiaoyunPatterns.IntentType intent = XiaoyunPatterns.estimateIntent(userMessage);
         if (intent == XiaoyunPatterns.IntentType.ACTION_COMMAND) return false;
-        if (intent == XiaoyunPatterns.IntentType.COMPLEX_ANALYSIS) return false;
         if (intent == XiaoyunPatterns.IntentType.SMALL_TALK) return true;
         if (intent == XiaoyunPatterns.IntentType.KNOWLEDGE_ASK) return true;
-        return userMessage.length() <= 20;
+        if (intent == XiaoyunPatterns.IntentType.SIMPLE_QUERY) return true;
+        // 轻度分析类问题（≤300字符）也尝试走快速通道
+        if (intent == XiaoyunPatterns.IntentType.COMPLEX_ANALYSIS && userMessage.length() <= 300) return true;
+        return userMessage.length() <= 50;
     }
 
     /** 安全获取 CompletableFuture 当前结果：未完成或异常返回空字符串，不阻塞 */
@@ -871,10 +873,10 @@ public class AiAgentOrchestrator {
                 entityMemoryFuture = java.util.concurrent.CompletableFuture.completedFuture("");
             }
 
-            // 等待全部完成（2s 超时保护，避免慢查询阻塞快速通道）
+            // 等待全部完成（4s 超时保护，确保慢查询但仍有效的上下文能返回；超过25s由上层Agent超时兜底）
             try {
                 java.util.concurrent.CompletableFuture.allOf(ragFuture, intelligenceFuture, memoryBankFuture, entityMemoryFuture)
-                        .get(2, TimeUnit.SECONDS);
+                        .get(4, TimeUnit.SECONDS);
             } catch (Exception e) {
                 log.debug("[QuickPath] 上下文并行构建部分超时: {}", e.getMessage());
             }

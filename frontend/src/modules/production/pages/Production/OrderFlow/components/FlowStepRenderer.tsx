@@ -9,9 +9,9 @@ import StylePatternSimpleTab from './StylePatternSimpleTab';
 import StyleQuotationTab from '@/modules/basic/pages/StyleInfo/components/StyleQuotationTab';
 import StyleSecondaryProcessTab from '@/modules/basic/pages/StyleInfo/components/StyleSecondaryProcessTab';
 import { formatReferenceKilograms } from '../../MaterialPurchase/utils';
-import { formatMoney } from '@/utils/format';
 import { toNumberSafe } from '@/utils/api';
-import { formatDateTime } from '@/utils/datetime';
+import DisplayStatusTag from '@/components/common/DisplayStatusTag';
+import { displayDate, displayAmount } from '@/utils/display';
 import type { CuttingBundle, CuttingTask } from '@/types/production';
 import api from '@/utils/api';
 import { remarkApi, type OrderRemark } from '@/services/system/remarkApi';
@@ -37,30 +37,6 @@ interface Props {
   onCancelEdit: () => void;
   onRefresh?: () => void;
 }
-
-const BUNDLE_STATUS_MAP: Record<string, { text: string; color: string }> = {
-  created: { text: '已创建', color: 'default' },
-  active: { text: '有效', color: 'success' },
-  qualified: { text: '合格', color: 'success' },
-  unqualified: { text: '不合格', color: 'error' },
-  inactive: { text: '无效', color: 'default' },
-  split: { text: '已拆分', color: 'processing' },
-  pending: { text: '待处理', color: 'default' },
-  in_progress: { text: '进行中', color: 'processing' },
-  completed: { text: '已完成', color: 'success' },
-};
-
-const TASK_STATUS_MAP: Record<string, { text: string; color: string }> = {
-  pending: { text: '待裁剪', color: 'default' },
-  in_progress: { text: '裁剪中', color: 'processing' },
-  completed: { text: '已完成', color: 'success' },
-  bundled: { text: '已打扎', color: 'success' },
-};
-
-const StatusTag: React.FC<{ status: string; map: Record<string, { text: string; color: string }> }> = ({ status, map }) => {
-  const s = map[status] || { text: status || '未知', color: 'default' };
-  return <span style={{ padding: '1px 6px', borderRadius: 3, fontSize: 14, background: `var(--ant-${s.color}-1, var(--color-border-light))`, color: `var(--ant-${s.color}-6, #333)` }}>{s.text}</span>;
-};
 
 const FlowStepRenderer: React.FC<Props> = ({
   loading, data, isFactoryUser,
@@ -201,10 +177,10 @@ const FlowStepRenderer: React.FC<Props> = ({
     { title: '单件用量', dataIndex: 'usageAmount', key: 'usageAmount', width: 100, align: 'right' as const, render: (v: any, record: any) => v ? `${Number(v).toFixed(2)} ${record.unit || ''}` : '-' },
     { title: '损耗率', dataIndex: 'lossRate', key: 'lossRate', width: 80, align: 'right' as const, render: (v: any) => v ? `${Number(v)}%` : '-' },
     ...(!isFactoryUser ? [
-      { title: '单价', dataIndex: 'unitPrice', key: 'unitPrice', width: 90, align: 'right' as const, render: (v: any) => v ? formatMoney(Number(v)) : '-' },
+      { title: '单价', dataIndex: 'unitPrice', key: 'unitPrice', width: 90, align: 'right' as const, render: (v: any) => v ? displayAmount(Number(v)) : '-' },
       { title: '总价', key: 'totalPrice', width: 100, align: 'right' as const, render: (_: any, record: any) => {
         const total = Number(record.totalPrice || 0) || (Number(record.usageAmount || 0) * Number(record.unitPrice || 0));
-        return total > 0 ? <strong style={{ color: 'var(--primary-color)' }}>{formatMoney(total)}</strong> : '-';
+        return total > 0 ? <strong style={{ color: 'var(--primary-color)' }}>{displayAmount(total)}</strong> : '-';
       }},
     ] : []),
     { title: '供应商', dataIndex: 'supplier', key: 'supplier', width: 120, ellipsis: true, render: (v: any) => v || '-' },
@@ -268,8 +244,8 @@ const FlowStepRenderer: React.FC<Props> = ({
                           { title: '裁片数', dataIndex: 'cuttingQuantity', key: 'cuttingQuantity', width: 100, align: 'right' as const, render: (v: any) => toNumberSafe(v) },
                           { title: '扎数', dataIndex: 'cuttingBundleCount', key: 'cuttingBundleCount', width: 80, align: 'right' as const, render: (v: any) => toNumberSafe(v) },
                           { title: '操作人', dataIndex: 'receiverName', key: 'receiverName', width: 120, render: (v: any) => v || '-' },
-                          { title: '完成时间', dataIndex: 'bundledTime', key: 'bundledTime', width: 170, render: (v: any, record: any) => v ? formatDateTime(v) : (record?.createTime ? formatDateTime(record.createTime) : '-') },
-                          { title: '状态', dataIndex: 'status', key: 'status', width: 100, render: (v: any) => <StatusTag status={v} map={TASK_STATUS_MAP} /> },
+                          { title: '完成时间', dataIndex: 'bundledTime', key: 'bundledTime', width: 170, render: (v: any, record: any) => displayDate(v ?? record?.createTime, 'datetime') },
+                          { title: '状态', dataIndex: 'status', key: 'status', width: 100, render: (v: any) => <DisplayStatusTag status={v} variant="task" /> },
                         ]} pagination={false} scroll={{ x: 670 }} />
                     </Card>
                   )}
@@ -287,8 +263,8 @@ const FlowStepRenderer: React.FC<Props> = ({
                       { title: '颜色', dataIndex: 'color', key: 'color', width: 100, render: (v: any) => String(v || '').trim() || '-' },
                       { title: '尺码', dataIndex: 'size', key: 'size', width: 80 },
                       { title: '数量', dataIndex: 'quantity', key: 'quantity', width: 80, align: 'right' as const, render: (v: any) => toNumberSafe(v) },
-                      { title: '状态', dataIndex: 'status', key: 'status', width: 100, render: (v: any) => <StatusTag status={v} map={BUNDLE_STATUS_MAP} /> },
-                      { title: '创建时间', dataIndex: 'createTime', key: 'createTime', width: 170, render: (v: any) => v ? formatDateTime(v) : '-' },
+                      { title: '状态', dataIndex: 'status', key: 'status', width: 100, render: (v: any) => <DisplayStatusTag status={v} variant="bundle" /> },
+                      { title: '创建时间', dataIndex: 'createTime', key: 'createTime', width: 170, render: (v: any) => displayDate(v, 'datetime') },
                       { title: '操作人', key: 'operatorDisplay', width: 120, render: (_: any, record: any) => {
                         const opName = record.operatorName || record.creatorName;
                         if (taskReceiverName && (!opName || opName === '系统管理员')) return taskReceiverName;
@@ -370,10 +346,10 @@ const FlowStepRenderer: React.FC<Props> = ({
                         return <span style={{ color }}>{val.toFixed(2)} {record.unit || ''}</span>;
                       }},
                       ...(!isFactoryUser ? [
-                        { title: '单价', dataIndex: 'unitPrice', key: 'unitPrice', width: 90, align: 'right' as const, render: (v: any) => v ? formatMoney(Number(v)) : '-' },
-                        { title: '总价', key: 'totalAmount', width: 100, align: 'right' as const, render: (_: any, record: any) => {
+                        { title: '单价', dataIndex: 'unitPrice', key: 'unitPrice', width: 90, align: 'right' as const, render: (v: any) => v ? displayAmount(Number(v)) : '-' },
+                        { title: '总价', key: 'totalPrice', width: 100, align: 'right' as const, render: (_: any, record: any) => {
                           const total = Number(record.totalAmount || 0) || (Number(record.purchaseQuantity || 0) * Number(record.unitPrice || 0));
-                          return total > 0 ? <strong style={{ color: 'var(--primary-color)' }}>{formatMoney(total)}</strong> : '-';
+                          return total > 0 ? <strong style={{ color: 'var(--primary-color)' }}>{displayAmount(total)}</strong> : '-';
                         }},
                       ] : []),
                       { title: '供应商', dataIndex: 'supplierName', key: 'supplierName', width: 120, ellipsis: true, render: (v: any) => v || '-' },
@@ -464,7 +440,7 @@ const FlowStepRenderer: React.FC<Props> = ({
                             <Alert title="工序单价信息" type="info" showIcon style={{ marginBottom: 16 }}
                               description={
                                 <div>
-                                  <p>工序数量: <strong>{workflowNodes.length}</strong> 个 | 工序总单价: <strong style={{ color: 'var(--primary-color)', fontSize: 'var(--font-size-lg)' }}>{formatMoney(totalPrice)}</strong></p>
+                                  <p>工序数量: <strong>{workflowNodes.length}</strong> 个 | 工序总单价: <strong style={{ color: 'var(--primary-color)', fontSize: 'var(--font-size-lg)' }}>{displayAmount(totalPrice)}</strong></p>
                                   <p style={{ marginTop: 8, color: 'var(--color-warning)' }}>提示：单价修改需要到"单价维护"模块中修改，修改后点击"刷新数据"按钮可更新单价</p>
                                 </div>
                               } />
@@ -479,7 +455,7 @@ const FlowStepRenderer: React.FC<Props> = ({
                                 return m[v] || v || '-'; }},
                               { title: '机器类型', dataIndex: 'machineType', key: 'machineType', width: 120, render: (v: any) => v || '-' },
                               { title: '标准工时(分钟)', dataIndex: 'standardTime', key: 'standardTime', width: 130, align: 'right' as const, render: (v: any) => Number(v || 0).toFixed(2) },
-                              ...(!isFactoryUser ? [{ title: '单价(元)', dataIndex: 'unitPrice', key: 'unitPrice', width: 120, align: 'right' as const, render: (v: any) => <strong style={{ color: 'var(--primary-color)' }}>{formatMoney(Number(v || 0))}</strong> }] : []),
+                              ...(!isFactoryUser ? [{ title: '单价(元)', dataIndex: 'unitPrice', key: 'unitPrice', width: 120, align: 'right' as const, render: (v: any) => <strong style={{ color: 'var(--primary-color)' }}>{displayAmount(Number(v || 0))}</strong> }] : []),
                               { title: '工序描述', dataIndex: 'description', key: 'description', ellipsis: true, render: (v: any) => v || '-' },
                             ]} pagination={false} bordered scroll={{ x: 'max-content' }} />
                         </>
@@ -539,7 +515,7 @@ const FlowStepRenderer: React.FC<Props> = ({
                                 {r.authorName && <><UserOutlined /> {r.authorName}</>}
                               </span>
                               <span style={{ color: 'var(--color-text-quaternary)', fontSize: 12 }}>
-                                {formatDateTime(r.createTime)}
+                                {displayDate(r.createTime, 'datetime')}
                               </span>
                             </div>
                             <div style={{ marginLeft: isSystem ? 20 : 0, color: isSystem ? 'var(--color-text-secondary)' : 'var(--color-text-primary)' }}>
