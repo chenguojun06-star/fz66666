@@ -86,6 +86,13 @@ Page({
     styleInfo: null,
     loading: true,
     showDetails: false,
+    // 开发阶段快捷操作（与 PC 端 useStagePanel 一致）
+    stages: [],
+    // 样衣生产工作流快捷操作（与 PC 端 useSampleStage 一致）
+    showSampleWorkflow: false,
+    canReceiveSample: false,
+    canCompleteSample: false,
+    sampleWfStatusText: '',
     // BOM清单
     bomList: [],
     bomLoading: false,
@@ -143,6 +150,8 @@ Page({
       const detail = res?.data || res || {};
       // 保存 pattern 自带的 coverImage 作为兜底
       this._patternCover = getAuthedImageUrl(detail.coverImage || detail.styleImage || detail.cover || '');
+      // 构建样衣生产工作流快捷操作
+      this.buildSampleWorkflow(detail);
       // 把 PatternProduction 基础字段存起来，后续合并到 styleInfo
       const rawStatus = detail.status || '';
       const mainStatus = resolveMainStatus(detail);
@@ -246,6 +255,7 @@ Page({
         _completeTime: styleInfo.completeTime || styleInfo.sampleCompletedTime || '',
       });
       this.setData({ styleInfo, loading: false });
+      this.buildStages(styleInfo);
       this.buildStyleImages(styleInfo);
       // 并行预加载折叠区域内的所有数据
       this.loadBom();
@@ -303,6 +313,38 @@ Page({
       };
     });
     this.setData({ stages });
+  },
+
+  /**
+   * 构建样衣生产工作流快捷操作（与 PC 端 useSampleStage 一致）
+   * 根据 patternDetail.status 判断可领取/可完成
+   *   PENDING → 可领取
+   *   IN_PROGRESS / PROGRESS → 可标记完成
+   *   COMPLETED / WAREHOUSE_IN → 已完成，不显示按钮
+   */
+  buildSampleWorkflow(patternDetail) {
+    if (!patternDetail || !this.data.patternId) {
+      this.setData({ showSampleWorkflow: false, canReceiveSample: false, canCompleteSample: false, sampleWfStatusText: '' });
+      return;
+    }
+    const rawStatus = String(patternDetail.status || patternDetail.sampleStatus || '').trim().toUpperCase();
+    const isScrapped = rawStatus === 'SCRAPPED' || rawStatus === 'CLOSED';
+    const isCompleted = rawStatus === 'COMPLETED' || rawStatus === 'WAREHOUSE_IN' ||
+      String(patternDetail.progressNode || '').includes('完成');
+    const isReceived = rawStatus === 'IN_PROGRESS' || rawStatus === 'PROGRESS' ||
+      !!patternDetail.receiveTime || !!patternDetail.receiver;
+    const canReceive = !isScrapped && !isCompleted && !isReceived;
+    const canComplete = !isScrapped && !isCompleted && isReceived;
+    let statusText = '未领取';
+    if (isScrapped) statusText = '已报废/关单';
+    else if (isCompleted) statusText = '已完成';
+    else if (isReceived) statusText = '制作中';
+    this.setData({
+      showSampleWorkflow: !isScrapped,
+      canReceiveSample: canReceive,
+      canCompleteSample: canComplete,
+      sampleWfStatusText: statusText,
+    });
   },
 
   /** 构建款式图片列表（cover + pattern自带的coverImage + 附件中的图片） */
@@ -403,6 +445,8 @@ Page({
       const config = configRes?.data || configRes || [];
       const records = recordsRes?.data || recordsRes || [];
       const processStages = this._buildProcessStages(config, records, detail);
+      // 同步更新样衣生产工作流状态（detail 中含最新 status/receiveTime）
+      this.buildSampleWorkflow(detail);
       this.setData({
         processStages,
         hasProcessSystem: config.length > 0,
@@ -670,6 +714,62 @@ Page({
           this.loadStyleDetail();
         } catch (e) {
           toast.error('退回失败');
+        }
+      }
+    });
+  },
+
+  /** 领取样衣（与 PC 端 useSampleStage.receive 一致） */
+  onSampleReceive() {
+    const patternId = this.data.patternId;
+    if (!patternId || !this.data.canReceiveSample) return;
+
+    const doReceive = async () => {
+      try {
+        await production.receivePattern(patternId, '');
+        wx.showToast({ title: '领取成功', icon: 'success' });
+        // 刷新工作流状态 + 工序列表
+        this.loadProductionScanStages();
+        if (this.data.styleId) this.loadStyleDetail();
+      } catch (e) {
+        toast.error('领取失败');
+      }
+    };
+
+    if (!permission.canReceiveTask('sample')) {
+      wx.showModal({
+        title: '岗位提示',
+        content: `您当前职务「${permission.getRoleDisplayName()}」非样衣岗，确定代领样衣？`,
+        confirmText: '确定代领',
+        cancelText: '取消',
+        success: (res) => { if (res.confirm) doReceive(); },
+      });
+    } else {
+      wx.showModal({
+        title: '领取确认',
+        content: '确认领取此样衣任务？',
+        success: (res) => { if (res.confirm) doReceive(); },
+      });
+    }
+  },
+
+  /** 标记样衣完成（与 PC 端 useSampleStage.complete 一致） */
+  onSampleComplete() {
+    const patternId = this.data.patternId;
+    if (!patternId || !this.data.canCompleteSample) return;
+
+    wx.showModal({
+      title: '确认完成',
+      content: '确认此样衣已制作完成？',
+      success: async (res) => {
+        if (!res.confirm) return;
+        try {
+          await production.patternWorkflowAction(patternId, 'complete');
+          wx.showToast({ title: '已标记完成', icon: 'success' });
+          this.loadProductionScanStages();
+          if (this.data.styleId) this.loadStyleDetail();
+        } catch (e) {
+          toast.error('操作失败');
         }
       }
     });

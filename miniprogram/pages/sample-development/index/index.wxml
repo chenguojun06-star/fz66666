@@ -1,4 +1,10 @@
 <view class="container">
+  <!-- 样衣开发摘要 -->
+  <view class="sample-summary-bar" wx:if="{{sampleCount > 0}}">
+    <text class="sample-summary-val">{{sampleCount}}</text>
+    <text class="sample-summary-lbl">样衣开发中</text>
+  </view>
+
   <!-- 搜索栏 -->
   <view class="search-bar">
     <view class="search-input-wrap">
@@ -20,15 +26,6 @@
   <view wx:if="{{roleHint}}" class="role-hint-bar">
     <text class="role-hint-icon">⚠️</text>
     <text class="role-hint-text">{{roleHint}}</text>
-  </view>
-
-  <!-- 搜索栏 -->
-  <view class="search-bar">
-    <view class="search-input-wrap">
-      <text class="search-icon">🔍</text>
-      <input class="search-input" placeholder="搜索款号/款式名" value="{{keyword}}" bindinput="onSearchInput" confirm-type="search" />
-      <text wx:if="{{keyword}}" class="search-clear" data-clear="1" bindtap="onSearchInput">✕</text>
-    </view>
   </view>
 
   <!-- 状态筛选 Tab -->

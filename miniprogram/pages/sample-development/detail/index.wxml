@@ -91,6 +91,57 @@
       </view>
     </view>
 
+    <!-- ══ ③-2 开发阶段快捷操作（与 PC 端 useStagePanel 一致） ══ -->
+    <view wx:if="{{stages.length > 0}}" class="section-card stage-quick-card">
+      <view class="section-hd">
+        <text class="section-title">开发阶段</text>
+        <text class="section-count">共 {{stages.length}} 项</text>
+      </view>
+      <view class="stage-list">
+        <view wx:for="{{stages}}" wx:key="key" wx:for-item="stage"
+              class="stage-row {{stage.status === 'completed' ? 'sr-done' : ''}} {{stage.status === 'in_progress' ? 'sr-active' : ''}}">
+          <view class="sr-left">
+            <view class="sr-dot {{stage.status === 'completed' ? 'sd-done' : (stage.status === 'in_progress' ? 'sd-active' : 'sd-pending')}}"></view>
+            <view class="sr-info">
+              <text class="sr-name">{{stage.name}}</text>
+              <text class="sr-status ss-{{stage.status}}">{{stage.statusText}}</text>
+            </view>
+          </view>
+          <view class="sr-actions">
+            <view wx:if="{{stage.canReceive}}" class="stage-btn sb-primary"
+                  data-key="{{stage.key}}" bindtap="onStageReceive">
+              <text>领取</text>
+            </view>
+            <view wx:if="{{stage.canComplete}}" class="stage-btn sb-primary"
+                  data-key="{{stage.key}}" bindtap="onStageConfirm">
+              <text>标记完成</text>
+            </view>
+            <view wx:if="{{stage.canRollback}}" class="stage-btn sb-danger"
+                  data-key="{{stage.key}}" bindtap="onStageRollback">
+              <text>退回修改</text>
+            </view>
+            <text wx:if="{{!stage.canReceive && !stage.canComplete && !stage.canRollback && stage.status === 'completed'}}" class="sr-done-mark">✓</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- ══ ③-3 样衣生产工作流快捷操作（领取/完成，与 PC 端 useSampleStage 一致） ══ -->
+    <view wx:if="{{patternId && showSampleWorkflow}}" class="section-card sample-wf-card">
+      <view class="section-hd">
+        <text class="section-title">样衣生产</text>
+        <text class="section-count">{{sampleWfStatusText}}</text>
+      </view>
+      <view class="sample-wf-actions">
+        <view wx:if="{{canReceiveSample}}" class="stage-btn sb-primary swf-btn" bindtap="onSampleReceive">
+          <text>领取样衣</text>
+        </view>
+        <view wx:if="{{canCompleteSample}}" class="stage-btn sb-primary swf-btn" bindtap="onSampleComplete">
+          <text>标记完成</text>
+        </view>
+      </view>
+    </view>
+
     <!-- ══ ④ 执行进度区 · 生产工序 ══ -->
     <view wx:if="{{showDetails}}" class="section-card">
       <view class="section-hd">

@@ -23,7 +23,6 @@ const app = getApp();
 
 /* 状态过滤映射（值 = 后端 status 字段；overdue 为客户端筛选） */
 const STATUS_FILTERS = [
-  { key: 'all',           label: '进行中', value: '' },
   { key: 'in_production', label: '生产中', value: 'production' },
   { key: 'completed',     label: '已完成', value: 'completed' },
   { key: 'overdue',       label: '延期',   value: '' },
@@ -59,8 +58,8 @@ Page({
     unreadNoticeCount: 0,
     /* 状态过滤 */
     statFilters: STATUS_FILTERS,
-    activeFilter: 'all',
-    statCounts: { all: 0, in_production: 0, completed: 0, overdue: 0 },
+    activeFilter: 'in_production',
+    statCounts: { in_production: 0, completed: 0, overdue: 0 },
     searchKey: '',
     /* 订单列表（分页） */
     orders: { list: [], page: 0, pageSize: 15, loading: false, hasMore: true },
@@ -239,7 +238,6 @@ Page({
       const dash  = res[1] || {};
       that.setData({
         statCounts: {
-          all:            Number(stats.totalOrders) || 0,
           in_production:  Number(stats.activeOrders) || 0,
           completed:      Number(stats.completedOrders) || 0,
           overdue:        Number(dash.overdueOrderCount) || Number(stats.delayedOrders) || 0,

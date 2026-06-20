@@ -10,12 +10,8 @@
     <text class="today-scan" wx:if="{{todayScanCount > 0}}">{{todayScanCount}} 次扫码</text>
   </view>
 
-  <!-- 4 张摘要卡片 · 横向等分 -->
+  <!-- 3 张摘要卡片 · 横向等分 -->
   <view class="stats-row" wx:if="{{!loading}}">
-    <view class="stat-card stat-card--purple" wx:if="{{cards.sample.developing > 0 || cards.sample.completed > 0}}">
-      <text class="stat-val">{{cards.sample.developing}}</text>
-      <text class="stat-lbl">样衣开发</text>
-    </view>
     <view class="stat-card stat-card--blue">
       <text class="stat-val">{{cards.production.total}}</text>
       <text class="stat-lbl">生产订单</text>

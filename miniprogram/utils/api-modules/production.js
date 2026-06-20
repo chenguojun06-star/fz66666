@@ -204,6 +204,15 @@ const production = {
     }
     return ok(`/api/production/pattern/${encodeURIComponent(id)}/workflow-action?action=${action}`, 'POST', payload);
   },
+  /**
+   * 通用样衣工作流操作（与 PC 端 useSampleStage 一致）
+   * action: receive / complete / warehouse-in / review
+   */
+  patternWorkflowAction(patternId, action, payload) {
+    const id = String(patternId || '').trim();
+    const act = encodeURIComponent(action || '');
+    return ok(`/api/production/pattern/${encodeURIComponent(id)}/workflow-action?action=${act}`, 'POST', payload || {});
+  },
   receivePattern(patternId, remark, extra) {
     const id = String(patternId || '').trim();
     const payload = { remark: remark || '' };

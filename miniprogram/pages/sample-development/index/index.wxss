@@ -14,6 +14,28 @@
   padding: var(--spacing-md) 0;
 }
 
+/* ---- 样衣开发摘要条 ---- */
+.sample-summary-bar {
+  display: flex;
+  align-items: baseline;
+  gap: var(--spacing-xs);
+  margin: 0 0 var(--spacing-md);
+  padding: var(--spacing-sm) var(--spacing-lg);
+  background: linear-gradient(135deg, rgba(var(--color-primary-rgb), 0.10), rgba(var(--color-primary-rgb), 0.04));
+  border-radius: var(--radius-lg);
+  border: 1rpx solid rgba(var(--color-primary-rgb), 0.18);
+}
+.sample-summary-val {
+  font-size: var(--font-size-xl);
+  font-weight: 600;
+  color: var(--color-primary);
+  line-height: 1.2;
+}
+.sample-summary-lbl {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
 /* ---- 跨岗位提示条 ---- */
 .role-hint-bar {
   display: flex;

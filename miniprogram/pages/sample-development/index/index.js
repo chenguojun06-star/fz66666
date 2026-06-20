@@ -120,6 +120,7 @@ Page({
     keyword: '',
     activeFilter: '',
     statusTabs: STATUS_TABS,
+    sampleCount: 0,
 
     list: [],
     page: 1,
@@ -209,6 +210,14 @@ Page({
     };
     if (that.data.keyword.trim()) params.keyword = that.data.keyword.trim();
     if (that.data.activeFilter) params.status = that.data.activeFilter;
+
+    // 并行获取样衣开发数量（来自 dashboard 接口）
+    if (reset) {
+      api.dashboard.get().then(function (res) {
+        const d = (res && res.data) || res || {};
+        that.setData({ sampleCount: Number(d.sampleDevelopmentCount) || 0 });
+      }).catch(function () { /* 静默失败，不阻塞列表 */ });
+    }
 
     api.production.listPatterns(params)
       .then(function (res) {
