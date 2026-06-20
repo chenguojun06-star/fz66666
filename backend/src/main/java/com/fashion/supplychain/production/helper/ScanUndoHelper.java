@@ -272,10 +272,7 @@ public class ScanUndoHelper {
         scanRecordService.removeById(target.getId());
         log.info("[undo] 已删除扫码记录: recordId={}", target.getId());
 
-        String oid = TextUtils.safeText(target.getOrderId());
-        if (hasText(oid)) {
-            productionOrderService.recomputeProgressFromRecords(oid);
-        }
+        safeRecomputeProgress(target.getOrderId());
 
         Map<String, Object> resp = new HashMap<>();
         resp.put("success", ok);
@@ -288,15 +285,22 @@ public class ScanUndoHelper {
         scanRecordService.removeById(target.getId());
         log.info("[undo] 已删除扫码记录: recordId={}", target.getId());
 
-        String oid = TextUtils.safeText(target.getOrderId());
-        if (hasText(oid)) {
-            productionOrderService.recomputeProgressFromRecords(oid);
-        }
+        safeRecomputeProgress(target.getOrderId());
 
         Map<String, Object> resp = new HashMap<>();
         resp.put("success", true);
         resp.put("message", "已撤销");
         return resp;
+    }
+
+    private void safeRecomputeProgress(String orderId) {
+        String oid = TextUtils.safeText(orderId);
+        if (!hasText(oid)) return;
+        try {
+            productionOrderService.recomputeProgressFromRecords(oid);
+        } catch (Exception e) {
+            log.warn("[safeRecomputeProgress] 进度重算失败（不影响撤销主流程）: orderId={}", oid, e);
+        }
     }
 
     private void resetTrackingByScanRecord(String scanRecordId) {

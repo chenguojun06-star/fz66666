@@ -67,7 +67,7 @@ public class SpringAiInferenceAdapter implements AiInferenceGateway {
             } catch (Exception e) {
                 lastError = e;
                 if (isRetryable(e) && attempt < 2) {
-                    long backoffMs = (long) Math.pow(2, attempt) * 1000 + (long)(Math.random() * 500);
+                    long backoffMs = (long) Math.pow(2, attempt) * 500 + (long)(Math.random() * 200);
                     log.warn("[SpringAiAdapter] chat failed (attempt={}), retrying in {}ms: {}", attempt + 1, backoffMs, e.getMessage());
                     try { Thread.sleep(backoffMs); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); break; }
                 } else {
@@ -119,7 +119,7 @@ public class SpringAiInferenceAdapter implements AiInferenceGateway {
             } catch (Exception e) {
                 lastError = e;
                 if (isRetryable(e) && attempt < 2) {
-                    long backoffMs = (long) Math.pow(2, attempt) * 1000 + (long)(Math.random() * 500);
+                    long backoffMs = (long) Math.pow(2, attempt) * 500 + (long)(Math.random() * 200);
                     log.warn("[SpringAiAdapter] chat failed (attempt={}), retrying in {}ms: {}", attempt + 1, backoffMs, e.getMessage());
                     try { Thread.sleep(backoffMs); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); break; }
                 } else {
@@ -134,10 +134,13 @@ public class SpringAiInferenceAdapter implements AiInferenceGateway {
     private boolean isRetryable(Exception e) {
         if (e == null) return false;
         String msg = e.getMessage() != null ? e.getMessage().toLowerCase() : "";
-        // 429限流、5xx服务端错误、网络超时可重试
+        // 网络超时/连接拒绝：快速降级不重试（网络问题短期不会恢复，重试浪费时间）
+        if (msg.contains("timeout") || msg.contains("timed out")) return false;
+        if (msg.contains("connection refused") || msg.contains("connection reset")
+                || msg.contains("connection timed out") || msg.contains("connectexception")) return false;
+        // 429限流、5xx服务端错误可重试（临时性错误，重试有意义）
         if (msg.contains("429") || msg.contains("rate") || msg.contains("too many")) return true;
         if (msg.contains("500") || msg.contains("502") || msg.contains("503") || msg.contains("504")) return true;
-        if (msg.contains("timeout") || msg.contains("timed out") || msg.contains("connection")) return true;
         // reasoning_content之类的400错误不可重试（需要修数据）
         return false;
     }
@@ -257,7 +260,7 @@ public class SpringAiInferenceAdapter implements AiInferenceGateway {
             } catch (Exception e) {
                 lastError = e;
                 if (isRetryable(e) && attempt < 2) {
-                    long backoffMs = (long) Math.pow(2, attempt) * 1000 + (long)(Math.random() * 500);
+                    long backoffMs = (long) Math.pow(2, attempt) * 500 + (long)(Math.random() * 200);
                     log.warn("[SpringAiAdapter] chatWithVision failed (attempt={}), retrying in {}ms: {}", attempt + 1, backoffMs, e.getMessage());
                     try { Thread.sleep(backoffMs); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); break; }
                 } else {
@@ -296,6 +299,77 @@ public class SpringAiInferenceAdapter implements AiInferenceGateway {
                 .temperature(temperature)
                 .maxTokens(maxTokens)
                 .build();
+    }
+
+    /**
+     * 带模型 ID 的 options 构建（per-call model selection 支持）。
+     *
+     * @param scene   场景
+     * @param modelId 模型 ID，null 则用默认模型
+     */
+    private OpenAiChatOptions buildOptionsWithModel(String scene, String modelId) {
+        double temperature = resolveTemperature(scene);
+        int maxTokens = resolveMaxTokens(scene);
+        OpenAiChatOptions.Builder builder = OpenAiChatOptions.builder()
+                .temperature(temperature)
+                .maxTokens(maxTokens);
+        if (modelId != null && !modelId.isBlank()) {
+            builder.model(modelId);
+        }
+        return builder.build();
+    }
+
+    /**
+     * 带模型选择的聊天接口实现（per-call model selection）。
+     * 如果 modelId 不为空，则覆盖默认模型配置；否则降级到标准 chat。
+     */
+    @Override
+    public String chatWithModel(String prompt, Long tenantId, Long userId, String modelId) {
+        long start = System.currentTimeMillis();
+        IntelligenceInferenceResult budgetCheck = checkTokenBudget(start);
+        if (budgetCheck != null) {
+            return budgetCheck.getContent() != null ? budgetCheck.getContent() : "";
+        }
+
+        Exception lastError = null;
+        for (int attempt = 0; attempt < 3; attempt++) {
+            try {
+                ChatClient chatClient = chatClientProvider.getIfAvailable();
+                if (chatClient == null) {
+                    log.warn("[SpringAiAdapter] chatWithModel: ChatClient bean not available, fallback to default");
+                    IntelligenceInferenceResult result = chat("model-selection", null, prompt);
+                    return result != null ? result.getContent() : "";
+                }
+                ChatResponse response = chatClient.prompt()
+                        .user(prompt)
+                        .options(buildOptionsWithModel("model-selection", modelId))
+                        .call()
+                        .chatResponse();
+                IntelligenceInferenceResult result = convertResult(response, start);
+                if (modelId != null && !modelId.isBlank()) {
+                    result.setModel(modelId);
+                }
+                recordTokenUsage(result);
+                log.info("[SpringAiAdapter] chatWithModel success modelId={} tokens={}/{}",
+                        modelId, result.getPromptTokens(), result.getCompletionTokens());
+                return result.getContent() != null ? result.getContent() : "";
+            } catch (Exception e) {
+                lastError = e;
+                if (isRetryable(e) && attempt < 2) {
+                    long backoffMs = (long) Math.pow(2, attempt) * 500 + (long)(Math.random() * 200);
+                    log.warn("[SpringAiAdapter] chatWithModel failed (attempt={}), retrying in {}ms: {}",
+                            attempt + 1, backoffMs, e.getMessage());
+                    try { Thread.sleep(backoffMs); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); break; }
+                } else {
+                    break;
+                }
+            }
+        }
+        log.warn("[SpringAiAdapter] chatWithModel failed after retries, fallback to default chat: {}",
+                lastError != null ? lastError.getMessage() : "unknown");
+        // 降级到标准 chat
+        IntelligenceInferenceResult fallback = chat("model-selection", null, prompt);
+        return fallback != null ? fallback.getContent() : "";
     }
 
     private double resolveTemperature(String scene) {

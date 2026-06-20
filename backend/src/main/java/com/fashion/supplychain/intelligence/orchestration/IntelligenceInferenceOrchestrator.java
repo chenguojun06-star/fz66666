@@ -117,14 +117,15 @@ public class IntelligenceInferenceOrchestrator {
         }
 
         // 2. 新的通用配置：VISION_MODEL_1_API_KEY, VISION_MODEL_2_API_KEY...
+        // 优先读环境变量，回退到系统属性（兼容测试 System.setProperty）
         for (int i = 1; i <= 20; i++) {
-            String apiKey = System.getenv("VISION_MODEL_" + i + "_API_KEY");
+            String apiKey = resolveEnvOrProp("VISION_MODEL_" + i + "_API_KEY");
             if (hasText(apiKey)) {
-                String apiUrl = System.getenv("VISION_MODEL_" + i + "_API_URL");
+                String apiUrl = resolveEnvOrProp("VISION_MODEL_" + i + "_API_URL");
                 apiUrl = apiUrl != null ? apiUrl : "https://apihub.agnes-ai.com/v1/chat/completions";
-                String model = System.getenv("VISION_MODEL_" + i + "_MODEL");
+                String model = resolveEnvOrProp("VISION_MODEL_" + i + "_MODEL");
                 model = model != null ? model : "agnes-2.0-flash";
-                String timeoutStr = System.getenv("VISION_MODEL_" + i + "_TIMEOUT_SECONDS");
+                String timeoutStr = resolveEnvOrProp("VISION_MODEL_" + i + "_TIMEOUT_SECONDS");
                 int timeout = timeoutStr != null ? Integer.parseInt(timeoutStr) : 60;
                 visionModels.add(new VisionModelConfig("vision-model-" + i, apiKey, apiUrl, model, timeout));
             }
@@ -246,8 +247,17 @@ public class IntelligenceInferenceOrchestrator {
 
     public boolean isVisionEnabled() {
         if (!visionModels.isEmpty()) return true;
+        // 兜底：@PostConstruct 未触发（如单元测试手动 setField）时，直接检查字段
+        if (hasText(agnesApiKey) || hasText(agnes2ApiKey)) return true;
         log.warn("[Vision] 未配置任何视觉模型");
         return false;
+    }
+
+    /** 优先读环境变量，回退到系统属性（兼容测试 System.setProperty） */
+    private String resolveEnvOrProp(String key) {
+        String v = System.getenv(key);
+        if (v == null || v.isEmpty()) v = System.getProperty(key);
+        return v;
     }
 
     private record VisionModelConfig(String name, String apiKey, String apiUrl, String model, int timeoutSeconds) {}

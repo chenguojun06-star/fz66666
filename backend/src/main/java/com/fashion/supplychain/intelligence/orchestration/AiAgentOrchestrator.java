@@ -60,6 +60,10 @@ public class AiAgentOrchestrator {
     @Autowired private org.springframework.beans.factory.ObjectProvider<com.fashion.supplychain.intelligence.helper.PromptTemplateLoader> promptTemplateLoaderProvider;
     @Autowired private org.springframework.beans.factory.ObjectProvider<com.fashion.supplychain.intelligence.helper.AiAgentPromptHelper> aiAgentPromptHelperProvider;
 
+    // P2-2: per-call model selection + 成本爆炸防御
+    @Autowired private org.springframework.beans.factory.ObjectProvider<com.fashion.supplychain.intelligence.service.ModelSelectionRouter> modelSelectionRouterProvider;
+    @Autowired private org.springframework.beans.factory.ObjectProvider<com.fashion.supplychain.intelligence.service.CostExplosionGuard> costExplosionGuardProvider;
+
     // 自我进化系统组件
     @Autowired private org.springframework.beans.factory.ObjectProvider<SelfCriticService> selfCriticServiceProvider;
     @Autowired private org.springframework.beans.factory.ObjectProvider<RealTimeLearningLoop> realTimeLearningLoopProvider;
@@ -98,6 +102,13 @@ public class AiAgentOrchestrator {
             2, 4, 60L, TimeUnit.SECONDS,
             new LinkedBlockingQueue<>(64),
             r -> { Thread t = new Thread(r, "post-turn-hook"); t.setDaemon(true); return t; },
+            new ThreadPoolExecutor.CallerRunsPolicy());
+
+    // QuickPath 上下文并行构建专用线程池（RAG/intelligence/memoryBank/entityMemory 四路并行）
+    private final ExecutorService quickPathCtxExecutor = new ThreadPoolExecutor(
+            4, 8, 60L, TimeUnit.SECONDS,
+            new LinkedBlockingQueue<>(32),
+            r -> { Thread t = new Thread(r, "quick-path-ctx"); t.setDaemon(true); return t; },
             new ThreadPoolExecutor.CallerRunsPolicy());
 
     private final java.util.concurrent.atomic.AtomicLong conversationTurnCounter = new java.util.concurrent.atomic.AtomicLong(0);
@@ -222,6 +233,12 @@ public class AiAgentOrchestrator {
         AgentLoopContext ctx = contextBuilder.build(userMessage, augmentedPageContext);
         lastCommandIdHolder.set(ctx.getCommandId());
 
+        // P2-2: 成本爆炸防御 — 上下文肥大检测与压缩
+        applyCostExplosionGuard(ctx);
+
+        // P2-2: per-call model selection — 选择模型分级并记录
+        selectAndLogModelTier(userMessage, ctx);
+
         try {
             SyncAgentLoopCallback cb = new SyncAgentLoopCallback(
                     ctx, memoryHelper, decisionCardOrchestrator, longTermMemoryOrchestrator);
@@ -287,6 +304,35 @@ public class AiAgentOrchestrator {
     private String getDefaultAnswer(String userMessage) {
         if (userMessage == null || userMessage.isBlank()) {
             return "你好！我是小云，你的服装供应链智能助手。有什么可以帮到你的？";
+        }
+        String msg = userMessage.toLowerCase();
+        // 问候类
+        if (msg.contains("你好") || msg.contains("hi") || msg.contains("hello")) {
+            return "你好！我是小云，你的服装供应链智能助手。有什么可以帮到你的？";
+        }
+        // 帮助类
+        if (msg.contains("帮助") || msg.contains("怎么使用") || msg.contains("怎么操作")) {
+            return "你可以问我关于订单进度、扫码统计、工资结算、库存查询等问题，我会尽力帮你解答。";
+        }
+        // 订单进度类
+        if (msg.contains("订单") && (msg.contains("进度") || msg.contains("状态"))) {
+            return "你可以前往订单管理页面查看订单进度和状态。目前AI模型暂未启用，无法实时查询。";
+        }
+        // 逾期类
+        if (msg.contains("延期") || msg.contains("逾期")) {
+            return "你可以前往待办中心查看延期/逾期订单。目前AI模型暂未启用，无法实时查询。";
+        }
+        // 扫码/产量类
+        if (msg.contains("扫码") || msg.contains("产量")) {
+            return "你可以前往生产进度页面查看扫码记录和产量统计。目前AI模型暂未启用，无法实时查询。";
+        }
+        // 工资类
+        if (msg.contains("工资") || msg.contains("结算")) {
+            return "你可以前往工资管理页面查看工资结算情况。目前AI模型暂未启用，无法实时查询。";
+        }
+        // 库存类
+        if (msg.contains("库存") || msg.contains("入库")) {
+            return "你可以前往仓储管理页面查看库存和入库记录。目前AI模型暂未启用，无法实时查询。";
         }
         return "我正在学习中，暂时无法回答这个问题。你可以尝试问我关于订单进度、扫码统计、工资结算、库存查询等问题。";
     }
@@ -360,6 +406,13 @@ public class AiAgentOrchestrator {
             AgentLoopContext ctx = contextBuilder.build(userMessage, augmentedPageContext);
             ctx.setDeadlineMs(requestStartAt + agentTimeoutMs);
             ctx.setCancelled(cancelled);
+
+            // P2-2: 成本爆炸防御 — 上下文肥大检测与压缩
+            applyCostExplosionGuard(ctx);
+
+            // P2-2: per-call model selection — 选择模型分级并记录
+            selectAndLogModelTier(userMessage, ctx);
+
             StreamingAgentLoopCallback cb = new StreamingAgentLoopCallback(
                     emitter, ctx, memoryHelper, decisionCardOrchestrator, longTermMemoryOrchestrator);
 
@@ -490,6 +543,9 @@ public class AiAgentOrchestrator {
             }
             toolResultsStr = sb.toString();
         }
+
+        // P2-2: 成本爆炸防御 — 记录工具调用（重复检测 + 熔断失败计数）
+        recordToolCallsToCostGuard(toolRecords);
 
         double selfScore = 80.0;
 
@@ -733,27 +789,101 @@ public class AiAgentOrchestrator {
         return userMessage.length() <= 20;
     }
 
+    /** 安全获取 CompletableFuture 当前结果：未完成或异常返回空字符串，不阻塞 */
+    private String safeGetNow(java.util.concurrent.CompletableFuture<String> future) {
+        try {
+            return future.getNow("");
+        } catch (Exception e) {
+            return "";
+        }
+    }
+
     private boolean tryQuickPath(String userMessage, String pageContext, SseEmitter emitter,
                                   String cacheKey, long requestStartAt) {
         try {
             String commandId = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 16);
 
-            String ragContext = "";
+            // ── 上下文四路并行构建（原串行累计 1-3s，并行后 ≤ max(单步)） ──
+            // 四步之间无依赖关系：RAG / intelligence / memoryBank / entityMemory
+            final java.util.concurrent.CompletableFuture<String> ragFuture;
             com.fashion.supplychain.intelligence.service.KnowledgeBaseService knowledgeBaseService = knowledgeBaseServiceProvider.getIfAvailable();
             if (knowledgeBaseService != null) {
-                try {
-                    ragContext = promptContextProvider.buildRagContext(UserContext.tenantId(), userMessage);
-                } catch (Exception e) {
-                    log.debug("[QuickPath] RAG检索跳过: {}", e.getMessage());
-                }
+                ragFuture = java.util.concurrent.CompletableFuture.supplyAsync(
+                        UserContext.wrapSupplier(() -> {
+                            try {
+                                return promptContextProvider.buildRagContext(UserContext.tenantId(), userMessage);
+                            } catch (Exception e) {
+                                log.debug("[QuickPath] RAG检索跳过: {}", e.getMessage());
+                                return "";
+                            }
+                        }), quickPathCtxExecutor);
+            } else {
+                ragFuture = java.util.concurrent.CompletableFuture.completedFuture("");
             }
 
-            String intelligenceCtx = "";
-            try {
-                intelligenceCtx = promptContextProvider.buildIntelligenceContext();
-            } catch (Exception e) {
-                log.debug("[QuickPath] 经营上下文跳过: {}", e.getMessage());
+            final java.util.concurrent.CompletableFuture<String> intelligenceFuture =
+                    java.util.concurrent.CompletableFuture.supplyAsync(
+                            UserContext.wrapSupplier(() -> {
+                                try {
+                                    return promptContextProvider.buildIntelligenceContext();
+                                } catch (Exception e) {
+                                    log.debug("[QuickPath] 经营上下文跳过: {}", e.getMessage());
+                                    return "";
+                                }
+                            }), quickPathCtxExecutor);
+
+            final java.util.concurrent.CompletableFuture<String> memoryBankFuture;
+            com.fashion.supplychain.intelligence.service.MemoryBankService memoryBankService = memoryBankServiceProvider.getIfAvailable();
+            if (memoryBankService != null) {
+                memoryBankFuture = java.util.concurrent.CompletableFuture.supplyAsync(
+                        UserContext.wrapSupplier(() -> {
+                            try {
+                                Long mbTenantId = UserContext.tenantId();
+                                if (mbTenantId == null || !memoryBankService.isInitialized(mbTenantId)) return "";
+                                String mbCtx = memoryBankService.compileContextForPrompt(mbTenantId);
+                                if (mbCtx == null || mbCtx.isBlank() || mbCtx.contains("尚未初始化")) return "";
+                                return mbCtx;
+                            } catch (Exception e) {
+                                log.debug("[QuickPath] MemoryBank注入跳过: {}", e.getMessage());
+                                return "";
+                            }
+                        }), quickPathCtxExecutor);
+            } else {
+                memoryBankFuture = java.util.concurrent.CompletableFuture.completedFuture("");
             }
+
+            final java.util.concurrent.CompletableFuture<String> entityMemoryFuture;
+            com.fashion.supplychain.intelligence.service.EntityMemoryContextService entityMemoryContextService = entityMemoryContextServiceProvider.getIfAvailable();
+            if (entityMemoryContextService != null) {
+                entityMemoryFuture = java.util.concurrent.CompletableFuture.supplyAsync(
+                        UserContext.wrapSupplier(() -> {
+                            try {
+                                Long memTenantId = UserContext.tenantId();
+                                if (memTenantId == null) return "";
+                                String ctx = entityMemoryContextService.buildEntityMemoryContext(memTenantId, userMessage);
+                                return ctx == null ? "" : ctx;
+                            } catch (Exception e) {
+                                log.debug("[QuickPath] EntityMemory注入跳过: {}", e.getMessage());
+                                return "";
+                            }
+                        }), quickPathCtxExecutor);
+            } else {
+                entityMemoryFuture = java.util.concurrent.CompletableFuture.completedFuture("");
+            }
+
+            // 等待全部完成（2s 超时保护，避免慢查询阻塞快速通道）
+            try {
+                java.util.concurrent.CompletableFuture.allOf(ragFuture, intelligenceFuture, memoryBankFuture, entityMemoryFuture)
+                        .get(2, TimeUnit.SECONDS);
+            } catch (Exception e) {
+                log.debug("[QuickPath] 上下文并行构建部分超时: {}", e.getMessage());
+            }
+
+            // 分别获取结果（已完成的立即返回，未完成的返回空字符串不影响整体）
+            String ragContext = safeGetNow(ragFuture);
+            String intelligenceCtx = safeGetNow(intelligenceFuture);
+            String mbCtx = safeGetNow(memoryBankFuture);
+            String entityMemCtx = safeGetNow(entityMemoryFuture);
 
             StringBuilder sysPrompt = new StringBuilder();
             com.fashion.supplychain.intelligence.helper.PromptTemplateLoader promptTemplateLoader = promptTemplateLoaderProvider.getIfAvailable();
@@ -787,33 +917,11 @@ public class AiAgentOrchestrator {
             if (pageContext != null && !pageContext.isBlank()) {
                 sysPrompt.append("【当前页面上下文】\n").append(pageContext).append("\n\n");
             }
-            com.fashion.supplychain.intelligence.service.MemoryBankService memoryBankService = memoryBankServiceProvider.getIfAvailable();
-            if (memoryBankService != null) {
-                try {
-                    Long mbTenantId = UserContext.tenantId();
-                    if (mbTenantId != null && memoryBankService.isInitialized(mbTenantId)) {
-                        String mbCtx = memoryBankService.compileContextForPrompt(mbTenantId);
-                        if (mbCtx != null && !mbCtx.isBlank() && !mbCtx.contains("尚未初始化")) {
-                            sysPrompt.append(mbCtx).append("\n\n");
-                        }
-                    }
-                } catch (Exception e) {
-                    log.debug("[QuickPath] MemoryBank注入跳过: {}", e.getMessage());
-                }
+            if (mbCtx != null && !mbCtx.isBlank()) {
+                sysPrompt.append(mbCtx).append("\n\n");
             }
-            com.fashion.supplychain.intelligence.service.EntityMemoryContextService entityMemoryContextService = entityMemoryContextServiceProvider.getIfAvailable();
-            if (entityMemoryContextService != null) {
-                try {
-                    Long memTenantId = UserContext.tenantId();
-                    if (memTenantId != null) {
-                        String entityMemCtx = entityMemoryContextService.buildEntityMemoryContext(memTenantId, userMessage);
-                        if (!entityMemCtx.isBlank()) {
-                            sysPrompt.append("【实体记忆】\n").append(entityMemCtx).append("\n\n");
-                        }
-                    }
-                } catch (Exception e) {
-                    log.debug("[QuickPath] EntityMemory注入跳过: {}", e.getMessage());
-                }
+            if (entityMemCtx != null && !entityMemCtx.isBlank()) {
+                sysPrompt.append("【实体记忆】\n").append(entityMemCtx).append("\n\n");
             }
 
             // 发送思考事件，确保前端创建消息
@@ -963,5 +1071,70 @@ public class AiAgentOrchestrator {
 
         sb.append("\n正在执行分析，请稍候...");
         return sb.toString();
+    }
+
+    // ==================== P2-2: per-call model selection + 成本爆炸防御 ====================
+
+    /**
+     * 成本爆炸防御：上下文肥大检测与压缩。
+     * 检测到肥大时自动压缩旧轮次消息，避免 token 浪费。
+     */
+    private void applyCostExplosionGuard(AgentLoopContext ctx) {
+        try {
+            com.fashion.supplychain.intelligence.service.CostExplosionGuard guard =
+                    costExplosionGuardProvider.getIfAvailable();
+            if (guard == null || !guard.isEnabled()) return;
+            if (guard.checkContextBloat(ctx)) {
+                guard.compressContext(ctx);
+            }
+        } catch (Exception e) {
+            log.debug("[AiAgent] CostExplosionGuard 跳过: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * per-call model selection：选择模型分级并记录。
+     * 根据用户消息复杂度、预估工具调用数、多域标识选择 ECONOMY/STANDARD/PREMIUM。
+     */
+    private void selectAndLogModelTier(String userMessage, AgentLoopContext ctx) {
+        try {
+            com.fashion.supplychain.intelligence.service.ModelSelectionRouter router =
+                    modelSelectionRouterProvider.getIfAvailable();
+            if (router == null || !router.isEnabled()) return;
+            int estimatedTools = ctx != null && ctx.getVisibleTools() != null
+                    ? Math.min(ctx.getVisibleTools().size(), 8) : 0;
+            boolean multiDomain = ctx != null && ctx.getRoutedDomains() != null
+                    && ctx.getRoutedDomains().size() > 1;
+            com.fashion.supplychain.intelligence.service.ModelSelectionRouter.ModelTier tier =
+                    router.selectModel(userMessage, estimatedTools, multiDomain);
+            log.info("[AiAgent] 模型分级选择: tier={} modelId={}", tier, router.resolveModelId(tier));
+        } catch (Exception e) {
+            log.debug("[AiAgent] ModelSelectionRouter 跳过: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * 成本爆炸防御：记录工具调用结果（用于重复检测）和失败（用于熔断）。
+     * 在 triggerPostTurnHooks 中调用。
+     */
+    private void recordToolCallsToCostGuard(List<AiAgentToolExecHelper.ToolExecRecord> toolRecords) {
+        try {
+            com.fashion.supplychain.intelligence.service.CostExplosionGuard guard =
+                    costExplosionGuardProvider.getIfAvailable();
+            if (guard == null || !guard.isEnabled() || toolRecords == null || toolRecords.isEmpty()) return;
+            Long tenantId = UserContext.tenantId();
+            if (tenantId == null) return;
+            for (AiAgentToolExecHelper.ToolExecRecord rec : toolRecords) {
+                String paramsHash = guard.hashParams(rec.args);
+                boolean failed = rec.rawResult != null && rec.rawResult.startsWith("{\"error\"");
+                if (failed) {
+                    guard.recordToolFailure(tenantId, rec.toolName);
+                } else {
+                    guard.recordToolCall(tenantId, rec.toolName, paramsHash, rec.rawResult);
+                }
+            }
+        } catch (Exception e) {
+            log.debug("[AiAgent] 工具调用记录到 CostGuard 跳过: {}", e.getMessage());
+        }
     }
 }

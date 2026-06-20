@@ -7,6 +7,7 @@ const api = require('../../../utils/api');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 const { triggerDataRefresh } = require('../../../utils/eventBus');
 const SKUProcessor = require('../processors/SKUProcessor');
+const { handlePatternScan } = require('../handlers/PatternScanProcessor');
 
 // ---- 常量（样板操作类型定义） ----
 const OPERATION_LABELS = {
@@ -33,7 +34,27 @@ const STATUS_LABELS = {
   COMPLETED: '已完成',
   RELEASED: '已发放',
   RECEIVED: '已领取',
+  ENABLED: '启用',
+  ACTIVE: '启用',
+  DISABLED: '已停用',
+  INACTIVE: '已停用',
+  WAREHOUSE_IN: '已入库',
+  WAREHOUSE_OUT: '已出库',
+  REVIEW_PENDING: '待审核',
+  APPROVED: '已通过',
+  REJECTED: '已驳回',
+  CANCELLED: '已取消',
+  CANCELED: '已取消',
+  ARCHIVED: '已归档',
+  CLOSED: '已关闭',
+  DELETED: '已删除',
+  CREATED: '已创建',
 };
+function _statusToCN(status) {
+  if (!status) return '';
+  const s = String(status).toUpperCase().replace(/-/g, '_');
+  return STATUS_LABELS[s] || String(status);
+}
 
 const SOURCE_LABELS = {
   SELF_DEVELOPED: '自主开发',
@@ -68,41 +89,175 @@ Page({
     locationOptions: [],
     reviewImages: [],
     maxImages: 9,
+    // 视图模式：loading(加载中) | select(工序选择) | operate(操作确认)
+    viewMode: 'loading',
+    // 工序选择列表（显示工序名称、状态、是否可操作）
+    processList: [],
   },
 
-  onLoad() {
-    const app = getApp();
-    const data = app.globalData && app.globalData.patternScanData;
-    if (!data) {
-      toast.error('缺少样板数据');
+  onLoad(options) {
+    const that = this;
+    const opts = options || {};
+    const patternId = opts.patternId || '';
+    const manualProcessName = opts.processName ? decodeURIComponent(opts.processName) : '';
+    const manualProgressStage = opts.progressStage ? decodeURIComponent(opts.progressStage) : '';
+    const manualScanType = opts.scanType ? decodeURIComponent(opts.scanType) : '';
+
+    if (!patternId) {
+      toast.error('无效的样衣编号');
       setTimeout(() => wx.navigateBack(), 300);
       return;
     }
 
-    // 构建样板详情页数据
+    wx.showLoading({ title: '加载中', mask: true });
+
+    const handler = {
+      api: api,
+      SCAN_MODE: { PATTERN: 'pattern' },
+      _errorResult: function(msg) { return { success: false, message: msg }; },
+    };
+
+    // 如果从列表页点击了某个工序，构造 manualScanType 供 handlePatternScan 选择默认工序
+    const manualType = manualProcessName || manualProgressStage || '';
+
+    handlePatternScan(handler, { patternId: patternId, scanCode: patternId }, manualType)
+      .then(function(result) {
+        if (!result || !result.success) {
+          toast.error(result && result.message ? result.message : '加载失败');
+          setTimeout(() => wx.navigateBack(), 500);
+          return;
+        }
+
+        const data = result.data || {};
+        const app = getApp();
+        if (app.globalData) {
+          app.globalData.patternScanData = data;
+        }
+
+        // 构建工序选择列表（用于 select 模式）
+        const rawOptions = Array.isArray(data.operationOptions) ? data.operationOptions : [];
+        const processList = rawOptions.map(function(opt) {
+          return {
+            value: opt.value,
+            name: opt.label || opt.processName || opt.value,
+            completed: opt.completed === true,
+            canOperate: opt.canOperate === true,
+            locked: opt.locked === true,
+            lockReason: opt.lockReason || '',
+            processName: opt.processName || opt.value,
+            progressStage: opt.progressStage || opt.value,
+            scanType: opt.scanType || 'production',
+          };
+        });
+
+        // 判断视图模式：如果 URL 传了具体工序 → 直接操作；否则 → 先选工序
+        const hasDirectProcess = !!manualType;
+        const firstOperable = processList.find(function(p) { return p.canOperate; });
+        const allCompleted = processList.length > 0 && processList.every(function(p) { return p.completed; });
+
+        if (allCompleted) {
+          toast.success('所有工序已完成');
+          setTimeout(() => wx.navigateBack(), 500);
+          return;
+        }
+
+        if (hasDirectProcess && firstOperable) {
+          // 直接进入操作页，选中第一个可操作工序（或用户指定的）
+          that._buildOperateView(data, manualType);
+        } else {
+          // 显示工序选择
+          that.setData({
+            viewMode: 'select',
+            processList: processList,
+            detail: {
+              patternId: data.patternId,
+              styleNo: data.styleNo || data.patternId,
+              color: data.color || '',
+              coverImage: data.patternDetail ? getAuthedImageUrl(data.patternDetail.coverImage || data.patternDetail.styleImage || '') : '',
+            },
+          });
+        }
+      })
+      .catch(function(err) {
+        console.error('[PatternPage] 加载失败:', err);
+        toast.error('加载失败');
+        setTimeout(() => wx.navigateBack(), 500);
+      })
+      .finally(function() {
+        wx.hideLoading();
+      });
+  },
+
+  // 选择某个工序后，进入操作页
+  onProcessSelect(e) {
+    const idx = e.currentTarget.dataset.index;
+    if (idx === undefined || idx === null) return;
+    const processList = this.data.processList || [];
+    const proc = processList[idx];
+    if (!proc) return;
+
+    if (proc.locked) {
+      toast.error(proc.lockReason || '该工序暂不可操作');
+      return;
+    }
+    if (!proc.canOperate) {
+      if (proc.completed) {
+        toast.error('该工序已完成');
+      }
+      return;
+    }
+
+    // 从 globalData 取出之前的完整数据，重新构建操作视图
+    const app = getApp();
+    const data = app.globalData && app.globalData.patternScanData;
+    if (!data) {
+      toast.error('数据已丢失，请重试');
+      wx.navigateBack();
+      return;
+    }
+
+    this._buildOperateView(data, proc.processName || proc.value);
+  },
+
+  // 构建操作视图（原 onLoad 的核心逻辑）
+  _buildOperateView(data, preferredProcess) {
     const patternDetail = data.patternDetail || {};
     const rawOptions = Array.isArray(data.operationOptions) ? data.operationOptions : [];
-    // 四步扫码：领取 → 完成 → 审核 → 入库（与PC端对齐）
     const status = String(data.status || '').toUpperCase();
     const reviewStatus = String(patternDetail.reviewStatus || '').toUpperCase();
     const reviewResult = String(patternDetail.reviewResult || '').toUpperCase();
     const reviewApproved = reviewStatus === 'APPROVED' || reviewResult === 'APPROVED';
 
-    // 直接使用 PatternScanProcessor 已正确计算好的 operationType，不再从 status 重新推导
+    // 匹配用户指定的工序，如果没匹配到 → 用第一个可操作的
+    let selected = null;
+    if (preferredProcess) {
+      const p = preferredProcess;
+      selected = rawOptions.find(function(o) {
+        return o.value === p || o.processName === p || (o.label && o.label === p);
+      });
+    }
+    if (!selected) {
+      selected = rawOptions.find(function(o) { return o.canOperate; }) || rawOptions[0];
+    }
+
     const SUBMIT_LABEL_MAP = {
       RECEIVE: '领取', COMPLETE: '完成', REWORK: '返修完成', REVIEW: '审核',
       WAREHOUSE_IN: '入库', WAREHOUSE_OUT: '出库', WAREHOUSE_RETURN: '归还',
       PROCUREMENT: '采购', CUTTING: '裁剪', SECONDARY: '二次工艺',
       SEWING: '车缝', TAIL: '尾部',
     };
-    const operationType = String(data.operationType || '').toUpperCase() || 'RECEIVE';
-    const operationLabel = OPERATION_LABELS[operationType] || '操作';
-    const requiresWarehouseInput = WAREHOUSE_OPERATIONS.has(operationType);
-    const requiresReviewBeforeInbound = operationType === 'WAREHOUSE_IN' && !reviewApproved;
+    const operationType = String(selected.value || '').toUpperCase() || 'RECEIVE';
+    const operationLabel = selected.label || OPERATION_LABELS[operationType] || '操作';
+    // 工序系统模式：用 scanType 判断是否是仓库操作；传统模式：用英文枚举判断
+    const scanType = String(selected.scanType || '').toLowerCase();
+    const requiresWarehouseInput = data.hasProcessSystem
+      ? scanType === 'warehouse' || scanType === 'warehouse_in'
+      : WAREHOUSE_OPERATIONS.has(operationType);
     const submitLabel = SUBMIT_LABEL_MAP[operationType] || operationLabel;
     const sizes = patternDetail.sizes || [];
 
     this.setData({
+      viewMode: 'operate',
       detail: {
         patternId: data.patternId,
         styleNo: data.styleNo,
@@ -111,15 +266,15 @@ Page({
         maxQuantity: normalizePositiveInt(data.quantity, 1),
         warehouseCode: '',
         status: status,
-        statusLabel: STATUS_LABELS[status] || data.statusLabel || status || '-',
-        statusType: status.toLowerCase().replace('_', ''),
+        statusLabel: _statusToCN(status),
+        statusType: String(status || '').toLowerCase().replace(/_/g, ''),
         sizes: sizes,
         sizesText: sizes.length ? sizes.join('/') : '-',
         operationType: operationType,
         operationLabel: operationLabel,
         operationOptions: rawOptions,
         requiresWarehouseInput: requiresWarehouseInput,
-        requiresReviewBeforeInbound: requiresReviewBeforeInbound,
+        requiresReviewBeforeInbound: operationType === 'WAREHOUSE_IN' && !reviewApproved,
         reviewApproved: reviewApproved,
         designer: data.designer || patternDetail.designer || '-',
         patternDeveloper: data.patternDeveloper || patternDetail.patternDeveloper || '-',
@@ -142,7 +297,7 @@ Page({
       },
     });
 
-    // Process size/color matrix for table display + aggregated text (matching PC端 cardSizeQuantity.ts)
+    // Process size/color matrix for table display + aggregated text
     const matrix = patternDetail.sizeColorMatrix;
     const matrixSizes = (matrix && Array.isArray(matrix.sizes) && matrix.sizes.length > 0)
       ? matrix.sizes
@@ -160,7 +315,6 @@ Page({
       });
       const grandTotal = matrixRows.reduce((s, r) => s + r.rowTotal, 0);
 
-      // Build aggregated items (replicating PC端 buildStyleMatrixItems logic)
       matrix.matrixRows.forEach(function(row) {
         const color = row.color || '';
         const qtys = Array.isArray(row.quantities) ? row.quantities : [];
@@ -609,6 +763,8 @@ Page({
             operatorRole: 'PLATE_WORKER',
             orderId: d.orderId,
             processName: processName,
+            styleNo: d.styleNo,
+            color: d.color,
             remark: remark || '',
           },
         );
@@ -617,6 +773,8 @@ Page({
         requests.forEach(function(req) {
           req.scanType = scanType;
           req.bundleNo = d.bundleNo || '01';
+          if (!req.styleNo && d.styleNo) req.styleNo = d.styleNo;
+          if (!req.color && d.color) req.color = d.color;
           if (d.warehouseCode) req.warehouse = d.warehouseCode;
           if (this.data.warehouseAreaId) req.warehouseAreaId = this.data.warehouseAreaId;
           if (this.data.warehouseLocationCode) req.warehouseLocationCode = this.data.warehouseLocationCode;
@@ -660,6 +818,8 @@ Page({
           scanCode: d.patternId || '',
           sourceBizType: 'SAMPLE',
           operatorRole: 'PLATE_WORKER',
+          styleNo: d.styleNo,
+          color: d.color,
           remark: remark || '',
         };
 

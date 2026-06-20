@@ -1,7 +1,7 @@
 <view class="page">
   <view class="header">
-    <view class="greeting-name">{{userName}}，{{greeting}}</view>
-    <view class="greeting-sub">{{orgName ? orgName + '，欢迎使用衣智链' : '欢迎使用衣智链'}}</view>
+    <view class="greeting-name" style="height: 41rpx; display: block; box-sizing: border-box">{{userName}}，{{greeting}}</view>
+    <view class="greeting-sub" style="height: 41rpx; display: block; box-sizing: border-box; position: relative; left: 0rpx; top: -8rpx">{{orgName ? orgName + '，欢迎使用衣智链' : '欢迎使用衣智链'}}</view>
   </view>
 
   <view class="weather-card">

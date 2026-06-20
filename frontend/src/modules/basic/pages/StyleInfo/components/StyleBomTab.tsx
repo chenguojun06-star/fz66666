@@ -155,8 +155,9 @@ const StyleBomTab: React.FC<Props> = ({
       : (Number(item.devUsageAmount) || Number(item.usageAmount) || 0);
     const lossRate = Number(item.lossRate) || 0;
     const unitPrice = Number(item.unitPrice) || 0;
-    const qty = effectiveUsage * (1 + lossRate / 100);
-    return Number((qty * unitPrice).toFixed(2));
+    // 精度控制：先对含损耗的用量做4位小数舍入，再计算总价，避免浮点精度污染
+    const roundedUsage = Math.round(effectiveUsage * (1 + lossRate / 100) * 10000) / 10000;
+    return Number((roundedUsage * unitPrice).toFixed(2));
   };
 
   const {

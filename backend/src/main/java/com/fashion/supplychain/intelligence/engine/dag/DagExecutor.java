@@ -120,8 +120,10 @@ public class DagExecutor {
         for (int i = 0; i < layer.size(); i++) {
             final int idx = i;
             final int step = stepBase + i;
+            // 每个并行任务使用 state 的副本，避免并发写入同一个非线程安全的 HashMap
+            final Map<String, Object> stateCopy = new HashMap<>(state);
             futures.add(java.util.concurrent.CompletableFuture.supplyAsync(
-                    () -> runNode(graph.getNodes().get(layer.get(idx)), state, step, threadId),
+                    () -> runNode(graph.getNodes().get(layer.get(idx)), stateCopy, step, threadId),
                     parallelExecutor));
         }
         List<DagCheckpoint> results = new ArrayList<>();

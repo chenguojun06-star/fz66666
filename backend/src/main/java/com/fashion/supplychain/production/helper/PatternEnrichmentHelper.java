@@ -65,6 +65,7 @@ public class PatternEnrichmentHelper {
         map.put("styleId", record.getStyleId());
         map.put("styleNo", record.getStyleNo());
         map.put("color", record.getColor());
+        map.put("size", record.getSize());
         map.put("quantity", record.getQuantity());
         map.put("releaseTime", record.getReleaseTime() != null ? record.getReleaseTime().format(fmt) : null);
         map.put("deliveryTime", record.getDeliveryTime());
@@ -78,6 +79,7 @@ public class PatternEnrichmentHelper {
         map.put("progressNodes", record.getProgressNodes());
         map.put("status", record.getStatus());
         map.put("createTime", record.getCreateTime());
+        map.put("createBy", record.getCreateBy()); // 创建人
         map.put("reviewStatus", record.getReviewStatus());
         map.put("reviewResult", record.getReviewResult());
         map.put("reviewRemark", record.getReviewRemark());

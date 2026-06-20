@@ -63,4 +63,17 @@ public class LegacyInferenceAdapter implements AiInferenceGateway {
     public String getProviderName() {
         return "legacy";
     }
+
+    /**
+     * 带模型选择的聊天接口实现（per-call model selection）。
+     * Legacy 适配器不支持 per-call model 覆盖，降级到标准 chat。
+     * modelId 仅记录日志，不真正生效（向后兼容）。
+     */
+    @Override
+    public String chatWithModel(String prompt, Long tenantId, Long userId, String modelId) {
+        log.info("[LegacyAdapter] chatWithModel: modelId={} (legacy adapter does not support per-call model, fallback to default)",
+                modelId != null ? modelId : "default");
+        IntelligenceInferenceResult result = chat("model-selection", null, prompt);
+        return result != null ? result.getContent() : "";
+    }
 }

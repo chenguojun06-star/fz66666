@@ -1,10 +1,14 @@
 package com.fashion.supplychain.intelligence.orchestration;
 
 import com.fashion.supplychain.intelligence.service.EvolutionPipeline;
+import com.fashion.supplychain.intelligence.service.MemoryBankDbService;
 import com.fashion.supplychain.intelligence.service.SelfCriticService;
 import com.fashion.supplychain.intelligence.service.DataTruthGuard;
 import com.fashion.supplychain.intelligence.service.SystemDataMiner;
 import com.fashion.supplychain.intelligence.service.SkillAutoCreationService;
+import com.fashion.supplychain.intelligence.service.SkillCrystallizationService;
+import com.fashion.supplychain.intelligence.service.GepaPromptOptimizer;
+import com.fashion.supplychain.intelligence.service.EvolutionEventLogger;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -68,6 +72,12 @@ public class EvolutionOrchestrator {
     @Autowired private ObjectProvider<SkillEvolutionOrchestrator> skillEvolutionProvider;
     @Autowired private ObjectProvider<SkillAutoCreationService> skillAutoCreationProvider;
     @Autowired private ObjectProvider<ConversationReflectionOrchestrator> conversationReflectionProvider;
+    @Autowired private ObjectProvider<SkillCrystallizationService> skillCrystallizationProvider;
+    @Autowired private ObjectProvider<GepaPromptOptimizer> gepaPromptOptimizerProvider;
+    @Autowired private ObjectProvider<EvolutionEventLogger> evolutionEventLoggerProvider;
+    @Autowired private org.springframework.beans.factory.ObjectProvider<com.fashion.supplychain.intelligence.service.ModelSelectionRouter> modelSelectionRouterProvider;
+    @Autowired private org.springframework.beans.factory.ObjectProvider<com.fashion.supplychain.intelligence.service.CostExplosionGuard> costExplosionGuardProvider;
+    @Autowired private org.springframework.beans.factory.ObjectProvider<com.fashion.supplychain.intelligence.service.MemoryBankDbService> memoryBankDbServiceProvider;
     @Autowired private JdbcTemplate jdbc;
 
     /**
@@ -145,6 +155,30 @@ public class EvolutionOrchestrator {
         metrics.put("conversationReflection", safeCall("conversationReflection",
                 () -> aggregateConversationReflectionStats(tenantId)));
 
+        // 12. SkillCrystallization（技能结晶化统计，D-021 合规新增）
+        metrics.put("skillCrystallization", safeCall("skillCrystallization",
+                () -> aggregateSkillCrystallizationStats(tenantId)));
+
+        // 13. GepaPromptOptimizer（GEPA 遗传优化统计，D-021 合规新增）
+        metrics.put("gepaPromptOptimizer", safeCall("gepaPromptOptimizer",
+                () -> aggregateGepaPromptOptimizerStats(tenantId)));
+
+       // 14. EvolutionEventLogger（进化事件审计统计，D-021 合规新增）
+        metrics.put("evolutionEventLogger", safeCall("evolutionEventLogger",
+                () -> aggregateEvolutionEventStats()));
+
+        // 15. ModelSelectionRouter（per-call 模型选择分布统计，D-021 合规新增）
+        metrics.put("modelSelectionRouter", safeCall("modelSelectionRouter",
+                () -> aggregateModelSelectionStats()));
+
+        // 16. CostExplosionGuard（成本爆炸防御统计，D-021 合规新增）
+        metrics.put("costExplosionGuard", safeCall("costExplosionGuard",
+                () -> aggregateCostExplosionGuardStats()));
+
+        // 17. MemoryBankDb（ConPort 数据库化记忆银行，D-021 合规新增）
+        metrics.put("memoryBankDb", safeCall("memoryBankDb",
+                () -> aggregateMemoryBankStats(tenantId)));
+
         return metrics;
     }
 
@@ -174,6 +208,12 @@ public class EvolutionOrchestrator {
         checkComponentAvailable(components, "skillEvolution", skillEvolutionProvider);
         checkComponentAvailable(components, "skillAutoCreation", skillAutoCreationProvider);
         checkComponentAvailable(components, "conversationReflection", conversationReflectionProvider);
+        checkComponentAvailable(components, "skillCrystallization", skillCrystallizationProvider);
+        checkComponentAvailable(components, "gepaPromptOptimizer", gepaPromptOptimizerProvider);
+        checkComponentAvailable(components, "evolutionEventLogger", evolutionEventLoggerProvider);
+        checkComponentAvailable(components, "memoryBankDb", memoryBankDbServiceProvider);
+        checkComponentAvailable(components, "modelSelectionRouter", modelSelectionRouterProvider);
+        checkComponentAvailable(components, "costExplosionGuard", costExplosionGuardProvider);
 
         // 检测 MemoryNudge PENDING 堆积
         try {
@@ -223,6 +263,118 @@ public class EvolutionOrchestrator {
         } catch (Exception ignored) {
         }
 
+        // 检测 SkillCrystallization 结晶化技能数（D-021 合规新增）
+        try {
+            Long crystallizedCount = jdbc.queryForObject(
+                    "SELECT COUNT(*) FROM t_skill_template WHERE source = 'crystallized' AND delete_flag = 0",
+                    Long.class);
+            if (crystallizedCount != null && crystallizedCount > 200) {
+                issues.add(Map.of(
+                        "severity", "INFO",
+                        "component", "skillCrystallization",
+                        "issue", "结晶化技能堆积: " + crystallizedCount + " 条",
+                        "suggestion", "检查是否有过期的结晶化技能需要清理"
+                ));
+            }
+        } catch (Exception ignored) {
+        }
+
+        // 检测 EvolutionEventLogger 是否有写入（D-021 合规新增）
+        try {
+            EvolutionEventLogger logger = evolutionEventLoggerProvider.getIfAvailable();
+            if (logger != null) {
+                long eventCount = logger.countTodayEvents();
+                if (eventCount == 0) {
+                    issues.add(Map.of(
+                            "severity", "INFO",
+                            "component", "evolutionEventLogger",
+                            "issue", "今日无进化事件记录",
+                            "suggestion", "检查 SkillCrystallization/GepaPromptOptimizer 是否正常运行"
+                    ));
+                }
+            }
+        } catch (Exception ignored) {
+        }
+
+        // 检测 GepaPromptOptimizer 最近是否有优化记录（D-021 合规新增）
+        try {
+            Long recentOptCount = jdbc.queryForObject(
+                    "SELECT COUNT(*) FROM t_prompt_optimization WHERE create_time > DATE_SUB(NOW(), INTERVAL 2 DAY)",
+                    Long.class);
+            if (recentOptCount != null && recentOptCount == 0) {
+                issues.add(Map.of(
+                        "severity", "INFO",
+                        "component", "gepaPromptOptimizer",
+                        "issue", "最近2天无 GEPA 优化记录",
+                        "suggestion", "检查 GepaPromptOptimizer @Scheduled 是否触发（cron=0 0 4 * * ?）"
+                ));
+            }
+        } catch (Exception ignored) {
+        }
+
+        // 检测 Memory Bank 是否已迁移 + 孤儿关系（D-021 合规新增，ConPort 模式）
+        try {
+            MemoryBankDbService dbService = memoryBankDbServiceProvider.getIfAvailable();
+            if (dbService != null) {
+                long publicEntries = dbService.getEntryCount(0L);
+                if (publicEntries == 0) {
+                    issues.add(Map.of(
+                            "severity", "WARN",
+                            "component", "memoryBankDb",
+                            "issue", "Memory Bank 公共记忆未迁移（tenantId=0 条目数为 0）",
+                            "suggestion", "检查 MemoryBankMigrationRunner 是否执行，或 memory-bank 目录是否存在"
+                    ));
+                }
+                long orphanRelations = dbService.getOrphanRelationCount(0L);
+                if (orphanRelations > 0) {
+                    issues.add(Map.of(
+                            "severity", "WARN",
+                            "component", "memoryBankDb",
+                            "issue", "孤儿关系: " + orphanRelations + " 条（source/target 条目不存在）",
+                            "suggestion", "清理 t_memory_bank_relation 中 source_entry_id/target_entry_id 不存在的记录"
+                    ));
+                }
+            }
+        } catch (Exception ignored) {
+        }
+
+        // 检测 ModelSelectionRouter 是否启用（D-021 合规新增）
+        try {
+            com.fashion.supplychain.intelligence.service.ModelSelectionRouter router =
+                    modelSelectionRouterProvider.getIfAvailable();
+            if (router == null) {
+                issues.add(Map.of(
+                        "severity", "INFO",
+                        "component", "modelSelectionRouter",
+                        "issue", "per-call 模型选择路由器未启用",
+                        "suggestion", "检查 xiaoyun.model-selection.enabled 配置"
+                ));
+            } else if (!router.isEnabled()) {
+                issues.add(Map.of(
+                        "severity", "INFO",
+                        "component", "modelSelectionRouter",
+                        "issue", "per-call 模型选择已禁用（所有查询用同一模型，成本未优化）",
+                        "suggestion", "设置 xiaoyun.model-selection.enabled=true 启用成本优化"
+                ));
+            }
+        } catch (Exception ignored) {
+        }
+
+        // 检测 CostExplosionGuard Redis 连接（D-021 合规新增）
+        try {
+            com.fashion.supplychain.intelligence.service.CostExplosionGuard guard =
+                    costExplosionGuardProvider.getIfAvailable();
+            if (guard != null && guard.isEnabled() && !guard.isRedisAvailable()) {
+                issues.add(Map.of(
+                        "severity", "WARN",
+                        "component", "costExplosionGuard",
+                        "issue", "成本爆炸防御已启用但 Redis 不可用（熔断/重复检测将降级放行）",
+                        "suggestion", "检查 Redis 连接配置，确保 StringRedisTemplate 可用"
+                ));
+            }
+        } catch (Exception ignored) {
+        }
+
         report.put("components", components);
         report.put("issues", issues);
         report.put("status", issues.isEmpty() ? "HEALTHY" : "HAS_ISSUES");
@@ -248,6 +400,15 @@ public class EvolutionOrchestrator {
 
     private void checkComponentAvailable(java.util.List<Map<String, Object>> components,
                                           String name, ObjectProvider<?> provider) {
+        if (provider == null) {
+            // 测试场景下 ObjectProvider 可能未被注入，防御性处理
+            components.add(Map.of(
+                    "name", name,
+                    "available", false,
+                    "className", "N/A"
+            ));
+            return;
+        }
         Object bean = provider.getIfAvailable();
         components.add(Map.of(
                 "name", name,
@@ -461,5 +622,120 @@ public class EvolutionOrchestrator {
         } catch (Exception e) {
             return Map.of("error", e.getMessage());
         }
+    }
+
+    /** 技能结晶化统计（D-021 合规新增） */
+    private Map<String, Object> aggregateSkillCrystallizationStats(Long tenantId) {
+        Map<String, Object> stats = new LinkedHashMap<>();
+        stats.put("available", skillCrystallizationProvider.getIfAvailable() != null);
+        try {
+            String sql = "SELECT COUNT(*) AS skillCrystallizedCount, "
+                    + "SUM(use_count) AS totalUses, "
+                    + "AVG(confidence) AS avgConfidence, "
+                    + "MAX(update_time) AS lastCrystallized "
+                    + "FROM t_skill_template WHERE source = 'crystallized' AND delete_flag = 0"
+                    + (tenantId != null ? " AND tenant_id = ?" : "");
+            List<Map<String, Object>> rows = tenantId != null
+                    ? jdbc.queryForList(sql, tenantId)
+                    : jdbc.queryForList(sql);
+            if (!rows.isEmpty()) stats.put("summary", rows.get(0));
+        } catch (Exception ignored) {
+        }
+        return stats;
+    }
+
+    /** GEPA 遗传优化统计（D-021 合规新增） */
+    private Map<String, Object> aggregateGepaPromptOptimizerStats(Long tenantId) {
+        Map<String, Object> stats = new LinkedHashMap<>();
+        stats.put("available", gepaPromptOptimizerProvider.getIfAvailable() != null);
+        try {
+            String sql = "SELECT MAX(fitness_score) AS promptOptimizationFitness, "
+                    + "SUM(gate_passed) AS gatePassedCount, "
+                    + "COUNT(*) AS totalOptimizations, "
+                    + "MAX(create_time) AS lastOptimization "
+                    + "FROM t_prompt_optimization WHERE 1=1"
+                    + (tenantId != null ? " AND tenant_id = ?" : "");
+            List<Map<String, Object>> rows = tenantId != null
+                    ? jdbc.queryForList(sql, tenantId)
+                    : jdbc.queryForList(sql);
+            if (!rows.isEmpty()) {
+                Map<String, Object> summary = rows.get(0);
+                stats.put("summary", summary);
+                Object total = summary.get("totalOptimizations");
+                Object passed = summary.get("gatePassedCount");
+                if (total != null && passed != null) {
+                    long totalLong = ((Number) total).longValue();
+                    long passedLong = ((Number) passed).longValue();
+                    stats.put("constraintGatePassRate", totalLong > 0 ? (double) passedLong / totalLong : 0.0);
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        return stats;
+    }
+
+    /** 进化事件审计统计（D-021 合规新增） */
+    private Map<String, Object> aggregateEvolutionEventStats() {
+        Map<String, Object> stats = new LinkedHashMap<>();
+        EvolutionEventLogger logger = evolutionEventLoggerProvider.getIfAvailable();
+        stats.put("available", logger != null);
+        if (logger != null) {
+            try {
+                stats.put("evolutionEventCount", logger.countTodayEvents());
+            } catch (Exception ignored) {
+            }
+        }
+        return stats;
+    }
+
+    /** Memory Bank 数据库化统计（D-021 合规新增，ConPort 模式） */
+    private Map<String, Object> aggregateMemoryBankStats(Long tenantId) {
+        Map<String, Object> stats = new LinkedHashMap<>();
+        MemoryBankDbService dbService = memoryBankDbServiceProvider.getIfAvailable();
+        stats.put("available", dbService != null);
+        if (dbService == null) return stats;
+        try {
+            long publicEntries = dbService.getEntryCount(0L);
+            stats.put("memoryBankEntryCount", publicEntries);
+            if (tenantId != null && tenantId != 0L) {
+                stats.put("memoryBankTenantEntryCount", dbService.getEntryCount(tenantId));
+                stats.put("memoryBankRelationCount", dbService.getRelationCount(tenantId));
+            } else {
+                stats.put("memoryBankRelationCount", dbService.getRelationCount(0L));
+            }
+            stats.put("memoryBankSemanticSearchCount", dbService.getSemanticSearchCount());
+        } catch (Exception ignored) {
+        }
+        return stats;
+    }
+
+    /** per-call 模型选择分布统计（D-021 合规新增） */
+    private Map<String, Object> aggregateModelSelectionStats() {
+        Map<String, Object> stats = new LinkedHashMap<>();
+        com.fashion.supplychain.intelligence.service.ModelSelectionRouter router =
+                modelSelectionRouterProvider.getIfAvailable();
+        stats.put("available", router != null);
+        if (router != null) {
+            try {
+                stats.putAll(router.getSelectionStats());
+            } catch (Exception ignored) {
+            }
+        }
+        return stats;
+    }
+
+    /** 成本爆炸防御统计（D-021 合规新增） */
+    private Map<String, Object> aggregateCostExplosionGuardStats() {
+        Map<String, Object> stats = new LinkedHashMap<>();
+        com.fashion.supplychain.intelligence.service.CostExplosionGuard guard =
+                costExplosionGuardProvider.getIfAvailable();
+        stats.put("available", guard != null);
+        if (guard != null) {
+            try {
+                stats.putAll(guard.getGuardStats());
+            } catch (Exception ignored) {
+            }
+        }
+        return stats;
     }
 }

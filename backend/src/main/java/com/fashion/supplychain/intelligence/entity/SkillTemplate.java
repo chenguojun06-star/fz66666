@@ -24,6 +24,25 @@ public class SkillTemplate {
     private String stepsJson;
     private String preConditions;
     private String postCheck;
+
+    /** metadata 层（~50 tokens，name/description/triggers，YAML 格式） */
+    private String metadataYaml;
+
+    /** SKILL.md 层（~500 tokens，完整技能文档，Markdown 格式） */
+    private String skillMd;
+
+    /** references 层（按需加载的详细参考，JSON 数组） */
+    private String referencesJson;
+
+    /** metadata 层 token 预算（默认 50） */
+    private Integer tokenBudgetMetadata;
+
+    /** SKILL.md 层 token 预算（默认 500） */
+    private Integer tokenBudgetSkillMd;
+
+    /** 披露级别：MINIMAL/STANDARD/FULL */
+    private String disclosureLevel;
+
     private String source;
     private String sourceConversationId;
     private Integer version;

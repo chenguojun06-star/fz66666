@@ -1,4 +1,5 @@
 const api = require('../../../utils/api');
+const { toast } = require('../../../utils/uiHelper');
 
 const STAGE_MAP = [
   { id: 'procurement', name: '采购' },
@@ -80,7 +81,7 @@ Page({
       }
       if (!order) {
         that.setData({ loading: false });
-        wx.showToast({ title: '订单不存在', icon: 'none' });
+        toast.error('订单不存在');
         return;
       }
       const status = order.status || '';
@@ -104,7 +105,7 @@ Page({
     }).catch(function (err) {
       console.error('[process-edit] 加载订单失败:', err);
       that.setData({ loading: false });
-      wx.showToast({ title: '加载失败', icon: 'none' });
+      toast.error('加载失败');
     });
   },
 
@@ -413,11 +414,11 @@ Page({
           difficulty: n.difficulty, sortOrder: n.sortOrder,
         };
       })));
-      wx.showToast({ title: '保存成功', icon: 'success' });
+      toast.success('保存成功');
     }).catch(function (err) {
       wx.hideLoading();
       console.error('[process-edit] 保存失败:', err);
-      wx.showToast({ title: '保存失败', icon: 'none' });
+      toast.error('保存失败');
     });
   },
 });

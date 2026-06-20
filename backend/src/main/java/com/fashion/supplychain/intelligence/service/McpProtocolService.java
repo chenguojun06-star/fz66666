@@ -1,7 +1,11 @@
 package com.fashion.supplychain.intelligence.service;
 
 import com.fashion.supplychain.intelligence.agent.AiTool;
+import com.fashion.supplychain.intelligence.agent.resource.McpIdentityContext;
 import com.fashion.supplychain.intelligence.agent.resource.McpResourceProvider;
+import com.fashion.supplychain.intelligence.agent.resource.McpResourceSanitizer;
+import com.fashion.supplychain.intelligence.agent.resource.McpTimeoutBudget;
+import com.fashion.supplychain.intelligence.agent.resource.McpToolError;
 import com.fashion.supplychain.intelligence.agent.tool.AgentTool;
 import com.fashion.supplychain.common.UserContext;
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -15,6 +19,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.context.annotation.Lazy;
 
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 /**
@@ -135,8 +142,11 @@ public class McpProtocolService {
 
     /** MCP resources/read 响应 */
     @Data
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     public static class McpResourceReadResult {
         private List<Map<String, Object>> contents;
+        /** SERF 结构化错误（可空，非空表示读取失败） */
+        private McpToolError error;
     }
 
     // ─────────────────────────────────────────────────────────────────────
@@ -211,14 +221,33 @@ public class McpProtocolService {
      *
      * <p>聚合所有 {@link McpResourceProvider} 的资源列表。
      * 多租户隔离：从 {@link UserContext#tenantId()} 获取当前租户。
+     * 安全：聚合后再次 sanitize description（双保险，防 Provider 漏调）。
      */
     public McpResourcesResponse listResources() {
+        return listResources(McpIdentityContext.fromUserContext());
+    }
+
+    /**
+     * 列出所有可用资源（带完整身份上下文）。
+     *
+     * @param identity 身份上下文（tenantId/userId/roles/permissions）
+     */
+    public McpResourcesResponse listResources(McpIdentityContext identity) {
         McpResourcesResponse response = new McpResourcesResponse();
-        Long tenantId = safeTenantId();
+        McpIdentityContext ctx = identity != null ? identity : McpIdentityContext.fromUserContext();
         List<McpResource> all = new ArrayList<>();
         for (McpResourceProvider provider : resourceProviders) {
             try {
-                all.addAll(provider.listResources(tenantId));
+                List<McpResource> items = provider.listResources(ctx);
+                // 双保险：聚合层再次 sanitize（防 Provider 实现遗漏）
+                if (items != null) {
+                    for (McpResource r : items) {
+                        if (r.getDescription() != null) {
+                            r.setDescription(McpResourceSanitizer.sanitizeDescription(r.getDescription()));
+                        }
+                    }
+                    all.addAll(items);
+                }
             } catch (Exception e) {
                 log.warn("[McpProtocol] listResources provider={} failed: {}",
                         provider.getClass().getSimpleName(), e.getMessage());
@@ -233,10 +262,22 @@ public class McpProtocolService {
      *
      * <p>按 URI 前缀路由到对应的 {@link McpResourceProvider}。
      * 多租户隔离：从 {@link UserContext#tenantId()} 获取当前租户。
+     * ATBA：按 Provider toolType 应用自适应超时预算。
      */
     public McpResourceReadResult readResource(String uri) {
+        return readResource(uri, McpIdentityContext.fromUserContext());
+    }
+
+    /**
+     * 读取指定 URI 的资源内容（带完整身份上下文 + ATBA 超时预算）。
+     *
+     * @param uri      资源 URI
+     * @param identity 身份上下文
+     */
+    public McpResourceReadResult readResource(String uri, McpIdentityContext identity) {
         if (uri == null || uri.isBlank()) {
             McpResourceReadResult err = new McpResourceReadResult();
+            err.setError(McpToolError.notFound(uri == null ? "" : uri));
             err.setContents(List.of(Map.of(
                     "uri", "",
                     "mimeType", "text/plain",
@@ -245,26 +286,16 @@ public class McpProtocolService {
             return err;
         }
 
-        Long tenantId = safeTenantId();
+        McpIdentityContext ctx = identity != null ? identity : McpIdentityContext.fromUserContext();
         for (McpResourceProvider provider : resourceProviders) {
             if (provider.supports(uri)) {
-                try {
-                    return provider.readResource(uri, tenantId);
-                } catch (Exception e) {
-                    log.warn("[McpProtocol] readResource uri={} provider={} failed: {}",
-                            uri, provider.getClass().getSimpleName(), e.getMessage());
-                    McpResourceReadResult err = new McpResourceReadResult();
-                    err.setContents(List.of(Map.of(
-                            "uri", uri,
-                            "mimeType", "text/plain",
-                            "text", "读取失败：" + e.getMessage()
-                    )));
-                    return err;
-                }
+                return readWithTimeout(provider, uri, ctx);
             }
         }
 
+        // 无 Provider 支持该 URI → SERF 结构化错误
         McpResourceReadResult notFound = new McpResourceReadResult();
+        notFound.setError(McpToolError.notFound(uri));
         notFound.setContents(List.of(Map.of(
                 "uri", uri,
                 "mimeType", "text/plain",
@@ -274,15 +305,51 @@ public class McpProtocolService {
     }
 
     /**
-     * 安全获取当前租户 ID（MCP 端点可能无用户上下文，降级为 1L）。
+     * ATBA：按 Provider toolType 应用自适应超时预算。
+     * 超时返回 RATE_LIMITED 风格的结构化错误。
      */
-    private Long safeTenantId() {
+    private McpResourceReadResult readWithTimeout(McpResourceProvider provider, String uri, McpIdentityContext ctx) {
+        long timeoutSec = McpTimeoutBudget.forToolType(provider.toolType());
         try {
-            Long tid = UserContext.tenantId();
-            return tid != null ? tid : 1L;
+            CompletableFuture<McpResourceReadResult> future = CompletableFuture.supplyAsync(
+                    UserContext.wrapSupplier(() -> provider.readResource(uri, ctx))
+            );
+            McpResourceReadResult result = future.get(timeoutSec, TimeUnit.SECONDS);
+            return result != null ? result : emptyResult(uri);
+        } catch (TimeoutException e) {
+            log.warn("[McpProtocol] readResource timeout uri={} provider={} budget={}s",
+                    uri, provider.getClass().getSimpleName(), timeoutSec);
+            McpResourceReadResult err = new McpResourceReadResult();
+            err.setError(McpToolError.rateLimited());
+            err.setContents(List.of(Map.of(
+                    "uri", uri,
+                    "mimeType", "text/plain",
+                    "text", "读取超时（预算 " + timeoutSec + "s）"
+            )));
+            return err;
         } catch (Exception e) {
-            return 1L;
+            Throwable cause = e.getCause() != null ? e.getCause() : e;
+            log.warn("[McpProtocol] readResource uri={} provider={} failed: {}",
+                    uri, provider.getClass().getSimpleName(), cause.getMessage());
+            McpResourceReadResult err = new McpResourceReadResult();
+            err.setError(McpToolError.internal(cause.getMessage()));
+            err.setContents(List.of(Map.of(
+                    "uri", uri,
+                    "mimeType", "text/plain",
+                    "text", "读取失败：" + cause.getMessage()
+            )));
+            return err;
         }
+    }
+
+    private McpResourceReadResult emptyResult(String uri) {
+        McpResourceReadResult r = new McpResourceReadResult();
+        r.setContents(List.of(Map.of(
+                "uri", uri,
+                "mimeType", "text/plain",
+                "text", ""
+        )));
+        return r;
     }
 
     // ─────────────────────────────────────────────────────────────────────

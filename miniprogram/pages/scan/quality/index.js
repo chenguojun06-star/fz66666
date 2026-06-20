@@ -319,7 +319,7 @@ Page({
       const statusText = (res && res.bundleStatusText) || '';
       if (hints.length > 0) {
         setTimeout(function() {
-          wx.showToast({ title: statusText || hints.join(' → '), icon: 'none', duration: 3000 });
+          toast.info(statusText || hints.join(' → '));
         }, 800);
       }
       this._emitRefresh();

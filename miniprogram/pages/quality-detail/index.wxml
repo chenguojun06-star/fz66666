@@ -1,65 +1,81 @@
-<view class="container" wx:if="{{detail}}">
-  <view class="detail-card">
-    <view class="card-header">
-      <view class="order-info">
-        <text class="order-no">{{detail.orderNo || '-'}}</text>
-        <text class="quality-status {{detail.qualityStatus === 'unqualified' ? 'status-error' : 'status-success'}}">{{detail.qualityStatusText || '-'}}</text>
-      </view>
-      <text class="warehousing-no" wx:if="{{detail.warehousingNo}}">入库号: {{detail.warehousingNo}}</text>
-    </view>
+<!-- 质检详情页 · 六段式结构 -->
 
-    <view class="info-grid">
-      <view class="info-item">
+<view class="quality-page" wx:if="{{detail}}">
+
+  <!-- ════════════ ① 基础信息卡 ════════════ -->
+  <view class="top-card">
+    <view class="top-left">
+      <view class="cover-placeholder">
+        <text class="cover-icon">✓</text>
+        <text class="cover-label">质检</text>
+      </view>
+    </view>
+    <view class="top-right">
+      <view class="top-title">
+        <text class="order-no">{{detail.orderNo || '-'}}</text>
+        <text class="status-tag tag {{detail.qualityStatus === 'unqualified' ? 'tag-error' : 'tag-success'}}">{{detail.qualityStatusText || '-'}}</text>
+      </view>
+      <view class="info-row" wx:if="{{detail.warehousingNo}}">
+        <text class="info-label">入库号</text>
+        <text class="info-value">{{detail.warehousingNo}}</text>
+      </view>
+      <view class="info-row">
         <text class="info-label">款号</text>
         <text class="info-value">{{detail.styleNo || '-'}}</text>
       </view>
-      <view class="info-item">
+      <view class="info-row">
         <text class="info-label">款名</text>
         <text class="info-value">{{detail.styleName || '-'}}</text>
       </view>
-      <view class="info-item">
+      <view class="info-row">
         <text class="info-label">生产方</text>
         <text class="info-value">{{detail.factoryName || '-'}}</text>
       </view>
-      <view class="info-item">
+      <view class="info-row">
         <text class="info-label">菲号</text>
         <text class="info-value">{{detail.bundleNo || '-'}}</text>
       </view>
-      <view class="info-item">
+      <view class="info-row">
         <text class="info-label">颜色</text>
         <text class="info-value">{{detail.color || '-'}}</text>
       </view>
-      <view class="info-item">
+      <view class="info-row">
         <text class="info-label">尺码</text>
         <text class="info-value">{{detail.size || '-'}}</text>
       </view>
     </view>
   </view>
 
-  <view class="detail-card">
-    <view class="card-title">数量明细</view>
-    <view class="qty-grid">
-      <view class="qty-item">
-        <text class="qty-value">{{detail.cuttingQuantity || 0}}</text>
-        <text class="qty-label">裁剪</text>
-      </view>
-      <view class="qty-item">
-        <text class="qty-value">{{detail.warehousingQuantity || 0}}</text>
-        <text class="qty-label">质检</text>
-      </view>
-      <view class="qty-item">
-        <text class="qty-value qty-success">{{detail.qualifiedQuantity || 0}}</text>
-        <text class="qty-label">合格</text>
-      </view>
-      <view class="qty-item">
-        <text class="qty-value qty-error">{{detail.unqualifiedQuantity || 0}}</text>
-        <text class="qty-label">不合格</text>
-      </view>
+  <!-- ════════════ ② 数量进度卡 ════════════ -->
+  <view class="qty-card">
+    <view class="qty-col">
+      <text class="qty-num">{{detail.cuttingQuantity || 0}}</text>
+      <text class="qty-label">裁剪</text>
+    </view>
+    <view class="qty-div"></view>
+    <view class="qty-col">
+      <text class="qty-num">{{detail.warehousingQuantity || 0}}</text>
+      <text class="qty-label">质检</text>
+    </view>
+    <view class="qty-div"></view>
+    <view class="qty-col">
+      <text class="qty-num qty-success">{{detail.qualifiedQuantity || 0}}</text>
+      <text class="qty-label">合格</text>
+    </view>
+    <view class="qty-div"></view>
+    <view class="qty-col">
+      <text class="qty-num qty-error">{{detail.unqualifiedQuantity || 0}}</text>
+      <text class="qty-label">不合格</text>
     </view>
   </view>
 
-  <view class="detail-card">
-    <view class="card-title">质检信息</view>
+  <!-- ════════════ ③ 操作区（无操作按钮，省略） ════════════ -->
+
+  <!-- ════════════ ④ 执行进度区 · 质检信息 ════════════ -->
+  <view class="section-card">
+    <view class="section-hd">
+      <text class="section-title">质检信息</text>
+    </view>
     <view class="info-list">
       <view class="info-row" wx:if="{{detail.scanModeText}}">
         <text class="info-label">扫码方式</text>
@@ -80,12 +96,15 @@
     </view>
   </view>
 
-  <view class="detail-card" wx:if="{{detail.defectCategoryText || detail.defectRemark || detail.remark}}">
-    <view class="card-title">质检异常问题</view>
-    <view class="info-list">
+  <!-- ════════════ ⑤ 明细数据区 · 异常问题 + 不良品照片 ════════════ -->
+  <view class="section-card" wx:if="{{detail.defectCategoryText || detail.defectRemark || detail.remark || detail.imageList.length > 0}}">
+    <view class="section-hd">
+      <text class="section-title">质检明细</text>
+    </view>
+    <view class="info-list" wx:if="{{detail.defectCategoryText || detail.defectRemark || detail.remark}}">
       <view class="info-row" wx:if="{{detail.defectCategoryText}}">
         <text class="info-label">缺陷类别</text>
-        <text class="info-value error-text">{{detail.defectCategoryText}}</text>
+        <text class="info-value text-error">{{detail.defectCategoryText}}</text>
       </view>
       <view class="info-row" wx:if="{{detail.defectRemark}}">
         <text class="info-label">处理方式</text>
@@ -96,14 +115,28 @@
         <text class="info-value">{{detail.remark}}</text>
       </view>
     </view>
-  </view>
 
-  <view class="detail-card" wx:if="{{detail.imageList.length > 0}}">
-    <view class="card-title">不良品照片 ({{detail.imageList.length}})</view>
-    <view class="photo-grid">
-      <image wx:for="{{detail.imageList}}" wx:key="*this"
-             class="defect-photo" src="{{item}}" mode="aspectFill"
-             data-url="{{item}}" data-urls="{{detail.imageList}}" bindtap="onPreviewImage" />
+    <view class="photo-wrap" wx:if="{{detail.imageList.length > 0}}">
+      <view class="photo-hd">
+        <text class="photo-title">不良品照片</text>
+        <text class="section-count">{{detail.imageList.length}}张</text>
+      </view>
+      <view class="photo-grid">
+        <image
+          wx:for="{{detail.imageList}}"
+          wx:key="*this"
+          class="defect-photo"
+          src="{{item}}"
+          mode="aspectFill"
+          data-url="{{item}}"
+          data-urls="{{detail.imageList}}"
+          bindtap="onPreviewImage"
+        />
+      </view>
     </view>
   </view>
+
+  <!-- ════════════ ⑥ 操作记录区（暂无，省略） ════════════ -->
+
+  <view class="bottom-gap"></view>
 </view>

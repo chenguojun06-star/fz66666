@@ -12,6 +12,7 @@ import com.fashion.supplychain.integration.sync.adapter.EcPlatformAdapterRegistr
 import com.fashion.supplychain.integration.sync.dto.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -19,6 +20,7 @@ import java.util.*;
 
 @Component
 @Slf4j
+@ConditionalOnProperty(name = "fashion.ecommerce.enabled", havingValue = "true", matchIfMissing = true)
 public class EcSyncJob {
 
     @Autowired

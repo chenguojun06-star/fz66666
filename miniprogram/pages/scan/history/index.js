@@ -4,6 +4,7 @@
  */
 const api = require('../../../utils/api');
 const { eventBus, Events } = require('../../../utils/eventBus');
+const { toast } = require('../../../utils/uiHelper');
 
 function _normalizeQualityName(processName) {
   if (!processName) return processName;
@@ -39,20 +40,23 @@ function formatTime(timeStr) {
 }
 
 function _formatPatternRecord(item) {
+  const qty = typeof item.quantity === 'number' && item.quantity > 0 ? item.quantity
+    : (item.quantity ? parseInt(item.quantity, 10) || 0 : 0);
   return {
     ...item,
     _isPattern: true,
     displayTime: formatTime(item.scanTime),
-    displayProcess: '样衣-' + (item.progressStage || item.operationType || '-'),
+    // 工序名直接用配置（含父子关系）的 processName，不加固定"样衣-"前缀
+    displayProcess: item.processName || item.progressStage || item.operationType || '-',
     displayWorker: item.operatorName || '-',
-    displayOrderNo: item.styleNo || '-',
+    displayOrderNo: item.styleNo || item.orderNo || '-',
     displayBundleNo: item.color || '-',
     displayColor: item.color || '-',
     displaySize: item.size || '-',
     // 合并字段：颜色/码数 与 单价/金额 — 降低 WXML 节点数（每行 12→10），
     // 避免 pages/scan/history/index 节点总数 >1000 触发性能告警。
     displayColorSize: ((item.color || '-') + ' / ' + (item.size || '-')),
-    displayQuantity: 0,
+    displayQuantity: qty,
     displayUnitPrice: '-',
     displayPriceAmount: '-',
     lineAmount: 0,
@@ -353,7 +357,7 @@ Page({
         this.setData({ loading: false });
         return;
       }
-      wx.showToast({ title: `加载失败: ${(e && e.message) || '请稍后重试'}`, icon: 'none' });
+      toast.error('加载失败: ' + ((e && e.message) || '请稍后重试'));
       this.setData({ loading: false });
     }
   },

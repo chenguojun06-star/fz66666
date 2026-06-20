@@ -48,12 +48,11 @@ async function handlePatternScan(handler, parsedData, manualScanType) {
 
     // 获取样衣扫码记录，判断当前可执行的操作
     const scanRecords = await getPatternScanRecords(handler, patternId);
-    
     // 获取PC端配置的工序配置
     let processConfig = null;
     let hasProcessSystem = false;
     let operationOptions = [];
-    
+
     try {
       processConfig = await getPatternProcessConfig(handler, patternId);
       if (processConfig && processConfig.length > 0) {
@@ -63,18 +62,52 @@ async function handlePatternScan(handler, parsedData, manualScanType) {
     } catch (e) {
       console.warn('[PatternScanProcessor] 获取工序配置失败，使用默认流程:', e);
     }
-    
+
     // 如果没有工序配置或工序配置为空，使用默认流程
     if (!hasProcessSystem || operationOptions.length === 0) {
       operationOptions = buildSampleOperationOptions(patternDetail, scanRecords, manualScanType);
     }
-    
+
     if (operationOptions.length === 0) {
       return handler._errorResult('该样衣没有可执行操作，请检查样衣状态');
     }
 
     // 选择默认操作（如果指定了手动扫码类型，优先匹配）
     const selected = pickSelectedOperation(operationOptions, manualScanType);
+
+    // 稳健提取基础字段（兼容多种后端返回结构）
+    const extractText = function (obj) {
+      if (!obj) return '';
+      const args = Array.prototype.slice.call(arguments, 1);
+      for (let i = 0; i < args.length; i++) {
+        const v = obj[args[i]];
+        if (v !== undefined && v !== null && v !== '') return String(v);
+      }
+      return '';
+    };
+
+    // 从 patternDetail 提取基础字段（多字段兼容）
+    const colorVal = extractText(patternDetail, 'color', 'colorName', 'sampleColor', 'colour');
+    // 码数：优先单码数，其次多码数数组
+    let sizeVal = patternDetail.size || patternDetail.sizeName || '';
+    if (!sizeVal) {
+      const sizesArr = Array.isArray(patternDetail.sizes) ? patternDetail.sizes : [];
+      if (sizesArr.length > 0) sizeVal = sizesArr.join('/');
+    }
+    // 数量
+    const qtyCandidates = [patternDetail.quantity, patternDetail.sampleQuantity, patternDetail.totalQuantity, patternDetail.orderQuantity];
+    let qtyVal = 0;
+    for (let i = 0; i < qtyCandidates.length; i++) {
+      if (typeof qtyCandidates[i] === 'number' && qtyCandidates[i] > 0) { qtyVal = qtyCandidates[i]; break; }
+    }
+    // 款号
+    const styleNoVal = patternDetail.styleNo || patternDetail.styleCode || patternId || '';
+    // 款式名
+    const styleNameVal = patternDetail.styleName || patternDetail.name || '';
+    // 封面
+    const coverVal = patternDetail.coverImage || patternDetail.styleImage || patternDetail.cover || '';
+    // sizes 数组
+    const sizesArrVal = Array.isArray(patternDetail.sizes) ? patternDetail.sizes.slice() : [];
 
     return {
       success: true,
@@ -87,11 +120,15 @@ async function handlePatternScan(handler, parsedData, manualScanType) {
         operationType: selected.value,
         operationLabel: selected.label,
         operationOptions: operationOptions,
-        styleNo: patternDetail.styleNo || parsedData.styleNo,
-        color: patternDetail.color || parsedData.color,
-        quantity: patternDetail.quantity,
-        status: patternDetail.status,
-        hasProcessSystem: hasProcessSystem, // 样衣使用工序系统
+        styleNo: styleNoVal,
+        styleName: styleNameVal,
+        color: colorVal,
+        size: sizeVal,
+        sizes: sizesArrVal,
+        quantity: qtyVal,
+        status: patternDetail.status || '',
+        hasProcessSystem: hasProcessSystem,
+        cover: coverVal,
       },
       message: '请确认样衣操作',
     };
@@ -248,7 +285,37 @@ function buildProcessOperationOptions(processConfig, scanRecords, patternDetail,
   if (!processConfig || processConfig.length === 0) {
     return [];
   }
-  
+
+  // 从 patternDetail 提取基础字段（一次提取，所有工序共用）
+  const baseColor = (function () {
+    if (!patternDetail) return '';
+    const candidates = [patternDetail.color, patternDetail.colorName, patternDetail.sampleColor, patternDetail.colour];
+    for (let i = 0; i < candidates.length; i++) {
+      if (candidates[i] != null && candidates[i] !== '') return String(candidates[i]);
+    }
+    return '';
+  })();
+
+  const baseSize = (function () {
+    if (!patternDetail) return '';
+    let s = patternDetail.size || patternDetail.sizeName || '';
+    if (!s && Array.isArray(patternDetail.sizes) && patternDetail.sizes.length > 0) {
+      s = patternDetail.sizes.join('/');
+    }
+    return s;
+  })();
+
+  const baseSizes = patternDetail && Array.isArray(patternDetail.sizes) ? patternDetail.sizes.slice() : [];
+
+  const baseQuantity = (function () {
+    if (!patternDetail) return 0;
+    const candidates = [patternDetail.quantity, patternDetail.sampleQuantity, patternDetail.totalQuantity, patternDetail.orderQuantity];
+    for (let i = 0; i < candidates.length; i++) {
+      if (typeof candidates[i] === 'number' && candidates[i] > 0) return candidates[i];
+    }
+    return 0;
+  })();
+
   // 提取已完成的工序（规范化为标准工序名）
   const completedStages = new Set();
   if (scanRecords && Array.isArray(scanRecords)) {
@@ -274,21 +341,13 @@ function buildProcessOperationOptions(processConfig, scanRecords, patternDetail,
   const options = [];
   const status = String(patternDetail.status || '').toUpperCase();
   
-  // 检查是否需要先领取
-  const needReceive = (status === 'PENDING' || status === '') && !completedStages.has('RECEIVE') && !completedStages.has('领取') && !completedStages.has('采购');
-  if (needReceive) {
-    options.push({
-      value: 'RECEIVE',
-      label: '领取样衣',
-      icon: 'scan',
-      processName: '领取样衣',
-      progressStage: '采购',
-      scanType: 'procurement'
-    });
-    return options;
-  }
+  // 完全按 PC 端工序配置构建操作选项
+  // 1. 已完成的工序：显示已完成标记
+  // 2. 当前可操作工序（父工序都已完成）：显示可操作
+  // 3. 被门禁拦截的工序：显示锁定
   
-  // 遍历工序配置，按顺序检查门禁
+  // 遍历工序配置，逐个构建选项（不 break）
+  let foundFirstOperable = false;
   for (let i = 0; i < processConfig.length; i++) {
     const config = processConfig[i];
     const processName = String(config.processName || config.operationType || '').trim();
@@ -297,13 +356,26 @@ function buildProcessOperationOptions(processConfig, scanRecords, patternDetail,
     const isCompleted = completedStages.has(processName) || completedStages.has(config.operationType) || completedStages.has(stageDetection.canonicalStageKey(processName));
     
     if (isCompleted) {
-      continue; // 跳过已完成的
+      options.push({
+        value: processName,
+        label: processName,
+        icon: 'check',
+        processName: processName,
+        progressStage: progressStage,
+        scanType: scanType,
+        sortOrder: config.sortOrder || i,
+        completed: true,
+        color: baseColor,
+        size: baseSize,
+        sizes: baseSizes,
+        quantity: baseQuantity,
+      });
+      continue;
     }
     
     // 门禁校验：检查父工序是否全部完成
     const gate = stageDetection.checkParentStageGate(progressStage, completedStages);
     if (!gate.pass) {
-      // 父工序未完成，不能执行当前工序
       options.push({
         value: processName,
         label: processName,
@@ -314,11 +386,15 @@ function buildProcessOperationOptions(processConfig, scanRecords, patternDetail,
         sortOrder: config.sortOrder || i,
         locked: true,
         lockReason: '需先完成：' + gate.missing.join('、'),
+        color: baseColor,
+        size: baseSize,
+        sizes: baseSizes,
+        quantity: baseQuantity,
       });
-      break; // 门禁拦截后不再显示后续工序
+      continue; // 门禁拦截后继续显示后续工序（只读展示）
     }
     
-    // 门禁通过，显示可执行操作
+    // 门禁通过：可操作
     options.push({
       value: processName,
       label: processName,
@@ -326,27 +402,14 @@ function buildProcessOperationOptions(processConfig, scanRecords, patternDetail,
       processName: processName,
       progressStage: progressStage,
       scanType: scanType,
-      sortOrder: config.sortOrder || i
+      sortOrder: config.sortOrder || i,
+      canOperate: !foundFirstOperable, // 只有第一个可操作项能执行（父子顺序）
+      color: baseColor,
+      size: baseSize,
+      sizes: baseSizes,
+      quantity: baseQuantity,
     });
-    break; // 只显示第一个可执行的工序
-  }
-  
-  // 如果所有工序都完成了，检查是否可以入库
-  if (options.length === 0 && (status === 'COMPLETED' || status === 'PRODUCTION_COMPLETED')) {
-    const reviewStatus = String(patternDetail.reviewStatus || '').toUpperCase();
-    const reviewResult = String(patternDetail.reviewResult || '').toUpperCase();
-    if (reviewStatus === 'APPROVED' || reviewResult === 'APPROVED') {
-      if (!completedStages.has('WAREHOUSE_IN') && !completedStages.has('入库')) {
-        options.push({
-          value: 'WAREHOUSE_IN',
-          label: '样衣入库',
-          icon: 'inbox',
-          processName: '样衣入库',
-          progressStage: '入库',
-          scanType: 'warehouse'
-        });
-      }
-    }
+    foundFirstOperable = true;
   }
   
   return options;

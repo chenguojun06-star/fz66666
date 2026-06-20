@@ -13,6 +13,7 @@ import org.springframework.context.annotation.Lazy;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.*;
+import org.apache.commons.lang3.StringUtils;
 
 @Slf4j
 @Service
@@ -65,6 +66,13 @@ public class SkillAutoCreationService {
                 existing.setUseCount(existing.getUseCount() + 1);
                 existing.setVersion(existing.getVersion() + 1);
                 existing.setStepsJson(mergeSteps(existing.getStepsJson(), template.getStepsJson()));
+                existing.setReferencesJson(mergeReferences(existing.getReferencesJson(), template.getReferencesJson()));
+                if (StringUtils.isNotBlank(template.getSkillMd())) {
+                    existing.setSkillMd(template.getSkillMd());
+                }
+                if (StringUtils.isNotBlank(template.getMetadataYaml())) {
+                    existing.setMetadataYaml(template.getMetadataYaml());
+                }
                 existing.setConfidence(existing.getConfidence()
                         .add(new BigDecimal("0.05")).min(new BigDecimal("1.0")));
                 skillTemplateMapper.updateById(existing);
@@ -83,6 +91,7 @@ public class SkillAutoCreationService {
                 template.setDeleteFlag(0);
                 template.setCreateTime(LocalDateTime.now());
                 template.setUpdateTime(LocalDateTime.now());
+                fillDefaultDisclosureFields(template);
                 skillTemplateMapper.insert(template);
                 log.info("[SkillAutoCreate] 新技能自动创建: {} ({})", template.getSkillName(), template.getTitle());
             }
@@ -111,16 +120,16 @@ public class SkillAutoCreationService {
     private String buildAutoCreationPrompt(String question, String toolCalls, String answer) {
         return String.format("""
                 你是一个AI技能提取器。分析以下成功的Agent任务执行过程，提取可复用的操作流程作为技能模板。
-                
+
                 ## 用户问题
                 %s
-                
+
                 ## 工具调用序列
                 %s
-                
+
                 ## 最终回答
                 %s
-                
+
                 ## 要求
                 1. 只提取涉及3个以上工具调用的复杂流程
                 2. 技能名称：英文简写（如 analyze_delivery_risk）
@@ -131,14 +140,26 @@ public class SkillAutoCreationService {
                 7. 执行步骤JSON：每步包含 action/tool/params/description
                 8. 前置条件：执行前需要满足的条件
                 9. 后置校验：执行后需要确认的事项
-                
+
+                ## 三层渐进式披露格式要求（必须同时生成）
+                10. metadata_yaml（≤50 tokens）：
+                    YAML 格式，含 name / description / triggers（逗号分隔）
+                    示例：name: analyze_delivery_risk\\ndescription: 货期风险分析\\ntriggers: 逾期,货期,交期
+                11. skill_md（≤500 tokens）：
+                    Markdown 格式，含 # 角色定位 / ## 执行流程 / ## 检查清单 / ## 反例
+                12. references_json（按需，可为空数组 []）：
+                    JSON 数组，每项含 title / content / keywords（keywords 为逗号分隔字符串）
+
                 如果任务过于简单或没有可复用模式，回复 NONE。
-                
+
                 格式（JSON）：
                 {"skill_name":"...","skill_group":"...","title":"...","description":"...",
                  "trigger_phrases":"...",
                  "steps_json":"[{\"action\":\"...\",\"tool\":\"...\",\"params\":{},\"description\":\"...\"}]",
-                 "pre_conditions":"...","post_check":"..."}
+                 "pre_conditions":"...","post_check":"...",
+                 "metadata_yaml":"name: ...\\ndescription: ...\\ntriggers: ...",
+                 "skill_md":"# ...\\n## 角色定位\\n...\\n## 执行流程\\n...\\n## 检查清单\\n...\\n## 反例\\n...",
+                 "references_json":"[{\"title\":\"...\",\"content\":\"...\",\"keywords\":\"...\"}]"}
                 """, truncate(question, 500), truncate(toolCalls, 2000), truncate(answer, 500));
     }
 
@@ -164,6 +185,10 @@ public class SkillAutoCreationService {
             t.setStepsJson(getStr(map, "steps_json", "[]"));
             t.setPreConditions(getStr(map, "pre_conditions", null));
             t.setPostCheck(getStr(map, "post_check", null));
+            // 三层渐进式披露字段
+            t.setMetadataYaml(getStr(map, "metadata_yaml", null));
+            t.setSkillMd(getStr(map, "skill_md", null));
+            t.setReferencesJson(getStr(map, "references_json", null));
             return t;
         } catch (Exception e) {
             log.warn("[SkillAutoCreate] LLM响应解析失败: {}", e.getMessage());
@@ -182,6 +207,49 @@ public class SkillAutoCreationService {
         } catch (Exception e) {
             return existingJson;
         }
+    }
+
+    /** 合并 references_json：去重后追加新 references（按 title 去重）。 */
+    @SuppressWarnings("unchecked")
+    private String mergeReferences(String existingJson, String newJson) {
+        if (isBlank(newJson)) return existingJson;
+        try {
+            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            java.util.List<Map<String, Object>> existing = isBlank(existingJson)
+                    ? new java.util.ArrayList<>()
+                    : mapper.readValue(existingJson, java.util.List.class);
+            java.util.List<Map<String, Object>> incoming = mapper.readValue(newJson, java.util.List.class);
+            java.util.Set<String> existingTitles = new java.util.HashSet<>();
+            for (Map<String, Object> ref : existing) {
+                Object title = ref.get("title");
+                if (title != null) existingTitles.add(title.toString());
+            }
+            for (Map<String, Object> ref : incoming) {
+                Object title = ref.get("title");
+                if (title == null || !existingTitles.contains(title.toString())) {
+                    existing.add(ref);
+                }
+            }
+            return mapper.writeValueAsString(existing);
+        } catch (Exception e) {
+            log.warn("[SkillAutoCreate] references 合并失败: {}", e.getMessage());
+            return existingJson;
+        }
+    }
+
+    /** 新建技能时填充默认披露字段（若 LLM 未生成则用默认值）。 */
+    private void fillDefaultDisclosureFields(SkillTemplate t) {
+        if (t.getTokenBudgetMetadata() == null) t.setTokenBudgetMetadata(50);
+        if (t.getTokenBudgetSkillMd() == null) t.setTokenBudgetSkillMd(500);
+        if (isBlank(t.getDisclosureLevel())) t.setDisclosureLevel("STANDARD");
+    }
+
+    private boolean isNotBlank(String s) {
+        return s != null && !s.isBlank();
+    }
+
+    private boolean isBlank(String s) {
+        return s == null || s.isBlank();
     }
 
     private String getStr(Map<String, Object> map, String key, String defaultValue) {

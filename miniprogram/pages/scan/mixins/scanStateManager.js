@@ -7,6 +7,7 @@
 
 const api = require('../../../utils/api');
 const { DEBUG_MODE } = require('../../../config');
+const { toast } = require('../../../utils/uiHelper');
 
 /** 扫码结果通知停留时长：20 分钟 */
 const RESULT_DISMISS_MS = 20 * 60 * 1000;
@@ -40,7 +41,7 @@ module.exports = {
       }).catch(function(e) {
         console.error('[loadMyPanel] 加载统计数据失败:', e.message || e);
         self.setData({ 'my.stats': { scanCount: 0, orderCount: 0, totalQuantity: 0, totalAmount: 0 } });
-        if (DEBUG_MODE) wx.showToast({ title: '统计加载失败', icon: 'none' });
+        if (DEBUG_MODE) toast.error('统计加载失败');
       }).finally(function() {
         self.setData({ 'my.loadingStats': false });
       });

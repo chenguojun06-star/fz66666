@@ -205,11 +205,11 @@ Page({
     if (this.data._useRoleApi) {
       api.system.saveMiniprogramMenuRoleConfig(roleMenus).then(function () {
         self.setData({ menuManageVisible: false, savingMenuConfig: false });
-        wx.showToast({ title: '菜单配置已保存', icon: 'success' });
+        toast.success('菜单配置已保存');
       }).catch(function (err) {
         console.error('保存菜单配置失败', err);
         self.setData({ savingMenuConfig: false });
-        wx.showToast({ title: '保存失败', icon: 'none' });
+        toast.error('保存失败');
       });
     } else {
       const flatMenus = {};
@@ -219,11 +219,11 @@ Page({
       }
       api.system.saveMiniprogramMenuConfig(flatMenus).then(function () {
         self.setData({ menuManageVisible: false, savingMenuConfig: false });
-        wx.showToast({ title: '菜单配置已保存', icon: 'success' });
+        toast.success('菜单配置已保存');
       }).catch(function (err) {
         console.error('保存菜单配置失败', err);
         self.setData({ savingMenuConfig: false });
-        wx.showToast({ title: '保存失败', icon: 'none' });
+        toast.error('保存失败');
       });
     }
   },
@@ -244,7 +244,7 @@ Page({
         if (tab && typeof tab.refreshLanguage === 'function') {
           tab.refreshLanguage(appliedLang);
         }
-        wx.showToast({ title: i18n.t('admin.languageSwitched', appliedLang), icon: 'success' });
+        toast.success(i18n.t('admin.languageSwitched', appliedLang));
       },
       fail: function () {},
     });
@@ -371,12 +371,12 @@ Page({
   onCopyRecruitCode: function () {
     const code = (this._recruitInfo && this._recruitInfo.tenantCode) || '';
     if (!code) {
-      wx.showToast({ title: '暂无工厂码', icon: 'none' });
+      toast.error('暂无工厂码');
       return;
     }
     wx.setClipboardData({
       data: code,
-      success: function () { wx.showToast({ title: '工厂码已复制', icon: 'success' }); },
+      success: function () { toast.success('工厂码已复制'); },
     });
   },
 
@@ -385,7 +385,7 @@ Page({
     const tenantCode = recruitInfo.tenantCode || '';
     const tenantName = recruitInfo.tenantName || '';
     if (!tenantCode) {
-      wx.showToast({ title: '暂无工厂码', icon: 'none' });
+      toast.error('暂无工厂码');
       return;
     }
     let baseUrl = '';
@@ -400,7 +400,7 @@ Page({
       + '&tenantName=' + encodeURIComponent(tenantName || '');
     wx.setClipboardData({
       data: url,
-      success: function () { wx.showToast({ title: '注册链接已复制', icon: 'success' }); },
+      success: function () { toast.success('注册链接已复制'); },
     });
   },
 

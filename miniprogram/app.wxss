@@ -124,15 +124,6 @@ page {
   line-height: var(--line-height-relaxed);
 }
 
-.tag {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: var(--radius-sm);
-  font-size: var(--font-size-xs);
-  background: var(--color-success-bg);
-  color: var(--color-success);
-}
-
 .list-item {
   display: block;
   width: 100%;

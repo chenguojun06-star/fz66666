@@ -86,10 +86,7 @@ public class DailyBriefingService {
         if (factoryId != null && !factoryId.isBlank()) {
             wrapper.eq(ProductionOrder::getFactoryId, factoryId);
         }
-        wrapper.select(ProductionOrder::getId, ProductionOrder::getOrderNo,
-                        ProductionOrder::getStatus, ProductionOrder::getProductionProgress,
-                        ProductionOrder::getPlannedEndDate, ProductionOrder::getFactoryId)
-                .last("LIMIT 5000");
+        wrapper.last("LIMIT 5000");
 
         List<ProductionOrder> allOrders = productionOrderService.list(wrapper);
 
@@ -168,7 +165,7 @@ public class DailyBriefingService {
         if (s.endsWith("，")) {
             s = s.substring(0, s.length() - 1);
         }
-        if (s.endsWith("今日简报，")) {
+        if (s.equals("今日简报") || s.endsWith("今日简报，")) {
             s = "今日简报，系统健康";
         }
         return s;

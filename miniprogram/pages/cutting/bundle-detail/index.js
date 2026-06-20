@@ -36,6 +36,7 @@ Page({
     cuttingExcess: 0,
     maxBedNo: '-',
     operatorName: '-',
+    creatorName: '',
     latestBundleTime: '-',
     cuttingMatrix: { sizes: [], rows: [] },
     cuttingSimpleRows: [],
@@ -182,6 +183,8 @@ Page({
           deliveryDate: order.expectedShipDate || order.deliveryDate
             || (order.plannedEndDate ? order.plannedEndDate.slice(0, 10) : ''),
           expectedShipDate: order.expectedShipDate ? this._formatDeliveryDate(order.expectedShipDate) : '',
+          // 状态颜色映射（统一走全局 design-tokens）
+          _statusColor: this._mapStatusToColor(order.statusText || order.status || '生产中'),
         }));
         this.setData({ orderList: list, orderListLoading: false });
       })
@@ -315,6 +318,10 @@ Page({
       const withOp = bundles.filter(b => b.operatorName);
       const operatorName = withOp.length ? withOp[withOp.length - 1].operatorName : '-';
 
+      // 创建人（使用 creatorName，后端 select 返回此字段）
+      const withCreator = bundles.filter(b => b.creatorName);
+      const creatorName = withCreator.length ? withCreator[withCreator.length - 1].creatorName : '';
+
       // 编菲时间（最新 createTime）
       const times = bundles
         .map(b => b.createTime || b.createdTime || '')
@@ -330,6 +337,7 @@ Page({
         cuttingSimpleRows,
         maxBedNo: String(maxBedNo),
         operatorName,
+        creatorName,
         latestBundleTime,
         hasBundles: bundles.length > 0,
         _rawBundles: bundles,
@@ -585,6 +593,17 @@ Page({
     if (Array.isArray(res)) return res;
     if (res.records && Array.isArray(res.records)) return res.records;
     return [];
+  },
+
+  /** 中文状态 → 语义化颜色类（default|processing|warning|success|error） */
+  _mapStatusToColor(statusText) {
+    const s = String(statusText || '');
+    if (/已完成|完成|结束|已确认/.test(s)) return 'success';
+    if (/完成|已裁剪|已生产/.test(s)) return 'success';
+    if (/取消|作废|退单|失败/.test(s)) return 'error';
+    if (/待|未|等待|准备|计划/.test(s)) return 'warning';
+    if (/生产|进行|裁剪|加工|扫描|扫码/.test(s)) return 'processing';
+    return 'processing';
   },
 
   /**

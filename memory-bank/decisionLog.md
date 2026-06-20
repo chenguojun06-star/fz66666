@@ -1,7 +1,7 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-06-19
+> 最后更新：2026-06-20
 
 ---
 
@@ -209,3 +209,96 @@
 - **上下文**：12个自我进化组件散落各处，无统一 metrics 汇总，"自我进化空转"无法被发现（DynamicFollowUpEngine 孤儿、MemoryNudge.expireOldNudges 死代码、EvolutionEnginePatrolJob 空壳）
 - **决策**：12个进化组件必须通过 EvolutionOrchestrator.getUnifiedMetrics() 汇总指标；新增进化组件时必须在 EvolutionOrchestrator 注册并暴露量化指标
 - **理由**：统一可观测是"自我进化"的前提，散落各处时无法发现空转
+
+## D-022：多视角对抗评审强制启用
+
+- **日期**：2026-06-20
+- **上下文**：原 SelfCritiqueGate（2026-06-18 引入）只做单一维度评分，高风险场景（涉及钱/权限/数据删除/跨租户）下幻觉/越权/数据错误仍可能通过门控。单一评审视角存在"盲区"，无法覆盖业务正确性、数据真实性、多租户安全、权限合规四个维度的独立风险。
+- **决策**：高风险场景必须触发 MultiPerspectiveCritic 4视角并行评审 + AdversarialJudgePipeline Round 2 对抗评审
+  - 4视角权重：业务正确性 30% + 数据真实性 30% + 多租户安全 25% + 权限合规 15%
+  - 一票否决：任一视角得分<40 → 整体 HARD_FAIL，不再加权平均
+  - 收敛停止：连续 2 轮评分提升<5 分停止，≤3 轮上限
+  - 普通场景可跳过对抗评审（Round 2），但多视角评审（Round 1）不可跳过
+- **理由**：
+  1. 单一 SelfCriticService 评分容易"盲区"，4视角并行 + 一票否决堵住幻觉/越权/数据错误
+  2. 高风险场景的代价远高于额外评审成本（钱/权限/数据删除一旦错误难以挽回）
+  3. 对抗评审（Round 2）用反方立场质疑，能发现 Round 1 的确认偏差
+  4. 收敛停止条件防止"无限打磨"消耗 token，符合 AI Hard Limits
+- **借鉴来源**：Ruflo Truth Scoring + Claude Agent SDK Judge-and-iterate
+- **执行规则**：
+  1. HighRiskDetector 检测高风险场景（涉及钱/权限/数据删除/跨租户）→ 触发 Round 2
+  2. 所有场景必须执行 Round 1（4视角并行）
+  3. 任一视角<40 分 → HARD_FAIL，不再加权
+  4. 连续 2 轮提升<5 分 → 停止迭代
+
+## D-023：MCP resource description 必须 sanitize
+
+- **日期**：2026-06-20
+- **上下文**：2026-06-18 启用 MCP resources 后，resource description 直接暴露给 AI。如果 description 包含 prompt injection 模式（如 `ignore previous instructions`、`system: you are now...`、`<script>`），AI 行为可能被劫持。resource description 来源包括用户可控内容（如知识库条目标题、工厂画像描述），存在注入风险。
+- **决策**：所有 McpResourceProvider 实现返回的 resource description 必须经过 `McpResourceSanitizer.sanitize()` 处理
+  - 过滤 prompt injection 模式（`ignore previous`/`system:`/`<script>`/`assistant:`/`user:`）
+  - 转义特殊字符（`<`/`>`/`&`/`"`/`'`）
+  - 长度截断 ≤500 字符
+  - 禁止直接返回用户可控内容作为 description
+- **理由**：
+  1. prompt injection 可劫持 AI 行为，导致越权/数据泄露/错误操作
+  2. resource description 是 AI 上下文的一部分，注入风险等同于用户消息
+  3. 用户可控内容（知识库标题/工厂描述）必须经过 sanitize，不可信任
+  4. 违反 = P0 安全事故（prompt injection 可劫持 AI 行为）
+- **执行规则**：
+  1. 所有 McpResourceProvider.listResources() 返回的 description 必须经过 sanitize
+  2. 所有 McpResourceProvider.readResource() 返回的 contents 必须经过 sanitize
+  3. Code Review 时检查新增 Provider 是否调用 McpResourceSanitizer
+  4. 禁止绕过 sanitize 直接返回原始内容
+
+## D-024：Memory Bank 数据库化
+
+- **日期**：2026-06-20
+- **上下文**：Memory Bank 原为 Markdown 文件（product-context/active-context/system-patterns/decision-log/progress），AI 每次需要"通读全文"才能找到上下文，token 浪费严重（5个文件 ~10K token），且无法做语义检索。决策间关系（如 D-022 依赖 D-020）无法表达，知识图谱缺失。
+- **决策**：Memory Bank 必须双写（Markdown + DB）
+  - 写入：MemoryBankService 同时写 Markdown 文件 + t_memory_bank_entry 表
+  - 读取：优先 DB 语义检索（topK=5），回退 Markdown 通读
+  - 关系：决策/模式间关系必须存入 t_memory_bank_relation（知识图谱，关系类型 DEPENDS_ON/RELATES_TO/DERIVED_FROM）
+  - 迁移：启动时 MemoryBankMigrationRunner 自动 Markdown → DB（Redis 幂等，key: `memory_bank:migration:done`）
+  - 新增记忆类型时，必须同时更新 DB schema 和 Markdown 模板
+- **理由**：
+  1. Markdown 通读 token 浪费严重（~10K token），DB 语义检索 topK=5 仅 ~500 token，降低 ~70%
+  2. 知识图谱关系支持"决策 D-022 依赖 D-020"类关联查询，Markdown 无法表达
+  3. 双写兼容确保向后兼容，旧代码无感知，可渐进迁移
+  4. 启动时自动迁移 + Redis 幂等，避免重复迁移
+- **借鉴来源**：RooFlow Context Portal 2026-02-19（ConPort 模式）
+- **执行规则**：
+  1. MemoryBankService 所有写入操作必须双写（Markdown + DB）
+  2. 读取操作优先 DB 语义检索，回退 Markdown
+  3. 决策/模式间关系必须存入 t_memory_bank_relation
+  4. 新增记忆类型时同步更新 DB schema 和 Markdown 模板
+  5. 启动时 MemoryBankMigrationRunner 自动迁移，Redis 幂等
+
+## D-025：per-call model selection 强制启用
+
+- **日期**：2026-06-20
+- **上下文**：所有 AI 调用原使用同一模型（glm-4-plus 旗舰），简单查询（如"今天有几条待办"）也用旗舰模型，成本高（旗舰 ~$0.05/次 vs 经济 ~$0.005/次，5-10倍差距）。同时上下文无限膨胀导致 token 成本爆炸，单会话可能消耗 $10+。
+- **决策**：所有 AI 调用必须经过 ModelSelectionRouter 选择模型
+  - 简单查询（复杂度<30）→ ECONOMY（glm-4-flash）
+  - 一般对话（30-70）→ STANDARD（glm-4）
+  - 复杂推理（>70）→ PREMIUM（glm-4-plus）
+  - 禁止简单查询用旗舰模型（成本浪费 5-10 倍）
+  - CostExplosionGuard 必须开启：
+    - 上下文 >32K token → 自动摘要压缩
+    - 连续 3 轮相似度>0.9 → 强制终止
+    - 单会话 >$5 → 熔断，拒绝后续调用
+    - 单轮工具调用 >10 次 → 强制收敛
+  - 熔断时返回友好提示，不静默失败
+- **理由**：
+  1. 简单查询用旗舰模型成本浪费 5-10 倍，per-call selection 降低 ~80% 成本
+  2. 上下文肥大是 token 成本爆炸主因，自动压缩防止失控
+  3. 重复检测防止 AI"原地打转"消耗资源
+  4. 熔断机制防止单会话成本失控（>$5 阈值基于业务可接受上限）
+  5. 四维评估（意图复杂度+上下文长度+工具调用数+历史轮次）确保模型选择准确
+- **借鉴来源**：Claude Agent SDK per-call model selection + Ruflo 成本爆炸防御
+- **执行规则**：
+  1. 所有 AI 调用必须经过 ModelSelectionRouter，禁止直接指定模型
+  2. 复杂场景可用 `chatPremium()` 强制 PREMIUM，但需注释原因
+  3. CostExplosionGuard 必须开启，不可关闭
+  4. 熔断时返回友好提示（如"本次对话已较长，建议开启新会话"），不静默失败
+  5. application.yml 中 model-selection.enabled 和 cost-guard 配置不可设为 false

@@ -42,7 +42,7 @@
  */
 
 // ==================== 导入模块 ====================
-const { safeNavigate } = require('../../utils/uiHelper');
+const { safeNavigate, toast } = require('../../utils/uiHelper');
 
 // 导入 Mixins (生命周期 + 核心业务 + 数据配置)
 const scanLifecycleMixin = require('./mixins/scanLifecycleMixin');
@@ -296,15 +296,15 @@ Page({
       success: (res) => {
         wx.hideLoading();
         if (res.networkType === 'none' || res.networkType === 'unknown') {
-          wx.showToast({ title: '网络不可用，请检查网络设置', icon: 'none', duration: 2500 });
+          toast.error('网络不可用，请检查网络设置');
         } else {
-          wx.showToast({ title: '网络已恢复，重新扫码', icon: 'success', duration: 1500 });
+          toast.success('网络已恢复，重新扫码');
           this.onScan();
         }
       },
       fail: () => {
         wx.hideLoading();
-        wx.showToast({ title: '检测失败，请重试', icon: 'none' });
+        toast.error('检测失败，请重试');
       },
     });
   },

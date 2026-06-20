@@ -1,6 +1,7 @@
 package com.fashion.supplychain.intelligence.controller;
 
 import com.fashion.supplychain.common.Result;
+import com.fashion.supplychain.intelligence.agent.resource.McpIdentityContext;
 import com.fashion.supplychain.intelligence.service.McpProtocolService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -46,13 +47,13 @@ public class McpProtocolController {
     /** MCP resources/list — 列出所有可用资源（memory:// / knowledge:// / factory://） */
     @PostMapping("/resources/list")
     public Result<McpProtocolService.McpResourcesResponse> listResources() {
-        return Result.success(mcpProtocolService.listResources());
+        return Result.success(mcpProtocolService.listResources(McpIdentityContext.fromUserContext()));
     }
 
     /** MCP resources/read — 读取指定 URI 的资源内容 */
     @PostMapping("/resources/read")
     public Result<McpProtocolService.McpResourceReadResult> readResource(@RequestBody Map<String, String> request) {
         String uri = request != null ? request.get("uri") : null;
-        return Result.success(mcpProtocolService.readResource(uri));
+        return Result.success(mcpProtocolService.readResource(uri, McpIdentityContext.fromUserContext()));
     }
 }

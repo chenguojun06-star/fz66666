@@ -164,12 +164,22 @@ public class PatternProductionController {
             Map<String, Object> item = new HashMap<>();
             item.put("id", r.getId());
             item.put("patternProductionId", r.getPatternProductionId());
+            item.put("styleId", r.getStyleId());
+            item.put("styleNo", r.getStyleNo());
+            item.put("styleName", r.getStyleName());
+            item.put("color", r.getColor());
+            item.put("size", r.getSize());
+            item.put("quantity", r.getQuantity());
             item.put("operationType", r.getOperationType());
-            item.put("processName", r.getOperationType());
+            item.put("processName", r.getProcessName());
+            item.put("progressStage", r.getProgressStage());
+            item.put("processCode", r.getProcessCode());
             item.put("operatorId", r.getOperatorId());
             item.put("operatorName", r.getOperatorName());
             item.put("operatorRole", r.getOperatorRole());
             item.put("warehouseCode", r.getWarehouseCode());
+            item.put("warehouseAreaId", r.getWarehouseAreaId());
+            item.put("warehouseLocationCode", r.getWarehouseLocationCode());
             item.put("remark", r.getRemark());
             item.put("scanTime", r.getScanTime() != null ? r.getScanTime().format(fmt) : null);
             return item;
@@ -385,14 +395,19 @@ public class PatternProductionController {
                 item.put("scanResult", "success");
                 item.put("operationType", r.getOperationType());
 
-                String processLabel = _patternOperationLabel(r.getOperationType());
-                item.put("processName", processLabel);
-                item.put("progressStage", processLabel);
+                // 工序名优先用记录自身字段；如果 processName 为空再兜底为 operationType
+                String name = StringUtils.hasText(r.getProcessName()) ? r.getProcessName()
+                        : (StringUtils.hasText(r.getOperationType()) ? r.getOperationType() : _patternOperationLabel(r.getOperationType()));
+                item.put("processName", name);
+                item.put("progressStage", StringUtils.hasText(r.getProgressStage()) ? r.getProgressStage() : name);
 
                 item.put("operatorName", r.getOperatorName());
                 item.put("operatorId", r.getOperatorId());
+                item.put("styleId", r.getStyleId());
                 item.put("styleNo", r.getStyleNo());
+                item.put("styleName", r.getStyleName());
                 item.put("color", r.getColor());
+                item.put("size", r.getSize());
                 item.put("warehouseCode", r.getWarehouseCode());
                 item.put("remark", r.getRemark());
                 item.put("scanTime", r.getScanTime() != null
@@ -400,9 +415,13 @@ public class PatternProductionController {
 
                 PatternProduction pp = r.getPatternProductionId() != null
                         ? productionMap.get(r.getPatternProductionId()) : null;
-                int qty = (pp != null && pp.getQuantity() != null) ? pp.getQuantity() : 1;
+                // 数量优先使用记录自身字段；如果记录没有设置则用样衣表的数量
+                int qty = (r.getQuantity() != null && r.getQuantity() > 0)
+                        ? r.getQuantity()
+                        : ((pp != null && pp.getQuantity() != null) ? pp.getQuantity() : 1);
                 item.put("quantity", qty);
                 item.put("unitPrice", null);
+                item.put("patternProductionId", r.getPatternProductionId());
                 item.put("orderId", pp != null ? pp.getId() : null);
                 item.put("orderNo", r.getStyleNo());
                 return item;

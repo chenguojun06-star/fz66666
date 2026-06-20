@@ -1,4 +1,4 @@
-<view class="page">
+<view class="container">
   <view class="tab-bar">
     <view class="tab-item {{activeTab===0?'tab-active':''}}" data-tab="0" bindtap="switchTab">我的订单</view>
     <view class="tab-item {{activeTab===1?'tab-active':''}}" data-tab="1" bindtap="switchTab">发货记录</view>
@@ -13,57 +13,61 @@
 
   <view wx:if="{{activeTab===0}}" class="tab-content">
     <view wx:if="{{orders.length===0 && !orderLoading}}" class="empty">
-      <text class="empty-icon">📋</text>
-      <text class="empty-text">暂无订单数据</text>
+      <empty-state iconEmoji="🏭" text="暂无数据" hint="下拉刷新试试" card="{{true}}"></empty-state>
     </view>
 
     <view class="order-list" wx:if="{{orders.length > 0}}">
-      <view class="order-card {{item.expanded ? 'order-card--open' : ''}} {{item.remainDaysClass === 'days-overdue' ? 'order-card--overdue' : ''}}"
+      <view class="task-card {{item.expanded ? 'task-card--open' : ''}} {{item.remainDaysClass === 'days-overdue' ? 'task-card--overdue' : ''}}"
             wx:for="{{orders}}" wx:key="id">
 
         <view class="order-main" data-index="{{index}}" bindtap="onCardToggle">
-          <view class="order-cover" catchtap="onCoverPreview" data-url="{{item.styleCoverUrl}}">
-            <image wx:if="{{item.styleCoverUrl}}" class="cover-pic" src="{{item.styleCoverUrl}}" mode="aspectFill" lazy-load />
-            <view wx:else class="cover-placeholder">
-              <text class="cover-ph-text">📦</text>
-            </view>
-          </view>
-
-          <view class="order-info">
-            <view class="info-line1">
-              <text class="order-no">{{item.orderNo}}</text>
-              <text wx:if="{{item.urgencyTagText === '急'}}" class="badge badge-urgent">急</text>
-              <text wx:if="{{item.plateTypeTagText}}" class="badge badge-blue">{{item.plateTypeTagText}}</text>
-            </view>
-            <view class="info-line2">
-              <text class="info-style">{{item.styleNo || '暂无款号'}}</text>
-              <text class="info-divider" wx:if="{{item.factoryName}}">|</text>
-              <text class="info-factory" wx:if="{{item.factoryName}}">{{item.factoryName}}</text>
-            </view>
-            <view class="info-line3" wx:if="{{item.deliveryDateStr}}">
-              <text class="info-delivery">交期 {{item.deliveryDateStr}}</text>
-              <text class="info-remain {{item.remainDaysClass}}" wx:if="{{item.remainDaysText}}">{{item.remainDaysText}}</text>
-            </view>
-            <view class="info-qty-row">
-              <text class="iq-num">{{item.cuttingQty || item.totalQuantity || item.orderQuantity || 0}}</text>
-              <text class="iq-lbl">总数</text>
-              <text class="iq-num iq-num--done">{{item.completedQuantity || 0}}</text>
-              <text class="iq-lbl">已完成</text>
-              <text class="iq-num iq-num--remain">{{item.remainQuantity || 0}}</text>
-              <text class="iq-lbl">剩余</text>
-            </view>
-            <view class="info-progress">
-              <view class="ip-bar">
-                <view class="ip-fill {{item.remainDaysClass === 'days-overdue' ? 'ip-fill--overdue' : ''}}" style="width:{{item.calculatedProgress > 100 ? 100 : item.calculatedProgress}}%"></view>
-              </view>
-              <text class="ip-pct">{{item.calculatedProgress || 0}}%</text>
-            </view>
-          </view>
-
-          <view class="order-arrow">
-            <text class="arrow-icon {{item.expanded ? 'arrow-icon--up' : ''}}">›</text>
+        <view class="order-cover" catchtap="onCoverPreview" data-url="{{item.styleCoverUrl}}">
+          <image wx:if="{{item.styleCoverUrl}}" class="cover-pic" src="{{item.styleCoverUrl}}" mode="aspectFill" lazy-load />
+          <view wx:else class="cover-placeholder">
+            <text class="cover-ph-text">📦</text>
           </view>
         </view>
+
+        <view class="order-info">
+          <view class="info-top">
+            <text class="order-no">{{item.orderNo}}</text>
+            <text wx:if="{{item.urgencyTagText === '急'}}" class="status-tag tag tag-warning">急</text>
+            <text wx:if="{{item.plateTypeTagText}}" class="status-tag tag tag-processing">{{item.plateTypeTagText}}</text>
+          </view>
+
+          <view class="info-spec-row">
+            <text class="info-spec-label">款号</text>
+            <text class="info-spec-value">{{item.styleNo || '-'}}</text>
+            <text class="info-spec-label" wx:if="{{item.factoryName}}">工厂</text>
+            <text class="info-spec-value" wx:if="{{item.factoryName}}">{{item.factoryName}}</text>
+          </view>
+
+          <view class="info-spec-row" wx:if="{{item.deliveryDateStr}}">
+            <text class="info-spec-label">交期</text>
+            <text class="info-spec-value">{{item.deliveryDateStr}}</text>
+            <text class="info-remain {{item.remainDaysClass}}" wx:if="{{item.remainDaysText}}">{{item.remainDaysText}}</text>
+          </view>
+
+          <view class="info-qty-row">
+            <text class="iq-num">{{item.cuttingQty || item.totalQuantity || item.orderQuantity || 0}}</text>
+            <text class="iq-lbl">总数</text>
+            <text class="iq-num iq-num--done">{{item.completedQuantity || 0}}</text>
+            <text class="iq-lbl">已完成</text>
+            <text class="iq-num iq-num--remain">{{item.remainQuantity || 0}}</text>
+            <text class="iq-lbl">剩余</text>
+          </view>
+          <view class="info-progress">
+            <view class="ip-bar">
+              <view class="ip-fill {{item.remainDaysClass === 'days-overdue' ? 'ip-fill--overdue' : ''}}" style="width:{{item.calculatedProgress > 100 ? 100 : item.calculatedProgress}}%"></view>
+            </view>
+            <text class="ip-pct">{{item.calculatedProgress || 0}}%</text>
+          </view>
+        </view>
+
+        <view class="order-arrow">
+          <text class="arrow-icon {{item.expanded ? 'arrow-icon--up' : ''}}">›</text>
+        </view>
+      </view>
 
         <view class="order-expand" wx:if="{{item.expanded}}" catchtap="">
           <view class="expand-section" wx:if="{{item.processNodes.length > 0}}">
@@ -81,6 +85,7 @@
           </view>
 
           <view class="expand-actions">
+            <view class="act-btn act-btn--detail" catchtap="onOpenDetail" data-index="{{index}}">详情</view>
             <view class="act-btn act-btn--primary" catchtap="onGoOrderProcurement" data-index="{{index}}">采购</view>
             <view class="act-btn act-btn--primary" catchtap="onGoOrderCutting" data-index="{{index}}">裁剪</view>
             <view class="act-btn act-btn--primary" catchtap="onGoOrderProcessEdit" data-index="{{index}}">工序</view>
@@ -98,13 +103,12 @@
 
   <view wx:if="{{activeTab===1}}" class="tab-content">
     <view wx:if="{{shipments.length===0 && !shipmentLoading}}" class="empty">
-      <text class="empty-icon">📦</text>
-      <text class="empty-text">暂无发货记录</text>
+      <empty-state iconEmoji="🏭" text="暂无数据" hint="下拉刷新试试" card="{{true}}"></empty-state>
     </view>
-    <view wx:for="{{shipments}}" wx:key="id" class="shipment-card" data-index="{{index}}" bindtap="onTapShipment">
+    <view wx:for="{{shipments}}" wx:key="id" class="task-card" data-index="{{index}}" bindtap="onTapShipment">
       <view class="shipment-top">
         <text class="shipment-no">{{item.orderNo || item.shipmentNo || ''}}</text>
-        <text class="shipment-status {{item.statusCls}}">{{item.statusText}}</text>
+        <text class="status-tag tag {{item.statusCls}}">{{item.statusText}}</text>
       </view>
       <view class="shipment-info">
         <text>发货: {{item.totalQuantity || 0}}件</text>
@@ -177,6 +181,9 @@
       <view wx:if="{{currentShipment}}" class="detail-info">
         <view class="di-row"><text class="di-label">状态</text><text class="di-value {{currentShipment.statusCls}}">{{currentShipment.statusText}}</text></view>
         <view class="di-row"><text class="di-label">发货数量</text><text class="di-value">{{currentShipment.totalQuantity || 0}} 件</text></view>
+        <view class="di-row" wx:if="{{currentShipment.creatorName}}"><text class="di-label">创建人</text><text class="di-value">{{currentShipment.creatorName}}</text></view>
+        <view class="di-row" wx:if="{{currentShipment.shippedByName}}"><text class="di-label">发货人</text><text class="di-value">{{currentShipment.shippedByName}} · {{currentShipment.shipTime || ''}}</text></view>
+        <view class="di-row" wx:if="{{currentShipment.receivedByName}}"><text class="di-label">收货人</text><text class="di-value">{{currentShipment.receivedByName}} · {{currentShipment.receiveTime || ''}}</text></view>
       </view>
       <view wx:if="{{detailItems.length > 0}}">
         <view class="ship-table-header">

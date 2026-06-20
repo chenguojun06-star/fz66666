@@ -6,12 +6,12 @@ const { transformOrderData } = require('../utils/orderTransform');
 const { buildProcessNodesWithRates, calcOrderProgress } = require('../utils/progressNodes');
 
 const STATUS_MAP = {
-  pending: { text: '待收货', cls: 'tag-orange' },
-  received: { text: '已收货', cls: 'tag-green' },
+  pending: { text: '待收货', cls: 'tag-warning' },
+  received: { text: '已收货', cls: 'tag-success' },
 };
 
 function receiveStatusText(s) { return (STATUS_MAP[s] || {}).text || s || ''; }
-function receiveStatusCls(s) { return (STATUS_MAP[s] || {}).cls || 'tag-gray'; }
+function receiveStatusCls(s) { return (STATUS_MAP[s] || {}).cls || 'tag-default'; }
 
 function enrichForDashboard(order) {
   const completed = Number(order.completedQuantity) || 0;
@@ -159,7 +159,7 @@ Page({
     const orderNo = e.currentTarget.dataset.orderNo;
     if (!orderNo) return;
     wx.setClipboardData({ data: orderNo, success: function () {
-      wx.showToast({ title: '已复制', icon: 'success', duration: 1000 });
+      toast.success('已复制');
     }});
   },
 
@@ -182,6 +182,16 @@ Page({
     const order = this.data.orders[idx];
     if (!order) return;
     safeNavigate({ url: '/pages/dashboard/process-edit/index?orderId=' + encodeURIComponent(order.id) + '&orderNo=' + encodeURIComponent(order.orderNo || '') }).catch(() => {});
+  },
+
+  onOpenDetail: function (e) {
+    const idx = e.currentTarget.dataset.index;
+    const order = this.data.orders[idx];
+    if (!order) return;
+    const params = [];
+    if (order.id) params.push('orderId=' + encodeURIComponent(order.id));
+    if (order.orderNo) params.push('orderNo=' + encodeURIComponent(order.orderNo));
+    safeNavigate({ url: '/pages/dashboard/order-detail/index?' + params.join('&') }).catch(function () {});
   },
 
   onOpenShip: function (e) {

@@ -106,6 +106,13 @@ public class ProductWarehousing {
 
     private LocalDateTime receivedTime;
 
+    // ==================== 创建人字段（自动填充，新增 V202606201006）====================
+    @TableField(fill = FieldFill.INSERT)
+    private String creatorId;
+
+    @TableField(fill = FieldFill.INSERT)
+    private String creatorName;
+
     private String inspectionStatus;
 
     private LocalDateTime createTime;

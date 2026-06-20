@@ -43,6 +43,12 @@ public class KnowledgeBaseResourceProvider implements McpResourceProvider {
         return uri != null && uri.startsWith(URI_PREFIX);
     }
 
+    /** ATBA：知识库读取为查询类，5s 预算 */
+    @Override
+    public String toolType() {
+        return McpTimeoutBudget.QUERY;
+    }
+
     @Override
     public List<McpResource> listResources(Long tenantId) {
         List<McpResource> resources = new ArrayList<>();
@@ -52,7 +58,8 @@ public class KnowledgeBaseResourceProvider implements McpResourceProvider {
                 McpResource r = new McpResource();
                 r.setUri(URI_PREFIX + kb.getId());
                 r.setName(kb.getTitle() != null ? kb.getTitle() : kb.getId());
-                r.setDescription(buildDescription(kb));
+                // 安全修复：sanitize description 防 prompt injection
+                r.setDescription(McpResourceSanitizer.sanitizeDescription(buildDescription(kb)));
                 r.setMimeType(MIME_TYPE);
                 resources.add(r);
             }
@@ -88,6 +95,10 @@ public class KnowledgeBaseResourceProvider implements McpResourceProvider {
             // knowledge://{id} 返回单条知识全文
             KnowledgeBase kb = knowledgeBaseService.getById(key);
             if (kb == null || !belongsToTenant(kb, tenantId)) {
+                // 跨租户访问或资源不存在 → SERF 结构化错误
+                result.setError(kb == null
+                        ? McpToolError.notFound(uri)
+                        : McpToolError.tenantMismatch());
                 result.setContents(List.of(Map.of(
                         "uri", uri,
                         "mimeType", "text/plain",
@@ -114,6 +125,7 @@ public class KnowledgeBaseResourceProvider implements McpResourceProvider {
             )));
         } catch (Exception e) {
             log.warn("[KnowledgeBaseResource] read 失败 uri={} tenant={} err={}", uri, tenantId, e.getMessage());
+            result.setError(McpToolError.internal(e.getMessage()));
             result.setContents(List.of(Map.of(
                     "uri", uri,
                     "mimeType", "text/plain",

@@ -7,6 +7,7 @@ import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.common.util.NumberUtils;
 import com.fashion.supplychain.common.util.QrCodeSigner;
 import com.fashion.supplychain.common.util.TextUtils;
+import com.fashion.supplychain.production.entity.PatternScanRecord;
 import com.fashion.supplychain.production.entity.CuttingBundle;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
@@ -18,6 +19,7 @@ import com.fashion.supplychain.production.helper.ScanRescanHelper;
 import com.fashion.supplychain.production.service.CuttingBundleService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.ScanRecordService;
+import com.fashion.supplychain.production.service.PatternScanRecordService;
 import com.fashion.supplychain.production.service.ProductWarehousingService;
 import org.springframework.util.StringUtils;
 import java.util.HashMap;
@@ -50,6 +52,7 @@ public class ScanRecordOrchestrator {
     private static final Set<String> ADMIN_ROLE_KEYWORDS = Set.of("admin", "ADMIN", "manager", "supervisor", "主管", "管理员");
 
     @Autowired private ScanRecordService scanRecordService;
+    @Autowired private PatternScanRecordService patternScanRecordService;
     @Autowired private ProductionOrderService productionOrderService;
     @Autowired private CuttingBundleService cuttingBundleService;
     @Autowired private ProductWarehousingService productWarehousingService;
@@ -239,9 +242,66 @@ public class ScanRecordOrchestrator {
         if (order == null && hasText(scanCode)) order = resolveOrder(null, scanCode);
         validateOrderBelonging(order, ctx);
         final ProductionOrder resolvedOrder = order;
-        return productionScanExecutor.execute(params, requestId, operatorId, operatorName, scanType,
+        Map<String, Object> result = productionScanExecutor.execute(params, requestId, operatorId, operatorName, scanType,
                 quantity != null ? quantity : NumberUtils.toInt(params.get("quantity")), autoProcess,
                 (unused) -> resolveColor(params, null, resolvedOrder), (unused) -> resolveSize(params, null, resolvedOrder));
+
+        // 工序扫码（sourceBizType=SAMPLE）同时写入 t_pattern_scan_record，供个人扫码历史查询
+        String sourceBizType = params.get("sourceBizType") == null ? null : String.valueOf(params.get("sourceBizType"));
+        if ("SAMPLE".equalsIgnoreCase(sourceBizType)) {
+            try {
+                savePatternScanRecordFromProductionScan(params, result, operatorId, operatorName, ctx);
+            } catch (Exception e) {
+                log.warn("[PatternScan] 双写 t_pattern_scan_record 失败: {}", e.getMessage(), e);
+            }
+        }
+
+        return result;
+    }
+
+    /**
+     * 工序扫码时同步写入 t_pattern_scan_record（供个人扫码历史 my-history 查询）
+     * 与 PatternProductionOrchestrator.createPatternScanRecord() 字段对齐
+     */
+    private void savePatternScanRecordFromProductionScan(Map<String, Object> params, Map<String, Object> result,
+            String operatorId, String operatorName, UserContext ctx) {
+        String patternId = TextUtils.safeText(params.get("scanCode")); // scanCode 就是 patternId
+        if (!hasText(patternId)) return;
+
+        PatternScanRecord sr = new PatternScanRecord();
+        sr.setPatternProductionId(patternId);
+        sr.setStyleId(params.get("styleId") == null ? null : String.valueOf(params.get("styleId")));
+        sr.setStyleNo(params.get("styleNo") == null ? null : String.valueOf(params.get("styleNo")));
+        sr.setStyleName(params.get("styleName") == null ? null : String.valueOf(params.get("styleName")));
+        sr.setColor(params.get("color") == null ? null : String.valueOf(params.get("color")));
+        sr.setSize(params.get("size") == null ? null : String.valueOf(params.get("size")));
+        Object qtyObj = params.get("quantity");
+        if (qtyObj != null) {
+            try {
+                sr.setQuantity(Integer.parseInt(String.valueOf(qtyObj).trim()));
+            } catch (NumberFormatException ignore) {
+                sr.setQuantity(null);
+            }
+        }
+        sr.setOperationType(String.valueOf(params.get("progressStage") != null ? params.get("progressStage") : "").toUpperCase());
+        sr.setProcessName(TextUtils.safeText(params.get("processName")));
+        sr.setProgressStage(TextUtils.safeText(params.get("progressStage")));
+        sr.setProcessCode(TextUtils.safeText(params.get("processCode")));
+        sr.setOperatorId(operatorId);
+        sr.setOperatorName(operatorName);
+        sr.setOperatorRole(params.get("operatorRole") == null ? "PLATE_WORKER" : String.valueOf(params.get("operatorRole")));
+        sr.setRemark(TextUtils.safeText(params.get("remark")));
+        sr.setWarehouseCode(params.get("warehouse") == null ? null : String.valueOf(params.get("warehouse")));
+        sr.setWarehouseAreaId(params.get("warehouseAreaId") == null ? null : String.valueOf(params.get("warehouseAreaId")));
+        sr.setWarehouseLocationCode(params.get("warehouseLocationCode") == null ? null : String.valueOf(params.get("warehouseLocationCode")));
+        sr.setScanTime(java.time.LocalDateTime.now());
+        sr.setCreateTime(java.time.LocalDateTime.now());
+        sr.setDeleteFlag(0);
+        sr.setTenantId(ctx == null ? UserContext.tenantId() : ctx.getTenantId());
+
+        patternScanRecordService.save(sr);
+        log.info("[PatternScan] 同步写入 t_pattern_scan_record: patternId={}, processName={}, styleNo={}, operator={}",
+                patternId, sr.getProcessName(), sr.getStyleNo(), operatorId);
     }
 
     private ProductionOrder resolveOrder(String orderId, String orderNo) {

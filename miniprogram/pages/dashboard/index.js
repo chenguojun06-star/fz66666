@@ -70,7 +70,7 @@ Page({
     const app = getApp();
     if (app.requireAuth && !app.requireAuth()) return;
     if (!isTenantOwner() && !isAdminOrSupervisor()) {
-      wx.showToast({ title: '无权限访问', icon: 'none', duration: 1500 });
+      toast.error('无权限访问');
       wx.navigateBack({ delta: 1, fail: function () { wx.switchTab({ url: '/pages/home/index' }); } });
       return;
     }
@@ -161,9 +161,9 @@ Page({
         },
       });
       if (apiFailCount >= 3) {
-        wx.showToast({ title: '数据加载失败，请下拉刷新', icon: 'none', duration: 2500 });
+        toast.error('数据加载失败，请下拉刷新');
       } else if (apiFailCount > 0) {
-        wx.showToast({ title: '部分数据加载失败', icon: 'none', duration: 2000 });
+        toast.warn('部分数据加载失败');
       }
     }).catch(function (err) {
       console.error('[Dashboard] refreshCards error:', err);
@@ -197,7 +197,11 @@ Page({
       if (searchKey) params.orderNo = searchKey;
       return api.production.listOrders(params);
     }, function (r) {
-      return enrichForDashboard(transformOrderData(r));
+      // 防御性捕获：transformOrderData 崩溃时仍能展示原始数据
+      try { return enrichForDashboard(transformOrderData(r)); } catch (e) {
+        console.warn('[loadOrders] transformOrderData 失败，使用原始数据:', e.message || e);
+        return enrichForDashboard(r);
+      }
     }).then(function () {
       if (isOverdue) {
         const filtered = (that.data.orders.list || []).filter(function (o) {
@@ -287,7 +291,7 @@ Page({
     const orderNo = e.currentTarget.dataset.orderNo;
     if (!orderNo) return;
     wx.setClipboardData({ data: orderNo, success: function () {
-      wx.showToast({ title: '已复制', icon: 'success', duration: 1000 });
+      toast.success('已复制');
     }});
   },
 
@@ -325,6 +329,17 @@ Page({
       return;
     }
     safeNavigate({ url: '/pages/dashboard/process-edit/index?orderId=' + encodeURIComponent(orderId) + '&orderNo=' + encodeURIComponent(orderNo || '') }).catch(() => {});
+  },
+
+  /* ======== 打开订单详情页 ======== */
+  onOpenDetail: function (e) {
+    const idx = e.currentTarget.dataset.index;
+    const order = this.data.orders.list[idx];
+    if (!order) return;
+    const params = [];
+    if (order.id) params.push('orderId=' + encodeURIComponent(order.id));
+    if (order.orderNo) params.push('orderNo=' + encodeURIComponent(order.orderNo));
+    safeNavigate({ url: '/pages/dashboard/order-detail/index?' + params.join('&') }).catch(function () {});
   },
 
   /* ======== 搜索：输入（防抖 500ms） ======== */

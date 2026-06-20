@@ -861,25 +861,25 @@ public class VisionAnalysisService {
 
     private String normalizeColor(String raw) {
         if (raw == null || raw.isBlank()) return "";
-        // 去掉无意义的描述词，保留颜色本体
-        String s = raw
-                .replaceAll("(?i)主色|配色|辅色|整体|服装|主色调|配色方案|色", "")
-                .replaceAll("[，,。.！!？?：:；;\\s]+", "")
-                .trim();
-        // 常见颜色归一化
+        // 先尝试完整匹配常见颜色（保留"色"字），避免被 replaceAll 去掉
         java.util.Map<String, String> map = new java.util.LinkedHashMap<>();
         map.put("黑色", "black"); map.put("白色", "white"); map.put("灰色", "gray");
         map.put("红色", "red"); map.put("粉色", "pink"); map.put("蓝色", "blue");
         map.put("绿色", "green"); map.put("黄色", "yellow"); map.put("橙色", "orange");
         map.put("紫色", "purple"); map.put("棕色", "brown"); map.put("米色", "beige");
-        map.put("驼色", "camel"); map.put("藏青", "navy"); map.put("藏青色", "navy");
-        map.put("杏色", "apricot"); map.put("卡其", "khaki"); map.put("米白", "off-white");
-        map.put("卡其色", "khaki"); map.put("军绿", "army"); map.put("咖啡色", "coffee");
+        map.put("驼色", "camel"); map.put("藏青色", "navy"); map.put("藏青", "navy");
+        map.put("杏色", "apricot"); map.put("卡其色", "khaki"); map.put("卡其", "khaki");
+        map.put("米白", "off-white"); map.put("军绿", "army"); map.put("咖啡色", "coffee");
         map.put("深蓝色", "navy"); map.put("浅蓝色", "light-blue"); map.put("深灰色", "dark-gray");
         map.put("浅灰色", "light-gray"); map.put("暗红色", "dark-red");
         for (java.util.Map.Entry<String, String> e : map.entrySet()) {
-            if (s.contains(e.getKey())) return e.getKey();
+            if (raw.contains(e.getKey())) return e.getKey();
         }
+        // 去掉无意义的描述词，保留颜色本体
+        String s = raw
+                .replaceAll("(?i)主色|配色|辅色|整体|服装|主色调|配色方案|色", "")
+                .replaceAll("[，,。.！!？?：:；;\\s]+", "")
+                .trim();
         return s.length() > 8 ? s.substring(0, 8) : s;
     }
 
@@ -892,11 +892,12 @@ public class VisionAnalysisService {
 
     private String pickSeason(String raw) {
         if (raw == null || raw.isBlank()) return null;
+        // 先检查组合词"春秋"/"四季"，再检查单字
+        if (raw.contains("春秋") || raw.contains("四季")) return "春秋";
         if (raw.contains("夏")) return "夏";
         if (raw.contains("冬")) return "冬";
         if (raw.contains("春")) return "春";
         if (raw.contains("秋")) return "秋";
-        if (raw.contains("春秋") || raw.contains("四季")) return "春秋";
         return null;
     }
 

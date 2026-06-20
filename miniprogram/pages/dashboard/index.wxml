@@ -60,7 +60,7 @@
     <view class="order-card {{item.expanded ? 'order-card--open' : ''}} {{item.remainDaysClass === 'days-overdue' ? 'order-card--overdue' : ''}}"
           wx:for="{{orders.list}}" wx:key="id">
 
-      <!-- 主行：封面图 + 全部信息 -->
+      <!-- 主行：封面图 + 规格信息右栏（点击展开折叠） -->
       <view class="order-main" data-index="{{index}}" bindtap="onCardToggle">
         <view class="order-cover" catchtap="onCoverPreview" data-url="{{item.styleCoverUrl}}">
           <image wx:if="{{item.styleCoverUrl}}" class="cover-pic" src="{{item.styleCoverUrl}}" mode="aspectFill" lazy-load />
@@ -70,21 +70,31 @@
         </view>
 
         <view class="order-info">
-          <view class="info-line1">
+          <!-- 顶部：订单号 + 状态标签 -->
+          <view class="info-top">
             <text class="order-no">{{item.orderNo}}</text>
-            <text wx:if="{{item.urgencyTagText === '急'}}" class="badge badge-urgent">急</text>
-            <text wx:if="{{item.plateTypeTagText}}" class="badge badge-blue">{{item.plateTypeTagText}}</text>
+            <text wx:if="{{item.urgencyTagText === '急'}}" class="status-tag tag tag-warning">急</text>
+            <text wx:if="{{item.plateTypeTagText}}" class="status-tag tag tag-processing">{{item.plateTypeTagText}}</text>
+            <text wx:if="{{item.status === 'completed'}}" class="status-tag tag tag-success">已完成</text>
+            <text wx:elif="{{item.remainDaysClass === 'days-overdue'}}" class="status-tag tag tag-error">已逾期</text>
           </view>
-          <view class="info-line2">
-            <text class="info-style">{{item.styleNo || '暂无款号'}}</text>
-            <text class="info-divider" wx:if="{{item.factoryName}}">|</text>
-            <text class="info-factory" wx:if="{{item.factoryName}}">{{item.factoryName}}</text>
+
+          <!-- 基础信息（款号 + 工厂） -->
+          <view class="info-spec-row">
+            <text class="info-spec-label">款号</text>
+            <text class="info-spec-value">{{item.styleNo || '-'}}</text>
+            <text class="info-spec-label" wx:if="{{item.factoryName}}">工厂</text>
+            <text class="info-spec-value" wx:if="{{item.factoryName}}">{{item.factoryName}}</text>
           </view>
-          <view class="info-line3" wx:if="{{item.deliveryDateStr}}">
-            <text class="info-delivery">交期 {{item.deliveryDateStr}}</text>
+
+          <!-- 交期信息 -->
+          <view class="info-spec-row" wx:if="{{item.deliveryDateStr}}">
+            <text class="info-spec-label">交期</text>
+            <text class="info-spec-value">{{item.deliveryDateStr}}</text>
             <text class="info-remain {{item.remainDaysClass}}" wx:if="{{item.remainDaysText}}">{{item.remainDaysText}}</text>
           </view>
-          <!-- 数量 + 进度 -->
+
+          <!-- 数量 + 进度条 -->
           <view class="info-qty-row">
             <text class="iq-num">{{item.cuttingQty || item.totalQuantity || item.orderQuantity || 0}}</text>
             <text class="iq-lbl">总数</text>
@@ -152,6 +162,7 @@
 
         <!-- 快捷操作 -->
         <view class="expand-actions">
+          <view class="act-btn act-btn--detail" catchtap="onOpenDetail" data-index="{{index}}">详情</view>
           <view class="act-btn act-btn--primary" catchtap="onGoProcurement" data-index="{{index}}">采购</view>
           <view class="act-btn act-btn--primary" catchtap="onViewCuttingBundles" data-order-no="{{item.orderNo}}">裁剪</view>
           <view class="act-btn act-btn--primary" catchtap="onEditProcess" data-order-id="{{item.id}}" data-order-no="{{item.orderNo}}" data-status="{{item.status}}" wx:if="{{item.status === 'production'}}">工序</view>

@@ -43,6 +43,7 @@ function _friendlyNetworkError(e) {
 }
 
 const ScanOfflineQueue = require('../../services/ScanOfflineQueue');
+const { toast } = require('../../../../utils/uiHelper');
 
 class ScanSubmitter {
   constructor(api) {
@@ -82,7 +83,7 @@ class ScanSubmitter {
       // 因此必须明确 res.success === true 或者 res.code === 200!
       if (res && (res.scanRecord || res.success === true)) {
         if (res.unitPriceHint) {
-          wx.showToast({ title: res.unitPriceHint, icon: 'none', duration: 4000 });
+          toast.info(res.unitPriceHint);
         }
         return {
           success: true,

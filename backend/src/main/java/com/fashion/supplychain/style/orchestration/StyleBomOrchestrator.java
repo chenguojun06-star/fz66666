@@ -119,6 +119,15 @@ public class StyleBomOrchestrator {
             } catch (Exception e) {
                 log.warn("Auto-sync quotation failed after BOM update: styleId={}, error={}", sid, e.getMessage());
             }
+            // BOM数量变更时，同步更新关联的pending采购任务
+            try {
+                int synced = purchaseHelper.syncPendingPurchasesOnBomChange(current, styleBom);
+                if (synced > 0) {
+                    log.info("BOM变更已同步{}条pending采购任务: styleId={}", synced, sid);
+                }
+            } catch (Exception e) {
+                log.warn("BOM变更同步采购任务失败（不影响BOM保存）: styleId={}, error={}", sid, e.getMessage());
+            }
         }
 
         if (!ok) {
@@ -348,8 +357,10 @@ public class StyleBomOrchestrator {
         BigDecimal lossRate = styleBom.getLossRate() == null ? BigDecimal.ZERO : styleBom.getLossRate();
         BigDecimal unitPrice = styleBom.getUnitPrice() == null ? BigDecimal.ZERO : styleBom.getUnitPrice();
 
+        // 精度控制：用量保留4位小数，避免前端浮点数精度污染（如0.99999999）
+        usageAmount = usageAmount.setScale(4, RoundingMode.HALF_UP);
         BigDecimal qty = usageAmount.multiply(BigDecimal.ONE.add(lossRate.movePointLeft(2)));
-        styleBom.setTotalPrice(qty.multiply(unitPrice));
+        styleBom.setTotalPrice(qty.multiply(unitPrice).setScale(2, RoundingMode.HALF_UP));
     }
 
     @Transactional(rollbackFor = Exception.class)

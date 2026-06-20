@@ -139,8 +139,10 @@
 }
 
 .list-card {
-  display: flex;
-  flex-direction: column;
+  background: #fff;
+  border-radius: 12rpx;
+  padding: 0 24rpx;
+  overflow: hidden;
 }
 
 .list-item {
@@ -321,7 +323,7 @@
   padding: 30rpx;
   border-bottom: 1rpx solid #f0f0f0;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
 }
 
 .style-cover {
@@ -350,19 +352,121 @@
   margin-top: 8rpx;
 }
 
-/* 款式图片网格 */
-.style-images {
+/* 基础字段标签行 */
+.style-meta-row {
   display: flex;
   flex-wrap: wrap;
   gap: 12rpx;
-  margin-bottom: 20rpx;
+  margin-top: 12rpx;
+}
+.meta-tag {
+  background: #f5f5f5;
+  color: #666;
+  font-size: 24rpx;
+  padding: 6rpx 16rpx;
+  border-radius: 8rpx;
+}
+.meta-status-completed { background: #f6ffed; color: #52c41a; }
+.meta-status-in_progress { background: #e6f7ff; color: #1890ff; }
+.meta-status-PENDING { background: #fff7e6; color: #fa8c16; }
+.meta-status-others { background: #f5f5f5; color: #666; }
+
+/* 生产工序卡片式列表 */
+.process-card { background: #fff; border-radius: 16rpx; overflow: hidden; }
+.process-row { display: flex; align-items: center; padding: 28rpx 24rpx; border-bottom: 1rpx solid #f5f5f5; min-height: 120rpx; }
+.process-row:last-child { border-bottom: none; }
+.row-active { background: #f0f7ff; }
+.row-locked { opacity: 0.5; }
+.row-done { background: #fafafa; }
+.row-status-dot { width: 56rpx; text-align: center; font-size: 36rpx; flex-shrink: 0; margin-right: 20rpx; }
+.dot-check { color: #52c41a; font-size: 40rpx; }
+.dot-arrow { color: #1890ff; font-size: 36rpx; }
+.dot-lock { color: #999; font-size: 32rpx; }
+.dot-empty { color: #d9d9d9; font-size: 32rpx; }
+.row-main { flex: 1; min-width: 0; }
+.row-process-name { display: block; color: #333; font-size: 32rpx; font-weight: 500; line-height: 1.4; }
+.row-meta { display: flex; flex-wrap: wrap; gap: 12rpx; margin-top: 8rpx; }
+.row-meta-item { color: #999; font-size: 24rpx; background: #f5f5f5; padding: 2rpx 10rpx; border-radius: 4rpx; }
+.row-right { flex-shrink: 0; text-align: right; margin-left: 20rpx; display: flex; flex-direction: column; align-items: flex-end; gap: 4rpx; }
+.row-operator { color: #333; font-size: 26rpx; font-weight: 500; }
+.row-time { color: #999; font-size: 22rpx; margin-top: 2rpx; }
+.row-action-tag { background: #1890ff; color: #fff; font-size: 22rpx; padding: 6rpx 16rpx; border-radius: 20rpx; margin-top: 4rpx; font-weight: 500; }
+.row-done-tag { color: #52c41a; font-size: 24rpx; font-weight: 500; margin-top: 4rpx; }
+.row-locked-tag { color: #999; font-size: 22rpx; margin-top: 4rpx; }
+.row-pending-tag { color: #d9d9d9; font-size: 22rpx; margin-top: 4rpx; }
+.process-summary { text-align: center; color: #999; font-size: 24rpx; padding: 20rpx 0 10rpx; }
+
+/* 款式图片横向滚动 */
+.image-scroll {
+  white-space: nowrap;
+  width: 100%;
 }
 
 .style-image-thumb {
+  display: inline-block;
   width: 160rpx;
   height: 160rpx;
   border-radius: 8rpx;
   background: #f5f5f5;
+  margin-right: 12rpx;
+  vertical-align: top;
+}
+
+/* 生产工序扫码列表（与列表页风格一致） */
+.process-scan-item {
+  display: flex;
+  align-items: center;
+  padding: 24rpx 0;
+  border-bottom: 1rpx solid #f5f5f5;
+  background: #fff;
+}
+
+.process-scan-item:last-child {
+  border-bottom: none;
+}
+
+.process-scan-item.can-operate {
+  background: #f0f7ff;
+}
+
+.process-scan-item.locked {
+  opacity: 0.6;
+}
+
+.process-scan-dot {
+  width: 48rpx;
+  text-align: center;
+  font-size: 32rpx;
+  flex-shrink: 0;
+  margin-right: 16rpx;
+}
+
+.process-scan-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.process-scan-name {
+  color: #333;
+  font-size: 30rpx;
+  font-weight: 500;
+}
+
+.process-scan-hint {
+  font-size: 24rpx;
+  margin-top: 4rpx;
+}
+
+.done-hint { color: #52c41a; }
+.can-hint { color: #2563eb; font-weight: 500; }
+.lock-hint { color: #999; }
+.process-scan-arrow {
+  font-size: 48rpx;
+  color: #2563eb;
+  flex-shrink: 0;
+  margin-left: 12rpx;
 }
 
 /* 阶段进度增强 */

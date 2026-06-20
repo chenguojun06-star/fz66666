@@ -2,9 +2,11 @@ package com.fashion.supplychain.intelligence.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.intelligence.entity.AgentMemoryCore;
+import com.fashion.supplychain.intelligence.entity.MemoryBankEntry;
 import com.fashion.supplychain.intelligence.mapper.AgentMemoryCoreMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.context.annotation.Lazy;
@@ -23,6 +25,9 @@ import java.util.stream.Collectors;
 public class MemoryBankService {
 
     private final AgentMemoryCoreMapper memoryCoreMapper;
+    /** 用 ObjectProvider 注入避免循环依赖（DbService 也可能反向引用本类） */
+    private final ObjectProvider<MemoryBankDbService> memoryBankDbServiceProvider;
+    private final ObjectProvider<MemoryBankRelationService> memoryBankRelationServiceProvider;
 
     private static final String AGENT_ID = "xiaoyun";
     private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
@@ -105,6 +110,16 @@ public class MemoryBankService {
                 memoryCoreMapper.updateById(record);
             }
             log.info("[MemoryBank] 租户={} 类别={} 已更新 {}字符", tenantId, category.key, content.length());
+            // 双写数据库（ConPort 模式，失败不影响主流程）
+            try {
+                MemoryBankDbService dbService = memoryBankDbServiceProvider.getIfAvailable();
+                if (dbService != null) {
+                    dbService.upsertEntry(tenantId, category.key, category.key,
+                            category.description, content, null);
+                }
+            } catch (Exception e) {
+                log.debug("[MemoryBank] 双写数据库失败（不影响主流程）: {}", e.getMessage());
+            }
         } finally {
             lock.unlock();
         }
@@ -229,5 +244,40 @@ public class MemoryBankService {
         write(tenantId, Category.DECISION_LOG, "");
         write(tenantId, Category.PROGRESS, "[初始化] Memory Bank 已创建");
         log.info("[MemoryBank] 租户={} 初始化完成", tenantId);
+    }
+
+    // ==================== ConPort 数据库化扩展（双写兼容） ====================
+
+    /**
+     * 语义搜索记忆条目（委托 MemoryBankDbService）。
+     *
+     * <p>当前为 LIKE 全文搜索，未来接 Qdrant 向量搜索。
+     * 搜索 title + content + tags，跨所有 category。
+     *
+     * @param tenantId 租户ID（多租户隔离）
+     * @param query    查询文本
+     * @param limit    返回条数上限
+     * @return 匹配的记忆条目列表
+     */
+    public List<MemoryBankEntry> semanticSearch(Long tenantId, String query, int limit) {
+        MemoryBankDbService dbService = memoryBankDbServiceProvider.getIfAvailable();
+        if (dbService == null) return List.of();
+        return dbService.semanticSearch(tenantId, query, limit);
+    }
+
+    /**
+     * 知识图谱遍历（委托 MemoryBankRelationService）。
+     *
+     * <p>从 entryKey 出发，CTE 递归遍历关联条目（depth ≤2 防爆炸）。
+     *
+     * @param tenantId 租户ID
+     * @param entryKey 起始条目 key（如 D-020）
+     * @param depth    遍历深度（强制 ≤2）
+     * @return 关联条目列表（不含起点本身）
+     */
+    public List<MemoryBankEntry> getRelatedEntries(Long tenantId, String entryKey, int depth) {
+        MemoryBankRelationService relService = memoryBankRelationServiceProvider.getIfAvailable();
+        if (relService == null) return List.of();
+        return relService.traverseGraph(tenantId, entryKey, depth);
     }
 }

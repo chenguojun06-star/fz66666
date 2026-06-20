@@ -33,6 +33,10 @@ const production = {
     const on = String(orderNo || '').trim();
     return ok('/api/production/order/list', 'GET', { orderNo: on });
   },
+  /** 获取订单完整流程数据（含工序阶段/扫码记录/物料采购/BOM等） */
+  getOrderFlow(orderId) {
+    return ok(`/api/production/order/flow/${encodeURIComponent(orderId)}`, 'GET', {});
+  },
   updateProgress(payload) {
     return ok('/api/production/order/update-progress', 'POST', payload || {});
   },

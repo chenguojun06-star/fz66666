@@ -9,6 +9,7 @@
  */
 const api = require('../../../../utils/api');
 const { eventBus } = require('../../../../utils/eventBus');
+const { toast } = require('../../../../utils/uiHelper');
 
 /**
  * 调用料卷扫码接口（封装，使用统一 api.js）
@@ -75,7 +76,7 @@ Page({
           this.setData({ rollCode: code, rollInfo: null, errorMsg: '', successMsg: '' });
           this.queryRoll(code);
         } else {
-          wx.showToast({ title: '不是料卷二维码', icon: 'none' });
+          toast.error('不是料卷二维码');
         }
       },
     });

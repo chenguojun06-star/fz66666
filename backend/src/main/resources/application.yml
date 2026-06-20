@@ -501,6 +501,29 @@ xiaoyun:
     enabled: ${XIAOYUN_PROACTIVE_INSIGHT_ENABLED:true}
     max-unread: ${XIAOYUN_PROACTIVE_INSIGHT_MAX_UNREAD:50}
     ttl-hours: ${XIAOYUN_PROACTIVE_INSIGHT_TTL_HOURS:4}
+  # P2-2: per-call 模型选择（借鉴 Claude Agent SDK per-call model selection）
+  # 简单查询用便宜模型，复杂排产用强模型，预计节省 Token 成本 40-60%
+  model-selection:
+    enabled: ${XIAOYUN_MODEL_SELECTION_ENABLED:true}
+    economy:
+      model-id: ${XIAOYUN_MODEL_ECONOMY:glm-4-flash}
+      max-tokens: 1024
+    standard:
+      model-id: ${XIAOYUN_MODEL_STANDARD:glm-4}
+      max-tokens: 2048
+    premium:
+      model-id: ${XIAOYUN_MODEL_PREMIUM:glm-4-plus}
+      max-tokens: 4096
+  # P2-2: 成本爆炸防御（借鉴 Ruflo 成本爆炸三大原因 + 防御）
+  # 上下文肥大检测 / 多 Agent 重复检测 / 重试风暴熔断
+  cost-guard:
+    enabled: ${XIAOYUN_COST_GUARD_ENABLED:true}
+    context-bloat-threshold: 12000
+    context-history-limit: 10
+    circuit-breaker-threshold: 5
+    circuit-breaker-window-minutes: 5
+    circuit-breaker-recovery-minutes: 10
+    duplicate-cache-ttl-hours: 1
 
 # SerpApi 趋势数据配置（Google Trends / Google Shopping）
 serpapi:

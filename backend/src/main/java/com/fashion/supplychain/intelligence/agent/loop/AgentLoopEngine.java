@@ -30,6 +30,7 @@ import com.fashion.supplychain.intelligence.service.AgentStateStore;
 import com.fashion.supplychain.intelligence.service.DataTruthGuard;
 import com.fashion.supplychain.intelligence.service.EntityFactChecker;
 import com.fashion.supplychain.intelligence.service.GroundedGenerationGuard;
+import com.fashion.supplychain.intelligence.service.ModelSelectionRouter;
 import com.fashion.supplychain.intelligence.service.SemanticCacheService;
 import com.fashion.supplychain.intelligence.service.SelfConsistencyVerifier;
 import com.fashion.supplychain.intelligence.service.ConversationMemoryService;
@@ -39,6 +40,7 @@ import com.fashion.supplychain.intelligence.service.MemoryHierarchyService;
 import com.fashion.supplychain.intelligence.service.ProactiveRiskDetectionService;
 import com.fashion.supplychain.intelligence.service.ProactiveInsightService;
 import com.fashion.supplychain.intelligence.service.PromptEvolutionService;
+import com.fashion.supplychain.intelligence.service.SkillCrystallizationService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -86,6 +88,8 @@ public class AgentLoopEngine {
     @Autowired private org.springframework.beans.factory.ObjectProvider<HandoffEngine> handoffEngineProvider;
     @Autowired private org.springframework.beans.factory.ObjectProvider<ConversationMemoryService> conversationMemoryServiceProvider;
     @Autowired private org.springframework.beans.factory.ObjectProvider<SemanticCacheService> semanticCacheServiceProvider;
+    @Autowired private org.springframework.beans.factory.ObjectProvider<SkillCrystallizationService> skillCrystallizationServiceProvider;
+    @Autowired private org.springframework.beans.factory.ObjectProvider<ModelSelectionRouter> modelSelectionRouterProvider;
 
     public String run(AgentLoopContext ctx, AgentLoopCallback cb) {
         String sessionId = ctx.getCommandId();
@@ -106,6 +110,22 @@ public class AgentLoopEngine {
                     }
                 } catch (Exception e) {
                     log.warn("[AgentLoop] 语义缓存查找异常，继续主流程: {}", e.getMessage());
+                }
+            }
+
+            // 结晶化命中检查：高频问题跳过LLM直接返回（借鉴 GenericAgent Skill Crystallization）
+            SkillCrystallizationService crystallizationService = skillCrystallizationServiceProvider.getIfAvailable();
+            if (crystallizationService != null && ctx.getTenantId() != null) {
+                try {
+                    java.util.Optional<String> crystallized = crystallizationService.tryCrystallizedAnswer(
+                            ctx.getTenantId(), ctx.getUserMessage());
+                    if (crystallized.isPresent()) {
+                        log.info("[AgentLoop] 结晶化技能命中，跳过Agent循环 tenantId={} queryLen={}",
+                                ctx.getTenantId(), ctx.getUserMessage().length());
+                        return handleFinalAnswer(ctx, crystallized.get(), cb);
+                    }
+                } catch (Exception e) {
+                    log.warn("[AgentLoop] 结晶化命中检查失败，降级到正常LLM流程: {}", e.getMessage());
                 }
             }
 
@@ -133,6 +153,9 @@ public class AgentLoopEngine {
             }
 
             injectPlanIfNeeded(ctx, cb);
+
+            // ★ 接入点4：在第一次 LLM 调用前应用 per-call 模型选择
+            applyModelSelection(ctx);
 
             String termination;
             while (ctx.getCurrentIteration() < ctx.getMaxIterations()) {
@@ -213,6 +236,17 @@ public class AgentLoopEngine {
     private IntelligenceInferenceResult performInference(AgentLoopContext ctx, AgentLoopCallback cb, int iter) {
         cb.onThinking(iter, "正在调用推理模型，请稍候…");
 
+        // ★ 接入点4：如果是 PREMIUM 模型，使用非流式 chatWithModel（更强模型能力）
+        // 否则用标准 chatStream（保持流式体验）
+        if (ctx.hasModelSelection() && "PREMIUM".equals(ctx.getModelTier())) {
+            try {
+                return performInferenceWithModel(ctx, cb, iter);
+            } catch (Exception e) {
+                log.warn("[AgentLoop] PREMIUM 模型调用失败，降级到标准流式: {}", e.getMessage());
+                // 降级到标准流式
+            }
+        }
+
         // 所有轮次均使用流式输出，实时推送中间思考内容，提升用户等待体验
         if (cb instanceof StreamingAgentLoopCallback) {
             return inferenceGateway.chatStream("agent-loop", ctx.getMessages(), ctx.getVisibleApiTools(),
@@ -223,6 +257,94 @@ public class AgentLoopEngine {
                     });
         }
         return inferenceGateway.chat("agent-loop", ctx.getMessages(), ctx.getVisibleApiTools());
+    }
+
+    /**
+     * 接入点4：使用 per-call 模型选择进行推理（PREMIUM 模型场景）。
+     *
+     * <p>当 ModelSelectionRouter 选中 PREMIUM 模型时，使用 chatWithModel 接口
+     * 传递 modelId 给底层 gateway，真正实现 per-call model 覆盖。
+     * 牺牲流式体验换取更强模型能力（复杂排产/多域分析场景）。
+     */
+    private IntelligenceInferenceResult performInferenceWithModel(AgentLoopContext ctx, AgentLoopCallback cb, int iter) {
+        long start = System.currentTimeMillis();
+        // 将消息列表拼接成完整 prompt
+        StringBuilder promptBuilder = new StringBuilder();
+        if (ctx.getMessages() != null) {
+            for (AiMessage msg : ctx.getMessages()) {
+                if (msg.getContent() == null) continue;
+                String role = msg.getRole() != null ? msg.getRole() : "user";
+                promptBuilder.append("[role:").append(role).append("]\n")
+                        .append(msg.getContent()).append("\n\n");
+            }
+        }
+        String prompt = promptBuilder.toString();
+
+        Long tenantId = ctx.getTenantId();
+        long userIdHash = ctx.getUserId() != null ? ctx.getUserId().hashCode() : 0L;
+        String modelId = ctx.getModelId();
+
+        log.info("[AgentLoop] 使用 PREMIUM 模型推理 iter={} modelId={} tenantId={}",
+                iter, modelId, tenantId);
+
+        // 调用 chatWithModel（会路由到 SpringAiInferenceAdapter 真正覆盖模型）
+        String content = inferenceGateway.chatWithModel(prompt, tenantId, userIdHash, modelId);
+
+        // 包装成 IntelligenceInferenceResult（保持下游处理一致）
+        IntelligenceInferenceResult result = new IntelligenceInferenceResult();
+        result.setSuccess(content != null && !content.isEmpty());
+        result.setProvider("model-selection");
+        result.setModel(modelId);
+        result.setContent(content != null ? content : "");
+        result.setLatencyMs(System.currentTimeMillis() - start);
+        result.setResponseChars(content != null ? content.length() : 0);
+        result.setPromptTokens(prompt.length() / 4);
+        result.setCompletionTokens(content != null ? content.length() / 2 : 0);
+
+        // 推送完整内容到前端（非流式，一次性推送）
+        if (content != null && !content.isEmpty() && cb instanceof StreamingAgentLoopCallback) {
+            cb.onAnswerChunk(content);
+        }
+        return result;
+    }
+
+    /**
+     * 接入点4：在第一次 LLM 调用前应用 per-call 模型选择。
+     *
+     * <p>根据用户消息复杂度、预估工具调用数、多域标识自动选择模型分级：
+     * <ul>
+     *   <li>ECONOMY — 简单查询 → 便宜模型（保持流式）</li>
+     *   <li>STANDARD — 普通对话 → 标准模型（保持流式）</li>
+     *   <li>PREMIUM — 复杂排产 → 强模型（非流式，更强能力）</li>
+     * </ul>
+     *
+     * <p>降级安全：ModelSelectionRouter 不可用时使用默认模型（不覆盖）。
+     */
+    private void applyModelSelection(AgentLoopContext ctx) {
+        ModelSelectionRouter modelSelectionRouter = modelSelectionRouterProvider.getIfAvailable();
+        if (modelSelectionRouter == null || !modelSelectionRouter.isEnabled()) {
+            log.debug("[AgentLoop] ModelSelectionRouter 不可用，使用默认模型");
+            return;
+        }
+        try {
+            String userMessage = ctx.getUserMessage();
+            // 预估工具调用数：根据可见工具数估算（保守估计）
+            int estimatedToolCalls = ctx.getVisibleTools() != null ? ctx.getVisibleTools().size() : 0;
+            // 多域标识：routedDomains.size > 1 → 多域
+            boolean isMultiDomain = ctx.getRoutedDomains() != null && ctx.getRoutedDomains().size() > 1;
+
+            ModelSelectionRouter.ModelTier tier = modelSelectionRouter.selectModel(
+                    userMessage, estimatedToolCalls, isMultiDomain);
+            String modelId = modelSelectionRouter.resolveModelId(tier);
+
+            ctx.setModelTier(tier.name());
+            ctx.setModelId(modelId);
+
+            log.info("[AgentLoop] per-call 模型选择已应用: tier={} modelId={} multiDomain={} estToolCalls={}",
+                    tier, modelId, isMultiDomain, estimatedToolCalls);
+        } catch (Exception e) {
+            log.warn("[AgentLoop] 模型选择失败，降级到默认模型（不影响主流程）: {}", e.getMessage());
+        }
     }
 
     private String handleInferenceError(AgentLoopContext ctx, IntelligenceInferenceResult result,
@@ -495,6 +617,25 @@ public class AgentLoopEngine {
 
         // 持久化对话记忆
         saveConversationMemory(ctx, content);
+
+        // 异步结晶化检测：高频问题自主探索 → 执行路径结晶化 → 下次直接复用
+        // detectAndCrystallize 本身为 @Async，不阻塞当前异步后处理
+        SkillCrystallizationService crystallizationService = skillCrystallizationServiceProvider.getIfAvailable();
+        if (crystallizationService != null && ctx.getTenantId() != null) {
+            try {
+                String toolCallsLog = ctx.getAllExecRecords().stream()
+                        .map(r -> "tool_call: " + r.toolName)
+                        .reduce("", (a, b) -> a.isEmpty() ? b : a + "\n" + b);
+                // 质量分默认 0.8（>0.75 阈值即触发结晶化），后续可接入 SelfCritiqueGate 评分
+                double qualityScore = 0.8;
+                crystallizationService.detectAndCrystallize(
+                        ctx.getTenantId(), ctx.getCommandId(), ctx.getUserMessage(),
+                        toolCallsLog, content, qualityScore);
+            } catch (Exception e) {
+                log.debug("[AsyncPost] 结晶化检测失败（不影响主流程）: {}", e.getMessage());
+            }
+        }
+
         completeSession(ctx, content);
     }
 

@@ -216,7 +216,7 @@
 .close-btn { font-size: var(--font-size-xl); color: var(--color-text-disabled); }
 
 .quick-chips { display: flex; flex-direction: row; padding: 8px 12px 0; gap: 8px; flex-wrap: wrap; }
-.quick-chip { background: var(--color-bg-light); color: var(--color-primary); border-radius: 16px; padding: 6px 12px; font-size: var(--font-size-xs); line-height: var(--line-height-normal); border: 1px solid var(--color-info-bg); }
+.quick-chip { background: var(--color-bg-light); color: var(--color-primary); border-radius: 16px; padding: 4px 10px; font-size: 10px; line-height: var(--line-height-normal); border: 1px solid var(--color-info-bg); }
 .quick-chip-hover { background: var(--color-info-bg); }
 .page-context-chips { padding: 10px 12px 0; }
 .page-context-label { font-size: var(--font-size-xxs); color: var(--color-text-disabled); margin-bottom: 6px; }
@@ -580,8 +580,8 @@
 .recommend-pill {
   background: var(--color-bg-light);
   color: var(--color-primary);
-  font-size: var(--font-size-xxs);
-  padding: 4px 10px;
+  font-size: 10px;
+  padding: 3px 8px;
   border-radius: var(--radius-lg);
   border: 1px solid var(--color-info-bg);
 }
@@ -608,8 +608,8 @@
   background: var(--color-error-bg);
   color: var(--color-danger);
   border-radius: 16px;
-  padding: 6px 12px;
-  font-size: var(--font-size-xs);
+  padding: 4px 10px;
+  font-size: 10px;
   line-height: var(--line-height-normal);
   border: 1px solid var(--color-error-border);
 }
@@ -670,10 +670,10 @@
   flex-shrink: 0;
   background: var(--color-primary);
   color: var(--color-text-white);
-  font-size: var(--font-size-xxs);
-  padding: 4px 12px;
+  font-size: 10px;
+  padding: 3px 10px;
   border-radius: var(--radius-lg);
-  margin-left: 8px;
+  margin-left: 6px;
 }
 .action-card-btn-hover {
   opacity: 0.85;
@@ -691,16 +691,16 @@
 .insight-warning { border-left-color: #fa8c16; background: #fff7e6; }
 .insight-success { border-left-color: #52c41a; background: #f6ffed; }
 .insight-info { border-left-color: #1677ff; background: #f0f5ff; }
-.insight-title { font-weight: 600; font-size: 13px; color: #333; margin-bottom: 2px; }
+.insight-title { font-weight: 600; font-size: 12px; color: #333; margin-bottom: 2px; }
 .insight-danger .insight-title { color: #cf1322; }
 .insight-warning .insight-title { color: #d46b08; }
 .insight-success .insight-title { color: #389e0d; }
 .insight-info .insight-title { color: #1d39c4; }
-.insight-summary { font-size: 12px; color: #333; margin-top: 2px; }
-.insight-pain { font-size: 12px; color: #cf1322; margin-top: 2px; }
-.insight-action { font-size: 12px; color: #1677ff; margin-top: 2px; }
+.insight-summary { font-size: 11px; color: #333; margin-top: 2px; }
+.insight-pain { font-size: 11px; color: #cf1322; margin-top: 2px; }
+.insight-action { font-size: 11px; color: #1677ff; margin-top: 2px; }
 .insight-evidence { margin-top: 4px; }
-.insight-ev-item { font-size: 11px; color: #8c8c8c; line-height: 1.6; }
+.insight-ev-item { font-size: 10px; color: #8c8c8c; line-height: 1.6; }
 
 .clarification-card {
   margin-top: 6px;

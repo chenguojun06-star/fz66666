@@ -9,6 +9,7 @@ import com.fashion.supplychain.intelligence.service.AiAgentToolAccessService;
 import com.fashion.supplychain.intelligence.service.AiAgentToolAccessService.ConfirmLevel;
 import com.fashion.supplychain.intelligence.service.AiAgentMetricsService;
 import com.fashion.supplychain.intelligence.service.AiAgentIdempotencyService;
+import com.fashion.supplychain.intelligence.service.CostExplosionGuard;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -43,6 +44,7 @@ public class AiAgentToolExecHelper {
     @Autowired private AiAgentIdempotencyService idempotencyService;
     @Autowired private List<AgentTool> registeredTools;
     @Autowired(required = false) private List<ToolExecutionHook> toolHooks;
+    @Autowired(required = false) private CostExplosionGuard costExplosionGuard;
 
     private Map<String, AgentTool> toolMap;
 
@@ -183,6 +185,34 @@ public class AiAgentToolExecHelper {
         String rawResult;
         boolean success = false;
 
+        // ── CostExplosionGuard 接入点1：工具调用前熔断检查 + 重复检测 ──
+        Long tenantId = UserContext.tenantId();
+        String paramsHash = null;
+        if (costExplosionGuard != null && tenantId != null) {
+            try {
+                // 1. 熔断检查：5分钟内同工具失败≥5次 → 熔断10分钟
+                if (costExplosionGuard.isCircuitBroken(tenantId, toolName)) {
+                    log.warn("[CostGuard] 熔断已触发，拒绝工具调用 tenantId={} tool={}", tenantId, toolName);
+                    rawResult = "{\"error\":\"cost_circuit_broken\",\"message\":\"当前会话成本超限，请稍后重试或开启新会话\"}";
+                    long elapsed = System.currentTimeMillis() - start;
+                    return new ToolExecRecord(toolCallId, toolName, arguments, rawResult,
+                            evidenceHelper.buildToolEvidenceMessage(toolName, rawResult), elapsed);
+                }
+                // 2. 重复检测：同工具同参数近期已调用 → 返回缓存结果
+                paramsHash = costExplosionGuard.hashParams(arguments);
+                java.util.Optional<String> cached = costExplosionGuard.checkDuplicateToolCall(tenantId, toolName, paramsHash);
+                if (cached.isPresent()) {
+                    log.info("[CostGuard] 重复工具调用命中缓存，跳过执行 tenantId={} tool={}", tenantId, toolName);
+                    String cachedResult = cached.get();
+                    long elapsed = System.currentTimeMillis() - start;
+                    return new ToolExecRecord(toolCallId, toolName, arguments, cachedResult,
+                            evidenceHelper.buildToolEvidenceMessage(toolName, cachedResult), elapsed);
+                }
+            } catch (Exception e) {
+                log.debug("[CostGuard] 熔断/重复检测异常（降级放行）: {}", e.getMessage());
+            }
+        }
+
         if (toolHooks != null) {
             for (ToolExecutionHook hook : toolHooks) {
                 try {
@@ -243,6 +273,21 @@ public class AiAgentToolExecHelper {
             idempotencyService.saveResult(toolName, arguments, rawResult);
         } else {
             idempotencyService.clearOnFailure(toolName, arguments);
+        }
+
+        // ── CostExplosionGuard 接入点1：工具调用后记录成本（成功记录缓存/失败记录熔断） ──
+        if (costExplosionGuard != null && tenantId != null) {
+            try {
+                if (success) {
+                    // 记录工具调用结果（用于后续重复检测）
+                    costExplosionGuard.recordToolCall(tenantId, toolName, paramsHash, rawResult);
+                } else {
+                    // 记录工具失败（用于熔断判断）
+                    costExplosionGuard.recordToolFailure(tenantId, toolName);
+                }
+            } catch (Exception e) {
+                log.debug("[CostGuard] 记录工具调用失败（不影响主流程）: {}", e.getMessage());
+            }
         }
 
         if (toolHooks != null) {

@@ -72,10 +72,8 @@
 .info-value { font-size: var(--font-size-md); color: var(--color-text-primary, var(--color-text-primary)); flex: 1; }
 .info-value.bold { font-weight: bold; color: var(--color-primary, var(--color-primary)); font-size: var(--font-size-md-lg); }
 
-/* 状态标签 */
-.status-tag { padding: 2px 8px; border-radius: 10px; font-size: var(--font-size-xs); }
-.tag-green { background: var(--color-success-bg); color: var(--color-success); border: 1px solid var(--color-success-border); }
-.tag-orange { background: var(--color-warning-bg); color: var(--color-warning); border: 1px solid var(--color-warning-border); }
+
+
 
 /* 操作区 */
 .action-area { margin-bottom: 10px; }

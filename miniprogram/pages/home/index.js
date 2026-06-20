@@ -380,10 +380,17 @@ Page({
     safeNavigate({ url: item.route }, isTabPage ? 'switchTab' : undefined);
   },
 
+  _favoriteNavLock: false,
+
   onFavoriteTap: function (e) {
     // 拖动中不响应点击
     if (this.data.draggingIndex !== -1) return;
-    
+    // 防重复点击（200ms 内忽略）
+    if (this._favoriteNavLock) return;
+    this._favoriteNavLock = true;
+    const that = this;
+    setTimeout(function () { that._favoriteNavLock = false; }, 200);
+
     const app = e.currentTarget.dataset.app;
     if (!app || !app.route) return;
     safeNavigate({ url: app.route });

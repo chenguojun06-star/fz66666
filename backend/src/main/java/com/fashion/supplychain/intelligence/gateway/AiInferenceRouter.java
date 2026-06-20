@@ -5,6 +5,9 @@ import com.fashion.supplychain.intelligence.agent.AiTool;
 import com.fashion.supplychain.intelligence.dto.IntelligenceInferenceResult;
 import com.fashion.supplychain.intelligence.orchestration.AiCostTrackingOrchestrator;
 import com.fashion.supplychain.intelligence.orchestration.AiOperationAuditOrchestrator;
+import com.fashion.supplychain.intelligence.service.CostExplosionGuard;
+import com.fashion.supplychain.intelligence.service.ModelSelectionRouter;
+import com.fashion.supplychain.common.UserContext;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -42,6 +45,12 @@ public class AiInferenceRouter implements AiInferenceGateway {
 
     @Autowired(required = false)
     private ModelConsortiumRouter modelConsortiumRouter;
+
+    @Autowired(required = false)
+    private ModelSelectionRouter modelSelectionRouter;
+
+    @Autowired(required = false)
+    private CostExplosionGuard costExplosionGuard;
 
     private final AtomicInteger springAiConsecutiveFailures = new AtomicInteger(0);
     private final AtomicLong springAiCircuitOpenSince = new AtomicLong(0);
@@ -285,6 +294,112 @@ public class AiInferenceRouter implements AiInferenceGateway {
     public String chatSimple(String prompt) {
         IntelligenceInferenceResult result = chat("reflection", null, prompt);
         return result != null ? result.getContent() : "";
+    }
+
+    /**
+     * 带模型选择的聊天接口实现（per-call model selection）。
+     *
+     * <p>路由到具体的底层 gateway（SpringAiInferenceAdapter / LegacyInferenceAdapter），
+     * 由底层 adapter 真正实现 per-call model 覆盖。
+     * 同时记录 LLM 调用成本到 CostExplosionGuard（用于成本爆炸防御）。
+     */
+    @Override
+    public String chatWithModel(String prompt, Long tenantId, Long userId, String modelId) {
+        long start = System.currentTimeMillis();
+        AiInferenceGateway gateway = resolveGateway("model-selection");
+        String content;
+        try {
+            content = gateway.chatWithModel(prompt, tenantId, userId, modelId);
+        } catch (Exception e) {
+            log.warn("[AiInferenceRouter] chatWithModel failed, fallback to legacy: {}", e.getMessage());
+            content = legacyAdapter.chatWithModel(prompt, tenantId, userId, modelId);
+        }
+        long elapsed = System.currentTimeMillis() - start;
+
+        // 记录 LLM 调用成本到 CostExplosionGuard（用于成本爆炸防御 + 重复检测）
+        if (costExplosionGuard != null && tenantId != null) {
+            try {
+                // 用 "llm_call" 作为 toolName，prompt 哈希作为 paramsHash
+                String paramsHash = costExplosionGuard.hashParams(prompt);
+                costExplosionGuard.recordToolCall(tenantId, "llm_call", paramsHash,
+                        content != null ? content : "");
+                log.debug("[AiInferenceRouter] LLM 调用成本已记录 tenantId={} modelId={} elapsed={}ms",
+                        tenantId, modelId, elapsed);
+            } catch (Exception e) {
+                log.debug("[AiInferenceRouter] 记录 LLM 调用成本失败（不影响主流程）: {}", e.getMessage());
+            }
+        }
+
+        log.info("[AiInferenceRouter] chatWithModel: gateway={} modelId={} elapsed={}ms contentLen={}",
+                gateway.getProviderName(), modelId != null ? modelId : "default",
+                elapsed, content != null ? content.length() : 0);
+        return content;
+    }
+
+    /**
+     * Per-call 模型选择调用（借鉴 Claude Agent SDK per-call model selection）。
+     *
+     * <p>根据用户消息复杂度、预估工具调用数、多域标识自动选择模型分级：
+     * <ul>
+     *   <li>ECONOMY — 简单查询 → 便宜模型</li>
+     *   <li>STANDARD — 普通对话 → 标准模型</li>
+     *   <li>PREMIUM — 复杂排产 → 强模型</li>
+     * </ul>
+     *
+     * <p>★ 接入点3：真正调用 gateway.chatWithModel 传递 modelId，而非仅用 scene 路由。
+     *
+     * @param prompt              完整提示词
+     * @param userMessage         用户原始消息（用于复杂度评估）
+     * @param estimatedToolCalls  预估工具调用数
+     * @param isMultiDomain       是否多域任务
+     * @return LLM 回答文本
+     */
+    public String chatWithModelSelection(String prompt, String userMessage,
+                                          int estimatedToolCalls, boolean isMultiDomain) {
+        if (modelSelectionRouter == null || !modelSelectionRouter.isEnabled()) {
+            return chatSimple(prompt);
+        }
+        ModelSelectionRouter.ModelTier tier = modelSelectionRouter.selectModel(
+                userMessage, estimatedToolCalls, isMultiDomain);
+        String modelId = modelSelectionRouter.resolveModelId(tier);
+        log.info("[AiInferenceRouter] per-call model selection: tier={} modelId={}", tier, modelId);
+
+        // 从 UserContext 获取 tenantId/userId（多租户隔离 + 成本追踪）
+        Long tenantId = UserContext.tenantId();
+        String userIdStr = UserContext.userId();
+
+        // ★ 真正调用 gateway.chatWithModel 传递 modelId（接入点3 核心）
+        try {
+            return chatWithModel(prompt, tenantId, userIdStr != null ? userIdStr.hashCode() : 0L, modelId);
+        } catch (Exception e) {
+            log.warn("[AiInferenceRouter] chatWithModelSelection failed, fallback to chatSimple: {}", e.getMessage());
+            return chatSimple(prompt);
+        }
+    }
+
+    /**
+     * 强制使用 PREMIUM 模型调用（高风险场景，如复杂排产优化）。
+     *
+     * @param prompt 完整提示词
+     * @return LLM 回答文本
+     */
+    public String chatPremium(String prompt) {
+        if (modelSelectionRouter == null || !modelSelectionRouter.isEnabled()) {
+            return chatSimple(prompt);
+        }
+        String modelId = modelSelectionRouter.resolveModelId(ModelSelectionRouter.ModelTier.PREMIUM);
+        log.info("[AiInferenceRouter] forced premium model: modelId={}", modelId);
+        IntelligenceInferenceResult result = chat("premium-reasoning", null, prompt);
+        return result != null ? result.getContent() : "";
+    }
+
+    /** 根据模型分级映射到 scene（用于网关路由 hint） */
+    private String resolveSceneByTier(ModelSelectionRouter.ModelTier tier) {
+        return switch (tier) {
+            case ECONOMY -> "economy-query";
+            case STANDARD -> "reflection";
+            case PREMIUM -> "premium-reasoning";
+        };
     }
 
     /**

@@ -1,7 +1,7 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-06-19
+> 最后更新：2026-06-20
 
 ---
 
@@ -13,9 +13,179 @@
 - ✅ 安全审计修复（微信支付回调签名验证 + 数据库密码校验 + HTTPS 强制）
 - ✅ 小云AI全面智能化升级（8大优化模块，2026-06-13完成）
 - ✅ 小云AI CL4R1T4S 借鉴升级（6项优化，2026-06-18完成）
-- ✅ 产品稳定性批量优化（9项任务，2026-06-19完成）
+- ✅ 产品稳定性批量优化（9项任务，2026-06-19上午完成）
+- ✅ 小程序错误处理统一优化（2026-06-19下午完成）
+- ✅ 小云AI 6大升级 + 开发效能体系（2026-06-20完成）
 
 ## 最近变更
+
+### 2026-06-20 小云AI 6大升级 + 开发效能体系
+
+**背景**：从"被动响应"升级为"主动对抗式自检 + 数据库化记忆 + 遗传优化提示词"。
+**借鉴来源**：Ruflo Truth Scoring / Claude Agent SDK / RooFlow Context Portal / GenericAgent / Hermes GEPA / SIJE 7-Agent / Agency-Agents 215角色
+
+#### 升级总览表
+
+| 优先级 | 优化模块 | 核心变更 | 编译 |
+|--------|---------|---------|:----:|
+| P0-1 | SelfCritiqueGate 多视角对抗评审 | MultiPerspectiveCritic(285行,4视角并行) + AdversarialJudgePipeline(215行,高风险Round2) + ConvergenceStopCondition(88行) | ✅ |
+| P0-2 | MCP 生产化 | McpResourceSanitizer(95行,防注入) + McpIdentityContext(113行) + McpToolError(130行,SERF) + McpTimeoutBudget(70行,ATBA) | ✅ |
+| P0-3 | Memory Bank 数据库化（ConPort） | V202606201003 两表 + MemoryBankDbService(274行) + MemoryBankRelationService(76行,CTE递归) + MemoryBankMigrationRunner(132行) | ✅ |
+| P1-1 | Skill 三层渐进式披露 | V202606201001 +6字段 + SkillDisclosureLoader(195行,L1/L2/L3按需) + SkillDisclosureController(95行) | ✅ |
+| P1-2 | 技能结晶化 + GEPA 遗传优化 | V202606201002 + SkillCrystallizationService(239行) + GepaPromptOptimizer(337行,17基因) + ConstraintGates(193行) + EvolutionEventLogger(169行) | ✅ |
+| P1-3 | 服装专属 Skills（10个） | scan-flow-expert/wage-settlement-guard/tenant-isolation-auditor 等10个 SKILL.md | — |
+| P2-2 | per-call model selection + 成本爆炸防御 | ModelSelectionRouter(242行,ECONOMY/STANDARD/PREMIUM) + CostExplosionGuard(307行,熔断) | ✅ |
+| 补充 | 开发 Skills（8个） | orchestrator-scaffolder/transaction-boundary-checker 等8个 SKILL.md | — |
+| 补充 | 开发 MCP 服务器设计文档 | .trae/rules/dev-mcp-design.md(410行,4个MCP设计) | — |
+
+#### 新增文件清单（按模块）
+
+**P0-1 多视角对抗评审**：
+- `intelligence/orchestration/MultiPerspectiveCritic.java`（285行，4视角并行：业务30%+数据30%+租户25%+权限15%，一票否决）
+- `intelligence/orchestration/AdversarialJudgePipeline.java`（215行，高风险Round 2对抗+HighRiskDetector）
+- `intelligence/orchestration/ConvergenceStopCondition.java`（88行，连续2轮<5分停止）
+
+**P0-2 MCP 生产化**：
+- `intelligence/agent/resource/McpResourceSanitizer.java`（95行，防prompt injection）
+- `intelligence/agent/resource/McpIdentityContext.java`（113行，身份传播值对象）
+- `intelligence/agent/resource/McpToolError.java`（130行，SERF结构化错误5类码）
+- `intelligence/agent/resource/McpTimeoutBudget.java`（70行，ATBA自适应超时QUERY/REPORT/COMPUTATION）
+
+**P0-3 Memory Bank 数据库化**：
+- `resources/db/migration/V202606201003__create_memory_bank_tables.sql`（t_memory_bank_entry + t_memory_bank_relation 两表）
+- `intelligence/entity/MemoryBankEntry.java` + `MemoryBankRelation.java`
+- `intelligence/mapper/MemoryBankEntryMapper.java`（含CTE递归traverseGraph）+ `MemoryBankRelationMapper.java`
+- `intelligence/service/MemoryBankDbService.java`（274行，upsert/semanticSearch/addRelation/importFromMarkdown）
+- `intelligence/service/MemoryBankRelationService.java`（76行，知识图谱遍历depth≤2）
+- `intelligence/runner/MemoryBankMigrationRunner.java`（132行，启动时Markdown→DB迁移，Redis幂等）
+
+**P1-1 Skill 三层披露**：
+- `resources/db/migration/V202606201001__add_skill_disclosure_fields.sql`（t_skill_template +6字段）
+- `intelligence/service/SkillDisclosureLoader.java`（195行，三层按需加载+token估算+旧数据降级）
+- `intelligence/controller/SkillDisclosureController.java`（95行，REST API三层查询）
+
+**P1-2 技能结晶化 + GEPA**：
+- `resources/db/migration/V202606201002__create_prompt_optimization_table.sql`
+- `intelligence/entity/PromptOptimization.java` + `intelligence/mapper/PromptOptimizationMapper.java`
+- `intelligence/service/SkillCrystallizationService.java`（239行，高频问题Redis语义哈希计数→结晶化→跳过LLM）
+- `intelligence/service/GepaPromptOptimizer.java`（337行，17个prompt块当基因，种群10/代数≤5）
+- `intelligence/service/ConstraintGates.java`（193行，三重门控：尺寸/语义漂移/测试套件）
+- `intelligence/service/EvolutionEventLogger.java`（169行，events.jsonl append-only审计）
+
+**P1-3 服装专属 Skills（10个）**：
+- `.trae/skills/scan-flow-expert/SKILL.md`
+- `.trae/skills/wage-settlement-guard/SKILL.md`
+- `.trae/skills/tenant-isolation-auditor/SKILL.md`
+- `.trae/skills/delivery-forecast-advisor/SKILL.md`
+- `.trae/skills/supplier-risk-agent/SKILL.md`
+- `.trae/skills/quality-inspection-advisor/SKILL.md`
+- `.trae/skills/production-scheduling-advisor/SKILL.md`
+- `.trae/skills/cost-negotiation-advisor/SKILL.md`
+- `.trae/skills/fabric-sourcing-strategist/SKILL.md`
+- `.trae/skills/compliance-checker/SKILL.md`
+
+**P2-2 per-call model selection**：
+- `intelligence/service/ModelSelectionRouter.java`（242行，ECONOMY/STANDARD/PREMIUM三级，四维评估）
+- `intelligence/service/CostExplosionGuard.java`（307行，上下文肥大+重复检测+熔断）
+
+**开发 Skills（8个）**：
+- `.trae/skills/orchestrator-scaffolder/SKILL.md`
+- `.trae/skills/tenant-isolation-auditor/SKILL.md`
+- `.trae/skills/transaction-boundary-checker/SKILL.md`
+- `.trae/skills/ai-tool-scaffolder/SKILL.md`
+- `.trae/skills/skill-scaffolder/SKILL.md`
+- `.trae/skills/mcp-resource-scaffolder/SKILL.md`
+- `.trae/skills/prompt-block-optimizer/SKILL.md`
+- `.trae/skills/evolution-component-scaffolder/SKILL.md`
+
+**开发 MCP 设计**：
+- `.trae/rules/dev-mcp-design.md`（410行，4个MCP：db-query/flyway/test-runner/code-search）
+
+#### 修改文件清单
+
+- `intelligence/orchestration/SelfCritiqueGate.java`（177→298行，集成多视角+对抗+收敛）
+- `intelligence/agent/resource/McpResourceProvider.java`（+默认方法向后兼容）
+- `intelligence/agent/resource/MemoryBankResourceProvider.java` + `KnowledgeBaseResourceProvider.java` + `FactoryProfileResourceProvider.java`（实现新接口）
+- `intelligence/service/McpProtocolService.java` + `intelligence/controller/McpSseController.java` + `McpProtocolController.java`（接入生产化组件）
+- `intelligence/service/MemoryBankService.java`（双写兼容：Markdown + DB）
+- `intelligence/entity/SkillTemplate.java`（+6字段：metadata_yaml/skill_md/references_json/token_budget/disclosure_level/disclosure_updated_at）
+- `intelligence/service/SkillAutoCreationService.java`（生成三层）+ `intelligence/agent/tool/SkillExecutionTool.java`（按需加载）
+- `intelligence/service/AiInferenceRouter.java`（+chatWithModelSelection/+chatPremium）
+- `intelligence/orchestration/AiAgentOrchestrator.java`（接入CostExplosionGuard）
+- `intelligence/orchestration/EvolutionOrchestrator.java`（D-021注册5新组件：MultiPerspectiveCritic/AdversarialJudgePipeline/SkillCrystallization/GepaPromptOptimizer/ModelSelectionRouter，现统一17组件）
+- `backend/src/main/resources/application.yml`（model-selection + cost-guard 配置块）
+
+#### 编译验证结果
+
+- ✅ 后端 `mvn compile` BUILD SUCCESS（全部模块）
+- ✅ Flyway 迁移脚本 V202606201001/V202606201002/V202606201003 校验通过
+- ✅ EvolutionOrchestrator D-021 合规（17组件全部注册）
+
+#### 新增铁律
+
+- **D-022**：多视角对抗评审强制启用（高风险场景必须4视角并行 + 一票否决）
+- **D-023**：MCP resource description 必须 sanitize（防 prompt injection）
+- **D-024**：Memory Bank 数据库化（双写兼容，语义检索替代通读）
+- **D-025**：per-call model selection 强制启用（简单查询禁止用旗舰模型）
+
+### 2026-06-19下午 小程序错误处理统一优化
+
+**背景**：用户反馈"这两天问题太多"，系统性排查小程序、PC、H5端的所有问题。
+
+**排查结论**：
+| 检查项 | 结论 |
+|--------|------|
+| PC端字段名与后端一致性 | ✅ 无问题 |
+| 小程序字段名与后端一致性 | ✅ 无问题 |
+| H5端字段名与后端一致性 | ✅ 无问题 |
+| 三端API端点一致性 | ✅ 无问题 |
+| 枚举值一致性 | ✅ 基本一致 |
+| GlobalExceptionHandler | ✅ 覆盖15+种异常 |
+| cloudbaserc.json探针配置 | ✅ initialDelaySeconds: 300 |
+| docker-entrypoint.sh | ✅ 无localhost/socat残留 |
+
+**发现的问题**：小程序已有完整的 `errorHandler.js`（207行）和 `uiHelper.toast`，但20+页面未使用。
+
+**修复方案**：批量修改小程序页面，将 `wx.showToast` 错误提示替换为 `toast.error()` / `toast.success()` / `toast.warn()` / `toast.info()`。
+
+**修改的文件**（15个）：
+- `miniprogram/utils/errorHandler.js` — showError() 集成 uiHelper.toast
+- `miniprogram/pages/scan/pattern/index.js` — 3处 wx.showToast → toast
+- `miniprogram/pages/scan/confirm/index.js` — 1处 wx.showToast → toast.success
+- `miniprogram/pages/scan/index.js` — 3处 wx.showToast → toast
+- `miniprogram/pages/scan/history/index.js` — 1处 wx.showToast → toast.error
+- `miniprogram/pages/scan/quality/index.js` — 1处 wx.showToast → toast.info
+- `miniprogram/pages/scan/mixins/scanSubmitter.js` — 1处 wx.showToast → toast.warn
+- `miniprogram/pages/scan/mixins/scanStateManager.js` — 1处 wx.showToast → toast.error
+- `miniprogram/pages/scan/mixins/scanLifecycleMixin.js` — 2处 wx.showToast → toast
+- `miniprogram/pages/scan/handlers/helpers/ScanSubmitter.js` — 1处 wx.showToast → toast.info
+- `miniprogram/pages/scan/services/ScanOfflineQueue.js` — 2处 wx.showToast → toast
+- `miniprogram/pages/scan/handlers/HistoryHandler.js` — 1处 wx.showToast → toast.error
+- `miniprogram/pages/dashboard/index.js` — 4处 wx.showToast → toast
+- `miniprogram/pages/dashboard/process-edit/index.js` — 4处 wx.showToast → toast
+- `miniprogram/pages/order/create/index.js` — 2处 wx.showToast → toast
+- `miniprogram/pages/order/create/form/index.js` — 2处 wx.showToast → toast
+- `miniprogram/pages/sample-development/detail/index.js` — 10处 wx.showToast → toast
+- `miniprogram/pages/warehouse/sample/scan-action/index.js` — 3处 wx.showToast → toast
+- `miniprogram/pages/warehouse/material/scan/index.js` — 3处 wx.showToast → toast
+- `miniprogram/pages/admin/index.js` — 7处 wx.showToast → toast
+- `miniprogram/pages/admin/misc/feedback/index.js` — 2处 wx.showToast → toast
+- `miniprogram/pages/admin/misc/change-password/index.js` — 2处 wx.showToast → toast
+- `miniprogram/pages/admin/misc/invite/index.js` — 4处 wx.showToast → toast
+- `miniprogram/pages/factory/shipment/index.js` — 1处 wx.showToast → toast.success
+
+**保留的 wx.showToast**（业务校验，38处）：
+- `return wx.showToast` — 用户输入校验，必须保留
+- `scanValidator.js` — 输入数字校验，必须保留
+- `blePrinter.js` — 打印完成提示，必须保留
+- 仓库区域选择等业务校验提示，必须保留
+
+**修改原则**：
+- 错误提示（加载失败/保存失败）→ `toast.error()`
+- 成功提示（下单成功/已复制）→ `toast.success()`
+- 警告提示（离线缓存/暂无数据）→ `toast.warn()`
+- 信息提示（状态更新）→ `toast.info()`
+- 用户输入校验（请输入xxx）→ `return wx.showToast`（保留）
 
 ### 2026-06-19 产品稳定性批量优化（9项任务）
 
@@ -366,8 +536,24 @@ SelfCritiqueGateTest 和 EvolutionOrchestratorTest 需要修复 Spring ObjectPro
 
 ## 下一步
 
+### 2026-06-20 小云AI 6大升级 + 测试闭环（已完成）
+
+- [x] P1 多视角对抗评审（MultiPerspectiveCritic + AdversarialJudgePipeline）
+- [x] P1 MCP 生产化三大原语（Identity Propagation + ATBA 超时 + SERF 错误恢复）
+- [x] P1 Memory Bank 数据库化（ConPort 模式 + 知识图谱 + 语义检索）
+- [x] P2-1 五层记忆模型（L4 Procedural Memory + L5 Archival Memory + 多 Agent 共享记忆）
+- [x] P2-2 per-call model selection（ECONOMY/STANDARD/PREMIUM + CostExplosionGuard）
+- [x] P1-2 技能结晶化 + GEPA 遗传优化（SkillCrystallizationService + GepaPromptOptimizer）
+- [x] 18 个 Skill（10 服装专属 + 8 开发专用）
+- [x] 2 个开发 MCP（db-query-mcp + flyway-mcp）
+- [x] 测试闭环：5389 tests, 0 failures, 0 errors（从 122 失败修复到 0）
+- [x] 主代码 bug 修复 5 个（条件Bean依赖/@Scheduled带参/HashMap并发/异常传播）
+
+### 历史待办
+
 - 10处跨表 @Transactional 事务上移到 Orchestrator 层
 - 4处 Entity 缺 tenant_id 评估（AgentEvent/IntegrationCallbackLog/LogisticsProvider/LogisticsTrack）
 - 订单列表 N+1 优化（enrichOrderList 10+ Fill 服务并行化）
 - 用户健康度仪表盘后端 API（DAU/任务完成率/P0数/AI解决率）
 - EvolutionOrchestrator 死代码清理（getUnifiedMetrics/runHealthCheck 无人调用）
+- 服装专属 Skill 触发关键词调优（基于实际使用数据）

@@ -6,12 +6,18 @@
   </view>
 
   <block wx:else>
-    <!-- 顶部款式信息 -->
+    <!-- 顶部款式信息 + 基础字段 -->
     <view class="style-header">
       <image wx:if="{{styleInfo.cover}}" class="style-cover" src="{{styleInfo.cover}}" mode="aspectFill" bindtap="onCoverTap" />
       <view class="style-header-info">
         <view class="style-name">{{styleInfo.styleName || styleInfo.name || '未命名款式'}}</view>
         <view class="style-no">{{styleInfo.styleNo || styleInfo.styleCode || ''}}</view>
+        <view class="style-meta-row">
+          <text wx:if="{{styleInfo.color}}" class="meta-tag">颜色：{{styleInfo.color}}</text>
+          <text wx:if="{{styleInfo.size}}" class="meta-tag">码数：{{styleInfo.size}}</text>
+          <text wx:if="{{styleInfo.quantity}}" class="meta-tag">数量：{{styleInfo.quantity}}件</text>
+          <text wx:if="{{styleInfo.status}}" class="meta-tag meta-status-{{styleInfo.statusType}}">{{styleInfo.statusText || styleInfo.status}}</text>
+        </view>
       </view>
     </view>
 
@@ -25,63 +31,63 @@
     <!-- Tab内容 -->
     <view class="tab-content">
 
-      <!-- 概览 + 开发进度（合并） -->
+      <!-- 概览：款式图片 + 渠道信息 -->
       <block wx:if="{{activeTab === 0}}">
-        <view class="section">
-          <view class="section-title">款式信息</view>
-          <!-- 款式图片 -->
-          <view wx:if="{{styleImages.length > 0}}" class="style-images">
-            <image wx:for="{{styleImages}}" wx:key="index" class="style-image-thumb" src="{{item}}" mode="aspectFill" data-url="{{item}}" bindtap="onImagePreview" />
-          </view>
-          <view class="info-card">
-            <view class="info-row"><text class="info-label">款号</text><text class="info-value">{{styleInfo.styleNo || '-'}}</text></view>
-            <view class="info-row"><text class="info-label">品类</text><text class="info-value">{{styleInfo.category || '-'}}</text></view>
-            <view class="info-row"><text class="info-label">季节</text><text class="info-value">{{styleInfo.season || '-'}}</text></view>
-            <view class="info-row"><text class="info-label">设计师</text><text class="info-value">{{styleInfo.designer || '-'}}</text></view>
-            <view class="info-row"><text class="info-label">开发状态</text><text class="info-value">{{styleInfo.developmentStatus || styleInfo.status || '-'}}</text></view>
-          </view>
+        <view wx:if="{{styleImages.length > 0}}" class="section">
+          <view class="section-title">款式图片</view>
+          <scroll-view class="image-scroll" scroll-x="true">
+            <image wx:for="{{styleImages}}" wx:key="*this" class="style-image-thumb" src="{{item}}" mode="aspectFill" data-url="{{item}}" bindtap="onImagePreview" />
+          </scroll-view>
         </view>
-        <!-- 销售渠道与客户信息 -->
         <view class="section" wx:if="{{styleInfo.salesChannel || styleInfo.customerId || styleInfo.customerName || styleInfo.customerContact || styleInfo.customerPhone}}">
-          <view class="section-title">销售渠道与客户信息</view>
+          <view class="section-title">渠道与客户</view>
           <view class="info-card">
             <view class="info-row" wx:if="{{styleInfo.salesChannel}}"><text class="info-label">销售渠道</text><text class="info-value">{{styleInfo.salesChannel || '-'}}</text></view>
             <view class="info-row" wx:if="{{styleInfo.customerName || styleInfo.customer}}"><text class="info-label">客户</text><text class="info-value">{{styleInfo.customerName || styleInfo.customer || '-'}}</text></view>
             <view class="info-row" wx:if="{{styleInfo.customerContact}}"><text class="info-label">联系人</text><text class="info-value">{{styleInfo.customerContact || '-'}}</text></view>
             <view class="info-row" wx:if="{{styleInfo.customerPhone}}"><text class="info-label">电话</text><text class="info-value">{{styleInfo.customerPhone || '-'}}</text></view>
-            <view class="info-row" wx:if="{{styleInfo.customerAddress}}"><text class="info-label">地址</text><text class="info-value">{{styleInfo.customerAddress || '-'}}</text></view>
-          </view>
-        </view>
-        <!-- 开发进度（含领取/完成操作） -->
-        <view class="section" wx:if="{{stages.length > 0}}">
-          <view class="section-title">开发进度</view>
-          <view class="info-card">
-            <view class="progress-item" wx:for="{{stages}}" wx:key="key">
-              <view class="progress-left">
-                <view class="progress-dot progress-dot-{{item.status}}"></view>
-                <view class="progress-content">
-                  <view class="progress-name">{{item.name}}</view>
-                  <view class="progress-meta">
-                    <text class="progress-status progress-status-{{item.status}}">{{item.statusText}}</text>
-                    <text wx:if="{{item.assignee}}" class="progress-assignee"> · {{item.assignee}}</text>
-                  </view>
-                  <view wx:if="{{item.startTime && item.status === 'in_progress'}}" class="progress-time">领取于 {{item.startTime}}</view>
-                  <view wx:if="{{item.completedAt}}" class="progress-time">完成于 {{item.completedAt}}</view>
-                </view>
-              </view>
-              <view wx:if="{{item.canReceive}}" class="progress-action progress-action-receive" data-key="{{item.key}}" bindtap="onStageReceive">领取</view>
-              <view wx:elif="{{item.canComplete}}" class="progress-action" data-key="{{item.key}}" bindtap="onStageConfirm">完成</view>
-              <view wx:elif="{{item.status === 'completed'}}" class="progress-done-wrap">
-                <text class="progress-done-icon">✓</text>
-                <text wx:if="{{item.canRollback}}" class="progress-action-rollback" data-key="{{item.key}}" bindtap="onStageRollback">退回</text>
-              </view>
-            </view>
           </view>
         </view>
       </block>
 
-      <!-- BOM清单 -->
+      <!-- 生产工序（点击进入扫码操作） -->
       <block wx:if="{{activeTab === 1}}">
+        <view wx:if="{{processScanLoading}}" class="loading-inline">加载中...</view>
+        <view wx:elif="{{!hasProcessSystem || processStages.length === 0}}" class="empty-inline">
+          <text>暂无生产工序配置，请在 PC 端设置</text>
+        </view>
+        <view wx:else class="process-card">
+          <view wx:for="{{processStages}}" wx:key="processName" wx:for-item="stage"
+                class="process-row {{stage.completed ? 'row-done' : ''}} {{stage.canOperate ? 'row-active' : ''}} {{stage.locked ? 'row-locked' : ''}}"
+                data-stage="{{stage}}" bindtap="onProductionProcessOperate">
+            <view class="row-status-dot">
+              <text wx:if="{{stage.completed}}" class="dot-check">✓</text>
+              <text wx:elif="{{stage.canOperate}}" class="dot-arrow">▶</text>
+              <text wx:elif="{{stage.locked}}" class="dot-lock">🔒</text>
+              <text wx:else class="dot-empty">○</text>
+            </view>
+            <view class="row-main">
+              <text class="row-process-name">{{stage.processName}}</text>
+              <view class="row-meta">
+                <text wx:if="{{stage.color}}" class="row-meta-item">颜色：{{stage.color}}</text>
+                <text wx:if="{{stage.size}}" class="row-meta-item">码数：{{stage.size}}</text>
+                <text wx:if="{{stage.quantity}}" class="row-meta-item">数量：{{stage.quantity}}件</text>
+              </view>
+            </view>
+            <view class="row-right">
+              <text wx:if="{{stage.operatorName}}" class="row-operator">{{stage.operatorName}}</text>
+              <text wx:if="{{stage.time}}" class="row-time">{{stage.time}}</text>
+              <text wx:if="{{stage.completed}}" class="row-done-tag">已完成</text>
+              <text wx:elif="{{stage.canOperate}}" class="row-action-tag">点击操作</text>
+              <text wx:elif="{{stage.locked}}" class="row-locked-tag">{{stage.lockReason}}</text>
+              <text wx:else class="row-pending-tag">待执行</text>
+            </view>
+        </view>
+        <view class="process-summary">共 {{processStages.length}} 个工序</view>
+      </block>
+
+      <!-- BOM清单 -->
+      <block wx:if="{{activeTab === 2}}">
         <view wx:if="{{bomLoading}}" class="loading-inline">加载中...</view>
         <view wx:elif="{{bomList.length === 0}}" class="empty-inline">暂无BOM数据</view>
         <view wx:else class="list-card">
@@ -98,9 +104,9 @@
       </block>
 
       <!-- 工序单价 -->
-      <block wx:if="{{activeTab === 2}}">
+      <block wx:if="{{activeTab === 3}}">
         <view wx:if="{{processLoading}}" class="loading-inline">加载中...</view>
-        <view wx:elif="{{processList.length === 0}}" class="empty-inline">暂无工序数据</view>
+        <view wx:elif="{{processList.length === 0}}" class="empty-inline">暂无工序单价数据</view>
         <view wx:else class="process-list">
           <view class="process-item" wx:for="{{processList}}" wx:key="id">
             <view class="process-left">
@@ -116,7 +122,7 @@
       </block>
 
       <!-- 二次工艺 -->
-      <block wx:if="{{activeTab === 3}}">
+      <block wx:if="{{activeTab === 4}}">
         <view wx:if="{{secondaryLoading}}" class="loading-inline">加载中...</view>
         <view wx:elif="{{secondaryList.length === 0}}" class="empty-inline">暂无二次工艺数据</view>
         <view wx:else class="list-card">
@@ -133,7 +139,7 @@
       </block>
 
       <!-- 纸样 -->
-      <block wx:if="{{activeTab === 4}}">
+      <block wx:if="{{activeTab === 5}}">
         <view wx:if="{{patternLoading}}" class="loading-inline">加载中...</view>
         <view wx:elif="{{!patternData}}" class="empty-inline">暂无纸样数据</view>
         <view wx:else class="section">
@@ -148,7 +154,7 @@
       </block>
 
       <!-- 生产制单 -->
-      <block wx:if="{{activeTab === 5}}">
+      <block wx:if="{{activeTab === 6}}">
         <view wx:if="{{productionLoading}}" class="loading-inline">加载中...</view>
         <view wx:elif="{{!productionData}}" class="empty-inline">暂无制单数据</view>
         <view wx:else class="section">
@@ -172,7 +178,7 @@
       </block>
 
       <!-- 报价单 -->
-      <block wx:if="{{activeTab === 6}}">
+      <block wx:if="{{activeTab === 7}}">
         <view wx:if="{{quotationLoading}}" class="loading-inline">加载中...</view>
         <view wx:elif="{{!quotationData}}" class="empty-inline">暂无报价数据</view>
         <view wx:else class="section">
@@ -189,7 +195,7 @@
       </block>
 
       <!-- 附件文件 -->
-      <block wx:if="{{activeTab === 7}}">
+      <block wx:if="{{activeTab === 8}}">
         <view wx:if="{{attachmentLoading}}" class="loading-inline">加载中...</view>
         <view wx:elif="{{attachmentList.length === 0}}" class="empty-inline">暂无附件</view>
         <view wx:else class="list-card">

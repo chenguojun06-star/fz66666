@@ -43,14 +43,6 @@ const DEV_STAGES = [
   { key: 'production', name: '生产制单' },
 ];
 
-const PROD_STAGES = [
-  { op: 'RECEIVE', name: '领取样衣' },
-  { op: 'PLATE', name: '车板' },
-  { op: 'FOLLOW_UP', name: '跟单确认' },
-  { op: 'COMPLETE', name: '完成确认' },
-  { op: 'WAREHOUSE_IN', name: '样衣入库' },
-];
-
 function formatDate(v) {
   if (!v) return '';
   const s = String(v);
@@ -84,13 +76,15 @@ Page({
 
     expandedId: '',
     patternDetail: null,
-    patternScanRecords: null,
     detailLoading: false,
-    roleHint: '', // 跨岗位提示
+    roleHint: '',
+    // 工序配置与展示
+    processConfig: [],
+    processStages: [],
+    hasProcessSystem: false,
   },
 
   onLoad: function () {
-    // 职务提示：非样衣岗且非主管以上，显示跨岗位提示
     if (!permission.canReceiveTask('sample')) {
       this.setData({ roleHint: `您当前职务「${permission.getRoleDisplayName()}」非样衣岗，如需代领请知会主管` });
     }
@@ -181,27 +175,10 @@ Page({
 
           item._devDoneCount = item._devStages.filter(function (s) { return s.completed; }).length;
           item._devTotalCount = item._devStages.length;
-
-          if (item.scanRecords && Array.isArray(item.scanRecords)) {
-            item._scanStages = PROD_STAGES.map(function (s) {
-              const matched = item.scanRecords.filter(function (r) {
-                return String(r.operationType || '').toUpperCase() === s.op;
-              });
-              return {
-                name: s.name,
-                completed: matched.length > 0,
-                time: matched.length > 0 && matched[0].scanTime ? fmtDate(matched[0].scanTime) : '',
-              };
-            });
-          } else {
-            item._scanStages = [];
-          }
-
           return item;
         });
 
         const merged = reset ? list : (that.data.list || []).concat(list);
-        // 按 id 去重，避免 wx:key 重复警告
         const seen = new Set();
         const newList = merged.filter(function (item) {
           if (seen.has(item.id)) return false;
@@ -255,26 +232,34 @@ Page({
     if (expandedId) {
       this.loadDetail(id);
     } else {
-      this.setData({ patternDetail: null, patternScanRecords: null });
+      this.setData({ patternDetail: null, processConfig: [], processStages: [], hasProcessSystem: false });
     }
   },
 
   loadDetail: function (patternId) {
     const that = this;
     that.setData({ detailLoading: true });
+    const detailPromise = api.production.getPatternDetail(patternId);
+    const configPromise = api.production.getPatternProcessConfig(patternId);
+    const recordsPromise = api.production.getPatternScanRecords(patternId);
 
-    return api.production.getPatternDetail(patternId)
-      .then(function (res) {
-        const detail = res && res.data ? res.data : res;
+    return Promise.all([detailPromise, configPromise, recordsPromise])
+      .then(function (results) {
+        const detail = results[0] && results[0].data ? results[0].data : results[0];
         if (detail.reviewStatus) {
           detail._reviewStatusLabel = REVIEW_STATUS_LABELS[detail.reviewStatus] || detail.reviewStatus;
         }
-        that.setData({ patternDetail: detail });
-        return api.production.getPatternScanRecords(patternId);
-      })
-      .then(function (res) {
-        const records = res && res.data ? res.data : (Array.isArray(res) ? res : []);
-        that.setData({ patternScanRecords: records });
+        const config = Array.isArray(results[1]) ? results[1] : (results[1] && results[1].data ? (Array.isArray(results[1].data) ? results[1].data : []) : []);
+        const records = Array.isArray(results[2]) ? results[2] : (results[2] && results[2].data ? (Array.isArray(results[2].data) ? results[2].data : []) : []);
+
+        const stages = that._buildProcessStages(config, records, detail);
+
+        that.setData({
+          patternDetail: detail,
+          processConfig: config,
+          processStages: stages,
+          hasProcessSystem: config.length > 0,
+        });
       })
       .catch(function () {})
       .finally(function () {
@@ -282,10 +267,110 @@ Page({
       });
   },
 
+  _buildProcessStages: function (config, records, patternDetail) {
+    if (!config || !Array.isArray(config) || config.length === 0) {
+      return [];
+    }
+
+    const completedSet = new Set();
+    if (records && Array.isArray(records)) {
+      records.forEach(function (r) {
+        const op = String(r.operationType || '').trim();
+        const pn = String(r.processName || '').trim();
+        const ps = String(r.progressStage || '').trim();
+        if (op) completedSet.add(op);
+        if (pn) completedSet.add(pn);
+        if (ps) completedSet.add(ps);
+        // 规范化 key
+        completedSet.add(op.toLowerCase());
+        completedSet.add(pn.toLowerCase());
+      });
+    }
+
+    const status = String(patternDetail.status || '').toUpperCase();
+
+    // 按 PC 端工序配置构建工序列表（不自动加"领取样衣"或"入库"）
+    const stages = [];
+
+    // 找到第一个尚未完成的工序索引（用于判断可操作性）
+    let firstIncompleteIdx = -1;
+
+    for (let i = 0; i < config.length; i++) {
+      const c = config[i];
+      const processName = String(c.processName || c.operationType || '').trim();
+      const progressStage = String(c.progressStage || processName).trim();
+      const scanType = String(c.scanType || 'production').trim();
+      const isCompleted = completedSet.has(processName) || completedSet.has(progressStage) || completedSet.has(progressStage.toLowerCase());
+
+      // 查找完成时间
+      let time = '';
+      if (records && Array.isArray(records)) {
+        for (let j = 0; j < records.length; j++) {
+          const r = records[j];
+          const rOp = String(r.operationType || '').trim();
+          const rPn = String(r.processName || '').trim();
+          if ((rOp === processName || rPn === processName) && r.scanTime) {
+            time = fmtDate(r.scanTime);
+            break;
+          }
+        }
+      }
+
+      // 可操作判断：该工序尚未完成，且前面的工序都已完成
+      let canOperate = false;
+      let locked = false;
+      let lockReason = '';
+
+      if (!isCompleted) {
+        if (firstIncompleteIdx === -1) {
+          firstIncompleteIdx = i;
+        }
+        // 只有第一个未完成的工序可以操作
+        if (firstIncompleteIdx === i) {
+          // 检查前面的工序是否都完成了
+          let prevAllDone = true;
+          for (let j = 0; j < i; j++) {
+            const prev = config[j];
+            const prevName = String(prev.processName || prev.operationType || '').trim();
+            const prevDone = completedSet.has(prevName) || completedSet.has(String(prev.progressStage || prevName).trim());
+            if (!prevDone) {
+              prevAllDone = false;
+              break;
+            }
+          }
+          if (prevAllDone) {
+            canOperate = true;
+          } else {
+            locked = true;
+            lockReason = '需先完成前置工序';
+          }
+        } else {
+          locked = true;
+          lockReason = '需先完成前置工序';
+        }
+      }
+
+      stages.push({
+        name: processName,
+        processName: processName,
+        progressStage: progressStage,
+        scanType: scanType,
+        completed: isCompleted,
+        time: time,
+        canOperate: canOperate,
+        locked: locked,
+        lockReason: lockReason,
+        isReceive: false,
+      });
+    }
+
+    // 注意：入库等操作完全依赖 PC 端工序配置，不再自动追加
+    return stages;
+  },
+
   onGoDetail: function (e) {
     const item = e.currentTarget.dataset.item;
     if (!item) return;
-    // 优先使用 styleId（款式ID），没有则用 id 作为兜底
     const styleId = item.styleId || '';
     const patternId = item.id || '';
     if (!styleId && !patternId) return;
@@ -295,39 +380,61 @@ Page({
     }).catch(() => {});
   },
 
-  onGoScan: function (e) {
-    const item = e.currentTarget.dataset.item;
-    if (!item || !item.styleId) return;
-    const app = getApp();
-    if (app && app.globalData) {
-      app.globalData.patternScanData = item;
-    }
-    safeNavigate({
-      url: '/pages/scan/pattern/index?patternId=' + encodeURIComponent(item.id || ''),
-    }).catch(() => {});
+  // 顶部扫码按钮：扫码识别样衣，进入扫码页
+  onTopScan: function () {
+    const that = this;
+    wx.scanCode({
+      onlyFromCamera: false,
+      scanType: ['qrCode', 'barCode'],
+      success: function (res) {
+        const scanCode = res.result || '';
+        if (!scanCode) {
+          toast.error('扫码内容为空');
+          return;
+        }
+        // 解析 patternId：优先从 URL ?patternId= 取，其次取纯数字/ID
+        let patternId = scanCode;
+        const match = scanCode.match(/[?&]patternId=([^&]+)/);
+        if (match && match[1]) {
+          patternId = decodeURIComponent(match[1]);
+        }
+        // 跳转扫码页，让扫码页自己获取工序配置
+        safeNavigate({
+          url: '/pages/scan/pattern/index?patternId=' + encodeURIComponent(patternId) + '&scanCode=' + encodeURIComponent(scanCode),
+        }).catch(function () {});
+      },
+      fail: function () {
+        // 用户取消不提示
+      }
+    });
   },
 
-  /** 手工进入流程操作（不扫码） */
-  onManualOperate: function (e) {
-    const item = e.currentTarget.dataset.item;
-    if (!item) return;
-    const app = getApp();
-    if (app && app.globalData) {
-      // 构建手工进入的数据，跳过扫码直接进入操作页面
-      app.globalData.patternScanData = {
-        ...item,
-        // 强制设置 operationType 为 RECEIVE，让用户可以选择工序
-        operationType: item.operationType || 'RECEIVE',
-        // 如果有审核状态，设置当前操作为审核
-        patternDetail: {
-          reviewStatus: item.reviewStatus || '',
-          reviewResult: item.reviewResult || '',
-        },
-      };
+  // 点击工序项：直接跳转到扫码页，让扫码页自己获取工序配置
+  onProcessOperate: function (e) {
+    const stage = e.currentTarget.dataset.stage;
+    const patternId = e.currentTarget.dataset.patternId || this.data.expandedId;
+    if (!stage || !patternId) return;
+
+    if (stage.locked) {
+      toast.error(stage.lockReason || '前置工序未完成');
+      return;
     }
+    if (!stage.canOperate) {
+      if (stage.completed) {
+        toast.error('该工序已完成');
+      }
+      return;
+    }
+
+    // 跳转到扫码页，带上指定工序名，扫码页自动定位到该工序
+    const param = 'patternId=' + encodeURIComponent(patternId) +
+      '&manual=1' +
+      '&processName=' + encodeURIComponent(stage.processName || '') +
+      '&progressStage=' + encodeURIComponent(stage.progressStage || '') +
+      '&scanType=' + encodeURIComponent(stage.scanType || '');
     safeNavigate({
-      url: '/pages/scan/pattern/index?patternId=' + encodeURIComponent(item.id || '') + '&manual=1',
-    }).catch(() => {});
+      url: '/pages/scan/pattern/index?' + param,
+    }).catch(function () {});
   },
 
   onPreviewImage: function (e) {

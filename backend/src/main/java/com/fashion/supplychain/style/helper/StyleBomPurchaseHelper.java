@@ -264,4 +264,110 @@ public class StyleBomPurchaseHelper {
 
         return purchase;
     }
+
+    /**
+     * BOM数量变更时，同步更新关联的pending采购任务
+     * - sample类型：重新计算purchaseQuantity（复用buildPurchaseFromBom逻辑）
+     * - order类型：软删除pending任务（计算依赖订单信息，需用户重新生成）
+     *
+     * @param oldBom 变更前的BOM
+     * @param newBom 变更后的BOM
+     * @return 同步的采购任务数量
+     */
+    public int syncPendingPurchasesOnBomChange(StyleBom oldBom, StyleBom newBom) {
+        if (oldBom == null || newBom == null || newBom.getStyleId() == null) {
+            return 0;
+        }
+        if (!isQuantityChanged(oldBom, newBom)) {
+            return 0;
+        }
+
+        String styleIdStr = String.valueOf(newBom.getStyleId());
+        String materialCode = newBom.getMaterialCode();
+
+        com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<MaterialPurchase> wrapper =
+                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<>();
+        wrapper.eq(MaterialPurchase::getStyleId, styleIdStr)
+               .eq(MaterialPurchase::getDeleteFlag, 0)
+               .eq(MaterialPurchase::getStatus, MaterialConstants.STATUS_PENDING);
+        if (StringUtils.hasText(materialCode)) {
+            wrapper.eq(MaterialPurchase::getMaterialCode, materialCode);
+        }
+
+        List<MaterialPurchase> pendingPurchases = materialPurchaseService.list(wrapper);
+        if (pendingPurchases.isEmpty()) {
+            return 0;
+        }
+
+        int synced = 0;
+        for (MaterialPurchase mp : pendingPurchases) {
+            String sourceType = mp.getSourceType() == null ? "" : mp.getSourceType().trim();
+            if ("sample".equals(sourceType)) {
+                synced += recalcSamplePurchase(mp, newBom);
+            } else if ("order".equals(sourceType)) {
+                materialPurchaseService.removeById(mp.getId());
+                synced++;
+                log.info("BOM变更同步：软删除order类型pending采购任务 purchaseId={}, styleId={}", mp.getId(), styleIdStr);
+            }
+        }
+
+        if (synced > 0) {
+            log.info("BOM变更同步采购任务完成: styleId={}, materialCode={}, synced={}", styleIdStr, materialCode, synced);
+        }
+        return synced;
+    }
+
+    /**
+     * 重新计算sample类型采购任务的数量
+     */
+    private int recalcSamplePurchase(MaterialPurchase mp, StyleBom newBom) {
+        try {
+            StyleInfo styleInfo = styleInfoService.getById(newBom.getStyleId());
+            if (styleInfo == null) return 0;
+
+            SizeColorParseResult parseResult = parseSizeColorConfig(styleInfo);
+            BigDecimal usageAmount = newBom.getDevUsageAmount() != null ? newBom.getDevUsageAmount()
+                    : (newBom.getUsageAmount() != null ? newBom.getUsageAmount() : BigDecimal.ZERO);
+            BigDecimal lossRate = newBom.getLossRate() != null ? newBom.getLossRate() : BigDecimal.ZERO;
+            BigDecimal lossFactor = BigDecimal.ONE.add(
+                    lossRate.divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP));
+            BigDecimal totalUsage = usageAmount
+                    .multiply(BigDecimal.valueOf(parseResult.styleTotalQty))
+                    .multiply(lossFactor);
+            BigDecimal purchaseQty = totalUsage.setScale(4, RoundingMode.HALF_UP);
+
+            if (purchaseQty.compareTo(BigDecimal.ZERO) <= 0) return 0;
+
+            mp.setPurchaseQuantity(purchaseQty);
+            if (mp.getUnitPrice() != null) {
+                mp.setTotalAmount(mp.getUnitPrice().multiply(purchaseQty).setScale(2, RoundingMode.HALF_UP));
+            }
+            mp.setUpdateTime(LocalDateTime.now());
+            materialPurchaseService.updateById(mp);
+            log.info("BOM变更同步：更新sample采购任务数量 purchaseId={}, newQty={}", mp.getId(), purchaseQty);
+            return 1;
+        } catch (Exception e) {
+            log.warn("BOM变更同步sample采购任务失败: purchaseId={}, error={}", mp.getId(), e.getMessage());
+            return 0;
+        }
+    }
+
+    private boolean isQuantityChanged(StyleBom oldBom, StyleBom newBom) {
+        return !bigDecimalEquals(oldBom.getUsageAmount(), newBom.getUsageAmount())
+                || !bigDecimalEquals(oldBom.getDevUsageAmount(), newBom.getDevUsageAmount())
+                || !bigDecimalEquals(oldBom.getLossRate(), newBom.getLossRate())
+                || !stringEquals(oldBom.getSizeUsageMap(), newBom.getSizeUsageMap());
+    }
+
+    private boolean bigDecimalEquals(BigDecimal a, BigDecimal b) {
+        if (a == null && b == null) return true;
+        if (a == null || b == null) return false;
+        return a.compareTo(b) == 0;
+    }
+
+    private boolean stringEquals(String a, String b) {
+        if (a == null && b == null) return true;
+        if (a == null || b == null) return false;
+        return a.equals(b);
+    }
 }

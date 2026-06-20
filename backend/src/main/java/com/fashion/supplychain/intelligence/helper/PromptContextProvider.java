@@ -27,6 +27,8 @@ import com.fashion.supplychain.intelligence.orchestration.IntelligenceSignalOrch
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Component
@@ -329,97 +331,142 @@ public class PromptContextProvider {
 
     /** 传统三路检索（降级用） */
     private String buildRagContextLegacy(Long tenantId, String userMessage) {
-        StringBuilder result = new StringBuilder();
-        boolean hasContent = false;
-
-        // 路径1：知识库（系统操作指南）
-        if (userMessage != null && !userMessage.isBlank() && knowledgeBaseService != null) {
-            boolean isSystemGuideQuery = SYSTEM_GUIDE_KEYWORDS.stream()
-                    .anyMatch(kw -> userMessage.contains(kw));
-            if (isSystemGuideQuery) {
-                try {
-                    com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<com.fashion.supplychain.intelligence.entity.KnowledgeBase> kbQw =
-                            new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<com.fashion.supplychain.intelligence.entity.KnowledgeBase>()
-                                    .eq("delete_flag", 0)
-                                    .in("category", java.util.List.of("system_guide", "sop"))
-                                    .and(w -> w.isNull("tenant_id").or().eq("tenant_id", tenantId))
-                                    .last("LIMIT 3");
-                    java.util.List<com.fashion.supplychain.intelligence.entity.KnowledgeBase> kbList =
-                            knowledgeBaseService.list(kbQw);
-                    if (kbList != null && !kbList.isEmpty()) {
-                        result.append("【系统操作知识库（已预加载）】\n");
-                        for (com.fashion.supplychain.intelligence.entity.KnowledgeBase kb : kbList) {
-                            String summary = kb.getContent();
-                            if (summary != null && summary.length() > 600) summary = summary.substring(0, 600) + "…";
-                            result.append("--- ").append(kb.getTitle()).append(" ---\n").append(summary).append("\n\n");
-                        }
-                        result.append("（以上为系统内置操作指南，如需更详细内容，调用 tool_knowledge_search。）\n\n");
-                        hasContent = true;
-                    }
-                } catch (Exception e) {
-                    log.debug("[AiAgent-RAG] 知识库预注入跳过: {}", e.getMessage());
-                }
-            }
-        }
-
-        // 路径2：记忆案例
-        try {
-            if (userMessage != null && !userMessage.isBlank()) {
-                IntelligenceMemoryResponse ragResult =
-                        intelligenceMemoryOrchestrator.recallSimilar(tenantId, userMessage, ragRecallTopK);
-                List<IntelligenceMemoryResponse.MemoryItem> recalled = ragResult.getRecalled();
-                if (recalled != null && !recalled.isEmpty()) {
-                    List<IntelligenceMemoryResponse.MemoryItem> relevant = recalled.stream()
-                            .filter(item -> item.getSimilarityScore() >= ragSimilarityThreshold)
-                            .collect(Collectors.toList());
-                    if (!relevant.isEmpty()) {
-                        StringBuilder rag = new StringBuilder();
-                        rag.append("【相关历史经验参考】\n");
-                        for (int ri = 0; ri < relevant.size(); ri++) {
-                            IntelligenceMemoryResponse.MemoryItem item = relevant.get(ri);
-                            String c = item.getContent();
-                            if (c != null && c.length() > 400) c = c.substring(0, 400) + "…";
-                            rag.append(String.format("  %d. [%s] %s\n", ri + 1,
-                                    item.getTitle() != null ? item.getTitle() : "经验", c != null ? c : ""));
-                        }
-                        rag.append("（以上为历史经验参考，判断须以工具查询的实时数据为准）\n\n");
-                        result.append(rag);
-                        hasContent = true;
-                    }
-                }
-            }
-        } catch (Exception e) {
-            log.debug("[AiAgent-RAG] 混合检索跳过: {}", e.getMessage());
-        }
-
-        // 路径3：语义向量检索
-        if (userMessage != null && !userMessage.isBlank() && qdrantService != null) {
+        // 三路无依赖关系（知识库 DB / 记忆案例 DB / Qdrant 语义检索），并行执行（原串行 200-1000ms → 并行 ≤ max(单路)）
+        CompletableFuture<String> kbFuture = CompletableFuture.supplyAsync(() -> {
             try {
-                List<com.fashion.supplychain.intelligence.service.QdrantService.ScoredPoint> semanticResults =
-                        qdrantService.search(tenantId, userMessage, ragRecallTopK);
-                if (semanticResults != null && !semanticResults.isEmpty()) {
-                    List<com.fashion.supplychain.intelligence.service.QdrantService.ScoredPoint> filtered =
-                            semanticResults.stream().filter(sp -> sp.getScore() >= ragSimilarityThreshold)
-                                    .limit(3).toList();
-                    if (!filtered.isEmpty()) {
-                        result.append("【语义检索 — 相关知识文档】\n");
-                        for (int i = 0; i < filtered.size(); i++) {
-                            var sp = filtered.get(i);
-                            String content = sp.getPayload() != null
-                                    ? (String) sp.getPayload().getOrDefault("content", "") : "";
-                            if (content.length() > 500) content = content.substring(0, 500) + "…";
-                            result.append(String.format("  %d. [相似度%.2f] %s\n",
-                                    i + 1, sp.getScore(), content.isBlank() ? "（无内容）" : content));
-                        }
-                        hasContent = true;
-                    }
-                }
+                return retrieveKnowledgeBaseBlock(tenantId, userMessage);
+            } catch (Exception e) {
+                log.debug("[AiAgent-RAG] 知识库预注入跳过: {}", e.getMessage());
+                return "";
+            }
+        });
+
+        CompletableFuture<String> memoryCaseFuture = CompletableFuture.supplyAsync(() -> {
+            try {
+                return retrieveMemoryCaseBlock(tenantId, userMessage);
+            } catch (Exception e) {
+                log.debug("[AiAgent-RAG] 混合检索跳过: {}", e.getMessage());
+                return "";
+            }
+        });
+
+        CompletableFuture<String> semanticFuture = CompletableFuture.supplyAsync(() -> {
+            try {
+                return retrieveSemanticBlock(tenantId, userMessage);
             } catch (Exception e) {
                 log.debug("[AiAgent-RAG] 语义检索跳过: {}", e.getMessage());
+                return "";
             }
+        });
+
+        // 等待三路完成（2s 超时保护，单路失败不影响其他路）
+        try {
+            CompletableFuture.allOf(kbFuture, memoryCaseFuture, semanticFuture).get(2, TimeUnit.SECONDS);
+        } catch (Exception e) {
+            log.debug("[AiAgent-RAG] 三路并行检索部分超时: {}", e.getMessage());
         }
 
+        // 按原顺序合并结果（路径1 → 路径2 → 路径3）
+        String kbBlock = safeGetNow(kbFuture);
+        String memoryCaseBlock = safeGetNow(memoryCaseFuture);
+        String semanticBlock = safeGetNow(semanticFuture);
+
+        StringBuilder result = new StringBuilder();
+        boolean hasContent = false;
+        if (!kbBlock.isEmpty()) { result.append(kbBlock); hasContent = true; }
+        if (!memoryCaseBlock.isEmpty()) { result.append(memoryCaseBlock); hasContent = true; }
+        if (!semanticBlock.isEmpty()) { result.append(semanticBlock); hasContent = true; }
+
         if (!hasContent) return "【知识库检索】（检索失败，请勿编造知识库内容，如需查询请调用 tool_knowledge_search）\n";
+        return result.toString();
+    }
+
+    /** 安全获取 CompletableFuture 当前结果：未完成或异常返回空字符串，不阻塞 */
+    private String safeGetNow(CompletableFuture<String> future) {
+        try {
+            return future.getNow("");
+        } catch (Exception e) {
+            return "";
+        }
+    }
+
+    /** 路径1：知识库（系统操作指南） */
+    private String retrieveKnowledgeBaseBlock(Long tenantId, String userMessage) {
+        if (userMessage == null || userMessage.isBlank() || knowledgeBaseService == null) return "";
+        boolean isSystemGuideQuery = SYSTEM_GUIDE_KEYWORDS.stream()
+                .anyMatch(kw -> userMessage.contains(kw));
+        if (!isSystemGuideQuery) return "";
+
+        com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<com.fashion.supplychain.intelligence.entity.KnowledgeBase> kbQw =
+                new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<com.fashion.supplychain.intelligence.entity.KnowledgeBase>()
+                        .eq("delete_flag", 0)
+                        .in("category", java.util.List.of("system_guide", "sop"))
+                        .and(w -> w.isNull("tenant_id").or().eq("tenant_id", tenantId))
+                        .last("LIMIT 3");
+        java.util.List<com.fashion.supplychain.intelligence.entity.KnowledgeBase> kbList =
+                knowledgeBaseService.list(kbQw);
+        if (kbList == null || kbList.isEmpty()) return "";
+
+        StringBuilder result = new StringBuilder();
+        result.append("【系统操作知识库（已预加载）】\n");
+        for (com.fashion.supplychain.intelligence.entity.KnowledgeBase kb : kbList) {
+            String summary = kb.getContent();
+            if (summary != null && summary.length() > 600) summary = summary.substring(0, 600) + "…";
+            result.append("--- ").append(kb.getTitle()).append(" ---\n").append(summary).append("\n\n");
+        }
+        result.append("（以上为系统内置操作指南，如需更详细内容，调用 tool_knowledge_search。）\n\n");
+        return result.toString();
+    }
+
+    /** 路径2：记忆案例 */
+    private String retrieveMemoryCaseBlock(Long tenantId, String userMessage) {
+        if (userMessage == null || userMessage.isBlank()) return "";
+        IntelligenceMemoryResponse ragResult =
+                intelligenceMemoryOrchestrator.recallSimilar(tenantId, userMessage, ragRecallTopK);
+        List<IntelligenceMemoryResponse.MemoryItem> recalled = ragResult.getRecalled();
+        if (recalled == null || recalled.isEmpty()) return "";
+
+        List<IntelligenceMemoryResponse.MemoryItem> relevant = recalled.stream()
+                .filter(item -> item.getSimilarityScore() >= ragSimilarityThreshold)
+                .collect(Collectors.toList());
+        if (relevant.isEmpty()) return "";
+
+        StringBuilder rag = new StringBuilder();
+        rag.append("【相关历史经验参考】\n");
+        for (int ri = 0; ri < relevant.size(); ri++) {
+            IntelligenceMemoryResponse.MemoryItem item = relevant.get(ri);
+            String c = item.getContent();
+            if (c != null && c.length() > 400) c = c.substring(0, 400) + "…";
+            rag.append(String.format("  %d. [%s] %s\n", ri + 1,
+                    item.getTitle() != null ? item.getTitle() : "经验", c != null ? c : ""));
+        }
+        rag.append("（以上为历史经验参考，判断须以工具查询的实时数据为准）\n\n");
+        return rag.toString();
+    }
+
+    /** 路径3：语义向量检索 */
+    private String retrieveSemanticBlock(Long tenantId, String userMessage) {
+        if (userMessage == null || userMessage.isBlank() || qdrantService == null) return "";
+
+        List<com.fashion.supplychain.intelligence.service.QdrantService.ScoredPoint> semanticResults =
+                qdrantService.search(tenantId, userMessage, ragRecallTopK);
+        if (semanticResults == null || semanticResults.isEmpty()) return "";
+
+        List<com.fashion.supplychain.intelligence.service.QdrantService.ScoredPoint> filtered =
+                semanticResults.stream().filter(sp -> sp.getScore() >= ragSimilarityThreshold)
+                        .limit(3).toList();
+        if (filtered.isEmpty()) return "";
+
+        StringBuilder result = new StringBuilder();
+        result.append("【语义检索 — 相关知识文档】\n");
+        for (int i = 0; i < filtered.size(); i++) {
+            var sp = filtered.get(i);
+            String content = sp.getPayload() != null
+                    ? (String) sp.getPayload().getOrDefault("content", "") : "";
+            if (content.length() > 500) content = content.substring(0, 500) + "…";
+            result.append(String.format("  %d. [相似度%.2f] %s\n",
+                    i + 1, sp.getScore(), content.isBlank() ? "（无内容）" : content));
+        }
         return result.toString();
     }
 

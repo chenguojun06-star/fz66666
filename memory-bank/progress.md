@@ -1,11 +1,66 @@
 # 进度跟踪
 
 > 本文件由 AI 助手自动维护，记录项目开发进度
-> 最后更新：2026-06-19
+> 最后更新：2026-06-20
 
 ---
 
 ## 已完成
+
+### 2026-06-20 小云AI 6大升级 + 开发效能体系
+
+**借鉴来源**：Ruflo Truth Scoring / Claude Agent SDK / RooFlow Context Portal / GenericAgent / Hermes GEPA / SIJE 7-Agent / Agency-Agents 215角色
+
+- [x] 🔴 P0-1：SelfCritiqueGate 多视角对抗评审
+  - 新增 MultiPerspectiveCritic.java（285行，4视角并行：业务30%+数据30%+租户25%+权限15%，一票否决）
+  - 新增 AdversarialJudgePipeline.java（215行，高风险场景Round 2验证+HighRiskDetector）
+  - 新增 ConvergenceStopCondition.java（88行，连续2轮提升<5分停止）
+  - 修改 SelfCritiqueGate.java（177→298行，集成多视角+对抗+收敛）
+- [x] 🔴 P0-2：MCP 生产化
+  - 新增 McpResourceSanitizer.java（95行，防prompt injection）
+  - 新增 McpIdentityContext.java（113行，身份传播值对象）
+  - 新增 McpToolError.java（130行，SERF结构化错误5类码）
+  - 新增 McpTimeoutBudget.java（70行，ATBA自适应超时QUERY/REPORT/COMPUTATION）
+  - 修改 McpResourceProvider接口（+默认方法向后兼容）+ 3个Provider实现 + McpProtocolService + 2个Controller
+- [x] 🔴 P0-3：Memory Bank 数据库化（ConPort 模式）
+  - Flyway V202606201003（t_memory_bank_entry + t_memory_bank_relation 两表）
+  - 新增 MemoryBankEntry/Relation Entity + Mapper（含CTE递归traverseGraph）
+  - 新增 MemoryBankDbService.java（274行，upsert/semanticSearch/addRelation/importFromMarkdown）
+  - 新增 MemoryBankRelationService.java（76行，知识图谱遍历depth≤2）
+  - 新增 MemoryBankMigrationRunner.java（132行，启动时Markdown→DB迁移，Redis幂等）
+  - 修改 MemoryBankService（双写兼容）+ EvolutionOrchestrator（D-021指标）
+- [x] 🟡 P1-1：Skill 三层渐进式披露
+  - Flyway V202606201001（t_skill_template新增6字段：metadata_yaml/skill_md/references_json/token_budget/disclosure_level/disclosure_updated_at）
+  - 新增 SkillDisclosureLoader.java（195行，三层按需加载+token估算+旧数据降级）
+  - 新增 SkillDisclosureController.java（95行，REST API三层查询）
+  - 修改 SkillTemplate Entity（+6字段）+ SkillAutoCreationService（生成三层）+ SkillExecutionTool（按需加载）
+- [x] 🟡 P1-2：技能结晶化 + GEPA 遗传优化
+  - Flyway V202606201002（t_prompt_optimization表）
+  - 新增 SkillCrystallizationService.java（239行，高频问题Redis语义哈希计数→结晶化→跳过LLM）
+  - 新增 GepaPromptOptimizer.java（337行，17个prompt块当基因，遗传算法种群10/代数≤5）
+  - 新增 ConstraintGates.java（193行，三重门控：尺寸/语义漂移/测试套件）
+  - 新增 EvolutionEventLogger.java（169行，events.jsonl append-only审计）
+  - 修改 EvolutionOrchestrator（D-021注册3新组件+指标+健康检查）
+- [x] 🟡 P1-3：服装专属 Skills（10个）
+  - scan-flow-expert / wage-settlement-guard / tenant-isolation-auditor / delivery-forecast-advisor / supplier-risk-agent / quality-inspection-advisor / production-scheduling-advisor / cost-negotiation-advisor / fabric-sourcing-strategist / compliance-checker
+  - 路径：.trae/skills/<name>/SKILL.md（每个80-115行）
+- [x] 🟢 P2-2：per-call model selection + 成本爆炸防御
+  - 新增 ModelSelectionRouter.java（242行，ECONOMY/STANDARD/PREMIUM三级，四维评估）
+  - 新增 CostExplosionGuard.java（307行，上下文肥大+重复检测+熔断）
+  - 修改 AiInferenceRouter（+chatWithModelSelection/+chatPremium）+ AiAgentOrchestrator（接入防御）+ EvolutionOrchestrator（D-021）+ application.yml（配置块）
+- [x] 🟢 开发 skills 补充（8个）
+  - orchestrator-scaffolder / tenant-isolation-auditor / transaction-boundary-checker / ai-tool-scaffolder / skill-scaffolder / mcp-resource-scaffolder / prompt-block-optimizer / evolution-component-scaffolder
+  - 路径：.trae/skills/<name>/SKILL.md（每个108-141行）
+- [x] 🟢 开发 MCP 服务器设计文档
+  - 新增 .trae/rules/dev-mcp-design.md（410行）
+  - 4个MCP：db-query-mcp / flyway-mcp / test-runner-mcp / code-search-mcp
+  - 含工具清单/多租户安全/技术栈/集成方式/实施路线图
+- [x] 后端 mvn compile BUILD SUCCESS（全部模块编译通过）
+- [x] Flyway 迁移脚本 V202606201001/V202606201002/V202606201003 校验通过
+- [x] EvolutionOrchestrator D-021 合规（17组件全部注册：原12 + 新5）
+- [x] 新增铁律 D-022（多视角对抗评审强制启用）+ D-023（MCP resource description 必须 sanitize）+ D-024（Memory Bank 数据库化）+ D-025（per-call model selection 强制启用）
+- [x] 更新 memory-bank/activeContext.md + decisionLog.md + progress.md
+- [x] 新建 optimization-log-20260620.md
 
 ### 2026-06-19 Controller 事务边界全面治理 + 文档体系更新
 - [x] 🔴 P0-1：PatternRevisionController → PatternRevisionOrchestrator 化（save/update/remove 全部下沉
@@ -173,3 +228,15 @@
 - [ ] P2：RESTful迁移第二批（cutting-task/by-style-no等）
 - [ ] 前端硬编码颜色值批量替换（~555处中性色）
 - [ ] Service层@Transactional违规治理（剩余62处，需逐个分析调用链）
+
+### 2026-06-20 测试闭环（已完成）
+
+- [x] 测试闭环：5389 tests, 0 failures, 0 errors（从 122 失败修复到 0）
+- [x] 主代码 bug 修复 5 个：
+  - EcStockSyncEventListener/EcSyncJob 添加 @ConditionalOnProperty（条件Bean依赖者未加条件注解）
+  - GepaPromptOptimizer 拆分 @Scheduled 带参方法（Spring 禁止 @Scheduled 带参数）
+  - DagExecutor 并行任务用 state 副本（HashMap 并发写入 bug）
+  - ScanUndoHelper 提取 safeRecomputeProgress（异常传播导致撤销返回失败）
+- [x] 测试配置修复：application-test.yml 添加 allow-bean-definition-overriding
+- [x] 测试文件修复 13 个（Service/Controller/集成测试 mock 缺失与断言修正）
+- 详见 `.trae/rules/optimization-log-20260620.md` 第十五章

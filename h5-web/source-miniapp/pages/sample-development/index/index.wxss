@@ -4,6 +4,38 @@
   padding-bottom: 20rpx;
 }
 
+/* 顶部扫码按钮栏 */
+.top-action-bar {
+  display: flex;
+  padding: 16rpx 24rpx;
+  background: #fff;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+
+.scan-top-btn {
+  flex: 1;
+  height: 80rpx;
+  line-height: 80rpx;
+  background: linear-gradient(135deg, #1677ff 0%, #1890ff 100%);
+  color: #fff;
+  border-radius: 40rpx;
+  font-size: 30rpx;
+  font-weight: 500;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.scan-top-btn .scan-icon {
+  font-size: 32rpx;
+  margin-right: 12rpx;
+}
+
+.btn-hover {
+  opacity: 0.85;
+}
+
 /* 跨岗位提示条 */
 .role-hint-bar {
   display: flex;
@@ -316,31 +348,19 @@
   color: #666;
 }
 
-.detail-action {
+.detail-action-single {
   margin-top: 20rpx;
   display: flex;
-  gap: 20rpx;
   justify-content: center;
 }
 
 .action-btn {
-  flex: 1;
   height: 72rpx;
   line-height: 72rpx;
   border-radius: 36rpx;
   font-size: 26rpx;
   border: none;
-  padding: 0;
-}
-
-.action-btn.scan-btn {
-  color: #fff;
-  background: #1677ff;
-}
-
-.action-btn.manual-btn {
-  color: #fff;
-  background: #52c41a;
+  padding: 0 48rpx;
 }
 
 .action-btn.detail-btn {
@@ -348,9 +368,162 @@
   background: #e6f4ff;
 }
 
+/* 工序区标题行 */
+.section-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.section-hint {
+  font-size: 22rpx;
+  color: #999;
+  font-weight: normal;
+}
+
+/* 未配置工序提示 */
+.no-process-hint {
+  padding: 48rpx 24rpx;
+  text-align: center;
+  background: #fafafa;
+  border-radius: 16rpx;
+  border: 2rpx dashed #d9d9d9;
+}
+
+.no-process-icon {
+  display: block;
+  font-size: 56rpx;
+  margin-bottom: 16rpx;
+}
+
+.no-process-text {
+  font-size: 26rpx;
+  color: #999;
+}
+
 .load-more {
   padding: 32rpx 0;
   text-align: center;
   font-size: 26rpx;
+  color: #999;
+}
+
+/* 新的工序阶段列表 */
+.process-section {
+  margin-top: 24rpx;
+}
+
+.process-stages-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+}
+
+.process-stage-item {
+  display: flex;
+  align-items: center;
+  padding: 16rpx 20rpx;
+  background: #fafafa;
+  border-radius: 12rpx;
+  border: 1rpx solid #f0f0f0;
+}
+
+.process-stage-item.done {
+  background: #f6ffed;
+  border-color: #b7eb8f;
+}
+
+.process-stage-item.can-operate {
+  background: #e6f4ff;
+  border-color: #91caff;
+}
+
+.process-stage-item.locked {
+  background: #fffbe6;
+  border-color: #ffe58f;
+  opacity: 0.85;
+}
+
+.process-stage-dot {
+  width: 48rpx;
+  height: 48rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  margin-right: 16rpx;
+  flex-shrink: 0;
+  font-size: 24rpx;
+  background: #f0f0f0;
+  color: #999;
+}
+
+.process-stage-item.done .process-stage-dot {
+  background: #52c41a;
+  color: #fff;
+}
+
+.process-stage-item.can-operate .process-stage-dot {
+  background: #1677ff;
+  color: #fff;
+}
+
+.process-stage-item.locked .process-stage-dot {
+  background: #faad14;
+  color: #fff;
+}
+
+.dot-check, .dot-arrow, .dot-empty {
+  font-size: 24rpx;
+}
+
+.process-stage-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+  min-width: 0;
+}
+
+.process-stage-name {
+  font-size: 26rpx;
+  color: #333;
+  font-weight: 500;
+}
+
+.process-stage-item.done .process-stage-name {
+  color: #389e0d;
+}
+
+.process-stage-item.can-operate .process-stage-name {
+  color: #0958d9;
+}
+
+.process-stage-item.locked .process-stage-name {
+  color: #874d00;
+}
+
+.process-stage-time {
+  font-size: 22rpx;
+  color: #999;
+}
+
+.process-stage-item.done .process-stage-time {
+  color: #52c41a;
+}
+
+.process-stage-action {
+  font-size: 22rpx;
+  color: #1677ff;
+  font-weight: 600;
+}
+
+.process-stage-lock {
+  font-size: 22rpx;
+  color: #d46b08;
+}
+
+.process-stage-pending {
+  font-size: 22rpx;
   color: #999;
 }

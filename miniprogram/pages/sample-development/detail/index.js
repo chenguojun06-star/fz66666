@@ -1,6 +1,80 @@
 const { style } = require('../../../utils/api-modules/style-warehouse');
-const { production } = require('../../../utils/api-modules/production');
+const production = require('../../../utils/api-modules/production');
+const { toast } = require('../../../utils/uiHelper');
 const permission = require('../../../utils/permission');
+const { getAuthedImageUrl } = require('../../../utils/fileUrl');
+
+/* ========== 与 PC 端 / 列表页 完全一致的状态与交期计算 ========== */
+
+// PC 端同款 getProgressNodeColor：中文关键字匹配颜色
+// 返回: default | success | warning | error | processing
+function getProgressNodeColor(node) {
+  if (!node) return 'default';
+  const s = String(node);
+  if (/开发样报废|样衣报废|已报废/.test(s)) return 'default';
+  if (/报废|驳回|不通过|异常|失败/.test(s)) return 'error';
+  if (/返修|紧急/.test(s)) return 'warning';
+  if (/完成|通过/.test(s)) return 'success';
+  if (/中|待审|确认/.test(s)) return 'processing';
+  return 'default';
+}
+
+// PC 端同款 getDeliveryMeta：计算交期标签
+function getDeliveryMeta(record, allStagesCompleted) {
+  if (!record) return { tone: 'normal', label: '' };
+  const sampleStatus = String(record.sampleStatus || record.status || '').trim().toUpperCase();
+  if (sampleStatus === 'SCRAPPED') return { tone: 'scrapped', label: '已报废' };
+  if (sampleStatus === 'CLOSED') return { tone: 'scrapped', label: '已关单' };
+  if (allStagesCompleted) return { tone: 'success', label: '已完成' };
+  const deliveryDate = record.deliveryDate || record.deliveryTime;
+  if (!deliveryDate) return { tone: 'normal', label: '待补交期' };
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const target = new Date(deliveryDate);
+  target.setHours(0, 0, 0, 0);
+  const diffDays = Math.ceil((target.getTime() - today.getTime()) / 86400000);
+  if (diffDays < 0) return { tone: 'danger', label: '延期' + Math.abs(diffDays) + '天' };
+  if (diffDays <= 3) return { tone: 'warning', label: diffDays + '天内交板' };
+  return { tone: 'normal', label: diffDays + '天后交板' };
+}
+
+// 英文枚举 → 中文兜底映射（当后端没有返回 progressNode 时使用）
+const EN_TO_CN = {
+  PENDING: '待领取',
+  IN_PROGRESS: '制作中',
+  PROGRESS: '制作中',
+  COMPLETED: '已完成',
+  WAREHOUSE_IN: '已入库',
+  ENABLED: '启用',
+  ACTIVE: '启用',
+  DISABLED: '已停用',
+  REVIEW_PENDING: '待审核',
+  REVIEWED: '已审核',
+  APPROVED: '已通过',
+  REJECTED: '已驳回',
+  CANCELLED: '已取消',
+  CANCELED: '已取消',
+  SCRAPPED: '样衣报废',
+  CLOSED: '已关单',
+};
+
+// 主状态文本：优先使用后端返回的 progressNode（已是中文），否则使用枚举映射
+function resolveMainStatus(styleInfo) {
+  if (!styleInfo) return '未开始';
+  const node = String(styleInfo.progressNode || styleInfo.status || '').trim();
+  if (node) {
+    const upper = node.toUpperCase();
+    if (EN_TO_CN[upper]) return EN_TO_CN[upper];
+    return node;
+  }
+  const status = String(styleInfo.sampleStatus || styleInfo.status || '').trim();
+  if (status) {
+    const upper = status.toUpperCase();
+    if (EN_TO_CN[upper]) return EN_TO_CN[upper];
+    return status;
+  }
+  return '未开始';
+}
 
 // 可手动领取/完成的子工序（其他只展示）
 const ACTIONABLE_STAGES = new Set(['pattern', 'bom', 'process', 'secondary', 'production']);
@@ -11,26 +85,17 @@ Page({
     patternId: '',
     styleInfo: null,
     loading: true,
-    activeTab: 0,
-    tabs: [
-      { key: 'overview', name: '概览', icon: '📋' },
-      { key: 'bom', name: 'BOM', icon: '📦' },
-      { key: 'process', name: '工序', icon: '⚙️' },
-      { key: 'secondary', name: '二次工艺', icon: '🎨' },
-      { key: 'pattern', name: '纸样', icon: '📐' },
-      { key: 'production', name: '制单', icon: '📝' },
-      { key: 'quotation', name: '报价', icon: '💰' },
-      { key: 'attachment', name: '附件', icon: '📎' },
-    ],
-
-    // 阶段进度
-    stages: [],
+    showDetails: false,
     // BOM清单
     bomList: [],
     bomLoading: false,
     // 工序单价
     processList: [],
     processLoading: false,
+    // 生产工序扫码（父子工序，可操作）
+    processStages: [],
+    processScanLoading: false,
+    hasProcessSystem: false,
     // 二次工艺
     secondaryList: [],
     secondaryLoading: false,
@@ -76,19 +141,58 @@ Page({
     try {
       const res = await production.getPatternDetail(patternId);
       const detail = res?.data || res || {};
+      // 保存 pattern 自带的 coverImage 作为兜底
+      this._patternCover = getAuthedImageUrl(detail.coverImage || detail.styleImage || detail.cover || '');
+      // 把 PatternProduction 基础字段存起来，后续合并到 styleInfo
+      const rawStatus = detail.status || '';
+      const mainStatus = resolveMainStatus(detail);
+      const mainStatusColor = getProgressNodeColor(mainStatus);
+      const deliveryMeta = getDeliveryMeta(detail, false);
+      const basicInfo = {
+        color: detail.color || detail.colorName || '',
+        size: detail.size || detail.sizeName || (Array.isArray(detail.sizes) && detail.sizes.length ? detail.sizes.join('/') : ''),
+        quantity: detail.quantity || detail.sampleQuantity || detail.totalQuantity || 0,
+        status: rawStatus,
+        // 与 PC 端一致：主状态 + 颜色 + 交期
+        _mainStatus: mainStatus,
+        _mainStatusColor: mainStatusColor,
+        _deliveryLabel: deliveryMeta.label,
+        _deliveryTone: deliveryMeta.tone,
+        cover: getAuthedImageUrl(detail.coverImage || detail.styleImage || detail.cover || ''),
+      };
+      this.setData({ _patternBasicInfo: basicInfo });
       const styleId = detail.styleId || detail.styleNo || '';
       if (styleId) {
-        this.setData({ styleId });
+        this.setData({ styleId, patternId });
         this.loadStyleDetail();
       } else {
-        // 没有 styleId，用 patternId 作为兜底显示样衣信息
-        this.setData({ styleInfo: detail, loading: false });
-        wx.showToast({ title: '该样衣暂无关联款式', icon: 'none' });
+        // 没有 styleId：把 pattern 数据作为 styleInfo 展示
+        this.setData({
+          styleInfo: {
+            styleName: detail.styleName || detail.name || '未命名款式',
+            styleNo: detail.styleNo || detail.patternNo || '',
+            styleCode: '',
+            cover: basicInfo.cover,
+            customer: detail.customer || detail.customerName || detail.buyer || '',
+            category: detail.category || '',
+            developmentSourceType: detail.developmentSourceType || detail.sourceType || '',
+            season: detail.season || '',
+            patternMaker: detail.patternMaker || detail.patternDeveloper || detail.receiver || '',
+            receiver: detail.receiver || '',
+            _releaseTime: detail.releaseTime || detail.createTime || '',
+            _deliveryTime: detail.deliveryTime || '',
+            _completeTime: detail.completeTime || '',
+            ...basicInfo,
+          },
+          loading: false,
+        });
+        // 仍尝试加载工序列表（若 patternId 存在）
+        if (this.data.patternId) this.loadProductionScanStages();
       }
     } catch (e) {
       console.error('获取样衣详情失败', e);
       this.setData({ loading: false });
-      wx.showToast({ title: '加载失败', icon: 'none' });
+      toast.error('加载失败');
     }
   },
 
@@ -97,15 +201,65 @@ Page({
     try {
       const res = await style.getStyleDetail(this.data.styleId);
       const styleInfo = res?.data || res || {};
+      // 合并 PatternProduction 基础字段（颜色/码数/数量/状态），让头部能显示
+      const basic = this.data._patternBasicInfo || {};
+      // 从 styleInfo 自身提取多字段兼容（款式维度
+      const styleColor = styleInfo.color || styleInfo.colorName || '';
+      const styleSize = styleInfo.size || styleInfo.sizeName || (Array.isArray(styleInfo.sizes) && styleInfo.sizes.length ? styleInfo.sizes.join('/') : '');
+      const styleQty = styleInfo.quantity || styleInfo.sampleQuantity || styleInfo.totalQuantity || styleInfo.sampleCount || 0;
+      const styleCover = getAuthedImageUrl(styleInfo.cover || styleInfo.coverImage || styleInfo.styleImage || '');
+      // 计算主状态 + 颜色 + 交期（与 PC 端一致）
+      const finalColor = basic.color || styleColor;
+      const finalSize = basic.size || styleSize;
+      const finalQty = basic.quantity || styleQty;
+      Object.assign(styleInfo, {
+        styleName: styleInfo.styleName || styleInfo.name || '',
+        styleNo: styleInfo.styleNo || styleInfo.styleCode || styleInfo.styleId || '',
+        color: finalColor,
+        size: finalSize,
+        quantity: finalQty,
+        cover: basic.cover || styleCover,
+        // 与 PC 端一致：主状态 + 颜色 + 交期（覆盖 basic 中的同名字段）
+        _mainStatus: basic._mainStatus || resolveMainStatus(styleInfo),
+        _mainStatusColor: basic._mainStatusColor || getProgressNodeColor(basic._mainStatus || resolveMainStatus(styleInfo)),
+        _deliveryLabel: basic._deliveryLabel || getDeliveryMeta({
+          deliveryDate: styleInfo.deliveryTime || styleInfo.deliveryDate,
+          sampleStatus: styleInfo.sampleStatus || styleInfo.status,
+          status: styleInfo.status,
+        }, false).label,
+        _deliveryTone: basic._deliveryTone || getDeliveryMeta({
+          deliveryDate: styleInfo.deliveryTime || styleInfo.deliveryDate,
+          sampleStatus: styleInfo.sampleStatus || styleInfo.status,
+          status: styleInfo.status,
+        }, false).tone,
+        // 客户信息（兼容多字段）
+        customer: styleInfo.customer || styleInfo.customerName || styleInfo.buyer || styleInfo.buyerName || '',
+        category: styleInfo.category || styleInfo.productCategory || '',
+        developmentSourceType: styleInfo.developmentSourceType || styleInfo.sourceType || '',
+        season: styleInfo.season || '',
+        // 制版师 / 操作工
+        patternMaker: styleInfo.patternMaker || styleInfo.patternDeveloper || styleInfo.receiver || '',
+        receiver: styleInfo.receiver || '',
+        // 时间字段（格式化前端展示用）
+        _releaseTime: styleInfo.releaseTime || styleInfo.createTime || '',
+        _deliveryTime: styleInfo.deliveryTime || '',
+        _completeTime: styleInfo.completeTime || styleInfo.sampleCompletedTime || '',
+      });
       this.setData({ styleInfo, loading: false });
-      this.buildStages(styleInfo);
       this.buildStyleImages(styleInfo);
-      // 默认加载概览数据
-      this.loadTabData(0);
+      // 并行预加载折叠区域内的所有数据
+      this.loadBom();
+      this.loadStyleProcesses();
+      this.loadSecondary();
+      this.loadPattern();
+      this.loadProduction();
+      this.loadQuotation();
+      this.loadAttachments();
+      if (this.data.patternId) this.loadProductionScanStages();
     } catch (e) {
       console.error('加载款式详情失败', e);
       this.setData({ loading: false });
-      wx.showToast({ title: '加载失败', icon: 'none' });
+      toast.error('加载失败');
     }
   },
 
@@ -151,11 +305,37 @@ Page({
     this.setData({ stages });
   },
 
-  /** 构建款式图片列表（cover + 附件中的图片） */
+  /** 构建款式图片列表（cover + pattern自带的coverImage + 附件中的图片） */
   buildStyleImages(info) {
     const images = [];
+    // 1. 款式封面
     if (info.cover) images.push(info.cover);
-    // 附件中的图片在加载附件后补充
+    else if (info.coverImage) images.push(getAuthedImageUrl(info.coverImage));
+    // 2. 样衣审核图片（JSON数组）
+    if (info.sampleReviewImages) {
+      try {
+        const arr = typeof info.sampleReviewImages === 'string'
+          ? JSON.parse(info.sampleReviewImages)
+          : info.sampleReviewImages;
+        if (Array.isArray(arr)) {
+          arr.forEach(url => { if (url && typeof url === 'string') images.push(getAuthedImageUrl(url)); });
+        }
+      } catch (e) { /* 非JSON格式，忽略 */ }
+    }
+    // 3. 从 styleInfo 其他图片字段中提取
+    const otherImgKeys = ['styleImages', 'photos', 'images', 'sampleImages'];
+    for (let i = 0; i < otherImgKeys.length; i++) {
+      const val = info[otherImgKeys[i]];
+      if (Array.isArray(val)) {
+        val.forEach(url => { if (url && typeof url === 'string') images.push(getAuthedImageUrl(url)); });
+      } else if (typeof val === 'string' && val) {
+        images.push(getAuthedImageUrl(val));
+      }
+    }
+    // 4. pattern 自带的 coverImage 兜底（已做了认证）
+    if (this._patternCover && !images.includes(this._patternCover)) {
+      images.push(this._patternCover);
+    }
     this.setData({ styleImages: images });
   },
 
@@ -172,26 +352,14 @@ Page({
     return '未开始';
   },
 
-  /** Tab切换 */
-  onTabTap(e) {
-    const idx = e.currentTarget.dataset.index;
-    if (idx === this.data.activeTab) return;
-    this.setData({ activeTab: idx });
-    this.loadTabData(idx);
+  /** 切换折叠区域的展开/收起 */
+  onToggleCollapse() {
+    this.setData({ showDetails: !this.data.showDetails });
   },
 
-  /** 按Tab加载数据 */
-  loadTabData(idx) {
-    const key = this.data.tabs[idx]?.key;
-    switch (key) {
-      case 'bom': this.loadBom(); break;
-      case 'process': this.loadProcess(); break;
-      case 'secondary': this.loadSecondary(); break;
-      case 'pattern': this.loadPattern(); break;
-      case 'production': this.loadProduction(); break;
-      case 'quotation': this.loadQuotation(); break;
-      case 'attachment': this.loadAttachments(); break;
-    }
+  /** 刷新整个页面 */
+  onRefresh() {
+    this.loadStyleDetail();
   },
 
   // === 数据加载方法 ===
@@ -206,7 +374,7 @@ Page({
     this.setData({ bomLoading: false });
   },
 
-  async loadProcess() {
+  async loadStyleProcesses() {
     if (this.data.processList.length > 0) return;
     this.setData({ processLoading: true });
     try {
@@ -214,6 +382,102 @@ Page({
       this.setData({ processList: res?.data?.records || res?.data || res?.records || [] });
     } catch (e) { console.error('工序加载失败', e); }
     this.setData({ processLoading: false });
+  },
+
+  /** 加载生产工序扫码（父子工序，可操作） */
+  async loadProductionScanStages() {
+    const pid = (this.data.patternId || '').trim();
+    if (!pid) {
+      console.warn('[loadProductionScanStages] patternId为空，跳过加载');
+      return;
+    }
+    if (this.data.processStages.length > 0) return;
+    this.setData({ processScanLoading: true });
+    try {
+      const [detailRes, configRes, recordsRes] = await Promise.all([
+        production.getPatternDetail(pid),
+        production.getPatternProcessConfig(pid),
+        production.getPatternScanRecords(pid),
+      ]);
+      const detail = detailRes?.data || detailRes || {};
+      const config = configRes?.data || configRes || [];
+      const records = recordsRes?.data || recordsRes || [];
+      const processStages = this._buildProcessStages(config, records, detail);
+      this.setData({
+        processStages,
+        hasProcessSystem: config.length > 0,
+        processScanLoading: false,
+      });
+    } catch (e) {
+      console.error('加载生产工序失败', e);
+      this.setData({ processScanLoading: false });
+    }
+  },
+
+  /** 构建生产工序列表（与列表页一致） */
+  _buildProcessStages(config, records, patternDetail) {
+    if (!config || !Array.isArray(config) || config.length === 0) return [];
+
+    // 从 patternDetail 预提取基础字段（一次提取，全工序共用）
+    const colorCandidates = [patternDetail && patternDetail.color, patternDetail && patternDetail.colorName, patternDetail && patternDetail.sampleColor];
+    const baseColor = colorCandidates.find(function (v) { return v != null && v !== ''; }) || '';
+    let baseSize = (patternDetail && (patternDetail.size || patternDetail.sizeName)) || '';
+    if (!baseSize && patternDetail && Array.isArray(patternDetail.sizes) && patternDetail.sizes.length) {
+      baseSize = patternDetail.sizes.join('/');
+    }
+    const qtyCandidates = [patternDetail && patternDetail.quantity, patternDetail && patternDetail.sampleQuantity, patternDetail && patternDetail.totalQuantity, patternDetail && patternDetail.orderQuantity];
+    const baseQuantity = qtyCandidates.find(function (v) { return typeof v === 'number' && v > 0; }) || 0;
+
+    const completedSet = new Set();
+    (records || []).forEach(r => {
+      const name = (r.progressStage || r.processName || r.operationType || '').toString().trim();
+      if (name) completedSet.add(name);
+    });
+    const stages = [];
+    let firstIncompleteIdx = -1;
+    for (let i = 0; i < config.length; i++) {
+      const c = config[i];
+      const processName = String(c.processName || c.operationType || '').trim();
+      const isCompleted = completedSet.has(processName);
+      if (!isCompleted && firstIncompleteIdx === -1) firstIncompleteIdx = i;
+      const stageRecord = (records || []).find(r =>
+        (r.progressStage || r.processName || r.operationType || '').toString().trim() === processName
+      );
+      stages.push({
+        processName,
+        progressStage: c.progressStage || processName,
+        scanType: c.scanType || 'production',
+        completed: isCompleted,
+        canOperate: !isCompleted && i === firstIncompleteIdx,
+        locked: !isCompleted && i > firstIncompleteIdx,
+        lockReason: !isCompleted && i > firstIncompleteIdx ? '前置工序未完成' : '',
+        color: (stageRecord && stageRecord.color) || baseColor,
+        size: (stageRecord && stageRecord.size) || baseSize,
+        quantity: (stageRecord && stageRecord.quantity) || baseQuantity,
+        operatorName: stageRecord && stageRecord.operatorName ? stageRecord.operatorName : '',
+        time: stageRecord && stageRecord.scanTime
+          ? String(stageRecord.scanTime).substring(0, 16).replace('T', ' ')
+          : '',
+      });
+    }
+    return stages;
+  },
+
+  /** 点击生产工序 → 跳转扫码页 */
+  onProductionProcessOperate(e) {
+    const stage = e.currentTarget.dataset.stage;
+    const patternId = this.data.patternId;
+    if (!stage || !patternId) return;
+    if (stage.locked) { toast.error(stage.lockReason || '前置工序未完成'); return; }
+    if (!stage.canOperate) {
+      if (stage.completed) toast.error('该工序已完成');
+      return;
+    }
+    const url = `/pages/scan/pattern/index?patternId=${encodeURIComponent(patternId)}` +
+      `&manual=1&processName=${encodeURIComponent(stage.processName || '')}` +
+      `&progressStage=${encodeURIComponent(stage.progressStage || '')}` +
+      `&scanType=${encodeURIComponent(stage.scanType || '')}`;
+    wx.navigateTo({ url }).catch(() => {});
   },
 
   async loadSecondary() {
@@ -343,7 +607,7 @@ Page({
         wx.showToast({ title: '领取成功', icon: 'success' });
         this.loadStyleDetail();
       } catch (e) {
-        wx.showToast({ title: '领取失败', icon: 'none' });
+        toast.error('领取失败');
       }
     };
 
@@ -380,7 +644,7 @@ Page({
           wx.showToast({ title: '已确认完成', icon: 'success' });
           this.loadStyleDetail();
         } catch (e) {
-          wx.showToast({ title: '操作失败', icon: 'none' });
+          toast.error('操作失败');
         }
       }
     });
@@ -402,10 +666,10 @@ Page({
         try {
           const reason = (res.content || '').trim();
           await style.stageAction(this.data.styleId, stageKey, 'reset', reason || undefined);
-          wx.showToast({ title: '已退回', icon: 'success' });
+          toast.success('已退回');
           this.loadStyleDetail();
         } catch (e) {
-          wx.showToast({ title: '退回失败', icon: 'none' });
+          toast.error('退回失败');
         }
       }
     });

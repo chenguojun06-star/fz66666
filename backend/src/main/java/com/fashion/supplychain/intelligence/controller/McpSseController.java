@@ -2,6 +2,7 @@ package com.fashion.supplychain.intelligence.controller;
 
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
+import com.fashion.supplychain.intelligence.agent.resource.McpIdentityContext;
 import com.fashion.supplychain.intelligence.service.McpProtocolService;
 import com.fashion.supplychain.intelligence.service.McpSseSessionService;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -151,10 +152,10 @@ public class McpSseController {
                     toolReq.setArguments(args);
                     result = mcpProtocolService.callTool(toolReq);
                 }
-                case "resources/list" -> result = mcpProtocolService.listResources();
+                case "resources/list" -> result = mcpProtocolService.listResources(McpIdentityContext.fromUserContext());
                 case "resources/read" -> {
                     String uri = (String) params.get("uri");
-                    result = mcpProtocolService.readResource(uri);
+                    result = mcpProtocolService.readResource(uri, McpIdentityContext.fromUserContext());
                 }
                 default -> result = Map.of("error", Map.of("code", -32601, "message", "Method not found: " + method));
             }

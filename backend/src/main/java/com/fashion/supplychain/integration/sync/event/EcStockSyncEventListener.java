@@ -3,11 +3,13 @@ package com.fashion.supplychain.integration.sync.event;
 import com.fashion.supplychain.integration.ecommerce.orchestration.EcStockOrchestrator;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
 @Slf4j
 @Component
+@ConditionalOnProperty(name = "fashion.ecommerce.enabled", havingValue = "true", matchIfMissing = true)
 public class EcStockSyncEventListener {
 
     @Autowired

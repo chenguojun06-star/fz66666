@@ -1,6 +1,38 @@
 const { style } = require('../../../utils/api-modules/style-warehouse');
 const { production } = require('../../../utils/api-modules/production');
+const { toast } = require('../../../utils/uiHelper');
 const permission = require('../../../utils/permission');
+const { getAuthedImageUrl } = require('../../../utils/fileUrl');
+
+// 状态中文映射（避免 ENABLED 等英文直接显示）
+const STATUS_CN = {
+  ENABLED: '启用',
+  ACTIVE: '启用',
+  DISABLED: '已停用',
+  INACTIVE: '已停用',
+  PENDING: '待领取',
+  IN_PROGRESS: '进行中',
+  COMPLETED: '已完成',
+  RELEASED: '已发放',
+  RECEIVED: '已领取',
+  WAREHOUSE_IN: '已入库',
+  WAREHOUSE_OUT: '已出库',
+  REVIEW_PENDING: '待审核',
+  APPROVED: '已通过',
+  REJECTED: '已驳回',
+  CANCELLED: '已取消',
+  CANCELED: '已取消',
+  ARCHIVED: '已归档',
+  CLOSED: '已关闭',
+  DELETED: '已删除',
+  CREATED: '已创建',
+  NOT_STARTED: '未开始',
+};
+function statusToCN(status) {
+  if (!status) return '';
+  const s = String(status).toUpperCase().replace(/-/g, '_');
+  return STATUS_CN[s] || STATUS_CN[String(status).toUpperCase()] || String(status);
+}
 
 // 可手动领取/完成的子工序（其他只展示）
 const ACTIONABLE_STAGES = new Set(['pattern', 'bom', 'process', 'secondary', 'production']);
@@ -14,23 +46,25 @@ Page({
     activeTab: 0,
     tabs: [
       { key: 'overview', name: '概览', icon: '📋' },
+      { key: 'production', name: '生产工序', icon: '📷' },
       { key: 'bom', name: 'BOM', icon: '📦' },
-      { key: 'process', name: '工序', icon: '⚙️' },
+      { key: 'process', name: '工序单价', icon: '⚙️' },
       { key: 'secondary', name: '二次工艺', icon: '🎨' },
       { key: 'pattern', name: '纸样', icon: '📐' },
-      { key: 'production', name: '制单', icon: '📝' },
+      { key: 'sheet', name: '制单', icon: '📝' },
       { key: 'quotation', name: '报价', icon: '💰' },
       { key: 'attachment', name: '附件', icon: '📎' },
     ],
-
-    // 阶段进度
-    stages: [],
     // BOM清单
     bomList: [],
     bomLoading: false,
     // 工序单价
     processList: [],
     processLoading: false,
+    // 生产工序扫码（父子工序，可操作）
+    processStages: [],
+    processScanLoading: false,
+    hasProcessSystem: false,
     // 二次工艺
     secondaryList: [],
     secondaryLoading: false,
@@ -76,19 +110,38 @@ Page({
     try {
       const res = await production.getPatternDetail(patternId);
       const detail = res?.data || res || {};
+      this._patternCover = getAuthedImageUrl(detail.coverImage || detail.styleImage || detail.cover || '');
+      const basicInfo = {
+        color: detail.color || '',
+        size: detail.size || '',
+        quantity: detail.quantity || 0,
+        status: detail.status || '',
+        statusText: statusToCN(detail.status),
+        statusType: (detail.status || '').toLowerCase().replace('_', ''),
+        cover: getAuthedImageUrl(detail.coverImage || detail.styleImage || detail.cover || ''),
+      };
+      this.setData({ _patternBasicInfo: basicInfo });
       const styleId = detail.styleId || detail.styleNo || '';
       if (styleId) {
-        this.setData({ styleId });
+        this.setData({ styleId, patternId });
         this.loadStyleDetail();
       } else {
-        // 没有 styleId，用 patternId 作为兜底显示样衣信息
-        this.setData({ styleInfo: detail, loading: false });
-        wx.showToast({ title: '该样衣暂无关联款式', icon: 'none' });
+        this.setData({
+          styleInfo: {
+            name: detail.styleNo || detail.patternProductionId || '未命名款式',
+            styleNo: detail.styleNo || '',
+            styleCode: '',
+            cover: basicInfo.cover || '',
+            ...basicInfo,
+          },
+          loading: false,
+        });
+        toast.error('该样衣暂无关联款式');
       }
     } catch (e) {
       console.error('获取样衣详情失败', e);
       this.setData({ loading: false });
-      wx.showToast({ title: '加载失败', icon: 'none' });
+      toast.error('加载失败');
     }
   },
 
@@ -97,15 +150,27 @@ Page({
     try {
       const res = await style.getStyleDetail(this.data.styleId);
       const styleInfo = res?.data || res || {};
+      const basic = this.data._patternBasicInfo || {};
+      if (Object.keys(basic).length > 0) {
+        Object.assign(styleInfo, {
+          color: basic.color || styleInfo.color || '',
+          size: basic.size || styleInfo.size || '',
+          quantity: basic.quantity || styleInfo.quantity || 0,
+          status: basic.status || styleInfo.status || '',
+          statusText: statusToCN(basic.status || styleInfo.status),
+          statusType: basic.statusType || styleInfo.statusType || '',
+          cover: basic.cover || getAuthedImageUrl(styleInfo.coverImage || styleInfo.styleImage || styleInfo.cover || ''),
+        });
+      }
       this.setData({ styleInfo, loading: false });
       this.buildStages(styleInfo);
       this.buildStyleImages(styleInfo);
-      // 默认加载概览数据
       this.loadTabData(0);
+      if (this.data.patternId) this.loadProductionScanStages();
     } catch (e) {
       console.error('加载款式详情失败', e);
       this.setData({ loading: false });
-      wx.showToast({ title: '加载失败', icon: 'none' });
+      toast.error('加载失败');
     }
   },
 
@@ -151,11 +216,26 @@ Page({
     this.setData({ stages });
   },
 
-  /** 构建款式图片列表（cover + 附件中的图片） */
+  /** 构建款式图片列表（cover + pattern自带的coverImage + 附件中的图片） */
   buildStyleImages(info) {
     const images = [];
+    // 1. 款式封面
     if (info.cover) images.push(info.cover);
-    // 附件中的图片在加载附件后补充
+    // 2. 样衣审核图片（JSON数组）
+    if (info.sampleReviewImages) {
+      try {
+        const arr = typeof info.sampleReviewImages === 'string'
+          ? JSON.parse(info.sampleReviewImages)
+          : info.sampleReviewImages;
+        if (Array.isArray(arr)) {
+          arr.forEach(url => { if (url && typeof url === 'string') images.push(url); });
+        }
+      } catch (e) { /* 非JSON格式，忽略 */ }
+    }
+    // 3. pattern 自带的 coverImage 兜底
+    if (this._patternCover && !images.includes(this._patternCover)) {
+      images.push(this._patternCover);
+    }
     this.setData({ styleImages: images });
   },
 
@@ -184,11 +264,12 @@ Page({
   loadTabData(idx) {
     const key = this.data.tabs[idx]?.key;
     switch (key) {
+      case 'production': this.loadProductionScanStages(); break; // 生产工序扫码（可操作）
+      case 'process': this.loadStyleProcesses(); break; // 工序单价（款式维度）
       case 'bom': this.loadBom(); break;
-      case 'process': this.loadProcess(); break;
       case 'secondary': this.loadSecondary(); break;
       case 'pattern': this.loadPattern(); break;
-      case 'production': this.loadProduction(); break;
+      case 'sheet': this.loadProduction(); break; // 制单
       case 'quotation': this.loadQuotation(); break;
       case 'attachment': this.loadAttachments(); break;
     }
@@ -206,7 +287,7 @@ Page({
     this.setData({ bomLoading: false });
   },
 
-  async loadProcess() {
+  async loadStyleProcesses() {
     if (this.data.processList.length > 0) return;
     this.setData({ processLoading: true });
     try {
@@ -214,6 +295,91 @@ Page({
       this.setData({ processList: res?.data?.records || res?.data || res?.records || [] });
     } catch (e) { console.error('工序加载失败', e); }
     this.setData({ processLoading: false });
+  },
+
+  /** 加载生产工序扫码（父子工序，可操作） */
+  async loadProductionScanStages() {
+    if (this.data.processStages.length > 0) return;
+    const pid = (this.data.patternId || '').trim();
+    if (!pid) {
+      console.warn('[loadProductionScanStages] patternId为空，跳过加载');
+      return;
+    }
+    this.setData({ processScanLoading: true });
+    try {
+      const [detailRes, configRes, recordsRes] = await Promise.all([
+        production.getPatternDetail(pid),
+        production.getPatternProcessConfig(pid),
+        production.getPatternScanRecords(pid),
+      ]);
+      const detail = detailRes?.data || detailRes || {};
+      const config = configRes?.data || configRes || [];
+      const records = recordsRes?.data || recordsRes || [];
+      const processStages = this._buildProcessStages(config, records, detail);
+      this.setData({
+        processStages,
+        hasProcessSystem: config.length > 0,
+        processScanLoading: false,
+      });
+    } catch (e) {
+      console.error('加载生产工序失败', e);
+      this.setData({ processScanLoading: false });
+    }
+  },
+
+  /** 构建生产工序列表（与列表页一致） */
+  _buildProcessStages(config, records, patternDetail) {
+    if (!config || !Array.isArray(config) || config.length === 0) return [];
+    const completedSet = new Set();
+    (records || []).forEach(r => {
+      const name = r.progressStage || r.processName || r.operationType || '';
+      if (name) completedSet.add(name.trim());
+    });
+    const stages = [];
+    let firstIncompleteIdx = -1;
+    for (let i = 0; i < config.length; i++) {
+      const c = config[i];
+      const processName = String(c.processName || c.operationType || '').trim();
+      const completed = completedSet.has(processName);
+      if (!completed && firstIncompleteIdx === -1) firstIncompleteIdx = i;
+      const stageRecord = (records || []).find(r =>
+        (r.progressStage || r.processName || r.operationType || '').trim() === processName
+      );
+      stages.push({
+        processName,
+        progressStage: c.progressStage || processName,
+        scanType: c.scanType || 'production',
+        completed,
+        canOperate: !completed && i === firstIncompleteIdx,
+        locked: !completed && i > firstIncompleteIdx,
+        lockReason: !completed && i > firstIncompleteIdx ? '前置工序未完成' : '',
+        color: patternDetail.color || (stageRecord && stageRecord.color) || '',
+        size: patternDetail.size || (stageRecord && stageRecord.size) || '',
+        quantity: patternDetail.quantity || (stageRecord && stageRecord.quantity) || 0,
+        operatorName: stageRecord && stageRecord.operatorName ? stageRecord.operatorName : '',
+        time: stageRecord && stageRecord.scanTime
+          ? String(stageRecord.scanTime).substring(0, 16).replace('T', ' ')
+          : '',
+      });
+    }
+    return stages;
+  },
+
+  /** 点击生产工序 → 跳转扫码页 */
+  onProductionProcessOperate(e) {
+    const stage = e.currentTarget.dataset.stage;
+    const patternId = this.data.patternId;
+    if (!stage || !patternId) return;
+    if (stage.locked) { toast.error(stage.lockReason || '前置工序未完成'); return; }
+    if (!stage.canOperate) {
+      if (stage.completed) toast.error('该工序已完成');
+      return;
+    }
+    const url = `/pages/scan/pattern/index?patternId=${encodeURIComponent(patternId)}` +
+      `&manual=1&processName=${encodeURIComponent(stage.processName || '')}` +
+      `&progressStage=${encodeURIComponent(stage.progressStage || '')}` +
+      `&scanType=${encodeURIComponent(stage.scanType || '')}`;
+    wx.navigateTo({ url }).catch(() => {});
   },
 
   async loadSecondary() {
@@ -343,7 +509,7 @@ Page({
         wx.showToast({ title: '领取成功', icon: 'success' });
         this.loadStyleDetail();
       } catch (e) {
-        wx.showToast({ title: '领取失败', icon: 'none' });
+        toast.error('领取失败');
       }
     };
 
@@ -380,7 +546,7 @@ Page({
           wx.showToast({ title: '已确认完成', icon: 'success' });
           this.loadStyleDetail();
         } catch (e) {
-          wx.showToast({ title: '操作失败', icon: 'none' });
+          toast.error('操作失败');
         }
       }
     });
@@ -402,10 +568,10 @@ Page({
         try {
           const reason = (res.content || '').trim();
           await style.stageAction(this.data.styleId, stageKey, 'reset', reason || undefined);
-          wx.showToast({ title: '已退回', icon: 'success' });
+          toast.success('已退回');
           this.loadStyleDetail();
         } catch (e) {
-          wx.showToast({ title: '退回失败', icon: 'none' });
+          toast.error('退回失败');
         }
       }
     });

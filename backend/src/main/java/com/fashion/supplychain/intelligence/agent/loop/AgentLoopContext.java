@@ -90,6 +90,28 @@ public class AgentLoopContext {
         this.structuredResponse = response;
     }
 
+    /**
+     * Per-call 模型选择（接入点4：AgentLoopEngine 在第一次 LLM 调用前设置）。
+     * modelTier 为 null 表示使用默认模型（不进行 per-call 覆盖）。
+     */
+    @Getter
+    private String modelTier;
+    @Getter
+    private String modelId;
+
+    public void setModelTier(String modelTier) {
+        this.modelTier = modelTier;
+    }
+
+    public void setModelId(String modelId) {
+        this.modelId = modelId;
+    }
+
+    /** 是否已应用 per-call 模型选择 */
+    public boolean hasModelSelection() {
+        return modelId != null && !modelId.isBlank();
+    }
+
     private long deadlineMs;
     private AtomicBoolean cancelled;
 

@@ -11,6 +11,8 @@ import org.springframework.context.annotation.Lazy;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -35,27 +37,49 @@ public class EntityMemoryContextService {
             return "";
         }
 
+        // DB 实体记忆查询与 Qdrant 语义向量搜索无依赖关系，并行执行（原串行 200-500ms → 并行 ≤ max(单步)）
+        CompletableFuture<String> entityFuture = CompletableFuture.supplyAsync(() -> {
+            try {
+                return lookupEntityMemories(tenantId, userMessage);
+            } catch (Exception e) {
+                log.debug("[EntityMemory] 实体记忆加载跳过: {}", e.getMessage());
+                return "";
+            }
+        });
+
+        CompletableFuture<String> semanticFuture = CompletableFuture.supplyAsync(() -> {
+            try {
+                return searchSimilarMemories(tenantId, userMessage);
+            } catch (Exception e) {
+                log.debug("[EntityMemory] 语义记忆搜索跳过: {}", e.getMessage());
+                return "";
+            }
+        });
+
+        // 等待两路完成（2s 超时保护，单步失败不影响另一步）
+        String entityCtx = "";
+        String semanticCtx = "";
+        try {
+            CompletableFuture.allOf(entityFuture, semanticFuture).get(2, TimeUnit.SECONDS);
+        } catch (Exception e) {
+            log.debug("[EntityMemory] 并行构建部分超时: {}", e.getMessage());
+        }
+        try {
+            entityCtx = entityFuture.getNow("");
+        } catch (Exception ignored) { }
+        try {
+            semanticCtx = semanticFuture.getNow("");
+        } catch (Exception ignored) { }
+
+        // 保持原有合并格式：entityCtx 在前，semanticCtx 在后，中间用 \n 分隔
         StringBuilder ctx = new StringBuilder();
-
-        try {
-            String entityCtx = lookupEntityMemories(tenantId, userMessage);
-            if (!entityCtx.isEmpty()) {
-                ctx.append(entityCtx);
-            }
-        } catch (Exception e) {
-            log.debug("[EntityMemory] 实体记忆加载跳过: {}", e.getMessage());
+        if (entityCtx != null && !entityCtx.isEmpty()) {
+            ctx.append(entityCtx);
         }
-
-        try {
-            String semanticCtx = searchSimilarMemories(tenantId, userMessage);
-            if (!semanticCtx.isEmpty()) {
-                if (ctx.length() > 0) ctx.append("\n");
-                ctx.append(semanticCtx);
-            }
-        } catch (Exception e) {
-            log.debug("[EntityMemory] 语义记忆搜索跳过: {}", e.getMessage());
+        if (semanticCtx != null && !semanticCtx.isEmpty()) {
+            if (ctx.length() > 0) ctx.append("\n");
+            ctx.append(semanticCtx);
         }
-
         return ctx.toString();
     }
 

@@ -74,7 +74,10 @@ const useStyleBomMutations = ({
     const nextItem: Record<string, any> = { ...item, ...row, groupName: '' };
     const conversionRate = Number(row?.conversionRate ?? nextItem.conversionRate ?? 1) || 1;
     const rawSizeUsageMap = activeSizes.length
-      ? Object.fromEntries(activeSizes.map((size) => [size, Number(row?.sizeUsageMapObject?.[size] ?? item.usageAmount ?? nextItem.usageAmount ?? 0)]))
+      ? Object.fromEntries(activeSizes.map((size) => {
+          const raw = Number(row?.sizeUsageMapObject?.[size] ?? item.usageAmount ?? nextItem.usageAmount ?? 0);
+          return [size, Math.round(raw * 10000) / 10000]; // 精度控制：4位小数，避免浮点污染
+        }))
       : parseNumberMap(item.patternSizeUsageMap || item.sizeUsageMap);
 
     nextItem.patternUnit = resolvePatternUnit(nextItem as StyleBom);

@@ -1,4 +1,5 @@
 const api = require('../../../../utils/api');
+const { toast } = require('../../../../utils/uiHelper');
 
 function today() {
   const d = new Date();
@@ -455,11 +456,11 @@ Page({
     const self = this;
     api.production.createOrder(payload).then(function () {
       self.setData({ submitting: false });
-      wx.showToast({ title: '下单成功', icon: 'success' });
+      toast.success('下单成功');
       setTimeout(function () { wx.navigateBack(); }, 1500);
     }).catch(function (err) {
       self.setData({ submitting: false });
-      wx.showToast({ title: (err && err.message) || '下单失败', icon: 'none', duration: 3000 });
+      toast.error((err && err.message) || '下单失败');
     });
   },
 });

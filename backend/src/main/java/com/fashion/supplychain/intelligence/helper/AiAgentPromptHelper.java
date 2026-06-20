@@ -43,6 +43,18 @@ public class AiAgentPromptHelper {
     @Autowired(required = false)
     private AiAgentMemoryHelper memoryHelper;
 
+    /** L4 程序性记忆：人工 SOP 注入（五层记忆模型第四章） */
+    @Autowired(required = false)
+    private com.fashion.supplychain.intelligence.service.ProceduralMemoryService proceduralMemoryService;
+
+    /** L5 归档记忆：冷数据召回（五层记忆模型第五章） */
+    @Autowired(required = false)
+    private com.fashion.supplychain.intelligence.service.MemoryArchiveService memoryArchiveService;
+
+    /** GEPA 遗传优化器：对 17 个 prompt 块应用优化值（enabled/weight） */
+    @Autowired(required = false)
+    private com.fashion.supplychain.intelligence.service.GepaPromptOptimizer gepaPromptOptimizer;
+
     /** P2升级: 结构化输出强制执行 */
     @Autowired(required = false)
     private com.fashion.supplychain.intelligence.service.StructuredOutputEnforcer outputEnforcer;
@@ -102,13 +114,20 @@ public class AiAgentPromptHelper {
         CompletableFuture<String> graphRagCtx = supplyAsync(() -> contextProvider.buildGraphRagContext(tenantId, userMessage));
         CompletableFuture<String> factoryProfileCtx = supplyAsync(() -> contextProvider.buildFactoryProfileContext(tenantId, userMessage));
         CompletableFuture<String> proceduralMemCtx = supplyAsync(() -> memoryHelper.buildProceduralMemoryBlock());
+        // L4 程序性记忆：人工 SOP（按 trigger_keywords 精确匹配，区别于上面的自动学习模式）
+        final Long tenantIdForSop = tenantId;
+        final String userMessageForSop = userMessage;
+        CompletableFuture<String> proceduralSopCtx = supplyAsync(() -> buildProceduralSopBlock(tenantIdForSop, userMessageForSop));
+        // L5 归档记忆：用户问"之前/历史/上次"时召回冷数据
+        CompletableFuture<String> archivalMemCtx = supplyAsync(() -> buildArchivalMemoryBlock(tenantIdForSop, userMessageForSop));
 
         String intelligenceContext = safeJoin(intelligenceCtx, "实时经营上下文");
         String workerProfileBlock = safeJoin(workerProfile, "工人画像");
         String mgmtInsightBlock = safeJoin(mgmtInsight, "管理层快照");
         String longTermMemBlock = safeJoin(longTermMem, "长期记忆");
         String memoryContext = safeJoin(memoryCtx, "历史对话");
-        String ragContext = safeJoin(ragCtx, "RAG检索");
+        // 重查询块（RAG/EntityMemory/GraphRag 涉及 DB+Qdrant）单独设置 1.5s 更短超时，避免慢查询阻塞
+        String ragContext = safeJoinWithTimeout(ragCtx, 1500, "RAG检索");
         String userBehaviorBlock = safeJoin(userBehavior, "行为画像");
         String activePatrolBlock = safeJoinWithTimeout(activePatrol, 800, "巡查风险");
         String exceptionReportBlock = safeJoin(exceptionReport, "异常报告");
@@ -116,10 +135,12 @@ public class AiAgentPromptHelper {
         String userProfileBlockStr = safeJoin(userProfileBlock, "用户画像");
         String memoryBankBlockStr = safeJoin(memoryBankBlock, "MemoryBank");
         String selfCritiqueBlock = safeJoin(selfCritiqueCtx, "自我评分反馈");
-        String entityMemoryBlock = safeJoin(entityMemCtx, "实体记忆");
-        String graphRagBlock = safeJoin(graphRagCtx, "知识图谱");
+        String entityMemoryBlock = safeJoinWithTimeout(entityMemCtx, 1500, "实体记忆");
+        String graphRagBlock = safeJoinWithTimeout(graphRagCtx, 1500, "知识图谱");
         String factoryProfileBlock = safeJoin(factoryProfileCtx, "工厂画像");
         String proceduralMemBlock = safeJoin(proceduralMemCtx, "程序记忆");
+        String proceduralSopBlock = safeJoin(proceduralSopCtx, "L4程序性SOP");
+        String archivalMemBlock = safeJoin(archivalMemCtx, "L5归档记忆");
 
         String masFromFuture = safeJoin(masInsightCtx, "多Agent分析");
         String masFromCache = buildMasInsightBlock();
@@ -137,7 +158,8 @@ public class AiAgentPromptHelper {
         String prompt = assemblePrompt(contextBlock, pageCtxBlock, roleBlock, exceptionReportBlock, activePatrolBlock,
                 masInsightBlock, intelligenceContext, longTermMemBlock, memoryContext, ragContext,
                 userBehaviorBlock, contextFileBlockStr, userProfileBlockStr, memoryBankBlockStr, selfCritiqueBlock,
-                entityMemoryBlock, graphRagBlock, factoryProfileBlock, proceduralMemBlock, formatHint,
+                entityMemoryBlock, graphRagBlock, factoryProfileBlock, proceduralMemBlock, proceduralSopBlock,
+                archivalMemBlock, formatHint,
                 toolGuide, domainHint);
 
         if (prompt.length() > maxSystemPromptChars) {
@@ -219,7 +241,7 @@ public class AiAgentPromptHelper {
     private interface Supplier<T> { T get(); }
 
     private String safeJoin(CompletableFuture<String> future, String label) {
-        try { return future.get(5, TimeUnit.SECONDS); }
+        try { return future.get(2, TimeUnit.SECONDS); }
         catch (Exception e) { log.debug("[AiAgent-Prompt] {}构建超时或失败，跳过: {}", label, e.getMessage()); return ""; }
     }
 
@@ -271,6 +293,63 @@ public class AiAgentPromptHelper {
             }
         } catch (Exception e) { log.debug("[AiAgent-MemoryBank] 上下文注入跳过: {}", e.getMessage()); }
         return "";
+    }
+
+    /**
+     * L4 程序性记忆：人工 SOP 注入（五层记忆模型第四章）。
+     *
+     * <p>按 trigger_keywords 精确匹配用户意图，命中则注入结构化 SOP 步骤。
+     * 降级安全：ProceduralMemoryService 不可用或异常时返回空字符串，不影响主流程。
+     */
+    private String buildProceduralSopBlock(Long tenantId, String userMessage) {
+        if (proceduralMemoryService == null || tenantId == null || userMessage == null) return "";
+        try {
+            String sopBlock = proceduralMemoryService.buildProceduralSopBlock(tenantId, userMessage);
+            if (sopBlock != null && !sopBlock.isEmpty()) {
+                log.debug("[AiAgent-L4SOP] 已注入租户{}的SOP上下文 ({}字符)", tenantId, sopBlock.length());
+                return sopBlock;
+            }
+        } catch (Exception e) {
+            log.debug("[AiAgent-L4SOP] SOP注入失败（不影响主流程）: {}", e.getMessage());
+        }
+        return "";
+    }
+
+    /**
+     * L5 归档记忆：冷数据召回（五层记忆模型第五章）。
+     *
+     * <p>仅当用户消息含"之前/历史/上次/以前"等历史召回关键词时触发，
+     * 从 Qdrant archival_memory_{tenantId} collection 向量搜索召回。
+     * 降级安全：MemoryArchiveService 不可用或 Qdrant 不可用时返回空字符串。
+     */
+    private String buildArchivalMemoryBlock(Long tenantId, String userMessage) {
+        if (memoryArchiveService == null || tenantId == null || userMessage == null) return "";
+        // 关键词触发（低优先级，避免每轮都查 Qdrant）
+        if (!containsHistoryKeywords(userMessage)) return "";
+        try {
+            java.util.List<com.fashion.supplychain.intelligence.service.MemoryArchiveService.ArchivalMemoryHit> hits =
+                    memoryArchiveService.searchArchival(tenantId, userMessage, 3);
+            if (hits == null || hits.isEmpty()) return "";
+            StringBuilder sb = new StringBuilder("\n【L5 归档记忆：历史召回】\n");
+            sb.append("以下是从 6 个月前的历史会话中召回的相关记忆（可能已过时，请用工具验证关键数据）：\n\n");
+            for (com.fashion.supplychain.intelligence.service.MemoryArchiveService.ArchivalMemoryHit hit : hits) {
+                sb.append("• (").append(hit.getCreateTime() != null ? hit.getCreateTime() : "未知日期").append(") ");
+                sb.append(hit.getSummary() != null ? hit.getSummary() : "").append("\n");
+            }
+            log.debug("[AiAgent-L5Archival] 已注入租户{}的归档记忆 ({}条)", tenantId, hits.size());
+            return sb.toString();
+        } catch (Exception e) {
+            log.debug("[AiAgent-L5Archival] 归档召回失败（不影响主流程）: {}", e.getMessage());
+        }
+        return "";
+    }
+
+    /** 检测用户消息是否含历史召回关键词 */
+    private boolean containsHistoryKeywords(String message) {
+        if (message == null) return false;
+        return message.contains("之前") || message.contains("历史") || message.contains("上次")
+                || message.contains("以前") || message.contains("前次") || message.contains("曾经")
+                || message.contains("之前那个") || message.contains("之前说的");
     }
 
     public String buildUserContextBlock() {
@@ -420,11 +499,15 @@ public class AiAgentPromptHelper {
             String userBehaviorBlock, String contextFileBlockStr, String userProfileBlockStr,
             String memoryBankBlockStr, String selfCritiqueBlock, String entityMemoryBlock,
             String graphRagBlock, String factoryProfileBlock, String proceduralMemBlock,
+            String proceduralSopBlock, String archivalMemBlock,
             String formatHint, String toolGuide, String domainHint) {
         String identity = promptTemplateLoader.getBaseIdentity();
         if (identity == null || identity.isBlank()) {
             identity = "你是小云——服装供应链首席运营顾问，由云裳智链Trivia团队开发。";
         }
+
+        // 加载 GEPA 已应用优化个体（applied=1），对 17 个 prompt 块应用 enabled/weight 优化
+        com.fashion.supplychain.intelligence.service.GepaPromptOptimizer.PromptIndividual gepaInd = loadGepaIndividual();
 
         // ===== P0升级: Prompt Caching 优化 =====
         // 原则：所有静态、可复用的内容放在 prompt 最前面，形成稳定前缀。
@@ -437,22 +520,22 @@ public class AiAgentPromptHelper {
         // ── 第1层：稳定前缀（可缓存 ~5000 tokens）──────────────
         prompt.append("<!--CACHE_STABLE_BEGIN-->");
         prompt.append(identity).append("\n\n");
-        prompt.append("<!--BLOCK:principles-->").append(promptTemplateLoader.getBasePrinciples()).append("<!--/BLOCK:principles-->\n\n");
-        prompt.append(promptTemplateLoader.getCollaborationRules()).append("\n\n");
-        prompt.append(promptTemplateLoader.getToolStrategy()).append("\n\n");
-        prompt.append(promptTemplateLoader.getToolAntiPatterns()).append("\n\n");
-        prompt.append(promptTemplateLoader.getThinkToolGuide()).append("\n\n");
-        prompt.append(promptTemplateLoader.getOutputRequirements()).append("\n\n");
-        prompt.append(promptTemplateLoader.getExecutionRules()).append("\n\n");
-        prompt.append(promptTemplateLoader.getFollowupFormat()).append("\n\n");
-        prompt.append(promptTemplateLoader.getRichMediaFormat()).append("\n\n");
-        prompt.append(promptTemplateLoader.getSelfCritiqueFeedback()).append("\n\n");
-        prompt.append(buildMemoryLimitationsBlock());
+        prompt.append("<!--BLOCK:principles-->").append(applyGepaGene("principles", promptTemplateLoader.getBasePrinciples(), gepaInd)).append("<!--/BLOCK:principles-->\n\n");
+        prompt.append(applyGepaGene("collaboration", promptTemplateLoader.getCollaborationRules(), gepaInd)).append("\n\n");
+        prompt.append(applyGepaGene("toolStrategy", promptTemplateLoader.getToolStrategy(), gepaInd)).append("\n\n");
+        prompt.append(applyGepaGene("toolAntiPatterns", promptTemplateLoader.getToolAntiPatterns(), gepaInd)).append("\n\n");
+        prompt.append(applyGepaGene("thinkToolGuide", promptTemplateLoader.getThinkToolGuide(), gepaInd)).append("\n\n");
+        prompt.append(applyGepaGene("outputRequirements", promptTemplateLoader.getOutputRequirements(), gepaInd)).append("\n\n");
+        prompt.append(applyGepaGene("executionRules", promptTemplateLoader.getExecutionRules(), gepaInd)).append("\n\n");
+        prompt.append(applyGepaGene("followupFormat", promptTemplateLoader.getFollowupFormat(), gepaInd)).append("\n\n");
+        prompt.append(applyGepaGene("richMediaFormat", promptTemplateLoader.getRichMediaFormat(), gepaInd)).append("\n\n");
+        prompt.append(applyGepaGene("selfCritiqueFeedback", promptTemplateLoader.getSelfCritiqueFeedback(), gepaInd)).append("\n\n");
+        prompt.append(applyGepaGene("memoryLimitations", buildMemoryLimitationsBlock(), gepaInd));
         prompt.append("<!--CACHE_STABLE_END-->");
 
         // ── 第2层：工具/领域（半稳定，工具集变化时刷新）────
-        prompt.append("<!--BLOCK:toolGuide-->").append(toolGuide).append("<!--/BLOCK:toolGuide-->");
-        prompt.append("<!--BLOCK:domainHint-->").append(domainHint).append("<!--/BLOCK:domainHint-->");
+        prompt.append("<!--BLOCK:toolGuide-->").append(applyGepaGene("toolGuide", toolGuide, gepaInd)).append("<!--/BLOCK:toolGuide-->");
+        prompt.append("<!--BLOCK:domainHint-->").append(applyGepaGene("domainHint", domainHint, gepaInd)).append("<!--/BLOCK:domainHint-->");
         // P2升级: 结构化输出格式提示
         if (formatHint != null && !formatHint.isBlank()) {
             prompt.append("<!--BLOCK:formatHint-->").append(formatHint).append("<!--/BLOCK:formatHint-->");
@@ -460,28 +543,95 @@ public class AiAgentPromptHelper {
 
         // ── 第3层：动态上下文（每次变化，不缓存）──────────
         prompt.append("<!--CACHE_DYNAMIC_BEGIN-->");
-        prompt.append("<!--BLOCK:context-->").append(contextBlock).append("<!--/BLOCK:context-->\n");
+        prompt.append("<!--BLOCK:context-->").append(applyGepaGene("context", contextBlock, gepaInd)).append("<!--/BLOCK:context-->\n");
         prompt.append("<!--BLOCK:pageContext-->").append(pageCtxBlock).append("<!--/BLOCK:pageContext-->");
         prompt.append("<!--BLOCK:role-->").append(roleBlock).append("<!--/BLOCK:role-->");
         prompt.append("<!--BLOCK:exceptionReport-->").append(exceptionReportBlock).append("<!--/BLOCK:exceptionReport-->");
         prompt.append("<!--BLOCK:activePatrol-->").append(activePatrolBlock).append("<!--/BLOCK:activePatrol-->");
         prompt.append("<!--BLOCK:masInsight-->").append(masInsightBlock).append("<!--/BLOCK:masInsight-->");
-        prompt.append("<!--BLOCK:intelligence-->").append(intelligenceContext).append("<!--/BLOCK:intelligence-->\n");
+        prompt.append("<!--BLOCK:intelligence-->").append(applyGepaGene("intelligence", intelligenceContext, gepaInd)).append("<!--/BLOCK:intelligence-->\n");
         prompt.append("<!--BLOCK:selfCritique-->").append(selfCritiqueBlock).append("<!--/BLOCK:selfCritique-->");
         prompt.append("<!--BLOCK:longTermMem-->").append(longTermMemBlock).append("<!--/BLOCK:longTermMem-->");
         prompt.append("<!--BLOCK:memory-->").append(memoryContext).append("<!--/BLOCK:memory-->");
-        prompt.append("<!--BLOCK:memoryBank-->").append(memoryBankBlockStr).append("<!--/BLOCK:memoryBank-->");
+        prompt.append("<!--BLOCK:memoryBank-->").append(applyGepaGene("memoryBank", memoryBankBlockStr, gepaInd)).append("<!--/BLOCK:memoryBank-->");
         prompt.append("<!--BLOCK:entityMemory-->").append(entityMemoryBlock).append("<!--/BLOCK:entityMemory-->");
         prompt.append("<!--BLOCK:graphRag-->").append(graphRagBlock).append("<!--/BLOCK:graphRag-->");
         prompt.append("<!--BLOCK:factoryProfile-->").append(factoryProfileBlock).append("<!--/BLOCK:factoryProfile-->");
         prompt.append("<!--BLOCK:proceduralMem-->").append(proceduralMemBlock).append("<!--/BLOCK:proceduralMem-->");
-        prompt.append("<!--BLOCK:rag-->").append(ragContext).append("<!--/BLOCK:rag-->");
+        // L4 程序性记忆：人工 SOP（按 trigger_keywords 精确匹配，命中即注入）
+        if (proceduralSopBlock != null && !proceduralSopBlock.isEmpty()) {
+            prompt.append("<!--BLOCK:proceduralSopCtx-->").append(proceduralSopBlock).append("<!--/BLOCK:proceduralSopCtx-->");
+        }
+        // L5 归档记忆：冷数据召回（低优先级，仅在用户问历史时触发）
+        if (archivalMemBlock != null && !archivalMemBlock.isEmpty()) {
+            prompt.append("<!--BLOCK:archivalMemCtx-->").append(archivalMemBlock).append("<!--/BLOCK:archivalMemCtx-->");
+        }
+        prompt.append("<!--BLOCK:rag-->").append(applyGepaGene("rag", ragContext, gepaInd)).append("<!--/BLOCK:rag-->");
         prompt.append("<!--BLOCK:userBehavior-->").append(userBehaviorBlock).append("<!--/BLOCK:userBehavior-->");
         prompt.append("<!--BLOCK:contextFile-->").append(contextFileBlockStr).append("<!--/BLOCK:contextFile-->");
         prompt.append("<!--BLOCK:userProfile-->").append(userProfileBlockStr).append("<!--/BLOCK:userProfile-->");
         prompt.append("<!--CACHE_DYNAMIC_END-->");
 
         return prompt.toString();
+    }
+
+    /**
+     * 加载 GEPA 已应用优化个体（applied=1 的最新记录）。
+     * 失败时返回 null，调用方降级到原始流程（不应用 GEPA 优化）。
+     */
+    private com.fashion.supplychain.intelligence.service.GepaPromptOptimizer.PromptIndividual loadGepaIndividual() {
+        if (gepaPromptOptimizer == null) return null;
+        try {
+            Long tenantId = UserContext.tenantId();
+            if (tenantId == null) return null;
+            return gepaPromptOptimizer.getAppliedIndividual(tenantId).orElse(null);
+        } catch (Exception e) {
+            log.debug("[AiAgent-GEPA] 加载优化个体失败，降级到原始流程: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * 对单个 prompt 块应用 GEPA 优化值。
+     *
+     * <p>优化策略：
+     * <ul>
+     *   <li>gene.enabled=false 且非核心块 → 返回空字符串（禁用该块）</li>
+     *   <li>gene.weight<1.0 且块长度>200 → 按 weight 比例缩减（最少保留 200 字符）</li>
+     *   <li>核心块（principles/toolGuide/memoryLimitations）保护：不应用 enabled=false</li>
+     *   <li>gene=null 或 gepaInd=null → 返回原内容（降级）</li>
+     * </ul>
+     */
+    private String applyGepaGene(String blockName, String blockContent,
+                                   com.fashion.supplychain.intelligence.service.GepaPromptOptimizer.PromptIndividual gepaInd) {
+        if (gepaInd == null || blockContent == null || blockContent.isEmpty()) return blockContent;
+        com.fashion.supplychain.intelligence.service.GepaPromptOptimizer.GeneConfig gene = gepaInd.getGenes().get(blockName);
+        if (gene == null) return blockContent;
+
+        // 核心块保护：不应用 enabled=false
+        if (!gene.isEnabled() && !isProtectedBlock(blockName)) {
+            log.debug("[AiAgent-GEPA] 块 {} 被 GEPA 禁用", blockName);
+            return "";
+        }
+
+        // weight 截断：weight<1.0 时按比例缩减
+        if (gene.getWeight() < 1.0 && blockContent.length() > 200) {
+            int targetLen = (int) (blockContent.length() * gene.getWeight());
+            targetLen = Math.max(200, targetLen);
+            if (targetLen < blockContent.length()) {
+                int cutAt = blockContent.lastIndexOf('\n', targetLen);
+                if (cutAt < 100) cutAt = targetLen;
+                log.debug("[AiAgent-GEPA] 块 {} 按 weight={} 缩减 {}→{} 字符",
+                        blockName, gene.getWeight(), blockContent.length(), cutAt);
+                return blockContent.substring(0, cutAt) + "…\n";
+            }
+        }
+        return blockContent;
+    }
+
+    private boolean isProtectedBlock(String blockName) {
+        return "principles".equals(blockName) || "toolGuide".equals(blockName)
+                || "memoryLimitations".equals(blockName);
     }
 
     public String describePageContext(String path) {

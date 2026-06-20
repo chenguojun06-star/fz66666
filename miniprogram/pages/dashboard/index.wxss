@@ -170,13 +170,14 @@
   gap: 10px;
 }
 
-/* 封面图 */
+/* 封面图 - 长方形，与样衣开发一致 */
 .order-cover {
-  width: 90px;
-  height: 120px;
-  border-radius: 8px;
+  width: 120rpx;
+  height: 160rpx;
+  border-radius: var(--radius-md);
   overflow: hidden;
   flex-shrink: 0;
+  background: var(--color-bg-gray);
 }
 .cover-pic {
   width: 100%;
@@ -185,13 +186,12 @@
 .cover-placeholder {
   width: 100%;
   height: 100%;
-  background: var(--color-bg-gray);
   display: flex;
   align-items: center;
   justify-content: center;
 }
 .cover-ph-text {
-  font-size: 28px;
+  font-size: 36rpx;
 }
 
 /* 信息区 */
@@ -200,77 +200,42 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 6rpx;
 }
 
-.info-line1 {
+/* 顶部：订单号 + status tag */
+.info-top {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 10rpx;
+  flex-wrap: wrap;
 }
 .order-no {
-  font-size: 15px;
+  font-size: 28rpx;
   font-weight: 600;
   color: var(--color-text-primary);
 }
-
-/* 标签 */
-.badge {
-  font-size: 10px;
-  padding: 2px 7px;
-  border-radius: 4px;
-  font-weight: 500;
-  line-height: 16px;
-}
-.badge-urgent {
-  background: rgba(239, 68, 68, 0.1);
-  color: var(--color-danger);
-}
-.badge-gray {
-  background: rgba(120, 120, 128, 0.1);
-  color: var(--color-text-tertiary);
-}
-.badge-blue {
-  background: rgba(59, 130, 246, 0.1);
-  color: var(--color-primary);
-  font-size: 10px;
-  padding: 2px 7px;
-  border-radius: 4px;
-  font-weight: 500;
-  line-height: 16px;
-}
-
-.info-line2 {
+/* 规格信息行 - 标签+值（款号、工厂、交期等） */
+.info-spec-row {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 12rpx;
+  flex-wrap: wrap;
 }
-.info-style {
-  font-size: 13px;
-  color: var(--color-text-secondary);
-}
-.info-divider {
-  font-size: 12px;
-  color: var(--color-border-light);
-}
-.info-factory {
-  font-size: 12px;
+.info-spec-label {
+  font-size: 22rpx;
   color: var(--color-text-tertiary);
 }
+.info-spec-value {
+  font-size: 24rpx;
+  color: var(--color-text-primary);
+  font-weight: 500;
+}
 
-.info-line3 {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.info-delivery {
-  font-size: 12px;
-  color: var(--color-text-secondary);
-}
 .info-remain {
-  font-size: 11px;
-  padding: 2px 8px;
-  border-radius: 4px;
+  font-size: 20rpx;
+  padding: 4rpx 12rpx;
+  border-radius: var(--radius-sm);
   font-weight: 500;
 }
 /* 剩余天数颜色 */
@@ -303,11 +268,11 @@
 .info-qty-row {
   display: flex;
   align-items: baseline;
-  gap: 4px;
-  padding-top: 2px;
+  gap: 4rpx;
+  padding-top: 4rpx;
 }
 .iq-num {
-  font-size: 14px;
+  font-size: 26rpx;
   font-weight: 600;
   color: var(--color-text-primary);
 }
@@ -318,38 +283,38 @@
   color: var(--color-text-secondary);
 }
 .iq-lbl {
-  font-size: 10px;
+  font-size: 20rpx;
   color: var(--color-text-tertiary);
-  margin-right: 8px;
+  margin-right: 16rpx;
 }
 
 /* — 进度条（交期下方） — */
 .info-progress {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 16rpx;
 }
 .ip-bar {
   flex: 1;
-  height: 3px;
+  height: 6rpx;
   background: rgba(0, 0, 0, 0.06);
-  border-radius: 2px;
+  border-radius: 4rpx;
   overflow: hidden;
 }
 .ip-fill {
   height: 100%;
   background: var(--color-primary);
-  border-radius: 2px;
+  border-radius: 4rpx;
   transition: width 0.3s;
 }
 .ip-fill--overdue {
   background: var(--color-danger);
 }
 .ip-pct {
-  font-size: 11px;
+  font-size: 22rpx;
   font-weight: 600;
   color: var(--color-text-secondary);
-  min-width: 30px;
+  min-width: 60rpx;
   text-align: right;
 }
 
@@ -517,6 +482,11 @@
 .act-btn--warn {
   color: #ad6800;
   background: rgba(250, 173, 20, 0.12);
+}
+.act-btn--detail {
+  color: #7c5cfc;
+  background: rgba(124, 92, 252, 0.1);
+  font-weight: 600;
 }
 
 /* ============ 加载 / 空状态 ============ */

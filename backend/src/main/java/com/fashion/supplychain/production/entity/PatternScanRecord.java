@@ -43,6 +43,21 @@ public class PatternScanRecord {
     private String color;
 
     /**
+     * 码数
+     */
+    private String size;
+
+    /**
+     * 数量
+     */
+    private Integer quantity;
+
+    /**
+     * 款号名称
+     */
+    private String styleName;
+
+    /**
      * 操作类型：RECEIVE(领取), PLATE(车板), FOLLOW_UP(跟单), COMPLETE(完成),
      * WAREHOUSE_IN(入库), WAREHOUSE_OUT(出库), WAREHOUSE_RETURN(归还)
      */

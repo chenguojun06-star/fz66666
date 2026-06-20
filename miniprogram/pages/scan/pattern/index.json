@@ -1,6 +1,9 @@
 {
   "navigationBarTitleText": "样板生产",
+  "enablePullDownRefresh": true,
+  "backgroundColor": "#ededed",
   "usingComponents": {
-    "image-preview": "/components/common/image-preview/index"
+    "image-preview": "/components/common/image-preview/index",
+    "empty-state": "/components/empty-state/empty-state"
   }
 }

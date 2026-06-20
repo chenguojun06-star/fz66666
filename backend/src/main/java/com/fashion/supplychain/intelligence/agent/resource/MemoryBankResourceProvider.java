@@ -43,14 +43,22 @@ public class MemoryBankResourceProvider implements McpResourceProvider {
         return uri != null && uri.startsWith(URI_PREFIX);
     }
 
+    /** ATBA：记忆读取为查询类，5s 预算 */
+    @Override
+    public String toolType() {
+        return McpTimeoutBudget.QUERY;
+    }
+
     @Override
     public List<McpResource> listResources(Long tenantId) {
         List<McpResource> resources = new ArrayList<>();
         for (Category cat : Category.values()) {
             McpResource r = new McpResource();
-            r.setUri(URI_PREFIX + cat.getKey());
+            // URI 用连字符（符合 URI 规范），parseCategory 同时兼容下划线
+            r.setUri(URI_PREFIX + cat.getKey().replace('_', '-'));
             r.setName(cat.getKey());
-            r.setDescription(cat.getDescription());
+            // 安全修复：sanitize description 防 prompt injection
+            r.setDescription(McpResourceSanitizer.sanitizeDescription(cat.getDescription()));
             r.setMimeType(MIME_TYPE);
             resources.add(r);
         }
@@ -64,6 +72,7 @@ public class MemoryBankResourceProvider implements McpResourceProvider {
             String categoryKey = uri.substring(URI_PREFIX.length());
             Category cat = parseCategory(categoryKey);
             if (cat == null) {
+                result.setError(McpToolError.notFound(uri));
                 result.setContents(List.of(Map.of(
                         "uri", uri,
                         "mimeType", "text/plain",
@@ -80,6 +89,7 @@ public class MemoryBankResourceProvider implements McpResourceProvider {
             )));
         } catch (Exception e) {
             log.warn("[MemoryBankResource] 读取失败 uri={} tenant={} err={}", uri, tenantId, e.getMessage());
+            result.setError(McpToolError.internal(e.getMessage()));
             result.setContents(List.of(Map.of(
                     "uri", uri,
                     "mimeType", "text/plain",
@@ -90,8 +100,10 @@ public class MemoryBankResourceProvider implements McpResourceProvider {
     }
 
     private Category parseCategory(String key) {
+        // 兼容连字符（URI 风格 product-context）和下划线（DB key product_context）两种格式
+        String normalized = key == null ? "" : key.replace('-', '_');
         for (Category cat : Category.values()) {
-            if (cat.getKey().equals(key)) return cat;
+            if (cat.getKey().equals(normalized)) return cat;
         }
         return null;
     }

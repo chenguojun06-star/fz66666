@@ -596,10 +596,10 @@ public class MaterialPurchaseOrchestratorHelper {
 
     public java.math.BigDecimal coerceBigDecimal(Object v) {
         if (v == null) return null;
-        if (v instanceof java.math.BigDecimal bd) return bd;
-        if (v instanceof Number number) return java.math.BigDecimal.valueOf(number.doubleValue());
+        if (v instanceof java.math.BigDecimal bd) return bd.setScale(4, java.math.RoundingMode.HALF_UP);
+        if (v instanceof Number number) return java.math.BigDecimal.valueOf(number.doubleValue()).setScale(4, java.math.RoundingMode.HALF_UP);
         String s = String.valueOf(v).trim();
         if (!StringUtils.hasText(s)) return null;
-        try { return new java.math.BigDecimal(s); } catch (Exception e) { log.debug("[MaterialPurchase] coerceBigDecimal失败: {}", s); return null; }
+        try { return new java.math.BigDecimal(s).setScale(4, java.math.RoundingMode.HALF_UP); } catch (Exception e) { log.debug("[MaterialPurchase] coerceBigDecimal失败: {}", s); return null; }
     }
 }
