@@ -96,6 +96,13 @@ Page({
     // BOM清单
     bomList: [],
     bomLoading: false,
+    // 采购节点（样衣采购，与 PC 端 useSampleProcurementQuickActions 一致）
+    purchaseList: [],
+    purchaseLoading: false,
+    purchaseGenerating: false,
+    // BOM 物料数量编辑（同步 devUsageAmount 回 BOM）
+    editingBomId: '',
+    editingBomQty: '',
     // 工序单价
     processList: [],
     processLoading: false,
@@ -399,11 +406,6 @@ Page({
     this.setData({ showDetails: !this.data.showDetails });
   },
 
-  /** 刷新整个页面 */
-  onRefresh() {
-    this.loadStyleDetail();
-  },
-
   // === 数据加载方法 ===
 
   async loadBom() {
@@ -411,9 +413,220 @@ Page({
     this.setData({ bomLoading: true });
     try {
       const res = await style.listBom({ styleId: this.data.styleId });
-      this.setData({ bomList: res?.data?.records || res?.data || res?.records || [] });
+      const list = res?.data?.records || res?.data || res?.records || [];
+      // 为每条 BOM 附加展示字段
+      list.forEach(it => {
+        it._displayQty = it.devUsageAmount || it.usageAmount || 0;
+        it._unit = it.unit || '';
+        it._materialLabel = it.materialName || it.name || '';
+        it._specLabel = [it.spec, it.specification, it.color].filter(v => v).join(' ');
+      });
+      this.setData({ bomList: list });
+      // BOM 加载完后，若有 styleNo 则加载采购列表
+      this.loadPurchases();
     } catch (e) { console.error('BOM加载失败', e); }
     this.setData({ bomLoading: false });
+  },
+
+  /**
+   * 加载样衣采购列表（与 PC 端 useSampleProcurementQuickActions 一致）
+   * GET /api/production/purchase/list?styleNo=xxx&sourceType=sample
+   */
+  async loadPurchases() {
+    const styleInfo = this.data.styleInfo || {};
+    const styleNo = styleInfo.styleNo || styleInfo.styleCode || '';
+    // 后端按 styleNo 过滤，没有 styleNo 时无法精确查询，跳过
+    if (!styleNo) return;
+    this.setData({ purchaseLoading: true });
+    try {
+      const params = {
+        sourceType: 'sample',
+        styleNo: styleNo,
+        page: 1,
+        pageSize: 200,
+      };
+      const res = await production.getMaterialPurchases(params);
+      const data = res?.data || res || {};
+      const records = data.records || (Array.isArray(data) ? data : []);
+      // 附加展示字段
+      records.forEach(p => {
+        p._statusText = this._purchaseStatusText(p.status);
+        p._canReceive = p.status === 'pending';
+        p._canComplete = p.status === 'received' || p.status === 'awaiting_confirm';
+      });
+      this.setData({ purchaseList: records });
+    } catch (e) {
+      console.error('采购列表加载失败', e);
+    }
+    this.setData({ purchaseLoading: false });
+  },
+
+  /** 采购状态 → 中文 */
+  _purchaseStatusText(status) {
+    const s = String(status || '').toLowerCase();
+    const map = {
+      pending: '待采购',
+      received: '已领取',
+      awaiting_confirm: '待确认',
+      completed: '已完成',
+      partial_arrived: '部分到货',
+      cancelled: '已取消',
+    };
+    return map[s] || status || '';
+  },
+
+  /** 生成样衣采购单（基于 BOM，与 PC 端 handleGeneratePurchase 一致） */
+  onGeneratePurchase() {
+    const styleId = this.data.styleId;
+    if (!styleId) { toast.error('缺少款式信息'); return; }
+    const hasExisting = this.data.purchaseList.length > 0;
+    wx.showModal({
+      title: '生成采购单',
+      content: hasExisting
+        ? '已存在采购记录，是否强制重新生成？（仅删除待采购状态的旧记录，已领取/已完成的不受影响）'
+        : '将基于 BOM 清单自动生成样衣采购单，确认继续？',
+      confirmText: hasExisting ? '强制重新生成' : '确认生成',
+      success: async (res) => {
+        if (!res.confirm) return;
+        this.setData({ purchaseGenerating: true });
+        try {
+          const result = await style.generateSamplePurchase({ styleId: Number(styleId), force: hasExisting });
+          const count = (result && (result.data || result)) || 0;
+          wx.showToast({ title: `已生成 ${count} 条采购记录`, icon: 'success' });
+          // 刷新采购列表
+          this.setData({ purchaseList: [] });
+          this.loadPurchases();
+        } catch (e) {
+          const msg = (e && e.message) || '生成失败';
+          toast.error(msg);
+        }
+        this.setData({ purchaseGenerating: false });
+      }
+    });
+  },
+
+  /** 编辑 BOM 物料数量（进入编辑状态） */
+  onEditBomQty(e) {
+    const bomId = e.currentTarget.dataset.id;
+    const bom = this.data.bomList.find(b => b.id === bomId);
+    if (!bom) return;
+    this.setData({
+      editingBomId: bomId,
+      editingBomQty: String(bom.devUsageAmount || bom.usageAmount || ''),
+    });
+  },
+
+  /** 取消编辑 BOM 物料数量 */
+  onCancelEditBomQty() {
+    this.setData({ editingBomId: '', editingBomQty: '' });
+  },
+
+  /** 编辑中输入数量 */
+  onBomQtyInput(e) {
+    this.setData({ editingBomQty: e.detail.value });
+  },
+
+  /**
+   * 保存 BOM 物料数量（同步 devUsageAmount 回 BOM）
+   * 调用 PUT /api/style/bom，后端会自动同步 pending 状态的样衣采购任务数量
+   */
+  onSaveBomQty(e) {
+    const bomId = e.currentTarget.dataset.id;
+    const bom = this.data.bomList.find(b => b.id === bomId);
+    if (!bom) return;
+    const rawVal = (this.data.editingBomQty || '').trim();
+    const val = Number(rawVal);
+    if (!rawVal || isNaN(val) || val < 0) {
+      toast.error('请输入有效数量');
+      return;
+    }
+    wx.showLoading({ title: '保存中...' });
+    // 构造完整 payload（后端 PUT /api/style/bom 需要 id + 关键字段）
+    const payload = {
+      id: bom.id,
+      styleId: bom.styleId,
+      materialCode: bom.materialCode,
+      materialName: bom.materialName,
+      materialType: bom.materialType,
+      spec: bom.spec,
+      unit: bom.unit,
+      devUsageAmount: val,
+      usageAmount: val, // 同步到 usageAmount，保持一致
+      lossRate: bom.lossRate || 0,
+      unitPrice: bom.unitPrice || 0,
+      supplier: bom.supplier || '',
+    };
+    style.updateBom(payload).then(() => {
+      wx.hideLoading();
+      wx.showToast({ title: '已保存，采购数量已同步', icon: 'success' });
+      // 更新本地 BOM 列表
+      const list = this.data.bomList.map(b => {
+        if (b.id === bomId) {
+          b.devUsageAmount = val;
+          b.usageAmount = val;
+          b._displayQty = val;
+        }
+        return b;
+      });
+      this.setData({ bomList: list, editingBomId: '', editingBomQty: '' });
+      // 刷新采购列表（pending 状态的采购数量已被后端自动同步）
+      this.loadPurchases();
+    }).catch(err => {
+      wx.hideLoading();
+      const msg = (err && err.message) || '保存失败';
+      toast.error(msg);
+    });
+  },
+
+  /** 领取采购任务（与 PC 端 useSampleProcurementQuickActions 一致） */
+  onReceivePurchase(e) {
+    const purchaseId = e.currentTarget.dataset.id;
+    if (!purchaseId) return;
+    const userInfo = wx.getStorageSync('userInfo') || {};
+    wx.showModal({
+      title: '领取确认',
+      content: '确认领取此采购任务？',
+      success: async (res) => {
+        if (!res.confirm) return;
+        wx.showLoading({ title: '处理中...' });
+        try {
+          await production.receivePurchase({
+            purchaseId: purchaseId,
+            receiverId: userInfo.userId || userInfo.id || '',
+            receiverName: userInfo.realName || userInfo.nickname || userInfo.userName || '',
+          });
+          wx.hideLoading();
+          wx.showToast({ title: '领取成功', icon: 'success' });
+          this.loadPurchases();
+        } catch (err) {
+          wx.hideLoading();
+          toast.error((err && err.message) || '领取失败');
+        }
+      }
+    });
+  },
+
+  /** 确认采购完成（与 PC 端 useSampleProcurementQuickActions 一致） */
+  onConfirmPurchaseComplete(e) {
+    const purchaseId = e.currentTarget.dataset.id;
+    if (!purchaseId) return;
+    wx.showModal({
+      title: '确认完成',
+      content: '确认此采购任务已完成？',
+      success: async (res) => {
+        if (!res.confirm) return;
+        wx.showLoading({ title: '处理中...' });
+        try {
+          await production.confirmPurchaseComplete({ purchaseId: purchaseId });
+          wx.hideLoading();
+          wx.showToast({ title: '已完成', icon: 'success' });
+          this.loadPurchases();
+        } catch (err) {
+          wx.hideLoading();
+          toast.error((err && err.message) || '操作失败');
+        }
+      }
+    });
   },
 
   async loadStyleProcesses() {

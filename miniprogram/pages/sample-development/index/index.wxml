@@ -1,8 +1,25 @@
 <view class="container">
-  <!-- 样衣开发摘要 -->
-  <view class="sample-summary-bar" wx:if="{{sampleCount > 0}}">
-    <text class="sample-summary-val">{{sampleCount}}</text>
-    <text class="sample-summary-lbl">样衣开发中</text>
+  <!-- 样衣开发统计 + 智能提示标签（与 PC 端 PageStatCards hints 一致） -->
+  <view class="stats-bar">
+    <view class="stat-item stat-primary">
+      <text class="stat-val">{{sampleCount}}</text>
+      <text class="stat-lbl">开发中</text>
+    </view>
+    <view class="stat-item stat-overdue {{smartFilter === 'overdue' ? 'stat-active' : ''}} {{overdueCount === 0 ? 'stat-zero' : ''}}"
+          data-key="overdue" bindtap="onSmartFilterTap">
+      <text class="stat-val">{{overdueCount}}</text>
+      <text class="stat-lbl">已延期</text>
+    </view>
+    <view class="stat-item stat-warning {{smartFilter === 'warning' ? 'stat-active' : ''}} {{warningCount === 0 ? 'stat-zero' : ''}}"
+          data-key="warning" bindtap="onSmartFilterTap">
+      <text class="stat-val">{{warningCount}}</text>
+      <text class="stat-lbl">临近交期</text>
+    </view>
+  </view>
+
+  <!-- 清除智能筛选 -->
+  <view wx:if="{{smartFilter}}" class="clear-filter-bar" bindtap="onClearSmartFilter">
+    <text class="clear-filter-text">清除筛选 ✕</text>
   </view>
 
   <!-- 搜索栏 -->
@@ -42,16 +59,16 @@
   </view>
 
   <!-- 加载中 -->
-  <view wx:if="{{loading && list.length === 0}}" class="loading-state">
+  <view wx:if="{{loading && displayList.length === 0}}" class="loading-state">
     <text>加载样衣中…</text>
   </view>
 
   <!-- 空状态 -->
-  <empty-state wx:elif="{{!loading && list.length === 0}}" iconEmoji="👔" text="暂无样衣开发记录" hint="点击上方「扫码样衣」录入新的样衣任务"></empty-state>
+  <empty-state wx:elif="{{!loading && displayList.length === 0}}" iconEmoji="👔" text="{{smartFilter ? '当前筛选条件下无样衣记录' : '暂无样衣开发记录'}}" hint="{{smartFilter ? '点击「清除筛选」查看全部' : '点击上方「扫码样衣」录入新的样衣任务'}}"></empty-state>
 
   <!-- 任务列表 -->
   <block wx:else>
-    <view class="task-card" wx:for="{{list}}" wx:key="id" data-id="{{item.id}}" data-item="{{item}}" bindtap="onCardTap" hover-class="task-card-hover">
+    <view class="task-card" wx:for="{{displayList}}" wx:key="id" data-id="{{item.id}}" data-item="{{item}}" bindtap="onCardTap" hover-class="task-card-hover">
       <!-- 卡片头部：款号 + 状态 + 交期标签 -->
       <view class="card-header-row">
         <text class="style-no">{{item._styleNo || '-'}}</text>

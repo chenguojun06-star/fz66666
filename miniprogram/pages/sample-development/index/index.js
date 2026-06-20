@@ -120,9 +120,14 @@ Page({
     keyword: '',
     activeFilter: '',
     statusTabs: STATUS_TABS,
-    sampleCount: 0,
+    // 样衣开发统计（与 PC 端 activeStyles 逻辑一致）
+    sampleCount: 0,       // 开发中（活跃款式数量）
+    overdueCount: 0,      // 已延期
+    warningCount: 0,      // 临近交期
+    smartFilter: '',      // 智能筛选：'' | 'overdue' | 'warning'
 
     list: [],
+    displayList: [],  // 应用智能筛选后的展示列表
     page: 1,
     pageSize: 15,
     total: 0,
@@ -211,11 +216,15 @@ Page({
     if (that.data.keyword.trim()) params.keyword = that.data.keyword.trim();
     if (that.data.activeFilter) params.status = that.data.activeFilter;
 
-    // 并行获取样衣开发数量（来自 dashboard 接口）
+    // 并行获取样衣开发统计（与 PC 端 activeStyles 逻辑一致）
     if (reset) {
-      api.dashboard.get().then(function (res) {
+      api.production.getSampleStats().then(function (res) {
         const d = (res && res.data) || res || {};
-        that.setData({ sampleCount: Number(d.sampleDevelopmentCount) || 0 });
+        that.setData({
+          sampleCount: Number(d.activeCount) || 0,
+          overdueCount: Number(d.overdueCount) || 0,
+          warningCount: Number(d.warningCount) || 0,
+        });
       }).catch(function () { /* 静默失败，不阻塞列表 */ });
     }
 
@@ -342,12 +351,17 @@ Page({
         });
         that.setData({
           list: newList,
+          displayList: newList,  // 默认展示全部，smartFilter 切换时再过滤
           total: total,
           hasMore: newList.length < total,
           loading: false,
           loadingMore: false,
           page: reset ? 1 : that.data.page + 1,
         });
+        // 若已有智能筛选，应用过滤
+        if (that.data.smartFilter) {
+          that._refreshDisplayList();
+        }
       })
       .catch(function (err) {
         that.setData({ loading: false, loadingMore: false });
@@ -380,6 +394,50 @@ Page({
     const key = e.currentTarget.dataset.key;
     this.setData({ activeFilter: key });
     this.loadData(true);
+  },
+
+  /**
+   * 智能筛选标签点击（与 PC 端 smartFilter 逻辑一致）
+   * 点击"已延期"→ 只看延期款号；点击"临近交期"→ 只看临近交期款号；再次点击 → 取消
+   * 实现方式：前端过滤当前列表中 _deliveryTone === 'danger'（延期）/ 'warning'（临近交期）的记录
+   */
+  onSmartFilterTap: function (e) {
+    const target = e.currentTarget.dataset.key; // 'overdue' | 'warning'
+    const current = this.data.smartFilter;
+    if (current === target) {
+      // 再次点击同一标签 → 取消筛选
+      this.setData({ smartFilter: '' });
+    } else {
+      this.setData({ smartFilter: target });
+    }
+    this._refreshDisplayList();
+  },
+
+  /** 清除智能筛选 */
+  onClearSmartFilter: function () {
+    this.setData({ smartFilter: '' });
+    this._refreshDisplayList();
+  },
+
+  /**
+   * 应用智能筛选后返回展示列表（与 PC 端 displayData 逻辑一致）
+   * smartFilter='overdue' → 只显示 _deliveryTone==='danger' 的记录
+   * smartFilter='warning' → 只显示 _deliveryTone==='warning' 的记录
+   * smartFilter='' → 显示全部
+   */
+  _getDisplayList: function () {
+    const sf = this.data.smartFilter;
+    if (!sf) return this.data.list;
+    return this.data.list.filter(function (item) {
+      if (sf === 'overdue') return item._deliveryTone === 'danger';
+      if (sf === 'warning') return item._deliveryTone === 'warning';
+      return true;
+    });
+  },
+
+  /** smartFilter 变化时刷新展示列表 */
+  _refreshDisplayList: function () {
+    this.setData({ displayList: this._getDisplayList() });
   },
 
   onCardTap: function (e) {

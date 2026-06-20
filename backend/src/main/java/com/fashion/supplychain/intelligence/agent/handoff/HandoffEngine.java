@@ -62,8 +62,14 @@ public class HandoffEngine {
     private String runSubAgent(String userMessage, SubAgentDefinition subAgent, AgentLoopContext ctx) {
         StringBuilder systemPrompt = new StringBuilder();
         systemPrompt.append(subAgent.getSystemPrompt()).append("\n\n");
-        systemPrompt.append("当前租户: ").append(ctx.getTenantId()).append("\n");
-        systemPrompt.append("用户身份: ").append(ctx.getUserId()).append("\n");
+        // 用真实姓名/角色而非数字ID，避免回复中出现"租户：2，用户：1005"这种生硬表述
+        String userName = com.fashion.supplychain.common.UserContext.username();
+        String userRole = com.fashion.supplychain.common.UserContext.role();
+        systemPrompt.append("当前用户：").append(userName != null && !userName.isBlank() ? userName : "用户").append("\n");
+        if (userRole != null && !userRole.isBlank()) {
+            systemPrompt.append("用户角色：").append(userRole).append("\n");
+        }
+        systemPrompt.append("（注意：回复时用用户姓名称呼，禁止展示租户ID、用户ID等内部数字编号）\n");
 
         if (subAgent.getKnowledgeRefs() != null) {
             systemPrompt.append("\n可用知识库:\n");

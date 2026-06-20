@@ -13,6 +13,8 @@ import com.fashion.supplychain.production.helper.PatternStockHelper;
 import com.fashion.supplychain.production.service.PatternProductionService;
 import com.fashion.supplychain.production.service.PatternScanRecordService;
 import com.fashion.supplychain.production.service.ScanRecordService;
+import com.fashion.supplychain.style.entity.StyleInfo;
+import com.fashion.supplychain.style.service.StyleInfoService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -59,6 +61,9 @@ public class PatternProductionOrchestrator {
     private PatternStatusHelper statusHelper;
 
     @Autowired
+    private StyleInfoService styleInfoService;
+
+    @Autowired
     private com.fashion.supplychain.style.service.StyleProcessService styleProcessService;
 
     /**
@@ -100,6 +105,87 @@ public class PatternProductionOrchestrator {
         result.put("current", pageResult.getCurrent());
         result.put("pages", pageResult.getPages());
         return result;
+    }
+
+    /**
+     * 样衣开发统计（与 PC 端 StyleInfoList activeStyles 逻辑一致）
+     * <p>
+     * activeCount：开发中（排除已归档/已报废/样衣完成/开发样报废/审核通过）
+     * overdueCount：已延期（活跃款式中 deliveryDate 已过）
+     * warningCount：临近交期（活跃款式中 deliveryDate 在 3 天内，含今天）
+     */
+    public Map<String, Object> calcSampleStats() {
+        // 查询所有未删除的样衣生产记录
+        LambdaQueryWrapper<PatternProduction> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(PatternProduction::getDeleteFlag, 0);
+        List<PatternProduction> allPatterns = patternProductionService.list(wrapper);
+
+        // 收集关联的 styleId，批量查询 StyleInfo（StyleInfo.id 是 Long，PatternProduction.styleId 是 String）
+        List<Long> styleIds = allPatterns.stream()
+                .map(PatternProduction::getStyleId)
+                .filter(id -> id != null && !id.isEmpty())
+                .map(id -> {
+                    try { return Long.valueOf(id); } catch (NumberFormatException e) { return null; }
+                })
+                .filter(id -> id != null)
+                .distinct()
+                .collect(Collectors.toList());
+        Map<String, StyleInfo> styleMap = new HashMap<>();
+        if (!styleIds.isEmpty()) {
+            List<StyleInfo> styles = styleInfoService.listByIds(styleIds);
+            for (StyleInfo s : styles) {
+                styleMap.put(String.valueOf(s.getId()), s);
+            }
+        }
+
+        // 与 PC 端 activeStyles 逻辑一致：排除已完成/已报废/审核通过
+        int activeCount = 0;
+        int overdueCount = 0;
+        int warningCount = 0;
+        java.time.LocalDate today = java.time.LocalDate.now();
+
+        for (PatternProduction p : allPatterns) {
+            StyleInfo s = styleMap.get(p.getStyleId());
+            // 合并 pattern 和 styleInfo 的状态字段
+            String styleStatus = s != null ? String.valueOf(s.getStatus()).trim().toLowerCase() : "";
+            String progressNode = s != null ? String.valueOf(s.getProgressNode() != null ? s.getProgressNode() : "").trim() : "";
+            String sampleStatus = s != null ? String.valueOf(s.getSampleStatus() != null ? s.getSampleStatus() : "").trim().toUpperCase() : "";
+            String sampleReviewStatus = s != null ? String.valueOf(s.getSampleReviewStatus() != null ? s.getSampleReviewStatus() : "").trim().toUpperCase() : "";
+
+            // 排除条件 1：status = archived / scrapped
+            if ("archived".equals(styleStatus) || "scrapped".equals(styleStatus)) continue;
+            // 排除条件 2：progressNode = 样衣完成 / 开发样报废
+            if ("样衣完成".equals(progressNode) || "开发样报废".equals(progressNode)) continue;
+            // 排除条件 3：sampleStatus = COMPLETED
+            if ("COMPLETED".equals(sampleStatus)) continue;
+            // 排除条件 4：sampleReviewStatus = PASS / APPROVED
+            if ("PASS".equals(sampleReviewStatus) || "APPROVED".equals(sampleReviewStatus)) continue;
+
+            // 通过所有排除条件 → 活跃款式
+            activeCount++;
+
+            // 计算延期/临近交期（优先用 styleInfo.deliveryDate，其次 pattern.deliveryTime）
+            java.time.LocalDate deliveryDate = null;
+            if (s != null && s.getDeliveryDate() != null) {
+                deliveryDate = s.getDeliveryDate().toLocalDate();
+            } else if (p.getDeliveryTime() != null) {
+                deliveryDate = p.getDeliveryTime().toLocalDate();
+            }
+            if (deliveryDate != null) {
+                long diffDays = java.time.temporal.ChronoUnit.DAYS.between(today, deliveryDate);
+                if (diffDays < 0) {
+                    overdueCount++;
+                } else if (diffDays <= 3) {
+                    warningCount++;
+                }
+            }
+        }
+
+        Map<String, Object> stats = new HashMap<>();
+        stats.put("activeCount", activeCount);
+        stats.put("overdueCount", overdueCount);
+        stats.put("warningCount", warningCount);
+        return stats;
     }
 
     /**

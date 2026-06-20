@@ -402,7 +402,6 @@ public class AiAgentPromptHelper {
         }
         Long tenantId = UserContext.tenantId();
         if (tenantId != null) {
-            ctx.append("- 当前租户ID：").append(tenantId).append("\n");
             String tenantName = resolveTenantName(tenantId);
             if (tenantName != null && !tenantName.isBlank()) {
                 ctx.append("- 所属公司：").append(tenantName).append("\n");

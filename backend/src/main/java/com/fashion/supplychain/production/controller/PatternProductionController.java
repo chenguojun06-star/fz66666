@@ -62,6 +62,18 @@ public class PatternProductionController {
     }
 
     /**
+     * 样衣开发统计（与 PC 端 StyleInfoList activeStyles 逻辑一致）
+     * 返回：activeCount（开发中）/ overdueCount（已延期）/ warningCount（临近交期）
+     */
+    @GetMapping("/sample-stats")
+    public Result<Map<String, Object>> sampleStats() {
+        if (DataPermissionHelper.isFactoryAccount()) {
+            return Result.success(Map.of("activeCount", 0, "overdueCount", 0, "warningCount", 0));
+        }
+        return Result.success(patternProductionOrchestrator.calcSampleStats());
+    }
+
+    /**
      * 分页查询样板生产记录（丰富关联数据）
      */
     @GetMapping("/list")

@@ -79,6 +79,13 @@ const production = {
   receivePurchase(payload) {
     return ok('/api/production/purchase/receive', 'POST', payload || {});
   },
+  /**
+   * 确认采购完成（单条，与 PC 端 useSampleProcurementQuickActions 一致）
+   * 后端：POST /api/production/purchase/confirm-complete
+   */
+  confirmPurchaseComplete(payload) {
+    return ok('/api/production/purchase/confirm-complete', 'POST', payload || {});
+  },
   createPurchaseInstruction(payload) {
     return ok('/api/production/purchase/instruction', 'POST', payload || {});
   },
@@ -179,6 +186,13 @@ const production = {
   },
   listPatterns(params) {
     return ok('/api/production/pattern/list', 'GET', params || {});
+  },
+  /**
+   * 样衣开发统计（与 PC 端 StyleInfoList activeStyles 逻辑一致）
+   * 返回 { activeCount, overdueCount, warningCount }
+   */
+  getSampleStats() {
+    return ok('/api/production/pattern/sample-stats', 'GET', {});
   },
   getPatternProcessConfig(patternId) {
     const id = String(patternId || '').trim();
