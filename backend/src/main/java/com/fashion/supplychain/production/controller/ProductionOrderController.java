@@ -473,6 +473,16 @@ public class ProductionOrderController {
         return Result.success(factoryCapacityOrchestrator.getFactoryCapacity());
     }
 
+    /**
+     * 外发工厂统计（对齐 PC 端 ExternalFactory FactorySidebar 7-Tag）
+     * 返回每个外发工厂的：订单数/件数/款数/进行中/已完成/逾期/预警
+     */
+    @GetMapping("/external-factory-stats")
+    @Operation(summary = "外发工厂统计", description = "按外发工厂分组聚合订单统计，对齐 PC 端外发工厂页面工厂汇总卡片")
+    public Result<List<com.fashion.supplychain.production.dto.ExternalFactoryStatsVO>> getExternalFactoryStats() {
+        return Result.success(productionOrderOrchestrator.calcExternalFactoryStats());
+    }
+
     @GetMapping("/{id}/timeline")
     @PreAuthorize("isAuthenticated()")
     public Result<?> timeline(@PathVariable String id) {

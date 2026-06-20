@@ -41,6 +41,20 @@
     </view>
   </view>
 
+  <!-- 智能提示标签（对齐 PC 端 OrderManagement hints：已延期/临近交期） -->
+  <view class="smart-hints" wx:if="{{!loading && (hasSmartHints || smartFilter)}}">
+    <view class="smart-hint {{smartFilter === item.key ? 'smart-hint--active' : ''}} {{item.tone === 'danger' ? 'smart-hint--danger' : 'smart-hint--warning'}} {{item.count === 0 ? 'smart-hint--zero' : ''}}"
+          wx:for="{{smartHints}}" wx:key="key"
+          wx:if="{{item.count > 0 || smartFilter === item.key}}"
+          data-key="{{item.key}}" bindtap="onSmartHintTap">
+      <text class="smart-hint-num">{{item.count}}</text>
+      <text class="smart-hint-lbl">{{item.label}}</text>
+    </view>
+    <view class="smart-hint-clear" wx:if="{{smartFilter}}" catchtap="onClearSmartFilter">
+      <text>清除筛选 ✕</text>
+    </view>
+  </view>
+
   <!-- 状态过滤条 -->
   <scroll-view class="filter-scroll" scroll-x enhanced show-scrollbar="{{false}}">
     <view class="filter-pill {{activeFilter === item.key ? 'filter-pill--on' : ''}} {{item.key === 'overdue' ? 'filter-pill--danger' : ''}} {{item.key === 'completed' ? 'filter-pill--done' : ''}}"

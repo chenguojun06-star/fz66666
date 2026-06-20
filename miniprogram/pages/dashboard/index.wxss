@@ -110,6 +110,74 @@
   white-space: nowrap;
   padding: 0 0 12rpx;
 }
+
+/* 智能提示标签（对齐 PC 端 OrderManagement hints） */
+.smart-hints {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px 0 12rpx;
+  min-height: 32px;
+}
+.smart-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-card);
+  font-size: 12px;
+}
+.smart-hint-num {
+  font-weight: 600;
+  font-size: 13px;
+}
+.smart-hint-lbl {
+  color: var(--color-text-secondary);
+}
+.smart-hint--danger {
+  border-color: var(--color-danger);
+  background: rgba(255, 77, 79, 0.08);
+}
+.smart-hint--danger .smart-hint-num {
+  color: var(--color-danger);
+}
+.smart-hint--warning {
+  border-color: #fa8c16;
+  background: rgba(250, 140, 22, 0.08);
+}
+.smart-hint--warning .smart-hint-num {
+  color: #d46b08;
+}
+.smart-hint--active {
+  border-width: 1px;
+  border-style: solid;
+}
+.smart-hint--active.smart-hint--danger {
+  background: var(--color-danger);
+}
+.smart-hint--active.smart-hint--danger .smart-hint-num,
+.smart-hint--active.smart-hint--danger .smart-hint-lbl {
+  color: #fff;
+}
+.smart-hint--active.smart-hint--warning {
+  background: #fa8c16;
+}
+.smart-hint--active.smart-hint--warning .smart-hint-num,
+.smart-hint--active.smart-hint--warning .smart-hint-lbl {
+  color: #fff;
+}
+.smart-hint--zero {
+  opacity: 0.5;
+}
+.smart-hint-clear {
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+  padding: 4px 8px;
+}
+
 .filter-pill {
   display: inline-flex;
   flex-direction: column;

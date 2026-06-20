@@ -4,6 +4,41 @@
     <view class="tab-item {{activeTab===1?'tab-active':''}}" data-tab="1" bindtap="switchTab">发货记录</view>
   </view>
 
+  <!-- 外发工厂汇总状态条（对齐 PC 端 FactorySidebar 7-Tag） -->
+  <view class="factory-stats-bar" wx:if="{{!isFactory && activeTab === 0}}">
+    <!-- 全部工厂汇总 -->
+    <view class="factory-card factory-card--all {{selectedFactoryId === '' ? 'factory-card--selected' : ''}}"
+          data-factory-id="" bindtap="onFactoryStatTap">
+      <view class="factory-card-name">全部工厂</view>
+      <view class="factory-card-tags">
+        <text class="ftag ftag--blue">{{factoryStatsTotal.orderCount}} 单</text>
+        <text class="ftag ftag--orange">{{factoryStatsTotal.totalQuantity}} 件</text>
+        <text class="ftag ftag--default">{{factoryStatsTotal.styleCount}} 款</text>
+        <text class="ftag ftag--processing">{{factoryStatsTotal.inProgressCount}} 进行中</text>
+        <text class="ftag ftag--success">{{factoryStatsTotal.completedCount}} 已完成</text>
+        <text class="ftag ftag--danger" wx:if="{{factoryStatsTotal.overdueCount > 0}}">{{factoryStatsTotal.overdueCount}} 逾期</text>
+        <text class="ftag ftag--warning" wx:if="{{factoryStatsTotal.warningCount > 0}}">{{factoryStatsTotal.warningCount}} 预警</text>
+      </view>
+    </view>
+    <!-- 各工厂卡片（横向滚动） -->
+    <scroll-view scroll-x class="factory-scroll" enhanced show-scrollbar="{{false}}" wx:if="{{factoryStats.length > 0}}">
+      <view class="factory-card {{selectedFactoryId === item.factoryId ? 'factory-card--selected' : ''}}"
+            wx:for="{{factoryStats}}" wx:key="factoryId"
+            data-factory-id="{{item.factoryId}}" bindtap="onFactoryStatTap">
+        <view class="factory-card-name">{{item.factoryName}}</view>
+        <view class="factory-card-tags">
+          <text class="ftag ftag--blue">{{item.orderCount}} 单</text>
+          <text class="ftag ftag--orange">{{item.totalQuantity}} 件</text>
+          <text class="ftag ftag--default">{{item.styleCount}} 款</text>
+          <text class="ftag ftag--processing">{{item.inProgressCount}} 进行中</text>
+          <text class="ftag ftag--success">{{item.completedCount}} 已完成</text>
+          <text class="ftag ftag--danger" wx:if="{{item.overdueCount > 0}}">{{item.overdueCount}} 逾期</text>
+          <text class="ftag ftag--warning" wx:if="{{item.warningCount > 0}}">{{item.warningCount}} 预警</text>
+        </view>
+      </view>
+    </scroll-view>
+  </view>
+
   <view class="search-bar">
     <view class="search-box">
       <text class="search-emoji">🔍</text>

@@ -14,6 +14,103 @@
   background: var(--color-bg-card);
   border-bottom: 1rpx solid var(--color-border-light);
 }
+
+/* ---- 外发工厂汇总状态条（对齐 PC 端 FactorySidebar 7-Tag） ---- */
+.factory-stats-bar {
+  padding: 8px 12px;
+  background: var(--color-bg-card);
+  border-bottom: 1rpx solid var(--color-border-light);
+}
+.factory-scroll {
+  white-space: nowrap;
+  margin-top: 8px;
+}
+.factory-card {
+  display: inline-block;
+  vertical-align: top;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: var(--color-bg-page);
+  border: 1px solid var(--color-border-light);
+  margin-bottom: 6px;
+}
+.factory-scroll .factory-card {
+  display: inline-block;
+  width: auto;
+  min-width: 220px;
+  margin-right: 8px;
+  margin-bottom: 0;
+}
+.factory-card--all {
+  background: #e6f4ff;
+  border-color: #91d5ff;
+}
+.factory-card--selected {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.15);
+}
+.factory-card-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+}
+.factory-card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.ftag {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 11px;
+  line-height: 1.4;
+  background: var(--color-bg-card);
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border-light);
+}
+.ftag--blue {
+  background: #e6f4ff;
+  color: #1677ff;
+  border-color: #91d5ff;
+}
+.ftag--orange {
+  background: #fff7e6;
+  color: #fa8c16;
+  border-color: #ffd591;
+}
+.ftag--default {
+  background: var(--color-bg-card);
+  color: var(--color-text-secondary);
+}
+.ftag--processing {
+  background: #e6fffb;
+  color: #08979c;
+  border-color: #87e8de;
+}
+.ftag--success {
+  background: #f6ffed;
+  color: #389e0d;
+  border-color: #b7eb8f;
+}
+.ftag--danger {
+  background: #fff1f0;
+  color: #ff4d4f;
+  border-color: #ffa39e;
+}
+.ftag--warning {
+  background: #fff7e6;
+  color: #d46b08;
+  border-color: #ffd591;
+}
+
 .tab-item {
   flex: 1;
   text-align: center;

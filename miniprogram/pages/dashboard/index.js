@@ -60,6 +60,13 @@ Page({
     statFilters: STATUS_FILTERS,
     activeFilter: 'in_production',
     statCounts: { in_production: 0, completed: 0, overdue: 0 },
+    /* 智能提示标签（对齐 PC 端 OrderManagement hints） */
+    smartHints: [
+      { key: 'overdue', label: '已延期', count: 0, tone: 'danger' },
+      { key: 'warning', label: '临近交期', count: 0, tone: 'warning' },
+    ],
+    hasSmartHints: false,
+    smartFilter: '',
     searchKey: '',
     /* 订单列表（分页） */
     orders: { list: [], page: 0, pageSize: 15, loading: false, hasMore: true },
@@ -175,6 +182,7 @@ Page({
     const that = this;
     const activeKey = this.data.activeFilter;
     const isOverdue = activeKey === 'overdue';
+    const smartFilter = this.data.smartFilter;
     let filterVal = '';
     if (!isOverdue) {
       for (let i = 0; i < STATUS_FILTERS.length; i++) {
@@ -186,7 +194,7 @@ Page({
     }
 
     return app.loadPagedList(this, 'orders', reset, function (p) {
-      const params = { page: p.page, pageSize: isOverdue ? 50 : p.pageSize, excludeTerminal: 'true' };
+      const params = { page: p.page, pageSize: (isOverdue || smartFilter) ? 50 : p.pageSize, excludeTerminal: 'true' };
       if (isOverdue) {
         params.status = 'production';
       } else if (filterVal) {
@@ -202,7 +210,18 @@ Page({
         return enrichForDashboard(r);
       }
     }).then(function () {
-      if (isOverdue) {
+      // 智能筛选：已延期 / 临近交期（基于订单 remainDaysClass，与小程序订单交期计算一致）
+      if (smartFilter === 'overdue') {
+        const filtered = (that.data.orders.list || []).filter(function (o) {
+          return o.remainDaysClass === 'days-overdue';
+        });
+        that.setData({ 'orders.list': filtered });
+      } else if (smartFilter === 'warning') {
+        const filtered = (that.data.orders.list || []).filter(function (o) {
+          return o.remainDaysClass === 'days-urgent';
+        });
+        that.setData({ 'orders.list': filtered });
+      } else if (isOverdue) {
         const filtered = (that.data.orders.list || []).filter(function (o) {
           return o.remainDaysClass === 'days-overdue';
         });
@@ -236,14 +255,36 @@ Page({
     ]).then(function (res) {
       const stats = res[0] || {};
       const dash  = res[1] || {};
+      const overdueCount = Number(dash.overdueOrderCount) || Number(stats.delayedOrders) || 0;
+      const warningCount = Number(stats.warningOrders) || 0;
       that.setData({
         statCounts: {
           in_production:  Number(stats.activeOrders) || 0,
           completed:      Number(stats.completedOrders) || 0,
-          overdue:        Number(dash.overdueOrderCount) || Number(stats.delayedOrders) || 0,
+          overdue:        overdueCount,
         },
+        smartHints: [
+          { key: 'overdue', label: '已延期', count: overdueCount, tone: 'danger' },
+          { key: 'warning', label: '临近交期', count: warningCount, tone: 'warning' },
+        ],
+        hasSmartHints: overdueCount > 0 || warningCount > 0,
       });
     }).catch(function () {});
+  },
+
+  /* ======== 智能提示标签点击（对齐 PC 端 smartFilter） ======== */
+  onSmartHintTap: function (e) {
+    const key = e.currentTarget.dataset.key;
+    if (!key) return;
+    const next = this.data.smartFilter === key ? '' : key;
+    this.setData({ smartFilter: next });
+    this.loadOrders(true);
+  },
+
+  onClearSmartFilter: function () {
+    if (!this.data.smartFilter) return;
+    this.setData({ smartFilter: '' });
+    this.loadOrders(true);
   },
 
   /* ======== 状态筛选切换 ======== */

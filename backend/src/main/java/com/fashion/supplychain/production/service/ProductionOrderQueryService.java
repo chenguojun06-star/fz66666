@@ -537,7 +537,8 @@ public class ProductionOrderQueryService {
                         + ") THEN 1 ELSE 0 END) AS risk_orders",
                     "COALESCE(SUM(CASE WHEN status NOT IN ('completed','cancelled','scrapped','archived','closed') AND ("
                         + "(planned_end_date IS NOT NULL AND planned_end_date >= NOW() AND planned_end_date <= DATE_ADD(NOW(), INTERVAL 7 DAY) AND COALESCE(production_progress,0) < 50)"
-                        + ") THEN order_quantity ELSE 0 END), 0) AS risk_quantity"
+                        + ") THEN order_quantity ELSE 0 END), 0) AS risk_quantity",
+                    "SUM(CASE WHEN status NOT IN ('completed','cancelled','scrapped','archived','closed') AND planned_end_date IS NOT NULL AND planned_end_date >= NOW() AND planned_end_date <= DATE_ADD(NOW(), INTERVAL 3 DAY) THEN 1 ELSE 0 END) AS warning_orders"
                 )
             );
 
@@ -559,6 +560,7 @@ public class ProductionOrderQueryService {
                 stats.setTodayQuantity(toLong(r.get("today_quantity")));
                 stats.setRiskOrders(toLong(r.get("risk_orders")));
                 stats.setRiskQuantity(toLong(r.get("risk_quantity")));
+                stats.setWarningOrders(toLong(r.get("warning_orders")));
             } else {
                 resetStatsToZero(stats);
             }
@@ -640,6 +642,7 @@ public class ProductionOrderQueryService {
         stats.setTodayQuantity(0);
         stats.setRiskOrders(0);
         stats.setRiskQuantity(0);
+        stats.setWarningOrders(0);
     }
 
     private void fillStatusStats(com.fashion.supplychain.production.dto.ProductionOrderStatsDTO stats, List<ProductionOrder> allOrders) {

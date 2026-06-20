@@ -71,4 +71,10 @@ public class ProductionOrderStatsDTO {
     private long riskOrders;
 
     private long riskQuantity;
+
+    /**
+     * 临近交期订单数（3天内交期且非终态）
+     * 用于小程序订单管理"临近交期"智能提示标签
+     */
+    private long warningOrders;
 }

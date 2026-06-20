@@ -973,4 +973,81 @@ public class ProductionOrderOrchestrator {
         order.setNodeOperations(nodeOperations);
         return productionOrderService.updateById(order);
     }
+
+    /**
+     * 外发工厂统计（对齐 PC 端 ExternalFactory FactorySidebar 7-Tag）
+     * 按 factory_id 分组聚合，返回每个外发工厂的订单数/件数/款数/进行中/已完成/逾期/预警
+     *
+     * 业务规则（与 PC 端一致）：
+     * - factory_type = 'EXTERNAL'
+     * - 交期字段优先 expectedShipDate，回退 plannedEndDate
+     * - 逾期：交期 < 今天 且 status != completed
+     * - 预警：交期在 0-7 天内 且 status != completed
+     * - 款号数按 styleNo 去重
+     */
+    public java.util.List<com.fashion.supplychain.production.dto.ExternalFactoryStatsVO> calcExternalFactoryStats() {
+        // 工厂账号不应访问外发工厂全局统计
+        if (com.fashion.supplychain.common.DataPermissionHelper.isFactoryAccount()) {
+            return java.util.Collections.emptyList();
+        }
+
+        java.util.List<ProductionOrder> allOrders = productionOrderService.lambdaQuery()
+                .eq(ProductionOrder::getDeleteFlag, 0)
+                .eq(ProductionOrder::getFactoryType, "EXTERNAL")
+                .list();
+
+        java.util.Map<String, com.fashion.supplychain.production.dto.ExternalFactoryStatsVO> statsMap = new java.util.LinkedHashMap<>();
+        java.util.Map<String, java.util.Set<String>> styleSetMap = new java.util.HashMap<>();
+        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+        java.time.LocalDate today = now.toLocalDate();
+
+        for (ProductionOrder order : allOrders) {
+            String factoryId = order.getFactoryId() != null ? order.getFactoryId() : "unknown";
+            String factoryName = order.getFactoryName() != null ? order.getFactoryName() : "未知工厂";
+            com.fashion.supplychain.production.dto.ExternalFactoryStatsVO stat = statsMap.computeIfAbsent(
+                    factoryId, k -> {
+                        com.fashion.supplychain.production.dto.ExternalFactoryStatsVO s = new com.fashion.supplychain.production.dto.ExternalFactoryStatsVO();
+                        s.setFactoryId(factoryId);
+                        s.setFactoryName(factoryName);
+                        return s;
+                    });
+
+            stat.setOrderCount(stat.getOrderCount() + 1);
+            stat.setTotalQuantity(stat.getTotalQuantity() + (order.getOrderQuantity() != null ? order.getOrderQuantity() : 0));
+
+            String status = order.getStatus() != null ? order.getStatus().trim().toLowerCase() : "";
+            if ("completed".equals(status)) {
+                stat.setCompletedCount(stat.getCompletedCount() + 1);
+            } else if ("production".equals(status)) {
+                stat.setInProgressCount(stat.getInProgressCount() + 1);
+            }
+
+            // 款号去重
+            if (StringUtils.hasText(order.getStyleNo())) {
+                java.util.Set<String> set = styleSetMap.computeIfAbsent(factoryId, k -> new java.util.HashSet<>());
+                set.add(order.getStyleNo());
+            }
+
+            // 交期判断（优先 expectedShipDate，回退 plannedEndDate）
+            java.time.LocalDateTime deliveryDate = order.getExpectedShipDate() != null
+                    ? order.getExpectedShipDate()
+                    : order.getPlannedEndDate();
+            if (deliveryDate != null && !"completed".equals(status)) {
+                long diffDays = java.time.temporal.ChronoUnit.DAYS.between(today, deliveryDate.toLocalDate());
+                if (diffDays < 0) {
+                    stat.setOverdueCount(stat.getOverdueCount() + 1);
+                } else if (diffDays <= 7) {
+                    stat.setWarningCount(stat.getWarningCount() + 1);
+                }
+            }
+        }
+
+        // 回填款号数
+        for (java.util.Map.Entry<String, com.fashion.supplychain.production.dto.ExternalFactoryStatsVO> entry : statsMap.entrySet()) {
+            java.util.Set<String> set = styleSetMap.get(entry.getKey());
+            entry.getValue().setStyleCount(set != null ? set.size() : 0);
+        }
+
+        return new java.util.ArrayList<>(statsMap.values());
+    }
 }

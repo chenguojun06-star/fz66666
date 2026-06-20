@@ -14,6 +14,9 @@ const production = {
   getFactoryCapacity() {
     return ok('/api/production/order/factory-capacity', 'GET', {});
   },
+  getExternalFactoryStats() {
+    return ok('/api/production/order/external-factory-stats', 'GET', {});
+  },
   createOrder(payload) {
     return ok('/api/production/order', 'POST', payload || {});
   },
