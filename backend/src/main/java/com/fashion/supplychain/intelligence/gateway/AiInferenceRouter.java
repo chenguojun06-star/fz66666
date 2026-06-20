@@ -292,6 +292,10 @@ public class AiInferenceRouter implements AiInferenceGateway {
     }
 
     public String chatSimple(String prompt) {
+        if (prompt == null || prompt.isBlank()) {
+            log.warn("[AiInferenceRouter] chatSimple 收到空 prompt，跳过 LLM 调用");
+            return "";
+        }
         IntelligenceInferenceResult result = chat("reflection", null, prompt);
         return result != null ? result.getContent() : "";
     }

@@ -168,10 +168,19 @@ public class StreamingAgentLoopCallback implements AgentLoopCallback {
     }
 
     private void emitSse(String eventName, Map<String, Object> data) {
+        if (emitterClosed) {
+            return;
+        }
         try {
             emitter.send(SseEmitter.event().name(eventName).data(JSON.writeValueAsString(data)));
         } catch (Exception e) {
-            log.warn("[StreamCallback] 发送SSE事件失败: event={}, error={}", eventName, e.getMessage());
+            String msg = e.getMessage();
+            if (msg != null && msg.contains("already completed")) {
+                emitterClosed = true;
+                log.debug("[StreamCallback] SSE已完成，跳过事件: event={}", eventName);
+            } else {
+                log.warn("[StreamCallback] 发送SSE事件失败: event={}, error={}", eventName, msg);
+            }
         }
     }
 

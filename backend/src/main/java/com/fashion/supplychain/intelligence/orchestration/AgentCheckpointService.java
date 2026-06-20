@@ -53,8 +53,8 @@ public class AgentCheckpointService {
             checkpointMapper.insert(checkpoint);
             log.debug("[Checkpoint] Saved: thread={}, node={}, step={}", threadId, nodeId, stepIndex);
         } catch (Exception e) {
-            log.error("[Checkpoint] Save failed: threadId={}, nodeId={}, stepIndex={}, error={}",
-                      threadId, nodeId, stepIndex, e.getMessage(), e);
+            log.warn("[Checkpoint] Save failed: threadId={}, nodeId={}, stepIndex={}, errorClass={}, errorMsg={}",
+                      threadId, nodeId, stepIndex, e.getClass().getSimpleName(), e.getMessage());
             tryInsertMinimal(tenantId, threadId, nodeId, stepIndex);
         }
     }
@@ -71,8 +71,8 @@ public class AgentCheckpointService {
             checkpointMapper.insert(minimal);
             log.info("[Checkpoint] Minimal insert succeeded: thread={}, node={}, step={}", threadId, nodeId, stepIndex);
         } catch (Exception e2) {
-            log.error("[Checkpoint] Minimal insert also failed: threadId={}, nodeId={}, error={}",
-                      threadId, nodeId, e2.getMessage());
+            log.warn("[Checkpoint] Minimal insert also failed: threadId={}, nodeId={}, errorClass={}, errorMsg={}",
+                      threadId, nodeId, e2.getClass().getSimpleName(), e2.getMessage());
         }
     }
 
