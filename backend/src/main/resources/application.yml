@@ -533,6 +533,19 @@ xiaoyun:
     circuit-breaker-recovery-minutes: 10
     duplicate-cache-ttl-hours: 1
 
+  # 秒答缓存（每15分钟预取业务快照 + 预构建答案）
+  # 开启后，用户问"今日产能/延期/物料"等常见问题时可秒答（1-3秒）
+  quick-answer:
+    enabled: ${XIAOYUN_QUICK_ANSWER_ENABLED:true}
+    # 快照有效时间（分钟），必须与预取间隔一致，确保每次都是最新数据
+    snapshot-ttl-minutes: ${XIAOYUN_QUICK_ANSWER_SNAPSHOT_TTL:15}
+    # 预构建答案的最小置信度（低于此值不使用缓存）
+    min-confidence: ${XIAOYUN_QUICK_ANSWER_MIN_CONFIDENCE:0.70}
+    # 是否每15分钟自动预取业务快照
+    prefetch-enabled: ${XIAOYUN_QUICK_ANSWER_PREFETCH_ENABLED:true}
+    # 定时任务Cron表达式（每小时的0/15/30/45分执行）
+    prefetch-cron: ${XIAOYUN_QUICK_ANSWER_PREFETCH_CRON:0 0,15,30,45 * * * ?}
+
 # SerpApi 趋势数据配置（Google Trends / Google Shopping）
 serpapi:
   api-key: ${SERPAPI_KEY:}

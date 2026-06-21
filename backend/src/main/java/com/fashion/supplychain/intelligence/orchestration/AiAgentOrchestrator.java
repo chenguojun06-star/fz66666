@@ -73,6 +73,9 @@ public class AiAgentOrchestrator {
     /** P2升级: 结构化输出后处理 */
     @Autowired private org.springframework.beans.factory.ObjectProvider<com.fashion.supplychain.intelligence.service.StructuredOutputEnforcer> outputEnforcerProvider;
 
+    // P1-4: 秒答缓存（预取的业务快照 + 预构建答案）
+    @Autowired private org.springframework.beans.factory.ObjectProvider<com.fashion.supplychain.intelligence.service.QuickAnswerCacheService> quickAnswerCacheServiceProvider;
+
     // 五大Agent框架增强组件
     @Autowired private org.springframework.beans.factory.ObjectProvider<com.fashion.supplychain.intelligence.service.MemoryBankService> memoryBankServiceProvider;
     @Autowired private org.springframework.beans.factory.ObjectProvider<com.fashion.supplychain.intelligence.service.SkillAutoCreationService> skillAutoCreationServiceProvider;
@@ -372,6 +375,12 @@ public class AiAgentOrchestrator {
                 emitSse(emitter, "answer", java.util.Map.of("content", cached, "commandId", ctx.getCommandId()));
                 emitSse(emitter, "done", java.util.Map.of());
                 emitter.complete();
+                return;
+            }
+
+            // ── P1-4: 秒答缓存检查（1-3秒返回，比LLM快10倍+） ──
+            boolean quickAnswerHit = tryQuickAnswerCache(userMessage, emitter);
+            if (quickAnswerHit) {
                 return;
             }
 
@@ -778,6 +787,55 @@ public class AiAgentOrchestrator {
         return sb.toString();
     }
 
+
+    /**
+     * P1-4: 秒答缓存检查。
+     * 检查用户的问题是否能命中每30分钟预取的业务快照或预构建答案。
+     * 如果命中，直接返回（~1-3秒），无需走LLM推理。
+     *
+     * @return true: 命中并已返回，false: 未命中需继续执行
+     */
+    private boolean tryQuickAnswerCache(String userMessage, SseEmitter emitter) {
+        try {
+            com.fashion.supplychain.intelligence.service.QuickAnswerCacheService cache =
+                    quickAnswerCacheServiceProvider.getIfAvailable();
+            if (cache == null) return false;
+            if (!cache.isEnabled()) return false;
+
+            Long tenantId = safeTenantId();
+            if (tenantId == null) return false;
+
+            com.fashion.supplychain.intelligence.service.QuickAnswerCacheService.HitResult hit = cache.tryHit(tenantId, userMessage);
+            if (hit == null) return false;
+
+            // 命中：直接返回缓存内容
+            String fullAnswer = hit.getFullAnswer();
+            log.info("[AiAgent-QuickAnswer] 命中: type={}, confidence={}, 长度={}",
+                    hit.getType(), hit.getConfidence(), fullAnswer.length());
+
+            // 返回answer事件（与其他流程一致的格式）
+            String commandId = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 16);
+            emitSse(emitter, "answer", java.util.Map.of(
+                    "content", fullAnswer,
+                    "commandId", commandId,
+                    "source", "quick_answer_cache",
+                    "hitType", hit.getType()));
+            emitSse(emitter, "done", java.util.Map.of());
+            emitter.complete();
+            return true;
+        } catch (Exception e) {
+            log.warn("[AiAgent-QuickAnswer] 秒答缓存异常, 降级: {}", e.getMessage());
+            return false;
+        }
+    }
+
+    private Long safeTenantId() {
+        try {
+            return UserContext.tenantId();
+        } catch (Exception e) {
+            return null;
+        }
+    }
 
     private boolean isQuickPathEligible(String userMessage) {
         if (userMessage == null || userMessage.length() > 800) return false;
