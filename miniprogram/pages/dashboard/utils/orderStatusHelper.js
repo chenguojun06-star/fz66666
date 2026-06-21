@@ -14,6 +14,8 @@ const COLOR_BLUE = 'var(--color-info)';
 const COLOR_CYAN = 'var(--color-tertiary)';
 const COLOR_ORANGE = 'var(--color-warning-secondary)';
 const COLOR_VOLCANO = 'var(--color-error-secondary)';
+const COLOR_PURPLE = 'var(--color-purple)';
+const COLOR_GEEKBLUE = 'var(--color-geekblue)';
 const COLOR_FALLBACK = 'var(--color-text-secondary)';
 
 /** 主状态标签映射（与 PC 端 orderStatus.ts 保持一致） */
@@ -57,14 +59,15 @@ const STATUS_LABEL_MAP = {
 
 /** 主状态颜色映射（与 PC 端 ORDER_STATUS_COLOR 保持一致） */
 const STATUS_COLOR_MAP = {
+  // 与 PC 端 constants/statusMaps.ts ORDER_STATUS_MAP 保持一致
   not_started: COLOR_DEFAULT,
   pending: COLOR_DEFAULT,
   procurement: COLOR_BLUE,
   cutting: COLOR_CYAN,
   sewing: COLOR_CYAN,
-  secondary_process: COLOR_BLUE,
-  quality_check: COLOR_PROCESSING,
-  warehousing: COLOR_PROCESSING,
+  secondary_process: COLOR_PURPLE,
+  quality_check: COLOR_GEEKBLUE,
+  warehousing: COLOR_GEEKBLUE,
   production: COLOR_PROCESSING,
   in_progress: COLOR_PROCESSING,
   completed: COLOR_SUCCESS,
@@ -81,13 +84,13 @@ const STATUS_COLOR_MAP = {
   closed: COLOR_BLUE,
   archived: COLOR_DEFAULT,
   ironing: COLOR_CYAN,
-  packaging: COLOR_PROCESSING,
+  packaging: COLOR_GEEKBLUE,
   material_preparation: COLOR_BLUE,
   received: COLOR_BLUE,
   partial: COLOR_CYAN,
   partial_arrival: COLOR_CYAN,
   awaiting_confirm: COLOR_BLUE,
-  warehouse_pending: COLOR_PROCESSING,
+  warehouse_pending: COLOR_GEEKBLUE,
   pending_audit: COLOR_BLUE,
   passed: COLOR_SUCCESS,
   bundled: COLOR_CYAN,

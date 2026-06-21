@@ -993,6 +993,7 @@ public class ProductionOrderOrchestrator {
 
         java.util.List<ProductionOrder> allOrders = productionOrderService.lambdaQuery()
                 .eq(ProductionOrder::getDeleteFlag, 0)
+                .eq(ProductionOrder::getTenantId, UserContext.tenantId())
                 .eq(ProductionOrder::getFactoryType, "EXTERNAL")
                 .list();
 

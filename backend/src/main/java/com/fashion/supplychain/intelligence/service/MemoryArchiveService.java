@@ -116,10 +116,10 @@ public class MemoryArchiveService {
                     archiveToQdrant(mem);
                 }
                 // 软删除 PostgreSQL 原记录（delete_flag=1，保留 7 天兜底由 purgeJob 硬删除）
+                // 注意：只用 id（主键）作为条件，避免 tenant_id=NULL 时删除失败
                 conversationMemoryMapper.update(null,
                         new LambdaUpdateWrapper<AiConversationMemory>()
                                 .eq(AiConversationMemory::getId, mem.getId())
-                                .eq(AiConversationMemory::getTenantId, mem.getTenantId())
                                 .set(AiConversationMemory::getDeleteFlag, 1));
                 archived++;
             } catch (Exception e) {
