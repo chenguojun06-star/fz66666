@@ -311,21 +311,28 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
   const currentAssetMeta = resolveAssetMeta(currentImage, currentIndex);
   return (
     <div style={{ marginBottom: 12 }}>
-      <div style={{ marginBottom: 8, fontWeight: 600 }}>图片资产</div>
+      <div style={{
+        marginBottom: 8,
+        fontWeight: 600,
+        fontSize: 14,
+        color: '#1f2937',
+        paddingLeft: 12,
+        borderLeft: '3px solid var(--color-primary)',
+        lineHeight: 1.4,
+      }}>图片资产</div>
       {/* 大图（缩小版预览） */}
       <div
         style={{
           width: '100%',
-          maxWidth: 400,
           aspectRatio: '1 / 1',
-          border: '1px dashed var(--color-border-antd)',
+          border: '1px solid #e5e7eb',
           borderRadius: 8,
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'center',
           marginBottom: 12,
           overflow: 'hidden',
-          background: 'var(--color-bg-container)',
+          background: '#fafafa',
           cursor: 'default',
           position: 'relative',
         }}
@@ -335,7 +342,7 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
         {currentImage ? (
           <div style={{ position: 'relative', width: '100%', height: '100%' }}>
             <Image loading="lazy" src={getFullAuthedFileUrl(currentImage.fileUrl)} alt="main" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            <div style={{ position: 'absolute', left: 10, top: 10, padding: '3px 8px', borderRadius: 999, background: currentAssetMeta.color, color: 'var(--color-bg-base)', fontSize: 14, fontWeight: 600 }}>
+            <div style={{ position: 'absolute', left: 10, top: 10, padding: '4px 10px', borderRadius: 999, background: 'rgba(37, 99, 235, 0.9)', color: '#fff', fontSize: 12, fontWeight: 600 }}>
               {currentAssetMeta.label}
             </div>
             {currentImage && (
@@ -349,8 +356,8 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
                   {parsing && (
                     <div
                       style={{
-                        padding: '3px 8px', borderRadius: 999,
-                        background: 'rgba(234,88,12,0.95)', color: 'var(--color-bg-base)',
+                        padding: '4px 10px', borderRadius: 999,
+                        background: 'rgba(234, 88, 12, 0.92)', color: '#fff',
                         fontSize: 12, fontWeight: 600,
                         display: 'flex', alignItems: 'center', gap: 4,
                       }}
@@ -362,25 +369,25 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
                   {!parsing && parseSuccessConfidence !== null && (
                     <div
                       style={{
-                        padding: '3px 8px', borderRadius: 999,
-                        background: 'rgba(34,197,94,0.95)', color: 'var(--color-bg-base)',
+                        padding: '4px 10px', borderRadius: 999,
+                        background: 'rgba(34, 197, 94, 0.92)', color: '#fff',
                         fontSize: 12, fontWeight: 600,
                         display: 'flex', alignItems: 'center', gap: 4,
                       }}
                     >
-                      ✅ 已识别：置信度 {parseSuccessConfidence}%
+                      ✅ 已识别：{parseSuccessConfidence}%
                     </div>
                   )}
                   {!parsing && parseSuccessConfidence === null && autoParseError && (
                     <div
                       style={{
-                        padding: '3px 8px', borderRadius: 999,
-                        background: 'rgba(245,158,11,0.95)', color: 'var(--color-bg-base)',
+                        padding: '4px 10px', borderRadius: 999,
+                        background: 'rgba(245, 158, 11, 0.9)', color: '#fff',
                         fontSize: 12, fontWeight: 600,
                         display: 'flex', alignItems: 'center', gap: 4,
                       }}
                     >
-                      ⚠️ 识别失败，可手动填写
+                      ⚠️ 可手动填写
                     </div>
                   )}
                   <div style={{ display: 'flex', gap: 6 }}>
@@ -409,22 +416,22 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
                         }
                       }}
                       style={{
-                        padding: '3px 8px', borderRadius: 999,
-                        background: parsing ? 'rgba(0,0,0,0.3)' : 'rgba(234,88,12,0.85)', color: 'var(--color-bg-base)',
+                        padding: '4px 10px', borderRadius: 999,
+                        background: parsing ? 'rgba(0,0,0,0.3)' : 'rgba(37, 99, 235, 0.9)',
+                        color: '#fff',
                         fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4,
                         transition: 'background 0.15s',
                       }}
                       title="智能识别图片中的款式特征并自动填充表单"
                     >
                       <BulbOutlined style={{ fontSize: 11 }} />
-                      {parsing ? '识别中...' : '智能识别'}
+                      {parsing ? '识别中...' : '智能识别填充'}
                     </div>
                     <div
                       onClick={async () => {
                         if (searching) return;
                         let imgUrl = '';
 
-                        // 新建模式：本地图片需要先上传获取服务器URL
                         if (currentImage.isLocal && isNewMode && pendingFiles[currentImage.localIndex]) {
                           setSearching(true);
                           try {
@@ -445,17 +452,16 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
                             return;
                           }
                         } else {
-                          // 编辑模式：直接使用服务器图片URL
                           const fullUrl = getFullAuthedFileUrl(currentImage.fileUrl);
                           if (!fullUrl || fullUrl.startsWith('blob:') || fullUrl.startsWith('data:')) {
-                            message.warning('当前图片不支持以图搜款（需要公网可访问的图片）');
+                            message.warning('当前图片不支持以图搜款');
                             return;
                           }
                           imgUrl = fullUrl;
                         }
 
                         if (!imgUrl) {
-                          message.warning('无法获取图片URL，无法进行以图搜款');
+                          message.warning('无法获取图片URL');
                           return;
                         }
 
@@ -475,10 +481,10 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
                         }
                       }}
                       style={{
-                        padding: '3px 8px', borderRadius: 999,
-                        background: searching ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.45)', color: 'var(--color-bg-base)',
+                        padding: '4px 10px', borderRadius: 999,
+                        background: searching ? 'rgba(0,0,0,0.3)' : 'rgba(17, 24, 39, 0.7)',
+                        color: '#fff',
                         fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4,
-                        transition: 'background 0.15s',
                       }}
                       title="以图搜款：搜索视觉相似的历史款式"
                     >
@@ -491,26 +497,27 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
             )}
           </div>
         ) : coverUrl ? (
-          // 无上传附件但有选品中心下板时的参考图（cover字段）
           <Image loading="lazy" src={getFullAuthedFileUrl(coverUrl)} alt="cover" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
         ) : (
-          <div style={{ textAlign: 'center', padding: '20px' }}>
+          <div style={{ textAlign: 'center', padding: '24px 16px', width: '100%' }}>
             {isNewMode ? (
               <>
-                <div style={{ color: 'var(--primary-color)', fontSize: "var(--font-size-base)", marginBottom: 4 }}>上传设计稿或款式照片</div>
-                <div style={{ color: 'var(--neutral-text-disabled)', fontSize: "var(--font-size-xs)" }}>可点击"智能识别"自动填充款号信息</div>
+                <div style={{ color: 'var(--color-primary)', fontSize: 13, marginBottom: 6, fontWeight: 600 }}>上传设计稿或款式照片</div>
+                <div style={{ color: '#9ca3af', fontSize: 12, lineHeight: 1.55 }}>
+                  支持拖拽上传本地图片，上传完成后可自动识别并填充款号信息、颜色、尺码等字段
+                </div>
               </>
             ) : !styleId ? (
               <>
-                <div style={{ color: 'var(--primary-color)', fontSize: "var(--font-size-base)", marginBottom: 4 }}>上传设计稿或款式照片</div>
-                <div style={{ color: 'var(--neutral-text-disabled)', fontSize: "var(--font-size-xs)" }}>请先填写上方基础信息并点击"保存基础信息"</div>
+                <div style={{ color: 'var(--color-primary)', fontSize: 13, marginBottom: 6, fontWeight: 600 }}>上传设计稿或款式照片</div>
+                <div style={{ color: '#9ca3af', fontSize: 12, lineHeight: 1.55 }}>请先保存基础信息后再上传图片</div>
               </>
             ) : enabled ? (
-              <span style={{ color: 'var(--neutral-text-disabled)' }}>上传设计稿或款式照片</span>
+              <span style={{ color: '#9ca3af', fontSize: 12 }}>上传设计稿或款式照片</span>
             ) : (
               <>
-                <div style={{ color: 'var(--color-danger)', fontSize: "var(--font-size-base)", marginBottom: 4 }}>样衣已完成</div>
-                <div style={{ color: 'var(--neutral-text-disabled)', fontSize: "var(--font-size-xs)" }}>请联系管理员退回后修改</div>
+                <div style={{ color: 'var(--color-danger)', fontSize: 13, marginBottom: 6, fontWeight: 600 }}>样衣已完成</div>
+                <div style={{ color: '#9ca3af', fontSize: 12, lineHeight: 1.55 }}>如需修改请联系管理员</div>
               </>
             )}
           </div>
@@ -521,27 +528,27 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
               onClick={(e) => { e.stopPropagation(); setCurrentIndex(currentIndex <= 0 ? displayImages.length - 1 : currentIndex - 1); }}
               style={{
                 position: 'absolute', left: 0, top: '50%', transform: 'translateY(-50%)',
-                width: 28, height: 48, background: 'rgba(0,0,0,0.35)',
-                borderRadius: '0 6px 6px 0', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                width: 32, height: 56, background: 'rgba(17, 24, 39, 0.5)',
+                borderRadius: '0 8px 8px 0', display: 'flex', alignItems: 'center', justifyContent: 'center',
                 cursor: 'pointer', transition: 'background 0.15s',
               }}
-              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(0,0,0,0.55)'; }}
-              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(0,0,0,0.35)'; }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(17, 24, 39, 0.75)'; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(17, 24, 39, 0.5)'; }}
             >
-              <LeftOutlined style={{ color: 'var(--color-bg-base)', fontSize: 12 }} />
+              <LeftOutlined style={{ color: '#fff', fontSize: 14 }} />
             </div>
             <div
               onClick={(e) => { e.stopPropagation(); setCurrentIndex(currentIndex >= displayImages.length - 1 ? 0 : currentIndex + 1); }}
               style={{
                 position: 'absolute', right: 0, top: '50%', transform: 'translateY(-50%)',
-                width: 28, height: 48, background: 'rgba(0,0,0,0.35)',
-                borderRadius: '6px 0 0 6px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                width: 32, height: 56, background: 'rgba(17, 24, 39, 0.5)',
+                borderRadius: '8px 0 0 8px', display: 'flex', alignItems: 'center', justifyContent: 'center',
                 cursor: 'pointer', transition: 'background 0.15s',
               }}
-              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(0,0,0,0.55)'; }}
-              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(0,0,0,0.35)'; }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(17, 24, 39, 0.75)'; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(17, 24, 39, 0.5)'; }}
             >
-              <RightOutlined style={{ color: 'var(--color-bg-base)', fontSize: 12 }} />
+              <RightOutlined style={{ color: '#fff', fontSize: 14 }} />
             </div>
           </>
         )}

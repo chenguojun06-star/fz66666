@@ -125,9 +125,13 @@ const StyleInfoDetailPage: React.FC = () => {
           </Card>
         ) : null}
         <StyleIntelligenceProfileCard style={currentStyle} />
+        {/* 样衣详情 - 基础信息卡片 */}
         <Card
-          title="样衣详情"
-          style={{ marginBottom: 12 }}
+          title={
+            <span style={{ fontSize: 15, fontWeight: 600, color: '#111827' }}>样衣详情</span>
+          }
+          style={{ marginBottom: 16, borderRadius: 10 }}
+          bodyStyle={{ padding: 20 }}
           extra={
             <StyleActionButtons
               saving={saving}
@@ -205,14 +209,22 @@ const StyleInfoDetailPage: React.FC = () => {
           </Form>
         </Card>
 
-        <div style={{ marginTop: 12 }}>
+        {/* 业务流程区 —— 按业务流程分区展示 BOM / 报价单 / 其他信息 */}
+        <div style={{ marginTop: 4 }}>
           <Tabs
             activeKey={bomAreaTabKey}
             onChange={setBomAreaTabKey}
             size="small"
+            tabBarStyle={{
+              background: '#ffffff',
+              padding: '0 12px',
+              borderRadius: '10px 10px 0 0',
+              border: '1px solid #e5e7eb',
+              margin: 0,
+            }}
             items={[
-              { key: 'bom', label: 'BOM清单', children: (
-                <div>
+              { key: 'bom', label: 'BOM清单 · 工艺 · 生产', children: (
+                <div style={{ padding: 12, background: '#ffffff', border: '1px solid #e5e7eb', borderTop: 'none', borderRadius: '0 0 10px 10px' }}>
                   <StyleBomTab
                     styleId={currentStyle?.id ?? ''}
                     sizeColorConfig={colorSize.sizeColorConfig}
@@ -222,7 +234,7 @@ const StyleInfoDetailPage: React.FC = () => {
                     bomCompletedTime={(currentStyle as any)?.bomCompletedTime}
                     onRefresh={() => { void fetchDetail(styleIdParam!); }}
                   />
-                  <Card title="纸样开发" id="section-pattern" style={{ marginTop: 8 }}>
+                  <Card title="纸样开发" id="section-pattern" style={{ marginTop: 8, borderRadius: 8 }}>
                     <StylePatternTab
                       styleId={currentStyle?.id ?? ''}
                       sizeColorConfig={colorSize.sizeColorConfig}
@@ -238,7 +250,7 @@ const StyleInfoDetailPage: React.FC = () => {
                       onRefresh={() => { void fetchDetail(styleIdParam!); }}
                     />
                   </Card>
-                  <Card title="生产制单" id="section-production" style={{ marginTop: 8 }}>
+                  <Card title="生产制单" id="section-production" style={{ marginTop: 8, borderRadius: 8 }}>
                     <StyleProductionTab
                       styleId={currentStyle?.id ?? ''}
                       styleNo={currentStyle?.styleNo ?? ''}
@@ -269,7 +281,7 @@ const StyleInfoDetailPage: React.FC = () => {
                       sampleQuantity={(currentStyle as any)?.sampleQuantity}
                     />
                   </Card>
-                  <Card title="二次工艺" id="section-secondary" style={{ marginTop: 8 }}>
+                  <Card title="二次工艺" id="section-secondary" style={{ marginTop: 8, borderRadius: 8 }}>
                     <StyleSecondaryProcessTab
                       styleId={currentStyle?.id ?? ''}
                       styleNo={currentStyle?.styleNo ?? ''}
@@ -281,7 +293,7 @@ const StyleInfoDetailPage: React.FC = () => {
                       onRefresh={() => { void fetchDetail(styleIdParam!); }}
                     />
                   </Card>
-                  <Card title="工序单价" id="section-process" style={{ marginTop: 8 }}>
+                  <Card title="工序单价" id="section-process" style={{ marginTop: 8, borderRadius: 8 }}>
                     <StyleProcessTab
                       styleId={currentStyle?.id ?? ''}
                       styleNo={currentStyle?.styleNo ?? ''}
@@ -295,46 +307,56 @@ const StyleInfoDetailPage: React.FC = () => {
                 </div>
               )},
               { key: 'quotation', label: '报价单', children: (
-                <StyleQuotationTab styleId={currentStyle?.id ?? ''} styleNo={currentStyle?.styleNo ?? ''} totalQty={colorSize.totalMatrixQty} />
+                <div style={{ padding: 12, background: '#ffffff', border: '1px solid #e5e7eb', borderTop: 'none', borderRadius: '0 0 10px 10px' }}>
+                  <StyleQuotationTab styleId={currentStyle?.id ?? ''} styleNo={currentStyle?.styleNo ?? ''} totalQty={colorSize.totalMatrixQty} />
+                </div>
               )},
               { key: 'attachment', label: '附件文件', children: (
-                <StyleAttachmentTab styleId={currentStyle?.id ?? ''} styleNo={currentStyle?.styleNo ?? ''} />
+                <div style={{ padding: 12, background: '#ffffff', border: '1px solid #e5e7eb', borderTop: 'none', borderRadius: '0 0 10px 10px' }}>
+                  <StyleAttachmentTab styleId={currentStyle?.id ?? ''} styleNo={currentStyle?.styleNo ?? ''} />
+                </div>
               )},
               { key: 'sku', label: 'SKU管理', children: (
-                <StyleSkuTab
-                  styleId={String(currentStyle?.id ?? '')}
-                  styleNo={currentStyle?.styleNo ?? ''}
-                  skc={(currentStyle as any)?.skc}
-                  skuMode={(currentStyle as any)?.skuMode}
-                  useSkuPrefix={(currentStyle as any)?.useSkuPrefix}
-                  onModeChange={() => { void fetchDetail(styleIdParam!); }}
-                  onRefresh={() => { void fetchDetail(styleIdParam!); }}
-                />
+                <div style={{ padding: 12, background: '#ffffff', border: '1px solid #e5e7eb', borderTop: 'none', borderRadius: '0 0 10px 10px' }}>
+                  <StyleSkuTab
+                    styleId={String(currentStyle?.id ?? '')}
+                    styleNo={currentStyle?.styleNo ?? ''}
+                    skc={(currentStyle as any)?.skc}
+                    skuMode={(currentStyle as any)?.skuMode}
+                    useSkuPrefix={(currentStyle as any)?.useSkuPrefix}
+                    onModeChange={() => { void fetchDetail(styleIdParam!); }}
+                    onRefresh={() => { void fetchDetail(styleIdParam!); }}
+                  />
+                </div>
               )},
               { key: 'washlabel', label: '洗水唛', children: (
-                <StyleWashLabelTab
-                  styleId={String(currentStyle?.id ?? '')}
-                  styleNo={currentStyle?.styleNo ?? ''}
-                  styleName={(currentStyle as any)?.styleName}
-                  fabricCompositionParts={(currentStyle as any)?.fabricCompositionParts}
-                  fabricComposition={(currentStyle as any)?.fabricComposition}
-                  washInstructions={(currentStyle as any)?.washInstructions}
-                  uCode={(currentStyle as any)?.uCode}
-                  washTempCode={(currentStyle as any)?.washTempCode}
-                  bleachCode={(currentStyle as any)?.bleachCode}
-                  tumbleDryCode={(currentStyle as any)?.tumbleDryCode}
-                  ironCode={(currentStyle as any)?.ironCode}
-                  dryCleanCode={(currentStyle as any)?.dryCleanCode}
-                  careIconCodes={(currentStyle as any)?.careIconCodes}
-                  onRefresh={() => { void fetchDetail(styleIdParam!); }}
-                />
+                <div style={{ padding: 12, background: '#ffffff', border: '1px solid #e5e7eb', borderTop: 'none', borderRadius: '0 0 10px 10px' }}>
+                  <StyleWashLabelTab
+                    styleId={String(currentStyle?.id ?? '')}
+                    styleNo={currentStyle?.styleNo ?? ''}
+                    styleName={(currentStyle as any)?.styleName}
+                    fabricCompositionParts={(currentStyle as any)?.fabricCompositionParts}
+                    fabricComposition={(currentStyle as any)?.fabricComposition}
+                    washInstructions={(currentStyle as any)?.washInstructions}
+                    uCode={(currentStyle as any)?.uCode}
+                    washTempCode={(currentStyle as any)?.washTempCode}
+                    bleachCode={(currentStyle as any)?.bleachCode}
+                    tumbleDryCode={(currentStyle as any)?.tumbleDryCode}
+                    ironCode={(currentStyle as any)?.ironCode}
+                    dryCleanCode={(currentStyle as any)?.dryCleanCode}
+                    careIconCodes={(currentStyle as any)?.careIconCodes}
+                    onRefresh={() => { void fetchDetail(styleIdParam!); }}
+                  />
+                </div>
               )},
               { key: 'cutting', label: '裁剪信息', children: (
-                <StyleCuttingInfoTab styleNo={currentStyle?.styleNo ?? ''} />
+                <div style={{ padding: 12, background: '#ffffff', border: '1px solid #e5e7eb', borderTop: 'none', borderRadius: '0 0 10px 10px' }}>
+                  <StyleCuttingInfoTab styleNo={currentStyle?.styleNo ?? ''} />
+                </div>
               )},
             ]}
           />
-          </div>
+        </div>
         </PageLayout>
 
       <ResizableModal
