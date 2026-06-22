@@ -103,7 +103,7 @@ const OrderWasteAnalysis: React.FC = () => {
 
     setLoading(true);
     try {
-      const result = await api.get('/api/production/waste-analysis/summary', {
+      const result = await api.get('/production/waste-analysis/summary', {
         params: {
           styleNo: filters.styleNo || '',
           orderNo: filters.orderNo || '',
@@ -129,7 +129,7 @@ const OrderWasteAnalysis: React.FC = () => {
 
     setLoading(true);
     try {
-      const result = await api.get('/api/production/waste-analysis/list', {
+      const result = await api.get('/production/waste-analysis/list', {
         params: {
           current: String(page),
           size: String(pageSize),
