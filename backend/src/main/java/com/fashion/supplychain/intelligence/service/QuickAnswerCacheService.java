@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -131,14 +132,13 @@ public class QuickAnswerCacheService {
         } else {
             return null;
         }
-        for (String kw : keywords) {
-            List<QuickAnswer> list = quickAnswerMapper.findPrebuiltByKeyword(tenantId, kw);
-            if (list != null && !list.isEmpty()) {
-                QuickAnswer qa = list.get(0);
-                if (qa.getConfidence() >= confidenceThreshold) {
-                    quickAnswerMapper.incrementHitCount(qa.getId());
-                    return toHitResult(qa);
-                }
+        // 单次查询多个关键词（OR条件），提高查询效率和准确性
+        List<QuickAnswer> list = quickAnswerMapper.findPrebuiltByKeywords(tenantId, keywords);
+        if (list != null && !list.isEmpty()) {
+            QuickAnswer qa = list.get(0);
+            if (qa.getConfidence() >= confidenceThreshold) {
+                quickAnswerMapper.incrementHitCount(qa.getId());
+                return toHitResult(qa);
             }
         }
         return null;
@@ -166,6 +166,7 @@ public class QuickAnswerCacheService {
     // ========================================================================
 
     /** 写入业务快照（数字卡片）——每租户每类型只留1条有效快照，避免表无限变大 */
+    @Transactional(rollbackFor = Exception.class)
     public void saveSnapshot(Long tenantId, Map<String, Object> snapshotData,
                               String summaryText, String evidenceJson) {
         if (tenantId == null) return;

@@ -32,6 +32,19 @@ public interface QuickAnswerMapper extends BaseMapper<QuickAnswer> {
     List<QuickAnswer> findPrebuiltByKeyword(@Param("tenantId") Long tenantId,
                                             @Param("keyword") String keyword);
 
+    /** 按多个问题模式匹配（OR条件，用于PREBUILT类型，单次查询） */
+    @Select("<script>" +
+            "SELECT * FROM t_quick_answer WHERE tenant_id = #{tenantId} " +
+            "AND answer_type = 'PREBUILT' AND delete_flag = 0 " +
+            "AND expire_time > NOW() AND (question_pattern LIKE CONCAT('%', #{keywords[0]}, '%') " +
+            "<foreach collection='keywords' item='kw' index='idx' separator=' OR '>" +
+            "question_pattern LIKE CONCAT('%', #{kw}, '%')" +
+            "</foreach>) " +
+            "ORDER BY confidence DESC, hit_count DESC LIMIT 3" +
+            "</script>")
+    List<QuickAnswer> findPrebuiltByKeywords(@Param("tenantId") Long tenantId,
+                                             @Param("keywords") String[] keywords);
+
     /** 获取指定租户最新的HOTSPOT（热点预取）缓存 */
     @Select("SELECT * FROM t_quick_answer WHERE tenant_id = #{tenantId} " +
             "AND answer_type = 'HOTSPOT' AND delete_flag = 0 " +

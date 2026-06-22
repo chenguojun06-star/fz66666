@@ -126,12 +126,12 @@ public class MaterialColorCardOrchestrator {
             throw new IllegalStateException("色卡编号已存在");
         }
 
-        // 自动同步供应商到工厂管理（面料供应商）
-        syncSupplierToFactory(card);
-
         LocalDateTime now = LocalDateTime.now();
         card.setId(UUID.randomUUID().toString().replace("-", ""));
         card.setTenantId(tenantId);
+
+        // 自动同步供应商到工厂管理（面料供应商）
+        syncSupplierToFactory(card);
         card.setCreateTime(now);
         card.setUpdateTime(now);
         card.setDeleteFlag(0);
@@ -645,7 +645,7 @@ public class MaterialColorCardOrchestrator {
                 card.setSupplierContactPhone(existing.getContactPhone());
             }
         } else {
-            // 不存在，自动创建
+            // 不存在，自动创建（带并发防御：插入后再次查询，防止重复创建）
             Factory newFactory = new Factory();
             newFactory.setId(null);
             newFactory.setFactoryName(card.getSupplierName().trim());
@@ -660,7 +660,17 @@ public class MaterialColorCardOrchestrator {
             newFactory.setCreateTime(LocalDateTime.now());
             newFactory.setUpdateTime(LocalDateTime.now());
             factoryMapper.insert(newFactory);
-            card.setSupplierId(newFactory.getId());
+
+            // 并发防御：插入后再次查询，确保不会重复创建
+            Factory afterInsert = factoryMapper.selectOne(
+                new LambdaQueryWrapper<Factory>()
+                    .eq(Factory::getFactoryName, card.getSupplierName().trim())
+                    .eq(Factory::getTenantId, tenantId)
+                    .eq(Factory::getSupplierType, "MATERIAL")
+                    .and(w -> w.isNull(Factory::getDeleteFlag).or().eq(Factory::getDeleteFlag, 0))
+                    .last("LIMIT 1")
+            );
+            card.setSupplierId(afterInsert != null ? afterInsert.getId() : newFactory.getId());
         }
     }
 
