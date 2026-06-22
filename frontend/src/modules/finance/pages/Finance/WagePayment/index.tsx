@@ -2,6 +2,7 @@ import React, { useCallback } from 'react';
 import { readPageSize } from '@/utils/pageSizeStore';
 import { formatMoney } from '@/utils/format';
 import dayjs from 'dayjs';
+import { useSync } from '@/utils/syncManager';
 import AccountManagementModal from './components/AccountManagementModal';
 import BillSummaryTab from './components/BillSummaryTab';
 import {
@@ -28,7 +29,6 @@ import {
   AccountBookOutlined,
   DownloadOutlined,
   LineChartOutlined,
-  MessageOutlined,
 } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
 import ResizableModal from '@/components/common/ResizableModal';
@@ -43,10 +43,10 @@ import {
   OWNER_TYPE_OPTIONS,
   BIZ_TYPE_OPTIONS,
   BIZ_TYPE_MAP,
+  wagePaymentApi,
 } from '@/services/finance/wagePaymentApi';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import PaymentDashboardTab from './components/PaymentDashboardTab';
-import WageFeedbackTab from './components/WageFeedbackTab';
 import { usePaymentColumns, methodIconMap, accountTypeIconMap } from './hooks/usePaymentColumns';
 import { usePaymentData } from './hooks/usePaymentData';
 import { usePayModal } from './hooks/usePayModal';
@@ -87,6 +87,32 @@ const PaymentCenterPage: React.FC = () => {
   const handleOpenPayModal = useCallback(() => pay.openPayModal(), [pay.openPayModal]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const handleClearSelectedPayableKeys = useCallback(() => data.setSelectedPayableKeys([]), [data.setSelectedPayableKeys]);
+
+  // ---- 数据同步（45秒轮询，与 MaterialReconciliation 一致） ----
+  useSync(
+    'wage-payment-list',
+    async () => {
+      try {
+        if (data.activeTab === 'pending') {
+          const res: any = await wagePaymentApi.listPendingPayables(data.payableBizType || undefined);
+          return { records: res?.data ?? res ?? [], tab: 'pending' };
+        } else {
+          const res: any = await wagePaymentApi.listPayments(data.filterValuesRef.current);
+          return { records: res?.data ?? res ?? [], tab: 'records' };
+        }
+      } catch { return null; }
+    },
+    (newData, oldData) => {
+      if (oldData !== null && newData) {
+        if (newData.tab === 'pending') {
+          void data.fetchPayables();
+        } else {
+          void data.fetchPayments();
+        }
+      }
+    },
+    { interval: 45000, enabled: !data.payablesLoading && !data.paymentsLoading && !pay.payModalOpen && !acct.accountModalOpen, pauseOnHidden: true },
+  );
 
   const [amountDetailOpen, setAmountDetailOpen] = React.useState(false);
   const [amountDetailTarget, setAmountDetailTarget] = React.useState<any>(null);
@@ -151,23 +177,19 @@ const PaymentCenterPage: React.FC = () => {
             destroyOnHidden={false}
             items={[
               {
-                key: 'bills',
-                label: (
-                  <span>
-                    <AccountBookOutlined /> 账单汇总
-                  </span>
-                ),
-                children: <BillSummaryTab />,
-              },
-              {
                 key: 'pending',
                 label: (
                   <span>
-                    <AccountBookOutlined /> 待收付款 {data.pendingStats.total > 0 && <Tag color="red">{data.pendingStats.total}</Tag>}
+                    <AccountBookOutlined /> 待处理 {data.pendingStats.total > 0 && <Tag color="red">{data.pendingStats.total}</Tag>}
                   </span>
                 ),
                 children: (
                   <>
+                    {/* 账单汇总（上方） */}
+                    <div style={{ marginBottom: 16 }}>
+                      <BillSummaryTab />
+                    </div>
+
                     {/* 统计行 */}
                     <div style={{
                       display: 'flex',
@@ -408,15 +430,6 @@ const PaymentCenterPage: React.FC = () => {
                   </span>
                 ),
                 children: <PaymentDashboardTab />,
-              },
-              {
-                key: 'feedback',
-                label: (
-                  <span>
-                    <MessageOutlined /> 工资结算反馈
-                  </span>
-                ),
-                children: <WageFeedbackTab />,
               },
             ]}
           />

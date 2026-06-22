@@ -17,7 +17,7 @@ import Register from './pages/Register';
 import { PurchaseCartProvider } from './context/PurchaseCartContext';
 
 import { StyleInfo, StyleInfoList, OrderManagement, DataCenter, TemplateCenter, PatternRevisionManagement, MaintenanceCenter } from './modules/basic';
-import { MaterialReconciliation, PayrollOperatorSummary, FinanceCenter, ExpenseReimbursement, EmployeeAdvance, WagePayment, EcSalesRevenue, TaxExport, OrderWasteAnalysis } from './modules/finance';
+import { MaterialReconciliation, PayrollOperatorSummary, FinanceCenter, ExpenseReimbursement, EmployeeAdvance, WagePayment, EcSalesRevenue, TaxExport, OrderWasteAnalysis, FinanceDashboard, ShipmentReconciliation } from './modules/finance';
 import { CrmDashboard, ReceivableList } from './modules/crm';
 import { SelectionCenter } from './modules/selection';
 import { MaterialInventory, MaterialDatabase, FinishedInventory, SampleInventory, EcommerceOrders, InventoryCheck, LabelPrint, ProductInfo, WarehouseLocationMap } from './modules/warehouse';
@@ -134,7 +134,7 @@ const AppRoutes: React.FC = () => {
     window.scrollTo(0, 0);
   }, [location.pathname]);
 
-  // ⌘K / Ctrl+K 全局搜索快捷键
+  // ⌘K / Ctrl+K 全局搜索快捷键 + 外部事件触发
   React.useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
@@ -142,8 +142,13 @@ const AppRoutes: React.FC = () => {
         setPaletteOpen(v => !v);
       }
     };
+    const customHandler = () => setPaletteOpen(true);
     document.addEventListener('keydown', handler);
-    return () => document.removeEventListener('keydown', handler);
+    window.addEventListener('command-palette:open', customHandler);
+    return () => {
+      document.removeEventListener('keydown', handler);
+      window.removeEventListener('command-palette:open', customHandler);
+    };
   }, []);
 
   React.useEffect(() => {
@@ -226,6 +231,8 @@ const AppRoutes: React.FC = () => {
           <Route path={paths.ecSalesRevenue} element={<RouteErrorBoundary pageName="电商销售"><Suspense fallback={routeFallback}><EcSalesRevenue /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.financeTaxExport} element={<RouteErrorBoundary pageName="税务导出"><Suspense fallback={routeFallback}><TaxExport /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.orderWasteAnalysis} element={<RouteErrorBoundary pageName="订单损耗分析"><Suspense fallback={routeFallback}><OrderWasteAnalysis /></Suspense></RouteErrorBoundary>} />
+          <Route path={paths.financeDashboard} element={<RouteErrorBoundary pageName="财务总览"><Suspense fallback={routeFallback}><FinanceDashboard /></Suspense></RouteErrorBoundary>} />
+          <Route path={paths.shipmentReconciliation} element={<RouteErrorBoundary pageName="出货对账"><Suspense fallback={routeFallback}><ShipmentReconciliation /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.crm} element={<RouteErrorBoundary pageName="CRM"><Suspense fallback={routeFallback}><CrmDashboard /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.crmReceivables} element={<RouteErrorBoundary pageName="应收管理"><Suspense fallback={routeFallback}><ReceivableList /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.selectionBatch} element={<RouteErrorBoundary pageName="选品中心"><Suspense fallback={routeFallback}><SelectionCenter /></Suspense></RouteErrorBoundary>} />

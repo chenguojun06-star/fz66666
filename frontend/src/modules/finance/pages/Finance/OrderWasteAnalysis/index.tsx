@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { App, Tag, Statistic, Card, Row, Col, DatePicker, Input, Select } from 'antd';
 import PageLayout from '@/components/common/PageLayout';
 import ResizableTable from '@/components/common/ResizableTable';
@@ -6,6 +6,7 @@ import StandardPagination from '@/components/common/StandardPagination';
 import SkuColorImage from '@/components/common/SkuColorImage';
 import dayjs from 'dayjs';
 import { useNavigate } from 'react-router-dom';
+import api from '@/utils/api';
 
 const { RangePicker } = DatePicker;
 const { Option } = Select;
@@ -95,42 +96,41 @@ const OrderWasteAnalysis: React.FC = () => {
     dateRange: [] as [dayjs.Dayjs, dayjs.Dayjs] | [],
   });
 
-  const fetchSummary = useMemo(() => {
+  const fetchSummary = useCallback(async () => {
     const dateRangeStr = filters.dateRange.length === 2
       ? `${filters.dateRange[0].format('YYYY-MM-DD')}~${filters.dateRange[1].format('YYYY-MM-DD')}`
       : '';
-    
-    return async () => {
-      setLoading(true);
-      try {
-        const response = await fetch(`/api/production/waste-analysis/summary?${new URLSearchParams({
+
+    setLoading(true);
+    try {
+      const result = await api.get('/api/production/waste-analysis/summary', {
+        params: {
           styleNo: filters.styleNo || '',
           orderNo: filters.orderNo || '',
           factoryName: filters.factoryName || '',
           factoryType: filters.factoryType || '',
           dateRange: dateRangeStr,
-        }).toString()}`);
-        const result = await response.json();
-        if (result.code === 200) {
-          setSummary(result.data);
-        }
-      } catch (error) {
-        message.error('获取汇总数据失败');
-      } finally {
-        setLoading(false);
+        },
+      });
+      if (result.data.code === 200) {
+        setSummary(result.data.data);
       }
-    };
+    } catch (error) {
+      message.error('获取汇总数据失败');
+    } finally {
+      setLoading(false);
+    }
   }, [filters, message]);
 
-  const fetchList = useMemo(() => {
+  const fetchList = useCallback(async (page: number, pageSize: number) => {
     const dateRangeStr = filters.dateRange.length === 2
       ? `${filters.dateRange[0].format('YYYY-MM-DD')}~${filters.dateRange[1].format('YYYY-MM-DD')}`
       : '';
-    
-    return async (page: number, pageSize: number) => {
-      setLoading(true);
-      try {
-        const response = await fetch(`/api/production/waste-analysis/list?${new URLSearchParams({
+
+    setLoading(true);
+    try {
+      const result = await api.get('/api/production/waste-analysis/list', {
+        params: {
           current: String(page),
           size: String(pageSize),
           styleNo: filters.styleNo || '',
@@ -138,18 +138,17 @@ const OrderWasteAnalysis: React.FC = () => {
           factoryName: filters.factoryName || '',
           factoryType: filters.factoryType || '',
           dateRange: dateRangeStr,
-        }).toString()}`);
-        const result = await response.json();
-        if (result.code === 200) {
-          setDataSource(result.data.records || []);
-          setPagination(prev => ({ ...prev, total: result.data.total || 0, current: page, pageSize }));
-        }
-      } catch (error) {
-        message.error('获取订单损耗列表失败');
-      } finally {
-        setLoading(false);
+        },
+      });
+      if (result.data.code === 200) {
+        setDataSource(result.data.data.records || []);
+        setPagination(prev => ({ ...prev, total: result.data.data.total || 0, current: page, pageSize }));
       }
-    };
+    } catch (error) {
+      message.error('获取订单损耗列表失败');
+    } finally {
+      setLoading(false);
+    }
   }, [filters, message]);
 
   useEffect(() => {

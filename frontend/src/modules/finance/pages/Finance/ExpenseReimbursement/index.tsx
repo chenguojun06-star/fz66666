@@ -13,8 +13,10 @@ import { useUser } from '@/utils/AuthContext';
 import { hasPermission } from '@/utils/permission';
 import { EXPENSE_TYPES, EXPENSE_STATUS, PAYMENT_METHODS, expenseReimbursementApi, type ExpenseReimbursement } from '@/services/finance/expenseReimbursementApi';
 import SupplierSelect from '@/components/common/SupplierSelect';
+import PageLayout from '@/components/common/PageLayout';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
+import { useSync } from '@/utils/syncManager';
 import { useExpenseListData } from './hooks/useExpenseListData';
 import { useExpenseForm } from './hooks/useExpenseForm';
 import ExpenseDetailModal from './components/ExpenseDetailModal';
@@ -67,6 +69,29 @@ const ExpenseReimbursementPage: React.FC = () => {
       message.error(`删除报销单失败: ${err instanceof Error ? err.message : '未知错误'}`);
     }
   };
+
+  // ---- 数据同步（45秒轮询，与 MaterialReconciliation 一致） ----
+  useSync(
+    'expense-reimbursement-list',
+    async () => {
+      try {
+        const params: Record<string, unknown> = { page: 1, size: 1 };
+        if (viewMode === 'my' && user?.id) params.applicantId = String(user.id);
+        if (filterStatus) params.status = filterStatus;
+        if (filterType) params.expenseType = filterType;
+        if (keyword.trim()) params.keyword = keyword.trim();
+        const res = await expenseReimbursementApi.getList(params);
+        const data = res.data;
+        return { total: data?.total || 0 };
+      } catch { return null; }
+    },
+    (newData, oldData) => {
+      if (oldData !== null && newData && newData.total !== oldData.total) {
+        fetchList();
+      }
+    },
+    { interval: 45000, enabled: !loading && !formOpen && !detailOpen, pauseOnHidden: true },
+  );
 
   const handlePay = (record: ExpenseReimbursement) => {
     modal.confirm({
@@ -137,7 +162,7 @@ const ExpenseReimbursementPage: React.FC = () => {
 
   return (
     <>
-      <div style={{ padding: '0 0 24px' }}>
+      <PageLayout>
         {showSmartErrorNotice && smartError ? (<Card style={{ marginBottom: 16 }}><SmartErrorNotice error={smartError} onFix={() => { void fetchList(); }} /></Card>) : null}
         <Row gutter={16} style={{ marginBottom: 16 }}>
           <Col span={8}><Card><Statistic title="待审批" value={stats.pending} suffix="件" styles={{ content: { color: 'var(--color-warning)' } }} /></Card></Col>
@@ -156,7 +181,7 @@ const ExpenseReimbursementPage: React.FC = () => {
         <ResizableTable storageKey="expense-reimbursement" rowKey="id" columns={columns} dataSource={list} loading={loading} stickyHeader scroll={{ x: 1200 }}
           pagination={{ current: page, pageSize, total, showSizeChanger: true, showTotal: (t) => `共 ${t} 条`, onChange: (p, s) => { setPage(p); setPageSize(s); } }}
         />
-      </div>
+      </PageLayout>
 
       <ResizableModal open={formOpen} title={editingRecord ? '编辑报销单' : '新建报销单'} onCancel={() => setFormOpen(false)} width="40vw" centered
         footer={<Space><Button onClick={() => setFormOpen(false)}>取消</Button><Button type="primary" loading={submitting} onClick={handleFormSubmit}>{editingRecord ? '更新' : '提交报销'}</Button></Space>}

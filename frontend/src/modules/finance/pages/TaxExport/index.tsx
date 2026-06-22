@@ -10,6 +10,7 @@ import { paths } from '@/routeConfig';
 import { appStoreService } from '@/services/system/appStore';
 import { useUser } from '@/utils/AuthContext';
 import { message } from '@/utils/antdStatic';
+import api from '@/utils/api';
 import InvoiceTab from './InvoiceTab';
 import PayableTab from './PayableTab';
 import TaxConfigTab from './TaxConfigTab';
@@ -71,16 +72,13 @@ const TaxExport: React.FC = () => {
     try {
       const startDate = dateRange[0].format('YYYY-MM-DD');
       const endDate = dateRange[1].format('YYYY-MM-DD');
-      const url = `/api/finance/tax-export/${type}?startDate=${startDate}&endDate=${endDate}&format=${format}`;
-      const response = await fetch(url, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('authToken') || ''}` },
+      const url = `/api/finance/tax-export/${type}`;
+      const result = await api.get(url, {
+        params: { startDate, endDate, format },
+        responseType: 'blob',
       });
-      if (!response.ok) {
-        const json = await response.json().catch(() => null);
-        throw new Error(json?.message || `下载失败 (${response.status})`);
-      }
-      const blob = await response.blob();
-      const disposition = response.headers.get('Content-Disposition') || '';
+      const blob = new Blob([result.data]);
+      const disposition = result.headers['content-disposition'] || '';
       const filenameMatch = disposition.match(/filename\*?=(?:UTF-8'')?([^;]+)/i);
       const filename = filenameMatch ? decodeURIComponent(filenameMatch[1].replace(/"/g, '')) : `export_${type}_${startDate}.xlsx`;
       const link = document.createElement('a');

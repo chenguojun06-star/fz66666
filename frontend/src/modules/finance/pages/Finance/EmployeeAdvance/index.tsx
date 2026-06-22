@@ -4,6 +4,9 @@ import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
 import type { RowAction } from '@/components/common/RowActions';
 import StandardModal from '@/components/common/StandardModal';
+import PageLayout from '@/components/common/PageLayout';
+import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
+import type { SmartErrorInfo } from '@/smart/core/types';
 import { PlusOutlined, SearchOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
@@ -46,6 +49,11 @@ const EmployeeAdvancePage: React.FC = () => {
   const [repayOpen, setRepayOpen] = useState(false);
   const [repayRecord, setRepayRecord] = useState<EmployeeAdvance | null>(null);
   const [repaySubmitting, setRepaySubmitting] = useState(false);
+  const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
+
+  const reportSmartError = useCallback((code: string, msg: string) => {
+    setSmartError({ code, title: msg });
+  }, []);
 
   const fetchList = useCallback(async () => {
     setLoading(true);
@@ -60,6 +68,7 @@ const EmployeeAdvancePage: React.FC = () => {
         message.error(res.message || '查询失败');
       }
     } catch (err: unknown) {
+      reportSmartError('fetch', err instanceof Error ? err.message : '查询异常');
       message.error(err instanceof Error ? err.message : '查询异常');
     } finally {
       setLoading(false);
@@ -187,7 +196,8 @@ const EmployeeAdvancePage: React.FC = () => {
   ];
 
   return (
-    <div style={{ padding: '0 0 24px' }}>
+    <PageLayout>
+      {smartError && <SmartErrorNotice error={smartError} />}
       <Card style={{ marginBottom: 16 }}>
         <Row gutter={[12, 12]} align="middle">
           <Col>
@@ -263,7 +273,7 @@ const EmployeeAdvancePage: React.FC = () => {
           </Form>
         </div>
       </StandardModal>
-    </div>
+    </PageLayout>
   );
 };
 

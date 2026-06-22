@@ -6,6 +6,9 @@ import com.fashion.supplychain.finance.entity.DeductionItem;
 import com.fashion.supplychain.finance.entity.ShipmentReconciliation;
 import com.fashion.supplychain.finance.orchestration.ReconciliationStatusOrchestrator;
 import com.fashion.supplychain.finance.orchestration.ShipmentReconciliationOrchestrator;
+import com.fashion.supplychain.system.entity.OperationLog;
+import com.fashion.supplychain.system.service.OperationLogService;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -27,6 +30,9 @@ public class ShipmentReconciliationController {
 
     @Autowired
     private ReconciliationStatusOrchestrator reconciliationStatusOrchestrator;
+
+    @Autowired
+    private OperationLogService operationLogService;
 
     @PreAuthorize("isAuthenticated()")
     @GetMapping("/list")
@@ -59,6 +65,45 @@ public class ShipmentReconciliationController {
         return Result.success(shipmentReconciliationOrchestrator.delete(id));
     }
 
+    /**
+     * 统一的状态操作端点（与 MaterialReconciliation 风格一致）
+     *
+     * @param id 对账记录ID
+     * @param action 操作类型：update/return
+     * @param status 目标状态（用于update操作）
+     * @param reason 退回原因（用于return操作）
+     * @return 操作结果
+     */
+    @PreAuthorize("isAuthenticated()")
+    @PostMapping("/{id}/status-action")
+    public Result<?> statusAction(
+            @PathVariable String id,
+            @RequestParam String action,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String reason) {
+
+        // 智能路由到对应的Orchestrator方法
+        switch (action.toLowerCase()) {
+            case "update":
+                if (status == null || status.trim().isEmpty()) {
+                    return Result.fail("status不能为空");
+                }
+                String updateMessage = reconciliationStatusOrchestrator.updateShipmentStatus(id, status);
+                return Result.successMessage(updateMessage);
+
+            case "return":
+                String returnMessage = reconciliationStatusOrchestrator.returnShipmentToPrevious(id, reason);
+                return Result.successMessage(returnMessage);
+
+            default:
+                return Result.fail("不支持的操作: " + action);
+        }
+    }
+
+    /**
+     * @deprecated 使用 {@link #statusAction(String, String, String, String)} 替代，action=update
+     */
+    @Deprecated
     @PreAuthorize("isAuthenticated()")
     @PostMapping("/update-status")
     public Result<?> updateStatus(@Valid @RequestBody UpdateStatusRequest body) {
@@ -66,6 +111,10 @@ public class ShipmentReconciliationController {
         return Result.successMessage(message);
     }
 
+    /**
+     * @deprecated 使用 {@link #statusAction(String, String, String, String)} 替代，action=return
+     */
+    @Deprecated
     @PreAuthorize("isAuthenticated()")
     @PostMapping("/return")
     public Result<?> returnToPrevious(@Valid @RequestBody IdReasonRequest body) {
@@ -113,17 +162,18 @@ public class ShipmentReconciliationController {
 
     /**
      * 获取订单操作日志
-     * 注：当前为轻量级实现，返回空数组
-     * 如需详细日志，可考虑：
-     * 1. 从 t_shipment_reconciliation 的状态字段获取变更历史
-     * 2. 创建独立的 t_operation_log 表记录所有操作
-     * 3. 使用AOP切面自动记录关键操作
+     * 从 t_operation_log 查询该对账记录相关的操作日志（修改/驳回/结算等）
      */
     @PreAuthorize("isAuthenticated()")
     @GetMapping("/{orderId}/logs")
-    public Result<?> getOrderLogs(@PathVariable String orderId) {
-        // 轻量级实现：返回空数组（系统当前不强依赖操作日志）
-        return Result.success(Collections.emptyList());
+    public Result<List<OperationLog>> getOrderLogs(@PathVariable String orderId) {
+        LambdaQueryWrapper<OperationLog> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(OperationLog::getTargetId, orderId)
+               .in(OperationLog::getTargetType, "财务单", "出货对账")
+               .orderByDesc(OperationLog::getOperationTime)
+               .last("LIMIT 50");
+        List<OperationLog> logs = operationLogService.list(wrapper);
+        return Result.success(logs);
     }
 
     public static class UpdateStatusRequest {

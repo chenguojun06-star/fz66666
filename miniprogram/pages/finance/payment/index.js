@@ -50,6 +50,15 @@ Page({
     selectedAccountName: '',
     canPay: false,
     stats: null,
+    // 搜索收款人
+    showSearchPayee: false,
+    searchPayeeKeyword: '',
+    searchPayeeResults: [],
+    // 保存账户弹窗
+    showSaveAccountModal: false,
+    accountForm: { payeeId: '', payeeType: '', accountName: '', accountNo: '', bankName: '' },
+    // 取消支付确认
+    cancellingPaymentId: null,
   },
 
   onLoad: function () {
@@ -223,5 +232,162 @@ Page({
   onCancelPay: function () {
     if (!hasFeaturePermission('cancel_payment')) { toast('您没有取消支付的权限'); return; }
     this.setData({ showPayModal: false, currentPayable: null });
+  },
+
+  // ========== 确认支付（线下确认 / 确认收款） ==========
+
+  onConfirmPayment: function (e) {
+    var idx = e.currentTarget.dataset.index;
+    var item = this.data.paymentList[idx];
+    if (!item) return;
+    var that = this;
+    var method = item.paymentMethod;
+    var confirmFn = (method === 'OFFLINE') ? api.wagePayment.confirmOffline : api.wagePayment.confirmReceived;
+    wx.showModal({
+      title: '确认支付',
+      content: '确认' + (method === 'OFFLINE' ? '线下已付款' : '已收款') + ' ¥' + (item.amount || 0).toFixed(2) + '？',
+      success: function (res) {
+        if (!res.confirm) return;
+        confirmFn(item.id).then(function () {
+          toast('确认成功');
+          that._loadStats();
+          that._resetAndLoad();
+        }).catch(function (e) { toast('确认失败: ' + (e.message || e)); });
+      }
+    });
+  },
+
+  // ========== 取消支付（支付记录列表操作） ==========
+
+  onCancelPayment: function (e) {
+    if (!hasFeaturePermission('cancel_payment')) { toast('您没有取消支付的权限'); return; }
+    var idx = e.currentTarget.dataset.index;
+    var item = this.data.paymentList[idx];
+    if (!item) return;
+    var that = this;
+    wx.showModal({
+      title: '取消支付',
+      content: '确认取消该笔支付记录？',
+      success: function (res) {
+        if (!res.confirm) return;
+        that.setData({ cancellingPaymentId: item.id });
+        api.wagePayment.cancelPayment(item.id).then(function () {
+          toast('已取消');
+          that.setData({ cancellingPaymentId: null });
+          that._loadStats();
+          that._resetAndLoad();
+        }).catch(function (e) {
+          that.setData({ cancellingPaymentId: null });
+          toast('取消失败: ' + (e.message || e));
+        });
+      }
+    });
+  },
+
+  // ========== 重新支付（失败/退回的支付记录） ==========
+
+  onRepay: function (e) {
+    if (!hasFeaturePermission('initiate_payment')) { toast('您没有发起支付的权限'); return; }
+    var idx = e.currentTarget.dataset.index;
+    var item = this.data.paymentList[idx];
+    if (!item) return;
+    var that = this;
+    wx.showModal({
+      title: '重新支付',
+      content: '确认重新发起 ¥' + (item.amount || 0).toFixed(2) + ' 的支付？',
+      success: function (res) {
+        if (!res.confirm) return;
+        api.wagePayment.initiatePayment({
+          payeeType: item.payeeType,
+          payeeId: item.payeeId,
+          payeeName: item.payeeName,
+          paymentMethod: item.paymentMethod || 'OFFLINE',
+          amount: item.amount,
+          bizType: item.bizType,
+          bizId: item.bizId,
+          bizNo: item.bizNo,
+          remark: '重新支付',
+        }).then(function () {
+          toast('支付已发起');
+          that._loadStats();
+          that._resetAndLoad();
+        }).catch(function (e) { toast('支付失败: ' + (e.message || e)); });
+      }
+    });
+  },
+
+  // ========== 搜索收款人 ==========
+
+  onOpenSearchPayee: function () {
+    this.setData({ showSearchPayee: true, searchPayeeKeyword: '', searchPayeeResults: [] });
+  },
+
+  onSearchPayeeInput: function (e) {
+    this.setData({ searchPayeeKeyword: e.detail.value });
+  },
+
+  onSearchPayee: function () {
+    var keyword = this.data.searchPayeeKeyword.trim();
+    if (!keyword) { toast('请输入收款人姓名或手机号'); return; }
+    var that = this;
+    api.wagePayment.searchPayee({ keyword: keyword }).then(function (res) {
+      var results = Array.isArray(res) ? res : (res && res.records) || [];
+      that.setData({ searchPayeeResults: results });
+    }).catch(function (e) { toast('搜索失败: ' + (e.message || e)); });
+  },
+
+  onSelectSearchPayee: function (e) {
+    var idx = e.currentTarget.dataset.index;
+    var payee = this.data.searchPayeeResults[idx];
+    if (!payee) return;
+    // 选中收款人后，加载其账户列表
+    this.setData({ showSearchPayee: false });
+    if (payee.id && payee.type) {
+      this._loadPayeeAccounts({ payeeId: payee.id, payeeType: payee.type });
+    }
+  },
+
+  onCloseSearchPayee: function () {
+    this.setData({ showSearchPayee: false });
+  },
+
+  // ========== 保存收款账户 ==========
+
+  onOpenSaveAccount: function () {
+    var item = this.data.currentPayable;
+    this.setData({
+      showSaveAccountModal: true,
+      accountForm: {
+        payeeId: item ? item.payeeId : '',
+        payeeType: item ? item.payeeType : '',
+        accountName: '',
+        accountNo: '',
+        bankName: '',
+      },
+    });
+  },
+
+  onAccountFormInput: function (e) {
+    var field = e.currentTarget.dataset.field;
+    this.setData({ ['accountForm.' + field]: e.detail.value });
+  },
+
+  onSaveAccount: function () {
+    var form = this.data.accountForm;
+    if (!form.accountName.trim()) { toast('请输入账户名称'); return; }
+    if (!form.accountNo.trim()) { toast('请输入账号'); return; }
+    var that = this;
+    api.wagePayment.saveAccount(form).then(function () {
+      toast('账户保存成功');
+      that.setData({ showSaveAccountModal: false });
+      // 刷新账户列表
+      if (that.data.currentPayable) {
+        that._loadPayeeAccounts(that.data.currentPayable);
+      }
+    }).catch(function (e) { toast('保存失败: ' + (e.message || e)); });
+  },
+
+  onCloseSaveAccount: function () {
+    this.setData({ showSaveAccountModal: false });
   },
 });

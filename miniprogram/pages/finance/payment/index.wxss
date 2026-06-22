@@ -256,3 +256,70 @@
   font-size: var(--font-size-sm);
   color: var(--color-text-primary);
 }
+
+/* 确认/取消/重新支付按钮 */
+.confirm-btn {
+  background: var(--color-success);
+  color: #fff;
+}
+
+.cancel-btn {
+  background: var(--color-bg-gray);
+  color: var(--color-text-secondary);
+  margin-right: 8px;
+}
+
+/* 支付弹窗内的子操作按钮 */
+.modal-sub-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-border-light);
+}
+
+.sub-action-btn {
+  flex: 1;
+  text-align: center;
+  padding: 8px 0;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  color: var(--color-primary);
+  background: var(--color-bg-gray);
+}
+
+/* 搜索收款人 */
+.search-btn {
+  text-align: center;
+  padding: 8px 0;
+  margin-top: 8px;
+  background: var(--color-primary);
+  color: #fff;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+}
+
+.payee-result-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.payee-result-name {
+  font-size: var(--font-size-md);
+  color: var(--color-text-primary);
+}
+
+.payee-result-type {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+}
+
+.empty-hint {
+  text-align: center;
+  padding: 20px 0;
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-sm);
+}

@@ -72,6 +72,8 @@ export const paths = {
   ecSalesRevenue: '/finance/ec-revenue',
   financeTaxExport: '/finance/tax-export',
   orderWasteAnalysis: '/finance/order-waste-analysis',
+  shipmentReconciliation: '/finance/shipment-reconciliation',
+  financeDashboard: '/finance/dashboard',
 
   materialInventory: '/warehouse/material',
   materialDatabase: '/warehouse/material-database',
@@ -163,6 +165,9 @@ export const permissionCodes = {
   intelligenceCenter: 'MENU_INTELLIGENCE_CENTER', // 智能运营中心独立权限码（full_admin专用）
   systemIssues: 'MENU_CUSTOMER', // 超管专属，复用权限码
   financeTaxExport: 'MENU_FINANCE_EXPORT',
+  orderWasteAnalysis: 'MENU_FINANCE_EXPORT',
+  shipmentReconciliation: 'MENU_FINISHED_SETTLEMENT',
+  financeDashboard: 'MENU_FINISHED_SETTLEMENT',
   crm: 'MENU_CRM',
   crmReceivables: 'MENU_CRM',
   selection: 'MENU_SELECTION',
@@ -272,12 +277,18 @@ export const menuConfig: MenuSection[] = [
     key: 'finance',
     icon: React.createElement(AccountBookOutlined),
     items: [
-      { label: '物料对账', path: paths.materialReconciliation, icon: React.createElement(AccountBookOutlined) },
+      // 组1: 财务总览
+      { label: '财务总览', path: paths.financeDashboard, icon: React.createElement(DashboardOutlined) },
+      // 组2: 结算管理
       { label: '工资结算', path: paths.payrollOperatorSummary, icon: React.createElement(AccountBookOutlined) },
       { label: '外发结算', path: paths.financeCenter, icon: React.createElement(AccountBookOutlined) },
+      // 组3: 收支管理
+      { label: '物料对账', path: paths.materialReconciliation, icon: React.createElement(AccountBookOutlined) },
+      { label: '出货对账', path: paths.shipmentReconciliation, icon: React.createElement(AccountBookOutlined) },
+      { label: '收付款中心', path: paths.wagePayment, icon: React.createElement(DollarOutlined) },
+      // 组4: 财务工具
       { label: '费用报销', path: paths.expenseReimbursement, icon: React.createElement(AccountBookOutlined) },
       { label: '员工借支', path: paths.employeeAdvance, icon: React.createElement(AccountBookOutlined) },
-      { label: '收付款中心', path: paths.wagePayment, icon: React.createElement(DollarOutlined) },
       { label: '订单损耗分析', path: paths.orderWasteAnalysis, icon: React.createElement(RadarChartOutlined) },
       { label: '财税导出', path: paths.financeTaxExport, icon: React.createElement(DollarOutlined) },
     ],
@@ -393,6 +404,9 @@ export const routeToPermissionCode: Record<string, string> = {
   // financeTaxExport: 标准格式免费开放，有财务权限的用户均可访问；金蝶/用友格式在页面内做付费拦截
   [paths.financeTaxExport]: permissionCodes.financeTaxExport,       // 财税导出 → MENU_FINANCE_EXPORT
   [paths.ecSalesRevenue]: permissionCodes.financeTaxExport,         // EC销售收入 → MENU_FINANCE_EXPORT
+  [paths.orderWasteAnalysis]: permissionCodes.orderWasteAnalysis,   // 订单损耗分析 → MENU_FINANCE_EXPORT
+  [paths.shipmentReconciliation]: permissionCodes.shipmentReconciliation, // 出货对账 → MENU_FINISHED_SETTLEMENT
+  [paths.financeDashboard]: permissionCodes.financeDashboard,       // 财务总览 → MENU_FINISHED_SETTLEMENT
   [paths.crm]: permissionCodes.crm,
   [paths.crmReceivables]: permissionCodes.crmReceivables,
   [paths.selectionBatch]: permissionCodes.selection,

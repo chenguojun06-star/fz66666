@@ -72,6 +72,8 @@ function resolveRecentTitle(basePath: string | undefined, pathname: string, lang
   if (base === '/crm/receivables') return '应收账款';
   if (base === '/finance/employee-advance') return '员工借支';
   if (base === '/finance/tax-export') return '财税导出';
+  if (base === '/finance/dashboard') return '财务总览';
+  if (base === '/finance/shipment-reconciliation') return '出货对账';
   if (base === '/warehouse/product-info') return '成品资料';
   if (base === '/warehouse/label-print') return '标签打印';
   if (base === '/warehouse/inventory-check') return '库存盘点';

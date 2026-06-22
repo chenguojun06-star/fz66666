@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { Card, Tag, Select, Input, Button, Space, Row, Col, Statistic, Popconfirm, Tooltip, Typography } from 'antd';
+import { App, Card, Tag, Select, Input, Button, Space, Row, Col, Statistic, Popconfirm, Tooltip, Typography } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
 import {
   SearchOutlined, ReloadOutlined, CheckCircleOutlined,
@@ -7,7 +7,6 @@ import {
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { ecSalesRevenueApi, EcRevenueRecord, EcRevenueSummary } from '@/services/finance/ecSalesRevenueApi';
-import { message } from '@/utils/antdStatic';
 import { readPageSize } from '@/utils/pageSizeStore';
 import { formatMoney } from '@/utils/format';
 
@@ -31,6 +30,7 @@ const STATUS_MAP: Record<string, { label: string; color: string }> = {
 };
 
 const EcSalesRevenue: React.FC = () => {
+  const { message } = App.useApp();
   const [loading, setLoading] = useState(false);
   const [records, setRecords] = useState<EcRevenueRecord[]>([]);
   const [total, setTotal] = useState(0);

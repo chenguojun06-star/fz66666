@@ -18,30 +18,6 @@ const employeeAdvance = {
   },
 };
 
-const factoryShipment = {
-  list: function (params) {
-    return ok('/api/production/factory-shipment/list', 'POST', params || {});
-  },
-  listByOrder: function (orderId) {
-    return ok('/api/production/factory-shipment/list-by-order', 'POST', { orderId: orderId });
-  },
-  shippable: function (orderId) {
-    return ok('/api/production/factory-shipment/shippable/' + encodeURIComponent(orderId), 'GET', {});
-  },
-  ship: function (data) {
-    return ok('/api/production/factory-shipment/ship', 'POST', data || {});
-  },
-  receive: function (id, payload) {
-    return ok('/api/production/factory-shipment/' + encodeURIComponent(id) + '/receive', 'POST', payload || {});
-  },
-  getDetails: function (id) {
-    return ok('/api/production/factory-shipment/' + encodeURIComponent(id) + '/details', 'GET', {});
-  },
-  remove: function (id) {
-    return ok('/api/production/factory-shipment/' + encodeURIComponent(id), 'DELETE', {});
-  },
-};
-
 const wagePayment = {
   listPendingPayables: function (params) {
     return ok('/api/finance/wage-payments/pending-payables', 'POST', params || {});
@@ -90,4 +66,4 @@ const wageSettlementFeedback = {
   },
 };
 
-module.exports = { employeeAdvance, factoryShipment, wagePayment, payrollSettlement, wageSettlementFeedback };
+module.exports = { employeeAdvance, wagePayment, payrollSettlement, wageSettlementFeedback };

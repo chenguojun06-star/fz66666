@@ -78,6 +78,13 @@
           <text class="info-value">{{item.createTime || '—'}}</text>
         </view>
       </view>
+      <view class="card-actions" wx:if="{{item.status === 'processing'}}">
+        <view class="action-btn confirm-btn" data-index="{{index}}" bindtap="onConfirmPayment">确认</view>
+        <view class="action-btn cancel-btn" data-index="{{index}}" bindtap="onCancelPayment">取消</view>
+      </view>
+      <view class="card-actions" wx:if="{{item.status === 'failed' || item.status === 'refunded'}}">
+        <view class="action-btn pay-btn" data-index="{{index}}" bindtap="onRepay">重新支付</view>
+      </view>
     </view>
     <view class="load-more {{!paymentHasMore ? 'disabled' : ''}}" wx:if="{{loading || !paymentHasMore}}">
       <text>{{loading ? '加载中...' : '没有更多了'}}</text>
@@ -135,10 +142,66 @@
         <text class="mf-label">备注</text>
         <input class="mf-input" placeholder="选填" value="{{payForm.remark}}" bindinput="onPayRemarkInput" />
       </view>
+
+      <view class="modal-sub-actions">
+        <view class="sub-action-btn" bindtap="onOpenSearchPayee">搜索收款人</view>
+        <view class="sub-action-btn" bindtap="onOpenSaveAccount">新增收款账户</view>
+      </view>
     </view>
     <view class="modal-footer">
       <view class="modal-btn cancel" bindtap="onCancelPay">取消</view>
       <view class="modal-btn confirm" bindtap="onSubmitPay">确认支付</view>
+    </view>
+  </view>
+
+  <!-- 搜索收款人弹窗 -->
+  <view class="modal-mask" wx:if="{{showSearchPayee}}" bindtap="onCloseSearchPayee"></view>
+  <view class="modal {{showSearchPayee ? 'modal-show' : ''}}">
+    <view class="modal-header">
+      <text class="modal-title">搜索收款人</text>
+      <text class="modal-close" bindtap="onCloseSearchPayee">✕</text>
+    </view>
+    <view class="modal-body">
+      <view class="mf-item">
+        <input class="mf-input" placeholder="输入姓名或手机号" value="{{searchPayeeKeyword}}" bindinput="onSearchPayeeInput" confirm-type="search" bindconfirm="onSearchPayee" />
+      </view>
+      <view class="search-btn" bindtap="onSearchPayee">搜索</view>
+      <view wx:if="{{searchPayeeResults.length > 0}}">
+        <view class="payee-result-item" wx:for="{{searchPayeeResults}}" wx:key="id" data-index="{{index}}" bindtap="onSelectSearchPayee">
+          <text class="payee-result-name">{{item.name || item.payeeName || '—'}}</text>
+          <text class="payee-result-type">{{item.type || item.payeeType || ''}}</text>
+        </view>
+      </view>
+      <view wx:elif="{{searchPayeeKeyword && searchPayeeResults.length === 0}}" class="empty-hint">
+        <text>未找到匹配的收款人</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 保存收款账户弹窗 -->
+  <view class="modal-mask" wx:if="{{showSaveAccountModal}}" bindtap="onCloseSaveAccount"></view>
+  <view class="modal {{showSaveAccountModal ? 'modal-show' : ''}}">
+    <view class="modal-header">
+      <text class="modal-title">新增收款账户</text>
+      <text class="modal-close" bindtap="onCloseSaveAccount">✕</text>
+    </view>
+    <view class="modal-body">
+      <view class="mf-item">
+        <text class="mf-label mf-required">账户名称</text>
+        <input class="mf-input" placeholder="如：张三工商银行" value="{{accountForm.accountName}}" data-field="accountName" bindinput="onAccountFormInput" />
+      </view>
+      <view class="mf-item">
+        <text class="mf-label mf-required">账号</text>
+        <input class="mf-input" placeholder="银行卡号/微信/支付宝账号" value="{{accountForm.accountNo}}" data-field="accountNo" bindinput="onAccountFormInput" />
+      </view>
+      <view class="mf-item">
+        <text class="mf-label">开户行</text>
+        <input class="mf-input" placeholder="选填" value="{{accountForm.bankName}}" data-field="bankName" bindinput="onAccountFormInput" />
+      </view>
+    </view>
+    <view class="modal-footer">
+      <view class="modal-btn cancel" bindtap="onCloseSaveAccount">取消</view>
+      <view class="modal-btn confirm" bindtap="onSaveAccount">保存</view>
     </view>
   </view>
 </view>

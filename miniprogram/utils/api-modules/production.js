@@ -192,7 +192,7 @@ const production = {
   },
   /**
    * 样衣开发统计（与 PC 端 StyleInfoList activeStyles 逻辑一致）
-   * 返回 { activeCount, overdueCount, warningCount }
+   * 返回 { activeCount, completedCount, overdueCount, warningCount }
    */
   getSampleStats() {
     return ok('/api/production/pattern/sample-stats', 'GET', {});
@@ -332,4 +332,28 @@ const production = {
   },
 };
 
-module.exports = production;
+const factoryShipment = {
+  list: function (params) {
+    return ok('/api/production/factory-shipment/list', 'POST', params || {});
+  },
+  listByOrder: function (orderId) {
+    return ok('/api/production/factory-shipment/list-by-order', 'POST', { orderId: orderId });
+  },
+  shippable: function (orderId) {
+    return ok('/api/production/factory-shipment/shippable/' + encodeURIComponent(orderId), 'GET', {});
+  },
+  ship: function (data) {
+    return ok('/api/production/factory-shipment/ship', 'POST', data || {});
+  },
+  receive: function (id, payload) {
+    return ok('/api/production/factory-shipment/' + encodeURIComponent(id) + '/receive', 'POST', payload || {});
+  },
+  getDetails: function (id) {
+    return ok('/api/production/factory-shipment/' + encodeURIComponent(id) + '/details', 'GET', {});
+  },
+  remove: function (id) {
+    return ok('/api/production/factory-shipment/' + encodeURIComponent(id), 'DELETE', {});
+  },
+};
+
+module.exports = { ...production, factoryShipment };
