@@ -7,9 +7,9 @@ import type { Factory } from '@/types/system';
 interface SupplierSelectProps extends Omit<AutoCompleteProps, 'options' | 'onChange'> {
   value?: string;
   onChange?: (value: string, option?: {
-    id: number;
-    factory: Factory;
-    supplierId?: number;
+    id?: string;
+    factory?: Factory;
+    supplierId?: string;
     supplierContactPerson?: string;
     supplierContactPhone?: string;
   }) => void;
@@ -119,9 +119,51 @@ const SupplierSelect: React.FC<SupplierSelectProps> = ({
     });
   };
 
-  const handleChange = (changedValue: string) => {
-    // 用户手动输入时，清空 supplierId 和联系信息
-    onChange?.(changedValue, undefined);
+  const handleChange = async (changedValue: string) => {
+    if (!changedValue?.trim()) {
+      onChange?.(changedValue, undefined);
+      return;
+    }
+
+    // 检查是否是已有供应商
+    const existing = suppliers.find(s => s.factoryName === changedValue.trim());
+    if (existing) {
+      onChange?.(changedValue, {
+        id: existing.id,
+        factory: existing,
+        supplierId: existing.id,
+        supplierContactPerson: existing.contactPerson,
+        supplierContactPhone: existing.contactPhone
+      });
+      return;
+    }
+
+    // 新供应商名称，自动创建
+    try {
+      const response = await factoryApi.create({
+        factoryName: changedValue.trim(),
+        supplierType: 'MATERIAL',
+        factoryType: 'EXTERNAL',
+        status: 'active'
+      });
+      if (response?.data?.id) {
+        const newFactory = response.data;
+        setSuppliers(prev => [...prev, newFactory]);
+        onChange?.(changedValue, {
+          id: newFactory.id,
+          factory: newFactory,
+          supplierId: newFactory.id,
+          supplierContactPerson: newFactory.contactPerson,
+          supplierContactPhone: newFactory.contactPhone
+        });
+      } else {
+        onChange?.(changedValue, undefined);
+      }
+    } catch (error) {
+      console.error('自动创建供应商失败:', error);
+      // 创建失败时仍然允许保存（后端会兜底同步）
+      onChange?.(changedValue, undefined);
+    }
   };
 
   return (

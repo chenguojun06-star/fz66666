@@ -325,8 +325,6 @@ const ColorCardPage: React.FC = () => {
           setRecognizeVisible(false);
           // 自动添加识别到的颜色
           if (!itemVisible) {
-            setCurrentCardId(previewCard?.id || '');
-            setCurrentCardName(previewCard?.colorCardName || '');
             setCurrentItems([]);
           }
           const newItem: ColorCardItem = {

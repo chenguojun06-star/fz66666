@@ -1,5 +1,6 @@
 package com.fashion.supplychain.production.orchestration;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fashion.supplychain.common.UserContext;
@@ -9,6 +10,8 @@ import com.fashion.supplychain.production.entity.MaterialDatabase;
 import com.fashion.supplychain.production.mapper.ColorCardItemMapper;
 import com.fashion.supplychain.production.mapper.ColorCardMapper;
 import com.fashion.supplychain.production.service.MaterialDatabaseService;
+import com.fashion.supplychain.system.entity.Factory;
+import com.fashion.supplychain.system.mapper.FactoryMapper;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -43,6 +46,9 @@ public class ColorCardOrchestrator {
 
     @Autowired
     private MaterialDatabaseService materialDatabaseService;
+
+    @Autowired
+    private FactoryMapper factoryMapper;
 
     // ==================== 色卡本 CRUD ====================
 
@@ -105,6 +111,9 @@ public class ColorCardOrchestrator {
             throw new IllegalStateException("色卡本编号已存在");
         }
 
+        // 自动同步供应商到工厂管理（面料供应商）
+        syncSupplierToFactory(card);
+
         LocalDateTime now = LocalDateTime.now();
         card.setId(UUID.randomUUID().toString().replace("-", ""));
         card.setTenantId(tenantId);
@@ -136,6 +145,9 @@ public class ColorCardOrchestrator {
         if (!StringUtils.hasText(card.getColorCardName())) card.setColorCardName(current.getColorCardName());
         if (!StringUtils.hasText(card.getMaterialType())) card.setMaterialType(current.getMaterialType());
         if (!StringUtils.hasText(card.getStatus())) card.setStatus(current.getStatus());
+
+        // 自动同步供应商到工厂管理（当 supplierName 变更时）
+        syncSupplierToFactory(card);
 
         int rows = colorCardMapper.updateById(card);
         if (rows <= 0) throw new IllegalStateException("保存失败");
@@ -377,6 +389,55 @@ public class ColorCardOrchestrator {
     }
 
     // ==================== 辅助 ====================
+
+    /**
+     * 自动同步供应商到工厂管理表
+     * 当 supplierName 存在但 supplierId 为空时，查找或创建 t_factory 记录
+     */
+    private void syncSupplierToFactory(ColorCard card) {
+        if (!StringUtils.hasText(card.getSupplierName())) return;
+        if (StringUtils.hasText(card.getSupplierId())) return;
+
+        Long tenantId = card.getTenantId() != null ? card.getTenantId() : UserContext.tenantId();
+
+        // 查找是否已存在同名供应商
+        Factory existing = factoryMapper.selectOne(
+            new LambdaQueryWrapper<Factory>()
+                .eq(Factory::getFactoryName, card.getSupplierName().trim())
+                .eq(Factory::getTenantId, tenantId)
+                .eq(Factory::getSupplierType, "MATERIAL")
+                .and(w -> w.isNull(Factory::getDeleteFlag).or().eq(Factory::getDeleteFlag, 0))
+                .last("LIMIT 1")
+        );
+
+        if (existing != null) {
+            // 已存在，回写 supplierId 和联系信息
+            card.setSupplierId(existing.getId());
+            if (!StringUtils.hasText(card.getSupplierContactPerson()) && StringUtils.hasText(existing.getContactPerson())) {
+                card.setSupplierContactPerson(existing.getContactPerson());
+            }
+            if (!StringUtils.hasText(card.getSupplierContactPhone()) && StringUtils.hasText(existing.getContactPhone())) {
+                card.setSupplierContactPhone(existing.getContactPhone());
+            }
+        } else {
+            // 不存在，自动创建
+            Factory newFactory = new Factory();
+            newFactory.setId(null);
+            newFactory.setFactoryName(card.getSupplierName().trim());
+            newFactory.setFactoryCode("AUTO_" + System.currentTimeMillis());
+            newFactory.setTenantId(tenantId);
+            newFactory.setSupplierType("MATERIAL");
+            newFactory.setFactoryType("EXTERNAL");
+            newFactory.setContactPerson(card.getSupplierContactPerson());
+            newFactory.setContactPhone(card.getSupplierContactPhone());
+            newFactory.setStatus("active");
+            newFactory.setDeleteFlag(0);
+            newFactory.setCreateTime(LocalDateTime.now());
+            newFactory.setUpdateTime(LocalDateTime.now());
+            factoryMapper.insert(newFactory);
+            card.setSupplierId(newFactory.getId());
+        }
+    }
 
     /**
      * 生成色卡本编号（格式：CC + 年月日 + 序号）
