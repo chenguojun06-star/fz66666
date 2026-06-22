@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { Card, Input, Button, Tag, Space, Statistic, Empty, App, DatePicker } from 'antd';
-import { SearchOutlined, ReloadOutlined, DownloadOutlined } from '@ant-design/icons';
+import { Card, Input, Button, Tag, Space, Statistic, Empty, App, DatePicker, Modal, message } from 'antd';
+import { SearchOutlined, ReloadOutlined, DownloadOutlined, CheckCircleOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import type { Dayjs } from 'dayjs';
@@ -9,6 +9,7 @@ import api from '@/utils/api';
 import ResizableTable from '@/components/common/ResizableTable';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
 import { readPageSize } from '@/utils/pageSizeStore';
+import RowActions from '@/components/common/RowActions';
 import type { ShipmentReconciliation } from '@/types/finance';
 
 const { RangePicker } = DatePicker;
@@ -36,6 +37,7 @@ const ShipmentReconContent: React.FC = () => {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(() => readPageSize(20));
+  const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
   const [filters, setFilters] = useState<FilterState>({
     orderNo: '',
     styleNo: '',
@@ -111,6 +113,103 @@ const ShipmentReconContent: React.FC = () => {
     }
   };
 
+  // 对账确认（单条）
+  const handleConfirmReconciliation = async (record: ShipmentReconciliation) => {
+    if (record.status !== 'pending') {
+      message.warning('只有待对账状态的记录可以确认');
+      return;
+    }
+    Modal.confirm({
+      title: '确认对账',
+      icon: <ExclamationCircleOutlined />,
+      content: `确认对账单 ${record.orderNo || record.id}？`,
+      okText: '确认',
+      cancelText: '取消',
+      onOk: async () => {
+        try {
+          await api.post(`/finance/shipment-reconciliation/${record.id}/status-action`, null, {
+            params: { action: 'update', status: 'verified' },
+          });
+          message.success('对账确认成功');
+          fetchData(page, pageSize, filters);
+        } catch (e: unknown) {
+          const errMsg = e instanceof Error ? e.message : '对账确认失败';
+          message.error(errMsg);
+        }
+      },
+    });
+  };
+
+  // 批量对账确认
+  const handleBatchConfirm = async () => {
+    const eligible = data.filter(r =>
+      selectedRowKeys.includes(r.id ?? '') && r.status === 'pending'
+    );
+    if (eligible.length === 0) {
+      message.warning('请选择待对账状态的记录');
+      return;
+    }
+    Modal.confirm({
+      title: '批量对账确认',
+      icon: <ExclamationCircleOutlined />,
+      content: `确认对账 ${eligible.length} 条记录？`,
+      okText: '确认',
+      cancelText: '取消',
+      onOk: async () => {
+        try {
+          const results = await Promise.allSettled(
+            eligible.map(r => api.post(`/finance/shipment-reconciliation/${r.id}/status-action`, null, {
+              params: { action: 'update', status: 'verified' },
+            }))
+          );
+          const succeeded = results.filter(r => r.status === 'fulfilled').length;
+          if (succeeded > 0) message.success(`成功确认 ${succeeded} 条对账单`);
+          if (results.some(r => r.status === 'rejected')) message.warning('部分对账单确认失败');
+          setSelectedRowKeys([]);
+          fetchData(page, pageSize, filters);
+        } catch (e: unknown) {
+          const errMsg = e instanceof Error ? e.message : '批量对账失败';
+          message.error(errMsg);
+        }
+      },
+    });
+  };
+
+  // 批量审批
+  const handleBatchApprove = async () => {
+    const eligible = data.filter(r =>
+      selectedRowKeys.includes(r.id ?? '') && r.status === 'verified'
+    );
+    if (eligible.length === 0) {
+      message.warning('请选择已确认状态的记录');
+      return;
+    }
+    Modal.confirm({
+      title: '批量审批',
+      icon: <ExclamationCircleOutlined />,
+      content: `审批 ${eligible.length} 条已确认的对账单？`,
+      okText: '审批',
+      cancelText: '取消',
+      onOk: async () => {
+        try {
+          const results = await Promise.allSettled(
+            eligible.map(r => api.post(`/finance/shipment-reconciliation/${r.id}/status-action`, null, {
+              params: { action: 'update', status: 'approved' },
+            }))
+          );
+          const succeeded = results.filter(r => r.status === 'fulfilled').length;
+          if (succeeded > 0) message.success(`成功审批 ${succeeded} 条对账单`);
+          if (results.some(r => r.status === 'rejected')) message.warning('部分对账单审批失败');
+          setSelectedRowKeys([]);
+          fetchData(page, pageSize, filters);
+        } catch (e: unknown) {
+          const errMsg = e instanceof Error ? e.message : '批量审批失败';
+          message.error(errMsg);
+        }
+      },
+    });
+  };
+
   const stats = {
     totalCount: total,
     totalAmount: data.reduce((s, r) => s + Number(r.totalAmount || 0), 0),
@@ -147,6 +246,25 @@ const ShipmentReconContent: React.FC = () => {
       key: 'reconciliationDate',
       width: 120,
       render: (v: string) => v || '-',
+    },
+    {
+      title: '操作',
+      key: 'action',
+      width: 120,
+      fixed: 'right',
+      render: (_: unknown, record: ShipmentReconciliation) => (
+        <RowActions
+          actions={[
+            {
+              key: 'confirm',
+              label: '确认',
+              primary: record.status === 'pending',
+              disabled: record.status !== 'pending',
+              onClick: () => handleConfirmReconciliation(record),
+            },
+          ]}
+        />
+      ),
     },
   ];
 
@@ -201,6 +319,26 @@ const ShipmentReconContent: React.FC = () => {
           <Button type="primary" ghost onClick={handleSearch} icon={<SearchOutlined />}>查询</Button>
           <Button ghost onClick={handleReset} icon={<ReloadOutlined />}>重置</Button>
           <Button ghost onClick={handleExport} icon={<DownloadOutlined />}>导出</Button>
+          {selectedRowKeys.length > 0 && (
+            <>
+              <Button
+                type="primary"
+                ghost
+                onClick={handleBatchConfirm}
+                disabled={!data.some(r => r.id && selectedRowKeys.includes(r.id) && r.status === 'pending')}
+              >
+                批量确认 ({selectedRowKeys.filter(id => data.find(r => r.id === id && r.status === 'pending')).length})
+              </Button>
+              <Button
+                type="primary"
+                ghost
+                onClick={handleBatchApprove}
+                disabled={!data.some(r => r.id && selectedRowKeys.includes(r.id) && r.status === 'verified')}
+              >
+                批量审批 ({selectedRowKeys.filter(id => data.find(r => r.id === id && r.status === 'verified')).length})
+              </Button>
+            </>
+          )}
         </Space>
       </div>
 
@@ -209,7 +347,11 @@ const ShipmentReconContent: React.FC = () => {
         dataSource={data}
         rowKey="id"
         loading={loading}
-        scroll={{ x: 1200 }}
+        scroll={{ x: 1400 }}
+        rowSelection={{
+          selectedRowKeys,
+          onChange: (keys: React.Key[]) => setSelectedRowKeys(keys as string[]),
+        }}
         pagination={{
           current: page,
           pageSize,

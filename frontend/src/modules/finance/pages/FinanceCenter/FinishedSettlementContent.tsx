@@ -24,6 +24,7 @@ const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNo
   const {
     searchOrderNo, setSearchOrderNo,
     searchStatus, setSearchStatus,
+    searchFactoryType, setSearchFactoryType,
     loading, data, total,
     selectedRowKeys, setSelectedRowKeys,
     remarkModalVisible, setRemarkModalVisible,
@@ -186,6 +187,16 @@ const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNo
                   { label: '全部', value: '' },
                   { label: '生产中', value: 'production' },
                   { label: '已完成', value: 'completed' },
+                ]}
+              />
+              <Select
+                value={searchFactoryType}
+                onChange={(value) => { setSearchFactoryType(value); handleSearch({ factoryType: value as PageParams['factoryType'] }); }}
+                style={{ width: 140 }}
+                options={[
+                  { label: '外发工厂', value: 'EXTERNAL' },
+                  { label: '内部工厂', value: 'INTERNAL' },
+                  { label: '全部', value: '' },
                 ]}
               />
               <Input
