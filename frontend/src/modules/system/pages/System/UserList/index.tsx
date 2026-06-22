@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Alert, Avatar, Button, Card, DatePicker, Input, Select, Space, Spin, Statistic, Tag, Form, Row, Col } from 'antd';
-import { QrcodeOutlined, LinkOutlined, TeamOutlined, UserOutlined, ShopOutlined, ApartmentOutlined, HourglassOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
+import { Alert, Avatar, Button, Card, DatePicker, Input, Select, Space, Spin, Tag, Form, Row, Col, Typography, Tooltip } from 'antd';
+import { QrcodeOutlined, LinkOutlined, TeamOutlined, UserOutlined, ShopOutlined, ApartmentOutlined, SafetyCertificateOutlined, CheckOutlined, CloseOutlined, UnorderedListOutlined } from '@ant-design/icons';
 import PageLayout from '@/components/common/PageLayout';
 import ResizableModal from '@/components/common/ResizableModal';
 import ResizableTable from '@/components/common/ResizableTable';
@@ -24,6 +24,7 @@ import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { organizationApi } from '@/services/system/organizationApi';
 import './styles.css';
 
+const { Text } = Typography;
 const { Option } = Select;
 
 const DepartmentTree: React.FC<{
@@ -132,14 +133,12 @@ const UserList: React.FC = () => {
 
   const debouncedKeyword = useDebouncedValue(keywordInput, 300);
 
-  // ===== 人员统计（用于顶部统计卡片）=====
+  // ===== 人员统计（用于顶部简洁统计条）=====
   const userStats = useMemo(() => {
     let internal = 0;
     let externalFactory = 0;
     let supplier = 0;
-    let other = 0;
     let activeCount = 0;
-    let inactiveCount = 0;
 
     userList.forEach((u) => {
       const roleName = String(u.roleName || '').toLowerCase();
@@ -156,18 +155,14 @@ const UserList: React.FC = () => {
                  roleName.includes('采购') || roleName.includes('财务') ||
                  roleName.includes('仓库') || roleName.includes('merchandiser')) {
         internal++;
-      } else {
-        other++;
       }
 
       if (String(u.status || 'active') === 'active') {
         activeCount++;
-      } else {
-        inactiveCount++;
       }
     });
 
-    return { internal, externalFactory, supplier, other, activeCount, inactiveCount };
+    return { internal, externalFactory, supplier, activeCount };
   }, [userList]);
 
   useEffect(() => {
@@ -210,15 +205,59 @@ const UserList: React.FC = () => {
     onResetPassword: handleResetPassword,
   });
 
+  // 顶部统计条
+  const renderStatsBar = () => (
+    <Card size="small" style={{ marginBottom: 12 }} styles={{ body: { padding: '10px 16px' } }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+        <Space size={16} wrap>
+          <Space size={4}>
+            <TeamOutlined style={{ fontSize: 14, color: 'var(--color-text-secondary, #666)' }} />
+            <Text type="secondary" style={{ fontSize: 12 }}>总人数</Text>
+            <Text strong style={{ fontSize: 16, color: 'var(--primary-color, #1677ff)' }}>{total}</Text>
+          </Space>
+          <Space size={4}>
+            <UserOutlined style={{ fontSize: 14, color: 'var(--color-success, #52c41a)' }} />
+            <Text type="secondary" style={{ fontSize: 12 }}>内部</Text>
+            <Text strong style={{ fontSize: 16, color: 'var(--color-success, #52c41a)' }}>{userStats.internal}</Text>
+          </Space>
+          <Space size={4}>
+            <ApartmentOutlined style={{ fontSize: 14, color: 'var(--color-info, #1890ff)' }} />
+            <Text type="secondary" style={{ fontSize: 12 }}>外发工厂</Text>
+            <Text strong style={{ fontSize: 16, color: 'var(--color-info, #1890ff)' }}>{userStats.externalFactory}</Text>
+          </Space>
+          <Space size={4}>
+            <ShopOutlined style={{ fontSize: 14, color: 'var(--color-warning, #fa8c16)' }} />
+            <Text type="secondary" style={{ fontSize: 12 }}>供应商</Text>
+            <Text strong style={{ fontSize: 16, color: 'var(--color-warning, #fa8c16)' }}>{userStats.supplier}</Text>
+          </Space>
+          <Space size={4}>
+            <SafetyCertificateOutlined style={{ fontSize: 14, color: 'var(--color-success, #52c41a)' }} />
+            <Text type="secondary" style={{ fontSize: 12 }}>启用</Text>
+            <Text strong style={{ fontSize: 16, color: 'var(--color-success, #52c41a)' }}>{userStats.activeCount}</Text>
+          </Space>
+          {pendingUserCount > 0 && (
+            <Tag color="orange" style={{ fontSize: 11, padding: '2px 8px' }}>
+              {pendingUserCount} 人待审批
+            </Tag>
+          )}
+        </Space>
+        {canManageUsers && (
+          <Space size={8}>
+            <Tooltip title="生成邀请码，员工扫码绑定微信">
+              <Button icon={<QrcodeOutlined />} onClick={handleGenerateInvite}>邀请员工</Button>
+            </Tooltip>
+            <Button type="primary" ghost onClick={() => openDialog()}>新增人员</Button>
+          </Space>
+        )}
+      </div>
+    </Card>
+  );
+
   return (
     <>
         <PageLayout
-          title={
-            <span style={{ display: 'flex', alignItems: 'center' }}>
-              <TeamOutlined style={{ marginRight: 8, fontSize: 22, color: 'var(--primary-color, var(--color-primary))' }} />
-              <span style={{ fontSize: 22, fontWeight: 700 }}>人员管理</span>
-            </span>
-          }
+          title="人员管理"
+          titleExtra={null}
           headerContent={
             <>
               {showSmartErrorNotice && smartError ? (
@@ -228,122 +267,28 @@ const UserList: React.FC = () => {
               ) : null}
               {pendingUserCount > 0 && canManageUsers && (
                 <Alert
-                  title={`有 ${pendingUserCount} 个新用户待审批`}
+                  message={`有 ${pendingUserCount} 个新用户待审批`}
                   description="点击前往审批页面，为新用户分配角色和权限"
                   type="info"
                   showIcon
                   closable
                   action={
-                    <Button
-                      type="primary"
-                      onClick={() => { navigate('/system/user-approval'); }}
-                    >
+                    <Button type="primary" ghost onClick={() => navigate('/system/user-approval')}>
                       立即审批
                     </Button>
                   }
-                  style={{ marginBottom: 16 }}
+                  style={{ marginBottom: 12 }}
                 />
               )}
-
-              {/* ===== 人员统计卡片 ===== */}
-              <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
-                <Col xs={12} sm={8} md={6} lg={4}>
-                  <Card size="small" style={{ borderRadius: 8, border: '1px solid var(--color-border-antd, #f0f0f0)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                      <Avatar size={40} icon={<TeamOutlined />} style={{ backgroundColor: 'var(--primary-color, #1890ff)', fontSize: 20 }} />
-                      <div>
-                        <div style={{ fontSize: 12, color: 'var(--color-text-secondary, #666)' }}>
-                          <span style={{ display: 'block' }}>总人数</span>
-                        </div>
-                        <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--color-text-primary, #000)', marginTop: 2 }}>{total}</div>
-                      </div>
-                    </div>
-                  </Card>
-                </Col>
-                <Col xs={12} sm={8} md={6} lg={4}>
-                  <Card size="small" style={{ borderRadius: 8, border: '1px solid var(--color-border-antd, #f0f0f0)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                      <Avatar size={40} icon={<UserOutlined />} style={{ backgroundColor: 'var(--color-success, #52c41a)', fontSize: 20 }} />
-                      <div>
-                        <div style={{ fontSize: 12, color: 'var(--color-text-secondary, #666)' }}>
-                          <span style={{ display: 'block' }}>内部员工</span>
-                        </div>
-                        <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--color-success, #52c41a)', marginTop: 2 }}>{userStats.internal}</div>
-                      </div>
-                    </div>
-                  </Card>
-                </Col>
-                <Col xs={12} sm={8} md={6} lg={4}>
-                  <Card size="small" style={{ borderRadius: 8, border: '1px solid var(--color-border-antd, #f0f0f0)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                      <Avatar size={40} icon={<ApartmentOutlined />} style={{ backgroundColor: 'var(--color-info, #1890ff)', fontSize: 20 }} />
-                      <div>
-                        <div style={{ fontSize: 12, color: 'var(--color-text-secondary, #666)' }}>
-                          <span style={{ display: 'block' }}>外发工厂</span>
-                        </div>
-                        <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--color-info, #1890ff)', marginTop: 2 }}>{userStats.externalFactory}</div>
-                      </div>
-                    </div>
-                  </Card>
-                </Col>
-                <Col xs={12} sm={8} md={6} lg={4}>
-                  <Card size="small" style={{ borderRadius: 8, border: '1px solid var(--color-border-antd, #f0f0f0)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                      <Avatar size={40} icon={<ShopOutlined />} style={{ backgroundColor: 'var(--color-warning, #fa8c16)', fontSize: 20 }} />
-                      <div>
-                        <div style={{ fontSize: 12, color: 'var(--color-text-secondary, #666)' }}>
-                          <span style={{ display: 'block' }}>第三方供应商</span>
-                        </div>
-                        <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--color-warning, #fa8c16)', marginTop: 2 }}>{userStats.supplier}</div>
-                      </div>
-                    </div>
-                  </Card>
-                </Col>
-                <Col xs={12} sm={8} md={6} lg={4}>
-                  <Card size="small" style={{ borderRadius: 8, border: '1px solid var(--color-border-antd, #f0f0f0)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                      <Avatar size={40} icon={<SafetyCertificateOutlined />} style={{ backgroundColor: 'var(--color-success, #52c41a)', fontSize: 20 }} />
-                      <div>
-                        <div style={{ fontSize: 12, color: 'var(--color-text-secondary, #666)' }}>
-                          <span style={{ display: 'block' }}>启用</span>
-                        </div>
-                        <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--color-success, #52c41a)', marginTop: 2 }}>{userStats.activeCount}</div>
-                      </div>
-                    </div>
-                  </Card>
-                </Col>
-                <Col xs={12} sm={8} md={6} lg={4}>
-                  <Card size="small" style={{ borderRadius: 8, border: '1px solid var(--color-border-antd, #f0f0f0)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                      <Avatar size={40} icon={<HourglassOutlined />} style={{ backgroundColor: pendingUserCount > 0 ? 'var(--color-warning, #fa8c16)' : 'var(--color-text-quaternary, #d9d9d9)', fontSize: 20 }} />
-                      <div>
-                        <div style={{ fontSize: 12, color: 'var(--color-text-secondary, #666)' }}>
-                          <span style={{ display: 'block' }}>待审批</span>
-                        </div>
-                        <div style={{ fontSize: 20, fontWeight: 700, color: pendingUserCount > 0 ? 'var(--color-warning, #fa8c16)' : 'var(--color-text-quaternary, #d9d9d9)', marginTop: 2 }}>{pendingUserCount}</div>
-                      </div>
-                    </div>
-                  </Card>
-                </Col>
-              </Row>
+              {renderStatsBar()}
             </>
-          }
-          titleExtra={
-            canManageUsers && (
-              <Space>
-                <Button icon={<QrcodeOutlined />} onClick={() => { void handleGenerateInvite(); }}>
-                  生成邀请码
-                </Button>
-                <Button type="primary" onClick={() => openDialog()}>
-                  新增人员
-                </Button>
-              </Space>
-            )
           }
         >
           <div className="user-split-layout">
             <div className="user-dept-panel">
-              <div className="user-dept-header">部门</div>
+              <div className="user-dept-header">
+                <Text strong style={{ fontSize: 13 }}>部门</Text>
+              </div>
               <DepartmentTree
                 departments={departments}
                 selectedId={selectedDeptId}
@@ -352,7 +297,7 @@ const UserList: React.FC = () => {
             </div>
 
             <div className="user-list-panel">
-              <Card className="filter-card mb-sm">
+              <Card size="small" style={{ marginBottom: 12 }} styles={{ body: { padding: '10px 16px' } }}>
                 <StandardToolbar
                   left={
                     <StandardSearchBar
@@ -366,7 +311,7 @@ const UserList: React.FC = () => {
                           key: 'employment',
                           label: '在职状态',
                           type: 'select',
-                          width: 130,
+                          width: 120,
                           options: [
                             { label: '全部', value: '' },
                             { label: '正式', value: 'normal' },
@@ -378,7 +323,7 @@ const UserList: React.FC = () => {
                           key: 'role',
                           label: '角色',
                           type: 'select',
-                          width: 150,
+                          width: 140,
                           options: [
                             { label: '全部角色', value: '' },
                             ...roleOptions.map(r => ({
@@ -395,16 +340,11 @@ const UserList: React.FC = () => {
                     />
                   }
                   right={
-                    canManageUsers ? (
-                      <Space size={8}>
-                        <Button ghost icon={<QrcodeOutlined />} onClick={handleGenerateInvite}>
-                          邀请员工
-                        </Button>
-                        <Button type="primary" ghost onClick={() => openDialog()}>
-                          新增用户
-                        </Button>
-                      </Space>
-                    ) : undefined
+                    <Space size={8}>
+                      <Text type="secondary" style={{ fontSize: 12 }}>
+                        显示 {userList.length} / {total} 人
+                      </Text>
+                    </Space>
                   }
                 />
               </Card>
@@ -579,16 +519,16 @@ const UserList: React.FC = () => {
               <Spin tip="正在生成二维码..."><div style={{ padding: '48px 0' }} /></Spin>
             ) : inviteQr.qrBase64 ? (
               <>
-                <img src={inviteQr.qrBase64} alt="邀请二维码" style={{ width: 220, height: 220, display: 'block', margin: '0 auto 16px' }} />
-                <div style={{ color: 'var(--color-text-secondary, #666)', fontSize: 14 }}>
+                <img src={inviteQr.qrBase64} alt="邀请二维码" style={{ width: 200, height: 200, display: 'block', margin: '0 auto 12px' }} />
+                <div style={{ color: 'var(--color-text-secondary, #666)', fontSize: 13 }}>
                   员工用微信扫码后，输入系统账号密码即可完成绑定
                 </div>
                 {inviteQr.expiresAt && (
-                  <div style={{ color: 'var(--color-text-tertiary, #999)', fontSize: 14, marginTop: 8 }}>
+                  <div style={{ color: 'var(--color-text-tertiary, #999)', fontSize: 12, marginTop: 6 }}>
                     有效期至：{inviteQr.expiresAt.replace('T', ' ').slice(0, 16)}
                   </div>
                 )}
-                <div style={{ marginTop: 16, display: 'flex', justifyContent: 'center', gap: 8 }}>
+                <div style={{ marginTop: 12 }}>
                   <Button
                     icon={<LinkOutlined />}
                     onClick={async () => {

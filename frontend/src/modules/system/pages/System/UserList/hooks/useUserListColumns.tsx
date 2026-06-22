@@ -112,11 +112,10 @@ export function useUserListColumns(props: UseUserListColumnsProps) {
   // 快速切换用户角色
   const handleQuickChangeRole = async (user: UserType, newRole: Role) => {
     try {
+      // 只传必要字段：id + roleId（数字类型）
       const response = await requestWithPathFallback('put', '/system/user', '/auth/user', {
         id: user.id,
-        roleId: newRole.id,
-        roleName: newRole.roleName,
-        roleCode: newRole.roleCode,
+        roleId: Number(newRole.id),
       });
       const result = response as any;
       if (result?.code === 200) {
