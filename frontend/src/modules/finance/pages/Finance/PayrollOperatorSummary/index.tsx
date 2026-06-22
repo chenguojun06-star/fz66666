@@ -412,6 +412,35 @@ const PayrollOperatorSummary: React.FC = () => {
                             </>
                         ),
                     },
+                    {
+                        key: 'internalOrders', label: '内部工厂订单',
+                        children: (
+                            <>
+                                <Card className="mb-sm">
+                                    <Space wrap>
+                                        <span style={{ color: 'var(--neutral-text-secondary)' }}>订单数 {internalOrders.length}</span>
+                                        <Button ghost onClick={fetchInternalOrders} disabled={internalOrdersLoading}>刷新</Button>
+                                    </Space>
+                                </Card>
+                                <ResizableTable
+                                    storageKey="finance-payroll-internal-orders"
+                                    rowKey={(r: Record<string, unknown>) => String(r?.orderId || r?.orderNo || '')}
+                                    columns={[
+                                        { title: '订单号', dataIndex: 'orderNo', key: 'orderNo', width: 150, ellipsis: true },
+                                        { title: '款号', dataIndex: 'styleNo', key: 'styleNo', width: 120, ellipsis: true },
+                                        { title: '工厂', dataIndex: 'factoryName', key: 'factoryName', width: 120, ellipsis: true },
+                                        { title: '状态', dataIndex: 'status', key: 'status', width: 100, render: (v: string) => { const s = statusMap[v] || statusMap[v?.toLowerCase?.()] || {}; return <Tag color={s.color || 'default'}>{s.text || v || '-'}</Tag>; } },
+                                        { title: '订单数量', dataIndex: 'orderQuantity', key: 'orderQuantity', width: 100, align: 'right', render: (v: number) => v?.toLocaleString() ?? '-' },
+                                        { title: '入库数量', dataIndex: 'warehousedQuantity', key: 'warehousedQuantity', width: 100, align: 'right', render: (v: number) => v?.toLocaleString() ?? '-' },
+                                        { title: '生产成本', dataIndex: 'productionCost', key: 'productionCost', width: 120, align: 'right', render: (v: number) => formatMoney(v) },
+                                        { title: '总金额', dataIndex: 'totalAmount', key: 'totalAmount', width: 120, align: 'right', render: (v: number) => <span style={{ fontWeight: 600, color: 'var(--primary-color)' }}>{formatMoney(v)}</span> },
+                                    ] as any}
+                                    dataSource={internalOrders as any} loading={internalOrdersLoading}
+                                    pagination={{ showTotal: (total) => `共 ${total} 条`, showSizeChanger: true, pageSizeOptions: ['10', '20', '50', '100'], defaultPageSize: readPageSize(20) }}
+                                    sticky scroll={{ x: 1000 }} />
+                            </>
+                        ),
+                    },
                 ]} />
             </PageLayout>
             <WageSlipPrintModal
