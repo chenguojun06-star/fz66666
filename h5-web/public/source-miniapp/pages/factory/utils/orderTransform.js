@@ -90,71 +90,107 @@ function buildColorSizeMeta(order) {
   };
 }
 
+/**
+ * iOS 安全日期解析：将不带时区信息的日期字符串按本地时间解析
+ */
+function parseSafeLocalDate(dateStr) {
+  if (!dateStr) return new Date(NaN);
+  var s = String(dateStr).trim();
+  if (!s) return new Date(NaN);
+  if (/Z|[+-]\d{2}:?\d{2}$/.test(s)) {
+    return new Date(s);
+  }
+  var match = s.match(
+    /^(\d{4})[-/](\d{1,2})[-/](\d{1,2})(?:[\sT]+(\d{1,2}):(\d{1,2})(?::(\d{1,2})(?:\.(\d+))?)?)?$/
+  );
+  if (match) {
+    var y = Number(match[1]);
+    var mo = Number(match[2]) - 1;
+    var d = Number(match[3]);
+    var h = match[4] ? Number(match[4]) : 0;
+    var mi = match[5] ? Number(match[5]) : 0;
+    var se = match[6] ? Number(match[6]) : 0;
+    var ms = match[7] ? Math.round(Number('0.' + match[7]) * 1000) : 0;
+    return new Date(y, mo, d, h, mi, se, ms);
+  }
+  return new Date(s);
+}
+
+/**
+ * 判断订单是否已处于"完成/终止"状态（不应再显示延期倒计时）
+ */
+function isOrderFinished(source) {
+  if (!source) return false;
+  var s = String(source.status || '').trim().toLowerCase();
+  if (s === 'completed' || s === 'closed' || s === 'cancelled' || s === 'canceled'
+    || s === 'scrapped' || s === 'archived') return true;
+  if (source.actualEndDate && String(source.actualEndDate).trim()) return true;
+  var p = Number(source.productionProgress);
+  if (!isNaN(p) && p >= 100) return true;
+  return false;
+}
+
 function calcDeliveryInfo(source) {
-  const status = String(source.status || '').toLowerCase();
-  if (status === 'completed' || status === 'cancelled' || status === 'canceled' || status === 'scrapped' || status === 'closed' || status === 'archived') {
+  // 已完成/已关单：停止倒计时，直接显示状态文本
+  if (isOrderFinished(source)) {
     var raw = source.plannedEndDate || source.expectedShipDate || '';
     var dateStr = '';
     if (raw) {
-      const s = String(raw);
-      if (s.length > 10) {
-        var d = new Date(s.replace(/-/g, '/'));
-        if (!isNaN(d.getTime())) {
-          var pad = function (n) { return String(n).padStart(2, '0'); };
-          dateStr = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
-        } else {
-          dateStr = s.substring(0, 16);
-        }
+      var d0 = parseSafeLocalDate(String(raw));
+      if (!isNaN(d0.getTime())) {
+        var pad0 = function (n) { return String(n).padStart ? String(n).padStart(2, '0') : (n < 10 ? '0' + n : '' + n); };
+        dateStr = d0.getFullYear() + '-' + pad0(d0.getMonth() + 1) + '-' + pad0(d0.getDate()) + ' ' + pad0(d0.getHours()) + ':' + pad0(d0.getMinutes());
       } else {
-        dateStr = s.substring(0, 10);
+        dateStr = String(raw).substring(0, 16);
       }
     }
-    return { deliveryDateStr: dateStr, remainDays: null, remainDaysText: '已关单', remainDaysClass: 'days-done' };
+    var s2 = String(source.status || '').toLowerCase();
+    var text = '已关单';
+    if (s2 === 'completed' || (Number(source.productionProgress) >= 100)) text = '已完成';
+    else if (s2 === 'scrapped') text = '已报废';
+    else if (s2 === 'cancelled' || s2 === 'canceled') text = '已取消';
+    return { deliveryDateStr: dateStr, remainDays: null, remainDaysText: text, remainDaysClass: 'days-done' };
   }
+
   var raw = source.plannedEndDate || source.expectedShipDate || '';
   if (!raw) return { deliveryDateStr: '', remainDays: null, remainDaysText: '', remainDaysClass: '' };
-  var dateStr = String(raw);
-  if (dateStr.length > 10) {
-    var d = new Date(dateStr.replace(/-/g, '/'));
-    if (!isNaN(d.getTime())) {
-      var pad = function (n) { return String(n).padStart(2, '0'); };
-      dateStr = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
-    } else {
-      dateStr = dateStr.substring(0, 16);
-    }
-  }
-  const deliveryDateStr = dateStr;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const rawDateOnly = String(raw).substring(0, 10);
-  const dateParts = rawDateOnly.split('-');
-  const target = new Date(Number(dateParts[0]), Number(dateParts[1]) - 1, Number(dateParts[2]));
-  const diffMs = target.getTime() - today.getTime();
-  const remainDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-  let remainDaysText = '';
-  let remainDaysClass = '';
-  if (remainDays < 0) {
-    remainDaysText = '逾' + Math.abs(remainDays) + '天';
-    remainDaysClass = 'days-overdue';
-  } else if (remainDays === 0) {
-    remainDaysText = '今天';
-    remainDaysClass = 'days-urgent';
+  var d = parseSafeLocalDate(String(raw));
+  var dateStr;
+  if (!isNaN(d.getTime())) {
+    var pad = function (n) { return String(n).padStart ? String(n).padStart(2, '0') : (n < 10 ? '0' + n : '' + n); };
+    dateStr = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
   } else {
-    const createRaw = source.createTime || '';
+    dateStr = String(raw).substring(0, 16);
+  }
+  var today = new Date();
+  today.setHours(0, 0, 0, 0);
+  var target = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  var diffMs = target.getTime() - today.getTime();
+  var remainDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+  var remainDaysText = '';
+  var remainDaysClass = '';
+  if (remainDays < 0) { remainDaysText = '逾' + Math.abs(remainDays) + '天'; remainDaysClass = 'days-overdue'; }
+  else if (remainDays === 0) { remainDaysText = '今天'; remainDaysClass = 'days-urgent'; }
+  else {
+    var createRaw = source.createTime || '';
+    var ratioMatched = false;
     if (createRaw) {
-      const start = new Date(typeof createRaw === 'string' ? createRaw.replace(' ', 'T') : createRaw);
-      const totalDays = Math.ceil((target.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) || 1;
-      const ratio = remainDays / totalDays;
-      if (ratio <= 0.2) { remainDaysText = remainDays + '天'; remainDaysClass = 'days-urgent'; }
-      else if (ratio <= 0.5) { remainDaysText = remainDays + '天'; remainDaysClass = 'days-warn'; }
-      else { remainDaysText = remainDays + '天'; remainDaysClass = 'days-safe'; }
-    } else {
+      var start = parseSafeLocalDate(String(createRaw));
+      if (!isNaN(start.getTime())) {
+        var totalDays = Math.ceil((target.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) || 1;
+        var ratio = remainDays / totalDays;
+        if (ratio <= 0.2) { remainDaysText = remainDays + '天'; remainDaysClass = 'days-urgent'; ratioMatched = true; }
+        else if (ratio <= 0.5) { remainDaysText = remainDays + '天'; remainDaysClass = 'days-warn'; ratioMatched = true; }
+        else { remainDaysText = remainDays + '天'; remainDaysClass = 'days-safe'; ratioMatched = true; }
+      }
+    }
+    if (!ratioMatched) {
       if (remainDays <= 3) { remainDaysText = remainDays + '天'; remainDaysClass = 'days-urgent'; }
       else if (remainDays <= 7) { remainDaysText = remainDays + '天'; remainDaysClass = 'days-warn'; }
       else { remainDaysText = remainDays + '天'; remainDaysClass = 'days-safe'; }
     }
   }
-  return { deliveryDateStr: deliveryDateStr, remainDays: remainDays, remainDaysText: remainDaysText, remainDaysClass: remainDaysClass };
+  return { deliveryDateStr: dateStr, remainDays: remainDays, remainDaysText: remainDaysText, remainDaysClass: remainDaysClass };
 }
 
 function validateAndNormalizeOrder(order) {

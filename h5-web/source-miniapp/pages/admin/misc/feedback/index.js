@@ -1,4 +1,5 @@
 const api = require('../../../../utils/api');
+const { toast } = require('../../../../utils/uiHelper');
 
 const STATUS_MAP = {
   PENDING: '待处理',
@@ -47,8 +48,8 @@ Page({
 
   async onSubmitFeedback() {
     const { title, content, category } = this.data.form;
-    if (!title.trim()) return wx.showToast({ title: '请填写标题', icon: 'none' });
-    if (!content.trim()) return wx.showToast({ title: '请填写描述', icon: 'none' });
+    if (!title.trim()) return toast.error('请填写标题');
+    if (!content.trim()) return toast.error('请填写描述');
 
     this.setData({ submitting: true });
     try {
@@ -58,14 +59,14 @@ Page({
         category,
         source: 'MINIPROGRAM',
       });
-      wx.showToast({ title: '提交成功', icon: 'success' });
+      toast.success('提交成功');
       this.setData({
         form: { title: '', content: '', category: 'BUG' },
         categoryIndex: 0,
       });
       this.loadMyFeedbacks();
     } catch (err) {
-      wx.showToast({ title: err.message || '提交失败', icon: 'none' });
+      toast.error(err.message || '提交失败');
     } finally {
       this.setData({ submitting: false });
     }

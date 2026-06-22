@@ -37,33 +37,43 @@
       data-task="{{item}}"
       hover-class="task-card-hover"
     >
-      <!-- 头部：订单号 + 状态标签 -->
-      <view class="card-header">
-        <text class="order-no">{{item.productionOrderNo || item.orderNo}}</text>
-        <text class="status-tag tag tag-{{item.statusColor}}">{{item.statusText}}</text>
-      </view>
+      <!-- 主区域：图片 + 规格信息右栏（与样衣开发风格一致） -->
+      <view class="card-main">
+        <view class="card-cover" catchtap="onCoverPreview" data-url="{{item.styleCoverUrl}}">
+          <image wx:if="{{item.styleCoverUrl}}" class="card-cover-img" src="{{item.styleCoverUrl}}" mode="aspectFill" lazy-load="{{true}}" />
+          <view wx:else class="card-cover-empty">
+            <text class="cover-abbr">✂</text>
+          </view>
+        </view>
 
-      <!-- 信息行 -->
-      <view class="card-body">
-        <view class="info-row">
-          <text class="info-label">款号</text>
-          <text class="info-value">{{item.styleNo || '-'}}</text>
-        </view>
-        <view class="info-row">
-          <text class="info-label">颜色</text>
-          <text class="info-value">{{item.color || '全部颜色'}}</text>
-        </view>
-        <view class="info-row">
-          <text class="info-label">数量</text>
-          <text class="info-value bold">{{item.orderQuantity || 0}} 件</text>
-        </view>
-        <view wx:if="{{item.expectedShipDate || item.deliveryDate}}" class="info-row">
-          <text class="info-label">交期</text>
-          <text class="info-value">{{item.expectedShipDate || item.deliveryDate}}</text>
-        </view>
-        <view wx:if="{{item.receiverName}}" class="info-row">
-          <text class="info-label">领取人</text>
-          <text class="info-value">{{item.receiverName}}</text>
+        <view class="card-info">
+          <!-- 顶部：订单号 + 状态标签 -->
+          <view class="info-top">
+            <text class="order-no">{{item.productionOrderNo || item.orderNo}}</text>
+            <text class="status-tag tag tag-{{item.statusColor}}">{{item.statusText}}</text>
+          </view>
+
+          <!-- 规格信息行：款号 + 颜色 -->
+          <view class="info-spec-row">
+            <text class="info-spec-label">款号</text>
+            <text class="info-spec-value">{{item.styleNo || '-'}}</text>
+            <text class="info-spec-label" wx:if="{{item.color}}">颜色</text>
+            <text class="info-spec-value" wx:if="{{item.color}}">{{item.color}}</text>
+          </view>
+
+          <!-- 规格信息行：数量 + 交期 -->
+          <view class="info-spec-row">
+            <text class="info-spec-label">数量</text>
+            <text class="info-spec-value highlight">{{item.orderQuantity || 0}} 件</text>
+            <text class="info-spec-label" wx:if="{{item.expectedShipDate || item.deliveryDate}}">交期</text>
+            <text class="info-spec-value" wx:if="{{item.expectedShipDate || item.deliveryDate}}">{{item.expectedShipDate || item.deliveryDate}}</text>
+          </view>
+
+          <!-- 规格信息行：领取人 -->
+          <view class="info-spec-row" wx:if="{{item.receiverName}}">
+            <text class="info-spec-label">领取</text>
+            <text class="info-spec-value">{{item.receiverName}}</text>
+          </view>
         </view>
       </view>
 
@@ -78,7 +88,6 @@
         <view wx:else class="btn-action btn-disabled">
           {{item.statusText}}
         </view>
-        <!-- 裁剪单明细入口 -->
         <view class="btn-action btn-outline" hover-class="btn-outline-hover" hover-stay-time="100" catchtap="goBundleDetail" data-task="{{item}}">
           裁剪明细
         </view>

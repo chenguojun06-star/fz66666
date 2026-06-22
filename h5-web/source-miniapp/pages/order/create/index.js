@@ -138,7 +138,7 @@ Page({
       .catch(function (err) {
         console.error('[下单管理] 加载失败:', err);
         self.setData({ styleLoading: false });
-        wx.showToast({ title: '加载失败', icon: 'none' });
+        toast.error('加载失败');
       });
   },
 
@@ -201,7 +201,7 @@ Page({
       fail: function (err) {
         console.error('[无资料下单] 选择图片失败:', err);
         if (err && err.errMsg && err.errMsg.indexOf('cancel') === -1) {
-          wx.showToast({ title: '选择图片失败', icon: 'none' });
+          toast.error('选择图片失败');
         }
       }
     });

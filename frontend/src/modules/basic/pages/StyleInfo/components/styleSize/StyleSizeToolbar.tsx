@@ -67,56 +67,65 @@ const StyleSizeToolbar: React.FC<Props> = ({
       if (res.code !== 200) {
         antMessage.error(res.message || 'AI识别失败');
       } else {
-        let rawJson = res.data?.rawJson || '{}';
-        console.log('[AI识别] 原始返回:', rawJson);
+        const data = res.data || {};
+        console.log('[AI识别] 后端解析结果:', data, ' 原始AI文本:', data?.rawJson);
 
-        // 从任意文本中提取第一个 { 到最后一个 } 之间的内容
-        const extractJson = (text: string): string => {
-          const s = String(text || '').trim();
-          const firstOpen = s.indexOf('{');
-          const lastClose = s.lastIndexOf('}');
-          if (firstOpen !== -1 && lastClose !== -1 && lastClose > firstOpen) {
-            return s.slice(firstOpen, lastClose + 1);
+        // 1) 优先使用后端已经解析好的 { sizes, parts }
+        let recognized = data;
+        const hasSizes = Array.isArray(recognized?.sizes) && recognized.sizes.length > 0;
+        const hasParts = Array.isArray(recognized?.parts) && recognized.parts.length > 0;
+
+        // 2) 如果后端没解析成功，fallback 到客户端再次尝试解析 rawJson
+        if (!hasSizes && !hasParts && data?.rawJson) {
+          const extractJson = (text: string): string => {
+            const s = String(text || '').trim();
+            const firstOpen = s.indexOf('{');
+            const lastClose = s.lastIndexOf('}');
+            if (firstOpen !== -1 && lastClose !== -1 && lastClose > firstOpen) {
+              return s.slice(firstOpen, lastClose + 1);
+            }
+            return s;
+          };
+
+          let rawText = String(data.rawJson || '').trim();
+          if (rawText.startsWith('```json')) rawText = rawText.slice(7);
+          if (rawText.startsWith('```')) rawText = rawText.slice(3);
+          if (rawText.endsWith('```')) rawText = rawText.slice(0, -3);
+          rawText = rawText.trim();
+
+          let parsed: any = null;
+          for (const attempt of [rawText, extractJson(rawText)]) {
+            try {
+              parsed = JSON.parse(attempt);
+              if (parsed && typeof parsed === 'object') break;
+              parsed = null;
+            } catch {
+              parsed = null;
+            }
           }
-          return s;
-        };
-
-        // 清理 Markdown 代码块标记
-        rawJson = rawJson.trim();
-        if (rawJson.startsWith('```json')) {
-          rawJson = rawJson.slice(7);
-        }
-        if (rawJson.startsWith('```')) {
-          rawJson = rawJson.slice(3);
-        }
-        if (rawJson.endsWith('```')) {
-          rawJson = rawJson.slice(0, -3);
-        }
-        rawJson = rawJson.trim();
-
-        let parsed: any = null;
-        for (const attempt of [rawJson, extractJson(rawJson)]) {
-          try {
-            parsed = JSON.parse(attempt);
-            if (parsed && typeof parsed === 'object') break;
-            parsed = null;
-          } catch {
-            parsed = null;
+          if (parsed && (parsed.sizes || parsed.parts)) {
+            recognized = parsed;
+            console.log('[AI识别] 客户端二次解析成功:', recognized);
           }
         }
 
-        if (parsed && typeof parsed === 'object') {
-          console.log('[AI识别] 解析成功:', parsed);
-          onSizeTableRecognized(parsed);
-          setOcrModalOpen(false);
-          setOcrFile(null);
-          antMessage.success('尺寸表识别成功！');
-        } else {
-          console.error('[AI识别] JSON解析失败，原始文本:', rawJson);
-          // AI 返回了非 JSON 自然语言（如"此图片不是一张尺寸表"），提取可读提示
-          const plainText = String(rawJson || '').replace(/^[`\s]+|[`\s]+$/g, '').slice(0, 80);
-          antMessage.error(plainText ? `AI返回：${plainText}（请上传尺码表图片重试）` : 'AI返回格式异常，请重试');
+        const finalSizes = Array.isArray(recognized?.sizes) ? recognized.sizes : [];
+        const finalParts = Array.isArray(recognized?.parts) ? recognized.parts : [];
+
+        if (finalSizes.length === 0 && finalParts.length === 0) {
+          const preview = String(data?.rawJson || '').replace(/^[`\s]+|[`\s]+$/g, '').slice(0, 80);
+          antMessage.error(preview ? `AI返回：${preview}（请上传尺码表图片重试）` : 'AI返回为空，请重试');
+          return;
         }
+
+        onSizeTableRecognized({ sizes: finalSizes, parts: finalParts });
+        setOcrModalOpen(false);
+        setOcrFile(null);
+        antMessage.success(
+          finalSizes.length
+            ? `识别成功！新增 ${finalSizes.length} 个尺码、${finalParts.length} 个部位`
+            : `识别成功！导入 ${finalParts.length} 个部位数据`,
+        );
       }
     } catch (e: unknown) {
       console.error('[AI识别] 请求失败:', e);

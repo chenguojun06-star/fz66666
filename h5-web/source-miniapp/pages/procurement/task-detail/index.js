@@ -368,13 +368,13 @@ Page({
 
   _getStatusColor(status) {
     const map = {
-      pending: 'orange', received: 'blue', partial: 'blue',
-      partial_arrival: 'blue', awaiting_confirm: 'gold', completed: 'green',
-      cancelled: 'red', warehouse_pending: 'cyan',
-      waiting_procurement: 'orange', procurement_in_progress: 'blue',
-      procurement_completed: 'green',
+      pending: 'warning', received: 'processing', partial: 'processing',
+      partial_arrival: 'processing', awaiting_confirm: 'warning', completed: 'success',
+      cancelled: 'error', warehouse_pending: 'processing',
+      waiting_procurement: 'warning', procurement_in_progress: 'processing',
+      procurement_completed: 'success',
     };
-    return map[status] || 'orange';
+    return map[status] || 'warning';
   },
 
   _isActionableForUser(item, receiverId, receiverName) {

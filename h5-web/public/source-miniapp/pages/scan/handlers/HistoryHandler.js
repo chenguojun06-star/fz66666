@@ -504,7 +504,7 @@ async function loadMyHistory(page, refresh = false) {
   } catch (e) {
     console.error('[loadMyHistory] 加载失败:', e.message || e);
     // 始终提示用户加载失败，便于排查"重新打开后记录消失"问题
-    wx.showToast({ title: '加载记录失败，请下拉刷新', icon: 'none', duration: 2500 });
+    toast.error('加载记录失败，请下拉刷新');
   } finally {
     page.setData({ 'my.loadingHistory': false });
 

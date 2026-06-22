@@ -9,10 +9,10 @@ import Icon from '@/components/Icon';
 import OrderCard from '@/components/OrderCard';
 import EmptyState from '@/components/EmptyState';
 
+// 状态过滤（已延期/临近交期用 smart-hints 小标签筛选，此处不重复）
 const STATUS_FILTERS = [
   { key: 'all', label: '全部' },
   { key: 'in_production', label: '生产中' },
-  { key: 'overdue', label: '延期' },
   { key: 'completed', label: '已完成' },
 ];
 
@@ -20,13 +20,6 @@ const FACTORY_TYPES = [
   { key: '', label: '全部' },
   { key: 'INTERNAL', label: '内部' },
   { key: 'EXTERNAL', label: '外部' },
-];
-
-const SUMMARY_CARDS = [
-  { key: 'sample', title: '样衣开发', icon: 'scissors', color: 'var(--color-purple)', bg: 'rgba(124,92,252,0.1)', tone: 'purple' },
-  { key: 'production', title: '生产订单', icon: 'package', color: 'var(--color-primary)', bg: 'rgba(59,130,246,0.1)', tone: 'blue' },
-  { key: 'inbound', title: '入库', icon: 'inbox', color: 'var(--color-success)', bg: 'rgba(34,197,94,0.1)', tone: 'green' },
-  { key: 'outbound', title: '出库', icon: 'download', color: 'var(--color-warning)', bg: 'rgba(245,158,11,0.1)', tone: 'orange' },
 ];
 
 export default function DashboardPage() {
@@ -42,12 +35,8 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState('all');
   const [factoryType, setFactoryType] = useState('');
-  const [cards, setCards] = useState({
-    sample: { developing: 0, completed: 0 },
-    production: { total: 0, overdue: 0, pieces: 0 },
-    inbound: { today: 0, week: 0 },
-    outbound: { today: 0, week: 0 },
-  });
+  const [smartFilter, setSmartFilter] = useState(''); // 已延期/临近交期筛选
+  const [smartHintsData, setSmartHintsData] = useState({ overdueCount: 0, warningCount: 0 });
   const [orders, setOrders] = useState([]);
   const [searchKey, setSearchKey] = useState('');
   const [todayScanCount, setTodayScanCount] = useState(0);
@@ -62,18 +51,13 @@ export default function DashboardPage() {
     setLoading(true);
     let failCount = 0;
     try {
-      const [dashRes, topStatsRes, statsRes] = await Promise.allSettled([
+      const [dashRes, statsRes] = await Promise.allSettled([
         api.dashboard.get(),
-        api.dashboard.getTopStats(),
         api.production.orderStats({}),
       ]);
 
       if (dashRes.status === 'rejected') {
         console.error('[Dashboard] dash API失败:', dashRes.reason?.message);
-        failCount++;
-      }
-      if (topStatsRes.status === 'rejected') {
-        console.error('[Dashboard] topStats API失败:', topStatsRes.reason?.message);
         failCount++;
       }
       if (statsRes.status === 'rejected') {
@@ -82,23 +66,20 @@ export default function DashboardPage() {
       }
 
       const dash = dashRes.status === 'fulfilled' ? (dashRes.value?.data ?? dashRes.value ?? {}) : {};
-      const topStats = topStatsRes.status === 'fulfilled' ? (topStatsRes.value?.data ?? topStatsRes.value ?? {}) : {};
       const stats = statsRes.status === 'fulfilled' ? (statsRes.value?.data ?? statsRes.value ?? {}) : {};
       setTodayScanCount(Number(dash.todayScanCount || 0));
-      setCards({
-        sample: { developing: Number(dash.sampleDevelopmentCount || 0), completed: Number(stats.completedOrders || topStats.sampleDevelopment?.total || 0) },
-        production: { total: Number(stats.activeOrders || dash.productionOrderCount || 0), overdue: Number(stats.delayedOrders || dash.overdueOrderCount || 0), pieces: Number(stats.activeQuantity || dash.orderQuantityTotal || 0) },
-        inbound: { today: Number(topStats.warehousingInbound?.day || 0), week: Number(topStats.warehousingInbound?.week || 0) },
-        outbound: { today: Number(topStats.warehousingOutbound?.day || 0), week: Number(topStats.warehousingOutbound?.week || 0) },
-      });
+      // 更新 smart-hints：已延期/临近交期计数
+      const overdueCount = Number(dash.overdueOrderCount || stats.delayedOrders || 0);
+      const warningCount = Number(stats.warningOrders || 0);
+      setSmartHintsData({ overdueCount, warningCount });
 
-      if (failCount >= 3) {
-        toast.error('看板数据全部加载失败，请检查网络后刷新');
+      if (failCount >= 2) {
+        toast.error('数据加载失败，请检查网络后刷新');
       } else if (failCount > 0) {
-        toast.error('部分数据加载失败');
+        toast.warn('部分数据加载失败');
       }
     } catch (e) {
-      console.error('[Dashboard] refreshCards error:', e?.response?.status, e?.message, e?.response?.data);
+      console.error('[Dashboard] refreshCards error:', e?.message);
       toast.error('数据加载失败');
     } finally {
       setLoading(false);
@@ -107,30 +88,38 @@ export default function DashboardPage() {
 
   const loadOrders = useCallback(async (reset) => {
     try {
-      const params = { page: 1, pageSize: 30, excludeTerminal: 'true' };
-      if (activeFilter === 'in_production') params.status = 'production';
-      else if (activeFilter === 'completed') params.status = 'completed';
-      else if (activeFilter === 'overdue') params.status = 'production';
+      const params = { page: 1, pageSize: smartFilter ? 50 : 30, excludeTerminal: 'true' };
+      // 生产中：不传 status，由 excludeTerminal='true' 排除终止状态（已完成/已取消/已报废/已归档/已关单），
+      // 这样可以正确显示所有活跃订单（production/in_progress/cutting/sewing/ironing/packaging/quality_check/warehousing 等）
+      if (activeFilter === 'completed') params.status = 'completed';
       if (searchKey) params.orderNo = searchKey;
       if (factoryType) params.factoryType = factoryType;
       const res = await api.production.orderList(params);
       const data = res?.data ?? res ?? {};
       let rawList = data?.records ?? data?.list ?? [];
-      if (activeFilter === 'overdue') {
+      // smart-hints 筛选：已延期/临近交期
+      if (smartFilter === 'overdue') {
         rawList = rawList.filter(o => {
           const delivery = new Date(String(o.plannedEndDate || o.expectedShipDate || o.deliveryDate || '').replace(' ', 'T'));
           return !isNaN(delivery.getTime()) && delivery < new Date();
+        });
+      } else if (smartFilter === 'warning') {
+        rawList = rawList.filter(o => {
+          const delivery = new Date(String(o.plannedEndDate || o.expectedShipDate || o.deliveryDate || '').replace(' ', 'T'));
+          if (isNaN(delivery.getTime())) return false;
+          const diffDays = (delivery.getTime() - Date.now()) / (1000 * 60 * 60 * 24);
+          return diffDays >= 0 && diffDays <= 3; // 3天内交期
         });
       }
       const list = rawList.map(r => transformOrderData(r));
       setOrders(reset ? list : prev => [...prev, ...list]);
     } catch (e) {
-      console.error('[Dashboard] loadOrders error:', e?.response?.status, e?.message, e?.response?.data);
-      toast.error('订单数据加载失败，请下拉刷新');
+      console.error('[Dashboard] loadOrders error:', e?.message);
+      toast.error('订单数据加载失败');
     }
-  }, [activeFilter, searchKey, factoryType]);
+  }, [activeFilter, searchKey, factoryType, smartFilter]);
 
-  useEffect(() => { loadOrders(true); }, [activeFilter, factoryType]);
+  useEffect(() => { loadOrders(true); }, [activeFilter, factoryType, smartFilter]);
 
   useEffect(() => {
     const onRefresh = () => { refreshCards(); loadOrders(true); };
@@ -147,45 +136,12 @@ export default function DashboardPage() {
     loadOrders(true);
   }, [loadOrders]);
 
-  const renderCardMetrics = useCallback((key) => {
-    const c = cards[key];
-    switch (key) {
-      case 'sample':
-        return (
-          <div className="card-bd">
-            <div className="metric"><div className="metric-val">{c.developing}</div><div className="metric-lbl">款式总数</div></div>
-            <div className="metric-divider" />
-            <div className="metric"><div className="metric-val val--muted">{c.completed}</div><div className="metric-lbl">已完成</div></div>
-          </div>
-        );
-      case 'production':
-        return (
-          <div className="card-bd">
-            <div className="metric"><div className="metric-val">{c.total}</div><div className="metric-lbl">生产中</div></div>
-            <div className="metric-divider" />
-            <div className="metric"><div className="metric-val val--muted">{c.pieces}</div><div className="metric-lbl">件数</div></div>
-            <div className="metric-divider" />
-            <div className="metric"><div className={`metric-val${c.overdue > 0 ? ' val--danger' : ' val--muted'}`}>{c.overdue}</div><div className="metric-lbl">已延期</div></div>
-          </div>
-        );
-      case 'inbound':
-        return (
-          <div className="card-bd">
-            <div className="metric"><div className="metric-val">{c.today}</div><div className="metric-lbl">今日</div></div>
-            <div className="metric-divider" />
-            <div className="metric"><div className="metric-val val--muted">{c.week}</div><div className="metric-lbl">本周</div></div>
-          </div>
-        );
-      case 'outbound':
-        return (
-          <div className="card-bd">
-            <div className="metric"><div className="metric-val">{c.today}</div><div className="metric-lbl">今日</div></div>
-            <div className="metric-divider" />
-            <div className="metric"><div className="metric-val val--muted">{c.week}</div><div className="metric-lbl">本周</div></div>
-          </div>
-        );
-    }
-  }, [cards]);
+  const handleSmartHintClick = (key) => {
+    // 点击小标签切换筛选，点击已选中的则清除
+    setSmartFilter(prev => prev === key ? '' : key);
+  };
+
+  const hasSmartHints = smartHintsData.overdueCount > 0 || smartHintsData.warningCount > 0;
 
   return (
     <div className="dashboard-stack">
@@ -201,18 +157,47 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="card-grid">
-        {SUMMARY_CARDS.map(card => (
-          <div key={card.key} className={`summary-card card--${card.tone}`}>
-            <div className="card-hd">
-              <div className="card-icon" style={{ background: card.bg }}>
-                <Icon name={card.icon} size={20} color={card.color} />
-              </div>
-              <div className="card-title">{card.title}</div>
-            </div>
-            {renderCardMetrics(card.key)}
-          </div>
-        ))}
+      {/* smart-hints 小标签：已延期/临近交期 */}
+      <div className="smart-hints" style={{ display: 'flex', flexWrap: 'wrap', gap: 8, padding: '8px 0' }}>
+        {smartHintsData.overdueCount > 0 && (
+          <button
+            className={`smart-hint danger${smartFilter === 'overdue' ? ' active' : ''}`}
+            onClick={() => handleSmartHintClick('overdue')}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 4,
+              padding: '4px 10px', fontSize: 12, borderRadius: 4,
+              background: smartFilter === 'overdue' ? '#ff4d4f' : '#fff1f0',
+              color: smartFilter === 'overdue' ? '#fff' : '#ff4d4f',
+              border: '1px solid #ffa39e', cursor: 'pointer'
+            }}
+          >
+            <span style={{ fontWeight: 600 }}>{smartHintsData.overdueCount}</span>
+            <span>已延期</span>
+          </button>
+        )}
+        {smartHintsData.warningCount > 0 && (
+          <button
+            className={`smart-hint warning${smartFilter === 'warning' ? ' active' : ''}`}
+            onClick={() => handleSmartHintClick('warning')}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 4,
+              padding: '4px 10px', fontSize: 12, borderRadius: 4,
+              background: smartFilter === 'warning' ? '#fa8c16' : '#fff7e6',
+              color: smartFilter === 'warning' ? '#fff' : '#d46b08',
+              border: '1px solid #ffd591', cursor: 'pointer'
+            }}
+          >
+            <span style={{ fontWeight: 600 }}>{smartHintsData.warningCount}</span>
+            <span>临近交期</span>
+          </button>
+        )}
+        {smartFilter && (
+          <button
+            className="smart-hint-clear"
+            onClick={() => setSmartFilter('')}
+            style={{ fontSize: 12, color: '#8c8c8c', padding: '4px 8px', border: 'none', background: 'transparent', cursor: 'pointer' }}
+          >清除筛选 ✕</button>
+        )}
       </div>
 
       <div className="filter-row">

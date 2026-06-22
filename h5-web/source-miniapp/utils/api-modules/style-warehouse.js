@@ -39,9 +39,12 @@ const style = {
   createBom(payload) {
     return ok('/api/style/bom', 'POST', payload || {});
   },
-  updateBom(bomId, payload) {
-    const id = String(bomId || '').trim();
-    return ok(`/api/style/bom/${encodeURIComponent(id)}`, 'PUT', payload || {});
+  /**
+   * 更新 BOM（后端 PUT /api/style/bom，id 放在 payload body 中）
+   * 更新 devUsageAmount 后会自动同步 pending 状态的样衣采购任务数量
+   */
+  updateBom(payload) {
+    return ok('/api/style/bom', 'PUT', payload || {});
   },
   deleteBom(bomId) {
     const id = String(bomId || '').trim();
@@ -49,6 +52,13 @@ const style = {
   },
   batchSaveBom(payload) {
     return ok('/api/style/bom/batch-save', 'POST', payload || {});
+  },
+  /**
+   * 基于 BOM 生成样衣采购单（与 PC 端 StyleBomTab.handleGeneratePurchase 一致）
+   * 后端会遍历 BOM 列表，按 devUsageAmount(优先) 或 usageAmount × 数量 × (1+损耗率) 计算采购数量
+   */
+  generateSamplePurchase(payload) {
+    return ok('/api/style/bom/generate-purchase', 'POST', payload || {});
   },
 
   // 工序
@@ -249,9 +259,12 @@ const sampleStock = {
   list(params) { return ok('/api/stock/sample/list', 'GET', params || {}); },
   scanQuery(data) { return ok('/api/stock/sample/scan-query', 'POST', data); },
   inbound(data) { return ok('/api/stock/sample/inbound', 'POST', data); },
+  inboundBatch(data) { return ok('/api/stock/sample/inbound/batch', 'POST', data); },
   loan(data) { return ok('/api/stock/sample/loan', 'POST', data); },
   returnSample(data) { return ok('/api/stock/sample/return', 'POST', data); },
   transfer(data) { return ok('/api/stock/sample/transfer', 'POST', data); },
+  destroy(data) { return ok('/api/stock/sample/destroy', 'POST', data); },
+  transferToOutstock(data) { return ok('/api/stock/sample/transfer-to-outstock', 'POST', data); },
   loanList(params) { return ok('/api/stock/sample/loan/list', 'GET', params || {}); },
 };
 

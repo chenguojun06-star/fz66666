@@ -14,6 +14,9 @@ const production = {
   getFactoryCapacity() {
     return ok('/api/production/order/factory-capacity', 'GET', {});
   },
+  getExternalFactoryStats() {
+    return ok('/api/production/order/external-factory-stats', 'GET', {});
+  },
   createOrder(payload) {
     return ok('/api/production/order', 'POST', payload || {});
   },
@@ -32,6 +35,10 @@ const production = {
   orderDetailByOrderNo(orderNo) {
     const on = String(orderNo || '').trim();
     return ok('/api/production/order/list', 'GET', { orderNo: on });
+  },
+  /** 获取订单完整流程数据（含工序阶段/扫码记录/物料采购/BOM等） */
+  getOrderFlow(orderId) {
+    return ok(`/api/production/order/flow/${encodeURIComponent(orderId)}`, 'GET', {});
   },
   updateProgress(payload) {
     return ok('/api/production/order/update-progress', 'POST', payload || {});
@@ -74,6 +81,13 @@ const production = {
   },
   receivePurchase(payload) {
     return ok('/api/production/purchase/receive', 'POST', payload || {});
+  },
+  /**
+   * 确认采购完成（单条，与 PC 端 useSampleProcurementQuickActions 一致）
+   * 后端：POST /api/production/purchase/confirm-complete
+   */
+  confirmPurchaseComplete(payload) {
+    return ok('/api/production/purchase/confirm-complete', 'POST', payload || {});
   },
   createPurchaseInstruction(payload) {
     return ok('/api/production/purchase/instruction', 'POST', payload || {});
@@ -176,6 +190,13 @@ const production = {
   listPatterns(params) {
     return ok('/api/production/pattern/list', 'GET', params || {});
   },
+  /**
+   * 样衣开发统计（与 PC 端 StyleInfoList activeStyles 逻辑一致）
+   * 返回 { activeCount, overdueCount, warningCount }
+   */
+  getSampleStats() {
+    return ok('/api/production/pattern/sample-stats', 'GET', {});
+  },
   getPatternProcessConfig(patternId) {
     const id = String(patternId || '').trim();
     return ok(`/api/production/pattern/${encodeURIComponent(id)}/process-config`, 'GET', {});
@@ -199,6 +220,15 @@ const production = {
       payload.images = images;
     }
     return ok(`/api/production/pattern/${encodeURIComponent(id)}/workflow-action?action=${action}`, 'POST', payload);
+  },
+  /**
+   * 通用样衣工作流操作（与 PC 端 useSampleStage 一致）
+   * action: receive / complete / warehouse-in / review
+   */
+  patternWorkflowAction(patternId, action, payload) {
+    const id = String(patternId || '').trim();
+    const act = encodeURIComponent(action || '');
+    return ok(`/api/production/pattern/${encodeURIComponent(id)}/workflow-action?action=${act}`, 'POST', payload || {});
   },
   receivePattern(patternId, remark, extra) {
     const id = String(patternId || '').trim();

@@ -7,7 +7,11 @@
       <image wx:if="{{detail.coverImage}}" class="pattern-cover" src="{{detail.coverImage}}" mode="aspectFill" />
       <view class="pattern-brief-info">
         <text class="pattern-style-no">{{detail.styleNo}}</text>
+        <text wx:if="{{detail.styleName}}" class="pattern-style-name">{{detail.styleName}}</text>
         <text wx:if="{{detail.color}}" class="pattern-color">颜色：{{detail.color}}</text>
+        <text wx:if="{{detail.size}}" class="pattern-color">码数：{{detail.size}}</text>
+        <text wx:elif="{{detail.sizesText && detail.sizesText !== '-'}}" class="pattern-color">码数：{{detail.sizesText}}</text>
+        <text wx:if="{{detail.quantity && detail.quantity > 0}}" class="pattern-color">数量：{{detail.quantity}} 件</text>
       </view>
     </view>
 
@@ -25,6 +29,12 @@
         </view>
         <view class="process-select-content">
           <text class="process-select-name">{{proc.name}}</text>
+          <!-- 工序基础信息：颜色/码数/数量（同一订单下工序共用） -->
+          <view class="process-select-meta">
+            <text wx:if="{{proc.color}}" class="meta-item">颜色：{{proc.color}}</text>
+            <text wx:if="{{proc.size}}" class="meta-item">码数：{{proc.size}}</text>
+            <text wx:if="{{proc.quantity && proc.quantity > 0}}" class="meta-item">数量：{{proc.quantity}}件</text>
+          </view>
           <text wx:if="{{proc.completed}}" class="process-select-hint done-hint">已完成</text>
           <text wx:elif="{{proc.canOperate}}" class="process-select-hint can-hint">点击操作</text>
           <text wx:elif="{{proc.locked}}" class="process-select-hint lock-hint">{{proc.lockReason || '前置工序未完成'}}</text>
@@ -42,8 +52,8 @@
   <view wx:elif="{{viewMode === 'operate'}}">
 
     <!-- 样板信息卡片 -->
-    <view class="info-card">
-      <view class="status-badge status-{{detail.statusType}}">{{detail.statusLabel || '-'}}</view>
+    <view class="task-card">
+      <view class="status-tag tag tag-{{detail.statusColor}}">{{detail.statusLabel || '-'}}</view>
       <view class="card-header">
         <image-preview class="cover-wrap" src="{{detail.coverImage || ''}}" mode="aspectFill" />
         <view class="header-info">
@@ -52,13 +62,16 @@
       </view>
 
       <view class="field-list">
-        <view class="field-row" wx:if="{{detail.sourceLabel}}">
-          <text class="field-label">来源</text>
-          <text class="field-value">{{detail.sourceLabel}}</text>
+        <!-- 颜色（优先显示） -->
+        <view class="field-row" wx:if="{{detail.color}}">
+          <text class="field-label">颜色</text>
+          <text class="field-value">{{detail.color}}</text>
         </view>
-        <view class="field-row" wx:if="{{detail.categoryLabel}}">
-          <text class="field-label">品类</text>
-          <text class="field-value">{{detail.categoryLabel}}</text>
+
+        <!-- 数量（优先显示） -->
+        <view class="field-row" wx:if="{{detail.quantity && detail.quantity > 0}}">
+          <text class="field-label">数量</text>
+          <text class="field-value">{{detail.quantity}} 件</text>
         </view>
 
         <!-- 颜色码数矩阵 -->
@@ -77,22 +90,27 @@
             <text class="matrix-grand-total">总数: {{detail.matrixTotal}} 件</text>
           </view>
         </view>
+        <!-- 无矩阵但有单独码数时的兜底展示 -->
+        <view wx:elif="{{detail.size}}" class="field-row">
+          <text class="field-label">码数</text>
+          <text class="field-value">{{detail.size}}</text>
+        </view>
+        <view wx:elif="{{detail.sizesText && detail.sizesText !== '-'}}" class="field-row">
+          <text class="field-label">码数</text>
+          <text class="field-value">{{detail.sizesText}}</text>
+        </view>
 
         <view class="field-row">
           <text class="field-label">交板</text>
           <text class="field-value">{{detail.deliveryTime || '-'}}</text>
         </view>
-        <view class="field-row" wx:if="{{detail.customer}}">
-          <text class="field-label">客户</text>
-          <text class="field-value">{{detail.customer}}</text>
-        </view>
-        <view class="field-row">
+        <view class="field-row" wx:if="{{detail.designer}}">
           <text class="field-label">设计师</text>
-          <text class="field-value">{{detail.designer || '-'}}</text>
+          <text class="field-value">{{detail.designer}}</text>
         </view>
-        <view class="field-row">
+        <view class="field-row" wx:if="{{detail.patternDeveloper}}">
           <text class="field-label">纸样师</text>
-          <text class="field-value">{{detail.patternDeveloper || '-'}}</text>
+          <text class="field-value">{{detail.patternDeveloper}}</text>
         </view>
       </view>
     </view>

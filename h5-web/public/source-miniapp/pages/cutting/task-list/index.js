@@ -130,6 +130,18 @@ Page({
     }).catch(() => {});
   },
 
+  /* ---- 预览封面图 ---- */
+  onCoverPreview(e) {
+    const url = e.currentTarget.dataset.url;
+    if (!url) return;
+    try {
+      wx.previewImage({
+        current: url,
+        urls: [url],
+      });
+    } catch (err) { /* ignore */ }
+  },
+
   /* ---- 跳转裁剪单明细页（数量矩阵总览） ---- */
   goMatrix(e) {
     const task = e.currentTarget.dataset.task;
@@ -166,22 +178,22 @@ Page({
     );
 
     let statusText = '待领取';
-    let statusColor = 'orange';
+    let statusColor = 'warning';
     let canReceive = false;
     let canOperate = false;
 
     if (status === 'pending') {
       statusText = '待领取';
-      statusColor = 'orange';
+      statusColor = 'warning';
       canReceive = true;
     } else if (status === 'received') {
       statusText = '已领取';
-      statusColor = 'blue';
+      statusColor = 'processing';
       canReceive = false;
       canOperate = isMine;
     } else if (status === 'bundled') {
       statusText = '已完成';
-      statusColor = 'green';
+      statusColor = 'success';
     }
 
     return {

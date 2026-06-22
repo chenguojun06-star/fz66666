@@ -1,5 +1,8 @@
 {
   "navigationBarTitleText": "采购任务",
   "enablePullDownRefresh": true,
-  "usingComponents": {}
+  "backgroundColor": "#ededed",
+  "usingComponents": {
+    "empty-state": "/components/empty-state/empty-state"
+  }
 }

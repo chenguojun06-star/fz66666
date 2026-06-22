@@ -1,9 +1,62 @@
-import { Tag } from 'antd';
-import type { MenuProps } from 'antd';
-import { CheckOutlined, CloseOutlined } from '@ant-design/icons';
+import React, { useState } from 'react';
+import { Tag, Button, Space, Dropdown, MenuProps, App } from 'antd';
+import type { MenuProps as AntDMenuProps } from 'antd';
+import { CheckOutlined, CloseOutlined, UserOutlined, AppstoreOutlined, ShopOutlined, TeamOutlined } from '@ant-design/icons';
 import RowActions from '@/components/common/RowActions';
 import { Role, User as UserType } from '@/types/system';
 import { formatDate } from '@/utils/datetime';
+import { requestWithPathFallback } from '@/utils/api';
+
+/** 用户归属类型 */
+type UserAffiliation = 'internal' | 'external_factory' | 'supplier' | 'other';
+
+/** 角色类型对应的用户归属 */
+function getUserAffiliation(roleName?: string, roleCode?: string): { type: UserAffiliation; label: string; color: string; icon: React.ReactNode } {
+  const name = (roleName || '').toLowerCase();
+  const code = (roleCode || '').toLowerCase();
+
+  // 外发工厂用户
+  if (name.includes('factory') || name.includes('外发') || name.includes('外包') ||
+      code.includes('factory_owner') || code.includes('external')) {
+    return {
+      type: 'external_factory',
+      label: '外发工厂',
+      color: 'blue',
+      icon: <AppstoreOutlined />,
+    };
+  }
+
+  // 第三方供应商用户
+  if (name.includes('supplier') || name.includes('vendor') || name.includes('供应商') ||
+      name.includes('面辅料') || name.includes('物料')) {
+    return {
+      type: 'supplier',
+      label: '第三方供应商',
+      color: 'purple',
+      icon: <ShopOutlined />,
+    };
+  }
+
+  // 内部员工
+  if (name.includes('admin') || name.includes('manager') || name.includes('主管') ||
+      name.includes('组长') || name.includes('员工') || name.includes('operator') ||
+      name.includes('merchandiser') || name.includes('采购') || name.includes('财务') ||
+      name.includes('仓库')) {
+    return {
+      type: 'internal',
+      label: '内部员工',
+      color: 'green',
+      icon: <UserOutlined />,
+    };
+  }
+
+  return {
+    type: 'other',
+    label: '其他',
+    color: 'default',
+    icon: <TeamOutlined />,
+  };
+}
 
 export const getStatusConfig = (status: UserType['status']) => {
   const statusMap = {
@@ -54,6 +107,27 @@ export function useUserListColumns(props: UseUserListColumnsProps) {
     isTenantOwner: _isTenantOwner,
     onResetPassword,
   } = props;
+  const { message, modal } = App.useApp();
+
+  // 快速切换用户角色
+  const handleQuickChangeRole = async (user: UserType, newRole: Role) => {
+    try {
+      const response = await requestWithPathFallback('put', '/system/user', '/auth/user', {
+        id: user.id,
+        roleId: newRole.id,
+        roleName: newRole.roleName,
+        roleCode: newRole.roleCode,
+      });
+      const result = response as any;
+      if (result?.code === 200) {
+        message.success(`已将 ${user.name || user.username} 设置为「${newRole.roleName}」`);
+      } else {
+        message.error(result?.message || '设置角色失败');
+      }
+    } catch {
+      message.error('设置角色失败');
+    }
+  };
 
   const columns = [
     {
@@ -81,8 +155,85 @@ export function useUserListColumns(props: UseUserListColumnsProps) {
       title: '角色权限',
       dataIndex: 'roleName',
       key: 'roleName',
-      width: 120,
-      render: (v: string) => v ? <Tag color="blue">{v}</Tag> : '-',
+      width: 180,
+      render: (v: string, r: UserType) => {
+        const affiliation = getUserAffiliation(String(v || ''), String(r.roleCode || ''));
+
+        // 无角色时显示设置按钮
+        if (!v) {
+          const noRoleItems = roleOptions.map(role => ({
+            key: String(role.id),
+            label: role.roleName,
+            onClick: () => handleQuickChangeRole(r, role),
+          }));
+          return (
+            <Dropdown menu={{ items: noRoleItems }} disabled={roleOptionsLoading} trigger={['click']}>
+              <Button size="small" type="dashed">
+                <span style={{ fontSize: 12, color: "var(--color-text-secondary, #666)" }}>
+                  <UserOutlined style={{ fontSize: 11 }} />
+                  <span style={{ marginLeft: 4 }}>点击设置角色</span>
+                </span>
+              </Button>
+            </Dropdown>
+          );
+        }
+
+        // 有角色时显示可切换的标签
+        const items = roleOptions.map(role => {
+          const isCurrent = String(role.id) === String(r.roleId);
+          return {
+            key: String(role.id),
+            label: (
+              <span style={{ display: 'inline-block', width: '100%' }}>
+                {isCurrent && (
+                  <CheckOutlined style={{ fontSize: 10, marginRight: 4, color: 'var(--color-primary, #52c41a)' }} />
+                )}
+                {role.roleName}
+                {isCurrent && (
+                  <span style={{ fontSize: 10, marginLeft: 8, color: 'var(--color-text-quaternary, #999)' }}>
+                    （当前）
+                  </span>
+                )}
+              </span>
+            ),
+            onClick: () => handleQuickChangeRole(r, role),
+          };
+        });
+
+        return (
+          <Dropdown menu={{ items }} trigger={['click']}>
+            <Tag
+              icon={affiliation.icon}
+              color={affiliation.color}
+              style={{
+                cursor: 'pointer',
+                padding: '2px 10px',
+                fontSize: 12,
+                border: `1px solid var(--color-border-antd, #d9d9d9)`,
+                borderRadius: 4,
+              }}
+            >
+              <span style={{ fontSize: 12 }}>{v}</span>
+              <span style={{ fontSize: 10, marginLeft: 4, color: 'var(--color-text-quaternary, #999)' }}>
+                点击切换
+              </span>
+            </Tag>
+          </Dropdown>
+        );
+      },
+    },
+    {
+      title: '归属',
+      key: 'affiliation',
+      width: 110,
+      render: (_: any, r: UserType) => {
+        const affiliation = getUserAffiliation(String(r.roleName || ''), String(r.roleCode || ''));
+        return (
+          <Tag color={affiliation.color}>
+            {affiliation.icon} {affiliation.label}
+          </Tag>
+        );
+      },
     },
     {
       title: '性别',

@@ -17,8 +17,8 @@ const WORKER_PROMPTS = [
 ];
 
 const MANAGER_PROMPTS = [
-  { label: '📋 下单', text: '帮我下单' },
-  { label: '👕 借调样衣', text: '帮我借调样衣' },
+  { label: '下单', text: '帮我下单' },
+  { label: '借调样衣', text: '帮我借调样衣' },
   { label: '日报口径', text: '请给我内部资料：日报统计口径' },
   { label: '逾期定义', text: '请给我内部资料：逾期定义' },
   { label: '采购流程', text: '请给我内部资料：采购流程' },
@@ -66,10 +66,7 @@ export default function AiAssistantPage() {
   const [conversationId] = useState('h5_' + Date.now());
   const [quickPrompts, setQuickPrompts] = useState(WORKER_PROMPTS);
   const [dynamicSuggestions, setDynamicSuggestions] = useState([]);
-  const [pendingImage, setPendingImage] = useState(null);
-  const [uploading, setUploading] = useState(false);
   const bottomRef = useRef(null);
-  const fileInputRef = useRef(null);
   const aiStream = useAiChatStream();
 
   const voice = useVoiceInput({
@@ -88,7 +85,7 @@ export default function AiAssistantPage() {
     const mgr = isManagerLevel();
     setIsManager(mgr);
     setQuickPrompts(mgr ? MANAGER_PROMPTS : WORKER_PROMPTS);
-    setMessages([{ id: 'welcome', role: 'ai', text: '你好！这里是小云帮助中心。有什么可以帮你的？\n\n你可以：\n· 打字提问\n· 拍照识别\n· 语音输入' }]);
+    setMessages([{ id: 'welcome', role: 'ai', text: '你好！这里是小云帮助中心。有什么可以帮你的？\n\n你可以：\n· 打字提问\n· 语音输入' }]);
     api.intelligence.getMyPendingTaskSummary().then(res => {
       const data = res?.data || res;
       if (!data) return;
@@ -105,38 +102,13 @@ export default function AiAssistantPage() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, streamingText]);
 
-  const handleFileChange = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    e.target.value = '';
-    setPendingImage({ url: URL.createObjectURL(file), file });
-  };
-
-  const removePendingImage = () => {
-    if (pendingImage?.url?.startsWith('blob:')) URL.revokeObjectURL(pendingImage.url);
-    setPendingImage(null);
-  };
-
-  const uploadPendingImage = async () => {
-    if (!pendingImage) return null;
-    if (pendingImage.file) {
-      setUploading(true);
-      try { return await api.common.uploadImage(pendingImage.file); }
-      catch (e) { toast.error('图片上传失败'); return null; }
-      finally { setUploading(false); }
-    }
-    return pendingImage.url;
-  };
-
-  const _send = useCallback(async (text, imageUrl) => {
-    const displayText = imageUrl ? (text || '请看这张图片') : text;
-    const userMsg = { id: Date.now() + '_u', role: 'user', text: displayText, image: imageUrl ? imageUrl : (pendingImage?.url || null) };
+  const _send = useCallback(async (text) => {
+    const userMsg = { id: Date.now() + '_u', role: 'user', text: text };
     const loadingId = Date.now() + '_l';
     setMessages(prev => [...prev, userMsg, { id: loadingId, role: 'ai', text: '', loading: true }]);
     setSending(true);
     setStreamingText('');
     setStreamingTool('');
-    setPendingImage(null);
 
     const chatContext = isManager ? 'manager_assistant' : 'worker_assistant';
     let aiMsgUpdated = false;
@@ -150,7 +122,7 @@ export default function AiAssistantPage() {
 
     try {
       await aiStream.startStream(
-        { question: text, pageContext: chatContext, conversationId, imageUrl, orderNo: urlOrderNo, processName: urlProcessName, stage: urlStage },
+        { question: text, pageContext: chatContext, conversationId, orderNo: urlOrderNo, processName: urlProcessName, stage: urlStage },
         {
           onEvent: (event) => {
             if (event.type === 'thinking') setStreamingTool('小云正在整理思路…');
@@ -167,7 +139,6 @@ export default function AiAssistantPage() {
           onFallback: async (q) => {
             let reply;
             const chatPayload = { question: q, conversationId, context: chatContext };
-            if (imageUrl) chatPayload.imageUrl = imageUrl;
             if (isManager) {
               try { const res = await api.intelligence.naturalLanguageExecute({ text: q, conversationId }); reply = res?.message || res?.reply || res?.content || '操作完成'; }
               catch (_) { const res = await api.intelligence.aiAdvisorChat(chatPayload); reply = res?.reply || res?.content || res?.message || '（无回应）'; }
@@ -181,24 +152,18 @@ export default function AiAssistantPage() {
     } catch (err) {
       updateLoadingMsg('服务暂时无法响应，请稍后再试。');
     }
-  }, [conversationId, isManager, pendingImage]);
+  }, [conversationId, isManager]);
 
   const onSend = async () => {
     const text = inputText.trim();
-    if ((!text && !pendingImage) || sending) return;
+    if (!text || sending) return;
     setInputText('');
     voice.stop();
-    let imageUrl = null;
-    if (pendingImage) {
-      imageUrl = await uploadPendingImage();
-      if (pendingImage && !imageUrl) return;
-    }
-    _send(text, imageUrl);
+    _send(text);
   };
 
   return (
     <div className="chat-wrapper">
-      <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFileChange} />
 
       {(dynamicSuggestions.length > 0) && (
         <div style={{ padding: '10px 12px 0' }}>
@@ -228,7 +193,6 @@ export default function AiAssistantPage() {
             <div key={m.id} className={`chat-msg-row ${m.role === 'user' ? 'user' : ''}`}>
               {m.role === 'ai' && <div className="chat-avatar ai"><Icon name="cloud" size={14} /></div>}
               <div className={`chat-bubble ${m.role === 'user' ? 'user' : 'ai'}`}>
-                {m.image && <img src={m.image} alt="上传图片" />}
                 {m.loading ? (
                   <span className="typing-indicator"><span>⟳</span> 思考中...</span>
                 ) : parsed ? (
@@ -341,26 +305,15 @@ export default function AiAssistantPage() {
         <div ref={bottomRef} />
       </div>
 
-      {pendingImage && (
-        <div className="chat-pending-image">
-          <img src={pendingImage.url} alt="待发送" />
-          <span className="chat-pending-image-text">已选图片，发送时将上传识别</span>
-          <button className="chat-pending-image-del" onClick={removePendingImage}><Icon name="x" size={14} /></button>
-        </div>
-      )}
-
       <div className="chat-input-bar">
-        <button className="chat-tool-btn" onClick={() => fileInputRef.current?.click()} disabled={sending || uploading} title="拍照/选图">
-          <Icon name="camera" size={18} />
-        </button>
         <button className={`chat-tool-btn${voice.listening ? ' active' : ''}`} onClick={voice.toggle} disabled={sending} title="语音输入">
           <Icon name={voice.listening ? 'micOff' : 'mic'} size={18} />
         </button>
         <input className="chat-input-field" placeholder={voice.listening ? '正在聆听...' : '输入消息...'} value={inputText}
           onChange={e => setInputText(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && !e.shiftKey && onSend()} />
-        <button className="chat-send-btn" onClick={onSend} disabled={sending || uploading}>
-          {uploading ? '上传中' : sending ? '...' : '发送'}
+        <button className="chat-send-btn" onClick={onSend} disabled={sending}>
+          {sending ? '...' : '发送'}
         </button>
       </div>
     </div>

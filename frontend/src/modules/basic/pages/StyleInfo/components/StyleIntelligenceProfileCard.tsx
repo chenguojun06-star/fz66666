@@ -66,32 +66,56 @@ const getProgressMeta = (style: StyleInfo) => {
   return { label: '待推进', color: 'warning' as const, percent };
 };
 
-const buildFallbackInsights = (style: StyleInfo, quote: StyleQuoteSuggestionResponse | null) => {
-  const insights: string[] = [];
+type InsightCategory = 'delivery' | 'progress' | 'quote' | 'process';
+
+interface StyleInsightItem {
+  category: InsightCategory;
+  text: string;
+}
+
+const INSIGHT_COLOR: Record<InsightCategory, string> = {
+  delivery: 'var(--color-danger)',
+  progress: 'var(--color-primary)',
+  quote: 'var(--color-warning)',
+  process: 'var(--color-accent-purple)',
+};
+
+const INSIGHT_LABEL: Record<InsightCategory, string> = {
+  delivery: '交期风险',
+  progress: '进度/订单',
+  quote: '报价',
+  process: '工序',
+};
+
+const buildFallbackInsights = (style: StyleInfo, quote: StyleQuoteSuggestionResponse | null): StyleInsightItem[] => {
+  const insights: StyleInsightItem[] = [];
   const deliveryMeta = getDeliveryMeta(style);
   const orderCount = Number(style.orderCount || 0);
   const latestProgress = Number(style.latestProductionProgress || 0);
 
   if (deliveryMeta.label === '已延期') {
-    insights.push(`交期已失守，建议优先检查纸样、工序单价和生产制单三个关键环节。`);
+    insights.push({ category: 'delivery', text: '交期已失守，建议优先检查纸样、工序单价和生产制单三个关键环节。' });
   } else if (deliveryMeta.label === '即将超期') {
-    insights.push(`已进入临界交期窗口，建议今天内锁定未完成的开发节点。`);
+    insights.push({ category: 'delivery', text: '已进入临界交期窗口，建议今天内锁定未完成的开发节点。' });
   }
 
   if (!(style as any)?.processCompletedTime) {
-    insights.push('工序单价尚未锁定，后续大货结算与报价准确性会受影响。');
+    insights.push({ category: 'process', text: '工序单价尚未锁定，后续大货结算与报价准确性会受影响。' });
   }
 
   if (orderCount > 0 && latestProgress > 0 && latestProgress < 50) {
-    insights.push(`已有 ${orderCount} 个关联订单，但最近大货进度仅 ${latestProgress}%，需提前关注产线节奏。`);
+    insights.push({ category: 'progress', text: `已有 ${orderCount} 个关联订单，但最近大货进度仅 ${latestProgress}%，需提前关注产线节奏。` });
   } else if (orderCount === 0) {
-    insights.push('当前还未形成生产订单，建议先把开发资料和价格体系固化，减少后续反复。');
+    insights.push({ category: 'progress', text: '当前还未形成生产订单，建议先把开发资料和价格体系固化，减少后续反复。' });
   }
 
   if (quote?.suggestedPrice != null && quote?.currentQuotation != null) {
     const diff = Number(quote.suggestedPrice) - Number(quote.currentQuotation);
     if (Math.abs(diff) >= 1) {
-      insights.push(diff > 0 ? 'AI 判断当前报价偏低，建议复核利润空间和二次工艺损耗。' : 'AI 判断当前报价偏高，可结合历史样本复核市场接受度。');
+      insights.push({
+        category: 'quote',
+        text: diff > 0 ? 'AI 判断当前报价偏低，建议复核利润空间和二次工艺损耗。' : 'AI 判断当前报价偏高，可结合历史样本复核市场接受度。',
+      });
     }
   }
 
@@ -201,6 +225,28 @@ const StyleIntelligenceProfileCard: React.FC<Props> = ({ style }) => {
   }, [styleId, style?.cover, style?.styleNo]);
 
   const activeDifficulty = localDifficulty ?? profile?.difficulty;
+
+  const workerHint = useMemo(() => {
+    const items: Array<{ key: string; label: string; value: string }> = [];
+    if (activeDifficulty?.difficultyLabel) {
+      items.push({
+        key: 'difficulty',
+        label: '难度等级',
+        value: `${String(activeDifficulty.difficultyLabel).trim()}${activeDifficulty.difficultyScore != null ? `（${activeDifficulty.difficultyScore}/10）` : ''}`,
+      });
+    }
+    const fabric = String((style as any)?.fabricComposition ?? '').trim();
+    if (fabric) items.push({ key: 'fabric', label: '面料成分', value: fabric });
+    const desc = String(style?.description ?? '').trim();
+    if (desc) {
+      const needleMatch = desc.match(/([0-9一二三四五六七八九十]+\s*号?针)/);
+      if (needleMatch) items.push({ key: 'needle', label: '针号建议', value: needleMatch[1] });
+    }
+    if (activeDifficulty?.hasSecondaryProcess || (style as any)?.secondaryProcess) {
+      items.push({ key: 'secondary', label: '二次工艺', value: '本款含二次工艺，需重点关注' });
+    }
+    return items;
+  }, [activeDifficulty, style]);
 
   const stageTags = useMemo(() => {
     if (profile?.stages?.length) {
@@ -410,6 +456,141 @@ const StyleIntelligenceProfileCard: React.FC<Props> = ({ style }) => {
                   <Button icon={<ExperimentOutlined />} loading={difficultyLoading} onClick={handleAiImageAnalysis} disabled={!styleId} style={{ fontSize: 12 }}>AI 难度分析</Button>
                   <div style={{ fontSize: 11, color: 'var(--color-text-quaternary)', marginTop: 4 }}>分析款式图片，评估制作难度与定价倍率</div>
                 </div>
+              )}
+            </div>
+          </div>
+
+          {/* ── 工人提示预览：工人扫码时看到的内容 ── */}
+          {workerHint.length > 0 && (
+            <div style={{ marginTop: 10, padding: '10px 12px', borderRadius: 8, background: '#FFFAEB', border: '1px solid #F5C451' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ fontSize: 12, color: '#B45309', fontWeight: 700 }}>⚠ 工人提示预览</span>
+                  <Tag color="gold" style={{ margin: 0, fontSize: 11, lineHeight: '16px', padding: '0 5px' }}>工人扫码时可见</Tag>
+                </div>
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, fontSize: 12 }}>
+                {workerHint.map((item) => (
+                  <div key={item.key} style={{ background: '#fff7dc', borderRadius: 4, padding: '4px 8px', border: '1px solid #f5e08e' }}>
+                    <span style={{ color: '#8c6d1f', marginRight: 6 }}>{item.label}：</span>
+                    <span style={{ color: '#3d2d00', fontWeight: 600 }}>{item.value}</span>
+                  </div>
+                ))}
+                {activeDifficulty?.imageInsight && String(activeDifficulty.imageInsight).trim() && !String(activeDifficulty.imageInsight).includes('未开通') && (
+                  <div style={{ width: '100%', marginTop: 2, padding: '5px 8px', borderRadius: 4, background: 'rgba(180,83,9,0.06)', fontSize: 12, color: '#7c4a05', lineHeight: 1.55 }}>
+                    <b>AI 视觉分析：</b>{String(activeDifficulty.imageInsight).trim()}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* AI 洞察区域 */}
+          <div style={{ marginTop: 10, padding: '8px 10px', borderRadius: 8, background: 'rgba(114,46,209,0.05)', border: '1px solid rgba(114,46,209,0.15)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <BulbOutlined style={{ color: 'var(--color-accent-purple)', fontSize: 14 }} />
+                <span style={{ fontSize: 13, fontWeight: 600, color: '#1f1f1f' }}>AI 洞察</span>
+              </div>
+              <Button
+                size="small"
+                type="link"
+                onClick={() => void loadProfile()}
+                loading={loading}
+                style={{ padding: 0, fontSize: 12 }}
+              >
+                刷新洞察
+              </Button>
+            </div>
+            {(() => {
+              const fallbackInsights = buildFallbackInsights(style || ({} as StyleInfo), quoteSuggestion);
+              const merged: StyleInsightItem[] = Array.isArray((profile as any)?.insights) && (profile as any).insights.length > 0
+                ? (profile as any).insights.map((it: any) => ({
+                    category: (it.category || it.type || 'progress') as InsightCategory,
+                    text: String(it.text || it.message || it.content || '').trim(),
+                  })).filter((it: StyleInsightItem) => it.text)
+                : fallbackInsights;
+              const items: StyleInsightItem[] = merged.length > 0 ? merged : [{ category: 'progress' as InsightCategory, text: '暂无明显风险信号，继续保持当前节奏。' }];
+              return (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {items.map((it, idx) => (
+                    <Tag
+                      key={`${it.category}_${idx}`}
+                      style={{
+                        margin: 0,
+                        fontSize: 12,
+                        lineHeight: '18px',
+                        padding: '3px 8px',
+                        color: INSIGHT_COLOR[it.category],
+                        background: `${INSIGHT_COLOR[it.category]}14`,
+                        border: `1px solid ${INSIGHT_COLOR[it.category]}40`,
+                        borderRadius: 10,
+                      }}
+                    >
+                      <b style={{ color: INSIGHT_COLOR[it.category] }}>{INSIGHT_LABEL[it.category]}</b>
+                      <span style={{ color: '#595959', marginLeft: 6 }}>{it.text}</span>
+                    </Tag>
+                  ))}
+                </div>
+              );
+            })()}
+          </div>
+
+          {/* 关键标签云 */}
+          <div style={{ marginTop: 8, padding: '8px 10px', borderRadius: 8, background: 'var(--color-bg-base)', border: '1px solid var(--color-border-antd)' }}>
+            <div style={{ fontSize: 12, color: 'var(--color-text-tertiary)', marginBottom: 6 }}>关键标签</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+              {/* 品类 */}
+              {String(style?.category || '').trim() && (
+                <Tag
+                  color="blue"
+                  style={{ margin: 0, fontSize: 12, lineHeight: '20px', padding: '1px 8px', borderRadius: 10 }}
+                >
+                  品类：{String(style!.category).trim()}
+                </Tag>
+              )}
+              {/* 价格区间 */}
+              {Number(style?.price) > 0 && (
+                <Tag
+                  color="#faad14"
+                  style={{ margin: 0, fontSize: 12, lineHeight: '20px', padding: '1px 8px', borderRadius: 10 }}
+                >
+                  价格：{fmtMoney(Number(style!.price))}
+                </Tag>
+              )}
+              {/* 工艺复杂度（由难度评估映射） */}
+              {activeDifficulty?.difficultyLevel && (
+                <Tag
+                  color={difficultyColor(activeDifficulty.difficultyLevel)}
+                  style={{ margin: 0, fontSize: 12, lineHeight: '20px', padding: '1px 8px', borderRadius: 10 }}
+                >
+                  工艺复杂度：{activeDifficulty.difficultyLabel}
+                </Tag>
+              )}
+              {/* 二次工艺 */}
+              {Boolean(activeDifficulty?.hasSecondaryProcess || (style as any)?.secondaryProcess) && (
+                <Tag
+                  color="purple"
+                  style={{ margin: 0, fontSize: 12, lineHeight: '20px', padding: '1px 8px', borderRadius: 10 }}
+                >
+                  含二次工艺
+                </Tag>
+              )}
+              {/* 是否已下单 */}
+              {Number(style?.orderCount) > 0 || Number((profile as any)?.production?.orderCount || 0) > 0 ? (
+                <Tag
+                  color="green"
+                  style={{ margin: 0, fontSize: 12, lineHeight: '20px', padding: '1px 8px', borderRadius: 10 }}
+                >
+                  已下单 · {Number((profile as any)?.production?.orderCount || style?.orderCount || 0)} 单
+                </Tag>
+              ) : (
+                <Tag
+                  color="default"
+                  style={{ margin: 0, fontSize: 12, lineHeight: '20px', padding: '1px 8px', borderRadius: 10 }}
+                >
+                  未下单
+                </Tag>
               )}
             </div>
           </div>

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-14T03:12:06.028Z",
+  "generatedAt": "2026-06-21T15:27:32.759Z",
   "tabBar": {
     "color": "#999999",
     "selectedColor": "#3b82f6",
@@ -260,6 +260,12 @@
     {
       "source": "pages/dashboard/process-edit/index",
       "h5Path": "/dashboard/process-edit",
+      "type": "subpackage",
+      "packageName": "pkg-dashboard"
+    },
+    {
+      "source": "pages/dashboard/order-detail/index",
+      "h5Path": "/dashboard/order-detail",
       "type": "subpackage",
       "packageName": "pkg-dashboard"
     },

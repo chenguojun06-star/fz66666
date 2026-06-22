@@ -138,8 +138,9 @@ public class PatternProductionOrchestrator {
             }
         }
 
-        // 与 PC 端 activeStyles 逻辑一致：排除已完成/已报废/审核通过
+        // 与 PC 端 activeStyles 逻辑一致：区分 active / completed / overdue / warning
         int activeCount = 0;
+        int completedCount = 0;
         int overdueCount = 0;
         int warningCount = 0;
         java.time.LocalDate today = java.time.LocalDate.now();
@@ -151,17 +152,33 @@ public class PatternProductionOrchestrator {
             String progressNode = s != null ? String.valueOf(s.getProgressNode() != null ? s.getProgressNode() : "").trim() : "";
             String sampleStatus = s != null ? String.valueOf(s.getSampleStatus() != null ? s.getSampleStatus() : "").trim().toUpperCase() : "";
             String sampleReviewStatus = s != null ? String.valueOf(s.getSampleReviewStatus() != null ? s.getSampleReviewStatus() : "").trim().toUpperCase() : "";
+            String patternStatus = String.valueOf(p.getStatus()).trim().toUpperCase();
 
-            // 排除条件 1：status = archived / scrapped
-            if ("archived".equals(styleStatus) || "scrapped".equals(styleStatus)) continue;
-            // 排除条件 2：progressNode = 样衣完成 / 开发样报废
-            if ("样衣完成".equals(progressNode) || "开发样报废".equals(progressNode)) continue;
-            // 排除条件 3：sampleStatus = COMPLETED
-            if ("COMPLETED".equals(sampleStatus)) continue;
-            // 排除条件 4：sampleReviewStatus = PASS / APPROVED
-            if ("PASS".equals(sampleReviewStatus) || "APPROVED".equals(sampleReviewStatus)) continue;
+            // 已完成：sampleStatus = COMPLETED/WAREHOUSE_IN 或 progressNode = 样衣完成
+            //        或 pattern status = COMPLETED/WAREHOUSE_IN
+            boolean isCompleted =
+                "COMPLETED".equals(sampleStatus)
+                || "WAREHOUSE_IN".equals(sampleStatus)
+                || "样衣完成".equals(progressNode)
+                || "COMPLETED".equals(patternStatus)
+                || "WAREHOUSE_IN".equals(patternStatus);
 
-            // 通过所有排除条件 → 活跃款式
+            // 排除：已报废 / 已归档 / 开发样报废 / 审核通过（审核通过 = 完成了样衣流程）
+            boolean isExcluded =
+                "archived".equals(styleStatus)
+                || "scrapped".equals(styleStatus)
+                || "开发样报废".equals(progressNode)
+                || "PASS".equals(sampleReviewStatus)
+                || "APPROVED".equals(sampleReviewStatus);
+
+            if (isExcluded) continue;
+
+            if (isCompleted) {
+                completedCount++;
+                continue;
+            }
+
+            // 通过所有排除条件且未完成 → 活跃款式
             activeCount++;
 
             // 计算延期/临近交期（优先用 styleInfo.deliveryDate，其次 pattern.deliveryTime）
@@ -183,6 +200,7 @@ public class PatternProductionOrchestrator {
 
         Map<String, Object> stats = new HashMap<>();
         stats.put("activeCount", activeCount);
+        stats.put("completedCount", completedCount);
         stats.put("overdueCount", overdueCount);
         stats.put("warningCount", warningCount);
         return stats;

@@ -642,4 +642,150 @@ public class FinishedProductSettlementController {
 
         return Result.success(null);
     }
+
+    /**
+     * 财务看板汇总数据
+     * 返回统计卡片、趋势图、排名所需的数据
+     */
+    @Operation(summary = "财务看板汇总")
+    @PreAuthorize("isAuthenticated()")
+    @GetMapping("/summary")
+    public Result<Map<String, Object>> summary(
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate,
+            @RequestParam(required = false, defaultValue = "amount") String dimension
+    ) {
+        TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
+
+        LocalDateTime startDateTime = StringUtils.isNotBlank(startDate)
+                ? LocalDate.parse(startDate).atStartOfDay()
+                : LocalDate.now().withDayOfYear(1).atStartOfDay();
+        LocalDateTime endDateTime = StringUtils.isNotBlank(endDate)
+                ? LocalDate.parse(endDate).atTime(LocalTime.MAX)
+                : LocalDate.now().atTime(LocalTime.MAX);
+
+        LambdaQueryWrapper<FinishedProductSettlement> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(FinishedProductSettlement::getTenantId, tenantId);
+        wrapper.ge(FinishedProductSettlement::getCreateTime, startDateTime);
+        wrapper.le(FinishedProductSettlement::getCreateTime, endDateTime);
+        wrapper.notIn(FinishedProductSettlement::getStatus,
+                "CANCELLED", "cancelled", "DELETED", "deleted", "scrapped", "SCRAPPED", "archived", "ARCHIVED");
+
+        // 外发工厂账号强制只看自己工厂数据
+        String ctxFactoryId = UserContext.factoryId();
+        if (StringUtils.isNotBlank(ctxFactoryId)) {
+            wrapper.eq(FinishedProductSettlement::getFactoryId, ctxFactoryId);
+        }
+
+        List<FinishedProductSettlement> allData = settlementService.list(wrapper);
+        enrichSettlementRecords(allData);
+
+        Set<String> approvedSettlementIds = approvalStatusService.getApprovedIds(tenantId);
+
+        // 只统计已审批的数据
+        List<FinishedProductSettlement> approvedData = allData.stream()
+                .filter(item -> StringUtils.isNotBlank(item.getOrderId())
+                        && approvedSettlementIds.contains(item.getOrderId()))
+                .collect(Collectors.toList());
+
+        // 统计卡片数据
+        BigDecimal totalAmount = approvedData.stream()
+                .map(item -> item.getTotalAmount() != null ? item.getTotalAmount() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        int totalWarehoused = approvedData.stream()
+                .mapToInt(item -> item.getWarehousedQuantity() != null ? item.getWarehousedQuantity() : 0)
+                .sum();
+        int totalOrderCount = approvedData.size();
+
+        BigDecimal totalProfit = approvedData.stream()
+                .map(item -> item.getProfit() != null ? item.getProfit() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal avgProfitRate = totalAmount.compareTo(BigDecimal.ZERO) > 0
+                ? totalProfit.multiply(BigDecimal.valueOf(100)).divide(totalAmount, 2, RoundingMode.HALF_UP)
+                : BigDecimal.ZERO;
+
+        // 计算完成率（有入库数量的订单 / 总订单）
+        long completedCount = approvedData.stream()
+                .filter(item -> item.getWarehousedQuantity() != null && item.getWarehousedQuantity() > 0)
+                .count();
+        BigDecimal completionRate = totalOrderCount > 0
+                ? BigDecimal.valueOf(completedCount * 100).divide(BigDecimal.valueOf(totalOrderCount), 2, RoundingMode.HALF_UP)
+                : BigDecimal.ZERO;
+
+        // 日金额（按天平均）
+        long days = java.time.temporal.ChronoUnit.DAYS.between(
+                startDateTime.toLocalDate(), endDateTime.toLocalDate()) + 1;
+        BigDecimal dailyAmount = days > 0
+                ? totalAmount.divide(BigDecimal.valueOf(days), 2, RoundingMode.HALF_UP)
+                : BigDecimal.ZERO;
+
+        // 趋势数据：按月分组
+        Map<String, List<FinishedProductSettlement>> monthGroups = approvedData.stream()
+                .filter(item -> item.getCreateTime() != null)
+                .collect(Collectors.groupingBy(
+                        item -> item.getCreateTime().format(DateTimeFormatter.ofPattern("yyyy-MM"))
+                ));
+
+        List<Map<String, Object>> trend = new ArrayList<>();
+        List<String> sortedMonths = new ArrayList<>(monthGroups.keySet());
+        Collections.sort(sortedMonths);
+        for (String month : sortedMonths) {
+            List<FinishedProductSettlement> monthData = monthGroups.get(month);
+            BigDecimal value = "amount".equals(dimension)
+                    ? monthData.stream()
+                            .map(item -> item.getTotalAmount() != null ? item.getTotalAmount() : BigDecimal.ZERO)
+                            .reduce(BigDecimal.ZERO, BigDecimal::add)
+                    : BigDecimal.valueOf(monthData.stream()
+                            .mapToInt(item -> item.getWarehousedQuantity() != null ? item.getWarehousedQuantity() : 0)
+                            .sum());
+            Map<String, Object> trendItem = new LinkedHashMap<>();
+            trendItem.put("month", month);
+            trendItem.put("value", value.doubleValue());
+            trendItem.put("type", "amount".equals(dimension) ? "金额" : "数量");
+            trend.add(trendItem);
+        }
+
+        // 排名数据：按工厂分组
+        Map<String, List<FinishedProductSettlement>> factoryGroups = approvedData.stream()
+                .collect(Collectors.groupingBy(
+                        item -> StringUtils.isNotBlank(item.getFactoryName()) ? item.getFactoryName() : "未分配工厂"
+                ));
+
+        List<Map<String, Object>> factoryRankList = new ArrayList<>();
+        for (Map.Entry<String, List<FinishedProductSettlement>> entry : factoryGroups.entrySet()) {
+            BigDecimal value = "amount".equals(dimension)
+                    ? entry.getValue().stream()
+                            .map(item -> item.getTotalAmount() != null ? item.getTotalAmount() : BigDecimal.ZERO)
+                            .reduce(BigDecimal.ZERO, BigDecimal::add)
+                    : BigDecimal.valueOf(entry.getValue().stream()
+                            .mapToInt(item -> item.getWarehousedQuantity() != null ? item.getWarehousedQuantity() : 0)
+                            .sum());
+            Map<String, Object> rankItem = new LinkedHashMap<>();
+            rankItem.put("name", entry.getKey());
+            rankItem.put("value", value.doubleValue());
+            factoryRankList.add(rankItem);
+        }
+        factoryRankList.sort((a, b) -> Double.compare((double) b.get("value"), (double) a.get("value")));
+        for (int i = 0; i < factoryRankList.size(); i++) {
+            factoryRankList.get(i).put("rank", i + 1);
+        }
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("totalAmount", totalAmount.doubleValue());
+        result.put("totalAmountChange", 0);      // 周同比暂不支持
+        result.put("totalAmountDayChange", 0);   // 日同比暂不支持
+        result.put("dailyAmount", dailyAmount.doubleValue());
+        result.put("warehousedCount", totalWarehoused);
+        result.put("warehousedDayCount", days > 0 ? totalWarehoused / days : 0);
+        result.put("orderCount", totalOrderCount);
+        result.put("completionRate", completionRate.doubleValue());
+        result.put("profitRate", avgProfitRate.doubleValue());
+        result.put("profitRateChange", 0);
+        result.put("profitRateDayChange", 0);
+        result.put("trend", trend);
+        result.put("rank", factoryRankList);
+
+        return Result.success(result);
+    }
 }

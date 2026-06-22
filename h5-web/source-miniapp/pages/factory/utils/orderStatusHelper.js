@@ -1,7 +1,7 @@
 /**
  * 订单状态辅助函数
  * 统一管理订单、质检等状态文本转换
- * 与 PC 端 / 小程序 / 后端保持一致
+ * 与 PC 端 ORDER_STATUS_LABEL / 后端 OrderStatusConstants / dashboard orderStatusHelper.js 保持一致
  */
 
 const COLOR_DEFAULT = 'var(--color-text-disabled)';

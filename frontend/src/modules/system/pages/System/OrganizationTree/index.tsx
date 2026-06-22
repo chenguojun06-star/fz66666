@@ -8,21 +8,21 @@ import type { Factory, OrganizationUnit, User } from '@/types/system';
 import type { ApiResult } from '@/utils/api';
 import { useUser } from '@/utils/AuthContext';
 import {
-  App, Avatar, Button, Checkbox, Col, DatePicker, Empty, Form, Input,
+  App, Avatar, Button, Card, Checkbox, Col, DatePicker, Empty, Form, Input,
   InputNumber, Row, Select, Space, Spin, Switch, Tag,
 } from 'antd';
+import {
+  ApartmentOutlined, BankOutlined, CrownFilled,
+  PlusOutlined, QrcodeOutlined, SafetyCertificateOutlined,
+  SnippetsOutlined, TeamOutlined, UserAddOutlined, UserOutlined,
+  LinkOutlined,
+} from '@ant-design/icons';
 import type { TableColumnsType } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
 import SmallModal from '@/components/common/SmallModal';
 import PaymentAccountManager from '@/components/common/PaymentAccountManager';
 import { DEFAULT_PAGE_SIZE, DEFAULT_PAGE_SIZE_OPTIONS } from '@/utils/pageSizeStore';
-import {
-  ApartmentOutlined, BankOutlined, CrownFilled,
-  PlusOutlined, QrcodeOutlined, SafetyCertificateOutlined,
-  SnippetsOutlined, UserAddOutlined, UserOutlined,
-  LinkOutlined,
-} from '@ant-design/icons';
 import api from '@/utils/api';
 import { getEmploymentStatusConfig, getGenderText } from '../UserList/hooks/useUserListColumns';
 import { formatDate } from '@/utils/datetime';
@@ -386,6 +386,33 @@ const OrganizationTreePage: React.FC = () => {
   const selectedUnit = useMemo(() => findUnit(treeData, selectedUnitId), [treeData, selectedUnitId]);
   const isExternalSelected = selectedUnit?.ownerType === 'EXTERNAL';
 
+  // ===== 每个部门的人数计算（递归）=====
+  const unitMemberCount = useMemo(() => {
+    const countMap: Record<string, number> = {};
+    const subUnitsMap: Record<string, number> = {};
+
+    // 先计算每个部门的人数（包括其所有子部门）
+    const calculateCount = (nodes: OrganizationUnit[]): number => {
+      let total = 0;
+      nodes.forEach(node => {
+        const nodeId = String(node.id);
+        // 当前节点的直接成员数
+        let nodeCount = Array.isArray(membersMap[nodeId]) ? membersMap[nodeId].length : 0;
+        // 递归计算子部门人数
+        if (node.children && node.children.length > 0) {
+          const subCount = calculateCount(node.children);
+          nodeCount += subCount;
+        }
+        countMap[nodeId] = nodeCount;
+        subUnitsMap[nodeId] = node.children?.length || 0;
+        total += nodeCount;
+      });
+      return total;
+    };
+    calculateCount(treeData);
+    return { countMap, subUnitsMap };
+  }, [treeData, membersMap]);
+
   const displayedMembers = useMemo(() => {
     if (!selectedUnitId || !selectedUnit) return [];
     const unitIds = includeSubUnits ? getDescendantIds(selectedUnit) : [selectedUnitId];
@@ -595,13 +622,61 @@ const OrganizationTreePage: React.FC = () => {
           !isFactoryAccount ? (
             <div style={{ color: 'var(--neutral-text-secondary)', marginTop: 4 }}>
               管理公司组织结构与人员，包含部门、成员分配、职位权限。
-              <span style={{ marginLeft: 12 }}>
-                共 <strong>{departments.length}</strong> 个部门 · <strong>{totalMembers}</strong> 名人员
-              </span>
             </div>
           ) : undefined
         }
       >
+        {/* 顶部统计卡片 */}
+        {treeData.length > 0 && (
+          <Row gutter={16} style={{ marginBottom: 16 }}>
+            <Col xs={12} md={6}>
+              <Card size="small" className="stats-card" style={{ borderColor: 'var(--color-border-antd)' }}>
+                <div className="stats-card-value">
+                  <span style={{ fontSize: 22, fontWeight: 700 }}>{departments.length}</span>
+                </div>
+                <div className="stats-card-label" style={{ color: 'var(--color-text-tertiary)', fontSize: 13 }}>
+                  部门总数
+                </div>
+              </Card>
+            </Col>
+            <Col xs={12} md={6}>
+              <Card size="small" className="stats-card" style={{ borderColor: 'var(--color-primary-light-3, var(--color-primary-light-3))' }}>
+                <div className="stats-card-value">
+                  <span style={{ fontSize: 22, fontWeight: 700, color: 'var(--color-primary)' }}>
+                    {totalMembers}
+                  </span>
+                </div>
+                <div className="stats-card-label" style={{ color: 'var(--color-text-tertiary)', fontSize: 13 }}>
+                  员工总数
+                </div>
+              </Card>
+            </Col>
+            <Col xs={12} md={6}>
+              <Card size="small" className="stats-card" style={{ borderColor: 'var(--color-success-light-3, var(--color-success-light-3))' }}>
+                <div className="stats-card-value">
+                  <span style={{ fontSize: 22, fontWeight: 700, color: 'var(--color-success)' }}>
+                    {departments.filter((d: OrganizationUnit) => String(d.status) === '1' || String(d.enabled) === '1' || d.isEnabled === true).length}
+                  </span>
+                </div>
+                <div className="stats-card-label" style={{ color: 'var(--color-text-tertiary)', fontSize: 13 }}>
+                  启用中的部门
+                </div>
+              </Card>
+            </Col>
+            <Col xs={12} md={6}>
+              <Card size="small" className="stats-card" style={{ borderColor: 'var(--color-warning-light-3, var(--color-warning-light-3))' }}>
+                <div className="stats-card-value">
+                  <span style={{ fontSize: 22, fontWeight: 700, color: 'var(--color-warning)' }}>
+                    {departments.filter((d: OrganizationUnit) => d.nodeType === 'FACTORY' || d.ownerType === 'EXTERNAL').length}
+                  </span>
+                </div>
+                <div className="stats-card-label" style={{ color: 'var(--color-text-tertiary)', fontSize: 13 }}>
+                  工厂/外协部门
+                </div>
+              </Card>
+            </Col>
+          </Row>
+        )}
         <Spin spinning={loading}>
         {visibleTreeData.length === 0 && !loading ? (
           <Empty description="暂无组织架构数据" style={{ padding: '60px 0' }}>
@@ -627,6 +702,8 @@ const OrganizationTreePage: React.FC = () => {
                   onAddMember={handleOpenAssign}
                   onShowQRCode={handleShowQRCode}
                   readOnly={isFactoryAccount}
+                  unitMemberCountMap={unitMemberCount.countMap}
+                  unitSubUnitsCountMap={unitMemberCount.subUnitsMap}
                 />
               ))}
             </div>
@@ -640,17 +717,69 @@ const OrganizationTreePage: React.FC = () => {
                 />
               ) : (
                 <>
+                  {/* 部门信息概览 */}
+                  <Card
+                    size="small"
+                    style={{ marginBottom: 12, borderColor: 'var(--color-border-antd)' }}
+                    bodyStyle={{ padding: 12 }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontSize: 16, fontWeight: 600 }}>
+                          {selectedUnit?.nodeType === 'FACTORY' || selectedUnit?.ownerType === 'EXTERNAL'
+                            ? <BankOutlined style={{ color: 'var(--color-primary)', marginRight: 4 }} />
+                            : <ApartmentOutlined style={{ color: 'var(--color-accent-purple, var(--color-accent-purple))', marginRight: 4 }} />
+                          }
+                          {selectedUnit?.unitName}
+                        </span>
+                        {selectedUnit?.nodeType === 'FACTORY' && (
+                          <Tag color="orange" style={{ margin: 0 }}>工厂</Tag>
+                        )}
+                        {selectedUnit?.ownerType === 'EXTERNAL' && (
+                          <Tag color="purple" style={{ margin: 0 }}>外协</Tag>
+                        )}
+                      </div>
+                      <div style={{ color: 'var(--color-text-tertiary)', fontSize: 13 }}>
+                        <Space>
+                          <span>成员 {unitMemberCount.countMap[String(selectedUnit?.id)] ?? 0} 人</span>
+                          <span style={{ color: 'var(--color-border-antd)' }}>|</span>
+                          <span>子部门 {unitMemberCount.subUnitsMap[String(selectedUnit?.id)] ?? 0} 个</span>
+                        </Space>
+                      </div>
+                    </div>
+
+                    <Row gutter={12} style={{ marginTop: 8 }}>
+                      <Col xs={24} sm={12} md={8} style={{ paddingTop: 4, paddingBottom: 4 }}>
+                        <span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>部门类型:</span>
+                        <span style={{ marginLeft: 8, fontSize: 13 }}>
+                          {selectedUnit?.nodeType === 'FACTORY' || selectedUnit?.ownerType === 'EXTERNAL' ? '外协工厂' : '内部部门'}
+                        </span>
+                      </Col>
+                      <Col xs={24} sm={12} md={8} style={{ paddingTop: 4, paddingBottom: 4 }}>
+                        <span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>审批人:</span>
+                        <span style={{ marginLeft: 8, fontSize: 13 }}>
+                          {selectedUnit?.managerUserName
+                            ? <Tag icon={<SafetyCertificateOutlined />} color="blue" style={{ margin: 0 }}>{selectedUnit.managerUserName}</Tag>
+                            : <span style={{ color: 'var(--color-text-tertiary)' }}>未设置</span>}
+                        </span>
+                      </Col>
+                      <Col xs={24} sm={12} md={8} style={{ paddingTop: 4, paddingBottom: 4 }}>
+                        <span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>状态:</span>
+                        <span style={{ marginLeft: 8, fontSize: 13 }}>
+                          {(String(selectedUnit?.status) === '1' || String(selectedUnit?.enabled) === '1' || selectedUnit?.isEnabled === true)
+                            ? <Tag color="success" style={{ margin: 0 }}>启用</Tag>
+                            : <Tag color="default" style={{ margin: 0 }}>未启用</Tag>}
+                        </span>
+                      </Col>
+                    </Row>
+                  </Card>
+
                   <div style={{ marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div style={{ fontWeight: 600, fontSize: 15 }}>
-                      {selectedUnit?.unitName} · 成员列表
+                      成员列表
                       <span style={{ color: 'var(--color-text-tertiary, #999)', fontWeight: 400, marginLeft: 8, fontSize: 14 }}>
                         共 {displayedMembers.length} 人
                       </span>
-                      {selectedUnit?.managerUserName && (
-                        <Tag icon={<SafetyCertificateOutlined />} color="blue" style={{ marginLeft: 8, fontSize: 14 }}>
-                          审批人: {selectedUnit.managerUserName}
-                        </Tag>
-                      )}
                     </div>
                     {!isFactoryAccount && (
                       <Button

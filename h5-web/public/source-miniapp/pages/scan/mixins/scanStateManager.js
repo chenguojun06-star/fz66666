@@ -7,6 +7,7 @@
 
 const api = require('../../../utils/api');
 const { DEBUG_MODE } = require('../../../config');
+const { toast } = require('../../../utils/uiHelper');
 
 /** 扫码结果通知停留时长：20 分钟 */
 const RESULT_DISMISS_MS = 20 * 60 * 1000;
@@ -37,10 +38,14 @@ module.exports = {
       const self = this;
       api.production.personalScanStats().then(function(res) {
         self.setData({ 'my.stats': { scanCount: res.scanCount || 0, orderCount: res.orderCount || 0, totalQuantity: res.totalQuantity || 0, totalAmount: res.totalAmount || 0 } });
+        // ============ AI 扫码助手：基于统计更新 AI 摘要（可选）
+        if (typeof self._loadAiScanSummary === 'function') {
+          try { self._loadAiScanSummary(); } catch (_e) { /* ignore */ }
+        }
       }).catch(function(e) {
         console.error('[loadMyPanel] 加载统计数据失败:', e.message || e);
         self.setData({ 'my.stats': { scanCount: 0, orderCount: 0, totalQuantity: 0, totalAmount: 0 } });
-        if (DEBUG_MODE) wx.showToast({ title: '统计加载失败', icon: 'none' });
+        if (DEBUG_MODE) toast.error('统计加载失败');
       }).finally(function() {
         self.setData({ 'my.loadingStats': false });
       });
@@ -58,6 +63,10 @@ module.exports = {
       for (const k in result) { if (result.hasOwnProperty(k)) formattedResult[k] = result[k]; }
       const localRecord = { orderNo: result.orderNo || '', processCode: result.processCode || '', processName: result.processName || '', quantity: result.quantity || 0, success: true, time: new Date().toLocaleTimeString() };
       this.setData({ lastResult: formattedResult, lastLocalScanRecord: localRecord, quantity: '' });
+      // ============ AI 扫码结果增强（可选，不阻塞）============
+      if (typeof this._runScanAiTips === 'function') {
+        try { this._runScanAiTips(formattedResult); } catch (_e) { /* ignore */ }
+      }
       wx.pageScrollTo({ scrollTop: 0, duration: 300 });
       this._startResultDismissTimer();
       this.addToLocalHistory(formattedResult);

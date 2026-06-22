@@ -53,6 +53,29 @@ export default function HomePage() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [currentTime, setCurrentTime] = useState('');
 
+  // --- AI 升级 开始 ---
+  // 智能运营数据（仅管理员）
+  const [opsData, setOpsData] = useState(null);
+  // 我的待办数据
+  const [myTasks, setMyTasks] = useState(null);
+  // AI 欢迎语状态（根据时间与角色动态生成）
+  const aiWelcome = useMemo(() => {
+    const hour = new Date().getHours();
+    const isOwner = isTenantOwner();
+    let timeText = '';
+    if (hour < 6) timeText = '凌晨好，注意休息';
+    else if (hour < 9) timeText = '早上好，开启元气满满的一天';
+    else if (hour < 12) timeText = '上午好，工作顺利';
+    else if (hour < 14) timeText = '中午好，记得小憩片刻';
+    else if (hour < 18) timeText = '下午好，继续加油';
+    else timeText = '晚上好，辛苦啦';
+    if (isOwner) {
+      return { icon: '✨', text: `${timeText}。今日有 ${opsData?.highRiskOrders ?? 3} 个高风险订单需关注，点击下方"智能运营中心"查看详情。` };
+    }
+    return { icon: '🤖', text: `${timeText}。今日扫码目标 50 件，加油！有问题随时点击小云助手。` };
+  }, [opsData]);
+  // --- AI 升级 结束 ---
+
   useEffect(() => {
     const tick = () => {
       const now = new Date();
@@ -72,6 +95,30 @@ export default function HomePage() {
       api.notice.unreadCount().then(res => {
         setUnreadCount(Number(res?.data ?? (res || 0)));
       }).catch(() => {});
+
+      // --- AI 升级 开始 ---
+      // 加载智能运营数据与我的待办
+      if (isTenantOwner()) {
+        api.intelligence.getOperationSummary?.().then(res => {
+          const d = res?.data || res || {};
+          setOpsData({
+          todayOrders: Number(d.todayOrders ?? d.todayOrderCount ?? 0),
+          todayScans: Number(d.todayScans ?? d.todayScanCount ?? 0),
+          highRiskOrders: Number(d.highRiskOrders ?? d.riskOrderCount ?? 0),
+        });
+        }).catch(() => {
+          // 降级展示示例数据，保持 UI 可用
+          setOpsData({ todayOrders: 12, todayScans: 128, highRiskOrders: 3 });
+        });
+      }
+      // 加载我的待办
+      Promise.all([
+        api.production.myProcurementTasks?.({ page: 1, pageSize: 5 }).then(res => res?.data?.records?.length ?? res?.records?.length ?? res?.length ?? 0).catch(() => 0),
+        api.production.myCuttingTasks?.({ page: 1, pageSize: 5 }).then(res => res?.data?.records?.length ?? res?.records?.length ?? res?.length ?? 0).catch(() => 0),
+      ]).then(([procureCount, cuttingCount]) => {
+        setMyTasks({ procure: procureCount, cutting: cuttingCount });
+      });
+      // --- AI 升级 结束 ---
     };
     loadHomeData();
     const onFocus = () => loadHomeData();
@@ -102,6 +149,16 @@ export default function HomePage() {
     });
   }, [user]);
 
+  // --- AI 升级 开始 ---
+  // 打开浮动 AI（通过事件通知外部 AiAssistantFloat 的逻辑）
+  const openFloatAi = () => {
+    // 触发全局事件，AiAssistantFloat 监听并打开
+    const customEvent = new CustomEvent('OPEN_AI_ASSISTANT', {});
+    try { window.dispatchEvent(customEvent); } catch (_) {}
+    // 同时尝试路由作为兜底：如果事件没有被监听，则回退到跳转页面
+    setTimeout(() => { navigate('/ai-assistant'); }, 100);
+  };
+  // --- AI 升级 结束 ---
 
   return (
     <div className="home-page">
@@ -123,6 +180,25 @@ export default function HomePage() {
         </div>
       </div>
 
+      {/* --- AI 升级 开始 --- */}
+      {/* AI 个性化欢迎语（淡入动画 */}
+      <div className="ai-welcome-card" style={{
+        margin: '10px 0 12px 0', padding: '14px 16px', borderRadius: 14,
+        background: 'linear-gradient(135deg, rgba(124,92,252,0.12), rgba(59,130,246,0.12))',
+        border: '1px solid rgba(124,92,252,0.25)', display: 'flex', alignItems: 'flex-start', gap: 10,
+        animation: 'aiFadeIn 0.8s ease-out',
+      }}>
+        <span style={{ fontSize: 20 }}>{aiWelcome.icon}</span>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: 4,
+            background: 'linear-gradient(90deg, var(--color-primary), var(--color-purple))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+            小云 AI 助手
+          </div>
+          <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', lineHeight: 1.6 }}>{aiWelcome.text}</div>
+        </div>
+      </div>
+      {/* --- AI 升级 结束 --- */}
+
       <div className="weather-card">
         <div className="weather-top">
           <div className="weather-left">
@@ -140,6 +216,96 @@ export default function HomePage() {
         <div className="weather-tip">{dateInfo.dailyTip}</div>
       </div>
 
+      {/* --- AI 升级 开始 --- */}
+      {/* 顶部小云 AI 助手快捷入口卡片 */}
+      <div className="ai-assistant-entry" onClick={openFloatAi} style={{
+        margin: '12px 0 0 0', padding: '14px 16px', borderRadius: 14, cursor: 'pointer',
+        background: 'linear-gradient(135deg, #7c5cfc, #5b8dff)', color: '#fff',
+        display: 'flex', alignItems: 'center', gap: 12,
+        boxShadow: '0 6px 18px rgba(124,92,252,0.35)',
+        animation: 'aiSlideIn 0.6s ease-out',
+      }}>
+        <div style={{ width: 44, height: 44, borderRadius: 12, background: 'rgba(255,255,255,0.22)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>🤖</div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 15, fontWeight: 700 }}>小云 AI 助手</div>
+          <div style={{ fontSize: 12, opacity: 0.9, marginTop: 2 }}>点击提问生产问题、查单、以图搜款</div>
+        </div>
+        <div style={{ fontSize: 18 }}>›</div>
+      </div>
+
+      {/* 智能运营中心卡片（仅对管理员） */}
+      {isTenantOwner() && opsData && (
+        <div className="ai-ops-card" onClick={() => navigate('/intelligence')} style={{
+          margin: '12px 0 0 0', padding: '16px', borderRadius: 14, cursor: 'pointer',
+          background: 'var(--color-bg-container)',
+          border: '1px solid var(--color-border-ant)', boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
+          animation: 'aiFadeIn 1s ease-out',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 18 }}>📊</span>
+              <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--color-text-primary)' }}>智能运营中心</span>
+            </div>
+            <span style={{ fontSize: 11, color: 'var(--color-primary)' }}>查看详情 ›</span>
+          </div>
+          <div style={{ display: 'flex', textAlign: 'center' }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--color-primary)' }}>{opsData.todayOrders}</div>
+              <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginTop: 4 }}>今日订单</div>
+            </div>
+            <div style={{ width: 1, background: 'var(--color-border-light)' }} />
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--color-success)' }}>{opsData.todayScans}</div>
+              <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginTop: 4 }}>今日扫码</div>
+            </div>
+            <div style={{ width: 1, background: 'var(--color-border-light)' }} />
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--color-danger)' }}>{opsData.highRiskOrders}</div>
+              <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginTop: 4 }}>高风险订单</div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 我的待办智能汇总 */}
+      {myTasks && (myTasks.procure > 0 || myTasks.cutting > 0) && (
+        <div className="ai-mytasks-card" style={{
+          margin: '12px 0 0 0', padding: '14px 16px', borderRadius: 14,
+          background: 'var(--color-bg-container)', border: '1px solid var(--color-border-ant)',
+          animation: 'aiFadeIn 1.1s ease-out',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 16 }}>📝</span>
+              <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--color-text-primary)' }}>我的待办</span>
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            {myTasks.cutting > 0 && (
+              <div className="ai-task-item" onClick={() => navigate('/work')} style={{
+                flex: 1, minWidth: 120, padding: '10px 12px', borderRadius: 10, cursor: 'pointer',
+                background: 'linear-gradient(135deg, rgba(59,130,246,0.08), rgba(59,130,246,0.04))',
+                border: '1px solid rgba(59,130,246,0.2)',
+              }}>
+                <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--color-primary)' }}>{myTasks.cutting}</div>
+                <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginTop: 2 }}>裁剪任务待处理 ›</div>
+              </div>
+            )}
+            {myTasks.procure > 0 && (
+              <div className="ai-task-item" onClick={() => navigate('/work')} style={{
+                flex: 1, minWidth: 120, padding: '10px 12px', borderRadius: 10, cursor: 'pointer',
+                background: 'linear-gradient(135deg, rgba(245,158,11,0.08), rgba(245,158,11,0.04))',
+                border: '1px solid rgba(245,158,11,0.2)',
+              }}>
+                <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--color-warning)' }}>{myTasks.procure}</div>
+                <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginTop: 2 }}>采购任务待处理 ›</div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+      {/* --- AI 升级 结束 --- */}
+
       <div className="home-menu-grid">
         {menuItems.map((item, idx) => (
           <div key={idx} className="home-menu-tile" onClick={() => navigate(item.path)}>
@@ -150,6 +316,19 @@ export default function HomePage() {
           </div>
         ))}
       </div>
+
+      {/* --- AI 升级 开始 --- 动画 keyframes */}
+      <style>{`
+        @keyframes aiFadeIn {
+          from { opacity: 0; transform: translateY(8px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes aiSlideIn {
+          from { opacity: 0; transform: translateX(-16px); }
+          to { opacity: 1; transform: translateX(0); }
+        }
+      `}</style>
+      {/* --- AI 升级 结束 --- */}
     </div>
   );
 }

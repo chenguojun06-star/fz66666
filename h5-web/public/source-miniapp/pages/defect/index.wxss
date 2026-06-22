@@ -173,27 +173,11 @@ page {
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-semibold);
   flex-shrink: 0;
+  /* 颜色由 .tag-error / .tag-warning / .tag-processing / .tag-default 全局定义 */
 }
 
-.tag-error {
-  background: var(--color-error-bg);
-  color: var(--color-error);
-}
-
-.tag-warning {
-  background: var(--color-warning-bg);
-  color: var(--color-warning);
-}
-
-.tag-info {
-  background: var(--color-info-bg);
-  color: var(--color-info);
-}
-
-.tag-success {
-  background: var(--color-success-bg);
-  color: var(--color-success);
-}
+/* .tag-success / .tag-error / .tag-warning / .tag-processing / .tag-default */
+/* 已统一在 design-tokens.wxss 全局定义，此处不再重复 */
 
 .card-row {
   display: flex;

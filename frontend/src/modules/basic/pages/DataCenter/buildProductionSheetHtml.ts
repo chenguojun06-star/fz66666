@@ -158,6 +158,9 @@ export const buildProductionSheetHtml = (payload: any, tenantName?: string, extr
           <div>码数：${esc(style.size || '')}</div>
           ${(style.salesChannel || extra?.salesChannel) ? `<div>销售渠道：${esc(style.salesChannel || extra?.salesChannel || '')}</div>` : ''}
           ${(style.customerName || extra?.customerName) ? `<div>客户：${esc(style.customerName || extra?.customerName || '')}</div>` : ''}
+          ${style.tagPrice ? `<div>吊牌价：¥${esc(style.tagPrice)}</div>` : ''}
+          ${style.salesPrice ? `<div>销售价：¥${esc(style.salesPrice)}</div>` : ''}
+          ${style.price ? `<div>打板价：¥${esc(style.price)}</div>` : ''}
         </div>
       </div>
     </div>

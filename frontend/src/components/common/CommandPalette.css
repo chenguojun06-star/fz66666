@@ -364,3 +364,122 @@ kbd.cp-kbd {
   opacity: 1;
   transform: translateX(2px);
 }
+
+/* ── 以图搜款 Grid 卡片 ─────────────────────────────────────── */
+.cp-grid-wrap {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
+  padding: 8px 14px 16px;
+}
+
+.cp-grid-card {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--color-border-antd);
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: pointer;
+  background: var(--color-bg-base);
+  transition: border-color 0.15s, transform 0.15s, box-shadow 0.15s;
+  user-select: none;
+}
+
+.cp-grid-card:hover,
+.cp-grid-card.active {
+  border-color: #a855f7;
+  box-shadow: 0 4px 14px rgba(168, 85, 247, 0.12);
+  transform: translateY(-1px);
+}
+
+.cp-grid-card-cover {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  background: #fafafa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.cp-grid-card-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.cp-grid-card-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+}
+
+.cp-grid-card-body {
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: var(--color-bg-container);
+}
+
+.cp-grid-card-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cp-grid-card-sub {
+  font-size: 11.5px;
+  color: var(--color-text-tertiary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── 拖拽高亮状态 ─────────────────────────────────────────────── */
+.cp-modal--dragging {
+  outline: 2px dashed #a855f7;
+  outline-offset: 2px;
+  box-shadow:
+    0 0 0 1px rgba(168, 85, 247, .2),
+    0 8px 32px rgba(168, 85, 247, .25),
+    0 20px 60px rgba(0, 0, 0, .12);
+}
+
+/* ── 拖拽遮罩层 ─────────────────────────────────────────────── */
+.cp-drop-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(168, 85, 247, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  pointer-events: none;
+  backdrop-filter: blur(2px);
+}
+
+.cp-drop-inner {
+  text-align: center;
+  color: #7c3aed;
+}
+
+.cp-drop-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.cp-drop-tip {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+/* 让 modal 作为定位祖先承载 overlay */
+.cp-modal {
+  position: relative;
+}

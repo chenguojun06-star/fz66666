@@ -318,10 +318,8 @@
 .info-value.bold,
 .bold { font-weight: bold; font-size: var(--font-size-md-lg); color: var(--color-primary); }
 
-/* 状态标签 */
-.status-tag { padding: 2px 8px; border-radius: 10px; font-size: var(--font-size-xs); }
-.tag-green { background: var(--color-success-bg); color: var(--color-success); }
-.tag-orange { background: var(--color-warning-bg); color: var(--color-warning); }
+
+
 
 /* 借调记录 */
 .loan-item { margin-top: 4px; padding-top: 4px; border-top: 1px dashed var(--color-border-light); }

@@ -184,114 +184,129 @@ const StyleSizeTab: React.FC<Props> = ({
     deletedIds, originalRef, combinedSizeIdsRef, snapshotRef, fetchSize, message,
   });
 
-  /** 处理AI识别尺寸表结果 */
+  /** 处理AI识别尺寸表结果：自动加尺码列 + 自动加部位行 + 已有行自动补列 */
   const handleSizeTableRecognized = (result: { sizes: string[]; parts: any[] }) => {
     try {
-      // 1. 处理尺码列表
+      // 1. 识别到的尺码列表（统一字符串、去空格）
       const recognizedSizes = (result.sizes || [])
         .map((s: string) => String(s || '').trim())
         .filter(Boolean);
-      
-      if (recognizedSizes.length === 0) {
-        message.warning('未识别到尺码信息');
+
+      if (recognizedSizes.length === 0 && (result.parts || []).length === 0) {
+        message.warning('未识别到尺码或部位信息');
         return;
       }
-      
-      // 2. 将新尺码添加到列中（保留现有尺码，新增不存在的）
-      const existingSizes = new Set(sizeColumns);
-      const newSizes = recognizedSizes.filter((s: string) => !existingSizes.has(s));
-      
-      if (newSizes.length > 0) {
-        // 使用 sortSizeNames 排序后合并
-        const allSizes = sortSizeNames([...sizeColumns, ...newSizes]);
-        setSizeColumns(allSizes);
-        message.success(`已添加 ${newSizes.length} 个新尺码：${newSizes.join(', ')}`);
-      }
-      
-      // 3. 处理部位数据
-      const parts = result.parts || [];
-      
-      if (parts.length === 0) {
-        if (newSizes.length > 0) {
-          // 只有新尺码，没有部位数据
-          message.info('尺码已添加，可手动录入部位数据');
-        }
-        return;
-      }
-      
-      // 4. 构建新行
-      const newRows: MatrixRow[] = parts.map((part: any, index: number) => {
+
+      // 2. 计算合并后的尺码列（保留已有顺序，新增追加后统一排序）
+      const existingSizeSet = new Set(sizeColumns);
+      const newSizes = recognizedSizes.filter((s: string) => !existingSizeSet.has(s));
+      const allSizes = sortSizeNames([...sizeColumns, ...newSizes]);
+
+      // 3. 构建尺码 -> 单元格数值 map（统一从 part.values 读，避免 key 不一致）
+      //    结构：{ [partName]: { measureMethod, tolerance, sizeValues: { [sizeName]: number } } }
+      const partMap = new Map<string, {
+        measureMethod: string;
+        tolerance: string;
+        sizeValues: Record<string, number>;
+      }>();
+      (result.parts || []).forEach((part: any) => {
         const partName = String(part.name || '').trim();
+        if (!partName) return;
         const measureMethod = String(part.measureMethod || '').trim();
         const tolerance = String(part.tolerance || '').trim();
         const values = part.values || {};
-        
-        // 构建单元格
-        const cells: Record<string, { value: number }> = {};
-        
-        // 为所有尺码填充数值（从识别结果中获取）
-        const allSizeColumns = sortSizeNames([...sizeColumns, ...newSizes]);
-        allSizeColumns.forEach((sizeName: string) => {
-          const rawValue = values[sizeName];
-          if (rawValue !== null && rawValue !== undefined && rawValue !== '') {
-            cells[sizeName] = { value: Number(rawValue) };
+        const sizeValues: Record<string, number> = {};
+        Object.keys(values).forEach((key) => {
+          const v = values[key];
+          if (v === null || v === undefined || v === '') return;
+          const n = Number(v);
+          if (!Number.isNaN(n)) sizeValues[String(key).trim()] = n;
+        });
+        // 合并相同部位（后面的覆盖前面的）
+        const prev = partMap.get(partName);
+        if (prev) {
+          partMap.set(partName, {
+            measureMethod: measureMethod || prev.measureMethod,
+            tolerance: tolerance || prev.tolerance,
+            sizeValues: { ...prev.sizeValues, ...sizeValues },
+          });
+        } else {
+          partMap.set(partName, { measureMethod, tolerance, sizeValues });
+        }
+      });
+
+      // 4. 合并行（已有行 + 新部位行），并给所有行在 allSizes 中的尺码补上单元格
+      setRows((prevRows) => {
+        const updatedRows: MatrixRow[] = prevRows.map((r) => ({ ...r, cells: { ...r.cells } }));
+
+        partMap.forEach((info, partName) => {
+          const existingIndex = updatedRows.findIndex(
+            (r) => r.partName === partName,
+          );
+          if (existingIndex >= 0) {
+            // 已有部位：合并数值（保留已有非零值，新识别到的非零值覆盖零值）
+            const existing = updatedRows[existingIndex];
+            const mergedCells: Record<string, { value: number }> = {};
+            allSizes.forEach((sn) => {
+              const oldVal = existing.cells[sn]?.value ?? 0;
+              const newVal = info.sizeValues[sn] ?? 0;
+              const finalVal = oldVal !== 0 ? oldVal : newVal;
+              mergedCells[sn] = { value: finalVal };
+            });
+            updatedRows[existingIndex] = {
+              ...existing,
+              cells: mergedCells,
+              measureMethod: info.measureMethod || existing.measureMethod,
+              tolerance: info.tolerance || existing.tolerance,
+            };
           } else {
-            cells[sizeName] = { value: 0 };
+            // 新增部位行：按 allSizes 构建完整的 cells（即便识别没这个尺码也是 0）
+            const cells: Record<string, { value: number }> = {};
+            allSizes.forEach((sn) => {
+              cells[sn] = { value: info.sizeValues[sn] ?? 0 };
+            });
+            updatedRows.push({
+              key: `ai-row-${Date.now()}-${updatedRows.length}`,
+              groupName: '',
+              partName,
+              measureMethod: info.measureMethod || '',
+              baseSize: '',
+              gradingZones: [],
+              tolerance: info.tolerance || '',
+              sort: updatedRows.length,
+              cells,
+            } as MatrixRow);
           }
         });
-        
-        return {
-          key: `ai-row-${Date.now()}-${index}`,
-          groupName: '',
-          partName,
-          measureMethod,
-          baseSize: '',
-          gradingZones: [],
-          tolerance: tolerance || '',
-          sort: rows.length + index,
-          cells,
-        } as MatrixRow;
-      });
-      
-      // 5. 合并到现有行
-      if (newRows.length > 0) {
-        setRows((prev) => {
-          const updatedRows = [...prev];
-          newRows.forEach((newRow) => {
-            // 检查是否已存在相同部位名的行
-            const existingIndex = updatedRows.findIndex(
-              (r) => r.partName === newRow.partName
-            );
-            
-            if (existingIndex >= 0) {
-              // 合并单元格数值
-              const existing = updatedRows[existingIndex];
-              const mergedCells = { ...existing.cells };
-              Object.keys(newRow.cells).forEach((sizeName) => {
-                if (newRow.cells[sizeName]?.value !== 0) {
-                  mergedCells[sizeName] = newRow.cells[sizeName];
-                }
-              });
-              updatedRows[existingIndex] = {
-                ...existing,
-                cells: mergedCells,
-                measureMethod: newRow.measureMethod || existing.measureMethod,
-                tolerance: newRow.tolerance || existing.tolerance,
-              };
-            } else {
-              // 新增行
-              updatedRows.push(newRow);
-            }
+
+        // 5. 重要：即便没有新部位（partMap 空），也给所有已有行补上新尺码列（填 0）
+        if (partMap.size === 0 && newSizes.length > 0) {
+          updatedRows.forEach((r, idx, arr) => {
+            const mergedCells: Record<string, { value: number }> = {};
+            allSizes.forEach((sn) => {
+              if (r.cells && r.cells[sn]) {
+                mergedCells[sn] = { ...r.cells[sn] };
+              } else {
+                mergedCells[sn] = { value: 0 };
+              }
+            });
+            arr[idx] = { ...r, cells: mergedCells };
           });
-          
-          // 重新排序
-          return normalizeRowSorts(updatedRows);
-        });
-        
-        message.success(`已导入 ${parts.length} 个部位数据`);
-      }
-      
-      // 6. 确保进入编辑模式
+        }
+
+        return normalizeRowSorts(updatedRows);
+      });
+
+      // 6. 更新尺码列（要放在 setRows 后，确保 columns rerender 时 sizeColumns 已是最新）
+      setSizeColumns(allSizes);
+
+      // 7. 友好提示
+      const msg = [];
+      if (newSizes.length > 0) msg.push(`新增 ${newSizes.length} 个尺码（${newSizes.join(', ')}）`);
+      if (partMap.size > 0) msg.push(`导入 ${partMap.size} 个部位数据`);
+      if (msg.length) message.success(msg.join('，'));
+
+      // 8. 确保进入编辑模式
       if (!editMode && !readOnly) {
         enterEdit();
       }

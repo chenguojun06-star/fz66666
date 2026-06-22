@@ -138,104 +138,126 @@ function buildColorSizeMeta(order) {
 }
 
 /**
+ * iOS 安全日期解析：将不带时区信息的日期字符串按本地时间解析
+ * 解决 iOS 上 new Date('2024-05-01T08:00:00') 被当作 UTC 解析导致差8小时的问题
+ */
+function parseSafeLocalDate(dateStr) {
+  if (!dateStr) return new Date(NaN);
+  var s = String(dateStr).trim();
+  if (!s) return new Date(NaN);
+
+  // 含显式时区信息（Z 或 +08:00）→ 交给原生解析
+  if (/Z|[+-]\d{2}:?\d{2}$/.test(s)) {
+    return new Date(s);
+  }
+
+  // 手动拆分：YYYY-MM-DD[ T]HH:mm:ss[.sss] → 按本地时间构造
+  var match = s.match(
+    /^(\d{4})[-/](\d{1,2})[-/](\d{1,2})(?:[\sT]+(\d{1,2}):(\d{1,2})(?::(\d{1,2})(?:\.(\d+))?)?)?$/
+  );
+  if (match) {
+    var y = Number(match[1]);
+    var mo = Number(match[2]) - 1;
+    var d = Number(match[3]);
+    var h = match[4] ? Number(match[4]) : 0;
+    var mi = match[5] ? Number(match[5]) : 0;
+    var se = match[6] ? Number(match[6]) : 0;
+    var ms = match[7] ? Math.round(Number('0.' + match[7]) * 1000) : 0;
+    return new Date(y, mo, d, h, mi, se, ms);
+  }
+
+  // 退化
+  return new Date(s);
+}
+
+/**
+ * 判断订单是否已处于"完成/终止"状态（不应再显示延期倒计时）
+ */
+function isOrderFinished(source) {
+  if (!source) return false;
+  var s = String(source.status || '').trim().toLowerCase();
+  if (s === 'completed' || s === 'closed' || s === 'cancelled' || s === 'canceled'
+    || s === 'scrapped' || s === 'archived') return true;
+  if (source.actualEndDate && String(source.actualEndDate).trim()) return true;
+  var p = Number(source.productionProgress);
+  if (!isNaN(p) && p >= 100) return true;
+  return false;
+}
+
+/**
  * 计算交期和剩余天数
- * 颜色逻辑与 PC 端 progressColor.ts 保持一致：
- *   有 createTime 时按比例：≤20% → red，≤50% → yellow，>50% → green
- *   无 createTime 时固定阈值：≤3天 → urgent，≤7天 → warn，>7天 → safe
- * @param {Object} source - 订单数据（需包含 plannedEndDate/expectedShipDate，可选 createTime）
- * @returns {Object} { deliveryDateStr, remainDays, remainDaysText, remainDaysClass }
+ * 修复：(1) 已完成订单不再显示"延期N天"；(2) createTime 不再用 'T' 替换空格避免 iOS UTC解析
  */
 function calcDeliveryInfo(source) {
-  // 已关单 / 已完成：停止倒计时，直接显示关单状态
-  const status = String(source.status || '').toLowerCase();
-  if (status === 'completed' || status === 'cancelled' || status === 'canceled' || status === 'scrapped' || status === 'closed' || status === 'archived') {
-    const raw = source.plannedEndDate || source.expectedShipDate || '';
+  // 先统一判断"已完成/已关单"——包含 status / actualEndDate / productionProgress 三条线索
+  if (isOrderFinished(source)) {
+    var raw = source.plannedEndDate || source.expectedShipDate || '';
     var dateStr = '';
     if (raw) {
-      const s = String(raw);
-      if (s.length > 10) {
-        var d = new Date(s.replace(/-/g, '/'));
-        if (!isNaN(d.getTime())) {
-          var pad = n => String(n).padStart(2, '0');
-          dateStr = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
-        } else {
-          dateStr = s.substring(0, 16);
-        }
+      var d = parseSafeLocalDate(String(raw));
+      if (!isNaN(d.getTime())) {
+        var pad = function (n) { return String(n).padStart ? String(n).padStart(2, '0') : (n < 10 ? '0' + n : '' + n); };
+        dateStr = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
       } else {
-        dateStr = s.substring(0, 10);
+        dateStr = String(raw).substring(0, 16);
       }
     }
-    return {
-      deliveryDateStr: dateStr,
-      remainDays: null,
-      remainDaysText: '已关单',
-      remainDaysClass: 'days-done',
-    };
+    var s2 = String(source.status || '').toLowerCase();
+    var text = '已关单';
+    if (s2 === 'completed' || (Number(source.productionProgress) >= 100)) text = '已完成';
+    else if (s2 === 'scrapped') text = '已报废';
+    else if (s2 === 'cancelled' || s2 === 'canceled') text = '已取消';
+    return { deliveryDateStr: dateStr, remainDays: null, remainDaysText: text, remainDaysClass: 'days-done' };
   }
 
-  const raw = source.plannedEndDate || source.expectedShipDate || '';
+  var raw = source.plannedEndDate || source.expectedShipDate || '';
   if (!raw) return { deliveryDateStr: '', remainDays: null, remainDaysText: '', remainDaysClass: '' };
 
-  var dateStr = String(raw);
-  if (dateStr.length > 10) {
-    var d = new Date(dateStr.replace(/-/g, '/'));
-    if (!isNaN(d.getTime())) {
-      var pad = n => String(n).padStart(2, '0');
-      dateStr = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
-    } else {
-      dateStr = dateStr.substring(0, 16);
-    }
+  var d = parseSafeLocalDate(String(raw));
+  var dateStr;
+  if (!isNaN(d.getTime())) {
+    var pad = function (n) { return String(n).padStart ? String(n).padStart(2, '0') : (n < 10 ? '0' + n : '' + n); };
+    dateStr = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+  } else {
+    dateStr = String(raw).substring(0, 16);
   }
-  const deliveryDateStr = dateStr;
 
-  const today = new Date();
+  var today = new Date();
   today.setHours(0, 0, 0, 0);
-  const rawDateOnly = String(raw).substring(0, 10);
-  const dateParts = rawDateOnly.split('-');
-  const target = new Date(Number(dateParts[0]), Number(dateParts[1]) - 1, Number(dateParts[2]));
-  const diffMs = target.getTime() - today.getTime();
-  const remainDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+  // 从 target 中取年月日，构造本地时间的 Date（不依赖字符串解析，彻底消除iOS差异）
+  var target = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  var diffMs = target.getTime() - today.getTime();
+  var remainDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
 
-  let remainDaysText = '';
-  let remainDaysClass = '';
+  var remainDaysText = '';
+  var remainDaysClass = '';
 
   if (remainDays < 0) {
-    remainDaysText = `逾${Math.abs(remainDays)}天`;
+    remainDaysText = '逾' + Math.abs(remainDays) + '天';
     remainDaysClass = 'days-overdue';
   } else if (remainDays === 0) {
     remainDaysText = '今天';
     remainDaysClass = 'days-urgent';
   } else {
-    const createRaw = source.createTime || '';
+    var createRaw = source.createTime || '';
     if (createRaw) {
-      const start = new Date(typeof createRaw === 'string' ? createRaw.replace(' ', 'T') : createRaw);
-      const totalDays = Math.ceil((target.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) || 1;
-      const ratio = remainDays / totalDays;
-      if (ratio <= 0.2) {
-        remainDaysText = `${remainDays}天`;
-        remainDaysClass = 'days-urgent';
-      } else if (ratio <= 0.5) {
-        remainDaysText = `${remainDays}天`;
-        remainDaysClass = 'days-warn';
-      } else {
-        remainDaysText = `${remainDays}天`;
-        remainDaysClass = 'days-safe';
+      var start = parseSafeLocalDate(String(createRaw));
+      if (!isNaN(start.getTime())) {
+        var totalDays = Math.ceil((target.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) || 1;
+        var ratio = remainDays / totalDays;
+        if (ratio <= 0.2) { remainDaysText = remainDays + '天'; remainDaysClass = 'days-urgent'; }
+        else if (ratio <= 0.5) { remainDaysText = remainDays + '天'; remainDaysClass = 'days-warn'; }
+        else { remainDaysText = remainDays + '天'; remainDaysClass = 'days-safe'; }
       }
-    } else {
-      if (remainDays <= 3) {
-        remainDaysText = `${remainDays}天`;
-        remainDaysClass = 'days-urgent';
-      } else if (remainDays <= 7) {
-        remainDaysText = `${remainDays}天`;
-        remainDaysClass = 'days-warn';
-      } else {
-        remainDaysText = `${remainDays}天`;
-        remainDaysClass = 'days-safe';
-      }
+    }
+    if (!remainDaysText) {
+      if (remainDays <= 3) { remainDaysText = remainDays + '天'; remainDaysClass = 'days-urgent'; }
+      else if (remainDays <= 7) { remainDaysText = remainDays + '天'; remainDaysClass = 'days-warn'; }
+      else { remainDaysText = remainDays + '天'; remainDaysClass = 'days-safe'; }
     }
   }
 
-  return { deliveryDateStr, remainDays, remainDaysText, remainDaysClass };
+  return { deliveryDateStr: dateStr, remainDays: remainDays, remainDaysText: remainDaysText, remainDaysClass: remainDaysClass };
 }
 
 /**

@@ -60,18 +60,50 @@
         </view>
       </view>
     </view>
-    <view class="quick-chips" wx:if="{{messages.length <= 1 && !isLoading}}">
-      <block wx:if="{{isManager}}">
-        <view class="quick-chip" hover-class="quick-chip-hover" hover-stay-time="100" catchtap="autoAsk" data-question="帮我汇总今日日报"><view class="line-icon line-icon--sm icon-stats"></view><text>生成日报</text></view>
-        <view class="quick-chip" hover-class="quick-chip-hover" hover-stay-time="100" catchtap="autoAsk" data-question="当前有哪些逾期或高风险订单？"><view class="line-icon line-icon--sm icon-alert"></view><text>风险订单</text></view>
-        <view class="quick-chip" hover-class="quick-chip-hover" hover-stay-time="100" catchtap="autoAsk" data-question="今天工厂扫码情况如何？"><view class="line-icon line-icon--sm icon-search"></view><text>今日扫码</text></view>
-      </block>
-      <block wx:else>
-        <view class="quick-chip" hover-class="quick-chip-hover" hover-stay-time="100" catchtap="autoAsk" data-question="我今天负责的生产任务是什么？"><view class="line-icon line-icon--sm icon-clipboard"></view><text>我的任务</text></view>
-        <view class="quick-chip" hover-class="quick-chip-hover" hover-stay-time="100" catchtap="autoAsk" data-question="帮我查一下我最近的扫码记录"><view class="line-icon line-icon--sm icon-search"></view><text>扫码记录</text></view>
-        <view class="quick-chip" hover-class="quick-chip-hover" hover-stay-time="100" catchtap="autoAsk" data-question="我负责的订单当前进度怎么样？"><view class="line-icon line-icon--sm icon-package"></view><text>订单进度</text></view>
-      </block>
-    </view>
+    <!-- 角色默认建议（新：更漂亮的空状态 + 网格布局） -->
+      <view class="ai-empty" wx:if="{{messages.length <= 1 && !isLoading}}">
+        <view class="ai-empty-hero">
+          <view class="ai-empty-cloud">
+            <view class="chat-cloud-part chat-cloud-part-left"></view>
+            <view class="chat-cloud-part chat-cloud-part-center"></view>
+            <view class="chat-cloud-part chat-cloud-part-right"></view>
+            <view class="chat-cloud-base"></view>
+            <view class="chat-cloud-eye chat-cloud-eye-left"><view class="chat-cloud-eye-dot"></view></view>
+            <view class="chat-cloud-eye chat-cloud-eye-right"><view class="chat-cloud-eye-dot"></view></view>
+            <view class="chat-cloud-smile"></view>
+          </view>
+          <text class="ai-empty-title">小云 AI 助手</text>
+          <text class="ai-empty-sub">随时问我生产、订单、工资的任何问题</text>
+        </view>
+
+        <view class="ai-quick-grid">
+          <view class="ai-quick-card" hover-class="ai-quick-card-hover" hover-stay-time="100" catchtap="autoAsk" data-question="帮我汇总今日日报" wx:if="{{isManager}}">
+            <text class="ai-quick-icon">📊</text>
+            <text class="ai-quick-label">生成日报</text>
+          </view>
+          <view class="ai-quick-card" hover-class="ai-quick-card-hover" hover-stay-time="100" catchtap="autoAsk" data-question="当前有哪些逾期或高风险订单？" wx:if="{{isManager}}">
+            <text class="ai-quick-icon">⚠️</text>
+            <text class="ai-quick-label">风险订单</text>
+          </view>
+          <view class="ai-quick-card" hover-class="ai-quick-card-hover" hover-stay-time="100" catchtap="autoAsk" data-question="今天工厂扫码情况如何？" wx:if="{{isManager}}">
+            <text class="ai-quick-icon">🔍</text>
+            <text class="ai-quick-label">今日扫码</text>
+          </view>
+          <view class="ai-quick-card" hover-class="ai-quick-card-hover" hover-stay-time="100" catchtap="autoAsk" data-question="我今天负责的生产任务是什么？" wx:if="{{!isManager}}">
+            <text class="ai-quick-icon">📋</text>
+            <text class="ai-quick-label">我的任务</text>
+          </view>
+          <view class="ai-quick-card" hover-class="ai-quick-card-hover" hover-stay-time="100" catchtap="autoAsk" data-question="帮我查一下我最近的扫码记录" wx:if="{{!isManager}}">
+            <text class="ai-quick-icon">🔍</text>
+            <text class="ai-quick-label">扫码记录</text>
+          </view>
+          <view class="ai-quick-card" hover-class="ai-quick-card-hover" hover-stay-time="100" catchtap="autoAsk" data-question="我负责的订单当前进度怎么样？" wx:if="{{!isManager}}">
+            <text class="ai-quick-icon">📦</text>
+            <text class="ai-quick-label">订单进度</text>
+          </view>
+        </view>
+
+      </view>
     <view class="chat-history-wrapper">
       <scroll-view class="chat-history" scroll-y enhanced="{{true}}" scroll-into-view="{{scrollTo}}">
         <block wx:for="{{visibleMessages}}" wx:key="id">
@@ -263,7 +295,7 @@
     </view>
     <view class="chat-input-area">
       <input class="chat-input" value="{{inputValue}}" placeholder="输入关键字查询内部资料" bindinput="onInput" confirm-type="send" bindconfirm="sendMessage" />
-      <view class="send-btn-mini {{(!inputValue) ? 'btn-disabled' : ''}}" catchtap="sendMessage">
+      <view class="send-btn-mini {{!inputValue ? 'btn-disabled' : ''}}" catchtap="sendMessage">
         <text class="send-icon">➤</text>
       </view>
     </view>

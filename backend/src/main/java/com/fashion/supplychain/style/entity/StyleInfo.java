@@ -61,6 +61,18 @@ public class StyleInfo {
     private BigDecimal price;
 
     /**
+     * 吊牌价（选填）
+     */
+    @TableField("tag_price")
+    private BigDecimal tagPrice;
+
+    /**
+     * 销售价（选填）
+     */
+    @TableField("sales_price")
+    private BigDecimal salesPrice;
+
+    /**
      * 生产周期(天)
      */
     private Integer cycle;

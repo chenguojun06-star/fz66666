@@ -114,6 +114,8 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose }) => {
   const [activeTab, setActiveTab] = useState<SearchTab>('all');
   const [imageSearchMode, setImageSearchMode] = useState(false);
   const [imageSearchLoading, setImageSearchLoading] = useState(false);
+  // 拖拽高亮
+  const [isDragging, setIsDragging] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
   const abortRef    = useRef<AbortController | null>(null);
 
@@ -125,6 +127,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose }) => {
       setActiveIdx(0);
       setActiveTab('all');
       setImageSearchMode(false);
+      setIsDragging(false);
       setTimeout(() => inputRef.current?.focus(), 50);
     }
   }, [open]);
@@ -176,28 +179,48 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose }) => {
     return () => clearTimeout(debounceRef.current);
   }, [query, doSearch]);
 
-  // 图片搜款
+  // 图片搜款：先上传文件到 COS，然后用 URL 调用以图搜款
   const handleImageSearch = useCallback(async (file: File) => {
     setImageSearchLoading(true);
     setImageSearchMode(true);
+    setQuery('');
     setItems([]);
     try {
+      // 1. 先上传文件到 COS
       const formData = new FormData();
       formData.append('file', file);
-      formData.append('topK', '8');
-      const res = await api.post('/intelligence/visual/style-search', formData, {
+      const uploadRes = await api.post('/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 60000,
       });
-      if (res?.code === 200 && Array.isArray(res?.data?.results)) {
-        const imageResults: ResultItem[] = (res.data.results as any[]).map(s => ({
+      if (uploadRes?.code !== 200 || !uploadRes?.data) {
+        console.warn('[CmdK] 图片上传失败:', uploadRes?.message);
+        setImageSearchLoading(false);
+        return;
+      }
+      const imageUrl = uploadRes.data as string;
+
+      // 2. 用上传后的 URL 调用以图搜款
+      const res = await api.post('/intelligence/visual/style-search', {
+        imageUrl,
+        topK: 8,
+      });
+
+      // 兼容两种返回结构：res.data.results[] 或 res.data.styles[]
+      const resultList = res?.code === 200 && res?.data
+        ? (res.data as any).results || (res.data as any).styles || []
+        : [];
+
+      if (Array.isArray(resultList) && resultList.length > 0) {
+        const imageResults: ResultItem[] = (resultList as any[]).map((s, idx) => ({
           kind: 'imageStyle' as const,
           data: {
-            id: s.id,
-            styleNo: s.styleNo || '',
-            styleName: s.styleName || '',
+            id: s.id || idx,
+            styleNo: s.styleNo || s.style_no || '',
+            styleName: s.styleName || s.style_name || '',
             category: s.category || '',
-            coverUrl: s.coverUrl || s.imageUrl || '',
-            similarity: s.similarity ?? s.score,
+            coverUrl: s.coverUrl || s.imageUrl || s.cover_url || s.main_image || '',
+            similarity: s.similarity ?? s.score ?? (1 - idx * 0.1),
           },
         }));
         setItems(imageResults);
@@ -230,6 +253,59 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose }) => {
     };
     document.addEventListener('paste', handler);
     return () => document.removeEventListener('paste', handler);
+  }, [open, handleImageSearch]);
+
+  // ─── 拖放图片支持 ─────────────────────────────────────
+  useEffect(() => {
+    if (!open) return;
+    const container = document.querySelector<HTMLElement>('.cp-modal');
+    if (!container) return;
+
+    const handleDragEnter = (e: DragEvent) => {
+      if (e.dataTransfer?.types.includes('Files')) {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(true);
+      }
+    };
+    const handleDragOver = (e: DragEvent) => {
+      if (e.dataTransfer?.types.includes('Files')) {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(true);
+      }
+    };
+    const handleDragLeave = (e: DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setIsDragging(false);
+    };
+    const handleDrop = (e: DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setIsDragging(false);
+      const files = e.dataTransfer?.files;
+      if (!files || files.length === 0) return;
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        if (file.type.startsWith('image/')) {
+          handleImageSearch(file);
+          return;
+        }
+      }
+    };
+
+    container.addEventListener('dragenter', handleDragEnter);
+    container.addEventListener('dragover', handleDragOver);
+    container.addEventListener('dragleave', handleDragLeave);
+    container.addEventListener('drop', handleDrop);
+
+    return () => {
+      container.removeEventListener('dragenter', handleDragEnter);
+      container.removeEventListener('dragover', handleDragOver);
+      container.removeEventListener('dragleave', handleDragLeave);
+      container.removeEventListener('drop', handleDrop);
+    };
   }, [open, handleImageSearch]);
 
   // 导航到对应路径
@@ -271,25 +347,35 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose }) => {
   useEffect(() => {
     const listEl = listRef.current;
     if (!listEl) return;
-    const activeEl = listEl.querySelector<HTMLElement>('.cp-item.active');
+    const activeEl = listEl.querySelector<HTMLElement>('.cp-item.active, .cp-grid-card.active');
     if (activeEl) {
       activeEl.scrollIntoView({ block: 'nearest' });
     }
-  }, [activeIdx]);
+  }, [activeIdx, imageSearchMode]);
 
   if (!open) return null;
 
   // ─── 渲染结果分组 ─────────────────────────────────────────
 
-  const menus      = items.filter(i => i.kind === 'menu');
-  const orders     = items.filter(i => i.kind === 'order');
-  const styles     = items.filter(i => i.kind === 'style');
-  const workers    = items.filter(i => i.kind === 'worker');
+  const menus       = items.filter(i => i.kind === 'menu');
+  const orders      = items.filter(i => i.kind === 'order');
+  const styles      = items.filter(i => i.kind === 'style');
+  const workers     = items.filter(i => i.kind === 'worker');
   const imageStyles = items.filter(i => i.kind === 'imageStyle');
 
   return (
     <div className="cp-overlay" onClick={onClose}>
-      <div className="cp-modal cp-modal-wide" onClick={e => e.stopPropagation()} onKeyDown={handleKeyDown} role="dialog" aria-label="全局搜索">
+      <div
+        className={
+          'cp-modal cp-modal-wide' +
+          (isDragging ? ' cp-modal--dragging' : '') +
+          (imageSearchMode ? ' cp-modal--image-mode' : '')
+        }
+        onClick={e => e.stopPropagation()}
+        onKeyDown={handleKeyDown}
+        role="dialog"
+        aria-label="全局搜索"
+      >
         {/* ── 搜索框 ── */}
         <div className="cp-input-row">
           {imageSearchMode ? (
@@ -300,7 +386,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose }) => {
           <input
             ref={inputRef}
             className="cp-input"
-            placeholder={imageSearchMode ? '图片搜款结果 — 输入文字切换回普通搜索…' : '搜索菜单 · 订单号 · 款式 · 工人…  粘贴图片可搜款'}
+            placeholder={imageSearchMode ? '图片搜款结果 — 输入文字切换回普通搜索…' : '拖拽图片到这里，或按 Ctrl+V 粘贴图片，也可输入关键词搜索订单 / 款式 / 工人'}
             value={query}
             onChange={e => { setQuery(e.target.value); if (imageSearchMode) setImageSearchMode(false); }}
             autoComplete="off"
@@ -343,12 +429,26 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose }) => {
           </div>
         )}
 
+        {/* ── 拖拽高亮遮罩 ── */}
+        {isDragging && (
+          <div className="cp-drop-overlay">
+            <div className="cp-drop-inner">
+              <PictureOutlined style={{ fontSize: 48, color: '#a855f7', marginBottom: 12 }} />
+              <div className="cp-drop-title">松开以图搜款</div>
+              <div className="cp-drop-tip">支持 PNG / JPG / WEBP 等常见图片格式</div>
+            </div>
+          </div>
+        )}
+
         {/* ── 结果列表 ── */}
         <div ref={listRef} className="cp-list">
           {!query.trim() && !imageSearchMode && (
             <div className="cp-empty-hint">
               <AppstoreOutlined style={{ fontSize: 16, marginBottom: 8, opacity: 0.3 }} />
-              <div>输入关键词搜索，或粘贴图片以图搜款</div>
+              <div>拖拽图片到这里，或按 Ctrl+V 粘贴图片</div>
+              <div style={{ fontSize: 12, color: 'var(--color-text-tertiary)', marginTop: 4 }}>
+                也可输入关键词搜索订单 / 款式 / 工人
+              </div>
               <div className="cp-hint-tips">
                 <span><kbd>↑</kbd><kbd>↓</kbd> 导航</span>
                 <span><kbd>↵</kbd> 跳转</span>
@@ -386,45 +486,58 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose }) => {
             </div>
           )}
 
-          {items.length > 0 && (() => {
+          {/* ——— 图片搜款 Grid 卡片 ——— */}
+          {imageSearchMode && !imageSearchLoading && imageStyles.length > 0 && (
+            <>
+              <div className="cp-group-title"><PictureOutlined style={{ color: '#a855f7' }} /> 相似款式（{imageStyles.length}）</div>
+              <div className="cp-grid-wrap">
+                {imageStyles.map((it, i) => {
+                  const s = it.data;
+                  const sim = typeof s.similarity === 'number'
+                    ? (s.similarity > 1 ? s.similarity : s.similarity * 100)
+                    : 0;
+                  const isHigh = sim >= 72;
+                  return (
+                    <div
+                      key={s.id}
+                      className={'cp-grid-card' + (i === activeIdx ? ' active' : '')}
+                      onClick={() => navigateTo(it)}
+                      onMouseEnter={() => setActiveIdx(i)}
+                    >
+                      <div className="cp-grid-card-cover">
+                        {s.coverUrl ? (
+                          <SmartImage src={s.coverUrl} alt={s.styleName} preview={{ cover: <span>预览</span> }} />
+                        ) : (
+                          <PictureOutlined style={{ fontSize: 28, color: 'var(--color-text-quaternary)' }} />
+                        )}
+                        {sim > 0 && (
+                          <span
+                            className={'cp-grid-card-badge' + (isHigh ? ' high' : '')}
+                            style={{
+                              padding: '2px 8px', borderRadius: 12, fontSize: 11, fontWeight: 600,
+                              background: isHigh ? 'rgba(34,197,94,0.12)' : 'rgba(14,165,233,0.12)',
+                              color: isHigh ? '#15803d' : '#0369a1',
+                            }}
+                          >
+                            {Math.round(sim)}%
+                          </span>
+                        )}
+                      </div>
+                      <div className="cp-grid-card-body">
+                        <div className="cp-grid-card-title">{s.styleNo || '—'}</div>
+                        <div className="cp-grid-card-sub">{s.styleName || ''}{s.category ? ` · ${s.category}` : ''}</div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
+
+          {/* ——— 其他分组（菜单/订单/款式/工人）保留原来列表样式 ——— */}
+          {(!imageSearchMode) && items.length > 0 && (() => {
             let cursor = 0;
             const sections: React.ReactNode[] = [];
-
-            // 图片搜款结果
-            if (imageStyles.length) {
-              sections.push(<div key="th-image" className="cp-group-title"><PictureOutlined style={{ color: '#a855f7' }} /> 相似款式</div>);
-              imageStyles.forEach((it, i) => {
-                const idx = cursor + i;
-                const s = it.data;
-                sections.push(
-                  <div
-                    key={`imgstyle-${s.id}`}
-                    className={`cp-item${idx === activeIdx ? ' active' : ''}`}
-                    onClick={() => navigateTo(it)}
-                    onMouseEnter={() => setActiveIdx(idx)}
-                  >
-                    <span className="cp-item-icon cp-icon-image">
-                      {s.coverUrl ? (
-                        <SmartImage src={s.coverUrl} alt={s.styleName} className="cp-cover" width={32} height={32} preview={{ cover: <span>预览</span> }} />
-                      ) : (
-                        <PictureOutlined />
-                      )}
-                    </span>
-                    <span className="cp-item-main">
-                      <span className="cp-item-title">{s.styleNo}</span>
-                      <span className="cp-item-sub">{s.styleName}{s.category ? ` · ${s.category}` : ''}</span>
-                    </span>
-                    {s.similarity != null && (
-                      <span className="cp-item-meta">
-                        <span className="cp-similarity">{Math.round(s.similarity * 100)}%</span>
-                      </span>
-                    )}
-                    <RightOutlined className="cp-item-arrow" />
-                  </div>
-                );
-              });
-              cursor += imageStyles.length;
-            }
 
             // 菜单
             if (menus.length) {
@@ -435,7 +548,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose }) => {
                 sections.push(
                   <div
                     key={`menu-${m.path}`}
-                    className={`cp-item${idx === activeIdx ? ' active' : ''}`}
+                    className={'cp-item' + (idx === activeIdx ? ' active' : '')}
                     onClick={() => navigateTo(it)}
                     onMouseEnter={() => setActiveIdx(idx)}
                   >
@@ -460,7 +573,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose }) => {
                 sections.push(
                   <div
                     key={`order-${o.id}`}
-                    className={`cp-item${idx === activeIdx ? ' active' : ''}`}
+                    className={'cp-item' + (idx === activeIdx ? ' active' : '')}
                     onClick={() => navigateTo(it)}
                     onMouseEnter={() => setActiveIdx(idx)}
                   >
@@ -490,7 +603,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose }) => {
                 sections.push(
                   <div
                     key={`style-${s.id}`}
-                    className={`cp-item${idx === activeIdx ? ' active' : ''}`}
+                    className={'cp-item' + (idx === activeIdx ? ' active' : '')}
                     onClick={() => navigateTo(it)}
                     onMouseEnter={() => setActiveIdx(idx)}
                   >
@@ -521,7 +634,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose }) => {
                 sections.push(
                   <div
                     key={`worker-${w.id}`}
-                    className={`cp-item${idx === activeIdx ? ' active' : ''}`}
+                    className={'cp-item' + (idx === activeIdx ? ' active' : '')}
                     onClick={() => navigateTo(it)}
                     onMouseEnter={() => setActiveIdx(idx)}
                   >

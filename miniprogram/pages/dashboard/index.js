@@ -21,11 +21,13 @@ const { safeNavigate } = require('../../utils/uiHelper');
 
 const app = getApp();
 
-/* 状态过滤映射（值 = 后端 status 字段；overdue 为客户端筛选） */
+/* 状态过滤映射（值 = 后端 status 字段；
+   已延期/临近交期用 smart-hints 筛选；
+   生产中不单独过滤 status='production'，而是依赖 excludeTerminal='true' 排除终止状态，
+   因为活跃状态包含 production/in_progress/cutting/sewing/ironing/packaging/quality_check/warehousing 等） */
 const STATUS_FILTERS = [
-  { key: 'in_production', label: '生产中', value: 'production' },
+  { key: 'in_production', label: '生产中', value: '' },
   { key: 'completed',     label: '已完成', value: 'completed' },
-  { key: 'overdue',       label: '延期',   value: '' },
 ];
 
 function buildProcessNodes(order) {
@@ -56,10 +58,10 @@ Page({
     },
     todayScanCount: 0,
     unreadNoticeCount: 0,
-    /* 状态过滤 */
+    /* 状态过滤（已延期/临近交期用 smart-hints 筛选，不在这里重复） */
     statFilters: STATUS_FILTERS,
     activeFilter: 'in_production',
-    statCounts: { in_production: 0, completed: 0, overdue: 0 },
+    statCounts: { in_production: 0, completed: 0 },
     /* 智能提示标签（对齐 PC 端 OrderManagement hints） */
     smartHints: [
       { key: 'overdue', label: '已延期', count: 0, tone: 'danger' },
@@ -181,23 +183,18 @@ Page({
   loadOrders: function (reset) {
     const that = this;
     const activeKey = this.data.activeFilter;
-    const isOverdue = activeKey === 'overdue';
     const smartFilter = this.data.smartFilter;
     let filterVal = '';
-    if (!isOverdue) {
-      for (let i = 0; i < STATUS_FILTERS.length; i++) {
-        if (STATUS_FILTERS[i].key === activeKey) {
-          filterVal = STATUS_FILTERS[i].value;
-          break;
-        }
+    for (let i = 0; i < STATUS_FILTERS.length; i++) {
+      if (STATUS_FILTERS[i].key === activeKey) {
+        filterVal = STATUS_FILTERS[i].value;
+        break;
       }
     }
 
     return app.loadPagedList(this, 'orders', reset, function (p) {
-      const params = { page: p.page, pageSize: (isOverdue || smartFilter) ? 50 : p.pageSize, excludeTerminal: 'true' };
-      if (isOverdue) {
-        params.status = 'production';
-      } else if (filterVal) {
+      const params = { page: p.page, pageSize: smartFilter ? 50 : p.pageSize, excludeTerminal: 'true' };
+      if (filterVal) {
         params.status = filterVal;
       }
       const searchKey = that.data.searchKey;
@@ -219,11 +216,6 @@ Page({
       } else if (smartFilter === 'warning') {
         const filtered = (that.data.orders.list || []).filter(function (o) {
           return o.remainDaysClass === 'days-urgent';
-        });
-        that.setData({ 'orders.list': filtered });
-      } else if (isOverdue) {
-        const filtered = (that.data.orders.list || []).filter(function (o) {
-          return o.remainDaysClass === 'days-overdue';
         });
         that.setData({ 'orders.list': filtered });
       }
@@ -261,7 +253,6 @@ Page({
         statCounts: {
           in_production:  Number(stats.activeOrders) || 0,
           completed:      Number(stats.completedOrders) || 0,
-          overdue:        overdueCount,
         },
         smartHints: [
           { key: 'overdue', label: '已延期', count: overdueCount, tone: 'danger' },

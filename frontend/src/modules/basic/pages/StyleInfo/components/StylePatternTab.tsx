@@ -475,28 +475,18 @@ const StylePatternTab: React.FC<Props> = ({
       </div>
 
       {/* 尺寸表模块 */}
-      <Collapse
-        defaultActiveKey={['size']}
-        style={{ marginTop: 16 }}
-        items={[
-          {
-            key: 'size',
-            label: <span style={{ fontWeight: 600 }}> 尺寸表</span>,
-            children: (
-              <StyleSizeTab
-                styleId={styleId}
-                readOnly={childReadOnly}
-                sizeAssignee={sizeAssignee}
-                sizeStartTime={sizeStartTime}
-                sizeCompletedTime={sizeCompletedTime}
-                linkedSizes={linkedSizes}
-                hideStageControl
-                onRefresh={onRefresh}
-              />
-            ),
-          },
-        ]}
-      />
+      <div style={{ marginTop: 16 }}>
+        <StyleSizeTab
+          styleId={styleId}
+          readOnly={childReadOnly}
+          sizeAssignee={sizeAssignee}
+          sizeStartTime={sizeStartTime}
+          sizeCompletedTime={sizeCompletedTime}
+          linkedSizes={linkedSizes}
+          hideStageControl
+          onRefresh={onRefresh}
+        />
+      </div>
 
       {/* 各码用量配比 */}
       <Card

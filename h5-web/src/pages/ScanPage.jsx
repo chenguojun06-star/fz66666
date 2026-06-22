@@ -246,9 +246,18 @@ export default function ScanPage() {
           setScanResultData({ ...data, scanCode: code, scanType, flowInfo });
           setLastResult({ ...data, scanCode: code, scanType, success: true,
             message: flowInfo ? flowInfo.message : (data.message || '扫码成功'),
-            orderNo: data.orderNo, styleNo: data.styleNo,
+            orderNo: data.orderNo, styleNo: data.styleNo, styleName: data.styleName,
             processName: data.processName, quantity: data.quantity,
             unitPrice: data.unitPrice, color: data.color, size: data.size,
+            progressStage: data.progressStage,
+            orderProgressBefore: data.orderProgressBefore, orderProgressAfter: data.orderProgressAfter,
+            // ── 来自样衣开发阶段的 AI 识别结果 ──
+            difficultyLabel: data.difficultyLabel || (data.orderInfo && data.orderInfo.difficultyLabel),
+            difficultyScore: data.difficultyScore || (data.orderInfo && data.orderInfo.difficultyScore),
+            fabricComposition: data.fabricComposition || (data.orderInfo && data.orderInfo.fabricComposition),
+            imageInsight: data.imageInsight || (data.orderInfo && data.orderInfo.imageInsight),
+            workerHint: data.workerHint || (data.orderInfo && data.orderInfo.workerHint),
+            secondaryProcessHint: data.secondaryProcessHint || (data.orderInfo && data.orderInfo.secondaryProcessHint),
           });
           const stageTip = getStageStatusTip(data.progressStage, flowInfo);
           toast.success(stageTip);
@@ -363,11 +372,55 @@ export default function ScanPage() {
             {lastResult.success ? '扫码成功' : '扫码失败'}
           </div>
           {lastResult.success ? (
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 16px', fontSize: 13 }}>
-              <span style={{ color: 'var(--color-text-secondary)' }}>款号: <strong style={{ color: 'var(--color-text-primary)' }}>{lastResult.styleNo || '-'}</strong></span>
-              <span style={{ color: 'var(--color-text-secondary)' }}>工序: <strong style={{ color: 'var(--color-text-primary)' }}>{lastResult.processName || '-'}</strong></span>
-              <span style={{ color: 'var(--color-text-secondary)' }}>数量: <strong style={{ color: 'var(--color-text-primary)' }}>{lastResult.quantity || 1}</strong></span>
-            </div>
+            <>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 16px', fontSize: 13 }}>
+                <span style={{ color: 'var(--color-text-secondary)' }}>款号: <strong style={{ color: 'var(--color-text-primary)' }}>{lastResult.styleNo || '-'}</strong></span>
+                <span style={{ color: 'var(--color-text-secondary)' }}>款式: <strong style={{ color: 'var(--color-text-primary)' }}>{lastResult.styleName || '-'}</strong></span>
+                <span style={{ color: 'var(--color-text-secondary)' }}>工序: <strong style={{ color: 'var(--color-text-primary)' }}>{lastResult.processName || lastResult.progressStage || '-'}</strong></span>
+                <span style={{ color: 'var(--color-text-secondary)' }}>数量: <strong style={{ color: 'var(--color-text-primary)' }}>{lastResult.quantity || 1}</strong></span>
+                <span style={{ color: 'var(--color-text-secondary)' }}>订单: <strong style={{ color: 'var(--color-text-primary)' }}>{lastResult.orderNo || '-'}</strong></span>
+              </div>
+              {(lastResult.difficultyLabel || lastResult.fabricComposition || lastResult.secondaryProcessHint || lastResult.workerHint || lastResult.imageInsight) && (
+                <div style={{
+                  marginTop: 14, padding: '12px 14px', background: '#FFFAEB',
+                  border: '1px solid #F5C451', borderRadius: 8, fontSize: 13
+                }}>
+                  <div style={{ fontWeight: 700, color: '#92400E', marginBottom: 8, fontSize: 13 }}>⚠️ 生产提示</div>
+                  {lastResult.difficultyLabel && (
+                    <div style={{ marginBottom: 6, lineHeight: 1.7 }}>
+                      <span style={{ color: 'var(--color-text-secondary)', marginRight: 8 }}>难度等级:</span>
+                      <span style={{ color: '#B45309', fontWeight: 700 }}>
+                        {lastResult.difficultyLabel}{lastResult.difficultyScore ? `（${lastResult.difficultyScore}/10）` : ''}
+                      </span>
+                    </div>
+                  )}
+                  {lastResult.fabricComposition && (
+                    <div style={{ marginBottom: 6, lineHeight: 1.7 }}>
+                      <span style={{ color: 'var(--color-text-secondary)', marginRight: 8 }}>面料成分:</span>
+                      <span style={{ color: 'var(--color-text-primary)' }}>{lastResult.fabricComposition}</span>
+                    </div>
+                  )}
+                  {lastResult.secondaryProcessHint && (
+                    <div style={{ marginBottom: 6, lineHeight: 1.7 }}>
+                      <span style={{ color: 'var(--color-text-secondary)', marginRight: 8 }}>二次工艺:</span>
+                      <span style={{ color: 'var(--color-text-primary)' }}>{lastResult.secondaryProcessHint}</span>
+                    </div>
+                  )}
+                  {lastResult.workerHint && (
+                    <div style={{ marginTop: 8, padding: '8px 10px', background: 'rgba(245,196,81,0.18)', borderRadius: 6, lineHeight: 1.7 }}>
+                      <span style={{ color: 'var(--color-text-secondary)', marginRight: 8, fontWeight: 600 }}>综合提示:</span>
+                      <span style={{ color: 'var(--color-text-primary)' }}>{lastResult.workerHint}</span>
+                    </div>
+                  )}
+                  {lastResult.imageInsight && (
+                    <div style={{ marginTop: 8, padding: '8px 10px', background: 'rgba(59,130,246,0.08)', borderRadius: 6, lineHeight: 1.7 }}>
+                      <span style={{ color: 'var(--color-text-secondary)', marginRight: 8, fontWeight: 600 }}>AI识别:</span>
+                      <span style={{ color: 'var(--color-text-primary)' }}>{lastResult.imageInsight}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
           ) : (
             <div style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>{lastResult.message}</div>
           )}
@@ -461,6 +514,16 @@ export default function ScanPage() {
           <CameraScanner active={cameraActive} onScan={handleScanResult}
             onError={handleCameraError} />
         )}
-      </Suspense>    </div>
+      </Suspense>
+
+      {/* --- AI 升级 开始 --- 新增动画 keyframes */}
+      <style>{`
+        @keyframes aiFadeIn {
+          from { opacity: 0; transform: translateY(6px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
+      {/* --- AI 升级 结束 --- */}
+    </div>
   );
 }

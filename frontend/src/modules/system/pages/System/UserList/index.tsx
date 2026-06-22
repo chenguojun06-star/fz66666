@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Alert, Button, Card, DatePicker, Input, Select, Space, Spin, Tag, Form, Row, Col } from 'antd';
-import { QrcodeOutlined, LinkOutlined } from '@ant-design/icons';
+import { Alert, Avatar, Button, Card, DatePicker, Input, Select, Space, Spin, Statistic, Tag, Form, Row, Col } from 'antd';
+import { QrcodeOutlined, LinkOutlined, TeamOutlined, UserOutlined, ShopOutlined, ApartmentOutlined, HourglassOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
 import PageLayout from '@/components/common/PageLayout';
 import ResizableModal from '@/components/common/ResizableModal';
 import ResizableTable from '@/components/common/ResizableTable';
@@ -132,6 +132,44 @@ const UserList: React.FC = () => {
 
   const debouncedKeyword = useDebouncedValue(keywordInput, 300);
 
+  // ===== 人员统计（用于顶部统计卡片）=====
+  const userStats = useMemo(() => {
+    let internal = 0;
+    let externalFactory = 0;
+    let supplier = 0;
+    let other = 0;
+    let activeCount = 0;
+    let inactiveCount = 0;
+
+    userList.forEach((u) => {
+      const roleName = String(u.roleName || '').toLowerCase();
+      const roleCode = String(u.roleCode || '').toLowerCase();
+      if (roleName.includes('factory') || roleName.includes('外发') || roleName.includes('外包') ||
+          roleCode.includes('factory_owner') || roleCode.includes('external')) {
+        externalFactory++;
+      } else if (roleName.includes('supplier') || roleName.includes('vendor') ||
+                 roleName.includes('供应商') || roleName.includes('面辅料') || roleName.includes('物料')) {
+        supplier++;
+      } else if (roleName.includes('admin') || roleName.includes('manager') ||
+                 roleName.includes('主管') || roleName.includes('组长') ||
+                 roleName.includes('员工') || roleName.includes('operator') ||
+                 roleName.includes('采购') || roleName.includes('财务') ||
+                 roleName.includes('仓库') || roleName.includes('merchandiser')) {
+        internal++;
+      } else {
+        other++;
+      }
+
+      if (String(u.status || 'active') === 'active') {
+        activeCount++;
+      } else {
+        inactiveCount++;
+      }
+    });
+
+    return { internal, externalFactory, supplier, other, activeCount, inactiveCount };
+  }, [userList]);
+
   useEffect(() => {
     organizationApi.departments().then(list => {
       setDepartments(Array.isArray(list) ? list : []);
@@ -175,7 +213,12 @@ const UserList: React.FC = () => {
   return (
     <>
         <PageLayout
-          title="人员管理"
+          title={
+            <span style={{ display: 'flex', alignItems: 'center' }}>
+              <TeamOutlined style={{ marginRight: 8, fontSize: 22, color: 'var(--primary-color, var(--color-primary))' }} />
+              <span style={{ fontSize: 22, fontWeight: 700 }}>人员管理</span>
+            </span>
+          }
           headerContent={
             <>
               {showSmartErrorNotice && smartError ? (
@@ -201,7 +244,101 @@ const UserList: React.FC = () => {
                   style={{ marginBottom: 16 }}
                 />
               )}
+
+              {/* ===== 人员统计卡片 ===== */}
+              <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
+                <Col xs={12} sm={8} md={6} lg={4}>
+                  <Card size="small" style={{ borderRadius: 8, border: '1px solid var(--color-border-antd, #f0f0f0)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <Avatar size={40} icon={<TeamOutlined />} style={{ backgroundColor: 'var(--primary-color, #1890ff)', fontSize: 20 }} />
+                      <div>
+                        <div style={{ fontSize: 12, color: 'var(--color-text-secondary, #666)' }}>
+                          <span style={{ display: 'block' }}>总人数</span>
+                        </div>
+                        <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--color-text-primary, #000)', marginTop: 2 }}>{total}</div>
+                      </div>
+                    </div>
+                  </Card>
+                </Col>
+                <Col xs={12} sm={8} md={6} lg={4}>
+                  <Card size="small" style={{ borderRadius: 8, border: '1px solid var(--color-border-antd, #f0f0f0)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <Avatar size={40} icon={<UserOutlined />} style={{ backgroundColor: 'var(--color-success, #52c41a)', fontSize: 20 }} />
+                      <div>
+                        <div style={{ fontSize: 12, color: 'var(--color-text-secondary, #666)' }}>
+                          <span style={{ display: 'block' }}>内部员工</span>
+                        </div>
+                        <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--color-success, #52c41a)', marginTop: 2 }}>{userStats.internal}</div>
+                      </div>
+                    </div>
+                  </Card>
+                </Col>
+                <Col xs={12} sm={8} md={6} lg={4}>
+                  <Card size="small" style={{ borderRadius: 8, border: '1px solid var(--color-border-antd, #f0f0f0)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <Avatar size={40} icon={<ApartmentOutlined />} style={{ backgroundColor: 'var(--color-info, #1890ff)', fontSize: 20 }} />
+                      <div>
+                        <div style={{ fontSize: 12, color: 'var(--color-text-secondary, #666)' }}>
+                          <span style={{ display: 'block' }}>外发工厂</span>
+                        </div>
+                        <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--color-info, #1890ff)', marginTop: 2 }}>{userStats.externalFactory}</div>
+                      </div>
+                    </div>
+                  </Card>
+                </Col>
+                <Col xs={12} sm={8} md={6} lg={4}>
+                  <Card size="small" style={{ borderRadius: 8, border: '1px solid var(--color-border-antd, #f0f0f0)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <Avatar size={40} icon={<ShopOutlined />} style={{ backgroundColor: 'var(--color-warning, #fa8c16)', fontSize: 20 }} />
+                      <div>
+                        <div style={{ fontSize: 12, color: 'var(--color-text-secondary, #666)' }}>
+                          <span style={{ display: 'block' }}>第三方供应商</span>
+                        </div>
+                        <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--color-warning, #fa8c16)', marginTop: 2 }}>{userStats.supplier}</div>
+                      </div>
+                    </div>
+                  </Card>
+                </Col>
+                <Col xs={12} sm={8} md={6} lg={4}>
+                  <Card size="small" style={{ borderRadius: 8, border: '1px solid var(--color-border-antd, #f0f0f0)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <Avatar size={40} icon={<SafetyCertificateOutlined />} style={{ backgroundColor: 'var(--color-success, #52c41a)', fontSize: 20 }} />
+                      <div>
+                        <div style={{ fontSize: 12, color: 'var(--color-text-secondary, #666)' }}>
+                          <span style={{ display: 'block' }}>启用</span>
+                        </div>
+                        <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--color-success, #52c41a)', marginTop: 2 }}>{userStats.activeCount}</div>
+                      </div>
+                    </div>
+                  </Card>
+                </Col>
+                <Col xs={12} sm={8} md={6} lg={4}>
+                  <Card size="small" style={{ borderRadius: 8, border: '1px solid var(--color-border-antd, #f0f0f0)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <Avatar size={40} icon={<HourglassOutlined />} style={{ backgroundColor: pendingUserCount > 0 ? 'var(--color-warning, #fa8c16)' : 'var(--color-text-quaternary, #d9d9d9)', fontSize: 20 }} />
+                      <div>
+                        <div style={{ fontSize: 12, color: 'var(--color-text-secondary, #666)' }}>
+                          <span style={{ display: 'block' }}>待审批</span>
+                        </div>
+                        <div style={{ fontSize: 20, fontWeight: 700, color: pendingUserCount > 0 ? 'var(--color-warning, #fa8c16)' : 'var(--color-text-quaternary, #d9d9d9)', marginTop: 2 }}>{pendingUserCount}</div>
+                      </div>
+                    </div>
+                  </Card>
+                </Col>
+              </Row>
             </>
+          }
+          titleExtra={
+            canManageUsers && (
+              <Space>
+                <Button icon={<QrcodeOutlined />} onClick={() => { void handleGenerateInvite(); }}>
+                  生成邀请码
+                </Button>
+                <Button type="primary" onClick={() => openDialog()}>
+                  新增人员
+                </Button>
+              </Space>
+            )
           }
         >
           <div className="user-split-layout">

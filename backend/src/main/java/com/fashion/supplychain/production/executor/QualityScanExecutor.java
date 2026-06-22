@@ -205,7 +205,11 @@ public class QualityScanExecutor {
         result.put("success", true);
         result.put("message", "receive".equals(qualityStage) ? "领取成功" : "验收成功");
         result.put("scanRecord", sr);
-        result.put("orderInfo", recordFactory.buildOrderInfo(order));
+        Map<String, Object> orderInfo = executorSupport.buildOrderInfo(order, bundle);
+        result.put("orderInfo", orderInfo);
+        executorSupport.flattenOrderInfoToTop(result, orderInfo);
+        executorSupport.flattenBundleToTop(result, bundle);
+        result.put("processName", "质检");
         result.put("cuttingBundle", bundle);
         result.put("nextScanType", "warehouse");
         result.put("nextStageHint", "下一环节: warehouse");
@@ -307,7 +311,11 @@ public class QualityScanExecutor {
                 ? (isScrap ? "已标记报废，剩余合格品可继续入库" : "不合格已录入，请安排返修")
                 : "质检合格，请进行包装工序");
         result.put("scanRecord", existed);
-        result.put("orderInfo", recordFactory.buildOrderInfo(order));
+        Map<String, Object> orderInfo = executorSupport.buildOrderInfo(order, bundle);
+        result.put("orderInfo", orderInfo);
+        executorSupport.flattenOrderInfoToTop(result, orderInfo);
+        executorSupport.flattenBundleToTop(result, bundle);
+        result.put("processName", "质检");
         result.put("cuttingBundle", bundle);
         result.put("nextScanType", "warehouse");
         result.put("nextStageHint", "下一环节: warehouse");
@@ -400,7 +408,9 @@ public class QualityScanExecutor {
         dup.put("success", true);
         dup.put("message", "receive".equals(qualityStage) ? "已领取" : "已验收");
         dup.put("scanRecord", existed);
-        dup.put("orderInfo", recordFactory.buildOrderInfo(order));
+        Map<String, Object> dupOrderInfo = executorSupport.buildOrderInfo(order, bundle);
+        dup.put("orderInfo", dupOrderInfo);
+        executorSupport.flattenOrderInfoToTop(dup, dupOrderInfo);
         dup.put("cuttingBundle", bundle);
         return dup;
     }

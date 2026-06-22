@@ -110,6 +110,15 @@ Page({
     stageBuckets: [], activeStage: '', activeStageLabel: '', activeStageOrders: [],
     factoryList: [], factoryOnline: 0, factoryStagnant: 0, factoryTotalOrders: 0, factoryTotalQty: 0,
     lastRefreshTime: '', loading: false,
+    // ============ 顶部简洁区域（无彩色）============
+    topStats: {
+      todayScanCount: 0,       // 今日扫码次数
+      todayScanQty: 0,          // 今日扫码件数
+      activeOrders: 0,          // 进行中订单
+      totalFactories: 0,        // 合作工厂数
+      todayInboundCount: 0,     // 今日入库
+      todayOutboundCount: 0,    // 今日出库
+    },
     // _allOrders 已迁移到 this._allOrders 实例属性（在 onMenuTap 里过滤使用，不参与 WXML 渲染）
     // 避免 setData 传入未绑定 WXML 变量的性能告警，同时减少大数组序列化开销。
   },
@@ -209,12 +218,14 @@ Page({
       api.dashboard.getDailyBrief(),
       api.production.getFactoryCapacity(),
       api.intelligence.getLivePulse(),
+      api.dashboard.getTopStats({}),
     ]).then(function (results) {
       const ordersData = self._unwrap(results[0]);
       const statsData = self._unwrap(results[1]);
       const brief = self._unwrap(results[2]);
       const factoryCap = self._unwrap(results[3]);
       const pulse = self._unwrap(results[4]);
+      const topStats = self._unwrap(results[5]);
 
       // 如果 pulse 接口失败，使用默认值
       const pulseData = (pulse && !pulse.error) ? pulse : {
@@ -273,6 +284,17 @@ Page({
         riskOrdersQty: toNum(statsData && statsData.riskQuantity) || riskQty,
       };
       const totalWarn = menuData.delayedOrders + menuData.riskOrders;
+
+      // ============ 顶部简洁统计（无彩色） ============
+      const ts = topStats && typeof topStats === 'object' ? topStats : {};
+      const topStatsOut = {
+        todayScanCount: toNum(ts.todayScanCount) || toNum(ts.scanCount) || toNum(brief && brief.todayScanCount) || 0,
+        todayScanQty: toNum(ts.todayScanQty) || toNum(ts.scanQty) || toNum(brief && brief.todayScanQty) || 0,
+        activeOrders: menuData.inProduction,
+        totalFactories: 0, // 在 factoryList 计算后赋值
+        todayInboundCount: menuData.todayInbound,
+        todayOutboundCount: menuData.todayOutbound,
+      };
 
       const stageBuckets = STAGE_LIST.map(function(stage) {
         const bucketOrders = inProd.filter(function(o) { return detectStage(o) === stage.key; });
@@ -333,11 +355,15 @@ Page({
         });
       }
 
+      // ============ 顶部简洁统计（无彩色）============
+      topStatsOut.totalFactories = toNum(ts.totalFactories) || factoryList.length || 0;
+
       self.setData({
         menuData: menuData, menuExtra: menuExtra, totalWarn: totalWarn,
         stageBuckets: stageBuckets,
         factoryList: factoryList, factoryOnline: factoryOnline, factoryStagnant: factoryStagnant,
         factoryTotalOrders: factoryTotalOrders, factoryTotalQty: factoryTotalQty,
+        topStats: topStatsOut,
         loading: false,
       });
       // 存为实例属性，不走 setData（不参与 WXML）

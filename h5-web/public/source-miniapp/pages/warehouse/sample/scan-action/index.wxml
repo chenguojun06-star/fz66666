@@ -131,7 +131,7 @@
         <view class="info-row">
           <text class="info-label">状态</text>
           <text class="info-value">
-            <text class="status-tag tag-orange">未入库</text>
+            <text class="status-tag tag tag-warning">未入库</text>
           </text>
         </view>
         <view class="info-row">
@@ -155,8 +155,8 @@
             <view class="info-row">
               <text class="info-label">状态</text>
               <text class="info-value">
-                <text class="status-tag tag-green" wx:if="{{stockInfo.availableQuantity > 0}}">在库</text>
-                <text class="status-tag tag-orange" wx:else>全部借出</text>
+                <text class="status-tag tag tag-success" wx:if="{{stockInfo.availableQuantity > 0}}">在库</text>
+                <text class="status-tag tag tag-warning" wx:else>全部借出</text>
               </text>
             </view>
             <view class="info-row">

@@ -3,6 +3,7 @@ package com.fashion.supplychain.style.orchestration;
 import com.fashion.supplychain.common.CosService;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.intelligence.orchestration.IntelligenceInferenceOrchestrator;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -90,7 +91,7 @@ public class StyleDocOcrOrchestrator {
                     "3. 每个部位在各尺码下的具体数值（单位：cm厘米）\n" +
                     "4. 测量方法（如：平铺量、拉伸量等）\n" +
                     "5. 公差范围（如：±1cm等）\n\n" +
-                    "请严格按照以下JSON格式输出，不要输出其他内容：\n" +
+                    "请严格按照以下JSON格式输出，不要输出其他内容。必须保证是合法的 JSON，且 values 中的 key 与 sizes 数组中的尺码名称完全一致：\n" +
                     "{\n" +
                     "  \"sizes\": [\"尺码1\", \"尺码2\", \"尺码3\"],\n" +
                     "  \"parts\": [\n" +
@@ -104,9 +105,11 @@ public class StyleDocOcrOrchestrator {
                     "}\n\n" +
                     "注意：\n" +
                     "- values里的key必须与sizes数组中的尺码名称完全一致\n" +
-                    "- 只输出JSON，不要有任何解释性文字\n" +
-                    "- 如果某些部位没有数值，values里对应尺码可以写null\n" +
-                    "- 如果图片中有多行表头，只取第一个尺码行";
+                    "- 只输出JSON，不要有任何解释性文字、代码块标记或Markdown格式\n" +
+                    "- 如果某些部位没有数值，values里对应尺码请填null\n" +
+                    "- 数值必须是数字，不要包含 cm/厘米 等单位\n" +
+                    "- 如果图片中有多行表头，只取第一个尺码行\n" +
+                    "- 输出 JSON 后不要有任何尾随字符";
 
             String rawJson = inferenceOrchestrator.chatWithVision(imageUrl, prompt);
             if (rawJson == null || rawJson.trim().isEmpty()) {
@@ -115,8 +118,9 @@ public class StyleDocOcrOrchestrator {
 
             log.info("[SizeTableOcr] 尺寸表识别完成 tenantId={} 字符数={}", tenantId, rawJson.length());
 
-            Map<String, Object> result = new HashMap<>();
-            result.put("rawJson", rawJson.trim());
+            // ====== 鲁棒 JSON 解析：多重兜底，保证识别结果可被前端使用 ======
+            Map<String, Object> result = parseSizeTableResult(rawJson);
+
             result.put("imageUrl", imageUrl);
             return result;
         } catch (IllegalStateException e) {
@@ -124,6 +128,101 @@ public class StyleDocOcrOrchestrator {
         } catch (Exception e) {
             log.warn("[SizeTableOcr] AI识别异常 tenantId={}: {}", tenantId, e.getMessage());
             throw new IllegalStateException("AI识别失败，请重试：" + e.getMessage());
+        }
+    }
+
+    /** 多重兜底解析尺寸表识别结果。*/
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> parseSizeTableResult(String rawJson) {
+        Map<String, Object> fallback = new java.util.LinkedHashMap<>();
+        fallback.put("rawJson", rawJson);
+        fallback.put("sizes", new java.util.ArrayList<>());
+        fallback.put("parts", new java.util.ArrayList<>());
+
+        if (rawJson == null || rawJson.trim().isEmpty()) {
+            log.warn("[SizeTableOcr] AI返回为空文本");
+            return fallback;
+        }
+
+        // 清洗常见 Markdown / 前后缀
+        String text = rawJson.trim();
+        if (text.startsWith("```json")) text = text.substring(7);
+        if (text.startsWith("```")) text = text.substring(3);
+        if (text.endsWith("```")) text = text.substring(0, text.length() - 3);
+        text = text.trim();
+
+        // 尝试1: 直接解析
+        java.util.Map<String, Object> parsed = tryParseJsonObject(text);
+        if (parsed != null && isValidSizeTablePayload(parsed)) {
+            fallback.putAll(parsed);
+            fallback.put("rawJson", rawJson);
+            log.info("[SizeTableOcr] 直接解析成功 sizes={}, parts={}",
+                    java.util.Objects.toString(parsed.get("sizes")),
+                    ((java.util.List<?>) parsed.getOrDefault("parts", new java.util.ArrayList<>())).size());
+            return fallback;
+        }
+
+        // 尝试2: 从第一个 { 到最后一个 } 切片
+        int firstBrace = text.indexOf('{');
+        int lastBrace = text.lastIndexOf('}');
+        if (firstBrace >= 0 && lastBrace > firstBrace) {
+            String sliced = text.substring(firstBrace, lastBrace + 1);
+            java.util.Map<String, Object> parsed2 = tryParseJsonObject(sliced);
+            if (parsed2 != null && isValidSizeTablePayload(parsed2)) {
+                fallback.putAll(parsed2);
+                fallback.put("rawJson", rawJson);
+                log.info("[SizeTableOcr] 切片解析成功 sizes={}", parsed2.get("sizes"));
+                return fallback;
+            }
+        }
+
+        // 尝试3: 只保留 JSON 友好字符（压缩空白）
+        String stripped = text.replaceAll("(?s)\\s+", " ");
+        java.util.Map<String, Object> parsed3 = tryParseJsonObject(stripped);
+        if (parsed3 != null && isValidSizeTablePayload(parsed3)) {
+            fallback.putAll(parsed3);
+            fallback.put("rawJson", rawJson);
+            log.info("[SizeTableOcr] 压缩后解析成功 sizes={}", parsed3.get("sizes"));
+            return fallback;
+        }
+
+        log.warn("[SizeTableOcr] JSON解析失败，返回空结构供用户手动录入 rawPreview={}",
+                text.length() > 160 ? text.substring(0, 160) + "..." : text);
+        return fallback;
+    }
+
+    /** 校验解析结果是否是有效的尺寸表 payload（至少含 sizes 或 parts 之一）。*/
+    private boolean isValidSizeTablePayload(java.util.Map<String, Object> obj) {
+        if (obj == null) return false;
+        Object sizes = obj.get("sizes");
+        Object parts = obj.get("parts");
+        boolean hasSizes = sizes instanceof java.util.List && !((java.util.List<?>) sizes).isEmpty();
+        boolean hasParts = parts instanceof java.util.List && !((java.util.List<?>) parts).isEmpty();
+        return hasSizes || hasParts;
+    }
+
+    @SuppressWarnings("unchecked")
+    private java.util.Map<String, Object> tryParseJsonObject(String candidate) {
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            java.util.Map<String, Object> obj = mapper.readValue(candidate,
+                    new com.fasterxml.jackson.core.type.TypeReference<java.util.Map<String, Object>>() {});
+            if (obj == null) return null;
+            if (!obj.containsKey("sizes") && !obj.containsKey("parts")) {
+                // 可能被包了一层 data/result
+                for (String key : obj.keySet()) {
+                    Object inner = obj.get(key);
+                    if (inner instanceof java.util.Map) {
+                        java.util.Map<String, Object> innerMap = (java.util.Map<String, Object>) inner;
+                        if (innerMap.containsKey("sizes") || innerMap.containsKey("parts")) {
+                            return innerMap;
+                        }
+                    }
+                }
+            }
+            return obj;
+        } catch (Exception e) {
+            return null;
         }
     }
 

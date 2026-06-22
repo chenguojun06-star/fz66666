@@ -25,11 +25,7 @@
   </view>
 
   <!-- 空状态 -->
-  <view wx:elif="{{filteredGroups.length === 0}}" class="empty-state">
-    <text class="empty-icon">🛒</text>
-    <text class="empty-text">暂无采购任务</text>
-    <text class="empty-hint">当有物料需要采购时，任务将出现在这里</text>
-  </view>
+  <empty-state wx:elif="{{filteredGroups.length === 0}}" iconEmoji="📦" text="暂无数据" hint="下拉刷新试试" card="{{true}}"></empty-state>
 
   <!-- 任务列表 -->
   <block wx:else>
@@ -41,37 +37,39 @@
       bindtap="onGroupTap"
       hover-class="task-card-hover"
     >
-      <!-- 头部：图标 + 订单号 + 状态标签 -->
-      <view class="card-header">
-        <view class="card-header-left">
-          <view class="card-icon-circle card-icon-circle--orange">
-            <text class="iconfont icon-menu-cart"></text>
-          </view>
-          <view class="card-title-area">
-            <text class="order-no">{{item.orderNo}}</text>
-            <text class="style-no" wx:if="{{item.styleNo}}">{{item.styleNo}}</text>
+      <!-- 主区域：图片 + 规格信息右栏（与样衣开发风格一致） -->
+      <view class="card-main">
+        <view class="card-cover" catchtap="onCoverPreview" data-url="{{item.styleCoverUrl}}">
+          <image wx:if="{{item.styleCoverUrl}}" class="card-cover-img" src="{{item.styleCoverUrl}}" mode="aspectFill" lazy-load="{{true}}" />
+          <view wx:else class="card-cover-empty">
+            <text class="cover-abbr">📦</text>
           </view>
         </view>
-        <text class="status-tag tag tag-{{item.statusColor}}">{{item.statusText}}</text>
-      </view>
 
-      <!-- 信息行 -->
-      <view class="card-body">
-        <view class="info-row">
-          <text class="info-label">物料</text>
-          <text class="info-value bold">{{item.totalCount}} 项</text>
-        </view>
-        <view class="info-row">
-          <text class="info-label">到货率</text>
-          <text class="info-value {{item.arrivalRate >= 100 ? 'arrived' : ''}}">{{item.arrivalRate}}%</text>
-        </view>
-        <view wx:if="{{item.pendingCount > 0}}" class="info-row">
-          <text class="info-label">待采购</text>
-          <text class="info-value pending">{{item.pendingCount}} 项</text>
-        </view>
-        <view wx:if="{{item.receivedCount > 0}}" class="info-row">
-          <text class="info-label">采购中</text>
-          <text class="info-value">{{item.receivedCount}} 项</text>
+        <view class="card-info">
+          <!-- 顶部：订单号 + 状态标签 -->
+          <view class="info-top">
+            <text class="order-no">{{item.orderNo}}</text>
+            <text class="status-tag tag tag-{{item.statusColor}}">{{item.statusText}}</text>
+          </view>
+
+          <!-- 规格信息行：款号 + 物料 -->
+          <view class="info-spec-row">
+            <text class="info-spec-label" wx:if="{{item.styleNo}}">款号</text>
+            <text class="info-spec-value" wx:if="{{item.styleNo}}">{{item.styleNo}}</text>
+            <text class="info-spec-label">物料</text>
+            <text class="info-spec-value highlight">{{item.totalCount}} 项</text>
+          </view>
+
+          <!-- 规格信息行：到货率 + 待采购/采购中 -->
+          <view class="info-spec-row">
+            <text class="info-spec-label">到货率</text>
+            <text class="info-spec-value {{item.arrivalRate >= 100 ? 'success' : ''}}">{{item.arrivalRate}}%</text>
+            <text class="info-spec-label" wx:if="{{item.pendingCount > 0}}">待采购</text>
+            <text class="info-spec-value pending" wx:if="{{item.pendingCount > 0}}">{{item.pendingCount}} 项</text>
+            <text class="info-spec-label" wx:if="{{item.receivedCount > 0 && item.pendingCount === 0}}">采购中</text>
+            <text class="info-spec-value" wx:if="{{item.receivedCount > 0 && item.pendingCount === 0}}">{{item.receivedCount}} 项</text>
+          </view>
         </view>
       </view>
 

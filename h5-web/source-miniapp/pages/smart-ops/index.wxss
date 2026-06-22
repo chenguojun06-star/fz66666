@@ -10,6 +10,11 @@
 .alert-ok { background: var(--color-success-bg); color: #237804; }
 .alert-warn { background: var(--color-warning-bg); color: #ad4e00; }
 
+.plain-stats { display: flex; flex-wrap: wrap; background: var(--color-bg-card); padding: 14rpx 12rpx; border-bottom: 1px solid var(--color-border-light); }
+.plain-stat-item { flex: 1 1 33.33%; text-align: center; padding: 12rpx 8rpx; }
+.plain-stat-num { display: block; font-size: 30rpx; font-weight: 700; color: var(--color-text-primary); line-height: 1.2; }
+.plain-stat-label { display: block; font-size: 20rpx; color: var(--color-text-secondary); margin-top: 4rpx; }
+
 .warn { color: var(--color-danger) !important; }
 
 .menu-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8rpx; padding: 12rpx 0; }

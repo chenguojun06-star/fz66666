@@ -1,7 +1,7 @@
 <view class="page">
   <view class="header">
-    <view class="greeting-name">{{userName}}，{{greeting}}</view>
-    <view class="greeting-sub">{{orgName ? orgName + '，欢迎使用衣智链' : '欢迎使用衣智链'}}</view>
+    <view class="greeting-name" style="height: 41rpx; display: block; box-sizing: border-box">{{userName}}，{{greeting}}</view>
+    <view class="greeting-sub" style="height: 41rpx; display: block; box-sizing: border-box; position: relative; left: 0rpx; top: -8rpx">{{orgName ? orgName + '，欢迎使用衣智链' : '欢迎使用衣智链'}}</view>
   </view>
 
   <view class="weather-card">
@@ -20,7 +20,7 @@
   <!-- 我的待办（按职务聚合） -->
   <view wx:if="{{myTodos.length > 0}}" class="todo-section">
     <view class="todo-header">
-      <text class="todo-title">📋 我的待办</text>
+      <text class="todo-title">📋 任务列表</text>
     </view>
     <view class="todo-list">
       <view

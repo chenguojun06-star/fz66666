@@ -43,11 +43,17 @@
 
 // ==================== 导入模块 ====================
 const { safeNavigate, toast } = require('../../utils/uiHelper');
+const api = require('../../utils/api');
 
 // 导入 Mixins (生命周期 + 核心业务 + 数据配置)
 const scanLifecycleMixin = require('./mixins/scanLifecycleMixin');
 const scanCoreMixin = require('./mixins/scanCoreMixin');
 const { scanPageData } = require('./mixins/scanDataConfig');
+
+// ============ 扫码页默认数据（无 AI 相关字段）============
+function _buildScanData() {
+  return {};
+}
 
 // 导入 Handlers (所有委托调用)
 const QualityHandler = require('./handlers/QualityHandler');
@@ -64,8 +70,8 @@ Page({
   // 使用 Mixins (微信小程序 behaviors 机制)
   behaviors: [scanLifecycleMixin, scanCoreMixin],
 
-  // 数据对象 (从 scanDataConfig 导入)
-  data: scanPageData,
+  // 数据对象 (从 scanDataConfig 导入 + AI 扩展)
+  data: _buildScanData(),
 
   // 业务处理器实例
   scanHandler: null,

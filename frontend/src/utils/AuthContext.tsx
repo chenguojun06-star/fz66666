@@ -26,18 +26,35 @@ export interface UserInfo extends Record<string, unknown> {
 
 export type WorkspaceRole = 'boss' | 'management' | 'merchandiser';
 
+/**
+ * 判断是否为管理员/老板/超管
+ * 收紧判定条件：只根据明确的标识判断，不依赖字符串包含匹配
+ */
 export function isAdmin(user: UserInfo | null): boolean {
   if (!user) return false;
+  // 明确标识：租户主账号、平台超管
   if (user.isTenantOwner || user.isSuperAdmin) return true;
-  const role = (user.role || '').toLowerCase();
-  return role.includes('admin') || role.includes('管理员') || role.includes('管理') || user.roleId === '1';
+  // 精确匹配 roleId = '1'（系统管理员角色）
+  if (user.roleId === '1') return true;
+  // 精确匹配 role（如"管理员"、"老板"、"admin"全词，不接受包含匹配）
+  const role = (user.role || '').trim();
+  const normalizedRole = role.toLowerCase();
+  // 只允许精确匹配或前后有边界的包含（如" 管理员 "）
+  if (normalizedRole === 'admin' || normalizedRole === '管理员' || normalizedRole === '老板' || normalizedRole === 'supermanager') return true;
+  return false;
 }
 
+/**
+ * 判断是否为管理员/主管及以上级别
+ * 收紧判定条件：只根据明确的标识判断
+ */
 export function isSupervisorOrAbove(user: UserInfo | null): boolean {
   if (isAdmin(user)) return true;
   if (!user) return false;
-  const role = (user.role || '').toLowerCase();
-  return role.includes('主管') || role.includes('manager') || role.includes('supervisor') || role.includes('组长');
+  // 精确匹配主管相关角色
+  const role = (user.role || '').trim().toLowerCase();
+  if (role === '主管' || role === 'manager' || role === 'supervisor' || role === '组长' || role === '全能管理') return true;
+  return false;
 }
 
 export function canViewAllData(user: UserInfo | null): boolean {
@@ -53,23 +70,24 @@ const toPermissionRange = (value: unknown): UserInfo['permissionRange'] => {
 };
 
 export const isAdminUser = (user?: Partial<UserInfo> | null) => {
-  const role = String((user as any)?.role ?? (user as any)?.roleName ?? '').trim();
-  const username = String((user as any)?.username ?? '').trim();
-  if (username === 'admin') return true;
+  if (!user) return false;
+  // 明确标识
   if ((user as any)?.isTenantOwner === true) return true;
   if ((user as any)?.isSuperAdmin === true) return true;
-  if (role === '1') return true;
-  const lower = role.toLowerCase();
-  return lower.includes('admin') || role.includes('管理员') || role.includes('管理');
+  // 精确匹配 roleId
+  if ((user as any)?.roleId === '1') return true;
+  // 精确匹配 role
+  const role = String((user as any)?.role ?? (user as any)?.roleName ?? '').trim().toLowerCase();
+  if (role === 'admin' || role === '管理员' || role === '老板') return true;
+  return false;
 };
 
 export const isSupervisorOrAboveUser = (user?: Partial<UserInfo> | null) => {
   if (isAdminUser(user)) return true;
   if ((user as any)?.isSuperAdmin === true) return true;
-  const role = String((user as any)?.role ?? (user as any)?.roleName ?? '').trim();
-  if (!role) return false;
-  const lower = role.toLowerCase();
-  if (lower.includes('manager') || lower.includes('supervisor') || role.includes('主管') || role.includes('全能')) return true;
+  const role = String((user as any)?.role ?? (user as any)?.roleName ?? '').trim().toLowerCase();
+  if (role === '主管' || role === 'manager' || role === 'supervisor' || role === '组长') return true;
+  // 检查 permissions 是否包含 'all'
   const perms = Array.isArray((user as any)?.permissions)
     ? ((user as any).permissions as string[])
     : [];
@@ -77,13 +95,16 @@ export const isSupervisorOrAboveUser = (user?: Partial<UserInfo> | null) => {
 };
 
 export const getWorkspaceRole = (user?: Partial<UserInfo> | null): WorkspaceRole => {
-  const role = String((user as any)?.role ?? (user as any)?.roleName ?? '').trim();
-  if ((user as any)?.isTenantOwner === true || role.includes('老板') || role.includes('总经理')) {
+  if (!user) return 'merchandiser';
+  const role = String((user as any)?.role ?? (user as any)?.roleName ?? '').trim().toLowerCase();
+  // 精确匹配老板级别
+  if ((user as any)?.isTenantOwner === true || role === '老板' || role === '总经理') {
     return 'boss';
   }
   if ((user as any)?.isSuperAdmin === true) {
     return 'boss';
   }
+  // 精确匹配管理层
   if (isSupervisorOrAboveUser(user)) {
     return 'management';
   }
@@ -209,9 +230,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         id: String(u.id || ''),
         username: String(u.username || ''),
         name: String(u.name || ''),
-        role: String(u.roleName || u.role || 'admin'),
+        role: String(u.roleName || u.role || ''),
         roleId: u.roleId != null ? String(u.roleId) : undefined,
-        permissions: ['all'],
+        // 默认空权限，接口获取真实权限后再更新；避免接口失败时保留 ['all'] 导致权限绕过
+        permissions: [],
         permissionRange: toPermissionRange(u.permissionRange),
         phone: u.phone != null ? String(u.phone) : undefined,
         email: u.email != null ? String(u.email) : undefined,
@@ -439,9 +461,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               id: String(u.id || ''),
               username: String(u.username || ''),
               name: String(u.name || ''),
-              role: String(u.roleName || u.role || 'admin'),
+              role: String(u.roleName || u.role || ''),
               roleId: u.roleId != null ? String(u.roleId) : undefined,
-              permissions: Array.isArray(u.permissions) ? (u.permissions as string[]) : ['all'],
+              // 从接口获取权限，接口失败时默认为空
+              permissions: Array.isArray(u.permissions) ? (u.permissions as string[]) : [],
               permissionRange: toPermissionRange(u.permissionRange),
               phone: u.phone != null ? String(u.phone) : undefined,
               email: u.email != null ? String(u.email) : undefined,

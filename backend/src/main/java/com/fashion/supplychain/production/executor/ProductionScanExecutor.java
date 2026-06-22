@@ -262,7 +262,13 @@ public class ProductionScanExecutor {
         String displayProcessName = ctx.processCode != null ? ctx.processCode : (ctx.progressStage != null ? ctx.progressStage : "");
         result.put("message", "扫码成功" + (displayProcessName.isEmpty() ? "" : " · " + displayProcessName) + (bundleNoStr.isEmpty() ? "" : " · 菲号" + bundleNoStr));
         result.put("scanRecord", sr);
-        result.put("orderInfo", buildOrderInfo(ctx.order));
+        Map<String, Object> orderInfo = executorSupport.buildOrderInfo(ctx.order, ctx.bundle);
+        result.put("orderInfo", orderInfo);
+        // ══════ 关键信息同步到顶层，便于扫码页面直接展示 ══════
+        executorSupport.flattenOrderInfoToTop(result, orderInfo);
+        executorSupport.flattenBundleToTop(result, ctx.bundle);
+        result.put("processName", displayProcessName);
+        result.put("progressStage", ctx.progressStage);
         result.put("childProcessName", ctx.childProcessName);
         result.put("parentProgressStage", ctx.progressStage);
 
@@ -550,29 +556,8 @@ public class ProductionScanExecutor {
     }
 
     private Map<String, Object> buildOrderInfo(ProductionOrder order) {
-        Map<String, Object> info = new HashMap<>();
-        info.put("orderNo", order.getOrderNo()); info.put("styleNo", order.getStyleNo());
-        if (hasText(order.getStyleId())) {
-            try {
-                com.fashion.supplychain.style.entity.StyleInfo si = styleInfoService.getById(order.getStyleId());
-                if (si != null) {
-                    if (hasText(si.getDescription())) info.put("description", si.getDescription());
-                    if (hasText(si.getCover())) {
-                        info.put("coverImage", si.getCover());
-                        info.put("styleImage", si.getCover());
-                    }
-                }
-            } catch (Exception e) { log.warn("buildOrderInfo查询款式信息失败: styleId={}", order.getStyleId(), e); }
-            try {
-                Long styleIdLong = null;
-                try { styleIdLong = Long.valueOf(order.getStyleId()); } catch (NumberFormatException e) { log.debug("数字解析失败: {}", e.getMessage()); }
-                if (styleIdLong != null) {
-                    java.util.List<com.fashion.supplychain.style.entity.SecondaryProcess> processes = secondaryProcessService.listByStyleId(styleIdLong);
-                    if (processes != null && !processes.isEmpty()) info.put("secondaryProcesses", processes);
-                }
-            } catch (Exception e) { log.warn("buildOrderInfo查询二次工艺失败: styleId={}", order.getStyleId(), e); }
-        }
-        return info;
+        // 统一复用 ScanExecutorSupport 的公共逻辑（含 WorkerHintComposer 工艺关键词抽取）
+        return executorSupport.buildOrderInfo(order);
     }
 
     private boolean hasText(String str) {

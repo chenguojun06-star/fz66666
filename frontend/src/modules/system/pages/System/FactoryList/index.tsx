@@ -10,7 +10,8 @@ import { Factory as FactoryType, FactoryQueryParams, OrganizationUnit, User } fr
 import api, { type ApiResult } from '@/utils/api';
 import { useModal } from '@/hooks';
 import { useDebouncedValue } from '@/hooks/usePerformance';
-import { App, Button, Card, Form, Tabs } from 'antd';
+import { App, Avatar, Button, Card, Col, Form, Row, Space, Tabs, Tag } from 'antd';
+import { ApartmentOutlined, PlusOutlined, ShopOutlined, TeamOutlined, UserOutlined } from '@ant-design/icons';
 import { useViewport } from '@/utils/useViewport';
 import { useLocation, useNavigate } from 'react-router-dom';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
@@ -107,6 +108,47 @@ const FactoryList: React.FC = () => {
   }, [scorecardLoaded, scorecardLoading]);
 
   const modalInitialHeight = typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800;
+
+  // ===== 工厂/供应商统计（用于顶部统计卡片）=====
+  const factoryStats = useMemo(() => {
+    let materialCount = 0;
+    let outsourceCount = 0;
+    let internalCount = 0;
+    let externalCount = 0;
+    let activeCount = 0;
+    let inactiveCount = 0;
+    let approvedCount = 0;
+    let pendingCount = 0;
+
+    factoryList.forEach((f) => {
+      const supplierType = String(f.supplierType || '').toUpperCase();
+      const factoryType = String(f.factoryType || '').toUpperCase();
+      const status = String(f.status || 'active');
+      const admissionStatus = String((f as any).admissionStatus || '').toLowerCase();
+
+      if (supplierType === 'MATERIAL') materialCount++;
+      if (supplierType === 'OUTSOURCE') outsourceCount++;
+      if (factoryType === 'INTERNAL') internalCount++;
+      if (factoryType === 'EXTERNAL') externalCount++;
+
+      if (status === 'active') activeCount++;
+      else inactiveCount++;
+
+      if (admissionStatus === 'approved') approvedCount++;
+      if (admissionStatus === 'pending' || admissionStatus === '') pendingCount++;
+    });
+
+    return {
+      materialCount,
+      outsourceCount,
+      internalCount,
+      externalCount,
+      activeCount,
+      inactiveCount,
+      approvedCount,
+      pendingCount,
+    };
+  }, [factoryList]);
 
   // ===== 数据获取 =====
   const fetchFactories = useCallback(async () => {
@@ -342,12 +384,128 @@ const FactoryList: React.FC = () => {
   return (
     <>
       <PageLayout
-        title={managementTab === 'customer' ? '客户管理' : '供应商管理'}
-        headerContent={showSmartErrorNotice && smartError ? (
-          <Card style={{ marginBottom: 12 }}>
-            <SmartErrorNotice error={smartError} onFix={() => { void fetchFactories(); }} />
-          </Card>
-        ) : null}
+        title={
+          <span style={{ display: 'flex', alignItems: 'center' }}>
+            <ShopOutlined style={{ marginRight: 8, fontSize: 22, color: 'var(--primary-color, var(--color-primary))' }} />
+            <span style={{ fontSize: 22, fontWeight: 700 }}>
+              {managementTab === 'customer' ? '客户管理' : '供应商管理'}
+            </span>
+          </span>
+        }
+        headerContent={
+          <>
+            {showSmartErrorNotice && smartError ? (
+              <Card style={{ marginBottom: 12 }}>
+                <SmartErrorNotice error={smartError} onFix={() => { void fetchFactories(); }} />
+              </Card>
+            ) : null}
+
+            {/* ===== 供应商统计卡片 ===== */}
+            {managementTab === 'supplier' && (
+              <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
+                <Col xs={12} sm={8} md={6} lg={4}>
+                  <Card size="small" style={{ borderRadius: 8, border: '1px solid var(--color-border-antd, #f0f0f0)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <Avatar size={40} icon={<TeamOutlined />} style={{ backgroundColor: 'var(--primary-color, #1890ff)', fontSize: 20 }} />
+                      <div>
+                        <div style={{ fontSize: 12, color: 'var(--color-text-secondary, #666)' }}>
+                          <span style={{ display: 'block' }}>供应商总数</span>
+                        </div>
+                        <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--color-text-primary, #000)', marginTop: 2 }}>
+                          {total}
+                        </div>
+                      </div>
+                    </div>
+                  </Card>
+                </Col>
+                <Col xs={12} sm={8} md={6} lg={4}>
+                  <Card size="small" style={{ borderRadius: 8, border: '1px solid var(--color-border-antd, #f0f0f0)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <Avatar size={40} icon={<ShopOutlined />} style={{ backgroundColor: 'var(--color-info, #1890ff)', fontSize: 20 }} />
+                      <div>
+                        <div style={{ fontSize: 12, color: 'var(--color-text-secondary, #666)' }}>
+                          <span style={{ display: 'block' }}>面辅料供应商</span>
+                        </div>
+                        <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--color-info, #1890ff)', marginTop: 2 }}>
+                          {factoryStats.materialCount}
+                        </div>
+                      </div>
+                    </div>
+                  </Card>
+                </Col>
+                <Col xs={12} sm={8} md={6} lg={4}>
+                  <Card size="small" style={{ borderRadius: 8, border: '1px solid var(--color-border-antd, #f0f0f0)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <Avatar size={40} icon={<ApartmentOutlined />} style={{ backgroundColor: 'var(--color-warning, #fa8c16)', fontSize: 20 }} />
+                      <div>
+                        <div style={{ fontSize: 12, color: 'var(--color-text-secondary, #666)' }}>
+                          <span style={{ display: 'block' }}>外发工厂</span>
+                        </div>
+                        <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--color-warning, #fa8c16)', marginTop: 2 }}>
+                          {factoryStats.outsourceCount}
+                        </div>
+                      </div>
+                    </div>
+                  </Card>
+                </Col>
+                <Col xs={12} sm={8} md={6} lg={4}>
+                  <Card size="small" style={{ borderRadius: 8, border: '1px solid var(--color-border-antd, #f0f0f0)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <Avatar size={40} icon={<UserOutlined />} style={{ backgroundColor: 'var(--color-success, #52c41a)', fontSize: 20 }} />
+                      <div>
+                        <div style={{ fontSize: 12, color: 'var(--color-text-secondary, #666)' }}>
+                          <span style={{ display: 'block' }}>启用中</span>
+                        </div>
+                        <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--color-success, #52c41a)', marginTop: 2 }}>
+                          {factoryStats.activeCount}
+                        </div>
+                      </div>
+                    </div>
+                  </Card>
+                </Col>
+                <Col xs={12} sm={8} md={6} lg={4}>
+                  <Card size="small" style={{ borderRadius: 8, border: '1px solid var(--color-border-antd, #f0f0f0)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <Avatar size={40} icon={<ApartmentOutlined />} style={{ backgroundColor: 'var(--color-success, #52c41a)', fontSize: 20 }} />
+                      <div>
+                        <div style={{ fontSize: 12, color: 'var(--color-text-secondary, #666)' }}>
+                          <span style={{ display: 'block' }}>已准入</span>
+                        </div>
+                        <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--color-success, #52c41a)', marginTop: 2 }}>
+                          {factoryStats.approvedCount}
+                        </div>
+                      </div>
+                    </div>
+                  </Card>
+                </Col>
+                <Col xs={12} sm={8} md={6} lg={4}>
+                  <Card size="small" style={{ borderRadius: 8, border: '1px solid var(--color-border-antd, #f0f0f0)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <Avatar size={40} icon={<TeamOutlined />} style={{ backgroundColor: factoryStats.pendingCount > 0 ? 'var(--color-warning, #fa8c16)' : 'var(--color-text-quaternary, #d9d9d9)', fontSize: 20 }} />
+                      <div>
+                        <div style={{ fontSize: 12, color: 'var(--color-text-secondary, #666)' }}>
+                          <span style={{ display: 'block' }}>待审核</span>
+                        </div>
+                        <div style={{ fontSize: 20, fontWeight: 700, color: factoryStats.pendingCount > 0 ? 'var(--color-warning, #fa8c16)' : 'var(--color-text-quaternary, #d9d9d9)', marginTop: 2 }}>
+                          {factoryStats.pendingCount}
+                        </div>
+                      </div>
+                    </div>
+                  </Card>
+                </Col>
+              </Row>
+            )}
+          </>
+        }
+        titleExtra={
+          managementTab === 'supplier' && (
+            <Space>
+              <Button type="primary" icon={<PlusOutlined />} onClick={() => openDialog('create')}>
+                新增供应商
+              </Button>
+            </Space>
+          )
+        }
       >
         <Tabs
           activeKey={managementTab}

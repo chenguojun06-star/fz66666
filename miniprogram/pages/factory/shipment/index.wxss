@@ -153,6 +153,109 @@
   height: 24px;
 }
 
+/* ---- 状态过滤条（生产中 / 已完成） ---- */
+.filter-scroll {
+  white-space: nowrap;
+  padding: 4rpx 0 12rpx;
+}
+.filter-pill {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 14rpx 28rpx;
+  border-radius: 16rpx;
+  background: var(--color-bg-card);
+  margin-right: 16rpx;
+  min-width: 104rpx;
+}
+.filter-pill--on {
+  background: var(--color-primary);
+}
+.filter-pill--done.filter-pill--on {
+  background: var(--color-success);
+}
+.filter-num {
+  font-size: 34rpx;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  line-height: 1.1;
+}
+.filter-text {
+  font-size: 22rpx;
+  color: var(--color-text-secondary);
+  margin-top: 4rpx;
+}
+.filter-pill--on .filter-num,
+.filter-pill--on .filter-text {
+  color: #fff;
+}
+
+/* ---- smart-hints 小标签（已延期 / 临近交期） ---- */
+.smart-hints {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12rpx;
+  padding: 12rpx 0 8rpx;
+}
+.smart-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 6rpx;
+  padding: 6rpx 16rpx;
+  border-radius: var(--radius-lg);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  border: 1rpx solid;
+  background: var(--color-bg-card);
+}
+.smart-hint-num {
+  font-weight: 700;
+}
+.smart-hint--danger {
+  background: var(--color-error-bg);
+  color: var(--color-error);
+  border-color: var(--color-error-border);
+}
+.smart-hint--danger .smart-hint-num {
+  color: var(--color-error);
+}
+.smart-hint--warning {
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+  border-color: var(--color-warning-border);
+}
+.smart-hint--warning .smart-hint-num {
+  color: var(--color-warning);
+}
+.smart-hint--active.smart-hint--danger {
+  background: var(--color-error);
+  color: #fff;
+  border-color: var(--color-error);
+}
+.smart-hint--active.smart-hint--danger .smart-hint-num,
+.smart-hint--active.smart-hint--danger .smart-hint-lbl {
+  color: #fff;
+}
+.smart-hint--active.smart-hint--warning {
+  background: var(--color-warning);
+  color: #fff;
+  border-color: var(--color-warning);
+}
+.smart-hint--active.smart-hint--warning .smart-hint-num,
+.smart-hint--active.smart-hint--warning .smart-hint-lbl {
+  color: #fff;
+}
+.smart-hint--zero {
+  opacity: 0.55;
+}
+.smart-hint-clear {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+  padding: 6rpx 12rpx;
+  border-radius: var(--radius-lg);
+}
+
 .tab-content { padding: 0; }
 .order-list { padding: 0; }
 

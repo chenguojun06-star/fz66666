@@ -5,6 +5,7 @@
 const api = require('../../../../utils/api');
 const { getAuthedImageUrl } = require('../../../../utils/fileUrl');
 const { ok } = require('../../../../utils/api-modules/helpers');
+const { toast } = require('../../../../utils/uiHelper');
 
 const SAMPLE_TYPE_MAP = {
   'development': '开发样',
@@ -608,7 +609,7 @@ Page({
       return;
     }
     
-    wx.showToast({ title: '无法识别的二维码', icon: 'none' });
+    toast.error('无法识别的二维码');
   },
 
   onBackToList() {

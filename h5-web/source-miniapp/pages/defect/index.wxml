@@ -53,7 +53,7 @@
           <view class="card-info">
             <view class="card-row-top">
               <text class="card-order-no">{{item.orderNo || '-'}}</text>
-              <text class="defect-status-tag {{item.repairStatus === 'pending' || item.repairStatus === 'pending_repair' ? 'tag-error' : item.repairStatus === 'repairing' ? 'tag-warning' : item.repairStatus === 'repair_done' ? 'tag-info' : 'tag-success'}}">{{item.repairStatusText || '-'}}</text>
+              <text class="defect-status-tag {{item.repairStatus === 'pending' || item.repairStatus === 'pending_repair' ? 'tag-error' : item.repairStatus === 'repairing' ? 'tag-processing' : item.repairStatus === 'repair_done' ? 'tag-warning' : 'tag-default'}}">{{item.repairStatusText || '-'}}</text>
             </view>
             <view class="card-row">
               <text class="card-label">款号</text>

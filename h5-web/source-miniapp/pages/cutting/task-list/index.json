@@ -1,5 +1,7 @@
 {
   "navigationBarTitleText": "裁剪任务",
+  "enablePullDownRefresh": true,
+  "backgroundColor": "#ededed",
   "usingComponents": {
     "empty-state": "/components/empty-state/empty-state"
   }

@@ -17,7 +17,6 @@ import {
 } from './components/IntelligenceWidgets';
 import { OrderScrollPanel, AutoScrollBox, BottleneckRow } from './components/OrderScrollPanel';
 import { useCockpit } from './hooks/useCockpit';
-import GlobalSearchModal from './components/GlobalSearchModal';
 import KpiCardRow from './components/KpiCardRow';
 import ProductionOrdersCard from './components/ProductionOrdersCard';
 import FactoryOverviewCard from './components/FactoryOverviewCard';
@@ -43,7 +42,6 @@ const IntelligenceCenter: React.FC = () => {
   const [now, setNow]               = useState(new Date());
   const { isSuperAdmin } = useUser();
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [showSearch, setShowSearch] = useState(false);
   const { isLowEnd } = useDeviceCapability();
 
   const { repairing, repairResult, handleRepair } = useRepairAction(reload);
@@ -62,17 +60,6 @@ const IntelligenceCenter: React.FC = () => {
       setSearchParams({}, { replace: true });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    const handleSearchKey = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault();
-        setShowSearch(true);
-      }
-    };
-    window.addEventListener('keydown', handleSearchKey);
-    return () => window.removeEventListener('keydown', handleSearchKey);
   }, []);
 
   useEffect(() => {
@@ -176,7 +163,11 @@ const IntelligenceCenter: React.FC = () => {
               </button>
             </Tooltip>
             <Tooltip title="⌘K 全局搜索">
-              <button className="cockpit-fs-btn" onClick={() => setShowSearch(true)} style={{ marginRight: 4 }}>
+              <button
+                className="cockpit-fs-btn"
+                onClick={() => window.dispatchEvent(new CustomEvent('command-palette:open'))}
+                style={{ marginRight: 4 }}
+              >
                 <SearchOutlined />
               </button>
             </Tooltip>
@@ -546,9 +537,6 @@ const IntelligenceCenter: React.FC = () => {
         )}
 
       </div>
-
-      <GlobalSearchModal open={showSearch} onClose={() => setShowSearch(false)} />
-
     </>
   );
 };

@@ -13,6 +13,7 @@ const ScanHandler = require('../handlers/ScanHandler');
 const api = require('../../../utils/api');
 // 修复: 解构导入 eventBus 实例（而非模块对象）
 const { eventBus, Events } = require('../../../utils/eventBus');
+const { toast } = require('../../../utils/uiHelper');
 const ScanOfflineQueue = require('../services/ScanOfflineQueue');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 
@@ -283,11 +284,11 @@ const scanLifecycleMixin = Behavior({
         });
         this.setData({ offlineSyncing: false, offlinePendingCount: ScanOfflineQueue.count() });
         if (submitted > 0) {
-          wx.showToast({ title: '已同步 ' + submitted + ' 条扫码', icon: 'none', duration: 2200 });
+          toast.success('已同步 ' + submitted + ' 条扫码');
           setTimeout(() => { if (this && this.data) this.loadMyPanel(true); }, 500);
         }
         if (failed > 0 && ScanOfflineQueue.count() > 0) {
-          wx.showToast({ title: failed + ' 条暂时失败，稍后自动重试', icon: 'none', duration: 2500 });
+          toast.error(failed + ' 条暂时失败，稍后自动重试');
         }
       } catch (e) {
         console.warn('[lifecycle] _flushOfflineQueue 异常:', e);

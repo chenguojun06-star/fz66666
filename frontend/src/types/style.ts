@@ -8,6 +8,8 @@ export interface StyleInfo extends Record<string, unknown> {
   styleName: string;
   category: string;
   price: number;
+  tagPrice?: number;
+  salesPrice?: number;
   cycle: number;
   description?: string;
   year?: number;

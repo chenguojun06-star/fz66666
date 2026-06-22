@@ -159,8 +159,10 @@ function prompt({
  */
 let navigating = false;
 let navigateTimer = null;
-const NAVIGATE_TIMEOUT = 5000; // 导航超时时间(ms)，从3秒增加到5秒
-const NAVIGATE_UNLOCK_DELAY = 1500; // 导航完成后解锁延迟(ms)
+let navigateStartTime = 0;
+const NAVIGATE_TIMEOUT = 5000; // 导航超时时间(ms)：5秒后自动释放锁（SDK崩溃时锁无法正常释放）
+const NAVIGATE_MAX_LOCK = 8000; // 导航锁最大持有时间：8秒兜底释放（防止SDK完全冻结）
+const NAVIGATE_UNLOCK_DELAY = 300; // 导航完成后解锁延迟(ms)，减少不必要的等待
 
 // tabBar 页面路径集合（与 app.json tabBar.list 保持一致）
 const TAB_BAR_PAGES = new Set([
@@ -206,10 +208,20 @@ function safeNavigate(options, method = 'navigateTo') {
   }
 
   navigating = true;
+  navigateStartTime = Date.now();
 
   if (navigateTimer) {
     clearTimeout(navigateTimer);
+    navigateTimer = null;
   }
+  // 兜底：即使所有定时器都失效，8秒后强制释放锁
+  navigateTimer = setTimeout(() => {
+    if (navigating) {
+      console.warn('[SafeNavigate] 导航锁兜底释放(' + NAVIGATE_MAX_LOCK + 'ms)：', options.url);
+      navigating = false;
+      navigateStartTime = 0;
+    }
+  }, NAVIGATE_MAX_LOCK);
 
   const navigator = {
     navigateTo: wx.navigateTo,
@@ -219,35 +231,65 @@ function safeNavigate(options, method = 'navigateTo') {
   }[method] || wx.navigateTo;
 
   let timeoutTimer = null;
+  let finished = false;
 
-  return new Promise((resolve, reject) => {
-    // 设置超时保护
+  function unlock() {
+    if (finished) return;
+    finished = true;
+    if (timeoutTimer) { try { clearTimeout(timeoutTimer); } catch (_e) {} timeoutTimer = null; }
+    if (navigateTimer) { try { clearTimeout(navigateTimer); } catch (_e) {} navigateTimer = null; }
+    try { navigating = false; } catch (_e) {}
+    navigateStartTime = 0;
+  }
+
+  function safeFallback() {
+    if (finished) return;
+    try {
+      wx.redirectTo({
+        url: options.url,
+        success: () => { unlock(); },
+        fail: () => {
+          if (finished) return;
+          try {
+            wx.reLaunch({ url: '/pages/home/index', complete: () => { unlock(); } });
+          } catch (_e) { unlock(); }
+        },
+      });
+    } catch (_e) {
+      unlock();
+    }
+  }
+
+  return new Promise((resolve) => {
+    // 超时保护：5秒后释放锁，让后续导航可以继续
     timeoutTimer = setTimeout(() => {
-      navigating = false;
-      navigateTimer = null;
-      const err = { errMsg: 'navigateTo:fail timeout' };
-      console.error('[SafeNavigate] 导航超时:', options.url, err);
-      reject(err);
+      if (finished) return;
+      console.warn('[SafeNavigate] 导航超时(' + NAVIGATE_TIMEOUT + 'ms)，页面仍在加载中:', options.url);
+      unlock();
+      resolve();
     }, NAVIGATE_TIMEOUT);
 
-    navigator({
-      ...options,
-      success: (res) => {
-        if (timeoutTimer) clearTimeout(timeoutTimer);
-        navigateTimer = setTimeout(() => {
-          navigating = false;
-          navigateTimer = null;
-        }, NAVIGATE_UNLOCK_DELAY);
-        resolve(res);
-      },
-      fail: (err) => {
-        if (timeoutTimer) clearTimeout(timeoutTimer);
-        navigating = false;
-        navigateTimer = null;
-        console.error('[SafeNavigate] 导航失败:', err);
-        reject(err);
-      },
-    });
+    try {
+      navigator({
+        ...options,
+        success: () => {
+          if (finished) return;
+          if (timeoutTimer) { try { clearTimeout(timeoutTimer); } catch (_e) {} timeoutTimer = null; }
+          navigateTimer = setTimeout(() => { unlock(); }, NAVIGATE_UNLOCK_DELAY);
+          resolve();
+        },
+        fail: (err) => {
+          if (finished) return;
+          console.warn('[SafeNavigate] 导航失败，降级为 redirectTo:', err && err.errMsg);
+          safeFallback();
+          resolve();
+        },
+      });
+    } catch (e) {
+      console.warn('[SafeNavigate] 导航API调用异常:', e);
+      unlock();
+      resolve();
+    }
   });
 }
 

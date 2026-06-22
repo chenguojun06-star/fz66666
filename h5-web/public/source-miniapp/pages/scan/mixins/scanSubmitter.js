@@ -48,6 +48,10 @@ module.exports = {
       if (!codeStr) return;
       const self = this;
       if (isRecentDuplicate(codeStr)) { toast.info('扫码太快啦'); return; }
+      // ============ AI 预检查（可选，不阻塞主流程）============
+      if (typeof self._runScanPrecheck === 'function') {
+        try { self._runScanPrecheck(codeStr); } catch (_e) { /* ignore */ }
+      }
       this.setData({ loading: true });
       if (/^MR\d{13}$/.test(codeStr)) {
         this.setData({ loading: false });
@@ -136,7 +140,7 @@ module.exports = {
         return;
       }
       if (e.isOfflineQueued) {
-        wx.showToast({ title: '📶 已离线缓存，联网后自动同步', icon: 'none', duration: 2500 });
+        toast.warn('📶 已离线缓存，联网后自动同步');
         this.setData({
           lastResult: { success: false, queued: true, message: '📶 无网络，已离线缓存，联网后自动上传', displayTime: new Date().toLocaleTimeString(), statusText: '已缓存', statusClass: 'queued', errorAction: null },
           offlinePendingCount: e.offlineCount || 0,

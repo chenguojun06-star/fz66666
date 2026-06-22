@@ -4,6 +4,7 @@
  */
 const api = require('../../../utils/api');
 const { eventBus, Events } = require('../../../utils/eventBus');
+const { toast } = require('../../../utils/uiHelper');
 
 function _normalizeQualityName(processName) {
   if (!processName) return processName;
@@ -356,7 +357,7 @@ Page({
         this.setData({ loading: false });
         return;
       }
-      wx.showToast({ title: `加载失败: ${(e && e.message) || '请稍后重试'}`, icon: 'none' });
+      toast.error('加载失败: ' + ((e && e.message) || '请稍后重试'));
       this.setData({ loading: false });
     }
   },

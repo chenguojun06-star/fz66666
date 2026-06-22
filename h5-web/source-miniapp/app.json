@@ -94,7 +94,7 @@
     {
         "root": "pages/dashboard",
         "name": "pkg-dashboard",
-        "pages": ["index", "process-edit/index"]
+        "pages": ["index", "process-edit/index", "order-detail/index"]
       },
     {
       "root": "pages/smart-ops",

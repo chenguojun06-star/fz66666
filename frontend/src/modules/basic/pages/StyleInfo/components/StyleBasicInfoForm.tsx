@@ -267,7 +267,7 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
 
       {/* 右侧：表单字段（按业务流程自上而下分区） */}
       <div style={{ minWidth: 0 }}>
-        {/* 区1：基础信息（款号 / SKC / 款名 / 品类 / 季节） */}
+        {/* 区1：基础信息（款号 / SKC / 款名 / 品类 / 季节 / 销售渠道） */}
         <div
           style={{
             marginBottom: 20,
@@ -279,12 +279,12 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
         >
           {renderSectionTitle('基础信息 · 款号 / SKC / 款名', true)}
           <Row gutter={[16, 8]}>
-            <Col xs={24} md={7}>
+            <Col xs={24} md={8}>
               <Form.Item name="styleNo" label="款号" rules={[{ required: true, message: '请输入款号' }]} style={{ marginBottom: 8 }}>
                 <Input id="styleNo" placeholder="请输入款号" disabled={editLocked || Boolean(currentStyle?.id)} />
               </Form.Item>
             </Col>
-            <Col xs={24} md={7}>
+            <Col xs={24} md={8}>
               <Form.Item name="skc" label="SKC" style={{ marginBottom: 8 }}>
                 {currentStyle?.skc && !isNewPage ? (
                   <span
@@ -298,7 +298,7 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
                 )}
               </Form.Item>
             </Col>
-            <Col xs={24} md={10}>
+            <Col xs={24} md={8}>
               <Form.Item name="styleName" label="款名" rules={[{ required: true, message: '请输入款名' }]} style={{ marginBottom: 8 }}>
                 <DictAutoComplete dictType="style_name" placeholder="请输入或选择" disabled={editLocked} style={{ width: '100%' }} id="styleName" />
               </Form.Item>
@@ -355,7 +355,7 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
           </Row>
         </div>
 
-        {/* 区2：客户与团队（客户 / 跟单 / 设计师） */}
+        {/* 区2：客户跟进信息（客户 / 跟单员 / 设计师 / 打板价 / 吊牌价 / 销售价） */}
         <div
           style={{
             marginBottom: 20,
@@ -365,9 +365,9 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
             borderRadius: 8,
           }}
         >
-          {renderSectionTitle('客户与团队信息')}
+          {renderSectionTitle('客户跟进信息')}
           <Row gutter={[16, 8]}>
-            <Col xs={24} md={7}>
+            <Col xs={24} md={8}>
               <Form.Item name="customerId" noStyle hidden>
                 <Input id="customerId" />
               </Form.Item>
@@ -386,25 +386,35 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
                 />
               </Form.Item>
             </Col>
-            <Col xs={24} md={7}>
+            <Col xs={24} md={8}>
               <Form.Item name="orderType" label="跟单员" style={{ marginBottom: 8 }}>
                 <Input id="orderType" placeholder="请输入跟单员" disabled={isFieldLocked(currentStyle?.orderType)} />
               </Form.Item>
             </Col>
-            <Col xs={24} md={10}>
+            <Col xs={24} md={8}>
               <Form.Item name="sampleNo" label="设计师" style={{ marginBottom: 8 }}>
                 <Input id="sampleNo" placeholder="请输入设计师" disabled={editLocked} />
               </Form.Item>
             </Col>
-            <Col xs={24} md={7}>
+            <Col xs={24} md={8}>
               <Form.Item name="price" label="打板价" style={{ marginBottom: 8 }}>
                 <InputNumber id="price" style={{ width: '100%' }} min={0} prefix="¥" precision={2} disabled />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={8}>
+              <Form.Item name="tagPrice" label="吊牌价" style={{ marginBottom: 8 }}>
+                <InputNumber id="tagPrice" style={{ width: '100%' }} min={0} prefix="¥" precision={2} disabled={editLocked} placeholder="选填" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={8}>
+              <Form.Item name="salesPrice" label="销售价" style={{ marginBottom: 8 }}>
+                <InputNumber id="salesPrice" style={{ width: '100%' }} min={0} prefix="¥" precision={2} disabled={editLocked} placeholder="选填" />
               </Form.Item>
             </Col>
           </Row>
         </div>
 
-        {/* 区3：版次信息（板类 / 纸样师 / 纸样号 / 车板师） */}
+        {/* 区3：版次信息（板类 / 纸样师 / 车板师） */}
         <div
           style={{
             marginBottom: 20,
@@ -416,22 +426,17 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
         >
           {renderSectionTitle('版次与版型信息')}
           <Row gutter={[16, 8]}>
-            <Col xs={24} md={7}>
+            <Col xs={24} md={8}>
               <Form.Item name="plateType" label="板类" style={{ marginBottom: 8 }}>
                 <DictAutoComplete dictType="plate_type" placeholder="请选择板类" disabled={isFieldLocked(currentStyle?.plateType)} style={{ width: '100%' }} id="plateType" />
               </Form.Item>
             </Col>
-            <Col xs={24} md={7}>
+            <Col xs={24} md={8}>
               <Form.Item name="sampleSupplier" label="纸样师" style={{ marginBottom: 8 }}>
                 <Input id="sampleSupplier" placeholder="请输入纸样师" disabled={isFieldLocked(currentStyle?.sampleSupplier)} />
               </Form.Item>
             </Col>
-            <Col xs={24} md={10}>
-              <Form.Item name="patternNo" label="纸样号" style={{ marginBottom: 8 }}>
-                <Input id="patternNo" placeholder="请输入纸样号" disabled={isFieldLocked(currentStyle?.patternNo)} />
-              </Form.Item>
-            </Col>
-            <Col xs={24} md={7}>
+            <Col xs={24} md={8}>
               <Form.Item name="plateWorker" label="车板师" style={{ marginBottom: 8 }}>
                 <Input id="plateWorker" placeholder="请输入车板师" disabled={isFieldLocked(currentStyle?.plateWorker)} />
               </Form.Item>

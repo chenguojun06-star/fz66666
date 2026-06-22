@@ -20,7 +20,7 @@
   <!-- 我的待办（按职务聚合） -->
   <view wx:if="{{myTodos.length > 0}}" class="todo-section">
     <view class="todo-header">
-      <text class="todo-title">📋 我的待办</text>
+      <text class="todo-title">📋 任务列表</text>
     </view>
     <view class="todo-list">
       <view

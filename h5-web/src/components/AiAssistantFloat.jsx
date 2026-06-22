@@ -7,26 +7,29 @@ import { isManagerLevel } from '@/utils/permission';
 import { toast } from '@/utils/uiHelper';
 import useVoiceInput from '@/hooks/useVoiceInput';
 import useAiChatStream from '@/hooks/useAiChatStream';
-import useCameraCapture from '@/hooks/useCameraCapture';
 import Icon from '@/components/Icon';
 import { parseAiResponse } from '@/utils/chatParser';
 import StepWizardCard from '@/components/StepWizardCard';
 
+// --- AI 升级 开始 ---
 const QUICK_PROMPTS_WORKER = [
   { label: '我的任务', text: '我今天负责的生产任务是什么？' },
   { label: '扫码记录', text: '帮我查一下我最近的扫码记录' },
   { label: '订单进度', text: '我负责的订单当前进度怎么样？' },
 ];
 const QUICK_PROMPTS_ADMIN = [
-  { label: '📋 下单', text: '帮我下单' },
-  { label: '👕 借调样衣', text: '帮我借调样衣' },
+  { label: '下单', text: '帮我下单' },
+  { label: '借调样衣', text: '帮我借调样衣' },
   { label: '生成日报', text: '帮我汇总今日日报' },
   { label: '风险订单', text: '当前有哪些逾期或高风险订单？' },
   { label: '今日扫码', text: '今天工厂扫码情况如何？' },
   { label: '样衣进度', text: '当前样衣开发进度如何？' },
   { label: '利润估算', text: '帮我估算本月利润' },
   { label: '面料缺口', text: '当前有哪些面料缺口？' },
+  { label: '款式分析', text: '分析本厂近3个月的热门款式' },
+  { label: '供应商评分', text: '帮我列出供应商评分和风险预警' },
 ];
+// --- AI 升级 结束 ---
 
 const TOOL_NAME_MAP = {
   production_progress: '生产进度', order_edit: '订单编辑', inventory_query: '库存查询',
@@ -48,11 +51,16 @@ const MOOD_CONFIG = {
   normal: { emoji: '🔵', label: '正常', color: '#1677ff' },
 };
 
-function MiniCloud({ size = 50, mood = 'normal' }) {
+// --- AI 升级 开始 ---
+// 增强版小云形象：悬浮动画、说话状态嘴巴动画、随机眨眼间隔
+function MiniCloud({ size = 50, mood = 'normal', isTalking = false }) {
   const s = size / 50;
   const moodColor = MOOD_CONFIG[mood]?.color || MOOD_CONFIG.normal.color;
+  // 随机眨眼间隔：3.5s~9.2s
+  const blinkDuration = 3.5 + Math.random() * 5.7;
+  const talkAnim = isTalking ? 'cloudTalk 0.32s ease-in-out infinite' : 'cloudSmileTalk 3.8s ease-in-out infinite';
   return (
-    <div style={{ position: 'relative', width: 50 * s, height: 50 * s, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <div style={{ position: 'relative', width: 50 * s, height: 50 * s, display: 'flex', alignItems: 'flex-end' }}>
       <div style={{
         position: 'absolute', inset: 4 * s, borderRadius: 500,
         background: `radial-gradient(circle, ${moodColor}33, ${moodColor}08 66%, transparent 78%)`,
@@ -63,17 +71,18 @@ function MiniCloud({ size = 50, mood = 'normal' }) {
         <div style={{ position: 'absolute', width: 17 * s, height: 17 * s, left: 11 * s, top: 3 * s, borderRadius: '50%', background: 'var(--color-bg-light)', boxShadow: `inset 0 1px 0 rgba(255,255,255,0.9), 0 3px 7px ${moodColor}22` }} />
         <div style={{ position: 'absolute', width: 12 * s, height: 12 * s, right: 4 * s, top: 11 * s, borderRadius: '50%', background: 'var(--color-bg-light)', boxShadow: `inset 0 1px 0 rgba(255,255,255,0.9), 0 3px 7px ${moodColor}22` }} />
         <div style={{ position: 'absolute', left: 5 * s, right: 5 * s, bottom: 3 * s, height: 12 * s, borderRadius: 500, background: 'var(--color-bg-light)', boxShadow: `inset 0 1px 0 rgba(255,255,255,0.9), 0 3px 7px ${moodColor}22` }} />
-        <div style={{ position: 'absolute', top: 14 * s, left: 12 * s, width: 5 * s, height: 7 * s, borderRadius: 500, background: moodColor, animation: 'cloudBlink 6.6s ease-in-out infinite', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', top: 14 * s, left: 12 * s, width: 5 * s, height: 7 * s, borderRadius: 500, background: moodColor, animation: `cloudBlink ${blinkDuration.toFixed(2)}s ease-in-out infinite`, overflow: 'hidden' }}>
           <div style={{ width: 2 * s, height: 2 * s, margin: '1px 0 0 1px', borderRadius: '50%', background: 'rgba(255,255,255,0.96)', animation: 'eyeHighlightTwinkle 4.2s ease-in-out infinite' }} />
         </div>
-        <div style={{ position: 'absolute', top: 14 * s, right: 12 * s, width: 5 * s, height: 7 * s, borderRadius: 500, background: moodColor, animation: 'cloudBlink 6.6s ease-in-out infinite', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', top: 14 * s, right: 12 * s, width: 5 * s, height: 7 * s, borderRadius: 500, background: moodColor, animation: `cloudBlink ${(blinkDuration + 0.3).toFixed(2)}s ease-in-out infinite`, overflow: 'hidden' }}>
           <div style={{ width: 2 * s, height: 2 * s, margin: '1px 0 0 1px', borderRadius: '50%', background: 'rgba(255,255,255,0.96)', animation: 'eyeHighlightTwinkle 4.2s ease-in-out infinite' }} />
         </div>
-        <div style={{ position: 'absolute', left: '50%', bottom: 5 * s, width: 12 * s, height: 6 * s, marginLeft: -6 * s, borderBottom: `2px solid ${moodColor}`, borderRadius: '0 0 12px 12px', animation: 'cloudSmileTalk 3.8s ease-in-out infinite' }} />
+        <div style={{ position: 'absolute', left: '50%', bottom: 5 * s, width: 12 * s, height: isTalking ? 8 * s : 6 * s, marginLeft: -6 * s, borderBottom: `2px solid ${moodColor}`, borderRadius: '0 0 12px 12px', animation: talkAnim }} />
       </div>
     </div>
   );
 }
+// --- AI 升级 结束 ---
 
 export { MiniCloud };
 
@@ -200,8 +209,6 @@ export default function AiAssistantFloat() {
   const [inputText, setInputText] = useState('');
   const [sending, setSending] = useState(false);
   const [streamingText, setStreamingText] = useState('');
-  const [pendingImage, setPendingImage] = useState(null);
-  const [uploading, setUploading] = useState(false);
   const [currentTool, setCurrentTool] = useState(null);
   const [toolResults, setToolResults] = useState([]);
   const [isMgr, setIsMgr] = useState(false);
@@ -218,6 +225,12 @@ export default function AiAssistantFloat() {
   useEffect(() => { storeMessages(messages); }, [messages]);
 
   useEffect(() => { setIsMgr(isManagerLevel()); }, []);
+
+  useEffect(() => {
+    const onOpen = () => setOpen(true);
+    window.addEventListener('OPEN_AI_ASSISTANT', onOpen);
+    return () => window.removeEventListener('OPEN_AI_ASSISTANT', onOpen);
+  }, []);
 
   const currentPageContext = (() => {
     const path = window.location.pathname;
@@ -246,8 +259,6 @@ export default function AiAssistantFloat() {
     onResult: (transcript) => setInputText(prev => prev + transcript),
   });
 
-  const camera = useCameraCapture({ maxCount: 1, autoUpload: false });
-
   useEffect(() => {
     if (voice.error === 'NOT_SUPPORTED') toast.info('当前浏览器不支持语音识别，请使用Chrome浏览器');
     else if (voice.error === 'PERMISSION_DENIED') toast.error('请允许麦克风权限');
@@ -269,7 +280,7 @@ export default function AiAssistantFloat() {
       const moodEmoji = MOOD_CONFIG[mood]?.emoji || '';
       let greet = `${moodEmoji} ${greeting}，${name}！这里是小云帮助中心。`;
       if (mood === 'urgent') greet += '\n\n⚠️ 当前有紧急待办，建议优先处理！';
-      greet += '\n\n你可以：\n· 打字提问\n· 📷 拍照识别\n· 🎤 语音输入\n· 🔊 点击喇叭朗读回复';
+      greet += '\n\n你可以：\n· 打字提问\n· 语音输入\n· 点击喇叭朗读回复';
       setMessages([{ role: 'ai', text: greet, id: 'init' }]);
     }
   }, [open]);
@@ -317,36 +328,9 @@ export default function AiAssistantFloat() {
     if (!moved.current) setOpen(true);
   };
 
-  const handleTakePhoto = async () => {
-    try {
-      const urls = await camera.captureFromCamera();
-      if (urls && urls.length > 0) {
-        setPendingImage({ url: urls[0], file: null });
-      }
-    } catch (e) {
-      if (e?.message !== 'cancel') toast.error('拍照失败，请重试');
-    }
-  };
-
-  const removePendingImage = () => {
-    if (pendingImage?.url?.startsWith('blob:')) URL.revokeObjectURL(pendingImage.url);
-    setPendingImage(null);
-  };
-
-  const uploadPendingImage = async () => {
-    if (!pendingImage) return null;
-    if (pendingImage.file) {
-      setUploading(true);
-      try { return await api.common.uploadImage(pendingImage.file); }
-      catch (e) { toast.error('图片上传失败'); return null; }
-      finally { setUploading(false); }
-    }
-    return pendingImage.url;
-  };
-
   const handleSend = useCallback(async (text) => {
     const msg = (text || inputText).trim();
-    if ((!msg && !pendingImage) || sendingRef.current) return;
+    if (!msg || sendingRef.current) return;
     sendingRef.current = true;
     setInputText('');
     voice.stop();
@@ -355,15 +339,8 @@ export default function AiAssistantFloat() {
     setCurrentTool(null);
     setToolResults([]);
 
-    let imageUrl = null;
-    if (pendingImage) {
-      imageUrl = await uploadPendingImage();
-      if (pendingImage && !imageUrl) { setSending(false); sendingRef.current = false; return; }
-    }
-
-    const displayText = imageUrl ? (msg || '请看这张图片') : msg;
     const userMsgId = 'u_' + Date.now();
-    setMessages((prev) => [...prev, { role: 'user', text: displayText, image: imageUrl || (pendingImage?.url || null), id: userMsgId }]);
+    setMessages((prev) => [...prev, { role: 'user', text: msg, id: userMsgId }]);
 
     const chatContext = isMgr ? 'manager_assistant' : 'worker_assistant';
     let fullText = '';
@@ -375,7 +352,6 @@ export default function AiAssistantFloat() {
         question: msg,
         pageContext: `${chatContext}:${currentPageContext}`,
         conversationId: advisorSessionId,
-        imageUrl,
       };
       if (scanResultData) {
         if (scanResultData.orderNo) streamParams.orderNo = scanResultData.orderNo;
@@ -413,7 +389,6 @@ export default function AiAssistantFloat() {
             });
             setSending(false);
             sendingRef.current = false;
-            setPendingImage(null);
             refreshMood();
           },
           onError: () => {
@@ -424,7 +399,6 @@ export default function AiAssistantFloat() {
             setMessages((prev) => [...prev, { role: 'ai', text: '抱歉，小云暂时无法回复，请稍后再试。', id: aiMsgId }]);
             setSending(false);
             sendingRef.current = false;
-            setPendingImage(null);
           },
           onFallback: async (q) => {
             if (isMgr) {
@@ -452,9 +426,8 @@ export default function AiAssistantFloat() {
       }
       setSending(false);
       sendingRef.current = false;
-      setPendingImage(null);
     }
-  }, [inputText, sending, pendingImage, isMgr, advisorSessionId, currentTool]);
+  }, [inputText, sending, isMgr, advisorSessionId, currentTool]);
 
   const handleFeedback = useCallback(async (msgId, helpful) => {
     try {
@@ -487,7 +460,7 @@ export default function AiAssistantFloat() {
         transition: 'left 0.3s ease',
       }}
     >
-      <MiniCloud size={50} mood={mood} />
+      <MiniCloud size={50} mood={mood} isTalking={streamingText.length > 0} />
       {pendingCount > 0 && (
         <span style={{
           position: 'absolute', top: -2, right: -2,
@@ -502,7 +475,7 @@ export default function AiAssistantFloat() {
     <div style={{ position: 'fixed', inset: 0, background: 'var(--color-bg-page)', zIndex: 99999, display: 'flex', flexDirection: 'column' }}>
       <div className="chat-header">
         <button onClick={() => { setOpen(false); voice.stop(); tts.stop(); }} className="chat-close-btn">✕</button>
-        <MiniCloud size={28} mood={mood} />
+        <MiniCloud size={28} mood={mood} isTalking={streamingText.length > 0} />
         <span className="chat-header-title">小云帮助中心</span>
         <span style={{ fontSize: 11, color: MOOD_CONFIG[mood]?.color, marginLeft: 4 }}>{MOOD_CONFIG[mood]?.emoji}</span>
       </div>
@@ -675,36 +648,60 @@ export default function AiAssistantFloat() {
         )}
       </div>
 
+      {/* --- AI 升级 开始 --- */}
+      {/* 空状态：漂亮的欢迎界面 + 网格布局快捷卡片 */}
       {!sending && messages.length <= 1 && (
-        <div className="chat-quick-chips">
-          {prompts.map((p) => (
-            <button key={p.label} onClick={() => handleSend(p.text)} className="chat-chip">{p.label}</button>
-          ))}
+        <div className="ai-empty-state" style={{
+          padding: '18px 14px 4px 14px',
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
+            <MiniCloud size={60} mood={mood} />
+          </div>
+          <div style={{ textAlign: 'center', fontSize: 15, fontWeight: 700, color: 'var(--color-text-primary)' }}>
+            你好，我是小云 AI 助手
+          </div>
+          <div style={{ textAlign: 'center', fontSize: 12, color: 'var(--color-text-secondary)', marginTop: 4, marginBottom: 14 }}>
+            试试下面的快捷功能，或直接输入你的问题
+          </div>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(2, 1fr)',
+            gap: 10,
+          }}>
+            {prompts.map((p, idx) => (
+              <button key={p.label + idx} onClick={() => handleSend(p.text)}
+                className="ai-quick-card"
+                style={{
+                  padding: '12px 10px',
+                  borderRadius: 12,
+                  border: '1px solid var(--color-border-ant)',
+                  background: 'var(--color-bg-container)',
+                  textAlign: 'left',
+                  cursor: 'pointer',
+                  fontSize: 12,
+                  color: 'var(--color-text-primary)',
+                  fontWeight: 500,
+                  animation: `aiFadeIn 0.${30 + idx * 5}s ease-out`,
+                }}>
+                <div style={{ fontWeight: 700, marginBottom: 4, fontSize: 13 }}>{p.label}</div>
+                <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', lineHeight: 1.4 }}>{p.text}</div>
+              </button>
+            ))}
+          </div>
         </div>
       )}
+      {/* --- AI 升级 结束 --- */}
 
       {!sending && messages.length > 1 && (
         <div className="chat-context-chips">
-          {isMgr && <button className="chat-chip" onClick={() => handleSend('当前有哪些逾期或高风险订单？')}>⚠️ 风险订单</button>}
-          {isMgr && <button className="chat-chip" onClick={() => handleSend('帮我估算本月利润')}>💰 利润估算</button>}
-          <button className="chat-chip" onClick={() => handleSend('当前面料缺口情况')}>📦 面料缺口</button>
-          <button className="chat-chip" onClick={() => handleSend('帮我汇总今日日报')}>📋 日报</button>
-        </div>
-      )}
-
-      {pendingImage && (
-        <div className="chat-pending-image">
-          <img src={pendingImage.url} alt="" className="chat-pending-img" />
-          <span className="chat-pending-image-text">已选图片，发送时将上传识别</span>
-          <button onClick={removePendingImage} className="chat-pending-image-del">✕</button>
+          {isMgr && <button className="chat-chip" onClick={() => handleSend('当前有哪些逾期或高风险订单？')}>风险订单</button>}
+          {isMgr && <button className="chat-chip" onClick={() => handleSend('帮我估算本月利润')}>利润估算</button>}
+          <button className="chat-chip" onClick={() => handleSend('当前面料缺口情况')}>面料缺口</button>
+          <button className="chat-chip" onClick={() => handleSend('帮我汇总今日日报')}>日报</button>
         </div>
       )}
 
       <div className="chat-input-bar">
-        <button onClick={handleTakePhoto} disabled={sending || uploading}
-          className="chat-tool-btn" title="拍照">
-          <Icon name="camera" size={18} color="var(--color-text-secondary)" />
-        </button>
         <button onClick={voice.toggle} disabled={sending}
           className={`chat-tool-btn${voice.listening ? ' active' : ''}`}
           title="语音输入">
@@ -714,13 +711,34 @@ export default function AiAssistantFloat() {
           placeholder={voice.listening ? '正在聆听...' : '输入关键字查询内部资料'}
           disabled={sending}
           className="chat-input-field" />
-        <button onClick={() => handleSend()} disabled={(!inputText.trim() && !pendingImage) || sending || uploading}
+        <button onClick={() => handleSend()} disabled={!inputText.trim() || sending}
           className="chat-send-btn">
-          {uploading ? '上传中' : '发送'}
+          发送
         </button>
       </div>
     </div>
   );
 
-  return createPortal(floatBtn, document.body);
+  return (
+    <>
+      {createPortal(floatBtn, document.body)}
+      {/* --- AI 升级 开始 --- 新增动画 keyframes */}
+      <style>{`
+        @keyframes cloudTalk {
+          0% { transform: scaleY(0.6); }
+          50% { transform: scaleY(1.3); }
+          100% { transform: scaleY(0.6); }
+        }
+        @keyframes aiFadeIn {
+          from { opacity: 0; transform: translateY(6px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .cursor-blink { animation: cursorBlink 0.9s steps(1) infinite; }
+        @keyframes cursorBlink {
+          50% { opacity: 0; }
+        }
+      `}</style>
+      {/* --- AI 升级 结束 --- */}
+    </>
+  );
 }

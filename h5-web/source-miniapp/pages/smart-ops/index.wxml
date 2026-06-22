@@ -9,6 +9,34 @@
     <text class="alert-tag {{totalWarn > 0 ? 'alert-warn' : 'alert-ok'}}">{{totalWarn > 0 ? totalWarn + '项预警' : '系统正常'}}</text>
   </view>
 
+  <!-- 顶部简洁统计（无彩色） -->
+  <view class="plain-stats">
+    <view class="plain-stat-item">
+      <text class="plain-stat-num">{{topStats.todayScanCount}}</text>
+      <text class="plain-stat-label">今日扫码</text>
+    </view>
+    <view class="plain-stat-item">
+      <text class="plain-stat-num">{{topStats.todayScanQty}}</text>
+      <text class="plain-stat-label">扫码件数</text>
+    </view>
+    <view class="plain-stat-item">
+      <text class="plain-stat-num">{{topStats.activeOrders}}</text>
+      <text class="plain-stat-label">进行中订单</text>
+    </view>
+    <view class="plain-stat-item">
+      <text class="plain-stat-num">{{topStats.totalFactories}}</text>
+      <text class="plain-stat-label">合作工厂</text>
+    </view>
+    <view class="plain-stat-item">
+      <text class="plain-stat-num">{{topStats.todayInboundCount}}</text>
+      <text class="plain-stat-label">今日入库</text>
+    </view>
+    <view class="plain-stat-item">
+      <text class="plain-stat-num">{{topStats.todayOutboundCount}}</text>
+      <text class="plain-stat-label">今日出库</text>
+    </view>
+  </view>
+
   <view class="menu-grid">
     <view class="menu-card {{activeMenu === 'inProduction' ? 'menu-active' : ''}}" bindtap="onMenuTap" data-key="inProduction">
       <text class="menu-label">生产中</text>

@@ -370,10 +370,23 @@ App({
 
   onUnhandledRejection(res) {
     const reason = res && res.reason ? String(res.reason) : 'unknown';
-    // 过滤正常的防抖导航忽略 — 不属于真实错误，不需要上报
-    if (reason.includes('导航进行中')) return;
-    console.error('[App] 未处理的Promise拒绝:', reason);
-    this._reportError('unhandledRejection', reason);
+    // 过滤正常的导航抖动 / 超时 / 降级 — 不属于真实业务错误，不上报
+    if (
+      reason.includes('导航进行中') ||
+      reason.includes('navigateTo:fail') ||
+      reason.includes('redirectTo:fail') ||
+      reason.includes('switchTab:fail') ||
+      reason.includes('navigateTo:fail timeout') ||
+      reason.indexOf('timeout') !== -1 && reason.indexOf('navigate') !== -1
+    ) {
+      return;
+    }
+    console.warn('[App] 未处理的Promise拒绝:', reason);
+    try {
+      this._reportError('unhandledRejection', reason);
+    } catch (_) {
+      /* ignore secondary reporting failures */
+    }
   },
 
   _reportError(type, detail) {

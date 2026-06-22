@@ -4,13 +4,44 @@ const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 const { eventBus, Events } = require('../../../utils/eventBus');
 const permission = require('../../../utils/permission');
 
-const STATUS_LABELS = {
-  PENDING: '待领取',
-  IN_PROGRESS: '制作中',
-  COMPLETED: '已完成',
-  WAREHOUSE_IN: '已入库',
-};
+/* === 与 PC 端 StyleInfoList 一致的状态显示逻辑 === */
 
+// PC 端同款：getProgressNodeColor —— 用中文关键字做颜色匹配
+// Ant Design Tag 颜色：default / success / warning / error / processing
+function getProgressNodeColor(node) {
+  if (!node) return 'default';
+  const s = String(node);
+  if (/开发样报废|样衣报废|已报废/.test(s)) return 'default';
+  if (/报废|驳回|不通过|异常|失败/.test(s)) return 'error';
+  if (/返修|紧急/.test(s)) return 'warning';
+  if (/完成|通过/.test(s)) return 'success';
+  if (/中|待审|确认/.test(s)) return 'processing';
+  return 'default';
+}
+
+// PC 端同款：getDeliveryMeta —— 计算交期状态
+// tone: 'scrapped' | 'danger' | 'warning' | 'normal' | 'success'
+function getDeliveryMeta(record, allStagesCompleted) {
+  if (!record) return { tone: 'normal', label: '' };
+  const sampleStatus = String(record.sampleStatus || record.status || '').trim().toUpperCase();
+  if (sampleStatus === 'SCRAPPED') return { tone: 'scrapped', label: '已报废' };
+  if (sampleStatus === 'CLOSED') return { tone: 'scrapped', label: '已关单' };
+  if (allStagesCompleted) {
+    return { tone: 'success', label: '已完成' };
+  }
+  const deliveryDate = record.deliveryDate || record.deliveryTime;
+  if (!deliveryDate) return { tone: 'normal', label: '待补交期' };
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const target = new Date(deliveryDate);
+  target.setHours(0, 0, 0, 0);
+  const diffDays = Math.ceil((target.getTime() - today.getTime()) / 86400000);
+  if (diffDays < 0) return { tone: 'danger', label: `延期${Math.abs(diffDays)}天` };
+  if (diffDays <= 3) return { tone: 'warning', label: `${diffDays}天内交板` };
+  return { tone: 'normal', label: `${diffDays}天后交板` };
+}
+
+// 样衣审核状态标签（PC 端同款）
 const REVIEW_STATUS_LABELS = {
   'APPROVED': '已通过',
   'REJECTED': '已驳回',
@@ -20,11 +51,19 @@ const REVIEW_STATUS_LABELS = {
   'SUBMITTED': '已提交',
 };
 
-const STATUS_COLORS = {
-  PENDING: '#faad14',
-  IN_PROGRESS: '#1677ff',
-  COMPLETED: '#52c41a',
-  WAREHOUSE_IN: '#8c8c8c',
+// 开发来源中文映射（后端返回英文枚举，前端映射为中文）
+const SOURCE_TYPE_LABELS = {
+  'SELF_DEVELOPED': '自主开发',
+  'SELECTION_CENTER': '选品中心',
+  'MARKET': '市场采购',
+  'SUPPLIER': '供应商提供',
+  'CUSTOMER': '客户定制',
+  'INTERNAL': '内部选品',
+  'SAMPLE': '样衣开发',
+  'BULK': '大货',
+  'PATTERN': '纸样开发',
+  'EXTERNAL': '外部市场',
+  'BUYER': '买手采购',
 };
 
 const STATUS_TABS = [
@@ -60,14 +99,35 @@ function fmtDate(v) {
   return s;
 }
 
+/** 格式化为 MM-DD HH:mm（完整时间，去掉年份） */
+function fmtDateTime(v) {
+  if (!v) return '';
+  const s = String(v);
+  try {
+    // 支持 YYYY-MM-DDTHH:mm:ss 或 YYYY-MM-DD HH:mm:ss
+    const parts = s.split(/[-T :]/);
+    if (parts.length >= 5) {
+      return parts[1] + '-' + parts[2] + ' ' + parts[3] + ':' + parts[4];
+    }
+    if (parts.length >= 3) return parts[1] + '-' + parts[2];
+  } catch (_e) { /* ignore */ }
+  return s;
+}
+
 Page({
   data: {
     loading: true,
     keyword: '',
     activeFilter: '',
     statusTabs: STATUS_TABS,
+    // 样衣开发统计（与 PC 端 activeStyles 逻辑一致）
+    sampleCount: 0,       // 开发中（活跃款式数量）
+    overdueCount: 0,      // 已延期
+    warningCount: 0,      // 临近交期
+    smartFilter: '',      // 智能筛选：'' | 'overdue' | 'warning'
 
     list: [],
+    displayList: [],  // 应用智能筛选后的展示列表
     page: 1,
     pageSize: 15,
     total: 0,
@@ -92,8 +152,13 @@ Page({
   },
 
   onShow: function () {
+    // 第一次进入页面时不重复加载（onLoad 已经 loadData 过了）
+    // 从别的页面跳回来时，如果有 _needRefresh 标记才刷新
     if (this._loaded) {
-      this.loadData(true);
+      if (this._needRefresh) {
+        this._needRefresh = false;
+        this.loadData(true);
+      }
     }
     this._loaded = true;
     this._bindEvents();
@@ -151,30 +216,129 @@ Page({
     if (that.data.keyword.trim()) params.keyword = that.data.keyword.trim();
     if (that.data.activeFilter) params.status = that.data.activeFilter;
 
-    return api.production.listPatterns(params)
+    // 并行获取样衣开发统计（与 PC 端 activeStyles 逻辑一致）
+    if (reset) {
+      api.production.getSampleStats().then(function (res) {
+        const d = (res && res.data) || res || {};
+        that.setData({
+          sampleCount: Number(d.activeCount) || 0,
+          overdueCount: Number(d.overdueCount) || 0,
+          warningCount: Number(d.warningCount) || 0,
+        });
+      }).catch(function () { /* 静默失败，不阻塞列表 */ });
+    }
+
+    api.production.listPatterns(params)
       .then(function (res) {
         const data = res && res.data ? res.data : res;
         const records = (data && data.records) ? data.records : (Array.isArray(data) ? data : []);
+
+        // 调试日志：看 createBy 是否在后端有值（Console 查看）
+        if (records.length > 0) {
+          console.log('[sample-dev] 样衣列表首条 createBy=' + (records[0].createBy || '无') + ', receiver=' + (records[0].receiver || '无'));
+        }
+
         const total = Number(data && data.total) || records.length;
 
         const list = records.map(function (item) {
-          item._cover = getAuthedImageUrl(item.coverImage || '');
-          item._statusLabel = STATUS_LABELS[item.status] || item.status || '-';
-          item._statusColor = STATUS_COLORS[item.status] || '#8c8c8c';
-          item._deliveryDate = formatDate(item.deliveryTime);
-          item._createDate = formatDate(item.releaseTime || item.createTime);
-          item._expanded = false;
+          const styleInfo = item.styleInfo || {};
+          // ========== 与 PC 端一致：progressNode 作为主状态 ==========
+          // 优先用 styleInfo.progressNode（款式维度），其次用 item.progressNode（样衣任务维度），
+          // 再兜底到 styleInfo.sampleStatus / item.status（英文枚举）做中文映射
+          let progressNode = String(
+            styleInfo.progressNode || item.progressNode || styleInfo.sampleStatus || item.status || '未开始'
+          ).trim() || '未开始';
 
+          // 如果是英文枚举（PENDING/IN_PROGRESS 等），做一次 fallback 中文转换
+          const upperStatus = progressNode.toUpperCase();
+          const EN_TO_CN = {
+            PENDING: '待领取',
+            IN_PROGRESS: '制作中',
+            PROGRESS: '制作中',
+            COMPLETED: '已完成',
+            WAREHOUSE_IN: '已入库',
+            ENABLED: '启用',
+            ACTIVE: '启用',
+            DISABLED: '已停用',
+            REVIEW_PENDING: '待审核',
+            REVIEWED: '已审核',
+            APPROVED: '已通过',
+            REJECTED: '已驳回',
+            CANCELLED: '已取消',
+            CANCELED: '已取消',
+            SCRAPPED: '样衣报废',
+            CLOSED: '已关单',
+          };
+          if (EN_TO_CN[upperStatus]) progressNode = EN_TO_CN[upperStatus];
+          item._progressNode = progressNode;
+          item._progressColor = getProgressNodeColor(progressNode);
+
+          // ========== 与 PC 端一致：交期信息（次要标签） ==========
+          const deliveryMeta = getDeliveryMeta(
+            { deliveryDate: item.deliveryDate || styleInfo.deliveryDate || item.deliveryTime, sampleStatus: item.sampleStatus || styleInfo.sampleStatus, status: item.status },
+            false
+          );
+          item._deliveryTone = deliveryMeta.tone;
+          item._deliveryLabel = deliveryMeta.label;
+
+          // ========== 基础字段：颜色 / 码数 / 数量 ==========
+          /** 将任意值转为规范显示字符串（数组用/或,连接） */
+          function normalizeVal(v, sep) {
+            sep = sep || '/';
+            if (!v) return '';
+            if (Array.isArray(v)) return v.filter(function (x) { return x != null && x !== ''; }).join(sep);
+            var s = String(v);
+            if (s.startsWith('[')) {
+              try { return normalizeVal(JSON.parse(s), sep); } catch (e) { return s; }
+            }
+            // 逗号分隔的字符串也展开
+            if (s.indexOf(',') !== -1) return s.split(',').map(function (x) { return x.trim(); }).filter(function (x) { return x; }).join(sep);
+            return s;
+          }
+
+          item._color = normalizeVal(item.color || styleInfo.color || styleInfo.colorName || item.sampleColor || styleInfo.sampleColor || '', ',');
+          item._size = normalizeVal(item.size || styleInfo.size || styleInfo.sizeName || '', '/');
+          const qtyCandidates = [item.quantity, styleInfo.quantity, item.sampleQuantity, styleInfo.sampleQuantity, item.totalQuantity, item.orderQuantity];
+          item._quantity = qtyCandidates.find(function (v) { return typeof v === 'number' && v > 0; }) || 0;
+
+          // ========== 图片 / 款号 / 款名 ==========
+          item._cover = getAuthedImageUrl(item.coverImage || styleInfo.coverImage || styleInfo.cover || '');
+          const styleNoCandidates = [item.styleNo, styleInfo.styleNo, styleInfo.styleCode, item.patternNo, item.patternCode];
+          item._styleNo = styleNoCandidates.find(function (v) { return v != null && v !== ''; }) || '';
+          item._styleName = item.styleName || styleInfo.styleName || item.name || '';
+
+          // ========== 与 PC 端一致的 metaItems：来源 / 品类 / 季节 / 客户 / 版师 ==========
+          const customerCandidates = [item.customer, styleInfo.customer, item.customerName, styleInfo.customerName, item.buyer, styleInfo.buyer];
+          item._customer = customerCandidates.find(function (v) { return v != null && String(v).trim() !== ''; }) || '';
+          item._category = item.category || styleInfo.category || '';
+          item._sourceType = SOURCE_TYPE_LABELS[item.developmentSourceType || styleInfo.developmentSourceType || item.sourceType || styleInfo.sourceType] || item.developmentSourceType || styleInfo.developmentSourceType || item.sourceType || styleInfo.sourceType || '';
+          item._season = item.season || styleInfo.season || '';
+          item._patternMaker = item.patternMaker || styleInfo.patternDeveloper || item.receiver || '';
+          item._receiver = item.receiver || '';
+          item._creator = item.createBy || ''; // 创建人
+
+          // ========== 时间字段 ==========
+          item._deliveryDate = formatDate(item.deliveryTime || styleInfo.deliveryTime);
+          item._deliveryTimeFull = fmtDateTime(item.deliveryTime || styleInfo.deliveryTime);
+          item._createDate = formatDate(item.releaseTime || item.createTime);
+          item._completeDate = formatDate(item.completeTime);
+          item._deliveryDateShort = item._deliveryDate ? item._deliveryDate.substring(5) : '';
+          item._createDateShort = item._createDate ? item._createDate.substring(5) : '';
+
+          // ========== 开发阶段（只读，用于展示进度） ==========
+          item._expanded = false;
           item._devStages = DEV_STAGES.map(function (s) {
             return {
               key: s.key,
               name: s.name,
-              completed: !!(item.styleInfo && item.styleInfo[s.key + 'CompletedTime']),
+              completed: !!(item[s.key + 'CompletedTime'] || (styleInfo && styleInfo[s.key + 'CompletedTime'])),
             };
           });
-
           item._devDoneCount = item._devStages.filter(function (s) { return s.completed; }).length;
           item._devTotalCount = item._devStages.length;
+          // 进度百分比（0-100）
+          item._progressPct = item._devTotalCount ? Math.round((item._devDoneCount / item._devTotalCount) * 100) : 0;
+
           return item;
         });
 
@@ -187,16 +351,25 @@ Page({
         });
         that.setData({
           list: newList,
+          displayList: newList,  // 默认展示全部，smartFilter 切换时再过滤
           total: total,
           hasMore: newList.length < total,
           loading: false,
           loadingMore: false,
           page: reset ? 1 : that.data.page + 1,
         });
+        // 若已有智能筛选，应用过滤
+        if (that.data.smartFilter) {
+          that._refreshDisplayList();
+        }
       })
-      .catch(function () {
+      .catch(function (err) {
         that.setData({ loading: false, loadingMore: false });
-        if (reset) toast.error('加载失败');
+        const msg = (err && err.message) || '';
+        if (reset) {
+          if (msg.includes('timeout')) toast.error('加载超时，请检查网络');
+          else toast.error('加载失败');
+        }
       });
   },
 
@@ -223,6 +396,50 @@ Page({
     this.loadData(true);
   },
 
+  /**
+   * 智能筛选标签点击（与 PC 端 smartFilter 逻辑一致）
+   * 点击"已延期"→ 只看延期款号；点击"临近交期"→ 只看临近交期款号；再次点击 → 取消
+   * 实现方式：前端过滤当前列表中 _deliveryTone === 'danger'（延期）/ 'warning'（临近交期）的记录
+   */
+  onSmartFilterTap: function (e) {
+    const target = e.currentTarget.dataset.key; // 'overdue' | 'warning'
+    const current = this.data.smartFilter;
+    if (current === target) {
+      // 再次点击同一标签 → 取消筛选
+      this.setData({ smartFilter: '' });
+    } else {
+      this.setData({ smartFilter: target });
+    }
+    this._refreshDisplayList();
+  },
+
+  /** 清除智能筛选 */
+  onClearSmartFilter: function () {
+    this.setData({ smartFilter: '' });
+    this._refreshDisplayList();
+  },
+
+  /**
+   * 应用智能筛选后返回展示列表（与 PC 端 displayData 逻辑一致）
+   * smartFilter='overdue' → 只显示 _deliveryTone==='danger' 的记录
+   * smartFilter='warning' → 只显示 _deliveryTone==='warning' 的记录
+   * smartFilter='' → 显示全部
+   */
+  _getDisplayList: function () {
+    const sf = this.data.smartFilter;
+    if (!sf) return this.data.list;
+    return this.data.list.filter(function (item) {
+      if (sf === 'overdue') return item._deliveryTone === 'danger';
+      if (sf === 'warning') return item._deliveryTone === 'warning';
+      return true;
+    });
+  },
+
+  /** smartFilter 变化时刷新展示列表 */
+  _refreshDisplayList: function () {
+    this.setData({ displayList: this._getDisplayList() });
+  },
+
   onCardTap: function (e) {
     const id = e.currentTarget.dataset.id;
     if (!id) return;
@@ -242,8 +459,11 @@ Page({
     const detailPromise = api.production.getPatternDetail(patternId);
     const configPromise = api.production.getPatternProcessConfig(patternId);
     const recordsPromise = api.production.getPatternScanRecords(patternId);
+    // 工序单价（款式维度）
+    const processPromise = api.production.listStyleProcesses(patternId)
+      .catch(function () { return []; });
 
-    return Promise.all([detailPromise, configPromise, recordsPromise])
+    Promise.all([detailPromise, configPromise, recordsPromise, processPromise])
       .then(function (results) {
         const detail = results[0] && results[0].data ? results[0].data : results[0];
         if (detail.reviewStatus) {
@@ -251,19 +471,43 @@ Page({
         }
         const config = Array.isArray(results[1]) ? results[1] : (results[1] && results[1].data ? (Array.isArray(results[1].data) ? results[1].data : []) : []);
         const records = Array.isArray(results[2]) ? results[2] : (results[2] && results[2].data ? (Array.isArray(results[2].data) ? results[2].data : []) : []);
+        const processList = Array.isArray(results[3]) ? results[3] : (results[3] && results[3].data ? (Array.isArray(results[3].data) ? results[3].data : []) : []);
+
+        // 调试日志：看扫码记录里有没有 operatorName
+        if (records.length > 0) {
+          console.log('[sample-dev] 扫码记录首条 operatorName=' + (records[0].operatorName || '无') + ', recordsCount=' + records.length);
+        }
 
         const stages = that._buildProcessStages(config, records, detail);
 
+        // 更新列表中对应项的数量
+        const list = that.data.list.map(function (item) {
+          if (String(item.id) === String(patternId)) {
+            return Object.assign({}, item, {
+              _bomCount: detail.bomItemCount || detail.bomCount || 0,
+              _patternCount: detail.patternRevisionCount || detail.revisionCount || 0,
+              _processCount: processList.length || 0,
+              _secondaryCount: detail.secondaryProcessCount || 0,
+              _productionCount: detail.productionSheetCount || 0,
+            });
+          }
+          return item;
+        });
+
         that.setData({
+          list: list,
           patternDetail: detail,
           processConfig: config,
           processStages: stages,
           hasProcessSystem: config.length > 0,
+          detailLoading: false,
         });
       })
-      .catch(function () {})
-      .finally(function () {
+      .catch(function (err) {
         that.setData({ detailLoading: false });
+        const msg = (err && err.message) || '';
+        if (msg.includes('timeout')) toast.error('加载超时，请重试');
+        else toast.error('加载失败');
       });
   },
 
@@ -302,8 +546,10 @@ Page({
       const scanType = String(c.scanType || 'production').trim();
       const isCompleted = completedSet.has(processName) || completedSet.has(progressStage) || completedSet.has(progressStage.toLowerCase());
 
-      // 查找完成时间
+      // 查找完成时间 + 操作人
       let time = '';
+      let operatorName = '';
+      let operatorRole = '';
       if (records && Array.isArray(records)) {
         for (let j = 0; j < records.length; j++) {
           const r = records[j];
@@ -311,6 +557,8 @@ Page({
           const rPn = String(r.processName || '').trim();
           if ((rOp === processName || rPn === processName) && r.scanTime) {
             time = fmtDate(r.scanTime);
+            operatorName = r.operatorName || '';
+            operatorRole = r.operatorRole || '';
             break;
           }
         }
@@ -350,6 +598,14 @@ Page({
         }
       }
 
+      // 从 patternDetail 提取通用基础字段（每个工序展示同样的基础信息）
+      const colorCandidates = [patternDetail.color, patternDetail.colorName, patternDetail.sampleColor, patternDetail.colour];
+      const baseColor = colorCandidates.find(function (v) { return v != null && v !== ''; }) || '';
+      let baseSize = patternDetail.size || patternDetail.sizeName || '';
+      if (!baseSize && Array.isArray(patternDetail.sizes) && patternDetail.sizes.length) baseSize = patternDetail.sizes.join('/');
+      const qtyCandidates = [patternDetail.quantity, patternDetail.sampleQuantity, patternDetail.totalQuantity, patternDetail.orderQuantity];
+      const baseQuantity = qtyCandidates.find(function (v) { return typeof v === 'number' && v > 0; }) || 0;
+
       stages.push({
         name: processName,
         processName: processName,
@@ -357,10 +613,15 @@ Page({
         scanType: scanType,
         completed: isCompleted,
         time: time,
+        operatorName: operatorName,
+        operatorRole: operatorRole,
         canOperate: canOperate,
         locked: locked,
         lockReason: lockReason,
         isReceive: false,
+        color: baseColor,
+        size: baseSize,
+        quantity: baseQuantity,
       });
     }
 
@@ -441,5 +702,10 @@ Page({
     const url = e.currentTarget.dataset.src;
     if (!url) return;
     wx.previewImage({ current: url, urls: [url] });
+  },
+
+  onLoadMore: function () {
+    if (!this.data.hasMore || this.data.loadingMore) return;
+    this.loadData(false);
   },
 });

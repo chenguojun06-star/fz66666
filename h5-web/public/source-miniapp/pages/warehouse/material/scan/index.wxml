@@ -71,7 +71,7 @@
       </view>
       <view class="info-row">
         <text class="info-label">当前状态</text>
-        <view class="status-tag {{rollInfo.currentStatus === 'IN_STOCK' ? 'tag-green' : 'tag-orange'}}">
+        <view class="status-tag tag {{rollInfo.currentStatus === 'IN_STOCK' ? 'tag-success' : 'tag-warning'}}">
           {{rollInfo.currentStatus === 'IN_STOCK' ? '在库' : (rollInfo.currentStatus === 'ISSUED' ? '已发料' : rollInfo.currentStatus)}}
         </view>
       </view>

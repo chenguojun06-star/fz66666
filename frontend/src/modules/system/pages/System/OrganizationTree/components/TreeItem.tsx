@@ -10,6 +10,7 @@ import {
   PlusOutlined,
   EditOutlined,
   DeleteOutlined,
+  TeamOutlined,
 } from '@ant-design/icons';
 import type { OrganizationUnit } from '@/types/system';
 
@@ -24,16 +25,23 @@ interface TreeItemProps {
   onAddMember: (node: OrganizationUnit) => void;
   onShowQRCode: (node: OrganizationUnit) => void;
   readOnly?: boolean;
+  unitMemberCountMap?: Record<string, number>;
+  unitSubUnitsCountMap?: Record<string, number>;
 }
 
 export const TreeItem: React.FC<TreeItemProps> = ({
   node, depth, selectedId, onSelect, onAdd, onEdit, onDelete, onAddMember, onShowQRCode, readOnly,
+  unitMemberCountMap, unitSubUnitsCountMap,
 }) => {
   const [expanded, setExpanded] = useState(depth < 2);
   const hasChildren = Array.isArray(node.children) && node.children.length > 0;
   const isSelected = String(node.id) === selectedId;
   const isFactory = node.nodeType === 'FACTORY';
   const isExternal = node.ownerType === 'EXTERNAL';
+
+  // 从countMap中查找该节点的人数
+  const totalMembers = unitMemberCountMap?.[String(node.id)] ?? 0;
+  const subUnits = unitSubUnitsCountMap?.[String(node.id)] ?? (hasChildren ? node.children!.length : 0);
 
   return (
     <div>
@@ -54,9 +62,24 @@ export const TreeItem: React.FC<TreeItemProps> = ({
             : <ApartmentOutlined style={{ color: 'var(--color-accent-purple, var(--color-accent-purple))', marginRight: 4 }} />
           }
           <span className="tree-node-name">{node.unitName}</span>
+
+          {/* 人数统计标签 */}
+          {totalMembers > 0 && (
+            <Tag color="blue" style={{ marginLeft: 6, fontSize: 12, lineHeight: '18px', padding: '0 6px' }}>
+              <TeamOutlined style={{ fontSize: 11 }} /> {totalMembers} 人
+            </Tag>
+          )}
+
+          {/* 子部门统计 */}
+          {subUnits > 0 && (
+            <Tag color="default" style={{ marginLeft: 4, fontSize: 12, lineHeight: '18px', padding: '0 6px' }}>
+              {subUnits} 个子部门
+            </Tag>
+          )}
+
           {node.managerUserName && (
-            <Tag color="blue" style={{ marginLeft: 6, fontSize: 14, lineHeight: '16px', padding: '0 4px' }}>
-              领取人: {node.managerUserName}
+            <Tag color="gold" style={{ marginLeft: 6, fontSize: 12, lineHeight: '18px', padding: '0 6px' }}>
+              审批人: {node.managerUserName}
             </Tag>
           )}
         </span>
@@ -105,6 +128,8 @@ export const TreeItem: React.FC<TreeItemProps> = ({
               onAddMember={onAddMember}
               onShowQRCode={onShowQRCode}
               readOnly={readOnly}
+              unitMemberCountMap={unitMemberCountMap}
+              unitSubUnitsCountMap={unitSubUnitsCountMap}
             />
           ))}
         </div>

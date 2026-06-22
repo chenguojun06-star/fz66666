@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { App, Modal, Image } from 'antd';
-import { DeleteOutlined, StarFilled, StarOutlined, LeftOutlined, RightOutlined, SearchOutlined, BulbOutlined } from '@ant-design/icons';
+import { App, Modal, Image, Button } from 'antd';
+import { DeleteOutlined, StarFilled, StarOutlined, LeftOutlined, RightOutlined, SearchOutlined, BulbOutlined, PictureOutlined } from '@ant-design/icons';
 import api, { type ApiResult, isApiSuccess, getApiMessage } from '@/utils/api';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { setStyleCoverOverride } from '@/components/StyleAssets';
@@ -158,6 +158,64 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
       return null;
     }
   }, [displayImages, currentIndex, isNewMode, pendingFiles, styleId, styleNo]);
+
+  // 统一样式搜：根据当前图片，调用以图搜款
+  const runStyleSearchByImage = useCallback(async () => {
+    if (searching) return;
+    const current = displayImages[currentIndex];
+    if (!current) return;
+    let imgUrl = '';
+
+    if (current.isLocal && isNewMode && pendingFiles[current.localIndex]) {
+      setSearching(true);
+      try {
+        const file = pendingFiles[current.localIndex];
+        const formData = new FormData();
+        formData.append('file', file);
+        if (styleId) formData.append('styleId', String(styleId));
+        if (styleNo) formData.append('styleNo', styleNo);
+        const uploadRes = await api.post<ApiResult<{ fileUrl?: string }>>('/style/attachment/upload', formData, { timeout: 60000 });
+        if (isApiSuccess(uploadRes) && uploadRes?.data?.fileUrl) {
+          imgUrl = getFullAuthedFileUrl(uploadRes.data.fileUrl);
+        } else {
+          message.error('图片上传失败，无法进行以图搜款');
+          setSearching(false);
+          return;
+        }
+      } catch {
+        message.error('图片上传失败，无法进行以图搜款');
+        setSearching(false);
+        return;
+      }
+    } else {
+      const fullUrl = getFullAuthedFileUrl(current.fileUrl);
+      if (!fullUrl || fullUrl.startsWith('blob:') || fullUrl.startsWith('data:')) {
+        message.warning('当前图片不支持以图搜款');
+        return;
+      }
+      imgUrl = fullUrl;
+    }
+
+    if (!imgUrl) {
+      message.warning('无法获取图片URL');
+      return;
+    }
+
+    setSearching(true);
+    try {
+      const res = await styleSearchByImage(imgUrl);
+      if (res.success && res.matchCount > 0) {
+        setSearchResult(res);
+        setSearchExpanded(true);
+      } else {
+        message.info(res.success ? '未找到视觉相似的历史款式' : (res.error || '以图搜款服务暂不可用'));
+      }
+    } catch {
+      message.warning('以图搜款服务暂不可用');
+    } finally {
+      setSearching(false);
+    }
+  }, [currentImage, displayImages, currentIndex, isNewMode, pendingFiles, searching, styleId, styleNo]);
 
   // 编辑模式下首次加载时自动触发一次识别（保持原有行为）
   useEffect(() => {
@@ -428,58 +486,7 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
                       {parsing ? '识别中...' : '智能识别填充'}
                     </div>
                     <div
-                      onClick={async () => {
-                        if (searching) return;
-                        let imgUrl = '';
-
-                        if (currentImage.isLocal && isNewMode && pendingFiles[currentImage.localIndex]) {
-                          setSearching(true);
-                          try {
-                            const file = pendingFiles[currentImage.localIndex];
-                            const formData = new FormData();
-                            formData.append('file', file);
-                            if (styleId) formData.append('styleId', String(styleId));
-                            if (styleNo) formData.append('styleNo', styleNo);
-                            const uploadRes = await api.post<ApiResult<{ fileUrl?: string }>>('/style/attachment/upload', formData, { timeout: 60000 });
-                            if (isApiSuccess(uploadRes) && uploadRes?.data?.fileUrl) {
-                              imgUrl = getFullAuthedFileUrl(uploadRes.data.fileUrl);
-                            } else {
-                              message.error('图片上传失败，无法进行以图搜款');
-                              return;
-                            }
-                          } catch {
-                            message.error('图片上传失败，无法进行以图搜款');
-                            return;
-                          }
-                        } else {
-                          const fullUrl = getFullAuthedFileUrl(currentImage.fileUrl);
-                          if (!fullUrl || fullUrl.startsWith('blob:') || fullUrl.startsWith('data:')) {
-                            message.warning('当前图片不支持以图搜款');
-                            return;
-                          }
-                          imgUrl = fullUrl;
-                        }
-
-                        if (!imgUrl) {
-                          message.warning('无法获取图片URL');
-                          return;
-                        }
-
-                        setSearching(true);
-                        try {
-                          const res = await styleSearchByImage(imgUrl);
-                          if (res.success && res.matchCount > 0) {
-                            setSearchResult(res);
-                            setSearchExpanded(true);
-                          } else {
-                            message.info(res.success ? '未找到视觉相似的历史款式' : (res.error || '以图搜款服务暂不可用'));
-                          }
-                        } catch {
-                          message.warning('以图搜款服务暂不可用');
-                        } finally {
-                          setSearching(false);
-                        }
-                      }}
+                      onClick={runStyleSearchByImage}
                       style={{
                         padding: '4px 10px', borderRadius: 999,
                         background: searching ? 'rgba(0,0,0,0.3)' : 'rgba(17, 24, 39, 0.7)',
@@ -554,6 +561,112 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
         )}
       </div>
 
+      {/* 【新增】常显的 AI 操作按钮栏（有图片时显示） */}
+      {displayImages.length > 0 && (
+        <div
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: 8,
+            marginBottom: 12,
+            padding: '10px 12px',
+            borderRadius: 8,
+            border: '1px solid var(--color-border-antd)',
+            background: 'var(--color-bg-container)',
+          }}
+        >
+          <Button
+            size="small"
+            icon={<BulbOutlined />}
+            onClick={async () => {
+              if (parsing || searching) return;
+              setParsing(true);
+              setAutoParseError(null);
+              setParseSuccessConfidence(null);
+              try {
+                const res = await runStyleParseFromCurrentImage();
+                if (res?.available) {
+                  message.success(`识别完成（置信度 ${res.overallConfidence}%）`);
+                  onStyleParseResult?.(res);
+                  onAutoParseResult?.(res);
+                  setParseSuccessConfidence(res.overallConfidence ?? null);
+                } else {
+                  message.warning(res?.errorMessage || '识别失败，请人工填写');
+                  setAutoParseError(res?.errorMessage || '识别失败');
+                }
+              } catch {
+                message.warning('智能识别服务暂不可用');
+                setAutoParseError('智能识别服务暂不可用');
+              } finally {
+                setParsing(false);
+              }
+            }}
+            loading={parsing}
+          >
+            {parsing ? 'AI 识别中…' : 'AI 智能识别'}
+          </Button>
+          <Button
+            size="small"
+            icon={<SearchOutlined />}
+            onClick={runStyleSearchByImage}
+            loading={searching}
+          >
+            {searching ? '正在搜款中…' : '搜相似款'}
+          </Button>
+        </div>
+      )}
+
+      {/* 【新增】AI 识别结果状态卡片 */}
+      {displayImages.length > 0 && parseSuccessConfidence !== null && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: 8,
+            padding: '10px 12px',
+            marginBottom: 12,
+            borderRadius: 8,
+            background: 'rgba(34, 197, 94, 0.08)',
+            border: '1px solid rgba(34, 197, 94, 0.3)',
+          }}
+        >
+          <PictureOutlined style={{ fontSize: 16, color: '#15803d', marginTop: 2 }} />
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: '#15803d' }}>
+              识别完成：{parseSuccessConfidence}% 置信度
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginTop: 2 }}>
+              AI 已自动填充款号信息、颜色、尺码等字段信息，可在下方表单中核对修改。
+            </div>
+          </div>
+        </div>
+      )}
+      {displayImages.length > 0 && parseSuccessConfidence === null && autoParseError && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: 8,
+            padding: '10px 12px',
+            marginBottom: 12,
+            borderRadius: 8,
+            background: 'rgba(245, 158, 11, 0.08)',
+            border: '1px solid rgba(245, 158, 11, 0.3)',
+          }}
+        >
+          <PictureOutlined style={{ fontSize: 16, color: '#b45309', marginTop: 2 }} />
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: '#b45309' }}>
+              未识别，请手动填写或换张更清晰的图片
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginTop: 2 }}>
+              {autoParseError}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 缩略图列表（保留原有） */}
       {displayImages.length > 0 && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6, width: '100%', maxWidth: 400, marginBottom: 10 }}>
           {displayImages.map((img, idx) => {

@@ -1,14 +1,15 @@
 /**
  * 订单状态辅助函数
  * 统一管理订单、质检等状态文本转换
- * 与 PC 端 / 小程序 / 后端保持一致
+ * 与 PC 端 ORDER_STATUS_LABEL / 后端 OrderStatusConstants 保持一致
+ * 关键：小写规范化 + 颜色分组（待生产/default，生产中/processing=blue，完成/success，逾期/warning，报废/error）
  */
 
 const COLOR_DEFAULT = 'var(--color-text-disabled)';
 const COLOR_SUCCESS = 'var(--color-success)';
 const COLOR_WARNING = 'var(--color-warning)';
 const COLOR_ERROR = 'var(--color-error)';
-const COLOR_PROCESSING = 'var(--color-primary)';
+const COLOR_PROCESSING = 'var(--color-primary)'; // 与前端 processing 对应（生产中/活跃工序）
 const COLOR_BLUE = 'var(--color-info)';
 const COLOR_CYAN = 'var(--color-tertiary)';
 const COLOR_ORANGE = 'var(--color-warning-secondary)';
@@ -17,6 +18,7 @@ const COLOR_PURPLE = 'var(--color-purple)';
 const COLOR_GEEKBLUE = 'var(--color-geekblue)';
 const COLOR_FALLBACK = 'var(--color-text-secondary)';
 
+/** 主状态标签映射（与 PC 端 orderStatus.ts 保持一致） */
 const STATUS_LABEL_MAP = {
   not_started: '未开始',
   pending: '待生产',
@@ -55,6 +57,7 @@ const STATUS_LABEL_MAP = {
   created: '已创建',
 };
 
+/** 主状态颜色映射（与 PC 端 ORDER_STATUS_COLOR 保持一致） */
 const STATUS_COLOR_MAP = {
   // 与 PC 端 constants/statusMaps.ts ORDER_STATUS_MAP 保持一致
   not_started: COLOR_DEFAULT,

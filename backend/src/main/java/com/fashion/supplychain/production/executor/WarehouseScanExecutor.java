@@ -279,7 +279,11 @@ public class WarehouseScanExecutor {
         String whBundleNo = bundle != null && bundle.getBundleNo() != null ? String.valueOf(bundle.getBundleNo()) : "";
         result.put("message", "入库成功" + (whBundleNo.isEmpty() ? "" : " · 菲号" + whBundleNo));
         result.put("scanRecord", sr);
-        result.put("orderInfo", executorSupport.buildOrderInfo(order));
+        Map<String, Object> orderInfo = executorSupport.buildOrderInfo(order, bundle);
+        result.put("orderInfo", orderInfo);
+        executorSupport.flattenOrderInfoToTop(result, orderInfo);
+        executorSupport.flattenBundleToTop(result, bundle);
+        result.put("processName", "入库");
         result.put("cuttingBundle", bundle);
         return result;
     }

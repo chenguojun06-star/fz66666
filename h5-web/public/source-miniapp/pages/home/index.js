@@ -4,6 +4,8 @@ const { isTokenExpired } = require('../../utils/storage');
 const { eventBus, Events } = require('../../utils/eventBus');
 const permission = require('../../utils/permission');
 
+function _hasFn(fn) { return typeof fn === 'function'; }
+
 const DAILY_FLOWERS = [
   '🌸 樱花 — 生命之美，转瞬即永恒',
   '🌹 玫瑰 — 热情与勇气',
@@ -218,10 +220,11 @@ Page({
     const wantProcurement = isManager || role === permission.ROLES.PURCHASER;
     const wantCutting = isManager || role === permission.ROLES.CUTTER;
     if (!wantProcurement && !wantCutting) {
-      this.setData({ myTodos: [] });
+      this.setData({ myTodos: [], aiTodoSummary: { myTasks: 0, procurement: 0, cutting: 0 } });
       return;
     }
     const tasks = [];
+    let total = 0, procurement = 0, cutting = 0;
     if (wantProcurement) tasks.push(
       api.production.myProcurementTasks().then(function (res) {
         const list = Array.isArray(res) ? res : (res && res.list) || [];
@@ -237,6 +240,8 @@ Page({
             count: pending.length,
             url: '/pages/procurement/task-list/index',
           });
+          procurement += pending.length;
+          total += pending.length;
         }
       }).catch(function () {})
     );
@@ -255,17 +260,17 @@ Page({
             count: pending.length,
             url: '/pages/cutting/task-list/index',
           });
+          cutting += pending.length;
+          total += pending.length;
         }
       }).catch(function () {})
     );
     Promise.all(tasks).then(function () {
-      that.setData({ myTodos: todos });
+      that.setData({
+        myTodos: todos,
+        aiTodoSummary: { myTasks: total, procurement: procurement, cutting: cutting },
+      });
     });
-  },
-
-  onTodoTap: function (e) {
-    const url = e.currentTarget.dataset.url;
-    if (url) safeNavigate({ url: url });
   },
 
   _loadMenuVisibility: function () {
@@ -380,10 +385,17 @@ Page({
     safeNavigate({ url: item.route }, isTabPage ? 'switchTab' : undefined);
   },
 
+  _favoriteNavLock: false,
+
   onFavoriteTap: function (e) {
     // 拖动中不响应点击
     if (this.data.draggingIndex !== -1) return;
-    
+    // 防重复点击（200ms 内忽略）
+    if (this._favoriteNavLock) return;
+    this._favoriteNavLock = true;
+    const that = this;
+    setTimeout(function () { that._favoriteNavLock = false; }, 200);
+
     const app = e.currentTarget.dataset.app;
     if (!app || !app.route) return;
     safeNavigate({ url: app.route });

@@ -112,6 +112,14 @@ Page({
     }).catch(() => {});
   },
 
+  onCoverPreview(e) {
+    const url = e.currentTarget.dataset.url;
+    if (!url) return;
+    try {
+      wx.previewImage({ current: url, urls: [url] });
+    } catch (err) { /* ignore */ }
+  },
+
   _normalizeList(res) {
     if (Array.isArray(res)) return res;
     if (res && Array.isArray(res.records)) return res.records;
@@ -157,7 +165,7 @@ Page({
       ...g,
       arrivalRate: g.totalPurchased > 0 ? Math.round(g.totalArrived / g.totalPurchased * 100) : 0,
       statusText: g.completedCount === g.totalCount ? '已完成' : (g.pendingCount === g.totalCount ? '待采购' : '采购中'),
-      statusColor: g.completedCount === g.totalCount ? 'green' : (g.pendingCount === g.totalCount ? 'orange' : 'blue'),
+      statusColor: g.completedCount === g.totalCount ? 'success' : (g.pendingCount === g.totalCount ? 'warning' : 'processing'),
     }));
   },
 });

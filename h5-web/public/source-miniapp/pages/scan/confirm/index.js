@@ -155,7 +155,7 @@ Page({
 
     // 防御性检查：裁剪已完成 → 自动提示并返回
     if (isCutting && cuttingTask && ['completed', 'done'].includes(cuttingTask.status)) {
-      wx.showToast({ title: '裁剪任务已完成', icon: 'success' });
+      toast.success('裁剪任务已完成');
       setTimeout(function() { wx.navigateBack(); }, 1500);
       return;
     }

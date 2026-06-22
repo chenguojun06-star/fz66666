@@ -6,12 +6,12 @@ const { transformOrderData } = require('../utils/orderTransform');
 const { buildProcessNodesWithRates, calcOrderProgress } = require('../utils/progressNodes');
 
 const STATUS_MAP = {
-  pending: { text: '待收货', cls: 'tag-orange' },
-  received: { text: '已收货', cls: 'tag-green' },
+  pending: { text: '待收货', cls: 'tag-warning' },
+  received: { text: '已收货', cls: 'tag-success' },
 };
 
 function receiveStatusText(s) { return (STATUS_MAP[s] || {}).text || s || ''; }
-function receiveStatusCls(s) { return (STATUS_MAP[s] || {}).cls || 'tag-gray'; }
+function receiveStatusCls(s) { return (STATUS_MAP[s] || {}).cls || 'tag-default'; }
 
 function enrichForDashboard(order) {
   const completed = Number(order.completedQuantity) || 0;
@@ -48,6 +48,11 @@ Page({
     showReceiveModal: false,
     receiveForm: { receivedDetails: [] },
     currentReceiveShipment: null,
+    /* 外发工厂汇总统计（对齐 PC 端 FactorySidebar 7-Tag） */
+    factoryStats: [],
+    factoryStatsTotal: { orderCount: 0, totalQuantity: 0, inProgressCount: 0, completedCount: 0, styleCount: 0, overdueCount: 0, warningCount: 0 },
+    selectedFactoryId: '',
+    factoryStatsLoading: false,
   },
 
   onLoad: function () {
@@ -84,7 +89,46 @@ Page({
       orderPage: 1, orders: [], orderHasMore: true,
       shipmentPage: 1, shipments: [], shipmentHasMore: true,
     });
-    return Promise.all([this._loadOrders(), this._loadShipments()]);
+    return Promise.all([this._loadOrders(), this._loadShipments(), this._loadFactoryStats()]);
+  },
+
+  /* ======== 外发工厂汇总统计（对齐 PC 端 FactorySidebar 7-Tag） ======== */
+  _loadFactoryStats: function () {
+    // 工厂账号不加载全局工厂统计
+    if (this.data.isFactory) return Promise.resolve();
+    const that = this;
+    this.setData({ factoryStatsLoading: true });
+    return api.production.getExternalFactoryStats().then(function (res) {
+      const list = (res && res.data) || res || [];
+      const arr = Array.isArray(list) ? list : [];
+      // 计算全部工厂汇总
+      const total = arr.reduce(function (acc, s) {
+        acc.orderCount += Number(s.orderCount) || 0;
+        acc.totalQuantity += Number(s.totalQuantity) || 0;
+        acc.inProgressCount += Number(s.inProgressCount) || 0;
+        acc.completedCount += Number(s.completedCount) || 0;
+        acc.styleCount += Number(s.styleCount) || 0;
+        acc.overdueCount += Number(s.overdueCount) || 0;
+        acc.warningCount += Number(s.warningCount) || 0;
+        return acc;
+      }, { orderCount: 0, totalQuantity: 0, inProgressCount: 0, completedCount: 0, styleCount: 0, overdueCount: 0, warningCount: 0 });
+      that.setData({ factoryStats: arr, factoryStatsTotal: total, factoryStatsLoading: false });
+    }).catch(function () {
+      that.setData({ factoryStatsLoading: false });
+    });
+  },
+
+  /* 点击工厂汇总卡片切换筛选 */
+  onFactoryStatTap: function (e) {
+    const factoryId = e.currentTarget.dataset.factoryId || '';
+    const next = this.data.selectedFactoryId === factoryId ? '' : factoryId;
+    this.setData({ selectedFactoryId: next });
+    this._resetAndLoadOrders();
+  },
+
+  _resetAndLoadOrders: function () {
+    this.setData({ orderPage: 1, orders: [], orderHasMore: true });
+    return this._loadOrders();
   },
 
   _loadOrders: function () {
@@ -93,6 +137,7 @@ Page({
     this.setData({ orderLoading: true });
     const params = { page: this.data.orderPage, pageSize: 20, excludeTerminal: 'true' };
     if (this.data.keyword) params.orderNo = this.data.keyword;
+    if (this.data.selectedFactoryId) params.factoryId = this.data.selectedFactoryId;
     return api.production.listOrders(params).then(function (res) {
       const records = (res && res.records) || [];
       const total = (res && res.total) || 0;
@@ -159,7 +204,7 @@ Page({
     const orderNo = e.currentTarget.dataset.orderNo;
     if (!orderNo) return;
     wx.setClipboardData({ data: orderNo, success: function () {
-      wx.showToast({ title: '已复制', icon: 'success', duration: 1000 });
+      toast.success('已复制');
     }});
   },
 
@@ -182,6 +227,16 @@ Page({
     const order = this.data.orders[idx];
     if (!order) return;
     safeNavigate({ url: '/pages/dashboard/process-edit/index?orderId=' + encodeURIComponent(order.id) + '&orderNo=' + encodeURIComponent(order.orderNo || '') }).catch(() => {});
+  },
+
+  onOpenDetail: function (e) {
+    const idx = e.currentTarget.dataset.index;
+    const order = this.data.orders[idx];
+    if (!order) return;
+    const params = [];
+    if (order.id) params.push('orderId=' + encodeURIComponent(order.id));
+    if (order.orderNo) params.push('orderNo=' + encodeURIComponent(order.orderNo));
+    safeNavigate({ url: '/pages/dashboard/order-detail/index?' + params.join('&') }).catch(function () {});
   },
 
   onOpenShip: function (e) {

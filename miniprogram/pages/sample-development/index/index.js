@@ -26,6 +26,7 @@ function getDeliveryMeta(record, allStagesCompleted) {
   const sampleStatus = String(record.sampleStatus || record.status || '').trim().toUpperCase();
   if (sampleStatus === 'SCRAPPED') return { tone: 'scrapped', label: '已报废' };
   if (sampleStatus === 'CLOSED') return { tone: 'scrapped', label: '已关单' };
+  if (sampleStatus === 'COMPLETED' || sampleStatus === 'WAREHOUSE_IN') return { tone: 'success', label: '已完成' };
   if (allStagesCompleted) {
     return { tone: 'success', label: '已完成' };
   }
@@ -122,6 +123,7 @@ Page({
     statusTabs: STATUS_TABS,
     // 样衣开发统计（与 PC 端 activeStyles 逻辑一致）
     sampleCount: 0,       // 开发中（活跃款式数量）
+    completedCount: 0,    // 已完成
     overdueCount: 0,      // 已延期
     warningCount: 0,      // 临近交期
     smartFilter: '',      // 智能筛选：'' | 'overdue' | 'warning'
@@ -222,6 +224,7 @@ Page({
         const d = (res && res.data) || res || {};
         that.setData({
           sampleCount: Number(d.activeCount) || 0,
+          completedCount: Number(d.completedCount) || 0,
           overdueCount: Number(d.overdueCount) || 0,
           warningCount: Number(d.warningCount) || 0,
         });
@@ -398,11 +401,13 @@ Page({
 
   /**
    * 智能筛选标签点击（与 PC 端 smartFilter 逻辑一致）
-   * 点击"已延期"→ 只看延期款号；点击"临近交期"→ 只看临近交期款号；再次点击 → 取消
-   * 实现方式：前端过滤当前列表中 _deliveryTone === 'danger'（延期）/ 'warning'（临近交期）的记录
+   * 点击「已延期」→ 只看 _deliveryTone==='danger' 的款号
+   * 点击「临近交期」→ 只看 _deliveryTone==='warning' 的款号
+   * 点击「已完成」→ 只看 _deliveryTone==='success' 的款号
+   * 再次点击同一标签 → 取消筛选
    */
   onSmartFilterTap: function (e) {
-    const target = e.currentTarget.dataset.key; // 'overdue' | 'warning'
+    const target = e.currentTarget.dataset.key; // 'overdue' | 'warning' | 'completed'
     const current = this.data.smartFilter;
     if (current === target) {
       // 再次点击同一标签 → 取消筛选
@@ -423,6 +428,7 @@ Page({
    * 应用智能筛选后返回展示列表（与 PC 端 displayData 逻辑一致）
    * smartFilter='overdue' → 只显示 _deliveryTone==='danger' 的记录
    * smartFilter='warning' → 只显示 _deliveryTone==='warning' 的记录
+   * smartFilter='completed' → 只显示 _deliveryTone==='success' 的记录
    * smartFilter='' → 显示全部
    */
   _getDisplayList: function () {
@@ -431,6 +437,7 @@ Page({
     return this.data.list.filter(function (item) {
       if (sf === 'overdue') return item._deliveryTone === 'danger';
       if (sf === 'warning') return item._deliveryTone === 'warning';
+      if (sf === 'completed') return item._deliveryTone === 'success';
       return true;
     });
   },

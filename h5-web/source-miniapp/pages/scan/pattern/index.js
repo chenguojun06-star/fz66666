@@ -29,6 +29,7 @@ const OPERATION_LABELS = {
 const WAREHOUSE_OPERATIONS = new Set(['WAREHOUSE_IN', 'WAREHOUSE_OUT', 'WAREHOUSE_RETURN']);
 
 const STATUS_LABELS = {
+  // 通用流程
   PENDING: '待处理',
   IN_PROGRESS: '进行中',
   COMPLETED: '已完成',
@@ -99,13 +100,10 @@ Page({
     const that = this;
     const opts = options || {};
     const patternId = opts.patternId || '';
-    const manualProcessName = opts.processName ? decodeURIComponent(opts.processName) : '';
-    const manualProgressStage = opts.progressStage ? decodeURIComponent(opts.progressStage) : '';
-    const manualScanType = opts.scanType ? decodeURIComponent(opts.scanType) : '';
 
     if (!patternId) {
       toast.error('无效的样衣编号');
-      setTimeout(() => wx.navigateBack(), 300);
+      setTimeout(() => { try { wx.navigateBack({ delta: 1 }); } catch (_e) {} }, 300);
       return;
     }
 
@@ -118,23 +116,53 @@ Page({
     };
 
     // 如果从列表页点击了某个工序，构造 manualScanType 供 handlePatternScan 选择默认工序
-    const manualType = manualProcessName || manualProgressStage || '';
+    const manualProcessName = opts.processName ? decodeURIComponent(opts.processName) : '';
+    const manualProgressStage = opts.progressStage ? decodeURIComponent(opts.progressStage) : '';
+    const manualScanType = manualProcessName || manualProgressStage || '';
 
-    handlePatternScan(handler, { patternId: patternId, scanCode: patternId }, manualType)
+    // 超时保护：10秒内没有返回则提示失败（避免页面卡死导致 navigateTo 也超时）
+    let timedOut = false;
+    let done = false;
+    const timeoutTimer = setTimeout(() => {
+      timedOut = true;
+      try { wx.hideLoading(); } catch (_e) { /* ignore */ }
+      toast.error('加载超时，请重试');
+      if (!that.data || !that.data.viewMode) {
+        try {
+          wx.navigateTo && wx.navigateBack({ delta: 1 });
+        } catch (_e) { /* ignore */ }
+      }
+    }, 10000);
+
+    function finish() {
+      if (done) return;
+      done = true;
+      if (timedOut) return;
+      try { clearTimeout(timeoutTimer); } catch (_e) { /* ignore */ }
+      try { wx.hideLoading(); } catch (_e) { /* ignore */ }
+    }
+
+    handlePatternScan(handler, { patternId: patternId, scanCode: patternId }, manualScanType)
       .then(function(result) {
+        if (timedOut) return;
         if (!result || !result.success) {
+          finish();
           toast.error(result && result.message ? result.message : '加载失败');
-          setTimeout(() => wx.navigateBack(), 500);
+          setTimeout(() => { try { wx.navigateBack({ delta: 1 }); } catch (_e) {} }, 500);
           return;
         }
 
         const data = result.data || {};
         const app = getApp();
-        if (app.globalData) {
+        if (app && app.globalData) {
           app.globalData.patternScanData = data;
         }
 
-        // 构建工序选择列表（用于 select 模式）
+        // 从 data 中提取标准化的基础信息（已经由 Processor 做了多字段兼容）
+        const sizesArr = data.sizes || [];
+        const sizesText = sizesArr.length ? sizesArr.join('/') : (data.size ? String(data.size) : '-');
+
+        // 构建工序选择列表（同时把 color/size/quantity 转发给 WXML）
         const rawOptions = Array.isArray(data.operationOptions) ? data.operationOptions : [];
         const processList = rawOptions.map(function(opt) {
           return {
@@ -147,24 +175,30 @@ Page({
             processName: opt.processName || opt.value,
             progressStage: opt.progressStage || opt.value,
             scanType: opt.scanType || 'production',
+            color: opt.color || data.color || '',
+            size: opt.size || data.size || (sizesArr.length ? sizesArr.join('/') : ''),
+            quantity: typeof opt.quantity === 'number' ? opt.quantity : (typeof data.quantity === 'number' ? data.quantity : 0),
           };
         });
 
-        // 判断视图模式：如果 URL 传了具体工序 → 直接操作；否则 → 先选工序
-        const hasDirectProcess = !!manualType;
+        // 判断视图模式
+        const hasDirectProcess = !!manualScanType;
         const firstOperable = processList.find(function(p) { return p.canOperate; });
         const allCompleted = processList.length > 0 && processList.every(function(p) { return p.completed; });
 
         if (allCompleted) {
+          finish();
           toast.success('所有工序已完成');
-          setTimeout(() => wx.navigateBack(), 500);
+          setTimeout(() => { try { wx.navigateBack({ delta: 1 }); } catch (_e) {} }, 500);
           return;
         }
 
         if (hasDirectProcess && firstOperable) {
-          // 直接进入操作页，选中第一个可操作工序（或用户指定的）
-          that._buildOperateView(data, manualType);
+          finish();
+          // 直接进入操作视图
+          that._buildOperateView(data, manualScanType);
         } else {
+          finish();
           // 显示工序选择
           that.setData({
             viewMode: 'select',
@@ -172,19 +206,23 @@ Page({
             detail: {
               patternId: data.patternId,
               styleNo: data.styleNo || data.patternId,
+              styleName: data.styleName || '',
               color: data.color || '',
-              coverImage: data.patternDetail ? getAuthedImageUrl(data.patternDetail.coverImage || data.patternDetail.styleImage || '') : '',
+              size: data.size || '',
+              sizes: sizesArr,
+              sizesText: sizesText,
+              quantity: data.quantity || 0,
+              coverImage: data.cover || getAuthedImageUrl(''),
             },
           });
         }
       })
       .catch(function(err) {
+        if (timedOut) return;
+        finish();
         console.error('[PatternPage] 加载失败:', err);
-        toast.error('加载失败');
-        setTimeout(() => wx.navigateBack(), 500);
-      })
-      .finally(function() {
-        wx.hideLoading();
+        toast.error('加载失败，请重试');
+        setTimeout(() => { try { wx.navigateBack({ delta: 1 }); } catch (_e) {} }, 500);
       });
   },
 
@@ -224,9 +262,15 @@ Page({
     const patternDetail = data.patternDetail || {};
     const rawOptions = Array.isArray(data.operationOptions) ? data.operationOptions : [];
     const status = String(data.status || '').toUpperCase();
-    const reviewStatus = String(patternDetail.reviewStatus || '').toUpperCase();
-    const reviewResult = String(patternDetail.reviewResult || '').toUpperCase();
-    const reviewApproved = reviewStatus === 'APPROVED' || reviewResult === 'APPROVED';
+
+    // 从 data（已由 Processor 做了多字段兼容）中提取基础字段
+    const colorVal = data.color || patternDetail.color || '';
+    const sizeVal = data.size || patternDetail.size || '';
+    const quantityVal = data.quantity || patternDetail.quantity || 0;
+    const styleNoVal = data.styleNo || patternDetail.styleNo || data.patternId || '';
+    const styleNameVal = data.styleName || patternDetail.styleName || '';
+    const sizesArr = data.sizes || patternDetail.sizes || [];
+    const coverVal = data.cover || patternDetail.coverImage || patternDetail.styleImage || '';
 
     // 匹配用户指定的工序，如果没匹配到 → 用第一个可操作的
     let selected = null;
@@ -247,116 +291,73 @@ Page({
       SEWING: '车缝', TAIL: '尾部',
     };
     const operationType = String(selected.value || '').toUpperCase() || 'RECEIVE';
-    const operationLabel = selected.label || OPERATION_LABELS[operationType] || '操作';
-    // 工序系统模式：用 scanType 判断是否是仓库操作；传统模式：用英文枚举判断
+    const operationLabel = selected.label || operationType;
     const scanType = String(selected.scanType || '').toLowerCase();
     const requiresWarehouseInput = data.hasProcessSystem
       ? scanType === 'warehouse' || scanType === 'warehouse_in'
-      : WAREHOUSE_OPERATIONS.has(operationType);
+      : ['WAREHOUSE_IN', 'WAREHOUSE_OUT', 'WAREHOUSE_RETURN'].indexOf(operationType) > -1;
     const submitLabel = SUBMIT_LABEL_MAP[operationType] || operationLabel;
-    const sizes = patternDetail.sizes || [];
+
+    // 状态颜色：与 PC 端一致的 color class 映射
+    let statusColor = 'default';
+    if (/PENDING|WAITING/.test(status)) statusColor = 'warning';
+    else if (/IN_PROGRESS|ACTIVE/.test(status)) statusColor = 'processing';
+    else if (/COMPLETED|DONE|FINISHED|CLOSED/.test(status)) statusColor = 'success';
+    else if (/REJECTED|FAILED|ERROR|SCRAPPED|CANCELLED/.test(status)) statusColor = 'error';
 
     this.setData({
       viewMode: 'operate',
       detail: {
         patternId: data.patternId,
-        styleNo: data.styleNo,
-        color: data.color,
-        quantity: normalizePositiveInt(data.quantity, 1),
-        maxQuantity: normalizePositiveInt(data.quantity, 1),
+        styleNo: styleNoVal,
+        styleName: styleNameVal,
+        color: colorVal,
+        size: sizeVal,
+        sizes: sizesArr,
+        sizesText: sizesArr.length ? sizesArr.join('/') : (sizeVal ? String(sizeVal) : ''),
+        quantity: normalizePositiveInt(quantityVal, 1),
+        maxQuantity: normalizePositiveInt(quantityVal, 1),
         warehouseCode: '',
         status: status,
         statusLabel: _statusToCN(status),
-        statusType: String(status || '').toLowerCase().replace(/_/g, ''),
-        sizes: sizes,
-        sizesText: sizes.length ? sizes.join('/') : '-',
+        statusColor: statusColor,
         operationType: operationType,
         operationLabel: operationLabel,
         operationOptions: rawOptions,
         requiresWarehouseInput: requiresWarehouseInput,
-        requiresReviewBeforeInbound: operationType === 'WAREHOUSE_IN' && !reviewApproved,
-        reviewApproved: reviewApproved,
-        designer: data.designer || patternDetail.designer || '-',
-        patternDeveloper: data.patternDeveloper || patternDetail.patternDeveloper || '-',
-        deliveryTime: patternDetail.deliveryTime || '-',
-        coverImage: getAuthedImageUrl(patternDetail.coverImage || patternDetail.styleImage || ''),
-        styleImage: getAuthedImageUrl(patternDetail.styleImage || patternDetail.coverImage || ''),
-        styleName: patternDetail.styleName || data.styleName || '',
-        category: patternDetail.category || data.category || '',
-        customer: patternDetail.customer || data.customer || '',
-        source: patternDetail.developmentSourceType || data.developmentSourceType || '',
-        categoryLabel: CATEGORY_LABELS[patternDetail.category || data.category || ''] || patternDetail.category || data.category || '',
-        sourceLabel: SOURCE_LABELS[patternDetail.developmentSourceType || data.developmentSourceType || ''] || patternDetail.developmentSourceType || data.developmentSourceType || '',
+        requiresReviewBeforeInbound: operationType === 'WAREHOUSE_IN',
+        designer: patternDetail.designer || '',
+        patternDeveloper: patternDetail.patternDeveloper || '',
+        deliveryTime: patternDetail.deliveryTime || '',
+        coverImage: getAuthedImageUrl(coverVal),
+        hasProcessSystem: !!data.hasProcessSystem,
         submitLabel: submitLabel,
         remark: '',
-        reviewResult: 'PASS',
-        hasProcessSystem: !!data.hasProcessSystem,
-        orderId: data.orderId || '',
-        orderNo: data.orderNo || '',
-        stageGroups: data.stageGroups || [],
       },
     });
 
-    // Process size/color matrix for table display + aggregated text
+    // 处理颜色/码数矩阵（如果有）
     const matrix = patternDetail.sizeColorMatrix;
-    const matrixSizes = (matrix && Array.isArray(matrix.sizes) && matrix.sizes.length > 0)
-      ? matrix.sizes
-      : (matrix && Array.isArray(matrix.commonSizes) ? matrix.commonSizes : []);
-    const matrixItems = [];
-    if (matrix && Array.isArray(matrix.matrixRows)
-        && matrixSizes.length > 0 && matrix.matrixRows.length > 0) {
-      const matrixRows = matrix.matrixRows.map(row => {
-        const quantities = Array.isArray(row.quantities) ? row.quantities : [];
+    if (matrix && Array.isArray(matrix.matrixRows) && matrix.matrixRows.length > 0) {
+      const matrixSizes = Array.isArray(matrix.sizes) ? matrix.sizes : [];
+      const matrixRowsFormatted = matrix.matrixRows.map(function(row) {
+        const qtyList = Array.isArray(row.quantities) ? row.quantities : [];
+        const rowTotal = qtyList.reduce(function(s, q) { return s + (Number(q) || 0); }, 0);
         return {
           color: row.color || '',
-          quantities: quantities,
-          rowTotal: quantities.reduce((s, q) => s + (Number(q) || 0), 0),
+          quantities: qtyList,
+          rowTotal: rowTotal,
         };
       });
-      const grandTotal = matrixRows.reduce((s, r) => s + r.rowTotal, 0);
+      const grandTotal = matrixRowsFormatted.reduce(function(s, r) { return s + r.rowTotal; }, 0);
 
-      matrix.matrixRows.forEach(function(row) {
-        const color = row.color || '';
-        const qtys = Array.isArray(row.quantities) ? row.quantities : [];
-        matrixSizes.forEach(function(size, idx) {
-          const qty = Number(qtys[idx]) || 0;
-          if (size && qty > 0) {
-            matrixItems.push({ color: color, size: size, quantity: qty });
-          }
-        });
-      });
-
-      const matrixUpdate = {
+      this.setData({
         'detail.hasMatrix': true,
         'detail.matrixSizes': matrixSizes,
-        'detail.matrixRows': matrixRows,
+        'detail.matrixRows': matrixRowsFormatted,
         'detail.matrixTotal': grandTotal,
-        'detail.maxQuantity': grandTotal > 0 ? grandTotal : (this.data.detail.maxQuantity || 1),
-      };
-
-      if (matrixItems.length > 0) {
-        const uniqueColors = [];
-        matrixItems.forEach(function(item) {
-          if (item.color && uniqueColors.indexOf(item.color) === -1) {
-            uniqueColors.push(item.color);
-          }
-        });
-        matrixUpdate['detail.colorText'] = uniqueColors.join(' / ');
-        matrixUpdate['detail.sizeText'] = matrixItems.map(function(i) { return i.size; }).join(' / ');
-        matrixUpdate['detail.quantityText'] = matrixItems.map(function(i) { return String(i.quantity); }).join(' / ');
-        matrixUpdate['detail.totalQuantity'] = grandTotal;
-      }
-
-      this.setData(matrixUpdate);
-    }
-
-    // 构建 SKU 列表用于多色多码选择
-    if (matrixItems.length > 0 || (data.orderItems && data.orderItems.length > 0)) {
-      const skuItems = matrixItems.length > 0 ? matrixItems : (data.orderItems || []);
-      const normalized = SKUProcessor.normalizeOrderItems(skuItems, data.orderNo, data.styleNo);
-      const formItems = SKUProcessor.buildSKUInputList(normalized);
-      const summary = SKUProcessor.getSummary(formItems);
-      this.setData({ skuList: formItems, summary: summary });
+        'detail.maxQuantity': grandTotal > 0 ? grandTotal : this.data.detail.maxQuantity,
+      });
     }
 
     this._loadWarehouseOptions();
@@ -694,6 +695,7 @@ Page({
       } else if (operationType === 'RECEIVE') {
         const receiveExtra = {};
         if (d.color) receiveExtra.color = d.color;
+        if (d.size) receiveExtra.size = d.size;
         if (qty > 0) receiveExtra.quantity = qty;
         const rcvRes = await api.production.receivePattern(d.patternId, remark, receiveExtra);
         result = rcvRes ? { success: true, message: '领取成功' } : { success: false, message: '领取样板失败' };
@@ -704,6 +706,8 @@ Page({
           operationType: operationType,
           operatorRole: 'PLATE_WORKER',
           quantity: qty,
+          size: d.size,
+          color: d.color,
           warehouseCode: d.warehouseCode,
           warehouseAreaId: this.data.warehouseAreaId,
           warehouseLocationCode: this.data.warehouseLocationCode,
@@ -763,8 +767,9 @@ Page({
             operatorRole: 'PLATE_WORKER',
             orderId: d.orderId,
             processName: processName,
-            styleNo: d.styleNo,
-            color: d.color,
+            styleNo: d.styleNo || '',
+            color: d.color || '',
+            size: d.size || '',
             remark: remark || '',
           },
         );
@@ -775,6 +780,7 @@ Page({
           req.bundleNo = d.bundleNo || '01';
           if (!req.styleNo && d.styleNo) req.styleNo = d.styleNo;
           if (!req.color && d.color) req.color = d.color;
+          if (!req.size && d.size) req.size = d.size;
           if (d.warehouseCode) req.warehouse = d.warehouseCode;
           if (this.data.warehouseAreaId) req.warehouseAreaId = this.data.warehouseAreaId;
           if (this.data.warehouseLocationCode) req.warehouseLocationCode = this.data.warehouseLocationCode;
@@ -818,8 +824,9 @@ Page({
           scanCode: d.patternId || '',
           sourceBizType: 'SAMPLE',
           operatorRole: 'PLATE_WORKER',
-          styleNo: d.styleNo,
-          color: d.color,
+          styleNo: d.styleNo || '',
+          color: d.color || '',
+          size: d.size || '',
           remark: remark || '',
         };
 
