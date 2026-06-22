@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState, useEffect } from 'react';
-import { Alert, App, Avatar, Button, Card, Checkbox, Divider, Empty, Form, Input, Select, Space, Spin, Tag, Badge, Statistic, Row, Col } from 'antd';
+import { Alert, App, Avatar, Button, Card, Checkbox, Col, Empty, Form, Input, Row, Select, Space, Spin, Tag, Tabs, Tooltip, Typography } from 'antd';
 import type { ButtonProps } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import PageLayout from '@/components/common/PageLayout';
@@ -25,10 +25,11 @@ import {
   ToolOutlined, ContainerOutlined, HomeOutlined,
   DollarOutlined, AuditOutlined,
   CarOutlined, ShopOutlined, AppstoreOutlined,
-  CheckSquareOutlined, BorderOutlined, ReloadOutlined,
+  CheckSquareOutlined, BorderOutlined, ReloadOutlined, UnorderedListOutlined,
 } from '@ant-design/icons';
 
-/** 角色类型分类定义 */
+const { Text } = Typography;
+
 type RoleCategory = 'internal' | 'external_factory' | 'supplier' | 'other';
 
 interface RoleTemplateWithCategory {
@@ -38,55 +39,29 @@ interface RoleTemplateWithCategory {
   categoryColor: string;
 }
 
-/** 根据角色模板名称判断角色类型 */
 function getRoleCategory(template: { templateName?: string; description?: string; isEnabled?: string }): RoleTemplateWithCategory {
   const name = template.templateName?.toLowerCase() || '';
   const desc = template.description?.toLowerCase() || '';
 
-  // 外发工厂角色
   if (name.includes('factory_owner') || name.includes('external') || desc.includes('外发') || desc.includes('外包') || desc.includes('external factory')) {
-    return {
-      template,
-      category: 'external_factory',
-      categoryLabel: '外发工厂',
-      categoryColor: 'blue',
-    };
+    return { template, category: 'external_factory', categoryLabel: '外发工厂', categoryColor: 'blue' };
   }
 
-  // 第三方供应商角色（物料/面辅料）
   if (name.includes('supplier') || name.includes('vendor') || desc.includes('供应商') || desc.includes('面辅料') || desc.includes('物料供应商')) {
-    return {
-      template,
-      category: 'supplier',
-      categoryLabel: '第三方供应商',
-      categoryColor: 'purple',
-    };
+    return { template, category: 'supplier', categoryLabel: '第三方供应商', categoryColor: 'purple' };
   }
 
-  // 内部角色（管理员、主管、普通员工等）
   if (name.includes('admin') || name.includes('manager') || name.includes('supervisor') ||
       name.includes('full_admin') || name.includes('management') ||
       name.includes('operator') || name.includes('merchandiser') ||
       name.includes('leader') || name.includes('组长') || name.includes('主管') ||
       name.includes('管理员') || name.includes('经理') || name.includes('员工')) {
-    return {
-      template,
-      category: 'internal',
-      categoryLabel: '内部员工',
-      categoryColor: 'green',
-    };
+    return { template, category: 'internal', categoryLabel: '内部员工', categoryColor: 'green' };
   }
 
-  // 其他类型
-  return {
-    template,
-    category: 'other',
-    categoryLabel: '其他',
-    categoryColor: 'default',
-  };
+  return { template, category: 'other', categoryLabel: '其他', categoryColor: 'default' };
 }
 
-/** 角色分类对应的图标 */
 const RoleCategoryIcon: Record<RoleCategory, React.ReactNode> = {
   internal: <UserOutlined />,
   external_factory: <AppstoreOutlined />,
@@ -94,7 +69,7 @@ const RoleCategoryIcon: Record<RoleCategory, React.ReactNode> = {
   other: <TeamOutlined />,
 };
 
-const SIDEBAR_PERM_SECTIONS = [
+const MODULE_SECTIONS = [
   { title: '仪表盘', items: [{ label: '仪表盘', code: permissionCodes.dashboard }] },
   { title: '选品中心', items: [{ label: '选品中心', code: permissionCodes.selection }] },
   { title: '样衣管理', items: [
@@ -202,6 +177,13 @@ const getRoleIcon = (name: string) => {
   return <UserSwitchOutlined />;
 };
 
+const dataScopeLabel = (scope: string | undefined) => {
+  const s = String(scope || 'all');
+  if (s === 'all') return '全部数据';
+  if (s === 'team') return '团队数据';
+  return '个人数据';
+};
+
 const RoleList: React.FC = () => {
   const { message, modal } = App.useApp();
   const [form] = Form.useForm();
@@ -211,6 +193,7 @@ const RoleList: React.FC = () => {
   const [roleList, setRoleList] = useState<RoleRecord[]>([]);
   const [roleUserCounts, setRoleUserCounts] = useState<Record<string, number>>({});
   const [selectedRole, setSelectedRole] = useState<RoleRecord | null>(null);
+  const [activeTab, setActiveTab] = useState<string>('basic');
   const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
   const showSmartErrorNotice = useMemo(() => isSmartFeatureEnabled('smart.production.precheck.enabled'), []);
   const showSystemGuard = useMemo(() => isSmartFeatureEnabled('smart.system.guard.enabled'), []);
@@ -226,9 +209,6 @@ const RoleList: React.FC = () => {
   const [employeeModalOpen, setEmployeeModalOpen] = useState(false);
   const [employeeList, setEmployeeList] = useState<any[]>([]);
   const [employeeLoading, setEmployeeLoading] = useState(false);
-
-  const [editingRoleName, setEditingRoleName] = useState(false);
-  const [roleNameValue, setRoleNameValue] = useState('');
 
   const [logVisible, setLogVisible] = useState(false);
   const [logLoading, setLogLoading] = useState(false);
@@ -246,7 +226,6 @@ const RoleList: React.FC = () => {
         const data = (result.data as { records?: RoleRecord[]; total?: number }) || {};
         const list = Array.isArray(data.records) ? data.records : [];
         setRoleList(list);
-        // 为每个角色查询用户数（简化：只取前20个避免过多请求；如果有聚合接口可以替换）
         const counts: Record<string, number> = {};
         try {
           const userRes = await api.get('/system/user/list', { params: { page: 1, pageSize: 500 } });
@@ -258,9 +237,7 @@ const RoleList: React.FC = () => {
             }
           }
           setRoleUserCounts(counts);
-        } catch {
-          // 忽略用户数统计失败
-        }
+        } catch { /* ignore */ }
         if (showSmartErrorNotice) setSmartError(null);
         return;
       }
@@ -295,12 +272,8 @@ const RoleList: React.FC = () => {
   }, [message]);
 
   useEffect(() => {
-    if (selectedRole?.id) {
-      loadPermTreeAndChecked(String(selectedRole.id));
-    } else {
-      setPermTree([]);
-      setCheckedPermIds(new Set());
-    }
+    if (selectedRole?.id) loadPermTreeAndChecked(String(selectedRole.id));
+    else { setPermTree([]); setCheckedPermIds(new Set()); }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedRole?.id]);
 
@@ -317,27 +290,49 @@ const RoleList: React.FC = () => {
     return map;
   }, [permTree]);
 
-  const permissionsByModule = useMemo(() => {
+  const sectionsComputed = useMemo(() => {
     const kw = String(permKeyword || '').trim().toLowerCase();
     const firstCodeLabel = new Map<string, string>();
-    const result = SIDEBAR_PERM_SECTIONS.map((section) => {
-      const items: Array<{ label: string; permNode: PermissionNode | null; sharedWith: string | null }> = [];
+    const result = MODULE_SECTIONS.map((section) => {
+      const items: Array<{ label: string; permNode: PermissionNode | null; sharedWith: string | null; allIds: number[] }> = [];
       for (const item of section.items) {
         const sharedWith = firstCodeLabel.has(item.code) ? firstCodeLabel.get(item.code)! : null;
-        if (!firstCodeLabel.has(item.code)) {
-          firstCodeLabel.set(item.code, item.label);
-        }
+        if (!firstCodeLabel.has(item.code)) firstCodeLabel.set(item.code, item.label);
         const node = permCodeMap.get(item.code) || null;
-        items.push({ label: item.label, permNode: node, sharedWith });
+        const childIds: number[] = (!sharedWith && node?.children) ? node.children.filter(c => c.id != null).map(c => Number(c.id)) : [];
+        const selfId = node?.id != null && !sharedWith ? [Number(node.id)] : [];
+        const allIds = [...selfId, ...childIds];
+        items.push({ label: item.label, permNode: node, sharedWith, allIds });
       }
-      return { title: section.title, items };
+      // 本模块统计
+      let moduleTotal = 0;
+      let moduleChecked = 0;
+      for (const it of items) {
+        for (const id of it.allIds) {
+          moduleTotal++;
+          if (checkedPermIds.has(id)) moduleChecked++;
+        }
+      }
+      return { title: section.title, items, moduleTotal, moduleChecked };
     }).filter(s => s.items.length > 0);
     if (!kw) return result;
     return result.filter(s =>
       s.title.toLowerCase().includes(kw) ||
       s.items.some(it => it.label.toLowerCase().includes(kw) || (it.permNode?.children || []).some((c: PermissionNode) => String(c.permissionName || '').toLowerCase().includes(kw)))
     );
-  }, [permKeyword, permCodeMap]);
+  }, [permKeyword, permCodeMap, checkedPermIds]);
+
+  const totalPermCount = useMemo(() => {
+    let total = 0;
+    const walk = (nodes: PermissionNode[]) => {
+      for (const n of nodes) {
+        if (n.id != null) total++;
+        if (n.children?.length) walk(n.children);
+      }
+    };
+    walk(permTree);
+    return total;
+  }, [permTree]);
 
   const savePerms = async () => {
     if (!selectedRole?.id) return;
@@ -347,12 +342,12 @@ const RoleList: React.FC = () => {
         const ids = Array.from(checkedPermIds.values());
         const res = await requestWithPathFallback('put', `/system/role/${selectedRole.id}/permission-ids`, `/auth/role/${selectedRole.id}/permission-ids`, { permissionIds: ids, remark });
         const result = res as { code?: number; message?: unknown };
-        if (result.code === 200) { message.success('授权成功'); } else { message.error(String(result.message || '授权失败')); }
+        if (result.code === 200) message.success('授权成功');
+        else message.error(String(result.message || '授权失败'));
       } catch { message.error('授权失败'); } finally { setPermSaving(false); }
     });
   };
 
-  // 一键全选所有权限
   const handleSelectAll = () => {
     const next = new Set(checkedPermIds);
     const walk = (nodes: PermissionNode[]) => {
@@ -365,49 +360,14 @@ const RoleList: React.FC = () => {
     setCheckedPermIds(next);
   };
 
-  // 一键取消所有权限
   const handleDeselectAll = () => {
-    const next = new Set<number>();
-    const walk = (nodes: PermissionNode[]) => {
-      for (const n of nodes) {
-        if (n.id != null) next.delete(Number(n.id));
-        if (n.children?.length) walk(n.children);
-      }
-    };
-    walk(permTree);
-    // 或者直接清空
     setCheckedPermIds(new Set());
   };
 
-  // 一键选中某个模块的所有权限
-  const handleSelectModule = (moduleLabel: string) => {
-    const section = permissionsByModule.find(s => s.title === moduleLabel);
-    if (!section) return;
+  const toggleIds = (ids: number[], selected: boolean) => {
     const next = new Set(checkedPermIds);
-    for (const item of section.items) {
-      if (item.permNode?.id != null) {
-        next.add(Number(item.permNode.id));
-        for (const child of (item.permNode.children || []) as PermissionNode[]) {
-          if (child.id != null) next.add(Number(child.id));
-        }
-      }
-    }
-    setCheckedPermIds(next);
-  };
-
-  // 一键取消某个模块的所有权限
-  const handleDeselectModule = (moduleLabel: string) => {
-    const section = permissionsByModule.find(s => s.title === moduleLabel);
-    if (!section) return;
-    const next = new Set(checkedPermIds);
-    for (const item of section.items) {
-      if (item.permNode?.id != null) {
-        next.delete(Number(item.permNode.id));
-        for (const child of (item.permNode.children || []) as PermissionNode[]) {
-          if (child.id != null) next.delete(Number(child.id));
-        }
-      }
-    }
+    if (selected) ids.forEach(id => next.add(id));
+    else ids.forEach(id => next.delete(id));
     setCheckedPermIds(next);
   };
 
@@ -442,11 +402,11 @@ const RoleList: React.FC = () => {
       const submit = async (remark?: string) => {
         const nextPayload = { ...payload, operationRemark: remark };
         let response;
-        if (nextPayload?.id) { response = await requestWithPathFallback('put', '/system/role', '/auth/role', nextPayload); }
-        else { response = await requestWithPathFallback('post', '/system/role', '/auth/role', nextPayload); }
+        if (nextPayload?.id) response = await requestWithPathFallback('put', '/system/role', '/auth/role', nextPayload);
+        else response = await requestWithPathFallback('post', '/system/role', '/auth/role', nextPayload);
         const result = response as { code?: number; message?: unknown };
         if (result.code === 200) { message.success('保存成功'); closeDialog(); fetchRoles(); }
-        else { message.error(String(result.message || '保存失败')); }
+        else message.error(String(result.message || '保存失败'));
       };
       if (payload?.id) { openRemarkModal('确认保存', '确认保存', undefined, submit); return; }
       await submit();
@@ -473,8 +433,8 @@ const RoleList: React.FC = () => {
     try {
       const res = await api.get('/system/user/list', { params: { roleId: selectedRole.id, page: 1, pageSize: 500 } });
       const result = res as any;
-      if (result.code === 200) { setEmployeeList(result.data?.records || []); }
-      else { setEmployeeList([]); }
+      if (result.code === 200) setEmployeeList(result.data?.records || []);
+      else setEmployeeList([]);
     } catch { setEmployeeList([]); }
     finally { setEmployeeLoading(false); }
   };
@@ -489,46 +449,20 @@ const RoleList: React.FC = () => {
       onOk: async () => {
         try {
           const res: any = await api.put('/system/user', { id: userId, roleId: '' });
-          if (res?.code === 200) {
-            message.success('已移除角色');
-            await handleOpenEmployeeList();
-          } else {
-            message.error(res?.message || '移除失败');
-          }
-        } catch {
-          message.error('移除失败');
-        }
+          if (res?.code === 200) { message.success('已移除角色'); await handleOpenEmployeeList(); }
+          else message.error(res?.message || '移除失败');
+        } catch { message.error('移除失败'); }
       },
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedRole, modal, message]);
-
-  const handleSaveRoleName = useCallback(async () => {
-    if (!selectedRole?.id || !roleNameValue.trim()) return;
-    try {
-      const res: any = await requestWithPathFallback('put', '/system/role', '/auth/role', {
-        ...selectedRole,
-        roleName: roleNameValue.trim(),
-      });
-      if (res?.code === 200) {
-        message.success('职位名称已更新');
-        setEditingRoleName(false);
-        await fetchRoles();
-        setSelectedRole({ ...selectedRole, roleName: roleNameValue.trim() } as RoleRecord);
-      } else {
-        message.error(res?.message || '更新失败');
-      }
-    } catch {
-      message.error('更新失败');
-    }
-  }, [selectedRole, roleNameValue, fetchRoles, message]);
 
   const openLogModal = async (bizType: string, bizId: string, title: string) => {
     setLogTitle(title); setLogVisible(true); setLogLoading(true);
     try {
       const res = await api.get('/system/operation-log/list', { params: { bizType, bizId } });
       const result = res as { code?: number; data?: unknown; message?: unknown };
-      if (result.code === 200) { setLogRecords(Array.isArray(result.data) ? (result.data as OperationLog[]) : []); }
+      if (result.code === 200) setLogRecords(Array.isArray(result.data) ? (result.data as OperationLog[]) : []);
       else { message.error(String(result.message || '获取日志失败')); setLogRecords([]); }
     } catch (e: unknown) { message.error(getErrorMessage(e, '获取日志失败')); setLogRecords([]); }
     finally { setLogLoading(false); }
@@ -536,9 +470,7 @@ const RoleList: React.FC = () => {
 
   const employeeColumns: ColumnsType<any> = [
     {
-      title: '姓名',
-      dataIndex: 'name',
-      key: 'name',
+      title: '姓名', dataIndex: 'name', key: 'name',
       render: (v: string, r: any) => (
         <Space size={6}>
           <Avatar size={24} icon={<UserOutlined />} style={{ backgroundColor: 'var(--primary-color, var(--color-primary))', flexShrink: 0 }} />
@@ -549,13 +481,9 @@ const RoleList: React.FC = () => {
     { title: '手机号', dataIndex: 'phone', key: 'phone', render: (v: string) => v || '-' },
     { title: '状态', dataIndex: 'status', key: 'status', render: (v: string) => <Tag color={v === 'active' ? 'green' : 'red'}>{v === 'active' ? '启用' : '停用'}</Tag> },
     {
-      title: '操作',
-      key: 'action',
-      width: 80,
+      title: '操作', key: 'action', width: 80,
       render: (_: unknown, r: any) => (
-        <Button danger size="small" onClick={() => handleRemoveEmployeeFromRole(String(r.id), r.name || r.username)}>
-          移除
-        </Button>
+        <Button danger size="small" onClick={() => handleRemoveEmployeeFromRole(String(r.id), r.name || r.username)}>移除</Button>
       ),
     },
   ];
@@ -567,14 +495,333 @@ const RoleList: React.FC = () => {
     { title: '时间', dataIndex: 'createTime', key: 'createTime', width: 180, render: (v: string) => formatDateTime(v) },
   ];
 
+  // 左侧角色列表渲染
+  const renderRoleList = () => (
+    <div className="role-list-panel">
+      <div className="role-list-header">
+        <Text strong>角色列表</Text>
+        <Tag color="blue" style={{ marginRight: 0 }}>{roleList.length} 个</Tag>
+      </div>
+      <div className="role-list-items">
+        {roleList.map(role => {
+          const isActive = String(role.id) === String(selectedRole?.id);
+          const categoryInfo = getRoleCategory({ templateName: role.roleCode, description: role.description, isEnabled: role.status === 'active' } as any);
+          const userCount = roleUserCounts[String(role.id)] || 0;
+          return (
+            <div
+              key={String(role.id || role.roleCode)}
+              className={`role-list-item${isActive ? ' role-list-item-active' : ''}`}
+              onClick={() => { setSelectedRole(role); setActiveTab('basic'); }}
+            >
+              <Avatar
+                size={32}
+                icon={getRoleIcon(String(role.roleName || ''))}
+                style={{
+                  backgroundColor: isActive ? 'var(--primary-color, #1677ff)' : 'var(--color-fill-tertiary, #f5f5f5)',
+                  color: isActive ? '#fff' : 'var(--color-text-secondary, #666)',
+                  flexShrink: 0,
+                }}
+              />
+              <div className="role-list-item-content">
+                <div className="role-list-item-top">
+                  <Text strong ellipsis style={{ maxWidth: 140 }}>{role.roleName}</Text>
+                  {role.status !== 'active' && <Tag color="default" style={{ fontSize: 10, padding: '0 4px', marginRight: 0 }}>停用</Tag>}
+                </div>
+                <Space size={4} wrap style={{ marginTop: 2 }}>
+                  <Tag color={categoryInfo.categoryColor} style={{ fontSize: 10, padding: '0 6px', marginRight: 0 }}>
+                    {categoryInfo.categoryLabel}
+                  </Tag>
+                  <Tag color="cyan" style={{ fontSize: 10, padding: '0 6px', marginRight: 0 }}>
+                    {userCount} 人
+                  </Tag>
+                </Space>
+              </div>
+            </div>
+          );
+        })}
+        {roleList.length === 0 && <Empty description="暂无角色" style={{ padding: '40px 0' }} />}
+      </div>
+    </div>
+  );
+
+  // 顶部角色信息条
+  const renderRoleHeader = () => {
+    if (!selectedRole) return null;
+    const categoryInfo = getRoleCategory({ templateName: selectedRole.roleCode, description: selectedRole.description, isEnabled: selectedRole.status === 'active' } as any);
+    const userCount = roleUserCounts[String(selectedRole.id)] || 0;
+    return (
+      <Card size="small" style={{ marginBottom: 12 }} styles={{ body: { padding: '12px 16px' } }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+            <Avatar
+              size={40}
+              icon={getRoleIcon(String(selectedRole.roleName || ''))}
+              style={{ backgroundColor: 'var(--primary-color, #1677ff)', color: '#fff' }}
+            />
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                <Text strong style={{ fontSize: 16 }}>{selectedRole.roleName}</Text>
+                <Tag color="blue" style={{ fontSize: 11, padding: '0 6px', marginRight: 0 }}>{selectedRole.roleCode}</Tag>
+                <Tag icon={RoleCategoryIcon[categoryInfo.category]} color={categoryInfo.categoryColor} style={{ fontSize: 11, padding: '0 6px', marginRight: 0 }}>{categoryInfo.categoryLabel}</Tag>
+                <Tag color={selectedRole.status === 'active' ? 'green' : 'default'} style={{ fontSize: 11, padding: '0 6px', marginRight: 0 }}>
+                  {selectedRole.status === 'active' ? '启用' : '停用'}
+                </Tag>
+              </div>
+              {selectedRole.description && (
+                <Text type="secondary" style={{ fontSize: 12, marginTop: 4, display: 'block' }}>{selectedRole.description}</Text>
+              )}
+            </div>
+          </div>
+          <Space wrap size={8}>
+            <Tooltip title="查看此角色的员工">
+              <Button icon={<TeamOutlined />} onClick={handleOpenEmployeeList}>员工 {userCount} 人</Button>
+            </Tooltip>
+            <Button ghost onClick={() => openDialog(selectedRole as any)}>编辑</Button>
+            <Button ghost onClick={() => openLogModal('role', String(selectedRole.id || ''), `角色 ${selectedRole.roleName} 操作日志`)}>日志</Button>
+            <Button ghost danger onClick={() => handleDelete(selectedRole.id)}>删除</Button>
+          </Space>
+        </div>
+      </Card>
+    );
+  };
+
+  // 基本信息 Tab
+  const renderBasicTab = () => {
+    if (!selectedRole) return null;
+    const userCount = roleUserCounts[String(selectedRole.id)] || 0;
+    return (
+      <div style={{ maxWidth: 720 }}>
+        <Row gutter={12}>
+          <Col xs={12} sm={8}>
+            <Card size="small" styles={{ body: { padding: '14px 16px' } }}>
+              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
+                <Text type="secondary" style={{ fontSize: 12 }}>使用此角色</Text>
+                <Text strong style={{ fontSize: 18, color: 'var(--primary-color, #1677ff)' }}>{userCount}</Text>
+              </div>
+              <Text type="secondary" style={{ fontSize: 12, display: 'block', marginTop: 2 }}>位员工</Text>
+            </Card>
+          </Col>
+          <Col xs={12} sm={8}>
+            <Card size="small" styles={{ body: { padding: '14px 16px' } }}>
+              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
+                <Text type="secondary" style={{ fontSize: 12 }}>已选权限</Text>
+                <Text strong style={{ fontSize: 18, color: 'var(--color-success, #52c41a)' }}>{checkedPermIds.size}</Text>
+              </div>
+              <Text type="secondary" style={{ fontSize: 12, display: 'block', marginTop: 2 }}>项</Text>
+            </Card>
+          </Col>
+          <Col xs={12} sm={8}>
+            <Card size="small" styles={{ body: { padding: '14px 16px' } }}>
+              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
+                <Text type="secondary" style={{ fontSize: 12 }}>数据范围</Text>
+                <Text strong style={{ fontSize: 18, color: 'var(--color-warning, #faad14)' }}>{dataScopeLabel(selectedRole.dataScope as string).replace('数据', '')}</Text>
+              </div>
+              <Text type="secondary" style={{ fontSize: 12, display: 'block', marginTop: 2 }}>数据权限</Text>
+            </Card>
+          </Col>
+        </Row>
+
+        <Card size="small" title={<Text strong style={{ fontSize: 13 }}>角色属性</Text>} style={{ marginTop: 12 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div>
+              <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>角色编码</Text>
+              <Text style={{ fontSize: 13 }}>{selectedRole.roleCode || '-'}</Text>
+            </div>
+            <div>
+              <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>状态</Text>
+              <Tag color={selectedRole.status === 'active' ? 'green' : 'default'} style={{ fontSize: 11 }}>
+                {selectedRole.status === 'active' ? '启用' : '停用'}
+              </Tag>
+            </div>
+            <div>
+              <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>数据权限范围</Text>
+              <Text style={{ fontSize: 13 }}>{dataScopeLabel(selectedRole.dataScope as string)}</Text>
+            </div>
+            <div>
+              <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>创建时间</Text>
+              <Text style={{ fontSize: 13 }}>{formatDateTime((selectedRole as any).createTime) || '-'}</Text>
+            </div>
+          </div>
+          {selectedRole.description && (
+            <>
+              <div style={{ height: 1, backgroundColor: 'var(--color-border-light, #f0f0f0)', margin: '12px 0' }} />
+              <div>
+                <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>描述</Text>
+                <Text style={{ fontSize: 13, lineHeight: 1.7 }}>{selectedRole.description}</Text>
+              </div>
+            </>
+          )}
+        </Card>
+      </div>
+    );
+  };
+
+  // 权限配置 Tab
+  const renderPermTab = () => {
+    if (!selectedRole) return null;
+    if (permLoading) return <div style={{ padding: '48px 0', textAlign: 'center' }}><Spin size="large" tip="加载权限中..." /></div>;
+    if (!sectionsComputed.length) return <Empty description="暂无可配置权限" style={{ padding: '48px 0' }} />;
+
+    return (
+      <>
+        <Card size="small" style={{ marginBottom: 12 }} styles={{ body: { padding: '10px 16px' } }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+            <Space wrap size={8}>
+              <Button type="primary" icon={<CheckSquareOutlined />} onClick={handleSelectAll}>一键全选</Button>
+              <Button icon={<BorderOutlined />} onClick={handleDeselectAll}>一键取消</Button>
+              <Input
+                value={permKeyword}
+                onChange={(e) => setPermKeyword(e.target.value)}
+                placeholder="搜索权限名称"
+                style={{ width: 200 }}
+                allowClear
+              />
+            </Space>
+            <Space size={8}>
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                已选 <Text strong style={{ color: 'var(--primary-color, #1677ff)', fontSize: 14 }}>{checkedPermIds.size}</Text> / {totalPermCount} 项
+              </Text>
+              <Button icon={<ReloadOutlined />} onClick={() => selectedRole?.id && loadPermTreeAndChecked(String(selectedRole.id))} loading={permLoading}>刷新</Button>
+              <Button type="primary" ghost onClick={savePerms} loading={permSaving}>保存权限</Button>
+            </Space>
+          </div>
+        </Card>
+
+        <Row gutter={12}>
+          {sectionsComputed.map((section, si) => {
+            const moduleAllIds = section.items.flatMap(it => it.allIds);
+            const moduleTotal = moduleAllIds.length;
+            const moduleChecked = moduleAllIds.filter(id => checkedPermIds.has(id)).length;
+            const moduleAllSelected = moduleTotal > 0 && moduleChecked === moduleTotal;
+
+            return (
+              <Col xs={24} sm={24} md={12} lg={8} xl={8} key={si} style={{ marginBottom: 12 }}>
+                <Card
+                  size="small"
+                  title={
+                    <Space size={8}>
+                      <Text strong style={{ fontSize: 13 }}>{section.title}</Text>
+                      {moduleTotal > 0 && (
+                        <Tag
+                          color={moduleAllSelected ? 'green' : moduleChecked > 0 ? 'blue' : 'default'}
+                          style={{ fontSize: 11, padding: '0 8px', marginRight: 0 }}
+                        >
+                          {moduleChecked}/{moduleTotal}
+                        </Tag>
+                      )}
+                    </Space>
+                  }
+                  extra={
+                    moduleTotal > 0 ? (
+                      <Tooltip title={moduleAllSelected ? '取消本模块所有权限' : '开通本模块全部权限'}>
+                        <Checkbox
+                          checked={moduleAllSelected}
+                          onChange={(e) => toggleIds(moduleAllIds, e.target.checked)}
+                        >
+                          <span style={{ fontSize: 12, color: 'var(--color-text-secondary, #666)' }}>全选</span>
+                        </Checkbox>
+                      </Tooltip>
+                    ) : null
+                  }
+                  styles={{ body: { padding: '8px 16px' } }}
+                  style={{ height: '100%' }}
+                >
+                  <Space direction="vertical" size={4} style={{ width: '100%' }}>
+                    {section.items.map((item, ii) => {
+                      const hasNode = item.permNode?.id != null && !item.sharedWith;
+                      const childNodes = hasNode ? ((item.permNode as PermissionNode)?.children || []) as PermissionNode[] : [];
+                      const selfIds = item.allIds;
+                      const itemAllSelected = selfIds.length > 0 && selfIds.every(id => checkedPermIds.has(id));
+                      const itemSomeSelected = selfIds.some(id => checkedPermIds.has(id));
+
+                      return (
+                        <div
+                          key={`${si}-${item.label}`}
+                          style={{
+                            padding: '8px 4px',
+                            borderBottom: ii < section.items.length - 1 ? '1px solid var(--color-border-light, #f0f0f0)' : 'none',
+                          }}
+                        >
+                          {hasNode ? (
+                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
+                              <Checkbox
+                                checked={itemAllSelected}
+                                indeterminate={!itemAllSelected && itemSomeSelected}
+                                onChange={(e) => toggleIds(selfIds, e.target.checked)}
+                              >
+                                <Text style={{ fontSize: 13 }}>{item.label}</Text>
+                              </Checkbox>
+                            </div>
+                          ) : (
+                            <div style={{ paddingLeft: 4 }}>
+                              <Text style={{ fontSize: 13 }}>{item.label}</Text>
+                              {item.sharedWith && (
+                                <Text type="secondary" style={{ fontSize: 11, marginLeft: 6 }}>（同「{item.sharedWith}」）</Text>
+                              )}
+                            </div>
+                          )}
+                          {hasNode && childNodes.length > 0 && (
+                            <div style={{ paddingLeft: 28, marginTop: 6, display: 'flex', flexWrap: 'wrap', gap: '8px 14px' }}>
+                              {childNodes.map(btn => (
+                                <Checkbox
+                                  key={btn.id}
+                                  checked={checkedPermIds.has(Number(btn.id))}
+                                  onChange={(e) => toggleIds([Number(btn.id)], e.target.checked)}
+                                >
+                                  <span style={{ fontSize: 12 }}>{btn.permissionName}</span>
+                                </Checkbox>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </Space>
+                </Card>
+              </Col>
+            );
+          })}
+        </Row>
+      </>
+    );
+  };
+
+  const rightPanel = () => {
+    if (!selectedRole) {
+      return (
+        <Empty
+          description={
+            <div style={{ textAlign: 'center' }}>
+              <Text strong style={{ fontSize: 15, display: 'block', marginBottom: 4 }}>请选择一个角色</Text>
+              <Text type="secondary" style={{ fontSize: 12 }}>从左侧角色列表中选择，查看或编辑它的基本信息和权限配置</Text>
+            </div>
+          }
+          style={{ padding: '80px 0' }}
+        />
+      );
+    }
+    return (
+      <>
+        {renderRoleHeader()}
+        <Tabs
+          activeKey={activeTab}
+          onChange={setActiveTab}
+          size="small"
+          items={[
+            { key: 'basic', label: <Space size={4}><UnorderedListOutlined />基本信息</Space>, children: renderBasicTab() },
+            { key: 'perm', label: <Space size={4}><CheckSquareOutlined />权限配置</Space>, children: renderPermTab() },
+          ]}
+        />
+      </>
+    );
+  };
+
   return (
     <>
       <PageLayout
-        title="角色与权限管理"
+        title="岗位管理"
         titleExtra={
-          <Button type="primary" ghost onClick={() => openDialog()}>
-            新增角色
-          </Button>
+          <Button type="primary" ghost onClick={() => openDialog()}>新增角色</Button>
         }
         headerContent={
           <>
@@ -587,306 +834,27 @@ const RoleList: React.FC = () => {
               const broadRoles = roleList.filter((r) => String(r.status || 'active') === 'active' && String(r.dataScope || '') === 'all');
               if (broadRoles.length === 0) return null;
               return (
-                <Alert style={{ marginBottom: 12 }} type="warning" showIcon icon={<span></span>} title="权限防呆检测"
-                  description={<span>当前有 <strong>{broadRoles.length}</strong> 个启用角色使用"全部数据"范围（{broadRoles.slice(0, 3).map((r) => String(r.roleName || r.roleCode)).join('、')}{broadRoles.length > 3 ? '等' : ''}），建议审查。</span>} banner={false} />
+                <Alert
+                  style={{ marginBottom: 12 }}
+                  type="warning"
+                  showIcon
+                  message="权限防呆检测"
+                  description={
+                    <span>
+                      当前有 <Text strong>{broadRoles.length}</Text> 个启用角色使用"全部数据"范围
+                      （{broadRoles.slice(0, 3).map((r) => String(r.roleName || r.roleCode)).join('、')}{broadRoles.length > 3 ? '等' : ''}），建议审查。
+                    </span>
+                  }
+                />
               );
             })()}
           </>
         }
       >
-        <div className="role-split-layout" style={{ height: 'calc(100vh - 180px)' }}>
-          <div className="role-list-panel" style={{ width: 260 }}>
-            <div className="role-list-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span>角色列表</span>
-              <Tag color="blue" style={{ marginRight: 0 }}>{roleList.length} 个角色</Tag>
-            </div>
-            <div className="role-list-items">
-              {roleList.map(role => {
-                const isActive = String(role.id) === String(selectedRole?.id);
-                const categoryInfo = getRoleCategory({ templateName: role.roleCode, description: role.description, isEnabled: role.status === 'active' } as any);
-                const userCount = roleUserCounts[String(role.id)] || 0;
-                return (
-                  <div
-                    key={String(role.id || role.roleCode)}
-                    className={`role-list-item${isActive ? ' role-list-item-active' : ''}`}
-                    onClick={() => { setSelectedRole(role); setEditingRoleName(false); }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'flex-start', width: '100%' }}>
-                      <span className="role-list-item-icon" style={{ color: isActive ? 'var(--primary-color, var(--color-primary))' : 'var(--color-text-tertiary, #999)', marginTop: 2, flexShrink: 0 }}>
-                        {RoleCategoryIcon[categoryInfo.category]}
-                      </span>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-                          <span className="role-list-item-name" style={{ fontWeight: 600, fontSize: 14 }}>{role.roleName}</span>
-                          <Space size={4}>
-                            {role.status === 'active'
-                              ? <Badge status="success" text={<span style={{ fontSize: 11, color: 'var(--color-text-secondary, #666)' }}>启用</span>} />
-                              : <Badge status="default" text={<span style={{ fontSize: 11, color: 'var(--color-text-tertiary, #999)' }}>停用</span>} />
-                            }
-                          </Space>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                          <Tag color={categoryInfo.categoryColor} style={{ fontSize: 11, marginRight: 0, padding: '0 6px' }}>
-                            {categoryInfo.categoryLabel}
-                          </Tag>
-                          <Tag color="cyan" style={{ fontSize: 11, marginRight: 0, padding: '0 6px' }}>
-                            <UserOutlined style={{ fontSize: 10, marginRight: 2 }} />{userCount} 人
-                          </Tag>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-              {roleList.length === 0 && <Empty description="暂无角色" style={{ padding: '40px 0' }} />}
-            </div>
-          </div>
-
+        <div className="role-split-layout">
+          {renderRoleList()}
           <div className="role-perm-panel">
-            {!selectedRole ? (
-              <Empty
-                description={
-                  <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>请选择一个角色</div>
-                    <div style={{ fontSize: 12, color: 'var(--color-text-secondary, #666)' }}>
-                      从左侧角色列表中选择一个角色<br />查看或编辑它的权限配置
-                    </div>
-                  </div>
-                }
-                style={{ paddingTop: 80 }}
-              />
-            ) : (
-              <>
-                {/* 角色信息卡片 */}
-                <Card style={{ marginBottom: 12, border: '1px solid var(--color-border-light, #e8e8e8)' }}>
-                  <Row gutter={16} align="middle">
-                    <Col flex="auto">
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-                        {editingRoleName ? (
-                          <Space>
-                            <Input
-                              value={roleNameValue}
-                              onChange={e => setRoleNameValue(e.target.value)}
-                              style={{ width: 180 }}
-                              onPressEnter={handleSaveRoleName}
-                              autoFocus
-                            />
-                            <Button type="primary" size="small" onClick={handleSaveRoleName}>保存</Button>
-                            <Button size="small" onClick={() => setEditingRoleName(false)}>取消</Button>
-                          </Space>
-                        ) : (
-                          <span
-                            style={{ fontSize: 20, fontWeight: 700, cursor: 'pointer', borderBottom: '1px dashed var(--color-border-antd, var(--color-border-antd))' }}
-                            onClick={() => { setEditingRoleName(true); setRoleNameValue(selectedRole.roleName || ''); }}
-                            title="点击编辑角色名称"
-                          >
-                            {selectedRole.roleName}
-                          </span>
-                        )}
-                        <Tag color="blue">{selectedRole.roleCode}</Tag>
-                        {(() => {
-                          const categoryInfo = getRoleCategory({ templateName: selectedRole.roleCode, description: selectedRole.description, isEnabled: selectedRole.status === 'active' } as any);
-                          return (
-                            <Tag icon={RoleCategoryIcon[categoryInfo.category]} color={categoryInfo.categoryColor}>
-                              {categoryInfo.categoryLabel}
-                            </Tag>
-                          );
-                        })()}
-                        <Tag color={selectedRole.status === 'active' ? 'green' : 'default'}>
-                          {selectedRole.status === 'active' ? '启用' : '停用'}
-                        </Tag>
-                      </div>
-                      {selectedRole.description && (
-                        <div style={{ color: 'var(--color-text-secondary, #666)', fontSize: 13, marginTop: 8 }}>
-                          {selectedRole.description}
-                        </div>
-                      )}
-                    </Col>
-                  </Row>
-                  <Divider style={{ margin: '12px 0' }} />
-                  <Row gutter={16}>
-                    <Col span={8}>
-                      <div style={{ textAlign: 'center' }}>
-                        <div style={{ fontSize: 24, fontWeight: 700, color: 'var(--primary-color, #1677ff)' }}>
-                          {roleUserCounts[String(selectedRole.id)] || 0}
-                        </div>
-                        <div style={{ fontSize: 12, color: 'var(--color-text-secondary, #666)' }}>人在使用此角色</div>
-                      </div>
-                    </Col>
-                    <Col span={8}>
-                      <div style={{ textAlign: 'center' }}>
-                        <div style={{ fontSize: 24, fontWeight: 700, color: 'var(--color-success, #52c41a)' }}>
-                          {checkedPermIds.size}
-                        </div>
-                        <div style={{ fontSize: 12, color: 'var(--color-text-secondary, #666)' }}>项已选权限</div>
-                      </div>
-                    </Col>
-                    <Col span={8}>
-                      <div style={{ textAlign: 'center' }}>
-                        <div style={{ fontSize: 24, fontWeight: 700, color: 'var(--color-warning, #faad14)' }}>
-                          {String(selectedRole.dataScope || 'all') === 'all' ? '全部' : String(selectedRole.dataScope) === 'team' ? '团队' : '个人'}
-                        </div>
-                        <div style={{ fontSize: 12, color: 'var(--color-text-secondary, #666)' }}>数据范围</div>
-                      </div>
-                    </Col>
-                  </Row>
-                  <Divider style={{ margin: '12px 0' }} />
-                  <Space wrap>
-                    <Button
-                      icon={<TeamOutlined />}
-                      onClick={handleOpenEmployeeList}
-                    >
-                      查看此角色的员工
-                    </Button>
-                    <Button ghost onClick={() => openDialog(selectedRole as any)}>编辑角色</Button>
-                    <Button ghost danger onClick={() => handleDelete(selectedRole.id)}>删除角色</Button>
-                    <Button ghost onClick={() => openLogModal('role', String(selectedRole.id || ''), `角色 ${selectedRole.roleName} 操作日志`)}>操作日志</Button>
-                  </Space>
-                </Card>
-
-                {/* 权限操作工具栏 */}
-                <div className="role-perm-toolbar" style={{ marginBottom: 8 }}>
-                  <Space wrap>
-                    <Button
-                      type="primary"
-                      icon={<CheckSquareOutlined />}
-                      onClick={handleSelectAll}
-                      disabled={permLoading || permissionsByModule.length === 0}
-                    >
-                      一键全选
-                    </Button>
-                    <Button
-                      icon={<BorderOutlined />}
-                      onClick={handleDeselectAll}
-                      disabled={permLoading || permissionsByModule.length === 0}
-                    >
-                      一键取消
-                    </Button>
-                    <Input value={permKeyword} onChange={(e) => setPermKeyword(e.target.value)} placeholder="搜索权限名称" style={{ width: 200 }} allowClear />
-                    {permKeyword && <Button onClick={() => setPermKeyword('')}>清空搜索</Button>}
-                    <span style={{ color: 'var(--color-text-secondary, #666)', fontWeight: 500 }}>已选 <strong style={{ color: 'var(--primary-color, #1677ff)' }}>{checkedPermIds.size}</strong> 项权限</span>
-                  </Space>
-                  <Space>
-                    <Button
-                      icon={<ReloadOutlined />}
-                      onClick={() => selectedRole?.id && loadPermTreeAndChecked(String(selectedRole.id))}
-                      loading={permLoading}
-                    >
-                      刷新权限
-                    </Button>
-                    <Button type="primary" ghost onClick={savePerms} loading={permSaving}>保存权限</Button>
-                  </Space>
-                </div>
-
-                {/* 权限模块卡片 */}
-                <div className="role-perm-cards">
-                  {permLoading ? (
-                    <div style={{ padding: '48px 0', textAlign: 'center' }}><Spin size="large" tip="加载权限中..." /></div>
-                  ) : permissionsByModule.length ? (
-                    <Row gutter={12}>
-                      {permissionsByModule.map((section, si) => {
-                        // 计算本模块的权限数和已选数
-                        let moduleTotal = 0;
-                        let moduleChecked = 0;
-                        for (const item of section.items) {
-                          if (item.permNode?.id != null) {
-                            moduleTotal++;
-                            if (checkedPermIds.has(Number(item.permNode.id))) moduleChecked++;
-                            for (const child of ((item.permNode as PermissionNode)?.children || []) as PermissionNode[]) {
-                              moduleTotal++;
-                              if (checkedPermIds.has(Number(child.id))) moduleChecked++;
-                            }
-                          }
-                        }
-                        return (
-                          <Col xs={24} sm={24} md={12} lg={8} xl={8} key={si} style={{ marginBottom: 12 }}>
-                            <Card
-                              size="small"
-                              title={
-                                <Space>
-                                  <span style={{ fontWeight: 600 }}>{section.title}</span>
-                                  {moduleTotal > 0 && (
-                                    <Tag color={moduleChecked === moduleTotal ? 'green' : moduleChecked > 0 ? 'blue' : 'default'} style={{ marginRight: 0 }}>
-                                      {moduleChecked}/{moduleTotal} 已选
-                                    </Tag>
-                                  )}
-                                </Space>
-                              }
-                              extra={
-                                moduleTotal > 0 ? (
-                                  <Space size={4}>
-                                    <Button size="small" type="primary" onClick={() => handleSelectModule(section.title)}>
-                                      开通本模块
-                                    </Button>
-                                    <Button size="small" onClick={() => handleDeselectModule(section.title)}>
-                                      取消本模块
-                                    </Button>
-                                  </Space>
-                                ) : null
-                              }
-                              style={{ height: '100%' }}
-                            >
-                              <Space direction="vertical" size={8} style={{ width: '100%' }}>
-                                {section.items.map((item) => {
-                                  const nodeId = item.permNode ? Number(item.permNode.id) : 0;
-                                  const isShared = item.sharedWith !== null;
-                                  const btnNodes = isShared ? [] : ((item.permNode as PermissionNode)?.children || []) as PermissionNode[];
-                                  const allIds = nodeId ? [nodeId, ...btnNodes.map(b => Number(b.id))] : [];
-                                  const moduleAllSelected = nodeId ? allIds.every(id => checkedPermIds.has(id)) : false;
-                                  return (
-                                    <div key={`${si}-${item.label}`} className="perm-group-row" style={{ borderBottom: si < permissionsByModule.length - 1 || section.items.indexOf(item) < section.items.length - 1 ? '1px solid var(--color-border-light, #f0f0f0)' : 'none', paddingBottom: 8, marginBottom: 8 }}>
-                                      {nodeId ? (
-                                        <Checkbox
-                                          checked={moduleAllSelected}
-                                          onChange={(e) => {
-                                            const next = new Set(checkedPermIds);
-                                            if (e.target.checked) allIds.forEach(id => next.add(id));
-                                            else allIds.forEach(id => next.delete(id));
-                                            setCheckedPermIds(next);
-                                          }}
-                                        >
-                                          <span style={{ fontWeight: 500 }}>{item.label}</span>
-                                        </Checkbox>
-                                      ) : (
-                                        <span style={{ fontWeight: 500, fontSize: 14, color: 'var(--color-text-secondary, #666)' }}>{item.label}</span>
-                                      )}
-                                      {isShared && (
-                                        <span style={{ fontSize: 12, color: 'var(--color-text-quaternary, #999)', marginLeft: 4 }}>
-                                          （同「{item.sharedWith}」）
-                                        </span>
-                                      )}
-                                      {!isShared && btnNodes.length > 0 && (
-                                        <div className="perm-group-btns" style={{ paddingLeft: 24, marginTop: 4 }}>
-                                          {btnNodes.map(btn => (
-                                            <Checkbox
-                                              key={btn.id}
-                                              checked={checkedPermIds.has(Number(btn.id))}
-                                              onChange={(e) => {
-                                                const next = new Set(checkedPermIds);
-                                                if (e.target.checked) next.add(Number(btn.id)); else next.delete(Number(btn.id));
-                                                setCheckedPermIds(next);
-                                              }}
-                                            >
-                                              <span style={{ fontSize: 12 }}>{btn.permissionName}</span>
-                                            </Checkbox>
-                                          ))}
-                                        </div>
-                                      )}
-                                    </div>
-                                  );
-                                })}
-                              </Space>
-                            </Card>
-                          </Col>
-                        );
-                      })}
-                    </Row>
-                  ) : (
-                    <Empty description="暂无可配置权限" />
-                  )}
-                </div>
-              </>
-            )}
+            {rightPanel()}
           </div>
         </div>
       </PageLayout>
