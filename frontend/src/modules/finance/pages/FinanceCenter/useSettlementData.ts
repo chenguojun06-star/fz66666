@@ -97,6 +97,7 @@ export function useSettlementData(auditedOrderNos: Set<string>, onAuditNosChange
   const [pageParams, setPageParams] = useState<PageParams>({
     page: 1,
     pageSize: readPageSize(20),
+    factoryType: 'EXTERNAL',
   });
 
   const showSmartErrorNotice = isSmartFeatureEnabled('smart.finance.explain.enabled');
@@ -286,7 +287,7 @@ export function useSettlementData(auditedOrderNos: Set<string>, onAuditNosChange
   };
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { loadData(); }, []);
+  useEffect(() => { loadData({ ...pageParams, factoryType: 'EXTERNAL' }); }, []);
 
   return {
     searchOrderNo, setSearchOrderNo,
