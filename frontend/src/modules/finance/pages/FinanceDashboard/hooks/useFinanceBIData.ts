@@ -80,7 +80,7 @@ export const useFinanceBIData = () => {
       const [wageStatsRes, finishedRes, expenseRes] = await Promise.allSettled([
         api.get('/finance/wage-payments/dashboard-stats', { params: dateParams }),
         api.get('/finance/finished-settlement/summary', { params: dateParams }),
-        api.post('/finance/expense-reimbursement/list', { ...dateParams, page: 1, pageSize: 1000 }),
+        api.get('/finance/expense-reimbursement/list', { params: { ...dateParams, page: 1, pageSize: 1000 } }),
       ]);
 
       let totalRevenue = 0;
