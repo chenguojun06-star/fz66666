@@ -572,7 +572,7 @@ const RoleList: React.FC = () => {
       <PageLayout
         title="角色与权限管理"
         titleExtra={
-          <Button type="primary" onClick={() => openDialog()}>
+          <Button type="primary" ghost onClick={() => openDialog()}>
             新增角色
           </Button>
         }
@@ -738,9 +738,9 @@ const RoleList: React.FC = () => {
                     >
                       查看此角色的员工
                     </Button>
-                    <Button onClick={() => openDialog(selectedRole as any)}>编辑角色</Button>
-                    <Button danger onClick={() => handleDelete(selectedRole.id)}>删除角色</Button>
-                    <Button onClick={() => openLogModal('role', String(selectedRole.id || ''), `角色 ${selectedRole.roleName} 操作日志`)}>操作日志</Button>
+                    <Button ghost onClick={() => openDialog(selectedRole as any)}>编辑角色</Button>
+                    <Button ghost danger onClick={() => handleDelete(selectedRole.id)}>删除角色</Button>
+                    <Button ghost onClick={() => openLogModal('role', String(selectedRole.id || ''), `角色 ${selectedRole.roleName} 操作日志`)}>操作日志</Button>
                   </Space>
                 </Card>
 
@@ -774,7 +774,7 @@ const RoleList: React.FC = () => {
                     >
                       刷新权限
                     </Button>
-                    <Button type="primary" onClick={savePerms} loading={permSaving}>保存权限</Button>
+                    <Button type="primary" ghost onClick={savePerms} loading={permSaving}>保存权限</Button>
                   </Space>
                 </div>
 

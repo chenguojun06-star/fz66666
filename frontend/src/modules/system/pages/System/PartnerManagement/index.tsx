@@ -294,15 +294,17 @@ const PartnerManagement: React.FC = () => {
                           共 {displayedMembers.length} 人
                         </span>
                       </div>
-                      <Space>
+                      <Space size={8}>
                         <Button
                           type="primary"
+                          ghost
                           icon={<UserAddOutlined />}
                           onClick={() => selectedUnit && handleOpenAssign(selectedUnit)}
                         >
                           添加成员
                         </Button>
                         <Button
+                          ghost
                           icon={<QrcodeOutlined />}
                           onClick={() => selectedUnit && handleShowQRCode(selectedUnit)}
                         >

@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { readPageSize } from '@/utils/pageSizeStore';
 import { formatMoney } from '@/utils/format';
 import dayjs from 'dayjs';
@@ -11,24 +11,30 @@ import {
   Card,
   DatePicker,
   Descriptions,
+  Dropdown,
+  Empty,
   Form,
   Image,
   Input,
   InputNumber,
+  Radio,
   Select,
   Space,
+  Statistic,
   Tabs,
   Tag,
   message,
 } from 'antd';
 import {
   CheckCircleOutlined,
+  ClockCircleOutlined,
   DollarOutlined,
   SearchOutlined,
   PayCircleOutlined,
   AccountBookOutlined,
   DownloadOutlined,
   LineChartOutlined,
+  MoreOutlined,
 } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
 import ResizableModal from '@/components/common/ResizableModal';
@@ -116,6 +122,58 @@ const PaymentCenterPage: React.FC = () => {
 
   const [amountDetailOpen, setAmountDetailOpen] = React.useState(false);
   const [amountDetailTarget, setAmountDetailTarget] = React.useState<any>(null);
+  const [presetValue, setPresetValue] = useState<string>('');
+  const [payableStatusTab, setPayableStatusTab] = useState<string>('');
+  const [paymentStatusTab, setPaymentStatusTab] = useState<string>('');
+
+  // ==================== 统计卡片 ====================
+  // 待收付款 (payables) 统计
+  const pendingStats = useMemo(() => {
+    const total = data.payables.length;
+    const totalAmount = data.payables.reduce((s: number, p: any) => s + Number(p.amount ?? 0), 0);
+    const reconCount = data.payables.filter((p: any) => p.bizType === 'RECONCILIATION').length;
+    const reimbCount = data.payables.filter((p: any) => p.bizType === 'REIMBURSEMENT').length;
+    const payrollCount = data.payables.filter((p: any) => p.bizType === 'PAYROLL' || p.bizType === 'PAYROLL_SETTLEMENT').length;
+    return { total, totalAmount, reconCount, reimbCount, payrollCount };
+  }, [data.payables]);
+
+  // 收支记录 (payments) 统计
+  const paymentStats = useMemo(() => {
+    const total = data.payments.length;
+    const pendingCount = data.payments.filter((p: any) => p.status === 'pending' || p.status === 'processing').length;
+    const successCount = data.payments.filter((p: any) => p.status === 'success').length;
+    const rejectedCount = data.payments.filter((p: any) => p.status === 'rejected' || p.status === 'failed' || p.status === 'cancelled').length;
+    const totalAmount = data.payments.reduce((s: number, p: any) => s + Number(p.amount ?? 0), 0);
+    const successAmount = data.payments.filter((p: any) => p.status === 'success').reduce((s: number, p: any) => s + Number(p.amount ?? 0), 0);
+    return { total, pendingCount, successCount, rejectedCount, totalAmount, successAmount };
+  }, [data.payments]);
+
+  // ==================== 快捷日期筛选 ====================
+  const handlePresetChange = (e: any) => {
+    const val = e.target.value;
+    setPresetValue(val);
+    const today = dayjs();
+    if (!val) {
+      data.setPayableDateRange(['', '']);
+      return;
+    }
+    let start = '';
+    let end = '';
+    if (val === 'today') {
+      start = today.startOf('day').format('YYYY-MM-DD');
+      end = today.endOf('day').format('YYYY-MM-DD');
+    } else if (val === 'week') {
+      start = today.startOf('week').format('YYYY-MM-DD');
+      end = today.endOf('week').format('YYYY-MM-DD');
+    } else if (val === 'month') {
+      start = today.startOf('month').format('YYYY-MM-DD');
+      end = today.endOf('month').format('YYYY-MM-DD');
+    } else if (val === 'year') {
+      start = today.startOf('year').format('YYYY-MM-DD');
+      end = today.endOf('year').format('YYYY-MM-DD');
+    }
+    data.setPayableDateRange([start, end]);
+  };
 
   // ---- 表格列定义 ----
   const { payableColumns, paymentColumns } = usePaymentColumns({
@@ -130,6 +188,24 @@ const PaymentCenterPage: React.FC = () => {
     msg,
     onAmountClick: (record) => { setAmountDetailTarget(record); setAmountDetailOpen(true); },
   });
+
+  // Tab 切换后的过滤数据
+  const statusFilteredPayables = useMemo(() => {
+    if (!payableStatusTab) return data.filteredPayables;
+    if (payableStatusTab === 'RECONCILIATION') return data.filteredPayables.filter((p: any) => p.bizType === 'RECONCILIATION');
+    if (payableStatusTab === 'REIMBURSEMENT') return data.filteredPayables.filter((p: any) => p.bizType === 'REIMBURSEMENT');
+    if (payableStatusTab === 'PAYROLL') return data.filteredPayables.filter((p: any) => p.bizType === 'PAYROLL' || p.bizType === 'PAYROLL_SETTLEMENT');
+    if (payableStatusTab === 'ORDER_SETTLEMENT') return data.filteredPayables.filter((p: any) => p.bizType === 'ORDER_SETTLEMENT');
+    return data.filteredPayables;
+  }, [data.filteredPayables, payableStatusTab]);
+
+  const statusFilteredPayments = useMemo(() => {
+    if (!paymentStatusTab) return data.payments;
+    if (paymentStatusTab === 'pending') return data.payments.filter((p: any) => p.status === 'pending' || p.status === 'processing');
+    if (paymentStatusTab === 'success') return data.payments.filter((p: any) => p.status === 'success');
+    if (paymentStatusTab === 'failed') return data.payments.filter((p: any) => p.status === 'rejected' || p.status === 'failed' || p.status === 'cancelled');
+    return data.payments;
+  }, [data.payments, paymentStatusTab]);
 
   // ============================================================
   //  渲染
@@ -152,111 +228,186 @@ const PaymentCenterPage: React.FC = () => {
         ) : null}
 
         {/* 页头 */}
-        <Card className="page-card" style={{ marginBottom: 16 }}>
+        <Card className="page-card" size="small" style={{ marginBottom: 12, border: '1px solid var(--color-border-secondary)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
-              <h2 style={{ margin: 0 }}>
+              <h2 style={{ margin: 0, fontSize: 16 }}>
                 <PayCircleOutlined style={{ marginRight: 8 }} />
                 收付款中心
               </h2>
-              <span style={{ color: 'var(--color-text-tertiary)', fontSize: 14 }}>
+              <span style={{ color: 'var(--color-text-tertiary)', fontSize: 13 }}>
                 集中管理账单汇总、待收付款、员工工资、工厂对账的收付款操作
               </span>
             </div>
-            <Button type="primary" icon={<DollarOutlined />} onClick={handleOpenPayModal}>
+            <Button type="primary" ghost icon={<DollarOutlined />} onClick={handleOpenPayModal}>
               手动发起支付
             </Button>
           </div>
         </Card>
 
+        {/* ===== 统计卡片（顶部统一） ===== */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 12 }}>
+          <Card
+            size="small"
+            style={{ borderRadius: 6, border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }}
+            styles={{ body: { padding: '10px 14px' } }}
+          >
+            <Statistic
+              title={<span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}><ClockCircleOutlined style={{ marginRight: 4, fontSize: 12 }} />待处理</span>}
+              value={data.activeTab === 'pending' ? pendingStats.total : paymentStats.pendingCount}
+              suffix="笔"
+              valueStyle={{ color: 'var(--color-warning)', fontSize: 20, fontWeight: 500 }}
+            />
+          </Card>
+          <Card
+            size="small"
+            style={{ borderRadius: 6, border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }}
+            styles={{ body: { padding: '10px 14px' } }}
+          >
+            <Statistic
+              title={<span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}><CheckCircleOutlined style={{ marginRight: 4, fontSize: 12 }} />已完成</span>}
+              value={data.activeTab === 'pending' ? (pendingStats.total - data.selectedPayableKeys.length) : paymentStats.successCount}
+              suffix="笔"
+              valueStyle={{ color: 'var(--color-primary)', fontSize: 20, fontWeight: 500 }}
+            />
+          </Card>
+          <Card
+            size="small"
+            style={{ borderRadius: 6, border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }}
+            styles={{ body: { padding: '10px 14px' } }}
+          >
+            <Statistic
+              title={<span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}><DollarOutlined style={{ marginRight: 4, fontSize: 12 }} />已处理金额</span>}
+              value={data.activeTab === 'pending' ? 0 : paymentStats.successAmount}
+              precision={2}
+              prefix="¥"
+              valueStyle={{ color: 'var(--color-success)', fontSize: 20, fontWeight: 500 }}
+            />
+          </Card>
+          <Card
+            size="small"
+            style={{ borderRadius: 6, border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }}
+            styles={{ body: { padding: '10px 14px' } }}
+          >
+            <Statistic
+              title={<span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>合计金额</span>}
+              value={data.activeTab === 'pending' ? pendingStats.totalAmount : paymentStats.totalAmount}
+              precision={2}
+              prefix="¥"
+              valueStyle={{ color: 'var(--color-text-primary)', fontSize: 20, fontWeight: 500 }}
+            />
+          </Card>
+        </div>
+
         {/* Tab 切换 */}
-        <Card className="page-card">
+        <Card className="page-card" style={{ border: '1px solid var(--color-border-secondary)', borderRadius: 6 }} styles={{ body: { padding: '12px 16px' } }}>
           <Tabs
             activeKey={data.activeTab}
             onChange={data.setActiveTab}
             destroyOnHidden={false}
+            size="small"
             items={[
               {
                 key: 'pending',
                 label: (
                   <span>
-                    <AccountBookOutlined /> 待处理 {data.pendingStats.total > 0 && <Tag color="red">{data.pendingStats.total}</Tag>}
+                    <AccountBookOutlined /> 待处理 {pendingStats.total > 0 && <Tag color="red">{pendingStats.total}</Tag>}
                   </span>
                 ),
                 children: (
                   <>
                     {/* 账单汇总（上方） */}
-                    <div style={{ marginBottom: 16 }}>
+                    <div style={{ marginBottom: 12 }}>
                       <BillSummaryTab />
                     </div>
 
-                    {/* 统计行 */}
-                    <div style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      marginBottom: 12,
-                      padding: '16px 24px',
-                      background: 'var(--color-bg-container)',
-                      borderRadius: '8px',
-                      border: '1px solid var(--color-border-light)'
-                    }}>
-                      <div style={{ textAlign: 'center', flex: 1, borderRight: '1px solid var(--color-border)' }}>
-                        <div style={{ color: 'var(--color-text-tertiary)', fontSize: 14, marginBottom: 4 }}>待收付款总额</div>
-                        <div style={{ fontSize: 16, fontWeight: 'bold', color: 'var(--color-error)' }}>¥ {Number(data.pendingStats.totalAmount || 0).toLocaleString('zh-CN', {minimumFractionDigits: 2})}</div>
+                    {/* 快捷日期筛选 + 状态 Tab */}
+                    <Card className="filter-card mb-sm" style={{ marginBottom: 12, border: '1px solid var(--color-border-secondary)', borderRadius: 6 }} styles={{ body: { padding: '12px 16px' } }}>
+                      <div style={{ marginBottom: 8 }}>
+                        <Space size={12} wrap>
+                          <Radio.Group value={presetValue} onChange={handlePresetChange} optionType="button" buttonStyle="solid" size="small">
+                            <Radio.Button value="today">今天</Radio.Button>
+                            <Radio.Button value="week">本周</Radio.Button>
+                            <Radio.Button value="month">本月</Radio.Button>
+                            <Radio.Button value="year">本年</Radio.Button>
+                          </Radio.Group>
+                          <Button size="small" onClick={() => { setPresetValue(''); data.setPayableDateRange(['', '']); }}>清除日期</Button>
+                        </Space>
                       </div>
-                      <div style={{ textAlign: 'center', flex: 1, borderRight: '1px solid var(--color-border)' }}>
-                        <div style={{ color: 'var(--color-text-tertiary)', fontSize: 14, marginBottom: 4 }}>工厂对账</div>
-                        <div style={{ fontSize: 15, fontWeight: 500, color: 'var(--color-text-primary)' }}>{data.pendingStats.reconCount || 0} <span style={{fontSize: 14, fontWeight: 'normal', color: 'var(--color-text-tertiary)'}}>笔</span></div>
-                      </div>
-                      <div style={{ textAlign: 'center', flex: 1, borderRight: '1px solid var(--color-border)' }}>
-                        <div style={{ color: 'var(--color-text-tertiary)', fontSize: 14, marginBottom: 4 }}>费用报销</div>
-                        <div style={{ fontSize: 15, fontWeight: 500, color: 'var(--color-text-primary)' }}>{data.pendingStats.reimbCount || 0} <span style={{fontSize: 14, fontWeight: 'normal', color: 'var(--color-text-tertiary)'}}>笔</span></div>
-                      </div>
-                      <div style={{ textAlign: 'center', flex: 1 }}>
-                        <div style={{ color: 'var(--color-text-tertiary)', fontSize: 14, marginBottom: 4 }}>员工工资</div>
-                        <div style={{ fontSize: 15, fontWeight: 500, color: 'var(--color-text-primary)' }}>{data.pendingStats.payrollCount || 0} <span style={{fontSize: 14, fontWeight: 'normal', color: 'var(--color-text-tertiary)'}}>笔</span></div>
-                      </div>
-                    </div>
-
-                    {/* 过滤 */}
-                    <div style={{ marginBottom: 16 }}>
-                      <Space wrap>
-                        <span style={{ color: 'var(--color-text-secondary)' }}>业务类型：</span>
-                        {BIZ_TYPE_OPTIONS.map(opt => (
+                      <Tabs
+                        activeKey={payableStatusTab}
+                        onChange={setPayableStatusTab}
+                        size="small"
+                        items={[
+                          { key: '', label: `全部 (${data.filteredPayables.length})` },
+                          { key: 'RECONCILIATION', label: `工厂对账 (${data.filteredPayables.filter((p: any) => p.bizType === 'RECONCILIATION').length})` },
+                          { key: 'REIMBURSEMENT', label: `费用报销 (${data.filteredPayables.filter((p: any) => p.bizType === 'REIMBURSEMENT').length})` },
+                          { key: 'PAYROLL', label: `员工工资 (${data.filteredPayables.filter((p: any) => p.bizType === 'PAYROLL' || p.bizType === 'PAYROLL_SETTLEMENT').length})` },
+                          { key: 'ORDER_SETTLEMENT', label: `外发结算 (${data.filteredPayables.filter((p: any) => p.bizType === 'ORDER_SETTLEMENT').length})` },
+                        ]}
+                        style={{ marginBottom: 0 }}
+                      />
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8, flexWrap: 'wrap', gap: 8 }}>
+                        <Space size={12} wrap>
+                          <span style={{ color: 'var(--color-text-tertiary)', fontSize: 13 }}>
+                            共 {statusFilteredPayables.length} 笔
+                          </span>
+                          {BIZ_TYPE_OPTIONS.filter(o => o.value).map(opt => (
+                            <Button
+                              key={opt.value}
+                              size="small"
+                              ghost={data.payableBizType !== opt.value}
+                              type={data.payableBizType === opt.value ? 'primary' : 'default'}
+                              onClick={() => { data.setPayableBizType(opt.value); data.setSelectedPayableKeys([]); }}
+                            >
+                              {opt.label}
+                            </Button>
+                          ))}
+                          <RangePicker
+                            size="small"
+                            allowClear
+                            value={data.payableDateRange[0] && data.payableDateRange[1] ? [dayjs(data.payableDateRange[0], 'YYYY-MM-DD'), dayjs(data.payableDateRange[1], 'YYYY-MM-DD')] : null}
+                            onChange={(dates) => {
+                              if (dates && dates[0] && dates[1]) {
+                                data.setPayableDateRange([dates[0].format('YYYY-MM-DD'), dates[1].format('YYYY-MM-DD')]);
+                              } else {
+                                data.setPayableDateRange(['', '']);
+                              }
+                              data.setSelectedPayableKeys([]);
+                            }}
+                          />
+                          {data.selectedPayableKeys.length > 0 && (
+                            <span style={{ color: 'var(--color-primary)' }}>
+                              已选 {data.selectedPayableKeys.length} 笔
+                              （{formatMoney(data.filteredPayables.filter(p => data.selectedPayableKeys.includes(`${p.bizType}-${p.bizId}`)).reduce((s, p) => s + Number(p.amount ?? 0), 0))}）
+                            </span>
+                          )}
+                        </Space>
+                        <Space size={8}>
+                          {data.selectedPayableKeys.length > 0 && (
+                            <>
+                              <Button
+                                type="primary"
+                                ghost
+                                size="small"
+                                loading={data.batchPaySubmitting}
+                                onClick={data.handleBatchPay}
+                              >
+                                批量付款
+                              </Button>
+                              <Button size="small" onClick={handleClearSelectedPayableKeys}>清空选择</Button>
+                            </>
+                          )}
                           <Button
-                            key={opt.value}
-                            type={data.payableBizType === opt.value ? 'primary' : 'default'}
-                           
-                            onClick={() => { data.setPayableBizType(opt.value); data.setSelectedPayableKeys([]); }}
-                          >
-                            {opt.label}
-                          </Button>
-                        ))}
-                        <span style={{ color: 'var(--color-text-secondary)', marginLeft: 8 }}>时间：</span>
-                        <RangePicker
-                         
-                          allowClear
-                          value={data.payableDateRange[0] && data.payableDateRange[1] ? [dayjs(data.payableDateRange[0], 'YYYY-MM-DD'), dayjs(data.payableDateRange[1], 'YYYY-MM-DD')] : null}
-                          onChange={(dates) => {
-                            if (dates && dates[0] && dates[1]) {
-                              data.setPayableDateRange([dates[0].format('YYYY-MM-DD'), dates[1].format('YYYY-MM-DD')]);
-                            } else {
-                              data.setPayableDateRange(['', '']);
-                            }
-                            data.setSelectedPayableKeys([]);
-                          }}
-                        />
-                        <Button
-                         
-                          icon={<DownloadOutlined />}
-                          style={{ marginLeft: 8 }}
-                          onClick={() => {
-                            if (data.payables.length === 0) {
-                              message.warning('当前没有数据可导出');
-                              return;
-                            }
-                            exportToExcelFile(data.payables, [
+                            size="small"
+                            ghost
+                            icon={<DownloadOutlined />}
+                            onClick={() => {
+                              if (data.payables.length === 0) {
+                                message.warning('当前没有数据可导出');
+                                return;
+                              }
+                              exportToExcelFile(data.payables, [
                                 { title: '业务类型', dataIndex: 'bizType' },
                                 { title: '单据编号', dataIndex: 'bizNo' },
                                 { title: '收款方', dataIndex: 'receiverName' },
@@ -264,41 +415,34 @@ const PaymentCenterPage: React.FC = () => {
                                 { title: '已付金额', dataIndex: 'paidAmount' },
                                 { title: '描述', dataIndex: 'description' },
                                 { title: '创建时间', dataIndex: 'createTime' }
-                            ], '待收付款明细');
-                          }}
-                        >
-                          导出Excel
-                        </Button>
-                        {data.selectedPayableKeys.length > 0 && (
-                          <>
-                            <span style={{ color: 'var(--color-primary)', marginLeft: 8 }}>
-                              已选 {data.selectedPayableKeys.length} 笔
-                              （{formatMoney(data.filteredPayables.filter(p => data.selectedPayableKeys.includes(`${p.bizType}-${p.bizId}`)).reduce((s, p) => s + Number(p.amount ?? 0), 0))}）
-                            </span>
-                            <Button
-                              type="primary"
-                             
-                              loading={data.batchPaySubmitting}
-                              onClick={data.handleBatchPay}
-                            >
-                              批量付款
-                            </Button>
-                            <Button onClick={handleClearSelectedPayableKeys}>
-              清空选择
-            </Button>
-                          </>
-                        )}
-                      </Space>
-                    </div>
+                              ], '待收付款明细');
+                            }}
+                          >
+                            导出
+                          </Button>
+                          <Dropdown
+                            trigger={['click']}
+                            menu={{
+                              items: [
+                                { key: 'pay', label: '手动发起支付', icon: <DollarOutlined />, onClick: handleOpenPayModal },
+                              ],
+                            }}
+                          >
+                            <Button size="small" icon={<MoreOutlined />} />
+                          </Dropdown>
+                        </Space>
+                      </div>
+                    </Card>
 
                     {/* 待收付款表格 */}
                     <ResizableTable
                       columns={payableColumns}
-                      dataSource={data.filteredPayables}
-                      rowKey={(r) => `${r.bizType}-${r.bizId}`}
+                      dataSource={statusFilteredPayables}
+                      rowKey={(r: any) => `${r.bizType}-${r.bizId}`}
                       loading={data.payablesLoading}
                       scroll={{ x: 1200 }}
                       pagination={{ defaultPageSize: readPageSize(20), showSizeChanger: true, showTotal: (t) => `共 ${t} 条` }}
+                      locale={{ emptyText: <Empty description="暂无记录" image={Empty.PRESENTED_IMAGE_SIMPLE} /> }}
                       rowSelection={{
                         selectedRowKeys: data.selectedPayableKeys,
                         onChange: (keys) => data.setSelectedPayableKeys(keys),
@@ -306,7 +450,7 @@ const PaymentCenterPage: React.FC = () => {
                           {
                             key: 'select-all-month',
                             text: data.payableDateRange[0] ? `全选 ${data.payableDateRange[0]} 月` : '全选当前月份',
-                            onSelect: () => data.setSelectedPayableKeys(data.filteredPayables.map(p => `${p.bizType}-${p.bizId}`)),
+                            onSelect: () => data.setSelectedPayableKeys(data.filteredPayables.map((p: any) => `${p.bizType}-${p.bizId}`)),
                           },
                         ],
                       }}
@@ -323,101 +467,90 @@ const PaymentCenterPage: React.FC = () => {
                 ),
                 children: (
                   <>
-                    {/* 统计行 */}
-                    <div style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      marginBottom: 12,
-                      padding: '16px 24px',
-                      background: 'var(--color-bg-container)',
-                      borderRadius: '8px',
-                      border: '1px solid var(--color-border-light)'
-                    }}>
-                      <div style={{ textAlign: 'center', flex: 1, borderRight: '1px solid var(--color-border)' }}>
-                        <div style={{ color: 'var(--color-text-tertiary)', fontSize: 14, marginBottom: 4 }}>支付总额</div>
-                        <div style={{ fontSize: 16, fontWeight: 'bold', color: 'var(--color-text-primary)' }}>¥ {Number(data.paymentStats.totalAmount || 0).toLocaleString('zh-CN', {minimumFractionDigits: 2})}</div>
+                    {/* 快捷日期筛选 + 状态 Tab */}
+                    <Card className="filter-card mb-sm" style={{ marginBottom: 12, border: '1px solid var(--color-border-secondary)', borderRadius: 6 }} styles={{ body: { padding: '12px 16px' } }}>
+                      <Tabs
+                        activeKey={paymentStatusTab}
+                        onChange={setPaymentStatusTab}
+                        size="small"
+                        items={[
+                          { key: '', label: `全部 (${data.payments.length})` },
+                          { key: 'pending', label: `处理中 (${data.payments.filter((p: any) => p.status === 'pending' || p.status === 'processing').length})` },
+                          { key: 'success', label: `已成功 (${data.payments.filter((p: any) => p.status === 'success').length})` },
+                          { key: 'failed', label: `失败/取消 (${data.payments.filter((p: any) => p.status === 'rejected' || p.status === 'failed' || p.status === 'cancelled').length})` },
+                        ]}
+                        style={{ marginBottom: 0 }}
+                      />
+                      <div style={{ marginTop: 8 }}>
+                        <Form layout="inline" onFinish={(values) => { data.filterValuesRef.current = values; data.fetchPayments(values); }}>
+                          <Form.Item name="payeeName">
+                            <Input placeholder="收款方姓名" allowClear prefix={<SearchOutlined />} style={{ width: 150 }} />
+                          </Form.Item>
+                          <Form.Item name="bizType">
+                            <Select placeholder="业务类型" allowClear style={{ width: 130 }}>
+                              {BIZ_TYPE_OPTIONS.filter(o => o.value).map(o => (
+                                <Select.Option key={o.value} value={o.value}>{o.label}</Select.Option>
+                              ))}
+                            </Select>
+                          </Form.Item>
+                          <Form.Item name="status">
+                            <Select placeholder="状态" allowClear style={{ width: 120 }}>
+                              {Object.entries(PAYMENT_STATUS_MAP).map(([k, v]) => (
+                                <Select.Option key={k} value={k}>{v.text}</Select.Option>
+                              ))}
+                            </Select>
+                          </Form.Item>
+                          <Form.Item name="paymentMethod">
+                            <Select placeholder="支付方式" allowClear style={{ width: 130 }}>
+                              {PAYMENT_METHOD_OPTIONS.map(o => (
+                                <Select.Option key={o.value} value={o.value}>{o.label}</Select.Option>
+                              ))}
+                            </Select>
+                          </Form.Item>
+                          <Form.Item name="dateRange">
+                            <RangePicker style={{ width: 240 }} />
+                          </Form.Item>
+                          <Form.Item>
+                            <Button type="primary" ghost htmlType="submit" icon={<SearchOutlined />}>查询</Button>
+                          </Form.Item>
+                          <Form.Item>
+                            <Button
+                              ghost
+                              icon={<DownloadOutlined />}
+                              onClick={() => {
+                                if (data.payments.length === 0) {
+                                  message.warning('当前没有数据可导出');
+                                  return;
+                                }
+                                exportToExcelFile(data.payments, [
+                                  { title: '支付单号', dataIndex: 'paymentNo' },
+                                  { title: '业务类型', dataIndex: 'bizType' },
+                                  { title: '收款方', dataIndex: 'payeeName' },
+                                  { title: '支付方式', dataIndex: 'paymentMethod' },
+                                  { title: '金额', dataIndex: 'amount' },
+                                  { title: '状态', dataIndex: 'status' },
+                                  { title: '业务单号', dataIndex: 'bizNo' },
+                                  { title: '操作人', dataIndex: 'operatorName' },
+                                  { title: '创建时间', dataIndex: 'createTime' }
+                                ], '收支记录明细');
+                              }}
+                            >
+                              导出
+                            </Button>
+                          </Form.Item>
+                        </Form>
                       </div>
-                      <div style={{ textAlign: 'center', flex: 1, borderRight: '1px solid var(--color-border)' }}>
-                        <div style={{ color: 'var(--color-text-tertiary)', fontSize: 14, marginBottom: 4 }}>已付金额</div>
-                        <div style={{ fontSize: 16, fontWeight: 'bold', color: '#389e0d' }}>¥ {Number(data.paymentStats.successAmount || 0).toLocaleString('zh-CN', {minimumFractionDigits: 2})}</div>
-                      </div>
-                      <div style={{ textAlign: 'center', flex: 1, borderRight: '1px solid var(--color-border)' }}>
-                        <div style={{ color: 'var(--color-text-tertiary)', fontSize: 14, marginBottom: 4 }}>总笔数</div>
-                        <div style={{ fontSize: 15, fontWeight: 500, color: 'var(--color-text-primary)' }}>{data.paymentStats.total || 0} <span style={{fontSize: 14, fontWeight: 'normal', color: 'var(--color-text-tertiary)'}}>笔</span></div>
-                      </div>
-                      <div style={{ textAlign: 'center', flex: 1 }}>
-                        <div style={{ color: 'var(--color-text-tertiary)', fontSize: 14, marginBottom: 4 }}>成功</div>
-                        <div style={{ fontSize: 15, fontWeight: 500, color: '#389e0d' }}>{data.paymentStats.successCount || 0} <span style={{fontSize: 14, fontWeight: 'normal', color: 'var(--color-text-tertiary)'}}>笔</span></div>
-                      </div>
-                    </div>
-
-                    {/* 过滤器 */}
-                    <Form layout="inline" onFinish={(values) => { data.filterValuesRef.current = values; data.fetchPayments(values); }} style={{ marginBottom: 16 }}>
-                      <Form.Item name="payeeName">
-                        <Input placeholder="收款方姓名" allowClear prefix={<SearchOutlined />} style={{ width: 150 }} />
-                      </Form.Item>
-                      <Form.Item name="bizType">
-                        <Select placeholder="业务类型" allowClear style={{ width: 130 }}>
-                          {BIZ_TYPE_OPTIONS.filter(o => o.value).map(o => (
-                            <Select.Option key={o.value} value={o.value}>{o.label}</Select.Option>
-                          ))}
-                        </Select>
-                      </Form.Item>
-                      <Form.Item name="status">
-                        <Select placeholder="状态" allowClear style={{ width: 120 }}>
-                          {Object.entries(PAYMENT_STATUS_MAP).map(([k, v]) => (
-                            <Select.Option key={k} value={k}>{v.text}</Select.Option>
-                          ))}
-                        </Select>
-                      </Form.Item>
-                      <Form.Item name="paymentMethod">
-                        <Select placeholder="支付方式" allowClear style={{ width: 130 }}>
-                          {PAYMENT_METHOD_OPTIONS.map(o => (
-                            <Select.Option key={o.value} value={o.value}>{o.label}</Select.Option>
-                          ))}
-                        </Select>
-                      </Form.Item>
-                      <Form.Item name="dateRange">
-                        <RangePicker style={{ width: 240 }} />
-                      </Form.Item>
-                      <Form.Item>
-                        <Button type="primary" htmlType="submit" icon={<SearchOutlined />}>查询</Button>
-                      </Form.Item>
-                      <Form.Item>
-                        <Button
-                          icon={<DownloadOutlined />}
-                          onClick={() => {
-                            if (data.payments.length === 0) {
-                              message.warning('当前没有数据可导出');
-                              return;
-                            }
-                            exportToExcelFile(data.payments, [
-                                { title: '支付单号', dataIndex: 'paymentNo' },
-                                { title: '业务类型', dataIndex: 'bizType' },
-                                { title: '收款方', dataIndex: 'payeeName' },
-                                { title: '支付方式', dataIndex: 'paymentMethod' },
-                                { title: '金额', dataIndex: 'amount' },
-                                { title: '状态', dataIndex: 'status' },
-                                { title: '业务单号', dataIndex: 'bizNo' },
-                                { title: '操作人', dataIndex: 'operatorName' },
-                                { title: '创建时间', dataIndex: 'createTime' }
-                            ], '收支记录明细');
-                          }}
-                        >
-                          导出Excel
-                        </Button>
-                      </Form.Item>
-                    </Form>
+                    </Card>
 
                     {/* 收支记录表格 */}
                     <ResizableTable
                       columns={paymentColumns}
-                      dataSource={data.payments}
-                      rowKey="id"
+                      dataSource={statusFilteredPayments}
+                      rowKey={(r: any) => r.id || r.paymentNo}
                       loading={data.paymentsLoading}
                       scroll={{ x: 1400 }}
                       pagination={{ defaultPageSize: readPageSize(20), showSizeChanger: true, showTotal: (t) => `共 ${t} 条` }}
+                      locale={{ emptyText: <Empty description="暂无记录" image={Empty.PRESENTED_IMAGE_SIMPLE} /> }}
                     />
                   </>
                 ),

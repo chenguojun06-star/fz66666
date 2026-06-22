@@ -612,7 +612,7 @@ const OrganizationTreePage: React.FC = () => {
               >
                 使用模板
               </Button>
-              <Button type="primary" icon={<PlusOutlined />} onClick={() => openCreate()}>
+              <Button type="primary" ghost icon={<PlusOutlined />} onClick={() => openCreate()}>
                 新增部门
               </Button>
             </Space>
@@ -681,8 +681,8 @@ const OrganizationTreePage: React.FC = () => {
         {visibleTreeData.length === 0 && !loading ? (
           <Empty description="暂无组织架构数据" style={{ padding: '60px 0' }}>
             {!isFactoryAccount && (
-              <Button type="primary" icon={<SnippetsOutlined />} onClick={() => setTplModal({ open: true, type: null, rootName: '' })}>
-                使用模板快速创建
+              <Button type="primary" ghost icon={<SnippetsOutlined />} onClick={() => setTplModal({ open: true, type: null, rootName: '' })}>
+                从模板导入
               </Button>
             )}
           </Empty>
@@ -850,6 +850,7 @@ const OrganizationTreePage: React.FC = () => {
                         </Button>
                         {canManageUsers && (
                           <Button
+                            ghost
                             icon={<PlusOutlined />}
                             onClick={() => openUserDialog()}
                           >
@@ -857,9 +858,9 @@ const OrganizationTreePage: React.FC = () => {
                           </Button>
                         )}
                         {canManageUsers && (
-                          <Button icon={<QrcodeOutlined />} onClick={handleGenerateInvite}>
-                            邀请员工
-                          </Button>
+                          <Button ghost icon={<QrcodeOutlined />} onClick={handleGenerateInvite}>
+                              邀请成员
+                            </Button>
                         )}
                         {isExternalSelected && (
                           <Button

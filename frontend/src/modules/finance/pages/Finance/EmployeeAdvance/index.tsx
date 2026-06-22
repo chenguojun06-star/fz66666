@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { App, Button, Card, Col, Form, Input, InputNumber, Row, Select, Tag } from 'antd';
+import React, { useCallback, useEffect, useState, useMemo } from 'react';
+import { App, Button, Card, Col, Empty, Form, Input, InputNumber, Row, Select, Space, Statistic, Tabs, Tag } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
 import type { RowAction } from '@/components/common/RowActions';
@@ -7,7 +7,7 @@ import StandardModal from '@/components/common/StandardModal';
 import PageLayout from '@/components/common/PageLayout';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import type { SmartErrorInfo } from '@/smart/core/types';
-import { PlusOutlined, SearchOutlined } from '@ant-design/icons';
+import { PlusOutlined, SearchOutlined, CheckCircleOutlined, ClockCircleOutlined, DollarOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import { formatDateTime } from '@/utils/datetime';
@@ -54,6 +54,15 @@ const EmployeeAdvancePage: React.FC = () => {
   const reportSmartError = useCallback((code: string, msg: string) => {
     setSmartError({ code, title: msg });
   }, []);
+
+  // ===== 统计卡片数据
+  const advanceStats = useMemo(() => {
+    const pending = (list || []).filter((r: any) => r.status === 'pending').length;
+    const approved = (list || []).filter((r: any) => r.status === 'approved').length;
+    const paid = (list || []).filter((r: any) => r.repaymentStatus === 'full').length;
+    const total = (list || []).reduce((acc: number, r: any) => acc + (Number(r.amount) || 0), 0);
+    return { pending, approved, paid, total };
+  }, [list]);
 
   const fetchList = useCallback(async () => {
     setLoading(true);
@@ -198,12 +207,36 @@ const EmployeeAdvancePage: React.FC = () => {
   return (
     <PageLayout>
       {smartError && <SmartErrorNotice error={smartError} />}
-      <Card style={{ marginBottom: 16 }}>
-        <Row gutter={[12, 12]} align="middle">
-          <Col>
-            <Select value={filterStatus} onChange={(v) => { setFilterStatus(v); setPage(1); }}
-              allowClear placeholder="审批状态" style={{ width: 120 }} options={ADVANCE_STATUS} />
-          </Col>
+
+      {/* ===== 统一统计卡片 ===== */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 12 }}>
+        <Card size="small" style={{ borderRadius: 6, border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }} styles={{ body: { padding: '10px 14px' } }}>
+          <Statistic title={<span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}><ClockCircleOutlined style={{ marginRight: 4, fontSize: 12 }} />待审批</span>} value={advanceStats.pending} suffix="件" valueStyle={{ color: 'var(--color-warning)', fontSize: 20, fontWeight: 500 }} />
+        </Card>
+        <Card size="small" style={{ borderRadius: 6, border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }} styles={{ body: { padding: '10px 14px' } }}>
+          <Statistic title={<span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}><CheckCircleOutlined style={{ marginRight: 4, fontSize: 12 }} />已审批</span>} value={advanceStats.approved} suffix="件" valueStyle={{ color: 'var(--color-primary)', fontSize: 20, fontWeight: 500 }} />
+        </Card>
+        <Card size="small" style={{ borderRadius: 6, border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }} styles={{ body: { padding: '10px 14px' } }}>
+          <Statistic title={<span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}><DollarOutlined style={{ marginRight: 4, fontSize: 12 }} />已还款</span>} value={advanceStats.paid} suffix="件" valueStyle={{ color: 'var(--color-success)', fontSize: 20, fontWeight: 500 }} />
+        </Card>
+        <Card size="small" style={{ borderRadius: 6, border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }} styles={{ body: { padding: '10px 14px' } }}>
+          <Statistic title={<span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}><DollarOutlined style={{ marginRight: 4, fontSize: 12 }} />合计金额</span>} value={advanceStats.total} prefix="¥" precision={2} valueStyle={{ color: 'var(--color-text-primary)', fontSize: 20, fontWeight: 500 }} />
+        </Card>
+      </div>
+
+      <Card style={{ marginBottom: 12, borderRadius: 6, border: '1px solid var(--color-border-secondary)' }} styles={{ body: { padding: '12px 16px' } }}>
+        <Tabs
+          activeKey={filterStatus || ''}
+          onChange={(k) => { setFilterStatus(k || undefined); setPage(1); }}
+          size="small"
+          items={[
+            { key: '', label: `全部 (${total})` },
+            { key: 'pending', label: `待审批` },
+            { key: 'approved', label: `已审批` },
+            { key: 'rejected', label: `已驳回` },
+          ]}
+        />
+        <Row gutter={[12, 12]} align="middle" style={{ marginTop: 8 }}>
           <Col>
             <Select value={filterRepayment} onChange={(v) => { setFilterRepayment(v); setPage(1); }}
               allowClear placeholder="还款状态" style={{ width: 120 }} options={REPAYMENT_STATUS} />
@@ -214,12 +247,16 @@ const EmployeeAdvancePage: React.FC = () => {
               placeholder="搜索员工/单号" style={{ width: 160 }} suffix={<SearchOutlined style={{ color: 'var(--color-text-quaternary)' }} />} />
           </Col>
           <Col flex="auto" style={{ textAlign: 'right' }}>
-            <Button type="primary" icon={<PlusOutlined />} onClick={openForm}>新建借支</Button>
+            <Space size={8}>
+              <Button type="primary" ghost size="small" icon={<PlusOutlined />} onClick={openForm}>新建借支</Button>
+              <Button size="small" ghost onClick={() => { void fetchList(); }}>刷新</Button>
+            </Space>
           </Col>
         </Row>
       </Card>
       <ResizableTable storageKey="employee-advance" rowKey="id" columns={columns} dataSource={list}
         loading={loading} stickyHeader scroll={{ x: 1000 }}
+        locale={{ emptyText: <Empty description="暂无记录" image={Empty.PRESENTED_IMAGE_SIMPLE} /> }}
         pagination={{ current: page, pageSize, total, showSizeChanger: true, showTotal: (t) => `共 ${t} 条`, onChange: (p, s) => { setPage(p); setPageSize(s); } }}
       />
 

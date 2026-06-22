@@ -1,12 +1,15 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { Card, Form, Input, Button, Space, App, Tag, Tooltip } from 'antd';
+import { Card, Form, Input, Button, Space, App, Tag, Tooltip, Empty, Radio, Statistic, Dropdown, Tabs } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
   ReloadOutlined,
   CheckCircleOutlined,
+  ClockCircleOutlined,
+  DollarOutlined,
   ShopOutlined,
   PrinterOutlined,
   DownloadOutlined,
+  MoreOutlined,
 } from '@ant-design/icons';
 import api from '@/utils/api';
 import { wagePaymentApi } from '@/services/finance/wagePaymentApi';
@@ -71,9 +74,32 @@ const FactorySummaryContent: React.FC<Props> = ({ auditedOrderNos, onAuditNosCha
   const [leaderboard, setLeaderboard] = useState<FactoryRank[]>([]);
   const [lbLoading, setLbLoading] = useState(false);
   const [lbCollapsed, setLbCollapsed] = useState(false);
+  const [presetValue, setPresetValue] = useState<string>('');
+  const [statusTab, setStatusTab] = useState<string>('');
   const [printModalVisible, setPrintModalVisible] = useState(false);
   const [drilldownOpen, setDrilldownOpen] = useState(false);
   const [drilldownTarget, setDrilldownTarget] = useState<FactorySummaryRow | null>(null);
+
+  // ===== 统计卡片计算 =====
+  const stats = useMemo(() => {
+    const pendingCount = data.filter(r => r.factoryType !== 'INTERNAL' && !pushedFactoryIds.has(r.factoryId || r.factoryName)).length;
+    const approvedCount = data.filter(r => pushedFactoryIds.has(r.factoryId || r.factoryName)).length;
+    const totalAmount = data.reduce((s: number, r) => s + Number(r.totalAmount || 0), 0);
+    return { total: data.length, pendingCount, approvedCount, totalAmount };
+  }, [data, pushedFactoryIds]);
+
+  // ===== Tab 过滤（根据推送状态） =====
+  const filteredDataByTab = useMemo(() => {
+    if (!statusTab) return data;
+    if (statusTab === 'pending') return data.filter(r => r.factoryType !== 'INTERNAL' && !pushedFactoryIds.has(r.factoryId || r.factoryName));
+    if (statusTab === 'approved') return data.filter(r => pushedFactoryIds.has(r.factoryId || r.factoryName));
+    return data;
+  }, [data, statusTab, pushedFactoryIds]);
+
+  const handlePresetChange = (e: any) => {
+    const val = e.target.value;
+    setPresetValue(val);
+  };
 
   const handlePrintStatement = () => {
     if (selectedRowKeys.length === 0) {
@@ -524,53 +550,66 @@ const FactorySummaryContent: React.FC<Props> = ({ auditedOrderNos, onAuditNosCha
         </Card>
       ) : null}
 
-      {/* 汇总卡片 */}
-      <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
-        <Card style={{ flex: 1, textAlign: 'center' }}>
-          <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>工厂数</div>
-          <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--primary-color)' }}>
-            {filteredData.length}
-          </div>
+      {/* ===== 统一统计卡片 ===== */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 12 }}>
+        <Card
+          size="small"
+          style={{ borderRadius: 6, border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }}
+          styles={{ body: { padding: '10px 14px' } }}
+        >
+          <Statistic
+            title={<span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}><ClockCircleOutlined style={{ marginRight: 4, fontSize: 12 }} />待推送</span>}
+            value={stats.pendingCount}
+            suffix="个"
+            valueStyle={{ color: 'var(--color-warning)', fontSize: 20, fontWeight: 500 }}
+          />
         </Card>
-        <Card style={{ flex: 1, textAlign: 'center' }}>
-          <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>订单总数</div>
-          <div style={{ fontSize: 15, fontWeight: 600 }}>
-            {summary.totalOrders}
-          </div>
+        <Card
+          size="small"
+          style={{ borderRadius: 6, border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }}
+          styles={{ body: { padding: '10px 14px' } }}
+        >
+          <Statistic
+            title={<span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}><CheckCircleOutlined style={{ marginRight: 4, fontSize: 12 }} />已推送</span>}
+            value={stats.approvedCount}
+            suffix="个"
+            valueStyle={{ color: 'var(--color-primary)', fontSize: 20, fontWeight: 500 }}
+          />
         </Card>
-        <Card style={{ flex: 1, textAlign: 'center' }}>
-          <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>入库总量</div>
-          <div style={{ fontSize: 15, fontWeight: 600 }}>
-            {summary.totalWarehoused.toLocaleString()}
-          </div>
+        <Card
+          size="small"
+          style={{ borderRadius: 6, border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }}
+          styles={{ body: { padding: '10px 14px' } }}
+        >
+          <Statistic
+            title={<span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}><ShopOutlined style={{ marginRight: 4, fontSize: 12 }} />工厂总数</span>}
+            value={stats.total}
+            suffix="个"
+            valueStyle={{ color: 'var(--color-success)', fontSize: 20, fontWeight: 500 }}
+          />
         </Card>
-        <Card style={{ flex: 1, textAlign: 'center' }}>
-          <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>总金额</div>
-          <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--primary-color)' }}>
-            ¥{toMoney(summary.totalAmount)}
-          </div>
-        </Card>
-        <Card style={{ flex: 1, textAlign: 'center' }}>
-          <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>总利润</div>
-          <div style={{
-            fontSize: 15,
-            fontWeight: 600,
-            color: summary.totalProfit >= 0 ? 'var(--color-success)' : 'var(--color-danger)',
-          }}>
-            ¥{toMoney(summary.totalProfit)}
-          </div>
+        <Card
+          size="small"
+          style={{ borderRadius: 6, border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }}
+          styles={{ body: { padding: '10px 14px' } }}
+        >
+          <Statistic
+            title={<span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}><DollarOutlined style={{ marginRight: 4, fontSize: 12 }} />总金额</span>}
+            value={summary.totalAmount}
+            precision={2}
+            prefix="¥"
+            valueStyle={{ color: 'var(--color-text-primary)', fontSize: 20, fontWeight: 500 }}
+          />
         </Card>
       </div>
 
       {/* 工厂绩效榜 */}
       {leaderboard.length > 0 && (
         <Card
-         
-          style={{ marginBottom: 12 }}
+          size="small"
+          style={{ marginBottom: 12, borderRadius: 6, border: '1px solid var(--color-border-secondary)' }}
           loading={lbLoading}
-          title={
-            <span style={{ fontSize: 14, fontWeight: 600 }}> 工厂绩效榜</span>
-          }
+          title={<span style={{ fontSize: 14, fontWeight: 600 }}>工厂绩效榜</span>}
           extra={
             <Button type="link" onClick={() => setLbCollapsed(!lbCollapsed)} style={{ padding: 0 }}>
               {lbCollapsed ? '展开' : '收起'}
@@ -585,8 +624,8 @@ const FactorySummaryContent: React.FC<Props> = ({ auditedOrderNos, onAuditNosCha
                   <div key={r.factoryId} style={{
                     display: 'flex', alignItems: 'center', gap: 6,
                     padding: '4px 10px', borderRadius: 6,
-                    background: 'var(--background-secondary, #f8f9fa)',
-                    border: '1px solid var(--border-color, #e8e8e8)',
+                    background: 'var(--color-fill-tertiary)',
+                    border: '1px solid var(--color-border-secondary)',
                     minWidth: 190,
                   }}>
                     <span style={{ fontSize: 13 }}>{r.medal || `#${r.rank}`}</span>
@@ -605,15 +644,41 @@ const FactorySummaryContent: React.FC<Props> = ({ auditedOrderNos, onAuditNosCha
       )}
 
       {/* 搜索 & 工具栏 */}
-      <StickyFilterBar>
-      <Card style={{ marginBottom: 12 }}>
-        {searchFields}
-      </Card>
-      <StandardToolbar
-        left={
-          <Space>
+      <Card className="filter-card mb-sm" style={{ marginBottom: 12, border: '1px solid var(--color-border-secondary)', borderRadius: 6 }} styles={{ body: { padding: '12px 16px' } }}>
+        <div style={{ marginBottom: 8 }}>
+          <Space size={12} wrap>
+            <Radio.Group value={presetValue} onChange={handlePresetChange} optionType="button" buttonStyle="solid" size="small">
+              <Radio.Button value="today">今天</Radio.Button>
+              <Radio.Button value="week">本周</Radio.Button>
+              <Radio.Button value="month">本月</Radio.Button>
+              <Radio.Button value="year">本年</Radio.Button>
+            </Radio.Group>
+            <Button size="small" onClick={() => setPresetValue('')}>清除日期</Button>
+          </Space>
+        </div>
+        <Tabs
+          activeKey={statusTab}
+          onChange={setStatusTab}
+          size="small"
+          items={[
+            { key: '', label: `全部 (${data.length})` },
+            { key: 'pending', label: `待推送 (${stats.pendingCount})` },
+            { key: 'approved', label: `已推送 (${stats.approvedCount})` },
+          ]}
+          style={{ marginBottom: 0 }}
+        />
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8, flexWrap: 'wrap', gap: 8 }}>
+          <Space size={8} wrap>
+            {searchFields}
+          </Space>
+          <Space size={8}>
+            <span style={{ color: 'var(--color-text-tertiary)', fontSize: 13 }}>
+              {selectedRowKeys.length > 0 ? `已选 ${selectedRowKeys.length} 个` : `共 ${data.length} 个工厂`}
+            </span>
             <Button
               type="primary"
+              ghost
+              size="small"
               icon={<CheckCircleOutlined />}
               disabled={selectedRowKeys.length === 0}
               onClick={handleBatchApprove}
@@ -622,13 +687,17 @@ const FactorySummaryContent: React.FC<Props> = ({ auditedOrderNos, onAuditNosCha
               批量终审推送 ({selectedRowKeys.length})
             </Button>
             <Button
+              size="small"
+              ghost
               icon={<PrinterOutlined />}
               disabled={selectedRowKeys.length === 0}
               onClick={handlePrintStatement}
             >
-              打印对账单 ({selectedRowKeys.length})
+              打印对账单
             </Button>
             <Button
+              size="small"
+              ghost
               icon={<DownloadOutlined />}
               onClick={handleExport}
               disabled={data.length === 0}
@@ -636,24 +705,29 @@ const FactorySummaryContent: React.FC<Props> = ({ auditedOrderNos, onAuditNosCha
             >
               导出汇总
             </Button>
+            <Dropdown
+              trigger={['click']}
+              menu={{
+                items: [
+                  { key: 'refresh', label: '刷新', icon: <ReloadOutlined />, onClick: fetchData },
+                ],
+              }}
+            >
+              <Button size="small" icon={<MoreOutlined />} />
+            </Dropdown>
           </Space>
-        }
-        right={
-          <Button icon={<ReloadOutlined />} onClick={fetchData}>
-            刷新
-          </Button>
-        }
-      />
-      </StickyFilterBar>
+        </div>
+      </Card>
 
       {/* 数据表格 */}
       <ResizableTable
         columns={columns}
-        dataSource={filteredData}
+        dataSource={filteredDataByTab}
         rowKey="factoryName"
         loading={loading}
         scroll={{ x: 1400 }}
         pagination={false}
+        locale={{ emptyText: <Empty description="暂无记录" image={Empty.PRESENTED_IMAGE_SIMPLE} /> }}
         rowSelection={{
           selectedRowKeys,
           onChange: (keys) => setSelectedRowKeys(keys as string[]),

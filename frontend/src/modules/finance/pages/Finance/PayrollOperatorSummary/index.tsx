@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { App, Button, Card, Form, Input, InputNumber, Select, Space, Switch, Tabs, Tag, Tooltip } from 'antd';
+import { App, Button, Card, Form, Input, InputNumber, Select, Space, Statistic, Switch, Tabs, Tag, Tooltip } from 'antd';
 import { UnifiedRangePicker } from '@/components/common/UnifiedDatePicker';
 import PageLayout from '@/components/common/PageLayout';
 import ResizableTable from '@/components/common/ResizableTable';
@@ -9,7 +9,7 @@ import dayjs from 'dayjs';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { getSummaryColumns, getDetailColumns } from './payrollOperatorColumns';
 import WageSlipPrintModal from './WageSlipPrintModal';
-import { PrinterOutlined, SearchOutlined, DownloadOutlined } from '@ant-design/icons';
+import { PrinterOutlined, SearchOutlined, DownloadOutlined, CheckCircleOutlined, ClockCircleOutlined, DollarOutlined } from '@ant-design/icons';
 import { readPageSize } from '@/utils/pageSizeStore';
 import { usePayrollData, toNumberOrZero, toMoneyText, getDetailRowKey, getDetailApprovalId, isDetailAudited } from './usePayrollData';
 import { formatMoney } from '@/utils/format';
@@ -308,6 +308,22 @@ const PayrollOperatorSummary: React.FC = () => {
                     ) : null
                 }
             >
+                {/* ===== 统一统计卡片 ===== */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 12 }}>
+                    <Card size="small" style={{ borderRadius: 6, border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }} styles={{ body: { padding: '10px 14px' } }}>
+                        <Statistic title={<span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}><ClockCircleOutlined style={{ marginRight: 4, fontSize: 12 }} />待审批</span>} value={rows.filter((r: any) => !r.auditStatus || r.auditStatus === 'pending').length} suffix="条" valueStyle={{ color: 'var(--color-warning)', fontSize: 20, fontWeight: 500 }} />
+                    </Card>
+                    <Card size="small" style={{ borderRadius: 6, border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }} styles={{ body: { padding: '10px 14px' } }}>
+                        <Statistic title={<span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}><CheckCircleOutlined style={{ marginRight: 4, fontSize: 12 }} />已审批</span>} value={rows.filter((r: any) => r.auditStatus === 'approved' || r.auditStatus === 'audited').length} suffix="条" valueStyle={{ color: 'var(--color-primary)', fontSize: 20, fontWeight: 500 }} />
+                    </Card>
+                    <Card size="small" style={{ borderRadius: 6, border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }} styles={{ body: { padding: '10px 14px' } }}>
+                        <Statistic title={<span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}><DollarOutlined style={{ marginRight: 4, fontSize: 12 }} />已付款</span>} value={rows.filter((r: any) => r.paymentStatus === 'paid' || r.status === 'paid').length} suffix="条" valueStyle={{ color: 'var(--color-success)', fontSize: 20, fontWeight: 500 }} />
+                    </Card>
+                    <Card size="small" style={{ borderRadius: 6, border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }} styles={{ body: { padding: '10px 14px' } }}>
+                        <Statistic title={<span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}><DollarOutlined style={{ marginRight: 4, fontSize: 12 }} />合计金额</span>} value={totalAmount} prefix="¥" precision={2} valueStyle={{ color: 'var(--color-text-primary)', fontSize: 20, fontWeight: 500 }} />
+                    </Card>
+                </div>
+
                 <Card className="filter-card mb-sm">
                     <Space wrap>
                         <Input placeholder="搜索订单号 / 款号 / 人员 / 工序" style={{ width: 280 }} allowClear value={keyword}
@@ -320,12 +336,12 @@ const PayrollOperatorSummary: React.FC = () => {
                             <span style={{ color: 'var(--neutral-text-secondary)' }}>包含已结算</span>
                             <Switch id="includeSettledSwitch" checked={includeSettled} onChange={setIncludeSettled} />
                         </Space>
-                        <Button type="primary" onClick={fetchData} loading={loading}>查询</Button>
-                        <Button onClick={reset} disabled={loading}>重置</Button>
-                        <Button onClick={exportToExcelFn} disabled={loading || rows.length === 0}>导出Excel</Button>
+                        <Button type="primary" ghost onClick={fetchData} loading={loading}>查询</Button>
+                        <Button ghost onClick={reset} disabled={loading}>重置</Button>
+                        <Button ghost onClick={exportToExcelFn} disabled={loading || rows.length === 0}>导出Excel</Button>
                         <Select style={{ width: 120 }} value={kingdeeExportFormat} onChange={setKingdeeExportFormat}
                             options={[{ value: 'KINGDEE', label: '金蝶KIS' }, { value: 'UFIDA', label: '用友T3' }, { value: 'STANDARD', label: '标准格式' }]} />
-                        <Button icon={<DownloadOutlined />} onClick={handleKingdeeExport} disabled={loading || rows.length === 0}>财税导出</Button>
+                        <Button ghost icon={<DownloadOutlined />} onClick={handleKingdeeExport} disabled={loading || rows.length === 0}>财税导出</Button>
                     </Space>
                 </Card>
 
@@ -354,7 +370,7 @@ const PayrollOperatorSummary: React.FC = () => {
                                                 { value: 'approved', label: '已审核' },
                                             ]}
                                         />
-                                        <Button type="primary" disabled={detailSelectedKeys.length === 0} onClick={handleBatchAuditDetails}>
+                                        <Button type="primary" ghost disabled={detailSelectedKeys.length === 0} onClick={handleBatchAuditDetails}>
                                             批量审核 ({detailSelectedKeys.length})
                                         </Button>
                                     </Space>
@@ -384,10 +400,10 @@ const PayrollOperatorSummary: React.FC = () => {
                                         <span style={{ color: 'var(--neutral-text-secondary)' }}>人员数 {summaryRows.length}</span>
                                         <span style={{ color: 'var(--neutral-text-secondary)' }}>总数量 {summaryRows.reduce((sum, r) => sum + toNumberOrZero(r.totalQuantity), 0)}</span>
                                         <span style={{ color: 'var(--neutral-text-secondary)' }}>总金额 {summaryRows.reduce((sum, r) => sum + toNumberOrZero(r.totalAmount), 0).toFixed(2)}</span>
-                                        <Button type="primary" onClick={handleBatchFinalPush} disabled={selectedRowKeys.length === 0}>
+                                        <Button type="primary" ghost onClick={handleBatchFinalPush} disabled={selectedRowKeys.length === 0}>
                                             批量终审推送 ({selectedRowKeys.length})
                                         </Button>
-                                        <Button icon={<PrinterOutlined />} onClick={handlePrintWageSlips} disabled={selectedRowKeys.length === 0}>
+                                        <Button ghost icon={<PrinterOutlined />} onClick={handlePrintWageSlips} disabled={selectedRowKeys.length === 0}>
                                             打印工资条 ({selectedRowKeys.length})
                                         </Button>
                                     </Space>
@@ -413,7 +429,7 @@ const PayrollOperatorSummary: React.FC = () => {
                                 <Card className="mb-sm">
                                     <Space wrap>
                                         <span style={{ color: 'var(--neutral-text-secondary)' }}>内部工厂订单 {internalOrders.length}</span>
-                                        <Button onClick={fetchInternalOrders} loading={internalOrdersLoading}>刷新</Button>
+                                        <Button ghost onClick={fetchInternalOrders} loading={internalOrdersLoading}>刷新</Button>
                                     </Space>
                                 </Card>
                                 <ResizableTable

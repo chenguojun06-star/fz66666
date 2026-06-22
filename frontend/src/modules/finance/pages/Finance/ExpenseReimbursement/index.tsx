@@ -1,9 +1,9 @@
-import React, { useState, useRef } from 'react';
-import { App, Button, Card, Col, Form, Image, Input, InputNumber, Row, Select, Space, Spin, Statistic, Tag } from 'antd';
+import React, { useState, useRef, useMemo } from 'react';
+import { App, Button, Card, Col, Empty, Form, Image, Input, InputNumber, Radio, Row, Select, Space, Spin, Statistic, Tabs, Tag } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
 import type { RowAction } from '@/components/common/RowActions';
-import { PlusOutlined, SearchOutlined, CloseCircleOutlined, UploadOutlined } from '@ant-design/icons';
+import { PlusOutlined, SearchOutlined, CloseCircleOutlined, UploadOutlined, CheckCircleOutlined, ClockCircleOutlined, DollarOutlined, MoreOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import { formatDateTime } from '@/utils/datetime';
@@ -160,31 +160,68 @@ const ExpenseReimbursementPage: React.FC = () => {
 
   const expenseTypeValue = Form.useWatch('expenseType', form);
 
+  // ===== 统一统计卡片 =====
+  const cardStats = useMemo(() => ({
+    pending: (list || []).filter((r: any) => r.status === 'pending' || r.status === 'submitted').length,
+    approved: (list || []).filter((r: any) => r.status === 'approved').length,
+    paid: (list || []).filter((r: any) => r.status === 'paid' || r.paymentStatus === 'paid').length,
+    total: (list || []).reduce((acc: number, r: any) => acc + (Number(r.amount) || 0), 0),
+  }), [list]);
+
   return (
     <>
       <PageLayout>
         {showSmartErrorNotice && smartError ? (<Card style={{ marginBottom: 16 }}><SmartErrorNotice error={smartError} onFix={() => { void fetchList(); }} /></Card>) : null}
-        <Row gutter={16} style={{ marginBottom: 16 }}>
-          <Col span={8}><Card><Statistic title="待审批" value={stats.pending} suffix="件" styles={{ content: { color: 'var(--color-warning)' } }} /></Card></Col>
-          <Col span={8}><Card><Statistic title="本页总金额" value={stats.totalAmount} prefix="¥" precision={2} /></Card></Col>
-          <Col span={8}><Card><Statistic title="已付款金额" value={stats.paidAmount} prefix="¥" precision={2} styles={{ content: { color: 'var(--color-success)' } }} /></Card></Col>
-        </Row>
-        <Card style={{ marginBottom: 16 }}>
-          <Row gutter={[12, 12]} align="middle">
+
+        {/* ===== 统一统计卡片 ===== */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 12 }}>
+          <Card size="small" style={{ borderRadius: 6, border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }} styles={{ body: { padding: '10px 14px' } }}>
+            <Statistic title={<span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}><ClockCircleOutlined style={{ marginRight: 4, fontSize: 12 }} />待审批</span>} value={stats.pending} suffix="件" valueStyle={{ color: 'var(--color-warning)', fontSize: 20, fontWeight: 500 }} />
+          </Card>
+          <Card size="small" style={{ borderRadius: 6, border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }} styles={{ body: { padding: '10px 14px' } }}>
+            <Statistic title={<span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}><CheckCircleOutlined style={{ marginRight: 4, fontSize: 12 }} />已审批</span>} value={cardStats.approved + cardStats.paid} suffix="件" valueStyle={{ color: 'var(--color-primary)', fontSize: 20, fontWeight: 500 }} />
+          </Card>
+          <Card size="small" style={{ borderRadius: 6, border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }} styles={{ body: { padding: '10px 14px' } }}>
+            <Statistic title={<span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}><DollarOutlined style={{ marginRight: 4, fontSize: 12 }} />已付款</span>} value={stats.paidAmount} prefix="¥" precision={2} valueStyle={{ color: 'var(--color-success)', fontSize: 20, fontWeight: 500 }} />
+          </Card>
+          <Card size="small" style={{ borderRadius: 6, border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }} styles={{ body: { padding: '10px 14px' } }}>
+            <Statistic title={<span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}><DollarOutlined style={{ marginRight: 4, fontSize: 12 }} />合计金额</span>} value={stats.totalAmount} prefix="¥" precision={2} valueStyle={{ color: 'var(--color-text-primary)', fontSize: 20, fontWeight: 500 }} />
+          </Card>
+        </div>
+
+        <Card style={{ marginBottom: 12, borderRadius: 6, border: '1px solid var(--color-border-secondary)' }} styles={{ body: { padding: '12px 16px' } }}>
+          <Tabs
+            activeKey={filterStatus || ''}
+            onChange={(k) => { setFilterStatus(k || undefined); setPage(1); }}
+            size="small"
+            items={[
+              { key: '', label: `全部 (${total})` },
+              { key: 'pending', label: `待审批 (${stats.pending})` },
+              { key: 'approved', label: `已审批 (${cardStats.approved})` },
+              { key: 'paid', label: `已付款 (${cardStats.paid})` },
+              { key: 'rejected', label: `已驳回` },
+            ]}
+          />
+          <Row gutter={[12, 12]} align="middle" style={{ marginTop: 8 }}>
             <Col><Select value={viewMode} onChange={(v) => { setViewMode(v); setPage(1); }} style={{ width: 130 }} options={[{ value: 'my', label: '我的报销' }, { value: 'all', label: '全部报销（审批）' }]} /></Col>
-            <Col><Select value={filterStatus} onChange={(v) => { setFilterStatus(v); setPage(1); }} allowClear placeholder="状态筛选" style={{ width: 120 }} options={EXPENSE_STATUS} /></Col>
             <Col><Select value={filterType} onChange={(v) => { setFilterType(v); setPage(1); }} allowClear placeholder="费用类型" style={{ width: 130 }} options={EXPENSE_TYPES} /></Col>
             <Col><Input value={keyword} onChange={(e) => setKeyword(e.target.value)} onPressEnter={() => { setPage(1); fetchList(); }} placeholder="搜索事由" style={{ width: 160 }} suffix={<SearchOutlined style={{ color: 'var(--color-text-quaternary)' }} />} /></Col>
-            <Col flex="auto" style={{ textAlign: 'right' }}><Button type="primary" icon={<PlusOutlined />} onClick={() => openForm()}>新建报销</Button></Col>
+            <Col flex="auto" style={{ textAlign: 'right' }}>
+              <Space size={8}>
+                <Button type="primary" ghost size="small" icon={<PlusOutlined />} onClick={() => openForm()}>新建报销</Button>
+                <Button size="small" ghost onClick={() => fetchList()}>刷新</Button>
+              </Space>
+            </Col>
           </Row>
         </Card>
         <ResizableTable storageKey="expense-reimbursement" rowKey="id" columns={columns} dataSource={list} loading={loading} stickyHeader scroll={{ x: 1200 }}
+          locale={{ emptyText: <Empty description="暂无记录" image={Empty.PRESENTED_IMAGE_SIMPLE} /> }}
           pagination={{ current: page, pageSize, total, showSizeChanger: true, showTotal: (t) => `共 ${t} 条`, onChange: (p, s) => { setPage(p); setPageSize(s); } }}
         />
       </PageLayout>
 
       <ResizableModal open={formOpen} title={editingRecord ? '编辑报销单' : '新建报销单'} onCancel={() => setFormOpen(false)} width="40vw" centered
-        footer={<Space><Button onClick={() => setFormOpen(false)}>取消</Button><Button type="primary" loading={submitting} onClick={handleFormSubmit}>{editingRecord ? '更新' : '提交报销'}</Button></Space>}
+        footer={<Space><Button size="small" onClick={() => setFormOpen(false)}>取消</Button><Button type="primary" ghost size="small" loading={submitting} onClick={handleFormSubmit}>{editingRecord ? '更新' : '提交报销'}</Button></Space>}
       >
         <div style={{ padding: '0 8px', maxHeight: '68vh', overflowY: 'auto', overflowX: 'hidden' }}>
           <Form form={form} layout="vertical" requiredMark="optional">

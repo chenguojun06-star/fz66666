@@ -396,11 +396,11 @@ const UserList: React.FC = () => {
                   }
                   right={
                     canManageUsers ? (
-                      <Space>
-                        <Button icon={<QrcodeOutlined />} onClick={handleGenerateInvite}>
+                      <Space size={8}>
+                        <Button ghost icon={<QrcodeOutlined />} onClick={handleGenerateInvite}>
                           邀请员工
                         </Button>
-                        <Button type="primary" onClick={() => openDialog()}>
+                        <Button type="primary" ghost onClick={() => openDialog()}>
                           新增用户
                         </Button>
                       </Space>

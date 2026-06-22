@@ -1,5 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { Card, Input, Button, Timeline, Select } from 'antd';
+import { Card, Button, Input, Select, Empty, Radio, Space, Tag, Statistic, Dropdown, Timeline, Tabs } from 'antd';
+import { CheckCircleOutlined, ClockCircleOutlined, DollarOutlined, SearchOutlined, MoreOutlined, ReloadOutlined, DownloadOutlined } from '@ant-design/icons';
+import dayjs from 'dayjs';
 import ResizableTable from '@/components/common/ResizableTable';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
 import PageLayout from '@/components/common/PageLayout';
@@ -18,6 +20,7 @@ interface Props {
 const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNosChange }) => {
   const [approvalFilter, setApprovalFilter] = useState<'all' | 'pending' | 'approved'>('all');
   const [searchFactoryName, setSearchFactoryName] = useState('');
+  const [presetValue, setPresetValue] = useState<string>('');
   const {
     searchOrderNo, setSearchOrderNo,
     searchStatus, setSearchStatus,
@@ -53,19 +56,124 @@ const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNo
     return result;
   }, [data, approvalFilter, auditedOrderNos, searchFactoryName]);
 
+  const stats = useMemo(() => {
+    const pendingCount = data.filter(r => !auditedOrderNos.has(r.orderNo) && r.approvalStatus !== 'APPROVED').length;
+    const approvedCount = data.filter(r => auditedOrderNos.has(r.orderNo) || r.approvalStatus === 'APPROVED').length;
+    const totalAmount = data.reduce((s: number, r: any) => s + Number(r.totalAmount ?? 0), 0);
+    return { pendingCount, approvedCount, totalAmount };
+  }, [data, auditedOrderNos]);
+
+  const handlePresetChange = (e: any) => {
+    const val = e.target.value;
+    setPresetValue(val);
+    const today = dayjs();
+    if (!val) { setDateRange(null); return; }
+    let start: any = today.startOf('day');
+    let end: any = today.endOf('day');
+    if (val === 'week') { start = today.startOf('week'); end = today.endOf('week'); }
+    else if (val === 'month') { start = today.startOf('month'); end = today.endOf('month'); }
+    else if (val === 'year') { start = today.startOf('year'); end = today.endOf('year'); }
+    setDateRange([start, end]);
+  };
+
+  const activeTab = approvalFilter === 'pending' ? 'pending' : approvalFilter === 'approved' ? 'approved' : '';
+  const handleTabChange = (key: string) => {
+    if (key === 'pending') setApprovalFilter('pending');
+    else if (key === 'approved') setApprovalFilter('approved');
+    else setApprovalFilter('all');
+  };
+
   return (
     <>
+      {/* ===== 统计卡片 ===== */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 12 }}>
+        <Card
+          size="small"
+          style={{ borderRadius: 6, border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }}
+          styles={{ body: { padding: '10px 14px' } }}
+        >
+          <Statistic
+            title={<span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}><ClockCircleOutlined style={{ marginRight: 4, fontSize: 12 }} />待审批</span>}
+            value={stats.pendingCount}
+            suffix="条"
+            valueStyle={{ color: 'var(--color-warning)', fontSize: 20, fontWeight: 500 }}
+          />
+        </Card>
+        <Card
+          size="small"
+          style={{ borderRadius: 6, border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }}
+          styles={{ body: { padding: '10px 14px' } }}
+        >
+          <Statistic
+            title={<span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}><CheckCircleOutlined style={{ marginRight: 4, fontSize: 12 }} />已审批</span>}
+            value={stats.approvedCount}
+            suffix="条"
+            valueStyle={{ color: 'var(--color-primary)', fontSize: 20, fontWeight: 500 }}
+          />
+        </Card>
+        <Card
+          size="small"
+          style={{ borderRadius: 6, border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }}
+          styles={{ body: { padding: '10px 14px' } }}
+        >
+          <Statistic
+            title={<span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}><DollarOutlined style={{ marginRight: 4, fontSize: 12 }} />订单数</span>}
+            value={total}
+            suffix="条"
+            valueStyle={{ color: 'var(--color-success)', fontSize: 20, fontWeight: 500 }}
+          />
+        </Card>
+        <Card
+          size="small"
+          style={{ borderRadius: 6, border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }}
+          styles={{ body: { padding: '10px 14px' } }}
+        >
+          <Statistic
+            title={<span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>合计金额</span>}
+            value={stats.totalAmount}
+            precision={2}
+            prefix="¥"
+            valueStyle={{ color: 'var(--color-text-primary)', fontSize: 20, fontWeight: 500 }}
+          />
+        </Card>
+      </div>
+
       <PageLayout
         filterCard={false}
         headerContent={
           showSmartErrorNotice && smartError ? (
             <Card style={{ marginBottom: 12 }}>
-              <SmartErrorNotice error={smartError} onFix={() => {}} />
+              <SmartErrorNotice error={smartError} onFix={() => { }} />
             </Card>
           ) : null
         }
-        filterLeft={
-          <>
+      >
+        {/* 筛选区 */}
+        <Card className="filter-card mb-sm" style={{ marginBottom: 12, border: '1px solid var(--color-border-secondary)', borderRadius: 6 }} styles={{ body: { padding: '12px 16px' } }}>
+          <div style={{ marginBottom: 8 }}>
+            <Space size={12} wrap>
+              <Radio.Group value={presetValue} onChange={handlePresetChange} optionType="button" buttonStyle="solid" size="small">
+                <Radio.Button value="today">今天</Radio.Button>
+                <Radio.Button value="week">本周</Radio.Button>
+                <Radio.Button value="month">本月</Radio.Button>
+                <Radio.Button value="year">本年</Radio.Button>
+              </Radio.Group>
+              <Button size="small" onClick={() => { setPresetValue(''); setDateRange(null); }}>清除日期</Button>
+            </Space>
+          </div>
+          <Tabs
+            activeKey={activeTab}
+            onChange={handleTabChange}
+            size="small"
+            items={[
+              { key: '', label: `全部 (${data.length})` },
+              { key: 'pending', label: `待审批 (${stats.pendingCount})` },
+              { key: 'approved', label: `已审批 (${stats.approvedCount})` },
+            ]}
+            style={{ marginBottom: 0 }}
+          />
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8, flexWrap: 'wrap', gap: 8 }}>
+            <Space size={8} wrap>
               <StandardSearchBar
                 searchValue={searchOrderNo}
                 onSearchChange={(value) => { setSearchOrderNo(value); handleSearch(); }}
@@ -87,31 +195,45 @@ const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNo
                 value={searchFactoryName}
                 onChange={e => setSearchFactoryName(e.target.value)}
               />
-              <Select
-                style={{ width: 120 }}
-                value={approvalFilter}
-                onChange={setApprovalFilter}
-                options={[
-                  { value: 'all', label: '全部' },
-                  { value: 'pending', label: '待审核' },
-                  { value: 'approved', label: '已审核' },
-                ]}
-              />
-          </>
-        }
-        filterRight={
-          <>
-              <Button type="primary" onClick={handleBatchAudit} disabled={selectedRowKeys.length === 0 || !data.some(r => selectedRowKeys.includes(r.orderId) && r.factoryType !== 'INTERNAL' && !auditedOrderNos.has(r.orderNo) && r.approvalStatus !== 'APPROVED' && isOrderFrozenByStatus(r) && (r.warehousedQuantity ?? 0) > 0)}>
-                批量审核 ({selectedRowKeys.length})
+            </Space>
+            <Space size={8}>
+              <span style={{ color: 'var(--color-text-tertiary)', fontSize: 13 }}>
+                {selectedRowKeys.length > 0 ? `已选 ${selectedRowKeys.length} 条` : `共 ${total} 条记录`}
+              </span>
+              <Button
+                type="primary"
+                ghost
+                size="small"
+                onClick={handleBatchAudit}
+                disabled={selectedRowKeys.length === 0 || !data.some(r => selectedRowKeys.includes(r.orderId) && r.factoryType !== 'INTERNAL' && !auditedOrderNos.has(r.orderNo) && r.approvalStatus !== 'APPROVED' && isOrderFrozenByStatus(r) && (r.warehousedQuantity ?? 0) > 0)}
+              >
+                批量审批 ({selectedRowKeys.length})
               </Button>
-              <Button onClick={handleReset}>重置</Button>
-              <Button type="primary" onClick={handleExportSelected} disabled={selectedRowKeys.length === 0}>
+              <Button size="small" ghost onClick={handleReset}>重置</Button>
+              <Button
+                type="primary"
+                ghost
+                size="small"
+                onClick={handleExportSelected}
+                disabled={selectedRowKeys.length === 0}
+              >
                 导出选中 ({selectedRowKeys.length})
               </Button>
-              <Button onClick={handleExport}>导出全部</Button>
-          </>
-        }
-      >
+              <Button size="small" ghost icon={<DownloadOutlined />} onClick={handleExport}>导出全部</Button>
+              <Dropdown
+                trigger={['click']}
+                menu={{
+                  items: [
+                    { key: 'refresh', label: '刷新', icon: <ReloadOutlined />, onClick: handleReset },
+                  ],
+                }}
+              >
+                <Button size="small" icon={<MoreOutlined />} />
+              </Dropdown>
+            </Space>
+          </div>
+        </Card>
+
         <ResizableTable
           storageKey="finance-finished-settlement"
           columns={columns}
@@ -120,8 +242,9 @@ const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNo
           rowKey="orderId"
           rowSelection={{ selectedRowKeys, onChange: (keys: React.Key[]) => setSelectedRowKeys(keys as string[]) }}
           scroll={{ x: 1800 }}
-          pagination={{ current: pageParams.page, pageSize: pageParams.pageSize, total, showSizeChanger: true, showQuickJumper: true, showTotal: (total) => `共 ${total} 条`, pageSizeOptions: ['10', '20', '50', '100'] }}
+          pagination={{ current: pageParams.page, pageSize: pageParams.pageSize, total, showSizeChanger: true, showQuickJumper: true, showTotal: (t) => `共 ${t} 条`, pageSizeOptions: ['10', '20', '50', '100'] }}
           onChange={handleTableChange}
+          locale={{ emptyText: <Empty description="暂无记录" image={Empty.PRESENTED_IMAGE_SIMPLE} /> }}
         />
       </PageLayout>
 
@@ -132,17 +255,19 @@ const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNo
 
       <StandardModal title="操作日志" open={logModalVisible} onCancel={() => setLogModalVisible(false)} footer={<Button onClick={() => setLogModalVisible(false)}>关闭</Button>} size="md">
         {orderLogs.length > 0 ? (
-          <Timeline items={orderLogs.map((log: any) => ({ content: (
-            <div>
-              <div style={{ fontWeight: 600, marginBottom: 4 }}>{log.action || log.operationType}</div>
-              <div style={{ color: 'var(--neutral-text-secondary)', fontSize: '13px', marginBottom: 4 }}>{log.description || log.content}</div>
-              <div style={{ color: 'var(--neutral-text-disabled)', fontSize: '12px' }}>
-                <span>{log.operatorName || log.userName || '系统'}</span>
-                <span style={{ margin: '0 8px' }}>·</span>
-                <span>{log.createTime ? new Date(log.createTime).toLocaleString() : '-'}</span>
+          <Timeline items={orderLogs.map((log: any) => ({
+            content: (
+              <div>
+                <div style={{ fontWeight: 600, marginBottom: 4 }}>{log.action || log.operationType}</div>
+                <div style={{ color: 'var(--neutral-text-secondary)', fontSize: 13, marginBottom: 4 }}>{log.description || log.content}</div>
+                <div style={{ color: 'var(--neutral-text-disabled)', fontSize: 12 }}>
+                  <span>{log.operatorName || log.userName || '系统'}</span>
+                  <span style={{ margin: '0 8px' }}>·</span>
+                  <span>{log.createTime ? new Date(log.createTime).toLocaleString() : '-'}</span>
+                </div>
               </div>
-            </div>
-          ) }))} />
+            ),
+          }))} />
         ) : (
           <div style={{ textAlign: 'center', padding: '40px', color: 'var(--neutral-text-disabled)' }}>暂无操作日志</div>
         )}
