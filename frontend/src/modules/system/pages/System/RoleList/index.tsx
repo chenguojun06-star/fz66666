@@ -663,8 +663,8 @@ const RoleList: React.FC = () => {
     if (!sectionsComputed.length) return <Empty description="暂无可配置权限" style={{ padding: '48px 0' }} />;
 
     return (
-      <>
-        <Card size="small" style={{ marginBottom: 12 }} styles={{ body: { padding: '10px 16px' } }}>
+      <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+        <Card size="small" style={{ marginBottom: 12, flexShrink: 0 }} styles={{ body: { padding: '10px 16px' } }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
             <Space wrap size={8}>
               <Button type="primary" icon={<CheckSquareOutlined />} onClick={handleSelectAll}>一键全选</Button>
@@ -687,7 +687,8 @@ const RoleList: React.FC = () => {
           </div>
         </Card>
 
-        <Row gutter={12}>
+        <div style={{ flex: 1, overflowY: 'auto', minHeight: 0, paddingRight: 4 }}>
+          <Row gutter={12}>
           {sectionsComputed.map((section, si) => {
             const moduleAllIds = section.items.flatMap(it => it.allIds);
             const moduleTotal = moduleAllIds.length;
@@ -782,7 +783,8 @@ const RoleList: React.FC = () => {
             );
           })}
         </Row>
-      </>
+        </div>
+      </div>
     );
   };
 

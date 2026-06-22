@@ -1,7 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { Card, Button, Input, Select, Empty, Radio, Space, Tag, Statistic, Dropdown, Timeline, Tabs } from 'antd';
-import { CheckCircleOutlined, ClockCircleOutlined, DollarOutlined, SearchOutlined, MoreOutlined, ReloadOutlined, DownloadOutlined } from '@ant-design/icons';
-import dayjs from 'dayjs';
+import { Card, Button, Input, Select, Empty, Space, Tag, Statistic, Timeline, Tabs } from 'antd';
+import { CheckCircleOutlined, ClockCircleOutlined, DollarOutlined, SearchOutlined, DownloadOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
 import PageLayout from '@/components/common/PageLayout';
@@ -10,7 +9,6 @@ import SmallModal from '@/components/common/SmallModal';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { useSettlementData, type PageParams } from './useSettlementData';
 import { getSettlementColumns } from './settlementColumns';
-import { isOrderFrozenByStatus } from '@/utils/api/production';
 
 interface Props {
   auditedOrderNos: Set<string>;
@@ -19,8 +17,6 @@ interface Props {
 
 const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNosChange }) => {
   const [approvalFilter, setApprovalFilter] = useState<'all' | 'pending' | 'approved'>('all');
-  const [searchFactoryName, setSearchFactoryName] = useState('');
-  const [presetValue, setPresetValue] = useState<string>('');
   const {
     searchOrderNo, setSearchOrderNo,
     searchStatus, setSearchStatus,
@@ -50,12 +46,8 @@ const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNo
     } else if (approvalFilter === 'approved') {
       result = result.filter(r => auditedOrderNos.has(r.orderNo) || r.approvalStatus === 'APPROVED');
     }
-    if (searchFactoryName.trim()) {
-      const kw = searchFactoryName.trim().toLowerCase();
-      result = result.filter(r => String(r.factoryName || '').toLowerCase().includes(kw));
-    }
     return result;
-  }, [data, approvalFilter, auditedOrderNos, searchFactoryName]);
+  }, [data, approvalFilter, auditedOrderNos]);
 
   const stats = useMemo(() => {
     const pendingCount = data.filter(r => !auditedOrderNos.has(r.orderNo) && r.approvalStatus !== 'APPROVED').length;
@@ -63,19 +55,6 @@ const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNo
     const totalAmount = data.reduce((s: number, r: any) => s + Number(r.totalAmount ?? 0), 0);
     return { pendingCount, approvedCount, totalAmount };
   }, [data, auditedOrderNos]);
-
-  const handlePresetChange = (e: any) => {
-    const val = e.target.value;
-    setPresetValue(val);
-    const today = dayjs();
-    if (!val) { setDateRange(null); return; }
-    let start: any = today.startOf('day');
-    let end: any = today.endOf('day');
-    if (val === 'week') { start = today.startOf('week'); end = today.endOf('week'); }
-    else if (val === 'month') { start = today.startOf('month'); end = today.endOf('month'); }
-    else if (val === 'year') { start = today.startOf('year'); end = today.endOf('year'); }
-    setDateRange([start, end]);
-  };
 
   const activeTab = approvalFilter === 'pending' ? 'pending' : approvalFilter === 'approved' ? 'approved' : '';
   const handleTabChange = (key: string) => {
@@ -151,17 +130,6 @@ const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNo
       >
         {/* 筛选区 */}
         <Card className="filter-card mb-sm" style={{ marginBottom: 12, border: '1px solid var(--color-border-secondary)', borderRadius: 6 }} styles={{ body: { padding: '12px 16px' } }}>
-          <div style={{ marginBottom: 8 }}>
-            <Space size={12} wrap>
-              <Radio.Group value={presetValue} onChange={handlePresetChange} optionType="button" buttonStyle="solid" size="small">
-                <Radio.Button value="today">今天</Radio.Button>
-                <Radio.Button value="week">本周</Radio.Button>
-                <Radio.Button value="month">本月</Radio.Button>
-                <Radio.Button value="year">本年</Radio.Button>
-              </Radio.Group>
-              <Button size="small" onClick={() => { setPresetValue(''); setDateRange(null); }}>清除日期</Button>
-            </Space>
-          </div>
           <Tabs
             activeKey={activeTab}
             onChange={handleTabChange}
@@ -171,9 +139,9 @@ const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNo
               { key: 'pending', label: `待审批 (${stats.pendingCount})` },
               { key: 'approved', label: `已审批 (${stats.approvedCount})` },
             ]}
-            style={{ marginBottom: 0 }}
+            style={{ marginBottom: 8 }}
           />
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8, flexWrap: 'wrap', gap: 8 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
             <Space size={8} wrap>
               <StandardSearchBar
                 searchValue={searchOrderNo}
@@ -192,55 +160,29 @@ const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNo
               <Select
                 value={searchFactoryType}
                 onChange={(value) => { setSearchFactoryType(value); handleSearch({ factoryType: value as PageParams['factoryType'] }); }}
-                style={{ width: 140 }}
+                style={{ width: 120 }}
                 options={[
                   { label: '外发工厂', value: 'EXTERNAL' },
                   { label: '内部工厂', value: 'INTERNAL' },
                   { label: '全部', value: '' },
                 ]}
               />
-              <Input
-                placeholder="搜索工厂名"
-                allowClear
-                style={{ width: 160 }}
-                value={searchFactoryName}
-                onChange={e => setSearchFactoryName(e.target.value)}
-              />
             </Space>
             <Space size={8}>
               <span style={{ color: 'var(--color-text-tertiary)', fontSize: 13 }}>
-                {selectedRowKeys.length > 0 ? `已选 ${selectedRowKeys.length} 条` : `共 ${total} 条记录`}
+                {selectedRowKeys.length > 0 ? `已选 ${selectedRowKeys.length} 条` : `共 ${total} 条`}
               </span>
               <Button
                 type="primary"
                 ghost
                 size="small"
                 onClick={handleBatchAudit}
-                disabled={selectedRowKeys.length === 0 || !data.some(r => selectedRowKeys.includes(r.orderId) && r.factoryType !== 'INTERNAL' && !auditedOrderNos.has(r.orderNo) && r.approvalStatus !== 'APPROVED' && isOrderFrozenByStatus(r) && (r.warehousedQuantity ?? 0) > 0)}
-              >
-                批量审批 ({selectedRowKeys.length})
-              </Button>
-              <Button size="small" ghost onClick={handleReset}>重置</Button>
-              <Button
-                type="primary"
-                ghost
-                size="small"
-                onClick={handleExportSelected}
                 disabled={selectedRowKeys.length === 0}
               >
-                导出选中 ({selectedRowKeys.length})
+                批量审批
               </Button>
-              <Button size="small" ghost icon={<DownloadOutlined />} onClick={handleExport}>导出全部</Button>
-              <Dropdown
-                trigger={['click']}
-                menu={{
-                  items: [
-                    { key: 'refresh', label: '刷新', icon: <ReloadOutlined />, onClick: handleReset },
-                  ],
-                }}
-              >
-                <Button size="small" icon={<MoreOutlined />} />
-              </Dropdown>
+              <Button size="small" ghost onClick={handleReset}>重置</Button>
+              <Button size="small" ghost icon={<DownloadOutlined />} onClick={handleExport}>导出</Button>
             </Space>
           </div>
         </Card>

@@ -1,9 +1,7 @@
 import React from 'react';
-import { Card, Row, Col, Button, Spin, Space, DatePicker } from 'antd';
+import { Card, Row, Col, Button, Spin, Space } from 'antd';
 import { useFinanceBIData, type TimeRangeType } from './hooks/useFinanceBIData';
 import styles from './index.module.css';
-
-const { RangePicker } = DatePicker;
 
 const TIME_OPTIONS: { label: string; value: TimeRangeType }[] = [
   { label: '今日', value: 'today' },
@@ -82,7 +80,7 @@ const PieChart: React.FC<{ data: { type: string; value: number }[] }> = ({ data 
 };
 
 const FinanceDashboard: React.FC = () => {
-  const { loading, data, timeRange, setTimeRange, customRange, setCustomRange, resetFilters, goToModule } = useFinanceBIData();
+  const { loading, data, timeRange, setTimeRange, resetFilters, goToModule } = useFinanceBIData();
 
   return (
     <Spin spinning={loading}>
@@ -91,12 +89,10 @@ const FinanceDashboard: React.FC = () => {
         <Space size={12} wrap>
           <span className={styles.filterLabel}>时间：</span>
           {TIME_OPTIONS.map(opt => (
-            <Button key={opt.value} type="primary" ghost={timeRange !== opt.value} onClick={() => { setTimeRange(opt.value); setCustomRange(null); }}>
+            <Button key={opt.value} type="primary" ghost={timeRange !== opt.value} onClick={() => setTimeRange(opt.value)}>
               {opt.label}
             </Button>
           ))}
-          <RangePicker value={customRange} onChange={(dates) => { setCustomRange(dates as [any, any]); setTimeRange('custom'); }} style={{ width: 240 }} />
-          <Button onClick={resetFilters}>重置</Button>
         </Space>
       </Card>
 

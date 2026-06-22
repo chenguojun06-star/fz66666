@@ -326,22 +326,19 @@ const PayrollOperatorSummary: React.FC = () => {
 
                 <Card className="filter-card mb-sm">
                     <Space wrap>
-                        <Input placeholder="搜索订单号 / 款号 / 人员 / 工序" style={{ width: 280 }} allowClear value={keyword}
+                        <Input placeholder="搜索订单号 / 款号 / 人员" style={{ width: 240 }} allowClear value={keyword}
                             onChange={(e) => setKeyword(e.target.value)} prefix={<SearchOutlined style={{ color: 'var(--color-text-quaternary)' }} />} />
                         <Select placeholder="生产节点" style={{ width: 140 }} allowClear value={scanType}
                             options={SCAN_TYPE_OPTIONS}
                             onChange={(v) => setScanType(v)} />
-                        <UnifiedRangePicker showTime value={dateRange as any} onChange={(v) => setDateRange(v as any)} style={{ width: 320 }} />
+                        <UnifiedRangePicker showTime value={dateRange as any} onChange={(v) => setDateRange(v as any)} style={{ width: 280 }} />
                         <Space>
-                            <span style={{ color: 'var(--neutral-text-secondary)' }}>包含已结算</span>
+                            <span style={{ color: 'var(--neutral-text-secondary)' }}>含已结算</span>
                             <Switch id="includeSettledSwitch" checked={includeSettled} onChange={setIncludeSettled} />
                         </Space>
                         <Button type="primary" ghost onClick={fetchData} loading={loading}>查询</Button>
                         <Button ghost onClick={reset} disabled={loading}>重置</Button>
-                        <Button ghost onClick={exportToExcelFn} disabled={loading || rows.length === 0}>导出Excel</Button>
-                        <Select style={{ width: 120 }} value={kingdeeExportFormat} onChange={setKingdeeExportFormat}
-                            options={[{ value: 'KINGDEE', label: '金蝶KIS' }, { value: 'UFIDA', label: '用友T3' }, { value: 'STANDARD', label: '标准格式' }]} />
-                        <Button ghost icon={<DownloadOutlined />} onClick={handleKingdeeExport} disabled={loading || rows.length === 0}>财税导出</Button>
+                        <Button ghost onClick={exportToExcelFn} disabled={loading || rows.length === 0}>导出</Button>
                     </Space>
                 </Card>
 
@@ -353,13 +350,7 @@ const PayrollOperatorSummary: React.FC = () => {
                                 <Card className="mb-sm">
                                     <Space wrap>
                                         <span style={{ color: 'var(--neutral-text-secondary)' }}>行数 {filteredRows.length}</span>
-                                        <span style={{ color: 'var(--neutral-text-secondary)' }}>数量合计 {totalQuantity}</span>
                                         <span style={{ color: 'var(--neutral-text-secondary)' }}>金额合计 {totalAmount.toFixed(2)}</span>
-                                        {dateRange?.[0] && dateRange?.[1] && (
-                                            <span style={{ color: 'var(--neutral-text-secondary)' }}>
-                                                统计周期：{dayjs(dateRange[0]).format('YYYY-MM-DD HH:mm')} ~ {dayjs(dateRange[1]).format('YYYY-MM-DD HH:mm')}
-                                            </span>
-                                        )}
                                         <Select
                                             style={{ width: 120 }}
                                             value={approvalFilter}
@@ -398,13 +389,12 @@ const PayrollOperatorSummary: React.FC = () => {
                                 <Card className="mb-sm">
                                     <Space wrap>
                                         <span style={{ color: 'var(--neutral-text-secondary)' }}>人员数 {summaryRows.length}</span>
-                                        <span style={{ color: 'var(--neutral-text-secondary)' }}>总数量 {summaryRows.reduce((sum, r) => sum + toNumberOrZero(r.totalQuantity), 0)}</span>
                                         <span style={{ color: 'var(--neutral-text-secondary)' }}>总金额 {summaryRows.reduce((sum, r) => sum + toNumberOrZero(r.totalAmount), 0).toFixed(2)}</span>
                                         <Button type="primary" ghost onClick={handleBatchFinalPush} disabled={selectedRowKeys.length === 0}>
-                                            批量终审推送 ({selectedRowKeys.length})
+                                            批量终审 ({selectedRowKeys.length})
                                         </Button>
                                         <Button ghost icon={<PrinterOutlined />} onClick={handlePrintWageSlips} disabled={selectedRowKeys.length === 0}>
-                                            打印工资条 ({selectedRowKeys.length})
+                                            打印工资条
                                         </Button>
                                     </Space>
                                 </Card>
@@ -420,34 +410,6 @@ const PayrollOperatorSummary: React.FC = () => {
                                     pagination={{ showTotal: (total) => `共 ${total} 条`, showSizeChanger: true, pageSizeOptions: ['10', '20', '50', '100'], defaultPageSize: readPageSize(20) }}
                                     sticky scroll={{ x: 1300 }} />
                             </>
-                        ),
-                    },
-                    {
-                        key: 'internalOrders', label: '订单汇总',
-                        children: (
-                            <>
-                                <Card className="mb-sm">
-                                    <Space wrap>
-                                        <span style={{ color: 'var(--neutral-text-secondary)' }}>内部工厂订单 {internalOrders.length}</span>
-                                        <Button ghost onClick={fetchInternalOrders} loading={internalOrdersLoading}>刷新</Button>
-                                    </Space>
-                                </Card>
-                                <ResizableTable
-                                    storageKey="finance-payroll-internal-orders"
-                                    rowKey={(r: any) => String(r.orderNo || r.orderId || '')}
-                                    dataSource={internalOrders} columns={internalOrderColumns} loading={internalOrdersLoading}
-                                    pagination={{ defaultPageSize: readPageSize(50), showSizeChanger: true, showTotal: (t: number) => `共 ${t} 条` }}
-                                    sticky scroll={{ x: 1700 }} />
-                            </>
-                        ),
-                    },
-                    {
-                        key: 'efficiency', label: '效率排名',
-                        children: (
-                            <WorkerEfficiencyTab
-                                list={workerEffList}
-                                loading={workerEffLoading}
-                                onRefresh={() => { workerEffFetched.current = false; void fetchWorkerEfficiency(); }} />
                         ),
                     },
                 ]} />

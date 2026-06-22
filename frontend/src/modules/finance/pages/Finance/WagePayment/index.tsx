@@ -4,20 +4,17 @@ import { formatMoney } from '@/utils/format';
 import dayjs from 'dayjs';
 import { useSync } from '@/utils/syncManager';
 import AccountManagementModal from './components/AccountManagementModal';
-import BillSummaryTab from './components/BillSummaryTab';
 import {
   App,
   Button,
   Card,
   DatePicker,
   Descriptions,
-  Dropdown,
   Empty,
   Form,
   Image,
   Input,
   InputNumber,
-  Radio,
   Select,
   Space,
   Statistic,
@@ -33,8 +30,6 @@ import {
   PayCircleOutlined,
   AccountBookOutlined,
   DownloadOutlined,
-  LineChartOutlined,
-  MoreOutlined,
 } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
 import ResizableModal from '@/components/common/ResizableModal';
@@ -52,7 +47,6 @@ import {
   wagePaymentApi,
 } from '@/services/finance/wagePaymentApi';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
-import PaymentDashboardTab from './components/PaymentDashboardTab';
 import { usePaymentColumns, methodIconMap, accountTypeIconMap } from './hooks/usePaymentColumns';
 import { usePaymentData } from './hooks/usePaymentData';
 import { usePayModal } from './hooks/usePayModal';
@@ -122,8 +116,6 @@ const PaymentCenterPage: React.FC = () => {
 
   const [amountDetailOpen, setAmountDetailOpen] = React.useState(false);
   const [amountDetailTarget, setAmountDetailTarget] = React.useState<any>(null);
-  const [presetValue, setPresetValue] = useState<string>('');
-  const [payableStatusTab, setPayableStatusTab] = useState<string>('');
   const [paymentStatusTab, setPaymentStatusTab] = useState<string>('');
 
   // ==================== 统计卡片 ====================
@@ -148,33 +140,6 @@ const PaymentCenterPage: React.FC = () => {
     return { total, pendingCount, successCount, rejectedCount, totalAmount, successAmount };
   }, [data.payments]);
 
-  // ==================== 快捷日期筛选 ====================
-  const handlePresetChange = (e: any) => {
-    const val = e.target.value;
-    setPresetValue(val);
-    const today = dayjs();
-    if (!val) {
-      data.setPayableDateRange(['', '']);
-      return;
-    }
-    let start = '';
-    let end = '';
-    if (val === 'today') {
-      start = today.startOf('day').format('YYYY-MM-DD');
-      end = today.endOf('day').format('YYYY-MM-DD');
-    } else if (val === 'week') {
-      start = today.startOf('week').format('YYYY-MM-DD');
-      end = today.endOf('week').format('YYYY-MM-DD');
-    } else if (val === 'month') {
-      start = today.startOf('month').format('YYYY-MM-DD');
-      end = today.endOf('month').format('YYYY-MM-DD');
-    } else if (val === 'year') {
-      start = today.startOf('year').format('YYYY-MM-DD');
-      end = today.endOf('year').format('YYYY-MM-DD');
-    }
-    data.setPayableDateRange([start, end]);
-  };
-
   // ---- 表格列定义 ----
   const { payableColumns, paymentColumns } = usePaymentColumns({
     openPayModal: pay.openPayModal,
@@ -190,14 +155,7 @@ const PaymentCenterPage: React.FC = () => {
   });
 
   // Tab 切换后的过滤数据
-  const statusFilteredPayables = useMemo(() => {
-    if (!payableStatusTab) return data.filteredPayables;
-    if (payableStatusTab === 'RECONCILIATION') return data.filteredPayables.filter((p: any) => p.bizType === 'RECONCILIATION');
-    if (payableStatusTab === 'REIMBURSEMENT') return data.filteredPayables.filter((p: any) => p.bizType === 'REIMBURSEMENT');
-    if (payableStatusTab === 'PAYROLL') return data.filteredPayables.filter((p: any) => p.bizType === 'PAYROLL' || p.bizType === 'PAYROLL_SETTLEMENT');
-    if (payableStatusTab === 'ORDER_SETTLEMENT') return data.filteredPayables.filter((p: any) => p.bizType === 'ORDER_SETTLEMENT');
-    return data.filteredPayables;
-  }, [data.filteredPayables, payableStatusTab]);
+  const statusFilteredPayables = useMemo(() => data.filteredPayables, [data.filteredPayables]);
 
   const statusFilteredPayments = useMemo(() => {
     if (!paymentStatusTab) return data.payments;
@@ -316,39 +274,10 @@ const PaymentCenterPage: React.FC = () => {
                 ),
                 children: (
                   <>
-                    {/* 账单汇总（上方） */}
-                    <div style={{ marginBottom: 12 }}>
-                      <BillSummaryTab />
-                    </div>
-
-                    {/* 快捷日期筛选 + 状态 Tab */}
+                    {/* 快捷筛选区 */}
                     <Card className="filter-card mb-sm" style={{ marginBottom: 12, border: '1px solid var(--color-border-secondary)', borderRadius: 6 }} styles={{ body: { padding: '12px 16px' } }}>
-                      <div style={{ marginBottom: 8 }}>
-                        <Space size={12} wrap>
-                          <Radio.Group value={presetValue} onChange={handlePresetChange} optionType="button" buttonStyle="solid" size="small">
-                            <Radio.Button value="today">今天</Radio.Button>
-                            <Radio.Button value="week">本周</Radio.Button>
-                            <Radio.Button value="month">本月</Radio.Button>
-                            <Radio.Button value="year">本年</Radio.Button>
-                          </Radio.Group>
-                          <Button size="small" onClick={() => { setPresetValue(''); data.setPayableDateRange(['', '']); }}>清除日期</Button>
-                        </Space>
-                      </div>
-                      <Tabs
-                        activeKey={payableStatusTab}
-                        onChange={setPayableStatusTab}
-                        size="small"
-                        items={[
-                          { key: '', label: `全部 (${data.filteredPayables.length})` },
-                          { key: 'RECONCILIATION', label: `工厂对账 (${data.filteredPayables.filter((p: any) => p.bizType === 'RECONCILIATION').length})` },
-                          { key: 'REIMBURSEMENT', label: `费用报销 (${data.filteredPayables.filter((p: any) => p.bizType === 'REIMBURSEMENT').length})` },
-                          { key: 'PAYROLL', label: `员工工资 (${data.filteredPayables.filter((p: any) => p.bizType === 'PAYROLL' || p.bizType === 'PAYROLL_SETTLEMENT').length})` },
-                          { key: 'ORDER_SETTLEMENT', label: `外发结算 (${data.filteredPayables.filter((p: any) => p.bizType === 'ORDER_SETTLEMENT').length})` },
-                        ]}
-                        style={{ marginBottom: 0 }}
-                      />
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8, flexWrap: 'wrap', gap: 8 }}>
-                        <Space size={12} wrap>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+                        <Space size={8} wrap>
                           <span style={{ color: 'var(--color-text-tertiary)', fontSize: 13 }}>
                             共 {statusFilteredPayables.length} 笔
                           </span>
@@ -379,57 +308,34 @@ const PaymentCenterPage: React.FC = () => {
                           {data.selectedPayableKeys.length > 0 && (
                             <span style={{ color: 'var(--color-primary)' }}>
                               已选 {data.selectedPayableKeys.length} 笔
-                              （{formatMoney(data.filteredPayables.filter(p => data.selectedPayableKeys.includes(`${p.bizType}-${p.bizId}`)).reduce((s, p) => s + Number(p.amount ?? 0), 0))}）
                             </span>
                           )}
                         </Space>
                         <Space size={8}>
                           {data.selectedPayableKeys.length > 0 && (
                             <>
-                              <Button
-                                type="primary"
-                                ghost
-                                size="small"
-                                loading={data.batchPaySubmitting}
-                                onClick={data.handleBatchPay}
-                              >
+                              <Button type="primary" ghost size="small" loading={data.batchPaySubmitting} onClick={data.handleBatchPay}>
                                 批量付款
                               </Button>
-                              <Button size="small" onClick={handleClearSelectedPayableKeys}>清空选择</Button>
+                              <Button size="small" onClick={handleClearSelectedPayableKeys}>清空</Button>
                             </>
                           )}
-                          <Button
-                            size="small"
-                            ghost
-                            icon={<DownloadOutlined />}
-                            onClick={() => {
-                              if (data.payables.length === 0) {
-                                message.warning('当前没有数据可导出');
-                                return;
-                              }
-                              exportToExcelFile(data.payables, [
-                                { title: '业务类型', dataIndex: 'bizType' },
-                                { title: '单据编号', dataIndex: 'bizNo' },
-                                { title: '收款方', dataIndex: 'receiverName' },
-                                { title: '应付金额', dataIndex: 'amount' },
-                                { title: '已付金额', dataIndex: 'paidAmount' },
-                                { title: '描述', dataIndex: 'description' },
-                                { title: '创建时间', dataIndex: 'createTime' }
-                              ], '待收付款明细');
-                            }}
-                          >
+                          <Button size="small" ghost icon={<DownloadOutlined />} onClick={() => {
+                            if (data.payables.length === 0) {
+                              message.warning('当前没有数据可导出');
+                              return;
+                            }
+                            exportToExcelFile(data.payables, [
+                              { title: '业务类型', dataIndex: 'bizType' },
+                              { title: '单据编号', dataIndex: 'bizNo' },
+                              { title: '收款方', dataIndex: 'receiverName' },
+                              { title: '应付金额', dataIndex: 'amount' },
+                              { title: '已付金额', dataIndex: 'paidAmount' },
+                              { title: '创建时间', dataIndex: 'createTime' }
+                            ], '待收付款明细');
+                          }}>
                             导出
                           </Button>
-                          <Dropdown
-                            trigger={['click']}
-                            menu={{
-                              items: [
-                                { key: 'pay', label: '手动发起支付', icon: <DollarOutlined />, onClick: handleOpenPayModal },
-                              ],
-                            }}
-                          >
-                            <Button size="small" icon={<MoreOutlined />} />
-                          </Dropdown>
                         </Space>
                       </div>
                     </Card>
@@ -446,13 +352,6 @@ const PaymentCenterPage: React.FC = () => {
                       rowSelection={{
                         selectedRowKeys: data.selectedPayableKeys,
                         onChange: (keys) => data.setSelectedPayableKeys(keys),
-                        selections: [
-                          {
-                            key: 'select-all-month',
-                            text: data.payableDateRange[0] ? `全选 ${data.payableDateRange[0]} 月` : '全选当前月份',
-                            onSelect: () => data.setSelectedPayableKeys(data.filteredPayables.map((p: any) => `${p.bizType}-${p.bizId}`)),
-                          },
-                        ],
                       }}
                     />
                   </>
@@ -554,15 +453,6 @@ const PaymentCenterPage: React.FC = () => {
                     />
                   </>
                 ),
-              },
-              {
-                key: 'dashboard',
-                label: (
-                  <span>
-                    <LineChartOutlined /> 数据看板
-                  </span>
-                ),
-                children: <PaymentDashboardTab />,
               },
             ]}
           />

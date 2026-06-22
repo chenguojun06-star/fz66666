@@ -1,6 +1,6 @@
 import React, { useRef, useState, useMemo } from 'react';
-import { App, Button, Card, Dropdown, Empty, Radio, RadioChangeEvent, Space, Statistic, Tabs, Tag } from 'antd';
-import { PlusOutlined, ExportOutlined, CheckCircleOutlined, ClockCircleOutlined, DollarOutlined, MoreOutlined } from '@ant-design/icons';
+import { App, Button, Card, Empty, Space, Statistic, Tabs, Tag } from 'antd';
+import { ExportOutlined, CheckCircleOutlined, ClockCircleOutlined, DollarOutlined } from '@ant-design/icons';
 import { useUser } from '@/utils/AuthContext';
 import { useSync } from '@/utils/syncManager';
 import PageLayout from '@/components/common/PageLayout';
@@ -16,16 +16,15 @@ import { useMaterialReconData } from './hooks/useMaterialReconData';
 import { useMaterialReconActions } from './hooks/useMaterialReconActions';
 import { useMaterialReconExport } from './hooks/useMaterialReconExport';
 import { useMaterialReconColumns } from './hooks/useMaterialReconColumns';
-import dayjs from 'dayjs';
 
 const MaterialReconciliation: React.FC = () => {
   const { message } = App.useApp();
   const { user } = useUser();
 
   const {
-    reconciliationList, loading, queryLoading, total, queryParams, dateRange,
+    reconciliationList, loading, queryLoading, total, queryParams,
     smartError, showSmartErrorNotice, financeAudit, auditLoading,
-    setQueryParams, setDateRange, fetchList, fetchFinanceAudit,
+    setQueryParams, fetchList, fetchFinanceAudit,
   } = useMaterialReconData();
 
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
@@ -33,7 +32,6 @@ const MaterialReconciliation: React.FC = () => {
   const [reconModalData, setReconModalData] = useState<MaterialReconType | null>(null);
   const [submitLoading, setSubmitLoading] = useState(false);
   const saveFormRef = useRef<(() => void) | null>(null);
-  const [presetValue, setPresetValue] = useState<string>('');
 
   const openDialog = (recon?: MaterialReconType) => { setReconModalData(recon || null); setReconModalVisible(true); };
   const closeDialog = () => { setReconModalVisible(false); setReconModalData(null); };
@@ -58,29 +56,6 @@ const MaterialReconciliation: React.FC = () => {
     const paidCount = paid.length;
     return { pendingCount, approvedCount, paidCount, totalAmount, total };
   }, [reconciliationList]);
-
-  // ==================== 快捷日期筛选 ====================
-  const handlePresetChange = (e: RadioChangeEvent) => {
-    const val = e.target.value;
-    setPresetValue(val);
-    const today = dayjs();
-    switch (val) {
-      case 'today':
-        setDateRange([today.startOf('day'), today.endOf('day')]);
-        break;
-      case 'week':
-        setDateRange([today.startOf('week'), today.endOf('week')]);
-        break;
-      case 'month':
-        setDateRange([today.startOf('month'), today.endOf('month')]);
-        break;
-      case 'year':
-        setDateRange([today.startOf('year'), today.endOf('year')]);
-        break;
-      default:
-        setDateRange(null);
-    }
-  };
 
   // ==================== 状态Tab ====================
   const statusTabs = [
@@ -227,19 +202,6 @@ const MaterialReconciliation: React.FC = () => {
 
         {/* ===== 筛选区 ===== */}
         <Card className="filter-card mb-sm" styles={{ body: { padding: '12px 16px' } }}>
-          {/* 快捷日期 + 状态Tab */}
-          <div style={{ marginBottom: 12 }}>
-            <Space size={12} wrap>
-              <Radio.Group value={presetValue} onChange={handlePresetChange} optionType="button" buttonStyle="solid" size="small">
-                <Radio.Button value="today">今天</Radio.Button>
-                <Radio.Button value="week">本周</Radio.Button>
-                <Radio.Button value="month">本月</Radio.Button>
-                <Radio.Button value="year">本年</Radio.Button>
-              </Radio.Group>
-              <Button size="small" onClick={() => { setPresetValue(''); setDateRange(null); }}>清除日期</Button>
-            </Space>
-          </div>
-
           {/* 状态Tab */}
           <Tabs
             activeKey={activeTab}
@@ -252,17 +214,16 @@ const MaterialReconciliation: React.FC = () => {
           {/* 操作按钮区 */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
             <span style={{ color: 'var(--color-text-tertiary)', fontSize: 13 }}>
-              {selectedRowKeys.length > 0 ? `已选 ${selectedRowKeys.length} 条` : `共 ${stats.total} 条记录`}
+              {selectedRowKeys.length > 0 ? `已选 ${selectedRowKeys.length} 条` : `共 ${stats.total} 条`}
             </span>
             <Space size={8}>
-              {/* 主要操作按钮（空心描边样式） */}
               <Button
                 type="primary"
                 ghost
                 disabled={approvalSubmitting || selectedPendingCount === 0}
                 onClick={batchApprove}
               >
-                批量审批{selectedPendingCount > 0 ? `(${selectedPendingCount})` : ''}
+                批量审批{selectedPendingCount > 0 ? ` (${selectedPendingCount})` : ''}
               </Button>
               <Button
                 ghost
@@ -272,23 +233,9 @@ const MaterialReconciliation: React.FC = () => {
               >
                 批量驳回
               </Button>
-              {/* 次要操作 */}
-              <Button
-                ghost
-                disabled={exporting}
-                onClick={exportCsv}
-                icon={<ExportOutlined />}
-              >
+              <Button ghost disabled={exporting} onClick={exportCsv} icon={<ExportOutlined />}>
                 导出
               </Button>
-              {/* 更多操作 */}
-              <Dropdown trigger={['click']} menu={{
-                items: [
-                  { key: 'create', label: '新增物料对账', icon: <PlusOutlined />, onClick: () => openDialog() },
-                ],
-              }}>
-                <Button icon={<MoreOutlined />} />
-              </Dropdown>
             </Space>
           </div>
         </Card>

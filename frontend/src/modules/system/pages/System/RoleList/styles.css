@@ -32,10 +32,10 @@
 
 .role-list-item {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
-  height: 36px;
-  padding: 0 12px;
+  min-height: 44px;
+  padding: 6px 12px;
   border-radius: 4px;
   margin: 1px 4px;
   transition: background 0.15s;
@@ -46,6 +46,7 @@
 .role-list-item-icon {
   font-size: 14px;
   flex-shrink: 0;
+  margin-top: 2px;
 }
 
 .role-list-item:hover {
@@ -66,6 +67,11 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.role-list-item-content {
+  flex: 1;
+  min-width: 0;
 }
 
 .role-perm-panel {
