@@ -400,18 +400,16 @@ public class ColorCardOrchestrator {
 
         Long tenantId = card.getTenantId() != null ? card.getTenantId() : UserContext.tenantId();
 
-        // 查找是否已存在同名供应商
         Factory existing = factoryMapper.selectOne(
             new LambdaQueryWrapper<Factory>()
                 .eq(Factory::getFactoryName, card.getSupplierName().trim())
                 .eq(Factory::getTenantId, tenantId)
                 .eq(Factory::getSupplierType, "MATERIAL")
                 .and(w -> w.isNull(Factory::getDeleteFlag).or().eq(Factory::getDeleteFlag, 0))
-                .last("LIMIT 1")
+                .last("LIMIT 1 FOR UPDATE")
         );
 
         if (existing != null) {
-            // 已存在，回写 supplierId 和联系信息
             card.setSupplierId(existing.getId());
             if (!StringUtils.hasText(card.getSupplierContactPerson()) && StringUtils.hasText(existing.getContactPerson())) {
                 card.setSupplierContactPerson(existing.getContactPerson());
@@ -420,7 +418,6 @@ public class ColorCardOrchestrator {
                 card.setSupplierContactPhone(existing.getContactPhone());
             }
         } else {
-            // 不存在，自动创建（带并发防御：插入后再次查询，防止重复创建）
             Factory newFactory = new Factory();
             newFactory.setId(null);
             newFactory.setFactoryName(card.getSupplierName().trim());
@@ -435,17 +432,7 @@ public class ColorCardOrchestrator {
             newFactory.setCreateTime(LocalDateTime.now());
             newFactory.setUpdateTime(LocalDateTime.now());
             factoryMapper.insert(newFactory);
-
-            // 并发防御：插入后再次查询，确保不会重复创建
-            Factory afterInsert = factoryMapper.selectOne(
-                new LambdaQueryWrapper<Factory>()
-                    .eq(Factory::getFactoryName, card.getSupplierName().trim())
-                    .eq(Factory::getTenantId, tenantId)
-                    .eq(Factory::getSupplierType, "MATERIAL")
-                    .and(w -> w.isNull(Factory::getDeleteFlag).or().eq(Factory::getDeleteFlag, 0))
-                    .last("LIMIT 1")
-            );
-            card.setSupplierId(afterInsert != null ? afterInsert.getId() : newFactory.getId());
+            card.setSupplierId(newFactory.getId());
         }
     }
 

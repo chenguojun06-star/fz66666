@@ -1,415 +1,213 @@
-import React, { useState, useEffect } from 'react';
-import { Card, Row, Col, Tabs, DatePicker, Statistic, Tooltip, Spin, Space, Empty } from 'antd';
-import { InfoCircleOutlined, CaretUpOutlined, CaretDownOutlined } from '@ant-design/icons';
-import { Column } from '@ant-design/charts';
-import api from '@/utils/api';
-import dayjs from 'dayjs';
+import React from 'react';
+import { Card, Row, Col, Select, Input, Button, Spin, Space, Table } from 'antd';
+import { Line, Pie } from '@ant-design/charts';
+import { useFinanceBIData, type TimeRangeType } from './hooks/useFinanceBIData';
 import styles from './index.module.css';
-import { useRequest } from '@/hooks';
-import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
-import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
-import type { SmartErrorInfo } from '@/smart/core/types';
-import { usePersistentState } from '@/hooks/usePersistentState';
 
-const { RangePicker } = DatePicker;
+const { RangePicker } = require('antd');
+const { Option } = Select;
 
-// 统计卡片数据接口
-interface StatCardData {
-  totalAmount: number;           // 总金额
-  totalAmountChange: number;     // 周同比变化
-  totalAmountDayChange: number;  // 日同比变化
-  dailyAmount: number;           // 日金额
+const TIME_OPTIONS: { label: string; value: TimeRangeType }[] = [
+  { label: '今日', value: 'today' },
+  { label: '本周', value: 'week' },
+  { label: '本月', value: 'month' },
+  { label: '本年', value: 'year' },
+];
 
-  warehousedCount: number;       // 入库数量
-  warehousedDayCount: number;    // 日入库数量
-
-  orderCount: number;            // 订单数量
-  completionRate: number;        // 完成率
-
-  profitRate: number;            // 利润率
-  profitRateChange: number;      // 周同比变化
-  profitRateDayChange: number;   // 日同比变化
-}
-
-// 趋势数据
-interface TrendData {
-  month: string;
+const StatCard: React.FC<{
+  title: string;
   value: number;
-  type: string;
-}
-
-// 排名数据
-interface RankData {
-  rank: number;
-  name: string;
-  value: number;
-}
-
-type TimeRangeType = 'today' | 'week' | 'month' | 'year' | 'custom';
+  prefix?: string;
+  suffix?: string;
+  onClick?: () => void;
+  color?: string;
+}> = ({ title, value, prefix = '¥', suffix, onClick, color }) => (
+  <Card
+    className={styles.statCard}
+    onClick={onClick}
+    hoverable={!!onClick}
+  >
+    <div className={styles.cardTitle}>{title}</div>
+    <div className={styles.cardValue} style={color ? { color } : undefined}>
+      {prefix}{value.toLocaleString()}{suffix}
+    </div>
+  </Card>
+);
 
 const FinanceDashboard: React.FC = () => {
-  const [activeTab, setActiveTab] = usePersistentState<'amount' | 'count'>('finance-dashboard-active-tab', 'amount');
-  const [timeRange, setTimeRange] = useState<TimeRangeType>('year');
-  const [customRange, setCustomRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(null);
-  const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
-  const showSmartErrorNotice = React.useMemo(() => isSmartFeatureEnabled('smart.finance.explain.enabled'), []);
+  const {
+    loading,
+    data,
+    timeRange,
+    setTimeRange,
+    customRange,
+    setCustomRange,
+    factoryId,
+    setFactoryId,
+    styleNo,
+    setStyleNo,
+    factories,
+    resetFilters,
+    goToModule,
+  } = useFinanceBIData();
 
-  const reportSmartError = (title: string, reason?: string, code?: string) => {
-    if (!showSmartErrorNotice) return;
-    setSmartError({
-      title,
-      reason,
-      code,
-      actionText: '刷新重试',
-    });
-  };
-
-  const [statData, setStatData] = useState<StatCardData>({
-    totalAmount: 0, totalAmountChange: 0, totalAmountDayChange: 0, dailyAmount: 0,
-    warehousedCount: 0, warehousedDayCount: 0,
-    orderCount: 0, completionRate: 0,
-    profitRate: 0, profitRateChange: 0, profitRateDayChange: 0,
-  });
-
-  const [trendData, setTrendData] = useState<TrendData[]>([]);
-  const [rankData, setRankData] = useState<RankData[]>([]);
-
-  // ===== 使用 useRequest 优化数据加载 =====
-  const { run: loadData, loading } = useRequest(async () => {
-    try {
-      // 计算日期范围
-      let startDate: string, endDate: string;
-      const today = dayjs();
-
-      switch (timeRange) {
-        case 'today':
-          startDate = endDate = today.format('YYYY-MM-DD');
-          break;
-        case 'week':
-          startDate = today.startOf('week').format('YYYY-MM-DD');
-          endDate = today.endOf('week').format('YYYY-MM-DD');
-          break;
-        case 'month':
-          startDate = today.startOf('month').format('YYYY-MM-DD');
-          endDate = today.endOf('month').format('YYYY-MM-DD');
-          break;
-        case 'year':
-          startDate = today.startOf('year').format('YYYY-MM-DD');
-          endDate = today.endOf('year').format('YYYY-MM-DD');
-          break;
-        case 'custom':
-          if (customRange) {
-            startDate = customRange[0].format('YYYY-MM-DD');
-            endDate = customRange[1].format('YYYY-MM-DD');
-          } else {
-            startDate = today.startOf('year').format('YYYY-MM-DD');
-            endDate = today.endOf('year').format('YYYY-MM-DD');
-          }
-          break;
-      }
-
-      // 调用汇总API
-      const response = await api.get('/finance/finished-settlement/summary', {
-        params: { startDate, endDate, dimension: activeTab === 'amount' ? 'amount' : 'count' }
-      });
-
-      if (response.code === 200 && response.data) {
-        const data = response.data;
-        setStatData({
-          totalAmount: data.totalAmount ?? 0,
-          totalAmountChange: data.totalAmountChange ?? 0,
-          totalAmountDayChange: data.totalAmountDayChange ?? 0,
-          dailyAmount: data.dailyAmount ?? 0,
-          warehousedCount: data.warehousedCount ?? 0,
-          warehousedDayCount: data.warehousedDayCount ?? 0,
-          orderCount: data.orderCount ?? 0,
-          completionRate: data.completionRate ?? 0,
-          profitRate: data.profitRate ?? 0,
-          profitRateChange: data.profitRateChange ?? 0,
-          profitRateDayChange: data.profitRateDayChange ?? 0,
-        });
-
-        // 趋势数据
-        if (data.trend && Array.isArray(data.trend)) {
-          setTrendData(data.trend);
-        } else {
-          setTrendData([]);
-        }
-
-        if (data.rank && Array.isArray(data.rank)) {
-          setRankData(data.rank);
-        } else {
-          setRankData([]);
-        }
-        if (showSmartErrorNotice) setSmartError(null);
-      }
-    } catch (error) {
-      console.error('加载财务汇总数据失败:', error);
-      reportSmartError('财务看板数据加载失败', '网络异常或服务不可用，请稍后重试', 'FINANCE_DASHBOARD_LOAD_FAILED');
-      // API失败时显示0值，不使用假数据
-      setStatData({
-        totalAmount: 0,
-        totalAmountChange: 0,
-        totalAmountDayChange: 0,
-        dailyAmount: 0,
-        warehousedCount: 0,
-        warehousedDayCount: 0,
-        orderCount: 0,
-        completionRate: 0,
-        profitRate: 0,
-        profitRateChange: 0,
-        profitRateDayChange: 0,
-      });
-      setTrendData([]);
-      setRankData([]);
-    }
-  }, { manual: true });
-
-  useEffect(() => {
-    loadData();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [timeRange, customRange, activeTab]);
-
-  // 时间范围选择器
-  const TimeRangeSelector = () => (
-    <Space size={16} className={styles.timeSelector}>
-      {(['today', 'week', 'month', 'year'] as TimeRangeType[]).map((range) => (
-        <span
-          key={range}
-          className={`${styles.timeOption} ${timeRange === range ? styles.active : ''}`}
-          onClick={() => setTimeRange(range)}
-        >
-          {{ today: '今日', week: '本周', month: '本月', year: '全年' }[range]}
-        </span>
-      ))}
-      <RangePicker
-        value={customRange}
-        onChange={(dates) => {
-          if (dates) {
-            setCustomRange(dates as [dayjs.Dayjs, dayjs.Dayjs]);
-            setTimeRange('custom');
-          }
-        }}
-        format="YYYY-MM-DD"
-        style={{ width: 240 }}
-      />
-    </Space>
-  );
-
-  // 变化指标渲染
-  const renderChange = (value: number, suffix = '%') => {
-    const isUp = value >= 0;
-    return (
-      <span className={isUp ? styles.changeUp : styles.changeDown}>
-        {isUp ? <CaretUpOutlined /> : <CaretDownOutlined />}
-        {Math.abs(value)}{suffix}
-      </span>
-    );
-  };
-
-  // 柱状图配置
-  const chartConfig = {
-    data: trendData,
+  // 营收趋势折线图配置
+  const lineConfig = {
+    data: data.revenueTrend,
     xField: 'month',
     yField: 'value',
-    color: 'var(--primary-color)',
-    columnStyle: {
-      radius: [4, 4, 0, 0],
-    },
+    smooth: true,
+    color: '#1890ff',
     label: undefined,
-    xAxis: {
-      label: {
-        style: { fill: '#8c8c8c', fontSize: "var(--font-size-xs)" },
-      },
-    },
-    yAxis: {
-      label: {
-        style: { fill: '#8c8c8c', fontSize: "var(--font-size-xs)" },
-        formatter: (v: string) => `${Number(v).toLocaleString()}`,
-      },
-    },
-    tooltip: {
-      formatter: (datum: TrendData) => ({
-        name: activeTab === 'amount' ? '金额' : '数量',
-        value: datum.value.toLocaleString(),
-      }),
-    },
+    xAxis: { label: { style: { fill: '#8c8c8c', fontSize: 10 } } },
+    yAxis: { label: { style: { fill: '#8c8c8c', fontSize: 10 }, formatter: (v: string) => `¥${Number(v).toLocaleString()}` } },
+    tooltip: { formatter: (datum: any) => ({ name: '营收', value: `¥${datum.value.toLocaleString()}` }) },
   };
 
+  // 成本结构饼图配置
+  const pieConfig = {
+    data: data.costStructure,
+    angleField: 'value',
+    colorField: 'type',
+    radius: 0.8,
+    innerRadius: 0.6,
+    label: { text: 'type', style: { fontSize: 10 } },
+    legend: { position: 'right' as const },
+    statistic: { title: { content: '总成本', style: { fontSize: 12 } }, value: { content: `¥${(data.wageExpense + data.materialCost + data.expenseCost).toLocaleString()}`, style: { fontSize: 14 } } },
+    color: ['#ff7875', '#ffa940', '#ffd666'],
+  };
+
+  const factoryColumns = [
+    { title: '工厂', dataIndex: 'factoryName', key: 'factoryName' },
+    { title: '成本', dataIndex: 'cost', key: 'cost', align: 'right' as const, render: (v: number) => `¥${v.toLocaleString()}` },
+  ];
+
+  const styleColumns = [
+    { title: '款号', dataIndex: 'styleNo', key: 'styleNo' },
+    { title: '利润', dataIndex: 'profit', key: 'profit', align: 'right' as const, render: (v: number) => `¥${v.toLocaleString()}` },
+  ];
+
   return (
-    <>
-      {showSmartErrorNotice && smartError ? (
-        <Card style={{ marginBottom: 12 }}>
-          <SmartErrorNotice
-            error={smartError}
-            onFix={() => {
-              void loadData();
+    <Spin spinning={loading}>
+      {/* 顶部筛选区 */}
+      <Card className={styles.filterCard}>
+        <Space size={12} wrap>
+          <span className={styles.filterLabel}>时间：</span>
+          {TIME_OPTIONS.map(opt => (
+            <Button
+              key={opt.value}
+              type="primary"
+              ghost={timeRange !== opt.value}
+              onClick={() => { setTimeRange(opt.value); setCustomRange(null); }}
+            >
+              {opt.label}
+            </Button>
+          ))}
+          <RangePicker
+            value={customRange}
+            onChange={(dates) => {
+              if (dates && dates[0] && dates[1]) {
+                setCustomRange([dates[0], dates[1]]);
+                setTimeRange('custom');
+              } else {
+                setCustomRange(null);
+              }
             }}
+            style={{ width: 240 }}
           />
-        </Card>
-      ) : null}
+          <span className={styles.filterLabel}>工厂：</span>
+          <Select
+            value={factoryId || undefined}
+            onChange={setFactoryId}
+            placeholder="全部工厂"
+            allowClear
+            style={{ width: 140 }}
+          >
+            {factories.map(f => <Option key={f.id} value={f.id}>{f.name}</Option>)}
+          </Select>
+          <Input
+            placeholder="款号/订单号"
+            value={styleNo}
+            onChange={e => setStyleNo(e.target.value)}
+            style={{ width: 120 }}
+            allowClear
+          />
+          <Button onClick={resetFilters}>重置</Button>
+        </Space>
+      </Card>
 
-      <Spin spinning={loading}>
-        {/* 顶部统计卡片 */}
-        <Row gutter={16} className={styles.statCards}>
-          {/* 总金额 */}
-          <Col span={6}>
-            <Card className={styles.statCard}>
-              <div className={styles.cardHeader}>
-                <span className={styles.cardTitle}>总金额</span>
-                <Tooltip title="所选时间范围内的订单总金额">
-                  <InfoCircleOutlined className={styles.infoIcon} />
-                </Tooltip>
-              </div>
-              <Statistic
-                value={statData.totalAmount}
-                precision={0}
-                prefix="¥"
-                styles={{ content: { fontSize: 28, fontWeight: 600, color: 'var(--neutral-text)' } }}
-              />
-              <div className={styles.cardFooter}>
-                <span className={styles.subLabel}>周同比</span>
-                {renderChange(statData.totalAmountChange)}
-                <span className={styles.subLabel} style={{ marginLeft: 16 }}>日同比</span>
-                {renderChange(statData.totalAmountDayChange)}
-              </div>
-              <div className={styles.dailyInfo}>
-                <span className={styles.dailyLabel}>日金额</span>
-                <span className={styles.dailyValue}>¥{statData.dailyAmount.toLocaleString()}</span>
-              </div>
-            </Card>
-          </Col>
+      {/* 汇总指标卡（6个） */}
+      <Row gutter={[12, 12]} className={styles.statRow}>
+        <Col span={4}>
+          <StatCard title="总营收" value={data.totalRevenue} onClick={() => goToModule('revenue')} />
+        </Col>
+        <Col span={4}>
+          <StatCard title="应付账款" value={data.accountsPayable} color="var(--color-warning)" onClick={() => goToModule('payable')} />
+        </Col>
+        <Col span={4}>
+          <StatCard title="工资支出" value={data.wageExpense} color="var(--color-danger)" onClick={() => goToModule('wage')} />
+        </Col>
+        <Col span={4}>
+          <StatCard title="物料成本" value={data.materialCost} color="var(--color-info)" onClick={() => goToModule('material')} />
+        </Col>
+        <Col span={4}>
+          <StatCard title="费用支出" value={data.expenseCost} color="#ffa940" onClick={() => goToModule('expense')} />
+        </Col>
+        <Col span={4}>
+          <StatCard title="净利润" value={data.netProfit} color={data.netProfit >= 0 ? 'var(--color-success)' : 'var(--color-error)'} onClick={() => goToModule('profit')} />
+        </Col>
+      </Row>
 
-          {/* 入库数量 */}
-          <Col span={6}>
-            <Card className={styles.statCard}>
-              <div className={styles.cardHeader}>
-                <span className={styles.cardTitle}>入库数量</span>
-                <Tooltip title="所选时间范围内的成品入库总数">
-                  <InfoCircleOutlined className={styles.infoIcon} />
-                </Tooltip>
-              </div>
-              <Statistic
-                value={statData.warehousedCount}
-                styles={{ content: { fontSize: 28, fontWeight: 600, color: 'var(--neutral-text)' } }}
-              />
-              <div className={styles.tinyChart}>
-                {/* 迷你面积图占位 */}
-                <div className={styles.miniAreaChart} />
-              </div>
-              <div className={styles.dailyInfo}>
-                <span className={styles.dailyLabel}>日入库</span>
-                <span className={styles.dailyValue}>{statData.warehousedDayCount.toLocaleString()}</span>
-              </div>
-            </Card>
-          </Col>
+      {/* 图表区 */}
+      <Row gutter={12} className={styles.chartRow}>
+        <Col span={14}>
+          <Card title="营收趋势" className={styles.chartCard}>
+            {data.revenueTrend.length > 0 ? (
+              <Line {...lineConfig} style={{ height: 260 }} />
+            ) : (
+              <div className={styles.emptyChart}>暂无数据</div>
+            )}
+          </Card>
+        </Col>
+        <Col span={10}>
+          <Card title="成本结构" className={styles.chartCard}>
+            {data.costStructure.length > 0 ? (
+              <Pie {...pieConfig} style={{ height: 260 }} />
+            ) : (
+              <div className={styles.emptyChart}>暂无数据</div>
+            )}
+          </Card>
+        </Col>
+      </Row>
 
-          {/* 订单数量 */}
-          <Col span={6}>
-            <Card className={styles.statCard}>
-              <div className={styles.cardHeader}>
-                <span className={styles.cardTitle}>订单数量</span>
-                <Tooltip title="所选时间范围内的订单总数">
-                  <InfoCircleOutlined className={styles.infoIcon} />
-                </Tooltip>
-              </div>
-              <Statistic
-                value={statData.orderCount}
-                styles={{ content: { fontSize: 28, fontWeight: 600, color: 'var(--neutral-text)' } }}
-              />
-              <div className={styles.tinyChart}>
-                {/* 迷你柱状图占位 */}
-                <div className={styles.miniBarChart} />
-              </div>
-              <div className={styles.dailyInfo}>
-                <span className={styles.dailyLabel}>完成率</span>
-                <span className={styles.dailyValue}>{statData.completionRate}%</span>
-              </div>
-            </Card>
-          </Col>
-
-          {/* 利润率 */}
-          <Col span={6}>
-            <Card className={styles.statCard}>
-              <div className={styles.cardHeader}>
-                <span className={styles.cardTitle}>平均利润率</span>
-                <Tooltip title="所选时间范围内的平均利润率">
-                  <InfoCircleOutlined className={styles.infoIcon} />
-                </Tooltip>
-              </div>
-              <Statistic
-                value={statData.profitRate}
-                suffix="%"
-                styles={{ content: { fontSize: 28, fontWeight: 600, color: 'var(--neutral-text)' } }}
-              />
-              <div className={styles.progressBar}>
-                <div className={styles.progressFill} style={{ width: `${statData.profitRate}%` }} />
-              </div>
-              <div className={styles.cardFooter}>
-                <span className={styles.subLabel}>周同比</span>
-                {renderChange(statData.profitRateChange)}
-                <span className={styles.subLabel} style={{ marginLeft: 16 }}>日同比</span>
-                {renderChange(statData.profitRateDayChange)}
-              </div>
-            </Card>
-          </Col>
-        </Row>
-
-        {/* 图表区域 */}
-        <Card className={styles.chartCard}>
-          <div className={styles.chartHeader}>
-            <Tabs
-              activeKey={activeTab}
-              onChange={(key) => setActiveTab(key as 'amount' | 'count')}
-              items={[
-                { key: 'amount', label: '金额' },
-                { key: 'count', label: '数量' },
-              ]}
-              className={styles.tabs}
+      {/* 明细表 */}
+      <Row gutter={12} className={styles.tableRow}>
+        <Col span={12}>
+          <Card title="工厂成本排行" className={styles.tableCard}>
+            <Table
+              columns={factoryColumns}
+              dataSource={data.factoryRanking}
+              rowKey="factoryName"
+              size="small"
+              pagination={false}
+              scroll={{ y: 200 }}
             />
-            <TimeRangeSelector />
-          </div>
-
-          <Row gutter={32}>
-            {/* 趋势图 */}
-            <Col span={16}>
-              <div className={styles.trendSection}>
-                <h4 className={styles.sectionTitle}>
-                  {activeTab === 'amount' ? '金额趋势' : '数量趋势'}
-                </h4>
-                <div style={{ height: 300 }}>
-                  {trendData.length > 0
-                    ? <Column {...chartConfig} />
-                    : <Empty description="暂无数据" image={Empty.PRESENTED_IMAGE_SIMPLE} style={{ paddingTop: 80 }} />}
-                </div>
-              </div>
-            </Col>
-
-            {/* 排名列表 */}
-            <Col span={8}>
-              <div className={styles.rankSection}>
-                <h4 className={styles.sectionTitle}>
-                  {activeTab === 'amount' ? '工序成本排名' : '工序数量排名'}
-                </h4>
-                <div className={styles.rankList}>
-                  {rankData.map((item) => (
-                    <div key={item.rank} className={styles.rankItem}>
-                      <span className={`${styles.rankNum} ${item.rank <= 3 ? styles.topRank : ''}`}>
-                        {item.rank}
-                      </span>
-                      <span className={styles.rankName}>{item.name}</span>
-                      <span className={styles.rankValue}>
-                        {activeTab === 'amount' ? `¥${item.value.toLocaleString()}` : item.value.toLocaleString()}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </Col>
-          </Row>
-        </Card>
-      </Spin>
-    </>
+          </Card>
+        </Col>
+        <Col span={12}>
+          <Card title="款号利润排行" className={styles.tableCard}>
+            <Table
+              columns={styleColumns}
+              dataSource={data.styleProfitRanking}
+              rowKey="styleNo"
+              size="small"
+              pagination={false}
+              scroll={{ y: 200 }}
+            />
+          </Card>
+        </Col>
+      </Row>
+    </Spin>
   );
 };
 

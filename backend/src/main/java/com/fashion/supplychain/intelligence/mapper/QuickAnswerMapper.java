@@ -36,10 +36,12 @@ public interface QuickAnswerMapper extends BaseMapper<QuickAnswer> {
     @Select("<script>" +
             "SELECT * FROM t_quick_answer WHERE tenant_id = #{tenantId} " +
             "AND answer_type = 'PREBUILT' AND delete_flag = 0 " +
-            "AND expire_time > NOW() AND (question_pattern LIKE CONCAT('%', #{keywords[0]}, '%') " +
-            "<foreach collection='keywords' item='kw' index='idx' separator=' OR '>" +
+            "AND expire_time > NOW() " +
+            "<if test='keywords != null and keywords.length > 0'>" +
+            "AND (<foreach collection='keywords' item='kw' index='idx' separator=' OR '>" +
             "question_pattern LIKE CONCAT('%', #{kw}, '%')" +
-            "</foreach>) " +
+            "</foreach>)" +
+            "</if>" +
             "ORDER BY confidence DESC, hit_count DESC LIMIT 3" +
             "</script>")
     List<QuickAnswer> findPrebuiltByKeywords(@Param("tenantId") Long tenantId,

@@ -72,7 +72,6 @@ export const paths = {
   ecSalesRevenue: '/finance/ec-revenue',
   financeTaxExport: '/finance/tax-export',
   orderWasteAnalysis: '/finance/order-waste-analysis',
-  shipmentReconciliation: '/finance/shipment-reconciliation',
   financeDashboard: '/finance/dashboard',
 
   materialInventory: '/warehouse/material',
@@ -276,7 +275,7 @@ export const menuConfig: MenuSection[] = [
     key: 'finance',
     icon: React.createElement(AccountBookOutlined),
     items: [
-      // 组1: 财务总览
+      // 组1: 财务总览（BI大屏，可筛选所有财务数据）
       { label: '财务总览', path: paths.financeDashboard, icon: React.createElement(DashboardOutlined) },
       // 组2: 结算管理
       { label: '工资结算', path: paths.payrollOperatorSummary, icon: React.createElement(AccountBookOutlined) },
@@ -284,11 +283,8 @@ export const menuConfig: MenuSection[] = [
       // 组3: 收支管理
       { label: '物料对账', path: paths.materialReconciliation, icon: React.createElement(AccountBookOutlined) },
       { label: '收付款中心', path: paths.wagePayment, icon: React.createElement(DollarOutlined) },
-      // 组4: 财务工具
-      { label: '费用报销', path: paths.expenseReimbursement, icon: React.createElement(AccountBookOutlined) },
-      { label: '员工借支', path: paths.employeeAdvance, icon: React.createElement(AccountBookOutlined) },
-      { label: '订单损耗分析', path: paths.orderWasteAnalysis, icon: React.createElement(RadarChartOutlined) },
-      { label: '财税导出', path: paths.financeTaxExport, icon: React.createElement(DollarOutlined) },
+      // 组4: 财税工具（合并费用报销+员工借支+财税导出+EC收入+损耗分析）
+      { label: '财税工具', path: paths.financeTaxExport, icon: React.createElement(DollarOutlined) },
     ],
   },
   {

@@ -1,225 +1,113 @@
-.statCards {
-  margin-bottom: 24px;
+/* 顶部筛选区 */
+.filterCard {
+  margin-bottom: 12px;
+  border-radius: 8px;
+}
+
+.filterCard :global(.ant-card-body) {
+  padding: 12px 16px;
+}
+
+.filterLabel {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+/* 统计卡片 */
+.statRow {
+  margin-bottom: 12px;
 }
 
 .statCard {
-  border-radius: 12px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: box-shadow 0.2s;
+}
+
+.statCard:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.09);
 }
 
 .statCard :global(.ant-card-body) {
-  padding: 20px 24px;
-}
-
-.cardHeader {
-  display: flex;
-  align-items: center;
-  margin-bottom: 8px;
+  padding: 12px;
 }
 
 .cardTitle {
-  font-size: 14px;
-  color: var(--color-text-tertiary);
-}
-
-.infoIcon {
-  margin-left: 4px;
   font-size: 12px;
-  color: var(--color-text-quaternary);
-  cursor: pointer;
+  color: var(--color-text-secondary);
+  margin-bottom: 4px;
 }
 
-.cardFooter {
-  margin-top: 12px;
-  font-size: 12px;
-  color: var(--color-text-tertiary);
+.cardValue {
+  font-size: 16px;
+  font-weight: bold;
+  color: var(--color-text-primary);
+  line-height: 1.2;
 }
 
-.subLabel {
-  margin-right: 8px;
-}
-
-.changeUp {
-  color: var(--color-error);
-}
-
-.changeDown {
-  color: var(--color-success);
-}
-
-.dailyInfo {
-  margin-top: 8px;
-  padding-top: 8px;
-  border-top: 1px solid var(--color-border-light);
-}
-
-.dailyLabel {
-  font-size: 12px;
-  color: var(--color-text-tertiary);
-  margin-right: 8px;
-}
-
-.dailyValue {
-  font-size: 14px;
-  color: #262626;
-  font-weight: 500;
-}
-
-.tinyChart {
-  height: 46px;
-  margin-top: 8px;
-}
-
-.miniAreaChart {
-  height: 100%;
-  background: var(--primary-bg-light);
-  border-radius: 8px;
-}
-
-.miniBarChart {
-  height: 100%;
-  background: var(--color-border-antd);
-  border-radius: 8px;
-}
-
-.progressBar {
-  height: 8px;
-  background: var(--color-border-light);
-  border-radius: 8px;
-  margin-top: 12px;
-  overflow: hidden;
-}
-
-.progressFill {
-  height: 100%;
-  background: var(--info-color);
-  border-radius: 8px;
-  transition: width 0.3s ease;
+/* 图表区 */
+.chartRow {
+  margin-bottom: 12px;
 }
 
 .chartCard {
-  border-radius: 12px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
-}
-
-.chartCard :global(.ant-card-body) {
-  padding: 0;
-}
-
-.chartHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0 24px;
-  border-bottom: 1px solid var(--color-border-light);
-}
-
-.tabs :global(.ant-tabs-nav) {
-  margin-bottom: 0;
-}
-
-.tabs :global(.ant-tabs-tab) {
-  padding: 16px 0;
-  font-size: 14px;
-}
-
-.tabs :global(.ant-tabs-tab-active .ant-tabs-tab-btn) {
-  color: var(--color-info);
-  font-weight: 500;
-}
-
-.tabs :global(.ant-tabs-ink-bar) {
-  background: var(--color-info);
-}
-
-.timeSelector {
-  display: flex;
-  align-items: center;
-}
-
-.timeOption {
-  padding: 4px 12px;
-  font-size: 14px;
-  color: #595959;
-  cursor: pointer;
   border-radius: 8px;
-  transition: all 0.2s;
-}
-
-.timeOption:hover {
-  color: var(--color-info);
-}
-
-.timeOption.active {
-  color: var(--color-info);
-  font-weight: 500;
-}
-
-.trendSection {
-  padding: 24px 24px 24px 0;
-}
-
-.rankSection {
-  padding: 24px 24px 24px 0;
-  border-left: 1px solid var(--color-border-light);
   height: 100%;
 }
 
-.sectionTitle {
+.chartCard :global(.ant-card-body) {
+  padding: 12px;
+}
+
+.chartCard :global(.ant-card-head) {
+  padding: 0 12px;
+  min-height: 40px;
+}
+
+.chartCard :global(.ant-card-head-title) {
   font-size: 14px;
-  font-weight: 500;
-  color: #262626;
-  margin-bottom: 16px;
+  padding: 8px 0;
 }
 
-.rankList {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.rankItem {
-  display: flex;
-  align-items: center;
-}
-
-.rankNum {
-  width: 20px;
-  height: 20px;
+.emptyChart {
+  height: 260px;
   display: flex;
   align-items: center;
   justify-content: center;
+  color: var(--color-text-quaternary);
   font-size: 12px;
-  color: var(--color-text-tertiary);
-  margin-right: 12px;
 }
 
-.rankNum.topRank {
-  background: #314659;
-  color: var(--color-bg-base);
-  border-radius: 50%;
+/* 明细表 */
+.tableRow {
+  margin-bottom: 12px;
 }
 
-.rankItem:nth-child(1) .rankNum.topRank {
-  background: #314659;
+.tableCard {
+  border-radius: 8px;
 }
 
-.rankItem:nth-child(2) .rankNum.topRank {
-  background: #314659;
+.tableCard :global(.ant-card-body) {
+  padding: 0;
 }
 
-.rankItem:nth-child(3) .rankNum.topRank {
-  background: #314659;
+.tableCard :global(.ant-card-head) {
+  padding: 0 12px;
+  min-height: 40px;
 }
 
-.rankName {
-  flex: 1;
+.tableCard :global(.ant-card-head-title) {
   font-size: 14px;
-  color: #262626;
+  padding: 8px 0;
 }
 
-.rankValue {
-  font-size: 14px;
-  color: #262626;
-  font-weight: 500;
+.tableCard :global(.ant-table-thead > tr > th) {
+  font-size: 12px;
+  padding: 8px 12px;
+  background: var(--color-bg-light);
+}
+
+.tableCard :global(.ant-table-tbody > tr > td) {
+  font-size: 12px;
+  padding: 8px 12px;
 }

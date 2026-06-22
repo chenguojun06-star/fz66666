@@ -1,26 +1,22 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Tabs } from 'antd';
-import { FileTextOutlined, ShopOutlined, ScanOutlined } from '@ant-design/icons';
+import { FileTextOutlined, ShopOutlined, AuditOutlined, DollarOutlined } from '@ant-design/icons';
 import { useSearchParams } from 'react-router-dom';
-import { useUser } from '@/utils/AuthContext';
 import FinishedSettlementContent from './FinishedSettlementContent';
-import FactorySummaryContent from './FactorySummaryContent';
-import ExternalScanContent from './ExternalScanContent';
+import ShipmentReconContent from './ShipmentReconContent';
+import PaidUnsettledContent from './PaidUnsettledContent';
+import PaidSettledContent from './PaidSettledContent';
 import styles from './index.module.css';
 
-type TabKey = 'settlement' | 'factory' | 'scans';
+type TabKey = 'reconciliation' | 'settlement' | 'unpaid' | 'paid';
 
 const FinanceCenter: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const { user } = useUser();
-  const isFactoryAccount = !!(user as any)?.factoryId;
-  // 已审核订单号集合：Tab1审核后流入Tab2，Tab2驳回后回流Tab1
-  const [auditedOrderNos, setAuditedOrderNos] = useState<Set<string>>(new Set());
 
-  // 从 URL 参数读取初始 Tab，默认 settlement
+  // 从 URL 参数读取初始 Tab，默认 reconciliation
   const getInitialTab = (): TabKey => {
     const tab = searchParams.get('tab');
-    if (tab === 'settlement' || tab === 'factory' || tab === 'scans') {
+    if (tab === 'reconciliation' || tab === 'settlement' || tab === 'unpaid' || tab === 'paid') {
       return tab;
     }
     return 'settlement';
@@ -36,30 +32,34 @@ const FinanceCenter: React.FC = () => {
   };
 
   // 初始化时同步 URL
-  useEffect(() => {
+  React.useEffect(() => {
     const currentTab = searchParams.get('tab');
     if (currentTab !== activeTab) {
       setSearchParams({ tab: activeTab }, { replace: true });
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // 工厂账号只能访问订单汇总和扫码明细
-  useEffect(() => {
-    if (isFactoryAccount && activeTab !== 'settlement' && activeTab !== 'scans') {
-      setActiveTab('settlement');
-      setSearchParams({ tab: 'settlement' }, { replace: true });
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isFactoryAccount]);
+  // 已审核订单号集合：用于外发结算Tab内部状态共享
+  const [auditedOrderNos, setAuditedOrderNos] = useState<Set<string>>(new Set());
 
   const tabItems = [
+    {
+      key: 'reconciliation',
+      label: (
+        <span className={styles.tabLabel}>
+          <FileTextOutlined />
+          对账单
+        </span>
+      ),
+      children: <ShipmentReconContent />,
+    },
     {
       key: 'settlement',
       label: (
         <span className={styles.tabLabel}>
-          <FileTextOutlined />
-          订单汇总
+          <ShopOutlined />
+          外发结算
         </span>
       ),
       children: (
@@ -70,35 +70,26 @@ const FinanceCenter: React.FC = () => {
       ),
     },
     {
-      key: 'factory',
+      key: 'unpaid',
       label: (
         <span className={styles.tabLabel}>
-          <ShopOutlined />
-          工厂订单汇总
+          <AuditOutlined />
+          已审未付
         </span>
       ),
-      children: (
-        <FactorySummaryContent
-          auditedOrderNos={auditedOrderNos}
-          onAuditNosChange={setAuditedOrderNos}
-        />
-      ),
+      children: <PaidUnsettledContent />,
     },
     {
-      key: 'scans',
+      key: 'paid',
       label: (
         <span className={styles.tabLabel}>
-          <ScanOutlined />
-          扫码明细
+          <DollarOutlined />
+          已付款
         </span>
       ),
-      children: <ExternalScanContent />,
+      children: <PaidSettledContent />,
     },
   ];
-
-  const visibleTabItems = isFactoryAccount
-    ? tabItems.filter((t) => t.key === 'settlement' || t.key === 'scans')
-    : tabItems;
 
   return (
     <>
@@ -106,7 +97,7 @@ const FinanceCenter: React.FC = () => {
         <Tabs
           activeKey={activeTab}
           onChange={handleTabChange}
-          items={visibleTabItems}
+          items={tabItems}
           className={styles.tabs}
           size="large"
         />
