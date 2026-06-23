@@ -23,13 +23,16 @@ spring:
         enabled: true
   datasource:
     hikari:
-      maximum-pool-size: ${HIKARI_MAX_POOL_SIZE:30}
-      minimum-idle: ${HIKARI_MIN_IDLE:5}
+      maximum-pool-size: ${HIKARI_MAX_POOL_SIZE:50}
+      minimum-idle: ${HIKARI_MIN_IDLE:10}
       connection-timeout: 30000
       idle-timeout: 180000
       max-lifetime: 1200000
       keepalive-time: 120000
       connection-test-query: SELECT 1
+      leak-detection-threshold: 60000
+      pool-name: FashionHikariPoolProd
+      transaction-isolation: TRANSACTION_READ_COMMITTED
       data-source-properties:
         socketTimeout: 30000
         connectTimeout: 10000

@@ -26,6 +26,9 @@ public class IntegrationCallbackLog {
     @TableId(type = IdType.AUTO)
     private Long id;
 
+    /** 租户ID（P0铁律4：多租户隔离） */
+    private Long tenantId;
+
     /** 回调类型：PAYMENT / LOGISTICS */
     private String type;
 

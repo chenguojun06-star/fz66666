@@ -23,7 +23,7 @@ public class AuditLogCleanupJob {
     @Autowired(required = false)
     private TenantService tenantService;
 
-    @Scheduled(cron = "0 0 4 * * ?")
+    @Scheduled(cron = "0 50 4 * * ?")
     public void cleanupOldAuditLogs() {
         try {
             int retentionDays = 90;

@@ -45,6 +45,9 @@ public class AgentLoopContextBuilder {
     @Value("${xiaoyun.agent.token-budget:30000}")
     private int tokenBudget;
 
+    @Value("${xiaoyun.agent.max-iterations-hard-limit:10}")
+    private int maxIterationsHardLimit;
+
     public AgentLoopContext build(String userMessage, String pageContext) {
         TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
@@ -89,6 +92,10 @@ public class AgentLoopContextBuilder {
             int extraIterations = Math.max(0, multiDomains.size() - 1) * 2;
             maxIterations = maxIterations + extraIterations;
             log.info("[ContextBuilder] 多域查询提升maxIterations: {} → {}", maxIterations - extraIterations, maxIterations);
+        }
+        if (maxIterations > maxIterationsHardLimit) {
+            log.warn("[ContextBuilder] maxIterations({})超过硬上限({})，已截断", maxIterations, maxIterationsHardLimit);
+            maxIterations = maxIterationsHardLimit;
         }
 
         return AgentLoopContext.builder()

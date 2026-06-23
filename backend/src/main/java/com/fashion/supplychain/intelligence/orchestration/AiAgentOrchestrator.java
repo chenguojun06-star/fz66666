@@ -581,71 +581,6 @@ public class AiAgentOrchestrator {
 
         final double finalSelfScore = selfScore;
 
-        RealTimeLearningLoop realTimeLearningLoop = realTimeLearningLoopProvider.getIfAvailable();
-        if (realTimeLearningLoop != null) {
-            final double scoreForLearning = finalSelfScore;
-            postTurnExecutor.execute(UserContext.wrap(() -> {
-                try {
-                    realTimeLearningLoop.trigger(
-                            conversationId, userMessage, assistantResponse,
-                            scoreForLearning, tenantId);
-                } catch (Exception e) {
-                    log.debug("[AiAgent] RealTimeLearning触发失败（非关键）: {}", e.getMessage());
-                }
-            }));
-        }
-
-        com.fashion.supplychain.intelligence.service.MemoryBankService memoryBankService = memoryBankServiceProvider.getIfAvailable();
-        if (memoryBankService != null) {
-            final String focusMsg = userMessage.length() > 100 ? userMessage.substring(0, 100) : userMessage;
-            postTurnExecutor.execute(UserContext.wrap(() -> {
-                try {
-                    memoryBankService.onFocusChange(tenantId, focusMsg);
-                } catch (Exception e) {
-                    log.debug("[AiAgent] MemoryBank更新失败（非关键）: {}", e.getMessage());
-                }
-            }));
-        }
-
-        com.fashion.supplychain.intelligence.service.SkillAutoCreationService skillAutoCreationService = skillAutoCreationServiceProvider.getIfAvailable();
-        ConversationReflectionOrchestrator reflectionOrchestrator = reflectionOrchestratorProvider.getIfAvailable();
-        if (skillAutoCreationService != null && reflectionOrchestrator == null
-                && toolRecords != null && toolRecords.size() >= 3) {
-            final String finalToolResultsForSkill = toolResultsStr;
-            postTurnExecutor.execute(UserContext.wrap(() -> {
-                try {
-                    skillAutoCreationService.tryAutoCreateFromTask(
-                            tenantId, conversationId, userMessage,
-                            finalToolResultsForSkill, assistantResponse, 0.75);
-                } catch (Exception e) {
-                    log.debug("[AiAgent] SkillAutoCreation触发失败（非关键）: {}", e.getMessage());
-                }
-            }));
-        }
-
-        if (reflectionOrchestrator != null) {
-            final String finalToolResults = toolResultsStr;
-            final String finalConversationId = conversationId;
-            postTurnExecutor.execute(UserContext.wrap(() -> {
-                reflectionOrchestrator.reflectAsync(
-                        tenantId, finalConversationId, sessionId,
-                        userMessage, assistantResponse, finalToolResults);
-            }));
-        }
-
-        com.fashion.supplychain.intelligence.service.SessionSearchService sessionSearchService = sessionSearchServiceProvider.getIfAvailable();
-        if (sessionSearchService != null) {
-            postTurnExecutor.execute(UserContext.wrap(() -> {
-                try {
-                    sessionSearchService.indexConversation(
-                            tenantId, userId, sessionId, conversationId,
-                            userMessage, assistantResponse);
-                } catch (Exception e) {
-                    log.debug("[AiAgent] SessionSearch索引失败（非关键）: {}", e.getMessage());
-                }
-            }));
-        }
-
         List<String> toolNames = new java.util.ArrayList<>();
         if (toolRecords != null) {
             for (AiAgentToolExecHelper.ToolExecRecord rec : toolRecords) {
@@ -653,40 +588,124 @@ public class AiAgentOrchestrator {
             }
         }
 
-        // P1升级: 在线评估采样 — 10%流量触发LLM-as-Judge，与SelfCritic对比校准
+        final List<String> finalToolNames = toolNames;
+        final String finalToolResults = toolResultsStr;
+        final long turnCount = conversationTurnCounter.incrementAndGet();
+
+        List<Runnable> postTurnTasks = new java.util.ArrayList<>();
+
+        RealTimeLearningLoop realTimeLearningLoop = realTimeLearningLoopProvider.getIfAvailable();
+        if (realTimeLearningLoop != null) {
+            final double scoreForLearning = finalSelfScore;
+            postTurnTasks.add(() -> {
+                try {
+                    realTimeLearningLoop.trigger(
+                            conversationId, userMessage, assistantResponse,
+                            scoreForLearning, tenantId);
+                } catch (Exception e) {
+                    log.debug("[AiAgent] RealTimeLearning触发失败（非关键）: {}", e.getMessage());
+                }
+            });
+        }
+
+        com.fashion.supplychain.intelligence.service.MemoryBankService memoryBankService = memoryBankServiceProvider.getIfAvailable();
+        if (memoryBankService != null) {
+            final String focusMsg = userMessage.length() > 100 ? userMessage.substring(0, 100) : userMessage;
+            postTurnTasks.add(() -> {
+                try {
+                    memoryBankService.onFocusChange(tenantId, focusMsg);
+                } catch (Exception e) {
+                    log.debug("[AiAgent] MemoryBank更新失败（非关键）: {}", e.getMessage());
+                }
+            });
+        }
+
+        com.fashion.supplychain.intelligence.service.SkillAutoCreationService skillAutoCreationService = skillAutoCreationServiceProvider.getIfAvailable();
+        ConversationReflectionOrchestrator reflectionOrchestrator = reflectionOrchestratorProvider.getIfAvailable();
+        if (skillAutoCreationService != null && reflectionOrchestrator == null
+                && toolRecords != null && toolRecords.size() >= 3) {
+            postTurnTasks.add(() -> {
+                try {
+                    skillAutoCreationService.tryAutoCreateFromTask(
+                            tenantId, conversationId, userMessage,
+                            finalToolResults, assistantResponse, 0.75);
+                } catch (Exception e) {
+                    log.debug("[AiAgent] SkillAutoCreation触发失败（非关键）: {}", e.getMessage());
+                }
+            });
+        }
+
+        if (reflectionOrchestrator != null) {
+            final String finalConversationId = conversationId;
+            postTurnTasks.add(() -> {
+                reflectionOrchestrator.reflectAsync(
+                        tenantId, finalConversationId, sessionId,
+                        userMessage, assistantResponse, finalToolResults);
+            });
+        }
+
+        com.fashion.supplychain.intelligence.service.SessionSearchService sessionSearchService = sessionSearchServiceProvider.getIfAvailable();
+        if (sessionSearchService != null) {
+            postTurnTasks.add(() -> {
+                try {
+                    sessionSearchService.indexConversation(
+                            tenantId, userId, sessionId, conversationId,
+                            userMessage, assistantResponse);
+                } catch (Exception e) {
+                    log.debug("[AiAgent] SessionSearch索引失败（非关键）: {}", e.getMessage());
+                }
+            });
+        }
+
         com.fashion.supplychain.intelligence.service.GoldenEvalService goldenEvalService = goldenEvalServiceProvider.getIfAvailable();
         if (goldenEvalService != null && assistantResponse != null && !assistantResponse.isBlank()) {
-            postTurnExecutor.execute(UserContext.wrap(() -> {
+            postTurnTasks.add(() -> {
                 goldenEvalService.maybeOnlineEvaluate(userMessage, assistantResponse, finalSelfScore);
-            }));
+            });
         }
 
         MemoryNudgeOrchestrator memoryNudgeOrchestrator = memoryNudgeOrchestratorProvider.getIfAvailable();
         if (memoryNudgeOrchestrator != null) {
-            final List<String> finalToolNames = toolNames;
-            postTurnExecutor.execute(UserContext.wrap(() -> {
+            postTurnTasks.add(() -> {
                 memoryNudgeOrchestrator.analyzeAndNudge(
                         tenantId, userId, sessionId, conversationId,
                         userMessage, assistantResponse, finalToolNames);
-            }));
+            });
         }
 
         UserProfileEvolutionOrchestrator userProfileEvolutionOrchestrator = userProfileEvolutionOrchestratorProvider.getIfAvailable();
         if (userProfileEvolutionOrchestrator != null) {
-            final List<String> finalToolNames2 = toolNames;
-            postTurnExecutor.execute(UserContext.wrap(() -> {
+            postTurnTasks.add(() -> {
                 userProfileEvolutionOrchestrator.evolveProfile(
                         tenantId, userId, userMessage, assistantResponse,
-                        conversationId, finalToolNames2);
-            }));
+                        conversationId, finalToolNames);
+            });
         }
 
-        long turnCount = conversationTurnCounter.incrementAndGet();
         if (!usedQuickPath && turnCount % 3 == 0) {
-            postTurnExecutor.execute(UserContext.wrap(() -> {
+            postTurnTasks.add(() -> {
                 memoryHelper.saveCurrentConversationToMemory(userId, tenantId);
                 log.info("[AiAgent] 自动保存L3对话记忆 (turn #{})", turnCount);
+            });
+        }
+
+        if (toolRecords != null && !toolRecords.isEmpty() && !usedQuickPath) {
+            postTurnTasks.add(() -> {
+                learnEntityMemoryFromTools(tenantId, finalToolResults);
+            });
+        }
+
+        if (!postTurnTasks.isEmpty()) {
+            postTurnExecutor.execute(UserContext.wrap(() -> {
+                for (Runnable task : postTurnTasks) {
+                    try {
+                        task.run();
+                    } catch (Exception e) {
+                        log.debug("[AiAgent] 后处理任务执行失败: {}", e.getMessage());
+                    }
+                }
             }));
+            log.debug("[AiAgent] 后处理任务已批量提交: {} 个任务", postTurnTasks.size());
         }
 
         // P2升级: 安全护栏 — Guardrails-as-Code输出内容检查
@@ -711,17 +730,11 @@ public class AiAgentOrchestrator {
             }
         }
 
-        if (toolRecords != null && !toolRecords.isEmpty() && !usedQuickPath) {
-            final String finalToolResults = toolResultsStr;
-            postTurnExecutor.execute(UserContext.wrap(() -> {
-                learnEntityMemoryFromTools(tenantId, finalToolResults);
-            }));
-            // P1升级: 记录成功工具调用模式到程序记忆
-            if (selfScore > 80) {
-                List<String> pmToolNames = toolRecords.stream()
-                        .map(r -> r.toolName).distinct().toList();
-                memoryHelper.recordProceduralPattern(userMessage, pmToolNames, selfScore);
-            }
+        // P1升级: 记录成功工具调用模式到程序记忆
+        if (toolRecords != null && !toolRecords.isEmpty() && !usedQuickPath && selfScore > 80) {
+            List<String> pmToolNames = toolRecords.stream()
+                    .map(r -> r.toolName).distinct().toList();
+            memoryHelper.recordProceduralPattern(userMessage, pmToolNames, selfScore);
         }
     }
 

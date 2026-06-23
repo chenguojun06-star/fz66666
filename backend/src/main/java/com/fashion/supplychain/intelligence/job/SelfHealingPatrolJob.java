@@ -12,7 +12,7 @@ import java.util.List;
 @Lazy
 public class SelfHealingPatrolJob extends AbstractPatrolJob {
 
-    @Scheduled(cron = "0 15 3 * * ?")
+    @Scheduled(cron = "0 25 2 * * ?")
     public void patrol() {
         log.info("[SelfHealing] ===== 开始自愈引擎巡检 =====");
         List<Long> tenants = getActiveTenantIds();

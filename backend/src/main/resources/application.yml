@@ -102,8 +102,8 @@ spring:
     enabled: ${FLYWAY_ENABLED:true}
     baseline-on-migrate: true
     baseline-version: 1
-    validate-on-migrate: false
-    out-of-order: true
+    validate-on-migrate: true
+    out-of-order: false
     locations: classpath:db/migration
     encoding: UTF-8
 
@@ -460,6 +460,7 @@ xiaoyun:
     timeout-ms: ${XIAOYUN_AGENT_TIMEOUT_MS:180000}
     context-refresh-ms: ${XIAOYUN_CONTEXT_REFRESH_MS:600000}
     quick-path-timeout-ms: ${XIAOYUN_QUICK_PATH_TIMEOUT_MS:25000}
+    max-iterations-hard-limit: ${XIAOYUN_MAX_ITERATIONS_HARD_LIMIT:10}
     tool-executor:
       core-pool-size: ${XIAOYUN_TOOL_EXECUTOR_CORE:16}
       max-pool-size: ${XIAOYUN_TOOL_EXECUTOR_MAX:32}
@@ -502,8 +503,8 @@ xiaoyun:
   # LLM 语义缓存（减少重复 LLM 推理调用）
   semantic-cache:
     enabled: ${XIAOYUN_SEMANTIC_CACHE_ENABLED:true}
-    ttl-minutes: ${XIAOYUN_SEMANTIC_CACHE_TTL:30}
-    similarity-threshold: ${XIAOYUN_SEMANTIC_CACHE_THRESHOLD:0.86}
+    ttl-minutes: ${XIAOYUN_SEMANTIC_CACHE_TTL:120}
+    similarity-threshold: ${XIAOYUN_SEMANTIC_CACHE_THRESHOLD:0.82}
   # 主动洞察推送（巡检发现风险后推送给用户）
   proactive-insight:
     enabled: ${XIAOYUN_PROACTIVE_INSIGHT_ENABLED:true}

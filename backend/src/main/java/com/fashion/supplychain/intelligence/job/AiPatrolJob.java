@@ -556,7 +556,7 @@ public class AiPatrolJob {
     /**
      * 每日 02:00 执行全量巡检
      */
-    @Scheduled(cron = "0 0 2 * * ?")
+    @Scheduled(cron = "0 30 1 * * ?")
     public void runDailyPatrol() {
         log.info("[AiPatrolJob] ===== 开始 AI 闭环质量巡检 =====");
         LocalDateTime since = LocalDateTime.now().minusHours(24);

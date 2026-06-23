@@ -16,7 +16,7 @@ import org.springframework.context.annotation.Lazy;
 /**
  * 智能学习任务 — 打通反馈闭环的最后一环
  *
- * <p>每日凌晨 03:00 运行，扫描过去24小时的预测偏差数据：
+ * <p>每日凌晨 02:00 运行，扫描过去24小时的预测偏差数据：
  * <ol>
  *   <li>按 stage / process / factory 维度计算平均偏差</li>
  *   <li>偏差绝对值 > 60分钟的场景写入 REFLECTIVE 记忆，供 AI 后续参考</li>
@@ -43,7 +43,7 @@ public class IntelligenceLearningJob {
     @Autowired(required = false)
     private JdbcTemplate jdbcTemplate;
 
-    @Scheduled(cron = "0 0 3 * * ?")
+    @Scheduled(cron = "0 0 2 * * ?")
     public void runDailyLearning() {
         if (predictionLogMapper == null && jdbcTemplate == null) {
             log.debug("[LearningJob] 预测日志组件未注入，跳过每日学习");

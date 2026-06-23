@@ -13,6 +13,9 @@ public class LogisticsProvider {
 
     @TableId(type = IdType.ASSIGN_UUID)
     private String id;
+
+    /** 租户ID（P0铁律4：多租户隔离） */
+    private Long tenantId;
     private String providerCode;
     private String providerName;
     private String expressCompanyCode;

@@ -12,7 +12,7 @@ import java.util.List;
 @Lazy
 public class SystemDoctorPatrolJob extends AbstractPatrolJob {
 
-    @Scheduled(cron = "0 15 4 * * ?")
+    @Scheduled(cron = "0 0 4 * * ?")
     public void patrol() {
         log.info("[SystemDoctor] ===== 开始系统医生巡检 =====");
         List<Long> tenants = getActiveTenantIds();

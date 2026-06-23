@@ -6,6 +6,7 @@ import com.fashion.supplychain.intelligence.gateway.AiInferenceRouter;
 import com.fashion.supplychain.intelligence.mapper.MemoryNudgeMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.context.annotation.Lazy;
@@ -83,6 +84,20 @@ public class MemoryNudgeOrchestrator {
         nudge.setStatus("DISMISSED");
         nudge.setDismissedAt(LocalDateTime.now());
         nudgeMapper.updateById(nudge);
+    }
+
+    /**
+     * 定时清理过期的记忆提醒（NUDGE_EXPIRY_HOURS=72）。
+     * 每天凌晨4:30执行，防止PENDING状态堆积。
+     */
+    @Scheduled(cron = "0 30 4 * * ?")
+    public void scheduledExpireOldNudges() {
+        try {
+            expireOldNudges();
+            log.debug("[MemoryNudge] 定时过期清理完成");
+        } catch (Exception e) {
+            log.warn("[MemoryNudge] 定时过期清理失败: {}", e.getMessage());
+        }
     }
 
     public void expireOldNudges() {

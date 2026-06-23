@@ -12,7 +12,7 @@ import java.util.List;
 @Lazy
 public class LearningEnginePatrolJob extends AbstractPatrolJob {
 
-    @Scheduled(cron = "0 0 5 * * ?")
+    @Scheduled(cron = "0 40 5 * * ?")
     public void patrol() {
         log.info("[LearningEngine] ===== 开始学习引擎巡检 =====");
         List<Long> tenants = getActiveTenantIds();

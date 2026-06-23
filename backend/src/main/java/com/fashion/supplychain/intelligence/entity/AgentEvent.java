@@ -12,6 +12,9 @@ import java.time.LocalDateTime;
 public class AgentEvent {
     @TableId(type = IdType.AUTO)
     private Long id;
+
+    /** 租户ID（P0铁律4：多租户隔离） */
+    private Long tenantId;
     private String sessionId;
     private Integer iteration;
     private String eventType;

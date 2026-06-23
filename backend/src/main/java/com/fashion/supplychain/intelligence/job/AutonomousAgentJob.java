@@ -13,7 +13,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.context.annotation.Lazy;
 
 /**
- * 自主Agent定时任务 — 每天凌晨3点自动挖掘规律（按租户隔离）。
+ * 自主Agent定时任务 — 每天凌晨2:50自动挖掘规律（按租户隔离）。
  */
 @Slf4j
 @Component
@@ -26,7 +26,7 @@ public class AutonomousAgentJob {
 
     private static final int LOOKBACK_DAYS = 30;
 
-    @Scheduled(cron = "0 0 3 * * ?")
+    @Scheduled(cron = "0 50 2 * * ?")
     public void discoverPatternsForAllTenants() {
         String lockValue = distributedLockService.tryLock("job:autonomous-pattern-discovery", 25, TimeUnit.MINUTES);
         if (lockValue == null) {
