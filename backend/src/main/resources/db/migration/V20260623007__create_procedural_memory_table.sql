@@ -30,9 +30,9 @@ CREATE TABLE IF NOT EXISTS t_procedural_memory (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='L4程序性记忆：SOP/流程/技能';
 
 -- 2. 幂等插入初始SOP数据
-DROP PROCEDURE IF EXISTS init_pm07;
+DROP PROCEDURE IF EXISTS init_pm08;
 DELIMITER //
-CREATE PROCEDURE init_pm07()
+CREATE PROCEDURE init_pm08()
 BEGIN
     INSERT IGNORE INTO t_procedural_memory (tenant_id, sop_name, sop_type, steps_json, trigger_keywords, confidence) VALUES
     (0, '工序扫码流程', 'SCAN_WORKFLOW', '[{"step":1,"action":"打开扫码页面","tool":"scan_page","expected":"显示扫码界面"},{"step":2,"action":"扫描工单号/条码","tool":"scan_barcode","expected":"识别成功"},{"step":3,"action":"确认工序信息","tool":"confirm_process","expected":"显示工序详情"},{"step":4,"action":"点击确认完成","tool":"submit_complete","expected":"扫码成功"}]', '扫码,工序扫码,扫描,打卡', 0.95);
@@ -48,7 +48,7 @@ BEGIN
     (0, '交期预测查询', 'DELIVERY_FORECAST', '[{"step":1,"action":"进入订单详情","tool":"order_detail"},{"step":2,"action":"查看进度看板","tool":"progress_board"},{"step":3,"action":"查看交期预测","tool":"delivery_prediction"},{"step":4,"action":"如有延期风险，查看原因","tool":"risk_analysis"}]', '交期,延期,预测,排产,产能', 0.88);
     INSERT IGNORE INTO t_procedural_memory (tenant_id, sop_name, sop_type, steps_json, trigger_keywords, confidence) VALUES
     (0, '供应商评估流程', 'SUPPLIER_EVAL', '[{"step":1,"action":"进入供应商管理","tool":"supplier_page"},{"step":2,"action":"选择供应商","tool":"select_supplier"},{"step":3,"action":"查看评估指标","tool":"view_metrics"},{"step":4,"action":"查看评级结果","tool":"view_rating"},{"step":5,"action":"导出评估报告","tool":"export_report"}]', '供应商,评估,评级,供应商评估', 0.85);
-END//
+END//;
 DELIMITER ;
-CALL init_pm07();
-DROP PROCEDURE IF EXISTS init_pm07;
+CALL init_pm08();
+DROP PROCEDURE IF EXISTS init_pm08;
