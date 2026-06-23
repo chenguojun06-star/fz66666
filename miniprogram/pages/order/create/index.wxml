@@ -65,9 +65,5 @@
   </view>
 
   <!-- 隐私协议弹窗 -->
-  <privacy-dialog
-    wx:if="{{showPrivacy}}"
-    bind:agree="onPrivacyAgree"
-    bind:disagree="onPrivacyDisagree"
-  />
+  <privacy-dialog id="privacyDialog" />
 </view>

@@ -2,6 +2,7 @@ var api = require('../../../utils/api');
 var { toast, safeNavigate } = require('../../../utils/uiHelper');
 var { isAdminOrSupervisor, isFactoryOwner } = require('../../../utils/permission');
 var { getAuthedImageUrl } = require('../../../utils/fileUrl');
+var { eventBus } = require('../../../utils/eventBus');
 
 Page({
   data: {
@@ -11,44 +12,29 @@ Page({
     styleKeyword: '',
     styleLoading: true,
     
-    _allStyles: [],  // 存储所有款式（用于无资料下单）
+    _allStyles: [],
     
     // 无资料下单：上传的图片
     noDataUploadedImage: '',
-
-    // 隐私协议
-    showPrivacy: false,
   },
 
   onLoad: function () {
-    // 隐私授权监听（wx.chooseMedia 需要隐私协议授权）
-    if (wx.onNeedPrivacyAuthorization) {
-      this._privacyCb = (resolve) => {
-        this._resolvePrivacy = resolve;
-        this.setData({ showPrivacy: true });
-      };
-      wx.onNeedPrivacyAuthorization(this._privacyCb);
+    var self = this;
+    if (eventBus && typeof eventBus.on === 'function') {
+      this._unsubPrivacy = eventBus.on('showPrivacyDialog', function (resolve) {
+        try {
+          var dialog = self.selectComponent('#privacyDialog');
+          if (dialog && typeof dialog.showDialog === 'function') dialog.showDialog(resolve);
+        } catch (_) {}
+      });
     }
     this._initPage();
   },
 
   onUnload() {
-    if (wx.offNeedPrivacyAuthorization && this._privacyCb) {
-      wx.offNeedPrivacyAuthorization(this._privacyCb);
-    }
-  },
-
-  onPrivacyAgree() {
-    this.setData({ showPrivacy: false });
-    if (this._resolvePrivacy) {
-      this._resolvePrivacy({ buttonId: 'agree-btn', event: 'agree' });
-    }
-  },
-
-  onPrivacyDisagree() {
-    this.setData({ showPrivacy: false });
-    if (this._resolvePrivacy) {
-      this._resolvePrivacy({ buttonId: 'disagree-btn', event: 'disagree' });
+    if (this._unsubPrivacy) {
+      try { this._unsubPrivacy(); } catch (_) {}
+      this._unsubPrivacy = null;
     }
   },
 
