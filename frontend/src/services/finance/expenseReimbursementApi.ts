@@ -122,6 +122,7 @@ export const expenseReimbursementApi = {
     formData.append('file', file);
     return await api.post('/finance/expense-reimbursement/recognize-doc', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 60000 // Agnes视觉模型最长60秒
     });
   },
 

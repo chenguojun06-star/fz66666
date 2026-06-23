@@ -61,7 +61,8 @@ const StyleSizeToolbar: React.FC<Props> = ({
       formData.append('file', ocrFile);
       
       const res = await api.post(`/style/info/${styleId}/recognize-size-table`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
+        headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 60000 // Agnes视觉模型最长60秒，前端对齐后端超时
       });
       
       if (res.code !== 200) {

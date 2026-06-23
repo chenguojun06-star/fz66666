@@ -86,7 +86,9 @@ export function usePurchaseActions({
       const fd = new FormData();
       fd.append('file', file);
       if (orderNo) fd.append('orderNo', orderNo);
-      const res = await api.post<{ code: number; message?: string; data: { items?: Array<{ purchaseId?: string; quantity?: number; matched?: boolean }> } }>('/production/purchase/recognize-doc', fd);
+      const res = await api.post<{ code: number; message?: string; data: { items?: Array<{ purchaseId?: string; quantity?: number; matched?: boolean }> } }>('/production/purchase/recognize-doc', fd, {
+        timeout: 60000 // Agnes视觉模型最长60秒
+      });
       if (res.code === 200 && res.data?.items) {
         const qtys: Record<string, number> = {};
         (res.data.items || []).forEach((it) => {
