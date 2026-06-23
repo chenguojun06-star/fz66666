@@ -28,7 +28,7 @@ BEGIN
             KEY idx_enabled (enabled)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='角色模板';
     END IF;
-END//
+END;//
 DELIMITER ;
 CALL create_role_template_table();
 DROP PROCEDURE IF EXISTS create_role_template_table;
