@@ -393,6 +393,11 @@ public class ColorCardOrchestrator {
     /**
      * 自动同步供应商到工厂管理表
      * 当 supplierName 存在但 supplierId 为空时，查找或创建 t_factory 记录
+     *
+     * 并发防御策略：
+     * 1. 先查询是否存在（FOR UPDATE 行锁）
+     * 2. 不存在则尝试插入（依赖数据库唯一约束 uk_factory_name_tenant_supplier_type）
+     * 3. 插入失败（DuplicateKeyException）则再次查询获取已创建的供应商
      */
     private void syncSupplierToFactory(ColorCard card) {
         if (!StringUtils.hasText(card.getSupplierName())) return;
@@ -400,6 +405,7 @@ public class ColorCardOrchestrator {
 
         Long tenantId = card.getTenantId() != null ? card.getTenantId() : UserContext.tenantId();
 
+        // 1. 先查询是否存在（FOR UPDATE 行锁，防止并发查询返回null）
         Factory existing = factoryMapper.selectOne(
             new LambdaQueryWrapper<Factory>()
                 .eq(Factory::getFactoryName, card.getSupplierName().trim())
@@ -417,22 +423,45 @@ public class ColorCardOrchestrator {
             if (!StringUtils.hasText(card.getSupplierContactPhone()) && StringUtils.hasText(existing.getContactPhone())) {
                 card.setSupplierContactPhone(existing.getContactPhone());
             }
-        } else {
-            Factory newFactory = new Factory();
-            newFactory.setId(null);
-            newFactory.setFactoryName(card.getSupplierName().trim());
-            newFactory.setFactoryCode("AUTO_" + System.currentTimeMillis());
-            newFactory.setTenantId(tenantId);
-            newFactory.setSupplierType("MATERIAL");
-            newFactory.setFactoryType("EXTERNAL");
-            newFactory.setContactPerson(card.getSupplierContactPerson());
-            newFactory.setContactPhone(card.getSupplierContactPhone());
-            newFactory.setStatus("active");
-            newFactory.setDeleteFlag(0);
-            newFactory.setCreateTime(LocalDateTime.now());
-            newFactory.setUpdateTime(LocalDateTime.now());
+            return;
+        }
+
+        // 2. 不存在，尝试插入（依赖数据库唯一约束防止并发重复插入）
+        Factory newFactory = new Factory();
+        newFactory.setId(null);
+        newFactory.setFactoryName(card.getSupplierName().trim());
+        newFactory.setFactoryCode("AUTO_" + System.currentTimeMillis());
+        newFactory.setTenantId(tenantId);
+        newFactory.setSupplierType("MATERIAL");
+        newFactory.setFactoryType("EXTERNAL");
+        newFactory.setContactPerson(card.getSupplierContactPerson());
+        newFactory.setContactPhone(card.getSupplierContactPhone());
+        newFactory.setStatus("active");
+        newFactory.setDeleteFlag(0);
+        newFactory.setCreateTime(LocalDateTime.now());
+        newFactory.setUpdateTime(LocalDateTime.now());
+
+        try {
             factoryMapper.insert(newFactory);
             card.setSupplierId(newFactory.getId());
+        } catch (org.springframework.dao.DuplicateKeyException e) {
+            // 3. 并发插入失败（唯一约束冲突），再次查询获取已创建的供应商
+            log.warn("并发创建供应商冲突，重新查询已存在的供应商: name={}, tenantId={}",
+                card.getSupplierName().trim(), tenantId);
+            Factory afterInsert = factoryMapper.selectOne(
+                new LambdaQueryWrapper<Factory>()
+                    .eq(Factory::getFactoryName, card.getSupplierName().trim())
+                    .eq(Factory::getTenantId, tenantId)
+                    .eq(Factory::getSupplierType, "MATERIAL")
+                    .and(w -> w.isNull(Factory::getDeleteFlag).or().eq(Factory::getDeleteFlag, 0))
+                    .last("LIMIT 1")
+            );
+            if (afterInsert != null) {
+                card.setSupplierId(afterInsert.getId());
+            } else {
+                // 极端情况：唯一约束冲突但查询不到，抛出异常（不应发生）
+                throw new IllegalStateException("供应商创建失败：并发冲突后查询不到记录");
+            }
         }
     }
 

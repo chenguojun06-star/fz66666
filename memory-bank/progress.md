@@ -1,11 +1,25 @@
 # 进度跟踪
 
 > 本文件由 AI 助手自动维护，记录项目开发进度
-> 最后更新：2026-06-20
+> 最后更新：2026-06-23
 
 ---
 
 ## 已完成
+
+### 2026-06-23 权限系统大牌水准优化
+
+**背景**：用户要求"优化到大牌的水准，比他们的系统要好用更简单，租户开户就马上知道怎么使用"。
+
+- [x] 新租户开户向导 - TenantSetupGuide 组件（RoleList/index.tsx 集成）
+- [x] 预设角色模板 - 7个模板已就绪（管理员/跟单员/仓库管理员/财务/质检/生产主管/裁剪师傅）
+- [x] 数据权限维度验证 - all/team/own + factoryId 供应商隔离
+- [x] 供应商数据隔离验证 - SupplierPortalController 完整实现
+- [x] 权限矩阵可视化验证 - RoleList 页面功能完善
+- [x] TypeScript 错误修复 - TenantSetupGuide.tsx res.message 类型问题
+- [x] 编译错误修复 - RoleTemplateController.java Result.error → Result.badRequest
+- [x] 后端编译验证 - mvn compile BUILD SUCCESS
+- [x] 前端编译验证 - npx tsc --noEmit 0 errors
 
 ### 2026-06-20 小云AI 6大升级 + 开发效能体系
 

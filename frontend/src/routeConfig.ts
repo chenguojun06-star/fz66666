@@ -275,15 +275,16 @@ export const menuConfig: MenuSection[] = [
     key: 'finance',
     icon: React.createElement(AccountBookOutlined),
     items: [
-      // 组1: 财务总览（BI大屏，可筛选所有财务数据）
+      // ========== 总览 ==========
       { label: '财务总览', path: paths.financeDashboard, icon: React.createElement(DashboardOutlined) },
-      // 组2: 结算管理
+      // ========== 内部结算 ==========
       { label: '工资结算', path: paths.payrollOperatorSummary, icon: React.createElement(AccountBookOutlined) },
-      { label: '外发结算', path: paths.financeCenter, icon: React.createElement(AccountBookOutlined) },
-      // 组3: 收支管理
-      { label: '物料对账', path: paths.materialReconciliation, icon: React.createElement(AccountBookOutlined) },
+      // ========== 外部结算 ==========
+      { label: '外发结算', path: paths.financeCenter, icon: React.createElement(ShopOutlined) },
+      { label: '物料对账', path: paths.materialReconciliation, icon: React.createElement(FileTextOutlined) },
+      // ========== 收付款 ==========
       { label: '收付款中心', path: paths.wagePayment, icon: React.createElement(DollarOutlined) },
-      // 组4: 财税工具（合并费用报销+员工借支+财税导出+EC收入+损耗分析）
+      // ========== 财税工具 ==========
       { label: '财税工具', path: paths.financeTaxExport, icon: React.createElement(DollarOutlined) },
     ],
   },
@@ -297,10 +298,17 @@ export const menuConfig: MenuSection[] = [
       { label: '岗位管理', path: paths.role, icon: React.createElement(UserSwitchOutlined) },
       { label: '组织架构', path: paths.organization, icon: React.createElement(TeamOutlined) },
       { label: '合作企业管理', path: paths.partnerManagement, icon: React.createElement(TeamOutlined) },
+    ],
+  },
+  {
+    title: '工具',
+    key: 'tools',
+    icon: React.createElement(SettingOutlined),
+    items: [
+      { label: '数据导入', path: paths.dataImport, icon: React.createElement(FileTextOutlined) },
       { label: '字典管理', path: paths.dict, icon: React.createElement(BookOutlined) },
       { label: '系统日志', path: paths.systemLogs, icon: React.createElement(FileSearchOutlined) },
       { label: '系统教学', path: paths.tutorial, icon: React.createElement(BookOutlined) },
-      { label: '数据导入', path: paths.dataImport, icon: React.createElement(FileTextOutlined) },
       { label: '孤立数据', path: paths.orphanData, icon: React.createElement(DeleteOutlined) },
     ],
   },

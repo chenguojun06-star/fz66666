@@ -1,12 +1,19 @@
 package com.fashion.supplychain.system.orchestration;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.util.TextUtils;
+import com.fashion.supplychain.system.entity.Permission;
 import com.fashion.supplychain.system.entity.Role;
+import com.fashion.supplychain.system.entity.RoleTemplate;
+import com.fashion.supplychain.system.service.PermissionService;
 import com.fashion.supplychain.system.service.RolePermissionService;
 import com.fashion.supplychain.system.service.RoleService;
+import com.fashion.supplychain.system.service.RoleTemplateService;
 import com.fashion.supplychain.system.service.LoginLogService;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
@@ -14,6 +21,7 @@ import org.springframework.util.StringUtils;
 
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.stream.Collectors;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -32,6 +40,15 @@ public class RoleOrchestrator {
 
     @Autowired
     private PermissionCalculationEngine permissionEngine;
+
+    @Autowired
+    private RoleTemplateService roleTemplateService;
+
+    @Autowired
+    private PermissionService permissionService;
+
+    @Autowired
+    private ObjectMapper objectMapper;
 
     public Page<Role> list(Long page, Long pageSize, String roleName, String roleCode, String status) {
         return roleService.getRolePage(page, pageSize, roleName, roleCode, status);
@@ -149,6 +166,73 @@ public class RoleOrchestrator {
             log.warn("[RoleOrchestrator] 清除权限缓存失败，将在TTL后自动生效: {}", e.getMessage());
         }
         return true;
+    }
+
+    /**
+     * 根据模板创建角色
+     * @param templateId 模板ID
+     * @param roleName 自定义的角色名称（可选，为空则用模板名称）
+     * @param remark 操作原因
+     * @return 创建的角色ID
+     */
+    public Long applyTemplate(Long templateId, String roleName, String remark) {
+        // 1. 获取模板
+        RoleTemplate template = roleTemplateService.getById(templateId);
+        if (template == null || template.getDeleteFlag() == 1) {
+            throw new NoSuchElementException("模板不存在");
+        }
+
+        // 2. 创建角色
+        Role role = new Role();
+        role.setRoleName(StringUtils.hasText(roleName) ? roleName : template.getTemplateName());
+        role.setDescription(template.getTemplateDesc());
+        role.setStatus("active");
+        role.setDataScope(template.getPermissionRange());
+        role.setIsTemplate(false);
+        role.setSourceTemplateId(templateId);
+        role.setTenantId(UserContext.tenantId());
+
+        boolean saved = roleService.save(role);
+        if (!saved) {
+            throw new IllegalStateException("创建角色失败");
+        }
+
+        Long roleId = role.getId();
+
+        // 3. 将权限码转换为权限ID，并设置角色权限
+        if (StringUtils.hasText(template.getPermissionsJson())) {
+            try {
+                List<String> permissionCodes = objectMapper.readValue(
+                    template.getPermissionsJson(), new TypeReference<List<String>>() {});
+                if (permissionCodes != null && !permissionCodes.isEmpty()) {
+                    // 根据权限码查询权限ID
+                    List<Long> permissionIds = permissionService.list(
+                        new LambdaQueryWrapper<Permission>()
+                            .in(Permission::getPermissionCode, permissionCodes)
+                    ).stream().map(Permission::getId).collect(Collectors.toList());
+
+                    if (!permissionIds.isEmpty()) {
+                        rolePermissionService.replaceRolePermissions(roleId, permissionIds);
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("解析权限JSON失败: {}", e.getMessage());
+            }
+        }
+
+        // 4. 记录操作日志
+        saveOperationLog("role", String.valueOf(roleId), role.getRoleName(), "CREATE_FROM_TEMPLATE",
+            StringUtils.hasText(remark) ? remark : "从模板【" + template.getTemplateName() + "】创建");
+
+        // 5. 清除缓存
+        try {
+            permissionEngine.evictRolePermissionCache(roleId);
+            permissionEngine.evictAllUserPermissionCaches();
+        } catch (Exception e) {
+            log.warn("清除权限缓存失败: {}", e.getMessage());
+        }
+
+        return roleId;
     }
 
     // 使用TextUtils.safeText()替代

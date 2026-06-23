@@ -3,6 +3,7 @@ package com.fashion.supplychain.common;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
 
 /**
  * 操作人记录工具类
@@ -11,9 +12,11 @@ import lombok.extern.slf4j.Slf4j;
  * 1. 全系统所有环节自动记录操作人
  * 2. 支持外协工厂场景的手动填写
  */
-@Component
 @Slf4j
+@Component
 public class OperatorRecorder {
+
+    private static final Logger logger = log;
 
     /**
      * 记录操作人信息（自动从上下文获取）
@@ -40,7 +43,7 @@ public class OperatorRecorder {
             info.setOperatorId(manualOperatorId);
             info.setOperatorName(manualOperatorName);
             info.setIsOutsourced(true);
-            log.debug("外协工厂操作人: {}", manualOperatorName);
+            logger.debug("外协工厂操作人: {}", manualOperatorName);
             return info;
         }
 
@@ -50,7 +53,7 @@ public class OperatorRecorder {
             info.setOperatorId(ctx.getUserId());
             info.setOperatorName(ctx.getUsername());
             info.setIsOutsourced(false);
-            log.debug("系统操作人: {}", ctx.getUsername());
+            logger.debug("系统操作人: {}", ctx.getUsername());
             return info;
         }
 
@@ -59,12 +62,12 @@ public class OperatorRecorder {
             info.setOperatorId(manualOperatorId);
             info.setOperatorName(manualOperatorName);
             info.setIsOutsourced(isOutsourced);
-            log.warn("使用兜底操作人: {}", manualOperatorName);
+            logger.warn("使用兜底操作人: {}", manualOperatorName);
             return info;
         }
 
         // 完全无法获取操作人
-        log.error("无法获取操作人信息，UserContext为空且未提供手动操作人");
+        logger.error("无法获取操作人信息，UserContext为空且未提供手动操作人");
         info.setOperatorId(null);
         info.setOperatorName("未知操作人");
         info.setIsOutsourced(false);
@@ -133,7 +136,7 @@ public class OperatorRecorder {
                     }
                 }
             } catch (Exception e) {
-                log.error("应用操作人信息失败: {}", e.getMessage(), e);
+                logger.error("应用操作人信息失败: {}", e.getMessage(), e);
             }
         }
 

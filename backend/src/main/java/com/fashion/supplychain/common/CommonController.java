@@ -2,6 +2,7 @@ package com.fashion.supplychain.common;
 
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.common.tenant.TenantFilePathResolver;
+import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
@@ -27,6 +28,8 @@ import java.util.UUID;
 @Slf4j
 @PreAuthorize("isAuthenticated()")
 public class CommonController {
+
+    private static final Logger logger = log;
 
     private static final Set<String> ALLOWED_EXTENSIONS = Set.of(
             ".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".svg",
@@ -142,12 +145,12 @@ public class CommonController {
                 try {
                     TenantFilePathResolver.validateTenantAccess(fileTenantId);
                 } catch (Exception e) {
-                    log.warn("[旧下载端点-租户隔离] 跨租户文件访问被拒绝: currentUser={}, fileTenant={}, fileName={}",
+                    logger.warn("[旧下载端点-租户隔离] 跨租户文件访问被拒绝: currentUser={}, fileTenant={}, fileName={}",
                             UserContext.tenantId(), fileTenantId, fileName);
                     return ResponseEntity.status(403).build();
                 }
             } else {
-                log.info("[旧下载端点-租户隔离] 管理员访问旧格式文件: user={}, tenantId={}, fileName={}",
+                logger.info("[旧下载端点-租户隔离] 管理员访问旧格式文件: user={}, tenantId={}, fileName={}",
                         UserContext.username(), UserContext.tenantId(), fileName);
             }
 
@@ -165,14 +168,14 @@ public class CommonController {
         try {
             contentType = Files.probeContentType(filePath);
         } catch (IOException e) {
-            log.debug("[Common] 文件类型探测失败: {}", e.getMessage());
+            logger.debug("[Common] 文件类型探测失败: {}", e.getMessage());
         }
         MediaType mediaType = MediaType.APPLICATION_OCTET_STREAM;
         if (contentType != null && !contentType.trim().isEmpty()) {
             try {
                 mediaType = MediaType.parseMediaType(contentType);
             } catch (Exception e) {
-                log.debug("[Common] MediaType解析失败: {}", e.getMessage());
+                logger.debug("[Common] MediaType解析失败: {}", e.getMessage());
             }
         }
 
@@ -230,7 +233,7 @@ public class CommonController {
             if ("jpg".equals(format)) format = "jpeg";
             java.util.Iterator<javax.imageio.ImageWriter> writers = javax.imageio.ImageIO.getImageWritersByFormatName(format);
             if (!writers.hasNext()) {
-                log.warn("[图片压缩] 无可用ImageWriter for format={}, 使用原图", format);
+                logger.warn("[图片压缩] 无可用ImageWriter for format={}, 使用原图", format);
                 return originalBytes;
             }
             javax.imageio.ImageWriter writer = writers.next();
@@ -245,12 +248,12 @@ public class CommonController {
             }
             writer.dispose();
             byte[] result = baos.toByteArray();
-            log.info("[图片压缩] {}x{} → {}x{}, {}KB → {}KB",
+            logger.info("[图片压缩] {}x{} → {}x{}, {}KB → {}KB",
                 width, height, newWidth, newHeight,
                 originalBytes.length / 1024, result.length / 1024);
             return result;
         } catch (Exception e) {
-            log.warn("[图片压缩] 压缩失败，使用原图: {}", e.getMessage());
+            logger.warn("[图片压缩] 压缩失败，使用原图: {}", e.getMessage());
             return originalBytes;
         }
     }

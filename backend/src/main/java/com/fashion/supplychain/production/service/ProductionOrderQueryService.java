@@ -30,6 +30,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -84,6 +87,8 @@ public class ProductionOrderQueryService {
 
     @Autowired
     private ObjectMapper objectMapper;
+
+    private final ExecutorService enrichExecutor = Executors.newFixedThreadPool(8);
 
     public IPage<ProductionOrder> queryPage(Map<String, Object> params) {
         Map<String, Object> safeParams = params == null ? new HashMap<>() : params;
@@ -240,23 +245,40 @@ public class ProductionOrderQueryService {
     }
 
     private void enrichOrderList(IPage<ProductionOrder> resultPage) {
-        fillStyleCover(resultPage.getRecords());
-        orderCuttingFillService.fillCuttingSummary(resultPage.getRecords());
-        progressFillHelper.fillCurrentProcessName(resultPage.getRecords());
-        orderStockFillService.fillStockSummary(resultPage.getRecords());
-        flowStageFillHelper.fillFlowStageFields(resultPage.getRecords());
-        resultPage.getRecords().forEach(o -> {
+        List<ProductionOrder> records = resultPage.getRecords();
+        
+        // 并行执行所有填充操作，提升列表查询性能
+        List<CompletableFuture<Void>> futures = new java.util.ArrayList<>();
+        
+        // 异步任务组1：基础信息填充
+        futures.add(CompletableFuture.runAsync(() -> fillStyleCover(records), enrichExecutor));
+        futures.add(CompletableFuture.runAsync(() -> orderCuttingFillService.fillCuttingSummary(records), enrichExecutor));
+        futures.add(CompletableFuture.runAsync(() -> progressFillHelper.fillCurrentProcessName(records), enrichExecutor));
+        futures.add(CompletableFuture.runAsync(() -> orderStockFillService.fillStockSummary(records), enrichExecutor));
+        futures.add(CompletableFuture.runAsync(() -> flowStageFillHelper.fillFlowStageFields(records), enrichExecutor));
+        futures.add(CompletableFuture.runAsync(() -> orderQualityFillService.fillQualityStats(records), enrichExecutor));
+        futures.add(CompletableFuture.runAsync(() -> stageBundleStatsFillHelper.fillStageBundleStats(records), enrichExecutor));
+        futures.add(CompletableFuture.runAsync(() -> fillHasSecondaryProcess(records), enrichExecutor));
+        
+        // 异步任务组2：价格信息填充
+        futures.add(CompletableFuture.runAsync(() -> priceFillHelper.fillFactoryUnitPrice(records), enrichExecutor));
+        futures.add(CompletableFuture.runAsync(() -> priceFillHelper.fillQuotationUnitPrice(records), enrichExecutor));
+        futures.add(CompletableFuture.runAsync(() -> priceFillHelper.fillProgressNodeUnitPrices(records), enrichExecutor));
+        
+        // 等待所有异步任务完成
+        try {
+            CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).get();
+        } catch (Exception e) {
+            log.warn("[OrderQuery] 并行填充部分任务失败: {}", e.getMessage());
+        }
+        
+        // 同步任务：简单的内存操作，不需要异步
+        records.forEach(o -> {
             if (o != null && (!org.springframework.util.StringUtils.hasText(o.getOrderOperatorName()))
                     && org.springframework.util.StringUtils.hasText(o.getCreatedByName())) {
                 o.setOrderOperatorName(o.getCreatedByName());
             }
         });
-        orderQualityFillService.fillQualityStats(resultPage.getRecords());
-        stageBundleStatsFillHelper.fillStageBundleStats(resultPage.getRecords());
-        priceFillHelper.fillFactoryUnitPrice(resultPage.getRecords());
-        priceFillHelper.fillQuotationUnitPrice(resultPage.getRecords());
-        priceFillHelper.fillProgressNodeUnitPrices(resultPage.getRecords());
-        fillHasSecondaryProcess(resultPage.getRecords());
     }
 
     private void applyCurrentProcessNameFilter(IPage<ProductionOrder> resultPage, String currentProcessName) {

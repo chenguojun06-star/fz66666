@@ -143,6 +143,12 @@ public class MaterialPickupRecord {
     /** 生产方类型：INTERNAL=内部工厂  EXTERNAL=外部工厂 */
     private String factoryType;
 
+    /** 成本归属：INTERNAL=内部工厂平账，EXTERNAL=外部工厂扣款 */
+    private String costOwner;
+
+    /** 成本是否已汇总到订单：0=未汇总，1=已汇总 */
+    private Integer costSettled;
+
     // =================== 关联生产订单（查询时补充业务属性） ===================
 
     /** 生产方式：CMT / FOB / ODM / OEM（非数据库字段） */

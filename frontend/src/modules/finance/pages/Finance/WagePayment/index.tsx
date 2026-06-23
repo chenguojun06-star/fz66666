@@ -4,6 +4,7 @@ import { formatMoney } from '@/utils/format';
 import dayjs from 'dayjs';
 import { useSync } from '@/utils/syncManager';
 import AccountManagementModal from './components/AccountManagementModal';
+import BillSummaryTab from './components/BillSummaryTab';
 import {
   App,
   Button,
@@ -30,6 +31,7 @@ import {
   PayCircleOutlined,
   AccountBookOutlined,
   DownloadOutlined,
+  FileTextOutlined,
 } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
 import ResizableModal from '@/components/common/ResizableModal';
@@ -194,7 +196,7 @@ const PaymentCenterPage: React.FC = () => {
                 收付款中心
               </h2>
               <span style={{ color: 'var(--color-text-tertiary)', fontSize: 13 }}>
-                集中管理账单汇总、待收付款、员工工资、工厂对账的收付款操作
+                统一处理所有付款：工资结算、外发结算、物料对账、费用报销
               </span>
             </div>
             <Button type="primary" ghost icon={<DollarOutlined />} onClick={handleOpenPayModal}>
@@ -269,7 +271,7 @@ const PaymentCenterPage: React.FC = () => {
                 key: 'pending',
                 label: (
                   <span>
-                    <AccountBookOutlined /> 待处理 {pendingStats.total > 0 && <Tag color="red">{pendingStats.total}</Tag>}
+                    <AccountBookOutlined /> 待付款 {pendingStats.total > 0 && <Tag color="red">{pendingStats.total}</Tag>}
                   </span>
                 ),
                 children: (
@@ -453,6 +455,15 @@ const PaymentCenterPage: React.FC = () => {
                     />
                   </>
                 ),
+              },
+              {
+                key: 'receivable',
+                label: (
+                  <span>
+                    <FileTextOutlined /> 应收账单
+                  </span>
+                ),
+                children: <BillSummaryTab />,
               },
             ]}
           />

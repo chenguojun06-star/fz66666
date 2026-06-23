@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState, useEffect } from 'react';
-import { Alert, App, Avatar, Button, Card, Checkbox, Col, Empty, Form, Input, Row, Select, Space, Spin, Tag, Tabs, Tooltip, Typography } from 'antd';
+import { Alert, App, Avatar, Button, Card, Checkbox, Col, Empty, Form, Input, Modal, Row, Select, Space, Spin, Tag, Tabs, Tooltip, Typography, message } from 'antd';
 import type { ButtonProps } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import PageLayout from '@/components/common/PageLayout';
@@ -15,6 +15,9 @@ import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
 import RejectReasonModal from '@/components/common/RejectReasonModal';
+import RoleTemplateSelector, { RoleTemplate } from './components/RoleTemplateSelector';
+import TenantSetupGuide from './components/TenantSetupGuide';
+import { roleTemplateApi } from '@/services/system/roleTemplateApi';
 import './styles.css';
 import { permissionCodes } from '@/routeConfig';
 import {
@@ -190,6 +193,10 @@ const RoleList: React.FC = () => {
   const { isMobile, modalWidth } = useViewport();
   const roleModal = useModal<Role>();
 
+  // 角色模板选择弹窗
+  const [templateModalOpen, setTemplateModalOpen] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState<RoleTemplate | undefined>();
+
   const [roleList, setRoleList] = useState<RoleRecord[]>([]);
   const [roleUserCounts, setRoleUserCounts] = useState<Record<string, number>>({});
   const [selectedRole, setSelectedRole] = useState<RoleRecord | null>(null);
@@ -217,6 +224,9 @@ const RoleList: React.FC = () => {
 
   const [remarkModalState, setRemarkModalState] = useState<RemarkModalState | null>(null);
   const [remarkLoading, setRemarkLoading] = useState(false);
+
+  // 新租户开户向导
+  const [showSetupGuide, setShowSetupGuide] = useState(false);
 
   const fetchRoles = useCallback(async () => {
     try {
@@ -251,6 +261,22 @@ const RoleList: React.FC = () => {
   }, [message, showSmartErrorNotice]);
 
   useEffect(() => { fetchRoles(); }, [fetchRoles]);
+
+  const checkNewTenant = async () => {
+    try {
+      const res = await roleTemplateApi.checkNewTenant();
+      if (res.data?.isNewTenant) {
+        setShowSetupGuide(true);
+      }
+    } catch (e) {
+      // 忽略错误
+    }
+  };
+
+  useEffect(() => {
+    // 检测是否为新租户
+    checkNewTenant();
+  }, []);
 
   const loadPermTreeAndChecked = useCallback(async (roleId: string) => {
     const rid = String(roleId || '').trim();
@@ -382,7 +408,39 @@ const RoleList: React.FC = () => {
     });
   };
 
-  const closeDialog = () => { roleModal.close(); form.resetFields(); };
+  const openDialogWithTemplate = (template: RoleTemplate) => {
+    roleModal.open(undefined);
+    form.setFieldsValue({
+      roleName: '',
+      roleCode: '',
+      description: template.templateDesc || '',
+      status: 'active',
+      dataScope: template.permissionRange || 'team',
+    });
+    // 保存模板ID到表单外部，供后续使用（如apply接口）
+    (form as any).__templateId = template.id;
+  };
+
+  // 从模板直接创建角色（调用apply接口）
+  const handleApplyTemplate = async (template: RoleTemplate) => {
+    setTemplateModalOpen(false);
+    try {
+      const res: any = await api.post('/role-template/apply', {
+        templateId: template.id,
+        remark: '应用角色模板',
+      });
+      if (res?.code === 200) {
+        message.success('角色创建成功');
+        fetchRoles();
+      } else {
+        message.error(res?.message || '创建失败');
+      }
+    } catch (error: unknown) {
+      message.error(getErrorMessage(error, '创建失败'));
+    }
+  };
+
+  const closeDialog = () => { roleModal.close(); form.resetFields(); (form as any).__templateId = undefined; };
 
   const openRemarkModal = (title: string, okText: string, okButtonProps: ButtonProps | undefined, onConfirm: (remark: string) => Promise<void>) => {
     setRemarkModalState({ open: true, title, okText, okDanger: okButtonProps?.danger === true, onConfirm });
@@ -823,7 +881,10 @@ const RoleList: React.FC = () => {
       <PageLayout
         title="岗位管理"
         titleExtra={
-          <Button type="primary" ghost onClick={() => openDialog()}>新增角色</Button>
+          <Space>
+            <Button type="primary" ghost onClick={() => setTemplateModalOpen(true)}>从模板创建</Button>
+            <Button type="primary" ghost onClick={() => openDialog()}>空模板创建</Button>
+          </Space>
         }
         headerContent={
           <>
@@ -944,6 +1005,50 @@ const RoleList: React.FC = () => {
         loading={remarkLoading}
         onOk={handleRemarkConfirm}
         onCancel={() => setRemarkModalState(null)}
+      />
+
+      {/* 角色模板选择弹窗 */}
+      <Modal
+        title="选择角色模板"
+        open={templateModalOpen}
+        onCancel={() => { setTemplateModalOpen(false); setSelectedTemplate(undefined); }}
+        footer={[
+          <Button key="cancel" onClick={() => { setTemplateModalOpen(false); setSelectedTemplate(undefined); }}>取消</Button>,
+          <Button key="apply" type="primary" disabled={!selectedTemplate} onClick={() => {
+            if (selectedTemplate) {
+              handleApplyTemplate(selectedTemplate);
+            }
+          }}>应用模板创建角色</Button>,
+        ]}
+        width={720}
+        destroyOnClose
+      >
+        <RoleTemplateSelector
+          value={selectedTemplate?.id}
+          onChange={(id, template) => setSelectedTemplate(template)}
+        />
+        {selectedTemplate && (
+          <Alert
+            message="提示"
+            description={`已选择「${selectedTemplate.templateName}」模板。点击「下一步：编辑角色」继续创建角色，权限配置可在创建后编辑。`}
+            type="info"
+            showIcon
+            style={{ marginTop: 16 }}
+          />
+        )}
+      </Modal>
+
+      {/* 新租户开户向导 */}
+      <TenantSetupGuide
+        visible={showSetupGuide}
+        onComplete={() => {
+          setShowSetupGuide(false);
+          message.success('基础角色已创建，请继续完善配置');
+          fetchRoles();
+        }}
+        onSkip={() => {
+          setShowSetupGuide(false);
+        }}
       />
     </>
   );

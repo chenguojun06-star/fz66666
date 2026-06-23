@@ -5,6 +5,7 @@ import {
   CloseCircleOutlined,
   SearchOutlined,
   FileTextOutlined,
+  CalendarOutlined,
 } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
 import {
@@ -167,6 +168,9 @@ const BillSummaryTab: React.FC = () => {
       title: '来源单号', dataIndex: 'sourceNo', key: 'sourceNo', width: 150, ellipsis: true,
     },
     {
+      title: '备注/扣款原因', dataIndex: 'remark', key: 'remark', width: 180, ellipsis: true,
+    },
+    {
       title: '创建时间', dataIndex: 'createTime', key: 'createTime', width: 160,
       render: (v: string) => v ? dayjs(v).format('YYYY-MM-DD HH:mm') : '-',
     },
@@ -209,6 +213,20 @@ const BillSummaryTab: React.FC = () => {
         <Select id="billTypeFilter" style={{ width: 100 }} options={BILL_TYPE_OPTIONS} value={query.billType || ''} onChange={v => updateQuery({ billType: v || undefined })} />
         <Select id="billCategoryFilter" style={{ width: 100 }} options={BILL_CATEGORY_OPTIONS} value={query.billCategory || ''} onChange={v => updateQuery({ billCategory: v || undefined })} />
         <Select id="billStatusFilter" style={{ width: 100 }} options={BILL_STATUS_OPTIONS} value={query.status || ''} onChange={v => updateQuery({ status: v || undefined })} />
+        {/* 结算月选择器 */}
+        <DatePicker.MonthPicker
+          style={{ width: 120 }}
+          placeholder="结算月份"
+          allowClear
+          suffixIcon={<CalendarOutlined />}
+          onChange={(date) => {
+            if (date) {
+              updateQuery({ settlementMonth: date.format('YYYY-MM') });
+            } else {
+              updateQuery({ settlementMonth: undefined });
+            }
+          }}
+        />
         {/* 日期范围选择：取代之前的月份选择器，用创建时间范围过滤 */}
         <DatePicker.RangePicker
           placeholder={['开始日期', '结束日期']}

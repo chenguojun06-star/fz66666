@@ -135,11 +135,27 @@ public class ShipmentReconciliationController {
     }
 
     @PreAuthorize("isAuthenticated()")
+    @GetMapping("/deduction-items/by-order/{orderId}")
+    public Result<List<DeductionItem>> getDeductionItemsByOrderId(@PathVariable String orderId) {
+        return Result.success(shipmentReconciliationOrchestrator.getDeductionItemsByOrderId(orderId));
+    }
+
+    @PreAuthorize("isAuthenticated()")
     @PostMapping("/deduction-items/{reconciliationId}")
     public Result<?> saveDeductionItems(
             @PathVariable String reconciliationId,
             @RequestBody(required = false) List<DeductionItem> items) {
         shipmentReconciliationOrchestrator.saveDeductionItems(reconciliationId,
+                items == null ? Collections.emptyList() : items);
+        return Result.successMessage("操作成功");
+    }
+
+    @PreAuthorize("isAuthenticated()")
+    @PostMapping("/deduction-items/by-order/{orderId}")
+    public Result<?> saveDeductionItemsByOrderId(
+            @PathVariable String orderId,
+            @RequestBody(required = false) List<DeductionItem> items) {
+        shipmentReconciliationOrchestrator.saveDeductionItemsByOrderId(orderId,
                 items == null ? Collections.emptyList() : items);
         return Result.successMessage("操作成功");
     }

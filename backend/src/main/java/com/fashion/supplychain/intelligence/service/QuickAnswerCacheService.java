@@ -9,7 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -166,32 +166,37 @@ public class QuickAnswerCacheService {
     // ========================================================================
 
     /** 写入业务快照（数字卡片）——每租户每类型只留1条有效快照，避免表无限变大 */
-    @Transactional(rollbackFor = Exception.class)
     public void saveSnapshot(Long tenantId, Map<String, Object> snapshotData,
                               String summaryText, String evidenceJson) {
         if (tenantId == null) return;
         try {
-            // 先把该租户旧的SNAPSHOT标记为已删除（每租户只留最新1条有效快照）
-            quickAnswerMapper.softDeleteOldSnapshots(tenantId);
-
-            QuickAnswer qa = new QuickAnswer();
-            qa.setTenantId(tenantId);
-            qa.setAnswerType("SNAPSHOT");
-            qa.setAnswerSummary(summaryText);
-            qa.setSnapshotData(toJson(snapshotData));
-            qa.setRawEvidence(evidenceJson);
-            qa.setConfidence(0.95);
-            qa.setDataTimestamp(LocalDateTime.now());
-            qa.setCacheSource("BusinessSnapshotPrefetcher");
-            qa.setHitCount(0);
-            qa.setDeleteFlag(0);
-            qa.setExpireTime(LocalDateTime.now().plusMinutes(ttlMinutes));
-            quickAnswerMapper.insert(qa);
-            log.info("[QuickAnswer] 保存SNAPSHOT: tenantId={}, summary={}",
-                    tenantId, truncate(summaryText, 60));
+            saveSnapshotInternal(tenantId, snapshotData, summaryText, evidenceJson);
         } catch (Exception e) {
             log.warn("[QuickAnswer] 保存SNAPSHOT失败: {}", e.getMessage());
         }
+    }
+
+    /** 内部方法：实际的快照保存逻辑（由Orchestrator调用，事务在Orchestrator层） */
+    public void saveSnapshotInternal(Long tenantId, Map<String, Object> snapshotData,
+                                     String summaryText, String evidenceJson) {
+        // 先把该租户旧的SNAPSHOT标记为已删除（每租户只留最新1条有效快照）
+        quickAnswerMapper.softDeleteOldSnapshots(tenantId);
+
+        QuickAnswer qa = new QuickAnswer();
+        qa.setTenantId(tenantId);
+        qa.setAnswerType("SNAPSHOT");
+        qa.setAnswerSummary(summaryText);
+        qa.setSnapshotData(toJson(snapshotData));
+        qa.setRawEvidence(evidenceJson);
+        qa.setConfidence(0.95);
+        qa.setDataTimestamp(LocalDateTime.now());
+        qa.setCacheSource("BusinessSnapshotPrefetcher");
+        qa.setHitCount(0);
+        qa.setDeleteFlag(0);
+        qa.setExpireTime(LocalDateTime.now().plusMinutes(ttlMinutes));
+        quickAnswerMapper.insert(qa);
+        log.info("[QuickAnswer] 保存SNAPSHOT: tenantId={}, summary={}",
+                tenantId, truncate(summaryText, 60));
     }
 
     /** 写入预构建答案（由PatrolAgent使用） */

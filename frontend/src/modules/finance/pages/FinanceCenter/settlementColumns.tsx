@@ -15,6 +15,7 @@ export function getSettlementColumns(
   handleAuditOrder: (record: FinishedSettlementRow) => void,
   openRemarkModal: (record: FinishedSettlementRow) => void,
   openLogModal: (orderId: string) => void,
+  openDeductionModal: (record: FinishedSettlementRow) => void,
 ): ColumnsType<FinishedSettlementRow> {
   return [
     {
@@ -201,6 +202,7 @@ export function getSettlementColumns(
           <RowActions
             actions={[
               { key: 'approve', label: isAudited ? '已审核' : '审核', primary: canAudit, disabled: isInternalFactory || isCancelled || isAudited || !isOrderFrozenByStatus(record) || !hasWarehousedQty, onClick: () => handleAuditOrder(record) },
+              { key: 'deduction', label: '扣款', onClick: () => openDeductionModal(record) },
               { key: 'remark', label: '备注', onClick: () => openRemarkModal(record) },
               { key: 'log', label: '日志', onClick: () => openLogModal(record.orderId) },
             ]}

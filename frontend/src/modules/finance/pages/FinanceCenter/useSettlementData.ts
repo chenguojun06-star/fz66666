@@ -92,6 +92,10 @@ export function useSettlementData(auditedOrderNos: Set<string>, onAuditNosChange
   const [remarkText, setRemarkText] = useState<string>('');
   const [logModalVisible, setLogModalVisible] = useState(false);
   const [orderLogs, setOrderLogs] = useState<any[]>([]);
+  const [deductionModalVisible, setDeductionModalVisible] = useState(false);
+  const [deductionOrderId, setDeductionOrderId] = useState<string>('');
+  const [deductionItems, setDeductionItems] = useState<any[]>([]);
+  const [deductionLoading, setDeductionLoading] = useState(false);
   const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
   const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
   const [pageParams, setPageParams] = useState<PageParams>({
@@ -261,6 +265,41 @@ export function useSettlementData(auditedOrderNos: Set<string>, onAuditNosChange
     }
   };
 
+  const openDeductionModal = async (record: FinishedSettlementRow) => {
+    setDeductionOrderId(record.orderId);
+    setDeductionLoading(true);
+    setDeductionModalVisible(true);
+    try {
+      const response = await api.get(`/finance/shipment-reconciliation/deduction-items/by-order/${record.orderId}`);
+      if (response.code === 200) {
+        setDeductionItems(response.data || []);
+      } else {
+        setDeductionItems([]);
+        message.warning(response.message || '获取扣款明细失败');
+      }
+    } catch (error: unknown) {
+      setDeductionItems([]);
+      const errMsg = error instanceof Error ? error.message : '获取扣款明细失败';
+      // 不显示错误，因为可能是订单没有对账单
+      console.warn('[Deduction]', errMsg);
+    } finally {
+      setDeductionLoading(false);
+    }
+  };
+
+  const saveDeductionItems = async (items: any[]) => {
+    if (!deductionOrderId) return;
+    try {
+      await api.post(`/finance/shipment-reconciliation/deduction-items/by-order/${deductionOrderId}`, items);
+      message.success('扣款保存成功');
+      setDeductionModalVisible(false);
+      loadData();
+    } catch (error: unknown) {
+      const errMsg = error instanceof Error ? error.message : '保存失败';
+      message.error(errMsg);
+    }
+  };
+
   const handleExport = async () => {
     try {
       const params = buildPageParams();
@@ -300,6 +339,9 @@ export function useSettlementData(auditedOrderNos: Set<string>, onAuditNosChange
     editingOrderId, remarkText, setRemarkText,
     logModalVisible, setLogModalVisible,
     orderLogs,
+    deductionModalVisible, setDeductionModalVisible,
+    deductionOrderId, deductionItems, setDeductionItems,
+    deductionLoading,
     dateRange, setDateRange,
     smartError, showSmartErrorNotice,
     pageParams,
@@ -307,6 +349,7 @@ export function useSettlementData(auditedOrderNos: Set<string>, onAuditNosChange
     handleAuditOrder, handleBatchAudit,
     handleExportSelected, handleExport,
     openRemarkModal, saveRemark, openLogModal,
+    openDeductionModal, saveDeductionItems,
     handleTableChange, loadData,
   };
 }

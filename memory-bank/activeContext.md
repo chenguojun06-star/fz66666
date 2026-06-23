@@ -1,12 +1,13 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-06-20
+> 最后更新：2026-06-23
 
 ---
 
 ## 当前目标
 
+- ✅ 五大能力增强（HUD可观测性 + 上下文腐烂治理 + 学习门槛降低 + 协作流自动化 + Superpowers完善）
 - ✅ 采购车系统全链路（后端+前端+小程序）
 - ✅ 数据安全修复（tenant_id 隔离 + 事务原子性 + 字段名一致性）
 - ✅ ProductionOrderController 深度审查
@@ -17,8 +18,148 @@
 - ✅ 小程序错误处理统一优化（2026-06-19下午完成）
 - ✅ 小云AI 6大升级 + 开发效能体系（2026-06-20完成）
 - ✅ 小云AI响应速度全面提速（2026-06-20晚：解决"一两分钟才回答"的核心痛点）
+- ✅ 设置管理模块全面优化（2026-06-22：供应商账号独立页面 + 菜单重组 + 预设角色模板）
+- ✅ 权限系统大牌水准优化（2026-06-23：新租户开户向导 + TypeScript/编译错误修复 + 数据权限维度验证）
 
 ## 最近变更
+
+### 2026-06-23 权限系统大牌水准优化
+
+**背景**：用户要求"优化到大牌的水准，比他们的系统要好用更简单，租户开户就马上知道怎么使用"。
+
+**优化内容**：
+
+| 优化项 | 状态 | 说明 |
+|--------|:----:|------|
+| 新租户开户向导 | ✅ | TenantSetupGuide 组件，检测新租户并引导快速创建角色 |
+| 预设角色模板 | ✅ | 7个模板（管理员/跟单员/仓库管理员/财务/质检/生产主管/裁剪师傅） |
+| 数据权限维度 | ✅ | all/team/own 三档 + factoryId 供应商/工厂隔离 |
+| 供应商数据隔离 | ✅ | SupplierPortalController 完整实现（采购/库存/应收/对账） |
+| 权限矩阵可视化 | ✅ | RoleList 页面按模块分组展示，已选/总数统计 |
+
+**修复的问题**：
+1. `TenantSetupGuide.tsx` - `res.message` 属性不存在 → 添加 `message?: string` 到 API 返回类型
+2. `RoleTemplateController.java` - `Result.error()` 方法不存在 → 改为 `Result.badRequest()`
+
+**编译验证**：
+- 后端 `mvn compile` BUILD SUCCESS ✅
+- 前端 `npx tsc --noEmit` 0 errors ✅
+
+**数据权限架构**：
+- `all` - 管理员看全部数据
+- `team` - 团队范围（按 orgUnitId）
+- `own` - 仅自己创建的数据
+- `factoryId` - 供应商/工厂维度隔离（SupplierPortalController 用 factoryId 过滤）
+
+**设计决策**：
+- 供应商用户通过 factoryId 实现数据隔离，无法访问其他供应商数据
+- 预设角色模板已覆盖常见业务角色，新租户可直接选用
+- 权限配置界面可视化程度已较高，无需大幅改动
+
+---
+
+### 2026-06-23 Skills & MCP 全面增强
+
+**背景**：新增的 5 个上下文文件（ai-dashboard/change-impact/context-rot/quick-start/anti-patterns）需要被 Skills 和 MCP servers 主动调用，否则每次对话 AI 不会自动加载。
+
+**增强总览**：
+
+| 类别 | 之前状态 | 本次增强 |
+|------|---------|---------|
+| **Skills** | 28个，缺少统一入口 | ✅ 新增 `dev-assistant` Skill（开发助手统一入口，整合所有开发相关能力） |
+| **MCP Servers** | 2个（db-query + flyway） | ✅ 新增 `memory-bank-mcp`（AI记忆读写）<br>✅ 新增 `change-impact-mcp`（变更影响分析）<br>✅ 新增 `anti-pattern-mcp`（反模式检测） |
+| **现有 Skills** | 未引用新文件 | ✅ 更新 `code-quality-gate` + `dev-closure-verification` + `memory-bank-updater` 引用新文件 |
+
+**新增 Skills**：
+- `.trae/skills/dev-assistant/SKILL.md`（~270行）— 开发助手统一入口，触发词：开发/写代码/修bug/做功能/改数据库，整合 change-impact-matrix + anti-patterns + agent-workflow + 所有开发相关 Skills
+
+**新增 MCP Servers**：
+- `.trae/mcp-servers/memory-bank-mcp/`（package.json + index.js）— 提供 AI 记忆读写能力（read_memory/read_all_core/append_active_context/mark_progress_complete/append_ai_dashboard/generate_session_summary）
+- `.trae/mcp-servers/change-impact-mcp/`（package.json + index.js）— 提供变更影响分析能力（analyze_change_risk/check_p0_rules/generate_checklist/get_impact_matrix）
+- `.trae/mcp-servers/anti-pattern-mcp/`（package.json + index.js）— 提供反模式检测能力（detect_anti_patterns/get_anti_pattern/get_all_anti_patterns/generate_self_check_list）
+
+**修改 Skills**：
+- `.trae/skills/code-quality-gate/SKILL.md` — 新增 triggers + 引用 anti-patterns.md + change-impact-matrix.md
+- `.trae/skills/dev-closure-verification/SKILL.md` — 新增 triggers + 引用 ai-dashboard.md
+- `.trae/skills/memory-bank-updater/SKILL.md` — 从 5 个更新文件 → 7 个，新增 ai-dashboard + quick-start 步骤
+
+**关键设计决策**：
+1. dev-assistant Skill 作为开发任务的统一入口，避免 AI 不知道该调用哪个 Skill
+2. 3 个 MCP servers 提供程序化能力，让外部编排工具（Cursor/Claude Desktop）也能读取项目记忆/分析影响/检测反模式
+3. 所有 MCP servers 使用 Node.js + @modelcontextprotocol/sdk，与现有 db-query-mcp/flyway-mcp 保持一致
+
+**无代码变更**，无需编译验证
+
+---
+
+### 2026-06-23 五大能力全面增强
+
+**背景**：参照 Claude Code 的五大核心能力（Superpowers 工作流 / HUD 可观测性 / GET SHIT DONE 上下文治理 / Learn Claude Code 学习门槛 / Code Action 协作流），对本项目已有能力做全面增强，补齐短板。
+
+**增强总览**：
+
+| 能力 | 之前状态 | 本次增强 |
+|------|---------|---------|
+| **HUD 可观测性** | 依赖 IDE 原生，无项目级仪表盘 | ✅ 新增 `ai-dashboard.md`：会话速览 + 操作日志 + Token预警 + 文件变更清单 |
+| **变更影响可视化** | 开发者自己评估，无标准 | ✅ 新增 `change-impact-matrix.md`：P0/P1/P2 三级变更识别 + 后端→前端→小程序三级联动图 + CHECKLIST |
+| **上下文腐烂治理** | 有 5 层 memory-bank，无压缩机制 | ✅ 新增 `context-rot-mgmt.md`：会话摘要模板 + 上下文块智能开关 + 压缩触发条件 + 归档策略 |
+| **学习门槛降低** | copilot-instructions.md 很长，无快速入门 | ✅ 新增 `quick-start-5min.md`：一句话项目介绍 + 7条P0铁律速记 + 快速搜索指引 + 常见问题速查 |
+| **反模式速查** | 零散分布在 optimization-log 各条目中 | ✅ 新增 `anti-patterns.md`：12+ 条常见反模式（数据库/后端/前端/小程序/工作流/AI助手），每条含识别信号+错误做法+正确做法 |
+| **协作流自动化** | 基础 PR 模板已存在 | ✅ 增强 `pull_request_template.md`：新增变更摘要表格 + 变更影响分析 CHECKLIST + 修改文件清单 + 关联文档记录 |
+
+**新增文件**：
+- memory-bank/ai-dashboard.md（~110 行）
+- memory-bank/change-impact-matrix.md（~160 行）
+- memory-bank/context-rot-mgmt.md（~180 行）
+- memory-bank/quick-start-5min.md（~220 行）
+- memory-bank/anti-patterns.md（~230 行）
+
+**修改文件**：
+- memory-bank/activeContext.md（新增本次变更记录）
+- .github/pull_request_template.md（增强变更摘要模板 + 影响分析 + 文件清单）
+
+**无代码变更**，无需编译验证
+
+**⚠️ 重要：MCP Servers 已注册**
+- MCP 配置文件：`~/.trae/mcp.json`
+- 包含 5 个 MCP servers：memory-bank-mcp + change-impact-mcp + anti-pattern-mcp + db-query-mcp + flyway-mcp
+- 需要**重启 Trae IDE** 才能加载新的 MCP servers
+- db-query-mcp 需要设置环境变量 `MCP_DB_PASSWORD=你的数据库密码`
+
+**关键设计决策**：
+1. 所有 HUD/可观测性功能都使用纯 Markdown 表格实现，不引入任何工具依赖
+2. 5 个新文件都放在 `memory-bank/` 下，与现有 Memory Bank 系统保持一致
+3. 变更影响矩阵采用 P0/P1/P2 三级分类，与 agent-workflow.md 的风险等级定义对齐
+4. PR 模板增强后保留原有检查项，只在顶部增加了变更摘要表，中部增加影响分析，无破坏性变更
+
+---
+
+### 2026-06-22 设置管理模块全面优化
+
+**背景**：用户反馈"设置管理里面人员管理、权限管理、供应商权限搞得乱七八糟，头都是大的"。
+
+**优化总览**：
+
+| 优化项 | 核心变更 | 状态 |
+|--------|---------|:----:|
+| 供应商账号独立页面 | 新增 `/system/supplier-users` 页面，统计面板+高级筛选+完整CRUD | ✅ |
+| 系统设置菜单重组 | 拆分为"系统设置"(高频6项)和"工具"(低频5项)两个菜单 | ✅ |
+| 预设角色模板 | 新增角色模板表 + RoleTemplateController + 前端模板选择组件 | ✅ |
+| 菜单标签澄清 | FactoryList/PartnerManagement 管理不同数据，不合并，只澄清职责 | ✅ |
+
+**新增/修改文件**：
+- 后端：`SupplierUserController` (+/all-list), `FactoryController` (+/simple-list), `RoleTemplate*` (5个新文件)
+- 前端：`SupplierUserList/index.tsx` (新页面), `RoleTemplateSelector.tsx` (新组件), `routeConfig.ts` (菜单重组)
+- Flyway：`V20260622001__add_role_template.sql`
+
+**分析结论**：
+- FactoryList (t_factory) 和 PartnerManagement (t_organization_unit) 管理不同数据，不应合并
+- 供应商账号管理入口从 FactoryList 弹窗独立为完整页面
+- 系统设置菜单按使用频率拆分为两个菜单
+
+**编译验证**：mvn compile ✅ | npx tsc --noEmit ✅（仅 StyleSizeTab.tsx 有历史遗留错误）
+
+---
 
 ### 2026-06-20晚 小云AI响应速度全面提速 — 解决"一两分钟才回答"
 

@@ -1,6 +1,7 @@
 package com.fashion.supplychain.common;
 
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
@@ -19,6 +20,8 @@ import java.util.concurrent.atomic.AtomicLong;
 @Aspect
 @Component
 public class PerformanceMonitor {
+
+    private static final Logger logger = log;
 
     @Value("${app.performance-monitor.default-warn-threshold-ms:1000}")
     private long defaultWarnThresholdMs;
@@ -104,12 +107,12 @@ public class PerformanceMonitor {
             // 如果执行时间超过阈值，记录警告日志
             long warnThreshold = resolveWarnThreshold(methodName);
             if (executionTime > warnThreshold) {
-                log.warn("慢方法警告: {} 执行耗时 {}ms (阈值={}ms)", methodName, executionTime, warnThreshold);
+                logger.warn("慢方法警告: {} 执行耗时 {}ms (阈值={}ms)", methodName, executionTime, warnThreshold);
             }
 
             // 记录调试日志
-            if (log.isDebugEnabled()) {
-                log.debug("方法执行: {} 耗时 {}ms", methodName, executionTime);
+            if (logger.isDebugEnabled()) {
+                logger.debug("方法执行: {} 耗时 {}ms", methodName, executionTime);
             }
         }
     }
@@ -155,17 +158,17 @@ public class PerformanceMonitor {
      * 打印统计报告
      */
     public void printReport() {
-        log.info("========== 性能监控报告 ==========");
+        logger.info("========== 性能监控报告 ==========");
         if (statsMap.isEmpty()) {
-            log.info("暂无统计信息");
+            logger.info("暂无统计信息");
             return;
         }
 
         statsMap.entrySet().stream()
                 .sorted((e1, e2) -> Long.compare(e2.getValue().getAvgTime(), e1.getValue().getAvgTime()))
                 .forEach(entry -> {
-                    log.info("{}: {}", entry.getKey(), entry.getValue());
+                    logger.info("{}: {}", entry.getKey(), entry.getValue());
                 });
-        log.info("==================================");
+        logger.info("==================================");
     }
 }

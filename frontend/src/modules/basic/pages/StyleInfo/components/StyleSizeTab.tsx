@@ -301,7 +301,7 @@ const StyleSizeTab: React.FC<Props> = ({
       setSizeColumns(allSizes);
 
       // 7. 友好提示
-      const msg = [];
+      const msg: string[] = [];
       if (newSizes.length > 0) msg.push(`新增 ${newSizes.length} 个尺码（${newSizes.join(', ')}）`);
       if (partMap.size > 0) msg.push(`导入 ${partMap.size} 个部位数据`);
       if (msg.length) message.success(msg.join('，'));

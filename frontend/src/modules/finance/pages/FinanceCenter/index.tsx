@@ -1,22 +1,21 @@
 import React, { useState } from 'react';
 import { Tabs } from 'antd';
-import { FileTextOutlined, ShopOutlined, AuditOutlined, DollarOutlined } from '@ant-design/icons';
+import { ShopOutlined, AuditOutlined, DollarOutlined } from '@ant-design/icons';
 import { useSearchParams } from 'react-router-dom';
 import FinishedSettlementContent from './FinishedSettlementContent';
-import ShipmentReconContent from './ShipmentReconContent';
 import PaidUnsettledContent from './PaidUnsettledContent';
 import PaidSettledContent from './PaidSettledContent';
 import styles from './index.module.css';
 
-type TabKey = 'reconciliation' | 'settlement' | 'unpaid' | 'paid';
+type TabKey = 'settlement' | 'unpaid' | 'paid';
 
 const FinanceCenter: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // 从 URL 参数读取初始 Tab，默认 reconciliation
+  // 从 URL 参数读取初始 Tab，默认 settlement
   const getInitialTab = (): TabKey => {
     const tab = searchParams.get('tab');
-    if (tab === 'reconciliation' || tab === 'settlement' || tab === 'unpaid' || tab === 'paid') {
+    if (tab === 'settlement' || tab === 'unpaid' || tab === 'paid') {
       return tab;
     }
     return 'settlement';
@@ -44,16 +43,6 @@ const FinanceCenter: React.FC = () => {
   const [auditedOrderNos, setAuditedOrderNos] = useState<Set<string>>(new Set());
 
   const tabItems = [
-    {
-      key: 'reconciliation',
-      label: (
-        <span className={styles.tabLabel}>
-          <FileTextOutlined />
-          对账单
-        </span>
-      ),
-      children: <ShipmentReconContent />,
-    },
     {
       key: 'settlement',
       label: (

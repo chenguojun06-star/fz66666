@@ -15,6 +15,7 @@ import com.qcloud.cos.region.Region;
 import com.fashion.supplychain.system.entity.Tenant;
 import com.fashion.supplychain.system.service.TenantService;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -44,9 +45,11 @@ import java.util.Date;
  * 文件存储路径（COS Key）格式：tenants/{tenantId}/{filename}
  * 预签名 URL 有效期：2 小时
  */
-@Service
 @Slf4j
+@Service
 public class CosService {
+
+    private static final Logger logger = log;
 
     @Autowired
     private TenantService tenantService;
@@ -77,13 +80,13 @@ public class CosService {
             COSCredentials credentials = new BasicCOSCredentials(secretId, secretKey);
             ClientConfig clientConfig = new ClientConfig(new Region(region));
             cosClient = new COSClient(credentials, clientConfig);
-            log.info("[COS] 已启用腾讯云 COS 文件存储: bucket={}, region={}", bucket, region);
+            logger.info("[COS] 已启用腾讯云 COS 文件存储: bucket={}, region={}", bucket, region);
             // 启动时验证 COS 连接（完整权限验证：写入+读取+删除）
             String testKey = "_health_check_" + System.currentTimeMillis() + ".txt";
             try {
                 // 1. 验证 list 权限
                 cosClient.listObjects(bucket, "tenants/");
-                log.info("[COS] ✅ list 权限验证通过");
+                logger.info("[COS] ✅ list 权限验证通过");
 
                 // 2. 验证 write 权限（上传小文件）
                 byte[] testData = "COS health check".getBytes();
@@ -91,30 +94,30 @@ public class CosService {
                 testMeta.setContentLength(testData.length);
                 testMeta.setContentType("text/plain");
                 cosClient.putObject(bucket, testKey, new ByteArrayInputStream(testData), testMeta);
-                log.info("[COS] ✅ write 权限验证通过");
+                logger.info("[COS] ✅ write 权限验证通过");
 
                 // 3. 验证 read 权限（生成预签名URL）
                 GeneratePresignedUrlRequest preReq = new GeneratePresignedUrlRequest(bucket, testKey, HttpMethodName.GET);
                 preReq.setExpiration(new Date(System.currentTimeMillis() + 60_000));
                 cosClient.generatePresignedUrl(preReq);
-                log.info("[COS] ✅ read/presign 权限验证通过");
+                logger.info("[COS] ✅ read/presign 权限验证通过");
 
                 // 4. 清理测试文件
                 cosClient.deleteObject(bucket, testKey);
-                log.info("[COS] ✅ delete 权限验证通过");
+                logger.info("[COS] ✅ delete 权限验证通过");
 
-                log.info("[COS] COS 全部权限验证成功 ✅ (list/write/read/delete)");
+                logger.info("[COS] COS 全部权限验证成功 ✅ (list/write/read/delete)");
             } catch (Exception e) {
                 // 清理可能残留的测试文件
-                try { cosClient.deleteObject(bucket, testKey); } catch (Exception ex) { log.debug("Non-critical error: {}", ex.getMessage()); }
+                try { cosClient.deleteObject(bucket, testKey); } catch (Exception ex) { logger.debug("Non-critical error: {}", ex.getMessage()); }
                 String errMsg = e.getMessage();
                 if (errMsg != null && errMsg.contains("AccessDenied")) {
-                    log.error("[COS] ⛔⛔⛔ COS 权限验证失败（AccessDenied）！" +
+                    logger.error("[COS] ⛔⛔⛔ COS 权限验证失败（AccessDenied）！" +
                             "API密钥没有对 bucket={} 的操作权限。" +
                             "请到腾讯云控制台 → 访问管理(CAM) → 检查子用户的 COS 策略是否包含 cos:PutObject、cos:GetObject 权限。" +
                             "错误详情: {}", bucket, errMsg);
                 } else {
-                    log.error("[COS] ⚠️⚠️⚠️ COS 连接验证失败！bucket={}, region={}, 错误: {}。" +
+                    logger.error("[COS] ⚠️⚠️⚠️ COS 连接验证失败！bucket={}, region={}, 错误: {}。" +
                             "文件上传/下载将会失败！请检查 COS_SECRET_ID、COS_SECRET_KEY、COS_BUCKET 环境变量是否正确。",
                             bucket, region, errMsg);
                 }
@@ -124,7 +127,7 @@ public class CosService {
             boolean isProduction = System.getenv("SPRING_PROFILES_ACTIVE") != null
                     && System.getenv("SPRING_PROFILES_ACTIVE").contains("prod");
             if (isProduction || "/uploads/".equals(uploadPath) || "/uploads".equals(uploadPath)) {
-                log.error("\n" +
+                logger.error("\n" +
                     "╔══════════════════════════════════════════════════════════════════╗\n" +
                     "║  ⛔ COS 未配置！生产环境文件将存储在容器本地磁盘！              ║\n" +
                     "║  容器重启/缩扩容后所有上传的文件将永久丢失！                    ║\n" +
@@ -136,7 +139,7 @@ public class CosService {
                     "║    COS_REGION     = ap-shanghai                                ║\n" +
                     "╚══════════════════════════════════════════════════════════════════╝");
             } else {
-                log.info("[COS] 未配置 COS，使用本地文件存储（开发模式）");
+                logger.info("[COS] 未配置 COS，使用本地文件存储（开发模式）");
             }
         }
     }
@@ -189,7 +192,7 @@ public class CosService {
                 throw new IOException("本地上传目录创建失败: " + localDir.getAbsolutePath());
             }
             file.transferTo(localFile);
-            log.info("[COS-LOCAL] 文件已保存到本地: {}", localFile.getAbsolutePath());
+            logger.info("[COS-LOCAL] 文件已保存到本地: {}", localFile.getAbsolutePath());
             safeRefreshTenantStorageUsage(tenantId);
             return;
         }
@@ -202,14 +205,14 @@ public class CosService {
         try (InputStream is = file.getInputStream()) {
             cosClient.putObject(bucket, key, is, metadata);
         } catch (com.qcloud.cos.exception.CosServiceException e) {
-            log.error("[COS] 文件上传失败: key={}, errorCode={}, statusCode={}, message={}",
+            logger.error("[COS] 文件上传失败: key={}, errorCode={}, statusCode={}, message={}",
                     key, e.getErrorCode(), e.getStatusCode(), e.getErrorMessage());
             if ("AccessDenied".equals(e.getErrorCode())) {
                 throw new IOException("文件存储服务权限不足（COS AccessDenied），请联系管理员检查云存储配置", e);
             }
             throw new IOException("文件存储服务异常: " + e.getErrorMessage(), e);
         }
-        log.info("[COS] 文件上传成功: key={}, size={}", key, file.getSize());
+        logger.info("[COS] 文件上传成功: key={}, size={}", key, file.getSize());
         safeRefreshTenantStorageUsage(tenantId);
     }
 
@@ -243,7 +246,7 @@ public class CosService {
             } catch (IOException e) {
                 throw new RuntimeException("本地文件写入失败: " + localFile.getAbsolutePath(), e);
             }
-            log.info("[COS-LOCAL] 文件(bytes)已保存到本地: {}", localFile.getAbsolutePath());
+            logger.info("[COS-LOCAL] 文件(bytes)已保存到本地: {}", localFile.getAbsolutePath());
             safeRefreshTenantStorageUsage(tenantId);
             return;
         }
@@ -256,7 +259,7 @@ public class CosService {
         try (InputStream is = new ByteArrayInputStream(content)) {
             cosClient.putObject(bucket, key, is, metadata);
         } catch (com.qcloud.cos.exception.CosServiceException e) {
-            log.error("[COS] 文件上传失败(bytes): key={}, errorCode={}, statusCode={}, message={}",
+            logger.error("[COS] 文件上传失败(bytes): key={}, errorCode={}, statusCode={}, message={}",
                     key, e.getErrorCode(), e.getStatusCode(), e.getErrorMessage());
             if ("AccessDenied".equals(e.getErrorCode())) {
                 throw new RuntimeException("文件存储服务权限不足（COS AccessDenied），请联系管理员检查云存储配置", e);
@@ -265,7 +268,7 @@ public class CosService {
         } catch (IOException e) {
             throw new RuntimeException("COS 上传失败: " + key, e);
         }
-        log.info("[COS] 文件上传成功 (bytes): key={}, size={}", key, content.length);
+        logger.info("[COS] 文件上传成功 (bytes): key={}, size={}", key, content.length);
         safeRefreshTenantStorageUsage(tenantId);
     }
 
@@ -300,7 +303,7 @@ public class CosService {
             URL url = cosClient.generatePresignedUrl(req);
             return url.toString();
         } catch (com.qcloud.cos.exception.CosServiceException e) {
-            log.error("[COS] 生成预签名URL失败: key={}, errorCode={}, message={}",
+            logger.error("[COS] 生成预签名URL失败: key={}, errorCode={}, message={}",
                     key, e.getErrorCode(), e.getErrorMessage());
             throw new RuntimeException("文件下载链接生成失败: " + e.getErrorMessage(), e);
         }
@@ -323,11 +326,11 @@ public class CosService {
                 return false; // 文件确实不存在
             }
             // 权限不足等其他错误，记录日志并抛出（不能静默吞掉）
-            log.error("[COS] exists检查异常: key={}, errorCode={}, statusCode={}, message={}",
+            logger.error("[COS] exists检查异常: key={}, errorCode={}, statusCode={}, message={}",
                     key, e.getErrorCode(), e.getStatusCode(), e.getErrorMessage());
             throw new RuntimeException("COS文件检查失败(" + e.getErrorCode() + "): " + e.getErrorMessage(), e);
         } catch (Exception e) {
-            log.error("[COS] exists检查未知异常: key={}, error={}", key, e.getMessage());
+            logger.error("[COS] exists检查未知异常: key={}, error={}", key, e.getMessage());
             throw new RuntimeException("COS文件检查失败: " + e.getMessage(), e);
         }
     }
@@ -351,7 +354,7 @@ public class CosService {
         tenant.setStorageUsedMb(usedMb);
         tenant.setUpdateTime(java.time.LocalDateTime.now());
         tenantService.updateById(tenant);
-        log.info("[COS] 已同步租户存储用量: tenantId={}, usedBytes={}, usedMb={}", tenantId, usedBytes, usedMb);
+        logger.info("[COS] 已同步租户存储用量: tenantId={}, usedBytes={}, usedMb={}", tenantId, usedBytes, usedMb);
         return usedMb;
     }
 
@@ -359,7 +362,7 @@ public class CosService {
         try {
             refreshTenantStorageUsage(tenantId);
         } catch (Exception e) {
-            log.warn("[COS] 租户存储用量同步失败 tenantId={}: {}", tenantId, e.getMessage());
+            logger.warn("[COS] 租户存储用量同步失败 tenantId={}: {}", tenantId, e.getMessage());
         }
     }
 
@@ -437,7 +440,7 @@ public class CosService {
         } catch (RuntimeException e) {
             throw e;
         } catch (Exception e) {
-            log.warn("[COS] 存储配额检查失败 tenantId={}: {}", tenantId, e.getMessage());
+            logger.warn("[COS] 存储配额检查失败 tenantId={}: {}", tenantId, e.getMessage());
         }
     }
 

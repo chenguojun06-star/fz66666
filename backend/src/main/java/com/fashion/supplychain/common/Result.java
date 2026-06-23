@@ -1,6 +1,5 @@
 package com.fashion.supplychain.common;
 
-import lombok.Data;
 import org.slf4j.MDC;
 import java.io.Serial;
 import java.io.Serializable;
@@ -8,7 +7,6 @@ import java.io.Serializable;
 /**
  * 统一响应结果类
  */
-@Data
 public class Result<T> implements Serializable {
     @Serial
     private static final long serialVersionUID = 1L;
@@ -34,6 +32,15 @@ public class Result<T> implements Serializable {
      * 该值会自动从 MDC(requestId) 注入（由后端过滤器生成或透传）。
      */
     private String requestId;
+
+    public Integer getCode() { return code; }
+    public void setCode(Integer code) { this.code = code; }
+    public String getMessage() { return message; }
+    public void setMessage(String message) { this.message = message; }
+    public T getData() { return data; }
+    public void setData(T data) { this.data = data; }
+    public String getRequestId() { return requestId; }
+    public void setRequestId(String requestId) { this.requestId = requestId; }
 
     /**
      * 成功响应

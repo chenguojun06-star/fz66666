@@ -295,6 +295,33 @@
   3. 重复检测防止 AI"原地打转"消耗资源
   4. 熔断机制防止单会话成本失控（>$5 阈值基于业务可接受上限）
   5. 四维评估（意图复杂度+上下文长度+工具调用数+历史轮次）确保模型选择准确
+
+## D-026：设置管理模块数据模型澄清
+
+- **日期**：2026-06-22
+- **上下文**：FactoryList (t_factory) 和 PartnerManagement (t_organization_unit) 被误认为重复功能，实际管理不同数据。用户反馈"搞的乱七八糟，不知道去哪改"。
+- **决策**：不合并两个页面，明确区分职责
+  - FactoryList (t_factory)：管理供应商/外发工厂/客户的主数据（联系人、资质、合同）
+  - PartnerManagement (t_organization_unit)：管理外部企业的组织架构和成员分配
+  - 供应商账号 (t_supplier_user)：独立账号体系，管理供应商用户
+- **理由**：
+  1. t_factory 和 t_organization_unit 是不同表，管理不同数据，不应合并
+  2. 用户困惑的原因是菜单标签不清，不是功能重复
+  3. 优化方向：菜单重组 + 供应商账号独立页面 + 预设角色模板
+
+## D-027：预设角色模板平台级共享
+
+- **日期**：2026-06-22
+- **上下文**：新租户创建角色时不知道该创建哪些角色，需要预设模板参考。
+- **决策**：角色模板表 t_role_template 为平台级（tenantId = null），预设模板所有租户共享
+  - 预设模板：admin / merchandiser / warehouse_keeper / finance / quality_inspector 等
+  - 租户可自定义模板（category=CUSTOM），仅自己可见
+  - apply 方法只创建新角色，不修改现有角色
+- **理由**：
+  1. 平台级预设模板避免重复创建，新租户直接使用
+  2. 租户自定义模板隔离，确保不影响其他租户
+  3. apply 方法幂等，只增不减
+
 - **借鉴来源**：Claude Agent SDK per-call model selection + Ruflo 成本爆炸防御
 - **执行规则**：
   1. 所有 AI 调用必须经过 ModelSelectionRouter，禁止直接指定模型

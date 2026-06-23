@@ -1,12 +1,20 @@
 package com.fashion.supplychain.system.controller;
 
 import com.fashion.supplychain.common.Result;
+import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.system.entity.Factory;
 import com.fashion.supplychain.system.orchestration.FactoryOrchestrator;
+import com.fashion.supplychain.system.service.FactoryService;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/system/factory")
@@ -15,6 +23,9 @@ public class FactoryController {
 
     @Autowired
     private FactoryOrchestrator factoryOrchestrator;
+
+    @Autowired
+    private FactoryService factoryService;
 
     @GetMapping("/list")
     public Result<?> list(
@@ -86,6 +97,44 @@ public class FactoryController {
             return Result.fail("工厂账号无权删除工厂");
         }
         return Result.success(factoryOrchestrator.delete(id, remark));
+    }
+
+    /**
+     * 获取供应商下拉列表（仅返回面辅料供应商）
+     */
+    @GetMapping("/simple-list")
+    public Result<List<Map<String, Object>>> simpleList(
+            @RequestParam(required = false) String type) {
+        Long tenantId = UserContext.tenantId();
+        if (tenantId == null) {
+            return Result.fail("请先登录");
+        }
+
+        LambdaQueryWrapper<Factory> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Factory::getTenantId, tenantId)
+                .eq(Factory::getDeleteFlag, 0);
+
+        // 如果指定了 type，则按 type 过滤；默认返回面辅料供应商
+        if (type != null && !type.isEmpty()) {
+            wrapper.eq(Factory::getSupplierType, type);
+        } else {
+            wrapper.eq(Factory::getSupplierType, "MATERIAL");
+        }
+
+        wrapper.orderByAsc(Factory::getFactoryName);
+        List<Factory> factories = factoryService.list(wrapper);
+
+        List<Map<String, Object>> result = factories.stream()
+                .map(f -> {
+                    Map<String, Object> item = new HashMap<>();
+                    item.put("id", f.getId());
+                    item.put("factoryName", f.getFactoryName());
+                    item.put("factoryCode", f.getFactoryCode());
+                    return item;
+                })
+                .collect(Collectors.toList());
+
+        return Result.success(result);
     }
 
     @PutMapping("/{id}/admission")

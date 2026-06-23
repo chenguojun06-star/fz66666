@@ -56,6 +56,9 @@ public class ShipmentReconciliationOrchestrator {
     @Autowired
     private ScanRecordMapper scanRecordMapper;
 
+    @Autowired
+    private BillAggregationOrchestrator billAggregationOrchestrator;
+
     /**
      * 计算工序成本（从Phase 5 ScanRecord汇总）
      * 数据来源：该订单下所有ScanRecord的scanCost求和
@@ -237,6 +240,10 @@ public class ShipmentReconciliationOrchestrator {
         if (!ok) {
             throw new IllegalStateException("保存失败");
         }
+
+        // 推送应收账单到 BillAggregation（出货对账单生成后自动应收）
+        pushReceivableBill(shipmentReconciliation);
+
         return true;
     }
 
@@ -326,6 +333,45 @@ public class ShipmentReconciliationOrchestrator {
             throw new IllegalArgumentException("参数错误");
         }
         return deductionItemMapper.selectByReconciliationId(rid, com.fashion.supplychain.common.UserContext.tenantId());
+    }
+
+    /**
+     * 根据订单ID获取出货对账单
+     */
+    public ShipmentReconciliation getByOrderId(String orderId) {
+        if (!StringUtils.hasText(orderId)) {
+            throw new IllegalArgumentException("订单ID不能为空");
+        }
+        TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
+        return shipmentReconciliationService.lambdaQuery()
+                .eq(ShipmentReconciliation::getOrderId, orderId.trim())
+                .eq(ShipmentReconciliation::getTenantId, tenantId)
+                .last("LIMIT 1")
+                .one();
+    }
+
+    /**
+     * 根据订单ID获取扣款明细
+     */
+    public List<DeductionItem> getDeductionItemsByOrderId(String orderId) {
+        ShipmentReconciliation recon = getByOrderId(orderId);
+        if (recon == null) {
+            throw new NoSuchElementException("该订单没有对账单，请先确认订单是否已生成对账单");
+        }
+        return deductionItemMapper.selectByReconciliationId(recon.getId(), UserContext.tenantId());
+    }
+
+    /**
+     * 根据订单ID保存扣款明细
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void saveDeductionItemsByOrderId(String orderId, List<DeductionItem> items) {
+        ShipmentReconciliation recon = getByOrderId(orderId);
+        if (recon == null) {
+            throw new NoSuchElementException("该订单没有对账单，请先确认订单是否已生成对账单");
+        }
+        saveDeductionItems(recon.getId(), items);
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -447,6 +493,93 @@ public class ShipmentReconciliationOrchestrator {
             patch.setFinalAmount(recalculatedFinal);
             shipmentReconciliationService.updateById(patch);
         }
+
+        // 推送扣款明细作为独立账单（让对方也能看到每笔扣款）
+        pushDeductionBills(rid, allItems, current);
+
+        // 同步更新 BillAggregation 应收账单金额（扣款变更后联动）
+        syncBillAggregationAmount(current.getId(), current.getOrderId(), recalculatedFinal);
+    }
+
+    /**
+     * 推送扣款明细作为独立账单（让对方也能看到每笔扣款）
+     */
+    private void pushDeductionBills(String reconciliationId, List<DeductionItem> items, ShipmentReconciliation recon) {
+        if (items == null || items.isEmpty() || billAggregationOrchestrator == null) {
+            return;
+        }
+        try {
+            // 先删除该对账单已推送的扣款账单（幂等性）
+            billAggregationOrchestrator.cancelBySource("SHIPMENT_RECONCILIATION_DEDUCTION", reconciliationId);
+            
+            // 推送每笔扣款作为独立账单
+            for (DeductionItem item : items) {
+                if (item == null || item.getDeductionAmount() == null || item.getDeductionAmount().compareTo(BigDecimal.ZERO) <= 0) {
+                    continue;
+                }
+                // SUPPLEMENT 是补款，不作为扣款账单
+                if ("SUPPLEMENT".equalsIgnoreCase(item.getDeductionType())) {
+                    continue;
+                }
+                
+                BillAggregationOrchestrator.BillPushRequest req = new BillAggregationOrchestrator.BillPushRequest();
+                req.setBillType("RECEIVABLE");  // 扣款也是应收（我们要向对方收取扣款金额）
+                req.setBillCategory("DEDUCTION");
+                req.setSourceType("SHIPMENT_RECONCILIATION_DEDUCTION");
+                req.setSourceId(item.getId() != null ? item.getId().toString() : reconciliationId + "_" + System.nanoTime());
+                req.setSourceNo(recon.getReconciliationNo() + "-" + item.getDeductionType());
+                req.setCounterpartyType("CUSTOMER");
+                req.setCounterpartyId(recon.getCustomerId());
+                req.setCounterpartyName(recon.getCustomerName());
+                req.setOrderId(recon.getOrderId());
+                req.setOrderNo(recon.getOrderNo());
+                req.setStyleNo(recon.getStyleNo());
+                req.setAmount(item.getDeductionAmount());
+                req.setRemark(buildDeductionDescription(item));
+                req.setSettlementMonth(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM")));
+                billAggregationOrchestrator.pushBill(req);
+            }
+            log.info("[ShipmentRecon] 推送扣款明细账单: reconciliationId={}, count={}", reconciliationId, items.size());
+        } catch (Exception e) {
+            log.warn("[ShipmentRecon] 推送扣款明细账单失败: reconciliationId={}, err={}", reconciliationId, e.getMessage());
+        }
+    }
+
+    /**
+     * 构建扣款描述
+     */
+    private String buildDeductionDescription(DeductionItem item) {
+        String type = item.getDeductionType();
+        String desc = item.getDescription();
+        StringBuilder sb = new StringBuilder();
+        if ("QUALITY_DEFECT".equalsIgnoreCase(type)) {
+            sb.append("次品扣款");
+        } else if ("PRODUCT_SCRAP".equalsIgnoreCase(type)) {
+            sb.append("报废扣款");
+        } else if ("MATERIAL_PICKUP".equalsIgnoreCase(type)) {
+            sb.append("领料扣款");
+        } else {
+            sb.append("其他扣款");
+        }
+        if (StringUtils.hasText(desc)) {
+            sb.append("：").append(desc);
+        }
+        return sb.toString();
+    }
+
+    /**
+     * 同步更新 BillAggregation 应收账单金额
+     */
+    private void syncBillAggregationAmount(String reconciliationId, String orderId, BigDecimal newAmount) {
+        if (newAmount == null || newAmount.compareTo(BigDecimal.ZERO) < 0) {
+            return;
+        }
+        try {
+            billAggregationOrchestrator.syncAmountBySource("SHIPMENT_RECONCILIATION", reconciliationId, newAmount);
+            log.info("[ShipmentRecon] 同步应收账单金额: reconciliationId={}, newAmount={}", reconciliationId, newAmount);
+        } catch (Exception e) {
+            log.warn("[ShipmentRecon] 同步应收账单金额失败: reconciliationId={}, err={}", reconciliationId, e.getMessage());
+        }
     }
 
     private String generateReconciliationNo() {
@@ -481,5 +614,37 @@ public class ShipmentReconciliationOrchestrator {
         }
 
         return String.format("%s%04d", prefix, sequence);
+    }
+
+    /**
+     * 推送出货应收账单到 BillAggregation
+     * 出货对账单生成后自动推送应收账单，用于向客户收款
+     */
+    private void pushReceivableBill(ShipmentReconciliation recon) {
+        if (recon == null || recon.getFinalAmount() == null || recon.getFinalAmount().compareTo(BigDecimal.ZERO) <= 0) {
+            return;
+        }
+        try {
+            BillAggregationOrchestrator.BillPushRequest req = new BillAggregationOrchestrator.BillPushRequest();
+            req.setBillType("RECEIVABLE");
+            req.setBillCategory("SHIPMENT");
+            req.setSourceType("SHIPMENT_RECONCILIATION");
+            req.setSourceId(recon.getId());
+            req.setSourceNo(recon.getReconciliationNo());
+            req.setCounterpartyType("CUSTOMER");
+            req.setCounterpartyId(recon.getCustomerId());
+            req.setCounterpartyName(recon.getCustomerName());
+            req.setOrderId(recon.getOrderId());
+            req.setOrderNo(recon.getOrderNo());
+            req.setStyleNo(recon.getStyleNo());
+            req.setAmount(recon.getFinalAmount());
+            req.setSettlementMonth(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM")));
+            billAggregationOrchestrator.pushBill(req);
+            log.info("[ShipmentRecon] 推送应收账单: reconciliationNo={}, amount={}",
+                    recon.getReconciliationNo(), recon.getFinalAmount());
+        } catch (Exception e) {
+            log.warn("[ShipmentRecon] 推送应收账单失败: reconciliationNo={}, err={}",
+                    recon.getReconciliationNo(), e.getMessage());
+        }
     }
 }

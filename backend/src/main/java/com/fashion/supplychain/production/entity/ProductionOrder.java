@@ -701,4 +701,18 @@ public class ProductionOrder {
 
     @TableField(fill = FieldFill.INSERT)
     private Long tenantId;
+
+    // ==================== 成本汇总字段（新增）====================
+
+    /**
+     * 面辅料成本汇总（内部工厂采购成本）
+     */
+    @TableField("material_cost")
+    private BigDecimal materialCost;
+
+    /**
+     * 订单总成本 = 加工费 + 面辅料成本
+     */
+    @TableField("total_cost")
+    private BigDecimal totalCost;
 }

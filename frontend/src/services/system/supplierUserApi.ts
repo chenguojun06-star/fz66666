@@ -3,6 +3,7 @@ import api from '@/utils/api';
 export interface SupplierUserItem {
   id: string;
   supplierId: string;
+  supplierName?: string;
   tenantId: number;
   username: string;
   contactPerson?: string;
@@ -18,6 +19,9 @@ export interface SupplierUserItem {
 const supplierUserApi = {
   list: (supplierId: string) =>
     api.get<{ code: number; data: SupplierUserItem[] }>(`/supplier-user/list`, { params: { supplierId } }),
+
+  listAll: (params: { keyword?: string; status?: string; supplierId?: string; page?: number; pageSize?: number }) =>
+    api.get<{ code: number; data: { list: SupplierUserItem[]; total: number } }>(`/supplier-user/all-list`, { params }),
 
   create: (data: { supplierId: string; username: string; password: string; contactPerson?: string; contactPhone?: string; contactEmail?: string }) =>
     api.post<{ code: number; data: SupplierUserItem }>(`/supplier-user/create`, data),

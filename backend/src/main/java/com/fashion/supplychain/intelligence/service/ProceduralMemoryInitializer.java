@@ -75,7 +75,7 @@ public class ProceduralMemoryInitializer implements ApplicationRunner {
         sop.setSopName("扫码流程（工序/质检/入库）");
         sop.setSopType("SCAN_WORKFLOW");
         sop.setTriggerKeywords("扫码,工序扫码,质检扫码,入库扫码,扫工序码,扫菲,扫码记录,扫码撤回,产量扫码");
-        sop.setConfidence(new BigDecimal("0.85"));
+        sop.setConfidence(0.85);
         sop.setSource("manual");
         sop.setEnabled(1);
         sop.setVersion(1);
@@ -99,7 +99,7 @@ public class ProceduralMemoryInitializer implements ApplicationRunner {
         sop.setSopName("工资结算流程");
         sop.setSopType("WAGE_SETTLEMENT");
         sop.setTriggerKeywords("工资,结算,计件,工资单,工资结算,结算工资,工资撤回,外发任务工资,工资支付");
-        sop.setConfidence(new BigDecimal("0.85"));
+        sop.setConfidence(0.85);
         sop.setSource("manual");
         sop.setEnabled(1);
         sop.setVersion(1);
@@ -123,7 +123,7 @@ public class ProceduralMemoryInitializer implements ApplicationRunner {
         sop.setSopName("交期预测流程");
         sop.setSopType("DELIVERY_FORECAST");
         sop.setTriggerKeywords("交期,延期,逾期,排产,产能,交付风险,交期预测,延期订单,排程");
-        sop.setConfidence(new BigDecimal("0.80"));
+        sop.setConfidence(0.80);
         sop.setSource("manual");
         sop.setEnabled(1);
         sop.setVersion(1);
@@ -147,7 +147,7 @@ public class ProceduralMemoryInitializer implements ApplicationRunner {
         sop.setSopName("供应商评估流程");
         sop.setSopType("SUPPLIER_EVAL");
         sop.setTriggerKeywords("供应商,评估,评级,考核,寻源,供应商风险,供应商评分,供应商管理");
-        sop.setConfidence(new BigDecimal("0.80"));
+        sop.setConfidence(0.80);
         sop.setSource("manual");
         sop.setEnabled(1);
         sop.setVersion(1);
@@ -171,7 +171,7 @@ public class ProceduralMemoryInitializer implements ApplicationRunner {
         sop.setSopName("质检流程（首件/巡检/末件/入库）");
         sop.setSopType("QUALITY_CHECK");
         sop.setTriggerKeywords("质检,次品,返工,不合格,合格率,首件,巡检,末件,入库质检,疵点,视觉质检");
-        sop.setConfidence(new BigDecimal("0.85"));
+        sop.setConfidence(0.85);
         sop.setSource("manual");
         sop.setEnabled(1);
         sop.setVersion(1);

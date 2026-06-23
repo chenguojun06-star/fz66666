@@ -1,6 +1,7 @@
 package com.fashion.supplychain.service;
 
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.Cursor;
 import org.springframework.data.redis.core.RedisCallback;
@@ -22,6 +23,8 @@ import java.util.concurrent.TimeUnit;
 @Service
 public class RedisService {
 
+    private static final Logger logger = log;
+
     @Autowired(required = false)
     private RedisTemplate<String, Object> redisTemplate;
 
@@ -32,7 +35,7 @@ public class RedisService {
         try {
             redisTemplate.opsForValue().set(key, value);
         } catch (Exception e) {
-            log.error("Redis set error, key: {}", key, e);
+            logger.error("Redis set error, key: {}", key, e);
         }
     }
 
@@ -43,7 +46,7 @@ public class RedisService {
         try {
             redisTemplate.opsForValue().set(key, value, timeout, unit);
         } catch (Exception e) {
-            log.error("Redis set error, key: {}", key, e);
+            logger.error("Redis set error, key: {}", key, e);
         }
     }
 
@@ -57,8 +60,8 @@ public class RedisService {
         } catch (Exception e) {
             // 反序列化失败：可能是新旧序列化格式不兼容（版本升级/部署后旧缓存未清理）
             // 自动删除损坏的 key，使其在下次写入时以当前格式重建，实现自愈
-            log.warn("Redis get failed (cache miss), key={} err={} — 自动删除损坏key", key, e.getMessage());
-            try { redisTemplate.delete(key); } catch (Exception ex) { log.debug("Non-critical error: {}", ex.getMessage()); }
+            logger.warn("Redis get failed (cache miss), key={} err={} — 自动删除损坏key", key, e.getMessage());
+            try { redisTemplate.delete(key); } catch (Exception ex) { logger.debug("Non-critical error: {}", ex.getMessage()); }
             return null;
         }
     }
@@ -70,7 +73,7 @@ public class RedisService {
         try {
             redisTemplate.delete(key);
         } catch (Exception e) {
-            log.error("Redis delete error, key: {}", key, e);
+            logger.error("Redis delete error, key: {}", key, e);
         }
     }
 
@@ -81,7 +84,7 @@ public class RedisService {
         try {
             redisTemplate.delete(keys);
         } catch (Exception e) {
-            log.error("Redis batch delete error", e);
+            logger.error("Redis batch delete error", e);
         }
     }
 
@@ -118,14 +121,14 @@ public class RedisService {
                         Boolean existed = redisTemplate.delete(keyStr);
                         if (Boolean.TRUE.equals(existed)) count++;
                     }
-                } catch (Exception e) { log.debug("Non-critical error: {}", e.getMessage()); }
+                } catch (Exception e) { logger.debug("Non-critical error: {}", e.getMessage()); }
             }
             if (count > 0) {
-                log.info("Redis deleteByPattern: pattern={}, deleted={}", pattern, count);
+                logger.info("Redis deleteByPattern: pattern={}, deleted={}", pattern, count);
             }
             return count;
         } catch (Exception e) {
-            log.warn("Redis deleteByPattern failed, pattern={}, err={}", pattern, e.getMessage());
+            logger.warn("Redis deleteByPattern failed, pattern={}, err={}", pattern, e.getMessage());
             return 0;
         }
     }
@@ -137,7 +140,7 @@ public class RedisService {
         try {
             return Boolean.TRUE.equals(redisTemplate.hasKey(key));
         } catch (Exception e) {
-            log.error("Redis hasKey error, key: {}", key, e);
+            logger.error("Redis hasKey error, key: {}", key, e);
             return false;
         }
     }
@@ -149,7 +152,7 @@ public class RedisService {
         try {
             return Boolean.TRUE.equals(redisTemplate.expire(key, timeout, unit));
         } catch (Exception e) {
-            log.error("Redis expire error, key: {}", key, e);
+            logger.error("Redis expire error, key: {}", key, e);
             return false;
         }
     }
@@ -161,7 +164,7 @@ public class RedisService {
         try {
             return redisTemplate.getExpire(key, unit);
         } catch (Exception e) {
-            log.error("Redis getExpire error, key: {}", key, e);
+            logger.error("Redis getExpire error, key: {}", key, e);
             return null;
         }
     }
@@ -173,7 +176,7 @@ public class RedisService {
         try {
             return redisTemplate.opsForValue().increment(key, delta);
         } catch (Exception e) {
-            log.error("Redis increment error, key: {}", key, e);
+            logger.error("Redis increment error, key: {}", key, e);
             return null;
         }
     }
@@ -185,7 +188,7 @@ public class RedisService {
         try {
             return redisTemplate.opsForValue().decrement(key, delta);
         } catch (Exception e) {
-            log.error("Redis decrement error, key: {}", key, e);
+            logger.error("Redis decrement error, key: {}", key, e);
             return null;
         }
     }
@@ -197,7 +200,7 @@ public class RedisService {
         try {
             redisTemplate.opsForHash().put(key, hashKey, value);
         } catch (Exception e) {
-            log.error("Redis hSet error, key: {}, hashKey: {}", key, hashKey, e);
+            logger.error("Redis hSet error, key: {}, hashKey: {}", key, hashKey, e);
         }
     }
 
@@ -209,7 +212,7 @@ public class RedisService {
         try {
             return (T) redisTemplate.opsForHash().get(key, hashKey);
         } catch (Exception e) {
-            log.error("Redis hGet error, key: {}, hashKey: {}", key, hashKey, e);
+            logger.error("Redis hGet error, key: {}, hashKey: {}", key, hashKey, e);
             return null;
         }
     }
@@ -221,7 +224,7 @@ public class RedisService {
         try {
             redisTemplate.opsForHash().delete(key, hashKeys);
         } catch (Exception e) {
-            log.error("Redis hDelete error, key: {}", key, e);
+            logger.error("Redis hDelete error, key: {}", key, e);
         }
     }
 }

@@ -4,6 +4,7 @@ import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.agent.tool.AgentTool;
 import com.fashion.supplychain.intelligence.service.AiAgentToolAccessService;
+import com.fashion.supplychain.intelligence.service.ProceduralMemoryService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -334,8 +335,9 @@ public class AiAgentPromptHelper {
     private String buildProceduralSopBlock(Long tenantId, String userMessage) {
         if (proceduralMemoryService == null || tenantId == null || userMessage == null) return "";
         try {
-            String sopBlock = proceduralMemoryService.buildProceduralSopBlock(tenantId, userMessage);
-            if (sopBlock != null && !sopBlock.isEmpty()) {
+            ProceduralMemoryService.MatchedSOP matchedSOP = proceduralMemoryService.matchSOP(tenantId, userMessage);
+            if (matchedSOP != null && matchedSOP.getSteps() != null && !matchedSOP.getSteps().isEmpty()) {
+                String sopBlock = matchedSOP.formatSteps();
                 log.debug("[AiAgent-L4SOP] 已注入租户{}的SOP上下文 ({}字符)", tenantId, sopBlock.length());
                 return sopBlock;
             }

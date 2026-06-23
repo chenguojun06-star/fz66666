@@ -1,6 +1,7 @@
 package com.fashion.supplychain.intelligence.job;
 
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.intelligence.orchestration.QuickAnswerOrchestrator;
 import com.fashion.supplychain.intelligence.service.QuickAnswerCacheService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,6 +37,9 @@ public class BusinessSnapshotPrefetcher {
 
     @Autowired(required = false)
     private QuickAnswerCacheService quickAnswerCacheService;
+
+    @Autowired(required = false)
+    private QuickAnswerOrchestrator quickAnswerOrchestrator;
 
     @Value("${xiaoyun.quick-answer.prefetch-enabled:true}")
     private boolean enabled;
@@ -133,8 +137,14 @@ public class BusinessSnapshotPrefetcher {
         evidence.append(", t_material_stock(tenant_id=").append(tenantId).append(")");
         evidence.append(", t_quality_inspection(tenant_id=").append(tenantId).append(")");
 
-        quickAnswerCacheService.saveSnapshot(tenantId, snapshot,
-                summary.toString(), evidence.toString());
+        // 使用Orchestrator获得事务保护（P0铁律2：@Transactional仅在Orchestrator层）
+        if (quickAnswerOrchestrator != null) {
+            quickAnswerOrchestrator.saveSnapshotWithTransaction(tenantId, snapshot,
+                    summary.toString(), evidence.toString());
+        } else {
+            quickAnswerCacheService.saveSnapshot(tenantId, snapshot,
+                    summary.toString(), evidence.toString());
+        }
     }
 
     // --- 各查询（安全兜底：无表时返回-1，不影响整体运行） ---

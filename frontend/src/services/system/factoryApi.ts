@@ -55,6 +55,12 @@ export const factoryApi = {
 
   updateContract: (id: string, data: Partial<Factory>) =>
     api.put<{ code: number; data: boolean }>(`/system/factory/${id}/contract`, data),
+
+  /**
+   * 获取供应商下拉列表
+   */
+  simpleList: <T = { id: string; factoryName: string }>() =>
+    api.get<{ code: number; data: T[] }>('/system/factory/simple-list'),
 };
 
 export default factoryApi;

@@ -31,6 +31,7 @@ public class MaterialPickupOrchestrator {
     private final MaterialPickupRecordMapper pickupMapper;
     private final MaterialPickupReceivableOrchestrator materialPickupReceivableOrchestrator;
     private final com.fashion.supplychain.finance.orchestration.BillAggregationOrchestrator billAggregationOrchestrator;
+    private final com.fashion.supplychain.production.helper.OrderCostSummaryHelper orderCostSummaryHelper;
 
     /** 简易序号（进程级，重启归零，仅用于单号生成去重） */
     private final AtomicInteger seqCounter = new AtomicInteger(0);
@@ -188,6 +189,15 @@ public class MaterialPickupOrchestrator {
                 materialPickupReceivableOrchestrator.syncAfterApproval(record, strOf(body.get("remark")));
                 pushPickupBill(record);
             } else {
+                // 内部工厂：汇总物料成本到订单
+                if (StringUtils.hasText(record.getOrderNo())) {
+                    try {
+                        orderCostSummaryHelper.summaryOrderMaterialCost(record.getOrderNo());
+                    } catch (Exception e) {
+                        log.warn("[MaterialPickup] 内部工厂成本汇总失败: pickupNo={}, orderNo={}, err={}",
+                                record.getPickupNo(), record.getOrderNo(), e.getMessage());
+                    }
+                }
                 record.setFinanceRemark(StringUtils.hasText(strOf(body.get("remark")))
                         ? "内部领料审核通过（内部平账）：" + strOf(body.get("remark")).trim()
                         : "内部领料审核通过，已做内部平账处理");

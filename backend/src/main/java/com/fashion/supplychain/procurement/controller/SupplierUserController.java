@@ -55,6 +55,103 @@ public class SupplierUserController {
         return Result.success(users.stream().map(this::buildUserView).collect(Collectors.toList()));
     }
 
+    @GetMapping("/all-list")
+    public Result<Map<String, Object>> listAll(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String supplierId,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "100") int pageSize) {
+        Long tenantId = UserContext.tenantId();
+        if (tenantId == null) {
+            return Result.fail("请先登录");
+        }
+
+        // 构建查询条件
+        LambdaQueryWrapper<SupplierUser> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(SupplierUser::getTenantId, tenantId)
+                .eq(SupplierUser::getDeleteFlag, 0);
+
+        if (status != null && !status.isEmpty()) {
+            wrapper.eq(SupplierUser::getStatus, status);
+        }
+
+        if (supplierId != null && !supplierId.isEmpty()) {
+            wrapper.eq(SupplierUser::getSupplierId, supplierId);
+        }
+
+        if (keyword != null && !keyword.isEmpty()) {
+            String likeKeyword = "%" + keyword.trim() + "%";
+            wrapper.and(w -> w
+                    .like(SupplierUser::getUsername, likeKeyword)
+                    .or()
+                    .like(SupplierUser::getContactPerson, likeKeyword)
+                    .or()
+                    .like(SupplierUser::getContactPhone, likeKeyword)
+            );
+        }
+
+        // 分页查询
+        int offset = (page - 1) * pageSize;
+        wrapper.orderByDesc(SupplierUser::getCreateTime)
+                .last("LIMIT " + offset + ", " + pageSize);
+
+        List<SupplierUser> users = supplierUserService.list(wrapper);
+
+        // 查询总数
+        LambdaQueryWrapper<SupplierUser> countWrapper = new LambdaQueryWrapper<>();
+        countWrapper.eq(SupplierUser::getTenantId, tenantId)
+                .eq(SupplierUser::getDeleteFlag, 0);
+        if (status != null && !status.isEmpty()) {
+            countWrapper.eq(SupplierUser::getStatus, status);
+        }
+        if (supplierId != null && !supplierId.isEmpty()) {
+            countWrapper.eq(SupplierUser::getSupplierId, supplierId);
+        }
+        if (keyword != null && !keyword.isEmpty()) {
+            String likeKeyword = "%" + keyword.trim() + "%";
+            countWrapper.and(w -> w
+                    .like(SupplierUser::getUsername, likeKeyword)
+                    .or()
+                    .like(SupplierUser::getContactPerson, likeKeyword)
+                    .or()
+                    .like(SupplierUser::getContactPhone, likeKeyword)
+            );
+        }
+        long total = supplierUserService.count(countWrapper);
+
+        // 收集所有 supplierId 用于批量查询供应商名称
+        List<String> supplierIds = users.stream()
+                .map(SupplierUser::getSupplierId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList());
+
+        // 批量查询供应商名称
+        Map<String, String> supplierNameMap = new HashMap<>();
+        if (!supplierIds.isEmpty()) {
+            List<Factory> factories = factoryService.listByIds(supplierIds);
+            for (Factory factory : factories) {
+                supplierNameMap.put(factory.getId(), factory.getFactoryName());
+            }
+        }
+
+        // 构建返回结果
+        List<Map<String, Object>> dataList = users.stream()
+                .map(u -> {
+                    Map<String, Object> m = buildUserView(u);
+                    m.put("supplierName", supplierNameMap.getOrDefault(u.getSupplierId(), ""));
+                    return m;
+                })
+                .collect(Collectors.toList());
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("list", dataList);
+        result.put("total", total);
+
+        return Result.success(result);
+    }
+
     @PostMapping("/create")
     public Result<Map<String, Object>> create(@RequestBody Map<String, String> request) {
         Long tenantId = UserContext.tenantId();

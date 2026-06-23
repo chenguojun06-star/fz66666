@@ -2,6 +2,7 @@ package com.fashion.supplychain.production.helper;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.finance.entity.ShipmentReconciliation;
+import com.fashion.supplychain.finance.orchestration.BillAggregationOrchestrator;
 import com.fashion.supplychain.finance.service.ShipmentReconciliationService;
 import com.fashion.supplychain.production.entity.MaterialPurchase;
 import com.fashion.supplychain.production.entity.ProductionOrder;
@@ -35,6 +36,9 @@ public class OrderReconciliationHelper {
 
     @Autowired
     private MaterialPurchaseService materialPurchaseService;
+
+    @Autowired(required = false)
+    private BillAggregationOrchestrator billAggregationOrchestrator;
 
     public boolean isOwnFactory(ProductionOrder order) {
         if (order == null) {
@@ -141,8 +145,42 @@ public class OrderReconciliationHelper {
         if (saved) {
             log.info("订单结算记录创建成功: orderId={}, reconciliationNo={}, isOwnFactory={}",
                 orderId, recon.getReconciliationNo(), isOwn);
+            // 推送应收账单到 BillAggregation（出货对账单生成后自动应收）
+            pushReceivableBill(recon);
         } else {
             log.error("订单结算记录创建失败: orderId={}", orderId);
+        }
+    }
+
+    /**
+     * 推送出货应收账单到 BillAggregation
+     */
+    private void pushReceivableBill(ShipmentReconciliation recon) {
+        if (billAggregationOrchestrator == null || recon == null || recon.getFinalAmount() == null
+                || recon.getFinalAmount().compareTo(BigDecimal.ZERO) <= 0) {
+            return;
+        }
+        try {
+            BillAggregationOrchestrator.BillPushRequest req = new BillAggregationOrchestrator.BillPushRequest();
+            req.setBillType("RECEIVABLE");
+            req.setBillCategory("SHIPMENT");
+            req.setSourceType("SHIPMENT_RECONCILIATION");
+            req.setSourceId(recon.getId());
+            req.setSourceNo(recon.getReconciliationNo());
+            req.setCounterpartyType("CUSTOMER");
+            req.setCounterpartyId(recon.getCustomerId());
+            req.setCounterpartyName(recon.getCustomerName());
+            req.setOrderId(recon.getOrderId());
+            req.setOrderNo(recon.getOrderNo());
+            req.setStyleNo(recon.getStyleNo());
+            req.setAmount(recon.getFinalAmount());
+            req.setSettlementMonth(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM")));
+            billAggregationOrchestrator.pushBill(req);
+            log.info("[OrderRecon] 推送应收账单: reconciliationNo={}, amount={}",
+                    recon.getReconciliationNo(), recon.getFinalAmount());
+        } catch (Exception e) {
+            log.warn("[OrderRecon] 推送应收账单失败: reconciliationNo={}, err={}",
+                    recon.getReconciliationNo(), e.getMessage());
         }
     }
 
