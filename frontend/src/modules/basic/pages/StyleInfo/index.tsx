@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { App, Card, Checkbox, Form, Input, Tabs } from 'antd';
 import ResizableModal from '@/components/common/ResizableModal';
@@ -26,6 +26,7 @@ import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
 import { type StyleFieldParseResult } from '@/services/intelligence/intelligenceApi';
+import { useFormDraft } from '@/hooks/useFormDraft';
 
 import './styles.css';
 
@@ -34,7 +35,7 @@ const StyleInfoDetailPage: React.FC = () => {
   const location = window.location;
   const isNewPath = location.pathname.endsWith('/new');
   const styleIdParam = isNewPath ? 'new' : (params.id as string | undefined);
-  const { message: _message } = App.useApp();
+  const { message: _message, modal } = App.useApp();
 
   const {
     loading: _loading,
@@ -69,11 +70,68 @@ const StyleInfoDetailPage: React.FC = () => {
 
   const colorSize = useStyleColorSize({ currentStyle, setCurrentStyle, isNewPage, form });
 
+  const styleDraft = useFormDraft('style-create', { debounceMs: 300 });
+  const [draftChecked, setDraftChecked] = useState(false);
+
+  useEffect(() => {
+    if (!isNewPage || draftChecked) return;
+
+    const draftInfo = styleDraft.getDraftInfo();
+    if (draftInfo.hasDraft) {
+      modal.confirm({
+        title: '发现未保存的草稿',
+        content: (
+          <div>
+            <p>检测到您有未保存的款号草稿（{draftInfo.timeDescription}），是否恢复？</p>
+            <p style={{ color: 'var(--color-text-secondary)', fontSize: 12, marginTop: 8 }}>
+              选择"恢复草稿"将恢复之前未保存的款号内容，选择"新建款号"将清空草稿并重新开始。
+            </p>
+          </div>
+        ),
+        okText: '恢复草稿',
+        cancelText: '新建款号',
+        onOk: () => {
+          const draftData = styleDraft.loadDraft() as {
+            formValues?: Record<string, unknown>;
+            sizeColorConfig?: Record<string, unknown>;
+          } | null;
+          if (draftData) {
+            if (draftData.formValues) {
+              form.setFieldsValue(draftData.formValues);
+            }
+            if (draftData.sizeColorConfig) {
+              setCurrentStyle((prev) => prev ? {
+                ...prev,
+                sizeColorConfig: JSON.stringify(draftData.sizeColorConfig),
+              } as any : null);
+            }
+          }
+          setDraftChecked(true);
+        },
+        onCancel: () => {
+          styleDraft.clearDraft();
+          setDraftChecked(true);
+        },
+      });
+    } else {
+      setDraftChecked(true);
+    }
+  }, [isNewPage, draftChecked, styleDraft, form, modal, setCurrentStyle]);
+
+  useEffect(() => {
+    if (!isNewPage || !draftChecked) return;
+    const allValues = form.getFieldsValue(true);
+    styleDraft.saveDraftDebounced({
+      formValues: allValues,
+      sizeColorConfig: colorSize.sizeColorConfig,
+    });
+  }, [form, colorSize.sizeColorConfig, isNewPage, draftChecked, styleDraft]);
+
   const {
     saving,
     completingSample,
     pushingToOrder,
-    handleSave,
+    handleSave: _handleSave,
     handleCompleteSample,
     handlePushToOrder: handlePushToOrderDirect,
     handleUnlock,
@@ -89,6 +147,14 @@ const StyleInfoDetailPage: React.FC = () => {
     pendingImages: colorSize.pendingImages,
     pendingColorImages: colorSize.pendingColorImages,
   });
+
+  const handleSave = async () => {
+    const success = await _handleSave();
+    if (success && isNewPage) {
+      styleDraft.clearDraft();
+    }
+    return success;
+  };
 
   const production = useStyleProduction({
     currentStyle,

@@ -8,6 +8,7 @@ import { materialInventoryApi } from '@/services/warehouse/materialInventoryApi'
 import api from '@/utils/api';
 import { message } from '@/utils/antdStatic';
 import type { MaterialInventory } from '../types';
+import { formatDateTime } from '@/utils/datetime';
 
 export function useMaterialInventoryList() {
   const [loading, setLoading] = useState(false);
@@ -57,10 +58,10 @@ export function useMaterialInventoryList() {
           totalValue: Number(item.totalValue) || (item.quantity || 0) * (Number(item.unitPrice) || 0),
           warehouseLocation: item.location || item.warehouseLocation || '默认仓',
           lastInboundDate: item.lastInboundDate
-            ? String(item.lastInboundDate).replace('T', ' ').substring(0, 16)
-            : (item.updateTime ? String(item.updateTime).replace('T', ' ').substring(0, 16) : '-'),
+            ? formatDateTime(item.lastInboundDate)
+            : (item.updateTime ? formatDateTime(item.updateTime) : '-'),
           lastOutboundDate: item.lastOutboundDate
-            ? String(item.lastOutboundDate).replace('T', ' ').substring(0, 16) : '-',
+            ? formatDateTime(item.lastOutboundDate) : '-',
           supplierName: item.supplierName || '-',
         }));
         setDataSource(list);

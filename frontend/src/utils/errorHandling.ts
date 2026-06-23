@@ -1,4 +1,5 @@
-import { message, modal } from '@/utils/antdStatic';
+import { message, modal, notification } from '@/utils/antdStatic';
+import React from 'react';
 /**
  * 统一的错误处理和日志系统
  */
@@ -207,7 +208,7 @@ class ErrorHandler {
         errorMsg = '资源不存在';
         errorType = ErrorType.Business;
       } else if (status === 500) {
-        errorMsg = '服务器内部错误，请稍后重试';
+        errorMsg = data?.message || '服务器开小差了，请稍后重试';
         errorType = ErrorType.Server;
       } else if (status >= 500) {
         errorMsg = '服务暂时不可用，请稍后重试';
@@ -232,6 +233,145 @@ class ErrorHandler {
     });
 
     message.error(`${errorMsg} (${traceId})`);
+    return errorMsg;
+  }
+
+  /**
+   * 判断错误是否可重试
+   */
+  isRetryableError(error: unknown): boolean {
+    const err = error as { response?: { status?: number }; code?: string; message?: string; request?: unknown };
+    
+    // 网络超时
+    if (err?.code === 'ECONNABORTED') return true;
+    
+    // 5xx 服务器错误
+    if (err?.response?.status && err.response.status >= 500) return true;
+    
+    // 无响应（网络问题）
+    if (err?.request && !err?.response) return true;
+    
+    // 网络连接错误
+    if (err?.message?.includes('Network') || err?.message?.includes('网络')) return true;
+    
+    return false;
+  }
+
+  /**
+   * 获取错误类型
+   */
+  getErrorType(error: unknown): ErrorType {
+    const err = error as { response?: { status?: number }; request?: unknown; errorFields?: unknown };
+    
+    if (err?.errorFields) return ErrorType.Validation;
+    
+    if (err?.response?.status) {
+      const status = err.response.status;
+      if (status === 400) return ErrorType.Validation;
+      if (status === 401) return ErrorType.Auth;
+      if (status === 403) return ErrorType.Permission;
+      if (status >= 500) return ErrorType.Server;
+      return ErrorType.Business;
+    }
+    
+    if (err?.request) return ErrorType.Network;
+    
+    return ErrorType.Unknown;
+  }
+
+  /**
+   * 带重试按钮的错误通知
+   * 
+   * @param error 错误对象
+   * @param onRetry 重试回调函数
+   * @param options 配置选项
+   * @returns 错误消息
+   */
+  showErrorWithRetry(
+    error: unknown,
+    onRetry?: () => void,
+    options: {
+      title?: string;
+      defaultMsg?: string;
+      duration?: number;
+    } = {}
+  ): string {
+    const { title = '操作失败', defaultMsg = '操作失败，请稍后重试', duration = 0 } = options;
+    
+    let errorMsg = defaultMsg;
+    const err = error as { response?: { status?: number; data?: { message?: string } }; code?: string; message?: string };
+    const errorType = this.getErrorType(error);
+    const retryable = onRetry ? this.isRetryableError(error) : false;
+    
+    // 根据错误类型获取友好消息
+    if (err?.response) {
+      const status = err.response.status;
+      const data = err.response.data;
+      
+      if (status === 400) {
+        errorMsg = data?.message || '请求参数错误，请检查输入后重试';
+      } else if (status === 401) {
+        errorMsg = '登录已过期，请重新登录';
+      } else if (status === 403) {
+        errorMsg = '您没有权限执行此操作，请联系管理员开通权限';
+      } else if (status === 404) {
+        errorMsg = '请求的资源不存在';
+      } else if (status === 500) {
+        errorMsg = data?.message || '服务器开小差了，请稍后重试';
+      } else if (status && status >= 500) {
+        errorMsg = '服务暂时不可用，请稍后重试';
+      } else {
+        errorMsg = data?.message || `请求失败 (${status})`;
+      }
+    } else if (err?.code === 'ECONNABORTED') {
+      errorMsg = '请求超时，请检查网络后重试';
+    } else if (err?.message?.includes('Network') || err?.message?.includes('网络')) {
+      errorMsg = '网络连接异常，请检查网络设置';
+    } else if (err?.message) {
+      errorMsg = err.message;
+    }
+    
+    const traceId = logger.error('操作失败', {
+      message: errorMsg,
+      type: errorType,
+      retryable
+    });
+
+    let btn: React.ReactNode | undefined;
+    if (retryable) {
+      btn = React.createElement(
+        'button',
+        {
+          className: 'ant-btn ant-btn-primary ant-btn-sm',
+          onClick: () => {
+            notification.destroy(traceId);
+            onRetry?.();
+          },
+        },
+        '重试'
+      );
+    }
+
+    const description = React.createElement(
+      'div',
+      null,
+      React.createElement('div', null, errorMsg),
+      React.createElement(
+        'div',
+        { style: { marginTop: 8, fontSize: 12, color: '#999' } },
+        '追踪ID: ',
+        traceId
+      )
+    );
+
+    notification.error({
+      key: traceId,
+      message: title,
+      description,
+      btn,
+      duration,
+    });
+
     return errorMsg;
   }
 

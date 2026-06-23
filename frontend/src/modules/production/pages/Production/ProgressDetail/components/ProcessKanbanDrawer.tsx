@@ -15,6 +15,7 @@ import {
 } from '@/utils/api/production';
 import { remarkApi } from '@/services/system/remarkApi';
 import type { OrderRemark } from '@/services/system/remarkApi';
+import { formatDateTime } from '@/utils/datetime';
 
 const RemarkTimelineContent: React.FC<{ targetType: string; targetNo: string; canAddRemark?: boolean }> = ({
   targetType, targetNo, canAddRemark = false,
@@ -71,7 +72,7 @@ const RemarkTimelineContent: React.FC<{ targetType: string; targetNo: string; ca
                     <strong style={{ fontSize: 14 }}>{r.authorName || '匿名'}</strong>
                     {r.authorRole && <Tag style={{ marginLeft: 6, fontSize: 14 }}>{r.authorRole}</Tag>}
                   </span>
-                  <span style={{ color: 'var(--color-text-tertiary)', fontSize: 14 }}>{r.createTime ? r.createTime.replace('T', ' ').substring(0, 16) : ''}</span>
+                  <span style={{ color: 'var(--color-text-tertiary)', fontSize: 14 }}>{formatDateTime(r.createTime)}</span>
                 </div>
                 <div style={{ fontSize: 14, whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>{r.content}</div>
               </div>

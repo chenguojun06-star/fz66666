@@ -97,8 +97,19 @@ public class DatabaseHealthCheckJob {
                     (rs, rowNum) -> rs.getInt("Value"));
             if (slowQueries != null) {
                 infos.add("累计慢查询 " + slowQueries + " 次");
-                if (slowQueries > 1000) {
-                    warnings.add("慢查询累计超过1000次 (" + slowQueries + ")，建议优化");
+                if (slowQueries > 500) {
+                    warnings.add("慢查询累计超过500次 (" + slowQueries + ")，建议优化索引和SQL");
+                }
+            }
+
+            Long questions = jdbcTemplate.queryForObject(
+                    "SHOW STATUS LIKE 'Questions'",
+                    (rs, rowNum) -> rs.getLong("Value"));
+            if (questions != null && questions > 0 && slowQueries != null) {
+                double slowRate = (double) slowQueries / questions * 100;
+                infos.add("慢查询比例 " + String.format("%.3f", slowRate) + "%");
+                if (slowRate > 1.0) {
+                    warnings.add("慢查询比例超过1% (" + String.format("%.3f", slowRate) + "%)，需重点关注");
                 }
             }
         } catch (Exception ignored) {}

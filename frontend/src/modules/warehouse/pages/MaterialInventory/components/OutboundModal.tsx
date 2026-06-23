@@ -41,6 +41,7 @@ interface OutboundModalProps {
   loadReceivers: () => void;
   receiverOptions: any[];
   autoMatchOutboundContext: (_data: any, _context: any) => void;
+  outboundSubmitting?: boolean;
 }
 
 const OutboundModal: React.FC<OutboundModalProps> = ({
@@ -59,6 +60,7 @@ const OutboundModal: React.FC<OutboundModalProps> = ({
   loadReceivers,
   receiverOptions,
   autoMatchOutboundContext,
+  outboundSubmitting,
 }) => {
   const warehouseAreaId = Form.useWatch('warehouseAreaId', outboundForm);
   const { selectOptions: areaOptions } = useWarehouseAreaOptions('MATERIAL');
@@ -88,7 +90,7 @@ const OutboundModal: React.FC<OutboundModalProps> = ({
             setBatchDetails([]);
             outboundForm.resetFields();
           }}>取消</Button>
-          <Button type="primary" onClick={handleOutboundConfirm}>确认出库</Button>
+          <Button type="primary" loading={outboundSubmitting} onClick={handleOutboundConfirm} disabled={outboundSubmitting}>确认出库</Button>
         </Space>
       }
     >

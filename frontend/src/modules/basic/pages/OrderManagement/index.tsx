@@ -39,6 +39,7 @@ import { useOrderDataFetch } from './hooks/useOrderDataFetch';
 import { useOrderIntelligence } from './hooks/useOrderIntelligence';
 import { useOrderActions } from './hooks/useOrderActions';
 import { useOrderHandleSubmit } from './hooks/useOrderHandleSubmit';
+import { useFormDraft } from '@/hooks/useFormDraft';
 
 const OrderManagement: React.FC = () => {
   const { modal, message } = App.useApp();
@@ -62,7 +63,7 @@ const OrderManagement: React.FC = () => {
   }, []);
 
   const [queryParams, setQueryParams] = useState<StyleQueryParams>({
-    page: 1, pageSize: readPageSize(10),
+    page: 1, pageSize: readPageSize(20),
     onlyCompleted: true, pushedToOrderOnly: true, keyword: '',
   });
   const [factoryMode, setFactoryMode] = useState<'INTERNAL' | 'EXTERNAL'>('INTERNAL');
@@ -72,6 +73,7 @@ const OrderManagement: React.FC = () => {
   const [selectedStyle, setSelectedStyle] = useState<StyleInfo | null>(null);
   const [submitLoading, setSubmitLoading] = useState(false);
   const [form] = Form.useForm();
+  const orderDraft = useFormDraft('order-create', { debounceMs: 300 });
 
   const [viewMode, setViewMode] = usePersistentState<'table' | 'card'>('order-management-view-mode', 'table');
 
@@ -251,6 +253,22 @@ const OrderManagement: React.FC = () => {
     form.setFieldsValue({ orderQuantity: totalOrderQuantity });
   }, [form, totalOrderQuantity]);
 
+  useEffect(() => {
+    if (!visible) return;
+    const allValues = form.getFieldsValue(true);
+    orderDraft.saveDraftDebounced({
+      formValues: allValues,
+      orderLines,
+      factoryMode,
+    });
+  }, [form, orderLines, factoryMode, visible, orderDraft]);
+
+  useEffect(() => {
+    if (createdOrder) {
+      orderDraft.clearDraft();
+    }
+  }, [createdOrder, orderDraft]);
+
   const selectableColors = useMemo(() => {
     const parsed = parseSizeColorConfig((selectedStyle as any)?.sizeColorConfig);
     return mergeDistinctOptions(splitOptions(selectedStyle?.color), parsed.colors);
@@ -261,14 +279,69 @@ const OrderManagement: React.FC = () => {
     return mergeDistinctOptions(splitOptions(selectedStyle?.size), parsed.sizes);
   }, [selectedStyle?.size, (selectedStyle as any)?.sizeColorConfig]);
 
-  const { generateOrderNo, openCreate, closeDialog } = useOrderActions({
+  const { generateOrderNo, openCreate: _openCreate, closeDialog: _closeDialog } = useOrderActions({
     form,
     setSelectedStyle,
-    setVisible, setActiveTabKey, setCreatedOrder, setProgressNodes,
-    setOrderLines, setBomList, setBomLoading,
-    setSizePriceRows, setSizePriceLoading, setSchedulingResult,
-    setFactoryMode, setPricingModeTouched,
+    setVisible,
+    setActiveTabKey,
+    setCreatedOrder,
+    setProgressNodes,
+    setOrderLines,
+    setBomList,
+    setBomLoading,
+    setSizePriceRows,
+    setSizePriceLoading,
+    setSchedulingResult,
+    setFactoryMode,
+    setPricingModeTouched,
   });
+
+  const openCreate = (style: StyleInfo) => {
+    const draftInfo = orderDraft.getDraftInfo();
+    if (draftInfo.hasDraft) {
+      modal.confirm({
+        title: '发现未保存的草稿',
+        content: (
+          <div>
+            <p>检测到您有未保存的订单草稿（{draftInfo.timeDescription}），是否恢复？</p>
+            <p style={{ color: 'var(--color-text-secondary)', fontSize: 12, marginTop: 8 }}>
+              选择"恢复草稿"将恢复之前未提交的订单内容，选择"新建订单"将清空草稿并重新开始。
+            </p>
+          </div>
+        ),
+        okText: '恢复草稿',
+        cancelText: '新建订单',
+        onOk: () => {
+          _openCreate(style);
+          setTimeout(() => {
+            const draftData = orderDraft.loadDraft() as { formValues?: Record<string, unknown>; orderLines?: OrderLine[]; factoryMode?: 'INTERNAL' | 'EXTERNAL' } | null;
+            if (draftData) {
+              if (draftData.formValues) {
+                form.setFieldsValue(draftData.formValues);
+              }
+              if (draftData.orderLines) {
+                setOrderLines(draftData.orderLines);
+              }
+              if (draftData.factoryMode) {
+                setFactoryMode(draftData.factoryMode);
+              }
+            }
+          }, 0);
+        },
+        onCancel: () => {
+          orderDraft.clearDraft();
+          _openCreate(style);
+        },
+      });
+    } else {
+      _openCreate(style);
+    }
+  };
+
+  const closeDialog = () => {
+    orderDraft.flushSaveDraft();
+    _closeDialog();
+  };
 
   const handleSubmit = useOrderHandleSubmit({
     form, message,

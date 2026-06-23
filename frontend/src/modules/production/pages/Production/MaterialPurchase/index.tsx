@@ -34,7 +34,7 @@ const MaterialPurchase: React.FC = () => {
   const [warehousePickSubmitting, setWarehousePickSubmitting] = useState(false);
   const [warehousePickForm] = Form.useForm();
   const {
-    contextHolder,
+    contextHolder, modalContextHolder,
     user, isMobile, isSupervisorOrAbove,
     purchaseList, loading, total,
     queryParams, setQueryParams,
@@ -157,6 +157,7 @@ const MaterialPurchase: React.FC = () => {
   return (
     <>
       {contextHolder}
+      {modalContextHolder}
       <Form form={form} component={false} />
       <Form form={materialDatabaseForm} component={false} />
         <PageLayout

@@ -1,6 +1,7 @@
 import React from 'react';
-import { Table, ConfigProvider } from 'antd';
+import { Table, ConfigProvider, Empty, Button, Space } from 'antd';
 import type { TableProps } from 'antd';
+import { PlusOutlined } from '@ant-design/icons';
 import {
   DndContext,
   closestCenter,
@@ -50,6 +51,16 @@ type ResizableTableProps<T extends object> = TableProps<T> & {
   stickyHeader?: boolean | { offsetHeader?: number };
   /** 是否自动根据屏幕宽度切换表格 size（默认 true） */
   responsiveSize?: boolean;
+  /** 空状态描述文本 */
+  emptyDescription?: string;
+  /** 空状态主操作按钮文本 */
+  emptyActionText?: string;
+  /** 空状态主操作按钮点击事件 */
+  onEmptyAction?: () => void;
+  /** 空状态副操作按钮文本 */
+  emptySecondaryActionText?: string;
+  /** 空状态副操作按钮点击事件 */
+  onEmptySecondaryAction?: () => void;
 };
 
 const SortableHeaderCell: React.FC<any> = (props) => {
@@ -112,8 +123,49 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
     className,
     rowKey,
     size: sizeProp,
+    emptyDescription,
+    emptyActionText,
+    onEmptyAction,
+    emptySecondaryActionText,
+    onEmptySecondaryAction,
+    locale: localeProp,
+    dataSource,
     ...rest
   } = props;
+
+  const hasEmptyAction = Boolean(emptyActionText && onEmptyAction);
+  const hasEmptySecondaryAction = Boolean(emptySecondaryActionText && onEmptySecondaryAction);
+
+  const mergedLocale = React.useMemo(() => {
+    if (!hasEmptyAction && !hasEmptySecondaryAction && !emptyDescription) {
+      return localeProp;
+    }
+    const emptyNode = (
+      <Empty
+        description={emptyDescription || '暂无数据'}
+        style={{ padding: '48px 0' }}
+      >
+        {(hasEmptyAction || hasEmptySecondaryAction) && (
+          <Space>
+            {hasEmptySecondaryAction && (
+              <Button onClick={onEmptySecondaryAction}>
+                {emptySecondaryActionText}
+              </Button>
+            )}
+            {hasEmptyAction && (
+              <Button type="primary" icon={<PlusOutlined />} onClick={onEmptyAction}>
+                {emptyActionText}
+              </Button>
+            )}
+          </Space>
+        )}
+      </Empty>
+    );
+    return {
+      ...localeProp,
+      emptyText: emptyNode,
+    };
+  }, [localeProp, emptyDescription, emptyActionText, onEmptyAction, emptySecondaryActionText, onEmptySecondaryAction, hasEmptyAction, hasEmptySecondaryAction]);
 
   const shellRef = React.useRef<HTMLDivElement>(null);
   const [isScrollable, setIsScrollable] = React.useState(false);
@@ -459,6 +511,8 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
           style={{ wordBreak: 'break-all' }}
           pagination={mergedPagination as TableProps<T>['pagination']}
           sticky={stickyHeaderProp === true ? { offsetHeader: 0 } : (stickyHeaderProp || undefined)}
+          locale={mergedLocale}
+          dataSource={dataSource}
         />
       </ConfigProvider>
     </div>

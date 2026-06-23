@@ -20,6 +20,7 @@ import { isOrderFrozenByStatus } from '@/utils/api/production';
 import { SCAN_TYPE_OPTIONS } from '@/components/common/ScanTypeBadge';
 import { usePersistentSort } from '@/hooks/usePersistentSort';
 import api from '@/utils/api';
+import { formatDateTime, formatDate } from '@/utils/datetime';
 
 const PayrollOperatorSummary: React.FC = () => {
     const {
@@ -157,7 +158,7 @@ const PayrollOperatorSummary: React.FC = () => {
             dataIndex: 'completeTime',
             key: 'completeTime',
             width: 160,
-            render: (val: string) => val ? val.replace('T', ' ').slice(0, 16) : '-',
+            render: (val: string) => formatDateTime(val),
         },
         {
             title: '颜色',
@@ -311,16 +312,16 @@ const PayrollOperatorSummary: React.FC = () => {
                 {/* ===== 统一统计卡片 ===== */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 12 }}>
                     <Card size="small" style={{ borderRadius: 6, border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }} styles={{ body: { padding: '10px 14px' } }}>
-                        <Statistic title={<span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}><ClockCircleOutlined style={{ marginRight: 4, fontSize: 12 }} />待审批</span>} value={rows.filter((r: any) => !r.auditStatus || r.auditStatus === 'pending').length} suffix="条" valueStyle={{ color: 'var(--color-warning)', fontSize: 20, fontWeight: 500 }} />
+                        <Statistic title={<span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}><ClockCircleOutlined style={{ marginRight: 4, fontSize: 12 }} />待审批</span>} value={rows.filter((r: any) => !r.auditStatus || r.auditStatus === 'pending').length} suffix="条" valueStyle={{ color: 'var(--color-warning)', fontSize: 22, fontWeight: 600 }} />
                     </Card>
                     <Card size="small" style={{ borderRadius: 6, border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }} styles={{ body: { padding: '10px 14px' } }}>
-                        <Statistic title={<span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}><CheckCircleOutlined style={{ marginRight: 4, fontSize: 12 }} />已审批</span>} value={rows.filter((r: any) => r.auditStatus === 'approved' || r.auditStatus === 'audited').length} suffix="条" valueStyle={{ color: 'var(--color-primary)', fontSize: 20, fontWeight: 500 }} />
+                        <Statistic title={<span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}><CheckCircleOutlined style={{ marginRight: 4, fontSize: 12 }} />已审批</span>} value={rows.filter((r: any) => r.auditStatus === 'approved' || r.auditStatus === 'audited').length} suffix="条" valueStyle={{ color: 'var(--color-primary)', fontSize: 22, fontWeight: 600 }} />
                     </Card>
                     <Card size="small" style={{ borderRadius: 6, border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }} styles={{ body: { padding: '10px 14px' } }}>
-                        <Statistic title={<span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}><DollarOutlined style={{ marginRight: 4, fontSize: 12 }} />已付款</span>} value={rows.filter((r: any) => r.paymentStatus === 'paid' || r.status === 'paid').length} suffix="条" valueStyle={{ color: 'var(--color-success)', fontSize: 20, fontWeight: 500 }} />
+                        <Statistic title={<span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}><DollarOutlined style={{ marginRight: 4, fontSize: 12 }} />已付款</span>} value={rows.filter((r: any) => r.paymentStatus === 'paid' || r.status === 'paid').length} suffix="条" valueStyle={{ color: 'var(--color-success)', fontSize: 22, fontWeight: 600 }} />
                     </Card>
-                    <Card size="small" style={{ borderRadius: 6, border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }} styles={{ body: { padding: '10px 14px' } }}>
-                        <Statistic title={<span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}><DollarOutlined style={{ marginRight: 4, fontSize: 12 }} />合计金额</span>} value={totalAmount} prefix="¥" precision={2} valueStyle={{ color: 'var(--color-text-primary)', fontSize: 20, fontWeight: 500 }} />
+                    <Card size="small" style={{ borderRadius: 6, border: '1px solid var(--color-primary)', background: 'linear-gradient(135deg, var(--color-primary-light) 0%, var(--color-bg-container) 100%)' }} styles={{ body: { padding: '10px 14px' } }}>
+                        <Statistic title={<span style={{ color: 'var(--color-text-secondary)', fontSize: 12, fontWeight: 500 }}><DollarOutlined style={{ marginRight: 4, fontSize: 12 }} />合计金额</span>} value={totalAmount} prefix="¥" precision={2} valueStyle={{ color: 'var(--color-primary)', fontSize: 24, fontWeight: 700 }} />
                     </Card>
                 </div>
 
@@ -377,8 +378,12 @@ const PayrollOperatorSummary: React.FC = () => {
                                         }),
                                     }}
                                     columns={columns} dataSource={filteredRows as any} loading={loading}
-                                    pagination={{ showTotal: (total) => `共 ${total} 条`, showSizeChanger: true, pageSizeOptions: ['10', '20', '50', '100'], defaultPageSize: readPageSize(20) }}
-                                    sticky scroll={{ x: 1600 }} />
+                                    pagination={{ showTotal: (total) => `共 ${total} 条`, showSizeChanger: true, pageSizeOptions: ['20', '50', '100', '200'], defaultPageSize: readPageSize(20) }}
+                                    sticky scroll={{ x: 1600 }}
+                                    emptyDescription="暂无工序数据"
+                                    emptyActionText="去扫码录入"
+                                    onEmptyAction={() => { window.location.href = '/production/scan'; }}
+                                />
                             </>
                         ),
                     },
@@ -407,8 +412,12 @@ const PayrollOperatorSummary: React.FC = () => {
                                         getCheckboxProps: (record: Record<string, unknown>) => ({ disabled: Boolean(record.approvalTime) }),
                                     }}
                                     columns={summaryColumns} dataSource={summaryRows as any} loading={loading}
-                                    pagination={{ showTotal: (total) => `共 ${total} 条`, showSizeChanger: true, pageSizeOptions: ['10', '20', '50', '100'], defaultPageSize: readPageSize(20) }}
-                                    sticky scroll={{ x: 1300 }} />
+                                    pagination={{ showTotal: (total) => `共 ${total} 条`, showSizeChanger: true, pageSizeOptions: ['20', '50', '100', '200'], defaultPageSize: readPageSize(20) }}
+                                    sticky scroll={{ x: 1300 }}
+                                    emptyDescription="暂无工资汇总数据"
+                                    emptyActionText="去扫码录入"
+                                    onEmptyAction={() => { window.location.href = '/production/scan'; }}
+                                />
                             </>
                         ),
                     },
@@ -436,7 +445,7 @@ const PayrollOperatorSummary: React.FC = () => {
                                         { title: '总金额', dataIndex: 'totalAmount', key: 'totalAmount', width: 120, align: 'right', render: (v: number) => <span style={{ fontWeight: 600, color: 'var(--primary-color)' }}>{formatMoney(v)}</span> },
                                     ] as any}
                                     dataSource={internalOrders as any} loading={internalOrdersLoading}
-                                    pagination={{ showTotal: (total) => `共 ${total} 条`, showSizeChanger: true, pageSizeOptions: ['10', '20', '50', '100'], defaultPageSize: readPageSize(20) }}
+                                    pagination={{ showTotal: (total) => `共 ${total} 条`, showSizeChanger: true, pageSizeOptions: ['20', '50', '100', '200'], defaultPageSize: readPageSize(20) }}
                                     sticky scroll={{ x: 1000 }} />
                             </>
                         ),

@@ -1,7 +1,7 @@
 import { formatDateTimeSecond } from '@/utils/datetime';
 import dayjs from 'dayjs';
 import { useModal } from '@/hooks';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { materialInventoryApi } from '@/services/warehouse/materialInventoryApi';
 import { message } from '@/utils/antdStatic';
 import type { FormInstance } from 'antd';
@@ -31,6 +31,8 @@ export function useOutboundActions({
 }: OutboundActionsDeps) {
   const outboundModal = useModal<MaterialInventory>();
   const [batchDetails, setBatchDetails] = useState<MaterialBatchDetail[]>([]);
+  const [outboundSubmitting, setOutboundSubmitting] = useState(false);
+  const outboundSubmittingRef = useRef(false);
 
   const buildManualOutboundPrintPayload = (
     record: MaterialInventory, values: Record<string, any>, outboundNo: string,
@@ -89,6 +91,9 @@ export function useOutboundActions({
   };
 
   const handleOutboundConfirm = async () => {
+    if (outboundSubmittingRef.current) return;
+    outboundSubmittingRef.current = true;
+    setOutboundSubmitting(true);
     try {
       const values: any = await outboundForm.validateFields();
       const selectedBatches = batchDetails.filter((item) => (item.outboundQty || 0) > 0);
@@ -116,6 +121,9 @@ export function useOutboundActions({
       const errMsg = typeof error === 'object' && error !== null && 'response' in error
         ? String((error as Record<string, any>).response?.data?.message || '') : '';
       message.error(errMsg || (error instanceof Error ? error.message : '出库操作失败，请重试'));
+    } finally {
+      setOutboundSubmitting(false);
+      outboundSubmittingRef.current = false;
     }
   };
 
@@ -139,6 +147,7 @@ export function useOutboundActions({
 
   return {
     outboundModal, batchDetails, setBatchDetails,
+    outboundSubmitting,
     handleOutbound, handleBatchQtyChange, handleOutboundConfirm, handlePrintOutbound,
   };
 }

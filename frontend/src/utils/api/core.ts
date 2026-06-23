@@ -4,12 +4,12 @@ import axios, { type AxiosInstance, type AxiosRequestConfig } from 'axios';
  * 核心 API 超时配置（毫秒）
  * - 普通请求：15秒
  * - 扫码提交：10秒（快速失败，便于用户重试）
- * - AI/图片识别：30秒（可能需要长耗时处理）
+ * - AI/图片识别：60秒（视觉模型处理可能需要长耗时）
  * - 文件上传：60秒
  */
 export const API_TIMEOUT_MS = 15000;
 export const SCAN_API_TIMEOUT_MS = 10000;
-export const AI_VISION_TIMEOUT_MS = 30000;
+export const AI_VISION_TIMEOUT_MS = 60000;
 export const FILE_UPLOAD_TIMEOUT_MS = 60000;
 
 export type ApiResult<T = unknown> = {
@@ -204,7 +204,7 @@ export const createApiClient = (): ApiClient => {
         if (/\/scan\//i.test(url) || /scan.*execute/i.test(url)) {
           config.timeout = SCAN_API_TIMEOUT_MS; // 扫码请求：10秒
         } else if (/ocr|vision|recognize|extract/.test(url)) {
-          config.timeout = AI_VISION_TIMEOUT_MS; // AI/图片识别：30秒
+          config.timeout = AI_VISION_TIMEOUT_MS; // AI/图片识别：60秒
         } else if (/upload|import|excel/.test(url) && method === 'post') {
           config.timeout = FILE_UPLOAD_TIMEOUT_MS; // 文件上传：60秒
         }

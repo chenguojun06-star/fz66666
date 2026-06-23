@@ -18,6 +18,7 @@ import FactoryTypeTag from '@/components/common/FactoryTypeTag';
 import { isDirectCuttingOrder, isOrderFrozenByStatus } from '@/utils/api';
 import { factoryShipmentApi } from '@/services/production/factoryShipmentApi';
 import SupplierNameTooltip from '@/components/common/SupplierNameTooltip';
+import { formatDateTime } from '@/utils/datetime';
 import { parseProductionOrderLines } from '@/utils/api/production';
 import { getRemainingDaysDisplay } from '@/utils/progressColor';
 import { stageAliasMap } from '@/utils/productionStage';
@@ -521,7 +522,7 @@ export function createProgressNodesRender(ctx: ProgressNodesContext) {
           const predictHint = getPredictHint(String(record.id || ''), nodeName, percent);
           const workerNames = nodeWorkerNamesMap?.[nodeName] || [];
           const operatorDisplay = workerNames.length > 0 ? workerNames.slice(0, 3).join('、') + (workerNames.length > 3 ? `等${workerNames.length}人` : '') : '';
-          const completionTimeDisplay = completionTime ? completionTime.slice(0, 16).replace('T', ' ') : '';
+          const completionTimeDisplay = formatDateTime(completionTime);
           const segmentProgress = Math.min(1, percent / 100);
           const nodePrimaryColor = isCompletedOrClosed ? 'var(--color-success)' : (frozen ? 'var(--color-text-tertiary)' : getNodeColor(record.expectedShipDate || record.plannedEndDate));
           const nodeSecondaryColor = isCompletedOrClosed ? '#95de64' : (frozen ? '#d1d5db' : getNodeColor(record.expectedShipDate || record.plannedEndDate, true));

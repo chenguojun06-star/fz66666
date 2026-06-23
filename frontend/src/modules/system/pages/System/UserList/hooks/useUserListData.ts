@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import { App, Form } from 'antd';
 import type { NavigateFunction } from 'react-router-dom';
 import { Role, User as UserType, UserQueryParams } from '@/types/system';
@@ -27,11 +27,12 @@ export function useUserListData({ user, isSuperAdmin, isTenantOwner, form, userM
   const canManageUsers = isSuperAdmin || isTenantOwner;
 
   // ---- 数据状态 ----
-  const [queryParams, setQueryParams] = useState<UserQueryParams>({ page: 1, pageSize: readPageSize(10) });
+  const [queryParams, setQueryParams] = useState<UserQueryParams>({ page: 1, pageSize: readPageSize(20) });
   const [userList, setUserList] = useState<UserType[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [submitLoading, setSubmitLoading] = useState(false);
+  const submitLoadingRef = useRef(false);
 
   const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
   const showSmartErrorNotice = useMemo(() => isSmartFeatureEnabled('smart.production.precheck.enabled'), []);
@@ -427,9 +428,11 @@ export function useUserListData({ user, isSuperAdmin, isTenantOwner, form, userM
   };
 
   const handleSubmit = async () => {
+    if (submitLoadingRef.current) return;
     try {
       const values: any = await form.validateFields();
       const submit = async (remark?: string) => {
+        submitLoadingRef.current = true;
         setSubmitLoading(true);
         try {
           let response;
@@ -446,7 +449,7 @@ export function useUserListData({ user, isSuperAdmin, isTenantOwner, form, userM
             message.success(userModal.data?.id ? '编辑人员成功' : '新增人员成功');
             closeDialog(); getUserList();
           } else { message.error(result.message || '保存失败'); }
-        } finally { setSubmitLoading(false); }
+        } finally { setSubmitLoading(false); submitLoadingRef.current = false; }
       };
       if (userModal.data?.id) { openRemarkModal('确认保存', '确认保存', undefined, submit); return; }
       await submit();

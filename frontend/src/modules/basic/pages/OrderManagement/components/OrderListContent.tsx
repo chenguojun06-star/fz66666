@@ -88,6 +88,9 @@ const OrderListContent: React.FC<Props> = ({
             pageSizeOptions: [...DEFAULT_PAGE_SIZE_OPTIONS],
             onChange: (page: number, pageSize: number) => setQueryParams((prev) => ({ ...prev, page, pageSize })),
           }}
+          emptyDescription="暂无款号数据"
+          emptyActionText="去创建第一款"
+          onEmptyAction={() => { onNoDataOrder?.(); }}
         />
       ) : (
         <>

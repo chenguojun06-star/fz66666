@@ -653,7 +653,7 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
         onChange: (page, pageSize) => setQueryParams(prev => ({ ...prev, page, pageSize })),
         showTotal: (total) => `共 ${total} 条`,
         showSizeChanger: true,
-        pageSizeOptions: ['10', '20', '50', '100'],
+        pageSizeOptions: ['20', '50', '100', '200'],
         size: isMobile ? 'small' : 'default',
       }}
     />

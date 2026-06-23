@@ -17,7 +17,27 @@
   --color-warning: #faad14; /* Ant Design 默认 warning */
   --color-danger: #ff4d4f;  /* Ant Design 默认 error */
   --color-success: #52c41a; /* Ant Design 默认 success */
-  --color-info: #1890ff;    /* Ant Design 默认 info */
+  --color-info: #722ed1;    /* Ant Design 默认 purple/info */
+
+  /* 状态标签颜色 - 6色系统（与Ant Design Tag color对应） */
+  --status-success: #52c41a;
+  --status-success-bg: #f6ffed;
+  --status-success-border: #b7eb8f;
+  --status-processing: #1890ff;
+  --status-processing-bg: #e6f7ff;
+  --status-processing-border: #91d5ff;
+  --status-warning: #faad14;
+  --status-warning-bg: #fffbe6;
+  --status-warning-border: #ffe58f;
+  --status-error: #ff4d4f;
+  --status-error-bg: #fff2f0;
+  --status-error-border: #ffccc7;
+  --status-default: #bfbfbf;
+  --status-default-bg: #fafafa;
+  --status-default-border: #d9d9d9;
+  --status-info: #722ed1;
+  --status-info-bg: #f9f0ff;
+  --status-info-border: #d3adf7;
 
   /* 中性色（文字、背景） */
   --color-text-primary: #1a1a1a;
@@ -172,7 +192,27 @@
     --color-success: #22c55e;
     --color-warning: #eab308;
     --color-danger: #ef4444;
-    --color-info: #06b6d4;
+    --color-info: #9254de;
+
+    /* 状态标签颜色 - 6色系统（深色模式） */
+    --status-success: #22c55e;
+    --status-success-bg: rgba(34, 197, 94, 0.15);
+    --status-success-border: rgba(34, 197, 94, 0.3);
+    --status-processing: #3b82f6;
+    --status-processing-bg: rgba(59, 130, 246, 0.15);
+    --status-processing-border: rgba(59, 130, 246, 0.3);
+    --status-warning: #eab308;
+    --status-warning-bg: rgba(234, 179, 8, 0.15);
+    --status-warning-border: rgba(234, 179, 8, 0.3);
+    --status-error: #ef4444;
+    --status-error-bg: rgba(239, 68, 68, 0.15);
+    --status-error-border: rgba(239, 68, 68, 0.3);
+    --status-default: #6b7280;
+    --status-default-bg: rgba(107, 114, 128, 0.15);
+    --status-default-border: rgba(107, 114, 128, 0.3);
+    --status-info: #9254de;
+    --status-info-bg: rgba(146, 84, 222, 0.15);
+    --status-info-border: rgba(146, 84, 222, 0.3);
 
     /* 玻璃拟态 - 深色模式 */
     --glass-bg: rgba(26, 26, 26, 0.75);
@@ -215,7 +255,28 @@ html.dark-mode {
   --color-success: #22c55e;
   --color-warning: #eab308;
   --color-danger: #ef4444;
-  --color-info: #06b6d4;
+  --color-info: #9254de;
+
+  /* 状态标签颜色 - 6色系统（深色模式） */
+  --status-success: #22c55e;
+  --status-success-bg: rgba(34, 197, 94, 0.15);
+  --status-success-border: rgba(34, 197, 94, 0.3);
+  --status-processing: #3b82f6;
+  --status-processing-bg: rgba(59, 130, 246, 0.15);
+  --status-processing-border: rgba(59, 130, 246, 0.3);
+  --status-warning: #eab308;
+  --status-warning-bg: rgba(234, 179, 8, 0.15);
+  --status-warning-border: rgba(234, 179, 8, 0.3);
+  --status-error: #ef4444;
+  --status-error-bg: rgba(239, 68, 68, 0.15);
+  --status-error-border: rgba(239, 68, 68, 0.3);
+  --status-default: #6b7280;
+  --status-default-bg: rgba(107, 114, 128, 0.15);
+  --status-default-border: rgba(107, 114, 128, 0.3);
+  --status-info: #9254de;
+  --status-info-bg: rgba(146, 84, 222, 0.15);
+  --status-info-border: rgba(146, 84, 222, 0.3);
+
   --glass-bg: rgba(26, 26, 26, 0.75);
   --glass-border: rgba(255, 255, 255, 0.1);
   --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.3);

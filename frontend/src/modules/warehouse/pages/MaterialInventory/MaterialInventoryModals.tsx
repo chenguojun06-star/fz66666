@@ -63,9 +63,11 @@ const MaterialInventoryModals: React.FC<MaterialInventoryModalsProps> = ({
     txList,
     inboundModal,
     inboundForm,
+    inboundSubmitting,
     handleInboundConfirm,
     outboundModal,
     outboundForm,
+    outboundSubmitting,
     handleOutboundConfirm,
     batchDetails,
     setBatchDetails,
@@ -241,7 +243,7 @@ const MaterialInventoryModals: React.FC<MaterialInventoryModalsProps> = ({
               inboundModal.close();
               inboundForm.resetFields();
             }}>取消</Button>
-            <Button type="primary" onClick={handleInboundConfirm}>确认入库</Button>
+            <Button type="primary" loading={inboundSubmitting} onClick={handleInboundConfirm} disabled={inboundSubmitting}>确认入库</Button>
           </Space>
         }
       >
@@ -432,6 +434,7 @@ const MaterialInventoryModals: React.FC<MaterialInventoryModalsProps> = ({
         loadReceivers={loadReceivers}
         receiverOptions={receiverOptions}
         autoMatchOutboundContext={autoMatchOutboundContext}
+        outboundSubmitting={outboundSubmitting}
       />
 
       {/* 料卷/箱标签生成弹窗 */}

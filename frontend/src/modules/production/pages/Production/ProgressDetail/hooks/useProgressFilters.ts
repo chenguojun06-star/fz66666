@@ -24,7 +24,7 @@ const saveDateSortToStorage = (asc: boolean) => {
 export const useProgressFilters = () => {
   const location = useLocation();
 
-  const [queryParams, setQueryParams] = useState<ProductionQueryParams>({ page: 1, pageSize: readPageSize(10), keyword: '', includeScrapped: false, excludeTerminal: true });
+  const [queryParams, setQueryParams] = useState<ProductionQueryParams>({ page: 1, pageSize: readPageSize(20), keyword: '', includeScrapped: false, excludeTerminal: true });
   const [dateRange, setDateRange] = useState<[dayjs.Dayjs | null, dayjs.Dayjs | null] | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'card'>(
     () => (localStorage.getItem(PROGRESS_VIEW_MODE_STORAGE_KEY) as 'list' | 'card') || 'card'

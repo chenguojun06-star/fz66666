@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { ProductionOrder } from '@/types/production';
 import api, { isApiSuccess, isOrderFrozenByStatus } from '@/utils/api';
 import { productionOrderApi } from '@/services/production/productionApi';
@@ -39,12 +39,18 @@ export function useProductionActions({
   const [scrapOrderLoading, setScrapOrderLoading] = useState(false);
   // 快速编辑状态
   const [quickEditSaving, setQuickEditSaving] = useState(false);
+  const quickEditSavingRef = useRef(false);
   const [remarkPopoverId, setRemarkPopoverId] = useState<string | null>(null);
   const [remarkText, setRemarkText] = useState('');
   const [remarkSaving, setRemarkSaving] = useState(false);
+  const remarkSavingRef = useRef(false);
+  const closeOrderLoadingRef = useRef(false);
+  const scrapOrderLoadingRef = useRef(false);
 
   /** 保存跟单员备注（自动前置时间戳）*/
   const handleRemarkSave = async (orderId: string) => {
+    if (remarkSavingRef.current) return;
+    remarkSavingRef.current = true;
     setRemarkSaving(true);
     try {
       const ts = dayjs().format('MM-DD HH:mm');
@@ -77,6 +83,7 @@ export function useProductionActions({
       message.error(respMsg || (err instanceof Error ? err.message : '保存失败'));
     } finally {
       setRemarkSaving(false);
+      remarkSavingRef.current = false;
     }
   };
 
@@ -86,6 +93,8 @@ export function useProductionActions({
     editData: ProductionOrder | null,
     closeModal: () => void,
   ) => {
+    if (quickEditSavingRef.current) return;
+    quickEditSavingRef.current = true;
     setQuickEditSaving(true);
     try {
       const urgencyLevel: ProductionOrder['urgencyLevel'] =
@@ -115,6 +124,7 @@ export function useProductionActions({
       throw error;
     } finally {
       setQuickEditSaving(false);
+      quickEditSavingRef.current = false;
     }
   };
 
@@ -182,6 +192,8 @@ export function useProductionActions({
 
   const confirmCloseOrder = async (remark: string) => {
     if (!pendingCloseOrder) return;
+    if (closeOrderLoadingRef.current) return;
+    closeOrderLoadingRef.current = true;
     setCloseOrderLoading(true);
     try {
       const orderId = safeString((pendingCloseOrder.order as any)?.id, '');
@@ -201,12 +213,15 @@ export function useProductionActions({
       message.error(e instanceof Error ? e.message : '关单失败');
     } finally {
       setCloseOrderLoading(false);
+      closeOrderLoadingRef.current = false;
     }
   };
   const cancelCloseOrder = () => setPendingCloseOrder(null);
 
   const confirmScrapOrder = async (reason: string) => {
     if (!pendingScrapOrder) return;
+    if (scrapOrderLoadingRef.current) return;
+    scrapOrderLoadingRef.current = true;
     setScrapOrderLoading(true);
     try {
       const orderId = safeString((pendingScrapOrder as any)?.id, '');
@@ -226,6 +241,7 @@ export function useProductionActions({
       message.error(e instanceof Error ? e.message : '报废失败');
     } finally {
       setScrapOrderLoading(false);
+      scrapOrderLoadingRef.current = false;
     }
   };
   const cancelScrapOrder = () => setPendingScrapOrder(null);

@@ -108,3 +108,35 @@ export const formatDate = (input: DateInput): string => {
   const day = pad2(d.getDate());
   return `${y}-${m}-${day}`;
 };
+
+export const formatDateShort = (input: DateInput): string => {
+  const d = toDate(input);
+  if (!d) {
+    const raw = String(input ?? '').trim();
+    return raw ? raw : '-';
+  }
+  const m = pad2(d.getMonth() + 1);
+  const day = pad2(d.getDate());
+  return `${m}-${day}`;
+};
+
+export const formatDateTimeShort = (input: DateInput): string => {
+  const d = toDate(input);
+  if (!d) {
+    const raw = String(input ?? '').trim();
+    return raw ? raw : '-';
+  }
+  const m = pad2(d.getMonth() + 1);
+  const day = pad2(d.getDate());
+  const h = pad2(d.getHours());
+  const min = pad2(d.getMinutes());
+  return `${m}-${day} ${h}:${min}`;
+};
+
+export const formatDurationDays = (days: number | undefined | null): string => {
+  if (days == null || !Number.isFinite(days)) return '-';
+  const absDays = Math.abs(days);
+  if (days < 0) return `逾${absDays}天`;
+  if (days === 0) return '今天';
+  return `${days}天`;
+};

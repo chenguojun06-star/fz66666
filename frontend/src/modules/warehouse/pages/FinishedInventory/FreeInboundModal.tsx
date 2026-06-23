@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { Form, Input, InputNumber, Select, Button, Space, Row, Col, Alert, Switch, App, Divider, Drawer } from 'antd';
 import StandardModal from '@/components/common/StandardModal';
 import ResizableTable from '@/components/common/ResizableTable';
@@ -40,6 +40,7 @@ const FreeInboundModal: React.FC<FreeInboundModalProps> = ({ open, onClose, onSu
   const [skuInput, setSkuInput] = useState('');
   const [querying, setQuerying] = useState(false);
   const [loading, setLoading] = useState(false);
+  const loadingRef = useRef(false);
   const [autoCreate, setAutoCreate] = useState(false);
   const [showCreateFields, setShowCreateFields] = useState(false);
   const [selectedAreaId, setSelectedAreaId] = useState<string | undefined>(undefined);
@@ -143,11 +144,13 @@ const FreeInboundModal: React.FC<FreeInboundModalProps> = ({ open, onClose, onSu
   }, [form]);
 
   const handleSubmit = async () => {
+    if (loadingRef.current) return;
     if (items.length === 0) {
       message.warning('请添加入库SKU');
       return;
     }
     const values = form.getFieldsValue();
+    loadingRef.current = true;
     setLoading(true);
     try {
       const submitItems = items.map(item => ({
@@ -196,6 +199,7 @@ const FreeInboundModal: React.FC<FreeInboundModalProps> = ({ open, onClose, onSu
       if (e.message) message.error(e.message);
     } finally {
       setLoading(false);
+      loadingRef.current = false;
     }
   };
 

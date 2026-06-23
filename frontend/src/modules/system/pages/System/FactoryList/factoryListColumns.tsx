@@ -93,8 +93,8 @@ export const getFactoryColumns = (actions: FactoryColumnActions): ColumnsType<Fa
       key: 'factoryType',
       width: 110,
       render: (v: string) => {
-        if (v === 'INTERNAL') return <Tag color="blue">内部</Tag>;
-        if (v === 'EXTERNAL') return <Tag color="purple">外部</Tag>;
+        if (v === 'INTERNAL') return <Tag color="processing">内部</Tag>;
+        if (v === 'EXTERNAL') return <Tag color="info">外部</Tag>;
         return <Tag>未标记</Tag>;
       },
     },
@@ -104,8 +104,8 @@ export const getFactoryColumns = (actions: FactoryColumnActions): ColumnsType<Fa
       key: 'supplierType',
       width: 110,
       render: (v: string) => {
-        if (v === 'MATERIAL') return <Tag color="blue">面辅料</Tag>;
-        if (v === 'OUTSOURCE') return <Tag color="orange">外发厂</Tag>;
+        if (v === 'MATERIAL') return <Tag color="processing">面辅料</Tag>;
+        if (v === 'OUTSOURCE') return <Tag color="warning">外发厂</Tag>;
         return <Tag>未分类</Tag>;
       },
     },
@@ -116,7 +116,7 @@ export const getFactoryColumns = (actions: FactoryColumnActions): ColumnsType<Fa
       width: 70,
       render: (v: string) => {
         if (!v) return '-';
-        const colorMap: Record<string, string> = { S: 'gold', A: 'green', B: 'blue', C: 'red' };
+        const colorMap: Record<string, string> = { S: 'warning', A: 'success', B: 'processing', C: 'error' };
         return <Tag color={colorMap[v] || 'default'} style={{ fontWeight: 700 }}>{v}</Tag>;
       },
     },
@@ -127,10 +127,10 @@ export const getFactoryColumns = (actions: FactoryColumnActions): ColumnsType<Fa
       width: 90,
       render: (v: string) => {
         const map: Record<string, { color: string; text: string }> = {
-          approved: { color: 'green', text: '已通过' },
-          pending: { color: 'orange', text: '待审核' },
-          probation: { color: 'blue', text: '试用中' },
-          rejected: { color: 'red', text: '已拒绝' },
+          approved: { color: 'success', text: '已通过' },
+          pending: { color: 'warning', text: '待审核' },
+          probation: { color: 'processing', text: '试用中' },
+          rejected: { color: 'error', text: '已拒绝' },
           suspended: { color: 'default', text: '已暂停' },
         };
         const item = map[v] || { color: 'default', text: v || '-' };

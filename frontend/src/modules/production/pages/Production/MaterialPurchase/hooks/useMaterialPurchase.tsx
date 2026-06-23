@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { message as antdMessage } from 'antd';
+import { message as antdMessage, Modal } from 'antd';
 import { isSupervisorOrAboveUser, useUser } from '@/utils/AuthContext';
 import { useViewport } from '@/utils/useViewport';
 import { useLocation } from 'react-router-dom';
@@ -16,6 +16,7 @@ import type { MaterialPurchase as MaterialPurchaseType } from '@/types/productio
 export function useMaterialPurchase() {
   const [messageApi, contextHolder] = antdMessage.useMessage();
   const message = messageApi;
+  const [modal, modalContextHolder] = Modal.useModal();
   const location = useLocation();
   const { user } = useUser();
   const { isMobile } = useViewport();
@@ -58,6 +59,7 @@ export function useMaterialPurchase() {
 
   const dialog = usePurchaseDialog({
     message,
+    modal,
     queryParams: list.queryParams,
     fetchMaterialPurchaseList: list.fetchMaterialPurchaseList,
     ensureOrderUnlocked: list.ensureOrderUnlocked,
@@ -122,7 +124,7 @@ export function useMaterialPurchase() {
   void setActiveTabKey; // suppress unused-variable warning (consumed via activeTabKey)
 
   return {
-    contextHolder, message,
+    contextHolder, modalContextHolder, message,
     user, isMobile, isSupervisorOrAbove,
     activeTabKey,
     purchaseList: list.purchaseList,

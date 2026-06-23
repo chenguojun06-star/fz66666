@@ -98,7 +98,7 @@ export function useOrderColumns({ openCreate, setPrintModalVisible, setPrintingR
       width: 90,
       render: (_: any, record: StyleInfo) => {
         const c = Number((record as Record<string, unknown>)?.orderCount || 0) || 0;
-        return c > 0 ? <Tag color="green">有</Tag> : <Tag>无</Tag>;
+        return c > 0 ? <Tag color="success">有</Tag> : <Tag>无</Tag>;
       },
     },
     {

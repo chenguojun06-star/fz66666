@@ -2,8 +2,9 @@
  * usePurchaseDialog — 采购弹窗状态：表单/预览/提交/打印下载
  * ~130 lines (target ≤ 200)
  */
-import { useState } from 'react';
-import { Form } from 'antd';
+import { useState, useEffect, useRef } from 'react';
+import { Form, Modal } from 'antd';
+import type { ModalStaticFunctions } from 'antd/es/modal/confirm';
 import api from '@/utils/api';
 import { safePrint } from '@/utils/safePrint';
 import { normalizeMaterialType } from '@/utils/materialType';
@@ -11,9 +12,11 @@ import { MATERIAL_PURCHASE_STATUS, MATERIAL_TYPES } from '@/constants/business';
 import { confirmAction } from '@/utils/confirm';
 import type { MaterialPurchase as MaterialPurchaseType, ProductionOrder, MaterialQueryParams } from '@/types/production';
 import { buildPurchaseSheetHtml } from '../utils';
+import { useFormDraft } from '@/hooks/useFormDraft';
 
 interface UsePurchaseDialogOptions {
   message: any;
+  modal: Omit<ModalStaticFunctions, 'warn'>;
   queryParams: MaterialQueryParams;
   fetchMaterialPurchaseList: () => Promise<void>;
   ensureOrderUnlocked: (orderKey: any) => Promise<boolean>;
@@ -31,6 +34,7 @@ interface UsePurchaseDialogOptions {
 
 export function usePurchaseDialog({
   message,
+  modal,
   queryParams,
   fetchMaterialPurchaseList,
   ensureOrderUnlocked,
@@ -50,7 +54,10 @@ export function usePurchaseDialog({
   const [submitLoading, setSubmitLoading] = useState(false);
   const [form] = Form.useForm();
 
-  const openDialog = (mode: 'view' | 'create' | 'preview', purchase?: MaterialPurchaseType) => {
+  const purchaseDraft = useFormDraft('purchase-create', { debounceMs: 300 });
+  const draftCheckedRef = useRef(false);
+
+  const _openDialog = (mode: 'view' | 'create' | 'preview', purchase?: MaterialPurchaseType) => {
     setDialogMode(mode);
     setCurrentPurchase(purchase || null);
     if (mode !== 'preview') { setPreviewList([]); setPreviewOrderId(''); }
@@ -68,6 +75,41 @@ export function usePurchaseDialog({
     setVisible(true);
   };
 
+  const openDialog = (mode: 'view' | 'create' | 'preview', purchase?: MaterialPurchaseType) => {
+    if (mode !== 'create') {
+      _openDialog(mode, purchase);
+      return;
+    }
+
+    const draftInfo = purchaseDraft.getDraftInfo();
+    if (draftInfo.hasDraft) {
+      modal.confirm({
+        title: '发现未保存的草稿',
+        content: `检测到您有未保存的采购草稿（${draftInfo.timeDescription}），是否恢复？\n\n选择"恢复草稿"将恢复之前未提交的采购内容，选择"新建采购"将清空草稿并重新开始。`,
+        okText: '恢复草稿',
+        cancelText: '新建采购',
+        onOk: () => {
+          _openDialog(mode, purchase);
+          setTimeout(() => {
+            const draftData = purchaseDraft.loadDraft() as { formValues?: Record<string, unknown> } | null;
+            if (draftData?.formValues) {
+              form.setFieldsValue(draftData.formValues);
+            }
+            draftCheckedRef.current = true;
+          }, 0);
+        },
+        onCancel: () => {
+          purchaseDraft.clearDraft();
+          _openDialog(mode, purchase);
+          draftCheckedRef.current = true;
+        },
+      });
+    } else {
+      _openDialog(mode, purchase);
+      draftCheckedRef.current = true;
+    }
+  };
+
   const openDialogSafe = async (mode: 'view' | 'create' | 'preview', purchase?: MaterialPurchaseType) => {
     if (mode !== 'view') {
       const orderKey = String(purchase?.orderId || purchase?.orderNo || '').trim();
@@ -80,12 +122,14 @@ export function usePurchaseDialog({
   };
 
   const closeDialog = () => {
+    purchaseDraft.flushSaveDraft();
     setVisible(false);
     setCurrentPurchase(null);
     setDialogMode('view');
     setPreviewList([]);
     setPreviewOrderId('');
     form.resetFields();
+    draftCheckedRef.current = false;
   };
 
   const handleSubmit = async () => {
@@ -111,6 +155,7 @@ export function usePurchaseDialog({
       const response = await api.post<{ code: number; message?: string }>('/production/purchase', payload);
       if (response.code === 200) {
         message.success('新增采购单成功');
+        purchaseDraft.clearDraft();
         closeDialog();
         fetchMaterialPurchaseList();
       } else {
@@ -127,6 +172,12 @@ export function usePurchaseDialog({
       setSubmitLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (!_visible || _dialogMode !== 'create' || !draftCheckedRef.current) return;
+    const allValues = form.getFieldsValue(true);
+    purchaseDraft.saveDraftDebounced({ formValues: allValues });
+  }, [_visible, _dialogMode, form, purchaseDraft]);
 
   const handleSavePreview = async (overwrite = false) => {
     try {

@@ -6,6 +6,7 @@ import { StyleCoverThumb } from '@/components/StyleAssets';
 import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
 import type { SalesForecastResponse, SizeCurveResponse } from '@/services/intelligence/intelligenceTypes';
 import { formatMoney } from '@/utils/format';
+import { formatDateTime } from '@/utils/datetime';
 
 // SKU明细接口
 export interface SKUDetail {
@@ -167,7 +168,7 @@ export function getMainColumns(handlers: {
       width: 190,
       render: (_, record) => (
         <div style={{ fontSize: 14, lineHeight: 2, color: 'var(--neutral-text)' }}>
-          <div>{record.lastInboundDate ? String(record.lastInboundDate).slice(0, 16).replace('T', ' ') : '-'}</div>
+          <div>{formatDateTime(record.lastInboundDate)}</div>
           <div>数量: <strong style={{ color: 'var(--color-success)' }}>{record.lastInboundQty ?? '-'}</strong> 件</div>
           <div>操作人: <strong>{record.lastInboundBy || '-'}</strong></div>
           <div style={{ color: 'var(--neutral-text-secondary)' }}>库位: {record.warehouseLocation || '-'}</div>
@@ -179,7 +180,7 @@ export function getMainColumns(handlers: {
       width: 190,
       render: (_, record) => (
         <div style={{ fontSize: 14, lineHeight: 2, color: 'var(--neutral-text)' }}>
-          <div>{record.lastOutboundDate ? String(record.lastOutboundDate).slice(0, 16).replace('T', ' ') : '-'}</div>
+          <div>{formatDateTime(record.lastOutboundDate)}</div>
           <div>单号: <strong style={{ color: 'var(--primary-color)' }}>{record.lastOutstockNo || '-'}</strong></div>
           <div>出库人: <strong>{record.lastOutboundBy || '-'}</strong></div>
         </div>

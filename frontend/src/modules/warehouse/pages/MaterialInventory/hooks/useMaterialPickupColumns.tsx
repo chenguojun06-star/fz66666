@@ -2,6 +2,7 @@ import { Button, Tag, Space, Popconfirm } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { formatMaterialSpecWidth } from '@/utils/materialType';
 import { formatMoney } from '@/utils/format';
+import { formatDateTime } from '@/utils/datetime';
 
 type LegacyPickupRecord = Record<string, any>;
 
@@ -39,11 +40,6 @@ const RECEIVABLE_STATUS_MAP: Record<string, { color: string; text: string }> = {
   PAID: { color: 'green', text: '已收款' },
   OVERDUE: { color: 'red', text: '逾期未收' },
 };
-
-function fmtTime(t?: string) {
-  if (!t) return '-';
-  return String(t).replace('T', ' ').substring(0, 16);
-}
 
 export function useMaterialPickupColumns(actions: UsedActions): ColumnsType<LegacyPickupRecord> {
   return [
@@ -218,7 +214,7 @@ export function useMaterialPickupColumns(actions: UsedActions): ColumnsType<Lega
       title: '领取时间',
       dataIndex: 'pickupTime',
       width: 150,
-      render: fmtTime,
+      render: formatDateTime,
     },
     {
       title: '审核状态',
@@ -271,7 +267,7 @@ export function useMaterialPickupColumns(actions: UsedActions): ColumnsType<Lega
       title: '收款时间',
       dataIndex: 'receivedTime',
       width: 150,
-      render: fmtTime,
+      render: formatDateTime,
     },
     {
       title: '操作',

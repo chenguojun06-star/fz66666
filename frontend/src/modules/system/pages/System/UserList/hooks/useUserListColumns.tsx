@@ -21,7 +21,7 @@ function getUserAffiliation(roleName?: string, roleCode?: string): { type: UserA
     return {
       type: 'external_factory',
       label: '外发工厂',
-      color: 'blue',
+      color: 'warning',
       icon: <AppstoreOutlined />,
     };
   }
@@ -32,7 +32,7 @@ function getUserAffiliation(roleName?: string, roleCode?: string): { type: UserA
     return {
       type: 'supplier',
       label: '第三方供应商',
-      color: 'purple',
+      color: 'info',
       icon: <ShopOutlined />,
     };
   }
@@ -45,7 +45,7 @@ function getUserAffiliation(roleName?: string, roleCode?: string): { type: UserA
     return {
       type: 'internal',
       label: '内部员工',
-      color: 'green',
+      color: 'success',
       icon: <UserOutlined />,
     };
   }
@@ -69,9 +69,9 @@ export const getStatusConfig = (status: UserType['status']) => {
 
 export const getEmploymentStatusConfig = (status?: string) => {
   const map: Record<string, { text: string; color: string }> = {
-    normal: { text: '正式', color: 'green' },
-    probation: { text: '试用期', color: 'orange' },
-    temporary: { text: '临时工', color: 'blue' },
+    normal: { text: '正式', color: 'success' },
+    probation: { text: '试用期', color: 'warning' },
+    temporary: { text: '临时工', color: 'processing' },
   };
   return map[status || ''] ?? { text: '未设置', color: 'default' };
 };
@@ -149,7 +149,7 @@ export function useUserListColumns(props: UseUserListColumnsProps) {
       dataIndex: 'position',
       key: 'position',
       width: 140,
-      render: (v: string) => v ? <Tag color="purple">{v}</Tag> : '-',
+      render: (v: string) => v ? <Tag color="info">{v}</Tag> : '-',
     },
     {
       title: '角色权限',

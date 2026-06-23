@@ -22,6 +22,7 @@ import StandardSearchBar from '@/components/common/StandardSearchBar';
 import StandardToolbar from '@/components/common/StandardToolbar';
 import PageStatCards from '@/components/common/PageStatCards';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
+import { formatDateTime } from '@/utils/datetime';
 
 import { useMaterialInventoryColumns } from './hooks/useMaterialInventoryColumns';
 import { useMaterialInventoryData } from './hooks/useMaterialInventoryData';
@@ -171,7 +172,7 @@ const _MaterialInventory: React.FC = () => {
       title: '申请时间',
       dataIndex: 'createTime',
       width: 150,
-      render: (t: string) => t ? String(t).replace('T', ' ').substring(0, 16) : '-',
+      render: (t: string) => formatDateTime(t),
     },
     {
       title: '状态',
@@ -408,6 +409,9 @@ const _MaterialInventory: React.FC = () => {
                     stickyHeader
                     scroll={{ x: 1600 }}
                     pagination={false}
+                    emptyDescription="暂无原料库存数据"
+                    emptyActionText="去新增入库"
+                    onEmptyAction={() => { window.location.href = '/warehouse/material-inbound'; }}
                   />
                   <StandardPagination
                     current={inventoryData.pagination.pagination.current}

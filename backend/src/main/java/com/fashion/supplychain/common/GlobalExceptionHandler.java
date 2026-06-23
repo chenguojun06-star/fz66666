@@ -155,7 +155,7 @@ public class GlobalExceptionHandler {
                 String uri = request == null ? "" : request.getRequestURI();
                 logger.error("空指针异常: {} {}", method, uri, e);
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                                .body(Result.fail(500, "系统内部错误，请联系管理员"));
+                                .body(Result.fail(500, "服务器开小差了，请稍后重试，如问题持续请联系管理员"));
         }
 
         /**
@@ -269,7 +269,7 @@ public class GlobalExceptionHandler {
                 String rootMsg = e.getCause() != null ? e.getCause().getMessage() : e.getMessage();
                 logger.error("SQL语法异常（DB列缺失）: {} {} - {}", method, uri, rootMsg, e);
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                                .body(Result.fail(500, "数据库操作异常，请联系管理员"));
+                                .body(Result.fail(500, "数据服务暂时不可用，请稍后重试，如问题持续请联系管理员"));
         }
 
         /**
@@ -308,7 +308,7 @@ public class GlobalExceptionHandler {
                 String uri = request == null ? "" : request.getRequestURI();
                 logger.error("DB访问异常: {} {} - {}", method, uri, e.getMessage(), e);
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                                .body(Result.fail(500, "数据库操作失败，请稍后重试"));
+                                .body(Result.fail(500, "数据访问失败，请稍后重试，如问题持续请联系管理员"));
         }
 
         @ExceptionHandler(IOException.class)
@@ -327,7 +327,7 @@ public class GlobalExceptionHandler {
                 }
                 logger.error("IO异常: {} {}", method, uri, e);
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                                .body(Result.fail(500, "系统内部错误，请联系管理员"));
+                                .body(Result.fail(500, "服务器繁忙，请稍后重试，如问题持续请联系管理员"));
         }
 
         /**
@@ -350,7 +350,7 @@ public class GlobalExceptionHandler {
 
                 logger.error("系统异常: {} {}", method, uri, e);
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                                .body(Result.fail(500, "系统内部错误，请联系管理员"));
+                                .body(Result.fail(500, "服务器开小差了，请稍后重试，如问题持续请联系管理员"));
         }
 
         private String sanitizeClientMessage(String message) {

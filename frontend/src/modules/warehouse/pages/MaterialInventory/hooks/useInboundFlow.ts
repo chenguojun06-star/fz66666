@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Form } from 'antd';
 import { useModal } from '@/hooks';
 import { materialInventoryApi } from '@/services/warehouse/materialInventoryApi';
@@ -20,6 +20,8 @@ export function useInboundFlow({ user, fetchData }: InboundFlowDeps) {
   const [rollForm] = Form.useForm();
   const inboundModal = useModal<MaterialInventory>();
   const rollModal = useModal<{ inboundId: string; materialCode: string; materialName: string }>();
+  const [inboundSubmitting, setInboundSubmitting] = useState(false);
+  const inboundSubmittingRef = useRef(false);
 
   const handleInbound = (record?: MaterialInventory) => {
     if (record) {
@@ -33,6 +35,9 @@ export function useInboundFlow({ user, fetchData }: InboundFlowDeps) {
   };
 
   const handleInboundConfirm = async () => {
+    if (inboundSubmittingRef.current) return;
+    inboundSubmittingRef.current = true;
+    setInboundSubmitting(true);
     try {
       const values: any = await inboundForm.validateFields();
       const response = await materialInventoryApi.manualInbound({
@@ -73,6 +78,9 @@ export function useInboundFlow({ user, fetchData }: InboundFlowDeps) {
       const errMsg = typeof error === 'object' && error !== null && 'response' in error
         ? String((error as Record<string, any>).response?.data?.message || '') : '';
       message.error(errMsg || (error instanceof Error ? error.message : '入库操作失败，请重试'));
+    } finally {
+      setInboundSubmitting(false);
+      inboundSubmittingRef.current = false;
     }
   };
 
@@ -129,6 +137,7 @@ export function useInboundFlow({ user, fetchData }: InboundFlowDeps) {
 
   return {
     inboundForm, rollForm, inboundModal, rollModal, generatingRolls,
+    inboundSubmitting,
     handleInbound, handleInboundConfirm, handleGenerateRollLabels,
   };
 }

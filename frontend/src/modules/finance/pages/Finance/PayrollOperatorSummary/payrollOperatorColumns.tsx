@@ -302,7 +302,7 @@ export function getDetailColumns(deps: DetailColumnDeps): any[] {
                 if (type === 'internal') {
                     return (
                         <Tooltip title={actualOperator && actualOperator !== targetName ? `由 ${actualOperator} 代为操作` : undefined}>
-                            <Tag color="blue">内部指派</Tag>
+                            <Tag color="processing">内部指派</Tag>
                         </Tooltip>
                     );
                 }
@@ -310,7 +310,7 @@ export function getDetailColumns(deps: DetailColumnDeps): any[] {
                 if (type === 'external') {
                     return (
                         <Tooltip title={actualOperator ? `由 ${actualOperator} 代为录入` : undefined}>
-                            <Tag color="orange">外发工厂</Tag>
+                            <Tag color="warning">外发工厂</Tag>
                         </Tooltip>
                     );
                 }
@@ -420,8 +420,8 @@ export function getDetailColumns(deps: DetailColumnDeps): any[] {
             fixed: 'right' as const,
             render: (v: unknown) => {
                 const status = String(v || '').toLowerCase();
-                if (status === 'completed') return <Tag color="green">已完成·可审核</Tag>;
-                if (status === 'closed') return <Tag color="blue">已关单·可审核</Tag>;
+                if (status === 'completed') return <Tag color="success">已完成·可审核</Tag>;
+                if (status === 'closed') return <Tag color="processing">已关单·可审核</Tag>;
                 if (!status) return <span style={{ color: 'var(--neutral-text-disabled)' }}>-</span>;
                 const label = ORDER_STATUS_LABEL[status];
                 return <Tag color={ORDER_STATUS_COLOR[status] ?? 'default'}>{label ?? '未知'}</Tag>;
@@ -435,7 +435,7 @@ export function getDetailColumns(deps: DetailColumnDeps): any[] {
             render: (_: unknown, record: any) => {
                 const canAudit = isOrderFrozenByStatus({ status: record.orderStatus });
                 const audited = isDetailAudited(record);
-                if (audited) return <Tag color="cyan">已审核</Tag>;
+                if (audited) return <Tag color="processing">已审核</Tag>;
                 if (!canAudit) return <span style={{ color: 'var(--neutral-text-disabled)', fontSize: 14 }}>未关单</span>;
                 return (
                     <Button

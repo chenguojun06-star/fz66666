@@ -63,6 +63,7 @@ const PurchaseDocRecognizeModal: React.FC<Props> = ({ open, orderNo, onCancel, o
       const res = await api.post<{ code: number; message?: string; data: RecognizeResult }>(
         '/production/purchase/recognize-doc',
         fd,
+        { timeout: 60000 },
       );
       if (res.code === 200 && res.data) {
         setResult(res.data);

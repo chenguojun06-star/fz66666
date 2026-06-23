@@ -23,6 +23,7 @@ import { useDebouncedValue } from '@/hooks/usePerformance';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { organizationApi } from '@/services/system/organizationApi';
 import './styles.css';
+import { formatDateTime } from '@/utils/datetime';
 
 const { Text } = Typography;
 const { Option } = Select;
@@ -362,9 +363,12 @@ const UserList: React.FC = () => {
                   total: total,
                   showTotal: (total) => `共 ${total} 条`,
                   showSizeChanger: true,
-                  pageSizeOptions: ['10', '20', '50', '100'],
+                  pageSizeOptions: ['20', '50', '100', '200'],
                   onChange: (page, pageSize) => setQueryParams({ ...queryParams, page, pageSize })
                 }}
+                emptyDescription="暂无用户数据"
+                emptyActionText="去添加用户"
+                onEmptyAction={() => { userModal.open({} as UserType); }}
               />
             </div>
           </div>
@@ -525,7 +529,7 @@ const UserList: React.FC = () => {
                 </div>
                 {inviteQr.expiresAt && (
                   <div style={{ color: 'var(--color-text-tertiary, #999)', fontSize: 12, marginTop: 6 }}>
-                    有效期至：{inviteQr.expiresAt.replace('T', ' ').slice(0, 16)}
+                    有效期至：{formatDateTime(inviteQr.expiresAt)}
                   </div>
                 )}
                 <div style={{ marginTop: 12 }}>

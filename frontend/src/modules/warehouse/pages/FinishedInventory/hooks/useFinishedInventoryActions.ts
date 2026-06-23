@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { App } from 'antd';
 import api from '@/utils/api';
 import { useModal } from '@/hooks';
@@ -21,6 +21,8 @@ export const useFinishedInventoryActions = (rawDataSource: FinishedInventory[], 
   const [outboundCustomerName, setOutboundCustomerName] = useState('');
   const [outboundCustomerPhone, setOutboundCustomerPhone] = useState('');
   const [outboundShippingAddress, setOutboundShippingAddress] = useState('');
+  const [outboundSubmitting, setOutboundSubmitting] = useState(false);
+  const outboundSubmittingRef = useRef(false);
 
   const handleOutbound = useCallback((record: FinishedInventory) => {
     const styleSKUs: SKUDetail[] = rawDataSource.filter(item => item.styleNo === record.styleNo).flatMap(item => {
@@ -58,16 +60,18 @@ export const useFinishedInventoryActions = (rawDataSource: FinishedInventory[], 
   }, []);
 
   const handleOutboundConfirm = useCallback(async () => {
+    if (outboundSubmittingRef.current) return;
     if (outboundType === 'sales' && !outboundCustomerName.trim()) { message.warning('销售出库请填写客户名称'); return; }
     if (outboundType === 'scrap' && !outboundReason.trim()) { message.warning('请填写报废原因'); return; }
     const selectedItems = skuDetails.filter(item => (item.outboundQty || 0) > 0);
     if (selectedItems.length === 0) { message.warning('请至少输入一个SKU的出库数量'); return; }
     const invalidItems = selectedItems.filter(item => (item.outboundQty || 0) > item.availableQty);
     if (invalidItems.length > 0) { message.error(`${invalidItems[0].sku} 的出库数量超过可用库存`); return; }
+    outboundSubmittingRef.current = true;
+    setOutboundSubmitting(true);
     try {
       const outboundItems = skuDetails.filter(item => (item.outboundQty ?? 0) > 0).map(item => {
         const result: Record<string, unknown> = { sku: item.sku, quantity: item.outboundQty };
-        // 如果价格有修改，传递改价信息
         if (item.originalSalesPrice != null && item.salesPrice !== item.originalSalesPrice) {
           result.salesPrice = item.salesPrice;
           result.priceAdjustmentReason = item.priceAdjustmentReason || '';
@@ -99,6 +103,10 @@ export const useFinishedInventoryActions = (rawDataSource: FinishedInventory[], 
       setSkuDetails([]);
       loadData();
     } catch (error: unknown) { message.error(error instanceof Error ? error.message : '出库失败，请重试'); }
+    finally {
+      setOutboundSubmitting(false);
+      outboundSubmittingRef.current = false;
+    }
   }, [skuDetails, outboundModal, outboundType, outboundReason, outboundProductionOrderNo, outboundTrackingNo, outboundExpressCompany, outboundCustomerName, outboundCustomerPhone, outboundShippingAddress, message, loadData]);
 
   const handleViewInboundHistory = useCallback(async (record: FinishedInventory) => {
@@ -137,6 +145,7 @@ export const useFinishedInventoryActions = (rawDataSource: FinishedInventory[], 
     outboundProductionOrderNo, setOutboundProductionOrderNo, outboundTrackingNo, setOutboundTrackingNo,
     outboundExpressCompany, setOutboundExpressCompany, outboundCustomerName, setOutboundCustomerName,
     outboundCustomerPhone, setOutboundCustomerPhone, outboundShippingAddress, setOutboundShippingAddress,
+    outboundSubmitting,
     handleOutbound, handleSKUQtyChange, handleSKUSalesPriceChange, handleSKUPriceReasonChange, handleOutboundConfirm, handleViewInboundHistory,
   };
 };

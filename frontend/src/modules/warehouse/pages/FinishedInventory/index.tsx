@@ -29,7 +29,7 @@ const _FinishedInventory: React.FC = () => {
   const [inboundPageSize, setInboundPageSize] = useState(20);
 
   const { rawDataSource, dataSource, pagedDataSource, totalRecords, loading, smartError, showSmartErrorNotice, searchText, setSearchText, statusValue, setStatusValue, selectedFactoryType, setSelectedFactoryType, factoryTypeOptions, pagination, loadData } = useFinishedInventoryData();
-  const { outboundModal, inboundHistoryModal, skuDetails, inboundHistory, outstockTotal, outboundType, setOutboundType, outboundReason, setOutboundReason, outboundProductionOrderNo, setOutboundProductionOrderNo, outboundTrackingNo, setOutboundTrackingNo, outboundExpressCompany, setOutboundExpressCompany, outboundCustomerName, setOutboundCustomerName, outboundCustomerPhone, setOutboundCustomerPhone, outboundShippingAddress, setOutboundShippingAddress, handleOutbound, handleSKUQtyChange, handleSKUSalesPriceChange, handleSKUPriceReasonChange, handleOutboundConfirm, handleViewInboundHistory } = useFinishedInventoryActions(rawDataSource, loadData);
+  const { outboundModal, inboundHistoryModal, skuDetails, inboundHistory, outstockTotal, outboundType, setOutboundType, outboundReason, setOutboundReason, outboundProductionOrderNo, setOutboundProductionOrderNo, outboundTrackingNo, setOutboundTrackingNo, outboundExpressCompany, setOutboundExpressCompany, outboundCustomerName, setOutboundCustomerName, outboundCustomerPhone, setOutboundCustomerPhone, outboundShippingAddress, setOutboundShippingAddress, outboundSubmitting, handleOutbound, handleSKUQtyChange, handleSKUSalesPriceChange, handleSKUPriceReasonChange, handleOutboundConfirm, handleViewInboundHistory } = useFinishedInventoryActions(rawDataSource, loadData);
 
   const columns = getMainColumns({ handleOutbound, handleViewInboundHistory });
   const skuColumns = getSkuColumns({ handleSKUQtyChange, handleSKUSalesPriceChange, handleSKUPriceReasonChange });
@@ -52,7 +52,11 @@ const _FinishedInventory: React.FC = () => {
           label: '库存管理',
           children: (<>
           <Card>
-            <ResizableTable storageKey="warehouse-finished-inventory" size="small" columns={columns} dataSource={pagedDataSource} rowKey={(r: FinishedInventory) => `${r.orderNo}_${r.styleNo}`} loading={loading} pagination={false} scroll={{ x: 'max-content' }} />
+            <ResizableTable storageKey="warehouse-finished-inventory" size="small" columns={columns} dataSource={pagedDataSource} rowKey={(r: FinishedInventory) => `${r.orderNo}_${r.styleNo}`} loading={loading} pagination={false} scroll={{ x: 'max-content' }}
+              emptyDescription="暂无成品库存数据"
+              emptyActionText="去扫码入库"
+              onEmptyAction={() => { window.location.href = '/warehouse/scan-in'; }}
+            />
             <StandardPagination current={pagination.pagination.current} pageSize={pagination.pagination.pageSize} total={totalRecords} onChange={(page, _pageSize) => pagination.gotoPage(page)} />
           </Card>
           <Drawer
@@ -64,8 +68,8 @@ const _FinishedInventory: React.FC = () => {
             destroyOnHidden
             extra={
               <Space>
-                <Button onClick={outboundModal.close}>取消</Button>
-                <Button type="primary" onClick={handleOutboundConfirm}>确认出库</Button>
+                <Button onClick={outboundModal.close} disabled={outboundSubmitting}>取消</Button>
+                <Button type="primary" loading={outboundSubmitting} onClick={handleOutboundConfirm} disabled={outboundSubmitting}>确认出库</Button>
               </Space>
             }
           >
