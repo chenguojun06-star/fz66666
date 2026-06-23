@@ -48,7 +48,7 @@ BEGIN
     (0, '交期预测查询', 'DELIVERY_FORECAST', '[{"step":1,"action":"进入订单详情","tool":"order_detail"},{"step":2,"action":"查看进度看板","tool":"progress_board"},{"step":3,"action":"查看交期预测","tool":"delivery_prediction"},{"step":4,"action":"如有延期风险，查看原因","tool":"risk_analysis"}]', '交期,延期,预测,排产,产能', 0.88);
     INSERT IGNORE INTO t_procedural_memory (tenant_id, sop_name, sop_type, steps_json, trigger_keywords, confidence) VALUES
     (0, '供应商评估流程', 'SUPPLIER_EVAL', '[{"step":1,"action":"进入供应商管理","tool":"supplier_page"},{"step":2,"action":"选择供应商","tool":"select_supplier"},{"step":3,"action":"查看评估指标","tool":"view_metrics"},{"step":4,"action":"查看评级结果","tool":"view_rating"},{"step":5,"action":"导出评估报告","tool":"export_report"}]', '供应商,评估,评级,供应商评估', 0.85);
-END//;
+END //
 DELIMITER ;
 CALL init_pm09();
 DROP PROCEDURE IF EXISTS init_pm09;
