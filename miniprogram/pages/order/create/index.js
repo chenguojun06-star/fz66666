@@ -212,6 +212,16 @@ Page({
     this.setData({ noDataUploadedImage: '' });
   },
 
+  // 无资料下单：预览图片
+  previewNoDataImage: function () {
+    var url = this.data.noDataUploadedImage;
+    if (!url) return;
+    wx.previewImage({
+      current: url,
+      urls: [url]
+    });
+  },
+
   // 无资料下单：跳转到订单表单页面
   goToNoDataOrderForm: function () {
     if (!this.data.noDataUploadedImage) {
