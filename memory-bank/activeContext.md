@@ -24,6 +24,34 @@
 
 ## 最近变更
 
+### 2026-06-24 P0多租户隔离修复 + 死代码清理（第二波）
+
+**P0 多租户隔离修复（4个Entity缺tenant_id）**：
+
+| Entity | 风险等级 | 修复 |
+|--------|----------|------|
+| IntegrationCallbackLog | 🔴 P0 | Mapper已在查询tenant_id但表/Entity都没有，SQL会报错！已补列+索引 |
+| LogisticsProvider | 🟡 P1 | 物流服务商配置需按租户隔离，已补列+索引 |
+| LogisticsTrack | 🟡 P1 | 物流轨迹含敏感信息需隔离，已补列+索引 |
+| AgentEvent | 🟢 P2 | AI事件记录需按租户隔离，已补列+索引 |
+
+**新增4个Flyway迁移（幂等）**：
+- V202606240001 ~ V202606240004
+- 全部使用 INFORMATION_SCHEMA 检查列存在性，缺则补
+- 均带 tenant_id + 业务字段联合索引
+
+**P1 死代码清理**：
+
+| 模块 | 清理内容 | 状态 |
+|------|----------|------|
+| EvolutionOrchestrator | 删除 getUnifiedMetrics/runHealthCheck/getEvolutionReport 3个死方法 | ✅ |
+| MemoryNudgeOrchestrator | 迁移 scheduledExpireOldNudges @Scheduled 调度到此 | ✅ |
+| 前端 NextGenDashboard | 删除 NextGenDashboard.tsx + next-gen-styles.css（无路由、无引用） | ✅ |
+
+**本次提交**：15528619e（28 files, +596 -1251）
+
+---
+
 ### 2026-06-24 全链路数据流阻塞治理（4项优化）
 
 **背景**：排查系统全链路数据流阻塞点，重点针对智能化模块导致的数据库压力问题。
