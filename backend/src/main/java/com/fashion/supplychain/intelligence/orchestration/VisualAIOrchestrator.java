@@ -404,4 +404,22 @@ public class VisualAIOrchestrator {
             log.info("[VisualAI] parseSizeChart 耗时: {}ms", System.currentTimeMillis() - startTime);
         }
     }
+
+    /**
+     * BOM清单/工艺单图片识别：提取物料名称、规格、用量等。
+     */
+    public VisionAnalysisService.BomExtractResult parseBomExtract(String imageUrl) {
+        long startTime = System.currentTimeMillis();
+        try {
+            return visionAnalysisService.parseBomExtract(imageUrl);
+        } catch (Exception e) {
+            log.warn("[VisualAI] parseBomExtract 异常: {}", e.getMessage(), e);
+            VisionAnalysisService.BomExtractResult r = new VisionAnalysisService.BomExtractResult();
+            r.setAvailable(false);
+            r.setErrorMessage("识别异常：" + e.getMessage());
+            return r;
+        } finally {
+            log.info("[VisualAI] parseBomExtract 耗时: {}ms", System.currentTimeMillis() - startTime);
+        }
+    }
 }

@@ -10,6 +10,7 @@ import com.fashion.supplychain.finance.service.ShipmentReconciliationService;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.helper.ExternalFactoryMaterialDeductionHelper;
+import com.fashion.supplychain.production.helper.ExternalFactoryDefectDeductionHelper;
 import com.fashion.supplychain.production.helper.OrderReconciliationHelper;
 import com.fashion.supplychain.production.service.ProductOutstockService;
 import com.fashion.supplychain.production.service.ProductionOrderScanRecordDomainService;
@@ -70,6 +71,9 @@ public class ShipmentReconciliationOrchestrator {
     @Autowired
     private ExternalFactoryMaterialDeductionHelper externalFactoryMaterialDeductionHelper;
 
+    @Autowired
+    private ExternalFactoryDefectDeductionHelper externalFactoryDefectDeductionHelper;
+
     @Autowired(required = false)
     private BillAggregationOrchestrator billAggregationOrchestrator;
 
@@ -110,7 +114,14 @@ public class ShipmentReconciliationOrchestrator {
             externalFactoryMaterialDeductionHelper.attachOrphanDeductionsToReconciliation(
                     oid, order.getOrderNo(), sr.getId());
         } catch (Exception e) {
-            log.warn("归集暂存扣款失败(不影响主流程): orderId={}", oid, e);
+            log.warn("归集暂存面辅料扣款失败(不影响主流程): orderId={}", oid, e);
+        }
+
+        try {
+            externalFactoryDefectDeductionHelper.attachOrphanDeductionsToReconciliation(
+                    oid, order.getOrderNo(), sr.getId());
+        } catch (Exception e) {
+            log.warn("归集暂存次品扣款失败(不影响主流程): orderId={}", oid, e);
         }
 
         return true;

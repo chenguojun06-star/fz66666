@@ -982,4 +982,139 @@ public class VisionAnalysisService {
             colors.add(c);
         }
     }
+
+    /**
+     * BOM清单/工艺单图片OCR识别：提取物料名称、规格、用量等
+     */
+    public BomExtractResult parseBomExtract(String imageUrl) {
+        BomExtractResult r = new BomExtractResult();
+        r.setImageUrl(imageUrl);
+        if (!isAvailable()) {
+            r.setAvailable(false);
+            r.setErrorMessage("视觉AI模型未启用，请联系管理员配置");
+            return r;
+        }
+
+        try {
+            String prompt = buildBomExtractPrompt();
+            IntelligenceInferenceResult inference = aiInferenceGateway.chatWithVision(
+                    "vision-bom-extract",
+                    "你是服装BOM清单OCR专家。请仔细识别这张工艺单/面料清单图片，提取所有物料行数据。",
+                    prompt,
+                    imageUrl
+            );
+
+            if (inference == null || !inference.isSuccess()) {
+                r.setAvailable(false);
+                r.setErrorMessage("BOM识别失败：" + (inference != null ? inference.getErrorMessage() : "未知错误"));
+                return r;
+            }
+
+            String raw = inference.getContent();
+            r.setConfidence(inference.getPromptTokens() + inference.getCompletionTokens() > 0 ? 75 : 50);
+
+            String jsonFragment = extractJsonFragment(raw);
+            if (jsonFragment != null) {
+                Map<String, Object> map = MAPPER.readValue(jsonFragment, Map.class);
+                parseBomFromMap(map, r);
+            } else {
+                parseBomFromText(raw, r);
+            }
+
+            r.setAvailable(true);
+            log.info("[VisionAnalysis] parseBomExtract done: imageUrl={}, items={}, confidence={}",
+                    imageUrl, r.getItems().size(), r.getConfidence());
+
+        } catch (Exception e) {
+            log.warn("[VisionAnalysis] parseBomExtract failed: {}", e.getMessage());
+            r.setAvailable(false);
+            r.setErrorMessage("BOM识别异常：" + e.getMessage());
+        }
+        return r;
+    }
+
+    private String buildBomExtractPrompt() {
+        return """
+            请仔细分析这张工艺单/面料清单/BOM表图片，提取所有物料行数据。
+
+            要求：
+            1. 识别表格结构：物料名称、规格/成分、用量/数量、单位等列
+            2. 每行提取物料名称、规格、用量、单位
+            3. 如果某格为空，填 null
+
+            返回严格的JSON格式（不要markdown包裹，不要解释文字）：
+            {
+              "items": [
+                {"materialName": "面料名称", "materialCode": "面料编码(如有)", "specification": "规格/成分", "usageAmount": 1.5, "unit": "米"},
+                {"materialName": "里料名称", "specification": "规格", "usageAmount": 0.8, "unit": "米"}
+              ]
+            }
+
+            重要：
+            - 只返回JSON，不要任何解释文字
+            - usageAmount必须是数字（单件用量）
+            - 如果图片不清晰或无法识别，返回空数组：{"items":[]}
+            - 物料名称必须有，其他字段没有可以为空
+            - 常见单位：米、个、套、条、只、双、粒、枚、包、张、件、根、片
+            """;
+    }
+
+    @SuppressWarnings("unchecked")
+    private void parseBomFromMap(Map<String, Object> map, BomExtractResult r) {
+        Object itemsObj = map.get("items");
+        if (!(itemsObj instanceof List)) return;
+
+        List<Map<String, Object>> items = (List<Map<String, Object>>) itemsObj;
+        for (Map<String, Object> item : items) {
+            BomItemRow row = new BomItemRow();
+            row.setMaterialName(extractStringField(item, "materialName", "name", "物料名称", "名称", "品名"));
+            row.setMaterialCode(extractStringField(item, "materialCode", "code", "物料编码", "编码", "款号"));
+            row.setSpecification(extractStringField(item, "specification", "spec", "规格", "成分", "材质", "幅宽"));
+            row.setUsageAmount(extractAmount(item, "usageAmount", "quantity", "用量", "数量", "单件用量"));
+            row.setUnit(extractStringField(item, "unit", "单位"));
+
+            if (row.getMaterialName() != null && !row.getMaterialName().isBlank()) {
+                r.getItems().add(row);
+            }
+        }
+    }
+
+    private void parseBomFromText(String raw, BomExtractResult r) {
+        if (raw == null || raw.isBlank()) return;
+
+        java.util.regex.Pattern linePattern = java.util.regex.Pattern.compile(
+                "(.+?)\\s+[：:　 ]\\s*(.+?)(?:\\s+[：:　 ]\\s*(\\d+(?:\\.\\d+)?)\\s*(\\S+))?"
+        );
+        java.util.regex.Matcher m = linePattern.matcher(raw);
+        while (m.find()) {
+            String name = m.group(1).trim();
+            if (name.length() < 2) continue;
+            BomItemRow row = new BomItemRow();
+            row.setMaterialName(name);
+            row.setSpecification(m.group(2) != null ? m.group(2).trim() : null);
+            if (m.group(3) != null) {
+                try { row.setUsageAmount(Double.parseDouble(m.group(3))); } catch (Exception ignored) {}
+            }
+            row.setUnit(m.group(4));
+            r.getItems().add(row);
+        }
+    }
+
+    @lombok.Data
+    public static class BomExtractResult {
+        private String imageUrl;
+        private boolean available = true;
+        private String errorMessage;
+        private int confidence;
+        private java.util.List<BomItemRow> items = new ArrayList<>();
+    }
+
+    @lombok.Data
+    public static class BomItemRow {
+        private String materialName;
+        private String materialCode;
+        private String specification;
+        private Double usageAmount;
+        private String unit;
+    }
 }

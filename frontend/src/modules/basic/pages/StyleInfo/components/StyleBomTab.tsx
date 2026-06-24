@@ -1,10 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { App, Button, Card, Form, Modal, Tag, Upload, Tooltip } from 'antd';
-import { BulbOutlined, DeleteOutlined, HistoryOutlined, InboxOutlined, PlusOutlined } from '@ant-design/icons';
-import type { UploadFile, UploadProps } from 'antd/es/upload/interface';
+import { App, Form, Modal } from 'antd';
 import { StyleBom } from '@/types/style';
 import api from '@/utils/api';
-import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
 import ResizableTable from '@/components/common/ResizableTable';
 import { isSupervisorOrAboveUser, useUser } from '@/utils/AuthContext';
 import { getMaterialSortWeight } from '@/utils/materialType';
@@ -32,19 +29,6 @@ interface Props {
     colors?: string[];
     matrixRows?: Array<{ color: string; quantities: number[]; imageUrl?: string }>;
   };
-}
-
-// AI 智能识别的物料条目
-interface AiBomRecognizedItem {
-  id: string;
-  sourceImageUrl?: string;
-  materialName: string;
-  materialCode?: string;
-  specification?: string;
-  usageAmount?: number;
-  rawText?: string;
-  createdAt: number;
-  joined?: boolean;
 }
 
 const normalizeUniqueValues = (values?: string[]) => Array.from(
@@ -149,12 +133,6 @@ const StyleBomTab: React.FC<Props> = ({
   }, [activeSizes, extractSpecLength, parseNumberMap]);
 
   const [checkingStock, setCheckingStock] = useState(false);
-
-  const [aiBomRecognized, setAiBomRecognized] = useState<AiBomRecognizedItem[]>([]);
-  const [aiBomModalOpen, setAiBomModalOpen] = useState(false);
-  const [aiBomImagePreviewUrl, setAiBomImagePreviewUrl] = useState<string | undefined>(undefined);
-  const [aiBomLoading, setAiBomLoading] = useState(false);
-  const [aiBomFallbackMessage, setAiBomFallbackMessage] = useState<string>('');
 
   const locked = Boolean(readOnly);
 
@@ -426,113 +404,9 @@ const StyleBomTab: React.FC<Props> = ({
     sortBomRows,
   });
 
-  // ── AI 智能识别 BOM 清单处理 ──
-  const handleAiBomRecognize = useCallback(async (file: File): Promise<string | null> => {
-    if (!file) return null;
-    setAiBomLoading(true);
-    setAiBomFallbackMessage('');
-    try {
-      // 1. 上传图片
-      const fd = new FormData();
-      fd.append('file', file);
-      const uploadRes = await api.post('/upload', fd, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-        timeout: 60000,
-      });
-      if (uploadRes?.code !== 200 || !uploadRes?.data) {
-        setAiBomFallbackMessage('图片上传失败，您可手动在下方添加物料行');
-        message.error('图片上传失败');
-        return null;
-      }
-      const imageUrl = uploadRes.data as string;
-
-      // 2. 调用 bom-extract 接口；若 404/非200 则回退到 style-search
-      let items: AiBomRecognizedItem[] = [];
-      let usedFallback = false;
-      try {
-        const bomRes = await api.post<{ code: number; data: Array<Record<string, unknown>> }>(
-          '/intelligence/visual/bom-extract',
-          { imageUrl, styleId: styleId != null ? String(styleId) : undefined }
-        );
-        if (bomRes?.code === 200 && Array.isArray(bomRes?.data) && bomRes.data.length > 0) {
-          items = bomRes.data.map((row, idx) => {
-            const name = String((row as any).materialName || (row as any).name || (row as any).物料名称 || '').trim();
-            const code = String((row as any).materialCode || (row as any).code || (row as any).物料编码 || '').trim();
-            const spec = String((row as any).specification || (row as any).spec || (row as any).规格 || '').trim();
-            const qty = Number((row as any).usageAmount || (row as any).quantity || (row as any).数量 || (row as any).用量 || 0) || undefined;
-            return {
-              id: `ai_${Date.now()}_${idx}`,
-              sourceImageUrl: imageUrl,
-              materialName: name || '未识别物料',
-              materialCode: code || undefined,
-              specification: spec || undefined,
-              usageAmount: qty,
-              rawText: typeof row === 'string' ? row : JSON.stringify(row),
-              createdAt: Date.now(),
-            };
-          }).filter((it) => it.materialName && it.materialName !== '未识别物料');
-        } else {
-          usedFallback = true;
-        }
-      } catch {
-        usedFallback = true;
-      }
-
-      // 3. 回退路径：以图搜款作为视觉接口不可用时的 fallback（仅作提示，不解析为 BOM 行）
-      if (usedFallback) {
-        try {
-          const fallback = await intelligenceApi.styleSearchByImage(imageUrl, 3);
-          if (fallback?.success && fallback.matches?.length) {
-            setAiBomFallbackMessage('AI 识别功能即将上线，您可手动在下方添加物料行（以图搜款已定位到类似款式供参考）');
-          } else {
-            setAiBomFallbackMessage('AI 识别功能即将上线，您可手动在下方添加物料行');
-          }
-        } catch {
-          setAiBomFallbackMessage('AI 识别功能即将上线，您可手动在下方添加物料行');
-        }
-      }
-
-      if (items.length > 0) {
-        setAiBomRecognized((prev) => [...items, ...prev]);
-        message.success(`识别成功：共解析出 ${items.length} 条物料`);
-        return imageUrl;
-      }
-      if (!usedFallback) {
-        message.info('未识别出有效物料行');
-      }
-      return imageUrl;
-    } catch {
-      setAiBomFallbackMessage('AI 识别功能即将上线，您可手动在下方添加物料行');
-      message.error('AI 识别失败');
-      return null;
-    } finally {
-      setAiBomLoading(false);
-    }
-  }, [message, styleId]);
-
-  const handleJoinAiBomRow = useCallback((item: AiBomRecognizedItem) => {
-    // 创建一个临时的 BOM 行并填入识别到的字段
-    const rowId = `tmp_ai_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-    const patch: Partial<StyleBom> & Record<string, unknown> = {
-      id: rowId,
-      materialName: item.materialName,
-      materialCode: item.materialCode,
-      specification: item.specification,
-      usageAmount: item.usageAmount,
-    };
-    form.setFieldsValue({ [rowId]: patch });
-    setData((prev) => sortBomRows([...(Array.isArray(prev) ? prev : []), patch as StyleBom]));
-    setAiBomRecognized((prev) => prev.map((it) => (it.id === item.id ? { ...it, joined: true } : it)));
-    message.success('已加入 BOM，请到下方表格完善其他字段');
-  }, [form, message]);
-
-  const handleJoinAllAiBom = useCallback(() => {
-    const unjoined = aiBomRecognized.filter((it) => !it.joined);
-    if (unjoined.length === 0) {
-      message.info('没有可加入的物料');
-      return;
-    }
-    unjoined.forEach((it, idx) => {
+  const handleBomRecognized = useCallback((items: Array<{ id: string; materialName: string; materialCode?: string; specification?: string; usageAmount?: number }>) => {
+    if (!Array.isArray(items) || items.length === 0) return;
+    items.forEach((it, idx) => {
       const rowId = `tmp_ai_${Date.now()}_${idx}_${Math.random().toString(36).slice(2, 5)}`;
       const patch: Partial<StyleBom> & Record<string, unknown> = {
         id: rowId,
@@ -545,7 +419,7 @@ const StyleBomTab: React.FC<Props> = ({
     });
     setData((prev) => {
       const next = [...(Array.isArray(prev) ? prev : [])];
-      unjoined.forEach((it, idx) => {
+      items.forEach((it, idx) => {
         const rowId = `tmp_ai_${Date.now()}_${idx}_${Math.random().toString(36).slice(2, 5)}`;
         next.push({
           id: rowId,
@@ -557,257 +431,7 @@ const StyleBomTab: React.FC<Props> = ({
       });
       return sortBomRows(next);
     });
-    setAiBomRecognized((prev) => prev.map((it) => ({ ...it, joined: true })));
-    message.success(`已将 ${unjoined.length} 条物料加入 BOM`);
-  }, [aiBomRecognized, form, message]);
-
-  // ── AI 智能识别 BOM 清单组件（内联定义） ──
-  const AiBomRecognizeBar: React.FC = () => {
-    const unjoinedCount = aiBomRecognized.filter((it) => !it.joined).length;
-
-    const onDrop: UploadProps['customRequest'] = async (options) => {
-      const file = options?.file as unknown as File;
-      if (!file) return;
-      await handleAiBomRecognize(file);
-    };
-
-    return (
-      <Card
-        styles={{ body: { padding: '10px 12px' } }}
-        style={{
-          marginBottom: 12,
-          borderRadius: 12,
-          border: '1px solid rgba(114,46,209,0.15)',
-          background: 'linear-gradient(135deg, #fff7ed 0%, #faf5ff 100%)',
-        }}
-      >
-        <div style={{ display: 'flex', gap: 12, alignItems: 'stretch', flexWrap: 'wrap' }}>
-          {/* 左：图标 + 标题 */}
-          <div style={{ flex: '0 0 220px', minWidth: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <BulbOutlined style={{ color: 'var(--color-accent-purple)', fontSize: 18 }} />
-              <span style={{ fontWeight: 700, color: '#1f1f1f' }}>AI 智能识别 BOM 清单</span>
-            </div>
-            <div style={{ fontSize: 12, color: 'var(--color-text-tertiary)', lineHeight: 1.5, marginTop: 4 }}>
-              上传工艺单/面料清单图片，自动解析物料名称、规格、数量
-            </div>
-            <div style={{ marginTop: 8 }}>
-              <Button
-                type="link"
-                icon={<HistoryOutlined />}
-                onClick={() => setAiBomModalOpen(true)}
-                style={{ padding: 0, fontSize: 12 }}
-              >
-                历史识别记录（{aiBomRecognized.length}）
-              </Button>
-            </div>
-          </div>
-
-          {/* 中：拖拽上传区域 */}
-          <div style={{ flex: 1, minWidth: 260 }}>
-            <Upload.Dragger
-              accept="image/*"
-              multiple
-              showUploadList={false}
-              beforeUpload={() => false}
-              customRequest={onDrop}
-              disabled={aiBomLoading}
-              style={{ padding: 8 }}
-            >
-              <p className="ant-upload-drag-icon" style={{ margin: 0 }}>
-                <InboxOutlined style={{ color: 'var(--color-accent-purple)' }} />
-              </p>
-              <p className="ant-upload-text" style={{ margin: '4px 0 0', fontSize: 13, color: '#1f1f1f' }}>
-                {aiBomLoading ? '正在识别中…' : '点击或拖拽图片到此处上传识别'}
-              </p>
-              <p className="ant-upload-hint" style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--color-text-tertiary)' }}>
-                支持 JPG/PNG，每张图片独立解析
-              </p>
-            </Upload.Dragger>
-            {aiBomFallbackMessage && (
-              <div
-                style={{
-                  marginTop: 6,
-                  padding: '4px 8px',
-                  borderRadius: 6,
-                  background: 'rgba(255,193,7,0.08)',
-                  border: '1px solid rgba(255,193,7,0.25)',
-                  fontSize: 12,
-                  color: '#d48806',
-                  lineHeight: 1.5,
-                }}
-              >
-                {aiBomFallbackMessage}
-              </div>
-            )}
-          </div>
-
-          {/* 右：已识别结果摘要 + 一键加入 */}
-          <div style={{ flex: '0 0 260px', minWidth: 0 }}>
-            <div style={{ fontSize: 12, color: 'var(--color-text-tertiary)', marginBottom: 4 }}>
-              已识别 <b style={{ color: 'var(--color-accent-purple)' }}>{aiBomRecognized.length}</b> 条，待加入 <b>{unjoinedCount}</b> 条
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 110, overflowY: 'auto' }}>
-              {aiBomRecognized.slice(0, 4).map((it) => (
-                <div
-                  key={it.id}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 6,
-                    padding: '3px 6px',
-                    background: 'var(--color-bg-base)',
-                    borderRadius: 6,
-                    border: '1px solid rgba(0,0,0,0.05)',
-                  }}
-                >
-                  <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', fontSize: 12 }}>
-                    {it.materialName}
-                    {it.specification ? ` · ${it.specification}` : ''}
-                  </span>
-                  {it.joined ? (
-                    <Tag color="success" style={{ margin: 0, fontSize: 11 }}>已加入</Tag>
-                  ) : (
-                    <Button
-                      size="small"
-                      type="primary"
-                      icon={<PlusOutlined />}
-                      onClick={() => handleJoinAiBomRow(it)}
-                      style={{ fontSize: 11, height: 20, padding: '0 6px' }}
-                    >
-                      加入 BOM
-                    </Button>
-                  )}
-                </div>
-              ))}
-              {aiBomRecognized.length === 0 && !aiBomLoading && (
-                <div style={{ fontSize: 11, color: 'var(--color-text-quaternary)', padding: '8px 4px', textAlign: 'center' }}>
-                  还未识别任何物料
-                </div>
-              )}
-            </div>
-            <div style={{ marginTop: 6, textAlign: 'right' }}>
-              <Button
-                size="small"
-                type="primary"
-                disabled={unjoinedCount === 0}
-                onClick={handleJoinAllAiBom}
-                style={{ fontSize: 12, height: 24 }}
-              >
-                一键全部加入 BOM（{unjoinedCount}）
-              </Button>
-            </div>
-          </div>
-        </div>
-
-        {/* 历史识别记录弹窗 */}
-        <Modal
-          title="历史识别记录"
-          open={aiBomModalOpen}
-          onCancel={() => setAiBomModalOpen(false)}
-          footer={[
-            <Button
-              key="clear"
-              danger
-              icon={<DeleteOutlined />}
-              disabled={aiBomRecognized.length === 0}
-              onClick={() => {
-                setAiBomRecognized([]);
-                message.success('已清空历史识别记录');
-              }}
-            >
-              清空记录
-            </Button>,
-            <Button key="close" type="primary" onClick={() => setAiBomModalOpen(false)}>关闭</Button>,
-          ]}
-          width={640}
-        >
-          {aiBomRecognized.length === 0 ? (
-            <div style={{ padding: '24px 0', textAlign: 'center', color: 'var(--color-text-tertiary)' }}>
-              本次会话还没有识别记录
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 420, overflowY: 'auto' }}>
-              {aiBomRecognized.map((it) => (
-                <div
-                  key={it.id}
-                  style={{
-                    display: 'flex',
-                    gap: 10,
-                    padding: 8,
-                    border: '1px solid var(--color-border-antd)',
-                    borderRadius: 8,
-                    background: 'var(--color-bg-container)',
-                  }}
-                >
-                  {it.sourceImageUrl && (
-                    <div style={{ flex: '0 0 96px' }}>
-                      <img
-                        src={it.sourceImageUrl}
-                        alt={it.materialName}
-                        style={{ width: 96, height: 96, objectFit: 'cover', borderRadius: 6, cursor: 'pointer' }}
-                        onClick={() => setAiBomImagePreviewUrl(it.sourceImageUrl)}
-                      />
-                    </div>
-                  )}
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: '#1f1f1f' }}>{it.materialName}</div>
-                    {it.materialCode && (
-                      <div style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>编码：{it.materialCode}</div>
-                    )}
-                    {it.specification && (
-                      <div style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>规格：{it.specification}</div>
-                    )}
-                    {it.usageAmount != null && (
-                      <div style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>用量：{it.usageAmount}</div>
-                    )}
-                    <div style={{ marginTop: 6 }}>
-                      {it.joined ? (
-                        <Tag color="success" style={{ margin: 0, fontSize: 11 }}>已加入 BOM</Tag>
-                      ) : (
-                        <Button
-                          size="small"
-                          type="primary"
-                          icon={<PlusOutlined />}
-                          onClick={() => handleJoinAiBomRow(it)}
-                          style={{ fontSize: 11, height: 22, padding: '0 8px' }}
-                        >
-                          加入 BOM
-                        </Button>
-                      )}
-                      <Tooltip title="查看原图">
-                        <Button
-                          size="small"
-                          type="link"
-                          onClick={() => setAiBomImagePreviewUrl(it.sourceImageUrl)}
-                          style={{ padding: '0 6px', fontSize: 11 }}
-                        >
-                          查看原图
-                        </Button>
-                      </Tooltip>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </Modal>
-
-        {/* 图片预览 */}
-        <Modal
-          title="原始图片"
-          open={!!aiBomImagePreviewUrl}
-          onCancel={() => setAiBomImagePreviewUrl(undefined)}
-          footer={null}
-          width={640}
-        >
-          {aiBomImagePreviewUrl && (
-            <img src={aiBomImagePreviewUrl} alt="preview" style={{ width: '100%', borderRadius: 6 }} />
-          )}
-        </Modal>
-      </Card>
-    );
-  };
+  }, [form]);
 
   // 列定义
   const columns = useBomColumns({
@@ -881,7 +505,6 @@ const StyleBomTab: React.FC<Props> = ({
           return true;
         }}
       />
-      <AiBomRecognizeBar />
       <StyleBomSizeColorSummary sizes={activeSizes} colors={activeColors} />
       <StyleBomToolbar
         dataLength={data.length}
@@ -893,6 +516,8 @@ const StyleBomTab: React.FC<Props> = ({
         editingKey={editingKey}
         bomTemplateId={bomTemplateId}
         bomTemplates={bomTemplates}
+        styleId={styleId}
+        onBomRecognized={handleBomRecognized}
         onBomTemplateIdChange={setBomTemplateId}
         onTemplateOpenChange={(open) => {
           if (open && !bomTemplates.length) fetchBomTemplates('');

@@ -348,6 +348,25 @@ public class IntelligenceAiAdvisorController {
         }
     }
 
+    @PostMapping("/visual/bom-extract")
+    @DataTruth(source = DataTruth.Source.AI_DERIVED, description = "BOM清单OCR识别由视觉AI生成")
+    public Result<VisionAnalysisService.BomExtractResult> bomExtract(@RequestBody Map<String, Object> body) {
+        String imageUrl = (String) body.get("imageUrl");
+        if (imageUrl == null || imageUrl.isBlank()) {
+            return Result.fail("imageUrl 不能为空");
+        }
+        try {
+            VisionAnalysisService.BomExtractResult result = visualAIOrchestrator.parseBomExtract(imageUrl);
+            if (result == null || !result.isAvailable()) {
+                return Result.fail(result != null ? result.getErrorMessage() : "BOM识别失败");
+            }
+            return Result.success(result);
+        } catch (Exception e) {
+            log.error("[BOM识别] 异常: {}", e.getMessage(), e);
+            return Result.fail("BOM识别服务异常: " + e.getMessage());
+        }
+    }
+
     /**
      * 运行时诊断端点 — 排查 Agnes/DeepSeek 配置是否正确注入
      * 浏览器访问: GET /api/intelligence/visual/diag

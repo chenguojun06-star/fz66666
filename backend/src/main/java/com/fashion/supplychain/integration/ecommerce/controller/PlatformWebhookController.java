@@ -45,12 +45,18 @@ public class PlatformWebhookController {
             return ResponseEntity.ok(Map.of("received", false, "reason", "platform not configured"));
         }
 
-        if (signature != null && timestamp != null && config.getAppSecret() != null) {
-            String expected = hmacSha256(config.getAppSecret(), timestamp + body);
-            if (!expected.equals(signature)) {
-                log.warn("[Webhook] 租户{}平台{}签名验证失败", tenantId, code);
-                return ResponseEntity.status(401).body(Map.of("error", "signature mismatch"));
-            }
+        if (signature == null || timestamp == null) {
+            log.warn("[Webhook] 租户{}平台{}缺少签名或时间戳头，拒绝请求", tenantId, code);
+            return ResponseEntity.status(401).body(Map.of("error", "missing signature/timestamp"));
+        }
+        if (config.getAppSecret() == null) {
+            log.warn("[Webhook] 租户{}平台{}未配置密钥，拒绝请求", tenantId, code);
+            return ResponseEntity.status(401).body(Map.of("error", "app secret not configured"));
+        }
+        String expected = hmacSha256(config.getAppSecret(), timestamp + body);
+        if (!expected.equals(signature)) {
+            log.warn("[Webhook] 租户{}平台{}签名验证失败", tenantId, code);
+            return ResponseEntity.status(401).body(Map.of("error", "signature mismatch"));
         }
 
         try {

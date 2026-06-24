@@ -163,6 +163,14 @@ public class DatabaseHealthCheckJob {
 
         for (String[] check : businessChecks) {
             try {
+                Integer tableExists = jdbcTemplate.queryForObject(
+                        "SELECT COUNT(*) FROM information_schema.COLUMNS " +
+                                "WHERE table_schema = DATABASE() AND table_name = ? AND column_name = 'tenant_id'",
+                        Integer.class, check[0]);
+                if (tableExists == null || tableExists == 0) {
+                    continue;
+                }
+
                 Integer nullCount = jdbcTemplate.queryForObject(
                         "SELECT COUNT(*) FROM " + check[0] + " WHERE tenant_id IS NULL",
                         Integer.class);

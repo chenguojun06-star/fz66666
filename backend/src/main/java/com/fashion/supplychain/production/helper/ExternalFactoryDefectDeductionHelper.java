@@ -46,6 +46,12 @@ public class ExternalFactoryDefectDeductionHelper {
     @Autowired
     private DeductionItemMapper deductionItemMapper;
 
+    @Autowired
+    private com.fashion.supplychain.production.service.ProductWarehousingService productWarehousingService;
+
+    @Autowired
+    private com.fashion.supplychain.finance.mapper.ShipmentReconciliationMapper shipmentReconciliationMapper;
+
     /**
      * 对质检入库的次品/报废品进行扣款。
      *
@@ -86,12 +92,6 @@ public class ExternalFactoryDefectDeductionHelper {
                     .last("LIMIT 1")
                     .one();
 
-            if (recon == null) {
-                log.info("[DefectDeduction] 暂无出货对账单，次品扣款将在关单时自动归集: orderNo={}", orderNo);
-                return;
-            }
-
-            // 单件成本
             BigDecimal unitCost = (unitMaterialCost != null ? unitMaterialCost : BigDecimal.ZERO)
                     .add(unitProductionCost != null ? unitProductionCost : BigDecimal.ZERO);
             if (unitCost.compareTo(BigDecimal.ZERO) <= 0) {
@@ -117,7 +117,7 @@ public class ExternalFactoryDefectDeductionHelper {
 
             // 创建扣款项
             DeductionItem deduction = new DeductionItem();
-            deduction.setReconciliationId(recon.getId());
+            deduction.setReconciliationId(recon != null ? recon.getId() : null);
             deduction.setDeductionType(deductionType);
             deduction.setDeductionAmount(defectCost);
             deduction.setSourceType("PRODUCT_WAREHOUSING");
@@ -128,15 +128,16 @@ public class ExternalFactoryDefectDeductionHelper {
                     unqualified, unitCost, defectCost));
             deductionItemMapper.insert(deduction);
 
-            // 更新对账单
-            BigDecimal existingDeduction = recon.getDeductionAmount() != null ? recon.getDeductionAmount() : BigDecimal.ZERO;
-            BigDecimal totalAmount = recon.getTotalAmount() != null ? recon.getTotalAmount() : BigDecimal.ZERO;
-            recon.setDeductionAmount(existingDeduction.add(defectCost));
-            recon.setFinalAmount(totalAmount.subtract(recon.getDeductionAmount()));
-            shipmentReconciliationService.updateById(recon);
+            if (recon == null) {
+                log.info("[DefectDeduction] {}扣款已暂存(暂无出货对账单，关单时自动归集): orderNo={}, factory={}, defectQty={}, amount={}",
+                        deductionType, orderNo, factoryName, unqualified, defectCost);
+                return;
+            }
 
-            log.info("[DefectDeduction] {}扣款已记录: orderNo={}, factory={}, defectQty={}, amount={}, totalDeduction={}",
-                    deductionType, orderNo, factoryName, unqualified, defectCost, recon.getDeductionAmount());
+            shipmentReconciliationMapper.recalculateDeductionAndFinal(recon.getId());
+
+            log.info("[DefectDeduction] {}扣款已记录: orderNo={}, factory={}, defectQty={}, amount={}",
+                    deductionType, orderNo, factoryName, unqualified, defectCost);
         } catch (Exception e) {
             log.error("[DefectDeduction] 次品扣款记录失败: warehousingId={}", warehousing.getId(), e);
         }
@@ -155,20 +156,61 @@ public class ExternalFactoryDefectDeductionHelper {
                 return;
             }
             for (DeductionItem item : items) {
-                ShipmentReconciliation recon = shipmentReconciliationService.getById(item.getReconciliationId());
-                if (recon != null) {
-                    BigDecimal deduction = recon.getDeductionAmount() != null ? recon.getDeductionAmount() : BigDecimal.ZERO;
-                    BigDecimal rollback = item.getDeductionAmount() != null ? item.getDeductionAmount() : BigDecimal.ZERO;
-                    BigDecimal totalAmount = recon.getTotalAmount() != null ? recon.getTotalAmount() : BigDecimal.ZERO;
-                    recon.setDeductionAmount(deduction.subtract(rollback).max(BigDecimal.ZERO));
-                    recon.setFinalAmount(totalAmount.subtract(recon.getDeductionAmount()));
-                    shipmentReconciliationService.updateById(recon);
-                }
+                String reconId = item.getReconciliationId();
+                BigDecimal amount = item.getDeductionAmount() != null ? item.getDeductionAmount() : BigDecimal.ZERO;
                 deductionItemMapper.deleteById(item.getId());
+
+                if (StringUtils.hasText(reconId)) {
+                    shipmentReconciliationMapper.recalculateDeductionAndFinal(reconId);
+                }
             }
             log.info("[DefectDeduction] 次品扣款已撤销: warehousingId={}", warehousingId);
         } catch (Exception e) {
             log.error("[DefectDeduction] 撤销扣款失败: warehousingId={}", warehousingId, e);
+        }
+    }
+
+    public void attachOrphanDeductionsToReconciliation(String orderId, String orderNo, String reconciliationId) {
+        if (!StringUtils.hasText(reconciliationId)) return;
+
+        List<DeductionItem> orphans = deductionItemMapper.selectList(
+                new LambdaQueryWrapper<DeductionItem>()
+                        .eq(DeductionItem::getTenantId, UserContext.tenantId())
+                        .in(DeductionItem::getDeductionType, "QUALITY_DEFECT", "PRODUCT_SCRAP")
+                        .isNull(DeductionItem::getReconciliationId));
+        if (orphans == null || orphans.isEmpty()) return;
+
+        if (StringUtils.hasText(orderId)) {
+            orphans = orphans.stream()
+                    .filter(o -> orderId.equals(resolveOrderIdFromSource(o)))
+                    .collect(java.util.stream.Collectors.toList());
+            if (orphans.isEmpty()) return;
+        }
+
+        BigDecimal totalOrphanAmount = BigDecimal.ZERO;
+        for (DeductionItem orphan : orphans) {
+            orphan.setReconciliationId(reconciliationId);
+            deductionItemMapper.updateById(orphan);
+            totalOrphanAmount = totalOrphanAmount.add(orphan.getDeductionAmount() != null ? orphan.getDeductionAmount() : BigDecimal.ZERO);
+        }
+
+        if (totalOrphanAmount.compareTo(BigDecimal.ZERO) > 0) {
+            shipmentReconciliationMapper.recalculateDeductionAndFinal(reconciliationId);
+            log.info("[DefectDeduction] 暂存次品扣款已归集到出货对账单: orderId={}, reconId={}, totalOrphanAmount={}",
+                    orderId, reconciliationId, totalOrphanAmount);
+        }
+    }
+
+    private String resolveOrderIdFromSource(DeductionItem item) {
+        if (!"PRODUCT_WAREHOUSING".equals(item.getSourceType()) || !StringUtils.hasText(item.getSourceId())) {
+            return null;
+        }
+        try {
+            com.fashion.supplychain.production.entity.ProductWarehousing wh =
+                    productWarehousingService.getById(item.getSourceId());
+            return wh != null ? wh.getOrderId() : null;
+        } catch (Exception e) {
+            return null;
         }
     }
 }
