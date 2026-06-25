@@ -267,8 +267,19 @@ export default function ScanPage() {
         loadTodayHistory();
       }
     } catch (err) {
-      setLastResult({ scanCode: code, scanType, success: false, message: err.message || '扫码失败' });
-      toast.error(err.message || '扫码失败');
+      const errData = err?.response?.data?.data || err?.data || null;
+      setLastResult({
+        scanCode: code, scanType, success: false,
+        message: err?.message || err?.response?.data?.message || '扫码失败',
+        orderNo: errData?.orderNo, styleNo: errData?.styleNo, styleName: errData?.styleName,
+        bundleNo: errData?.bundleNo, color: errData?.color, size: errData?.size,
+        quantity: errData?.quantity, processName: errData?.processName,
+        progressStage: errData?.progressStage,
+        difficultyLabel: errData?.difficultyLabel || (errData?.orderInfo && errData.orderInfo.difficultyLabel),
+        difficultyScore: errData?.difficultyScore || (errData?.orderInfo && errData.orderInfo.difficultyScore),
+        fabricComposition: errData?.fabricComposition || (errData?.orderInfo && errData.orderInfo.fabricComposition),
+      });
+      toast.error(err?.message || err?.response?.data?.message || '扫码失败');
     } finally { setLoading(false); submitLockRef.current = false; }
   }, [scanType, loading, isRecentDuplicate, setScanResultData, setQualityData, setPatternScanData, navigate, loadTodayHistory]);
 
@@ -414,15 +425,31 @@ export default function ScanPage() {
                   )}
                   {lastResult.imageInsight && (
                     <div style={{ marginTop: 8, padding: '8px 10px', background: 'rgba(59,130,246,0.08)', borderRadius: 6, lineHeight: 1.7 }}>
-                      <span style={{ color: 'var(--color-text-secondary)', marginRight: 8, fontWeight: 600 }}>AI识别:</span>
+                      <span style={{ color: 'var(--color-text-secondary)', marginRight: 8, fontWeight: 600 }}>系统提示:</span>
                       <span style={{ color: 'var(--color-text-primary)' }}>{lastResult.imageInsight}</span>
+                      <div style={{ fontSize: 11, color: 'var(--color-text-tertiary)', marginTop: 6, fontStyle: 'italic' }}>
+                        * 以上提示仅供参考，请以实际工艺要求为准
+                      </div>
                     </div>
                   )}
                 </div>
               )}
             </>
           ) : (
-            <div style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>{lastResult.message}</div>
+            <div>
+              <div style={{ fontSize: 13, color: 'var(--color-danger)', fontWeight: 600, marginBottom: 8 }}>{lastResult.message}</div>
+              {(lastResult.styleNo || lastResult.orderNo || lastResult.bundleNo) && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 16px', fontSize: 12, opacity: 0.8 }}>
+                  {lastResult.styleNo && <span>款号: <strong>{lastResult.styleNo}</strong></span>}
+                  {lastResult.styleName && <span>款式: <strong>{lastResult.styleName}</strong></span>}
+                  {lastResult.bundleNo && <span>菲号: <strong>{lastResult.bundleNo}</strong></span>}
+                  {lastResult.color && <span>颜色: <strong>{lastResult.color}</strong></span>}
+                  {lastResult.size && <span>尺码: <strong>{lastResult.size}</strong></span>}
+                  {lastResult.orderNo && <span>订单: <strong>{lastResult.orderNo}</strong></span>}
+                  {lastResult.processName && <span>工序: <strong>{lastResult.processName}</strong></span>}
+                </div>
+              )}
+            </div>
           )}
         </div>
       )}

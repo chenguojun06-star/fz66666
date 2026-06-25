@@ -44,8 +44,8 @@
 }
 
 .bubbleUser {
-  background: var(--color-info);
-  color: var(--color-bg-base);
+  background: #1890ff;
+  color: #ffffff;
   border-top-right-radius: 2px;
 }
 
@@ -78,7 +78,7 @@
   display: flex;
   align-items: center;
   padding: 7px 10px;
-  background: linear-gradient(135deg, var(--color-bg-base)7e6 0%, #ffe7ba 100%);
+  background: linear-gradient(135deg, #fff7e6 0%, #ffe7ba 100%);
   border: 1px solid #ffd591;
   border-radius: 10px;
   font-size: 14px;
@@ -122,7 +122,7 @@
 .pendingMoreBtn {
   text-align: center;
   font-size: 14px;
-  color: var(--color-info);
+  color: #1890ff;
   cursor: pointer;
   padding: 6px 0 2px;
   font-weight: 500;
@@ -141,7 +141,7 @@
   border-radius: 16px;
   font-size: 14px;
   line-height: 1.3;
-  color: var(--color-info);
+  color: #1890ff;
   cursor: pointer;
   transition: all 0.2s;
   width: 100%;
@@ -185,14 +185,14 @@
   border: 1px solid #91d5ff;
   border-radius: 8px;
   font-size: 15px;
-  color: var(--color-info);
+  color: #1890ff;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .reportDownloadBtn:hover:not(:disabled) {
   background: #e6f7ff;
-  border-color: var(--color-info);
+  border-color: #1890ff;
   transform: translateY(-1px);
   box-shadow: 0 2px 6px rgba(24, 144, 255, 0.2);
 }
@@ -207,7 +207,7 @@
   padding-top: 8px;
   border-top: 1px dashed rgba(24, 144, 255, 0.2);
   font-size: 14px;
-  color: var(--color-info);
+  color: #1890ff;
   display: flex;
   align-items: center;
   gap: 4px;
@@ -238,7 +238,7 @@
 
 .recommendPill {
   font-size: 15px;
-  color: var(--color-info);
+  color: #1890ff;
   background: rgba(24, 144, 255, 0.05);
   border: 1px solid rgba(24, 144, 255, 0.2);
   padding: 6px 12px;
@@ -250,7 +250,7 @@
 
 .recommendPill:hover {
   background: rgba(24, 144, 255, 0.1);
-  border-color: var(--color-info);
+  border-color: #1890ff;
 }
 
 .typingIndicator {
@@ -275,7 +275,7 @@
 .typingDot:nth-child(2) { animation-delay: -0.16s; }
 @keyframes typing {
   0%, 80%, 100% { transform: scale(0); }
-  40% { transform: scale(1); background: var(--color-info); }
+  40% { transform: scale(1); background: #1890ff; }
 }
 
 .speechBtn {
@@ -288,7 +288,7 @@
   margin-left: 8px;
 }
 .speechBtn:hover {
-  color: var(--color-info);
+  color: #1890ff;
 }
 
 .chartsWrapper {

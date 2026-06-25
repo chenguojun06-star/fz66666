@@ -54,7 +54,9 @@ public class ProductionScanExecutor {
                                        String operatorName, String scanType, int quantity, boolean autoProcess,
                                        java.util.function.Function<String, String> colorResolver,
                                        java.util.function.Function<String, String> sizeResolver) {
-        ScanContext ctx = resolveScanContext(params, scanType, quantity, autoProcess, operatorId, operatorName);
+        ScanContext ctx = null;
+        try {
+        ctx = resolveScanContext(params, scanType, quantity, autoProcess, operatorId, operatorName);
 
         executorSupport.validateBundleNotBlocked(ctx.bundle, "生产");
 
@@ -119,6 +121,17 @@ public class ProductionScanExecutor {
         executorSupport.recomputeProgressSync(ctx.order.getId());
 
         return buildSuccessResult(sr, ctx, isCutting);
+        } catch (BusinessException be) {
+            // 已经是 BusinessException，直接抛出
+            throw be;
+        } catch (RuntimeException re) {
+            // 包装成带上下文的 BusinessException，让前端即便出错也能看到款号/菲号
+            if (ctx != null && ctx.order != null) {
+                executorSupport.throwWithContext(re.getMessage(), ctx.order, ctx.bundle, scanType,
+                        ctx.progressStage != null ? ctx.progressStage : "");
+            }
+            throw re;
+        }
     }
 
     private ScanContext resolveScanContext(Map<String, Object> params, String scanType, int quantity, boolean autoProcess, String operatorId, String operatorName) {
@@ -267,6 +280,8 @@ public class ProductionScanExecutor {
         // ══════ 关键信息同步到顶层，便于扫码页面直接展示 ══════
         executorSupport.flattenOrderInfoToTop(result, orderInfo);
         executorSupport.flattenBundleToTop(result, ctx.bundle);
+        // ══════ 工序过滤：只展示当前工序相关的提示 ══════
+        executorSupport.filterHintsByStage(result, sr.getScanType(), ctx.progressStage);
         result.put("processName", displayProcessName);
         result.put("progressStage", ctx.progressStage);
         result.put("childProcessName", ctx.childProcessName);
@@ -364,6 +379,16 @@ public class ProductionScanExecutor {
                 duplicate.put("message", "扫码过快，已自动忽略重复提交");
                 duplicate.put("duplicateIgnored", true);
                 duplicate.put("scanRecord", existing);
+                // ══════ 重复扫码也带上完整信息，页面不至于空白 ══════
+                Map<String, Object> dupOrderInfo = executorSupport.buildOrderInfo(order, bundle);
+                duplicate.put("orderInfo", dupOrderInfo);
+                executorSupport.flattenOrderInfoToTop(duplicate, dupOrderInfo);
+                executorSupport.flattenBundleToTop(duplicate, bundle);
+                executorSupport.filterHintsByStage(duplicate, scanType, progressStage);
+                duplicate.put("processName", processCode != null ? processCode : (progressStage != null ? progressStage : ""));
+                duplicate.put("progressStage", progressStage);
+                duplicate.put("childProcessName", childProcessName);
+                if (includeBundle) duplicate.put("cuttingBundle", bundle);
                 return duplicate;
             }
 
@@ -385,6 +410,15 @@ public class ProductionScanExecutor {
 
             Map<String, Object> result = new HashMap<>();
             result.put("success", true); result.put("message", "已扫码更新"); result.put("scanRecord", returned);
+            // ══════ 更新成功也带上完整信息，和首次扫码一致 ══════
+            Map<String, Object> updateOrderInfo = executorSupport.buildOrderInfo(order, bundle);
+            result.put("orderInfo", updateOrderInfo);
+            executorSupport.flattenOrderInfoToTop(result, updateOrderInfo);
+            executorSupport.flattenBundleToTop(result, bundle);
+            executorSupport.filterHintsByStage(result, scanType, progressStage);
+            result.put("processName", processCode != null ? processCode : (progressStage != null ? progressStage : ""));
+            result.put("progressStage", progressStage);
+            result.put("childProcessName", childProcessName);
             if (includeBundle) result.put("cuttingBundle", bundle);
             return result;
         } catch (IllegalStateException ise) {

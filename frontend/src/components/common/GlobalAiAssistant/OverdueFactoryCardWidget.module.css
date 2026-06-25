@@ -6,7 +6,7 @@
 }
 
 .overdueSummaryBar {
-  background: linear-gradient(135deg, var(--color-bg-base)1f0 0%, var(--color-bg-base)7e6 100%);
+  background: linear-gradient(135deg, #fff1f0 0%, #fff7e6 100%);
   border: 1px solid #ffccc7;
   border-radius: 10px;
   padding: 10px 12px;
@@ -15,7 +15,7 @@
 .overdueSummaryTitle {
   font-size: 13px;
   font-weight: 700;
-  color: var(--color-error);
+  color: #cf1322;
   margin-bottom: 8px;
   display: flex;
   align-items: center;
@@ -59,7 +59,7 @@
 }
 
 .overdueStatChipHighlight .overdueStatValue {
-  color: var(--color-error);
+  color: #cf1322;
 }
 
 .overdueStatUnit {
@@ -170,7 +170,7 @@
 }
 
 .overdueMetricDanger {
-  color: var(--color-error);
+  color: #cf1322;
 }
 
 .overdueOrderList {
@@ -203,7 +203,7 @@
 .overdueOrderNo {
   font-size: 12px;
   font-weight: 600;
-  color: var(--color-info);
+  color: #1890ff;
   text-decoration: none;
 }
 
@@ -225,7 +225,7 @@
 .overdueOrderProgress {
   font-size: 12px;
   font-weight: 600;
-  color: var(--color-warning);
+  color: #faad14;
 }
 
 .overdueOrderDanger {
@@ -234,8 +234,8 @@
 
 .overdueOrderDays {
   font-size: 13px;
-  color: var(--color-error);
-  background: var(--color-bg-base)1f0;
+  color: #cf1322;
+  background: #fff1f0;
   border-radius: 4px;
   padding: 1px 6px;
 }

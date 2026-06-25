@@ -81,7 +81,7 @@ public class FinanceDataConsistencyJob {
         }
     }
 
-    private void doCheckAndFix() {
+    void doCheckAndFix() {
         log.info("[FinanceConsistency] 开始财务数据一致性巡检...");
         long start = System.currentTimeMillis();
 
@@ -121,13 +121,15 @@ public class FinanceDataConsistencyJob {
                 fixedMissingRecon, fixedOrphanDeductions, fixedDeductionSum, totalFailed, duration);
     }
 
-    private int fixMissingShipmentReconciliations() {
-        List<ProductionOrder> externalOrders = productionOrderService.list(
-                new LambdaQueryWrapper<ProductionOrder>()
-                        .select(ProductionOrder::getId, ProductionOrder::getOrderNo, ProductionOrder::getFactoryType)
-                        .eq(ProductionOrder::getFactoryType, "EXTERNAL")
-                        .in(ProductionOrder::getStatus, "production", "completed", "closed")
-                        .eq(ProductionOrder::getDeleteFlag, 0));
+    int fixMissingShipmentReconciliations() {
+        Long tenantId = TenantAssert.currentTenantId();
+        List<ProductionOrder> externalOrders = productionOrderService.lambdaQuery()
+                .select(ProductionOrder::getId, ProductionOrder::getOrderNo, ProductionOrder::getFactoryType)
+                .eq(ProductionOrder::getTenantId, tenantId)
+                .eq(ProductionOrder::getFactoryType, "EXTERNAL")
+                .in(ProductionOrder::getStatus, "production", "completed", "closed")
+                .eq(ProductionOrder::getDeleteFlag, 0)
+                .list();
         if (externalOrders == null || externalOrders.isEmpty()) return 0;
 
         int fixed = 0;
@@ -160,9 +162,11 @@ public class FinanceDataConsistencyJob {
         return fixed;
     }
 
-    private int fixOrphanDeductions() {
+    int fixOrphanDeductions() {
+        Long tenantId = TenantAssert.currentTenantId();
         List<DeductionItem> orphans = deductionItemMapper.selectList(
                 new LambdaQueryWrapper<DeductionItem>()
+                        .eq(DeductionItem::getTenantId, tenantId)
                         .isNull(DeductionItem::getReconciliationId));
         if (orphans == null || orphans.isEmpty()) return 0;
 
@@ -201,7 +205,7 @@ public class FinanceDataConsistencyJob {
         return null;
     }
 
-    private int fixDeductionSumMismatch(Long tenantId) {
+    int fixDeductionSumMismatch(Long tenantId) {
         List<ShipmentReconciliation> recons = shipmentReconciliationService.lambdaQuery()
                 .eq(ShipmentReconciliation::getTenantId, tenantId)
                 .list();

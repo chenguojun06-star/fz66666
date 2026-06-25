@@ -45,7 +45,7 @@
 
 .progressBarWrap {
   height: 8px;
-  background: var(--color-border-light);
+  background: #f0f0f0;
   border-radius: 4px;
   overflow: hidden;
   margin: 6px 0;

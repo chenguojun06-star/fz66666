@@ -1,8 +1,8 @@
 .pie-card {
-  --pie-bg: var(--color-bg-base);
-  --pie-border: var(--color-border);
+  --pie-bg: #ffffff;
+  --pie-border: #e5e7eb;
   --pie-text: #1f2937;
-  --pie-text-muted: var(--color-text-tertiary);
+  --pie-text-muted: #9ca3af;
   --pie-accent: #3b82f6;
   --pie-radius: 10px;
   --pie-padding: 16px;
@@ -20,25 +20,25 @@
 .pie-sidebar-row { display: flex; align-items: center; gap: 6px; font-size: 14px; color: var(--color-text-secondary); }
 .pie-sidebar-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 .pie-sidebar-dot--dev { background: #3b82f6; }
-.pie-sidebar-dot--done { background: var(--color-accent-emerald); }
+.pie-sidebar-dot--done { background: #10b981; }
 .pie-sidebar-num { margin-left: auto; font-weight: 700; color: var(--pie-text); }
 .pie-sidebar-today { display: flex; gap: 8px; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--color-border); }
 .pie-today-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px; background: #f9fafb; border-radius: 6px; border: 1px solid var(--color-border); }
-.pie-today-label { font-size: 14px; color: var(--color-text-tertiary); }
+.pie-today-label { font-size: 14px; color: #9ca3af; }
 .pie-today-value { font-size: 13px; font-weight: 700; color: #1f2937; }
-.pie-today-value--success { color: var(--color-accent-emerald); }
+.pie-today-value--success { color: #10b981; }
 .pie-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: calc(12px * var(--pie-scale)); flex-shrink: 0; }
 .pie-card-title { font-size: calc(16px * var(--pie-scale)); font-weight: 700; color: var(--pie-text); }
 .pie-card-today-stats { display: flex; gap: calc(8px * var(--pie-scale)); }
 .pie-today-tag { font-size: calc(11px * var(--pie-scale)); padding: calc(4px * var(--pie-scale)) calc(8px * var(--pie-scale)); background: #f9fafb; border-radius: calc(4px * var(--pie-scale)); color: var(--color-text-secondary); border: 1px solid var(--color-border); }
-.pie-today-tag--success { color: var(--color-accent-emerald); border-color: rgba(16, 185, 129, 0.3); background: #ecfdf5; }
+.pie-today-tag--success { color: #10b981; border-color: rgba(16, 185, 129, 0.3); background: #ecfdf5; }
 .pie-card-stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: calc(8px * var(--pie-scale)); margin-bottom: calc(12px * var(--pie-scale)); flex-shrink: 0; }
 .pie-card-stat { display: flex; flex-direction: column; align-items: center; gap: calc(4px * var(--pie-scale)); padding: calc(8px * var(--pie-scale)) calc(4px * var(--pie-scale)); background: #f9fafb; border-radius: calc(8px * var(--pie-scale)); border: 1px solid var(--color-border); }
 .pie-card-stat--extra { background: #eff6ff; border: 1px solid rgba(59, 130, 246, 0.2); }
 .pie-card-stat--today { background: #f5f3ff; border: 1px solid rgba(139, 92, 246, 0.2); }
 .pie-card-stat-num { font-size: calc(20px * var(--pie-scale)); font-weight: 800; line-height: 1; color: var(--pie-text); white-space: nowrap; }
 .pie-card-stat-num--dev { color: #3b82f6; }
-.pie-card-stat-num--done { color: var(--color-accent-emerald); }
+.pie-card-stat-num--done { color: #10b981; }
 .pie-card-stat-num--today { color: #8b5cf6; }
 .pie-card-stat-num--time { color: #f59e0b; }
 .pie-card-stat-label { font-size: calc(11px * var(--pie-scale)); color: var(--pie-text-muted); }
@@ -47,11 +47,11 @@
 .pie-card-svg { width: calc(180px * var(--pie-scale)); height: calc(180px * var(--pie-scale)); }
 .pie-card-segment { opacity: 0.9; transition: opacity 0.2s; }
 .pie-card-segment:hover { opacity: 1; }
-.pie-card-center { fill: var(--color-bg-base); }
+.pie-card-center { fill: #ffffff; }
 .pie-card-total { fill: var(--pie-text); font-size: calc(18px * var(--pie-scale)); font-weight: 800; dominant-baseline: middle; }
 .pie-card-center-label { fill: var(--pie-text-muted); font-size: calc(10px * var(--pie-scale)); dominant-baseline: middle; }
 .pie-card-percent { font-size: calc(14px * var(--pie-scale)); font-weight: 700; dominant-baseline: middle; }
-.pie-card-pie-count { fill: var(--color-text-secondary); font-size: calc(12px * var(--pie-scale)); dominant-baseline: middle; }
+.pie-card-pie-count { fill: #6b7280; font-size: calc(12px * var(--pie-scale)); dominant-baseline: middle; }
 .pie-card-legend { display: flex; flex-direction: column; gap: calc(6px * var(--pie-scale)); min-width: 0; }
 .pie-legend-item { display: grid; grid-template-columns: 10px auto auto auto; gap: calc(6px * var(--pie-scale)); align-items: center; padding: calc(6px * var(--pie-scale)) calc(8px * var(--pie-scale)); background: #f9fafb; border-radius: calc(6px * var(--pie-scale)); font-size: calc(12px * var(--pie-scale)); border: 1px solid #f0f1f3; }
 .pie-legend-dot { width: calc(8px * var(--pie-scale)); height: calc(8px * var(--pie-scale)); border-radius: 50%; flex-shrink: 0; }

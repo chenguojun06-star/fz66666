@@ -19,6 +19,8 @@ public class BusinessException extends RuntimeException {
 
     private final String errorCode;
 
+    private Object data;
+
     public BusinessException() {
         super();
         this.code = 400;
@@ -35,6 +37,20 @@ public class BusinessException extends RuntimeException {
         super(message);
         this.code = code;
         this.errorCode = "BUSINESS_ERROR";
+    }
+
+    public BusinessException(String message, Object data) {
+        super(message);
+        this.code = 400;
+        this.errorCode = "BUSINESS_ERROR";
+        this.data = data;
+    }
+
+    public BusinessException(String message, int code, Object data) {
+        super(message);
+        this.code = code;
+        this.errorCode = "BUSINESS_ERROR";
+        this.data = data;
     }
 
     public BusinessException(String message, Throwable cause) {
@@ -69,6 +85,15 @@ public class BusinessException extends RuntimeException {
 
     public String getErrorMessage() {
         return getMessage();
+    }
+
+    public Object getData() {
+        return data;
+    }
+
+    public BusinessException setData(Object data) {
+        this.data = data;
+        return this;
     }
 
     public static BusinessException paramError(String message) {

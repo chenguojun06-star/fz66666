@@ -2,6 +2,7 @@ package com.fashion.supplychain.production.executor;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.fashion.supplychain.common.BusinessException;
 import com.fashion.supplychain.common.constant.OrderStatusConstants;
 import com.fashion.supplychain.common.util.NumberUtils;
 import com.fashion.supplychain.common.util.TextUtils;
@@ -97,6 +98,8 @@ public class WarehouseScanExecutor {
                                        String operatorName, ProductionOrder order,
                                        java.util.function.Function<String, String> colorResolver,
                                        java.util.function.Function<String, String> sizeResolver) {
+        CuttingBundle bundle = null;
+        try {
         Integer qty = NumberUtils.toInt(params.get("quantity"));
         if (qty == null || qty <= 0) {
             throw new IllegalArgumentException("数量必须大于0");
@@ -133,7 +136,7 @@ public class WarehouseScanExecutor {
             }
         }
 
-        CuttingBundle bundle = bundleLookupService.lookup(BundleLookupContext.from(params));
+        bundle = bundleLookupService.lookup(BundleLookupContext.from(params));
         if (bundle == null || !hasText(bundle.getId())) {
             throw new IllegalStateException("未匹配到菲号");
         }
@@ -165,6 +168,14 @@ public class WarehouseScanExecutor {
         updateProcessTrackingForWarehouse(bundle, order, operatorId, operatorName, sr);
         Map<String, Object> result = buildResult(bundle, order, sr);
         return result;
+        } catch (BusinessException be) {
+            throw be;
+        } catch (RuntimeException re) {
+            if (order != null) {
+                executorSupport.throwWithContext(re.getMessage(), order, bundle, "warehouse", "入库");
+            }
+            throw re;
+        }
     }
 
     private Map<String, Object> handleDefectiveReentry(ProductionOrder order, CuttingBundle bundle,
@@ -283,6 +294,8 @@ public class WarehouseScanExecutor {
         result.put("orderInfo", orderInfo);
         executorSupport.flattenOrderInfoToTop(result, orderInfo);
         executorSupport.flattenBundleToTop(result, bundle);
+        // ══════ 工序过滤：入库只看基本信息，屏蔽工艺/针号/系统提示 ══════
+        executorSupport.filterHintsByStage(result, "warehouse", "入库");
         result.put("processName", "入库");
         result.put("cuttingBundle", bundle);
         return result;

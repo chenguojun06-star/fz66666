@@ -49,6 +49,10 @@ public class GlobalExceptionHandler {
         public ResponseEntity<Result<?>> handleBusinessException(BusinessException e, HttpServletRequest request) {
                 logger.warn("业务异常: {} {} - {}", request == null ? "" : request.getMethod(),
                                 request == null ? "" : request.getRequestURI(), e.getMessage());
+                if (e.getData() != null) {
+                        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                                        .body(Result.fail(e.getCode(), e.getMessage(), e.getData()));
+                }
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Result.fail(e.getCode(), e.getMessage()));
         }
 

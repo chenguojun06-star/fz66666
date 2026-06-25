@@ -158,6 +158,25 @@ public class ScanExecutorSupport {
         return !bundleFactoryId.equals(workerFactoryId);
     }
 
+    /**
+     * 抛出带上下文的业务异常——即便扫码失败，前端也能展示款号/菲号等基本信息，不至于一片空白。
+     */
+    public void throwWithContext(String message, ProductionOrder order, CuttingBundle bundle,
+            String scanType, String progressStage) {
+        java.util.Map<String, Object> ctx = new java.util.HashMap<>();
+        if (order != null) {
+            java.util.Map<String, Object> orderInfo = buildOrderInfo(order, bundle);
+            ctx.put("orderInfo", orderInfo);
+            flattenOrderInfoToTop(ctx, orderInfo);
+        }
+        if (bundle != null) {
+            flattenBundleToTop(ctx, bundle);
+        }
+        filterHintsByStage(ctx, scanType, progressStage);
+        ctx.put("error", true);
+        throw new BusinessException(message, ctx);
+    }
+
     /** 将 orderInfo 关键字段平铺到扫码结果顶层，便于前端直接读取 */
     public void flattenOrderInfoToTop(Map<String, Object> result, Map<String, Object> orderInfo) {
         if (result == null || orderInfo == null || orderInfo.isEmpty()) return;
@@ -197,6 +216,80 @@ public class ScanExecutorSupport {
             result.put("bundleSplitHint",
                     "split_parent".equals(bundle.getSplitStatus()) ? "本菲号已拆分，扫码后会分摊到子菲号" : null);
         }
+    }
+
+    /**
+     * 根据扫码工序类型，过滤掉与当前工序无关的提示信息。
+     * <p>不同工序关注点不同，只展示该工序真正需要的信息：
+     * <ul>
+     *   <li>裁剪：关注难度、面料、款式备注（不看针号/工艺要点/二次工艺）</li>
+     *   <li>车缝：关注难度、面料、针号、工艺要点、二次工艺、款式备注（全展示）</li>
+     *   <li>质检：关注难度、二次工艺、款式备注、系统提示（不看针号/工艺要点）</li>
+     *   <li>入库：关注款式基本信息（难度/面料/备注），不看工艺类提示</li>
+     * </ul>
+     *
+     * @param result       已在构建中的扫码结果（此方法直接修改 result 的内容）
+     * @param scanType     扫码类型：cutting / production / quality / warehouse
+     * @param progressStage 当前工序阶段名称（兜底判断）
+     */
+    public void filterHintsByStage(Map<String, Object> result, String scanType, String progressStage) {
+        if (result == null) return;
+
+        // —— 统一转小写，方便比较 ——
+        String st = (scanType != null ? scanType.trim().toLowerCase() : "");
+        String ps = (progressStage != null ? progressStage.trim().toLowerCase() : "");
+
+        // 判断是否是裁剪工序（裁剪不看针号、工艺、二次工艺）
+        boolean isCutting = st.equals("cutting") || ps.contains("裁剪") || ps.contains("裁床");
+        // 判断是否是采购工序（采购不看针号、工艺要点、二次工艺，只看面料/难度）
+        boolean isPurchasing = ps.contains("采购") || ps.contains("面辅料") || ps.contains("面料采购");
+        // 判断是否是车缝工序（车缝关注针号、工艺要点）
+        boolean isProduction = !isPurchasing && (st.equals("production") || ps.contains("车缝") || ps.contains("缝制")
+                || ps.contains("生产") || ps.contains("工序"));
+        // 判断是否是质检工序（质检不看针号、工艺要点，关注二次工艺和系统提示）
+        boolean isQuality = st.equals("quality") || ps.contains("质检") || ps.contains("验货");
+        // 判断是否是入库工序（入库只看基本信息）
+        boolean isWarehouse = st.equals("warehouse") || ps.contains("入库") || ps.contains("仓库");
+
+        // 裁剪工序过滤：移除针号、工艺要点、二次工艺、系统提示
+        if (isCutting) {
+            result.remove("needleHint");
+            result.remove("processHints");
+            result.remove("secondaryProcessHint");
+            result.remove("secondaryProcesses");
+            result.remove("imageInsight");
+            result.remove("visionRaw");
+        }
+
+        // 采购工序过滤：同裁剪，只保留面料/难度/款式备注，移除针号/工艺/二次工艺/系统提示
+        if (isPurchasing) {
+            result.remove("needleHint");
+            result.remove("processHints");
+            result.remove("secondaryProcessHint");
+            result.remove("secondaryProcesses");
+            result.remove("imageInsight");
+            result.remove("visionRaw");
+        }
+
+        // 入库工序过滤：保留基本信息，但移除针号、工艺要点、二次工艺、系统提示
+        if (isWarehouse && !isProduction) {
+            result.remove("needleHint");
+            result.remove("processHints");
+            result.remove("secondaryProcessHint");
+            result.remove("secondaryProcesses");
+            result.remove("imageInsight");
+            result.remove("visionRaw");
+        }
+
+        // 质检工序过滤：移除针号、工艺要点（这些是车缝用的）；保留难度、二次工艺、系统提示
+        if (isQuality) {
+            result.remove("needleHint");
+            result.remove("processHints");
+            // 质检特别保留 imageInsight 作为参考（但已在前端标注为仅供参考）
+        }
+
+        // 车缝工序：不过滤任何字段，保留全部提示
+        // 入库已单独处理
     }
 
     /** 单步完成：构建 orderInfo + 关键字段平铺到 result 顶层 */

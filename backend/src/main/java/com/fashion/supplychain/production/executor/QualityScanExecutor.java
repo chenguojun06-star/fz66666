@@ -1,6 +1,7 @@
 package com.fashion.supplychain.production.executor;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.fashion.supplychain.common.BusinessException;
 import com.fashion.supplychain.common.constant.OrderStatusConstants;
 import com.fashion.supplychain.common.util.NumberUtils;
 import com.fashion.supplychain.common.util.TextUtils;
@@ -91,6 +92,8 @@ public class QualityScanExecutor {
                                        String operatorName, ProductionOrder order,
                                        java.util.function.Function<String, String> colorResolver,
                                        java.util.function.Function<String, String> sizeResolver) {
+        CuttingBundle bundle = null;
+        try {
         Integer qty = NumberUtils.toInt(params.get("quantity"));
         if (qty == null || qty <= 0) {
             throw new IllegalArgumentException("数量必须大于0");
@@ -111,7 +114,7 @@ public class QualityScanExecutor {
             }
         }
 
-        CuttingBundle bundle = bundleLookupService.lookup(BundleLookupContext.from(params));
+        bundle = bundleLookupService.lookup(BundleLookupContext.from(params));
         if (bundle == null || !hasText(bundle.getId())) {
             throw new IllegalStateException("未匹配到菲号");
         }
@@ -152,6 +155,14 @@ public class QualityScanExecutor {
         executorSupport.recomputeProgressSync(order.getId());
 
         return result;
+        } catch (BusinessException be) {
+            throw be;
+        } catch (RuntimeException re) {
+            if (order != null) {
+                executorSupport.throwWithContext(re.getMessage(), order, bundle, "quality", "质检");
+            }
+            throw re;
+        }
     }
 
     /**
@@ -209,6 +220,8 @@ public class QualityScanExecutor {
         result.put("orderInfo", orderInfo);
         executorSupport.flattenOrderInfoToTop(result, orderInfo);
         executorSupport.flattenBundleToTop(result, bundle);
+        // ══════ 工序过滤：质检只看难度/二次工艺/备注/系统提示，屏蔽针号/工艺要点 ══════
+        executorSupport.filterHintsByStage(result, "quality", "质检");
         result.put("processName", "质检");
         result.put("cuttingBundle", bundle);
         result.put("nextScanType", "warehouse");
@@ -315,6 +328,8 @@ public class QualityScanExecutor {
         result.put("orderInfo", orderInfo);
         executorSupport.flattenOrderInfoToTop(result, orderInfo);
         executorSupport.flattenBundleToTop(result, bundle);
+        // ══════ 工序过滤：质检只看难度/二次工艺/备注/系统提示，屏蔽针号/工艺要点 ══════
+        executorSupport.filterHintsByStage(result, "quality", "质检");
         result.put("processName", "质检");
         result.put("cuttingBundle", bundle);
         result.put("nextScanType", "warehouse");
@@ -411,6 +426,10 @@ public class QualityScanExecutor {
         Map<String, Object> dupOrderInfo = executorSupport.buildOrderInfo(order, bundle);
         dup.put("orderInfo", dupOrderInfo);
         executorSupport.flattenOrderInfoToTop(dup, dupOrderInfo);
+        // ══════ 补全：菲号信息平铺 + 工序过滤 + processName ══════
+        executorSupport.flattenBundleToTop(dup, bundle);
+        executorSupport.filterHintsByStage(dup, "quality", "质检");
+        dup.put("processName", "质检");
         dup.put("cuttingBundle", bundle);
         return dup;
     }

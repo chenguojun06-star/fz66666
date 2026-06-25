@@ -866,7 +866,7 @@
 
 /* ═══════════════════════════════════════════════════════════
    SmartAlertBell — 顶栏今日预警按钮 + 下滑面板
-   配色：蓝紫系（var(--color-primary) / #0284c7），禁止橙红色
+   配色：蓝紫系（#2D7FF9 / #0284c7），禁止橙红色
 ════════════════════════════════════════════════════════════ */
 
 /* ── 触发按钮 ── */
@@ -906,7 +906,7 @@
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  border: 1.5px solid var(--color-bg-base);
+  border: 1.5px solid #fff;
   animation: sab-dot-pulse 2s ease-in-out infinite;
 }
 @keyframes sab-dot-pulse {
@@ -991,7 +991,7 @@
   content: '';
   display: block;
   height: 3px;
-  background: var(--color-primary); /* Impeccable: 纯色，不用渐变 */
+  background: #2D7FF9; /* Impeccable: 纯色，不用渐变 */
 }
 
 /* 面板头 */
@@ -1012,7 +1012,7 @@
 }
 .sap-date {
   font-size: 14px;
-  color: var(--color-text-tertiary);
+  color: #9ca3af;
   font-weight: 400;
 }
 .sap-close {
@@ -1025,7 +1025,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--color-text-tertiary);
+  color: #9ca3af;
   transition: background 0.15s, color 0.15s;
 }
 .sap-close:hover {
@@ -1071,7 +1071,7 @@
 }
 .sap-stat-label {
   font-size: 14px;
-  color: var(--color-text-tertiary);
+  color: #9ca3af;
   white-space: nowrap;
 }
 
@@ -1127,7 +1127,7 @@
   margin-bottom: 6px;
 }
 .sap-priority-no  { font-size: 14px; font-weight: 600; color: #1a5fb4; }
-.sap-priority-factory { font-size: 14px; color: var(--color-text-tertiary); }
+.sap-priority-factory { font-size: 14px; color: #9ca3af; }
 .sap-priority-bar-wrap {
   display: flex;
   align-items: center;
@@ -1142,7 +1142,7 @@
 .sap-priority-bar {
   position: absolute;
   left: 0; top: 0; bottom: 0;
-  background: var(--color-primary); /* Impeccable: 纯色，不用渐变 */
+  background: #2D7FF9; /* Impeccable: 纯色，不用渐变 */
   border-radius: 4px;
   transition: width 0.5s var(--ease-smooth);
 }
@@ -1185,7 +1185,7 @@
   width: 18px; height: 18px;
   display: flex; align-items: center; justify-content: center;
   border: none; background: transparent; cursor: pointer;
-  border-radius: 50%; color: var(--color-text-tertiary);
+  border-radius: 50%; color: #9ca3af;
   opacity: 0; transition: opacity 0.15s, background 0.15s;
   padding: 0;
 }
@@ -1211,7 +1211,7 @@
   width: 18px; height: 18px;
   display: flex; align-items: center; justify-content: center;
   border: none; background: transparent; cursor: pointer;
-  border-radius: 50%; color: var(--color-text-tertiary);
+  border-radius: 50%; color: #9ca3af;
   opacity: 0; transition: opacity 0.15s, background 0.15s;
   padding: 0;
 }
@@ -1234,7 +1234,7 @@
 .sap-ai-label {
   font-size: 14px;
   font-weight: 600;
-  color: var(--color-primary);
+  color: #2D7FF9;
   margin-bottom: 6px;
   display: flex;
   align-items: center;
@@ -1275,7 +1275,7 @@
   border-radius: 8px;
   border: 1.5px solid rgba(45, 127, 249, 0.35);
   background: rgba(45, 127, 249, 0.06);
-  color: var(--color-primary);
+  color: #2D7FF9;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -1321,8 +1321,8 @@
   border-bottom-left-radius: 3px;
 }
 .sap-ai-msg-user .sap-ai-msg-bubble {
-  background: var(--color-primary);
-  color: var(--color-bg-base);
+  background: #2D7FF9;
+  color: #fff;
   border-bottom-right-radius: 3px;
   margin-left: auto;
 }
@@ -1337,7 +1337,7 @@
   border-radius: 20px;
   border: 1px solid rgba(45, 127, 249, 0.35);
   background: rgba(45, 127, 249, 0.04);
-  color: var(--color-primary);
+  color: #2D7FF9;
   font-size: 14px;
   cursor: pointer;
   transition: background 0.15s;
@@ -1389,12 +1389,12 @@
 }
 
 .announcement-banner.warning {
-  background: var(--color-bg-base)7E6;
+  background: #FFF7E6;
   border-color: #ffd591;
 }
 
 .announcement-banner.important {
-  background: var(--color-bg-base)1F0;
+  background: #FFF1F0;
   border-color: #ffa39e;
 }
 

@@ -3,7 +3,7 @@
 }
 
 .emojiActive {
-  color: var(--color-info) !important;
+  color: #1890ff !important;
 }
 
 .emojiPanel {
@@ -42,8 +42,8 @@
 }
 
 .emojiTabActive {
-  color: var(--color-info);
-  border-bottom-color: var(--color-info);
+  color: #1890ff;
+  border-bottom-color: #1890ff;
 }
 
 .emojiGrid {

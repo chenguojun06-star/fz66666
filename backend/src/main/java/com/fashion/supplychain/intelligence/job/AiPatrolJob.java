@@ -198,17 +198,17 @@ public class AiPatrolJob {
                 ));
 
             if (!activeFactories.isEmpty()) {
-                // 查询最近3天内各工厂的最后扫码时间
                 @SuppressWarnings("unchecked")
                 List<Map<String, Object>> latestScans = (List<Map<String, Object>>)
                     (Object) scanRecordService.listMaps(
                         new QueryWrapper<ScanRecord>()
-                            .select("tenant_id, factory_name, MAX(scan_time) as last_scan")
-                            .eq("scan_result", "success")
-                            .ne("scan_type", "orchestration")
-                            .ge("scan_time", silenceThreshold)
-                            .isNotNull("factory_name")
-                            .groupBy("tenant_id, factory_name")
+                            .select("sr.tenant_id, po.factory_name, MAX(sr.scan_time) as last_scan")
+                            .apply("LEFT JOIN t_production_order po ON sr.factory_id = po.factory_id AND sr.tenant_id = po.tenant_id AND po.delete_flag = 0")
+                            .eq("sr.scan_result", "success")
+                            .ne("sr.scan_type", "orchestration")
+                            .ge("sr.scan_time", silenceThreshold)
+                            .isNotNull("sr.factory_id")
+                            .groupBy("sr.tenant_id, po.factory_name")
                     );
 
                 Set<String> recentScanFactories = latestScans.stream()
@@ -346,7 +346,6 @@ public class AiPatrolJob {
                 QueryWrapper<ScanRecord> sewQ = new QueryWrapper<>();
                 sewQ.eq("order_no", order.getOrderNo())
                     .eq("scan_type", "production")
-                    .ne("scan_type", "orchestration")
                     .ge("scan_time", since)
                     .last("LIMIT 1");
                 List<Map<String, Object>> sewScans = (List<Map<String, Object>>) (Object) scanRecordService.listMaps(sewQ);

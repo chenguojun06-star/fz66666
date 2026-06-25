@@ -46,6 +46,9 @@ public class ExternalFactoryMaterialDeductionHelper {
             List<MaterialPickingItem> items,
             MaterialPurchasePickingSupport.FactorySnapshot factorySnapshot) {
         try {
+            if (picking == null || items == null || items.isEmpty()) {
+                return;
+            }
             String orderId = purchase != null ? purchase.getOrderId() : picking.getOrderId();
             String orderNo = purchase != null ? purchase.getOrderNo() : picking.getOrderNo();
             if (!StringUtils.hasText(orderId) && !StringUtils.hasText(orderNo)) {
@@ -86,7 +89,7 @@ public class ExternalFactoryMaterialDeductionHelper {
             deduction.setDeductionAmount(totalMaterialCost);
             deduction.setSourceType("MATERIAL_PICKING");
             deduction.setSourceId(picking.getId());
-            deduction.setDescription("外发工厂领料扣款|" + (factorySnapshot.factoryName != null ? factorySnapshot.factoryName : "")
+            deduction.setDescription("外发工厂领料扣款|" + (factorySnapshot != null && factorySnapshot.factoryName != null ? factorySnapshot.factoryName : "")
                     + "|pickingNo=" + picking.getPickingNo()
                     + "|物料" + items.size() + "项|金额" + totalMaterialCost.setScale(2, RoundingMode.HALF_UP));
             deductionItemMapper.insert(deduction);
@@ -106,39 +109,43 @@ public class ExternalFactoryMaterialDeductionHelper {
     }
 
     public void rollbackMaterialDeduction(String pickingId) {
-        List<DeductionItem> items = deductionItemMapper.selectList(
-                new LambdaQueryWrapper<DeductionItem>()
-                        .eq(DeductionItem::getTenantId, UserContext.tenantId())
-                        .eq(DeductionItem::getSourceType, "MATERIAL_PICKING")
-                        .eq(DeductionItem::getSourceId, pickingId));
-        if (items == null || items.isEmpty()) {
-            return;
-        }
-
-        Set<String> reconIds = items.stream()
-                .map(DeductionItem::getReconciliationId)
-                .filter(StringUtils::hasText)
-                .collect(Collectors.toSet());
-        Map<String, ShipmentReconciliation> reconMap = reconIds.isEmpty()
-                ? Collections.emptyMap()
-                : shipmentReconciliationService.listByIds(reconIds).stream()
-                        .collect(Collectors.toMap(ShipmentReconciliation::getId, r -> r, (a, b) -> a));
-
-        for (DeductionItem item : items) {
-            String reconId = item.getReconciliationId();
-            BigDecimal amount = item.getDeductionAmount() != null ? item.getDeductionAmount() : BigDecimal.ZERO;
-            deductionItemMapper.deleteById(item.getId());
-
-            if (!StringUtils.hasText(reconId)) {
-                log.info("外发工厂领料扣款已回退(暂存记录): pickingId={}, rollbackAmount={}", pickingId, amount);
-                continue;
+        try {
+            List<DeductionItem> items = deductionItemMapper.selectList(
+                    new LambdaQueryWrapper<DeductionItem>()
+                            .eq(DeductionItem::getTenantId, UserContext.tenantId())
+                            .eq(DeductionItem::getSourceType, "MATERIAL_PICKING")
+                            .eq(DeductionItem::getSourceId, pickingId));
+            if (items == null || items.isEmpty()) {
+                return;
             }
 
-            ShipmentReconciliation recon = reconMap.get(reconId);
-            if (recon != null) {
-                shipmentReconciliationMapper.recalculateDeductionAndFinal(reconId);
-                log.info("外发工厂领料扣款已回退: pickingId={}, reconId={}, rollbackAmount={}", pickingId, reconId, amount);
+            Set<String> reconIds = items.stream()
+                    .map(DeductionItem::getReconciliationId)
+                    .filter(StringUtils::hasText)
+                    .collect(Collectors.toSet());
+            Map<String, ShipmentReconciliation> reconMap = reconIds.isEmpty()
+                    ? Collections.emptyMap()
+                    : shipmentReconciliationService.listByIds(reconIds).stream()
+                            .collect(Collectors.toMap(ShipmentReconciliation::getId, r -> r, (a, b) -> a));
+
+            for (DeductionItem item : items) {
+                String reconId = item.getReconciliationId();
+                BigDecimal amount = item.getDeductionAmount() != null ? item.getDeductionAmount() : BigDecimal.ZERO;
+                deductionItemMapper.deleteById(item.getId());
+
+                if (!StringUtils.hasText(reconId)) {
+                    log.info("外发工厂领料扣款已回退(暂存记录): pickingId={}, rollbackAmount={}", pickingId, amount);
+                    continue;
+                }
+
+                ShipmentReconciliation recon = reconMap.get(reconId);
+                if (recon != null) {
+                    shipmentReconciliationMapper.recalculateDeductionAndFinal(reconId);
+                    log.info("外发工厂领料扣款已回退: pickingId={}, reconId={}, rollbackAmount={}", pickingId, reconId, amount);
+                }
             }
+        } catch (Exception e) {
+            log.error("外发工厂领料扣款回退失败: pickingId={}", pickingId, e);
         }
     }
 

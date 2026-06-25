@@ -84,10 +84,10 @@
   font-weight: 500;
   white-space: nowrap;
 }
-.ef-delivery-badge--normal  { background: #e6f4ff; color: var(--color-primary); }
-.ef-delivery-badge--warning { background: var(--color-bg-base)7e6; color: var(--color-warning); }
-.ef-delivery-badge--danger  { background: var(--color-bg-base)1f0; color: var(--color-danger); }
-.ef-delivery-badge--success { background: #f6ffed; color: var(--color-success); }
+.ef-delivery-badge--normal  { background: #e6f4ff; color: #1677ff; }
+.ef-delivery-badge--warning { background: #fff7e6; color: #fa8c16; }
+.ef-delivery-badge--danger  { background: #fff1f0; color: #ff4d4f; }
+.ef-delivery-badge--success { background: #f6ffed; color: #52c41a; }
 .ef-delivery-badge--scrapped { background: var(--color-bg-subtle); color: var(--color-text-tertiary); }
 
 /* ── 三栏布局微调 ── */
@@ -141,7 +141,7 @@
 }
 
 .ef-order-no {
-  color: var(--color-primary);
+  color: #1677ff;
   cursor: pointer;
   font-weight: 500;
 }
@@ -170,7 +170,7 @@
 }
 
 .ef-size-qty {
-  color: var(--color-primary);
+  color: #1677ff;
   font-weight: 500;
 }
 
@@ -203,7 +203,7 @@
 .ef-compact .style-smart-stage__time {
   font-size: 11px;
   min-height: 11px;
-  color: var(--color-accent-emerald);
+  color: #10b981;
   font-weight: 600;
 }
 
