@@ -25,3 +25,10 @@ SET @s = IF((SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
     'ALTER TABLE `t_pattern_scan_record` ADD COLUMN `style_name` VARCHAR(255) DEFAULT NULL COMMENT ''款号名称''',
     'SELECT 1');
 PREPARE stmt FROM @s; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+-- 4. warehouse_code 字段
+SET @s = IF((SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='t_pattern_scan_record' AND COLUMN_NAME='warehouse_code')=0,
+    'ALTER TABLE `t_pattern_scan_record` ADD COLUMN `warehouse_code` VARCHAR(64) DEFAULT NULL COMMENT ''仓位编码''',
+    'SELECT 1');
+PREPARE stmt FROM @s; EXECUTE stmt; DEALLOCATE PREPARE stmt;
