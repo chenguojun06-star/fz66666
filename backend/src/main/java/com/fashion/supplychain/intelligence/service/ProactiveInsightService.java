@@ -176,6 +176,18 @@ public class ProactiveInsightService {
      * @return 注入文本，无洞察时返回空字符串
      */
     public String buildInsightInjection(Long tenantId) {
+        return buildRelevantInsightInjection(tenantId, null);
+    }
+
+    /**
+     * 构建与用户问题相关的主动洞察注入文本（推荐使用）。
+     * <p>根据用户消息智能过滤和排序相关洞察，减少token浪费。
+     *
+     * @param tenantId    租户ID
+     * @param userMessage 用户消息（用于相关性匹配，为空则返回全部洞察）
+     * @return 注入文本，无相关洞察时返回空字符串
+     */
+    public String buildRelevantInsightInjection(Long tenantId, String userMessage) {
         if (!enabled || tenantId == null) {
             return "";
         }
@@ -184,33 +196,139 @@ public class ProactiveInsightService {
             return "";
         }
 
+        // 如果有用户消息，做相关性过滤和排序
+        List<InsightItem> relevantInsights = insights;
+        if (userMessage != null && !userMessage.isBlank()) {
+            relevantInsights = filterAndRankByRelevance(insights, userMessage);
+        }
+
+        if (relevantInsights.isEmpty()) {
+            return "";
+        }
+
         StringBuilder sb = new StringBuilder();
         sb.append("\n## \uD83D\uDCA1 系统主动洞察（巡检发现的问题，请在回答中主动提及）\n");
 
-        // 按严重程度分组
-        long criticalCount = insights.stream().filter(i -> "critical".equals(i.getSeverity())).count();
-        long warningCount = insights.stream().filter(i -> "warning".equals(i.getSeverity())).count();
-        long infoCount = insights.stream().filter(i -> "info".equals(i.getSeverity())).count();
+        // 按严重程度分组统计
+        long criticalCount = relevantInsights.stream().filter(i -> "critical".equals(i.getSeverity())).count();
+        long warningCount = relevantInsights.stream().filter(i -> "warning".equals(i.getSeverity())).count();
+        long infoCount = relevantInsights.stream().filter(i -> "info".equals(i.getSeverity())).count();
 
-        sb.append(String.format("当前有 %d 条未读洞察（%d 严重 / %d 警告 / %d 提示）：\n\n",
-                insights.size(), criticalCount, warningCount, infoCount));
+        if (userMessage != null && !userMessage.isBlank()) {
+            sb.append(String.format("找到 %d 条与您问题相关的洞察（%d 严重 / %d 警告 / %d 提示）：\n\n",
+                    relevantInsights.size(), criticalCount, warningCount, infoCount));
+        } else {
+            sb.append(String.format("当前有 %d 条未读洞察（%d 严重 / %d 警告 / %d 提示）：\n\n",
+                    relevantInsights.size(), criticalCount, warningCount, infoCount));
+        }
 
-        // 最多展示前10条（避免prompt过长）
-        int limit = Math.min(insights.size(), 10);
+        // 最多展示前8条（避免prompt过长）
+        int limit = Math.min(relevantInsights.size(), 8);
         for (int i = 0; i < limit; i++) {
-            InsightItem item = insights.get(i);
+            InsightItem item = relevantInsights.get(i);
             String emoji = "critical".equals(item.getSeverity()) ? "\uD83D\uDD34"
                     : "warning".equals(item.getSeverity()) ? "\uD83D\uDFE1" : "\uD83D\uDFE2";
             sb.append(String.format("%d. %s **%s** [%s]: %s\n",
                     i + 1, emoji, item.getTitle(), item.getType(), item.getContent()));
         }
 
-        if (insights.size() > limit) {
-            sb.append(String.format("... 还有 %d 条洞察未展示\n", insights.size() - limit));
+        if (relevantInsights.size() > limit) {
+            sb.append(String.format("... 还有 %d 条相关洞察未展示\n", relevantInsights.size() - limit));
         }
 
         sb.append("\n如果用户的问题与以上洞察相关，请主动提醒用户关注这些风险。\n");
         return sb.toString();
+    }
+
+    /**
+     * 根据用户消息过滤和排序洞察。
+     * <p>排序规则：严重程度 > 相关性 > 时间
+     */
+    private List<InsightItem> filterAndRankByRelevance(List<InsightItem> insights, String userMessage) {
+        if (insights == null || insights.isEmpty()) {
+            return List.of();
+        }
+
+        String msg = userMessage.toLowerCase();
+
+        // 计算每个洞察的相关性得分
+        List<ScoredInsight> scored = new ArrayList<>();
+        for (InsightItem insight : insights) {
+            double score = calculateRelevanceScore(insight, msg);
+            if (score > 0) {  // 只保留有相关性的
+                scored.add(new ScoredInsight(insight, score));
+            }
+        }
+
+        // 如果没有相关的，返回前3条最严重的（保底）
+        if (scored.isEmpty()) {
+            return insights.stream()
+                    .sorted((a, b) -> {
+                        int sevCompare = severityWeight(b.getSeverity()) - severityWeight(a.getSeverity());
+                        if (sevCompare != 0) return sevCompare;
+                        return Long.compare(b.getCreatedAt(), a.getCreatedAt());
+                    })
+                    .limit(3)
+                    .toList();
+        }
+
+        // 排序：严重程度 > 相关性得分 > 时间
+        scored.sort((a, b) -> {
+            int sevCompare = severityWeight(b.insight.getSeverity()) - severityWeight(a.insight.getSeverity());
+            if (sevCompare != 0) return sevCompare;
+            int scoreCompare = Double.compare(b.score, a.score);
+            if (scoreCompare != 0) return scoreCompare;
+            return Long.compare(b.insight.getCreatedAt(), a.insight.getCreatedAt());
+        });
+
+        return scored.stream().map(s -> s.insight).toList();
+    }
+
+    /**
+     * 计算洞察与用户消息的相关性得分。
+     * <p>基于关键词匹配、类型匹配、实体匹配等多维度。
+     */
+    private double calculateRelevanceScore(InsightItem insight, String msg) {
+        double score = 0;
+
+        String title = insight.getTitle() != null ? insight.getTitle().toLowerCase() : "";
+        String content = insight.getContent() != null ? insight.getContent().toLowerCase() : "";
+        String type = insight.getType() != null ? insight.getType().toLowerCase() : "";
+
+        // 维度1：标题关键词匹配（权重高）
+        String[] msgWords = msg.split("[，。！？、\\s]+");
+        for (String word : msgWords) {
+            if (word.length() < 2) continue;
+            if (title.contains(word)) score += 3.0;
+            if (content.contains(word)) score += 1.0;
+        }
+
+        // 维度2：类型匹配
+        if (type.contains("delay") && msg.matches(".*(延期|逾期|超期|交期|延迟).*")) score += 5.0;
+        if (type.contains("quality") && msg.matches(".*(质量|次品|返工|报废|不良|质检).*")) score += 5.0;
+        if (type.contains("cost") && msg.matches(".*(成本|费用|利润|价格|工资|结算).*")) score += 5.0;
+        if (type.contains("inventory") && msg.matches(".*(库存|缺货|缺料|面料|物料|入库).*")) score += 5.0;
+        if (type.contains("combo") && msg.matches(".*(组合|复合|多维度|综合).*")) score += 3.0;
+        if (type.contains("stagnant") && msg.matches(".*(停滞|卡住|不动|没进展).*")) score += 4.0;
+
+        return score;
+    }
+
+    private int severityWeight(String severity) {
+        if (severity == null) return 0;
+        return switch (severity) {
+            case "critical" -> 3;
+            case "warning" -> 2;
+            case "info" -> 1;
+            default -> 0;
+        };
+    }
+
+    @lombok.Data
+    @lombok.AllArgsConstructor
+    private static class ScoredInsight {
+        private InsightItem insight;
+        private double score;
     }
 
     @Data

@@ -72,34 +72,68 @@ const GlobalVoiceAssistant: React.FC<VoiceAssistantProps> = ({ className }) => {
     }
   }, [isListening]);
 
-  // 处理音频
+  // ══════════════════════════════════════════════════════════════════════════
+  // 【P2升级】Web Speech API 语音识别
+  // 使用浏览器原生 API，无需 API Key，支持实时语音识别
+  // ══════════════════════════════════════════════════════════════════════════
+
   const processAudio = async (_audioBlob: Blob) => {
     setIsProcessing(true);
+
+    // 检查浏览器是否支持 Web Speech API
+    const SpeechRecognitionAPI = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+
+    if (!SpeechRecognitionAPI) {
+      // 浏览器不支持 Web Speech API，回退到快捷命令模式
+      console.warn('[VoiceAssistant] 浏览器不支持 Web Speech API，使用快捷命令模式');
+      setTranscript('（您的浏览器不支持语音识别，请使用快捷命令或手动输入）');
+      message.warning('您的浏览器不支持语音识别，请使用快捷命令');
+      setIsProcessing(false);
+      return;
+    }
+
     try {
-      // 模拟语音识别（实际项目中调用后端API）
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      const recognition = new SpeechRecognitionAPI();
+      recognition.lang = 'zh-CN';  // 中文
+      recognition.continuous = false;  // 单次识别
+      recognition.interimResults = true;  // 显示中间结果
 
-      // 模拟识别结果
-      const mockTranscripts = [
-        '帮我查一下A款的订单进度',
-        '创建一个新的生产订单',
-        '今天有哪些待审批的事项',
-        '物料库存还剩多少',
-        '查看最近的工资报表'
-      ];
-      const randomTranscript = mockTranscripts[Math.floor(Math.random() * mockTranscripts.length)];
-      setTranscript(randomTranscript);
-      setHasUnread(true);
+      // 实时显示识别结果
+      recognition.onresult = (event: any) => {
+        const results = event.results;
+        const transcriptText = results[results.length - 1][0].transcript;
+        setTranscript(transcriptText);
+        console.log('[VoiceAssistant] 识别结果:', transcriptText);
+      };
 
-      // 自动触发小云AI处理
-      setTimeout(() => {
-        message.info('小云正在为您处理...');
-      }, 500);
+      recognition.onerror = (event: any) => {
+        console.error('[VoiceAssistant] 语音识别错误:', event.error);
+        if (event.error === 'no-speech') {
+          message.warning('未检测到语音，请重试');
+        } else if (event.error === 'not-allowed') {
+          message.error('请允许麦克风权限');
+        } else {
+          message.error(`语音识别失败: ${event.error}`);
+        }
+        setIsProcessing(false);
+      };
+
+      recognition.onend = () => {
+        console.log('[VoiceAssistant] 语音识别结束');
+        setIsProcessing(false);
+        if (transcript && transcript.trim()) {
+          // 识别成功后自动发送
+          message.success('语音识别成功，正在处理...');
+        }
+      };
+
+      // 开始识别
+      recognition.start();
+      console.log('[VoiceAssistant] 开始语音识别...');
 
     } catch (error) {
-      console.error('语音识别失败:', error);
+      console.error('[VoiceAssistant] 语音识别异常:', error);
       message.error('语音识别失败，请重试');
-    } finally {
       setIsProcessing(false);
     }
   };

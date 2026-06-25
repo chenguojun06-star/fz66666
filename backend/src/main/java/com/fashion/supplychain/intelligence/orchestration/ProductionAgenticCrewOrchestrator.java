@@ -48,11 +48,15 @@ public class ProductionAgenticCrewOrchestrator {
     private static final String CMD_TYPES =
         "order:hold(暂停订单), order:expedite(加急), order:resume(恢复), order:remark(备注), " +
         "order:approve(审批通过), order:reject(驳回), order:ship_date(修改货期), " +
-        "order:add_note(添加备注), style:approve(款式审批), style:return(款式退回), " +
-        "quality:reject(质检拒绝), settlement:approve(结算审批), purchase:create(创建采购单), " +
+        "order:add_note(添加备注), order:edit(编辑订单), " +
+        "style:approve(款式审批), style:return(款式退回), " +
+        "quality:reject(质检拒绝), defective:handle(次品处理), " +
+        "settlement:approve(结算审批), payroll:approve(工资审批), " +
+        "purchase:create(创建采购单), procurement:order_goods(下采购订单), " +
         "factory:urge(催工厂), process:reassign(工序重分配), " +
         "material:safety_stock(设置安全库存), notification:push(推送消息), " +
-        "procurement:order_goods(下采购订单), undo:last(撤销上次操作)";
+        "scan:undo(扫码撤回), cutting:create(创建裁床), " +
+        "undo:last(撤销上次操作)";
 
     private final ProductionOrderService productionOrderService;
     private final OrderHealthScoreOrchestrator healthScoreOrchestrator;

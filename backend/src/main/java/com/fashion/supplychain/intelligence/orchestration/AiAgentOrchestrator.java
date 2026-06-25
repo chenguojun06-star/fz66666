@@ -10,6 +10,7 @@ import com.fashion.supplychain.intelligence.agent.loop.AgentLoopContextBuilder;
 import com.fashion.supplychain.intelligence.agent.loop.AgentLoopEngine;
 import com.fashion.supplychain.intelligence.agent.loop.StreamingAgentLoopCallback;
 import com.fashion.supplychain.intelligence.agent.loop.SyncAgentLoopCallback;
+import com.fashion.supplychain.intelligence.agent.router.SemanticDomainRouter;
 import com.fashion.supplychain.intelligence.entity.SkillTemplate;
 import com.fashion.supplychain.intelligence.entity.AiLongMemory;
 import com.fashion.supplychain.intelligence.mapper.AiLongMemoryMapper;
@@ -87,6 +88,16 @@ public class AiAgentOrchestrator {
     @Autowired private org.springframework.beans.factory.ObjectProvider<com.fashion.supplychain.intelligence.upgrade.phase4.GraphOfThoughtsEngine> graphOfThoughtsEngineProvider;
     @Autowired private org.springframework.beans.factory.ObjectProvider<com.fashion.supplychain.intelligence.upgrade.phase3.IntentDrivenDagService> intentDrivenDagServiceProvider;
     @Autowired private org.springframework.beans.factory.ObjectProvider<com.fashion.supplychain.intelligence.upgrade.phase4.DagVisualizationService> dagVisualizationServiceProvider;
+
+    // P0升级: 多Agent图编排 — 主对话路由到专家Agent协作
+    @Autowired private org.springframework.beans.factory.ObjectProvider<com.fashion.supplychain.intelligence.agent.router.SemanticDomainRouter> semanticDomainRouterProvider;
+    @Autowired private org.springframework.beans.factory.ObjectProvider<MultiAgentGraphOrchestrator> multiAgentGraphOrchestratorProvider;
+
+    // P2升级: SwarmExecutionEngine — 多Agent并行协作引擎
+    @Autowired private org.springframework.beans.factory.ObjectProvider<com.fashion.supplychain.intelligence.agent.dag.SwarmExecutionEngine> swarmExecutionEngineProvider;
+
+    // P1升级: 意图组合引擎 — 一句话多意图识别与并行处理
+    @Autowired private org.springframework.beans.factory.ObjectProvider<com.fashion.supplychain.intelligence.service.IntentCompositionService> intentCompositionServiceProvider;
 
     private final ThreadLocal<String> lastCommandIdHolder = new ThreadLocal<>();
     private final ThreadLocal<List<AiAgentToolExecHelper.ToolExecRecord>> lastToolRecordsHolder = new ThreadLocal<>();
@@ -203,6 +214,13 @@ public class AiAgentOrchestrator {
     }
 
     public Result<String> executeAgent(String userMessage, String pageContext) {
+        // 【P0升级】多Agent图编排路由决策：复杂/多领域问题路由到专家Agent协作
+        Result<String> multiAgentResult = tryRouteToMultiAgentGraph(userMessage, pageContext);
+        if (multiAgentResult != null) {
+            log.info("[AiAgent] 路由到多Agent图编排，复杂度触发: {}", multiAgentResult.getData() != null ? "已处理" : "降级");
+            return multiAgentResult;
+        }
+
         // 【v2 修复】反转优先级：先尝试 AI 完整回答，失败后才走关键词模板
         // 旧逻辑：关键词匹配 → 短路返回（用户感觉"不像AI"）
         // 新逻辑：关键词提取 hint → AI 基于 hint + 真实数据回答 → AI 失败才走模板兜底
@@ -274,7 +292,167 @@ public class AiAgentOrchestrator {
         }
     }
 
-    /** v2: 只提取关键词→数据路由提示，不直接返回模板。让 AI 基于真实数据回答。 */
+    // ══════════════════════════════════════════════════════════════════════════
+    // 【P0升级】多Agent图编排路由
+    // 策略：COMPLEX复杂度 或 多领域问题 → 路由到专家Agent协作
+    // 降级：多Agent执行失败 → 返回null，继续走原有AgentLoopEngine
+    // ══════════════════════════════════════════════════════════════════════════
+
+    /**
+     * 尝试路由到多Agent图编排。
+     *
+     * @return 非null表示已处理（成功或失败），返回Result；null表示继续走原有逻辑
+     */
+    private Result<String> tryRouteToMultiAgentGraph(String userMessage, String pageContext) {
+        try {
+            var router = semanticDomainRouterProvider.getIfAvailable();
+            var multiAgentGraph = multiAgentGraphOrchestratorProvider.getIfAvailable();
+
+            if (router == null || multiAgentGraph == null) {
+                log.debug("[MultiAgent路由] 组件未就绪，降级到AgentLoop");
+                return null;
+            }
+
+            // 1. 意图识别：判断是否需要多Agent协作
+            var routing = router.routeMulti(userMessage, pageContext);
+            boolean shouldRoute = routing.getComplexity() == SemanticDomainRouter.Complexity.COMPLEX
+                    || routing.isMultiDomain();
+
+            if (!shouldRoute) {
+                log.debug("[MultiAgent路由] 单领域简单问题，跳过多Agent，domain={}, complexity={}",
+                        routing.getDomains(), routing.getComplexity());
+                return null;
+            }
+
+            // ══════════════════════════════════════════════════════════════════════════
+            // 【P2升级】SwarmExecutionEngine 拓扑选择
+            // 根据领域数量和复杂度选择合适的并行协作模式
+            // ══════════════════════════════════════════════════════════════════════════
+            var swarmTopology = routing.getSwarmTopology();
+            log.info("[MultiAgent路由] 触发多Agent图编排，domains={}, complexity={}, confidence={}, swarmTopology={}",
+                    routing.getDomains(), routing.getComplexity(), routing.getConfidence(), swarmTopology);
+
+            // 2. 构建多Agent请求
+            var request = buildMultiAgentRequest(userMessage, pageContext, routing);
+
+            // 3. 执行多Agent图
+            var graphResult = multiAgentGraph.runGraph(request);
+
+            if (graphResult.isSuccess() && graphResult.getOptimizationSuggestion() != null) {
+                String answer = buildMultiAgentAnswer(graphResult, routing);
+                log.info("[MultiAgent路由] 多Agent图执行成功，置信度={}, 建议={}字符",
+                        graphResult.getConfidenceScore(),
+                        graphResult.getOptimizationSuggestion().length());
+                return Result.success(answer);
+            } else {
+                log.warn("[MultiAgent路由] 多Agent图执行失败或无建议，降级到AgentLoop，success={}, error={}",
+                        graphResult.isSuccess(), graphResult.getErrorMessage());
+                return null; // 降级到原有逻辑
+            }
+        } catch (Exception e) {
+            log.error("[MultiAgent路由] 多Agent路由异常，降级到AgentLoop: {}", e.getMessage(), e);
+            return null; // 降级到原有逻辑
+        }
+    }
+
+    /**
+     * 构建多Agent请求。
+     */
+    private com.fashion.supplychain.intelligence.dto.MultiAgentRequest buildMultiAgentRequest(
+            String userMessage, String pageContext, SemanticDomainRouter.MultiRoutingResult routing) {
+        // 手动构建请求
+        var request = new com.fashion.supplychain.intelligence.dto.MultiAgentRequest();
+        request.setScene(routing.getDomains().isEmpty() ? "full" : routing.getDomains().get(0).name());
+        request.setQuestion(userMessage);
+        return request;
+    }
+
+    /**
+     * 构建多Agent回答文本。
+     */
+    private String buildMultiAgentAnswer(
+            com.fashion.supplychain.intelligence.dto.GraphExecutionResult result,
+            SemanticDomainRouter.MultiRoutingResult routing) {
+        StringBuilder sb = new StringBuilder();
+
+        // 头部分析结论
+        if (result.getOptimizationSuggestion() != null) {
+            sb.append(result.getOptimizationSuggestion());
+        }
+
+        // 节点执行摘要（如果有多Agent协作）
+        if (result.getNodeTrace() != null && !result.getNodeTrace().isEmpty()) {
+            sb.append("\n\n💡 **分析完成**（由");
+            for (int i = 0; i < result.getNodeTrace().size(); i++) {
+                if (i > 0) sb.append(" → ");
+                sb.append(switch (result.getNodeTrace().get(i)) {
+                    case "supervisor" -> "调度专家";
+                    case "digital_twin" -> "数字孪生";
+                    case "specialists" -> routing.describeDomains() + "专家";
+                    case "reflection" -> "反思引擎";
+                    case "re_route" -> "重路由";
+                    default -> result.getNodeTrace().get(i);
+                });
+            }
+            sb.append("协作完成）");
+        }
+
+        // 置信度提示
+        if (result.getConfidenceScore() > 0) {
+            sb.append("\n📊 分析置信度：").append(result.getConfidenceScore()).append("%");
+        }
+
+        return sb.toString();
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // 【P0升级】流式对话多Agent路由
+    // ══════════════════════════════════════════════════════════════════════════
+
+    /**
+     * 流式对话的多Agent路由。
+     *
+     * @return true 表示已处理，false 表示继续走原有逻辑
+     */
+    private boolean tryRouteToMultiAgentGraphStreaming(
+            String userMessage, String pageContext, SseEmitter emitter, String cacheKey) {
+        try {
+            var router = semanticDomainRouterProvider.getIfAvailable();
+            var multiAgentGraph = multiAgentGraphOrchestratorProvider.getIfAvailable();
+
+            if (router == null || multiAgentGraph == null) {
+                log.debug("[MultiAgent路由-流式] 组件未就绪，降级到AgentLoop");
+                return false;
+            }
+
+            // 意图识别
+            var routing = router.routeMulti(userMessage, pageContext);
+            boolean shouldRoute = routing.getComplexity() == SemanticDomainRouter.Complexity.COMPLEX
+                    || routing.isMultiDomain();
+
+            if (!shouldRoute) {
+                log.debug("[MultiAgent路由-流式] 单领域简单问题，跳过多Agent");
+                return false;
+            }
+
+            log.info("[MultiAgent路由-流式] 触发多Agent图编排，domains={}, complexity={}",
+                    routing.getDomains(), routing.getComplexity());
+
+            // 构建请求
+            var request = buildMultiAgentRequest(userMessage, pageContext, routing);
+
+            // 流式执行多Agent图（使用MultiAgentGraphOrchestrator内置的SSE流式）
+            // 注意：不缓存多Agent结果，让MultiAgentGraphOrchestrator内部处理缓存和完成信号
+            multiAgentGraph.runGraphStreaming(request, emitter);
+
+            return true;
+        } catch (Exception e) {
+            log.error("[MultiAgent路由-流式] 多Agent路由异常，降级到AgentLoop: {}", e.getMessage(), e);
+            return false; // 降级到原有逻辑
+        }
+    }
+
+    /** v2: 只提取关键词→数据路由提示，不直接返回模板，让 AI 基于真实数据回答。 */
     private String extractKeywordDataHint(String userMessage) {
         if (userMessage == null || userMessage.isBlank()) return null;
         String msg = userMessage.toLowerCase();
@@ -393,6 +571,11 @@ public class AiAgentOrchestrator {
             }
 
             heartbeatFuture = startHeartbeat(emitter, sseHeartbeatIntervalS, cancelled);
+
+            // 【P0升级】流式对话多Agent路由：复杂问题路由到专家Agent协作
+            if (tryRouteToMultiAgentGraphStreaming(userMessage, pageContext, emitter, cacheKey)) {
+                return; // 多Agent已处理，直接返回
+            }
 
             // 【v2】keyword hint 注入 augmentedPageContext（之前已经生成过一次，复用）
             String augmentedPageContext = buildAugmentedPageContext(userMessage, pageContext);

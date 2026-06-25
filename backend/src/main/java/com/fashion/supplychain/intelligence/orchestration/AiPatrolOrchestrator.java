@@ -324,8 +324,8 @@ public class AiPatrolOrchestrator {
                         o.getPlannedEndDate().format(FMT),
                         Math.max(0, overdueDays),
                         pct(o));
-                push(tenantId, o.getOrderNo(), o.getMerchandiser(),
-                        "⚠️ 逾期订单：" + o.getOrderNo(), body, "overdue");
+                push(tenantId, o.getId(), o.getOrderNo(), o.getMerchandiser(),
+                        "⚠️ 逾期订单：" + o.getOrderNo(), body, "overdue", "urge_order", o.getStyleImage());
                 count++;
             }
         }
@@ -376,8 +376,8 @@ public class AiPatrolOrchestrator {
                 String body = String.format(
                         "订单【%s】已 %d 天无新增扫码记录，当前进度 %d%%，交期 %s，请联系工厂确认生产状态。",
                         o.getOrderNo(), days, pct(o), deadline);
-                push(tenantId, o.getOrderNo(), o.getMerchandiser(),
-                        "⏸ 生产停滞：" + o.getOrderNo(), body, "stagnant");
+                push(tenantId, o.getId(), o.getOrderNo(), o.getMerchandiser(),
+                        "⏸ 生产停滞：" + o.getOrderNo(), body, "stagnant", "urge_order", o.getStyleImage());
                 count++;
             }
         }
@@ -811,8 +811,9 @@ public class AiPatrolOrchestrator {
                 .count() > 0;
     }
 
-    private void push(Long tenantId, String orderNo, String toName,
-                      String title, String content, String noticeType) {
+    private void push(Long tenantId, String orderId, String orderNo, String toName,
+                      String title, String content, String noticeType, String actionType,
+                      String styleImage) {
         SysNotice n = new SysNotice();
         n.setTenantId(tenantId);
         n.setToName(toName == null || toName.isBlank() ? "管理员" : toName);
@@ -821,6 +822,11 @@ public class AiPatrolOrchestrator {
         n.setTitle(title);
         n.setContent(content);
         n.setNoticeType(noticeType);
+        n.setActionType(actionType);
+        n.setStyleImage(styleImage);
+        if (orderId != null) {
+            n.setActionPayload("{\"orderId\":\"" + orderId + "\",\"orderNo\":\"" + orderNo + "\"}");
+        }
         n.setIsRead(0);
         n.setCreatedAt(LocalDateTime.now());
         sysNoticeService.save(n);

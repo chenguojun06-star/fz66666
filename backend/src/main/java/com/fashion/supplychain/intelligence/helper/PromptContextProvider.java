@@ -284,7 +284,8 @@ public class PromptContextProvider {
     public String buildGraphRagContext(Long tenantId, String userMessage) {
         if (graphRagService == null) return "";
         try {
-            return graphRagService.buildGraphContext(tenantId, userMessage);
+            // 优先使用 GraphRAG 分层检索（社区发现 + 实体级）
+            return graphRagService.buildGraphRagContext(tenantId, userMessage);
         } catch (Exception e) {
             log.debug("[AiAgent] 知识图谱上下文加载跳过: {}", e.getMessage());
             return "";

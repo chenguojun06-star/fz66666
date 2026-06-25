@@ -202,7 +202,9 @@ public class FinanceDataConsistencyJob {
     }
 
     private int fixDeductionSumMismatch(Long tenantId) {
-        List<ShipmentReconciliation> recons = shipmentReconciliationService.list();
+        List<ShipmentReconciliation> recons = shipmentReconciliationService.lambdaQuery()
+                .eq(ShipmentReconciliation::getTenantId, tenantId)
+                .list();
         if (recons == null || recons.isEmpty()) return 0;
 
         int fixed = 0;

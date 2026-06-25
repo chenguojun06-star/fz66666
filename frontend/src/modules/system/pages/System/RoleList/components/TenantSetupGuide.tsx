@@ -70,7 +70,7 @@ const TenantSetupGuide: React.FC<TenantSetupGuideProps> = ({ visible, onComplete
     <Modal
       title={
         <Space>
-          <RocketOutlined style={{ color: '#1890ff' }} />
+          <RocketOutlined style={{ color: 'var(--color-info)' }} />
           <span>新租户快速初始化</span>
         </Space>
       }
@@ -106,15 +106,15 @@ const TenantSetupGuide: React.FC<TenantSetupGuideProps> = ({ visible, onComplete
                 hoverable
                 onClick={() => toggleTemplate(tpl.id)}
                 style={{
-                  borderColor: selectedIds.includes(tpl.id) ? '#1890ff' : '#f0f0f0',
-                  background: selectedIds.includes(tpl.id) ? '#e6f7ff' : '#fff',
+                  borderColor: selectedIds.includes(tpl.id) ? 'var(--color-info)' : 'var(--color-border-light)',
+                  background: selectedIds.includes(tpl.id) ? '#e6f7ff' : 'var(--color-bg-base)',
                 }}
                 bodyStyle={{ padding: 12 }}
               >
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
                   <CheckCircleOutlined
                     style={{
-                      color: selectedIds.includes(tpl.id) ? '#1890ff' : '#d9d9d9',
+                      color: selectedIds.includes(tpl.id) ? 'var(--color-info)' : 'var(--color-border-antd)',
                       fontSize: 16,
                       marginTop: 2,
                     }}
@@ -153,7 +153,7 @@ const TenantSetupGuide: React.FC<TenantSetupGuideProps> = ({ visible, onComplete
 
       {step === 1 && (
         <div style={{ textAlign: 'center', padding: '20px 0' }}>
-          <CheckCircleOutlined style={{ fontSize: 48, color: '#52c41a', marginBottom: 16 }} />
+          <CheckCircleOutlined style={{ fontSize: 48, color: 'var(--color-success)', marginBottom: 16 }} />
           <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>初始化完成！</div>
           <Text type="secondary" style={{ display: 'block', marginBottom: 16 }}>
             已为您创建 {selectedIds.length} 个基础角色，现在可以开始使用了

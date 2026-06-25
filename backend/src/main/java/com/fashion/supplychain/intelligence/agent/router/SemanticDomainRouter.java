@@ -312,6 +312,26 @@ public class SemanticDomainRouter {
                     .map(d -> d.getLabel())
                     .collect(Collectors.joining("和"));
         }
+
+        // ══════════════════════════════════════════════════════════════════════════
+        // 【P2升级】SwarmExecutionEngine 拓扑选择
+        // 根据领域数量和复杂度选择合适的 Swarm 拓扑
+        // - 2个领域：HIERARCHICAL（顺序协作）
+        // - 3个以上领域：STAR（中心协调 + 外围并行）
+        // - COMPLEX 复杂度：MESH（全并行）
+        // ══════════════════════════════════════════════════════════════════════════
+
+        public String getSwarmTopology() {
+            if (complexity == Complexity.COMPLEX && domains.size() >= 3) {
+                return "MESH";  // 复杂多领域 → 全并行
+            } else if (domains.size() >= 3) {
+                return "STAR";  // 多领域 → 星型（中心协调）
+            } else if (domains.size() == 2) {
+                return "HIERARCHICAL";  // 2个领域 → 层级顺序
+            } else {
+                return "RING";  // 单领域 → 环形流水线
+            }
+        }
     }
 
     public enum Complexity {

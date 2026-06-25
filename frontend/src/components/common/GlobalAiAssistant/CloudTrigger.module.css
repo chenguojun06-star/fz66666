@@ -38,7 +38,7 @@
   top: -6px;
   right: 4px;
   background: #ff7875;
-  color: #fff;
+  color: var(--color-bg-base);
   font-size: 13px;
   font-weight: 700;
   line-height: 1;
@@ -50,7 +50,7 @@
   justify-content: center;
   padding: 0 4px;
   box-shadow: 0 2px 6px rgba(255, 77, 79, 0.55);
-  border: 2px solid #fff;
+  border: 2px solid var(--color-bg-base);
   pointer-events: none;
   animation: badgePulse 2s ease-in-out infinite;
 }
@@ -105,7 +105,7 @@
 .cuteCloudPart,
 .cuteCloudBase {
   position: absolute;
-  background: linear-gradient(180deg, #ffffff 0%, #dce9ff 100%);
+  background: linear-gradient(180deg, var(--color-bg-base) 0%, #dce9ff 100%);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.95), 0 6px 14px rgba(31, 117, 234, 0.14);
 }
 
@@ -250,12 +250,12 @@
 
 .cuteCloudUrgent .cuteCloudPart,
 .cuteCloudUrgent .cuteCloudBase {
-  background: linear-gradient(180deg, #fffefe 0%, #e1efff 100%);
+  background: linear-gradient(180deg, var(--color-bg-base)efe 0%, #e1efff 100%);
 }
 
 .cuteCloudSuccess .cuteCloudPart,
 .cuteCloudSuccess .cuteCloudBase {
-  background: linear-gradient(180deg, #ffffff 0%, #d9f4ff 100%);
+  background: linear-gradient(180deg, var(--color-bg-base) 0%, #d9f4ff 100%);
 }
 
 @keyframes floatTrigger {

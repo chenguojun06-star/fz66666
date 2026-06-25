@@ -365,7 +365,7 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
           </div>
           {/* 标签打印选项 */}
           {labelPrintMode && (
-            <div style={{ marginBottom: 16, padding: '12px 16px', background: '#FFF7E6', borderRadius: 12, border: '1px solid #ffd591' }}>
+            <div style={{ marginBottom: 16, padding: '12px 16px', background: 'var(--color-bg-base)7E6', borderRadius: 12, border: '1px solid #ffd591' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
                 <span style={{ fontWeight: 600, color: '#d46b08', whiteSpace: 'nowrap' }}>标签打印：</span>
                 <Radio.Group value={labelSize} onChange={e => setLabelSize(e.target.value)}>
@@ -397,10 +397,10 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
             /* 统一打印表格样式 */
             .pt { width: 100%; border-collapse: collapse; font-size: 12px; }
             .pt th, .pt td { border: 0.5px solid #d0d0d0; padding: 5px 8px; vertical-align: middle; }
-            .pt th { background: #f5f5f5; font-weight: 600; text-align: center; white-space: nowrap; }
+            .pt th { background: var(--color-bg-subtle); font-weight: 600; text-align: center; white-space: nowrap; }
             .pt td { color: #333; }
-            .pt .label-cell { background: #f5f5f5; font-weight: 500; color: #333; width: 100px; white-space: nowrap; }
-            .pt .total-row td { background: #f5f5f5; font-weight: 700; }
+            .pt .label-cell { background: var(--color-bg-subtle); font-weight: 500; color: #333; width: 100px; white-space: nowrap; }
+            .pt .total-row td { background: var(--color-bg-subtle); font-weight: 700; }
             .pt .highlight-cell { font-weight: 700; color: #1d39c4; }
           `}</style>
           {/* 基本信息 */}
@@ -414,14 +414,14 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
                     <Image src={getFullAuthedFileUrl(resolvedCover)} alt={styleNo}
                       style={{ width: 90, height: 90, objectFit: 'cover', borderRadius: 6, border: '1px solid #e0e0e0' }} preview={{ cover: <span>预览</span> }} />
                   ) : (
-                    <div style={{ width: 90, height: 90, borderRadius: 6, border: '1px dashed #ccc', background: '#fafafa', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#999', fontSize: 12 }}>无图片</div>
+                    <div style={{ width: 90, height: 90, borderRadius: 6, border: '1px dashed #ccc', background: 'var(--color-bg-container)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#999', fontSize: 12 }}>无图片</div>
                   )}
                   {/* 二维码 */}
-                  <div style={{ width: 90, height: 90, padding: 4, border: '1px solid #e0e0e0', borderRadius: 6, background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+                  <div style={{ width: 90, height: 90, padding: 4, border: '1px solid #e0e0e0', borderRadius: 6, background: 'var(--color-bg-base)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
                     {qrPngDataUrl
                       ? <img src={qrPngDataUrl} alt="QR" style={{ width: 80, height: 80, display: 'block' }} />
                       : <QRCode value={qrValue} size={80} />}
-                    {user?.tenantLogo || user?.logo ? <img src={(user?.tenantLogo || user?.logo) as string} alt="logo" style={{ position: 'absolute', width: 20, height: 20, borderRadius: '50%', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', objectFit: 'contain', background: '#fff' }} /> : null}
+                    {user?.tenantLogo || user?.logo ? <img src={(user?.tenantLogo || user?.logo) as string} alt="logo" style={{ position: 'absolute', width: 20, height: 20, borderRadius: '50%', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', objectFit: 'contain', background: 'var(--color-bg-base)' }} /> : null}
                   </div>
                   <div style={{ fontSize: 11, color: '#999', textAlign: 'center' }}>扫码查看详情</div>
                 </div>

@@ -19,8 +19,14 @@ import org.springframework.context.annotation.Lazy;
 
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.UUID;
+import java.util.concurrent.atomic.AtomicReference;
+import com.fashion.supplychain.intelligence.agent.dag.DagGraph;
+import com.fashion.supplychain.intelligence.agent.dag.DagNode;
+import com.fashion.supplychain.intelligence.agent.dag.DagNodeExecutor;
+import com.fashion.supplychain.intelligence.agent.dag.SwarmExecutionEngine;
+import com.fashion.supplychain.intelligence.agent.dag.SwarmExecutionEngine.SwarmTopology;
 
 /**
  * 多代理图总指挥编排器 — Hybrid Graph MAS v4.1。
@@ -49,6 +55,10 @@ public class MultiAgentGraphOrchestrator {
     @Autowired private com.fashion.supplychain.intelligence.helper.AiAgentPromptHelper promptHelper;
     @Autowired private AgentCheckpointService checkpointService;
     @Autowired private AgentMemoryService memoryService;
+    @Autowired private SwarmExecutionEngine swarmEngine;
+    @Autowired private com.fashion.supplychain.intelligence.agent.dag.DagExecutionEngine dagEngine;
+    @Autowired(required = false)
+    private com.fashion.supplychain.intelligence.service.SharedAgentMemoryService sharedAgentMemory;
 
     /**
      * 同步执行：Plan→DigitalTwin→Supervisor→Specialist(并行)→Reflect→[重路由]→Result
@@ -189,26 +199,167 @@ public class MultiAgentGraphOrchestrator {
 
     /**
      * 并行派发 SpecialistAgent（full 场景全部执行，其他场景仅匹配路由）。
+     * <p>【P2升级】多领域时使用 SwarmExecutionEngine 执行，享受 4 种拓扑并行模式：</p>
+     * <ul>
+     *   <li>单领域 → HIERARCHICAL（顺序执行）</li>
+     *   <li>2个领域 → RING（环形流水线，结果依次传递）</li>
+     *   <li>3-5个领域 → STAR（中心协调 + 外围并行）</li>
+     *   <li>6+个领域 → MESH（全并行）</li>
+     * </ul>
      */
     private void dispatchSpecialists(AgentState state) {
         String route = state.getRoute();
         List<SpecialistAgent> targets = specialistAgents.stream()
                 .filter(s -> "full".equals(route) || s.getRoute().equals(route))
                 .toList();
-        if (targets.size() <= 1) {
-            targets.forEach(s -> { s.analyze(state); state.getNodeTrace().add("specialist:" + s.getRoute()); });
+        
+        if (targets.isEmpty()) {
+            log.debug("[Graph] 无匹配的 SpecialistAgent，跳过");
             return;
         }
-        // 并行执行多个 Specialist
-        List<CompletableFuture<Void>> futures = targets.stream()
-                .map(s -> CompletableFuture.runAsync(UserContext.wrap(() -> {
-                    try { s.analyze(state); } catch (Exception e) {
-                        log.warn("[Graph] Specialist {} 失败: {}", s.getRoute(), e.getMessage());
-                        state.getSpecialistResults().put(s.getRoute(), "分析失败: " + e.getMessage());
+        
+        if (targets.size() == 1) {
+            // 单领域：直接执行，保持原有逻辑
+            targets.forEach(s -> { 
+                s.analyze(state); 
+                state.getNodeTrace().add("specialist:" + s.getRoute()); 
+            });
+            return;
+        }
+        
+        // ══════════════════════════════════════════════════════════════════════════
+        // 【P2升级】多领域：使用 SwarmExecutionEngine 执行
+        // ══════════════════════════════════════════════════════════════════════════
+        log.info("[Graph:Swarm] 多领域并行执行，拓扑选择，specialists={}", targets.size());
+        
+        // 1. 构建 DAG 图
+        DagGraph graph = new DagGraph("specialist-graph-" + System.currentTimeMillis(), "Specialist并行图");
+        List<String> dependencies = new ArrayList<>();
+        for (int i = 0; i < targets.size(); i++) {
+            SpecialistAgent specialist = targets.get(i);
+            DagNode node = new DagNode();
+            node.setId("specialist:" + specialist.getRoute());
+            node.setName(specialist.getRoute());
+            // STAR 拓扑：第一个节点是中心，后续依赖中心
+            if (i > 0 && targets.size() >= 3) {
+                node.setDependsOn(List.of("specialist:" + targets.get(0).getRoute()));
+            }
+            graph.addNode(node);
+        }
+        
+        // 2. 注册执行器
+        for (SpecialistAgent specialist : targets) {
+            String nodeId = "specialist:" + specialist.getRoute();
+            dagEngine.registerExecutor(nodeId, new com.fashion.supplychain.intelligence.agent.dag.DagNodeExecutor() {
+                @Override
+                public String getNodeId() { return nodeId; }
+                @Override
+                public Object execute(AgentState agentState, Map<String, Object> deps, Map<String, Object> config) {
+                    try {
+                        specialist.analyze(agentState);
+                        return agentState.getSpecialistResults().get(specialist.getRoute());
+                    } catch (Exception e) {
+                        log.warn("[Graph:Swarm] Specialist {} 失败: {}", specialist.getRoute(), e.getMessage());
+                        agentState.getSpecialistResults().put(specialist.getRoute(), "分析失败: " + e.getMessage());
+                        return null;
                     }
-                }))).toList();
-        CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new)).join();
-        targets.forEach(s -> state.getNodeTrace().add("specialist:" + s.getRoute()));
+                }
+            });
+        }
+        
+        // 3. 选择拓扑并执行
+        SwarmTopology topology = selectSwarmTopology(targets.size());
+        log.info("[Graph:Swarm] 执行拓扑={}, specialists={}", topology, targets.size());
+        
+        SwarmExecutionEngine.SwarmResult swarmResult = swarmEngine.execute(topology, graph, state);
+        
+        // 4. 记录结果
+        for (String completed : swarmResult.getCompletedNodes()) {
+            state.getNodeTrace().add(completed);
+        }
+        if (!swarmResult.getFailedNodes().isEmpty()) {
+            log.warn("[Graph:Swarm] 失败的节点: {}", swarmResult.getFailedNodes());
+        }
+        
+        // ══════════════════════════════════════════════════════════════════════════
+        // 【P2升级】多Agent共享记忆：执行完成后写入共享事实
+        // ══════════════════════════════════════════════════════════════════════════
+        writeSharedMemoryFacts(state, targets, swarmResult);
+        
+        log.info("[Graph:Swarm] 执行完成，成功={}, 失败={}, 耗时={}ms", 
+                swarmResult.getCompletedNodes().size(), 
+                swarmResult.getFailedNodes().size(),
+                swarmResult.getLatencyMs());
+    }
+    
+    /**
+     * 根据 specialist 数量选择 Swarm 拓扑。
+     */
+    private SwarmTopology selectSwarmTopology(int specialistCount) {
+        if (specialistCount <= 1) {
+            return SwarmTopology.HIERARCHICAL;
+        } else if (specialistCount == 2) {
+            return SwarmTopology.RING;  // 2领域用环形流水线
+        } else if (specialistCount <= 5) {
+            return SwarmTopology.STAR;  // 3-5个用星型
+        } else {
+            return SwarmTopology.MESH;  // 6+个用全并行
+        }
+    }
+    
+    /**
+     * 【P2升级】写入多Agent共享记忆。
+     * <p>每个 SpecialistAgent 执行完成后，将分析结果写入共享记忆，供后续Agent复用。</p>
+     */
+    private void writeSharedMemoryFacts(AgentState state, List<SpecialistAgent> targets, 
+                                        SwarmExecutionEngine.SwarmResult swarmResult) {
+        if (sharedAgentMemory == null) {
+            log.debug("[Graph:SharedMem] SharedAgentMemoryService 未配置，跳过共享记忆写入");
+            return;
+        }
+        
+        String sessionId = state.getThreadId() != null ? state.getThreadId() : "graph-" + System.currentTimeMillis();
+        state.setThreadId(sessionId);  // 确保 threadId 已设置
+        
+        for (SpecialistAgent specialist : targets) {
+            String nodeId = "specialist:" + specialist.getRoute();
+            if (!swarmResult.getCompletedNodes().contains(nodeId)) {
+                continue;  // 跳过失败的节点
+            }
+            
+            try {
+                // 获取该 Specialist 的分析结果
+                Object result = state.getSpecialistResults().get(specialist.getRoute());
+                if (result != null) {
+                    // 写入共享记忆：key = "specialist:{route}_result"
+                    String factKey = "specialist:" + specialist.getRoute() + "_result";
+                    String factValue = result.toString();
+                    // 置信度 = state.getConfidenceScore() / 100.0
+                    java.math.BigDecimal confidence = java.math.BigDecimal.valueOf(state.getConfidenceScore())
+                            .divide(java.math.BigDecimal.valueOf(100.0), 2, java.math.RoundingMode.HALF_UP);
+                    
+                    sharedAgentMemory.writeFact(state.getTenantId(), sessionId, specialist.getRoute(),
+                            factKey, factValue, confidence);
+                    
+                    log.debug("[Graph:SharedMem] 写入共享记忆 tenant={} session={} agent={} key={}",
+                            state.getTenantId(), sessionId, specialist.getRoute(), factKey);
+                }
+            } catch (Exception e) {
+                log.warn("[Graph:SharedMem] 写入共享记忆失败 agent={}: {}", specialist.getRoute(), e.getMessage());
+            }
+        }
+        
+        // 写入总体置信度
+        if (state.getConfidenceScore() > 0) {
+            try {
+                java.math.BigDecimal confidence = java.math.BigDecimal.valueOf(state.getConfidenceScore())
+                        .divide(java.math.BigDecimal.valueOf(100.0), 2, java.math.RoundingMode.HALF_UP);
+                sharedAgentMemory.writeFact(state.getTenantId(), sessionId, "graph_orchestrator",
+                        "overall_confidence", String.valueOf(state.getConfidenceScore()), confidence);
+            } catch (Exception e) {
+                log.debug("[Graph:SharedMem] 写入总体置信度失败: {}", e.getMessage());
+            }
+        }
     }
 
     // ── 日志持久化 ────────────────────────────────────────────────────────

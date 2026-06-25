@@ -36,6 +36,7 @@ export interface MessageBubbleProps {
   onSafeNavigate: (path: string) => void;
   onSpeak: (text: string) => void;
   onPurchaseDocAction: (msgId: string, mode: string, card: any) => void;
+  onActionCardAction?: (card: import('./types').ActionCard, actionType: string, path?: string, orderId?: string) => void;
   onWizardSubmit?: (msgId: string, command: string, params: Record<string, unknown>) => void;
 }
 
@@ -43,7 +44,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
   msg, downloadingType,
   onSend, onDownloadReport, onActualDownload, onShowAgentTrace: _onShowAgentTrace, onShowRecentTraces: _onShowRecentTraces,
   onOpenTraceCenter: _onOpenTraceCenter, onFeedback, onJumpToIntelligence, onSafeNavigate,
-  onSpeak, onPurchaseDocAction, onWizardSubmit,
+  onSpeak, onPurchaseDocAction, onActionCardAction, onWizardSubmit,
 }) => (
   <div className={`${msgStyles.messageRow} ${msg.role === 'ai' ? msgStyles.rowAi : msgStyles.rowUser}`}>
     {msg.role === 'ai' && (
@@ -109,9 +110,13 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
                   card={card}
                   onUrgeOrderSaved={() => void onSend(`订单 ${card.orderNo ?? card.orderId} 出货信息已更新`)}
                   onAction={(type, path, orderId) => {
-                    if (type === 'navigate' && path) onSafeNavigate(path);
-                    else if (type === 'mark_urgent' && orderId) void onSend(`把订单 ${orderId} 标记为紧急`);
-                    else void onSend(`执行操作：${card.title}`);
+                    if (onActionCardAction) {
+                      onActionCardAction(card, type, path, orderId);
+                    } else {
+                      if (type === 'navigate' && path) onSafeNavigate(path);
+                      else if (type === 'mark_urgent' && orderId) void onSend(`把订单 ${orderId} 标记为紧急`);
+                      else void onSend(`执行操作：${card.title}`);
+                    }
                   }}
                 />
               ))}

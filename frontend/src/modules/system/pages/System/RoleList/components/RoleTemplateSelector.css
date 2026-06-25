@@ -9,17 +9,17 @@
 }
 
 .template-card {
-  border: 1px solid var(--color-border-light, #f0f0f0);
+  border: 1px solid var(--color-border-light, var(--color-border-light));
   transition: all 0.2s ease;
 }
 
 .template-card:hover {
-  border-color: var(--primary-color, #1677ff);
+  border-color: var(--primary-color, var(--color-primary));
 }
 
 .template-card-selected {
-  border-color: var(--primary-color, #1677ff);
-  background-color: color-mix(in srgb, var(--primary-color, #1677ff) 5%, white);
+  border-color: var(--primary-color, var(--color-primary));
+  background-color: color-mix(in srgb, var(--primary-color, var(--color-primary)) 5%, white);
 }
 
 .template-radio {

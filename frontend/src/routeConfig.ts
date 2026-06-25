@@ -113,6 +113,307 @@ export const paths = {
   selectionBatch: '/selection',
 } as const;
 
+// ─────────────────────────────────────────────────────────────
+// AI助手页面元信息（统一管理页面标签 + 快捷建议）
+// ─────────────────────────────────────────────────────────────
+
+export interface PageMeta {
+  label: string;
+  suggestions?: string[];
+}
+
+const GENERAL_SUGGESTIONS = [
+  '📄 今日日报',
+  '📊 本周周报',
+  '📈 本月月报',
+  '🔍 检测今日异常',
+  '🚨 查看紧急预警',
+];
+
+const pageMetaMap: Record<string, PageMeta> = {
+  // ── 生产管理 ──
+  [paths.productionList]: {
+    label: '生产管理模块',
+    suggestions: [
+      '🏭 查看今日生产进度',
+      '📅 预测订单交期',
+      '🔍 检测生产异常',
+      '📊 排产建议',
+      '⚡ 紧急订单有哪些',
+      '📉 逾期风险分析',
+    ],
+  },
+  '/production/list': {
+    label: '生产订单列表',
+    suggestions: [
+      '🔍 查找逾期订单',
+      '📋 批量导出今日订单',
+      '⚡ 标记紧急订单',
+      '📊 按状态分组查看',
+    ],
+  },
+  '/production/detail': { label: '生产订单详情' },
+  '/production/progress': {
+    label: '工序跟进',
+    suggestions: [
+      '📈 当前工序进度怎样',
+      '⚠️ 哪些工序停滞了',
+      '🔮 预计什么时候完成',
+      '📊 工序效率分析',
+    ],
+  },
+  [paths.cutting]: {
+    label: '裁剪管理',
+    suggestions: [
+      '✂️ 查看裁剪计划',
+      '📦 裁剪完成多少了',
+      '⚠️ 裁剪异常提醒',
+      '📊 裁剪效率统计',
+    ],
+  },
+  '/production/purchase': {
+    label: '物料采购',
+    suggestions: [
+      '🛒 待采购物料有哪些',
+      '📦 采购到货情况',
+      '⚠️ 物料短缺预警',
+      '📊 采购成本分析',
+    ],
+  },
+  [paths.warehousing]: {
+    label: '成品入库',
+    suggestions: [
+      '📦 今日入库多少',
+      '🔍 入库异常检测',
+      '📊 入库效率统计',
+      '⚠️ 质检合格率怎样',
+    ],
+  },
+  '/production/inspection': { label: '质检管理' },
+
+  // ── 款式样衣 ──
+  [paths.styleInfoList]: {
+    label: '款式样衣管理',
+    suggestions: [
+      '✂️ 分析这款样衣工序',
+      '💰 报价建议',
+      '📋 BOM清单检查',
+      '🏭 推荐工厂',
+      '📊 开发进度如何',
+    ],
+  },
+  '/style-info/list': {
+    label: '款式列表',
+    suggestions: [
+      '🔍 按状态筛选款式',
+      '📋 批量操作选中款式',
+      '⚠️ 逾期开发提醒',
+      '📊 款式完成率',
+    ],
+  },
+  '/style-info/detail': { label: '款式详情' },
+  '/style-info/sample': {
+    label: '样衣开发',
+    suggestions: [
+      '✂️ 样衣开发进度',
+      '📋 待确认工序',
+      '⚠️ 开发逾期提醒',
+      '📊 样衣完成率',
+    ],
+  },
+
+  // ── 财务管理 ──
+  '/finance': {
+    label: '财务管理',
+    suggestions: [
+      '💰 工资成本分析',
+      '📊 对账异常检测',
+      '📈 利润估算',
+      '🧾 费用报销统计',
+      '💵 本月支出多少',
+    ],
+  },
+  '/finance/reconciliation': {
+    label: '对账管理',
+    suggestions: [
+      '📋 待对账明细',
+      '⚠️ 对账异常提醒',
+      '💵 已对账金额',
+      '📊 对账完成率',
+    ],
+  },
+  '/finance/wage': {
+    label: '工资结算',
+    suggestions: [
+      '💰 工资结算情况',
+      '📋 待结算人员',
+      '⚠️ 结算异常提醒',
+      '📊 计件统计',
+    ],
+  },
+  '/finance/expense': { label: '费用报销' },
+
+  // ── 仓库管理 ──
+  '/warehouse': {
+    label: '仓库管理',
+    suggestions: [
+      '📦 库存预警',
+      '🔍 物料短缺检测',
+      '📊 入库统计',
+      '🏭 供应商评分',
+      '⚠️ 库存不足提醒',
+    ],
+  },
+  '/warehouse/inventory': {
+    label: '库存管理',
+    suggestions: [
+      '📦 库存余量查询',
+      '⚠️ 库存预警提醒',
+      '📋 呆滞物料',
+      '📊 库存周转率',
+    ],
+  },
+  [paths.materialInventory]: {
+    label: '物料库',
+    suggestions: [
+      '🧵 面料库存情况',
+      '📦 辅料库存预警',
+      '⚠️ 短缺物料提醒',
+      '📊 物料使用统计',
+    ],
+  },
+  [paths.finishedInventory]: {
+    label: '成品库存',
+    suggestions: [
+      '📦 成品库存情况',
+      '🚚 待发货订单',
+      '⚠️ 库存积压提醒',
+      '📊 成品周转率',
+    ],
+  },
+  [paths.sampleInventory]: { label: '样衣库存' },
+  '/warehouse/check': {
+    label: '库存盘点',
+    suggestions: [
+      '📋 盘点任务',
+      '⚠️ 盘点差异提醒',
+      '📊 盘点完成率',
+      '📦 差异明细',
+    ],
+  },
+
+  // ── 系统管理 ──
+  '/system': {
+    label: '系统管理',
+    suggestions: [
+      '🏭 供应商管理建议',
+      '📊 工厂效率排行',
+      '👥 工人技能分析',
+      '⚙️ 系统健康检查',
+    ],
+  },
+  [paths.user]: { label: '用户管理' },
+  [paths.role]: { label: '角色权限' },
+  [paths.tenantManagement]: { label: '租户管理' },
+  '/system/log': { label: '系统日志' },
+
+  // ── CRM ──
+  [paths.crm]: {
+    label: '客户关系管理',
+    suggestions: [
+      '📊 客户订单分析',
+      '💰 应收账款概览',
+      '📈 客户趋势预测',
+      '🔍 逾期订单提醒',
+    ],
+  },
+  '/crm/receivable': {
+    label: '应收管理',
+    suggestions: [
+      '💰 应收金额汇总',
+      '⚠️ 逾期应收提醒',
+      '📊 回款进度',
+      '📋 客户欠款明细',
+    ],
+  },
+
+  // ── 智能决策中心 ──
+  [paths.cockpit]: {
+    label: '智能决策中心',
+    suggestions: [
+      '🧠 AI大脑总快照',
+      '📊 智能运营报告',
+      '🔍 异常工单追踪',
+      '📈 学习效果评估',
+      '🚨 风险预警汇总',
+    ],
+  },
+  '/cockpit/trace': { label: '执行轨迹' },
+
+  // ── 数据驾驶舱 ──
+  [paths.dashboard]: { label: '数据驾驶舱' },
+  '/dashboard/main': { label: '主仪表盘' },
+  '/dashboard/sample': { label: '样衣进度' },
+
+  // ── 选品中心 ──
+  [paths.selectionBatch]: {
+    label: '选品中心',
+    suggestions: [
+      '🛍️ 今日选品动态',
+      '📈 选品转化分析',
+      '⚠️ 爆款预警',
+      '📊 选品成功率',
+    ],
+  },
+
+  // ── 电商运营 ──
+  '/ecommerce': {
+    label: '电商运营',
+    suggestions: [
+      '📦 电商订单处理',
+      '🚚 发货状态跟踪',
+      '⚠️ 异常订单提醒',
+      '📊 订单转化统计',
+    ],
+  },
+  '/ecommerce/order': { label: '电商订单' },
+
+  // ── 智能中心 ──
+  '/intelligence': {
+    label: '智能中心',
+    suggestions: [
+      '🤖 小云AI能力中心',
+      '📊 AI执行轨迹',
+      '🔍 AI建议采纳率',
+      '⚙️ AI模型配置',
+    ],
+  },
+  [paths.intelligenceCenter]: { label: 'AI功能中心' },
+  '/intelligence/trace': { label: '智能执行记录' },
+};
+
+// 按路径长度降序排序，确保更具体的路径优先匹配（修复 /production 误匹配 /production/cutting 的问题）
+const sortedPageMeta = Object.entries(pageMetaMap).sort(
+  (a, b) => b[0].length - a[0].length,
+);
+
+export function getPageMeta(pathname: string): PageMeta | null {
+  for (const [path, meta] of sortedPageMeta) {
+    if (pathname.startsWith(path)) {
+      return meta;
+    }
+  }
+  return null;
+}
+
+export function getPageLabel(pathname: string): string {
+  return getPageMeta(pathname)?.label ?? '';
+}
+
+export function getPageSuggestions(pathname: string): string[] {
+  return getPageMeta(pathname)?.suggestions ?? GENERAL_SUGGESTIONS;
+}
+
 export const permissionCodes = {
   dashboard: 'MENU_DASHBOARD',
   styleInfo: 'MENU_STYLE_INFO',

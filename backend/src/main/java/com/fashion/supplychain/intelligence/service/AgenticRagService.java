@@ -444,10 +444,10 @@ public class AgenticRagService {
             log.debug("[AgenticRAG] 记忆检索跳过: {}", e.getMessage());
         }
 
-        // 知识图谱
+        // 知识图谱（GraphRAG 分层检索）
         if (graphRagService != null) {
             try {
-                String graphCtx = graphRagService.buildGraphContext(tenantId, query);
+                String graphCtx = graphRagService.buildGraphRagContext(tenantId, query);
                 if (graphCtx != null && !graphCtx.isBlank()) {
                     ctx.append(graphCtx);
                     sourceCount++;

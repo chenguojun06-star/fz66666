@@ -5,6 +5,7 @@ import com.fashion.supplychain.intelligence.agent.AiToolCall;
 import com.fashion.supplychain.intelligence.agent.AgentModeContext;
 import com.fashion.supplychain.intelligence.agent.command.CompensableTool;
 import com.fashion.supplychain.intelligence.agent.command.CompensationResult;
+import com.fashion.supplychain.intelligence.agent.planning.AgentPlan;
 import com.fashion.supplychain.intelligence.agent.planning.AgentPlanningEngine;
 import com.fashion.supplychain.intelligence.agent.skill.AgentSkillRegistry;
 import com.fashion.supplychain.intelligence.entity.AgentCheckpoint;
@@ -86,6 +87,8 @@ public class AgentLoopEngine {
     @Autowired private org.springframework.beans.factory.ObjectProvider<AgentSkillRegistry> skillRegistryProvider;
     @Autowired private org.springframework.beans.factory.ObjectProvider<AgentCheckpointManager> checkpointManagerProvider;
     @Autowired private org.springframework.beans.factory.ObjectProvider<HandoffEngine> handoffEngineProvider;
+    // P1升级: 意图组合引擎
+    @Autowired private org.springframework.beans.factory.ObjectProvider<com.fashion.supplychain.intelligence.service.IntentCompositionService> intentCompositionServiceProvider;
     @Autowired private org.springframework.beans.factory.ObjectProvider<ConversationMemoryService> conversationMemoryServiceProvider;
     @Autowired private org.springframework.beans.factory.ObjectProvider<SemanticCacheService> semanticCacheServiceProvider;
     @Autowired private org.springframework.beans.factory.ObjectProvider<SkillCrystallizationService> skillCrystallizationServiceProvider;
@@ -164,8 +167,25 @@ public class AgentLoopEngine {
 
                 ctx.incrementIteration();
                 int iter = ctx.getCurrentIteration();
-                cb.onThinking(iter, "正在思考第 " + iter + " 轮…");
+
+                // ★ Plan-and-Execute：推送计划进度
+                if (ctx.isPlanAndExecuteMode()) {
+                    int progress = ctx.getPlanProgressPercent();
+                    int completed = ctx.getCompletedPlanSteps();
+                    int total = ctx.getTotalPlanSteps();
+                    cb.onThinking(iter, String.format("执行计划第%d/%d步 (%d%%)，第%d轮思考…",
+                            completed, total, progress, iter));
+                } else {
+                    cb.onThinking(iter, "正在思考第 " + iter + " 轮…");
+                }
+
                 injectProgressHint(ctx, iter);
+
+                // ★ Plan-and-Execute：检查是否需要重规划
+                if (ctx.isPlanAndExecuteMode() && shouldReplan(ctx)) {
+                    String replanResult = tryReplanning(ctx, cb, iter);
+                    if (replanResult != null) return replanResult;
+                }
 
                 String turnResult = runSingleTurn(ctx, cb, iter);
                 if (turnResult != null) {
@@ -819,17 +839,19 @@ public class AgentLoopEngine {
                 log.debug("[AgentLoop] 规划跳过: {}", planResult.getSkipReason());
             } else {
                 String planInjection = planResult.toPromptInjection();
-                if (!planInjection.isBlank()) {
+                if (!planInjection.isBlank() && planResult.getPlan() != null) {
                     ctx.getMessages().add(1, AiMessage.system(planInjection));
+                    // ★ Plan-and-Execute 模式：设置当前计划，启用进度跟踪
+                    ctx.setCurrentPlan(planResult.getPlan());
 
                     if (planResult.getRiskLevel() != null
                             && ("high".equals(planResult.getRiskLevel()) || "critical".equals(planResult.getRiskLevel()))) {
                         cb.onThinking(0, "高风险任务，已启动详细规划与验证模式");
                     }
 
-                    log.info("[AgentLoop] 规划已注入: complexity={} steps={} riskLevel={}",
+                    log.info("[AgentLoop] 规划已注入（Plan-and-Execute模式）: complexity={} steps={} riskLevel={}",
                             planResult.getComplexityScore(),
-                            planResult.getPlan() != null ? planResult.getPlan().getStepCount() : 0,
+                            planResult.getPlan().getStepCount(),
                             planResult.getRiskLevel());
                 }
             }
@@ -868,10 +890,31 @@ public class AgentLoopEngine {
             // 主动洞察注入：将巡检发现的风险注入到AI上下文中
             ProactiveInsightService proactiveInsightService = proactiveInsightServiceProvider.getIfAvailable();
             if (proactiveInsightService != null && ctx.getTenantId() != null) {
-                String insightInjection = proactiveInsightService.buildInsightInjection(ctx.getTenantId());
+                // 升级：使用相关性匹配，只注入与用户问题相关的洞察
+                String insightInjection = proactiveInsightService.buildRelevantInsightInjection(
+                        ctx.getTenantId(), ctx.getUserMessage());
                 if (!insightInjection.isBlank()) {
                     ctx.getMessages().add(1, AiMessage.system(insightInjection));
-                    log.info("[AgentLoop] 主动洞察已注入: tenant={}", ctx.getTenantId());
+                    log.info("[AgentLoop] 主动洞察已注入（相关性匹配）: tenant={}", ctx.getTenantId());
+                }
+            }
+
+            // ★ 意图组合引擎：检测多意图并注入结构化提示
+            com.fashion.supplychain.intelligence.service.IntentCompositionService intentCompositionService =
+                    intentCompositionServiceProvider.getIfAvailable();
+            if (intentCompositionService != null) {
+                com.fashion.supplychain.intelligence.service.IntentCompositionService.MultiIntentDetectionResult multiIntent =
+                        intentCompositionService.detectMultiIntent(ctx.getUserMessage());
+                if (multiIntent.isMultiIntent() && multiIntent.getIntentCount() >= 2) {
+                    StringBuilder intentHint = new StringBuilder();
+                    intentHint.append("【系统提示：检测到您的问题包含").append(multiIntent.getIntentCount()).append("个独立子问题】\n");
+                    intentHint.append("子问题清单：\n");
+                    for (int i = 0; i < multiIntent.getIntents().size(); i++) {
+                        intentHint.append("  ").append(i + 1).append(". ").append(multiIntent.getIntents().get(i)).append("\n");
+                    }
+                    intentHint.append("请逐一回答每个子问题，回答结构清晰，用编号或小标题区分。\n");
+                    ctx.getMessages().add(1, AiMessage.system(intentHint.toString()));
+                    log.info("[AgentLoop] 多意图已注入: {}个子问题", multiIntent.getIntentCount());
                 }
             }
 
@@ -887,6 +930,121 @@ public class AgentLoopEngine {
             return handoffEngine.tryHandoff(ctx.getUserMessage(), ctx, cb);
         } catch (Exception e) {
             log.warn("[AgentLoop] Handoff尝试失败（继续主Agent执行）: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    // ==================== Plan-and-Execute 重规划机制 ====================
+
+    /** 最大重规划次数（防止无限重规划） */
+    private static final int MAX_REPLAN_COUNT = 2;
+
+    /**
+     * 判断是否需要重规划。
+     * <p>触发条件（满足任一）：
+     * <ul>
+     *   <li>执行了3轮以上但计划进度未推进</li>
+     *   <li>工具调用出现连续失败</li>
+     *   <li>当前步骤的验证标准未达到</li>
+     * </ul>
+     */
+    private boolean shouldReplan(AgentLoopContext ctx) {
+        if (ctx.getReplanCount() >= MAX_REPLAN_COUNT) return false;
+        if (!ctx.isPlanAndExecuteMode()) return false;
+
+        AgentPlan plan = ctx.getCurrentPlan();
+        if (plan == null || plan.getSteps() == null) return false;
+
+        int iter = ctx.getCurrentIteration();
+        int completed = ctx.getCompletedPlanSteps();
+        int totalSteps = plan.getStepCount();
+
+        // 条件1：执行了多轮但进度没推进（每步平均>2轮还没完成）
+        if (iter > 3 && completed < Math.max(1, iter / 3)) {
+            log.info("[PlanReplan] 触发重规划：进度缓慢 iter={} completed={}/{}", iter, completed, totalSteps);
+            return true;
+        }
+
+        // 条件2：连续工具失败（最近2次执行都有错误）
+        List<AiAgentToolExecHelper.ToolExecRecord> records = ctx.getAllExecRecords();
+        if (records.size() >= 2) {
+            long recentFailures = records.stream()
+                    .skip(Math.max(0, records.size() - 2))
+                    .filter(r -> r.rawResult != null && r.rawResult.startsWith("{\"error\""))
+                    .count();
+            if (recentFailures >= 2) {
+                log.info("[PlanReplan] 触发重规划：连续工具失败 recentFailures={}", recentFailures);
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * 执行重规划。
+     * <p>重新调用 PlanningEngine，基于当前执行状态生成新计划。
+     */
+    private String tryReplanning(AgentLoopContext ctx, AgentLoopCallback cb, int iter) {
+        AgentPlanningEngine planningEngine = planningEngineProvider.getIfAvailable();
+        if (planningEngine == null) return null;
+
+        try {
+            ctx.incrementReplanCount();
+            cb.onThinking(iter, String.format("执行路径偏离预期，正在重新规划（第%d/%d次）…",
+                    ctx.getReplanCount(), MAX_REPLAN_COUNT));
+
+            // 构建当前执行状态描述
+            StringBuilder statusBuilder = new StringBuilder();
+            statusBuilder.append("当前执行进度：已完成 ").append(ctx.getCompletedPlanSteps())
+                    .append("/").append(ctx.getTotalPlanSteps()).append(" 步\n");
+            statusBuilder.append("已调用工具：").append(ctx.getAllExecRecords().size()).append(" 次\n");
+            statusBuilder.append("已获取的信息：\n");
+            for (AiAgentToolExecHelper.ToolExecRecord rec : ctx.getAllExecRecords()) {
+                String shortResult = rec.evidence != null && rec.evidence.length() > 100
+                        ? rec.evidence.substring(0, 100) + "..."
+                        : (rec.evidence != null ? rec.evidence : "");
+                statusBuilder.append("- ").append(rec.toolName).append(": ").append(shortResult).append("\n");
+            }
+
+            // 重新规划（传入页面上下文 + 当前状态）
+            java.util.List<java.util.Map<String, Object>> toolsForPlanning = new java.util.ArrayList<>();
+            for (com.fashion.supplychain.intelligence.agent.AiTool tool : ctx.getVisibleApiTools()) {
+                java.util.Map<String, Object> toolMap = new java.util.LinkedHashMap<>();
+                toolMap.put("name", tool.getFunction() != null ? tool.getFunction().getName() : "");
+                toolMap.put("description", tool.getFunction() != null ? tool.getFunction().getDescription() : "");
+                toolMap.put("domain", "general");
+                toolsForPlanning.add(toolMap);
+            }
+
+            String replanUserMessage = ctx.getUserMessage()
+                    + "\n\n【当前执行状态】\n" + statusBuilder
+                    + "\n请根据已获取的信息重新规划剩余步骤。";
+
+            AgentPlanningEngine.PlanResult replanResult = planningEngine.analyzeAndPlan(
+                    replanUserMessage, toolsForPlanning, ctx.getPageContext());
+
+            if (replanResult.isSkip() || replanResult.getPlan() == null) {
+                log.info("[PlanReplan] 重规划跳过: {}", replanResult.getSkipReason());
+                return null;
+            }
+
+            // 更新计划
+            ctx.setCurrentPlan(replanResult.getPlan());
+            // 注入新计划到消息列表
+            String planInjection = replanResult.toPromptInjection();
+            if (!planInjection.isBlank()) {
+                ctx.getMessages().add(AiMessage.system(
+                        "【系统】执行路径已调整，以下是更新后的执行计划：\n" + planInjection
+                                + "\n请按照新计划继续执行。"));
+            }
+
+            log.info("[PlanReplan] 重规划完成: steps={} complexity={}",
+                    replanResult.getPlan().getStepCount(), replanResult.getComplexityScore());
+
+            return null;  // 继续执行
+        } catch (Exception e) {
+            log.warn("[PlanReplan] 重规划异常，继续原计划: {}", e.getMessage());
             return null;
         }
     }

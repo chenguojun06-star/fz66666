@@ -47,6 +47,12 @@ public class SysNotice {
     /** 操作类型: urge_order等 */
     private String actionType;
 
+    /** 一键处理参数JSON（如orderId、taskId等） */
+    private String actionPayload;
+
+    /** 款式图片URL */
+    private String styleImage;
+
     /** 发送时间 */
     private LocalDateTime createdAt;
 }

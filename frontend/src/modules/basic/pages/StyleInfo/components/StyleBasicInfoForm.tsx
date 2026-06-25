@@ -272,8 +272,8 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
           style={{
             marginBottom: 20,
             padding: 16,
-            background: '#ffffff',
-            border: '1px solid #e5e7eb',
+            background: 'var(--color-bg-base)',
+            border: '1px solid var(--color-border)',
             borderRadius: 8,
           }}
         >
@@ -360,8 +360,8 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
           style={{
             marginBottom: 20,
             padding: 16,
-            background: '#ffffff',
-            border: '1px solid #e5e7eb',
+            background: 'var(--color-bg-base)',
+            border: '1px solid var(--color-border)',
             borderRadius: 8,
           }}
         >
@@ -419,8 +419,8 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
           style={{
             marginBottom: 20,
             padding: 16,
-            background: '#ffffff',
-            border: '1px solid #e5e7eb',
+            background: 'var(--color-bg-base)',
+            border: '1px solid var(--color-border)',
             borderRadius: 8,
           }}
         >
@@ -449,8 +449,8 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
           style={{
             marginBottom: 20,
             padding: 16,
-            background: '#ffffff',
-            border: '1px solid #e5e7eb',
+            background: 'var(--color-bg-base)',
+            border: '1px solid var(--color-border)',
             borderRadius: 8,
           }}
         >
@@ -508,8 +508,8 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
           style={{
             marginBottom: 4,
             padding: 16,
-            background: '#ffffff',
-            border: '1px solid #e5e7eb',
+            background: 'var(--color-bg-base)',
+            border: '1px solid var(--color-border)',
             borderRadius: 8,
           }}
         >

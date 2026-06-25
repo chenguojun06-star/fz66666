@@ -37,7 +37,8 @@ import TaskListView from './TaskListView';
 import TaskFormModal from './TaskFormModal';
 import { usePanelResize } from './usePanelResize';
 import { useTaskManager } from './useTaskManager';
-import type { Message, PanelView, TaskItem } from './types';
+import type { Message, PanelView, TaskItem, ActionCard } from './types';
+import SampleLoanModal from './SampleLoanModal';
 
 function normalizeTraceableAdvice(payload: unknown): Message['traceableAdvice'] | null {
   if (!payload || typeof payload !== 'object') return null;
@@ -91,6 +92,9 @@ const GlobalAiAssistant: React.FC = () => {
   const [taskSaving, setTaskSaving] = useState(false);
   const { tasks: pendingItems, refresh: refreshPendingTasks } = usePendingTasks();
   const [dismissedPending, setDismissedPending] = useState<Set<string>>(loadDismissedPending);
+
+  const [sampleLoanModalVisible, setSampleLoanModalVisible] = useState(false);
+  const [sampleLoanPrefill, setSampleLoanPrefill] = useState<Record<string, unknown> | undefined>();
 
   const { size, cycleSize, dimensions, showSidebar, showAuxPanel } = usePanelResize();
 
@@ -266,6 +270,35 @@ const GlobalAiAssistant: React.FC = () => {
     setIsTaskPanelOpen(false);
     navigate(safePath);
   }, [navigate]);
+
+  const handleOpenModal = useCallback((modalType: string, prefillData?: Record<string, unknown>) => {
+    if (modalType === 'open_order_create') {
+      setIsOpen(false);
+      setIsTaskPanelOpen(false);
+      const params = new URLSearchParams();
+      params.set('autoOpenCreate', '1');
+      if (prefillData?.styleNo) {
+        params.set('styleNo', String(prefillData.styleNo));
+      }
+      navigate(`/basic/order-management?${params.toString()}`);
+    } else if (modalType === 'open_sample_loan') {
+      setSampleLoanPrefill(prefillData);
+      setSampleLoanModalVisible(true);
+    }
+  }, [navigate]);
+
+  const handleActionCardAction = useCallback((card: ActionCard, actionType: string, path?: string, orderId?: string) => {
+    const action = card.actions.find(a => a.type === actionType);
+    if (actionType === 'open_modal' && action?.modalType) {
+      handleOpenModal(action.modalType, action.prefillData || card.prefillData);
+    } else if (actionType === 'navigate' && path) {
+      onSafeNavigate(path);
+    } else if (actionType === 'mark_urgent' && orderId) {
+      void handleSend(`把订单 ${orderId} 标记为紧急`);
+    } else {
+      void handleSend(`执行操作：${card.title}`);
+    }
+  }, [handleOpenModal, onSafeNavigate, handleSend]);
 
   const openTaskPanel = useCallback(() => {
     setIsTaskPanelOpen(true);
@@ -519,6 +552,7 @@ const GlobalAiAssistant: React.FC = () => {
                         onFeedback={handleAdvisorFeedback} onJumpToIntelligence={jumpToIntelligenceCenter}
                         onSafeNavigate={onSafeNavigate} onSpeak={speak}
                         onPurchaseDocAction={(msgId, mode, card) => onPurchaseDocAction(msgId, mode, card)}
+                        onActionCardAction={(card, actionType, path, orderId) => handleActionCardAction(card, actionType, path, orderId)}
                         onWizardSubmit={(_msgId, command, params) => {
                           let p = command;
                           Object.entries(params).forEach(([_k, v]) => {
@@ -688,6 +722,16 @@ const GlobalAiAssistant: React.FC = () => {
           <span className={cloudStyles.triggerBadge} onClick={(e) => { e.stopPropagation(); openTaskPanel(); }}>{visiblePendingItems.length}</span>
         )}
       </div>
+
+      <SampleLoanModal
+        visible={sampleLoanModalVisible}
+        prefillData={sampleLoanPrefill}
+        onCancel={() => setSampleLoanModalVisible(false)}
+        onSuccess={() => {
+          setSampleLoanModalVisible(false);
+          message.success('样衣借出成功');
+        }}
+      />
     </>
   );
 };

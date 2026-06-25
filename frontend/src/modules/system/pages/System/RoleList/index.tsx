@@ -575,8 +575,8 @@ const RoleList: React.FC = () => {
                 size={32}
                 icon={getRoleIcon(String(role.roleName || ''))}
                 style={{
-                  backgroundColor: isActive ? 'var(--primary-color, #1677ff)' : 'var(--color-fill-tertiary, #f5f5f5)',
-                  color: isActive ? '#fff' : 'var(--color-text-secondary, #666)',
+                  backgroundColor: isActive ? 'var(--primary-color, var(--color-primary))' : 'var(--color-fill-tertiary, var(--color-bg-subtle))',
+                  color: isActive ? 'var(--color-bg-base)' : 'var(--color-text-secondary, #666)',
                   flexShrink: 0,
                 }}
               />
@@ -614,7 +614,7 @@ const RoleList: React.FC = () => {
             <Avatar
               size={40}
               icon={getRoleIcon(String(selectedRole.roleName || ''))}
-              style={{ backgroundColor: 'var(--primary-color, #1677ff)', color: '#fff' }}
+              style={{ backgroundColor: 'var(--primary-color, var(--color-primary))', color: 'var(--color-bg-base)' }}
             />
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
@@ -654,7 +654,7 @@ const RoleList: React.FC = () => {
             <Card size="small" styles={{ body: { padding: '14px 16px' } }}>
               <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
                 <Text type="secondary" style={{ fontSize: 12 }}>使用此角色</Text>
-                <Text strong style={{ fontSize: 18, color: 'var(--primary-color, #1677ff)' }}>{userCount}</Text>
+                <Text strong style={{ fontSize: 18, color: 'var(--primary-color, var(--color-primary))' }}>{userCount}</Text>
               </div>
               <Text type="secondary" style={{ fontSize: 12, display: 'block', marginTop: 2 }}>位员工</Text>
             </Card>
@@ -663,7 +663,7 @@ const RoleList: React.FC = () => {
             <Card size="small" styles={{ body: { padding: '14px 16px' } }}>
               <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
                 <Text type="secondary" style={{ fontSize: 12 }}>已选权限</Text>
-                <Text strong style={{ fontSize: 18, color: 'var(--color-success, #52c41a)' }}>{checkedPermIds.size}</Text>
+                <Text strong style={{ fontSize: 18, color: 'var(--color-success, var(--color-success))' }}>{checkedPermIds.size}</Text>
               </div>
               <Text type="secondary" style={{ fontSize: 12, display: 'block', marginTop: 2 }}>项</Text>
             </Card>
@@ -672,7 +672,7 @@ const RoleList: React.FC = () => {
             <Card size="small" styles={{ body: { padding: '14px 16px' } }}>
               <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
                 <Text type="secondary" style={{ fontSize: 12 }}>数据范围</Text>
-                <Text strong style={{ fontSize: 18, color: 'var(--color-warning, #faad14)' }}>{dataScopeLabel(selectedRole.dataScope as string).replace('数据', '')}</Text>
+                <Text strong style={{ fontSize: 18, color: 'var(--color-warning, var(--color-warning))' }}>{dataScopeLabel(selectedRole.dataScope as string).replace('数据', '')}</Text>
               </div>
               <Text type="secondary" style={{ fontSize: 12, display: 'block', marginTop: 2 }}>数据权限</Text>
             </Card>
@@ -702,7 +702,7 @@ const RoleList: React.FC = () => {
           </div>
           {selectedRole.description && (
             <>
-              <div style={{ height: 1, backgroundColor: 'var(--color-border-light, #f0f0f0)', margin: '12px 0' }} />
+              <div style={{ height: 1, backgroundColor: 'var(--color-border-light, var(--color-border-light))', margin: '12px 0' }} />
               <div>
                 <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>描述</Text>
                 <Text style={{ fontSize: 13, lineHeight: 1.7 }}>{selectedRole.description}</Text>
@@ -737,7 +737,7 @@ const RoleList: React.FC = () => {
             </Space>
             <Space size={8}>
               <Text type="secondary" style={{ fontSize: 12 }}>
-                已选 <Text strong style={{ color: 'var(--primary-color, #1677ff)', fontSize: 14 }}>{checkedPermIds.size}</Text> / {totalPermCount} 项
+                已选 <Text strong style={{ color: 'var(--primary-color, var(--color-primary))', fontSize: 14 }}>{checkedPermIds.size}</Text> / {totalPermCount} 项
               </Text>
               <Button icon={<ReloadOutlined />} onClick={() => selectedRole?.id && loadPermTreeAndChecked(String(selectedRole.id))} loading={permLoading}>刷新</Button>
               <Button type="primary" ghost onClick={savePerms} loading={permSaving}>保存权限</Button>
@@ -798,7 +798,7 @@ const RoleList: React.FC = () => {
                           key={`${si}-${item.label}`}
                           style={{
                             padding: '8px 4px',
-                            borderBottom: ii < section.items.length - 1 ? '1px solid var(--color-border-light, #f0f0f0)' : 'none',
+                            borderBottom: ii < section.items.length - 1 ? '1px solid var(--color-border-light, var(--color-border-light))' : 'none',
                           }}
                         >
                           {hasNode ? (

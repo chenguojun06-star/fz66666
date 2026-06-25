@@ -462,7 +462,7 @@ const StyleIntelligenceProfileCard: React.FC<Props> = ({ style }) => {
 
           {/* ── 工人提示预览：工人扫码时看到的内容 ── */}
           {workerHint.length > 0 && (
-            <div style={{ marginTop: 10, padding: '10px 12px', borderRadius: 8, background: '#FFFAEB', border: '1px solid #F5C451' }}>
+            <div style={{ marginTop: 10, padding: '10px 12px', borderRadius: 8, background: 'var(--color-bg-base)AEB', border: '1px solid #F5C451' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   <span style={{ fontSize: 12, color: '#B45309', fontWeight: 700 }}>⚠ 工人提示预览</span>
@@ -471,7 +471,7 @@ const StyleIntelligenceProfileCard: React.FC<Props> = ({ style }) => {
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, fontSize: 12 }}>
                 {workerHint.map((item) => (
-                  <div key={item.key} style={{ background: '#fff7dc', borderRadius: 4, padding: '4px 8px', border: '1px solid #f5e08e' }}>
+                  <div key={item.key} style={{ background: 'var(--color-bg-base)7dc', borderRadius: 4, padding: '4px 8px', border: '1px solid #f5e08e' }}>
                     <span style={{ color: '#8c6d1f', marginRight: 6 }}>{item.label}：</span>
                     <span style={{ color: '#3d2d00', fontWeight: 600 }}>{item.value}</span>
                   </div>
@@ -552,7 +552,7 @@ const StyleIntelligenceProfileCard: React.FC<Props> = ({ style }) => {
               {/* 价格区间 */}
               {Number(style?.price) > 0 && (
                 <Tag
-                  color="#faad14"
+                  color="var(--color-warning)"
                   style={{ margin: 0, fontSize: 12, lineHeight: '20px', padding: '1px 8px', borderRadius: 10 }}
                 >
                   价格：{fmtMoney(Number(style!.price))}

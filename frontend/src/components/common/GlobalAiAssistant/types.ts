@@ -10,6 +10,8 @@ export interface ActionCard {
   title: string;
   desc?: string;
   orderId?: string;
+  actionType?: string;
+  prefillData?: Record<string, unknown>;
   // 催单专用字段
   orderNo?: string;
   responsiblePerson?: string;
@@ -17,8 +19,10 @@ export interface ActionCard {
   currentExpectedShipDate?: string;
   actions: Array<{
     label: string;
-    type: 'mark_urgent' | 'remove_urgent' | 'navigate' | 'send_notification' | 'urge_order';
+    type: 'mark_urgent' | 'remove_urgent' | 'navigate' | 'send_notification' | 'urge_order' | 'open_modal';
     path?: string;
+    modalType?: string;
+    prefillData?: Record<string, unknown>;
   }>;
 }
 

@@ -88,6 +88,9 @@ public class ProductionOrderOrchestrator {
     @Autowired
     private SysNoticeOrchestrator sysNoticeOrchestrator;
 
+    @Autowired(required = false)
+    private com.fashion.supplychain.intelligence.mapper.CollaborationTaskMapper collaborationTaskMapper;
+
     @Autowired
     private ProductionProcessTrackingOrchestrator processTrackingOrchestrator;
 
@@ -569,7 +572,46 @@ public class ProductionOrderOrchestrator {
 
         sysNoticeOrchestrator.sendWithUrgeRecord(order.getOrderNo(), "urge_order", record.getId());
 
+        createUrgeCollaborationTask(order, record, senderName);
+
         return record;
+    }
+
+    private void createUrgeCollaborationTask(ProductionOrder order, UrgeRecord record, String senderName) {
+        if (collaborationTaskMapper == null) return;
+        try {
+            com.fashion.supplychain.intelligence.entity.CollaborationTask task =
+                new com.fashion.supplychain.intelligence.entity.CollaborationTask();
+            task.setTenantId(order.getTenantId());
+            task.setOrderNo(order.getOrderNo());
+            task.setStyleNo(order.getStyleNo());
+            task.setTargetRole("跟单员");
+            task.setInstruction("催单回复：" + order.getOrderNo());
+            task.setSourceInstruction(
+                (senderName != null ? senderName : "系统") + "发起催单，备注：" +
+                (record.getRemark() != null && !record.getRemark().isBlank() ? record.getRemark() : "无") +
+                "。请尽快联系工厂确认交期并回复。"
+            );
+            task.setAcceptanceCriteria("填写预计出货日期和回复备注");
+            task.setPriority(com.fashion.supplychain.intelligence.entity.CollaborationTask.Priority.HIGH.name());
+            task.setTaskStatus(com.fashion.supplychain.intelligence.entity.CollaborationTask.TaskStatus.ACCEPTED.name());
+            task.setSourceType(com.fashion.supplychain.intelligence.entity.CollaborationTask.SourceType.MANUAL.name());
+            task.setAssigneeName(order.getMerchandiser());
+            task.setCurrentStage("待回复");
+            task.setNextStep("联系工厂确认交期，填写预计出货日期和回复备注");
+            task.setOverdue(false);
+            task.setCreatedAt(LocalDateTime.now());
+            task.setUpdatedAt(LocalDateTime.now());
+            task.setDueAt(LocalDateTime.now().plusHours(24));
+            task.setOrderLinkStatus("LINKED");
+            task.setProgressChangeMonitorEnabled(false);
+            task.setReminderCount(0);
+            collaborationTaskMapper.insert(task);
+            log.info("[催单] 已创建待办任务 taskId={} orderNo={} assignee={}",
+                task.getId(), order.getOrderNo(), order.getMerchandiser());
+        } catch (Exception e) {
+            log.warn("[催单] 创建待办任务失败: {}", e.getMessage(), e);
+        }
     }
 
     // ======================= quickEdit / updateBasicInfo / urgeReply =======================

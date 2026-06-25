@@ -103,6 +103,7 @@ public class SysNoticeOrchestrator {
         notice.setTitle(title);
         notice.setContent(content);
         notice.setNoticeType(noticeType);
+        notice.setStyleImage(order.getStyleImage());
         notice.setIsRead(0);
         notice.setCreatedAt(LocalDateTime.now());
 
@@ -143,11 +144,44 @@ public class SysNoticeOrchestrator {
         notice.setNoticeType(noticeType);
         notice.setActionType(noticeType);
         notice.setUrgeRecordId(urgeRecordId);
+        notice.setStyleImage(order.getStyleImage());
         notice.setIsRead(0);
         notice.setCreatedAt(LocalDateTime.now());
 
         sysNoticeService.save(notice);
         log.info("[SysNotice] 催单通知已发送 orderNo={} to={} urgeRecordId={}", orderNo, merchandiser, urgeRecordId);
+
+        // 推送：企业微信
+        try {
+            wechatWorkNotifyService.sendOrderAlertForTenant(
+                    tenantId,
+                    order.getOrderNo(),
+                    order.getStyleNo(),
+                    noticeType,
+                    notice.getContent());
+        } catch (Exception e) {
+            log.warn("[SysNotice] 企业微信推送失败: {}", e.getMessage());
+        }
+        // 推送：飞书
+        if (feishuNotifyService != null) {
+            try {
+                feishuNotifyService.sendOrderAlertForTenant(
+                        tenantId, order.getOrderNo(), order.getStyleNo(),
+                        noticeType, notice.getContent());
+            } catch (Exception e) {
+                log.warn("[SysNotice] 飞书推送失败: {}", e.getMessage());
+            }
+        }
+        // 推送：钉钉
+        if (dingtalkNotifyService != null) {
+            try {
+                dingtalkNotifyService.sendOrderAlertForTenant(
+                        tenantId, order.getOrderNo(), order.getStyleNo(),
+                        noticeType, notice.getContent());
+            } catch (Exception e) {
+                log.warn("[SysNotice] 钉钉推送失败: {}", e.getMessage());
+            }
+        }
     }
 
     /**
@@ -186,6 +220,7 @@ public class SysNoticeOrchestrator {
         notice.setTitle(buildTitle(noticeType, order));
         notice.setContent(buildContent(noticeType, order));
         notice.setNoticeType(noticeType);
+        notice.setStyleImage(order.getStyleImage());
         notice.setIsRead(0);
         notice.setCreatedAt(LocalDateTime.now());
 
@@ -268,6 +303,7 @@ public class SysNoticeOrchestrator {
         notice.setTitle("⚠️ 生产提醒 — 订单 " + order.getOrderNo());
         notice.setContent(content);
         notice.setNoticeType("worker_alert");
+        notice.setStyleImage(order.getStyleImage());
         notice.setIsRead(0);
         notice.setCreatedAt(LocalDateTime.now());
 

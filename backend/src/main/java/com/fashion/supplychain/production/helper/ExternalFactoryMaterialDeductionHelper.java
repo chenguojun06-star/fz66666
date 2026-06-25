@@ -145,6 +145,12 @@ public class ExternalFactoryMaterialDeductionHelper {
     public void attachOrphanDeductionsToReconciliation(String orderId, String orderNo, String reconciliationId) {
         if (!StringUtils.hasText(reconciliationId)) return;
 
+        ShipmentReconciliation recon = shipmentReconciliationService.getById(reconciliationId);
+        if (recon == null || !UserContext.tenantId().equals(recon.getTenantId())) {
+            log.warn("[MaterialDeduction] 对账单不属于当前租户，跳过归集: reconciliationId={}", reconciliationId);
+            return;
+        }
+
         List<DeductionItem> orphans = deductionItemMapper.selectList(
                 new LambdaQueryWrapper<DeductionItem>()
                         .eq(DeductionItem::getTenantId, UserContext.tenantId())

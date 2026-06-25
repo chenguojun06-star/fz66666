@@ -45,7 +45,7 @@ const BarChart: React.FC<{ data: { label: string; value: number }[] }> = ({ data
 const PieChart: React.FC<{ data: { type: string; value: number }[] }> = ({ data }) => {
   const total = data.reduce((sum, d) => sum + d.value, 0);
   if (total === 0) return <div className={styles.emptyChart}>暂无数据</div>;
-  const colors = ['#1890ff', '#ff7875', '#ffa940', '#52c41a'];
+  const colors = ['var(--color-info)', '#ff7875', '#ffa940', 'var(--color-success)'];
   let currentAngle = 0;
   return (
     <div className={styles.pieChart}>
@@ -64,7 +64,7 @@ const PieChart: React.FC<{ data: { type: string; value: number }[] }> = ({ data 
           const path = `M 50 50 L ${x1} ${y1} A 40 40 0 ${largeArcFlag} 1 ${x2} ${y2} Z`;
           return <path key={idx} d={path} fill={colors[idx % colors.length]} />;
         })}
-        <circle cx="50" cy="50" r="25" fill="#fff" />
+        <circle cx="50" cy="50" r="25" fill="var(--color-bg-base)" />
       </svg>
       <div className={styles.pieLegend}>
         {data.map((item, idx) => (

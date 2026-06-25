@@ -4,6 +4,7 @@ import com.fashion.supplychain.intelligence.agent.AiMessage;
 import com.fashion.supplychain.intelligence.agent.AiTool;
 import com.fashion.supplychain.intelligence.agent.tool.AgentTool;
 import com.fashion.supplychain.intelligence.agent.tool.ToolDomain;
+import com.fashion.supplychain.intelligence.agent.planning.AgentPlan;
 import com.fashion.supplychain.intelligence.dto.XiaoyunStructuredResponse;
 import com.fashion.supplychain.intelligence.helper.AiAgentToolExecHelper;
 import lombok.Builder;
@@ -110,6 +111,50 @@ public class AgentLoopContext {
     /** 是否已应用 per-call 模型选择 */
     public boolean hasModelSelection() {
         return modelId != null && !modelId.isBlank();
+    }
+
+    // ==================== Plan-and-Execute 计划跟踪 ====================
+
+    /** 当前执行计划（Plan-and-Execute 模式） */
+    @Getter
+    private AgentPlan currentPlan;
+
+    /** 已完成的步骤索引（从0开始） */
+    @Builder.Default
+    private int completedPlanSteps = 0;
+
+    /** 重规划次数（防止无限重规划） */
+    @Builder.Default
+    private int replanCount = 0;
+
+    /** 是否处于 Plan-and-Execute 模式 */
+    public boolean isPlanAndExecuteMode() {
+        return currentPlan != null && currentPlan.getSteps() != null && !currentPlan.getSteps().isEmpty();
+    }
+
+    public void setCurrentPlan(AgentPlan plan) {
+        this.currentPlan = plan;
+        this.completedPlanSteps = 0;
+    }
+
+    public void incrementCompletedSteps() {
+        this.completedPlanSteps++;
+    }
+
+    public void incrementReplanCount() {
+        this.replanCount++;
+    }
+
+    /** 获取计划总步骤数 */
+    public int getTotalPlanSteps() {
+        return currentPlan != null && currentPlan.getSteps() != null ? currentPlan.getSteps().size() : 0;
+    }
+
+    /** 获取计划完成百分比 */
+    public int getPlanProgressPercent() {
+        int total = getTotalPlanSteps();
+        if (total == 0) return 0;
+        return Math.min(100, (int) ((completedPlanSteps / (double) total) * 100));
     }
 
     private long deadlineMs;

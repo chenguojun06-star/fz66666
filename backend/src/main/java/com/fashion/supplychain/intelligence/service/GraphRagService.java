@@ -210,4 +210,240 @@ public class GraphRagService {
         log.info("[GraphRAG] 批量同步: {}条关系", created);
         return created;
     }
+
+    // ==================== GraphRAG 深度集成升级 ====================
+
+    /**
+     * GraphRAG 分层检索：先找相关社区，再找社区内的实体和关系。
+     * <p>比传统关键词检索质量更高，因为它利用了图结构的社区信息。
+     */
+    public String buildGraphRagContext(Long tenantId, String userMessage) {
+        if (userMessage == null || userMessage.isBlank()) return "";
+        try {
+            // 1. 增强实体提取：识别用户消息中的业务实体
+            List<KgEntity> seedEntities = extractEntitiesFromMessage(tenantId, userMessage);
+            if (seedEntities.isEmpty()) {
+                // 退化为关键词检索
+                return buildGraphContext(tenantId, userMessage);
+            }
+
+            // 2. 社区发现：以种子实体为中心，发现相关社区
+            List<GraphCommunity> communities = discoverCommunities(tenantId, seedEntities);
+            if (communities.isEmpty()) {
+                return buildGraphContext(tenantId, userMessage);
+            }
+
+            // 3. 分层检索：社区级摘要 + 关键实体关系
+            StringBuilder sb = new StringBuilder("【GraphRAG 知识图谱洞察】\n");
+
+            int communityIdx = 1;
+            for (GraphCommunity community : communities) {
+                if (sb.length() > 1500) break;  // Token 预算保护
+
+                sb.append("\n▎相关主题 ").append(communityIdx++)
+                        .append("：").append(community.getSummary()).append("\n");
+                sb.append("  核心实体：").append(community.getCoreEntities()).append("\n");
+
+                // 社区内关键关系（按权重排序）
+                List<String> keyRelations = community.getKeyRelations();
+                for (int i = 0; i < Math.min(5, keyRelations.size()); i++) {
+                    sb.append("  • ").append(keyRelations.get(i)).append("\n");
+                }
+            }
+
+            // 4. 推理路径推荐
+            List<String> reasoningPaths = buildReasoningPaths(seedEntities, communities);
+            if (!reasoningPaths.isEmpty()) {
+                sb.append("\n▎推理路径建议：\n");
+                for (int i = 0; i < Math.min(3, reasoningPaths.size()); i++) {
+                    sb.append("  → ").append(reasoningPaths.get(i)).append("\n");
+                }
+            }
+
+            sb.append("\n（以上为知识图谱结构化关系，可用于关联推理和交叉验证）\n");
+            log.info("[GraphRAG] 分层检索完成: 种子实体={} 社区={}", seedEntities.size(), communities.size());
+            return sb.toString();
+        } catch (Exception e) {
+            log.warn("[GraphRAG] 分层检索异常，降级为关键词检索: {}", e.getMessage());
+            return buildGraphContext(tenantId, userMessage);
+        }
+    }
+
+    /**
+     * 增强实体提取：从用户消息中识别具体的业务实体。
+     * <p>比关键词匹配更精准，因为它匹配实体名称而不只是类型关键词。
+     */
+    private List<KgEntity> extractEntitiesFromMessage(Long tenantId, String userMessage) {
+        List<KgEntity> results = new ArrayList<>();
+        Set<Long> seenIds = new HashSet<>();
+
+        // 策略1：直接搜索实体名称（模糊匹配）
+        // 将用户消息分词，尝试匹配实体名称
+        String[] tokens = userMessage.split("[，。！？、\\s]+");
+        for (String token : tokens) {
+            if (token.length() < 2) continue;
+            List<KgEntity> found = kgEntityMapper.searchEntities(tenantId, token, 5);
+            for (KgEntity entity : found) {
+                if (seenIds.add(entity.getId())) {
+                    results.add(entity);
+                }
+            }
+            if (results.size() >= 5) break;
+        }
+
+        // 策略2：如果直接搜索没结果，用类型关键词兜底
+        if (results.isEmpty()) {
+            List<String> typeKeywords = extractKeywords(userMessage);
+            for (String keyword : typeKeywords) {
+                List<KgEntity> found = kgEntityMapper.searchEntities(tenantId, keyword, 3);
+                for (KgEntity entity : found) {
+                    if (seenIds.add(entity.getId())) {
+                        results.add(entity);
+                    }
+                }
+                if (results.size() >= 3) break;
+            }
+        }
+
+        return results;
+    }
+
+    /**
+     * 社区发现：以种子实体为中心，通过 BFS 发现连接紧密的实体社区。
+     * <p>这是 GraphRAG 的核心能力：将大图拆分为小社区，每个社区生成摘要。
+     */
+    private List<GraphCommunity> discoverCommunities(Long tenantId, List<KgEntity> seedEntities) {
+        List<GraphCommunity> communities = new ArrayList<>();
+        Set<Long> visitedEntities = new HashSet<>();
+
+        for (KgEntity seed : seedEntities) {
+            if (visitedEntities.contains(seed.getId())) continue;
+
+            // BFS 发现社区（2跳以内的实体）
+            Set<Long> communityEntityIds = new HashSet<>();
+            List<KgEntity> communityEntities = new ArrayList<>();
+            List<String> communityRelations = new ArrayList<>();
+            Map<String, Integer> typeCount = new HashMap<>();
+
+            // BFS 队列
+            Queue<Long> queue = new LinkedList<>();
+            queue.add(seed.getId());
+            communityEntityIds.add(seed.getId());
+            communityEntities.add(seed);
+            typeCount.merge(seed.getEntityType(), 1, Integer::sum);
+
+            int hops = 0;
+            while (!queue.isEmpty() && hops < 2 && communityEntityIds.size() < 20) {
+                int levelSize = queue.size();
+                for (int i = 0; i < levelSize && communityEntityIds.size() < 20; i++) {
+                    Long currentId = queue.poll();
+                    List<Map<String, Object>> neighbors = kgEntityMapper.traverseGraph(currentId, 1);
+
+                    for (Map<String, Object> neighbor : neighbors) {
+                        Object targetIdObj = neighbor.get("target_id");
+                        if (targetIdObj == null) continue;
+                        Long targetId = ((Number) targetIdObj).longValue();
+
+                        if (communityEntityIds.add(targetId)) {
+                            // 找到新实体
+                            String entityName = Objects.toString(neighbor.get("entity_name"), "?");
+                            String entityType = Objects.toString(neighbor.get("entity_type"), "UNKNOWN");
+                            String relType = Objects.toString(neighbor.get("relation_type"), "关联");
+                            String sourceName = Objects.toString(neighbor.get("source_name"), seed.getEntityName());
+
+                            KgEntity newEntity = new KgEntity();
+                            newEntity.setId(targetId);
+                            newEntity.setEntityName(entityName);
+                            newEntity.setEntityType(entityType);
+                            communityEntities.add(newEntity);
+
+                            communityRelations.add(String.format("%s --[%s]--> %s",
+                                    sourceName, translateRelation(relType), entityName));
+
+                            typeCount.merge(entityType, 1, Integer::sum);
+                            queue.add(targetId);
+                        }
+                    }
+                }
+                hops++;
+            }
+
+            visitedEntities.addAll(communityEntityIds);
+
+            // 生成社区摘要
+            if (communityEntityIds.size() >= 2) {
+                GraphCommunity community = new GraphCommunity();
+                community.setCoreEntities(buildCoreEntityList(communityEntities));
+                community.setSummary(buildCommunitySummary(communityEntities, typeCount));
+                community.setKeyRelations(communityRelations);
+                community.setEntityCount(communityEntityIds.size());
+                communities.add(community);
+            }
+        }
+
+        // 按社区大小排序（实体多的社区信息量更大）
+        communities.sort((a, b) -> Integer.compare(b.getEntityCount(), a.getEntityCount()));
+        return communities.subList(0, Math.min(3, communities.size()));
+    }
+
+    /** 构建社区摘要文本 */
+    private String buildCommunitySummary(List<KgEntity> entities, Map<String, Integer> typeCount) {
+        StringBuilder sb = new StringBuilder();
+        // 找主导实体类型
+        String dominantType = typeCount.entrySet().stream()
+                .max(Map.Entry.comparingByValue())
+                .map(Map.Entry::getKey)
+                .orElse("UNKNOWN");
+        sb.append(translateType(dominantType)).append("关联网络");
+        // 加上实体数量
+        sb.append("（").append(entities.size()).append("个实体）");
+        return sb.toString();
+    }
+
+    /** 构建核心实体列表字符串 */
+    private String buildCoreEntityList(List<KgEntity> entities) {
+        return entities.stream()
+                .limit(5)
+                .map(e -> e.getEntityName() + "[" + translateType(e.getEntityType()) + "]")
+                .collect(Collectors.joining("、"));
+    }
+
+    /** 构建推理路径建议 */
+    private List<String> buildReasoningPaths(List<KgEntity> seedEntities, List<GraphCommunity> communities) {
+        List<String> paths = new ArrayList<>();
+        if (seedEntities.isEmpty() || communities.isEmpty()) return paths;
+
+        // 基于社区中的实体类型，给出推理路径建议
+        Set<String> allTypes = new HashSet<>();
+        for (GraphCommunity community : communities) {
+            // 从摘要和核心实体中提取类型信息
+            for (KgEntity seed : seedEntities) {
+                allTypes.add(seed.getEntityType());
+            }
+        }
+
+        // 常见推理模式
+        if (allTypes.contains("ORDER") && allTypes.contains("FACTORY")) {
+            paths.add("订单 → 生产工厂 → 产能分析 → 交期预测");
+        }
+        if (allTypes.contains("STYLE") && allTypes.contains("MATERIAL")) {
+            paths.add("款式 → BOM材料 → 供应商 → 采购周期");
+        }
+        if (allTypes.contains("ORDER") && allTypes.contains("PROCESS")) {
+            paths.add("订单 → 工序流程 → 瓶颈工序 → 进度跟踪");
+        }
+
+        return paths;
+    }
+
+    /**
+     * 图社区数据结构（GraphRAG 的基本单元）
+     */
+    @lombok.Data
+    private static class GraphCommunity {
+        private String summary;          // 社区摘要
+        private String coreEntities;     // 核心实体列表
+        private List<String> keyRelations;  // 关键关系
+        private int entityCount;         // 实体数量
+    }
 }

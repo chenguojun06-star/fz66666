@@ -135,12 +135,12 @@ export function buildPrintHtml({
             vertical-align: top;
           }
           th {
-            background: #f5f5f5;
+            background: var(--color-bg-subtle);
             font-weight: 600;
             color: #333;
           }
           tr:nth-child(even) {
-            background: #fafafa;
+            background: var(--color-bg-container);
           }
 
           /* 信息网格 */

@@ -49,7 +49,7 @@
 
 .dashboard-page .filter-card .ant-input-affix-wrapper:focus,
 .dashboard-page .filter-card .ant-input-affix-wrapper-focused {
-  border-color: #2D7FF9 !important;
+  border-color: var(--color-primary) !important;
   box-shadow: 0 0 0 2px rgba(45, 127, 249, 0.1) !important;
 }
 
@@ -107,8 +107,8 @@
 .dashboard-page .filter-card .ant-btn-primary:hover {
   transform: translateY(-2px) !important;
   background: #f0f9ff !important;
-  border-color: #1890ff !important;
-  color: #1890ff !important;
+  border-color: var(--color-info) !important;
+  color: var(--color-info) !important;
   box-shadow: 0 4px 12px rgba(24, 144, 255, 0.25) !important;
 }
 
@@ -169,7 +169,7 @@
 }
 
 .stat-card {
-  background: #ffffff;
+  background: var(--color-bg-base);
   border: 1px solid var(--color-border-light, #e8e8e8);
   border-radius: 12px;
   padding: 24px;
@@ -209,38 +209,38 @@
 
 /* 新的8个统计卡片样式 */
 .stat-card--sample {
-  border-color: #1677ff;
+  border-color: var(--color-primary);
   background: #f0f7ff;
 }
 
 .stat-card--production {
-  border-color: #13c2c2;
+  border-color: var(--color-accent-cyan);
   background: #e6fffb;
 }
 
 .stat-card--quantity {
-  border-color: #52c41a;
+  border-color: var(--color-success);
   background: #f6ffed;
 }
 
 .stat-card--overdue {
   border-color: #ff7875;
-  background: #fff1f0;
+  background: var(--color-bg-base)1f0;
 }
 
 .stat-card--today-warehousing {
-  border-color: #faad14;
-  background: #fffbe6;
+  border-color: var(--color-warning);
+  background: var(--color-bg-base)be6;
 }
 
 .stat-card--total-warehousing {
-  border-color: #722ed1;
+  border-color: var(--color-accent-purple);
   background: #f9f0ff;
 }
 
 .stat-card--defective {
   border-color: #fa541c;
-  background: #fff7e6;
+  background: var(--color-bg-base)7e6;
 }
 
 .stat-card--payment {
@@ -250,19 +250,19 @@
 
 /* 旧样式保留以兼容 */
 .stat-card--style {
-  border-color: #1677ff;
+  border-color: var(--color-primary);
 }
 
 .stat-card--finance {
-  border-color: #faad14;
+  border-color: var(--color-warning);
 }
 
 .stat-card--scan {
-  border-color: #722ed1;
+  border-color: var(--color-accent-purple);
 }
 
 .stat-card--warehousing {
-  border-color: #52c41a;
+  border-color: var(--color-success);
 }
 
 .stat-card--unqualified {
@@ -303,17 +303,17 @@
 
 /* 新的8个图标样式 */
 .stat-icon--sample {
-  color: #1677ff;
+  color: var(--color-primary);
   background: #e6f4ff;
 }
 
 .stat-icon--production {
-  color: #13c2c2;
+  color: var(--color-accent-cyan);
   background: #e6fffb;
 }
 
 .stat-icon--quantity {
-  color: #52c41a;
+  color: var(--color-success);
   background: #d9f7be;
 }
 
@@ -323,12 +323,12 @@
 }
 
 .stat-icon--today-warehousing {
-  color: #faad14;
+  color: var(--color-warning);
   background: #ffe7ba;
 }
 
 .stat-icon--total-warehousing {
-  color: #722ed1;
+  color: var(--color-accent-purple);
   background: #efdbff;
 }
 
@@ -344,33 +344,33 @@
 
 /* 旧样式保留以兼容 */
 .stat-icon--style {
-  color: #1677ff;
+  color: var(--color-primary);
   background: #e6f4ff;
 }
 
 .stat-icon--finance {
-  color: #faad14;
-  background: #fffbe6;
+  color: var(--color-warning);
+  background: var(--color-bg-base)be6;
 }
 
 .stat-icon--scan {
-  color: #722ed1;
+  color: var(--color-accent-purple);
   background: #f9f0ff;
 }
 
 .stat-icon--warehousing {
-  color: #52c41a;
+  color: var(--color-success);
   background: #f6ffed;
 }
 
 .stat-icon--unqualified {
   color: #ff7875;
-  background: #fff1f0;
+  background: var(--color-bg-base)1f0;
 }
 
 .stat-icon--urgent {
   color: #fa541c;
-  background: #fff7e6;
+  background: var(--color-bg-base)7e6;
 }
 
 .stat-content {
@@ -400,7 +400,7 @@
 }
 
 .dashboard-card {
-  background: #ffffff;
+  background: var(--color-bg-base);
   border: 1px solid var(--color-border-light, #e8e8e8);
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
@@ -495,27 +495,27 @@
 }
 
 .activity-icon--production {
-  color: #13c2c2;
+  color: var(--color-accent-cyan);
   background: #e6fffb;
 }
 
 .activity-icon--reconciliation {
-  color: #faad14;
-  background: #fffbe6;
+  color: var(--color-warning);
+  background: var(--color-bg-base)be6;
 }
 
 .activity-icon--scan {
-  color: #722ed1;
+  color: var(--color-accent-purple);
   background: #f9f0ff;
 }
 
 .activity-icon--style {
-  color: #1677ff;
+  color: var(--color-primary);
   background: #e6f4ff;
 }
 
 .activity-icon--material {
-  color: #52c41a;
+  color: var(--color-success);
   background: #f6ffed;
 }
 
@@ -564,31 +564,31 @@
 }
 
 .quick-entry-item--style {
-  border-color: #1677ff;
+  border-color: var(--color-primary);
 }
 
 .quick-entry-item--production {
-  border-color: #13c2c2;
+  border-color: var(--color-accent-cyan);
 }
 
 .quick-entry-item--scan {
-  border-color: #722ed1;
+  border-color: var(--color-accent-purple);
 }
 
 .quick-entry-item--finance {
-  border-color: #faad14;
+  border-color: var(--color-warning);
 }
 
 .quick-entry-item--material {
-  border-color: #52c41a;
+  border-color: var(--color-success);
 }
 
 .quick-entry-item--warehousing {
-  border-color: #13c2c2;
+  border-color: var(--color-accent-cyan);
 }
 
 .quick-entry-item--report {
-  border-color: #1677ff;
+  border-color: var(--color-primary);
 }
 
 .quick-entry-item--factory {
@@ -600,7 +600,7 @@
 }
 
 .quick-entry-item--cutting {
-  border-color: #fa8c16;
+  border-color: var(--color-warning);
 }
 
 .quick-entry-item--factory-recon {
@@ -608,7 +608,7 @@
 }
 
 .quick-entry-item--shipment {
-  border-color: #722ed1;
+  border-color: var(--color-accent-purple);
 }
 
 .entry-icon {
@@ -625,37 +625,37 @@
 }
 
 .entry-icon--style {
-  color: #1677ff;
+  color: var(--color-primary);
   background: #e6f4ff;
 }
 
 .entry-icon--production {
-  color: #13c2c2;
+  color: var(--color-accent-cyan);
   background: #e6fffb;
 }
 
 .entry-icon--scan {
-  color: #722ed1;
+  color: var(--color-accent-purple);
   background: #f9f0ff;
 }
 
 .entry-icon--finance {
-  color: #faad14;
-  background: #fffbe6;
+  color: var(--color-warning);
+  background: var(--color-bg-base)be6;
 }
 
 .entry-icon--material {
-  color: #52c41a;
+  color: var(--color-success);
   background: #f6ffed;
 }
 
 .entry-icon--warehousing {
-  color: #13c2c2;
+  color: var(--color-accent-cyan);
   background: #e6fffb;
 }
 
 .entry-icon--report {
-  color: #1677ff;
+  color: var(--color-primary);
   background: #e6f4ff;
 }
 
@@ -670,17 +670,17 @@
 }
 
 .entry-icon--cutting {
-  color: #fa8c16;
-  background: #fff7e6;
+  color: var(--color-warning);
+  background: var(--color-bg-base)7e6;
 }
 
 .entry-icon--factory-recon {
   color: #eb2f96;
-  background: #fff0f6;
+  background: var(--color-bg-base)0f6;
 }
 
 .entry-icon--shipment {
-  color: #722ed1;
+  color: var(--color-accent-purple);
   background: #f9f0ff;
 }
 
@@ -875,32 +875,32 @@
 
 /* 8个统计卡片色系（白色主题下保持淡底+左色线） */
 :root[data-theme="white"] .stat-card--sample {
-  border-left-color: #1677ff;
+  border-left-color: var(--color-primary);
   background: #fafcff;
 }
 :root[data-theme="white"] .stat-card--production {
-  border-left-color: #13c2c2;
+  border-left-color: var(--color-accent-cyan);
   background: #f8fffe;
 }
 :root[data-theme="white"] .stat-card--quantity {
-  border-left-color: #52c41a;
+  border-left-color: var(--color-success);
   background: #fbfff7;
 }
 :root[data-theme="white"] .stat-card--overdue {
   border-left-color: #ff7875;
-  background: #fffbfb;
+  background: var(--color-bg-base)bfb;
 }
 :root[data-theme="white"] .stat-card--today-warehousing {
-  border-left-color: #faad14;
-  background: #fffef8;
+  border-left-color: var(--color-warning);
+  background: var(--color-bg-base)ef8;
 }
 :root[data-theme="white"] .stat-card--total-warehousing {
-  border-left-color: #722ed1;
+  border-left-color: var(--color-accent-purple);
   background: #fcfaff;
 }
 :root[data-theme="white"] .stat-card--defective {
   border-left-color: #fa541c;
-  background: #fffcfa;
+  background: var(--color-bg-base)cfa;
 }
 :root[data-theme="white"] .stat-card--payment {
   border-left-color: #2f54eb;
@@ -1006,7 +1006,7 @@
 }
 
 .dashboard-error-alert-icon {
-  color: var(--color-warning, #fa8c16);
+  color: var(--color-warning, var(--color-warning));
   font-size: 18px;
 }
 

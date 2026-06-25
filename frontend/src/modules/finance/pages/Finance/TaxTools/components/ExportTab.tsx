@@ -9,8 +9,8 @@ const { Text } = Typography;
 const { RangePicker } = DatePicker;
 
 const EXPORT_TYPES = [
-  { key: 'wage', title: '工资结算导出', desc: '导出员工工资结算数据，包含应发、实发、扣款等', color: '#1677ff', icon: '💰' },
-  { key: 'material', title: '物料对账导出', desc: '导出物料采购对账数据，包含供应商、金额、税率等', color: '#52c41a', icon: '📦' },
+  { key: 'wage', title: '工资结算导出', desc: '导出员工工资结算数据，包含应发、实发、扣款等', color: 'var(--color-primary)', icon: '💰' },
+  { key: 'material', title: '物料对账导出', desc: '导出物料采购对账数据，包含供应商、金额、税率等', color: 'var(--color-success)', icon: '📦' },
 ];
 
 const ExportTab: React.FC = () => {

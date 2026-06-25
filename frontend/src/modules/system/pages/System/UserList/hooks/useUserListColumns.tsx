@@ -186,7 +186,7 @@ export function useUserListColumns(props: UseUserListColumnsProps) {
             label: (
               <span style={{ display: 'inline-block', width: '100%' }}>
                 {isCurrent && (
-                  <CheckOutlined style={{ fontSize: 10, marginRight: 4, color: 'var(--color-primary, #52c41a)' }} />
+                  <CheckOutlined style={{ fontSize: 10, marginRight: 4, color: 'var(--color-primary, var(--color-success))' }} />
                 )}
                 {role.roleName}
                 {isCurrent && (
@@ -209,7 +209,7 @@ export function useUserListColumns(props: UseUserListColumnsProps) {
                 cursor: 'pointer',
                 padding: '2px 10px',
                 fontSize: 12,
-                border: `1px solid var(--color-border-antd, #d9d9d9)`,
+                border: `1px solid var(--color-border-antd, var(--color-border-antd))`,
                 borderRadius: 4,
               }}
             >

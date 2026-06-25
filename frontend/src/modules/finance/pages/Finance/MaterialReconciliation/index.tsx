@@ -60,10 +60,10 @@ const MaterialReconciliation: React.FC = () => {
   // ==================== 状态Tab ====================
   const statusTabs = [
     { key: '', label: '全部' },
-    { key: 'pending', label: '待审批', color: '#faad14' },
-    { key: 'approved', label: '已审批', color: '#1890ff' },
-    { key: 'paid', label: '已付款', color: '#52c41a' },
-    { key: 'rejected', label: '已驳回', color: '#ff4d4f' },
+    { key: 'pending', label: '待审批', color: 'var(--color-warning)' },
+    { key: 'approved', label: '已审批', color: 'var(--color-info)' },
+    { key: 'paid', label: '已付款', color: 'var(--color-success)' },
+    { key: 'rejected', label: '已驳回', color: 'var(--color-danger)' },
   ];
   const activeTab = queryParams.status || '';
 

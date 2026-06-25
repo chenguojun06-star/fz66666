@@ -123,6 +123,12 @@ const OrderManagement: React.FC = () => {
     const params = new URLSearchParams(location.search);
     const styleNo = (params.get('styleNo') || '').trim();
     const styleName = (params.get('styleName') || '').trim();
+    const autoOpenCreate = params.get('autoOpenCreate') === '1';
+
+    if (autoOpenCreate) {
+      setVisible(true);
+    }
+
     if (styleNo || styleName) {
       const keyword = styleNo || styleName;
       setQueryParams((prev) => ({

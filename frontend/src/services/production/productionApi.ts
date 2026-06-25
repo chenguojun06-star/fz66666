@@ -181,11 +181,13 @@ export interface SysNotice {
   orderNo: string;
   title: string;
   content: string;
-  noticeType: 'stagnant' | 'deadline' | 'quality' | 'manual' | 'urge_order';
+  noticeType: 'stagnant' | 'deadline' | 'quality' | 'manual' | 'urge_order' | 'overdue' | 'task_overdue' | 'task_due_soon';
   isRead: 0 | 1;
   createdAt: string;
   urgeRecordId?: string;
   actionType?: string;
+  actionPayload?: string;
+  styleImage?: string;
 }
 
 export const urgeApi = {

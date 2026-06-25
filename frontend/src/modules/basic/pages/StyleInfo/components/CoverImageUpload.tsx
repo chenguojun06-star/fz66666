@@ -383,14 +383,14 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
         style={{
           width: '100%',
           aspectRatio: '1 / 1',
-          border: '1px solid #e5e7eb',
+          border: '1px solid var(--color-border)',
           borderRadius: 8,
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'center',
           marginBottom: 12,
           overflow: 'hidden',
-          background: '#fafafa',
+          background: 'var(--color-bg-container)',
           cursor: 'default',
           position: 'relative',
         }}
@@ -400,7 +400,7 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
         {currentImage ? (
           <div style={{ position: 'relative', width: '100%', height: '100%' }}>
             <Image loading="lazy" src={getFullAuthedFileUrl(currentImage.fileUrl)} alt="main" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            <div style={{ position: 'absolute', left: 10, top: 10, padding: '4px 10px', borderRadius: 999, background: 'rgba(37, 99, 235, 0.9)', color: '#fff', fontSize: 12, fontWeight: 600 }}>
+            <div style={{ position: 'absolute', left: 10, top: 10, padding: '4px 10px', borderRadius: 999, background: 'rgba(37, 99, 235, 0.9)', color: 'var(--color-bg-base)', fontSize: 12, fontWeight: 600 }}>
               {currentAssetMeta.label}
             </div>
             {currentImage && (
@@ -415,7 +415,7 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
                     <div
                       style={{
                         padding: '4px 10px', borderRadius: 999,
-                        background: 'rgba(234, 88, 12, 0.92)', color: '#fff',
+                        background: 'rgba(234, 88, 12, 0.92)', color: 'var(--color-bg-base)',
                         fontSize: 12, fontWeight: 600,
                         display: 'flex', alignItems: 'center', gap: 4,
                       }}
@@ -428,7 +428,7 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
                     <div
                       style={{
                         padding: '4px 10px', borderRadius: 999,
-                        background: 'rgba(34, 197, 94, 0.92)', color: '#fff',
+                        background: 'rgba(34, 197, 94, 0.92)', color: 'var(--color-bg-base)',
                         fontSize: 12, fontWeight: 600,
                         display: 'flex', alignItems: 'center', gap: 4,
                       }}
@@ -440,7 +440,7 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
                     <div
                       style={{
                         padding: '4px 10px', borderRadius: 999,
-                        background: 'rgba(245, 158, 11, 0.9)', color: '#fff',
+                        background: 'rgba(245, 158, 11, 0.9)', color: 'var(--color-bg-base)',
                         fontSize: 12, fontWeight: 600,
                         display: 'flex', alignItems: 'center', gap: 4,
                       }}
@@ -476,7 +476,7 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
                       style={{
                         padding: '4px 10px', borderRadius: 999,
                         background: parsing ? 'rgba(0,0,0,0.3)' : 'rgba(37, 99, 235, 0.9)',
-                        color: '#fff',
+                        color: 'var(--color-bg-base)',
                         fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4,
                         transition: 'background 0.15s',
                       }}
@@ -490,7 +490,7 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
                       style={{
                         padding: '4px 10px', borderRadius: 999,
                         background: searching ? 'rgba(0,0,0,0.3)' : 'rgba(17, 24, 39, 0.7)',
-                        color: '#fff',
+                        color: 'var(--color-bg-base)',
                         fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4,
                       }}
                       title="以图搜款：搜索视觉相似的历史款式"
@@ -510,21 +510,21 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
             {isNewMode ? (
               <>
                 <div style={{ color: 'var(--color-primary)', fontSize: 13, marginBottom: 6, fontWeight: 600 }}>上传设计稿或款式照片</div>
-                <div style={{ color: '#9ca3af', fontSize: 12, lineHeight: 1.55 }}>
+                <div style={{ color: 'var(--color-text-tertiary)', fontSize: 12, lineHeight: 1.55 }}>
                   支持拖拽上传本地图片，上传完成后可自动识别并填充款号信息、颜色、尺码等字段
                 </div>
               </>
             ) : !styleId ? (
               <>
                 <div style={{ color: 'var(--color-primary)', fontSize: 13, marginBottom: 6, fontWeight: 600 }}>上传设计稿或款式照片</div>
-                <div style={{ color: '#9ca3af', fontSize: 12, lineHeight: 1.55 }}>请先保存基础信息后再上传图片</div>
+                <div style={{ color: 'var(--color-text-tertiary)', fontSize: 12, lineHeight: 1.55 }}>请先保存基础信息后再上传图片</div>
               </>
             ) : enabled ? (
-              <span style={{ color: '#9ca3af', fontSize: 12 }}>上传设计稿或款式照片</span>
+              <span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>上传设计稿或款式照片</span>
             ) : (
               <>
                 <div style={{ color: 'var(--color-danger)', fontSize: 13, marginBottom: 6, fontWeight: 600 }}>样衣已完成</div>
-                <div style={{ color: '#9ca3af', fontSize: 12, lineHeight: 1.55 }}>如需修改请联系管理员</div>
+                <div style={{ color: 'var(--color-text-tertiary)', fontSize: 12, lineHeight: 1.55 }}>如需修改请联系管理员</div>
               </>
             )}
           </div>
@@ -542,7 +542,7 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
               onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(17, 24, 39, 0.75)'; }}
               onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(17, 24, 39, 0.5)'; }}
             >
-              <LeftOutlined style={{ color: '#fff', fontSize: 14 }} />
+              <LeftOutlined style={{ color: 'var(--color-bg-base)', fontSize: 14 }} />
             </div>
             <div
               onClick={(e) => { e.stopPropagation(); setCurrentIndex(currentIndex >= displayImages.length - 1 ? 0 : currentIndex + 1); }}
@@ -555,7 +555,7 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
               onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(17, 24, 39, 0.75)'; }}
               onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(17, 24, 39, 0.5)'; }}
             >
-              <RightOutlined style={{ color: '#fff', fontSize: 14 }} />
+              <RightOutlined style={{ color: 'var(--color-bg-base)', fontSize: 14 }} />
             </div>
           </>
         )}

@@ -214,27 +214,27 @@ const UserList: React.FC = () => {
           <Space size={4}>
             <TeamOutlined style={{ fontSize: 14, color: 'var(--color-text-secondary, #666)' }} />
             <Text type="secondary" style={{ fontSize: 12 }}>总人数</Text>
-            <Text strong style={{ fontSize: 16, color: 'var(--primary-color, #1677ff)' }}>{total}</Text>
+            <Text strong style={{ fontSize: 16, color: 'var(--primary-color, var(--color-primary))' }}>{total}</Text>
           </Space>
           <Space size={4}>
-            <UserOutlined style={{ fontSize: 14, color: 'var(--color-success, #52c41a)' }} />
+            <UserOutlined style={{ fontSize: 14, color: 'var(--color-success, var(--color-success))' }} />
             <Text type="secondary" style={{ fontSize: 12 }}>内部</Text>
-            <Text strong style={{ fontSize: 16, color: 'var(--color-success, #52c41a)' }}>{userStats.internal}</Text>
+            <Text strong style={{ fontSize: 16, color: 'var(--color-success, var(--color-success))' }}>{userStats.internal}</Text>
           </Space>
           <Space size={4}>
-            <ApartmentOutlined style={{ fontSize: 14, color: 'var(--color-info, #1890ff)' }} />
+            <ApartmentOutlined style={{ fontSize: 14, color: 'var(--color-info, var(--color-info))' }} />
             <Text type="secondary" style={{ fontSize: 12 }}>外发工厂</Text>
-            <Text strong style={{ fontSize: 16, color: 'var(--color-info, #1890ff)' }}>{userStats.externalFactory}</Text>
+            <Text strong style={{ fontSize: 16, color: 'var(--color-info, var(--color-info))' }}>{userStats.externalFactory}</Text>
           </Space>
           <Space size={4}>
-            <ShopOutlined style={{ fontSize: 14, color: 'var(--color-warning, #fa8c16)' }} />
+            <ShopOutlined style={{ fontSize: 14, color: 'var(--color-warning, var(--color-warning))' }} />
             <Text type="secondary" style={{ fontSize: 12 }}>供应商</Text>
-            <Text strong style={{ fontSize: 16, color: 'var(--color-warning, #fa8c16)' }}>{userStats.supplier}</Text>
+            <Text strong style={{ fontSize: 16, color: 'var(--color-warning, var(--color-warning))' }}>{userStats.supplier}</Text>
           </Space>
           <Space size={4}>
-            <SafetyCertificateOutlined style={{ fontSize: 14, color: 'var(--color-success, #52c41a)' }} />
+            <SafetyCertificateOutlined style={{ fontSize: 14, color: 'var(--color-success, var(--color-success))' }} />
             <Text type="secondary" style={{ fontSize: 12 }}>启用</Text>
-            <Text strong style={{ fontSize: 16, color: 'var(--color-success, #52c41a)' }}>{userStats.activeCount}</Text>
+            <Text strong style={{ fontSize: 16, color: 'var(--color-success, var(--color-success))' }}>{userStats.activeCount}</Text>
           </Space>
           {pendingUserCount > 0 && (
             <Tag color="orange" style={{ fontSize: 11, padding: '2px 8px' }}>

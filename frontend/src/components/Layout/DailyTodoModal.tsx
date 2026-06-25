@@ -83,17 +83,17 @@ const isInPopupWindow = () => {
   return mins >= 9 * 60 + 30 && mins <= 11 * 60;
 };
 
-// ── 颜色常量 ─────────────────────────────────────────────────────────
+// ── 颜色常量（使用CSS变量）─────────────────────────────────────────────
 const LEVEL_COLOR: Record<string, string> = {
   danger: 'var(--color-danger)', warning: 'var(--color-warning)', info: 'var(--color-primary)', success: 'var(--color-success)',
 };
 
 const LEVEL_BG: Record<string, string> = {
-  danger: '#FFF1F0', warning: '#FFF7E6', info: '#e6f4ff', success: '#f6ffed',
+  danger: 'var(--color-danger-bg-light)', warning: 'var(--color-warning-bg-light)', info: 'var(--color-primary-bg-light)', success: 'var(--color-success-bg-light)',
 };
 
 const LEVEL_BORDER: Record<string, string> = {
-  danger: '#ffa39e', warning: '#ffd591', info: '#91caff', success: '#b7eb8f',
+  danger: 'var(--color-danger-border)', warning: 'var(--color-warning-border)', info: 'var(--color-primary-border)', success: 'var(--color-success-border)',
 };
 
 // ── 子组件：核心指标卡片 ──────────────────────────────────────────────
@@ -107,7 +107,7 @@ const MetricCard: React.FC<{
     <div style={{ fontSize: 16, fontWeight: 700, color, lineHeight: 1.2 }}>
       {Number(value) || 0}{suffix}
     </div>
-    <div style={{ fontSize: 14, color: '#595959', marginTop: 4 }}>{label}</div>
+    <div style={{ fontSize: 14, color: 'var(--color-text-secondary)', marginTop: 4 }}>{label}</div>
   </div>
 );
 
@@ -128,14 +128,14 @@ const DecisionCardRow: React.FC<{
         <Tag color={card.level === 'danger' ? 'error' : card.level === 'warning' ? 'warning' : card.level === 'success' ? 'success' : 'processing'} style={{ margin: 0 }}>
           {card.level === 'danger' ? '紧急' : card.level === 'warning' ? '注意' : card.level === 'success' ? '良好' : '提示'}
         </Tag>
-        <span style={{ fontWeight: 600, fontSize: 14, color: '#141414' }}>{card.title}</span>
+        <span style={{ fontWeight: 600, fontSize: 14, color: 'var(--color-text)' }}>{card.title}</span>
         {card.confidence > 0 && (
           <span style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginLeft: 'auto' }}>
             置信度 {card.confidence}%
           </span>
         )}
       </div>
-      <div style={{ fontSize: 14, color: '#262626', lineHeight: 1.6, marginBottom: 6 }}>
+      <div style={{ fontSize: 14, color: 'var(--color-text)', lineHeight: 1.6, marginBottom: 6 }}>
         {card.summary}
       </div>
       {card.painPoint && (
@@ -328,7 +328,7 @@ const DailyTodoModal: React.FC = () => {
             marginBottom: 16,
           }}>
             <div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: '#141414' }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--color-text)' }}>
                 ☀️ 早上好，今日生产运营简报
               </div>
               <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginTop: 2 }}>
@@ -350,19 +350,19 @@ const DailyTodoModal: React.FC = () => {
           {/* ── 核心指标卡片 ── */}
           <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
             <MetricCard
-              label="逾期订单" color="var(--color-danger)" bg="#FFF1F0"
+              label="逾期订单" color={LEVEL_COLOR.danger} bg={LEVEL_BG.danger}
               value={Number(brief.overdueOrderCount) || 0} suffix="单"
             />
             <MetricCard
-              label="高风险订单" color="var(--color-warning)" bg="#FFF7E6"
+              label="高风险订单" color={LEVEL_COLOR.warning} bg={LEVEL_BG.warning}
               value={Number(brief.highRiskOrderCount) || 0} suffix="单"
             />
             <MetricCard
-              label="今日扫码" color="var(--color-primary)" bg="#e6f4ff"
+              label="今日扫码" color={LEVEL_COLOR.info} bg={LEVEL_BG.info}
               value={Number(brief.todayScanCount) || 0} suffix="次"
             />
             <MetricCard
-              label="昨日入库" color="var(--color-success)" bg="#f6ffed"
+              label="昨日入库" color={LEVEL_COLOR.success} bg={LEVEL_BG.success}
               value={Number(brief.yesterdayWarehousingCount) || 0} suffix="单"
             />
           </div>
@@ -409,8 +409,8 @@ const DailyTodoModal: React.FC = () => {
           {/* ── 无决策卡片时的兜底摘要 ── */}
           {cards.length === 0 && (
             <div style={{ marginBottom: 16 }}>
-              <div style={{ fontSize: 14, fontWeight: 600, color: '#262626', marginBottom: 8 }}>
-                🎯 今日重点关注
+              <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-text)', marginBottom: 8 }}>
+                📅 今日关键任务
               </div>
               {(Number(brief.overdueOrderCount) || 0) > 0 && (
                 <ActionRow
@@ -429,8 +429,8 @@ const DailyTodoModal: React.FC = () => {
               {(Number(brief.overdueOrderCount) || 0) === 0 &&
                (Number(brief.highRiskOrderCount) || 0) === 0 && (
                 <div style={{
-                  padding: '12px 14px', borderRadius: 8, background: '#f6ffed',
-                  border: '1px solid #b7eb8f', fontSize: 14, color: '#389e0d',
+                  padding: '12px 14px', borderRadius: 8, background: LEVEL_BG.success,
+                  border: '1px solid ' + LEVEL_BORDER.success, fontSize: 14, color: LEVEL_COLOR.success,
                 }}>
                   ✅ 当前订单健康度良好，保持日常巡检，重点关注新开单进度
                 </div>
@@ -452,7 +452,7 @@ const DailyTodoModal: React.FC = () => {
               </div>
               {suggestions.map((s, i) => (
                 <div key={i} style={{
-                  fontSize: 14, color: '#262626', lineHeight: 1.7,
+                  fontSize: 14, color: 'var(--color-text)', lineHeight: 1.7,
                   paddingLeft: 12, position: 'relative',
                 }}>
                   <span style={{
@@ -491,7 +491,7 @@ const ActionRow: React.FC<{
     onMouseLeave={e => ((e.currentTarget as HTMLDivElement).style.background = 'var(--color-bg-container)')}
   >
     <span style={{ fontSize: 13, color }}>{icon}</span>
-    <span style={{ flex: 1, fontSize: 14, color: '#262626' }}>{title}</span>
+    <span style={{ flex: 1, fontSize: 14, color: 'var(--color-text)' }}>{title}</span>
     <RightOutlined style={{ fontSize: 13, color: 'var(--color-text-quaternary)' }} />
   </div>
 );

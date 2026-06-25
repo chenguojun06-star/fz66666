@@ -15,6 +15,7 @@ import com.fashion.supplychain.intelligence.orchestration.TaskOrderMonitorOrches
 import com.fashion.supplychain.intelligence.service.ProcessStatsEngine;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
+import com.fashion.supplychain.production.entity.SysNotice;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.ScanRecordService;
 import java.math.BigDecimal;
@@ -95,6 +96,9 @@ public class AiPatrolJob {
 
     @Autowired(required = false)
     private ProcessStatsEngine processStatsEngine;
+
+    @Autowired(required = false)
+    private com.fashion.supplychain.production.service.SysNoticeService sysNoticeService;
 
     @Autowired(required = false)
     private TaskOrderMonitorOrchestrator taskOrderMonitorOrchestrator;
@@ -849,5 +853,135 @@ public class AiPatrolJob {
         } catch (Exception e) {
             log.warn("[AiPatrolJob-TaskOrder] 创建提醒动作失败: {}", e.getMessage());
         }
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    // 个人任务到期提醒（每小时）
+    // 已领取的任务快到期或已逾期，自动提醒领取人
+    // ══════════════════════════════════════════════════════════════════
+
+    @Scheduled(cron = "0 0 * * * ?")
+    public void scanPersonalTaskReminders() {
+        if (collaborationTaskMapper == null || sysNoticeService == null) {
+            log.debug("[AiPatrolJob-TaskReminder] 依赖未注入，跳过");
+            return;
+        }
+        List<Long> tenants = processStatsEngine != null
+                ? processStatsEngine.findActiveTenantIds()
+                : null;
+        if (tenants == null || tenants.isEmpty()) {
+            log.debug("[AiPatrolJob-TaskReminder] 无活跃租户，跳过");
+            return;
+        }
+        int totalReminded = 0;
+        for (Long tenantId : tenants) {
+            if (tenantId == null) continue;
+            UserContext previous = UserContext.get();
+            try {
+                UserContext ctx = new UserContext();
+                ctx.setTenantId(tenantId);
+                ctx.setUsername("system");
+                ctx.setUserId("system");
+                UserContext.set(ctx);
+
+                totalReminded += remindDueTasksForTenant(tenantId);
+            } catch (Exception e) {
+                log.warn("[AiPatrolJob-TaskReminder] 租户 {} 扫描异常: {}", tenantId, e.getMessage(), e);
+            } finally {
+                if (previous != null) {
+                    UserContext.set(previous);
+                } else {
+                    UserContext.clear();
+                }
+            }
+        }
+        if (totalReminded > 0) {
+            log.info("[AiPatrolJob-TaskReminder] ===== 个人任务提醒完成，共提醒 {} 条 =====", totalReminded);
+        }
+    }
+
+    private int remindDueTasksForTenant(Long tenantId) {
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime soon = now.plusHours(24);
+
+        List<CollaborationTask> tasks = collaborationTaskMapper.selectList(
+            new LambdaQueryWrapper<CollaborationTask>()
+                .eq(CollaborationTask::getTenantId, tenantId)
+                .in(CollaborationTask::getTaskStatus, "ACCEPTED", "IN_PROGRESS")
+                .isNotNull(CollaborationTask::getAssigneeName)
+                .ne(CollaborationTask::getAssigneeName, "")
+                .and(w -> w.lt(CollaborationTask::getDueAt, soon)
+                         .or().eq(CollaborationTask::getOverdue, true))
+                .last("LIMIT 100")
+        );
+        if (tasks == null || tasks.isEmpty()) return 0;
+
+        int count = 0;
+        for (CollaborationTask task : tasks) {
+            String assignee = task.getAssigneeName();
+            if (assignee == null || assignee.isBlank()) continue;
+
+            boolean isOverdue = Boolean.TRUE.equals(task.getOverdue());
+            String noticeType = isOverdue ? "task_overdue" : "task_due_soon";
+
+            if (recentlySentTaskNotice(tenantId, task.getId(), noticeType)) continue;
+
+            String title;
+            String content;
+            if (isOverdue) {
+                long overdueHours = task.getDueAt() != null
+                        ? java.time.Duration.between(task.getDueAt(), now).toHours()
+                        : 0;
+                title = "⏰ 任务已逾期：" + truncate(task.getInstruction(), 30);
+                content = String.format(
+                    "您领取的任务「%s」已逾期 %d 小时，订单：%s，请尽快处理。",
+                    task.getInstruction(),
+                    Math.max(1, overdueHours),
+                    task.getOrderNo() != null ? task.getOrderNo() : "无"
+                );
+            } else {
+                long hoursLeft = task.getDueAt() != null
+                        ? java.time.Duration.between(now, task.getDueAt()).toHours()
+                        : 24;
+                title = "⏳ 任务即将到期：" + truncate(task.getInstruction(), 30);
+                content = String.format(
+                    "您领取的任务「%s」还剩 %d 小时到期，订单：%s，请及时处理。",
+                    task.getInstruction(),
+                    Math.max(1, hoursLeft),
+                    task.getOrderNo() != null ? task.getOrderNo() : "无"
+                );
+            }
+
+            SysNotice n = new SysNotice();
+            n.setTenantId(tenantId);
+            n.setToName(assignee);
+            n.setFromName("AI任务提醒");
+            n.setOrderNo(task.getOrderNo());
+            n.setTitle(title);
+            n.setContent(content);
+            n.setNoticeType(noticeType);
+            n.setActionType(noticeType);
+            n.setActionPayload("{\"taskId\":" + task.getId() + "}");
+            n.setIsRead(0);
+            n.setCreatedAt(now);
+            sysNoticeService.save(n);
+            count++;
+            log.info("[AiPatrolJob-TaskReminder] 任务{}提醒 {}: {}", task.getId(), assignee, title);
+        }
+        return count;
+    }
+
+    private boolean recentlySentTaskNotice(Long tenantId, Long taskId, String noticeType) {
+        return sysNoticeService.lambdaQuery()
+                .eq(SysNotice::getTenantId, tenantId)
+                .eq(SysNotice::getNoticeType, noticeType)
+                .eq(SysNotice::getActionPayload, "{\"taskId\":" + taskId + "}")
+                .gt(SysNotice::getCreatedAt, LocalDateTime.now().minusHours(12))
+                .count() > 0;
+    }
+
+    private String truncate(String s, int maxLen) {
+        if (s == null) return "";
+        return s.length() > maxLen ? s.substring(0, maxLen) + "..." : s;
     }
 }

@@ -1,247 +1,276 @@
 package com.fashion.supplychain.intelligence.service;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.intelligence.entity.ProceduralMemory;
 import com.fashion.supplychain.intelligence.mapper.ProceduralMemoryMapper;
-import lombok.Data;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
-
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * L4 程序性记忆服务 - SOP/流程/技能管理
- * 
- * <p>设计原则：
- * <ol>
- *   <li>精确匹配优先：按 trigger_keywords 精确匹配用户意图</li>
- *   <li>语义搜索兜底：关键词匹配不到时走向量搜索</li>
- *   <li>置信度过滤：confidence >= 60 才注入</li>
- *   <li>多租户隔离：所有查询带 tenant_id WHERE（P0铁律4）</li>
- * </ol>
+ * L4程序性记忆服务
+ *
+ * <p>用途：SOP结构化存储与检索，流程类问题直接调用而非推理</p>
+ *
+ * @author xiaoyun
+ * @since 2026-06-24
  */
-@Service
-@Lazy
 @Slf4j
+@Service
+@RequiredArgsConstructor
 public class ProceduralMemoryService {
 
-    @Autowired
-    private ProceduralMemoryMapper proceduralMemoryMapper;
+    private final ProceduralMemoryMapper proceduralMemoryMapper;
 
-    @Autowired(required = false)
-    private ObjectMapper objectMapper;
+    /**
+     * 根据用户消息检索匹配的SOP
+     *
+     * @param userMessage 用户消息
+     * @return 匹配的SOP列表（最多3个）
+     */
+    public List<ProceduralMemory> searchSops(String userMessage) {
+        Long tenantId = UserContext.tenantId();
+        if (tenantId == null) {
+            log.warn("[ProceduralMemory] tenantId为空，无法检索SOP");
+            return List.of();
+        }
 
-    private static final double CONFIDENCE_THRESHOLD = 0.60;
+        // 提取关键词
+        String keyword = extractKeyword(userMessage);
+        if (keyword == null || keyword.isBlank()) {
+            return List.of();
+        }
+
+        log.debug("[ProceduralMemory] 检索SOP，tenantId={}, keyword={}", tenantId, keyword);
+        List<ProceduralMemory> sops = proceduralMemoryMapper.searchByKeyword(tenantId, keyword);
+        log.debug("[ProceduralMemory] 找到{}个匹配SOP", sops.size());
+        return sops;
+    }
+
+    /**
+     * 根据SOP类型获取SOP
+     *
+     * @param sopType SOP类型
+     * @return SOP（置信度最高的）
+     */
+    public ProceduralMemory findBySopType(String sopType) {
+        Long tenantId = UserContext.tenantId();
+        if (tenantId == null) {
+            return null;
+        }
+        return proceduralMemoryMapper.findBySopType(tenantId, sopType);
+    }
+
+    /**
+     * 更新SOP调用统计
+     *
+     * @param sopId SOP ID
+     * @param success 是否成功
+     */
+    public void recordUsage(Long sopId, boolean success) {
+        if (sopId == null) return;
+        try {
+            proceduralMemoryMapper.updateUsageStats(sopId, success ? 1 : 0);
+            log.debug("[ProceduralMemory] 更新SOP统计，id={}, success={}", sopId, success);
+        } catch (Exception e) {
+            log.warn("[ProceduralMemory] 更新统计失败，id={}: {}", sopId, e.getMessage());
+        }
+    }
+
+    /**
+     * 构建SOP上下文文本（用于注入Prompt）
+     *
+     * @param sops SOP列表
+     * @return 格式化的SOP上下文
+     */
+    public String buildSopContext(List<ProceduralMemory> sops) {
+        if (sops == null || sops.isEmpty()) {
+            return "";
+        }
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("\n\n[程序性记忆 - 标准操作流程]\n");
+        sb.append("以下是相关的标准操作流程，请严格按照流程执行：\n\n");
+
+        for (int i = 0; i < sops.size(); i++) {
+            ProceduralMemory sop = sops.get(i);
+            sb.append(String.format("%d. 【%s】%s\n", i + 1, sop.getSopType(), sop.getSopName()));
+            sb.append(String.format("   置信度：%.0f%% | 调用次数：%d\n", 
+                    sop.getConfidence().doubleValue() * 100, sop.getUsageCount()));
+
+            // 解析步骤JSON
+            if (sop.getStepsJson() != null && !sop.getStepsJson().isBlank()) {
+                sb.append("   操作步骤：\n");
+                try {
+                    // 简单的步骤解析（实际应该用JSON库）
+                    String steps = sop.getStepsJson()
+                            .replaceAll("[\\[\\]\"]", "")  // 移除JSON括号和引号
+                            .replaceAll("\\{", "\n     ")
+                            .replaceAll("\\},", "\n")
+                            .replaceAll("step:", "\n       - 步骤")
+                            .replaceAll("action:", "：")
+                            .replaceAll(",", " |");
+                    sb.append(steps).append("\n");
+                } catch (Exception e) {
+                    sb.append("   [步骤详情]").append(sop.getStepsJson()).append("\n");
+                }
+            }
+
+            // 触发关键词
+            if (sop.getTriggerKeywords() != null && !sop.getTriggerKeywords().isBlank()) {
+                sb.append("   适用场景：").append(sop.getTriggerKeywords()).append("\n");
+            }
+        }
+
+        sb.append("\n请按照上述流程指导用户操作，确保步骤完整、数据准确。\n");
+        return sb.toString();
+    }
+
+    /**
+     * 从用户消息中提取关键词
+     */
+    private String extractKeyword(String userMessage) {
+        if (userMessage == null || userMessage.isBlank()) {
+            return null;
+        }
+
+        String msg = userMessage.toLowerCase();
+
+        // 流程类关键词
+        String[] workflowKeywords = {"扫码", "扫描", "计件", "报工", "质检", "检验", "入库", "工资", "结算", "交期", "预测", "供应商", "评估"};
+        for (String kw : workflowKeywords) {
+            if (msg.contains(kw)) {
+                return kw;
+            }
+        }
+
+        // 通用关键词：取前10个字符
+        if (msg.length() >= 5) {
+            return msg.substring(0, Math.min(10, msg.length()));
+        }
+        return msg;
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // 对外接口：匹配SOP（供 AiAgentPromptHelper 调用）
+    // ══════════════════════════════════════════════════════════════════════════
 
     /**
      * 根据用户消息匹配SOP
-     * 
+     *
      * @param tenantId 租户ID
      * @param userMessage 用户消息
-     * @return 匹配的SOP（置信度足够时），否则返回null
+     * @return 匹配的SOP（置信度最高的）
      */
     public MatchedSOP matchSOP(Long tenantId, String userMessage) {
         if (tenantId == null || userMessage == null || userMessage.isBlank()) {
             return null;
         }
 
-        // 步骤1：精确关键词匹配（优先）
-        List<ProceduralMemory> matches = findByKeyword(tenantId, userMessage);
-        if (!matches.isEmpty()) {
-            ProceduralMemory bestMatch = matches.get(0);
-            if (bestMatch.getConfidence() >= CONFIDENCE_THRESHOLD) {
-                // 记录使用次数
-                incrementUsageCount(bestMatch.getId());
-                return toMatchedSOP(bestMatch);
-            }
+        String keyword = extractKeyword(userMessage);
+        if (keyword == null || keyword.isBlank()) {
+            return null;
         }
 
-        // 步骤2：SOP类型匹配（兜底）
-        String detectedType = detectSOPType(userMessage);
-        if (detectedType != null) {
-            List<ProceduralMemory> typeMatches = findBySopType(tenantId, detectedType);
-            if (!typeMatches.isEmpty() && typeMatches.get(0).getConfidence() >= CONFIDENCE_THRESHOLD) {
-                incrementUsageCount(typeMatches.get(0).getId());
-                return toMatchedSOP(typeMatches.get(0));
-            }
+        log.debug("[ProceduralMemory.matchSOP] tenantId={}, keyword={}", tenantId, keyword);
+        List<ProceduralMemory> sops = proceduralMemoryMapper.searchByKeyword(tenantId, keyword);
+
+        if (sops == null || sops.isEmpty()) {
+            log.debug("[ProceduralMemory.matchSOP] 未找到匹配的SOP，keyword={}", keyword);
+            return null;
         }
 
-        return null;
+        ProceduralMemory bestSOP = sops.get(0);
+        log.debug("[ProceduralMemory.matchSOP] 匹配到SOP: {}", bestSOP.getSopName());
+
+        return new MatchedSOP(bestSOP);
     }
 
     /**
-     * 根据关键词查找SOP
+     * 匹配的SOP封装类（供Prompt注入）
      */
-    public List<ProceduralMemory> findByKeyword(Long tenantId, String keyword) {
-        if (tenantId == null || keyword == null) {
-            return new ArrayList<>();
-        }
-        try {
-            // 拆分关键词，分别查询
-            String[] keywords = keyword.split("[，,。.、\\s]+");
-            List<ProceduralMemory> results = new ArrayList<>();
-            for (String kw : keywords) {
-                if (kw.length() >= 2) {
-                    List<ProceduralMemory> matches = proceduralMemoryMapper.findByKeyword(tenantId, kw.trim());
-                    for (ProceduralMemory m : matches) {
-                        if (!results.contains(m)) {
-                            results.add(m);
-                        }
-                    }
-                }
-            }
-            // 按置信度排序
-            results.sort((a, b) -> Double.compare(b.getConfidence(), a.getConfidence()));
-            return results;
-        } catch (Exception e) {
-            log.warn("[ProceduralMemory] 关键词查询失败: {}", e.getMessage());
-            return new ArrayList<>();
-        }
-    }
-
-    /**
-     * 根据类型查找SOP
-     */
-    public List<ProceduralMemory> findBySopType(Long tenantId, String sopType) {
-        if (tenantId == null || sopType == null) {
-            return new ArrayList<>();
-        }
-        try {
-            return proceduralMemoryMapper.findBySopType(tenantId, sopType);
-        } catch (Exception e) {
-            log.warn("[ProceduralMemory] 类型查询失败: {}", e.getMessage());
-            return new ArrayList<>();
-        }
-    }
-
-    /**
-     * 获取高频使用的SOP
-     */
-    public List<ProceduralMemory> getTopUsed(Long tenantId) {
-        if (tenantId == null) {
-            return new ArrayList<>();
-        }
-        try {
-            return proceduralMemoryMapper.findTopUsed(tenantId);
-        } catch (Exception e) {
-            log.warn("[ProceduralMemory] 获取高频SOP失败: {}", e.getMessage());
-            return new ArrayList<>();
-        }
-    }
-
-    /**
-     * 记录成功调用
-     */
-    public void recordSuccess(Long memoryId) {
-        if (memoryId != null) {
-            try {
-                proceduralMemoryMapper.incrementSuccessCount(memoryId);
-            } catch (Exception e) {
-                log.warn("[ProceduralMemory] 记录成功失败: {}", e.getMessage());
-            }
-        }
-    }
-
-    /**
-     * 检测用户消息对应的SOP类型
-     */
-    private String detectSOPType(String message) {
-        if (message.contains("扫码") || message.contains("扫描") || message.contains("工序")) {
-            return "SCAN_WORKFLOW";
-        }
-        if (message.contains("工资") || message.contains("结算") || message.contains("计件")) {
-            return "WAGE_SETTLEMENT";
-        }
-        if (message.contains("质检") || message.contains("检验") || message.contains("次品") || message.contains("不合格")) {
-            return "QUALITY_CHECK";
-        }
-        if (message.contains("交期") || message.contains("延期") || message.contains("排产")) {
-            return "DELIVERY_FORECAST";
-        }
-        if (message.contains("供应商") || message.contains("评估") || message.contains("评级")) {
-            return "SUPPLIER_EVAL";
-        }
-        return null;
-    }
-
-    private void incrementUsageCount(Long id) {
-        try {
-            proceduralMemoryMapper.incrementUsageCount(id);
-        } catch (Exception e) {
-            log.debug("[ProceduralMemory] 记录使用次数失败: {}", e.getMessage());
-        }
-    }
-
-    private MatchedSOP toMatchedSOP(ProceduralMemory memory) {
-        MatchedSOP sop = new MatchedSOP();
-        sop.setId(memory.getId());
-        sop.setSopName(memory.getSopName());
-        sop.setSopType(memory.getSopType());
-        sop.setConfidence(memory.getConfidence());
-        sop.setSteps(parseSteps(memory.getStepsJson()));
-        return sop;
-    }
-
-    private List<Step> parseSteps(String stepsJson) {
-        if (stepsJson == null || stepsJson.isBlank()) {
-            return new ArrayList<>();
-        }
-        try {
-            if (objectMapper != null) {
-                return objectMapper.readValue(stepsJson, new TypeReference<List<Step>>() {});
-            }
-        } catch (Exception e) {
-            log.warn("[ProceduralMemory] 解析步骤JSON失败: {}", e.getMessage());
-        }
-        return new ArrayList<>();
-    }
-
-    /**
-     * 匹配的SOP结果
-     */
-    @Data
     public static class MatchedSOP {
-        private Long id;
-        private String sopName;
-        private String sopType;
-        private Double confidence;
-        private List<Step> steps;
+        private final ProceduralMemory sop;
+        private final List<Step> steps;
 
-        /**
-         * 生成可读的步骤描述
-         */
+        public MatchedSOP(ProceduralMemory sop) {
+            this.sop = sop;
+            this.steps = parseSteps(sop.getStepsJson());
+        }
+
+        public ProceduralMemory getSOP() { return sop; }
+        public List<Step> getSteps() { return steps; }
+        public Long getSopId() { return sop.getId(); }
+
+        /** 格式化SOP步骤为Prompt文本 */
         public String formatSteps() {
             if (steps == null || steps.isEmpty()) {
                 return "";
             }
+
             StringBuilder sb = new StringBuilder();
-            sb.append("【").append(sopName).append("】\n");
+            sb.append("\n\n[程序性记忆 - 标准操作流程]\n");
+            sb.append("检测到你正在询问「").append(sop.getSopName()).append("」，请按以下标准流程指导：\n\n");
+
             for (Step step : steps) {
-                sb.append(step.getStep()).append(". ").append(step.getAction());
-                if (step.getExpected() != null && !step.getExpected().isBlank()) {
-                    sb.append("（预期：").append(step.getExpected()).append("）");
-                }
-                sb.append("\n");
+                sb.append(String.format("%d. 【%s】%s\n",
+                        step.step, step.action, step.tool != null ? "使用工具：" + step.tool : ""));
+                sb.append(String.format("   预期结果：%s\n", step.expected));
             }
+
+            sb.append("\n请严格按照上述步骤执行，确保流程完整、数据准确。\n");
             return sb.toString();
         }
-    }
 
-    /**
-     * SOP步骤
-     */
-    @Data
-    public static class Step {
-        private Integer step;
-        private String action;
-        private String tool;
-        private String expected;
+        private static List<Step> parseSteps(String stepsJson) {
+            if (stepsJson == null || stepsJson.isBlank()) {
+                return List.of();
+            }
+            try {
+                // 简单JSON解析
+                List<Step> steps = new java.util.ArrayList<>();
+                // 移除数组括号
+                String json = stepsJson.replaceAll("[\\[\\]\"]", "");
+                String[] items = json.split("\\},");
+                for (String item : items) {
+                    item = item.replace("{", "").replace("}", "").trim();
+                    if (item.isEmpty()) continue;
+
+                    Step step = new Step();
+                    for (String pair : item.split(",")) {
+                        String[] kv = pair.split(":");
+                        if (kv.length < 2) continue;
+                        String key = kv[0].trim().toLowerCase();
+                        String val = kv[1].trim();
+
+                        if ("step".equals(key)) {
+                            step.step = Integer.parseInt(val);
+                        } else if ("action".equals(key)) {
+                            step.action = val;
+                        } else if ("tool".equals(key)) {
+                            step.tool = val;
+                        } else if ("expected".equals(key)) {
+                            step.expected = val;
+                        }
+                    }
+                    if (step.step > 0) {
+                        steps.add(step);
+                    }
+                }
+                return steps;
+            } catch (Exception e) {
+                log.warn("[ProceduralMemory.parseSteps] 解析失败: {}", e.getMessage());
+                return List.of();
+            }
+        }
+
+        public static class Step {
+            public int step;
+            public String action;
+            public String tool;
+            public String expected;
+        }
     }
 }

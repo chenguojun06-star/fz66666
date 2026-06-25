@@ -282,15 +282,15 @@ const StyleInfoDetailPage: React.FC = () => {
             onChange={setBomAreaTabKey}
             size="small"
             tabBarStyle={{
-              background: '#ffffff',
+              background: 'var(--color-bg-base)',
               padding: '0 12px',
               borderRadius: '10px 10px 0 0',
-              border: '1px solid #e5e7eb',
+              border: '1px solid var(--color-border)',
               margin: 0,
             }}
             items={[
               { key: 'bom', label: 'BOM清单 · 工艺 · 生产', children: (
-                <div style={{ padding: 12, background: '#ffffff', border: '1px solid #e5e7eb', borderTop: 'none', borderRadius: '0 0 10px 10px' }}>
+                <div style={{ padding: 12, background: 'var(--color-bg-base)', border: '1px solid var(--color-border)', borderTop: 'none', borderRadius: '0 0 10px 10px' }}>
                   <StyleBomTab
                     styleId={currentStyle?.id ?? ''}
                     sizeColorConfig={colorSize.sizeColorConfig}
@@ -373,17 +373,17 @@ const StyleInfoDetailPage: React.FC = () => {
                 </div>
               )},
               { key: 'quotation', label: '报价单', children: (
-                <div style={{ padding: 12, background: '#ffffff', border: '1px solid #e5e7eb', borderTop: 'none', borderRadius: '0 0 10px 10px' }}>
+                <div style={{ padding: 12, background: 'var(--color-bg-base)', border: '1px solid var(--color-border)', borderTop: 'none', borderRadius: '0 0 10px 10px' }}>
                   <StyleQuotationTab styleId={currentStyle?.id ?? ''} styleNo={currentStyle?.styleNo ?? ''} totalQty={colorSize.totalMatrixQty} />
                 </div>
               )},
               { key: 'attachment', label: '附件文件', children: (
-                <div style={{ padding: 12, background: '#ffffff', border: '1px solid #e5e7eb', borderTop: 'none', borderRadius: '0 0 10px 10px' }}>
+                <div style={{ padding: 12, background: 'var(--color-bg-base)', border: '1px solid var(--color-border)', borderTop: 'none', borderRadius: '0 0 10px 10px' }}>
                   <StyleAttachmentTab styleId={currentStyle?.id ?? ''} styleNo={currentStyle?.styleNo ?? ''} />
                 </div>
               )},
               { key: 'sku', label: 'SKU管理', children: (
-                <div style={{ padding: 12, background: '#ffffff', border: '1px solid #e5e7eb', borderTop: 'none', borderRadius: '0 0 10px 10px' }}>
+                <div style={{ padding: 12, background: 'var(--color-bg-base)', border: '1px solid var(--color-border)', borderTop: 'none', borderRadius: '0 0 10px 10px' }}>
                   <StyleSkuTab
                     styleId={String(currentStyle?.id ?? '')}
                     styleNo={currentStyle?.styleNo ?? ''}
@@ -396,7 +396,7 @@ const StyleInfoDetailPage: React.FC = () => {
                 </div>
               )},
               { key: 'washlabel', label: '洗水唛', children: (
-                <div style={{ padding: 12, background: '#ffffff', border: '1px solid #e5e7eb', borderTop: 'none', borderRadius: '0 0 10px 10px' }}>
+                <div style={{ padding: 12, background: 'var(--color-bg-base)', border: '1px solid var(--color-border)', borderTop: 'none', borderRadius: '0 0 10px 10px' }}>
                   <StyleWashLabelTab
                     styleId={String(currentStyle?.id ?? '')}
                     styleNo={currentStyle?.styleNo ?? ''}
@@ -416,7 +416,7 @@ const StyleInfoDetailPage: React.FC = () => {
                 </div>
               )},
               { key: 'cutting', label: '裁剪信息', children: (
-                <div style={{ padding: 12, background: '#ffffff', border: '1px solid #e5e7eb', borderTop: 'none', borderRadius: '0 0 10px 10px' }}>
+                <div style={{ padding: 12, background: 'var(--color-bg-base)', border: '1px solid var(--color-border)', borderTop: 'none', borderRadius: '0 0 10px 10px' }}>
                   <StyleCuttingInfoTab styleNo={currentStyle?.styleNo ?? ''} />
                 </div>
               )},
