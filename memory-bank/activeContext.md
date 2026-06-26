@@ -24,6 +24,28 @@
 
 ## 最近变更
 
+### 2026-06-26 Flyway迁移混乱修复
+
+**问题**：数据库迁移历史与本地文件不同步，导致Out of Order错误，应用启动时Flyway验证失败。
+
+**根因**：
+- 数据库中有V202606240001, V202606250001, V202606250002记录但本地文件被重命名
+- V20260623006和V20260624001重复创建t_procedural_memory表
+- 迁移记录与实际文件版本号不匹配
+- checksum校验失败（20260615001, 20260615002, 202606181000）
+
+**修复**：
+1. 删除重复的迁移文件：V20260623006, V20260624001
+2. 删除数据库中本地不存在的迁移记录
+3. 执行flyway:repair修复checksum
+4. 执行flyway:migrate -Dflyway.outOfOrder=true执行待执行的迁移
+5. application.yml中设置out-of-order: true防止将来再有类似问题
+
+**涉及文件**：
+- `application.yml` (out-of-order: true)
+- 删除 `V20260623006__create_procedural_memory_table.sql`
+- 删除 `V20260624001__create_procedural_memory_table.sql`
+
 ### 2026-06-23 系统全面体验优化（8大模块）
 
 **背景**：用户反馈"线上经常出问题""操作不好用""信息不清晰"，全面梳理系统交互、稳定性、信息层级问题，按P0/P1/P2三优先级批量修复。
