@@ -68,6 +68,13 @@ public class AiAgentPromptHelper {
     @Value("${xiaoyun.agent.prompt-executor.queue-capacity:128}")
     private int promptQueueCapacity;
 
+    @Value("${xiaoyun.agent.prompt-build.high-timeout-ms:2000}")
+    private long highTimeoutMs;
+    @Value("${xiaoyun.agent.prompt-build.medium-timeout-ms:1200}")
+    private long mediumTimeoutMs;
+    @Value("${xiaoyun.agent.prompt-build.low-timeout-ms:600}")
+    private long lowTimeoutMs;
+
     private ExecutorService promptBuildExecutor;
 
     @PostConstruct
@@ -104,49 +111,85 @@ public class AiAgentPromptHelper {
         boolean isTenantOwner = UserContext.isTenantOwner();
         boolean isManager = aiAgentToolAccessService.hasManagerAccess();
 
-        CompletableFuture<String> intelligenceCtx = supplyAsync(() -> contextProvider.buildIntelligenceContext());
+        XiaoyunPatterns.IntentType intent = XiaoyunPatterns.estimateIntent(userMessage);
+        boolean isSmallTalk = intent == XiaoyunPatterns.IntentType.SMALL_TALK;
+        boolean isSimpleQuery = intent == XiaoyunPatterns.IntentType.SIMPLE_QUERY;
+        boolean isKnowledgeAsk = intent == XiaoyunPatterns.IntentType.KNOWLEDGE_ASK;
+        boolean isComplex = intent == XiaoyunPatterns.IntentType.COMPLEX_ANALYSIS
+                || intent == XiaoyunPatterns.IntentType.ACTION_COMMAND
+                || isMultiDomain;
+
+        CompletableFuture<String> emptyFuture = CompletableFuture.completedFuture("");
+
+        CompletableFuture<String> intelligenceCtx = isSmallTalk
+                ? emptyFuture
+                : supplyAsync(() -> contextProvider.buildIntelligenceContext());
         CompletableFuture<String> workerProfile = isManager
                 ? CompletableFuture.completedFuture("")
                 : supplyAsync(() -> contextProvider.buildWorkerContext(userName));
-        CompletableFuture<String> mgmtInsight = isManager
+        CompletableFuture<String> mgmtInsight = isManager && !isSmallTalk
                 ? supplyAsync(() -> contextProvider.buildManagementInsight(tenantId))
                 : CompletableFuture.completedFuture("");
-        CompletableFuture<String> longTermMem = supplyAsync(() -> contextProvider.buildLongTermMemory(userId));
-        CompletableFuture<String> memoryCtx = supplyAsync(() -> contextProvider.buildMemoryContext(tenantId, userId));
-        CompletableFuture<String> ragCtx = supplyAsync(() -> contextProvider.buildRagContext(tenantId, userMessage));
-        CompletableFuture<String> userBehavior = supplyAsync(contextProvider::buildUserBehaviorHint);
-        CompletableFuture<String> activePatrol = supplyAsync(contextProvider::buildActivePatrolBlock);
-        CompletableFuture<String> exceptionReport = isManager
+        CompletableFuture<String> longTermMem = isSmallTalk
+                ? emptyFuture
+                : supplyAsync(() -> contextProvider.buildLongTermMemory(userId));
+        CompletableFuture<String> memoryCtx = isSmallTalk
+                ? emptyFuture
+                : supplyAsync(() -> contextProvider.buildMemoryContext(tenantId, userId));
+        CompletableFuture<String> ragCtx = (isKnowledgeAsk || isComplex || isSimpleQuery)
+                ? supplyAsync(() -> contextProvider.buildRagContext(tenantId, userMessage))
+                : emptyFuture;
+        CompletableFuture<String> userBehavior = isSmallTalk
+                ? emptyFuture
+                : supplyAsync(contextProvider::buildUserBehaviorHint);
+        CompletableFuture<String> activePatrol = isSmallTalk
+                ? emptyFuture
+                : supplyAsync(contextProvider::buildActivePatrolBlock);
+        CompletableFuture<String> exceptionReport = isManager && !isSmallTalk
                 ? supplyAsync(() -> contextProvider.buildExceptionReport(tenantId))
                 : CompletableFuture.completedFuture("");
-        CompletableFuture<String> contextFileBlock = supplyAsync(() -> contextProvider.buildContextFileBlock(tenantId));
-        CompletableFuture<String> userProfileBlock = supplyAsync(() -> contextProvider.buildUserProfileBlock(tenantId, userId));
-        CompletableFuture<String> memoryBankBlock = supplyAsync(() -> buildMemoryBankContext(tenantId));
-        CompletableFuture<String> selfCritiqueCtx = supplyAsync(() -> contextProvider.buildSelfCritiqueContext(tenantId));
-        CompletableFuture<String> entityMemCtx = supplyAsync(() -> contextProvider.buildEntityMemoryContext(tenantId, userMessage));
+        CompletableFuture<String> contextFileBlock = isComplex
+                ? supplyAsync(() -> contextProvider.buildContextFileBlock(tenantId))
+                : emptyFuture;
+        CompletableFuture<String> userProfileBlock = isSmallTalk
+                ? emptyFuture
+                : supplyAsync(() -> contextProvider.buildUserProfileBlock(tenantId, userId));
+        CompletableFuture<String> memoryBankBlock = isComplex
+                ? supplyAsync(() -> buildMemoryBankContext(tenantId))
+                : emptyFuture;
+        CompletableFuture<String> selfCritiqueCtx = emptyFuture;
+        CompletableFuture<String> entityMemCtx = (isComplex || isSimpleQuery)
+                ? supplyAsync(() -> contextProvider.buildEntityMemoryContext(tenantId, userMessage))
+                : emptyFuture;
         CompletableFuture<String> masInsightCtx = isMultiDomain
                 ? supplyAsync(() -> contextProvider.buildMasInsightContext(tenantId, userMessage))
                 : CompletableFuture.completedFuture("");
-        CompletableFuture<String> graphRagCtx = supplyAsync(() -> contextProvider.buildGraphRagContext(tenantId, userMessage));
-        CompletableFuture<String> factoryProfileCtx = supplyAsync(() -> contextProvider.buildFactoryProfileContext(tenantId, userMessage));
-        CompletableFuture<String> proceduralMemCtx = supplyAsync(() -> memoryHelper.buildProceduralMemoryBlock());
-        // L4 程序性记忆：人工 SOP（按 trigger_keywords 精确匹配，区别于上面的自动学习模式）
+        CompletableFuture<String> graphRagCtx = (isKnowledgeAsk || isComplex)
+                ? supplyAsync(() -> contextProvider.buildGraphRagContext(tenantId, userMessage))
+                : emptyFuture;
+        CompletableFuture<String> factoryProfileCtx = isSmallTalk
+                ? emptyFuture
+                : supplyAsync(() -> contextProvider.buildFactoryProfileContext(tenantId, userMessage));
+        CompletableFuture<String> proceduralMemCtx = isSmallTalk
+                ? emptyFuture
+                : supplyAsync(() -> memoryHelper.buildProceduralMemoryBlock());
         final Long tenantIdForSop = tenantId;
         final String userMessageForSop = userMessage;
-        CompletableFuture<String> proceduralSopCtx = supplyAsync(() -> buildProceduralSopBlock(tenantIdForSop, userMessageForSop));
-        // L5 归档记忆：用户问"之前/历史/上次"时召回冷数据
-        CompletableFuture<String> archivalMemCtx = supplyAsync(() -> buildArchivalMemoryBlock(tenantIdForSop, userMessageForSop));
+        CompletableFuture<String> proceduralSopCtx = isSmallTalk
+                ? emptyFuture
+                : supplyAsync(() -> buildProceduralSopBlock(tenantIdForSop, userMessageForSop));
+        CompletableFuture<String> archivalMemCtx = emptyFuture;
 
-        // 按优先级分批等待：HIGH优先级块先等3s（影响回答质量的关键上下文）
-        // MEDIUM优先级块等2s（知识/记忆类）
-        // LOW优先级块等1s（锦上添花，缺失不影响）
+        // 按优先级分批等待：HIGH优先级块先等高timeout（影响回答质量的关键上下文）
+        // MEDIUM优先级块等中timeout（知识/记忆类）
+        // LOW优先级块等低timeout（锦上添花，缺失不影响）
         // 分批获取避免串行等待所有块，关键块先到先用
         // HIGH: factoryProfile/entityMemory/proceduralSop/longTermMem/pageContext
         // MEDIUM: rag/graphRag/intelligence/memoryBank/mgmtInsight/userProfile/contextFile
         // LOW: userBehavior/activePatrol/workerProfile(self)/exceptionReport/selfCritique/archival
-        long highTimeout = 3000L;
-        long mediumTimeout = 1800L;
-        long lowTimeout = 1000L;
+        long highTimeout = highTimeoutMs;
+        long mediumTimeout = mediumTimeoutMs;
+        long lowTimeout = lowTimeoutMs;
 
         // HIGH 优先级块（3s）
         String factoryProfileBlock = safeJoinWithTimeout(factoryProfileCtx, highTimeout, "工厂画像(HIGH)");

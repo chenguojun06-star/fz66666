@@ -114,6 +114,9 @@ public class QuickAnswerCacheService {
         return false;
     }
 
+    /** 公共租户ID（所有租户共享的预构建答案） */
+    private static final Long PUBLIC_TENANT_ID = 0L;
+
     /** PREBUILT命中：用简单关键词匹配用户常用问题 */
     private HitResult tryHitPrebuilt(Long tenantId, String userMessage) {
         String msg = userMessage.trim();
@@ -132,15 +135,29 @@ public class QuickAnswerCacheService {
         } else {
             return null;
         }
-        // 单次查询多个关键词（OR条件），提高查询效率和准确性
+
+        // 1. 先查当前租户的PREBUILT答案
         List<QuickAnswer> list = quickAnswerMapper.findPrebuiltByKeywords(tenantId, keywords);
         if (list != null && !list.isEmpty()) {
             QuickAnswer qa = list.get(0);
-            if (qa.getConfidence() >= confidenceThreshold) {
+            if (qa.getConfidence().doubleValue() >= confidenceThreshold) {
                 quickAnswerMapper.incrementHitCount(qa.getId());
                 return toHitResult(qa);
             }
         }
+
+        // 2. 兜底：查公共租户（tenant_id=0）的PREBUILT答案
+        if (!PUBLIC_TENANT_ID.equals(tenantId)) {
+            List<QuickAnswer> publicList = quickAnswerMapper.findPrebuiltByKeywords(PUBLIC_TENANT_ID, keywords);
+            if (publicList != null && !publicList.isEmpty()) {
+                QuickAnswer qa = publicList.get(0);
+                if (qa.getConfidence().doubleValue() >= confidenceThreshold) {
+                    quickAnswerMapper.incrementHitCount(qa.getId());
+                    return toHitResult(qa);
+                }
+            }
+        }
+
         return null;
     }
 

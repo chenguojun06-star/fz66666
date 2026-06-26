@@ -42,16 +42,20 @@ public class SemanticCacheService {
     @Value("${xiaoyun.semantic-cache.enabled:${XIAOYUN_SEMANTIC_CACHE_ENABLED:true}}")
     private boolean enabled;
 
-    @Value("${xiaoyun.semantic-cache.ttl-minutes:${XIAOYUN_SEMANTIC_CACHE_TTL:30}}")
+    @Value("${xiaoyun.semantic-cache.ttl-minutes:${XIAOYUN_SEMANTIC_CACHE_TTL:120}}")
     private int cacheTtlMinutes;
 
-    @Value("${xiaoyun.semantic-cache.similarity-threshold:${XIAOYUN_SEMANTIC_CACHE_THRESHOLD:0.86}}")
+    @Value("${xiaoyun.semantic-cache.similarity-threshold:${XIAOYUN_SEMANTIC_CACHE_THRESHOLD:0.80}}")
     private float similarityThreshold;
+
+    @Value("${xiaoyun.semantic-cache.min-response-length:50}")
+    private int minResponseLength;
 
     private static final String CACHE_PREFIX = "semantic:llm:";
     /** Qdrant 中语义缓存的专用集合 */
     private static final String SEMANTIC_CACHE_COLLECTION = "semantic_cache";
-    /** 最小缓存响应长度（低于此长度的响应不缓存，避免缓存简单问候语） */
+    /** @deprecated 请使用 minResponseLength 配置项 */
+    @Deprecated
     private static final int MIN_RESPONSE_LENGTH = 50;
 
     // ── 命中率监控计数器（线程安全） ──
@@ -76,8 +80,10 @@ public class SemanticCacheService {
         try {
             totalLookups.incrementAndGet();
 
+            String normalizedQuery = normalizeQuery(query);
+
             // 1. 精确匹配：SHA-256 查 Redis
-            String exactKey = buildExactKey(tenantId, query);
+            String exactKey = buildExactKey(tenantId, normalizedQuery);
             String cached = lookupExact(exactKey);
             if (cached != null) {
                 exactHits.incrementAndGet();
@@ -85,7 +91,7 @@ public class SemanticCacheService {
                 return cached;
             }
 
-            // 2. 语义匹配：Qdrant 搜索相似查询
+            // 2. 语义匹配：Qdrant 搜索相似查询（使用原始query，语义匹配更准确）
             String semanticResult = lookupSemantic(tenantId, query);
             if (semanticResult != null) {
                 semanticHits.incrementAndGet();
@@ -111,18 +117,19 @@ public class SemanticCacheService {
         if (!enabled || tenantId == null || query == null || query.isBlank()) {
             return;
         }
-        // 只缓存非空、长度 > 50 字符的响应
-        if (response == null || response.length() <= MIN_RESPONSE_LENGTH) {
+        if (response == null || response.length() <= minResponseLength) {
             return;
         }
         try {
             totalStores.incrementAndGet();
 
-            // 1. 精确缓存：Redis 存储 query_hash -> response
-            String exactKey = buildExactKey(tenantId, query);
+            String normalizedQuery = normalizeQuery(query);
+
+            // 1. 精确缓存：Redis 存储 query_hash -> response（用规范化query）
+            String exactKey = buildExactKey(tenantId, normalizedQuery);
             storeExact(exactKey, response);
 
-            // 2. 语义索引：Qdrant 存储 query_vector -> response（通过 payload）
+            // 2. 语义索引：Qdrant 存储 query_vector -> response（通过 payload，用原始query）
             storeSemantic(tenantId, query, response);
         } catch (Exception e) {
             log.warn("[SemanticCache] store失败，静默降级 tenantId={}: {}", tenantId, e.getMessage());
@@ -332,5 +339,20 @@ public class SemanticCacheService {
     private String truncate(String text, int maxLen) {
         if (text == null) return "";
         return text.length() > maxLen ? text.substring(0, maxLen) : text;
+    }
+
+    /**
+     * 规范化查询字符串，提高精确缓存命中率
+     * - 去除首尾空白
+     * - 合并多个空白字符为单个空格
+     * - 统一中英文标点（可选）
+     * - 转小写
+     */
+    private String normalizeQuery(String query) {
+        if (query == null) return null;
+        String normalized = query.trim()
+                .replaceAll("\\s+", " ")
+                .toLowerCase();
+        return normalized;
     }
 }

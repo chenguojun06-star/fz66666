@@ -75,8 +75,11 @@ export default defineConfig({
                 || id.includes('node_modules/clsx/')) {
               return 'vendor-react-router';
             }
-            // L4：大型第三方库
-            if (id.includes('echarts/') || id.includes('zrender/') || id.includes('echarts-for-react/')) return 'vendor-echarts';
+            // L4：大型第三方库（按需加载优化）
+            // echarts 1.1M：拆分为 echarts-core + echarts-charts（按需加载）
+            if (id.includes('echarts/core') || id.includes('zrender/')) return 'vendor-echarts-core';
+            if (id.includes('echarts/charts') || id.includes('echarts/components')) return 'vendor-echarts-charts';
+            if (id.includes('echarts/') || id.includes('echarts-for-react/')) return 'vendor-echarts';
             if (id.includes('exceljs/')) return 'vendor-exceljs';
             if (id.includes('@antv/') || id.includes('@ant-design/charts')) return 'vendor-antv';
             if (id.includes('dayjs/')) return 'vendor-dayjs';
@@ -86,6 +89,8 @@ export default defineConfig({
             if (id.includes('qrcode')) return 'vendor-qrcode';
             if (id.includes('react-virtuoso/')) return 'vendor-virtuoso';
             if (id.includes('jsbarcode/')) return 'vendor-jsbarcode';
+            // xlsx 单独分包（Excel导出功能懒加载）
+            if (id.includes('xlsx/')) return 'vendor-xlsx';
           }
         },
       },
