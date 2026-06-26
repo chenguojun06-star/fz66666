@@ -97,6 +97,7 @@ public class IntelligenceExecutionController {
             // 注入租户ID和创建时间
             command.setTenantId(tenantId);
             command.setCreatedAt(System.currentTimeMillis());
+            command.setExpiresAt(System.currentTimeMillis() + 5 * 60 * 1000L); // 默认5分钟有效期
             if (command.getCommandId() == null || command.getCommandId().isEmpty()) {
                 command.generateCommandId();
             }

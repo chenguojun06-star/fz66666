@@ -233,7 +233,13 @@ public class AgentLoopEngine {
         }
 
         IntelligenceInferenceResult result = performInference(ctx, cb, iter);
+        log.info("[DEBUG-AI] iter={} success={} contentLen={} toolCalls={} provider={} model={}",
+                iter, result.isSuccess(),
+                result.getContent() != null ? result.getContent().length() : 0,
+                result.getToolCalls() != null ? result.getToolCalls().size() : 0,
+                result.getProvider(), result.getModel());
         if (!result.isSuccess()) {
+            log.warn("[DEBUG-AI] inference error: {}", result.getErrorMessage());
             return handleInferenceError(ctx, result, cb);
         }
 

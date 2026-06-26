@@ -81,6 +81,21 @@ public class IntelligenceAiAdvisorController {
     @Autowired
     private ProactiveInsightService proactiveInsightService;
 
+    @Autowired
+    private org.springframework.context.ApplicationContext applicationContext;
+
+    @Autowired
+    private java.util.List<com.fashion.supplychain.intelligence.agent.tool.AgentTool> allAgentTools;
+
+    @Autowired
+    private com.fashion.supplychain.intelligence.service.AiAgentToolAccessService aiAgentToolAccessService;
+
+    @Autowired
+    private com.fashion.supplychain.intelligence.routing.AiAgentDomainRouter aiAgentDomainRouter;
+
+    @Autowired
+    private com.fashion.supplychain.intelligence.routing.AiAgentToolAdvisor aiAgentToolAdvisor;
+
     @GetMapping("/ai-advisor/status")
     public Result<?> aiAdvisorStatus() {
         boolean enabled = aiAdvisorService.isEnabled();
@@ -510,6 +525,44 @@ public class IntelligenceAiAdvisorController {
         configStatus.put("deepseek_model", deepseekModel);
         result.put("configStatus", configStatus);
 
+        // 工具诊断
+        java.util.Map<String, Object> toolDiag = new java.util.LinkedHashMap<>();
+        try {
+            // 获取所有注册工具
+            toolDiag.put("registered_tool_count", allAgentTools.size());
+
+            // 可见工具
+            var visibleTools = aiAgentToolAccessService.resolveVisibleTools(new java.util.ArrayList<>(allAgentTools));
+            toolDiag.put("visible_tool_count", visibleTools.size());
+
+            // 多个查询的诊断
+            java.util.List<String> testQueries = java.util.List.of(
+                    "帮我下个订单", "帮我下单", "创建订单", "下单",
+                    "查询订单进度", "工资多少", "库存还有多少",
+                    "什么时候能出货", "货好了吗", "这个月工资多少",
+                    "还有多少面料", "裁完了吗", "加急一下",
+                    "扫错了怎么办", "帮我批一下", "今日生产统计"
+            );
+            java.util.List<java.util.Map<String, Object>> queryTests = new java.util.ArrayList<>();
+            for (String q : testQueries) {
+                java.util.Map<String, Object> qt = new java.util.LinkedHashMap<>();
+                qt.put("query", q);
+                var domains = aiAgentDomainRouter.route(q);
+                qt.put("domains", domains.stream().map(Enum::name).toList());
+                var domainFiltered = aiAgentToolAccessService.filterByDomains(visibleTools, domains);
+                qt.put("domain_filtered_count", domainFiltered.size());
+                var advised = aiAgentToolAdvisor.advise(domainFiltered, q);
+                qt.put("advised_count", advised.size());
+                qt.put("advised_names", advised.stream().map(t -> t.getName()).sorted().toList());
+                queryTests.add(qt);
+            }
+            toolDiag.put("query_tests", queryTests);
+        } catch (Exception e) {
+            toolDiag.put("error", e.getMessage());
+            toolDiag.put("error_stack", java.util.Arrays.stream(e.getStackTrace()).limit(5).map(StackTraceElement::toString).toList());
+        }
+        result.put("toolDiagnostics", toolDiag);
+
         // 快速连通性测试（短消息 + 短超时）
         java.util.List<java.util.Map<String, Object>> tests = new java.util.ArrayList<>();
 
@@ -528,6 +581,7 @@ public class IntelligenceAiAdvisorController {
             textTest.put("preview", content != null
                     ? content.substring(0, Math.min(80, content.length())) + "..."
                     : "无内容");
+            textTest.put("isDefaultAnswer", content != null && content.contains("我正在学习中"));
         } catch (Exception e) {
             textTest.put("status", "error");
             textTest.put("elapsedMs", System.currentTimeMillis() - startTs);

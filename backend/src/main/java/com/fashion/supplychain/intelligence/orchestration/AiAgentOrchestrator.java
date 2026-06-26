@@ -264,6 +264,9 @@ public class AiAgentOrchestrator {
             SyncAgentLoopCallback cb = new SyncAgentLoopCallback(
                     ctx, memoryHelper, decisionCardOrchestrator, longTermMemoryOrchestrator);
             String loopResult = loopEngine.run(ctx, cb);
+            log.info("[DEBUG-AI] loopResult={}, finalContent={}, toolRecords={}",
+                    loopResult, cb.getFinalContent() != null ? cb.getFinalContent().length() + "chars" : "null",
+                    cb.getExecRecords() != null ? cb.getExecRecords().size() : 0);
 
             if ("stuck_detected".equals(loopResult)) {
                 return Result.success("抱歉，我在处理过程中遇到了循环，已自动终止。请尝试换一种方式描述您的需求。");
