@@ -149,7 +149,8 @@ management:
   endpoints:
     web:
       exposure:
-        include: ${ACTUATOR_ENDPOINTS:health}
+        # 增强：暴露hikari指标用于监控
+        include: ${ACTUATOR_ENDPOINTS:health,metrics}
       base-path: /actuator
   endpoint:
     health:
@@ -164,11 +165,14 @@ management:
       export:
         enabled: true
   metrics:
-      distribution:
-        percentiles-histogram:
-          http.server.requests: true
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
       tags:
         application: ${spring.application.name:supplychain}
+    # HikariCP连接池指标
+    enable:
+      hikaricp: true
   health:
     livenessstate:
       enabled: true

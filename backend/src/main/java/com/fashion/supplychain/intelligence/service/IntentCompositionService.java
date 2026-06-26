@@ -229,7 +229,7 @@ public class IntentCompositionService {
         public static MultiIntentDetectionResult single(String message) {
             MultiIntentDetectionResult r = new MultiIntentDetectionResult();
             r.isMultiIntent = false;
-            r.intents = List.of(message);
+            r.intents = message == null ? Collections.emptyList() : List.of(message);
             r.originalMessage = message;
             return r;
         }
