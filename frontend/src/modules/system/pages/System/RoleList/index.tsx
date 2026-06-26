@@ -212,7 +212,10 @@ const RoleList: React.FC = () => {
   const [checkedPermIds, setCheckedPermIds] = useState<Set<number>>(new Set());
   const [permLoading, setPermLoading] = useState(false);
   const [permSaving, setPermSaving] = useState(false);
-  const [permKeyword, setPermKeyword] = useState('');
+  // 权限搜索词（原始值，用于即时显示）
+  const [permKeywordInput, setPermKeywordInput] = useState('');
+  // 防抖后的搜索词
+  const permKeyword = useDebouncedValue(permKeywordInput, 200);
 
   const [employeeModalOpen, setEmployeeModalOpen] = useState(false);
   const [employeeList, setEmployeeList] = useState<any[]>([]);
@@ -748,8 +751,8 @@ const RoleList: React.FC = () => {
               <Button type="primary" icon={<CheckSquareOutlined />} onClick={handleSelectAll}>一键全选</Button>
               <Button icon={<BorderOutlined />} onClick={handleDeselectAll}>一键取消</Button>
               <Input
-                value={permKeyword}
-                onChange={(e) => setPermKeyword(e.target.value)}
+                value={permKeywordInput}
+                onChange={(e) => setPermKeywordInput(e.target.value)}
                 placeholder="搜索权限名称"
                 style={{ width: 200 }}
                 allowClear
