@@ -135,6 +135,7 @@ const UserList: React.FC = () => {
   const debouncedKeyword = useDebouncedValue(keywordInput, 300);
 
   // ===== 人员统计（用于顶部简洁统计条）=====
+  // 优化：使用 permissionRange 和 factoryId 判断用户类型，更准确
   const userStats = useMemo(() => {
     let internal = 0;
     let externalFactory = 0;
@@ -142,19 +143,38 @@ const UserList: React.FC = () => {
     let activeCount = 0;
 
     userList.forEach((u) => {
+      // 优先用 permissionRange 判断
+      const permRange = String(u.permissionRange || '').toLowerCase();
       const roleName = String(u.roleName || '').toLowerCase();
-      const roleCode = String(u.roleCode || '').toLowerCase();
-      if (roleName.includes('factory') || roleName.includes('外发') || roleName.includes('外包') ||
-          roleCode.includes('factory_owner') || roleCode.includes('external')) {
+      const roleCode = String((u as any).roleCode || '').toLowerCase();
+      const factoryId = u.factoryId;
+      const isFactoryOwner = u.isFactoryOwner;
+
+      // 判断是否为外发工厂用户：有factoryId 或 permissionRange包含external/factory
+      const isExternalFactory = (factoryId && String(factoryId).length > 0) ||
+                                 isFactoryOwner ||
+                                 permRange.includes('external') ||
+                                 permRange.includes('factory') ||
+                                 roleName.includes('factory') ||
+                                 roleName.includes('外发') ||
+                                 roleName.includes('外包') ||
+                                 roleCode.includes('factory_owner') ||
+                                 roleCode.includes('external');
+
+      // 判断是否为供应商用户
+      const isSupplier = permRange.includes('supplier') ||
+                         roleName.includes('supplier') ||
+                         roleName.includes('vendor') ||
+                         roleName.includes('供应商') ||
+                         roleName.includes('面辅料') ||
+                         roleName.includes('物料');
+
+      if (isExternalFactory && !isSupplier) {
         externalFactory++;
-      } else if (roleName.includes('supplier') || roleName.includes('vendor') ||
-                 roleName.includes('供应商') || roleName.includes('面辅料') || roleName.includes('物料')) {
+      } else if (isSupplier) {
         supplier++;
-      } else if (roleName.includes('admin') || roleName.includes('manager') ||
-                 roleName.includes('主管') || roleName.includes('组长') ||
-                 roleName.includes('员工') || roleName.includes('operator') ||
-                 roleName.includes('采购') || roleName.includes('财务') ||
-                 roleName.includes('仓库') || roleName.includes('merchandiser')) {
+      } else {
+        // 其他默认为内部员工
         internal++;
       }
 

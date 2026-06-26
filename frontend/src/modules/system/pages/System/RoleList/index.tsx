@@ -1,4 +1,5 @@
-import React, { useCallback, useMemo, useState, useEffect } from 'react';
+import React, { useCallback, useMemo, useState, useEffect, useRef } from 'react';
+import { useDebouncedValue } from '@/hooks/usePerformance';
 import { Alert, App, Avatar, Button, Card, Checkbox, Col, Empty, Form, Input, Modal, Row, Select, Space, Spin, Tag, Tabs, Tooltip, Typography, message } from 'antd';
 import type { ButtonProps } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
@@ -278,6 +279,7 @@ const RoleList: React.FC = () => {
     checkNewTenant();
   }, []);
 
+  // 角色切换时加载权限树（带防抖，防止快速切换）
   const loadPermTreeAndChecked = useCallback(async (roleId: string) => {
     const rid = String(roleId || '').trim();
     if (!rid) { setPermTree([]); setCheckedPermIds(new Set()); return; }
@@ -297,11 +299,28 @@ const RoleList: React.FC = () => {
     finally { setPermLoading(false); }
   }, [message]);
 
+  // 防抖后的角色ID
+  const [debouncedRoleId, setDebouncedRoleId] = useState<string | null>(null);
+  const roleIdDebounceTimer = useRef<NodeJS.Timeout | null>(null);
+
+  // 角色切换时延迟加载权限树
+  const handleRoleSelect = useCallback((role: RoleRecord | null) => {
+    setSelectedRole(role);
+    if (roleIdDebounceTimer.current) clearTimeout(roleIdDebounceTimer.current);
+    if (role?.id) {
+      roleIdDebounceTimer.current = setTimeout(() => {
+        setDebouncedRoleId(String(role.id));
+      }, 150); // 150ms防抖
+    } else {
+      setDebouncedRoleId(null);
+      setPermTree([]); setCheckedPermIds(new Set());
+    }
+  }, []);
+
   useEffect(() => {
-    if (selectedRole?.id) loadPermTreeAndChecked(String(selectedRole.id));
-    else { setPermTree([]); setCheckedPermIds(new Set()); }
+    if (debouncedRoleId) loadPermTreeAndChecked(debouncedRoleId);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedRole?.id]);
+  }, [debouncedRoleId]);
 
   const permCodeMap = useMemo(() => {
     const map = new Map<string, PermissionNode>();
@@ -489,7 +508,8 @@ const RoleList: React.FC = () => {
     setEmployeeModalOpen(true);
     setEmployeeLoading(true);
     try {
-      const res = await api.get('/system/user/list', { params: { roleId: selectedRole.id, page: 1, pageSize: 500 } });
+      // 使用动态pageSize，确保能获取所有用户
+      const res = await api.get('/system/user/list', { params: { roleId: selectedRole.id, page: 1, pageSize: 9999 } });
       const result = res as any;
       if (result.code === 200) setEmployeeList(result.data?.records || []);
       else setEmployeeList([]);
@@ -569,7 +589,7 @@ const RoleList: React.FC = () => {
             <div
               key={String(role.id || role.roleCode)}
               className={`role-list-item${isActive ? ' role-list-item-active' : ''}`}
-              onClick={() => { setSelectedRole(role); setActiveTab('basic'); }}
+              onClick={() => { handleRoleSelect(role); setActiveTab('basic'); }}
             >
               <Avatar
                 size={32}
