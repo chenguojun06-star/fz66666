@@ -27,6 +27,19 @@ jobs:
         run: mvn package -DskipTests -q
         working-directory: ${{ env.BACKEND_DIR }}
 
+      - name: Pre-check Flyway migrations
+        run: |
+          echo "=== 检查迁移文件版本号格式 ==="
+          python3 scripts/check-flyway-versions.py
+          echo "=== 检查迁移SQL幂等性 ==="
+          python3 scripts/check-flyway-sql.py
+          echo "=== 检查Entity与Flyway一致性 ==="
+          python3 scripts/check-entity-flyway.py
+          echo "=== 检查列依赖 ==="
+          python3 scripts/check-flyway-column-deps.py
+          echo "✅ 所有Flyway检查通过"
+        working-directory: ${{ github.workspace }}
+
       - name: Login to WeChat Cloud Container Registry
         uses: docker/login-action@v3
         with:
