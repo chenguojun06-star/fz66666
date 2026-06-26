@@ -43,7 +43,7 @@ public class CuttingTaskController {
      *
      * @since 2026-02-01 优化版本
      */
-    @GetMapping("/list")
+    @GetMapping
     public Result<?> list(@RequestParam Map<String, Object> params) {
         // 智能路由：我的任务
         if ("true".equals(String.valueOf(params.get("myTasks")))) {
@@ -103,19 +103,12 @@ public class CuttingTaskController {
         return success ? Result.success("更新成功") : Result.fail("更新失败");
     }
 
-    @GetMapping("/by-style-no")
-    @Deprecated
-    public Result<?> listByStyleNo(@RequestParam String styleNo) {
+    /**
+     * 按款号查询裁剪任务列表（RESTful：使用子资源路径 /by-style/{styleNo}）
+     */
+    @GetMapping("/by-style/{styleNo}")
+    public Result<?> listByStyleNo(@PathVariable String styleNo) {
         return doListByStyle(styleNo);
-    }
-
-    @PostMapping("/list-by-style")
-    public Result<?> listByStyle(@RequestBody Map<String, Object> body) {
-        String styleNo = body.get("styleNo") != null ? String.valueOf(body.get("styleNo")) : null;
-        if (styleNo == null || styleNo.trim().isEmpty()) {
-            return Result.fail("缺少styleNo参数");
-        }
-        return doListByStyle(styleNo.trim());
     }
 
     private Result<?> doListByStyle(String styleNo) {

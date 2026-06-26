@@ -35,7 +35,7 @@ export default defineConfig({
     dedupe: ['react', 'react-dom']
   },
   build: {
-    chunkSizeWarningLimit: 800,
+    chunkSizeWarningLimit: 600,
     minify: 'esbuild',
     target: 'es2020',
     rollupOptions: {
@@ -47,15 +47,35 @@ export default defineConfig({
         // 3) 保持依赖图线性化：基础库 → UI 组件 → 业务模块
         manualChunks(id) {
           if (id.includes('node_modules/')) {
-            // 基础框架（必须最先加载，含 React/ReactDOM/antd/rc-*/@ant-design/icons）
-            if (id.includes('react/') || id.includes('react-dom/') || id.includes('scheduler/')
-                || id.includes('react-router') || id.includes('@remix-run/')
-                || id.includes('antd/') || id.includes('@ant-design/')
-                || id.includes('rc-') || id.includes('@rc-component/')
-                || id.includes('clsx/') || id.includes('zustand/')) {
+            // ============================================================
+            // 拆分策略：基础框架按"是否首屏必需"分层
+            // L1 核心（vendor-react-core）：react/react-dom/scheduler，无条件最先加载
+            // L2 UI 框架（vendor-react-antd）：antd/rc-*/@ant-design/icons，与 antd 配套
+            // L3 路由+状态（vendor-react-router）：react-router/zustand/clsx
+            // L4 大型第三方：echarts/exceljs/antv/...
+            // ============================================================
+
+            // L1：React 核心（必须最先加载）
+            if (id.includes('node_modules/react/')
+                || id.includes('node_modules/react-dom/')
+                || id.includes('node_modules/scheduler/')) {
+              return 'vendor-react-core';
+            }
+            // L2：antd + 配套 rc-* + @ant-design/icons
+            if (id.includes('node_modules/antd/')
+                || id.includes('node_modules/@ant-design/icons/')
+                || id.includes('node_modules/rc-')
+                || id.includes('node_modules/@rc-component/')) {
               return 'vendor-react-antd';
             }
-            // 大型第三方库
+            // L3：路由 + 状态管理 + 工具
+            if (id.includes('node_modules/react-router')
+                || id.includes('node_modules/@remix-run/')
+                || id.includes('node_modules/zustand/')
+                || id.includes('node_modules/clsx/')) {
+              return 'vendor-react-router';
+            }
+            // L4：大型第三方库
             if (id.includes('echarts/') || id.includes('zrender/') || id.includes('echarts-for-react/')) return 'vendor-echarts';
             if (id.includes('exceljs/')) return 'vendor-exceljs';
             if (id.includes('@antv/') || id.includes('@ant-design/charts')) return 'vendor-antv';
@@ -67,8 +87,6 @@ export default defineConfig({
             if (id.includes('react-virtuoso/')) return 'vendor-virtuoso';
             if (id.includes('jsbarcode/')) return 'vendor-jsbarcode';
           }
-          // AI 智能模块单独打包（但仅 src 代码，不会与基础框架形成循环）
-          // 不再将 zustand 放入 AI 模块，保持 AI 模块作为纯业务代码
         },
       },
     },

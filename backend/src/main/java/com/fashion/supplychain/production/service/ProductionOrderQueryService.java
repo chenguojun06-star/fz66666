@@ -13,6 +13,7 @@ import com.fashion.supplychain.production.helper.OrderFlowStageFillHelper;
 import com.fashion.supplychain.production.helper.OrderPriceFillHelper;
 import com.fashion.supplychain.production.helper.OrderProgressFillHelper;
 import com.fashion.supplychain.production.helper.OrderStageBundleStatsFillHelper;
+import com.fashion.supplychain.production.helper.OrderListCacheHelper;
 import com.fashion.supplychain.production.helper.ProcessParentNodeResolver;
 import com.fashion.supplychain.style.entity.SecondaryProcess;
 import com.fashion.supplychain.style.entity.StyleAttachment;
@@ -88,12 +89,24 @@ public class ProductionOrderQueryService {
     @Autowired
     private ObjectMapper objectMapper;
 
+    @Autowired
+    private OrderListCacheHelper orderListCacheHelper;
+
     private final ExecutorService enrichExecutor = Executors.newFixedThreadPool(8);
 
     public IPage<ProductionOrder> queryPage(Map<String, Object> params) {
         Map<String, Object> safeParams = params == null ? new HashMap<>() : params;
         int page = ParamUtils.getPage(safeParams);
         int pageSize = ParamUtils.getPageSizeClamped(safeParams, 10, 1, 200);
+
+        // 缓存命中直接返回（OrderListCacheHelper 已实现：仅缓存非个性化+稳定条件场景，TTL=300s）
+        String cacheKey = orderListCacheHelper.buildListCacheKey(safeParams);
+        IPage<?> cached = orderListCacheHelper.getListCache(cacheKey);
+        if (cached != null) {
+            log.debug("[OrderQuery] cache hit, key={}", cacheKey);
+            return (IPage<ProductionOrder>) cached;
+        }
+
         Page<ProductionOrder> pageInfo = new Page<>(page, pageSize);
 
         QueryParams qp = extractQueryParams(safeParams);
@@ -105,6 +118,9 @@ public class ProductionOrderQueryService {
         IPage<ProductionOrder> resultPage = productionOrderMapper.selectPage(pageInfo, wrapper);
         enrichOrderList(resultPage);
         applyCurrentProcessNameFilter(resultPage, qp.currentProcessName);
+
+        // 写入缓存
+        orderListCacheHelper.putListCache(cacheKey, resultPage);
         return resultPage;
     }
 
@@ -296,6 +312,22 @@ public class ProductionOrderQueryService {
 
 
     public ProductionOrder getDetailById(String id) {
+        if (!StringUtils.hasText(id)) {
+            return null;
+        }
+        // 详情缓存
+        String detailKey = orderListCacheHelper.buildDetailCacheKey(id);
+        java.util.Map<String, Object> cachedDetail = orderListCacheHelper.getDetailCache(detailKey);
+        if (cachedDetail != null) {
+            log.debug("[OrderQuery] detail cache hit, key={}", detailKey);
+            // 从 Map 反序列化为 ProductionOrder
+            try {
+                return objectMapper.convertValue(cachedDetail, ProductionOrder.class);
+            } catch (Exception e) {
+                log.debug("[OrderQuery] detail cache deserialize failed, fallback to DB: {}", e.getMessage());
+            }
+        }
+
         String ctxFactoryId = com.fashion.supplychain.common.UserContext.factoryId();
         LambdaQueryWrapper<ProductionOrder> wrapper = new LambdaQueryWrapper<ProductionOrder>()
                 .eq(ProductionOrder::getId, id)
@@ -305,6 +337,11 @@ public class ProductionOrderQueryService {
 
         if (productionOrder != null) {
             fillDetails(List.of(productionOrder));
+            try {
+                orderListCacheHelper.putDetailCache(detailKey, productionOrder);
+            } catch (Exception e) {
+                log.debug("[OrderQuery] detail cache put failed: {}", e.getMessage());
+            }
         }
 
         return productionOrder;

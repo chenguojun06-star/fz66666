@@ -12,6 +12,8 @@ import api from '@/utils/api';
 import { MATERIAL_PURCHASE_STATUS } from '@/constants/business';
 import type { MaterialPurchase as MaterialPurchaseType } from '@/types/production';
 import { formatMaterialQuantity, formatReferenceKilograms, subtractMaterialQuantity } from '../utils';
+import { exportToExcel } from '@/utils/excelExport';
+import dayjs from 'dayjs';
 
 interface UsePurchaseActionsOptions {
   message: any;
@@ -541,6 +543,25 @@ export function usePurchaseActions({
 
   const handleExport = async () => {
     if (!purchaseList.length) { message.warning('当前没有数据可导出'); return; }
+    const exportColumns = [
+      { header: '序号', key: 'no', width: 6 },
+      { header: '订单号', key: 'orderNo', width: 18 },
+      { header: '采购单号', key: 'purchaseNo', width: 18 },
+      { header: '物料类型', key: 'materialType', width: 10 },
+      { header: '物料名称', key: 'materialName', width: 20 },
+      { header: '物料编码', key: 'materialCode', width: 16 },
+      { header: '规格', key: 'specifications', width: 14 },
+      { header: '供应商', key: 'supplierName', width: 18 },
+      { header: '采购数量', key: 'purchaseQuantity', width: 10 },
+      { header: '参考公斤数', key: 'referenceKilograms', width: 12 },
+      { header: '到货数量', key: 'arrivedQuantity', width: 10 },
+      { header: '待到数量', key: 'pendingQuantity', width: 10 },
+      { header: '单价', key: 'unitPrice', width: 10 },
+      { header: '总金额', key: 'totalAmount', width: 12 },
+      { header: '状态', key: 'status', width: 10 },
+      { header: '领取人', key: 'receiverName', width: 12 },
+      { header: '创建时间', key: 'createTime', width: 20 },
+    ];
     const exportData = purchaseList.map((item, index) => [
       index + 1,
       item.orderNo || '-',
@@ -561,45 +582,11 @@ export function usePurchaseActions({
       item.createTime || '-',
     ]);
     try {
-      const ExcelJS = await import('exceljs');
-      const workbook = new ExcelJS.default.Workbook();
-      const worksheet = workbook.addWorksheet('面辅料采购');
-      worksheet.columns = [
-        { header: '序号', key: 'no', width: 6 },
-        { header: '订单号', key: 'orderNo', width: 18 },
-        { header: '采购单号', key: 'purchaseNo', width: 18 },
-        { header: '物料类型', key: 'materialType', width: 10 },
-        { header: '物料名称', key: 'materialName', width: 20 },
-        { header: '物料编码', key: 'materialCode', width: 16 },
-        { header: '规格', key: 'specifications', width: 14 },
-        { header: '供应商', key: 'supplierName', width: 18 },
-        { header: '采购数量', key: 'purchaseQuantity', width: 10 },
-        { header: '参考公斤数', key: 'referenceKilograms', width: 12 },
-        { header: '到货数量', key: 'arrivedQuantity', width: 10 },
-        { header: '待到数量', key: 'pendingQuantity', width: 10 },
-        { header: '单价', key: 'unitPrice', width: 10 },
-        { header: '总金额', key: 'totalAmount', width: 12 },
-        { header: '状态', key: 'status', width: 10 },
-        { header: '领取人', key: 'receiverName', width: 12 },
-        { header: '创建时间', key: 'createTime', width: 20 },
-      ];
-      worksheet.addRows(exportData);
-      const headerRow = worksheet.getRow(1);
-      headerRow.font = { bold: true };
-      headerRow.alignment = { horizontal: 'center' };
-      const now = new Date();
-      const date = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
-      const time = `${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`;
-      const buffer = await workbook.xlsx.writeBuffer();
-      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `面辅料采购_${date}_${time}.xlsx`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
+      await exportToExcel(
+        exportData.map((row) => Object.fromEntries(exportColumns.map((c, i) => [c.key, row[i]]))),
+        exportColumns,
+        `面辅料采购_${dayjs().format('YYYYMMDDHHmmss')}.xlsx`,
+      );
       message.success('导出成功');
     } catch (e: unknown) {
       message.error(e instanceof Error ? e.message : '导出失败');
