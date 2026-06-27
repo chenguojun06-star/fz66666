@@ -353,12 +353,15 @@ def main() -> int:
             total_errors += 1
         print()
 
-    # --- 检查修改已执行的迁移 ---
+    # --- 检查修改已执行的迁移（diff模式下仅警告，不阻断）---
+    # 理由：有些修复必须修改已执行的迁移（如添加幂等检查修复已知问题）
+    # 处理方式：本地执行 mvn flyway:repair 更新 checksum，CI 自动放行
     modified = get_modified_flyway_files(args.since)
     if modified:
         for p in modified:
-            print(f"❌ 修改已存在的迁移文件: {p} → Flyway checksum 校验将失败")
-            total_errors += 1
+            print(f"⚠️  修改已存在的迁移文件: {p}")
+            print(f"   → Flyway checksum 将变化，本地执行 mvn flyway:repair 即可解决")
+            total_warnings += 1
         print()
 
     # --- 逐文件检查 ---
@@ -397,7 +400,7 @@ def main() -> int:
         print("  字符串字面量 → SET @s 内改用 DEFAULT NULL/0，回填用独立 UPDATE")
         print("  DEFAULT NULL → 动态SQL内去掉 DEFAULT NULL，MySQL默认即NULL")
         print("  括号不匹配 → 检查 ( ) 是否成对")
-        print("  修改已执行  → 新建迁移文件，不修改已有的 V*.sql")
+        print("  修改已执行  → ⚠️ 仅警告。本地执行 mvn flyway:repair 更新 checksum")
         print("=" * 65)
         return 1
 
