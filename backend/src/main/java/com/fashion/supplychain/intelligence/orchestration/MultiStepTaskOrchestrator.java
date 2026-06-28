@@ -131,8 +131,9 @@ public class MultiStepTaskOrchestrator {
                 } else {
                     String errorMsg = result.getErrorMessage();
                     boolean isApprovalPending = "REQUIRES_APPROVAL".equals(errorMsg);
+                    // 失败步骤 success 应为 false；审批等待（isApprovalPending=true）视为"已接收待审批"，不算失败
                     results.add(new StepResult(i + 1, stepDesc, step.getAction(),
-                            !isApprovalPending,
+                            isApprovalPending,
                             isApprovalPending ? "需要审批：" + result.getMessage() : result.getMessage(),
                             result.getData()));
 

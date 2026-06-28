@@ -245,24 +245,6 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
           onCoverChange={onCoverChange}
           onStyleParseResult={handleStyleParseResult}
         />
-        {/* 新建模式下：突出 AI 识别入口 */}
-        {isNewPage && (
-          <div
-            style={{
-              marginTop: 12,
-              padding: '10px 12px',
-              background: 'linear-gradient(135deg, #eff6ff 0%, #f5f3ff 100%)',
-              border: '1px solid #bfdbfe',
-              borderRadius: 8,
-              fontSize: 12,
-              color: '#3730a3',
-              lineHeight: 1.55,
-            }}
-          >
-            <div style={{ fontWeight: 600, marginBottom: 4 }}>💡 快速录入提示</div>
-            <div>上传设计稿或实物图后，系统将自动识别并填充款号信息、颜色、尺码等字段，节省手工录入时间。</div>
-          </div>
-        )}
       </div>
 
       {/* 右侧：表单字段（按业务流程自上而下分区） */}

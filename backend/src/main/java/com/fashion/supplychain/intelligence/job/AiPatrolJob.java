@@ -316,7 +316,7 @@ public class AiPatrolJob {
                     String tenantId = String.valueOf(row.getOrDefault("tenant_id", ""));
                     String processName = String.valueOf(row.getOrDefault("process_name", "未知工序"));
                     String issue = String.format(
-                        "工序[%s] 近24h次品率%.0f%%（共%d次扫码，失败%d次），超出15%阈值",
+                        "工序[%s] 近24h次品率%.0f%%（共%d次扫码，失败%d次），超出15%%阈值",
                         processName, failRate * 100, total.intValue(), failCount.intValue());
                     patrolOrchestrator.createAction(
                         "BIZ_PATROL_JOB", issue, "QUALITY_SPIKE",

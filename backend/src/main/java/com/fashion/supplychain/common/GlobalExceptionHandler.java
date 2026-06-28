@@ -197,9 +197,26 @@ public class GlobalExceptionHandler {
                         HttpServletRequest request) {
                 String method = request == null ? "" : request.getMethod();
                 String uri = request == null ? "" : request.getRequestURI();
-                logger.warn("请求体解析失败: {} {} - {}", method, uri, e.getMessage());
+                // 打印根因 cause，便于定位是哪个字段反序列化失败
+                Throwable root = e;
+                while (root.getCause() != null && root.getCause() != root) {
+                        root = root.getCause();
+                }
+                String rootMsg = root == e ? e.getMessage() : root.getClass().getSimpleName() + ": " + root.getMessage();
+                logger.warn("请求体解析失败: {} {} - 根因: {}", method, uri, rootMsg);
+                // 向前端返回更具体的提示（包含根因关键字，便于前端开发者定位字段）
+                String clientHint = "请求参数格式错误";
+                if (rootMsg != null) {
+                        if (rootMsg.contains("LocalDateTime") || rootMsg.contains("Date") || rootMsg.contains("deliveryDate")) {
+                                clientHint = "日期字段格式错误，应为 yyyy-MM-dd HH:mm:ss";
+                        } else if (rootMsg.contains("BigDecimal") || rootMsg.contains("Integer") || rootMsg.contains("Long")) {
+                                clientHint = "数值字段格式错误：" + rootMsg;
+                        } else if (rootMsg.contains("UnrecognizedPropertyException") || rootMsg.contains("Unrecognized field")) {
+                                clientHint = "请求包含后端不识别的字段：" + rootMsg;
+                        }
+                }
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                                .body(Result.fail(400, "请求参数格式错误，请检查日期或数值字段格式"));
+                                .body(Result.fail(400, clientHint));
         }
 
         /**

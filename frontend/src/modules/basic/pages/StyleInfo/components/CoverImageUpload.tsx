@@ -399,7 +399,7 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
       >
         {currentImage ? (
           <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-            <Image loading="lazy" src={getFullAuthedFileUrl(currentImage.fileUrl)} alt="main" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            <Image loading="lazy" src={getFullAuthedFileUrl(currentImage.fileUrl)} alt="主图" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             <div style={{ position: 'absolute', left: 10, top: 10, padding: '4px 10px', borderRadius: 999, background: 'rgba(37, 99, 235, 0.9)', color: 'var(--color-bg-base)', fontSize: 12, fontWeight: 600 }}>
               {currentAssetMeta.label}
             </div>
@@ -509,23 +509,17 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
           <div style={{ textAlign: 'center', padding: '24px 16px', width: '100%' }}>
             {isNewMode ? (
               <>
-                <div style={{ color: 'var(--color-primary)', fontSize: 13, marginBottom: 6, fontWeight: 600 }}>上传设计稿或款式照片</div>
-                <div style={{ color: 'var(--color-text-tertiary)', fontSize: 12, lineHeight: 1.55 }}>
-                  支持拖拽上传本地图片，上传完成后可自动识别并填充款号信息、颜色、尺码等字段
+                <div style={{ color: 'var(--color-primary)', fontSize: 13, fontWeight: 600 }}>上传设计稿或款式照片</div>
+                <div style={{ color: 'var(--color-text-tertiary)', fontSize: 12, marginTop: 4 }}>
+                  支持拖拽上传，可自动识别填充
                 </div>
               </>
             ) : !styleId ? (
-              <>
-                <div style={{ color: 'var(--color-primary)', fontSize: 13, marginBottom: 6, fontWeight: 600 }}>上传设计稿或款式照片</div>
-                <div style={{ color: 'var(--color-text-tertiary)', fontSize: 12, lineHeight: 1.55 }}>请先保存基础信息后再上传图片</div>
-              </>
+              <div style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>请先保存基础信息后再上传图片</div>
             ) : enabled ? (
               <span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>上传设计稿或款式照片</span>
             ) : (
-              <>
-                <div style={{ color: 'var(--color-danger)', fontSize: 13, marginBottom: 6, fontWeight: 600 }}>样衣已完成</div>
-                <div style={{ color: 'var(--color-text-tertiary)', fontSize: 12, lineHeight: 1.55 }}>如需修改请联系管理员</div>
-              </>
+              <div style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>样衣已完成，如需修改请联系管理员</div>
             )}
           </div>
         )}
@@ -561,107 +555,25 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
         )}
       </div>
 
-      {/* 【新增】常显的 AI 操作按钮栏（有图片时显示） */}
-      {displayImages.length > 0 && (
-        <div
-          style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            gap: 8,
-            marginBottom: 12,
-            padding: '10px 12px',
-            borderRadius: 8,
-            border: '1px solid var(--color-border-antd)',
-            background: 'var(--color-bg-container)',
-          }}
-        >
-          <Button
-            size="small"
-            icon={<BulbOutlined />}
-            onClick={async () => {
-              if (parsing || searching) return;
-              setParsing(true);
-              setAutoParseError(null);
-              setParseSuccessConfidence(null);
-              try {
-                const res = await runStyleParseFromCurrentImage();
-                if (res?.available) {
-                  message.success(`识别完成（置信度 ${res.overallConfidence}%）`);
-                  onStyleParseResult?.(res);
-                  onAutoParseResult?.(res);
-                  setParseSuccessConfidence(res.overallConfidence ?? null);
-                } else {
-                  message.warning(res?.errorMessage || '识别失败，请人工填写');
-                  setAutoParseError(res?.errorMessage || '识别失败');
-                }
-              } catch {
-                message.warning('智能识别服务暂不可用');
-                setAutoParseError('智能识别服务暂不可用');
-              } finally {
-                setParsing(false);
-              }
-            }}
-            loading={parsing}
-          >
-            {parsing ? 'AI 识别中…' : 'AI 智能识别'}
-          </Button>
-          <Button
-            size="small"
-            icon={<SearchOutlined />}
-            onClick={runStyleSearchByImage}
-            loading={searching}
-          >
-            {searching ? '正在搜款中…' : '搜相似款'}
-          </Button>
-        </div>
-      )}
-
-      {/* 【新增】AI 识别结果状态卡片 */}
-      {displayImages.length > 0 && parseSuccessConfidence !== null && (
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'flex-start',
-            gap: 8,
-            padding: '10px 12px',
-            marginBottom: 12,
-            borderRadius: 8,
-            background: 'rgba(34, 197, 94, 0.08)',
-            border: '1px solid rgba(34, 197, 94, 0.3)',
-          }}
-        >
-          <PictureOutlined style={{ fontSize: 16, color: '#15803d', marginTop: 2 }} />
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 13, fontWeight: 600, color: '#15803d' }}>
-              识别完成：{parseSuccessConfidence}% 置信度
-            </div>
-            <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginTop: 2 }}>
-              AI 已自动填充款号信息、颜色、尺码等字段信息，可在下方表单中核对修改。
-            </div>
-          </div>
-        </div>
-      )}
+      {/* 【新增】AI 识别结果状态卡片（仅识别失败时显示，成功信息已在大图徽标展示） */}
       {displayImages.length > 0 && parseSuccessConfidence === null && autoParseError && (
         <div
           style={{
             display: 'flex',
             alignItems: 'flex-start',
             gap: 8,
-            padding: '10px 12px',
-            marginBottom: 12,
+            padding: '8px 12px',
+            marginBottom: 10,
             borderRadius: 8,
             background: 'rgba(245, 158, 11, 0.08)',
             border: '1px solid rgba(245, 158, 11, 0.3)',
+            fontSize: 12,
+            color: '#b45309',
           }}
         >
-          <PictureOutlined style={{ fontSize: 16, color: '#b45309', marginTop: 2 }} />
+          <PictureOutlined style={{ fontSize: 14, marginTop: 1 }} />
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 13, fontWeight: 600, color: '#b45309' }}>
-              未识别，请手动填写或换张更清晰的图片
-            </div>
-            <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginTop: 2 }}>
-              {autoParseError}
-            </div>
+            识别失败：{autoParseError}。可点击右上角"智能识别"重试，或手动填写下方表单。
           </div>
         </div>
       )}
@@ -695,7 +607,7 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
               >
                 <img
                   src={getFullAuthedFileUrl(img.fileUrl)}
-                  alt={`thumb-${idx}`}
+                  alt={assetMeta.label}
                   style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                   onClick={() => setCurrentIndex(idx)}
                 />
@@ -783,7 +695,7 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
 
       {displayImages.length > 0 && (
         <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--neutral-text-disabled)', marginBottom: 4 }}>
-          共 {displayImages.length} 张{isNewMode ? '（保存时上传）' : ''} · 在下方颜色/尺码表可上传图片
+          共 {displayImages.length} 张{isNewMode ? '（保存时上传）' : ''}
         </div>
       )}
 
@@ -866,14 +778,7 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
         </div>
       )}
 
-      {/* 自动识别错误提示（静默展示，不打断用户） */}
-      {autoParseError && autoParseAttempted && !parsing && (
-        <div style={{
-          fontSize: 12, color: 'var(--color-text-tertiary)', marginBottom: 6, maxWidth: 400,
-        }}>
-          自动识别未成功：{autoParseError}（可手动点击"智能识别"重试）
-        </div>
-      )}
+      {/* 自动识别错误提示已合并到上方状态卡片，不再重复显示 */}
     </div>
   );
 };

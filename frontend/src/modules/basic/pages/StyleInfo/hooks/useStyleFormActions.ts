@@ -272,6 +272,7 @@ export const useStyleFormActions = ({
 
         return true;
       } else {
+        // 后端 400 时携带具体字段提示，直接展示给用户便于排查
         message.error(res.message || '保存失败');
         return false;
       }
@@ -279,7 +280,9 @@ export const useStyleFormActions = ({
       if (typeof error === 'object' && error !== null && 'errorFields' in error) {
         message.error('请完善表单信息');
       } else {
-        message.error(error instanceof Error ? error.message : '保存失败');
+        // axios 错误：优先展示后端返回的 message（包含字段定位提示）
+        const axiosErr = typeof error === 'object' && error !== null && 'response' in error ? (error as any).response?.data?.message : null;
+        message.error(axiosErr || (error instanceof Error ? error.message : '保存失败'));
       }
       return false;
     } finally {
