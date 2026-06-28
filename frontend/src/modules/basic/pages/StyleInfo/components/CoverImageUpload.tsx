@@ -501,48 +501,13 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
         )}
       </div>
 
-      {/* 工具栏：所有操作按钮收到这里，统一一行，图片保持干净 */}
+      {/* 操作按钮：直接放图片下方，能点到就行 */}
       {currentImage && (
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 8,
-          marginBottom: 8,
-          padding: '6px 8px',
-          background: 'var(--color-bg-container)',
-          border: '1px solid var(--color-border)',
-          borderRadius: 6,
-        }}>
-          <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-            <Button
-              type="text"
-              size="small"
-              loading={parsing}
-              icon={!parsing ? <BulbOutlined /> : undefined}
-              onClick={handleParseClick}
-              style={{ fontSize: 12, color: 'var(--color-primary)', padding: '0 8px', height: 26 }}
-              title="智能识别图片中的款式特征并自动填充表单"
-            >
-              智能识别
-            </Button>
-            <Button
-              type="text"
-              size="small"
-              loading={searching}
-              icon={!searching ? <SearchOutlined /> : undefined}
-              onClick={runStyleSearchByImage}
-              style={{ fontSize: 12, color: 'var(--color-text-secondary)', padding: '0 8px', height: 26 }}
-              title="以图搜款：搜索视觉相似的历史款式"
-            >
-              搜相似
-            </Button>
-          </div>
-          {/* 识别状态：只在这里显示一次 */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8, fontSize: 12 }}>
+          <Button type="link" size="small" loading={parsing} icon={!parsing ? <BulbOutlined /> : undefined} onClick={handleParseClick} style={{ padding: 0, height: 'auto' }}>智能识别</Button>
+          <Button type="link" size="small" loading={searching} icon={!searching ? <SearchOutlined /> : undefined} onClick={runStyleSearchByImage} style={{ padding: 0, height: 'auto' }}>搜相似</Button>
           {parseStatusText && (
-            <span style={{ fontSize: 12, color: parseStatusColor, fontWeight: 500 }}>
-              {parseStatusText}
-            </span>
+            <span style={{ color: parseStatusColor }}>{parseStatusText}</span>
           )}
         </div>
       )}
