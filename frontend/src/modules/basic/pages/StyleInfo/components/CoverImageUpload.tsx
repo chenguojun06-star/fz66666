@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { App, Modal, Image, Button } from 'antd';
-import { DeleteOutlined, StarFilled, StarOutlined, LeftOutlined, RightOutlined, SearchOutlined, BulbOutlined, PictureOutlined } from '@ant-design/icons';
+import { DeleteOutlined, StarFilled, StarOutlined, LeftOutlined, RightOutlined, SearchOutlined, BulbOutlined } from '@ant-design/icons';
 import api, { type ApiResult, isApiSuccess, getApiMessage } from '@/utils/api';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { setStyleCoverOverride } from '@/components/StyleAssets';
@@ -367,6 +367,49 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
   };
 
   const currentAssetMeta = resolveAssetMeta(currentImage, currentIndex);
+
+  // 统一的识别触发器（供工具栏按钮调用）
+  const handleParseClick = async () => {
+    if (parsing || searching) return;
+    setParsing(true);
+    setAutoParseError(null);
+    setParseSuccessConfidence(null);
+    try {
+      const res = await runStyleParseFromCurrentImage();
+      if (res?.available) {
+        message.success(`识别完成（置信度 ${res.overallConfidence}%）`);
+        onStyleParseResult?.(res);
+        onAutoParseResult?.(res);
+        setParseSuccessConfidence(res.overallConfidence ?? null);
+      } else {
+        message.warning(res?.errorMessage || '识别失败，请人工填写');
+        setAutoParseError(res?.errorMessage || '识别失败');
+      }
+    } catch {
+      message.warning('智能识别服务暂不可用');
+      setAutoParseError('智能识别服务暂不可用');
+    } finally {
+      setParsing(false);
+    }
+  };
+
+  // 识别状态文本（只在这里组装一次，工具栏右侧展示）
+  const parseStatusText = parsing
+    ? '识别中...'
+    : parseSuccessConfidence !== null
+      ? `已识别 ${parseSuccessConfidence}%`
+      : autoParseError
+        ? '识别失败，可手动填写'
+        : '';
+
+  const parseStatusColor = parsing
+    ? 'var(--color-warning)'
+    : parseSuccessConfidence !== null
+      ? 'var(--color-success, #16a34a)'
+      : autoParseError
+        ? 'var(--color-warning)'
+        : 'var(--color-text-tertiary)';
+
   return (
     <div style={{ marginBottom: 12 }}>
       <div style={{
@@ -378,7 +421,8 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
         borderLeft: '3px solid var(--color-primary)',
         lineHeight: 1.4,
       }}>图片资产</div>
-      {/* 大图（缩小版预览） */}
+
+      {/* 大图预览：保持干净，只在左上角显示资产类型徽标 */}
       <div
         style={{
           width: '100%',
@@ -388,7 +432,7 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'center',
-          marginBottom: 12,
+          marginBottom: 8,
           overflow: 'hidden',
           background: 'var(--color-bg-container)',
           cursor: 'default',
@@ -400,108 +444,10 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
         {currentImage ? (
           <div style={{ position: 'relative', width: '100%', height: '100%' }}>
             <Image loading="lazy" src={getFullAuthedFileUrl(currentImage.fileUrl)} alt="主图" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            <div style={{ position: 'absolute', left: 10, top: 10, padding: '4px 10px', borderRadius: 999, background: 'rgba(37, 99, 235, 0.9)', color: 'var(--color-bg-base)', fontSize: 12, fontWeight: 600 }}>
+            {/* 左上角：资产类型徽标（唯一一个常驻徽标） */}
+            <div style={{ position: 'absolute', left: 10, top: 10, padding: '3px 10px', borderRadius: 999, background: 'rgba(37, 99, 235, 0.9)', color: 'var(--color-bg-base)', fontSize: 12, fontWeight: 600, pointerEvents: 'none' }}>
               {currentAssetMeta.label}
             </div>
-            {currentImage && (
-              <>
-                <div
-                  style={{
-                    position: 'absolute', right: 10, top: 10,
-                    display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end',
-                  }}
-                >
-                  {parsing && (
-                    <div
-                      style={{
-                        padding: '4px 10px', borderRadius: 999,
-                        background: 'rgba(234, 88, 12, 0.92)', color: 'var(--color-bg-base)',
-                        fontSize: 12, fontWeight: 600,
-                        display: 'flex', alignItems: 'center', gap: 4,
-                      }}
-                    >
-                      <BulbOutlined style={{ fontSize: 11 }} />
-                      正在智能识别...
-                    </div>
-                  )}
-                  {!parsing && parseSuccessConfidence !== null && (
-                    <div
-                      style={{
-                        padding: '4px 10px', borderRadius: 999,
-                        background: 'rgba(34, 197, 94, 0.92)', color: 'var(--color-bg-base)',
-                        fontSize: 12, fontWeight: 600,
-                        display: 'flex', alignItems: 'center', gap: 4,
-                      }}
-                    >
-                      ✅ 已识别：{parseSuccessConfidence}%
-                    </div>
-                  )}
-                  {!parsing && parseSuccessConfidence === null && autoParseError && (
-                    <div
-                      style={{
-                        padding: '4px 10px', borderRadius: 999,
-                        background: 'rgba(245, 158, 11, 0.9)', color: 'var(--color-bg-base)',
-                        fontSize: 12, fontWeight: 600,
-                        display: 'flex', alignItems: 'center', gap: 4,
-                      }}
-                    >
-                      ⚠️ 可手动填写
-                    </div>
-                  )}
-                  <div style={{ display: 'flex', gap: 6 }}>
-                    <div
-                      onClick={async () => {
-                        if (parsing || searching) return;
-                        setParsing(true);
-                        setAutoParseError(null);
-                        setParseSuccessConfidence(null);
-                        try {
-                          const res = await runStyleParseFromCurrentImage();
-                          if (res?.available) {
-                            message.success(`识别完成（置信度 ${res.overallConfidence}%）`);
-                            onStyleParseResult?.(res);
-                            onAutoParseResult?.(res);
-                            setParseSuccessConfidence(res.overallConfidence ?? null);
-                          } else {
-                            message.warning(res?.errorMessage || '识别失败，请人工填写');
-                            setAutoParseError(res?.errorMessage || '识别失败');
-                          }
-                        } catch {
-                          message.warning('智能识别服务暂不可用');
-                          setAutoParseError('智能识别服务暂不可用');
-                        } finally {
-                          setParsing(false);
-                        }
-                      }}
-                      style={{
-                        padding: '4px 10px', borderRadius: 999,
-                        background: parsing ? 'rgba(0,0,0,0.3)' : 'rgba(37, 99, 235, 0.9)',
-                        color: 'var(--color-bg-base)',
-                        fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4,
-                        transition: 'background 0.15s',
-                      }}
-                      title="智能识别图片中的款式特征并自动填充表单"
-                    >
-                      <BulbOutlined style={{ fontSize: 11 }} />
-                      {parsing ? '识别中...' : '智能识别填充'}
-                    </div>
-                    <div
-                      onClick={runStyleSearchByImage}
-                      style={{
-                        padding: '4px 10px', borderRadius: 999,
-                        background: searching ? 'rgba(0,0,0,0.3)' : 'rgba(17, 24, 39, 0.7)',
-                        color: 'var(--color-bg-base)',
-                        fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4,
-                      }}
-                      title="以图搜款：搜索视觉相似的历史款式"
-                    >
-                      <SearchOutlined style={{ fontSize: 11 }} />
-                      {searching ? '搜索中...' : '搜相似'}
-                    </div>
-                  </div>
-                </div>
-              </>
-            )}
           </div>
         ) : coverUrl ? (
           <Image loading="lazy" src={getFullAuthedFileUrl(coverUrl)} alt="cover" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -555,32 +501,55 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
         )}
       </div>
 
-      {/* 【新增】AI 识别结果状态卡片（仅识别失败时显示，成功信息已在大图徽标展示） */}
-      {displayImages.length > 0 && parseSuccessConfidence === null && autoParseError && (
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'flex-start',
-            gap: 8,
-            padding: '8px 12px',
-            marginBottom: 10,
-            borderRadius: 8,
-            background: 'rgba(245, 158, 11, 0.08)',
-            border: '1px solid rgba(245, 158, 11, 0.3)',
-            fontSize: 12,
-            color: '#b45309',
-          }}
-        >
-          <PictureOutlined style={{ fontSize: 14, marginTop: 1 }} />
-          <div style={{ flex: 1 }}>
-            识别失败：{autoParseError}。可点击右上角"智能识别"重试，或手动填写下方表单。
+      {/* 工具栏：所有操作按钮收到这里，统一一行，图片保持干净 */}
+      {currentImage && (
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 8,
+          marginBottom: 8,
+          padding: '6px 8px',
+          background: 'var(--color-bg-container)',
+          border: '1px solid var(--color-border)',
+          borderRadius: 6,
+        }}>
+          <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+            <Button
+              type="text"
+              size="small"
+              loading={parsing}
+              icon={!parsing ? <BulbOutlined /> : undefined}
+              onClick={handleParseClick}
+              style={{ fontSize: 12, color: 'var(--color-primary)', padding: '0 8px', height: 26 }}
+              title="智能识别图片中的款式特征并自动填充表单"
+            >
+              智能识别
+            </Button>
+            <Button
+              type="text"
+              size="small"
+              loading={searching}
+              icon={!searching ? <SearchOutlined /> : undefined}
+              onClick={runStyleSearchByImage}
+              style={{ fontSize: 12, color: 'var(--color-text-secondary)', padding: '0 8px', height: 26 }}
+              title="以图搜款：搜索视觉相似的历史款式"
+            >
+              搜相似
+            </Button>
           </div>
+          {/* 识别状态：只在这里显示一次 */}
+          {parseStatusText && (
+            <span style={{ fontSize: 12, color: parseStatusColor, fontWeight: 500 }}>
+              {parseStatusText}
+            </span>
+          )}
         </div>
       )}
 
-      {/* 缩略图列表（保留原有） */}
+      {/* 缩略图列表：hover 时显示设为主图/删除 */}
       {displayImages.length > 0 && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6, width: '100%', maxWidth: 400, marginBottom: 10 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6, width: '100%', maxWidth: 400, marginBottom: 6 }}>
           {displayImages.map((img, idx) => {
             const hover = hoverIndex === idx;
             const canOperate = isNewMode || enabled;
@@ -672,7 +641,7 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
                     </div>
                   </div>
                 )}
-                {/* 主图/参考图标记 */}
+                {/* 主图/参考图小标记 */}
                 <div
                   style={{
                     position: 'absolute',

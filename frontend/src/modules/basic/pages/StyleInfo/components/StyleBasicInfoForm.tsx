@@ -444,7 +444,6 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
                   id="createTime"
                   disabled
                   allowClear={false}
-                  showTime
                   placeholder="系统自动生成"
                   format="YYYY-MM-DD"
                   style={{ width: '100%' }}
@@ -457,7 +456,6 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
                   id="completedTime"
                   disabled
                   allowClear={false}
-                  showTime
                   placeholder="全部环节入库完成后自动生成"
                   format="YYYY-MM-DD"
                   style={{ width: '100%' }}
@@ -470,7 +468,6 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
                   id="deliveryDate"
                   disabled={isFieldLocked(currentStyle?.deliveryDate)}
                   allowClear
-                  showTime
                   placeholder="请选择交板日期"
                   format="YYYY-MM-DD"
                   style={{ width: '100%' }}
