@@ -230,6 +230,10 @@ public class TemplateStyleOrchestrator {
     private boolean applyBomTemplate(TemplateLibrary template, Long targetStyleId, boolean overwrite) throws Exception {
         List<StyleBom> boms = parseBomContent(template.getTemplateContent());
 
+        if (boms.isEmpty()) {
+            throw new IllegalStateException("BOM模板内容为空或解析失败，拒绝应用（templateId=" + template.getId() + "）");
+        }
+
         if (overwrite) {
             styleBomService.lambdaUpdate()
                     .eq(StyleBom::getStyleId, targetStyleId)
@@ -296,6 +300,13 @@ public class TemplateStyleOrchestrator {
     private boolean applyProcessTemplate(TemplateLibrary template, Long targetStyleId, boolean overwrite) throws Exception {
         List<StyleProcess> processes = parseProcessContent(template.getTemplateContent());
 
+        if (processes.isEmpty()) {
+            throw new IllegalStateException("工序模板内容为空或解析失败，拒绝应用（templateId=" + template.getId() + "，contentLength=" + (template.getTemplateContent() == null ? 0 : template.getTemplateContent().length()) + "）");
+        }
+
+        log.info("应用工序模板: templateId={}, targetStyleId={}, parsedCount={}, overwrite={}",
+                template.getId(), targetStyleId, processes.size(), overwrite);
+
         if (overwrite) {
             styleProcessService.lambdaUpdate()
                     .eq(StyleProcess::getStyleId, targetStyleId)
@@ -333,6 +344,10 @@ public class TemplateStyleOrchestrator {
 
     private boolean applySizeTemplate(TemplateLibrary template, Long targetStyleId, boolean overwrite) throws Exception {
         List<StyleSize> sizes = parseSizeContent(template.getTemplateContent());
+
+        if (sizes.isEmpty()) {
+            throw new IllegalStateException("尺码模板内容为空或解析失败，拒绝应用（templateId=" + template.getId() + "）");
+        }
 
         if (overwrite) {
             styleSizeService.lambdaUpdate()
