@@ -82,39 +82,51 @@ const INSIGHT_COLOR: Record<InsightCategory, string> = {
 
 const INSIGHT_LABEL: Record<InsightCategory, string> = {
   delivery: '交期风险',
-  progress: '进度/订单',
+  progress: '开发进度',
   quote: '报价',
   process: '工序',
 };
 
+// 基于开发节点（STAGE_MAP）生成洞察，不查大货订单数据
 const buildFallbackInsights = (style: StyleInfo, quote: StyleQuoteSuggestionResponse | null): StyleInsightItem[] => {
   const insights: StyleInsightItem[] = [];
   const deliveryMeta = getDeliveryMeta(style);
-  const orderCount = Number(style.orderCount || 0);
-  const latestProgress = Number(style.latestProductionProgress || 0);
 
+  // 1. 交期洞察（开发阶段的交板日期）
   if (deliveryMeta.label === '已延期') {
-    insights.push({ category: 'delivery', text: '交期已失守，建议优先检查纸样、工序单价和生产制单三个关键环节。' });
+    insights.push({ category: 'delivery', text: '交板已失守，建议优先检查纸样、工序单价和生产制单三个关键环节。' });
   } else if (deliveryMeta.label === '即将超期') {
     insights.push({ category: 'delivery', text: '已进入临界交期窗口，建议今天内锁定未完成的开发节点。' });
   }
 
+  // 2. 开发进度洞察（基于 STAGE_MAP，不查大货订单）
+  const stages = STAGE_MAP.map((item) => ({ key: item.key, label: item.label, done: item.done(style) }));
+  const doneCount = stages.filter((s) => s.done).length;
+  const totalCount = stages.length;
+  const pendingStages = stages.filter((s) => !s.done).map((s) => s.label);
+
+  if (doneCount < totalCount) {
+    if (doneCount === 0) {
+      insights.push({ category: 'progress', text: `${totalCount} 个开发节点均未启动，建议从 BOM 和纸样开始推进。` });
+    } else if (doneCount < 4) {
+      insights.push({ category: 'progress', text: `已完成 ${doneCount}/${totalCount}，待推进：${pendingStages.slice(0, 3).join('、')}。` });
+    } else {
+      insights.push({ category: 'progress', text: `已完成 ${doneCount}/${totalCount}，收尾阶段：${pendingStages.slice(0, 2).join('、')}。` });
+    }
+  }
+
+  // 3. 工序单价洞察
   if (!(style as any)?.processCompletedTime) {
-    insights.push({ category: 'process', text: '工序单价尚未锁定，后续大货结算与报价准确性会受影响。' });
+    insights.push({ category: 'process', text: '工序单价尚未锁定，影响后续大货结算与报价准确性。' });
   }
 
-  if (orderCount > 0 && latestProgress > 0 && latestProgress < 50) {
-    insights.push({ category: 'progress', text: `已有 ${orderCount} 个关联订单，但最近大货进度仅 ${latestProgress}%，需提前关注产线节奏。` });
-  } else if (orderCount === 0) {
-    insights.push({ category: 'progress', text: '当前还未形成生产订单，建议先把开发资料和价格体系固化，减少后续反复。' });
-  }
-
+  // 4. 报价洞察
   if (quote?.suggestedPrice != null && quote?.currentQuotation != null) {
     const diff = Number(quote.suggestedPrice) - Number(quote.currentQuotation);
     if (Math.abs(diff) >= 1) {
       insights.push({
         category: 'quote',
-        text: diff > 0 ? 'AI 判断当前报价偏低，建议复核利润空间和二次工艺损耗。' : 'AI 判断当前报价偏高，可结合历史样本复核市场接受度。',
+        text: diff > 0 ? 'AI 建议报价高于当前报价，建议复核利润空间和二次工艺损耗。' : 'AI 建议报价低于当前报价，可结合历史样本复核市场接受度。',
       });
     }
   }

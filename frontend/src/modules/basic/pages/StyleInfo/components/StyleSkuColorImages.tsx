@@ -237,11 +237,9 @@ const StyleSkuColorImages: React.FC<StyleSkuColorImagesProps> = ({ styleId, styl
         </Space>
       </div>
 
-      {/* 说明 */}
+      {/* 说明：仅保留核心操作提示 */}
       <div style={{ marginBottom: 16, padding: '8px 12px', background: 'var(--color-bg-subtle)', borderRadius: 4, fontSize: 12, color: '#666' }}>
-        💡 提示：勾选颜色后可批量应用同一张图片到多个颜色；也可以点击单个颜色上传专属图片。
-        <br />
-        图片将同步显示在订单、库存、电商等所有SKU展示位置。
+        勾选颜色后可批量应用同一张图片，也可以点击单个颜色上传专属图片。
       </div>
 
       {/* 颜色图片网格 */}

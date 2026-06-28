@@ -272,7 +272,7 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = ({ styleId, styleNo, skc: initia
           return (
             <Image
               src={fullUrl}
-              alt=""
+              alt="款式图片"
               width={44}
               height={44}
               style={{ objectFit: 'cover', borderRadius: 4, cursor: 'pointer' }}

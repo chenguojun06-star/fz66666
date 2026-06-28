@@ -168,9 +168,7 @@ export default function WashCareLabelModal({ open, onCancel, order }: Props) {
           </div>
         </div>
 
-        <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginBottom: 16 }}>
-          提示：建议使用专用标签打印机，或A4纸打印后沿顶部虚线剪断。
-        </div>
+
       </Spin>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 8 }}>
         <Button onClick={onCancel}>取消</Button>

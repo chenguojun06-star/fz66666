@@ -73,7 +73,7 @@ const PreviewModal: React.FC<PreviewModalProps> = ({ open, url, title, onClose }
         >
           <img
             src={getFullAuthedFileUrl(url)}
-            alt=""
+            alt="质检图片"
             onLoad={handleImageLoad}
             style={{
               maxWidth: '100%',

@@ -441,7 +441,6 @@ const FlowStepRenderer: React.FC<Props> = ({
                               description={
                                 <div>
                                   <p>工序数量: <strong>{workflowNodes.length}</strong> 个 | 工序总单价: <strong style={{ color: 'var(--primary-color)', fontSize: 'var(--font-size-lg)' }}>{displayAmount(totalPrice)}</strong></p>
-                                  <p style={{ marginTop: 8, color: 'var(--color-warning)' }}>提示：单价修改需要到"单价维护"模块中修改，修改后点击"刷新数据"按钮可更新单价</p>
                                 </div>
                               } />
                           )}

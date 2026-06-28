@@ -137,9 +137,6 @@ const PurchasePreviewView: React.FC<PurchasePreviewViewProps> = ({ previewList, 
         scroll={{ x: 'max-content' }}
         size={isMobile ? 'small' : 'middle'}
       />
-      <div className="mt-sm" style={{ color: 'var(--neutral-text-disabled)' }}>
-        小提示：保存生成后可在列表中查看并补充单价等信息
-      </div>
     </div>
   );
 };

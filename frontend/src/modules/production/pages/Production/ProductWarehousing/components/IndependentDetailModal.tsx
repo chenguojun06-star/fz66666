@@ -261,7 +261,7 @@ const IndependentDetailModal: React.FC<IndependentDetailModalProps> = ({
                     <img
                       key={url}
                       src={getFullAuthedFileUrl(url)}
-                      alt=""
+                      alt="款式图片"
                       width={84}
                       height={84}
                       style={{ objectFit: 'cover', cursor: 'pointer' }}
