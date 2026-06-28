@@ -20,6 +20,9 @@ public class StyleProcessOrchestrator {
     @Autowired
     private StyleQuotationOrchestrator styleQuotationOrchestrator;
 
+    @Autowired
+    private com.fashion.supplychain.style.helper.StyleStageCompletionHelper styleStageCompletionHelper;
+
     public List<StyleProcess> listByStyleId(Long styleId) {
         if (styleId == null) {
             throw new IllegalArgumentException("styleId不能为空");
@@ -40,6 +43,9 @@ public class StyleProcessOrchestrator {
         if (!ok) {
             throw new IllegalStateException("保存失败");
         }
+
+        // 自动回填工序开始时间（用户跳过"开始工序单价"按钮直接添加数据时）
+        styleStageCompletionHelper.autoStartStage(styleProcess.getStyleId(), "process");
 
         // 工序变更后自动重算报价单
         try {

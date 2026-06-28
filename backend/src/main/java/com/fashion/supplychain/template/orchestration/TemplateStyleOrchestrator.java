@@ -50,6 +50,9 @@ public class TemplateStyleOrchestrator {
     @Autowired
     private ObjectMapper objectMapper;
 
+    @Autowired
+    private com.fashion.supplychain.style.helper.StyleStageCompletionHelper styleStageCompletionHelper;
+
     @Transactional(rollbackFor = Exception.class)
     public boolean applyTemplateToStyle(String templateId, Long targetStyleId, String mode) {
         if (templateId == null || templateId.trim().isEmpty()) {
@@ -246,6 +249,9 @@ public class TemplateStyleOrchestrator {
             styleBomService.save(bom);
         }
 
+        // 自动回填 BOM 开始时间（导入模板相当于开始 BOM 配置）
+        styleStageCompletionHelper.autoStartStage(targetStyleId, "bom");
+
         styleBomService.clearBomCache(targetStyleId);
         return true;
     }
@@ -320,6 +326,9 @@ public class TemplateStyleOrchestrator {
             process.setStyleId(targetStyleId);
             styleProcessService.save(process);
         }
+
+        // 自动回填工序开始时间（导入模板相当于开始工序配置）
+        styleStageCompletionHelper.autoStartStage(targetStyleId, "process");
 
         return true;
     }

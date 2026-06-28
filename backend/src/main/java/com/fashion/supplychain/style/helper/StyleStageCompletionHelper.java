@@ -485,6 +485,93 @@ public class StyleStageCompletionHelper {
 
     // ==================== Utility ====================
 
+    /**
+     * 自动回填环节开始时间（如果为空）。
+     * <p>用户添加 BOM/工序/二次工艺等数据时，如果未点击"开始XX"按钮，
+     * 系统自动记录开始时间，避免时间字段为空导致开发资料直编台显示"-"。
+     * <p>幂等：如果 startTime 已有值，跳过。
+     * @param stage 环节标识：bom / process / secondary / size / sizePrice
+     */
+    public void autoStartStage(Long styleId, String stage) {
+        if (styleId == null || stage == null) {
+            return;
+        }
+        try {
+            StyleInfo current = styleInfoService.getById(styleId);
+            if (current == null) {
+                return;
+            }
+            // 租户隔离校验
+            TenantAssert.assertBelongsToCurrentTenant(current.getTenantId(), "款式");
+
+            LocalDateTime now = LocalDateTime.now();
+            String currentUser = UserContext.username();
+            boolean needsUpdate = false;
+
+            var wrapper = new com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<StyleInfo>()
+                    .eq(StyleInfo::getId, styleId)
+                    .set(StyleInfo::getUpdateTime, now);
+
+            switch (stage) {
+                case "bom" -> {
+                    if (current.getBomStartTime() == null && current.getBomCompletedTime() == null) {
+                        wrapper.set(StyleInfo::getBomStartTime, now);
+                        if (StringUtils.hasText(currentUser)) {
+                            wrapper.set(StyleInfo::getBomAssignee, currentUser);
+                        }
+                        needsUpdate = true;
+                    }
+                }
+                case "process" -> {
+                    if (current.getProcessStartTime() == null && current.getProcessCompletedTime() == null) {
+                        wrapper.set(StyleInfo::getProcessStartTime, now);
+                        if (StringUtils.hasText(currentUser)) {
+                            wrapper.set(StyleInfo::getProcessAssignee, currentUser);
+                        }
+                        needsUpdate = true;
+                    }
+                }
+                case "secondary" -> {
+                    if (current.getSecondaryStartTime() == null && current.getSecondaryCompletedTime() == null) {
+                        wrapper.set(StyleInfo::getSecondaryStartTime, now);
+                        if (StringUtils.hasText(currentUser)) {
+                            wrapper.set(StyleInfo::getSecondaryAssignee, currentUser);
+                        }
+                        needsUpdate = true;
+                    }
+                }
+                case "size" -> {
+                    if (current.getSizeStartTime() == null && current.getSizeCompletedTime() == null) {
+                        wrapper.set(StyleInfo::getSizeStartTime, now);
+                        if (StringUtils.hasText(currentUser)) {
+                            wrapper.set(StyleInfo::getSizeAssignee, currentUser);
+                        }
+                        needsUpdate = true;
+                    }
+                }
+                case "sizePrice" -> {
+                    if (current.getSizePriceStartTime() == null && current.getSizePriceCompletedTime() == null) {
+                        wrapper.set(StyleInfo::getSizePriceStartTime, now);
+                        if (StringUtils.hasText(currentUser)) {
+                            wrapper.set(StyleInfo::getSizePriceAssignee, currentUser);
+                        }
+                        needsUpdate = true;
+                    }
+                }
+                default -> {
+                    return;
+                }
+            }
+
+            if (needsUpdate) {
+                styleInfoService.update(wrapper);
+                log.info("自动回填环节开始时间: styleId={}, stage={}, assignee={}", styleId, stage, currentUser);
+            }
+        } catch (Exception e) {
+            log.warn("自动回填环节开始时间失败: styleId={}, stage={}, error={}", styleId, stage, e.getMessage());
+        }
+    }
+
     private void ensureStyleFullyCompletedBeforeMaintenance(StyleInfo current) {
         if (!isStyleFullyCompleted(current)) {
             throw new IllegalStateException("只有款式全部完成后，再次修改才算维护");

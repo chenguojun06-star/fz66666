@@ -47,6 +47,9 @@ public class StyleBomOrchestrator {
     @Autowired
     private StyleQuotationOrchestrator styleQuotationOrchestrator;
 
+    @Autowired
+    private com.fashion.supplychain.style.helper.StyleStageCompletionHelper styleStageCompletionHelper;
+
     public List<StyleBom> listByStyleId(Long styleId) {
         if (styleId == null) {
             throw new IllegalArgumentException("styleId不能为空");
@@ -68,6 +71,9 @@ public class StyleBomOrchestrator {
         if (!ok) {
             throw new IllegalStateException("保存失败");
         }
+
+        // 自动回填 BOM 开始时间（用户跳过"开始BOM配置"按钮直接添加数据时）
+        styleStageCompletionHelper.autoStartStage(styleBom.getStyleId(), "bom");
 
         try {
             styleQuotationOrchestrator.recalculateFromLiveData(styleBom.getStyleId());
