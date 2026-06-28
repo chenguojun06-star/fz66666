@@ -359,8 +359,11 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
                   placeholder="搜索或输入客户名称"
                   disabled={isFieldLocked(currentStyle?.customer)}
                   onChange={(_value, option) => {
-                    if (option?.customerId) {
-                      _form.setFieldsValue({ customerId: option.customerId });
+                    // Customer.id 是 String(UUID)，但 StyleInfo.customerId 是 Long，
+                    // 只有纯数字的 ID 才能写入 customerId 字段，否则会导致后端 400
+                    const cid = option?.customerId;
+                    if (cid && /^\d+$/.test(String(cid))) {
+                      _form.setFieldsValue({ customerId: Number(cid) });
                     } else {
                       _form.setFieldsValue({ customerId: undefined });
                     }

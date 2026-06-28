@@ -55,6 +55,16 @@ export const useStyleFormActions = ({
   const [pushingToOrder, setPushingToOrder] = useState(false);
 
   /**
+   * 后端为 Long 类型的字段集合。
+   * 前端某些组件（如 CustomerSelect）可能把 String 类型的 ID（哈希）
+   * 误填到这些字段中，提交时会导致 Jackson 反序列化 400。
+   * 这里在提交前过滤掉无法解析为整数的字符串值。
+   */
+  const LONG_TYPE_FIELDS = new Set([
+    'customerId', 'tenantId', 'factoryId', 'orderId', 'styleId', 'id',
+  ]);
+
+  /**
    * 规范化提交到后端的字段值：
    * - 日期/时间字段（dayjs/Date）→ yyyy-MM-dd HH:mm:ss 字符串
    * - 空字符串 → null（避免 Jackson 将 "" 解析为 Integer/LocalDateTime 失败）
@@ -86,6 +96,18 @@ export const useStyleFormActions = ({
       // 2) 空字符串 → null（后端 Integer/LocalDateTime 都不能解析 ""）
       if (typeof raw === 'string' && raw.trim() === '') {
         result[key] = null;
+        continue;
+      }
+
+      // 2.5) 后端 Long 类型字段：前端可能误传 String 哈希（如 Customer.id 是 String，
+      //      但 StyleInfo.customerId 是 Long），过滤掉无法解析为整数的值
+      if (typeof raw === 'string' && LONG_TYPE_FIELDS.has(key)) {
+        const trimmed = raw.trim();
+        if (!/^\d+$/.test(trimmed)) {
+          result[key] = null;
+          continue;
+        }
+        result[key] = Number(trimmed);
         continue;
       }
 
