@@ -589,6 +589,11 @@ public class StyleInfo {
     @TableField(fill = FieldFill.INSERT)
     private Long tenantId;
 
+    /**
+     * 删除标记
+     */
+    private Integer deleteFlag;
+
     // ==================== 生产制单编辑锁定字段 ====================
 
     /** 生产制单内容是否锁定：1=锁定（默认），0=已退回可编辑 */

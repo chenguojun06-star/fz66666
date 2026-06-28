@@ -1,7 +1,7 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-06-24
+> 最后更新：2026-06-27
 
 ---
 
@@ -23,6 +23,56 @@
 - ✅ 数据库稳定性 + 全链路数据流阻塞治理（2026-06-24）
 
 ## 最近变更
+
+### 2026-06-28 修复云端 SysNoticeMapper setting parameters 错误
+
+**问题**：云端日志 backend-1747 在 08:57:10 和 08:58:10 反复报 MyBatis 错误：
+```
+### The error occurred while setting parameters
+### The error may involve defaultParameterMap
+### The error may exist in com/fashion/supplychain/production/mapper/SysNoticeMapper.java (best guess)
+```
+
+**根因**：
+- SysNotice Entity 在 2026-06-25（commit a6681c3d7）新增 `actionPayload` 和 `styleImage` 两个字段
+- 配套迁移 V202706250001/V202706250002 使用 `DELIMITER $$ + CREATE PROCEDURE` 写法，该写法在 Flyway 中存在静默失败风险
+- SysNoticeOrchestrator 多处调用 `notice.setStyleImage()` 写入不存在的列，触发 MyBatis "setting parameters" 错误
+- t_sys_notice 表历史上已有 9 个迁移文件涉及字段补齐，是 schema drift 高发区
+
+**修复**：新增 [V202706280001__ensure_sys_notice_all_entity_columns.sql](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/resources/db/migration/V202706280001__ensure_sys_notice_all_entity_columns.sql)
+- 用 `PREPARE/EXECUTE/DEALLOCATE` 模式（参考 V202705031800 已验证可靠的写法）
+- 一次性确保 SysNotice Entity 全部 14 个字段在 DB 中存在
+- 修复 content VARCHAR(512) → TEXT
+- 修复 to_name 无默认值（MindPushOrchestrator 显式 setToName("")）
+- PREPARE 动态 SQL 内不写 DEFAULT NULL（项目约定，MySQL 默认即 NULL）
+- 本地校验：`python3 scripts/check-flyway-sql.py` 通过（0 警告 0 错误）
+
+**待验证**：部署到云端后确认 SysNoticeMapper 错误消失
+
+### 2026-06-27 系统数据质量全面治理
+
+**背景**：用户要求梳理全系统上下游数据一致性，从样衣开发到生产入库全链路排查问题。
+
+**⚠️ 踩坑记录**：
+- 一开始错误地认为缺少供应商主表，新建了 `t_supplier` 表和完整模块
+- 实际系统早已用 `t_factory` 表统一管理工厂和供应商（通过 factoryType/supplierType 区分）
+- 前端也已有 SupplierSelect 组件、SupplierUserManager 页面、工厂列表页等完整功能
+- 已删除全部多余代码（Flyway脚本 + 5个Java文件）
+
+**数据质量治理（4类问题）**
+
+| # | 问题 | 处理方式 | 效果 |
+|---|------|---------|------|
+| 1 | 测试订单污染（14个TEST/REWORK订单） | 软删除（delete_flag=1） | 有效订单从70→53个 |
+| 2 | E2E测试脏数据（3个ORD开头的0数量订单） | 软删除 | 数量为0的有效订单仅剩1个（报废单，正常） |
+| 3 | 重复入库记录（13个入库单号重复，121条脏数据） | 每个单号保留最早1条，其余软删除 | 有效入库记录从142→21条，超量入库0个 |
+| 4 | 超量入库（2个订单入库>订单量） | 清理重复数据后自动恢复正常 | PO20260401002: 340→30件；PO20260426001: 2→1件 |
+
+**质量验证**：
+- 后端 `mvn compile` BUILD SUCCESS ✅
+- 前端 `npx tsc --noEmit` 0 errors ✅
+- 数据一致性：超量入库订单 0 个 ✅
+- 数据一致性：重复入库单号 0 个 ✅
 
 ### 2026-06-26 Flyway迁移混乱修复
 
