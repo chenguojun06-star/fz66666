@@ -350,7 +350,7 @@ public class StyleInfo {
 
     /** 客户ID，关联客户资料表 */
     @TableField("customer_id")
-    private Long customerId;
+    private String customerId;
 
     /** 客户名称（冗余存储，用于打印和展示） */
     @TableField("customer_name")

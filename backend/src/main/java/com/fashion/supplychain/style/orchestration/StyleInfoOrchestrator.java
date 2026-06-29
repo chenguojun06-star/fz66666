@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.constant.OrderStatusConstants;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.system.orchestration.ChangeApprovalOrchestrator;
 import com.fashion.supplychain.production.dto.PatternDevelopmentStatsDTO;
@@ -41,6 +42,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.context.annotation.Lazy;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Service
 @Slf4j
@@ -305,6 +307,29 @@ public class StyleInfoOrchestrator {
         }
     }
 
+    @Transactional(rollbackFor = Exception.class)
+    public void updateSizeColorConfig(Long id, Map<String, Object> body) {
+        ensureStyleNotScrapped(id);
+        StyleInfo style = styleInfoService.getById(id);
+        if (style == null) {
+            throw new IllegalArgumentException("款式不存在: " + id);
+        }
+        ObjectMapper mapper = new ObjectMapper();
+        try {
+            Map<String, Object> config = new java.util.HashMap<>();
+            config.put("colors", body.get("colors"));
+            config.put("sizes", body.get("sizes"));
+            config.put("quantities", body.get("quantities"));
+            config.put("matrixRows", body.get("matrixRows"));
+            style.setSizeColorConfig(mapper.writeValueAsString(config));
+            styleInfoService.updateById(style);
+            productSkuService.generateSkusForStyle(id);
+        } catch (Exception e) {
+            log.error("更新颜色尺码配置失败: styleId={}", id, e);
+            throw new RuntimeException("更新颜色尺码配置失败: " + e.getMessage(), e);
+        }
+    }
+
     public StyleInfo updateProductionRequirements(Long id, Map<String, Object> body) {
         ensureStyleNotScrapped(id);
         return styleStageHelper.updateProductionRequirements(id, body);
@@ -396,9 +421,10 @@ public class StyleInfoOrchestrator {
         long activeOrders = productionOrderService.count(
                 new LambdaQueryWrapper<ProductionOrder>()
                         .eq(ProductionOrder::getStyleId, String.valueOf(id))
-                        .eq(ProductionOrder::getDeleteFlag, 0));
+                        .eq(ProductionOrder::getDeleteFlag, 0)
+                        .notIn(ProductionOrder::getStatus, OrderStatusConstants.TERMINAL_STATUSES));
         if (activeOrders > 0) {
-            throw new IllegalStateException("该款式下存在 " + activeOrders + " 个生产订单，无法删除");
+            throw new IllegalStateException("该款式下存在 " + activeOrders + " 个进行中的生产订单，无法删除");
         }
         if (patternProductionService != null) {
             patternProductionService.lambdaUpdate()
@@ -451,9 +477,10 @@ public class StyleInfoOrchestrator {
         long activeOrders = productionOrderService.count(
                 new LambdaQueryWrapper<ProductionOrder>()
                         .eq(ProductionOrder::getStyleId, String.valueOf(id))
-                        .eq(ProductionOrder::getDeleteFlag, 0));
+                        .eq(ProductionOrder::getDeleteFlag, 0)
+                        .notIn(ProductionOrder::getStatus, OrderStatusConstants.TERMINAL_STATUSES));
         if (activeOrders > 0) {
-            throw new IllegalStateException("该款式下存在 " + activeOrders + " 个生产订单，无法报废");
+            throw new IllegalStateException("该款式下存在 " + activeOrders + " 个进行中的生产订单，无法报废");
         }
 
         boolean result = styleInfoService.lambdaUpdate()

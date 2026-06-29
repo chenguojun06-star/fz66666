@@ -7,28 +7,123 @@ import { paths } from '@/routeConfig';
 
 export type TimeRangeType = 'today' | 'week' | 'month' | 'year' | 'custom';
 
-export interface BIDashboardData {
+export interface FinanceSummary {
   totalRevenue: number;
   accountsPayable: number;
   wageExpense: number;
+  materialCost: number;
   expenseCost: number;
+  advanceAmount: number;
+  totalCost: number;
   netProfit: number;
-  revenueTrend: { label: string; value: number }[];
-  costStructure: { type: string; value: number }[];
   pendingApprovals: number;
-  pendingPayments: number;
+  overdueCount: number;
 }
 
-const DEFAULT_DATA: BIDashboardData = {
-  totalRevenue: 0,
-  accountsPayable: 0,
-  wageExpense: 0,
-  expenseCost: 0,
-  netProfit: 0,
+export interface FinanceTrendPoint {
+  label: string;
+  revenue: number;
+  cost: number;
+  profit: number;
+}
+
+export interface FinanceCostItem {
+  type: string;
+  value: number;
+}
+
+export interface RevenueDetailItem {
+  source: string;
+  orderNo: string;
+  customerName: string;
+  amount: number;
+  time: string;
+}
+
+export interface PayableDetailItem {
+  payableNo: string;
+  supplierName: string;
+  amount: number;
+  paidAmount: number;
+  outstanding: number;
+  status: string;
+  dueDate: string;
+}
+
+export interface WageDetailItem {
+  paymentNo: string;
+  payeeName: string;
+  bizType: string;
+  amount: number;
+  paymentMethod: string;
+  time: string;
+}
+
+export interface MaterialDetailItem {
+  reconciliationNo: string;
+  supplierName: string;
+  materialName: string;
+  finalAmount: number;
+  status: string;
+  time: string;
+}
+
+export interface ExpenseDetailItem {
+  reimbursementNo: string;
+  applicantName: string;
+  expenseType: string;
+  title: string;
+  amount: number;
+  status: string;
+  time: string;
+}
+
+export interface AdvanceDetailItem {
+  advanceNo: string;
+  employeeName: string;
+  amount: number;
+  remainingAmount: number;
+  repaymentStatus: string;
+  time: string;
+}
+
+export interface FinanceDashboardData {
+  summary: FinanceSummary;
+  revenueTrend: FinanceTrendPoint[];
+  costStructure: FinanceCostItem[];
+  details: {
+    revenue: RevenueDetailItem[];
+    payable: PayableDetailItem[];
+    wage: WageDetailItem[];
+    material: MaterialDetailItem[];
+    expense: ExpenseDetailItem[];
+    advance: AdvanceDetailItem[];
+  };
+}
+
+const DEFAULT_DATA: FinanceDashboardData = {
+  summary: {
+    totalRevenue: 0,
+    accountsPayable: 0,
+    wageExpense: 0,
+    materialCost: 0,
+    expenseCost: 0,
+    advanceAmount: 0,
+    totalCost: 0,
+    netProfit: 0,
+    pendingApprovals: 0,
+    overdueCount: 0,
+  },
   revenueTrend: [],
   costStructure: [],
-  pendingApprovals: 0,
-  pendingPayments: 0,
+  details: {
+    revenue: [],
+    payable: [],
+    wage: [],
+    material: [],
+    expense: [],
+    advance: [],
+  },
 };
 
 const getDateRanges = (timeRange: TimeRangeType, customRange: [Dayjs, Dayjs] | null) => {
@@ -67,7 +162,7 @@ export const useFinanceBIData = () => {
   const { message } = App.useApp();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const [data, setData] = useState<BIDashboardData>(DEFAULT_DATA);
+  const [data, setData] = useState<FinanceDashboardData>(DEFAULT_DATA);
   const [timeRange, setTimeRange] = useState<TimeRangeType>('month');
   const [customRange, setCustomRange] = useState<[Dayjs, Dayjs] | null>(null);
 
@@ -75,97 +170,58 @@ export const useFinanceBIData = () => {
     setLoading(true);
     try {
       const { startDate, endDate } = getDateRanges(timeRange, customRange);
-      const dateParams = { startDate, endDate };
-
-      const [wageStatsRes, finishedRes, expenseRes] = await Promise.allSettled([
-        api.get('/finance/wage-payments/dashboard-stats', { params: dateParams }),
-        api.get('/finance/finished-settlement/summary', { params: dateParams }),
-        api.get('/finance/expense-reimbursement/list', { params: { ...dateParams, page: 1, pageSize: 1000 } }),
-      ]);
-
-      let totalRevenue = 0;
-      let accountsPayable = 0;
-      let wageExpense = 0;
-      let expenseCost = 0;
-      let pendingApprovals = 0;
-      let pendingPayments = 0;
-
-      // 工资/收付款统计（使用真实API）
-      if (wageStatsRes.status === 'fulfilled') {
-        const stats = (wageStatsRes.value as any)?.data ?? {};
-        totalRevenue = Number(stats.totalRevenue) || 0;
-        accountsPayable = Number(stats.totalPending) || 0;
-        wageExpense = Number(stats.totalPaid) || 0;
-        pendingApprovals = Number(stats.pendingApprovalCount) || 0;
-        pendingPayments = Number(stats.pendingPaymentCount) || 0;
-      }
-
-      // 完工结算汇总
-      if (finishedRes.status === 'fulfilled') {
-        const finished = (finishedRes.value as any)?.data ?? {};
-        if (!totalRevenue) totalRevenue = Number(finished.totalAmount) || 0;
-      }
-
-      // 费用报销汇总
-      if (expenseRes.status === 'fulfilled') {
-        const expense = (expenseRes.value as any)?.data?.records ?? [];
-        expenseCost = expense.reduce((s: number, r: any) => s + (Number(r.amount) || 0), 0);
-      }
-
-      // 净利润 = 营收 - 支出
-      const netProfit = totalRevenue - wageExpense - expenseCost;
-
-      // 成本结构饼图
-      const costStructure = [
-        { type: '工资支出', value: wageExpense },
-        { type: '费用支出', value: expenseCost },
-      ].filter(item => item.value > 0);
-
-      // 营收趋势（简化：按月汇总）
-      const months = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
-      const currentMonth = dayjs().month();
-      const revenueTrend = months.slice(0, currentMonth + 1).map((label, i) => ({
-        label,
-        value: i === currentMonth ? totalRevenue : Math.round(totalRevenue * 0.8 * Math.random()),
-      }));
-
+      const res: any = await api.get('/finance/dashboard/summary', {
+        params: { startDate, endDate },
+      });
+      const payload = res?.data ?? DEFAULT_DATA;
       setData({
-        totalRevenue,
-        accountsPayable,
-        wageExpense,
-        expenseCost,
-        netProfit,
-        revenueTrend,
-        costStructure,
-        pendingApprovals,
-        pendingPayments,
+        summary: { ...DEFAULT_DATA.summary, ...(payload.summary ?? {}) },
+        revenueTrend: Array.isArray(payload.revenueTrend) ? payload.revenueTrend : [],
+        costStructure: Array.isArray(payload.costStructure) ? payload.costStructure : [],
+        details: {
+          revenue: [],
+          payable: [],
+          wage: [],
+          material: [],
+          expense: [],
+          advance: [],
+          ...(payload.details ?? {}),
+        },
       });
     } catch (error) {
-      console.error('[FinanceBI] 数据加载失败:', error);
+      console.error('[FinanceDashboard] 数据加载失败:', error);
+      message.error('财务总览数据加载失败');
       setData(DEFAULT_DATA);
     } finally {
       setLoading(false);
     }
-  }, [timeRange, customRange]);
+  }, [timeRange, customRange, message]);
 
-  useEffect(() => { loadData(); }, [loadData]);
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const resetFilters = useCallback(() => {
     setTimeRange('month');
     setCustomRange(null);
   }, []);
 
-  const goToModule = useCallback((module: string) => {
-    const routeMap: Record<string, string> = {
-      revenue: paths.financeCenter,
-      payable: paths.wagePayment,
-      wage: paths.payrollOperatorSummary,
-      expense: paths.financeTaxExport,
-      profit: paths.financeDashboard,
-      approval: paths.financeCenter,
-    };
-    navigate(routeMap[module] || paths.financeDashboard);
-  }, [navigate]);
+  const goToModule = useCallback(
+    (module: string) => {
+      const routeMap: Record<string, string> = {
+        revenue: paths.financeCenter,
+        payable: paths.wagePayment,
+        wage: paths.payrollOperatorSummary,
+        expense: paths.expenseReimbursement,
+        material: paths.materialReconciliation,
+        advance: paths.employeeAdvance,
+        profit: paths.financeDashboard,
+        approval: paths.financeCenter,
+      };
+      navigate(routeMap[module] || paths.financeDashboard);
+    },
+    [navigate],
+  );
 
   return {
     loading,

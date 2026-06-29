@@ -367,7 +367,7 @@ const StyleProductionTab: React.FC<Props> = ({
           </Space>
         </div>
         <div style={{ color: 'var(--color-text-tertiary, var(--color-text-secondary))', fontSize: 14, marginBottom: 8 }}>
-          提示：相关文件请在"文件管理"标签页统一上传
+          相关文件请在"文件管理"标签页统一上传
         </div>
         <Input.TextArea
           id="productionRequirements"

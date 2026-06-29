@@ -256,7 +256,7 @@ public class ProductionOrderCreationHelper {
             newOrder.setSalesChannel(style.getSalesChannel());
         }
         if (style.getCustomerId() != null) {
-            newOrder.setCustomerId(String.valueOf(style.getCustomerId()));
+            newOrder.setCustomerId(style.getCustomerId());
         }
         if (StringUtils.hasText(style.getCustomerName())) {
             newOrder.setCustomerName(style.getCustomerName());

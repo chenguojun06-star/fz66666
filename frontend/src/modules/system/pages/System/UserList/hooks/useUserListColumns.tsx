@@ -72,6 +72,9 @@ export const getEmploymentStatusConfig = (status?: string) => {
     normal: { text: '正式', color: 'success' },
     probation: { text: '试用期', color: 'warning' },
     temporary: { text: '临时工', color: 'processing' },
+    transferred: { text: '调岗', color: 'blue' },
+    resigned: { text: '离职', color: 'error' },
+    archived: { text: '已归档', color: 'default' },
   };
   return map[status || ''] ?? { text: '未设置', color: 'default' };
 };
@@ -92,6 +95,7 @@ interface UseUserListColumnsProps {
   toggleUserStatus: (id: string, status: UserType['status']) => void;
   isTenantOwner?: boolean;
   onResetPassword?: (record: UserType) => void;
+  onChangeEmploymentStatus?: (record: UserType, nextStatus: 'transferred' | 'resigned' | 'archived') => void;
 }
 
 export function useUserListColumns(props: UseUserListColumnsProps) {
@@ -106,6 +110,7 @@ export function useUserListColumns(props: UseUserListColumnsProps) {
     toggleUserStatus,
     isTenantOwner: _isTenantOwner,
     onResetPassword,
+    onChangeEmploymentStatus,
   } = props;
   const { message, modal } = App.useApp();
 
@@ -292,6 +297,12 @@ export function useUserListColumns(props: UseUserListColumnsProps) {
           return items;
         })();
 
+        // 当前在职状态：非调岗/离职/归档的视为"在职"
+        const empStatus = String(record.employmentStatus || '');
+        const isTransferred = empStatus === 'transferred';
+        const isResigned = empStatus === 'resigned';
+        const isArchived = empStatus === 'archived';
+
         return (
           <RowActions
             maxInline={2}
@@ -308,6 +319,36 @@ export function useUserListColumns(props: UseUserListColumnsProps) {
                 label: '改密',
                 title: '改密',
                 onClick: () => onResetPassword?.(record),
+              },
+              {
+                key: 'more',
+                label: '更多',
+                children: [
+                  {
+                    key: 'emp-status-group',
+                    label: '变更在职状态',
+                    children: [
+                      {
+                        key: 'set-transferred',
+                        label: '调岗',
+                        disabled: isTransferred,
+                        onClick: () => onChangeEmploymentStatus?.(record, 'transferred'),
+                      },
+                      {
+                        key: 'set-resigned',
+                        label: '离职',
+                        disabled: isResigned,
+                        onClick: () => onChangeEmploymentStatus?.(record, 'resigned'),
+                      },
+                      {
+                        key: 'set-archived',
+                        label: '归档',
+                        disabled: isArchived,
+                        onClick: () => onChangeEmploymentStatus?.(record, 'archived'),
+                      },
+                    ],
+                  },
+                ],
               },
               {
                 key: 'delete',

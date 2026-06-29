@@ -20,23 +20,124 @@ interface WageSlipPrintModalProps {
 }
 
 const PRINT_STYLES = `
-    body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "'Segoe UI'", Roboto, "'Helvetica Neue'", Arial, "'Noto Sans'", "'Microsoft YaHei'", "'PingFang SC'", serif; padding: 20px; }
+    body {
+        font-family: "Microsoft YaHei", "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+        padding: 20px;
+        color: #000;
+        line-height: 1.6;
+    }
     .slip-container {
-        border: 1px solid #000;
-        margin-bottom: 30px;
-        padding: 15px;
+        margin-bottom: 40px;
         page-break-inside: avoid;
     }
-    .header { text-align: center; font-size: 18px; font-weight: bold; margin-bottom: 10px; border-bottom: 2px solid #000; padding-bottom: 10px; }
-    .info-row { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 14px; }
-    table { width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 12px; }
-    th, td { border: 1px solid #000; padding: 6px; text-align: center; }
-    th { background-color: var(--color-border-light); }
-    .footer { display: flex; justify-content: space-between; font-size: 14px; font-weight: bold; margin-top: 10px; }
-    .sign-area { display: flex; justify-content: space-between; margin-top: 30px; font-size: 14px; }
+    .slip-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 14px;
+    }
+    .slip-table th, .slip-table td {
+        border: 1px solid #000;
+        padding: 10px 12px;
+    }
+    .slip-table th {
+        background-color: #eaeaea;
+        font-weight: bold;
+        text-align: center;
+    }
+    .row-title th {
+        text-align: center;
+        font-size: 22px;
+        font-weight: bold;
+        letter-spacing: 4px;
+        padding: 16px 12px;
+        background-color: #eaeaea;
+    }
+    .row-info td {
+        font-size: 14px;
+        padding: 10px 12px;
+    }
+    .row-info .label {
+        font-weight: bold;
+        background-color: #f5f5f5;
+        text-align: right;
+        width: 12%;
+        white-space: nowrap;
+    }
+    .row-info .value {
+        text-align: left;
+        width: 25%;
+    }
+    .row-info .value-mid {
+        text-align: left;
+        width: 21%;
+    }
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+        margin: 0;
+    }
+    .data-table th, .data-table td {
+        border: 1px solid #000;
+        padding: 8px 6px;
+        text-align: center;
+    }
+    .data-table th {
+        background-color: #eaeaea;
+        font-weight: bold;
+    }
+    .row-data-header th {
+        background-color: #eaeaea;
+        padding: 0;
+    }
+    .row-data-header th > table {
+        border: none;
+        margin: 0;
+    }
+    .row-data-header th > table th,
+    .row-data-header th > table td {
+        border-left: 1px solid #000;
+        border-top: 0;
+        border-bottom: 0;
+        border-right: 0;
+    }
+    .row-data-header th > table th:first-child { border-left: 0; }
+    .row-total td {
+        font-size: 15px;
+        font-weight: bold;
+        background-color: #f5f5f5;
+        text-align: right;
+        padding: 12px;
+    }
+    .row-total .label {
+        text-align: right;
+        width: 50%;
+    }
+    .row-total .value {
+        text-align: left;
+        width: 50%;
+    }
+    .row-sign td {
+        padding: 40px 12px 12px;
+        font-size: 14px;
+        text-align: left;
+    }
+    .row-sign .sign-line {
+        display: inline-block;
+        min-width: 200px;
+        border-bottom: 1px solid #000;
+        margin-left: 8px;
+    }
+    .row-empty td {
+        padding: 0;
+        border-left: 0;
+        border-right: 0;
+        height: 8px;
+        background-color: #fff;
+    }
     @media print {
         body { -webkit-print-color-adjust: exact; padding: 0; }
-        @page { margin: 5mm; }
+        @page { margin: 10mm; }
     }
 `;
 
@@ -91,7 +192,7 @@ const WageSlipPrintModal: React.FC<WageSlipPrintModalProps> = ({
     const selectedWorkers = workerData.filter(w => selectedWorkerNames.includes(w.operatorName));
 
     const renderDetailTable = (details: any[]) => (
-        <table>
+        <table className="data-table">
             <thead>
                 <tr>
                     <th>序号</th>
@@ -127,7 +228,7 @@ const WageSlipPrintModal: React.FC<WageSlipPrintModalProps> = ({
         const totalQty = details.reduce((sum, d) => sum + (Number(d.quantity) || 0), 0);
         const totalAmt = details.reduce((sum, d) => sum + (Number(d.totalAmount) || 0), 0);
         return (
-            <table>
+            <table className="data-table">
                 <thead>
                     <tr>
                         <th>序号总数</th>
@@ -202,23 +303,38 @@ const WageSlipPrintModal: React.FC<WageSlipPrintModalProps> = ({
             <div ref={printRef} style={{ maxHeight: '55vh', overflowY: 'auto', paddingRight: 10 }}>
                 {selectedWorkers.map((worker) => (
                     <div key={worker.operatorName} className="slip-container">
-                        <div className="header" style={{ fontSize: 22, fontWeight: 700, textAlign: 'center', marginBottom: 4 }}>
-                            {user?.tenantName ? `${user.tenantName} - ` : ''}员工计件工资条{printVersion === 'simple' ? '（简版）' : ''}
-                        </div>
-                        <div className="info-row">
-                            <span><strong>姓名：</strong>{worker.operatorName}</span>
-                            <span><strong>结算周期：</strong>{dateRange[0]} 至 {dateRange[1]}</span>
-                            <span><strong>打印时间：</strong>{dayjs().format('YYYY-MM-DD HH:mm')}</span>
-                        </div>
-                        {printVersion === 'detail' ? renderDetailTable(worker.details) : renderSimpleTable(worker.details)}
-                        <div className="footer">
-                            <span>合计总件数：{worker.totalQuantity} 件</span>
-                            <span>应发总计：{formatMoney(worker.totalAmount)}</span>
-                        </div>
-                        <div className="sign-area">
-                            <span>核算人：_____________</span>
-                            <span>员工签字：_____________</span>
-                        </div>
+                        <table className="slip-table">
+                            <tbody>
+                                <tr className="row-title">
+                                    <th colSpan={6}>
+                                        {user?.tenantName ? `${user.tenantName} - ` : ''}员工计件工资条{printVersion === 'simple' ? '（简版）' : ''}
+                                    </th>
+                                </tr>
+                                <tr className="row-info">
+                                    <td className="label">姓名</td>
+                                    <td className="value">{worker.operatorName}</td>
+                                    <td className="label">结算周期</td>
+                                    <td className="value-mid">{dateRange[0]} 至 {dateRange[1]}</td>
+                                    <td className="label">打印时间</td>
+                                    <td className="value-mid">{dayjs().format('YYYY-MM-DD HH:mm')}</td>
+                                </tr>
+                                <tr className="row-data-header">
+                                    <th colSpan={6}>
+                                        {printVersion === 'detail' ? renderDetailTable(worker.details) : renderSimpleTable(worker.details)}
+                                    </th>
+                                </tr>
+                                <tr className="row-total">
+                                    <td className="label">合计总件数</td>
+                                    <td className="value">{worker.totalQuantity} 件</td>
+                                    <td className="label">应发总计</td>
+                                    <td className="value" colSpan={3}>{formatMoney(worker.totalAmount)}</td>
+                                </tr>
+                                <tr className="row-sign">
+                                    <td colSpan={3}>核算人：<span className="sign-line">&nbsp;</span></td>
+                                    <td colSpan={3}>员工签字：<span className="sign-line">&nbsp;</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 ))}
                 {selectedWorkers.length === 0 && (

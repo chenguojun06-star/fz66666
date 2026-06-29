@@ -59,32 +59,13 @@ export interface StageQuickAction {
 export const isStyleInfoCompleted = (record: StyleRecord | Partial<StyleInfo> | null | undefined): boolean => {
   if (!record) return false;
 
+  // 样衣完成唯一权威判定：sampleStatus=COMPLETED 或 sampleCompletedTime 存在
+  // 后端只有 StyleStageHelper.completeSample（前置校验通过后）才会设置这两个字段
+  // 其他条件（审核通过/6阶段完成/progressNode）都不算完成，避免款号被误判完成而从列表消失
   const sampleStatus = String((record as StyleRecord).sampleStatus || '').trim().toUpperCase();
-  const progressNode = String((record as StyleRecord).progressNode || '').trim();
-  const sampleReviewStatus = String((record as StyleRecord).sampleReviewStatus || '').trim().toUpperCase();
   const sampleCompletedTime = (record as StyleRecord).sampleCompletedTime;
-  const sampleReviewTime = (record as StyleRecord).sampleReviewTime;
-  const completedTime = (record as StyleRecord).completedTime;
-
-  // 1. 状态直接标记完成
   if (sampleStatus === 'COMPLETED' || sampleStatus === 'DONE') return true;
-  // 2. 进度节点显示样衣完成
-  if (progressNode === '样衣完成' || /^样衣完成/.test(progressNode)) return true;
-  // 3. 样衣审核通过
-  if (sampleReviewStatus === 'PASS' || sampleReviewStatus === 'APPROVED') return true;
-  // 4. 有样衣完成时间或样衣审核时间
-  if (sampleCompletedTime || sampleReviewTime) return true;
-  // 5. 有整体完成时间
-  if (completedTime) return true;
-
-  // 6. 所有 6 个开发阶段都已完成（BOM/纸样/尺寸/工序/生产制单/二次工艺）
-  const hasBom = Boolean((record as StyleRecord).bomCompletedTime);
-  const hasPattern = Boolean((record as StyleRecord).patternCompletedTime);
-  const hasSize = Boolean((record as StyleRecord).sizePriceCompletedTime) || Boolean((record as StyleRecord).sizeCompletedTime);
-  const hasProcess = Boolean((record as StyleRecord).processCompletedTime);
-  const hasProduction = Boolean((record as StyleRecord).productionCompletedTime);
-  const hasSecondary = Boolean((record as StyleRecord).secondaryCompletedTime);
-  if (hasBom && hasPattern && hasSize && hasProcess && hasProduction && hasSecondary) return true;
+  if (sampleCompletedTime) return true;
 
   return false;
 };
@@ -565,20 +546,24 @@ export const buildSampleStage: StageBuilder = (record) => {
   const sampleStatus = String(record.sampleStatus || '').trim().toUpperCase();
   const sampleProgress = clampPercent(Number(record.sampleProgress || 0));
   const started = ['IN_PROGRESS', 'PRODUCTION_COMPLETED', 'COMPLETED'].includes(sampleStatus);
-  const done = Boolean(record.sampleCompletedTime)
-    || sampleProgress >= 100
-    || ['PRODUCTION_COMPLETED', 'COMPLETED'].includes(sampleStatus);
+  // 样衣生产 done 的唯一判定：sampleStatus=COMPLETED 或 sampleCompletedTime 存在
+  // PRODUCTION_COMPLETED 仅代表样板制作完成，样衣开发流程仍在进行（还有审核/入库等环节）
+  const done = sampleStatus === 'COMPLETED' || Boolean(record.sampleCompletedTime);
+  // 样板制作完成（PRODUCTION_COMPLETED）单独标记，用于 helper 文案区分
+  const productionDone = sampleStatus === 'PRODUCTION_COMPLETED';
 
   return {
     key: 'sample',
     label: '样衣生产',
     helper: done
-      ? '生产完成'
-      : sampleProgress > 0
-        ? `进度 ${sampleProgress}%`
-        : started
-          ? '已领取生产'
-          : '等待纸样',
+      ? '样衣完成'
+      : productionDone
+        ? '样板制作完成，待审核入库'
+        : sampleProgress > 0
+          ? `进度 ${sampleProgress}%`
+          : started
+            ? '已领取生产'
+            : '等待纸样',
     startTimeLabel: formatNodeTime(record.sampleStartTime),
     timeLabel: done
       ? (record.sampleCompletedTime
@@ -592,7 +577,7 @@ export const buildSampleStage: StageBuilder = (record) => {
     actionKey: 'detail',
     actionLabel: '查看详情',
     details: buildStageDetails(
-      started ? '样衣制作中' : '领取时间待更新',
+      done ? '样衣已完成' : productionDone ? '样板制作完成，待审核入库' : started ? '样衣制作中' : '领取时间待更新',
       done && record.sampleCompletedTime ? `完成时间：${dayjs(record.sampleCompletedTime as string | number | Date).format('YYYY-MM-DD')}` : false
     ),
   };

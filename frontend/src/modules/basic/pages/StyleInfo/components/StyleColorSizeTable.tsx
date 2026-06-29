@@ -58,6 +58,8 @@ interface StyleColorSizeTableProps {
   // 锁定状态
   editLocked: boolean;
   isFieldLocked: (fieldValue: any) => boolean;
+  hideInternalTitle?: boolean;
+  hideMatrix?: boolean;
 }
 
 /**
@@ -77,7 +79,9 @@ const StyleColorSizeTable: React.FC<StyleColorSizeTableProps> = ({
   onImageClear,
   commonSizes, commonColors,
   setCommonSizes, setCommonColors,
-  editLocked, isFieldLocked
+  editLocked, isFieldLocked,
+  hideInternalTitle = false,
+  hideMatrix = false
 }) => {
   const { message } = App.useApp();
 
@@ -209,8 +213,8 @@ const StyleColorSizeTable: React.FC<StyleColorSizeTableProps> = ({
   );
 
   return (
-    <div className="style-color-size-table" style={{ marginBottom: 12 }}>
-      <div style={{ marginBottom: 10, fontWeight: 600 }}>码数/颜色/数量配置</div>
+    <div className="style-color-size-table" style={{ marginBottom: hideInternalTitle ? 0 : 12 }}>
+      {!hideInternalTitle && <div style={{ marginBottom: 10, fontWeight: 600 }}>码数/颜色/数量配置</div>}
 
       <div style={{ display: 'grid', gap: 10 }}>
         <div style={{ display: 'grid', gridTemplateColumns: '72px minmax(0, 1fr)', gap: 10, alignItems: 'start' }}>
@@ -295,87 +299,91 @@ const StyleColorSizeTable: React.FC<StyleColorSizeTableProps> = ({
           </div>
         </div>
 
-        <div style={{ overflowX: 'auto', border: '1px solid var(--color-border)', borderRadius: 12 }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 560 }}>
-            <tbody>
-              <tr>
-                <td style={{ width: 120, padding: '8px 10px', background: 'var(--color-bg-container)', fontWeight: 600, fontSize: 14 }}>颜色 / 尺码</td>
-                {selectedSizes.map((size) => (
-                  <td key={size} style={{ padding: '8px 10px', background: 'var(--color-bg-container)', textAlign: 'center', fontWeight: 600, fontSize: 14 }}>{size}</td>
-                ))}
-                <td style={{ width: 72, padding: '8px 10px', background: 'var(--color-bg-container)', textAlign: 'center', fontWeight: 600, fontSize: 14 }}>小计</td>
-              </tr>
-              {matrixRows.map((row, rowIndex) => {
-                const rowTotal = row.quantities.reduce((sum, qty) => sum + Number(qty || 0), 0);
-                return (
-                  <tr key={row.color || rowIndex}>
-                    <td style={{ padding: '8px 10px', borderTop: '1px solid var(--color-border)' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-                        <ImageUploadBox
-                          size={80}
-                          enableDrop
-                          maxSizeMB={0}
-                          value={row.imageUrl ?? null}
-                          disabled={editLocked}
-                          uploadFn={async (file) => {
-                            if (!file.type.startsWith('image/')) throw new Error('请上传图片文件');
-                            if (file.size > 10 * 1024 * 1024) throw new Error('单张颜色图最大 10MB');
-                            const dataUrl = await new Promise<string>((resolve, reject) => {
-                              const reader = new FileReader();
-                              reader.onload = () => resolve(String(reader.result || ''));
-                              reader.onerror = reject;
-                              reader.readAsDataURL(file);
-                            });
-                            void Promise.resolve(onImageSync?.(row.color, file)).catch((err: any) => {
-                              message.warning(err?.message || '颜色图片已预览，但联动封面图失败');
-                            });
-                            return dataUrl;
-                          }}
-                          onChange={(url) => {
-                            if (url) {
-                              setMatrixRows((prev) => prev.map((r, i) => i === rowIndex ? { ...r, imageUrl: url } : r));
-                            } else {
-                              void clearRowImage(rowIndex);
-                            }
-                          }}
-                        />
-                        <div style={{ fontWeight: 600, color: '#ef4444', fontSize: 14, textAlign: 'center', maxWidth: 90, wordBreak: 'break-all' }}>{row.color}</div>
-                      </div>
-                    </td>
-                    {selectedSizes.map((_, columnIndex) => (
-                      <td key={`${row.color}-${columnIndex}`} style={{ padding: '6px 8px', borderTop: '1px solid var(--color-border)' }}>
-                        <InputNumber
-                          className="style-color-size-table__input"
-                         
-                          min={0}
-                          controls={false}
-                          value={Number(row.quantities[columnIndex] || 0)}
-                          onChange={(value) => updateCell(rowIndex, columnIndex, Number(value || 0))}
-                          style={{ width: '100%' }}
-                          disabled={editLocked}
-                        />
-                      </td>
+        {!hideMatrix && (
+          <>
+            <div style={{ overflowX: 'auto', border: '1px solid var(--color-border)', borderRadius: 12 }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 560 }}>
+                <tbody>
+                  <tr>
+                    <td style={{ width: 120, padding: '8px 10px', background: 'var(--color-bg-container)', fontWeight: 600, fontSize: 14 }}>颜色 / 尺码</td>
+                    {selectedSizes.map((size) => (
+                      <td key={size} style={{ padding: '8px 10px', background: 'var(--color-bg-container)', textAlign: 'center', fontWeight: 600, fontSize: 14 }}>{size}</td>
                     ))}
-                    <td style={{ padding: '8px 10px', borderTop: '1px solid var(--color-border)', textAlign: 'center', fontWeight: 600, fontSize: 14 }}>{rowTotal}</td>
+                    <td style={{ width: 72, padding: '8px 10px', background: 'var(--color-bg-container)', textAlign: 'center', fontWeight: 600, fontSize: 14 }}>小计</td>
                   </tr>
-                );
-              })}
-              <tr>
-                <td style={{ padding: '8px 10px', borderTop: '1px solid var(--color-border)', background: 'rgba(37, 99, 235, 0.04)', fontWeight: 700, fontSize: 14 }}>合计</td>
-                {sizeColumnTotals.map((total, index) => (
-                  <td key={index} style={{ padding: '8px 10px', borderTop: '1px solid var(--color-border)', background: 'rgba(37, 99, 235, 0.04)', textAlign: 'center', fontWeight: 700, fontSize: 14 }}>{total}</td>
-                ))}
-                <td style={{ padding: '8px 10px', borderTop: '1px solid var(--color-border)', background: 'rgba(37, 99, 235, 0.04)', textAlign: 'center', fontWeight: 700, fontSize: 14 }}>{matrixTotal}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+                  {matrixRows.map((row, rowIndex) => {
+                    const rowTotal = row.quantities.reduce((sum, qty) => sum + Number(qty || 0), 0);
+                    return (
+                      <tr key={row.color || rowIndex}>
+                        <td style={{ padding: '8px 10px', borderTop: '1px solid var(--color-border)' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                            <ImageUploadBox
+                              size={80}
+                              enableDrop
+                              maxSizeMB={0}
+                              value={row.imageUrl ?? null}
+                              disabled={editLocked}
+                              uploadFn={async (file) => {
+                                if (!file.type.startsWith('image/')) throw new Error('请上传图片文件');
+                                if (file.size > 10 * 1024 * 1024) throw new Error('单张颜色图最大 10MB');
+                                const dataUrl = await new Promise<string>((resolve, reject) => {
+                                  const reader = new FileReader();
+                                  reader.onload = () => resolve(String(reader.result || ''));
+                                  reader.onerror = reject;
+                                  reader.readAsDataURL(file);
+                                });
+                                void Promise.resolve(onImageSync?.(row.color, file)).catch((err: any) => {
+                                  message.warning(err?.message || '颜色图片已预览，但联动封面图失败');
+                                });
+                                return dataUrl;
+                              }}
+                              onChange={(url) => {
+                                if (url) {
+                                  setMatrixRows((prev) => prev.map((r, i) => i === rowIndex ? { ...r, imageUrl: url } : r));
+                                } else {
+                                  void clearRowImage(rowIndex);
+                                }
+                              }}
+                            />
+                            <div style={{ fontWeight: 600, color: '#ef4444', fontSize: 14, textAlign: 'center', maxWidth: 90, wordBreak: 'break-all' }}>{row.color}</div>
+                          </div>
+                        </td>
+                        {selectedSizes.map((_, columnIndex) => (
+                          <td key={`${row.color}-${columnIndex}`} style={{ padding: '6px 8px', borderTop: '1px solid var(--color-border)' }}>
+                            <InputNumber
+                              className="style-color-size-table__input"
+                             
+                              min={0}
+                              controls={false}
+                              value={Number(row.quantities[columnIndex] || 0)}
+                              onChange={(value) => updateCell(rowIndex, columnIndex, Number(value || 0))}
+                              style={{ width: '100%' }}
+                              disabled={editLocked}
+                            />
+                          </td>
+                        ))}
+                        <td style={{ padding: '8px 10px', borderTop: '1px solid var(--color-border)', textAlign: 'center', fontWeight: 600, fontSize: 14 }}>{rowTotal}</td>
+                      </tr>
+                    );
+                  })}
+                  <tr>
+                    <td style={{ padding: '8px 10px', borderTop: '1px solid var(--color-border)', background: 'rgba(37, 99, 235, 0.04)', fontWeight: 700, fontSize: 14 }}>合计</td>
+                    {sizeColumnTotals.map((total, index) => (
+                      <td key={index} style={{ padding: '8px 10px', borderTop: '1px solid var(--color-border)', background: 'rgba(37, 99, 235, 0.04)', textAlign: 'center', fontWeight: 700, fontSize: 14 }}>{total}</td>
+                    ))}
+                    <td style={{ padding: '8px 10px', borderTop: '1px solid var(--color-border)', background: 'rgba(37, 99, 235, 0.04)', textAlign: 'center', fontWeight: 700, fontSize: 14 }}>{matrixTotal}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
 
-        {matrixTotal > 0 && (
-          <div style={{ marginTop: 4, padding: '5px 8px', background: '#f0f9ff', border: '1px solid #91d5ff', display: 'inline-block', borderRadius: 8 }}>
-            <span style={{ fontWeight: 500, color: 'var(--primary-color)' }}>总数量：</span>
-            <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--primary-color)' }}>{matrixTotal}</span>
-          </div>
+            {matrixTotal > 0 && (
+              <div style={{ marginTop: 4, padding: '5px 8px', background: '#f0f9ff', border: '1px solid #91d5ff', display: 'inline-block', borderRadius: 8 }}>
+                <span style={{ fontWeight: 500, color: 'var(--primary-color)' }}>总数量：</span>
+                <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--primary-color)' }}>{matrixTotal}</span>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

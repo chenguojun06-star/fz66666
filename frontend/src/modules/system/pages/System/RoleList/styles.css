@@ -32,21 +32,21 @@
 
 .role-list-item {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 8px;
-  min-height: 44px;
+  min-height: 40px;
   padding: 6px 12px;
   border-radius: 4px;
   margin: 1px 4px;
   transition: background 0.15s;
   user-select: none;
   cursor: pointer;
+  border: 1px solid transparent;
 }
 
 .role-list-item-icon {
   font-size: 14px;
   flex-shrink: 0;
-  margin-top: 2px;
 }
 
 .role-list-item:hover {
@@ -54,16 +54,35 @@
 }
 
 .role-list-item-active {
-  background: var(--color-bg-highlight, #e6f4ff);
+  background: #e6f4ff;
+  border: 1px solid #91caff;
 }
 
 .role-list-item-active .role-list-item-name {
-  color: var(--primary-color, var(--color-primary));
+  color: #1677ff;
   font-weight: 500;
+}
+
+.role-list-item-actions {
+  display: none;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.role-list-item:hover .role-list-item-actions {
+  display: flex;
+}
+
+.role-list-item-active .role-list-item-actions {
+  display: flex;
 }
 
 .role-list-item-name {
   font-size: 13px;
+  flex: 1;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -80,6 +99,44 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+}
+
+.role-perm-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text-primary, #333);
+  padding: 16px 20px 0;
+  flex-shrink: 0;
+}
+
+.role-perm-formbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px 16px;
+  border-bottom: 1px solid var(--color-border-light, var(--color-border-light));
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.role-perm-formbar-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.role-perm-required-label::before {
+  content: '*';
+  color: #ff4d4f;
+  margin-right: 4px;
+}
+
+.role-perm-required-label {
+  font-size: 14px;
+  color: var(--color-text-primary, #333);
+  font-weight: 500;
 }
 
 .role-perm-header {
@@ -107,6 +164,82 @@
   flex: 1;
   overflow-y: auto;
   min-height: 0;
+}
+
+/* 截图风格权限矩阵 */
+.perm-matrix-container {
+  margin: 0 20px 20px;
+  border: 1px solid var(--color-border-light, #e8e8e8);
+  border-radius: 6px;
+  background: #fff;
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.perm-matrix-global-header {
+  display: flex;
+  align-items: center;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--color-border-light, #e8e8e8);
+  background: var(--color-bg-base, #fff);
+}
+
+.perm-matrix-section {
+  border-bottom: 1px solid var(--color-border-light, #e8e8e8);
+  background: #f7f8fa;
+}
+
+.perm-matrix-section:last-child {
+  border-bottom: none;
+}
+
+.perm-matrix-section-header {
+  display: flex;
+  align-items: center;
+  padding: 10px 16px;
+  background: #f0f2f5;
+  border-bottom: 1px solid var(--color-border-light, #e8e8e8);
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--color-text-primary, #333);
+}
+
+.perm-matrix-section-body {
+  padding: 12px 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+}
+
+.perm-matrix-section-body.has-prefix {
+  padding-left: 92px;
+  position: relative;
+}
+
+.perm-matrix-section-prefix {
+  position: absolute;
+  left: 16px;
+  top: 12px;
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--color-text-primary, #333);
+}
+
+.perm-matrix-item {
+  display: inline-flex;
+  align-items: center;
+  min-width: 120px;
+}
+
+.perm-matrix-item .ant-checkbox-wrapper {
+  font-size: 13px;
+  color: var(--color-text-primary, #333);
+}
+
+.perm-matrix-item .ant-checkbox-wrapper-checked {
+  color: #1677ff;
+  font-weight: 500;
 }
 
 .perm-module {

@@ -472,14 +472,12 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
                       if (mode === 'sample') {
                         allFields.push({ label: '板类', value: translatePlateType((data.productionSheet as any)?.plateType) });
                         allFields.push({ label: '纸样师', value: (data.productionSheet as any)?.sampleSupplier || empty });
-                        allFields.push({ label: '纸样号', value: (data.productionSheet as any)?.patternNo || empty });
                         allFields.push({ label: '车板师', value: (data.productionSheet as any)?.plateWorker || empty });
                       } else {
                         const factoryName = (data.productionSheet as any)?.factoryName || (extraInfo as any)?.加工厂 || empty;
                         allFields.push({ label: '加工厂', value: factoryName });
                         allFields.push({ label: '设计师', value: (data.productionSheet as any)?.sampleNo || empty });
                         allFields.push({ label: '板类', value: translatePlateType((data.productionSheet as any)?.plateType) });
-                        allFields.push({ label: '纸样号', value: (data.productionSheet as any)?.patternNo || empty });
                       }
                     }
 

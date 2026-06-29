@@ -123,7 +123,7 @@ const UserList: React.FC = () => {
     getUserList, openDialog, closeDialog, handleGenerateInvite,
     handleRemarkConfirm, openLogModal,
     toggleUserStatus, applyRoleToUser, handleSubmit,
-    handleResetPassword,
+    handleResetPassword, changeEmploymentStatus,
   } = useUserListData({ user, isSuperAdmin, isTenantOwner, form, userModal, logModal, navigate });
 
   const [departments, setDepartments] = useState<OrganizationUnit[]>([]);
@@ -224,6 +224,7 @@ const UserList: React.FC = () => {
     toggleUserStatus,
     isTenantOwner,
     onResetPassword: handleResetPassword,
+    onChangeEmploymentStatus: changeEmploymentStatus,
   });
 
   // 顶部统计条
@@ -338,6 +339,9 @@ const UserList: React.FC = () => {
                             { label: '正式', value: 'normal' },
                             { label: '试用期', value: 'probation' },
                             { label: '临时工', value: 'temporary' },
+                            { label: '调岗', value: 'transferred' },
+                            { label: '离职', value: 'resigned' },
+                            { label: '已归档', value: 'archived' },
                           ],
                         },
                         {
@@ -472,6 +476,9 @@ const UserList: React.FC = () => {
                     <Option value="normal">正式</Option>
                     <Option value="probation">试用期</Option>
                     <Option value="temporary">临时工</Option>
+                    <Option value="transferred">调岗</Option>
+                    <Option value="resigned">离职</Option>
+                    <Option value="archived">已归档</Option>
                   </Select>
                 </Form.Item>
               </Col>

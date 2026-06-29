@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
 import { Tabs } from 'antd';
-import { ShopOutlined, AuditOutlined, DollarOutlined } from '@ant-design/icons';
+import { ShopOutlined, AuditOutlined, DollarOutlined, ScanOutlined, BankOutlined } from '@ant-design/icons';
 import { useSearchParams } from 'react-router-dom';
 import FinishedSettlementContent from './FinishedSettlementContent';
+import ExternalScanContent from './ExternalScanContent';
+import FactorySummaryContent from './FactorySummaryContent';
 import PaidUnsettledContent from './PaidUnsettledContent';
 import PaidSettledContent from './PaidSettledContent';
 import styles from './index.module.css';
 
-type TabKey = 'settlement' | 'unpaid' | 'paid';
+type TabKey = 'settlement' | 'externalScan' | 'factorySummary' | 'unpaid' | 'paid';
 
 const FinanceCenter: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -15,7 +17,7 @@ const FinanceCenter: React.FC = () => {
   // 从 URL 参数读取初始 Tab，默认 settlement
   const getInitialTab = (): TabKey => {
     const tab = searchParams.get('tab');
-    if (tab === 'settlement' || tab === 'unpaid' || tab === 'paid') {
+    if (tab === 'settlement' || tab === 'externalScan' || tab === 'factorySummary' || tab === 'unpaid' || tab === 'paid') {
       return tab;
     }
     return 'settlement';
@@ -53,6 +55,31 @@ const FinanceCenter: React.FC = () => {
       ),
       children: (
         <FinishedSettlementContent
+          auditedOrderNos={auditedOrderNos}
+          onAuditNosChange={setAuditedOrderNos}
+        />
+      ),
+    },
+    {
+      key: 'externalScan',
+      label: (
+        <span className={styles.tabLabel}>
+          <ScanOutlined />
+          外部工厂扫码
+        </span>
+      ),
+      children: <ExternalScanContent />,
+    },
+    {
+      key: 'factorySummary',
+      label: (
+        <span className={styles.tabLabel}>
+          <BankOutlined />
+          工厂汇总
+        </span>
+      ),
+      children: (
+        <FactorySummaryContent
           auditedOrderNos={auditedOrderNos}
           onAuditNosChange={setAuditedOrderNos}
         />

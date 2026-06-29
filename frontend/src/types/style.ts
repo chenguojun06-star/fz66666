@@ -44,7 +44,7 @@ export interface StyleInfo extends Record<string, unknown> {
 
   // 销售渠道与客户信息
   salesChannel?: string;
-  customerId?: number;
+  customerId?: string;
   customerName?: string;
   customerContact?: string;
   customerPhone?: string;

@@ -60,6 +60,11 @@ public class LegacyInferenceAdapter implements AiInferenceGateway {
     }
 
     @Override
+    public boolean isVisionAvailable() {
+        return delegate.isVisionModelEnabled();
+    }
+
+    @Override
     public String getProviderName() {
         return "legacy";
     }

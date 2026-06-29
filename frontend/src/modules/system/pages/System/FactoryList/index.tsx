@@ -593,9 +593,14 @@ const FactoryList: React.FC = () => {
                       />
                     }
                     right={
-                      <Button type="primary" onClick={() => openDialog('create')}>
-                        {activeTab === 'OUTSOURCE' ? '新增外发供应商' : '新增面辅料供应商'}
-                      </Button>
+                      <Space size={8}>
+                        <Tag color="blue" style={{ marginRight: 0 }}>
+                          {activeTab === 'ALL' ? '全部' : activeTab === 'MATERIAL' ? '面辅料' : '外发'} · 共 {total} 家
+                        </Tag>
+                        <Button type="primary" onClick={() => openDialog('create')}>
+                          {activeTab === 'OUTSOURCE' ? '新增外发供应商' : '新增面辅料供应商'}
+                        </Button>
+                      </Space>
                     }
                   />
                   <ResizableTable<FactoryType>

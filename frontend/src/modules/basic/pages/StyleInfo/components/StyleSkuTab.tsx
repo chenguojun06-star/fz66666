@@ -20,11 +20,12 @@ interface StyleSkuTabProps {
   useSkuPrefix?: boolean | number;
   onModeChange?: (mode: 'AUTO' | 'MANUAL') => void;
   onRefresh?: () => void;
+  refreshTrigger?: number;
 }
 
 let tempIdCounter = -1;
 
-const StyleSkuTab: React.FC<StyleSkuTabProps> = ({ styleId, styleNo, skc: initialSkc, skuMode: initialMode, useSkuPrefix: initialUseSkuPrefix, onModeChange, onRefresh }) => {
+const StyleSkuTab: React.FC<StyleSkuTabProps> = ({ styleId, styleNo, skc: initialSkc, skuMode: initialMode, useSkuPrefix: initialUseSkuPrefix, onModeChange, onRefresh, refreshTrigger = 0 }) => {
   const { message } = App.useApp();
   const messageRef = useRef(message);
   messageRef.current = message;
@@ -67,6 +68,7 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = ({ styleId, styleNo, skc: initia
   }, [styleId]);
 
   useEffect(() => { fetchSkus(); }, [fetchSkus]);
+  useEffect(() => { if (refreshTrigger > 0) fetchSkus(); }, [refreshTrigger]);
   useEffect(() => { if (initialMode) setSkuMode(initialMode); }, [initialMode]);
   useEffect(() => { if (initialSkc) setSkcValue(initialSkc); }, [initialSkc]);
   useEffect(() => { if (initialUseSkuPrefix !== undefined) setUseSkuPrefix(Boolean(initialUseSkuPrefix)); }, [initialUseSkuPrefix]);

@@ -49,7 +49,9 @@ public class ProductSkuServiceImpl extends ServiceImpl<ProductSkuMapper, Product
             List<String> colors;
 
             String trimmed = sizeColorConfig.trim();
+            Map<String, Object> config = null;
             if (trimmed.startsWith("[")) {
+                // 旧格式：[{color, sizes: [...]}, ...]
                 List<Map<String, Object>> configList = objectMapper.readValue(trimmed,
                         new TypeReference<List<Map<String, Object>>>() {
                         });
@@ -78,7 +80,8 @@ public class ProductSkuServiceImpl extends ServiceImpl<ProductSkuMapper, Product
                     }
                 }
             } else {
-                Map<String, Object> config = objectMapper.readValue(trimmed,
+                // 新格式：{colors, sizes, matrixRows}
+                config = objectMapper.readValue(trimmed,
                         new TypeReference<Map<String, Object>>() {
                         });
 
@@ -105,9 +108,47 @@ public class ProductSkuServiceImpl extends ServiceImpl<ProductSkuMapper, Product
                 return;
             }
 
+            // 从 matrixRows 提取每个颜色每种尺码的数量
+            // matrixRows[i].quantities[j] 对应 sizes[j]（按位置索引）
+            java.util.Map<String, java.util.Map<String, Integer>> colorSizeQtyMap = new java.util.LinkedHashMap<>();
+            if (config != null) {
+                Object matrixRows = config.get("matrixRows");
+                if (matrixRows instanceof List) {
+                    for (Object row : (List<?>) matrixRows) {
+                        if (row instanceof Map) {
+                            String color = (String) ((Map<?, ?>) row).get("color");
+                            if (!StringUtils.hasText(color)) continue;
+                            Object qtyObj = ((Map<?, ?>) row).get("quantities");
+                            if (qtyObj instanceof List) {
+                                List<?> qtyList = (List<?>) qtyObj;
+                                java.util.Map<String, Integer> sizeQtyMap = new java.util.LinkedHashMap<>();
+                                for (int j = 0; j < sizes.size() && j < qtyList.size(); j++) {
+                                    Object q = qtyList.get(j);
+                                    int qty = 0;
+                                    if (q instanceof Number) {
+                                        qty = ((Number) q).intValue();
+                                    }
+                                    sizeQtyMap.put(sizes.get(j), qty);
+                                }
+                                colorSizeQtyMap.put(color.trim(), sizeQtyMap);
+                            }
+                        }
+                    }
+                }
+            }
+
             for (String color : colors) {
                 for (String size : sizes) {
-                    createOrUpdateSku(style, color, size);
+                    // 从 matrixRows 取数量，没有则取矩阵该颜色该尺码的总数（兼容旧数据）
+                    Integer qty = null;
+                    if (colorSizeQtyMap.containsKey(color) && colorSizeQtyMap.get(color).containsKey(size)) {
+                        qty = colorSizeQtyMap.get(color).get(size);
+                    }
+                    // 兼容：若 matrixRows 没有该颜色记录，取该颜色所有尺码的总数量
+                    if (qty == null && colorSizeQtyMap.containsKey(color)) {
+                        qty = colorSizeQtyMap.get(color).values().stream().mapToInt(Integer::intValue).sum();
+                    }
+                    createOrUpdateSku(style, color, size, qty);
                 }
             }
         } catch (Exception e) {
@@ -247,6 +288,7 @@ public class ProductSkuServiceImpl extends ServiceImpl<ProductSkuMapper, Product
                     existing.setExternalPlatform(skuUpdate.getExternalPlatform());
                     existing.setCostPrice(skuUpdate.getCostPrice());
                     existing.setSalesPrice(skuUpdate.getSalesPrice());
+                    existing.setStockQuantity(skuUpdate.getStockQuantity());
                     existing.setRemark(skuUpdate.getRemark());
                     existing.setManuallyEdited(1);
                     this.updateById(existing);
@@ -272,12 +314,100 @@ public class ProductSkuServiceImpl extends ServiceImpl<ProductSkuMapper, Product
                 skuUpdate.setStyleId(styleId);
                 skuUpdate.setStyleNo(style.getStyleNo());
                 skuUpdate.setStatus("ENABLED");
-                skuUpdate.setStockQuantity(0);
+                skuUpdate.setStockQuantity(skuUpdate.getStockQuantity() != null ? skuUpdate.getStockQuantity() : 0);
                 skuUpdate.setManuallyEdited(1);
                 skuUpdate.setSkuMode(style.getSkuMode());
                 skuUpdate.setTenantId(tenantId);
                 this.save(skuUpdate);
             }
+        }
+
+        // ★ 反向同步：SKU数量变化 → 回写 sizeColorConfig.matrixRows
+        syncStockQuantityToMatrixRows(style, skuList);
+    }
+
+    /**
+     * 将SKU的stockQuantity反向同步到sizeColorConfig.matrixRows
+     * matrixRows[rowIndex].quantities[sizeIndex] 对应 colors[rowIndex] × sizes[sizeIndex]
+     */
+    private void syncStockQuantityToMatrixRows(StyleInfo style, List<ProductSku> skuList) {
+        String configJson = style.getSizeColorConfig();
+        if (!StringUtils.hasText(configJson) || skuList == null || skuList.isEmpty()) {
+            return;
+        }
+
+        try {
+            String trimmed = configJson.trim();
+            Map<String, Object> config;
+            List<String> colors;
+            List<String> sizes;
+
+            if (trimmed.startsWith("[")) {
+                // 旧格式不支持反向同步
+                return;
+            }
+
+            config = objectMapper.readValue(trimmed, new TypeReference<Map<String, Object>>() {});
+            Object colorsObj = config.get("colors");
+            Object sizesObj = config.get("sizes");
+            Object matrixRowsObj = config.get("matrixRows");
+
+            if (!(colorsObj instanceof List) || !(sizesObj instanceof List) || !(matrixRowsObj instanceof List)) {
+                return;
+            }
+
+            colors = ((List<?>) colorsObj).stream().map(String::valueOf).collect(java.util.stream.Collectors.toList());
+            sizes = ((List<?>) sizesObj).stream().map(String::valueOf).collect(java.util.stream.Collectors.toList());
+            List<Map<String, Object>> matrixRows = (List<Map<String, Object>>) matrixRowsObj;
+
+            // 构建 colorIndex 映射
+            java.util.Map<String, Integer> colorIndexMap = new java.util.LinkedHashMap<>();
+            for (int i = 0; i < colors.size(); i++) {
+                colorIndexMap.put(colors.get(i).trim(), i);
+            }
+
+            // 遍历SKU，按 (color, size) 找到 matrixRows 对应位置并更新 quantities
+            boolean modified = false;
+            for (ProductSku sku : skuList) {
+                String skuColor = sku.getColor();
+                String skuSize = sku.getSize();
+                if (!StringUtils.hasText(skuColor) || !StringUtils.hasText(skuSize)) {
+                    continue;
+                }
+                Integer rowIdx = colorIndexMap.get(skuColor.trim());
+                if (rowIdx == null) {
+                    continue;
+                }
+                Integer colIdx = null;
+                for (int j = 0; j < sizes.size(); j++) {
+                    if (sizes.get(j).trim().equals(skuSize.trim())) {
+                        colIdx = j;
+                        break;
+                    }
+                }
+                if (colIdx == null) {
+                    continue;
+                }
+
+                Map<String, Object> row = matrixRows.get(rowIdx);
+                Object qtyObj = row.get("quantities");
+                if (qtyObj instanceof List) {
+                    List<Object> quantities = (List<Object>) qtyObj;
+                    if (colIdx < quantities.size()) {
+                        Integer newQty = sku.getStockQuantity() != null ? sku.getStockQuantity() : 0;
+                        quantities.set(colIdx, newQty);
+                        modified = true;
+                    }
+                }
+            }
+
+            if (modified) {
+                config.put("matrixRows", matrixRows);
+                style.setSizeColorConfig(objectMapper.writeValueAsString(config));
+                styleInfoMapper.updateById(style);
+            }
+        } catch (Exception e) {
+            log.error("反向同步SKU数量到matrixRows失败: styleId={}", style.getId(), e);
         }
     }
 
@@ -389,7 +519,7 @@ public class ProductSkuServiceImpl extends ServiceImpl<ProductSkuMapper, Product
         return sb.toString();
     }
 
-    private void createOrUpdateSku(StyleInfo style, String color, String size) {
+    private void createOrUpdateSku(StyleInfo style, String color, String size, Integer quantity) {
         String skuCode = generateSkuCode(style.getStyleNo(), color, size, style.getUseSkuPrefix());
         Long tenantId = UserContext.tenantId();
         if (tenantId == null) {
@@ -409,16 +539,18 @@ public class ProductSkuServiceImpl extends ServiceImpl<ProductSkuMapper, Product
             sku.setColor(color);
             sku.setSize(size);
             sku.setStatus("ENABLED");
-            sku.setStockQuantity(0);
+            sku.setStockQuantity(quantity != null ? quantity : 0);
             sku.setSalesPrice(style.getPrice());
             sku.setSkuMode(style.getSkuMode());
             sku.setTenantId(tenantId);
             this.save(sku);
-            log.info("Created new SKU: {}", skuCode);
+            log.info("Created new SKU: {} with quantity={}", skuCode, quantity);
         } else {
             existing.setStyleNo(style.getStyleNo());
+            // 只有未被手动编辑过的 SKU 才自动更新编码和数量
             if (!Integer.valueOf(1).equals(existing.getManuallyEdited())) {
                 existing.setSkuCode(skuCode);
+                existing.setStockQuantity(quantity != null ? quantity : 0);
             }
             this.updateById(existing);
         }

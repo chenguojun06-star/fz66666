@@ -91,6 +91,13 @@ public class StyleInfoController {
         return Result.successMessage("操作成功");
     }
 
+    @PutMapping("/{id}/size-color-config")
+    public Result<?> updateSizeColorConfig(@PathVariable Long id,
+            @RequestBody(required = false) Map<String, Object> body) {
+        styleInfoOrchestrator.updateSizeColorConfig(id, body);
+        return Result.successMessage("颜色尺码配置已保存，SKU 已自动生成");
+    }
+
     @PutMapping("/{id}/production-requirements")
     public Result<?> updateProductionRequirements(@PathVariable Long id,
             @RequestBody(required = false) Map<String, Object> body) {

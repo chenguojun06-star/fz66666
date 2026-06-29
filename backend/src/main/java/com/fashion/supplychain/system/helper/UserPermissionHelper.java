@@ -92,7 +92,8 @@ public class UserPermissionHelper {
         }
         List<String> permissions;
         try {
-            permissions = permissionEngine.calculatePermissions(user.getId(), user.getRoleId(), user.getTenantId(), Boolean.TRUE.equals(user.getIsTenantOwner()));
+            // ★ 一人多角色：引擎内部优先查 t_user_role 多角色列表，回退到 User.roleId 单字段
+            permissions = permissionEngine.calculatePermissionsByUser(user.getId(), user.getRoleId(), user.getTenantId(), Boolean.TRUE.equals(user.getIsTenantOwner()));
         } catch (Exception e) { permissions = List.of(); }
         result.put("permissions", permissions);
         return result;
@@ -106,7 +107,7 @@ public class UserPermissionHelper {
             rid = current.getRoleId();
         }
         User user = resolveCurrentUser();
-        if (user != null) return permissionEngine.calculatePermissions(user.getId(), rid, user.getTenantId());
+        if (user != null) return permissionEngine.calculatePermissionsByUser(user.getId(), rid, user.getTenantId(), false);
         return permissionEngine.getRolePermissionCodes(rid);
     }
 

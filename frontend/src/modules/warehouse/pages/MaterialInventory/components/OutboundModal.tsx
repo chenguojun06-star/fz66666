@@ -439,7 +439,7 @@ const OutboundModal: React.FC<OutboundModalProps> = ({
             fontSize: "var(--font-size-sm)",
             color: 'var(--primary-color)'
           }}>
-             提示：请在"出库数量"列输入需要出库的数量，系统将自动汇总。出库数量不能超过可用库存。
+             请在"出库数量"列输入需要出库的数量，系统将自动汇总。出库数量不能超过可用库存。
           </div>
         </Space>
       )}

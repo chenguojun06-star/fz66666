@@ -206,7 +206,7 @@ const MaterialInventoryModals: React.FC<MaterialInventoryModalsProps> = ({
               placeholder="请输入安全库存"
             />
             <div style={{ fontSize: "var(--font-size-sm)", color: 'var(--neutral-text-disabled)', marginTop: 8 }}>
-              提示：当库存低于安全库存时，系统将在仓库看板和面辅料预警中显示该物料
+              当库存低于安全库存时，系统将在仓库看板和面辅料预警中显示该物料
             </div>
           </div>
         )}

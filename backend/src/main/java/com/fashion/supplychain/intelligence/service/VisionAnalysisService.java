@@ -57,7 +57,7 @@ public class VisionAnalysisService {
     private Boolean realModelEnabled;
 
     public boolean isAvailable() {
-        return realModelEnabled && aiInferenceGateway.isAvailable();
+        return realModelEnabled && aiInferenceGateway.isVisionAvailable();
     }
 
     // ==================== 公开API ====================
@@ -107,7 +107,7 @@ public class VisionAnalysisService {
         }
 
         VisionResult result;
-        if (realModelEnabled && aiInferenceGateway.isAvailable()) {
+        if (realModelEnabled && aiInferenceGateway.isVisionAvailable()) {
             // 2. 真实视觉模型调用
             result = callRealVisionModel(imageUrl, textPrompt, taskType, tenantId);
         } else {

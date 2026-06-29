@@ -82,7 +82,6 @@ export function useSettlementData(auditedOrderNos: Set<string>, onAuditNosChange
   const [searchOrderNo, setSearchOrderNo] = useState('');
   const [searchStyleNo, setSearchStyleNo] = useState('');
   const [searchStatus, setSearchStatus] = useState('');
-  const [searchFactoryType, setSearchFactoryType] = useState<'INTERNAL' | 'EXTERNAL' | ''>('EXTERNAL');
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<FinishedSettlementRow[]>([]);
   const [total, setTotal] = useState(0);
@@ -117,10 +116,10 @@ export function useSettlementData(auditedOrderNos: Set<string>, onAuditNosChange
     orderNo: (overrides?.orderNo ?? searchOrderNo) || undefined,
     styleNo: (overrides?.styleNo ?? searchStyleNo) || undefined,
     status: (overrides?.status ?? searchStatus) || undefined,
-    factoryType: (overrides?.factoryType ?? searchFactoryType) || undefined,
+    factoryType: overrides?.factoryType ?? 'EXTERNAL',
     startDate: overrides?.startDate ?? (dateRange?.[0] ? dayjs(dateRange[0]).format('YYYY-MM-DD') : undefined),
     endDate: overrides?.endDate ?? (dateRange?.[1] ? dayjs(dateRange[1]).format('YYYY-MM-DD') : undefined),
-  }), [dateRange, pageParams.pageSize, searchOrderNo, searchStatus, searchStyleNo, searchFactoryType]);
+  }), [dateRange, pageParams.pageSize, searchOrderNo, searchStatus, searchStyleNo]);
 
   const loadData = async (params: PageParams = pageParams) => {
     setLoading(true);
@@ -156,7 +155,6 @@ export function useSettlementData(auditedOrderNos: Set<string>, onAuditNosChange
     setSearchOrderNo('');
     setSearchStyleNo('');
     setSearchStatus('');
-    setSearchFactoryType('EXTERNAL');
     setDateRange(null);
     const params: PageParams = { page: 1, pageSize: 20, factoryType: 'EXTERNAL' };
     setPageParams(params);
@@ -332,7 +330,6 @@ export function useSettlementData(auditedOrderNos: Set<string>, onAuditNosChange
     searchOrderNo, setSearchOrderNo,
     searchStyleNo, setSearchStyleNo,
     searchStatus, setSearchStatus,
-    searchFactoryType, setSearchFactoryType,
     loading, data, total,
     selectedRowKeys, setSelectedRowKeys,
     remarkModalVisible, setRemarkModalVisible,

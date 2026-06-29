@@ -222,6 +222,11 @@ public class SpringAiInferenceAdapter implements AiInferenceGateway {
     }
 
     @Override
+    public boolean isVisionAvailable() {
+        return false;
+    }
+
+    @Override
     public String getProviderName() {
         return "spring-ai";
     }

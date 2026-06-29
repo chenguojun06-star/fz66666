@@ -26,7 +26,14 @@ const statusTag = (val: string) => {
   return s ? <Tag color={s.color}>{s.label}</Tag> : <Tag>{val}</Tag>;
 };
 
-const ExpenseTab: React.FC = () => {
+interface ExpenseTabProps {
+  /** 默认费用类型筛选（如 'other' 用于"其他费用"Tab） */
+  defaultExpenseType?: string;
+  /** 新建按钮文案 */
+  createButtonText?: string;
+}
+
+const ExpenseTab: React.FC<ExpenseTabProps> = ({ defaultExpenseType, createButtonText = '新建报销' }) => {
   const { message } = App.useApp();
   const [form] = Form.useForm();
   const [list, setList] = useState<ExpenseReimbursement[]>([]);
@@ -35,7 +42,7 @@ const ExpenseTab: React.FC = () => {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [filterStatus, setFilterStatus] = useState<string | undefined>(undefined);
-  const [filterType, setFilterType] = useState<string | undefined>(undefined);
+  const [filterType, setFilterType] = useState<string | undefined>(defaultExpenseType);
   const [keyword, setKeyword] = useState('');
   const [formOpen, setFormOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -63,7 +70,7 @@ const ExpenseTab: React.FC = () => {
 
   useEffect(() => { void fetchList(); }, [fetchList]);
 
-  const openForm = () => { form.resetFields(); setFormOpen(true); };
+  const openForm = () => { form.resetFields(); if (defaultExpenseType) form.setFieldValue('expenseType', defaultExpenseType); setFormOpen(true); };
 
   const handleFormSubmit = async () => {
     try {
@@ -132,7 +139,7 @@ const ExpenseTab: React.FC = () => {
           </Col>
           <Col flex="auto" style={{ textAlign: 'right' }}>
             <Space size={8}>
-              <Button type="primary" ghost size="small" icon={<PlusOutlined />} onClick={openForm}>新建报销</Button>
+              <Button type="primary" ghost size="small" icon={<PlusOutlined />} onClick={openForm}>{createButtonText}</Button>
               <Button size="small" ghost onClick={() => { void fetchList(); }}>刷新</Button>
             </Space>
           </Col>

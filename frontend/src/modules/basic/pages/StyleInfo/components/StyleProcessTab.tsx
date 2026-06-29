@@ -5,7 +5,6 @@ import { LoadingOutlined, DownOutlined, PlusOutlined } from '@ant-design/icons';
 import { toNumberSafe, sortSizeNames } from '@/utils/api';
 import ResizableTable from '@/components/common/ResizableTable';
 import StyleStageControlBar from './StyleStageControlBar';
-import StyleQuoteSuggestionInlineCard from './StyleQuoteSuggestionInlineCard';
 import ProcessCostSummary from './ProcessCostSummary';
 import { StyleProcessTabProps, StyleProcessWithSizePrice, STAGE_ORDER, computeSortedDataAndStageSpan, buildProcessColumns } from './styleProcessTabUtils';
 import { useStyleProcessData } from './hooks/useStyleProcessData';
@@ -65,7 +64,6 @@ const StyleProcessTab: React.FC<StyleProcessTabProps> = ({
 
   return (
     <div>
-      <StyleQuoteSuggestionInlineCard styleNo={styleNo} sourceStyleNo="" />
       <StyleStageControlBar
         stageName="工序单价" styleId={styleId} apiPath="process"
         status={processCompletedTime ? 'COMPLETED' : processStartTime ? 'IN_PROGRESS' : 'NOT_STARTED'}

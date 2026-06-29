@@ -76,7 +76,7 @@ public class StyleCustomerSyncHelper {
         }
 
         // 找出所有有客户ID的款式
-        java.util.List<Long> customerIds = styleList.stream()
+        java.util.List<String> customerIds = styleList.stream()
                 .filter(s -> s.getCustomerId() != null)
                 .map(StyleInfo::getCustomerId)
                 .distinct()
@@ -99,8 +99,8 @@ public class StyleCustomerSyncHelper {
 
         // 填充客户信息
         for (StyleInfo style : styleList) {
-            if (style.getCustomerId() != null && customerMap.containsKey(String.valueOf(style.getCustomerId()))) {
-                syncFromCustomer(style, customerMap.get(String.valueOf(style.getCustomerId())));
+            if (style.getCustomerId() != null && customerMap.containsKey(style.getCustomerId())) {
+                syncFromCustomer(style, customerMap.get(style.getCustomerId()));
             }
         }
     }

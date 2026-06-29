@@ -1,5 +1,6 @@
 package com.fashion.supplychain.style.helper;
 
+import com.fashion.supplychain.common.BusinessException;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.service.StyleAttachmentService;
@@ -415,52 +416,45 @@ public class StyleStageHelper {
             throw new IllegalStateException("样衣已完成，无需重复操作");
         }
 
-        // 兜底逻辑：自动补全所有未完成的步骤
-        LocalDateTime now = LocalDateTime.now();
-        String currentUser = UserContext.username();
-
-        // 构建更新条件
-        var updateChain = styleInfoService.lambdaUpdate().eq(StyleInfo::getId, id);
-
-        // 1. BOM配置
+        // 前置校验：所有开发资料环节必须完成才能标记样衣完成
+        // 样衣完成 = 开发资料全部闭环 + 样衣制作完成，不允许跳过任何环节
+        java.util.List<String> pendingStages = new java.util.ArrayList<>();
+        if (current.getPatternCompletedTime() == null) {
+            pendingStages.add("纸样开发");
+        }
         if (current.getBomCompletedTime() == null) {
-            updateChain.set(StyleInfo::getBomAssignee, currentUser)
-                      .set(StyleInfo::getBomStartTime, current.getBomStartTime() != null ? current.getBomStartTime() : now)
-                      .set(StyleInfo::getBomCompletedTime, now);
-            log.info("样衣完成兜底：自动完成BOM配置");
+            pendingStages.add("BOM配置");
         }
-
-        // 4. 工序配置
+        if (current.getSizeCompletedTime() == null) {
+            pendingStages.add("尺码表");
+        }
         if (current.getProcessCompletedTime() == null) {
-            updateChain.set(StyleInfo::getProcessAssignee, currentUser)
-                      .set(StyleInfo::getProcessStartTime, current.getProcessStartTime() != null ? current.getProcessStartTime() : now)
-                      .set(StyleInfo::getProcessCompletedTime, now);
-            log.info("样衣完成兜底：自动完成工序配置");
+            pendingStages.add("工序配置");
         }
-
-        // 6. 二次工艺
         if (current.getSecondaryCompletedTime() == null) {
-            updateChain.set(StyleInfo::getSecondaryAssignee, currentUser)
-                      .set(StyleInfo::getSecondaryStartTime, current.getSecondaryStartTime() != null ? current.getSecondaryStartTime() : now)
-                      .set(StyleInfo::getSecondaryCompletedTime, now);
-            log.info("样衣完成兜底：自动完成二次工艺");
+            pendingStages.add("二次工艺");
+        }
+        if (current.getProductionCompletedTime() == null) {
+            pendingStages.add("生产制单");
+        }
+        if (!pendingStages.isEmpty()) {
+            throw new BusinessException("请先完成以下环节再标记样衣完成：" + String.join("、", pendingStages));
         }
 
-        // 7. 标记样衣完成
-        updateChain.set(StyleInfo::getSampleStatus, "COMPLETED")
-                  .set(StyleInfo::getSampleProgress, 100)
-                  .set(StyleInfo::getSampleCompletedTime, now)
-                  .set(StyleInfo::getUpdateTime, now);
+        // 校验通过：所有开发资料环节已完成，直接标记样衣完成
+        LocalDateTime now = LocalDateTime.now();
 
-        boolean ok = updateChain.update();
+        boolean ok = styleInfoService.lambdaUpdate()
+                .eq(StyleInfo::getId, id)
+                .set(StyleInfo::getSampleStatus, "COMPLETED")
+                .set(StyleInfo::getSampleProgress, 100)
+                .set(StyleInfo::getSampleCompletedTime, now)
+                .set(StyleInfo::getUpdateTime, now)
+                .update();
 
         if (ok) {
-            styleLogHelper.saveSampleLog(id, "SAMPLE_COMPLETED", "点击样衣完成");
-            log.info("样衣完成成功：styleId={}, 保持纸样开发/尺寸表/生产制单独立状态", id);
-
-            // [修改于2026-03-09]: 根据最新业务逻辑，不再在这里自动推送到单价维护或资料中心
-            // 这些流转操作已移动到 "推送到下单" (OrderManagementOrchestrator.createFromStyle) 时手动触发
-            log.info("样衣完成成功：只改变状态，不自动流转资料。等待手动点击【推送到下单】");
+            styleLogHelper.saveSampleLog(id, "SAMPLE_COMPLETED", "点击样衣完成（前置校验通过）");
+            log.info("样衣完成成功：styleId={}, 所有开发资料环节已闭环", id);
         }
         return ok;
     }

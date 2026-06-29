@@ -389,10 +389,6 @@ const InboundModal: React.FC<InboundModalProps> = ({ visible, onCancel, onSucces
                     <div>{styleSnapshot.styleName || '-'}</div>
                   </Col>
                   <Col span={8}>
-                    <div style={{ color: 'var(--neutral-text-secondary)', fontSize: 14 }}>纸样号</div>
-                    <div>{styleSnapshot.patternNo || '-'}</div>
-                  </Col>
-                  <Col span={8}>
                     <div style={{ color: 'var(--neutral-text-secondary)', fontSize: 14 }}>样衣完成时间</div>
                     <div>{styleSnapshot.sampleCompletedTime || '-'}</div>
                   </Col>

@@ -272,17 +272,17 @@ const ShipmentReconContent: React.FC = () => {
     <Card styles={{ body: { padding: '16px 20px' } }}>
       {/* 统计卡片 */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 12 }}>
-        <Card size="small" style={{ borderRadius: 6, border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }} styles={{ body: { padding: '10px 14px' } }}>
-          <Statistic title={<span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>对账单数</span>} value={stats.totalCount} valueStyle={{ fontSize: 20, fontWeight: 500 }} />
+        <Card size="small" style={{ borderRadius: 6, border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }} styles={{ body: { padding: '5px 10px' } }}>
+          <Statistic title={<span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>对账单数</span>} value={stats.totalCount} valueStyle={{ fontSize: 15, fontWeight: 500 }} />
         </Card>
-        <Card size="small" style={{ borderRadius: 6, border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }} styles={{ body: { padding: '10px 14px' } }}>
-          <Statistic title={<span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>总金额</span>} value={stats.totalAmount} precision={2} prefix="¥" valueStyle={{ fontSize: 20, fontWeight: 500 }} />
+        <Card size="small" style={{ borderRadius: 6, border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }} styles={{ body: { padding: '5px 10px' } }}>
+          <Statistic title={<span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>总金额</span>} value={stats.totalAmount} precision={2} prefix="¥" valueStyle={{ fontSize: 15, fontWeight: 500 }} />
         </Card>
-        <Card size="small" style={{ borderRadius: 6, border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }} styles={{ body: { padding: '10px 14px' } }}>
-          <Statistic title={<span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>扣款合计</span>} value={stats.totalDeduction} precision={2} prefix="¥" valueStyle={{ fontSize: 20, fontWeight: 500 }} />
+        <Card size="small" style={{ borderRadius: 6, border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }} styles={{ body: { padding: '5px 10px' } }}>
+          <Statistic title={<span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>扣款合计</span>} value={stats.totalDeduction} precision={2} prefix="¥" valueStyle={{ fontSize: 15, fontWeight: 500 }} />
         </Card>
-        <Card size="small" style={{ borderRadius: 6, border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }} styles={{ body: { padding: '10px 14px' } }}>
-          <Statistic title={<span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>最终金额</span>} value={stats.totalFinalAmount} precision={2} prefix="¥" valueStyle={{ fontSize: 20, fontWeight: 500, color: 'var(--primary-color)' }} />
+        <Card size="small" style={{ borderRadius: 6, border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }} styles={{ body: { padding: '5px 10px' } }}>
+          <Statistic title={<span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>最终金额</span>} value={stats.totalFinalAmount} precision={2} prefix="¥" valueStyle={{ fontSize: 15, fontWeight: 500, color: 'var(--primary-color)' }} />
         </Card>
       </div>
 

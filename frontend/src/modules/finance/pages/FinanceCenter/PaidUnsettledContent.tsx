@@ -185,11 +185,11 @@ const PaidUnsettledContent: React.FC = () => {
     <Card styles={{ body: { padding: '16px 20px' } }}>
       {/* 统计卡片 */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12, marginBottom: 12 }}>
-        <Card size="small" style={{ borderRadius: 6, border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }} styles={{ body: { padding: '10px 14px' } }}>
-          <Statistic title={<span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>已审未付订单</span>} value={stats.count} suffix="条" valueStyle={{ fontSize: 20, fontWeight: 500 }} />
+        <Card size="small" style={{ borderRadius: 6, border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }} styles={{ body: { padding: '5px 10px' } }}>
+          <Statistic title={<span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>已审未付订单</span>} value={stats.count} suffix="条" valueStyle={{ fontSize: 15, fontWeight: 500 }} />
         </Card>
-        <Card size="small" style={{ borderRadius: 6, border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }} styles={{ body: { padding: '10px 14px' } }}>
-          <Statistic title={<span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>待付金额</span>} value={stats.totalAmount} precision={2} prefix="¥" valueStyle={{ fontSize: 20, fontWeight: 500, color: 'var(--color-warning)' }} />
+        <Card size="small" style={{ borderRadius: 6, border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }} styles={{ body: { padding: '5px 10px' } }}>
+          <Statistic title={<span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>待付金额</span>} value={stats.totalAmount} precision={2} prefix="¥" valueStyle={{ fontSize: 15, fontWeight: 500, color: 'var(--color-warning)' }} />
         </Card>
       </div>
 

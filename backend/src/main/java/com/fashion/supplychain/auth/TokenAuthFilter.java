@@ -162,7 +162,7 @@ public class TokenAuthFilter extends OncePerRequestFilter {
             // 超级管理员：调用权限引擎获取全部权限（tenantId传null触发超管分支）
             // 以后新增任何权限，超管自动获得，无需手动配置
             if (subject.isSuperAdmin()) {
-                List<String> permCodes = permissionEngine.calculatePermissions(userId, roleId, null, false);
+                List<String> permCodes = permissionEngine.calculatePermissionsByUser(userId, roleId, null, false);
                 if (permCodes != null) {
                     for (String code : permCodes) {
                         if (StringUtils.hasText(code)) {
@@ -176,7 +176,8 @@ public class TokenAuthFilter extends OncePerRequestFilter {
             // 租户主账号即使没有roleId也应获得权限
             if (roleId == null && !isTenantOwner) return;
 
-            List<String> permCodes = permissionEngine.calculatePermissions(userId, roleId, tenantId, isTenantOwner);
+            // ★ 一人多角色：引擎内部优先查 t_user_role 多角色列表，回退到 roleId 单字段
+            List<String> permCodes = permissionEngine.calculatePermissionsByUser(userId, roleId, tenantId, isTenantOwner);
             if (permCodes != null) {
                 for (String code : permCodes) {
                     if (StringUtils.hasText(code)) {

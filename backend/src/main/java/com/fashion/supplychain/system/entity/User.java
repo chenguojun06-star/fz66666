@@ -119,6 +119,17 @@ public class User {
     /** 职位（如"缝纫一组组长"、"车间主任"），区别于 roleName（角色权限） */
     private String position;
 
+    /**
+     * 账号类型（统一内外部账号体系）：
+     *   INTERNAL          = 内部员工账号（默认）
+     *   EXTERNAL_FACTORY  = 外发工厂账号
+     *   SUPPLIER          = 供应商账号
+     *
+     * 用于统一管理内部员工和外协单位（外发工厂/供应商）账号，
+     * 配合 factoryId 区分具体所属外协单位。
+     */
+    private String userType;
+
     public interface Create {}
     public interface Register {}
 }

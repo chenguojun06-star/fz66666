@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { App, Button, Card, Form, Input, InputNumber, Select, Space, Statistic, Switch, Tabs, Tag, Tooltip } from 'antd';
+import { App, Button, Card, Form, Input, InputNumber, Select, Space, Statistic, Switch, Tabs, Tooltip } from 'antd';
 import { UnifiedRangePicker } from '@/components/common/UnifiedDatePicker';
 import PageLayout from '@/components/common/PageLayout';
 import ResizableTable from '@/components/common/ResizableTable';
@@ -9,7 +9,7 @@ import dayjs from 'dayjs';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { getSummaryColumns, getDetailColumns } from './payrollOperatorColumns';
 import WageSlipPrintModal from './WageSlipPrintModal';
-import { PrinterOutlined, SearchOutlined, DownloadOutlined, CheckCircleOutlined, ClockCircleOutlined, DollarOutlined } from '@ant-design/icons';
+import { PrinterOutlined, SearchOutlined, DownloadOutlined, CheckCircleOutlined, ClockCircleOutlined, DollarOutlined, ShopOutlined } from '@ant-design/icons';
 import { readPageSize } from '@/utils/pageSizeStore';
 import { usePayrollData, toNumberOrZero, toMoneyText, getDetailRowKey, getDetailApprovalId, isDetailAudited } from './usePayrollData';
 import { formatMoney } from '@/utils/format';
@@ -311,20 +311,40 @@ const PayrollOperatorSummary: React.FC = () => {
             >
                 {/* ===== 统一统计卡片 ===== */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 12 }}>
-                    <Card size="small" style={{ borderRadius: 6, border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }} styles={{ body: { padding: '10px 14px' } }}>
-                        <Statistic title={<span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}><ClockCircleOutlined style={{ marginRight: 4, fontSize: 12 }} />待审批</span>} value={rows.filter((r: any) => !r.auditStatus || r.auditStatus === 'pending').length} suffix="条" valueStyle={{ color: 'var(--color-warning)', fontSize: 22, fontWeight: 600 }} />
-                    </Card>
-                    <Card size="small" style={{ borderRadius: 6, border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }} styles={{ body: { padding: '10px 14px' } }}>
-                        <Statistic title={<span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}><CheckCircleOutlined style={{ marginRight: 4, fontSize: 12 }} />已审批</span>} value={rows.filter((r: any) => r.auditStatus === 'approved' || r.auditStatus === 'audited').length} suffix="条" valueStyle={{ color: 'var(--color-primary)', fontSize: 22, fontWeight: 600 }} />
-                    </Card>
-                    <Card size="small" style={{ borderRadius: 6, border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }} styles={{ body: { padding: '10px 14px' } }}>
-                        <Statistic title={<span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}><DollarOutlined style={{ marginRight: 4, fontSize: 12 }} />已付款</span>} value={rows.filter((r: any) => r.paymentStatus === 'paid' || r.status === 'paid').length} suffix="条" valueStyle={{ color: 'var(--color-success)', fontSize: 22, fontWeight: 600 }} />
-                    </Card>
-                    <Card size="small" style={{ borderRadius: 6, border: '1px solid var(--color-primary)', background: 'linear-gradient(135deg, var(--color-primary-light) 0%, var(--color-bg-container) 100%)' }} styles={{ body: { padding: '10px 14px' } }}>
-                        <Statistic title={<span style={{ color: 'var(--color-text-secondary)', fontSize: 12, fontWeight: 500 }}><DollarOutlined style={{ marginRight: 4, fontSize: 12 }} />合计金额</span>} value={totalAmount} prefix="¥" precision={2} valueStyle={{ color: 'var(--color-primary)', fontSize: 24, fontWeight: 700 }} />
-                    </Card>
+                    {activeTab === 'internalOrders' ? (
+                        <>
+                            <Card size="small" style={{ borderRadius: 6, border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }} styles={{ body: { padding: '5px 10px' } }}>
+                                <Statistic title={<span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}><ShopOutlined style={{ marginRight: 4, fontSize: 12 }} />订单数</span>} value={internalOrders.length} suffix="条" valueStyle={{ color: 'var(--color-primary)', fontSize: 15, fontWeight: 600 }} />
+                            </Card>
+                            <Card size="small" style={{ borderRadius: 6, border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }} styles={{ body: { padding: '5px 10px' } }}>
+                                <Statistic title={<span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}><ClockCircleOutlined style={{ marginRight: 4, fontSize: 12 }} />生产中</span>} value={internalOrders.filter((r: any) => r.status === 'production' || r.status === 'IN_PRODUCTION' || r.status === 'in_production').length} suffix="条" valueStyle={{ color: 'var(--color-warning)', fontSize: 15, fontWeight: 600 }} />
+                            </Card>
+                            <Card size="small" style={{ borderRadius: 6, border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }} styles={{ body: { padding: '5px 10px' } }}>
+                                <Statistic title={<span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}><CheckCircleOutlined style={{ marginRight: 4, fontSize: 12 }} />已完成</span>} value={internalOrders.filter((r: any) => r.status === 'completed' || r.status === 'COMPLETED' || r.status === 'closed' || r.status === 'CLOSED').length} suffix="条" valueStyle={{ color: 'var(--color-success)', fontSize: 15, fontWeight: 600 }} />
+                            </Card>
+                            <Card size="small" style={{ borderRadius: 6, border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }} styles={{ body: { padding: '5px 10px' } }}>
+                                <Statistic title={<span style={{ color: 'var(--color-text-secondary)', fontSize: 12, fontWeight: 500 }}><DollarOutlined style={{ marginRight: 4, fontSize: 12 }} />合计金额</span>} value={internalOrders.reduce((s: number, r: any) => s + toNumberOrZero(r.totalAmount), 0)} prefix="¥" precision={2} valueStyle={{ color: 'var(--color-primary)', fontSize: 17, fontWeight: 700 }} />
+                            </Card>
+                        </>
+                    ) : (
+                        <>
+                            <Card size="small" style={{ borderRadius: 6, border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }} styles={{ body: { padding: '5px 10px' } }}>
+                                <Statistic title={<span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}><ClockCircleOutlined style={{ marginRight: 4, fontSize: 12 }} />待审批</span>} value={rows.filter((r: any) => !r.auditStatus || r.auditStatus === 'pending').length} suffix="条" valueStyle={{ color: 'var(--color-warning)', fontSize: 15, fontWeight: 600 }} />
+                            </Card>
+                            <Card size="small" style={{ borderRadius: 6, border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }} styles={{ body: { padding: '5px 10px' } }}>
+                                <Statistic title={<span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}><CheckCircleOutlined style={{ marginRight: 4, fontSize: 12 }} />已审批</span>} value={rows.filter((r: any) => r.auditStatus === 'approved' || r.auditStatus === 'audited').length} suffix="条" valueStyle={{ color: 'var(--color-primary)', fontSize: 15, fontWeight: 600 }} />
+                            </Card>
+                            <Card size="small" style={{ borderRadius: 6, border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }} styles={{ body: { padding: '5px 10px' } }}>
+                                <Statistic title={<span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}><DollarOutlined style={{ marginRight: 4, fontSize: 12 }} />已付款</span>} value={rows.filter((r: any) => r.paymentStatus === 'paid' || r.status === 'paid').length} suffix="条" valueStyle={{ color: 'var(--color-success)', fontSize: 15, fontWeight: 600 }} />
+                            </Card>
+                            <Card size="small" style={{ borderRadius: 6, border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }} styles={{ body: { padding: '5px 10px' } }}>
+                                <Statistic title={<span style={{ color: 'var(--color-text-secondary)', fontSize: 12, fontWeight: 500 }}><DollarOutlined style={{ marginRight: 4, fontSize: 12 }} />合计金额</span>} value={totalAmount} prefix="¥" precision={2} valueStyle={{ color: 'var(--color-primary)', fontSize: 17, fontWeight: 700 }} />
+                            </Card>
+                        </>
+                    )}
                 </div>
 
+                {activeTab !== 'internalOrders' && (
                 <Card className="filter-card mb-sm">
                     <Space wrap>
                         <Input placeholder="搜索订单号 / 款号 / 人员" style={{ width: 240 }} allowClear value={keyword}
@@ -342,6 +362,7 @@ const PayrollOperatorSummary: React.FC = () => {
                         <Button ghost onClick={exportToExcelFn} disabled={loading || rows.length === 0}>导出</Button>
                     </Space>
                 </Card>
+                )}
 
                 <Tabs activeKey={activeTab} onChange={setActiveTab} items={[
                     {
@@ -434,19 +455,10 @@ const PayrollOperatorSummary: React.FC = () => {
                                 <ResizableTable
                                     storageKey="finance-payroll-internal-orders"
                                     rowKey={(r: Record<string, unknown>) => String(r?.orderId || r?.orderNo || '')}
-                                    columns={[
-                                        { title: '订单号', dataIndex: 'orderNo', key: 'orderNo', width: 150, ellipsis: true },
-                                        { title: '款号', dataIndex: 'styleNo', key: 'styleNo', width: 120, ellipsis: true },
-                                        { title: '工厂', dataIndex: 'factoryName', key: 'factoryName', width: 120, ellipsis: true },
-                                        { title: '状态', dataIndex: 'status', key: 'status', width: 100, render: (v: string) => { const s = statusMap[v] || statusMap[v?.toLowerCase?.()] || {}; return <Tag color={s.color || 'default'}>{s.text || v || '-'}</Tag>; } },
-                                        { title: '订单数量', dataIndex: 'orderQuantity', key: 'orderQuantity', width: 100, align: 'right', render: (v: number) => v?.toLocaleString() ?? '-' },
-                                        { title: '入库数量', dataIndex: 'warehousedQuantity', key: 'warehousedQuantity', width: 100, align: 'right', render: (v: number) => v?.toLocaleString() ?? '-' },
-                                        { title: '生产成本', dataIndex: 'productionCost', key: 'productionCost', width: 120, align: 'right', render: (v: number) => formatMoney(v) },
-                                        { title: '总金额', dataIndex: 'totalAmount', key: 'totalAmount', width: 120, align: 'right', render: (v: number) => <span style={{ fontWeight: 600, color: 'var(--primary-color)' }}>{formatMoney(v)}</span> },
-                                    ] as any}
+                                    columns={internalOrderColumns as any}
                                     dataSource={internalOrders as any} loading={internalOrdersLoading}
                                     pagination={{ showTotal: (total) => `共 ${total} 条`, showSizeChanger: true, pageSizeOptions: ['20', '50', '100', '200'], defaultPageSize: readPageSize(20) }}
-                                    sticky scroll={{ x: 1000 }} />
+                                    sticky scroll={{ x: 1800 }} />
                             </>
                         ),
                     },

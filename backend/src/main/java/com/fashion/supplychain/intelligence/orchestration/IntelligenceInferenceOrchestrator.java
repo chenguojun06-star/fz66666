@@ -93,6 +93,7 @@ public class IntelligenceInferenceOrchestrator {
     @Autowired private IntelligenceObservabilityOrchestrator intelligenceObservabilityOrchestrator;
     @Autowired private com.fashion.supplychain.intelligence.service.AiAgentTokenBudgetService aiAgentTokenBudgetService;
     @Autowired(required = false) private TenantAiConfigService tenantAiConfigService;
+    @Autowired(required = false) private StyleImageUrlResolver styleImageUrlResolver;
 
     @PostConstruct
     public void initHttpClient() {
@@ -195,6 +196,10 @@ public class IntelligenceInferenceOrchestrator {
                 || hasText(agnes2ApiKey);
     }
 
+    public boolean isVisionModelEnabled() {
+        return !visionModels.isEmpty();
+    }
+
     @FunctionalInterface
     public interface StreamChunkConsumer {
         void accept(String chunk, boolean isDone);
@@ -268,8 +273,19 @@ public class IntelligenceInferenceOrchestrator {
             return null;
         }
 
-        // 规范化 imageUrl：相对路径 → 完整 HTTP URL（Agnes 要求 http/https/data 开头）
-        imageUrl = resolveImageUrl(imageUrl);
+        // 规范化 imageUrl：优先用 StyleImageUrlResolver 处理（支持本地文件转Base64、COS预签名）
+        // 失败时回退到原有的 resolveImageUrl（拼接公网URL）
+        String resolvedUrl = null;
+        if (styleImageUrlResolver != null) {
+            resolvedUrl = styleImageUrlResolver.resolveForVision(imageUrl);
+            if (resolvedUrl != null) {
+                log.info("[Vision] imageUrl 已通过 StyleImageUrlResolver 规范化");
+            }
+        }
+        if (resolvedUrl == null) {
+            resolvedUrl = resolveImageUrl(imageUrl);
+        }
+        imageUrl = resolvedUrl;
 
         if (visionModels.isEmpty()) {
             log.warn("[Vision] 没有可用的视觉模型");

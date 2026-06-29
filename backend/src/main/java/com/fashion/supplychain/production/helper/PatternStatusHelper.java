@@ -306,7 +306,8 @@ public class PatternStatusHelper {
             }
 
             String currentSampleStatus = String.valueOf(styleInfo.getSampleStatus() == null ? "" : styleInfo.getSampleStatus()).trim().toUpperCase();
-            boolean sampleFinished = "COMPLETED".equals(currentSampleStatus) || "PRODUCTION_COMPLETED".equals(currentSampleStatus);
+            // 只有 COMPLETED 才算样衣开发流程真正完成；PRODUCTION_COMPLETED 仅代表样板制作完成，样衣开发流程仍在进行
+            boolean sampleFinished = "COMPLETED".equals(currentSampleStatus);
             int progress = calculatePatternProgressPercent(pattern);
             String status = String.valueOf(pattern.getStatus() == null ? "" : pattern.getStatus()).trim().toUpperCase();
             LocalDateTime now = LocalDateTime.now();
@@ -326,18 +327,13 @@ public class PatternStatusHelper {
 
             if ("PRODUCTION_COMPLETED".equals(status) || "COMPLETED".equals(status) || "WAREHOUSE_OUT".equals(status)) {
                 patch.setProductionCompletedTime(resolvedCompleteTime != null ? resolvedCompleteTime : now);
+                // 注意：PatternProduction 完成 ≠ 样衣开发流程完成（还有纸样/BOM/工序/二次工艺等环节）
+                // 这里只把 sampleStatus 推进到 PRODUCTION_COMPLETED（生产完成，但开发流程未完成）
+                // 真正的"样衣完成"由 StyleStageHelper.completeSample 显式调用时设置
                 if (!sampleFinished) {
-                    String targetSampleStatus;
-                    if ("COMPLETED".equals(status)) {
-                        targetSampleStatus = "COMPLETED";
-                    } else if ("WAREHOUSE_OUT".equals(status)) {
-                        targetSampleStatus = "COMPLETED";
-                    } else {
-                        targetSampleStatus = "PRODUCTION_COMPLETED";
-                    }
-                    patch.setSampleStatus(targetSampleStatus);
-                    patch.setSampleProgress(100);
-                    patch.setSampleCompletedTime(resolvedCompleteTime != null ? resolvedCompleteTime : now);
+                    patch.setSampleStatus("PRODUCTION_COMPLETED");
+                    patch.setSampleProgress(progress > 0 ? progress : 100);
+                    // 不在此处设置 sampleCompletedTime，避免误导前端判定为已完成
                 }
             } else if (!sampleFinished && !"PENDING".equals(status)) {
                 patch.setSampleStatus("IN_PROGRESS");

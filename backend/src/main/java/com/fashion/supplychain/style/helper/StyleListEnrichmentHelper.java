@@ -387,10 +387,12 @@ public class StyleListEnrichmentHelper {
         if (STYLE_STATUS_SCRAPPED.equalsIgnoreCase(String.valueOf(style.getStatus()))) {
             style.setProgressNode("开发样报废");
             style.setCompletedTime(null);
-        } else if ("COMPLETED".equalsIgnoreCase(sampleStatus) || "PRODUCTION_COMPLETED".equalsIgnoreCase(sampleStatus)) {
+        } else if ("COMPLETED".equalsIgnoreCase(sampleStatus)) {
+            // 只有 sampleStatus=COMPLETED 才是样衣开发流程真正完成（由 StyleStageHelper.completeSample 显式设置）
             style.setProgressNode("样衣完成");
             style.setCompletedTime(style.getSampleCompletedTime());
-        } else if ("IN_PROGRESS".equalsIgnoreCase(sampleStatus)) {
+        } else if ("PRODUCTION_COMPLETED".equalsIgnoreCase(sampleStatus) || "IN_PROGRESS".equalsIgnoreCase(sampleStatus)) {
+            // PRODUCTION_COMPLETED 仅代表样板制作完成，样衣开发流程仍在进行（还有BOM/工序/二次工艺等环节）
             style.setProgressNode("样衣制作中");
             style.setCompletedTime(null);
         } else if ("COMPLETED".equalsIgnoreCase(patternStatus)) {

@@ -1,5 +1,5 @@
 import React, { forwardRef, useCallback, useImperativeHandle, useMemo, useState } from 'react';
-import { Alert, App, Button, Checkbox, Input, Space } from 'antd';
+import { Alert, App, Button, Checkbox, Input, Space, Tag, Tooltip, Empty } from 'antd';
 import ResizableModal from '@/components/common/ResizableModal';
 import { requestWithPathFallback } from '@/utils/api';
 import { useViewport } from '@/utils/useViewport';
@@ -130,6 +130,34 @@ const PermissionDialog = forwardRef<PermissionDialogHandle, PermissionDialogProp
 
   const applyTemplate = (ids: Set<number>) => { setPermKeyword(''); setCheckedPermIds(new Set(ids)); };
 
+  // 模块层级全选/半选/未选状态计算
+  const getModuleCheckState = useCallback((module: { moduleId: number; groups: Array<{ groupId: number; buttons: Array<{ id: number }> }>; directButtons: Array<{ id: number }> }) => {
+    const allBtnIds = [...module.groups.flatMap(g => [g.groupId, ...g.buttons.map(b => b.id)]), ...module.directButtons.map(b => b.id)];
+    const total = allBtnIds.length + 1; // +1 for module node itself
+    const checked = allBtnIds.filter(id => checkedPermIds.has(id)).length + (checkedPermIds.has(module.moduleId) ? 1 : 0);
+    return {
+      allIds: [module.moduleId, ...allBtnIds],
+      total,
+      checked,
+      allSelected: total > 0 && checked === total,
+      someSelected: checked > 0 && checked < total,
+      noneSelected: checked === 0,
+    };
+  }, [checkedPermIds]);
+
+  // 子组层级全选/半选状态
+  const getGroupCheckState = useCallback((group: { groupId: number; buttons: Array<{ id: number }> }) => {
+    const allIds = [group.groupId, ...group.buttons.map(b => b.id)];
+    const checked = allIds.filter(id => checkedPermIds.has(id)).length;
+    return {
+      allIds,
+      total: allIds.length,
+      checked,
+      allSelected: allIds.length > 0 && checked === allIds.length,
+      someSelected: checked > 0 && checked < allIds.length,
+    };
+  }, [checkedPermIds]);
+
   return (
     <ResizableModal open={visible} title={roleModal.data ? `为「${roleModal.data.roleName}」授权` : '权限授权'} onCancel={close}
       footer={<div className="modal-footer-actions"><Button onClick={close} disabled={permSaving}>取消</Button><Button type="primary" onClick={savePerms} loading={permSaving}>保存</Button></div>}
@@ -139,34 +167,76 @@ const PermissionDialog = forwardRef<PermissionDialogHandle, PermissionDialogProp
         <Space wrap>
           <Input value={permKeyword} onChange={(e) => setPermKeyword(e.target.value)} placeholder="搜索权限名称" style={{ width: 260 }} allowClear />
           <Button onClick={() => setPermKeyword('')} disabled={!String(permKeyword || '').trim()}>清空搜索</Button>
-          <span style={{ color: 'var(--neutral-text-secondary)' }}>已选 {checkedPermIds.size} 项</span>
+          <span style={{ color: 'var(--neutral-text-secondary)' }}>
+            已选 <span style={{ color: 'var(--primary-color, var(--color-primary))', fontWeight: 600 }}>{checkedPermIds.size}</span> 项
+            {String(permKeyword || '').trim() && permissionsByModule.length > 0 && (
+              <span style={{ marginLeft: 8 }}>· 匹配 {permissionsByModule.length} 个模块</span>
+            )}
+          </span>
         </Space>
         <Space wrap>
           <Button onClick={() => applyTemplate(allPermissionIds)} disabled={!allPermissionIds.size}>全选</Button>
           <Button onClick={() => applyTemplate(new Set())} disabled={!checkedPermIds.size}>清空</Button>
           {templatePresets.map((t) => (<Button key={t.key} onClick={() => applyTemplate(t.ids)} disabled={!t.count}>{t.label}</Button>))}
         </Space>
-        <div style={{ marginTop: 12, display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+        <div style={{ marginTop: 4, display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-start', maxHeight: 'calc(85vh - 220px)', overflowY: 'auto', paddingRight: 4 }}>
+          {permissionsByModule.length === 0 && (
+            <div style={{ width: '100%' }}>
+              <Empty description="未找到匹配的权限" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+            </div>
+          )}
           {permissionsByModule.map((module) => {
-            const allBtnIds = [...module.groups.flatMap(g => [g.groupId, ...g.buttons.map(b => b.id)]), ...module.directButtons.map(b => b.id)];
+            const state = getModuleCheckState(module);
+            // 边框颜色根据选中状态变化：全选=主色，部分=浅蓝，未选=灰
+            const borderColor = state.allSelected
+              ? 'var(--primary-color, var(--color-primary))'
+              : state.someSelected
+                ? '#91caff'
+                : '#d1d5db';
+            const headerBg = state.allSelected
+              ? 'var(--primary-color, var(--color-primary))'
+              : state.someSelected
+                ? '#e6f4ff'
+                : 'var(--primary-color, var(--color-primary))';
+            const headerTextColor = state.someSelected && !state.allSelected ? '#1677ff' : 'var(--color-bg-base)';
             return (
-              <div key={module.moduleId} style={{ minWidth: 130, maxWidth: 200, border: '1px solid #d1d5db', borderRadius: 4, overflow: 'hidden', fontSize: 14, flexShrink: 0 }}>
-                <div style={{ background: 'var(--primary-color, var(--color-primary))', padding: '4px 8px' }}>
-                  <Checkbox checked={checkedPermIds.has(module.moduleId)} onChange={(e) => { const next = new Set(checkedPermIds); if (e.target.checked) { next.add(module.moduleId); allBtnIds.forEach(id => next.add(id)); } else { next.delete(module.moduleId); allBtnIds.forEach(id => next.delete(id)); } setCheckedPermIds(next); }} style={{ color: 'var(--color-bg-base)', fontSize: 14, fontWeight: 600 }}>{module.moduleName}</Checkbox>
+              <div key={module.moduleId} style={{ minWidth: 140, maxWidth: 220, border: `1px solid ${borderColor}`, borderRadius: 6, overflow: 'hidden', fontSize: 14, flexShrink: 0, boxShadow: state.someSelected ? '0 1px 4px rgba(22,119,255,0.08)' : 'none' }}>
+                <div style={{ background: headerBg, padding: '6px 8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <Checkbox
+                    checked={state.allSelected}
+                    indeterminate={state.someSelected}
+                    onChange={(e) => { const next = new Set(checkedPermIds); if (e.target.checked) state.allIds.forEach(id => next.add(id)); else state.allIds.forEach(id => next.delete(id)); setCheckedPermIds(next); }}
+                    style={{ color: headerTextColor, fontSize: 14, fontWeight: 600 }}
+                  >
+                    {module.moduleName}
+                  </Checkbox>
+                  <Tag color={state.allSelected ? 'success' : state.someSelected ? 'processing' : 'default'} style={{ fontSize: 11, padding: '0 6px', margin: 0, color: state.someSelected && !state.allSelected ? '#1677ff' : undefined }}>
+                    {state.checked}/{state.total}
+                  </Tag>
                 </div>
-                {module.groups.map(group => (
+                {module.groups.map(group => {
+                  const gState = getGroupCheckState(group);
+                  return (
                   <div key={group.groupId} style={{ borderBottom: '1px solid var(--color-border-light)' }}>
-                    <div style={{ background: checkedPermIds.has(group.groupId) ? '#dbeafe' : '#f0f4ff', padding: '2px 6px', borderBottom: '1px solid #e8eaf0' }}>
-                      <Checkbox checked={checkedPermIds.has(group.groupId)} onChange={(e) => { const next = new Set(checkedPermIds); const ids = [group.groupId, ...group.buttons.map(b => b.id)]; if (e.target.checked) ids.forEach(id => next.add(id)); else ids.forEach(id => next.delete(id)); setCheckedPermIds(next); }} style={{ fontSize: 14, fontWeight: 500 }}>{group.groupName}</Checkbox>
+                    <div style={{ background: gState.allSelected ? '#dbeafe' : gState.someSelected ? '#e6f4ff' : '#f0f4ff', padding: '4px 6px', borderBottom: '1px solid #e8eaf0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <Checkbox
+                        checked={gState.allSelected}
+                        indeterminate={gState.someSelected}
+                        onChange={(e) => { const next = new Set(checkedPermIds); if (e.target.checked) gState.allIds.forEach(id => next.add(id)); else gState.allIds.forEach(id => next.delete(id)); setCheckedPermIds(next); }}
+                        style={{ fontSize: 13, fontWeight: 500 }}
+                      >
+                        {group.groupName}
+                      </Checkbox>
+                      <span style={{ fontSize: 11, color: 'var(--color-text-tertiary)' }}>{gState.checked}/{gState.total}</span>
                     </div>
                     <div style={{ padding: '2px 4px 4px 16px' }}>
-                      {group.buttons.map(btn => (<div key={btn.id} style={{ background: checkedPermIds.has(btn.id) ? '#e6f4ff' : undefined, borderRadius: 2, marginBottom: 1 }}><Checkbox checked={checkedPermIds.has(btn.id)} onChange={(e) => { const next = new Set(checkedPermIds); if (e.target.checked) next.add(btn.id); else next.delete(btn.id); setCheckedPermIds(next); }} style={{ fontSize: 14, width: '100%' }}>{btn.name}</Checkbox></div>))}
-                      {group.buttons.length === 0 && <span style={{ color: 'var(--color-text-quaternary)', fontSize: 14 }}>仅菜单权限</span>}
+                      {group.buttons.map(btn => (<div key={btn.id} style={{ background: checkedPermIds.has(btn.id) ? '#e6f4ff' : undefined, borderRadius: 2, marginBottom: 1 }}><Checkbox checked={checkedPermIds.has(btn.id)} onChange={(e) => { const next = new Set(checkedPermIds); if (e.target.checked) next.add(btn.id); else next.delete(btn.id); setCheckedPermIds(next); }} style={{ fontSize: 13, width: '100%' }}>{btn.name}</Checkbox></div>))}
+                      {group.buttons.length === 0 && <span style={{ color: 'var(--color-text-quaternary)', fontSize: 13 }}>仅菜单权限</span>}
                     </div>
                   </div>
-                ))}
-                {module.directButtons.length > 0 && (<div style={{ padding: '4px 6px' }}>{module.directButtons.map(btn => (<div key={btn.id} style={{ background: checkedPermIds.has(btn.id) ? '#e6f4ff' : undefined, borderRadius: 2, marginBottom: 1 }}><Checkbox checked={checkedPermIds.has(btn.id)} onChange={(e) => { const next = new Set(checkedPermIds); if (e.target.checked) next.add(btn.id); else next.delete(btn.id); setCheckedPermIds(next); }} style={{ fontSize: 14, width: '100%' }}>{btn.name}</Checkbox></div>))}</div>)}
-                {module.groups.length === 0 && module.directButtons.length === 0 && (<div style={{ padding: '4px 8px', color: '#aaa', fontSize: 14 }}>仅页面入口</div>)}
+                );})}
+                {module.directButtons.length > 0 && (<div style={{ padding: '4px 6px' }}>{module.directButtons.map(btn => (<div key={btn.id} style={{ background: checkedPermIds.has(btn.id) ? '#e6f4ff' : undefined, borderRadius: 2, marginBottom: 1 }}><Checkbox checked={checkedPermIds.has(btn.id)} onChange={(e) => { const next = new Set(checkedPermIds); if (e.target.checked) next.add(btn.id); else next.delete(btn.id); setCheckedPermIds(next); }} style={{ fontSize: 13, width: '100%' }}>{btn.name}</Checkbox></div>))}</div>)}
+                {module.groups.length === 0 && module.directButtons.length === 0 && (<div style={{ padding: '4px 8px', color: '#aaa', fontSize: 13 }}>仅页面入口</div>)}
               </div>
             );
           })}

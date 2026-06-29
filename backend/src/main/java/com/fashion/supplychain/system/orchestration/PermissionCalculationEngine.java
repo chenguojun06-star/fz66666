@@ -8,6 +8,7 @@ import com.fashion.supplychain.system.service.PermissionService;
 import com.fashion.supplychain.system.service.RolePermissionService;
 import com.fashion.supplychain.system.service.TenantPermissionCeilingService;
 import com.fashion.supplychain.system.service.UserPermissionOverrideService;
+import com.fashion.supplychain.system.service.UserRoleService;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -67,6 +68,13 @@ public class PermissionCalculationEngine {
     @Autowired
     private UserPermissionOverrideService overrideService;
 
+    /**
+     * 用户多角色关联 Service（P0-1 一人多角色支持）
+     * 优先从 t_user_role 表查询用户的全部角色列表，回退到 User.roleId 单字段
+     */
+    @Autowired(required = false)
+    private UserRoleService userRoleService;
+
     @Autowired
     private RedisService redisService;
 
@@ -122,7 +130,7 @@ public class PermissionCalculationEngine {
     }
 
     /**
-     * 计算用户最终权限代码列表（支持租户主账号）
+     * 计算用户最终权限代码列表（支持租户主账号）— 单角色版本，转调多角色版本，保持向后兼容
      *
      * @param userId        用户ID
      * @param roleId        角色ID
@@ -131,20 +139,44 @@ public class PermissionCalculationEngine {
      * @return 权限代码列表
      */
     public List<String> calculatePermissions(Long userId, Long roleId, Long tenantId, boolean isTenantOwner) {
+        List<Long> roleIds = (roleId == null) ? Collections.emptyList() : Collections.singletonList(roleId);
+        return calculatePermissions(userId, roleIds, tenantId, isTenantOwner);
+    }
+
+    /**
+     * 计算用户最终权限代码列表（支持一人多角色）★ 新增
+     *
+     * 权限计算公式（多角色并集版本）：
+     *   最终权限 = (∪每个角色权限 ∩ 租户天花板) ∪ 用户GRANT覆盖 - 用户REVOKE覆盖
+     *
+     * @param userId        用户ID
+     * @param roleIds       角色ID列表（多角色权限取并集，空列表=无角色）
+     * @param tenantId      租户ID（null=超级管理员）
+     * @param isTenantOwner 是否为租户主账号
+     * @return 权限代码列表
+     */
+    public List<String> calculatePermissions(Long userId, List<Long> roleIds, Long tenantId, boolean isTenantOwner) {
         // 超级管理员（tenantId=null）：跳过天花板和角色限制，直接返回系统全部权限
         // 以后新增任何权限，超管自动获得，无需手动配置
         if (tenantId == null) {
-            if (roleId != null) {
-                return getRolePermissionCodes(roleId);
+            if (roleIds != null && !roleIds.isEmpty()) {
+                // 超管显式指定角色时，按角色权限并集返回（兼容旧逻辑）
+                Set<Long> permIds = new HashSet<>();
+                for (Long rid : roleIds) {
+                    if (rid != null) {
+                        permIds.addAll(getRolePermissionIds(rid));
+                    }
+                }
+                return convertToPermissionCodes(permIds);
             }
             return getAllPermissionCodes();
         }
 
         // 租户主账号且无角色：获取租户天花板内的所有权限
-        if (roleId == null && isTenantOwner && tenantId != null) {
+        if ((roleIds == null || roleIds.isEmpty()) && isTenantOwner && tenantId != null) {
             return calculateTenantOwnerPermissions(userId, tenantId);
         }
-        if (roleId == null) {
+        if (roleIds == null || roleIds.isEmpty()) {
             return List.of();
         }
 
@@ -156,8 +188,13 @@ public class PermissionCalculationEngine {
             return cachedUserPerms;
         }
 
-        // Level 1: 角色权限
-        Set<Long> rolePermIds = new HashSet<>(getRolePermissionIds(roleId));
+        // Level 1: 多角色权限并集
+        Set<Long> rolePermIds = new HashSet<>();
+        for (Long rid : roleIds) {
+            if (rid != null) {
+                rolePermIds.addAll(getRolePermissionIds(rid));
+            }
+        }
         if (rolePermIds.isEmpty()) {
             return List.of();
         }
@@ -177,6 +214,49 @@ public class PermissionCalculationEngine {
         writeCache(cacheKey, permissionCodes, "user-perms");
 
         return permissionCodes;
+    }
+
+    /**
+     * 计算用户最终权限代码列表（自动解析多角色）★ 新增
+     *
+     * 引擎内部优先用 UserRoleService 查询用户的多角色列表（t_user_role），
+     * 查不到时回退到 fallbackRoleId 单字段（兼容旧用户/未迁移数据）。
+     *
+     * 调用方只需传 userId + 兜底 roleId（来自 User.roleId 或 TokenSubject.roleId），
+     * 多角色解析逻辑对调用方透明，老代码改一行调用即可生效。
+     *
+     * @param userId          用户ID
+     * @param fallbackRoleId  兜底角色ID（来自 User.roleId 单字段，可空）
+     * @param tenantId        租户ID（null=超级管理员）
+     * @param isTenantOwner   是否租户主账号
+     * @return 权限代码列表
+     */
+    public List<String> calculatePermissionsByUser(Long userId, Long fallbackRoleId, Long tenantId, boolean isTenantOwner) {
+        List<Long> roleIds = resolveRoleIds(userId, fallbackRoleId, tenantId);
+        return calculatePermissions(userId, roleIds, tenantId, isTenantOwner);
+    }
+
+    /**
+     * 解析用户的有效角色ID列表
+     * 1. 优先从 t_user_role 查询多角色（自动过滤过期、按主角色倒序）
+     * 2. 查不到时回退到 fallbackRoleId 单字段（兼容旧用户/未迁移数据）
+     */
+    private List<Long> resolveRoleIds(Long userId, Long fallbackRoleId, Long tenantId) {
+        if (userId != null && userRoleService != null) {
+            try {
+                List<Long> multi = userRoleService.getRoleIdsByUserId(userId, tenantId);
+                if (multi != null && !multi.isEmpty()) {
+                    return multi;
+                }
+            } catch (Exception e) {
+                log.warn("[PermissionCalc] 查询多角色失败，回退到单角色: userId={} err={}", userId, e.getMessage());
+            }
+        }
+        // 回退：使用 User.roleId 单字段（兼容旧用户/未迁移数据）
+        if (fallbackRoleId != null) {
+            return Collections.singletonList(fallbackRoleId);
+        }
+        return Collections.emptyList();
     }
 
     /**

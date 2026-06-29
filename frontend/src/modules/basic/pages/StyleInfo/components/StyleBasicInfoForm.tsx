@@ -1,10 +1,12 @@
-import React, { useImperativeHandle } from 'react';
+import React, { useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { Form, Input, InputNumber, Row, Col, FormInstance, Select, App } from 'antd';
+import api from '@/utils/api';
 import { UnifiedDatePicker } from '@/components/common/UnifiedDatePicker';
 import DictAutoComplete from '@/components/common/DictAutoComplete';
 import CustomerSelect from '@/components/common/CustomerSelect';
 import CoverImageUpload from './CoverImageUpload';
 import StyleColorSizeTable from './StyleColorSizeTable';
+import StyleSkuTab from './StyleSkuTab';
 import { StyleInfo } from '@/types/style';
 import { CATEGORY_CODE_OPTIONS, SEASON_CODE_OPTIONS } from '@/utils/styleCategory';
 import { useDictOptions } from '@/hooks/useDictOptions';
@@ -24,7 +26,6 @@ interface StyleBasicInfoFormProps {
   onPendingImagesChange: (files: File[]) => void;
   coverRefreshToken: number;
   onCoverChange: (url: string | null) => void;
-  onSkcClick?: () => void;
   // 颜色码数配置props
   size1: string;
   setSize1: (v: string) => void;
@@ -70,6 +71,12 @@ interface StyleBasicInfoFormProps {
   setCommonColors: (v: string[]) => void;
   onStyleParseResult?: (result: StyleFieldParseResult) => void;
   forwardedRef?: React.Ref<StyleBasicInfoFormRef>;
+  styleId?: string;
+  styleNo?: string;
+  skc?: string;
+  skuMode?: 'AUTO' | 'MANUAL';
+  useSkuPrefix?: boolean | number;
+  onRefresh?: () => void;
 }
 
 /**
@@ -94,9 +101,14 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
   commonSizes, setCommonSizes, commonColors, setCommonColors,
   onColorImageSync,
   onColorImageClear,
-  onSkcClick,
   onStyleParseResult,
   forwardedRef,
+  styleId,
+  styleNo,
+  skc,
+  skuMode,
+  useSkuPrefix,
+  onRefresh,
 }) => {
   const { message } = App.useApp();
   const { options: categoryOptions } = useDictOptions('category', CATEGORY_CODE_OPTIONS);
@@ -111,6 +123,45 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
     paddingLeft: 8,
     lineHeight: '20px',
   };
+
+  // 颜色/尺码/数量变化时自动保存并同步生成 SKU（不调 onRefresh，避免表单重置打断编辑）
+  const prevConfigRef = useRef<string>('');
+  const isInitialMountRef = useRef(true);
+  const [skuRefreshTrigger, setSkuRefreshTrigger] = useState(0);
+  useEffect(() => {
+    if (!styleId) return;
+    const colorsKey = colorOptions.join(',');
+    const sizesKey = sizeOptions.join(',');
+    const qtyKey = sizeColorMatrixRows.map((r) => r.quantities.join('|')).join(';');
+    const configKey = `${colorsKey}||${sizesKey}||${qtyKey}`;
+
+    // 跳过首次挂载（从后端加载的初始值，不需要回写）
+    if (isInitialMountRef.current) {
+      isInitialMountRef.current = false;
+      prevConfigRef.current = configKey;
+      return;
+    }
+    if (prevConfigRef.current === configKey) return;
+
+    const sync = async () => {
+      try {
+        await api.put(`/style/info/${styleId}/size-color-config`, {
+          colors: colorOptions,
+          sizes: sizeOptions,
+          quantities: sizeColorMatrixRows.map((row) => row.quantities.reduce((sum, qty) => sum + Number(qty || 0), 0)),
+          matrixRows: sizeColorMatrixRows.map((row) => ({ color: row.color, quantities: row.quantities })),
+        });
+        // 只刷新 SKU 表，不刷新整个款式数据（避免表单重置）
+        setSkuRefreshTrigger((prev) => prev + 1);
+      } catch (e: any) {
+        message.error(e?.message || '颜色尺码同步失败');
+      }
+    };
+
+    prevConfigRef.current = configKey;
+    const timer = setTimeout(sync, 800);
+    return () => clearTimeout(timer);
+  }, [styleId, colorOptions, sizeOptions, sizeColorMatrixRows, message]);
 
   // 智能识别结果填充：款名/品类/季节/颜色/尺码，面料袖型领型版型图案放备注
   const applyStyleParseResult = (result: StyleFieldParseResult) => {
@@ -269,10 +320,7 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
             <Col xs={24} md={8}>
               <Form.Item name="skc" label="SKC" style={{ marginBottom: 8 }}>
                 {currentStyle?.skc && !isNewPage ? (
-                  <span
-                    onClick={onSkcClick}
-                    style={{ color: 'var(--color-primary)', cursor: 'pointer', fontWeight: 500, fontSize: 14, lineHeight: '32px' }}
-                  >
+                  <span style={{ fontWeight: 500, fontSize: 14, lineHeight: '32px' }}>
                     {currentStyle.skc}
                   </span>
                 ) : (
@@ -359,11 +407,10 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
                   placeholder="搜索或输入客户名称"
                   disabled={isFieldLocked(currentStyle?.customer)}
                   onChange={(_value, option) => {
-                    // Customer.id 是 String(UUID)，但 StyleInfo.customerId 是 Long，
-                    // 只有纯数字的 ID 才能写入 customerId 字段，否则会导致后端 400
+                    // customerId 已改为 String 类型以匹配 Customer.id（UUID）
                     const cid = option?.customerId;
-                    if (cid && /^\d+$/.test(String(cid))) {
-                      _form.setFieldsValue({ customerId: Number(cid) });
+                    if (cid) {
+                      _form.setFieldsValue({ customerId: String(cid) });
                     } else {
                       _form.setFieldsValue({ customerId: undefined });
                     }
@@ -485,7 +532,7 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
           </Row>
         </div>
 
-        {/* 区5：颜色码数配置（与上方分区保持一致的卡片视觉） */}
+        {/* 区5：颜色 / 尺码 / SKU 配置（融合一个模块） */}
         <div
           style={{
             marginBottom: 4,
@@ -495,7 +542,7 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
             borderRadius: 8,
           }}
         >
-          {renderSectionTitle('颜色 / 尺码 / 数量配置')}
+          {renderSectionTitle('颜色 / 尺码 / SKU 配置')}
           <StyleColorSizeTable
             size1={size1}
             setSize1={setSize1}
@@ -541,7 +588,22 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
             setCommonColors={setCommonColors}
             editLocked={editLocked}
             isFieldLocked={isFieldLocked}
+            hideInternalTitle
           />
+
+          {/* 根据颜色/尺码自动生成的 SKU 明细表 */}
+          {styleId && (
+            <StyleSkuTab
+              styleId={styleId}
+              styleNo={styleNo || ''}
+              skc={skc}
+              skuMode={skuMode}
+              useSkuPrefix={useSkuPrefix}
+              onModeChange={() => { onRefresh?.(); }}
+              onRefresh={onRefresh}
+              refreshTrigger={skuRefreshTrigger}
+            />
+          )}
         </div>
       </div>
     </Row>

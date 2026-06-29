@@ -23,8 +23,13 @@ import {
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 
+interface BillSummaryTabProps {
+  /** 强制锁定账单类型：RECEIVABLE=应收 / PAYABLE=应付 / undefined=全部 */
+  defaultBillType?: 'RECEIVABLE' | 'PAYABLE';
+}
+
 /** 账单汇总 Tab — 展示所有模块推送过来的账单 */
-const BillSummaryTab: React.FC = () => {
+const BillSummaryTab: React.FC<BillSummaryTabProps> = ({ defaultBillType }) => {
   const { message: msg, modal } = App.useApp();
 
   // ---- 数据 ----
@@ -34,8 +39,8 @@ const BillSummaryTab: React.FC = () => {
   const [stats, setStats] = useState<BillStats>({ pendingAmount: 0, pendingCount: 0, confirmedAmount: 0, confirmedCount: 0, settledAmount: 0, settledCount: 0 });
   const [selectedKeys, setSelectedKeys] = useState<React.Key[]>([]);
 
-  // ---- 筛选 ----
-  const [query, setQuery] = useState<BillQueryRequest>({ pageNum: 1, pageSize: 20 });
+  // ---- 筛选（defaultBillType 锁定后不可切换）----
+  const [query, setQuery] = useState<BillQueryRequest>({ pageNum: 1, pageSize: 20, billType: defaultBillType });
 
   // ---- 数据加载 ----
   const fetchBills = useCallback(async (q?: BillQueryRequest) => {
@@ -210,7 +215,10 @@ const BillSummaryTab: React.FC = () => {
 
       {/* 筛选栏 */}
       <div style={{ display: 'flex', gap: 12, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
-        <Select id="billTypeFilter" style={{ width: 100 }} options={BILL_TYPE_OPTIONS} value={query.billType || ''} onChange={v => updateQuery({ billType: v || undefined })} />
+        {/* 类型筛选：defaultBillType 锁定时不显示 */}
+        {!defaultBillType && (
+          <Select id="billTypeFilter" style={{ width: 100 }} options={BILL_TYPE_OPTIONS} value={query.billType || ''} onChange={v => updateQuery({ billType: v || undefined })} />
+        )}
         <Select id="billCategoryFilter" style={{ width: 100 }} options={BILL_CATEGORY_OPTIONS} value={query.billCategory || ''} onChange={v => updateQuery({ billCategory: v || undefined })} />
         <Select id="billStatusFilter" style={{ width: 100 }} options={BILL_STATUS_OPTIONS} value={query.status || ''} onChange={v => updateQuery({ status: v || undefined })} />
         {/* 结算月选择器 */}

@@ -237,13 +237,6 @@ const SampleInventory: React.FC = () => {
       render: (text) => text || '-',
     },
     {
-      title: '纸样号',
-      dataIndex: 'patternNo',
-      key: 'patternNo',
-      width: 140,
-      render: (text) => text || '-',
-    },
-    {
       title: '类型',
       dataIndex: 'sampleType',
       key: 'sampleType',

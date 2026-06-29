@@ -306,11 +306,11 @@ const StyleInfoListPage: React.FC = () => {
       if (status === 'archived' || status === 'scrapped') return false;
       const progressNode = String(item.progressNode || '').trim();
       const sampleStatus = String(item.sampleStatus || '').trim().toUpperCase();
-      const sampleReviewStatus = String((item as any).sampleReviewStatus || '').trim().toUpperCase();
-      // 排除已完成的样衣：进度节点完成 / 样衣状态完成 / 审核通过
+      // 样衣完成唯一判定：sampleStatus=COMPLETED（后端 completeSample 前置校验通过后才会设置）
+      // 审核通过（PASS/APPROVED）不算完成，因为还需要入库环节
+      // PRODUCTION_COMPLETED 也不算完成，只是样板制作完成
       if (progressNode === '样衣完成' || progressNode === '开发样报废') return false;
       if (sampleStatus === 'COMPLETED') return false;
-      if (sampleReviewStatus === 'PASS' || sampleReviewStatus === 'APPROVED') return false;
       return true;
     });
   }, [data]);

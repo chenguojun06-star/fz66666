@@ -56,12 +56,13 @@ export const useStyleFormActions = ({
 
   /**
    * 后端为 Long 类型的字段集合。
-   * 前端某些组件（如 CustomerSelect）可能把 String 类型的 ID（哈希）
-   * 误填到这些字段中，提交时会导致 Jackson 反序列化 400。
+   * 前端某些组件可能把 String 类型的 ID 误填到这些字段中，
+   * 提交时会导致 Jackson 反序列化 400。
    * 这里在提交前过滤掉无法解析为整数的字符串值。
+   * 注：customerId 已改为 String 类型以匹配 Customer.id（UUID），不在此列。
    */
   const LONG_TYPE_FIELDS = new Set([
-    'customerId', 'tenantId', 'factoryId', 'orderId', 'styleId', 'id',
+    'tenantId', 'factoryId', 'orderId', 'styleId', 'id',
   ]);
 
   /**

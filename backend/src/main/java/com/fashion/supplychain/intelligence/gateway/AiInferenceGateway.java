@@ -19,6 +19,8 @@ public interface AiInferenceGateway {
 
     boolean isAvailable();
 
+    boolean isVisionAvailable();
+
     String getProviderName();
 
     /**

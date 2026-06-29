@@ -325,12 +325,13 @@ public class TenantInterceptor implements InnerInterceptor {
     }
 
     /**
-     * 超管业务表隔离：追加 WHERE tenant_id IS NULL
-     * 业务数据全部有 tenant_id 值，IS NULL 过滤后有效返回 0 行，
-     * 拒绝超管浏览任何租户的生产/款式/财务等业务数据。
+     * 超管业务表隔离：追加 WHERE 1=0
+     * 旧方案用 tenant_id IS NULL 过滤，依赖"业务表无 NULL tenant_id 脏数据"的假设，
+     * 一旦有脏数据（老数据迁移遗留等）超管就能看到。
+     * 新方案用 1=0 永假条件，无论 tenant_id 是否 NULL 都返回 0 行，彻底杜绝脏数据泄露。
      */
     private String addTenantIsNullFilter(String sql) {
-        String condition = " AND tenant_id IS NULL";
+        String condition = " AND 1=0";
 
         int orderByIdx = findFirstAtDepthZero(sql, " ORDER BY ");
         int groupByIdx = findFirstAtDepthZero(sql, " GROUP BY ");
@@ -349,7 +350,7 @@ public class TenantInterceptor implements InnerInterceptor {
         if (whereIdx >= 0 && whereIdx < insertPos) {
             return sql.substring(0, insertPos) + condition + sql.substring(insertPos);
         } else {
-            return sql.substring(0, insertPos) + " WHERE tenant_id IS NULL" + sql.substring(insertPos);
+            return sql.substring(0, insertPos) + " WHERE 1=0" + sql.substring(insertPos);
         }
     }
 

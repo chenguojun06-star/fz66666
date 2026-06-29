@@ -138,6 +138,17 @@ public class AiInferenceRouter implements AiInferenceGateway {
     }
 
     @Override
+    public boolean isVisionAvailable() {
+        if (legacyAdapter != null && legacyAdapter.isVisionAvailable()) {
+            return true;
+        }
+        if (springAiAdapter != null && !isSpringAiCircuitOpen() && springAiAdapter.isVisionAvailable()) {
+            return true;
+        }
+        return false;
+    }
+
+    @Override
     public String getProviderName() {
         return resolveGateway(null).getProviderName();
     }

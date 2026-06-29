@@ -474,6 +474,44 @@ export function useUserListData({ user, isSuperAdmin, isTenantOwner, form, userM
     });
   };
 
+  // 快捷变更在职状态（调岗/离职/归档）
+  const changeEmploymentStatus = async (record: UserType, nextStatus: 'transferred' | 'resigned' | 'archived') => {
+    const statusLabel: Record<typeof nextStatus, string> = {
+      transferred: '调岗',
+      resigned: '离职',
+      archived: '归档',
+    };
+    openRemarkModal(`确认${statusLabel[nextStatus]}`, '确认', undefined, async (remark) => {
+      try {
+        const tenantId = record?.tenantId ? Number(record.tenantId) : null;
+        const payload: any = {
+          id: record.id,
+          username: record.username,
+          name: record.name,
+          employmentStatus: nextStatus,
+          operationRemark: remark,
+        };
+        if (!isSuperAdmin && tenantId) {
+          const response = await tenantService.updateSubAccount(Number(record.id), payload);
+          const result = response as any;
+          if (result.code === 200) {
+            message.success(`${statusLabel[nextStatus]}成功`);
+            setUserList(prev => prev.map(u => u.id === record.id ? { ...u, employmentStatus: nextStatus } : u));
+          } else { message.error(result.message || `${statusLabel[nextStatus]}失败`); }
+          return;
+        }
+        const response = await api.put('/system/user', payload);
+        const result = response as any;
+        if (result.code === 200) {
+          message.success(`${statusLabel[nextStatus]}成功`);
+          setUserList(prev => prev.map(u => u.id === record.id ? { ...u, employmentStatus: nextStatus } : u));
+        } else { message.error(result.message || `${statusLabel[nextStatus]}失败`); }
+      } catch (error: unknown) {
+        message.error(error instanceof Error ? error.message : `${statusLabel[nextStatus]}失败`);
+      }
+    });
+  };
+
   return {
     // 数据状态
     queryParams, setQueryParams, userList, total, loading, submitLoading,
@@ -490,6 +528,6 @@ export function useUserListData({ user, isSuperAdmin, isTenantOwner, form, userM
     getUserList, openDialog, closeDialog, handleGenerateInvite,
     openRemarkModal, handleRemarkConfirm, openLogModal,
     toggleUserStatus, applyRoleToUser, handleSubmit, savePerms,
-    loadPermTreeAndChecked, handleResetPassword,
+    loadPermTreeAndChecked, handleResetPassword, changeEmploymentStatus,
   };
 }

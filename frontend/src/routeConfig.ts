@@ -28,6 +28,7 @@ import {
   ShopOutlined,
   TagOutlined,
   ProfileOutlined,
+  BarChartOutlined,
 } from '@ant-design/icons';
 
 export const paths = {
@@ -68,6 +69,7 @@ export const paths = {
   financeCenter: '/finance/center',
   expenseReimbursement: '/finance/expense-reimbursement',
   employeeAdvance: '/finance/employee-advance',
+  expenseManagement: '/finance/expense-management',
   wagePayment: '/finance/wage-payment',
   ecSalesRevenue: '/finance/ec-revenue',
   financeTaxExport: '/finance/tax-export',
@@ -434,6 +436,7 @@ export const permissionCodes = {
   financeCenter: 'MENU_FINISHED_SETTLEMENT',
   expenseReimbursement: 'MENU_EXPENSE_REIMBURSEMENT',
   employeeAdvance: 'MENU_EMPLOYEE_ADVANCE',
+  expenseManagement: 'MENU_EXPENSE_REIMBURSEMENT',
   wagePayment: 'MENU_PAYMENT_APPROVAL',
 
   materialInventory: 'MENU_MATERIAL_INVENTORY',
@@ -585,8 +588,12 @@ export const menuConfig: MenuSection[] = [
       { label: '物料对账', path: paths.materialReconciliation, icon: React.createElement(FileTextOutlined) },
       // ========== 收付款 ==========
       { label: '收付款中心', path: paths.wagePayment, icon: React.createElement(DollarOutlined) },
+      // ========== 费用管理 ==========
+      { label: '费用管理', path: paths.expenseManagement, icon: React.createElement(AuditOutlined) },
       // ========== 财税工具 ==========
       { label: '财税工具', path: paths.financeTaxExport, icon: React.createElement(DollarOutlined) },
+      // ========== 成本分析 ==========
+      { label: '损耗分析', path: paths.orderWasteAnalysis, icon: React.createElement(BarChartOutlined) },
     ],
   },
   {
@@ -708,6 +715,7 @@ export const routeToPermissionCode: Record<string, string> = {
   [paths.financeTaxExport]: permissionCodes.financeTaxExport,       // 财税导出 → MENU_FINANCE_EXPORT
   [paths.ecSalesRevenue]: permissionCodes.financeTaxExport,         // EC销售收入 → MENU_FINANCE_EXPORT
   [paths.orderWasteAnalysis]: permissionCodes.orderWasteAnalysis,   // 订单损耗分析 → MENU_FINANCE_EXPORT
+  [paths.expenseManagement]: permissionCodes.expenseReimbursement,  // 费用管理 → MENU_EXPENSE_REIMBURSEMENT
   [paths.financeDashboard]: permissionCodes.financeDashboard,       // 财务总览 → MENU_FINISHED_SETTLEMENT
   [paths.crm]: permissionCodes.crm,
   [paths.crmReceivables]: permissionCodes.crmReceivables,
