@@ -14,7 +14,8 @@ public class WarehouseAreaLogAppendHelper {
     @Autowired
     private WarehouseAreaService warehouseAreaService;
 
-    public void appendOperation(Long areaId, String action, String detail) {
+    public void appendOperation(String areaId, String action, String detail) {
+        if (areaId == null) return;
         OperationLogAppendUtil.appendOperation(
             areaId,
             warehouseAreaService,
@@ -26,19 +27,19 @@ public class WarehouseAreaLogAppendHelper {
         );
     }
 
-    public void appendCreate(Long areaId) {
+    public void appendCreate(String areaId) {
         appendOperation(areaId, "新增仓库区域", null);
     }
 
-    public void appendUpdate(Long areaId, String fieldNames) {
+    public void appendUpdate(String areaId, String fieldNames) {
         appendOperation(areaId, "修改仓库区域", "更新字段：" + fieldNames);
     }
 
-    public void appendDisable(Long areaId, String reason) {
+    public void appendDisable(String areaId, String reason) {
         appendOperation(areaId, "禁用区域", "原因：" + reason);
     }
 
-    public void appendEnable(Long areaId) {
+    public void appendEnable(String areaId) {
         appendOperation(areaId, "启用区域", null);
     }
 }

@@ -8,6 +8,7 @@ import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.production.entity.CuttingTask;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.factory.CuttingOrderFactory;
+import com.fashion.supplychain.production.helper.CuttingTaskLogAppendHelper;
 import com.fashion.supplychain.production.helper.OrderRemarkHelper;
 import com.fashion.supplychain.production.service.CuttingTaskService;
 import com.fashion.supplychain.production.service.MaterialPurchaseService;
@@ -50,6 +51,9 @@ public class CuttingTaskOrchestrator {
 
     @Autowired
     private OrderRemarkHelper orderRemarkHelper;
+
+    @Autowired
+    private CuttingTaskLogAppendHelper logAppendHelper;
 
     private boolean isDirectCuttingOrder(ProductionOrder order, CuttingTask task) {
         String orderNo = order != null && StringUtils.hasText(order.getOrderNo())
@@ -236,6 +240,7 @@ public class CuttingTaskOrchestrator {
         writeReceiveRemark(updated);
         sendReceiveNotice(updated);
 
+        logAppendHelper.appendAssign(taskId, receiverName);
         return updated;
     }
 
@@ -388,6 +393,8 @@ public class CuttingTaskOrchestrator {
             throw new IllegalStateException("退回失败");
         }
         TenantAssert.assertBelongsToCurrentTenant(updated.getTenantId(), "裁剪任务");
+
+        logAppendHelper.appendCancel(taskId, reason);
         return updated;
     }
 

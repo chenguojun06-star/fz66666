@@ -9,6 +9,7 @@ import com.fashion.supplychain.system.entity.OperationLog;
 import com.fashion.supplychain.system.service.OperationLogService;
 import com.fashion.supplychain.warehouse.entity.WarehouseArea;
 import com.fashion.supplychain.warehouse.entity.WarehouseLocation;
+import com.fashion.supplychain.warehouse.helper.WarehouseAreaLogAppendHelper;
 import com.fashion.supplychain.warehouse.service.WarehouseAreaService;
 import com.fashion.supplychain.warehouse.service.WarehouseLocationService;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +30,7 @@ public class WarehouseAreaOrchestrator {
     private final WarehouseAreaService areaService;
     private final WarehouseLocationService locationService;
     private final OperationLogService operationLogService;
+    private final WarehouseAreaLogAppendHelper logAppendHelper;
 
     private static final Map<String, String> WAREHOUSE_TYPE_LABELS = Map.of(
             "FINISHED", "成品仓",
@@ -107,6 +109,7 @@ public class WarehouseAreaOrchestrator {
         area.setCreateTime(LocalDateTime.now());
         areaService.save(area);
 
+        logAppendHelper.appendCreate(area.getId());
         log.info("[仓库区域] 创建: code={}, name={}, type={}, tenantId={}",
                 area.getAreaCode(), area.getAreaName(), area.getWarehouseType(), tenantId);
         return Result.success(area);
@@ -135,6 +138,7 @@ public class WarehouseAreaOrchestrator {
         area.setUpdateTime(LocalDateTime.now());
         areaService.updateById(area);
 
+        logAppendHelper.appendUpdate(id, "仓库区域更新");
         log.info("[仓库区域] 更新: id={}, code={}", id, existing.getAreaCode());
         return Result.success(area);
     }
@@ -177,6 +181,8 @@ public class WarehouseAreaOrchestrator {
         String areaCode = existing.getAreaCode();
         String areaName = existing.getAreaName();
         areaService.removeById(id);
+
+        logAppendHelper.appendDisable(id, reason);
 
         OperationLog opLog = new OperationLog();
         opLog.setModule("仓库管理");
@@ -234,6 +240,7 @@ public class WarehouseAreaOrchestrator {
         area.setCreateTime(LocalDateTime.now());
         areaService.save(area);
 
+        logAppendHelper.appendCreate(area.getId());
         log.info("[仓库区域] 快速创建: code={}, name={}, type={}", areaCode, areaName, warehouseType);
         return Result.success(area);
     }

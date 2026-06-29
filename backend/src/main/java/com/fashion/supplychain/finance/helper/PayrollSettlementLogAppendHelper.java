@@ -14,7 +14,8 @@ public class PayrollSettlementLogAppendHelper {
     @Autowired
     private PayrollSettlementService payrollSettlementService;
 
-    public void appendOperation(Long settlementId, String action, String detail) {
+    public void appendOperation(String settlementId, String action, String detail) {
+        if (settlementId == null) return;
         OperationLogAppendUtil.appendOperation(
             settlementId,
             payrollSettlementService,
@@ -26,27 +27,27 @@ public class PayrollSettlementLogAppendHelper {
         );
     }
 
-    public void appendCreate(Long settlementId) {
+    public void appendCreate(String settlementId) {
         appendOperation(settlementId, "创建工资结算", null);
     }
 
-    public void appendSubmit(Long settlementId) {
+    public void appendSubmit(String settlementId) {
         appendOperation(settlementId, "提交审核", null);
     }
 
-    public void appendApprove(Long settlementId, String reviewer) {
+    public void appendApprove(String settlementId, String reviewer) {
         appendOperation(settlementId, "审核通过", "审核人：" + reviewer);
     }
 
-    public void appendReject(Long settlementId, String reviewer, String reason) {
+    public void appendReject(String settlementId, String reviewer, String reason) {
         appendOperation(settlementId, "审核驳回", "审核人：" + reviewer + "，原因：" + reason);
     }
 
-    public void appendPaid(Long settlementId) {
+    public void appendPaid(String settlementId) {
         appendOperation(settlementId, "已发放", null);
     }
 
-    public void appendCancel(Long settlementId, String reason) {
+    public void appendCancel(String settlementId, String reason) {
         appendOperation(settlementId, "取消结算", "原因：" + reason);
     }
 }

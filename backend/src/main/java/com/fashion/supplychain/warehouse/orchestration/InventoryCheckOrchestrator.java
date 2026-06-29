@@ -15,6 +15,7 @@ import com.fashion.supplychain.style.service.ProductSkuService;
 import com.fashion.supplychain.style.service.StyleInfoService;
 import com.fashion.supplychain.warehouse.entity.InventoryCheck;
 import com.fashion.supplychain.warehouse.entity.InventoryCheckItem;
+import com.fashion.supplychain.warehouse.helper.InventoryCheckLogAppendHelper;
 import com.fashion.supplychain.warehouse.service.InventoryCheckItemService;
 import com.fashion.supplychain.warehouse.service.InventoryCheckService;
 import lombok.extern.slf4j.Slf4j;
@@ -51,6 +52,9 @@ public class InventoryCheckOrchestrator {
 
     @Autowired
     private StyleInfoService styleInfoService;
+
+    @Autowired
+    private InventoryCheckLogAppendHelper logAppendHelper;
 
     @Transactional(rollbackFor = Exception.class)
     public InventoryCheck createCheck(Map<String, Object> params) {
@@ -104,6 +108,7 @@ public class InventoryCheckOrchestrator {
         check.setTotalBookQty(totalBook);
 
         checkService.save(check);
+        logAppendHelper.appendCreate(check.getId());
         if (!items.isEmpty()) {
             items.forEach(i -> i.setCheckId(check.getId()));
             itemService.saveBatch(items, 100);

@@ -14,7 +14,8 @@ public class CuttingBomLogAppendHelper {
     @Autowired
     private CuttingBomService cuttingBomService;
 
-    public void appendOperation(Long bomId, String action, String detail) {
+    public void appendOperation(String bomId, String action, String detail) {
+        if (bomId == null) return;
         OperationLogAppendUtil.appendOperation(
             bomId,
             cuttingBomService,
@@ -26,19 +27,19 @@ public class CuttingBomLogAppendHelper {
         );
     }
 
-    public void appendCreate(Long bomId) {
+    public void appendCreate(String bomId) {
         appendOperation(bomId, "创建裁剪BOM", null);
     }
 
-    public void appendUpdate(Long bomId, String fieldNames) {
+    public void appendUpdate(String bomId, String fieldNames) {
         appendOperation(bomId, "修改裁剪BOM", "更新字段：" + fieldNames);
     }
 
-    public void appendAddMaterial(Long bomId, String materialName) {
+    public void appendAddMaterial(String bomId, String materialName) {
         appendOperation(bomId, "添加物料", "物料：" + materialName);
     }
 
-    public void appendRemoveMaterial(Long bomId, String materialName) {
+    public void appendRemoveMaterial(String bomId, String materialName) {
         appendOperation(bomId, "移除物料", "物料：" + materialName);
     }
 }

@@ -9,6 +9,8 @@ import com.fashion.supplychain.production.entity.MaterialStock;
 import com.fashion.supplychain.production.service.MaterialStockService;
 import com.fashion.supplychain.style.service.ProductSkuService;
 import com.fashion.supplychain.warehouse.entity.StockTransfer;
+import com.fashion.supplychain.warehouse.entity.WarehouseLocation;
+import com.fashion.supplychain.warehouse.helper.StockTransferLogAppendHelper;
 import com.fashion.supplychain.warehouse.service.StockTransferService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,6 +30,7 @@ public class StockTransferOrchestrator {
     private final StockTransferService transferService;
     private final MaterialStockService materialStockService;
     private final ProductSkuService productSkuService;
+    private final StockTransferLogAppendHelper logAppendHelper;
 
     public Result<Page<StockTransfer>> list(int page, int pageSize, String status,
                                              String transferType, String keyword) {
@@ -82,6 +85,7 @@ public class StockTransferOrchestrator {
         transfer.setCreateTime(LocalDateTime.now());
         transferService.save(transfer);
 
+        logAppendHelper.appendCreate(transfer.getId());
         log.info("[调拨] 创建调拨单: no={}, from={}, to={}, qty={}",
                 transfer.getTransferNo(), transfer.getFromLocationCode(),
                 transfer.getToLocationCode(), transfer.getQuantity());
@@ -112,6 +116,7 @@ public class StockTransferOrchestrator {
         transfer.setUpdateTime(LocalDateTime.now());
         transferService.updateById(transfer);
 
+        logAppendHelper.appendApprove(id, UserContext.username());
         log.info("[调拨] 审批通过: no={}", transfer.getTransferNo());
         return Result.success(transfer);
     }
@@ -139,6 +144,7 @@ public class StockTransferOrchestrator {
         transfer.setUpdateTime(LocalDateTime.now());
         transferService.updateById(transfer);
 
+        logAppendHelper.appendTransfer(id, transfer.getFromLocationCode(), transfer.getToLocationCode());
         log.info("[调拨] 调拨完成: no={}, stockType={}, qty={}",
                 transfer.getTransferNo(), transfer.getStockType(), transfer.getQuantity());
         return Result.success(transfer);
@@ -161,6 +167,7 @@ public class StockTransferOrchestrator {
             return Result.fail("已完成的调拨单不可取消");
         }
 
+        logAppendHelper.appendCancel(id, "用户取消调拨");
         transfer.setStatus("CANCELLED");
         transfer.setUpdateTime(LocalDateTime.now());
         transferService.updateById(transfer);

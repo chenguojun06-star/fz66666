@@ -14,7 +14,8 @@ public class WarehouseLocationLogAppendHelper {
     @Autowired
     private WarehouseLocationService warehouseLocationService;
 
-    public void appendOperation(Long locationId, String action, String detail) {
+    public void appendOperation(String locationId, String action, String detail) {
+        if (locationId == null) return;
         OperationLogAppendUtil.appendOperation(
             locationId,
             warehouseLocationService,
@@ -26,23 +27,23 @@ public class WarehouseLocationLogAppendHelper {
         );
     }
 
-    public void appendCreate(Long locationId) {
+    public void appendCreate(String locationId) {
         appendOperation(locationId, "新增库位", null);
     }
 
-    public void appendUpdate(Long locationId, String fieldNames) {
+    public void appendUpdate(String locationId, String fieldNames) {
         appendOperation(locationId, "修改库位", "更新字段：" + fieldNames);
     }
 
-    public void appendDisable(Long locationId, String reason) {
+    public void appendDisable(String locationId, String reason) {
         appendOperation(locationId, "禁用库位", "原因：" + reason);
     }
 
-    public void appendEnable(Long locationId) {
+    public void appendEnable(String locationId) {
         appendOperation(locationId, "启用库位", null);
     }
 
-    public void appendAssign(Long locationId, String purpose) {
+    public void appendAssign(String locationId, String purpose) {
         appendOperation(locationId, "分配用途", "用途：" + purpose);
     }
 }

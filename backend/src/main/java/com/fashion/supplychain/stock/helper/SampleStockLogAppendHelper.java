@@ -14,7 +14,8 @@ public class SampleStockLogAppendHelper {
     @Autowired
     private SampleStockService sampleStockService;
 
-    public void appendOperation(Long stockId, String action, String detail) {
+    public void appendOperation(String stockId, String action, String detail) {
+        if (stockId == null) return;
         OperationLogAppendUtil.appendOperation(
             stockId,
             sampleStockService,
@@ -26,27 +27,27 @@ public class SampleStockLogAppendHelper {
         );
     }
 
-    public void appendCreate(Long stockId) {
+    public void appendCreate(String stockId) {
         appendOperation(stockId, "新增样衣", null);
     }
 
-    public void appendUpdate(Long stockId, String fieldNames) {
+    public void appendUpdate(String stockId, String fieldNames) {
         appendOperation(stockId, "修改样衣", "更新字段：" + fieldNames);
     }
 
-    public void appendLoan(Long stockId, String borrower, Integer quantity) {
+    public void appendLoan(String stockId, String borrower, Integer quantity) {
         appendOperation(stockId, "借出", "借用人：" + borrower + "，数量：" + quantity);
     }
 
-    public void appendReturn(Long stockId, String borrower, Integer quantity) {
+    public void appendReturn(String stockId, String borrower, Integer quantity) {
         appendOperation(stockId, "归还", "归还人：" + borrower + "，数量：" + quantity);
     }
 
-    public void appendTransfer(Long stockId, String fromFactory, String toFactory) {
+    public void appendTransfer(String stockId, String fromFactory, String toFactory) {
         appendOperation(stockId, "调拨", "从：" + fromFactory + "，到：" + toFactory);
     }
 
-    public void appendScrap(Long stockId, String reason) {
+    public void appendScrap(String stockId, String reason) {
         appendOperation(stockId, "报废", "原因：" + reason);
     }
 }

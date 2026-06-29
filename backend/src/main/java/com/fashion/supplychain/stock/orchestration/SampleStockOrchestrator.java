@@ -15,6 +15,7 @@ import com.fashion.supplychain.production.service.ProductOutstockService;
 import com.fashion.supplychain.stock.dto.SampleStockInboundBatchRequest;
 import com.fashion.supplychain.stock.entity.SampleLoan;
 import com.fashion.supplychain.stock.entity.SampleStock;
+import com.fashion.supplychain.stock.helper.SampleStockLogAppendHelper;
 import com.fashion.supplychain.stock.mapper.SampleLoanMapper;
 import com.fashion.supplychain.stock.mapper.SampleStockMapper;
 import com.fashion.supplychain.stock.service.SampleStockService;
@@ -72,6 +73,9 @@ public class SampleStockOrchestrator {
     @Autowired
     private ProductOutstockService productOutstockService;
 
+    @Autowired
+    private SampleStockLogAppendHelper logAppendHelper;
+
     @Transactional(rollbackFor = Exception.class)
     public void inbound(SampleStock stock) {
         TenantAssert.assertTenantContext();
@@ -111,6 +115,8 @@ public class SampleStockOrchestrator {
         stock.setLoanedQuantity(0);
         stock.setTenantId(currentTenantId);
         sampleStockService.save(stock);
+
+        logAppendHelper.appendCreate(stock.getId());
 
         if (matchedPattern != null) {
             saveInboundScanRecords(stock, matchedPattern, currentTenantId);

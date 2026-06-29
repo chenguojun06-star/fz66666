@@ -4,6 +4,7 @@ import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.production.entity.CuttingBom;
 import com.fashion.supplychain.production.entity.CuttingTask;
 import com.fashion.supplychain.production.entity.MaterialDatabase;
+import com.fashion.supplychain.production.helper.CuttingBomLogAppendHelper;
 import com.fashion.supplychain.production.service.CuttingBomService;
 import com.fashion.supplychain.production.service.CuttingTaskService;
 import com.fashion.supplychain.production.service.MaterialDatabaseService;
@@ -33,6 +34,9 @@ public class CuttingBomOrchestrator {
     @Autowired
     private MaterialDatabaseOrchestrator materialDatabaseOrchestrator;
 
+    @Autowired
+    private CuttingBomLogAppendHelper logAppendHelper;
+
     public List<CuttingBom> listByCuttingTaskId(String cuttingTaskId) {
         return cuttingBomService.listByCuttingTaskId(cuttingTaskId);
     }
@@ -47,6 +51,7 @@ public class CuttingBomOrchestrator {
         fillDefaults(bom);
         calculateTotalPrice(bom);
         cuttingBomService.save(bom);
+        logAppendHelper.appendCreate(bom.getId());
         syncSingleBomRowToMaterialDatabase(bom);
         return bom;
     }
@@ -63,6 +68,7 @@ public class CuttingBomOrchestrator {
         calculateTotalPrice(bom);
         bom.setUpdateTime(LocalDateTime.now());
         cuttingBomService.updateById(bom);
+        logAppendHelper.appendUpdate(bom.getId(), "裁剪BOM更新");
         syncSingleBomRowToMaterialDatabase(bom);
         return bom;
     }

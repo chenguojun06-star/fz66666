@@ -2,6 +2,7 @@ package com.fashion.supplychain.production.orchestration;
 
 import com.fashion.supplychain.production.entity.MaterialInbound;
 import com.fashion.supplychain.production.entity.MaterialPurchase;
+import com.fashion.supplychain.production.helper.MaterialInboundLogAppendHelper;
 import com.fashion.supplychain.production.mapper.MaterialPurchaseMapper;
 import com.fashion.supplychain.production.service.MaterialInboundService;
 import com.fashion.supplychain.production.service.MaterialPurchaseService;
@@ -57,6 +58,9 @@ public class MaterialInboundOrchestrator {
 
     @Autowired
     private OrderRemarkService orderRemarkService;
+
+    @Autowired
+    private MaterialInboundLogAppendHelper logAppendHelper;
 
     /**
      * 采购到货入库完整流程
@@ -123,6 +127,9 @@ public class MaterialInboundOrchestrator {
 
         materialInboundService.save(inbound);
         log.info("入库记录已创建: {}", inboundNo);
+
+        logAppendHelper.appendInbound(inbound.getId(), arrivedQuantity);
+        logAppendHelper.appendOperation(purchaseId, "物料入库", "入库单号：" + inboundNo + "，数量：" + arrivedQuantity);
 
         // 4. 更新库存（带仓位同步）
         materialStockService.increaseStock(purchase, arrivedQuantity, warehouseLocation);

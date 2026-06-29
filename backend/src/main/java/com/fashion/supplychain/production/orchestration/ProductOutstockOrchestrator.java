@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.production.entity.ProductOutstock;
 import com.fashion.supplychain.production.entity.ProductionOrder;
+import com.fashion.supplychain.production.helper.ProductOutstockLogAppendHelper;
 import com.fashion.supplychain.integration.openapi.service.WebhookPushService;
 import com.fashion.supplychain.production.service.ProductionOrderScanRecordDomainService;
 import com.fashion.supplychain.production.service.ProductOutstockService;
@@ -40,6 +41,9 @@ public class ProductOutstockOrchestrator {
 
     @Autowired
     private ProductSkuService productSkuService;
+
+    @Autowired
+    private ProductOutstockLogAppendHelper logAppendHelper;
 
     public IPage<ProductOutstock> list(Map<String, Object> params) {
         return productOutstockService.queryPage(params);
@@ -79,6 +83,8 @@ public class ProductOutstockOrchestrator {
         if (!ok) {
             throw new IllegalStateException("保存失败");
         }
+        logAppendHelper.appendCreate(outstock.getId());
+
         // 异步推送物流信息给已对接客户
         if (webhookPushService != null) {
             try {
@@ -191,6 +197,8 @@ public class ProductOutstockOrchestrator {
         }
         patch.setUpdateTime(LocalDateTime.now());
         productOutstockService.updateById(patch);
+
+        logAppendHelper.appendOutstock(key, outstock.getOutstockQuantity());
 
         log.info("出库单已收货: outstockNo={}, id={}", outstock.getOutstockNo(), key);
         return productOutstockService.getById(key);

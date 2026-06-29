@@ -14,6 +14,7 @@ import com.fashion.supplychain.system.entity.OperationLog;
 import com.fashion.supplychain.system.service.OperationLogService;
 import com.fashion.supplychain.warehouse.entity.WarehouseLocation;
 import com.fashion.supplychain.warehouse.entity.WarehouseArea;
+import com.fashion.supplychain.warehouse.helper.WarehouseLocationLogAppendHelper;
 import com.fashion.supplychain.warehouse.service.WarehouseAreaService;
 import com.fashion.supplychain.warehouse.service.WarehouseLocationService;
 import lombok.RequiredArgsConstructor;
@@ -36,6 +37,7 @@ public class WarehouseLocationOrchestrator {
     private final ProductSkuService productSkuService;
     private final ProductWarehousingMapper productWarehousingMapper;
     private final OperationLogService operationLogService;
+    private final WarehouseLocationLogAppendHelper logAppendHelper;
 
     private static final Map<String, String> WAREHOUSE_TYPE_LABELS = Map.of(
             "FINISHED", "成品仓",
@@ -173,6 +175,7 @@ public class WarehouseLocationOrchestrator {
         location.setCreateTime(LocalDateTime.now());
         locationService.save(location);
 
+        logAppendHelper.appendCreate(location.getId());
         log.info("[库位] 创建库位: code={}, type={}, tenantId={}",
                 location.getLocationCode(), location.getWarehouseType(), tenantId);
         return Result.success(location);
@@ -196,7 +199,8 @@ public class WarehouseLocationOrchestrator {
         location.setUpdateTime(LocalDateTime.now());
         locationService.updateById(location);
 
-        log.info("[库位] 更新库位: id={}, code={}", id, existing.getLocationCode());
+        logAppendHelper.appendUpdate(id, "库位更新");
+        log.info("[库位] 更新: id={}, code={}", id, existing.getLocationCode());
         return Result.success(location);
     }
 
@@ -242,6 +246,8 @@ public class WarehouseLocationOrchestrator {
         String warehouseType = existing.getWarehouseType();
 
         locationService.removeById(id);
+
+        logAppendHelper.appendDisable(id, reason);
 
         OperationLog opLog = new OperationLog();
         opLog.setModule("仓库管理");

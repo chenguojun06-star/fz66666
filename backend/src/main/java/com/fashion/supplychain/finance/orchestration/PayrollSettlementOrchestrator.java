@@ -8,6 +8,7 @@ import com.fashion.supplychain.common.util.TextUtils;
 import com.fashion.supplychain.finance.entity.PayrollSettlement;
 import com.fashion.supplychain.finance.entity.PayrollSettlementItem;
 import com.fashion.supplychain.finance.entity.DeductionItem;
+import com.fashion.supplychain.finance.helper.PayrollSettlementLogAppendHelper;
 import com.fashion.supplychain.finance.mapper.DeductionItemMapper;
 import com.fashion.supplychain.finance.service.PayrollSettlementItemService;
 import com.fashion.supplychain.finance.service.PayrollSettlementService;
@@ -57,6 +58,9 @@ public class PayrollSettlementOrchestrator {
 
     @Autowired
     private DeductionItemMapper deductionItemMapper;
+
+    @Autowired
+    private PayrollSettlementLogAppendHelper logAppendHelper;
 
     private static final class PayrollQuery {
         private String orderId;
@@ -626,6 +630,8 @@ public class PayrollSettlementOrchestrator {
         }
         payrollSettlementService.update(uw);
 
+        logAppendHelper.appendApprove(settlementId.trim(), confirmerName);
+
         // 确认关联扫码记录的结算状态（payrollSettlementId 已在 generate() 时绑定）
         // 审核通过后 payrollSettlementId 保持不变，undo 操作会据此阻止撤回
         Long tenantId = UserContext.tenantId();
@@ -683,6 +689,8 @@ public class PayrollSettlementOrchestrator {
                 .set(PayrollSettlement::getUpdateTime, LocalDateTime.now())
                 .eq(PayrollSettlement::getId, settlementId.trim());
         payrollSettlementService.update(settlementUw);
+
+        logAppendHelper.appendCancel(settlementId.trim(), remark);
 
         LambdaUpdateWrapper<ScanRecord> scanUw = new LambdaUpdateWrapper<ScanRecord>()
                 .set(ScanRecord::getPayrollSettlementId, null)
