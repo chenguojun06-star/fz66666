@@ -5,6 +5,7 @@ import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.system.service.OperationLogService;
 import com.fashion.supplychain.warehouse.entity.WarehouseArea;
 import com.fashion.supplychain.warehouse.service.WarehouseAreaService;
+import com.fashion.supplychain.warehouse.helper.WarehouseAreaLogAppendHelper;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -36,6 +37,9 @@ class WarehouseAreaOrchestratorTest {
     @Mock
     private OperationLogService operationLogService;
 
+    @Mock
+    private WarehouseAreaLogAppendHelper logAppendHelper;
+
     private WarehouseAreaOrchestrator orchestrator;
 
     @BeforeEach
@@ -48,7 +52,7 @@ class WarehouseAreaOrchestratorTest {
         ctx.setTenantId(1L);
         ctx.setPermissionRange("all");
         UserContext.set(ctx);
-        orchestrator = new WarehouseAreaOrchestrator(areaService, locationService, operationLogService);
+        orchestrator = new WarehouseAreaOrchestrator(areaService, locationService, operationLogService, logAppendHelper);
     }
 
     @AfterEach
