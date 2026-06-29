@@ -22,6 +22,7 @@ import com.fashion.supplychain.production.service.MaterialDatabaseService;
 import com.fashion.supplychain.production.helper.MaterialPurchasePickingHelper;
 import com.fashion.supplychain.production.helper.MaterialPurchaseQueryHelper;
 import com.fashion.supplychain.production.helper.MaterialPurchaseStatusHelper;
+import com.fashion.supplychain.production.helper.MaterialPurchaseLogAppendHelper;
 import com.fashion.supplychain.production.service.MaterialPurchaseService;
 import com.fashion.supplychain.production.service.ProductionOrderScanRecordDomainService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
@@ -68,6 +69,9 @@ public class MaterialPurchaseOrchestrator {
 
     @Autowired
     private MaterialPurchaseQueryHelper queryHelper;
+
+    @Autowired
+    private MaterialPurchaseLogAppendHelper logAppendHelper;
 
     @Autowired
     private MaterialDatabaseService materialDatabaseService;
@@ -141,6 +145,7 @@ public class MaterialPurchaseOrchestrator {
         if (!ok) {
             throw new IllegalStateException("保存失败");
         }
+        logAppendHelper.appendCreate(materialPurchase.getId());
         return true;
     }
 
@@ -158,6 +163,7 @@ public class MaterialPurchaseOrchestrator {
         if (!ok) {
             throw new IllegalStateException("保存失败");
         }
+        logAppendHelper.appendUpdate(materialPurchase.getId(), "字段更新");
         return true;
     }
 
@@ -192,6 +198,11 @@ public class MaterialPurchaseOrchestrator {
         boolean ok = batchAndSync(purchases);
         if (!ok) {
             throw new IllegalStateException("批量保存失败");
+        }
+        for (MaterialPurchase p : purchases) {
+            if (p.getId() != null) {
+                logAppendHelper.appendCreate(p.getId());
+            }
         }
         return true;
     }
@@ -414,6 +425,7 @@ public class MaterialPurchaseOrchestrator {
             throw new NoSuchElementException("采购任务不存在");
         }
         com.fashion.supplychain.common.tenant.TenantAssert.assertBelongsToCurrentTenant(current.getTenantId(), "采购任务");
+        logAppendHelper.appendCancel(key, "删除采购单");
         boolean ok = materialPurchaseService.deleteById(key);
         if (!ok) {
             throw new IllegalStateException("删除失败");

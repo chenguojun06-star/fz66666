@@ -263,7 +263,7 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = ({ styleId, styleNo, skc: initia
   };
 
   const isManual = skuMode === 'MANUAL';
-  const canEdit = isEditing;
+  const canEdit = isEditing && isManual;
 
   const columns = [
     {
@@ -349,6 +349,15 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = ({ styleId, styleNo, skc: initia
       },
     },
     {
+      title: '吊牌价', dataIndex: 'tagPrice', key: 'tagPrice', width: 110,
+      render: (_: number, record: ProductSku) => {
+        const key = getRowKey(record);
+        return canEdit ? (
+          <InputNumber value={getCellValue(record, 'tagPrice')} onChange={v => handleFieldChange(key, 'tagPrice', v)} min={0} precision={2} prefix="¥" controls={false} style={{ width: '100%' }} />
+        ) : record.tagPrice != null ? formatMoney(record.tagPrice) : '-';
+      },
+    },
+    {
       title: '销售价', dataIndex: 'salesPrice', key: 'salesPrice', width: 110,
       render: (_: number, record: ProductSku) => {
         const key = getRowKey(record);
@@ -409,17 +418,16 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = ({ styleId, styleNo, skc: initia
         </Space>
 
         <Space>
-          {!isEditing ? (
+          {isManual && !isEditing && (
             <Button type="primary" icon={<EditOutlined />} onClick={() => setIsEditing(true)}>
               编辑
             </Button>
-          ) : (
+          )}
+          {isManual && isEditing && (
             <>
-              {isManual && (
-                <Dropdown menu={{ items: addMenuItems }} trigger={['hover']}>
-                  <Button icon={<PlusOutlined />}>新增SKU</Button>
-                </Dropdown>
-              )}
+              <Dropdown menu={{ items: addMenuItems }} trigger={['hover']}>
+                <Button icon={<PlusOutlined />}>新增SKU</Button>
+              </Dropdown>
               <Button type="primary" icon={<SaveOutlined />} onClick={handleSave} loading={saving}>
                 保存
               </Button>

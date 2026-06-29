@@ -480,11 +480,6 @@ Page({
         const records = Array.isArray(results[2]) ? results[2] : (results[2] && results[2].data ? (Array.isArray(results[2].data) ? results[2].data : []) : []);
         const processList = Array.isArray(results[3]) ? results[3] : (results[3] && results[3].data ? (Array.isArray(results[3].data) ? results[3].data : []) : []);
 
-        // 调试日志：看扫码记录里有没有 operatorName
-        if (records.length > 0) {
-          console.log('[sample-dev] 扫码记录首条 operatorName=' + (records[0].operatorName || '无') + ', recordsCount=' + records.length);
-        }
-
         const stages = that._buildProcessStages(config, records, detail);
 
         // 更新列表中对应项的数量

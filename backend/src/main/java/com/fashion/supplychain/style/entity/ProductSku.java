@@ -81,6 +81,11 @@ public class ProductSku {
     private BigDecimal costPrice;
 
     /**
+     * 吊牌价
+     */
+    private BigDecimal tagPrice;
+
+    /**
      * 销售价
      */
     private BigDecimal salesPrice;

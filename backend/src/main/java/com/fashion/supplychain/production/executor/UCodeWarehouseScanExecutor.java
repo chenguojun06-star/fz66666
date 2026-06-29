@@ -137,7 +137,9 @@ public class UCodeWarehouseScanExecutor {
             sku.setStyleNo(styleNo);
             sku.setColor(color);
             sku.setSize(size);
+            sku.setStatus("ENABLED");
             sku.setStockQuantity(0);
+            sku.setSkuMode("AUTO");
             if (order.getStyleId() != null) {
                 try { sku.setStyleId(Long.parseLong(order.getStyleId())); } catch (NumberFormatException e) {
                     log.warn("[SKU创建] styleId 解析失败: orderId={}, styleId={}", order.getId(), order.getStyleId());

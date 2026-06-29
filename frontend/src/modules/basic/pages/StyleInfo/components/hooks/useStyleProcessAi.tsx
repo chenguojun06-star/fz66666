@@ -50,9 +50,12 @@ export const useStyleProcessAi = ({ styleId, data, editMode, enterEdit }: UseSty
         const preview = incoming.filter(p => !existingNames.has(String(p.processName || '').trim()));
         setAiOpen(false);
         if (preview.length === 0) { message.info('所有工序已存在，无需重复补全'); return; }
+        // 判断数据来源
+        const dataSource = res.data?.dataSource || 'historical';
+        const sourceLabel = dataSource === 'historical' ? '本厂历史数据' : 'AI建议';
         modal.confirm({
           title: `AI建议补全 ${preview.length} 道工序`,
-          content: (<div><p style={{ marginBottom: 8 }}>以下工序将被添加，请确认：</p>{preview.map((p, i) => (<div key={i} style={{ color: 'var(--color-text-secondary)', lineHeight: '24px' }}>• {p.progressStage || '车缝'} - {p.processName}（建议单价 ¥{p.suggestedPrice ?? 0}）</div>))}</div>),
+          content: (<div><p style={{ marginBottom: 8 }}>以下工序将被添加，请确认：</p>{preview.map((p, i) => (<div key={i} style={{ color: 'var(--color-text-secondary)', lineHeight: '24px' }}>• {p.progressStage || '车缝'} - {p.processName}（参考价 ¥{p.suggestedPrice ?? 0}）</div>))}</div>),
           okText: '确认添加', cancelText: '取消',
           onOk: async () => {
             if (!editMode) await enterEdit();
@@ -64,10 +67,10 @@ export const useStyleProcessAi = ({ styleId, data, editMode, enterEdit }: UseSty
               addedCount = toAdd.length;
               return [...prev, ...toAdd];
             });
-            setTimeout(() => { message.success(`已添加 ${addedCount} 道AI建议工序（${res.data.category || aiCategory || '历史数据'} · ${res.data.sampleStyleCount ?? '?'} 个样本）`); }, 0);
+            setTimeout(() => { message.success(`已添加 ${addedCount} 道工序（${sourceLabel} · ${res.data?.sampleStyleCount ?? '?'} 个样本参考）`); }, 0);
           },
         });
-      } else { message.warning('暂无该品类的工序历史数据'); }
+      } else { message.warning({ content: '暂无该品类的工序历史数据，请先在「工序单价」页面录入实际工序', duration: 5 }); }
     } catch { message.error('AI补全失败，请稍后重试'); } finally { setAiLoading(false); }
   }, [aiCategory, styleId, message, data, editMode, enterEdit]);
 

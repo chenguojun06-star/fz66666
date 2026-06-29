@@ -239,7 +239,6 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
             StyleInfo existing = this.getById(styleInfo.getId());
             if (existing != null) {
                 styleInfo.setCreateTime(existing.getCreateTime());
-                styleInfo.setPrice(existing.getPrice());
             }
             styleInfo.setUpdateTime(now);
         } else {
@@ -255,7 +254,6 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
             if (!StringUtils.hasText(styleInfo.getCategory())) {
                 styleInfo.setCategory("未分类");
             }
-            styleInfo.setPrice(null);
 
             // 设计师 = 创建款式的人（自动填充）
             String currentUser = UserContext.username();
@@ -287,8 +285,8 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
                 styleInfo.setSkc("SKC" + timeStr);
             }
         }
-
-        return this.saveOrUpdate(styleInfo);
+        boolean result = this.saveOrUpdate(styleInfo);
+        return result;
     }
 
     @Override
@@ -379,5 +377,17 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
         }
 
         return style;
+    }
+
+    @Override
+    public void updateSizeColorConfigOnly(Long styleId, String sizeColorConfig) {
+        StyleInfo style = this.getById(styleId);
+        if (style == null) {
+            throw new IllegalArgumentException("款式不存在: " + styleId);
+        }
+        style.setSizeColorConfig(sizeColorConfig);
+        style.setUpdateTime(java.time.LocalDateTime.now());
+        // 直接用 MyBatis-Plus updateById，只更新这一行，不走 saveOrUpdateStyle
+        this.updateById(style);
     }
 }

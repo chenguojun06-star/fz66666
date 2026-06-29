@@ -33,4 +33,10 @@ public interface StyleInfoService extends IService<StyleInfo> {
     boolean isPatternLocked(Long styleId);
 
     StyleInfo getValidatedForOrderCreate(String styleId, String styleNo);
+
+    /**
+     * 只更新 sizeColorConfig 字段，不走 saveOrUpdateStyle（避免误覆盖 price 等字段）
+     */
+    void updateSizeColorConfigOnly(Long styleId, String sizeColorConfig);
+
 }

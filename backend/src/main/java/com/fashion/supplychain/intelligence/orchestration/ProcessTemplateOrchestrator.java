@@ -88,20 +88,9 @@ public class ProcessTemplateOrchestrator {
         ProcessTemplateResponse resp = new ProcessTemplateResponse();
         resp.setCategory(category);
 
-        // 1. 如果 AI 服务可用，并且传入了品类，优先尝试使用 AI 大模型 + IE知识库进行智能限价推断
-        if (StringUtils.hasText(category) && aiAdvisorService != null && aiAdvisorService.isEnabled()) {
-            boolean[] ieMatched = {false};
-            List<ProcessTemplateItem> aiGenerated = tryGenerateViaLLM(category, ieMatched);
-            if (aiGenerated != null && !aiGenerated.isEmpty()) {
-                resp.setProcesses(aiGenerated);
-                int realSampleCount = countRealSamplesForCategory(category);
-                resp.setSampleStyleCount(realSampleCount);
-                resp.setDataSource(ieMatched[0] ? "ie_standard" : "ai_derived");
-                return resp;
-            }
-        }
-
-        // 2. 如果无 AI 或大模型回答失败，降级退回租户级历史数据统计（基于本厂以往做过的订单真实价格求均值）
+        // ★★★ 全部走租户自己的历史数据，不走 IE 核价 ★★★
+        // 原因：IE 核价给的工序和工厂实际做的工序对不上，会造成混乱
+        // 参考：用户反馈 2026-06-29
         return buildFromHistoricalData(category, resp);
     }
 

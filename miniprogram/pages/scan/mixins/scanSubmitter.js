@@ -44,7 +44,6 @@ module.exports = {
     },
 
     processScanCode: function(codeStr, scanType) {
-      console.log('[DEBUG] processScanCode 入口: codeStr=', codeStr, 'scanType=', scanType);
       if (!codeStr) return;
       const self = this;
       if (isRecentDuplicate(codeStr)) { toast.info('扫码太快啦'); return; }

@@ -317,7 +317,7 @@ class ScanDataProcessor {
   async getOrderDetail(orderNo, orderId) {
     // 防护：两个标识都为空时直接返回 null，避免空参数调用列表 API
     if (!orderNo && !orderId) {
-      console.warn('[DEBUG] getOrderDetail: orderNo 和 orderId 都为空');
+
       return null;
     }
 

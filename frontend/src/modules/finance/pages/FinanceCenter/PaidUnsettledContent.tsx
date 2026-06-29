@@ -6,6 +6,7 @@ import dayjs from 'dayjs';
 import type { Dayjs } from 'dayjs';
 import { formatMoney } from '@/utils/format';
 import api from '@/utils/api';
+import logger from '@/utils/logger';
 import ResizableTable from '@/components/common/ResizableTable';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
 import RowActions from '@/components/common/RowActions';
@@ -174,7 +175,7 @@ const PaidUnsettledContent: React.FC = () => {
       render: (_: unknown, record: FinishedSettlementRow) => (
         <RowActions
           actions={[
-            { key: 'detail', label: '查看详情', onClick: () => console.log('查看详情', record.orderId) },
+            { key: 'detail', label: '查看详情', onClick: () => logger.debug('查看详情', record.orderId) },
           ]}
         />
       ),

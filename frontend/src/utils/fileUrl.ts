@@ -140,3 +140,20 @@ export function downloadFile(fileUrl: string, fileName?: string): void {
   link.click();
   document.body.removeChild(link);
 }
+
+/**
+ * 触发 Blob 下载（通过创建临时 <a> 标签，自动释放 URL）
+ *
+ * @param blob Blob 对象
+ * @param fileName 下载文件名
+ */
+export function downloadBlob(blob: Blob, fileName: string): void {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}

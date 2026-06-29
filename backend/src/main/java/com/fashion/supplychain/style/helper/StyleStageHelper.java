@@ -3,6 +3,7 @@ package com.fashion.supplychain.style.helper;
 import com.fashion.supplychain.common.BusinessException;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.style.entity.StyleInfo;
+import com.fashion.supplychain.style.helper.StyleOperationAppendHelper;
 import com.fashion.supplychain.style.service.StyleAttachmentService;
 import com.fashion.supplychain.style.service.StyleInfoService;
 import java.time.LocalDateTime;
@@ -27,6 +28,9 @@ public class StyleStageHelper {
 
     @Autowired
     private StyleLogHelper styleLogHelper;
+
+    @Autowired
+    private StyleOperationAppendHelper styleOperationAppendHelper;
 
     @Autowired
     private StyleAttachmentService styleAttachmentService;
@@ -55,6 +59,7 @@ public class StyleStageHelper {
 
         if (ok) {
             styleLogHelper.saveStyleLog(id, "PRODUCTION_REQUIREMENTS_SAVE", null);
+            styleOperationAppendHelper.appendOperation(id, "保存生产要求", null);
         }
 
         if (!ok) {
@@ -108,6 +113,7 @@ public class StyleStageHelper {
         }
 
         styleLogHelper.saveMaintenanceLog(id, "PRODUCTION_REQUIREMENTS_ROLLBACK", reason);
+        styleOperationAppendHelper.appendOperation(id, "退回生产要求", "原因：" + reason);
         return true;
     }
 
@@ -140,6 +146,7 @@ public class StyleStageHelper {
             throw new IllegalStateException("退回操作失败");
         }
         styleLogHelper.saveMaintenanceLog(id, "PATTERN_REVISION_ROLLBACK", reason);
+        styleOperationAppendHelper.appendOperation(id, "退回纸样修改", "原因：" + reason);
         return true;
     }
 
@@ -182,6 +189,7 @@ public class StyleStageHelper {
                 .update();
         if (!ok) throw new IllegalStateException("操作失败");
         styleLogHelper.saveStyleLog(id, "PRODUCTION_START", null);
+        styleOperationAppendHelper.appendStart(id, "生产制单");
         return true;
     }
 
@@ -201,6 +209,7 @@ public class StyleStageHelper {
                 .update();
         if (!ok) throw new IllegalStateException("操作失败");
         styleLogHelper.saveStyleLog(id, "PRODUCTION_COMPLETED", null);
+        styleOperationAppendHelper.appendComplete(id, "生产制单");
         return true;
     }
 
@@ -224,6 +233,7 @@ public class StyleStageHelper {
                 .update();
         if (!ok) throw new IllegalStateException("操作失败");
         styleLogHelper.saveMaintenanceLog(id, "PRODUCTION_RESET", reason);
+        styleOperationAppendHelper.appendOperation(id, "退回生产制单", "原因：" + reason);
         log.info("生产制单已退回维护: styleId={}, reason={}", id, reason);
         return true;
     }
@@ -267,6 +277,7 @@ public class StyleStageHelper {
         boolean ok = updateChain.update();
         if (ok) {
             styleLogHelper.savePatternLog(id, "PATTERN_START", null);
+            styleOperationAppendHelper.appendStart(id, "纸样开发");
             log.info("纸样开始，已同步更新尺寸表和生产制单开始时间: styleId={}", id);
         }
         if (!ok) {
@@ -296,6 +307,7 @@ public class StyleStageHelper {
                 .update();
         if (ok) {
             styleLogHelper.savePatternLog(id, "PATTERN_COMPLETED", null);
+            styleOperationAppendHelper.appendComplete(id, "纸样开发");
             log.info("纸样完成，已同步完成尺寸表: styleId={}", id);
         }
         if (!ok) {
@@ -339,6 +351,7 @@ public class StyleStageHelper {
         if (ok) {
             styleLogHelper.saveMaintenanceLog(id, "PATTERN_RESET", remark);
             styleLogHelper.saveMaintenanceLog(id, "SAMPLE_RESET", "关联纸样回退自动同步: " + remark);
+            styleOperationAppendHelper.appendOperation(id, "退回纸样开发", "原因：" + remark);
         }
         if (!ok) {
             throw new IllegalStateException("操作失败");
@@ -365,6 +378,7 @@ public class StyleStageHelper {
                 .update();
         if (ok) {
             styleLogHelper.saveSampleLog(id, "RECEIVE_START", null);
+            styleOperationAppendHelper.appendStart(id, "样衣制作");
         }
         if (!ok) {
             throw new IllegalStateException("操作失败");
@@ -454,6 +468,7 @@ public class StyleStageHelper {
 
         if (ok) {
             styleLogHelper.saveSampleLog(id, "SAMPLE_COMPLETED", "点击样衣完成（前置校验通过）");
+            styleOperationAppendHelper.appendComplete(id, "样衣制作");
             log.info("样衣完成成功：styleId={}, 所有开发资料环节已闭环", id);
         }
         return ok;

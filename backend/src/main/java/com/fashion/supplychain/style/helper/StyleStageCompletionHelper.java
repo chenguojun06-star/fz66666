@@ -11,6 +11,7 @@ import com.fashion.supplychain.stock.mapper.SampleStockMapper;
 import com.fashion.supplychain.style.entity.SecondaryProcess;
 import com.fashion.supplychain.style.entity.StyleBom;
 import com.fashion.supplychain.style.entity.StyleInfo;
+import com.fashion.supplychain.style.helper.StyleOperationAppendHelper;
 import com.fashion.supplychain.style.service.SecondaryProcessService;
 import com.fashion.supplychain.style.service.StyleBomService;
 import com.fashion.supplychain.style.service.StyleInfoService;
@@ -48,6 +49,9 @@ public class StyleStageCompletionHelper {
     @Autowired
     private SampleStockMapper sampleStockMapper;
 
+    @Autowired
+    private StyleOperationAppendHelper styleOperationAppendHelper;
+
     // ==================== Size Stage ====================
 
     public boolean startSize(Long id) {
@@ -71,6 +75,7 @@ public class StyleStageCompletionHelper {
         if (!ok) {
             throw new IllegalStateException("操作失败");
         }
+        styleOperationAppendHelper.appendStart(id, "尺寸表配置");
         log.info("尺寸表配置已开始: styleId={}, assignee={}", id, currentUser);
         return true;
     }
@@ -100,6 +105,7 @@ public class StyleStageCompletionHelper {
         if (!ok) {
             throw new IllegalStateException("操作失败");
         }
+        styleOperationAppendHelper.appendComplete(id, "尺寸表配置");
         log.info("尺寸表配置已完成: styleId={}", id);
         return true;
     }
@@ -128,6 +134,7 @@ public class StyleStageCompletionHelper {
         if (!ok) {
             throw new IllegalStateException("操作失败");
         }
+        styleOperationAppendHelper.appendOperation(id, "退回尺寸表配置", "原因：" + reason);
         log.info("尺寸表配置已退回维护: styleId={}, reason={}", id, reason);
         return true;
     }
@@ -155,6 +162,7 @@ public class StyleStageCompletionHelper {
         if (!ok) {
             throw new IllegalStateException("操作失败");
         }
+        styleOperationAppendHelper.appendStart(id, "BOM配置");
         log.info("BOM配置已开始: styleId={}, assignee={}", id, currentUser);
         return true;
     }
@@ -190,6 +198,7 @@ public class StyleStageCompletionHelper {
         if (!ok) {
             throw new IllegalStateException("操作失败");
         }
+        styleOperationAppendHelper.appendComplete(id, "BOM配置");
         log.info("BOM配置已完成: styleId={}", id);
         return true;
     }
@@ -215,6 +224,7 @@ public class StyleStageCompletionHelper {
         if (!ok) {
             throw new IllegalStateException("操作失败");
         }
+        styleOperationAppendHelper.appendOperation(id, "退回BOM配置", "原因：" + reason);
         log.info("BOM配置已退回维护: styleId={}, reason={}", id, reason);
         return true;
     }
@@ -242,6 +252,7 @@ public class StyleStageCompletionHelper {
         if (!ok) {
             throw new IllegalStateException("操作失败");
         }
+        styleOperationAppendHelper.appendStart(id, "工序配置");
         log.info("工序配置已开始: styleId={}, assignee={}", id, currentUser);
         return true;
     }
@@ -265,6 +276,7 @@ public class StyleStageCompletionHelper {
         if (!ok) {
             throw new IllegalStateException("操作失败");
         }
+        styleOperationAppendHelper.appendComplete(id, "工序配置");
         log.info("工序配置已完成: styleId={}", id);
         return true;
     }
@@ -290,6 +302,7 @@ public class StyleStageCompletionHelper {
         if (!ok) {
             throw new IllegalStateException("操作失败");
         }
+        styleOperationAppendHelper.appendOperation(id, "退回工序配置", "原因：" + reason);
         log.info("工序配置已退回维护: styleId={}, reason={}", id, reason);
         return true;
     }
@@ -315,6 +328,7 @@ public class StyleStageCompletionHelper {
         if (!ok) {
             throw new IllegalStateException("操作失败");
         }
+        styleOperationAppendHelper.appendStart(id, "码数单价配置");
         log.info("码数单价配置已开始: styleId={}, assignee={}", id, currentUser);
         return true;
     }
@@ -336,6 +350,7 @@ public class StyleStageCompletionHelper {
         if (!ok) {
             throw new IllegalStateException("操作失败");
         }
+        styleOperationAppendHelper.appendComplete(id, "码数单价配置");
         log.info("码数单价配置已完成: styleId={}", id);
         return true;
     }
@@ -361,6 +376,7 @@ public class StyleStageCompletionHelper {
         if (!ok) {
             throw new IllegalStateException("操作失败");
         }
+        styleOperationAppendHelper.appendOperation(id, "退回码数单价配置", "原因：" + reason);
         log.info("码数单价已退回维护: styleId={}, reason={}", id, reason);
         return true;
     }
@@ -388,6 +404,7 @@ public class StyleStageCompletionHelper {
         if (!ok) {
             throw new IllegalStateException("操作失败");
         }
+        styleOperationAppendHelper.appendStart(id, "二次工艺");
         log.info("二次工艺已开始: styleId={}, assignee={}", id, currentUser);
         return true;
     }
@@ -429,6 +446,7 @@ public class StyleStageCompletionHelper {
                     .update();
         }
         log.info("二次工艺已完成: styleId={}, 联动更新子记录{}条", id, pendingItems.size());
+        styleOperationAppendHelper.appendComplete(id, "二次工艺");
         return true;
     }
 
@@ -453,6 +471,7 @@ public class StyleStageCompletionHelper {
         if (!ok) {
             throw new IllegalStateException("操作失败");
         }
+        styleOperationAppendHelper.appendOperation(id, "退回二次工艺", "原因：" + reason);
         log.info("二次工艺已退回维护: styleId={}, reason={}", id, reason);
         return true;
     }

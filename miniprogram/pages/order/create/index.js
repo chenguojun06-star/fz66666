@@ -52,7 +52,7 @@ Page({
 
   switchTab: function (e) {
     var tab = e.currentTarget.dataset.tab;
-    console.log('[下单管理] 切换标签页:', tab);
+
     this.setData({ activeTab: tab, styleKeyword: '' });
     this.loadStyles();
   },
@@ -92,7 +92,7 @@ Page({
         // 款式下单：再次过滤确保只显示已完成的样衣
         if (!isNoData) {
           list = list.filter(function (s) { return s.sampleStatus === 'COMPLETED'; });
-          console.log('[下单管理] 过滤后数量(只保留已完成):', list.length);
+
         }
 
         list.forEach(function (s) {
@@ -113,10 +113,10 @@ Page({
         // 根据当前标签页存储数据
         if (isNoData) {
           self._allStyles = list;  // 无资料下单：存储所有款式
-          console.log('[下单管理] 存储到 _allStyles, 数量:', list.length);
+
         } else {
           self._styles = list;  // 款式下单：存储已完成的样衣
-          console.log('[下单管理] 存储到 _styles, 数量:', list.length);
+
         }
         
         self.setData({ styleFilteredStyles: list, styleLoading: false });
@@ -181,7 +181,7 @@ Page({
       sourceType: ['album', 'camera'],
       success: function (res) {
         var tempPath = res.tempFiles[0].tempFilePath;
-        console.log('[无资料下单] 选择图片:', tempPath);
+
         self.setData({ noDataUploadedImage: tempPath });
       },
       fail: function (err) {
@@ -221,7 +221,7 @@ Page({
       'tempImage=' + encodeURIComponent(this.data.noDataUploadedImage)
     ];
 
-    console.log('[无资料下单] 跳转到表单页面:', params.join('&'));
+
     safeNavigate({ url: '/pages/order/create/form/index?' + params.join('&') }).catch(() => {});
   }
 });

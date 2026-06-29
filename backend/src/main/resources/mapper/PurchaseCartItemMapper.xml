@@ -3,8 +3,13 @@
 <mapper namespace="com.fashion.supplychain.production.mapper.PurchaseCartItemMapper">
 
     <select id="selectByCartId" resultType="com.fashion.supplychain.production.entity.PurchaseCartItem">
-        SELECT * FROM t_purchase_cart_item 
-        WHERE cart_id = #{cartId} 
+        SELECT id, cart_id, tenant_id, material_code, material_name, material_type,
+               specifications, unit, quantity, supplier_id, supplier_name, unit_price,
+               total_amount, source_type, source_id, source_no, source_quantity, color,
+               fabric_composition, fabric_width, fabric_weight, merge_group_id, remark,
+               sort_order, delete_flag, created_time, updated_time
+        FROM t_purchase_cart_item
+        WHERE cart_id = #{cartId}
           AND delete_flag = 0
         ORDER BY material_type, sort_order
     </select>

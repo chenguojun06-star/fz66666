@@ -491,6 +491,7 @@ public class FinishedWarehouseOperationOrchestrator {
         newSku.setStockQuantity(0);
         newSku.setSalesPrice(unitPrice != null ? unitPrice : style.getPrice());
         newSku.setCostPrice(unitPrice);
+        newSku.setTagPrice(style.getTagPrice());
         newSku.setSkuMode("AUTO");
         newSku.setTenantId(tenantId);
         productSkuService.save(newSku);

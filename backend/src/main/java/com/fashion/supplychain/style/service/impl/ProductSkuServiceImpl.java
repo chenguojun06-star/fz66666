@@ -18,6 +18,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
+import java.math.BigDecimal;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -207,8 +209,10 @@ public class ProductSkuServiceImpl extends ServiceImpl<ProductSkuMapper, Product
                     newSku.setStatus("ENABLED");
                     newSku.setStockQuantity(quantity);
                     newSku.setTenantId(tenantId);
-                    if (style != null && style.getPrice() != null) {
-                        newSku.setSalesPrice(style.getPrice());
+                    if (style != null) {
+                        newSku.setCostPrice(style.getPrice());       // 打板价 → 成本价
+                        newSku.setTagPrice(style.getTagPrice());     // 吊牌价
+                        newSku.setSalesPrice(style.getSalesPrice());  // 销售价
                     }
                     this.save(newSku);
                     log.info("Auto-created SKU {} with stock {} (from warehousing)", skuCode, quantity);
@@ -269,9 +273,40 @@ public class ProductSkuServiceImpl extends ServiceImpl<ProductSkuMapper, Product
 
         Long tenantId = UserContext.tenantId();
 
+        List<ProductSku> toUpdate = new java.util.ArrayList<>();
+        List<ProductSku> toInsert = new java.util.ArrayList<>();
+
+        List<Long> existingIds = skuList.stream()
+                .filter(s -> s.getId() != null)
+                .map(ProductSku::getId)
+                .collect(java.util.stream.Collectors.toList());
+
+        java.util.Map<Long, ProductSku> existingMap = new java.util.HashMap<>();
+        if (!existingIds.isEmpty()) {
+            List<ProductSku> existingList = this.listByIds(existingIds);
+            for (ProductSku sku : existingList) {
+                existingMap.put(sku.getId(), sku);
+            }
+        }
+
+        List<String> newSkuCodes = skuList.stream()
+                .filter(s -> s.getId() == null && StringUtils.hasText(s.getSkuCode()))
+                .map(ProductSku::getSkuCode)
+                .collect(java.util.stream.Collectors.toList());
+
+        java.util.Set<String> existingCodeSet = new java.util.HashSet<>();
+        if (!newSkuCodes.isEmpty()) {
+            List<ProductSku> existingByCodes = this.list(new LambdaQueryWrapper<ProductSku>()
+                    .in(ProductSku::getSkuCode, newSkuCodes)
+                    .eq(tenantId != null, ProductSku::getTenantId, tenantId));
+            for (ProductSku sku : existingByCodes) {
+                existingCodeSet.add(sku.getSkuCode());
+            }
+        }
+
         for (ProductSku skuUpdate : skuList) {
             if (skuUpdate.getId() != null) {
-                ProductSku existing = this.getById(skuUpdate.getId());
+                ProductSku existing = existingMap.get(skuUpdate.getId());
                 if (existing == null) {
                     continue;
                 }
@@ -287,11 +322,12 @@ public class ProductSkuServiceImpl extends ServiceImpl<ProductSkuMapper, Product
                     existing.setExternalSkuId(skuUpdate.getExternalSkuId());
                     existing.setExternalPlatform(skuUpdate.getExternalPlatform());
                     existing.setCostPrice(skuUpdate.getCostPrice());
+                    existing.setTagPrice(skuUpdate.getTagPrice());
                     existing.setSalesPrice(skuUpdate.getSalesPrice());
                     existing.setStockQuantity(skuUpdate.getStockQuantity());
                     existing.setRemark(skuUpdate.getRemark());
                     existing.setManuallyEdited(1);
-                    this.updateById(existing);
+                    toUpdate.add(existing);
                 }
             } else {
                 if (!StringUtils.hasText(skuUpdate.getColor()) || !StringUtils.hasText(skuUpdate.getSize())) {
@@ -304,9 +340,7 @@ public class ProductSkuServiceImpl extends ServiceImpl<ProductSkuMapper, Product
                     skuUpdate.setSkuCode(autoCode);
                 }
 
-                ProductSku existingByCode = this.getOne(new LambdaQueryWrapper<ProductSku>()
-                        .eq(ProductSku::getSkuCode, skuUpdate.getSkuCode()));
-                if (existingByCode != null) {
+                if (existingCodeSet.contains(skuUpdate.getSkuCode())) {
                     log.warn("SKU code already exists: {}, skip creation", skuUpdate.getSkuCode());
                     continue;
                 }
@@ -318,12 +352,20 @@ public class ProductSkuServiceImpl extends ServiceImpl<ProductSkuMapper, Product
                 skuUpdate.setManuallyEdited(1);
                 skuUpdate.setSkuMode(style.getSkuMode());
                 skuUpdate.setTenantId(tenantId);
-                this.save(skuUpdate);
+                toInsert.add(skuUpdate);
+                existingCodeSet.add(skuUpdate.getSkuCode());
             }
         }
 
-        // ★ 反向同步：SKU数量变化 → 回写 sizeColorConfig.matrixRows
+        if (!toUpdate.isEmpty()) {
+            this.updateBatchById(toUpdate);
+        }
+        if (!toInsert.isEmpty()) {
+            this.saveBatch(toInsert);
+        }
+
         syncStockQuantityToMatrixRows(style, skuList);
+        syncSkuPricesToStyle(style, skuList);
     }
 
     /**
@@ -408,6 +450,51 @@ public class ProductSkuServiceImpl extends ServiceImpl<ProductSkuMapper, Product
             }
         } catch (Exception e) {
             log.error("反向同步SKU数量到matrixRows失败: styleId={}", style.getId(), e);
+        }
+    }
+
+    /**
+     * SKU价格反向同步到StyleInfo
+     * 取列表中第一个有效SKU的 costPrice → StyleInfo.price（打板价）
+     *                          tagPrice → StyleInfo.tagPrice（吊牌价）
+     *                          salesPrice → StyleInfo.salesPrice
+     */
+    private void syncSkuPricesToStyle(StyleInfo style, List<ProductSku> skuList) {
+        if (skuList == null || skuList.isEmpty()) {
+            return;
+        }
+        // 找第一个未手动编辑的SKU，用它的价格同步到StyleInfo
+        ProductSku primarySku = null;
+        for (ProductSku sku : skuList) {
+            if (!Integer.valueOf(1).equals(sku.getManuallyEdited())) {
+                primarySku = sku;
+                break;
+            }
+        }
+        // 如果全部是手动编辑的，用第一个
+        if (primarySku == null) {
+            primarySku = skuList.get(0);
+        }
+
+        boolean modified = false;
+        BigDecimal costPrice = primarySku.getCostPrice();
+        BigDecimal tagPrice = primarySku.getTagPrice();
+        BigDecimal salesPrice = primarySku.getSalesPrice();
+
+        if (costPrice != null && (style.getPrice() == null || style.getPrice().compareTo(costPrice) != 0)) {
+            style.setPrice(costPrice);
+            modified = true;
+        }
+        if (tagPrice != null && (style.getTagPrice() == null || style.getTagPrice().compareTo(tagPrice) != 0)) {
+            style.setTagPrice(tagPrice);
+            modified = true;
+        }
+        if (salesPrice != null && (style.getSalesPrice() == null || style.getSalesPrice().compareTo(salesPrice) != 0)) {
+            style.setSalesPrice(salesPrice);
+            modified = true;
+        }
+        if (modified) {
+            styleInfoMapper.updateById(style);
         }
     }
 
@@ -540,17 +627,22 @@ public class ProductSkuServiceImpl extends ServiceImpl<ProductSkuMapper, Product
             sku.setSize(size);
             sku.setStatus("ENABLED");
             sku.setStockQuantity(quantity != null ? quantity : 0);
-            sku.setSalesPrice(style.getPrice());
+            sku.setCostPrice(style.getPrice());      // 打板价 → 成本价
+            sku.setTagPrice(style.getTagPrice());    // 吊牌价同步
+            sku.setSalesPrice(style.getSalesPrice()); // 销售价同步
             sku.setSkuMode(style.getSkuMode());
             sku.setTenantId(tenantId);
             this.save(sku);
-            log.info("Created new SKU: {} with quantity={}", skuCode, quantity);
+            log.info("Created new SKU: {} with quantity={}, costPrice={}, tagPrice={}, salesPrice={}", skuCode, quantity, style.getPrice(), style.getTagPrice(), style.getSalesPrice());
         } else {
             existing.setStyleNo(style.getStyleNo());
-            // 只有未被手动编辑过的 SKU 才自动更新编码和数量
+            // 只有未被手动编辑过的 SKU 才自动更新编码、数量和价格
             if (!Integer.valueOf(1).equals(existing.getManuallyEdited())) {
                 existing.setSkuCode(skuCode);
                 existing.setStockQuantity(quantity != null ? quantity : 0);
+                existing.setCostPrice(style.getPrice());      // 打板价同步到成本价
+                existing.setTagPrice(style.getTagPrice());      // 吊牌价同步
+                existing.setSalesPrice(style.getSalesPrice()); // 销售价同步
             }
             this.updateById(existing);
         }

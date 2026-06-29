@@ -4,6 +4,7 @@ import { ReloadOutlined, ExclamationCircleFilled, CheckCircleFilled, WarningFill
 import ResizableModal from '@/components/common/ResizableModal';
 import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
 import type { PredictionRestockSuggestionItem } from '@/services/intelligence/intelligenceApi';
+import logger from '@/utils/logger';
 
 const { Text, Title, Paragraph } = Typography;
 const { TextArea } = Input;
@@ -102,14 +103,13 @@ const RestockSuggestionCard: React.FC<RestockSuggestionCardProps> = ({ topN = 10
         remark: editRemark || undefined,
         priority: activeItem.priority,
       };
-      console.log('[RestockSuggestionCard] 生成采购申请 payload:', payload);
+      logger.debug('[RestockSuggestionCard] 生成采购申请 payload:', payload);
       try {
         const result = await intelligenceApi.generatePurchaseRequest(payload);
         message.success(`已生成采购申请：${activeItem.materialName} × ${editQuantity}`);
-        console.log('[RestockSuggestionCard] 生成采购申请 result:', result);
+        logger.debug('[RestockSuggestionCard] 生成采购申请 result:', result);
       } catch (err) {
-        // 后端未对接时降级：console.log + Toast 提示
-        console.warn('[RestockSuggestionCard] 生成采购申请接口调用失败，降级为模拟生成:', err);
+        logger.warn('[RestockSuggestionCard] 生成采购申请接口调用失败，降级为模拟生成:', err);
         message.success(`模拟生成采购申请成功：${activeItem.materialName} × ${editQuantity}`);
       }
       setModalOpen(false);

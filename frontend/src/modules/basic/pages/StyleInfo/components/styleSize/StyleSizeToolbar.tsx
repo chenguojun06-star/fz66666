@@ -3,6 +3,7 @@ import { App, Button, Dropdown, Input, Modal, Popover, Select, Space, Upload, me
 import { DownOutlined, RobotOutlined } from '@ant-design/icons';
 import { sortSizeNames } from '@/utils/api';
 import api from '@/utils/api';
+import logger from '@/utils/logger';
 import { TemplateLibrary } from '@/types/style';
 
 interface Props {
@@ -69,7 +70,7 @@ const StyleSizeToolbar: React.FC<Props> = ({
         antMessage.error(res.message || 'AI识别失败');
       } else {
         const data = res.data || {};
-        console.log('[AI识别] 后端解析结果:', data, ' 原始AI文本:', data?.rawJson);
+        logger.debug('[AI识别] 后端解析结果:', data, ' 原始AI文本:', data?.rawJson);
 
         // 1) 优先使用后端已经解析好的 { sizes, parts }
         let recognized = data;
@@ -106,7 +107,7 @@ const StyleSizeToolbar: React.FC<Props> = ({
           }
           if (parsed && (parsed.sizes || parsed.parts)) {
             recognized = parsed;
-            console.log('[AI识别] 客户端二次解析成功:', recognized);
+            logger.debug('[AI识别] 客户端二次解析成功:', recognized);
           }
         }
 

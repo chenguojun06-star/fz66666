@@ -30,14 +30,30 @@
 
     <!-- 查询订单的所有跟踪记录 -->
     <select id="selectByOrderId" resultType="com.fashion.supplychain.production.entity.ProductionProcessTracking">
-        SELECT * FROM t_production_process_tracking
+        SELECT id, production_order_id, production_order_no, cutting_bundle_id, bundle_no,
+               sku, color, size, quantity, process_code, process_name, process_order,
+               unit_price, scan_status, scan_time, scan_record_id, operator_id, operator_name,
+               settlement_amount, is_settled, settled_at, settled_batch_no, settled_by,
+               created_at, updated_at, creator, updater, tenant_id,
+               quality_status, defect_quantity, defect_category, defect_remark, defect_problems,
+               quality_operator_id, quality_operator_name, quality_time,
+               repair_status, repair_completed_time
+        FROM t_production_process_tracking
         WHERE production_order_id = #{productionOrderId}
           AND tenant_id = #{tenantId}
         ORDER BY bundle_no, process_order
     </select>
 
     <select id="selectByBundleId" resultType="com.fashion.supplychain.production.entity.ProductionProcessTracking">
-        SELECT * FROM t_production_process_tracking
+        SELECT id, production_order_id, production_order_no, cutting_bundle_id, bundle_no,
+               sku, color, size, quantity, process_code, process_name, process_order,
+               unit_price, scan_status, scan_time, scan_record_id, operator_id, operator_name,
+               settlement_amount, is_settled, settled_at, settled_batch_no, settled_by,
+               created_at, updated_at, creator, updater, tenant_id,
+               quality_status, defect_quantity, defect_category, defect_remark, defect_problems,
+               quality_operator_id, quality_operator_name, quality_time,
+               repair_status, repair_completed_time
+        FROM t_production_process_tracking
         WHERE cutting_bundle_id = #{cuttingBundleId}
           AND tenant_id = #{tenantId}
         ORDER BY process_order
@@ -60,7 +76,15 @@
     </select>
 
     <select id="selectByBundleAndProcess" resultType="com.fashion.supplychain.production.entity.ProductionProcessTracking">
-        SELECT * FROM t_production_process_tracking
+        SELECT id, production_order_id, production_order_no, cutting_bundle_id, bundle_no,
+               sku, color, size, quantity, process_code, process_name, process_order,
+               unit_price, scan_status, scan_time, scan_record_id, operator_id, operator_name,
+               settlement_amount, is_settled, settled_at, settled_batch_no, settled_by,
+               created_at, updated_at, creator, updater, tenant_id,
+               quality_status, defect_quantity, defect_category, defect_remark, defect_problems,
+               quality_operator_id, quality_operator_name, quality_time,
+               repair_status, repair_completed_time
+        FROM t_production_process_tracking
         WHERE cutting_bundle_id = #{cuttingBundleId}
           AND process_code = #{processCode}
           AND tenant_id = #{tenantId}
@@ -68,7 +92,15 @@
     </select>
 
     <select id="selectByBundleAndProcessName" resultType="com.fashion.supplychain.production.entity.ProductionProcessTracking">
-        SELECT * FROM t_production_process_tracking
+        SELECT id, production_order_id, production_order_no, cutting_bundle_id, bundle_no,
+               sku, color, size, quantity, process_code, process_name, process_order,
+               unit_price, scan_status, scan_time, scan_record_id, operator_id, operator_name,
+               settlement_amount, is_settled, settled_at, settled_batch_no, settled_by,
+               created_at, updated_at, creator, updater, tenant_id,
+               quality_status, defect_quantity, defect_category, defect_remark, defect_problems,
+               quality_operator_id, quality_operator_name, quality_time,
+               repair_status, repair_completed_time
+        FROM t_production_process_tracking
         WHERE cutting_bundle_id = #{cuttingBundleId}
           AND process_name = #{processName}
           AND tenant_id = #{tenantId}

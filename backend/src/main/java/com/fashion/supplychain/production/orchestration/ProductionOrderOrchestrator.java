@@ -10,6 +10,7 @@ import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.UrgeRecordService;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.production.helper.OrderListCacheHelper;
+import com.fashion.supplychain.production.helper.ProductionOrderLogAppendHelper;
 import com.fashion.supplychain.common.lock.DistributedLockService;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.system.entity.OperationLog;
@@ -154,6 +155,9 @@ public class ProductionOrderOrchestrator {
 
     @Autowired
     private OrderListCacheHelper orderListCacheHelper;
+
+    @Autowired
+    private ProductionOrderLogAppendHelper logAppendHelper;
 
     // ======================= 查询类方法 =======================
 
@@ -323,7 +327,15 @@ public class ProductionOrderOrchestrator {
 
     @Transactional(rollbackFor = Exception.class)
     public boolean saveOrUpdateOrder(ProductionOrder productionOrder) {
+        boolean isNew = productionOrder.getId() == null;
         boolean result = creationHelper.saveOrUpdateOrder(productionOrder);
+        if (result) {
+            if (isNew) {
+                logAppendHelper.appendCreate(productionOrder.getId());
+            } else {
+                logAppendHelper.appendUpdate(productionOrder.getId(), "基础信息");
+            }
+        }
         evictCacheAfterCommit(productionOrder.getId());
         return result;
     }
@@ -406,6 +418,9 @@ public class ProductionOrderOrchestrator {
             String rollbackToProcessName) {
         boolean result = progressOrchestrationService.updateProductionProgress(id, progress, rollbackRemark,
                 rollbackToProcessName);
+        if (result) {
+            logAppendHelper.appendUpdateProgress(id, progress);
+        }
         evictCacheAfterCommit(id);
         return result;
     }
@@ -413,6 +428,9 @@ public class ProductionOrderOrchestrator {
     @Transactional(rollbackFor = Exception.class)
     public boolean updateMaterialArrivalRate(String id, Integer rate) {
         boolean result = progressOrchestrationService.updateMaterialArrivalRate(id, rate);
+        if (result) {
+            logAppendHelper.appendUpdateMaterialArrival(id, rate);
+        }
         evictCacheAfterCommit(id);
         return result;
     }
@@ -421,6 +439,9 @@ public class ProductionOrderOrchestrator {
     public boolean completeProduction(String id, BigDecimal tolerancePercent) {
         assertOrderBelongsToCurrentTenant(id, "完成生产");
         boolean result = financeOrchestrationService.completeProduction(id, tolerancePercent);
+        if (result) {
+            logAppendHelper.appendComplete(id);
+        }
         evictCacheAfterCommit(id);
         return result;
     }

@@ -20,6 +20,7 @@ import com.fashion.supplychain.style.entity.ProductSku;
 import com.fashion.supplychain.style.helper.StyleCostCalculator;
 import com.fashion.supplychain.style.helper.StyleListEnrichmentHelper;
 import com.fashion.supplychain.style.helper.StyleLogHelper;
+import com.fashion.supplychain.style.helper.StyleOperationAppendHelper;
 import com.fashion.supplychain.style.helper.StyleStageHelper;
 import com.fashion.supplychain.style.helper.StyleStageCompletionHelper;
 import com.fashion.supplychain.style.service.SecondaryProcessService;
@@ -61,6 +62,9 @@ public class StyleInfoOrchestrator {
 
     @Autowired
     private StyleLogHelper styleLogHelper;
+
+    @Autowired
+    private StyleOperationAppendHelper styleOperationAppendHelper;
 
     @Autowired
     private StyleSelectionSourceHelper styleSelectionSourceHelper;
@@ -244,9 +248,11 @@ public class StyleInfoOrchestrator {
                                 .one();
                         if (savedStyle != null) {
                             stylePatternProductionHelper.createPatternProductionRecord(savedStyle);
+                            styleOperationAppendHelper.appendCreate(savedStyle.getId());
                         }
                     } else {
                         stylePatternProductionHelper.createPatternProductionRecord(styleInfo);
+                        styleOperationAppendHelper.appendUpdate(styleInfo, "基础信息");
                     }
                 } catch (Exception e) {
                     log.error("自动创建样板生产记录失败: styleId={}, styleNo={}",
@@ -288,6 +294,7 @@ public class StyleInfoOrchestrator {
             if (result) {
                 try {
                     stylePatternProductionHelper.syncPatternProductionInfo(styleInfo);
+                    styleOperationAppendHelper.appendUpdate(styleInfo, "基础信息");
                 } catch (Exception e) {
                     log.warn("同步样板生产信息失败: styleId={}, error={}", styleInfo.getId(), e.getMessage());
                 }
@@ -321,8 +328,9 @@ public class StyleInfoOrchestrator {
             config.put("sizes", body.get("sizes"));
             config.put("quantities", body.get("quantities"));
             config.put("matrixRows", body.get("matrixRows"));
-            style.setSizeColorConfig(mapper.writeValueAsString(config));
-            styleInfoService.updateById(style);
+            String configJson = mapper.writeValueAsString(config);
+            // 用专用的只更新方法，避免误覆盖 price 等字段
+            styleInfoService.updateSizeColorConfigOnly(id, configJson);
             productSkuService.generateSkusForStyle(id);
         } catch (Exception e) {
             log.error("更新颜色尺码配置失败: styleId={}", id, e);
@@ -505,6 +513,7 @@ public class StyleInfoOrchestrator {
         }
 
         styleLogHelper.saveMaintenanceLog(id, "STYLE_SCRAPPED", remark);
+        styleOperationAppendHelper.appendScrap(id, remark);
         log.info("开发样已报废留档: styleId={}, styleNo={}, reason={}", id, style.getStyleNo(), remark);
         return true;
     }
@@ -690,6 +699,7 @@ public class StyleInfoOrchestrator {
             }
         }
         styleInfoService.updateById(style);
+        styleOperationAppendHelper.appendSampleReview(id, reviewStatus, UserContext.username(), reviewComment);
 
         syncPatternProductionReviewFields(id, reviewStatus, reviewComment, reviewImages);
 
@@ -806,6 +816,7 @@ public class StyleInfoOrchestrator {
         }
 
         copyBomToNewStyle(sourceStyleId, savedStyle);
+        styleOperationAppendHelper.appendCopy(sourceStyleId, newStyle.getStyleNo());
 
         log.info("一键复制款式成功: sourceStyleId={}, newStyleId={}, newStyleNo={}, newColor={}",
                 sourceStyleId, savedStyle.getId(), newStyle.getStyleNo(), newColor);

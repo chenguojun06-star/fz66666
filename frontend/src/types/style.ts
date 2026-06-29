@@ -272,6 +272,7 @@ export interface ProductSku {
   externalSkuId?: string;
   externalPlatform?: string;
   costPrice?: number;
+  tagPrice?: number;
   salesPrice?: number;
   stockQuantity?: number;
   status?: string;
