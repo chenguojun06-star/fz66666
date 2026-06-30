@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.fashion.supplychain.production.entity.MaterialDatabase;
 import com.fashion.supplychain.production.service.MaterialDatabaseService;
+import com.fashion.supplychain.production.helper.MaterialDatabaseLogAppendHelper;
 import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -19,6 +20,9 @@ public class MaterialDatabaseOrchestrator {
 
     @Autowired
     private MaterialDatabaseService materialDatabaseService;
+
+    @Autowired
+    private MaterialDatabaseLogAppendHelper logAppendHelper;
 
     public IPage<MaterialDatabase> list(Map<String, Object> params) {
         return materialDatabaseService.queryPage(params);
@@ -81,6 +85,7 @@ public class MaterialDatabaseOrchestrator {
         if (!ok) {
             throw new IllegalStateException("保存失败");
         }
+        logAppendHelper.appendCreate(material.getId());
         return true;
     }
 
@@ -116,6 +121,7 @@ public class MaterialDatabaseOrchestrator {
         if (!ok) {
             throw new IllegalStateException("保存失败");
         }
+        logAppendHelper.appendUpdate(material.getId(), "基础信息更新");
         return true;
     }
 
@@ -130,6 +136,7 @@ public class MaterialDatabaseOrchestrator {
         if (!ok) {
             throw new IllegalStateException("操作失败");
         }
+        logAppendHelper.appendComplete(id);
         return true;
     }
 
@@ -146,6 +153,7 @@ public class MaterialDatabaseOrchestrator {
         if (!ok) {
             throw new IllegalStateException("操作失败");
         }
+        logAppendHelper.appendReturnToPending(id, reason);
         return true;
     }
 
@@ -164,6 +172,7 @@ public class MaterialDatabaseOrchestrator {
         if (!ok) {
             throw new IllegalStateException("删除失败");
         }
+        logAppendHelper.appendDelete(current.getId());
         return true;
     }
 
@@ -198,6 +207,7 @@ public class MaterialDatabaseOrchestrator {
         if (!ok) {
             throw new IllegalStateException("操作失败");
         }
+        logAppendHelper.appendDisable(id, "手动禁用");
         return true;
     }
 
@@ -211,6 +221,7 @@ public class MaterialDatabaseOrchestrator {
         if (!ok) {
             throw new IllegalStateException("操作失败");
         }
+        logAppendHelper.appendEnable(id);
         return true;
     }
 }

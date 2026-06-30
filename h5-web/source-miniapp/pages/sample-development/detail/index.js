@@ -25,6 +25,7 @@ function getDeliveryMeta(record, allStagesCompleted) {
   const sampleStatus = String(record.sampleStatus || record.status || '').trim().toUpperCase();
   if (sampleStatus === 'SCRAPPED') return { tone: 'scrapped', label: '已报废' };
   if (sampleStatus === 'CLOSED') return { tone: 'scrapped', label: '已关单' };
+  if (sampleStatus === 'COMPLETED' || sampleStatus === 'WAREHOUSE_IN') return { tone: 'success', label: '已完成' };
   if (allStagesCompleted) return { tone: 'success', label: '已完成' };
   const deliveryDate = record.deliveryDate || record.deliveryTime;
   if (!deliveryDate) return { tone: 'normal', label: '待补交期' };

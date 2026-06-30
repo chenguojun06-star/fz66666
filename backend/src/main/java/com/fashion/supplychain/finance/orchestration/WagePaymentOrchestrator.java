@@ -11,6 +11,7 @@ import com.fashion.supplychain.finance.service.BillAggregationService;
 import com.fashion.supplychain.finance.service.PaymentAccountService;
 import com.fashion.supplychain.finance.service.PayableService;
 import com.fashion.supplychain.finance.service.WagePaymentService;
+import com.fashion.supplychain.finance.helper.WagePaymentLogAppendHelper;
 import org.springframework.util.StringUtils;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -38,6 +39,7 @@ public class WagePaymentOrchestrator {
     private final BillAggregationService billAggregationService;
     private final WagePaymentDashboardHelper dashboardHelper;
     private final PaymentNoGenerator paymentNoGenerator;
+    private final WagePaymentLogAppendHelper logAppendHelper;
 
     public List<PaymentAccount> listAccounts(String ownerType, String ownerId) {
         TenantAssert.assertTenantContext();
@@ -107,6 +109,7 @@ public class WagePaymentOrchestrator {
         account.setStatus("inactive");
         paymentAccountService.updateById(account);
         log.info("[工资支付] 停用收款账户: id={}", accountId);
+        logAppendHelper.appendRemoveAccount(account.getOwnerId(), account.getOwnerType(), accountId);
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -147,6 +150,9 @@ public class WagePaymentOrchestrator {
         log.info("[工资支付] 创建支付记录: no={}, payee={}, method={}, amount={}",
                  payment.getPaymentNo(), payment.getPayeeName(),
                  payment.getPaymentMethod(), payment.getAmount());
+        logAppendHelper.appendInitiatePayment(payment.getId(),
+                payment.getAmount() != null ? payment.getAmount().toString() : "0",
+                payment.getPaymentMethod());
 
         return payment;
     }
@@ -191,6 +197,7 @@ public class WagePaymentOrchestrator {
 
         wagePaymentService.updateById(payment);
         log.info("[工资支付] 收款方确认收款: id={}, no={}", paymentId, payment.getPaymentNo());
+        logAppendHelper.appendConfirmReceived(payment.getId(), payment.getPaymentNo());
 
         return payment;
     }

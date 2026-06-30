@@ -5,6 +5,173 @@
   padding: var(--page-padding-x) var(--page-padding-x) calc(env(safe-area-inset-bottom) + 160rpx);
 }
 
+/* ================ ① 款式 / 客户卡片 ================ */
+.style-card {
+  background: var(--color-bg-card);
+  border-radius: var(--radius-xl);
+  padding: 24rpx;
+  margin-bottom: 20rpx;
+  box-shadow: 0 4rpx 16rpx rgba(0,0,0,0.04);
+}
+.style-card__header {
+  display: flex;
+  align-items: flex-start;
+  gap: 20rpx;
+}
+.style-card__cover {
+  width: 160rpx;
+  height: 160rpx;
+  border-radius: 16rpx;
+  background: #f2f4f7;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.style-card__info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 160rpx;
+}
+.style-card__style {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 12rpx;
+  margin-bottom: 10rpx;
+}
+.style-card__styleNo {
+  font-size: 38rpx;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  letter-spacing: 1rpx;
+}
+.style-card__styleName {
+  font-size: 26rpx;
+  color: var(--color-text-secondary);
+  font-weight: 500;
+}
+.style-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16rpx;
+  margin-top: 8rpx;
+}
+.style-card__metaItem {
+  font-size: 24rpx;
+  color: #6b7280;
+  background: #f5f7fa;
+  padding: 4rpx 12rpx;
+  border-radius: 8rpx;
+}
+.style-card__process {
+  margin-top: 20rpx;
+  padding-top: 18rpx;
+  border-top: 1rpx solid #eef1f6;
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+}
+.style-card__process-label {
+  font-size: 22rpx;
+  color: var(--color-text-tertiary);
+  background: #eef4ff;
+  color: #4b7cd1;
+  padding: 4rpx 14rpx;
+  border-radius: 6rpx;
+}
+.style-card__process-name {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+/* ================ ② 菲号信息卡片 ================ */
+.bundle-card {
+  background: linear-gradient(135deg, #ffffff 0%, #f7fbff 100%);
+  border: 2rpx solid #e4ecf5;
+  border-radius: var(--radius-xl);
+  padding: 24rpx;
+  margin-bottom: 20rpx;
+  box-shadow: 0 4rpx 14rpx rgba(60, 110, 200, 0.06);
+}
+.bundle-card__title {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+  margin-bottom: 18rpx;
+  padding-bottom: 14rpx;
+  border-bottom: 1rpx dashed #dbe3ee;
+}
+.bundle-card__title-icon {
+  font-size: 30rpx;
+}
+.bundle-card__title-text {
+  font-size: 26rpx;
+  font-weight: 700;
+  color: #2f3e5f;
+}
+.bundle-card__grid {
+  display: flex;
+  flex-direction: column;
+  gap: 14rpx;
+}
+.bundle-card__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4rpx 0;
+}
+.bundle-card__row--split {
+  gap: 24rpx;
+}
+.bundle-card__row--split .bundle-card__cell {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #fff;
+  border-radius: 10rpx;
+  padding: 12rpx 18rpx;
+  border: 1rpx solid #f0f4fa;
+}
+.bundle-card__label {
+  font-size: 24rpx;
+  color: var(--color-text-secondary);
+  flex-shrink: 0;
+}
+.bundle-card__value {
+  font-size: 28rpx;
+  color: var(--color-text-primary);
+  font-weight: 500;
+  text-align: right;
+  flex: 1;
+  margin-left: 16rpx;
+}
+.bundle-card__value--bold {
+  font-size: 34rpx;
+  font-weight: 700;
+  color: #1f2937;
+}
+.bundle-card__value--qty {
+  font-size: 32rpx;
+  font-weight: 700;
+  color: #2563eb;
+}
+.bundle-card__cell--qty {
+  background: linear-gradient(135deg, #eff6ff, #dbeafe);
+  border-color: #bfdbfe;
+}
+.bundle-card__hint {
+  margin-top: 16rpx;
+  padding: 12rpx 16rpx;
+  background: #fff8e6;
+  border-radius: 10rpx;
+  font-size: 24rpx;
+  color: #a16207;
+  border-left: 4rpx solid #f59e0b;
+}
+
 .info-card {
   background: var(--color-bg-card);
   border-radius: var(--radius-xl);
@@ -269,4 +436,163 @@
   font-size: var(--font-size-md);
   font-weight: 600;
   color: var(--color-text-primary);
+}
+
+/* ===== 生产提示卡片（来自样衣开发阶段 AI 识别结果） ===== */
+.worker-hint-card {
+  background: #FFFAEB;
+  border: 2rpx solid #F5C451;
+  border-radius: var(--radius-xl);
+  padding: 24rpx 28rpx;
+  margin-bottom: 24rpx;
+  box-shadow: 0 4rpx 16rpx rgba(245,196,81,0.18);
+}
+.worker-hint-title {
+  font-size: var(--font-size-md);
+  font-weight: 700;
+  color: #92400E;
+  margin-bottom: 16rpx;
+  display: block;
+}
+.worker-hint-row {
+  display: flex;
+  align-items: flex-start;
+  padding: 10rpx 0;
+  border-bottom: 1rpx dashed rgba(146,64,14,0.18);
+}
+.worker-hint-row:last-child { border-bottom: none; }
+.worker-hint-row--summary {
+  background: rgba(245,196,81,0.15);
+  border-radius: 12rpx;
+  padding: 14rpx 16rpx;
+  margin-top: 8rpx;
+  border-bottom: none;
+}
+.worker-hint-row--insight {
+  background: #f8fafc;
+  border-radius: 12rpx;
+  padding: 10rpx 14rpx;
+  margin-top: 8rpx;
+  border-bottom: none;
+}
+.worker-hint-value--insight {
+  color: #64748B;
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-relaxed);
+}
+
+/* ── 难度徽章：按等级分色 ── */
+.worker-hint-row--difficulty {
+  padding-bottom: 16rpx;
+  border-bottom: 1rpx dashed rgba(146,64,14,0.2);
+}
+.worker-difficulty-badge {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  padding: 10rpx 16rpx;
+  border-radius: 12rpx;
+  font-weight: 600;
+}
+.worker-difficulty-icon {
+  font-size: 28rpx;
+  margin-right: 8rpx;
+}
+.worker-difficulty-label {
+  font-size: 26rpx;
+  flex: 1;
+}
+.worker-difficulty-score {
+  font-size: 22rpx;
+  opacity: 0.85;
+  margin-left: 6rpx;
+}
+
+.worker-difficulty--critical {
+  background: #FEF2F2;
+  color: #B91C1C;
+  border: 2rpx solid #FCA5A5;
+}
+.worker-difficulty--high {
+  background: #FFF7ED;
+  color: #C2410C;
+  border: 2rpx solid #FDBA74;
+}
+.worker-difficulty--medium {
+  background: #FEF9C3;
+  color: #854D0E;
+  border: 2rpx solid #FACC15;
+}
+.worker-difficulty--low {
+  background: #F0FDF4;
+  color: #15803D;
+  border: 2rpx solid #86EFAC;
+}
+
+/* ── 针号提示强调 ── */
+.worker-hint-row--needle {
+  background: rgba(254,242,242,0.55);
+  border-radius: 12rpx;
+  padding: 10rpx 14rpx;
+}
+.worker-hint-value--alert {
+  color: #B91C1C;
+  font-weight: 700;
+}
+
+/* ── 工艺要点 chips ── */
+.worker-hint-row--processes .worker-hint-value {
+  display: block;
+}
+.worker-process-chips {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10rpx;
+}
+.worker-process-chip {
+  display: inline-block;
+  padding: 6rpx 16rpx;
+  background: #FEF3C7;
+  color: #78350F;
+  border-radius: 24rpx;
+  border: 1rpx solid #F59E0B;
+  font-size: 22rpx;
+  font-weight: 500;
+  line-height: 36rpx;
+}
+
+/* ── 款式备注 / 综合提示样式微调 ── */
+.worker-hint-row--description {
+  background: rgba(255,250,235,0.6);
+  border-radius: 12rpx;
+  padding: 10rpx 14rpx;
+}
+.worker-hint-value--desc {
+  color: #57330A;
+  font-size: 24rpx;
+}
+.worker-hint-value--summary {
+  color: #7C2D12;
+  font-weight: 600;
+  font-size: 26rpx;
+  line-height: 40rpx;
+}
+.worker-hint-key {
+  width: 160rpx;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  flex-shrink: 0;
+  font-weight: 600;
+}
+.worker-hint-value {
+  flex: 1;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  line-height: var(--line-height-relaxed);
+  word-break: break-all;
+}
+.worker-hint-value--alert {
+  color: #B45309;
+  font-weight: 700;
 }

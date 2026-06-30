@@ -10,28 +10,6 @@
     <text class="today-scan" wx:if="{{todayScanCount > 0}}">{{todayScanCount}} 次扫码</text>
   </view>
 
-  <!-- 3 张摘要卡片 · 横向等分 -->
-  <view class="stats-row" wx:if="{{!loading}}">
-    <view class="stat-card stat-card--blue">
-      <text class="stat-val">{{cards.production.total}}</text>
-      <text class="stat-lbl">生产订单</text>
-    </view>
-    <view class="stat-card stat-card--green">
-      <text class="stat-val">{{cards.inbound.today}}</text>
-      <text class="stat-lbl">今日入库</text>
-    </view>
-    <view class="stat-card stat-card--orange">
-      <text class="stat-val">{{cards.outbound.today}}</text>
-      <text class="stat-lbl">今日出库</text>
-    </view>
-  </view>
-  <view class="stats-row skeleton-row" wx:else>
-    <view class="stat-card stat-card--skeleton" wx:for="{{4}}" wx:key="index">
-      <view class="skel-line skel-line--short"></view>
-      <view class="skel-line skel-line--long"></view>
-    </view>
-  </view>
-
   <!-- 搜索栏 -->
   <view class="search-bar">
     <view class="search-box">

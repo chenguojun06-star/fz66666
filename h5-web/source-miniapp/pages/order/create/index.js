@@ -2,6 +2,8 @@ var api = require('../../../utils/api');
 var { toast, safeNavigate } = require('../../../utils/uiHelper');
 var { isAdminOrSupervisor, isFactoryOwner } = require('../../../utils/permission');
 var { getAuthedImageUrl } = require('../../../utils/fileUrl');
+var { eventBus } = require('../../../utils/eventBus');
+var { DEBUG } = require('../../../config/debug');
 
 Page({
   data: {
@@ -11,44 +13,29 @@ Page({
     styleKeyword: '',
     styleLoading: true,
     
-    _allStyles: [],  // 存储所有款式（用于无资料下单）
+    _allStyles: [],
     
     // 无资料下单：上传的图片
     noDataUploadedImage: '',
-
-    // 隐私协议
-    showPrivacy: false,
   },
 
   onLoad: function () {
-    // 隐私授权监听（wx.chooseMedia 需要隐私协议授权）
-    if (wx.onNeedPrivacyAuthorization) {
-      this._privacyCb = (resolve) => {
-        this._resolvePrivacy = resolve;
-        this.setData({ showPrivacy: true });
-      };
-      wx.onNeedPrivacyAuthorization(this._privacyCb);
+    var self = this;
+    if (eventBus && typeof eventBus.on === 'function') {
+      this._unsubPrivacy = eventBus.on('showPrivacyDialog', function (resolve) {
+        try {
+          var dialog = self.selectComponent('#privacyDialog');
+          if (dialog && typeof dialog.showDialog === 'function') dialog.showDialog(resolve);
+        } catch (_) {}
+      });
     }
     this._initPage();
   },
 
   onUnload() {
-    if (wx.offNeedPrivacyAuthorization && this._privacyCb) {
-      wx.offNeedPrivacyAuthorization(this._privacyCb);
-    }
-  },
-
-  onPrivacyAgree() {
-    this.setData({ showPrivacy: false });
-    if (this._resolvePrivacy) {
-      this._resolvePrivacy({ buttonId: 'agree-btn', event: 'agree' });
-    }
-  },
-
-  onPrivacyDisagree() {
-    this.setData({ showPrivacy: false });
-    if (this._resolvePrivacy) {
-      this._resolvePrivacy({ buttonId: 'disagree-btn', event: 'disagree' });
+    if (this._unsubPrivacy) {
+      try { this._unsubPrivacy(); } catch (_) {}
+      this._unsubPrivacy = null;
     }
   },
 
@@ -66,7 +53,7 @@ Page({
 
   switchTab: function (e) {
     var tab = e.currentTarget.dataset.tab;
-    console.log('[下单管理] 切换标签页:', tab);
+
     this.setData({ activeTab: tab, styleKeyword: '' });
     this.loadStyles();
   },
@@ -76,7 +63,7 @@ Page({
     var catMap = {};
     var isNoData = self.data.activeTab === 'noData';
 
-    console.log('[下单管理] 加载款式列表, 当前标签:', self.data.activeTab, '是否无资料:', isNoData);
+    if (DEBUG) console.log('[下单管理] 加载款式列表, 当前标签:', self.data.activeTab, '是否无资料:', isNoData);
     self.setData({ styleLoading: true });
 
     return api.system.getDictList('category')
@@ -94,7 +81,7 @@ Page({
         // 款式下单：只获取已完成的样衣
         var params = { pageSize: 500 };
         if (!isNoData) params.sampleStatus = 'COMPLETED';
-        console.log('[下单管理] API请求参数:', params);
+        if (DEBUG) console.log('[下单管理] API请求参数:', params);
         return api.style.listStyles(params);
       })
       .then(function (res) {
@@ -106,7 +93,7 @@ Page({
         // 款式下单：再次过滤确保只显示已完成的样衣
         if (!isNoData) {
           list = list.filter(function (s) { return s.sampleStatus === 'COMPLETED'; });
-          console.log('[下单管理] 过滤后数量(只保留已完成):', list.length);
+
         }
 
         list.forEach(function (s) {
@@ -127,10 +114,10 @@ Page({
         // 根据当前标签页存储数据
         if (isNoData) {
           self._allStyles = list;  // 无资料下单：存储所有款式
-          console.log('[下单管理] 存储到 _allStyles, 数量:', list.length);
+
         } else {
           self._styles = list;  // 款式下单：存储已完成的样衣
-          console.log('[下单管理] 存储到 _styles, 数量:', list.length);
+
         }
         
         self.setData({ styleFilteredStyles: list, styleLoading: false });
@@ -195,7 +182,7 @@ Page({
       sourceType: ['album', 'camera'],
       success: function (res) {
         var tempPath = res.tempFiles[0].tempFilePath;
-        console.log('[无资料下单] 选择图片:', tempPath);
+
         self.setData({ noDataUploadedImage: tempPath });
       },
       fail: function (err) {
@@ -212,6 +199,16 @@ Page({
     this.setData({ noDataUploadedImage: '' });
   },
 
+  // 无资料下单：预览图片
+  previewNoDataImage: function () {
+    var url = this.data.noDataUploadedImage;
+    if (!url) return;
+    wx.previewImage({
+      current: url,
+      urls: [url]
+    });
+  },
+
   // 无资料下单：跳转到订单表单页面
   goToNoDataOrderForm: function () {
     if (!this.data.noDataUploadedImage) {
@@ -225,7 +222,7 @@ Page({
       'tempImage=' + encodeURIComponent(this.data.noDataUploadedImage)
     ];
 
-    console.log('[无资料下单] 跳转到表单页面:', params.join('&'));
+
     safeNavigate({ url: '/pages/order/create/form/index?' + params.join('&') }).catch(() => {});
   }
 });

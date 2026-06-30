@@ -2,6 +2,7 @@ package com.fashion.supplychain.style.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.constant.OrderStatusConstants;
@@ -295,6 +296,18 @@ public class StyleInfoOrchestrator {
                 try {
                     stylePatternProductionHelper.syncPatternProductionInfo(styleInfo);
                     styleOperationAppendHelper.appendUpdate(styleInfo, "基础信息");
+                    // 同步颜色图片到SKU表
+                    if (styleInfo.getId() != null && styleInfo.getSizeColorConfig() != null) {
+                        try {
+                            ObjectMapper om = new ObjectMapper();
+                            Map<String, Object> config = om.readValue(styleInfo.getSizeColorConfig(), Map.class);
+                            if (config != null && config.containsKey("matrixRows")) {
+                                syncColorImagesFromMatrixRows(styleInfo.getId(), config.get("matrixRows"));
+                            }
+                        } catch (Exception e) {
+                            log.warn("同步颜色图片到SKU表失败: styleId={}, error={}", styleInfo.getId(), e.getMessage());
+                        }
+                    }
                 } catch (Exception e) {
                     log.warn("同步样板生产信息失败: styleId={}, error={}", styleInfo.getId(), e.getMessage());
                 }
@@ -329,12 +342,63 @@ public class StyleInfoOrchestrator {
             config.put("quantities", body.get("quantities"));
             config.put("matrixRows", body.get("matrixRows"));
             String configJson = mapper.writeValueAsString(config);
-            // 用专用的只更新方法，避免误覆盖 price 等字段
             styleInfoService.updateSizeColorConfigOnly(id, configJson);
             productSkuService.generateSkusForStyle(id);
+            syncColorImagesFromMatrixRows(id, body.get("matrixRows"));
         } catch (Exception e) {
             log.error("更新颜色尺码配置失败: styleId={}", id, e);
             throw new RuntimeException("更新颜色尺码配置失败: " + e.getMessage(), e);
+        }
+    }
+
+    private void syncColorImagesFromMatrixRows(Long styleId, Object matrixRowsObj) {
+        if (styleId == null || matrixRowsObj == null) {
+            return;
+        }
+        if (!(matrixRowsObj instanceof List)) {
+            return;
+        }
+        List<?> matrixRows = (List<?>) matrixRowsObj;
+        if (matrixRows.isEmpty()) {
+            return;
+        }
+        Map<String, String> colorImageMap = new HashMap<>();
+        for (Object rowObj : matrixRows) {
+            if (!(rowObj instanceof Map)) {
+                continue;
+            }
+            Map<?, ?> row = (Map<?, ?>) rowObj;
+            Object colorObj = row.get("color");
+            Object imageUrlObj = row.get("imageUrl");
+            if (colorObj == null) {
+                continue;
+            }
+            String color = String.valueOf(colorObj).trim();
+            if (color.isEmpty()) {
+                continue;
+            }
+            String imageUrl = imageUrlObj != null ? String.valueOf(imageUrlObj).trim() : "";
+            if (!imageUrl.isEmpty() && !imageUrl.startsWith("data:")) {
+                colorImageMap.put(color, imageUrl);
+            }
+        }
+        if (colorImageMap.isEmpty()) {
+            return;
+        }
+        Long tenantId = UserContext.tenantId();
+        int updatedCount = 0;
+        for (Map.Entry<String, String> entry : colorImageMap.entrySet()) {
+            String color = entry.getKey();
+            String imageUrl = entry.getValue();
+            LambdaUpdateWrapper<ProductSku> wrapper = new LambdaUpdateWrapper<>();
+            wrapper.eq(ProductSku::getStyleId, styleId)
+                    .eq(tenantId != null, ProductSku::getTenantId, tenantId)
+                    .eq(ProductSku::getColor, color)
+                    .set(ProductSku::getSkuColorImage, imageUrl);
+            updatedCount += productSkuService.getBaseMapper().update(null, wrapper);
+        }
+        if (updatedCount > 0) {
+            log.info("同步颜色图片到SKU表: styleId={}, 颜色数={}, 更新SKU数={}", styleId, colorImageMap.size(), updatedCount);
         }
     }
 

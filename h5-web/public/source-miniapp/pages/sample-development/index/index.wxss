@@ -42,6 +42,10 @@
   background: rgba(212, 107, 8, 0.06);
   border-color: rgba(212, 107, 8, 0.15);
 }
+.stat-item.stat-success {
+  background: rgba(64, 158, 87, 0.06);
+  border-color: rgba(64, 158, 87, 0.15);
+}
 .stat-item.stat-active {
   border-width: 2rpx;
   box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.08);
@@ -55,6 +59,7 @@
   line-height: 1.2;
 }
 .stat-primary .stat-val { color: var(--color-primary); }
+.stat-success .stat-val { color: #409e57; }
 .stat-overdue .stat-val { color: #dc3545; }
 .stat-warning .stat-val { color: #d46b08; }
 .stat-lbl {

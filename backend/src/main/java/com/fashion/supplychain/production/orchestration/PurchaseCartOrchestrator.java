@@ -14,6 +14,7 @@ import com.fashion.supplychain.production.mapper.PurchaseCartMapper;
 import com.fashion.supplychain.production.service.PurchaseCartService;
 import com.fashion.supplychain.production.orchestration.MaterialPurchaseOrchestrator;
 import com.fashion.supplychain.production.service.MaterialPurchaseService;
+import com.fashion.supplychain.production.helper.PurchaseCartLogAppendHelper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -50,6 +51,9 @@ public class PurchaseCartOrchestrator {
     
     @Autowired
     private MaterialPurchaseMapper materialPurchaseMapper;
+
+    @Autowired
+    private PurchaseCartLogAppendHelper logAppendHelper;
     
     @Transactional(rollbackFor = Exception.class)
     public AddItemResultDto addItem(Long tenantId, String userId, AddCartItemRequest request) {
@@ -108,6 +112,7 @@ public class PurchaseCartOrchestrator {
         result.setItemId(newItem.getId());
         
         recalculateCartTotal(cart.getId());
+        logAppendHelper.appendAddItem(cart.getId(), request.getMaterialName() != null ? request.getMaterialName() : request.getMaterialCode());
         
         return result;
     }
@@ -156,8 +161,10 @@ public class PurchaseCartOrchestrator {
             throw new BusinessException("无权操作此物料");
         }
         String cartId = item.getCartId();
+        String materialName = item.getMaterialName();
         purchaseCartItemMapper.deleteById(itemId);
         recalculateCartTotal(cartId);
+        logAppendHelper.appendRemoveItem(cartId, materialName);
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -212,6 +219,7 @@ public class PurchaseCartOrchestrator {
         
         purchaseCartItemMapper.updateById(target);
         recalculateCartTotal(target.getCartId());
+        logAppendHelper.appendMergeItems(target.getCartId(), items.size());
     }
     
     @Transactional
@@ -249,6 +257,7 @@ public class PurchaseCartOrchestrator {
         newItem.setSortOrder(item.getSortOrder() + 1);
         newItem.setDeleteFlag(0);
         purchaseCartItemMapper.insert(newItem);
+        logAppendHelper.appendSplitItem(item.getCartId(), item.getMaterialName());
     }
     
     public CartPreviewDto preview(Long tenantId, String userId) {
@@ -394,6 +403,8 @@ public class PurchaseCartOrchestrator {
         ConfirmResultDto result = new ConfirmResultDto();
         result.setPurchaseIds(purchaseIds);
         result.setPurchaseNos(purchaseNos);
+
+        logAppendHelper.appendConfirm(cart.getId(), preview.getPurchaseGroups().size());
         
         return result;
     }

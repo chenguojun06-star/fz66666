@@ -7,12 +7,13 @@
 
 // ── 领域模块 ──────────────────────────────────────────────
 const production = require('./api-modules/production');
+const { factoryShipment } = require('./api-modules/production');
 const purchaseCart = require('./api-modules/purchase-cart');
 const { system, serial, factory, factoryWorker, tenant } = require('./api-modules/system');
 const { intelligence, notice } = require('./api-modules/intelligence');
 const { style, warehouse, material, materialRoll, orderManagement, sampleStock } = require('./api-modules/style-warehouse');
 const { dashboard, wechat, common } = require('./api-modules/common');
-const { employeeAdvance, factoryShipment, wagePayment, payrollSettlement, wageSettlementFeedback } = require('./api-modules/finance');
+const { employeeAdvance, wagePayment, payrollSettlement, wageSettlementFeedback } = require('./api-modules/finance');
 
 // ── 聚合对象（与拆分前完全一致的接口） ──────────────────────
 const api = {

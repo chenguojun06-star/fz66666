@@ -67,6 +67,7 @@ const QuotationBomSection: React.FC<Props> = ({ bomList, bomColorCosts, material
         size="small"
         dataSource={bomList}
         columns={[
+          { title: '序号', width: 60, align: 'center' as const, render: (_: any, __: any, idx: number) => idx + 1 },
           { title: '物料类型', dataIndex: 'materialType', width: 70, render: (v: string) => getMaterialTypeLabel(v) || '-' },
           { title: '物料编码', dataIndex: 'materialCode', width: 100, render: (v: string) => String(v || '').trim() || '-' },
           { title: '物料名称', dataIndex: 'materialName', width: 110, render: (v: string) => String(v || '').trim() || '-' },

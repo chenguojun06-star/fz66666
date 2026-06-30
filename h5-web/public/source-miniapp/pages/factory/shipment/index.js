@@ -23,6 +23,12 @@ function enrichForDashboard(order) {
   return order;
 }
 
+/* 状态过滤映射（值 = 后端 status 字段；已延期/临近交期用 smart-hints 筛选） */
+const STATUS_FILTERS = [
+  { key: 'in_production', label: '生产中', value: '' },
+  { key: 'completed',     label: '已完成', value: 'completed' },
+];
+
 Page({
   data: {
     activeTab: 0,
@@ -53,6 +59,17 @@ Page({
     factoryStatsTotal: { orderCount: 0, totalQuantity: 0, inProgressCount: 0, completedCount: 0, styleCount: 0, overdueCount: 0, warningCount: 0 },
     selectedFactoryId: '',
     factoryStatsLoading: false,
+    /* 状态过滤（与 dashboard 页面对齐） */
+    statFilters: STATUS_FILTERS,
+    activeFilter: 'in_production',
+    statCounts: { in_production: 0, completed: 0 },
+    /* 智能提示标签（已延期/临近交期） */
+    smartHints: [
+      { key: 'overdue', label: '已延期', count: 0, tone: 'danger' },
+      { key: 'warning', label: '临近交期', count: 0, tone: 'warning' },
+    ],
+    hasSmartHints: false,
+    smartFilter: '',
   },
 
   onLoad: function () {
@@ -89,7 +106,7 @@ Page({
       orderPage: 1, orders: [], orderHasMore: true,
       shipmentPage: 1, shipments: [], shipmentHasMore: true,
     });
-    return Promise.all([this._loadOrders(), this._loadShipments(), this._loadFactoryStats()]);
+    return Promise.all([this._loadOrders(true), this._loadShipments(), this._loadFactoryStats()]);
   },
 
   /* ======== 外发工厂汇总统计（对齐 PC 端 FactorySidebar 7-Tag） ======== */
@@ -131,29 +148,71 @@ Page({
     return this._loadOrders();
   },
 
-  _loadOrders: function () {
-    if (this.data.orderLoading) return Promise.resolve();
+  _loadOrders: function (reset) {
+    if (this.data.orderLoading && !reset) return Promise.resolve();
     const that = this;
+    const page = reset ? 1 : this.data.orderPage;
+    const activeKey = this.data.activeFilter;
+    const smartFilter = this.data.smartFilter;
+    let filterVal = '';
+    for (let i = 0; i < STATUS_FILTERS.length; i++) {
+      if (STATUS_FILTERS[i].key === activeKey) {
+        filterVal = STATUS_FILTERS[i].value;
+        break;
+      }
+    }
+
     this.setData({ orderLoading: true });
-    const params = { page: this.data.orderPage, pageSize: 20, excludeTerminal: 'true' };
+    const params = { page: page, pageSize: smartFilter ? 50 : 20, excludeTerminal: 'true' };
+    if (filterVal) params.status = filterVal;
     if (this.data.keyword) params.orderNo = this.data.keyword;
     if (this.data.selectedFactoryId) params.factoryId = this.data.selectedFactoryId;
     return api.production.listOrders(params).then(function (res) {
       const records = (res && res.records) || [];
       const total = (res && res.total) || 0;
-      const enriched = records.map(function (r) {
+      let enriched = records.map(function (r) {
         return enrichForDashboard(transformOrderData(r));
       });
+      // smart-filter：已延期/临近交期
+      if (smartFilter === 'overdue') {
+        enriched = enriched.filter(function (o) { return o.remainDaysClass === 'days-overdue'; });
+      } else if (smartFilter === 'warning') {
+        enriched = enriched.filter(function (o) { return o.remainDaysClass === 'days-warn' || o.remainDaysClass === 'days-urgent'; });
+      }
+      const newOrders = reset ? enriched : that.data.orders.concat(enriched);
       that.setData({
-        orders: that.data.orders.concat(enriched),
-        orderHasMore: that.data.orders.length + enriched.length < total,
-        orderPage: that.data.orderPage + 1,
+        orders: newOrders,
+        orderHasMore: newOrders.length < total,
+        orderPage: page + 1,
         orderLoading: false,
       });
+      if (reset) that._refreshStatCounts();
     }).catch(function (e) {
       that.setData({ orderLoading: false });
       toast('加载失败');
     });
+  },
+
+  /* 刷新状态计数和 smart-hints 计数 */
+  _refreshStatCounts: function () {
+    const that = this;
+    const params = {};
+    if (that.data.selectedFactoryId) params.factoryId = that.data.selectedFactoryId;
+    return api.production.orderStats(params).then(function (stats) {
+      const s = stats || {};
+      const active = Number(s.activeOrders) || 0;
+      const completed = Number(s.completedOrders) || 0;
+      const overdueCount = Number(s.overdueOrders) || Number(s.delayedOrders) || 0;
+      const warningCount = Number(s.warningOrders) || 0;
+      that.setData({
+        statCounts: { in_production: active, completed: completed },
+        smartHints: [
+          { key: 'overdue', label: '已延期', count: overdueCount, tone: 'danger' },
+          { key: 'warning', label: '临近交期', count: warningCount, tone: 'warning' },
+        ],
+        hasSmartHints: overdueCount > 0 || warningCount > 0,
+      });
+    }).catch(function () {});
   },
 
   _loadShipments: function () {
@@ -180,6 +239,28 @@ Page({
 
   onKeywordInput: function (e) { this.setData({ keyword: e.detail.value }); },
   onKeywordSearch: function () { this._resetAndLoad(); },
+
+  /* ===== 状态筛选按钮切换 ===== */
+  onStatTap: function (e) {
+    const key = e.currentTarget.dataset.key;
+    if (key === this.data.activeFilter) return;
+    this.setData({ activeFilter: key });
+    this._loadOrders(true);
+  },
+
+  /* ===== smart-hints 小标签点击 ===== */
+  onSmartHintTap: function (e) {
+    const key = e.currentTarget.dataset.key;
+    if (!key) return;
+    const next = this.data.smartFilter === key ? '' : key;
+    this.setData({ smartFilter: next });
+    this._loadOrders(true);
+  },
+  onClearSmartFilter: function () {
+    if (!this.data.smartFilter) return;
+    this.setData({ smartFilter: '' });
+    this._loadOrders(true);
+  },
 
   onCardToggle: function (e) {
     const idx = e.currentTarget.dataset.index;

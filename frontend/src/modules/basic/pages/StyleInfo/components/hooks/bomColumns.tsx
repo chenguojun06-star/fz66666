@@ -108,6 +108,13 @@ export function useBomColumns({
 
   const columns = [
     {
+      title: '序号',
+      key: 'rowIndex',
+      width: 60,
+      align: 'center' as const,
+      render: (_: any, __: any, idx: number) => idx + 1,
+    },
+    {
       title: '图片',
       dataIndex: 'imageUrls',
       key: 'imageUrls',

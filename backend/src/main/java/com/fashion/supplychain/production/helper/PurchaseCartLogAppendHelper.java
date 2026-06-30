@@ -59,4 +59,20 @@ public class PurchaseCartLogAppendHelper {
     public void appendClear(String cartId) {
         appendOperation(cartId, "清空采购车", null);
     }
+
+    public void appendMergeItems(String cartId, int itemCount) {
+        appendOperation(cartId, "合并物料", "合并数量：" + itemCount + "项");
+    }
+
+    public void appendSplitItem(String cartId, String materialName) {
+        appendOperation(cartId, "拆分物料", "物料：" + materialName);
+    }
+
+    public void appendConfirm(String cartId, int groupCount) {
+        appendOperation(cartId, "提交采购", "生成采购单：" + groupCount + "个");
+    }
+
+    public void appendUpdateItem(String cartId, String materialName) {
+        appendOperation(cartId, "修改物料", "物料：" + materialName);
+    }
 }

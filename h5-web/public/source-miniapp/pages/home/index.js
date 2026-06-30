@@ -1,6 +1,6 @@
 const api = require('../../utils/api');
 const { safeNavigate } = require('../../utils/uiHelper');
-const { isTokenExpired } = require('../../utils/storage');
+const { isTokenExpired, isFactoryOwner, getUserInfo } = require('../../utils/storage');
 const { eventBus, Events } = require('../../utils/eventBus');
 const permission = require('../../utils/permission');
 
@@ -65,32 +65,49 @@ function buildMenuItems(menuVisibility) {
   const visibility = menuVisibility || {};
   const items = [];
 
-  if (visibility.smartOps !== false) {
+  const isFactory = isFactoryOwner();
+
+  // 运营看板：外发工厂不开放
+  if (!isFactory && visibility.smartOps !== false) {
     items.push({ id: 'smartOps', name: '运营看板', iconClass: 'icon-menu-ai', circleClass: 'menu-icon-circle--purple', route: '/pages/smart-ops/index' });
   }
-  if (visibility.orderCreate !== false) {
+  // 下单管理：外发工厂不开放
+  if (!isFactory && visibility.orderCreate !== false) {
     items.push({ id: 'orderCreate', name: '下单管理', iconClass: 'icon-menu-order', circleClass: 'menu-icon-circle--blue', route: '/pages/order/create/index' });
   }
-  if (visibility.dashboard !== false) {
+  // 生产管理：外发工厂不开放（改为从外部工厂页面看自己的订单）
+  if (!isFactory && visibility.dashboard !== false) {
     items.push({ id: 'dashboard', name: '生产管理', iconClass: 'icon-menu-production', circleClass: 'menu-icon-circle--teal', route: '/pages/dashboard/index' });
   }
-  if (visibility.production !== false) {
+  // 质检通知：外发工厂不开放
+  if (!isFactory && visibility.production !== false) {
     items.push({ id: 'production', name: '质检通知', iconClass: 'icon-menu-quality-notice', circleClass: 'menu-icon-circle--amber', route: '/pages/defect/index' });
   }
+  // 生产扫码：所有用户均可
   if (visibility.quality !== false) {
     items.push({ id: 'quality', name: '生产扫码', iconClass: 'icon-menu-scan', circleClass: 'menu-icon-circle--green', route: '/pages/scan/index' });
   }
-  if (visibility.bundleSplit !== false) {
+  // 菲号单价：外发工厂不开放
+  if (!isFactory && visibility.bundleSplit !== false) {
     items.push({ id: 'bundleSplit', name: '菲号单价', iconClass: 'icon-menu-price', circleClass: 'menu-icon-circle--orange', route: '/pages/work/bundle-split/index' });
   }
-  if (visibility.cuttingDetail !== false) {
+  // 裁剪明细：外发工厂不开放
+  if (!isFactory && visibility.cuttingDetail !== false) {
     items.push({ id: 'cuttingDetail', name: '裁剪明细', iconClass: 'icon-menu-cutting', circleClass: 'menu-icon-circle--rose', route: '/pages/cutting/bundle-detail/index' });
   }
+  // 扫码历史：所有用户均可，但外发工厂只看到自己工厂的记录
   if (visibility.history !== false) {
     items.push({ id: 'history', name: '扫码历史', iconClass: 'icon-menu-history', circleClass: 'menu-icon-circle--indigo', route: '/pages/scan/history/index' });
   }
+  // 外发工厂：仅外发工厂账号可见
   if (visibility.factoryShipment !== false) {
-    items.push({ id: 'factoryShipment', name: '外发工厂', iconClass: 'icon-menu-shipment', circleClass: 'menu-icon-circle--cyan', route: '/pages/factory/shipment/index' });
+    // 外发工厂账号 -> 显示为首页看板
+    if (isFactory) {
+      items.push({ id: 'factoryShipment', name: '工厂看板', iconClass: 'icon-menu-shipment', circleClass: 'menu-icon-circle--cyan', route: '/pages/factory/shipment/index' });
+    } else if (visibility.dashboard === false) {
+      // 仅当生产管理不可见时才显示
+      items.push({ id: 'factoryShipment', name: '外发工厂', iconClass: 'icon-menu-shipment', circleClass: 'menu-icon-circle--cyan', route: '/pages/factory/shipment/index' });
+    }
   }
 
   return items;

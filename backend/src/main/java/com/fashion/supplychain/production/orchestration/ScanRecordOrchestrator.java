@@ -16,6 +16,7 @@ import com.fashion.supplychain.production.helper.DuplicateScanPreventer;
 import com.fashion.supplychain.production.helper.ScanRecordPermissionHelper;
 import com.fashion.supplychain.production.helper.ScanUndoHelper;
 import com.fashion.supplychain.production.helper.ScanRescanHelper;
+import com.fashion.supplychain.production.helper.ScanRecordLogAppendHelper;
 import com.fashion.supplychain.production.service.CuttingBundleService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.ScanRecordService;
@@ -71,6 +72,7 @@ public class ScanRecordOrchestrator {
     @Autowired private ProductWarehousingHelper warehousingHelper;
     @Autowired private ScanUndoHelper scanUndoHelper;
     @Autowired private ScanRescanHelper scanRescanHelper;
+    @Autowired private ScanRecordLogAppendHelper logAppendHelper;
     @Autowired(required = false) private ScanPrecheckFeedbackOrchestrator scanPrecheckFeedbackOrchestrator;
     @Autowired(required = false) private OrderRiskTrackingOrchestrator orderRiskTrackingOrchestrator;
     @Autowired private com.fashion.supplychain.production.helper.OrderListCacheHelper orderListCacheHelper;
@@ -91,6 +93,21 @@ public class ScanRecordOrchestrator {
                 }
             });
             // 事务提交后执行：通知与状态提示（各自有 try/catch，失败不影响扫码结果）
+            try {
+                if (result != null && Boolean.TRUE.equals(result.get("success"))) {
+                    String orderId = TextUtils.safeText(result.get("orderId"));
+                    String scanType = TextUtils.safeText(result.get("scanType"));
+                    String bundleNo = null;
+                    Object bundleObj = result.get("cuttingBundle");
+                    if (bundleObj instanceof CuttingBundle) {
+                        CuttingBundle bundle = (CuttingBundle) bundleObj;
+                        bundleNo = bundle.getBundleNo() != null ? String.valueOf(bundle.getBundleNo()) : bundle.getQrCode();
+                    }
+                    logAppendHelper.appendScan(orderId, scanType, bundleNo, "success");
+                }
+            } catch (Exception e) {
+                log.debug("[ScanLog] 扫码日志记录失败（不阻断）: {}", e.getMessage());
+            }
             tryNotifyNextStage(safeParams, result);
             appendBundleStatusHints(safeParams, result);
             recordScanFeedbackSafely(safeParams, result);
@@ -185,11 +202,39 @@ public class ScanRecordOrchestrator {
 
     @org.springframework.transaction.annotation.Transactional(rollbackFor = Exception.class)
     public Map<String, Object> undo(Map<String, Object> params) {
-        return scanUndoHelper.undo(params);
+        Map<String, Object> result = scanUndoHelper.undo(params);
+        try {
+            if (result != null && Boolean.TRUE.equals(result.get("success"))) {
+                String orderId = TextUtils.safeText(result.get("orderId"));
+                String scanType = TextUtils.safeText(result.get("scanType"));
+                String bundleNo = TextUtils.safeText(result.get("bundleNo"));
+                String undoType = TextUtils.safeText(result.get("undoType"));
+                logAppendHelper.appendUndo(orderId, scanType, bundleNo, undoType);
+            }
+        } catch (Exception e) {
+            log.debug("[ScanLog] 撤回日志记录失败（不阻断）: {}", e.getMessage());
+        }
+        return result;
     }
 
     public Map<String, Object> rescan(Map<String, Object> params) {
-        return scanRescanHelper.rescan(params);
+        Map<String, Object> result = scanRescanHelper.rescan(params);
+        try {
+            if (result != null && Boolean.TRUE.equals(result.get("success"))) {
+                String orderId = TextUtils.safeText(params.get("orderId"));
+                String orderNo = TextUtils.safeText(params.get("orderNo"));
+                String scanType = TextUtils.safeText(params.get("scanType"));
+                String scanCode = TextUtils.safeText(params.get("scanCode"));
+                if (!hasText(orderId) && hasText(orderNo)) {
+                    ProductionOrder order = productionOrderService.getByOrderNo(orderNo);
+                    if (order != null) orderId = order.getId();
+                }
+                logAppendHelper.appendRescan(orderId, scanType, scanCode);
+            }
+        } catch (Exception e) {
+            log.debug("[ScanLog] 重新扫码日志记录失败（不阻断）: {}", e.getMessage());
+        }
+        return result;
     }
 
     private Map<String, Object> executeQualityScan(Map<String, Object> params, String requestId, String operatorId,

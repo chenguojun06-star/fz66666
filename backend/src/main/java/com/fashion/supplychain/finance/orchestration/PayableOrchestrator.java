@@ -9,6 +9,7 @@ import com.fashion.supplychain.finance.entity.BillAggregation;
 import com.fashion.supplychain.finance.entity.Payable;
 import com.fashion.supplychain.finance.service.BillAggregationService;
 import com.fashion.supplychain.finance.service.PayableService;
+import com.fashion.supplychain.finance.helper.PayableLogAppendHelper;
 import java.util.NoSuchElementException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,6 +38,9 @@ public class PayableOrchestrator {
 
     @Autowired
     private BillAggregationService billAggregationService;
+
+    @Autowired
+    private PayableLogAppendHelper logAppendHelper;
 
     private static final DateTimeFormatter NO_FMT = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
     private static final java.util.concurrent.atomic.AtomicInteger NO_SEQ = new java.util.concurrent.atomic.AtomicInteger(0);
@@ -160,6 +164,7 @@ public class PayableOrchestrator {
 
         payableService.save(payable);
         log.info("[PayableOrchestrator] 新建应付单 {} 金额 {}", payable.getPayableNo(), payable.getAmount());
+        logAppendHelper.appendCreate(payable.getId(), payable.getAmount() != null ? payable.getAmount().toString() : "0");
         return payable;
     }
 
@@ -226,6 +231,10 @@ public class PayableOrchestrator {
             payableService.updateById(merged);
             log.info("[PayableOrchestrator] 合并应付单: payableNo={}, +{}, total={}, billCount={}",
                     merged.getPayableNo(), addAmount, merged.getAmount(), merged.getBillCount());
+            logAppendHelper.appendMergeUpdate(merged.getId(),
+                    addAmount != null ? addAmount.toString() : "0",
+                    merged.getAmount() != null ? merged.getAmount().toString() : "0",
+                    String.valueOf(merged.getBillCount()));
             return merged;
         }
 
@@ -297,6 +306,7 @@ public class PayableOrchestrator {
         payableService.updateById(p);
         syncBillAggregationAfterPayment(p, paymentAmount);
         log.info("[PayableOrchestrator] 应付单 {} 登记付款 {}，状态={}", id, paymentAmount, p.getStatus());
+        logAppendHelper.appendMarkPaid(p.getId(), paymentAmount != null ? paymentAmount.toString() : "0", p.getStatus());
         return p;
     }
 
@@ -343,6 +353,7 @@ public class PayableOrchestrator {
         patch.setDeleteFlag(1);
         patch.setUpdateTime(java.time.LocalDateTime.now());
         payableService.updateById(patch);
+        logAppendHelper.appendDelete(id);
     }
 
     @Transactional(rollbackFor = Exception.class)

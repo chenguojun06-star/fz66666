@@ -16,6 +16,7 @@ import com.fashion.supplychain.production.helper.ProductWarehousingQueryHelper;
 import com.fashion.supplychain.production.helper.ProductWarehousingPendingHelper;
 import com.fashion.supplychain.production.helper.ProductWarehousingRepairHelper;
 import com.fashion.supplychain.production.helper.ProductWarehousingRollbackHelper;
+import com.fashion.supplychain.production.helper.ProductWarehousingLogAppendHelper;
 import com.fashion.supplychain.production.service.CuttingBundleService;
 import com.fashion.supplychain.production.service.ProductWarehousingService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
@@ -67,6 +68,9 @@ public class ProductWarehousingOrchestrator {
 
     @Autowired
     private OrderRemarkHelper orderRemarkHelper;
+
+    @Autowired
+    private ProductWarehousingLogAppendHelper logAppendHelper;
 
     public IPage<ProductWarehousing> list(Map<String, Object> params) {
         return queryHelper.list(params);
@@ -170,6 +174,10 @@ public class ProductWarehousingOrchestrator {
         }
 
         postActionHelper.triggerPostSaveActions(orderId, productWarehousing);
+
+        logAppendHelper.appendSingleWarehousing(orderId,
+                productWarehousing.getQualifiedQuantity() != null ? productWarehousing.getQualifiedQuantity() : 0,
+                productWarehousing.getUnqualifiedQuantity() != null ? productWarehousing.getUnqualifiedQuantity() : 0);
 
         return true;
     }
@@ -350,6 +358,7 @@ public class ProductWarehousingOrchestrator {
 
         String orderId = StringUtils.hasText(current.getOrderId()) ? current.getOrderId().trim() : null;
         postActionHelper.triggerPostUpdateActions(orderId, productWarehousing.getId());
+        logAppendHelper.appendUpdate(orderId, "修改入库数量/次品信息");
         return true;
     }
 
@@ -475,7 +484,13 @@ public class ProductWarehousingOrchestrator {
 
     @Transactional(rollbackFor = Exception.class)
     public boolean rollbackByBundle(Map<String, Object> body) {
-        return rollbackHelper.rollbackByBundle(body);
+        boolean result = rollbackHelper.rollbackByBundle(body);
+        String bundleNo = body != null && body.get("bundleNo") != null ? String.valueOf(body.get("bundleNo")) : null;
+        String orderId = body != null && body.get("orderId") != null ? String.valueOf(body.get("orderId")) : null;
+        if (result && orderId != null) {
+            logAppendHelper.appendRollback(orderId, bundleNo);
+        }
+        return result;
     }
 
     private void validateProductionPrerequisiteForWarehousing(String orderId, String bundleId) {
@@ -558,16 +573,28 @@ public class ProductWarehousingOrchestrator {
     @Transactional(rollbackFor = Exception.class)
     public void startBundleRepair(String bundleId, String operatorName) {
         repairHelper.startBundleRepair(bundleId, operatorName);
+        CuttingBundle bundle = cuttingBundleService.getById(bundleId);
+        if (bundle != null) {
+            logAppendHelper.appendStartRepair(bundle.getProductionOrderId(), String.valueOf(bundle.getBundleNo()));
+        }
     }
 
     @Transactional(rollbackFor = Exception.class)
     public void completeBundleRepair(String bundleId) {
         repairHelper.completeBundleRepair(bundleId);
+        CuttingBundle bundle = cuttingBundleService.getById(bundleId);
+        if (bundle != null) {
+            logAppendHelper.appendCompleteRepair(bundle.getProductionOrderId(), String.valueOf(bundle.getBundleNo()));
+        }
     }
 
     @Transactional(rollbackFor = Exception.class)
     public void scrapBundle(String bundleId) {
         repairHelper.scrapBundle(bundleId);
+        CuttingBundle bundle = cuttingBundleService.getById(bundleId);
+        if (bundle != null) {
+            logAppendHelper.appendScrap(bundle.getProductionOrderId(), String.valueOf(bundle.getBundleNo()));
+        }
     }
 
     private void fillOperatorFromContext(ProductWarehousing w) {

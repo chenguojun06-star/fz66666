@@ -5,6 +5,11 @@
       <text class="stat-val">{{sampleCount}}</text>
       <text class="stat-lbl">开发中</text>
     </view>
+    <view class="stat-item stat-success {{smartFilter === 'completed' ? 'stat-active' : ''}} {{completedCount === 0 ? 'stat-zero' : ''}}"
+          data-key="completed" bindtap="onSmartFilterTap">
+      <text class="stat-val">{{completedCount}}</text>
+      <text class="stat-lbl">已完成</text>
+    </view>
     <view class="stat-item stat-overdue {{smartFilter === 'overdue' ? 'stat-active' : ''}} {{overdueCount === 0 ? 'stat-zero' : ''}}"
           data-key="overdue" bindtap="onSmartFilterTap">
       <text class="stat-val">{{overdueCount}}</text>

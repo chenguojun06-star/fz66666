@@ -47,6 +47,31 @@
   </view>
 
   <view wx:if="{{activeTab===0}}" class="tab-content">
+
+    <!-- ===== 状态过滤条（生产中 / 已完成） ===== -->
+    <scroll-view class="filter-scroll" scroll-x enhanced show-scrollbar="{{false}}">
+      <view class="filter-pill {{activeFilter === item.key ? 'filter-pill--on' : ''}} {{item.key === 'completed' ? 'filter-pill--done' : ''}}"
+            wx:for="{{statFilters}}" wx:key="key"
+            data-key="{{item.key}}" bindtap="onStatTap">
+        <text class="filter-num">{{statCounts[item.key] || 0}}</text>
+        <text class="filter-text">{{item.label}}</text>
+      </view>
+    </scroll-view>
+
+    <!-- ===== smart-hints 小标签（已延期 / 临近交期） ===== -->
+    <view class="smart-hints" wx:if="{{hasSmartHints || smartFilter}}">
+      <view class="smart-hint {{smartFilter === item.key ? 'smart-hint--active' : ''}} {{item.tone === 'danger' ? 'smart-hint--danger' : 'smart-hint--warning'}} {{item.count === 0 ? 'smart-hint--zero' : ''}}"
+            wx:for="{{smartHints}}" wx:key="key"
+            wx:if="{{item.count > 0 || smartFilter === item.key}}"
+            data-key="{{item.key}}" bindtap="onSmartHintTap">
+        <text class="smart-hint-num">{{item.count}}</text>
+        <text class="smart-hint-lbl">{{item.label}}</text>
+      </view>
+      <view class="smart-hint-clear" wx:if="{{smartFilter}}" catchtap="onClearSmartFilter">
+        <text>清除筛选 ✕</text>
+      </view>
+    </view>
+
     <view wx:if="{{orders.length===0 && !orderLoading}}" class="empty">
       <empty-state iconEmoji="🏭" text="暂无数据" hint="下拉刷新试试" card="{{true}}"></empty-state>
     </view>

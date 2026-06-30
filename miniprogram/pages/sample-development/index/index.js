@@ -3,6 +3,7 @@ const { toast, safeNavigate } = require('../../../utils/uiHelper');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 const { eventBus, Events } = require('../../../utils/eventBus');
 const permission = require('../../../utils/permission');
+const { DEBUG } = require('../../../config/debug');
 
 /* === 与 PC 端 StyleInfoList 一致的状态显示逻辑 === */
 
@@ -237,7 +238,7 @@ Page({
         const records = (data && data.records) ? data.records : (Array.isArray(data) ? data : []);
 
         // 调试日志：看 createBy 是否在后端有值（Console 查看）
-        if (records.length > 0) {
+        if (DEBUG && records.length > 0) {
           console.log('[sample-dev] 样衣列表首条 createBy=' + (records[0].createBy || '无') + ', receiver=' + (records[0].receiver || '无'));
         }
 

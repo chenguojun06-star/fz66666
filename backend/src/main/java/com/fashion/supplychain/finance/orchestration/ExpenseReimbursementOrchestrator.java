@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.finance.entity.ExpenseReimbursement;
 import com.fashion.supplychain.finance.service.ExpenseReimbursementService;
+import com.fashion.supplychain.finance.helper.ExpenseReimbursementLogAppendHelper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -23,6 +24,9 @@ public class ExpenseReimbursementOrchestrator {
 
     @Autowired
     private ExpenseReimbursementService expenseReimbursementService;
+
+    @Autowired
+    private ExpenseReimbursementLogAppendHelper logAppendHelper;
 
     @Autowired
     private BillAggregationOrchestrator billAggregationOrchestrator;
@@ -50,7 +54,8 @@ public class ExpenseReimbursementOrchestrator {
         expenseReimbursementService.save(entity);
         log.info("报销单创建成功: no={}, applicant={}, amount={}, type={}",
                 reimbursementNo, entity.getApplicantName(), entity.getAmount(), entity.getExpenseType());
-
+        logAppendHelper.appendCreate(entity.getId(), entity.getTitle(),
+                entity.getAmount() != null ? entity.getAmount().toString() : "0");
         return entity;
     }
 
@@ -123,9 +128,12 @@ public class ExpenseReimbursementOrchestrator {
         if ("approve".equals(action)) {
             entity.setStatus("approved");
             log.info("报销单已批准: no={}, approver={}", entity.getReimbursementNo(), UserContext.username());
+            logAppendHelper.appendApprove(entity.getId(), UserContext.username(),
+                    entity.getAmount() != null ? entity.getAmount().toString() : "0");
         } else if ("reject".equals(action)) {
             entity.setStatus("rejected");
             log.info("报销单已驳回: no={}, approver={}, reason={}", entity.getReimbursementNo(), UserContext.username(), remark);
+            logAppendHelper.appendReject(entity.getId(), UserContext.username(), remark);
         } else {
             throw new RuntimeException("无效的审批操作: " + action);
         }
@@ -194,6 +202,7 @@ public class ExpenseReimbursementOrchestrator {
 
         expenseReimbursementService.updateById(entity);
         log.info("报销单已付款: no={}, amount={}, payTo={}", entity.getReimbursementNo(), entity.getAmount(), entity.getAccountName());
+        logAppendHelper.appendPay(entity.getId(), entity.getAmount() != null ? entity.getAmount().toString() : "0");
 
         return entity;
     }
@@ -218,5 +227,6 @@ public class ExpenseReimbursementOrchestrator {
         // 软删除
         expenseReimbursementService.removeById(id);
         log.info("报销单已删除: no={}", entity.getReimbursementNo());
+        logAppendHelper.appendDelete(id);
     }
 }

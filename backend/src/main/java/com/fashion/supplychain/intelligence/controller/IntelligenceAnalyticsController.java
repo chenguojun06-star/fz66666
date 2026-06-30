@@ -165,7 +165,8 @@ public class IntelligenceAnalyticsController {
 
     @GetMapping("/process-template")
     public Result<ProcessTemplateResponse> processTemplate(
-            @RequestParam(value = "category", required = false) String category) {
-        return Result.success(processTemplateOrchestrator.suggest(category));
+            @RequestParam(value = "category", required = false) String category,
+            @RequestParam(value = "styleId", required = false) Long styleId) {
+        return Result.success(processTemplateOrchestrator.suggest(category, styleId));
     }
 }

@@ -3,6 +3,7 @@ var { toast, safeNavigate } = require('../../../utils/uiHelper');
 var { isAdminOrSupervisor, isFactoryOwner } = require('../../../utils/permission');
 var { getAuthedImageUrl } = require('../../../utils/fileUrl');
 var { eventBus } = require('../../../utils/eventBus');
+var { DEBUG } = require('../../../config/debug');
 
 Page({
   data: {
@@ -62,7 +63,7 @@ Page({
     var catMap = {};
     var isNoData = self.data.activeTab === 'noData';
 
-    console.log('[下单管理] 加载款式列表, 当前标签:', self.data.activeTab, '是否无资料:', isNoData);
+    if (DEBUG) console.log('[下单管理] 加载款式列表, 当前标签:', self.data.activeTab, '是否无资料:', isNoData);
     self.setData({ styleLoading: true });
 
     return api.system.getDictList('category')
@@ -80,7 +81,7 @@ Page({
         // 款式下单：只获取已完成的样衣
         var params = { pageSize: 500 };
         if (!isNoData) params.sampleStatus = 'COMPLETED';
-        console.log('[下单管理] API请求参数:', params);
+        if (DEBUG) console.log('[下单管理] API请求参数:', params);
         return api.style.listStyles(params);
       })
       .then(function (res) {

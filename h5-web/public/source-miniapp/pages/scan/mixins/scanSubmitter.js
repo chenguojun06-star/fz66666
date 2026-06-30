@@ -34,7 +34,7 @@ module.exports = {
       if (currentScanType === 'warehouse' && !this.data.warehouse) { toast.error('请先选择目标仓库'); return; }
       const self = this;
       wx.scanCode({
-        onlyFromCamera: true,
+        onlyFromCamera: false,
         scanType: ['qrCode', 'barCode'],
         success: function(res) { self.processScanCode(res.result, currentScanType); },
         fail: function(err) {
@@ -44,7 +44,6 @@ module.exports = {
     },
 
     processScanCode: function(codeStr, scanType) {
-      console.log('[DEBUG] processScanCode 入口: codeStr=', codeStr, 'scanType=', scanType);
       if (!codeStr) return;
       const self = this;
       if (isRecentDuplicate(codeStr)) { toast.info('扫码太快啦'); return; }

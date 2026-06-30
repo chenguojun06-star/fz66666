@@ -19,6 +19,10 @@ public class ProcessTemplateResponse {
     private List<ProcessTemplateItem> processes;
     /** 数据来源：ie_standard=IE标准库+AI, ai_derived=纯AI推演, historical=历史真实数据 */
     private String dataSource;
+    /** 匹配方式：category_difficulty=品类+难度, category_only=仅品类, all=全部 */
+    private String matchType;
+    /** 难度级别标签（如：简单款/工艺复杂） */
+    private String difficultyLabel;
 
     @Data
     @NoArgsConstructor

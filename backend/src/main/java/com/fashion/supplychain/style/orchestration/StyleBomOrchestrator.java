@@ -9,6 +9,7 @@ import com.fashion.supplychain.style.service.StyleBomService;
 import com.fashion.supplychain.style.service.StyleInfoService;
 import com.fashion.supplychain.style.helper.StyleBomMaterialSyncHelper;
 import com.fashion.supplychain.style.helper.StyleBomPurchaseHelper;
+import com.fashion.supplychain.style.helper.StyleBomLogAppendHelper;
 import java.math.RoundingMode;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -49,6 +50,9 @@ public class StyleBomOrchestrator {
 
     @Autowired
     private com.fashion.supplychain.style.helper.StyleStageCompletionHelper styleStageCompletionHelper;
+
+    @Autowired
+    private StyleBomLogAppendHelper logAppendHelper;
 
     public List<StyleBom> listByStyleId(Long styleId) {
         if (styleId == null) {
@@ -98,6 +102,7 @@ public class StyleBomOrchestrator {
             log.warn("Failed to sync merchandiser: styleId={}, error={}", styleBom.getStyleId(), e.getMessage());
         }
 
+        logAppendHelper.appendSave(styleBom.getId(), 1);
         return true;
     }
 
@@ -174,7 +179,11 @@ public class StyleBomOrchestrator {
     }
 
     public Map<String, Object> syncToMaterialDatabase(Long styleId, boolean forceUpdateCompleted) {
-        return materialSyncHelper.syncToMaterialDatabase(styleId, forceUpdateCompleted);
+        Map<String, Object> result = materialSyncHelper.syncToMaterialDatabase(styleId, forceUpdateCompleted);
+        int created = result.get("created") != null ? ((Number) result.get("created")).intValue() : 0;
+        int updated = result.get("updated") != null ? ((Number) result.get("updated")).intValue() : 0;
+        logAppendHelper.appendSyncToMaterial(styleId, created + updated);
+        return result;
     }
 
     public Map<String, Object> startSyncToMaterialDatabaseJob(Long styleId, boolean forceUpdateCompleted) {
@@ -239,6 +248,10 @@ public class StyleBomOrchestrator {
             log.warn("BOM列表中没有已保存的记录，跳过更新");
         }
 
+        int sufficientCount = (int) bomList.stream()
+                .filter(bom -> "sufficient".equals(bom.getStockStatus()))
+                .count();
+        logAppendHelper.appendStockCheck(styleId, bomList.size(), sufficientCount);
         return bomList;
     }
 
@@ -371,7 +384,7 @@ public class StyleBomOrchestrator {
 
     @Transactional(rollbackFor = Exception.class)
     public int generatePurchase(Long styleId) {
-        return purchaseHelper.generatePurchase(styleId);
+        return generatePurchase(styleId, false);
     }
 
     @Transactional(rollbackFor = Exception.class)

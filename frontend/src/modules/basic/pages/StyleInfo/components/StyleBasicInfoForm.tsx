@@ -149,7 +149,14 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
           colors: colorOptions,
           sizes: sizeOptions,
           quantities: sizeColorMatrixRows.map((row) => row.quantities.reduce((sum, qty) => sum + Number(qty || 0), 0)),
-          matrixRows: sizeColorMatrixRows.map((row) => ({ color: row.color, quantities: row.quantities })),
+          matrixRows: sizeColorMatrixRows.map((row) => {
+            const hasImage = row.imageUrl && !row.imageUrl.startsWith('data:');
+            return {
+              color: row.color,
+              quantities: row.quantities,
+              ...(hasImage ? { imageUrl: row.imageUrl } : {}),
+            };
+          }),
         });
         // 只刷新 SKU 表，不刷新整个款式数据（避免表单重置）
         setSkuRefreshTrigger((prev) => prev + 1);

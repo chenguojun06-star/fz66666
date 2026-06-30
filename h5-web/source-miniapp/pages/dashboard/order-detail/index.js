@@ -441,9 +441,6 @@ Page({
         return { colorText: colorText, sizeText: sizeText, qtyText: qtyText, hasSpec: true };
       })();
 
-      // 调试信息：订单状态 → Console 里直接可看
-      console.log('[order-detail] orderNo=' + (order.orderNo || order.id) + ', rawStatus=' + order.status + ', statusText=' + statusText + ', isEditable=' + isEditable);
-
       that.setData({
         order: order,
         isEditable: isEditable,

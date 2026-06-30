@@ -115,7 +115,7 @@ const production = {
     return ok('/api/production/order/confirm-procurement', 'POST', payload || {});
   },
   myCuttingTasks() {
-    return ok('/api/production/cutting-task/list', 'GET', { myTasks: 'true' });
+    return ok('/api/production/cutting-task', 'GET', { myTasks: 'true' });
   },
   myQualityTasks() {
     return ok('/api/production/scan/my-quality-tasks', 'GET', {});
@@ -142,7 +142,7 @@ const production = {
     return ok('/api/production/cutting-task/receive', 'POST', { taskId, receiverId, receiverName });
   },
   getCuttingTaskByOrderId(orderIdOrNo) {
-    return ok('/api/production/cutting-task/list', 'GET', { orderNo: orderIdOrNo, pageSize: 1 });
+    return ok('/api/production/cutting-task', 'GET', { orderNo: orderIdOrNo, pageSize: 1 });
   },
   listBundles(orderNo, page = 1, pageSize = 100) {
     return ok('/api/production/cutting/list', 'GET', { orderNo, page, pageSize });
@@ -192,7 +192,7 @@ const production = {
   },
   /**
    * 样衣开发统计（与 PC 端 StyleInfoList activeStyles 逻辑一致）
-   * 返回 { activeCount, overdueCount, warningCount }
+   * 返回 { activeCount, completedCount, overdueCount, warningCount }
    */
   getSampleStats() {
     return ok('/api/production/pattern/sample-stats', 'GET', {});
@@ -332,4 +332,28 @@ const production = {
   },
 };
 
-module.exports = production;
+const factoryShipment = {
+  list: function (params) {
+    return ok('/api/production/factory-shipment/list', 'POST', params || {});
+  },
+  listByOrder: function (orderId) {
+    return ok('/api/production/factory-shipment/list-by-order', 'POST', { orderId: orderId });
+  },
+  shippable: function (orderId) {
+    return ok('/api/production/factory-shipment/shippable/' + encodeURIComponent(orderId), 'GET', {});
+  },
+  ship: function (data) {
+    return ok('/api/production/factory-shipment/ship', 'POST', data || {});
+  },
+  receive: function (id, payload) {
+    return ok('/api/production/factory-shipment/' + encodeURIComponent(id) + '/receive', 'POST', payload || {});
+  },
+  getDetails: function (id) {
+    return ok('/api/production/factory-shipment/' + encodeURIComponent(id) + '/details', 'GET', {});
+  },
+  remove: function (id) {
+    return ok('/api/production/factory-shipment/' + encodeURIComponent(id), 'DELETE', {});
+  },
+};
+
+module.exports = { ...production, factoryShipment };

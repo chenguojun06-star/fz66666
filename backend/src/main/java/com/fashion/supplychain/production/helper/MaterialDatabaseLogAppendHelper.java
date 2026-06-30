@@ -50,4 +50,20 @@ public class MaterialDatabaseLogAppendHelper {
     public void appendDisable(String materialId, String reason) {
         appendOperation(materialId, "禁用物料", "原因：" + reason);
     }
+
+    public void appendEnable(String materialId) {
+        appendOperation(materialId, "启用物料", null);
+    }
+
+    public void appendComplete(String materialId) {
+        appendOperation(materialId, "完善资料", null);
+    }
+
+    public void appendReturnToPending(String materialId, String reason) {
+        appendOperation(materialId, "退回待完善", "原因：" + reason);
+    }
+
+    public void appendDelete(String materialId) {
+        appendOperation(materialId, "删除物料", null);
+    }
 }

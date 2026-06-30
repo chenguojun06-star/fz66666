@@ -326,6 +326,7 @@ public class ProductSkuServiceImpl extends ServiceImpl<ProductSkuMapper, Product
                     existing.setSalesPrice(skuUpdate.getSalesPrice());
                     existing.setStockQuantity(skuUpdate.getStockQuantity());
                     existing.setRemark(skuUpdate.getRemark());
+                    existing.setSkuColorImage(skuUpdate.getSkuColorImage());
                     existing.setManuallyEdited(1);
                     toUpdate.add(existing);
                 }
@@ -627,25 +628,42 @@ public class ProductSkuServiceImpl extends ServiceImpl<ProductSkuMapper, Product
             sku.setSize(size);
             sku.setStatus("ENABLED");
             sku.setStockQuantity(quantity != null ? quantity : 0);
-            sku.setCostPrice(style.getPrice());      // 打板价 → 成本价
-            sku.setTagPrice(style.getTagPrice());    // 吊牌价同步
-            sku.setSalesPrice(style.getSalesPrice()); // 销售价同步
+            sku.setCostPrice(style.getPrice());
+            sku.setTagPrice(style.getTagPrice());
+            sku.setSalesPrice(style.getSalesPrice());
             sku.setSkuMode(style.getSkuMode());
             sku.setTenantId(tenantId);
+            String inheritedColorImage = getColorImageFromSameColor(style.getId(), color, tenantId);
+            if (StringUtils.hasText(inheritedColorImage)) {
+                sku.setSkuColorImage(inheritedColorImage);
+            }
             this.save(sku);
             log.info("Created new SKU: {} with quantity={}, costPrice={}, tagPrice={}, salesPrice={}", skuCode, quantity, style.getPrice(), style.getTagPrice(), style.getSalesPrice());
         } else {
             existing.setStyleNo(style.getStyleNo());
-            // 只有未被手动编辑过的 SKU 才自动更新编码、数量和价格
             if (!Integer.valueOf(1).equals(existing.getManuallyEdited())) {
                 existing.setSkuCode(skuCode);
                 existing.setStockQuantity(quantity != null ? quantity : 0);
-                existing.setCostPrice(style.getPrice());      // 打板价同步到成本价
-                existing.setTagPrice(style.getTagPrice());      // 吊牌价同步
-                existing.setSalesPrice(style.getSalesPrice()); // 销售价同步
+                existing.setCostPrice(style.getPrice());
+                existing.setTagPrice(style.getTagPrice());
+                existing.setSalesPrice(style.getSalesPrice());
             }
             this.updateById(existing);
         }
+    }
+
+    private String getColorImageFromSameColor(Long styleId, String color, Long tenantId) {
+        if (styleId == null || !StringUtils.hasText(color)) {
+            return null;
+        }
+        ProductSku sameColorSku = this.getOne(new LambdaQueryWrapper<ProductSku>()
+                .eq(ProductSku::getStyleId, styleId)
+                .eq(tenantId != null, ProductSku::getTenantId, tenantId)
+                .eq(ProductSku::getColor, color.trim())
+                .isNotNull(ProductSku::getSkuColorImage)
+                .ne(ProductSku::getSkuColorImage, "")
+                .last("LIMIT 1"), false);
+        return sameColorSku != null ? sameColorSku.getSkuColorImage() : null;
     }
 
     @Override

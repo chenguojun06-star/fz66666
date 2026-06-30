@@ -115,7 +115,7 @@ const production = {
     return ok('/api/production/order/confirm-procurement', 'POST', payload || {});
   },
   myCuttingTasks() {
-    return ok('/api/production/cutting-task/list', 'GET', { myTasks: 'true' });
+    return ok('/api/production/cutting-task', 'GET', { myTasks: 'true' });
   },
   myQualityTasks() {
     return ok('/api/production/scan/my-quality-tasks', 'GET', {});
@@ -142,7 +142,7 @@ const production = {
     return ok('/api/production/cutting-task/receive', 'POST', { taskId, receiverId, receiverName });
   },
   getCuttingTaskByOrderId(orderIdOrNo) {
-    return ok('/api/production/cutting-task/list', 'GET', { orderNo: orderIdOrNo, pageSize: 1 });
+    return ok('/api/production/cutting-task', 'GET', { orderNo: orderIdOrNo, pageSize: 1 });
   },
   listBundles(orderNo, page = 1, pageSize = 100) {
     return ok('/api/production/cutting/list', 'GET', { orderNo, page, pageSize });

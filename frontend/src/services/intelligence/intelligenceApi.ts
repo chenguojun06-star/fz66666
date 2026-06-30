@@ -458,10 +458,10 @@ export const intelligenceApi = {
     ),
 
   /** 工序AI补全 */
-  getProcessTemplate: (category?: string) =>
+  getProcessTemplate: (category?: string, styleId?: string) =>
     api.get<{ code: number; data: ProcessTemplateResponse }>(
       '/intelligence/process-template',
-      { params: { ...(category ? { category } : {}) } },
+      { params: { ...(category ? { category } : {}), ...(styleId ? { styleId } : {}) } },
     ),
 
   // ── 第六批：MindPush 主动推送中枢 + OrderTrack 客户进度门户 ──

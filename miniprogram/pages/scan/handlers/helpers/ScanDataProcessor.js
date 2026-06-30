@@ -1,5 +1,6 @@
 const { formatLocalDateTime } = require('./ScanPeripheralHelper');
 const { normalizeScanType } = require('./ScanModeResolver');
+const { DEBUG } = require('../../../../config/debug');
 
 /**
  * 扫码数据处理器
@@ -322,7 +323,7 @@ class ScanDataProcessor {
     }
 
     try {
-      console.log('[DEBUG] getOrderDetail: orderNo=', orderNo, 'orderId=', orderId);
+      if (DEBUG) console.log('[DEBUG] getOrderDetail: orderNo=', orderNo, 'orderId=', orderId);
       let res;
       if (orderNo) {
         res = await this.api.production.orderDetailByOrderNo(orderNo);
@@ -330,7 +331,7 @@ class ScanDataProcessor {
         // 通过 orderId (UUID) 查询
         res = await this.api.production.orderDetail(orderId);
       }
-      console.log('[DEBUG] getOrderDetail: API返回=', JSON.stringify(res));
+      if (DEBUG) console.log('[DEBUG] getOrderDetail: API返回=', JSON.stringify(res));
 
       // 解包分页响应：orderDetailByOrderNo 实际调用 /list，返回 Page 对象
       if (res && res.records && Array.isArray(res.records)) {

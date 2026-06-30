@@ -43,19 +43,36 @@ export const useStyleProcessAi = ({ styleId, data, editMode, enterEdit }: UseSty
   const handleAiTemplate = useCallback(async (setData: React.Dispatch<React.SetStateAction<StyleProcessWithSizePrice[]>>) => {
     setAiLoading(true);
     try {
-      const res = await intelligenceApi.getProcessTemplate(aiCategory) as any;
+      const res = await intelligenceApi.getProcessTemplate(aiCategory, String(styleId)) as any;
       if (res?.code === 200 && Array.isArray(res.data?.processes) && res.data.processes.length > 0) {
         const incoming: ProcessTemplateItem[] = res.data.processes;
         const existingNames = new Set(data.map(r => String(r.processName || '').trim()));
         const preview = incoming.filter(p => !existingNames.has(String(p.processName || '').trim()));
         setAiOpen(false);
         if (preview.length === 0) { message.info('所有工序已存在，无需重复补全'); return; }
-        // 判断数据来源
-        const dataSource = res.data?.dataSource || 'historical';
-        const sourceLabel = dataSource === 'historical' ? '本厂历史数据' : 'AI建议';
+        const matchType = res.data?.matchType || 'category_only';
+        const difficultyLabel = res.data?.difficultyLabel || '';
+        const sampleCount = res.data?.sampleStyleCount ?? 0;
+        let matchDesc = '';
+        if (matchType === 'category_difficulty' && difficultyLabel) {
+          matchDesc = `同品类 · 同难度（${difficultyLabel}）`;
+        } else if (matchType === 'category_only') {
+          matchDesc = '同品类全部';
+        } else {
+          matchDesc = '全部历史';
+        }
         modal.confirm({
           title: `AI建议补全 ${preview.length} 道工序`,
-          content: (<div><p style={{ marginBottom: 8 }}>以下工序将被添加，请确认：</p>{preview.map((p, i) => (<div key={i} style={{ color: 'var(--color-text-secondary)', lineHeight: '24px' }}>• {p.progressStage || '车缝'} - {p.processName}（参考价 ¥{p.suggestedPrice ?? 0}）</div>))}</div>),
+          content: (<div>
+            <p style={{ marginBottom: 8, color: 'var(--color-text-secondary)' }}>
+              数据来源：本厂历史数据 · {matchDesc} · {sampleCount} 个样本参考
+            </p>
+            {preview.map((p, i) => (
+              <div key={i} style={{ color: 'var(--color-text-secondary)', lineHeight: '24px' }}>
+                • {p.progressStage || '车缝'} - {p.processName}（参考价 ¥{p.suggestedPrice ?? 0}）
+              </div>
+            ))}
+          </div>),
           okText: '确认添加', cancelText: '取消',
           onOk: async () => {
             if (!editMode) await enterEdit();
@@ -67,7 +84,7 @@ export const useStyleProcessAi = ({ styleId, data, editMode, enterEdit }: UseSty
               addedCount = toAdd.length;
               return [...prev, ...toAdd];
             });
-            setTimeout(() => { message.success(`已添加 ${addedCount} 道工序（${sourceLabel} · ${res.data?.sampleStyleCount ?? '?'} 个样本参考）`); }, 0);
+            setTimeout(() => { message.success(`已添加 ${addedCount} 道工序（本厂历史数据 · ${sampleCount} 个样本参考）`); }, 0);
           },
         });
       } else { message.warning({ content: '暂无该品类的工序历史数据，请先在「工序单价」页面录入实际工序', duration: 5 }); }

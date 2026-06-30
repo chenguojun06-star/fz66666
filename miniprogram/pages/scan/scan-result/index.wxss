@@ -578,11 +578,6 @@
   font-size: 26rpx;
   line-height: 40rpx;
 }
-  border-radius: 12rpx;
-  padding: 14rpx 16rpx;
-  margin-top: 8rpx;
-  border-bottom: none;
-}
 .worker-hint-key {
   width: 160rpx;
   font-size: var(--font-size-xs);

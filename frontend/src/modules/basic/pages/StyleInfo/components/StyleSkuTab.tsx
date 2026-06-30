@@ -267,6 +267,14 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = ({ styleId, styleNo, skc: initia
 
   const columns = [
     {
+      title: '序号',
+      key: 'rowIndex',
+      width: 60,
+      align: 'center' as const,
+      fixed: 'left' as const,
+      render: (_: any, __: any, idx: number) => idx + 1,
+    },
+    {
       title: '图片', dataIndex: 'skuColorImage', key: 'skuColorImage', width: 80, fixed: 'left' as const,
       render: (_: string, record: ProductSku) => {
         if (record.skuColorImage) {

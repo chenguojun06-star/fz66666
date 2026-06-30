@@ -11,6 +11,35 @@ function normalizePositiveInt(value, fallback) {
   return n;
 }
 
+// ── 样衣开发阶段 AI 识别结果字段解析工具 ──
+function pickHintField(raw, key) {
+  if (!raw) return '';
+  if (raw[key] != null && raw[key] !== '') return raw[key];
+  if (raw.orderDetail && raw.orderDetail[key] != null && raw.orderDetail[key] !== '') return raw.orderDetail[key];
+  if (raw.orderInfo && raw.orderInfo[key] != null && raw.orderInfo[key] !== '') return raw.orderInfo[key];
+  return '';
+}
+
+function computeDifficultyLevelInfo(label, score) {
+  // 返回 { severity, badgeClass, title, icon }
+  const lv = String(label || '').trim();
+  const s = typeof score === 'number' ? score : parseInt(String(score || '0'), 10);
+  let severity = 'LOW';
+  if (lv.indexOf('高定') >= 0) severity = 'CRITICAL';
+  else if (lv.indexOf('工艺复杂') >= 0) severity = 'HIGH';
+  else if (lv.indexOf('中等') >= 0 || lv.indexOf('中等难度') >= 0) severity = 'MEDIUM';
+  else if (lv.indexOf('简单') >= 0 || lv.length === 0) severity = 'LOW';
+  else if (s >= 8) severity = 'CRITICAL';
+  else if (s >= 6) severity = 'HIGH';
+  else if (s >= 4) severity = 'MEDIUM';
+  return {
+    severity,
+    badgeClass: 'worker-difficulty--' + severity.toLowerCase(),
+    title: lv || ('难度分 ' + (s || 0) + '/10'),
+    icon: severity === 'CRITICAL' ? '🔴' : severity === 'HIGH' ? '🟠' : severity === 'MEDIUM' ? '🟡' : '🟢',
+  };
+}
+
 Page({
   data: {
     detail: {},
@@ -28,6 +57,19 @@ Page({
     showWarehouse: false,
     isQualityReceive: false,
     imageInsight: '',
+    // ── 新增：样衣开发阶段 AI 识别提示相关字段 ──
+    difficultyLabel: '',
+    difficultyScore: '',
+    difficultyLevel: '',
+    difficultyLevelInfo: null,  // 含 severity/icon/badgeClass，WXML 中直接 detail.difficultyLevelInfo
+    fabricComposition: '',
+    imageInsight: '',
+    workerHint: '',
+    secondaryProcessHint: '',
+    needleHint: '',
+    processHintList: [],        // Array<string>，后端提取的工艺关键词
+    description: '',
+    hintExpanded: true,
     loading: false,
   },
 
@@ -104,23 +146,64 @@ Page({
     const cuttingDate = orderDetail.cuttingDate || orderDetail.cutDate || orderDetail.plannedCutDate || orderDetail.plannedStartDate || '';
     const deliveryDate = orderDetail.deliveryDate || orderDetail.expectedShipDate || orderDetail.shipDate || orderDetail.plannedShipDate || orderDetail.plannedEndDate || '';
 
+    // ── 样衣开发阶段 AI 识别结果，工人扫码展示 ──
+    const difficultyLabel = pickHintField(raw, 'difficultyLabel');
+    const difficultyScore = pickHintField(raw, 'difficultyScore');
+    const difficultyLevel = pickHintField(raw, 'difficultyLevel');
+    const difficultyLevelInfo = computeDifficultyLevelInfo(difficultyLabel, difficultyScore);
+    const fabricComposition = pickHintField(raw, 'fabricComposition');
+    const imageInsight = pickHintField(raw, 'imageInsight');
+    const workerHint = pickHintField(raw, 'workerHint');
+    const secondaryProcessHint = pickHintField(raw, 'secondaryProcessHint');
+    const needleHint = pickHintField(raw, 'needleHint');
+    const description = pickHintField(raw, 'description');
+    const processHintRaw = raw.processHints || (raw.orderDetail && raw.orderDetail.processHints)
+      || (raw.orderInfo && raw.orderInfo.processHints) || [];
+    const processHintList = Array.isArray(processHintRaw) && processHintRaw.length > 0
+      ? processHintRaw.map(function(p) { return String(p); })
+      : [];
+
     this.setData({
       detail: {
+        // —— 基础信息 ——
         coverImage: coverImage,
-        styleNo: raw.styleNo || orderDetail.styleNo || '',
+        cover: raw.cover || (raw.orderDetail && raw.orderDetail.cover) || '',
+        styleNo: raw.styleNo || (raw.orderDetail && raw.orderDetail.styleNo) || '',
+        styleName: raw.styleName || (raw.orderDetail && raw.orderDetail.styleName) || '',
         orderNo: raw.orderNo || '',
-        bundleNo: bundleNo,
+        customerName: raw.customerName || (raw.orderDetail && raw.orderDetail.customerName) || '',
         processName: raw.processName || '',
         progressStage: raw.progressStage || '',
         timeDisplay: raw.timeDisplay || '',
+
+        // —— 菲号信息 ——
+        bundleNo: raw.bundleNo != null ? raw.bundleNo : (raw.orderDetail && raw.orderDetail.bundleNo) || '',
+        bundleLabel: raw.bundleLabel || (raw.orderDetail && raw.orderDetail.bundleLabel) || '',
         color: color,
         size: size,
         displayQuantity: displayQuantity,
-        bedNo: bedNo ? String(bedNo) : '',
-        cuttingDateDisplay: this._formatYMD(cuttingDate),
-        deliveryDateDisplay: this._formatYMD(deliveryDate),
+        quantity: raw.quantity || 0,
+        bedNoDisplay: raw.bedNoDisplay
+          || ((raw.bedNo != null && raw.bedSubNo != null) ? (raw.bedNo + '-' + raw.bedSubNo) : (raw.bedNo != null ? String(raw.bedNo) : ''))
+          || (raw.orderDetail && raw.orderDetail.bedNoDisplay)
+          || '',
+        bedNo: raw.bedNo != null ? String(raw.bedNo) : '',
+        bundleSplitHint: raw.bundleSplitHint || '',
         bundleStatusHints: raw.bundleStatusHints || [],
         bundleStatusText: raw.bundleStatusText || '',
+
+        // —— 样衣开发阶段 AI 识别结果 ——
+        difficultyLabel: difficultyLabel,
+        difficultyScore: difficultyScore,
+        difficultyLevel: difficultyLevel,
+        difficultyLevelInfo: difficultyLevelInfo,
+        fabricComposition: fabricComposition,
+        imageInsight: imageInsight,
+        workerHint: workerHint,
+        secondaryProcessHint: secondaryProcessHint,
+        needleHint: needleHint,
+        processHints: processHintList,
+        description: description,
       },
       processOptions: processOptions,
       selectedNames: selectedNames,
