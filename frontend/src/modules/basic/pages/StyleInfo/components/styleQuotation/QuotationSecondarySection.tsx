@@ -32,8 +32,8 @@ const QuotationSecondarySection: React.FC<Props> = ({ secondaryProcessList }) =>
         pagination={false}
         size="small"
         dataSource={secondaryProcessList}
+        showIndex
         columns={[
-          { title: '序号', width: 60, align: 'center' as const, render: (_: any, __: any, idx: number) => toNumberSafe(secondaryProcessList[idx]?.sortOrder) || idx + 1 },
           { title: '工艺名称', dataIndex: 'processName', width: 130, render: (v: string) => String(v || '').trim() || '-' },
           { title: '工艺描述', dataIndex: 'description', width: 200, render: (v: string) => String(v || '').trim() || '-' },
           { title: '领取人', dataIndex: 'assignee', width: 90, render: (v: string) => String(v || '').trim() || '-' },

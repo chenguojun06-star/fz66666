@@ -792,7 +792,7 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
               className="print-table"
               dataSource={data.bom}
               rowKey="id"
-             
+              showIndex={false}
               pagination={false}
               bordered
               columns={[
@@ -830,7 +830,7 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
               className="print-table"
               dataSource={data.process}
               rowKey="id"
-             
+              showIndex={false}
               pagination={false}
               bordered
               columns={[

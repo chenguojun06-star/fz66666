@@ -45,8 +45,8 @@ const QuotationProcessSection: React.FC<Props> = ({ processList, onRateChange, i
         pagination={false}
         size="small"
         dataSource={processList}
+        showIndex
         columns={[
-          { title: '序号', width: 60, align: 'center' as const, render: (_: any, __: any, idx: number) => idx + 1 },
           { title: '进度阶段', dataIndex: 'progressStage', width: 180, render: (v: string) => String(v || '').trim() || '-' },
           {
             title: '倍率', width: 120, align: 'center' as const,

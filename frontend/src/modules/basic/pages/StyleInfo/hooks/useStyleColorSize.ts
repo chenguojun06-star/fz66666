@@ -3,7 +3,6 @@ import { App } from 'antd';
 import dayjs from 'dayjs';
 import api, { type ApiResult, isApiSuccess, getApiMessage } from '@/utils/api';
 import { setStyleCoverOverride } from '@/components/StyleAssets';
-import { sortSizes, sortColors } from '@/utils/sortUtils';
 
 type SizeColorMatrixRow = {
   color: string;
@@ -116,22 +115,22 @@ export function useStyleColorSize({ currentStyle, setCurrentStyle, isNewPage, fo
       try {
         const config = JSON.parse((currentStyle as any).sizeColorConfig);
         if (config.sizes) {
-          const sortedSizes = sortSizes(config.sizes.map((item: unknown) => String(item || '').trim()).filter(Boolean));
-          setMatrixSizes(sortedSizes);
-          setSize1(sortedSizes[0] || '');
-          setSize2(sortedSizes[1] || '');
-          setSize3(sortedSizes[2] || '');
-          setSize4(sortedSizes[3] || '');
-          setSize5(sortedSizes[4] || '');
+          const sizes = config.sizes.map((item: unknown) => String(item || '').trim()).filter(Boolean);
+          setMatrixSizes(sizes);
+          setSize1(sizes[0] || '');
+          setSize2(sizes[1] || '');
+          setSize3(sizes[2] || '');
+          setSize4(sizes[3] || '');
+          setSize5(sizes[4] || '');
         }
         if (config.colors) {
-          const sortedColors = sortColors(config.colors.map((item: unknown) => String(item || '').trim()).filter(Boolean));
-          setMatrixColors(sortedColors);
-          setColor1(sortedColors[0] || '');
-          setColor2(sortedColors[1] || '');
-          setColor3(sortedColors[2] || '');
-          setColor4(sortedColors[3] || '');
-          setColor5(sortedColors[4] || '');
+          const colors = config.colors.map((item: unknown) => String(item || '').trim()).filter(Boolean);
+          setMatrixColors(colors);
+          setColor1(colors[0] || '');
+          setColor2(colors[1] || '');
+          setColor3(colors[2] || '');
+          setColor4(colors[3] || '');
+          setColor5(colors[4] || '');
         }
         if (config.quantities) {
           setQty1(config.quantities[0] || 0);
@@ -172,8 +171,8 @@ export function useStyleColorSize({ currentStyle, setCurrentStyle, isNewPage, fo
     }
 
     const legacy = currentStyle as any;
-    const legacySizes = sortSizes([legacy.size1, legacy.size2, legacy.size3, legacy.size4, legacy.size5].map((item) => String(item || '').trim()).filter(Boolean));
-    const legacyColors = sortColors([legacy.color1, legacy.color2, legacy.color3, legacy.color4, legacy.color5].map((item) => String(item || '').trim()).filter(Boolean));
+    const legacySizes = [legacy.size1, legacy.size2, legacy.size3, legacy.size4, legacy.size5].map((item) => String(item || '').trim()).filter(Boolean);
+    const legacyColors = [legacy.color1, legacy.color2, legacy.color3, legacy.color4, legacy.color5].map((item) => String(item || '').trim()).filter(Boolean);
     setMatrixSizes(legacySizes);
     setMatrixColors(legacyColors);
     setSize1(legacySizes[0] || '');

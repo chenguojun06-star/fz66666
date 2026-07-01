@@ -591,6 +591,7 @@ const StyleBomTab: React.FC<Props> = ({
             loading={loading}
             rowKey="id"
             scroll={{ x: 'max-content' }}
+            showIndex
             storageKey={`style-bom-v2-${String(styleId)}`}
           />
         )}

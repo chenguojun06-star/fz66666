@@ -157,7 +157,6 @@ const FlowStepRenderer: React.FC<Props> = ({
   const taskReceiverName = cuttingTasks?.[0]?.receiverName || '';
 
   const bomColumns = [
-    { title: '序号', key: 'index', width: 60, align: 'center' as const, render: (_: any, __: any, index: number) => index + 1 },
     { title: '分组', dataIndex: 'groupName', key: 'groupName', width: 100, render: (v: any) => v || '-' },
     { title: '物料类型', dataIndex: 'materialType', key: 'materialType', width: 100, render: (v: any) => getMaterialTypeLabel(v) },
     { title: '物料编码', dataIndex: 'materialCode', key: 'materialCode', width: 120, render: (v: any) => v || '-' },
@@ -322,8 +321,8 @@ const FlowStepRenderer: React.FC<Props> = ({
                   <ResizableTable storageKey="order-flow-bom" size="small"
                     dataSource={materialPurchases}
                     rowKey={(r: any) => r.id || `mp-${Math.random()}`}
+                    showIndex
                     columns={[
-                      { title: '序号', key: 'index', width: 60, align: 'center' as const, render: (_: any, __: any, index: number) => index + 1 },
                       { title: '物料类型', dataIndex: 'materialType', key: 'materialType', width: 100, render: (v: any) => getMaterialTypeLabel(v) },
                       { title: '物料编码', dataIndex: 'materialCode', key: 'materialCode', width: 120, render: (v: any) => v || '-' },
                       { title: '物料名称', dataIndex: 'materialName', key: 'materialName', width: 180, ellipsis: true, render: (v: any) => v || '-' },
@@ -370,6 +369,7 @@ const FlowStepRenderer: React.FC<Props> = ({
                     dataSource={bomList}
                     rowKey={(r: any) => r.id || `bom-${Math.random()}`}
                     columns={bomColumns}
+                    showIndex
                     pagination={false} bordered scroll={{ x: 'max-content' }} />
                 </>
               ) : <Alert title="暂无面辅料信息" description="此订单尚未录入采购物料，也关联的款号未录入BOM物料清单" type="info" showIcon />,
@@ -446,8 +446,8 @@ const FlowStepRenderer: React.FC<Props> = ({
                           )}
                           <ResizableTable storageKey="order-flow-workflow" dataSource={workflowNodes}
                             rowKey={(record: any) => record.id || `${record.name}-${record.progressStage}`}
+                            showIndex
                             columns={[
-                              { title: '序号', key: 'index', width: 70, align: 'center', render: (_: any, __: any, index: number) => index + 1 },
                               { title: '工序名称', dataIndex: 'name', key: 'name', width: 180, render: (v: any, record: any) => formatProcessDisplayName(record.id, v) },
                               { title: '阶段', dataIndex: 'progressStage', key: 'progressStage', width: 120, render: (v: any) => {
                                 const m: Record<string, string> = { sample: '样衣', pre_production: '产前', production: '大货生产', procurement: '采购', cutting: '裁剪', carSewing: '车缝', secondaryProcess: '二次工艺', tailProcess: '尾部', warehousing: '入库' };

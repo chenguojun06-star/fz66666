@@ -147,13 +147,6 @@ const CuttingWorkflowEditorModal: React.FC<CuttingWorkflowEditorModalProps> = ({
 
   const columns = [
     {
-      title: '排序',
-      dataIndex: '_key',
-      key: 'sortOrder',
-      width: 60,
-      render: (_: any, __: WorkflowRow, idx: number) => idx + 1,
-    },
-    {
       title: '工序编号',
       dataIndex: '_key',
       key: 'processCode',
@@ -255,7 +248,7 @@ const CuttingWorkflowEditorModal: React.FC<CuttingWorkflowEditorModalProps> = ({
         </div>
         <ResizableTable<WorkflowRow>
           storageKey="cutting-workflow-table"
-          
+          showIndex={false}
           columns={columns}
           dataSource={rows}
           rowKey="_key"

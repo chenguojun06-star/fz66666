@@ -49,6 +49,8 @@ type ResizableTableProps<T extends object> = TableProps<T> & {
   reorderableColumns?: boolean;
   stickyFooter?: boolean;
   stickyHeader?: boolean | { offsetHeader?: number };
+  /** 是否显示序号列（默认 true） */
+  showIndex?: boolean;
   /** 是否自动根据屏幕宽度切换表格 size（默认 true） */
   responsiveSize?: boolean;
   /** 空状态描述文本 */
@@ -119,6 +121,7 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
     reorderableColumns = true,
     stickyFooter: stickyFooterProp,
     stickyHeader: stickyHeaderProp,
+    showIndex = true,
     responsiveSize = true,
     className,
     rowKey,
@@ -322,8 +325,24 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
       });
     };
 
-    return mapColumns(rawCols);
-  }, [columns, allowFixedColumns]);
+    const mapped = mapColumns(rawCols);
+
+    if (showIndex && mapped.length > 0) {
+      const indexColumn = {
+        title: '序号',
+        key: '__index__',
+        dataIndex: '__index__',
+        width: 60,
+        align: 'center',
+        fixed: 'left',
+        colId: '__index__',
+        render: (_: any, __: any, idx: number) => idx + 1,
+      };
+      return [indexColumn, ...mapped];
+    }
+
+    return mapped;
+  }, [columns, allowFixedColumns, showIndex]);
 
   const orderedColumns = React.useMemo(() => {
     if (!preparedColumns || columnOrder.length === 0) return preparedColumns;
@@ -331,10 +350,13 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
     const topLevelLeaf = rawCols.every((c) => isLeafColumn(c));
     if (!topLevelLeaf) return preparedColumns;
 
-    const topLevelIds = rawCols.map((col, idx) => getColumnId(col, [idx]));
+    const indexCol = showIndex ? rawCols.find((c: any) => c.colId === '__index__') : null;
+    const restCols = showIndex ? rawCols.filter((c: any) => c.colId !== '__index__') : rawCols;
+
+    const topLevelIds = restCols.map((col, idx) => getColumnId(col, [idx]));
     const map = new Map<string, any>();
-    for (let i = 0; i < rawCols.length; i++) {
-      map.set(topLevelIds[i], rawCols[i]);
+    for (let i = 0; i < restCols.length; i++) {
+      map.set(topLevelIds[i], restCols[i]);
     }
 
     const ordered: any[] = [];
@@ -344,7 +366,7 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
       ordered.push(hit);
       map.delete(id);
     }
-    for (let i = 0; i < rawCols.length; i++) {
+    for (let i = 0; i < restCols.length; i++) {
       const id = topLevelIds[i];
       const hit = map.get(id);
       if (!hit) continue;
@@ -352,20 +374,40 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
       map.delete(id);
     }
 
-    // ✅ 修正：无论 localStorage 存储的顺序如何（可能因 DnD 拖拽把 fixed 列移到了中间），
-    // 始终保证 fixed:'left' 在最左，fixed:'right' 在最右，各组内保持相对顺序不变。
-    // 这可修复用户拖拽 fixed 列到中间后，fixed 列 header 出现空白占位的问题。
     const fixedLeft = ordered.filter((c: any) => c.fixed === 'left');
     const fixedRight = ordered.filter((c: any) => c.fixed === 'right');
     const nonFixed = ordered.filter((c: any) => c.fixed !== 'left' && c.fixed !== 'right');
-    return [...fixedLeft, ...nonFixed, ...fixedRight];
-  }, [preparedColumns, columnOrder]);
+    const result = [...fixedLeft, ...nonFixed, ...fixedRight];
+
+    if (indexCol) {
+      return [indexCol, ...result];
+    }
+    return result;
+  }, [preparedColumns, columnOrder, showIndex]);
 
   const finalColumns = React.useMemo(() => {
     if (!orderedColumns) return orderedColumns;
+    const currentPage = typeof (mergedPagination as any)?.current === 'number' ? (mergedPagination as any).current : 1;
+    const currentPageSize = typeof (mergedPagination as any)?.pageSize === 'number' ? (mergedPagination as any).pageSize : 0;
+    const indexOffset = currentPage > 1 && currentPageSize > 0 ? (currentPage - 1) * currentPageSize : 0;
+
     return (orderedColumns as any[]).map((col: any) => {
       const { colId, ...cleanCol } = col;
       const originalOnHeaderCell = cleanCol.onHeaderCell;
+
+      if (colId === '__index__') {
+        return {
+          ...cleanCol,
+          render: (_: any, __: any, idx: number) => indexOffset + idx + 1,
+          onHeaderCell: (column: any) => {
+            const originalProps = typeof originalOnHeaderCell === 'function'
+              ? originalOnHeaderCell(column)
+              : {};
+            return { ...originalProps, 'data-col-id': colId };
+          },
+        };
+      }
+
       return {
         ...cleanCol,
         onHeaderCell: (column: any) => {
@@ -379,7 +421,7 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
         },
       };
     });
-  }, [orderedColumns]);
+  }, [orderedColumns, mergedPagination]);
 
   React.useEffect(() => {
     checkScrollable();
@@ -422,12 +464,11 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
   );
 
   const sortableColumnIds = React.useMemo(() => {
-    if (!finalColumns || !reorderableColumns) return [];
-    return (finalColumns as any[]).map((col, idx) => {
-      const colId = (orderedColumns as any[])?.[idx]?.colId || getColumnId(col, [idx]);
-      return colId;
-    });
-  }, [finalColumns, reorderableColumns, orderedColumns]);
+    if (!orderedColumns || !reorderableColumns) return [];
+    return (orderedColumns as any[])
+      .filter((col: any) => col.colId && col.colId !== '__index__')
+      .map((col: any) => col.colId);
+  }, [orderedColumns, reorderableColumns]);
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;

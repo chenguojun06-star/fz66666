@@ -55,14 +55,8 @@ const ProcessStageGroup: React.FC<ProcessStageGroupProps> = ({
           key: idx,
           description: p.description || descriptionMap.get(String(p.name || '').trim()) || '',
         }))}
+        showIndex
         columns={[
-          {
-            title: '序号',
-            dataIndex: 'sortOrder',
-            key: 'sortOrder',
-            width: '6%',
-            render: (_: any, __: any, index: number) => index + 1,
-          },
           {
             title: '工序',
             dataIndex: 'name',

@@ -174,7 +174,7 @@ const IndependentDetailModal: React.FC<IndependentDetailModalProps> = ({
             <div style={{ flex: 1, minHeight: 0 }}>
               <ResizableTable<OrderLineWarehousingRow>
                 storageKey="independent-detail-main"
-               
+                showIndex={false}
                 rowKey="key"
                 loading={orderDetailLoading}
                 pagination={false}
@@ -325,6 +325,7 @@ const IndependentDetailModal: React.FC<IndependentDetailModalProps> = ({
                         <ResizableTable
                           storageKey="independent-detail-requirements"
                           rowKey="key" pagination={false}
+                          showIndex={false}
                           dataSource={fixedRows}
                           style={{ fontSize: 14 }}
                           columns={[
