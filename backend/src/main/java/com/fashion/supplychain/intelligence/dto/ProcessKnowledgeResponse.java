@@ -25,6 +25,33 @@ public class ProcessKnowledgeResponse {
     /** 总工序记录数 */
     private int totalRecords;
 
+    /** 可用品类列表（供筛选） */
+    private List<String> categoryOptions;
+
+    /** 可用难度级别列表（供筛选） */
+    private List<DifficultyOption> difficultyOptions;
+
+    /** 按父节点分组的工序列表（前端展示用） */
+    private List<ProcessKnowledgeGroup> groupedItems;
+
+    @Data
+    public static class ProcessKnowledgeGroup {
+        /** 父节点名称（如：裁剪/车缝/尾部） */
+        private String parentNode;
+        /** 该父节点下的工序 */
+        private List<ProcessKnowledgeItem> items;
+    }
+
+    @Data
+    public static class DifficultyOption {
+        private String value;
+        private String label;
+        public DifficultyOption(String value, String label) {
+            this.value = value;
+            this.label = label;
+        }
+    }
+
     @Data
     public static class ProcessKnowledgeItem {
 
@@ -61,6 +88,9 @@ public class ProcessKnowledgeResponse {
         /** 价格趋势：UP / DOWN / STABLE（与最早记录对比） */
         private String priceTrend;
 
+        /** 异常价格数量（偏离均价 ±30%） */
+        private int abnormalCount;
+
         /** 最近 5 个款的明细（供展开查看） */
         private List<StylePriceRecord> recentStyles;
     }
@@ -82,5 +112,11 @@ public class ProcessKnowledgeResponse {
 
         /** 创建时间（格式化后） */
         private String createTime;
+
+        /** 是否异常价格（偏离均价 ±30%） */
+        private boolean abnormal;
+
+        /** 异常类型：HIGH / LOW / null（正常） */
+        private String abnormalType;
     }
 }

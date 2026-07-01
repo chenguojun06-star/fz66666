@@ -6,9 +6,11 @@ import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.dto.ProcessTemplateResponse;
 import com.fashion.supplychain.intelligence.dto.ProcessTemplateResponse.ProcessTemplateItem;
 import com.fashion.supplychain.production.entity.ScanRecord;
+import com.fashion.supplychain.production.service.ProcessParentMappingService;
 import com.fashion.supplychain.production.service.ScanRecordService;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.service.StyleInfoService;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -43,6 +45,10 @@ public class ProcessTemplateOrchestrator {
 
     @Autowired
     private ScanRecordService scanRecordService;
+
+    @Autowired
+    @org.springframework.context.annotation.Lazy
+    private ProcessParentMappingService processParentMappingService;
 
     public ProcessTemplateResponse suggest(String category, Long styleId) {
         ProcessTemplateResponse resp = new ProcessTemplateResponse();
@@ -208,7 +214,50 @@ public class ProcessTemplateOrchestrator {
                 .collect(Collectors.toList());
 
         resp.setProcesses(items);
+
+        // ── 6. 按父节点分组 ──────────────────────────────────────────────────
+        try {
+            List<ProcessTemplateResponse.ProcessTemplateGroup> groups = groupByParent(items);
+            resp.setGroupedProcesses(groups);
+        } catch (Exception e) {
+            log.warn("[工序模板] 按父节点分组失败: {}", e.getMessage());
+        }
+
         return resp;
+    }
+
+    /**
+     * 按父节点分组，保持父节点顺序：裁剪 → 车缝 → 尾部 → 入库 → 其他
+     */
+    private List<ProcessTemplateResponse.ProcessTemplateGroup> groupByParent(List<ProcessTemplateItem> items) {
+        Map<String, List<ProcessTemplateItem>> groupMap = new LinkedHashMap<>();
+        List<String> parentOrder = List.of("裁剪", "车缝", "尾部", "入库");
+
+        for (ProcessTemplateItem item : items) {
+            String parentNode = null;
+            try {
+                parentNode = processParentMappingService.resolveParentNode(item.getProcessName());
+            } catch (Exception e) {
+                // 解析失败用 progressStage 兜底
+            }
+            if (!StringUtils.hasText(parentNode)) {
+                parentNode = StringUtils.hasText(item.getProgressStage()) ? item.getProgressStage() : "其他";
+            }
+            groupMap.computeIfAbsent(parentNode, k -> new ArrayList<>()).add(item);
+        }
+
+        // 按预设顺序排序
+        List<ProcessTemplateResponse.ProcessTemplateGroup> groups = new ArrayList<>();
+        for (String parent : parentOrder) {
+            if (groupMap.containsKey(parent)) {
+                groups.add(new ProcessTemplateResponse.ProcessTemplateGroup(parent, groupMap.remove(parent)));
+            }
+        }
+        // 剩余的追加到末尾
+        for (Map.Entry<String, List<ProcessTemplateItem>> entry : groupMap.entrySet()) {
+            groups.add(new ProcessTemplateResponse.ProcessTemplateGroup(entry.getKey(), entry.getValue()));
+        }
+        return groups;
     }
 
     /** 聚合辅助类 */

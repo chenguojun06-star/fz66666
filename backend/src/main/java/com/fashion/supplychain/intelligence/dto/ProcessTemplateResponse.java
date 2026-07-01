@@ -23,6 +23,18 @@ public class ProcessTemplateResponse {
     private String matchType;
     /** 难度级别标签（如：简单款/工艺复杂） */
     private String difficultyLabel;
+    /** 按父节点分组的工序列表（前端展示用） */
+    private List<ProcessTemplateGroup> groupedProcesses;
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class ProcessTemplateGroup {
+        /** 父节点名称（如：裁剪/车缝/尾部） */
+        private String parentNode;
+        /** 该父节点下的工序 */
+        private List<ProcessTemplateItem> items;
+    }
 
     @Data
     @NoArgsConstructor

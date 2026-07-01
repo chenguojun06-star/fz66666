@@ -142,8 +142,10 @@ public class IntelligenceAnalyticsController {
 
     @GetMapping("/process-knowledge")
     public Result<ProcessKnowledgeResponse> processKnowledge(
-            @RequestParam(value = "keyword", required = false) String keyword) {
-        return Result.success(processKnowledgeOrchestrator.list(keyword));
+            @RequestParam(value = "keyword", required = false) String keyword,
+            @RequestParam(value = "category", required = false) String category,
+            @RequestParam(value = "difficultyLevel", required = false) String difficultyLevel) {
+        return Result.success(processKnowledgeOrchestrator.list(keyword, category, difficultyLevel));
     }
 
     @GetMapping("/material-shortage")

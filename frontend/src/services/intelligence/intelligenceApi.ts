@@ -299,9 +299,13 @@ export const intelligenceApi = {
     }),
 
   /** 工序知识库 */
-  getProcessKnowledge: (keyword?: string) =>
+  getProcessKnowledge: (keyword?: string, category?: string, difficultyLevel?: string) =>
     api.get<{ code: number; data: ProcessKnowledgeResponse }>('/intelligence/process-knowledge', {
-      params: keyword ? { keyword } : {},
+      params: {
+        ...(keyword ? { keyword } : {}),
+        ...(category ? { category } : {}),
+        ...(difficultyLevel ? { difficultyLevel } : {}),
+      },
     }),
 
   /** 面料缺口预测 */

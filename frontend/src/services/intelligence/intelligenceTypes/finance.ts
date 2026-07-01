@@ -69,10 +69,19 @@ export interface ProcessTemplateItem {
   suggestedPrice: number;
 }
 
+export interface ProcessTemplateGroup {
+  parentNode: string;
+  items: ProcessTemplateItem[];
+}
+
 export interface ProcessTemplateResponse {
   category: string;
   sampleStyleCount: number;
   processes: ProcessTemplateItem[];
+  matchType?: string;
+  difficultyLabel?: string;
+  dataSource?: string;
+  groupedProcesses?: ProcessTemplateGroup[];
 }
 
 export interface ProcessPriceHintResponse {
@@ -93,6 +102,8 @@ export interface ProcessKnowledgeStyleRecord {
   machineType?: string;
   standardTime?: number;
   createTime?: string;
+  abnormal?: boolean;
+  abnormalType?: 'HIGH' | 'LOW';
 }
 
 export interface ProcessKnowledgeItem {
@@ -107,7 +118,13 @@ export interface ProcessKnowledgeItem {
   avgStandardTime?: number;
   lastUsedTime?: string;
   priceTrend?: string;
+  abnormalCount?: number;
   recentStyles: ProcessKnowledgeStyleRecord[];
+}
+
+export interface ProcessKnowledgeGroup {
+  parentNode: string;
+  items: ProcessKnowledgeItem[];
 }
 
 export interface ProcessKnowledgeResponse {
@@ -115,6 +132,9 @@ export interface ProcessKnowledgeResponse {
   totalProcessTypes: number;
   totalStyles: number;
   totalRecords: number;
+  categoryOptions?: string[];
+  difficultyOptions?: Array<{ value: string; label: string }>;
+  groupedItems?: ProcessKnowledgeGroup[];
 }
 
 export interface WorkerDefect {
