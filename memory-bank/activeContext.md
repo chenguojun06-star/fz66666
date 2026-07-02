@@ -1,7 +1,7 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-07-02（小云 AI P1 实用能力升级 5 项全部完成）
+> 最后更新：2026-07-03（修复 2 个 P0 线上事故：SysNoticeMapper 报错 + Flyway V20270628005 失败）
 
 ---
 
@@ -24,6 +24,40 @@
 - ✅ 小云 AI P1 实用能力升级 5 项（2026-07-02完成）
 
 ## 最近变更
+
+### 2026-07-03 修复 2 个 P0 线上事故 + 全量待办项核实
+
+**背景**：用户贴出线上日志，SysNoticeMapper 每分钟报 "setting parameters" + Flyway V20270628005 迁移反复失败。要求"全部继续处理"所有未闭环项。
+
+**P0 事故修复（2 项）**：
+
+| # | 事故 | 根因 | 修复 | commit |
+|---|------|------|------|--------|
+| P0-1 | SysNoticeMapper 每分钟报 "setting parameters" | t_sys_notice.action_payload 是 json 类型，Entity 是 String 无 TypeHandler，MyBatis StringTypeHandler 用 setString 设置参数到 json 列时类型不兼容。触发点：AiPatrolJob.recentlySentTaskNotice() 用 .eq(actionPayload, ...) 查询 | V20270628006 把 action_payload 从 json 改成 text | 610a5f8c0 |
+| P0-2 | Flyway V20270628005 迁移失败 "Unknown column 'delete_flag'" | t_user 表没有 delete_flag 列（只有 status 和 employment_status），V20270628005 第5步 INSERT...SELECT WHERE delete_flag = 0 失败 | 改为 WHERE status = 'ENABLED' OR status IS NULL；子查询 ur.delete_flag = 0 保留（t_user_role 表有此列） | 610a5f8c0 |
+
+**全量待办项核实结果（8 项）**：
+
+| # | 待办项 | 核实结果 |
+|---|--------|---------|
+| P0-1 | SysNoticeMapper 报错 | ✅ 已修复（V20270628006） |
+| P0-2 | Flyway V20270628005 失败 | ✅ 已修复（delete_flag→status） |
+| P0-3 | CI 冒烟测试凭证 | ⏳ 需用户配 GitHub Secrets SMOKE_PASSWORD（已设 continue-on-error 非阻断） |
+| P0-4 | ProductionOrderController @Transactional 下沉 | ✅ 已无违规（Controller 层无 @Transactional） |
+| P0-5 | PurchaseCartServiceImpl @Transactional 违规 | ✅ 已无违规 |
+| P1-1 | 4 Entity 缺 tenant_id | ✅ 2026-06-24 已完成（V202606240001~004） |
+| P1-2 | MaterialPurchase DATE() 索引失效 | ✅ 已无问题（WHERE 用范围查询 >= 和 <，DATE() 仅在 SELECT/GROUP BY） |
+| P1-3 | 订单列表 N+1 优化 | ✅ 已无问题（enrichEcOrders/enrichDefectQuantity 用 .in() 批量查询 + Map 匹配） |
+
+**验证**：
+- Flyway SQL 校验通过（check-flyway-sql.py）
+- 列依赖检查通过（check-flyway-column-deps.py）
+- Entity-Flyway 对齐检查通过（check-entity-flyway.py）
+- 已推送 commit 610a5f8c0 到 origin/main
+
+**相关文件**：
+- [V20270628005__create_user_role_table_and_user_type.sql](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/resources/db/migration/V20270628005__create_user_role_table_and_user_type.sql)
+- [V20270628006__fix_sys_notice_action_payload_to_text.sql](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/resources/db/migration/V20270628006__fix_sys_notice_action_payload_to_text.sql)
 
 ### 2026-07-02 小云 AI P1 实用能力升级 5 项全部完成
 
