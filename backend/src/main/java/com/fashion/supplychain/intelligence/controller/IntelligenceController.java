@@ -70,7 +70,7 @@ public class IntelligenceController {
 
 
     @PostMapping("/nl-query")
-    @DataTruth(source = DataTruth.Source.AI_DERIVED, description = "自然语言查询结果由AI生成")
+    @DataTruth(source = DataTruth.Source.REAL_DATA, description = "自然语言查询结果来自数据库实时数据，仅查询意图由AI分类")
     public Result<NlQueryResponse> nlQuery(@RequestBody NlQueryRequest request) {
         return Result.success(nlQueryOrchestrator.query(request));
     }

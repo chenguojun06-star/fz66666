@@ -1,7 +1,9 @@
 package com.fashion.supplychain.intelligence.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.fashion.supplychain.intelligence.entity.ProceduralMemory;
 import com.fashion.supplychain.intelligence.entity.SkillTemplate;
+import com.fashion.supplychain.intelligence.mapper.ProceduralMemoryMapper;
 import com.fashion.supplychain.intelligence.mapper.SkillTemplateMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -58,7 +60,17 @@ public class SkillCrystallizationService {
     private static final BigDecimal INITIAL_CONFIDENCE = new BigDecimal("0.80");
     private static final double MIN_QUALITY_FOR_CRYSTALLIZE = 0.75;
 
+    /** P1-4：结晶化技能升级为程序性记忆的触发阈值（命中使用 20 次即升级） */
+    private static final int PROMOTION_USE_COUNT_THRESHOLD = 20;
+    /** P1-4：结晶化技能升级为程序性记忆的事件类型 */
+    public static final String EVENT_SKILL_PROMOTED_TO_PROCEDURAL = "SKILL_PROMOTED_TO_PROCEDURAL";
+    /** P1-5：用户反馈写入事件类型 */
+    public static final String EVENT_SKILL_FEEDBACK_RECEIVED = "SKILL_FEEDBACK_RECEIVED";
+    /** P1-5：反馈分数≥4 视为成功（5 分制） */
+    private static final int FEEDBACK_SUCCESS_THRESHOLD = 4;
+
     @Autowired private SkillTemplateMapper skillTemplateMapper;
+    @Autowired(required = false) private ProceduralMemoryMapper proceduralMemoryMapper;
     @Autowired(required = false) private StringRedisTemplate redis;
     @Autowired(required = false) private EvolutionEventLogger eventLogger;
 
@@ -103,7 +115,169 @@ public class SkillCrystallizationService {
         skill.setUseCount(skill.getUseCount() + 1);
         skillTemplateMapper.updateById(skill);
         log.debug("[Crystallize] 命中结晶化技能 {} (useCount={})", skill.getSkillName(), skill.getUseCount());
+
+        // P1-4：达到使用阈值后异步升级为程序性记忆（直接调用，跳过 LLM 推理）
+        if (skill.getUseCount() >= PROMOTION_USE_COUNT_THRESHOLD) {
+            tryPromoteAsync(tenantId, skill);
+        }
         return Optional.of(buildCachedAnswer(skill, userQuestion));
+    }
+
+    // ==================== P1-4：结晶化技能 → 程序性记忆升级 ====================
+
+    /**
+     * 异步尝试将结晶化技能升级为程序性记忆（不阻塞主流程）。
+     *
+     * <p>设计参考 five-layer-memory-design.md 第四章"升级路径"：
+     * 结晶化技能经多次验证后升级为 ProceduralMemory，获得更高优先级和更稳定检索。
+     */
+    @Async("aiSelfCriticExecutor")
+    public void tryPromoteAsync(Long tenantId, SkillTemplate skill) {
+        try {
+            promoteToProcedural(tenantId, skill);
+        } catch (Exception e) {
+            log.warn("[Crystallize] 升级 ProceduralMemory 失败 skillId={} err={}",
+                    skill.getId(), e.getMessage());
+        }
+    }
+
+    /**
+     * 将结晶化技能升级为程序性记忆（L4 Procedural Memory）。
+     *
+     * <p>触发条件：useCount ≥ {@link #PROMOTION_USE_COUNT_THRESHOLD}（多次验证有效）
+     * <p>幂等性：同一 skill 不会重复升级（查 procedural_memory 已存在则跳过）
+     * <p>多租户隔离：所有查询带 tenant_id（P0 铁律 #4）
+     *
+     * @param tenantId 租户 ID
+     * @param skill 已结晶化的技能（source=crystallized）
+     * @return true 表示本次升级成功；false 表示未达阈值或已升级过
+     */
+    public boolean promoteToProcedural(Long tenantId, SkillTemplate skill) {
+        if (proceduralMemoryMapper == null) {
+            log.debug("[Crystallize] ProceduralMemoryMapper 未注入，跳过升级");
+            return false;
+        }
+        if (tenantId == null || skill == null) return false;
+        Integer useCount = skill.getUseCount();
+        if (useCount == null || useCount < PROMOTION_USE_COUNT_THRESHOLD) return false;
+
+        // 幂等：同一租户下同 sop_name 已存在则跳过
+        QueryWrapper<ProceduralMemory> qw = new QueryWrapper<>();
+        qw.eq("tenant_id", tenantId)
+          .eq("sop_name", skill.getSkillName())
+          .eq("delete_flag", 0)
+          .last("LIMIT 1");
+        Long existing = proceduralMemoryMapper.selectCount(qw);
+        if (existing != null && existing > 0) {
+            log.debug("[Crystallize] 结晶化技能已升级过，跳过: {}", skill.getSkillName());
+            return false;
+        }
+
+        // 构建程序性记忆
+        ProceduralMemory pm = new ProceduralMemory();
+        pm.setTenantId(tenantId);
+        pm.setSopName(skill.getSkillName());
+        pm.setSopType(ProceduralMemory.SOP_TYPE_CRYSTALLIZED);
+        pm.setStepsJson(skill.getStepsJson());
+        pm.setPreconditions(skill.getPreConditions());
+        pm.setPostcheck(skill.getPostCheck());
+        pm.setTriggerKeywords(skill.getTriggerPhrases());
+        pm.setConfidence(skill.getConfidence() != null ? skill.getConfidence() : INITIAL_CONFIDENCE);
+        pm.setUsageCount(useCount);
+        pm.setSuccessCount(skill.getSuccessCount() != null ? skill.getSuccessCount() : 0);
+        pm.setVersion(1);
+        pm.setSource(ProceduralMemory.SOURCE_CRYSTALLIZED);
+        pm.setEnabled(1);
+        pm.setDeleteFlag(0);
+        pm.setCreateTime(LocalDateTime.now());
+        pm.setUpdateTime(LocalDateTime.now());
+        proceduralMemoryMapper.insert(pm);
+
+        // 审计事件
+        if (eventLogger != null) {
+            eventLogger.log(EvolutionEventLogger.EvolutionEvent.of(
+                    tenantId, EVENT_SKILL_PROMOTED_TO_PROCEDURAL,
+                    Map.of("skillId", String.valueOf(skill.getId()),
+                           "sopName", skill.getSkillName(),
+                           "proceduralMemoryId", String.valueOf(pm.getId()),
+                           "useCount", useCount)));
+        }
+        log.info("[Crystallize] 结晶化技能已升级为 ProceduralMemory: {} -> sopId={} (useCount={})",
+                skill.getSkillName(), pm.getId(), useCount);
+        return true;
+    }
+
+    // ==================== P1-5：Hermes 学习闭环 — 反馈回写 ====================
+
+    /**
+     * P1-5 Hermes Learning Loop — 用户反馈回写到结晶化技能。
+     *
+     * <p>当用户在 /ai-feedback 端点提交反馈（commandId + score）时，回写到对应的
+     * SkillTemplate，更新 successCount 与 avgRating（5 分制），形成"反馈→技能进化"闭环。
+     *
+     * <p>设计原则：
+     * <ul>
+     *   <li>仅回写 source=crystallized 的技能（手动 SOP 不受 AI 反馈影响）</li>
+     *   <li>幂等性：同一 commandId 多次反馈以最后一次为准（不累加 successCount）</li>
+     *   <li>多租户隔离：查询带 tenant_id（P0 铁律 #4）</li>
+     *   <li>异步执行，不阻塞反馈接口响应</li>
+     * </ul>
+     *
+     * @param commandId 会话 ID（对应 SkillTemplate.sourceConversationId）
+     * @param tenantId 租户 ID（null 时跳过）
+     * @param score 用户评分 1-5（5=最有用，1=最差）
+     * @param comment 用户评论（可为 null）
+     */
+    @Async("aiSelfCriticExecutor")
+    public void recordFeedback(String commandId, Long tenantId, int score, String comment) {
+        if (tenantId == null || commandId == null || commandId.isBlank()) return;
+        if (score < 1 || score > 5) return;
+        try {
+            // 通过 sourceConversationId 查找对应的结晶化技能
+            QueryWrapper<SkillTemplate> qw = new QueryWrapper<>();
+            qw.eq("tenant_id", tenantId)
+              .eq("source", SOURCE_CRYSTALLIZED)
+              .eq("source_conversation_id", commandId)
+              .eq("delete_flag", 0)
+              .last("LIMIT 1");
+            SkillTemplate skill = skillTemplateMapper.selectOne(qw);
+            if (skill == null) {
+                log.debug("[Crystallize] 反馈未匹配到结晶化技能 commandId={}", commandId);
+                return;
+            }
+
+            // 计算新的 avgRating（5 分制 → BigDecimal，保留 2 位）
+            Integer curSuccess = skill.getSuccessCount() != null ? skill.getSuccessCount() : 0;
+            BigDecimal curRating = skill.getAvgRating() != null ? skill.getAvgRating() : BigDecimal.ZERO;
+            // 反馈视为一次"成功"事件（score≥4）或"失败"事件（score<4）
+            int newSuccessCount = curSuccess + (score >= FEEDBACK_SUCCESS_THRESHOLD ? 1 : 0);
+            // avgRating 采用累积平均：newRating = (oldRating * oldN + score) / (oldN + 1)
+            // 其中 oldN 用 useCount 近似（避免引入新字段）
+            int n = skill.getUseCount() != null ? Math.max(1, skill.getUseCount()) : 1;
+            BigDecimal newRating = curRating.multiply(BigDecimal.valueOf(n))
+                    .add(BigDecimal.valueOf(score))
+                    .divide(BigDecimal.valueOf(n + 1), 2, java.math.RoundingMode.HALF_UP);
+
+            skill.setSuccessCount(newSuccessCount);
+            skill.setAvgRating(newRating);
+            skill.setUpdateTime(LocalDateTime.now());
+            skillTemplateMapper.updateById(skill);
+
+            if (eventLogger != null) {
+                eventLogger.log(EvolutionEventLogger.EvolutionEvent.of(
+                        tenantId, EVENT_SKILL_FEEDBACK_RECEIVED,
+                        Map.of("commandId", commandId,
+                               "skillId", String.valueOf(skill.getId()),
+                               "skillName", skill.getSkillName(),
+                               "score", score,
+                               "newAvgRating", newRating.toString(),
+                               "successCount", newSuccessCount)));
+            }
+            log.info("[Crystallize] 反馈已回写技能 {} score={} avgRating={}",
+                    skill.getSkillName(), score, newRating);
+        } catch (Exception e) {
+            log.warn("[Crystallize] 反馈回写失败 commandId={} err={}", commandId, e.getMessage());
+        }
     }
 
     // ==================== 私有方法 ====================

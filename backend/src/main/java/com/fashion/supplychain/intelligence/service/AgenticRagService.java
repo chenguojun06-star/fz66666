@@ -8,6 +8,7 @@ import com.fashion.supplychain.intelligence.service.QdrantService.ScoredPoint;
 import com.fashion.supplychain.service.RedisService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
@@ -43,15 +44,35 @@ public class AgenticRagService {
     @Autowired(required = false) private GraphRagService graphRagService;
     @Autowired(required = false) private EntityMemoryContextService entityMemoryContextService;
     @Autowired(required = false) private RedisService redisService;
+    @Autowired(required = false) private AiAdvisorService aiAdvisorService;
 
     private static final int DEFAULT_TOP_K = 5;
     private static final float MIN_SCORE = 0.35f;
     private static final int MAX_CONTEXT_CHARS = 2000;
-    
+
     /** RAG缓存前缀 */
     private static final String RAG_CACHE_PREFIX = "rag:cache:";
     /** RAG缓存有效期：10分钟 */
     private static final int RAG_CACHE_TTL_MINUTES = 10;
+
+    /** P1-1：Agentic RAG 自我修正循环最大轮数（含首轮） */
+    @Value("${xiaoyun.rag.max-rounds:3}")
+    private int maxRounds;
+    /** P1-1：是否启用 LLM 查询改写（关闭时仅用规则改写，节省 token） */
+    @Value("${xiaoyun.rag.llm-rewrite-enabled:true}")
+    private boolean llmRewriteEnabled;
+    /** P1-1：检索质量达标阈值（0-1，低于此值触发下一轮改写重试） */
+    @Value("${xiaoyun.rag.relevance-threshold:0.30}")
+    private double relevanceThreshold;
+
+    /** P1-1：LLM 查询改写提示词 */
+    private static final String LLM_REWRITE_PROMPT =
+            "你是服装供应链领域的查询改写助手。请将用户的问题改写为更适合知识库检索的查询：\n" +
+            "1. 展开缩写和行业术语（如\"菲号\"→\"FOB报价 离岸价\"）\n" +
+            "2. 补充同义词和相关词（如\"次品\"→\"次品 不合格品 返工\"）\n" +
+            "3. 保留原始问题的核心意图和实体（订单号、款号、日期等不可改）\n" +
+            "4. 输出只包含改写后的查询文本，不要解释\n" +
+            "改写后的查询应比原文更丰富、更易匹配知识库内容。";
     
     /** 服装供应链专业术语映射表 */
     private static final Map<String, String> FASHION_TERMS = Map.ofEntries(
@@ -172,7 +193,15 @@ public class AgenticRagService {
     }
 
     /**
-     * 自适应检索入口。
+     * 自适应检索入口（P1-1：Agentic RAG 三阶段闭环）。
+     *
+     * <p>Self-RAG/CRAG 模式：
+     * <ol>
+     *   <li>检索 → 评估相关性</li>
+     *   <li>相关性不足 → 改写查询重试（最多 {@link #maxRounds} 轮）</li>
+     *   <li>返回最佳结果（即使低于阈值也返回，保证有上下文）</li>
+     * </ol>
+     *
      * @param tenantId 租户ID
      * @param userMessage 用户原始消息
      * @return 检索到的上下文，可能为空（闲聊类或检索失败）
@@ -187,9 +216,9 @@ public class AgenticRagService {
         if (redisService != null) {
             RagResult cached = redisService.get(cacheKey);
             if (cached != null && !cached.isEmpty()) {
-                log.info("[AgenticRAG] Cache hit! tenant={} query={} strategy={}", 
+                log.info("[AgenticRAG] Cache hit! tenant={} query={} strategy={}",
                         tenantId, truncate(userMessage, 40), cached.strategy());
-                return new RagResult(cached.context(), cached.questionType(), 
+                return new RagResult(cached.context(), cached.questionType(),
                         cached.sourceCount(), cached.strategy(), true);
             }
         }
@@ -202,29 +231,70 @@ public class AgenticRagService {
             return new RagResult("", qType, 0, "skip_casual");
         }
 
-        // 查询改写
-        String rewrittenQuery = rewriteQuery(userMessage, qType);
+        // P1-1：3 轮自我修正循环
+        RagResult bestResult = null;
+        double bestScore = -1;
+        String currentQuery = userMessage;
 
-        // 按策略检索
-        RagResult result = retrieveByStrategy(tenantId, rewrittenQuery, qType);
+        for (int round = 1; round <= maxRounds; round++) {
+            // 第 1 轮用规则改写；第 2+ 轮用 LLM 改写（若启用）
+            String rewrittenQuery = (round == 1)
+                    ? rewriteQuery(currentQuery, qType)
+                    : rewriteQueryWithLlm(currentQuery, qType, round);
 
-        // 质量自检：结果不足时换策略重试一次
-        if (result.isEmpty() || result.sourceCount == 0) {
-            log.debug("[AgenticRAG] 首轮检索为空，尝试降级策略: {}", qType);
-            result = fallbackRetrieve(tenantId, rewrittenQuery, qType);
+            RagResult result = retrieveByStrategy(tenantId, rewrittenQuery, qType);
+            // 空结果降级重试
+            if (result.isEmpty() || result.sourceCount == 0) {
+                result = fallbackRetrieve(tenantId, rewrittenQuery, qType);
+            }
+
+            double score = gradeRetrieval(result, userMessage);
+            log.debug("[AgenticRAG] 第{}轮 score={} sourceCount={} strategy={} query={}",
+                    round, String.format("%.2f", score), result.sourceCount(), result.strategy(),
+                    truncate(rewrittenQuery, 50));
+
+            if (score > bestScore) {
+                bestScore = score;
+                bestResult = result;
+            }
+
+            // 达标即提前返回
+            if (score >= relevanceThreshold && result.sourceCount > 0) {
+                log.info("[AgenticRAG] 第{}轮达标 score={} >= {}", round,
+                        String.format("%.2f", score), relevanceThreshold);
+                break;
+            }
+
+            // 未达标：下一轮用 LLM 改写（若启用），否则停止
+            if (round < maxRounds && llmRewriteEnabled && aiAdvisorService != null && aiAdvisorService.isEnabled()) {
+                currentQuery = userMessage; // LLM 改写基于原始查询
+            } else if (!llmRewriteEnabled || aiAdvisorService == null) {
+                // LLM 不可用，不再重试
+                log.debug("[AgenticRAG] LLM改写不可用，停止在第{}轮", round);
+                break;
+            }
+        }
+
+        // 标记最终策略（含轮次信息）
+        if (bestResult != null) {
+            bestResult = new RagResult(bestResult.context(), bestResult.questionType(),
+                    bestResult.sourceCount(), bestResult.strategy() + "_r" + maxRounds,
+                    bestResult.fromCache());
+        } else {
+            bestResult = new RagResult("", qType, 0, "all_rounds_empty");
         }
 
         // 缓存非空结果
-        if (!result.isEmpty() && result.sourceCount > 0 && redisService != null) {
+        if (!bestResult.isEmpty() && bestResult.sourceCount > 0 && redisService != null) {
             try {
-                redisService.set(cacheKey, result, RAG_CACHE_TTL_MINUTES, TimeUnit.MINUTES);
+                redisService.set(cacheKey, bestResult, RAG_CACHE_TTL_MINUTES, TimeUnit.MINUTES);
                 log.debug("[AgenticRAG] 缓存已保存: {}", truncate(userMessage, 40));
             } catch (Exception e) {
                 log.warn("[AgenticRAG] 缓存保存失败: {}", e.getMessage());
             }
         }
 
-        return result;
+        return bestResult;
     }
 
     /**
@@ -291,20 +361,131 @@ public class AgenticRagService {
 
     private String rewriteQuery(String original, QuestionType qType) {
         String result = original;
-        
+
         // 短查询扩展：添加领域关键词提升召回
         if (result.length() <= 8 && qType == QuestionType.FACTUAL) {
             result = result + " 服装供应链 服装生产";
         }
-        
+
         // 专业术语标准化：扩展服装供应链术语
         for (Map.Entry<String, String> entry : FASHION_TERMS.entrySet()) {
             if (result.contains(entry.getKey())) {
                 result = result.replace(entry.getKey(), entry.getValue());
             }
         }
-        
+
         return result;
+    }
+
+    /**
+     * P1-1：LLM 驱动的查询改写（Self-RAG 的 query rewriting 模式）。
+     *
+     * <p>规则改写作为基础，LLM 在此之上做更深层的语义扩展。
+     * LLM 不可用时降级到规则改写。
+     *
+     * @param original 原始查询
+     * @param qType 问题类型
+     * @param round 当前轮次（用于日志）
+     * @return 改写后的查询
+     */
+    private String rewriteQueryWithLlm(String original, QuestionType qType, int round) {
+        // 先做规则改写作为基础
+        String ruleBased = rewriteQuery(original, qType);
+
+        if (!llmRewriteEnabled || aiAdvisorService == null || !aiAdvisorService.isEnabled()) {
+            return ruleBased;
+        }
+
+        try {
+            String reply = java.util.concurrent.CompletableFuture
+                    .supplyAsync(() -> aiAdvisorService.chat(LLM_REWRITE_PROMPT, original))
+                    .orTimeout(3, java.util.concurrent.TimeUnit.SECONDS)
+                    .exceptionally(ex -> null)
+                    .join();
+
+            if (reply == null || reply.isBlank()) {
+                log.debug("[AgenticRAG] 第{}轮 LLM改写超时/空，降级规则改写", round);
+                return ruleBased;
+            }
+            // LLM 改写结果 + 规则扩展合并（取并集，提升召回）
+            String merged = reply.trim() + " " + ruleBased;
+            log.debug("[AgenticRAG] 第{}轮 LLM改写: {} → {}", round, truncate(original, 30), truncate(reply.trim(), 50));
+            return merged.length() > 200 ? merged.substring(0, 200) : merged;
+        } catch (Exception e) {
+            log.debug("[AgenticRAG] LLM改写异常，降级规则: {}", e.getMessage());
+            return ruleBased;
+        }
+    }
+
+    /**
+     * P1-1：检索质量评分（Retrieval Grader）。
+     *
+     * <p>评估检索结果与用户问题的相关性，决定是否需要改写重试。
+     * 采用轻量级启发式评分（不调 LLM，避免延迟）：
+     * <ul>
+     *   <li>关键词重叠率（query 关键词在 context 中出现的比例）</li>
+     *   <li>来源数量（sourceCount 越多，覆盖越广）</li>
+     *   <li>上下文长度（过短可能信息不足）</li>
+     * </ul>
+     *
+     * @param result 检索结果
+     * @param userMessage 原始用户问题
+     * @return 0-1 相关性得分
+     */
+    private double gradeRetrieval(RagResult result, String userMessage) {
+        if (result == null || result.isEmpty() || result.sourceCount == 0) {
+            return 0.0;
+        }
+
+        String context = result.context();
+        // 提取用户问题中的关键词（去除停用词和短词）
+        String[] queryTerms = extractKeywords(userMessage);
+        if (queryTerms.length == 0) {
+            // 无法提取关键词，按来源数量给基础分
+            return Math.min(1.0, result.sourceCount() * 0.2);
+        }
+
+        // 计算关键词命中率
+        int hits = 0;
+        String lowerCtx = context.toLowerCase();
+        for (String term : queryTerms) {
+            if (lowerCtx.contains(term.toLowerCase())) hits++;
+        }
+        double keywordScore = (double) hits / queryTerms.length;
+
+        // 来源数量得分（5个来源满分）
+        double sourceScore = Math.min(1.0, result.sourceCount() / 5.0);
+
+        // 上下文长度得分（500字符满分）
+        double lengthScore = Math.min(1.0, context.length() / 500.0);
+
+        // 加权综合：关键词命中 60% + 来源数量 25% + 长度 15%
+        return keywordScore * 0.60 + sourceScore * 0.25 + lengthScore * 0.15;
+    }
+
+    /** 从用户问题中提取关键词（去停用词、去短词、去标点） */
+    private String[] extractKeywords(String text) {
+        // 去标点、转小写、按空格/标点分词
+        String cleaned = text.replaceAll("[\\p{Punct}\\p{IsPunctuation}]", " ").toLowerCase().trim();
+        if (cleaned.isBlank()) return new String[0];
+        String[] tokens = cleaned.split("\\s+");
+        java.util.List<String> keywords = new java.util.ArrayList<>();
+        for (String token : tokens) {
+            if (token.length() < 2) continue; // 跳过单字符
+            // 跳过常见停用词
+            if (token.matches("^(的|了|是|在|有|和|与|我|你|他|她|它|这|那|怎么|如何|什么|为什么|请问|一下|帮我|可以|吗|呢|啊|吧)$")) {
+                continue;
+            }
+            keywords.add(token);
+        }
+        // 中文无法按空格分词，保留原文作为整体匹配
+        if (keywords.isEmpty() && cleaned.length() >= 2) {
+            // 对中文查询，按 2-3 字片段匹配
+            for (int i = 0; i < cleaned.length() - 1; i += 2) {
+                keywords.add(cleaned.substring(i, Math.min(i + 2, cleaned.length())));
+            }
+        }
+        return keywords.toArray(new String[0]);
     }
 
     // ── 策略路由 ──

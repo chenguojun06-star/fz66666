@@ -25,6 +25,21 @@ import java.util.*;
 @Slf4j
 @Component
 @Lazy
+@AgentToolDef(
+        name = "tool_nl_query",
+        description = "自然语言数据查询工具",
+        domain = ToolDomain.ANALYSIS,
+        timeoutMs = 15000
+)
+@McpToolAnnotation(
+        name = "tool_nl_query",
+        description = "自然语言数据查询：通过自然语言直接查询订单、产量、库存、财务等所有业务数据。当用户问任何数据相关问题时，优先使用此工具。",
+        domain = ToolDomain.ANALYSIS,
+        readOnly = true,
+        timeoutSeconds = 15,
+        requiresConfirmation = false,
+        tags = {"自然语言查询", "数据查询", "订单查询", "产量统计", "库存查询", "财务统计"}
+)
 public class NlQueryTool extends AbstractAgentTool {
 
     @Autowired

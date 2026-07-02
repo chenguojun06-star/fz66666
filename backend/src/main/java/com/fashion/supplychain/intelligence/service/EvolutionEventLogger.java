@@ -31,6 +31,8 @@ import java.util.Map;
  * <ul>
  *   <li>{@code SKILL_CRYSTALLIZED} — 技能结晶化</li>
  *   <li>{@code SKILL_EVOLVED} — 技能进化</li>
+ *   <li>{@code SKILL_PROMOTED_TO_PROCEDURAL} — 结晶化技能升级为程序性记忆（P1-4）</li>
+ *   <li>{@code SKILL_FEEDBACK_RECEIVED} — 用户反馈回写到结晶化技能（P1-5 Hermes 学习闭环）</li>
  *   <li>{@code PROMPT_OPTIMIZED} — prompt 优化</li>
  *   <li>{@code CONSTRAINT_GATE_FAILED} — 门控失败</li>
  *   <li>{@code CONVERGENCE_STOPPED} — 收敛停止</li>

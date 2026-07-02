@@ -22,6 +22,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -112,6 +113,17 @@ public class AiPatrolJob {
 
     @Autowired(required = false)
     private ScanRecordService scanRecordService;
+
+    /** P1-3：巡检自动执行闭环 — 微信通知 + 任务创建 */
+    @Autowired(required = false)
+    private com.fashion.supplychain.intelligence.service.WxAlertNotifyService wxAlertNotifyService;
+    @Autowired(required = false)
+    private com.fashion.supplychain.intelligence.orchestration.TaskCenterOrchestrator taskCenterOrchestrator;
+
+    /** P1-3：需要自动创建跟进任务的问题类型（MEDIUM+ 严重级别） */
+    private static final Set<String> TASK_TRIGGERING_TYPES = Set.of(
+            "DEADLINE_RISK", "FACTORY_SILENCE", "QUALITY_SPIKE", "CUTTING_BACKLOG", "CORRELATED_RISK"
+    );
 
     // ══════════════════════════════════════════════════════════════════
     // 生产业务异常巡查（每4小时，真实业务数据）
@@ -522,14 +534,115 @@ public class AiPatrolJob {
         }
     }
 
+    /**
+     * P1-3：自动执行巡检动作（真实执行，非仅描述）。
+     *
+     * <p>闭环链路：
+     * <ol>
+     *   <li>MEDIUM+ 严重级别 → 自动创建跟进任务（TaskCenterOrchestrator.createTask）</li>
+     *   <li>所有动作 → 推送微信订阅消息（WxAlertNotifyService.notifyAlert）</li>
+     *   <li>降级安全：任一环节失败不影响其他环节</li>
+     * </ol>
+     *
+     * <p>多租户隔离：创建任务时设置 UserContext.tenantId（P0 铁律 #4）
+     */
     private String performAutoAction(AiPatrolAction action) {
         String issueType = action.getIssueType();
         String targetId = action.getTargetId();
-        String targetType = action.getTargetType();
+        Long tenantId = action.getTenantId();
 
         if (issueType == null) {
             return "未知类型动作已自动执行";
         }
+
+        StringBuilder result = new StringBuilder();
+
+        // 1. 自动创建跟进任务（MEDIUM+ 严重级别）
+        if (taskCenterOrchestrator != null && tenantId != null && TASK_TRIGGERING_TYPES.contains(issueType)) {
+            String taskResult = createFollowUpTask(action);
+            if (taskResult != null) {
+                result.append(taskResult);
+            }
+        }
+
+        // 2. 推送微信订阅消息（所有动作）
+        if (wxAlertNotifyService != null && tenantId != null) {
+            try {
+                String title = "巡检告警: " + issueType;
+                String content = action.getDetectedIssue() != null ? action.getDetectedIssue() : issueType;
+                wxAlertNotifyService.notifyAlert(tenantId, title, content, targetId, null);
+                if (result.length() > 0) result.append("；");
+                result.append("已推送微信通知");
+            } catch (Exception e) {
+                log.warn("[AiPatrolJob-AutoExec] 微信通知失败 actionId={} err={}",
+                        action.getId(), e.getMessage());
+            }
+        }
+
+        // 3. 附加描述性反馈（LOW_ADOPTION_RATE 等非任务类型）
+        if (result.length() == 0) {
+            return getDescriptiveFeedback(issueType, targetId);
+        }
+        return result.toString();
+    }
+
+    /** P1-3：为巡检动作创建跟进任务（含 UserContext 多租户隔离） */
+    private String createFollowUpTask(AiPatrolAction action) {
+        UserContext previous = UserContext.get();
+        try {
+            UserContext ctx = new UserContext();
+            ctx.setTenantId(action.getTenantId());
+            ctx.setUsername("system");
+            ctx.setUserId("system");
+            UserContext.set(ctx);
+
+            Map<String, Object> taskData = new HashMap<>();
+            taskData.put("title", buildTaskTitle(action));
+            taskData.put("description", action.getDetectedIssue() != null
+                    ? action.getDetectedIssue() : "系统巡检自动创建的跟进任务");
+            taskData.put("priority", "HIGH".equals(action.getIssueSeverity()) ? "high" : "medium");
+            taskData.put("module", resolveTargetRoleByIssueType(action.getIssueType()));
+            if (action.getTargetId() != null) {
+                taskData.put("orderNo", action.getTargetId());
+            }
+
+            Map<String, Object> taskResult = taskCenterOrchestrator.createTask(taskData);
+            if (Boolean.TRUE.equals(taskResult.get("success"))) {
+                log.info("[AiPatrolJob-AutoExec] 已创建跟进任务 taskId={} type={}",
+                        taskResult.get("taskId"), action.getIssueType());
+                return "已创建跟进任务#" + taskResult.get("taskId");
+            }
+            log.warn("[AiPatrolJob-AutoExec] 创建任务失败: {}", taskResult.get("error"));
+            return null;
+        } catch (Exception e) {
+            log.warn("[AiPatrolJob-AutoExec] 创建任务异常 actionId={} err={}",
+                    action.getId(), e.getMessage());
+            return null;
+        } finally {
+            if (previous != null) {
+                UserContext.set(previous);
+            } else {
+                UserContext.clear();
+            }
+        }
+    }
+
+    /** P1-3：根据问题类型生成任务标题 */
+    private String buildTaskTitle(AiPatrolAction action) {
+        String issueType = action.getIssueType();
+        String targetId = action.getTargetId();
+        return switch (issueType) {
+            case "DEADLINE_RISK" -> "交期风险跟进: " + (targetId != null ? targetId : "");
+            case "FACTORY_SILENCE" -> "工厂沉默跟进: " + (targetId != null ? targetId : "");
+            case "QUALITY_SPIKE" -> "质量异常跟进: " + (targetId != null ? targetId : "");
+            case "CUTTING_BACKLOG" -> "裁剪积压跟进: " + (targetId != null ? targetId : "");
+            case "CORRELATED_RISK" -> "关联风险跟进: " + (targetId != null ? targetId : "");
+            default -> "巡检告警跟进: " + (targetId != null ? targetId : "");
+        };
+    }
+
+    /** P1-3：非任务类型的描述性反馈（保留原有行为） */
+    private String getDescriptiveFeedback(String issueType, String targetId) {
         return switch (issueType) {
             case "LOW_ADOPTION_RATE" -> String.format(
                 "场景[%s]决策建议采纳率偏低，已自动标记为待优化场景并生成反思记忆",
@@ -546,9 +659,7 @@ public class AiPatrolJob {
             case "CUTTING_BACKLOG" -> String.format(
                 "订单[%s]裁剪积压，已自动标记为需跟进",
                 targetId != null ? targetId : "未知");
-            default -> String.format(
-                "[%s]类型动作已自动执行（%s:%s）",
-                issueType, targetType != null ? targetType : "", targetId != null ? targetId : "");
+            default -> String.format("[%s]类型动作已自动执行", issueType);
         };
     }
 

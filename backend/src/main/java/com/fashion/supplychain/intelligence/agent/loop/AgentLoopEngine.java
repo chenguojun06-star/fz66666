@@ -609,10 +609,13 @@ public class AgentLoopEngine {
         }
 
         // SelfCritiqueGate（LLM调用，约1-2秒）
+        // P1-5：质量分作为结晶化触发依据，默认 0.80（SelfCritiqueGate 评分范围 0-100，需 /100 归一化）
+        double qualityScore = 0.80;
         SelfCritiqueGate selfCritiqueGate = selfCritiqueGateProvider.getIfAvailable();
         if (selfCritiqueGate != null) {
             try {
                 SelfCritiqueGate.GateResult gateResult = selfCritiqueGate.check(ctx, content);
+                qualityScore = Math.max(0.0, Math.min(1.0, gateResult.getScore() / 100.0));
                 if (gateResult.isHardFail()) {
                     log.warn("[AsyncPost] SelfCritiqueGate HARD_FAIL score={}", gateResult.getScore());
                     content = gateResult.getContent();
@@ -663,8 +666,7 @@ public class AgentLoopEngine {
                 String toolCallsLog = ctx.getAllExecRecords().stream()
                         .map(r -> "tool_call: " + r.toolName)
                         .reduce("", (a, b) -> a.isEmpty() ? b : a + "\n" + b);
-                // 质量分默认 0.8（>0.75 阈值即触发结晶化），后续可接入 SelfCritiqueGate 评分
-                double qualityScore = 0.8;
+                // P1-5：质量分取自 SelfCritiqueGate（默认 0.80，>0.75 阈值即触发结晶化）
                 crystallizationService.detectAndCrystallize(
                         ctx.getTenantId(), ctx.getCommandId(), ctx.getUserMessage(),
                         toolCallsLog, content, qualityScore);

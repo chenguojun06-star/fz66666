@@ -414,3 +414,28 @@
   - `project_rules.md` P0 铁律从 22 条增加到 23 条
   - `agent-workflow.md` 第1/3/5/6步嵌入 MCP 强制调用
   - `mcp-tools-cheatsheet.md` 顶部新增 P0 #23 强制场景表
+
+## D-032：小云 AI P1 五项实用能力升级（Agentic RAG + NlQuery + 巡检闭环 + L4 程序性记忆 + Hermes 学习闭环）
+
+- **日期**：2026-07-02
+- **上下文**：基于对小云 AI 全量代码（165+ Orchestrators / 85+ Services / 100 Agent Tools）的系统核查，识别 5 项 P1 实用能力缺口。用户明确选择"实用能力升级"方向，跳过 P0（已稳定）和 P2（高阶但非急需）层级，要求 5 项全部实现。同时要求对孤儿组件"列出实际用处，不处理"。
+- **决策**：按"最小工作量优先"顺序实现 5 项 P1：
+  1. **P1-4 L4 Procedural Memory**：补全 `SkillCrystallizationService.promoteToProcedural()`（设计稿定义但未实现的唯一缺口），结晶化技能 useCount≥20 时自动升级为 `t_procedural_memory`，幂等性通过 sop_name 唯一性保证
+  2. **P1-1 Agentic RAG**：将 `AgenticRagService.retrieve()` 从单次检索+兜底改造为 3 轮自纠正循环。LLM 查询重写（3s 超时+规则兜底）+ 启发式相关性评分（关键词 60% + 来源数 25% + 长度 15%）+ 阈值 0.30 触发提前停止
+  3. **P1-3 巡检自动执行**：修复 `AiPatrolJob.performAutoAction()` 的 3 处断点：调用 `TaskCenterOrchestrator.createTask()` 创建真实跟进任务（带 UserContext 多租户隔离，try/finally 恢复）+ `WxAlertNotifyService.notifyAlert()` 推送微信订阅消息
+  4. **P1-2 NlQuery**：`NlQueryTool` 从老式 AbstractAgentTool 升级为 `@AgentToolDef` + `@McpToolAnnotation`（readOnly=true, timeout=15s, 6 个 tags）；`/nl-query` 端点 `@DataTruth` source 从 AI_DERIVED 修正为 REAL_DATA
+  5. **P1-5 Hermes Learning Loop**：4 处改动 — (a) `AgentLoopEngine` L667 硬编码 `qualityScore=0.8` 改为取 `SelfCritiqueGate.getScore()/100`（评分范围 0-100 归一化到 0-1，对齐 MIN_QUALITY_FOR_CRYSTALLIZE=0.75）；(b) `SkillCrystallizationService.recordFeedback()` 异步回写 successCount/avgRating（5 分制，score≥4 计入成功）；(c) `/ai-feedback` 接入反馈回写；(d) `EvolutionEventLogger` 新增 SKILL_FEEDBACK_RECEIVED 事件类型
+- **关键设计权衡**：
+  1. **P1-4 阈值 useCount≥20 而非 successCount≥10**：因 successCount/avgRating 在 P1-5 之前从未自动更新（仅手动 API），用 useCount 作即时可用的代理指标；P1-5 完成后两者协同（成功反馈累加 successCount，达到双重阈值可考虑更严格升级条件）
+  2. **P1-1 评分用启发式而非 LLM-as-Judge**：避免在关键路径增加额外 LLM 调用（+1-2s 延迟），LLM 仅用于第 2+ 轮的查询重写；启发式评分（关键词/来源数/长度）足够区分"无结果/弱匹配/强匹配"三态
+  3. **P1-3 createTask 用 try/finally 保护 UserContext**：Job 层无 HTTP 请求上下文，必须手动设置 system 身份（userId="system"），完成后恢复原 UserContext，避免污染后续 Job 调用
+  4. **P1-5 qualityScore 归一化**：SelfCritiqueGate 评分范围 0-100（GateResult.pass 默认 80.0），需 /100 映射到 MIN_QUALITY_FOR_CRYSTALLIZE=0.75 的 0-1 标度
+- **未处理项**（用户明确"不处理"）：
+  - `ProcessKnowledgeOrchestrator` 加载已删除的 IE 知识文件（ai_ie_parts_knowledge.json）— 静默失败但不影响功能
+  - 工序知识库（模板中心）vs AI 工序建议数据源不一致 — 已在 project_memory 记录，待统一处理
+  - `AgentLoopEngineTest` 中其他硬编码值（非 L667）— 测试代码，不影响生产
+- **影响**：
+  - 小云 AI 实用能力从"基本可用"提升到"自纠正 + 自学习 + 自执行"闭环
+  - L4 Procedural Memory 设计稿（five-layer-memory-design.md）的 P0 阶段全部落地
+  - Hermes 学习闭环形成：用户反馈 → SkillTemplate.successCount/avgRating 更新 → useCount≥20 触发 ProceduralMemory 升级 → 下次直接调用 SOP 步骤
+  - 编译验证通过（`mvn compile -q -pl .` exit code 0），无需回滚

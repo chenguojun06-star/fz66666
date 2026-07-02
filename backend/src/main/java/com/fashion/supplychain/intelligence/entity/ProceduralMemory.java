@@ -81,6 +81,8 @@ public class ProceduralMemory {
     public static final String SOP_TYPE_DELIVERY_FORECAST = "DELIVERY_FORECAST";
     public static final String SOP_TYPE_SUPPLIER_EVAL = "SUPPLIER_EVAL";
     public static final String SOP_TYPE_QUALITY_CHECK = "QUALITY_CHECK";
+    /** 结晶化技能升级而来（P1-4：SkillCrystallizationService.promoteToProcedural） */
+    public static final String SOP_TYPE_CRYSTALLIZED = "CRYSTALLIZED";
 
     public static final String SOURCE_MANUAL = "manual";
     public static final String SOURCE_CRYSTALLIZED = "crystallized";

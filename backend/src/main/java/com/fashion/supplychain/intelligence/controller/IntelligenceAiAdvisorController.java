@@ -96,6 +96,9 @@ public class IntelligenceAiAdvisorController {
     @Autowired
     private com.fashion.supplychain.intelligence.routing.AiAgentToolAdvisor aiAgentToolAdvisor;
 
+    @Autowired(required = false)
+    private com.fashion.supplychain.intelligence.service.SkillCrystallizationService skillCrystallizationService;
+
     @GetMapping("/ai-advisor/status")
     public Result<?> aiAdvisorStatus() {
         boolean enabled = aiAdvisorService.isEnabled();
@@ -212,6 +215,17 @@ public class IntelligenceAiAdvisorController {
                 new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<com.fashion.supplychain.intelligence.entity.IntelligenceMetrics>()
                         .eq("command_id", commandId));
         log.info("[AiFeedback] commandId={} score={} comment={}", commandId, score, comment);
+
+        // P1-5 Hermes Learning Loop：异步回写到结晶化技能（successCount/avgRating 更新）
+        Long tenantId = null;
+        try { tenantId = UserContext.tenantId(); } catch (Exception ignored) {}
+        if (skillCrystallizationService != null && tenantId != null) {
+            try {
+                skillCrystallizationService.recordFeedback(commandId, tenantId, score, comment);
+            } catch (Exception e) {
+                log.debug("[AiFeedback] 结晶化技能回写失败（不影响主流程）: {}", e.getMessage());
+            }
+        }
         return Result.success(null);
     }
 

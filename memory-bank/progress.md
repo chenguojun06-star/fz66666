@@ -7,6 +7,17 @@
 
 ## 已完成
 
+### 2026-07-02 小云 AI P1 实用能力升级 5 项全部完成
+
+- [x] P1-4 L4 Procedural Memory 完整实现（`SkillCrystallizationService.promoteToProcedural()` + `tryPromoteAsync()`）
+- [x] P1-1 Agentic RAG 三阶段闭环（`AgenticRagService.retrieve()` 3 轮自纠正 + LLM 重写 + 启发式评分）
+- [x] P1-3 巡检自动执行闭环（`AiPatrolJob.performAutoAction()` 创建真实任务 + 微信通知）
+- [x] P1-2 NlQuery 完成（`NlQueryTool` @AgentToolDef 升级 + @DataTruth 修正）
+- [x] P1-5 Hermes Learning Loop（`AgentLoopEngine` qualityScore 接入 SelfCritiqueGate + `recordFeedback()` 反馈回写 + 新事件类型）
+- [x] 后端编译验证通过（`mvn compile -q -pl .` exit code 0）
+- [x] 更新 `memory-bank/activeContext.md` 记录本次变更
+- [x] 添加决策 D-032（小云 AI P1 五项实用能力升级）
+
 ### 2026-07-02 新增 P0 #23 MCP 工具强制调用规则（配置 ≠ 自动调用）
 
 - [x] `.trae/rules/project_rules.md` 新增 P0 #23（10 个强制场景 + 降级规则 + tenantId 规则 + 例外清单）

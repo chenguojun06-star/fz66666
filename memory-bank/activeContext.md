@@ -1,7 +1,7 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-07-02（P0 #23 MCP 工具强制调用规则）
+> 最后更新：2026-07-02（小云 AI P1 实用能力升级 5 项全部完成）
 
 ---
 
@@ -21,8 +21,43 @@
 - ✅ 设置管理模块全面优化（2026-06-22：供应商账号独立页面 + 菜单重组 + 预设角色模板）
 - ✅ 权限系统大牌水准优化（2026-06-23：新租户开户向导 + TypeScript/编译错误修复 + 数据权限维度验证）
 - ✅ 数据库稳定性 + 全链路数据流阻塞治理（2026-06-24）
+- ✅ 小云 AI P1 实用能力升级 5 项（2026-07-02完成）
 
 ## 最近变更
+
+### 2026-07-02 小云 AI P1 实用能力升级 5 项全部完成
+
+**背景**：基于对小云 AI 全量代码的核查，识别 5 项 P1 实用能力缺口，按"最小工作量优先"顺序全部实现。
+
+**5 项 P1 完成清单**：
+
+| 序号 | 名称 | 核心改动 | 验证状态 |
+|------|------|---------|---------|
+| P1-4 | L4 Procedural Memory 完整实现 | `SkillCrystallizationService.promoteToProcedural()` — 结晶化技能 useCount≥20 自动升级为 ProceduralMemory；新增 `tryPromoteAsync()` 异步包装；幂等性通过 sop_name 唯一性保证 | ✅ 编译通过 |
+| P1-1 | Agentic RAG 三阶段闭环 | `AgenticRagService.retrieve()` 改造为 3 轮自纠正循环：LLM 查询重写（3s 超时+规则兜底）+ 启发式相关性评分（关键词60%+来源数25%+长度15%）+ 阈值 0.30 触发提前停止 | ✅ 编译通过 |
+| P1-3 | 巡检自动执行闭环 | `AiPatrolJob.performAutoAction()` 修复 3 处断点：调用 `TaskCenterOrchestrator.createTask()` 创建真实跟进任务（带 UserContext 多租户隔离）+ `WxAlertNotifyService.notifyAlert()` 推送微信订阅消息 | ✅ 编译通过 |
+| P1-2 | NlQuery 完成 | `NlQueryTool` 升级为 `@AgentToolDef` + `@McpToolAnnotation`（readOnly=true, timeout=15s, 6 个 tags）；`/nl-query` 端点 `@DataTruth` source 从 AI_DERIVED 修正为 REAL_DATA | ✅ 编译通过 |
+| P1-5 | Hermes Learning Loop | 4 处改动：(1) `AgentLoopEngine` L667 硬编码 qualityScore=0.8 改为取 SelfCritiqueGate.getScore()/100；(2) `SkillCrystallizationService.recordFeedback()` 异步回写 successCount/avgRating；(3) `/ai-feedback` 接入反馈回写；(4) `EvolutionEventLogger` 新增 SKILL_FEEDBACK_RECEIVED 事件类型 | ✅ 编译通过 |
+
+**关键设计决策**：
+- **P1-4 阈值选择 useCount≥20**：因 successCount/avgRating 尚未自动更新（需 P1-5 才补齐），用 useCount 作即时可用的代理指标；P1-5 完成后两者协同工作
+- **P1-1 评分用启发式而非 LLM**：避免在关键路径增加额外 LLM 调用，LLM 仅用于第 2+ 轮的查询重写
+- **P1-3 createTask 前置 UserContext**：在 try/finally 中设置 system 身份（userId="system"），避免破坏调用方的 UserContext
+- **P1-5 qualityScore 归一化**：SelfCritiqueGate 评分范围 0-100，需 /100 映射到 MIN_QUALITY_FOR_CRYSTALLIZE=0.75 的 0-1 标度
+
+**未处理项（用户明确"不处理"的孤儿组件）**：
+- `ProcessKnowledgeOrchestrator` 加载已删除的 IE 知识文件（ai_ie_parts_knowledge.json）— 静默失败但不影响功能
+- `工序知识库（模板中心）` vs `AI工序建议` 数据源不一致 — 已在 project_memory 记录
+- `AgentLoopEngine` AgentLoopEngineTest 中其他硬编码值（非 L667）— 测试代码，不影响生产
+
+**相关文件**：
+- [SkillCrystallizationService.java](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/java/com/fashion/supplychain/intelligence/service/SkillCrystallizationService.java)
+- [AgenticRagService.java](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/java/com/fashion/supplychain/intelligence/service/AgenticRagService.java)
+- [AiPatrolJob.java](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/java/com/fashion/supplychain/intelligence/job/AiPatrolJob.java)
+- [NlQueryTool.java](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/java/com/fashion/supplychain/intelligence/agent/tool/NlQueryTool.java)
+- [AgentLoopEngine.java](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/java/com/fashion/supplychain/intelligence/agent/loop/AgentLoopEngine.java)
+- [IntelligenceAiAdvisorController.java](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/java/com/fashion/supplychain/intelligence/controller/IntelligenceAiAdvisorController.java)
+- [EvolutionEventLogger.java](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/java/com/fashion/supplychain/intelligence/service/EvolutionEventLogger.java)
 
 ### 2026-07-02 新增 P0 #23 MCP 工具强制调用规则（配置 ≠ 自动调用）
 
