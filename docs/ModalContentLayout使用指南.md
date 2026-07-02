@@ -1139,7 +1139,7 @@ const MyModal: React.FC = () => {
 
 ### 相关文档
 - [useModal 使用指南](./useModal使用指南.md) - Modal 状态管理 Hook
-- [开发指南 - Modal 最佳实践](../开发指南.md#modal最佳实践) - 完整开发规范
+- [CLAUDE - Modal 最佳实践](../CLAUDE.md#modal最佳实践) - 完整开发规范
 - [设计系统完整规范](../设计系统完整规范-2026.md) - 字体、颜色、间距规范
 
 ### 已应用文件

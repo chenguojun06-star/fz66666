@@ -107,6 +107,7 @@ Page({
     menuData: { inProduction: 0, todayOrders: 0, todayInbound: 0, todayOutbound: 0, delayedOrders: 0, riskOrders: 0 },
     menuExtra: { inProductionQty: 0, todayOrdersQty: 0, todayInboundQty: 0, todayOutboundQty: 0, delayedOrdersQty: 0, riskOrdersQty: 0 },
     activeMenu: '', activeMenuTitle: '', activeOrders: [],
+    delayedOrders: [], riskOrders: [],
     stageBuckets: [], activeStage: '', activeStageLabel: '', activeStageOrders: [],
     factoryList: [], factoryOnline: 0, factoryStagnant: 0, factoryTotalOrders: 0, factoryTotalQty: 0,
     lastRefreshTime: '', loading: false,
@@ -178,6 +179,26 @@ Page({
     }
   },
 
+  onDelayedOrderTap: function (e) {
+    const idx = e.currentTarget.dataset.index;
+    const orders = this.data.delayedOrders;
+    if (!orders || !orders[idx]) return;
+    const order = orders[idx];
+    if (order.id) {
+      safeNavigate({ url: '/pages/dashboard/index?orderId=' + encodeURIComponent(order.id) }).catch(() => {});
+    }
+  },
+
+  onRiskOrderTap: function (e) {
+    const idx = e.currentTarget.dataset.index;
+    const orders = this.data.riskOrders;
+    if (!orders || !orders[idx]) return;
+    const order = orders[idx];
+    if (order.id) {
+      safeNavigate({ url: '/pages/dashboard/index?orderId=' + encodeURIComponent(order.id) }).catch(() => {});
+    }
+  },
+
   onStageOrderTap: function (e) {
     const idx = e.currentTarget.dataset.index;
     const orders = this.data.activeStageOrders;
@@ -228,7 +249,7 @@ Page({
       const topStats = self._unwrap(results[5]);
 
       // 如果 pulse 接口失败，使用默认值
-      const pulseData = (pulse && !pulse.error) ? pulse : {
+      const _pulseData = (pulse && !pulse.error) ? pulse : {
         systemHealth: 85,
         alertCount: 0,
         trend: 'stable',
@@ -360,6 +381,8 @@ Page({
 
       self.setData({
         menuData: menuData, menuExtra: menuExtra, totalWarn: totalWarn,
+        delayedOrders: delayed.slice(0, 5).map(toOrderRow),
+        riskOrders: risk.slice(0, 5).map(toOrderRow),
         stageBuckets: stageBuckets,
         factoryList: factoryList, factoryOnline: factoryOnline, factoryStagnant: factoryStagnant,
         factoryTotalOrders: factoryTotalOrders, factoryTotalQty: factoryTotalQty,

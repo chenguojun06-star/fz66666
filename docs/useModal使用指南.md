@@ -807,7 +807,7 @@ const handleUpdate = async () => {
 
 ### 相关文档
 - [ModalContentLayout 使用指南](./ModalContentLayout使用指南.md) - Modal 内容布局组件
-- [开发指南 - Modal 最佳实践](../开发指南.md#modal最佳实践) - 完整开发规范
+- [CLAUDE - Modal 最佳实践](../CLAUDE.md#modal最佳实践) - 完整开发规范
 
 ### 已应用文件
 - `frontend/src/modules/warehouse/pages/MaterialPurchase/index.tsx`（5 个弹窗）

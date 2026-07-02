@@ -11,7 +11,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -71,7 +70,7 @@ public class StyleExcelImporter {
         return config;
     }
 
-    @Transactional(rollbackFor = Exception.class)
+    // 事务由调用方 ExcelImportOrchestrator.importStyles() 提供（P0铁律#2）
     public Map<String, Object> importStyles(Long tenantId, MultipartFile file) {
         List<Map<String, String>> rows = importHelper.parseExcel(file, STYLE_HEADERS);
         if (rows.isEmpty()) {
@@ -141,7 +140,7 @@ public class StyleExcelImporter {
         return importHelper.buildResult(rows.size(), successRecords, failedRecords, "款式");
     }
 
-    @Transactional(rollbackFor = Exception.class)
+    // 事务由调用方 ExcelImportOrchestrator.importStylesFromZip() 提供（P0铁律#2）
     public Map<String, Object> importStylesFromZip(Long tenantId, MultipartFile zipFile) {
         ZipExtractResult extracted = extractZipContent(zipFile);
         if (extracted.excelBytes == null) {

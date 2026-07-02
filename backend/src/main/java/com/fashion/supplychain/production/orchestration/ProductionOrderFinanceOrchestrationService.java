@@ -28,7 +28,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.util.StringUtils;
 
@@ -75,7 +74,7 @@ public class ProductionOrderFinanceOrchestrationService {
     @Autowired(required = false)
     private com.fashion.supplychain.intelligence.service.ClosedOrderAiDataCleanupService closedOrderAiDataCleanupService;
 
-    @Transactional(rollbackFor = Exception.class)
+    // 事务由调用方 ProductionOrderOrchestrator.completeProduction() 提供（P0铁律#2）
     public boolean completeProduction(String id, BigDecimal tolerancePercent) {
         assertCompletePermission();
         String oid = assertValidOrderId(id);
@@ -206,12 +205,12 @@ public class ProductionOrderFinanceOrchestrationService {
         }
     }
 
-    @Transactional(rollbackFor = Exception.class)
+    // 事务由调用方 ProductionOrderOrchestrator.closeOrder() 提供（P0铁律#2）
     public ProductionOrder closeOrder(String id) {
         return closeOrder(id, false);
     }
 
-    @Transactional(rollbackFor = Exception.class)
+    // 事务由调用方 ProductionOrderOrchestrator.closeOrder() 提供（P0铁律#2）
     public ProductionOrder closeOrder(String id, boolean specialClose) {
         String oid = StringUtils.hasText(id) ? id.trim() : null;
         if (!StringUtils.hasText(oid)) throw new IllegalArgumentException("订单ID不能为空");
@@ -363,7 +362,7 @@ public class ProductionOrderFinanceOrchestrationService {
         return shipmentReconciliationOrchestrator.ensureShipmentReconciliationForOrder(orderId);
     }
 
-    @Transactional(rollbackFor = Exception.class)
+    // 事务由调用方 ProductionOrderOrchestrator.backfillFinanceRecords() 提供（P0铁律#2）
     public int backfillFinanceRecords() {
         List<ProductionOrder> orders = productionOrderService.lambdaQuery()
                 .eq(ProductionOrder::getDeleteFlag, 0)

@@ -1,11 +1,12 @@
 {
-  "copiedAt": "2026-06-30T05:49:16.722Z",
+  "copiedAt": "2026-07-02T14:22:24.083Z",
   "sourceRoot": "miniprogram",
   "copiedEntries": [
     "app.js",
     "app.json",
     "app.wxss",
     "config.js",
+    "config",
     "pages",
     "components",
     "utils",

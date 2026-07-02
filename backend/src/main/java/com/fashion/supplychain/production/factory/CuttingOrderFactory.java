@@ -23,7 +23,6 @@ import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 @Component
@@ -40,7 +39,7 @@ public class CuttingOrderFactory {
     private final OrderRemarkHelper orderRemarkHelper;
     private final ObjectMapper objectMapper;
 
-    @Transactional(rollbackFor = Exception.class)
+    // 事务由调用方 CuttingTaskOrchestrator.createCustom() 提供（P0铁律#2）
     public CuttingTask createCustom(Map<String, Object> body) {
         String styleNo = getTrimmedText(body, "styleNo");
         String orderNo = getTrimmedText(body, "orderNo");

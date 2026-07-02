@@ -14,6 +14,7 @@ const copyEntries = [
   'app.json',
   'app.wxss',
   'config.js',
+  'config',
   'pages',
   'components',
   'utils',
