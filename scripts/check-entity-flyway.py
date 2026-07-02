@@ -34,6 +34,20 @@ SKIP_COLUMNS = {
     "created_by", "updated_by", "version",
 }
 
+# CREATE TABLE 体中不是列定义的关键字（PRIMARY KEY / UNIQUE KEY / ENGINE= 等）
+SQL_KEYWORDS = {
+    "primary", "unique", "key", "constraint", "index", "foreign",
+    "check", "fulltext", "spatial", "engine", "default", "charset",
+    "collate", "auto_increment", "comment", "null", "not", "using",
+    "btree", "hash", "select", "from", "where", "if", "exists",
+    "current_timestamp", "on", "update", "delete", "cascade",
+    "restrict", "set", "no", "action", "references",
+}
+
+# 已知 MySQL 类型（用于精确匹配列定义，避免误匹配 PRIMARY KEY / ENGINE= 等）
+# 长类型放前面，避免 int 抢先匹配 integer（Python re 会在 \b 失败时回溯，但显式排序更清晰）
+SQL_TYPE_PATTERN = r'(?:bigint|mediumint|smallint|tinyint|integer|int|varchar|varbinary|tinytext|mediumtext|longtext|tinyblob|mediumblob|longblob|datetime|timestamp|decimal|numeric|float|double|char|text|blob|date|time|year|json|enum|set|bit|boolean|bool|binary|geometry|point|linestring|polygon)'
+
 
 def camel_to_snake(name: str) -> str:
     return re.sub(r"(?<!^)(?=[A-Z])", "_", name).lower()
@@ -129,8 +143,11 @@ def parse_flyway_tables() -> Dict[str, Set[str]]:
         content_lower = content.lower()
 
         # 模式1: CREATE TABLE `t_xxx` ( ... )
+        # 使用贪婪匹配 [^;]*\) 捕获完整 CREATE TABLE 体到 ';' 前最后一个 ')'
+        # （非贪婪 [^;]*?\) 会在 VARCHAR(64) / DECIMAL(10,2) 等类型定义的 ')' 处错误截断，
+        #   导致后续列丢失；幂等写法把 CREATE TABLE 放在字符串字面量里时尤其严重）
         for m in re.finditer(
-            r'create\s+table\s+(?:if\s+not\s+exists\s+)?`?(\w+)`?\s*\(([^;]*?\))',
+            r'create\s+table\s+(?:if\s+not\s+exists\s+)?`?(\w+)`?\s*\(([^;]*\))',
             content_lower,
             re.IGNORECASE | re.DOTALL,
         ):
@@ -138,8 +155,12 @@ def parse_flyway_tables() -> Dict[str, Set[str]]:
             cols_text = m.group(2)
             if table not in tables:
                 tables[table] = set()
-            for cm in re.finditer(r'`(\w+)`\s+\w+', cols_text):
-                    tables[table].add(cm.group(1))
+            # 匹配列定义：`col` TYPE 或 col TYPE（反引号可选）
+            # 用已知 SQL 类型精确识别列，避免误匹配 PRIMARY KEY / UNIQUE KEY / ENGINE= 等
+            for cm in re.finditer(r'`?(\w+)`?\s+' + SQL_TYPE_PATTERN + r'\b', cols_text):
+                col_name = cm.group(1)
+                if col_name not in SQL_KEYWORDS:
+                    tables[table].add(col_name)
 
         # 模式2: ALTER TABLE `t_xxx` ADD COLUMN `col`
         for m in re.finditer(
