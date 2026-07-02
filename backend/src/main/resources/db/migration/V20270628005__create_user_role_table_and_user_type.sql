@@ -68,12 +68,14 @@ AND (user_type IS NULL OR user_type = 'INTERNAL' OR user_type = '');
 -- ----------------------------------------------------------------
 -- 5. 数据回填：将现有 t_user.roleId 迁移到 t_user_role（保持主角色标记）
 --    这样过渡期 roleId 字段和 t_user_role 表双轨并行，向后兼容
+--    注：t_user 表没有 delete_flag 列（只有 status 和 employment_status），
+--    用 status = 'ENABLED' 过滤活跃用户；status 为 NULL 时也纳入（历史数据兼容）
 -- ----------------------------------------------------------------
 INSERT INTO t_user_role (tenant_id, user_id, role_id, is_primary, source)
 SELECT tenant_id, id, role_id, 1, 'manual'
 FROM t_user
 WHERE role_id IS NOT NULL
-AND delete_flag = 0
+AND (status = 'ENABLED' OR status IS NULL)
 AND NOT EXISTS (
     SELECT 1 FROM t_user_role ur
     WHERE ur.user_id = t_user.id AND ur.role_id = t_user.role_id
