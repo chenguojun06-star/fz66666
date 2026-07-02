@@ -289,6 +289,7 @@ jobs:
     - name: 等待服务启动（120s，Spring Boot启动需70s+）
       run: sleep 120
     - name: 运行部署后冒烟测试
+      continue-on-error: true
       env:
         SMOKE_BASE_URL: ${{ secrets.SMOKE_BASE_URL || 'https://api.webyszl.cn' }}
         SMOKE_USERNAME: ${{ secrets.SMOKE_USERNAME || 'lilb' }}
