@@ -88,7 +88,7 @@ function buildFilterBar(props: ProductionFilterBarProps) {
           dateValue={dateRange}
           onDateChange={setDateRange}
           statusValue={queryParams.status || ''}
-          onStatusChange={(value) => setQueryParams({ ...queryParams, status: value || undefined, includeScrapped: value === 'scrapped' ? true : queryParams.includeScrapped, excludeTerminal: value ? undefined : true, page: 1 })}
+          onStatusChange={(value) => setQueryParams({ ...queryParams, status: value || undefined, includeScrapped: value === 'scrapped' ? true : queryParams.includeScrapped, excludeTerminal: undefined, page: 1 })}
           statusOptions={buildProductionStatusOptions()}
         />
         <Select

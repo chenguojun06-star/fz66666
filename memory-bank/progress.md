@@ -1,11 +1,30 @@
 # 进度跟踪
 
 > 本文件由 AI 助手自动维护，记录项目开发进度
-> 最后更新：2026-06-23
+> 最后更新：2026-07-02
 
 ---
 
 ## 已完成
+
+### 2026-07-02 新增 P0 #23 MCP 工具强制调用规则（配置 ≠ 自动调用）
+
+- [x] `.trae/rules/project_rules.md` 新增 P0 #23（10 个强制场景 + 降级规则 + tenantId 规则 + 例外清单）
+- [x] `.trae/rules/agent-workflow.md` 嵌入 MCP 强制调用（第1/3/5/6步）
+- [x] `memory-bank/mcp-tools-cheatsheet.md` 顶部新增 P0 #23 强制场景表
+- [x] 更新 `memory-bank/activeContext.md` 记录本次变更
+- [x] 添加决策 D-031（P0 #23 MCP 工具强制调用规则）
+
+### 2026-07-02 MCP 工具体系全面优化（调研 + 配置 + 文档同步）
+
+- [x] 调研 GitHub 2026 最火 AI 工具（MCP/Skill/Agent），4 方向并行核实
+- [x] 创建 `.trae/mcp.json`（含 6 自研 MCP + Serena，之前缺失）
+- [x] 接入 Serena（uvx）替代未实现的 code-search-mcp
+- [x] 更新 `memory-bank/mcp-tools-cheatsheet.md`（决策树 + 36 工具清单 + Serena）
+- [x] 更新 `.trae/rules/dev-mcp-design.md` 状态（设计 → 已实现 6/7）
+- [x] 同步 `.trae/mcp-servers/MCP_CONFIG_TEMPLATE.md`（5 → 7 MCP + GitHub 可选）
+- [x] 更新 `memory-bank/activeContext.md` 记录本次变更
+- [x] 添加决策 D-029（Serena 替代 code-search-mcp）+ D-030（MCP 配置统一管理）
 
 ### 2026-06-23 系统全面体验优化（8大模块）
 

@@ -95,6 +95,51 @@
         </view>
       </view>
     </view>
+
+    <!-- AI 图片分析结果 -->
+    <view wx:if="{{images.length > 0 && (aiImageAnalyzing || aiImageResult || aiImageError)}}" class="ai-image-result">
+      <view class="ai-image-header">
+        <text class="ai-image-icon">🔍</text>
+        <text class="ai-image-title">AI 图片分析</text>
+        <view wx:if="{{aiImageResult && aiImageResult.detectedItems.length > 0}}"
+              class="ai-image-adopt" bindtap="onAdoptImageAiResult">采纳</view>
+        <view wx:if="{{!aiImageAnalyzing && aiImageResult}}"
+              class="ai-image-retry" bindtap="onReanalyzeImage">重新分析</view>
+      </view>
+
+      <view wx:if="{{aiImageAnalyzing}}" class="ai-image-loading">
+        <text>AI 正在分析图片中...</text>
+      </view>
+
+      <view wx:if="{{aiImageError}}" class="ai-image-error">
+        <text>分析失败：{{aiImageError}}</text>
+      </view>
+
+      <view wx:if="{{aiImageResult && aiImageResult.detectedItems && aiImageResult.detectedItems.length > 0}}" class="ai-image-defects">
+        <view class="ai-severity">
+          <text>严重程度：</text>
+          <text class="severity-badge severity-{{aiImageResult.severity}}">{{aiImageResult.severity}}</text>
+        </view>
+        <view wx:for="{{aiImageResult.detectedItems}}" wx:key="type" class="defect-item">
+          <text class="defect-type">• {{item.type}}</text>
+          <text wx:if="{{item.description}}" class="defect-desc">{{item.description}}</text>
+          <text wx:if="{{item.confidence}}" class="defect-confidence">置信度：{{item.confidence}}%</text>
+        </view>
+        <view wx:if="{{aiImageResult.report}}" class="ai-image-report">
+          <text class="report-label">分析说明：</text>
+          <text class="report-text">{{aiImageResult.report}}</text>
+        </view>
+        <view wx:if="{{aiImageResult.recommendation}}" class="ai-image-recommend">
+          <text class="recommend-label">建议处理：</text>
+          <text class="recommend-text">{{aiImageResult.recommendation}}</text>
+        </view>
+      </view>
+
+      <view wx:if="{{aiImageResult && aiImageResult.severity === 'NONE' && (!aiImageResult.detectedItems || aiImageResult.detectedItems.length === 0)}}"
+            class="ai-image-clean">
+        <text>✅ 未检测到明显缺陷，建议人工复核确认</text>
+      </view>
+    </view>
   </view>
 
   <!-- 备注 -->

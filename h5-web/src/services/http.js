@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { useAuthStore } from '@/stores/authStore';
-import { clearToken, isTokenExpired } from '@/utils/storage';
+import { clearToken, isTokenExpired, getRefreshToken, setRefreshToken, setToken } from '@/utils/storage';
 import wxAdapter from '@/adapters/wx';
 
 const isWechat = wxAdapter.isWechat;
@@ -28,6 +28,7 @@ export const http = axios.create({
 });
 
 let isHandling401 = false;
+let refreshPromise = null;
 
 const REDIRECT_PATH_KEY = 'h5_auth_redirect';
 
@@ -45,6 +46,35 @@ export function handleUnauthorized() {
   }
   window.location.href = '/login';
   setTimeout(() => { isHandling401 = false; }, 3000);
+}
+
+async function tryRefreshToken() {
+  const savedRefresh = getRefreshToken();
+  if (!savedRefresh) return null;
+  if (refreshPromise) return refreshPromise;
+  refreshPromise = (async () => {
+    try {
+      const refreshClient = axios.create({ baseURL: DEFAULT_BASE_URL, timeout: 10000 });
+      const refreshRes = await refreshClient.post('/api/system/user/refresh-token', { refreshToken: savedRefresh });
+      if (refreshRes.data && refreshRes.data.code === 200 && refreshRes.data.data) {
+        const newToken = String(refreshRes.data.data.token || '').trim();
+        const newRefresh = String(refreshRes.data.data.refreshToken || '').trim();
+        if (newToken) {
+          setToken(newToken);
+          useAuthStore.getState().setAuth(newToken, useAuthStore.getState().user, { tenantId: useAuthStore.getState().tenantId, tenantName: useAuthStore.getState().tenantName });
+        }
+        if (newRefresh) setRefreshToken(newRefresh);
+        return newToken || null;
+      }
+      return null;
+    } catch (e) {
+      console.warn('[http] refreshToken failed:', e.message);
+      return null;
+    } finally {
+      refreshPromise = null;
+    }
+  })();
+  return refreshPromise;
 }
 
 export function getAuthRedirectPath() {
@@ -125,6 +155,13 @@ http.interceptors.response.use(
       const msg = data.message || data.msg || '操作失败';
       return Promise.reject(new Error(friendlyMessage(msg)));
     }
+    // 非标准Result格式（如文件下载、纯数据），仅在非JSON响应时直接返回
+    const contentType = response.headers?.['content-type'] || '';
+    if (!contentType.includes('application/json')) {
+      return data;
+    }
+    // JSON响应但无code字段，属于异常情况
+    console.warn('[http] 响应缺少code字段，可能接口异常:', response.config?.url);
     return data;
   },
   async (error) => {
@@ -141,7 +178,17 @@ http.interceptors.response.use(
     const isLoginRequest = requestUrl.includes('/api/system/user/login');
 
     if (status === 401) {
-      if (!isOnLoginPage()) {
+      if (!isOnLoginPage() && config && !config.__refreshed) {
+        const newToken = await tryRefreshToken();
+        if (newToken) {
+          config.__refreshed = true;
+          config.headers.Authorization = `Bearer ${newToken}`;
+          return http(config);
+        }
+        handleUnauthorized();
+      } else if (isOnLoginPage()) {
+        // 登录页的401不处理跳转
+      } else {
         handleUnauthorized();
       }
     }
@@ -166,7 +213,9 @@ http.interceptors.response.use(
     }
 
     if (status >= 500) {
-      return Promise.reject(new Error('服务器繁忙，请稍后重试'));
+      const serverMsg = error?.response?.data?.message;
+      const msg = serverMsg ? friendlyMessage(serverMsg) : '服务器繁忙，请稍后重试';
+      return Promise.reject(new Error(msg));
     }
 
     if (status === 0 && isWechat) {

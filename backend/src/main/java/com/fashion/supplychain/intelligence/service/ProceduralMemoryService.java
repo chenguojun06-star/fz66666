@@ -72,7 +72,9 @@ public class ProceduralMemoryService {
     public void recordUsage(Long sopId, boolean success) {
         if (sopId == null) return;
         try {
-            proceduralMemoryMapper.updateUsageStats(sopId, success ? 1 : 0);
+            Long tenantId = UserContext.tenantId();
+            if (tenantId == null) return;
+            proceduralMemoryMapper.updateUsageStats(sopId, tenantId, success ? 1 : 0);
             log.debug("[ProceduralMemory] 更新SOP统计，id={}, success={}", sopId, success);
         } catch (Exception e) {
             log.warn("[ProceduralMemory] 更新统计失败，id={}: {}", sopId, e.getMessage());

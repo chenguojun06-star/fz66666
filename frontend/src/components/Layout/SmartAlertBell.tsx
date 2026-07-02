@@ -16,6 +16,7 @@ import type { SysNotice } from '../../services/production/productionApi';
 import { useAiPatrol, RISK_TYPE_LABELS } from '@/modules/production/pages/Production/List/hooks/useAiPatrol';
 import XiaoyunCloudAvatar from '../common/XiaoyunCloudAvatar';
 import XiaoyunInsightCard, { type XiaoyunInsightCardData } from '../common/XiaoyunInsightCard';
+import BackgroundTaskPanel from '../common/BackgroundTaskPanel';
 
 interface TopPriorityOrder {
   orderNo: string;
@@ -518,6 +519,15 @@ const SmartAlertBell: React.FC = () => {
                 )}
               </div>
             )}
+
+            {/* ── 后台任务 ── */}
+            <div className="sap-section">
+              <BackgroundTaskPanel
+                maxItems={5}
+                pollInterval={10000}
+                onViewAll={() => navigate('/intelligence/tasks')}
+              />
+            </div>
 
             {/* ── 我的通知 ── */}
             {visibleNotices.length > 0 && (

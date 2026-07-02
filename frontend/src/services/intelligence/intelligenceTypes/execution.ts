@@ -29,3 +29,29 @@ export interface ExecutionConfig {
   notificationEnabled: boolean;
   auditEnabled: boolean;
 }
+
+export interface AgentBackgroundTaskDTO {
+  taskId: string;
+  taskName: string;
+  taskType: string;
+  status: 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED' | 'CANCELLED';
+  priority: 'HIGH' | 'MEDIUM' | 'LOW';
+  createdBy?: string;
+  progress: number;
+  currentStep?: string;
+  retryCount: number;
+  maxRetry: number;
+  startedAt?: string;
+  completedAt?: string;
+  timeoutSeconds: number;
+  errorMessage?: string;
+  createTime: string;
+  updateTime: string;
+}
+
+export interface BackgroundTaskListResponse {
+  list: AgentBackgroundTaskDTO[];
+  total: number;
+  pageNum: number;
+  pageSize: number;
+}

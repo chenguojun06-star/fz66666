@@ -301,7 +301,28 @@ public class ScanExecutorSupport {
 
     // ======================== 工序跟踪更新 ========================
 
+    /** 兼容旧签名：无回退工序名 */
     public void updateProcessTracking(CuttingBundle bundle, String processName,
+                                       String operatorId, String operatorName, String scanRecordId,
+                                       ProductionOrder order) {
+        updateProcessTracking(bundle, processName, null, operatorId, operatorName, scanRecordId, order);
+    }
+
+    /**
+     * 更新工序跟踪记录（支持父节点回退匹配）
+     * <p>
+     * 统一封装重试逻辑：先尝试 updateScanRecord，失败后 appendProcessTracking 初始化再重试。
+     * 当 fallbackProcessName 非空且不等于 processName 时，主工序未命中后自动按回退工序名再匹配一次。
+     *
+     * @param bundle              菲号信息
+     * @param processName         主工序名称（优先匹配）
+     * @param fallbackProcessName 回退工序名称（主工序未命中时使用，可为 null）
+     * @param operatorId          操作人ID
+     * @param operatorName        操作人姓名
+     * @param scanRecordId        扫码记录ID
+     * @param order               生产订单
+     */
+    public void updateProcessTracking(CuttingBundle bundle, String processName, String fallbackProcessName,
                                        String operatorId, String operatorName, String scanRecordId,
                                        ProductionOrder order) {
         if (bundle == null || !hasText(bundle.getId()) || !hasText(processName)) return;
@@ -314,32 +335,52 @@ public class ScanExecutorSupport {
             return;
         }
         ExceptionHandler.runClassified("工序跟踪更新", () -> {
-            boolean updated = processTrackingOrchestrator.updateScanRecord(
-                    bundle.getId(), processName, operatorId, operatorName, scanRecordId);
-            if (updated) {
-                log.info("工序跟踪记录更新成功: bundleId={}, processName={}, orderNo={}",
-                        bundle.getId(), processName, order.getOrderNo());
-                return;
+            try {
+                doUpdateProcessTracking(bundle, processName, operatorId, operatorName, scanRecordId, order);
+            } catch (Exception e) {
+                // 主工序更新失败不应阻止回退工序匹配（与重构前两次独立调用行为一致）
+                log.warn("工序跟踪主工序更新失败（将继续尝试回退工序）: bundleId={}, processName={}, error={}",
+                        bundle.getId(), processName, e.getMessage());
             }
-            log.warn("工序跟踪记录未找到，追加初始化后重试: bundleId={}, processName={}, orderNo={}",
-                    bundle.getId(), processName, order.getOrderNo());
-            processTrackingOrchestrator.appendProcessTracking(order.getId(), List.of(bundle));
-            boolean retryUpdated = processTrackingOrchestrator.updateScanRecord(
-                    bundle.getId(), processName, operatorId, operatorName, scanRecordId);
-            if (retryUpdated) {
-                log.info("工序跟踪记录重试成功: bundleId={}, processName={}, orderNo={}",
-                        bundle.getId(), processName, order.getOrderNo());
-            } else {
-                log.warn("工序跟踪记录重试仍失败: bundleId={}, processName={}, orderNo={}",
-                        bundle.getId(), processName, order.getOrderNo());
+            if (hasText(fallbackProcessName) && !fallbackProcessName.equals(processName)) {
+                log.info("工序跟踪按回退工序名匹配: bundleId={}, primary={}, fallback={}",
+                        bundle.getId(), processName, fallbackProcessName);
+                doUpdateProcessTracking(bundle, fallbackProcessName, operatorId, operatorName, scanRecordId, order);
             }
         },
-        be -> log.warn("工序跟踪业务拒绝（不阻断扫码）: bundleId={}, processName={}, orderNo={}, msg={}",
-                bundle.getId(), processName, order.getOrderNo(), be.getMessage()),
-        ise -> log.warn("工序跟踪状态冲突（不阻断扫码）: bundleId={}, processName={}, orderNo={}, msg={}",
-                bundle.getId(), processName, order.getOrderNo(), ise.getMessage()),
-        e -> log.error("工序跟踪记录更新失败（非业务异常）: bundleId={}, processName={}, orderNo={}",
-                bundle.getId(), processName, order.getOrderNo(), e));
+        be -> log.warn("工序跟踪业务拒绝（不阻断扫码）: bundleId={}, processName={}, fallback={}, orderNo={}, msg={}",
+                bundle.getId(), processName, fallbackProcessName, order.getOrderNo(), be.getMessage()),
+        ise -> log.warn("工序跟踪状态冲突（不阻断扫码）: bundleId={}, processName={}, fallback={}, orderNo={}, msg={}",
+                bundle.getId(), processName, fallbackProcessName, order.getOrderNo(), ise.getMessage()),
+        e -> log.error("工序跟踪记录更新失败（非业务异常）: bundleId={}, processName={}, fallback={}, orderNo={}",
+                bundle.getId(), processName, fallbackProcessName, order.getOrderNo(), e));
+    }
+
+    /**
+     * 执行单次工序跟踪更新（含 appendProcessTracking 重试）
+     */
+    private void doUpdateProcessTracking(CuttingBundle bundle, String processName,
+                                          String operatorId, String operatorName, String scanRecordId,
+                                          ProductionOrder order) {
+        boolean updated = processTrackingOrchestrator.updateScanRecord(
+                bundle.getId(), processName, operatorId, operatorName, scanRecordId);
+        if (updated) {
+            log.info("工序跟踪记录更新成功: bundleId={}, processName={}, orderNo={}",
+                    bundle.getId(), processName, order.getOrderNo());
+            return;
+        }
+        log.warn("工序跟踪记录未找到，追加初始化后重试: bundleId={}, processName={}, orderNo={}",
+                bundle.getId(), processName, order.getOrderNo());
+        processTrackingOrchestrator.appendProcessTracking(order.getId(), List.of(bundle));
+        boolean retryUpdated = processTrackingOrchestrator.updateScanRecord(
+                bundle.getId(), processName, operatorId, operatorName, scanRecordId);
+        if (retryUpdated) {
+            log.info("工序跟踪记录重试成功: bundleId={}, processName={}, orderNo={}",
+                    bundle.getId(), processName, order.getOrderNo());
+        } else {
+            log.warn("工序跟踪记录重试仍失败: bundleId={}, processName={}, orderNo={}",
+                    bundle.getId(), processName, order.getOrderNo());
+        }
     }
 
     private static void safePut(Map<String, Object> map, String key, Object value) {

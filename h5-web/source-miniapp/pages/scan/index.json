@@ -1,5 +1,6 @@
 {
   "navigationBarTitleText": "扫码",
+  "enablePullDownRefresh": true,
   "usingComponents": {
     "ai-assistant": "/components/ai-assistant/index",
     "privacy-dialog": "/components/privacy-dialog/index"

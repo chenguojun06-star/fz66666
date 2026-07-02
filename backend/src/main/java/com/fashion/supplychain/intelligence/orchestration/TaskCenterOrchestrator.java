@@ -165,7 +165,7 @@ public class TaskCenterOrchestrator {
         if (task == null) return Map.of("success", false, "error", "任务不存在");
 
         String escalatedTo = resolveEscalationTarget(task);
-        int updated = collaborationTaskMapper.escalateTask(taskId, escalatedTo);
+        int updated = collaborationTaskMapper.escalateTask(taskId, task.getTenantId(), escalatedTo);
         if (updated > 0) {
             log.info("[TaskCenter] 任务[{}]已升级至: {}", taskId, escalatedTo);
         }

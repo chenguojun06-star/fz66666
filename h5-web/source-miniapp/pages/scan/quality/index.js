@@ -31,6 +31,10 @@ Page({
     historicalDefectRate: '',
     loading: false,
     coverImage: '',
+    // AI 图片分析相关
+    aiImageAnalyzing: false,
+    aiImageResult: null,
+    aiImageError: '',
   },
 
   onLoad() {
@@ -193,10 +197,13 @@ Page({
           return api.common.uploadImage(f.tempFilePath);
         });
         Promise.all(tasks).then(function (urls) {
-          // 上传后返回的是相对路径 /api/file/tenant-download/...，
-          // <image> 标签无法发送 Authorization header，必须在 URL 追加 ?token=xxx
           const authedUrls = urls.filter(Boolean).map(function (u) { return getAuthedImageUrl(u); });
-          self.setData({ images: self.data.images.concat(authedUrls) });
+          const newImages = self.data.images.concat(authedUrls);
+          self.setData({ images: newImages });
+          // 上传成功后自动触发AI分析（分析第一张新上传的图片）
+          if (authedUrls.length > 0) {
+            self._analyzeImageWithAI(authedUrls[0]);
+          }
         }).catch(function () {
           toast.error('图片上传失败');
         });
@@ -204,7 +211,6 @@ Page({
       fail: function (err) {
         console.warn('[Quality] chooseMedia fail:', err);
         if (err && err.errMsg && err.errMsg.indexOf('cancel') === -1) {
-          // 权限被拒绝时引导用户去设置页
           wx.showModal({
             title: '相机/相册权限',
             content: '需要相机或相册权限才能上传照片，请在设置中允许',
@@ -217,6 +223,87 @@ Page({
         }
       },
     });
+  },
+
+  /* ---- AI 图片分析 ---- */
+
+  _analyzeImageWithAI(imageUrl) {
+    const self = this;
+    if (!imageUrl) return;
+    self.setData({
+      aiImageAnalyzing: true,
+      aiImageResult: null,
+      aiImageError: '',
+    });
+
+    api.production.analyzeQualityImage({
+      imageUrl: imageUrl,
+      contextHint: '这是服装质检照片，请重点检查破洞、污渍、色差、线头、跳针、起毛等常见质量缺陷',
+    }).then(function (res) {
+      if (res && res.detectedItems && res.detectedItems.length > 0) {
+        self.setData({
+          aiImageAnalyzing: false,
+          aiImageResult: res,
+        });
+      } else {
+        self.setData({
+          aiImageAnalyzing: false,
+          aiImageResult: res || { detectedItems: [], severity: 'NONE' },
+        });
+      }
+    }).catch(function (err) {
+      console.warn('[Quality] AI图片分析失败:', err);
+      self.setData({
+        aiImageAnalyzing: false,
+        aiImageError: (err && (err.message || err.errMsg)) || '分析失败',
+      });
+    });
+  },
+
+  onReanalyzeImage() {
+    const self = this;
+    if (self.data.images.length > 0) {
+      self._analyzeImageWithAI(self.data.images[0]);
+    }
+  },
+
+  onAdoptImageAiResult() {
+    const self = this;
+    const result = self.data.aiImageResult;
+    if (!result || !result.detectedItems || result.detectedItems.length === 0) {
+      toast.error('暂无可采纳的AI结果');
+      return;
+    }
+    // 根据严重程度自动选择缺陷类别
+    const items = result.detectedItems;
+    const hasAppearance = items.some(function (it) {
+      const t = (it.type || '').toLowerCase();
+      return t.indexOf('破洞') >= 0 || t.indexOf('污渍') >= 0 || t.indexOf('起毛') >= 0 || t.indexOf('外观') >= 0;
+    });
+    const hasSize = items.some(function (it) {
+      const t = (it.type || '').toLowerCase();
+      return t.indexOf('尺寸') >= 0 || t.indexOf('大小') >= 0;
+    });
+    const hasProcess = items.some(function (it) {
+      const t = (it.type || '').toLowerCase();
+      return t.indexOf('线头') >= 0 || t.indexOf('跳针') >= 0 || t.indexOf('工艺') >= 0 || t.indexOf('车缝') >= 0;
+    });
+
+    let categoryIdx = 0; // 默认外观
+    if (hasSize) categoryIdx = 1; // 尺寸
+    else if (hasProcess) categoryIdx = 2; // 工艺
+    else if (hasAppearance) categoryIdx = 0; // 外观
+
+    const updates = {
+      defectCategoryIndex: categoryIdx,
+      result: 'unqualified',
+    };
+    // 用AI报告填充备注
+    if (result.report) {
+      updates.remark = result.report;
+    }
+    self.setData(updates);
+    toast.success('已采纳AI分析结果');
   },
 
   onDeleteImage(e) {

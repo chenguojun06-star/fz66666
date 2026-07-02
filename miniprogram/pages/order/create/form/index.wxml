@@ -4,7 +4,7 @@
     <!-- 款式信息 -->
     <view class="sec sec--top">
       <view class="style-row" wx:if="{{coverImage}}">
-        <image class="style-thumb" src="{{coverImage}}" mode="aspectFill" bindtap="onCoverPreview" data-url="{{coverImage}}" />
+        <image class="style-thumb" src="{{coverImage}}" lazy-load mode="aspectFill" bindtap="onCoverPreview" data-url="{{coverImage}}" />
         <view class="style-txt">
           <text class="style-no">{{styleNo}}</text>
           <text class="style-nm">{{styleName}}</text>

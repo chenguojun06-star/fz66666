@@ -1,5 +1,6 @@
 {
   "navigationBarTitleText": "质检",
+  "enablePullDownRefresh": true,
   "usingComponents": {
     "privacy-dialog": "/components/privacy-dialog/index"
   }

@@ -54,11 +54,12 @@ def _is_old_migration(fname: str) -> bool:
 # ──────────────────────────────────────────────
 # 1. 文件名校验
 # ──────────────────────────────────────────────
-def check_filename(fname: str) -> List[str]:
+def check_filename(fname: str) -> Tuple[List[str], bool]:
     errors = []
+    is_old = _is_old_migration(fname)
     if not VERSION_PATTERN.match(fname):
         errors.append(f"文件名格式错误: '{fname}' — 必须匹配 V{{timestamp}}__{{desc}}.sql")
-    return errors
+    return errors, is_old
 
 
 def check_version_duplicates(filenames: List[str]) -> Dict[str, List[str]]:
@@ -371,7 +372,8 @@ def main() -> int:
             content = f.read()
 
         file_results = []
-        file_results.extend([(e, False) for e in check_filename(fname)])
+        fname_errors, fname_is_old = check_filename(fname)
+        file_results.extend([(e, fname_is_old) for e in fname_errors])
         content_results = check_content(fname, content, existing_file=(not args.diff))
         if not args.diff:
             content_results = [(msg, True) for msg, _ in content_results]

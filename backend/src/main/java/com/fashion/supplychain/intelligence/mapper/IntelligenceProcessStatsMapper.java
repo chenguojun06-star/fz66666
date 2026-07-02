@@ -16,7 +16,9 @@ public interface IntelligenceProcessStatsMapper extends BaseMapper<IntelligenceP
 
     /**
      * 查询最近 90 天内有扫码记录的活跃租户列表（供学习 Job 批量遍历）
+     * 注意：此方法需要跨租户查询，必须标注 @InterceptorIgnore 绕过租户拦截器
      */
+    @InterceptorIgnore(tenantLine = "true")
     @Select("SELECT DISTINCT tenant_id FROM t_scan_record "
             + "WHERE scan_time >= DATE_SUB(NOW(), INTERVAL 90 DAY) "
             + "AND tenant_id IS NOT NULL "

@@ -1,4 +1,5 @@
 const TOKEN_KEY = 'fashion_token';
+const REFRESH_TOKEN_KEY = 'refreshToken';
 const USER_KEY = 'fashion_user_info';
 const TENANT_KEY = 'fashion_tenant_info';
 
@@ -10,8 +11,21 @@ function setToken(token) {
   localStorage.setItem(TOKEN_KEY, String(token || ''));
 }
 
+function getRefreshToken() {
+  return localStorage.getItem(REFRESH_TOKEN_KEY) || '';
+}
+
+function setRefreshToken(token) {
+  if (token) {
+    localStorage.setItem(REFRESH_TOKEN_KEY, String(token));
+  } else {
+    localStorage.removeItem(REFRESH_TOKEN_KEY);
+  }
+}
+
 function clearToken() {
   localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(REFRESH_TOKEN_KEY);
 }
 
 function getUserInfo() {
@@ -120,8 +134,8 @@ function clearBusinessCaches() {
 }
 
 export {
-  TOKEN_KEY, USER_KEY, TENANT_KEY,
-  getToken, setToken, clearToken,
+  TOKEN_KEY, REFRESH_TOKEN_KEY, USER_KEY, TENANT_KEY,
+  getToken, setToken, getRefreshToken, setRefreshToken, clearToken,
   getUserInfo, setUserInfo, clearUserInfo,
   getTenantInfo, setTenantInfo,
   isTokenExpired, getUserRole, getUserRoleName,

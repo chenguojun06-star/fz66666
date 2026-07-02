@@ -30,6 +30,8 @@ import type {
   PredictionRestockSuggestionItem,
   GeneratePurchaseRequestPayload,
   GeneratePurchaseRequestResult,
+  AgentBackgroundTaskDTO,
+  BackgroundTaskListResponse,
   DifficultyAssessment,
   ExecutionConfig,
   ExecutionStats,
@@ -949,6 +951,36 @@ export const intelligenceApi = {
         payload,
       )
       .then((r) => (r?.data as GeneratePurchaseRequestResult) ?? ({} as GeneratePurchaseRequestResult)),
+
+  getBackgroundActiveTasks: (limit = 20): Promise<AgentBackgroundTaskDTO[]> =>
+    api
+      .get<{ code: number; data: AgentBackgroundTaskDTO[] }>(
+        '/intelligence/background-task/active',
+        { params: { limit } },
+      )
+      .then((r) => (Array.isArray(r?.data) ? r.data : [])),
+
+  getBackgroundTaskList: (pageNum = 1, pageSize = 20): Promise<BackgroundTaskListResponse> =>
+    api
+      .get<{ code: number; data: BackgroundTaskListResponse }>(
+        '/intelligence/background-task/list',
+        { params: { pageNum, pageSize } },
+      )
+      .then((r) => (r?.data ?? { list: [], total: 0, pageNum: 1, pageSize: 20 })),
+
+  getBackgroundTaskDetail: (taskId: string): Promise<AgentBackgroundTaskDTO | null> =>
+    api
+      .get<{ code: number; data: AgentBackgroundTaskDTO }>(
+        `/intelligence/background-task/${taskId}`,
+      )
+      .then((r) => (r?.data ?? null)),
+
+  cancelBackgroundTask: (taskId: string): Promise<boolean> =>
+    api
+      .post<{ code: number; data: boolean }>(
+        `/intelligence/background-task/${taskId}/cancel`,
+      )
+      .then((r) => (r?.data ?? false)),
 
 };
 

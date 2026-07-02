@@ -255,16 +255,15 @@ public class ProductionScanExecutor {
                                         String scanRecordId, ProductionOrder order) {
         if (bundle == null || !hasText(bundle.getId())) return;
 
-        // 优先按子工序名称更新；统一方法内部已包含重试（appendProcessTracking）和分类异常处理
-        executorSupport.updateProcessTracking(bundle, childProcessName, operatorId, operatorName, scanRecordId, order);
+        // 统一方法内部已包含重试（appendProcessTracking）和父节点回退匹配
+        String fallbackProcessName = (hasText(progressStage) && !progressStage.equals(childProcessName))
+                ? progressStage : null;
+        executorSupport.updateProcessTracking(bundle, childProcessName, fallbackProcessName,
+                operatorId, operatorName, scanRecordId, order);
 
-        // 若子工序未命中且存在父进度节点，再按父节点名回退匹配一次
-        if (hasText(progressStage) && !childProcessName.equals(progressStage)) {
-            executorSupport.updateProcessTracking(bundle, progressStage, operatorId, operatorName, scanRecordId, order);
-            if (hasText(processCode)) {
-                log.info("工序跟踪按父节点名回退匹配完成: bundleId={}, processCode={}, progressStage={}",
-                        bundle.getId(), processCode, progressStage);
-            }
+        if (hasText(fallbackProcessName) && hasText(processCode)) {
+            log.info("工序跟踪配置父节点回退匹配: bundleId={}, processCode={}, fallback={}",
+                    bundle.getId(), processCode, fallbackProcessName);
         }
     }
 

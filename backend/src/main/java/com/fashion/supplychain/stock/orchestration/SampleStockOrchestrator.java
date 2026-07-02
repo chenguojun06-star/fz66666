@@ -208,7 +208,9 @@ public class SampleStockOrchestrator {
             try {
                 com.fashion.supplychain.warehouse.entity.WarehouseArea area = warehouseAreaService.getById(loan.getWarehouseAreaId());
                 if (area != null) loan.setWarehouseAreaName(area.getAreaName());
-            } catch (Exception ignored) {}
+            } catch (Exception e) {
+                log.warn("样衣借出查询仓库区域失败: areaId={}", loan.getWarehouseAreaId(), e);
+            }
         }
         sampleLoanMapper.insert(loan);
 

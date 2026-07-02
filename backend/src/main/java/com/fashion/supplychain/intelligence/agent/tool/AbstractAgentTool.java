@@ -10,6 +10,7 @@ import com.fashion.supplychain.intelligence.agent.command.CompensableTool;
 import com.fashion.supplychain.intelligence.agent.command.CompensationResult;
 import com.fashion.supplychain.intelligence.agent.tracker.AiOperationAudit;
 import com.fashion.supplychain.intelligence.service.AiAgentToolAccessService;
+import com.fashion.supplychain.intelligence.service.ToolParameterAutoFixService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -37,6 +38,9 @@ public abstract class AbstractAgentTool implements AgentTool, CompensableTool {
     @Autowired
     private AiOperationAudit operationAudit;
 
+    @Autowired(required = false)
+    private ToolParameterAutoFixService autoFixService;
+
     @Override
     public final String execute(String argumentsJson) throws Exception {
         long startMs = System.currentTimeMillis();
@@ -55,6 +59,18 @@ public abstract class AbstractAgentTool implements AgentTool, CompensableTool {
             }
 
             Map<String, Object> args = parseArgs(argumentsJson);
+
+            // ── P0优化：参数自动修复（日期格式、字段名、类型转换） ──
+            if (autoFixService != null) {
+                AiTool toolDef = getToolDefinition();
+                Map<String, Object> properties = null;
+                if (toolDef != null && toolDef.getFunction() != null
+                        && toolDef.getFunction().getParameters() != null) {
+                    properties = toolDef.getFunction().getParameters().getProperties();
+                }
+                args = autoFixService.autoFix(toolName, args, properties);
+            }
+
             String validationError = validateArguments(args);
             if (validationError != null) {
                 log.warn("[{}] 参数校验失败: {}", toolName, validationError);

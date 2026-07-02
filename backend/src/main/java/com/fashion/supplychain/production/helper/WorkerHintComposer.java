@@ -23,6 +23,14 @@ import java.util.regex.Pattern;
  *   <li>质检工：关注难度等级、二次工艺、AI 视觉摘要</li>
  *   <li>仓管：关注款式信息，减少漏发货</li>
  * </ul>
+ *
+ * <p>针号推荐优先级：</p>
+ * <ol>
+ *   <li>人工备注（description）中明确写了针号 → 直接使用，标注"样衣工艺备注"</li>
+ *   <li>AI 视觉分析（imageInsight + visionRaw）识别面料类型 → 按面料厚度推荐，标注"AI 推荐"</li>
+ *   <li>面料成分（fabricComposition）解析成分比例 → 按主导成分推荐，标注"AI 推荐"</li>
+ *   <li>以上都没有 → 不展示针号（不猜测）</li>
+ * </ol>
  */
 @Slf4j
 public final class WorkerHintComposer {
@@ -58,15 +66,66 @@ public final class WorkerHintComposer {
     /** 单次调用最大提取项数（防止 description 过长导致提示喧宾夺主） */
     private static final int MAX_PROCESS_HINTS = 5;
 
+    // ================== 面料→针号推荐表 ==================
+
+    /** 面料类型关键词 → 针号推荐（按厚度从薄到厚排列，匹配时取第一个命中的） */
+    private static final List<FabricNeedleRule> FABRIC_NEEDLE_RULES = List.of(
+            // —— 薄面料（9号针） ——
+            new FabricNeedleRule("9号针", "薄面料",
+                    List.of("真丝", "丝绸", "缎面", "缎", "雪纺", "乔其", "欧根纱", "里布", " lining", "薄纱"),
+                    "面料轻薄细密，使用细针避免针眼和抽丝"),
+            // —— 中薄面料（11号针） ——
+            new FabricNeedleRule("11号针", "中薄面料",
+                    List.of("雪棉", "薄棉", "府绸", "锦纶", "尼龙", "涤纶薄", "雪尼尔",
+                            "蕾丝", "网纱", "薄纱", "弹力", "氨纶", "莱卡", " stretch"),
+                    "中薄面料或含弹力成分，使用中等细针防止跳针"),
+            // —— 中等面料（12号针） ——
+            new FabricNeedleRule("12号针", "中等面料",
+                    List.of("棉", "涤纶", "polyester", "棉麻", "麻", "linen", "人棉", "粘胶",
+                            "莫代尔", "modal", "普通", "常规", "梭织", "针织", " fleece"),
+                    "中等厚度面料，12号针为通用选择"),
+            // —— 厚面料（14号针） ——
+            new FabricNeedleRule("14号针", "厚面料",
+                    List.of("牛仔", "denim", "帆布", "canvas", "厚棉", "粗纺", "毛呢", "呢料",
+                            " wool", "woolen", "粗针", "粗线", "夹克", "外衣", "coat"),
+                    "面料较厚，使用粗针避免断针和跳针"),
+            // —— 极厚面料（16号针） ——
+            new FabricNeedleRule("16号针", "极厚面料",
+                    List.of("皮革", "leather", "人造革", "pu皮", "厚皮", "复合面料",
+                            "多层贴合", "极厚"),
+                    "极厚面料或皮革，需专用粗针")
+    );
+
+    /** 面料成分 → 面料类型推断（用于 fabricComposition 文本解析） */
+    private static final List<CompositionRule> COMPOSITION_RULES = List.of(
+            // 真丝/缎面类 → 薄
+            new CompositionRule(List.of("真丝", "丝", "silk", "缎", "satin"), "薄", "真丝/缎面"),
+            // 雪纺/乔其 → 薄
+            new CompositionRule(List.of("雪纺", "乔其", "chiffon"), "薄", "雪纺类"),
+            // 氨纶/莱卡 → 弹力
+            new CompositionRule(List.of("氨纶", "莱卡", "spandex", "elastane"), "弹力", "弹力面料"),
+            // 麻 → 中等偏厚
+            new CompositionRule(List.of("麻", "linen"), "中等", "麻类"),
+            // 羊毛/呢料 → 厚
+            new CompositionRule(List.of("羊毛", "wool", "呢", "粗纺"), "厚", "毛呢类"),
+            // 牛仔 → 厚
+            new CompositionRule(List.of("牛仔", "denim"), "厚", "牛仔"),
+            // 皮革 → 极厚
+            new CompositionRule(List.of("皮革", "leather", "pu皮"), "极厚", "皮革"),
+            // 涤纶/聚酯纤维 → 中等
+            new CompositionRule(List.of("涤纶", "polyester", "聚酯"), "中等", "涤纶"),
+            // 棉 → 中等（最常见，放后面）
+            new CompositionRule(List.of("棉", "cotton"), "中等", "棉")
+    );
+
     private WorkerHintComposer() {}
 
     /**
      * 生成所有工人提示字段，放入 info map 中。
      * 若 styleInfo 为 null，保持 info 不变（不阻断扫码主流程）。
      *
-     * <p>重要原则：所有提示必须来源于样衣开发阶段的人工数据，不做任何"基于面料推断针距/针号"的猜测。
-     * 针号/工艺关键词来自 StyleInfo.description（样衣工艺备注，人工填写）。
-     * imageInsight（视觉识别结果）作为参考提示，前端已标注为"系统提示"，工人以实际面料手感为准。</p>
+     * <p>重要原则：针号优先使用人工备注（description），无备注时根据 AI 视觉分析和面料成分智能推荐。
+     * 所有推荐均标注来源（"样衣工艺备注"或"AI 推荐·面料类型"），工人以实际面料手感为准。</p>
      */
     public static void composeInto(Map<String, Object> info, StyleInfo si, List<SecondaryProcess> secondaryProcesses) {
         if (si == null || info == null) return;
@@ -91,15 +150,28 @@ public final class WorkerHintComposer {
             info.put("difficultySeverity", computeSeverityByScore(si.getDifficultyScore()));
         }
 
-        // —— 针号提示：仅从 description（人工填写的样衣工艺备注）中提取，绝不猜测 ——
+        // —— 针号提示：人工备注优先，AI 智能推荐兜底 ——
         String desc = safeTrim(si.getDescription());
         String needleMatch = null;
         if (desc != null) {
             Matcher m = NEEDLE_PATTERN.matcher(desc);
             if (m.find()) {
                 needleMatch = m.group(1);
-                // 明确标注来源：来自样衣工艺备注，不是系统推断
+                // 人工备注优先级最高
                 info.put("needleHint", needleMatch + "（样衣工艺备注）");
+            }
+        }
+
+        // 人工没写针号 → 根据 AI 视觉分析 + 面料成分智能推荐
+        if (needleMatch == null) {
+            String imageInsight = safeTrim(si.getImageInsight());
+            String visionRaw = safeTrim(si.getVisionRaw());
+            String fabricComp = safeTrim(si.getFabricComposition());
+            String category = safeTrim(si.getCategory());
+            NeedleRecommendation rec = recommendNeedleSize(imageInsight, visionRaw, fabricComp, category);
+            if (rec != null) {
+                info.put("needleHint", rec.needleSize + "（AI 推荐·" + rec.fabricType + "）");
+                info.put("needleReason", rec.reason);
             }
         }
 
@@ -144,7 +216,7 @@ public final class WorkerHintComposer {
                 "difficultyLabel", "difficultyScore", "difficultyLevel", "difficultySeverity",
                 "fabricComposition", "imageInsight", "visionRaw",
                 "workerHint", "secondaryProcessHint", "secondaryProcesses",
-                "processHints", "needleHint", "description", "cover", "fabricCompositionParts"
+                "processHints", "needleHint", "needleReason", "description", "cover", "fabricCompositionParts"
         };
         for (String k : topKeys) {
             if (info.get(k) != null) result.put(k, info.get(k));
@@ -190,5 +262,154 @@ public final class WorkerHintComposer {
             }
         }
         return hits;
+    }
+
+    // ================== 针号智能推荐 ==================
+
+    /**
+     * 根据 AI 视觉分析 + 面料成分推荐针号。
+     *
+     * <p>推荐逻辑：</p>
+     * <ol>
+     *   <li>先从 imageInsight / visionRaw 中提取面料关键词（AI 视觉分析最准）</li>
+     *   <li>再从 fabricComposition 中解析成分比例（人工填写的成分）</li>
+     *   <li>品类辅助判断（西装/大衣偏厚，T恤/衬衫偏薄）</li>
+     *   <li>综合判断面料厚度 → 返回对应针号推荐</li>
+     * </ol>
+     *
+     * @param imageInsight AI 视觉分析摘要（自然语言，≤120字）
+     * @param visionRaw    Agnes 视觉模型原始描述（自然语言，≤400字）
+     * @param fabricComp   面料成分文本（如"70%棉 30%涤纶"）
+     * @param category     品类（如"裤装"/"衬衫"/"外套"）
+     * @return 针号推荐，null 表示无法判断
+     */
+    private static NeedleRecommendation recommendNeedleSize(
+            String imageInsight, String visionRaw, String fabricComp, String category) {
+        // 合并 AI 视觉分析文本（转小写做匹配）
+        StringBuilder aiText = new StringBuilder();
+        if (imageInsight != null) aiText.append(imageInsight);
+        if (visionRaw != null) aiText.append(" ").append(visionRaw);
+        String aiTextLower = aiText.toString().toLowerCase();
+
+        // 1. 先从 AI 视觉文本中直接匹配面料关键词（最准）
+        for (FabricNeedleRule rule : FABRIC_NEEDLE_RULES) {
+            for (String kw : rule.keywords) {
+                if (aiTextLower.contains(kw.toLowerCase())) {
+                    return new NeedleRecommendation(
+                            rule.needleSize, rule.fabricType, rule.reason);
+                }
+            }
+        }
+
+        // 2. 从面料成分中解析主导成分
+        if (fabricComp != null && !fabricComp.isBlank()) {
+            String compLower = fabricComp.toLowerCase();
+            for (CompositionRule rule : COMPOSITION_RULES) {
+                for (String kw : rule.keywords) {
+                    if (compLower.contains(kw.toLowerCase())) {
+                        // 按成分推断的厚度找针号
+                        FabricNeedleRule needleRule = findRuleByThickness(rule.thickness);
+                        if (needleRule != null) {
+                            return new NeedleRecommendation(
+                                    needleRule.needleSize, rule.fabricLabel, needleRule.reason);
+                        }
+                    }
+                }
+            }
+        }
+
+        // 3. 品类辅助判断（最后兜底）
+        if (category != null && !category.isBlank()) {
+            String catLower = category.toLowerCase();
+            // 厚款品类
+            if (containsAny(catLower, "外套", "大衣", "夹克", "西装", "棉衣", "羽绒服")) {
+                FabricNeedleRule rule = findRuleByThickness("厚");
+                if (rule != null) {
+                    return new NeedleRecommendation(
+                            rule.needleSize, "厚款品类", rule.reason);
+                }
+            }
+            // 薄款品类
+            if (containsAny(catLower, "t恤", "衬衫", "背心", "吊带")) {
+                FabricNeedleRule rule = findRuleByThickness("薄");
+                if (rule != null) {
+                    return new NeedleRecommendation(
+                            rule.needleSize, "薄款品类", rule.reason);
+                }
+            }
+        }
+
+        // 无法判断
+        return null;
+    }
+
+    /** 按厚度标识查找对应的针号规则 */
+    private static FabricNeedleRule findRuleByThickness(String thickness) {
+        // 厚度映射：薄→9号, 弹力→11号, 中等→12号, 厚→14号, 极厚→16号
+        switch (thickness) {
+            case "薄": return findRule("9号针");
+            case "弹力": return findRule("11号针");
+            case "中等": return findRule("12号针");
+            case "厚": return findRule("14号针");
+            case "极厚": return findRule("16号针");
+            default: return null;
+        }
+    }
+
+    private static FabricNeedleRule findRule(String needleSize) {
+        for (FabricNeedleRule r : FABRIC_NEEDLE_RULES) {
+            if (r.needleSize.equals(needleSize)) return r;
+        }
+        return null;
+    }
+
+    private static boolean containsAny(String text, String... keywords) {
+        for (String kw : keywords) {
+            if (text.contains(kw.toLowerCase())) return true;
+        }
+        return false;
+    }
+
+    // ================== 推荐数据结构 ==================
+
+    /** 面料→针号规则 */
+    private static final class FabricNeedleRule {
+        final String needleSize;
+        final String fabricType;
+        final List<String> keywords;
+        final String reason;
+
+        FabricNeedleRule(String needleSize, String fabricType, List<String> keywords, String reason) {
+            this.needleSize = needleSize;
+            this.fabricType = fabricType;
+            this.keywords = keywords;
+            this.reason = reason;
+        }
+    }
+
+    /** 面料成分→厚度推断规则 */
+    private static final class CompositionRule {
+        final List<String> keywords;
+        final String thickness;
+        final String fabricLabel;
+
+        CompositionRule(List<String> keywords, String thickness, String fabricLabel) {
+            this.keywords = keywords;
+            this.thickness = thickness;
+            this.fabricLabel = fabricLabel;
+        }
+    }
+
+    /** 针号推荐结果 */
+    private static final class NeedleRecommendation {
+        final String needleSize;
+        final String fabricType;
+        final String reason;
+
+        NeedleRecommendation(String needleSize, String fabricType, String reason) {
+            this.needleSize = needleSize;
+            this.fabricType = fabricType;
+            this.reason = reason;
+        }
     }
 }

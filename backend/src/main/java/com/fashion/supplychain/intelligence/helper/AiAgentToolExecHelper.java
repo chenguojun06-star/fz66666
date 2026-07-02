@@ -10,6 +10,7 @@ import com.fashion.supplychain.intelligence.service.AiAgentToolAccessService.Con
 import com.fashion.supplychain.intelligence.service.AiAgentMetricsService;
 import com.fashion.supplychain.intelligence.service.AiAgentIdempotencyService;
 import com.fashion.supplychain.intelligence.service.CostExplosionGuard;
+import com.fashion.supplychain.intelligence.service.ToolResultCacheService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -53,6 +54,7 @@ public class AiAgentToolExecHelper {
     @Autowired private List<AgentTool> registeredTools;
     @Autowired(required = false) private List<ToolExecutionHook> toolHooks;
     @Autowired(required = false) private CostExplosionGuard costExplosionGuard;
+    @Autowired(required = false) private ToolResultCacheService toolResultCacheService;
 
     private Map<String, AgentTool> toolMap;
 
@@ -336,6 +338,23 @@ public class AiAgentToolExecHelper {
         }
 
         AgentTool tool = visibleToolMap.get(toolName);
+
+        // ── P0优化：只读工具跨会话缓存（ToolResultCacheService） ──
+        // 在执行前先查缓存，命中则跳过执行
+        if (tool != null && toolResultCacheService != null) {
+            try {
+                String cachedResult = toolResultCacheService.lookup(tool, toolName, arguments);
+                if (cachedResult != null) {
+                    log.info("[ToolCache] 跨会话缓存命中，跳过执行: tool={}", toolName);
+                    long elapsed = System.currentTimeMillis() - start;
+                    return new ToolExecRecord(toolCallId, toolName, arguments, cachedResult,
+                            evidenceHelper.buildToolEvidenceMessage(toolName, cachedResult), elapsed);
+                }
+            } catch (Exception e) {
+                log.debug("[ToolCache] 缓存查询异常，降级执行: {}", e.getMessage());
+            }
+        }
+
         if (tool != null) {
             try {
                 rawResult = tool.execute(arguments);
@@ -365,6 +384,15 @@ public class AiAgentToolExecHelper {
         // ── 写工具幂等收尾：成功回写结果，失败立即清键允许重试 ──
         if (success) {
             idempotencyService.saveResult(toolName, arguments, rawResult);
+
+            // ── P0优化：只读工具执行成功后保存跨会话缓存 ──
+            if (tool != null && toolResultCacheService != null) {
+                try {
+                    toolResultCacheService.save(tool, toolName, arguments, rawResult);
+                } catch (Exception e) {
+                    log.debug("[ToolCache] 缓存保存异常（不影响主流程）: {}", e.getMessage());
+                }
+            }
         } else {
             idempotencyService.clearOnFailure(toolName, arguments);
         }

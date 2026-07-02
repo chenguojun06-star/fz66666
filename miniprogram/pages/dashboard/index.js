@@ -26,6 +26,7 @@ const app = getApp();
    生产中不单独过滤 status='production'，而是依赖 excludeTerminal='true' 排除终止状态，
    因为活跃状态包含 production/in_progress/cutting/sewing/ironing/packaging/quality_check/warehousing 等） */
 const STATUS_FILTERS = [
+  { key: 'all',           label: '全部',   value: '' },
   { key: 'in_production', label: '生产中', value: '' },
   { key: 'completed',     label: '已完成', value: 'completed' },
 ];
@@ -60,8 +61,8 @@ Page({
     unreadNoticeCount: 0,
     /* 状态过滤（已延期/临近交期用 smart-hints 筛选，不在这里重复） */
     statFilters: STATUS_FILTERS,
-    activeFilter: 'in_production',
-    statCounts: { in_production: 0, completed: 0 },
+    activeFilter: 'all',
+    statCounts: { all: 0, in_production: 0, completed: 0 },
     /* 智能提示标签（对齐 PC 端 OrderManagement hints） */
     smartHints: [
       { key: 'overdue', label: '已延期', count: 0, tone: 'danger' },
@@ -193,7 +194,11 @@ Page({
     }
 
     return app.loadPagedList(this, 'orders', reset, function (p) {
-      const params = { page: p.page, pageSize: smartFilter ? 50 : p.pageSize, excludeTerminal: 'true' };
+      const params = { page: p.page, pageSize: smartFilter ? 50 : p.pageSize };
+      // 选"生产中"时排除终态，选"已完成"时按status查询，默认全部不过滤
+      if (activeKey === 'in_production') {
+        params.excludeTerminal = 'true';
+      }
       if (filterVal) {
         params.status = filterVal;
       }
@@ -251,6 +256,7 @@ Page({
       const warningCount = Number(stats.warningOrders) || 0;
       that.setData({
         statCounts: {
+          all:            (Number(stats.activeOrders) || 0) + (Number(stats.completedOrders) || 0),
           in_production:  Number(stats.activeOrders) || 0,
           completed:      Number(stats.completedOrders) || 0,
         },

@@ -30,7 +30,7 @@ export const FilterSearchSection: React.FC<FilterBarBaseProps> = ({
       dateValue={dateRange}
       onDateChange={(value) => setDateRange(value)}
       statusValue={String(queryParams.status || '')}
-      onStatusChange={(value) => setQueryParams((prev) => ({ ...prev, page: 1, status: value || undefined, includeScrapped: value === 'scrapped' ? true : undefined, excludeTerminal: value ? undefined : true }))}
+      onStatusChange={(value) => setQueryParams((prev) => ({ ...prev, page: 1, status: value || undefined, includeScrapped: value === 'scrapped' ? true : undefined, excludeTerminal: undefined }))}
       statusOptions={statusOptions}
     />
     <Select value={queryParams.factoryType || ''} onChange={(value) => setQueryParams((prev) => ({ ...prev, factoryType: (value || undefined) as ProductionQueryParams['factoryType'], page: 1 }))} placeholder="内外标签" allowClear style={{ minWidth: 110 }} options={factoryTypeOptions} />

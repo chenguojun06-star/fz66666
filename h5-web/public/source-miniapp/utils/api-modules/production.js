@@ -255,6 +255,9 @@ const production = {
   getQualityAiSuggestion(orderId) {
     return ok(`/api/quality/ai-suggestion?orderId=${encodeURIComponent(orderId)}`, 'GET', {});
   },
+  analyzeQualityImage(payload) {
+    return ok('/api/quality/ai-defect-detect', 'POST', payload || {});
+  },
 
   /* -------- 工序单价调整 -------- */
   queryOrderProcesses(orderNo) {

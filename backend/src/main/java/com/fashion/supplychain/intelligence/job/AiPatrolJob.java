@@ -422,7 +422,7 @@ public class AiPatrolJob {
                             : "L3";
 
                     String escalatedTo = resolveEscalationTarget(task);
-                    collaborationTaskMapper.escalateTask(task.getId(), escalatedTo);
+                    collaborationTaskMapper.escalateTask(task.getId(), task.getTenantId(), escalatedTo);
 
                     String issue = String.format(
                             "协作任务[%s] 逾期%d小时未处理（订单:%s, 岗位:%s），已自动升级至%s",

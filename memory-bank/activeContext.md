@@ -1,7 +1,7 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-06-27
+> 最后更新：2026-07-02（P0 #23 MCP 工具强制调用规则）
 
 ---
 
@@ -23,6 +23,58 @@
 - ✅ 数据库稳定性 + 全链路数据流阻塞治理（2026-06-24）
 
 ## 最近变更
+
+### 2026-07-02 新增 P0 #23 MCP 工具强制调用规则（配置 ≠ 自动调用）
+
+**背景**：用户质疑"配置 MCP ≠ AI 会自动调用"。确认 AI 习惯用原生工具（RunCommand+SQL / mvn / Read）导致 MCP 形同虚设，必须写入 P0 铁律强制。
+
+**完成内容**：
+1. **`.trae/rules/project_rules.md` 新增 P0 #23**
+   - 10 个强制场景表格（查业务数据 / Flyway 校验 / 编译验证 / 符号搜索 / 影响评估 / 反模式检测 / 记忆加载等）
+   - 每个场景明确"必须用 XX-mcp" + "禁止 YY 替代"
+   - 降级规则（MCP 不可用时必须告知用户并手动遵守 P0 #4/#1/#13）
+   - tenantId 传递规则（从 UserContext 获取，禁止编造）
+   - 例外清单（文件读写仍用原生工具，P0 铁律）
+2. **`.trae/rules/agent-workflow.md` 嵌入 MCP 强制调用**
+   - 第1步：优先用 `memory-bank-mcp.read_all_core` 加载核心记忆
+   - 第3步：影响分析用 `change-impact-mcp.analyze_change_risk` + 调用链用 `serena`
+   - 第5步：写代码前用 `anti-pattern-mcp.detect_anti_patterns` 检测
+   - 第6步：质量门控表格新增"强制 MCP 工具"列，禁止裸 mvn/tsc/python
+3. **`memory-bank/mcp-tools-cheatsheet.md` 顶部新增 P0 #23 强制场景表**
+   - 10 个场景一表速查 + 降级规则提示
+
+**相关文件**：
+- [project_rules.md](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/.trae/rules/project_rules.md)
+- [agent-workflow.md](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/.trae/rules/agent-workflow.md)
+- [mcp-tools-cheatsheet.md](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/memory-bank/mcp-tools-cheatsheet.md)
+
+### 2026-07-02 MCP 工具体系全面优化（调研 + 配置 + 文档同步）
+
+**背景**：调研 GitHub 2026 年最火 AI 开发工具（MCP/Skill/Agent），评估对项目有用性并落地优化。
+
+**完成内容**：
+1. **创建 `.trae/mcp.json`**（之前缺失，6 个自研 MCP 代码就绪但配置文件未创建）
+   - 包含 6 个自研 MCP：memory-bank / change-impact / anti-pattern / db-query / flyway / test-runner
+   - 补齐 test-runner-mcp（模板原缺失）+ flyway/test-runner 的 PROJECT_ROOT 环境变量
+   - 新增 Serena（语义代码搜索，uvx 按需下载，替代未实现的 code-search-mcp）
+2. **更新 `memory-bank/mcp-tools-cheatsheet.md`**
+   - 决策树新增 7 个自研 MCP 使用场景
+   - MCP Servers 表格分三类（通用 5 + 自研 6 + 外部 1）
+   - 新增 2.6-2.12 章节：36 个自研工具 + Serena 工具清单和参数说明
+3. **更新 `.trae/rules/dev-mcp-design.md` 状态**
+   - 状态从"设计阶段（未实现）"改为"已实现（6/7 + Serena 替代）"
+   - 新增实现状态总览表 + code-search-mcp 替代说明
+4. **同步 `.trae/mcp-servers/MCP_CONFIG_TEMPLATE.md`**
+   - 配置清单从 5 个更新为 7 个
+   - 新增 GitHub MCP 可选配置说明（需 PAT）
+
+**调研结论**：项目 AI 能力已相当成熟（6 自研 MCP + 30 SKILL + 100 AgentTool + 17 自进化组件），主要缺口是 code-search-mcp 未实现和 mcp.json 未创建。用 Serena 填补代码搜索缺口，其余外部工具（Diffblue/Bytebase/Sentry）按 P1/P2 优先级评估。
+
+**相关文件**：
+- [.trae/mcp.json](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/.trae/mcp.json)
+- [mcp-tools-cheatsheet.md](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/memory-bank/mcp-tools-cheatsheet.md)
+- [dev-mcp-design.md](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/.trae/rules/dev-mcp-design.md)
+- [MCP_CONFIG_TEMPLATE.md](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/.trae/mcp-servers/MCP_CONFIG_TEMPLATE.md)
 
 ### 2026-06-28 修复云端 SysNoticeMapper setting parameters 错误
 

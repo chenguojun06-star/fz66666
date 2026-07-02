@@ -117,6 +117,19 @@ public class WagePaymentOrchestrator {
         TenantAssert.assertTenantContext();
         Long tenantId = TenantAssert.requireTenantId();
 
+        // 幂等防重：同一业务单据+支付方式只允许创建一条非取消的支付记录
+        long existCount = wagePaymentService.count(
+            new LambdaQueryWrapper<WagePayment>()
+                .eq(WagePayment::getTenantId, tenantId)
+                .eq(WagePayment::getBizType, request.getBizType())
+                .eq(WagePayment::getBizId, request.getBizId())
+                .eq(WagePayment::getPaymentMethod, request.getPaymentMethod())
+                .ne(WagePayment::getStatus, "cancelled")
+        );
+        if (existCount > 0) {
+            throw new IllegalStateException("该单据已存在支付记录，请勿重复提交");
+        }
+
         WagePayment payment = new WagePayment();
         payment.setPaymentNo(generatePaymentNo());
         payment.setPayeeType(request.getPayeeType());
@@ -372,7 +385,9 @@ public class WagePaymentOrchestrator {
         try {
             Payable p = payableService.getById(request.getBizId());
             if (p != null && p.getDeleteFlag() != null && p.getDeleteFlag() == 0) return p;
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            log.warn("[付款中心] 查询应付单失败: bizId={}", request.getBizId(), e);
+        }
         return null;
     }
 
@@ -381,7 +396,9 @@ public class WagePaymentOrchestrator {
         try {
             Payable p = payableService.getById(payment.getBizId());
             if (p != null && p.getDeleteFlag() != null && p.getDeleteFlag() == 0) return p;
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            log.warn("[付款中心] 查询应付单失败: bizId={}", payment.getBizId(), e);
+        }
         return null;
     }
 

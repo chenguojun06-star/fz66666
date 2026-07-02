@@ -92,7 +92,10 @@
 
     <view wx:if="{{detail.needleHint}}" class="worker-hint-row">
       <text class="worker-hint-key">针号</text>
-      <text class="worker-hint-value">{{detail.needleHint}}</text>
+      <view class="worker-hint-value-wrap">
+        <text class="worker-hint-value">{{detail.needleHint}}</text>
+        <text wx:if="{{detail.needleReason}}" class="worker-hint-sub">{{detail.needleReason}}</text>
+      </view>
     </view>
 
     <view wx:if="{{detail.processHints && detail.processHints.length > 0}}" class="worker-hint-row worker-hint-row--processes">

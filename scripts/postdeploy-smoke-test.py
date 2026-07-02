@@ -204,6 +204,15 @@ if token:
     expect_200("GET", "/api/dashboard/overdue-orders", "逾期订单")
     expect_200("GET", "/api/finance/finished-settlement/list", "成品结算列表")
 
+    # 核心链路接口（扫码/入库/工资结算）
+    expect_200("GET", "/api/production/order/list", "生产订单列表")
+    expect_200("GET", "/api/production/process/template/list", "工序模板列表")
+    expect_200("GET", "/api/production/material/list", "物料列表")
+    expect_200("GET", "/api/production/warehousing/list", "入库记录列表")
+    expect_200("GET", "/api/finance/wage/payment/list", "工资结算列表")
+    expect_200("GET", "/api/finance/wage/piece-rate/list", "计件单价列表")
+    expect_200("GET", "/api/production/quality/check/list", "质检记录列表")
+
     # 权限控制
     code, _ = http("GET", "/api/system/user/list", with_token=False, retry=False)
     if code in (401, 403):

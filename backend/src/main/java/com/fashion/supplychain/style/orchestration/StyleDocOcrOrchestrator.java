@@ -226,6 +226,133 @@ public class StyleDocOcrOrchestrator {
         }
     }
 
+    /**
+     * 识别 BOM 物料清单图片，提取面料/辅料明细数据
+     * 返回结构化JSON：{ items: [{ materialName, materialCode, materialType, color, specification, unit, usageAmount, ... }] }
+     */
+    public Map<String, Object> recognizeBomTable(MultipartFile file) {
+        Long tenantId = UserContext.tenantId();
+
+        if (!inferenceOrchestrator.isVisionEnabled()) {
+            throw new IllegalStateException("AI视觉识别未启用，请联系管理员配置Agnes视觉模型");
+        }
+
+        String imageUrl = uploadFileToCos(tenantId, file);
+        if (imageUrl == null) {
+            throw new IllegalStateException("图片上传失败，请检查网络连接后重试");
+        }
+
+        try {
+            String prompt = "你是专业服装BOM物料清单识别助手。请仔细识别图片中的物料清单。\n" +
+                    "重点提取以下信息（每行物料一条记录）：\n" +
+                    "1. 物料名称（如：主面料、里布、拉链、纽扣、缝纫线等）\n" +
+                    "2. 物料编码（如图片中有编码则提取）\n" +
+                    "3. 物料类型（面料/辅料/缝纫线/标签/包装材料）\n" +
+                    "4. 颜色（如图片中有颜色信息则提取）\n" +
+                    "5. 规格/型号（如：20D/210T、YKK-5号等）\n" +
+                    "6. 单位（米/码/个/粒/卷/公斤等）\n" +
+                    "7. 单件用量（数字，不含单位）\n" +
+                    "8. 损耗率（百分比数字，如5表示5%）\n" +
+                    "9. 供应商（如图片中有则提取）\n" +
+                    "10. 备注（其他说明信息）\n\n" +
+                    "请严格按照以下JSON格式输出，不要输出其他内容：\n" +
+                    "{\n" +
+                    "  \"items\": [\n" +
+                    "    {\n" +
+                    "      \"materialName\": \"物料名称\",\n" +
+                    "      \"materialCode\": \"物料编码（没有则为空字符串）\",\n" +
+                    "      \"materialType\": \"面料|辅料|缝纫线|标签|包装材料\",\n" +
+                    "      \"color\": \"颜色（没有则为空字符串）\",\n" +
+                    "      \"specification\": \"规格型号（没有则为空字符串）\",\n" +
+                    "      \"unit\": \"单位\",\n" +
+                    "      \"usageAmount\": 0,\n" +
+                    "      \"lossRate\": 0,\n" +
+                    "      \"supplier\": \"供应商（没有则为空字符串）\",\n" +
+                    "      \"remark\": \"备注（没有则为空字符串）\"\n" +
+                    "    }\n" +
+                    "  ]\n" +
+                    "}\n\n" +
+                    "注意：\n" +
+                    "- usageAmount 和 lossRate 必须是数字\n" +
+                    "- 物料类型必须是以下之一：面料、辅料、缝纫线、标签、包装材料\n" +
+                    "- 如果某项信息图片中没有，对应字段填空字符串\"\"或数字0\n" +
+                    "- 只输出JSON，不要有任何解释性文字、代码块标记或Markdown格式\n" +
+                    "- 输出JSON后不要有任何尾随字符";
+
+            String rawJson = inferenceOrchestrator.chatWithVision(imageUrl, prompt);
+            if (rawJson == null || rawJson.trim().isEmpty()) {
+                throw new IllegalStateException("AI识别返回为空，请重试");
+            }
+
+            log.info("[BomOcr] BOM清单识别完成 tenantId={} 字符数={}", tenantId, rawJson.length());
+
+            Map<String, Object> result = parseBomTableResult(rawJson);
+            result.put("imageUrl", imageUrl);
+            return result;
+        } catch (IllegalStateException e) {
+            throw e;
+        } catch (Exception e) {
+            log.warn("[BomOcr] AI识别异常 tenantId={}: {}", tenantId, e.getMessage());
+            throw new IllegalStateException("AI识别失败，请重试：" + e.getMessage());
+        }
+    }
+
+    /** 多重兜底解析BOM清单识别结果。*/
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> parseBomTableResult(String rawJson) {
+        Map<String, Object> fallback = new java.util.LinkedHashMap<>();
+        fallback.put("rawJson", rawJson);
+        fallback.put("items", new java.util.ArrayList<>());
+
+        if (rawJson == null || rawJson.trim().isEmpty()) {
+            log.warn("[BomOcr] AI返回为空文本");
+            return fallback;
+        }
+
+        // 清洗 Markdown
+        String text = rawJson.trim();
+        if (text.startsWith("```json")) text = text.substring(7);
+        if (text.startsWith("```")) text = text.substring(3);
+        if (text.endsWith("```")) text = text.substring(0, text.length() - 3);
+        text = text.trim();
+
+        // 尝试1: 直接解析
+        java.util.Map<String, Object> parsed = tryParseJsonObject(text);
+        if (parsed != null && isValidBomPayload(parsed)) {
+            fallback.putAll(parsed);
+            fallback.put("rawJson", rawJson);
+            log.info("[BomOcr] 直接解析成功 items={}",
+                    ((java.util.List<?>) parsed.getOrDefault("items", new java.util.ArrayList<>())).size());
+            return fallback;
+        }
+
+        // 尝试2: 切片 { ... }
+        int firstBrace = text.indexOf('{');
+        int lastBrace = text.lastIndexOf('}');
+        if (firstBrace >= 0 && lastBrace > firstBrace) {
+            String sliced = text.substring(firstBrace, lastBrace + 1);
+            java.util.Map<String, Object> parsed2 = tryParseJsonObject(sliced);
+            if (parsed2 != null && isValidBomPayload(parsed2)) {
+                fallback.putAll(parsed2);
+                fallback.put("rawJson", rawJson);
+                log.info("[BomOcr] 切片解析成功 items={}",
+                        ((java.util.List<?>) parsed2.getOrDefault("items", new java.util.ArrayList<>())).size());
+                return fallback;
+            }
+        }
+
+        log.warn("[BomOcr] JSON解析失败，返回空结构供用户手动录入 rawPreview={}",
+                text.length() > 160 ? text.substring(0, 160) + "..." : text);
+        return fallback;
+    }
+
+    /** 校验是否是有效的BOM payload（含 items 数组）。*/
+    private boolean isValidBomPayload(java.util.Map<String, Object> obj) {
+        if (obj == null) return false;
+        Object items = obj.get("items");
+        return items instanceof java.util.List && !((java.util.List<?>) items).isEmpty();
+    }
+
     private String uploadFileToCos(Long tenantId, MultipartFile file) {
         try {
             // 本地开发模式（COS未配置）：直接转base64 data URI，让Agnes Vision直接读取

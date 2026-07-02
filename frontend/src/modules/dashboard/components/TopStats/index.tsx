@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { App, Spin } from 'antd';
+import { App, Skeleton } from 'antd';
 import {
 
   TagsOutlined,
@@ -41,23 +41,36 @@ interface StatCardProps {
 const StatCard: React.FC<StatCardProps> = ({ icon, label, data, loading, colorClass }) => {
   return (
     <div className={`top-stat-item ${colorClass || ''}`}>
-      <Spin spinning={loading}>
-        <div className="stat-card-content">
-          {/* 头部：图标 + 标签 + 汇总数量 同一行 */}
-          <div className="stat-header">
-            <span className="stat-icon">{icon}</span>
-            <span className="stat-label">{label}</span>
-            <span className="stat-total">{data?.total?.toLocaleString() || 0}</span>
-          </div>
-
-          {/* 底部：日/周/月/年 文字与数量同一行 */}
-          <div className="stat-tags-row">
-            <div className="stat-tag">
-              <span className="stat-tag-label">日</span>
-              <span className="stat-tag-value">{data?.day?.toLocaleString() || 0}</span>
+      <div className="stat-card-content">
+        {loading ? (
+          <>
+            <div className="stat-header">
+              <span className="stat-icon">{icon}</span>
+              <span className="stat-label">{label}</span>
+              <Skeleton.Input active size="small" style={{ width: 60 }} />
             </div>
-            <div className="stat-tag">
-              <span className="stat-tag-label">周</span>
+            <div className="stat-tags-row">
+              {[1, 2, 3, 4].map(i => (
+                <div className="stat-tag" key={i}>
+                  <Skeleton.Input active size="small" style={{ width: 40 }} />
+                </div>
+              ))}
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="stat-header">
+              <span className="stat-icon">{icon}</span>
+              <span className="stat-label">{label}</span>
+              <span className="stat-total">{data?.total?.toLocaleString() || 0}</span>
+            </div>
+            <div className="stat-tags-row">
+              <div className="stat-tag">
+                <span className="stat-tag-label">日</span>
+                <span className="stat-tag-value">{data?.day?.toLocaleString() || 0}</span>
+              </div>
+              <div className="stat-tag">
+                <span className="stat-tag-label">周</span>
               <span className="stat-tag-value">{data?.week?.toLocaleString() || 0}</span>
             </div>
             <div className="stat-tag">
@@ -69,8 +82,9 @@ const StatCard: React.FC<StatCardProps> = ({ icon, label, data, loading, colorCl
               <span className="stat-tag-value">{data?.year?.toLocaleString() || 0}</span>
             </div>
           </div>
-        </div>
-      </Spin>
+          </>
+        )}
+      </div>
     </div>
   );
 };

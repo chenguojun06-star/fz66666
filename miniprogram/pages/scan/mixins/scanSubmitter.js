@@ -7,7 +7,7 @@
 
 const api = require('../../../utils/api');
 const ScanHandler = require('../handlers/ScanHandler');
-const { toast, toastAndRedirect, safeNavigate } = require('../../../utils/uiHelper');
+const { toast, safeNavigate } = require('../../../utils/uiHelper');
 const scanValidator = require('./scanValidator');
 const isRecentDuplicate = scanValidator.isRecentDuplicate;
 const markRecent = scanValidator.markRecent;
@@ -63,7 +63,7 @@ module.exports = {
       this.scanHandler.handleScan(codeStr, options).then(function(result) {
         self._handleScanResult(result, codeStr, scanType);
       }).catch(function(e) {
-        self._handleScanException(e);
+        self._handleScanException(e, codeStr);
       }).finally(function() {
         self.setData({ loading: false });
       });
@@ -123,7 +123,7 @@ module.exports = {
       this.handleScanError({ message: '扫码结果异常，请重试' });
     },
 
-    _handleScanException: function(e) {
+    _handleScanException: function(e, codeStr) {
       if (e.needWarehousing && e.warehousingData) { this.showQualityModal(e.warehousingData); this.setData({ loading: false }); return; }
       if (e.isCompleted) {
         const msg = e.message || '进度节点已完成';
@@ -139,6 +139,7 @@ module.exports = {
         return;
       }
       if (e.isOfflineQueued) {
+        markRecent(codeStr, 2000);
         toast.warn('📶 已离线缓存，联网后自动同步');
         this.setData({
           lastResult: { success: false, queued: true, message: '📶 无网络，已离线缓存，联网后自动上传', displayTime: new Date().toLocaleTimeString(), statusText: '已缓存', statusClass: 'queued', errorAction: null },

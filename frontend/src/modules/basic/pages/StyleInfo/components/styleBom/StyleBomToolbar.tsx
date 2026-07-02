@@ -9,8 +9,14 @@ interface AiBomRecognizedItem {
   id: string;
   materialName: string;
   materialCode?: string;
+  materialType?: string;
+  color?: string;
   specification?: string;
+  unit?: string;
   usageAmount?: number;
+  lossRate?: number;
+  supplier?: string;
+  remark?: string;
 }
 
 interface StyleBomToolbarProps {
@@ -85,50 +91,41 @@ const StyleBomToolbar: React.FC<StyleBomToolbarProps> = ({
       const formData = new FormData();
       formData.append('file', ocrFile);
 
-      const uploadRes = await api.post('/upload', formData, {
+      const res = await api.post(`/style/info/${styleId}/recognize-bom-table`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
         timeout: 60000,
       });
-      if (uploadRes?.code !== 200 || !uploadRes?.data) {
-        message.error('图片上传失败');
-        return;
-      }
-      const imageUrl = uploadRes.data as string;
 
-      let items: AiBomRecognizedItem[] = [];
-      try {
-        const bomRes = await api.post<{ code: number; data: { items?: Array<Record<string, unknown>>; available?: boolean; errorMessage?: string } }>(
-          '/intelligence/visual/bom-extract',
-          { imageUrl, styleId: styleId != null ? String(styleId) : undefined }
-        );
-        if (bomRes?.code === 200 && Array.isArray(bomRes?.data?.items) && bomRes.data.items.length > 0) {
-          items = bomRes.data.items.map((row, idx) => {
-            const name = String((row as any).materialName || (row as any).name || '').trim();
-            const code = String((row as any).materialCode || (row as any).code || '').trim();
-            const spec = String((row as any).specification || (row as any).spec || '').trim();
-            const qty = Number((row as any).usageAmount || (row as any).quantity || 0) || undefined;
-            return {
-              id: `ai_${Date.now()}_${idx}`,
-              materialName: name || '未识别物料',
-              materialCode: code || undefined,
-              specification: spec || undefined,
-              usageAmount: qty,
-            };
-          }).filter((it) => it.materialName && it.materialName !== '未识别物料');
-        } else if (bomRes?.code !== 200) {
-          message.error(bomRes?.data?.errorMessage || 'AI识别失败');
-        }
-      } catch (err) {
-        console.error('[AI识别] BOM识别请求失败:', err);
-      }
-
-      if (items.length > 0) {
-        onBomRecognized(items);
-        setOcrModalOpen(false);
-        setOcrFile(null);
-        message.success(`识别成功：共解析出 ${items.length} 条物料`);
+      if (res.code !== 200) {
+        message.error(res.message || 'AI识别失败');
       } else {
-        message.info('未识别出有效物料行');
+        const data = res.data || {};
+        let items: AiBomRecognizedItem[] = [];
+
+        if (Array.isArray(data.items) && data.items.length > 0) {
+          items = data.items.map((row: any, idx: number) => ({
+            id: `ai_${Date.now()}_${idx}`,
+            materialName: String(row.materialName || '').trim() || '未识别物料',
+            materialCode: String(row.materialCode || '').trim() || undefined,
+            materialType: String(row.materialType || '').trim() || undefined,
+            color: String(row.color || '').trim() || undefined,
+            specification: String(row.specification || '').trim() || undefined,
+            unit: String(row.unit || '').trim() || undefined,
+            usageAmount: Number(row.usageAmount || 0) || undefined,
+            lossRate: Number(row.lossRate || 0) || undefined,
+            supplier: String(row.supplier || '').trim() || undefined,
+            remark: String(row.remark || '').trim() || undefined,
+          })).filter((it) => it.materialName && it.materialName !== '未识别物料');
+        }
+
+        if (items.length > 0) {
+          onBomRecognized(items);
+          setOcrModalOpen(false);
+          setOcrFile(null);
+          message.success(`识别成功：共解析出 ${items.length} 条物料`);
+        } else {
+          message.info('未识别出有效物料行，请尝试更清晰的图片');
+        }
       }
     } catch (e: unknown) {
       console.error('[AI识别] 请求失败:', e);

@@ -1,5 +1,6 @@
 {
   "navigationBarTitleText": "裁剪",
+  "enablePullDownRefresh": true,
   "usingComponents": {
     "image-preview": "/components/common/image-preview/index",
     "sku-matrix": "/components/sku-matrix/index"

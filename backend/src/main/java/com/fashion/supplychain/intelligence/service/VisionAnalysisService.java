@@ -78,9 +78,17 @@ public class VisionAnalysisService {
     }
 
     public VisionResult analyzeGeneric(String imageUrl, String taskDescription) {
-        String prompt = "请分析这张图片。任务：" + taskDescription
-                + "\n\n请返回JSON格式：{\"severity\":\"NONE|LOW|MEDIUM|HIGH|CRITICAL\","
-                + "\"confidence\":0-100,\"report\":\"分析结果\",\"recommendation\":\"建议\"}";
+        String prompt = "你是服装供应链视觉分析专家。请分析这张图片。\n\n"
+                + "## 分析任务\n" + taskDescription + "\n\n"
+                + "## 分析要求\n"
+                + "- 仔细观察图片中的每一个细节\n"
+                + "- 基于服装行业专业知识给出判断\n"
+                + "- 对于不确定的结论降低置信度\n\n"
+                + "## 返回格式（严格JSON，不要markdown包裹）\n"
+                + "{\"severity\":\"NONE|LOW|MEDIUM|HIGH|CRITICAL\","
+                + "\"confidence\":0-100,"
+                + "\"defects\":[{\"type\":\"分析项\",\"description\":\"具体描述\",\"level\":\"LOW|MEDIUM|HIGH\",\"location\":\"位置\"}],"
+                + "\"report\":\"分析结果总结\",\"recommendation\":\"建议\"}";
         return analyze(imageUrl, prompt, "GENERIC");
     }
 
@@ -126,9 +134,16 @@ public class VisionAnalysisService {
 
     private VisionResult callRealVisionModel(String imageUrl, String textPrompt, String taskType, Long tenantId) {
         try {
+            // 增强的系统 prompt — 给 AI 更专业的角色设定和分析框架
+            String systemPrompt = "你是一名拥有20年经验的服装供应链质检专家，精通面料检验、缝制工艺、色差管理和尺寸测量。"
+                + "你的分析必须精确、专业、可操作。"
+                + "请严格按照要求的JSON格式返回结果，不要添加任何markdown标记或额外说明。"
+                + "对于不确定的判断，请降低置信度并标注需要人工复核。"
+                + "所有缺陷描述必须包含具体位置、大小估算和严重程度，便于质检员快速定位和处理。";
+
             IntelligenceInferenceResult inferenceResult = aiInferenceGateway.chatWithVision(
                 "vision-analysis",
-                "你是服装生产质检专家，请精确分析图片并返回严格的JSON格式。",
+                systemPrompt,
                 textPrompt,
                 imageUrl
             );
@@ -205,44 +220,94 @@ public class VisionAnalysisService {
 
     private String buildDefectPrompt(String contextHint) {
         StringBuilder sb = new StringBuilder();
-        sb.append("你是服装质检AI专家。请仔细分析这张服装/布料图片，检测缺陷。\n\n");
-        sb.append("检测项目：破洞、污渍、色差、线头、跳针、漏针、起毛、褶皱、尺寸偏差、印花偏移\n\n");
+        sb.append("你是拥有20年经验的服装质检专家。请对这张服装/布料图片进行全面的缺陷分析。\n\n");
+        sb.append("## 检测项目（逐项排查，无遗漏）\n");
+        sb.append("1. **面料缺陷**：破洞、裂纹、抽丝、断纱、织疵、跳花\n");
+        sb.append("2. **污渍类**：油渍、水渍、汗渍、霉斑、不明污点\n");
+        sb.append("3. **色差类**：整体色差、局部色差、段差、边色差、缸差\n");
+        sb.append("4. **缝制缺陷**：跳针、漏针、断线、浮线、线迹歪斜、针孔过大\n");
+        sb.append("5. **后整理缺陷**：起毛、起球、褶皱、压痕、烫伤、烧焦\n");
+        sb.append("6. **尺寸/形状**：尺寸偏差、扭曲变形、不对称、裁剪偏移\n");
+        sb.append("7. **印花/绣花**：印花偏移、套色不准、脱胶、印花裂纹、绣花断线\n");
+        sb.append("8. **辅料/配件**：拉链不顺、纽扣松动、魔术贴失效、五金锈蚀\n\n");
+        sb.append("## 严重度判定标准\n");
+        sb.append("- CRITICAL：影响功能或安全性（如大破洞、拉链断裂）\n");
+        sb.append("- HIGH：明显影响外观或耐用性（如明显色差、大面积污渍）\n");
+        sb.append("- MEDIUM：轻微瑕疵但不影响主要功能（如小线头、轻微褶皱）\n");
+        sb.append("- LOW：仅专业质检能发现的微小问题\n");
+        sb.append("- NONE：未发现缺陷\n\n");
         if (contextHint != null && !contextHint.isBlank()) {
-            sb.append("额外上下文：").append(contextHint).append("\n\n");
+            sb.append("## 额外上下文\n").append(contextHint).append("\n\n");
         }
-        sb.append("返回JSON格式（严格JSON，不要markdown包裹）：\n");
+        sb.append("## 位置描述要求\n");
+        sb.append("使用明确的方位描述：如\"左上区域\"\"中心偏右\"\"底部边缘\"等，便于质检员定位\n\n");
+        sb.append("## 返回格式（严格JSON，不要markdown包裹）\n");
         sb.append("{\"severity\":\"NONE|LOW|MEDIUM|HIGH|CRITICAL\",");
         sb.append("\"confidence\":0-100,");
-        sb.append("\"defects\":[{\"type\":\"缺陷类型\",\"description\":\"具体描述\",\"level\":\"LOW|MEDIUM|HIGH\",\"location\":\"图片中的位置\"}],");
-        sb.append("\"report\":\"综合评价\",\"recommendation\":\"处理建议\"}");
+        sb.append("\"defects\":[{\"type\":\"缺陷类型\",\"description\":\"具体描述（含位置和大小）\",\"level\":\"LOW|MEDIUM|HIGH\",\"location\":\"图片中的位置\"}],");
+        sb.append("\"report\":\"综合评价（含整体质量评分和主要问题总结）\",");
+        sb.append("\"recommendation\":\"处理建议（返工/报废/让步接收/继续生产）\"}");
         return sb.toString();
     }
 
     private String buildStylePrompt(String contextHint) {
         StringBuilder sb = new StringBuilder();
-        sb.append("你是服装款式分析AI专家。请分析这张服装图片的款式特征。\n\n");
-        sb.append("分析维度：领型、袖型、版型、长度、面料质感、颜色、图案、风格、适用季节\n\n");
+        sb.append("你是拥有15年经验的服装设计师和款式分析师。请对这张服装图片进行全面的款式特征分析。\n\n");
+        sb.append("## 分析维度（逐项详细描述）\n");
+        sb.append("1. **领型**：圆领/V领/方领/立领/翻领/连帽/无领，描述领口深度和宽度\n");
+        sb.append("2. **袖型**：短袖/长袖/七分袖/无袖/泡泡袖/喇叭袖，描述袖口处理方式\n");
+        sb.append("3. **版型**：修身/标准/宽松/Oversize/A字/H型，描述合体度\n");
+        sb.append("4. **长度**：超短/标准/中长/超长，描述具体位置（如到腰/到臀/到膝）\n");
+        sb.append("5. **面料质感**：棉/涤纶/牛仔/针织/丝绸/雪纺/亚麻/混纺，描述厚薄和垂坠感\n");
+        sb.append("6. **主色调**：描述主色及辅助色，含色彩明度和饱和度\n");
+        sb.append("7. **图案/花型**：纯色/条纹/格子/印花/刺绣/拼色，描述图案大小和分布\n");
+        sb.append("8. **工艺细节**：缝制工艺、装饰工艺、辅料使用（拉链/纽扣/魔术贴等）\n");
+        sb.append("9. **风格定位**：商务/休闲/运动/时尚/工装/复古，描述目标人群\n");
+        sb.append("10. **适用季节**：春夏/秋冬/四季通用，描述透气性和保暖性\n\n");
         if (contextHint != null && !contextHint.isBlank()) {
-            sb.append("额外上下文：").append(contextHint).append("\n\n");
+            sb.append("## 额外上下文\n").append(contextHint).append("\n\n");
         }
-        sb.append("返回JSON格式（严格JSON，不要markdown包裹）：\n");
+        sb.append("## 返回格式（严格JSON，不要markdown包裹）\n");
         sb.append("{\"severity\":\"NONE\",\"confidence\":0-100,");
-        sb.append("\"defects\":[{\"type\":\"款式特征\",\"description\":\"具体描述\",\"level\":\"LOW\",\"location\":\"\"}],");
-        sb.append("\"report\":\"款式特征总结\",\"recommendation\":\"生产/设计建议\"}");
+        sb.append("\"defects\":[");
+        sb.append("{\"type\":\"领型\",\"description\":\"具体描述\",\"level\":\"LOW\",\"location\":\"\"},");
+        sb.append("{\"type\":\"袖型\",\"description\":\"具体描述\",\"level\":\"LOW\",\"location\":\"\"},");
+        sb.append("{\"type\":\"版型\",\"description\":\"具体描述\",\"level\":\"LOW\",\"location\":\"\"},");
+        sb.append("{\"type\":\"面料\",\"description\":\"具体描述\",\"level\":\"LOW\",\"location\":\"\"},");
+        sb.append("{\"type\":\"颜色\",\"description\":\"具体描述\",\"level\":\"LOW\",\"location\":\"\"},");
+        sb.append("{\"type\":\"工艺\",\"description\":\"具体描述\",\"level\":\"LOW\",\"location\":\"\"}");
+        sb.append("],");
+        sb.append("\"report\":\"款式特征总结（含风格定位和适用场景）\",");
+        sb.append("\"recommendation\":\"生产/设计建议（含面料采购建议和工艺注意事项）\"}");
         return sb.toString();
     }
 
     private String buildColorPrompt(String contextHint) {
         StringBuilder sb = new StringBuilder();
-        sb.append("你是服装色差检测AI专家。请分析这张图片的色差/色牢度问题。\n\n");
-        sb.append("检测项目：整体色差、局部色差、色牢度、染色均匀度、与标准色卡对比\n\n");
+        sb.append("你是拥有15年经验的服装色彩管理专家，精通色卡对比和色差分析（CIELAB/ΔE）。请对这张图片进行专业的色差/色牢度分析。\n\n");
+        sb.append("## 检测项目（逐项分析）\n");
+        sb.append("1. **整体色差**：评估整件服装/布料的颜色一致性，是否与预期目标色一致\n");
+        sb.append("2. **局部色差**：检查不同部位之间是否存在色差（如前后身、左右袖）\n");
+        sb.append("3. **段差/边色差**：检查布料不同批次段、边缘与中心的色差\n");
+        sb.append("4. **缸差**：不同染色批次之间的颜色差异\n");
+        sb.append("5. **染色均匀度**：是否存在染色不均、花斑、云斑、条花\n");
+        sb.append("6. **色牢度评估**：根据图片判断是否存在褪色、变色、迁移色现象\n");
+        sb.append("7. **色光偏差**：色光是否偏红/偏黄/偏蓝/偏绿\n");
+        sb.append("8. **对比度评估**：图案与底色的对比度是否合适\n\n");
+        sb.append("## 色差等级判定\n");
+        sb.append("- CRITICAL：ΔE>5，肉眼明显可见，不可接受\n");
+        sb.append("- HIGH：ΔE 3-5，明显色差，需返工\n");
+        sb.append("- MEDIUM：ΔE 1.5-3，可察觉的色差，需评估\n");
+        sb.append("- LOW：ΔE 0.5-1.5，轻微色差，可接受\n");
+        sb.append("- NONE：ΔE<0.5，无可察觉色差\n\n");
         if (contextHint != null && !contextHint.isBlank()) {
-            sb.append("额外上下文：").append(contextHint).append("\n\n");
+            sb.append("## 额外上下文\n").append(contextHint).append("\n\n");
         }
-        sb.append("返回JSON格式（严格JSON，不要markdown包裹）：\n");
+        sb.append("## 返回格式（严格JSON，不要markdown包裹）\n");
         sb.append("{\"severity\":\"NONE|LOW|MEDIUM|HIGH|CRITICAL\",\"confidence\":0-100,");
-        sb.append("\"defects\":[{\"type\":\"色差类型\",\"description\":\"具体描述\",\"level\":\"LOW|MEDIUM|HIGH\",\"location\":\"图片中的位置\"}],");
-        sb.append("\"report\":\"色差评价\",\"recommendation\":\"处理建议\"}");
+        sb.append("\"defects\":[{\"type\":\"色差类型\",\"description\":\"具体描述（含色差位置和范围）\",\"level\":\"LOW|MEDIUM|HIGH\",\"location\":\"图片中的位置\"}],");
+        sb.append("\"report\":\"色差综合评价（含色差等级和色光偏差方向）\",");
+        sb.append("\"recommendation\":\"处理建议（返工/让步接收/调整配方）\"}");
         return sb.toString();
     }
 

@@ -5,6 +5,7 @@ import com.fashion.supplychain.intelligence.entity.ProceduralMemory;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.Update;
 import java.util.List;
 
 /**
@@ -59,10 +60,10 @@ public interface ProceduralMemoryMapper extends BaseMapper<ProceduralMemory> {
      * @param id SOP ID
      * @param success 是否成功
      */
-    @Select("UPDATE t_procedural_memory " +
+    @Update("UPDATE t_procedural_memory " +
             "SET usage_count = usage_count + 1, " +
             "    success_count = success_count + #{success}, " +
-            "    confidence = LEAST(1.00, success_count + #{success} + 0.70) / (usage_count + 1) " +
-            "WHERE id = #{id}")
-    void updateUsageStats(@Param("id") Long id, @Param("success") Integer success);
+            "    confidence = LEAST(1.00, (success_count + #{success} + 0.70) / (usage_count + 1)) " +
+            "WHERE id = #{id} AND tenant_id = #{tenantId}")
+    void updateUsageStats(@Param("id") Long id, @Param("tenantId") Long tenantId, @Param("success") Integer success);
 }

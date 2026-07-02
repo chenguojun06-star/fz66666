@@ -2,5 +2,6 @@
   "usingComponents": {
     "empty-state": "/components/empty-state/empty-state"
   },
-  "navigationBarTitleText": "员工借支"
+  "navigationBarTitleText": "员工借支",
+  "enablePullDownRefresh": true
 }

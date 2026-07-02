@@ -303,6 +303,16 @@ public class StyleInfoController {
         return Result.success(styleDocOcrOrchestrator.recognizeSizeTable(file));
     }
 
+    /**
+     * AI识别BOM物料清单图片，提取面料/辅料明细数据
+     */
+    @PostMapping(value = "/{id}/recognize-bom-table", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public Result<?> recognizeBomTable(
+            @PathVariable Long id,
+            @RequestParam("file") MultipartFile file) {
+        return Result.success(styleDocOcrOrchestrator.recognizeBomTable(file));
+    }
+
     @PutMapping("/{id}/use-sku-prefix")
     public Result<?> updateUseSkuPrefix(
             @PathVariable Long id,

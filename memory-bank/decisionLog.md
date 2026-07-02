@@ -1,7 +1,7 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-06-20
+> 最后更新：2026-07-02
 
 ---
 
@@ -367,3 +367,50 @@
   2. 次要信息可降级，非关键信息超时可降级为精简版本
   3. 次要信息超时可降级为精简版本，不影响主流程
   4. 关键信息永不缩减，次要信息超时直接放弃
+
+## D-029：code-search-mcp 用 Serena 替代，不自研
+
+- **日期**：2026-07-02
+- **上下文**：`.trae/rules/dev-mcp-design.md` 设计的 4 个开发专用 MCP 中，code-search-mcp（语义搜索 + AST 调用链 + 影响范围分析）一直未实现。调研发现 GitHub 上 Serena（https://github.com/oraios/serena，24.5k★）已是代码语义搜索事实标准，基于 LSP（Language Server Protocol）的语义级理解比 grep 省 token 3-5 倍，支持 Java/TS/JS 等 30+ 语言。
+- **决策**：不自研 code-search-mcp，改用外部 MCP Serena 替代。Serena 通过 `uvx serena-mcp` 按需下载，已写入 `.trae/mcp.json`。
+- **理由**：
+  1. Serena 已是行业事实标准（24.5k★），自研重复造轮子无价值
+  2. LSP 语义级理解比原设计的 ripgrep + tree-sitter 更精准
+  3. 原设计的 find_tenant_violations / find_transaction_violations 已由 anti-pattern-mcp + test-runner-mcp.audit_tenant_id 覆盖
+  4. Serena 支持 find_symbol / find_referencing_symbols / replace_symbol_body 等，完全覆盖原设计的 find_callers / find_callees / impact_analysis
+- **影响**：`.trae/rules/dev-mcp-design.md` 状态更新为"已实现 6/7 + Serena 替代"
+
+## D-030：MCP 配置文件统一管理
+
+- **日期**：2026-07-02
+- **上下文**：项目 6 个自研 MCP 代码已就绪，但 `.trae/mcp.json` 配置文件一直未创建，导致 MCP 无法被 Trae IDE 加载。MCP_CONFIG_TEMPLATE.md 模板也只含 5 个 MCP（缺 test-runner-mcp）。
+- **决策**：
+  1. 创建 `.trae/mcp.json`，包含 6 个自研 MCP + 1 个外部 MCP（Serena）
+  2. 补齐 test-runner-mcp 配置（模板原缺失）
+  3. flyway-mcp 和 test-runner-mcp 添加 PROJECT_ROOT 环境变量
+  4. MCP_CONFIG_TEMPLATE.md 同步更新，新增 GitHub MCP 可选配置说明
+- **理由**：
+  1. 配置文件缺失导致已就绪的 MCP 代码无法使用，是 P0 级配置缺陷
+  2. 统一配置管理，避免代码就绪但配置缺失的"最后一公里"问题
+  3. GitHub MCP 作为可选项预留，需用户提供 PAT 后启用
+
+## D-031：P0 #23 MCP 工具强制调用规则（配置 ≠ 自动调用）
+
+- **日期**：2026-07-02
+- **上下文**：D-029/D-030 完成 MCP 配置后，用户质疑"配置 MCP ≠ AI 会自动调用"。确认 AI 习惯用原生工具（RunCommand+SQL / mvn / Read）走熟悉路径，导致 6 个自研 MCP + Serena 形同虚设。仅靠"建议"无法改变 AI 行为，必须写入 P0 铁律强制。
+- **决策**：
+  1. 新增 P0 #23「MCP 工具强制调用规则」到 `project_rules.md`，列出 10 个强制场景表格（查业务数据 / Flyway 校验 / 编译验证 / 符号搜索 / 影响评估 / 反模式检测 / 记忆加载等），每场景明确"必须用 XX-mcp" + "禁止 YY 替代"
+  2. 制定降级规则：MCP 不可用时必须明确告知用户"XX-mcp 不可用，降级为 YY"，并手动遵守对应 P0 铁律（#4 多租户 / #1 Flyway / #13 工具验证）
+  3. tenantId 传递规则：从 UserContext 获取（测试租户=1 东方制衣厂），禁止编造 0/null
+  4. 例外清单：项目内文件读写仍用原生工具（Read/Edit/Write/Glob/Grep，P0 铁律），MCP 不替代原生文件操作
+  5. `agent-workflow.md` 嵌入 MCP 强制调用：第1步用 memory-bank-mcp、第3步用 change-impact-mcp + serena、第5步用 anti-pattern-mcp、第6步质量门控表格新增"强制 MCP 工具"列
+  6. `mcp-tools-cheatsheet.md` 顶部新增 P0 #23 强制场景表速查
+- **理由**：
+  1. "建议使用 MCP"无法克服 AI 走熟悉路径的惯性，必须 P0 铁律级强制
+  2. 10 个场景覆盖开发全流程（记忆加载→调研→影响评估→反模式→Flyway→编译→租户审计→业务数据验证），不留盲区
+  3. 降级规则避免"MCP 不可用就停止工作"，但强制告知用户保持透明
+  4. 例外清单防止过度执行（文件读写仍用原生工具，符合 P0 铁律）
+- **影响**：
+  - `project_rules.md` P0 铁律从 22 条增加到 23 条
+  - `agent-workflow.md` 第1/3/5/6步嵌入 MCP 强制调用
+  - `mcp-tools-cheatsheet.md` 顶部新增 P0 #23 强制场景表
