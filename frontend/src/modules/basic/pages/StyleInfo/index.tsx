@@ -19,7 +19,6 @@ import StyleProcessTab from './components/StyleProcessTab';
 import StyleProductionTab from './components/StyleProductionTab';
 import StyleSecondaryProcessTab from './components/StyleSecondaryProcessTab';
 
-import StyleCuttingInfoTab from './components/StyleCuttingInfoTab';
 import StyleWashLabelTab from './components/StyleWashLabelTab';
 import StyleIntelligenceProfileCard from './components/StyleIntelligenceProfileCard';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
@@ -401,11 +400,6 @@ const StyleInfoDetailPage: React.FC = () => {
                     careIconCodes={(currentStyle as any)?.careIconCodes}
                     onRefresh={() => { void fetchDetail(styleIdParam!); }}
                   />
-                </div>
-              )},
-              { key: 'cutting', label: '裁剪信息', children: (
-                <div style={{ padding: 12, background: 'var(--color-bg-base)', border: '1px solid var(--color-border)', borderTop: 'none', borderRadius: '0 0 10px 10px' }}>
-                  <StyleCuttingInfoTab styleNo={currentStyle?.styleNo ?? ''} />
                 </div>
               )},
             ]}
