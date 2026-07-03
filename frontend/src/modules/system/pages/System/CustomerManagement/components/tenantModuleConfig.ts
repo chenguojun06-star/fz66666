@@ -111,7 +111,7 @@ export const MODULE_OPTIONS = [
   { value: 'EC_WECHAT_SHOP', label: '微信小店', category: '电商平台' },
   { value: 'EC_SHOPIFY', label: 'Shopify', category: '电商平台' },
   { value: 'EC_JST', label: '聚水潭', category: '电商平台' },
-  { value: 'EC_DONGFANG', label: '东纺纺织', category: '供应链' },
+  { value: 'EC_SHEIN', label: '希音', category: '电商平台' },
 ];
 
 export const DURATION_OPTIONS = [

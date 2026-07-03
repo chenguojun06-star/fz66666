@@ -145,6 +145,21 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
       }
     >
       <Card style={{ marginBottom: 12 }}>
+        <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
+          <div style={{ flexShrink: 0 }}>
+            <div style={{ color: 'rgba(0,0,0,0.65)', marginBottom: 6, fontSize: 14 }}>款式图</div>
+            <ImageUploadBox
+              value={createTask.createStyleImageUrl}
+              onChange={(url) => createTask.setCreateStyleImageUrl(url)}
+              width={120}
+              height={150}
+              enableDrop
+              maxSizeMB={10}
+              label="点击/拖拽/粘贴上传"
+              borderRadius={6}
+            />
+          </div>
+          <div style={{ flex: 1 }}>
         <Space wrap>
           <span>款号</span>
           <AutoComplete
@@ -296,27 +311,15 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
           />
         </div>
         {createTask.selectedFactoryStat && <FactoryCapacityCard stat={createTask.selectedFactoryStat} />}
-        <div style={{ display: 'flex', gap: 16, marginTop: 12, alignItems: 'flex-start' }}>
-          {/* 左：款式图上传（支持点击/拖拽/粘贴） */}
-          <div style={{ flexShrink: 0 }}>
-            <div style={{ color: 'rgba(0,0,0,0.65)', marginBottom: 6, fontSize: 14 }}>款式图</div>
-            <ImageUploadBox
-              value={createTask.createStyleImageUrl}
-              onChange={(url) => createTask.setCreateStyleImageUrl(url)}
-              width={120}
-              height={150}
-              enableDrop
-              maxSizeMB={10}
-              label="点击/拖拽/粘贴上传"
-              borderRadius={6}
-            />
           </div>
-          {/* 右：下单明细 */}
-          <div style={{ flex: 1 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-              <span style={{ color: 'rgba(0,0,0,0.85)', fontWeight: 500 }}>下单明细</span>
-              <Button type="dashed" onClick={createTask.addCreateOrderLine}>新增一行</Button>
-            </div>
+        </div>
+      </Card>
+
+      <Card style={{ marginBottom: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+          <span style={{ color: 'rgba(0,0,0,0.85)', fontWeight: 50 }}>下单明细</span>
+          <Button type="dashed" onClick={createTask.addCreateOrderLine}>新增一行</Button>
+        </div>
 
             {/* ── 快速批量录入：颜色+码数 → 生成明细行 ───────────────── */}
             <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 6, padding: '6px 0', marginBottom: 8, borderBottom: '1px dashed var(--color-border)' }}>
@@ -402,8 +405,6 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
                 </Space>
               ))}
             </div>
-          </div>
-        </div>
         {createTask.createStyleName ? (
           <div style={{ marginTop: 8, color: 'rgba(0,0,0,0.65)' }}>款名：{createTask.createStyleName}</div>
         ) : null}

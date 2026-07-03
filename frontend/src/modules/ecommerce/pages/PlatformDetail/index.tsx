@@ -68,15 +68,15 @@ const CREDENTIAL_GUIDES: Record<string, { title: string; steps: { title: string;
     ],
     docUrl: 'https://open.jushuitan.com',
   },
-  DONGFANG: {
-    title: '如何获取东纺纺织接口密钥？',
+  SHEIN: {
+    title: '如何获取希音接口密钥？',
     steps: [
-      { title: '联系东纺纺织平台', description: '联系客户经理，申请 API 对接权限' },
-      { title: '获取 API 凭证', description: '平台下发应用标识和密钥' },
+      { title: '登录希音开放平台', description: '打开 developer.shein.com，注册企业账号' },
+      { title: '创建应用', description: '进入「应用管理」→「创建应用」' },
+      { title: '获取凭证', description: '应用审核通过后，复制 API Key 和 API Secret' },
       { title: '填写到本系统', description: '将凭证填入下方表单' },
-      { title: '配置回调', description: '将本系统回调地址提供给东纺纺织' },
     ],
-    docUrl: '',
+    docUrl: 'https://developer.shein.com',
   },
   DEFAULT: {
     title: '如何获取平台接口凭证？',

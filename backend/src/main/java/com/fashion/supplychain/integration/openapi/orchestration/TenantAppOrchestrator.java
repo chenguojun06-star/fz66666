@@ -51,7 +51,7 @@ public class TenantAppOrchestrator {
         put("EC_WECHAT_SHOP", "微信小店对接");
         put("EC_SHOPIFY", "Shopify对接");
         put("EC_JST", "聚水潭对接");
-        put("EC_DONGFANG", "东纺纺织对接");
+        put("EC_SHEIN", "希音对接");
     }};
 
     private static final Map<String, String> STATUS_NAMES = Map.of(
@@ -624,7 +624,7 @@ public class TenantAppOrchestrator {
             case "EC_WECHAT_SHOP": prefix = "wcs"; break;
             case "EC_SHOPIFY": prefix = "sfy"; break;
             case "EC_JST": prefix = "jst"; break;
-            case "EC_DONGFANG": prefix = "df"; break;
+            case "EC_SHEIN": prefix = "shn"; break;
             default: prefix = "app"; break;
         }
         return prefix + "_" + UUID.randomUUID().toString().replace("-", "").substring(0, 24);
