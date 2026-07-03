@@ -24,7 +24,7 @@ public class PlatformDataMapperService {
                 case "XIAOHONGSHU" -> mapXiaohongshuToGeneric(body);
                 case "WECHAT_SHOP" -> mapWechatShopToGeneric(body);
                 case "SHOPIFY" -> mapShopifyToGeneric(body);
-                case "DONGFANG" -> mapDongfangToGeneric(body);
+                case "SHEIN" -> mapSheinToGeneric(body);
                 case "JST" -> body;
                 default -> body;
             };
@@ -215,21 +215,32 @@ public class PlatformDataMapperService {
         return result;
     }
 
-    private Map<String, Object> mapDongfangToGeneric(Map<String, Object> body) {
+    private Map<String, Object> mapSheinToGeneric(Map<String, Object> body) {
         Map<String, Object> result = new LinkedHashMap<>();
-        result.put("platformOrderNo", get(body, "order_id"));
-        result.put("shopName", get(body, "supplier_name"));
+        result.put("platformOrderNo", get(body, "order_id", "order_no"));
+        result.put("shopName", get(body, "shop_name", "store_name"));
         result.put("buyerNick", get(body, "buyer_name"));
-        result.put("skuCode", get(body, "fabric_code"));
-        result.put("styleNo", get(body, "style_no"));
-        result.put("quantity", get(body, "quantity"));
-        result.put("unitPrice", get(body, "unit_price"));
-        result.put("productName", get(body, "fabric_name"));
-        result.put("totalAmount", get(body, "total_amount"));
-        result.put("payAmount", get(body, "pay_amount"));
-        result.put("receiverName", get(body, "receiver_name"));
-        result.put("receiverPhone", get(body, "receiver_phone"));
-        result.put("receiverAddress", get(body, "receiver_address"));
+        result.put("receiverName", get(body, "receiver_name", "consignee_name"));
+        result.put("receiverPhone", get(body, "receiver_phone", "consignee_phone"));
+        result.put("receiverAddress", get(body, "receiver_address", "consignee_address"));
+        result.put("buyerRemark", get(body, "buyer_remark"));
+
+        Object items = body.get("items");
+        if (items instanceof List && !((List<?>) items).isEmpty()) {
+            Map<String, Object> item = (Map<String, Object>) ((List<?>) items).get(0);
+            result.put("skuCode", get(item, "sku_code", "sku_id"));
+            result.put("styleNo", get(item, "style_no", "product_code"));
+            result.put("properties", get(item, "spec_desc", "variant_desc"));
+            result.put("quantity", get(item, "quantity"));
+            result.put("unitPrice", get(item, "unit_price", "price"));
+            result.put("productName", get(item, "product_name", "item_name"));
+        }
+
+        result.put("totalAmount", get(body, "total_amount", "order_total"));
+        result.put("payAmount", get(body, "pay_amount", "paid_amount"));
+        result.put("freight", get(body, "freight_amount", "shipping_fee"));
+        result.put("discount", get(body, "discount_amount"));
+        result.put("payType", get(body, "pay_type"));
         return result;
     }
 

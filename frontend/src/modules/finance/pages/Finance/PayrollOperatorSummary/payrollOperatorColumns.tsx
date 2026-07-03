@@ -433,7 +433,8 @@ export function getDetailColumns(deps: DetailColumnDeps): any[] {
             width: 90,
             fixed: 'right' as const,
             render: (_: unknown, record: any) => {
-                const canAudit = isOrderFrozenByStatus({ status: record.orderStatus });
+                const isInternal = record.factoryType === 'INTERNAL';
+                const canAudit = isInternal || isOrderFrozenByStatus({ status: record.orderStatus });
                 const audited = isDetailAudited(record);
                 if (audited) return <Tag color="processing">已审核</Tag>;
                 if (!canAudit) return <span style={{ color: 'var(--neutral-text-disabled)', fontSize: 14 }}>未关单</span>;

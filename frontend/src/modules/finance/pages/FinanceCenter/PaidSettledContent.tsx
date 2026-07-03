@@ -24,6 +24,7 @@ interface FinishedSettlementRow {
   totalAmount: number;
   paymentStatus?: 'unpaid' | 'partially_paid' | 'paid';
   approvalStatus?: string;
+  status?: string;
   paidAt?: string;
   createTime?: string;
   completeTime?: string;
@@ -128,10 +129,65 @@ const PaidSettledContent: React.FC = () => {
     return { count: data.length, totalAmount };
   }, [data]);
 
+  const approvalStatusMap: Record<string, { text: string; color: string }> = {
+    PENDING: { text: '待审批', color: 'orange' },
+    APPROVED: { text: '已审批', color: 'success' },
+    REJECTED: { text: '已驳回', color: 'error' },
+    pending: { text: '待审批', color: 'orange' },
+    approved: { text: '已审批', color: 'success' },
+    rejected: { text: '已驳回', color: 'error' },
+  };
+
+  const orderStatusMap: Record<string, { text: string; color: string }> = {
+    PENDING: { text: '待生产', color: 'var(--color-warning)' },
+    CONFIRMED: { text: '已确认', color: 'var(--primary-color)' },
+    IN_PRODUCTION: { text: '生产中', color: 'var(--color-success)' },
+    COMPLETED: { text: '已完成', color: 'var(--info-color)' },
+    CANCELLED: { text: '已取消', color: 'var(--color-danger)' },
+    CLOSED: { text: '已关单', color: 'blue' },
+    SCRAPPED: { text: '已报废', color: 'var(--color-danger)' },
+    ARCHIVED: { text: '已归档', color: 'default' },
+    PAUSED: { text: '已暂停', color: 'var(--color-warning)' },
+    RETURNED: { text: '已退回', color: 'var(--color-warning)' },
+    pending: { text: '待生产', color: 'var(--color-warning)' },
+    confirmed: { text: '已确认', color: 'var(--primary-color)' },
+    in_production: { text: '生产中', color: 'var(--color-success)' },
+    production: { text: '生产中', color: 'var(--color-success)' },
+    completed: { text: '已完成', color: 'var(--info-color)' },
+    cancelled: { text: '已取消', color: 'var(--color-danger)' },
+    closed: { text: '已关单', color: 'blue' },
+    scrapped: { text: '已报废', color: 'var(--color-danger)' },
+    archived: { text: '已归档', color: 'default' },
+    paused: { text: '已暂停', color: 'var(--color-warning)' },
+    returned: { text: '已退回', color: 'var(--color-warning)' },
+    delayed: { text: '已逾期', color: 'var(--color-danger)' },
+  };
+
   const columns: ColumnsType<FinishedSettlementRow> = [
     { title: '订单号', dataIndex: 'orderNo', key: 'orderNo', width: 150, ellipsis: true },
     { title: '款号', dataIndex: 'styleNo', key: 'styleNo', width: 120, ellipsis: true },
-    { title: '工厂', dataIndex: 'factoryName', key: 'factoryName', width: 180, ellipsis: true },
+    {
+      title: '工厂',
+      key: 'factory',
+      width: 200,
+      render: (_: any, record: FinishedSettlementRow) => (
+        <Space>
+          {record.factoryType === 'INTERNAL' && <Tag color="orange" style={{ margin: 0, fontSize: 12 }}>内部</Tag>}
+          {record.factoryType === 'EXTERNAL' && <Tag color="purple" style={{ margin: 0, fontSize: 12 }}>外部</Tag>}
+          <span style={{ color: record.factoryType === 'INTERNAL' ? 'var(--color-warning)' : undefined }}>{record.factoryName || '-'}</span>
+        </Space>
+      ),
+    },
+    {
+      title: '订单状态',
+      dataIndex: 'status',
+      key: 'status',
+      width: 100,
+      render: (v: string) => {
+        const config = orderStatusMap[v] || orderStatusMap[v?.toLowerCase()] || orderStatusMap[v?.toUpperCase()];
+        return config ? <Tag color={config.color}>{config.text}</Tag> : <Tag>{v || '-'}</Tag>;
+      },
+    },
     { title: '下单数', dataIndex: 'orderQuantity', key: 'orderQuantity', width: 80, align: 'right', render: (v) => v?.toLocaleString() ?? '-' },
     { title: '入库数', dataIndex: 'warehousedQuantity', key: 'warehousedQuantity', width: 80, align: 'right', render: (v) => v?.toLocaleString() ?? '-' },
     {
@@ -159,8 +215,8 @@ const PaidSettledContent: React.FC = () => {
       key: 'approvalStatus',
       width: 100,
       render: (v: string) => {
-        const isApproved = v === 'APPROVED' || v === 'approved';
-        return isApproved ? <Tag icon={<CheckCircleOutlined />} color="success">已审批</Tag> : <Tag>{v || '-'}</Tag>;
+        const config = approvalStatusMap[v] || approvalStatusMap[v?.toLowerCase()] || approvalStatusMap[v?.toUpperCase()];
+        return config ? <Tag color={config.color}>{config.text}</Tag> : <Tag>{v || '-'}</Tag>;
       },
     },
     { title: '付款时间', dataIndex: 'paidAt', key: 'paidAt', width: 160, render: (v: string) => v || '-' },

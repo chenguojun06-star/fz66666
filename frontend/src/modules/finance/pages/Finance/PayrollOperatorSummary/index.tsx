@@ -394,9 +394,12 @@ const PayrollOperatorSummary: React.FC = () => {
                                     rowSelection={{
                                         selectedRowKeys: detailSelectedKeys,
                                         onChange: (keys: React.Key[]) => setDetailSelectedKeys(keys as string[]),
-                                        getCheckboxProps: (record: Record<string, unknown>) => ({
-                                            disabled: isDetailAudited(record, auditedDetailKeys) || !isOrderFrozenByStatus({ status: String(record.orderStatus || '') }) || !getDetailApprovalId(record),
-                                        }),
+                                        getCheckboxProps: (record: Record<string, unknown>) => {
+                                            const isInternal = record.factoryType === 'INTERNAL';
+                                            return {
+                                                disabled: isDetailAudited(record, auditedDetailKeys) || (!isInternal && !isOrderFrozenByStatus({ status: String(record.orderStatus || '') })) || !getDetailApprovalId(record),
+                                            };
+                                        },
                                     }}
                                     columns={columns} dataSource={filteredRows as any} loading={loading}
                                     pagination={{ showTotal: (total) => `共 ${total} 条`, showSizeChanger: true, pageSizeOptions: ['20', '50', '100', '200'], defaultPageSize: readPageSize(20) }}

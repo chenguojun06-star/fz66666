@@ -187,14 +187,14 @@ public class PlatformConnectorController {
                 result.put("credentialGuide", "打开 Shopify 后台 → 设置 → 应用 → 管理私有应用 → 获取 API 凭证");
                 result.put("supportedActions", List.of("订单接收", "物流回传"));
             }
-            case "DONGFANG" -> {
+            case "SHEIN" -> {
                 result.put("success", config.getAppSecret() != null && !config.getAppSecret().isBlank());
                 result.put("message", config.getAppSecret() != null && !config.getAppSecret().isBlank()
-                        ? "凭证已保存，请将回调地址配置到东纺平台"
+                        ? "凭证已保存，请将回调地址配置到希音平台"
                         : "请先填写真实的 AppKey 和 AppSecret");
                 result.put("webhookUrl", "/api/webhook/ecommerce/" + tenantId + "/" + platformCode);
-                result.put("credentialGuide", "联系东纺纺织获取 API 凭证");
-                result.put("supportedActions", List.of("面料同步", "供应商对接", "采购订单"));
+                result.put("credentialGuide", "联系希音平台获取 API 凭证");
+                result.put("supportedActions", List.of("订单同步", "物流回传", "库存同步"));
             }
             default -> {
                 result.put("success", true);
@@ -226,7 +226,7 @@ public class PlatformConnectorController {
                 return Result.success(syncResult);
             }
             case "TAOBAO", "TMALL", "DOUYIN", "PINDUODUO", "JD",
-                 "XIAOHONGSHU", "WECHAT_SHOP", "SHOPIFY", "DONGFANG" -> {
+                 "XIAOHONGSHU", "WECHAT_SHOP", "SHOPIFY", "SHEIN" -> {
                 return Result.success(Map.of(
                         "platform", platformCode,
                         "message", "该平台使用 Webhook 实时推送，无需手动同步",
@@ -254,9 +254,9 @@ public class PlatformConnectorController {
                 "主动拉取 + Webhook", List.of("订单同步", "店铺发现", "客户归集", "物流回传"),
                 "https://open.jushuitan.com", 299.00));
 
-        platforms.add(platformInfo("DONGFANG", "东纺纺织", "纺织面料B2B平台，面料采购与供应链协同",
-                "Webhook 回调", List.of("面料同步", "供应商对接", "采购订单", "库存联动"),
-                "", 199.00));
+        platforms.add(platformInfo("SHEIN", "希音", "希音(SHEIN)跨境电商平台订单对接",
+                "Webhook 回调", List.of("订单同步", "物流回传", "库存同步"),
+                "https://open.shein.com", 299.00));
 
         platforms.add(platformInfo("TAOBAO", "淘宝", "淘宝平台订单与物流对接，Webhook 实时推送",
                 "Webhook 实时推送",
@@ -385,8 +385,8 @@ public class PlatformConnectorController {
     }
 
     private boolean isSupported(String code) {
-        return Set.of("JST", "DONGFANG", "TAOBAO", "TMALL", "JD", "DOUYIN",
-                "PINDUODUO", "XIAOHONGSHU", "WECHAT_SHOP", "SHOPIFY", "SHEIN").contains(code);
+        return Set.of("JST", "SHEIN", "TAOBAO", "TMALL", "JD", "DOUYIN",
+                "PINDUODUO", "XIAOHONGSHU", "WECHAT_SHOP", "SHOPIFY").contains(code);
     }
 
     private String maskKey(String key) {

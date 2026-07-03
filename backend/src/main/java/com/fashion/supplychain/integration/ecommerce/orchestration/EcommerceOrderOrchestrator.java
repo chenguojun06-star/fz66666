@@ -278,7 +278,6 @@ public class EcommerceOrderOrchestrator {
             case "SHOPIFY" -> "SFY";
             case "SHEIN" -> "SY";
             case "JST" -> "JST";
-            case "DONGFANG" -> "DF";
             default -> "EC";
         };
         return prefix + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyMMddHHmmssSSS"));
@@ -296,7 +295,6 @@ public class EcommerceOrderOrchestrator {
             case "SHOPIFY" -> "SFY";
             case "SHEIN" -> "SY";
             case "JST" -> "JST";
-            case "DONGFANG" -> "DF";
             default -> code;
         };
     }

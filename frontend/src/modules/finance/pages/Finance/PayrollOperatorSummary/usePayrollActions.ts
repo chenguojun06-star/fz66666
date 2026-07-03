@@ -40,8 +40,9 @@ export function usePayrollActions(deps: PayrollActionDeps) {
     } = deps;
 
     const handleAuditDetail = async (row: any) => {
-        if (!isOrderFrozenByStatus({ status: String(row?.orderStatus || '') })) {
-            message.warning('该订单尚未关单，只有已关单的订单才能审核');
+        const isInternal = row?.factoryType === 'INTERNAL';
+        if (!isInternal && !isOrderFrozenByStatus({ status: String(row?.orderStatus || '') })) {
+            message.warning('外部工厂订单尚未关单，只有已关单的订单才能审核');
             return;
         }
         const approvalId = getDetailApprovalId(row);
@@ -72,7 +73,8 @@ export function usePayrollActions(deps: PayrollActionDeps) {
         }).filter(Boolean);
 
         const notFrozenRows = selectedRows.filter((row): row is PayrollOperatorProcessSummaryRow => {
-            return Boolean(row && !isOrderFrozenByStatus({ status: String((row as any)?.orderStatus || '') }));
+            const isInternal = (row as any)?.factoryType === 'INTERNAL';
+            return Boolean(row && !isInternal && !isOrderFrozenByStatus({ status: String((row as any)?.orderStatus || '') }));
         });
         const alreadyAuditedRows = selectedRows.filter((row): row is PayrollOperatorProcessSummaryRow => {
             return Boolean(row && isDetailAudited(row, auditedDetailKeys));
@@ -83,16 +85,17 @@ export function usePayrollActions(deps: PayrollActionDeps) {
 
         const eligibleRows = selectedRows.filter((row): row is PayrollOperatorProcessSummaryRow => {
             const approvalId = getDetailApprovalId(row);
+            const isInternal = (row as any)?.factoryType === 'INTERNAL';
             return Boolean(
                 row && approvalId &&
-                isOrderFrozenByStatus({ status: String((row as any)?.orderStatus || '') }) &&
+                (isInternal || isOrderFrozenByStatus({ status: String((row as any)?.orderStatus || '') })) &&
                 !isDetailAudited(row, auditedDetailKeys)
             );
         });
 
         if (eligibleRows.length === 0) {
             if (notFrozenRows.length > 0) {
-                message.warning(`所选 ${notFrozenRows.length} 行的订单尚未关单，只有已关单的订单才能审核`);
+                message.warning(`所选 ${notFrozenRows.length} 行外部工厂订单尚未关单，只有已关单的外部工厂订单才能审核`);
             } else if (alreadyAuditedRows.length > 0) {
                 message.warning('所选行已全部审核过，无需重复审核');
             } else if (noApprovalIdRows.length > 0) {

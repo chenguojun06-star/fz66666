@@ -41,120 +41,17 @@ interface ShopInfo {
 // ============================================================
 // 凭证获取教程内容
 // ============================================================
-const CREDENTIAL_GUIDES: Record<string, { title: string; steps: { title: string; description: string }[]; docUrl: string }> = {
-  JST: {
-    title: '如何获取聚水潭应用凭证？',
-    steps: [
-      { title: '登录聚水潭开放平台', description: '打开 open.jushuitan.com，使用企业账号登录' },
-      { title: '创建应用', description: '进入「开发者中心」→「应用管理」→「创建应用」，选择"自研ERP对接"，填写应用名称和回调地址' },
-      { title: '获取凭证', description: '应用审核通过后，在应用详情页复制应用标识（AppKey）和密钥（AppSecret）' },
-      { title: '填写到本系统', description: '将 AppKey 和 AppSecret 填入下方表单，点击"保存并测试连接"' },
-      { title: '授权店铺数据', description: '在聚水潭应用管理中，授权需要同步的店铺。系统会自动发现并拉取这些店铺的订单数据' },
-    ],
-    docUrl: 'https://open.jushuitan.com',
-  },
-  TAOBAO: {
-    title: '如何获取淘宝应用凭证？',
-    steps: [
-      { title: '登录淘宝开放平台', description: '打开 open.taobao.com，使用淘宝卖家账号登录' },
-      { title: '创建应用', description: '进入「控制台」→「应用管理」→「创建应用」，选择"自用型应用"' },
-      { title: '获取 AppKey/AppSecret', description: '创建完成后，在应用详情页复制 AppKey 和 AppSecret' },
-      { title: '填写到本系统', description: '将 AppKey 和 AppSecret 填入下方表单，保存后系统会生成回调地址' },
-      { title: '配置回调', description: '将系统生成的 Webhook 回调地址配置到淘宝应用的"消息服务"中' },
-    ],
-    docUrl: 'https://open.taobao.com',
-  },
-  TMALL: {
-    title: '如何获取天猫应用凭证？',
-    steps: [
-      { title: '登录淘宝开放平台', description: '打开 open.taobao.com（天猫与淘宝共用开放平台）' },
-      { title: '创建应用', description: '进入「控制台」→「应用管理」→「创建应用」' },
-      { title: '获取凭证', description: '复制 AppKey 和 AppSecret' },
-      { title: '填写到本系统', description: '将凭证填入下方表单' },
-    ],
-    docUrl: 'https://open.taobao.com',
-  },
-  DOUYIN: {
-    title: '如何获取抖音小店应用凭证？',
-    steps: [
-      { title: '登录抖音开放平台', description: '打开 open.douyin.com，使用抖音商家账号登录' },
-      { title: '创建应用', description: '进入「控制台」→「应用管理」→「创建应用」，选择"服务商应用"或"自用型应用"' },
-      { title: '获取 AppKey/AppSecret', description: '创建完成后复制 AppKey 和 AppSecret' },
-      { title: '填写到本系统', description: '将凭证填入下方表单' },
-      { title: '配置回调', description: '将系统生成的 Webhook 地址配置到抖音应用的"消息推送"中' },
-    ],
-    docUrl: 'https://open.douyin.com',
-  },
-  PINDUODUO: {
-    title: '如何获取拼多多应用凭证？',
-    steps: [
-      { title: '登录拼多多开放平台', description: '打开 open.pinduoduo.com，使用商家账号登录' },
-      { title: '创建应用', description: '进入「开发者中心」→「应用管理」→「创建应用」' },
-      { title: '获取 client_id 和 client_secret', description: '创建完成后，将 client_id 作为 AppKey、client_secret 作为 AppSecret' },
-      { title: '填写到本系统', description: '填入下方表单' },
-    ],
-    docUrl: 'https://open.pinduoduo.com',
-  },
-  JD: {
-    title: '如何获取京东应用凭证？',
-    steps: [
-      { title: '登录京东开放平台', description: '打开 open.jd.com，使用商家账号登录' },
-      { title: '创建应用', description: '进入「控制台」→「应用管理」→「创建应用」' },
-      { title: '获取 AppKey/AppSecret', description: '创建完成后复制凭证' },
-      { title: '填写到本系统', description: '填入下方表单' },
-    ],
-    docUrl: 'https://open.jd.com',
-  },
-  XIAOHONGSHU: {
-    title: '如何获取小红书应用凭证？',
-    steps: [
-      { title: '登录小红书开放平台', description: '打开 open.xiaohongshu.com' },
-      { title: '创建应用', description: '进入「开发者中心」→「创建应用」' },
-      { title: '获取凭证', description: '复制 AppKey 和 AppSecret' },
-      { title: '填写到本系统', description: '填入下方表单' },
-    ],
-    docUrl: 'https://open.xiaohongshu.com',
-  },
-  WECHAT_SHOP: {
-    title: '如何获取微信小店凭证？',
-    steps: [
-      { title: '登录微信小店后台', description: '打开微信小店管理后台' },
-      { title: '开发设置', description: '进入「设置」→「开发设置」' },
-      { title: '获取 AppID/AppSecret', description: '将 AppID 作为 AppKey、AppSecret 填入下方' },
-      { title: '填写到本系统', description: '填入下方表单' },
-    ],
-    docUrl: 'https://developers.weixin.qq.com',
-  },
-  SHOPIFY: {
-    title: '如何获取 Shopify API 凭证？',
-    steps: [
-      { title: '登录 Shopify 后台', description: '打开你的 Shopify 店铺管理后台' },
-      { title: '创建私有应用', description: '进入「设置」→「应用和销售渠道」→「管理私有应用」→「创建私有应用」' },
-      { title: '获取 API 凭证', description: '将 API Key 作为 AppKey、Password 作为 AppSecret' },
-      { title: '填写到本系统', description: '填入下方表单' },
-      { title: '配置 Webhook', description: '在 Shopify 设置中，将系统生成的 Webhook 地址添加为订单创建回调' },
-    ],
-    docUrl: 'https://shopify.dev',
-  },
-  DONGFANG: {
-    title: '如何获取东纺纺织接口密钥？',
-    steps: [
-      { title: '联系东纺纺织平台', description: '联系东纺纺织客户经理，申请 API 对接权限' },
-      { title: '获取 API 凭证', description: '平台会下发应用标识和密钥' },
-      { title: '填写到本系统', description: '将获取到的凭证填入下方表单' },
-    ],
-    docUrl: '',
-  },
-  DEFAULT: {
-    title: '如何获取平台接口凭证？',
-    steps: [
-      { title: '打开平台开放平台', description: '登录该平台的开放平台/开发者中心' },
-      { title: '创建应用/获取密钥', description: '创建对接应用，获取应用标识和密钥' },
-      { title: '填写到本系统', description: '将获取到的凭证填入下方表单' },
-      { title: '配置回调地址', description: '将本系统的回调地址配置到平台中' },
-    ],
-    docUrl: '',
-  },
+const PLATFORM_HELP_TIPS: Record<string, { openUrl: string; tip: string }> = {
+  JST: { openUrl: 'https://open.jushuitan.com', tip: '在聚水潭开放平台创建应用，获取 AppKey 和 AppSecret' },
+  TAOBAO: { openUrl: 'https://open.taobao.com', tip: '在淘宝开放平台创建自用型应用，获取 AppKey 和 AppSecret' },
+  TMALL: { openUrl: 'https://open.taobao.com', tip: '天猫与淘宝共用开放平台，创建应用获取凭证' },
+  DOUYIN: { openUrl: 'https://open.douyin.com', tip: '在抖音开放平台创建应用，获取 AppKey 和 AppSecret' },
+  PINDUODUO: { openUrl: 'https://open.pinduoduo.com', tip: '在拼多多开放平台创建应用，client_id 作为 AppKey' },
+  JD: { openUrl: 'https://open.jd.com', tip: '在京东开放平台创建应用，获取 AppKey 和 AppSecret' },
+  XIAOHONGSHU: { openUrl: 'https://open.xiaohongshu.com', tip: '在小红书开放平台创建应用，获取凭证' },
+  WECHAT_SHOP: { openUrl: 'https://developers.weixin.qq.com', tip: '在微信小店后台获取 AppID 和 AppSecret' },
+  SHOPIFY: { openUrl: 'https://shopify.dev', tip: '在 Shopify 后台创建私有应用，获取 API Key 和 Password' },
+  SHEIN: { openUrl: 'https://open.shein.com', tip: '在希音开放平台创建应用，获取 AppKey 和 AppSecret' },
 };
 
 // ============================================================
@@ -177,7 +74,6 @@ const PlatformConnectorTab: React.FC<{ active: boolean }> = ({ active }) => {
     supportedActions?: string[]; webhookUrl?: string; credentialGuide?: string;
   } | null>(null);
   const [syncResult, setSyncResult] = useState<{ synced?: number; skipped?: number } | null>(null);
-  const [showGuide, setShowGuide] = useState(false);
 
   const [form] = Form.useForm();
 
@@ -216,7 +112,6 @@ const PlatformConnectorTab: React.FC<{ active: boolean }> = ({ active }) => {
     form.resetFields();
     form.setFieldsValue({ appKey: '', appSecret: '' });
     setTestResult(null);
-    setShowGuide(false);
     setConfigModalOpen(true);
   };
 
@@ -276,9 +171,6 @@ const PlatformConnectorTab: React.FC<{ active: boolean }> = ({ active }) => {
     const colorMap = { pull: 'blue', webhook: 'green', both: 'purple' };
     return <Tag color={colorMap[mode]}>{SYNC_MODE_LABELS[mode]}</Tag>;
   };
-
-  // 凭证获取教程
-  const guide = activePlatform ? (CREDENTIAL_GUIDES[activePlatform.code] || CREDENTIAL_GUIDES.DEFAULT) : CREDENTIAL_GUIDES.DEFAULT;
 
   // 平台卡片
   const renderPlatformCard = (p: PlatformMeta) => {
@@ -387,8 +279,9 @@ const PlatformConnectorTab: React.FC<{ active: boolean }> = ({ active }) => {
           </Col>
         </Row>
 
-        <Alert type="info" showIcon style={{ marginBottom: 20, borderRadius: 8 }}
-          title={<span>选择一个电商/ERP平台，填写应用标识和密钥即可自动对接。支持 <strong>主动拉取</strong> 和 <strong>回调推送</strong>。<span style={{ color: 'var(--color-warning)' }}>不知道怎么获取凭证？点击「配置连接」→「如何获取凭证？」查看教程。</span></span>}
+        <Alert type="success" showIcon style={{ marginBottom: 20, borderRadius: 8 }}
+          title={<span>📦 <strong>三步傻瓜式对接</strong>：选择平台 → 粘贴凭证 → 复制回调地址到平台</span>}
+          description="支持 10 大电商平台一键对接，订单自动同步，物流自动回传"
         />
         <Row gutter={[16, 16]}>{PLATFORM_LIST.map(renderPlatformCard)}</Row>
         {stats.connected === 0 && (
@@ -401,60 +294,30 @@ const PlatformConnectorTab: React.FC<{ active: boolean }> = ({ active }) => {
         <ResizableModal
           open={configModalOpen}
           title={<Space><span style={{ fontSize: 20 }}>{activePlatform ? renderIcon(activePlatform.icon) : <ApiOutlined />}</span><span>配置 {activePlatform?.name} 连接</span></Space>}
-          onCancel={() => { setConfigModalOpen(false); setTestResult(null); setShowGuide(false); }}
+          onCancel={() => { setConfigModalOpen(false); setTestResult(null); }}
           footer={null} width="40vw" destroyOnHidden
         >
-          {/* 凭证获取教程 */}
-          {!showGuide ? (
-            <Alert type="warning" showIcon icon={<QuestionCircleOutlined />} style={{ marginBottom: 16, borderRadius: 8 }}
-              title={
-                <span>
-                  不知道怎么获取 {activePlatform?.name} 的应用标识和密钥？
-                  <Button type="link" onClick={() => setShowGuide(true)} style={{ padding: '0 4px' }}>
-                    点击查看获取教程 →
-                  </Button>
-                </span>
-              }
-            />
-          ) : (
-            <Card title={<span><QuestionCircleOutlined /> {guide.title}</span>} style={{ marginBottom: 16, borderRadius: 8, border: '1px solid #ffe58f' }}
-              extra={<Button type="link" onClick={() => setShowGuide(false)}>收起</Button>}>
-              <Steps direction="vertical" current={-1}
-                items={guide.steps.map(s => ({
-                  title: s.title,
-                  description: <Text type="secondary">{s.description}</Text>,
-                  status: 'process' as const,
-                }))}
-              />
-              {guide.docUrl && (
-                <div style={{ marginTop: 12, textAlign: 'center' }}>
-                  <Button icon={<LinkOutlined />} onClick={() => window.open(guide.docUrl, '_blank')}>
-                    打开 {activePlatform?.name} 开放平台 →
-                  </Button>
-                </div>
-              )}
-            </Card>
-          )}
+          <div style={{ background: '#fffbe6', border: '1px solid #ffe58f', borderRadius: 8, padding: '16px', marginBottom: 16 }}>
+            <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>💡 对接说明</div>
+            <div style={{ fontSize: 14, color: '#595959', marginBottom: 8 }}>
+              {PLATFORM_HELP_TIPS[activePlatform?.code || '']?.tip || '在对应平台开放平台创建应用，获取 AppKey 和 AppSecret'}
+            </div>
+            {PLATFORM_HELP_TIPS[activePlatform?.code || '']?.openUrl && (
+              <Button type="link" icon={<LinkOutlined />} onClick={() => window.open(PLATFORM_HELP_TIPS[activePlatform!.code].openUrl, '_blank')}>
+                打开 {activePlatform?.name} 开放平台 →
+              </Button>
+            )}
+          </div>
 
-          <Descriptions bordered column={1} style={{ marginBottom: 16 }}>
-            <Descriptions.Item label="平台">{activePlatform?.name}</Descriptions.Item>
-            <Descriptions.Item label="同步方式">{activePlatform ? modeLabel(activePlatform.syncMode) : null}</Descriptions.Item>
-            <Descriptions.Item label="功能">{activePlatform?.features.join('、')}</Descriptions.Item>
-          </Descriptions>
-
-          <Divider style={{ margin: '12px 0' }} />
           <Form form={form} layout="vertical">
-            <Alert type="error" showIcon style={{ marginBottom: 16, borderRadius: 8 }}
-              title="请填写从平台获取的真实凭证"
-              description="AppKey 和 AppSecret 需要在对应平台的开放平台注册应用后获取，不是本系统的登录账号。点击上方「如何获取凭证？」查看教程。" />
-            <Form.Item name="appKey" label={<span><KeyOutlined /> 应用标识 (AppKey)</span>} rules={[{ required: true, message: '请输入应用标识' }]} tooltip={`${activePlatform?.name} 开放平台颁发的应用标识`}>
-              <Input placeholder={`请输入 ${activePlatform?.name} 的真实 AppKey（非登录账号）`} autoComplete="off" />
+            <Form.Item name="appKey" label={<span><KeyOutlined /> AppKey</span>} rules={[{ required: true, message: '请粘贴应用标识' }]} tooltip="从平台开放平台复制">
+              <Input placeholder={`粘贴 ${activePlatform?.name} 的 AppKey`} autoComplete="off" />
             </Form.Item>
-            <Form.Item name="appSecret" label={<span><SafetyCertificateOutlined /> 应用密钥 (AppSecret)</span>} rules={[{ required: true, message: '请输入应用密钥' }]} tooltip="密钥加密传输，仅存储不可逆Hash">
-              <Input.Password placeholder={`请输入 ${activePlatform?.name} 的应用密钥`} autoComplete="off" />
+            <Form.Item name="appSecret" label={<span><SafetyCertificateOutlined /> AppSecret</span>} rules={[{ required: true, message: '请粘贴应用密钥' }]} tooltip="密钥加密存储，安全可靠">
+              <Input.Password placeholder={`粘贴 ${activePlatform?.name} 的 AppSecret`} autoComplete="off" />
             </Form.Item>
             <Form.Item name="shopName" label={<span><ShopOutlined /> 店铺名称（可选）</span>}>
-              <Input placeholder="给这个连接起个名字，如：主店铺" />
+              <Input placeholder="如：主店铺" />
             </Form.Item>
           </Form>
 
@@ -478,16 +341,17 @@ const PlatformConnectorTab: React.FC<{ active: boolean }> = ({ active }) => {
                   description={testResult.credentialGuide} />
               )}
               {testResult.webhookUrl && (
-                <Alert type="warning" showIcon style={{ marginBottom: 16, borderRadius: 8 }}
-                  title="下一步：配置回调地址"
-                  description={
-                    <div>
-                      <div style={{ marginBottom: 4 }}>请将此地址配置到平台的回调/Webhook设置中：</div>
-                      <code style={{ background: 'var(--color-bg-subtle)', padding: '4px 8px', borderRadius: 4, fontSize: 14, wordBreak: 'break-all' }}>
-                        {window.location.origin}{testResult.webhookUrl}
-                      </code>
-                    </div>
-                  } />
+                <div style={{ background: '#f0f9ff', border: '1px solid #91caff', borderRadius: 8, padding: '16px', marginBottom: 16 }}>
+                  <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>✅ 下一步：配置回调地址</div>
+                  <div style={{ fontSize: 14, marginBottom: 8 }}>复制下方地址，粘贴到 {activePlatform?.name} 平台的 Webhook 设置中：</div>
+                  <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                    <code style={{ flex: 1, background: '#fff', border: '1px solid #d9d9d9', padding: '8px 12px', borderRadius: 4, fontSize: 14, wordBreak: 'break-all' }}>
+                      {window.location.origin}{testResult.webhookUrl}
+                    </code>
+                    <Button type="primary" size="small" onClick={() => { navigator.clipboard.writeText(`${window.location.origin}${testResult.webhookUrl}`); message.success('已复制到剪贴板'); }}>一键复制</Button>
+                  </div>
+                  <div style={{ fontSize: 13, color: '#8c8c8c' }}>配置后，平台订单会自动推送到本系统，无需手动同步</div>
+                </div>
               )}
               {testResult.success && testResult.supportedActions && (
                 <Descriptions bordered column={2} style={{ marginBottom: 16 }}>

@@ -80,9 +80,8 @@ const AppStore: React.FC = () => {
 
   return (<>
     <div className="app-store-container">
-      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+      <div className="page-header">
         <div><h2>应用商店</h2><p>一键开通API对接，填写您的接口地址即可使用</p></div>
-        <Button icon={<BookOutlined />} onClick={() => navigate('/system/tenant?tab=guide')} style={{ marginTop: 4 }}>查看对接教程</Button>
       </div>
       <Spin spinning={myAppsLoading}>{renderMyApps()}</Spin>
       <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 12 }}><ShoppingCartOutlined style={{ marginRight: 6 }} />全部应用</div>
@@ -164,10 +163,16 @@ const AppStore: React.FC = () => {
           <CheckCircleOutlined style={{ fontSize: 48, color: 'var(--color-success)', marginBottom: 16 }} />
           <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}> 对接配置完成！</div>
           <div style={{ fontSize: 14, color: 'var(--color-text-secondary)', marginBottom: 12 }}>{wizardData.appName} 已开通{wizardData.trialDays ? ` ${wizardData.trialDays} 天试用` : ''}，API端点已就绪。</div>
-          <Row gutter={16} style={{ textAlign: 'left', marginBottom: 12 }}>
-            <Col span={12}><Card style={{ borderLeft: '3px solid var(--color-success)' }}><div style={{ fontWeight: 600, marginBottom: 4 }}> 已完成</div><ul style={{ margin: 0, paddingLeft: 16, fontSize: 14, color: 'var(--color-text-secondary)', lineHeight: 1.8 }}><li>API凭证自动生成</li><li>内部端点自动匹配</li><li>接口地址已配置</li></ul></Card></Col>
-            <Col span={12}><Card style={{ borderLeft: '3px solid var(--color-primary)' }}><div style={{ fontWeight: 600, marginBottom: 4 }}> 下一步</div><ul style={{ margin: 0, paddingLeft: 16, fontSize: 14, color: 'var(--color-text-secondary)', lineHeight: 1.8 }}><li>查看对接教程了解详情</li><li>在您的系统中集成API</li><li>发送第一个请求测试</li></ul></Card></Col>
-          </Row>
+          <div style={{ textAlign: 'left', marginBottom: 16 }}>
+            <Card style={{ borderLeft: '3px solid var(--color-success)' }}>
+              <div style={{ fontWeight: 600, marginBottom: 4 }}>已完成</div>
+              <ul style={{ margin: 0, paddingLeft: 16, fontSize: 14, color: 'var(--color-text-secondary)', lineHeight: 1.8 }}>
+                <li>API凭证自动生成</li>
+                <li>内部端点自动匹配</li>
+                <li>接口地址已配置</li>
+              </ul>
+            </Card>
+          </div>
           <div style={{ display: 'flex', justifyContent: 'center', gap: 12 }}>
             <Button onClick={() => setWizardVisible(false)}>关闭</Button>
             {isEcApp(wizardData.appCode || '') ? (
@@ -175,8 +180,8 @@ const AppStore: React.FC = () => {
                 前往电商运营管理平台
               </Button>
             ) : (
-              <Button type="primary" icon={<BookOutlined />} onClick={() => { setWizardVisible(false); navigate('/system/tenant?tab=guide'); }}>
-                查看对接教程
+              <Button type="primary" onClick={() => setWizardVisible(false)}>
+                完成
               </Button>
             )}
           </div>

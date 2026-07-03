@@ -1,8 +1,7 @@
 import React from 'react';
 import { Tabs } from 'antd';
-import { ApiOutlined, DashboardOutlined, BookOutlined } from '@ant-design/icons';
+import { ApiOutlined, DashboardOutlined } from '@ant-design/icons';
 import { useSearchParams } from 'react-router-dom';
-import IntegrationGuideTab from './IntegrationGuideTab';
 import IntegrationOverviewTab from './components/IntegrationOverviewTab';
 import AppManagementTab from './components/AppManagementTab';
 
@@ -25,11 +24,6 @@ const TenantManagement: React.FC = () => {
             key: 'apps',
             label: <span><ApiOutlined /> 应用管理</span>,
             children: <AppManagementTab />,
-          },
-          {
-            key: 'guide',
-            label: <span><BookOutlined /> 使用教程</span>,
-            children: <IntegrationGuideTab />,
           },
         ]}
       />
