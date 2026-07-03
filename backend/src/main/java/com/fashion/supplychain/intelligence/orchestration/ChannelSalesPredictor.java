@@ -197,6 +197,10 @@ public class ChannelSalesPredictor {
             com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<EcSalesRevenue> wrapper =
                     new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<>();
             wrapper.eq(EcSalesRevenue::getTenantId, tenantId);
+            // 按款号过滤：skuCode 格式为 "款号-颜色-尺码"，用 likeRight 前缀匹配
+            if (StringUtils.hasText(styleNo)) {
+                wrapper.likeRight(EcSalesRevenue::getSkuCode, styleNo + "-");
+            }
             wrapper.last("LIMIT 5000");
             return ecSalesRevenueService.list(wrapper);
         } catch (Exception e) {

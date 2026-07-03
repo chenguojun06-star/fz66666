@@ -197,6 +197,7 @@ public class ProductionOrderOrchestrator {
                             new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<
                                     com.fashion.supplychain.integration.ecommerce.entity.EcommerceOrder>()
                                     .in(com.fashion.supplychain.integration.ecommerce.entity.EcommerceOrder::getProductionOrderNo, orderNos)
+                                    .eq(com.fashion.supplychain.integration.ecommerce.entity.EcommerceOrder::getTenantId, UserContext.tenantId())
                             );
             if (ecOrders.isEmpty()) return;
             Map<String, com.fashion.supplychain.integration.ecommerce.entity.EcommerceOrder> ecMap =
@@ -205,23 +206,16 @@ public class ProductionOrderOrchestrator {
                             o -> o,
                             (a, b) -> a
                     ));
+            // 仅在内存中补充 ecOrderNo/ecPlatform/platformCode，不在此处执行 UPDATE（读方法不应有副作用）
+            // platformCode 的持久化由订单创建/关联时（linkProductionOrder/receiveOrder）负责
             page.getRecords().forEach(o -> {
                 com.fashion.supplychain.integration.ecommerce.entity.EcommerceOrder ec =
                         ecMap.get(o.getOrderNo());
                 if (ec != null) {
                     o.setEcOrderNo(ec.getOrderNo());
                     o.setEcPlatform(ec.getPlatform());
-                    // 持久化 platformCode（仅当尚未设置时）
                     if (!StringUtils.hasText(o.getPlatformCode()) && StringUtils.hasText(ec.getPlatform())) {
                         o.setPlatformCode(ec.getPlatform());
-                        try {
-                            productionOrderService.lambdaUpdate()
-                                    .eq(ProductionOrder::getId, o.getId())
-                                    .set(ProductionOrder::getPlatformCode, ec.getPlatform())
-                                    .update();
-                        } catch (Exception ex) {
-                            log.warn("[EC关联] 持久化 platformCode 失败: orderId={}", o.getId());
-                        }
                     }
                 }
             });
@@ -245,6 +239,7 @@ public class ProductionOrderOrchestrator {
                                     .select(com.fashion.supplychain.production.entity.ProductWarehousing::getOrderId,
                                             com.fashion.supplychain.production.entity.ProductWarehousing::getUnqualifiedQuantity)
                                     .in(com.fashion.supplychain.production.entity.ProductWarehousing::getOrderId, orderIds)
+                                    .eq(com.fashion.supplychain.production.entity.ProductWarehousing::getTenantId, UserContext.tenantId())
                                     .gt(com.fashion.supplychain.production.entity.ProductWarehousing::getUnqualifiedQuantity, 0)
                                     .eq(com.fashion.supplychain.production.entity.ProductWarehousing::getDeleteFlag, 0)
                             );

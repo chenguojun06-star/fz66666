@@ -128,6 +128,18 @@ public class EcommerceOrderOrchestrator {
                     order.setProductionOrderNo(matched.getOrderNo());
                     order.setWarehouseStatus(1);
                     ecOrderService.updateById(order);
+                    // 回写 platformCode 到生产订单（仅在未设置时）
+                    if (StringUtils.hasText(order.getPlatform()) && !StringUtils.hasText(matched.getPlatformCode())) {
+                        try {
+                            productionOrderService.lambdaUpdate()
+                                    .eq(ProductionOrder::getId, matched.getId())
+                                    .eq(ProductionOrder::getTenantId, tenantId)
+                                    .set(ProductionOrder::getPlatformCode, order.getPlatform())
+                                    .update();
+                        } catch (Exception ex) {
+                            log.warn("[EC自动匹配] 回写 platformCode 失败: prodOrderId={}", matched.getId());
+                        }
+                    }
                     log.info("[EC自动匹配] EC单={} 关联生产单={} styleNo={}",
                             order.getOrderNo(), matched.getOrderNo(), styleNo);
                 }
@@ -205,6 +217,26 @@ public class EcommerceOrderOrchestrator {
         order.setProductionOrderNo(productionOrderNo);
         order.setWarehouseStatus(1);
         ecOrderService.updateById(order);
+        // 回写 platformCode 到生产订单（仅在未设置时，避免覆盖人工设置）
+        if (StringUtils.hasText(order.getPlatform())) {
+            try {
+                ProductionOrder prodOrder = productionOrderService.getOne(
+                        new LambdaQueryWrapper<ProductionOrder>()
+                                .eq(ProductionOrder::getOrderNo, productionOrderNo)
+                                .eq(ProductionOrder::getTenantId, tenantId));
+                if (prodOrder != null && !StringUtils.hasText(prodOrder.getPlatformCode())) {
+                    productionOrderService.lambdaUpdate()
+                            .eq(ProductionOrder::getId, prodOrder.getId())
+                            .eq(ProductionOrder::getTenantId, tenantId)
+                            .set(ProductionOrder::getPlatformCode, order.getPlatform())
+                            .update();
+                    log.info("[EC关联] 回写 platformCode 到生产订单: prodOrderNo={} platform={}",
+                            productionOrderNo, order.getPlatform());
+                }
+            } catch (Exception e) {
+                log.warn("[EC关联] 回写 platformCode 失败，不阻断关联: prodOrderNo={} {}", productionOrderNo, e.getMessage());
+            }
+        }
         log.info("[EC关联] EC订单={} 关联生产订单={}", order.getOrderNo(), productionOrderNo);
     }
 

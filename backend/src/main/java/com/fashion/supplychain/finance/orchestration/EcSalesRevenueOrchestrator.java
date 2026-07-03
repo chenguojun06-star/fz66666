@@ -49,10 +49,11 @@ public class EcSalesRevenueOrchestrator {
     public void recordOnOutbound(EcommerceOrder order) {
         if (order == null || order.getId() == null) return;
 
-        // 幂等：同一订单只写一条
+        // 幂等：同一订单只写一条（带 tenant_id 隔离，P0铁律4）
         Long count = ecSalesRevenueService.count(
                 new LambdaQueryWrapper<EcSalesRevenue>()
-                        .eq(EcSalesRevenue::getEcOrderId, order.getId()));
+                        .eq(EcSalesRevenue::getEcOrderId, order.getId())
+                        .eq(EcSalesRevenue::getTenantId, order.getTenantId()));
         if (count > 0) {
             log.info("[EC收入] 已存在流水，跳过（ecOrderId={}）", order.getId());
             return;

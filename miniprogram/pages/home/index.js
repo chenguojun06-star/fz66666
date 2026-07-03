@@ -170,9 +170,14 @@ Page({
 
   loadFavorites: function () {
     const that = this;
+    const isFactory = isFactoryOwner();
     // 先读本地缓存快速渲染，避免服务器异常时空数据覆盖
     let localFavorites = [];
     try { localFavorites = wx.getStorageSync('favoriteApps') || []; } catch (e) { /* ignore */ }
+    // 外发工厂过滤掉销售类应用（防止从其他端已收藏绕过权限）
+    if (isFactory) {
+      localFavorites = localFavorites.filter(id => id !== 'salesData' && id !== 'platformOrder');
+    }
     if (localFavorites.length > 0) {
       that.setData({ favoriteApps: localFavorites });
     }
@@ -185,6 +190,10 @@ Page({
         if (!Array.isArray(favorites)) favorites = [];
       } catch (e) {
         favorites = [];
+      }
+      // 外发工厂过滤掉销售类应用
+      if (isFactory) {
+        favorites = favorites.filter(id => id !== 'salesData' && id !== 'platformOrder');
       }
       // 服务器返回空但本地有数据：保留本地（异步同步可能未完成）
       if (favorites.length === 0 && localFavorites.length > 0) {

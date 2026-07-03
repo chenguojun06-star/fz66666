@@ -93,17 +93,21 @@ public class FinishedOutstockHelper {
         String warehouseAreaId = trimToNull(params.get("warehouseAreaId"));
         String warehouseAreaName = resolveWarehouseAreaName(warehouseAreaId);
         String platformCode = trimToNull(params.get("platformCode"));
-        // 如果未传入 platformCode，尝试从生产订单查询
+        // 如果未传入 platformCode，尝试从生产订单查询（带 tenant_id 隔离，P0铁律4）
         if (!StringUtils.hasText(platformCode) && StringUtils.hasText(requestOrderNo)) {
             try {
+                Long currentTenantId = com.fashion.supplychain.common.UserContext.tenantId();
                 ProductionOrder prodOrder = productionOrderService.lambdaQuery()
                         .select(ProductionOrder::getId, ProductionOrder::getPlatformCode)
                         .eq(ProductionOrder::getOrderNo, requestOrderNo)
+                        .eq(currentTenantId != null, ProductionOrder::getTenantId, currentTenantId)
                         .one();
                 if (prodOrder != null && StringUtils.hasText(prodOrder.getPlatformCode())) {
                     platformCode = prodOrder.getPlatformCode();
                 }
-            } catch (Exception ignore) {}
+            } catch (Exception e) {
+                log.warn("[出库] 查询生产订单 platformCode 失败: orderNo={} {}", requestOrderNo, e.getMessage());
+            }
         }
 
         int totalItems = 0;
