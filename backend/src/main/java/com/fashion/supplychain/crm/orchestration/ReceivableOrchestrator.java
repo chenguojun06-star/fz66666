@@ -8,6 +8,7 @@ import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.crm.entity.Customer;
 import com.fashion.supplychain.crm.entity.Receivable;
 import com.fashion.supplychain.crm.entity.ReceivableReceiptLog;
+import com.fashion.supplychain.crm.helper.ReceivableLogAppendHelper;
 import com.fashion.supplychain.crm.service.CustomerService;
 import com.fashion.supplychain.crm.service.ReceivableService;
 import com.fashion.supplychain.finance.entity.BillAggregation;
@@ -45,6 +46,9 @@ public class ReceivableOrchestrator {
 
     @Autowired
     private BillAggregationService billAggregationService;
+
+    @Autowired
+    private ReceivableLogAppendHelper logAppendHelper;
 
     private static final DateTimeFormatter NO_FMT = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
     private static final java.util.concurrent.atomic.AtomicInteger NO_SEQ = new java.util.concurrent.atomic.AtomicInteger(0);
@@ -275,6 +279,7 @@ public class ReceivableOrchestrator {
 
         receivableService.save(receivable);
         log.info("[ReceivableOrchestrator] 新建应收单 {} 金额 {}", receivable.getReceivableNo(), receivable.getAmount());
+        logAppendHelper.appendCreate(receivable, ctx != null ? ctx.getUsername() : null);
         return receivable;
     }
 
@@ -352,6 +357,7 @@ public class ReceivableOrchestrator {
         receivableReceiptOrchestrator.recordReceipt(r, paymentAmount, remark);
         syncBillAggregationAfterReceipt(r, paymentAmount);
         log.info("[ReceivableOrchestrator] 应收单 {} 登记到账 {}，状态更新为 {}", id, paymentAmount, r.getStatus());
+        logAppendHelper.appendMarkReceived(r, paymentAmount, UserContext.username());
         return r;
     }
 
@@ -387,6 +393,13 @@ public class ReceivableOrchestrator {
     @Transactional(rollbackFor = Exception.class)
     public void delete(String id) {
         TenantAssert.assertTenantContext();
+        Receivable existing = receivableService.lambdaQuery()
+                .eq(Receivable::getId, id)
+                .eq(Receivable::getDeleteFlag, 0)
+                .one();
+        if (existing != null) {
+            logAppendHelper.appendDelete(existing, UserContext.username());
+        }
         receivableService.removeById(id);
     }
 
@@ -406,6 +419,7 @@ public class ReceivableOrchestrator {
         for (Receivable r : list) {
             r.setStatus("OVERDUE");
             receivableService.updateById(r);
+            logAppendHelper.appendMarkOverdue(r, null);
             count++;
         }
         if (count > 0) {

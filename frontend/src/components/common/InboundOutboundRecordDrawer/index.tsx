@@ -5,6 +5,8 @@ import type { DrawerProps } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
 import { getMaterialTypeCategory, getBaseMaterialTypeLabel } from '@/utils/materialType';
 import { formatDateTime } from '@/utils/datetime';
+import { canViewPrice } from '@/utils/sensitiveDataMask';
+import type { UserInfo } from '@/utils/AuthContext';
 
 interface TransactionRecord {
   type: 'IN' | 'OUT' | string;
@@ -14,6 +16,8 @@ interface TransactionRecord {
   operatorName?: string;
   warehouseLocation?: string;
   remark?: string;
+  unitPrice?: number;
+  amount?: number;
 }
 
 interface InboundOutboundRecordDrawerProps extends Omit<DrawerProps, 'title' | 'children'> {
@@ -27,6 +31,7 @@ interface InboundOutboundRecordDrawerProps extends Omit<DrawerProps, 'title' | '
   } | null;
   records: TransactionRecord[];
   loading?: boolean;
+  user?: UserInfo | null;
 }
 
 const InboundOutboundRecordDrawer: React.FC<InboundOutboundRecordDrawerProps> = ({
@@ -35,8 +40,11 @@ const InboundOutboundRecordDrawer: React.FC<InboundOutboundRecordDrawerProps> = 
   materialData,
   records,
   loading = false,
+  user = null,
   ...restProps
 }) => {
+  const canSeePrice = canViewPrice(user);
+
   const columns = [
     {
       title: '类型',
@@ -57,6 +65,40 @@ const InboundOutboundRecordDrawer: React.FC<InboundOutboundRecordDrawerProps> = 
       dataIndex: 'quantity',
       width: 100,
       render: (v: number) => `${v ?? 0} ${materialData?.unit || ''}`,
+    },
+    {
+      title: '单价',
+      dataIndex: 'unitPrice',
+      width: 100,
+      align: 'right' as const,
+      render: (v: number) => {
+        if (!canSeePrice) return '***';
+        return v != null && Number.isFinite(Number(v)) ? `¥${Number(v).toFixed(2)}` : '-';
+      },
+    },
+    {
+      title: '入库金额',
+      dataIndex: 'inboundAmount',
+      width: 120,
+      align: 'right' as const,
+      render: (_: any, record: TransactionRecord) => {
+        if (!canSeePrice) return '***';
+        if (record.type !== 'IN') return '-';
+        const amount = record.amount ?? (Number(record.quantity || 0) * Number(record.unitPrice || 0));
+        return amount ? `¥${Number(amount).toFixed(2)}` : '-';
+      },
+    },
+    {
+      title: '出库金额',
+      dataIndex: 'outboundAmount',
+      width: 120,
+      align: 'right' as const,
+      render: (_: any, record: TransactionRecord) => {
+        if (!canSeePrice) return '***';
+        if (record.type !== 'OUT') return '-';
+        const amount = record.amount ?? (Number(record.quantity || 0) * Number(record.unitPrice || 0));
+        return amount ? `¥${Number(amount).toFixed(2)}` : '-';
+      },
     },
     {
       title: '操作人',

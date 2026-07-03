@@ -17,11 +17,16 @@ import com.fashion.supplychain.production.helper.ProductWarehousingPendingHelper
 import com.fashion.supplychain.production.helper.ProductWarehousingRepairHelper;
 import com.fashion.supplychain.production.helper.ProductWarehousingRollbackHelper;
 import com.fashion.supplychain.production.helper.ProductWarehousingLogAppendHelper;
+import com.fashion.supplychain.production.mapper.MaterialOutboundLogMapper;
+import com.fashion.supplychain.production.mapper.ScanRecordMapper;
 import com.fashion.supplychain.production.service.CuttingBundleService;
 import com.fashion.supplychain.production.service.ProductWarehousingService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.ScanRecordService;
+import com.fashion.supplychain.style.entity.ProductSku;
 import com.fashion.supplychain.style.service.ProductSkuService;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -71,6 +76,12 @@ public class ProductWarehousingOrchestrator {
 
     @Autowired
     private ProductWarehousingLogAppendHelper logAppendHelper;
+
+    @Autowired
+    private ScanRecordMapper scanRecordMapper;
+
+    @Autowired
+    private MaterialOutboundLogMapper materialOutboundLogMapper;
 
     public IPage<ProductWarehousing> list(Map<String, Object> params) {
         return queryHelper.list(params);
@@ -152,6 +163,8 @@ public class ProductWarehousingOrchestrator {
                 productWarehousing.getOrderId(), productWarehousing.getCuttingBundleId());
 
         executeSaveWarehousing(productWarehousing);
+
+        collectProductionCost(productWarehousing);
 
         String orderId = StringUtils.hasText(productWarehousing.getOrderId())
                 ? productWarehousing.getOrderId().trim() : null;
@@ -612,6 +625,152 @@ public class ProductWarehousingOrchestrator {
         if (!StringUtils.hasText(w.getReceiverId())) {
             w.setReceiverId(userId);
             w.setReceiverName(username);
+        }
+    }
+
+    private boolean shouldCollectCost(ProductWarehousing w) {
+        if (w == null) {
+            return false;
+        }
+        String warehousingType = w.getWarehousingType();
+        String qualityStatus = w.getQualityStatus();
+        if (!"quality_scan".equals(warehousingType) && !"manual".equals(warehousingType) && !"scan".equals(warehousingType)) {
+            return false;
+        }
+        if (!"qualified".equals(qualityStatus)) {
+            return false;
+        }
+        Integer qty = w.getQualifiedQuantity();
+        return qty != null && qty > 0;
+    }
+
+    private void collectProductionCost(ProductWarehousing w) {
+        if (!shouldCollectCost(w)) {
+            return;
+        }
+        try {
+            Long tenantId = w.getTenantId();
+            if (tenantId == null) {
+                tenantId = UserContext.tenantId();
+            }
+            String orderId = w.getOrderId();
+            if (!StringUtils.hasText(orderId) || tenantId == null) {
+                return;
+            }
+
+            BigDecimal laborCost = BigDecimal.ZERO;
+            try {
+                laborCost = scanRecordMapper.sumLaborCostByOrderId(orderId, tenantId);
+                if (laborCost == null) {
+                    laborCost = BigDecimal.ZERO;
+                }
+            } catch (Exception e) {
+                log.warn("归集人工成本失败: orderId={}", orderId, e);
+            }
+
+            BigDecimal materialCost = BigDecimal.ZERO;
+            try {
+                materialCost = materialOutboundLogMapper.sumMaterialCostByOrderId(orderId, tenantId);
+                if (materialCost == null) {
+                    materialCost = BigDecimal.ZERO;
+                }
+            } catch (Exception e) {
+                log.warn("归集物料成本失败: orderId={}", orderId, e);
+            }
+
+            BigDecimal totalCost = laborCost.add(materialCost);
+            Integer qty = w.getQualifiedQuantity();
+            if (qty == null || qty <= 0) {
+                return;
+            }
+
+            BigDecimal unitPrice = totalCost.divide(BigDecimal.valueOf(qty), 4, RoundingMode.HALF_UP);
+            BigDecimal totalAmount = unitPrice.multiply(BigDecimal.valueOf(qty));
+
+            w.setUnitPrice(unitPrice);
+            w.setTotalAmount(totalAmount);
+            w.setPaymentStatus("unpaid");
+            if (w.getPaidAmount() == null) {
+                w.setPaidAmount(BigDecimal.ZERO);
+            }
+
+            productWarehousingService.updateById(w);
+
+            updateSkuCostPrice(w, unitPrice);
+
+            log.info("成品入库成本归集完成: warehousingId={}, orderId={}, laborCost={}, materialCost={}, unitPrice={}, totalAmount={}",
+                    w.getId(), orderId, laborCost, materialCost, unitPrice, totalAmount);
+        } catch (Exception e) {
+            log.error("成品入库成本归集异常: warehousingId={}", w.getId(), e);
+        }
+    }
+
+    private void updateSkuCostPrice(ProductWarehousing w, BigDecimal unitPrice) {
+        try {
+            if (unitPrice == null || unitPrice.compareTo(BigDecimal.ZERO) <= 0) {
+                return;
+            }
+            Integer inboundQty = w.getQualifiedQuantity();
+            if (inboundQty == null || inboundQty <= 0) {
+                return;
+            }
+
+            String styleNo = w.getStyleNo();
+            String color = null;
+            String size = null;
+
+            String bundleId = w.getCuttingBundleId();
+            if (StringUtils.hasText(bundleId)) {
+                try {
+                    CuttingBundle b = cuttingBundleService.getById(bundleId);
+                    if (b != null) {
+                        color = b.getColor();
+                        size = b.getSize();
+                    }
+                } catch (Exception e) {
+                    log.debug("updateSkuCostPrice: 加载菲号失败: bundleId={}", bundleId, e);
+                }
+            }
+            if (!StringUtils.hasText(color) || !StringUtils.hasText(size)) {
+                if (StringUtils.hasText(w.getCuttingBundleQrCode())) {
+                    try {
+                        CuttingBundle b = cuttingBundleService.getByQrCode(w.getCuttingBundleQrCode().trim());
+                        if (b != null) {
+                            color = b.getColor();
+                            size = b.getSize();
+                        }
+                    } catch (Exception e) {
+                        log.debug("updateSkuCostPrice: QrCode fallback失败: bundleQrCode={}", w.getCuttingBundleQrCode(), e);
+                    }
+                }
+            }
+
+            if (StringUtils.hasText(styleNo) && StringUtils.hasText(color) && StringUtils.hasText(size)) {
+                String skuCode = String.format("%s-%s-%s", styleNo.trim(), color.trim(), size.trim());
+                ProductSku sku = productSkuService.getBySkuCode(skuCode);
+                if (sku != null) {
+                    int currentStock = sku.getStockQuantity() != null ? sku.getStockQuantity() : 0;
+                    int oldStock = Math.max(0, currentStock - inboundQty);
+                    BigDecimal oldCostPrice = sku.getCostPrice() != null ? sku.getCostPrice() : BigDecimal.ZERO;
+
+                    BigDecimal newCostPrice;
+                    if (oldStock + inboundQty <= 0) {
+                        newCostPrice = unitPrice;
+                    } else {
+                        BigDecimal oldTotalCost = oldCostPrice.multiply(BigDecimal.valueOf(oldStock));
+                        BigDecimal inboundTotalCost = unitPrice.multiply(BigDecimal.valueOf(inboundQty));
+                        newCostPrice = oldTotalCost.add(inboundTotalCost)
+                                .divide(BigDecimal.valueOf(oldStock + inboundQty), 4, RoundingMode.HALF_UP);
+                    }
+
+                    sku.setCostPrice(newCostPrice);
+                    productSkuService.updateById(sku);
+                    log.info("更新SKU成本价: skuCode={}, oldStock={}, oldCostPrice={}, inboundQty={}, inboundUnitPrice={}, newCostPrice={}",
+                            skuCode, oldStock, oldCostPrice, inboundQty, unitPrice, newCostPrice);
+                }
+            }
+        } catch (Exception e) {
+            log.warn("更新SKU成本价失败: warehousingId={}", w.getId(), e);
         }
     }
 }

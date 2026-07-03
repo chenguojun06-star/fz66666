@@ -91,7 +91,35 @@ const MaterialPickingList: React.FC = () => {
       title: '状态',
       dataIndex: 'status',
       width: 100,
-      render: (_v: string) => <Tag color="green">已完成</Tag>,
+      render: (s: string) => {
+        if (s === 'completed') return <Tag color="green">已完成</Tag>;
+        if (s === 'pending') return <Tag color="orange">待出库</Tag>;
+        if (s === 'cancelled') return <Tag color="default">已取消</Tag>;
+        return <Tag color="default">{s || '未知'}</Tag>;
+      },
+    },
+    {
+      title: '审核状态',
+      dataIndex: 'auditStatus',
+      width: 100,
+      render: (status: string, record: any) => {
+        if (record.status !== 'completed') return '-';
+        if (status === 'APPROVED') return <Tag color="green">已审核</Tag>;
+        if (status === 'REJECTED') return <Tag color="red">已拒绝</Tag>;
+        return <Tag color="orange">待审核</Tag>;
+      },
+    },
+    {
+      title: '财务状态',
+      dataIndex: 'financeStatus',
+      width: 100,
+      render: (status: string, record: any) => {
+        if (record.status !== 'completed') return '-';
+        if (record.auditStatus !== 'APPROVED') return '-';
+        if (status === 'SETTLED') return <Tag color="green">已平账</Tag>;
+        if (status === 'PENDING') return <Tag color="orange">待结算</Tag>;
+        return <Tag color="default">未知</Tag>;
+      },
     },
     {
       title: '备注',

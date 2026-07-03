@@ -56,6 +56,7 @@ const MaterialSearchForm: React.FC<MaterialSearchFormProps> = ({
               { label: '部分到货', value: MATERIAL_PURCHASE_STATUS.PARTIAL },
               { label: '全部到货', value: MATERIAL_PURCHASE_STATUS.COMPLETED },
               { label: '已取消', value: MATERIAL_PURCHASE_STATUS.CANCELLED },
+              { label: '对账中', value: 'reconciling' },
             ]}
           />
           <Select

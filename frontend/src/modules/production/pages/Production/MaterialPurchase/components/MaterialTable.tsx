@@ -355,6 +355,36 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
       render: (v: number) => Number.isFinite(Number(v)) ? formatMoney(Number(v)) : '-',
     },
     {
+      title: '对账状态',
+      dataIndex: 'reconciliationStatus',
+      key: 'reconciliationStatus',
+      width: 100,
+      render: (_: any, record: MaterialPurchaseType) => {
+        const status = (record as any).reconciliationStatus;
+        if (!status) return <span style={{ color: 'var(--color-text-tertiary)' }}>未对账</span>;
+        const statusMap: Record<string, { text: string; color: string }> = {
+          pending: { text: '待核对', color: 'orange' },
+          verified: { text: '已核对', color: 'blue' },
+          approved: { text: '已审批', color: 'cyan' },
+          paid: { text: '已付款', color: 'green' },
+          rejected: { text: '已驳回', color: 'red' },
+        };
+        const cfg = statusMap[status];
+        return cfg ? <Tag color={cfg.color}>{cfg.text}</Tag> : <span>{status}</span>;
+      },
+    },
+    {
+      title: '结算金额',
+      dataIndex: 'settlementAmount',
+      key: 'settlementAmount',
+      width: 110,
+      align: 'right' as const,
+      render: (_: any, record: MaterialPurchaseType) => {
+        const amount = (record as any).settlementAmount;
+        return Number.isFinite(Number(amount)) ? formatMoney(Number(amount)) : '-';
+      },
+    },
+    {
       title: '状态',
       dataIndex: 'status',
       key: 'status',

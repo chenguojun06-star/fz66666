@@ -743,4 +743,18 @@ public class ProductSkuServiceImpl extends ServiceImpl<ProductSkuMapper, Product
                 .filter(s -> StringUtils.hasText(s.getColor()) && StringUtils.hasText(s.getSkuColorImage()))
                 .collect(Collectors.toMap(ProductSku::getColor, ProductSku::getSkuColorImage, (a, b) -> a));
     }
+
+    @Override
+    public void updateCostPrice(String skuCode, int inboundQty, BigDecimal inboundUnitPrice) {
+        if (!StringUtils.hasText(skuCode) || inboundQty <= 0 || inboundUnitPrice == null) {
+            return;
+        }
+        Long tenantId = UserContext.tenantId();
+        int rows = baseMapper.updateCostPriceBySkuCode(skuCode, inboundQty, inboundUnitPrice, tenantId);
+        if (rows > 0) {
+            log.info("Updated costPrice for SKU {}: inboundQty={}, inboundUnitPrice={}", skuCode, inboundQty, inboundUnitPrice);
+        } else {
+            log.warn("SKU not found for costPrice update: {}", skuCode);
+        }
+    }
 }

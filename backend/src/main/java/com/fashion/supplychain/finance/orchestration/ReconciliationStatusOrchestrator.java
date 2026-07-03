@@ -6,6 +6,8 @@ import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.finance.entity.MaterialReconciliation;
 import com.fashion.supplychain.finance.entity.ShipmentReconciliation;
 import com.fashion.supplychain.finance.entity.BillAggregation;
+import com.fashion.supplychain.finance.helper.MaterialReconciliationLogAppendHelper;
+import com.fashion.supplychain.finance.helper.ShipmentReconciliationLogAppendHelper;
 import com.fashion.supplychain.finance.service.MaterialReconciliationService;
 import com.fashion.supplychain.finance.service.ShipmentReconciliationService;
 import com.fashion.supplychain.finance.service.BillAggregationService;
@@ -90,6 +92,12 @@ public class ReconciliationStatusOrchestrator {
     @Autowired(required = false)
     private BillAggregationService billAggregationService;
 
+    @Autowired
+    private MaterialReconciliationLogAppendHelper materialLogAppendHelper;
+
+    @Autowired
+    private ShipmentReconciliationLogAppendHelper shipmentLogAppendHelper;
+
     @Transactional(rollbackFor = Exception.class)
     public String updateMaterialStatus(String id, String status) {
         return updateStatus(Scope.MATERIAL, id, status);
@@ -144,6 +152,8 @@ public class ReconciliationStatusOrchestrator {
                 boolean ok = materialReconciliationService.updateById(mr);
                 if (!ok) throw new IllegalStateException("状态更新失败");
 
+                appendStatusLogForMaterial(mr, to);
+
                 pushBillOnApproved(to, "MATERIAL_RECONCILIATION", rid, mr.getReconciliationNo(),
                         "PAYABLE", "MATERIAL", "SUPPLIER", mr.getSupplierId(), mr.getSupplierName(),
                         mr.getOrderId(), mr.getOrderNo(), mr.getFinalAmount(), mr.getTotalAmount(), now);
@@ -170,6 +180,8 @@ public class ReconciliationStatusOrchestrator {
                         sr.getStatus(), to, sr.getRemark(), now);
                 boolean ok = shipmentReconciliationService.updateById(sr);
                 if (!ok) throw new IllegalStateException("状态更新失败");
+
+                appendStatusLogForShipment(sr, to);
 
                 pushBillOnApproved(to, "SHIPMENT_RECONCILIATION", rid, sr.getReconciliationNo(),
                         "RECEIVABLE", "PRODUCT", "CUSTOMER", sr.getCustomerId(), sr.getCustomerName(),
@@ -601,5 +613,47 @@ public class ReconciliationStatusOrchestrator {
 
     private String buildTimestampHistoryRemark(String currentRemark) {
         return null;
+    }
+
+    private void appendStatusLogForMaterial(MaterialReconciliation mr, String to) {
+        if (mr == null || to == null) return;
+        String operatorName = UserContext.username();
+        switch (to) {
+            case "verified":
+                materialLogAppendHelper.appendVerify(mr, operatorName);
+                break;
+            case "approved":
+                materialLogAppendHelper.appendApprove(mr, operatorName);
+                break;
+            case "rejected":
+                materialLogAppendHelper.appendReject(mr, mr.getReReviewReason(), operatorName);
+                break;
+            case "paid":
+                materialLogAppendHelper.appendPaid(mr, mr.getFinalAmount(), operatorName);
+                break;
+            default:
+                break;
+        }
+    }
+
+    private void appendStatusLogForShipment(ShipmentReconciliation sr, String to) {
+        if (sr == null || to == null) return;
+        String operatorName = UserContext.username();
+        switch (to) {
+            case "verified":
+                shipmentLogAppendHelper.appendVerify(sr, operatorName);
+                break;
+            case "approved":
+                shipmentLogAppendHelper.appendApprove(sr, operatorName);
+                break;
+            case "rejected":
+                shipmentLogAppendHelper.appendReject(sr, sr.getReReviewReason(), operatorName);
+                break;
+            case "paid":
+                shipmentLogAppendHelper.appendPaid(sr, sr.getFinalAmount(), operatorName);
+                break;
+            default:
+                break;
+        }
     }
 }

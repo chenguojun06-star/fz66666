@@ -7,6 +7,7 @@ import com.fashion.supplychain.common.lock.DistributedLockService;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.finance.entity.DeductionItem;
 import com.fashion.supplychain.finance.entity.ShipmentReconciliation;
+import com.fashion.supplychain.finance.helper.ShipmentReconciliationLogAppendHelper;
 import com.fashion.supplychain.finance.mapper.DeductionItemMapper;
 import com.fashion.supplychain.finance.service.ShipmentReconciliationService;
 import com.fashion.supplychain.finance.service.impl.BaseReconciliationServiceImpl;
@@ -58,6 +59,9 @@ public class ShipmentReconciliationOrchestrator {
 
     @Autowired
     private BillAggregationOrchestrator billAggregationOrchestrator;
+
+    @Autowired
+    private ShipmentReconciliationLogAppendHelper logAppendHelper;
 
     /**
      * 计算工序成本（从Phase 5 ScanRecord汇总）
@@ -241,6 +245,8 @@ public class ShipmentReconciliationOrchestrator {
             throw new IllegalStateException("保存失败");
         }
 
+        logAppendHelper.appendCreate(shipmentReconciliation, UserContext.username());
+
         // 推送应收账单到 BillAggregation（出货对账单生成后自动应收）
         pushReceivableBill(shipmentReconciliation);
 
@@ -291,6 +297,7 @@ public class ShipmentReconciliationOrchestrator {
         if (!ok) {
             throw new IllegalStateException("保存失败");
         }
+        logAppendHelper.appendUpdate(shipmentReconciliation, UserContext.username());
         return true;
     }
 
@@ -317,6 +324,7 @@ public class ShipmentReconciliationOrchestrator {
             }
             throw new IllegalStateException("删除失败");
         }
+        logAppendHelper.appendDelete(current, UserContext.username());
         return true;
     }
 

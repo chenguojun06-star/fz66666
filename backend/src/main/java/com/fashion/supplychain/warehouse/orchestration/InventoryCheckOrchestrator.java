@@ -56,6 +56,9 @@ public class InventoryCheckOrchestrator {
     @Autowired
     private InventoryCheckLogAppendHelper logAppendHelper;
 
+    @Autowired
+    private com.fashion.supplychain.finance.orchestration.BillAggregationOrchestrator billAggregationOrchestrator;
+
     @Transactional(rollbackFor = Exception.class)
     public InventoryCheck createCheck(Map<String, Object> params) {
         Long tenantId = UserContext.tenantId();
@@ -333,6 +336,7 @@ public class InventoryCheckOrchestrator {
         checkService.updateById(check);
 
         applyStockAdjustments(check, items);
+        generateInventoryCheckBills(check, items);
         log.info("库存盘点确认: checkNo={}, diffItems={}, totalDiff={}", check.getCheckNo(), check.getDiffItems(), check.getTotalDiffQty());
         check.setItems(items);
         return check;
@@ -370,6 +374,45 @@ public class InventoryCheckOrchestrator {
                 }
                 log.info("盘点调整样衣库存: stockId={}, delta={}", item.getStockId(), delta);
             }
+        }
+    }
+
+    private void generateInventoryCheckBills(InventoryCheck check, List<InventoryCheckItem> items) {
+        Long tenantId = UserContext.tenantId();
+        BigDecimal minAmount = new BigDecimal("0.01");
+        for (InventoryCheckItem item : items) {
+            BigDecimal diffAmount = item.getDiffAmount();
+            if (diffAmount == null) continue;
+            if (diffAmount.abs().compareTo(minAmount) < 0) continue;
+
+            com.fashion.supplychain.finance.orchestration.BillAggregationOrchestrator.BillPushRequest req =
+                    new com.fashion.supplychain.finance.orchestration.BillAggregationOrchestrator.BillPushRequest();
+
+            if (diffAmount.compareTo(BigDecimal.ZERO) > 0) {
+                req.setBillType("RECEIVABLE");
+                req.setBillCategory("INVENTORY_PROFIT");
+            } else {
+                req.setBillType("PAYABLE");
+                req.setBillCategory("INVENTORY_LOSS");
+            }
+
+            req.setSourceType("INVENTORY_CHECK");
+            req.setSourceId(item.getId());
+            req.setSourceNo(check.getCheckNo());
+            req.setCounterpartyType("INTERNAL");
+            req.setStyleNo(item.getStyleNo());
+            req.setAmount(diffAmount.abs());
+            req.setSettlementMonth(java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM")));
+            req.setRemark(String.format("盘点差异: %s %s, 账面:%d, 实盘:%d, 差异:%d",
+                    item.getMaterialName() != null ? item.getMaterialName() : (item.getSkuCode() != null ? item.getSkuCode() : ""),
+                    diffAmount.compareTo(BigDecimal.ZERO) > 0 ? "盘盈" : "盘亏",
+                    item.getBookQuantity() != null ? item.getBookQuantity() : 0,
+                    item.getActualQuantity() != null ? item.getActualQuantity() : 0,
+                    item.getDiffQuantity() != null ? item.getDiffQuantity() : 0));
+
+            billAggregationOrchestrator.pushBill(req);
+            log.info("[盘点财务凭证] 生成账单: checkId={}, itemId={}, billType={}, amount={}",
+                    check.getId(), item.getId(), req.getBillType(), diffAmount.abs());
         }
     }
 

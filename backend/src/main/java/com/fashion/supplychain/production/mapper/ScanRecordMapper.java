@@ -285,4 +285,18 @@ public interface ScanRecordMapper extends BaseMapper<ScanRecord> {
                 @Param("tenantId") Long tenantId,
                 @Param("startTime") LocalDateTime startTime,
                 @Param("endTime") LocalDateTime endTime);
+
+        /**
+         * 按生产订单汇总人工成本（已完成的生产扫码工序）
+         * 用于成品入库时归集生产成本
+         */
+        @Select("SELECT COALESCE(SUM(COALESCE(NULLIF(sr.total_amount, 0), " +
+                "  NULLIF(sr.scan_cost, 0), sr.unit_price * sr.quantity, 0)), 0) AS laborCost " +
+                "FROM t_scan_record sr " +
+                "WHERE sr.order_id = #{orderId} " +
+                "  AND sr.scan_result = 'success' " +
+                "  AND sr.quantity > 0 " +
+                "  AND sr.scan_type = 'production' " +
+                "  AND sr.tenant_id = #{tenantId,jdbcType=BIGINT}")
+        java.math.BigDecimal sumLaborCostByOrderId(@Param("orderId") String orderId, @Param("tenantId") Long tenantId);
 }

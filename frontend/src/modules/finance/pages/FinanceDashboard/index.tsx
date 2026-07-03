@@ -1,8 +1,29 @@
-import React, { useMemo, useState } from 'react';
-import { Card, Row, Col, Button, Spin, Space, Table, Empty } from 'antd';
+import React, { useMemo, useState, Suspense, lazy } from 'react';
+import { Card, Row, Col, Button, Spin, Space, Table, Empty, Segmented } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
+import dayjs from 'dayjs';
 import { useFinanceBIData, type TimeRangeType } from './hooks/useFinanceBIData';
 import styles from './index.module.css';
+
+const ReactECharts = lazy(() => import('echarts-for-react'));
+
+type CashFlowDays = 7 | 30 | 90;
+
+const generateCashFlowMockData = (days: number) => {
+  const data: { date: string; income: number; expense: number }[] = [];
+  const today = dayjs();
+  for (let i = days - 1; i >= 0; i--) {
+    const date = today.subtract(i, 'day');
+    const baseIncome = 50000 + Math.sin(i / 5) * 20000 + Math.random() * 15000;
+    const baseExpense = 35000 + Math.cos(i / 7) * 15000 + Math.random() * 10000;
+    data.push({
+      date: date.format('MM-DD'),
+      income: Math.round(baseIncome),
+      expense: Math.round(baseExpense),
+    });
+  }
+  return data;
+};
 
 const TIME_OPTIONS: { label: string; value: TimeRangeType }[] = [
   { label: '今日', value: 'today' },
@@ -140,6 +161,150 @@ const PieChart: React.FC<{ data: { type: string; value: number }[] }> = ({ data 
 const FinanceDashboard: React.FC = () => {
   const { loading, data, timeRange, setTimeRange, goToModule } = useFinanceBIData();
   const [selectedDetail, setSelectedDetail] = useState<StatKey>('revenue');
+  const [cashFlowDays, setCashFlowDays] = useState<CashFlowDays>(30);
+
+  const cashFlowData = useMemo(() => generateCashFlowMockData(cashFlowDays), [cashFlowDays]);
+
+  const cashFlowChartOption = useMemo(() => {
+    const dates = cashFlowData.map(d => d.date);
+    const incomes = cashFlowData.map(d => d.income);
+    const expenses = cashFlowData.map(d => d.expense);
+    return {
+      tooltip: {
+        trigger: 'axis',
+        confine: true,
+        backgroundColor: 'var(--color-bg-base)',
+        borderColor: 'var(--color-border)',
+        borderWidth: 1,
+        textStyle: {
+          color: 'var(--color-text-primary)',
+        },
+        formatter: (params: any) => {
+          if (!params || params.length === 0) return '';
+          const date = params[0].axisValue;
+          let html = `<div style="padding: 4px 0; font-weight: 600; color: var(--color-text-primary);">${date}</div>`;
+          params.forEach((item: any) => {
+            const value = item.value !== undefined && item.value !== null ? item.value : 0;
+            html += `
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 2px 0;">
+                <span style="display: flex; align-items: center; gap: 8px;">
+                  <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: ${item.color};"></span>
+                  <span style="color: var(--color-text-primary);">${item.seriesName}</span>
+                </span>
+                <span style="font-weight: 600; color: var(--color-text-primary);">¥${Number(value).toLocaleString()}</span>
+              </div>
+            `;
+          });
+          return html;
+        },
+      },
+      legend: {
+        data: ['收入', '支出'],
+        top: 5,
+        textStyle: {
+          fontSize: 14,
+          color: 'var(--color-text-secondary)',
+        },
+      },
+      grid: {
+        left: '3%',
+        right: '4%',
+        bottom: '5px',
+        top: 35,
+        containLabel: true,
+      },
+      xAxis: {
+        type: 'category',
+        boundaryGap: false,
+        data: dates,
+        axisLine: {
+          lineStyle: {
+            color: 'var(--color-border)',
+          },
+        },
+        axisLabel: {
+          color: 'var(--color-text-tertiary)',
+          fontSize: 12,
+        },
+      },
+      yAxis: {
+        type: 'value',
+        axisLine: {
+          show: false,
+        },
+        axisTick: {
+          show: false,
+        },
+        axisLabel: {
+          color: 'var(--color-text-tertiary)',
+          fontSize: 12,
+          formatter: (value: number) => {
+            if (value >= 10000) return `${(value / 10000).toFixed(1)}万`;
+            return value.toLocaleString();
+          },
+        },
+        splitLine: {
+          lineStyle: {
+            color: 'var(--color-border-light)',
+          },
+        },
+      },
+      series: [
+        {
+          name: '收入',
+          type: 'line',
+          smooth: true,
+          data: incomes,
+          lineStyle: {
+            width: 2,
+            color: 'var(--color-success)',
+          },
+          itemStyle: {
+            color: 'var(--color-success)',
+          },
+          areaStyle: {
+            color: {
+              type: 'linear',
+              x: 0,
+              y: 0,
+              x2: 0,
+              y2: 1,
+              colorStops: [
+                { offset: 0, color: 'rgba(82, 196, 26, 0.25)' },
+                { offset: 1, color: 'rgba(82, 196, 26, 0.02)' },
+              ],
+            },
+          },
+        },
+        {
+          name: '支出',
+          type: 'line',
+          smooth: true,
+          data: expenses,
+          lineStyle: {
+            width: 2,
+            color: 'var(--color-error)',
+          },
+          itemStyle: {
+            color: 'var(--color-error)',
+          },
+          areaStyle: {
+            color: {
+              type: 'linear',
+              x: 0,
+              y: 0,
+              x2: 0,
+              y2: 1,
+              colorStops: [
+                { offset: 0, color: 'rgba(255, 77, 79, 0.25)' },
+                { offset: 1, color: 'rgba(255, 77, 79, 0.02)' },
+              ],
+            },
+          },
+        },
+      ],
+    };
+  }, [cashFlowData]);
 
   const statCards = useMemo(
     () => [
@@ -309,6 +474,32 @@ const FinanceDashboard: React.FC = () => {
         <Col span={10}>
           <Card title="成本结构" className={styles.chartCard}>
             <PieChart data={data.costStructure} />
+          </Card>
+        </Col>
+      </Row>
+
+      {/* 现金流趋势 */}
+      <Row gutter={12} className={styles.chartRow}>
+        <Col span={24}>
+          <Card
+            title="现金流趋势"
+            className={styles.chartCard}
+            extra={
+              <Segmented
+                size="small"
+                value={cashFlowDays}
+                onChange={(v) => setCashFlowDays(v as CashFlowDays)}
+                options={[
+                  { label: '近7天', value: 7 },
+                  { label: '近30天', value: 30 },
+                  { label: '近90天', value: 90 },
+                ]}
+              />
+            }
+          >
+            <Suspense fallback={<div className={styles.emptyChart}>图表加载中...</div>}>
+              <ReactECharts option={cashFlowChartOption} style={{ height: 300 }} />
+            </Suspense>
           </Card>
         </Col>
       </Row>

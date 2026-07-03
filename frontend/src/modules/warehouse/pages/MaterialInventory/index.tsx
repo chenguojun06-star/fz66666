@@ -23,6 +23,7 @@ import StandardToolbar from '@/components/common/StandardToolbar';
 import PageStatCards from '@/components/common/PageStatCards';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { formatDateTime } from '@/utils/datetime';
+import { canViewPrice } from '@/utils/sensitiveDataMask';
 
 import { useMaterialInventoryColumns } from './hooks/useMaterialInventoryColumns';
 import { useMaterialInventoryData } from './hooks/useMaterialInventoryData';
@@ -64,6 +65,8 @@ const _MaterialInventory: React.FC = () => {
     handleOutbound,
     handlePrintOutbound,
   } = inventoryData;
+
+  const canSeePrice = canViewPrice(user);
 
   const pickupData = useMaterialPickupData();
   const pickupPageSize = pickupData.pagination.pagination.pageSize;
@@ -288,7 +291,18 @@ const _MaterialInventory: React.FC = () => {
     },
     {
       title: '单价', dataIndex: 'unitPrice', width: 80,
-      render: (val: number) => val != null ? val.toFixed(2) : '-',
+      render: (val: number) => canSeePrice && val != null ? val.toFixed(2) : (canSeePrice ? '-' : '***'),
+    },
+    {
+      title: '出库金额', dataIndex: 'outboundAmount', width: 110,
+      align: 'right' as const,
+      render: (_: any, row: any) => {
+        if (!canSeePrice) return '***';
+        const qty = Number(row.quantity || 0);
+        const price = Number(row.unitPrice || 0);
+        if (!qty || !price) return '-';
+        return `¥${(qty * price).toFixed(2)}`;
+      },
     },
   ];
 
@@ -312,7 +326,7 @@ const _MaterialInventory: React.FC = () => {
           {
             key: 'all',
             items: [
-              { label: '库存总值', value: `¥${Number(stats.totalValue || 0).toLocaleString()}`, color: 'var(--color-primary)' },
+              { label: '库存总值', value: canSeePrice ? `¥${Number(stats.totalValue || 0).toLocaleString()}` : '***', color: 'var(--color-primary)' },
               { label: '库存总量', value: Number(stats.totalQty || 0), unit: '件/米', color: 'var(--color-success)' },
             ],
             onClick: () => setSelectedType(''),
@@ -334,6 +348,15 @@ const _MaterialInventory: React.FC = () => {
               { label: '今日出库', value: Number(stats.todayOutCount || 0), unit: '次', color: 'var(--color-warning)' },
             ],
             onClick: () => setSelectedType('today'),
+            activeColor: 'var(--color-success)',
+          },
+          {
+            key: 'monthAmount',
+            items: [
+              { label: '本月入库金额', value: canSeePrice ? `¥${Number((stats as any).monthInAmount || 0).toLocaleString()}` : '***', color: 'var(--color-success)' },
+              { label: '本月出库金额', value: canSeePrice ? `¥${Number((stats as any).monthOutAmount || 0).toLocaleString()}` : '***', color: 'var(--color-warning)' },
+            ],
+            onClick: () => setSelectedType('monthAmount'),
             activeColor: 'var(--color-success)',
           },
         ]}

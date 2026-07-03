@@ -238,6 +238,7 @@ public class PayrollSettlementOrchestrator {
         log.info("[PayrollGenerate] 生成工资结算单: operator={}, settlementId={}, settlementNo={}, orderId={}, orderNo={}, totalQty={}, totalAmount={}",
                 UserContext.username(), settlement.getId(), settlement.getSettlementNo(), q.orderId, q.orderNo,
                 settlement.getTotalQuantity(), settlement.getTotalAmount());
+        logAppendHelper.appendCreate(settlement, UserContext.username());
         return settlement;
     }
 
@@ -630,7 +631,7 @@ public class PayrollSettlementOrchestrator {
         }
         payrollSettlementService.update(uw);
 
-        logAppendHelper.appendApprove(settlementId.trim(), confirmerName);
+        logAppendHelper.appendApprove(settlement, confirmerName);
 
         // 确认关联扫码记录的结算状态（payrollSettlementId 已在 generate() 时绑定）
         // 审核通过后 payrollSettlementId 保持不变，undo 操作会据此阻止撤回
@@ -690,7 +691,7 @@ public class PayrollSettlementOrchestrator {
                 .eq(PayrollSettlement::getId, settlementId.trim());
         payrollSettlementService.update(settlementUw);
 
-        logAppendHelper.appendCancel(settlementId.trim(), remark);
+        logAppendHelper.appendCancel(settlement, UserContext.username());
 
         LambdaUpdateWrapper<ScanRecord> scanUw = new LambdaUpdateWrapper<ScanRecord>()
                 .set(ScanRecord::getPayrollSettlementId, null)
@@ -773,6 +774,7 @@ public class PayrollSettlementOrchestrator {
 
         log.info("[PayrollPayment] 工资打款记录: settlementId={}, paymentAmount={}, previousPaid={}",
                 settlementId, paymentAmount, currentPaid);
+        logAppendHelper.appendPayment(settlement, paymentAmount, UserContext.username());
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -812,5 +814,6 @@ public class PayrollSettlementOrchestrator {
 
         log.info("[PayrollDeduction] 工资扣款: settlementId={}, type={}, amount={}, previousDeduction={}",
                 settlementId, deductionType, deductionAmount, currentDeduction);
+        logAppendHelper.appendDeduction(settlement, deductionType, deductionAmount, UserContext.username());
     }
 }

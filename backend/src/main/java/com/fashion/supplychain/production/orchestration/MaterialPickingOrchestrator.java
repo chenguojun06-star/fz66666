@@ -152,15 +152,18 @@ public class MaterialPickingOrchestrator {
             picking.setAuditRemark(remark);
             String factoryType = resolveFactoryType(picking);
             if ("EXTERNAL".equalsIgnoreCase(factoryType)) {
-                picking.setFinanceStatus("PENDING");
-                picking.setFinanceRemark("外发工厂领料审核通过，待生成应收账单");
+                syncAuditToPickupRecords(id, remark);
+                picking.setFinanceStatus("SETTLED");
+                picking.setFinanceRemark(remark != null
+                        ? "外发领料审核通过，已生成应收账单：" + remark.trim()
+                        : "外发领料审核通过，已自动生成应收账单");
             } else {
                 picking.setFinanceStatus("SETTLED");
                 picking.setFinanceRemark(remark != null
                         ? "内部领料审核通过（内部平账）：" + remark
                         : "内部领料审核通过，已做内部平账处理");
+                syncAuditToPickupRecords(id, remark);
             }
-            syncAuditToPickupRecords(id, remark);
         } else {
             picking.setAuditStatus("REJECTED");
             picking.setAuditorId(userId);

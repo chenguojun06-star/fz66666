@@ -132,4 +132,17 @@ public interface MaterialOutboundLogMapper extends BaseMapper<MaterialOutboundLo
             "AND m.tenant_id = #{tenantId} AND s.tenant_id = #{tenantId} " +
             "GROUP BY MONTH(COALESCE(m.outbound_time, m.create_time))")
     List<Map<String, Object>> selectYearOutboundByMonthAndType(@Param("year") int year, @Param("materialType") String materialType, @Param("tenantId") Long tenantId);
+
+    /**
+     * 按生产订单汇总物料出库成本
+     * 用于成品入库时归集生产成本
+     */
+    @InterceptorIgnore(tenantLine = "true")
+    @Select("SELECT COALESCE(SUM(m.quantity * COALESCE(s.unit_price, 0)), 0) AS materialCost " +
+            "FROM t_material_outbound_log m " +
+            "JOIN t_material_stock s ON m.stock_id = s.id " +
+            "WHERE m.order_id = #{orderId} " +
+            "AND (m.delete_flag IS NULL OR m.delete_flag = 0) " +
+            "AND m.tenant_id = #{tenantId} AND s.tenant_id = #{tenantId}")
+    java.math.BigDecimal sumMaterialCostByOrderId(@Param("orderId") String orderId, @Param("tenantId") Long tenantId);
 }

@@ -40,6 +40,7 @@ const MaterialInventoryModals: React.FC<MaterialInventoryModalsProps> = ({
   const [materialSelectedAreaId, setMaterialSelectedAreaId] = useState<string>('');
   const { selectOptions: materialLocationOptions, loading: materialLocationLoading } = useWarehouseLocationByArea('MATERIAL', materialSelectedAreaId);
   const {
+    user,
     instructionVisible,
     closeInstruction,
     handleSendInstruction,
@@ -219,6 +220,7 @@ const MaterialInventoryModals: React.FC<MaterialInventoryModalsProps> = ({
         materialData={detailModal.data}
         records={txList}
         loading={txLoading}
+        user={user}
       />
 
       {/* 入库模态框 */}

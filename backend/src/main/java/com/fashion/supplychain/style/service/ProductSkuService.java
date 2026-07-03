@@ -42,4 +42,12 @@ public interface ProductSkuService extends IService<ProductSku> {
      * @return Map<颜色, 图片URL>
      */
     java.util.Map<String, String> getStyleColorImages(String styleNo);
+
+    /**
+     * 加权平均法更新成本价（库存由其他逻辑更新）
+     * @param skuCode SKU编码
+     * @param inboundQty 入库数量
+     * @param inboundUnitPrice 入库单价
+     */
+    void updateCostPrice(String skuCode, int inboundQty, java.math.BigDecimal inboundUnitPrice);
 }

@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.finance.entity.MaterialReconciliation;
+import com.fashion.supplychain.finance.helper.MaterialReconciliationLogAppendHelper;
 import com.fashion.supplychain.finance.service.MaterialReconciliationService;
 import com.fashion.supplychain.production.entity.MaterialPurchase;
 import com.fashion.supplychain.production.entity.ProductionOrder;
@@ -44,6 +45,9 @@ public class MaterialReconciliationOrchestrator {
 
     @Autowired
     private DistributedLockService distributedLockService;
+
+    @Autowired
+    private MaterialReconciliationLogAppendHelper logAppendHelper;
 
     public IPage<MaterialReconciliation> list(Map<String, Object> params) {
         TenantAssert.assertTenantContext();
@@ -232,6 +236,7 @@ public class MaterialReconciliationOrchestrator {
         if (!ok) {
             throw new IllegalStateException("保存失败");
         }
+        logAppendHelper.appendCreate(materialReconciliation, UserContext.username());
         return true;
     }
 
@@ -280,6 +285,7 @@ public class MaterialReconciliationOrchestrator {
         if (!ok) {
             throw new IllegalStateException("保存失败");
         }
+        logAppendHelper.appendUpdate(materialReconciliation, UserContext.username());
         return true;
     }
 
@@ -306,6 +312,7 @@ public class MaterialReconciliationOrchestrator {
         if (!ok) {
             throw new IllegalStateException("删除失败");
         }
+        logAppendHelper.appendDelete(current, UserContext.username());
         return true;
     }
 

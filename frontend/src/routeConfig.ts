@@ -29,6 +29,7 @@ import {
   TagOutlined,
   ProfileOutlined,
   BarChartOutlined,
+  ClockCircleOutlined,
 } from '@ant-design/icons';
 
 export const paths = {
@@ -75,6 +76,9 @@ export const paths = {
   financeTaxExport: '/finance/tax-export',
   orderWasteAnalysis: '/finance/order-waste-analysis',
   financeDashboard: '/finance/dashboard',
+  financeReceivables: '/finance/receivables',
+  financePayable: '/finance/payable',
+  financePaymentSchedule: '/finance/payment-schedule',
 
   materialInventory: '/warehouse/material',
   materialDatabase: '/warehouse/material-database',
@@ -587,11 +591,14 @@ export const menuConfig: MenuSection[] = [
       { label: '外发结算', path: paths.financeCenter, icon: React.createElement(ShopOutlined) },
       { label: '物料对账', path: paths.materialReconciliation, icon: React.createElement(FileTextOutlined) },
       // ========== 收付款 ==========
+      { label: '应收账款', path: paths.financeReceivables, icon: React.createElement(DollarOutlined) },
+      { label: '应付账款', path: paths.financePayable, icon: React.createElement(DollarOutlined) },
+      { label: '付款计划', path: paths.financePaymentSchedule, icon: React.createElement(ClockCircleOutlined) },
       { label: '收付款中心', path: paths.wagePayment, icon: React.createElement(DollarOutlined) },
       // ========== 费用管理 ==========
       { label: '费用管理', path: paths.expenseManagement, icon: React.createElement(AuditOutlined) },
       // ========== 财税工具 ==========
-      { label: '财税工具', path: paths.financeTaxExport, icon: React.createElement(DollarOutlined) },
+      { label: '财税工具', path: paths.expenseManagement, icon: React.createElement(DollarOutlined) },
       // ========== 成本分析 ==========
       { label: '损耗分析', path: paths.orderWasteAnalysis, icon: React.createElement(BarChartOutlined) },
     ],
@@ -717,6 +724,9 @@ export const routeToPermissionCode: Record<string, string> = {
   [paths.orderWasteAnalysis]: permissionCodes.orderWasteAnalysis,   // 订单损耗分析 → MENU_FINANCE_EXPORT
   [paths.expenseManagement]: permissionCodes.expenseReimbursement,  // 费用管理 → MENU_EXPENSE_REIMBURSEMENT
   [paths.financeDashboard]: permissionCodes.financeDashboard,       // 财务总览 → MENU_FINISHED_SETTLEMENT
+  [paths.financeReceivables]: permissionCodes.crmReceivables,       // 财务应收账款 → 复用 CRM 应收权限
+  [paths.financePayable]: permissionCodes.materialRecon,             // 应付账款 → 复用物料对账权限
+  [paths.financePaymentSchedule]: permissionCodes.materialRecon,      // 付款计划 → 复用物料对账权限
   [paths.crm]: permissionCodes.crm,
   [paths.crmReceivables]: permissionCodes.crmReceivables,
   [paths.selectionBatch]: permissionCodes.selection,

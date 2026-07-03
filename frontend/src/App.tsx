@@ -17,8 +17,8 @@ import Register from './pages/Register';
 import { PurchaseCartProvider } from './context/PurchaseCartContext';
 
 import { StyleInfo, StyleInfoList, OrderManagement, DataCenter, TemplateCenter, PatternRevisionManagement, MaintenanceCenter } from './modules/basic';
-import { MaterialReconciliation, PayrollOperatorSummary, FinanceCenter, ExpenseReimbursement, EmployeeAdvance, ExpenseManagement, WagePayment, EcSalesRevenue, TaxExport, OrderWasteAnalysis, FinanceDashboard } from './modules/finance';
-import { CrmDashboard, ReceivableList } from './modules/crm';
+import { MaterialReconciliation, PayrollOperatorSummary, FinanceCenter, ExpenseReimbursement, EmployeeAdvance, ExpenseManagement, WagePayment, EcSalesRevenue, TaxExport, OrderWasteAnalysis, FinanceDashboard, ReceivableList as FinanceReceivableList, PayableList, PaymentSchedule } from './modules/finance';
+import { CrmDashboard, ReceivableList as CrmReceivableList } from './modules/crm';
 import { SelectionCenter } from './modules/selection';
 import { MaterialInventory, MaterialDatabase, FinishedInventory, SampleInventory, EcommerceOrders, InventoryCheck, LabelPrint, ProductInfo, WarehouseLocationMap } from './modules/warehouse';
 import { Dashboard } from './modules/dashboard';
@@ -233,7 +233,10 @@ const AppRoutes: React.FC = () => {
           <Route path={paths.financeTaxExport} element={<RouteErrorBoundary pageName="财税工具"><Suspense fallback={routeFallback}><TaxExport /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.financeDashboard} element={<RouteErrorBoundary pageName="财务总览"><Suspense fallback={routeFallback}><FinanceDashboard /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.crm} element={<RouteErrorBoundary pageName="CRM"><Suspense fallback={routeFallback}><CrmDashboard /></Suspense></RouteErrorBoundary>} />
-          <Route path={paths.crmReceivables} element={<RouteErrorBoundary pageName="应收管理"><Suspense fallback={routeFallback}><ReceivableList /></Suspense></RouteErrorBoundary>} />
+          <Route path={paths.crmReceivables} element={<RouteErrorBoundary pageName="应收管理"><Suspense fallback={routeFallback}><CrmReceivableList /></Suspense></RouteErrorBoundary>} />
+          <Route path={paths.financeReceivables} element={<RouteErrorBoundary pageName="应收账款"><Suspense fallback={routeFallback}><FinanceReceivableList /></Suspense></RouteErrorBoundary>} />
+          <Route path={paths.financePayable} element={<RouteErrorBoundary pageName="应付账款"><Suspense fallback={routeFallback}><PayableList /></Suspense></RouteErrorBoundary>} />
+          <Route path={paths.financePaymentSchedule} element={<RouteErrorBoundary pageName="付款计划"><Suspense fallback={routeFallback}><PaymentSchedule /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.selectionBatch} element={<RouteErrorBoundary pageName="选品中心"><Suspense fallback={routeFallback}><SelectionCenter /></Suspense></RouteErrorBoundary>} />
 
           <Route path={paths.materialInventory} element={<RouteErrorBoundary pageName="物料库存"><Suspense fallback={routeFallback}><MaterialInventory /></Suspense></RouteErrorBoundary>} />
