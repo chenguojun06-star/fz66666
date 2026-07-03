@@ -10,6 +10,7 @@ import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import OrderImageManager from '@/components/common/OrderImageManager';
 import RemarkTimelineModal from '@/components/common/RemarkTimelineModal';
 import { remarkApi } from '@/services/system/remarkApi';
+import { getPlatformTag } from '@/utils/platform';
 import OrderColorSizeMatrix, { buildOrderColorSizeMatrixModel } from '@/components/common/OrderColorSizeMatrix';
 import '../../../styles.css';
 import { useOrderFlowData, orderStatusTag } from './useOrderFlowData';
@@ -396,7 +397,13 @@ const OrderFlow: React.FC = () => {
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', rowGap: 4, columnGap: 12 }}>
                   <span style={{ color: 'var(--color-text-tertiary)', fontSize: 14, lineHeight: '22px' }}>订单号</span>
-                  <span style={{ fontSize: 14, fontWeight: 600, lineHeight: '22px' }}>{(order as any)?.orderNo || '-'}</span>
+                  <span style={{ fontSize: 14, fontWeight: 600, lineHeight: '22px' }}>
+                    {(order as any)?.orderNo || '-'}
+                    {(order as any)?.ecPlatform && (() => {
+                      const t = getPlatformTag((order as any).ecPlatform);
+                      return <Tag color={t.color} style={{ marginLeft: 8 }}>{t.label}</Tag>;
+                    })()}
+                  </span>
 
                   <span style={{ color: 'var(--color-text-tertiary)', fontSize: 14, lineHeight: '22px' }}>款号</span>
                   <InlineEditableField
