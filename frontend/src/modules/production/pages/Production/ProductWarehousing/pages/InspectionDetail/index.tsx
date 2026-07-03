@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { Card, Spin, Button, Tabs, Alert, Descriptions, Tag, Image, Typography, Form, Drawer } from 'antd';
+import { Card, Spin, Button, Tabs, Alert, Descriptions, Tag, Image, Form, Drawer } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
 import { ArrowLeftOutlined, CheckCircleOutlined, InboxOutlined } from '@ant-design/icons';
 import api, { type ApiResult, toNumberSafe, parseProductionOrderLines, fetchProductionOrderDetail } from '@/utils/api';
@@ -20,8 +20,6 @@ import OrderLinesTable from './OrderLinesTable';
 import QcRecordsPanel from './QcRecordsPanel';
 import WarehousingActionPanel from './WarehousingActionPanel';
 import ProductionSheetPanel from './ProductionSheetPanel';
-
-const { Title } = Typography;
 
 const BOM_COLUMNS = [
   { title: '物料编码', dataIndex: 'materialCode', key: 'mc', width: 100 },
@@ -329,7 +327,7 @@ const InspectionDetail: React.FC<InspectionDetailProps> = ({ orderId: propOrderI
       {/* 顶部导航栏 */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
         <Button icon={<ArrowLeftOutlined />} onClick={() => embedded && onClose ? onClose() : navigate('/production/warehousing')}>返回</Button>
-        <Title level={4} style={{ margin: 0 }}>质检入库 - {order.orderNo}</Title>
+        <span style={{ fontWeight: 600, fontSize: 16 }}>质检入库 - {order.orderNo}</span>
         {(plateTypeKey === 'FIRST') && <Tag color="blue">首</Tag>}
         {(plateTypeKey === 'REORDER' || plateTypeKey === 'REPLATE') && <Tag color="purple">翻</Tag>}
         {(urgencyKey === 'urgent') && <Tag color="red">急</Tag>}
