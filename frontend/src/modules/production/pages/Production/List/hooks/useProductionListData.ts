@@ -38,7 +38,7 @@ export function useProductionListData() {
     const initSearch = new URLSearchParams(window.location.search);
     const initOrderNo = initSearch.get('orderNo') || '';
     return {
-      page: 1, pageSize: readPageSize(DEFAULT_PAGE_SIZE), includeScrapped: true, excludeTerminal: false,
+      page: 1, pageSize: readPageSize(DEFAULT_PAGE_SIZE), includeScrapped: false, excludeTerminal: true,
       ...(initOrderNo ? { keyword: initOrderNo } : {}),
     };
   });

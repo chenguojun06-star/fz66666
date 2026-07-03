@@ -264,6 +264,29 @@ const CuttingManagement: React.FC = () => {
                     activeColor: 'var(--color-success)',
                   },
                 ]}
+                extraRight={
+                  <button
+                    type="button"
+                    onClick={() => tasks.setShowAllTasks(v => !v)}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 4,
+                      border: '1px solid var(--color-border-antd)',
+                      background: 'var(--color-bg-base)',
+                      color: !tasks.showAllTasks ? 'var(--color-text-secondary)' : 'var(--color-primary)',
+                      borderRadius: 4,
+                      padding: '4px 10px',
+                      fontSize: 12,
+                      fontWeight: 500,
+                      cursor: 'pointer',
+                      lineHeight: 1.4,
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {tasks.showAllTasks ? '只看进行中' : '显示全部'}
+                  </button>
+                }
               />
 
               <StickyFilterBar>

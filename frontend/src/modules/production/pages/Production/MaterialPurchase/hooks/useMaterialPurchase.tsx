@@ -142,6 +142,8 @@ export function useMaterialPurchase() {
     purchaseStats: list.purchaseStats,
     activeStatFilter: list.activeStatFilter,
     handleStatClick: list.handleStatClick,
+    showAllPurchases: list.showAllPurchases,
+    setShowAllPurchases: list.setShowAllPurchases,
     overdueCount: list.overdueCount,
     smartError, showSmartErrorNotice, showPurchaseAI,
     fetchMaterialPurchaseList: list.fetchMaterialPurchaseList,

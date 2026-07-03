@@ -85,6 +85,7 @@ const StyleInfoListPage: React.FC = () => {
   const [categoryOptions, setCategoryOptions] = useState<{ label: string; value: string }[]>([]);
   const [stockStateMap, setStockStateMap] = useState<Record<string, boolean>>({});
   const [smartFilter, setSmartFilter] = useState<StyleSmartFilter>('all');
+  const [showAllStyles, setShowAllStyles] = useState(false);
   const [pendingFocusStyleId, setPendingFocusStyleId] = useState<string | null>(null);
   const [focusedStyleId, setFocusedStyleId] = useState<string | null>(null);
   const [dateSortAsc, setDateSortAsc] = useState(false);
@@ -341,14 +342,13 @@ const StyleInfoListPage: React.FC = () => {
   const displayData = useMemo(() => {
     let base = smartFilter === 'overdue' ? overdueStyles
              : smartFilter === 'warning' ? warningStyles
-             : data;
-    // 延期环节跳转：精确筛选到具体款式 ID（与后端 delayed-stage-breakdown 数据 100% 一致）
+             : showAllStyles ? data
+             : activeStyles;
     if (focusStyleIds.size > 0) {
       base = base.filter(s => focusStyleIds.has(String(s.id)));
     }
     if (base.length > 1) {
       base = [...base].sort((a, b) => {
-        // 报废款式始终排在最后，不受日期排序方向影响
         const aScrapped = isScrappedStyle(a) ? 1 : 0;
         const bScrapped = isScrappedStyle(b) ? 1 : 0;
         if (aScrapped !== bScrapped) return aScrapped - bScrapped;
@@ -358,9 +358,9 @@ const StyleInfoListPage: React.FC = () => {
       });
     }
     return base;
-  }, [smartFilter, data, overdueStyles, warningStyles, dateSortAsc, focusStyleIds]);
+  }, [smartFilter, data, activeStyles, overdueStyles, warningStyles, dateSortAsc, focusStyleIds, showAllStyles]);
 
-  const displayTotal = smartFilter !== 'all' ? displayData.length : total;
+  const displayTotal = smartFilter !== 'all' || !showAllStyles ? displayData.length : total;
 
   const getStyleDomKey = useCallback((record: Partial<StyleInfo> | null | undefined) => {
     return String(record?.id || record?.styleNo || '').trim();
@@ -476,6 +476,29 @@ const StyleInfoListPage: React.FC = () => {
                 setPendingFocusStyleId(null);
                 setFocusedStyleId(null);
               } : undefined}
+              extraRight={
+                <button
+                  type="button"
+                  onClick={() => setShowAllStyles(v => !v)}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 4,
+                    border: '1px solid var(--color-border-antd)',
+                    background: 'var(--color-bg-base)',
+                    color: showAllStyles ? 'var(--color-primary)' : 'var(--color-text-secondary)',
+                    borderRadius: 4,
+                    padding: '4px 10px',
+                    fontSize: 12,
+                    fontWeight: 500,
+                    cursor: 'pointer',
+                    lineHeight: 1.4,
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {showAllStyles ? '只看进行中' : '显示全部'}
+                </button>
+              }
             />
 
           </>

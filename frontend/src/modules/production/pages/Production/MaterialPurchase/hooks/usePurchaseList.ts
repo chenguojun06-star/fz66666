@@ -63,6 +63,7 @@ export function usePurchaseList({
   });
   const [purchaseStats, setPurchaseStats] = useState<PurchaseStats>(EMPTY_STATS);
   const [activeStatFilter, setActiveStatFilter] = useState<'all' | 'pending' | 'received' | 'partial' | 'completed' | 'overdue'>('all');
+  const [showAllPurchases, setShowAllPurchases] = useState(false);
 
   const [queryParams, setQueryParams] = useState<MaterialQueryParams>(() => {
     const base: MaterialQueryParams = { page: 1, pageSize: DEFAULT_PAGE_SIZE };
@@ -161,8 +162,14 @@ export function usePurchaseList({
   };
 
   const sortedPurchaseList = useMemo(() => {
-    const sorted = [...purchaseList];
-    sorted.sort((a: any, b: any) => {
+    let list = [...purchaseList];
+    if (!showAllPurchases && !queryParams.status) {
+      list = list.filter((r: any) => {
+        const s = String(r.status || '').trim().toLowerCase();
+        return s !== 'completed' && s !== 'cancelled';
+      });
+    }
+    list.sort((a: any, b: any) => {
       const aStatus = String(a.status || '').trim().toLowerCase();
       const bStatus = String(b.status || '').trim().toLowerCase();
       const aCancelled = aStatus === 'cancelled' ? 2 : aStatus === 'completed' ? 1 : 0;
@@ -175,8 +182,8 @@ export function usePurchaseList({
       }
       return 0;
     });
-    return sorted;
-  }, [purchaseList, sortField, sortOrder]);
+    return list;
+  }, [purchaseList, sortField, sortOrder, showAllPurchases, queryParams.status]);
 
   const overdueCount = useMemo(() => {
     const today = new Date(); today.setHours(0, 0, 0, 0);
@@ -247,6 +254,7 @@ export function usePurchaseList({
     sortField, sortOrder, purchaseSortField, purchaseSortOrder,
     sortedPurchaseList, overdueCount,
     purchaseStats, activeStatFilter,
+    showAllPurchases, setShowAllPurchases,
     fetchMaterialPurchaseList, fetchPurchaseStats,
     handleSort, handlePurchaseSort, handleStatClick,
     ensureOrderUnlocked, isOrderFrozenForRecord,

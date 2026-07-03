@@ -58,6 +58,8 @@ interface PageStatCardsProps {
   clearHintsLabel?: string;
   /** 自定义容器样式 */
   style?: React.CSSProperties;
+  /** 右侧额外操作区（与智能提示同一行，最右侧） */
+  extraRight?: React.ReactNode;
 }
 
 // ===== 色调映射（与 SmartPredictionStrip 保持一致） =====
@@ -118,6 +120,7 @@ const PageStatCards: React.FC<PageStatCardsProps> = ({
   onClearHints,
   clearHintsLabel = '清除筛选',
   style,
+  extraRight,
 }) => {
   const visibleHints = hints.filter((h) => h.count > 0);
 
@@ -231,22 +234,26 @@ const PageStatCards: React.FC<PageStatCardsProps> = ({
         );
       })}
 
-      {/* ── 清除筛选按钮 ── */}
-      {onClearHints && visibleHints.length > 0 && (
-        <button
-          type="button"
-          onClick={onClearHints}
-          style={{
-            marginLeft: 'auto',
-            border: 'none',
-            background: 'transparent',
-            color: 'var(--color-text-tertiary)',
-            cursor: 'pointer',
-            fontSize: TAG_FONT_SIZE,
-          }}
-        >
-          {clearHintsLabel}
-        </button>
+      {/* ── 右侧区域：清除筛选 + 扩展按钮 ── */}
+      {(onClearHints || extraRight) && (
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: TAG_GAP }}>
+          {onClearHints && visibleHints.length > 0 && (
+            <button
+              type="button"
+              onClick={onClearHints}
+              style={{
+                border: 'none',
+                background: 'transparent',
+                color: 'var(--color-text-tertiary)',
+                cursor: 'pointer',
+                fontSize: TAG_FONT_SIZE,
+              }}
+            >
+              {clearHintsLabel}
+            </button>
+          )}
+          {extraRight}
+        </div>
       )}
     </div>
   );

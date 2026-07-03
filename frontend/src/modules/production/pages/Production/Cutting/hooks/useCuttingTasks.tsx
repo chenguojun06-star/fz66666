@@ -89,6 +89,7 @@ export function useCuttingTasks({ message, isEntryPage }: UseCuttingTasksOptions
     totalCount: number; totalQuantity: number; pendingCount: number; receivedCount: number; bundledCount: number;
   }>({ totalCount: 0, totalQuantity: 0, pendingCount: 0, receivedCount: 0, bundledCount: 0 });
   const [activeStatFilter, setActiveStatFilter] = useState<'all' | 'pending' | 'received' | 'bundled'>('all');
+  const [showAllTasks, setShowAllTasks] = useState(false);
 
   // 快速编辑
   const [quickEditVisible, setQuickEditVisible] = useState(false);
@@ -118,8 +119,14 @@ export function useCuttingTasks({ message, isEntryPage }: UseCuttingTasksOptions
 
   // 排序后的任务列表
   const sortedTaskList = useMemo(() => {
-    const sorted = [...taskList];
-    sorted.sort((a: any, b: any) => {
+    let list = [...taskList];
+    if (!showAllTasks && !taskQuery.status) {
+      list = list.filter((r: any) => {
+        const s = String(r.status || '').trim().toLowerCase();
+        return s !== 'bundled';
+      });
+    }
+    list.sort((a: any, b: any) => {
       const aStatus = String(a.status || '').trim().toLowerCase();
       const bStatus = String(b.status || '').trim().toLowerCase();
       const aTerminal = aStatus === 'bundled' ? 1 : 0;
@@ -134,8 +141,8 @@ export function useCuttingTasks({ message, isEntryPage }: UseCuttingTasksOptions
       }
       return 0;
     });
-    return sorted;
-  }, [taskList, cuttingSortField, cuttingSortOrder]);
+    return list;
+  }, [taskList, cuttingSortField, cuttingSortOrder, showAllTasks, taskQuery.status]);
 
   // 获取裁剪统计
   const fetchCuttingStats = useCallback(async () => {
@@ -328,6 +335,7 @@ export function useCuttingTasks({ message, isEntryPage }: UseCuttingTasksOptions
     cuttingSortField, cuttingSortOrder, handleCuttingSort,
     // 统计
     cuttingStats, activeStatFilter, handleStatClick,
+    showAllTasks, setShowAllTasks,
     // 操作
     fetchTasks, handleReceiveTask, handleRollbackTask,
     receiveTaskLoading, rollbackTaskLoading,

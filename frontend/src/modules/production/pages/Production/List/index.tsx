@@ -313,6 +313,35 @@ const ProductionList: React.FC = () => {
                 })),
               ]}
               onClearHints={smartQueueFilter !== 'all' || focusOrderIds.size > 0 ? () => { setSmartQueueFilter('all'); setFocusOrderIds(new Set()); } : undefined}
+              extraRight={
+                <button
+                  type="button"
+                  onClick={() => setQueryParams(prev => ({
+                    ...prev,
+                    page: 1,
+                    status: undefined,
+                    excludeTerminal: !prev.excludeTerminal,
+                    includeScrapped: prev.excludeTerminal ? true : false,
+                  }))}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 4,
+                    border: '1px solid var(--color-border-antd)',
+                    background: 'var(--color-bg-base)',
+                    color: !queryParams.excludeTerminal ? 'var(--color-primary)' : 'var(--color-text-secondary)',
+                    borderRadius: 4,
+                    padding: '4px 10px',
+                    fontSize: 12,
+                    fontWeight: 500,
+                    cursor: 'pointer',
+                    lineHeight: 1.4,
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {queryParams.excludeTerminal ? '显示全部' : '只看进行中'}
+                </button>
+              }
           />
           </>}
           filterLeft={ProductionFilterBar({
