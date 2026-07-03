@@ -59,6 +59,8 @@ const WarehousingList: React.FC<WarehousingListProps> = ({ hook }) => {
     warehousingStats,
     statusFilter,
     handleStatusFilterChange,
+    showAllWarehousing,
+    setShowAllWarehousing,
     pendingBundles,
     pendingBundlesLoading,
     navigateToInspect,
@@ -171,6 +173,29 @@ const WarehousingList: React.FC<WarehousingListProps> = ({ hook }) => {
                 activeColor: 'var(--color-primary)',
               },
             ]}
+            extraRight={
+              <button
+                type="button"
+                onClick={() => setShowAllWarehousing(v => !v)}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  border: '1px solid var(--color-border-antd)',
+                  background: 'var(--color-bg-base)',
+                  color: !showAllWarehousing ? 'var(--color-text-secondary)' : 'var(--color-primary)',
+                  borderRadius: 4,
+                  padding: '4px 10px',
+                  fontSize: 12,
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                  lineHeight: 1.4,
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {showAllWarehousing ? '只看进行中' : '显示全部'}
+              </button>
+            }
           />
 
           {/* 筛选栏：始终渲染，pending模式下关键词仅做客户端过滤 */}

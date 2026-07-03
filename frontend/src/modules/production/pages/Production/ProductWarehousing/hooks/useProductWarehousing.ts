@@ -95,6 +95,7 @@ export const useProductWarehousing = () => {
 
   // 状态筛选
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [showAllWarehousing, setShowAllWarehousing] = useState(false);
   const [pendingBundles, setPendingBundles] = useState<PendingBundleRow[]>([]);
   const [pendingBundlesLoading, setPendingBundlesLoading] = useState(false);
 
@@ -440,7 +441,14 @@ export const useProductWarehousing = () => {
   }, [location.search]);
 
   const sortedWarehousingList = useMemo(() => {
-    return [...warehousingList].sort((a: any, b: any) => {
+    let list = [...warehousingList];
+    if (!showAllWarehousing) {
+      list = list.filter((r: any) => {
+        const s = String(r.status || r.qualityStatus || '').trim().toLowerCase();
+        return !['completed', 'warehoused', 'cancelled', 'scrapped'].includes(s);
+      });
+    }
+    return list.sort((a: any, b: any) => {
       const aStatus = String(a.status || a.qualityStatus || '').trim().toLowerCase();
       const bStatus = String(b.status || b.qualityStatus || '').trim().toLowerCase();
       const aCancelled = ['cancelled', 'scrapped'].includes(aStatus) ? 2 : aStatus === 'completed' || aStatus === 'warehoused' ? 1 : 0;
@@ -450,7 +458,7 @@ export const useProductWarehousing = () => {
       const bTime = new Date(String(b.createTime || b.warehousingTime || 0)).getTime();
       return bTime - aTime;
     });
-  }, [warehousingList]);
+  }, [warehousingList, showAllWarehousing]);
 
   return {
     // State
@@ -477,6 +485,8 @@ export const useProductWarehousing = () => {
     statusFilter,
     setStatusFilter,
     handleStatusFilterChange,
+    showAllWarehousing,
+    setShowAllWarehousing,
     pendingBundles,
     pendingBundlesLoading,
     fetchPendingBundles,
