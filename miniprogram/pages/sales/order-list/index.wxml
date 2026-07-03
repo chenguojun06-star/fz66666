@@ -1,0 +1,68 @@
+<!-- 平台订单列表 -->
+
+<view class="page">
+  <!-- 平台筛选 Tab（横向滚动） -->
+  <scroll-view class="tab-scroll" scroll-x enhanced show-scrollbar="{{false}}">
+    <view class="tab-pill {{activePlatform === item.key ? 'tab-pill--on' : ''}}"
+          wx:for="{{platformTabs}}" wx:key="key"
+          data-key="{{item.key}}" bindtap="onPlatformTap">
+      <text>{{item.label}}</text>
+    </view>
+  </scroll-view>
+
+  <!-- 状态筛选 -->
+  <view class="status-bar">
+    <view class="status-pill {{activeStatus === item.key ? 'status-pill--on' : ''}}"
+          wx:for="{{statusTabs}}" wx:key="key"
+          data-key="{{item.key}}" bindtap="onStatusTap">
+      <text>{{item.label}}</text>
+    </view>
+  </view>
+
+  <!-- 订单列表 -->
+  <view class="order-list" wx:if="{{list.length > 0}}">
+    <view class="order-card" wx:for="{{list}}" wx:key="id">
+      <view class="oc-head">
+        <text class="oc-platform">{{item.platformName}}</text>
+        <text class="oc-status {{item.statusCls}}">{{item.status}}</text>
+      </view>
+      <view class="oc-no" data-no="{{item.orderNo}}" bindtap="onCopyOrderNo">
+        <text class="oc-no-label">订单号</text>
+        <text class="oc-no-val">{{item.orderNo}}</text>
+        <text class="oc-copy">复制</text>
+      </view>
+      <view class="oc-row">
+        <text class="oc-label">买家</text>
+        <text class="oc-val">{{item.buyerName}}</text>
+      </view>
+      <view class="oc-row">
+        <text class="oc-label">金额</text>
+        <text class="oc-val oc-amount">¥{{item.amount}}</text>
+      </view>
+      <view class="oc-row" wx:if="{{item.orderTime}}">
+        <text class="oc-label">下单</text>
+        <text class="oc-val oc-time">{{item.orderTime}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 加载更多 / 没有更多 -->
+  <view wx:if="{{list.length > 0 && hasMore}}" class="load-more" bindtap="onReachBottom">
+    <text>{{loadingMore ? '加载中...' : '加载更多'}}</text>
+  </view>
+  <view wx:if="{{list.length > 0 && !hasMore}}" class="no-more">
+    <text>没有更多了</text>
+  </view>
+
+  <!-- 空状态 -->
+  <view class="empty-state" wx:if="{{!loading && list.length === 0}}">
+    <text class="empty-icon">📦</text>
+    <text class="empty-text">暂无订单</text>
+    <text class="empty-hint">切换平台或状态试试</text>
+  </view>
+
+  <!-- 加载中 -->
+  <view class="loading-state" wx:if="{{loading}}">
+    <text>加载中...</text>
+  </view>
+</view>

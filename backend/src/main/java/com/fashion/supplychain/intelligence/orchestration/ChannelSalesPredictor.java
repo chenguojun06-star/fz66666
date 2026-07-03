@@ -2,13 +2,18 @@ package com.fashion.supplychain.intelligence.orchestration;
 
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
+import com.fashion.supplychain.finance.entity.EcSalesRevenue;
+import com.fashion.supplychain.finance.service.EcSalesRevenueService;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -27,6 +32,16 @@ import java.util.stream.Collectors;
 @Lazy
 @Slf4j
 public class ChannelSalesPredictor {
+
+    @Autowired
+    @Lazy
+    private EcSalesRevenueService ecSalesRevenueService;
+
+    private static final Map<String, String> PLATFORM_NAME_MAP = Map.of(
+            "TB", "淘宝", "TM", "天猫", "JD", "京东", "PDD", "拼多多",
+            "DY", "抖音", "XHS", "小红书", "WC", "微信小店", "SFY", "Shopify",
+            "SY", "希音", "JST", "聚水潭"
+    );
 
     /**
      * 获取渠道销售分布分析报告
@@ -124,35 +139,81 @@ public class ChannelSalesPredictor {
     }
 
     /**
-     * 模拟获取渠道销售数据
+     * 从 t_ec_sales_revenue 查询真实渠道销售数据，按平台分组按季度聚合
      */
     private List<ChannelSalesData> fetchChannelSalesData(Long tenantId, String styleNo) {
-        List<ChannelSalesData> data = new ArrayList<>();
-
-        data.add(new ChannelSalesData("天猫", 1200, 1500, 1800, 2000));
-        data.add(new ChannelSalesData("抖音", 800, 1200, 1500, 1800));
-        data.add(new ChannelSalesData("京东", 600, 700, 800, 900));
-        data.add(new ChannelSalesData("拼多多", 400, 500, 600, 750));
-        data.add(new ChannelSalesData("线下门店", 500, 450, 480, 520));
-        data.add(new ChannelSalesData("私域", 200, 350, 500, 700));
-
-        return data;
+        List<EcSalesRevenue> records = querySalesRevenue(tenantId, styleNo);
+        if (records.isEmpty()) {
+            return Collections.emptyList();
+        }
+        Map<String, List<EcSalesRevenue>> byPlatform = records.stream()
+                .filter(r -> StringUtils.hasText(r.getPlatform()))
+                .collect(Collectors.groupingBy(EcSalesRevenue::getPlatform));
+        int year = LocalDate.now().getYear();
+        List<ChannelSalesData> result = new ArrayList<>();
+        for (Map.Entry<String, List<EcSalesRevenue>> entry : byPlatform.entrySet()) {
+            String platformName = PLATFORM_NAME_MAP.getOrDefault(entry.getKey(), entry.getKey());
+            int q1 = sumQuantityByQuarter(entry.getValue(), year, 1, 3);
+            int q2 = sumQuantityByQuarter(entry.getValue(), year, 4, 6);
+            int q3 = sumQuantityByQuarter(entry.getValue(), year, 7, 9);
+            int q4 = sumQuantityByQuarter(entry.getValue(), year, 10, 12);
+            result.add(new ChannelSalesData(platformName, q1, q2, q3, q4));
+        }
+        return result;
     }
 
     /**
-     * 模拟获取渠道绩效数据
+     * 从 t_ec_sales_revenue 查询真实渠道绩效数据
      */
     private List<ChannelPerformanceData> fetchChannelPerformanceData(Long tenantId) {
-        List<ChannelPerformanceData> data = new ArrayList<>();
+        List<EcSalesRevenue> records = querySalesRevenue(tenantId, null);
+        if (records.isEmpty()) {
+            return Collections.emptyList();
+        }
+        Map<String, List<EcSalesRevenue>> byPlatform = records.stream()
+                .filter(r -> StringUtils.hasText(r.getPlatform()))
+                .collect(Collectors.groupingBy(EcSalesRevenue::getPlatform));
+        List<ChannelPerformanceData> result = new ArrayList<>();
+        for (Map.Entry<String, List<EcSalesRevenue>> entry : byPlatform.entrySet()) {
+            String platformName = PLATFORM_NAME_MAP.getOrDefault(entry.getKey(), entry.getKey());
+            List<EcSalesRevenue> list = entry.getValue();
+            int salesVolume = list.stream().mapToInt(r -> r.getQuantity() != null ? r.getQuantity() : 0).sum();
+            BigDecimal revenueBd = list.stream()
+                    .map(r -> r.getPayAmount() != null ? r.getPayAmount() : BigDecimal.ZERO)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            int revenue = revenueBd.intValue();
+            double avgPrice = salesVolume > 0 ? revenueBd.divide(BigDecimal.valueOf(salesVolume), 2, java.math.RoundingMode.HALF_UP).doubleValue() : 0;
+            int fulfillmentRate = list.stream()
+                    .filter(r -> "reconciled".equals(r.getStatus()))
+                    .mapToInt(r -> 1).sum();
+            int fulfillmentPct = list.isEmpty() ? 0 : (fulfillmentRate * 100 / list.size());
+            result.add(new ChannelPerformanceData(platformName, salesVolume, revenue, avgPrice, fulfillmentPct, 0));
+        }
+        return result;
+    }
 
-        data.add(new ChannelPerformanceData("天猫", 1200, 240000, 4.2, 85, 30));
-        data.add(new ChannelPerformanceData("抖音", 1800, 180000, 4.5, 92, 15));
-        data.add(new ChannelPerformanceData("京东", 900, 270000, 4.8, 95, 12));
-        data.add(new ChannelPerformanceData("拼多多", 750, 75000, 3.8, 78, 45));
-        data.add(new ChannelPerformanceData("线下门店", 520, 156000, 4.9, 98, 5));
-        data.add(new ChannelPerformanceData("私域", 700, 175000, 4.7, 90, 8));
+    private List<EcSalesRevenue> querySalesRevenue(Long tenantId, String styleNo) {
+        try {
+            com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<EcSalesRevenue> wrapper =
+                    new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<>();
+            wrapper.eq(EcSalesRevenue::getTenantId, tenantId);
+            wrapper.last("LIMIT 5000");
+            return ecSalesRevenueService.list(wrapper);
+        } catch (Exception e) {
+            log.warn("[ChannelSalesPredictor] 查询销售数据失败: {}", e.getMessage());
+            return Collections.emptyList();
+        }
+    }
 
-        return data;
+    private int sumQuantityByQuarter(List<EcSalesRevenue> records, int year, int startMonth, int endMonth) {
+        return records.stream()
+                .filter(r -> {
+                    LocalDateTime t = r.getShipTime() != null ? r.getShipTime() : r.getCreateTime();
+                    if (t == null) return false;
+                    return t.getYear() == year && t.getMonthValue() >= startMonth && t.getMonthValue() <= endMonth;
+                })
+                .mapToInt(r -> r.getQuantity() != null ? r.getQuantity() : 0)
+                .sum();
     }
 
     /**

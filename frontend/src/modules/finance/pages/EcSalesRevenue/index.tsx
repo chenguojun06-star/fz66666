@@ -9,19 +9,9 @@ import type { ColumnsType } from 'antd/es/table';
 import { ecSalesRevenueApi, EcRevenueRecord, EcRevenueSummary } from '@/services/finance/ecSalesRevenueApi';
 import { readPageSize } from '@/utils/pageSizeStore';
 import { formatMoney } from '@/utils/format';
+import { getPlatformTag, getPlatformOptions } from '@/utils/platform';
 
 const { Text } = Typography;
-
-const PLATFORM_MAP: Record<string, { label: string; color: string }> = {
-  TB: { label: '淘宝', color: 'orange' },
-  TM: { label: '天猫', color: 'volcano' },
-  JD: { label: '京东', color: 'red' },
-  PDD: { label: '拼多多', color: 'magenta' },
-  DY: { label: '抖音', color: 'purple' },
-  XHS: { label: '小红书', color: 'pink' },
-  WC: { label: '微信', color: 'green' },
-  SFY: { label: '顺丰优选', color: 'blue' },
-};
 
 const STATUS_MAP: Record<string, { label: string; color: string }> = {
   pending: { label: '待核账', color: 'orange' },
@@ -105,8 +95,8 @@ const EcSalesRevenue: React.FC = () => {
       dataIndex: 'platform',
       width: 80,
       render: (v: string) => {
-        const info = PLATFORM_MAP[v] ?? { label: v, color: 'default' };
-        return <Tag color={info.color}>{info.label}</Tag>;
+        const t = getPlatformTag(v);
+        return <Tag color={t.color}>{t.label}</Tag>;
       },
     },
     {
@@ -261,10 +251,7 @@ const EcSalesRevenue: React.FC = () => {
               style={{ width: 120 }}
               value={filters.platform}
               onChange={(v) => setFilters((prev) => ({ ...prev, platform: v, page: 1 }))}
-              options={Object.entries(PLATFORM_MAP).map(([k, v]) => ({
-                value: k,
-                label: v.label,
-              }))}
+              options={getPlatformOptions()}
             />
             <Select
               placeholder="全部状态"

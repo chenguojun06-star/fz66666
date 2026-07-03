@@ -10,6 +10,8 @@ import com.fashion.supplychain.finance.orchestration.BillAggregationOrchestrator
 import com.fashion.supplychain.finance.service.BillAggregationService;
 import com.fashion.supplychain.integration.ecommerce.orchestration.EcommerceOrderOrchestrator;
 import com.fashion.supplychain.production.entity.ProductOutstock;
+import com.fashion.supplychain.production.entity.ProductionOrder;
+import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.ProductOutstockService;
 import com.fashion.supplychain.style.entity.ProductSku;
 import com.fashion.supplychain.style.entity.StyleInfo;
@@ -52,6 +54,9 @@ public class FinishedOutstockHelper {
     @Autowired
     private BillAggregationService billAggregationService;
 
+    @Autowired
+    private ProductionOrderService productionOrderService;
+
     public FinishedOutstockHelper(ProductSkuService productSkuService,
                                   ProductOutstockService productOutstockService,
                                   StyleInfoService styleInfoService,
@@ -87,6 +92,19 @@ public class FinishedOutstockHelper {
         }
         String warehouseAreaId = trimToNull(params.get("warehouseAreaId"));
         String warehouseAreaName = resolveWarehouseAreaName(warehouseAreaId);
+        String platformCode = trimToNull(params.get("platformCode"));
+        // 如果未传入 platformCode，尝试从生产订单查询
+        if (!StringUtils.hasText(platformCode) && StringUtils.hasText(requestOrderNo)) {
+            try {
+                ProductionOrder prodOrder = productionOrderService.lambdaQuery()
+                        .select(ProductionOrder::getId, ProductionOrder::getPlatformCode)
+                        .eq(ProductionOrder::getOrderNo, requestOrderNo)
+                        .one();
+                if (prodOrder != null && StringUtils.hasText(prodOrder.getPlatformCode())) {
+                    platformCode = prodOrder.getPlatformCode();
+                }
+            } catch (Exception ignore) {}
+        }
 
         int totalItems = 0;
         int totalQty = 0;
@@ -124,7 +142,7 @@ public class FinishedOutstockHelper {
             recordProductOutstock(sku, quantity, requestOrderId, requestOrderNo, requestWarehouse,
                     "成品库存页面出库|sku=" + skuCode, trackingNo, expressCompany,
                     customerName, customerPhone, shippingAddress, finalOutstockType,
-                    warehouseAreaId, warehouseAreaName, overrideSalesPrice, priceAdjustmentReason);
+                    warehouseAreaId, warehouseAreaName, overrideSalesPrice, priceAdjustmentReason, platformCode);
             totalItems++;
             totalQty += quantity;
         }
@@ -196,7 +214,8 @@ public class FinishedOutstockHelper {
                                        String warehouseAreaId,
                                        String warehouseAreaName,
                                        BigDecimal overrideSalesPrice,
-                                       String priceAdjustmentReason) {
+                                       String priceAdjustmentReason,
+                                       String platformCode) {
         ProductOutstock outstock = new ProductOutstock();
         LocalDateTime now = LocalDateTime.now();
         StyleInfo styleInfo = sku.getStyleId() == null ? null : styleInfoService.getById(sku.getStyleId());
@@ -244,6 +263,7 @@ public class FinishedOutstockHelper {
 
         outstock.setTrackingNo(trackingNo);
         outstock.setExpressCompany(expressCompany);
+        outstock.setPlatformCode(platformCode);
         outstock.setCustomerName(customerName);
         outstock.setCustomerPhone(customerPhone);
         outstock.setShippingAddress(shippingAddress);

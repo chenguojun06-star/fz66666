@@ -14,20 +14,11 @@ import api, { type ApiResult } from '@/utils/api';
 import { message } from '@/utils/antdStatic';
 import { readPageSize } from '@/utils/pageSizeStore';
 import { formatMoney } from '@/utils/format';
+import { getPlatformTag, getPlatformOptions } from '@/utils/platform';
 
 const { Text } = Typography;
 const { Option } = Select;
 
-const PLATFORM_MAP: Record<string, { name: string; emoji: string; color: string }> = {
-  TAOBAO:      { name: '淘宝',   emoji: '', color: 'orange' },
-  TMALL:       { name: '天猫',   emoji: '', color: 'red' },
-  JD:          { name: '京东',   emoji: '', color: 'volcano' },
-  DOUYIN:      { name: '抖音',   emoji: '', color: 'default' },
-  PINDUODUO:   { name: '拼多多', emoji: '', color: 'red' },
-  XIAOHONGSHU: { name: '小红书', emoji: '', color: 'magenta' },
-  WECHAT_SHOP: { name: '视频号', emoji: '', color: 'green' },
-  SHOPIFY:     { name: 'Shopify',emoji: '', color: 'purple' },
-};
 const STATUS_MAP: Record<number, { label: string; color: string }> = {
   0: { label: '待付款', color: 'default' },
   1: { label: '待发货', color: 'orange' },
@@ -176,9 +167,9 @@ const OrdersTab: React.FC = () => {
   const columns: ColumnsType<EcOrder> = [
     {
       title: '平台', dataIndex: 'sourcePlatformCode', width: 88,
-      render: code => {
-        const p = PLATFORM_MAP[code] ?? { name: code, emoji: '', color: 'default' };
-        return <Tag color={p.color}>{p.emoji} {p.name}</Tag>;
+      render: (code: string) => {
+        const t = getPlatformTag(code);
+        return <Tag color={t.color}>{t.label}</Tag>;
       },
     },
     {
@@ -335,11 +326,9 @@ const OrdersTab: React.FC = () => {
       <Card style={{ marginBottom: 10 }}>
         <Space wrap>
           <Select id="ecomPlatformFilter" placeholder="全部平台" allowClear value={filterPlatform || undefined}
-            onChange={v => { setFilterPlatform(v ?? ''); setPage(1); }} style={{ width: 120 }}>
-            {Object.entries(PLATFORM_MAP).map(([c, p]) => (
-              <Option key={c} value={c}>{p.emoji} {p.name}</Option>
-            ))}
-          </Select>
+            onChange={v => { setFilterPlatform(v ?? ''); setPage(1); }} style={{ width: 120 }}
+            options={getPlatformOptions()}
+          />
           <Select id="ecomStatusFilter" placeholder="全部状态" allowClear value={filterStatus}
             onChange={v => { setFilterStatus(v); setPage(1); }} style={{ width: 100 }}>
             {Object.entries(STATUS_MAP).map(([k, v]) => (
@@ -371,8 +360,9 @@ const OrdersTab: React.FC = () => {
           <>
             <Descriptions column={2} bordered>
               <Descriptions.Item label="平台">
-                {PLATFORM_MAP[detail.sourcePlatformCode]?.emoji}{' '}
-                {PLATFORM_MAP[detail.sourcePlatformCode]?.name || detail.platform}
+                <Tag color={getPlatformTag(detail.sourcePlatformCode).color}>
+                  {getPlatformTag(detail.sourcePlatformCode).label}
+                </Tag>
               </Descriptions.Item>
               <Descriptions.Item label="平台订单号">{detail.platformOrderNo || '-'}</Descriptions.Item>
               <Descriptions.Item label="内部单号" span={2}>{detail.orderNo}</Descriptions.Item>

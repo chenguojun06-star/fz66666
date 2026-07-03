@@ -87,6 +87,13 @@ public class ProductOutstock {
 
     private String expressCompany;
 
+    /**
+     * 平台代码（从生产订单或EC订单带入）
+     * 如 TB/JD/PDD/DY/XHS/WC/SFY/SY/JST
+     */
+    @TableField("platform_code")
+    private String platformCode;
+
     // ==================== 收货字段（历史遗留，不再在出库流程使用）====================
 
     private String receiveStatus;

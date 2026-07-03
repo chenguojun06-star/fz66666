@@ -659,6 +659,13 @@ public class ProductionOrder {
     private String ecPlatform;
 
     /**
+     * 平台代码（持久化字段，从EC订单同步）
+     * 如 TB/JD/PDD/DY/XHS/WC/SFY/SY/JST
+     */
+    @TableField("platform_code")
+    private String platformCode;
+
+    /**
      * 下单业务类型：FOB=离岸价交货, ODM=原创设计制造, OEM=代工贴牌, CMT=纯加工
      */
     private String orderBizType;

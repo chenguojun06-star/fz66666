@@ -38,6 +38,26 @@ function fmtDate(val) {
   return s;
 }
 
+/* 平台来源代码 → 中文名（与销售/订单列表页保持一致） */
+const PLATFORM_NAMES = {
+  TB: '淘宝',
+  TM: '天猫',
+  JD: '京东',
+  PDD: '拼多多',
+  DY: '抖音',
+  XHS: '小红书',
+  WC: '微信小店',
+  SFY: 'Shopify',
+  SY: '希音',
+  JST: '聚水潭',
+};
+function getPlatformName(code) {
+  const c = String(code || '').trim();
+  if (!c) return '';
+  if (PLATFORM_NAMES[c]) return PLATFORM_NAMES[c];
+  return c;
+}
+
 /* 状态文本 + tag 类名 */
 function getStatusInfo(raw) {
   const s = String(raw || '').toLowerCase();
@@ -180,6 +200,7 @@ Page({
     remainQuantity: 0,
     progressPct: 0,
     specSummary: { colorText: '', sizeText: '', qtyText: '', hasSpec: false },
+    ecPlatformName: '',
 
     // 工序阶段
     stages: [],
@@ -441,6 +462,9 @@ Page({
         return { colorText: colorText, sizeText: sizeText, qtyText: qtyText, hasSpec: true };
       })();
 
+      // 平台来源（电商订单 ecPlatform → 中文名）
+      const ecPlatformName = getPlatformName(order.ecPlatform || order.platform || order.platformCode);
+
       that.setData({
         order: order,
         isEditable: isEditable,
@@ -455,6 +479,7 @@ Page({
         remainQuantity: remainQty,
         progressPct: progressPct,
         specSummary: specSummary,
+        ecPlatformName: ecPlatformName,
         stages: stages,
         records: records,
         materialPurchases: materialPurchases,

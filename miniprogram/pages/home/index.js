@@ -52,6 +52,8 @@ const MENU_KEY_MAP = {
   factoryShipment: 'miniprogram.menu.factoryShipment',
   advance: 'miniprogram.menu.advance',
   wagePayment: 'miniprogram.menu.wagePayment',
+  salesData: 'miniprogram.menu.salesData',
+  platformOrder: 'miniprogram.menu.platformOrder',
 };
 
 function getGreeting() {
@@ -108,6 +110,14 @@ function buildMenuItems(menuVisibility) {
       // 仅当生产管理不可见时才显示
       items.push({ id: 'factoryShipment', name: '外发工厂', iconClass: 'icon-menu-shipment', circleClass: 'menu-icon-circle--cyan', route: '/pages/factory/shipment/index' });
     }
+  }
+  // 销售数据：外发工厂不开放
+  if (!isFactory && visibility.salesData !== false) {
+    items.push({ id: 'salesData', name: '销售数据', iconClass: 'icon-menu-ai', circleClass: 'menu-icon-circle--rose', route: '/pages/sales/overview/index' });
+  }
+  // 平台订单：外发工厂不开放
+  if (!isFactory && visibility.platformOrder !== false) {
+    items.push({ id: 'platformOrder', name: '平台订单', iconClass: 'icon-menu-order', circleClass: 'menu-icon-circle--blue', route: '/pages/sales/order-list/index' });
   }
 
   return items;

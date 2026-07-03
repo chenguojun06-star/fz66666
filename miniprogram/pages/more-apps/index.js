@@ -37,6 +37,10 @@ const ALL_APPS = [
     { id: 'payrollFeedback', name: '工资反馈', iconClass: 'icon-menu-payroll-feedback', circleClass: 'menu-icon-circle--blue', route: '/pages/payroll/feedback/index' },
     { id: 'advance', name: '预付款', iconClass: 'icon-menu-advance', circleClass: 'menu-icon-circle--green', route: '/pages/advance/list/index' },
   ]},
+  { group: '📊 销售管理', items: [
+    { id: 'salesData', name: '销售数据', iconClass: 'icon-menu-ai', circleClass: 'menu-icon-circle--rose', route: '/pages/sales/overview/index' },
+    { id: 'platformOrder', name: '平台订单', iconClass: 'icon-menu-order', circleClass: 'menu-icon-circle--blue', route: '/pages/sales/order-list/index' },
+  ]},
   { group: '👥 人员管理', items: [
     { id: 'userApproval', name: '用户审批', iconClass: 'icon-menu-user', circleClass: 'menu-icon-circle--purple', route: '/pages/admin/user-approval/index' },
     { id: 'invite', name: '邀请成员', iconClass: 'icon-menu-invite', circleClass: 'menu-icon-circle--rose', route: '/pages/admin/misc/invite/index' },

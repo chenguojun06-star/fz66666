@@ -211,6 +211,18 @@ public class ProductionOrderOrchestrator {
                 if (ec != null) {
                     o.setEcOrderNo(ec.getOrderNo());
                     o.setEcPlatform(ec.getPlatform());
+                    // 持久化 platformCode（仅当尚未设置时）
+                    if (!StringUtils.hasText(o.getPlatformCode()) && StringUtils.hasText(ec.getPlatform())) {
+                        o.setPlatformCode(ec.getPlatform());
+                        try {
+                            productionOrderService.lambdaUpdate()
+                                    .eq(ProductionOrder::getId, o.getId())
+                                    .set(ProductionOrder::getPlatformCode, ec.getPlatform())
+                                    .update();
+                        } catch (Exception ex) {
+                            log.warn("[EC关联] 持久化 platformCode 失败: orderId={}", o.getId());
+                        }
+                    }
                 }
             });
         } catch (Exception e) {

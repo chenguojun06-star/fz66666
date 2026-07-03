@@ -16,6 +16,7 @@ import org.springframework.util.StringUtils;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -216,13 +217,43 @@ public class EcSalesRevenueOrchestrator {
                 "totalQuantity", totalQuantity,
                 "totalPayAmount", totalPayAmount,
                 "totalFreight", totalFreight,
-                "netRevenue", totalPayAmount.subtract(totalFreight)
+                "netRevenue", totalPayAmount.subtract(totalFreight),
+                "platformBreakdown", buildPlatformBreakdown(all)
         );
     }
 
     // ─────────────────────────────────────────────────────────────────────────
     // 内部工具
     // ─────────────────────────────────────────────────────────────────────────
+
+    private List<Map<String, Object>> buildPlatformBreakdown(List<EcSalesRevenue> records) {
+        Map<String, List<EcSalesRevenue>> grouped = records.stream()
+                .collect(java.util.stream.Collectors.groupingBy(
+                        r -> r.getPlatform() != null ? r.getPlatform() : "UNKNOWN"));
+        return grouped.entrySet().stream()
+                .map(e -> {
+                    List<EcSalesRevenue> list = e.getValue();
+                    BigDecimal payAmount = list.stream()
+                            .map(r -> r.getPayAmount() != null ? r.getPayAmount() : BigDecimal.ZERO)
+                            .reduce(BigDecimal.ZERO, BigDecimal::add);
+                    BigDecimal freight = list.stream()
+                            .map(r -> r.getFreight() != null ? r.getFreight() : BigDecimal.ZERO)
+                            .reduce(BigDecimal.ZERO, BigDecimal::add);
+                    int quantity = list.stream()
+                            .mapToInt(r -> r.getQuantity() != null ? r.getQuantity() : 0)
+                            .sum();
+                    Map<String, Object> m = new java.util.LinkedHashMap<>();
+                    m.put("platform", e.getKey());
+                    m.put("orderCount", list.size());
+                    m.put("totalQuantity", quantity);
+                    m.put("totalPayAmount", payAmount);
+                    m.put("totalFreight", freight);
+                    m.put("netRevenue", payAmount.subtract(freight));
+                    return m;
+                })
+                .sorted((a, b) -> ((BigDecimal) b.get("totalPayAmount")).compareTo((BigDecimal) a.get("totalPayAmount")))
+                .collect(java.util.stream.Collectors.toList());
+    }
 
     private String genRevenueNo(String platform) {
         String p = platform != null ? platform : "EC";

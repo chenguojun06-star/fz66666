@@ -16,6 +16,7 @@ import SupplierNameTooltip from '@/components/common/SupplierNameTooltip';
 import FactoryTypeTag from '@/components/common/FactoryTypeTag';
 import { toCategoryCn } from '@/utils/styleCategory';
 import { getRemainingDaysDisplay } from '@/utils/progressColor';
+import { getPlatformTag } from '@/utils/platform';
 import { safeString } from '../utils';
 import { displayOrderStatus, displayDate, displayAmount } from '@/utils/display';
 import DisplayStatusTag from '@/components/common/DisplayStatusTag';
@@ -149,6 +150,11 @@ export function useProductionColumns({
               const colorMap: Record<string, string> = { FOB: 'processing', ODM: 'info', OEM: 'processing', CMT: 'warning' };
               return <Tag color={colorMap[bizType] ?? 'default'} style={{ margin: 0, fontSize: 12, padding: '0 4px', lineHeight: '18px' }}>{bizType}</Tag>;
             })()}
+            {record.ecPlatform && (
+              <Tag color={getPlatformTag(record.ecPlatform).color} style={{ margin: 0, fontSize: 12, padding: '0 4px', lineHeight: '18px' }}>
+                {getPlatformTag(record.ecPlatform).label}
+              </Tag>
+            )}
           </div>
         );
       },

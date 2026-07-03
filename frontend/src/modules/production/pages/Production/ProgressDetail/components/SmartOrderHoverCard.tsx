@@ -8,6 +8,7 @@
  */
 import React, { useMemo } from 'react';
 import dayjs from 'dayjs';
+import { Tag } from 'antd';
 
 import { SMART_CARD_CONTENT_WIDTH } from '@/components/common/DecisionInsightCard';
 import type { ProductionOrder } from '@/types/production';
@@ -17,6 +18,7 @@ import { calcOrderProgress } from '@/modules/production/utils/calcOrderProgress'
 import { isSentinelKey, SENTINEL_KEY_MAP } from '@/modules/production/utils/calcOrderProgress';
 import { useOrderPredictHint } from '../hooks/useOrderPredictHint';
 import { analyzeProgress, renderProgressInsight } from '../utils/progressIntelligence';
+import { getPlatformTag } from '@/utils/platform';
 
 
 interface Props { order: ProductionOrder; }
@@ -327,12 +329,19 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
             </span>
           )}
           {order.ecOrderNo && (
-            <span style={{
-              fontSize: 11, color: 'var(--color-primary)', background: '#e6f4ff',
-              padding: '1px 7px', borderRadius: 10, fontWeight: 600,
-            }}>
-              {order.ecPlatform ? `${order.ecPlatform} ` : ''}{order.ecOrderNo}
-            </span>
+            <>
+              {order.ecPlatform && (
+                <Tag color={getPlatformTag(order.ecPlatform).color} style={{ margin: 0, fontSize: 11, padding: '0 6px', lineHeight: '16px', borderRadius: 10 }}>
+                  {getPlatformTag(order.ecPlatform).label}
+                </Tag>
+              )}
+              <span style={{
+                fontSize: 11, color: 'var(--color-primary)', background: '#e6f4ff',
+                padding: '1px 7px', borderRadius: 10, fontWeight: 600,
+              }}>
+                {order.ecOrderNo}
+              </span>
+            </>
           )}
         </div>
       )}
