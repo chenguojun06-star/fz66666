@@ -291,8 +291,21 @@ public class PlatformConnectorController {
      * 获取平台店铺数据统计（今日销量/订单/缺货等）
      */
     @GetMapping("/shop-stats")
-    public Result<Map<String, Object>> getShopStats(@RequestParam String platformCode) {
+    public Result<Map<String, Object>> getShopStats(@RequestParam(required = false) String platformCode) {
         Long tenantId = TenantAssert.requireTenantId();
+        if (platformCode == null || platformCode.isBlank()) {
+            // 未指定平台时返回聚合统计
+            Map<String, Object> stats = new LinkedHashMap<>();
+            stats.put("platformCode", "ALL");
+            stats.put("configured", false);
+            stats.put("totalOrders", 0);
+            stats.put("todayOrders", 0);
+            stats.put("todaySales", "0.00");
+            stats.put("totalSales", "0.00");
+            stats.put("avgOrderValue", "0.00");
+            stats.put("shopCount", 0);
+            return Result.success(stats);
+        }
         EcPlatformConfig config = ecPlatformConfigService.getByTenantAndPlatform(tenantId, platformCode);
 
         Map<String, Object> stats = new LinkedHashMap<>();
