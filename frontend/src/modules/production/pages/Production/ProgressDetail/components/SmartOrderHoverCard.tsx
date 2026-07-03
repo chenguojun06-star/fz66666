@@ -14,6 +14,7 @@ import type { ProductionOrder } from '@/types/production';
 import { useProductionBoardStore } from '@/stores/productionBoardStore';
 import { isDirectCuttingOrder, isOrderTerminal } from '@/utils/api';
 import { calcOrderProgress } from '@/modules/production/utils/calcOrderProgress';
+import { isSentinelKey, SENTINEL_KEY_MAP } from '@/modules/production/utils/calcOrderProgress';
 import { useOrderPredictHint } from '../hooks/useOrderPredictHint';
 import { analyzeProgress, renderProgressInsight } from '../utils/progressIntelligence';
 
@@ -34,9 +35,11 @@ const STAGE_ORDER = ['采购', '裁剪', '二次工艺', '车缝', '尾部', '�
 /**
  * 规范化节点显示名称：将冗长变体名简化为标准名，仅用于 UI 显示层
  * 例："仓库入库" / "成品入库" / "质检入库" / "入仓" → "入库"
+ * 例："__procurement__" → "采购"（内部哨兵键映射）
  */
 const normalizeNodeLabel = (name: string): string => {
   if (!name) return name;
+  if (SENTINEL_KEY_MAP[name]) return SENTINEL_KEY_MAP[name];
   if (name.includes('入库') || name.includes('入仓')) return '入库';
   return name;
 };
@@ -167,13 +170,13 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
   /* 卡住检测（最近扫码3天没动） */
   const stuckNode = useMemo(() => {
     if (isCompleted) return null;
-    const entries = Object.entries(boardTimes);
+    const entries = Object.entries(boardTimes).filter(([k]) => !isSentinelKey(k));
     if (!entries.length) return null;
     const [node, time] = entries.reduce((a, b) =>
       dayjs(a[1]).isAfter(dayjs(b[1])) ? a : b
     );
     const days = now.diff(dayjs(time), 'day');
-    return days >= 3 ? { node, days } : null;
+    return days >= 3 ? { node: normalizeNodeLabel(node), days } : null;
   }, [boardTimes, isCompleted, now]);
 
   /* 交期标签 */

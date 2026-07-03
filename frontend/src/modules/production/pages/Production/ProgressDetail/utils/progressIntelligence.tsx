@@ -1,10 +1,10 @@
 /**
- * 生产进度智能分析 v2.0 (2026-03)
+ * 生产进度智能分析 v2.1 (2026-07)
  *
  *  全动态：不硬编码任何节点名称，完全基于传入的 stages 数组分析
  *   工厂自定义工序（如 烫衣/包装/贴标/水洗 等）同样被分析
  *
- * 1.  瓶颈识别 — 相邻工序进度落差最大的环节
+ * 1.  瓶颈识别 — 相邻工序进度落差最大的环节（上游需≥80%才算真瓶颈）
  * 2.  人员分析 — 各节点人员配置是否合理（已知字段 + 动态推断）
  * 3.  资源建议 — 应该在哪里加人/减人？
  * 4.  跟进要点 — 跟单员最该关注什么？
@@ -14,6 +14,7 @@ import React from 'react';
 import dayjs from 'dayjs';
 import type { ProductionOrder } from '@/types/production';
 import DecisionInsightCard from '@/components/common/DecisionInsightCard';
+import { lookupSentinelValue } from '@/modules/production/utils/calcOrderProgress';
 
 /**
  * 已知阶段→订单字段映射（best-effort 人员查询）
@@ -75,13 +76,17 @@ export function analyzeProgress(
   const allStages = stages;
 
   // ── 1. 瓶颈检测（相邻工序进度落差最大的环节，完全动态） ──
+  //    规则：上游需≥80%才算真瓶颈；上游还在进行中时下游未开始是正常的工序先后
   let maxGap = 0;
   let bnStage = '';
   let bnReason = '';
   for (let i = 1; i < allStages.length; i++) {
     const upstream = allStages[i - 1];
     const current = allStages[i];
-    if (upstream.pct <= 0) continue; // 上游没开始，不算瓶颈
+    // 上游没开始 → 不算瓶颈
+    if (upstream.pct <= 0) continue;
+    // 上游还在早期（<80%）→ 下游没开始是正常的，不算瓶颈
+    if (upstream.pct < 80 && current.pct === 0) continue;
     const gap = upstream.pct - current.pct;
     if (gap > maxGap && gap >= 20) {
       maxGap = gap;
@@ -180,7 +185,7 @@ export function analyzeProgress(
   let stagnantStage = '';
   for (const s of allStages) {
     if (s.pct >= 100 || s.pct === 0) continue;
-    const t = boardTimes[s.name];
+    const t = lookupSentinelValue(boardTimes, s.name);
     if (!t) continue;
     const days = now.diff(dayjs(t), 'day');
     if (days >= 2) {

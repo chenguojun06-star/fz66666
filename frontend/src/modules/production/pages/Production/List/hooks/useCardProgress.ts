@@ -2,6 +2,7 @@ import { useRef, useEffect, useCallback } from 'react';
 import { useProductionBoardStore } from '@/stores';
 import { hasProcurementStage, isOrderFrozenByStatus } from '@/utils/api';
 import type { ProductionOrder } from '@/types/production';
+import { SENTINEL_KEY_MAP } from '@/modules/production/utils/calcOrderProgress';
 
 export function useCardProgress() {
   const clearAllBoardCache = useProductionBoardStore((s) => s.clearAllBoardCache);
@@ -42,6 +43,7 @@ export function useCardProgress() {
       ? ['采购', '裁剪', '二次工艺', '车缝', '尾部', '入库']
       : ['裁剪', '二次工艺', '车缝', '尾部', '入库'];
     const normalizeKey = (k: string) => {
+      if (SENTINEL_KEY_MAP[k]) return SENTINEL_KEY_MAP[k];
       if (k.includes('入库') || k.includes('入仓')) return '入库';
       if (k.includes('质检') || k.includes('品检') || k.includes('验货')) return '尾部';
       if (k.includes('包装') || k.includes('后整') || k.includes('打包')) return '尾部';

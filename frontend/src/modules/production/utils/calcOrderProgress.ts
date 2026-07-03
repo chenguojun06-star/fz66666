@@ -24,6 +24,36 @@ export const clampProgress = (v: number): number =>
 /** 6 个核心工序阶段 — 与 ExternalFactorySmartView#PRODUCTION_STAGES 对齐 */
 const CORE_STAGES = ['采购', '裁剪', '二次工艺', '车缝', '尾部', '入库'];
 
+/** 内部哨兵键 → 标准中文名映射（__xxx__ 格式的内部键不能直接显示给用户） */
+export const SENTINEL_KEY_MAP: Record<string, string> = {
+  '__procurement__': '采购',
+};
+
+/** 判断是否为内部哨兵键（__xxx__ 格式） */
+export function isSentinelKey(k: string): boolean {
+  return typeof k === 'string' && k.startsWith('__') && k.endsWith('__');
+}
+
+/** 中文名 → 可能的哨兵键（反向查找，用于 boardTimes 查询） */
+const REVERSE_SENTINEL_MAP: Record<string, string[]> = {
+  '采购': ['__procurement__'],
+};
+
+/** 从 boardTimes/boardStats 中查某阶段的值（先试原名，再试哨兵键变体） */
+export function lookupSentinelValue<T>(
+  map: Record<string, T>,
+  stageName: string,
+): T | undefined {
+  if (map[stageName] !== undefined) return map[stageName];
+  const aliases = REVERSE_SENTINEL_MAP[stageName];
+  if (aliases) {
+    for (const a of aliases) {
+      if (map[a] !== undefined) return map[a];
+    }
+  }
+  return undefined;
+}
+
 /** 子工序 / 别名 → 核心阶段名映射 */
 const toCoreStage = (k: string): string => {
   // 子工序精确映射
