@@ -174,7 +174,7 @@ export function useCuttingTasks({ message, isEntryPage }: UseCuttingTasksOptions
   const fetchTasks = async () => {
     setTaskLoading(true);
     try {
-      const res = await api.get<{ code: number; message: string; data: { records: CuttingTask[]; total: number } }>('/production/cutting-task/list', { params: taskQuery });
+      const res = await api.get<{ code: number; message: string; data: { records: CuttingTask[]; total: number } }>('/production/cutting-task', { params: taskQuery });
       if (res.code === 200) {
         setTaskList(res.data.records || []);
         setTaskTotal(res.data.total || 0);

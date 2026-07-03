@@ -110,7 +110,7 @@ const CuttingManagement: React.FC = () => {
     const on = String(orderNo || '').trim();
     if (!on) return null;
     try {
-      const res = await api.get<{ code: number; data: { records: CuttingTask[] } }>('/production/cutting-task/list', {
+      const res = await api.get<{ code: number; data: { records: CuttingTask[] } }>('/production/cutting-task', {
         params: { page: 1, pageSize: 10, status: '', orderNo: on, styleNo: '' },
       });
       if (res.code !== 200) return null;
