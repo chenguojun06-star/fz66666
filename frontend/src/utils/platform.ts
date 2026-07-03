@@ -52,8 +52,9 @@ export function normalizePlatformCode(code: string | undefined | null): string {
 
 /** 获取平台标签（中文 + 颜色），兼容两套编码 */
 export function getPlatformTag(code: string | undefined | null): PlatformTag {
+  if (!code) return { label: '未指定', color: '#8c8c8c' };
   const normalized = normalizePlatformCode(code);
-  return SHORT_MAP[normalized] || { label: code || '未知', color: '#8c8c8c' };
+  return SHORT_MAP[normalized] || { label: '未知平台', color: '#8c8c8c' };
 }
 
 /** 获取平台中文名 */

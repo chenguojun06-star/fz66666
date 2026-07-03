@@ -91,6 +91,8 @@ Page({
   onShow: function () {
     var app = getApp();
     if (app && typeof app.requireAuth === 'function' && !app.requireAuth()) return;
+    // 静默刷新数据（从子页面返回时数据可能已过期），仅在已加载过的情况下刷新
+    if (this.data.activePlatform !== undefined && !this.data.loading) this._resetAndLoad();
   },
 
   onPullDownRefresh: function () {
@@ -207,7 +209,25 @@ Page({
     }).catch(function (err) {
       console.warn('[sales-order-list] 加载失败:', err && err.errMsg || err);
       that.setData({ loading: false });
-      if (isReset) toast.error('加载失败，请下拉刷新');
+      if (isReset) {
+        toast.error('加载失败，请下拉刷新');
+      } else {
+        // 加载更多失败时也要给用户反馈，并保留 hasMore 让用户可重试
+        toast.info('加载更多失败，请重试');
+        that.setData({ hasMore: true });
+      }
+    });
+  },
+
+  // 点击订单卡片：若有已关联的生产订单则跳转生产订单详情
+  onOrderTap: function (e) {
+    var idx = e.currentTarget.dataset.idx;
+    var item = this.data.list[idx];
+    if (!item || !item.productionOrderNo) {
+      return; // 未排产订单不跳转
+    }
+    wx.navigateTo({
+      url: '/pages/dashboard/order-detail/index?orderNo=' + encodeURIComponent(item.productionOrderNo),
     });
   },
 });

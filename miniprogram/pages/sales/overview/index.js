@@ -68,6 +68,8 @@ Page({
   onShow: function () {
     const app = getApp();
     if (app && typeof app.requireAuth === 'function' && !app.requireAuth()) return;
+    // 静默刷新数据（从子页面返回时数据可能已过期）
+    if (this.data.startDate) this._loadStats();
   },
 
   onPullDownRefresh: function () {

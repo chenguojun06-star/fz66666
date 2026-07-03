@@ -35,12 +35,17 @@ const EcSalesRevenue: React.FC = () => {
     pageSize: readPageSize(20),
   });
 
+  const [summaryLoading, setSummaryLoading] = useState(false);
+
   const fetchSummary = useCallback(async () => {
+    setSummaryLoading(true);
     try {
       const data = await ecSalesRevenueApi.summary({ platform: filters.platform });
       setSummary(data as unknown as EcRevenueSummary);
     } catch {
       message.warning('汇总数据加载失败，金额可能不准确');
+    } finally {
+      setSummaryLoading(false);
     }
   }, [filters.platform]);
 
@@ -211,7 +216,7 @@ const EcSalesRevenue: React.FC = () => {
         {/* 汇总卡片 */}
         <Row gutter={16}>
           <Col span={8}>
-            <Card>
+            <Card loading={summaryLoading && !summary}>
               <Statistic
                 title={<><ClockCircleOutlined style={{ color: 'orange', marginRight: 4 }} />待核账</>}
                 value={fmtAmt(summary?.pendingAmount)}
@@ -221,7 +226,7 @@ const EcSalesRevenue: React.FC = () => {
             </Card>
           </Col>
           <Col span={8}>
-            <Card>
+            <Card loading={summaryLoading && !summary}>
               <Statistic
                 title={<><CheckCircleOutlined style={{ color: 'var(--color-primary)', marginRight: 4 }} />已核账</>}
                 value={fmtAmt(summary?.confirmedAmount)}
@@ -231,7 +236,7 @@ const EcSalesRevenue: React.FC = () => {
             </Card>
           </Col>
           <Col span={8}>
-            <Card>
+            <Card loading={summaryLoading && !summary}>
               <Statistic
                 title={<><DollarOutlined style={{ color: 'var(--color-success)', marginRight: 4 }} />已入账净收入</>}
                 value={fmtAmt(summary?.netIncome)}
@@ -243,7 +248,9 @@ const EcSalesRevenue: React.FC = () => {
         </Row>
 
         {/* 按平台分组统计 */}
-        {summary?.platformBreakdown && summary.platformBreakdown.length > 0 && (
+        {summaryLoading && !summary ? (
+          <Card title="平台销售分布" size="small"><div style={{ textAlign: 'center', padding: 24, color: '#888' }}>加载中...</div></Card>
+        ) : summary?.platformBreakdown && summary.platformBreakdown.length > 0 ? (
           <Card title="平台销售分布" size="small">
             <Row gutter={[8, 8]}>
               {summary.platformBreakdown.map((item: PlatformBreakdownItem) => {
@@ -254,7 +261,7 @@ const EcSalesRevenue: React.FC = () => {
                       <Space direction="vertical" size={2} style={{ width: '100%' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <Tag color={t.color}>{t.label}</Tag>
-                          <Text type="secondary" style={{ fontSize: 12 }}>{item.orderCount}单</Text>
+                          <Text type="secondary" style={{ fontSize: 12 }}>{item.orderCount.toLocaleString()}单</Text>
                         </div>
                         <div>
                           <Text style={{ color: 'var(--color-success)', fontWeight: 600, fontSize: 16 }}>
@@ -262,7 +269,7 @@ const EcSalesRevenue: React.FC = () => {
                           </Text>
                         </div>
                         <div style={{ fontSize: 12, color: '#888' }}>
-                          {item.totalQuantity}件 · 运费¥{formatMoney(item.totalFreight)} · 净¥{formatMoney(item.netRevenue)}
+                          {item.totalQuantity.toLocaleString()}件 · 运费¥{formatMoney(item.totalFreight)} · 净¥{formatMoney(item.netRevenue)}
                         </div>
                       </Space>
                     </Card>
@@ -271,7 +278,9 @@ const EcSalesRevenue: React.FC = () => {
               })}
             </Row>
           </Card>
-        )}
+        ) : summary && !summaryLoading ? (
+          <Card title="平台销售分布" size="small"><div style={{ textAlign: 'center', padding: 24, color: '#888' }}>暂无平台销售数据</div></Card>
+        ) : null}
 
         {/* 筛选栏 */}
         <Card>
@@ -306,7 +315,7 @@ const EcSalesRevenue: React.FC = () => {
               allowClear
             />
             <Tooltip title="刷新">
-              <Button icon={<ReloadOutlined />} onClick={() => { setFilters((prev) => ({ ...prev, page: 1 })); }} />
+              <Button icon={<ReloadOutlined />} onClick={() => { setFilters((prev) => ({ ...prev, page: 1 })); fetchSummary(); }} />
             </Tooltip>
           </Space>
         </Card>

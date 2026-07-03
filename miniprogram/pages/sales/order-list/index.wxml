@@ -29,7 +29,7 @@
 
   <!-- 订单列表 -->
   <view class="order-list" wx:if="{{list.length > 0}}">
-    <view class="order-card" wx:for="{{list}}" wx:key="id">
+    <view class="order-card" wx:for="{{list}}" wx:key="id" data-idx="{{index}}" bindtap="onOrderTap">
       <!-- 第一行：平台 + 状态 -->
       <view class="oc-head">
         <view class="oc-head-left">
@@ -39,13 +39,13 @@
         <text class="oc-status {{item.statusCls}}">{{item.status}}</text>
       </view>
       <!-- 平台单号（优先显示） -->
-      <view class="oc-no" wx:if="{{item.platformOrderNo}}" data-no="{{item.platformOrderNo}}" bindtap="onCopyOrderNo">
+      <view class="oc-no" wx:if="{{item.platformOrderNo}}" data-no="{{item.platformOrderNo}}" catchtap="onCopyOrderNo">
         <text class="oc-no-label">平台单号</text>
         <text class="oc-no-val">{{item.platformOrderNo}}</text>
         <text class="oc-copy">复制</text>
       </view>
       <!-- 内部单号 -->
-      <view class="oc-no oc-no--sub" wx:if="{{item.orderNo}}" data-no="{{item.orderNo}}" bindtap="onCopyOrderNo">
+      <view class="oc-no oc-no--sub" wx:if="{{item.orderNo}}" data-no="{{item.orderNo}}" catchtap="onCopyOrderNo">
         <text class="oc-no-label">内部单号</text>
         <text class="oc-no-val">{{item.orderNo}}</text>
         <text class="oc-copy">复制</text>
