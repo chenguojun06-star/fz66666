@@ -31,6 +31,8 @@ export interface WarehousingStats {
   pendingPackagingQuantity: number;
   pendingWarehouseBundles: number;
   pendingWarehouseQuantity: number;
+  unqualifiedCount: number;
+  unqualifiedQuantity: number;
 }
 
 const defaultStats: WarehousingStats = {
@@ -46,10 +48,12 @@ const defaultStats: WarehousingStats = {
   pendingPackagingQuantity: 0,
   pendingWarehouseBundles: 0,
   pendingWarehouseQuantity: 0,
+  unqualifiedCount: 0,
+  unqualifiedQuantity: 0,
 };
 
 // 状态筛选类型
-export type StatusFilter = 'all' | 'pendingQc' | 'pendingPackaging' | 'pendingWarehouse' | 'completed';
+export type StatusFilter = 'all' | 'pendingQc' | 'pendingPackaging' | 'pendingWarehouse' | 'unqualified' | 'completed';
 
 // 待处理菲号行数据
 export interface PendingBundleRow {
@@ -193,7 +197,7 @@ export const useProductWarehousing = () => {
   // 切换状态筛选
   const handleStatusFilterChange = useCallback((newFilter: StatusFilter) => {
     setStatusFilter(newFilter);
-    if (newFilter === 'all' || newFilter === 'completed') {
+    if (newFilter === 'all' || newFilter === 'completed' || newFilter === 'unqualified') {
       setPendingBundles([]);
       fetchWarehousingList();
     } else {

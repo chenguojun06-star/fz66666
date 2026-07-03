@@ -120,6 +120,7 @@ const WarehousingList: React.FC<WarehousingListProps> = ({ hook }) => {
     pendingQc: '待质检',
     pendingPackaging: '待包装',
     pendingWarehouse: '待入库',
+    unqualified: '不合格',
     completed: '已完成',
   };
 
@@ -146,15 +147,6 @@ const WarehousingList: React.FC<WarehousingListProps> = ({ hook }) => {
             activeKey={statusFilter}
             cards={[
               {
-                key: 'completed',
-                items: [
-                  { label: '完成总数', value: warehousingStats.totalOrders, unit: '个订单', color: 'var(--color-primary)' },
-                  { label: '总数量', value: warehousingStats.totalQuantity, color: 'var(--color-success)' },
-                ],
-                onClick: () => handleStatusFilterChange(statusFilter === 'completed' ? 'all' : 'completed'),
-                activeColor: 'var(--color-success)',
-              },
-              {
                 key: 'pendingQc',
                 items: { label: '待质检', value: warehousingStats.pendingQcBundles, unit: '个菲号', color: 'var(--color-warning)' },
                 onClick: () => handleStatusFilterChange(statusFilter === 'pendingQc' ? 'all' : 'pendingQc'),
@@ -171,6 +163,20 @@ const WarehousingList: React.FC<WarehousingListProps> = ({ hook }) => {
                 items: { label: '待入库', value: warehousingStats.pendingWarehouseBundles, unit: '个菲号', color: 'var(--color-primary)' },
                 onClick: () => handleStatusFilterChange(statusFilter === 'pendingWarehouse' ? 'all' : 'pendingWarehouse'),
                 activeColor: 'var(--color-primary)',
+              },
+              {
+                key: 'unqualified',
+                items: { label: '不合格', value: warehousingStats.unqualifiedCount, unit: '条', color: 'var(--color-danger)' },
+                onClick: () => handleStatusFilterChange(statusFilter === 'unqualified' ? 'all' : 'unqualified'),
+                activeColor: 'var(--color-danger)',
+              },
+              {
+                key: 'completed',
+                items: [
+                  { label: '已完成', value: warehousingStats.totalOrders, unit: '个订单', color: 'var(--color-success)' },
+                ],
+                onClick: () => handleStatusFilterChange(statusFilter === 'completed' ? 'all' : 'completed'),
+                activeColor: 'var(--color-success)',
               },
             ]}
             extraRight={
@@ -202,11 +208,11 @@ const WarehousingList: React.FC<WarehousingListProps> = ({ hook }) => {
           <SearchForm
             queryParams={queryParams}
             setQueryParams={setQueryParams}
-            onSearch={statusFilter === 'all' || statusFilter === 'completed' ? fetchWarehousingList : () => {}}
+            onSearch={statusFilter === 'all' || statusFilter === 'completed' || statusFilter === 'unqualified' ? fetchWarehousingList : () => {}}
           />
 
           {/* 根据筛选状态显示不同内容 */}
-          {statusFilter === 'all' || statusFilter === 'completed' ? (
+          {statusFilter === 'all' || statusFilter === 'completed' || statusFilter === 'unqualified' ? (
             <WarehousingTable
               loading={loading}
               dataSource={sortedWarehousingList}
