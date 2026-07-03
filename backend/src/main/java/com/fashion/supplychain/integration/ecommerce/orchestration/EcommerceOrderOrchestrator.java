@@ -160,7 +160,18 @@ public class EcommerceOrderOrchestrator {
         wrapper.eq(EcommerceOrder::getTenantId, tenantId);
 
         String platform = (String) params.get("platform");
-        if (StringUtils.hasText(platform)) wrapper.eq(EcommerceOrder::getSourcePlatformCode, platform);
+        if (StringUtils.hasText(platform)) {
+            // 兼容短码（TB/TM/JD等）和全码（TAOBAO/TMALL等）
+            String fullCode = expandPlatformCode(platform);
+            if (fullCode != null) {
+                wrapper.and(w -> w.eq(EcommerceOrder::getSourcePlatformCode, fullCode)
+                        .or().eq(EcommerceOrder::getSourcePlatformCode, platform)
+                        .or().eq(EcommerceOrder::getPlatform, platform));
+            } else {
+                wrapper.and(w -> w.eq(EcommerceOrder::getSourcePlatformCode, platform)
+                        .or().eq(EcommerceOrder::getPlatform, platform));
+            }
+        }
 
         Object status = params.get("status");
         if (status != null) wrapper.eq(EcommerceOrder::getStatus, parseIntSafe(status, -1));
@@ -296,6 +307,24 @@ public class EcommerceOrderOrchestrator {
             case "SHEIN" -> "SY";
             case "JST" -> "JST";
             default -> code;
+        };
+    }
+
+    /** 短码 → 全码（用于 platform 筛选兼容） */
+    private String expandPlatformCode(String shortCode) {
+        if (shortCode == null) return null;
+        return switch (shortCode.toUpperCase()) {
+            case "TB" -> "TAOBAO";
+            case "TM" -> "TMALL";
+            case "JD" -> "JD";
+            case "DY" -> "DOUYIN";
+            case "PDD" -> "PINDUODUO";
+            case "XHS" -> "XIAOHONGSHU";
+            case "WC" -> "WECHAT_SHOP";
+            case "SFY" -> "SHOPIFY";
+            case "SY" -> "SHEIN";
+            case "JST" -> "JST";
+            default -> null;
         };
     }
 

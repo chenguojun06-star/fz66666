@@ -6,6 +6,28 @@
   background: var(--color-bg-page);
 }
 
+/* ============ 搜索框 ============ */
+.search-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--color-bg-card);
+  border-radius: var(--radius-lg);
+  padding: 8px 12px;
+  margin: 12px 0 4px;
+  border: 1px solid var(--color-border-light);
+}
+.search-input {
+  flex: 1;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+}
+.search-clear {
+  font-size: 16px;
+  color: var(--color-text-tertiary);
+  padding: 0 4px;
+}
+
 /* ============ 平台筛选 Tab ============ */
 .tab-scroll {
   white-space: nowrap;
@@ -69,10 +91,22 @@
   padding-bottom: 8px;
   border-bottom: 1px solid var(--color-divider);
 }
+.oc-head-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
 .oc-platform {
   font-size: 14px;
   font-weight: 600;
   color: var(--color-text-primary);
+}
+.oc-prod-no {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  background: var(--color-success-bg);
+  color: var(--color-success);
 }
 .oc-status {
   font-size: 11px;
@@ -131,6 +165,24 @@
   color: var(--color-primary);
   font-weight: 600;
   font-size: 15px;
+}
+.oc-product {
+  color: var(--color-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+.oc-no--sub {
+  padding-top: 0;
+}
+.oc-no--sub .oc-no-val {
+  font-weight: 400;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+}
+.oc-no--sub .oc-no-label {
+  color: var(--color-text-tertiary);
 }
 .oc-time {
   color: var(--color-text-secondary);

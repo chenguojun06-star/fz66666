@@ -16,17 +16,11 @@ const ecommerce = {
   },
 
   /**
-   * 销售统计汇总
-   * @param {Object} params { startDate, endDate, platform?, ... }
+   * 销售统计汇总（后端为 POST + RequestBody）
+   * @param {Object} params { startDate, endDate, platform?, status? }
    */
   getSalesStats: function (params) {
-    const p = params || {};
-    const qs = [];
-    if (p.startDate) qs.push('startDate=' + encodeURIComponent(p.startDate));
-    if (p.endDate) qs.push('endDate=' + encodeURIComponent(p.endDate));
-    if (p.platform) qs.push('platform=' + encodeURIComponent(p.platform));
-    const url = '/api/finance/ec-revenue/summary' + (qs.length ? '?' + qs.join('&') : '');
-    return ok(url, 'GET', {});
+    return ok('/api/finance/ec-revenue/summary', 'POST', params || {});
   },
 
   /**

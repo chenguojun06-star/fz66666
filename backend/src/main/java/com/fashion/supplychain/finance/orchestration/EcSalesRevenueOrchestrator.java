@@ -197,6 +197,11 @@ public class EcSalesRevenueOrchestrator {
         if (StringUtils.hasText(status)) wrapper.eq(EcSalesRevenue::getStatus, status);
         else wrapper.in(EcSalesRevenue::getStatus, "confirmed", "reconciled");
 
+        String startDate = (String) params.get("startDate");
+        String endDate = (String) params.get("endDate");
+        if (StringUtils.hasText(startDate)) wrapper.ge(EcSalesRevenue::getShipTime, startDate + " 00:00:00");
+        if (StringUtils.hasText(endDate)) wrapper.le(EcSalesRevenue::getShipTime, endDate + " 23:59:59");
+
         wrapper.last("LIMIT 5000");
         java.util.List<EcSalesRevenue> all = ecSalesRevenueService.list(wrapper);
 

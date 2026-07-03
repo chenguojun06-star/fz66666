@@ -1,6 +1,14 @@
 <!-- 平台订单列表 -->
 
 <view class="page">
+  <!-- 搜索框 -->
+  <view class="search-bar">
+    <icon type="search" size="14" color="#999" />
+    <input class="search-input" placeholder="搜索订单号/买家名" value="{{keyword}}"
+           confirm-type="search" bindinput="onSearchInput" bindconfirm="onSearchConfirm" />
+    <text wx:if="{{keyword}}" class="search-clear" bindtap="onClearKeyword">✕</text>
+  </view>
+
   <!-- 平台筛选 Tab（横向滚动） -->
   <scroll-view class="tab-scroll" scroll-x enhanced show-scrollbar="{{false}}">
     <view class="tab-pill {{activePlatform === item.key ? 'tab-pill--on' : ''}}"
@@ -11,34 +19,58 @@
   </scroll-view>
 
   <!-- 状态筛选 -->
-  <view class="status-bar">
+  <scroll-view class="tab-scroll status-scroll" scroll-x enhanced show-scrollbar="{{false}}">
     <view class="status-pill {{activeStatus === item.key ? 'status-pill--on' : ''}}"
           wx:for="{{statusTabs}}" wx:key="key"
           data-key="{{item.key}}" bindtap="onStatusTap">
       <text>{{item.label}}</text>
     </view>
-  </view>
+  </scroll-view>
 
   <!-- 订单列表 -->
   <view class="order-list" wx:if="{{list.length > 0}}">
     <view class="order-card" wx:for="{{list}}" wx:key="id">
+      <!-- 第一行：平台 + 状态 -->
       <view class="oc-head">
-        <text class="oc-platform">{{item.platformName}}</text>
+        <view class="oc-head-left">
+          <text class="oc-platform">{{item.platformName}}</text>
+          <text class="oc-prod-no" wx:if="{{item.productionOrderNo}}">已排产</text>
+        </view>
         <text class="oc-status {{item.statusCls}}">{{item.status}}</text>
       </view>
-      <view class="oc-no" data-no="{{item.orderNo}}" bindtap="onCopyOrderNo">
-        <text class="oc-no-label">订单号</text>
+      <!-- 平台单号（优先显示） -->
+      <view class="oc-no" wx:if="{{item.platformOrderNo}}" data-no="{{item.platformOrderNo}}" bindtap="onCopyOrderNo">
+        <text class="oc-no-label">平台单号</text>
+        <text class="oc-no-val">{{item.platformOrderNo}}</text>
+        <text class="oc-copy">复制</text>
+      </view>
+      <!-- 内部单号 -->
+      <view class="oc-no oc-no--sub" wx:if="{{item.orderNo}}" data-no="{{item.orderNo}}" bindtap="onCopyOrderNo">
+        <text class="oc-no-label">内部单号</text>
         <text class="oc-no-val">{{item.orderNo}}</text>
         <text class="oc-copy">复制</text>
       </view>
+      <!-- 商品信息 -->
+      <view class="oc-row" wx:if="{{item.productText}}">
+        <text class="oc-label">商品</text>
+        <text class="oc-val oc-product">{{item.productText}}</text>
+      </view>
+      <!-- 买家 -->
       <view class="oc-row">
         <text class="oc-label">买家</text>
         <text class="oc-val">{{item.buyerName}}</text>
       </view>
+      <!-- 金额 -->
       <view class="oc-row">
-        <text class="oc-label">金额</text>
+        <text class="oc-label">实付</text>
         <text class="oc-val oc-amount">¥{{item.amount}}</text>
       </view>
+      <!-- 物流 -->
+      <view class="oc-row" wx:if="{{item.trackingNo}}">
+        <text class="oc-label">物流</text>
+        <text class="oc-val">{{item.expressCompany}} {{item.trackingNo}}</text>
+      </view>
+      <!-- 下单时间 -->
       <view class="oc-row" wx:if="{{item.orderTime}}">
         <text class="oc-label">下单</text>
         <text class="oc-val oc-time">{{item.orderTime}}</text>
@@ -48,7 +80,7 @@
 
   <!-- 加载更多 / 没有更多 -->
   <view wx:if="{{list.length > 0 && hasMore}}" class="load-more" bindtap="onReachBottom">
-    <text>{{loadingMore ? '加载中...' : '加载更多'}}</text>
+    <text>{{loadingMore ? '加载中...' : '上拉加载更多'}}</text>
   </view>
   <view wx:if="{{list.length > 0 && !hasMore}}" class="no-more">
     <text>没有更多了</text>

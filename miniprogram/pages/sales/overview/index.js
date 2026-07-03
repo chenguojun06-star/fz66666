@@ -6,22 +6,16 @@
  *  - 按平台分组列表：平台名 / 订单量 / 销售额 / 净收入
  *
  *  数据来源：api.ecommerce.getSalesStats({ startDate, endDate })
+ *  后端返回字段：orderCount, totalPayAmount, totalFreight, netRevenue, platformBreakdown
  */
 const api = require('../../../utils/api');
 const { toast } = require('../../../utils/uiHelper');
 
-/* 平台代码 → 中文名称映射（与订单详情页保持一致） */
+/* 平台代码 → 中文名称映射 */
 const PLATFORM_NAMES = {
-  TB: '淘宝',
-  TM: '天猫',
-  JD: '京东',
-  PDD: '拼多多',
-  DY: '抖音',
-  XHS: '小红书',
-  WC: '微信小店',
-  SFY: 'Shopify',
-  SY: '希音',
-  JST: '聚水潭',
+  TB: '淘宝', TM: '天猫', JD: '京东', PDD: '拼多多',
+  DY: '抖音', XHS: '小红书', WC: '微信小店',
+  SFY: 'Shopify', SY: '希音', JST: '聚水潭',
 };
 
 /* 日期范围预设 */
@@ -35,23 +29,16 @@ function pad2(n) { return n < 10 ? '0' + n : '' + n; }
 function fmtDate(d) {
   return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
 }
-
 function getRange(key) {
   const now = new Date();
   if (key === 'thisMonth') {
-    const start = new Date(now.getFullYear(), now.getMonth(), 1);
-    return { startDate: fmtDate(start), endDate: fmtDate(now) };
+    return { startDate: fmtDate(new Date(now.getFullYear(), now.getMonth(), 1)), endDate: fmtDate(now) };
   }
   if (key === 'lastMonth') {
-    const start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const end = new Date(now.getFullYear(), now.getMonth(), 0);
-    return { startDate: fmtDate(start), endDate: fmtDate(end) };
+    return { startDate: fmtDate(new Date(now.getFullYear(), now.getMonth() - 1, 1)), endDate: fmtDate(new Date(now.getFullYear(), now.getMonth(), 0)) };
   }
-  // last30
-  const start = new Date(now.getTime() - 29 * 86400000);
-  return { startDate: fmtDate(start), endDate: fmtDate(now) };
+  return { startDate: fmtDate(new Date(now.getTime() - 29 * 86400000)), endDate: fmtDate(now) };
 }
-
 function fmtMoney(v) {
   const n = Number(v) || 0;
   if (n >= 10000) return (n / 10000).toFixed(2) + '万';
@@ -65,12 +52,7 @@ Page({
     activeRange: 'thisMonth',
     startDate: '',
     endDate: '',
-    summary: {
-      totalSales: 0,
-      totalOrders: 0,
-      totalShipping: 0,
-      netRevenue: 0,
-    },
+    summary: { totalSales: 0, totalOrders: 0, totalShipping: 0, netRevenue: 0 },
     platforms: [],
     platformNames: PLATFORM_NAMES,
   },
@@ -93,7 +75,6 @@ Page({
     this._loadStats().finally(function () { wx.stopPullDownRefresh(); });
   },
 
-  /* ======== 切换日期范围 ======== */
   onRangeTap: function (e) {
     const key = e.currentTarget.dataset.key;
     if (!key || key === this.data.activeRange) return;
@@ -102,7 +83,6 @@ Page({
     this._loadStats();
   },
 
-  /* ======== 跳转到平台订单列表 ======== */
   onViewOrders: function () {
     wx.navigateTo({ url: '/pages/sales/order-list/index' });
   },
@@ -113,7 +93,6 @@ Page({
     wx.navigateTo({ url: url });
   },
 
-  /* ======== 加载销售统计 ======== */
   _loadStats: function () {
     const that = this;
     this.setData({ loading: true });
@@ -122,32 +101,26 @@ Page({
       endDate: this.data.endDate,
     }).then(function (res) {
       const data = res || {};
-      // 兼容多种返回结构：summary 节点 + platforms 数组，或扁平字段
-      const summary = data.summary || {
-        totalSales: data.totalSales || data.totalAmount || 0,
-        totalOrders: data.totalOrders || data.orderCount || 0,
-        totalShipping: data.totalShipping || data.shippingFee || 0,
-        netRevenue: data.netRevenue || data.netIncome || 0,
-      };
-      let platforms = data.platforms || data.platformStats || data.list || [];
+      // 后端返回扁平字段：orderCount, totalPayAmount, totalFreight, netRevenue, platformBreakdown
+      var platforms = data.platformBreakdown || data.platforms || [];
       if (!Array.isArray(platforms)) platforms = [];
       platforms = platforms.map(function (p) {
-        const code = p.platform || p.platformCode || '';
+        var code = p.platform || '';
         return {
           platform: code,
-          platformName: p.platformName || PLATFORM_NAMES[code] || code || '未知平台',
-          orderCount: Number(p.orderCount || p.orders || 0),
-          salesAmount: Number(p.salesAmount || p.sales || p.amount || 0),
-          netRevenue: Number(p.netRevenue || p.netIncome || 0),
+          platformName: PLATFORM_NAMES[code] || code || '未知平台',
+          orderCount: Number(p.orderCount || 0),
+          salesAmount: Number(p.totalPayAmount || 0),
+          netRevenue: Number(p.netRevenue || 0),
         };
       });
       that.setData({
         loading: false,
         summary: {
-          totalSales: Number(summary.totalSales || 0),
-          totalOrders: Number(summary.totalOrders || 0),
-          totalShipping: Number(summary.totalShipping || 0),
-          netRevenue: Number(summary.netRevenue || 0),
+          totalSales: Number(data.totalPayAmount || 0),
+          totalOrders: Number(data.orderCount || 0),
+          totalShipping: Number(data.totalFreight || 0),
+          netRevenue: Number(data.netRevenue || 0),
         },
         platforms: platforms,
       });

@@ -2,66 +2,63 @@
  * 平台订单列表页
  *
  *  - 顶部平台筛选 Tab：全部 / 淘宝 / 抖音 / 京东 / 拼多多 / 希音 等
- *  - 状态筛选：全部 / 待发货 / 已发货 / 已完成
- *  - 订单列表：平台标签 + 订单号 + 买家名 + 金额 + 状态 + 下单时间
+ *  - 状态筛选：全部 / 待付款 / 待发货 / 已发货 / 已完成 / 已取消
+ *  - 搜索框：按订单号/买家名搜索
+ *  - 订单列表：平台标签 + 平台单号 + 内部单号 + 买家 + 商品名+数量 + 实付金额 + 状态 + 下单时间
  *  - 分页加载
  *
- *  数据来源：api.ecommerce.listOrders({ platform, status, page, pageSize })
+ *  后端 status 为 Integer：0=待付款 1=待发货 2=已发货 3=已完成 4=已取消 5=退款中
+ *  后端 platform 筛选兼容短码（TB）和全码（TAOBAO）
  */
 const api = require('../../../utils/api');
 const { toast } = require('../../../utils/uiHelper');
 
 const PLATFORM_NAMES = {
-  TB: '淘宝',
-  TM: '天猫',
-  JD: '京东',
-  PDD: '拼多多',
-  DY: '抖音',
-  XHS: '小红书',
-  WC: '微信小店',
-  SFY: 'Shopify',
-  SY: '希音',
-  JST: '聚水潭',
+  TB: '淘宝', TM: '天猫', JD: '京东', PDD: '拼多多',
+  DY: '抖音', XHS: '小红书', WC: '微信小店',
+  SFY: 'Shopify', SY: '希音', JST: '聚水潭',
 };
 
 const PLATFORM_TABS = [
-  { key: '',        label: '全部' },
-  { key: 'TB',      label: '淘宝' },
-  { key: 'TM',      label: '天猫' },
-  { key: 'DY',      label: '抖音' },
-  { key: 'JD',      label: '京东' },
-  { key: 'PDD',     label: '拼多多' },
-  { key: 'XHS',     label: '小红书' },
-  { key: 'SY',      label: '希音' },
-  { key: 'WC',      label: '微信小店' },
+  { key: '',   label: '全部' },
+  { key: 'TB', label: '淘宝' },
+  { key: 'TM', label: '天猫' },
+  { key: 'DY', label: '抖音' },
+  { key: 'JD', label: '京东' },
+  { key: 'PDD', label: '拼多多' },
+  { key: 'XHS', label: '小红书' },
+  { key: 'SY', label: '希音' },
+  { key: 'WC', label: '微信小店' },
 ];
 
-const STATUS_TABS = [
-  { key: '',           label: '全部' },
-  { key: 'pending',    label: '待发货' },
-  { key: 'shipped',    label: '已发货' },
-  { key: 'completed',  label: '已完成' },
+/* status 后端为 Integer，这里 key 用数字字符串 */
+var STATUS_TABS = [
+  { key: '',  label: '全部' },
+  { key: '1', label: '待发货' },
+  { key: '2', label: '已发货' },
+  { key: '3', label: '已完成' },
+  { key: '0', label: '待付款' },
+  { key: '4', label: '已取消' },
 ];
 
-const STATUS_MAP = {
-  pending:   { text: '待发货', cls: 'order-tag--warning' },
-  paid:      { text: '已付款', cls: 'order-tag--info' },
-  shipped:   { text: '已发货', cls: 'order-tag--info' },
-  completed: { text: '已完成', cls: 'order-tag--success' },
-  closed:    { text: '已关闭', cls: 'order-tag--default' },
-  cancelled: { text: '已取消', cls: 'order-tag--default' },
-  refunded:  { text: '已退款', cls: 'order-tag--default' },
+var STATUS_MAP = {
+  0: { text: '待付款', cls: 'order-tag--warning' },
+  1: { text: '待发货', cls: 'order-tag--warning' },
+  2: { text: '已发货', cls: 'order-tag--info' },
+  3: { text: '已完成', cls: 'order-tag--success' },
+  4: { text: '已取消', cls: 'order-tag--default' },
+  5: { text: '退款中', cls: 'order-tag--default' },
 };
 
 function fmtTime(val) {
   if (!val) return '';
-  const s = String(val);
+  var s = String(val).replace('T', ' ');
   if (s.length > 16) return s.substring(0, 16);
   return s;
 }
 
 function fmtMoney(v) {
-  const n = Number(v) || 0;
+  var n = Number(v) || 0;
   return n.toFixed(2);
 }
 
@@ -72,6 +69,7 @@ Page({
     statusTabs: STATUS_TABS,
     activePlatform: '',
     activeStatus: '',
+    keyword: '',
     list: [],
     page: 1,
     pageSize: 20,
@@ -81,25 +79,22 @@ Page({
   },
 
   onLoad: function (options) {
-    const app = getApp();
+    var app = getApp();
     if (app && typeof app.requireAuth === 'function' && !app.requireAuth()) return;
-    // 支持从概览页带 platform 跳转
     if (options && options.platform) {
-      const p = decodeURIComponent(options.platform);
-      // 校验是否在 TABS 内
-      const exists = PLATFORM_TABS.some(function (t) { return t.key === p; });
-      if (exists) this.setData({ activePlatform: p });
+      var p = decodeURIComponent(options.platform);
+      this.setData({ activePlatform: p });
     }
     this._resetAndLoad();
   },
 
   onShow: function () {
-    const app = getApp();
+    var app = getApp();
     if (app && typeof app.requireAuth === 'function' && !app.requireAuth()) return;
   },
 
   onPullDownRefresh: function () {
-    const that = this;
+    var that = this;
     this._resetAndLoad().finally(function () { wx.stopPullDownRefresh(); });
   },
 
@@ -107,30 +102,39 @@ Page({
     if (this.data.hasMore && !this.data.loadingMore) this._loadMore();
   },
 
-  /* ======== 切换平台 ======== */
   onPlatformTap: function (e) {
-    const key = e.currentTarget.dataset.key;
+    var key = e.currentTarget.dataset.key;
     if (key === this.data.activePlatform) return;
     this.setData({ activePlatform: key });
     this._resetAndLoad();
   },
 
-  /* ======== 切换状态 ======== */
   onStatusTap: function (e) {
-    const key = e.currentTarget.dataset.key;
+    var key = e.currentTarget.dataset.key;
     if (key === this.data.activeStatus) return;
     this.setData({ activeStatus: key });
     this._resetAndLoad();
   },
 
-  /* ======== 复制订单号 ======== */
+  onSearchInput: function (e) {
+    this.setData({ keyword: e.detail.value });
+  },
+
+  onSearchConfirm: function () {
+    this._resetAndLoad();
+  },
+
+  onClearKeyword: function () {
+    this.setData({ keyword: '' });
+    this._resetAndLoad();
+  },
+
   onCopyOrderNo: function (e) {
-    const no = e.currentTarget.dataset.no;
+    var no = e.currentTarget.dataset.no;
     if (!no) return;
     wx.setClipboardData({ data: no, success: function () { toast.success('已复制'); } });
   },
 
-  /* ======== 重置并加载 ======== */
   _resetAndLoad: function () {
     this.setData({ list: [], page: 1, hasMore: true });
     return this._loadPage(true);
@@ -138,47 +142,62 @@ Page({
 
   _loadMore: function () {
     this.setData({ loadingMore: true });
-    this._loadPage(false).finally(() => {
-      this.setData({ loadingMore: false });
+    var that = this;
+    this._loadPage(false).finally(function () {
+      that.setData({ loadingMore: false });
     });
   },
 
   _loadPage: function (isReset) {
-    const that = this;
+    var that = this;
     if (isReset) this.setData({ loading: true });
 
-    const params = {
+    var params = {
       platform: this.data.activePlatform,
       status: this.data.activeStatus,
       page: this.data.page,
       pageSize: this.data.pageSize,
     };
+    if (this.data.keyword) params.keyword = this.data.keyword;
 
     return api.ecommerce.listOrders(params).then(function (res) {
-      const data = res || {};
-      let records = data.records || data.list || data.items || [];
+      var data = res || {};
+      var records = data.records || data.list || data.items || [];
       if (!Array.isArray(records)) records = [];
-      const total = Number(data.total || 0);
+      var total = Number(data.total || 0);
 
-      const mapped = records.map(function (r) {
-        const code = r.platform || r.platformCode || r.ecPlatform || '';
-        const statusKey = String(r.status || r.orderStatus || '').toLowerCase();
-        const st = STATUS_MAP[statusKey] || { text: r.status || r.orderStatus || '-', cls: 'order-tag--default' };
+      var mapped = records.map(function (r) {
+        // platform 字段：后端存储 sourcePlatformCode(全码) + platform(短码)
+        var code = r.platform || r.platformCode || r.ecPlatform || '';
+        // status 后端为 Integer
+        var statusNum = Number(r.status);
+        if (isNaN(statusNum)) statusNum = -1;
+        var st = STATUS_MAP[statusNum] || { text: r.status != null ? String(r.status) : '-', cls: 'order-tag--default' };
+        // 商品信息
+        var productName = r.productName || r.itemName || '';
+        var quantity = r.quantity != null ? r.quantity : '';
+        var productText = productName ? (productName + (quantity ? ' x' + quantity : '')) : '';
+
         return {
-          id: r.id || r.orderId || r.orderNo,
-          orderNo: r.orderNo || r.orderSn || r.outerOrderNo || '-',
+          id: r.id || r.orderNo,
+          platformOrderNo: r.platformOrderNo || '',
+          orderNo: r.orderNo || '',
           platform: code,
-          platformName: r.platformName || PLATFORM_NAMES[code] || code || '-',
-          buyerName: r.buyerName || r.buyerNick || r.receiverName || '-',
-          amount: fmtMoney(r.amount || r.totalAmount || r.payAmount || 0),
+          platformName: PLATFORM_NAMES[code] || code || '-',
+          buyerName: r.buyerNick || r.buyerName || r.receiverName || '-',
+          amount: fmtMoney(r.payAmount || r.totalAmount || 0),
           status: st.text,
           statusCls: st.cls,
-          orderTime: fmtTime(r.orderTime || r.createTime || r.createdAt),
+          orderTime: fmtTime(r.createTime || r.orderTime),
+          productText: productText,
+          trackingNo: r.trackingNo || '',
+          expressCompany: r.expressCompany || '',
+          productionOrderNo: r.productionOrderNo || '',
         };
       });
 
-      const newList = isReset ? mapped : that.data.list.concat(mapped);
-      const hasMore = newList.length < total || mapped.length >= that.data.pageSize;
+      var newList = isReset ? mapped : that.data.list.concat(mapped);
+      var hasMore = newList.length < total || mapped.length >= that.data.pageSize;
       that.setData({
         list: newList,
         loading: false,
