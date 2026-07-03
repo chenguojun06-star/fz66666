@@ -187,44 +187,70 @@ public class EcSalesRevenueOrchestrator {
     public Map<String, Object> summary(Map<String, Object> params) {
         Long tenantId = UserContext.tenantId();
 
-        LambdaQueryWrapper<EcSalesRevenue> wrapper = new LambdaQueryWrapper<EcSalesRevenue>();
-        wrapper.eq(EcSalesRevenue::getTenantId, tenantId);
+        // 不带 status 过滤，拉取全部数据用于分组统计
+        LambdaQueryWrapper<EcSalesRevenue> baseWrapper = new LambdaQueryWrapper<EcSalesRevenue>();
+        baseWrapper.eq(EcSalesRevenue::getTenantId, tenantId);
 
         String platform = (String) params.get("platform");
-        if (StringUtils.hasText(platform)) wrapper.eq(EcSalesRevenue::getPlatform, platform);
-
-        String status = (String) params.get("status");
-        if (StringUtils.hasText(status)) wrapper.eq(EcSalesRevenue::getStatus, status);
-        else wrapper.in(EcSalesRevenue::getStatus, "confirmed", "reconciled");
+        if (StringUtils.hasText(platform)) baseWrapper.eq(EcSalesRevenue::getPlatform, platform);
 
         String startDate = (String) params.get("startDate");
         String endDate = (String) params.get("endDate");
-        if (StringUtils.hasText(startDate)) wrapper.ge(EcSalesRevenue::getShipTime, startDate + " 00:00:00");
-        if (StringUtils.hasText(endDate)) wrapper.le(EcSalesRevenue::getShipTime, endDate + " 23:59:59");
+        if (StringUtils.hasText(startDate)) baseWrapper.ge(EcSalesRevenue::getShipTime, startDate + " 00:00:00");
+        if (StringUtils.hasText(endDate)) baseWrapper.le(EcSalesRevenue::getShipTime, endDate + " 23:59:59");
 
-        wrapper.last("LIMIT 5000");
-        java.util.List<EcSalesRevenue> all = ecSalesRevenueService.list(wrapper);
+        baseWrapper.last("LIMIT 5000");
+        java.util.List<EcSalesRevenue> all = ecSalesRevenueService.list(baseWrapper);
 
-        BigDecimal totalPayAmount = all.stream()
-                .map(r -> r.getPayAmount() != null ? r.getPayAmount() : BigDecimal.ZERO)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        // 按状态分组统计（前端 EcRevenueSummary 期望字段）
+        java.util.Map<String, List<EcSalesRevenue>> byStatus = all.stream()
+                .collect(java.util.stream.Collectors.groupingBy(
+                        r -> r.getStatus() != null ? r.getStatus() : "unknown"));
 
-        BigDecimal totalFreight = all.stream()
+        List<EcSalesRevenue> pendingList     = byStatus.getOrDefault("pending",     java.util.Collections.emptyList());
+        List<EcSalesRevenue> confirmedList   = byStatus.getOrDefault("confirmed",   java.util.Collections.emptyList());
+        List<EcSalesRevenue> reconciledList  = byStatus.getOrDefault("reconciled",  java.util.Collections.emptyList());
+
+        BigDecimal pendingAmount    = sumPayAmount(pendingList);
+        BigDecimal confirmedAmount  = sumPayAmount(confirmedList);
+        BigDecimal reconciledAmount = sumPayAmount(reconciledList);
+
+        // 用于平台分组的数据（confirmed + reconciled，与之前行为一致）
+        List<EcSalesRevenue> forBreakdown = new java.util.ArrayList<>();
+        forBreakdown.addAll(confirmedList);
+        forBreakdown.addAll(reconciledList);
+
+        BigDecimal totalPayAmount = sumPayAmount(forBreakdown);
+        BigDecimal totalFreight = forBreakdown.stream()
                 .map(r -> r.getFreight() != null ? r.getFreight() : BigDecimal.ZERO)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        int totalQuantity = all.stream()
+        int totalQuantity = forBreakdown.stream()
                 .mapToInt(r -> r.getQuantity() != null ? r.getQuantity() : 0)
                 .sum();
 
-        return Map.of(
-                "orderCount", all.size(),
-                "totalQuantity", totalQuantity,
-                "totalPayAmount", totalPayAmount,
-                "totalFreight", totalFreight,
-                "netRevenue", totalPayAmount.subtract(totalFreight),
-                "platformBreakdown", buildPlatformBreakdown(all)
-        );
+        java.util.Map<String, Object> result = new java.util.LinkedHashMap<>();
+        // 前端 EcRevenueSummary 期望字段（向后兼容）
+        result.put("pendingCount",     pendingList.size());
+        result.put("pendingAmount",    pendingAmount);
+        result.put("confirmedCount",   confirmedList.size());
+        result.put("confirmedAmount",  confirmedAmount);
+        result.put("reconciledCount",  reconciledList.size());
+        result.put("reconciledAmount", reconciledAmount);
+        result.put("netIncome",        reconciledAmount);
+        // 新增字段（小程序 + PC端平台分组用）
+        result.put("orderCount",       forBreakdown.size());
+        result.put("totalQuantity",    totalQuantity);
+        result.put("totalPayAmount",   totalPayAmount);
+        result.put("totalFreight",     totalFreight);
+        result.put("netRevenue",       totalPayAmount.subtract(totalFreight));
+        result.put("platformBreakdown", buildPlatformBreakdown(forBreakdown));
+        return result;
+    }
+
+    private BigDecimal sumPayAmount(List<EcSalesRevenue> list) {
+        return list.stream()
+                .map(r -> r.getPayAmount() != null ? r.getPayAmount() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     // ─────────────────────────────────────────────────────────────────────────

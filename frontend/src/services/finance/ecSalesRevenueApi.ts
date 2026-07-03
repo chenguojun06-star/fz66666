@@ -8,7 +8,17 @@ export interface EcRevenueListParams {
   keyword?: string;      // 流水号 / 平台单号 / 商品名
 }
 
+export interface PlatformBreakdownItem {
+  platform: string;
+  orderCount: number;
+  totalQuantity: number;
+  totalPayAmount: number;
+  totalFreight: number;
+  netRevenue: number;
+}
+
 export interface EcRevenueSummary {
+  // 状态分组统计（PC端用）
   pendingCount: number;
   pendingAmount: number;
   confirmedCount: number;
@@ -16,6 +26,13 @@ export interface EcRevenueSummary {
   reconciledCount: number;
   reconciledAmount: number;
   netIncome: number;
+  // 总体统计 + 平台分组（小程序 + PC端平台分组用）
+  orderCount?: number;
+  totalQuantity?: number;
+  totalPayAmount?: number;
+  totalFreight?: number;
+  netRevenue?: number;
+  platformBreakdown?: PlatformBreakdownItem[];
 }
 
 export interface EcRevenueRecord {

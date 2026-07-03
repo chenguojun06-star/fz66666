@@ -6,7 +6,7 @@ import {
   ClockCircleOutlined, DollarOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
-import { ecSalesRevenueApi, EcRevenueRecord, EcRevenueSummary } from '@/services/finance/ecSalesRevenueApi';
+import { ecSalesRevenueApi, EcRevenueRecord, EcRevenueSummary, PlatformBreakdownItem } from '@/services/finance/ecSalesRevenueApi';
 import { readPageSize } from '@/utils/pageSizeStore';
 import { formatMoney } from '@/utils/format';
 import { getPlatformTag, getPlatformOptions } from '@/utils/platform';
@@ -241,6 +241,37 @@ const EcSalesRevenue: React.FC = () => {
             </Card>
           </Col>
         </Row>
+
+        {/* 按平台分组统计 */}
+        {summary?.platformBreakdown && summary.platformBreakdown.length > 0 && (
+          <Card title="平台销售分布" size="small">
+            <Row gutter={[8, 8]}>
+              {summary.platformBreakdown.map((item: PlatformBreakdownItem) => {
+                const t = getPlatformTag(item.platform);
+                return (
+                  <Col xs={12} sm={8} md={6} key={item.platform}>
+                    <Card size="small" style={{ borderLeft: `3px solid ${t.color}` }}>
+                      <Space direction="vertical" size={2} style={{ width: '100%' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <Tag color={t.color}>{t.label}</Tag>
+                          <Text type="secondary" style={{ fontSize: 12 }}>{item.orderCount}单</Text>
+                        </div>
+                        <div>
+                          <Text style={{ color: 'var(--color-success)', fontWeight: 600, fontSize: 16 }}>
+                            ¥{formatMoney(item.totalPayAmount)}
+                          </Text>
+                        </div>
+                        <div style={{ fontSize: 12, color: '#888' }}>
+                          {item.totalQuantity}件 · 运费¥{formatMoney(item.totalFreight)} · 净¥{formatMoney(item.netRevenue)}
+                        </div>
+                      </Space>
+                    </Card>
+                  </Col>
+                );
+              })}
+            </Row>
+          </Card>
+        )}
 
         {/* 筛选栏 */}
         <Card>

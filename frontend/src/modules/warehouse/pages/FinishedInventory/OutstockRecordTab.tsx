@@ -12,6 +12,7 @@ import api from '@/utils/api';
 import dayjs from 'dayjs';
 import { formatDateTime } from '@/utils/datetime';
 import { formatMoney } from '@/utils/format';
+import { getPlatformTag } from '@/utils/platform';
 import { useOutstockShare } from './useOutstockShare';
 import { printOutstockRecord } from './outstockPrintHelper';
 import ShareLinkModal from './ShareLinkModal';
@@ -43,6 +44,7 @@ interface OutstockRecord {
   approvalStatus?: string;
   approveByName?: string;
   approveTime?: string;
+  platformCode?: string;
 }
 
 const outstockTypeMap: Record<string, { label: string; color: string }> = {
@@ -143,6 +145,16 @@ const OutstockRecordTab: React.FC = () => {
       render: (text) => (
         <span style={{ color: 'var(--primary-color)', fontWeight: 600 }}>{text}</span>
       ),
+    },
+    {
+      title: '平台',
+      dataIndex: 'platformCode',
+      width: 80,
+      render: (code: string) => {
+        if (!code) return <span style={{ color: 'var(--neutral-text-disabled)' }}>-</span>;
+        const t = getPlatformTag(code);
+        return <Tag color={t.color}>{t.label}</Tag>;
+      },
     },
     {
       title: '款号 / 款名',
