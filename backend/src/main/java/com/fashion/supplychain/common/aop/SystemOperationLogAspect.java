@@ -12,8 +12,12 @@ import com.fashion.supplychain.production.service.CuttingTaskService;
 import com.fashion.supplychain.production.service.CuttingBundleService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
@@ -80,6 +84,45 @@ public class SystemOperationLogAspect {
         "secret", "appSecret", "privateKey", "accessToken", "refreshToken"
     );
 
+    /** 字段名 -> 中文标签映射 */
+    private static final Map<String, String> FIELD_LABEL_MAP = Map.ofEntries(
+        Map.entry("styleNo", "款号"), Map.entry("styleName", "款式名称"), Map.entry("name", "名称"),
+        Map.entry("code", "编码"), Map.entry("status", "状态"), Map.entry("orderNo", "订单号"),
+        Map.entry("purchaseNo", "采购单号"), Map.entry("pickingNo", "领料单号"), Map.entry("bundleNo", "菲号"),
+        Map.entry("materialName", "物料名称"), Map.entry("factoryName", "加工厂"),
+        Map.entry("price", "单价"), Map.entry("unitPrice", "单价"), Map.entry("quantity", "数量"),
+        Map.entry("amount", "金额"), Map.entry("totalAmount", "总金额"),
+        Map.entry("sampleDevCost", "样衣开发费"), Map.entry("tagPrice", "吊牌价"),
+        Map.entry("salesPrice", "销售价"), Map.entry("colorName", "颜色"), Map.entry("sizeName", "尺码"),
+        Map.entry("customerName", "客户名称"), Map.entry("contactName", "联系人"),
+        Map.entry("contactPhone", "联系电话"), Map.entry("address", "地址"),
+        Map.entry("expectedShipDate", "预计交期"), Map.entry("approvalStatus", "审批状态"),
+        Map.entry("remark", "备注"), Map.entry("categoryName", "品类"),
+        Map.entry("fabricComposition", "面料成分"), Map.entry("season", "季节"),
+        Map.entry("year", "年份"), Map.entry("brand", "品牌"),
+        Map.entry("productionStatus", "生产状态"), Map.entry("sampleStatus", "样衣状态"),
+        Map.entry("processStatus", "工序状态"), Map.entry("qualityStatus", "质检状态"),
+        Map.entry("warehousingStatus", "入库状态"), Map.entry("paymentStatus", "付款状态"),
+        Map.entry("cuttingNo", "裁剪编号"), Map.entry("warehouseOrderNo", "出库单号"),
+        Map.entry("supplierName", "供应商名称"), Map.entry("materialCode", "物料编码"),
+        Map.entry("spec", "规格"), Map.entry("unit", "单位"), Map.entry("color", "颜色"),
+        Map.entry("size", "尺码"), Map.entry("weight", "重量"),
+        Map.entry("width", "幅宽"), Map.entry("yardage", "码数"),
+        Map.entry("pricePerUnit", "单价"), Map.entry("totalPrice", "总价"),
+        Map.entry("deliveryDate", "交货日期"), Map.entry("orderDate", "下单日期"),
+        Map.entry("finishDate", "完成日期"), Map.entry("shipDate", "发货日期"),
+        Map.entry("receiveDate", "收货日期"), Map.entry("paymentDate", "付款日期"),
+        Map.entry("invoiceNo", "发票号"), Map.entry("contractNo", "合同号"),
+        Map.entry("purchaseDate", "采购日期"), Map.entry("inboundDate", "入库日期"),
+        Map.entry("outboundDate", "出库日期"), Map.entry("warehouseName", "仓库名称"),
+        Map.entry("locationName", "库位名称"), Map.entry("areaName", "库区名称"),
+        Map.entry("description", "描述"), Map.entry("summary", "摘要"),
+        Map.entry("type", "类型"), Map.entry("priority", "优先级"),
+        Map.entry("source", "来源"), Map.entry("version", "版本"),
+        Map.entry("enabled", "是否启用"), Map.entry("sortOrder", "排序"),
+        Map.entry("isDefault", "是否默认")
+    );
+
     /** 跳过列表：系统配置类接口，不是业务操作，不记录 */
     private static final String[] SKIP_PREFIXES = {
         "/api/system/dict",
@@ -143,8 +186,22 @@ public class SystemOperationLogAspect {
         String reason       = extractReason(pjp.getArgs());
         String details      = buildDetails(method, pjp.getArgs(), request);
         LocalDateTime now   = LocalDateTime.now();
+
+        // 修改操作：在执行前查询旧值快照，用于 before/after 对比
+        Map<String, String> oldSnapshot = null;
+        if ("修改".equals(operation) && targetType != null && targetId != null) {
+            oldSnapshot = queryEntitySnapshot(targetType, targetId);
+        }
+
         try {
             Object result = pjp.proceed();
+
+            // 修改操作：执行后查询新值，生成变更摘要
+            String changeSummary = null;
+            if ("修改".equals(operation) && oldSnapshot != null) {
+                Map<String, String> newSnapshot = queryEntitySnapshot(targetType, targetId);
+                changeSummary = buildChangeSummary(oldSnapshot, newSnapshot);
+            }
             // 优先从返回值取 orderNo（关单/报废/更新都有完整对象返回）
             String targetName = extractTargetNameFromResult(result);
             if (targetName == null) targetName = prefetchedTargetName;
@@ -157,6 +214,7 @@ public class SystemOperationLogAspect {
             log.setTargetName(limitLength(targetName, 200));
             log.setReason(limitLength(reason, 500));
             log.setDetails(details);
+            log.setChangeSummary(limitLength(changeSummary, 2000));
             log.setIp(ip);
             log.setOperationTime(now);
             log.setStatus("success");
@@ -792,6 +850,90 @@ public class SystemOperationLogAspect {
             log.debug("[OpLog] serializeDetails序列化失败");
             return null;
         }
+    }
+
+    /**
+     * 查询实体快照（字段名 -> 字段值）
+     * 用于 before/after 对比
+     */
+    private Map<String, String> queryEntitySnapshot(String targetType, String targetId) {
+        if (targetType == null || targetId == null) return null;
+        try {
+            Object entity = null;
+            switch (targetType) {
+                case "款式":
+                    entity = styleInfoService != null ? styleInfoService.getById(targetId) : null;
+                    break;
+                case "订单":
+                    entity = productionOrderService != null ? productionOrderService.getById(targetId) : null;
+                    break;
+                case "采购单":
+                    entity = materialPurchaseService != null ? materialPurchaseService.getById(targetId) : null;
+                    break;
+                case "领料单":
+                    entity = materialPickingService != null ? materialPickingService.getById(targetId) : null;
+                    break;
+                case "裁剪单":
+                    entity = cuttingTaskService != null ? cuttingTaskService.getById(targetId) : null;
+                    break;
+                case "菲号":
+                    entity = cuttingBundleService != null ? cuttingBundleService.getById(targetId) : null;
+                    break;
+                default:
+                    break;
+            }
+            if (entity == null) return null;
+            return beanToMap(entity);
+        } catch (Exception e) {
+            log.debug("[OpLog] 查询实体快照失败: targetType={} targetId={}", targetType, targetId, e);
+            return null;
+        }
+    }
+
+    /** 将实体对象转为 字段名->字符串值 的 Map（排除非业务字段） */
+    private Map<String, String> beanToMap(Object bean) {
+        Map<String, String> map = new LinkedHashMap<>();
+        try {
+            for (java.lang.reflect.Field f : bean.getClass().getDeclaredFields()) {
+                String name = f.getName();
+                // 排除非业务字段
+                if (name.equals("serialVersionUID") || name.equals("tenantId")
+                    || name.equals("deleteFlag") || name.equals("createTime") || name.equals("updateTime")
+                    || name.startsWith("$") || name.equals("id")) continue;
+                f.setAccessible(true);
+                Object val = f.get(bean);
+                if (val != null) {
+                    map.put(name, String.valueOf(val));
+                }
+            }
+        } catch (Exception e) {
+            log.debug("[OpLog] beanToMap失败", e);
+        }
+        return map;
+    }
+
+    /** 生成人类可读的变更摘要 */
+    private String buildChangeSummary(Map<String, String> oldMap, Map<String, String> newMap) {
+        if (oldMap == null || newMap == null) return null;
+        List<String> changes = new ArrayList<>();
+        Set<String> allKeys = new LinkedHashSet<>(oldMap.keySet());
+        allKeys.addAll(newMap.keySet());
+        for (String key : allKeys) {
+            if (SENSITIVE_FIELDS.contains(key)) continue;
+            String oldVal = oldMap.get(key);
+            String newVal = newMap.get(key);
+            // 都为null或相等则跳过
+            if (Objects.equals(oldVal, newVal)) continue;
+            String label = FIELD_LABEL_MAP.getOrDefault(key, key);
+            String oldDisp = oldVal != null ? oldVal : "(空)";
+            String newDisp = newVal != null ? newVal : "(空)";
+            // 截断过长的值
+            if (oldDisp.length() > 50) oldDisp = oldDisp.substring(0, 50) + "...";
+            if (newDisp.length() > 50) newDisp = newDisp.substring(0, 50) + "...";
+            changes.add(label + "：" + oldDisp + " -> " + newDisp);
+        }
+        if (changes.isEmpty()) return null;
+        return String.join("；", changes);
     }
 }
 

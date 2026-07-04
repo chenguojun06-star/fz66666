@@ -34,6 +34,8 @@ public class OperationLogServiceImpl extends ServiceImpl<OperationLogMapper, Ope
             String operation,
             String operatorName,
             String targetType,
+            String targetId,
+            String targetName,
             String startDate,
             String endDate
     ) {
@@ -58,6 +60,16 @@ public class OperationLogServiceImpl extends ServiceImpl<OperationLogMapper, Ope
         // 目标类型筛选
         if (StringUtils.hasText(targetType)) {
             wrapper.eq(OperationLog::getTargetType, targetType);
+        }
+
+        // 目标ID筛选（精准查询某个商品/款式的操作历史）
+        if (StringUtils.hasText(targetId)) {
+            wrapper.eq(OperationLog::getTargetId, targetId);
+        }
+
+        // 目标名称筛选（模糊匹配商品编码、款号等）
+        if (StringUtils.hasText(targetName)) {
+            wrapper.like(OperationLog::getTargetName, targetName);
         }
 
         // 时间范围筛选

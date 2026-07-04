@@ -11,6 +11,7 @@ export interface OperationLog {
   targetName?: string;     // 目标名称：款号、订单号等
   reason?: string;         // 操作原因
   details?: string;        // 详细信息（JSON格式）
+  changeSummary?: string;  // 人类可读的变更摘要
   ip?: string;            // 操作IP
   userAgent?: string;     // 浏览器信息
   operationTime: string;  // 操作时间
@@ -23,6 +24,8 @@ export interface OperationLogQueryParams {
   operation?: string;      // 操作类型筛选
   operatorName?: string;   // 操作人筛选
   targetType?: string;     // 目标类型筛选
+  targetId?: string;       // 按目标ID精准查询
+  targetName?: string;     // 按目标名称模糊查询
   startDate?: string;      // 开始日期
   endDate?: string;        // 结束日期
   page: number;

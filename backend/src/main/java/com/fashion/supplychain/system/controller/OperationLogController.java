@@ -32,11 +32,30 @@ public class OperationLogController {
             @RequestParam(required = false) String operation,
             @RequestParam(required = false) String operatorName,
             @RequestParam(required = false) String targetType,
+            @RequestParam(required = false) String targetId,
+            @RequestParam(required = false) String targetName,
             @RequestParam(required = false) String startDate,
             @RequestParam(required = false) String endDate) {
 
         Page<OperationLog> logPage = operationLogService.getOperationLogPage(
-                page, pageSize, module, operation, operatorName, targetType, startDate, endDate
+                page, pageSize, module, operation, operatorName, targetType, targetId, targetName, startDate, endDate
+        );
+        return Result.success(logPage);
+    }
+
+    /**
+     * 按业务对象查询操作历史（便捷入口）
+     * GET /api/system/operation-log/by-target?targetType=款式&targetId=123
+     */
+    @GetMapping("/by-target")
+    @PreAuthorize("isAuthenticated()")
+    public Result<?> getOperationLogByTarget(
+            @RequestParam String targetType,
+            @RequestParam String targetId,
+            @RequestParam(defaultValue = "1") Long page,
+            @RequestParam(defaultValue = "20") Long pageSize) {
+        Page<OperationLog> logPage = operationLogService.getOperationLogPage(
+                page, pageSize, null, null, null, targetType, targetId, null, null, null
         );
         return Result.success(logPage);
     }

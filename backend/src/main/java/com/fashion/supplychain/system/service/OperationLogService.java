@@ -18,6 +18,8 @@ public interface OperationLogService extends IService<OperationLog> {
      * @param operation 操作类型
      * @param operatorName 操作人
      * @param targetType 目标类型
+     * @param targetId 目标ID
+     * @param targetName 目标名称
      * @param startDate 开始日期
      * @param endDate 结束日期
      * @return 分页数据
@@ -29,6 +31,8 @@ public interface OperationLogService extends IService<OperationLog> {
             String operation,
             String operatorName,
             String targetType,
+            String targetId,
+            String targetName,
             String startDate,
             String endDate
     );

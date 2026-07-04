@@ -65,6 +65,11 @@ public class OperationLog {
     private String details;
 
     /**
+     * 人类可读的变更摘要（如"商品名称：绿色披肩->松绿云缂罗锦披肩；款式编码：BR26CA0050A->BR26CA0050B"）
+     */
+    private String changeSummary;
+
+    /**
      * 操作IP
      */
     private String ip;

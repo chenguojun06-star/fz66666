@@ -136,11 +136,56 @@ const SystemLogs: React.FC = () => {
 
   // 查看操作详情
   const handleViewDetails = (record: OperationLog) => {
-    let detailsText = '未记录到详细字段';
-    try {
-      detailsText = record.details ? JSON.stringify(JSON.parse(record.details), null, 2) : '未记录到详细字段';
-    } catch (e) {
-      detailsText = record.details || '未记录到详细字段';
+    // 变更对比区域
+    let changeContent: React.ReactNode = null;
+    if (record.changeSummary) {
+      const changes = record.changeSummary.split('；').filter(Boolean);
+      changeContent = (
+        <div style={{ marginTop: 12 }}>
+          <div style={{ fontWeight: 600, marginBottom: 8 }}>变更内容：</div>
+          <div style={{ backgroundColor: 'var(--color-bg-subtle)', padding: 12, borderRadius: 6 }}>
+            {changes.map((line, idx) => {
+              // 解析 "字段名：旧值 -> 新值" 格式
+              const match = line.match(/^(.+?)：(.+?)\s*->\s*(.+)$/);
+              if (match) {
+                const [, fieldName, oldVal, newVal] = match;
+                return (
+                  <div key={idx} style={{ marginBottom: 4, fontSize: 13 }}>
+                    <span style={{ color: 'var(--color-text-secondary)' }}>{fieldName}：</span>
+                    <span style={{ textDecoration: 'line-through', color: 'var(--color-text-tertiary)' }}>{oldVal}</span>
+                    <span style={{ margin: '0 6px' }}>→</span>
+                    <span style={{ color: 'var(--color-primary)', fontWeight: 500 }}>{newVal}</span>
+                  </div>
+                );
+              }
+              return <div key={idx} style={{ marginBottom: 4, fontSize: 13 }}>{line}</div>;
+            })}
+          </div>
+        </div>
+      );
+    } else if (record.details) {
+      let detailsText = '未记录到详细字段';
+      try {
+        detailsText = JSON.stringify(JSON.parse(record.details), null, 2);
+      } catch {
+        detailsText = record.details;
+      }
+      changeContent = (
+        <div style={{ marginTop: 12 }}>
+          <div style={{ fontWeight: 600, marginBottom: 8 }}>详细信息：</div>
+          <div style={{
+            backgroundColor: 'var(--color-bg-subtle)',
+            padding: 12,
+            fontFamily: 'monospace',
+            fontSize: 13,
+            whiteSpace: 'pre-wrap',
+            wordBreak: 'break-word',
+            borderRadius: 6,
+          }}>
+            {detailsText}
+          </div>
+        </div>
+      );
     }
 
     modal.info({
@@ -148,7 +193,7 @@ const SystemLogs: React.FC = () => {
       width: 700,
       content: (
         <div style={{ maxHeight: '60vh', overflow: 'auto' }}>
-          <div style={{ marginBottom: 16 }}>
+          <div style={{ marginBottom: 8, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 24px' }}>
             <div><strong>模块：</strong>{record.module}</div>
             <div><strong>操作：</strong>{record.operation}</div>
             <div><strong>操作人：</strong>{record.operatorName}</div>
@@ -156,19 +201,11 @@ const SystemLogs: React.FC = () => {
             <div><strong>目标ID：</strong>{record.targetId || '-'}</div>
             <div><strong>目标名称：</strong>{record.targetName || '-'}</div>
             <div><strong>操作时间：</strong>{formatDateTimeSecond(record.operationTime)}</div>
-            {record.reason && <div><strong>操作原因：</strong>{record.reason}</div>}
+            <div><strong>状态：</strong>{record.status === 'success' ? '成功' : '失败'}</div>
+            {record.reason && <div style={{ gridColumn: '1 / -1' }}><strong>操作原因：</strong>{record.reason}</div>}
             {record.ip && <div><strong>IP地址：</strong>{record.ip}</div>}
           </div>
-          <div style={{
-            backgroundColor: 'var(--color-bg-subtle)',
-            padding: 12,
-            fontFamily: 'monospace',
-            fontSize: 14
-          }}>
-            <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-              {detailsText}
-            </pre>
-          </div>
+          {changeContent}
         </div>
       ),
     });
@@ -223,6 +260,33 @@ const SystemLogs: React.FC = () => {
       width: 200,
       resizable: true,
       render: (v: string) => v || '-'
+    },
+    {
+      title: '操作内容',
+      dataIndex: 'changeSummary',
+      key: 'changeSummary',
+      width: 280,
+      resizable: true,
+      ellipsis: true,
+      render: (v: string, record: OperationLog) => {
+        if (v) {
+          return <span style={{ color: 'var(--color-text-secondary)' }}>{v}</span>;
+        }
+        if (record.details) {
+          try {
+            const obj = JSON.parse(record.details);
+            const brief = Object.entries(obj)
+              .filter(([k]) => !['id', 'orderId', 'styleId', 'purchaseId'].includes(k))
+              .slice(0, 3)
+              .map(([k, v]) => `${k}=${String(v).substring(0, 20)}`)
+              .join(', ');
+            return <span style={{ color: 'var(--color-text-tertiary)' }}>{brief || '-'}</span>;
+          } catch {
+            return <span style={{ color: 'var(--color-text-tertiary)' }}>-</span>;
+          }
+        }
+        return '-';
+      }
     },
     {
       title: '操作',
@@ -404,6 +468,13 @@ const SystemLogs: React.FC = () => {
                         ]}
                         onChange={(value) => setOperationQueryParams((prev) => ({ ...prev, targetType: value }))}
                       />
+                      <Input
+                        placeholder="商品/款式编码"
+                        style={{ width: 180 }}
+                        allowClear
+                        value={operationQueryParams?.targetName || ''}
+                        onChange={(e) => setOperationQueryParams((prev) => ({ ...prev, targetName: e.target.value, page: 1 }))}
+                      />
                       <UnifiedDatePicker
                         placeholder="开始日期"
                         value={operationQueryParams.startDate ? dayjs(String(operationQueryParams.startDate)) : null}
@@ -426,6 +497,7 @@ const SystemLogs: React.FC = () => {
                             operation: '',
                             operatorName: '',
                             targetType: '',
+                            targetName: '',
                             startDate: '',
                             endDate: '',
                           })
