@@ -79,20 +79,47 @@ public class ChannelSalesPredictor {
 
     /**
      * 获取全渠道销售预测
+     * 优化：一次性查全量数据，在内存按 styleNo 分组，避免 N+1 查询
      */
     public MultiChannelPredictionResponse predictMultiChannelSales(List<String> styleNos) {
-        List<ChannelSalesResponse> responses = new ArrayList<>();
+        if (styleNos == null || styleNos.isEmpty()) {
+            MultiChannelPredictionResponse empty = new MultiChannelPredictionResponse();
+            empty.setAnalysisDate(LocalDate.now());
+            empty.setTotalStyles(0);
+            empty.setTotalChannels(0);
+            empty.setTotalSales(0);
+            empty.setStyleResponses(new ArrayList<>());
+            return empty;
+        }
 
+        // 一次性查全量数据（不带 styleNo 过滤），在内存按 styleNo 分组
+        TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
+        List<EcSalesRevenue> allRecords = querySalesRevenue(tenantId, null);
+
+        // 按 styleNo 分组（从 skuCode 前缀提取）
+        Map<String, List<EcSalesRevenue>> byStyle = new HashMap<>();
+        for (EcSalesRevenue r : allRecords) {
+            String sku = r.getSkuCode();
+            if (!StringUtils.hasText(sku)) continue;
+            int dash = sku.indexOf('-');
+            String style = dash > 0 ? sku.substring(0, dash) : sku;
+            if (styleNos.contains(style)) {
+                byStyle.computeIfAbsent(style, k -> new ArrayList<>()).add(r);
+            }
+        }
+
+        List<ChannelSalesResponse> responses = new ArrayList<>();
         for (String styleNo : styleNos) {
             try {
-                ChannelSalesResponse response = analyzeChannelSales(styleNo);
+                List<EcSalesRevenue> records = byStyle.getOrDefault(styleNo, Collections.emptyList());
+                ChannelSalesResponse response = buildResponseFromRecords(styleNo, records);
                 responses.add(response);
             } catch (Exception e) {
                 log.warn("[ChannelSales] 分析失败: styleNo={}, error={}", styleNo, e.getMessage());
             }
         }
 
-        // 汇总统计
         int totalChannels = responses.stream()
                 .mapToInt(ChannelSalesResponse::getTotalChannels)
                 .sum();
@@ -108,6 +135,43 @@ public class ChannelSalesPredictor {
         response.setStyleResponses(responses);
 
         return response;
+    }
+
+    /** 从已查询的记录构建分析响应（避免重复查库） */
+    private ChannelSalesResponse buildResponseFromRecords(String styleNo, List<EcSalesRevenue> records) {
+        List<ChannelSalesData> salesData = buildChannelSalesData(records);
+        List<ChannelStats> channelStats = calculateChannelStats(salesData);
+        List<ChannelPrediction> predictions = predictChannelSales(salesData);
+        List<ChannelOptimization> optimizations = generateChannelOptimizations(channelStats);
+
+        ChannelSalesResponse response = new ChannelSalesResponse();
+        response.setStyleNo(styleNo);
+        response.setAnalysisDate(LocalDate.now());
+        response.setTotalChannels(channelStats.size());
+        response.setTotalSales(salesData.stream().mapToInt(d -> d.getQ1() + d.getQ2() + d.getQ3() + d.getQ4()).sum());
+        response.setChannelStats(channelStats);
+        response.setChannelPredictions(predictions);
+        response.setOptimizationSuggestions(optimizations);
+        return response;
+    }
+
+    /** 从记录构建渠道销售数据（按平台分组按季度聚合） */
+    private List<ChannelSalesData> buildChannelSalesData(List<EcSalesRevenue> records) {
+        if (records.isEmpty()) return Collections.emptyList();
+        Map<String, List<EcSalesRevenue>> byPlatform = records.stream()
+                .filter(r -> StringUtils.hasText(r.getPlatform()))
+                .collect(Collectors.groupingBy(EcSalesRevenue::getPlatform));
+        int year = LocalDate.now().getYear();
+        List<ChannelSalesData> result = new ArrayList<>();
+        for (Map.Entry<String, List<EcSalesRevenue>> entry : byPlatform.entrySet()) {
+            String platformName = PLATFORM_NAME_MAP.getOrDefault(entry.getKey(), entry.getKey());
+            int q1 = sumQuantityByQuarter(entry.getValue(), year, 1, 3);
+            int q2 = sumQuantityByQuarter(entry.getValue(), year, 4, 6);
+            int q3 = sumQuantityByQuarter(entry.getValue(), year, 7, 9);
+            int q4 = sumQuantityByQuarter(entry.getValue(), year, 10, 12);
+            result.add(new ChannelSalesData(platformName, q1, q2, q3, q4));
+        }
+        return result;
     }
 
     /**
@@ -143,23 +207,7 @@ public class ChannelSalesPredictor {
      */
     private List<ChannelSalesData> fetchChannelSalesData(Long tenantId, String styleNo) {
         List<EcSalesRevenue> records = querySalesRevenue(tenantId, styleNo);
-        if (records.isEmpty()) {
-            return Collections.emptyList();
-        }
-        Map<String, List<EcSalesRevenue>> byPlatform = records.stream()
-                .filter(r -> StringUtils.hasText(r.getPlatform()))
-                .collect(Collectors.groupingBy(EcSalesRevenue::getPlatform));
-        int year = LocalDate.now().getYear();
-        List<ChannelSalesData> result = new ArrayList<>();
-        for (Map.Entry<String, List<EcSalesRevenue>> entry : byPlatform.entrySet()) {
-            String platformName = PLATFORM_NAME_MAP.getOrDefault(entry.getKey(), entry.getKey());
-            int q1 = sumQuantityByQuarter(entry.getValue(), year, 1, 3);
-            int q2 = sumQuantityByQuarter(entry.getValue(), year, 4, 6);
-            int q3 = sumQuantityByQuarter(entry.getValue(), year, 7, 9);
-            int q4 = sumQuantityByQuarter(entry.getValue(), year, 10, 12);
-            result.add(new ChannelSalesData(platformName, q1, q2, q3, q4));
-        }
-        return result;
+        return buildChannelSalesData(records);
     }
 
     /**
@@ -181,7 +229,8 @@ public class ChannelSalesPredictor {
             BigDecimal revenueBd = list.stream()
                     .map(r -> r.getPayAmount() != null ? r.getPayAmount() : BigDecimal.ZERO)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
-            int revenue = revenueBd.intValue();
+            // 用 long 避免 intValue() 超 21 亿溢出（P2精度风险）
+            long revenue = revenueBd.longValue();
             double avgPrice = salesVolume > 0 ? revenueBd.divide(BigDecimal.valueOf(salesVolume), 2, java.math.RoundingMode.HALF_UP).doubleValue() : 0;
             int fulfillmentRate = list.stream()
                     .filter(r -> "reconciled".equals(r.getStatus()))
@@ -201,7 +250,6 @@ public class ChannelSalesPredictor {
             if (StringUtils.hasText(styleNo)) {
                 wrapper.likeRight(EcSalesRevenue::getSkuCode, styleNo + "-");
             }
-            wrapper.last("LIMIT 5000");
             return ecSalesRevenueService.list(wrapper);
         } catch (Exception e) {
             log.warn("[ChannelSalesPredictor] 查询销售数据失败: {}", e.getMessage());
@@ -315,7 +363,7 @@ public class ChannelSalesPredictor {
         // 综合评分
         int score = 0;
         score += Math.min(data.getSalesVolume() / 20, 25);
-        score += Math.min(data.getRevenue() / 10000, 25);
+        score += (int) Math.min(data.getRevenue() / 10000, 25);
         score += (int) (data.getCustomerRating() * 5);
         score += data.getFulfillmentRate() / 4;
         score += Math.max(0, 20 - data.getReturnRate() / 2);
@@ -391,7 +439,7 @@ public class ChannelSalesPredictor {
     public static class ChannelPerformance {
         private String channelName;
         private int salesVolume;
-        private int revenue;
+        private long revenue;
         private double customerRating;
         private int fulfillmentRate;
         private int returnRate;
@@ -421,12 +469,12 @@ public class ChannelSalesPredictor {
     public static class ChannelPerformanceData {
         private String channelName;
         private int salesVolume;
-        private int revenue;
+        private long revenue;
         private double customerRating;
         private int fulfillmentRate;
         private int returnRate;
 
-        public ChannelPerformanceData(String channelName, int salesVolume, int revenue,
+        public ChannelPerformanceData(String channelName, int salesVolume, long revenue,
                                       double customerRating, int fulfillmentRate, int returnRate) {
             this.channelName = channelName;
             this.salesVolume = salesVolume;

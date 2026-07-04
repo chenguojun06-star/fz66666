@@ -62,11 +62,16 @@
     </view>
   </view>
 
-  <!-- 空状态 -->
-  <view class="empty-state" wx:if="{{!loading && platforms.length === 0}}">
+  <!-- 空状态（区分加载失败） -->
+  <view class="empty-state" wx:if="{{!loading && platforms.length === 0 && !loadError}}">
     <text class="empty-icon">📊</text>
     <text class="empty-text">暂无销售数据</text>
     <text class="empty-hint">所选时间段内未统计到销售数据</text>
+  </view>
+  <view class="empty-state" wx:if="{{!loading && platforms.length === 0 && loadError}}">
+    <text class="empty-icon">⚠️</text>
+    <text class="empty-text">加载失败</text>
+    <text class="empty-hint" bindtap="onRetry">点击重试</text>
   </view>
 
   <!-- 加载中骨架 -->

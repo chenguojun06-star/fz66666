@@ -4,7 +4,7 @@
   <!-- 搜索框 -->
   <view class="search-bar">
     <icon type="search" size="14" color="#999" />
-    <input class="search-input" placeholder="搜索订单号/买家名" value="{{keyword}}"
+    <input class="search-input" placeholder="输入订单号/买家名后按搜索" value="{{keyword}}"
            confirm-type="search" bindinput="onSearchInput" bindconfirm="onSearchConfirm" />
     <text wx:if="{{keyword}}" class="search-clear" bindtap="onClearKeyword">✕</text>
   </view>
@@ -79,18 +79,32 @@
   </view>
 
   <!-- 加载更多 / 没有更多 -->
-  <view wx:if="{{list.length > 0 && hasMore}}" class="load-more" bindtap="onReachBottom">
+  <view wx:if="{{list.length > 0 && hasMore}}" class="load-more">
     <text>{{loadingMore ? '加载中...' : '上拉加载更多'}}</text>
   </view>
   <view wx:if="{{list.length > 0 && !hasMore}}" class="no-more">
     <text>没有更多了</text>
   </view>
 
-  <!-- 空状态 -->
-  <view class="empty-state" wx:if="{{!loading && list.length === 0}}">
+  <!-- 骨架屏（首次加载） -->
+  <view wx:if="{{loading && list.length === 0}}" class="skeleton-list">
+    <view class="skeleton-card" wx:for="{{[1,2,3,4]}}" wx:key="*this">
+      <view class="skeleton-line skeleton-line--short"></view>
+      <view class="skeleton-line"></view>
+      <view class="skeleton-line skeleton-line--long"></view>
+    </view>
+  </view>
+
+  <!-- 空状态（区分加载失败） -->
+  <view class="empty-state" wx:if="{{!loading && list.length === 0 && !loadError}}">
     <text class="empty-icon">📦</text>
     <text class="empty-text">暂无订单</text>
     <text class="empty-hint">切换平台或状态试试</text>
+  </view>
+  <view class="empty-state" wx:if="{{!loading && list.length === 0 && loadError}}">
+    <text class="empty-icon">⚠️</text>
+    <text class="empty-text">加载失败</text>
+    <text class="empty-hint" bindtap="onRetry">点击重试</text>
   </view>
 
   <!-- 加载中 -->

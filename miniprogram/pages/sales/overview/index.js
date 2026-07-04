@@ -48,6 +48,7 @@ function fmtMoney(v) {
 Page({
   data: {
     loading: true,
+    loadError: false,
     ranges: DATE_RANGES,
     activeRange: 'thisMonth',
     startDate: '',
@@ -81,8 +82,16 @@ Page({
     const key = e.currentTarget.dataset.key;
     if (!key || key === this.data.activeRange) return;
     const r = getRange(key);
+    const that = this;
+    // 保存旧值，加载失败时回滚（避免UI高亮与数据不一致）
+    const oldRange = this.data.activeRange;
+    const oldStart = this.data.startDate;
+    const oldEnd = this.data.endDate;
     this.setData({ activeRange: key, startDate: r.startDate, endDate: r.endDate });
-    this._loadStats();
+    this._loadStats().catch(function () {
+      // 回滚到旧值
+      that.setData({ activeRange: oldRange, startDate: oldStart, endDate: oldEnd });
+    });
   },
 
   onViewOrders: function () {
@@ -118,6 +127,7 @@ Page({
       });
       that.setData({
         loading: false,
+        loadError: false,
         summary: {
           totalSales: Number(data.totalPayAmount || 0),
           totalOrders: Number(data.orderCount || 0),
@@ -128,8 +138,13 @@ Page({
       });
     }).catch(function (err) {
       console.warn('[sales-overview] 加载失败:', err && err.errMsg || err);
-      that.setData({ loading: false });
-      toast.error('数据加载失败，请下拉刷新');
+      that.setData({ loading: false, loadError: true });
+      toast.error('刷新失败，请稍后重试');
     });
+  },
+
+  onRetry: function () {
+    this.setData({ loadError: false });
+    this._loadStats();
   },
 });

@@ -31,14 +31,17 @@ const PLATFORM_TABS = [
   { key: 'WC', label: '微信小店' },
 ];
 
-/* status 后端为 Integer，这里 key 用数字字符串 */
+/* status 后端为 Integer，这里 key 用数字字符串
+ * 顺序符合电商流程：待付款 → 待发货 → 已发货 → 已完成 → 已取消 → 退款中
+ */
 var STATUS_TABS = [
   { key: '',  label: '全部' },
+  { key: '0', label: '待付款' },
   { key: '1', label: '待发货' },
   { key: '2', label: '已发货' },
   { key: '3', label: '已完成' },
-  { key: '0', label: '待付款' },
   { key: '4', label: '已取消' },
+  { key: '5', label: '退款中' },
 ];
 
 var STATUS_MAP = {
@@ -47,7 +50,7 @@ var STATUS_MAP = {
   2: { text: '已发货', cls: 'order-tag--info' },
   3: { text: '已完成', cls: 'order-tag--success' },
   4: { text: '已取消', cls: 'order-tag--default' },
-  5: { text: '退款中', cls: 'order-tag--default' },
+  5: { text: '退款中', cls: 'order-tag--warning' },
 };
 
 function fmtTime(val) {
@@ -76,6 +79,7 @@ Page({
     hasMore: true,
     loadingMore: false,
     platformNames: PLATFORM_NAMES,
+    loadError: false,
   },
 
   onLoad: function (options) {
@@ -123,6 +127,9 @@ Page({
   },
 
   onSearchConfirm: function () {
+    // trim 搜索关键词，避免前后空格导致搜索失败
+    var kw = (this.data.keyword || '').trim();
+    this.setData({ keyword: kw });
     this._resetAndLoad();
   },
 
@@ -138,8 +145,12 @@ Page({
   },
 
   _resetAndLoad: function () {
-    this.setData({ list: [], page: 1, hasMore: true });
+    this.setData({ list: [], page: 1, hasMore: true, loadError: false });
     return this._loadPage(true);
+  },
+
+  onRetry: function () {
+    this._resetAndLoad();
   },
 
   _loadMore: function () {
@@ -199,7 +210,8 @@ Page({
       });
 
       var newList = isReset ? mapped : that.data.list.concat(mapped);
-      var hasMore = newList.length < total || mapped.length >= that.data.pageSize;
+      // 优先用 pageSize 判断是否还有更多（避免 total=0 时误判）
+      var hasMore = mapped.length >= that.data.pageSize && (total === 0 || newList.length < total);
       that.setData({
         list: newList,
         loading: false,
@@ -210,7 +222,9 @@ Page({
       console.warn('[sales-order-list] 加载失败:', err && err.errMsg || err);
       that.setData({ loading: false });
       if (isReset) {
-        toast.error('加载失败，请下拉刷新');
+        // 标记加载失败，UI 显示"点击重试"而非"暂无订单"
+        that.setData({ loadError: true });
+        toast.error('刷新失败，请稍后重试');
       } else {
         // 加载更多失败时也要给用户反馈，并保留 hasMore 让用户可重试
         toast.info('加载更多失败，请重试');

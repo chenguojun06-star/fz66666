@@ -195,3 +195,30 @@
   font-size: var(--font-size-sm);
   color: var(--color-text-tertiary);
 }
+
+/* ============ 骨架屏 ============ */
+.skeleton-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 0;
+}
+.skeleton-card {
+  background: var(--color-bg-card);
+  border-radius: var(--radius-lg);
+  padding: 12px 14px;
+}
+.skeleton-line {
+  height: 12px;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.4s ease infinite;
+  border-radius: 4px;
+  margin-bottom: 8px;
+}
+.skeleton-line--short { width: 30%; }
+.skeleton-line--long  { width: 90%; }
+@keyframes skeleton-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}

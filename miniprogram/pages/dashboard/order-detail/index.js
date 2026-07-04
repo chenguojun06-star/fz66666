@@ -246,12 +246,14 @@ Page({
 
   onPullDownRefresh: function () {
     const that = this;
-    // 直接调用 _loadFlow；当接口返回后停止下拉刷新
-    this._loadFlow();
-    // 兜底：3 秒内无论成功/失败都停止（_loadFlow 内部也有关闭 loading 的逻辑）
+    // 用 .finally 在接口返回后立即停止下拉刷新动画（避免 3.5s 卡顿）
+    this._loadFlow().finally(function () {
+      try { wx.stopPullDownRefresh(); } catch (e) {}
+    });
+    // 兜底：8 秒内若 Promise 未结束（极端情况），强制停止
     setTimeout(function () {
       try { wx.stopPullDownRefresh(); } catch (e) {}
-    }, 3500);
+    }, 8000);
   },
 
   /* ======== 加载完整流程数据 ======== */
@@ -522,7 +524,9 @@ Page({
 
     flowPromise.then(function () {
       clearTimeout(timeoutTimer);
-    }).catch(function (flowErr) {
+    });
+    // 返回 Promise，供 onPullDownRefresh 用 .finally 停止下拉动画
+    return flowPromise.catch(function (flowErr) {
       clearTimeout(timeoutTimer);
       if (flowErr && flowErr.message && flowErr.message !== 'flow-no-order' && flowErr.message !== 'no-orderId') {
         console.warn('[order-detail] flow 接口异常:', flowErr.message);

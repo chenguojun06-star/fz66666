@@ -188,38 +188,26 @@ public class EcSalesRevenueOrchestrator {
     public Map<String, Object> summary(Map<String, Object> params) {
         Long tenantId = UserContext.tenantId();
 
-        // 不带 status 过滤，拉取全部数据用于分组统计
-        LambdaQueryWrapper<EcSalesRevenue> baseWrapper = new LambdaQueryWrapper<EcSalesRevenue>();
-        baseWrapper.eq(EcSalesRevenue::getTenantId, tenantId);
-
         String platform = (String) params.get("platform");
-        if (StringUtils.hasText(platform)) baseWrapper.eq(EcSalesRevenue::getPlatform, platform);
-
         String startDate = (String) params.get("startDate");
         String endDate = (String) params.get("endDate");
-        if (StringUtils.hasText(startDate)) baseWrapper.ge(EcSalesRevenue::getShipTime, startDate + " 00:00:00");
-        if (StringUtils.hasText(endDate)) baseWrapper.le(EcSalesRevenue::getShipTime, endDate + " 23:59:59");
 
-        baseWrapper.last("LIMIT 5000");
-        java.util.List<EcSalesRevenue> all = ecSalesRevenueService.list(baseWrapper);
+        // 按 status 分组聚合（SQL 层做 SUM/COUNT，避免 LIMIT 5000 内存聚合）
+        BigDecimal pendingAmount    = sumPayAmountByStatus(tenantId, platform, startDate, endDate, "pending");
+        BigDecimal confirmedAmount  = sumPayAmountByStatus(tenantId, platform, startDate, endDate, "confirmed");
+        BigDecimal reconciledAmount = sumPayAmountByStatus(tenantId, platform, startDate, endDate, "reconciled");
+        long pendingCount           = countByStatus(tenantId, platform, startDate, endDate, "pending");
+        long confirmedCount         = countByStatus(tenantId, platform, startDate, endDate, "confirmed");
+        long reconciledCount        = countByStatus(tenantId, platform, startDate, endDate, "reconciled");
 
-        // 按状态分组统计（前端 EcRevenueSummary 期望字段）
-        java.util.Map<String, List<EcSalesRevenue>> byStatus = all.stream()
-                .collect(java.util.stream.Collectors.groupingBy(
-                        r -> r.getStatus() != null ? r.getStatus() : "unknown"));
-
-        List<EcSalesRevenue> pendingList     = byStatus.getOrDefault("pending",     java.util.Collections.emptyList());
-        List<EcSalesRevenue> confirmedList   = byStatus.getOrDefault("confirmed",   java.util.Collections.emptyList());
-        List<EcSalesRevenue> reconciledList  = byStatus.getOrDefault("reconciled",  java.util.Collections.emptyList());
-
-        BigDecimal pendingAmount    = sumPayAmount(pendingList);
-        BigDecimal confirmedAmount  = sumPayAmount(confirmedList);
-        BigDecimal reconciledAmount = sumPayAmount(reconciledList);
-
-        // 用于平台分组的数据（confirmed + reconciled，与之前行为一致）
-        List<EcSalesRevenue> forBreakdown = new java.util.ArrayList<>();
-        forBreakdown.addAll(confirmedList);
-        forBreakdown.addAll(reconciledList);
+        // 平台分组（只统计 confirmed + reconciled，与之前行为一致）
+        LambdaQueryWrapper<EcSalesRevenue> breakdownWrapper = new LambdaQueryWrapper<EcSalesRevenue>()
+                .eq(EcSalesRevenue::getTenantId, tenantId)
+                .in(EcSalesRevenue::getStatus, "confirmed", "reconciled");
+        if (StringUtils.hasText(platform)) breakdownWrapper.eq(EcSalesRevenue::getPlatform, platform);
+        if (StringUtils.hasText(startDate)) breakdownWrapper.ge(EcSalesRevenue::getShipTime, startDate + " 00:00:00");
+        if (StringUtils.hasText(endDate)) breakdownWrapper.le(EcSalesRevenue::getShipTime, endDate + " 23:59:59");
+        java.util.List<EcSalesRevenue> forBreakdown = ecSalesRevenueService.list(breakdownWrapper);
 
         BigDecimal totalPayAmount = sumPayAmount(forBreakdown);
         BigDecimal totalFreight = forBreakdown.stream()
@@ -230,15 +218,13 @@ public class EcSalesRevenueOrchestrator {
                 .sum();
 
         java.util.Map<String, Object> result = new java.util.LinkedHashMap<>();
-        // 前端 EcRevenueSummary 期望字段（向后兼容）
-        result.put("pendingCount",     pendingList.size());
+        result.put("pendingCount",     pendingCount);
         result.put("pendingAmount",    pendingAmount);
-        result.put("confirmedCount",   confirmedList.size());
+        result.put("confirmedCount",   confirmedCount);
         result.put("confirmedAmount",  confirmedAmount);
-        result.put("reconciledCount",  reconciledList.size());
+        result.put("reconciledCount",  reconciledCount);
         result.put("reconciledAmount", reconciledAmount);
         result.put("netIncome",        reconciledAmount);
-        // 新增字段（小程序 + PC端平台分组用）
         result.put("orderCount",       forBreakdown.size());
         result.put("totalQuantity",    totalQuantity);
         result.put("totalPayAmount",   totalPayAmount);
@@ -246,6 +232,31 @@ public class EcSalesRevenueOrchestrator {
         result.put("netRevenue",       totalPayAmount.subtract(totalFreight));
         result.put("platformBreakdown", buildPlatformBreakdown(forBreakdown));
         return result;
+    }
+
+    /** 按状态精确求和 payAmount（SQL 层聚合，无 LIMIT 5000） */
+    private BigDecimal sumPayAmountByStatus(Long tenantId, String platform, String startDate, String endDate, String status) {
+        com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<EcSalesRevenue> qw = new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<>();
+        qw.eq("tenant_id", tenantId)
+          .eq("status", status)
+          .select("IFNULL(SUM(pay_amount),0) AS total");
+        if (StringUtils.hasText(platform)) qw.eq("platform", platform);
+        if (StringUtils.hasText(startDate)) qw.ge("ship_time", startDate + " 00:00:00");
+        if (StringUtils.hasText(endDate)) qw.le("ship_time", endDate + " 23:59:59");
+        Map<String, Object> map = ecSalesRevenueService.getMap(qw);
+        if (map == null || map.get("total") == null) return BigDecimal.ZERO;
+        return new BigDecimal(map.get("total").toString());
+    }
+
+    /** 按状态精确计数（SQL 层聚合） */
+    private long countByStatus(Long tenantId, String platform, String startDate, String endDate, String status) {
+        LambdaQueryWrapper<EcSalesRevenue> qw = new LambdaQueryWrapper<EcSalesRevenue>()
+                .eq(EcSalesRevenue::getTenantId, tenantId)
+                .eq(EcSalesRevenue::getStatus, status);
+        if (StringUtils.hasText(platform)) qw.eq(EcSalesRevenue::getPlatform, platform);
+        if (StringUtils.hasText(startDate)) qw.ge(EcSalesRevenue::getShipTime, startDate + " 00:00:00");
+        if (StringUtils.hasText(endDate)) qw.le(EcSalesRevenue::getShipTime, endDate + " 23:59:59");
+        return ecSalesRevenueService.count(qw);
     }
 
     private BigDecimal sumPayAmount(List<EcSalesRevenue> list) {

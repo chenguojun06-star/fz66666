@@ -21,6 +21,7 @@ import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 import java.util.Map;
 
 @Slf4j
@@ -309,55 +310,35 @@ public class EcommerceOrderOrchestrator {
         }
     }
 
+    /** 平台编码映射常量（统一管理，避免三处 switch 重复）
+     *  FULL_TO_SHORT: 全码 → 短码（如 TAOBAO → TB）
+     *  SHORT_TO_FULL: 短码 → 全码（如 TB → TAOBAO）
+     */
+    private static final Map<String, String> FULL_TO_SHORT = Map.of(
+            "TAOBAO", "TB", "TMALL", "TM", "JD", "JD", "DOUYIN", "DY",
+            "PINDUODUO", "PDD", "XIAOHONGSHU", "XHS", "WECHAT_SHOP", "WC",
+            "SHOPIFY", "SFY", "SHEIN", "SY", "JST", "JST"
+    );
+    private static final Map<String, String> SHORT_TO_FULL = Map.of(
+            "TB", "TAOBAO", "TM", "TMALL", "JD", "JD", "DY", "DOUYIN",
+            "PDD", "PINDUODUO", "XHS", "XIAOHONGSHU", "WC", "WECHAT_SHOP",
+            "SFY", "SHOPIFY", "SY", "SHEIN", "JST", "JST"
+    );
+
     private String genOrderNo(String platformCode) {
-        String prefix = switch (platformCode) {
-            case "TAOBAO" -> "TB";
-            case "TMALL" -> "TM";
-            case "JD" -> "JD";
-            case "DOUYIN" -> "DY";
-            case "PINDUODUO" -> "PDD";
-            case "XIAOHONGSHU" -> "XHS";
-            case "WECHAT_SHOP" -> "WC";
-            case "SHOPIFY" -> "SFY";
-            case "SHEIN" -> "SY";
-            case "JST" -> "JST";
-            default -> "EC";
-        };
+        String prefix = FULL_TO_SHORT.getOrDefault(platformCode, "EC");
         return prefix + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyMMddHHmmssSSS"));
     }
 
     private String toPlatformAbbr(String code) {
-        return switch (code) {
-            case "TAOBAO" -> "TB";
-            case "TMALL" -> "TM";
-            case "JD" -> "JD";
-            case "DOUYIN" -> "DY";
-            case "PINDUODUO" -> "PDD";
-            case "XIAOHONGSHU" -> "XHS";
-            case "WECHAT_SHOP" -> "WC";
-            case "SHOPIFY" -> "SFY";
-            case "SHEIN" -> "SY";
-            case "JST" -> "JST";
-            default -> code;
-        };
+        if (code == null) return null;
+        return FULL_TO_SHORT.getOrDefault(code, code);
     }
 
     /** 短码 → 全码（用于 platform 筛选兼容） */
     private String expandPlatformCode(String shortCode) {
         if (shortCode == null) return null;
-        return switch (shortCode.toUpperCase()) {
-            case "TB" -> "TAOBAO";
-            case "TM" -> "TMALL";
-            case "JD" -> "JD";
-            case "DY" -> "DOUYIN";
-            case "PDD" -> "PINDUODUO";
-            case "XHS" -> "XIAOHONGSHU";
-            case "WC" -> "WECHAT_SHOP";
-            case "SFY" -> "SHOPIFY";
-            case "SY" -> "SHEIN";
-            case "JST" -> "JST";
-            default -> null;
-        };
+        return SHORT_TO_FULL.get(shortCode.toUpperCase());
     }
 
     private int parseIntSafe(Object val, int defaultVal) {
