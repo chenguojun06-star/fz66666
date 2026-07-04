@@ -141,6 +141,63 @@ export interface GiftMatch {
   reason: string;
 }
 
+// ==================== Phase 3: 物流异常 + 账单对账 ====================
+
+export interface LogisticsAnomaly {
+  id: number;
+  tenantId?: number;
+  orderId: number;
+  orderNo: string;
+  trackingNo?: string | null;
+  expressCompany?: string | null;
+  receiverName?: string | null;
+  receiverPhone?: string | null;
+  anomalyType: string;
+  severity: string;
+  daysSinceUpdate?: number;
+  lastTrackDesc?: string | null;
+  lastTrackTime?: string | null;
+  aiAdvice?: string | null;
+  aiConfidence?: number | null;
+  handledStatus: number;
+  handledBy?: string | null;
+  handledTime?: string | null;
+  handledRemark?: string | null;
+  createTime?: string;
+}
+
+export interface PlatformBill {
+  id: number;
+  tenantId?: number;
+  platform: string;
+  shopName?: string | null;
+  billPeriod: string;
+  billNo?: string | null;
+  platformOrderNo: string;
+  localRevenueId?: number | null;
+  localRevenueNo?: string | null;
+  platformAmount: number;
+  localAmount: number;
+  diffAmount: number;
+  diffType: string;
+  aiAnalysis?: string | null;
+  aiConfidence?: number | null;
+  handledStatus: number;
+  handledBy?: string | null;
+  handledTime?: string | null;
+  fetchedTime?: string | null;
+  createTime?: string;
+}
+
+export interface ReconcileResult {
+  billPeriod: string;
+  totalBills: number;
+  matched: number;
+  mismatched: number;
+  missingLocal: number;
+  newBills: number;
+}
+
 export function useEcStock() {
   const [stockList, setStockList] = useState<UniversalStock[]>([]);
   const [alerts, setAlerts] = useState<StockAlert[]>([]);
@@ -149,6 +206,8 @@ export function useEcStock() {
   const [splits, setSplits] = useState<OrderSplit[]>([]);
   const [mergeGroups, setMergeGroups] = useState<MergeGroup[]>([]);
   const [giftRules, setGiftRules] = useState<GiftRule[]>([]);
+  const [anomalies, setAnomalies] = useState<LogisticsAnomaly[]>([]);
+  const [bills, setBills] = useState<PlatformBill[]>([]);
   const [loading, setLoading] = useState(false);
 
   const fetchStock = useCallback(async () => {
@@ -278,15 +337,75 @@ export function useEcStock() {
     return res?.data ?? [];
   }, []);
 
+  // ==================== Phase 3: 物流异常 + 账单对账 ====================
+
+  /** 查询物流异常列表 */
+  const fetchAnomalies = useCallback(async (unhandledOnly = true) => {
+    try {
+      const res = await api.get<ApiResult<LogisticsAnomaly[]>>(
+        `/ecommerce/logistics/anomalies?unhandledOnly=${unhandledOnly}`);
+      setAnomalies(res?.data ?? []);
+    } catch { /* handled */ }
+  }, []);
+
+  /** 扫描物流异常 */
+  const scanAnomalies = useCallback(async () => {
+    const res = await api.post<ApiResult<number>>('/ecommerce/logistics/anomaly-scan');
+    await fetchAnomalies();
+    return res?.data ?? 0;
+  }, [fetchAnomalies]);
+
+  /** 处理物流异常 */
+  const handleAnomaly = useCallback(async (id: number, remark?: string) => {
+    await api.post(`/ecommerce/logistics/anomalies/${id}/handle`, { remark });
+    await fetchAnomalies();
+  }, [fetchAnomalies]);
+
+  /** 忽略物流异常 */
+  const ignoreAnomaly = useCallback(async (id: number, remark?: string) => {
+    await api.post(`/ecommerce/logistics/anomalies/${id}/ignore`, { remark });
+    await fetchAnomalies();
+  }, [fetchAnomalies]);
+
+  /** 查询账单列表 */
+  const fetchBills = useCallback(async (pendingOnly = true, billPeriod?: string) => {
+    try {
+      const periodParam = billPeriod ? `&billPeriod=${encodeURIComponent(billPeriod)}` : '';
+      const res = await api.get<ApiResult<PlatformBill[]>>(
+        `/ecommerce/bills?pendingOnly=${pendingOnly}${periodParam}`);
+      setBills(res?.data ?? []);
+    } catch { /* handled */ }
+  }, []);
+
+  /** 触发账单对账 */
+  const reconcileBills = useCallback(async (platform?: string, billPeriod?: string) => {
+    const res = await api.post<ApiResult<ReconcileResult>>('/ecommerce/bill/reconcile',
+      { platform, billPeriod });
+    await fetchBills(false);
+    return res?.data;
+  }, [fetchBills]);
+
+  /** 处理账单差异 */
+  const handleBill = useCallback(async (id: number, status: number, remark?: string) => {
+    await api.post(`/ecommerce/bills/${id}/handle`, { status, remark });
+    await fetchBills(false);
+  }, [fetchBills]);
+
   return useMemo(() => ({
-    stockList, alerts, suggestions, allocations, splits, mergeGroups, giftRules, loading,
+    stockList, alerts, suggestions, allocations, splits, mergeGroups, giftRules,
+    anomalies, bills, loading,
     fetchStock, fetchLowStock, fetchAlerts, fetchSuggestions,
     fetchAllocations, fetchSplits, syncAll, generateSuggestions, aiScanSuggestions,
     approveSuggestion, rejectSuggestion, resolveAlert, updateSafeStock,
     fetchMergeCandidates, mergeOutbound, fetchGiftRules, saveGiftRule, deleteGiftRule, matchGifts,
-  }), [stockList, alerts, suggestions, allocations, splits, mergeGroups, giftRules, loading,
+    fetchAnomalies, scanAnomalies, handleAnomaly, ignoreAnomaly,
+    reconcileBills, fetchBills, handleBill,
+  }), [stockList, alerts, suggestions, allocations, splits, mergeGroups, giftRules,
+    anomalies, bills, loading,
     fetchStock, fetchLowStock, fetchAlerts, fetchSuggestions,
     fetchAllocations, fetchSplits, syncAll, generateSuggestions, aiScanSuggestions,
     approveSuggestion, rejectSuggestion, resolveAlert, updateSafeStock,
-    fetchMergeCandidates, mergeOutbound, fetchGiftRules, saveGiftRule, deleteGiftRule, matchGifts]);
+    fetchMergeCandidates, mergeOutbound, fetchGiftRules, saveGiftRule, deleteGiftRule, matchGifts,
+    fetchAnomalies, scanAnomalies, handleAnomaly, ignoreAnomaly,
+    reconcileBills, fetchBills, handleBill]);
 }

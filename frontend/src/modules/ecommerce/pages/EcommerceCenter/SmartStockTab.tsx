@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Button, Space, Tabs, Tag, Tooltip, Form, InputNumber, Input, Select, App } from 'antd';
-import { WarningOutlined, ShoppingCartOutlined, InboxOutlined, SwapOutlined, ThunderboltOutlined, RobotOutlined, MergeCellsOutlined, GiftOutlined, PlusOutlined, DeleteOutlined } from '@ant-design/icons';
+import { Button, Space, Tabs, Tag, Tooltip, Form, InputNumber, Input, Select, App, Modal } from 'antd';
+import { WarningOutlined, ShoppingCartOutlined, InboxOutlined, SwapOutlined, ThunderboltOutlined, RobotOutlined, MergeCellsOutlined, GiftOutlined, PlusOutlined, DeleteOutlined, EnvironmentOutlined, AuditOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
 import ResizableModal from '@/components/common/ResizableModal';
 import RowActions from '@/components/common/RowActions';
 import { useEcStock } from './useEcStock';
 import type { ColumnsType } from 'antd/es/table';
-import type { UniversalStock, StockAlert, PurchaseSuggestion, WarehouseAllocation, MergeGroup, GiftRule } from './useEcStock';
+import type { UniversalStock, StockAlert, PurchaseSuggestion, WarehouseAllocation, MergeGroup, GiftRule, LogisticsAnomaly, PlatformBill } from './useEcStock';
 
 const UrgencyColorMap: Record<string, string> = {
   urgent: 'red', high: 'orange', medium: 'blue', low: 'default',
@@ -187,6 +187,7 @@ const SmartStockTab: React.FC = () => {
   useEffect(() => {
     st.fetchAlerts(); st.fetchSuggestions(); st.fetchStock(); st.fetchAllocations();
     st.fetchMergeCandidates(); st.fetchGiftRules();
+    st.fetchAnomalies(); st.fetchBills();
   }, [st]);
 
   const handleResolve = useCallback(async (id: number) => {
@@ -245,6 +246,64 @@ const SmartStockTab: React.FC = () => {
 
   const handleDeleteGiftRule = useCallback(async (id: number) => {
     await st.deleteGiftRule(id); message.success('已删除');
+  }, [st, message]);
+
+  // ==================== Phase 3: 物流异常 + 账单对账 ====================
+
+  const [anomalyScanning, setAnomalyScanning] = useState(false);
+  const handleScanAnomalies = useCallback(async () => {
+    setAnomalyScanning(true);
+    try {
+      const created = await st.scanAnomalies();
+      if (created > 0) message.success(`扫描完成，新增 ${created} 条异常预警`);
+      else message.info('扫描完成，暂无新异常');
+    } catch {
+      message.error('扫描失败，请稍后重试');
+    } finally { setAnomalyScanning(false); }
+  }, [st, message]);
+
+  const handleHandleAnomaly = useCallback(async (id: number) => {
+    let remark = '';
+    Modal.confirm({
+      title: '处理物流异常',
+      content: (
+        <Input.TextArea
+          placeholder="请输入处理备注（可选）"
+          rows={3}
+          onChange={(e) => { remark = e.target.value; }}
+        />
+      ),
+      onOk: async () => {
+        await st.handleAnomaly(id, remark);
+        message.success('已标记处理');
+      },
+    });
+  }, [st, message]);
+
+  const handleIgnoreAnomaly = useCallback(async (id: number) => {
+    await st.ignoreAnomaly(id);
+    message.info('已忽略');
+  }, [st, message]);
+
+  const [billReconciling, setBillReconciling] = useState(false);
+  const handleReconcileBills = useCallback(async () => {
+    setBillReconciling(true);
+    try {
+      const res = await st.reconcileBills();
+      if (res) {
+        message.success(`对账完成：共 ${res.totalBills} 条，匹配 ${res.matched}，差异 ${res.mismatched + res.missingLocal}，新增 ${res.newBills}`);
+      } else {
+        message.info('对账完成，无账单数据');
+      }
+    } catch {
+      message.error('对账失败，请稍后重试');
+    } finally { setBillReconciling(false); }
+  }, [st, message]);
+
+  const handleHandleBill = useCallback(async (id: number, status: number) => {
+    const label = status === 1 ? '确认' : status === 2 ? '申诉' : '忽略';
+    await st.handleBill(id, status);
+    message.success(`已${label}`);
   }, [st, message]);
 
   const alertCols: ColumnsType<StockAlert> = [
@@ -383,6 +442,121 @@ const SmartStockTab: React.FC = () => {
     )},
   ];
 
+  // Phase 3: 物流异常列
+  const anomalyCols: ColumnsType<LogisticsAnomaly> = [
+    { title: '订单号', dataIndex: 'orderNo', width: 140 },
+    { title: '快递单号', dataIndex: 'trackingNo', width: 140 },
+    { title: '快递公司', dataIndex: 'expressCompany', width: 90 },
+    {
+      title: '异常类型', dataIndex: 'anomalyType', width: 110,
+      render: (v: string) => {
+        const map: Record<string, { color: string; label: string }> = {
+          DELAY: { color: 'orange', label: '超时未签' },
+          STALE: { color: 'red', label: '轨迹停滞' },
+          EXCEPTION: { color: 'red', label: '轨迹异常' },
+          SIGNED_ABNORMAL: { color: 'volcano', label: '签收异常' },
+          RETURN_RISK: { color: 'magenta', label: '退货风险' },
+        };
+        const m = map[v] ?? { color: 'default', label: v };
+        return <Tag color={m.color}>{m.label}</Tag>;
+      },
+    },
+    {
+      title: '严重度', dataIndex: 'severity', width: 80,
+      render: (v: string) => {
+        const color = v === 'HIGH' ? 'red' : v === 'MEDIUM' ? 'orange' : 'blue';
+        return <Tag color={color}>{v}</Tag>;
+      },
+    },
+    { title: '停滞天数', dataIndex: 'daysSinceUpdate', width: 80, render: (v?: number) => v ?? '-' },
+    {
+      title: '最后轨迹', dataIndex: 'lastTrackDesc', width: 200, ellipsis: true,
+      render: (v?: string | null) => (
+        <Tooltip title={v || '-'}><span>{v || '-'}</span></Tooltip>
+      ),
+    },
+    {
+      title: 'AI 建议', dataIndex: 'aiAdvice', width: 260, ellipsis: true,
+      render: (v?: string | null, r?: LogisticsAnomaly) => {
+        const text = v || '-';
+        const conf = r?.aiConfidence;
+        const color = !conf ? 'var(--color-text-quaternary)' : conf >= 70 ? 'var(--color-success)' : conf >= 50 ? 'var(--color-warning)' : 'var(--color-error)';
+        return (
+          <Tooltip title={text}>
+            <span style={{ color }}>
+              {conf != null && <span style={{ marginRight: 4 }}>[{conf}%]</span>}
+              {text}
+            </span>
+          </Tooltip>
+        );
+      },
+    },
+    { title: '操作', width: 150, render: (_: unknown, r: LogisticsAnomaly) => (
+      <RowActions actions={[
+        { key: 'handle', label: '处理', primary: true, onClick: () => handleHandleAnomaly(r.id) },
+        { key: 'ignore', label: '忽略', onClick: () => handleIgnoreAnomaly(r.id) },
+      ]} />
+    )},
+  ];
+
+  // Phase 3: 平台账单列
+  const billCols: ColumnsType<PlatformBill> = [
+    { title: '平台', dataIndex: 'platform', width: 100 },
+    { title: '账期', dataIndex: 'billPeriod', width: 100 },
+    { title: '平台订单号', dataIndex: 'platformOrderNo', width: 160 },
+    {
+      title: '差异类型', dataIndex: 'diffType', width: 120,
+      render: (v: string) => {
+        const map: Record<string, { color: string; label: string }> = {
+          NONE: { color: 'success', label: '一致' },
+          MISSING_LOCAL: { color: 'orange', label: '本地缺失' },
+          MISSING_PLATFORM: { color: 'orange', label: '平台缺失' },
+          AMOUNT_MISMATCH: { color: 'red', label: '金额不符' },
+        };
+        const m = map[v] ?? { color: 'default', label: v };
+        return <Tag color={m.color}>{m.label}</Tag>;
+      },
+    },
+    {
+      title: '平台金额', dataIndex: 'platformAmount', width: 100, align: 'right' as const,
+      render: (v: number) => `¥${v?.toFixed(2) ?? '0.00'}`,
+    },
+    {
+      title: '本地金额', dataIndex: 'localAmount', width: 100, align: 'right' as const,
+      render: (v: number) => `¥${v?.toFixed(2) ?? '0.00'}`,
+    },
+    {
+      title: '差异金额', dataIndex: 'diffAmount', width: 100, align: 'right' as const,
+      render: (v: number) => {
+        const color = Math.abs(v) < 0.01 ? 'var(--color-success)' : v > 0 ? 'var(--color-error)' : 'var(--color-warning)';
+        return <span style={{ color, fontWeight: 500 }}>{v > 0 ? '+' : ''}{v?.toFixed(2) ?? '0.00'}</span>;
+      },
+    },
+    {
+      title: 'AI 分析', dataIndex: 'aiAnalysis', width: 260, ellipsis: true,
+      render: (v?: string | null, r?: PlatformBill) => {
+        const text = v || '-';
+        const conf = r?.aiConfidence;
+        const color = !conf ? 'var(--color-text-quaternary)' : conf >= 70 ? 'var(--color-success)' : conf >= 50 ? 'var(--color-warning)' : 'var(--color-error)';
+        return (
+          <Tooltip title={text}>
+            <span style={{ color }}>
+              {conf != null && <span style={{ marginRight: 4 }}>[{conf}%]</span>}
+              {text}
+            </span>
+          </Tooltip>
+        );
+      },
+    },
+    { title: '操作', width: 180, render: (_: unknown, r: PlatformBill) => (
+      <RowActions actions={[
+        { key: 'confirm', label: '确认', primary: true, onClick: () => handleHandleBill(r.id, 1) },
+        { key: 'appeal', label: '申诉', onClick: () => handleHandleBill(r.id, 2) },
+        { key: 'ignore', label: '忽略', onClick: () => handleHandleBill(r.id, 3) },
+      ]} />
+    )},
+  ];
+
   const tabItems = [
     { key: 'alerts', label: <span><WarningOutlined /> 预警列表</span>, children: <ResizableTable<StockAlert> dataSource={st.alerts} columns={alertCols} rowKey="id" size="small" loading={st.loading} /> },
     {
@@ -429,6 +603,38 @@ const SmartStockTab: React.FC = () => {
             <Button icon={<PlusOutlined />} type="primary" onClick={() => { setGiftRuleRecord(null); setGiftRuleModalOpen(true); }}>新增规则</Button>
           </div>
           <ResizableTable<GiftRule> dataSource={st.giftRules} columns={giftRuleCols} rowKey="id" size="small" loading={st.loading} />
+        </div>
+      ),
+    },
+    {
+      key: 'logistics',
+      label: <span><EnvironmentOutlined /> 物流监控</span>,
+      children: (
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <span style={{ color: 'var(--color-text-secondary)', fontSize: 13 }}>
+              <RobotOutlined style={{ marginRight: 4, color: 'var(--color-primary)' }} />
+              AI 监控在途订单物流异常（超时未签/轨迹停滞/轨迹异常），自动生成处理建议
+            </span>
+            <Button icon={<ThunderboltOutlined />} loading={anomalyScanning} onClick={handleScanAnomalies}>扫描物流异常</Button>
+          </div>
+          <ResizableTable<LogisticsAnomaly> dataSource={st.anomalies} columns={anomalyCols} rowKey="id" size="small" loading={st.loading} />
+        </div>
+      ),
+    },
+    {
+      key: 'bills',
+      label: <span><AuditOutlined /> 账单对账</span>,
+      children: (
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <span style={{ color: 'var(--color-text-secondary)', fontSize: 13 }}>
+              <RobotOutlined style={{ marginRight: 4, color: 'var(--color-primary)' }} />
+              AI 对账：拉取平台账单与本地收入流水比对，自动分析差异原因（佣金扣除/跨账期/优惠券等）
+            </span>
+            <Button icon={<ThunderboltOutlined />} loading={billReconciling} onClick={handleReconcileBills}>触发对账</Button>
+          </div>
+          <ResizableTable<PlatformBill> dataSource={st.bills} columns={billCols} rowKey="id" size="small" loading={st.loading} />
         </div>
       ),
     },

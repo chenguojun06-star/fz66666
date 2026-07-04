@@ -5,9 +5,15 @@ import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.integration.ecommerce.entity.EcommerceOrder;
 import com.fashion.supplychain.integration.ecommerce.entity.EcGiftRule;
+import com.fashion.supplychain.integration.ecommerce.entity.EcLogisticsAnomaly;
+import com.fashion.supplychain.integration.ecommerce.entity.EcPlatformBill;
 import com.fashion.supplychain.integration.ecommerce.orchestration.EcommerceOrderOrchestrator;
 import com.fashion.supplychain.integration.ecommerce.orchestration.EcOrderMergeOrchestrator;
+import com.fashion.supplychain.integration.ecommerce.orchestration.EcLogisticsAnomalyOrchestrator;
+import com.fashion.supplychain.integration.ecommerce.orchestration.EcBillReconciliationOrchestrator;
 import com.fashion.supplychain.integration.ecommerce.service.EcGiftRuleService;
+import com.fashion.supplychain.integration.ecommerce.service.EcLogisticsAnomalyService;
+import com.fashion.supplychain.integration.ecommerce.service.EcPlatformBillService;
 import com.fashion.supplychain.system.service.EcPlatformConfigService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -42,6 +48,18 @@ public class EcommerceOrderController {
 
     @Autowired
     private EcGiftRuleService giftRuleService;
+
+    @Autowired
+    private EcLogisticsAnomalyOrchestrator logisticsAnomalyOrchestrator;
+
+    @Autowired
+    private EcLogisticsAnomalyService logisticsAnomalyService;
+
+    @Autowired
+    private EcBillReconciliationOrchestrator billReconciliationOrchestrator;
+
+    @Autowired
+    private EcPlatformBillService platformBillService;
 
     private static final long WEBHOOK_TIMESTAMP_TOLERANCE_MS = 5 * 60 * 1000;
     private static final ObjectMapper objectMapper = new ObjectMapper();
@@ -181,6 +199,107 @@ public class EcommerceOrderController {
                 ? Integer.valueOf(body.get("orderQuantity").toString()) : null;
         String platform = (String) body.get("platformCode");
         return Result.success(giftRuleService.matchGifts(tenantId, amount, qty, platform));
+    }
+
+    // ==================== Phase 3: 物流异常预警 ====================
+
+    /** 扫描物流异常：扫描在途订单，生成异常预警 */
+    @PostMapping("/logistics/anomaly-scan")
+    public Result<Integer> scanLogisticsAnomalies() {
+        try {
+            int created = logisticsAnomalyOrchestrator.scanAnomalies();
+            return Result.success(created);
+        } catch (Exception e) {
+            log.error("[物流异常扫描失败] {}", e.getMessage());
+            return Result.fail("扫描失败: " + e.getMessage());
+        }
+    }
+
+    /** 查询物流异常列表 */
+    @GetMapping("/logistics/anomalies")
+    public Result<List<EcLogisticsAnomaly>> listAnomalies(
+            @RequestParam(value = "unhandledOnly", defaultValue = "true") boolean unhandledOnly) {
+        Long tenantId = UserContext.tenantId();
+        return Result.success(unhandledOnly
+                ? logisticsAnomalyService.listUnhandled(tenantId)
+                : logisticsAnomalyService.listAll(tenantId));
+    }
+
+    /** 处理物流异常（标记已处理） */
+    @PostMapping("/logistics/anomalies/{id}/handle")
+    public Result<Void> handleAnomaly(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+        try {
+            Long tenantId = UserContext.tenantId();
+            String handledBy = UserContext.username();
+            String remark = (String) body.get("remark");
+            logisticsAnomalyService.markHandled(tenantId, id, handledBy, remark);
+            return Result.success(null);
+        } catch (Exception e) {
+            log.error("[处理物流异常失败] id={} err={}", id, e.getMessage());
+            return Result.fail("处理失败: " + e.getMessage());
+        }
+    }
+
+    /** 忽略物流异常 */
+    @PostMapping("/logistics/anomalies/{id}/ignore")
+    public Result<Void> ignoreAnomaly(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+        try {
+            Long tenantId = UserContext.tenantId();
+            String handledBy = UserContext.username();
+            String remark = (String) body.get("remark");
+            logisticsAnomalyService.markIgnored(tenantId, id, handledBy, remark);
+            return Result.success(null);
+        } catch (Exception e) {
+            log.error("[忽略物流异常失败] id={} err={}", id, e.getMessage());
+            return Result.fail("操作失败: " + e.getMessage());
+        }
+    }
+
+    // ==================== Phase 3: 平台账单对账 ====================
+
+    /** 触发账单对账：拉取平台账单并与本地收入比对 */
+    @PostMapping("/bill/reconcile")
+    public Result<EcBillReconciliationOrchestrator.ReconcileResult> reconcile(
+            @RequestBody(required = false) Map<String, Object> body) {
+        try {
+            String platform = body != null ? (String) body.get("platform") : null;
+            String billPeriod = body != null ? (String) body.get("billPeriod") : null;
+            return Result.success(billReconciliationOrchestrator.reconcile(platform, billPeriod));
+        } catch (Exception e) {
+            log.error("[账单对账失败] {}", e.getMessage());
+            return Result.fail("对账失败: " + e.getMessage());
+        }
+    }
+
+    /** 查询账单列表 */
+    @GetMapping("/bills")
+    public Result<List<EcPlatformBill>> listBills(
+            @RequestParam(value = "pendingOnly", defaultValue = "true") boolean pendingOnly,
+            @RequestParam(value = "billPeriod", required = false) String billPeriod) {
+        Long tenantId = UserContext.tenantId();
+        if (billPeriod != null && !billPeriod.isBlank()) {
+            return Result.success(platformBillService.listByPeriod(tenantId, billPeriod));
+        }
+        return Result.success(pendingOnly
+                ? platformBillService.listPending(tenantId)
+                : platformBillService.listAll(tenantId));
+    }
+
+    /** 处理账单差异（1已确认/2已申诉/3已忽略） */
+    @PostMapping("/bills/{id}/handle")
+    public Result<Void> handleBill(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+        try {
+            Long tenantId = UserContext.tenantId();
+            String handledBy = UserContext.username();
+            int status = body.get("status") != null
+                    ? Integer.valueOf(body.get("status").toString()) : 1;
+            String remark = (String) body.get("remark");
+            platformBillService.markHandled(tenantId, id, status, handledBy, remark);
+            return Result.success(null);
+        } catch (Exception e) {
+            log.error("[处理账单差异失败] id={} err={}", id, e.getMessage());
+            return Result.fail("处理失败: " + e.getMessage());
+        }
     }
 
     private Long resolveTenantFromConfig(String platform, String appKey) {
