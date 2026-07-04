@@ -46,6 +46,14 @@ export interface PurchaseSuggestion {
   onWayStock: number;
   onWayProduction: number;
   status: number;
+  /** 建议类型：PURCHASE=采购 / PRODUCTION=生产（AI 补货顾问） */
+  suggestionType?: string;
+  /** 关联生产订单ID（转生产后回填） */
+  productionOrderId?: number | null;
+  /** AI 置信度 0-100 */
+  aiConfidence?: number | null;
+  /** AI 推理过程 */
+  aiReason?: string | null;
   createTime: string;
 }
 
@@ -135,9 +143,17 @@ export function useEcStock() {
     await fetchSuggestions();
   }, [fetchSuggestions]);
 
-  const approveSuggestion = useCallback(async (id: number) => {
-    await api.post(`/ec/stock/suggestions/${id}/approve`);
+  /** AI 补货顾问扫描：扫描预警生成 AI 建议 */
+  const aiScanSuggestions = useCallback(async () => {
+    const res = await api.post<ApiResult<{ created: number }>>('/ec/stock/suggestions/ai-scan');
     await fetchSuggestions();
+    return res?.data?.created ?? 0;
+  }, [fetchSuggestions]);
+
+  const approveSuggestion = useCallback(async (id: number) => {
+    const res = await api.post<ApiResult<{ message?: string; productionOrderId?: string; suggestionType?: string }>>(`/ec/stock/suggestions/${id}/approve`);
+    await fetchSuggestions();
+    return res?.data;
   }, [fetchSuggestions]);
 
   const rejectSuggestion = useCallback(async (id: number) => {
@@ -158,10 +174,10 @@ export function useEcStock() {
   return useMemo(() => ({
     stockList, alerts, suggestions, allocations, splits, loading,
     fetchStock, fetchLowStock, fetchAlerts, fetchSuggestions,
-    fetchAllocations, fetchSplits, syncAll, generateSuggestions,
+    fetchAllocations, fetchSplits, syncAll, generateSuggestions, aiScanSuggestions,
     approveSuggestion, rejectSuggestion, resolveAlert, updateSafeStock,
   }), [stockList, alerts, suggestions, allocations, splits, loading,
     fetchStock, fetchLowStock, fetchAlerts, fetchSuggestions,
-    fetchAllocations, fetchSplits, syncAll, generateSuggestions,
+    fetchAllocations, fetchSplits, syncAll, generateSuggestions, aiScanSuggestions,
     approveSuggestion, rejectSuggestion, resolveAlert, updateSafeStock]);
 }

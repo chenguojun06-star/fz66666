@@ -29,6 +29,7 @@ public class EcStockController {
     @Autowired private EcOrderSplitService orderSplitService;
     @Autowired private EcStockOrchestrator stockOrchestrator;
     @Autowired private EcPurchaseSuggestionOrchestrator purchaseSuggestionOrchestrator;
+    @Autowired private EcReplenishmentOrchestrator replenishmentOrchestrator;
 
     @PostMapping("/sync")
     public Result<Void> syncAllStock() {
@@ -88,11 +89,23 @@ public class EcStockController {
         return Result.success();
     }
 
+    /** AI 补货顾问扫描：扫描未处理预警，为每条生成 AI 建议（不执行，仅 PENDING） */
+    @PostMapping("/suggestions/ai-scan")
+    public Result<Map<String, Object>> aiScanSuggestions() {
+        int created = replenishmentOrchestrator.triggerScan();
+        return Result.success(Map.of("created", created));
+    }
+
     @PostMapping("/suggestions/{id}/approve")
-    public Result<Void> approveSuggestion(@PathVariable Long id) {
+    public Result<Map<String, Object>> approveSuggestion(@PathVariable Long id) {
         Long tenantId = UserContext.tenantId();
-        purchaseSuggestionOrchestrator.approveAndConvert(tenantId, id);
-        return Result.success();
+        EcReplenishmentOrchestrator.ApproveResult ar = replenishmentOrchestrator.approveAndConvert(tenantId, id);
+        return Result.success(Map.of(
+                "suggestionId", ar.getSuggestionId(),
+                "suggestionType", ar.getSuggestionType() != null ? ar.getSuggestionType() : "",
+                "productionOrderId", ar.getProductionOrderId() != null ? ar.getProductionOrderId() : "",
+                "message", ar.getMessage() != null ? ar.getMessage() : ""
+        ));
     }
 
     @PostMapping("/suggestions/{id}/reject")

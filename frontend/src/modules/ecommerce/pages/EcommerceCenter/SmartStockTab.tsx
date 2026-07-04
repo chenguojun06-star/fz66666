@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Tabs, Tag, Form, InputNumber, App } from 'antd';
-import { WarningOutlined, ShoppingCartOutlined, InboxOutlined, SwapOutlined } from '@ant-design/icons';
+import { Button, Space, Tabs, Tag, Tooltip, Form, InputNumber, App } from 'antd';
+import { WarningOutlined, ShoppingCartOutlined, InboxOutlined, SwapOutlined, ThunderboltOutlined, RobotOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
 import ResizableModal from '@/components/common/ResizableModal';
 import RowActions from '@/components/common/RowActions';
@@ -60,11 +60,29 @@ const SmartStockTab: React.FC = () => {
   }, [st, message]);
 
   const handleApprove = useCallback(async (id: number) => {
-    await st.approveSuggestion(id); message.success('已审批');
+    const res = await st.approveSuggestion(id);
+    message.success(res?.message || '已审批');
   }, [st, message]);
 
   const handleReject = useCallback(async (id: number) => {
     await st.rejectSuggestion(id); message.info('已拒绝');
+  }, [st, message]);
+
+  const [aiScanning, setAiScanning] = useState(false);
+  const handleAiScan = useCallback(async () => {
+    setAiScanning(true);
+    try {
+      const created = await st.aiScanSuggestions();
+      if (created > 0) {
+        message.success(`AI 补货顾问已生成 ${created} 条建议`);
+      } else {
+        message.info('暂无新的缺货预警需要处理');
+      }
+    } catch {
+      message.error('AI 扫描失败，请稍后重试');
+    } finally {
+      setAiScanning(false);
+    }
   }, [st, message]);
 
   const handleSafeStock = useCallback(async (skuId: number, val: number) => {
@@ -87,12 +105,38 @@ const SmartStockTab: React.FC = () => {
 
   const suggestionCols: ColumnsType<PurchaseSuggestion> = [
     { title: 'SKU编码', dataIndex: 'skuCode', width: 130 },
-    { title: '建议采购量', dataIndex: 'suggestQuantity', width: 100 },
+    {
+      title: '建议类型', dataIndex: 'suggestionType', width: 100,
+      render: (v?: string) => {
+        if (v === 'PRODUCTION') return <Tag color="processing">转生产</Tag>;
+        if (v === 'PURCHASE') return <Tag color="warning">转采购</Tag>;
+        return <Tag>采购</Tag>;
+      },
+    },
+    { title: '建议数量', dataIndex: 'suggestQuantity', width: 90 },
+    {
+      title: 'AI 置信度', dataIndex: 'aiConfidence', width: 110,
+      render: (v?: number | null) => {
+        if (v == null) return <Tag>规则</Tag>;
+        const color = v >= 70 ? 'success' : v >= 50 ? 'warning' : 'error';
+        const label = v >= 70 ? `${v}%` : v >= 50 ? `${v}% 需确认` : `${v}% 低置信`;
+        return <Tooltip title={v >= 70 ? 'AI 高置信度，可放心确认' : 'AI 置信度偏低，请仔细核对'}><Tag color={color}>{label}</Tag></Tooltip>;
+      },
+    },
     { title: '紧急程度', dataIndex: 'urgencyLevel', width: 90, render: (v: string) => <Tag color={UrgencyColorMap[v] ?? 'default'}>{v}</Tag> },
-    { title: '原因', dataIndex: 'reason', ellipsis: true },
+    {
+      title: 'AI 推理依据', dataIndex: 'aiReason', width: 220, ellipsis: true,
+      render: (v?: string | null, r?: PurchaseSuggestion) => (
+        <Tooltip title={v || r?.reason || '-'}>
+          <span style={{ color: v ? 'var(--color-text-primary)' : 'var(--color-text-quaternary)' }}>
+            {v || r?.reason || '-'}
+          </span>
+        </Tooltip>
+      ),
+    },
     { title: '操作', width: 150, render: (_: unknown, r: PurchaseSuggestion) => (
       <RowActions actions={[
-        { key: 'approve', label: '审批', primary: true, onClick: () => handleApprove(r.id) },
+        { key: 'approve', label: '确认', primary: true, onClick: () => handleApprove(r.id) },
         { key: 'reject', label: '拒绝', danger: true, onClick: () => handleReject(r.id) },
       ]} />
     )},
@@ -125,7 +169,24 @@ const SmartStockTab: React.FC = () => {
 
   const tabItems = [
     { key: 'alerts', label: <span><WarningOutlined /> 预警列表</span>, children: <ResizableTable<StockAlert> dataSource={st.alerts} columns={alertCols} rowKey="id" size="small" loading={st.loading} /> },
-    { key: 'suggestions', label: <span><ShoppingCartOutlined /> 补货建议</span>, children: <ResizableTable<PurchaseSuggestion> dataSource={st.suggestions} columns={suggestionCols} rowKey="id" size="small" loading={st.loading} /> },
+    {
+      key: 'suggestions',
+      label: <span><ShoppingCartOutlined /> 补货建议</span>,
+      children: (
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <span style={{ color: 'var(--color-text-secondary)', fontSize: 13 }}>
+              <RobotOutlined style={{ marginRight: 4, color: 'var(--color-primary)' }} />
+              AI 补货顾问根据租户类型与款式 BOM 自动判断走采购还是生产，置信度低于 70% 时请仔细核对
+            </span>
+            <Space>
+              <Button icon={<ThunderboltOutlined />} loading={aiScanning} onClick={handleAiScan}>AI 扫描生成建议</Button>
+            </Space>
+          </div>
+          <ResizableTable<PurchaseSuggestion> dataSource={st.suggestions} columns={suggestionCols} rowKey="id" size="small" loading={st.loading} />
+        </div>
+      ),
+    },
     { key: 'stock', label: <span><InboxOutlined /> 库存明细</span>, children: <ResizableTable<UniversalStock> dataSource={st.stockList} columns={stockCols} rowKey="id" size="small" loading={st.loading} /> },
     { key: 'allocations', label: <span><SwapOutlined /> 分配记录</span>, children: <ResizableTable<WarehouseAllocation> dataSource={st.allocations} columns={allocCols} rowKey="id" size="small" loading={st.loading} /> },
   ];
