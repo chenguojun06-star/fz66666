@@ -1,4 +1,5 @@
 -- 操作日志增加变更摘要字段（人类可读的 before->after 对比）
+DELIMITER $$
 DROP PROCEDURE IF EXISTS add_change_summary_to_operation_log $$
 
 CREATE PROCEDURE add_change_summary_to_operation_log()
@@ -41,3 +42,5 @@ BEGIN
 END $$
 CALL add_target_name_index() $$
 DROP PROCEDURE IF EXISTS add_target_name_index $$
+
+DELIMITER ;

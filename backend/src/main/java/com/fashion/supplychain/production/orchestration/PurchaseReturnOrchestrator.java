@@ -246,13 +246,11 @@ public class PurchaseReturnOrchestrator {
         // 3. 更新应付账款（减少应付金额）
         BigDecimal totalAmount = returnEntity.getTotalAmount();
         if (totalAmount != null && totalAmount.compareTo(BigDecimal.ZERO) > 0) {
-            // 查询对应的应付账款记录
+            // 查询对应的应付账款记录（P0铁律4：必须用AND保持tenant_id隔离，禁止.or()绕过租户过滤）
             List<Payable> payables = payableService.list(
                     new LambdaQueryWrapper<Payable>()
                             .eq(Payable::getTenantId, tenantId)
                             .eq(Payable::getSupplierId, returnEntity.getSupplierId())
-                            .isNull(Payable::getDeleteFlag)
-                            .or()
                             .eq(Payable::getDeleteFlag, 0)
                             .orderByDesc(Payable::getCreateTime)
             );

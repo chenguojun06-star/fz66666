@@ -1,4 +1,5 @@
 -- 采购退货单表（幂等创建）
+DELIMITER $$
 DROP PROCEDURE IF EXISTS create_purchase_return_table $$
 
 CREATE PROCEDURE create_purchase_return_table()
@@ -39,7 +40,6 @@ BEGIN
 END $$
 
 CALL create_purchase_return_table() $$
-
 DROP PROCEDURE IF EXISTS create_purchase_return_table $$
 
 -- 退货物料明细表（幂等创建）
@@ -77,5 +77,6 @@ BEGIN
 END $$
 
 CALL create_purchase_return_item_table() $$
-
 DROP PROCEDURE IF EXISTS create_purchase_return_item_table $$
+
+DELIMITER ;

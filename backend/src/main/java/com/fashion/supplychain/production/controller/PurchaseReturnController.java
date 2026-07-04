@@ -1,6 +1,7 @@
 package com.fashion.supplychain.production.controller;
 
 import com.fashion.supplychain.common.Result;
+import com.fashion.supplychain.production.entity.PurchaseReturn;
 import com.fashion.supplychain.production.orchestration.PurchaseReturnOrchestrator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -68,10 +69,9 @@ public class PurchaseReturnController {
      */
     @GetMapping("/list")
     @PreAuthorize("hasAuthority('PURCHASE_RETURN_VIEW')")
-    public Result<List<Map<String, Object>>> listReturns(@RequestParam Map<String, Object> params) {
-        // 返回退货单列表（含基本信息）
-        List<?> returns = purchaseReturnOrchestrator.listReturns(params);
-        return Result.success((List<Map<String, Object>>) returns);
+    public Result<List<PurchaseReturn>> listReturns(@RequestParam Map<String, Object> params) {
+        List<PurchaseReturn> returns = purchaseReturnOrchestrator.listReturns(params);
+        return Result.success(returns);
     }
 
     /**

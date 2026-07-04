@@ -45,12 +45,8 @@ public class SalesReturnController {
     /** 查询退货单详情 */
     @GetMapping("/{id}")
     public Result<Map<String, Object>> getDetail(@PathVariable Long id) {
-        SalesReturn returnOrder = salesReturnOrchestrator.getDetailById(id);
-        List<SalesReturnItem> items = salesReturnOrchestrator.getReturnItems(id);
-        Map<String, Object> result = new HashMap<>();
-        result.put("returnOrder", returnOrder);
-        result.put("items", items);
-        return Result.success(result);
+        Map<String, Object> detail = salesReturnOrchestrator.getDetailById(id);
+        return Result.success(detail);
     }
 
     /** 审核退货单 */

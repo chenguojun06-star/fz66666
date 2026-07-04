@@ -77,7 +77,7 @@ public class SalesReturnOrchestrator {
         return salesReturnService.page(new Page<>(page, pageSize), wrapper);
     }
 
-    public SalesReturn getDetailById(Long id) {
+    public Map<String, Object> getDetailById(Long id) {
         Long tenantId = TenantAssert.requireTenantId();
         SalesReturn returnOrder = salesReturnService.lambdaQuery()
                 .eq(SalesReturn::getId, id)
@@ -92,8 +92,11 @@ public class SalesReturnOrchestrator {
                 .eq(SalesReturnItem::getReturnId, id)
                 .eq(SalesReturnItem::getTenantId, tenantId)
                 .list();
-        // 注入到虚拟字段（需要SalesReturn增加@TableField(exist=false) List<SalesReturnItem> items字段）
-        return returnOrder;
+        // 组装返回结果（SalesReturn 实体无 items 字段，用 Map 注入避免明细丢失）
+        Map<String, Object> result = new java.util.HashMap<>();
+        result.put("returnOrder", returnOrder);
+        result.put("items", items);
+        return result;
     }
 
     public List<SalesReturnItem> getReturnItems(Long returnId) {

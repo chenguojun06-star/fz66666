@@ -864,6 +864,7 @@ public class StyleInfoOrchestrator {
 
         boolean exists = styleInfoService.lambdaQuery()
                 .eq(StyleInfo::getStyleNo, newStyleNo.trim())
+                .eq(StyleInfo::getTenantId, UserContext.tenantId())
                 .exists();
         if (exists) {
             throw new IllegalArgumentException("款号 " + newStyleNo.trim() + " 已存在，请换一个款号");
@@ -889,6 +890,13 @@ public class StyleInfoOrchestrator {
         copySecondaryProcessToNewStyle(sourceStyleId, savedStyle.getId());
         copyQuotationToNewStyle(sourceStyleId, savedStyle.getId());
         styleOperationAppendHelper.appendCopy(sourceStyleId, newStyle.getStyleNo());
+
+        // 复制完成后，如果尺码颜色配置存在，自动生成SKU
+        try {
+            tryAutoGenerateSkus(savedStyle.getId());
+        } catch (Exception e) {
+            log.warn("复制款式后自动生成SKU失败: styleId={}, error={}", savedStyle.getId(), e.getMessage());
+        }
 
         log.info("一键复制款式成功: sourceStyleId={}, newStyleId={}, newStyleNo={}, newColor={}",
                 sourceStyleId, savedStyle.getId(), newStyle.getStyleNo(), newColor);
