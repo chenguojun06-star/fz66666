@@ -1,24 +1,21 @@
 package com.fashion.supplychain.common.aop;
 
+import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.production.entity.MaterialPicking;
+import com.fashion.supplychain.production.entity.MaterialPurchase;
+import com.fashion.supplychain.production.service.CuttingBundleService;
+import com.fashion.supplychain.production.service.CuttingTaskService;
+import com.fashion.supplychain.production.service.MaterialPickingService;
+import com.fashion.supplychain.production.service.MaterialPurchaseService;
+import com.fashion.supplychain.production.service.ProductionOrderService;
+import com.fashion.supplychain.style.service.StyleInfoService;
 import com.fashion.supplychain.system.entity.OperationLog;
 import com.fashion.supplychain.system.helper.OperationLogTargetNameResolver;
 import com.fashion.supplychain.system.service.OperationLogService;
-import com.fashion.supplychain.common.UserContext;
-import com.fashion.supplychain.style.service.StyleInfoService;
-import com.fashion.supplychain.production.service.ProductionOrderService;
-import com.fashion.supplychain.production.service.MaterialPurchaseService;
-import com.fashion.supplychain.production.service.MaterialPickingService;
-import com.fashion.supplychain.production.service.CuttingTaskService;
-import com.fashion.supplychain.production.service.CuttingBundleService;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
+import jakarta.annotation.Resource;
+import jakarta.servlet.http.HttpServletRequest;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
@@ -26,12 +23,22 @@ import org.aspectj.lang.annotation.Pointcut;
 import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
-import org.springframework.web.servlet.HandlerMapping;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.annotation.Resource;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 
+import java.time.LocalDateTime;
+import java.util.Map;
+import java.util.Set;
+
+/**
+ * 系统操作日志切面（P2#10 拆分后）
+ * 事务边界：无（仅记录日志，不涉及业务事务）
+ *
+ * 拆分原则（不影响数据链路）：
+ *   - 实体快照查询 → OperationLogSnapshotHelper
+ *   - 变更摘要/详情构建 → OperationLogChangeSummaryHelper
+ *   - Aspect 只保留切面逻辑 + URI/参数解析 + 日志保存
+ *
+ * 符合 P0 铁律 #2：@Transactional 只在 Orchestrator 层（Aspect 不涉及业务事务）
+ */
 @Slf4j
 @Aspect
 @Component
@@ -55,27 +62,18 @@ public class SystemOperationLogAspect {
 
     private final OperationLogTargetNameResolver operationLogTargetNameResolver;
 
-    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    private final OperationLogSnapshotHelper snapshotHelper;
+
+    private final OperationLogChangeSummaryHelper changeSummaryHelper;
 
     /**
      * 只记录「有溯源价值」的操作：修改/删除/报废/关单/驳回/撤销/审批等异常/破坏性事件。
-     *
-     * ★ 刻意排除：
-     *   - 新增（正常创建流程，无溯源必要）
-     *   - 开始 / 完成生产 / 完工（正常工序推进）
-     *   - 提交审批（正常流转，审批结果才重要）
-     *   - 确认（正常收货/验收动作）
-     *   - 状态变更（太泛化，已被具体动作覆盖）
-     *   - 领料（正常出库动作，频率高、噪音大）
-     *
-     * 保留的入库/出库/结算 = 有财务意义，需可追溯。
+     * 刻意排除：新增/开始/完工/提交审批/确认/状态变更/领料（正常流程无溯源必要）
+     * 保留：入库/出库/结算（有财务意义需可追溯）
      */
     private static final Set<String> LOGGED_OPERATIONS = Set.of(
-        // 数据变更（真正的破坏性/不可逆操作）
         "修改", "删除", "报废", "转移", "删除扫码链",
-        // 异常状态流转（非正常路径）
         "关单", "驳回", "撤销", "审批通过", "审批",
-        // 财务/仓储重要动作
         "入库", "物料入库", "出库", "结算"
     );
 
@@ -84,63 +82,13 @@ public class SystemOperationLogAspect {
         "secret", "appSecret", "privateKey", "accessToken", "refreshToken"
     );
 
-    /** 字段名 -> 中文标签映射 */
-    private static final Map<String, String> FIELD_LABEL_MAP = Map.ofEntries(
-        Map.entry("styleNo", "款号"), Map.entry("styleName", "款式名称"), Map.entry("name", "名称"),
-        Map.entry("code", "编码"), Map.entry("status", "状态"), Map.entry("orderNo", "订单号"),
-        Map.entry("purchaseNo", "采购单号"), Map.entry("pickingNo", "领料单号"), Map.entry("bundleNo", "菲号"),
-        Map.entry("materialName", "物料名称"), Map.entry("factoryName", "加工厂"),
-        Map.entry("price", "单价"), Map.entry("unitPrice", "单价"), Map.entry("quantity", "数量"),
-        Map.entry("amount", "金额"), Map.entry("totalAmount", "总金额"),
-        Map.entry("sampleDevCost", "样衣开发费"), Map.entry("tagPrice", "吊牌价"),
-        Map.entry("salesPrice", "销售价"), Map.entry("colorName", "颜色"), Map.entry("sizeName", "尺码"),
-        Map.entry("customerName", "客户名称"), Map.entry("contactName", "联系人"),
-        Map.entry("contactPhone", "联系电话"), Map.entry("address", "地址"),
-        Map.entry("expectedShipDate", "预计交期"), Map.entry("approvalStatus", "审批状态"),
-        Map.entry("remark", "备注"), Map.entry("categoryName", "品类"),
-        Map.entry("fabricComposition", "面料成分"), Map.entry("season", "季节"),
-        Map.entry("year", "年份"), Map.entry("brand", "品牌"),
-        Map.entry("productionStatus", "生产状态"), Map.entry("sampleStatus", "样衣状态"),
-        Map.entry("processStatus", "工序状态"), Map.entry("qualityStatus", "质检状态"),
-        Map.entry("warehousingStatus", "入库状态"), Map.entry("paymentStatus", "付款状态"),
-        Map.entry("cuttingNo", "裁剪编号"), Map.entry("warehouseOrderNo", "出库单号"),
-        Map.entry("supplierName", "供应商名称"), Map.entry("materialCode", "物料编码"),
-        Map.entry("spec", "规格"), Map.entry("unit", "单位"), Map.entry("color", "颜色"),
-        Map.entry("size", "尺码"), Map.entry("weight", "重量"),
-        Map.entry("width", "幅宽"), Map.entry("yardage", "码数"),
-        Map.entry("pricePerUnit", "单价"), Map.entry("totalPrice", "总价"),
-        Map.entry("deliveryDate", "交货日期"), Map.entry("orderDate", "下单日期"),
-        Map.entry("finishDate", "完成日期"), Map.entry("shipDate", "发货日期"),
-        Map.entry("receiveDate", "收货日期"), Map.entry("paymentDate", "付款日期"),
-        Map.entry("invoiceNo", "发票号"), Map.entry("contractNo", "合同号"),
-        Map.entry("purchaseDate", "采购日期"), Map.entry("inboundDate", "入库日期"),
-        Map.entry("outboundDate", "出库日期"), Map.entry("warehouseName", "仓库名称"),
-        Map.entry("locationName", "库位名称"), Map.entry("areaName", "库区名称"),
-        Map.entry("description", "描述"), Map.entry("summary", "摘要"),
-        Map.entry("type", "类型"), Map.entry("priority", "优先级"),
-        Map.entry("source", "来源"), Map.entry("version", "版本"),
-        Map.entry("enabled", "是否启用"), Map.entry("sortOrder", "排序"),
-        Map.entry("isDefault", "是否默认")
-    );
-
     /** 跳过列表：系统配置类接口，不是业务操作，不记录 */
     private static final String[] SKIP_PREFIXES = {
-        "/api/system/dict",
-        "/api/system/permission",
-        "/api/system/role",
-        "/api/system/user",
-        "/api/system/tenant",
-        "/api/system/serial",
-        "/api/system/app-store",
-        "/api/system/operation-log",
-        "/api/system/login-log",
-        "/api/system/menu",
-        "/api/auth/",
-        "/api/internal/",
-        "/api/dashboard/",
-        "/api/datacenter/",
-        "/api/wechat/",
-        "/api/template/operation-log",
+        "/api/system/dict", "/api/system/permission", "/api/system/role",
+        "/api/system/user", "/api/system/tenant", "/api/system/serial",
+        "/api/system/app-store", "/api/system/operation-log", "/api/system/login-log",
+        "/api/system/menu", "/api/auth/", "/api/internal/", "/api/dashboard/",
+        "/api/datacenter/", "/api/wechat/", "/api/template/operation-log",
     };
 
     @Pointcut("within(com.fashion.supplychain..controller..*) && (@annotation(org.springframework.web.bind.annotation.PostMapping) || @annotation(org.springframework.web.bind.annotation.PutMapping) || @annotation(org.springframework.web.bind.annotation.DeleteMapping))")
@@ -153,21 +101,18 @@ public class SystemOperationLogAspect {
         String method = request == null ? "" : request.getMethod().toUpperCase();
         String uri    = request == null ? "" : request.getRequestURI().toLowerCase();
 
-        // 非业务路径直接放行，不记录
         if (shouldSkip(uri)) {
             return pjp.proceed();
         }
 
-        String operation    = resolveOperationByUri(uri, method, request);
-
-        // 只记录异常/重要操作（报废、修改、转单、删除、关单、驳回、撤销），正常流转不记录
+        String operation = resolveOperationByUri(uri, method, request);
         if (!LOGGED_OPERATIONS.contains(operation)) {
             return pjp.proceed();
         }
 
-        String module       = resolveModule(uri);
-        String targetType   = resolveTargetType(uri);
-        String targetId     = resolveTargetId(pjp.getArgs());
+        String module     = resolveModule(uri);
+        String targetType = resolveTargetType(uri);
+        String targetId   = resolveTargetId(pjp.getArgs());
         String prefetchedTargetName = resolveTargetName(pjp.getArgs());
         if (prefetchedTargetName == null) {
             prefetchedTargetName = resolveEntityNameFromUri(uri, pjp.getArgs(), targetId);
@@ -179,13 +124,13 @@ public class SystemOperationLogAspect {
         String operatorName = resolveOperator();
         String ip           = request == null ? null : request.getRemoteAddr();
         String reason       = extractReason(pjp.getArgs());
-        String details      = buildDetails(method, pjp.getArgs(), request);
+        String details      = changeSummaryHelper.buildDetails(method, pjp.getArgs(), request, SENSITIVE_FIELDS);
         LocalDateTime now   = LocalDateTime.now();
 
-        // 修改操作：在执行前查询旧值快照，用于 before/after 对比
+        // 修改操作：执行前查询旧值快照
         Map<String, String> oldSnapshot = null;
         if ("修改".equals(operation) && targetType != null && targetId != null) {
-            oldSnapshot = queryEntitySnapshot(targetType, targetId);
+            oldSnapshot = snapshotHelper.queryEntitySnapshot(targetType, targetId);
         }
 
         try {
@@ -194,12 +139,12 @@ public class SystemOperationLogAspect {
             // 修改操作：执行后查询新值，生成变更摘要
             String changeSummary = null;
             if ("修改".equals(operation) && oldSnapshot != null) {
-                Map<String, String> newSnapshot = queryEntitySnapshot(targetType, targetId);
-                changeSummary = buildChangeSummary(oldSnapshot, newSnapshot);
+                Map<String, String> newSnapshot = snapshotHelper.queryEntitySnapshot(targetType, targetId);
+                changeSummary = changeSummaryHelper.buildChangeSummary(oldSnapshot, newSnapshot, SENSITIVE_FIELDS);
             }
-            // 优先从返回值取 orderNo（关单/报废/更新都有完整对象返回）
             String targetName = extractTargetNameFromResult(result);
             if (targetName == null) targetName = prefetchedTargetName;
+
             OperationLog log = new OperationLog();
             log.setModule(module);
             log.setOperation(operation);
@@ -236,6 +181,8 @@ public class SystemOperationLogAspect {
         }
     }
 
+    // ─── URI/参数解析（Aspect 内部逻辑，不抽出）────────────────────────────
+
     private boolean shouldSkip(String uri) {
         for (String prefix : SKIP_PREFIXES) {
             if (uri.startsWith(prefix)) return true;
@@ -243,276 +190,6 @@ public class SystemOperationLogAspect {
         return false;
     }
 
-    /**
-     * 从返回值提取目标名称。
-     * ★ 当同时存在订单号和款号时，合并显示：订单号 (款号)
-     * 支持：普通对象（getOrderNo等）+ Map类型返回（cancelReceive等返回 Map<String,Object>）
-     */
-    private String extractTargetNameFromResult(Object result) {
-        if (result == null) return null;
-        try {
-            java.lang.reflect.Method getDataMethod = result.getClass().getMethod("getData");
-            Object data = getDataMethod.invoke(result);
-            if (data == null) return null;
-            // 处理 Map 类型返回
-            if (data instanceof Map) {
-                Map<?,?> m = (Map<?,?>) data;
-                String orderNo = mapStrObj(m, "orderNo");
-                String styleNo = mapStrObj(m, "styleNo");
-                if (orderNo != null && styleNo != null) return orderNo + " (" + styleNo + ")";
-                if (orderNo != null) return orderNo;
-                for (String key : new String[]{"purchaseNo","cuttingBundleNo","bundleNo",
-                        "pickingNo","warehouseOrderNo","materialName","name","code"}) {
-                    String v = mapStrObj(m, key);
-                    if (v != null) return v;
-                }
-                return styleNo;
-            }
-            // 普通实体对象：订单号 + 款号 合并
-            String orderNo = reflStr(data, "getOrderNo");
-            String styleNo = reflStr(data, "getStyleNo");
-            if (orderNo != null && styleNo != null) return orderNo + " (" + styleNo + ")";
-            if (orderNo != null) return orderNo;
-            for (String g : new String[]{
-                    "getPurchaseNo","getPickingNo","getCuttingBundleNo",
-                    "getBundleNo","getWarehouseOrderNo","getCuttingNo","getMaterialName",
-                    "getName","getCode"}) {
-                String v = reflStr(data, g);
-                if (v != null) return v;
-            }
-            return styleNo;
-        } catch (Exception e) { log.debug("Non-critical error: {}", e.getMessage()); }
-        return null;
-    }
-
-    /** Map 取非空字符串（Object 版本，遍历用） */
-    private static String mapStrObj(Map<?,?> map, String key) {
-        Object v = map.get(key);
-        if (v == null) return null;
-        String s = String.valueOf(v).trim();
-        return (s.isEmpty() || "null".equals(s)) ? null : s;
-    }
-    /** 从请求 body 的 remark / reason 字段提取操作原因 */
-    private String extractReason(Object[] args) {
-        if (args == null) return null;
-        for (Object arg : args) {
-            if (arg == null) continue;
-            if (arg instanceof Map) {
-                Object v = ((Map<?,?>) arg).get("remark");
-                if (v != null) return String.valueOf(v);
-                v = ((Map<?,?>) arg).get("reason");
-                if (v != null) return String.valueOf(v);
-            } else if (!(arg instanceof String) && !(arg instanceof Number)) {
-                try { Object v = arg.getClass().getMethod("getRemark").invoke(arg); if (v != null) return String.valueOf(v); } catch (Exception e) { log.debug("Non-critical error: {}", e.getMessage()); }
-                try { Object v = arg.getClass().getMethod("getReason").invoke(arg); if (v != null) return String.valueOf(v); } catch (Exception e) { log.debug("Non-critical error: {}", e.getMessage()); }
-            }
-        }
-        return null;
-    }
-
-    /**
-     * 构建详细操作信息（记录修改内容）
-     */
-    private String buildDetails(String method, Object[] args, HttpServletRequest request) {
-        if (args == null || args.length == 0) {
-            return buildRequestDetails(request);
-        }
-
-        try {
-            Map<String, Object> detailMap = new LinkedHashMap<>();
-
-            // PUT/DELETE 记录详细变更
-            if ("PUT".equalsIgnoreCase(method) || "DELETE".equalsIgnoreCase(method)) {
-                for (Object arg : args) {
-                    if (arg == null) continue;
-
-                    // 跳过基础类型
-                    if (arg instanceof String || arg instanceof Number || arg instanceof Boolean) {
-                        continue;
-                    }
-
-                    // 记录实体对象的关键字段
-                    if (arg instanceof Map) {
-                        @SuppressWarnings("unchecked")
-                        Map<String, Object> map = (Map<String, Object>) arg;
-                        extractKeyFields(detailMap, map);
-                    } else {
-                        // 使用反射提取对象字段
-                        extractObjectFields(detailMap, arg);
-                    }
-                }
-            }
-
-            // POST 只记录关键标识
-            else if ("POST".equalsIgnoreCase(method)) {
-                for (Object arg : args) {
-                    if (arg == null) continue;
-                    if (arg instanceof Map) {
-                        @SuppressWarnings("unchecked")
-                        Map<String, Object> map = (Map<String, Object>) arg;
-                        String[] keyFields = {
-                            "id", "orderId", "styleId", "purchaseId", "pickingId", "cuttingBundleId",
-                            "orderNo", "styleNo", "purchaseNo", "pickingNo", "bundleNo",
-                            "name", "code", "materialName", "status", "expectedShipDate",
-                            "reason", "remark", "remarks", "quantity"
-                        };
-                        for (String key : keyFields) {
-                            if (map.containsKey(key)) {
-                                Object value = map.get(key);
-                                if (value != null) {
-                                    if (SENSITIVE_FIELDS.contains(key)) {
-                                        detailMap.put(key, "***");
-                                    } else {
-                                        detailMap.put(key, value);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            enrichDetailsFromRequest(detailMap, request);
-
-            if (detailMap.isEmpty()) {
-                return null;
-            }
-
-            return OBJECT_MAPPER.writeValueAsString(detailMap);
-        } catch (Exception e) {
-            return null; // 构建失败不影响主流程
-        }
-    }
-
-    /**
-     * 从 Map 中提取关键字段
-     */
-    private void extractKeyFields(Map<String, Object> detailMap, Map<String, Object> source) {
-        String[] importantFields = {
-            "id", "orderNo", "styleNo", "name", "code", "status",
-            "price", "unitPrice", "quantity", "amount", "totalAmount",
-            "oldPrice", "newPrice", "oldStatus", "newStatus",
-            "reason", "remark", "remarks", "approvalStatus", "expectedShipDate",
-            "purchaseId", "purchaseNo", "pickingId", "pickingNo", "bundleNo",
-            "orderId", "styleId", "materialName", "factoryName"
-        };
-
-        for (String field : importantFields) {
-            if (source.containsKey(field)) {
-                Object value = source.get(field);
-                if (value != null) {
-                    if (SENSITIVE_FIELDS.contains(field)) {
-                        detailMap.put(field, "***");
-                    } else {
-                        detailMap.put(field, value);
-                    }
-                }
-            }
-        }
-    }
-
-    /**
-     * 从对象中提取字段
-     */
-    private void extractObjectFields(Map<String, Object> detailMap, Object obj) {
-        try {
-            String[] getterNames = {
-                "getId", "getOrderNo", "getStyleNo", "getName", "getCode",
-                "getPrice", "getUnitPrice", "getQuantity", "getAmount",
-                "getOldPrice", "getNewPrice", "getStatus", "getReason", "getRemark"
-            };
-
-            Class<?> clazz = obj.getClass();
-            for (String methodName : getterNames) {
-                try {
-                    var method = clazz.getMethod(methodName);
-                    Object value = method.invoke(obj);
-                    if (value != null) {
-                        String fieldName = methodName.substring(3, 4).toLowerCase() + methodName.substring(4);
-                        if (SENSITIVE_FIELDS.contains(fieldName)) {
-                            detailMap.put(fieldName, "***");
-                        } else {
-                            detailMap.put(fieldName, value);
-                        }
-                    }
-                } catch (NoSuchMethodException e) {
-                    log.trace("[OpLog] 反射方法不存在，跳过: {}", e.getMessage());
-                }
-            }
-        } catch (Exception e) {
-            log.trace("[OpLog] 反射提取字段失败: {}", e.getMessage());
-        }
-    }
-
-    /**
-     * 从请求参数解析目标名称。
-     * ★ 当同时存在订单号和款号时，合并显示：订单号 (款号)
-     * 覆盖全业务类型：订单号、采购单号、出库单号、菲号、款号、物料名等。
-     */
-    private String resolveTargetName(Object[] args) {
-        if (args == null || args.length == 0) return null;
-        for (Object arg : args) {
-            if (arg == null) continue;
-            if (arg instanceof Map) {
-                @SuppressWarnings("unchecked")
-                Map<String, Object> map = (Map<String, Object>) arg;
-                // 订单号 + 款号 合并显示
-                String orderNo  = mapStr(map, "orderNo");
-                String styleNo  = mapStr(map, "styleNo");
-                if (orderNo != null && styleNo != null) return orderNo + " (" + styleNo + ")";
-                if (orderNo != null) return orderNo;
-                // 其余业务单号
-                for (String key : new String[]{
-                        "purchaseNo","pickingNo","cuttingBundleNo","bundleNo",
-                        "warehouseOrderNo","cuttingNo","materialName","name","code"}) {
-                    String v = mapStr(map, key);
-                    if (v != null) return v;
-                }
-                // 款号兜底（单独的款式操作）
-                if (styleNo != null) return styleNo;
-            } else if (!(arg instanceof String) && !(arg instanceof Number) && !(arg instanceof Boolean)) {
-                // 订单号 + 款号 合并显示
-                String orderNo = reflStr(arg, "getOrderNo");
-                String styleNo = reflStr(arg, "getStyleNo");
-                if (orderNo != null && styleNo != null) return orderNo + " (" + styleNo + ")";
-                if (orderNo != null) return orderNo;
-                for (String getter : new String[]{
-                        "getPurchaseNo","getPickingNo","getCuttingBundleNo",
-                        "getBundleNo","getWarehouseOrderNo","getCuttingNo","getMaterialName",
-                        "getName","getCode"}) {
-                    String v = reflStr(arg, getter);
-                    if (v != null) return v;
-                }
-                if (styleNo != null) return styleNo;
-            }
-        }
-        return null;
-    }
-
-    /** 从 Map 取非空字符串；null 表示不存在或空 */
-    private static String mapStr(Map<?, ?> map, String key) {
-        Object v = map.get(key);
-        if (v == null) return null;
-        String s = String.valueOf(v).trim();
-        return (s.isEmpty() || "null".equals(s)) ? null : s;
-    }
-
-    /** 反射调用 getter 取非空字符串；null 表示不存在或空 */
-    private static String reflStr(Object obj, String getter) {
-        try {
-            Object v = obj.getClass().getMethod(getter).invoke(obj);
-            if (v == null) return null;
-            String s = String.valueOf(v).trim();
-            return (s.isEmpty() || "null".equals(s)) ? null : s;
-        } catch (Exception ignored) { log.debug("[OpLog] reflStr反射失败: getter={}", getter); return null; }
-    }
-
-    private String resolveOperator() {
-        String v = UserContext.username();
-        return v == null ? null : v.trim();
-    }
-
-    /** URI关键词精确映射操作类型，stage-action 读 action 查询参数 */
     private String resolveOperationByUri(String uri, String method, HttpServletRequest request) {
         if (uri.contains("/stage-action") && request != null) {
             String action = request.getParameter("action");
@@ -558,23 +235,16 @@ public class SystemOperationLogAspect {
     private String resolveModule(String uri) {
         if (uri == null || uri.isEmpty()) return "其他";
         String u = uri.toLowerCase();
-        // 样衣开发（优先于 /style）
         if (u.contains("/pattern-revision") || u.contains("/pattern-production") || u.contains("/sample-production")) return "样衣开发";
         if (u.contains("/style"))             return "样衣开发";
-        // 大货生产（含裁剪、扫码、面料）
         if (u.contains("/production/order") || u.contains("/production/orders") || u.contains("/production/cutting") || u.contains("/production/scan") || u.contains("/production/warehousing")) return "大货生产";
         if (u.contains("/material-purchase") || u.contains("/material-inbound") || u.contains("/material-picking") || u.contains("/material-roll")) return "大货生产";
         if (u.contains("/production"))        return "大货生产";
-        // 仓库管理
         if (u.contains("/warehouse/finished") || u.contains("/product-outstock") || u.contains("/product-warehousing")) return "仓库管理";
         if (u.contains("/warehouse"))         return "仓库管理";
-        // 财务管理
         if (u.contains("/finance"))           return "财务管理";
-        // 下单管理
         if (u.contains("/order-management"))  return "下单管理";
-        // 基础数据
         if (u.contains("/system/factory") || u.contains("/system/process")) return "基础设置";
-        // 模板库
         if (u.contains("/template"))          return "模板库";
         return "其他";
     }
@@ -656,17 +326,102 @@ public class SystemOperationLogAspect {
     }
 
     /**
-     * fallback：当前两步均未取到名称时，用 ID 查库获取实体名称。
-     * 覆盖范围：款式开发、生产订单、裁剪任务、菲号、采购单、出库单
+     * 从请求参数解析目标名称（订单号+款号合并显示）
+     */
+    private String resolveTargetName(Object[] args) {
+        if (args == null || args.length == 0) return null;
+        for (Object arg : args) {
+            if (arg == null) continue;
+            if (arg instanceof Map) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> map = (Map<String, Object>) arg;
+                String orderNo = mapStr(map, "orderNo");
+                String styleNo = mapStr(map, "styleNo");
+                if (orderNo != null && styleNo != null) return orderNo + " (" + styleNo + ")";
+                if (orderNo != null) return orderNo;
+                for (String key : new String[]{
+                        "purchaseNo","pickingNo","cuttingBundleNo","bundleNo",
+                        "warehouseOrderNo","cuttingNo","materialName","name","code"}) {
+                    String v = mapStr(map, key);
+                    if (v != null) return v;
+                }
+                if (styleNo != null) return styleNo;
+            } else if (!(arg instanceof String) && !(arg instanceof Number) && !(arg instanceof Boolean)) {
+                String orderNo = reflStr(arg, "getOrderNo");
+                String styleNo = reflStr(arg, "getStyleNo");
+                if (orderNo != null && styleNo != null) return orderNo + " (" + styleNo + ")";
+                if (orderNo != null) return orderNo;
+                for (String getter : new String[]{
+                        "getPurchaseNo","getPickingNo","getCuttingBundleNo",
+                        "getBundleNo","getWarehouseOrderNo","getCuttingNo","getMaterialName",
+                        "getName","getCode"}) {
+                    String v = reflStr(arg, getter);
+                    if (v != null) return v;
+                }
+                if (styleNo != null) return styleNo;
+            }
+        }
+        return null;
+    }
+
+    private String extractTargetNameFromResult(Object result) {
+        if (result == null) return null;
+        try {
+            java.lang.reflect.Method getDataMethod = result.getClass().getMethod("getData");
+            Object data = getDataMethod.invoke(result);
+            if (data == null) return null;
+            if (data instanceof Map) {
+                Map<?,?> m = (Map<?,?>) data;
+                String orderNo = mapStrObj(m, "orderNo");
+                String styleNo = mapStrObj(m, "styleNo");
+                if (orderNo != null && styleNo != null) return orderNo + " (" + styleNo + ")";
+                if (orderNo != null) return orderNo;
+                for (String key : new String[]{"purchaseNo","cuttingBundleNo","bundleNo",
+                        "pickingNo","warehouseOrderNo","materialName","name","code"}) {
+                    String v = mapStrObj(m, key);
+                    if (v != null) return v;
+                }
+                return styleNo;
+            }
+            String orderNo = reflStr(data, "getOrderNo");
+            String styleNo = reflStr(data, "getStyleNo");
+            if (orderNo != null && styleNo != null) return orderNo + " (" + styleNo + ")";
+            if (orderNo != null) return orderNo;
+            for (String g : new String[]{
+                    "getPurchaseNo","getPickingNo","getCuttingBundleNo",
+                    "getBundleNo","getWarehouseOrderNo","getCuttingNo","getMaterialName",
+                    "getName","getCode"}) {
+                String v = reflStr(data, g);
+                if (v != null) return v;
+            }
+            return styleNo;
+        } catch (Exception e) { log.debug("Non-critical error: {}", e.getMessage()); }
+        return null;
+    }
+
+    private String extractReason(Object[] args) {
+        if (args == null) return null;
+        for (Object arg : args) {
+            if (arg == null) continue;
+            if (arg instanceof Map) {
+                Object v = ((Map<?,?>) arg).get("remark");
+                if (v != null) return String.valueOf(v);
+                v = ((Map<?,?>) arg).get("reason");
+                if (v != null) return String.valueOf(v);
+            } else if (!(arg instanceof String) && !(arg instanceof Number)) {
+                try { Object v = arg.getClass().getMethod("getRemark").invoke(arg); if (v != null) return String.valueOf(v); } catch (Exception e) { log.debug("Non-critical error: {}", e.getMessage()); }
+                try { Object v = arg.getClass().getMethod("getReason").invoke(arg); if (v != null) return String.valueOf(v); } catch (Exception e) { log.debug("Non-critical error: {}", e.getMessage()); }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * fallback：用 ID 查库获取实体名称（款式/订单/采购单/出库单/菲号）
      */
     private String resolveEntityNameFromUri(String uri, Object[] args, String resolvedTargetId) {
         if (uri == null) return null;
-        // 优先从 body Map 的 ID 类字段反查
-        String entityId = resolvedTargetId;
-        if (entityId == null) {
-            entityId = extractEntityId(args);
-        }
-        // 也尝试从 body Map 中专用ID字段查（purchaseId, pickingId 等）
+        String entityId = resolvedTargetId != null ? resolvedTargetId : extractEntityId(args);
         String orderNo    = extractFieldFromArgs(args, "orderNo");
         String purchaseId = extractFieldFromArgs(args, "purchaseId");
         String purchaseNo = extractFieldFromArgs(args, "purchaseNo");
@@ -674,14 +429,12 @@ public class SystemOperationLogAspect {
         String pickingNo  = extractFieldFromArgs(args, "pickingNo");
         String bundleId   = extractFieldFromArgs(args, "cuttingBundleId");
         try {
-            // 款式开发
             if (uri.contains("/style/") || uri.contains("/pattern")) {
                 if (styleInfoService != null && entityId != null) {
                     var style = styleInfoService.getById(entityId);
                     if (style != null) return style.getStyleNo();
                 }
             }
-            // 生产订单
             if (uri.contains("/production/order") || uri.contains("/production/orders") || uri.contains("/production/cutting-task")) {
                 if (productionOrderService != null) {
                     var order = org.springframework.util.StringUtils.hasText(orderNo)
@@ -693,12 +446,11 @@ public class SystemOperationLogAspect {
                     }
                 }
             }
-            // 采购单（优先 purchaseId，其次 entityId）
             if (uri.contains("/material-purchase") || uri.contains("/purchase")) {
                 if (materialPurchaseService != null) {
                     String id = purchaseId != null ? purchaseId : entityId;
                     var p = org.springframework.util.StringUtils.hasText(purchaseNo)
-                            ? materialPurchaseService.lambdaQuery().eq(com.fashion.supplychain.production.entity.MaterialPurchase::getPurchaseNo, purchaseNo).last("LIMIT 1").one()
+                            ? materialPurchaseService.lambdaQuery().eq(MaterialPurchase::getPurchaseNo, purchaseNo).last("LIMIT 1").one()
                             : (id == null ? null : materialPurchaseService.getById(id));
                     if (p != null) {
                         String pno = p.getPurchaseNo();
@@ -707,19 +459,17 @@ public class SystemOperationLogAspect {
                     }
                 }
             }
-            // 出库领料单
             if (uri.contains("/picking") || uri.contains("/cancel-picking")) {
                 if (materialPickingService != null) {
                     String id = pickingId != null ? pickingId : entityId;
                     var pk = org.springframework.util.StringUtils.hasText(pickingNo)
-                            ? materialPickingService.lambdaQuery().eq(com.fashion.supplychain.production.entity.MaterialPicking::getPickingNo, pickingNo).last("LIMIT 1").one()
+                            ? materialPickingService.lambdaQuery().eq(MaterialPicking::getPickingNo, pickingNo).last("LIMIT 1").one()
                             : (id == null ? null : materialPickingService.getById(id));
                     if (pk != null) {
                         try { return String.valueOf(pk.getClass().getMethod("getPickingNo").invoke(pk)); } catch (Exception ignr) { log.debug("[操作日志] 提取领料单号失败"); }
                     }
                 }
             }
-            // 菲号
             if (uri.contains("/cutting-bundle") || uri.contains("/bundle")) {
                 if (cuttingBundleService != null) {
                     String id = bundleId != null ? bundleId : entityId;
@@ -731,7 +481,6 @@ public class SystemOperationLogAspect {
                     }
                 }
             }
-            // 裁剪任务
             if (uri.contains("/cutting") && entityId != null) {
                 if (cuttingTaskService != null) {
                     var ct = cuttingTaskService.getById(entityId);
@@ -746,7 +495,6 @@ public class SystemOperationLogAspect {
         return null;
     }
 
-    /** 从 args 中的 Map 或 DTO 对象中提取指定字段值 */
     private String extractFieldFromArgs(Object[] args, String fieldName) {
         if (args == null) return null;
         for (Object a : args) {
@@ -761,17 +509,11 @@ public class SystemOperationLogAspect {
         return null;
     }
 
-    /**
-     * 从方法参数中提取实体 ID（支持 Long 和 String UUID）。
-     * 优先级：Long参数 → DTO对象的getId() → Map中的id字段
-     */
     private String extractEntityId(Object[] args) {
         if (args == null) return null;
-        // 1. 优先取 Long 类型参数（@PathVariable Long id）
         for (Object a : args) {
             if (a instanceof Long) return String.valueOf(a);
         }
-        // 2. 从 DTO 对象中反射取 getId()（如 ScrapOrderRequest.getId()）
         for (Object a : args) {
             if (a == null || a instanceof String || a instanceof Number
                     || a instanceof Boolean || a instanceof Map) continue;
@@ -783,7 +525,6 @@ public class SystemOperationLogAspect {
                 }
             } catch (Exception e) { log.debug("Non-critical error: {}", e.getMessage()); }
         }
-        // 3. 从 Map 参数中取 id 字段
         for (Object a : args) {
             if (a instanceof Map) {
                 Object id = ((Map<?,?>) a).get("id");
@@ -796,153 +537,37 @@ public class SystemOperationLogAspect {
         return null;
     }
 
+    private String resolveOperator() {
+        String v = UserContext.username();
+        return v == null ? null : v.trim();
+    }
+
+    private static String mapStr(Map<?, ?> map, String key) {
+        Object v = map.get(key);
+        if (v == null) return null;
+        String s = String.valueOf(v).trim();
+        return (s.isEmpty() || "null".equals(s)) ? null : s;
+    }
+
+    private static String mapStrObj(Map<?,?> map, String key) {
+        Object v = map.get(key);
+        if (v == null) return null;
+        String s = String.valueOf(v).trim();
+        return (s.isEmpty() || "null".equals(s)) ? null : s;
+    }
+
+    private static String reflStr(Object obj, String getter) {
+        try {
+            Object v = obj.getClass().getMethod(getter).invoke(obj);
+            if (v == null) return null;
+            String s = String.valueOf(v).trim();
+            return (s.isEmpty() || "null".equals(s)) ? null : s;
+        } catch (Exception ignored) { log.debug("[OpLog] reflStr反射失败: getter={}", getter); return null; }
+    }
+
     private static String limitLength(String value, int max) {
-        if (value == null) {
-            return null;
-        }
-        if (max <= 0 || value.length() <= max) {
-            return value;
-        }
+        if (value == null) return null;
+        if (max <= 0 || value.length() <= max) return value;
         return value.substring(0, max);
     }
-
-    private void enrichDetailsFromRequest(Map<String, Object> detailMap, HttpServletRequest request) {
-        if (detailMap == null || request == null) {
-            return;
-        }
-
-        Object pathVariableAttr = request.getAttribute(HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE);
-        if (pathVariableAttr instanceof Map) {
-            Map<?, ?> pathVariables = (Map<?, ?>) pathVariableAttr;
-            for (String key : new String[]{"id", "orderId", "transferId", "trackingId", "productionOrderId"}) {
-                Object value = pathVariables.get(key);
-                if (value != null) {
-                    detailMap.putIfAbsent(key, value);
-                }
-            }
-        }
-
-        for (String key : new String[]{
-                "reason", "remark", "action", "stage", "orderNo", "purchaseId",
-                "purchaseNo", "pickingId", "pickingNo", "expectedShipDate"
-        }) {
-            String value = request.getParameter(key);
-            if (value != null && !value.isBlank()) {
-                detailMap.putIfAbsent(key, value.trim());
-            }
-        }
-    }
-
-    private String buildRequestDetails(HttpServletRequest request) {
-        try {
-            Map<String, Object> detailMap = new LinkedHashMap<>();
-            enrichDetailsFromRequest(detailMap, request);
-            if (detailMap.isEmpty()) {
-                return null;
-            }
-            return OBJECT_MAPPER.writeValueAsString(detailMap);
-        } catch (Exception ignored) {
-            log.debug("[OpLog] serializeDetails序列化失败");
-            return null;
-        }
-    }
-
-    /**
-     * 查询实体快照（字段名 -> 字段值）
-     * 用于 before/after 对比
-     */
-    private Map<String, String> queryEntitySnapshot(String targetType, String targetId) {
-        if (targetType == null || targetId == null) return null;
-        try {
-            Object entity = null;
-            switch (targetType) {
-                case "款式":
-                    entity = styleInfoService != null ? styleInfoService.getById(targetId) : null;
-                    break;
-                case "订单":
-                    entity = productionOrderService != null ? productionOrderService.getById(targetId) : null;
-                    break;
-                case "采购单":
-                    entity = materialPurchaseService != null ? materialPurchaseService.getById(targetId) : null;
-                    break;
-                case "领料单":
-                    entity = materialPickingService != null ? materialPickingService.getById(targetId) : null;
-                    break;
-                case "裁剪单":
-                    entity = cuttingTaskService != null ? cuttingTaskService.getById(targetId) : null;
-                    break;
-                case "菲号":
-                    entity = cuttingBundleService != null ? cuttingBundleService.getById(targetId) : null;
-                    break;
-                default:
-                    break;
-            }
-            if (entity == null) return null;
-            return beanToMap(entity);
-        } catch (Exception e) {
-            log.debug("[OpLog] 查询实体快照失败: targetType={} targetId={}", targetType, targetId, e);
-            return null;
-        }
-    }
-
-    /** 将实体对象转为 字段名->字符串值 的 Map（排除非业务字段） */
-    private Map<String, String> beanToMap(Object bean) {
-        Map<String, String> map = new LinkedHashMap<>();
-        try {
-            for (java.lang.reflect.Field f : bean.getClass().getDeclaredFields()) {
-                String name = f.getName();
-                // 排除非业务字段
-                if (name.equals("serialVersionUID") || name.equals("tenantId")
-                    || name.equals("deleteFlag") || name.equals("createTime") || name.equals("updateTime")
-                    || name.startsWith("$") || name.equals("id")) continue;
-                f.setAccessible(true);
-                Object val = f.get(bean);
-                if (val != null) {
-                    map.put(name, String.valueOf(val));
-                }
-            }
-        } catch (Exception e) {
-            log.debug("[OpLog] beanToMap失败", e);
-        }
-        return map;
-    }
-
-    /**
-     * 生成结构化变更摘要（JSON 数组）。
-     * 输出格式：[{"label":"款号","key":"styleNo","old":"A","new":"B"}, ...]
-     * 前端按 JSON 解析后渲染为「标签：旧值 → 新值」，避免正则切分遇到 "->" 字符错位。
-     */
-    private String buildChangeSummary(Map<String, String> oldMap, Map<String, String> newMap) {
-        if (oldMap == null || newMap == null) return null;
-        List<Map<String, String>> changes = new ArrayList<>();
-        Set<String> allKeys = new LinkedHashSet<>(oldMap.keySet());
-        allKeys.addAll(newMap.keySet());
-        for (String key : allKeys) {
-            if (SENSITIVE_FIELDS.contains(key)) continue;
-            String oldVal = oldMap.get(key);
-            String newVal = newMap.get(key);
-            // 都为null或相等则跳过
-            if (Objects.equals(oldVal, newVal)) continue;
-            String label = FIELD_LABEL_MAP.getOrDefault(key, key);
-            String oldDisp = oldVal != null ? oldVal : "(空)";
-            String newDisp = newVal != null ? newVal : "(空)";
-            // 截断过长的值
-            if (oldDisp.length() > 80) oldDisp = oldDisp.substring(0, 80) + "...";
-            if (newDisp.length() > 80) newDisp = newDisp.substring(0, 80) + "...";
-            Map<String, String> entry = new LinkedHashMap<>();
-            entry.put("label", label);
-            entry.put("key", key);
-            entry.put("old", oldDisp);
-            entry.put("new", newDisp);
-            changes.add(entry);
-        }
-        if (changes.isEmpty()) return null;
-        try {
-            return OBJECT_MAPPER.writeValueAsString(changes);
-        } catch (Exception e) {
-            log.debug("[OpLog] 序列化变更摘要失败", e);
-            return null;
-        }
-    }
 }
-

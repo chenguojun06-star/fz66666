@@ -30,6 +30,8 @@ import useSampleScanRecords from './useSampleScanRecords';
 import useSampleProcurementQuickActions, { STATUS_LABELS, STATUS_COLORS } from './useSampleProcurementQuickActions';
 import useConfirmStage from './useConfirmStage';
 import useStagePanel from './useStagePanel';
+import type { FieldConfigItem } from '@/hooks/useFieldConfig';
+import { getFieldValue, renderCellValue } from '@/hooks/useExtColumns';
 
 interface StyleTableViewProps {
   data: StyleInfo[];
@@ -46,6 +48,7 @@ interface StyleTableViewProps {
   onRefresh: () => void;
   focusedStyleId?: string | null;
   dateSortAsc?: boolean;
+  customFields?: FieldConfigItem[];
 }
 
 
@@ -64,6 +67,7 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
   onRefresh,
   focusedStyleId,
   dateSortAsc = false,
+  customFields = [],
 }) => {
   const { message, modal } = App.useApp();
   const navigate = useNavigate();
@@ -156,6 +160,13 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
         { label: '数量', value: `${resolveDisplayQuantity(record as StyleRecord) || '0'} 件` },
         { label: '交板', value: record.deliveryDate ? dayjs(record.deliveryDate).format('YYYY-MM-DD') : '-' },
         { label: '客户', value: String((record as StyleRecord).customer || '-') },
+        // 自定义字段（来自字段配置 isSystem=0）
+        ...customFields.map(f => {
+          const raw = getFieldValue(record, f.fieldKey);
+          const node = renderCellValue(raw, f.fieldType);
+          const text = node === '-' || node === undefined || node === null ? '-' : String(node);
+          return { label: f.label, value: text };
+        }),
       ].filter((item) => item.value && item.value !== '-');
 
       return {
@@ -183,7 +194,7 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
 
     return mapped;
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [categoryOptions, data, stockStateMap, dateSortAsc]);
+  }, [categoryOptions, data, stockStateMap, dateSortAsc, customFields]);
 
 
   return (

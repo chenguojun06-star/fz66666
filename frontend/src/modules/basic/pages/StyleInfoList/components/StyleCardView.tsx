@@ -17,6 +17,8 @@ import { DEFAULT_PAGE_SIZE_OPTIONS } from '@/utils/pageSizeStore';
 import { getStyleSourceText } from '@/utils/styleSource';
 import { useCardGridLayout } from '@/hooks/useCardGridLayout';
 import { isStyleInfoCompleted } from './styleTableViewUtils';
+import type { FieldConfigItem } from '@/hooks/useFieldConfig';
+import { getFieldValue, renderCellValue } from '@/hooks/useExtColumns';
 
 interface StyleCardViewProps {
   data: StyleInfo[];
@@ -31,6 +33,7 @@ interface StyleCardViewProps {
   onMaintenance: (record: StyleInfo) => void;
   onRefresh: () => void;
   focusedStyleId?: string | null;
+  customFields?: FieldConfigItem[];
 }
 
 /**
@@ -52,6 +55,7 @@ const StyleCardView: React.FC<StyleCardViewProps> = ({
   onMaintenance,
   onRefresh,
   focusedStyleId,
+  customFields = [],
 }) => {
   const navigate = useNavigate();
   const { user } = useUser();
@@ -123,6 +127,17 @@ const StyleCardView: React.FC<StyleCardViewProps> = ({
         }),
         [{ label: '来源', key: 'developmentSourceType', render: (_val, record) => renderSourceText(record as StyleInfo) }, { label: '品类', key: 'category', render: (val) => toCategoryCn(val) }],
         [{ label: '交板', key: 'deliveryDate', render: (val: unknown) => val ? dayjs(val as string).format('MM-DD') : '-' }, { label: '状态', key: 'latestPatternStatus', render: (_val, record) => isStageDoneRow(record as StyleInfo) ? '已入库' : '待入库' }],
+        // 自定义字段（来自字段配置 isSystem=0）
+        ...(customFields.length > 0
+          ? [customFields.map(f => ({
+              label: f.label,
+              key: `ext_${f.fieldKey}`,
+              render: (_val: any, record: any) => {
+                const raw = getFieldValue(record, f.fieldKey);
+                return renderCellValue(raw, f.fieldType);
+              },
+            }))]
+          : []),
       ]}
       progressConfig={{
         show: true,

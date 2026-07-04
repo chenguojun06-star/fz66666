@@ -3,6 +3,7 @@ import { App, Alert, Button, Drawer, Input, Tag } from 'antd';
 import { CheckCircleOutlined, CloseCircleOutlined, PictureOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { ModalField, ModalFieldRow } from '@/components/common/ModalContentLayout';
+import ApprovalFlowProgress from '@/components/common/ApprovalFlowProgress';
 import { useUser } from '@/utils/AuthContext';
 import { hasPermission } from '@/utils/permission';
 import SmartImage from '@/components/common/SmartImage';
@@ -144,6 +145,33 @@ const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({ open, record, v
 
         {/* 右侧：详情信息 + 审批 */}
         <div style={{ flex: 1, padding: '12px 20px', overflowY: 'auto', height: '100%', boxSizing: 'border-box' }}>
+          {/* 审批流程进度条 */}
+          <ApprovalFlowProgress
+            currentStatus={record.status || 'pending'}
+            rejectedStatus="rejected"
+            steps={[
+              {
+                title: '提交',
+                time: record.createTime,
+                operator: record.applicantName,
+                statusValue: 'pending',
+              },
+              {
+                title: '审批',
+                time: record.approvalTime,
+                operator: record.approverName,
+                remark: record.approvalRemark,
+                statusValue: 'approved',
+              },
+              {
+                title: '付款',
+                time: record.paymentTime,
+                operator: record.paymentBy,
+                statusValue: 'paid',
+              },
+            ]}
+          />
+
           <ModalFieldRow><ModalField label="报销单号" value={record.reimbursementNo || '-'} /><ModalField label="状态" value={statusTag(record.status || 'pending')} /></ModalFieldRow>
           <ModalFieldRow><ModalField label="申请人" value={record.applicantName || '-'} /><ModalField label="费用类型" value={typeLabel(record.expenseType)} /></ModalFieldRow>
           <ModalFieldRow><ModalField label="事由" value={record.title || '-'} /></ModalFieldRow>

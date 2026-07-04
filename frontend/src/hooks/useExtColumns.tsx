@@ -27,7 +27,7 @@ type UseExtColumnsOptions = {
 };
 
 /** 从 record 中读取字段值（支持 extJson） */
-function getFieldValue(record: any, fieldKey: string): unknown {
+export function getFieldValue(record: any, fieldKey: string): unknown {
   if (record && fieldKey in record && record[fieldKey] !== undefined && record[fieldKey] !== null) {
     return record[fieldKey];
   }
@@ -44,7 +44,7 @@ function getFieldValue(record: any, fieldKey: string): unknown {
 }
 
 /** 按字段类型渲染单元格 */
-function renderCellValue(value: unknown, fieldType?: string): React.ReactNode {
+export function renderCellValue(value: unknown, fieldType?: string): React.ReactNode {
   if (value === undefined || value === null || value === '') return '-';
   switch (fieldType) {
     case 'select':

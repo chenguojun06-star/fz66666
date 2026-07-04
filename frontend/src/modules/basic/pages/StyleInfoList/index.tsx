@@ -27,6 +27,7 @@ import StyleCostDetailDrawer from './components/StyleCostDetailDrawer';
 import { useCardGridLayout } from '@/hooks/useCardGridLayout';
 import { STYLE_INFO_LIST_REFRESH_KEY } from '@/modules/warehouse/pages/SampleInventory';
 import { savePageSize } from '@/utils/pageSizeStore';
+import { useFieldConfig } from '@/hooks/useFieldConfig';
 
 import { isScrappedStyle } from './components/styleTableViewUtils';
 import '../StyleInfo/styles.css';
@@ -42,6 +43,13 @@ const StyleInfoListPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   useCardGridLayout(10);
+
+  // 字段配置：自定义字段（isSystem=0）展示到卡片/列表
+  const { fields: styleFieldConfigs } = useFieldConfig({ bizType: 'style', platform: 'pc' });
+  const customFields = useMemo(
+    () => styleFieldConfigs.filter(f => f.isSystem === 0 && f.enabled !== 0),
+    [styleFieldConfigs]
+  );
 
   // 使用现有Hooks
   const {
@@ -569,6 +577,7 @@ const StyleInfoListPage: React.FC = () => {
             onRefresh={fetchList}
             focusedStyleId={focusedStyleId}
             dateSortAsc={dateSortAsc}
+            customFields={customFields}
           />
         ) : (
           <StyleCardView
@@ -584,6 +593,7 @@ const StyleInfoListPage: React.FC = () => {
             onMaintenance={openMaintenance}
             onRefresh={fetchList}
             focusedStyleId={focusedStyleId}
+            customFields={customFields}
           />
         )}
       </PageLayout>
