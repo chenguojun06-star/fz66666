@@ -139,27 +139,52 @@ const SystemLogs: React.FC = () => {
     // 变更对比区域
     let changeContent: React.ReactNode = null;
     if (record.changeSummary) {
-      const changes = record.changeSummary.split('；').filter(Boolean);
+      // 解析变更摘要：优先 JSON 数组格式，降级兼容旧字符串格式
+      type ChangeEntry = { label: string; key?: string; old: string; new: string };
+      let changes: ChangeEntry[] = [];
+      let parseMode: 'json' | 'legacy' | 'plain' = 'plain';
+      try {
+        const parsed = JSON.parse(record.changeSummary);
+        if (Array.isArray(parsed)) {
+          changes = parsed.filter((it: any) => it && typeof it.label === 'string');
+          parseMode = 'json';
+        }
+      } catch {
+        // 旧格式：分号分隔的「字段名：旧值 -> 新值」
+        const lines = record.changeSummary.split('；').filter(Boolean);
+        changes = lines.map((line) => {
+          const m = line.match(/^(.+?)：(.+?)\s*->\s*(.+)$/);
+          if (m) {
+            const [, fieldName, oldVal, newVal] = m;
+            return { label: fieldName, old: oldVal, new: newVal };
+          }
+          return { label: line, old: '', new: '' };
+        });
+        parseMode = lines.length > 0 ? 'legacy' : 'plain';
+      }
+
       changeContent = (
         <div style={{ marginTop: 12 }}>
           <div style={{ fontWeight: 600, marginBottom: 8 }}>变更内容：</div>
           <div style={{ backgroundColor: 'var(--color-bg-subtle)', padding: 12, borderRadius: 6 }}>
-            {changes.map((line, idx) => {
-              // 解析 "字段名：旧值 -> 新值" 格式
-              const match = line.match(/^(.+?)：(.+?)\s*->\s*(.+)$/);
-              if (match) {
-                const [, fieldName, oldVal, newVal] = match;
-                return (
-                  <div key={idx} style={{ marginBottom: 4, fontSize: 13 }}>
-                    <span style={{ color: 'var(--color-text-secondary)' }}>{fieldName}：</span>
-                    <span style={{ textDecoration: 'line-through', color: 'var(--color-text-tertiary)' }}>{oldVal}</span>
-                    <span style={{ margin: '0 6px' }}>→</span>
-                    <span style={{ color: 'var(--color-primary)', fontWeight: 500 }}>{newVal}</span>
-                  </div>
-                );
+            {changes.length > 0 ? changes.map((entry, idx) => {
+              // 兼容纯文本行（old/new 均为空）
+              if (!entry.old && !entry.new) {
+                return <div key={idx} style={{ marginBottom: 4, fontSize: 13 }}>{entry.label}</div>;
               }
-              return <div key={idx} style={{ marginBottom: 4, fontSize: 13 }}>{line}</div>;
-            })}
+              return (
+                <div key={idx} style={{ marginBottom: 4, fontSize: 13 }}>
+                  <span style={{ color: 'var(--color-text-secondary)' }}>{entry.label}：</span>
+                  <span style={{ textDecoration: 'line-through', color: 'var(--color-text-tertiary)' }}>{entry.old}</span>
+                  <span style={{ margin: '0 6px' }}>→</span>
+                  <span style={{ color: 'var(--color-primary)', fontWeight: 500 }}>{entry.new}</span>
+                </div>
+              );
+            }) : (
+              <div style={{ fontSize: 13, color: 'var(--color-text-tertiary)' }}>
+                {parseMode === 'plain' ? record.changeSummary : '无变更明细'}
+              </div>
+            )}
           </div>
         </div>
       );
@@ -270,7 +295,23 @@ const SystemLogs: React.FC = () => {
       ellipsis: true,
       render: (v: string, record: OperationLog) => {
         if (v) {
-          return <span style={{ color: 'var(--color-text-secondary)' }}>{v}</span>;
+          // 优先解析 JSON 数组格式，渲染为「标签：旧→新」摘要
+          let brief = '';
+          try {
+            const parsed = JSON.parse(v);
+            if (Array.isArray(parsed)) {
+              brief = parsed
+                .filter((it: any) => it && typeof it.label === 'string')
+                .slice(0, 2)
+                .map((it: any) => `${it.label}：${String(it.old ?? '').substring(0, 12)}→${String(it.new ?? '').substring(0, 12)}`)
+                .join('；');
+              if (parsed.length > 2) brief += `；（共${parsed.length}项变更）`;
+            }
+          } catch {
+            // 非 JSON：直接截断展示
+            brief = v.length > 60 ? v.substring(0, 60) + '...' : v;
+          }
+          return <span style={{ color: 'var(--color-text-secondary)' }}>{brief || '-'}</span>;
         }
         if (record.details) {
           try {

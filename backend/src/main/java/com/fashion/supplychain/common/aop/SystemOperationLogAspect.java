@@ -176,11 +176,6 @@ public class SystemOperationLogAspect {
             prefetchedTargetName = operationLogTargetNameResolver.resolveByTarget(targetType, targetId);
         }
 
-        // 纯 POST fallback 成"新增"但 URL 无法识别目标类型 → 非核心业务操作，跳过不记录（避免噪音日志）
-        if ("新增".equals(operation) && (targetType == null || targetType.isBlank())) {
-            return pjp.proceed();
-        }
-
         String operatorName = resolveOperator();
         String ip           = request == null ? null : request.getRemoteAddr();
         String reason       = extractReason(pjp.getArgs());
@@ -912,10 +907,14 @@ public class SystemOperationLogAspect {
         return map;
     }
 
-    /** 生成人类可读的变更摘要 */
+    /**
+     * 生成结构化变更摘要（JSON 数组）。
+     * 输出格式：[{"label":"款号","key":"styleNo","old":"A","new":"B"}, ...]
+     * 前端按 JSON 解析后渲染为「标签：旧值 → 新值」，避免正则切分遇到 "->" 字符错位。
+     */
     private String buildChangeSummary(Map<String, String> oldMap, Map<String, String> newMap) {
         if (oldMap == null || newMap == null) return null;
-        List<String> changes = new ArrayList<>();
+        List<Map<String, String>> changes = new ArrayList<>();
         Set<String> allKeys = new LinkedHashSet<>(oldMap.keySet());
         allKeys.addAll(newMap.keySet());
         for (String key : allKeys) {
@@ -928,12 +927,22 @@ public class SystemOperationLogAspect {
             String oldDisp = oldVal != null ? oldVal : "(空)";
             String newDisp = newVal != null ? newVal : "(空)";
             // 截断过长的值
-            if (oldDisp.length() > 50) oldDisp = oldDisp.substring(0, 50) + "...";
-            if (newDisp.length() > 50) newDisp = newDisp.substring(0, 50) + "...";
-            changes.add(label + "：" + oldDisp + " -> " + newDisp);
+            if (oldDisp.length() > 80) oldDisp = oldDisp.substring(0, 80) + "...";
+            if (newDisp.length() > 80) newDisp = newDisp.substring(0, 80) + "...";
+            Map<String, String> entry = new LinkedHashMap<>();
+            entry.put("label", label);
+            entry.put("key", key);
+            entry.put("old", oldDisp);
+            entry.put("new", newDisp);
+            changes.add(entry);
         }
         if (changes.isEmpty()) return null;
-        return String.join("；", changes);
+        try {
+            return OBJECT_MAPPER.writeValueAsString(changes);
+        } catch (Exception e) {
+            log.debug("[OpLog] 序列化变更摘要失败", e);
+            return null;
+        }
     }
 }
 

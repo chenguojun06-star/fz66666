@@ -1,6 +1,7 @@
 package com.fashion.supplychain.production.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.fashion.supplychain.common.BusinessException;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.finance.entity.Payable;
 import com.fashion.supplychain.finance.service.PayableService;
@@ -21,8 +22,11 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.stream.Collectors;
 
 /**
  * 采购退货Orchestrator
@@ -109,7 +113,15 @@ public class PurchaseReturnOrchestrator {
         BigDecimal totalAmount = BigDecimal.ZERO;
         List<PurchaseReturnItem> itemEntities = new ArrayList<>();
 
-        // 5. 创建退货明细
+        // 5. 批量查询所有采购记录（避免 N+1 查询）
+        List<String> purchaseIds = items.stream()
+                .map(item -> (String) item.get("purchaseId"))
+                .collect(Collectors.toList());
+        List<MaterialPurchase> purchaseRecords = materialPurchaseService.listByIds(purchaseIds);
+        Map<String, MaterialPurchase> purchaseMap = purchaseRecords.stream()
+                .collect(Collectors.toMap(MaterialPurchase::getId, p -> p, (a, b) -> a));
+
+        // 6. 创建退货明细
         for (Map<String, Object> item : items) {
             String purchaseId = (String) item.get("purchaseId");
             Integer quantity = (Integer) item.get("quantity");
@@ -117,7 +129,7 @@ public class PurchaseReturnOrchestrator {
                 throw new IllegalArgumentException("退货数量必须大于0");
             }
 
-            MaterialPurchase purchaseItem = materialPurchaseService.getById(purchaseId);
+            MaterialPurchase purchaseItem = purchaseMap.get(purchaseId);
             if (purchaseItem == null || !purchaseItem.getTenantId().equals(tenantId)) {
                 throw new IllegalArgumentException("采购记录不存在或不属于当前租户: " + purchaseId);
             }
@@ -147,7 +159,7 @@ public class PurchaseReturnOrchestrator {
         returnEntity.setTotalAmount(totalAmount);
         purchaseReturnService.save(returnEntity);
 
-        // 6. 保存退货明细（设置returnId）
+        // 7. 保存退货明细（设置returnId）
         Long returnId = returnEntity.getId();
         for (PurchaseReturnItem itemEntity : itemEntities) {
             itemEntity.setReturnId(returnId);
@@ -171,8 +183,13 @@ public class PurchaseReturnOrchestrator {
         String userId = ctx != null ? ctx.getUserId() : null;
         String userName = ctx != null ? ctx.getUsername() : null;
 
-        PurchaseReturn returnEntity = purchaseReturnService.getById(returnId);
-        if (returnEntity == null || !returnEntity.getTenantId().equals(tenantId)) {
+        // P1#3: 加 delete_flag=0 过滤，避免软删除单据被审核
+        PurchaseReturn returnEntity = purchaseReturnService.lambdaQuery()
+                .eq(PurchaseReturn::getId, returnId)
+                .eq(PurchaseReturn::getTenantId, tenantId)
+                .eq(PurchaseReturn::getDeleteFlag, 0)
+                .one();
+        if (returnEntity == null) {
             throw new IllegalArgumentException("退货单不存在或不属于当前租户");
         }
         if (!"PENDING".equals(returnEntity.getReturnStatus())) {
@@ -192,7 +209,8 @@ public class PurchaseReturnOrchestrator {
             returnEntity.setApproveTime(LocalDateTime.now());
             returnEntity.setApproveUserId(userId);
             returnEntity.setApproveUserName(userName);
-            returnEntity.setRemark("审核驳回: " + reason);
+            // P2#6: 驳回原因结构化追加（保留原 remark，不覆盖）
+            returnEntity.setRemark(appendAuditTrail(returnEntity.getRemark(), "审核驳回", userName, reason));
         }
 
         purchaseReturnService.updateById(returnEntity);
@@ -210,8 +228,13 @@ public class PurchaseReturnOrchestrator {
         String userId = ctx != null ? ctx.getUserId() : null;
         String userName = ctx != null ? ctx.getUsername() : null;
 
-        PurchaseReturn returnEntity = purchaseReturnService.getById(returnId);
-        if (returnEntity == null || !returnEntity.getTenantId().equals(tenantId)) {
+        // P1#3: 加 delete_flag=0 过滤，避免软删除单据被完成退货
+        PurchaseReturn returnEntity = purchaseReturnService.lambdaQuery()
+                .eq(PurchaseReturn::getId, returnId)
+                .eq(PurchaseReturn::getTenantId, tenantId)
+                .eq(PurchaseReturn::getDeleteFlag, 0)
+                .one();
+        if (returnEntity == null) {
             throw new IllegalArgumentException("退货单不存在或不属于当前租户");
         }
         if (!"APPROVED".equals(returnEntity.getReturnStatus())) {
@@ -230,16 +253,22 @@ public class PurchaseReturnOrchestrator {
         }
 
         // 2. 更新库存（减少库存）
+        // P1#4: 库存扣减失败抛异常触发事务回滚，避免账实不一致
         for (PurchaseReturnItem item : items) {
             MaterialPurchase purchaseItem = materialPurchaseService.getById(item.getPurchaseId());
-            if (purchaseItem != null) {
-                try {
-                    materialStockService.decreaseStock(purchaseItem, item.getQuantity());
-                    log.info("采购退货库存扣减成功: purchaseId={}, quantity={}", item.getPurchaseId(), item.getQuantity());
-                } catch (Exception e) {
-                    log.warn("采购退货库存扣减失败（可能库存不足或非库存物料）: purchaseId={}, err={}", item.getPurchaseId(), e.getMessage());
-                    // 库存扣减失败不阻断主流程（可能物料未入库或已消耗）
-                }
+            if (purchaseItem == null) {
+                log.warn("采购退货跳过库存扣减（原采购记录不存在）: purchaseId={}", item.getPurchaseId());
+                continue;
+            }
+            try {
+                materialStockService.decreaseStock(purchaseItem, item.getQuantity());
+                log.info("采购退货库存扣减成功: purchaseId={}, quantity={}", item.getPurchaseId(), item.getQuantity());
+            } catch (Exception e) {
+                log.error("采购退货库存扣减失败（账实不一致风险）: purchaseId={}, quantity={}, err={}",
+                        item.getPurchaseId(), item.getQuantity(), e.getMessage(), e);
+                throw new BusinessException("库存扣减失败：" + item.getMaterialName()
+                        + "（purchaseId=" + item.getPurchaseId()
+                        + "，原因=" + e.getMessage() + "），请先核对库存后再完成退货", e);
             }
         }
 
@@ -301,8 +330,13 @@ public class PurchaseReturnOrchestrator {
      */
     public Map<String, Object> getReturnDetail(Long returnId) {
         Long tenantId = UserContext.tenantId();
-        PurchaseReturn returnEntity = purchaseReturnService.getById(returnId);
-        if (returnEntity == null || !returnEntity.getTenantId().equals(tenantId)) {
+        // P1#3: 加 delete_flag=0 过滤
+        PurchaseReturn returnEntity = purchaseReturnService.lambdaQuery()
+                .eq(PurchaseReturn::getId, returnId)
+                .eq(PurchaseReturn::getTenantId, tenantId)
+                .eq(PurchaseReturn::getDeleteFlag, 0)
+                .one();
+        if (returnEntity == null) {
             throw new IllegalArgumentException("退货单不存在或不属于当前租户");
         }
 
@@ -312,18 +346,34 @@ public class PurchaseReturnOrchestrator {
                         .eq(PurchaseReturnItem::getReturnId, returnId)
         );
 
-        Map<String, Object> result = new java.util.HashMap<>();
+        Map<String, Object> result = new HashMap<>();
         result.put("return", returnEntity);
         result.put("items", items);
         return result;
     }
 
     /**
-     * 生成退货单号：PR+yyyyMMddHHmmss
+     * 生成退货单号：PR+yyyyMMddHHmmss+4位随机数（P1#1: 防止高并发碰撞）
      */
     private String generateReturnNo() {
         String prefix = "PR";
         String datetime = LocalDateTime.now().format(DATETIME_FMT);
-        return prefix + datetime;
+        int random = ThreadLocalRandom.current().nextInt(1000, 10000);
+        return prefix + datetime + random;
+    }
+
+    /**
+     * 结构化追加审核备注（P2#6）
+     * 格式：[2026-07-04 12:00:00][张三][审核驳回] 备注内容
+     * 多次审核会在新行追加，时间/操作人/动作清晰可辨，避免覆盖历史备注
+     */
+    private String appendAuditTrail(String existingRemark, String action, String operator, String reason) {
+        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+        String operatorName = operator != null ? operator : "系统";
+        String entry = "[" + timestamp + "][" + operatorName + "][" + action + "] " + reason;
+        if (existingRemark == null || existingRemark.isBlank()) {
+            return entry;
+        }
+        return existingRemark + "\n" + entry;
     }
 }

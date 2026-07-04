@@ -2,6 +2,25 @@ import ExcelJS from 'exceljs';
 import type { ColumnType } from 'antd/es/table';
 
 /**
+ * 从 ReactNode 中递归提取纯文本（用于 Excel 导出时获取 render 渲染后的可见文本）
+ * 支持：string/number/boolean/Array/ReactElement（含 Tag、Tooltip、嵌套 children）
+ */
+function extractTextFromReactNode(node: any): string {
+  if (node === null || node === undefined) return '';
+  if (typeof node === 'boolean') return '';
+  if (typeof node === 'string') return node;
+  if (typeof node === 'number') return String(node);
+  if (Array.isArray(node)) {
+    return node.map(extractTextFromReactNode).join('');
+  }
+  if (typeof node === 'object' && node !== null && node.props) {
+    // ReactElement：递归提取 props.children
+    return extractTextFromReactNode(node.props.children);
+  }
+  return String(node);
+}
+
+/**
  * 导出表格数据到Excel
  * @param dataSource 表格数据
  * @param columns 列配置
@@ -56,29 +75,27 @@ export async function exportTableToExcel<T extends object>(
       const key = String(col.key || col.dataIndex || '');
       let value: any;
 
-      // 提取字段值
-      if (col.render && typeof col.render === 'function') {
-        // 如果有render函数，尝试提取值
-        try {
-          const dataIndex = col.dataIndex;
-          if (typeof dataIndex === 'string') {
-            value = (record as any)[dataIndex];
-          } else if (Array.isArray(dataIndex)) {
-            value = (dataIndex as string[]).reduce((obj: any, key: string) => obj && obj[key], record);
-          } else {
-            value = undefined;
-          }
-        } catch {
-          value = undefined;
-        }
+      // 提取字段原始值
+      const dataIndex = col.dataIndex;
+      if (typeof dataIndex === 'string') {
+        value = (record as any)[dataIndex];
+      } else if (Array.isArray(dataIndex)) {
+        value = (dataIndex as string[]).reduce((obj: any, k: string) => obj && obj[k], record);
       } else {
-        const dataIndex = col.dataIndex;
-        if (typeof dataIndex === 'string') {
-          value = (record as any)[dataIndex];
-        } else if (Array.isArray(dataIndex)) {
-          value = (dataIndex as string[]).reduce((obj: any, key: string) => obj && obj[key], record);
-        } else {
-          value = undefined;
+        value = undefined;
+      }
+
+      // P2#9: 有 render 函数时，调用 render 取渲染后值，保证导出与界面显示一致
+      if (col.render && typeof col.render === 'function') {
+        try {
+          const rendered = col.render(value, record, rowIndex);
+          const text = extractTextFromReactNode(rendered);
+          if (text !== '') {
+            value = text;
+          }
+          // text 为空（如 render 返回 null/空）则保留原始值
+        } catch {
+          // render 调用失败，保留原始值
         }
       }
 

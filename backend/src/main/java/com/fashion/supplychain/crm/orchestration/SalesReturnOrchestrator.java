@@ -25,6 +25,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * 销售退货单编排器（P0铁律2：事务边界在Orchestrator层）
@@ -204,9 +205,10 @@ public class SalesReturnOrchestrator {
             returnOrder.setApproveUserId(ctx.getUserId());
             returnOrder.setApproveUserName(ctx.getUsername());
         }
+        // P2#6: 审核备注结构化追加（含时间、操作人、动作），避免多次操作污染历史备注
         if (StringUtils.hasText(request.getApproveRemark())) {
-            String remark = returnOrder.getRemark() != null ? returnOrder.getRemark() : "";
-            returnOrder.setRemark(remark + "\n审核备注：" + request.getApproveRemark());
+            returnOrder.setRemark(appendAuditTrail(returnOrder.getRemark(),
+                    "审核通过", ctx != null ? ctx.getUsername() : null, request.getApproveRemark()));
         }
 
         salesReturnService.updateById(returnOrder);
@@ -247,9 +249,10 @@ public class SalesReturnOrchestrator {
             returnOrder.setApproveUserId(ctx.getUserId());
             returnOrder.setApproveUserName(ctx.getUsername());
         }
+        // P2#6: 拒绝原因结构化追加
         if (StringUtils.hasText(rejectReason)) {
-            String remark = returnOrder.getRemark() != null ? returnOrder.getRemark() : "";
-            returnOrder.setRemark(remark + "\n拒绝原因：" + rejectReason);
+            returnOrder.setRemark(appendAuditTrail(returnOrder.getRemark(),
+                    "拒绝", ctx != null ? ctx.getUsername() : null, rejectReason));
         }
 
         salesReturnService.updateById(returnOrder);
@@ -283,7 +286,24 @@ public class SalesReturnOrchestrator {
     // ─── 工具 ───────────────────────────────────────────────────────────────
 
     private String generateReturnNo() {
-        return "SR" + DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSS").format(LocalDateTime.now());
+        // P1#2: 加 3 位随机数防止同毫秒并发碰撞
+        return "SR" + DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSS").format(LocalDateTime.now())
+                + ThreadLocalRandom.current().nextInt(100, 1000);
+    }
+
+    /**
+     * 结构化追加审核备注（P2#6）
+     * 格式：[2026-07-04 12:00:00][张三][审核通过] 备注内容
+     * 多次审核会在新行追加，时间/操作人/动作清晰可辨，避免污染历史备注
+     */
+    private String appendAuditTrail(String existingRemark, String action, String operator, String reason) {
+        String timestamp = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").format(LocalDateTime.now());
+        String operatorName = operator != null ? operator : "系统";
+        String entry = "[" + timestamp + "][" + operatorName + "][" + action + "] " + reason;
+        if (existingRemark == null || existingRemark.isBlank()) {
+            return entry;
+        }
+        return existingRemark + "\n" + entry;
     }
 
     private String calculateReturnType(Long originalOrderId, List<SalesReturnItemRequest> items) {
