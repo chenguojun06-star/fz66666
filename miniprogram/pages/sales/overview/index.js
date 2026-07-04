@@ -10,13 +10,7 @@
  */
 const api = require('../../../utils/api');
 const { toast } = require('../../../utils/uiHelper');
-
-/* 平台代码 → 中文名称映射 */
-const PLATFORM_NAMES = {
-  TB: '淘宝', TM: '天猫', JD: '京东', PDD: '拼多多',
-  DY: '抖音', XHS: '小红书', WC: '微信小店',
-  SFY: 'Shopify', SY: '希音', JST: '聚水潭',
-};
+const { PLATFORM_NAMES } = require('../../../utils/platformNames');
 
 /* 日期范围预设 */
 const DATE_RANGES = [

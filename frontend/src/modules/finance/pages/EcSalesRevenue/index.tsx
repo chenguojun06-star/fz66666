@@ -1,11 +1,12 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { App, Card, Tag, Select, Input, Button, Space, Row, Col, Statistic, Popconfirm, Tooltip, Typography } from 'antd';
+import { App, Card, Tag, Select, Input, Button, Space, Row, Col, Statistic, Popconfirm, Tooltip, Typography, DatePicker } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
 import {
   SearchOutlined, ReloadOutlined, CheckCircleOutlined,
   ClockCircleOutlined, DollarOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
+import type { Dayjs } from 'dayjs';
 import { ecSalesRevenueApi, EcRevenueRecord, EcRevenueSummary, PlatformBreakdownItem } from '@/services/finance/ecSalesRevenueApi';
 import { readPageSize } from '@/utils/pageSizeStore';
 import { formatMoney } from '@/utils/format';
@@ -27,27 +28,43 @@ const EcSalesRevenue: React.FC = () => {
   const [summary, setSummary] = useState<EcRevenueSummary | null>(null);
   const [actionLoading, setActionLoading] = useState<number | null>(null);
 
-  const [filters, setFilters] = useState({
-    platform: undefined as string | undefined,
-    status: undefined as string | undefined,
+  const [filters, setFilters] = useState<{
+    platform: string | undefined;
+    status: string | undefined;
+    keyword: string;
+    page: number;
+    pageSize: number;
+    dateRange: [Dayjs | null, Dayjs | null] | null;
+  }>({
+    platform: undefined,
+    status: undefined,
     keyword: '',
     page: 1,
     pageSize: readPageSize(20),
+    dateRange: null,
   });
 
   const [summaryLoading, setSummaryLoading] = useState(false);
 
+  // 提取日期范围字符串，避免在 useCallback deps 中传入对象引用导致死循环
+  const startDateStr = filters.dateRange?.[0]?.format('YYYY-MM-DD') ?? undefined;
+  const endDateStr = filters.dateRange?.[1]?.format('YYYY-MM-DD') ?? undefined;
+
   const fetchSummary = useCallback(async () => {
     setSummaryLoading(true);
     try {
-      const data = await ecSalesRevenueApi.summary({ platform: filters.platform });
+      const data = await ecSalesRevenueApi.summary({
+        platform: filters.platform,
+        startDate: startDateStr,
+        endDate: endDateStr,
+      });
       setSummary(data as unknown as EcRevenueSummary);
     } catch {
       message.warning('汇总数据加载失败，金额可能不准确');
     } finally {
       setSummaryLoading(false);
     }
-  }, [filters.platform]);
+  }, [filters.platform, startDateStr, endDateStr, message]);
 
   const fetchList = useCallback(async () => {
     setLoading(true);
@@ -58,6 +75,8 @@ const EcSalesRevenue: React.FC = () => {
         platform: filters.platform,
         status: filters.status,
         keyword: filters.keyword || undefined,
+        startDate: startDateStr,
+        endDate: endDateStr,
       });
       const data = resp as unknown as { records: EcRevenueRecord[]; total: number };
       setRecords(data.records ?? []);
@@ -67,7 +86,7 @@ const EcSalesRevenue: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [filters]);
+  }, [filters.page, filters.pageSize, filters.platform, filters.status, filters.keyword, startDateStr, endDateStr, message]);
 
   useEffect(() => {
     fetchList();
@@ -312,6 +331,12 @@ const EcSalesRevenue: React.FC = () => {
               value={filters.keyword}
               onChange={(e) => setFilters((prev) => ({ ...prev, keyword: e.target.value }))}
               onPressEnter={() => setFilters((prev) => ({ ...prev, page: 1 }))}
+              allowClear
+            />
+            <DatePicker.RangePicker
+              value={filters.dateRange ?? undefined}
+              onChange={(v) => setFilters((prev) => ({ ...prev, dateRange: v as [Dayjs | null, Dayjs | null] | null, page: 1 }))}
+              placeholder={['发货开始日', '发货结束日']}
               allowClear
             />
             <Tooltip title="刷新">

@@ -38,25 +38,8 @@ function fmtDate(val) {
   return s;
 }
 
-/* 平台来源代码 → 中文名（与销售/订单列表页保持一致） */
-const PLATFORM_NAMES = {
-  TB: '淘宝',
-  TM: '天猫',
-  JD: '京东',
-  PDD: '拼多多',
-  DY: '抖音',
-  XHS: '小红书',
-  WC: '微信小店',
-  SFY: 'Shopify',
-  SY: '希音',
-  JST: '聚水潭',
-};
-function getPlatformName(code) {
-  const c = String(code || '').trim();
-  if (!c) return '';
-  if (PLATFORM_NAMES[c]) return PLATFORM_NAMES[c];
-  return c;
-}
+/* 平台来源代码 → 中文名（统一使用共享模块，与销售/订单列表页保持一致） */
+const { getPlatformName } = require('../../../utils/platformNames');
 
 /* 状态文本 + tag 类名 */
 function getStatusInfo(raw) {

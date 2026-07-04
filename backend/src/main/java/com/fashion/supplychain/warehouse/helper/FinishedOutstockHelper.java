@@ -150,7 +150,12 @@ public class FinishedOutstockHelper {
             totalItems++;
             totalQty += quantity;
         }
-        String productionOrderNo = (String) params.get("productionOrderNo");
+        String productionOrderNo = trimToNull(params.get("productionOrderNo"));
+        // 兜底：若未显式传 productionOrderNo，使用 orderNo（出库时的生产单号）
+        // 之前缺失时静默跳过无日志，导致 EC 订单状态长期不更新且难以排查
+        if (!StringUtils.hasText(productionOrderNo)) {
+            productionOrderNo = requestOrderNo;
+        }
         if (StringUtils.hasText(productionOrderNo)) {
             try {
                 ecommerceOrderOrchestrator.onWarehouseOutbound(productionOrderNo,
@@ -158,6 +163,9 @@ public class FinishedOutstockHelper {
             } catch (Exception ex) {
                 log.warn("[EC回写失败不阻塞主流程] productionOrderNo={} err={}", productionOrderNo, ex.getMessage());
             }
+        } else if (StringUtils.hasText(requestOrderId)) {
+            log.warn("[EC回写跳过] 缺少 productionOrderNo 与 orderNo，无法回写EC订单 orderId={} customer={}",
+                    requestOrderId, customerName);
         }
 
         log.info("[FinishedOutbound] 成品批量出库: operator={}, orderId={}, orderNo={}, customer={}, items={}, totalQty={}, type={}",

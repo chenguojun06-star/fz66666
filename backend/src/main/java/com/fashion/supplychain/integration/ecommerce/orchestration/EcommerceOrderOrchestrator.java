@@ -187,7 +187,10 @@ public class EcommerceOrderOrchestrator {
         }
 
         Object status = params.get("status");
-        if (status != null) wrapper.eq(EcommerceOrder::getStatus, parseIntSafe(status, -1));
+        // 过滤空字符串：小程序"全部"状态发 '' 时不应解析为 -1（会查询不到任何订单）
+        if (status != null && StringUtils.hasText(status.toString())) {
+            wrapper.eq(EcommerceOrder::getStatus, parseIntSafe(status, -1));
+        }
 
         String keyword = (String) params.get("keyword");
         if (StringUtils.hasText(keyword)) {

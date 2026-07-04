@@ -76,11 +76,13 @@ public class EcSalesRevenueOrchestrator {
         rev.setDiscount(order.getDiscount());
         rev.setProductionOrderNo(order.getProductionOrderNo());
         rev.setShipTime(LocalDateTime.now());
-        rev.setStatus("confirmed");
+        // 出库生成流水时为 pending 状态，等待财务核账 → confirmed → reconciled
+        // 之前误设为 confirmed 导致状态机失效（pendingCount永远为0、confirm方法永远抛异常）
+        rev.setStatus("pending");
         rev.setTenantId(order.getTenantId());
 
         ecSalesRevenueService.save(rev);
-        log.info("[EC收入] 出库自动生成流水并已确认 revenueNo={} ecOrderNo={} payAmount={}",
+        log.info("[EC收入] 出库自动生成待核账流水 revenueNo={} ecOrderNo={} payAmount={}",
                 rev.getRevenueNo(), order.getOrderNo(), order.getPayAmount());
     }
 
@@ -170,6 +172,12 @@ public class EcSalesRevenueOrchestrator {
 
         String platform = (String) params.get("platform");
         if (StringUtils.hasText(platform)) wrapper.eq(EcSalesRevenue::getPlatform, platform);
+
+        // 日期范围筛选（按发货时间 ship_time 过滤，与 summary 一致）
+        String startDate = (String) params.get("startDate");
+        String endDate = (String) params.get("endDate");
+        if (StringUtils.hasText(startDate)) wrapper.ge(EcSalesRevenue::getShipTime, startDate + " 00:00:00");
+        if (StringUtils.hasText(endDate)) wrapper.le(EcSalesRevenue::getShipTime, endDate + " 23:59:59");
 
         String keyword = (String) params.get("keyword");
         if (StringUtils.hasText(keyword)) {

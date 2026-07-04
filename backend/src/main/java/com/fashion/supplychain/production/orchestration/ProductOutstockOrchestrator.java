@@ -79,6 +79,23 @@ public class ProductOutstockOrchestrator {
             outstock.setCreatorId(ctxUserId);
             outstock.setCreatorName(ctxUsername);
         }
+        // 兜底设置 platformCode：若未传，从关联生产订单查询（带 tenant_id 隔离，P0铁律4）
+        // 与 FinishedOutstockHelper.outbound 行为保持一致，确保所有出库记录都有平台来源
+        if (!StringUtils.hasText(outstock.getPlatformCode()) && StringUtils.hasText(outstock.getOrderNo())) {
+            try {
+                Long currentTenantId = UserContext.tenantId();
+                ProductionOrder prodOrder = productionOrderService.lambdaQuery()
+                        .select(ProductionOrder::getId, ProductionOrder::getPlatformCode)
+                        .eq(ProductionOrder::getOrderNo, outstock.getOrderNo())
+                        .eq(currentTenantId != null, ProductionOrder::getTenantId, currentTenantId)
+                        .one();
+                if (prodOrder != null && StringUtils.hasText(prodOrder.getPlatformCode())) {
+                    outstock.setPlatformCode(prodOrder.getPlatformCode());
+                }
+            } catch (Exception e) {
+                log.warn("[出库保存] 查询生产订单 platformCode 失败: orderNo={} {}", outstock.getOrderNo(), e.getMessage());
+            }
+        }
         boolean ok = saveAndSync(outstock);
         if (!ok) {
             throw new IllegalStateException("保存失败");

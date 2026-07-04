@@ -6,6 +6,8 @@ export interface EcRevenueListParams {
   status?: string;       // pending | confirmed | reconciled
   platform?: string;     // TB | JD | PDD | DY | XHS | WC | SFY | TM
   keyword?: string;      // 流水号 / 平台单号 / 商品名
+  startDate?: string;    // 发货起始日期 YYYY-MM-DD（同时作用于列表与汇总）
+  endDate?: string;      // 发货结束日期 YYYY-MM-DD
 }
 
 export interface PlatformBreakdownItem {
@@ -70,7 +72,7 @@ export const ecSalesRevenueApi = {
     ),
 
   /** 汇总统计（待核账 / 已核账 / 已入账 金额+单数）*/
-  summary: (params?: { platform?: string }) =>
+  summary: (params?: { platform?: string; startDate?: string; endDate?: string }) =>
     api.post<EcRevenueSummary>(`${BASE}/summary`, params ?? {}),
 
   /** 状态流转：confirm（核账）| reconcile（入账）*/

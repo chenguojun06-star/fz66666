@@ -12,12 +12,7 @@
  */
 const api = require('../../../utils/api');
 const { toast } = require('../../../utils/uiHelper');
-
-const PLATFORM_NAMES = {
-  TB: '淘宝', TM: '天猫', JD: '京东', PDD: '拼多多',
-  DY: '抖音', XHS: '小红书', WC: '微信小店',
-  SFY: 'Shopify', SY: '希音', JST: '聚水潭',
-};
+const { PLATFORM_NAMES } = require('../../../utils/platformNames');
 
 const PLATFORM_TABS = [
   { key: '',   label: '全部' },
@@ -180,8 +175,9 @@ Page({
       var total = Number(data.total || 0);
 
       var mapped = records.map(function (r) {
-        // platform 字段：后端存储 sourcePlatformCode(全码) + platform(短码)
-        var code = r.platform || r.platformCode || r.ecPlatform || '';
+        // platform 字段：后端 EcommerceOrder 仅存 platform（短码 TB/JD/...）
+        // 之前的 platformCode/ecPlatform 是无效字段，已清理
+        var code = r.platform || '';
         // status 后端为 Integer
         var statusNum = Number(r.status);
         if (isNaN(statusNum)) statusNum = -1;

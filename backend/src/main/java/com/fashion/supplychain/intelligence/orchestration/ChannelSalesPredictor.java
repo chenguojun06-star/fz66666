@@ -246,6 +246,9 @@ public class ChannelSalesPredictor {
             com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<EcSalesRevenue> wrapper =
                     new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<>();
             wrapper.eq(EcSalesRevenue::getTenantId, tenantId);
+            // 限制近2年数据，避免大数据量租户全表扫描导致 OOM
+            // 渠道预测/绩效分析只关注近期数据，历史数据无预测价值
+            wrapper.ge(EcSalesRevenue::getCreateTime, LocalDateTime.now().minusYears(2));
             // 按款号过滤：skuCode 格式为 "款号-颜色-尺码"，用 likeRight 前缀匹配
             if (StringUtils.hasText(styleNo)) {
                 wrapper.likeRight(EcSalesRevenue::getSkuCode, styleNo + "-");
