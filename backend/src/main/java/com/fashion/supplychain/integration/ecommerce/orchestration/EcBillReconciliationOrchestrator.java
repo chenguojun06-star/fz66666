@@ -68,27 +68,31 @@ public class EcBillReconciliationOrchestrator {
         if (billPeriod == null || billPeriod.isBlank()) {
             billPeriod = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM"));
         }
-        final String period = billPeriod;
+        // 账期长度校验：避免 substring 越界（如 "2026" 4 字符 substring(0,7) 越界）
+        // 支持 yyyy-MM（7字符）/ yyyy-Www（8字符） / yyyy-MM-dd（10字符）
+        if (billPeriod.length() < 7) {
+            throw new IllegalArgumentException("账期格式不合法，应为 yyyy-MM 或 yyyy-Www：" + billPeriod);
+        }
 
         // 1. 拉取平台账单（mock，基于本地 EcSalesRevenue 生成模拟账单）
-        List<PlatformBillItem> platformBills = fetchPlatformBills(tenantId, platform, period);
+        List<PlatformBillItem> platformBills = fetchPlatformBills(tenantId, platform, billPeriod);
         if (platformBills.isEmpty()) {
-            log.info("[BillReconcile] 无账单数据 tenantId={} platform={} period={}", tenantId, platform, period);
+            log.info("[BillReconcile] 无账单数据 tenantId={} platform={} period={}", tenantId, platform, billPeriod);
             ReconcileResult r = new ReconcileResult();
-            r.setBillPeriod(period);
+            r.setBillPeriod(billPeriod);
             r.setTotalBills(0);
             return r;
         }
 
         // 2. 查本地收入流水（按 platform + 账期月份匹配 shipTime）
-        Map<String, EcSalesRevenue> localMap = queryLocalRevenueMap(tenantId, platform, period);
+        Map<String, EcSalesRevenue> localMap = queryLocalRevenueMap(tenantId, platform, billPeriod);
 
         // 3. 逐条对账
         int created = 0, matched = 0, mismatched = 0, missingLocal = 0;
         for (PlatformBillItem pb : platformBills) {
             try {
                 EcSalesRevenue local = localMap.get(pb.platformOrderNo);
-                ReconcileOutcome outcome = reconcileOne(tenantId, platform, period, pb, local);
+                ReconcileOutcome outcome = reconcileOne(tenantId, platform, billPeriod, pb, local);
                 if (outcome.saved) created++;
                 switch (outcome.diffType) {
                     case "NONE" -> matched++;
@@ -100,18 +104,18 @@ public class EcBillReconciliationOrchestrator {
             }
         }
         ReconcileResult result = new ReconcileResult();
-        result.setBillPeriod(period);
+        result.setBillPeriod(billPeriod);
         result.setTotalBills(platformBills.size());
         result.setMatched(matched);
         result.setMismatched(mismatched);
         result.setMissingLocal(missingLocal);
         result.setNewBills(created);
         log.info("[BillReconcile] 对账完成 tenantId={} period={} total={} matched={} mismatched={} missingLocal={} newBills={}",
-                tenantId, period, platformBills.size(), matched, mismatched, missingLocal, created);
+                tenantId, billPeriod, platformBills.size(), matched, mismatched, missingLocal, created);
         return result;
     }
 
-    /** 单条对账：比对 + AI 分析 + 落库（去重） */
+    /** 单条对账：比对 + AI 分析 + 落库（已存在则更新） */
     private ReconcileOutcome reconcileOne(Long tenantId, String platform, String billPeriod,
                                            PlatformBillItem pb, EcSalesRevenue local) {
         ReconcileOutcome o = new ReconcileOutcome();
@@ -133,11 +137,26 @@ public class EcBillReconciliationOrchestrator {
 
         // 仅对差异项落库（NONE 不落库，避免噪声）
         if ("NONE".equals(diffType)) return o;
-        // 去重
-        if (billService.existsByPeriodAndOrder(tenantId, platform, billPeriod, pb.platformOrderNo)) return o;
 
         // AI 差异分析
         AiAnalysis ai = callAiForAnalysis(pb, local, diffAmount, diffType);
+
+        // 重复对账：已存在则更新金额与 AI 分析，不重复新增
+        EcPlatformBill existing = billService.getByPeriodAndOrder(tenantId, platform, billPeriod, pb.platformOrderNo);
+        if (existing != null) {
+            existing.setPlatformAmount(platformAmount);
+            existing.setLocalAmount(localAmount);
+            existing.setDiffAmount(diffAmount);
+            existing.setDiffType(diffType);
+            existing.setLocalRevenueId(local != null ? local.getId() : null);
+            existing.setLocalRevenueNo(local != null ? local.getRevenueNo() : null);
+            existing.setAiAnalysis(ai != null ? ai.analysis : buildRuleFallback(diffType, diffAmount));
+            existing.setAiConfidence(ai != null ? ai.confidence : 60);
+            existing.setFetchedTime(LocalDateTime.now());
+            billService.updateById(existing);
+            o.saved = true;
+            return o;
+        }
 
         EcPlatformBill bill = new EcPlatformBill();
         bill.setTenantId(tenantId);
@@ -235,11 +254,12 @@ public class EcBillReconciliationOrchestrator {
      * <p>后续对接真实平台 API 时，替换此方法实现即可。
      */
     private List<PlatformBillItem> fetchPlatformBills(Long tenantId, String platform, String billPeriod) {
-        // mock：取本地收入流水作为账单基础数据，模拟 10% 概率金额差异 + 5% 概率本地缺失
+        // mock：取本地收入流水作为账单基础数据，模拟 10% 概率金额差异 + 5% 概率完全不同
+        String periodPrefix = safeYearMonthPrefix(billPeriod);
         List<EcSalesRevenue> revenues = revenueService.list(new LambdaQueryWrapper<EcSalesRevenue>()
                 .eq(EcSalesRevenue::getTenantId, tenantId)
                 .eq(platform != null, EcSalesRevenue::getPlatform, platform)
-                .likeRight(EcSalesRevenue::getShipTime, billPeriod.substring(0, 7)));
+                .likeRight(EcSalesRevenue::getShipTime, periodPrefix));
         return revenues.stream()
                 .map(r -> {
                     PlatformBillItem item = new PlatformBillItem();
@@ -265,15 +285,27 @@ public class EcBillReconciliationOrchestrator {
 
     /** 查本地收入流水，按 platformOrderNo 建立 Map */
     private Map<String, EcSalesRevenue> queryLocalRevenueMap(Long tenantId, String platform, String billPeriod) {
+        String periodPrefix = safeYearMonthPrefix(billPeriod);
         List<EcSalesRevenue> list = revenueService.list(new LambdaQueryWrapper<EcSalesRevenue>()
                 .eq(EcSalesRevenue::getTenantId, tenantId)
                 .eq(platform != null, EcSalesRevenue::getPlatform, platform)
-                .likeRight(EcSalesRevenue::getShipTime, billPeriod.substring(0, 7)));
+                .likeRight(EcSalesRevenue::getShipTime, periodPrefix));
         Map<String, EcSalesRevenue> map = new HashMap<>();
         for (EcSalesRevenue r : list) {
             if (r.getPlatformOrderNo() != null) map.put(r.getPlatformOrderNo(), r);
         }
         return map;
+    }
+
+    /**
+     * 安全提取账期前缀用于 likeRight 匹配。
+     * yyyy-MM（7字符） → 直接返回
+     * yyyy-Www（8字符） → 返回前 7 字符（yyyy-W 加首位周数，周账期对账时月份仍可命中）
+     * yyyy-MM-dd（10字符） → 返回前 7 字符（yyyy-MM）
+     */
+    private String safeYearMonthPrefix(String billPeriod) {
+        if (billPeriod == null) return "";
+        return billPeriod.length() >= 7 ? billPeriod.substring(0, 7) : billPeriod;
     }
 
     /** mock 平台账单项 */

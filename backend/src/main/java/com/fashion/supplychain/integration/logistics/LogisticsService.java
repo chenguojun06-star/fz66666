@@ -87,7 +87,8 @@ public interface LogisticsService {
         ZTO("中通快递", "ZTO"),
         EMS("中国邮政", "EMS"),
         JD("京东物流", "JD"),
-        YD("韵达快递", "YD");
+        YD("韵达快递", "YD"),
+        JT("极兔速递", "JT");
 
         private final String displayName;
         private final String code;

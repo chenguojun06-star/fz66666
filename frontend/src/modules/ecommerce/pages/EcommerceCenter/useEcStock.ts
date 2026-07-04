@@ -185,6 +185,7 @@ export interface PlatformBill {
   handledStatus: number;
   handledBy?: string | null;
   handledTime?: string | null;
+  handledRemark?: string | null;
   fetchedTime?: string | null;
   createTime?: string;
 }

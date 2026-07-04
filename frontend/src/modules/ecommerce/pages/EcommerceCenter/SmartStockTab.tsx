@@ -188,7 +188,8 @@ const SmartStockTab: React.FC = () => {
     st.fetchAlerts(); st.fetchSuggestions(); st.fetchStock(); st.fetchAllocations();
     st.fetchMergeCandidates(); st.fetchGiftRules();
     st.fetchAnomalies(); st.fetchBills();
-  }, [st]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleResolve = useCallback(async (id: number) => {
     await st.resolveAlert(id); message.success('已处理');
@@ -274,8 +275,13 @@ const SmartStockTab: React.FC = () => {
         />
       ),
       onOk: async () => {
-        await st.handleAnomaly(id, remark);
-        message.success('已标记处理');
+        try {
+          await st.handleAnomaly(id, remark);
+          message.success('已标记处理');
+        } catch {
+          message.error('处理失败，请稍后重试');
+          throw new Error('handle failed');
+        }
       },
     });
   }, [st, message]);
@@ -454,8 +460,6 @@ const SmartStockTab: React.FC = () => {
           DELAY: { color: 'orange', label: '超时未签' },
           STALE: { color: 'red', label: '轨迹停滞' },
           EXCEPTION: { color: 'red', label: '轨迹异常' },
-          SIGNED_ABNORMAL: { color: 'volcano', label: '签收异常' },
-          RETURN_RISK: { color: 'magenta', label: '退货风险' },
         };
         const m = map[v] ?? { color: 'default', label: v };
         return <Tag color={m.color}>{m.label}</Tag>;
@@ -480,7 +484,7 @@ const SmartStockTab: React.FC = () => {
       render: (v?: string | null, r?: LogisticsAnomaly) => {
         const text = v || '-';
         const conf = r?.aiConfidence;
-        const color = !conf ? 'var(--color-text-quaternary)' : conf >= 70 ? 'var(--color-success)' : conf >= 50 ? 'var(--color-warning)' : 'var(--color-error)';
+        const color = conf == null ? 'var(--color-text-quaternary)' : conf >= 70 ? 'var(--color-success)' : conf >= 50 ? 'var(--color-warning)' : 'var(--color-error)';
         return (
           <Tooltip title={text}>
             <span style={{ color }}>
@@ -508,9 +512,7 @@ const SmartStockTab: React.FC = () => {
       title: '差异类型', dataIndex: 'diffType', width: 120,
       render: (v: string) => {
         const map: Record<string, { color: string; label: string }> = {
-          NONE: { color: 'success', label: '一致' },
           MISSING_LOCAL: { color: 'orange', label: '本地缺失' },
-          MISSING_PLATFORM: { color: 'orange', label: '平台缺失' },
           AMOUNT_MISMATCH: { color: 'red', label: '金额不符' },
         };
         const m = map[v] ?? { color: 'default', label: v };
@@ -519,17 +521,17 @@ const SmartStockTab: React.FC = () => {
     },
     {
       title: '平台金额', dataIndex: 'platformAmount', width: 100, align: 'right' as const,
-      render: (v: number) => `¥${v?.toFixed(2) ?? '0.00'}`,
+      render: (v: number) => `¥${v.toFixed(2)}`,
     },
     {
       title: '本地金额', dataIndex: 'localAmount', width: 100, align: 'right' as const,
-      render: (v: number) => `¥${v?.toFixed(2) ?? '0.00'}`,
+      render: (v: number) => `¥${v.toFixed(2)}`,
     },
     {
       title: '差异金额', dataIndex: 'diffAmount', width: 100, align: 'right' as const,
       render: (v: number) => {
         const color = Math.abs(v) < 0.01 ? 'var(--color-success)' : v > 0 ? 'var(--color-error)' : 'var(--color-warning)';
-        return <span style={{ color, fontWeight: 500 }}>{v > 0 ? '+' : ''}{v?.toFixed(2) ?? '0.00'}</span>;
+        return <span style={{ color, fontWeight: 500 }}>{v > 0 ? '+' : ''}{v.toFixed(2)}</span>;
       },
     },
     {
@@ -537,7 +539,7 @@ const SmartStockTab: React.FC = () => {
       render: (v?: string | null, r?: PlatformBill) => {
         const text = v || '-';
         const conf = r?.aiConfidence;
-        const color = !conf ? 'var(--color-text-quaternary)' : conf >= 70 ? 'var(--color-success)' : conf >= 50 ? 'var(--color-warning)' : 'var(--color-error)';
+        const color = conf == null ? 'var(--color-text-quaternary)' : conf >= 70 ? 'var(--color-success)' : conf >= 50 ? 'var(--color-warning)' : 'var(--color-error)';
         return (
           <Tooltip title={text}>
             <span style={{ color }}>

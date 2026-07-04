@@ -293,6 +293,9 @@ public class EcommerceOrderController {
             String handledBy = UserContext.username();
             int status = body.get("status") != null
                     ? Integer.valueOf(body.get("status").toString()) : 1;
+            if (status < 1 || status > 3) {
+                return Result.fail("处理状态不合法，仅支持 1=已确认 / 2=已申诉 / 3=已忽略");
+            }
             String remark = (String) body.get("remark");
             platformBillService.markHandled(tenantId, id, status, handledBy, remark);
             return Result.success(null);

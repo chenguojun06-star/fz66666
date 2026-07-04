@@ -59,6 +59,9 @@ public class EcPlatformBill {
     private String handledBy;
     private LocalDateTime handledTime;
 
+    /** 处理备注 */
+    private String handledRemark;
+
     /** 账单拉取时间 */
     private LocalDateTime fetchedTime;
 

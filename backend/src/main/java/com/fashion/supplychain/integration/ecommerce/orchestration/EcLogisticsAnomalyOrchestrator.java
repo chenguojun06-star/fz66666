@@ -60,7 +60,8 @@ public class EcLogisticsAnomalyOrchestrator {
     private static final int STALE_HOURS = 24;
     /** 异常关键字 */
     private static final String[] EXCEPTION_KEYWORDS = {
-            "退回", "拒收", "破损", "丢失", "异常", "问题件", "滞留", "无人签收"
+            "退回", "拒收", "破损", "丢失", "异常", "问题件", "滞留", "无人签收",
+            "延误", "派送失败", "地址不详", "联系不上", "无法联系", "客户取消", "错分"
     };
 
     /**
@@ -104,40 +105,47 @@ public class EcLogisticsAnomalyOrchestrator {
             log.debug("[LogisticsAnomaly] 拉轨迹失败 orderNo={} trackingNo={}: {}",
                     order.getOrderNo(), order.getTrackingNo(), e.getMessage());
             // 拉不到轨迹，若发货超过 48h 则报 STALE
-            return saveIfNotExists(order, "STALE", "HIGH",
-                    (int) Duration.between(order.getShipTime(), LocalDateTime.now()).toHours() / 24,
-                    "无法获取轨迹", null, null);
+            int days = order.getShipTime() != null
+                    ? calcDaysBetween(order.getShipTime(), LocalDateTime.now()) : 0;
+            return saveIfNotExists(order, "STALE", "HIGH", days,
+                    "无法获取物流轨迹", null);
         }
         if (tracks == null || tracks.isEmpty()) return false;
 
         TrackingInfo last = tracks.get(tracks.size() - 1);
         LocalDateTime lastTime = last.getTime();
         int daysSinceUpdate = lastTime != null
-                ? (int) Duration.between(lastTime, LocalDateTime.now()).toHours() / 24 : 0;
+                ? calcDaysBetween(lastTime, LocalDateTime.now()) : 0;
         String desc = last.getDescription();
 
         // 1. EXCEPTION：轨迹含异常关键字
         if (containsExceptionKeyword(desc)) {
             String severity = daysSinceUpdate > 3 ? "HIGH" : "MEDIUM";
-            return saveIfNotExists(order, "EXCEPTION", severity, daysSinceUpdate, desc, lastTime, null);
+            return saveIfNotExists(order, "EXCEPTION", severity, daysSinceUpdate, desc, lastTime);
         }
         // 2. STALE：轨迹停滞 > 24h
         if (lastTime != null && lastTime.isBefore(LocalDateTime.now().minusHours(STALE_HOURS))) {
             String severity = daysSinceUpdate > 3 ? "HIGH" : "MEDIUM";
-            return saveIfNotExists(order, "STALE", severity, daysSinceUpdate, desc, lastTime, null);
+            return saveIfNotExists(order, "STALE", severity, daysSinceUpdate, desc, lastTime);
         }
         // 3. DELAY：发货超 48h 仍未签收（兜底）
         if (order.getShipTime() != null
                 && order.getShipTime().isBefore(LocalDateTime.now().minusHours(DEFAULT_PENDING_HOURS))) {
-            return saveIfNotExists(order, "DELAY", "MEDIUM", daysSinceUpdate, desc, lastTime, null);
+            return saveIfNotExists(order, "DELAY", "MEDIUM", daysSinceUpdate, desc, lastTime);
         }
         return false;
+    }
+
+    /** 计算两个时间相差天数（向上取整，避免整数除法精度丢失） */
+    private int calcDaysBetween(LocalDateTime from, LocalDateTime to) {
+        long hours = Duration.between(from, to).toHours();
+        return (int) Math.ceil(hours / 24.0);
     }
 
     /** 落库（去重） + AI 建议 */
     private boolean saveIfNotExists(EcommerceOrder order, String anomalyType, String severity,
                                      int daysSinceUpdate, String desc,
-                                     LocalDateTime lastTrackTime, TrackingInfo lastTrack) {
+                                     LocalDateTime lastTrackTime) {
         Long tenantId = order.getTenantId();
         if (anomalyService.existsUnhandled(tenantId, order.getId(), anomalyType)) return false;
         // AI 生成建议
@@ -248,6 +256,7 @@ public class EcLogisticsAnomalyOrchestrator {
             case "EMS" -> LogisticsService.LogisticsType.EMS;
             case "JD" -> LogisticsService.LogisticsType.JD;
             case "YD" -> LogisticsService.LogisticsType.YD;
+            case "JT" -> LogisticsService.LogisticsType.JT;
             default -> null;
         };
     }

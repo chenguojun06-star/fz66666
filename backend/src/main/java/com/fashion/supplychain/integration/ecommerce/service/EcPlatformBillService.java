@@ -57,6 +57,16 @@ public class EcPlatformBillService extends ServiceImpl<EcPlatformBillMapper, EcP
         update.setHandledStatus(status);
         update.setHandledBy(handledBy);
         update.setHandledTime(java.time.LocalDateTime.now());
+        update.setHandledRemark(remark);
         updateById(update);
+    }
+
+    /** 按账期+订单号查询单条（用于重复对账时更新） */
+    public EcPlatformBill getByPeriodAndOrder(Long tenantId, String platform, String billPeriod, String platformOrderNo) {
+        return getOne(new LambdaQueryWrapper<EcPlatformBill>()
+                .eq(EcPlatformBill::getTenantId, tenantId)
+                .eq(EcPlatformBill::getPlatform, platform)
+                .eq(EcPlatformBill::getBillPeriod, billPeriod)
+                .eq(EcPlatformBill::getPlatformOrderNo, platformOrderNo), false);
     }
 }
