@@ -22,7 +22,7 @@ import { CrmDashboard, ReceivableList as CrmReceivableList } from './modules/crm
 import { SelectionCenter } from './modules/selection';
 import { MaterialInventory, MaterialDatabase, FinishedInventory, SampleInventory, EcommerceOrders, InventoryCheck, LabelPrint, ProductInfo, WarehouseLocationMap } from './modules/warehouse';
 import { Dashboard } from './modules/dashboard';
-import { UserList, UserApproval, RoleList, OrganizationTree, PartnerManagement, FactoryList, FactoryWorkerList, LoginLogList, SystemLogs, Profile, DictManage, Tutorial, TenantManagement, CustomerManagement, AppStore, DataImport, SystemIssueBoard, OrphanDataPage, FieldConfigPage } from './modules/system';
+import { UserList, UserApproval, RoleList, OrganizationTree, PartnerManagement, FactoryList, FactoryWorkerList, LoginLogList, SystemLogs, Profile, DictManage, Tutorial, TenantManagement, CustomerManagement, AppStore, DataImport, SystemIssueBoard, OrphanDataPage, FieldConfigPage, PrintTemplateList } from './modules/system';
 import { EcommerceCenter, PlatformDetail } from './modules/ecommerce';
 import { AiAgentTraceCenter, CockpitPage, IntelligenceCenter, PlatformDashboard } from './modules/intelligence';
 import { ProductionList, CuttingManagement, MaterialPurchase, MaterialPurchaseDetail, ProductWarehousing, InspectionDetail, OrderTransfer, OrderFlow, ProgressDetail, MaterialPicking, ExternalFactory } from './modules/production';
@@ -267,6 +267,7 @@ const AppRoutes: React.FC = () => {
           <Route path={paths.systemIssues} element={<RouteErrorBoundary pageName="问题反馈"><Suspense fallback={routeFallback}><SystemIssueBoard /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.orphanData} element={<RouteErrorBoundary pageName="孤儿数据"><Suspense fallback={routeFallback}><OrphanDataPage /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.fieldConfig} element={<RouteErrorBoundary pageName="字段配置"><Suspense fallback={routeFallback}><FieldConfigPage /></Suspense></RouteErrorBoundary>} />
+          <Route path={paths.printTemplate} element={<RouteErrorBoundary pageName="打印模板"><Suspense fallback={routeFallback}><PrintTemplateList /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.appStore} element={<RouteErrorBoundary pageName="应用商店"><Suspense fallback={routeFallback}><AppStore /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.dataImport} element={<RouteErrorBoundary pageName="数据导入"><Suspense fallback={routeFallback}><DataImport /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.ecommerceCenter} element={<RouteErrorBoundary pageName="电商运营"><Suspense fallback={routeFallback}><EcommerceCenter /></Suspense></RouteErrorBoundary>} />

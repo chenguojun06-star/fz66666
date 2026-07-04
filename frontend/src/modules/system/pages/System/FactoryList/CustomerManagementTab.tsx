@@ -386,6 +386,8 @@ const CustomerManagementTab: React.FC<Props> = ({ active }) => {
           pagination={false}
           stickyHeader
           scroll={{ x: 'max-content' }}
+          showExport={true}
+          exportFilename="客户列表.xlsx"
         />
       )}
       <StandardPagination

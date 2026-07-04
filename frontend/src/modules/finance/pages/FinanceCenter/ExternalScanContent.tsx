@@ -278,7 +278,8 @@ const ExternalScanContent: React.FC = () => {
           },
         }}
         scroll={{ x: 1300 }}
-       
+        showExport={true}
+        exportFilename="扫码记录.xlsx"
       />
     </Card>
   );

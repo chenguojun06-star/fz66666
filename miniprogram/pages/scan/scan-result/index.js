@@ -83,6 +83,11 @@ Page({
     }
     this._scanContext = raw;
 
+    // 扫码成功进入结果页时，触发振动提示
+    wx.vibrateShort({
+      type: 'medium'
+    });
+
     let processOptions = this._buildProcessOptions(raw);
     if (processOptions.length === 0 && raw.processName) {
       processOptions = [{
@@ -634,6 +639,8 @@ Page({
       }
 
       if (failedItems.length === 0) {
+        // 提交成功：振动+Toast提示
+        wx.vibrateShort({ type: 'heavy' });
         toast.success('已完成 ' + successCount + ' 个工序扫码');
         wx.navigateBack();
       } else if (successCount > 0) {
@@ -656,6 +663,8 @@ Page({
           quantity: quantity || 0,
           success: false,
         };
+        // 提交失败：长振动+Modal提示
+        wx.vibrateLong();
         wx.showModal({ title: '扫码失败', content: msg, showCancel: false, confirmText: '知道了' });
       }
     } catch (e) {
@@ -668,6 +677,8 @@ Page({
         quantity: quantity || 0,
         success: false,
       };
+      // 异常失败：长振动+Modal提示
+      wx.vibrateLong();
       wx.showModal({ title: '扫码失败', content: errMsg, showCancel: false, confirmText: '知道了' });
     }
   },

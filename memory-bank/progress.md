@@ -1,7 +1,20 @@
 # 进度跟踪
 
 > 本文件由 AI 助手自动维护，记录项目开发进度
-> 最后更新：2026-07-02
+> 最后更新：2026-07-04
+
+## 已完成
+
+### 2026-07-04 款式一键复制功能实现完成
+
+- [x] 后端：`StyleInfoOrchestrator.copyStyle()` 补充工序/二次工艺/报价复制逻辑
+- [x] 后端：修复 `buildNewStyleFromSource()` 扩展字段复制（sizeColorConfig/洗水唛等）
+- [x] 后端：新增 `copyProcessToNewStyle()` / `copySecondaryProcessToNewStyle()` / `copyQuotationToNewStyle()` 方法
+- [x] 后端：新增 `StyleQuotationService` / `StyleQuotation` 导入
+- [x] 后端编译验证通过（`mvn compile -q` exit code 0）
+- [x] 前端：API路径验证正确（`/style/info/${id}/copy`）
+- [x] 前端编译验证通过（`npx tsc --noEmit` exit code 0）
+- [x] 更新 `memory-bank/activeContext.md` 记录本次变更
 
 ---
 

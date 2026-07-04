@@ -593,6 +593,8 @@ const StyleBomTab: React.FC<Props> = ({
             scroll={{ x: 'max-content' }}
             showIndex
             storageKey={`style-bom-v2-${String(styleId)}`}
+            showExport={true}
+            exportFilename="款式BOM.xlsx"
           />
         )}
       </Form>

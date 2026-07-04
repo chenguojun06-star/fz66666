@@ -1,0 +1,236 @@
+/* 打印模板设计器样式 */
+
+.designer-container {
+  display: flex;
+  gap: 16px;
+  padding: 16px;
+  min-height: 600px;
+  background: var(--color-bg-base);
+}
+
+/* 左侧字段列表 */
+.left-panel {
+  width: 200px;
+  min-width: 200px;
+  overflow-y: auto;
+  max-height: calc(100vh - 200px);
+}
+
+.field-group {
+  margin-bottom: 12px;
+}
+
+.group-title {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--color-text-secondary);
+}
+
+.draggable-field {
+  padding: 6px 8px;
+  margin-bottom: 4px;
+  background: var(--color-bg-container);
+  border: 1px solid var(--color-border-antd);
+  border-radius: 4px;
+  cursor: grab;
+  transition: all 0.2s;
+}
+
+.draggable-field:hover {
+  background: var(--color-bg-gray);
+  border-color: var(--color-info);
+}
+
+.draggable-field.dragging {
+  opacity: 0.5;
+  background: var(--color-bg-subtle);
+}
+
+.field-label {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.field-category {
+  font-size: 11px;
+  margin-left: 4px;
+}
+
+/* 中间画布区域 */
+.canvas-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 400px;
+}
+
+.canvas-toolbar {
+  padding: 8px 12px;
+  background: var(--color-bg-gray);
+  border-radius: 8px;
+  margin-bottom: 12px;
+}
+
+.canvas-wrapper {
+  flex: 1;
+  overflow: auto;
+  background: var(--color-bg-container);
+  border: 1px solid var(--color-border-antd);
+  border-radius: 8px;
+  padding: 20px;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.template-canvas {
+  background: var(--color-bg-base);
+  border: 2px dashed var(--color-border-antd);
+  border-radius: 4px;
+  position: relative;
+  transition: border-color 0.2s;
+}
+
+.template-canvas.canvas-over {
+  border-color: var(--color-info);
+  background: var(--color-bg-subtle);
+}
+
+.canvas-empty {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+}
+
+.canvas-field {
+  position: absolute;
+  padding: 2px 4px;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  cursor: move;
+  transition: border-color 0.2s, background 0.2s;
+  min-width: 60px;
+}
+
+.canvas-field:hover {
+  border-color: var(--color-info);
+  background: rgba(59, 130, 246, 0.05);
+}
+
+.canvas-field.selected {
+  border-color: var(--color-info);
+  background: rgba(59, 130, 246, 0.1);
+  box-shadow: 0 0 4px rgba(59, 130, 246, 0.3);
+}
+
+.field-delete-btn {
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.canvas-field:hover .field-delete-btn,
+.canvas-field.selected .field-delete-btn {
+  opacity: 1;
+}
+
+/* 右侧属性面板 */
+.right-panel {
+  width: 260px;
+  min-width: 260px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: calc(100vh - 200px);
+  overflow-y: auto;
+}
+
+.property-panel {
+  background: var(--color-bg-container);
+  border: 1px solid var(--color-border-antd);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.property-panel.empty {
+  text-align: center;
+  padding: 24px;
+}
+
+.property-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.property-label {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  min-width: 80px;
+}
+
+.property-item .ant-input-number,
+.property-item .ant-select,
+.property-item .ant-input {
+  flex: 1;
+}
+
+.property-item .ant-slider {
+  flex: 1;
+  margin: 0;
+}
+
+.preview-panel {
+  flex: 1;
+  overflow: auto;
+}
+
+/* 底部工具栏 */
+.bottom-panel {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 12px 24px;
+  background: var(--color-bg-container);
+  border-top: 1px solid var(--color-border-antd);
+  display: flex;
+  justify-content: flex-end;
+  z-index: 100;
+}
+
+/* 拖拽覆盖层 */
+.drag-overlay-field {
+  padding: 6px 12px;
+  background: var(--color-info);
+  color: var(--color-bg-base);
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 500;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+/* 响应式 */
+@media (max-width: 1200px) {
+  .designer-container {
+    flex-wrap: wrap;
+  }
+
+  .left-panel {
+    width: 100%;
+    max-width: 100%;
+    max-height: 200px;
+  }
+
+  .canvas-panel {
+    min-width: 100%;
+  }
+
+  .right-panel {
+    width: 100%;
+    min-width: 100%;
+    max-height: 300px;
+  }
+}

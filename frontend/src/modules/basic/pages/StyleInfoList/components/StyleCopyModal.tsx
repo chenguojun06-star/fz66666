@@ -20,7 +20,7 @@ const StyleCopyModal: React.FC<StyleCopyModalProps> = ({ open, onCancel, copySou
     if (!copySource?.id) return;
     setCopying(true);
     try {
-      const res = await api.post<ApiResult>(`/style/info/${copySource.id}/copy`, values);
+      const res = await api.post<ApiResult>(`/style/info/${copySource.id}/copy`, values); // 路径与后端一致
       if (isApiSuccess(res)) {
         message.success('复制成功');
         onSuccess();

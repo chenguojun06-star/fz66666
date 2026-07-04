@@ -108,6 +108,8 @@ const OrderListContent: React.FC<Props> = ({
           emptyDescription="暂无款号数据"
           emptyActionText="去创建第一款"
           onEmptyAction={() => { onNoDataOrder?.(); }}
+          showExport={true}
+          exportFilename="订单列表.xlsx"
         />
       ) : (
         <>

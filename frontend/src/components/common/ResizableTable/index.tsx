@@ -1,7 +1,8 @@
-import React from 'react';
-import { Table, ConfigProvider, Empty, Button, Space } from 'antd';
+import React, { useState } from 'react';
+import { Table, ConfigProvider, Empty, Button, Space, Dropdown, Modal, Checkbox, message } from 'antd';
 import type { TableProps } from 'antd';
-import { PlusOutlined } from '@ant-design/icons';
+import type { ColumnType } from 'antd/es/table';
+import { PlusOutlined, DownloadOutlined } from '@ant-design/icons';
 import {
   DndContext,
   closestCenter,
@@ -38,6 +39,7 @@ import {
   uniqueStrings,
   computeAdaptiveWidth,
 } from './utils';
+import { exportTableToExcel } from '@/utils/exportExcel';
 
 type ResizableTableProps<T extends object> = TableProps<T> & {
   storageKey?: string;
@@ -63,6 +65,10 @@ type ResizableTableProps<T extends object> = TableProps<T> & {
   emptySecondaryActionText?: string;
   /** 空状态副操作按钮点击事件 */
   onEmptySecondaryAction?: () => void;
+  /** 是否显示导出按钮（默认 false） */
+  showExport?: boolean;
+  /** 导出文件名（默认 '导出数据.xlsx'） */
+  exportFilename?: string;
 };
 
 const SortableHeaderCell: React.FC<any> = (props) => {
@@ -133,8 +139,15 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
     onEmptySecondaryAction,
     locale: localeProp,
     dataSource,
+    showExport = false,
+    exportFilename = '导出数据.xlsx',
     ...rest
   } = props;
+
+  // 导出相关状态
+  const [exportModalVisible, setExportModalVisible] = useState(false);
+  const [selectedExportColumns, setSelectedExportColumns] = useState<string[]>([]);
+  const [exporting, setExporting] = useState(false);
 
   const hasEmptyAction = Boolean(emptyActionText && onEmptyAction);
   const hasEmptySecondaryAction = Boolean(emptySecondaryActionText && onEmptySecondaryAction);
@@ -537,8 +550,66 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
     return next;
   }, [className, stickyFooter, isScrollable]);
 
+  // 导出相关逻辑
+  const exportableColumns = React.useMemo(() => {
+    if (!columns) return [];
+    return (columns as any[]).filter(col => {
+      const key = col.key || col.dataIndex;
+      if (typeof key === 'string') {
+        return key !== '__index__' && !key.toLowerCase().includes('action') && !key.toLowerCase().includes('操作');
+      }
+      return true;
+    });
+  }, [columns]);
+
+  const handleExportClick = React.useCallback(() => {
+    if (!dataSource || dataSource.length === 0) {
+      message.warning('暂无数据可导出');
+      return;
+    }
+    // 默认导出所有列
+    const allKeys = exportableColumns.map(col => String(col.key || col.dataIndex || ''));
+    setSelectedExportColumns(allKeys);
+    setExportModalVisible(true);
+  }, [dataSource, exportableColumns]);
+
+  const handleExportConfirm = React.useCallback(async () => {
+    if (!dataSource || dataSource.length === 0 || !columns) {
+      setExportModalVisible(false);
+      return;
+    }
+    setExporting(true);
+    try {
+      await exportTableToExcel(
+        [...dataSource] as T[],
+        columns as ColumnType<T>[],
+        exportFilename,
+        selectedExportColumns
+      );
+      message.success('导出成功');
+      setExportModalVisible(false);
+    } catch (error) {
+      message.error('导出失败，请重试');
+      console.error('导出Excel失败:', error);
+    } finally {
+      setExporting(false);
+    }
+  }, [dataSource, columns, exportFilename, selectedExportColumns]);
+
   const tableContent = (
     <div className={wrapperClassName} ref={shellRef}>
+      {showExport && (
+        <div style={{ padding: '8px 0', display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+          <Button
+            icon={<DownloadOutlined />}
+            onClick={handleExportClick}
+            size="small"
+            disabled={!dataSource || dataSource.length === 0}
+          >
+            导出Excel
+          </Button>
+        </div>
+      )}
       <ConfigProvider getPopupContainer={getTablePopupContainer}>
         <Table
           {...rest}
@@ -561,19 +632,81 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
 
   if (reorderableColumns && sortableColumnIds.length > 0) {
     return (
-      <DndContext
-        sensors={dndSensors}
-        collisionDetection={closestCenter}
-        onDragEnd={handleDragEnd}
-      >
-        <SortableContext items={sortableColumnIds} strategy={horizontalListSortingStrategy}>
-          {tableContent}
-        </SortableContext>
-      </DndContext>
+      <>
+        <DndContext
+          sensors={dndSensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext items={sortableColumnIds} strategy={horizontalListSortingStrategy}>
+            {tableContent}
+          </SortableContext>
+        </DndContext>
+        {showExport && exportModalVisible && (
+          <Modal
+            title="选择导出列"
+            open={exportModalVisible}
+            onCancel={() => setExportModalVisible(false)}
+            onOk={handleExportConfirm}
+            confirmLoading={exporting}
+            width={600}
+          >
+            <Checkbox.Group
+              value={selectedExportColumns}
+              onChange={(values) => setSelectedExportColumns(values as string[])}
+              style={{ display: 'flex', flexDirection: 'column', gap: 8 }}
+            >
+              {exportableColumns.map(col => (
+                <Checkbox
+                  key={String(col.key || col.dataIndex || '')}
+                  value={String(col.key || col.dataIndex || '')}
+                >
+                  {typeof col.title === 'string' ? col.title : String(col.title || '')}
+                </Checkbox>
+              ))}
+            </Checkbox.Group>
+            <div style={{ marginTop: 12, color: '#8c8c8c', fontSize: 12 }}>
+              提示：导出当前页数据，共 {dataSource?.length || 0} 条记录
+            </div>
+          </Modal>
+        )}
+      </>
     );
   }
 
-  return tableContent;
+  return (
+    <>
+      {tableContent}
+      {showExport && exportModalVisible && (
+        <Modal
+          title="选择导出列"
+          open={exportModalVisible}
+          onCancel={() => setExportModalVisible(false)}
+          onOk={handleExportConfirm}
+          confirmLoading={exporting}
+          width={600}
+        >
+          <Checkbox.Group
+            value={selectedExportColumns}
+            onChange={(values) => setSelectedExportColumns(values as string[])}
+            style={{ display: 'flex', flexDirection: 'column', gap: 8 }}
+          >
+            {exportableColumns.map(col => (
+              <Checkbox
+                key={String(col.key || col.dataIndex || '')}
+                value={String(col.key || col.dataIndex || '')}
+              >
+                {typeof col.title === 'string' ? col.title : String(col.title || '')}
+              </Checkbox>
+            ))}
+          </Checkbox.Group>
+          <div style={{ marginTop: 12, color: '#8c8c8c', fontSize: 12 }}>
+            提示：导出当前页数据，共 {dataSource?.length || 0} 条记录
+          </div>
+        </Modal>
+      )}
+    </>
+  );
 };
 
 const ResizableTableWithSummary = Object.assign(ResizableTable, {

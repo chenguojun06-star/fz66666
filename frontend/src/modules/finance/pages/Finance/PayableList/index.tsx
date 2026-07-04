@@ -533,7 +533,8 @@ const PayableList: React.FC = () => {
               setPagination({ current: page, pageSize: (p as any).pageSize ?? 20 });
               fetchList(page, statusFilter, keyword);
             }}
-           
+            showExport={true}
+            exportFilename="应付账款.xlsx"
           />
         </Card>
 

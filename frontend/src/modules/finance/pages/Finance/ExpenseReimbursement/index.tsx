@@ -217,6 +217,8 @@ const ExpenseReimbursementPage: React.FC = () => {
         <ResizableTable storageKey="expense-reimbursement" rowKey="id" columns={columns} dataSource={list} loading={loading} stickyHeader scroll={{ x: 1200 }}
           locale={{ emptyText: <Empty description="暂无记录" image={Empty.PRESENTED_IMAGE_SIMPLE} /> }}
           pagination={{ current: page, pageSize, total, showSizeChanger: true, showTotal: (t) => `共 ${t} 条`, onChange: (p, s) => { setPage(p); setPageSize(s); } }}
+          showExport={true}
+          exportFilename="费用报销.xlsx"
         />
       </PageLayout>
 

@@ -1,7 +1,13 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-07-04（多租户字段配置系统阶段1+2 完整核实+遗漏修复）
+> 最后更新：2026-07-04（采购退货流程完整实现 + 编译验证通过）
+
+## 最近变更（Latest Changes）
+
+- 2026-07-04：采购退货流程完整实现（后端 Flyway迁移 + Entity/Mapper/Service/Orchestrator/Controller + 前端退货弹窗 + 编译验证通过）
+- 2026-07-04：完成款式一键复制功能（后端补充工序/二次工艺/报价复制，前端已有复制按钮和弹窗，编译通过）
+- 2026-07-04：多租户字段配置系统阶段1+2 完整核实+遗漏修复
 
 ---
 
@@ -25,6 +31,55 @@
 - ✅ 多租户字段配置系统阶段1+2 完整核实+遗漏修复（2026-07-04：6 业务对象种子 + multiselect bug 修复 + 全套质量门控通过）
 
 ## 最近变更
+
+### 2026-07-04 采购退货流程完整实现
+
+**背景**：用户要求实现服装供应链系统的"采购退货"流程，确保多端（PC+小程序+H5）数据同步和稳定性。
+
+**完成内容**：
+
+| # | 模块 | 完成项 |
+|---|------|--------|
+| 1 | Flyway迁移 | V20270704006__create_purchase_return_tables.sql（建 t_purchase_return + t_purchase_return_item，幂等存储过程） |
+| 2 | 后端-Entity | PurchaseReturn.java + PurchaseReturnItem.java（带 tenant_id 多租户隔离） |
+| 3 | 后端-Mapper | PurchaseReturnMapper.java + PurchaseReturnItemMapper.java |
+| 4 | 后端-Service | PurchaseReturnService/PurchaseReturnItemService（单领域CRUD，无事务） |
+| 5 | 后端-Orchestrator | PurchaseReturnOrchestrator（事务边界：createReturn/approveReturn/completeReturn + 库存更新 + 应付账款更新） |
+| 6 | 后端-Controller | PurchaseReturnController（RESTful API：POST /approve /complete /list /{id}） |
+| 7 | 前端-退货弹窗 | PurchaseReturnModal.tsx（ResizableModal + ResizableTable + 退货物料列表 + 数量编辑） |
+| 8 | 前端-按钮集成 | PurchaseDetailView.tsx 新增"采购退货"按钮 + 状态管理 + 弹窗触发 |
+| 9 | 附带修复 | CRM salesReturn.ts 从 '@/utils/request' 改为 '@/utils/api' |
+
+**关键设计决策**：
+- **事务边界**：@Transactional 只在 Orchestrator 层（P0铁律1），createReturn/approveReturn/completeReturn 三方法均加事务
+- **多租户隔离**：所有表强制带 tenant_id（P0铁律4），查询自动注入 tenantId
+- **库存更新**：completeReturn 时调用 MaterialStockService.decreaseStock 减少库存（捕获异常不阻断）
+- **应付账款更新**：completeReturn 时调用 PayableService.atomicAddPaidAmount 减少应付金额（负数 delta）
+- **单号生成**：PR + yyyyMMddHHmmss 格式
+- **前端规范**：使用 ResizableModal/ResizableTable 组件 + CSS变量 + RollbackOutlined 图标
+
+**验证**：
+- ✅ 后端 mvn compile 0 错误
+- ✅ 前端 npx tsc --noEmit 0 错误
+- ✅ Flyway SQL 幂等性验证通过
+
+**相关文件**：
+
+后端：
+- [V20270704006__create_purchase_return_tables.sql](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/resources/db/migration/V20270704006__create_purchase_return_tables.sql)
+- [PurchaseReturn.java](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/java/com/fashion/supplychain/production/entity/PurchaseReturn.java)
+- [PurchaseReturnItem.java](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/java/com/fashion/supplychain/production/entity/PurchaseReturnItem.java)
+- [PurchaseReturnOrchestrator.java](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/java/com/fashion/supplychain/production/orchestration/PurchaseReturnOrchestrator.java)
+- [PurchaseReturnController.java](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/java/com/fashion/supplychain/production/controller/PurchaseReturnController.java)
+
+前端：
+- [PurchaseReturnModal.tsx](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/frontend/src/modules/production/pages/Production/MaterialPurchase/components/PurchaseReturnModal.tsx)
+- [PurchaseDetailView.tsx](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/frontend/src/modules/production/pages/Production/MaterialPurchase/components/PurchaseModal/PurchaseDetailView.tsx)
+
+**未完成（后续按需推进）**：
+- 小程序端退货功能（API已就绪，需小程序页面）
+- H5端退货功能（API已就绪，需H5页面）
+- 退货单列表页（可选，当前在采购详情页触发）
 
 ### 2026-07-04 多租户字段配置系统阶段1+2 完整核实+遗漏修复
 

@@ -407,6 +407,8 @@ const PayrollOperatorSummary: React.FC = () => {
                                     emptyDescription="暂无工序数据"
                                     emptyActionText="去扫码录入"
                                     onEmptyAction={() => { window.location.href = '/production/scan'; }}
+                                    showExport={true}
+                                    exportFilename="工资结算-工序明细.xlsx"
                                 />
                             </>
                         ),
@@ -441,6 +443,8 @@ const PayrollOperatorSummary: React.FC = () => {
                                     emptyDescription="暂无工资汇总数据"
                                     emptyActionText="去扫码录入"
                                     onEmptyAction={() => { window.location.href = '/production/scan'; }}
+                                    showExport={true}
+                                    exportFilename="工资结算-工资汇总.xlsx"
                                 />
                             </>
                         ),
@@ -461,7 +465,10 @@ const PayrollOperatorSummary: React.FC = () => {
                                     columns={internalOrderColumns as any}
                                     dataSource={internalOrders as any} loading={internalOrdersLoading}
                                     pagination={{ showTotal: (total) => `共 ${total} 条`, showSizeChanger: true, pageSizeOptions: ['20', '50', '100', '200'], defaultPageSize: readPageSize(20) }}
-                                    sticky scroll={{ x: 1800 }} />
+                                    sticky scroll={{ x: 1800 }}
+                                    showExport={true}
+                                    exportFilename="工资结算-内部工厂订单.xlsx"
+                                />
                             </>
                         ),
                     },

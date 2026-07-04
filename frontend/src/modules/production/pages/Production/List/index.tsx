@@ -475,6 +475,8 @@ const ProductionList: React.FC = () => {
                 pageSizeOptions: [...DEFAULT_PAGE_SIZE_OPTIONS],
                 onChange: handlePageChange,
               }}
+              showExport={true}
+              exportFilename="生产订单.xlsx"
             />
           ) : (
             <>

@@ -17,6 +17,7 @@ import com.fashion.supplychain.style.entity.SecondaryProcess;
 import com.fashion.supplychain.style.entity.StyleBom;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.entity.StyleProcess;
+import com.fashion.supplychain.style.entity.StyleQuotation;
 import com.fashion.supplychain.style.entity.ProductSku;
 import com.fashion.supplychain.style.helper.StyleCostCalculator;
 import com.fashion.supplychain.style.helper.StyleListEnrichmentHelper;
@@ -28,6 +29,7 @@ import com.fashion.supplychain.style.service.SecondaryProcessService;
 import com.fashion.supplychain.style.service.StyleBomService;
 import com.fashion.supplychain.style.service.StyleInfoService;
 import com.fashion.supplychain.style.service.StyleProcessService;
+import com.fashion.supplychain.style.service.StyleQuotationService;
 import com.fashion.supplychain.style.service.ProductSkuService;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -96,6 +98,9 @@ public class StyleInfoOrchestrator {
 
     @Autowired
     private SecondaryProcessService secondaryProcessService;
+
+    @Autowired
+    private StyleQuotationService styleQuotationService;
 
     @Lazy
     @Autowired(required = false)
@@ -880,6 +885,9 @@ public class StyleInfoOrchestrator {
         }
 
         copyBomToNewStyle(sourceStyleId, savedStyle);
+        copyProcessToNewStyle(sourceStyleId, savedStyle.getId());
+        copySecondaryProcessToNewStyle(sourceStyleId, savedStyle.getId());
+        copyQuotationToNewStyle(sourceStyleId, savedStyle.getId());
         styleOperationAppendHelper.appendCopy(sourceStyleId, newStyle.getStyleNo());
 
         log.info("一键复制款式成功: sourceStyleId={}, newStyleId={}, newStyleNo={}, newColor={}",
@@ -892,12 +900,60 @@ public class StyleInfoOrchestrator {
         newStyle.setStyleNo(newStyleNo.trim());
         newStyle.setColor(newColor.trim());
         newStyle.setStyleName(StringUtils.hasText(newStyleName) ? newStyleName.trim() : source.getStyleName());
+        // 复制基本信息字段
         newStyle.setCategory(source.getCategory());
         newStyle.setSeason(source.getSeason());
         newStyle.setYear(source.getYear());
         newStyle.setMonth(source.getMonth());
         newStyle.setDescription(source.getDescription());
         newStyle.setCover(source.getCover());
+        // 复制扩展字段
+        newStyle.setSkc(source.getSkc());
+        newStyle.setSkuMode(source.getSkuMode());
+        newStyle.setUseSkuPrefix(source.getUseSkuPrefix());
+        newStyle.setPrice(source.getPrice());
+        newStyle.setTagPrice(source.getTagPrice());
+        newStyle.setSalesPrice(source.getSalesPrice());
+        newStyle.setCycle(source.getCycle());
+        newStyle.setSize(source.getSize());
+        newStyle.setSampleQuantity(source.getSampleQuantity());
+        newStyle.setDevelopmentSourceType(source.getDevelopmentSourceType());
+        newStyle.setDevelopmentSourceDetail(source.getDevelopmentSourceDetail());
+        newStyle.setSalesChannel(source.getSalesChannel());
+        newStyle.setCustomerId(source.getCustomerId());
+        newStyle.setCustomerName(source.getCustomerName());
+        newStyle.setCustomerContact(source.getCustomerContact());
+        newStyle.setCustomerPhone(source.getCustomerPhone());
+        newStyle.setCustomerAddress(source.getCustomerAddress());
+        // 复制洗水唛标签字段
+        newStyle.setFabricComposition(source.getFabricComposition());
+        newStyle.setWashInstructions(source.getWashInstructions());
+        newStyle.setUCode(source.getUCode());
+        newStyle.setWashTempCode(source.getWashTempCode());
+        newStyle.setBleachCode(source.getBleachCode());
+        newStyle.setTumbleDryCode(source.getTumbleDryCode());
+        newStyle.setIronCode(source.getIronCode());
+        newStyle.setDryCleanCode(source.getDryCleanCode());
+        newStyle.setFabricCompositionParts(source.getFabricCompositionParts());
+        newStyle.setCareIconCodes(source.getCareIconCodes());
+        newStyle.setQualityGrade(source.getQualityGrade());
+        newStyle.setExecuteStandard(source.getExecuteStandard());
+        newStyle.setSafetyCategory(source.getSafetyCategory());
+        newStyle.setInspector(source.getInspector());
+        newStyle.setInspectionDate(source.getInspectionDate());
+        // 复制尺码颜色配置
+        newStyle.setSizeColorConfig(source.getSizeColorConfig());
+        // 复制设计师/纸样师等信息
+        newStyle.setSampleNo(source.getSampleNo());
+        newStyle.setVehicleSupplier(source.getVehicleSupplier());
+        newStyle.setSampleSupplier(source.getSampleSupplier());
+        newStyle.setPatternNo(source.getPatternNo());
+        newStyle.setPlateWorker(source.getPlateWorker());
+        newStyle.setPlateType(source.getPlateType());
+        newStyle.setOrderType(source.getOrderType());
+        newStyle.setCustomer(source.getCustomer());
+        // 租户隔离
+        newStyle.setTenantId(UserContext.tenantId());
         return newStyle;
     }
 
@@ -928,11 +984,101 @@ public class StyleInfoOrchestrator {
             nb.setPatternSizeUsageMap(bom.getPatternSizeUsageMap());
             nb.setSizeSpecMap(bom.getSizeSpecMap());
             nb.setPatternUnit(bom.getPatternUnit());
+            nb.setTenantId(savedStyle.getTenantId());
             nb.setCreateTime(LocalDateTime.now());
             nb.setUpdateTime(LocalDateTime.now());
             newBoms.add(nb);
         }
         styleBomService.saveBatch(newBoms);
+    }
+
+    private void copyProcessToNewStyle(Long sourceStyleId, Long newStyleId) {
+        List<StyleProcess> sourceProcesses = styleProcessService.lambdaQuery()
+                .eq(StyleProcess::getStyleId, sourceStyleId)
+                .list();
+        if (sourceProcesses == null || sourceProcesses.isEmpty()) {
+            return;
+        }
+        List<StyleProcess> newProcesses = new java.util.ArrayList<>();
+        for (StyleProcess proc : sourceProcesses) {
+            StyleProcess np = new StyleProcess();
+            np.setStyleId(newStyleId);
+            np.setProcessCode(proc.getProcessCode());
+            np.setProcessName(proc.getProcessName());
+            np.setProgressStage(proc.getProgressStage());
+            np.setMachineType(proc.getMachineType());
+            np.setDifficulty(proc.getDifficulty());
+            np.setDescription(proc.getDescription());
+            np.setStandardTime(proc.getStandardTime());
+            np.setPrice(proc.getPrice());
+            np.setRateMultiplier(proc.getRateMultiplier());
+            np.setSortOrder(proc.getSortOrder());
+            np.setTenantId(UserContext.tenantId());
+            np.setCreateTime(LocalDateTime.now());
+            np.setUpdateTime(LocalDateTime.now());
+            newProcesses.add(np);
+        }
+        styleProcessService.saveBatch(newProcesses);
+    }
+
+    private void copySecondaryProcessToNewStyle(Long sourceStyleId, Long newStyleId) {
+        List<SecondaryProcess> sourceSecondaries = secondaryProcessService.lambdaQuery()
+                .eq(SecondaryProcess::getStyleId, sourceStyleId)
+                .list();
+        if (sourceSecondaries == null || sourceSecondaries.isEmpty()) {
+            return;
+        }
+        List<SecondaryProcess> newSecondaries = new java.util.ArrayList<>();
+        for (SecondaryProcess sec : sourceSecondaries) {
+            SecondaryProcess ns = new SecondaryProcess();
+            ns.setStyleId(newStyleId);
+            ns.setProcessType(sec.getProcessType());
+            ns.setProcessName(sec.getProcessName());
+            ns.setDescription(sec.getDescription());
+            ns.setQuantity(sec.getQuantity());
+            ns.setUnitPrice(sec.getUnitPrice());
+            ns.setTotalPrice(sec.getTotalPrice());
+            ns.setFactoryId(sec.getFactoryId());
+            ns.setFactoryName(sec.getFactoryName());
+            ns.setFactoryContactPerson(sec.getFactoryContactPerson());
+            ns.setFactoryContactPhone(sec.getFactoryContactPhone());
+            ns.setImages(sec.getImages());
+            ns.setAttachments(sec.getAttachments());
+            ns.setTenantId(UserContext.tenantId());
+            ns.setCreatedAt(LocalDateTime.now());
+            ns.setUpdatedAt(LocalDateTime.now());
+            newSecondaries.add(ns);
+        }
+        secondaryProcessService.saveBatch(newSecondaries);
+    }
+
+    private void copyQuotationToNewStyle(Long sourceStyleId, Long newStyleId) {
+        StyleQuotation sourceQuotation = styleQuotationService.lambdaQuery()
+                .eq(StyleQuotation::getStyleId, sourceStyleId)
+                .orderByDesc(StyleQuotation::getCreateTime)
+                .last("LIMIT 1")
+                .one();
+        if (sourceQuotation == null) {
+            return;
+        }
+        StyleQuotation nq = new StyleQuotation();
+        nq.setStyleId(newStyleId);
+        nq.setMaterialCost(sourceQuotation.getMaterialCost());
+        nq.setProcessCost(sourceQuotation.getProcessCost());
+        nq.setOtherCost(sourceQuotation.getOtherCost());
+        nq.setProfitRate(sourceQuotation.getProfitRate());
+        nq.setTotalCost(sourceQuotation.getTotalCost());
+        nq.setTotalPrice(sourceQuotation.getTotalPrice());
+        nq.setCurrency(sourceQuotation.getCurrency());
+        nq.setVersion(sourceQuotation.getVersion());
+        nq.setStandardMaterialCost(sourceQuotation.getStandardMaterialCost());
+        nq.setStandardProcessCost(sourceQuotation.getStandardProcessCost());
+        nq.setStandardOtherCost(sourceQuotation.getStandardOtherCost());
+        nq.setOverheadAllocationRate(sourceQuotation.getOverheadAllocationRate());
+        nq.setTenantId(UserContext.tenantId());
+        nq.setCreateTime(LocalDateTime.now());
+        nq.setUpdateTime(LocalDateTime.now());
+        styleQuotationService.save(nq);
     }
 
     private void evictCurrentTenantCache() {

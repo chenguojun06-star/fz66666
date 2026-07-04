@@ -133,7 +133,7 @@ const StyleProcessTab: React.FC<StyleProcessTabProps> = ({
         </Space>
       </div>
       <ProcessCostSummary data={data} />
-      <ResizableTable bordered dataSource={sortedData as unknown as any[]} columns={columns as unknown as any[]} pagination={false} loading={loading} rowKey="id" scroll={{ x: 'max-content' }} storageKey={`style-process-${String(styleId)}`} />
+      <ResizableTable bordered dataSource={sortedData as unknown as any[]} columns={columns as unknown as any[]} pagination={false} loading={loading} rowKey="id" scroll={{ x: 'max-content' }} storageKey={`style-process-${String(styleId)}`} showExport={true} exportFilename="款式工序.xlsx" />
     </div>
   );
 };

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Alert, Button, Card, Collapse, Space, Tag, Image, Spin, Tooltip, Form, InputNumber, App, Select, Input } from 'antd';
-import { FileImageOutlined, LoadingOutlined, UploadOutlined, PlusOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
+import { FileImageOutlined, LoadingOutlined, UploadOutlined, PlusOutlined, ExclamationCircleOutlined, RollbackOutlined } from '@ant-design/icons';
 import api from '@/utils/api';
 
 import MaterialTypeTag from '@/components/common/MaterialTypeTag';
@@ -14,6 +14,7 @@ import MultiImageUploadBox from '@/components/common/MultiImageUploadBox';
 import RejectReasonModal from '@/components/common/RejectReasonModal';
 import SmallModal from '@/components/common/SmallModal';
 import PurchaseDocRecognizeModal from '../PurchaseDocRecognizeModal';
+import PurchaseReturnModal from '../PurchaseReturnModal';
 import { ProductionOrderHeader } from '@/components/StyleAssets';
 import { MaterialPurchase as MaterialPurchaseType, ProductionOrder } from '@/types/production';
 import { formatMaterialSpecWidth, getMaterialTypeCategory, getMaterialTypeLabel } from '@/utils/materialType';
@@ -140,6 +141,9 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
   const [materialTotal, setMaterialTotal] = useState(0);
   const [materialPage, setMaterialPage] = useState(1);
   const [materialPageSize, setMaterialPageSize] = useState(10);
+
+  // 采购退货弹窗状态
+  const [returnModalOpen, setReturnModalOpen] = useState(false);
 
   // ── 发票/单据上传（复用 PurchaseCreateForm 同款上传逻辑） ──
   // invoiceUrls 从 currentPurchase.invoiceUrls（JSON字符串）解析，本地维护可编辑副本
@@ -529,6 +533,18 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
                   onClick={onBatchReturn}
                 >
                   批量回料确认
+                </Button>
+                <Button
+                  icon={<RollbackOutlined />}
+                  disabled={detailFrozen || !detailPurchases.some((p) => {
+                    const status = normalizeStatus(p.status);
+                    return (status === MATERIAL_PURCHASE_STATUS.RECEIVED
+                      || status === MATERIAL_PURCHASE_STATUS.PARTIAL
+                      || status === MATERIAL_PURCHASE_STATUS.COMPLETED);
+                  })}
+                  onClick={() => setReturnModalOpen(true)}
+                >
+                  采购退货
                 </Button>
                 <Button
                   type="primary"
@@ -1170,6 +1186,24 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
         onCancel={() => setDocRecognizeOpen(false)}
         onSuccess={async () => {
           setDocRecognizeOpen(false);
+          onRefresh?.();
+        }}
+      />
+
+      {/* 采购退货弹窗 */}
+      <PurchaseReturnModal
+        visible={returnModalOpen}
+        purchaseRecords={detailPurchases.filter((p) => {
+          const status = normalizeStatus(p.status);
+          return (status === MATERIAL_PURCHASE_STATUS.RECEIVED
+            || status === MATERIAL_PURCHASE_STATUS.PARTIAL
+            || status === MATERIAL_PURCHASE_STATUS.COMPLETED);
+        })}
+        originalPurchaseId={currentPurchase?.id || ''}
+        supplierName={currentPurchase?.supplierName || ''}
+        onClose={() => setReturnModalOpen(false)}
+        onSuccess={async () => {
+          setReturnModalOpen(false);
           onRefresh?.();
         }}
       />

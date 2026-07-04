@@ -404,6 +404,8 @@ const SystemLogs: React.FC = () => {
                     }}
                     stickyHeader
                     scroll={{ x: 'max-content' }}
+                    showExport={true}
+                    exportFilename="登录日志.xlsx"
                   />
                 </>
               ),
@@ -531,6 +533,8 @@ const SystemLogs: React.FC = () => {
                     }}
                     stickyHeader
                     scroll={{ x: 1200 }}
+                    showExport={true}
+                    exportFilename="操作日志.xlsx"
                   />
                 </>
               ),

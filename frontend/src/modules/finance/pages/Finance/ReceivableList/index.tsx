@@ -629,7 +629,8 @@ const ReceivableList: React.FC = () => {
               setPagination({ current: page, pageSize: (p as any).pageSize ?? 20 });
               fetchList(page, statusFilter, keyword, sourceBizType, sourceBizNo);
             }}
-           
+            showExport={true}
+            exportFilename="应收账款.xlsx"
           />
         </Card>
 

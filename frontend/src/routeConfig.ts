@@ -30,6 +30,7 @@ import {
   ProfileOutlined,
   BarChartOutlined,
   ClockCircleOutlined,
+  PrinterOutlined,
 } from '@ant-design/icons';
 
 export const paths = {
@@ -108,6 +109,7 @@ export const paths = {
   systemIssues: '/system/issues',
   orphanData: '/system/orphan-data',
   fieldConfig: '/system/field-config',
+  printTemplate: '/system/print-template',
   ecommerceCenter: '/ecommerce/center',
   ecommercePlatform: '/ecommerce/platform',
   cockpit: '/cockpit',
@@ -322,6 +324,7 @@ const pageMetaMap: Record<string, PageMeta> = {
   [paths.user]: { label: '用户管理' },
   [paths.role]: { label: '角色权限' },
   [paths.tenantManagement]: { label: '租户管理' },
+  [paths.printTemplate]: { label: '打印模板管理' },
   '/system/log': { label: '系统日志' },
 
   // ── CRM ──
@@ -463,6 +466,7 @@ export const permissionCodes = {
   loginLog: 'MENU_LOGIN_LOG',
   systemLogs: 'MENU_LOGIN_LOG', // 使用相同的权限码，兼容旧数据
   dict: 'MENU_DICT',
+  printTemplate: 'MENU_DICT', // 打印模板复用字典管理权限码
   tutorial: 'MENU_TUTORIAL',
   tenantManagement: 'MENU_TENANT_APP',
   customerManagement: 'MENU_CUSTOMER',
@@ -624,6 +628,7 @@ export const menuConfig: MenuSection[] = [
       { label: '数据导入', path: paths.dataImport, icon: React.createElement(FileTextOutlined) },
       { label: '字典管理', path: paths.dict, icon: React.createElement(BookOutlined) },
       { label: '字段配置', path: paths.fieldConfig, icon: React.createElement(SettingOutlined) },
+      { label: '打印模板', path: paths.printTemplate, icon: React.createElement(PrinterOutlined) },
       { label: '系统日志', path: paths.systemLogs, icon: React.createElement(FileSearchOutlined) },
       { label: '系统教学', path: paths.tutorial, icon: React.createElement(BookOutlined) },
       { label: '孤立数据', path: paths.orphanData, icon: React.createElement(DeleteOutlined) },
@@ -708,6 +713,7 @@ export const routeToPermissionCode: Record<string, string> = {
   [paths.loginLog]: permissionCodes.loginLog,
   [paths.systemLogs]: permissionCodes.systemLogs,
   [paths.dict]: permissionCodes.dict,
+  [paths.printTemplate]: permissionCodes.printTemplate,
   [paths.tutorial]: permissionCodes.tutorial,
   [paths.tenantManagement]: permissionCodes.tenantManagement,
   [paths.customerManagement]: permissionCodes.customerManagement,

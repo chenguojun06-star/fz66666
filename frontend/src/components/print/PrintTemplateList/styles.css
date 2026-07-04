@@ -1,0 +1,26 @@
+/* 打印模板列表样式 */
+
+.print-template-list {
+  padding: 16px;
+}
+
+.toolbar {
+  margin-bottom: 16px;
+}
+
+.template-card {
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.template-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.template-info {
+  text-align: center;
+}
+
+.template-meta {
+  margin-top: 8px;
+}

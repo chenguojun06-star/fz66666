@@ -1,0 +1,133 @@
+.print-template-renderer {
+  padding: 16px;
+  background: var(--color-bg-base);
+}
+
+.status-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: var(--color-bg-container);
+  border-radius: 8px;
+  margin-bottom: 12px;
+}
+
+.status-icon {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+.status-icon.connected {
+  background: rgba(34, 197, 94, 0.1);
+}
+
+.status-icon.disconnected {
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.icon {
+  width: 20px;
+  height: 20px;
+}
+
+.status-text {
+  font-size: 14px;
+  color: var(--neutral-text);
+}
+
+.action-bar {
+  display: flex;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.btn-connect {
+  flex: 1;
+  background: var(--color-info);
+  color: var(--color-bg-base);
+  border-radius: 8px;
+}
+
+.btn-print {
+  flex: 1;
+  background: var(--color-success);
+  color: var(--color-bg-base);
+  border-radius: 8px;
+}
+
+.btn-print[disabled] {
+  background: var(--color-bg-gray);
+  color: var(--neutral-text-light);
+}
+
+/* 设备列表弹窗 */
+.device-list-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  width: 80%;
+  max-height: 60vh;
+  background: var(--color-bg-container);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: var(--color-bg-gray);
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.close-btn {
+  font-size: 20px;
+  color: var(--neutral-text-light);
+}
+
+.device-list {
+  padding: 12px;
+  max-height: calc(60vh - 44px);
+  overflow-y: auto;
+}
+
+.device-item {
+  padding: 12px;
+  background: var(--color-bg-base);
+  border-radius: 8px;
+  margin-bottom: 8px;
+  border: 1px solid var(--color-border-antd);
+}
+
+.device-item:active {
+  background: var(--color-bg-subtle);
+}
+
+.device-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--neutral-text);
+}
+
+.device-id {
+  font-size: 12px;
+  color: var(--neutral-text-light);
+  margin-top: 4px;
+}

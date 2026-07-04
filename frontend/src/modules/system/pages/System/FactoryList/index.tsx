@@ -662,6 +662,8 @@ const FactoryList: React.FC = () => {
                     }}
                     stickyHeader
                     scroll={{ x: 'max-content' }}
+                    showExport={true}
+                    exportFilename="供应商列表.xlsx"
                   />
                 </>
               ),

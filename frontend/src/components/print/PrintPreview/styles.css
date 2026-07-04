@@ -1,0 +1,28 @@
+/* 打印预览样式 */
+
+.print-preview-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 8px;
+  background: var(--color-bg-gray);
+  border-radius: 4px;
+  overflow: auto;
+}
+
+.print-preview-canvas {
+  background: var(--color-bg-base);
+  border: 1px solid var(--color-border-antd);
+  border-radius: 2px;
+  position: relative;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.preview-field {
+  position: absolute;
+  padding: 1px 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #000;
+}
