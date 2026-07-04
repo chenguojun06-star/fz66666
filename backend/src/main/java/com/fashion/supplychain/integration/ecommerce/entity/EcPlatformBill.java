@@ -24,6 +24,12 @@ public class EcPlatformBill {
     /** 账期：如 2026-07 或 2026-W27 */
     private String billPeriod;
 
+    /** 账单来源：PLATFORM/DISTRIBUTOR（Phase 4 复用对账表） */
+    private String billSource;
+
+    /** 分销商ID（bill_source=DISTRIBUTOR时必填） */
+    private Long distributorId;
+
     private String billNo;
 
     /** 平台原始订单号 */

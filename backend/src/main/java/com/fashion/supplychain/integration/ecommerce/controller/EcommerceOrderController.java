@@ -305,6 +305,94 @@ public class EcommerceOrderController {
         }
     }
 
+    // ==================== Phase 4: B2B 分销订单 ====================
+
+    @Autowired
+    private com.fashion.supplychain.integration.ecommerce.orchestration.B2BOrderOrchestrator b2BOrderOrchestrator;
+
+    /** B2B 订单列表 */
+    @GetMapping("/b2b/orders")
+    public Result<List<EcommerceOrder>> listB2BOrders(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String distributorLevel,
+            @RequestParam(required = false) Integer status) {
+        return Result.success(b2BOrderOrchestrator.listB2BOrders(keyword, distributorLevel, status));
+    }
+
+    /** B2B 订单详情 */
+    @GetMapping("/b2b/orders/{id}")
+    public Result<EcommerceOrder> getB2BOrder(@PathVariable Long id) {
+        return Result.success(b2BOrderOrchestrator.getB2BOrder(id));
+    }
+
+    /** 创建 B2B 订单（阶梯价自动匹配 + 账期额度占用） */
+    @PostMapping("/b2b/orders")
+    public Result<EcommerceOrder> createB2BOrder(@RequestBody EcommerceOrder order) {
+        try {
+            return Result.success(b2BOrderOrchestrator.createB2BOrder(order));
+        } catch (IllegalArgumentException e) {
+            return Result.fail(e.getMessage());
+        }
+    }
+
+    /** 取消 B2B 订单（释放额度） */
+    @PostMapping("/b2b/orders/{id}/cancel")
+    public Result<Void> cancelB2BOrder(@PathVariable Long id) {
+        try {
+            b2BOrderOrchestrator.cancelB2BOrder(id);
+            return Result.success(null);
+        } catch (IllegalArgumentException e) {
+            return Result.fail(e.getMessage());
+        }
+    }
+
+    // ==================== Phase 4: 分销对账 ====================
+
+    @Autowired
+    private com.fashion.supplychain.integration.ecommerce.orchestration.DistributorBillReconciliationOrchestrator distributorBillOrchestrator;
+
+    /** 触发分销对账 */
+    @PostMapping("/distributor/bill/reconcile")
+    public Result<com.fashion.supplychain.integration.ecommerce.orchestration.DistributorBillReconciliationOrchestrator.ReconcileResult> reconcileDistributorBills(
+            @RequestParam(required = false) Long distributorId,
+            @RequestParam(required = false) String billPeriod) {
+        try {
+            return Result.success(distributorBillOrchestrator.reconcile(distributorId, billPeriod));
+        } catch (Exception e) {
+            log.error("[分销对账失败] distributorId={} err={}", distributorId, e.getMessage());
+            return Result.fail("对账失败: " + e.getMessage());
+        }
+    }
+
+    /** 查询分销账单列表 */
+    @GetMapping("/distributor/bills")
+    public Result<List<EcPlatformBill>> listDistributorBills(
+            @RequestParam(required = false) Long distributorId,
+            @RequestParam(required = false) String billPeriod,
+            @RequestParam(required = false, defaultValue = "false") boolean pendingOnly) {
+        return Result.success(distributorBillOrchestrator.listBills(distributorId, billPeriod, pendingOnly));
+    }
+
+    /** 处理分销账单差异（复用 Phase 3 的 markHandled） */
+    @PostMapping("/distributor/bills/{id}/handle")
+    public Result<Void> handleDistributorBill(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+        try {
+            Long tenantId = UserContext.tenantId();
+            String handledBy = UserContext.username();
+            int status = body.get("status") != null
+                    ? Integer.valueOf(body.get("status").toString()) : 1;
+            if (status < 1 || status > 3) {
+                return Result.fail("处理状态不合法，仅支持 1=已确认 / 2=已申诉 / 3=已忽略");
+            }
+            String remark = (String) body.get("remark");
+            platformBillService.markHandled(tenantId, id, status, handledBy, remark);
+            return Result.success(null);
+        } catch (Exception e) {
+            log.error("[处理分销账单失败] id={} err={}", id, e.getMessage());
+            return Result.fail("处理失败: " + e.getMessage());
+        }
+    }
+
     private Long resolveTenantFromConfig(String platform, String appKey) {
         if (appKey != null && !appKey.isBlank()) {
             var config = ecPlatformConfigService.getByAppKey(appKey);

@@ -74,6 +74,9 @@ public class EcSalesRevenue {
     @TableField(value = "status")
     private String status;
 
+    /** 收入来源：EC/DISTRIBUTOR（Phase 4 分销/B2B） */
+    private String revenueSource;
+
     /** 发货时间 */
     private LocalDateTime shipTime;
 

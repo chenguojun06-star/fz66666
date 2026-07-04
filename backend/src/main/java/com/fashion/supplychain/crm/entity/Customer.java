@@ -38,6 +38,9 @@ public class Customer {
     /** 客户等级：VIP / NORMAL */
     private String customerLevel;
 
+    /** 客户类型：NORMAL/DISTRIBUTOR（Phase 4 分销/B2B） */
+    private String customerType;
+
     /** 行业/品类 */
     private String industry;
 

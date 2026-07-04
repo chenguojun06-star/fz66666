@@ -6,7 +6,7 @@ import {
   CheckCircleOutlined, WarningOutlined, CloseCircleOutlined,
   ApiOutlined, ShopOutlined, ShoppingCartOutlined, DollarOutlined,
   SyncOutlined, CloudOutlined, InboxOutlined, ArrowRightOutlined, CloudUploadOutlined,
-  CreditCardOutlined, CarOutlined, BellOutlined, StockOutlined,
+  CreditCardOutlined, CarOutlined, BellOutlined, StockOutlined, TeamOutlined,
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { usePlatformConnector, type ShopStats } from '../../../integration/pages/IntegrationCenter/usePlatformConnector';
@@ -15,6 +15,7 @@ import PaymentRecordsTab from '../../../integration/pages/IntegrationCenter/Paym
 import LogisticsRecordsTab from '../../../integration/pages/IntegrationCenter/LogisticsRecordsTab';
 import CallbackLogsTab from '../../../integration/pages/IntegrationCenter/CallbackLogsTab';
 import SmartStockTab from './SmartStockTab';
+import DistributorTab from './DistributorTab';
 import { usePersistentState } from '@/hooks/usePersistentState';
 import { paths } from '@/routeConfig';
 
@@ -253,6 +254,11 @@ const EcommerceCenter: React.FC = () => {
       key: 'smart-stock',
       label: <span><StockOutlined /> 智能库存</span>,
       children: <SmartStockTab />,
+    },
+    {
+      key: 'distributor',
+      label: <span><TeamOutlined /> 分销/B2B</span>,
+      children: <DistributorTab />,
     },
   ];
 

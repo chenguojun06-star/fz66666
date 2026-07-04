@@ -64,6 +64,12 @@ public class EcommerceOrder {
     /** 预售说明（到货时间等） */
     private String presaleRemark;
 
+    /** 订单类型：EC/B2B（Phase 4 分销/B2B） */
+    private String orderType;
+
+    /** 分销商ID（B2B订单必填） */
+    private Long distributorId;
+
     private Long tenantId;
 
     @TableField(fill = FieldFill.INSERT)
