@@ -38,6 +38,9 @@ function fmtDate(val) {
   return s;
 }
 
+/* 平台来源代码 → 中文名（统一使用共享模块，与销售/订单列表页保持一致） */
+const { getPlatformName } = require('../../../utils/platformNames');
+
 /* 状态文本 + tag 类名 */
 function getStatusInfo(raw) {
   const s = String(raw || '').toLowerCase();
@@ -180,6 +183,7 @@ Page({
     remainQuantity: 0,
     progressPct: 0,
     specSummary: { colorText: '', sizeText: '', qtyText: '', hasSpec: false },
+    ecPlatformName: '',
 
     // 工序阶段
     stages: [],
@@ -225,12 +229,14 @@ Page({
 
   onPullDownRefresh: function () {
     const that = this;
-    // 直接调用 _loadFlow；当接口返回后停止下拉刷新
-    this._loadFlow();
-    // 兜底：3 秒内无论成功/失败都停止（_loadFlow 内部也有关闭 loading 的逻辑）
+    // 用 .finally 在接口返回后立即停止下拉刷新动画（避免 3.5s 卡顿）
+    this._loadFlow().finally(function () {
+      try { wx.stopPullDownRefresh(); } catch (e) {}
+    });
+    // 兜底：8 秒内若 Promise 未结束（极端情况），强制停止
     setTimeout(function () {
       try { wx.stopPullDownRefresh(); } catch (e) {}
-    }, 3500);
+    }, 8000);
   },
 
   /* ======== 加载完整流程数据 ======== */
@@ -441,6 +447,9 @@ Page({
         return { colorText: colorText, sizeText: sizeText, qtyText: qtyText, hasSpec: true };
       })();
 
+      // 平台来源（电商订单 ecPlatform → 中文名）
+      const ecPlatformName = getPlatformName(order.ecPlatform || order.platform || order.platformCode);
+
       that.setData({
         order: order,
         isEditable: isEditable,
@@ -455,6 +464,7 @@ Page({
         remainQuantity: remainQty,
         progressPct: progressPct,
         specSummary: specSummary,
+        ecPlatformName: ecPlatformName,
         stages: stages,
         records: records,
         materialPurchases: materialPurchases,
@@ -497,7 +507,9 @@ Page({
 
     flowPromise.then(function () {
       clearTimeout(timeoutTimer);
-    }).catch(function (flowErr) {
+    });
+    // 返回 Promise，供 onPullDownRefresh 用 .finally 停止下拉动画
+    return flowPromise.catch(function (flowErr) {
       clearTimeout(timeoutTimer);
       if (flowErr && flowErr.message && flowErr.message !== 'flow-no-order' && flowErr.message !== 'no-orderId') {
         console.warn('[order-detail] flow 接口异常:', flowErr.message);

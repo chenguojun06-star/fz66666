@@ -4,7 +4,7 @@
   <!-- 视图 A：工序选择（扫码进入，或未指定工序时） -->
   <view wx:if="{{viewMode === 'select'}}" class="select-view">
     <view class="pattern-brief-card">
-      <image wx:if="{{detail.coverImage}}" class="pattern-cover" src="{{detail.coverImage}}" mode="aspectFill" />
+      <image wx:if="{{detail.coverImage}}" class="pattern-cover" src="{{detail.coverImage}}" lazy-load mode="aspectFill" />
       <view class="pattern-brief-info">
         <text class="pattern-style-no">{{detail.styleNo}}</text>
         <text wx:if="{{detail.styleName}}" class="pattern-style-name">{{detail.styleName}}</text>
@@ -145,7 +145,7 @@
         <text class="input-label">审核图片（最多{{maxImages}}张）</text>
         <view class="review-images-list">
           <view wx:for="{{reviewImages}}" wx:key="*this" class="review-image-item">
-            <image src="{{item}}" mode="aspectFill" class="review-image" bindtap="previewReviewImage" data-index="{{index}}" />
+            <image src="{{item}}" lazy-load mode="aspectFill" class="review-image" bindtap="previewReviewImage" data-index="{{index}}" />
             <view class="review-image-remove" bindtap="removeReviewImage" data-index="{{index}}">✕</view>
           </view>
           <view wx:if="{{reviewImages.length < maxImages}}" class="review-image-add" bindtap="chooseReviewImage">

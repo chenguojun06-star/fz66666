@@ -5,6 +5,7 @@ import api from '@/utils/api';
 import { StyleInfo } from '@/types/style';
 import dayjs from 'dayjs';
 import { normalizeCategoryQuery, normalizeSeasonQuery } from '@/utils/styleCategory';
+import { flattenExtJson } from '@/components/common/SchemaForm/ExtFieldsSection';
 
 /**
  * 款式详情数据管理 Hook
@@ -104,7 +105,10 @@ export const useStyleDetail = (styleId?: string) => {
     nextValues.completedTime = rawCompletedTime ? dayjs(rawCompletedTime) : undefined;
     nextValues.deliveryDate = rawDeliveryDate ? dayjs(rawDeliveryDate) : undefined;
 
-    form.setFieldsValue(nextValues);
+    form.setFieldsValue({
+      ...nextValues,
+      ...flattenExtJson(currentStyle.extJson),
+    });
   }, [currentStyle, form, isEditorOpen]);
 
   // URL Tab参数变化时切换

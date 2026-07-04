@@ -21,6 +21,7 @@ export interface ProcessTrackingRecord {
   scanRecordId?: string;
   isSettled?: boolean;
   hasNextStageScanned?: boolean;
+  extJson?: string | Record<string, unknown> | null;
 }
 
 export interface ProcessListItem {

@@ -125,3 +125,12 @@
 .srt-td-time {
   width: 80px;
 }
+
+/* 扩展字段列 */
+.srt-th-ext,
+.srt-td-ext {
+  min-width: 80px;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

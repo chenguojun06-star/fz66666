@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { Tag } from 'antd';
 import type { StyleInfo } from '@/types/style';
 import { formatDateTime } from '@/utils/datetime';
@@ -5,6 +6,7 @@ import { toCategoryCn, toSeasonCn } from '@/utils/styleCategory';
 import { getStyleSourceMeta } from '@/utils/styleSource';
 import RowActions from '@/components/common/RowActions';
 import { StyleAttachmentsButton, StyleCoverThumb } from '@/components/StyleAssets';
+import { useExtColumns } from '@/hooks/useExtColumns';
 
 interface UseOrderColumnsParams {
   openCreate: (style: StyleInfo) => void;
@@ -15,7 +17,9 @@ interface UseOrderColumnsParams {
 }
 
 export function useOrderColumns({ openCreate, setPrintModalVisible, setPrintingRecord, setRemarkStyleNo, setRemarkModalOpen }: UseOrderColumnsParams) {
-  const columns = [
+  const { extColumns } = useExtColumns<StyleInfo>({ bizType: 'style', platform: 'pc' });
+
+  const baseColumns = [
     {
       title: '图片',
       dataIndex: 'cover',
@@ -152,6 +156,17 @@ export function useOrderColumns({ openCreate, setPrintModalVisible, setPrintingR
       )
     }
   ];
+
+  const columns = useMemo(() => {
+    const actionColIndex = baseColumns.findIndex(c => c.key === 'action');
+    if (actionColIndex === -1) {
+      return [...baseColumns, ...extColumns] as any;
+    }
+    const before = baseColumns.slice(0, actionColIndex);
+    const actionCol = baseColumns[actionColIndex];
+    const after = baseColumns.slice(actionColIndex + 1);
+    return [...before, ...extColumns, actionCol, ...after] as any;
+  }, [baseColumns, extColumns]);
 
   return columns;
 }

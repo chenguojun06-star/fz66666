@@ -125,6 +125,9 @@ public class Factory {
 
     private Integer deleteFlag;
 
+    /** 扩展字段 JSON，承载自定义字段值 */
+    private String extJson;
+
     @TableField(fill = FieldFill.INSERT)
     private Long tenantId;
 }

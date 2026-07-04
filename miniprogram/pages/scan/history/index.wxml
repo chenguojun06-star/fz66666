@@ -61,7 +61,7 @@
 
   <!-- 表格 -->
   <view class="table-wrap" wx:if="{{displayRecords.length > 0}}">
-    <scan-record-table records="{{displayRecords}}" showAmount="{{true}}" />
+    <scan-record-table records="{{displayRecords}}" showAmount="{{true}}" extFields="{{extFields}}" />
   </view>
 
   <!-- 空状态 -->

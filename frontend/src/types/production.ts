@@ -116,6 +116,8 @@ export interface ProductionOrder extends Record<string, unknown> {
 
   operationRemark?: string;
 
+  extJson?: string | Record<string, unknown> | null;
+
   factoryUnitPrice?: number;
   quotationUnitPrice?: number;
   pricingMode?: 'PROCESS' | 'SIZE' | 'QUOTE' | 'MANUAL';
@@ -218,6 +220,8 @@ export interface ScanRecord extends Record<string, unknown> {
   tenantId?: number;
   /** 扫码时归属外发工厂ID */
   factoryId?: string;
+
+  extJson?: string | Record<string, unknown> | null;
 }
 
 export interface CuttingBundle extends Record<string, unknown> {

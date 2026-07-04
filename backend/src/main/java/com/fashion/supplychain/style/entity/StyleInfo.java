@@ -631,4 +631,12 @@ public class StyleInfo {
     @TableField("pattern_rev_return_time")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime patternRevReturnTime;
+
+    /**
+     * 扩展字段 JSON（租户自定义字段值的存储载体）
+     * 由 t_field_config 定义字段元数据，ext_json 存储字段值
+     * 三端（PC/H5/小程序）共享同一份 ext_json
+     */
+    @TableField("ext_json")
+    private String extJson;
 }

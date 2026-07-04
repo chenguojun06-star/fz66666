@@ -709,6 +709,12 @@ public class ProductionOrder {
     @TableField(fill = FieldFill.INSERT)
     private Long tenantId;
 
+    /**
+     * 扩展字段JSON（租户自定义字段值的存储载体）
+     * 由 t_field_config 定义字段元数据，ext_json 存储字段值
+     */
+    private String extJson;
+
     // ==================== 成本汇总字段（新增）====================
 
     /**

@@ -1,7 +1,8 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { Card, Input, Button, Tag, DatePicker, Space } from 'antd';
-import { SearchOutlined, ReloadOutlined } from '@ant-design/icons';
+import { SearchOutlined, ReloadOutlined, SettingOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
+import { useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
 import type { Dayjs } from 'dayjs';
 import { formatDateTime } from '@/utils/datetime';
@@ -9,6 +10,8 @@ import { formatMoney } from '@/utils/format';
 import api from '@/utils/api';
 import ResizableTable from '@/components/common/ResizableTable';
 import { readPageSize } from '@/utils/pageSizeStore';
+import { useExtColumns } from '@/hooks/useExtColumns';
+import { paths } from '@/routeConfig';
 
 const { RangePicker } = DatePicker;
 
@@ -27,6 +30,7 @@ interface ScanRecordRow {
   scanTime?: string;
   scanResult?: string;
   bundleNo?: string;
+  extJson?: string | Record<string, unknown> | null;
   [key: string]: unknown;
 }
 
@@ -39,6 +43,7 @@ interface FilterState {
 }
 
 const ExternalScanContent: React.FC = () => {
+  const navigate = useNavigate();
   const [data, setData] = useState<ScanRecordRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
@@ -52,6 +57,8 @@ const ExternalScanContent: React.FC = () => {
     endTime: null,
   });
   const [pendingFilters, setPendingFilters] = useState<FilterState>({ ...filters });
+
+  const { extColumns } = useExtColumns<ScanRecordRow>({ bizType: 'scan' });
 
   const fetchData = useCallback(async (currentPage: number, currentPageSize: number, f: FilterState) => {
     setLoading(true);
@@ -93,7 +100,7 @@ const ExternalScanContent: React.FC = () => {
     setPage(1);
   };
 
-  const columns: ColumnsType<ScanRecordRow> = [
+  const baseColumns: ColumnsType<ScanRecordRow> = [
     {
       title: '委托工厂',
       dataIndex: 'delegateTargetName',
@@ -195,53 +202,63 @@ const ExternalScanContent: React.FC = () => {
     },
   ];
 
+  const columns = useMemo(() => [...baseColumns, ...extColumns], [baseColumns, extColumns]);
+
   return (
     <Card styles={{ body: { padding: '16px 20px' } }}>
       {/* 搜索栏 */}
-      <Space wrap style={{ marginBottom: 16 }}>
-        <RangePicker
-          value={[pendingFilters.startTime, pendingFilters.endTime]}
-          onChange={(dates) =>
-            setPendingFilters((f) => ({
-              ...f,
-              startTime: dates?.[0] ?? null,
-              endTime: dates?.[1] ?? null,
-            }))
-          }
-          placeholder={['开始日期', '结束日期']}
-          allowClear
-        />
-        <Input
-          placeholder="订单号"
-          value={pendingFilters.orderNo}
-          onChange={(e) => setPendingFilters((f) => ({ ...f, orderNo: e.target.value }))}
-          style={{ width: 160 }}
-          allowClear
-          onPressEnter={handleSearch}
-        />
-        <Input
-          placeholder="工序名"
-          value={pendingFilters.processName}
-          onChange={(e) => setPendingFilters((f) => ({ ...f, processName: e.target.value }))}
-          style={{ width: 130 }}
-          allowClear
-          onPressEnter={handleSearch}
-        />
-        <Input
-          placeholder="操作员"
-          value={pendingFilters.operatorName}
-          onChange={(e) => setPendingFilters((f) => ({ ...f, operatorName: e.target.value }))}
-          style={{ width: 130 }}
-          allowClear
-          onPressEnter={handleSearch}
-        />
-        <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>
-          查询
-        </Button>
-        <Button icon={<ReloadOutlined />} onClick={handleReset}>
-          重置
-        </Button>
-      </Space>
+      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+        <Space wrap>
+          <RangePicker
+            value={[pendingFilters.startTime, pendingFilters.endTime]}
+            onChange={(dates) =>
+              setPendingFilters((f) => ({
+                ...f,
+                startTime: dates?.[0] ?? null,
+                endTime: dates?.[1] ?? null,
+              }))
+            }
+            placeholder={['开始日期', '结束日期']}
+            allowClear
+          />
+          <Input
+            placeholder="订单号"
+            value={pendingFilters.orderNo}
+            onChange={(e) => setPendingFilters((f) => ({ ...f, orderNo: e.target.value }))}
+            style={{ width: 160 }}
+            allowClear
+            onPressEnter={handleSearch}
+          />
+          <Input
+            placeholder="工序名"
+            value={pendingFilters.processName}
+            onChange={(e) => setPendingFilters((f) => ({ ...f, processName: e.target.value }))}
+            style={{ width: 130 }}
+            allowClear
+            onPressEnter={handleSearch}
+          />
+          <Input
+            placeholder="操作员"
+            value={pendingFilters.operatorName}
+            onChange={(e) => setPendingFilters((f) => ({ ...f, operatorName: e.target.value }))}
+            style={{ width: 130 }}
+            allowClear
+            onPressEnter={handleSearch}
+          />
+          <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>
+            查询
+          </Button>
+          <Button icon={<ReloadOutlined />} onClick={handleReset}>
+            重置
+          </Button>
+        </Space>
+        <a
+          onClick={() => navigate(`${paths.fieldConfig}?bizType=scan`)}
+          style={{ fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer' }}
+        >
+          <SettingOutlined /> 字段配置
+        </a>
+      </div>
 
       <ResizableTable<ScanRecordRow>
         columns={columns}

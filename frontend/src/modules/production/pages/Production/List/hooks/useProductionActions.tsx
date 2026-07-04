@@ -5,11 +5,15 @@ import { productionOrderApi } from '@/services/production/productionApi';
 import { remarkApi } from '@/services/system/remarkApi';
 import dayjs from 'dayjs';
 import { safeString, getCloseMinRequired, buildOrdersCsv, downloadTextFile } from '../utils';
+import { collectExtValues } from '@/components/common/SchemaForm/ExtFieldsSection';
+import type { FieldConfigItem } from '@/hooks/useFieldConfig';
+import type { FormInstance } from 'antd/es/form';
 
 interface UseProductionActionsOptions {
   message: any;
   isSupervisorOrAbove: boolean;
   fetchProductionList: () => void;
+  customFields?: FieldConfigItem[];
 }
 
 /** Rich state for close-order confirm dialog */
@@ -30,6 +34,7 @@ export function useProductionActions({
   message,
   isSupervisorOrAbove,
   fetchProductionList,
+  customFields = [],
 }: UseProductionActionsOptions) {
   // 关单确认状态
   const [pendingCloseOrder, setPendingCloseOrder] = useState<PendingCloseOrder | null>(null);
@@ -89,7 +94,8 @@ export function useProductionActions({
 
   /** 快速编辑保存 */
   const handleQuickEditSave = async (
-    values: { remarks: string; expectedShipDate: string | null; urgencyLevel?: 'normal' | 'urgent' },
+    values: Record<string, unknown>,
+    form: FormInstance,
     editData: ProductionOrder | null,
     closeModal: () => void,
   ) => {
@@ -99,17 +105,29 @@ export function useProductionActions({
     try {
       const urgencyLevel: ProductionOrder['urgencyLevel'] =
         values.urgencyLevel === 'urgent' ? 'urgent' : 'normal';
-      await productionOrderApi.quickEdit({
+
+      let extJson: string | undefined;
+      if (customFields.length > 0) {
+        extJson = collectExtValues(form, customFields, { extJson: (editData as any)?.extJson });
+      }
+
+      const payload: any = {
         id: String(editData?.id ?? ''),
-        ...values,
+        remarks: values.remarks as string,
+        expectedShipDate: values.expectedShipDate as string | null,
         urgencyLevel,
-      });
-      if (values.remarks?.trim() && editData) {
+      };
+      if (extJson !== undefined) {
+        payload.extJson = extJson;
+      }
+
+      await productionOrderApi.quickEdit(payload);
+      if ((values.remarks as string)?.trim() && editData) {
         try {
           await remarkApi.add({
             targetType: 'order',
             targetNo: (editData as any).orderNo || '',
-            content: values.remarks.trim(),
+            content: (values.remarks as string).trim(),
             authorRole: '快速编辑',
           });
         } catch { /* non-critical */ }

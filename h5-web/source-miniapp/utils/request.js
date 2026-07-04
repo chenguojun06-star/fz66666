@@ -184,15 +184,17 @@ async function handle401Error({ statusCode, body, skipAuthRedirect, reject, reso
     }
     clearToken();
     clearRefreshToken();
-    triggerLoginRedirect();
-    reject(createError('未登录', { type: 'auth', statusCode, data: body }));
+    wx.showToast({ title: '登录已过期，请重新登录', icon: 'none', duration: 2000 });
+    setTimeout(() => triggerLoginRedirect(), 1500);
+    reject(createError('登录已过期', { type: 'auth', statusCode, data: body }));
     return true;
   }
   if (!skipAuthRedirect) {
     clearToken();
     clearRefreshToken();
-    triggerLoginRedirect();
-    reject(createError('未登录', { type: 'auth', statusCode, data: body }));
+    wx.showToast({ title: '登录已过期，请重新登录', icon: 'none', duration: 2000 });
+    setTimeout(() => triggerLoginRedirect(), 1500);
+    reject(createError('登录已过期', { type: 'auth', statusCode, data: body }));
     return true;
   }
   return false;

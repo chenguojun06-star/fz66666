@@ -81,6 +81,9 @@
       </view>
     </view>
 
+    <!-- ══ ② 扩展字段（自定义字段展示） ══ -->
+    <ext-fields wx:if="{{extFields.length > 0}}" mode="view" fields="{{extFields}}" data="{{styleInfo}}" customOnly="{{true}}" />
+
     <!-- ══ ③ 操作区 ══ -->
     <view class="action-bar-inline">
       <view class="action-btn-outline" bindtap="onToggleCollapse">

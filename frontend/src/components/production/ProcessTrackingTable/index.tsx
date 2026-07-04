@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useCallback } from 'react';
 import { Space, Button, Popconfirm } from 'antd';
-import { SendOutlined } from '@ant-design/icons';
+import { SendOutlined, SettingOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import ResizableTable from '@/components/common/ResizableTable';
 import { DEFAULT_PAGE_SIZE, DEFAULT_PAGE_SIZE_OPTIONS, readPageSize } from '@/utils/pageSizeStore';
@@ -9,6 +9,7 @@ import { paths } from '@/routeConfig';
 import type { ProcessTrackingTableProps, ProcessTrackingRecord } from './processTrackingFilter';
 import { useProcessTrackingActions } from './useProcessTrackingActions';
 import { useProcessTrackingColumns } from './useProcessTrackingColumns';
+import { useExtColumns } from '@/hooks/useExtColumns';
 
 const ProcessTrackingTable: React.FC<ProcessTrackingTableProps> = ({
   records,
@@ -64,7 +65,7 @@ const ProcessTrackingTable: React.FC<ProcessTrackingTableProps> = ({
     return { total, scanned, totalAmount, bundles };
   }, [flatData]);
 
-  const columns = useProcessTrackingColumns({
+  const baseColumns = useProcessTrackingColumns({
     actioningRecordId,
     isAdmin: _isAdmin,
     orderStatus,
@@ -73,6 +74,10 @@ const ProcessTrackingTable: React.FC<ProcessTrackingTableProps> = ({
     onManualComplete,
     onUndo: handleUndo,
   });
+
+  const { extColumns } = useExtColumns<ProcessTrackingRecord>({ bizType: 'scan' });
+
+  const columns = useMemo(() => [...baseColumns, ...extColumns], [baseColumns, extColumns]);
 
   const completableCount = useMemo(() => {
     return flatData.filter(r => canManualCompleteTracking(r, orderStatus, orderNo, orderId)).length;
@@ -163,6 +168,12 @@ const ProcessTrackingTable: React.FC<ProcessTrackingTableProps> = ({
           <span style={{ fontSize: 14, color: 'var(--color-success)' }}>
             金额: <strong>{`¥${stats.totalAmount.toFixed(2)}`}</strong>
           </span>
+          <a
+            onClick={() => navigate(`${paths.fieldConfig}?bizType=scan`)}
+            style={{ fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer' }}
+          >
+            <SettingOutlined /> 字段配置
+          </a>
         </Space>
       </div>
 

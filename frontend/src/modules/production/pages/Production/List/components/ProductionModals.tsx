@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo, useRef } from 'react';
 import { Input, Drawer } from 'antd';
 import { ExclamationCircleOutlined } from '@ant-design/icons';
 import QuickEditModal from '@/components/common/QuickEditModal';
@@ -16,6 +16,9 @@ import { InspectionDetail } from '@/modules/production';
 import { ProductionOrder } from '@/types/production';
 import { parseProductionOrderLines } from '@/utils/api';
 import { safeString } from '../utils';
+import ExtFieldsSection, { flattenExtJson } from '@/components/common/SchemaForm/ExtFieldsSection';
+import type { FieldConfigItem } from '@/hooks/useFieldConfig';
+import type { FormInstance } from 'antd/es/form';
 
 interface ProductionModalsProps {
   quickEditModal: {
@@ -25,7 +28,7 @@ interface ProductionModalsProps {
     open: (record: ProductionOrder) => void;
   };
   quickEditSaving: boolean;
-  onQuickEditSave: (values: any, record: ProductionOrder | null, close: () => void) => Promise<void>;
+  onQuickEditSave: (values: Record<string, unknown>, form: FormInstance, record: ProductionOrder | null, close: () => void) => Promise<void>;
   remarkPopoverId: string | null;
   setRemarkPopoverId: (id: string | null) => void;
   remarkText: string;
@@ -113,6 +116,8 @@ interface ProductionModalsProps {
   inspectDrawerVisible: boolean;
   inspectDrawerOrderId: string;
   closeInspectDrawer: () => void;
+  customFields: FieldConfigItem[];
+  fieldConfigs: FieldConfigItem[];
 }
 
 const ProductionModals: React.FC<ProductionModalsProps> = ({
@@ -206,20 +211,41 @@ const ProductionModals: React.FC<ProductionModalsProps> = ({
   inspectDrawerVisible,
   inspectDrawerOrderId,
   closeInspectDrawer,
+  customFields,
+  fieldConfigs,
 }) => {
+  const quickEditFormRef = useRef<FormInstance>();
+
+  const quickEditInitialValues = useMemo(() => {
+    const data = quickEditModal.data;
+    return {
+      remarks: (data as any)?.remarks,
+      expectedShipDate: (data as any)?.expectedShipDate,
+      urgencyLevel: (data as any)?.urgencyLevel || 'normal',
+      ...flattenExtJson((data as any)?.extJson),
+    };
+  }, [quickEditModal.data]);
+
   return (
   <>
     <QuickEditModal
       visible={quickEditModal.visible}
       loading={quickEditSaving}
-      initialValues={{
-        remarks: (quickEditModal.data as any)?.remarks,
-        expectedShipDate: (quickEditModal.data as any)?.expectedShipDate,
-        urgencyLevel: (quickEditModal.data as any)?.urgencyLevel || 'normal',
-      }}
-      onSave={(values) => onQuickEditSave(values, quickEditModal.data, quickEditModal.close)}
+      initialValues={quickEditInitialValues}
+      formRef={quickEditFormRef}
+      onSave={(values, form) => onQuickEditSave(values, form, quickEditModal.data, quickEditModal.close)}
       onCancel={() => { quickEditModal.close(); }}
-    />
+    >
+      {customFields.length > 0 && (
+        <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid #f0f0f0' }}>
+          <div style={{ fontWeight: 600, marginBottom: 12, fontSize: 14, color: '#1f1f1f' }}>扩展字段</div>
+          <ExtFieldsSection
+            fields={customFields}
+            colSpan={24}
+          />
+        </div>
+      )}
+    </QuickEditModal>
 
     <SmallModal
       title={<><ExclamationCircleOutlined style={{ color: '#f59e0b', marginRight: 8 }} />备注异常</>}

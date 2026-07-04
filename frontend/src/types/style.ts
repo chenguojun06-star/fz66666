@@ -68,6 +68,9 @@ export interface StyleInfo extends Record<string, unknown> {
   // 码数颜色配置（JSON字符串）
   sizeColorConfig?: string;
 
+  // 扩展字段（JSON字符串或对象）
+  extJson?: string | Record<string, unknown> | null;
+
   // 洗水唛 / 标签字段
   fabricComposition?: string;
   /** 多部位面料成分（JSON），格式：[{part, materials}]，用于两件套/拼接款 */

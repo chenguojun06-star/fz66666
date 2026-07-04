@@ -52,6 +52,8 @@ const MENU_KEY_MAP = {
   factoryShipment: 'miniprogram.menu.factoryShipment',
   advance: 'miniprogram.menu.advance',
   wagePayment: 'miniprogram.menu.wagePayment',
+  salesData: 'miniprogram.menu.salesData',
+  platformOrder: 'miniprogram.menu.platformOrder',
 };
 
 function getGreeting() {
@@ -109,6 +111,14 @@ function buildMenuItems(menuVisibility) {
       items.push({ id: 'factoryShipment', name: '外发工厂', iconClass: 'icon-menu-shipment', circleClass: 'menu-icon-circle--cyan', route: '/pages/factory/shipment/index' });
     }
   }
+  // 销售数据：外发工厂不开放
+  if (!isFactory && visibility.salesData !== false) {
+    items.push({ id: 'salesData', name: '销售数据', iconClass: 'icon-menu-ai', circleClass: 'menu-icon-circle--rose', route: '/pages/sales/overview/index' });
+  }
+  // 平台订单：外发工厂不开放
+  if (!isFactory && visibility.platformOrder !== false) {
+    items.push({ id: 'platformOrder', name: '平台订单', iconClass: 'icon-menu-order', circleClass: 'menu-icon-circle--blue', route: '/pages/sales/order-list/index' });
+  }
 
   return items;
 }
@@ -160,9 +170,14 @@ Page({
 
   loadFavorites: function () {
     const that = this;
+    const isFactory = isFactoryOwner();
     // 先读本地缓存快速渲染，避免服务器异常时空数据覆盖
     let localFavorites = [];
     try { localFavorites = wx.getStorageSync('favoriteApps') || []; } catch (e) { /* ignore */ }
+    // 外发工厂过滤掉销售类应用（防止从其他端已收藏绕过权限）
+    if (isFactory) {
+      localFavorites = localFavorites.filter(id => id !== 'salesData' && id !== 'platformOrder');
+    }
     if (localFavorites.length > 0) {
       that.setData({ favoriteApps: localFavorites });
     }
@@ -175,6 +190,10 @@ Page({
         if (!Array.isArray(favorites)) favorites = [];
       } catch (e) {
         favorites = [];
+      }
+      // 外发工厂过滤掉销售类应用
+      if (isFactory) {
+        favorites = favorites.filter(id => id !== 'salesData' && id !== 'platformOrder');
       }
       // 服务器返回空但本地有数据：保留本地（异步同步可能未完成）
       if (favorites.length === 0 && localFavorites.length > 0) {

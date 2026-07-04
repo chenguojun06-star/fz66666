@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { App, Button, Input } from 'antd';
-import { AppstoreOutlined, ArrowUpOutlined, ArrowDownOutlined, RadarChartOutlined } from '@ant-design/icons';
+import { AppstoreOutlined, ArrowUpOutlined, ArrowDownOutlined, RadarChartOutlined, SettingOutlined } from '@ant-design/icons';
 import PageLayout from '@/components/common/PageLayout';
 import RejectReasonModal from '@/components/common/RejectReasonModal';
 import SmallModal from '@/components/common/SmallModal';
@@ -537,6 +537,15 @@ const StyleInfoListPage: React.FC = () => {
                   onClick={() => navigate('/style-info/new')}
                 >
                   新建
+                </Button>
+                <Button
+                  type="link"
+                  size="small"
+                  icon={<SettingOutlined />}
+                  onClick={() => navigate('/system/field-config?bizType=style')}
+                  title="配置本页显示哪些字段、字段顺序、字段标签"
+                >
+                  字段配置
                 </Button>
               </>
             )}

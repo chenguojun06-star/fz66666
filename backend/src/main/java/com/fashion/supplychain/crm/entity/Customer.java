@@ -59,6 +59,9 @@ public class Customer {
     private String creatorId;
     private String creatorName;
 
+    /** 扩展字段 JSON，承载自定义字段值 */
+    private String extJson;
+
     /** 租户 ID */
     private Long tenantId;
 }

@@ -91,6 +91,10 @@
           <text class="info-label">业务</text>
           <text class="info-value">{{order.orderBizType}}</text>
         </view>
+        <view class="info-row" wx:if="{{ecPlatformName}}">
+          <text class="info-label">平台来源</text>
+          <text class="info-value">{{ecPlatformName}}</text>
+        </view>
       </view>
     </view>
 

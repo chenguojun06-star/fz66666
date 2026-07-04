@@ -1,4 +1,5 @@
 const { safeNavigate } = require('../../utils/uiHelper');
+const { isFactoryOwner } = require('../../utils/storage');
 const api = require('../../utils/api');
 
 // 所有应用配置
@@ -37,6 +38,10 @@ const ALL_APPS = [
     { id: 'payrollFeedback', name: '工资反馈', iconClass: 'icon-menu-payroll-feedback', circleClass: 'menu-icon-circle--blue', route: '/pages/payroll/feedback/index' },
     { id: 'advance', name: '预付款', iconClass: 'icon-menu-advance', circleClass: 'menu-icon-circle--green', route: '/pages/advance/list/index' },
   ]},
+  { group: '📊 销售管理', items: [
+    { id: 'salesData', name: '销售数据', iconClass: 'icon-menu-ai', circleClass: 'menu-icon-circle--rose', route: '/pages/sales/overview/index' },
+    { id: 'platformOrder', name: '平台订单', iconClass: 'icon-menu-order', circleClass: 'menu-icon-circle--blue', route: '/pages/sales/order-list/index' },
+  ]},
   { group: '👥 人员管理', items: [
     { id: 'userApproval', name: '用户审批', iconClass: 'icon-menu-user', circleClass: 'menu-icon-circle--purple', route: '/pages/admin/user-approval/index' },
     { id: 'invite', name: '邀请成员', iconClass: 'icon-menu-invite', circleClass: 'menu-icon-circle--rose', route: '/pages/admin/misc/invite/index' },
@@ -46,6 +51,16 @@ const ALL_APPS = [
     { id: 'changePassword', name: '修改密码', iconClass: 'icon-menu-password', circleClass: 'menu-icon-circle--indigo', route: '/pages/admin/misc/change-password/index' },
   ]},
 ];
+
+// 外发工厂不可见的应用分组（与 home/index.js 保持一致）
+const FACTORY_HIDDEN_GROUPS = ['📝 开发下单', '📊 销售管理'];
+
+// 根据角色过滤应用列表
+function filterAppsByRole(apps) {
+  const isFactory = isFactoryOwner();
+  if (!isFactory) return apps;
+  return apps.filter(g => !FACTORY_HIDDEN_GROUPS.includes(g.group));
+}
 
 Page({
   data: {
@@ -57,10 +72,16 @@ Page({
   },
 
   onLoad: function () {
+    // 根据角色过滤应用列表（外发工厂不可见销售管理等）
+    const visibleApps = filterAppsByRole(ALL_APPS);
+    this.setData({ allApps: visibleApps, filteredApps: visibleApps });
     this.loadFavorites();
   },
 
   onShow: function () {
+    // onShow 也重新过滤，防止登录角色变化
+    const visibleApps = filterAppsByRole(ALL_APPS);
+    this.setData({ allApps: visibleApps });
     this.loadFavorites();
     if (typeof this.getTabBar === 'function' && this.getTabBar()) {
       this.getTabBar().setData({ selected: 1 });
@@ -69,9 +90,13 @@ Page({
 
   loadFavorites: function () {
     const that = this;
-    // 先读本地缓存快速渲染
+    const isFactory = isFactoryOwner();
+    // 先读本地缓存快速渲染（按角色过滤）
     let localFavorites = [];
     try { localFavorites = wx.getStorageSync('favoriteApps') || []; } catch (e) { /* ignore */ }
+    if (isFactory) {
+      localFavorites = localFavorites.filter(id => id !== 'salesData' && id !== 'platformOrder');
+    }
     if (localFavorites.length > 0) {
       that.setData({ favoriteApps: localFavorites });
       that.filterApps(that.data.searchKeyword, localFavorites);
@@ -85,6 +110,10 @@ Page({
         if (!Array.isArray(favorites)) favorites = [];
       } catch (e) {
         favorites = [];
+      }
+      // 外发工厂过滤掉销售类应用（防止从其他端已收藏的销售应用绕过权限）
+      if (isFactory) {
+        favorites = favorites.filter(id => id !== 'salesData' && id !== 'platformOrder');
       }
       // 服务器返回空但本地有数据：保留本地
       if (favorites.length === 0 && localFavorites.length > 0) {

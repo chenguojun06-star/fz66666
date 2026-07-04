@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button, Card, Space } from 'antd';
-import { AppstoreOutlined, UnorderedListOutlined, PlusOutlined } from '@ant-design/icons';
+import { AppstoreOutlined, SettingOutlined, UnorderedListOutlined, PlusOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import ResizableTable from '@/components/common/ResizableTable';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
@@ -13,6 +13,8 @@ import { getStyleCardSizeQuantityItems } from '@/utils/cardSizeQuantity';
 import { getStyleSourceText } from '@/utils/styleSource';
 import { toCategoryCn, toSeasonCn } from '@/utils/styleCategory';
 import { StyleInfo, StyleQueryParams } from '@/types/style';
+import SchemaPrint from '@/components/common/SchemaPrint';
+import type { FieldConfigItem } from '@/hooks/useFieldConfig';
 
 interface Props {
   viewMode: 'table' | 'card';
@@ -27,11 +29,14 @@ interface Props {
   openCreate: (style: StyleInfo) => void;
   fetchStyles: () => void;
   onNoDataOrder?: () => void;
+  styleFieldConfigs: FieldConfigItem[];
+  onGoToFieldConfig: () => void;
 }
 
 const OrderListContent: React.FC<Props> = ({
   viewMode, setViewMode, queryParams, setQueryParams,
   styles, total, loading, columns, cardColumns, openCreate, fetchStyles, onNoDataOrder,
+  styleFieldConfigs, onGoToFieldConfig,
 }) => {
   return (
     <>
@@ -56,6 +61,18 @@ const OrderListContent: React.FC<Props> = ({
               {onNoDataOrder && (
                 <Button icon={<PlusOutlined />} onClick={onNoDataOrder}>无资料下单</Button>
               )}
+              <a onClick={onGoToFieldConfig} style={{ fontSize: 13 }}>
+                <SettingOutlined /> 字段配置
+              </a>
+              <SchemaPrint
+                mode="list"
+                fields={styleFieldConfigs}
+                data={styles as unknown as Record<string, unknown>[]}
+                title="款式列表"
+                subtitle={`共 ${total} 条`}
+                buttonText="打印列表"
+                type="default"
+              />
               <Button
                 icon={viewMode === 'table' ? <AppstoreOutlined /> : <UnorderedListOutlined />}
                 onClick={() => {

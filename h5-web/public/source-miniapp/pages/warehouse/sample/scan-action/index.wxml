@@ -51,7 +51,7 @@
         bindtap="onStockItemTap"
         data-stock="{{item}}"
       >
-        <image wx:if="{{item._imageUrl}}" class="stock-thumb" src="{{item._imageUrl}}" mode="aspectFill" catchtap="onPreviewImage" data-src="{{item._imageUrl}}" />
+        <image wx:if="{{item._imageUrl}}" class="stock-thumb" src="{{item._imageUrl}}" lazy-load mode="aspectFill" catchtap="onPreviewImage" data-src="{{item._imageUrl}}" />
         <view wx:else class="stock-thumb-placeholder">
           <text>👕</text>
         </view>
@@ -180,7 +180,7 @@
               <text class="info-value">{{stockInfo.stock._sampleTypeLabel || stockInfo.stock.sampleType}}</text>
             </view>
           </view>
-          <image wx:if="{{stockInfo.stock._imageUrl}}" class="detail-thumb" src="{{stockInfo.stock._imageUrl}}" mode="aspectFill" bindtap="onPreviewImage" data-src="{{stockInfo.stock._imageUrl}}" />
+          <image wx:if="{{stockInfo.stock._imageUrl}}" class="detail-thumb" src="{{stockInfo.stock._imageUrl}}" lazy-load mode="aspectFill" bindtap="onPreviewImage" data-src="{{stockInfo.stock._imageUrl}}" />
         </view>
         <view class="info-row" wx:if="{{stockInfo.stock.location}}">
           <text class="info-label">仓位</text>

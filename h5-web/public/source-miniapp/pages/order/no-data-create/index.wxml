@@ -139,7 +139,7 @@
   <view class="section">
     <view class="section-title">📷 款式图片</view>
     <view class="image-upload" bindtap="chooseImage">
-      <image wx:if="{{styleImageUrl}}" src="{{styleImageUrl}}" mode="aspectFill" bindtap="previewImage" catchtap="previewImage" />
+      <image wx:if="{{styleImageUrl}}" src="{{styleImageUrl}}" lazy-load mode="aspectFill" bindtap="previewImage" catchtap="previewImage" />
       <view wx:else class="upload-placeholder">
         <text class="upload-icon">📷</text>
         <text>点击上传款式图片</text>

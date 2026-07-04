@@ -1,13 +1,16 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { App, Card, Form, Tabs } from 'antd';
+import { App, Card, Form, Space, Tabs } from 'antd';
+import { SettingOutlined } from '@ant-design/icons';
 import { useLocation, useNavigate } from 'react-router-dom';
 import PageLayout from '@/components/common/PageLayout';
 import PageStatCards from '@/components/common/PageStatCards';
 import StylePrintModal from '@/components/common/StylePrintModal';
 import RemarkTimelineModal from '@/components/common/RemarkTimelineModal';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
+import SchemaPrint from '@/components/common/SchemaPrint';
 import dayjs from 'dayjs';
 import { usePersistentState } from '@/hooks/usePersistentState';
+import { useFieldConfig } from '@/hooks/useFieldConfig';
 import { readPageSize } from '@/utils/pageSizeStore';
 import { getMaterialTypeCategory } from '@/utils/materialType';
 import { CATEGORY_CODE_OPTIONS } from '@/utils/styleCategory';
@@ -18,6 +21,7 @@ import { computeReferenceKilograms } from '@/modules/production/pages/Production
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import { useCuttingCreateTask } from '@/modules/production/pages/Production/Cutting/hooks';
 import { CuttingCreateTaskModal } from '@/modules/production/pages/Production/Cutting/components';
+import { paths } from '@/routeConfig';
 
 import { StyleInfo, StyleQueryParams } from '@/types/style';
 import type { StyleBom } from '@/types/style';
@@ -48,6 +52,17 @@ const OrderManagement: React.FC = () => {
   const navigate = useNavigate();
   const { isMobile } = useViewport();
   const { columns: cardColumns } = useCardGridLayout(10);
+
+  // ===== 扩展字段配置 =====
+  const { fields: orderFieldConfigs } = useFieldConfig({ bizType: 'order', platform: 'pc' });
+  const { fields: styleFieldConfigs } = useFieldConfig({ bizType: 'style', platform: 'pc' });
+  const orderCustomFields = useMemo(
+    () => orderFieldConfigs.filter(f => f.isSystem === 0),
+    [orderFieldConfigs]
+  );
+  const goToStyleFieldConfig = () => {
+    navigate(`${paths.fieldConfig}?bizType=style`);
+  };
 
   const cuttingCreateTask = useCuttingCreateTask({ message, navigate, fetchTasks: async () => {} });
 
@@ -359,6 +374,7 @@ const OrderManagement: React.FC = () => {
     orderLineColors, orderLineSizes,
     processBasedUnitPrice, sizeBasedUnitPrice, totalCostUnitPrice,
     quotationUnitPrice, suggestedQuotationUnitPrice, progressNodes,
+    customFields: orderCustomFields,
   });
 
   const columns = useOrderColumns({ openCreate, setPrintModalVisible, setPrintingRecord, setRemarkStyleNo, setRemarkModalOpen });
@@ -422,6 +438,8 @@ const OrderManagement: React.FC = () => {
                   openCreate={openCreate}
                   fetchStyles={fetchStyles}
                   onNoDataOrder={cuttingCreateTask.openCreateTask}
+                  styleFieldConfigs={styleFieldConfigs}
+                  onGoToFieldConfig={goToStyleFieldConfig}
                 />
               </>
             ),
@@ -472,6 +490,7 @@ const OrderManagement: React.FC = () => {
         deliverySuggestion={deliverySuggestion}
         suggestionLoading={suggestionLoading}
         generateOrderNo={generateOrderNo}
+        customFields={orderCustomFields}
       />
 
       <RemarkTimelineModal

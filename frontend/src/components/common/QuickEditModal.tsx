@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { Form, Input, Select, Tag } from 'antd';
 import SmallModal from './SmallModal';
 import { UnifiedDatePicker, dayjs } from './UnifiedDatePicker';
+import type { FormInstance } from 'antd/es/form';
 
 interface QuickEditModalProps {
   visible: boolean;
@@ -11,10 +12,13 @@ interface QuickEditModalProps {
     remark?: string;
     expectedShipDate?: string | null;
     urgencyLevel?: 'normal' | 'urgent';
+    [key: string]: unknown;
   };
-  onSave: (values: { remarks: string; expectedShipDate: string | null; urgencyLevel: 'normal' | 'urgent' }) => Promise<void>;
+  onSave: (values: Record<string, unknown>, form: FormInstance) => Promise<void>;
   onCancel: () => void;
   title?: string;
+  children?: React.ReactNode;
+  formRef?: React.MutableRefObject<FormInstance | undefined>;
 }
 
 const AI_INSPECTION_REGEX = /^\[AI巡检\]/;
@@ -26,8 +30,12 @@ const QuickEditModal: React.FC<QuickEditModalProps> = ({
   onSave,
   onCancel,
   title = '编辑备注和预计出货',
+  children,
+  formRef,
 }) => {
   const [form] = Form.useForm();
+
+  React.useImperativeHandle(formRef, () => form, [form]);
 
   const { aiRemarks, userRemarks } = useMemo(() => {
     const raw = initialValues?.remarks || initialValues?.remark || '';
@@ -63,10 +71,11 @@ const QuickEditModal: React.FC<QuickEditModalProps> = ({
         ? aiRemarks.join('\n') + (newUserRemark ? '\n' + newUserRemark : '')
         : newUserRemark;
       await onSave({
+        ...values,
         remarks: combined,
         expectedShipDate: values.expectedShipDate ? dayjs(values.expectedShipDate).format('YYYY-MM-DD HH:mm') : null,
         urgencyLevel: values.urgencyLevel || 'normal',
-      });
+      }, form);
       form.resetFields();
     } catch {
       // Intentionally empty
@@ -144,6 +153,7 @@ const QuickEditModal: React.FC<QuickEditModalProps> = ({
             autoFocus
           />
         </Form.Item>
+        {children}
       </Form>
     </SmallModal>
   );

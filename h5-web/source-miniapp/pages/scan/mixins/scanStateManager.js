@@ -31,6 +31,19 @@ module.exports = {
 
     refreshMy: function() { this.loadMyPanel(true); },
 
+    _playScanAudio: function(success) {
+      try {
+        if (!this._scanAudioCtx) {
+          this._scanAudioCtx = wx.createInnerAudioContext();
+          this._scanAudioCtx.onError(() => {});
+        }
+        // 成功：短促"叮" / 失败：低沉"嘟" — 用本地音频包内文件
+        this._scanAudioCtx.src = success ? '/assets/audio/scan-success.mp3' : '/assets/audio/scan-error.mp3';
+        this._scanAudioCtx.stop();
+        this._scanAudioCtx.play();
+      } catch (_) { /* 音频播放失败不影响扫码 */ }
+    },
+
     loadMyPanel: function(refresh) {
       if (refresh === undefined) refresh = false;
       if (this.data.my.loadingStats && !refresh) return;
@@ -54,6 +67,7 @@ module.exports = {
 
     handleScanSuccess: function(result) {
       wx.vibrateShort({ type: 'light' });
+      this._playScanAudio(true);
       const processName = result.processName || '';
       const scanQty = Number(result.quantity) || 0;
       const prevSessionQty = (this._sessionStats || {})[processName] || 0;
@@ -62,7 +76,13 @@ module.exports = {
       const formattedResult = { displayTime: new Date().toLocaleTimeString(), statusText: '扫码成功', statusClass: 'success', sessionQty: newSessionQty };
       for (const k in result) { if (result.hasOwnProperty(k)) formattedResult[k] = result[k]; }
       const localRecord = { orderNo: result.orderNo || '', processCode: result.processCode || '', processName: result.processName || '', quantity: result.quantity || 0, success: true, time: new Date().toLocaleTimeString() };
-      this.setData({ lastResult: formattedResult, lastLocalScanRecord: localRecord, quantity: '' });
+      const prefUpdates = {};
+      try {
+        if (processName) { wx.setStorageSync('scan_pref_process', processName); prefUpdates.lastUsedProcessName = processName; }
+        const curWarehouse = this.data.warehouse;
+        if (curWarehouse) wx.setStorageSync('scan_pref_warehouse', curWarehouse);
+      } catch (_) { /* storage 失败不影响扫码流程 */ }
+      this.setData(Object.assign({ lastResult: formattedResult, lastLocalScanRecord: localRecord, quantity: '' }, prefUpdates));
       // ============ AI 扫码结果增强（可选，不阻塞）============
       if (typeof this._runScanAiTips === 'function') {
         try { this._runScanAiTips(formattedResult); } catch (_e) { /* ignore */ }
@@ -71,11 +91,6 @@ module.exports = {
       this._startResultDismissTimer();
       this.addToLocalHistory(formattedResult);
       this.startUndoTimer(formattedResult);
-      try {
-        if (processName) { wx.setStorageSync('scan_pref_process', processName); this.setData({ lastUsedProcessName: processName }); }
-        const curWarehouse = this.data.warehouse;
-        if (curWarehouse) wx.setStorageSync('scan_pref_warehouse', curWarehouse);
-      } catch (_) { /* storage 失败不影响扫码流程 */ }
       const self = this;
       this._scanRefreshTimer = setTimeout(function() {
         if (self && self.data) self.loadMyPanel(true);
@@ -85,6 +100,7 @@ module.exports = {
 
     handleScanError: function(error) {
       wx.vibrateLong();
+      this._playScanAudio(false);
       const msg = error.errMsg || error.message || '扫码失败';
       let errorAction = 'retry';
       if (msg.indexOf('网络') >= 0 || msg.indexOf('timeout') >= 0 || msg.indexOf('超时') >= 0 || msg.indexOf('连接') >= 0 || msg.indexOf('errcode:-101') >= 0 || msg.indexOf('errcode:-102') >= 0) errorAction = 'checkNetwork';

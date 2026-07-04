@@ -1,4 +1,6 @@
 {
   "navigationBarTitleText": "新建订单",
-  "usingComponents": {}
+  "usingComponents": {
+    "ext-fields": "/components/ext-fields/index"
+  }
 }

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Tag, App } from 'antd';
+import { Tag, App, Tooltip } from 'antd';
 
 import ExternalFactorySmartView from '../ExternalFactory/ExternalFactorySmartView';
 import ResizableTable from '@/components/common/ResizableTable';
@@ -52,6 +52,11 @@ import ProductionFilterBar from './components/ProductionFilterBar';
 import { buildCommonOrderActions } from '../components/buildCommonOrderActions';
 import SmartReceiveModal from '../MaterialPurchase/components/SmartReceiveModal';
 import { useDelayedStageBreakdown } from '@/modules/dashboard/components/DelayedStageBreakdown/useDelayedStageBreakdown';
+import { useFieldConfig } from '@/hooks/useFieldConfig';
+import { useExtColumns } from '@/hooks/useExtColumns';
+import SchemaPrint from '@/components/common/SchemaPrint';
+import { SettingOutlined } from '@ant-design/icons';
+import { paths } from '@/routeConfig';
 
 const ProductionList: React.FC = () => {
   const { message } = App.useApp();
@@ -109,6 +114,18 @@ const ProductionList: React.FC = () => {
   const { visibleColumns, toggleColumnVisible, resetColumnSettings, columnOptions } = useColumnSettings();
   const { globalStats } = useProductionStats(queryParams);
 
+  // ===== 扩展字段配置 =====
+  const { fields: fieldConfigs, loading: fieldConfigLoading } = useFieldConfig({
+    bizType: 'production',
+    platform: 'pc',
+  });
+  const { extColumns } = useExtColumns({ bizType: 'production', platform: 'pc' });
+
+  const customFields = useMemo(
+    () => fieldConfigs.filter(f => f.isSystem === 0),
+    [fieldConfigs]
+  );
+
   // 依赖 fetchProductionList 的 Hooks
   const {
     quickEditSaving, handleQuickEditSave: hookQuickEditSave,
@@ -116,7 +133,7 @@ const ProductionList: React.FC = () => {
     handleScrapOrder, pendingScrapOrder, scrapOrderLoading, confirmScrapOrder, cancelScrapOrder,
     remarkPopoverId, setRemarkPopoverId, remarkText, setRemarkText, remarkSaving, handleRemarkSave,
     handleCopyOrder,
-  } = useProductionActions({ message, isSupervisorOrAbove, fetchProductionList });
+  } = useProductionActions({ message, isSupervisorOrAbove, fetchProductionList, customFields });
 
   const {
     transferModalVisible, transferRecord,
@@ -195,10 +212,45 @@ const ProductionList: React.FC = () => {
   });
 
   // 根据 visibleColumns 过滤列
-  const columns = allColumns.filter(col => {
+  const filteredColumns = allColumns.filter(col => {
     if (col.key === 'action' || col.key === 'orderNo') return true;
     return visibleColumns[col.key as string] !== false;
   });
+
+  // 给操作列追加 SchemaPrint 详情打印按钮
+  const columnsWithExtPrint = useMemo(() => {
+    return filteredColumns.map(col => {
+      if (col.key !== 'action') return col;
+      const originalRender = (col as any).render;
+      return {
+        ...col,
+        width: (col as any).width ? (col as any).width + 32 : undefined,
+        render: (_: unknown, record: ProductionOrder, index: number) => {
+          const originalNode = originalRender(_, record, index);
+          return (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              {originalNode}
+              <Tooltip title="打印字段详情（含自定义字段）">
+                <SchemaPrint
+                  mode="detail"
+                  fields={fieldConfigs}
+                  data={record as unknown as Record<string, unknown>}
+                  title={`生产订单详情 - ${record.orderNo || ''}`}
+                  subtitle="生产订单档案打印"
+                  column={2}
+                  type="default"
+                  buttonText=""
+                />
+              </Tooltip>
+            </div>
+          );
+        },
+      };
+    });
+  }, [filteredColumns, fieldConfigs]);
+
+  // 追加自定义字段列
+  const columns = [...columnsWithExtPrint, ...extColumns];
 
   
   const patrolTitleTags = useMemo(() => (record: ProductionOrder) => {
@@ -349,11 +401,30 @@ const ProductionList: React.FC = () => {
             visibleColumns, toggleColumnVisible, resetColumnSettings, columnOptions,
             viewMode, setViewMode, factoryTypeOptions,
           }).filterLeft}
-          filterRight={ProductionFilterBar({
-            queryParams, setQueryParams, dateRange, setDateRange, fetchProductionList,
-            visibleColumns, toggleColumnVisible, resetColumnSettings, columnOptions,
-            viewMode, setViewMode, factoryTypeOptions,
-          }).filterRight}
+          filterRight={
+            <>
+              {ProductionFilterBar({
+                queryParams, setQueryParams, dateRange, setDateRange, fetchProductionList,
+                visibleColumns, toggleColumnVisible, resetColumnSettings, columnOptions,
+                viewMode, setViewMode, factoryTypeOptions,
+              }).filterRight}
+              <a
+                onClick={() => navigate(`${paths.fieldConfig}?bizType=production`)}
+                style={{ fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 4 }}
+              >
+                <SettingOutlined /> 字段配置
+              </a>
+              <SchemaPrint
+                mode="list"
+                fields={fieldConfigs}
+                data={sortedProductionList as unknown as Record<string, unknown>[]}
+                title="生产订单列表"
+                subtitle={`共 ${total} 条记录`}
+                buttonText="打印列表"
+                type="default"
+              />
+            </>
+          }
         >
           {viewMode === 'smart' ? (
             <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
@@ -605,6 +676,8 @@ const ProductionList: React.FC = () => {
           inspectDrawerVisible={inspectDrawerModal.visible}
           inspectDrawerOrderId={inspectDrawerModal.data ?? ''}
           closeInspectDrawer={() => inspectDrawerModal.close()}
+          customFields={customFields}
+          fieldConfigs={fieldConfigs}
         />
 
         {/* 智能领取弹窗（入库/出库） */}

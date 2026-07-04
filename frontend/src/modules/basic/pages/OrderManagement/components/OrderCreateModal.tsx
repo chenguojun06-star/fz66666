@@ -4,12 +4,14 @@ import dayjs from 'dayjs';
 import { UnifiedDatePicker } from '@/components/common/UnifiedDatePicker';
 import CustomerSelect from '@/components/common/CustomerSelect';
 import { StyleInfo } from '@/types/style';
+import type { FieldConfigItem } from '@/hooks/useFieldConfig';
 import OrderFactorySelector from './OrderFactorySelector';
 import OrderPricingMaterialPanel from './OrderPricingMaterialPanel';
 import OrderLearningInsightCard from './OrderLearningInsightCard';
 import MultiColorOrderEditor from './MultiColorOrderEditor';
 import InlineField from './InlineField';
 import OrderCreateModalSidebar from './OrderCreateModalSidebar';
+import { ExtFieldsSection } from '@/components/common/SchemaForm/ExtFieldsSection';
 import { OrderLine } from '../types';
 
 interface Props {
@@ -54,6 +56,7 @@ interface Props {
   deliverySuggestion: any;
   suggestionLoading: boolean;
   generateOrderNo: () => void;
+  customFields: FieldConfigItem[];
 }
 
 const OrderCreateModal: React.FC<Props> = (p) => {
@@ -68,7 +71,7 @@ const OrderCreateModal: React.FC<Props> = (p) => {
     totalCostUnitPrice, quotationUnitPrice, suggestedQuotationUnitPrice,
     watchedPricingMode, resolvedOrderUnitPrice, setPricingModeTouched,
     orderOrchestration, orderLearningLoading, orderLearningRecommendation,
-    deliverySuggestion, suggestionLoading, generateOrderNo,
+    deliverySuggestion, suggestionLoading, generateOrderNo, customFields,
   } = p;
 
 
@@ -283,6 +286,13 @@ const OrderCreateModal: React.FC<Props> = (p) => {
               loading={orderLearningLoading}
               data={orderLearningRecommendation}
             />
+
+            {customFields.length > 0 && (
+              <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--color-border-light)' }}>
+                <div style={{ fontWeight: 600, marginBottom: 12, fontSize: 14 }}>扩展字段</div>
+                <ExtFieldsSection fields={customFields} />
+              </div>
+            )}
           </div>
         </div>
 

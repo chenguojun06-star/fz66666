@@ -107,6 +107,7 @@ export const paths = {
   dataImport: '/system/data-import',
   systemIssues: '/system/issues',
   orphanData: '/system/orphan-data',
+  fieldConfig: '/system/field-config',
   ecommerceCenter: '/ecommerce/center',
   ecommercePlatform: '/ecommerce/platform',
   cockpit: '/cockpit',
@@ -622,6 +623,7 @@ export const menuConfig: MenuSection[] = [
     items: [
       { label: '数据导入', path: paths.dataImport, icon: React.createElement(FileTextOutlined) },
       { label: '字典管理', path: paths.dict, icon: React.createElement(BookOutlined) },
+      { label: '字段配置', path: paths.fieldConfig, icon: React.createElement(SettingOutlined) },
       { label: '系统日志', path: paths.systemLogs, icon: React.createElement(FileSearchOutlined) },
       { label: '系统教学', path: paths.tutorial, icon: React.createElement(BookOutlined) },
       { label: '孤立数据', path: paths.orphanData, icon: React.createElement(DeleteOutlined) },

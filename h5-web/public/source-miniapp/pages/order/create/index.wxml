@@ -47,7 +47,7 @@
       </view>
       
       <view class="image-upload-large" bindtap="chooseNoDataImage">
-        <image wx:if="{{noDataUploadedImage}}" src="{{noDataUploadedImage}}" mode="aspectFill" catchtap="previewNoDataImage" />
+        <image wx:if="{{noDataUploadedImage}}" src="{{noDataUploadedImage}}" lazy-load mode="aspectFill" catchtap="previewNoDataImage" />
         <view wx:else class="upload-placeholder-large">
           <text class="upload-icon-large">📷</text>
           <text class="upload-text">点击上传款式图片</text>

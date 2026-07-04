@@ -13,6 +13,7 @@ export interface Customer {
   source?: string;
   status?: 'ACTIVE' | 'INACTIVE';
   remark?: string;
+  extJson?: string | Record<string, unknown> | null;
   createTime?: string;
   updateTime?: string;
   creatorName?: string;

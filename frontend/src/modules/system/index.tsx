@@ -18,3 +18,4 @@ export const AppStore = React.lazy(() => import('./pages/AppStore'));
 export const DataImport = React.lazy(() => import('./pages/DataImport'));
 export const SystemIssueBoard = React.lazy(() => import('./pages/System/SystemIssueBoard'));
 export const OrphanDataPage = React.lazy(() => import('./pages/System/OrphanDataPage'));
+export const FieldConfigPage = React.lazy(() => import('./pages/System/FieldConfig'));

@@ -7,10 +7,12 @@ import CustomerSelect from '@/components/common/CustomerSelect';
 import CoverImageUpload from './CoverImageUpload';
 import StyleColorSizeTable from './StyleColorSizeTable';
 import StyleSkuTab from './StyleSkuTab';
+import ExtFieldsSection from '@/components/common/SchemaForm/ExtFieldsSection';
 import { StyleInfo } from '@/types/style';
 import { CATEGORY_CODE_OPTIONS, SEASON_CODE_OPTIONS } from '@/utils/styleCategory';
 import { useDictOptions } from '@/hooks/useDictOptions';
 import { type StyleFieldParseResult } from '@/services/intelligence/intelligenceApi';
+import type { FieldConfigItem } from '@/hooks/useFieldConfig';
 
 export interface StyleBasicInfoFormRef {
   applyStyleParseResult: (result: StyleFieldParseResult) => void;
@@ -22,6 +24,7 @@ interface StyleBasicInfoFormProps {
   editLocked: boolean;
   isNewPage: boolean;
   isFieldLocked: (fieldValue: any) => boolean;
+  customFields: FieldConfigItem[];
   pendingImages: File[];
   onPendingImagesChange: (files: File[]) => void;
   coverRefreshToken: number;
@@ -89,6 +92,7 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
   editLocked,
   isNewPage,
   isFieldLocked,
+  customFields,
   pendingImages,
   onPendingImagesChange,
   coverRefreshToken,
@@ -612,6 +616,26 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
             />
           )}
         </div>
+
+        {/* 区6：扩展字段 */}
+        {customFields.length > 0 && (
+          <div
+            style={{
+              marginBottom: 4,
+              padding: 16,
+              background: 'var(--color-bg-base)',
+              border: '1px solid var(--color-border)',
+              borderRadius: 8,
+            }}
+          >
+            {renderSectionTitle('扩展字段')}
+            <ExtFieldsSection
+              fields={customFields}
+              disabled={editLocked}
+              colSpan={8}
+            />
+          </div>
+        )}
       </div>
     </Row>
   );

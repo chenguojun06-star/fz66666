@@ -118,6 +118,7 @@ export interface Factory extends Record<string, unknown> {
   overdueOrders?: number;
   tenantId?: number;
   businessLicense?: string;
+  extJson?: string | Record<string, unknown> | null;
   createTime?: string;
   updateTime?: string;
 }

@@ -1,0 +1,224 @@
+@import '/styles/page-utils.wxss';
+
+.page {
+  min-height: 100vh;
+  padding: 0 var(--page-padding-x, 12px) calc(env(safe-area-inset-bottom) + 20px);
+  background: var(--color-bg-page);
+}
+
+/* ============ 搜索框 ============ */
+.search-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--color-bg-card);
+  border-radius: var(--radius-lg);
+  padding: 8px 12px;
+  margin: 12px 0 4px;
+  border: 1px solid var(--color-border-light);
+}
+.search-input {
+  flex: 1;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+}
+.search-clear {
+  font-size: 16px;
+  color: var(--color-text-tertiary);
+  padding: 0 4px;
+}
+
+/* ============ 平台筛选 Tab ============ */
+.tab-scroll {
+  white-space: nowrap;
+  padding: 12px 0 8px;
+}
+.tab-pill {
+  display: inline-block;
+  padding: 6px 16px;
+  margin-right: 8px;
+  border-radius: var(--radius-full);
+  background: var(--color-bg-card);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border-light);
+}
+.tab-pill--on {
+  background: var(--color-primary);
+  color: #fff;
+  border-color: var(--color-primary);
+  font-weight: 600;
+}
+
+/* ============ 状态筛选条 ============ */
+.status-bar {
+  display: flex;
+  gap: 8px;
+  padding: 4px 0 12px;
+  flex-wrap: wrap;
+}
+.status-pill {
+  padding: 4px 14px;
+  border-radius: var(--radius-full);
+  background: var(--color-bg-card);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+  border: 1px solid var(--color-border-light);
+}
+.status-pill--on {
+  background: var(--color-primary-bg);
+  color: var(--color-primary);
+  border-color: var(--color-primary-border);
+  font-weight: 600;
+}
+
+/* ============ 订单卡片 ============ */
+.order-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.order-card {
+  background: var(--color-bg-card);
+  border-radius: var(--radius-lg);
+  padding: 12px 14px;
+  box-shadow: var(--shadow-sm, 0 1px 2px rgba(0,0,0,0.04));
+}
+.oc-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--color-divider);
+}
+.oc-head-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.oc-platform {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+.oc-prod-no {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  background: var(--color-success-bg);
+  color: var(--color-success);
+}
+.oc-status {
+  font-size: 11px;
+  padding: 2px 10px;
+  border-radius: var(--radius-full);
+  font-weight: 500;
+}
+.order-tag--warning { background: var(--color-warning-bg); color: var(--color-warning); }
+.order-tag--info    { background: var(--color-info-bg); color: var(--color-info); }
+.order-tag--success { background: var(--color-success-bg); color: var(--color-success); }
+.order-tag--default { background: var(--color-bg-gray); color: var(--color-text-tertiary); }
+
+.oc-no {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+}
+.oc-no-label {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+}
+.oc-no-val {
+  flex: 1;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.oc-copy {
+  font-size: var(--font-size-xs);
+  color: var(--color-primary);
+  padding: 2px 8px;
+  border: 1px solid var(--color-primary-border);
+  border-radius: var(--radius-sm);
+}
+
+.oc-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 0;
+}
+.oc-label {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+  min-width: 36px;
+}
+.oc-val {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+}
+.oc-amount {
+  color: var(--color-primary);
+  font-weight: 600;
+  font-size: 15px;
+}
+.oc-product {
+  color: var(--color-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+.oc-no--sub {
+  padding-top: 0;
+}
+.oc-no--sub .oc-no-val {
+  font-weight: 400;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+}
+.oc-no--sub .oc-no-label {
+  color: var(--color-text-tertiary);
+}
+.oc-time {
+  color: var(--color-text-secondary);
+}
+
+/* ============ 空状态 / 加载态 ============ */
+.loading-state {
+  text-align: center;
+  padding: 24px 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-tertiary);
+}
+
+/* ============ 骨架屏 ============ */
+.skeleton-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 0;
+}
+.skeleton-card {
+  background: var(--color-bg-card);
+  border-radius: var(--radius-lg);
+  padding: 12px 14px;
+}
+.skeleton-line {
+  height: 12px;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.4s ease infinite;
+  border-radius: 4px;
+  margin-bottom: 8px;
+}
+.skeleton-line--short { width: 30%; }
+.skeleton-line--long  { width: 90%; }
+@keyframes skeleton-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}

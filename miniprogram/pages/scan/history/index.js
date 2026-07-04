@@ -3,6 +3,7 @@
  * 支持"按月"和"自定义"两种时间筛选模式
  */
 const api = require('../../../utils/api');
+const { fieldConfig } = require('../../../utils/api-modules/field-config');
 const { eventBus, Events } = require('../../../utils/eventBus');
 const { toast } = require('../../../utils/uiHelper');
 
@@ -95,6 +96,8 @@ Page({
     },
     emptyText: '',
     emptyHint: '',
+    // 扩展字段配置
+    extFields: [],
   },
 
   _reqGeneration: 0,
@@ -105,9 +108,21 @@ Page({
     this._records = [];
     this._patternRecords = [];
     this._updateMonthDisplay();
+    // 加载扩展字段配置（非阻塞）
+    this.loadExtFields();
     // 未登录时跳过数据加载，避免触发 401 请求
     if (!(wx.getStorageSync('auth_token') || '')) return;
     this.loadData(true);
+  },
+
+  /** 加载扩展字段配置（scan 业务对象） */
+  loadExtFields() {
+    const self = this;
+    fieldConfig.list('scan', 'mp', false).then(function (fields) {
+      self.setData({ extFields: fields || [] });
+    }).catch(function () {
+      // 字段配置加载失败不阻塞主流程
+    });
   },
 
   onShow() {

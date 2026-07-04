@@ -4,7 +4,7 @@
     <!-- 款式信息 -->
     <view class="sec sec--top">
       <view class="style-row" wx:if="{{coverImage}}">
-        <image class="style-thumb" src="{{coverImage}}" mode="aspectFill" bindtap="onCoverPreview" data-url="{{coverImage}}" />
+        <image class="style-thumb" src="{{coverImage}}" lazy-load mode="aspectFill" bindtap="onCoverPreview" data-url="{{coverImage}}" />
         <view class="style-txt">
           <text class="style-no">{{styleNo}}</text>
           <text class="style-nm">{{styleName}}</text>
@@ -181,6 +181,12 @@
         <text class="f-lbl">单价</text>
         <input class="f-inp flex-1" type="digit" value="{{manualOrderUnitPrice}}" bindinput="onManualPriceInput" placeholder="0.00" />
       </view>
+    </view>
+
+    <!-- 扩展字段（自定义字段录入） -->
+    <view class="sec" wx:if="{{extFields.length > 0}}">
+      <view class="sec-hd">自定义字段</view>
+      <ext-fields mode="form" fields="{{extFields}}" data="{{}}" customOnly="{{true}}" bindchange="onExtFieldsChange" />
     </view>
 
     <view style="height:80px;"></view>

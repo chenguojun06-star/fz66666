@@ -3,9 +3,11 @@ import dayjs from 'dayjs';
 import api from '@/utils/api';
 import { StyleInfo } from '@/types/style';
 import { ProductionOrder } from '@/types/production';
+import type { FieldConfigItem } from '@/hooks/useFieldConfig';
 import { OrderLine, ProgressNode } from '../types';
 import { buildOrderSubmitPayload } from '../utils/buildOrderSubmitPayload';
 import { buildProgressWorkflowJson } from '../utils/progressWorkflowBuilder';
+import { collectExtValues } from '@/components/common/SchemaForm/ExtFieldsSection';
 
 interface SubmitDeps {
   form: FormInstance;
@@ -31,6 +33,7 @@ interface SubmitDeps {
   quotationUnitPrice: number;
   suggestedQuotationUnitPrice: number;
   progressNodes: ProgressNode[];
+  customFields: FieldConfigItem[];
 }
 
 function validateOrderLines(deps: SubmitDeps): number | null {
@@ -101,6 +104,8 @@ export function useOrderHandleSubmit(deps: SubmitDeps) {
       const colorLabel = deps.orderLineColors.length ? deps.orderLineColors.join(',') : undefined;
       const sizeLabel = deps.orderLineSizes.length ? deps.orderLineSizes.join(',') : undefined;
 
+      const extJson = collectExtValues(deps.form, deps.customFields, {});
+
       const { payload } = buildOrderSubmitPayload({
         values,
         selectedStyle: deps.selectedStyle,
@@ -125,6 +130,7 @@ export function useOrderHandleSubmit(deps: SubmitDeps) {
         resolvedOrderUnitPrice: deps.resolvedOrderUnitPrice,
         buildProgressWorkflowJson,
         progressNodes: deps.progressNodes,
+        extJson,
       });
       const response = await api.post<{ code: number; message: string; data: ProductionOrder }>('/production/order', payload);
       if (response.code === 200) {

@@ -44,7 +44,7 @@
       <view wx:for="{{list}}" wx:key="id" class="defect-card {{(item.repairStatus === 'pending' || item.repairStatus === 'pending_repair') ? 'defect-card-urgent' : ''}}" data-index="{{index}}" bindtap="onViewDetail">
         <view class="card-body">
           <view class="card-cover" wx:if="{{item.coverImage}}">
-            <image class="cover-img" src="{{item.coverImage}}" mode="aspectFill" />
+            <image class="cover-img" src="{{item.coverImage}}" lazy-load mode="aspectFill" />
             <view class="img-badge" wx:if="{{item.imageCount > 1}}">{{item.imageCount}}</view>
           </view>
           <view class="card-cover card-cover-empty" wx:else>

@@ -130,6 +130,14 @@
       "root": "pages/sample-development",
       "name": "pkg-sample-dev",
       "pages": ["index/index", "detail/index"]
+    },
+    {
+      "root": "pages/sales",
+      "name": "pkg-sales",
+      "pages": [
+        "overview/index",
+        "order-list/index"
+      ]
     }
   ],
   "preloadRule": {

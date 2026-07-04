@@ -1,7 +1,7 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-07-03（修复 2 个 P0 线上事故：SysNoticeMapper 报错 + Flyway V20270628005 失败）
+> 最后更新：2026-07-04（多租户字段配置系统阶段1+2 完整核实+遗漏修复）
 
 ---
 
@@ -22,8 +22,110 @@
 - ✅ 权限系统大牌水准优化（2026-06-23：新租户开户向导 + TypeScript/编译错误修复 + 数据权限维度验证）
 - ✅ 数据库稳定性 + 全链路数据流阻塞治理（2026-06-24）
 - ✅ 小云 AI P1 实用能力升级 5 项（2026-07-02完成）
+- ✅ 多租户字段配置系统阶段1+2 完整核实+遗漏修复（2026-07-04：6 业务对象种子 + multiselect bug 修复 + 全套质量门控通过）
 
 ## 最近变更
+
+### 2026-07-04 多租户字段配置系统阶段1+2 完整核实+遗漏修复
+
+**背景**：用户要求"全部核实清楚 不要遗漏 一定要全面处理清楚"。对阶段1+2 做全链路扫描，发现 2 处遗漏并修复。
+
+**本次修复**：
+| # | 遗漏点 | 类型 | 修复 |
+|---|--------|------|------|
+| 1 | SchemaForm multiselect widget 复用 select 但未传 mode="multiple"，导致多选实际只能单选 | bug | [SchemaForm/index.tsx](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/frontend/src/components/common/SchemaForm/index.tsx) 合并 select/multiselect case，按 fieldType 自动判断 mode |
+| 2 | SystemFieldSeeds 仅 style 有种子，order/production/scan/customer/supplier 5 个 bizType 是空 case | 遗漏 | [SystemFieldSeeds.java](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/java/com/fashion/supplychain/system/orchestration/SystemFieldSeeds.java) 补齐 5 个业务对象各 10 个核心字段种子，与对应 Entity 字段名严格对齐 |
+
+**全链路核实结果（无其他遗漏）**：
+- ✅ Flyway V20270704001 建表完整（t_field_config + t_user_preference + t_style_info.ext_json）
+- ✅ 后端 FieldConfig 完整分层（Entity/Mapper/Service/DTO/Orchestrator/Controller/SystemFieldSeeds）
+- ✅ 后端 UserPreference 完整分层
+- ✅ 后端 StyleInfo.extJson 字段（MyBatis-Plus 自动持久化，无需专门 API）
+- ✅ 前端 Hooks（useFieldConfig/useUserPreference）完整
+- ✅ 前端通用组件（ColumnSettings/SchemaForm/SchemaTable）完整
+- ✅ 前端管理后台页面完整
+- ✅ 前端路由配置完整（paths.fieldConfig + 菜单项 + App.tsx Route）
+- ✅ 款式管理页入口按钮完整（StyleInfoList 工具栏跳转 ?bizType=style）
+- ✅ SystemFieldSeeds 覆盖全部 6 个业务对象（style/order/production/scan/customer/supplier）
+- ✅ SchemaForm 7 种 widget 全部正确（含 multiselect mode=multiple 修复）
+- ✅ 字段级权限：visible_roles/editable_roles JSON，Orchestrator 按当前用户角色裁剪
+- ✅ 多租户隔离：FieldConfig/UserPreference 强制 tenant_id（P0铁律4）
+- ✅ 事务边界：@Transactional 在 Orchestrator 层（P0铁律2）
+
+**全套质量门控通过**：
+- ✅ 后端 mvn compile：0 错误
+- ✅ 前端 npx tsc --noEmit：0 错误
+- ✅ Flyway SQL 校验：通过（V20270704001 无警告）
+- ✅ 列依赖检查：通过（0 悬空引用）
+- ✅ Entity 对齐检查：通过（无新增 Entity 字段需校验）
+- ✅ 多租户审计：本次新增 FieldConfig/UserPreference 都有 tenantId，无新增违规（仅历史遗留 RoleTemplate 缺 tenantId，与本次无关）
+
+**未完成（阶段3，需用户确认后再推进）**：
+- 业务页面接入 SchemaTable/SchemaForm（让字段配置真正驱动渲染）
+- 候选接入页：客户管理 / 供应商管理 / 款式详情侧滑抽屉（自定义字段 section）
+- 不建议接入：款式列表 StyleTableView（876行含 SmartStage 复杂逻辑，强行切换会破坏功能）
+
+### 2026-07-04 多租户字段配置系统阶段1+2 落地完成
+
+**背景**：用户要求"按最好最优的方式落地"——适配不同租户的字段/显示定制需求，多端全系统优化。经全系统调研+业界方案对比，选定"JSON扩展列 + 元数据配置表（t_field_config）"轻量路线（不学Salesforce重架构，不用EAV）。
+
+**完成内容（阶段1+2，最小可行验证）**：
+
+| # | 模块 | 完成项 |
+|---|------|--------|
+| 1 | Flyway迁移 | V20270704001__create_field_config_and_user_preference.sql（建 t_field_config + t_user_preference + t_style_info 加 ext_json） |
+| 2 | 后端-FieldConfig | Entity/Mapper/Service/DTO/Orchestrator/Controller 完整分层（含 SystemFieldSeeds 种子模板） |
+| 3 | 后端-UserPreference | Entity/Mapper/Service/Orchestrator/Controller 完整分层（替代散落 localStorage） |
+| 4 | 后端-StyleInfo | 实体加 extJson 字段（ext_json JSON 列） |
+| 5 | 前端-Hooks | useFieldConfig（拉字段配置）+ useUserPreference（拉/存偏好） |
+| 6 | 前端-通用组件 | ColumnSettings/useColumnSettings（通用化抽象自 Production List） |
+| 7 | 前端-通用组件 | SchemaForm（7种 widget：input/inputnumber/datepicker/select/switch/textarea） |
+| 8 | 前端-通用组件 | SchemaTable（包装 ResizableTable + 列显隐/列顺序持久化） |
+| 9 | 前端-管理后台 | /system/field-config 页面（管理员配置字段显隐/顺序/标签，含URL参数?bizType=style跳转） |
+| 10 | 前端-试点集成 | 款式管理页（StyleInfoList）工具栏加入"字段配置"快捷入口按钮 |
+
+**关键设计决策**：
+- **存储方案**：业务主表加 `ext_json JSON` 列承载自定义字段值；标准字段保留原列（保证报表/索引性能）
+- **多租户隔离**：t_field_config / t_user_preference 强制带 tenant_id（P0铁律4）
+- **三端适配**：t_field_config 一行含 pc_widget/h5_widget/mp_widget 三端覆盖，后端按 platform 参数下发裁剪
+- **字段级权限**：visible_roles/editable_roles JSON 数组，后端按当前用户角色裁剪可见字段
+- **系统字段种子**：首次访问某 bizType 自动种入预设字段（is_system=1 不可删，可改显隐/标签）
+- **轻量集成**：款式管理页暂不切换渲染逻辑（避免破坏现有功能），仅加入"字段配置"入口；后续按业务页渐进切换到 SchemaTable
+- **不破坏现有功能**：t_tenant_smart_feature（功能开关）保留不变；t_dict（数据字典）保留不变；ResizableTable 已有能力保留不变
+
+**验证**：
+- ✅ 后端 mvn compile 0 错误
+- ✅ 前端 npx tsc --noEmit 0 错误
+- ✅ Flyway SQL 校验通过（新迁移 0 警告）
+- ✅ 列依赖检查通过（0 悬空引用）
+
+**相关文件**：
+
+后端：
+- [V20270704001__create_field_config_and_user_preference.sql](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/resources/db/migration/V20270704001__create_field_config_and_user_preference.sql)
+- [FieldConfig.java](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/java/com/fashion/supplychain/system/entity/FieldConfig.java)
+- [UserPreference.java](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/java/com/fashion/supplychain/system/entity/UserPreference.java)
+- [FieldConfigOrchestrator.java](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/java/com/fashion/supplychain/system/orchestration/FieldConfigOrchestrator.java)
+- [UserPreferenceOrchestrator.java](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/java/com/fashion/supplychain/system/orchestration/UserPreferenceOrchestrator.java)
+- [SystemFieldSeeds.java](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/java/com/fashion/supplychain/system/orchestration/SystemFieldSeeds.java)
+- [FieldConfigController.java](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/java/com/fashion/supplychain/system/controller/FieldConfigController.java)
+- [UserPreferenceController.java](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/java/com/fashion/supplychain/system/controller/UserPreferenceController.java)
+
+前端：
+- [useFieldConfig.ts](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/frontend/src/hooks/useFieldConfig.ts)
+- [useUserPreference.ts](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/frontend/src/hooks/useUserPreference.ts)
+- [ColumnSettings/](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/frontend/src/components/common/ColumnSettings/)
+- [SchemaForm/](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/frontend/src/components/common/SchemaForm/)
+- [SchemaTable/](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/frontend/src/components/common/SchemaTable/)
+- [FieldConfig管理页](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/frontend/src/modules/system/pages/System/FieldConfig/index.tsx)
+
+**未完成（阶段3+4，后续按需推进）**：
+- 阶段3：把款式管理页的实际渲染逻辑切换到 SchemaTable（替换硬编码列）
+- 阶段3：扩展到订单/生产单/扫码记录/客户/供应商等其他业务页
+- 阶段3：加"已保存视图/筛选器"功能
+- 阶段4：H5 端 SchemaForm H5 版（widget 走映射表）
+- 阶段4：小程序 SchemaForm 组件版
+- 阶段4：三端联调
 
 ### 2026-07-03 修复 2 个 P0 线上事故 + 全量待办项核实
 

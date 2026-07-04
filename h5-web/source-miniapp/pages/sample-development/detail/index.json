@@ -1,5 +1,7 @@
 {
-  "usingComponents": {},
+  "usingComponents": {
+    "ext-fields": "/components/ext-fields/index"
+  },
   "navigationBarTitleText": "样衣详情",
   "enablePullDownRefresh": true
 }

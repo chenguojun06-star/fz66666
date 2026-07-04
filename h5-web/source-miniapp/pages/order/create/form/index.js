@@ -1,4 +1,6 @@
 const api = require('../../../../utils/api');
+const { fieldConfig } = require('../../../../utils/api-modules/field-config');
+const { collectExtValues } = require('../../../../utils/api-modules/field-config-helpers');
 const { toast } = require('../../../../utils/uiHelper');
 
 function today() {
@@ -47,6 +49,8 @@ Page({
     plateTypeOptions: ['自动判断', '首单', '翻单'],
     factoryList: [], orgUnitList: [], categoryOptions: [],
     quickFillQty: 1, submitting: false,
+    // 扩展字段配置
+    extFields: [],
   },
 
   onLoad: function (opts) {
@@ -54,6 +58,9 @@ Page({
     var colors = [];
     var sizes = [];
     var coverImage = '';
+
+    // 加载扩展字段配置（非阻塞）
+    this.loadExtFields();
 
     if (isNoData) {
       // 无资料下单：使用用户上传的临时图片
@@ -372,6 +379,22 @@ Page({
   onManualPriceInput: function (e) { this.setData({ manualOrderUnitPrice: e.detail.value }); },
 
   /* ═══ 提交 ═══ */
+  /** 加载扩展字段配置（order 业务对象） */
+  loadExtFields: function () {
+    var self = this;
+    fieldConfig.list('order', 'mp', false).then(function (fields) {
+      self.setData({ extFields: fields || [] });
+    }).catch(function () {
+      // 字段配置加载失败不阻塞主流程
+    });
+  },
+
+  /** 扩展字段值变更回调 */
+  onExtFieldsChange: function (e) {
+    // 存储最新的扩展字段值，提交时收集
+    this._extFormValues = e.detail.allValues;
+  },
+
   onSubmit: function () {
     if (this.data.submitting) return;
     const d = this.data;
@@ -451,6 +474,7 @@ Page({
       plannedStartDate: d.plannedStartDate + 'T09:00:00',
       plannedEndDate: d.plannedEndDate + 'T18:00:00',
       scatterPricingMode: 'FOLLOW_ORDER',
+      extJson: collectExtValues(this._extFormValues || {}, d.extFields, ''),
     };
 
     const self = this;

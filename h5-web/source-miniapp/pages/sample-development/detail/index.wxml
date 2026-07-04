@@ -10,7 +10,7 @@
     <!-- ══ ① 基础信息卡 ══ -->
     <view class="top-card">
       <view class="top-left">
-        <image wx:if="{{styleInfo.cover}}" class="cover-img" src="{{styleInfo.cover}}" mode="aspectFill" bindtap="onCoverTap" />
+        <image wx:if="{{styleInfo.cover}}" class="cover-img" src="{{styleInfo.cover}}" lazy-load mode="aspectFill" bindtap="onCoverTap" />
         <view wx:else class="cover-placeholder">
           <text class="cover-icon">👔</text>
         </view>
@@ -80,6 +80,9 @@
         </view>
       </view>
     </view>
+
+    <!-- ══ ② 扩展字段（自定义字段展示） ══ -->
+    <ext-fields wx:if="{{extFields.length > 0}}" mode="view" fields="{{extFields}}" data="{{styleInfo}}" customOnly="{{true}}" />
 
     <!-- ══ ③ 操作区 ══ -->
     <view class="action-bar-inline">

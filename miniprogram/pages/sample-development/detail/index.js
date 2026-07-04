@@ -1,5 +1,6 @@
 const { style } = require('../../../utils/api-modules/style-warehouse');
 const production = require('../../../utils/api-modules/production');
+const { fieldConfig } = require('../../../utils/api-modules/field-config');
 const { toast } = require('../../../utils/uiHelper');
 const permission = require('../../../utils/permission');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
@@ -128,6 +129,8 @@ Page({
     attachmentLoading: false,
     // 款式图片（cover + 附件中的图片）
     styleImages: [],
+    // 扩展字段配置
+    extFields: [],
   },
 
   onLoad(options) {
@@ -138,6 +141,8 @@ Page({
       return;
     }
     this.setData({ styleId, patternId });
+    // 加载扩展字段配置（非阻塞，不影响主流程）
+    this.loadExtFields();
     // 如果只有 patternId，先获取样衣详情拿到 styleId
     if (!styleId && patternId) {
       this.loadStyleIdFromPattern(patternId);
@@ -210,6 +215,16 @@ Page({
       console.error('获取样衣详情失败', e);
       this.setData({ loading: false });
       toast.error('加载失败');
+    }
+  },
+
+  /** 加载扩展字段配置（style 业务对象） */
+  async loadExtFields() {
+    try {
+      const fields = await fieldConfig.list('style', 'mp', false);
+      this.setData({ extFields: fields || [] });
+    } catch (e) {
+      // 字段配置加载失败不阻塞主流程
     }
   },
 

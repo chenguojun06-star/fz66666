@@ -257,6 +257,12 @@ public class ScanRecord {
     @TableField(fill = FieldFill.INSERT)
     private Long tenantId;
 
+    /**
+     * 扩展字段JSON（租户自定义字段值的存储载体）
+     * 由 t_field_config 定义字段元数据，ext_json 存储字段值
+     */
+    private String extJson;
+
     /** 扫码时归属的外发工厂ID，NULL=非外发工厂账号扫码 */
     private String factoryId;
 }

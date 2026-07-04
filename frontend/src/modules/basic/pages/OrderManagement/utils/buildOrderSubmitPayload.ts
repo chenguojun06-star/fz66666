@@ -30,6 +30,7 @@ interface BuildOrderSubmitPayloadArgs {
   resolvedOrderUnitPrice: number;
   buildProgressWorkflowJson: (nodes: ProgressNode[]) => string;
   progressNodes: ProgressNode[];
+  extJson?: string;
 }
 
 export const buildOrderSubmitPayload = ({
@@ -56,6 +57,7 @@ export const buildOrderSubmitPayload = ({
   resolvedOrderUnitPrice,
   buildProgressWorkflowJson,
   progressNodes,
+  extJson,
 }: BuildOrderSubmitPayloadArgs) => {
   const pricingSnapshot = {
     pricingMode: values.pricingMode || 'PROCESS',
@@ -115,6 +117,7 @@ export const buildOrderSubmitPayload = ({
     plannedEndDate: values.plannedEndDate ? values.plannedEndDate.format('YYYY-MM-DDTHH:mm:ss') : null,
     expectedShipDate: values.plannedEndDate ? values.plannedEndDate.format('YYYY-MM-DDTHH:mm:ss') : null,
     progressWorkflowJson: buildProgressWorkflowJson(progressNodes),
+    extJson,
   };
 
   return { payload, pricingSnapshot, orderDetails };

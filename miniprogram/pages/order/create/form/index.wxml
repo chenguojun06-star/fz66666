@@ -183,6 +183,12 @@
       </view>
     </view>
 
+    <!-- 扩展字段（自定义字段录入） -->
+    <view class="sec" wx:if="{{extFields.length > 0}}">
+      <view class="sec-hd">自定义字段</view>
+      <ext-fields mode="form" fields="{{extFields}}" data="{{}}" customOnly="{{true}}" bindchange="onExtFieldsChange" />
+    </view>
+
     <view style="height:80px;"></view>
   </scroll-view>
 

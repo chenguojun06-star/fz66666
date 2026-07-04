@@ -10,10 +10,15 @@ import { Factory as FactoryType, FactoryQueryParams, OrganizationUnit, User } fr
 import api, { type ApiResult } from '@/utils/api';
 import { useModal } from '@/hooks';
 import { useDebouncedValue } from '@/hooks/usePerformance';
+import { useFieldConfig } from '@/hooks/useFieldConfig';
+import { useExtColumns } from '@/hooks/useExtColumns';
+import { flattenExtJson, collectExtValues } from '@/components/common/SchemaForm/ExtFieldsSection';
+import SchemaPrint from '@/components/common/SchemaPrint';
 import { App, Avatar, Button, Card, Col, Form, Row, Space, Tabs, Tag } from 'antd';
-import { ApartmentOutlined, PlusOutlined, ShopOutlined, TeamOutlined, UserOutlined } from '@ant-design/icons';
+import { ApartmentOutlined, PlusOutlined, SettingOutlined, ShopOutlined, TeamOutlined, UserOutlined } from '@ant-design/icons';
 import { useViewport } from '@/utils/useViewport';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { paths } from '@/routeConfig';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
@@ -81,6 +86,16 @@ const FactoryList: React.FC = () => {
   const [logTitle, setLogTitle] = useState('操作日志');
   const [departmentOptions, setDepartmentOptions] = useState<OrganizationUnit[]>([]);
   const [userOptions, setUserOptions] = useState<User[]>([]);
+
+  // ===== 字段配置（多租户扩展字段） =====
+  const { extColumns, fieldConfigs } = useExtColumns<FactoryType>({ bizType: 'supplier', platform: 'pc' });
+  const customFields = useMemo(
+    () => fieldConfigs.filter(f => f.isSystem === 0),
+    [fieldConfigs]
+  );
+  const goToFieldConfig = () => {
+    navigate(`${paths.fieldConfig}?bizType=supplier`);
+  };
 
   // 收款账户 / 供应商账号 弹窗
   const [accountModalOpen, setAccountModalOpen] = useState(false);
@@ -251,6 +266,7 @@ const FactoryList: React.FC = () => {
       factoryType: factoryModal.data?.factoryType || 'INTERNAL',
       parentOrgUnitId: factoryModal.data?.parentOrgUnitId,
       businessLicense: (factoryModal.data as any)?.businessLicense,
+      ...flattenExtJson(factoryModal.data?.extJson),
     });
   }, [activeTab, dialogMode, factoryModal.data, factoryModal.visible, form]);
 
@@ -322,8 +338,10 @@ const FactoryList: React.FC = () => {
   const handleSave = async () => {
     const values = await form.validateFields();
     const submit = async (remark?: string) => {
+      const extJson = collectExtValues(form, customFields, { extJson: factoryModal.data?.extJson });
       const payload: unknown = {
         ...values,
+        extJson,
         status: values.status || 'active',
         id: factoryModal.data?.id,
         operationRemark: remark,
@@ -367,7 +385,7 @@ const FactoryList: React.FC = () => {
   }, [message, openRemarkModal]);
 
   // ===== Columns =====
-  const columns = useMemo(() => getFactoryColumns({
+  const baseColumns = useMemo(() => getFactoryColumns({
     openDialog,
     handleDelete,
     openLogModal,
@@ -380,6 +398,17 @@ const FactoryList: React.FC = () => {
     scorecardLoading,
     navigate,
   }), [scorecardMap, scorecardLoading, loadScorecardOnce, navigate, handleDelete, openDialog, openLogModal]);
+
+  const columns = useMemo(() => {
+    const actionColIndex = baseColumns.findIndex(c => c.key === 'actions');
+    if (actionColIndex === -1) {
+      return [...baseColumns, ...extColumns] as any;
+    }
+    const before = baseColumns.slice(0, actionColIndex);
+    const actionCol = baseColumns[actionColIndex];
+    const after = baseColumns.slice(actionColIndex + 1);
+    return [...before, ...extColumns, actionCol, ...after] as any;
+  }, [baseColumns, extColumns]);
 
   return (
     <>
@@ -594,6 +623,18 @@ const FactoryList: React.FC = () => {
                     }
                     right={
                       <Space size={8}>
+                        <a onClick={goToFieldConfig} style={{ fontSize: 13 }}>
+                          <SettingOutlined /> 字段配置
+                        </a>
+                        <SchemaPrint
+                          mode="list"
+                          fields={fieldConfigs}
+                          data={factoryList as unknown as Record<string, unknown>[]}
+                          title="供应商列表"
+                          subtitle={`${activeTab === 'ALL' ? '全部' : activeTab === 'MATERIAL' ? '面辅料' : '外发'} · 共 ${total} 家`}
+                          buttonText="打印列表"
+                          type="default"
+                        />
                         <Tag color="blue" style={{ marginRight: 0 }}>
                           {activeTab === 'ALL' ? '全部' : activeTab === 'MATERIAL' ? '面辅料' : '外发'} · 共 {total} 家
                         </Tag>
@@ -645,8 +686,12 @@ const FactoryList: React.FC = () => {
         departmentOptions={departmentOptions}
         userOptions={userOptions}
         businessLicenseUrl={businessLicenseUrl}
+        customFields={customFields}
+        fieldConfigs={fieldConfigs}
+        factoryData={factoryModal.data ?? null}
         onCancel={closeDialog}
         onOk={handleSave}
+        onEdit={() => setDialogMode('edit')}
       />
 
       <ResizableModal

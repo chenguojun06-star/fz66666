@@ -6,6 +6,8 @@ import { StyleInfo } from '@/types/style';
 import { formatDateTimeSecond } from '@/utils/datetime';
 import { normalizeCategoryQuery, normalizeSeasonQuery } from '@/utils/styleCategory';
 import dayjs from 'dayjs';
+import { collectExtValues } from '@/components/common/SchemaForm/ExtFieldsSection';
+import type { FieldConfigItem } from '@/hooks/useFieldConfig';
 
 interface UseStyleFormActionsProps {
   form: FormInstance;
@@ -14,6 +16,7 @@ interface UseStyleFormActionsProps {
   fetchDetail: (id: string) => void;
   setEditLocked: (locked: boolean) => void;
   isNewPage: boolean;
+  customFields: FieldConfigItem[];
   // 颜色码数配置
   sizeColorConfig: {
     sizes: string[];
@@ -38,6 +41,7 @@ export const useStyleFormActions = ({
   fetchDetail,
   setEditLocked,
   isNewPage,
+  customFields,
   sizeColorConfig,
   pendingImages = [],
   pendingColorImages = [],
@@ -190,6 +194,9 @@ export const useStyleFormActions = ({
 
       // 设置样衣数量
       normalizedValues.sampleQuantity = totalQuantity;
+
+      // 收集扩展字段
+      normalizedValues.extJson = collectExtValues(form, customFields, { extJson: currentStyle?.extJson });
 
       let res;
       if (currentStyle?.id) {

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { App, Card, Checkbox, Form, Input, Tabs } from 'antd';
 import ResizableModal from '@/components/common/ResizableModal';
@@ -26,6 +26,7 @@ import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
 import { type StyleFieldParseResult } from '@/services/intelligence/intelligenceApi';
 import { useFormDraft } from '@/hooks/useFormDraft';
+import { useFieldConfig } from '@/hooks/useFieldConfig';
 
 import './styles.css';
 
@@ -57,6 +58,9 @@ const StyleInfoDetailPage: React.FC = () => {
   const showSmartErrorNotice = React.useMemo(() => isSmartFeatureEnabled('smart.production.precheck.enabled'), []);
   const [bomAreaTabKey, setBomAreaTabKey] = useState('bom');
   const basicInfoFormRef = useRef<StyleBasicInfoFormRef | null>(null);
+
+  const { fields: fieldConfigs } = useFieldConfig({ bizType: 'style', platform: 'pc' });
+  const customFields = useMemo(() => fieldConfigs.filter(f => f.isSystem === 0), [fieldConfigs]);
 
   const handleStyleParseResult = (result: StyleFieldParseResult) => {
     basicInfoFormRef.current?.applyStyleParseResult(result);
@@ -142,6 +146,7 @@ const StyleInfoDetailPage: React.FC = () => {
     fetchDetail,
     setEditLocked,
     isNewPage,
+    customFields,
     sizeColorConfig: colorSize.sizeColorConfig,
     pendingImages: colorSize.pendingImages,
     pendingColorImages: colorSize.pendingColorImages,
@@ -217,6 +222,7 @@ const StyleInfoDetailPage: React.FC = () => {
               editLocked={editLocked}
               isNewPage={isNewPage}
               isFieldLocked={isFieldLocked}
+              customFields={customFields}
               pendingImages={colorSize.pendingImages}
               onPendingImagesChange={colorSize.setPendingImages}
               coverRefreshToken={colorSize.coverRefreshToken}
