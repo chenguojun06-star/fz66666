@@ -65,6 +65,12 @@ export interface WarehouseAllocation {
   warehouse: string;
   allocatedQuantity: number;
   allocationType: string;
+  /** Phase 2: 分配综合得分 0-100 */
+  score?: number | null;
+  /** Phase 2: 分配原因 */
+  reason?: string | null;
+  /** Phase 2: 预估到货时效（天） */
+  estimatedDays?: number | null;
   createTime: string;
 }
 
@@ -77,8 +83,62 @@ export interface OrderSplit {
   warehouse: string;
   splitQuantity: number;
   splitReason: string;
+  /** Phase 2: 拆单类型 PARTIAL_STOCK/BY_WAREHOUSE/BY_SKU/PRESALE/ADDRESS */
+  splitType?: string;
   status: number;
   createTime: string;
+}
+
+// ==================== Phase 2: 订单深加工 ====================
+
+export interface MergeOrderItem {
+  orderId: number;
+  orderNo: string;
+  skuCode: string;
+  quantity: number;
+  totalAmount: number;
+}
+
+export interface MergeGroup {
+  receiverName: string;
+  receiverPhone: string;
+  platform: string;
+  orderCount: number;
+  totalQuantity: number;
+  orders: MergeOrderItem[];
+}
+
+export interface MergeResult {
+  successCount: number;
+  failedOrderIds: number[];
+  trackingNo: string;
+  totalCount: number;
+}
+
+export interface GiftRule {
+  id?: number;
+  tenantId?: number;
+  ruleName: string;
+  giftSkuCode: string;
+  giftQuantity: number;
+  triggerType: 'AMOUNT' | 'QUANTITY' | 'PLATFORM';
+  triggerValue?: number;
+  triggerPlatform?: string;
+  startTime?: string;
+  endTime?: string;
+  enabled: number;
+  deleteFlag?: number;
+  createTime?: string;
+  updateTime?: string;
+}
+
+export interface GiftMatch {
+  ruleId: number;
+  ruleName: string;
+  giftSkuCode: string;
+  giftQuantity: number;
+  triggerType: string;
+  reason: string;
 }
 
 export function useEcStock() {
@@ -87,6 +147,8 @@ export function useEcStock() {
   const [suggestions, setSuggestions] = useState<PurchaseSuggestion[]>([]);
   const [allocations, setAllocations] = useState<WarehouseAllocation[]>([]);
   const [splits, setSplits] = useState<OrderSplit[]>([]);
+  const [mergeGroups, setMergeGroups] = useState<MergeGroup[]>([]);
+  const [giftRules, setGiftRules] = useState<GiftRule[]>([]);
   const [loading, setLoading] = useState(false);
 
   const fetchStock = useCallback(async () => {
@@ -171,13 +233,60 @@ export function useEcStock() {
     await fetchStock();
   }, [fetchStock]);
 
+  // ==================== Phase 2: 订单深加工 ====================
+
+  /** 查询合单候选组 */
+  const fetchMergeCandidates = useCallback(async () => {
+    try {
+      const res = await api.get<ApiResult<MergeGroup[]>>('/ecommerce/merge-candidates');
+      setMergeGroups(res?.data ?? []);
+    } catch { /* handled */ }
+  }, []);
+
+  /** 合单发货 */
+  const mergeOutbound = useCallback(async (orderIds: number[], trackingNo: string, expressCompany: string) => {
+    const res = await api.post<ApiResult<MergeResult>>('/ecommerce/merge-outbound',
+      { orderIds, trackingNo, expressCompany });
+    await fetchMergeCandidates();
+    return res?.data;
+  }, [fetchMergeCandidates]);
+
+  /** 查询赠品规则 */
+  const fetchGiftRules = useCallback(async () => {
+    try {
+      const res = await api.get<ApiResult<GiftRule[]>>('/ecommerce/gift-rules');
+      setGiftRules(res?.data ?? []);
+    } catch { /* handled */ }
+  }, []);
+
+  /** 保存赠品规则 */
+  const saveGiftRule = useCallback(async (rule: GiftRule) => {
+    await api.post('/ecommerce/gift-rules', rule);
+    await fetchGiftRules();
+  }, [fetchGiftRules]);
+
+  /** 删除赠品规则 */
+  const deleteGiftRule = useCallback(async (id: number) => {
+    await api.delete(`/ecommerce/gift-rules/${id}`);
+    await fetchGiftRules();
+  }, [fetchGiftRules]);
+
+  /** 匹配赠品 */
+  const matchGifts = useCallback(async (orderAmount?: number, orderQuantity?: number, platformCode?: string) => {
+    const res = await api.post<ApiResult<GiftMatch[]>>('/ecommerce/gift-rules/match',
+      { orderAmount, orderQuantity, platformCode });
+    return res?.data ?? [];
+  }, []);
+
   return useMemo(() => ({
-    stockList, alerts, suggestions, allocations, splits, loading,
+    stockList, alerts, suggestions, allocations, splits, mergeGroups, giftRules, loading,
     fetchStock, fetchLowStock, fetchAlerts, fetchSuggestions,
     fetchAllocations, fetchSplits, syncAll, generateSuggestions, aiScanSuggestions,
     approveSuggestion, rejectSuggestion, resolveAlert, updateSafeStock,
-  }), [stockList, alerts, suggestions, allocations, splits, loading,
+    fetchMergeCandidates, mergeOutbound, fetchGiftRules, saveGiftRule, deleteGiftRule, matchGifts,
+  }), [stockList, alerts, suggestions, allocations, splits, mergeGroups, giftRules, loading,
     fetchStock, fetchLowStock, fetchAlerts, fetchSuggestions,
     fetchAllocations, fetchSplits, syncAll, generateSuggestions, aiScanSuggestions,
-    approveSuggestion, rejectSuggestion, resolveAlert, updateSafeStock]);
+    approveSuggestion, rejectSuggestion, resolveAlert, updateSafeStock,
+    fetchMergeCandidates, mergeOutbound, fetchGiftRules, saveGiftRule, deleteGiftRule, matchGifts]);
 }

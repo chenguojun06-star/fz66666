@@ -58,6 +58,12 @@ public class EcommerceOrder {
     private String productionOrderId;
     private String productionOrderNo;
 
+    /** 是否预售订单：0否1是（Phase 2 订单深加工） */
+    private Integer isPresale;
+
+    /** 预售说明（到货时间等） */
+    private String presaleRemark;
+
     private Long tenantId;
 
     @TableField(fill = FieldFill.INSERT)

@@ -19,6 +19,8 @@ public class EcOrderSplit {
     private String warehouse;
     private Integer splitQuantity;
     private String splitReason;
+    /** 拆单类型：PARTIAL_STOCK缺货/BY_WAREHOUSE按仓/BY_SKU按SKU/PRESALE预售/ADDRESS按地址（Phase 2） */
+    private String splitType;
     private Integer status;
 
     @TableField(fill = FieldFill.INSERT)

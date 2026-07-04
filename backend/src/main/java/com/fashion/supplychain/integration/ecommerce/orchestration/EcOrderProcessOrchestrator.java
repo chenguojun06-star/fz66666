@@ -84,10 +84,14 @@ public class EcOrderProcessOrchestrator {
             record.setWarehouse(wa.warehouse());
             record.setAllocatedQuantity(wa.quantity());
             record.setAllocationType("AUTO");
+            // Phase 2: 智能分仓透明化决策（得分/原因/时效）
+            record.setScore(wa.score());
+            record.setReason(wa.reason());
+            record.setEstimatedDays(wa.estimatedDays());
             allocationService.save(record);
             totalAllocated += wa.quantity();
-            log.info("[EcOrderProcessOrchestrator] 仓库分配: orderNo={}, warehouse={}, qty={}",
-                    orderNo, wa.warehouse(), wa.quantity());
+            log.info("[EcOrderProcessOrchestrator] 仓库分配: orderNo={}, warehouse={}, qty={}, score={}, estDays={}",
+                    orderNo, wa.warehouse(), wa.quantity(), wa.score(), wa.estimatedDays());
         }
 
         // 更新订单仓库状态为"备货中"，触发 pendingOrders 扣减可售库存

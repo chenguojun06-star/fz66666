@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Button, Space, Tabs, Tag, Tooltip, Form, InputNumber, App } from 'antd';
-import { WarningOutlined, ShoppingCartOutlined, InboxOutlined, SwapOutlined, ThunderboltOutlined, RobotOutlined } from '@ant-design/icons';
+import { Button, Space, Tabs, Tag, Tooltip, Form, InputNumber, Input, Select, App } from 'antd';
+import { WarningOutlined, ShoppingCartOutlined, InboxOutlined, SwapOutlined, ThunderboltOutlined, RobotOutlined, MergeCellsOutlined, GiftOutlined, PlusOutlined, DeleteOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
 import ResizableModal from '@/components/common/ResizableModal';
 import RowActions from '@/components/common/RowActions';
 import { useEcStock } from './useEcStock';
 import type { ColumnsType } from 'antd/es/table';
-import type { UniversalStock, StockAlert, PurchaseSuggestion, WarehouseAllocation } from './useEcStock';
+import type { UniversalStock, StockAlert, PurchaseSuggestion, WarehouseAllocation, MergeGroup, GiftRule } from './useEcStock';
 
 const UrgencyColorMap: Record<string, string> = {
   urgent: 'red', high: 'orange', medium: 'blue', low: 'default',
@@ -47,13 +47,147 @@ const SplitDetailModal: React.FC<{ open: boolean; splits: { orderNo: string; sku
   </ResizableModal>
 );
 
+/** 合单发货弹窗 */
+const MergeOutboundModal: React.FC<{
+  open: boolean;
+  group: MergeGroup | null;
+  onClose: () => void;
+  onOk: (orderIds: number[], trackingNo: string, expressCompany: string) => Promise<void>;
+}> = ({ open, group, onClose, onOk }) => {
+  const [form] = Form.useForm<{ trackingNo: string; expressCompany: string }>();
+  const [submitting, setSubmitting] = useState(false);
+  const handleOk = useCallback(async () => {
+    const val = await form.validateFields();
+    if (!group) return;
+    setSubmitting(true);
+    try {
+      await onOk(group.orders.map(o => o.orderId), val.trackingNo, val.expressCompany);
+      onClose();
+    } finally { setSubmitting(false); }
+  }, [form, group, onOk, onClose]);
+  return (
+    <ResizableModal title="合单发货" open={open} onCancel={onClose} onOk={handleOk} confirmLoading={submitting} width="40vw">
+      {group && (
+        <div style={{ marginBottom: 12 }}>
+          <div style={{ color: 'var(--color-text-secondary)', fontSize: 13, marginBottom: 8 }}>
+            收货人：{group.receiverName} | {group.receiverPhone} | 平台：{group.platform}
+          </div>
+          <div style={{ color: 'var(--color-text-secondary)', fontSize: 13, marginBottom: 8 }}>
+            共 {group.orderCount} 笔订单，{group.totalQuantity} 件商品
+          </div>
+        </div>
+      )}
+      <Form form={form} layout="vertical">
+        <Form.Item label="快递单号" name="trackingNo" rules={[{ required: true, message: '请输入快递单号' }]}>
+          <Input placeholder="请输入快递单号" />
+        </Form.Item>
+        <Form.Item label="快递公司" name="expressCompany" rules={[{ required: true, message: '请选择快递公司' }]}>
+          <Select placeholder="请选择快递公司" options={[
+            { label: '顺丰', value: 'SF' },
+            { label: '中通', value: 'ZTO' },
+            { label: '圆通', value: 'YTO' },
+            { label: '韵达', value: 'YD' },
+            { label: '申通', value: 'STO' },
+            { label: '极兔', value: 'JT' },
+            { label: '邮政', value: 'EMS' },
+            { label: '京东', value: 'JD' },
+          ]} />
+        </Form.Item>
+      </Form>
+    </ResizableModal>
+  );
+};
+
+/** 赠品规则编辑弹窗 */
+const GiftRuleModal: React.FC<{
+  open: boolean;
+  record: GiftRule | null;
+  onClose: () => void;
+  onOk: (rule: GiftRule) => Promise<void>;
+}> = ({ open, record, onClose, onOk }) => {
+  const [form] = Form.useForm<GiftRule>();
+  const [submitting, setSubmitting] = useState(false);
+  useEffect(() => {
+    if (open) {
+      form.setFieldsValue(record ?? { triggerType: 'AMOUNT', giftQuantity: 1, enabled: 1 });
+    }
+  }, [open, record, form]);
+  const handleOk = useCallback(async () => {
+    const val = await form.validateFields();
+    setSubmitting(true);
+    try {
+      await onOk({ ...record, ...val });
+      onClose();
+    } finally { setSubmitting(false); }
+  }, [form, record, onOk, onClose]);
+  return (
+    <ResizableModal title={record?.id ? '编辑赠品规则' : '新增赠品规则'} open={open} onCancel={onClose} onOk={handleOk} confirmLoading={submitting} width="40vw">
+      <Form form={form} layout="vertical">
+        <Form.Item label="规则名称" name="ruleName" rules={[{ required: true, message: '请输入规则名称' }]}>
+          <Input placeholder="如：满99送袜子" />
+        </Form.Item>
+        <Form.Item label="赠品SKU编码" name="giftSkuCode" rules={[{ required: true, message: '请输入赠品SKU编码' }]}>
+          <Input placeholder="赠品SKU编码" />
+        </Form.Item>
+        <Form.Item label="赠品数量" name="giftQuantity" rules={[{ required: true, message: '请输入赠品数量' }]}>
+          <InputNumber min={1} precision={0} style={{ width: '100%' }} />
+        </Form.Item>
+        <Form.Item label="触发类型" name="triggerType" rules={[{ required: true }]}>
+          <Select options={[
+            { label: '按订单金额（≥阈值赠送）', value: 'AMOUNT' },
+            { label: '按订单数量（≥阈值赠送）', value: 'QUANTITY' },
+            { label: '按平台（指定平台赠送）', value: 'PLATFORM' },
+          ]} />
+        </Form.Item>
+        <Form.Item shouldUpdate noStyle>
+          {({ getFieldValue }) => {
+            const type = getFieldValue('triggerType');
+            if (type === 'AMOUNT' || type === 'QUANTITY') {
+              return (
+                <Form.Item label={type === 'AMOUNT' ? '触发金额（元）' : '触发数量（件）'} name="triggerValue" rules={[{ required: true, message: '请输入触发阈值' }]}>
+                  <InputNumber min={0} precision={type === 'AMOUNT' ? 2 : 0} style={{ width: '100%' }} />
+                </Form.Item>
+              );
+            }
+            if (type === 'PLATFORM') {
+              return (
+                <Form.Item label="触发平台" name="triggerPlatform" rules={[{ required: true, message: '请选择平台' }]}>
+                  <Select options={[
+                    { label: '淘宝', value: 'TAOBAO' },
+                    { label: '天猫', value: 'TMALL' },
+                    { label: '京东', value: 'JD' },
+                    { label: '抖音', value: 'DOUYIN' },
+                    { label: '拼多多', value: 'PINDUODUO' },
+                    { label: '小红书', value: 'XIAOHONGSHU' },
+                  ]} />
+                </Form.Item>
+              );
+            }
+            return null;
+          }}
+        </Form.Item>
+        <Form.Item label="是否启用" name="enabled">
+          <Select options={[{ label: '启用', value: 1 }, { label: '禁用', value: 0 }]} />
+        </Form.Item>
+      </Form>
+    </ResizableModal>
+  );
+};
+
 const SmartStockTab: React.FC = () => {
   const { message } = App.useApp();
   const st = useEcStock();
   const [safeStockRecord, setSafeStockRecord] = useState<UniversalStock | null>(null);
   const [splitVisible, setSplitVisible] = useState(false);
+  const [mergeGroup, setMergeGroup] = useState<MergeGroup | null>(null);
+  const [mergeModalOpen, setMergeModalOpen] = useState(false);
+  const [giftRuleRecord, setGiftRuleRecord] = useState<GiftRule | null>(null);
+  const [giftRuleModalOpen, setGiftRuleModalOpen] = useState(false);
 
-  useEffect(() => { st.fetchAlerts(); st.fetchSuggestions(); st.fetchStock(); st.fetchAllocations(); }, [st]);
+  useEffect(() => {
+    st.fetchAlerts(); st.fetchSuggestions(); st.fetchStock(); st.fetchAllocations();
+    st.fetchMergeCandidates(); st.fetchGiftRules();
+  }, [st]);
 
   const handleResolve = useCallback(async (id: number) => {
     await st.resolveAlert(id); message.success('已处理');
@@ -87,6 +221,30 @@ const SmartStockTab: React.FC = () => {
 
   const handleSafeStock = useCallback(async (skuId: number, val: number) => {
     await st.updateSafeStock(skuId, val); message.success('已更新');
+  }, [st, message]);
+
+  // Phase 2: 合单发货
+  const handleMergeOutbound = useCallback(async (orderIds: number[], trackingNo: string, expressCompany: string) => {
+    try {
+      const res = await st.mergeOutbound(orderIds, trackingNo, expressCompany);
+      if (res?.failedOrderIds.length) {
+        message.warning(`合单完成：成功 ${res.successCount} 笔，失败 ${res.failedOrderIds.length} 笔`);
+      } else {
+        message.success(`合单发货成功，共 ${res?.successCount} 笔订单`);
+      }
+    } catch {
+      message.error('合单发货失败');
+    }
+  }, [st, message]);
+
+  // Phase 2: 赠品规则保存/删除
+  const handleSaveGiftRule = useCallback(async (rule: GiftRule) => {
+    await st.saveGiftRule(rule);
+    message.success(rule.id ? '规则已更新' : '规则已新增');
+  }, [st, message]);
+
+  const handleDeleteGiftRule = useCallback(async (id: number) => {
+    await st.deleteGiftRule(id); message.success('已删除');
   }, [st, message]);
 
   const alertCols: ColumnsType<StockAlert> = [
@@ -161,9 +319,67 @@ const SmartStockTab: React.FC = () => {
     { title: 'SKU编码', dataIndex: 'skuCode', width: 130 },
     { title: '仓库', dataIndex: 'warehouse', width: 100 },
     { title: '分配数量', dataIndex: 'allocatedQuantity', width: 90 },
+    {
+      title: '分配得分', dataIndex: 'score', width: 100,
+      render: (v?: number | null) => {
+        if (v == null) return <Tag>未评分</Tag>;
+        const color = v >= 80 ? 'success' : v >= 60 ? 'warning' : 'error';
+        return <Tag color={color}>{v}</Tag>;
+      },
+    },
+    {
+      title: '预估时效', dataIndex: 'estimatedDays', width: 90,
+      render: (v?: number | null) => v != null ? `${v}天` : '-',
+    },
+    {
+      title: '分配原因', dataIndex: 'reason', width: 220, ellipsis: true,
+      render: (v?: string | null) => (
+        <Tooltip title={v || '-'}>
+          <span style={{ color: v ? 'var(--color-text-primary)' : 'var(--color-text-quaternary)' }}>
+            {v || '-'}
+          </span>
+        </Tooltip>
+      ),
+    },
     { title: '分配类型', dataIndex: 'allocationType', width: 100 },
     { title: '操作', width: 100, render: () => (
       <RowActions actions={[{ key: 'detail', label: '查看详情', onClick: () => setSplitVisible(true) }]} />
+    )},
+  ];
+
+  // Phase 2: 合单候选组列
+  const mergeCols: ColumnsType<MergeGroup> = [
+    { title: '收货人', dataIndex: 'receiverName', width: 100 },
+    { title: '电话', dataIndex: 'receiverPhone', width: 130 },
+    { title: '平台', dataIndex: 'platform', width: 100 },
+    { title: '订单数', dataIndex: 'orderCount', width: 80 },
+    { title: '总件数', dataIndex: 'totalQuantity', width: 80 },
+    { title: '操作', width: 120, render: (_: unknown, r: MergeGroup) => (
+      <RowActions actions={[{ key: 'merge', label: '合单发货', primary: true, onClick: () => { setMergeGroup(r); setMergeModalOpen(true); } }]} />
+    )},
+  ];
+
+  // Phase 2: 赠品规则列
+  const giftRuleCols: ColumnsType<GiftRule> = [
+    { title: '规则名称', dataIndex: 'ruleName', width: 140 },
+    { title: '赠品SKU', dataIndex: 'giftSkuCode', width: 130 },
+    { title: '赠品数量', dataIndex: 'giftQuantity', width: 80 },
+    {
+      title: '触发类型', dataIndex: 'triggerType', width: 120,
+      render: (v: string, r?: GiftRule) => {
+        const label = v === 'AMOUNT' ? `满${r?.triggerValue}元` : v === 'QUANTITY' ? `满${r?.triggerValue}件` : v === 'PLATFORM' ? r?.triggerPlatform : v;
+        return <Tag color="blue">{label}</Tag>;
+      },
+    },
+    {
+      title: '状态', dataIndex: 'enabled', width: 80,
+      render: (v: number) => <Tag color={v === 1 ? 'success' : 'default'}>{v === 1 ? '启用' : '禁用'}</Tag>,
+    },
+    { title: '操作', width: 150, render: (_: unknown, r: GiftRule) => (
+      <RowActions actions={[
+        { key: 'edit', label: '编辑', onClick: () => { setGiftRuleRecord(r); setGiftRuleModalOpen(true); } },
+        { key: 'delete', label: '删除', danger: true, onClick: () => handleDeleteGiftRule(r.id!) },
+      ]} />
     )},
   ];
 
@@ -189,6 +405,33 @@ const SmartStockTab: React.FC = () => {
     },
     { key: 'stock', label: <span><InboxOutlined /> 库存明细</span>, children: <ResizableTable<UniversalStock> dataSource={st.stockList} columns={stockCols} rowKey="id" size="small" loading={st.loading} /> },
     { key: 'allocations', label: <span><SwapOutlined /> 分配记录</span>, children: <ResizableTable<WarehouseAllocation> dataSource={st.allocations} columns={allocCols} rowKey="id" size="small" loading={st.loading} /> },
+    {
+      key: 'merge',
+      label: <span><MergeCellsOutlined /> 合单管理</span>,
+      children: (
+        <div>
+          <div style={{ color: 'var(--color-text-secondary)', fontSize: 13, marginBottom: 12 }}>
+            系统自动扫描同收货人+同平台的多笔待发货订单，合并成一个包裹发货可节省运费
+          </div>
+          <ResizableTable<MergeGroup> dataSource={st.mergeGroups} columns={mergeCols} rowKey={(r) => `${r.receiverPhone}_${r.platform}`} size="small" loading={st.loading} />
+        </div>
+      ),
+    },
+    {
+      key: 'gift',
+      label: <span><GiftOutlined /> 赠品规则</span>,
+      children: (
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <span style={{ color: 'var(--color-text-secondary)', fontSize: 13 }}>
+              按订单金额/数量/平台自动匹配赠品规则
+            </span>
+            <Button icon={<PlusOutlined />} type="primary" onClick={() => { setGiftRuleRecord(null); setGiftRuleModalOpen(true); }}>新增规则</Button>
+          </div>
+          <ResizableTable<GiftRule> dataSource={st.giftRules} columns={giftRuleCols} rowKey="id" size="small" loading={st.loading} />
+        </div>
+      ),
+    },
   ];
 
   return (
@@ -196,6 +439,8 @@ const SmartStockTab: React.FC = () => {
       <Tabs items={tabItems} />
       <SafeStockModal open={!!safeStockRecord} record={safeStockRecord} onClose={() => setSafeStockRecord(null)} onOk={handleSafeStock} />
       <SplitDetailModal open={splitVisible} splits={[]} onClose={() => setSplitVisible(false)} />
+      <MergeOutboundModal open={mergeModalOpen} group={mergeGroup} onClose={() => setMergeModalOpen(false)} onOk={handleMergeOutbound} />
+      <GiftRuleModal open={giftRuleModalOpen} record={giftRuleRecord} onClose={() => setGiftRuleModalOpen(false)} onOk={handleSaveGiftRule} />
     </>
   );
 };

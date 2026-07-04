@@ -2,8 +2,12 @@ package com.fashion.supplychain.integration.ecommerce.controller;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.fashion.supplychain.common.Result;
+import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.integration.ecommerce.entity.EcommerceOrder;
+import com.fashion.supplychain.integration.ecommerce.entity.EcGiftRule;
 import com.fashion.supplychain.integration.ecommerce.orchestration.EcommerceOrderOrchestrator;
+import com.fashion.supplychain.integration.ecommerce.orchestration.EcOrderMergeOrchestrator;
+import com.fashion.supplychain.integration.ecommerce.service.EcGiftRuleService;
 import com.fashion.supplychain.system.service.EcPlatformConfigService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,7 +19,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
+import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Map;
 
 @Slf4j
@@ -30,6 +36,12 @@ public class EcommerceOrderController {
 
     @Autowired
     private EcPlatformConfigService ecPlatformConfigService;
+
+    @Autowired
+    private EcOrderMergeOrchestrator mergeOrchestrator;
+
+    @Autowired
+    private EcGiftRuleService giftRuleService;
 
     private static final long WEBHOOK_TIMESTAMP_TOLERANCE_MS = 5 * 60 * 1000;
     private static final ObjectMapper objectMapper = new ObjectMapper();
@@ -101,6 +113,74 @@ public class EcommerceOrderController {
             log.error("[EC直接出库失败] id={} err={}", id, e.getMessage());
             return Result.fail("出库失败: " + e.getMessage());
         }
+    }
+
+    // ==================== Phase 2: 订单深加工 ====================
+
+    /** 查询合单候选组（同收货人+同平台+待发货，≥2笔） */
+    @GetMapping("/merge-candidates")
+    public Result<List<EcOrderMergeOrchestrator.MergeGroup>> mergeCandidates() {
+        Long tenantId = UserContext.tenantId();
+        return Result.success(mergeOrchestrator.scanMergeCandidates(tenantId));
+    }
+
+    /** 合单发货：给多笔订单设置同一快递单号 */
+    @PostMapping("/merge-outbound")
+    public Result<EcOrderMergeOrchestrator.MergeResult> mergeOutbound(@RequestBody Map<String, Object> body) {
+        try {
+            Long tenantId = UserContext.tenantId();
+            @SuppressWarnings("unchecked")
+            List<Integer> orderIdsRaw = (List<Integer>) body.get("orderIds");
+            if (orderIdsRaw == null || orderIdsRaw.isEmpty()) {
+                return Result.fail("订单ID列表不能为空");
+            }
+            List<Long> orderIds = orderIdsRaw.stream().map(Number::longValue).toList();
+            String trackingNo = (String) body.get("trackingNo");
+            String expressCompany = (String) body.get("expressCompany");
+            return Result.success(mergeOrchestrator.batchOutbound(tenantId, orderIds, trackingNo, expressCompany));
+        } catch (Exception e) {
+            log.error("[合单发货失败] {}", e.getMessage());
+            return Result.fail("合单失败: " + e.getMessage());
+        }
+    }
+
+    /** 查询赠品规则列表 */
+    @GetMapping("/gift-rules")
+    public Result<List<EcGiftRule>> listGiftRules() {
+        Long tenantId = UserContext.tenantId();
+        return Result.success(giftRuleService.listByTenant(tenantId));
+    }
+
+    /** 保存赠品规则（新增/更新） */
+    @PostMapping("/gift-rules")
+    public Result<EcGiftRule> saveGiftRule(@RequestBody EcGiftRule rule) {
+        Long tenantId = UserContext.tenantId();
+        rule.setTenantId(tenantId);
+        if (rule.getEnabled() == null) rule.setEnabled(1);
+        if (rule.getDeleteFlag() == null) rule.setDeleteFlag(0);
+        if (rule.getGiftQuantity() == null) rule.setGiftQuantity(1);
+        giftRuleService.saveOrUpdate(rule);
+        return Result.success(rule);
+    }
+
+    /** 删除赠品规则（软删除） */
+    @DeleteMapping("/gift-rules/{id}")
+    public Result<Void> deleteGiftRule(@PathVariable Long id) {
+        Long tenantId = UserContext.tenantId();
+        giftRuleService.softDelete(tenantId, id);
+        return Result.success(null);
+    }
+
+    /** 匹配赠品：根据订单金额/数量/平台返回命中的赠品 */
+    @PostMapping("/gift-rules/match")
+    public Result<List<EcGiftRuleService.GiftMatch>> matchGifts(@RequestBody Map<String, Object> body) {
+        Long tenantId = UserContext.tenantId();
+        BigDecimal amount = body.get("orderAmount") != null
+                ? new BigDecimal(body.get("orderAmount").toString()) : null;
+        Integer qty = body.get("orderQuantity") != null
+                ? Integer.valueOf(body.get("orderQuantity").toString()) : null;
+        String platform = (String) body.get("platformCode");
+        return Result.success(giftRuleService.matchGifts(tenantId, amount, qty, platform));
     }
 
     private Long resolveTenantFromConfig(String platform, String appKey) {
