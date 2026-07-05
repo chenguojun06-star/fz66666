@@ -267,17 +267,25 @@ const ProductionList: React.FC = () => {
   }, [patrolRiskMap]);
 
   // 点击统计卡片筛选
-  const handleStatClick = (type: 'production' | 'delayed' | 'today') => {
+  const handleStatClick = (type: 'all' | 'production' | 'completed' | 'delayed' | 'today') => {
     setActiveStatFilter(type);
-    if (type === 'production') {
+    if (type === 'all') {
+      // 全部：不排除终态，显示所有订单（含已完成/已关单）
       setShowDelayedOnly(false);
-      setQueryParams({ ...queryParams, status: '', delayedOnly: undefined, todayOnly: undefined, page: 1 });
+      setQueryParams({ ...queryParams, status: '', delayedOnly: undefined, todayOnly: undefined, excludeTerminal: undefined, page: 1 });
+    } else if (type === 'production') {
+      setShowDelayedOnly(false);
+      setQueryParams({ ...queryParams, status: '', delayedOnly: undefined, todayOnly: undefined, excludeTerminal: true, page: 1 });
+    } else if (type === 'completed') {
+      // 已完成：只看终态订单
+      setShowDelayedOnly(false);
+      setQueryParams({ ...queryParams, status: 'completed', delayedOnly: undefined, todayOnly: undefined, excludeTerminal: undefined, page: 1 });
     } else if (type === 'delayed') {
       setShowDelayedOnly(true);
-      setQueryParams({ ...queryParams, status: '', delayedOnly: 'true', todayOnly: undefined, page: 1 });
+      setQueryParams({ ...queryParams, status: '', delayedOnly: 'true', todayOnly: undefined, excludeTerminal: true, page: 1 });
     } else if (type === 'today') {
       setShowDelayedOnly(false);
-      setQueryParams({ ...queryParams, status: '', delayedOnly: undefined, todayOnly: 'true', page: 1 });
+      setQueryParams({ ...queryParams, status: '', delayedOnly: undefined, todayOnly: 'true', excludeTerminal: true, page: 1 });
     }
   };
 
@@ -319,13 +327,31 @@ const ProductionList: React.FC = () => {
             activeKey={activeStatFilter}
             cards={[
               {
+                key: 'all',
+                items: [
+                  { label: '全部订单', value: Number(globalStats.totalOrders ?? 0), unit: '个', color: 'var(--color-text-primary)' },
+                  { label: '总数量', value: Number(globalStats.totalQuantity ?? 0), unit: '件', color: 'var(--color-text-primary)' },
+                ],
+                onClick: () => handleStatClick('all'),
+                activeColor: 'var(--color-text-primary)',
+              },
+              {
                 key: 'production',
                 items: [
-                  { label: '生产订单', value: Number(globalStats.activeOrders ?? globalStats.totalOrders ?? 0), unit: '个', color: 'var(--color-primary)' },
+                  { label: '生产中', value: Number(globalStats.activeOrders ?? globalStats.totalOrders ?? 0), unit: '个', color: 'var(--color-primary)' },
                   { label: '数量', value: Number(globalStats.activeQuantity ?? globalStats.totalQuantity ?? 0), unit: '件', color: 'var(--color-success)' },
                 ],
                 onClick: () => handleStatClick('production'),
                 activeColor: 'var(--color-primary)',
+              },
+              {
+                key: 'completed',
+                items: [
+                  { label: '已完成', value: Number(globalStats.completedOrders ?? 0), unit: '个', color: 'var(--color-success)' },
+                  { label: '数量', value: Number(globalStats.completedQuantity ?? 0), unit: '件', color: 'var(--color-success)' },
+                ],
+                onClick: () => handleStatClick('completed'),
+                activeColor: 'var(--color-success)',
               },
               {
                 key: 'delayed',

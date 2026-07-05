@@ -33,7 +33,7 @@ export const useProgressFilters = () => {
     localStorage.setItem(PROGRESS_VIEW_MODE_STORAGE_KEY, mode);
     setViewMode(mode);
   };
-  const [activeStatFilter, setActiveStatFilter] = useState<'production' | 'delayed' | 'today'>('production');
+  const [activeStatFilter, setActiveStatFilter] = useState<'all' | 'production' | 'completed' | 'delayed' | 'today'>('production');
   const [dateSortAsc, setDateSortAsc] = useState<boolean>(() => getDateSortFromStorage());
 
   const toggleDateSort = useCallback(() => {
@@ -64,10 +64,16 @@ export const useProgressFilters = () => {
     { label: '已取消', value: 'cancelled' },
   ]), []);
 
-  const handleStatClick = (type: 'production' | 'delayed' | 'today') => {
+  const handleStatClick = (type: 'all' | 'production' | 'completed' | 'delayed' | 'today') => {
     setActiveStatFilter(type);
-    if (type === 'production') {
+    if (type === 'all') {
+      // 全部：不排除终态，显示所有订单（含已完成/已关单）
+      setQueryParams((prev) => ({ ...prev, status: '', includeScrapped: undefined, delayedOnly: undefined, todayOnly: undefined, excludeTerminal: undefined, page: 1 }));
+    } else if (type === 'production') {
       setQueryParams((prev) => ({ ...prev, status: '', includeScrapped: undefined, delayedOnly: undefined, todayOnly: undefined, excludeTerminal: true, page: 1 }));
+    } else if (type === 'completed') {
+      // 已完成：只看终态订单
+      setQueryParams((prev) => ({ ...prev, status: 'completed', includeScrapped: undefined, delayedOnly: undefined, todayOnly: undefined, excludeTerminal: undefined, page: 1 }));
     } else if (type === 'delayed') {
       setQueryParams((prev) => ({ ...prev, status: '', includeScrapped: undefined, delayedOnly: 'true', todayOnly: undefined, excludeTerminal: true, page: 1 }));
     } else if (type === 'today') {

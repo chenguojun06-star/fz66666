@@ -61,7 +61,7 @@ export function useProductionListData() {
     setQueryParams(prev => ({ ...prev, page: 1 }));
   };
   const [showDelayedOnly, setShowDelayedOnly] = useState(false);
-  const [activeStatFilter, setActiveStatFilter] = useState<'production' | 'delayed' | 'today'>('production');
+  const [activeStatFilter, setActiveStatFilter] = useState<'all' | 'production' | 'completed' | 'delayed' | 'today'>('production');
   const [smartQueueFilter, setSmartQueueFilterRaw] = useState<'all' | 'urgent' | 'behind' | 'stagnant' | 'overdue'>('all');
   const setSmartQueueFilter = useCallback((filter: 'all' | 'urgent' | 'behind' | 'stagnant' | 'overdue') => {
     setSmartQueueFilterRaw(filter);

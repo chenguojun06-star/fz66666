@@ -63,12 +63,28 @@ type ProgressPageContentProps = {
 
 const STAT_CARDS_CONFIG = [
   {
+    key: 'all',
+    getItems: (gs: Record<string, number>) => [
+      { label: '全部订单', value: Number(gs.totalOrders ?? 0), unit: '个', color: 'var(--color-text-primary)' },
+      { label: '总数量', value: Number(gs.totalQuantity ?? 0), unit: '件', color: 'var(--color-text-primary)' },
+    ],
+    activeColor: 'var(--color-text-primary)',
+  },
+  {
     key: 'production',
     getItems: (gs: Record<string, number>) => [
-      { label: '生产订单', value: Number(gs.activeOrders ?? gs.totalOrders ?? 0), unit: '个', color: 'var(--color-primary)' },
+      { label: '生产中', value: Number(gs.activeOrders ?? gs.totalOrders ?? 0), unit: '个', color: 'var(--color-primary)' },
       { label: '生产数量', value: Number(gs.activeQuantity ?? gs.totalQuantity ?? 0), unit: '件', color: 'var(--color-success)' },
     ],
     activeColor: 'var(--color-primary)',
+  },
+  {
+    key: 'completed',
+    getItems: (gs: Record<string, number>) => [
+      { label: '已完成', value: Number(gs.completedOrders ?? 0), unit: '个', color: 'var(--color-success)' },
+      { label: '完成数量', value: Number(gs.completedQuantity ?? 0), unit: '件', color: 'var(--color-success)' },
+    ],
+    activeColor: 'var(--color-success)',
   },
   {
     key: 'delayed',
