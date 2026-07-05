@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import api from '@/utils/api';
 import { message } from 'antd';
+import { MATERIAL_PURCHASE_STATUS_MAP } from '@/constants/statusMaps';
 
 interface ProcurementItem {
   id: string;
@@ -29,27 +30,13 @@ interface HookState {
   completeItem: (purchaseId: string) => Promise<void>;
 }
 
-const STATUS_LABELS: Record<string, string> = {
-  pending: '待采购',
-  received: '已领取',
-  partial: '部分到货',
-  partial_arrival: '部分到货',
-  awaiting_confirm: '待确认完成',
-  completed: '已完成',
-  cancelled: '已取消',
-  warehouse_pending: '待仓库出库',
-};
-
-const STATUS_COLORS: Record<string, string> = {
-  pending: 'default',
-  received: 'processing',
-  partial: 'warning',
-  partial_arrival: 'warning',
-  awaiting_confirm: 'warning',
-  completed: 'success',
-  cancelled: 'error',
-  warehouse_pending: 'processing',
-};
+// 引用统一映射表（与小程序/H5 一致），见 frontend/src/constants/statusMaps.ts
+const STATUS_LABELS: Record<string, string> = Object.fromEntries(
+  Object.entries(MATERIAL_PURCHASE_STATUS_MAP).map(([k, v]) => [k, v.text]),
+);
+const STATUS_COLORS: Record<string, string> = Object.fromEntries(
+  Object.entries(MATERIAL_PURCHASE_STATUS_MAP).map(([k, v]) => [k, v.color]),
+);
 
 export { STATUS_LABELS, STATUS_COLORS };
 

@@ -385,7 +385,9 @@ export function usePurchaseActions({
   const handleReceiveAll = async () => {
     const orderNo = String(currentPurchase?.orderNo || '').trim();
     const sourceType = String(currentPurchase?.sourceType || '').trim();
-    const isSampleView = sourceType === 'sample' || sourceType === 'batch' || !orderNo || orderNo === '-';
+    // P1-4 修复：去掉 !orderNo || orderNo === '-' 启发式判断，
+    // 仅按 sourceType 判断样衣视图，避免大货订单 orderNo 临时为空时被误判
+    const isSampleView = sourceType === 'sample' || sourceType === 'batch';
     if (isSampleView) {
       const pending = detailPurchases.filter((p) => String(p.status || '').toLowerCase() === 'pending' && String(p.id || '').trim());
       if (!pending.length) { message.info('没有待采购的任务'); return; }
@@ -621,10 +623,10 @@ export function usePurchaseActions({
   };
 
   const isSamplePurchaseView = useMemo(() => {
+    // P1-4 修复：去掉 !orderNo || orderNo === '-' 启发式判断，仅按 sourceType 判断
     const sourceType = String(currentPurchase?.sourceType || '').trim();
-    const orderNo = String(currentPurchase?.orderNo || '').trim();
-    return sourceType === 'sample' || sourceType === 'batch' || !orderNo || orderNo === '-';
-  }, [currentPurchase?.sourceType, currentPurchase?.orderNo]);
+    return sourceType === 'sample' || sourceType === 'batch';
+  }, [currentPurchase?.sourceType]);
 
   return {
     returnConfirmModal, returnConfirmForm, returnConfirmSubmitting,

@@ -561,6 +561,8 @@ public class MaterialPurchaseStatusHelper {
     private void rollbackStockIfNeeded(MaterialPurchase purchase, String purchaseId) {
         int arrivedQty = purchase.getArrivedQuantity() != null ? purchase.getArrivedQuantity() : 0;
         if (arrivedQty > 0) {
+            // P1-5 说明：仅 order（大货订单）/ sample（样衣采购）视为订单驱动，
+            // 此处不回退库存（由订单状态机处理）；batch/stock/manual 不涉及订单库存，需回退。
             String sourceType = purchase.getSourceType();
             boolean isOrderDriven = "order".equals(sourceType) || "sample".equals(sourceType);
             if (!isOrderDriven) {

@@ -116,6 +116,13 @@ public class MaterialPurchaseReturnHelper {
         return ok;
     }
 
+    /**
+     * 判断是否为"订单驱动"的采购任务。
+     * <p>P1-5 说明：仅 order（大货订单）/ sample（样衣采购）两种 sourceType 视为订单驱动，
+     * 应回料/撤回时不在此处回退库存（由订单状态机或后续流程处理）。
+     * batch/stock/manual 三种 sourceType 不涉及订单库存，保持当前逻辑（不在订单驱动集合内），
+     * 回料确认/撤回时按原逻辑同步库存增减。
+     */
     public boolean isOrderDrivenPurchase(MaterialPurchase purchase) {
         if (purchase == null) return false;
         String sourceType = purchase.getSourceType();

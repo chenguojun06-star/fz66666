@@ -474,7 +474,7 @@ const DistributorTab: React.FC = () => {
         MISSING_LOCAL: { color: 'orange', label: '本地缺失' },
         AMOUNT_MISMATCH: { color: 'red', label: '金额不符' },
       };
-      const it = v ? m[v] : null; return it ? <Tag color={it.color}>{it.label}</Tag> : <Tag>{v}</Tag>;
+      const it = v ? m[v] : null; return it ? <Tag color={it.color}>{it.label}</Tag> : <Tag>未知</Tag>;
     }},
     { title: '平台金额', dataIndex: 'platformAmount', width: 100, align: 'right' as const, render: (v?: number) => v != null ? `¥${v.toFixed(2)}` : '-' },
     { title: '本地金额', dataIndex: 'localAmount', width: 100, align: 'right' as const, render: (v?: number) => v != null ? `¥${v.toFixed(2)}` : '-' },

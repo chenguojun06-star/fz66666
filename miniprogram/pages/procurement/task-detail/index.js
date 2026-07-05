@@ -15,6 +15,8 @@ Page({
     orderId: '',
     orderNo: '',
     styleNo: '',
+    patternProductionId: '',
+    sourceType: '',
     loading: false,
     submitting: false,
     materialPurchases: [],
@@ -28,8 +30,21 @@ Page({
   onLoad(options) {
     this.orderNo = decodeURIComponent(options.orderNo || '');
     const styleNo = decodeURIComponent(options.styleNo || '');
-    this.setData({ orderNo: this.orderNo, styleNo });
-    if (this.orderNo) this._loadDetail();
+    // P1-2 修复：样衣采购任务无 orderNo，按 patternProductionId 关联查询
+    this.patternProductionId = decodeURIComponent(options.patternProductionId || '');
+    this.sourceType = decodeURIComponent(options.sourceType || '');
+    this.setData({
+      orderNo: this.orderNo,
+      styleNo,
+      patternProductionId: this.patternProductionId,
+      sourceType: this.sourceType,
+    });
+    // 样衣采购：按 patternProductionId 查询；大货订单：按 orderNo 查询
+    if (this.patternProductionId && this.sourceType === 'sample') {
+      this._loadDetail();
+    } else if (this.orderNo) {
+      this._loadDetail();
+    }
   },
 
   onShow() {
@@ -42,7 +57,11 @@ Page({
   async _loadDetail() {
     this.setData({ loading: true });
     try {
-      const res = await api.production.getMaterialPurchases({ orderNo: this.orderNo });
+      // P1-2 修复：样衣采购按 patternProductionId 查询；大货订单按 orderNo 查询
+      const params = (this.patternProductionId && this.sourceType === 'sample')
+        ? { patternProductionId: this.patternProductionId, sourceType: 'sample' }
+        : { orderNo: this.orderNo };
+      const res = await api.production.getMaterialPurchases(params);
       const list = this._normalizeToArray(res);
       const userInfo = getUserInfo() || {};
       const receiverId = String(userInfo.id || userInfo.userId || '').trim();

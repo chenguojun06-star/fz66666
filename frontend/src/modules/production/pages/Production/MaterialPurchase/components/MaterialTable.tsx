@@ -371,7 +371,7 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
           rejected: { text: '已驳回', color: 'red' },
         };
         const cfg = statusMap[status];
-        return cfg ? <Tag color={cfg.color}>{cfg.text}</Tag> : <span>{status}</span>;
+        return cfg ? <Tag color={cfg.color}>{cfg.text}</Tag> : <span>未知</span>;
       },
     },
     {

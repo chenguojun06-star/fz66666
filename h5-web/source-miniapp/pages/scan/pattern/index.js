@@ -337,6 +337,10 @@ Page({
     });
 
     // 处理颜色/码数矩阵（如果有）
+    // 数据结构（matrixRows 格式）：{ matrixSizes, matrixRows: [{ color, quantities: [1,2,3], rowTotal }] }
+    // 与 sku-matrix 组件标准格式（{ sizes, rows: [{ color, cells: [{size,quantity}] }] }）不同，
+    // 本页内联渲染（detail.matrixSizes / detail.matrixRows），未使用组件。
+    // 如需迁移到 <sku-matrix /> 组件，使用 utils/skuMatrixAdapter.toSkuMatrixModel(matrix, 'matrixRows')
     const matrix = patternDetail.sizeColorMatrix;
     if (matrix && Array.isArray(matrix.matrixRows) && matrix.matrixRows.length > 0) {
       const matrixSizes = Array.isArray(matrix.sizes) ? matrix.sizes : [];

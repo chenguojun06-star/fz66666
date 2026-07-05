@@ -31,6 +31,12 @@ public class ProductWarehousing {
 
     private String styleName;
 
+    /**
+     * 款式封面图（P1-5 数据链路：临时字段，查询时从 ProductionOrder.styleCover 补齐）
+     */
+    @TableField(exist = false)
+    private String styleCover;
+
     private Integer warehousingQuantity;
 
     private Integer qualifiedQuantity;

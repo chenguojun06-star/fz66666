@@ -4,6 +4,8 @@ const { fieldConfig } = require('../../../utils/api-modules/field-config');
 const { toast } = require('../../../utils/uiHelper');
 const permission = require('../../../utils/permission');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
+// P1-6：采购单状态映射统一引用 shared/statusMap.js（与 PC MATERIAL_PURCHASE_STATUS_MAP 对齐）
+const { getPurchaseStatusText } = require('../../../shared/statusMap');
 
 /* ========== 纸样状态 / 开发来源 中文化 ========== */
 var PATTERN_STATUS_LABELS = { PENDING: '未开始', IN_PROGRESS: '进行中', COMPLETED: '已完成', RETURNED: '已退回', LOCKED: '已锁定', UNLOCKED: '未锁定', NOT_STARTED: '未开始' };
@@ -481,18 +483,11 @@ Page({
     this.setData({ purchaseLoading: false });
   },
 
-  /** 采购状态 → 中文 */
+  /** 采购状态 → 中文（直接代理到 shared/statusMap.getPurchaseStatusText）
+   *  保留本方法名以避免改写调用点；后续新页面可直接用 getPurchaseStatusText
+   */
   _purchaseStatusText(status) {
-    const s = String(status || '').toLowerCase();
-    const map = {
-      pending: '待采购',
-      received: '已领取',
-      awaiting_confirm: '待确认',
-      completed: '已完成',
-      partial_arrived: '部分到货',
-      cancelled: '已取消',
-    };
-    return map[s] || status || '';
+    return getPurchaseStatusText(status, '');
   },
 
   /** 生成样衣采购单（基于 BOM，与 PC 端 handleGeneratePurchase 一致） */

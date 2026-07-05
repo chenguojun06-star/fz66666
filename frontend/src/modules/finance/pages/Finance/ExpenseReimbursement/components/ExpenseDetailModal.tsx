@@ -21,7 +21,7 @@ const { TextArea } = Input;
 
 const typeLabel = (val: string): React.ReactNode => {
   const t = EXPENSE_TYPES.find(e => e.value === val);
-  return t ? <Tag color={t.color}>{t.label}</Tag> : <Tag>{val}</Tag>;
+  return t ? <Tag color={t.color}>{t.label}</Tag> : <Tag>未知</Tag>;
 };
 
 const statusTag = (val: string) => {

@@ -19,11 +19,11 @@ import {
 
 const typeLabel = (val: string): React.ReactNode => {
   const t = EXPENSE_TYPES.find(e => e.value === val);
-  return t ? <Tag color={t.color}>{t.label}</Tag> : <Tag>{val}</Tag>;
+  return t ? <Tag color={t.color}>{t.label}</Tag> : <Tag>未知</Tag>;
 };
 const statusTag = (val: string) => {
   const s = EXPENSE_STATUS.find(t => t.value === val);
-  return s ? <Tag color={s.color}>{s.label}</Tag> : <Tag>{val}</Tag>;
+  return s ? <Tag color={s.color}>{s.label}</Tag> : <Tag>未知</Tag>;
 };
 
 interface ExpenseTabProps {

@@ -23,6 +23,16 @@ const production = {
   createOutstock(payload) {
     return ok('/api/production/outstock', 'POST', payload || {});
   },
+  /**
+   * 订单详情（兜底接口，按 UUID 或 orderNo 取基础订单信息）
+   *
+   * 三端路径说明（P1-4 注释，不强制统一）：
+   *   - PC 主流程：/production/order/flow/{orderId}（OrderFlow 页 useOrderFlowData.tsx）
+   *   - 小程序/H5 主流程：getOrderFlow(orderId)（同样走 /production/order/flow/{id}，与 PC 一致）
+   *   - 此处 orderDetail 仅作 fallback：当 flow 接口未返回 order 时，按 UUID 走
+   *     /production/order/detail/{uuid}（基础信息），或按 orderNo 走 list 接口
+   *   - 路径差异是有意设计：flow 返回完整工序/扫码/采购树，detail/list 只返回订单基础字段
+   */
   orderDetail(idOrOrderNo) {
     const value = String(idOrOrderNo || '').trim();
     const uuidPattern =
@@ -36,7 +46,10 @@ const production = {
     const on = String(orderNo || '').trim();
     return ok('/api/production/order/list', 'GET', { orderNo: on });
   },
-  /** 获取订单完整流程数据（含工序阶段/扫码记录/物料采购/BOM等） */
+  /**
+   * 获取订单完整流程数据（含工序阶段/扫码记录/物料采购/BOM等）
+   * 三端统一入口：PC OrderFlow 页 / 小程序 dashboard/order-detail / H5 同小程序
+   */
   getOrderFlow(orderId) {
     return ok(`/api/production/order/flow/${encodeURIComponent(orderId)}`, 'GET', {});
   },
@@ -96,11 +109,12 @@ const production = {
     return ok('/api/production/purchase/update-arrived-quantity', 'POST', payload || {});
   },
   getMaterialPurchases(params) {
-    const payload = { ...(params || {}) };
-    if (payload.orderNo && !payload.scanCode) {
-      payload.scanCode = payload.orderNo;
-    }
-    return ok('/api/production/purchase/list', 'GET', payload);
+    // 三端统一（PC/小程序/H5）：只在有 orderNo 时传 orderNo，只在有 scanCode 时传 scanCode
+    // 后端 MaterialPurchaseController.list 会根据是否含 scanCode 走不同分支：
+    //   - 含 scanCode → getByScanCode（扫码场景专用）
+    //   - 否则 → listWithEnrichment（按 orderNo/styleNo 等过滤，与 PC 端一致）
+    // 因此调用方应明确传 scanCode（扫码场景），不要让适配层自动补
+    return ok('/api/production/purchase/list', 'GET', { ...(params || {}) });
   },
   myProcurementTasks() {
     return ok('/api/production/purchase/list', 'GET', { myTasks: 'true' });

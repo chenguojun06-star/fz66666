@@ -35,7 +35,7 @@ function orderStatusText(status) {
     canceled: '已取消', paused: '已暂停', returned: '已退回',
     closed: '已关单', archived: '已归档',
   };
-  return map[s] || '';
+  return map[s] || '未知';
 }
 
 function isClosedStatus(status) {

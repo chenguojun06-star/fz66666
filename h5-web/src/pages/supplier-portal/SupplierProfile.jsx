@@ -47,7 +47,7 @@ const SupplierProfile = () => {
       <div style={s.section}>
         <h3 style={s.sectionTitle}>账号信息</h3>
         <div style={s.row}><span style={s.label}>用户名</span><span style={s.val}>{user?.username || '-'}</span></div>
-        <div style={s.row}><span style={s.label}>状态</span><span style={{ ...s.val, color: '#27ae60' }}>{user?.status === 'ACTIVE' ? '正常' : user?.status || '-'}</span></div>
+        <div style={s.row}><span style={s.label}>状态</span><span style={{ ...s.val, color: '#27ae60' }}>{user?.status === 'ACTIVE' ? '正常' : (user?.status ? '已禁用' : '-')}</span></div>
         <div style={s.row}><span style={s.label}>最后登录</span><span style={s.val}>{user?.lastLoginTime || '-'}</span></div>
       </div>
 

@@ -70,7 +70,8 @@ public class MaterialPurchasePreviewHelper {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("orderNo", byOrderNo ? orderNo.trim() : "");
         result.put("styleNo", byStyleNo ? styleNo.trim() : "");
-        result.put("sourceType", byStyleNo ? "sample" : "bulk");
+        // P1-3 修复：使用真实枚举值 "order"（大货订单），原 "bulk" 不在枚举内会导致前端误判
+        result.put("sourceType", byStyleNo ? "sample" : "order");
         result.put("materials", items);
         result.put("pickingRecords", pickingRecords);
         result.put("totalRequired", items.stream().mapToInt(i -> (int) i.get("requiredQty")).sum());

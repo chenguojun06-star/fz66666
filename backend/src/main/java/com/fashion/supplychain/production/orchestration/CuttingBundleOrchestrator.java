@@ -33,7 +33,10 @@ public class CuttingBundleOrchestrator {
 
     public IPage<CuttingBundle> list(Map<String, Object> params) {
         try {
-            return doList(params);
+            IPage<CuttingBundle> page = doList(params);
+            // P1-6 数据链路：查询后补齐 styleName/styleCover，供前端展示
+            enrichStyleInfo(page);
+            return page;
         } catch (Exception e) {
             log.error("[CuttingBundle.list] 查询失败（可能为 schema 漂移）: {}", e.getMessage());
             return new Page<>();
@@ -61,6 +64,43 @@ public class CuttingBundleOrchestrator {
             return cuttingBundleService.queryPage(mutableParams);
         }
         return cuttingBundleService.queryPage(params);
+    }
+
+    /**
+     * 批量补齐 styleName/styleCover：通过 productionOrderId 关联 ProductionOrder 查询
+     */
+    private void enrichStyleInfo(IPage<CuttingBundle> page) {
+        if (page == null) return;
+        List<CuttingBundle> records = page.getRecords();
+        if (records == null || records.isEmpty()) return;
+
+        List<String> orderIds = records.stream()
+                .map(CuttingBundle::getProductionOrderId)
+                .filter(StringUtils::hasText)
+                .distinct()
+                .collect(Collectors.toList());
+        if (orderIds.isEmpty()) return;
+
+        try {
+            Map<String, ProductionOrder> orderMap = productionOrderService.listByIds(orderIds).stream()
+                    .filter(o -> o != null && StringUtils.hasText(o.getId()))
+                    .collect(Collectors.toMap(ProductionOrder::getId, o -> o, (a, b) -> a));
+            for (CuttingBundle b : records) {
+                if (b == null) continue;
+                String oid = b.getProductionOrderId();
+                if (!StringUtils.hasText(oid)) continue;
+                ProductionOrder order = orderMap.get(oid);
+                if (order == null) continue;
+                if (!StringUtils.hasText(b.getStyleName())) {
+                    b.setStyleName(order.getStyleName());
+                }
+                if (!StringUtils.hasText(b.getStyleCover())) {
+                    b.setStyleCover(order.getStyleCover());
+                }
+            }
+        } catch (Exception e) {
+            log.warn("[CuttingBundle.enrichStyleInfo] 补齐 styleName/styleCover 失败: {}", e.getMessage());
+        }
     }
 
     public Map<String, Object> summary(String orderNo, String orderId) {

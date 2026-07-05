@@ -97,19 +97,40 @@ export const ORDER_STATUS_MAP: StatusMap = {
   repaid:         { text: '已还清',      color: 'success' },
 };
 
-/* =========================== 物料采购状态 ============================ */
+/* =========================== 物料采购状态 ============================
+ * 文案/颜色三端统一（PC / 小程序 / H5）：
+ *   pending→待采购(warning) / received→已到货(success) / awaiting_confirm→待确认(processing)
+ *   completed→已完成(success) / partial_arrived→部分到货(warning) / cancelled→已取消(default)
+ * 小程序/H5 引用 h5-web/source-miniapp/shared/statusMap.js 中的 MATERIAL_PURCHASE_STATUS_LABELS/COLORS
+ */
 export const MATERIAL_PURCHASE_STATUS_MAP: StatusMap = {
   pending:            { text: '待采购',      color: 'warning' },
   procurement:        { text: '采购中',      color: 'processing' },
-  purchasing:        { text: '采购中',      color: 'processing' },
+  purchasing:         { text: '采购中',      color: 'processing' },
   material_preparation: { text: '备料中',    color: 'processing' },
   received:           { text: '已到货',      color: 'success' },
-  partial:            { text: '部分到货',    color: 'processing' },
-  partial_arrival:    { text: '部分到货',    color: 'processing' },
+  partial:            { text: '部分到货',    color: 'warning' },
+  partial_arrival:    { text: '部分到货',    color: 'warning' },
+  partial_arrived:    { text: '部分到货',    color: 'warning' },
   awaiting_confirm:   { text: '待确认',      color: 'processing' },
   warehouse_pending:  { text: '待仓库出库',  color: 'processing' },
   completed:          { text: '已完成',      color: 'success' },
   cancelled:          { text: '已取消',      color: 'default' },
+  canceled:           { text: '已取消',      color: 'default' },
+};
+
+/* =========================== 纸样生产状态（PatternProduction）============================
+ * 三端统一（PC / 小程序 / H5）：枚举值大写。
+ * 小程序/H5 引用 h5-web/source-miniapp/shared/statusMap.js 中的 PATTERN_STATUS_LABELS
+ */
+export const PATTERN_STATUS_MAP: StatusMap = {
+  PENDING:      { text: '未开始',  color: 'default' },
+  NOT_STARTED:  { text: '未开始',  color: 'default' },
+  IN_PROGRESS:  { text: '进行中',  color: 'processing' },
+  COMPLETED:    { text: '已完成',  color: 'success' },
+  RETURNED:     { text: '已退回',  color: 'error' },
+  LOCKED:       { text: '已锁定',  color: 'processing' },
+  UNLOCKED:     { text: '未锁定',  color: 'default' },
 };
 
 /* =========================== 物料对账状态 ============================ */

@@ -69,7 +69,7 @@ export default function ScanConfirmPage() {
     if (isCut && raw.cuttingTask) {
       const ct = raw.cuttingTask;
       const statusMap = { pending: '待领取', not_started: '待领取', received: '已领取', in_progress: '已领取', bundled: '已完成', completed: '已完成', done: '已完成' };
-      ct.statusText = statusMap[ct.status] || '待领取';
+      ct.statusText = statusMap[ct.status] || '未知';
       setCuttingTask(ct);
     }
 

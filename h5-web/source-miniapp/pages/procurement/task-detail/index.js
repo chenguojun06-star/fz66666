@@ -15,6 +15,8 @@ Page({
     orderId: '',
     orderNo: '',
     styleNo: '',
+    patternProductionId: '',
+    sourceType: '',
     loading: false,
     submitting: false,
     materialPurchases: [],
@@ -28,8 +30,21 @@ Page({
   onLoad(options) {
     this.orderNo = decodeURIComponent(options.orderNo || '');
     const styleNo = decodeURIComponent(options.styleNo || '');
-    this.setData({ orderNo: this.orderNo, styleNo });
-    if (this.orderNo) this._loadDetail();
+    // P1-2 修复：样衣采购任务无 orderNo，按 patternProductionId 关联查询
+    this.patternProductionId = decodeURIComponent(options.patternProductionId || '');
+    this.sourceType = decodeURIComponent(options.sourceType || '');
+    this.setData({
+      orderNo: this.orderNo,
+      styleNo,
+      patternProductionId: this.patternProductionId,
+      sourceType: this.sourceType,
+    });
+    // 样衣采购：按 patternProductionId 查询；大货订单：按 orderNo 查询
+    if (this.patternProductionId && this.sourceType === 'sample') {
+      this._loadDetail();
+    } else if (this.orderNo) {
+      this._loadDetail();
+    }
   },
 
   onShow() {
@@ -42,7 +57,11 @@ Page({
   async _loadDetail() {
     this.setData({ loading: true });
     try {
-      const res = await api.production.getMaterialPurchases({ orderNo: this.orderNo });
+      // P1-2 修复：样衣采购按 patternProductionId 查询；大货订单按 orderNo 查询
+      const params = (this.patternProductionId && this.sourceType === 'sample')
+        ? { patternProductionId: this.patternProductionId, sourceType: 'sample' }
+        : { orderNo: this.orderNo };
+      const res = await api.production.getMaterialPurchases(params);
       const list = this._normalizeToArray(res);
       const userInfo = getUserInfo() || {};
       const receiverId = String(userInfo.id || userInfo.userId || '').trim();
@@ -356,6 +375,9 @@ Page({
   },
 
   _getStatusText(status) {
+    // 注意：本页是"采购任务详情"（按领取状态展示），文案与 PC MATERIAL_PURCHASE_STATUS_MAP
+    // 不完全一致（PC 的 received=已到货，这里 received=已领取，因为是领取视角）。
+    // 待确认完成 / 全部到货 是本页历史文案，保留以免业务语义改变。
     const map = {
       pending: '待采购', received: '已领取', partial: '部分到货',
       partial_arrival: '部分到货', awaiting_confirm: '待确认完成',
@@ -367,10 +389,11 @@ Page({
   },
 
   _getStatusColor(status) {
+    // 颜色与 PC MATERIAL_PURCHASE_STATUS_MAP 保持一致
     const map = {
-      pending: 'warning', received: 'processing', partial: 'processing',
-      partial_arrival: 'processing', awaiting_confirm: 'warning', completed: 'success',
-      cancelled: 'error', warehouse_pending: 'processing',
+      pending: 'warning', received: 'processing', partial: 'warning',
+      partial_arrival: 'warning', awaiting_confirm: 'processing', completed: 'success',
+      cancelled: 'default', warehouse_pending: 'processing',
       waiting_procurement: 'warning', procurement_in_progress: 'processing',
       procurement_completed: 'success',
     };

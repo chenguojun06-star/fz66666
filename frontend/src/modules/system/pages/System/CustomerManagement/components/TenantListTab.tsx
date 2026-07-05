@@ -111,7 +111,7 @@ const TenantListTab: React.FC = () => {
   };
 
   const handleDeleteTenant = (record: TenantInfo) => {
-    const statusLabel = { pending_review: '待审核', active: '正常', disabled: '已停用', rejected: '已拒绝', trial: '试用中', expired: '已过期' }[record.status as string] || record.status;
+    const statusLabel = { pending_review: '待审核', active: '正常', disabled: '已停用', rejected: '已拒绝', trial: '试用中', expired: '已过期' }[record.status as string] || '未知';
     Modal.confirm({ width: '30vw', title: `确认删除「${record.tenantName}」`, icon: <ExclamationCircleOutlined />, content: record.status === 'active' || record.status === 'disabled' ? `该租户状态为「${statusLabel}」，删除后将同时清除其所有用户、角色、账单数据，此操作不可恢复！` : `将删除该${statusLabel}的入驻申请。`, okText: '确认删除', okButtonProps: { danger: true, type: 'default' }, cancelText: '取消', onOk: async () => { try { await tenantService.deleteTenant(record.id); message.success('已删除'); fetchData(); } catch (e: unknown) { message.error(e instanceof Error ? e.message : '删除失败'); } } });
   };
 

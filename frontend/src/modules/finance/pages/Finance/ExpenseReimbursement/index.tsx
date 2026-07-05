@@ -27,7 +27,7 @@ const typeLabel = (val: string): React.ReactNode => {
 };
 const statusTag = (val: string) => {
   const s = EXPENSE_STATUS.find(t => t.value === val);
-  return s ? <Tag color={s.color}>{s.label}</Tag> : <Tag>{val}</Tag>;
+  return s ? <Tag color={s.color}>{s.label}</Tag> : <Tag>未知</Tag>;
 };
 
 const ExpenseReimbursementPage: React.FC = () => {

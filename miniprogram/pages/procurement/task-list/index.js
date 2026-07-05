@@ -106,7 +106,15 @@ Page({
 
   onGroupTap(e) {
     const group = e.currentTarget.dataset.group;
-    if (!group || !group.orderNo) return;
+    if (!group) return;
+    // P1-2 修复：样衣采购无 orderNo，按 patternProductionId 跳转
+    if (!group.orderNo && group.patternProductionId) {
+      safeNavigate({
+        url: `/pages/procurement/task-detail/index?patternProductionId=${encodeURIComponent(group.patternProductionId)}&sourceType=sample&styleNo=${encodeURIComponent(group.styleNo || '')}`,
+      }).catch(() => {});
+      return;
+    }
+    if (!group.orderNo) return;
     safeNavigate({
       url: `/pages/procurement/task-detail/index?orderNo=${encodeURIComponent(group.orderNo)}&styleNo=${encodeURIComponent(group.styleNo || '')}`,
     }).catch(() => {});
@@ -129,11 +137,17 @@ Page({
   _groupByOrder(list) {
     const map = {};
     list.forEach(item => {
-      const orderNo = item.orderNo || '未知订单';
-      if (!map[orderNo]) {
-        map[orderNo] = {
+      // P1-2 修复：样衣采购无 orderNo，按 patternProductionId 分组
+      const orderNo = item.orderNo || '';
+      const patternProductionId = item.patternProductionId || '';
+      const sourceType = item.sourceType || '';
+      const groupKey = orderNo || (patternProductionId ? `sample_${patternProductionId}` : '未知订单');
+      if (!map[groupKey]) {
+        map[groupKey] = {
           orderNo,
           styleNo: item.styleNo || '',
+          patternProductionId,
+          sourceType,
           items: [],
           totalPurchased: 0,
           totalArrived: 0,
@@ -143,7 +157,7 @@ Page({
           totalCount: 0,
         };
       }
-      const g = map[orderNo];
+      const g = map[groupKey];
       g.items.push(item);
       const purchaseQty = Number(item.purchaseQuantity || 0);
       const arrivedQty = Number(item.arrivedQuantity || 0);
@@ -164,8 +178,10 @@ Page({
     return Object.values(map).map(g => ({
       ...g,
       arrivalRate: g.totalPurchased > 0 ? Math.round(g.totalArrived / g.totalPurchased * 100) : 0,
+      // P1-2 修复：样衣采购分组显示"样衣采购"前缀，区分大货订单
       statusText: g.completedCount === g.totalCount ? '已完成' : (g.pendingCount === g.totalCount ? '待采购' : '采购中'),
       statusColor: g.completedCount === g.totalCount ? 'success' : (g.pendingCount === g.totalCount ? 'warning' : 'processing'),
+      isSample: g.sourceType === 'sample' || (!g.orderNo && !!g.patternProductionId),
     }));
   },
 });

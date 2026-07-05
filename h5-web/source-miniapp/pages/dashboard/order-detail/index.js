@@ -91,6 +91,14 @@ function getScanTypeClass(r) {
 /* 从订单数据构建矩阵模型（与订单列表页 parseProductionOrderLines 保持一致的解析逻辑）
  * 返回：{ sizes: [尺码排序], rows: [{label, quantities, rowTotal}], total, hasData,
  *         colorGroups: [{color, sizeMap, total}], allSizes, colors: [颜色], sizeSummary: [{size, qty}] }
+ *
+ * P1-5 数据结构说明：
+ *   本页用 quantities 格式（rows[].quantities 数组）+ colorGroups 格式（sizeMap 对象）双视图，
+ *   与 sku-matrix 组件标准格式（rows[].cells: [{size,quantity}]）不同。
+ *   本页内联渲染，未使用 <sku-matrix /> 组件。
+ *   如需迁移到组件，使用 utils/skuMatrixAdapter：
+ *     - toSkuMatrixModel({ sizes, rows }, 'quantities')
+ *     - toSkuMatrixModel({ colorGroups, allSizes }, 'colorGroups')
  */
 function buildMatrixModel(order) {
   if (!order) return { sizes: [], rows: [], total: 0, hasData: false, flatList: [], colorGroups: [], allSizes: [], colors: [], sizeSummary: [] };

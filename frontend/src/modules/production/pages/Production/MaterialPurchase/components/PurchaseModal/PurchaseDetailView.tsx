@@ -364,12 +364,19 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
     try {
       const orderNo = currentPurchase?.orderNo || detailOrder?.orderNo || '';
       const styleNo = currentPurchase?.styleNo || detailOrder?.styleNo || '';
+      // P1-1 修复：sourceType 优先级 row > currentPurchase > 默认 'order'（带 warn）
+      const ctxSourceType = String((currentPurchase as any)?.sourceType || '').trim();
+      const fallbackSourceType = ctxSourceType || (() => {
+        console.warn('[PurchaseDetailView] sourceType 缺失，回退为默认值 order', { rowSourceType: undefined, ctxSourceType });
+        return 'order';
+      })();
       for (const row of validRows) {
         const purchaseQuantity = Number(row.purchaseQuantity || 0);
         const unitPrice = Number(row.unitPrice || 0);
         const totalAmount = Number.isFinite(purchaseQuantity) && Number.isFinite(unitPrice)
           ? Number((purchaseQuantity * unitPrice).toFixed(2)) : 0;
-        const payload = { ...row, totalAmount, status: row.status || MATERIAL_PURCHASE_STATUS.PENDING, sourceType: (row as any).sourceType || 'order', orderNo: row.orderNo || orderNo, styleNo: row.styleNo || styleNo };
+        const rowSourceType = String((row as any).sourceType || '').trim();
+        const payload = { ...row, totalAmount, status: row.status || MATERIAL_PURCHASE_STATUS.PENDING, sourceType: rowSourceType || fallbackSourceType, orderNo: row.orderNo || orderNo, styleNo: row.styleNo || styleNo };
         const isTemp = !row.id || String(row.id).startsWith('tmp_');
         if (!isTemp) {
           await api.put('/production/purchase', payload);

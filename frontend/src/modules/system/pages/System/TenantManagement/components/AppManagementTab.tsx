@@ -95,7 +95,7 @@ const AppManagementTab: React.FC = () => {
           disabled: { status: 'error', text: '停用' },
           expired: { status: 'default', text: '过期' },
         };
-        const item = map[s] || { status: 'default' as const, text: s };
+        const item = map[s] || { status: 'default' as const, text: '未知' };
         return <Badge status={item.status} text={item.text} />;
       },
     },

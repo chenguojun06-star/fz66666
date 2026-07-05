@@ -29,6 +29,18 @@ public class CuttingBundle {
 
     private String styleNo;
 
+    /**
+     * 款式名称（P1-6 数据链路：临时字段，查询时从 ProductionOrder.styleName 补齐）
+     */
+    @TableField(exist = false)
+    private String styleName;
+
+    /**
+     * 款式封面图（P1-6 数据链路：临时字段，查询时从 ProductionOrder.styleCover 补齐）
+     */
+    @TableField(exist = false)
+    private String styleCover;
+
     private String color;
 
     private String size;

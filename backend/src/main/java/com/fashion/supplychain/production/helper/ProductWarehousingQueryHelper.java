@@ -149,6 +149,10 @@ public class ProductWarehousingQueryHelper {
             if (!StringUtils.hasText(w.getStyleName())) {
                 w.setStyleName(order.getStyleName());
             }
+            // P1-5 数据链路：补齐 styleCover，供前端展示款式封面
+            if (!StringUtils.hasText(w.getStyleCover())) {
+                w.setStyleCover(order.getStyleCover());
+            }
         }
     }
 

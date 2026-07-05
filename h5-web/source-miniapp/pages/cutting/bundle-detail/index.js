@@ -625,7 +625,10 @@ Page({
     return { sizes, matrix };
   },
 
-  /** 转成 sku-matrix 组件所需格式 */
+  /** 转成 sku-matrix 组件所需格式
+   *  P1-5：等价于 utils/skuMatrixAdapter.fromMap({ matrix, sizes })
+   *  保留本页私有方法以避免改写现有调用点；新页面应直接用 skuMatrixAdapter
+   */
   _toSkuMatrix(matrix, sizes) {
     const rows = Object.keys(matrix).map(color => ({
       color,

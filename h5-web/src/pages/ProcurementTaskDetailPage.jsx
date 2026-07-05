@@ -59,7 +59,7 @@ export default function ProcurementTaskDetailPage() {
 
   const normalizeToArray = (res) => { if (Array.isArray(res)) return res; if (res?.records) return res.records; if (res?.data) return res.data; return []; };
   const normalizeStatus = (s) => String(s || '').trim().toLowerCase();
-  const getStatusText = (s) => ({ pending: '待采购', received: '已领取', partial: '部分到货', completed: '全部到货', cancelled: '已取消' }[s] || '待采购');
+  const getStatusText = (s) => ({ pending: '待采购', received: '已领取', partial: '部分到货', completed: '已完成', cancelled: '已取消' }[s] || '未知');
 
   const onReceiveAll = async () => {
     const userInfo = getUserInfo() || {};

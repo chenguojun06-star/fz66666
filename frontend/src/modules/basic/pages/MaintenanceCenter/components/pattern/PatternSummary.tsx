@@ -4,6 +4,7 @@ import { StyleInfo, StyleAttachment } from '@/types/style';
 import type { PatternRevision } from '@/types/patternRevision';
 import { formatDateTime } from '@/utils/datetime';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
+import { PATTERN_STATUS_MAP } from '@/constants/statusMaps';
 import { AttachmentThumb } from './AttachmentThumb';
 import {
   heroStyle, heroThumbStyle, heroHeadlineStyle, directTitleStyle,
@@ -13,16 +14,11 @@ import {
 
 type PatternAttachment = StyleAttachment & { versionRemark?: string | null };
 
+// 引用统一映射表 PATTERN_STATUS_MAP（与小程序/H5 保持一致）
 const toPatternStatusLabel = (value?: string | null) => {
   const normalized = String(value || '').trim().toUpperCase();
   if (!normalized) return '未记录';
-  if (normalized === 'COMPLETED') return '已完成';
-  if (normalized === 'IN_PROGRESS') return '进行中';
-  if (normalized === 'PENDING' || normalized === 'NOT_STARTED') return '未开始';
-  if (normalized === 'RETURNED') return '已退回';
-  if (normalized === 'LOCKED') return '已锁定';
-  if (normalized === 'UNLOCKED') return '未锁定';
-  return String(value);
+  return PATTERN_STATUS_MAP[normalized]?.text ?? String(value);
 };
 
 interface PatternSummaryProps {
