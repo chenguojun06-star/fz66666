@@ -437,6 +437,7 @@ public class ScanRecordOrchestrator {
         IPage<ScanRecord> page = scanRecordQueryHelper.list(params);
         scanRecordEnrichHelper.enrichBedNo(page.getRecords());
         scanRecordEnrichHelper.markHasNextStageScan(page.getRecords());
+        scanRecordEnrichHelper.enrichStyleInfo(page.getRecords());
         return page;
     }
 
@@ -444,6 +445,7 @@ public class ScanRecordOrchestrator {
         IPage<ScanRecord> result = scanRecordQueryHelper.getByOrderId(orderId, page, pageSize);
         scanRecordEnrichHelper.enrichBedNo(result.getRecords());
         scanRecordEnrichHelper.markHasNextStageScan(result.getRecords());
+        scanRecordEnrichHelper.enrichStyleInfo(result.getRecords());
         return result;
     }
 
@@ -451,6 +453,7 @@ public class ScanRecordOrchestrator {
         IPage<ScanRecord> result = scanRecordQueryHelper.getByStyleNo(styleNo, page, pageSize);
         scanRecordEnrichHelper.enrichBedNo(result.getRecords());
         scanRecordEnrichHelper.markHasNextStageScan(result.getRecords());
+        scanRecordEnrichHelper.enrichStyleInfo(result.getRecords());
         return result;
     }
 
@@ -458,6 +461,7 @@ public class ScanRecordOrchestrator {
         IPage<ScanRecord> result = scanRecordQueryHelper.getHistory(page, pageSize);
         scanRecordEnrichHelper.enrichBedNo(result.getRecords());
         scanRecordEnrichHelper.markHasNextStageScan(result.getRecords());
+        scanRecordEnrichHelper.enrichStyleInfo(result.getRecords());
         return result;
     }
 
@@ -466,6 +470,7 @@ public class ScanRecordOrchestrator {
         IPage<ScanRecord> result = scanRecordQueryHelper.getMyHistory(page, pageSize, scanType, startTime, endTime, orderNo, bundleNo, workerName, operatorName);
         scanRecordEnrichHelper.enrichBedNo(result.getRecords());
         scanRecordEnrichHelper.markHasNextStageScan(result.getRecords());
+        scanRecordEnrichHelper.enrichStyleInfo(result.getRecords());
         return result;
     }
 

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import useCrmClientStore from '@/stores/crmClientStore';
 import crmClient from '@/api/crmClient';
+import { orderStatusText } from './CrmOrders';
 
 const CrmDashboard = () => {
   const customer = useCrmClientStore((s) => s.customer);
@@ -80,7 +81,7 @@ const CrmDashboard = () => {
               <div style={styles.orderHeader}>
                 <span style={styles.orderNo}>{order.orderNo}</span>
                 <span style={{ ...styles.statusBadge, background: getStatusBg(order.status) }}>
-                  {order.status}
+                  {orderStatusText(order.status)}
                 </span>
               </div>
               <div style={styles.orderBody}>

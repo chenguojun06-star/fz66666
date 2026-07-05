@@ -6,7 +6,7 @@ const RECEIVABLE_STATUS_MAP = {
   PENDING: '待付款', PARTIAL: '部分付款', PAID: '已付清',
   OVERDUE: '逾期', CANCELLED: '已取消', WRITTEN_OFF: '已核销',
 };
-const receivableStatusText = (s) => RECEIVABLE_STATUS_MAP[s] || '未知';
+export const receivableStatusText = (s) => RECEIVABLE_STATUS_MAP[s] || '未知';
 
 const CrmReceivables = () => {
   const navigate = useNavigate();

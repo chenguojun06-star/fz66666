@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import useSupplierStore from '@/stores/supplierStore';
 import supplierPortal from '@/api/supplierPortal';
+import { purchaseStatusText } from './SupplierPurchases';
 
 const SupplierDashboard = () => {
   const supplier = useSupplierStore((s) => s.supplier);
@@ -58,7 +59,7 @@ const SupplierDashboard = () => {
             <div key={p.id} style={s.orderCard}>
               <div style={s.orderHeader}>
                 <span style={s.orderNo}>{p.materialName || p.purchaseNo}</span>
-                <span style={s.badge}>{p.status}</span>
+                <span style={s.badge}>{purchaseStatusText(p.status)}</span>
               </div>
               <div style={s.orderBody}>
                 <span>{p.orderNo}</span>

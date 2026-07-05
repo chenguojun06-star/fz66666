@@ -8,7 +8,7 @@ const ORDER_STATUS_MAP = {
   CANCELLED: '已取消', CONFIRMED: '已确认', SHIPPED: '已发货',
   DELIVERED: '已送达', CLOSED: '已关闭', REJECTED: '已拒绝',
 };
-const orderStatusText = (s) => ORDER_STATUS_MAP[s] || '未知';
+export const orderStatusText = (s) => ORDER_STATUS_MAP[s] || '未知';
 
 const CrmOrders = () => {
   const navigate = useNavigate();

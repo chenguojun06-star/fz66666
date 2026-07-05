@@ -92,13 +92,19 @@ public class MaterialPurchaseOrchestratorHelper {
         Map<String, String> orderBizTypeMap = new HashMap<>();
         loadOrderFields(orderIds, orderQuantityMap, orderColorMap, orderFactoryNameMap, orderFactoryTypeMap, orderBizTypeMap);
 
-        // 一次查询获取所有样版字段（原来是 2 次独立调用，现合并为 1 次）
+        // 一次查询获取所有样版字段（quantity/color + 通过关联 ProductionOrder 补齐 factoryName/factoryType/orderBizType）
         Map<String, Integer> patternQuantityMap = new HashMap<>();
         Map<String, String> patternColorMap = new HashMap<>();
-        loadPatternFields(patternProductionIds, patternQuantityMap, patternColorMap);
+        Map<String, String> patternFactoryNameMap = new HashMap<>();
+        Map<String, String> patternFactoryTypeMap = new HashMap<>();
+        Map<String, String> patternOrderBizTypeMap = new HashMap<>();
+        loadPatternFields(patternProductionIds, patternQuantityMap, patternColorMap,
+                patternFactoryNameMap, patternFactoryTypeMap, patternOrderBizTypeMap);
 
         List<Map<String, Object>> enrichedRecords = records.stream()
-            .map(record -> enrichRecord(record, orderQuantityMap, patternQuantityMap, orderColorMap, patternColorMap, orderFactoryNameMap, orderFactoryTypeMap, orderBizTypeMap))
+            .map(record -> enrichRecord(record, orderQuantityMap, patternQuantityMap, orderColorMap, patternColorMap,
+                    orderFactoryNameMap, orderFactoryTypeMap, orderBizTypeMap,
+                    patternFactoryNameMap, patternFactoryTypeMap, patternOrderBizTypeMap))
                 .collect(Collectors.toList());
 
         return buildPageResult(enrichedRecords, page);
@@ -130,18 +136,48 @@ public class MaterialPurchaseOrchestratorHelper {
     }
 
     /**
-     * 一次查询获取所有需要的样版字段，替代原来 2 次独立 listByIds 调用。
+     * 一次查询获取所有需要的样版字段。
+     * 样版本身只有 quantity/color；factoryName/factoryType/orderBizType 通过关联的 ProductionOrder（productionOrderId）补齐。
      */
     private void loadPatternFields(Set<String> patternProductionIds,
-            Map<String, Integer> quantityMap, Map<String, String> colorMap) {
+            Map<String, Integer> quantityMap, Map<String, String> colorMap,
+            Map<String, String> factoryNameMap, Map<String, String> factoryTypeMap,
+            Map<String, String> orderBizTypeMap) {
         if (patternProductionIds.isEmpty()) return;
         try {
             List<PatternProduction> patterns = patternProductionService.listByIds(patternProductionIds);
+            // 第一遍：填充 quantity/color，并收集所有关联的 ProductionOrder ID
+            Set<String> relatedOrderIds = new HashSet<>();
             for (PatternProduction pattern : patterns) {
                 if (pattern == null || !StringUtils.hasText(pattern.getId())) continue;
                 String id = pattern.getId();
                 quantityMap.put(id, pattern.getQuantity());
                 colorMap.put(id, pattern.getColor());
+                String orderId = pattern.getProductionOrderId();
+                if (StringUtils.hasText(orderId)) {
+                    relatedOrderIds.add(orderId);
+                }
+            }
+            // 第二遍：批量查询关联的 ProductionOrder，回填 factoryName/factoryType/orderBizType
+            if (!relatedOrderIds.isEmpty()) {
+                List<ProductionOrder> orders = productionOrderService.listByIds(relatedOrderIds);
+                Map<String, ProductionOrder> orderMap = new HashMap<>();
+                for (ProductionOrder order : orders) {
+                    if (order == null || !StringUtils.hasText(order.getId())) continue;
+                    orderMap.put(order.getId(), order);
+                }
+                // 按 patternId 回填（一个订单可能关联多个样版）
+                for (PatternProduction pattern : patterns) {
+                    if (pattern == null || !StringUtils.hasText(pattern.getId())) continue;
+                    String orderId = pattern.getProductionOrderId();
+                    if (!StringUtils.hasText(orderId)) continue;
+                    ProductionOrder order = orderMap.get(orderId);
+                    if (order == null) continue;
+                    String patternId = pattern.getId();
+                    factoryNameMap.put(patternId, order.getFactoryName());
+                    factoryTypeMap.put(patternId, order.getFactoryType());
+                    orderBizTypeMap.put(patternId, order.getOrderBizType());
+                }
             }
         } catch (Exception e) {
             log.warn("Failed to load pattern production fields for purchase enrichment", e);
@@ -151,7 +187,9 @@ public class MaterialPurchaseOrchestratorHelper {
             Map<String, Integer> orderQuantityMap, Map<String, Integer> patternQuantityMap,
             Map<String, String> orderColorMap, Map<String, String> patternColorMap,
             Map<String, String> orderFactoryNameMap, Map<String, String> orderFactoryTypeMap,
-            Map<String, String> orderBizTypeMap) {
+            Map<String, String> orderBizTypeMap,
+            Map<String, String> patternFactoryNameMap, Map<String, String> patternFactoryTypeMap,
+            Map<String, String> patternOrderBizTypeMap) {
         Map<String, Object> map = new LinkedHashMap<>();
         map.put("id", record.getId());
         map.put("purchaseNo", record.getPurchaseNo());
@@ -206,6 +244,10 @@ public class MaterialPurchaseOrchestratorHelper {
         } else if ("sample".equals(sourceType) && StringUtils.hasText(record.getPatternProductionId())) {
             orderQuantity = patternQuantityMap.get(record.getPatternProductionId());
             orderColor = patternColorMap.get(record.getPatternProductionId());
+            // factoryName/factoryType/orderBizType 通过 PatternProduction.productionOrderId 关联的 ProductionOrder 补齐
+            factoryName = patternFactoryNameMap.get(record.getPatternProductionId());
+            factoryType = patternFactoryTypeMap.get(record.getPatternProductionId());
+            orderBizType = patternOrderBizTypeMap.get(record.getPatternProductionId());
         }
         map.put("orderQuantity", orderQuantity);
         map.put("orderColor", orderColor);

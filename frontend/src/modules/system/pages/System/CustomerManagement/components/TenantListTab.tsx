@@ -173,7 +173,7 @@ const TenantListTab: React.FC = () => {
     { title: '主账号', dataIndex: 'ownerUsername', width: 110, render: (v: string, r: TenantInfo) => v || r.applyUsername || '-' },
     { title: '联系人', dataIndex: 'contactName', width: 90 },
     { title: '联系电话', dataIndex: 'contactPhone', width: 120 },
-    { title: '账户状态', dataIndex: 'status', width: 90, align: 'center', render: (s: string) => { const map: Record<string, {color:string, label:string}> = { active: {color:'green', label:'正常'}, disabled: {color:'red', label:'停用'}, pending_review: {color:'orange', label:'待审核'}, rejected: {color:'default', label:'已拒绝'} }; const cfg = map[s] || {color:'default', label: s}; return <Tag color={cfg.color}>{cfg.label}</Tag>; } },
+    { title: '账户状态', dataIndex: 'status', width: 90, align: 'center', render: (s: string) => { const map: Record<string, {color:string, label:string}> = { active: {color:'green', label:'正常'}, disabled: {color:'red', label:'停用'}, pending_review: {color:'orange', label:'待审核'}, rejected: {color:'default', label:'已拒绝'} }; const cfg = map[s] || {color:'default', label: '未知'}; return <Tag color={cfg.color}>{cfg.label}</Tag>; } },
     { title: '付费状态', dataIndex: 'paidStatus', width: 90, align: 'center', render: (s: string, r: TenantInfo) => r.status === 'active' ? <Tag color={s === 'PAID' ? 'gold' : 'default'}>{s === 'PAID' ? '已付费' : '免费试用'}</Tag> : '-' },
     { title: '最大用户数', dataIndex: 'maxUsers', width: 90, align: 'center', render: (v: number, r: TenantInfo) => r.status === 'active' ? v : '-' },
     { title: '申请时间', dataIndex: 'createTime', width: 150 },

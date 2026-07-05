@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import crmClient from '@/api/crmClient';
+import { receivableStatusText } from './CrmReceivables';
 
 const CrmReceivableDetail = () => {
   const { receivableId } = useParams();
@@ -39,7 +40,7 @@ const CrmReceivableDetail = () => {
         <div style={s.row}><span style={s.label}>应收金额</span><span style={s.val}>¥{r.amount?.toLocaleString() || 0}</span></div>
         <div style={s.row}><span style={s.label}>已收金额</span><span style={{ ...s.val, color: '#27ae60' }}>¥{r.receivedAmount?.toLocaleString() || 0}</span></div>
         <div style={s.row}><span style={s.label}>未收金额</span><span style={{ ...s.val, color: '#e74c3c' }}>¥{r.outstandingAmount?.toLocaleString() || 0}</span></div>
-        <div style={s.row}><span style={s.label}>状态</span><span style={s.val}>{r.status}</span></div>
+        <div style={s.row}><span style={s.label}>状态</span><span style={s.val}>{receivableStatusText(r.status)}</span></div>
         <div style={s.row}><span style={s.label}>到期日</span><span style={s.val}>{r.dueDate || '-'}</span></div>
         <div style={s.row}><span style={s.label}>关联订单</span><span style={s.val}>{r.orderNo || '-'}</span></div>
         <div style={s.row}><span style={s.label}>描述</span><span style={s.val}>{r.description || '-'}</span></div>

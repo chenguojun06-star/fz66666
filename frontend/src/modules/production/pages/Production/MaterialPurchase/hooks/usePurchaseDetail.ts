@@ -4,6 +4,7 @@
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import api, { parseProductionOrderLines } from '@/utils/api';
+import { productionPatternApi } from '@/services/production/productionApi';
 import type { MaterialPurchase as MaterialPurchaseType, ProductionOrder } from '@/types/production';
 import { getMaterialTypeSortKey } from '@/utils/materialType';
 import { buildSizePairs } from '../utils';
@@ -100,9 +101,87 @@ export function usePurchaseDetail({ currentPurchase, visible, dialogMode }: UseP
         unwrapPurchaseRecords(purchaseRes).filter(r => String((r as any)?.sourceType || '').trim().toLowerCase() === 'sample'),
       );
       setDetailPurchases(records);
-      setDetailOrder(null);
 
-      if (records.length > 0) {
+      // 样衣模式下没有大货订单，需要查样衣详情构造订单头信息（款号/款名/颜色/码数/下单数量/封面图）
+      // 否则订单头区域全部显示 '-'，用户看不到基础信息
+      // 参考 InlinePurchasePanel.tsx 的修复模式
+      const patternProductionId = String((currentPurchase as any)?.patternProductionId || '').trim();
+      let orderRecord: ProductionOrder | null = null;
+      if (patternProductionId) {
+        try {
+          const patternRes = await productionPatternApi.getPatternDetail(patternProductionId);
+          if (patternRes?.code === 200 && patternRes?.data) {
+            const p = patternRes.data;
+            let pColor = String(p.color || (currentPurchase as any)?.orderColor || currentPurchase?.color || '').trim();
+            let pSize = String(p.size || '').trim();
+            let pQty = Number(p.quantity || (currentPurchase as any)?.orderQuantity || 0);
+
+            // PatternProduction 的 color/size/quantity 可能为空（老数据未填）
+            // 兜底：从 StyleInfo 的 sizeColorMatrix 解析出完整的颜色×尺码×数量明细
+            // matrixRows 结构: [{color:"白色", quantities:[1,0,0]}], sizes: ["S(160/84A)", "M", "L"]
+            const orderDetails: Array<{ color: string; size: string; quantity: number }> = [];
+            if (pColor && pSize) {
+              orderDetails.push({ color: pColor, size: pSize, quantity: pQty });
+            } else {
+              const matrix = (p.sizeColorMatrix || p.sizeColorConfig) as Record<string, unknown> | string | undefined;
+              let parsedMatrix: { sizes?: string[]; matrixRows?: Array<Record<string, unknown>> } | null = null;
+              if (matrix && typeof matrix === 'string') {
+                try { parsedMatrix = JSON.parse(matrix); } catch { /* ignore */ }
+              } else if (matrix && typeof matrix === 'object') {
+                parsedMatrix = matrix as { sizes?: string[]; matrixRows?: Array<Record<string, unknown>> };
+              }
+              const sizes = Array.isArray(parsedMatrix?.sizes) ? (parsedMatrix!.sizes as string[]) : [];
+              const rows = Array.isArray(parsedMatrix?.matrixRows) ? (parsedMatrix!.matrixRows as Array<Record<string, unknown>>) : [];
+              rows.forEach((row) => {
+                const rowColor = String(row?.color || '').trim();
+                const quantities = Array.isArray(row?.quantities) ? (row.quantities as number[]) : [];
+                sizes.forEach((sz, idx) => {
+                  const q = Number(quantities[idx] || 0);
+                  if (q > 0) {
+                    orderDetails.push({ color: rowColor, size: String(sz || '').trim(), quantity: q });
+                  }
+                });
+              });
+              // 如果解析出明细，汇总给 pColor/pSize/pQty 用于订单头兜底显示
+              if (orderDetails.length > 0) {
+                if (!pColor) {
+                  const colors = Array.from(new Set(orderDetails.map(d => d.color).filter(Boolean)));
+                  pColor = colors.length === 1 ? colors[0] : (colors.length > 1 ? `${colors.length}色：${colors.join(' / ')}` : '');
+                }
+                if (!pSize) {
+                  const sizes2 = Array.from(new Set(orderDetails.map(d => d.size).filter(Boolean)));
+                  pSize = sizes2.length === 1 ? sizes2[0] : (sizes2.length > 1 ? `${sizes2.length}码：${sizes2.join(' / ')}` : '');
+                }
+                if (!pQty) pQty = orderDetails.reduce((s, d) => s + d.quantity, 0);
+              }
+            }
+
+            // 构造伪 order，字段对齐订单头期望的形状
+            // orderDetails 让 parseProductionOrderLines 能正常解析出 lines
+            orderRecord = {
+              id: String(p.id || patternProductionId),
+              styleNo: String(p.styleNo || styleNo || ''),
+              styleName: String(p.styleName || ''),
+              styleId: String(p.styleId || ''),
+              styleCover: (p.coverImage as string) || null,
+              color: pColor,
+              size: pSize,
+              orderQuantity: pQty,
+              orderNo: '',
+              orderDetails,
+            } as unknown as ProductionOrder;
+          }
+        } catch (e: unknown) {
+          console.warn('[usePurchaseDetail] 查询样衣详情失败:', (e as Error)?.message || e);
+        }
+      }
+      setDetailOrder(orderRecord);
+
+      // 优先用样衣详情解析出的明细行；没有再用采购记录汇总；最后兜底 '-'
+      const parsedLines = parseProductionOrderLines(orderRecord);
+      if (parsedLines.length) {
+        setDetailOrderLines(parsedLines);
+      } else if (records.length > 0) {
         const colors = new Set<string>(); const sizes = new Set<string>();
         let totalQty = 0; let orderQty = 0; let orderColor = '';
         records.forEach((p: any) => {

@@ -6,7 +6,7 @@ const PURCHASE_STATUS_MAP = {
   pending: '待处理', partial_arrival: '部分到货', received: '已到货',
   completed: '已完成', cancelled: '已取消', in_progress: '进行中',
 };
-const purchaseStatusText = (s) => PURCHASE_STATUS_MAP[s] || '未知';
+export const purchaseStatusText = (s) => PURCHASE_STATUS_MAP[s] || '未知';
 
 const CrmPurchases = () => {
   const navigate = useNavigate();

@@ -145,6 +145,10 @@ public class ProductWarehousingQueryHelper {
             w.setParentOrgUnitId(order.getParentOrgUnitId());
             w.setParentOrgUnitName(order.getParentOrgUnitName());
             w.setOrgPath(order.getOrgPath());
+            // 补齐 styleName：从生产订单直接 copy
+            if (!StringUtils.hasText(w.getStyleName())) {
+                w.setStyleName(order.getStyleName());
+            }
         }
     }
 

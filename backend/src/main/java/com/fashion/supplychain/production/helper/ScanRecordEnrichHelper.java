@@ -5,6 +5,10 @@ import com.fashion.supplychain.production.entity.CuttingBundle;
 import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.service.CuttingBundleService;
 import com.fashion.supplychain.production.service.ScanRecordService;
+import com.fashion.supplychain.style.entity.StyleAttachment;
+import com.fashion.supplychain.style.entity.StyleInfo;
+import com.fashion.supplychain.style.service.StyleAttachmentService;
+import com.fashion.supplychain.style.service.StyleInfoService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -26,6 +30,12 @@ public class ScanRecordEnrichHelper {
 
     @Autowired
     private ScanRecordService scanRecordService;
+
+    @Autowired
+    private StyleInfoService styleInfoService;
+
+    @Autowired
+    private StyleAttachmentService styleAttachmentService;
 
     /**
      * 批量填充床号：从 t_cutting_bundle 查询 bedNo 并写入扫码记录
@@ -116,6 +126,91 @@ public class ScanRecordEnrichHelper {
                 String key = r.getCuttingBundleId() + ":" + r.getScanType();
                 r.setHasNextStageScan(blockedKeys.contains(key));
             }
+        }
+    }
+
+    /**
+     * 批量补齐款式信息（styleName / coverImage）
+     * 参考 PatternEnrichmentHelper.enrichRecord 模式，从 StyleInfo 查询补齐
+     * - styleName 从 StyleInfo.styleName 补齐
+     * - coverImage 从 StyleInfo.cover 补齐，为空时从 StyleAttachment 查图片附件兜底
+     */
+    public void enrichStyleInfo(List<ScanRecord> records) {
+        if (records == null || records.isEmpty()) return;
+        try {
+            // 收集所有 styleId（ScanRecord.styleId 为 String，StyleInfo.id 为 Long）
+            List<String> styleIds = records.stream()
+                    .map(ScanRecord::getStyleId)
+                    .filter(StringUtils::hasText)
+                    .map(String::trim)
+                    .distinct()
+                    .collect(Collectors.toList());
+            if (styleIds.isEmpty()) return;
+
+            // 批量查询 StyleInfo
+            Map<String, StyleInfo> styleByIdStr = new HashMap<>();
+            for (String sid : styleIds) {
+                try {
+                    Long lid = Long.parseLong(sid);
+                    StyleInfo info = styleInfoService.getById(lid);
+                    if (info != null) styleByIdStr.put(sid, info);
+                } catch (NumberFormatException ignore) {
+                    // styleId 非数字，跳过
+                }
+            }
+            if (styleByIdStr.isEmpty()) return;
+
+            // 收集需要走二级兜底的 styleId（StyleInfo.cover 为空）
+            List<String> missingCoverStyleIds = styleByIdStr.entrySet().stream()
+                    .filter(e -> !StringUtils.hasText(e.getValue().getCover()))
+                    .map(Map.Entry::getKey)
+                    .collect(Collectors.toList());
+
+            // 二级兜底：StyleAttachment 查图片附件
+            Map<String, String> attachCoverByStyleId = new HashMap<>();
+            if (!missingCoverStyleIds.isEmpty()) {
+                try {
+                    List<StyleAttachment> attachments = styleAttachmentService.list(
+                            new LambdaQueryWrapper<StyleAttachment>()
+                                    .in(StyleAttachment::getStyleId, missingCoverStyleIds)
+                                    .like(StyleAttachment::getFileType, "image")
+                                    .eq(StyleAttachment::getStatus, "active")
+                                    .orderByAsc(StyleAttachment::getCreateTime));
+                    if (attachments != null) {
+                        for (StyleAttachment a : attachments) {
+                            if (a == null || !StringUtils.hasText(a.getFileUrl()) || !StringUtils.hasText(a.getStyleId())) continue;
+                            attachCoverByStyleId.putIfAbsent(a.getStyleId().trim(), a.getFileUrl());
+                        }
+                    }
+                } catch (Exception e) {
+                    log.warn("从 StyleAttachment 查封面图失败: styleIds={}", missingCoverStyleIds, e);
+                }
+            }
+
+            // 填充每条记录
+            for (ScanRecord r : records) {
+                String sid = r.getStyleId();
+                if (!StringUtils.hasText(sid)) continue;
+                StyleInfo info = styleByIdStr.get(sid.trim());
+                if (info == null) continue;
+                // 补齐 styleName
+                if (!StringUtils.hasText(r.getStyleName()) && StringUtils.hasText(info.getStyleName())) {
+                    r.setStyleName(info.getStyleName());
+                }
+                // 补齐 coverImage：一级 StyleInfo.cover → 二级 StyleAttachment
+                if (!StringUtils.hasText(r.getCoverImage())) {
+                    if (StringUtils.hasText(info.getCover())) {
+                        r.setCoverImage(info.getCover());
+                    } else {
+                        String attachCover = attachCoverByStyleId.get(sid.trim());
+                        if (StringUtils.hasText(attachCover)) {
+                            r.setCoverImage(attachCover);
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Failed to enrich styleInfo for scan records: recordCount={}", records.size(), e);
         }
     }
 

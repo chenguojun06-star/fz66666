@@ -8,16 +8,23 @@ import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.service.MaterialDatabaseService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.helper.MaterialPurchaseHelper;
+import com.fashion.supplychain.style.entity.StyleAttachment;
+import com.fashion.supplychain.style.entity.StyleInfo;
+import com.fashion.supplychain.style.service.StyleAttachmentService;
+import com.fashion.supplychain.style.service.StyleInfoService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
 @Component("materialPurchaseQueryHelperImpl")
+@Slf4j
 class MaterialPurchaseQueryHelper {
 
     @Autowired
@@ -28,6 +35,12 @@ class MaterialPurchaseQueryHelper {
 
     @Autowired
     private MaterialPurchaseServiceHelper serviceHelper;
+
+    @Autowired
+    private StyleInfoService styleInfoService;
+
+    @Autowired
+    private StyleAttachmentService styleAttachmentService;
 
     LambdaQueryWrapper<MaterialPurchase> buildQueryWrapper(Map<String, Object> safeParams, Long tenantId) {
         String purchaseNo = (String) safeParams.getOrDefault("purchaseNo", "");
@@ -127,6 +140,85 @@ class MaterialPurchaseQueryHelper {
             if ((record.getUnitPrice() == null || record.getUnitPrice().compareTo(BigDecimal.ZERO) == 0) && db.getUnitPrice() != null) record.setUnitPrice(db.getUnitPrice());
             if (!StringUtils.hasText(record.getColor()) && StringUtils.hasText(db.getColor())) record.setColor(db.getColor());
             if (!StringUtils.hasText(record.getSpecifications()) && StringUtils.hasText(db.getSpecifications())) record.setSpecifications(db.getSpecifications());
+        }
+    }
+
+    /**
+     * 补齐 styleName/styleCover：从 StyleInfo 查询补齐
+     * - styleName 为空时，从 StyleInfo.styleName 补齐
+     * - styleCover 为空时，从 StyleInfo.cover 补齐，并加 StyleAttachment 兜底
+     */
+    void enrichStyleInfo(List<MaterialPurchase> records) {
+        if (records == null || records.isEmpty()) return;
+        // 收集需要补齐 styleName 或 styleCover 的 styleId
+        List<String> styleIds = records.stream()
+                .map(MaterialPurchase::getStyleId)
+                .filter(StringUtils::hasText)
+                .map(String::trim)
+                .distinct()
+                .collect(Collectors.toList());
+        if (styleIds.isEmpty()) return;
+
+        // 一次查询所有 StyleInfo（按 styleId 字符串匹配 StyleInfo.id，需转 Long）
+        Map<String, StyleInfo> styleByIdStr = new HashMap<>();
+        for (String sid : styleIds) {
+            try {
+                Long lid = Long.parseLong(sid);
+                StyleInfo info = styleInfoService.getById(lid);
+                if (info != null) styleByIdStr.put(sid, info);
+            } catch (NumberFormatException ignore) {
+                // styleId 非数字，跳过
+            }
+        }
+        if (styleByIdStr.isEmpty()) return;
+
+        // 收集需要走二级兜底的 styleId（StyleInfo.cover 为空）
+        List<String> missingCoverStyleIds = styleByIdStr.entrySet().stream()
+                .filter(e -> !StringUtils.hasText(e.getValue().getCover()))
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toList());
+
+        // 二级兜底：StyleAttachment 查图片附件
+        Map<String, String> attachCoverByStyleId = new HashMap<>();
+        if (!missingCoverStyleIds.isEmpty()) {
+            try {
+                List<StyleAttachment> attachments = styleAttachmentService.list(
+                        new LambdaQueryWrapper<StyleAttachment>()
+                                .in(StyleAttachment::getStyleId, missingCoverStyleIds)
+                                .like(StyleAttachment::getFileType, "image")
+                                .eq(StyleAttachment::getStatus, "active")
+                                .orderByAsc(StyleAttachment::getCreateTime));
+                if (attachments != null) {
+                    for (StyleAttachment a : attachments) {
+                        if (a == null || !StringUtils.hasText(a.getFileUrl()) || !StringUtils.hasText(a.getStyleId())) continue;
+                        attachCoverByStyleId.putIfAbsent(a.getStyleId().trim(), a.getFileUrl());
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("从 StyleAttachment 查封面图失败: styleIds={}", missingCoverStyleIds, e);
+            }
+        }
+
+        for (MaterialPurchase record : records) {
+            String sid = record.getStyleId();
+            if (!StringUtils.hasText(sid)) continue;
+            StyleInfo info = styleByIdStr.get(sid.trim());
+            if (info == null) continue;
+            // 补齐 styleName
+            if (!StringUtils.hasText(record.getStyleName()) && StringUtils.hasText(info.getStyleName())) {
+                record.setStyleName(info.getStyleName());
+            }
+            // 补齐 styleCover：一级 StyleInfo.cover → 二级 StyleAttachment
+            if (!StringUtils.hasText(record.getStyleCover())) {
+                if (StringUtils.hasText(info.getCover())) {
+                    record.setStyleCover(info.getCover());
+                } else {
+                    String attachCover = attachCoverByStyleId.get(sid.trim());
+                    if (StringUtils.hasText(attachCover)) {
+                        record.setStyleCover(attachCover);
+                    }
+                }
+            }
         }
     }
 

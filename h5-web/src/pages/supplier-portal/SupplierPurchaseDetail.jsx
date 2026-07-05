@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import supplierPortal from '@/api/supplierPortal';
+import { purchaseStatusText } from './SupplierPurchases';
 
 const SupplierPurchaseDetail = () => {
   const { purchaseId } = useParams();
@@ -81,7 +82,7 @@ const SupplierPurchaseDetail = () => {
         <div style={s.row}><span style={s.label}>规格</span><span style={s.val}>{p.specifications || '-'}</span></div>
         <div style={s.row}><span style={s.label}>采购数量</span><span style={s.val}>{p.purchaseQuantity || 0} {p.unit || ''}</span></div>
         <div style={s.row}><span style={s.label}>已到货</span><span style={s.val}>{p.arrivedQuantity || 0}</span></div>
-        <div style={s.row}><span style={s.label}>状态</span><span style={s.val}>{p.status}</span></div>
+        <div style={s.row}><span style={s.label}>状态</span><span style={s.val}>{purchaseStatusText(p.status)}</span></div>
         <div style={s.row}><span style={s.label}>关联订单</span><span style={s.val}>{p.orderNo || '-'}</span></div>
         <div style={s.row}><span style={s.label}>款号</span><span style={s.val}>{p.styleNo || '-'}</span></div>
         <div style={s.row}><span style={s.label}>预计到货</span><span style={s.val}>{p.expectedArrivalDate || '-'}</span></div>

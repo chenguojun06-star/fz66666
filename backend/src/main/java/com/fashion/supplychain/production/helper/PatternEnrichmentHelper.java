@@ -9,10 +9,13 @@ import com.fashion.supplychain.production.service.MaterialPurchaseService;
 import com.fashion.supplychain.production.service.PatternProductionService;
 import com.fashion.supplychain.production.service.PatternScanRecordService;
 import com.fashion.supplychain.production.service.ProcessParentMappingService;
+import com.fashion.supplychain.style.entity.StyleAttachment;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.entity.StyleProcess;
+import com.fashion.supplychain.style.service.StyleAttachmentService;
 import com.fashion.supplychain.style.service.StyleInfoService;
 import com.fashion.supplychain.style.service.StyleProcessService;
+import com.fashion.supplychain.template.entity.TemplateLibrary;
 import com.fashion.supplychain.template.service.TemplateLibraryService;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -32,6 +35,9 @@ public class PatternEnrichmentHelper {
 
     @Autowired
     private StyleInfoService styleInfoService;
+
+    @Autowired
+    private StyleAttachmentService styleAttachmentService;
 
     @Autowired
     private StyleProcessService styleProcessService;
@@ -120,6 +126,7 @@ public class PatternEnrichmentHelper {
         String category = null;
         String customer = null;
         String developmentSourceType = null;
+        String styleNo = null;
 
         if (StringUtils.hasText(styleIdStr)) {
             try {
@@ -135,6 +142,7 @@ public class PatternEnrichmentHelper {
                     category = styleInfo.getCategory();
                     customer = styleInfo.getCustomer();
                     developmentSourceType = styleInfo.getDevelopmentSourceType();
+                    styleNo = styleInfo.getStyleNo();
 
                     String sizeColorConfig = styleInfo.getSizeColorConfig();
                     if (StringUtils.hasText(sizeColorConfig)) {
@@ -174,6 +182,14 @@ public class PatternEnrichmentHelper {
             } catch (Exception e) {
                 log.warn("Failed to get style info for styleId: {}", styleIdStr, e);
             }
+            // 二级兜底：StyleInfo.cover 为空时，从 StyleAttachment 查图片附件
+            if (!StringUtils.hasText(coverImage)) {
+                coverImage = fillCoverFromAttachments(styleIdStr);
+            }
+            // 三级兜底：StyleAttachment 仍为空时，从 TemplateLibrary 查模板图
+            if (!StringUtils.hasText(coverImage) && StringUtils.hasText(styleNo)) {
+                coverImage = fillCoverFromTemplates(styleNo);
+            }
         }
         map.put("coverImage", coverImage);
         map.put("sizes", sizes);
@@ -185,6 +201,99 @@ public class PatternEnrichmentHelper {
         map.put("category", category);
         map.put("customer", customer);
         map.put("developmentSourceType", developmentSourceType);
+    }
+
+    /**
+     * 二级兜底：从 StyleAttachment 查图片附件作为封面图
+     * 参考 ProductionOrderQueryService.fillCoverFromAttachments 实现
+     */
+    private String fillCoverFromAttachments(String styleIdStr) {
+        if (!StringUtils.hasText(styleIdStr)) {
+            return null;
+        }
+        try {
+            List<StyleAttachment> attachments = styleAttachmentService.list(
+                    new LambdaQueryWrapper<StyleAttachment>()
+                            .eq(StyleAttachment::getStyleId, styleIdStr.trim())
+                            .like(StyleAttachment::getFileType, "image")
+                            .eq(StyleAttachment::getStatus, "active")
+                            .orderByAsc(StyleAttachment::getCreateTime));
+            if (attachments == null || attachments.isEmpty()) {
+                return null;
+            }
+            for (StyleAttachment a : attachments) {
+                if (a != null && StringUtils.hasText(a.getFileUrl())) {
+                    return a.getFileUrl();
+                }
+            }
+        } catch (Exception e) {
+            log.warn("从 StyleAttachment 查封面图失败: styleId={}", styleIdStr, e);
+        }
+        return null;
+    }
+
+    /**
+     * 三级兜底：从 TemplateLibrary 查模板图作为封面图
+     * 参考 ProductionOrderQueryService.fillCoverFromTemplates 实现
+     */
+    private String fillCoverFromTemplates(String styleNo) {
+        if (!StringUtils.hasText(styleNo)) {
+            return null;
+        }
+        try {
+            List<TemplateLibrary> templates = templateLibraryService.list(
+                    new LambdaQueryWrapper<TemplateLibrary>()
+                            .eq(TemplateLibrary::getTemplateType, "process_price")
+                            .eq(TemplateLibrary::getSourceStyleNo, styleNo.trim())
+                            .orderByDesc(TemplateLibrary::getUpdateTime)
+                            .orderByDesc(TemplateLibrary::getCreateTime));
+            if (templates == null || templates.isEmpty()) {
+                return null;
+            }
+            for (TemplateLibrary t : templates) {
+                if (t == null || !StringUtils.hasText(t.getTemplateContent())) {
+                    continue;
+                }
+                String image = extractFirstTemplateImage(t.getTemplateContent());
+                if (StringUtils.hasText(image)) {
+                    return image;
+                }
+            }
+        } catch (Exception e) {
+            log.warn("从 TemplateLibrary 查模板封面图失败: styleNo={}", styleNo, e);
+        }
+        return null;
+    }
+
+    /**
+     * 从模板内容中提取第一张图片URL
+     * 复用 ProductionOrderQueryService 的同名方法逻辑
+     */
+    private String extractFirstTemplateImage(String templateContent) {
+        if (!StringUtils.hasText(templateContent)) {
+            return null;
+        }
+        try {
+            List<Map<String, Object>> nodes = objectMapper.readValue(templateContent,
+                    new TypeReference<List<Map<String, Object>>>() {});
+            if (nodes == null || nodes.isEmpty()) {
+                return null;
+            }
+            for (Map<String, Object> node : nodes) {
+                if (node == null) continue;
+                Object imageObj = node.get("image");
+                if (imageObj instanceof String && StringUtils.hasText((String) imageObj)) {
+                    return ((String) imageObj).trim();
+                }
+                Object imgObj = node.get("img");
+                if (imgObj instanceof String && StringUtils.hasText((String) imgObj)) {
+                    return ((String) imgObj).trim();
+                }
+            }
+        } catch (Exception e) {
+            log.debug("解析模板内容图片失败: {}", e.getMessage());
+        }
+        return null;
     }
 
     private void enrichWithProcessPrices(Map<String, Object> map, String styleIdStr) {

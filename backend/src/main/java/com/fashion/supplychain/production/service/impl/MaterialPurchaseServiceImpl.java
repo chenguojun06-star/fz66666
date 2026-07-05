@@ -70,6 +70,7 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
             queryHelper.repairRecords(records);
             queryHelper.enrichFactoryInfo(records);
             queryHelper.enrichFromMaterialDatabase(records);
+            queryHelper.enrichStyleInfo(records);
         }
         return pageResult;
     }

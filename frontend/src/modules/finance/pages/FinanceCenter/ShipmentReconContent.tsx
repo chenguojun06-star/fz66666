@@ -10,6 +10,7 @@ import ResizableTable from '@/components/common/ResizableTable';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
 import { readPageSize } from '@/utils/pageSizeStore';
 import RowActions from '@/components/common/RowActions';
+import { MATERIAL_RECON_STATUS_MAP } from '@/constants/statusMaps';
 import type { ShipmentReconciliation } from '@/types/finance';
 
 const { RangePicker } = DatePicker;
@@ -21,14 +22,6 @@ interface FilterState {
   dateRange: [Dayjs | null, Dayjs | null] | null;
   status: string;
 }
-
-const statusColors: Record<string, string> = {
-  pending: 'orange',
-  verified: 'blue',
-  approved: 'green',
-  paid: 'cyan',
-  rejected: 'red',
-};
 
 const ShipmentReconContent: React.FC = () => {
   const { message } = App.useApp();
@@ -238,7 +231,11 @@ const ShipmentReconContent: React.FC = () => {
       dataIndex: 'status',
       key: 'status',
       width: 100,
-      render: (v: string) => <Tag color={statusColors[v] || 'default'}>{v || '-'}</Tag>,
+      render: (v: string) => {
+        // 用统一状态映射，显示"待核实/已核实/已审批/已付款/已驳回"，避免直接显示英文状态码
+        const cfg = MATERIAL_RECON_STATUS_MAP[v];
+        return <Tag color={cfg?.color || 'default'}>{cfg?.text || '未知'}</Tag>;
+      },
     },
     {
       title: '对账日期',

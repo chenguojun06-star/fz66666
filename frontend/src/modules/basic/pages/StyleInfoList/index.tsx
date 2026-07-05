@@ -137,7 +137,27 @@ const StyleInfoListPage: React.FC = () => {
     fetchList();
     loadDevelopmentStats(statsRangeType);
     loadCategoryOptions();
+    loadStyleStats();
   }, [fetchList, loadDevelopmentStats, statsRangeType]);
+
+  // 顶部统计卡片数据（总数/开发中/已完成/已延期）
+  const [styleStats, setStyleStats] = useState<{ totalStyles: number; developingStyles: number; completedStyles: number; delayedStyles: number }>({ totalStyles: 0, developingStyles: 0, completedStyles: 0, delayedStyles: 0 });
+  const [activeStatFilter, setActiveStatFilter] = useState<'all' | 'developing' | 'completed' | 'delayed'>('developing');
+  const loadStyleStats = useCallback(async () => {
+    try {
+      const res: any = await api.get('/style/info/stats');
+      if (res.code === 200 && res.data) {
+        setStyleStats({
+          totalStyles: Number(res.data.totalStyles || 0),
+          developingStyles: Number(res.data.developingStyles || 0),
+          completedStyles: Number(res.data.completedStyles || 0),
+          delayedStyles: Number(res.data.delayedStyles || 0),
+        });
+      }
+    } catch {
+      // 静默失败，不影响列表加载
+    }
+  }, []);
 
   // queryParams 变化时重新加载
   useEffect(() => {
@@ -442,7 +462,59 @@ const StyleInfoListPage: React.FC = () => {
             />
 
             <PageStatCards
-              cards={[]}
+              activeKey={activeStatFilter}
+              cards={[
+                {
+                  key: 'all',
+                  items: [
+                    { label: '全部款号', value: styleStats.totalStyles, unit: '个', color: 'var(--color-text-primary)' },
+                  ],
+                  onClick: () => {
+                    setActiveStatFilter('all');
+                    setQueryParams(prev => ({ ...prev, progressNode: '', page: 1 }));
+                    setSmartFilter('all');
+                    setFocusStyleIds(new Set());
+                  },
+                  activeColor: 'var(--color-text-primary)',
+                },
+                {
+                  key: 'developing',
+                  items: [
+                    { label: '开发中', value: styleStats.developingStyles, unit: '个', color: 'var(--color-primary)' },
+                  ],
+                  onClick: () => {
+                    setActiveStatFilter('developing');
+                    setQueryParams(prev => ({ ...prev, progressNode: '', page: 1 }));
+                    setSmartFilter('all');
+                    setFocusStyleIds(new Set());
+                  },
+                  activeColor: 'var(--color-primary)',
+                },
+                {
+                  key: 'completed',
+                  items: [
+                    { label: '已完成', value: styleStats.completedStyles, unit: '个', color: 'var(--color-success)' },
+                  ],
+                  onClick: () => {
+                    setActiveStatFilter('completed');
+                    setQueryParams(prev => ({ ...prev, progressNode: '样衣完成', page: 1 }));
+                    setSmartFilter('all');
+                    setFocusStyleIds(new Set());
+                  },
+                  activeColor: 'var(--color-success)',
+                },
+                {
+                  key: 'delayed',
+                  items: [
+                    { label: '已延期', value: styleStats.delayedStyles, unit: '个', color: 'var(--color-danger)' },
+                  ],
+                  onClick: () => {
+                    setActiveStatFilter('delayed');
+                    handleSmartFilterClick('overdue', overdueStyles);
+                  },
+                  activeColor: 'var(--color-danger)',
+                },
+              ]}
               hints={[
                 {
                   key: 'overdue',

@@ -26,6 +26,8 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
   unitPrice,
   processList = [],
   isPatternProduction = false,
+  sourceType,
+  patternId,
   mode = 'modal',
   extraData: _extraData,
   onSaved,
@@ -371,6 +373,8 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
                     <InlinePurchasePanel
                       orderId={orderId}
                       orderNo={orderSummary.orderNo || orderNo}
+                      sourceType={sourceType}
+                      patternId={patternId}
                     />
                   ),
                 }

@@ -243,6 +243,18 @@ public class ScanRecord {
     private Boolean hasNextStageScan;
 
     /**
+     * 款式名称（非数据库字段，仅用于API返回，由 ScanRecordEnrichHelper 从 StyleInfo 补齐）
+     */
+    @TableField(exist = false)
+    private String styleName;
+
+    /**
+     * 款式封面图（非数据库字段，仅用于API返回，由 ScanRecordEnrichHelper 从 StyleInfo/StyleAttachment 补齐）
+     */
+    @TableField(exist = false)
+    private String coverImage;
+
+    /**
      * 创建时间
      */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")

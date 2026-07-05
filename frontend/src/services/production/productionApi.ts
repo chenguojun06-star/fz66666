@@ -144,6 +144,33 @@ export const materialPurchaseApi = {
     ),
 };
 
+/** 样衣生产详情 API */
+export interface PatternProductionDetail {
+  id?: string | number;
+  styleNo?: string;
+  styleName?: string;
+  styleId?: string;
+  coverImage?: string | null;
+  color?: string;
+  size?: string;
+  quantity?: number;
+  sizeColorMatrix?: unknown;
+  sizeColorConfig?: unknown;
+  [key: string]: unknown;
+}
+
+export const productionPatternApi = {
+  /**
+   * 获取样衣生产详情（enriched 数据）
+   * 返回字段含 styleName / coverImage / color / size / quantity / sizeColorMatrix 等，
+   * 用于样衣模式下构造订单头信息（PC 端无原生订单，需用样衣详情兜底）。
+   */
+  getPatternDetail: (patternId: string) =>
+    api.get<{ code: number; data: PatternProductionDetail }>(
+      `/production/pattern/${encodeURIComponent(String(patternId || '').trim())}`,
+    ),
+};
+
 /** 工序→父节点动态映射 API（替代硬编码关键词列表） */
 export const processParentMappingApi = {
   /** 获取全部映射 { keyword: parentNode } */
@@ -218,6 +245,7 @@ export default {
   productionCuttingApi,
   productionScanApi,
   materialPurchaseApi,
+  productionPatternApi,
   processParentMappingApi,
   qualityAiApi,
   sysNoticeApi,

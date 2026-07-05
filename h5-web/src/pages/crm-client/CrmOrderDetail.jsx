@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import crmClient from '@/api/crmClient';
+import { orderStatusText } from './CrmOrders';
+import { purchaseStatusText } from './CrmPurchases';
+import { receivableStatusText } from './CrmReceivables';
 
 const CrmOrderDetail = () => {
   const { orderId } = useParams();
@@ -42,7 +45,7 @@ const CrmOrderDetail = () => {
         <div style={s.row}><span style={s.label}>款名</span><span style={s.val}>{order.styleName || '-'}</span></div>
         <div style={s.row}><span style={s.label}>颜色/尺码</span><span style={s.val}>{[order.color, order.size].filter(Boolean).join('/') || '-'}</span></div>
         <div style={s.row}><span style={s.label}>数量</span><span style={s.val}>{order.orderQuantity || 0} 件</span></div>
-        <div style={s.row}><span style={s.label}>状态</span><span style={s.val}>{order.status}</span></div>
+        <div style={s.row}><span style={s.label}>状态</span><span style={s.val}>{orderStatusText(order.status)}</span></div>
         <div style={s.row}><span style={s.label}>客户</span><span style={s.val}>{order.company || '-'}</span></div>
         <div style={s.row}><span style={s.label}>交期</span><span style={s.val}>{order.plannedEndDate || '-'}</span></div>
       </div>
@@ -64,7 +67,7 @@ const CrmOrderDetail = () => {
             <div key={p.id} style={s.subItem} onClick={() => navigate(`/crm-client/purchases/${p.id}`)}>
               <div style={s.subHeader}>
                 <span style={s.subTitle}>{p.materialName || p.purchaseNo}</span>
-                <span style={s.subStatus}>{p.status}</span>
+                <span style={s.subStatus}>{purchaseStatusText(p.status)}</span>
               </div>
               <div style={s.subInfo}>{p.orderNo} · {p.purchaseQuantity || 0} {p.materialType || ''}</div>
             </div>
@@ -79,7 +82,7 @@ const CrmOrderDetail = () => {
             <div key={r.id} style={s.subItem} onClick={() => navigate(`/crm-client/receivables/${r.id}`)}>
               <div style={s.subHeader}>
                 <span style={s.subTitle}>{r.receivableNo}</span>
-                <span style={s.subStatus}>{r.status}</span>
+                <span style={s.subStatus}>{receivableStatusText(r.status)}</span>
               </div>
               <div style={s.subInfo}>¥{r.amount?.toLocaleString() || 0} · 已收 ¥{r.receivedAmount?.toLocaleString() || 0}</div>
             </div>

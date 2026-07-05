@@ -96,6 +96,10 @@ export interface NodeDetailModalProps {
   styleNo?: string;
   /** 是否是样板生产（样板生产不显示菲号明细、扫码记录等） */
   isPatternProduction?: boolean;
+  /** 采购来源类型：order=大货订单（默认）| sample=样衣开发；用于 InlinePurchasePanel 切换数据加载逻辑 */
+  sourceType?: 'order' | 'sample';
+  /** 样衣生产ID（sourceType='sample' 时必填，用于查 /production/pattern/{id} 获取订单头信息） */
+  patternId?: string;
   /** 展示模式：modal（弹窗，默认）| drawer（侧滑） */
   mode?: 'modal' | 'drawer';
   /** 额外数据（如采购进度信息、时间节点等） */

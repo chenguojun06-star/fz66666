@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import crmClient from '@/api/crmClient';
+import { purchaseStatusText } from './CrmPurchases';
 
 const CrmPurchaseDetail = () => {
   const { purchaseId } = useParams();
@@ -44,7 +45,7 @@ const CrmPurchaseDetail = () => {
         <div style={s.row}><span style={s.label}>已到数量</span><span style={s.val}>{p.arrivedQuantity || 0}</span></div>
         <div style={s.row}><span style={s.label}>单价</span><span style={s.val}>¥{p.unitPrice?.toLocaleString() || '-'}</span></div>
         <div style={s.row}><span style={s.label}>总金额</span><span style={s.val}>¥{p.totalAmount?.toLocaleString() || '-'}</span></div>
-        <div style={s.row}><span style={s.label}>状态</span><span style={s.val}>{p.status}</span></div>
+        <div style={s.row}><span style={s.label}>状态</span><span style={s.val}>{purchaseStatusText(p.status)}</span></div>
         <div style={s.row}><span style={s.label}>关联订单</span><span style={s.val}>{p.orderNo || '-'}</span></div>
         <div style={s.row}><span style={s.label}>预计到货</span><span style={s.val}>{p.expectedArrivalDate || '-'}</span></div>
         <div style={s.row}><span style={s.label}>实际到货</span><span style={s.val}>{p.actualArrivalDate || '-'}</span></div>
