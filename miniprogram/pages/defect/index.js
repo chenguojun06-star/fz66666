@@ -141,8 +141,8 @@ Page({
   },
 
   _processDefectItem: function (item) {
-    item.defectCategoryText = DEFECT_CATEGORY_MAP[item.defectCategory] || item.defectCategory || '';
-    item.repairStatusText = REPAIR_STATUS_MAP[item.repairStatus] || item.repairStatus || '';
+    item.defectCategoryText = item.defectCategory ? (DEFECT_CATEGORY_MAP[item.defectCategory] || '未知') : '';
+    item.repairStatusText = item.repairStatus ? (REPAIR_STATUS_MAP[item.repairStatus] || '未知') : '';
 
     if (item.unqualifiedImageUrls) {
       try {

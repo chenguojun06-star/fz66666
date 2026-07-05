@@ -28,7 +28,7 @@ const OPERATION_TYPE_LABELS: Record<string, string> = {
 
 function getOperationLabel(op: string | undefined): string {
   if (!op) return '-';
-  return OPERATION_TYPE_LABELS[op.toUpperCase()] || op;
+  return OPERATION_TYPE_LABELS[op.toUpperCase()] ?? '未知';
 }
 
 const SampleScanRecordsTable: React.FC<SampleScanRecordsTableProps> = ({ patternId, stageKey, onRefresh }) => {

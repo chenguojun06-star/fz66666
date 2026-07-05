@@ -391,7 +391,7 @@
                   </view>
                   <view class="tf-process-body">
                     <view class="tf-process-top">
-                      <text class="tf-process-code">{{item.processCode}}</text>
+                      <text class="tf-process-code">{{item.processCodeText}}</text>
                       <text class="tf-process-name">{{item.processName}}</text>
                       <text class="tf-process-price">{{item.priceText}}</text>
                       <text class="tf-process-status" wx:if="{{item._completed}}">已完成</text>

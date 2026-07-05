@@ -43,7 +43,7 @@ export default function FeedbackPage() {
   const loadMyFeedbacks = async () => {
     try {
       const res = await api.system.myFeedbackList({ page: 1, pageSize: 20 });
-      const list = (res?.records || res || []).map(item => ({ ...item, statusText: STATUS_MAP[item.status] || item.status }));
+      const list = (res?.records || res || []).map(item => ({ ...item, statusText: STATUS_MAP[item.status] || '未知' }));
       setMyFeedbacks(list);
     } catch (e) { /* ignore */ }
   };

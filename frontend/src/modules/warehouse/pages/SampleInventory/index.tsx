@@ -241,7 +241,7 @@ const SampleInventory: React.FC = () => {
       dataIndex: 'sampleType',
       key: 'sampleType',
       width: 100,
-      render: (text) => <Tag>{SampleTypeMap[text] || text}</Tag>,
+      render: (text) => <Tag>{SampleTypeMap[text] ?? '未知'}</Tag>,
     },
     {
       title: '颜色/尺码',

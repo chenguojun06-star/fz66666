@@ -117,7 +117,7 @@ const InvoiceTab: React.FC = () => {
 
   const columns = [
     { title: '发票号', dataIndex: 'invoiceNo', width: 140 },
-    { title: '发票类型', dataIndex: 'invoiceType', width: 130, render: (v: string) => INVOICE_TYPES.find(t => t.value === v)?.label || v },
+    { title: '发票类型', dataIndex: 'invoiceType', width: 130, render: (v: string) => INVOICE_TYPES.find(t => t.value === v)?.label ?? '未知' },
     { title: '关联业务', dataIndex: 'relatedBizType', width: 110, render: (v: string) => formatBizType(v) },
     { title: '关联单号', dataIndex: 'relatedBizNo', width: 160, ellipsis: true, render: (v: string) => v || '-' },
     { title: '购方名称', dataIndex: 'titleName', ellipsis: true },

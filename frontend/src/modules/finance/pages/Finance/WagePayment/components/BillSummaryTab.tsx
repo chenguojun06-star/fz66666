@@ -139,7 +139,7 @@ const BillSummaryTab: React.FC<BillSummaryTabProps> = ({ defaultBillType }) => {
       title: '分类', dataIndex: 'billCategory', key: 'billCategory', width: 90,
       render: (v: string) => {
         const m = BILL_CATEGORY_MAP[v];
-        return m ? <Tag color={m.color}>{m.text}</Tag> : v;
+        return m ? <Tag color={m.color}>{m.text}</Tag> : '未知';
       },
     },
     {

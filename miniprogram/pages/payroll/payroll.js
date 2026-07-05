@@ -57,7 +57,7 @@ function _scanTypeText(raw) {
   if (v === 'packaging') return '包装';
   if (v === 'warehousing') return '入库';
   if (v === 'sewing' || v === 'carSewing') return '车缝';
-  return v;
+  return '未知';
 }
 
 function _orderStatusText(status) {
@@ -72,14 +72,14 @@ function _orderStatusText(status) {
   if (s === 'cancelled' || s === 'canceled') return '已取消';
   if (s === 'paused') return '已暂停';
   if (s === 'returned') return '已退回';
-  return s || '-';
+  return '未知';
 }
 
 function _paymentStatusText(status) {
   if (!status) return '未发放';
   if (status === 'success') return '已发放';
   if (status === 'pending') return '待支付';
-  return status;
+  return '未知';
 }
 
 Page({

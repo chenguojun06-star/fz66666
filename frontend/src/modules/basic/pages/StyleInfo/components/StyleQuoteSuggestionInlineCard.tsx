@@ -156,7 +156,7 @@ const StyleQuoteSuggestionInlineCard: React.FC<Props> = ({ styleNo, sourceStyleN
                       width: 90,
                       render: (value: string) => (
                         <Tag color={STYLE_ORDER_STATUS_COLOR[value] ?? 'default'}>
-                          {STYLE_ORDER_STATUS_LABEL[value] ?? value}
+                          {STYLE_ORDER_STATUS_LABEL[value] ?? '未知'}
                         </Tag>
                       ),
                     },

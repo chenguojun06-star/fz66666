@@ -111,11 +111,11 @@ const FeedbackTab: React.FC = () => {
       render: (v: string) => <Tag color={v === 'MINIPROGRAM' ? 'green' : 'blue'}>{v === 'MINIPROGRAM' ? '小程序' : 'PC'}</Tag>,
     },
     { title: '分类', dataIndex: 'category', width: 70,
-      render: (v: string) => <Tag color={FEEDBACK_CATEGORY[v]?.color}>{FEEDBACK_CATEGORY[v]?.label || v}</Tag>,
+      render: (v: string) => <Tag color={FEEDBACK_CATEGORY[v]?.color}>{FEEDBACK_CATEGORY[v]?.label ?? '未知'}</Tag>,
     },
     { title: '标题', dataIndex: 'title', width: 200, ellipsis: true },
     { title: '状态', dataIndex: 'status', width: 80,
-      render: (v: string) => <Tag color={FEEDBACK_STATUS[v]?.color}>{FEEDBACK_STATUS[v]?.label || v}</Tag>,
+      render: (v: string) => <Tag color={FEEDBACK_STATUS[v]?.color}>{FEEDBACK_STATUS[v]?.label ?? '未知'}</Tag>,
     },
     { title: '提交时间', dataIndex: 'createTime', width: 160 },
     {

@@ -74,7 +74,7 @@ Page({
 
         return {
           ...item,
-          materialTypeCN: MATERIAL_TYPE_MAP[item.materialType] || item.materialType || '',
+          materialTypeCN: item.materialType ? (MATERIAL_TYPE_MAP[item.materialType] || '未知') : '',
           statusText: this._getStatusText(status),
           statusColor: this._getStatusColor(status),
           isActionable,

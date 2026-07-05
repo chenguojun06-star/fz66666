@@ -43,7 +43,7 @@ export default function ProcurementTaskDetailPage() {
         if (status === 'completed') statusTagClass = 'status-tag-success';
         else if (status === 'received' || status === 'partial') statusTagClass = 'status-tag-info';
         return {
-          ...item, materialTypeCN: MATERIAL_TYPE_MAP[item.materialType] || item.materialType || '',
+          ...item, materialTypeCN: item.materialType ? (MATERIAL_TYPE_MAP[item.materialType] || '未知') : '',
           statusText: getStatusText(status), statusTagClass,
           isActionable: status !== 'completed' && status !== 'cancelled',
           needsReceive: !status || status === 'pending',

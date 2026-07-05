@@ -12,7 +12,7 @@ const PROGRESS_STAGE_MAP = {
   shipping: '出货', design: '设计', pattern: '纸样',
   sample: '样衣', production: '生产', finishing: '后整理',
 };
-const progressStageText = (s) => PROGRESS_STAGE_MAP[s] || s || '-';
+const progressStageText = (s) => PROGRESS_STAGE_MAP[s] || (s ? '未知' : '-');
 
 export default function ScanRescanPage() {
   const navigate = useNavigate();

@@ -648,7 +648,7 @@ const WarehouseLocationMap: React.FC = () => {
                           color={area.warehouseType === 'FINISHED' ? 'blue' : area.warehouseType === 'MATERIAL' ? 'green' : 'orange'}
                           style={{ marginLeft: 6, fontSize: 10, lineHeight: '16px', padding: '0 4px' }}
                         >
-                          {WAREHOUSE_TYPE_MAP[area.warehouseType] || area.warehouseType}
+                          {WAREHOUSE_TYPE_MAP[area.warehouseType] ?? '未知'}
                         </Tag>
                       </div>
                       <div className="wlm-warehouse-meta">
@@ -684,7 +684,7 @@ const WarehouseLocationMap: React.FC = () => {
                     <EnvironmentOutlined style={{ color: 'var(--color-primary)', marginRight: 8 }} />
                     {selectedArea.areaName}
                     <Tag color={selectedArea.warehouseType === 'FINISHED' ? 'blue' : selectedArea.warehouseType === 'MATERIAL' ? 'green' : 'orange'} style={{ marginLeft: 8 }}>
-                      {WAREHOUSE_TYPE_MAP[selectedArea.warehouseType] || selectedArea.warehouseType}
+                      {WAREHOUSE_TYPE_MAP[selectedArea.warehouseType] ?? '未知'}
                     </Tag>
                   </div>
                   <div className="wlm-header-subtitle">

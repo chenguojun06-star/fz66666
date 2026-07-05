@@ -216,7 +216,7 @@ const TaskItem: React.FC<{
   onClick: (task: PendingTaskDTO) => void;
 }> = ({ task, onClick }) => {
   const prio = PRIORITY_CONFIG[task.priority] || PRIORITY_CONFIG.medium;
-  const moduleLabel = MODULE_LABELS[task.module] || task.module;
+  const moduleLabel = MODULE_LABELS[task.module] ?? '未知';
 
   const startText = fmtDateTime(task.startTime);
   const endText = fmtDateTime(task.endTime);

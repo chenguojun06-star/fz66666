@@ -54,7 +54,7 @@ const SupplierReconciliations = () => {
       case 'approved': return '已审批';
       case 'paid': return '已付款';
       case 'rejected': return '已驳回';
-      default: return st || '-';
+      default: return st ? '未知' : '-';
     }
   };
 

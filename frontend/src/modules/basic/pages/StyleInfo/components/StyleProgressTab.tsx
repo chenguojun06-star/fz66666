@@ -250,7 +250,7 @@ const StyleProgressTab: React.FC<Props> = ({ styleId, styleNo }) => {
         </div>
         {pattern && (
           <Tag color={statusStr === 'PENDING' ? 'default' : statusStr === 'IN_PROGRESS' ? 'processing' : 'success'}>
-            {STATUS_LABELS[statusStr] || pattern.status || '-'}
+            {STATUS_LABELS[statusStr] ?? '未知'}
           </Tag>
         )}
         {pattern?.quantity && (

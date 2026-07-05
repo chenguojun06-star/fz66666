@@ -113,13 +113,13 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
       const found = categoryOptions.find(opt => opt.value === code);
       if (found) return found.label;
     }
-    return CATEGORY_MAP[code] || code;
+    return CATEGORY_MAP[code] ?? '未知';
   };
 
   const toSeasonCn = (value: unknown) => {
     const code = String(value || '').trim().toUpperCase();
     if (!code) return '-';
-    return SEASON_MAP[code] || code;
+    return SEASON_MAP[code] ?? '未知';
   };
 
   const isStageDoneRow = (record: StyleInfo) => {
@@ -553,7 +553,7 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
                                 <td style={{ padding: '8px 12px', textAlign: 'right' }}>{item.purchaseQuantity} {item.unit}</td>
                                 <td style={{ padding: '8px 12px', color: 'var(--color-text-secondary)' }}>{item.supplierName || '-'}</td>
                                 <td style={{ padding: '8px 12px', textAlign: 'center' }}>
-                                  <Tag color={STATUS_COLORS[item.status] || 'default'}>{STATUS_LABELS[item.status] || item.status}</Tag>
+                                  <Tag color={STATUS_COLORS[item.status] ?? 'default'}>{STATUS_LABELS[item.status] ?? '未知'}</Tag>
                                 </td>
                                 <td style={{ padding: '8px 12px', textAlign: 'center' }}>
                                   {item.status === 'pending' ? (

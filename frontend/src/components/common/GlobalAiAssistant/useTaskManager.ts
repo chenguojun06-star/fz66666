@@ -2,6 +2,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
 import type { TaskItem, TaskStatus } from './types';
 import type { PendingTaskDTO } from '@/services/intelligence/intelligenceTypes/advisor';
+import { useAuthState } from '@/utils/AuthContext';
 
 const POLL_INTERVAL = 30_000;
 
@@ -38,8 +39,13 @@ export function useTaskManager() {
   const [loading, setLoading] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const initialFetchedRef = useRef(false);
+  const { isAuthenticated } = useAuthState();
 
   const fetchTasks = useCallback(async (filters?: { status?: string; priority?: string; module?: string }) => {
+    if (!isAuthenticated) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     const results = await Promise.allSettled([
       intelligenceApi.getMyTasks(filters?.status, filters?.priority, filters?.module, 1, 200) as any,
@@ -69,14 +75,15 @@ export function useTaskManager() {
       setTasks(merged);
     }
     setLoading(false);
-  }, []);
+  }, [isAuthenticated]);
 
   useEffect(() => {
+    if (!isAuthenticated) return;
     if (!initialFetchedRef.current) {
       initialFetchedRef.current = true;
       void fetchTasks();
     }
-  }, [fetchTasks]);
+  }, [fetchTasks, isAuthenticated]);
 
   const createTask = useCallback(async (data: {
     title: string; description?: string; priority?: string; module?: string; orderNo?: string; styleNo?: string; endTime?: string;

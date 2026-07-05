@@ -158,9 +158,9 @@ export const formatTemplateKey = (raw: unknown) => {
   const key = String(raw ?? '').trim();
   if (!key) return { text: '-', full: '' };
   if (key === 'default') return { text: '系统默认', full: key };
-  if (key.startsWith('style_')) return { text: key.slice(6) || key, full: key };
+  if (key.startsWith('style_')) return { text: key.slice(6) || '未知', full: key };
   if (key.startsWith('progress_custom_')) return { text: '自定义', full: key };
-  return { text: key, full: key };
+  return { text: '未知', full: key };
 };
 
 export const typeLabel = (t: string) => {
@@ -168,7 +168,7 @@ export const typeLabel = (t: string) => {
   if (v === 'bom') return 'BOM';
   if (v === 'size') return '尺寸';
   if (v === 'process' || v === 'process_price') return '工序进度单价';
-  return v || '-';
+  return v ? '未知' : '-';
 };
 
 export const hasErrorFields = (err: unknown): err is { errorFields: unknown } => {

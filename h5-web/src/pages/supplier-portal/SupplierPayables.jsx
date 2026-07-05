@@ -52,7 +52,7 @@ const SupplierPayables = () => {
       case 'PARTIAL': return '部分付款';
       case 'PAID': return '已付清';
       case 'OVERDUE': return '逾期';
-      default: return st || '-';
+      default: return st ? '未知' : '-';
     }
   };
 

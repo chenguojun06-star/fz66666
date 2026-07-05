@@ -67,7 +67,7 @@ const WageFeedbackTab: React.FC = () => {
     {
       title: '类型', dataIndex: 'feedbackType', key: 'feedbackType', width: 80,
       render: (v: string) => {
-        const t = TYPE_MAP[v] || { text: v, color: 'default' };
+        const t = TYPE_MAP[v] ?? { text: '未知', color: 'default' };
         return <Tag color={t.color}>{t.text}</Tag>;
       },
     },

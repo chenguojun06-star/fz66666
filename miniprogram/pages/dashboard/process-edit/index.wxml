@@ -35,7 +35,7 @@
           <view class="process-row">
             <view class="process-info">
               <view class="process-name-row">
-                <text class="process-code">{{child.processCode}}</text>
+                <text class="process-code">{{child.processCodeText}}</text>
                 <text class="process-name">{{child.processName}}</text>
                 <text class="process-machine" wx:if="{{child.machineType}}">{{child.machineType}}</text>
               </view>

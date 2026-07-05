@@ -78,7 +78,7 @@ export function usePaymentColumns(props: UsePaymentColumnsProps) {
         width: 120,
         render: (v: string) => {
           const t = BIZ_TYPE_MAP[v];
-          return t ? <Tag icon={bizTypeIconMap[v]} color={t.color}>{t.text}</Tag> : v;
+          return t ? <Tag icon={bizTypeIconMap[v]} color={t.color}>{t.text}</Tag> : '未知';
         },
       },
       {
@@ -217,7 +217,7 @@ export function usePaymentColumns(props: UsePaymentColumnsProps) {
         width: 110,
         render: (v: string) => {
           const t = BIZ_TYPE_MAP[v];
-          return t ? <Tag color={t.color}>{t.text}</Tag> : v || '-';
+          return t ? <Tag color={t.color}>{t.text}</Tag> : '未知';
         },
       },
       {

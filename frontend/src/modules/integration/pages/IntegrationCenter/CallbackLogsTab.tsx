@@ -83,7 +83,7 @@ const CallbackLogsTab: React.FC<Props> = ({ active }) => {
     { title: '类型', dataIndex: 'type', width: 80,
       render: (v: string) => <Tag color={v === 'PAYMENT' ? 'blue' : 'geekblue'}>{v === 'PAYMENT' ? '支付' : '物流'}</Tag> },
     { title: '渠道', dataIndex: 'channel', width: 100,
-      render: (v: string) => <Tag color={CHANNEL_COLOR[v] || 'default'}>{CHANNEL_NAME[v] || v}</Tag> },
+      render: (v: string) => <Tag color={CHANNEL_COLOR[v] || 'default'}>{CHANNEL_NAME[v] ?? '未知'}</Tag> },
     { title: '关联订单', dataIndex: 'relatedOrderId', width: 150,
       render: (v: string | null) => <span style={{ fontFamily: 'monospace', fontSize: 14 }}>{v || '-'}</span> },
     { title: '验签', dataIndex: 'verified', width: 70,

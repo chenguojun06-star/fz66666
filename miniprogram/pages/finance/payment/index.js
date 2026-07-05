@@ -29,9 +29,9 @@ const PAYMENT_STATUS_MAP = {
   refunded: { text: '已退回', cls: 'tag-orange' },
 };
 
-function bizTypeText(s) { return (BIZ_TYPE_MAP[s] || {}).text || s || ''; }
+function bizTypeText(s) { return s ? ((BIZ_TYPE_MAP[s] || {}).text || '未知') : ''; }
 function bizTypeCls(s) { return (BIZ_TYPE_MAP[s] || {}).cls || 'tag-gray'; }
-function paymentStatusText(s) { return (PAYMENT_STATUS_MAP[s] || {}).text || s || ''; }
+function paymentStatusText(s) { return s ? ((PAYMENT_STATUS_MAP[s] || {}).text || '未知') : ''; }
 function paymentStatusCls(s) { return (PAYMENT_STATUS_MAP[s] || {}).cls || 'tag-gray'; }
 
 Page({
@@ -141,7 +141,7 @@ Page({
       const enriched = records.map(function (r) {
         r.statusText = paymentStatusText(r.status);
         r.statusCls = paymentStatusCls(r.status);
-        r.paymentMethodText = PAYMENT_METHOD_MAP[r.paymentMethod] || r.paymentMethod || '';
+        r.paymentMethodText = r.paymentMethod ? (PAYMENT_METHOD_MAP[r.paymentMethod] || '未知') : '';
         return r;
       });
       that.setData({

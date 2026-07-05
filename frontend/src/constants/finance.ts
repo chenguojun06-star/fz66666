@@ -19,7 +19,7 @@ export const getMaterialReconStatusConfig = (status: any) => {
   };
   const key = String(status || '').trim();
   // 大小写兼容
-  return statusMap[key] ?? statusMap[key.toLowerCase()] ?? statusMap[key.toUpperCase()] ?? { text: key || '未知', color: 'default' };
+  return statusMap[key] ?? statusMap[key.toLowerCase()] ?? statusMap[key.toUpperCase()] ?? { text: '未知', color: 'default' };
 };
 
 /**

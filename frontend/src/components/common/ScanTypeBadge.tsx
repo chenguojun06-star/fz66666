@@ -40,7 +40,7 @@ export const SCAN_TYPE_OPTIONS = [
 
 export const getScanTypeLabel = (scanType: string | undefined | null) => {
   const key = String(scanType || '').trim();
-  return SCAN_TYPE_LABEL[key] || key || '-';
+  return SCAN_TYPE_LABEL[key] ?? (key ? '未知' : '-');
 };
 
 export const normalizeScanType = (scanType: string | undefined | null) => {
@@ -52,7 +52,7 @@ export const normalizeScanType = (scanType: string | undefined | null) => {
 
 const ScanTypeBadge: React.FC<{ scanType?: string | null; style?: React.CSSProperties }> = ({ scanType, style }) => {
   const key = normalizeScanType(scanType);
-  const label = SCAN_TYPE_LABEL[key] || key || '-';
+  const label = SCAN_TYPE_LABEL[key] ?? (key ? '未知' : '-');
   const color = SCAN_TYPE_COLOR[key] || 'default';
   return <Tag color={color} style={style}>{label}</Tag>;
 };

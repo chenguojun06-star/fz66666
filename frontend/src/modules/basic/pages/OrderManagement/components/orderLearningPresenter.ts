@@ -25,8 +25,8 @@ export interface PresentedOrderLearningRecommendation {
   factoryScoreLines: string[];
 }
 
-const pricingModeText = (value?: string) => pricingModeTextMap[value || ''] || value || '-';
-const factoryModeText = (value?: string) => factoryModeTextMap[value || ''] || value || '-';
+const pricingModeText = (value?: string) => pricingModeTextMap[value || ''] ?? '未知';
+const factoryModeText = (value?: string) => factoryModeTextMap[value || ''] ?? '未知';
 
 export const presentOrderLearningRecommendation = (
   payload?: OrderLearningRecommendationResponse | null,

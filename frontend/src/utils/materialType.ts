@@ -59,7 +59,7 @@ export const getMaterialTypeLabel = (v: unknown): string => {
   if (type === 'accessoryC') return '辅料C';
   if (type === 'accessoryD') return '辅料D';
   if (type === 'accessoryE') return '辅料E';
-  return raw ? raw : '-';
+  return raw ? '未知' : '-';
 };
 
 export const getMaterialTypeSortKey = (v: unknown): string => {

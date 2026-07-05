@@ -35,7 +35,7 @@ const PLATE_TYPE_MAP: Record<string, string> = {
   首翻单: '首单',
   复板: '翻单',
 };
-const translatePlateType = (v?: string | null) => (v ? (PLATE_TYPE_MAP[v] || v) : '-');
+const translatePlateType = (v?: string | null) => (v ? (PLATE_TYPE_MAP[v] ?? '未知') : '-');
 
 const StylePrintModal: React.FC<StylePrintModalProps> = ({
   visible, onClose, styleId, orderId, orderNo,

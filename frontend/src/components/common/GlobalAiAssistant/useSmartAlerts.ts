@@ -1,9 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
 import type { ApiResult } from '@/utils/api';
+import { useAuthState } from '@/utils/AuthContext';
 
 const POLL_INTERVAL = 30_000;
 const MAX_BACKOFF = 5 * 60_000;
+const MAX_FAIL_COUNT = 5;
 
 export interface AlertItem {
   id: string;
@@ -41,8 +43,10 @@ export function useSmartAlerts(): UseSmartAlertsResult {
   const [alerts, setAlerts] = useState<AlertItem[]>([]);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const failCountRef = useRef(0);
+  const { isAuthenticated } = useAuthState();
 
   const fetchAlerts = useCallback(async () => {
+    if (!isAuthenticated) return;
     try {
       const anomalyRes = await intelligenceApi.detectAnomalies();
       const anomalyData = (anomalyRes?.data as { items?: Array<{ id?: string; severity?: string; title?: string; description?: string; message?: string; targetName?: string; targetType?: string; targetId?: string; timestamp?: number; actionUrl?: string }> } | undefined) ?? undefined;
@@ -102,10 +106,11 @@ export function useSmartAlerts(): UseSmartAlertsResult {
     } catch {
       failCountRef.current += 1;
     }
-  }, []);
+  }, [isAuthenticated]);
 
   const scheduleNext = useCallback(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
+    if (failCountRef.current >= MAX_FAIL_COUNT) return;
     const delay = failCountRef.current === 0
       ? POLL_INTERVAL
       : Math.min(POLL_INTERVAL * Math.pow(2, failCountRef.current - 1), MAX_BACKOFF);
@@ -115,11 +120,12 @@ export function useSmartAlerts(): UseSmartAlertsResult {
   }, [fetchAlerts]);
 
   useEffect(() => {
+    if (!isAuthenticated) return;
     void fetchAlerts().then(scheduleNext);
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [fetchAlerts, scheduleNext]);
+  }, [fetchAlerts, scheduleNext, isAuthenticated]);
 
   const acknowledge = useCallback((id: string) => {
     setAlerts(prev => prev.map(alert =>

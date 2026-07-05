@@ -500,8 +500,9 @@ const ProductionList: React.FC = () => {
                 }),
                 [
                   { label: '', key: 'statusTags', render: (_val: unknown, record: Record<string, unknown>) => {
-                    const status = ORDER_STATUS_LABEL[String(record?.status || '').trim().toLowerCase()] || String(record?.status || '-');
-                    const statusColor = ORDER_STATUS_COLOR[String(record?.status || '').trim().toLowerCase()] || 'default';
+                    const statusKey = String(record?.status || '').trim().toLowerCase();
+                    const status = statusKey ? (ORDER_STATUS_LABEL[statusKey] || '未知') : '-';
+                    const statusColor = ORDER_STATUS_COLOR[statusKey] || 'default';
                     const { text: remainText, color: remainColor } = getRemainingDaysDisplay(record?.plannedEndDate as string, record?.createTime as string, record?.actualEndDate as string, record?.status as string);
                     const deliveryDate = record?.plannedEndDate ? dayjs(record.plannedEndDate as string).format('MM-DD') : '';
                     return (

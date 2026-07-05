@@ -697,7 +697,7 @@ const PaymentCenterPage: React.FC = () => {
                 <Descriptions.Item label="业务类型">
                   {(() => {
                     const t = BIZ_TYPE_MAP[detailRecord.bizType ?? ''];
-                    return t ? <Tag color={t.color}>{t.text}</Tag> : detailRecord.bizType || '-';
+                    return t ? <Tag color={t.color}>{t.text}</Tag> : '未知';
                   })()}
                 </Descriptions.Item>
                 <Descriptions.Item label="业务单号">{detailRecord.bizNo || '-'}</Descriptions.Item>
@@ -792,7 +792,7 @@ const PaymentCenterPage: React.FC = () => {
         {amountDetailTarget && (
           <Descriptions column={2} bordered>
             <Descriptions.Item label="业务类型">
-              {BIZ_TYPE_MAP[amountDetailTarget.bizType]?.text || amountDetailTarget.bizType}
+              {BIZ_TYPE_MAP[amountDetailTarget.bizType]?.text ?? '未知'}
             </Descriptions.Item>
             <Descriptions.Item label="单据编号">{amountDetailTarget.bizNo || '-'}</Descriptions.Item>
             <Descriptions.Item label="收款方">{amountDetailTarget.payeeName}</Descriptions.Item>

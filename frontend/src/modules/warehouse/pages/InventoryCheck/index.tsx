@@ -165,7 +165,7 @@ const InventoryCheck: React.FC = () => {
 
   const renderDiff = (v: number) => v ? <span style={{ color: v > 0 ? 'var(--color-error)' : 'var(--color-info)' }}>{v > 0 ? `+${v}` : v}</span> : '-';
 
-  const renderDiffType = (v: string) => { const m = DIFF_TYPE_MAP[v] || { label: v || '-', color: 'default' }; return <Tag color={m.color}>{m.label}</Tag>; };
+  const renderDiffType = (v: string) => { const m = DIFF_TYPE_MAP[v] || { label: v ? '未知' : '-', color: 'default' }; return <Tag color={m.color}>{m.label}</Tag>; };
 
   const imageColumn = {
     title: '图片', dataIndex: 'imageUrl', key: 'imageUrl', width: 60,
@@ -182,7 +182,7 @@ const InventoryCheck: React.FC = () => {
     {
       title: '盘点类型', dataIndex: 'checkType', key: 'checkType', width: 100,
       render: (v: string) => {
-        const m = CHECK_TYPE_MAP[v] || { label: v, color: 'default' };
+        const m = CHECK_TYPE_MAP[v] || { label: '未知', color: 'default' };
         return <Tag color={m.color}>{m.label}</Tag>;
       },
     },

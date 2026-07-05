@@ -57,7 +57,7 @@ const AnomalyBanner: React.FC<AnomalyBannerProps> = ({ visible, items, onClose, 
                   title="点击定位对应订单"
                 >
                   <span style={{ color: severityColor, fontWeight: 700, minWidth: 60 }}>
-                    [{TYPE_LABELS[item.type] ?? item.type}]
+                    [{TYPE_LABELS[item.type] ?? '未知'}]
                   </span>
                   <span style={{ fontWeight: 500, color: 'var(--text-primary)', minWidth: 80 }}>{item.targetName}</span>
                   <span>{item.description}</span>

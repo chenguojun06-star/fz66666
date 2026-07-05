@@ -824,6 +824,7 @@ Page({
               const s = scanMap[code];
               result.push({
                 processCode: code,
+                processCodeText: n.name || n.processName || '未知',
                 processName: n.name || n.processName || '-',
                 unitPrice: price,
                 priceText: price > 0 ? '¥' + price.toFixed(2) : '待定价',
@@ -844,6 +845,7 @@ Page({
           const s = scanMap[code];
           return {
             processCode: code,
+            processCodeText: n.name || '未知',
             processName: n.name || '-',
             unitPrice: price,
             priceText: price > 0 ? '¥' + price.toFixed(2) : '待定价',
@@ -866,6 +868,7 @@ Page({
           const s = scanMap[code];
           return {
             processCode: code,
+            processCodeText: p.processName || p.name || '未知',
             processName: p.processName || p.name || '-',
             unitPrice: price,
             priceText: price > 0 ? '¥' + price.toFixed(2) : '待定价',

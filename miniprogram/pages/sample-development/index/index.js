@@ -315,7 +315,8 @@ Page({
           const customerCandidates = [item.customer, styleInfo.customer, item.customerName, styleInfo.customerName, item.buyer, styleInfo.buyer];
           item._customer = customerCandidates.find(function (v) { return v != null && String(v).trim() !== ''; }) || '';
           item._category = item.category || styleInfo.category || '';
-          item._sourceType = SOURCE_TYPE_LABELS[item.developmentSourceType || styleInfo.developmentSourceType || item.sourceType || styleInfo.sourceType] || item.developmentSourceType || styleInfo.developmentSourceType || item.sourceType || styleInfo.sourceType || '';
+          const rawSourceType = item.developmentSourceType || styleInfo.developmentSourceType || item.sourceType || styleInfo.sourceType || '';
+          item._sourceType = rawSourceType ? (SOURCE_TYPE_LABELS[rawSourceType] || '其他') : '';
           item._season = item.season || styleInfo.season || '';
           item._patternMaker = item.patternMaker || styleInfo.patternDeveloper || item.receiver || '';
           item._receiver = item.receiver || '';

@@ -202,23 +202,40 @@ export function useStyleColorSize({ currentStyle, setCurrentStyle, isNewPage, fo
     if (!resolvedStyleId && !resolvedStyleNo) return;
     let mounted = true;
     void (async () => {
+      const nextMap: Record<string, string> = {};
+      // 1. 优先从 SKU 表读取（source of truth，与 SKU 表格显示一致）
+      if (resolvedStyleNo) {
+        try {
+          const skuRes = await api.get<ApiResult<Record<string, string>>>(`/style/sku/color-images/${encodeURIComponent(resolvedStyleNo)}`);
+          const skuMap = skuRes?.data;
+          if (skuMap && typeof skuMap === 'object') {
+            Object.entries(skuMap).forEach(([color, url]) => {
+              if (color && url) {
+                nextMap[color] = String(url);
+              }
+            });
+          }
+        } catch {
+          // SKU 接口失败时降级到 attachment
+        }
+      }
+      // 2. 用 attachment 列表补充 SKU 未覆盖的颜色（向后兼容）
       try {
         const res = await api.get<ApiResult<any[]>>('/style/attachment/list', {
           params: resolvedStyleId ? { styleId: resolvedStyleId } : { styleNo: resolvedStyleNo },
         });
         const list = Array.isArray(res?.data) ? res.data : [];
-        const nextMap: Record<string, string> = {};
         list.forEach((item: any) => {
           const color = parseColorImageBizType(item?.bizType);
           if (color && item?.fileUrl && !nextMap[color]) {
             nextMap[color] = String(item.fileUrl);
           }
         });
-        if (mounted) {
-          setColorImageMap((prev) => ({ ...prev, ...nextMap }));
-        }
       } catch {
-        // 出错时保留现有图片
+        // 出错时保留已获取的 SKU 数据
+      }
+      if (mounted && Object.keys(nextMap).length > 0) {
+        setColorImageMap((prev) => ({ ...prev, ...nextMap }));
       }
     })();
     return () => {
@@ -297,6 +314,14 @@ export function useStyleColorSize({ currentStyle, setCurrentStyle, isNewPage, fo
       if (uploadedUrl) {
         setColorImageMap((prev) => ({ ...prev, [color]: uploadedUrl }));
         handleCoverChange(uploadedUrl);
+        // 同步到 SKU 表，保持矩阵与 SKU 表格图片一致
+        if (resolvedStyleId) {
+          try {
+            await api.put(`/style/sku/color-images/${resolvedStyleId}`, { [normalizedColor]: uploadedUrl });
+          } catch (e) {
+            console.error('同步SKU颜色图片失败:', e);
+          }
+        }
       }
       setCoverRefreshToken((prev) => prev + 1);
       return;
@@ -327,6 +352,14 @@ export function useStyleColorSize({ currentStyle, setCurrentStyle, isNewPage, fo
         delete next[color];
         return next;
       });
+      // 同步清空 SKU 表对应颜色的图片，保持矩阵与 SKU 表格一致
+      if (resolvedStyleId) {
+        try {
+          await api.put(`/style/sku/color-images/${resolvedStyleId}`, { [normalizedColor]: '' });
+        } catch (e) {
+          console.error('同步清除SKU颜色图片失败:', e);
+        }
+      }
       if (String(currentStyle?.cover || '') === String(colorImageMap[color] || '')) {
         handleCoverChange(null);
       }

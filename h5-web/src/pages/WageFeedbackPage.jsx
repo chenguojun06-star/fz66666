@@ -83,7 +83,7 @@ export default function WageFeedbackPage() {
                   color: item.feedbackType === 'CONFIRM' ? 'var(--color-success)' : 'var(--color-warning)',
                 }}>{item.feedbackType === 'CONFIRM' ? '确认' : '异议'}</span>
                 <span style={{ fontSize: 'var(--font-size-xs)', color: STATUS_COLORS[item.status], fontWeight: 600 }}>
-                  {STATUS_MAP[item.status]}
+                  {STATUS_MAP[item.status] || '未知'}
                 </span>
               </div>
               <div style={{ marginTop: 8, fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)' }}>

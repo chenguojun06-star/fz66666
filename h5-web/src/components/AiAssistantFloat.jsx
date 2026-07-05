@@ -369,7 +369,7 @@ export default function AiAssistantFloat() {
             } else if (event.type === 'thinking') {
               setCurrentTool({ type: 'thinking' });
             } else if (event.type === 'tool_call') {
-              const toolName = TOOL_NAME_MAP[event.name] || event.name || '处理中';
+              const toolName = TOOL_NAME_MAP[event.name] || '处理中';
               setCurrentTool({ type: 'tool_call', name: toolName });
             } else if (event.type === 'tool_result') {
               setToolResults(prev => [...prev, { name: currentTool?.name || '工具', success: event.success !== false }]);

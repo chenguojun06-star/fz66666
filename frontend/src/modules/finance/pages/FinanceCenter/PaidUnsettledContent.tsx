@@ -209,7 +209,7 @@ const PaidUnsettledContent: React.FC = () => {
       render: (v: string) => {
         const colorMap: Record<string, string> = { unpaid: 'orange', partially_paid: 'blue', paid: 'green' };
         const textMap: Record<string, string> = { unpaid: '未付款', partially_paid: '部分付款', paid: '已付款' };
-        return <Tag color={colorMap[v] || 'default'}>{textMap[v] || v || '-'}</Tag>;
+        return <Tag color={colorMap[v] || 'default'}>{textMap[v] ?? (v ? '未知' : '-')}</Tag>;
       },
     },
     {
@@ -219,7 +219,7 @@ const PaidUnsettledContent: React.FC = () => {
       width: 100,
       render: (v: string) => {
         const config = approvalStatusMap[v] || approvalStatusMap[v?.toLowerCase()] || approvalStatusMap[v?.toUpperCase()];
-        return config ? <Tag color={config.color}>{config.text}</Tag> : <Tag>{v || '-'}</Tag>;
+        return config ? <Tag color={config.color}>{config.text}</Tag> : <Tag>{v ? '未知' : '-'}</Tag>;
       },
     },
     { title: '完成时间', dataIndex: 'completeTime', key: 'completeTime', width: 160, render: (v: string) => v || '-' },

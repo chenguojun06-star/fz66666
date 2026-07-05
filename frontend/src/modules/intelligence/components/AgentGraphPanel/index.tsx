@@ -49,7 +49,7 @@ const GraphPipeline: React.FC<{ events: NodeEvent[]; streaming: boolean }> = ({ 
       {allNodes.map((node, idx) => {
         const done = completedNodes.has(node);
         const active = streaming && !done && idx === completedNodes.size;
-        const [label, color] = NODE_LABELS[node] ?? [node, '#999'];
+        const [label, color] = NODE_LABELS[node] ?? ['未知', '#999'];
         return (
           <React.Fragment key={node}>
             {idx > 0 && (

@@ -387,7 +387,7 @@ export default function ScanPage() {
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 16px', fontSize: 13 }}>
                 <span style={{ color: 'var(--color-text-secondary)' }}>款号: <strong style={{ color: 'var(--color-text-primary)' }}>{lastResult.styleNo || '-'}</strong></span>
                 <span style={{ color: 'var(--color-text-secondary)' }}>款式: <strong style={{ color: 'var(--color-text-primary)' }}>{lastResult.styleName || '-'}</strong></span>
-                <span style={{ color: 'var(--color-text-secondary)' }}>工序: <strong style={{ color: 'var(--color-text-primary)' }}>{lastResult.processName || lastResult.progressStage || '-'}</strong></span>
+                <span style={{ color: 'var(--color-text-secondary)' }}>工序: <strong style={{ color: 'var(--color-text-primary)' }}>{lastResult.processName || STAGE_LABELS[lastResult.progressStage] || '未知'}</strong></span>
                 <span style={{ color: 'var(--color-text-secondary)' }}>数量: <strong style={{ color: 'var(--color-text-primary)' }}>{lastResult.quantity || 1}</strong></span>
                 <span style={{ color: 'var(--color-text-secondary)' }}>订单: <strong style={{ color: 'var(--color-text-primary)' }}>{lastResult.orderNo || '-'}</strong></span>
               </div>

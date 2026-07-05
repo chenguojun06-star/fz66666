@@ -66,7 +66,7 @@ const OrderAnalysisTab: React.FC = () => {
       dataIndex: 'category',
       key: 'category',
       width: 100,
-      render: (v: string) => toCategoryCn(v) || v || '-',
+      render: (v: string) => toCategoryCn(v) || '未知',
     },
     {
       title: '单价',

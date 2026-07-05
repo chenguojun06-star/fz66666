@@ -7,7 +7,7 @@ import { getAuthedImageUrl } from '@/utils/fileUrl';
 import { getUserInfo } from '@/utils/storage';
 import { eventBus } from '@/utils/eventBus';
 
-import { normalizeScanType, MATERIAL_TYPE_MAP } from '@/utils/scanHelpers';
+import { normalizeScanType, MATERIAL_TYPE_MAP, STAGE_LABELS } from '@/utils/scanHelpers';
 
 export default function ScanConfirmPage() {
   const navigate = useNavigate();
@@ -54,7 +54,7 @@ export default function ScanConfirmPage() {
 
     if (isProc && Array.isArray(raw.materialPurchases)) {
       const mps = raw.materialPurchases.map(item => ({
-        ...item, materialTypeCN: MATERIAL_TYPE_MAP[item.materialType] || item.materialType || '',
+        ...item, materialTypeCN: item.materialType ? (MATERIAL_TYPE_MAP[item.materialType] || '未知') : '',
       }));
       let totalDemand = 0, totalArrived = 0, totalPending = 0;
       mps.forEach(item => {
@@ -69,7 +69,7 @@ export default function ScanConfirmPage() {
     if (isCut && raw.cuttingTask) {
       const ct = raw.cuttingTask;
       const statusMap = { pending: '待领取', not_started: '待领取', received: '已领取', in_progress: '已领取', bundled: '已完成', completed: '已完成', done: '已完成' };
-      ct.statusText = statusMap[ct.status] || ct.status || '待领取';
+      ct.statusText = statusMap[ct.status] || '待领取';
       setCuttingTask(ct);
     }
 
@@ -83,8 +83,8 @@ export default function ScanConfirmPage() {
     const STATUS_MAP = { pending: '待处理', processing: '进行中', completed: '已完成', cancelled: '已取消' };
     const rawProcesses = orderDetail.secondaryProcesses || raw.secondaryProcesses || [];
     setSecondaryProcesses(rawProcesses.map(item => ({
-      ...item, processTypeCN: PROCESS_TYPE_MAP[item.processType] || item.processType || '',
-      statusCN: STATUS_MAP[item.status] || item.status || '',
+      ...item, processTypeCN: item.processType ? (PROCESS_TYPE_MAP[item.processType] || '未知') : '',
+      statusCN: item.status ? (STATUS_MAP[item.status] || '未知') : '',
     })));
   }, [confirmScanData]);
 
@@ -173,7 +173,7 @@ export default function ScanConfirmPage() {
       <div className="hero-card compact">
         <div style={{ fontWeight: 600, fontSize: 15 }}>{detail.orderNo}</div>
         <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginTop: 4 }}>
-          款号: {detail.styleNo} · 阶段: {detail.progressStage}
+          款号: {detail.styleNo} · 阶段: {STAGE_LABELS[normalizeScanType(detail.progressStage)] || '未知'}
         </div>
       </div>
 

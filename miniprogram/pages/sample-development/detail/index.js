@@ -660,7 +660,12 @@ Page({
     this.setData({ processLoading: true });
     try {
       const res = await style.listProcesses({ styleId: this.data.styleId });
-      this.setData({ processList: res?.data?.records || res?.data || res?.records || [] });
+      const list = res?.data?.records || res?.data || res?.records || [];
+      // 添加 processCodeText 字段用于显示（processCode 是工序编号，保留原值）
+      list.forEach(p => {
+        p.processCodeText = p.processCode || '';
+      });
+      this.setData({ processList: list });
     } catch (e) { console.error('工序加载失败', e); }
     this.setData({ processLoading: false });
   },
@@ -768,7 +773,18 @@ Page({
     this.setData({ secondaryLoading: true });
     try {
       const res = await style.listSecondaryProcesses({ styleId: this.data.styleId });
-      this.setData({ secondaryList: res?.data?.records || res?.data || res?.records || [] });
+      const list = res?.data?.records || res?.data || res?.records || [];
+      // 二次工艺类型英文 code → 中文映射，兜底 '未知'，不展示英文 code
+      const PROCESS_TYPE_MAP = {
+        embroidery: '绣花', printing: '印花', washing: '洗水',
+        dyeing: '染色', ironing: '整烫', pleating: '压褶',
+        beading: '钉珠', other: '其他',
+      };
+      list.forEach(s => {
+        const rawType = s.type || s.processType || '';
+        s.typeText = rawType ? (PROCESS_TYPE_MAP[rawType] || '未知') : '';
+      });
+      this.setData({ secondaryList: list });
     } catch (e) { console.error('二次工艺加载失败', e); }
     this.setData({ secondaryLoading: false });
   },

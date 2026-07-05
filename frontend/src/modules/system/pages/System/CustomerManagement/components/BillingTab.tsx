@@ -172,7 +172,7 @@ const BillingTab: React.FC = () => {
     const feeLabel = isYearly
       ? `¥${plan?.yearlyFee || record.monthlyFee * 10}/年`
       : `¥${record.monthlyFee || 0}/月`;
-    confirmAction(`为「${record.tenantName}」生成${isYearly ? '年度' : '本月'}账单`, `将根据当前套餐配置（${PLAN_LABELS[record.planType]?.label || record.planType}，${feeLabel}，${isYearly ? '年付' : '月付'}）生成账单。`, async () => {
+    confirmAction(`为「${record.tenantName}」生成${isYearly ? '年度' : '本月'}账单`, `将根据当前套餐配置（${PLAN_LABELS[record.planType]?.label ?? '未知'}，${feeLabel}，${isYearly ? '年付' : '月付'}）生成账单。`, async () => {
       try {
         await tenantService.generateMonthlyBill(record.id);
         message.success('账单已生成');
@@ -241,7 +241,7 @@ const BillingTab: React.FC = () => {
     {
       title: '当前套餐', dataIndex: 'planType', width: 100, align: 'center',
       render: (v: string) => {
-        const cfg = PLAN_LABELS[v] || { label: v, color: 'default' };
+        const cfg = PLAN_LABELS[v] || { label: '未知', color: 'default' };
         return <Tag color={cfg.color}>{cfg.label}</Tag>;
       },
     },
@@ -298,11 +298,11 @@ const BillingTab: React.FC = () => {
     { title: '账期', dataIndex: 'billingMonth', width: 100, align: 'center' },
     {
       title: '套餐', dataIndex: 'planType', width: 90, align: 'center',
-      render: (v: string) => PLAN_LABELS[v]?.label || v,
+      render: (v: string) => PLAN_LABELS[v]?.label ?? '未知',
     },
     {
       title: '周期', dataIndex: 'billingCycle', width: 60, align: 'center',
-      render: (v: string) => CYCLE_LABELS[v] || v || '月付',
+      render: (v: string) => CYCLE_LABELS[v] ?? (v ? '未知' : '月付'),
     },
     { title: '基础费', dataIndex: 'baseFee', width: 90, align: 'right', render: (v: number) => `¥${v}` },
     { title: '合计', dataIndex: 'totalAmount', width: 90, align: 'right',
@@ -470,7 +470,7 @@ const BillingTab: React.FC = () => {
             <Descriptions column={2} bordered>
               <Descriptions.Item label="套餐类型">
                 <Tag color={PLAN_LABELS[overview.planType]?.color || 'default'}>
-                  {PLAN_LABELS[overview.planType]?.label || overview.planType}
+                  {PLAN_LABELS[overview.planType]?.label ?? '未知'}
                 </Tag>
               </Descriptions.Item>
               <Descriptions.Item label="计费周期">

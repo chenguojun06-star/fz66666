@@ -65,7 +65,7 @@ export default function SelectionCenter() {
             <Row gutter={[16, 16]}>
               {pagedCandidates.map(item => {
                 const img = getFirstImage(item.referenceImages);
-                const { color, label } = STATUS_MAP[item.status] ?? { color: 'default', label: item.status };
+                const { color, label } = STATUS_MAP[item.status] ?? { color: 'default', label: '未知' };
                 const aiLoading = aiLoadingIds.has(item.id);
                 const latestReview = reviewMap[item.id] ?? null;
                 const scoreMeta = getScoreMeta(item);
@@ -101,7 +101,7 @@ export default function SelectionCenter() {
                         </div>
                         <div style={{ padding: '10px 12px' }}>
                           <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.styleName || '未命名'}</div>
-                          <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginBottom: 10 }}>{[item.category, item.colorFamily, SOURCE_MAP[item.sourceType] ?? item.sourceType].filter(Boolean).join(' · ')}</div>
+                          <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginBottom: 10 }}>{[item.category, item.colorFamily, SOURCE_MAP[item.sourceType] ?? '未知'].filter(Boolean).join(' · ')}</div>
                           <div style={{ fontSize: 14, color: '#777', marginBottom: 8, minHeight: 18 }}>
                             {item.reviewCount ? `已评审 ${item.reviewCount} 次` : '待审核'}{item.avgReviewScore != null ? ` · 平均分 ${item.avgReviewScore}` : ''}
                           </div>

@@ -118,7 +118,7 @@ export default function SampleInventoryPage() {
                   <div className="sample-card-no">{item.styleNo || '-'}</div>
                   <div className="sample-card-name">{item.styleName || item.name || '-'}</div>
                   <div className="sample-card-meta">
-                    <span className="sample-type-tag">{SAMPLE_TYPE_MAP[item.sampleType] || item.sampleType || '-'}</span>
+                    <span className="sample-type-tag">{SAMPLE_TYPE_MAP[item.sampleType] || (item.sampleType ? '未知' : '-')}</span>
                     {item.color && <span>· {item.color}</span>}
                     {item.size && <span>· {item.size}</span>}
                   </div>

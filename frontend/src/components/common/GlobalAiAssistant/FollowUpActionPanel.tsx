@@ -22,7 +22,7 @@ const ICON_EMOJI_MAP: Record<string, string> = {
 };
 
 function resolveIcon(icon: string): string {
-  return ICON_EMOJI_MAP[icon] ?? icon;
+  return ICON_EMOJI_MAP[icon] ?? '❓';
 }
 
 /* ── 单个跟进动作卡片（含可选表单输入） ── */

@@ -188,7 +188,7 @@ const MyBillingTab: React.FC<MyBillingTabProps> = ({ embedded = false }) => {
     { title: '账单编号', dataIndex: 'billingNo', width: 160 },
     { title: '账期', dataIndex: 'billingMonth', width: 100 },
     { title: '套餐', dataIndex: 'planType', width: 90,
-      render: (v: string) => PLAN_LABELS[v] || v },
+      render: (v: string) => PLAN_LABELS[v] ?? '未知' },
     { title: '金额(¥)', dataIndex: 'totalAmount', width: 100,
       render: (v: number) => (
         <Text strong style={{ color: 'var(--color-primary)' }}>
@@ -243,7 +243,7 @@ const MyBillingTab: React.FC<MyBillingTabProps> = ({ embedded = false }) => {
     },
     {
       title: '订阅类型', dataIndex: 'subscriptionType', width: 90,
-      render: (v: string) => <Tag color="blue">{SUB_TYPE_LABELS[v] || v}</Tag>,
+      render: (v: string) => <Tag color="blue">{SUB_TYPE_LABELS[v] ?? '未知'}</Tag>,
     },
     {
       title: '费用', key: 'price', width: 110,
@@ -325,7 +325,7 @@ const MyBillingTab: React.FC<MyBillingTabProps> = ({ embedded = false }) => {
             <Card>
               <Statistic
                 title="当前套餐"
-                value={PLAN_LABELS[overview.planType] || overview.planType}
+                value={PLAN_LABELS[overview.planType] ?? '未知'}
                 styles={{ content: { color: 'var(--color-primary)', fontSize: 20 } }}
               />
               <div style={{ marginTop: 8, color: 'var(--text-secondary)' }}>
@@ -441,7 +441,7 @@ const MyBillingTab: React.FC<MyBillingTabProps> = ({ embedded = false }) => {
                 </Space>
               </Descriptions.Item>
               <Descriptions.Item label="账期">{payingBill.billingMonth}</Descriptions.Item>
-              <Descriptions.Item label="套餐">{PLAN_LABELS[payingBill.planType] || payingBill.planType}</Descriptions.Item>
+              <Descriptions.Item label="套餐">{PLAN_LABELS[payingBill.planType] ?? '未知'}</Descriptions.Item>
               <Descriptions.Item label="应付金额" span={2}>
                 <Space align="center">
                   <Text strong style={{ color: 'var(--color-error)', fontSize: 22 }}>

@@ -61,7 +61,7 @@ function getStatusInfo(raw) {
   if (s === 'pending' || s === 'pending_start') {
     return { text: '待开始', cls: 'tag-warning' };
   }
-  return { text: fmt(raw, '未知'), cls: 'tag-default' };
+  return { text: '未知', cls: 'tag-default' };
 }
 
 /* 工序阶段状态 */
@@ -358,7 +358,7 @@ Page({
           'completed': { text: '已完成', cls: 'tag-default' },
         };
         const rawStatus = String(mp.status || '').toLowerCase();
-        const st = statusMap[rawStatus] || { text: fmt(mp.status, '未知'), cls: 'tag-default' };
+        const st = statusMap[rawStatus] || { text: '未知', cls: 'tag-default' };
         const isClaimable = (rawStatus === 'pending' || rawStatus === '');
         return {
           id: mp.id || mp.purchaseId || mp.materialPurchaseId,
@@ -421,7 +421,7 @@ Page({
             'completed': { text: '已完成', cls: 'tag-success' },
             'done': { text: '已完成', cls: 'tag-success' },
           };
-          const st = statusMap[rawStatus] || { text: fmt(b.status, '待领取'), cls: 'tag-default' };
+          const st = statusMap[rawStatus] || { text: '待领取', cls: 'tag-default' };
           return {
             id: b.id,
             taskId: b.taskId || b.id,

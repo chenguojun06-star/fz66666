@@ -78,7 +78,7 @@ const PaymentRecordsTab: React.FC<Props> = ({ active }) => {
     { title: '系统订单号', dataIndex: 'orderId', width: 160,
       render: (v: string) => <span style={{ fontFamily: 'monospace', fontSize: 14 }}>{v}</span> },
     { title: '渠道', dataIndex: 'channel', width: 90,
-      render: (v: string) => <Tag color="blue">{CHANNEL_MAP[v] || v}</Tag> },
+      render: (v: string) => <Tag color="blue">{CHANNEL_MAP[v] ?? '未知'}</Tag> },
     { title: '金额（元）', dataIndex: 'amount', width: 100,
       render: (v: number) => v != null ? formatMoney(v / 100) : '-' },
     { title: '实付（元）', dataIndex: 'actualAmount', width: 100,

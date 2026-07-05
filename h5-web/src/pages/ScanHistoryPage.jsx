@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import api from '@/api';
 import { useAuthStore } from '@/stores/authStore';
 import { toast } from '@/utils/uiHelper';
-import { canUndo } from '@/utils/scanHelpers';
+import { canUndo, STAGE_LABELS, SCAN_TYPE_MAP } from '@/utils/scanHelpers';
 import { eventBus } from '@/utils/eventBus';
 
 const _now = new Date();
@@ -85,7 +85,7 @@ export default function ScanHistoryPage() {
       const formatted = newRecords.map(item => ({
         ...item,
         displayTime: formatTime(item.scanTime || item.createTime),
-        displayProcess: _normalizeQualityName(item.processName) || item.progressStage || item.scanType || '-',
+        displayProcess: _normalizeQualityName(item.processName) || STAGE_LABELS[item.progressStage] || SCAN_TYPE_MAP[item.scanType] || '-',
         displayWorker: item.workerName || item.operatorName || '-',
         displayOrderNo: item.orderNo || '-',
         displayStyleNo: item.styleNo || '-',

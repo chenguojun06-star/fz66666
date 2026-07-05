@@ -124,10 +124,12 @@ Page({
         const subList = processesByNode[stageKey];
         if (!Array.isArray(subList)) return;
         subList.forEach(function (n, i) {
+          const code = n.processCode || String(i + 1).padStart(2, '0');
           result.push({
             id: n.id || ('proc_' + stageKey + '_' + i),
             processName: n.name || n.processName || '',
-            processCode: n.processCode || String(i + 1).padStart(2, '0'),
+            processCode: code,
+            processCodeText: code,
             progressStage: stageKey,
             machineType: n.machineType || '',
             standardTime: n.standardTime || 0,
@@ -143,10 +145,12 @@ Page({
     // 回退：从 nodes（父节点汇总）读取，兼容旧格式或无子工序订单
     const nodes = (wf && wf.nodes) || [];
     return nodes.map(function (n, i) {
+      const code = n.processCode || String(i + 1).padStart(2, '0');
       return {
         id: n.id || ('proc_' + i),
         processName: n.name || '',
-        processCode: n.processCode || String(i + 1).padStart(2, '0'),
+        processCode: code,
+        processCodeText: code,
         progressStage: n.progressStage || n.name || '',
         machineType: n.machineType || '',
         standardTime: n.standardTime || 0,
@@ -216,6 +220,7 @@ Page({
       id: 'new_' + Date.now(),
       processName: form.processName.trim(),
       processCode: String(Date.now()).slice(-4),
+      processCodeText: String(Date.now()).slice(-4),
       progressStage: form.stageId,
       machineType: form.machineType || '',
       standardTime: parseInt(form.standardTime) || 0,
@@ -398,6 +403,7 @@ Page({
           id: n.id,
           processName: n.name,
           processCode: n.processCode,
+          processCodeText: n.processCode,
           progressStage: n.progressStage,
           machineType: n.machineType,
           standardTime: n.standardTime,
@@ -409,6 +415,7 @@ Page({
       that._originalProcesses = JSON.parse(JSON.stringify(nodes.map(function (n) {
         return {
           id: n.id, processName: n.name, processCode: n.processCode,
+          processCodeText: n.processCode,
           progressStage: n.progressStage, machineType: n.machineType,
           standardTime: n.standardTime, price: n.unitPrice,
           difficulty: n.difficulty, sortOrder: n.sortOrder,

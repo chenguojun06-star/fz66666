@@ -112,7 +112,7 @@ const TaskListView: React.FC<Props> = ({ tasks, loading, onClaim, onComplete, on
                 <span className={styles.priorityTag} style={{ color: PRIORITY_CONFIG[task.priority]?.color, background: PRIORITY_CONFIG[task.priority]?.bg }}>
                   {PRIORITY_CONFIG[task.priority]?.label || '一般'}
                 </span>
-                <span className={styles.moduleTag}>{MODULE_LABELS[task.module] || task.module}</span>
+                <span className={styles.moduleTag}>{MODULE_LABELS[task.module] ?? '未知'}</span>
                 {isSystem && <span className={styles.sysTag}>系统</span>}
                 {task.orderLinkStatus && (
                   <span className={styles.moduleTag} style={{ color: getOrderLinkStatusColor(task.orderLinkStatus), borderColor: getOrderLinkStatusColor(task.orderLinkStatus) }}>

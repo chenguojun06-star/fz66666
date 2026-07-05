@@ -288,7 +288,7 @@
         <view class="item-row" wx:for="{{processList}}" wx:key="id">
           <view class="ir-main">
             <text class="ir-title">{{item.processName || item.name}}</text>
-            <text class="ir-sub">{{item.processCode || ''}}</text>
+            <text class="ir-sub">{{item.processCodeText}}</text>
           </view>
           <view class="ir-right">
             <text class="ir-price">¥{{item.unitPrice || 0}}/件</text>
@@ -309,7 +309,7 @@
         <view class="item-row" wx:for="{{secondaryList}}" wx:key="id">
           <view class="ir-main">
             <text class="ir-title">{{item.processName || item.name}}</text>
-            <text class="ir-sub">{{item.type || item.processType || ''}} {{item.position || ''}}</text>
+            <text class="ir-sub">{{item.typeText}} {{item.position || ''}}</text>
           </view>
           <view class="ir-right">
             <text class="ir-price">¥{{item.unitPrice || item.price || 0}}</text>

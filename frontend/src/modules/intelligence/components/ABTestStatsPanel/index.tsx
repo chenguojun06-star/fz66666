@@ -63,7 +63,7 @@ const ABTestStatsPanel: React.FC = () => {
                 border: (isBestLatency || isBestFeedback) ? '1px solid rgba(74,222,128,0.4)' : '1px solid rgba(255,255,255,0.06)',
               }}>
                 <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 8, color: '#e0e0e0' }}>
-                  {SCENE_LABELS[r.scene] || r.scene}
+                  {SCENE_LABELS[r.scene] ?? '未知'}
                   {isBestLatency && <Tooltip title="最低延迟"><span style={{ marginLeft: 4, fontSize: 14, color: '#4ade80' }}></span></Tooltip>}
                   {isBestFeedback && <Tooltip title="最高评分"><span style={{ marginLeft: 4, fontSize: 14, color: '#facc15' }}></span></Tooltip>}
                 </div>

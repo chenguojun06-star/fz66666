@@ -18,7 +18,7 @@ const PROGRESS_STAGE_MAP = {
   shipping: '出货', design: '设计', pattern: '纸样',
   sample: '样衣', production: '生产', finishing: '后整理',
 };
-const progressStageText = (s) => PROGRESS_STAGE_MAP[s] || s || '-';
+const progressStageText = (s) => PROGRESS_STAGE_MAP[s] || '未知';
 
 const HTTP_ERROR_MAP = {
   401: '登录已过期，请重新登录',
@@ -146,8 +146,8 @@ export default function ScanResultPage() {
     const rawProcesses = orderDetail.secondaryProcesses || raw.secondaryProcesses || [];
     setSecondaryProcesses(rawProcesses.map(item => ({
       ...item,
-      processTypeCN: PROCESS_TYPE_MAP[item.processType] || item.processType || '',
-      statusCN: STATUS_MAP[item.status] || item.status || ''
+      processTypeCN: item.processType ? (PROCESS_TYPE_MAP[item.processType] || '未知') : '',
+      statusCN: item.status ? (STATUS_MAP[item.status] || '未知') : ''
     })));
 
     const isProcurement = raw.progressStage === 'procurement' || raw.progressStage === '采购';
@@ -157,7 +157,7 @@ export default function ScanResultPage() {
       totalDemand += Number(item.purchaseQuantity) || 0;
       totalArrived += Number(item.arrivedQuantity) || 0;
       totalPending += Number(item.pendingQuantity) || 0;
-      return { ...item, materialTypeCN: MATERIAL_TYPE_MAP[item.materialType] || item.materialType || '' };
+      return { ...item, materialTypeCN: item.materialType ? (MATERIAL_TYPE_MAP[item.materialType] || '未知') : '' };
     });
     setMaterialPurchases(mappedMaterials);
     setMaterialSummary({ totalDemand, totalArrived, totalPending });
@@ -305,7 +305,7 @@ export default function ScanResultPage() {
         if (isQualityReceive) {
           toast.success('已领取质检任务，请录入质检结果');
         } else {
-          const stageLabel = STAGE_LABELS[normalizeScanType(scanResultData.progressStage)] || scanResultData.progressStage || '';
+          const stageLabel = STAGE_LABELS[normalizeScanType(scanResultData.progressStage)] || '';
           toast.success(stageLabel ? `${stageLabel}已完成，共${successCount}个工序` : `已完成 ${successCount} 个工序扫码`);
         }
         navigate(-1);

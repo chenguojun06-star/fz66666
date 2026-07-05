@@ -55,4 +55,4 @@ export const pageShellStyle: React.CSSProperties = {
 
 import { toMoney } from '@/utils/format';
 export const formatCurrency = toMoney;
-export const formatBizType = (value?: string) => RELATED_BIZ_TYPE_MAP[value || ''] || value || '-';
+export const formatBizType = (value?: string) => RELATED_BIZ_TYPE_MAP[value || ''] ?? '未知';

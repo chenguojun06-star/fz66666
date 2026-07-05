@@ -40,12 +40,13 @@ function normalizeScanType(progressStage, scanType) {
 function scanTypeText(raw) {
   const v = String(raw || '').trim();
   if (!v) return '-';
-  return SCAN_TYPE_MAP[v] || STAGE_LABELS[v] || v;
+  return SCAN_TYPE_MAP[v] || STAGE_LABELS[v] || '未知';
 }
 
 function orderStatusText(status) {
   const s = String(status || '').toLowerCase();
-  return ORDER_STATUS_MAP[s] || s || '-';
+  if (!s) return '-';
+  return ORDER_STATUS_MAP[s] || '未知';
 }
 
 function canUndo(record, isAdmin) {
@@ -108,14 +109,14 @@ function validateBundleForStage(parsedCode, expectedStage) {
     if (productionStages.includes(expectedStage)) {
       return { valid: true, reason: '' };
     }
-    return { valid: false, reason: `菲号不适用于${STAGE_LABELS[expectedStage] || expectedStage}阶段，生产环节请使用菲号扫码` };
+    return { valid: false, reason: `菲号不适用于${STAGE_LABELS[expectedStage] || '未知'}阶段，生产环节请使用菲号扫码` };
   }
   if (parsedCode.type === 'order') {
     const orderStages = ['cutting'];
     if (orderStages.includes(expectedStage)) {
       return { valid: true, reason: '' };
     }
-    return { valid: false, reason: `订单二维码不适用于${STAGE_LABELS[expectedStage] || expectedStage}阶段，采购/裁剪阶段请使用订单二维码` };
+    return { valid: false, reason: `订单二维码不适用于${STAGE_LABELS[expectedStage] || '未知'}阶段，采购/裁剪阶段请使用订单二维码` };
   }
   if (parsedCode.type === 'json' || parsedCode.type === 'url') {
     return { valid: true, reason: '' };
@@ -135,8 +136,8 @@ function determineAutoFlow(scanResult) {
   const stage = scanResult.progressStage || scanResult.stage || scanResult.scanType;
   const normalized = normalizeScanType(stage);
   const nextStage = getNextStage(normalized);
-  const stageLabel = STAGE_LABELS[normalized] || normalized;
-  const nextLabel = nextStage ? (STAGE_LABELS[nextStage] || nextStage) : null;
+  const stageLabel = STAGE_LABELS[normalized] || '未知';
+  const nextLabel = nextStage ? (STAGE_LABELS[nextStage] || '未知') : null;
   if (scanResult.scanResult === 'success' || scanResult.success) {
     if (nextStage) {
       return {
