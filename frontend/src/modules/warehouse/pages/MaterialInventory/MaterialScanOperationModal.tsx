@@ -3,6 +3,7 @@ import { Input, InputNumber, Select, Button, Space, Card, Row, Col, Tag, message
 import { ScanOutlined, InboxOutlined, LogoutOutlined, SearchOutlined } from '@ant-design/icons';
 import { materialWarehouseApi } from '../../../../services/warehouse/inventoryCheckApi';
 import { useWarehouseAreaOptions, useWarehouseLocationByArea } from '../../../../hooks/useWarehouseAreaOptions';
+import { getMaterialTypeLabel } from '@/utils/materialType';
 
 interface MaterialScanOperationModalProps {
   open: boolean;
@@ -114,7 +115,7 @@ const MaterialScanOperationModal: React.FC<MaterialScanOperationModalProps> = ({
           <Card style={{ background: '#f6f8fa' }}>
             <Descriptions column={3}>
               <Descriptions.Item label="物料名称">{scanResult.materialName}</Descriptions.Item>
-              <Descriptions.Item label="类型">{scanResult.materialType}</Descriptions.Item>
+              <Descriptions.Item label="类型">{getMaterialTypeLabel(scanResult.materialType) || '未知'}</Descriptions.Item>
               <Descriptions.Item label="仓位">{scanResult.location}</Descriptions.Item>
               <Descriptions.Item label="当前库存"><Tag color={scanResult.quantity > 0 ? 'green' : 'red'}>{scanResult.quantity} {scanResult.unit}</Tag></Descriptions.Item>
               <Descriptions.Item label="锁定量">{scanResult.lockedQuantity}</Descriptions.Item>

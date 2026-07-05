@@ -3,6 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import useCrmClientStore from '@/stores/crmClientStore';
 import crmClient from '@/api/crmClient';
 
+const ORDER_STATUS_MAP = {
+  PENDING: '待处理', IN_PROGRESS: '进行中', COMPLETED: '已完成',
+  CANCELLED: '已取消', CONFIRMED: '已确认', SHIPPED: '已发货',
+  DELIVERED: '已送达', CLOSED: '已关闭', REJECTED: '已拒绝',
+};
+const orderStatusText = (s) => ORDER_STATUS_MAP[s] || '未知';
+
 const CrmOrders = () => {
   const navigate = useNavigate();
   const [orders, setOrders] = useState([]);
@@ -74,7 +81,7 @@ const CrmOrders = () => {
           <div key={order.id} style={styles.card} onClick={() => navigate(`/crm-client/orders/${order.id}`)}>
             <div style={styles.cardHeader}>
               <span style={styles.orderNo}>{order.orderNo}</span>
-              <span style={{ ...styles.badge, background: getStatusBg(order.status) }}>{order.status}</span>
+              <span style={{ ...styles.badge, background: getStatusBg(order.status) }}>{orderStatusText(order.status)}</span>
             </div>
             <div style={styles.cardBody}>
               <div style={styles.cardRow}>

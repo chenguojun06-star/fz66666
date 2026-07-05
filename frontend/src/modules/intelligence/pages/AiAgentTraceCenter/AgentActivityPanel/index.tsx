@@ -100,7 +100,7 @@ const Workstation: React.FC<{
         <div className="ws-name">{agent.name}</div>
         <div className="ws-status-row">
           <span className={`ws-status-dot ws-status-dot--${agent.status}`} />
-          <span className="ws-status-text">{STATUS_LABEL[agent.status]}</span>
+          <span className="ws-status-text">{STATUS_LABEL[agent.status] ?? '未知'}</span>
           {agent.tasksToday > 0 && <span className="ws-task-count">{agent.tasksToday}任务</span>}
         </div>
         {isWorking && agent.currentTask && (
@@ -164,9 +164,9 @@ const AgentDetailCard: React.FC<{ agent: AgentInfo }> = ({ agent }) => {
         <div className="agent-detail-avatar" style={{ background: a.color }}>{a.name[0]}</div>
         <div>
           <div className="agent-detail-name">{a.name}</div>
-          <div className="agent-detail-dept">{DEPT_CONFIG[a.department]?.icon} {DEPT_CONFIG[a.department]?.label}</div>
+          <div className="agent-detail-dept">{DEPT_CONFIG[a.department]?.icon} {DEPT_CONFIG[a.department]?.label ?? '未知部门'}</div>
         </div>
-        <span className={`agent-detail-status agent-detail-status--${a.status}`}>{STATUS_LABEL[a.status]}</span>
+        <span className={`agent-detail-status agent-detail-status--${a.status}`}>{STATUS_LABEL[a.status] ?? '未知'}</span>
       </div>
       <div className="agent-detail-desc">{a.description}</div>
       <div className="agent-detail-stats">

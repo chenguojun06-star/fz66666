@@ -6,6 +6,14 @@ import { toast } from '@/utils/uiHelper';
 import { getAuthedImageUrl } from '@/utils/fileUrl';
 import { eventBus } from '@/utils/eventBus';
 
+const PROGRESS_STAGE_MAP = {
+  procurement: '采购', cutting: '裁剪', sewing: '缝制',
+  quality: '质检', warehouse: '入库', packaging: '包装',
+  shipping: '出货', design: '设计', pattern: '纸样',
+  sample: '样衣', production: '生产', finishing: '后整理',
+};
+const progressStageText = (s) => PROGRESS_STAGE_MAP[s] || s || '-';
+
 export default function ScanRescanPage() {
   const navigate = useNavigate();
   const rescanData = useGlobalStore(s => s.rescanData);
@@ -65,7 +73,7 @@ export default function ScanRescanPage() {
           <span className="info-label">工序:</span>
           <span className="info-value">{detail.processName}</span>
           <span className="info-label">阶段:</span>
-          <span className="info-value">{detail.progressStage}</span>
+          <span className="info-value">{progressStageText(detail.progressStage)}</span>
         </div>
         <div className="info-row">
           <span className="info-label">扫码时间:</span>

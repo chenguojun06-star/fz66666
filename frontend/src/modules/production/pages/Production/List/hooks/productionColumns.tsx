@@ -17,6 +17,7 @@ import FactoryTypeTag from '@/components/common/FactoryTypeTag';
 import { toCategoryCn } from '@/utils/styleCategory';
 import { getRemainingDaysDisplay } from '@/utils/progressColor';
 import { getPlatformTag } from '@/utils/platform';
+import { ORDER_BIZ_TYPE_MAP } from '@/constants/statusMaps';
 import { safeString } from '../utils';
 import { displayOrderStatus, displayDate, displayAmount } from '@/utils/display';
 import DisplayStatusTag from '@/components/common/DisplayStatusTag';
@@ -148,7 +149,8 @@ export function useProductionColumns({
             {(record as any).orderBizType && (() => {
               const bizType = String((record as any).orderBizType);
               const colorMap: Record<string, string> = { FOB: 'processing', ODM: 'info', OEM: 'processing', CMT: 'warning' };
-              return <Tag color={colorMap[bizType] ?? 'default'} style={{ margin: 0, fontSize: 12, padding: '0 4px', lineHeight: '18px' }}>{bizType}</Tag>;
+              const bizLabel = ORDER_BIZ_TYPE_MAP[bizType]?.text ?? '未知';
+              return <Tag color={colorMap[bizType] ?? 'default'} style={{ margin: 0, fontSize: 12, padding: '0 4px', lineHeight: '18px' }}>{bizLabel}</Tag>;
             })()}
             {record.ecPlatform && (
               <Tag color={getPlatformTag(record.ecPlatform).color} style={{ margin: 0, fontSize: 12, padding: '0 4px', lineHeight: '18px' }}>
@@ -226,7 +228,7 @@ export function useProductionColumns({
               onClick={(e) => { e.stopPropagation(); onOpenRemark?.(record, '生产方 — ' + (v || '')); }}
             />
             {bizType && (
-              <Tag color={colorMap[bizType] ?? 'default'} style={{ margin: 0, fontSize: 12, padding: '0 4px', lineHeight: '18px' }}>{bizType}</Tag>
+              <Tag color={colorMap[bizType] ?? 'default'} style={{ margin: 0, fontSize: 12, padding: '0 4px', lineHeight: '18px' }}>{ORDER_BIZ_TYPE_MAP[bizType]?.text ?? '未知'}</Tag>
             )}
           </Space>
         );

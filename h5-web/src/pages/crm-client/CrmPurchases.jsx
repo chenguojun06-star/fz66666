@@ -2,6 +2,12 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import crmClient from '@/api/crmClient';
 
+const PURCHASE_STATUS_MAP = {
+  pending: '待处理', partial_arrival: '部分到货', received: '已到货',
+  completed: '已完成', cancelled: '已取消', in_progress: '进行中',
+};
+const purchaseStatusText = (s) => PURCHASE_STATUS_MAP[s] || '未知';
+
 const CrmPurchases = () => {
   const navigate = useNavigate();
   const [purchases, setPurchases] = useState([]);
@@ -61,7 +67,7 @@ const CrmPurchases = () => {
         <div key={p.id} style={s.card} onClick={() => navigate(`/crm-client/purchases/${p.id}`)}>
           <div style={s.cardHeader}>
             <span style={s.cardTitle}>{p.materialName || p.purchaseNo}</span>
-            <span style={s.badge}>{p.status}</span>
+            <span style={s.badge}>{purchaseStatusText(p.status)}</span>
           </div>
           <div style={s.cardRow}><span style={s.cardLabel}>采购单号</span><span style={s.cardVal}>{p.purchaseNo}</span></div>
           <div style={s.cardRow}><span style={s.cardLabel}>关联订单</span><span style={s.cardVal}>{p.orderNo || '-'}</span></div>

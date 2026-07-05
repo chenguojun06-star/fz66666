@@ -2,6 +2,12 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import crmClient from '@/api/crmClient';
 
+const RECEIVABLE_STATUS_MAP = {
+  PENDING: '待付款', PARTIAL: '部分付款', PAID: '已付清',
+  OVERDUE: '逾期', CANCELLED: '已取消', WRITTEN_OFF: '已核销',
+};
+const receivableStatusText = (s) => RECEIVABLE_STATUS_MAP[s] || '未知';
+
 const CrmReceivables = () => {
   const navigate = useNavigate();
   const [receivables, setReceivables] = useState([]);
@@ -59,7 +65,7 @@ const CrmReceivables = () => {
         <div key={r.id} style={s.card} onClick={() => navigate(`/crm-client/receivables/${r.id}`)}>
           <div style={s.cardHeader}>
             <span style={s.cardTitle}>{r.receivableNo}</span>
-            <span style={{ ...s.badge, background: r.status === 'OVERDUE' ? '#f8d7da' : r.status === 'PAID' ? '#d4edda' : '#e2e3e5' }}>{r.status}</span>
+            <span style={{ ...s.badge, background: r.status === 'OVERDUE' ? '#f8d7da' : r.status === 'PAID' ? '#d4edda' : '#e2e3e5' }}>{receivableStatusText(r.status)}</span>
           </div>
           <div style={s.cardRow}><span style={s.cardLabel}>金额</span><span style={s.cardVal}>¥{r.amount?.toLocaleString() || 0}</span></div>
           <div style={s.cardRow}><span style={s.cardLabel}>已收</span><span style={s.cardVal}>¥{r.receivedAmount?.toLocaleString() || 0}</span></div>

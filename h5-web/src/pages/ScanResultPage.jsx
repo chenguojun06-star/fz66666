@@ -12,6 +12,14 @@ function normalizePositiveInt(value, fallback = 1) {
   return !isFinite(n) || n <= 0 ? fallback : n;
 }
 
+const PROGRESS_STAGE_MAP = {
+  procurement: '采购', cutting: '裁剪', sewing: '缝制',
+  quality: '质检', warehouse: '入库', packaging: '包装',
+  shipping: '出货', design: '设计', pattern: '纸样',
+  sample: '样衣', production: '生产', finishing: '后整理',
+};
+const progressStageText = (s) => PROGRESS_STAGE_MAP[s] || s || '-';
+
 const HTTP_ERROR_MAP = {
   401: '登录已过期，请重新登录',
   403: '无权限执行此操作',
@@ -333,7 +341,7 @@ export default function ScanResultPage() {
           颜色: {detail.color} · 码数: {detail.size} · 数量: {detail.displayQuantity}
         </div>
         <div style={{ fontSize: 12, color: 'var(--color-primary)', marginTop: 4 }}>
-          工序: {detail.processCode ? `${detail.processCode} ` : ''}{detail.processName} · 阶段: {detail.progressStage}
+          工序: {detail.processCode && /^[A-Za-z0-9]{1,4}$/.test(detail.processCode) ? `${detail.processCode} ` : ''}{detail.processName} · 阶段: {progressStageText(detail.progressStage)}
         </div>
         {detail.bundleStatusHints && detail.bundleStatusHints.length > 0 && (
           <div style={{
@@ -361,7 +369,7 @@ export default function ScanResultPage() {
                 fontSize: 12,
               }}>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                  <span style={{ color: 'var(--color-primary)', fontWeight: 600 }}>{r.processName || r.progressStage || '-'}</span>
+                  <span style={{ color: 'var(--color-primary)', fontWeight: 600 }}>{r.processName || progressStageText(r.progressStage) || '-'}</span>
                   <span style={{ color: 'var(--color-text-secondary)' }}>{r.color || '-'} / {r.size || '-'}</span>
                 </div>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>

@@ -17,7 +17,8 @@ const StatusTag: React.FC<StatusTagProps> = ({ status, statusMap, fallback }) =>
   const info = k
     ? (statusMap[k] ?? statusMap[k.toLowerCase()] ?? statusMap[k.toUpperCase()] ?? fallback)
     : fallback;
-  const resolved = info ?? { text: k || '未知', color: 'default' };
+  // 兜底用"未知"，不展示后端原始英文 code
+  const resolved = info ?? { text: '未知', color: 'default' };
   return <Tag color={resolved.color}>{resolved.text}</Tag>;
 };
 

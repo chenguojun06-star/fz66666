@@ -15,6 +15,7 @@ function daysLater(n) {
 
 const PLATE_MAP = ['', 'FIRST', 'REORDER'];
 const BIZ_TYPES = ['FOB', 'ODM', 'OEM', 'CMT'];
+const BIZ_TYPE_LABELS = ['FOB 离岸价', 'ODM 原厂设计', 'OEM 代工生产', 'CMT 来料加工'];
 const PRICING_MODES = ['PROCESS', 'SIZE', 'COST', 'QUOTE', 'MANUAL'];
 const PROD_DEPT_KEYWORDS = ['生产', '车间', '裁剪', '缝制', '后整', '工序', '车缝', '尾部', '整烫', '包装', '质检', '工艺', '班组', '产线', '绣花', '印花', '洗水', '组'];
 
@@ -35,6 +36,8 @@ Page({
     company: '', productCategory: '',
     plateType: '', plateTypeLabel: '',
     orderBizType: '',
+    orderBizTypeLabel: '',
+    bizTypeLabels: BIZ_TYPE_LABELS,
     patternMaker: '', merchandiser: '',
     pricingMode: 'PROCESS', pricingModeIdx: 0,
     pricingModeLabels: ['工序单价', '尺码单价', '外发整件', '报价单价', '手动单价'],
@@ -274,7 +277,11 @@ Page({
   },
 
   onBizTypeChange: function (e) {
-    this.setData({ orderBizType: BIZ_TYPES[e.detail.value] || '' });
+    const idx = e.detail.value;
+    this.setData({
+      orderBizType: BIZ_TYPES[idx] || '',
+      orderBizTypeLabel: BIZ_TYPE_LABELS[idx] || '',
+    });
   },
 
   onPatternMakerInput: function (e) { this.setData({ patternMaker: e.detail.value }); },

@@ -228,10 +228,10 @@ const OrderCreateModal: React.FC<Props> = (p) => {
                 <InlineField label="下单类型">
                   <Form.Item name="orderBizType" style={{ marginBottom: 0 }}>
                     <Select placeholder="选填" allowClear options={[
-                      { label: 'FOB', value: 'FOB' },
-                      { label: 'ODM', value: 'ODM' },
-                      { label: 'OEM', value: 'OEM' },
-                      { label: 'CMT', value: 'CMT' },
+                      { label: 'FOB 离岸价', value: 'FOB' },
+                      { label: 'ODM 原厂设计', value: 'ODM' },
+                      { label: 'OEM 代工生产', value: 'OEM' },
+                      { label: 'CMT 来料加工', value: 'CMT' },
                     ]} />
                   </Form.Item>
                 </InlineField>

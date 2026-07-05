@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { Card, Button, Table, Tag, Statistic, Row, Col, message } from 'antd';
+import { Card, Button, Table, Tag, Statistic, Row, Col, message, Descriptions, Empty } from 'antd';
 import { ReloadOutlined, ExperimentOutlined, SafetyOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons';
 import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
 
@@ -19,6 +19,73 @@ interface GoldenEvalData {
   avgScore: number;
   results: EvalResult[];
 }
+
+// 安全护栏字段中文标签映射
+const GUARDRAIL_LABELS: Record<string, string> = {
+  maxTurns: '最大对话轮数',
+  maxTokens: '最大 Token 数',
+  allowedTools: '允许使用的工具',
+  forbiddenTools: '禁止使用的工具',
+  forbiddenTopics: '禁止讨论的话题',
+  allowedTopics: '允许讨论的话题',
+  maxToolCalls: '最大工具调用次数',
+  timeoutMs: '超时时间（毫秒）',
+  retryLimit: '重试次数上限',
+  enableGuardrail: '是否启用护栏',
+  enableReflection: '是否启用反思',
+  enableToolReview: '是否启用工具审查',
+  temperature: '温度参数',
+  topP: 'Top-P 参数',
+  safetyLevel: '安全等级',
+  rules: '规则列表',
+  description: '说明',
+};
+
+// 安全等级中文化
+const SAFETY_LEVEL_MAP: Record<string, string> = {
+  strict: '严格',
+  moderate: '适中',
+  loose: '宽松',
+  high: '高',
+  medium: '中',
+  low: '低',
+};
+
+// 将任意值转换为中文友好的展示字符串
+const formatGuardrailValue = (key: string, value: unknown): string => {
+  if (value == null) return '未设置';
+  if (Array.isArray(value)) {
+    if (value.length === 0) return '无';
+    return value.map((v) => formatGuardrailValue(key, v)).join('、');
+  }
+  if (typeof value === 'boolean') return value ? '是' : '否';
+  if (typeof value === 'object') return JSON.stringify(value);
+  if (typeof value === 'string') {
+    if (key === 'safetyLevel') return SAFETY_LEVEL_MAP[value.toLowerCase()] ?? value;
+    return value;
+  }
+  return String(value);
+};
+
+// 安全护栏结构化展示
+const GuardrailsView: React.FC<{ guardrails: Record<string, unknown> }> = ({ guardrails }) => {
+  const entries = Object.entries(guardrails).filter(([, v]) => v != null);
+  if (entries.length === 0) {
+    return <Empty description="暂无安全规则配置" />;
+  }
+  return (
+    <Descriptions column={1} bordered size="small">
+      {entries.map(([key, value]) => (
+        <Descriptions.Item
+          key={key}
+          label={GUARDRAIL_LABELS[key] ?? key}
+        >
+          {formatGuardrailValue(key, value)}
+        </Descriptions.Item>
+      ))}
+    </Descriptions>
+  );
+};
 
 const AiQualityDashboard: React.FC = () => {
   const [evalData, setEvalData] = useState<GoldenEvalData | null>(null);
@@ -83,7 +150,7 @@ const AiQualityDashboard: React.FC = () => {
       {/* 操作栏 */}
       <div style={{ marginBottom: 16, display: 'flex', gap: 12 }}>
         <Button type="primary" icon={<ExperimentOutlined />} onClick={runGoldenEval} loading={loading}>
-          运行 Golden 回归测试
+          运行回归测试
         </Button>
         <Button icon={<SafetyOutlined />} onClick={loadGuardrails}>
           查看安全规则
@@ -123,7 +190,7 @@ const AiQualityDashboard: React.FC = () => {
 
       {/* 测试结果表格 */}
       {evalData && (
-        <Card title="Golden QA 回归测试结果" style={{ marginBottom: 16 }}>
+        <Card title="回归测试结果" style={{ marginBottom: 16 }}>
           <Table
             dataSource={evalData.results}
             columns={columns}
@@ -136,17 +203,8 @@ const AiQualityDashboard: React.FC = () => {
 
       {/* 安全规则 */}
       {guardrails && (
-        <Card title="安全护栏规则（Guardrails）">
-          <pre style={{
-            background: 'var(--color-bg-container, var(--color-bg-subtle))',
-            padding: 16,
-            borderRadius: 8,
-            maxHeight: 400,
-            overflow: 'auto',
-            fontSize: 13,
-          }}>
-            {JSON.stringify(guardrails, null, 2)}
-          </pre>
+        <Card title="安全护栏规则">
+          <GuardrailsView guardrails={guardrails} />
         </Card>
       )}
 
@@ -154,7 +212,7 @@ const AiQualityDashboard: React.FC = () => {
       {!evalData && !guardrails && (
         <Card>
           <p style={{ color: 'var(--color-text-tertiary, #999)' }}>
-            点击「运行 Golden 回归测试」对 AI 回答质量进行评估，或「查看安全规则」了解当前的内容安全策略。
+            点击「运行回归测试」对 AI 回答质量进行评估，或「查看安全规则」了解当前的内容安全策略。
           </p>
         </Card>
       )}

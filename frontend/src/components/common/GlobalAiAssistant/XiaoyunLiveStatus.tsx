@@ -1,6 +1,7 @@
 import React from 'react';
 import type { XiaoyunMood } from '@/services/intelligence/xiaoyunUnifiedHandler';
 import { getMoodIcon, getMoodMessage, formatElapsed } from '@/services/intelligence/xiaoyunUnifiedHandler';
+import { describeToolName } from './helpers';
 
 export interface XiaoyunLiveStatusProps {
   mood?: XiaoyunMood;
@@ -67,7 +68,7 @@ export const XiaoyunLiveStatus: React.FC<XiaoyunLiveStatusProps> = ({
             <span style={styles.toolIcon}>
               {toolExecuting.icon || '🔧'}
             </span>
-            <span style={styles.toolName}>{toolExecuting.tool}</span>
+            <span style={styles.toolName}>{describeToolName(toolExecuting.tool)}</span>
           </div>
         )}
 

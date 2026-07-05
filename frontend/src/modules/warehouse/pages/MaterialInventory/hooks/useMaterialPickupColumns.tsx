@@ -3,6 +3,7 @@ import type { ColumnsType } from 'antd/es/table';
 import { formatMaterialSpecWidth } from '@/utils/materialType';
 import { formatMoney } from '@/utils/format';
 import { formatDateTime } from '@/utils/datetime';
+import { ORDER_BIZ_TYPE_MAP } from '@/constants/statusMaps';
 
 type LegacyPickupRecord = Record<string, any>;
 
@@ -102,7 +103,7 @@ export function useMaterialPickupColumns(actions: UsedActions): ColumnsType<Lega
             {factoryType === 'INTERNAL' && <Tag color="blue" style={{ margin: 0, padding: '0 4px', lineHeight: '18px' }}>内</Tag>}
             {factoryType === 'EXTERNAL' && <Tag color="purple" style={{ margin: 0, padding: '0 4px', lineHeight: '18px' }}>外</Tag>}
             <span>{factoryName}</span>
-            {orderBizType && <Tag color={bizColorMap[orderBizType] ?? 'default'} style={{ margin: 0, padding: '0 4px', lineHeight: '18px' }}>{orderBizType}</Tag>}
+            {orderBizType && <Tag color={bizColorMap[orderBizType] ?? 'default'} style={{ margin: 0, padding: '0 4px', lineHeight: '18px' }}>{ORDER_BIZ_TYPE_MAP[orderBizType]?.text ?? '未知'}</Tag>}
           </Space>
         );
       },

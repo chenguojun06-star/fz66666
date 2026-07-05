@@ -243,10 +243,10 @@ export const BIZ_TYPE_MAP: StatusMap = {
 };
 
 export const ORDER_BIZ_TYPE_MAP: StatusMap = {
-  FOB:  { text: 'FOB', color: 'processing' },
-  ODM:  { text: 'ODM', color: 'info' },
-  OEM:  { text: 'OEM', color: 'processing' },
-  CMT:  { text: 'CMT', color: 'warning' },
+  FOB:  { text: 'FOB 离岸价', color: 'processing' },
+  ODM:  { text: 'ODM 原厂设计', color: 'info' },
+  OEM:  { text: 'OEM 代工生产', color: 'processing' },
+  CMT:  { text: 'CMT 来料加工', color: 'warning' },
 };
 
 /* =========================== 审核状态 ============================ */

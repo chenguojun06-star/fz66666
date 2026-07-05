@@ -31,9 +31,9 @@
           <text class="info-label">品类</text>
           <text class="info-value">{{styleInfo.category}}</text>
         </view>
-        <view class="info-row" wx:if="{{styleInfo.developmentSourceType}}">
+        <view class="info-row" wx:if="{{styleInfo.developmentSourceText}}">
           <text class="info-label">来源</text>
-          <text class="info-value">{{styleInfo.developmentSourceType}}</text>
+          <text class="info-value">{{styleInfo.developmentSourceText}}</text>
         </view>
         <view class="info-row" wx:if="{{styleInfo.season}}">
           <text class="info-label">季节</text>
@@ -270,7 +270,7 @@
       <view wx:elif="{{!patternData}}" class="empty-inline">暂无纸样数据</view>
       <view wx:else class="kv-list">
         <view class="kv-row"><text class="kv-label">版本</text><text class="kv-value">{{patternData.revision || patternData.version || '-'}}</text></view>
-        <view class="kv-row"><text class="kv-label">状态</text><text class="kv-value">{{patternData.status || '-'}}</text></view>
+        <view class="kv-row"><text class="kv-label">状态</text><text class="kv-value">{{patternData.statusText || '-'}}</text></view>
         <view class="kv-row"><text class="kv-label">制版师</text><text class="kv-value">{{patternData.patternMaker || patternData.assignee || '-'}}</text></view>
         <view class="kv-row" wx:if="{{patternData.notes}}"><text class="kv-label">备注</text><text class="kv-value kv-long">{{patternData.notes}}</text></view>
       </view>

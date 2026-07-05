@@ -4,6 +4,13 @@ import XiaoyunCloudAvatar from '@/components/common/XiaoyunCloudAvatar';
 import styles from './AgentCards.module.css';
 import sharedStyles from './index.module.css';
 
+// 拆菲状态中文化映射
+const SPLIT_STATUS_LABEL: Record<string, string> = {
+  split_child: '子菲号',
+  split_parent: '主菲号',
+  normal: '常规',
+};
+
 export interface TeamStatusRecipient {
   userId?: number;
   username?: string;
@@ -328,7 +335,7 @@ export const BundleSplitCardWidget: React.FC<{
               <span>{item.quantity ?? 0} 件</span>
             </div>
             <div className={styles.purchaseDocItemMeta}>
-              {item.splitStatus || 'normal'}
+              {item.splitStatus ? (SPLIT_STATUS_LABEL[item.splitStatus] ?? '常规') : '常规'}
               {item.operatorName ? ` · ${item.operatorName}` : item.operatorId ? ` · ${item.operatorId}` : ''}
             </div>
             {item.qrCode ? (

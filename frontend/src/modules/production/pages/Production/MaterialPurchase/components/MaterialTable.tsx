@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Tag, App, Space, Tooltip, Modal, InputNumber, Form, Button, Checkbox } from 'antd';
+import { Tag, App, Space, Tooltip, Modal, InputNumber, Form, Button, Checkbox, Descriptions } from 'antd';
 import { ShoppingCartOutlined } from '@ant-design/icons';
 import MaterialTypeTag from '@/components/common/MaterialTypeTag';
 import FactoryTypeTag from '@/components/common/FactoryTypeTag';
@@ -20,6 +20,7 @@ import { analyzePurchase, renderPurchaseTooltip } from '../utils/purchaseIntelli
 import { formatDateTime } from '@/utils/datetime';
 import { formatMaterialQuantityWithUnit, formatReferenceKilograms, getStatusConfig, subtractMaterialQuantity } from '../utils';
 import { MATERIAL_PURCHASE_STATUS } from '@/constants/business';
+import { ORDER_BIZ_TYPE_MAP } from '@/constants/statusMaps';
 import api from '@/utils/api';
 
 interface MaterialTableProps {
@@ -192,7 +193,7 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
           <Space size={4}>
             <FactoryTypeTag factoryType={type} />
             <SupplierNameTooltip name={name} />
-            {bizType && <Tag color={colorMap[bizType] ?? 'default'} style={{ margin: 0, fontSize: 12, padding: '0 4px', lineHeight: '18px' }}>{bizType}</Tag>}
+            {bizType && <Tag color={colorMap[bizType] ?? 'default'} style={{ margin: 0, fontSize: 12, padding: '0 4px', lineHeight: '18px' }}>{ORDER_BIZ_TYPE_MAP[bizType]?.text ?? '未知'}</Tag>}
           </Space>
         );
       },
@@ -619,10 +620,18 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
         } catch { message.error('入库失败'); }
         finally { setArrivalLoading(false); }
       }}>
-        <p style={{ marginBottom: 8, color: 'var(--text-secondary)', fontSize: 14 }}>
-          采购 {arrivalTarget?.purchaseQuantity || '-'}{arrivalTarget?.unit ? ' ' + arrivalTarget.unit : ''}，已到 {arrivalTarget?.arrivedQuantity || 0}，待到 {arrivalTarget ? Math.max(0.01, Number(arrivalTarget.purchaseQuantity || 0) - Number(arrivalTarget.arrivedQuantity || 0)) : 0}
-        </p>
-        <Form.Item name="arrivedQuantity" label="到货数量" rules={[{ required: true, message: '请输入到货数量' }]}>
+        <Descriptions bordered column={3} size="small" style={{ marginBottom: 16 }}>
+          <Descriptions.Item label="物料类型">{arrivalTarget?.materialType ? <MaterialTypeTag value={arrivalTarget.materialType} /> : '-'}</Descriptions.Item>
+          <Descriptions.Item label="物料名称">{arrivalTarget?.materialName || '-'}</Descriptions.Item>
+          <Descriptions.Item label="物料编码">{arrivalTarget?.materialCode || '-'}</Descriptions.Item>
+          <Descriptions.Item label="颜色">{arrivalTarget?.color || '-'}</Descriptions.Item>
+          <Descriptions.Item label="规格/幅宽">{formatMaterialSpecWidth(arrivalTarget?.specifications, arrivalTarget?.fabricWidth)}</Descriptions.Item>
+          <Descriptions.Item label="单位">{arrivalTarget?.unit || '-'}</Descriptions.Item>
+          <Descriptions.Item label="采购数量">{formatMaterialQuantityWithUnit(arrivalTarget?.purchaseQuantity, arrivalTarget?.unit)}</Descriptions.Item>
+          <Descriptions.Item label="已到货">{formatMaterialQuantityWithUnit(arrivalTarget?.arrivedQuantity || 0, arrivalTarget?.unit)}</Descriptions.Item>
+          <Descriptions.Item label="待到货">{formatMaterialQuantityWithUnit(arrivalTarget ? Math.max(0, Number(arrivalTarget.purchaseQuantity || 0) - Number(arrivalTarget.arrivedQuantity || 0)) : 0, arrivalTarget?.unit)}</Descriptions.Item>
+        </Descriptions>
+        <Form.Item name="arrivedQuantity" label="本次到货数量" rules={[{ required: true, message: '请输入到货数量' }]}>
           <InputNumber
             min={0.01}
             max={arrivalTarget ? Math.max(0.01, Number(arrivalTarget.purchaseQuantity || 0) - Number(arrivalTarget.arrivedQuantity || 0)) : 1}

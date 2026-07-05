@@ -111,8 +111,8 @@
         </view>
         <view class="f-row half">
           <text class="f-lbl">类型</text>
-          <picker range="{{['FOB','ODM','OEM','CMT']}}" bindchange="onBizTypeChange" class="flex-1">
-            <view class="f-pv {{orderBizType?'':'ph'}}">{{orderBizType || '选择'}}</view>
+          <picker range="{{bizTypeLabels}}" bindchange="onBizTypeChange" class="flex-1">
+            <view class="f-pv {{orderBizTypeLabel?'':'ph'}}">{{orderBizTypeLabel || '选择'}}</view>
           </picker>
         </view>
       </view>

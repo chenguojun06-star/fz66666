@@ -68,7 +68,7 @@ const buildTraceRoute = (row?: TraceRow | null) => {
     : null;
 };
 const exportTraceRows = (rows: TraceRow[]) => {
-  const header = ['时间', 'commandId', '状态', '执行人', '目标单据', '工具摘要', '耗时(ms)', '用户指令', '错误信息'];
+  const header = ['时间', '指令编号', '状态', '执行人', '目标单据', '工具摘要', '耗时(ms)', '用户指令', '错误信息'];
   const lines = rows.map((item) => [
     item.createdAt || '',
     item.commandId || '',
@@ -175,7 +175,7 @@ const AiAgentTraceCenter: React.FC = () => {
     <>
       <PageLayout
         title="AI 执行记录中心"
-        headerContent={<div style={{ color: 'var(--color-text-tertiary)', fontSize: 14 }}>统一查看小云每次执行的 commandId、状态、耗时、工具轨迹与失败信息</div>}
+        headerContent={<div style={{ color: 'var(--color-text-tertiary)', fontSize: 14 }}>统一查看小云每次执行的指令编号、状态、耗时、工具轨迹与失败信息</div>}
         titleExtra={
           <Space>
             <Button onClick={() => navigate(paths.cockpit)}>返回智能运营中心</Button>
@@ -204,7 +204,7 @@ const AiAgentTraceCenter: React.FC = () => {
                     allowClear
                     value={keyword}
                     onChange={(e) => setKeyword(e.target.value)}
-                    placeholder="搜索 commandId / 指令 / 时间"
+                    placeholder="搜索指令编号 / 指令 / 时间"
                     prefix={<SearchOutlined />}
                     style={{ width: 280 }}
                   />
@@ -275,8 +275,8 @@ const AiAgentTraceCenter: React.FC = () => {
                     locale={{ emptyText: <Empty description="暂无 AI 执行记录" /> }}
                     columns={[
                       { title: '时间', dataIndex: 'createdAt', width: 180 },
-                      { title: 'commandId', dataIndex: 'commandId', width: 240, ellipsis: true },
-                      { title: '状态', dataIndex: 'status', width: 100, render: (value) => { const m: Record<string, string> = { SUCCESS: '成功', FAILED: '失败', EXECUTING: '执行中', TIMEOUT: '超时', PENDING: '待执行', UNKNOWN: '未知' }; return <Tag color={statusColor(value)}>{m[value] || value || '未知'}</Tag>; } },
+                      { title: '指令编号', dataIndex: 'commandId', width: 240, ellipsis: true },
+                      { title: '状态', dataIndex: 'status', width: 100, render: (value) => { const m: Record<string, string> = { SUCCESS: '成功', FAILED: '失败', EXECUTING: '执行中', TIMEOUT: '超时', PENDING: '待执行', UNKNOWN: '未知' }; return <Tag color={statusColor(value)}>{m[value] || '未知'}</Tag>; } },
                       { title: '领取人', dataIndex: 'executorId', width: 120, ellipsis: true },
                       { title: '目标单据', dataIndex: 'targetId', width: 140, ellipsis: true },
                       { title: '工具', dataIndex: 'remark', width: 220, ellipsis: true },
@@ -313,7 +313,7 @@ const AiAgentTraceCenter: React.FC = () => {
       >
         <Space size={16} style={{ width: '100%', display: 'flex', flexDirection: 'column' }}>
           <Descriptions column={1} bordered>
-            <Descriptions.Item label="commandId">{detail?.commandId || '-'}</Descriptions.Item>
+            <Descriptions.Item label="指令编号">{detail?.commandId || '-'}</Descriptions.Item>
             <Descriptions.Item label="轨迹条数">{detail?.count ?? detail?.logs?.length ?? 0}</Descriptions.Item>
             <Descriptions.Item label="相关订单">
               {buildTraceRoute(detail?.logs?.find((item) => item.action?.startsWith('ai-agent:tool:')) || detail?.logs?.[0] || null)

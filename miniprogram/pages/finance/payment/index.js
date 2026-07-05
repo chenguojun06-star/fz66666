@@ -2,6 +2,9 @@ const api = require('../../../utils/api');
 const { toast } = require('../../../utils/uiHelper');
 const { isAdminOrSupervisor, hasFeaturePermission } = require('../../../utils/permission');
 
+/* ========== 收款人类型 中文化 ========== */
+var PAYEE_TYPE_LABELS = { WORKER: '员工', TEAM: '团队', FACTORY: '工厂', SUPPLIER: '供应商' };
+
 const PAYMENT_METHOD_MAP = {
   OFFLINE: '线下付款',
   BANK: '银行卡',
@@ -332,6 +335,13 @@ Page({
     var that = this;
     api.wagePayment.searchPayee({ keyword: keyword }).then(function (res) {
       var results = Array.isArray(res) ? res : (res && res.records) || [];
+      // 收款人类型中文化：兜底 '其他'，不展示英文 code
+      results.forEach(function (item) {
+        if (item) {
+          var rawType = item.type || item.payeeType || '';
+          item.payeeTypeText = rawType ? (PAYEE_TYPE_LABELS[String(rawType).toUpperCase()] || '其他') : '';
+        }
+      });
       that.setData({ searchPayeeResults: results });
     }).catch(function (e) { toast('搜索失败: ' + (e.message || e)); });
   },

@@ -22,18 +22,18 @@ const ROUTE_MAP: Record<string, [string, string]> = {
 };
 
 const NODE_LABELS: Record<string, [string, string]> = {
-  digital_twin:  [' 数字孪生',  '#818cf8'],
-  supervisor:    [' Supervisor', '#a78bfa'],
-  specialists:   [' Specialist', '#60a5fa'],
-  reflection:    [' Reflection', '#facc15'],
-  re_route:      [' 重路由',     '#f97316'],
+  digital_twin:  ['数字孪生',  '#818cf8'],
+  supervisor:    ['主管智能体', '#a78bfa'],
+  specialists:   ['专家智能体', '#60a5fa'],
+  reflection:    ['反思校验',   '#facc15'],
+  re_route:      ['重路由',     '#f97316'],
 };
 
 const confColor = (v: number) =>
   v >= 80 ? 'var(--color-success)' : v >= 60 ? 'var(--color-warning)' : '#ff7875';
 
 const RouteTag: React.FC<{ route?: string }> = ({ route }) => {
-  const [label, color] = ROUTE_MAP[route ?? ''] ?? [route ?? '—', '#999'];
+  const [label, color] = ROUTE_MAP[route ?? ''] ?? ['未知', '#999'];
   return <Tag color={color} style={{ fontWeight: 600 }}>{label}</Tag>;
 };
 
@@ -110,7 +110,7 @@ const SpecialistCards: React.FC<{ results?: Record<string, string> }> = ({ resul
           border: '1px solid rgba(255,255,255,0.06)',
         }}>
           <div style={{ fontSize: 14, fontWeight: 600, color: '#a78bfa', marginBottom: 4 }}>
-            {nameMap[key] ?? key}
+            {nameMap[key] ?? '分析结果'}
           </div>
           <div style={{ fontSize: 14, color: 'var(--color-text-quaternary)', lineHeight: 1.55, whiteSpace: 'pre-wrap' }}>
             {(val?.length ?? 0) > 300 ? val.slice(0, 300) + '…' : val}
@@ -126,13 +126,25 @@ const HistoryTable: React.FC = () => {
   const { history, historyLoading, loadHistory, submitFeedback } = useAgentGraphStore();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { loadHistory(); }, []);
+  // 场景中文化
+  const sceneMap: Record<string, string> = Object.fromEntries(SCENES.map((s) => [s.value, s.label.trim()]));
+  const renderScene = (v?: string) => {
+    if (!v) return <Tag>未知</Tag>;
+    return <Tag>{sceneMap[v] ?? '未知'}</Tag>;
+  };
+  // 状态中文化（不展示后端原始英文 code）
+  const statusMap: Record<string, string> = { SUCCESS: '成功', FAILED: '失败', EXECUTING: '执行中', TIMEOUT: '超时', PENDING: '待执行' };
+  const renderStatus = (v?: string) => {
+    const label = statusMap[v ?? ''] ?? '未知';
+    return <Tag color={v === 'SUCCESS' ? 'green' : v === 'EXECUTING' ? 'blue' : 'red'}>{label}</Tag>;
+  };
   const columns = [
     { title: '时间', dataIndex: 'createTime', width: 140, render: (v: string) => v?.replace('T', ' ').slice(0, 16) },
-    { title: '场景', dataIndex: 'scene', width: 80, render: (v: string) => <Tag>{v}</Tag> },
+    { title: '场景', dataIndex: 'scene', width: 90, render: renderScene },
     { title: '路由', dataIndex: 'route', width: 100, render: (v: string) => <RouteTag route={v} /> },
     { title: '置信', dataIndex: 'confidenceScore', width: 60, render: (v: number) => <span style={{ color: confColor(v) }}>{v}</span> },
     { title: '耗时', dataIndex: 'latencyMs', width: 70, render: (v: number) => `${v}ms` },
-    { title: '状态', dataIndex: 'status', width: 70, render: (v: string) => { const m: Record<string, string> = { SUCCESS: '成功', FAILED: '失败', EXECUTING: '执行中', TIMEOUT: '超时' }; return <Tag color={v === 'SUCCESS' ? 'green' : 'red'}>{m[v] || v || '未知'}</Tag>; } },
+    { title: '状态', dataIndex: 'status', width: 80, render: renderStatus },
     {
       title: '评分', dataIndex: 'userFeedback', width: 130,
       render: (v: number, row: any) => (
@@ -232,7 +244,7 @@ const AgentGraphPanel: React.FC = () => {
             <div style={{ textAlign: 'center', padding: '20px 0', color: '#a78bfa' }}>
               <Spin />
               <span style={{ marginLeft: 8, fontSize: 14 }}>
-                AI 多代理图推理中… DigitalTwin → Supervisor → Specialist → Reflect
+                AI 多代理图推理中… 数字孪生 → 主管 → 专家 → 反思
               </span>
             </div>
           )}
@@ -276,9 +288,10 @@ const AgentGraphPanel: React.FC = () => {
               {result.nodeTrace && result.nodeTrace.length > 0 && (
                 <div style={{ marginBottom: 8 }}>
                   <span style={{ fontSize: 14, color: '#888', marginRight: 6 }}>执行路径:</span>
-                  {result.nodeTrace.map((n, i) => (
-                    <Tag key={i} style={{ fontSize: 14 }}>{n}</Tag>
-                  ))}
+                  {result.nodeTrace.map((n, i) => {
+                    const [label] = NODE_LABELS[n] ?? ['未知', '#999'];
+                    return <Tag key={i} style={{ fontSize: 14 }}>{label}</Tag>;
+                  })}
                 </div>
               )}
 

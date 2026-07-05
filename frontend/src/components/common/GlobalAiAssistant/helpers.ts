@@ -88,7 +88,8 @@ export const describeToolName = (toolName?: string, isSuperAdmin?: boolean) => {
     tool_supplier: '供应商',
     tool_dict: '数据字典',
   };
-  return mapped[raw] || raw.replace(/^tool_/, '').replace(/_/g, ' ');
+  // 兜底用通用中文名，不展示原始 tool_xxx 英文代码
+  return mapped[raw] || '系统能力';
 };
 
 export const choose = (seed: number, variants: string[]) => {

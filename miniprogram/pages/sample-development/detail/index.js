@@ -5,6 +5,10 @@ const { toast } = require('../../../utils/uiHelper');
 const permission = require('../../../utils/permission');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 
+/* ========== 纸样状态 / 开发来源 中文化 ========== */
+var PATTERN_STATUS_LABELS = { PENDING: '未开始', IN_PROGRESS: '进行中', COMPLETED: '已完成', RETURNED: '已退回', LOCKED: '已锁定', UNLOCKED: '未锁定', NOT_STARTED: '未开始' };
+var SOURCE_TYPE_LABELS = { SELF_DEVELOPED: '自主开发', SELECTION_CENTER: '选款中心', CUSTOMER_PROVIDED: '客户提供', OEM_DESIGN: 'OEM 设计', OTHER: '其他' };
+
 /* ========== 与 PC 端 / 列表页 完全一致的状态与交期计算 ========== */
 
 // PC 端同款 getProgressNodeColor：中文关键字匹配颜色
@@ -198,6 +202,9 @@ Page({
             customer: detail.customer || detail.customerName || detail.buyer || '',
             category: detail.category || '',
             developmentSourceType: detail.developmentSourceType || detail.sourceType || '',
+            developmentSourceText: (detail.developmentSourceType || detail.sourceType)
+              ? (SOURCE_TYPE_LABELS[String(detail.developmentSourceType || detail.sourceType).toUpperCase()] || '其他')
+              : '',
             season: detail.season || '',
             patternMaker: detail.patternMaker || detail.patternDeveloper || detail.receiver || '',
             receiver: detail.receiver || '',
@@ -268,6 +275,9 @@ Page({
         customer: styleInfo.customer || styleInfo.customerName || styleInfo.buyer || styleInfo.buyerName || '',
         category: styleInfo.category || styleInfo.productCategory || '',
         developmentSourceType: styleInfo.developmentSourceType || styleInfo.sourceType || '',
+        developmentSourceText: (styleInfo.developmentSourceType || styleInfo.sourceType)
+          ? (SOURCE_TYPE_LABELS[String(styleInfo.developmentSourceType || styleInfo.sourceType).toUpperCase()] || '其他')
+          : '',
         season: styleInfo.season || '',
         // 制版师 / 操作工
         patternMaker: styleInfo.patternMaker || styleInfo.patternDeveloper || styleInfo.receiver || '',
@@ -769,7 +779,11 @@ Page({
     try {
       const res = await style.getPatternRevision(this.data.styleId);
       // getPatternRevision 直接返回纸样对象或null
-      this.setData({ patternData: res || null });
+      const patternData = res ? Object.assign({}, res) : null;
+      if (patternData && patternData.status) {
+        patternData.statusText = PATTERN_STATUS_LABELS[String(patternData.status).toUpperCase()] || '其他';
+      }
+      this.setData({ patternData });
     } catch (e) { console.error('纸样加载失败', e); }
     this.setData({ patternLoading: false });
   },
