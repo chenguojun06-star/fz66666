@@ -128,7 +128,9 @@ def check_content(fname: str, content: str, existing_file: bool = False) -> List
     raw = content
     cleaned = strip_sql_comments(content)
     cleaned_upper = cleaned.upper()
-    delimiter_blocks = _parse_delimiter_blocks(raw)
+    # 注意：delimiter_blocks 必须基于 cleaned 内容计算，
+    # 否则行号与主检测循环（基于 cleaned）不一致，会导致 DELIMITER 块内的语句被误判缺分号。
+    delimiter_blocks = _parse_delimiter_blocks(cleaned)
 
     # --- 6. 动态 SQL 字符串字面量 ---
     for i, line in enumerate(raw.splitlines(), 1):
