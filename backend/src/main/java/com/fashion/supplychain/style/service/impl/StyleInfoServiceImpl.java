@@ -63,6 +63,7 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
         String progressNode = (String) params.getOrDefault("progressNode", "");
 
         boolean onlyCompleted = parseBooleanParam(params, "onlyCompleted");
+        boolean onlyInProgress = parseBooleanParam(params, "onlyInProgress");
         boolean pushedToOrderOnly = parseBooleanParam(params, "pushedToOrderOnly");
         boolean excludeScrapped = Boolean.TRUE.equals(params.get("excludeScrapped"));
 
@@ -79,6 +80,9 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
                     .or()
                     .like(StyleInfo::getCategory, keyword))
                 .eq(onlyCompleted, StyleInfo::getSampleStatus, "COMPLETED")
+                .and(onlyInProgress, w -> w.isNull(StyleInfo::getSampleStatus)
+                        .or().ne(StyleInfo::getSampleStatus, "COMPLETED")
+                        .or().ne(StyleInfo::getSampleStatus, "Completed"))
                 .eq(pushedToOrderOnly, StyleInfo::getPushedToOrder, 1);
 
         applyStatusFilter(wrapper, excludeScrapped);

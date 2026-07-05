@@ -748,6 +748,56 @@ public class StyleInfoOrchestrator {
         return styleCostCalculator.getDevelopmentStatsByDateRange(startTime, endTime);
     }
 
+    /**
+     * 顶部统计卡片数据（总数/进行中/已完成/已延期）
+     * 支持两种模式：
+     * - 默认（mode 为空或 "sample"）：所有启用状态款式，用于样衣开发列表页
+     * - mode=order：仅已下单款式（pushedToOrder=1），用于下单管理页
+     * 多租户隔离：非超级管理员仅查询当前租户数据（P0铁律4）
+     */
+    public java.util.Map<String, Object> getStyleStats(String mode) {
+        java.util.Map<String, Object> stats = new java.util.HashMap<>();
+        boolean orderMode = "order".equalsIgnoreCase(mode);
+        Long readableTenantId = resolveReadableTenantId();
+        boolean tenantScopedRead = isTenantScopedRead();
+        long totalStyles = 0L;
+        long completedStyles = 0L;
+        long delayedStyles = 0L;
+        try {
+            totalStyles = styleInfoService.lambdaQuery()
+                    .eq(tenantScopedRead, StyleInfo::getTenantId, readableTenantId)
+                    .eq(StyleInfo::getStatus, "ENABLED")
+                    .eq(orderMode, StyleInfo::getPushedToOrder, 1)
+                    .count();
+
+            completedStyles = styleInfoService.lambdaQuery()
+                    .eq(tenantScopedRead, StyleInfo::getTenantId, readableTenantId)
+                    .eq(StyleInfo::getStatus, "ENABLED")
+                    .eq(orderMode, StyleInfo::getPushedToOrder, 1)
+                    .and(w -> w.eq(StyleInfo::getSampleStatus, "COMPLETED")
+                            .or().eq(StyleInfo::getSampleStatus, "Completed"))
+                    .count();
+
+            delayedStyles = styleInfoService.lambdaQuery()
+                    .eq(tenantScopedRead, StyleInfo::getTenantId, readableTenantId)
+                    .eq(StyleInfo::getStatus, "ENABLED")
+                    .eq(orderMode, StyleInfo::getPushedToOrder, 1)
+                    .and(w -> w.isNull(StyleInfo::getSampleStatus)
+                            .or().ne(StyleInfo::getSampleStatus, "COMPLETED")
+                            .or().ne(StyleInfo::getSampleStatus, "Completed"))
+                    .lt(StyleInfo::getDeliveryDate, LocalDateTime.now())
+                    .count();
+        } catch (Exception e) {
+            log.warn("[StyleInfo] getStyleStats 查询失败 mode={}, err={}", mode, e.getMessage());
+        }
+        long inProgressStyles = Math.max(0L, totalStyles - completedStyles);
+        stats.put("totalStyles", totalStyles);
+        stats.put("developingStyles", inProgressStyles);
+        stats.put("completedStyles", completedStyles);
+        stats.put("delayedStyles", delayedStyles);
+        return stats;
+    }
+
     @Transactional(rollbackFor = Exception.class)
     public StyleInfo saveSampleReview(Long id, String reviewStatus, String reviewComment, Object reviewImages) {
         StyleInfo style = styleInfoService.getById(id);

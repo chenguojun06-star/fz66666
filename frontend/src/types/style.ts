@@ -239,6 +239,7 @@ export interface StyleQueryParams {
   category?: string;
   keyword?: string;
   onlyCompleted?: boolean | number;
+  onlyInProgress?: boolean | number;
   pushedToOrderOnly?: boolean | number;
   progressNode?: string;
   page: number;

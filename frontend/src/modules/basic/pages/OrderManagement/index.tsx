@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { App, Card, Form, Space, Tabs } from 'antd';
 import { SettingOutlined } from '@ant-design/icons';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -8,6 +8,7 @@ import StylePrintModal from '@/components/common/StylePrintModal';
 import RemarkTimelineModal from '@/components/common/RemarkTimelineModal';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import SchemaPrint from '@/components/common/SchemaPrint';
+import api from '@/utils/api';
 import dayjs from 'dayjs';
 import { usePersistentState } from '@/hooks/usePersistentState';
 import { useFieldConfig } from '@/hooks/useFieldConfig';
@@ -84,6 +85,25 @@ const OrderManagement: React.FC = () => {
   const [factoryMode, setFactoryMode] = useState<'INTERNAL' | 'EXTERNAL'>('INTERNAL');
   const [smartFilter, setSmartFilter] = useState<'all' | 'overdue' | 'warning'>('all');
 
+  // 顶部统计卡片数据（全部/下单中/已完成/已延期）
+  const [orderStats, setOrderStats] = useState<{ totalStyles: number; developingStyles: number; completedStyles: number; delayedStyles: number }>({ totalStyles: 0, developingStyles: 0, completedStyles: 0, delayedStyles: 0 });
+  const [activeStatFilter, setActiveStatFilter] = useState<'all' | 'inProgress' | 'completed' | 'delayed'>('completed');
+  const loadOrderStats = useCallback(async () => {
+    try {
+      const res: any = await api.get('/style/info/stats', { params: { mode: 'order' } });
+      if (res.code === 200 && res.data) {
+        setOrderStats({
+          totalStyles: Number(res.data.totalStyles || 0),
+          developingStyles: Number(res.data.developingStyles || 0),
+          completedStyles: Number(res.data.completedStyles || 0),
+          delayedStyles: Number(res.data.delayedStyles || 0),
+        });
+      }
+    } catch {
+      // 静默失败，不影响列表加载
+    }
+  }, []);
+
   const [visible, setVisible] = useState(false);
   const [selectedStyle, setSelectedStyle] = useState<StyleInfo | null>(null);
   const [submitLoading, setSubmitLoading] = useState(false);
@@ -151,7 +171,9 @@ const OrderManagement: React.FC = () => {
         styleNo: undefined, styleName: undefined, category: undefined,
       }));
     }
-  }, [location.search]);
+    // 加载顶部统计卡片数据
+    loadOrderStats();
+  }, [location.search, loadOrderStats]);
 
   const bomByType = useMemo(() => {
     const fabric = bomList.filter((b) => getMaterialTypeCategory((b as Record<string, unknown>).materialType) === 'fabric');
@@ -392,7 +414,57 @@ const OrderManagement: React.FC = () => {
             ) : null}
 
             <PageStatCards
-              cards={[]}
+              activeKey={activeStatFilter}
+              cards={[
+                {
+                  key: 'all',
+                  items: [
+                    { label: '全部订单', value: orderStats.totalStyles, unit: '个', color: 'var(--color-text-primary)' },
+                  ],
+                  onClick: () => {
+                    setActiveStatFilter('all');
+                    setQueryParams(prev => ({ ...prev, onlyCompleted: false, onlyInProgress: false, page: 1 }));
+                    setSmartFilter('all');
+                  },
+                  activeColor: 'var(--color-text-primary)',
+                },
+                {
+                  key: 'inProgress',
+                  items: [
+                    { label: '下单中', value: orderStats.developingStyles, unit: '个', color: 'var(--color-primary)' },
+                  ],
+                  onClick: () => {
+                    setActiveStatFilter('inProgress');
+                    setQueryParams(prev => ({ ...prev, onlyCompleted: false, onlyInProgress: true, page: 1 }));
+                    setSmartFilter('all');
+                  },
+                  activeColor: 'var(--color-primary)',
+                },
+                {
+                  key: 'completed',
+                  items: [
+                    { label: '已完成', value: orderStats.completedStyles, unit: '个', color: 'var(--color-success)' },
+                  ],
+                  onClick: () => {
+                    setActiveStatFilter('completed');
+                    setQueryParams(prev => ({ ...prev, onlyCompleted: true, onlyInProgress: false, page: 1 }));
+                    setSmartFilter('all');
+                  },
+                  activeColor: 'var(--color-success)',
+                },
+                {
+                  key: 'delayed',
+                  items: [
+                    { label: '已延期', value: orderStats.delayedStyles, unit: '个', color: 'var(--color-danger)' },
+                  ],
+                  onClick: () => {
+                    setActiveStatFilter('delayed');
+                    setQueryParams(prev => ({ ...prev, onlyCompleted: false, onlyInProgress: false, page: 1 }));
+                    handleSmartFilterClick('overdue', overdueStyles);
+                  },
+                  activeColor: 'var(--color-danger)',
+                },
+              ]}
               hints={[
                 {
                   key: 'overdue',

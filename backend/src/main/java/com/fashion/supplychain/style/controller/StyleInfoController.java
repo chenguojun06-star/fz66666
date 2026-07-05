@@ -60,6 +60,17 @@ public class StyleInfoController {
     }
 
     /**
+     * 顶部统计卡片数据（总数/进行中/已完成/已延期）
+     * 支持可选 mode 参数：
+     * - 默认或 mode=sample：所有启用状态款式（样衣开发列表页）
+     * - mode=order：仅已下单款式 pushedToOrder=1（下单管理页）
+     */
+    @GetMapping("/stats")
+    public Result<?> getStyleStats(@RequestParam(required = false) String mode) {
+        return Result.success(styleInfoOrchestrator.getStyleStats(mode));
+    }
+
+    /**
      * 根据ID或款号查询详情。款式不存在时返回 data=null（200），不报404，
      * 适配样衣入库等"预填充"场景：未找到款式只是静默跳过，不是错误。
      */
