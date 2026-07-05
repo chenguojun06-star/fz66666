@@ -103,21 +103,8 @@ const FieldConfigPage: React.FC = () => {
   const handleEditSubmit = async () => {
     try {
       const values = await form.validateFields();
-      let fieldKey = editing?.fieldKey;
-
-      if (!fieldKey) {
-        fieldKey = values.fieldKey;
-        if (!fieldKey) {
-          message.error('字段键必填');
-          return;
-        }
-      }
-
-      const exists = rows.find(r => r.fieldKey === fieldKey && r.fieldKey !== editing?.fieldKey);
-      if (exists) {
-        message.error('字段键已存在');
-        return;
-      }
+      // 字段键由后端根据字段名自动生成（拼音），用户不需要填写
+      const fieldKey = editing?.fieldKey || '';
 
       const optionsArr = (values.optionsText || '')
         .split('\n')
@@ -230,14 +217,7 @@ const FieldConfigPage: React.FC = () => {
         </Space>
       ),
     },
-    { title: '字段名', dataIndex: 'label', width: 140, ellipsis: true },
-    {
-      title: '字段键',
-      dataIndex: 'fieldKey',
-      width: 160,
-      ellipsis: true,
-      render: (v: string) => <Text code copyable>{v}</Text>,
-    },
+    { title: '字段名', dataIndex: 'label', width: 160, ellipsis: true },
     {
       title: '类型',
       dataIndex: 'fieldType',
@@ -432,20 +412,7 @@ const FieldConfigPage: React.FC = () => {
         <Form form={form} layout="vertical">
           <Row gutter={16}>
             <Col span={12}>
-              {!editing?.fieldKey && (
-                <Form.Item
-                  name="fieldKey"
-                  label="字段键"
-                  rules={[
-                    { required: true, message: '请输入字段键' },
-                    { pattern: /^[a-zA-Z][a-zA-Z0-9_]*$/, message: '字母开头，仅字母/数字/下划线' },
-                  ]}
-                  extra="唯一不可改，如 sample_dev_cost"
-                >
-                  <Input placeholder="如 sample_dev_cost" />
-                </Form.Item>
-              )}
-              <Form.Item name="label" label="字段显示名" rules={[{ required: true, message: '请输入字段名' }]}>
+              <Form.Item name="label" label="字段名" rules={[{ required: true, message: '请输入字段名' }]}>
                 <Input placeholder="如 样衣开发费" />
               </Form.Item>
               <Form.Item name="fieldType" label="字段类型" rules={[{ required: true }]}>
@@ -459,12 +426,12 @@ const FieldConfigPage: React.FC = () => {
               <Form.Item name="required" label="是否必填" valuePropName="checked">
                 <Switch />
               </Form.Item>
-              <Form.Item name="pcColSpan" label="表单列宽（24 栅格）">
+              <Form.Item name="pcColSpan" label="显示宽度">
                 <Select
                   options={[
-                    { label: '整行（24）', value: 24 },
-                    { label: '1/2 行（12）', value: 12 },
-                    { label: '1/3 行（8）', value: 8 },
+                    { label: '整行', value: 24 },
+                    { label: '半行', value: 12 },
+                    { label: '三分之一行', value: 8 },
                   ]}
                 />
               </Form.Item>

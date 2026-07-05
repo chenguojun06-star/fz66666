@@ -3,6 +3,7 @@ package com.fashion.supplychain.system.orchestration;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
+import com.fashion.supplychain.common.util.PinyinSearchUtils;
 import com.fashion.supplychain.system.dto.FieldConfigSaveRequest;
 import com.fashion.supplychain.system.entity.FieldConfig;
 import com.fashion.supplychain.system.service.FieldConfigService;
@@ -108,14 +109,28 @@ public class FieldConfigOrchestrator {
         List<FieldConfigSaveRequest.FieldConfigItem> items = request.getFields() != null
                 ? request.getFields() : new ArrayList<>();
 
+        // 收集本次提交的所有 fieldKey（含自动生成的），用于本次循环内去重
+        java.util.Set<String> usedKeysInBatch = new java.util.HashSet<>();
+
         for (FieldConfigSaveRequest.FieldConfigItem item : items) {
-            if (!StringUtils.hasText(item.getFieldKey())) continue;
-            FieldConfig row = existingMap.get(item.getFieldKey());
+            // 系统字段保留原 fieldKey；自定义字段若用户未填，按 label 拼音自动生成
+            String fieldKey = item.getFieldKey();
+            if (!StringUtils.hasText(fieldKey)) {
+                fieldKey = generateFieldKeyFromLabel(item.getLabel(), existingMap, usedKeysInBatch);
+                if (fieldKey == null) {
+                    // label 也为空，跳过
+                    continue;
+                }
+                item.setFieldKey(fieldKey);
+            }
+            usedKeysInBatch.add(fieldKey);
+
+            FieldConfig row = existingMap.get(fieldKey);
             if (row == null) {
                 row = new FieldConfig();
                 row.setTenantId(tenantId);
                 row.setBizType(bizType);
-                row.setFieldKey(item.getFieldKey());
+                row.setFieldKey(fieldKey);
                 row.setCreateTime(now);
             }
             applyItem(row, item, sortOrder, now);
@@ -204,6 +219,49 @@ public class FieldConfigOrchestrator {
             return;
         }
         throw new IllegalArgumentException("仅租户管理员可修改字段配置");
+    }
+
+    /**
+     * 根据字段显示名自动生成 fieldKey
+     * 规则：
+     *   1. 优先用 label 的拼音全拼（去声调小写），如 "样衣开发费" → "yangyikaifaifei"
+     *   2. label 是英文/数字时，直接小写 + 下划线拼接
+     *   3. 生成的 key 与 existingMap 或本批次冲突时，加数字后缀 _2 / _3 ...
+     *   4. 兜底：用 "field_" + 时间戳后 6 位
+     */
+    private String generateFieldKeyFromLabel(String label,
+                                             Map<String, FieldConfig> existingMap,
+                                             java.util.Set<String> usedKeysInBatch) {
+        if (!StringUtils.hasText(label)) return null;
+        String base;
+        try {
+            String pinyin = PinyinSearchUtils.toFullPinyin(label);
+            if (StringUtils.hasText(pinyin) && pinyin.matches("[a-z][a-z0-9_]*")) {
+                base = pinyin;
+            } else {
+                // label 是英文/数字：小写 + 非字母数字转下划线
+                base = label.toLowerCase().replaceAll("[^a-z0-9]", "_").replaceAll("_+", "_");
+                if (base.startsWith("_")) base = "field" + base;
+                if (!base.matches("[a-z][a-z0-9_]*")) base = "field_" + base;
+            }
+        } catch (Exception e) {
+            base = "field_" + System.currentTimeMillis() % 1_000_000;
+        }
+        // 长度限制（避免超 64）
+        if (base.length() > 50) base = base.substring(0, 50);
+
+        // 去重：与已有/本批次冲突时加后缀
+        String candidate = base;
+        int suffix = 2;
+        while (existingMap.containsKey(candidate) || usedKeysInBatch.contains(candidate)) {
+            candidate = base + "_" + suffix;
+            suffix++;
+            if (suffix > 999) {
+                candidate = base + "_" + System.currentTimeMillis() % 10000;
+                break;
+            }
+        }
+        return candidate;
     }
 
     /** 首次访问时种入系统字段模板 */
