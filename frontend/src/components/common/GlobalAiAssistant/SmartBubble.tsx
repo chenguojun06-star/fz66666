@@ -2,11 +2,13 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CloseOutlined, RightOutlined } from '@ant-design/icons';
 import { intelligenceApi, type PendingTaskSummaryDTO } from '@/services/intelligence/intelligenceApi';
+import { useUser } from '@/utils/AuthContext';
 import XiaoyunCloudAvatar from '@/components/common/XiaoyunCloudAvatar';
 import styles from './SmartBubble.module.css';
 
 const POLL_INTERVAL = 30_000;
 const MAX_BACKOFF = 5 * 60_000;
+const MAX_FAIL_COUNT = 5;
 const BUBBLE_AUTO_DISMISS_MS = 15_000;
 const STORAGE_KEY = 'xiaoyun_bubble_dismissed';
 
@@ -17,6 +19,8 @@ interface SmartBubbleProps {
 
 const SmartBubble: React.FC<SmartBubbleProps> = ({ onOpenTaskPanel, triggerEdge = 'right' }) => {
   const navigate = useNavigate();
+  const { user } = useUser();
+  const isAuthenticated = !!user;
   const [summary, setSummary] = useState<PendingTaskSummaryDTO | null>(null);
   const [visible, setVisible] = useState(false);
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
@@ -38,6 +42,8 @@ const SmartBubble: React.FC<SmartBubbleProps> = ({ onOpenTaskPanel, triggerEdge 
   }, []);
 
   const fetchSummary = useCallback(async () => {
+    if (!isAuthenticated) return;
+    if (failCountRef.current >= MAX_FAIL_COUNT) return;
     try {
       const res = await intelligenceApi.getMyPendingTaskSummary();
       const data: PendingTaskSummaryDTO = (res as any)?.code === 200
@@ -67,25 +73,28 @@ const SmartBubble: React.FC<SmartBubbleProps> = ({ onOpenTaskPanel, triggerEdge 
     } catch {
       failCountRef.current += 1;
     }
-  }, [loadDismissed]);
+  }, [loadDismissed, isAuthenticated]);
 
   const scheduleNext = useCallback(() => {
     if (pollTimerRef.current) clearTimeout(pollTimerRef.current);
+    if (!isAuthenticated) return;
+    if (failCountRef.current >= MAX_FAIL_COUNT) return;
     const delay = failCountRef.current === 0
       ? POLL_INTERVAL
       : Math.min(POLL_INTERVAL * Math.pow(2, failCountRef.current - 1), MAX_BACKOFF);
     pollTimerRef.current = setTimeout(() => {
       void fetchSummary().then(scheduleNext);
     }, delay);
-  }, [fetchSummary]);
+  }, [fetchSummary, isAuthenticated]);
 
   useEffect(() => {
+    if (!isAuthenticated) return;
     void fetchSummary().then(scheduleNext);
     return () => {
       if (pollTimerRef.current) clearTimeout(pollTimerRef.current);
       if (autoDismissRef.current) clearTimeout(autoDismissRef.current);
     };
-  }, [fetchSummary, scheduleNext]);
+  }, [fetchSummary, scheduleNext, isAuthenticated]);
 
   const handleDismiss = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();

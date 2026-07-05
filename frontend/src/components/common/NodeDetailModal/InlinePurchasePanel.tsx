@@ -137,6 +137,78 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = ({ orderId, orde
           );
           records = sortPurchases(unwrapRecords(sampleRes));
         } catch {}
+
+        // 样衣模式没有大货订单，需要查样衣详情构造订单头信息（款号/款名/颜色/码数/下单数量/封面图）
+        // 否则 ProductionOrderHeader 全显示 '-'，用户看不到基础信息
+        try {
+          const patternRes = await api.get<{ code: number; data: Record<string, unknown> }>(
+            `/production/pattern/${patternId}`
+          );
+          if (patternRes?.code === 200 && patternRes?.data) {
+            const p = patternRes.data;
+            let pColor = String(p.color || propColor || '').trim();
+            let pSize = String(p.size || '').trim();
+            let pQty = Number(p.quantity || propQuantity || 0);
+
+            // PatternProduction 的 color/size/quantity 可能为空（老数据未填）
+            // 兜底：从 StyleInfo 的 sizeColorMatrix 解析出完整的颜色×尺码×数量明细
+            // matrixRows 结构: [{color:"白色", quantities:[1,0,0]}], sizes: ["S(160/84A)", "M", "L"]
+            const orderDetails: Array<{ color: string; size: string; quantity: number }> = [];
+            if (pColor && pSize) {
+              orderDetails.push({ color: pColor, size: pSize, quantity: pQty });
+            } else {
+              const matrix = (p.sizeColorMatrix || p.sizeColorConfig) as Record<string, unknown> | string | undefined;
+              let parsedMatrix: { sizes?: string[]; matrixRows?: Array<Record<string, unknown>> } | null = null;
+              if (matrix && typeof matrix === 'string') {
+                try { parsedMatrix = JSON.parse(matrix); } catch { /* ignore */ }
+              } else if (matrix && typeof matrix === 'object') {
+                parsedMatrix = matrix as { sizes?: string[]; matrixRows?: Array<Record<string, unknown>> };
+              }
+              const sizes = Array.isArray(parsedMatrix?.sizes) ? (parsedMatrix!.sizes as string[]) : [];
+              const rows = Array.isArray(parsedMatrix?.matrixRows) ? (parsedMatrix!.matrixRows as Array<Record<string, unknown>>) : [];
+              rows.forEach((row) => {
+                const rowColor = String(row?.color || '').trim();
+                const quantities = Array.isArray(row?.quantities) ? (row.quantities as number[]) : [];
+                sizes.forEach((sz, idx) => {
+                  const q = Number(quantities[idx] || 0);
+                  if (q > 0) {
+                    orderDetails.push({ color: rowColor, size: String(sz || '').trim(), quantity: q });
+                  }
+                });
+              });
+              // 如果解析出明细，汇总给 pColor/pSize/pQty 用于 ProductionOrderHeader 兜底显示
+              if (orderDetails.length > 0) {
+                if (!pColor) {
+                  const colors = Array.from(new Set(orderDetails.map(d => d.color).filter(Boolean)));
+                  pColor = colors.length === 1 ? colors[0] : (colors.length > 1 ? `${colors.length}色：${colors.join(' / ')}` : '');
+                }
+                if (!pSize) {
+                  const sizes = Array.from(new Set(orderDetails.map(d => d.size).filter(Boolean)));
+                  pSize = sizes.length === 1 ? sizes[0] : (sizes.length > 1 ? `${sizes.length}码：${sizes.join(' / ')}` : '');
+                }
+                if (!pQty) pQty = orderDetails.reduce((s, d) => s + d.quantity, 0);
+              }
+            }
+
+            // 构造伪 order，字段对齐 ProductionOrderHeader 期望的形状
+            // orderDetails 让 parseProductionOrderLines 能正常解析出 lines
+            orderRecord = {
+              id: String(p.id || patternId),
+              styleNo: String(p.styleNo || styleNo || ''),
+              styleName: String(p.styleName || ''),
+              styleId: String(p.styleId || ''),
+              styleCover: (p.coverImage as string) || null,
+              color: pColor,
+              size: pSize,
+              orderQuantity: pQty,
+              orderNo: '',
+              orderDetails,
+            } as unknown as ProductionOrder;
+            setOrder(orderRecord);
+          }
+        } catch (e: any) {
+          console.warn('[InlinePurchasePanel] 查询样衣详情失败:', e?.message || e);
+        }
       } else {
         // 大货采购模式
         const no = String(orderNo || '').trim();
@@ -233,12 +305,13 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = ({ orderId, orde
     return {
       orderId: orderId || order?.id || firstPurchase?.orderId || '',
       orderNo: String(orderNo || firstPurchase?.orderNo || '').trim(),
-      styleNo: order?.styleNo || firstPurchase?.styleNo || '',
+      // 样衣模式 order 可能为空时，用 propStyleNo 兜底，保证款号不丢
+      styleNo: order?.styleNo || firstPurchase?.styleNo || styleNo || '',
       styleName: order?.styleName || firstPurchase?.styleName || '',
       styleId: order?.styleId || firstPurchase?.styleId || '',
       styleCover: order?.styleCover || firstPurchase?.styleCover || '',
     };
-  }, [orderId, orderNo, order, firstPurchase]);
+  }, [orderId, orderNo, order, firstPurchase, styleNo]);
 
   const handleCancelEdit = useCallback(() => {
     setEditing(false);
@@ -1230,7 +1303,8 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = ({ orderId, orde
         color={String(order?.color || firstPurchase?.color || propColor || '').trim() || buildColorSummary(orderLines) || ''}
         sizeItems={sizePairs.map(x => ({ size: x.size, quantity: x.quantity }))}
         totalQuantity={getOrderQtyTotal(orderLines) || propQuantity || 0}
-        showOrderNo
+        // 样衣模式没有订单号，隐藏"订单号"字段避免显示"订单号 -"
+        showOrderNo={sourceType !== 'sample'}
         coverSize={80}
       />
 
