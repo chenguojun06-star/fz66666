@@ -224,9 +224,9 @@ public class JushuitanSyncService {
     }
 
     /**
-     * 调用聚水潭 OpenAPI
+     * 调用聚水潭 OpenAPI（包级可见，供 EcSyncJob 等同包组件复用）
      */
-    private Map<String, Object> callJstApi(EcPlatformConfig config, String path, Map<String, Object> params) {
+    Map<String, Object> callJstApi(EcPlatformConfig config, String path, Map<String, Object> params) {
         try {
             String timestamp = String.valueOf(System.currentTimeMillis() / 1000);
             String bodyJson = new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(params);
@@ -245,6 +245,18 @@ public class JushuitanSyncService {
         } catch (Exception e) {
             log.error("[聚水潭API] 调用失败 path={}: {}", path, e.getMessage());
             return null;
+        }
+    }
+
+    /**
+     * 拉取所有已配置 JST 凭证的租户，用于定时任务遍历
+     */
+    public List<EcPlatformConfig> listJstConfigs() {
+        try {
+            return ecPlatformConfigService.listByPlatformCode("JST");
+        } catch (Exception e) {
+            log.warn("[聚水潭同步] 拉取配置列表失败: {}", e.getMessage());
+            return List.of();
         }
     }
 
