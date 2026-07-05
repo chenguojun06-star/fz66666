@@ -307,7 +307,7 @@ export function useCuttingTasks({ message, isEntryPage }: UseCuttingTasksOptions
     'cutting-tasks',
     async () => {
       try {
-        const res = await api.get<{ code: number; data: { records: CuttingTask[]; total: number } }>('/production/cutting-task/list', { params: taskQuery });
+        const res = await api.get<{ code: number; data: { records: CuttingTask[]; total: number } }>('/production/cutting-task', { params: taskQuery });
         if (res.code === 200) return { records: res.data.records || [], total: res.data.total || 0 };
         return null;
       } catch { return null; }
