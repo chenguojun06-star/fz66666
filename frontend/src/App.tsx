@@ -326,9 +326,15 @@ const AppRoutes: React.FC = () => {
   );
 };
 
+const PURCHASE_CART_ROUTES = ['/material-purchase', '/style-info', '/style-detail'];
+
 const GlobalCartFloatButton: React.FC = () => {
   const { cart, drawerOpen, openDrawer, closeDrawer, loadCart } = usePurchaseCartContext();
+  const location = useLocation();
   const itemCount = cart?.totalItems ?? 0;
+
+  // 只有购物车数量>0且在采购相关页面才显示浮动按钮
+  const shouldShow = itemCount > 0 && PURCHASE_CART_ROUTES.some(r => location.pathname.startsWith(r));
 
   React.useEffect(() => {
     loadCart().catch(() => {});
@@ -336,13 +342,15 @@ const GlobalCartFloatButton: React.FC = () => {
 
   return (
     <>
-      <FloatButton
-        icon={<Badge count={itemCount} size="small" offset={[4, -4]}><ShoppingCartOutlined /></Badge>}
-        type="primary"
-        onClick={openDrawer}
-        style={{ right: 24, bottom: 100 }}
-        tooltip="采购车"
-      />
+      {shouldShow && (
+        <FloatButton
+          icon={<Badge count={itemCount} size="small" offset={[4, -4]}><ShoppingCartOutlined /></Badge>}
+          type="primary"
+          onClick={openDrawer}
+          style={{ right: 24, bottom: 100 }}
+          tooltip="采购车"
+        />
+      )}
       <PurchaseCartDrawer open={drawerOpen} onClose={closeDrawer} />
     </>
   );
