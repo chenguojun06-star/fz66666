@@ -70,7 +70,7 @@ const OutboundModal: React.FC<OutboundModalProps> = ({
     <Drawer
       title={
         <Space>
-          <ExportOutlined style={{ color: 'var(--primary-color)' }} />
+          <ExportOutlined style={{ color: 'var(--color-primary)' }} />
           <span>物料出库 - 批次明细</span>
         </Space>
       }
@@ -81,7 +81,7 @@ const OutboundModal: React.FC<OutboundModalProps> = ({
         outboundForm.resetFields();
       }}
       size="large"
-      styles={{ wrapper: { width: '85%' } }}
+      styles={{ wrapper: { width: '60vw' } }}
       destroyOnHidden
       extra={
         <Space>
@@ -339,7 +339,7 @@ const OutboundModal: React.FC<OutboundModalProps> = ({
                   key: 'batchNo',
                   width: 160,
                   render: (text: string) => (
-                    <span style={{ fontWeight: 600, color: 'var(--primary-color)' }}>{text}</span>
+                    <span style={{ fontWeight: 600, color: 'var(--color-primary)' }}>{text}</span>
                   ),
                 },
                 {
@@ -421,7 +421,7 @@ const OutboundModal: React.FC<OutboundModalProps> = ({
                       </ResizableTable.Summary.Cell>
                       <ResizableTable.Summary.Cell key="locked" index={2} />
                       <ResizableTable.Summary.Cell key="outbound" index={3} align="center">
-                        <strong style={{ color: 'var(--primary-color)', fontSize: "var(--font-size-md)" }}>
+                        <strong style={{ color: 'var(--color-primary)', fontSize: "var(--font-size-md)" }}>
                           {totalOutbound} {outboundModal.data.unit}
                         </strong>
                       </ResizableTable.Summary.Cell>
@@ -433,11 +433,11 @@ const OutboundModal: React.FC<OutboundModalProps> = ({
           </div>
 
           <div style={{
-            background: '#e6f7ff',
-            border: '1px solid #91d5ff',
+            background: 'var(--color-primary-bg-light, #e6f7ff)',
+            border: '1px solid var(--color-primary-border, #91d5ff)',
             padding: '8px 12px',
             fontSize: "var(--font-size-sm)",
-            color: 'var(--primary-color)'
+            color: 'var(--color-primary)'
           }}>
              请在"出库数量"列输入需要出库的数量，系统将自动汇总。出库数量不能超过可用库存。
           </div>

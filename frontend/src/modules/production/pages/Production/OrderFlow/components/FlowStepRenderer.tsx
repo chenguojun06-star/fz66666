@@ -85,7 +85,7 @@ const FlowStepRenderer: React.FC<Props> = ({
     let reasonValue = '';
     modal.confirm({
       title,
-      width: 480,
+      width: '40vw',
       content: (
         <div style={{ marginTop: 12 }}>
           <p style={{ marginBottom: 8, color: 'var(--color-text-secondary)' }}>请输入{actionLabel}原因（将记录到订单操作记录）：</p>
@@ -179,7 +179,7 @@ const FlowStepRenderer: React.FC<Props> = ({
       { title: '单价', dataIndex: 'unitPrice', key: 'unitPrice', width: 90, align: 'right' as const, render: (v: any) => v ? displayAmount(Number(v)) : '-' },
       { title: '总价', key: 'totalPrice', width: 100, align: 'right' as const, render: (_: any, record: any) => {
         const total = Number(record.totalPrice || 0) || (Number(record.usageAmount || 0) * Number(record.unitPrice || 0));
-        return total > 0 ? <strong style={{ color: 'var(--primary-color)' }}>{displayAmount(total)}</strong> : '-';
+        return total > 0 ? <strong style={{ color: 'var(--color-primary)' }}>{displayAmount(total)}</strong> : '-';
       }},
     ] : []),
     { title: '供应商', dataIndex: 'supplier', key: 'supplier', width: 120, ellipsis: true, render: (v: any) => v || '-' },
@@ -348,7 +348,7 @@ const FlowStepRenderer: React.FC<Props> = ({
                         { title: '单价', dataIndex: 'unitPrice', key: 'unitPrice', width: 90, align: 'right' as const, render: (v: any) => v ? displayAmount(Number(v)) : '-' },
                         { title: '总价', key: 'totalPrice', width: 100, align: 'right' as const, render: (_: any, record: any) => {
                           const total = Number(record.totalAmount || 0) || (Number(record.purchaseQuantity || 0) * Number(record.unitPrice || 0));
-                          return total > 0 ? <strong style={{ color: 'var(--primary-color)' }}>{displayAmount(total)}</strong> : '-';
+                          return total > 0 ? <strong style={{ color: 'var(--color-primary)' }}>{displayAmount(total)}</strong> : '-';
                         }},
                       ] : []),
                       { title: '供应商', dataIndex: 'supplierName', key: 'supplierName', width: 120, ellipsis: true, render: (v: any) => v || '-' },
@@ -440,7 +440,7 @@ const FlowStepRenderer: React.FC<Props> = ({
                             <Alert title="工序单价信息" type="info" showIcon style={{ marginBottom: 16 }}
                               description={
                                 <div>
-                                  <p>工序数量: <strong>{workflowNodes.length}</strong> 个 | 工序总单价: <strong style={{ color: 'var(--primary-color)', fontSize: 'var(--font-size-lg)' }}>{displayAmount(totalPrice)}</strong></p>
+                                  <p>工序数量: <strong>{workflowNodes.length}</strong> 个 | 工序总单价: <strong style={{ color: 'var(--color-primary)', fontSize: 'var(--font-size-lg)' }}>{displayAmount(totalPrice)}</strong></p>
                                 </div>
                               } />
                           )}
@@ -451,10 +451,10 @@ const FlowStepRenderer: React.FC<Props> = ({
                               { title: '工序名称', dataIndex: 'name', key: 'name', width: 180, render: (v: any, record: any) => formatProcessDisplayName(record.id, v) },
                               { title: '阶段', dataIndex: 'progressStage', key: 'progressStage', width: 120, render: (v: any) => {
                                 const m: Record<string, string> = { sample: '样衣', pre_production: '产前', production: '大货生产', procurement: '采购', cutting: '裁剪', carSewing: '车缝', secondaryProcess: '二次工艺', tailProcess: '尾部', warehousing: '入库' };
-                                return m[v] || v || '-'; }},
+                                return m[v] ?? (v ? '未知' : '-'); }},
                               { title: '机器类型', dataIndex: 'machineType', key: 'machineType', width: 120, render: (v: any) => v || '-' },
                               { title: '标准工时(分钟)', dataIndex: 'standardTime', key: 'standardTime', width: 130, align: 'right' as const, render: (v: any) => Number(v || 0).toFixed(2) },
-                              ...(!isFactoryUser ? [{ title: '单价(元)', dataIndex: 'unitPrice', key: 'unitPrice', width: 120, align: 'right' as const, render: (v: any) => <strong style={{ color: 'var(--primary-color)' }}>{displayAmount(Number(v || 0))}</strong> }] : []),
+                              ...(!isFactoryUser ? [{ title: '单价', dataIndex: 'unitPrice', key: 'unitPrice', width: 120, align: 'right' as const, render: (v: any) => <strong style={{ color: 'var(--color-primary)' }}>{displayAmount(Number(v || 0))}</strong> }] : []),
                               { title: '工序描述', dataIndex: 'description', key: 'description', ellipsis: true, render: (v: any) => v || '-' },
                             ]} pagination={false} bordered scroll={{ x: 'max-content' }} />
                         </>
@@ -508,7 +508,7 @@ const FlowStepRenderer: React.FC<Props> = ({
                         content: (
                           <div key={r.id} style={{ paddingBottom: 4 }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                              {isSystem && <HistoryOutlined style={{ color: 'var(--primary-color)' }} />}
+                              {isSystem && <HistoryOutlined style={{ color: 'var(--color-primary)' }} />}
                               <strong>{r.authorRole || r.authorName || '系统'}</strong>
                               <span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>
                                 {r.authorName && <><UserOutlined /> {r.authorName}</>}

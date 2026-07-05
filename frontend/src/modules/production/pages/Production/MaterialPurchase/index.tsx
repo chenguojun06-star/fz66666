@@ -429,7 +429,7 @@ const MaterialPurchase: React.FC = () => {
           title={`仓库领取 - ${warehousePickTarget?.materialName || warehousePickTarget?.materialCode}`}
           okText="确认领取"
           cancelText="取消"
-          width={isMobile ? '96vw' : '70vw'}
+          width={isMobile ? '96vw' : '40vw'}
           onCancel={() => {
             setWarehousePickModalOpen(false);
             warehousePickForm.resetFields();
@@ -449,21 +449,35 @@ const MaterialPurchase: React.FC = () => {
                     size="small"
                     rowKey="id"
                     columns={[
-                      { title: '物料编号', dataIndex: 'materialCode', key: 'materialCode', width: 120, render: (v) => v || '-' },
-                      { title: '物料名称', dataIndex: 'materialName', key: 'materialName', width: 150, render: (v) => v || '-' },
-                      { title: '规格/幅宽', key: 'specWidth', width: 140, render: (_, r) => `${r.specifications || ''}${r.fabricWidth ? ` (${r.fabricWidth})` : ''}` || '-' },
-                      { title: '单价', dataIndex: 'unitPrice', key: 'unitPrice', width: 100, align: 'right', render: (v) => Number(v) ? `¥${Number(v).toFixed(2)}` : '-' },
-                      { title: '供应商', dataIndex: 'supplierName', key: 'supplierName', width: 160, render: (v) => v || '-' },
+                      { title: '物料编号', dataIndex: 'materialCode', key: 'materialCode', width: 120, render: (v: any) => v || '-' },
+                      { title: '物料名称', dataIndex: 'materialName', key: 'materialName', width: 140, render: (v: any) => v || '-' },
+                      { title: '颜色', dataIndex: 'color', key: 'color', width: 90, render: (v: any) => v || '-' },
+                      { title: '规格/幅宽', key: 'specWidth', width: 130, render: (_: any, r: any) => `${r.specifications || ''}${r.fabricWidth ? ` (${r.fabricWidth})` : ''}` || '-' },
+                      { title: '供应商', dataIndex: 'supplierName', key: 'supplierName', width: 130, render: (v: any) => v || '-' },
+                      { title: '单价', dataIndex: 'unitPrice', key: 'unitPrice', width: 90, align: 'right' as const, render: (v: any) => Number(v) ? `¥${Number(v).toFixed(2)}` : '-' },
                     ]}
                   />
                 </Card>
-                
-                {/* 需求数量和领取数量 */}
-                <div style={{ marginBottom: 16 }}>
-                  <p>需求数量：<strong>{formatMaterialQuantity(warehousePickTarget.purchaseQuantity)} {warehousePickTarget.unit || ''}</strong></p>
-                  <p style={{ color: 'var(--color-text-secondary)', fontSize: 14, marginTop: 4 }}>领取后将创建出库单，等待仓库确认出库</p>
+
+                {/* 需求/库存对比 */}
+                <div style={{ marginBottom: 16, display: 'flex', gap: 24, padding: '8px 12px', background: 'var(--color-bg-container)', borderRadius: 4 }}>
+                  <div>
+                    <div style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>需求数量</div>
+                    <div style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>{formatMaterialQuantity(warehousePickTarget.purchaseQuantity)} {warehousePickTarget.unit || ''}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>本次领取</div>
+                    <div style={{ fontWeight: 600, color: 'var(--color-primary)' }} id="warehouse-pick-qty-display">-</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>剩余待采购</div>
+                    <div style={{ fontWeight: 600, color: 'var(--color-warning)' }} id="warehouse-pick-remain-display">-</div>
+                  </div>
                 </div>
-                
+                <div style={{ marginBottom: 16, color: 'var(--color-text-secondary)', fontSize: 13 }}>
+                  领取后将创建出库单，等待仓库确认出库；剩余数量将自动转采购任务。
+                </div>
+
                 <Form.Item
                   label="仓库领取数量"
                   name="pickQty"
@@ -486,6 +500,14 @@ const MaterialPurchase: React.FC = () => {
                       step={0.01}
                       precision={2}
                       placeholder="请输入领取数量"
+                      onChange={(v) => {
+                        const pickQty = Number(v) || 0;
+                        const remain = Math.max(0, Number(warehousePickTarget.purchaseQuantity || 0) - pickQty);
+                        const qtyEl = document.getElementById('warehouse-pick-qty-display');
+                        const remainEl = document.getElementById('warehouse-pick-remain-display');
+                        if (qtyEl) qtyEl.textContent = `${pickQty} ${warehousePickTarget.unit || ''}`;
+                        if (remainEl) remainEl.textContent = `${remain} ${warehousePickTarget.unit || ''}`;
+                      }}
                     />
                     <Input
                       style={{ width: 80, textAlign: 'center' }}
@@ -517,7 +539,7 @@ const MaterialPurchase: React.FC = () => {
           title="回料确认 / 追加回料"
           okText="提交回料"
           cancelText="取消"
-          width={isMobile ? '96vw' : '85vw'}
+          width={isMobile ? '96vw' : '60vw'}
           centered
           onCancel={() => {
             returnConfirmModal.close();
@@ -535,7 +557,7 @@ const MaterialPurchase: React.FC = () => {
             {/* 左侧：凭证上传 + AI识别 */}
             {!isMobile && (
               <div
-                  style={{ width: 240, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 10, outline: 'none' }}
+                  style={{ width: 220, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 10, outline: 'none' }}
                   tabIndex={0}
                   onPaste={(e) => {
                     const files = e.clipboardData.files;
@@ -606,11 +628,11 @@ const MaterialPurchase: React.FC = () => {
                     border: '1px dashed var(--color-border-antd)', borderRadius: 8, padding: '16px 4px',
                     textAlign: 'center', cursor: 'pointer', background: 'var(--color-bg-container)', transition: 'border-color 0.3s',
                   }}
-                  onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--primary-color)'; }}
+                  onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--color-primary)'; }}
                   onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--color-border-antd)'; }}
                 >
                   <p className="ant-upload-drag-icon" style={{ marginBottom: 4 }}>
-                    <InboxOutlined style={{ fontSize: 24, color: 'var(--primary-color)' }} />
+                    <InboxOutlined style={{ fontSize: 24, color: 'var(--color-primary)' }} />
                   </p>
                   <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--neutral-text)', margin: 0 }}>上传回料凭据图片</p>
                   <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--neutral-text-disabled)', margin: '2px 0 0' }}>支持多张，最多5张</p>
@@ -768,7 +790,7 @@ const MaterialPurchase: React.FC = () => {
           okText="确认退回"
           cancelText="取消"
           okButtonProps={{ danger: true, type: 'default', loading: returnResetSubmitting }}
-          width={isMobile ? '96vw' : '30vw'}
+          width={isMobile ? '96vw' : '40vw'}
           onCancel={() => {
             returnResetModal.close();
             returnResetForm.resetFields();

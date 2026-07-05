@@ -1,9 +1,60 @@
 import { useState } from 'react';
-import { App, Input, Modal, Divider } from 'antd';
+import { App, Input, Modal, Divider, Tag } from 'antd';
 import { ShopOutlined, SendOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import api from '@/utils/api';
 import type { MaterialItem, PickingRecord } from '../smartReceiveTypes';
-import { getMaterialTypeName } from '../smartReceiveHelpers';
+import { getMaterialTypeName, getMaterialTypeColor } from '../smartReceiveHelpers';
+
+const renderPurchaseItemsTable = (items: MaterialItem[], showStockColumn = true) => (
+  <div style={{ maxHeight: 320, overflow: 'auto', margin: '8px 0', border: '1px solid var(--color-border)', borderRadius: 4 }}>
+    <table style={{ width: '100%', fontSize: 13, borderCollapse: 'collapse' }}>
+      <thead>
+        <tr style={{ background: 'var(--color-bg-container)', textAlign: 'left' }}>
+          <th style={{ padding: '8px 10px', fontWeight: 600, width: 90 }}>物料类型</th>
+          <th style={{ padding: '8px 10px', fontWeight: 600 }}>物料名称 / 编号</th>
+          <th style={{ padding: '8px 10px', fontWeight: 600, width: 100 }}>颜色 / 规格</th>
+          <th style={{ padding: '8px 10px', fontWeight: 600, textAlign: 'center', width: 80 }}>需求量</th>
+          {showStockColumn && <th style={{ padding: '8px 10px', fontWeight: 600, textAlign: 'center', width: 70 }}>库存</th>}
+          <th style={{ padding: '8px 10px', fontWeight: 600, textAlign: 'center', width: 80 }}>待采购</th>
+        </tr>
+      </thead>
+      <tbody>
+        {items.map((item) => {
+          const purchaseQty = Math.max(0, item.requiredQty - (showStockColumn ? item.availableStock : 0));
+          return (
+            <tr key={item.purchaseId} style={{ borderTop: '1px solid var(--color-border)' }}>
+              <td style={{ padding: '8px 10px' }}>
+                <Tag color={getMaterialTypeColor(item.materialType)} style={{ margin: 0 }}>
+                  {getMaterialTypeName(item.materialType) || '-'}
+                </Tag>
+              </td>
+              <td style={{ padding: '8px 10px' }}>
+                <div style={{ fontWeight: 500 }}>{item.materialName || '无'}</div>
+                <div style={{ fontSize: 12, color: 'var(--color-text-tertiary)', fontFamily: 'monospace' }}>
+                  {item.materialCode || '-'}
+                </div>
+              </td>
+              <td style={{ padding: '8px 10px', color: 'var(--color-text-secondary)' }}>
+                {item.color || '-'} / {item.size || '-'}
+              </td>
+              <td style={{ padding: '8px 10px', textAlign: 'center', fontWeight: 600 }}>
+                {item.requiredQty} {item.unit}
+              </td>
+              {showStockColumn && (
+                <td style={{ padding: '8px 10px', textAlign: 'center', color: item.availableStock > 0 ? 'var(--color-warning)' : 'var(--color-danger)', fontWeight: 600 }}>
+                  {item.availableStock}
+                </td>
+              )}
+              <td style={{ padding: '8px 10px', textAlign: 'center', fontWeight: 600, color: 'var(--color-warning)' }}>
+                {purchaseQty} {item.unit}
+              </td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
+  </div>
+);
 
 export const useSmartReceiveActions = (
   loadPreview: () => void,
@@ -76,8 +127,19 @@ export const useSmartReceiveActions = (
     if (needPurchaseItems.length === 0) { message.info('没有需要采购的物料'); return; }
 
     Modal.confirm({
-      width: '30vw', title: '确认批量采购', icon: <SendOutlined style={{ color: 'var(--color-primary)' }} />,
-      content: (<div><p>以下 <strong>{needPurchaseItems.length}</strong> 项物料将标记为"采购中"：</p><div style={{ maxHeight: 200, overflow: 'auto', margin: '8px 0', padding: '8px 12px', background: 'var(--color-bg-container)', borderRadius: 4 }}>{needPurchaseItems.map((item) => (<div key={item.purchaseId} style={{ fontSize: 14, padding: '2px 0' }}>• {item.materialName}（{item.materialCode}）— {item.requiredQty} {item.unit}</div>))}</div><Divider style={{ margin: '8px 0' }} /><p style={{ color: 'var(--color-primary)', fontWeight: 600 }}>确认后请联系供应商进行采购。</p></div>),
+      width: '60vw', title: '确认批量采购', icon: <SendOutlined style={{ color: 'var(--color-primary)' }} />,
+      content: (
+        <div>
+          <p style={{ marginBottom: 4 }}>以下 <strong>{needPurchaseItems.length}</strong> 项无库存物料将标记为"采购中"：</p>
+          {renderPurchaseItemsTable(needPurchaseItems, true)}
+          <Divider style={{ margin: '8px 0' }} />
+          <p style={{ color: 'var(--color-text-secondary)', fontSize: 13, marginBottom: 4 }}>
+            采购数量按 <strong>需求数量</strong> 自动登记，确认后请前往
+            <strong style={{ color: 'var(--color-primary)' }}> 采购单管理</strong>
+            创建采购单（含供应商 / 单价 / 到货时间）。
+          </p>
+        </div>
+      ),
       okText: `确认采购 ${needPurchaseItems.length} 项`, cancelText: '取消',
       onOk: async () => {
         setActionLoading((prev) => ({ ...prev, _batchPurchase: true }));
@@ -102,8 +164,22 @@ export const useSmartReceiveActions = (
     if (allPendingItems.length === 0) { message.info('没有待处理的采购任务'); return; }
     const hasStockCount = allPendingItems.filter((m) => m.availableStock > 0).length;
     Modal.confirm({
-      width: '30vw', title: '确认跳过库存全部外采', icon: <ExclamationCircleOutlined style={{ color: 'var(--color-warning)' }} />,
-      content: (<div>{hasStockCount > 0 && <p style={{ color: 'var(--color-warning)', fontWeight: 600 }}>有 {hasStockCount} 项物料存在可用库存，确认后将跳过仓库直接外采。</p>}<p>以下 <strong>{allPendingItems.length}</strong> 项物料将全部标记为"采购中"：</p><div style={{ maxHeight: 200, overflow: 'auto', margin: '8px 0', padding: '8px 12px', background: 'var(--color-bg-container)', borderRadius: 4 }}>{allPendingItems.map((item) => (<div key={item.purchaseId} style={{ fontSize: 14, padding: '2px 0' }}>• {item.materialName}（{item.materialCode}）— {item.requiredQty} {item.unit}{item.availableStock > 0 && <span style={{ color: 'var(--color-warning)', marginLeft: 4, fontSize: 14 }}>有库存</span>}</div>))}</div><Divider style={{ margin: '8px 0' }} /><p style={{ color: 'var(--color-warning)', fontWeight: 600 }}>确认后请联系供应商进行采购，不使用仓库库存。</p></div>),
+      width: '60vw', title: '确认跳过库存全部外采', icon: <ExclamationCircleOutlined style={{ color: 'var(--color-warning)' }} />,
+      content: (
+        <div>
+          {hasStockCount > 0 && (
+            <p style={{ color: 'var(--color-warning)', fontWeight: 600, marginBottom: 4 }}>
+              有 {hasStockCount} 项物料存在可用库存，确认后将跳过仓库直接外采。
+            </p>
+          )}
+          <p style={{ marginBottom: 4 }}>以下 <strong>{allPendingItems.length}</strong> 项物料将全部标记为"采购中"：</p>
+          {renderPurchaseItemsTable(allPendingItems, true)}
+          <Divider style={{ margin: '8px 0' }} />
+          <p style={{ color: 'var(--color-warning)', fontWeight: 600 }}>
+            确认后将跳过仓库库存，全部按需求量登记为外采，请前往采购单管理创建采购单。
+          </p>
+        </div>
+      ),
       okText: `确认外采 ${allPendingItems.length} 项`, cancelText: '取消',
       onOk: async () => {
         setActionLoading((prev) => ({ ...prev, _forcePurchase: true }));

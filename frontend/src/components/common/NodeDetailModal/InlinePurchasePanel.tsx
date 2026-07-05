@@ -16,6 +16,7 @@ import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import type { MaterialPurchase, ProductionOrder } from '@/types/production';
 import { MATERIAL_PURCHASE_STATUS } from '@/constants/business';
 import { getMaterialTypeCategory, getMaterialTypeLabel, getMaterialTypeSortKey } from '@/utils/materialType';
+import { formatMoney } from '@/utils/format';
 import { DEFAULT_PAGE_SIZE_OPTIONS } from '@/utils/pageSizeStore';
 import {
   formatMaterialQuantity,
@@ -575,7 +576,7 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = ({ orderId, orde
       content: contentEl,
       okText: '确认回料',
       cancelText: '取消',
-      width: 440,
+      width: '40vw',
       onOk: async () => {
         setActionLoading(true);
         try {
@@ -890,7 +891,7 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = ({ orderId, orde
         ),
       },
       {
-        title: '单价(元)',
+        title: '单价',
         dataIndex: 'unitPrice',
         key: 'unitPrice',
         width: 100,
@@ -903,6 +904,7 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = ({ orderId, orde
             style={{ width: '100%' }}
             onChange={(val) => handleUpdateRow(rid(r), 'unitPrice', val ?? 0)}
             size="small"
+            addonAfter="元"
           />
         ),
       },
@@ -1050,9 +1052,12 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = ({ orderId, orde
             onClick={() => {
               if (hasStock) {
                 const safeStock = Number.isFinite(stock) ? Math.floor(stock as number) : 0;
-                const requiredQty = Number.isFinite(Number(r.purchaseQuantity)) && Number(r.purchaseQuantity) > 0
-                  ? Math.floor(Number(r.purchaseQuantity))
-                  : safeStock;
+                const remaining = Math.max(0, Number(r.purchaseQuantity || 0) - Number(r.arrivedQuantity || 0));
+                const requiredQty = remaining > 0
+                  ? Math.floor(remaining)
+                  : (Number.isFinite(Number(r.purchaseQuantity)) && Number(r.purchaseQuantity) > 0
+                      ? Math.floor(Number(r.purchaseQuantity))
+                      : safeStock);
                 const pickQty = Math.min(safeStock, requiredQty);
                 if (pickQty > 0) {
                   handleWarehousePick(r, pickQty);
@@ -1066,18 +1071,18 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = ({ orderId, orde
       },
     },
     {
-      title: '单价(元)',
+      title: '单价',
       dataIndex: 'unitPrice',
       key: 'unitPrice',
       width: 100,
       align: 'right' as const,
       render: (v: unknown) => {
         const n = Number(v);
-        return Number.isFinite(n) ? n.toFixed(2) : '-';
+        return Number.isFinite(n) ? formatMoney(n) : '-';
       },
     },
     {
-      title: '金额(元)',
+      title: '金额',
       dataIndex: 'totalAmount',
       key: 'totalAmount',
       width: 110,
@@ -1085,9 +1090,9 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = ({ orderId, orde
       render: (v: any, r: any) => {
         const qty = Number(r?.arrivedQuantity ?? 0);
         const price = Number(r?.unitPrice);
-        if (Number.isFinite(qty) && Number.isFinite(price)) return (qty * price).toFixed(2);
+        if (Number.isFinite(qty) && Number.isFinite(price)) return formatMoney(qty * price);
         const n = Number(v);
-        return Number.isFinite(n) ? n.toFixed(2) : '-';
+        return Number.isFinite(n) ? formatMoney(n) : '-';
       },
     },
     {
@@ -1143,9 +1148,12 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = ({ orderId, orde
                 onClick={() => {
                   if (hasStock) {
                     const safeStock = Number.isFinite(stock) ? Math.floor(stock as number) : 0;
-                    const requiredQty = Number.isFinite(Number(record.purchaseQuantity)) && Number(record.purchaseQuantity) > 0
-                      ? Math.floor(Number(record.purchaseQuantity))
-                      : safeStock;
+                    const remaining = Math.max(0, Number(record.purchaseQuantity || 0) - Number(record.arrivedQuantity || 0));
+                    const requiredQty = remaining > 0
+                      ? Math.floor(remaining)
+                      : (Number.isFinite(Number(record.purchaseQuantity)) && Number(record.purchaseQuantity) > 0
+                          ? Math.floor(Number(record.purchaseQuantity))
+                          : safeStock);
                     const pickQty = Math.min(safeStock, requiredQty);
                     if (pickQty > 0) {
                       handleWarehousePick(record, pickQty);
@@ -1368,7 +1376,7 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = ({ orderId, orde
         open={materialModalOpen}
         onCancel={() => setMaterialModalOpen(false)}
         footer={null}
-        width="85vw"
+        width="60vw"
         destroyOnHidden
       >
         <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
@@ -1414,7 +1422,7 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = ({ orderId, orde
                     src={url}
                     width={40}
                     height={40}
-                    style={{ objectFit: 'cover', borderRadius: 4, border: '1px solid #eee' }}
+                    style={{ objectFit: 'cover', borderRadius: 4, border: '1px solid var(--color-border)' }}
                     preview={{ src: url }}
                   />
                 );
@@ -1493,12 +1501,14 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = ({ orderId, orde
         open={receiveModalVisible}
         onCancel={() => setReceiveModalVisible(false)}
         onOk={doReceive}
-        width={420}
+        width="40vw"
         destroyOnHidden
       >
         <Form form={receiveForm} layout="vertical" style={{ marginTop: 12 }}>
           <Form.Item label="物料">{receiveModalRecord?.materialName || receiveModalRecord?.materialCode || '-'}</Form.Item>
-          <Form.Item label="颜色">{receiveModalRecord?.color || '-'}</Form.Item>
+          <Form.Item label="物料编码">{receiveModalRecord?.materialCode || '-'}</Form.Item>
+          <Form.Item label="颜色/规格">{`${receiveModalRecord?.color || '-'} / ${receiveModalRecord?.specifications || '-'}`}</Form.Item>
+          <Form.Item label="采购数量">{receiveModalRecord?.purchaseQuantity || 0} {receiveModalRecord?.unit || ''}</Form.Item>
           <Form.Item
             label="实际到货数量"
             name="quantity"
@@ -1507,7 +1517,7 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = ({ orderId, orde
               { type: 'number', min: 1, message: '数量必须大于 0' },
             ]}
           >
-            <InputNumber style={{ width: '100%' }} min={1} precision={0} />
+            <InputNumber style={{ width: '100%' }} min={1} precision={0} addonAfter={receiveModalRecord?.unit || ''} />
           </Form.Item>
         </Form>
       </ResizableModal>
@@ -1518,14 +1528,16 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = ({ orderId, orde
         open={inboundModalVisible}
         onCancel={() => setInboundModalVisible(false)}
         onOk={doInbound}
-        width={420}
+        width="40vw"
         destroyOnHidden
       >
         <Form form={inboundForm} layout="vertical" style={{ marginTop: 12 }}>
           <Form.Item label="物料">{inboundModalRecord?.materialName || inboundModalRecord?.materialCode || '-'}</Form.Item>
-          <Form.Item label="颜色">{inboundModalRecord?.color || '-'}</Form.Item>
+          <Form.Item label="物料编码">{inboundModalRecord?.materialCode || '-'}</Form.Item>
+          <Form.Item label="颜色/规格">{`${inboundModalRecord?.color || '-'} / ${inboundModalRecord?.specifications || '-'}`}</Form.Item>
           <Form.Item label="采购数量">{inboundModalRecord?.purchaseQuantity || 0} {inboundModalRecord?.unit || ''}</Form.Item>
           <Form.Item label="已入库数量">{inboundModalRecord?.arrivedQuantity || 0} {inboundModalRecord?.unit || ''}</Form.Item>
+          <Form.Item label="待入库数量">{inboundModalRecord ? Math.max(0, Number(inboundModalRecord.purchaseQuantity || 0) - Number(inboundModalRecord.arrivedQuantity || 0)) : 0} {inboundModalRecord?.unit || ''}</Form.Item>
           <Form.Item
             label="本次入库数量"
             name="arrivedQuantity"
@@ -1534,7 +1546,7 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = ({ orderId, orde
               { type: 'number', min: 1, message: '数量必须大于 0' },
             ]}
           >
-            <InputNumber style={{ width: '100%' }} min={1} precision={0} />
+            <InputNumber style={{ width: '100%' }} min={1} precision={0} addonAfter={inboundModalRecord?.unit || ''} />
           </Form.Item>
           <Form.Item
             label="仓库库位"
@@ -1556,12 +1568,14 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = ({ orderId, orde
         open={returnModalVisible}
         onCancel={() => setReturnModalVisible(false)}
         onOk={doReturnConfirm}
-        width={420}
+        width="40vw"
         destroyOnHidden
       >
         <Form form={returnForm} layout="vertical" style={{ marginTop: 12 }}>
           <Form.Item label="物料">{returnModalRecord?.materialName || returnModalRecord?.materialCode || '-'}</Form.Item>
-          <Form.Item label="颜色">{returnModalRecord?.color || '-'}</Form.Item>
+          <Form.Item label="物料编码">{returnModalRecord?.materialCode || '-'}</Form.Item>
+          <Form.Item label="颜色/规格">{`${returnModalRecord?.color || '-'} / ${returnModalRecord?.specifications || '-'}`}</Form.Item>
+          <Form.Item label="到货数量">{returnModalRecord?.arrivedQuantity || 0} {returnModalRecord?.unit || ''}</Form.Item>
           <Form.Item
             label="实际回料数量"
             name="quantity"
@@ -1570,7 +1584,7 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = ({ orderId, orde
               { type: 'number', min: 0, message: '不能为负数' },
             ]}
           >
-            <InputNumber style={{ width: '100%' }} min={0} precision={0} />
+            <InputNumber style={{ width: '100%' }} min={0} precision={0} addonAfter={returnModalRecord?.unit || ''} />
           </Form.Item>
         </Form>
       </ResizableModal>

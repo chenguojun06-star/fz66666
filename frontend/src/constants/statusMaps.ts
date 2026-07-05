@@ -104,8 +104,8 @@ export const MATERIAL_PURCHASE_STATUS_MAP: StatusMap = {
   purchasing:        { text: '采购中',      color: 'processing' },
   material_preparation: { text: '备料中',    color: 'processing' },
   received:           { text: '已到货',      color: 'success' },
-  partial:            { text: '部分到料',    color: 'processing' },
-  partial_arrival:    { text: '部分到料',    color: 'processing' },
+  partial:            { text: '部分到货',    color: 'processing' },
+  partial_arrival:    { text: '部分到货',    color: 'processing' },
   awaiting_confirm:   { text: '待确认',      color: 'processing' },
   warehouse_pending:  { text: '待仓库出库',  color: 'processing' },
   completed:          { text: '已完成',      color: 'success' },
@@ -270,6 +270,6 @@ export function resolveStatus(key: string, fallback?: StatusMapItem): StatusMapI
     ORDER_STATUS_MAP[k.toLowerCase()] ??
     ORDER_STATUS_MAP[k.toUpperCase()] ??
     fallback ??
-    { text: k, color: 'default' }
+    { text: '未知', color: 'default' }
   );
 }

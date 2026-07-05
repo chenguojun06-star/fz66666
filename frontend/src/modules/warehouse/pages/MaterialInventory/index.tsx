@@ -168,7 +168,7 @@ const _MaterialInventory: React.FC = () => {
       width: 110,
       render: (v: string) => {
         const matched = USAGE_TYPE_MAP[v];
-        return matched ? <Tag color={matched.color}>{matched.text}</Tag> : (v || '-');
+        return matched ? <Tag color={matched.color}>{matched.text}</Tag> : (v ? '未知' : '-');
       },
     },
     {
@@ -182,7 +182,7 @@ const _MaterialInventory: React.FC = () => {
       dataIndex: 'status',
       width: 90,
       render: (s: string) => {
-        const cfg = STATUS_MAP[s] || { text: s || '未知', color: 'default' };
+        const cfg = STATUS_MAP[s] || { text: s ? '未知' : '-', color: 'default' };
         return <Tag color={cfg.color}>{cfg.text}</Tag>;
       },
     },

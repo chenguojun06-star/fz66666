@@ -133,7 +133,7 @@ export const CartList: React.FC<CartListProps> = ({
       render: (_, item) => (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           <span style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>
-            {SOURCE_LABELS[item.sourceType] || item.sourceType}
+            {SOURCE_LABELS[item.sourceType] ?? '未知'}
           </span>
           {item.sourceNo && (
             <Tooltip title={item.sourceNo}>

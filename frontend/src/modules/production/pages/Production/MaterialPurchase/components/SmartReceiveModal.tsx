@@ -41,8 +41,7 @@ const SmartReceiveModal: React.FC<SmartReceiveModalProps> = ({
       open={open}
       onClose={onCancel}
       placement="right"
-      size="large"
-      styles={{ wrapper: { width: '85vw' }, body: { padding: '16px 24px', display: 'flex', flexDirection: 'column', overflow: 'auto' } }}
+      styles={{ wrapper: { width: '60vw' }, body: { padding: '16px 24px', display: 'flex', flexDirection: 'column', overflow: 'auto' } }}
       footer={
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
           <Button onClick={onCancel}>关闭</Button>
@@ -99,9 +98,9 @@ const SmartReceiveModal: React.FC<SmartReceiveModalProps> = ({
       )}
 
       <style>{`
-        .row-no-stock { background: #F6FFED !important; }
-        .row-partial { background: #FFFBE6 !important; }
-        .row-done { background: #f6f6f6 !important; }
+        .row-no-stock { background: var(--color-success-bg, #f6ffed) !important; }
+        .row-partial { background: var(--color-warning-bg, #fffbe6) !important; }
+        .row-done { background: var(--color-bg-disabled, #f6f6f6) !important; }
         .row-cancelled { opacity: 0.5; }
         .row-no-stock:hover td, .row-partial:hover td, .row-done:hover td { background: inherit !important; }
       `}</style>

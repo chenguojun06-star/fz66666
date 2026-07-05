@@ -55,7 +55,7 @@ export function useMaterialPickupColumns(actions: UsedActions): ColumnsType<Lega
       dataIndex: 'movementType',
       width: 90,
       render: (v?: string) => {
-        const cfg = MOVEMENT_TYPE_MAP[v || 'OUTBOUND'] ?? { color: 'default', text: v || '-' };
+        const cfg = MOVEMENT_TYPE_MAP[v || 'OUTBOUND'] ?? { color: 'default', text: v ? '未知' : '-' };
         return <Tag color={cfg.color}>{cfg.text}</Tag>;
       },
     },
@@ -64,7 +64,7 @@ export function useMaterialPickupColumns(actions: UsedActions): ColumnsType<Lega
       dataIndex: 'pickupType',
       width: 80,
       render: (v: string) => {
-        const cfg = PICKUP_TYPE_MAP[v] ?? { color: 'default', text: v };
+        const cfg = PICKUP_TYPE_MAP[v] ?? { color: 'default', text: v ? '未知' : '-' };
         return <Tag color={cfg.color}>{cfg.text}</Tag>;
       },
     },
@@ -79,7 +79,7 @@ export function useMaterialPickupColumns(actions: UsedActions): ColumnsType<Lega
           STOCK: '备库/补库',
           OTHER: '其他',
         };
-        return map[v || ''] || v || '-';
+        return map[v || ''] ?? (v ? '未知' : '-');
       },
     },
     {
@@ -173,19 +173,19 @@ export function useMaterialPickupColumns(actions: UsedActions): ColumnsType<Lega
         v != null ? `${v} ${record?.unit ?? ''}` : '-',
     },
     {
-      title: '单价(元)',
+      title: '单价',
       dataIndex: 'unitPrice',
       width: 100,
       align: 'right' as const,
       render: (v?: number) => v != null ? formatMoney(v) : '-',
     },
     {
-      title: '金额(元)',
+      title: '金额',
       dataIndex: 'amount',
       width: 110,
       align: 'right' as const,
       render: (v?: number) => (
-        <span style={{ fontWeight: 600, color: 'var(--primary-color)' }}>
+        <span style={{ fontWeight: 600, color: 'var(--color-primary)' }}>
           {v != null ? formatMoney(v) : '-'}
         </span>
       ),

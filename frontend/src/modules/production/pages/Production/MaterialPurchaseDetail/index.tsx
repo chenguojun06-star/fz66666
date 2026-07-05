@@ -538,7 +538,7 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
         open={materialModalOpen}
         onCancel={() => setMaterialModalOpen(false)}
         footer={null}
-        width="85vw"
+        width="60vw"
         destroyOnHidden
       >
         <Tabs
@@ -691,20 +691,23 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
         onOk={handleReceive}
         onCancel={() => { setReceiveVisible(false); receiveForm.resetFields(); }}
         confirmLoading={receiveLoading}
-        width="30vw"
+        width="40vw"
       >
         {receiveRecord && (
           <ModalContentLayout.HeaderCard>
-            <ModalContentLayout.FieldRow gap={24}>
+            <ModalContentLayout.FieldRow gap={16}>
               <ModalContentLayout.Field label="物料名称" value={receiveRecord.materialName} />
               <ModalContentLayout.Field label="物料编码" value={receiveRecord.materialCode} />
+              <ModalContentLayout.Field label="颜色/规格" value={`${receiveRecord.color || '-'} / ${receiveRecord.size || '-'}`} />
+              <ModalContentLayout.Field label="采购数量" value={formatMaterialQuantityWithUnit(receiveRecord.purchaseQuantity, receiveRecord.unit)} />
               <ModalContentLayout.Field label="已到货" value={formatMaterialQuantityWithUnit(receiveRecord.arrivedQuantity, receiveRecord.unit)} />
+              <ModalContentLayout.Field label="待到货" value={formatMaterialQuantityWithUnit(Math.max(0, Number(receiveRecord.purchaseQuantity || 0) - Number(receiveRecord.arrivedQuantity || 0)), receiveRecord.unit)} />
             </ModalContentLayout.FieldRow>
           </ModalContentLayout.HeaderCard>
         )}
         <Form form={receiveForm} layout="vertical">
-          <Form.Item name="quantity" label="数量" rules={[{ required: true, message: '请输入数量' }]}>
-            <InputNumber min={0.01} step={0.01} precision={2} style={{ width: '100%' }} />
+          <Form.Item name="quantity" label="本次到货数量" rules={[{ required: true, message: '请输入数量' }]}>
+            <InputNumber min={0.01} step={0.01} precision={2} style={{ width: '100%' }} addonAfter={receiveRecord?.unit} />
           </Form.Item>
         </Form>
       </ResizableModal>
@@ -714,21 +717,23 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
         open={inboundVisible}
         onOk={doInbound}
         onCancel={() => { setInboundVisible(false); inboundForm.resetFields(); }}
-        width="35vw"
+        width="40vw"
       >
         {inboundRecord && (
           <ModalContentLayout.HeaderCard>
-            <ModalContentLayout.FieldRow gap={24}>
+            <ModalContentLayout.FieldRow gap={16}>
               <ModalContentLayout.Field label="物料名称" value={inboundRecord.materialName} />
               <ModalContentLayout.Field label="物料编码" value={inboundRecord.materialCode} />
+              <ModalContentLayout.Field label="颜色/规格" value={`${inboundRecord.color || '-'} / ${inboundRecord.size || '-'}`} />
               <ModalContentLayout.Field label="采购数量" value={formatMaterialQuantityWithUnit(inboundRecord.purchaseQuantity, inboundRecord.unit)} />
               <ModalContentLayout.Field label="已入库" value={formatMaterialQuantityWithUnit(inboundRecord.arrivedQuantity, inboundRecord.unit)} />
+              <ModalContentLayout.Field label="待入库" value={formatMaterialQuantityWithUnit(Math.max(0, Number(inboundRecord.purchaseQuantity || 0) - Number(inboundRecord.arrivedQuantity || 0)), inboundRecord.unit)} />
             </ModalContentLayout.FieldRow>
           </ModalContentLayout.HeaderCard>
         )}
         <Form form={inboundForm} layout="vertical">
           <Form.Item name="arrivedQuantity" label="本次入库数量" rules={[{ required: true, message: '请输入数量' }]}>
-            <InputNumber min={0.01} step={0.01} precision={2} style={{ width: '100%' }} />
+            <InputNumber min={0.01} step={0.01} precision={2} style={{ width: '100%' }} addonAfter={inboundRecord?.unit} />
           </Form.Item>
           <Form.Item name="warehouseLocation" label="仓库库位">
             <Input placeholder="请输入库位（如 A区-01）" />
@@ -745,20 +750,22 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
         onOk={doReturnConfirm}
         onCancel={() => { setReturnConfirmVisible(false); returnConfirmForm.resetFields(); }}
         confirmLoading={returnConfirmLoading}
-        width="30vw"
+        width="40vw"
       >
         {returnConfirmRecord && (
           <ModalContentLayout.HeaderCard>
-            <ModalContentLayout.FieldRow gap={24}>
+            <ModalContentLayout.FieldRow gap={16}>
               <ModalContentLayout.Field label="物料名称" value={returnConfirmRecord.materialName} />
               <ModalContentLayout.Field label="物料编码" value={returnConfirmRecord.materialCode} />
+              <ModalContentLayout.Field label="颜色/规格" value={`${returnConfirmRecord.color || '-'} / ${returnConfirmRecord.size || '-'}`} />
+              <ModalContentLayout.Field label="采购数量" value={formatMaterialQuantityWithUnit(returnConfirmRecord.purchaseQuantity, returnConfirmRecord.unit)} />
               <ModalContentLayout.Field label="已到货" value={formatMaterialQuantityWithUnit(returnConfirmRecord.arrivedQuantity, returnConfirmRecord.unit)} />
             </ModalContentLayout.FieldRow>
           </ModalContentLayout.HeaderCard>
         )}
         <Form form={returnConfirmForm} layout="vertical">
           <Form.Item name="quantity" label="实际回料数量" rules={[{ required: true, message: '请输入实际回料数量' }]}>
-            <InputNumber min={0} step={1} precision={0} style={{ width: '100%' }} />
+            <InputNumber min={0} step={0.01} precision={2} style={{ width: '100%' }} addonAfter={returnConfirmRecord?.unit} />
           </Form.Item>
         </Form>
       </ResizableModal>

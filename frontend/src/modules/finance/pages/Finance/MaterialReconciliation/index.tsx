@@ -121,7 +121,7 @@ const MaterialReconciliation: React.FC = () => {
       >
         {/* ===== AI审核助手 ===== */}
         {showSmartErrorNotice && (
-          <Card style={{ marginBottom: 12, background: '#f0f5ff', border: '1px solid #adc6ff' }} styles={{ body: { padding: '8px 12px' } }}
+          <Card style={{ marginBottom: 12, background: 'var(--color-primary-bg-light, #f0f5ff)', border: '1px solid var(--color-primary-border, #adc6ff)' }} styles={{ body: { padding: '8px 12px' } }}
             extra={<Button type="link" loading={auditLoading} onClick={fetchFinanceAudit} style={{ padding: 0 }}>{financeAudit ? '重新分析' : ' AI分析'}</Button>}
             title={<span style={{ fontSize: 14, color: 'var(--color-primary)' }}> 智能财务审核助手</span>}
           >
@@ -133,10 +133,10 @@ const MaterialReconciliation: React.FC = () => {
                   <Tag color={financeAudit.overallRisk === 'HIGH' ? 'red' : financeAudit.overallRisk === 'MEDIUM' ? 'orange' : 'green'}>
                     整体风险：{financeAudit.overallRisk === 'HIGH' ? '高' : financeAudit.overallRisk === 'MEDIUM' ? '中' : '低'}
                   </Tag>
-                  <span style={{ color: '#262626', marginLeft: 8 }}>{financeAudit.suggestion}</span>
+                  <span style={{ color: 'var(--color-text)', marginLeft: 8 }}>{financeAudit.suggestion}</span>
                 </div>
                 {financeAudit.findings?.length > 0 && (
-                  <ul style={{ margin: '4px 0 0 0', paddingLeft: 16, color: '#595959' }}>
+                  <ul style={{ margin: '4px 0 0 0', paddingLeft: 16, color: 'var(--color-text-secondary)' }}>
                     {financeAudit.findings.slice(0, 3).map((f: any, i: number) => <li key={i}>{f.description || f.detail || String(f)}</li>)}
                     {financeAudit.findings.length > 3 && <li style={{ color: 'var(--color-text-tertiary)' }}>...共 {financeAudit.findings.length} 条异常</li>}
                   </ul>
@@ -257,7 +257,7 @@ const MaterialReconciliation: React.FC = () => {
         okText="保存" cancelText="取消"
         footer={reconModalData ? null : undefined}
         okButtonProps={{ loading: submitLoading }}
-        width="85vw" initialHeight={400}
+        width="60vw" initialHeight={400}
         minWidth={320} scaleWithViewport
       >
         <MaterialReconModalContent currentRecon={reconModalData} onSubmit={handleSubmit} onSave={(saveFn) => { saveFormRef.current = saveFn; }} />

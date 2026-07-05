@@ -142,7 +142,7 @@ const PickingForm: React.FC<PickingFormProps> = ({ visible, onCancel, onSuccess 
       { title: '颜色', dataIndex: 'color' },
       { title: '规格', dataIndex: 'specification' },
       { title: '库存选择', width: 300, render: (r: any) => {
-          if (!r.stocks || r.stocks.length === 0) return <span style={{color: 'var(--error-color, #ff4d4f)'}}>无库存</span>;
+          if (!r.stocks || r.stocks.length === 0) return <span style={{color: 'var(--color-danger)'}}>无库存</span>;
 
           const selected = selectedMaterials.find(m => m.key === r.key);
           const currentStockId = selected?.stockId;
@@ -165,26 +165,32 @@ const PickingForm: React.FC<PickingFormProps> = ({ visible, onCancel, onSuccess 
                       setSelectedMaterials(newSelected);
                   }}
               >
-                  {r.stocks.map((s: any) => (
+                  {r.stocks.map((s: any) => {
+                    const availQty = Math.max(0, Number(s.quantity || 0) - Number(s.lockedQty || 0));
+                    return (
                       <Select.Option key={s.id} value={s.id}>
-                          {s.color || '-'} {s.size || '-'} (余:{s.quantity}{s.unit})
+                          {s.color || '-'} {s.size || '-'} (余:{availQty}{s.unit})
                       </Select.Option>
-                  ))}
+                    );
+                  })}
               </Select>
           );
       }},
       { title: '领料数量', width: 120, render: (r: any) => {
           const selected = selectedMaterials.find(m => m.key === r.key);
-          const maxQty = selected?.stock?.quantity || 999999;
+          const stockQty = Number(selected?.stock?.quantity || 0);
+          const lockedQty = Number(selected?.stock?.lockedQty || 0);
+          const maxQty = Math.max(0, stockQty - lockedQty);
 
           return (
               <InputNumber
                   min={0}
-                  max={maxQty}
+                  max={maxQty || undefined}
                   style={{ width: '100%' }}
                   value={selected?.pickQuantity}
                   disabled={!selected?.stockId}
                   placeholder={!selected?.stockId ? "请先选库存" : "数量"}
+                  addonAfter={selected?.stock?.unit || r.unit || ''}
                   onChange={(v) => {
                       const newSelected = [...selectedMaterials];
                       const idx = newSelected.findIndex(m => m.key === r.key);
@@ -199,7 +205,7 @@ const PickingForm: React.FC<PickingFormProps> = ({ visible, onCancel, onSuccess 
   ];
 
   return (
-    <ResizableModal title="生产领料" open={visible} onCancel={onCancel} onOk={form.submit} width="85vw" initialHeight={Math.round(window.innerHeight * 0.82)} confirmLoading={loading}>
+    <ResizableModal title="生产领料" open={visible} onCancel={onCancel} onOk={form.submit} width="60vw" initialHeight={Math.round(window.innerHeight * 0.82)} confirmLoading={loading}>
       <Form form={form} onFinish={handleFinish} layout="vertical">
         <Form.Item name="orderId" label="生产订单" rules={[{ required: true }]}>
             <Select id="orderId" onChange={handleOrderChange} showSearch optionFilterProp="children">

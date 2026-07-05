@@ -227,7 +227,7 @@ const MaterialInventoryModals: React.FC<MaterialInventoryModalsProps> = ({
       <Drawer
         title={
           <Space>
-            <ScanOutlined style={{ color: 'var(--primary-color)' }} />
+            <ScanOutlined style={{ color: 'var(--color-primary)' }} />
             扫码入库
           </Space>
         }
@@ -237,7 +237,7 @@ const MaterialInventoryModals: React.FC<MaterialInventoryModalsProps> = ({
           inboundForm.resetFields();
         }}
         size="large"
-        styles={{ wrapper: { width: '85%' } }}
+        styles={{ wrapper: { width: '60vw' } }}
         destroyOnHidden
         extra={
           <Space>
@@ -389,9 +389,9 @@ const MaterialInventoryModals: React.FC<MaterialInventoryModalsProps> = ({
               const materialType = getFieldValue('materialType');
               if (getMaterialTypeCategory(materialType) !== 'fabric') return null;
               return (
-                <Row gutter={12} style={{ background: '#f0f7ff', borderRadius: 6, padding: '8px 6px 0', marginBottom: 12 }}>
+                <Row gutter={12} style={{ background: 'var(--color-primary-bg-light, #f0f7ff)', borderRadius: 6, padding: '8px 6px 0', marginBottom: 12 }}>
                   <Col span={24} style={{ marginBottom: 6 }}>
-                    <span style={{ fontSize: 'var(--font-size-sm)', fontWeight: 600, color: 'var(--primary-color)' }}> 面料属性</span>
+                    <span style={{ fontSize: 'var(--font-size-sm)', fontWeight: 600, color: 'var(--color-primary)' }}> 面料属性</span>
                   </Col>
                   <Col span={8}>
                     <Form.Item label="幅宽" name="fabricWidth">

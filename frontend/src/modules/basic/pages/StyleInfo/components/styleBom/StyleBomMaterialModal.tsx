@@ -54,8 +54,7 @@ const StyleBomMaterialModal: React.FC<StyleBomMaterialModalProps> = ({
     open={open}
     onClose={onClose}
     placement="right"
-    size="large"
-    styles={{ wrapper: { width: '75vw' }, body: { padding: '16px 24px', display: 'flex', flexDirection: 'column', overflow: 'auto' } }}
+    styles={{ wrapper: { width: '60vw' }, body: { padding: '16px 24px', display: 'flex', flexDirection: 'column', overflow: 'auto' } }}
     destroyOnHidden
   >
     <Tabs
@@ -111,7 +110,7 @@ const StyleBomMaterialModal: React.FC<StyleBomMaterialModalProps> = ({
                           src={url}
                           width={40}
                           height={40}
-                          style={{ objectFit: 'cover', borderRadius: 4, border: '1px solid #eee' }}
+                          style={{ objectFit: 'cover', borderRadius: 4, border: '1px solid var(--color-border)' }}
                           preview={{ src: url }}
                         />
                       );

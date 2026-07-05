@@ -38,7 +38,7 @@ export const useMaterialReconColumns = ({
     { title: '款号', dataIndex: 'styleNo', key: 'styleNo', width: 110 },
     { title: '实到数量', dataIndex: 'quantity', key: 'quantity', width: 100, align: 'right' as const, render: (value: number, record: any) => `${value || 0}${record?.unit ? ' ' + record.unit : ''}` },
     { title: '采购单价', dataIndex: 'unitPrice', key: 'unitPrice', width: 110, align: 'right' as const, render: (value: number, record: any) => { if (!canViewPrice(user)) return '***'; return `¥${value?.toFixed(2) || '0.00'}${record?.unit ? '/' + record.unit : ''}`; } },
-    { title: '采购汇总', key: 'purchaseTotal', width: 120, align: 'right' as const, render: (_: any, record: any) => { if (!canViewPrice(user)) return '***'; const total = Number(record?.quantity || 0) * Number(record?.unitPrice || 0); return <span style={{ color: total > 0 ? 'var(--primary-color)' : undefined }}>¥{total.toFixed(2)}</span>; } },
+    { title: '采购汇总', key: 'purchaseTotal', width: 120, align: 'right' as const, render: (_: any, record: any) => { if (!canViewPrice(user)) return '***'; const total = Number(record?.quantity || 0) * Number(record?.unitPrice || 0); return <span style={{ color: total > 0 ? 'var(--color-primary)' : undefined }}>¥{total.toFixed(2)}</span>; } },
     { title: '采购完成', dataIndex: 'reconciliationDate', key: 'reconciliationDate', width: 120, render: (value: unknown) => formatDateTime(value) },
     { title: '采购员', dataIndex: 'purchaserName', key: 'purchaserName', width: 100, render: (value: string) => value || '-' },
     { title: '入库日期', dataIndex: 'inboundDate', key: 'inboundDate', width: 110, render: (value: unknown) => formatDateTime(value) || '-' },

@@ -218,7 +218,7 @@ const StyleBomToolbar: React.FC<StyleBomToolbarProps> = ({
         onOk={handleOcrRecognize}
         okText="识别"
         confirmLoading={ocrLoading}
-        width={480}
+        width="40vw"
       >
         <Spin spinning={ocrLoading} tip="正在识别，请稍候...">
           <div style={{ padding: '16px 0', outline: 'none' }}>
@@ -233,7 +233,7 @@ const StyleBomToolbar: React.FC<StyleBomToolbarProps> = ({
               fileList={ocrFile ? [{ uid: '-1', name: ocrFile.name, status: 'done', url: '', originFileObj: ocrFile }] : []}
             >
               <p className="ant-upload-drag-icon">
-                <RobotOutlined style={{ fontSize: 48, color: 'var(--primary-color)' }} />
+                <RobotOutlined style={{ fontSize: 48, color: 'var(--color-primary)' }} />
               </p>
               <p className="ant-upload-text">点击上传工艺单/面料清单图片</p>
               <p className="ant-upload-hint">
@@ -242,11 +242,11 @@ const StyleBomToolbar: React.FC<StyleBomToolbarProps> = ({
             </Upload.Dragger>
 
             {!ocrLoading && ocrFile && (
-              <div style={{ marginTop: 16, padding: 12, background: '#f6ffed', borderRadius: 8, border: '1px solid #b7eb8f' }}>
+              <div style={{ marginTop: 16, padding: 12, background: 'var(--color-success-bg-light, #f6ffed)', borderRadius: 8, border: '1px solid var(--color-success-border, #b7eb8f)' }}>
                 <p style={{ margin: 0, color: 'var(--color-success)', fontWeight: 500 }}>
                   已选择: {ocrFile.name}
                 </p>
-                <p style={{ margin: '8px 0 0', color: '#8c8c8c', fontSize: 12 }}>
+                <p style={{ margin: '8px 0 0', color: 'var(--color-text-tertiary)', fontSize: 12 }}>
                   点击"识别"按钮开始AI分析
                 </p>
               </div>

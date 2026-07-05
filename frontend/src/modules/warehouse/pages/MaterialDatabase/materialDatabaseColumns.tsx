@@ -56,7 +56,7 @@ export const getMaterialDatabaseColumns = (actions: MaterialColumnActions): Colu
         <SupplierNameTooltip name={record.supplierName} contactPerson={(record as any).supplierContactPerson} contactPhone={(record as any).supplierContactPhone} />
       ),
     },
-    { title: '单价(元)', dataIndex: 'unitPrice', key: 'unitPrice', width: 100, align: 'right' as const, render: (value: unknown) => renderMaskedNumber(value, user) },
+    { title: '单价', dataIndex: 'unitPrice', key: 'unitPrice', width: 100, align: 'right' as const, render: (value: unknown) => renderMaskedNumber(value, user) },
     {
       title: '换算', dataIndex: 'conversionRate', key: 'conversionRate', width: 130, align: 'right' as const,
       render: (value: unknown) => { const num = Number(value); return Number.isFinite(num) && num > 0 ? `${num} 米/公斤` : '-'; },

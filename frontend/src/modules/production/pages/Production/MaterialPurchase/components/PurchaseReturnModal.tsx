@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, Form, Input, Select, InputNumber, Space, Button, message, App } from 'antd';
+import { Modal, Form, Input, Select, InputNumber, Space, Button, message, App, Tag } from 'antd';
 import { RollbackOutlined } from '@ant-design/icons';
 import ResizableModal from '@/components/common/ResizableModal';
 import ResizableTable from '@/components/common/ResizableTable';
 import api from '@/utils/api';
 import { MaterialPurchase } from '@/types/production';
+import { formatMoney } from '@/utils/format';
+import { getMaterialTypeLabel } from '@/utils/materialType';
 
 interface PurchaseReturnModalProps {
   visible: boolean;
@@ -19,6 +21,9 @@ interface ReturnItem {
   purchaseId: string;
   materialCode: string;
   materialName: string;
+  materialType?: string;
+  color?: string;
+  specifications?: string;
   quantity: number;
   maxQuantity: number;
   unitPrice: number;
@@ -41,17 +46,24 @@ const PurchaseReturnModal: React.FC<PurchaseReturnModalProps> = ({
 
   useEffect(() => {
     if (visible && purchaseRecords.length > 0) {
-      // 初始化退货物料列表
-      const items: ReturnItem[] = purchaseRecords.map((record) => ({
-        purchaseId: record.id || '',
-        materialCode: record.materialCode || '',
-        materialName: record.materialName || '',
-        quantity: 0,
-        maxQuantity: Number(record.quantity) || 0,
-        unitPrice: Number(record.unitPrice) || 0,
-        unit: record.unit || '',
-        returnReason: '',
-      }));
+      // 初始化退货物料列表：maxQuantity = 采购数量 - 已退数量，避免重复退货
+      const items: ReturnItem[] = purchaseRecords.map((record) => {
+        const purchased = Number(record.quantity) || 0;
+        const returned = Number((record as any).returnQuantity || 0);
+        return {
+          purchaseId: record.id || '',
+          materialCode: record.materialCode || '',
+          materialName: record.materialName || '',
+          materialType: (record as any).materialType as string | undefined,
+          color: (record as any).color as string | undefined,
+          specifications: (record as any).specifications as string | undefined,
+          quantity: 0,
+          maxQuantity: Math.max(0, purchased - returned),
+          unitPrice: Number(record.unitPrice) || 0,
+          unit: record.unit || '',
+          returnReason: '',
+        };
+      });
       setReturnItems(items);
     }
   }, [visible, purchaseRecords]);
@@ -130,26 +142,45 @@ const PurchaseReturnModal: React.FC<PurchaseReturnModalProps> = ({
       dataIndex: 'materialName',
       key: 'materialName',
       width: 150,
+      ellipsis: true,
     },
     {
-      title: '采购数量',
+      title: '物料类型',
+      dataIndex: 'materialType',
+      key: 'materialType',
+      width: 90,
+      render: (val: any) => val ? <Tag>{getMaterialTypeLabel(val)}</Tag> : '-',
+    },
+    {
+      title: '颜色/规格',
+      key: 'colorSpec',
+      width: 140,
+      ellipsis: true,
+      render: (_: any, record: any) => `${record.color || '-'} / ${record.specifications || '-'}`,
+    },
+    {
+      title: '可退数量',
       dataIndex: 'maxQuantity',
       key: 'maxQuantity',
       width: 100,
+      align: 'right' as const,
       render: (val: number, record: ReturnItem) => `${val} ${record.unit}`,
     },
     {
       title: '退货数量',
       dataIndex: 'quantity',
       key: 'quantity',
-      width: 120,
+      width: 140,
       render: (val: number, record: ReturnItem) => (
         <InputNumber
           min={0}
-          max={record.maxQuantity}
+          max={record.maxQuantity || undefined}
           value={val}
           onChange={(num) => handleQuantityChange(record.purchaseId, num || 0)}
+          addonAfter={record.unit || ''}
           style={{ width: '100%' }}
+          disabled={record.maxQuantity <= 0}
+          placeholder={record.maxQuantity <= 0 ? '无可退' : '数量'}
         />
       ),
     },
@@ -158,7 +189,11 @@ const PurchaseReturnModal: React.FC<PurchaseReturnModalProps> = ({
       dataIndex: 'unitPrice',
       key: 'unitPrice',
       width: 100,
-      render: (val: number) => `¥${val.toFixed(2)}`,
+      align: 'right' as const,
+      render: (val: number) => {
+        const n = Number(val);
+        return Number.isFinite(n) ? formatMoney(n) : '-';
+      },
     },
     {
       title: '退货原因',
@@ -181,7 +216,7 @@ const PurchaseReturnModal: React.FC<PurchaseReturnModalProps> = ({
       title={`采购退货 - ${supplierName}`}
       open={visible}
       onCancel={onClose}
-      width={800}
+      width="60vw"
       footer={
         <Space>
           <Button onClick={onClose}>取消</Button>

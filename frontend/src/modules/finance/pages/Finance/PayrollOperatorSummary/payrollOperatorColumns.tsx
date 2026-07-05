@@ -397,7 +397,7 @@ export function getDetailColumns(deps: DetailColumnDeps): any[] {
             },
         },
         {
-            title: '单价(元)',
+            title: '单价',
             dataIndex: 'unitPrice',
             key: 'unitPrice',
             width: 110,
@@ -405,7 +405,7 @@ export function getDetailColumns(deps: DetailColumnDeps): any[] {
             render: (v: unknown) => toMoneyText(v),
         },
         {
-            title: '金额(元)',
+            title: '金额',
             dataIndex: 'totalAmount',
             key: 'totalAmount',
             width: 120,

@@ -1,11 +1,13 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { App, Button, Card, Descriptions, Form, Input, InputNumber, Select, Space, Tag, Drawer } from 'antd';
+import { ExclamationCircleOutlined } from '@ant-design/icons';
 import ResizableModal from '@/components/common/ResizableModal';
 import ResizableTable from '@/components/common/ResizableTable';
 import type { MaterialPurchase } from '@/types/production';
 import { materialQualityIssueApi, type MaterialQualityIssue } from '@/services/production/materialQualityIssueApi';
 import { formatDateTime } from '@/utils/datetime';
 import { formatMoney } from '@/utils/format';
+import { getMaterialTypeLabel } from '@/utils/materialType';
 import type { ApiResult } from '@/utils/api';
 
 interface Props {
@@ -154,22 +156,27 @@ const MaterialQualityIssueModal: React.FC<Props> = ({ open, purchase, onClose, o
   return (
     <>
       <Drawer
+        title={<Space><ExclamationCircleOutlined style={{ color: 'var(--color-warning)' }} /><span>品质异常登记 - {purchase?.materialName || purchase?.materialCode}</span></Space>}
         open={open}
-        title="面辅料品质异常"
         onClose={onClose}
         placement="right"
-        size="large"
-        styles={{ wrapper: { width: '75vw' }, body: { padding: '16px 24px', display: 'flex', flexDirection: 'column', overflow: 'auto' } }}
+        styles={{ wrapper: { width: '60vw' }, body: { padding: '16px 24px', display: 'flex', flexDirection: 'column', overflow: 'auto' } }}
         destroyOnHidden
       >
         <div style={{ marginTop: 16, display: 'grid', gap: 16 }}>
-          <Descriptions bordered column={3}>
+          <Descriptions bordered column={3} size="small">
             <Descriptions.Item label="采购单号">{purchase?.purchaseNo || '-'}</Descriptions.Item>
             <Descriptions.Item label="供应商">{purchase?.supplierName || '-'}</Descriptions.Item>
             <Descriptions.Item label="订单号">{purchase?.orderNo || '-'}</Descriptions.Item>
             <Descriptions.Item label="物料编码">{purchase?.materialCode || '-'}</Descriptions.Item>
             <Descriptions.Item label="物料名称">{purchase?.materialName || '-'}</Descriptions.Item>
-            <Descriptions.Item label="到货数量">{purchase?.arrivedQuantity ?? purchase?.purchaseQuantity ?? '-'}</Descriptions.Item>
+            <Descriptions.Item label="物料类型">{purchase?.materialType ? getMaterialTypeLabel(purchase.materialType) : '-'}</Descriptions.Item>
+            <Descriptions.Item label="颜色">{purchase?.color || '-'}</Descriptions.Item>
+            <Descriptions.Item label="规格/幅宽">{[purchase?.specifications, purchase?.fabricWidth].filter(Boolean).join(' / ') || '-'}</Descriptions.Item>
+            <Descriptions.Item label="单位">{purchase?.unit || '-'}</Descriptions.Item>
+            <Descriptions.Item label="采购数量">{purchase?.purchaseQuantity ?? '-'}{purchase?.unit ? ` ${purchase.unit}` : ''}</Descriptions.Item>
+            <Descriptions.Item label="到货数量">{purchase?.arrivedQuantity ?? purchase?.purchaseQuantity ?? '-'}{purchase?.unit ? ` ${purchase.unit}` : ''}</Descriptions.Item>
+            <Descriptions.Item label="单价">{purchase?.unitPrice != null ? `¥${Number(purchase.unitPrice).toFixed(2)}` : '-'}</Descriptions.Item>
           </Descriptions>
           <Card title="登记异常">
             <Form form={createForm} layout="vertical">

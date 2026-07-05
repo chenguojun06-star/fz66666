@@ -511,7 +511,7 @@ export function usePurchaseDetailPage(styleNoParam: string, orderNoParam: string
     const receiverName = String(user?.name || user?.username || '').trim();
     const contentEl = React.createElement('div', null,
       React.createElement('p', null, `确认批量采购以下 ${pending.length} 项物料：`),
-      React.createElement('div', { style: { maxHeight: 220, overflowY: 'auto', marginTop: 8, fontSize: 12 } },
+      React.createElement('div', { style: { maxHeight: 320, overflowY: 'auto', marginTop: 8, fontSize: 13 } },
         pending.map((item, idx) =>
           React.createElement('div', { key: idx, style: { padding: '6px 0', borderBottom: '1px solid var(--color-border-light)', display: 'flex', justifyContent: 'space-between' } },
             React.createElement('span', null, `${item.materialName || item.materialCode} · ${item.color || '-'}`),
@@ -525,7 +525,7 @@ export function usePurchaseDetailPage(styleNoParam: string, orderNoParam: string
       content: contentEl,
       okText: '确认批量采购',
       cancelText: '取消',
-      width: 440,
+      width: '40vw',
       onOk: async () => {
         for (const item of pending) {
           try {
@@ -556,7 +556,7 @@ export function usePurchaseDetailPage(styleNoParam: string, orderNoParam: string
     const confirmerName = String(user?.name || user?.username || '').trim();
     const contentEl = React.createElement('div', null,
       React.createElement('p', null, `确认回料以下 ${returnable.length} 项物料：`),
-      React.createElement('div', { style: { maxHeight: 220, overflowY: 'auto', marginTop: 8, fontSize: 12 } },
+      React.createElement('div', { style: { maxHeight: 320, overflowY: 'auto', marginTop: 8, fontSize: 13 } },
         returnable.map((item, idx) =>
           React.createElement('div', { key: idx, style: { padding: '6px 0', borderBottom: '1px solid var(--color-border-light)', display: 'flex', justifyContent: 'space-between' } },
             React.createElement('span', null, `${item.materialName || item.materialCode} · ${item.color || '-'}`),
@@ -570,7 +570,7 @@ export function usePurchaseDetailPage(styleNoParam: string, orderNoParam: string
       content: contentEl,
       okText: '确认回料',
       cancelText: '取消',
-      width: 440,
+      width: '40vw',
       onOk: async () => {
         for (const item of returnable) {
           try {

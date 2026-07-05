@@ -18,6 +18,7 @@ import PurchaseReturnModal from '../PurchaseReturnModal';
 import { ProductionOrderHeader } from '@/components/StyleAssets';
 import { MaterialPurchase as MaterialPurchaseType, ProductionOrder } from '@/types/production';
 import { formatMaterialSpecWidth, getMaterialTypeCategory, getMaterialTypeLabel } from '@/utils/materialType';
+import { formatMoney } from '@/utils/format';
 import { formatDateTime } from '@/utils/datetime';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { MATERIAL_PURCHASE_STATUS } from '@/constants/business';
@@ -863,14 +864,15 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
                         return (
                           <span
                             style={{
-                              color: hasStock ? 'var(--color-primary)' : '#bbb',
+                              color: hasStock ? 'var(--color-primary)' : 'var(--color-text-quaternary)',
                               cursor: hasStock ? 'pointer' : undefined,
                               textDecoration: hasStock ? 'underline' : undefined,
                             }}
                             title={hasStock ? '点击出库领取' : undefined}
                             onClick={() => {
                               if (hasStock && onWarehousePick) {
-                                const pickQty = Math.min(stock, Number(r.purchaseQuantity || 0));
+                                const remaining = Math.max(0, Number(r.purchaseQuantity || 0) - Number(r.arrivedQuantity || 0));
+                                const pickQty = remaining > 0 ? Math.min(stock, remaining) : Math.min(stock, Number(r.purchaseQuantity || 0));
                                 onWarehousePick(r, pickQty);
                               }
                             }}
@@ -881,18 +883,18 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
                       },
                     },
                     {
-                      title: '单价(元)',
+                      title: '单价',
                       dataIndex: 'unitPrice',
                       key: 'unitPrice',
                       width: 110,
                       align: 'right' as const,
                       render: (v: unknown) => {
                         const n = Number(v);
-                        return Number.isFinite(n) ? n.toFixed(2) : '-';
+                        return Number.isFinite(n) ? formatMoney(n) : '-';
                       },
                     },
                     {
-                      title: '金额(元)',
+                      title: '金额',
                       dataIndex: 'totalAmount',
                       key: 'totalAmount',
                       width: 120,
@@ -900,9 +902,9 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
                       render: (v: any, r: any) => {
                         const qty = Number(r?.arrivedQuantity ?? 0);
                         const price = Number(r?.unitPrice);
-                        if (Number.isFinite(qty) && Number.isFinite(price)) return (qty * price).toFixed(2);
+                        if (Number.isFinite(qty) && Number.isFinite(price)) return formatMoney(qty * price);
                         const n = Number(v);
-                        return Number.isFinite(n) ? n.toFixed(2) : '-';
+                        return Number.isFinite(n) ? formatMoney(n) : '-';
                       },
                     },
                     {
@@ -960,7 +962,8 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
                                 disabled={frozen || status !== MATERIAL_PURCHASE_STATUS.PENDING || Number(record?.returnConfirmed || 0) === 1}
                                 onClick={() => {
                                   if (hasStock && onWarehousePick) {
-                                    const pickQty = Math.min(stock, Number(record.purchaseQuantity || 0));
+                                    const remaining = Math.max(0, Number(record.purchaseQuantity || 0) - Number(record.arrivedQuantity || 0));
+                                    const pickQty = remaining > 0 ? Math.min(stock, remaining) : Math.min(stock, Number(record.purchaseQuantity || 0));
                                     onWarehousePick(record, pickQty);
                                   } else {
                                     onReceive(record);
