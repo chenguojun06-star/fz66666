@@ -25,6 +25,41 @@ function resolveIcon(icon: string): string {
   return ICON_EMOJI_MAP[icon] ?? '❓';
 }
 
+/* ── 预填参数中文化映射 ──
+ * 后端 prefilledParams 是 Map<String, Object>，key 是英文驼峰。
+ * 展示给用户时必须翻译成中文，避免用户看到 "styleNo: A001" 这种技术字段。
+ */
+const PREFILLED_LABEL_MAP: Record<string, string> = {
+  styleNo:      '款号',
+  color:        '颜色',
+  quantity:     '数量',
+  orderNo:      '订单号',
+  orderId:      '订单编号',
+  factoryName:  '工厂',
+  defectCount:  '次品数',
+  targetFactory:'目标工厂',
+  recipient:    '接收人',
+  expectedShipDate: '新交期',
+  remark:       '备注',
+  action:       '处理方式',
+};
+
+/* 内部 ID 类字段，不展示给用户（展示无意义，只是后端执行命令用的） */
+const PREFILLED_HIDDEN_KEYS = new Set(['orderId']);
+
+/** 将预填参数的英文 key 翻译为中文 label，未识别返回 null 表示不展示 */
+function resolvePrefilledLabel(key: string): string | null {
+  if (PREFILLED_HIDDEN_KEYS.has(key)) return null;
+  return PREFILLED_LABEL_MAP[key] ?? null;
+}
+
+/** 格式化预填参数的值：数字加千分位，空值显示 '-' */
+function formatPrefilledValue(v: unknown): string {
+  if (v == null || v === '') return '-';
+  if (typeof v === 'number') return v.toLocaleString('zh-CN');
+  return String(v);
+}
+
 /* ── 单个跟进动作卡片（含可选表单输入） ── */
 const FollowUpCard: React.FC<{
   action: FollowUpAction;
@@ -92,16 +127,22 @@ const FollowUpCard: React.FC<{
       {/* 展开的表单区 */}
       {expanded && hasInputs && (
         <div className={styles.followUpForm}>
-          {/* 已预填参数展示 */}
-          {action.prefilledParams && Object.keys(action.prefilledParams).length > 0 && (
-            <div className={styles.followUpPrefilled}>
-              {Object.entries(action.prefilledParams).map(([k, v]) => (
-                <span key={k} className={styles.followUpTag}>
-                  {k}: {String(v)}
-                </span>
-              ))}
-            </div>
-          )}
+          {/* 已预填参数展示（中文化，隐藏内部 ID） */}
+          {action.prefilledParams && Object.keys(action.prefilledParams).length > 0 && (() => {
+            const visibleItems = Object.entries(action.prefilledParams)
+              .map(([k, v]) => ({ key: k, label: resolvePrefilledLabel(k), value: formatPrefilledValue(v) }))
+              .filter(item => item.label !== null);
+            if (!visibleItems.length) return null;
+            return (
+              <div className={styles.followUpPrefilled}>
+                {visibleItems.map(item => (
+                  <span key={item.key} className={styles.followUpTag}>
+                    {item.label}: {item.value}
+                  </span>
+                ))}
+              </div>
+            );
+          })()}
 
           {/* 需用户填写的字段 */}
           {action.requiredInputs!.map((field: ActionField) => (

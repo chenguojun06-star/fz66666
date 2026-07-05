@@ -13,13 +13,14 @@ import { sortSizeNames } from '@/utils/api/size';
 import ResizableTable from '@/components/common/ResizableTable';
 import { formatDateTime } from '@/utils/datetime';
 import { formatMoney } from '@/utils/format';
-import { getMaterialTypeLabel } from '@/utils/materialType';
+import { getMaterialTypeLabel, getMaterialTypeCategory } from '@/utils/materialType';
 import { toCategoryCn } from '@/utils/styleCategory';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { getStyleInfoByRef } from '@/services/style/styleApi';
 import { message } from '@/utils/antdStatic';
 import { useUser } from '@/utils/AuthContext';
 import { canViewPrice } from '@/utils/sensitiveDataMask';
+import { parseWashLabelParts } from '@/utils/washLabel';
 import { toSeasonCn, PrintOptions, DEFAULT_PRINT_OPTIONS, StylePrintModalProps, PrintData } from './types';
 import { buildPrintHtml } from './printTemplate';
 import { safePrint } from '@/utils/safePrint';
@@ -430,7 +431,21 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
                 <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 14 }}>
                   {(() => {
                     const empty = '';
-                    const fabricVal = (data.productionSheet as any)?.fabricComposition;
+                    // 面料成分：优先读 fabricComposition（单字符串），
+                    // 为空时从 fabricCompositionParts（JSON）解析拼接，兼容旧数据
+                    const prodSheet = data.productionSheet as any;
+                    let fabricVal = prodSheet?.fabricComposition;
+                    if (!fabricVal && prodSheet?.fabricCompositionParts) {
+                      const parts = parseWashLabelParts(prodSheet.fabricCompositionParts);
+                      if (parts.length === 1) {
+                        fabricVal = parts[0].materials;
+                      } else if (parts.length > 1) {
+                        fabricVal = parts
+                          .filter(p => p.materials)
+                          .map(p => `${p.part}:${p.materials}`)
+                          .join('; ');
+                      }
+                    }
 
                     // 所有字段合并到一个数组，渲染成一张连续表格
                     const allFields: { label: string; value: React.ReactNode }[] = [];
@@ -497,6 +512,11 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
                     // 面料和备注
                     if (options.styleInfoBlock) {
                       allFields.push({ label: '面料成分', value: fabricVal || empty });
+                      // 是否套里：从 BOM 物料中检测 lining 类型（自动联动 BOM，无需新字段）
+                      const hasLining = Array.isArray(data.bom) && data.bom.some((m: any) =>
+                        getMaterialTypeCategory((m as any)?.materialType) === 'lining'
+                      );
+                      allFields.push({ label: '是否套里', value: hasLining ? '是' : '否' });
                     }
                     if (options.remarkBlock) {
                       allFields.push({ label: '备注', value: (data.productionSheet as any)?.description || empty });

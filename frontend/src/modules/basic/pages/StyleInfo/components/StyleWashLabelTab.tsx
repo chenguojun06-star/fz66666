@@ -12,7 +12,7 @@ import {
   careCodesFromLegacyFields,
   DEFAULT_CARE_ICON_CODES,
 } from '@/utils/careIcons';
-import { getDisplayWashCareCodes, buildWashLabelSections, parseWashNotePerPart } from '@/utils/washLabel';
+import { getDisplayWashCareCodes, buildWashLabelSections, parseWashLabelParts, parseWashNotePerPart } from '@/utils/washLabel';
 import { safePrint } from '@/utils/safePrint';
 import {
   buildWashLabelPrintHtml,
@@ -101,11 +101,24 @@ const StyleWashLabelTab: React.FC<Props> = ({
     if (!styleId) return;
     setSaving(true);
     try {
+      // 从 compositionParts（JSON）解析拼接为单字符串 fabricComposition，
+      // 供打印弹窗（StylePrintModal 读取 fabricComposition 字段）使用。
+      const parts = parseWashLabelParts(compositionParts);
+      let fabricCompositionSummary = '';
+      if (parts.length === 1) {
+        fabricCompositionSummary = parts[0].materials;
+      } else if (parts.length > 1) {
+        fabricCompositionSummary = parts
+          .filter(p => p.materials)
+          .map(p => `${p.part}:${p.materials}`)
+          .join('; ');
+      }
       const payload: Record<string, any> = {
         id: styleId,
         styleNo,
         styleName,
         fabricCompositionParts: compositionParts || undefined,
+        fabricComposition: fabricCompositionSummary || undefined,
         washInstructions: washInstructions || undefined,
         uCode: uCode || undefined,
         careIconCodes: serializeCareIconCodes(selectedIconCodes),
