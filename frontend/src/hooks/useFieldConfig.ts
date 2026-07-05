@@ -44,7 +44,7 @@ export function useFieldConfig({ bizType, platform = 'pc', enabled = true, inclu
     setLoading(true);
     try {
       const res = await api.get<{ code: number; data: FieldConfigItem[] }>(
-        '/api/system/field-config',
+        '/system/field-config',
         { params: { bizType, platform, includeDisabled } }
       );
       if (res?.code === 200 && Array.isArray(res.data)) {

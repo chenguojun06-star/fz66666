@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Button, Dropdown, Modal, Select, Space, Spin, Upload, message } from 'antd';
-import { DownOutlined, RobotOutlined } from '@ant-design/icons';
+import { DownOutlined, RobotOutlined, ShoppingCartOutlined } from '@ant-design/icons';
 import type { TemplateLibrary } from '@/types/style';
 import StyleBomAddRowsDropdown from './StyleBomAddRowsDropdown';
 import api from '@/utils/api';
@@ -34,6 +34,7 @@ interface StyleBomToolbarProps {
   onApplyTemplate: (mode: 'overwrite' | 'append') => void;
   onCheckStock: () => void;
   onGeneratePurchase: () => void;
+  onAddToPurchaseCart: () => void;
   onToggleEdit: () => void;
   onCancelEdit: () => void;
   onAddRows: (count: number) => void;
@@ -65,6 +66,7 @@ const StyleBomToolbar: React.FC<StyleBomToolbarProps> = ({
   onApplyTemplate,
   onCheckStock,
   onGeneratePurchase,
+  onAddToPurchaseCart,
   onToggleEdit,
   onCancelEdit,
   onAddRows,
@@ -148,6 +150,14 @@ const StyleBomToolbar: React.FC<StyleBomToolbarProps> = ({
           loading={loading}
         >
           生成采购单
+        </Button>
+        <Button
+          icon={<ShoppingCartOutlined />}
+          onClick={onAddToPurchaseCart}
+          disabled={locked || !dataLength || loading}
+          loading={loading}
+        >
+          加入采购车
         </Button>
         <Button
           type={tableEditable ? 'primary' : 'default'}

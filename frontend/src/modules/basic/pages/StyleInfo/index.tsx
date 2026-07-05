@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { App, Card, Checkbox, Form, Input, Tabs } from 'antd';
 import ResizableModal from '@/components/common/ResizableModal';
 import PageLayout from '@/components/common/PageLayout';
+import { PurchaseCartDrawer } from '@/components/common/PurchaseCartDrawer';
 import { useStyleDetail } from './hooks/useStyleDetail';
 import { useStyleFormActions } from './hooks/useStyleFormActions';
 import { useStyleColorSize } from './hooks/useStyleColorSize';
@@ -57,6 +58,7 @@ const StyleInfoDetailPage: React.FC = () => {
   const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
   const showSmartErrorNotice = React.useMemo(() => isSmartFeatureEnabled('smart.production.precheck.enabled'), []);
   const [bomAreaTabKey, setBomAreaTabKey] = useState('bom');
+  const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
   const basicInfoFormRef = useRef<StyleBasicInfoFormRef | null>(null);
 
   const { fields: fieldConfigs } = useFieldConfig({ bizType: 'style', platform: 'pc' });
@@ -305,6 +307,7 @@ const StyleInfoDetailPage: React.FC = () => {
                     bomStartTime={(currentStyle as any)?.bomStartTime}
                     bomCompletedTime={(currentStyle as any)?.bomCompletedTime}
                     onRefresh={() => { void fetchDetail(styleIdParam!); }}
+                    onCartAdded={() => setCartDrawerOpen(true)}
                   />
                   <Card title="纸样开发" id="section-pattern" style={{ marginTop: 8, borderRadius: 8 }}>
                     <StylePatternTab
@@ -453,6 +456,11 @@ const StyleInfoDetailPage: React.FC = () => {
           </Form.Item>
         </Form>
       </ResizableModal>
+
+      <PurchaseCartDrawer
+        open={cartDrawerOpen}
+        onClose={() => setCartDrawerOpen(false)}
+      />
 
     </>
   );

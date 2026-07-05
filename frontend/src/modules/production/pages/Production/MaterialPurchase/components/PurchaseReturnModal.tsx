@@ -102,7 +102,7 @@ const PurchaseReturnModal: React.FC<PurchaseReturnModalProps> = ({
         })),
       };
 
-      const result = await api.post('/api/production/purchase-return', params);
+      const result = await api.post('/production/purchase-return', params);
       if (result.success) {
         appMessage.success('退货单创建成功');
         onSuccess();

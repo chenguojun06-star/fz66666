@@ -4,6 +4,7 @@ import { useCallback, type Dispatch, type SetStateAction } from 'react';
 import type { StyleBom } from '@/types/style';
 import api from '@/utils/api';
 import { confirmAction } from '@/utils/confirm';
+import { usePurchaseCartActions } from '@/hooks/usePurchaseCart';
 
 interface UseStyleBomActionsOptions {
   locked: boolean;
@@ -37,6 +38,7 @@ const useStyleBomActions = ({
   sortBomRows,
 }: UseStyleBomActionsOptions) => {
   const { message } = App.useApp();
+  const { batchAddItems } = usePurchaseCartActions();
 
   const debugValue = useCallback((value: unknown) => {
     if (value === undefined) return 'undefined';
@@ -199,11 +201,61 @@ const useStyleBomActions = ({
     }
   }, [debugValue, fetchBom, form, isTempId, locked, message, setData, sortBomRows, tableEditable]);
 
+  const handleAddToPurchaseCart = useCallback(async () => {
+    if (!data.length) {
+      message.error('请先配置BOM物料');
+      return;
+    }
+
+    const itemsToAdd = data
+      .filter((item) => {
+        const qty = Number(item.devUsageAmount ?? item.usageAmount);
+        return qty > 0 && String(item.materialCode || '').trim();
+      })
+      .map((item) => ({
+        materialCode: String(item.materialCode || '').trim(),
+        materialName: String(item.materialName || '').trim(),
+        materialType: (String(item.materialType || '').toUpperCase() as any) || 'ACCESSORY',
+        specifications: String(item.specification || item.specifications || '').trim() || undefined,
+        unit: String(item.unit || '').trim() || '-',
+        quantity: Number(item.devUsageAmount ?? item.usageAmount) || 0,
+        supplierId: String(item.supplierId || '').trim() || undefined,
+        supplierName: String(item.supplier || item.supplierName || '').trim() || undefined,
+        unitPrice: Number(item.unitPrice) || undefined,
+        sourceType: 'SAMPLE' as const,
+        sourceId: String(styleId || '').trim() || undefined,
+        sourceNo: String(currentStyleNo || '').trim() || undefined,
+        sourceQuantity: Number(item.devUsageAmount ?? item.usageAmount) || 0,
+        color: String(item.color || '').trim() || undefined,
+        fabricComposition: String(item.fabricComposition || '').trim() || undefined,
+        fabricWidth: String(item.fabricWidth || '').trim() || undefined,
+        fabricWeight: String(item.fabricWeight || '').trim() || undefined,
+        remark: `来自BOM：${currentStyleNo || ''}`,
+      }));
+
+    if (!itemsToAdd.length) {
+      message.error('没有有效的物料数据');
+      return;
+    }
+
+    try {
+      const result = await batchAddItems(itemsToAdd);
+      if (result) {
+        const success = Number(result.successCount || 0);
+        const merged = Number(result.mergedCount || 0);
+        message.success(`已添加 ${success} 个物料到采购车（${merged} 个已合并）`);
+      }
+    } catch (error: unknown) {
+      message.error(`添加失败：${error instanceof Error ? error.message : '请求失败'}`);
+    }
+  }, [batchAddItems, data, message, currentStyleNo, styleId]);
+
   return {
     handleGeneratePurchase,
     handleCheckStock,
     handleApplyPickup,
     handleDelete,
+    handleAddToPurchaseCart,
   };
 };
 

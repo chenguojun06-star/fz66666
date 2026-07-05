@@ -24,6 +24,7 @@ interface Props {
   bomStartTime?: string;
   bomCompletedTime?: string;
   onRefresh?: () => void | Promise<void>;
+  onCartAdded?: () => void;
   sizeColorConfig?: {
     sizes?: string[];
     colors?: string[];
@@ -93,6 +94,7 @@ const StyleBomTab: React.FC<Props> = ({
   bomStartTime,
   bomCompletedTime,
   onRefresh,
+  onCartAdded,
   sizeColorConfig,
 }) => {
   const { user } = useUser();
@@ -388,6 +390,7 @@ const StyleBomTab: React.FC<Props> = ({
     handleCheckStock,
     handleApplyPickup,
     handleDelete,
+    handleAddToPurchaseCart,
   } = useStyleBomActions({
     locked,
     styleId,
@@ -403,6 +406,11 @@ const StyleBomTab: React.FC<Props> = ({
     isTempId,
     sortBomRows,
   });
+
+  const handleAddCartWithCallback = useCallback(async () => {
+    await handleAddToPurchaseCart();
+    onCartAdded?.();
+  }, [handleAddToPurchaseCart, onCartAdded]);
 
   const handleBomRecognized = useCallback((items: Array<{ id: string; materialName: string; materialCode?: string; specification?: string; usageAmount?: number }>) => {
     if (!Array.isArray(items) || items.length === 0) return;
@@ -539,6 +547,7 @@ const StyleBomTab: React.FC<Props> = ({
         }}
         onCheckStock={handleCheckStock}
         onGeneratePurchase={handleGeneratePurchase}
+        onAddToPurchaseCart={handleAddCartWithCallback}
         onToggleEdit={() => {
           if (tableEditable) {
             void saveAll();

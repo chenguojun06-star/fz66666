@@ -313,6 +313,53 @@ public class EcommerceOrderOrchestrator {
         }
     }
 
+    @Transactional(rollbackFor = Exception.class)
+    public int onLogisticsDelivered(String trackingNo, String expressCompany, LocalDateTime signTime) {
+        if (!StringUtils.hasText(trackingNo)) return 0;
+        Long tenantId = TenantAssert.requireTenantId();
+        LambdaQueryWrapper<EcommerceOrder> wrapper = new LambdaQueryWrapper<EcommerceOrder>()
+                .eq(EcommerceOrder::getTrackingNo, trackingNo)
+                .eq(EcommerceOrder::getTenantId, tenantId)
+                .in(EcommerceOrder::getStatus, 1, 2);
+        List<EcommerceOrder> orders = ecOrderService.list(wrapper);
+        if (orders.isEmpty()) {
+            log.info("[EC签收回写] 未找到匹配订单 | trackingNo={}", trackingNo);
+            return 0;
+        }
+        int updated = 0;
+        for (EcommerceOrder order : orders) {
+            order.setStatus(3);
+            order.setCompleteTime(signTime != null ? signTime : LocalDateTime.now());
+            ecOrderService.updateById(order);
+            updated++;
+            log.info("[EC签收回写] 订单已完成 | orderNo={} trackingNo={}", order.getOrderNo(), trackingNo);
+        }
+        return updated;
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public int onLogisticsDeliveredByTrackingNo(String trackingNo, String expressCompany, LocalDateTime signTime) {
+        if (!StringUtils.hasText(trackingNo)) return 0;
+        LambdaQueryWrapper<EcommerceOrder> wrapper = new LambdaQueryWrapper<EcommerceOrder>()
+                .eq(EcommerceOrder::getTrackingNo, trackingNo)
+                .in(EcommerceOrder::getStatus, 1, 2);
+        List<EcommerceOrder> orders = ecOrderService.list(wrapper);
+        if (orders.isEmpty()) {
+            log.info("[EC签收回写(无租户)] 未找到匹配订单 | trackingNo={}", trackingNo);
+            return 0;
+        }
+        int updated = 0;
+        for (EcommerceOrder order : orders) {
+            order.setStatus(3);
+            order.setCompleteTime(signTime != null ? signTime : LocalDateTime.now());
+            ecOrderService.updateById(order);
+            updated++;
+            log.info("[EC签收回写(无租户)] 订单已完成 | orderNo={} trackingNo={} tenantId={}",
+                    order.getOrderNo(), trackingNo, order.getTenantId());
+        }
+        return updated;
+    }
+
     /** 平台编码映射常量（统一管理，避免三处 switch 重复）
      *  FULL_TO_SHORT: 全码 → 短码（如 TAOBAO → TB）
      *  SHORT_TO_FULL: 短码 → 全码（如 TB → TAOBAO）

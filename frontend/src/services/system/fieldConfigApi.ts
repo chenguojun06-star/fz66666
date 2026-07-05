@@ -11,15 +11,15 @@ interface ApiResult<T> { code: number; data: T; message?: string; }
 
 export const fieldConfigApi = {
   list: (bizType: string, platform: string = 'pc', includeDisabled: boolean = false) =>
-    api.get<ApiResult<FieldConfigItem[]>>('/api/system/field-config', {
+    api.get<ApiResult<FieldConfigItem[]>>('/system/field-config', {
       params: { bizType, platform, includeDisabled },
     }),
 
   saveBatch: (data: FieldConfigSaveRequest) =>
-    api.put<ApiResult<FieldConfigItem[]>>('/api/system/field-config', data),
+    api.put<ApiResult<FieldConfigItem[]>>('/system/field-config', data),
 
   delete: (bizType: string, fieldKey: string) =>
-    api.delete<ApiResult<void>>('/api/system/field-config', { params: { bizType, fieldKey } }),
+    api.delete<ApiResult<void>>('/system/field-config', { params: { bizType, fieldKey } }),
 };
 
 export const BIZ_TYPE_OPTIONS = [

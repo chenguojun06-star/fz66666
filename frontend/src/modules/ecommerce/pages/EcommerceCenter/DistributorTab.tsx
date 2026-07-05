@@ -289,6 +289,57 @@ const DistributorTab: React.FC = () => {
     });
   }, [st, message, modal]);
 
+  const handleShipB2B = useCallback((id: number) => {
+    let trackingNo = '';
+    let expressCompany = '';
+    modal.confirm({
+      title: '订单发货',
+      content: (
+        <Form layout="vertical">
+          <Form.Item label="快递公司" required>
+            <Select
+              placeholder="请选择快递公司"
+              onChange={v => { expressCompany = v; }}
+              options={[
+                { value: 'SF', label: '顺丰速运' },
+                { value: 'STO', label: '申通快递' },
+                { value: 'YTO', label: '圆通速递' },
+                { value: 'ZTO', label: '中通快递' },
+                { value: 'YD', label: '韵达快递' },
+                { value: 'JT', label: '极兔速递' },
+                { value: 'EMS', label: 'EMS' },
+              ]}
+            />
+          </Form.Item>
+          <Form.Item label="快递单号" required>
+            <Input placeholder="请输入快递单号" onChange={e => { trackingNo = e.target.value; }} />
+          </Form.Item>
+        </Form>
+      ),
+      onOk: async () => {
+        if (!expressCompany || !trackingNo) {
+          message.error('请填写快递公司和快递单号');
+          return Promise.reject();
+        }
+        try {
+          await st.shipB2BOrder(id, trackingNo, expressCompany);
+          message.success('发货成功');
+          st.fetchB2BOrders();
+        } catch { message.error('发货失败'); }
+      },
+    });
+  }, [st, message, modal]);
+
+  const handleConfirmB2B = useCallback((id: number) => {
+    modal.confirm({
+      title: '确认收货？确认后订单将标记为已完成。',
+      onOk: async () => {
+        try { await st.confirmB2BOrder(id); message.success('已确认收货'); st.fetchB2BOrders(); }
+        catch { message.error('操作失败'); }
+      },
+    });
+  }, [st, message, modal]);
+
   const handleReconcile = useCallback(async () => {
     setReconciling(true);
     try {
@@ -400,8 +451,14 @@ const DistributorTab: React.FC = () => {
       };
       const it = v != null ? m[v] : null; return it ? <Tag color={it.color}>{it.label}</Tag> : '-';
     }},
-    { title: '操作', width: 120, render: (_: unknown, r: B2BOrder) => {
+    { title: '操作', width: 200, render: (_: unknown, r: B2BOrder) => {
       const actions: RowAction[] = [];
+      if (r.status === 1) {
+        actions.push({ key: 'ship', label: '发货', primary: true, onClick: () => handleShipB2B(r.id!) });
+      }
+      if (r.status === 2) {
+        actions.push({ key: 'confirm', label: '确认收货', primary: true, onClick: () => handleConfirmB2B(r.id!) });
+      }
       if (r.status != null && r.status < 3) {
         actions.push({ key: 'cancel', label: '取消', danger: true, onClick: () => handleCancelB2B(r.id!) });
       }

@@ -370,7 +370,11 @@ public class PayrollSettlementOrchestrator {
                 .set(ScanRecord::getUpdateTime, now)
                 .eq(ScanRecord::getScanResult, "success")
                 .gt(ScanRecord::getQuantity, 0)
-                .eq(ScanRecord::getTenantId, UserContext.tenantId());
+                .eq(ScanRecord::getTenantId, UserContext.tenantId())
+                // P0: 与 selectPayrollAggregation SQL 的 factory_id IS NULL 对齐
+                // 排除外发工厂扫码（外发走订单结算，不走内部工资结算）
+                // 修复前：按订单结算(不指定 operatorId)时外发记录被误标记为已结算，导致外发撤回被拦截
+                .isNull(ScanRecord::getFactoryId);
         if (!q.includeSettled) {
             uw.and(w -> w.isNull(ScanRecord::getPayrollSettlementId)
                     .or()
@@ -640,7 +644,9 @@ public class PayrollSettlementOrchestrator {
                 .set(ScanRecord::getSettlementStatus, "payroll_approved")
                 .set(ScanRecord::getUpdateTime, now)
                 .eq(ScanRecord::getPayrollSettlementId, settlementId.trim())
-                .eq(ScanRecord::getTenantId, tenantId);
+                .eq(ScanRecord::getTenantId, tenantId)
+                // P0: 双重保险，排除外发工厂扫码（generate 已过滤，此处对齐）
+                .isNull(ScanRecord::getFactoryId);
         scanRecordMapper.update(new ScanRecord(), scanUw);
 
         log.info("[PayrollApprove] 工资结算单审核通过: id={}, confirmerId={}", settlementId, confirmerId);

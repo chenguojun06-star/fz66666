@@ -8,6 +8,7 @@ import {
   StopOutlined,
 } from '@ant-design/icons';
 import { intelligenceApi, type AgentBackgroundTaskDTO } from '@/services/intelligence/intelligenceApi';
+import { useAuthState } from '@/utils/AuthContext';
 import './BackgroundTaskPanel.css';
 
 interface BackgroundTaskPanelProps {
@@ -37,8 +38,10 @@ const BackgroundTaskPanel: React.FC<BackgroundTaskPanelProps> = ({
 }) => {
   const [tasks, setTasks] = useState<AgentBackgroundTaskDTO[]>([]);
   const [loading, setLoading] = useState(false);
+  const { isAuthenticated } = useAuthState();
 
   const fetchTasks = useCallback(async () => {
+    if (!isAuthenticated) return;
     try {
       setLoading(true);
       const data = await intelligenceApi.getBackgroundActiveTasks(maxItems);
@@ -48,13 +51,14 @@ const BackgroundTaskPanel: React.FC<BackgroundTaskPanelProps> = ({
     } finally {
       setLoading(false);
     }
-  }, [maxItems]);
+  }, [maxItems, isAuthenticated]);
 
   useEffect(() => {
+    if (!isAuthenticated) return;
     fetchTasks();
     const timer = setInterval(fetchTasks, pollInterval);
     return () => clearInterval(timer);
-  }, [fetchTasks, pollInterval]);
+  }, [fetchTasks, pollInterval, isAuthenticated]);
 
   const handleCancel = async (taskId: string) => {
     try {

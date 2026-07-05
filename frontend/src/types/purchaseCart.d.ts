@@ -128,6 +128,7 @@ export interface CartPreview {
 export interface AddItemResult {
   itemId: string;
   mergeSuggestion?: MergeSuggestion;
+  merged?: boolean;
 }
 
 export interface ConfirmResult {

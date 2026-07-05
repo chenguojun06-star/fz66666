@@ -346,6 +346,31 @@ public class EcommerceOrderController {
         }
     }
 
+    /** B2B 订单发货 */
+    @PostMapping("/b2b/orders/{id}/ship")
+    public Result<Void> shipB2BOrder(
+            @PathVariable Long id,
+            @RequestParam String trackingNo,
+            @RequestParam String expressCompany) {
+        try {
+            b2BOrderOrchestrator.shipB2BOrder(id, trackingNo, expressCompany);
+            return Result.success(null);
+        } catch (IllegalArgumentException e) {
+            return Result.fail(e.getMessage());
+        }
+    }
+
+    /** B2B 订单确认收货 */
+    @PostMapping("/b2b/orders/{id}/confirm")
+    public Result<Void> confirmB2BOrder(@PathVariable Long id) {
+        try {
+            b2BOrderOrchestrator.confirmB2BOrder(id);
+            return Result.success(null);
+        } catch (IllegalArgumentException e) {
+            return Result.fail(e.getMessage());
+        }
+    }
+
     // ==================== Phase 4: 分销对账 ====================
 
     @Autowired

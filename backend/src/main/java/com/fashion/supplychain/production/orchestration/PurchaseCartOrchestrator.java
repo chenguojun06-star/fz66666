@@ -63,19 +63,50 @@ public class PurchaseCartOrchestrator {
         PurchaseCart cart = purchaseCartService.getOrCreateCart(tenantId, userId);
         log.info("购物车: id={}", cart.getId());
         
-        LambdaQueryWrapper<PurchaseCartItem> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(PurchaseCartItem::getCartId, cart.getId())
+        LambdaQueryWrapper<PurchaseCartItem> exactWrapper = new LambdaQueryWrapper<>();
+        exactWrapper.eq(PurchaseCartItem::getCartId, cart.getId())
                .eq(PurchaseCartItem::getMaterialCode, request.getMaterialCode())
                .eq(request.getSpecifications() != null, 
                    PurchaseCartItem::getSpecifications, request.getSpecifications())
+               .eq(request.getSupplierId() != null, 
+                   PurchaseCartItem::getSupplierId, request.getSupplierId())
                .eq(PurchaseCartItem::getDeleteFlag, 0);
         
-        List<PurchaseCartItem> existItems = purchaseCartItemMapper.selectList(wrapper);
+        List<PurchaseCartItem> exactMatchItems = purchaseCartItemMapper.selectList(exactWrapper);
         
         AddItemResultDto result = new AddItemResultDto();
         
-        if (!existItems.isEmpty()) {
-            MergeSuggestionDto suggestion = buildMergeSuggestion(existItems, request);
+        if (!exactMatchItems.isEmpty()) {
+            PurchaseCartItem target = exactMatchItems.get(0);
+            BigDecimal newQty = target.getQuantity().add(request.getQuantity());
+            target.setQuantity(newQty);
+            if (target.getUnitPrice() != null) {
+                target.setTotalAmount(target.getUnitPrice().multiply(newQty));
+            }
+            purchaseCartItemMapper.updateById(target);
+            log.info("自动合并物料: id={}, materialCode={}, quantity={}", 
+                    target.getId(), request.getMaterialCode(), newQty);
+            result.setItemId(target.getId());
+            result.setMerged(true);
+            
+            recalculateCartTotal(cart.getId());
+            logAppendHelper.appendMergeItems(cart.getId(), 2);
+            return result;
+        }
+        
+        LambdaQueryWrapper<PurchaseCartItem> sameMaterialWrapper = new LambdaQueryWrapper<>();
+        sameMaterialWrapper.eq(PurchaseCartItem::getCartId, cart.getId())
+               .eq(PurchaseCartItem::getMaterialCode, request.getMaterialCode())
+               .eq(request.getSpecifications() != null, 
+                   PurchaseCartItem::getSpecifications, request.getSpecifications())
+               .ne(request.getSupplierId() != null, 
+                   PurchaseCartItem::getSupplierId, request.getSupplierId())
+               .eq(PurchaseCartItem::getDeleteFlag, 0);
+        
+        List<PurchaseCartItem> sameMaterialItems = purchaseCartItemMapper.selectList(sameMaterialWrapper);
+        
+        if (!sameMaterialItems.isEmpty()) {
+            MergeSuggestionDto suggestion = buildMergeSuggestion(sameMaterialItems, request);
             result.setMergeSuggestion(suggestion);
         }
         
@@ -103,13 +134,13 @@ public class PurchaseCartOrchestrator {
         newItem.setFabricWidth(request.getFabricWidth());
         newItem.setFabricWeight(request.getFabricWeight());
         newItem.setRemark(request.getRemark());
-        newItem.setSortOrder(existItems.size());
         newItem.setDeleteFlag(0);
         
         log.info("插入购物车物料: cartId={}, materialCode={}", cart.getId(), request.getMaterialCode());
         purchaseCartItemMapper.insert(newItem);
         log.info("购物车物料插入成功: id={}", newItem.getId());
         result.setItemId(newItem.getId());
+        result.setMerged(false);
         
         recalculateCartTotal(cart.getId());
         logAppendHelper.appendAddItem(cart.getId(), request.getMaterialName() != null ? request.getMaterialName() : request.getMaterialCode());

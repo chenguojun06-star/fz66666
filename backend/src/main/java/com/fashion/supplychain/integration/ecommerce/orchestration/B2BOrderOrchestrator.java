@@ -159,4 +159,53 @@ public class B2BOrderOrchestrator {
         }
         return order;
     }
+
+    /**
+     * B2B 订单发货
+     * status: 1（待发货）→ 2（已发货）
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void shipB2BOrder(Long orderId, String trackingNo, String expressCompany) {
+        TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
+        EcommerceOrder order = orderService.getById(orderId);
+        if (order == null || !"B2B".equals(order.getOrderType())
+                || !order.getTenantId().equals(tenantId)) {
+            throw new IllegalArgumentException("B2B 订单不存在");
+        }
+        if (order.getStatus() == null || order.getStatus() != 1) {
+            throw new IllegalArgumentException("订单状态不是待发货，无法发货");
+        }
+        order.setStatus(2);
+        order.setTrackingNo(trackingNo);
+        order.setExpressCompany(expressCompany);
+        order.setShipTime(LocalDateTime.now());
+        order.setWarehouseStatus(2);
+        orderService.updateById(order);
+        log.info("[B2BOrder] 发货 orderNo={} trackingNo={} express={}",
+                order.getOrderNo(), trackingNo, expressCompany);
+    }
+
+    /**
+     * B2B 订单确认收货
+     * status: 2（已发货）→ 3（已完成）
+     * 账期订单完成后不释放额度（已在下单时占用，结算后才释放）
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void confirmB2BOrder(Long orderId) {
+        TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
+        EcommerceOrder order = orderService.getById(orderId);
+        if (order == null || !"B2B".equals(order.getOrderType())
+                || !order.getTenantId().equals(tenantId)) {
+            throw new IllegalArgumentException("B2B 订单不存在");
+        }
+        if (order.getStatus() == null || order.getStatus() != 2) {
+            throw new IllegalArgumentException("订单状态不是已发货，无法确认收货");
+        }
+        order.setStatus(3);
+        order.setCompleteTime(LocalDateTime.now());
+        orderService.updateById(order);
+        log.info("[B2BOrder] 确认收货 orderNo={}", order.getOrderNo());
+    }
 }

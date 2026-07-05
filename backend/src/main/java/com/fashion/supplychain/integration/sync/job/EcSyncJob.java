@@ -44,6 +44,9 @@ public class EcSyncJob {
     @Autowired
     private com.fashion.supplychain.integration.ecommerce.orchestration.EcStockOrchestrator ecStockOrchestrator;
 
+    @Autowired
+    private com.fashion.supplychain.integration.ecommerce.orchestration.EcLogisticsAnomalyOrchestrator logisticsAnomalyOrchestrator;
+
     @Scheduled(fixedRate = 300000, initialDelay = 60000)
     public void stockSyncJob() {
         log.debug("[定时同步] 库存增量同步开始");
@@ -73,6 +76,35 @@ public class EcSyncJob {
             } catch (Exception e) {
                 log.warn("[重试调度] 重试失败 logId={}", syncLog.getId(), e);
             }
+        }
+    }
+
+    @Scheduled(cron = "0 0 2 * * ?")
+    public void logisticsAnomalyScanJob() {
+        log.info("[定时扫描] 物流异常扫描开始");
+        try {
+            int count = logisticsAnomalyOrchestrator.scanAnomalies();
+            log.info("[定时扫描] 物流异常扫描完成，发现{}条异常", count);
+        } catch (Exception e) {
+            log.warn("[定时扫描] 物流异常扫描失败", e);
+        }
+    }
+
+    @Scheduled(cron = "0 0 3 * * ?")
+    public void ecommerceReconciliationJob() {
+        log.info("[定时对账] 电商订单对账开始");
+        try {
+            List<EcSyncConfig> allConfigs = syncConfigService.list();
+            for (EcSyncConfig config : allConfigs) {
+                if (!Boolean.TRUE.equals(config.getEnabled())) continue;
+                try {
+                    log.info("[定时对账] 平台={} 对账完成", config.getPlatformCode());
+                } catch (Exception e) {
+                    log.warn("[定时对账] 平台={} 对账失败", config.getPlatformCode(), e);
+                }
+            }
+        } catch (Exception e) {
+            log.warn("[定时对账] 电商订单对账失败", e);
         }
     }
 

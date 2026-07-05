@@ -114,96 +114,106 @@ export function useDistributor() {
 
   const fetchLevels = useCallback(async () => {
     try {
-      const res = await api.get('/api/ecommerce/distributor/levels');
+      const res = await api.get('/ecommerce/distributor/levels');
       setLevels(res?.data ?? []);
     } catch { setLevels([]); }
   }, []);
 
   const fetchProfiles = useCallback(async (keyword?: string, level?: string, status?: string) => {
     try {
-      const res = await api.get('/api/ecommerce/distributor/profiles', { params: { keyword, level, status } });
+      const res = await api.get('/ecommerce/distributor/profiles', { params: { keyword, level, status } });
       setProfiles(res?.data ?? []);
     } catch { setProfiles([]); }
   }, []);
 
   const fetchPolicies = useCallback(async (level?: string, skuCode?: string, policyType?: string) => {
     try {
-      const res = await api.get('/api/ecommerce/distributor/policies', { params: { level, skuCode, policyType } });
+      const res = await api.get('/ecommerce/distributor/policies', { params: { level, skuCode, policyType } });
       setPolicies(res?.data ?? []);
     } catch { setPolicies([]); }
   }, []);
 
   const fetchB2BOrders = useCallback(async (keyword?: string, distributorLevel?: string, status?: number) => {
     try {
-      const res = await api.get('/api/ecommerce/b2b/orders', { params: { keyword, distributorLevel, status } });
+      const res = await api.get('/ecommerce/b2b/orders', { params: { keyword, distributorLevel, status } });
       setB2bOrders(res?.data ?? []);
     } catch { setB2bOrders([]); }
   }, []);
 
   const fetchBills = useCallback(async (distributorId?: number, billPeriod?: string, pendingOnly?: boolean) => {
     try {
-      const res = await api.get('/api/ecommerce/distributor/bills', { params: { distributorId, billPeriod, pendingOnly } });
+      const res = await api.get('/ecommerce/distributor/bills', { params: { distributorId, billPeriod, pendingOnly } });
       setBills(res?.data ?? []);
     } catch { setBills([]); }
   }, []);
 
   const saveProfile = useCallback(async (profile: DistributorProfile) => {
     if (profile.id) {
-      await api.put(`/api/ecommerce/distributor/profiles/${profile.id}`, profile);
+      await api.put(`/ecommerce/distributor/profiles/${profile.id}`, profile);
     } else {
-      await api.post('/api/ecommerce/distributor/profiles', profile);
+      await api.post('/ecommerce/distributor/profiles', profile);
     }
   }, []);
 
   const deleteProfile = useCallback(async (id: number) => {
-    await api.delete(`/api/ecommerce/distributor/profiles/${id}`);
+    await api.delete(`/ecommerce/distributor/profiles/${id}`);
   }, []);
 
   const changeProfileStatus = useCallback(async (id: number, status: string) => {
-    await api.post(`/api/ecommerce/distributor/profiles/${id}/status`, null, { params: { status } });
+    await api.post(`/ecommerce/distributor/profiles/${id}/status`, null, { params: { status } });
   }, []);
 
   const saveLevel = useCallback(async (level: DistributorLevel) => {
     if (level.id) {
-      await api.put(`/api/ecommerce/distributor/levels/${level.id}`, level);
+      await api.put(`/ecommerce/distributor/levels/${level.id}`, level);
     } else {
-      await api.post('/api/ecommerce/distributor/levels', level);
+      await api.post('/ecommerce/distributor/levels', level);
     }
   }, []);
 
   const deleteLevel = useCallback(async (id: number) => {
-    await api.delete(`/api/ecommerce/distributor/levels/${id}`);
+    await api.delete(`/ecommerce/distributor/levels/${id}`);
   }, []);
 
   const savePolicy = useCallback(async (policy: DistributorPricePolicy) => {
     if (policy.id) {
-      await api.put(`/api/ecommerce/distributor/policies/${policy.id}`, policy);
+      await api.put(`/ecommerce/distributor/policies/${policy.id}`, policy);
     } else {
-      await api.post('/api/ecommerce/distributor/policies', policy);
+      await api.post('/ecommerce/distributor/policies', policy);
     }
   }, []);
 
   const deletePolicy = useCallback(async (id: number) => {
-    await api.delete(`/api/ecommerce/distributor/policies/${id}`);
+    await api.delete(`/ecommerce/distributor/policies/${id}`);
   }, []);
 
   const createB2BOrder = useCallback(async (order: B2BOrder) => {
-    return await api.post('/api/ecommerce/b2b/orders', order);
+    return await api.post('/ecommerce/b2b/orders', order);
   }, []);
 
   const cancelB2BOrder = useCallback(async (id: number) => {
-    await api.post(`/api/ecommerce/b2b/orders/${id}/cancel`);
+    await api.post(`/ecommerce/b2b/orders/${id}/cancel`);
+  }, []);
+
+  const shipB2BOrder = useCallback(async (id: number, trackingNo: string, expressCompany: string) => {
+    await api.post(`/ecommerce/b2b/orders/${id}/ship`, null, {
+      params: { trackingNo, expressCompany },
+    });
+  }, []);
+
+  const confirmB2BOrder = useCallback(async (id: number) => {
+    await api.post(`/ecommerce/b2b/orders/${id}/confirm`);
   }, []);
 
   const reconcileBills = useCallback(async (distributorId?: number, billPeriod?: string) => {
-    const res = await api.post<ApiResult<ReconcileResult>>('/api/ecommerce/distributor/bill/reconcile', null, {
+    const res = await api.post<ApiResult<ReconcileResult>>('/ecommerce/distributor/bill/reconcile', null, {
       params: { distributorId, billPeriod },
     });
     return res?.data;
   }, []);
 
   const handleBill = useCallback(async (id: number, status: number, remark?: string) => {
-    await api.post(`/api/ecommerce/distributor/bills/${id}/handle`, { status, remark });
+    await api.post(`/ecommerce/distributor/bills/${id}/handle`, { status, remark });
   }, []);
 
   const fetchAll = useCallback(async () => {
@@ -224,7 +234,7 @@ export function useDistributor() {
     saveProfile, deleteProfile, changeProfileStatus,
     saveLevel, deleteLevel,
     savePolicy, deletePolicy,
-    createB2BOrder, cancelB2BOrder,
+    createB2BOrder, cancelB2BOrder, shipB2BOrder, confirmB2BOrder,
     reconcileBills, handleBill,
   };
 }

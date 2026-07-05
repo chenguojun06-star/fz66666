@@ -1,7 +1,8 @@
 import React, { Suspense } from 'react';
 import { createPortal } from 'react-dom';
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
-import { Button, Image } from 'antd';
+import { Button, Image, FloatButton, Badge } from 'antd';
+import { ShoppingCartOutlined } from '@ant-design/icons';
 import PrivateRoute from './components/PrivateRoute';
 import XiaoyunPageLoader from './components/common/XiaoyunPageLoader';
 import { useAuthState } from './utils/AuthContext';
@@ -14,7 +15,8 @@ import CommandPalette from './components/common/CommandPalette';
 import KeyboardShortcuts from './components/common/KeyboardShortcuts';
 import Login from './pages/Login';
 import Register from './pages/Register';
-import { PurchaseCartProvider } from './context/PurchaseCartContext';
+import { PurchaseCartProvider, usePurchaseCartContext } from './context/PurchaseCartContext';
+import { PurchaseCartDrawer } from './components/common/PurchaseCartDrawer';
 
 import { StyleInfo, StyleInfoList, OrderManagement, DataCenter, TemplateCenter, PatternRevisionManagement, MaintenanceCenter } from './modules/basic';
 import { MaterialReconciliation, PayrollOperatorSummary, FinanceCenter, ExpenseReimbursement, EmployeeAdvance, ExpenseManagement, WagePayment, EcSalesRevenue, TaxExport, OrderWasteAnalysis, FinanceDashboard, ReceivableList as FinanceReceivableList, PayableList, PaymentSchedule } from './modules/finance';
@@ -126,6 +128,7 @@ const AppRoutes: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { modalWidth } = useViewport();
+  const { isAuthenticated } = useAuthState();
   const backgroundLocation = (location.state as any)?.backgroundLocation;
   const [paletteOpen, setPaletteOpen] = React.useState(false);
   const routeFallback = <XiaoyunPageLoader message="小云正在展开页面内容…" inline />;
@@ -318,6 +321,29 @@ const AppRoutes: React.FC = () => {
 
       <KeyboardShortcuts />
       <GlobalImagePreview />
+      {isAuthenticated && <GlobalCartFloatButton />}
+    </>
+  );
+};
+
+const GlobalCartFloatButton: React.FC = () => {
+  const { cart, drawerOpen, openDrawer, closeDrawer, loadCart } = usePurchaseCartContext();
+  const itemCount = cart?.totalItems ?? 0;
+
+  React.useEffect(() => {
+    loadCart().catch(() => {});
+  }, [loadCart]);
+
+  return (
+    <>
+      <FloatButton
+        icon={<Badge count={itemCount} size="small" offset={[4, -4]}><ShoppingCartOutlined /></Badge>}
+        type="primary"
+        onClick={openDrawer}
+        style={{ right: 24, bottom: 100 }}
+        tooltip="采购车"
+      />
+      <PurchaseCartDrawer open={drawerOpen} onClose={closeDrawer} />
     </>
   );
 };

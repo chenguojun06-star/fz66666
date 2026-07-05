@@ -6,4 +6,5 @@ import lombok.Data;
 public class AddItemResultDto {
     private String itemId;
     private MergeSuggestionDto mergeSuggestion;
+    private Boolean merged;
 }

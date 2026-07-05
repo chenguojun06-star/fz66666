@@ -2,6 +2,7 @@ package com.fashion.supplychain.integration.logistics.callback;
 
 import com.fashion.supplychain.integration.config.SFExpressProperties;
 import com.fashion.supplychain.integration.config.STOProperties;
+import com.fashion.supplychain.integration.ecommerce.orchestration.EcommerceOrderOrchestrator;
 import com.fashion.supplychain.integration.record.entity.IntegrationCallbackLog;
 import com.fashion.supplychain.integration.record.service.IntegrationRecordService;
 import com.fashion.supplychain.integration.util.SignatureUtils;
@@ -36,6 +37,7 @@ import java.util.Map;
 public class LogisticsCallbackController {
 
     private final IntegrationRecordService recordService;
+    private final EcommerceOrderOrchestrator ecommerceOrderOrchestrator;
 
     @Value("${spring.profiles.active:dev}")
     private String activeProfile;
@@ -206,6 +208,9 @@ public class LogisticsCallbackController {
         // String status = event.getOpCode() == 80 ? "DELIVERED" : "IN_TRANSIT";
         // LocalDateTime eventTime = event.getOpTime();
         // recordService.updateLogisticsStatus(trackingNumber, status, "顺丰路由: " + event.getOpCode(), eventTime);
+        // if ("DELIVERED".equals(status)) {
+        //     ecommerceOrderOrchestrator.onLogisticsDelivered(trackingNumber, "SF", eventTime);
+        // }
     }
 
     /**
@@ -241,6 +246,15 @@ public class LogisticsCallbackController {
         if (mappedStatus != null && trackingNumber != null && !trackingNumber.isEmpty()) {
             recordService.updateLogisticsStatus(
                     trackingNumber, mappedStatus, "申通状态: " + status, LocalDateTime.now());
+            if ("DELIVERED".equals(mappedStatus)) {
+                try {
+                    int updated = ecommerceOrderOrchestrator.onLogisticsDeliveredByTrackingNo(
+                            trackingNumber, "STO", LocalDateTime.now());
+                    log.info("[申通签收] 已更新 {} 个电商订单状态", updated);
+                } catch (Exception e) {
+                    log.error("[申通签收] 回写电商订单状态失败 | trackingNo={}", trackingNumber, e);
+                }
+            }
         }
     }
 

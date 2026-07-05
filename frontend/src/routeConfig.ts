@@ -539,7 +539,7 @@ export const menuConfig: MenuSection[] = [
     key: 'production',
     icon: React.createElement(BuildOutlined),
     items: [
-      { label: '我的订单', path: paths.productionList, icon: React.createElement(BuildOutlined) },
+      { label: '生产订单', path: paths.productionList, icon: React.createElement(BuildOutlined) },
       { label: '裁剪管理', path: paths.cutting, icon: React.createElement(ScissorOutlined) },
       { label: '工序跟进', path: paths.progressDetail, icon: React.createElement(FileSearchOutlined) },
       { label: '外发工厂', path: paths.externalFactory, icon: React.createElement(ThunderboltOutlined) },
@@ -603,7 +603,7 @@ export const menuConfig: MenuSection[] = [
       // ========== 费用管理 ==========
       { label: '费用管理', path: paths.expenseManagement, icon: React.createElement(AuditOutlined) },
       // ========== 财税工具 ==========
-      { label: '财税工具', path: paths.expenseManagement, icon: React.createElement(DollarOutlined) },
+      { label: '财税工具', path: paths.financeTaxExport, icon: React.createElement(DollarOutlined) },
       // ========== 成本分析 ==========
       { label: '损耗分析', path: paths.orderWasteAnalysis, icon: React.createElement(BarChartOutlined) },
     ],

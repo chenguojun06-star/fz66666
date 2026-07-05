@@ -26,7 +26,7 @@ export function useUserPreference() {
   const listByPage = useCallback(async (pageKey: string): Promise<UserPreferenceItem[]> => {
     try {
       const res = await api.get<{ code: number; data: UserPreferenceItem[] }>(
-        '/api/system/user-preference',
+        '/system/user-preference',
         { params: { pageKey } }
       );
       if (res?.code === 200 && Array.isArray(res.data)) return res.data;
@@ -38,7 +38,7 @@ export function useUserPreference() {
 
   const save = useCallback(async (params: SavePreferenceParams) => {
     try {
-      await api.put('/api/system/user-preference', {
+      await api.put('/system/user-preference', {
         bizType: params.bizType || 'common',
         pageKey: params.pageKey,
         preferenceType: params.preferenceType,
@@ -53,7 +53,7 @@ export function useUserPreference() {
 
   const remove = useCallback(async (pageKey: string, preferenceType: string) => {
     try {
-      await api.delete('/api/system/user-preference', {
+      await api.delete('/system/user-preference', {
         params: { pageKey, preferenceType },
       });
     } catch (e) {

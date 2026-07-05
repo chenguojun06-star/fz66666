@@ -23,6 +23,7 @@ interface PurchaseCartContextValue {
   previewData: CartPreview | null;
   mergeSuggestions: MergeSuggestion[];
   selectedItems: Set<string>;
+  drawerOpen: boolean;
   loadCart: () => Promise<void>;
   loadMergeSuggestions: () => Promise<void>;
   addItem: (request: AddCartItemRequest) => Promise<AddItemResult | null>;
@@ -37,6 +38,8 @@ interface PurchaseCartContextValue {
   toggleSelect: (itemId: string) => void;
   toggleSelectAll: () => void;
   setPreviewVisible: (v: boolean) => void;
+  openDrawer: () => void;
+  closeDrawer: () => void;
   cartVersion: number;
 }
 
@@ -69,6 +72,15 @@ export const PurchaseCartProvider: React.FC<PurchaseCartProviderProps> = ({
   const [mergeSuggestions, setMergeSuggestions] = useState<MergeSuggestion[]>([]);
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [cartVersion, setCartVersion] = useState(0);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
+  const openDrawer = useCallback(() => {
+    setDrawerOpen(true);
+  }, []);
+
+  const closeDrawer = useCallback(() => {
+    setDrawerOpen(false);
+  }, []);
 
   const onConfirmSuccessRef = useRef(onConfirmSuccess);
   onConfirmSuccessRef.current = onConfirmSuccess;
@@ -307,6 +319,9 @@ export const PurchaseCartProvider: React.FC<PurchaseCartProviderProps> = ({
     toggleSelect,
     toggleSelectAll,
     setPreviewVisible,
+    drawerOpen,
+    openDrawer,
+    closeDrawer,
     cartVersion,
   };
 
