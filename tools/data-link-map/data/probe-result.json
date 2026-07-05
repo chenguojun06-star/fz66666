@@ -1,0 +1,998 @@
+{
+  "probed_at": "2026-07-05T21:44:16.553012",
+  "base_url": "https://www.webyszl.cn",
+  "summary": {
+    "green": 96,
+    "yellow": 0,
+    "red": 0,
+    "total": 96
+  },
+  "chain_stats": {
+    "A": {
+      "green": 13,
+      "yellow": 0,
+      "red": 0,
+      "total": 13
+    },
+    "B": {
+      "green": 30,
+      "yellow": 0,
+      "red": 0,
+      "total": 30
+    },
+    "C": {
+      "green": 17,
+      "yellow": 0,
+      "red": 0,
+      "total": 17
+    },
+    "D": {
+      "green": 36,
+      "yellow": 0,
+      "red": 0,
+      "total": 36
+    }
+  },
+  "results": [
+    {
+      "id": "endpoint:GET-/api/style/info/list",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 189,
+      "error": null,
+      "path": "/api/style/info/list",
+      "chain": "A",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/style/info/development-stats",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 161,
+      "error": null,
+      "path": "/api/style/info/development-stats",
+      "chain": "A",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/style/sku/list",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 164,
+      "error": null,
+      "path": "/api/style/sku/list",
+      "chain": "A",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/style/process/list",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 137,
+      "error": null,
+      "path": "/api/style/process/list",
+      "chain": "A",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/style/size-price/list",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 181,
+      "error": null,
+      "path": "/api/style/size-price/list",
+      "chain": "A",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/style/bom/list",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 157,
+      "error": null,
+      "path": "/api/style/bom/list",
+      "chain": "A",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/style/operation-log/list",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 166,
+      "error": null,
+      "path": "/api/style/operation-log/list",
+      "chain": "A",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/style/size/list",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 181,
+      "error": null,
+      "path": "/api/style/size/list",
+      "chain": "A",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/style/secondary-process/list",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 177,
+      "error": null,
+      "path": "/api/style/secondary-process/list",
+      "chain": "A",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/style/attachment/list",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 172,
+      "error": null,
+      "path": "/api/style/attachment/list",
+      "chain": "A",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/crm/customers/active-list",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 146,
+      "error": null,
+      "path": "/api/crm/customers/active-list",
+      "chain": "A",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/crm/sales-return/list",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 903,
+      "error": null,
+      "path": "/api/crm/sales-return/list",
+      "chain": "A",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/production/scan/list",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 103,
+      "error": null,
+      "path": "/api/production/scan/list",
+      "chain": "B",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/production/scan/my-quality-tasks",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 125,
+      "error": null,
+      "path": "/api/production/scan/my-quality-tasks",
+      "chain": "B",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/production/warehousing/list",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 168,
+      "error": null,
+      "path": "/api/production/warehousing/list",
+      "chain": "B",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/production/order/list",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 131,
+      "error": null,
+      "path": "/api/production/order/list",
+      "chain": "B",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/production/order/transfer/list",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 137,
+      "error": null,
+      "path": "/api/production/order/transfer/list",
+      "chain": "B",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/production/purchase/list",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 110,
+      "error": null,
+      "path": "/api/production/purchase/list",
+      "chain": "B",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/production/purchase-return/list",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 792,
+      "error": null,
+      "path": "/api/production/purchase-return/list",
+      "chain": "B",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/production/cutting/list",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 137,
+      "error": null,
+      "path": "/api/production/cutting/list",
+      "chain": "B",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/production/cutting/summary",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 106,
+      "error": null,
+      "path": "/api/production/cutting/summary",
+      "chain": "B",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/production/cutting-bom/list",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 569,
+      "error": null,
+      "path": "/api/production/cutting-bom/list",
+      "chain": "B",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/production/cutting-bom/list-by-style-no",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 121,
+      "error": null,
+      "path": "/api/production/cutting-bom/list-by-style-no",
+      "chain": "B",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/production/outstock/list",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 140,
+      "error": null,
+      "path": "/api/production/outstock/list",
+      "chain": "B",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/production/material/inbound/list",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 157,
+      "error": null,
+      "path": "/api/production/material/inbound/list",
+      "chain": "B",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/production/material/stock/list",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 166,
+      "error": null,
+      "path": "/api/production/material/stock/list",
+      "chain": "B",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/production/material/stock/summary",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 131,
+      "error": null,
+      "path": "/api/production/material/stock/summary",
+      "chain": "B",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/production/picking/list",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 171,
+      "error": null,
+      "path": "/api/production/picking/list",
+      "chain": "B",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/production/pattern/list",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 130,
+      "error": null,
+      "path": "/api/production/pattern/list",
+      "chain": "B",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/production/pattern/scan-records/my-history",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 164,
+      "error": null,
+      "path": "/api/production/pattern/scan-records/my-history",
+      "chain": "B",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/finance/payroll-settlement/operator-summary",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 154,
+      "error": null,
+      "path": "/api/finance/payroll-settlement/operator-summary",
+      "chain": "C",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/finance/payroll-settlement/list",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 145,
+      "error": null,
+      "path": "/api/finance/payroll-settlement/list",
+      "chain": "C",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/finance/ec-revenue/summary",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 127,
+      "error": null,
+      "path": "/api/finance/ec-revenue/summary",
+      "chain": "C",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/finance/ec-revenue/list",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 142,
+      "error": null,
+      "path": "/api/finance/ec-revenue/list",
+      "chain": "C",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/finance/bill-aggregation/list",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 147,
+      "error": null,
+      "path": "/api/finance/bill-aggregation/list",
+      "chain": "C",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/finance/payable/list",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 116,
+      "error": null,
+      "path": "/api/finance/payable/list",
+      "chain": "C",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/finance/reconciliation/list",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 126,
+      "error": null,
+      "path": "/api/finance/reconciliation/list",
+      "chain": "C",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/finance/expense-reimbursement/list",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 518,
+      "error": null,
+      "path": "/api/finance/expense-reimbursement/list",
+      "chain": "C",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/finance/finished-settlement/list",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 201,
+      "error": null,
+      "path": "/api/finance/finished-settlement/list",
+      "chain": "C",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/finance/finished-settlement/summary",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 113,
+      "error": null,
+      "path": "/api/finance/finished-settlement/summary",
+      "chain": "C",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/intelligence/patrol/summary",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 170,
+      "error": null,
+      "path": "/api/intelligence/patrol/summary",
+      "chain": "D",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/intelligence/feedback-reason/list",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 185,
+      "error": null,
+      "path": "/api/intelligence/feedback-reason/list",
+      "chain": "D",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/intelligence/pending-tasks/my",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 118,
+      "error": null,
+      "path": "/api/intelligence/pending-tasks/my",
+      "chain": "D",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/intelligence/pending-tasks/summary",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 115,
+      "error": null,
+      "path": "/api/intelligence/pending-tasks/summary",
+      "chain": "D",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/intelligence/action-center/task-feedback/list",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 158,
+      "error": null,
+      "path": "/api/intelligence/action-center/task-feedback/list",
+      "chain": "D",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/intelligence/orphan-data/list",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 562,
+      "error": null,
+      "path": "/api/intelligence/orphan-data/list",
+      "chain": "D",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/intelligence/meeting/list",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 101,
+      "error": null,
+      "path": "/api/intelligence/meeting/list",
+      "chain": "D",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/intelligence/background-task/active",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 155,
+      "error": null,
+      "path": "/api/intelligence/background-task/active",
+      "chain": "D",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/intelligence/background-task/list",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 104,
+      "error": null,
+      "path": "/api/intelligence/background-task/list",
+      "chain": "D",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/intelligence/pain-point/list",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 465,
+      "error": null,
+      "path": "/api/intelligence/pain-point/list",
+      "chain": "D",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/intelligence/task-center/my-tasks",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 139,
+      "error": null,
+      "path": "/api/intelligence/task-center/my-tasks",
+      "chain": "D",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/intelligence/evolution/active-overrides",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 372,
+      "error": null,
+      "path": "/api/intelligence/evolution/active-overrides",
+      "chain": "D",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/system/system-status",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 137,
+      "error": null,
+      "path": "/api/system/system-status",
+      "chain": "D",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/dashboard",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 142,
+      "error": null,
+      "path": "/api/dashboard",
+      "chain": "D",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/system/user/info",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 141,
+      "error": null,
+      "path": "/api/system/user/info",
+      "chain": "D",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/system/user/list",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 97,
+      "error": null,
+      "path": "/api/system/user/list",
+      "chain": "D",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/system/menu/list",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 147,
+      "error": null,
+      "path": "/api/system/menu/list",
+      "chain": "D",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/system/role/list",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 356,
+      "error": null,
+      "path": "/api/system/role/list",
+      "chain": "D",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/system/role/all",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 137,
+      "error": null,
+      "path": "/api/system/role/all",
+      "chain": "D",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/system/permission/list",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 128,
+      "error": null,
+      "path": "/api/system/permission/list",
+      "chain": "D",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/system/dict/list",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 107,
+      "error": null,
+      "path": "/api/system/dict/list",
+      "chain": "D",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/system/factory/list",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 103,
+      "error": null,
+      "path": "/api/system/factory/list",
+      "chain": "D",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/system/operation-log/list",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 137,
+      "error": null,
+      "path": "/api/system/operation-log/list",
+      "chain": "D",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/system/login-log/list",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 120,
+      "error": null,
+      "path": "/api/system/login-log/list",
+      "chain": "D",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/system/approval/my",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 145,
+      "error": null,
+      "path": "/api/system/approval/my",
+      "chain": "D",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/warehouse/area/list",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 145,
+      "error": null,
+      "path": "/api/warehouse/area/list",
+      "chain": "B",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/warehouse/area/list-by-type",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 139,
+      "error": null,
+      "path": "/api/warehouse/area/list-by-type",
+      "chain": "B",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/warehouse/transfer/list",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 451,
+      "error": null,
+      "path": "/api/warehouse/transfer/list",
+      "chain": "B",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/warehouse/finished-inventory/list",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 289,
+      "error": null,
+      "path": "/api/warehouse/finished-inventory/list",
+      "chain": "B",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/warehouse/change-log/list",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 129,
+      "error": null,
+      "path": "/api/warehouse/change-log/list",
+      "chain": "B",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/warehouse/location/list",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 294,
+      "error": null,
+      "path": "/api/warehouse/location/list",
+      "chain": "B",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/warehouse/location/list-by-type",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 332,
+      "error": null,
+      "path": "/api/warehouse/location/list-by-type",
+      "chain": "B",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/warehouse/inventory-check/summary",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 746,
+      "error": null,
+      "path": "/api/warehouse/inventory-check/summary",
+      "chain": "B",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/warehouse/material-stock/list",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 1297,
+      "error": null,
+      "path": "/api/warehouse/material-stock/list",
+      "chain": "B",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/warehouse/material-inbound/list",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 307,
+      "error": null,
+      "path": "/api/warehouse/material-inbound/list",
+      "chain": "B",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/integration/jushuitan/order/list",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 316,
+      "error": null,
+      "path": "/api/integration/jushuitan/order/list",
+      "chain": "D",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/integration/ec-order/list",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 344,
+      "error": null,
+      "path": "/api/integration/ec-order/list",
+      "chain": "D",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/distributor/order/list",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 324,
+      "error": null,
+      "path": "/api/distributor/order/list",
+      "chain": "D",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/distributor/list",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 317,
+      "error": null,
+      "path": "/api/distributor/list",
+      "chain": "D",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/btb/order/list",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 309,
+      "error": null,
+      "path": "/api/btb/order/list",
+      "chain": "D",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/openapi/order/list",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 308,
+      "error": null,
+      "path": "/api/openapi/order/list",
+      "chain": "D",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/logistics/provider/list",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 314,
+      "error": null,
+      "path": "/api/logistics/provider/list",
+      "chain": "D",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/logistics/callback/list",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 320,
+      "error": null,
+      "path": "/api/logistics/callback/list",
+      "chain": "D",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/ec/stock/list",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 420,
+      "error": null,
+      "path": "/api/ec/stock/list",
+      "chain": "D",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/ec/stock/allocations",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 334,
+      "error": null,
+      "path": "/api/ec/stock/allocations",
+      "chain": "D",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/stock/sample/list",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 324,
+      "error": null,
+      "path": "/api/stock/sample/list",
+      "chain": "B",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/stock/sample/loan/list",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 329,
+      "error": null,
+      "path": "/api/stock/sample/loan/list",
+      "chain": "B",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/finance/tax-config/list",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 421,
+      "error": null,
+      "path": "/api/finance/tax-config/list",
+      "chain": "C",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/finance/tax-config/active",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 331,
+      "error": null,
+      "path": "/api/finance/tax-config/active",
+      "chain": "C",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/finance/period/list",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 776,
+      "error": null,
+      "path": "/api/finance/period/list",
+      "chain": "C",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/finance/dashboard/summary",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 1100,
+      "error": null,
+      "path": "/api/finance/dashboard/summary",
+      "chain": "C",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/finance/shipment-reconciliation/list",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 352,
+      "error": null,
+      "path": "/api/finance/shipment-reconciliation/list",
+      "chain": "C",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/finance/material-reconciliation/list",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 298,
+      "error": null,
+      "path": "/api/finance/material-reconciliation/list",
+      "chain": "C",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/template-library/list",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 368,
+      "error": null,
+      "path": "/api/template-library/list",
+      "chain": "A",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/supplier-user/list",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 361,
+      "error": null,
+      "path": "/api/supplier-user/list",
+      "chain": "D",
+      "module": "unknown"
+    },
+    {
+      "id": "endpoint:GET-/api/factory-worker/list",
+      "status": "green",
+      "httpStatus": 401,
+      "elapsedMs": 344,
+      "error": null,
+      "path": "/api/factory-worker/list",
+      "chain": "C",
+      "module": "unknown"
+    }
+  ]
+}

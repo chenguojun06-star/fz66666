@@ -291,7 +291,7 @@ Page({
       SEWING: '车缝', TAIL: '尾部',
     };
     const operationType = String(selected.value || '').toUpperCase() || 'RECEIVE';
-    const operationLabel = selected.label || operationType;
+    const operationLabel = selected.label || '未知';
     const scanType = String(selected.scanType || '').toLowerCase();
     const requiresWarehouseInput = data.hasProcessSystem
       ? scanType === 'warehouse' || scanType === 'warehouse_in'

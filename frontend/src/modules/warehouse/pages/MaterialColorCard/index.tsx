@@ -570,8 +570,9 @@ const MaterialColorCardPage: React.FC = () => {
           </Row>
 
           <Form.Item name="supplierId" hidden><Input /></Form.Item>
+          <Form.Item name="supplierName" hidden><Input /></Form.Item>
           <Form.Item label="供应商" required>
-            <Form.Item noStyle shouldUpdate={(prev, curr) => prev.supplierId !== curr.supplierId}>
+            <Form.Item noStyle shouldUpdate={(prev, curr) => prev.supplierId !== curr.supplierId || prev.supplierName !== curr.supplierName}>
               {({ getFieldValue }) => (
                 <SupplierSelect
                   placeholder="请选择供应商"
@@ -580,8 +581,8 @@ const MaterialColorCardPage: React.FC = () => {
                     form.setFieldsValue({
                       supplierId: (option as any)?.supplierId || value,
                       supplierName: value,
-                      supplierContactPerson: (option as any)?.contactPerson,
-                      supplierContactPhone: (option as any)?.contactPhone,
+                      supplierContactPerson: (option as any)?.supplierContactPerson,
+                      supplierContactPhone: (option as any)?.supplierContactPhone,
                     });
                   }}
                 />
@@ -592,12 +593,12 @@ const MaterialColorCardPage: React.FC = () => {
           <Row gutter={12}>
             <Col xs={24} sm={12}>
               <Form.Item name="supplierContactPerson" label="联系人">
-                <Input placeholder="自动填充" />
+                <Input placeholder="选择供应商自动填充，可手动修改" />
               </Form.Item>
             </Col>
             <Col xs={24} sm={12}>
               <Form.Item name="supplierContactPhone" label="联系电话">
-                <Input placeholder="自动填充" />
+                <Input placeholder="选择供应商自动填充，可手动修改" />
               </Form.Item>
             </Col>
           </Row>

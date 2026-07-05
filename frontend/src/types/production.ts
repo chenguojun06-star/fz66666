@@ -537,6 +537,8 @@ export interface WarehousingQueryParams {
   orgUnitId?: string;
   parentOrgUnitId?: string;
   factoryType?: 'INTERNAL' | 'EXTERNAL' | '';
+  /** 质检状态过滤：qualified(合格) / unqualified(不合格) / scrapped(报废) / reversed(冲销) */
+  qualityStatus?: string;
   page: number;
   pageSize: number;
 }

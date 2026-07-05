@@ -10,7 +10,7 @@ const STATUS_MAP = {
   received: { text: '已收货', cls: 'tag-success' },
 };
 
-function receiveStatusText(s) { return (STATUS_MAP[s] || {}).text || s || ''; }
+function receiveStatusText(s) { return s ? ((STATUS_MAP[s] || {}).text || '未知') : ''; }
 function receiveStatusCls(s) { return (STATUS_MAP[s] || {}).cls || 'tag-default'; }
 
 function enrichForDashboard(order) {

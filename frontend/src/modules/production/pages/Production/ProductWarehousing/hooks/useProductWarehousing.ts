@@ -197,13 +197,26 @@ export const useProductWarehousing = () => {
   // 切换状态筛选
   const handleStatusFilterChange = useCallback((newFilter: StatusFilter) => {
     setStatusFilter(newFilter);
-    if (newFilter === 'all' || newFilter === 'completed' || newFilter === 'unqualified') {
-      setPendingBundles([]);
-      fetchWarehousingList();
-    } else {
+    setPendingBundles([]);
+    if (newFilter === 'pendingQc' || newFilter === 'pendingPackaging' || newFilter === 'pendingWarehouse') {
+      // 待处理类：走 pending-bundles API
       fetchPendingBundles(newFilter);
+      return;
     }
-  }, [fetchPendingBundles, fetchWarehousingList]);
+    // all / completed / unqualified：走 list API，通过 qualityStatus 过滤
+    // 不合格 → qualityStatus=unqualified
+    // 已完成 → qualityStatus=qualified（合格即视为已完成，含已入库和待入库）
+    // 全部 → 不传 qualityStatus
+    const nextQualityStatus = newFilter === 'unqualified' ? 'unqualified'
+      : newFilter === 'completed' ? 'qualified'
+      : undefined;
+    setQueryParams((prev) => ({
+      ...prev,
+      page: 1,
+      qualityStatus: nextQualityStatus,
+    }));
+    // 注意：setQueryParams 会触发下方 useEffect 自动调 fetchWarehousingList
+  }, [fetchPendingBundles]);
 
   const navigateToInspect = useCallback((orderId: string, bundleId?: string) => {
     const params = new URLSearchParams();

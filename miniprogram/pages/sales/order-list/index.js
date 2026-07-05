@@ -181,7 +181,7 @@ Page({
         // status 后端为 Integer
         var statusNum = Number(r.status);
         if (isNaN(statusNum)) statusNum = -1;
-        var st = STATUS_MAP[statusNum] || { text: r.status != null ? String(r.status) : '-', cls: 'order-tag--default' };
+        var st = STATUS_MAP[statusNum] || { text: '未知', cls: 'order-tag--default' };
         // 商品信息
         var productName = r.productName || r.itemName || '';
         var quantity = r.quantity != null ? r.quantity : '';
@@ -192,7 +192,7 @@ Page({
           platformOrderNo: r.platformOrderNo || '',
           orderNo: r.orderNo || '',
           platform: code,
-          platformName: PLATFORM_NAMES[code] || code || '-',
+          platformName: PLATFORM_NAMES[code] || '未知',
           buyerName: r.buyerNick || r.buyerName || r.receiverName || '-',
           amount: fmtMoney(r.payAmount || r.totalAmount || 0),
           status: st.text,

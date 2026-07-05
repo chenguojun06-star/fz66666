@@ -77,7 +77,7 @@ Page({
       const res = await api.system.myFeedbackList({ page: 1, pageSize: 20 });
       const list = (res.records || (Array.isArray(res) ? res : [])).map(item => ({
         ...item,
-        statusText: STATUS_MAP[item.status] || item.status,
+        statusText: item.status ? (STATUS_MAP[item.status] || '未知') : '',
       }));
       this.setData({ myFeedbacks: list });
     } catch (err) {
