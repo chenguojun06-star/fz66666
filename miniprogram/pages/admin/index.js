@@ -14,7 +14,7 @@ const HOME_MENU_KEY_MAP = {
   production: { fullKey: 'miniprogram.menu.production', label: '质检通知' },
   quality: { fullKey: 'miniprogram.menu.quality', label: '生产扫码' },
   bundleSplit: { fullKey: 'miniprogram.menu.bundleSplit', label: '菲号单价' },
-  cuttingDetail: { fullKey: 'miniprogram.menu.cuttingDetail', label: '裁剪明细' },
+  cuttingDetail: { fullKey: 'miniprogram.menu.cuttingDetail', label: '裁剪任务' },
   history: { fullKey: 'miniprogram.menu.history', label: '扫码历史' },
   factoryShipment: { fullKey: 'miniprogram.menu.factoryShipment', label: '外发工厂' },
   advance: { fullKey: 'miniprogram.menu.advance', label: '员工借支' },

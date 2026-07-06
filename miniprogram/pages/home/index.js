@@ -93,9 +93,9 @@ function buildMenuItems(menuVisibility) {
   if (!isFactory && visibility.bundleSplit !== false) {
     items.push({ id: 'bundleSplit', name: '菲号单价', iconClass: 'icon-menu-price', circleClass: 'menu-icon-circle--orange', route: '/pages/work/bundle-split/index' });
   }
-  // 裁剪明细：外发工厂不开放
+  // 裁剪任务：外发工厂不开放
   if (!isFactory && visibility.cuttingDetail !== false) {
-    items.push({ id: 'cuttingDetail', name: '裁剪明细', iconClass: 'icon-menu-cutting', circleClass: 'menu-icon-circle--rose', route: '/pages/cutting/bundle-detail/index' });
+    items.push({ id: 'cuttingDetail', name: '裁剪任务', iconClass: 'icon-menu-cutting', circleClass: 'menu-icon-circle--rose', route: '/pages/cutting/bundle-detail/index' });
   }
   // 扫码历史：所有用户均可，但外发工厂只看到自己工厂的记录
   if (visibility.history !== false) {

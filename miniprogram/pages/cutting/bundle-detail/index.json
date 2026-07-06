@@ -1,5 +1,5 @@
 {
-  "navigationBarTitleText": "裁剪",
+  "navigationBarTitleText": "裁剪任务",
   "enablePullDownRefresh": true,
   "usingComponents": {
     "image-preview": "/components/common/image-preview/index",
