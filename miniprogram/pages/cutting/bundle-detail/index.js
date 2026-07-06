@@ -234,11 +234,9 @@ Page({
     this.setData({ loading: true });
     try {
       await this.loadOrderInfo(orderNo);
-      // 并行加载裁剪任务状态和菲号明细
-      await Promise.all([
-        this._loadCuttingTask(orderNo),
-        this.loadCuttingBundles(orderNo),
-      ]);
+      // 串行：先加载裁剪任务状态（决定后续是否显示裁剪分扎表单）
+      await this._loadCuttingTask(orderNo);
+      await this.loadCuttingBundles(orderNo);
     } catch (e) {
       console.error('[bundle-detail] loadAll error', e);
       toast.error('数据加载失败，请下拉刷新重试');
@@ -261,10 +259,11 @@ Page({
       const myId = String(userInfo.id || userInfo.userId || '').trim();
       const status = String(task.status || '').toLowerCase();
       const receiverId = String(task.receiverId || '').trim();
-      const canReceive = status === 'pending' || (!receiverId && status !== 'bundled');
-      const receivedByMe = receiverId && myId && receiverId === myId;
-      // 已完成/已分扎时不再显示领取条
-      const showReceiveBar = status !== 'completed' && status !== 'bundled' && status !== 'done';
+      // 终态：已完成/已分扎/已结束 — 不允许再领取或操作
+      const isTerminal = status === 'completed' || status === 'done' || status === 'bundled';
+      const canReceive = !isTerminal && (status === 'pending' || (!receiverId && status !== 'bundled'));
+      const receivedByMe = !isTerminal && receiverId && myId && receiverId === myId;
+      const showReceiveBar = !isTerminal;
       this.setData({
         cuttingTaskInfo: {
           taskId: task.id,
@@ -274,6 +273,7 @@ Page({
           canReceive: canReceive,
           receivedByMe: receivedByMe,
           showReceiveBar: showReceiveBar,
+          isTerminal: isTerminal,
         },
       });
     } catch (e) {
@@ -365,15 +365,18 @@ Page({
       const bundles = this._extractList(res);
 
       if (!bundles.length) {
+        // 终态或已被他人领取时，不显示裁剪分扎表单
+        const info = this.data.cuttingTaskInfo;
+        const canEdit = !info || !info.isTerminal;
         this.setData({
           cuttingTotal: 0, cuttingExcess: 0, maxBedNo: '-',
           operatorName: '-', latestBundleTime: '-',
           hasBundles: false, _rawBundles: [],
           cuttingMatrix: { sizes: [], rows: [] },
           cuttingSimpleRows: [],
-          showCuttingForm: true,
+          showCuttingForm: canEdit,
         });
-        this._parseAndSetCuttingLines(this.data.orderInfo);
+        if (canEdit) this._parseAndSetCuttingLines(this.data.orderInfo);
         return;
       }
 
@@ -1296,6 +1299,15 @@ Page({
   onGenerateBundles() {
     if (this.data.cuttingSubmitting) return;
     const d = this.data;
+    const info = d.cuttingTaskInfo;
+    // 终态禁止操作
+    if (info && info.isTerminal) {
+      return toast.info('裁剪任务已完成，无法生成菲号');
+    }
+    // 已被他人领取禁止操作
+    if (info && info.receiverId && !info.receivedByMe) {
+      return toast.error('该任务已被他人领取，无法操作');
+    }
     const cuttingOrderLines = d.cuttingOrderLines;
     const bundleSize = parseInt(d.bundleSize, 10) || 20;
     const orderId = d.orderId;

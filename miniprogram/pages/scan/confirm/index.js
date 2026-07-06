@@ -84,8 +84,10 @@ Page({
         pending: '待领取', not_started: '待领取',
         received: '已领取', in_progress: '已领取',
         bundled: '已完成', completed: '已完成', done: '已完成',
+        cancelled: '已取消', archived: '已归档',
       };
-      cuttingTask.statusText = statusMap[cuttingTask.status] || '待领取';
+      cuttingTask.statusText = statusMap[cuttingTask.status] || '未知状态';
+      cuttingTask.isTerminal = ['completed', 'done', 'bundled', 'cancelled', 'archived'].includes(cuttingTask.status);
     }
 
     let btnText = '确认扫码';

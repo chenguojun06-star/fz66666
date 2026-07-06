@@ -93,6 +93,7 @@ Page({
 
         return {
           ...item,
+          _status: status,  // 保留标准化后的状态用于整体判断
           materialTypeCN: item.materialType ? (MATERIAL_TYPE_MAP[item.materialType] || '未知') : '',
           statusText: this._getStatusText(status),
           statusColor: this._getStatusColor(status),
@@ -109,9 +110,13 @@ Page({
 
       const orderId = (materialPurchases[0] && (materialPurchases[0].orderId || materialPurchases[0].order_id)) || '';
       const overallArrivalRate = totalPurchased > 0 ? Math.round(totalArrived / totalPurchased * 100) : 0;
-      const canConfirmProcurement = hasUnconfirmed && overallArrivalRate >= 50;
+      // 整体采购阶段已完成：所有物料都 procurement_completed
+      const allProcurementCompleted = materialPurchases.length > 0
+        && materialPurchases.every(m => m._status === 'procurement_completed');
+      // canConfirmProcurement 需排除整体已完成的情况
+      const canConfirmProcurement = hasUnconfirmed && overallArrivalRate >= 50 && !allProcurementCompleted;
 
-      this.setData({ orderId, materialPurchases, loading: false, overallArrivalRate, canConfirmProcurement, hasReturnConfirmed });
+      this.setData({ orderId, materialPurchases, loading: false, overallArrivalRate, canConfirmProcurement, hasReturnConfirmed, allProcurementCompleted });
     } catch (e) {
       console.error('加载采购详情失败:', e);
       this.setData({ loading: false });
@@ -242,6 +247,10 @@ Page({
   async onConfirmProcurement() {
     if (this.data.hasReturnConfirmed) {
       toast.warning('已有物料完成回料确认，无需再次确认');
+      return;
+    }
+    if (this.data.allProcurementCompleted) {
+      toast.info('采购阶段已完成，无需再次确认');
       return;
     }
 
