@@ -188,7 +188,7 @@ public class SampleWorkflowTool extends AbstractAgentTool {
         String patternAction = required(args, "patternAction");
         Object result = switch (patternAction) {
             case "receive" -> patternProductionOrchestrator.receivePattern(pattern.getId(), Map.of());
-            case "complete" -> patternProductionOrchestrator.submitScan(pattern.getId(), "COMPLETE", "PLATE_WORKER", null, null, null, null, null, null);
+            case "complete" -> patternProductionOrchestrator.submitScan(pattern.getId(), "COMPLETE", "PLATE_WORKER", null, null, null, null, null, null, null, null);
             case "warehouse-in" -> patternProductionOrchestrator.warehouseIn(pattern.getId(), text(args.get("remark")), null, null, null);
             case "review" -> patternProductionOrchestrator.reviewPattern(pattern.getId(), text(args.get("result")), text(args.get("remark")));
             case "maintenance" -> {

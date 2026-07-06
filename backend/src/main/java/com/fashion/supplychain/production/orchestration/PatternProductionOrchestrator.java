@@ -376,7 +376,8 @@ public class PatternProductionOrchestrator {
      */
     @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> submitScan(String patternId, String operationType, String operatorRole, String remark,
-                                          Integer quantity, String warehouseCode, String warehouseAreaId,
+                                          Integer quantity, String color, String size,
+                                          String warehouseCode, String warehouseAreaId,
                                           String warehouseLocationCode, BigDecimal unitPrice) {
         assertSubmitScanParams(patternId, operationType);
         PatternProduction pattern = loadPatternForScan(patternId);
@@ -386,11 +387,16 @@ public class PatternProductionOrchestrator {
         String operatorName = UserContext.username();
         updatePatternQuantityIfNeeded(pattern, quantity, operatorName);
 
+        // 优先使用前端传入的颜色/尺码，为空时 fallback 到样板单的值
+        String effectiveColor = StringUtils.hasText(color) ? color : pattern.getColor();
+        String effectiveSize = StringUtils.hasText(size) ? size : pattern.getSize();
+
         PatternScanRecord scanRecord = createPatternScanRecord(pattern, operationType, operatorId, operatorName,
-                operatorRole, remark, quantity, warehouseCode, warehouseAreaId, warehouseLocationCode);
+                operatorRole, remark, quantity, effectiveColor, effectiveSize,
+                warehouseCode, warehouseAreaId, warehouseLocationCode);
         patternScanRecordService.save(scanRecord);
 
-        syncToScanRecord(pattern, operationType, operatorId, operatorName, remark, unitPrice);
+        syncToScanRecord(pattern, operationType, operatorId, operatorName, remark, unitPrice, effectiveColor, effectiveSize);
         statusHelper.updatePatternStatusByOperation(pattern, operationType, operatorName);
 
         if ("COMPLETE".equals(operationType.trim()) || "WAREHOUSE_IN".equals(operationType.trim())) {
@@ -425,13 +431,14 @@ public class PatternProductionOrchestrator {
 
     private PatternScanRecord createPatternScanRecord(PatternProduction pattern, String operationType,
             String operatorId, String operatorName, String operatorRole, String remark, Integer quantity,
+            String effectiveColor, String effectiveSize,
             String warehouseCode, String warehouseAreaId, String warehouseLocationCode) {
         PatternScanRecord scanRecord = new PatternScanRecord();
         scanRecord.setPatternProductionId(pattern.getId());
         scanRecord.setStyleId(pattern.getStyleId());
         scanRecord.setStyleNo(pattern.getStyleNo());
-        scanRecord.setColor(pattern.getColor());
-        scanRecord.setSize(pattern.getSize());
+        scanRecord.setColor(effectiveColor);
+        scanRecord.setSize(effectiveSize);
         // 数量：优先使用本次扫码传入的数量，其次取样板生产单的数量
         if (quantity != null && quantity > 0) {
             scanRecord.setQuantity(quantity);
@@ -458,7 +465,8 @@ public class PatternProductionOrchestrator {
     }
 
     private void syncToScanRecord(PatternProduction pattern, String operationType,
-            String operatorId, String operatorName, String remark, BigDecimal unitPrice) {
+            String operatorId, String operatorName, String remark, BigDecimal unitPrice,
+            String effectiveColor, String effectiveSize) {
         try {
             ScanRecord sr = new ScanRecord();
             sr.setScanType("pattern");
@@ -468,8 +476,8 @@ public class PatternProductionOrchestrator {
             sr.setScanTime(LocalDateTime.now());
             sr.setStyleNo(pattern.getStyleNo());
             sr.setOrderNo(pattern.getStyleNo());
-            sr.setColor(pattern.getColor());
-            sr.setSize(pattern.getSize());
+            sr.setColor(effectiveColor);
+            sr.setSize(effectiveSize);
             String processLabel = patternOperationLabel(operationType);
             sr.setProcessName(processLabel);
             sr.setProcessCode(processLabel);
@@ -527,7 +535,8 @@ public class PatternProductionOrchestrator {
         }
 
         Map<String, Object> result = submitScan(patternId, "WAREHOUSE_IN", "WAREHOUSE", remark,
-                pattern.getQuantity(), warehouseCode, warehouseAreaId, warehouseLocationCode, null);
+                pattern.getQuantity(), pattern.getColor(), pattern.getSize(),
+                warehouseCode, warehouseAreaId, warehouseLocationCode, null);
         result.put("message", "样衣入库成功");
         return result;
     }

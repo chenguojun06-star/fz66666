@@ -215,7 +215,7 @@ public class PatternProductionController {
                     return Result.success(receiveMsg);
                 case "complete":
                     Map<String, Object> completeResult = patternProductionOrchestrator.submitScan(
-                            id, "COMPLETE", "PLATE_WORKER", null, null, null, null, null, null);
+                            id, "COMPLETE", "PLATE_WORKER", null, null, null, null, null, null, null, null);
                     return Result.success(completeResult);
                 case "warehouse-in":
                     String remark = request != null ? (String) request.get("remark") : null;
@@ -346,10 +346,13 @@ public class PatternProductionController {
             if (unitPriceObj != null) {
                 try { unitPrice = new java.math.BigDecimal(String.valueOf(unitPriceObj)); } catch (Exception e) { log.warn("[样衣扫码] 单价解析失败: unitPriceObj={}", unitPriceObj, e.getMessage()); }
             }
+            // 接收前端传入的颜色/尺码，用于覆盖样板单的默认值（兜底场景：样板单未填色/码）
+            String color = request.get("color") == null ? null : String.valueOf(request.get("color")).trim();
+            String size = request.get("size") == null ? null : String.valueOf(request.get("size")).trim();
 
             Map<String, Object> result = patternProductionOrchestrator.submitScan(
-                    patternId, operationType, operatorRole, remark, quantity, warehouseCode,
-                    warehouseAreaId, warehouseLocationCode, unitPrice);
+                    patternId, operationType, operatorRole, remark, quantity, color, size,
+                    warehouseCode, warehouseAreaId, warehouseLocationCode, unitPrice);
             return Result.success(result);
         } catch (IllegalArgumentException e) {
             return Result.fail(e.getMessage());
