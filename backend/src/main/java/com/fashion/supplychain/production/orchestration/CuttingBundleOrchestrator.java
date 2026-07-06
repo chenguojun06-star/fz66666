@@ -31,6 +31,9 @@ public class CuttingBundleOrchestrator {
     @Autowired
     private ProductionOrderService productionOrderService;
 
+    @Autowired
+    private com.fashion.supplychain.production.helper.OrderRemarkHelper orderRemarkHelper;
+
     public IPage<CuttingBundle> list(Map<String, Object> params) {
         try {
             IPage<CuttingBundle> page = doList(params);
@@ -137,7 +140,17 @@ public class CuttingBundleOrchestrator {
             throw new IllegalArgumentException("参数错误");
         }
 
-        return cuttingBundleService.generateBundles(orderId, bundles);
+        List<CuttingBundle> result = cuttingBundleService.generateBundles(orderId, bundles);
+        // 写订单备注时间线：分扎生成
+        try {
+            ProductionOrder order = productionOrderService.getById(orderId);
+            if (order != null) {
+                orderRemarkHelper.append(order, "分扎生成", "生成 " + bundles.size() + " 个菲号");
+            }
+        } catch (Exception e) {
+            log.warn("[分扎生成] 写订单备注失败（不阻断）: orderId={}, err={}", orderId, e.getMessage());
+        }
+        return result;
     }
 
     public List<CuttingBundle> receive(Map<String, Object> body) {

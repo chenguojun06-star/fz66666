@@ -3,6 +3,7 @@ package com.fashion.supplychain.production.orchestration;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.production.entity.ProductionOrder;
+import com.fashion.supplychain.production.helper.ProductionOrderLogAppendHelper;
 import com.fashion.supplychain.production.service.ProductionOrderQueryService;
 import com.fashion.supplychain.production.service.ProductionOrderScanRecordDomainService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
@@ -40,6 +41,8 @@ public class ProductionOrderWorkflowHelper {
     private ProductionOrderOrchestratorHelper helper;
     @Autowired
     private ObjectMapper objectMapper;
+    @Autowired
+    private ProductionOrderLogAppendHelper logAppendHelper;
 
     @Transactional(rollbackFor = Exception.class)
     public ProductionOrder lockProgressWorkflow(String id, String workflowJson) {
@@ -84,6 +87,13 @@ public class ProductionOrderWorkflowHelper {
             log.warn("lockProgressWorkflow: syncUnitPrices failed for orderId={}", oid, e);
         }
 
+        // 写订单备注时间线：锁定工序流程
+        try {
+            logAppendHelper.appendLockWorkflow(oid, userName != null ? userName : UserContext.username());
+        } catch (Exception e) {
+            log.warn("[锁定工序] 写订单备注失败（不阻断）: orderId={}, err={}", oid, e.getMessage());
+        }
+
         return productionOrderQueryService.getDetailById(oid);
     }
 
@@ -116,6 +126,13 @@ public class ProductionOrderWorkflowHelper {
             scanRecordDomainService.insertRollbackRecord(existed, "流程回滚", reason, LocalDateTime.now());
         } catch (Exception e) {
             log.warn("rollbackProgressWorkflow: insertRollbackRecord failed for orderId={}", oid, e);
+        }
+
+        // 写订单备注时间线：回滚工序流程
+        try {
+            logAppendHelper.appendRollbackWorkflow(oid, reason);
+        } catch (Exception e) {
+            log.warn("[回滚工序] 写订单备注失败（不阻断）: orderId={}, err={}", oid, e.getMessage());
         }
 
         return productionOrderQueryService.getDetailById(oid);
@@ -199,6 +216,13 @@ public class ProductionOrderWorkflowHelper {
             productionOrderService.updateById(updateEntity);
         }
 
+        // 写订单备注时间线：确认采购完成
+        try {
+            logAppendHelper.appendConfirmProcurement(oid, remark);
+        } catch (Exception e) {
+            log.warn("[确认采购] 写订单备注失败（不阻断）: orderId={}, err={}", oid, e.getMessage());
+        }
+
         return productionOrderQueryService.getDetailById(oid);
     }
 
@@ -253,6 +277,13 @@ public class ProductionOrderWorkflowHelper {
             } catch (Exception e) {
                 log.warn("delegateProcess: parse/update workflow failed for orderId={}", oid, e);
             }
+        }
+
+        // 写订单备注时间线：工序委派
+        try {
+            logAppendHelper.appendDelegateProcess(oid, delegateNote);
+        } catch (Exception e) {
+            log.warn("[工序委派] 写订单备注失败（不阻断）: orderId={}, err={}", oid, e.getMessage());
         }
 
         Map<String, Object> result = new LinkedHashMap<>();

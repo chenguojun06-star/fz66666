@@ -274,6 +274,20 @@ public class ProductionScanExecutor {
         String displayProcessName = ctx.processCode != null ? ctx.processCode : (ctx.progressStage != null ? ctx.progressStage : "");
         result.put("message", "扫码成功" + (displayProcessName.isEmpty() ? "" : " · " + displayProcessName) + (bundleNoStr.isEmpty() ? "" : " · 菲号" + bundleNoStr));
         result.put("scanRecord", sr);
+        // 暴露 scanRecordId 给上层（ScanRecordOrchestrator 调用 logAppendHelper 时需要）
+        if (sr != null && sr.getId() != null) {
+            result.put("scanRecordId", sr.getId());
+        }
+        // 同时确保 orderId/orderNo 在顶层（logAppendHelper.appendOrderLog 需要 orderId）
+        if (sr != null && sr.getOrderId() != null) {
+            result.put("orderId", sr.getOrderId());
+        }
+        if (sr != null && sr.getOrderNo() != null) {
+            result.put("orderNo", sr.getOrderNo());
+        }
+        if (sr != null && sr.getScanType() != null) {
+            result.put("scanType", sr.getScanType());
+        }
         Map<String, Object> orderInfo = executorSupport.buildOrderInfo(ctx.order, ctx.bundle);
         result.put("orderInfo", orderInfo);
         // ══════ 关键信息同步到顶层，便于扫码页面直接展示 ══════
@@ -378,6 +392,9 @@ public class ProductionScanExecutor {
                 duplicate.put("message", "扫码过快，已自动忽略重复提交");
                 duplicate.put("duplicateIgnored", true);
                 duplicate.put("scanRecord", existing);
+                if (existing != null && existing.getId() != null) {
+                    duplicate.put("scanRecordId", existing.getId());
+                }
                 // ══════ 重复扫码也带上完整信息，页面不至于空白 ══════
                 Map<String, Object> dupOrderInfo = executorSupport.buildOrderInfo(order, bundle);
                 duplicate.put("orderInfo", dupOrderInfo);
@@ -409,6 +426,9 @@ public class ProductionScanExecutor {
 
             Map<String, Object> result = new HashMap<>();
             result.put("success", true); result.put("message", "已扫码更新"); result.put("scanRecord", returned);
+            if (returned != null && returned.getId() != null) {
+                result.put("scanRecordId", returned.getId());
+            }
             // ══════ 更新成功也带上完整信息，和首次扫码一致 ══════
             Map<String, Object> updateOrderInfo = executorSupport.buildOrderInfo(order, bundle);
             result.put("orderInfo", updateOrderInfo);

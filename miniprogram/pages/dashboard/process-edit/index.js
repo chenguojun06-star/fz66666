@@ -30,7 +30,6 @@ Page({
     orderId: '',
     orderNo: '',
     styleNo: '',
-    styleId: '',
     status: '',
     statusCn: '',
     statusClass: '',
@@ -123,69 +122,23 @@ Page({
       }
       const status = order.status || '';
       const editable = EDITABLE_STATUSES.indexOf(status) !== -1;
-      const styleId = order.styleId || '';
       that.setData({
         orderId: order.id || that.data.orderId,
         orderNo: order.orderNo || that.data.orderNo,
         styleNo: order.styleNo || order.styleNumber || '',
-        styleId: styleId,
         status: status,
         statusCn: STATUS_CN[status] || status,
         statusClass: STATUS_CLASS[status] || 'order-status--other',
         editable: editable,
       });
 
-      // 优先从 t_style_process 表读取工序（真实数据源）
-      // 兜底从 order.progressWorkflowJson 读（向后兼容旧数据）
-      if (styleId) {
-        api.style.listProcesses({ styleId: styleId }).then(function (procRes) {
-          const list = Array.isArray(procRes) ? procRes : (procRes && procRes.data) || [];
-          let processes;
-          if (list && list.length > 0) {
-            processes = list.map(function (p, i) {
-              return {
-                id: p.id || ('proc_' + i),
-                processName: p.processName || '',
-                processCode: p.processCode || String(i + 1).padStart(2, '0'),
-                processCodeText: p.processCode || String(i + 1).padStart(2, '0'),
-                progressStage: p.progressStage || '',
-                machineType: p.machineType || '',
-                standardTime: p.standardTime || 0,
-                price: Number(p.price || 0),
-                difficulty: p.difficulty || '',
-                description: p.description || '',
-                sortOrder: p.sortOrder != null ? p.sortOrder : i,
-                _modified: false,
-              };
-            });
-          } else {
-            processes = that._extractProcesses(order);
-          }
-          that._buildStages(processes);
-          that._originalProcesses = JSON.parse(JSON.stringify(processes));
-          that._deletedIds = [];
-          that._newProcesses = [];
-          that._recalcTotals();
-          that.setData({ loading: false });
-        }).catch(function (err) {
-          console.warn('[process-edit] 加载工序列表失败,回退到JSON:', err);
-          const processes = that._extractProcesses(order);
-          that._buildStages(processes);
-          that._originalProcesses = JSON.parse(JSON.stringify(processes));
-          that._deletedIds = [];
-          that._newProcesses = [];
-          that._recalcTotals();
-          that.setData({ loading: false });
-        });
-      } else {
-        const processes = that._extractProcesses(order);
-        that._buildStages(processes);
-        that._originalProcesses = JSON.parse(JSON.stringify(processes));
-        that._deletedIds = [];
-        that._newProcesses = [];
-        that._recalcTotals();
-        that.setData({ loading: false });
-      }
+      const processes = that._extractProcesses(order);
+      that._buildStages(processes);
+      that._originalProcesses = JSON.parse(JSON.stringify(processes));
+      that._deletedIds = [];
+      that._newProcesses = [];
+      that._recalcTotals();
+      that.setData({ loading: false });
     }).catch(function (err) {
       console.error('[process-edit] 加载订单失败:', err);
       that.setData({ loading: false });
@@ -586,31 +539,20 @@ Page({
   onSaveAll: function () {
     const that = this;
     const stages = that.data.stages;
-    const styleId = that.data.styleId;
-    const orderId = that.data.orderId;
-
-    if (!styleId) {
-      toast.error('缺少款式ID,无法保存工序');
-      return;
-    }
-
-    // 收集所有工序（保持顺序）
-    const allProcesses = [];
+    const nodes = [];
     let sortOrder = 0;
     STAGE_MAP.forEach(function (stageDef) {
       for (let i = 0; i < stages.length; i++) {
         if (stages[i].id === stageDef.id) {
           stages[i].processes.forEach(function (p) {
-            allProcesses.push({
-              id: p.id,
-              isNew: String(p.id).startsWith('new_'),
-              isModified: !!p._modified,
-              processName: p.processName,
+            nodes.push({
+              id: String(p.id).startsWith('new_') ? 'proc_' + sortOrder : p.id,
+              name: p.processName,
               processCode: p.processCode || String(sortOrder + 1).padStart(2, '0'),
               progressStage: p.progressStage || stageDef.id,
               machineType: p.machineType || '',
               standardTime: p.standardTime || 0,
-              price: p.price || 0,
+              unitPrice: p.price || 0,
               difficulty: p.difficulty || '',
               description: p.description || '',
               sortOrder: sortOrder,
@@ -622,80 +564,25 @@ Page({
       }
     });
 
+    const workflowJson = JSON.stringify({ nodes: nodes });
+    const payload = {
+      id: that.data.orderId,
+      progressWorkflowJson: workflowJson,
+    };
+
     wx.showLoading({ title: '保存中...' });
-
-    // 1. 删除已标记的工序
-    const deletePromises = (that._deletedIds || []).map(function (pid) {
-      return api.style.deleteProcess(pid).catch(function (err) {
-        console.warn('[process-edit] 删除工序失败:', pid, err);
-      });
-    });
-
-    Promise.all(deletePromises).then(function () {
-      // 2. 新增和修改工序
-      const savePromises = allProcesses.map(function (p) {
-        const payload = {
-          styleId: styleId,
-          processName: p.processName,
-          processCode: p.processCode,
-          progressStage: p.progressStage,
-          machineType: p.machineType,
-          standardTime: p.standardTime,
-          price: p.price,
-          difficulty: p.difficulty,
-          description: p.description,
-          sortOrder: p.sortOrder,
-        };
-        if (p.isNew) {
-          return api.style.createProcess(payload).catch(function (err) {
-            console.error('[process-edit] 新增工序失败:', p.processName, err);
-            throw err;
-          });
-        } else if (p.isModified) {
-          payload.id = p.id;
-          return api.style.updateProcess(p.id, payload).catch(function (err) {
-            console.error('[process-edit] 更新工序失败:', p.processName, err);
-            throw err;
-          });
-        }
-        return Promise.resolve();
-      });
-      return Promise.all(savePromises);
-    }).then(function () {
-      // 3. 同步更新订单的 progressWorkflowJson（向后兼容,PC端兜底读取）
-      const nodes = allProcesses.map(function (p) {
-        return {
-          id: p.isNew ? 'proc_' + p.sortOrder : p.id,
-          name: p.processName,
-          processCode: p.processCode,
-          progressStage: p.progressStage,
-          machineType: p.machineType,
-          standardTime: p.standardTime,
-          unitPrice: p.price,
-          difficulty: p.difficulty,
-          description: p.description,
-          sortOrder: p.sortOrder,
-        };
-      });
-      const workflowJson = JSON.stringify({ nodes: nodes });
-      const orderPayload = {
-        id: orderId,
-        progressWorkflowJson: workflowJson,
-      };
-      return api.production.quickEditOrder(orderPayload);
-    }).then(function () {
-      // 4. 保存成功后重新拉取数据验证
-      return that._loadOrderAndProcesses(orderId);
+    api.production.quickEditOrder(payload).then(function () {
+      // 保存成功后重新拉取数据验证
+      return that._loadOrderAndProcesses(that.data.orderId);
     }).then(function () {
       that._deletedIds = [];
       that._newProcesses = [];
       that.setData({ hasChanges: false });
-      wx.hideLoading();
       toast.success('保存成功');
     }).catch(function (err) {
       wx.hideLoading();
       console.error('[process-edit] 保存失败:', err);
-      toast.error('保存失败:' + (err && err.message ? err.message : '请重试'));
+      toast.error('保存失败');
     });
   },
 });

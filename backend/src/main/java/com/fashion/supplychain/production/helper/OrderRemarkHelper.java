@@ -16,7 +16,7 @@ import org.springframework.util.StringUtils;
 @Slf4j
 public class OrderRemarkHelper {
 
-    private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+    private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     private static final int MAX_LENGTH = 4000;
     private static final int MAX_ENTRIES = 10;
 
@@ -32,11 +32,13 @@ public class OrderRemarkHelper {
         }
         String operatorName = getOperatorName();
         String now = LocalDateTime.now().format(FMT);
+        // 格式统一为：[yyyy-MM-dd HH:mm:ss] 操作人 动作：详情
+        // 与 OperationLogAppendUtil.buildLogEntry 保持一致,确保 OrderRemarkController.parseInlineRemarks 能正确解析
         StringBuilder line = new StringBuilder();
         line.append("[").append(now).append("] ");
-        line.append(operatorName).append("-").append(action);
+        line.append(operatorName).append(" ").append(action);
         if (StringUtils.hasText(detail)) {
-            line.append("-").append(detail);
+            line.append("：").append(detail);
         }
         String newRemark = line.toString();
         ProductionOrder fresh = productionOrderService.getById(order.getId());

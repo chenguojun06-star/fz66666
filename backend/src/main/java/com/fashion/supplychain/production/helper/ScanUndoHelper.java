@@ -261,6 +261,13 @@ public class ScanUndoHelper {
         if (!hasText(qr) || qty <= 0) {
             throw new IllegalArgumentException("撤销参数错误");
         }
+        // 在删除前先把日志需要的字段缓存到 result，便于上层调用 logAppendHelper
+        String recordIdForLog = target.getId();
+        String orderIdForLog = target.getOrderId();
+        String orderNoForLog = target.getOrderNo();
+        String scanTypeForLog = target.getScanType();
+        String bundleNoForLog = target.getCuttingBundleNo() == null ? null : String.valueOf(target.getCuttingBundleNo());
+
         Map<String, Object> body = new HashMap<>();
         body.put("orderId", target.getOrderId());
         body.put("cuttingBundleQrCode", qr);
@@ -277,10 +284,24 @@ public class ScanUndoHelper {
         Map<String, Object> resp = new HashMap<>();
         resp.put("success", ok);
         resp.put("message", "已撤销");
+        // 注入日志所需字段（ScanRecord 已被删除，不能再查）
+        resp.put("scanRecordId", recordIdForLog);
+        resp.put("orderId", orderIdForLog);
+        resp.put("orderNo", orderNoForLog);
+        resp.put("scanType", scanTypeForLog);
+        resp.put("bundleNo", bundleNoForLog);
+        resp.put("undoType", "warehouse_rollback");
         return resp;
     }
 
     private Map<String, Object> undoNormalScan(ScanRecord target) {
+        // 在删除前先把日志需要的字段缓存到 result，便于上层调用 logAppendHelper
+        String recordIdForLog = target.getId();
+        String orderIdForLog = target.getOrderId();
+        String orderNoForLog = target.getOrderNo();
+        String scanTypeForLog = target.getScanType();
+        String bundleNoForLog = target.getCuttingBundleNo() == null ? null : String.valueOf(target.getCuttingBundleNo());
+
         resetTrackingByScanRecord(target.getId());
         scanRecordService.removeById(target.getId());
         log.info("[undo] 已删除扫码记录: recordId={}", target.getId());
@@ -290,6 +311,13 @@ public class ScanUndoHelper {
         Map<String, Object> resp = new HashMap<>();
         resp.put("success", true);
         resp.put("message", "已撤销");
+        // 注入日志所需字段（ScanRecord 已被删除，不能再查）
+        resp.put("scanRecordId", recordIdForLog);
+        resp.put("orderId", orderIdForLog);
+        resp.put("orderNo", orderNoForLog);
+        resp.put("scanType", scanTypeForLog);
+        resp.put("bundleNo", bundleNoForLog);
+        resp.put("undoType", "normal");
         return resp;
     }
 

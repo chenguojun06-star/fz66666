@@ -297,6 +297,8 @@ public class CuttingTaskOrchestrator {
         try {
             if (updated != null && StringUtils.hasText(updated.getProductionOrderNo())) {
                 String updatedReceiverName = updated.getReceiverName();
+                // 仅写一条带 "裁剪" role 的 t_order_remark 用于前端分组展示
+                // ProductionOrder.remarks + 第二条 t_order_remark 由 logAppendHelper.appendAssign 双写
                 OrderRemark sysRemark = new OrderRemark();
                 sysRemark.setTargetType("order");
                 sysRemark.setTargetNo(updated.getProductionOrderNo());
@@ -309,12 +311,6 @@ public class CuttingTaskOrchestrator {
                 sysRemark.setCreateTime(LocalDateTime.now());
                 sysRemark.setDeleteFlag(0);
                 orderRemarkService.save(sysRemark);
-
-                ProductionOrder order = productionOrderService.getByOrderNo(updated.getProductionOrderNo());
-                if (order != null) {
-                    orderRemarkHelper.append(order, "裁剪领取",
-                            (StringUtils.hasText(updatedReceiverName) ? "领取人:" + updatedReceiverName : ""));
-                }
             }
         } catch (Exception e) {
             log.warn("自动写入裁剪领取备注失败，不影响主流程", e);

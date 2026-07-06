@@ -6,6 +6,7 @@ import com.fashion.supplychain.production.service.ProductionOrderService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
 @Slf4j
 @Component
@@ -56,5 +57,25 @@ public class ProductionOrderLogAppendHelper {
 
     public void appendUrge(String orderId, String content) {
         appendOperation(orderId, "订单催单", content);
+    }
+
+    public void appendClose(String orderId, String remark) {
+        appendOperation(orderId, "关闭订单", StringUtils.hasText(remark) ? "备注：" + remark : null);
+    }
+
+    public void appendLockWorkflow(String orderId, String operator) {
+        appendOperation(orderId, "锁定工序流程", "操作人：" + operator);
+    }
+
+    public void appendRollbackWorkflow(String orderId, String reason) {
+        appendOperation(orderId, "回滚工序流程", StringUtils.hasText(reason) ? "原因：" + reason : null);
+    }
+
+    public void appendDelegateProcess(String orderId, String delegateNote) {
+        appendOperation(orderId, "工序委派", delegateNote);
+    }
+
+    public void appendConfirmProcurement(String orderId, String remark) {
+        appendOperation(orderId, "确认采购完成", StringUtils.hasText(remark) ? "备注：" + remark : null);
     }
 }

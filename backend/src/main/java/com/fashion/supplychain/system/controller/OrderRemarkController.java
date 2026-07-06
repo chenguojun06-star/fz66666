@@ -47,8 +47,12 @@ public class OrderRemarkController {
     @Autowired
     private MaterialPurchaseService materialPurchaseService;
 
+    // 兼容两种格式：
+    // 1. 旧格式：[MM-DD HH:mm] 或 [MM-DD HH:mm:ss]
+    // 2. 新格式：[yyyy-MM-dd HH:mm:ss]（与 OperationLogAppendUtil / OrderRemarkHelper 统一）
+    // 3. 可选 AI巡检 前缀
     private static final Pattern REMARK_LINE_PATTERN = Pattern.compile(
-            "^\\[(?:(AI巡检)\\s*)?(\\d{2}-\\d{2}\\s+\\d{2}:\\d{2})\\]\\s*(.+)$"
+            "^\\[(?:(AI巡检)\\s*)?((?:\\d{4}-)?\\d{2}-\\d{2}\\s+\\d{2}:\\d{2}(?::\\d{2})?)\\]\\s*(.+)$"
     );
 
     @PostMapping("/list")
@@ -252,9 +256,20 @@ public class OrderRemarkController {
     private LocalDateTime parseRemarkTime(String timeStr) {
         try {
             if (timeStr == null || timeStr.trim().isEmpty()) return null;
+            String trimmed = timeStr.trim();
+            // 新格式已含年份：yyyy-MM-dd HH:mm:ss 或 yyyy-MM-dd HH:mm
+            if (trimmed.matches("\\d{4}-\\d{2}-\\d{2}.*")) {
+                DateTimeFormatter fmtSec = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+                DateTimeFormatter fmtMin = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+                try { return LocalDateTime.parse(trimmed, fmtSec); } catch (Exception ignored) {}
+                try { return LocalDateTime.parse(trimmed, fmtMin); } catch (Exception ignored) {}
+            }
+            // 旧格式无年份：MM-DD HH:mm 或 MM-DD HH:mm:ss,补当前年份
             int currentYear = LocalDateTime.now().getYear();
-            String fullTimeStr = currentYear + "-" + timeStr.trim();
+            String fullTimeStr = currentYear + "-" + trimmed;
             DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+            DateTimeFormatter fmtSec = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+            try { return LocalDateTime.parse(fullTimeStr, fmtSec); } catch (Exception ignored) {}
             return LocalDateTime.parse(fullTimeStr, fmt);
         } catch (Exception e) {
             log.debug("[OrderRemark] parseTimeStr失败: timeStr={}", timeStr);

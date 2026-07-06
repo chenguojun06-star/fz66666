@@ -95,7 +95,7 @@ public class ScanRecordOrchestrator {
             // 事务提交后执行：通知与状态提示（各自有 try/catch，失败不影响扫码结果）
             try {
                 if (result != null && Boolean.TRUE.equals(result.get("success"))) {
-                    String orderId = TextUtils.safeText(result.get("orderId"));
+                    String scanRecordId = TextUtils.safeText(result.get("scanRecordId"));
                     String scanType = TextUtils.safeText(result.get("scanType"));
                     String bundleNo = null;
                     Object bundleObj = result.get("cuttingBundle");
@@ -103,7 +103,10 @@ public class ScanRecordOrchestrator {
                         CuttingBundle bundle = (CuttingBundle) bundleObj;
                         bundleNo = bundle.getBundleNo() != null ? String.valueOf(bundle.getBundleNo()) : bundle.getQrCode();
                     }
-                    logAppendHelper.appendScan(orderId, scanType, bundleNo, "success");
+                    // 重复扫码不写日志（避免噪音）
+                    if (!Boolean.TRUE.equals(result.get("duplicateIgnored"))) {
+                        logAppendHelper.appendScan(scanRecordId, scanType, bundleNo, "success");
+                    }
                 }
             } catch (Exception e) {
                 log.debug("[ScanLog] 扫码日志记录失败（不阻断）: {}", e.getMessage());
@@ -221,13 +224,19 @@ public class ScanRecordOrchestrator {
         Map<String, Object> result = scanRescanHelper.rescan(params);
         try {
             if (result != null && Boolean.TRUE.equals(result.get("success"))) {
-                String orderId = TextUtils.safeText(params.get("orderId"));
-                String orderNo = TextUtils.safeText(params.get("orderNo"));
-                String scanType = TextUtils.safeText(params.get("scanType"));
-                String scanCode = TextUtils.safeText(params.get("scanCode"));
-                if (!hasText(orderId) && hasText(orderNo)) {
-                    ProductionOrder order = productionOrderService.getByOrderNo(orderNo);
-                    if (order != null) orderId = order.getId();
+                // 优先从 result 取（ScanRescanHelper 已注入），兜底从 params 取
+                String orderId = TextUtils.safeText(result.get("orderId"));
+                String scanType = TextUtils.safeText(result.get("scanType"));
+                String scanCode = TextUtils.safeText(result.get("scanCode"));
+                if (!hasText(orderId)) orderId = TextUtils.safeText(params.get("orderId"));
+                if (!hasText(scanType)) scanType = TextUtils.safeText(params.get("scanType"));
+                if (!hasText(scanCode)) scanCode = TextUtils.safeText(params.get("scanCode"));
+                if (!hasText(orderId)) {
+                    String orderNo = TextUtils.safeText(params.get("orderNo"));
+                    if (hasText(orderNo)) {
+                        ProductionOrder order = productionOrderService.getByOrderNo(orderNo);
+                        if (order != null) orderId = order.getId();
+                    }
                 }
                 logAppendHelper.appendRescan(orderId, scanType, scanCode);
             }

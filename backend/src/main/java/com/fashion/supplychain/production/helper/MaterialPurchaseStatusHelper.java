@@ -58,6 +58,8 @@ public class MaterialPurchaseStatusHelper {
 
     private final MaterialPurchaseSyncHelper materialPurchaseSyncHelper;
 
+    private final MaterialPurchaseLogAppendHelper logAppendHelper;
+
     public MaterialPurchase receive(Map<String, Object> body) {
         String purchaseId = body == null ? null
                 : (body.get("purchaseId") == null ? null : String.valueOf(body.get("purchaseId")));
@@ -97,6 +99,11 @@ public class MaterialPurchaseStatusHelper {
             updated.setUpdateTime(LocalDateTime.now());
         }
         sendReceiveNotice(updated, rid, rname);
+        try {
+            logAppendHelper.appendReceive(purchaseId, rname);
+        } catch (Exception e) {
+            log.warn("[采购领取] 写日志失败（不阻断）: {}", e.getMessage());
+        }
         return updated;
     }
 
@@ -228,6 +235,11 @@ public class MaterialPurchaseStatusHelper {
         result.put("failCount", failMessages.size());
         result.put("failMessages", failMessages);
         result.put("totalRequested", purchaseIds.size());
+        try {
+            logAppendHelper.appendBatchReceive(validIds, rname, successCount, skipCount);
+        } catch (Exception e) {
+            log.warn("[批量领取] 写日志失败（不阻断）: {}", e.getMessage());
+        }
         return result;
     }
 
@@ -555,6 +567,11 @@ public class MaterialPurchaseStatusHelper {
         result.put("reason", reason);
         log.info("采购已撤回: purchaseId={}, purchaseNo={}, operator={}, reason={}",
                 purchaseId, purchase.getPurchaseNo(), operator, reason);
+        try {
+            logAppendHelper.appendCancelReceive(purchaseId, reason);
+        } catch (Exception e) {
+            log.warn("[采购撤回] 写日志失败（不阻断）: {}", e.getMessage());
+        }
         return result;
     }
 
@@ -623,6 +640,11 @@ public class MaterialPurchaseStatusHelper {
         result.put("status", MaterialConstants.STATUS_COMPLETED);
         log.info("采购已确认完成: purchaseId={}, purchaseNo={}, operator={}",
                 purchaseId, purchase.getPurchaseNo(), operator);
+        try {
+            logAppendHelper.appendConfirmComplete(purchaseId);
+        } catch (Exception e) {
+            log.warn("[采购确认完成] 写日志失败（不阻断）: {}", e.getMessage());
+        }
         return result;
     }
 

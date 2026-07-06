@@ -17,6 +17,7 @@ Page({
     activeFilter: '',
     statusTabs: STATUS_TABS,
     groups: [],
+    filteredGroups: [], // 筛选后的分组（首帧渲染需要初始值，避免 wxml 中 filteredGroups.length 为 undefined）
     roleHint: '', // 跨岗位提示（空=本岗位或主管，无提示）
   },
 

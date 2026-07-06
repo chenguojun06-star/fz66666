@@ -82,6 +82,12 @@ public class MaterialPurchasePickingHelper {
     @Autowired
     private ExternalFactoryMaterialDeductionHelper externalFactoryDeductionHelper;
 
+    @Autowired
+    private MaterialPurchaseLogAppendHelper logAppendHelper;
+
+    @Autowired
+    private com.fashion.supplychain.production.helper.OrderRemarkHelper orderRemarkHelper;
+
     // ──────────────────────────────────────────────────────────────
     // 智能一键领取
     // ──────────────────────────────────────────────────────────────
@@ -153,6 +159,11 @@ public class MaterialPurchasePickingHelper {
         result.put("details", details);
 
         log.info("✅ 智能一键领取完成: orderNo={}, 出库={}, 采购={}", orderNo, outboundCount, purchaseCount);
+        try {
+            logAppendHelper.appendSmartReceiveByOrderNo(orderNo, outboundCount + purchaseCount);
+        } catch (Exception e) {
+            log.warn("[智能领取] 写日志失败（不阻断）: {}", e.getMessage());
+        }
         return result;
     }
 
@@ -662,6 +673,24 @@ public class MaterialPurchasePickingHelper {
         }
 
         log.info("✅ 仓库确认出库完成: pickingId={}, itemCount={}", pickingId, items.size());
+
+        // 写订单备注时间线：仓库确认出库
+        try {
+            String orderNo = picking.getOrderNo();
+            if (StringUtils.hasText(orderNo)) {
+                ProductionOrder order = productionOrderService.lambdaQuery()
+                        .eq(ProductionOrder::getOrderNo, orderNo)
+                        .eq(ProductionOrder::getDeleteFlag, 0)
+                        .last("LIMIT 1")
+                        .one();
+                if (order != null) {
+                    String detail = "出库单：" + pickingId + "，物料项数：" + items.size() + "，总数：" + pickedTotalQty;
+                    orderRemarkHelper.append(order, "仓库确认出库", detail);
+                }
+            }
+        } catch (Exception e) {
+            log.warn("[仓库确认出库] 写订单备注失败（不阻断）: pickingId={}, err={}", pickingId, e.getMessage());
+        }
     }
 
     private int deductStockForOutboundItems(MaterialPicking picking, List<com.fashion.supplychain.production.entity.MaterialPickingItem> items) {

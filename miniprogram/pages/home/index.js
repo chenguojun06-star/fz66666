@@ -437,6 +437,12 @@ Page({
     safeNavigate({ url: app.route });
   },
 
+  onTodoTap: function (e) {
+    const url = e.currentTarget.dataset.url;
+    if (!url) return;
+    safeNavigate({ url });
+  },
+
   onMoreAppsTap: function () {
     safeNavigate({ url: '/pages/more-apps/index' });
   },

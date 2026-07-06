@@ -78,6 +78,11 @@ public class ScanRescanHelper {
         validateRescanPermission(target);
 
         String scanType = hasText(target.getScanType()) ? target.getScanType().trim().toLowerCase() : "";
+        // 在删除前缓存日志所需字段
+        String orderIdForLog = target.getOrderId();
+        String scanCodeForLog = target.getScanCode();
+        String scanTypeForLog = scanType;
+
         rollbackWarehousingOnRescan(target, scanType);
         rollbackCuttingOnRescan(target, scanType);
 
@@ -93,6 +98,10 @@ public class ScanRescanHelper {
         Map<String, Object> resp = new HashMap<>();
         resp.put("success", true);
         resp.put("message", "退回成功，可重新扫码");
+        // 注入日志所需字段（ScanRecord 已被删除，不能再查）
+        resp.put("orderId", orderIdForLog);
+        resp.put("scanType", scanTypeForLog);
+        resp.put("scanCode", scanCodeForLog);
         return resp;
     }
 

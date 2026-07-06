@@ -500,6 +500,14 @@ public class ProductionOrderOrchestrator {
         } catch (Exception e) {
             log.warn("记录订单关闭操作日志失败: orderId={}", id, e);
         }
+        // 写订单备注时间线：关闭订单
+        if (result != null) {
+            try {
+                logAppendHelper.appendClose(id, remark);
+            } catch (Exception e) {
+                log.warn("[关闭订单] 写订单备注失败（不阻断）: orderId={}, err={}", id, e.getMessage());
+            }
+        }
         if (result != null) {
             final String orderId = id;
             TransactionSynchronizationManager.registerSynchronization(
