@@ -54,7 +54,7 @@
     {
       "root": "pages/cutting",
       "name": "pkg-cutting",
-      "pages": ["task-list/index", "bundle-detail/index"]
+      "pages": ["bundle-detail/index"]
     },
     {
       "root": "pages/procurement",
