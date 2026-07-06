@@ -133,7 +133,6 @@ Page({
     unreadNoticeCount: 0,
     dateInfo: { date: '', day: '', season: '', dailyTip: '' },
     draggingIndex: -1,  // 正在拖拽的图标索引
-    myTodos: [],        // 我的待办：按职务聚合的采购/裁剪任务
   },
 
   _menuVisibility: null,
@@ -162,7 +161,6 @@ Page({
     this._refreshHomeData();
     this._bindWsEvents();
     this._loadMenuVisibility();
-    this._loadMyTodos();
     this.loadFavorites();
     // 暂时禁用购物车加载，避免 API 404 导致的问题
     // this._loadCartCount();
@@ -244,69 +242,6 @@ Page({
     if (this._onOrderProgress) eventBus.off(Events.ORDER_PROGRESS_CHANGED, this._onOrderProgress);
     if (this._onWarehouseIn) eventBus.off(Events.WAREHOUSE_IN, this._onWarehouseIn);
     if (this._onRefreshAll) eventBus.off(Events.REFRESH_ALL, this._onRefreshAll);
-  },
-
-  // 按职务聚合"我的待办"：采购员看采购、裁剪员看裁剪、主管以上看全部
-  _loadMyTodos: function () {
-    const that = this;
-    const role = permission.getCurrentRole();
-    const isManager = permission.isAdminOrSupervisor();
-    const todos = [];
-    // 决定加载哪些待办
-    const wantProcurement = isManager || role === permission.ROLES.PURCHASER;
-    const wantCutting = isManager || role === permission.ROLES.CUTTER;
-    if (!wantProcurement && !wantCutting) {
-      this.setData({ myTodos: [], aiTodoSummary: { myTasks: 0, procurement: 0, cutting: 0 } });
-      return;
-    }
-    const tasks = [];
-    let total = 0, procurement = 0, cutting = 0;
-    if (wantProcurement) tasks.push(
-      api.production.myProcurementTasks().then(function (res) {
-        const list = Array.isArray(res) ? res : (res && res.list) || [];
-        const pending = list.filter(function (it) {
-          const s = String((it && it.status) || '').toLowerCase();
-          return !s || s === 'pending';
-        });
-        if (pending.length > 0) {
-          todos.push({
-            key: 'procurement',
-            icon: '🛒',
-            title: '待领取采购',
-            count: pending.length,
-            url: '/pages/procurement/task-list/index',
-          });
-          procurement += pending.length;
-          total += pending.length;
-        }
-      }).catch(function () {})
-    );
-    if (wantCutting) tasks.push(
-      api.production.myCuttingTasks().then(function (res) {
-        const list = Array.isArray(res) ? res : (res && res.list) || [];
-        const pending = list.filter(function (it) {
-          const s = String((it && it.status) || '').toLowerCase();
-          return !s || s === 'pending';
-        });
-        if (pending.length > 0) {
-          todos.push({
-            key: 'cutting',
-            icon: '✂️',
-            title: '待领取裁剪',
-            count: pending.length,
-            url: '/pages/cutting/task-list/index',
-          });
-          cutting += pending.length;
-          total += pending.length;
-        }
-      }).catch(function () {})
-    );
-    Promise.all(tasks).then(function () {
-      that.setData({
-        myTodos: todos,
-        aiTodoSummary: { myTasks: total, procurement: procurement, cutting: cutting },
-      });
-    });
   },
 
   _loadMenuVisibility: function () {
@@ -435,12 +370,6 @@ Page({
     const app = e.currentTarget.dataset.app;
     if (!app || !app.route) return;
     safeNavigate({ url: app.route });
-  },
-
-  onTodoTap: function (e) {
-    const url = e.currentTarget.dataset.url;
-    if (!url) return;
-    safeNavigate({ url });
   },
 
   onMoreAppsTap: function () {
