@@ -12,7 +12,6 @@ import SmartGuideBar from '@/smart/components/SmartGuideBar';
 import { isSmartFeatureEnabled, triggerSmartFeatureRefresh } from '@/smart/core/featureFlags';
 import { resolveSmartGlobalGuide } from '@/smart/core/globalGuide';
 import SmartAlertBell from './SmartAlertBell';
-import DailyTodoModal from './DailyTodoModal';
 import FactoryPersonalCenterModal from './FactoryPersonalCenterModal';
 const GlobalAiAssistant = React.lazy(() => import('../common/GlobalAiAssistant'));
 import SideMenu from './SideMenu';
@@ -171,7 +170,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   return (
     <div className={`layout${collapsed ? ' layout-collapsed' : ''}`}>
-      <DailyTodoModal />
       {auth.isFactoryAccount && (
         <FactoryPersonalCenterModal open={factoryModalOpen} onClose={() => setFactoryModalOpen(false)} />
       )}

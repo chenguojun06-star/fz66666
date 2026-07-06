@@ -16,7 +16,6 @@ import type { SysNotice } from '../../services/production/productionApi';
 import { useAiPatrol, RISK_TYPE_LABELS } from '@/modules/production/pages/Production/List/hooks/useAiPatrol';
 import XiaoyunCloudAvatar from '../common/XiaoyunCloudAvatar';
 import XiaoyunInsightCard, { type XiaoyunInsightCardData } from '../common/XiaoyunInsightCard';
-import BackgroundTaskPanel from '../common/BackgroundTaskPanel';
 
 interface TopPriorityOrder {
   orderNo: string;
@@ -520,13 +519,32 @@ const SmartAlertBell: React.FC = () => {
               </div>
             )}
 
-            {/* ── 后台任务 ── */}
+            {/* ── 后台任务入口（收敛到小云AI助手） ── */}
             <div className="sap-section">
-              <BackgroundTaskPanel
-                maxItems={5}
-                pollInterval={10000}
-                onViewAll={() => navigate('/intelligence/tasks')}
-              />
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setOpen(false);
+                  window.dispatchEvent(new CustomEvent('openAiTasks'));
+                }}
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  background: 'linear-gradient(135deg, #6d28d9, #9333ea)',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: 8,
+                  cursor: 'pointer',
+                  fontSize: 13,
+                  fontWeight: 500,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6,
+                }}
+              >
+                <RobotOutlined /> 打开小云任务中心
+              </button>
             </div>
 
             {/* ── 我的通知 ── */}
@@ -750,7 +768,8 @@ const OneClickActionInline: React.FC<{
         setDone(true);
         setTimeout(() => onDone(), 800);
       } else if (notice.actionType === 'task_overdue' || notice.actionType === 'task_due_soon') {
-        navigate('/intelligence/tasks?tab=my');
+        // 收敛到小云AI助手任务中心
+        window.dispatchEvent(new CustomEvent('openAiTasks'));
       }
     } catch (e: any) {
       setError(e?.message || '操作失败');
