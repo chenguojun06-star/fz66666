@@ -387,7 +387,7 @@ public class PatternProductionOrchestrator {
         updatePatternQuantityIfNeeded(pattern, quantity, operatorName);
 
         PatternScanRecord scanRecord = createPatternScanRecord(pattern, operationType, operatorId, operatorName,
-                operatorRole, remark, warehouseCode, warehouseAreaId, warehouseLocationCode);
+                operatorRole, remark, quantity, warehouseCode, warehouseAreaId, warehouseLocationCode);
         patternScanRecordService.save(scanRecord);
 
         syncToScanRecord(pattern, operationType, operatorId, operatorName, remark, unitPrice);
@@ -424,13 +424,20 @@ public class PatternProductionOrchestrator {
     }
 
     private PatternScanRecord createPatternScanRecord(PatternProduction pattern, String operationType,
-            String operatorId, String operatorName, String operatorRole, String remark, String warehouseCode,
-            String warehouseAreaId, String warehouseLocationCode) {
+            String operatorId, String operatorName, String operatorRole, String remark, Integer quantity,
+            String warehouseCode, String warehouseAreaId, String warehouseLocationCode) {
         PatternScanRecord scanRecord = new PatternScanRecord();
         scanRecord.setPatternProductionId(pattern.getId());
         scanRecord.setStyleId(pattern.getStyleId());
         scanRecord.setStyleNo(pattern.getStyleNo());
         scanRecord.setColor(pattern.getColor());
+        scanRecord.setSize(pattern.getSize());
+        // 数量：优先使用本次扫码传入的数量，其次取样板生产单的数量
+        if (quantity != null && quantity > 0) {
+            scanRecord.setQuantity(quantity);
+        } else if (pattern.getQuantity() != null && pattern.getQuantity() > 0) {
+            scanRecord.setQuantity(pattern.getQuantity());
+        }
         scanRecord.setOperationType(operationType);
         // 补充 processName 和 progressStage，解决前端工序完成度匹配问题
         String processLabel = patternOperationLabel(operationType);
@@ -462,6 +469,7 @@ public class PatternProductionOrchestrator {
             sr.setStyleNo(pattern.getStyleNo());
             sr.setOrderNo(pattern.getStyleNo());
             sr.setColor(pattern.getColor());
+            sr.setSize(pattern.getSize());
             String processLabel = patternOperationLabel(operationType);
             sr.setProcessName(processLabel);
             sr.setProcessCode(processLabel);
@@ -474,6 +482,7 @@ public class PatternProductionOrchestrator {
             }
             sr.setTenantId(UserContext.tenantId());
             sr.setFactoryId(null);
+            // 样衣没有菲号概念，保留 null（cuttingBundleNo 字段为 Integer 类型）
             sr.setCuttingBundleNo(null);
             sr.setRemark(remark);
             sr.setCreateTime(LocalDateTime.now());

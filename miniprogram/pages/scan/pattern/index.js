@@ -777,7 +777,8 @@ Page({
         // 添加仓库信息到每个请求
         requests.forEach(function(req) {
           req.scanType = scanType;
-          req.bundleNo = d.bundleNo || '01';
+          // 样衣没有菲号概念，使用 SAMPLE 标识，避免与大货菲号混淆
+          req.bundleNo = d.bundleNo || 'SAMPLE';
           if (!req.styleNo && d.styleNo) req.styleNo = d.styleNo;
           if (!req.color && d.color) req.color = d.color;
           if (!req.size && d.size) req.size = d.size;
@@ -816,7 +817,8 @@ Page({
         const scanData = {
           orderNo: d.orderNo || '',
           orderId: d.orderId || '',
-          bundleNo: d.bundleNo || '01',
+          // 样衣没有菲号概念，使用 SAMPLE 标识，避免与大货菲号混淆
+          bundleNo: d.bundleNo || 'SAMPLE',
           processName: processName,
           progressStage: progressStage,
           scanType: scanType,
