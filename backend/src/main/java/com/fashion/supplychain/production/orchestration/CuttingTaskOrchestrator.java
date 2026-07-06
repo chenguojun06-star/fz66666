@@ -237,9 +237,10 @@ public class CuttingTaskOrchestrator {
             throw new IllegalStateException("领取失败");
         }
 
-        writeReceiveRemark(updated);
         sendReceiveNotice(updated);
 
+        // 操作记录由 logAppendHelper.appendAssign 统一写入（操作人=实际领取人）
+        // 不再调用 writeReceiveRemark，避免重复写入 author="系统" 的冗余备注
         logAppendHelper.appendAssign(taskId, receiverName);
         return updated;
     }
@@ -291,30 +292,6 @@ public class CuttingTaskOrchestrator {
             return name1.trim().equals(name2);
         }
         return false;
-    }
-
-    private void writeReceiveRemark(CuttingTask updated) {
-        try {
-            if (updated != null && StringUtils.hasText(updated.getProductionOrderNo())) {
-                String updatedReceiverName = updated.getReceiverName();
-                // 仅写一条带 "裁剪" role 的 t_order_remark 用于前端分组展示
-                // ProductionOrder.remarks + 第二条 t_order_remark 由 logAppendHelper.appendAssign 双写
-                OrderRemark sysRemark = new OrderRemark();
-                sysRemark.setTargetType("order");
-                sysRemark.setTargetNo(updated.getProductionOrderNo());
-                sysRemark.setAuthorId("system");
-                sysRemark.setAuthorName("系统");
-                sysRemark.setAuthorRole("裁剪");
-                sysRemark.setContent("裁剪任务已领取"
-                        + (StringUtils.hasText(updatedReceiverName) ? "，领取人：" + updatedReceiverName : ""));
-                sysRemark.setTenantId(updated.getTenantId());
-                sysRemark.setCreateTime(LocalDateTime.now());
-                sysRemark.setDeleteFlag(0);
-                orderRemarkService.save(sysRemark);
-            }
-        } catch (Exception e) {
-            log.warn("自动写入裁剪领取备注失败，不影响主流程", e);
-        }
     }
 
     private void sendReceiveNotice(CuttingTask updated) {
