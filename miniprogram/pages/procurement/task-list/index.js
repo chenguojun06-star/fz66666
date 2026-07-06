@@ -17,6 +17,7 @@ Page({
     groups: [],
     filteredGroups: [], // 筛选后的分组
     roleHint: '', // 跨岗位提示
+    searchKeyword: '', // 搜索关键词（对齐裁剪明细页面）
   },
 
   onLoad() {
@@ -82,8 +83,19 @@ Page({
     this._applyFilter();
   },
 
+  // 搜索输入（对齐裁剪明细页面）
+  onSearchInput(e) {
+    this.setData({ searchKeyword: e.detail.value || '' });
+    this._applyFilter();
+  },
+
+  onSearchConfirm() {
+    this._applyFilter();
+  },
+
   _applyFilter() {
-    const { groups, activeStatus } = this.data;
+    const { groups, activeStatus, searchKeyword } = this.data;
+    const kw = (searchKeyword || '').trim().toLowerCase();
     let filtered;
     // 对齐裁剪明细页面：'all' 而非空字符串
     if (activeStatus === 'all') {
@@ -94,6 +106,14 @@ Page({
         if (activeStatus === 'received') return g.receivedCount > 0;
         if (activeStatus === 'completed') return g.completedCount === g.totalCount && g.totalCount > 0;
         return true;
+      });
+    }
+    // 搜索过滤
+    if (kw) {
+      filtered = filtered.filter(g => {
+        const orderNo = String(g.orderNo || '').toLowerCase();
+        const styleNo = String(g.styleNo || '').toLowerCase();
+        return orderNo.indexOf(kw) >= 0 || styleNo.indexOf(kw) >= 0;
       });
     }
     // 更新筛选 tab 计数
@@ -206,6 +226,7 @@ Page({
         map[groupKey] = {
           orderNo,
           styleNo: item.styleNo || '',
+          styleCoverUrl: item.styleCoverUrl || item.styleCover || item.coverImage || item.cover || '',
           patternProductionId,
           sourceType,
           items: [],
@@ -218,6 +239,10 @@ Page({
         };
       }
       const g = map[groupKey];
+      // 封面图兜底：取首个有图的 item
+      if (!g.styleCoverUrl) {
+        g.styleCoverUrl = item.styleCoverUrl || item.styleCover || item.coverImage || item.cover || '';
+      }
       g.items.push(item);
       const purchaseQty = Number(item.purchaseQuantity || 0);
       const arrivedQty = Number(item.arrivedQuantity || 0);
