@@ -31,12 +31,18 @@ function handleCuttingTask(task) {
 function handleProcurementTask(task) {
   const orderNo = task.orderNo || '';
   const styleNo = task.styleNo || '';
+  const patternProductionId = task.patternProductionId || '';
 
   if (orderNo) {
     const url = `/pages/procurement/task-detail/index?orderNo=${encodeURIComponent(orderNo)}&styleNo=${encodeURIComponent(styleNo)}`;
     safeNavigate({ url }, 'navigateTo').catch(() => {});
+  } else if (patternProductionId) {
+    // 样衣采购：跳采购详情页（按 patternProductionId 查询）
+    const url = `/pages/procurement/task-detail/index?patternProductionId=${encodeURIComponent(patternProductionId)}&sourceType=sample&styleNo=${encodeURIComponent(styleNo)}`;
+    safeNavigate({ url }, 'navigateTo').catch(() => {});
   } else {
-    safeNavigate({ url: '/pages/defect/index' }, 'switchTab').catch(() => {});
+    // 兜底：跳采购页面列表
+    safeNavigate({ url: '/pages/procurement/task-list/index' }, 'navigateTo').catch(() => {});
   }
 }
 

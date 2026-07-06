@@ -379,12 +379,13 @@
           <view class="task-card-main">
             <view class="task-card-info">
               <view class="task-order-row">
-                <text class="task-order-no">{{item.orderNo || item.purchaseNo}}</text>
-                <text class="task-style-tag purchase-tag">待处理</text>
+                <text class="task-order-no">{{item.orderNo || '样衣采购'}}</text>
+                <text class="task-style-tag purchase-tag">{{item.arrivalRate >= 100 ? '已到齐' : (item.arrivalRate > 0 ? '采购中' : '待采购')}}</text>
               </view>
-              <text class="task-name">{{item.materialName || '待采购物料'}}</text>
+              <text class="task-name">{{item.styleNo || ''}}{{item.styleNo ? ' · ' : ''}}{{item.materialCount || 0}}项物料</text>
               <view class="task-chips">
-                <view class="task-chip">{{item.purchaseQuantity || 0}}{{item.unit || ''}}</view>
+                <view class="task-chip">到货 {{item.totalArrived || 0}}/{{item.totalPurchased || 0}}</view>
+                <view class="task-chip">{{item.arrivalRate || 0}}%</view>
                 <view class="task-chip time-chip" wx:if="{{item.receivedTimeText}}">{{item.receivedTimeText}}</view>
               </view>
             </view>
