@@ -82,7 +82,16 @@
 
       <!-- 底部操作 -->
       <view class="card-footer">
-        <view class="btn-action btn-primary" hover-class="btn-primary-hover" hover-stay-time="100">
+        <view wx:if="{{item.canReceive}}" class="btn-action btn-primary" hover-class="btn-primary-hover" hover-stay-time="100" catchtap="onReceive" data-group="{{item}}">
+          领取任务
+        </view>
+        <view wx:elif="{{item.canOperate}}" class="btn-action btn-primary" hover-class="btn-primary-hover" hover-stay-time="100" catchtap="onGroupTap" data-group="{{item}}">
+          采购执行
+        </view>
+        <view wx:else class="btn-action btn-disabled">
+          {{item.statusText}}
+        </view>
+        <view class="btn-action btn-outline" hover-class="btn-outline-hover" hover-stay-time="100" catchtap="onGroupTap" data-group="{{item}}">
           查看详情
         </view>
         <text class="card-arrow">›</text>

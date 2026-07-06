@@ -214,8 +214,16 @@ public class DistributedLockService {
             throw new IllegalStateException("操作被中断，请重试 [lock:" + key + "]");
         } catch (IllegalStateException | IllegalArgumentException e) {
             throw e;
+        } catch (com.fashion.supplychain.common.BusinessException be) {
+            // BusinessException 必须透传，保留原始业务错误信息和 data 字段
+            log.warn("Business exception in locked execution for key: {} - {}", key, be.getMessage());
+            throw be;
+        } catch (RuntimeException re) {
+            // RuntimeException 透传，保留原始异常信息（NPE/DataAccessException等）
+            log.error("Runtime exception in locked execution for key: {}", key, re);
+            throw re;
         } catch (Exception e) {
-            log.error("Lock error for key: {}, failing safely instead of executing without lock", key, e);
+            log.error("Unexpected exception in locked execution for key: {}", key, e);
             throw new IllegalStateException("系统暂时不可用，请稍后重试 [lock:" + key + "]");
         }
     }

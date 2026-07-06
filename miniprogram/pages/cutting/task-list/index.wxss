@@ -159,6 +159,53 @@
   font-weight: var(--font-weight-medium);
 }
 
+.card-footer {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md) var(--spacing-2xl);
+  border-top: 1rpx solid var(--color-border-light);
+  background: var(--color-bg-card);
+}
+.btn-action {
+  flex: 1;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 56rpx;
+}
+.btn-primary {
+  background: var(--color-primary);
+  color: var(--color-text-white);
+  border: none;
+}
+.btn-primary-hover {
+  opacity: 0.8;
+}
+.btn-outline {
+  background: transparent;
+  color: var(--color-primary);
+  border: 1rpx solid var(--color-primary);
+}
+.btn-outline-hover {
+  opacity: 0.7;
+}
+.btn-disabled {
+  background: var(--color-bg-gray);
+  color: var(--color-text-tertiary);
+  border: none;
+}
+.card-arrow {
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-lg);
+  flex-shrink: 0;
+}
+
 /* ---- 工序进度节点 ---- */
 .process-stage-item {
   display: flex;

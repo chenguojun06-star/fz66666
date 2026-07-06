@@ -154,22 +154,30 @@ const MultiColorOrderEditor: React.FC<MultiColorOrderEditorProps> = ({
     [availableColors, availableSizes],
   );
   const optionSignatureRef = useRef(optionSignature);
+  const hasSyncedFromLines = useRef(false);
 
+  // 只在 orderLines 首次有数据时同步颜色和尺码（编辑已有订单场景），
+  // 后续数量变化不应反向影响已选颜色/尺码
   useEffect(() => {
+    if (hasSyncedFromLines.current) return;
     const nextColors = uniq(orderLines.map((line) => line.color).filter(Boolean));
     const nextSizes = uniq(orderLines.map((line) => line.size).filter(Boolean));
     if (nextColors.length || nextSizes.length) {
       setSelectedColors(nextColors);
       setSelectedSizes(nextSizes);
-      optionSignatureRef.current = optionSignature;
-      return;
+      hasSyncedFromLines.current = true;
     }
+  }, [orderLines]);
+
+  // 款式切换时清空颜色和尺码
+  useEffect(() => {
     if (optionSignatureRef.current !== optionSignature) {
       optionSignatureRef.current = optionSignature;
       setSelectedColors([]);
       setSelectedSizes([]);
+      hasSyncedFromLines.current = false;
     }
-  }, [optionSignature, orderLines]);
+  }, [optionSignature]);
 
   const matrixRows = useMemo(() => {
     return selectedColors.map((color) => ({

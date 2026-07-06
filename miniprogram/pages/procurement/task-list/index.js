@@ -2,6 +2,7 @@ const api = require('../../../utils/api');
 const { toast, safeNavigate } = require('../../../utils/uiHelper');
 const { eventBus, Events } = require('../../../utils/eventBus');
 const permission = require('../../../utils/permission');
+const { getUserInfo } = require('../../../utils/storage');
 
 const STATUS_TABS = [
   { key: '', label: '全部' },
@@ -128,6 +129,62 @@ Page({
     } catch (err) { /* ignore */ }
   },
 
+  async onReceive(e) {
+    const group = e.currentTarget.dataset.group;
+    if (!group || !group.items || group.items.length === 0) return;
+
+    if (!permission.canReceiveTask('procurement')) {
+      const allowed = await new Promise(resolve => {
+        wx.showModal({
+          title: '岗位提示',
+          content: `您当前职务「${permission.getRoleDisplayName()}」非采购岗，确定代领？`,
+          confirmText: '确定代领',
+          cancelText: '取消',
+          success: res => resolve(!!res.confirm),
+        });
+      });
+      if (!allowed) return;
+    }
+
+    const userInfo = getUserInfo() || {};
+    const receiverId = String(userInfo.id || userInfo.userId || '').trim();
+    const receiverName = String(userInfo.name || userInfo.username || '').trim();
+
+    if (!receiverId && !receiverName) {
+      toast.error('采购人信息缺失，请重新登录');
+      return;
+    }
+
+    const pendingItems = group.items.filter(item => {
+      const status = String(item.status || '').toLowerCase();
+      return !status || status === 'pending';
+    });
+
+    if (pendingItems.length === 0) {
+      toast.success('所有物料均已采购');
+      return;
+    }
+
+    wx.showLoading({ title: '领取中...', mask: true });
+    try {
+      await Promise.all(pendingItems.map(item =>
+        api.production.receivePurchase({
+          purchaseId: item.id || item.purchaseId,
+          receiverId,
+          receiverName,
+        }),
+      ));
+      wx.hideLoading();
+      toast.success(`已领取 ${pendingItems.length} 项采购任务`);
+      eventBus.emit(Events.DATA_CHANGED);
+      this.loadData();
+    } catch (err) {
+      wx.hideLoading();
+      console.error('[ProcurementTaskList] receive error', err);
+      toast.error('领取失败：' + (err.errMsg || err.message || '请稍后重试'));
+    }
+  },
+
   _normalizeList(res) {
     if (Array.isArray(res)) return res;
     if (res && Array.isArray(res.records)) return res.records;
@@ -175,13 +232,34 @@ Page({
       }
     });
 
-    return Object.values(map).map(g => ({
-      ...g,
-      arrivalRate: g.totalPurchased > 0 ? Math.round(g.totalArrived / g.totalPurchased * 100) : 0,
-      // P1-2 修复：样衣采购分组显示"样衣采购"前缀，区分大货订单
-      statusText: g.completedCount === g.totalCount ? '已完成' : (g.pendingCount === g.totalCount ? '待采购' : '采购中'),
-      statusColor: g.completedCount === g.totalCount ? 'success' : (g.pendingCount === g.totalCount ? 'warning' : 'processing'),
-      isSample: g.sourceType === 'sample' || (!g.orderNo && !!g.patternProductionId),
-    }));
+    return Object.values(map).map(g => {
+      const userInfo = getUserInfo() || {};
+      const receiverId = String(userInfo.id || userInfo.userId || '').trim();
+      const receiverName = String(userInfo.name || userInfo.username || '').trim();
+
+      let canReceive = false;
+      let canOperate = false;
+
+      if (g.pendingCount > 0) {
+        canReceive = true;
+      } else if (g.receivedCount > 0) {
+        const myItems = g.items.filter(item => {
+          const rid = String(item.receiverId || '').trim();
+          const rname = String(item.receiverName || '').trim();
+          return rid === receiverId || rname === receiverName;
+        });
+        canOperate = myItems.length > 0;
+      }
+
+      return {
+        ...g,
+        arrivalRate: g.totalPurchased > 0 ? Math.round(g.totalArrived / g.totalPurchased * 100) : 0,
+        statusText: g.completedCount === g.totalCount ? '已完成' : (g.pendingCount === g.totalCount ? '待采购' : '采购中'),
+        statusColor: g.completedCount === g.totalCount ? 'success' : (g.pendingCount === g.totalCount ? 'warning' : 'processing'),
+        isSample: g.sourceType === 'sample' || (!g.orderNo && !!g.patternProductionId),
+        canReceive,
+        canOperate,
+      };
+    });
   },
 });

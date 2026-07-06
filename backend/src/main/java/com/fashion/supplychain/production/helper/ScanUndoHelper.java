@@ -51,7 +51,7 @@ public class ScanUndoHelper {
         String orderNo = TextUtils.safeText(safeParams.get("orderNo"));
         String orderId = TextUtils.safeText(safeParams.get("orderId"));
         String lockKey = "scan:" + (hasText(orderNo) ? orderNo : (hasText(orderId) ? orderId : "undo"));
-        Map<String, Object> result = distributedLockService.executeWithLock(lockKey, 10, TimeUnit.SECONDS, () -> {
+        Map<String, Object> result = distributedLockService.executeWithLock(lockKey, 30, TimeUnit.SECONDS, () -> {
             return doUndo(safeParams);
         });
 
