@@ -263,6 +263,8 @@ Page({
       const receiverId = String(task.receiverId || '').trim();
       const canReceive = status === 'pending' || (!receiverId && status !== 'bundled');
       const receivedByMe = receiverId && myId && receiverId === myId;
+      // 已完成/已分扎时不再显示领取条
+      const showReceiveBar = status !== 'completed' && status !== 'bundled' && status !== 'done';
       this.setData({
         cuttingTaskInfo: {
           taskId: task.id,
@@ -271,6 +273,7 @@ Page({
           receiverName: task.receiverName || '',
           canReceive: canReceive,
           receivedByMe: receivedByMe,
+          showReceiveBar: showReceiveBar,
         },
       });
     } catch (e) {

@@ -106,7 +106,7 @@
       </view>
 
       <!-- ════════════ ①.5 裁剪任务领取条 ════════════ -->
-      <view class="task-receive-bar" wx:if="{{cuttingTaskInfo}}">
+      <view class="task-receive-bar" wx:if="{{cuttingTaskInfo && cuttingTaskInfo.showReceiveBar}}">
         <!-- 待领取:显示领取按钮 -->
         <block wx:if="{{cuttingTaskInfo.canReceive}}">
           <text class="receive-hint">该订单裁剪任务待领取</text>
