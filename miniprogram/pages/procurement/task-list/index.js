@@ -3,6 +3,7 @@ const { toast, safeNavigate } = require('../../../utils/uiHelper');
 const { eventBus, Events } = require('../../../utils/eventBus');
 const permission = require('../../../utils/permission');
 const { getUserInfo } = require('../../../utils/storage');
+const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 
 Page({
   data: {
@@ -226,7 +227,7 @@ Page({
         map[groupKey] = {
           orderNo,
           styleNo: item.styleNo || '',
-          styleCoverUrl: item.styleCoverUrl || item.styleCover || item.coverImage || item.cover || '',
+          styleCoverUrl: getAuthedImageUrl(item.styleCoverUrl || item.styleCover || item.coverImage || item.cover || ''),
           patternProductionId,
           sourceType,
           items: [],
@@ -239,9 +240,10 @@ Page({
         };
       }
       const g = map[groupKey];
-      // 封面图兜底：取首个有图的 item
+      // 封面图兜底：取首个有图的 item（需通过 getAuthedImageUrl 转完整 URL + token）
       if (!g.styleCoverUrl) {
-        g.styleCoverUrl = item.styleCoverUrl || item.styleCover || item.coverImage || item.cover || '';
+        const rawCover = item.styleCoverUrl || item.styleCover || item.coverImage || item.cover || '';
+        if (rawCover) g.styleCoverUrl = getAuthedImageUrl(rawCover);
       }
       g.items.push(item);
       const purchaseQty = Number(item.purchaseQuantity || 0);
