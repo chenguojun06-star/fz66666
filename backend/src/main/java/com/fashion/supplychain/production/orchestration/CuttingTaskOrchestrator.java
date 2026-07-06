@@ -434,6 +434,8 @@ public class CuttingTaskOrchestrator {
             return new ArrayList<>();
         }
 
+        // 同时返回「待领取的任务」+「我已领取的任务」
+        // 修复前只返回 status=received 的任务,导致小程序看不到「领取任务」按钮
         List<CuttingTask> tasks = cuttingTaskService.lambdaQuery()
                 .select(
                         CuttingTask::getId,
@@ -444,10 +446,15 @@ public class CuttingTaskOrchestrator {
                         CuttingTask::getOrderQuantity,
                         CuttingTask::getReceiverName,
                         CuttingTask::getReceivedTime,
-                        CuttingTask::getExpectedShipDate
+                        CuttingTask::getExpectedShipDate,
+                        CuttingTask::getStatus
                 )
-                .eq(CuttingTask::getReceiverId, userId)
-                .eq(CuttingTask::getStatus, "received")
+                .and(w -> w
+                        .isNull(CuttingTask::getReceiverId).eq(CuttingTask::getStatus, "pending")
+                        .or()
+                        .eq(CuttingTask::getReceiverId, userId).eq(CuttingTask::getStatus, "received"))
+                // 待领取(pending)排在前面,已领取(received)排在后面
+                .orderByAsc(CuttingTask::getStatus)
                 .orderByDesc(CuttingTask::getReceivedTime)
                 .list();
 

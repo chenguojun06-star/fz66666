@@ -3,6 +3,7 @@ const { parseProductionOrderLines, sortSizeNames } = require('../../../utils/ord
 const { toast, safeNavigate } = require('../../../utils/uiHelper');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 const { triggerDataRefresh } = require('../../../utils/eventBus');
+const { getUserInfo } = require('../../../utils/storage');
 const blePrinter = require('../utils/blePrinter');
 
 /**
@@ -83,6 +84,9 @@ Page({
     cuttingLinesHasData: false,
     cuttingSummary: { totalOrdered: 0, totalCutting: 0, totalBundles: 0 },
     cuttingSubmitting: false,
+
+    /* ── 裁剪任务领取（与 t_cutting_task 关联）── */
+    cuttingTaskInfo: null,   // { taskId, status, receiverId, receiverName, canReceive, receivedByMe }
 
     /* ── Tab: detail(菲号明细) | transfer(转单) ── */
     activeTab: 'detail',
@@ -230,13 +234,85 @@ Page({
     this.setData({ loading: true });
     try {
       await this.loadOrderInfo(orderNo);
-      await this.loadCuttingBundles(orderNo);
+      // 并行加载裁剪任务状态和菲号明细
+      await Promise.all([
+        this._loadCuttingTask(orderNo),
+        this.loadCuttingBundles(orderNo),
+      ]);
     } catch (e) {
       console.error('[bundle-detail] loadAll error', e);
       toast.error('数据加载失败，请下拉刷新重试');
     } finally {
       this.setData({ loading: false });
     }
+  },
+
+  /** 查询该订单的裁剪任务状态,用于显示「领取裁剪任务」按钮 */
+  async _loadCuttingTask(orderNo) {
+    try {
+      const res = await api.production.getCuttingTaskByOrderId(orderNo).catch(() => null);
+      const list = this._extractList(res);
+      const task = list && list.length > 0 ? list[0] : null;
+      if (!task) {
+        this.setData({ cuttingTaskInfo: null });
+        return;
+      }
+      const userInfo = getUserInfo() || {};
+      const myId = String(userInfo.id || userInfo.userId || '').trim();
+      const status = String(task.status || '').toLowerCase();
+      const receiverId = String(task.receiverId || '').trim();
+      const canReceive = status === 'pending' || (!receiverId && status !== 'bundled');
+      const receivedByMe = receiverId && myId && receiverId === myId;
+      this.setData({
+        cuttingTaskInfo: {
+          taskId: task.id,
+          status: status,
+          receiverId: receiverId,
+          receiverName: task.receiverName || '',
+          canReceive: canReceive,
+          receivedByMe: receivedByMe,
+        },
+      });
+    } catch (e) {
+      console.warn('[bundle-detail] 加载裁剪任务状态失败', e);
+      this.setData({ cuttingTaskInfo: null });
+    }
+  },
+
+  /** 领取裁剪任务 */
+  onReceiveCuttingTask() {
+    const that = this;
+    const info = this.data.cuttingTaskInfo;
+    if (!info || !info.taskId) {
+      toast.error('未找到裁剪任务');
+      return;
+    }
+    const userInfo = getUserInfo() || {};
+    const receiverId = String(userInfo.id || userInfo.userId || '').trim();
+    const receiverName = String(userInfo.name || userInfo.username || userInfo.nickName || '').trim();
+    if (!receiverId) {
+      toast.error('用户信息缺失,无法领取');
+      return;
+    }
+    wx.showModal({
+      title: '领取裁剪任务',
+      content: '确定领取该订单的裁剪任务?',
+      confirmText: '领取',
+      success(res) {
+        if (!res.confirm) return;
+        wx.showLoading({ title: '领取中...' });
+        api.production.receiveCuttingTaskById(info.taskId, receiverId, receiverName).then(function () {
+          wx.hideLoading();
+          toast.success('领取成功');
+          // 重新加载裁剪任务状态
+          that._loadCuttingTask(that.data.orderNo);
+        }).catch(function (err) {
+          wx.hideLoading();
+          console.error('[bundle-detail] 领取裁剪任务失败', err);
+          toast.error('领取失败:' + (err && err.message ? err.message : '请重试'));
+        });
+      },
+    });
   },
 
   /** 加载订单信息 + 工序数 + 下单矩阵 */

@@ -107,12 +107,15 @@ public class MaterialPurchaseQueryHelper {
             return new ArrayList<>();
         }
 
-        // 在 DB 层完成核心过滤（租户隔离 + 状态 + 领取人），避免跨租户全表加载
+        // 同时返回「待领取的任务」+「我已领取的任务」
+        // 修复前只返回 status=received 的任务,导致小程序看不到「领取任务」按钮
         List<MaterialPurchase> myPurchases = materialPurchaseService.lambdaQuery()
                 .eq(MaterialPurchase::getTenantId, tenantId)
                 .eq(MaterialPurchase::getDeleteFlag, 0)
-                .eq(MaterialPurchase::getReceiverId, userId)
-                .eq(MaterialPurchase::getStatus, MaterialConstants.STATUS_RECEIVED)
+                .and(w -> w
+                        .isNull(MaterialPurchase::getReceiverId).eq(MaterialPurchase::getStatus, MaterialConstants.STATUS_PENDING)
+                        .or()
+                        .eq(MaterialPurchase::getReceiverId, userId).eq(MaterialPurchase::getStatus, MaterialConstants.STATUS_RECEIVED))
                 .and(w -> w.isNull(MaterialPurchase::getReturnConfirmed)
                            .or().eq(MaterialPurchase::getReturnConfirmed, 0))
                 .list()
