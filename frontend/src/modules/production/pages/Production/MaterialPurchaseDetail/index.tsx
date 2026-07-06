@@ -2,11 +2,10 @@ import React, { useCallback, useState } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { Button, Card, Tag, Space, Spin, Alert, Row, Col, InputNumber, Form, Dropdown, Input, Select, Image, Tabs } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { PlusOutlined, PrinterOutlined, DownloadOutlined, ExportOutlined, ExclamationCircleOutlined, UploadOutlined, EllipsisOutlined, EditOutlined } from '@ant-design/icons';
+import { PlusOutlined, PrinterOutlined, DownloadOutlined, ExportOutlined, ExclamationCircleOutlined, UploadOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
 import ResizableModal from '@/components/common/ResizableModal';
 import ModalContentLayout from '@/components/common/ModalContentLayout';
-import PageLayout from '@/components/common/PageLayout';
 import RowActions from '@/components/common/RowActions';
 import MaterialTypeTag from '@/components/common/MaterialTypeTag';
 import SupplierNameTooltip from '@/components/common/SupplierNameTooltip';
@@ -346,7 +345,7 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
       },
     },
     {
-      title: '操作', key: 'action', width: 160, fixed: 'right' as const,
+      title: '操作', key: 'action', width: 220, fixed: 'right' as const,
       render: (_: unknown, record: MaterialPurchase) => {
         const status = String(record.status || '').toLowerCase();
         const isPending = status === MATERIAL_PURCHASE_STATUS.PENDING;
@@ -358,112 +357,39 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
         const isReturnConfirmed = Number((record as any)?.returnConfirmed || 0) === 1;
         const isWarehousePending = status === MATERIAL_PURCHASE_STATUS.WAREHOUSE_PENDING || status === 'warehouse_pending';
 
-        // 主操作 + 次要操作，RowActions 会自动把溢出按钮折叠到"更多"下拉菜单
-        const actions: any[] = [];
-
-        if (editing) {
-          actions.push({ key: 'delete', label: '删除', onClick: () => handleDelete(record), danger: true, disabled: isCancelled });
-          return <RowActions actions={actions} maxInline={1} />;
-        }
-
-        if (isWarehousePending) {
-          actions.push({ key: 'warehouse-pending', label: '待仓库出库', disabled: true });
-        }
-        if (!isWarehousePending && (isPending || isReceived || isPartial)) {
-          actions.push({
-            key: 'receive',
-            label: isPending ? '采购/到货' : '追加到货',
-            onClick: () => openReceive(record),
-            primary: isPending,
-            disabled: !canProcure,
-            title: !canProcure ? '请先完善面辅料信息' : undefined,
-          });
-        }
-        if (isReturnConfirmed || isCompleted) {
-          actions.push({
-            key: 'warehouse-pick',
-            label: '出库领取',
-            onClick: () => _handleWarehousePick(record, Number(record.arrivedQuantity || record.purchaseQuantity || 0)),
-            primary: true,
-          });
-        }
-        if (isPending) {
-          actions.push({ key: 'inbound', label: '到货入库', onClick: () => openInbound(record) });
-        }
-        if (!isWarehousePending && !isPending && !isCancelled) {
-          actions.push({
-            key: 'return-confirm',
-            label: isReturnConfirmed ? '追加回料' : '回料确认',
-            onClick: () => handleReturnConfirm(record),
-          });
-        }
-        if (isReturnConfirmed || isCompleted) {
-          actions.push({ key: 'return-reset', label: '退回', onClick: () => handleReturnReset(record), danger: true });
-        }
-        if (!isPending && !isCompleted && !isCancelled && !isReturnConfirmed) {
-          actions.push({ key: 'cancel-receive', label: '取消领取', onClick: () => handleCancelReceive(record), danger: true });
-        }
-        actions.push({
-          key: 'quality-issue',
-          label: '品质异常',
-          onClick: () => { setQualityIssueRecord(record); setQualityIssueVisible(true); },
-        });
-
-        return <RowActions actions={actions} maxInline={2} />;
+        return (
+          <RowActions
+            actions={[
+              ...(editing ? [] : [
+                { key: 'edit', label: '编辑', onClick: () => handleStartEdit(), disabled: isCancelled },
+              ]),
+              { key: 'delete', label: '删除', onClick: () => handleDelete(record), danger: true, disabled: isCancelled },
+              ...(isWarehousePending ? [{ key: 'warehouse-pending', label: '待仓库出库', disabled: true }] : []),
+              ...(!isWarehousePending && (isPending || isReceived || isPartial) ? [{ key: 'receive', label: isPending ? '采购/到货' : '追加到货', onClick: () => openReceive(record), primary: isPending, disabled: !canProcure, title: !canProcure ? '请先完善面辅料信息' : undefined }] : []),
+              ...(isPending ? [{ key: 'inbound', label: '到货入库', onClick: () => openInbound(record) }] : []),
+              ...(!isPending && !isCancelled ? [{ key: 'return-confirm', label: isReturnConfirmed ? '追加回料' : '回料确认', onClick: () => handleReturnConfirm(record) }] : []),
+              ...((isReturnConfirmed || isCompleted) ? [{ key: 'return-reset', label: '退回', onClick: () => handleReturnReset(record), danger: true }] : []),
+              ...(!isPending && !isCompleted && !isCancelled && !isReturnConfirmed ? [{ key: 'cancel-receive', label: '取消领取', onClick: () => handleCancelReceive(record), danger: true }] : []),
+              { key: 'quality-issue', label: '品质异常', onClick: () => { setQualityIssueRecord(record); setQualityIssueVisible(true); } },
+              ...(isReturnConfirmed || isCompleted ? [{ key: 'warehouse-pick', label: '出库领取', onClick: () => _handleWarehousePick(record, Number(record.arrivedQuantity || record.purchaseQuantity || 0)), primary: true }] : []),
+            ]}
+          />
+        );
       },
     },
   ];
 
   const columns = editing ? editColumns : viewColumns;
 
-  // 顶部主操作按钮（对齐裁剪明细：领取 + 返回 + 更多操作 Dropdown）
-  const titleExtra = (
-    <Space>
-      {editing ? (
-        <>
-          <Button type="dashed" icon={<PlusOutlined />} onClick={handleAddRow}>添加物料</Button>
-          <Button type="primary" loading={saving} onClick={handleSaveAll}>保存</Button>
-          <Button onClick={handleCancelEdit}>取消</Button>
-        </>
-      ) : (
-        <>
-          {canProcure && (
-            <Button type="primary" onClick={onBatchPurchase} loading={batchPurchaseLoading}>
-              批量采购
-            </Button>
-          )}
-          <Dropdown menu={{
-            items: [
-              { key: 'edit', label: '编辑面辅料', icon: <EditOutlined />, onClick: handleStartEdit },
-              { key: 'upload', label: '上传采购单', icon: <UploadOutlined />, onClick: () => setDocRecognizeOpen(true) },
-              { key: 'batchReturn', label: '批量回料确认', onClick: onBatchReturnConfirm, disabled: batchReturnLoading },
-              { key: 'confirmComplete', label: '确认回料完成', onClick: handleConfirmComplete, disabled: confirmCompleteSubmitting },
-              { type: 'divider' as const },
-              { key: 'print', label: '打印采购单', icon: <PrinterOutlined />, onClick: () => {
-                const w = window.open('', '_blank');
-                if (!w) return;
-                const rows = purchaseList.map((p) => `<tr><td>${p.materialType || ''}</td><td>${p.materialName || ''}</td><td>${p.purchaseQuantity || ''}</td><td>${p.arrivedQuantity || ''}</td><td>${p.supplierName || ''}</td><td>${p.status || ''}</td></tr>`).join('');
-                w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>采购单 ${styleNo}</title><style>body{font-family:sans-serif;padding:20px}table{border-collapse:collapse;width:100%}td,th{border:1px solid #ccc;padding:6px 8px}</style></head><body><h2>采购单 - ${styleNo}</h2><table><tr><th>物料类型</th><th>物料名称</th><th>采购数量</th><th>到货数量</th><th>供应商</th><th>状态</th></tr>${rows}</table></body></html>`);
-                w.document.close();
-                w.print();
-              }},
-              { key: 'download', label: '下载采购单', icon: <DownloadOutlined />, onClick: handleExport },
-              { key: 'export', label: '导出明细', icon: <ExportOutlined />, onClick: onExport, disabled: exportLoading },
-            ],
-          }}>
-            <Button icon={<EllipsisOutlined />}>更多操作</Button>
-          </Dropdown>
-          <Button onClick={() => embedded && onClose ? onClose() : navigate(-1)}>返回</Button>
-        </>
-      )}
-    </Space>
-  );
-
   return (
-    <PageLayout
-      title="订单物料采购明细"
-      titleExtra={titleExtra}
-    >
+    <div style={{ padding: embedded ? 0 : (isMobile ? 12 : 24) }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
+        <Space>
+          <Button onClick={() => embedded && onClose ? onClose() : navigate(-1)}>返回</Button>
+          <h2 style={{ margin: 0, fontSize: isMobile ? 16 : 20 }}>订单物料采购明细</h2>
+        </Space>
+      </div>
+
       {loading ? (
         <div style={{ textAlign: 'center', padding: 48 }}><Spin size="large" /></div>
       ) : !order ? (
@@ -516,19 +442,64 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
         />
       )}
 
-      {bomIncomplete && !editing && (
-        <Alert
-          type="warning"
-          showIcon
-          style={{ marginBottom: 16 }}
-          title={isMultiColor ? '多颜色订单需完善面辅料信息后才可采购' : '请完善面辅料信息'}
-        />
-      )}
-
       <Card
         title={`面辅料信息（共 ${displayData.length} 项）`}
         loading={loading}
         styles={{ body: { padding: '0 16px 16px' } }}
+        extra={
+          <Space wrap>
+            <Button icon={<UploadOutlined />} onClick={() => setDocRecognizeOpen(true)} size="small">
+              上传采购单
+            </Button>
+            <Button onClick={onBatchPurchase} disabled={!canProcure} loading={batchPurchaseLoading} title={!canProcure ? '请先完善面辅料信息再批量采购' : ''} size="small">
+              批量采购
+            </Button>
+            <Button onClick={onBatchReturnConfirm} loading={batchReturnLoading} size="small">
+              批量回料确认
+            </Button>
+            <Button onClick={handleConfirmComplete} loading={confirmCompleteSubmitting} size="small">确认回料完成</Button>
+            <Dropdown menu={{
+              items: [
+                { key: 'print', label: '打印采购单', icon: <PrinterOutlined />, onClick: () => {
+                  const w = window.open('', '_blank');
+                  if (!w) return;
+                  const rows = purchaseList.map((p) => `<tr><td>${p.materialType || ''}</td><td>${p.materialName || ''}</td><td>${p.purchaseQuantity || ''}</td><td>${p.arrivedQuantity || ''}</td><td>${p.supplierName || ''}</td><td>${p.status || ''}</td></tr>`).join('');
+                  w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>采购单 ${styleNo}</title><style>body{font-family:sans-serif;padding:20px}table{border-collapse:collapse;width:100%}td,th{border:1px solid #ccc;padding:6px 8px}</style></head><body><h2>采购单 - ${styleNo}</h2><table><tr><th>物料类型</th><th>物料名称</th><th>采购数量</th><th>到货数量</th><th>供应商</th><th>状态</th></tr>${rows}</table></body></html>`);
+                  w.document.close();
+                  w.print();
+                }},
+                { key: 'download', label: '下载采购单', icon: <DownloadOutlined />, onClick: handleExport },
+              ],
+            }}>
+              <Button size="small">采购单生成</Button>
+            </Dropdown>
+            <Button icon={<ExportOutlined />} onClick={onExport} loading={exportLoading} size="small">导出</Button>
+            {editing ? (
+              <>
+                <Button type="dashed" icon={<PlusOutlined />} onClick={handleAddRow} size="small">
+                  添加物料
+                </Button>
+                <Button type="primary" loading={saving} onClick={handleSaveAll} size="small">
+                  保存
+                </Button>
+                <Button onClick={handleCancelEdit} size="small">
+                  取消
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button type="primary" icon={<PlusOutlined />} onClick={handleStartEdit} size="small">
+                  编辑面辅料
+                </Button>
+                {bomIncomplete && (
+                  <Tag icon={<ExclamationCircleOutlined />} color="warning">
+                    {isMultiColor ? '多颜色订单需完善面辅料信息后才可采购' : '请完善面辅料信息'}
+                  </Tag>
+                )}
+              </>
+            )}
+          </Space>
+        }
       >
         {displayData.length === 0 && !editing ? (
           <div style={{ textAlign: 'center', padding: '48px 16px' }}>
@@ -815,7 +786,7 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
           await loadData();
         }}
       />
-    </PageLayout>
+    </div>
   );
 };
 

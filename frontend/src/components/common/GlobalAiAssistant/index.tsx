@@ -208,17 +208,6 @@ const GlobalAiAssistant: React.FC = () => {
     return () => window.removeEventListener('openAiChat', handleOpenAiChat);
   }, [setInputValue]);
 
-  // ── 监听外部触发打开任务面板（SmartAlertBell 等入口收敛到这里） ──
-  useEffect(() => {
-    const handleOpenAiTasks = () => {
-      setIsTaskPanelOpen(true);
-      setIsOpen(false);
-      refreshPendingTasks();
-    };
-    window.addEventListener('openAiTasks', handleOpenAiTasks);
-    return () => window.removeEventListener('openAiTasks', handleOpenAiTasks);
-  }, [refreshPendingTasks]);
-
   const dismissPendingItem = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     setDismissedPending(prev => {
