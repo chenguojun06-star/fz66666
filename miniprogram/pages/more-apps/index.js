@@ -14,7 +14,7 @@ const ALL_APPS = [
     { id: 'sampleDev', name: '样衣开发', iconClass: 'icon-menu-garment', circleClass: 'menu-icon-circle--teal', route: '/pages/sample-development/index/index' },
     { id: 'cuttingTask', name: '裁剪任务', iconClass: 'icon-menu-cutting', circleClass: 'menu-icon-circle--rose', route: '/pages/cutting/task-list/index' },
     { id: 'cuttingDetail', name: '裁剪明细', iconClass: 'icon-menu-cutting', circleClass: 'menu-icon-circle--rose', route: '/pages/cutting/bundle-detail/index' },
-    { id: 'procurement', name: '采购任务', iconClass: 'icon-menu-cart', circleClass: 'menu-icon-circle--orange', route: '/pages/procurement/task-list/index' },
+    { id: 'procurement', name: '采购页面', iconClass: 'icon-menu-cart', circleClass: 'menu-icon-circle--orange', route: '/pages/procurement/task-list/index' },
     { id: 'factoryShipment', name: '外发工厂', iconClass: 'icon-menu-shipment', circleClass: 'menu-icon-circle--cyan', route: '/pages/factory/shipment/index' },
     { id: 'bundleSplit', name: '菲号单价', iconClass: 'icon-menu-price', circleClass: 'menu-icon-circle--orange', route: '/pages/work/bundle-split/index' },
   ]},

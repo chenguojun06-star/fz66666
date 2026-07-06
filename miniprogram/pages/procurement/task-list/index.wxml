@@ -10,8 +10,8 @@
     <view
       wx:for="{{statusTabs}}"
       wx:key="key"
-      class="filter-tab {{activeFilter === item.key ? 'active' : ''}}"
-      bindtap="onFilterTap"
+      class="filter-tab {{activeStatus === item.key ? 'active' : ''}}"
+      bindtap="onTabChange"
       data-key="{{item.key}}"
     >
       <text>{{item.label}}</text>
@@ -21,11 +21,11 @@
 
   <!-- 加载中 -->
   <view wx:if="{{loading && !filteredGroups.length}}" class="loading-state">
-    <text>加载采购任务中…</text>
+    <text>加载采购页面中…</text>
   </view>
 
   <!-- 空状态 -->
-  <empty-state wx:elif="{{filteredGroups.length === 0}}" iconEmoji="📦" text="暂无数据" hint="下拉刷新试试" card="{{true}}"></empty-state>
+  <empty-state wx:elif="{{filteredGroups.length === 0}}" iconEmoji="📦" text="暂无采购任务" hint="当有新的订单分配时，采购任务将出现在这里" card="{{true}}"></empty-state>
 
   <!-- 任务列表 -->
   <block wx:else>
@@ -37,7 +37,7 @@
       bindtap="onGroupTap"
       hover-class="task-card-hover"
     >
-      <!-- 主区域：图片 + 规格信息右栏（与样衣开发风格一致） -->
+      <!-- 主区域：图片 + 规格信息右栏（对齐裁剪明细页面风格） -->
       <view class="card-main">
         <view class="card-cover" catchtap="onCoverPreview" data-url="{{item.styleCoverUrl}}">
           <image wx:if="{{item.styleCoverUrl}}" class="card-cover-img" src="{{item.styleCoverUrl}}" mode="aspectFill" lazy-load="{{true}}" />
@@ -70,6 +70,12 @@
             <text class="info-spec-label" wx:if="{{item.receivedCount > 0 && item.pendingCount === 0}}">采购中</text>
             <text class="info-spec-value" wx:if="{{item.receivedCount > 0 && item.pendingCount === 0}}">{{item.receivedCount}} 项</text>
           </view>
+
+          <!-- 规格信息行：领取人（对齐裁剪明细页面） -->
+          <view class="info-spec-row" wx:if="{{item.receiverName}}">
+            <text class="info-spec-label">领取</text>
+            <text class="info-spec-value">{{item.receiverName}}</text>
+          </view>
         </view>
       </view>
 
@@ -92,7 +98,7 @@
           {{item.statusText}}
         </view>
         <view class="btn-action btn-outline" hover-class="btn-outline-hover" hover-stay-time="100" catchtap="onGroupTap" data-group="{{item}}">
-          查看详情
+          采购明细
         </view>
         <text class="card-arrow">›</text>
       </view>

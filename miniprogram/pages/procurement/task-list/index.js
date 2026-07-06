@@ -4,21 +4,19 @@ const { eventBus, Events } = require('../../../utils/eventBus');
 const permission = require('../../../utils/permission');
 const { getUserInfo } = require('../../../utils/storage');
 
-const STATUS_TABS = [
-  { key: '', label: '全部' },
-  { key: 'pending', label: '待采购' },
-  { key: 'received', label: '采购中' },
-  { key: 'completed', label: '已完成' },
-];
-
 Page({
   data: {
     loading: false,
-    activeFilter: '',
-    statusTabs: STATUS_TABS,
+    activeStatus: 'all', // 对齐裁剪明细页面：'all' 而非空字符串
+    statusTabs: [
+      { key: 'all', label: '全部' },
+      { key: 'pending', label: '待采购' },
+      { key: 'received', label: '采购中' },
+      { key: 'completed', label: '已完成' },
+    ],
     groups: [],
-    filteredGroups: [], // 筛选后的分组（首帧渲染需要初始值，避免 wxml 中 filteredGroups.length 为 undefined）
-    roleHint: '', // 跨岗位提示（空=本岗位或主管，无提示）
+    filteredGroups: [], // 筛选后的分组
+    roleHint: '', // 跨岗位提示
   },
 
   onLoad() {
@@ -31,7 +29,9 @@ Page({
     this.loadData();
   },
 
+  // 对齐裁剪明细页面：onShow 主动刷新数据
   onShow() {
+    this.loadData();
     this._bindEvents();
   },
 
@@ -71,33 +71,35 @@ Page({
     } catch (e) {
       console.error('[ProcurementTaskList] loadData error', e);
       this.setData({ loading: false });
-      toast.error('加载采购任务失败');
+      toast.error('加载采购页面失败');
     }
   },
 
-  onFilterTap(e) {
+  // 对齐裁剪明细页面：方法名 onTabChange（原 onFilterTap）
+  onTabChange(e) {
     const key = e.currentTarget.dataset.key;
-    this.setData({ activeFilter: key });
+    this.setData({ activeStatus: key });
     this._applyFilter();
   },
 
   _applyFilter() {
-    const { groups, activeFilter } = this.data;
+    const { groups, activeStatus } = this.data;
     let filtered;
-    if (!activeFilter) {
+    // 对齐裁剪明细页面：'all' 而非空字符串
+    if (activeStatus === 'all') {
       filtered = groups;
     } else {
       filtered = groups.filter(g => {
-        if (activeFilter === 'pending') return g.pendingCount > 0;
-        if (activeFilter === 'received') return g.receivedCount > 0;
-        if (activeFilter === 'completed') return g.completedCount === g.totalCount && g.totalCount > 0;
+        if (activeStatus === 'pending') return g.pendingCount > 0;
+        if (activeStatus === 'received') return g.receivedCount > 0;
+        if (activeStatus === 'completed') return g.completedCount === g.totalCount && g.totalCount > 0;
         return true;
       });
     }
     // 更新筛选 tab 计数
-    const statusTabs = STATUS_TABS.map(tab => {
+    const statusTabs = this.data.statusTabs.map(tab => {
       let count = 0;
-      if (tab.key === '') count = groups.length;
+      if (tab.key === 'all') count = groups.length;
       else if (tab.key === 'pending') count = groups.filter(g => g.pendingCount > 0).length;
       else if (tab.key === 'received') count = groups.filter(g => g.receivedCount > 0).length;
       else if (tab.key === 'completed') count = groups.filter(g => g.completedCount === g.totalCount && g.totalCount > 0).length;
@@ -240,6 +242,8 @@ Page({
 
       let canReceive = false;
       let canOperate = false;
+      // 对齐裁剪明细页面：显示领取人（取该订单下本人领取的物料对应的领取人）
+      let groupReceiverName = '';
 
       if (g.pendingCount > 0) {
         canReceive = true;
@@ -250,6 +254,16 @@ Page({
           return rid === receiverId || rname === receiverName;
         });
         canOperate = myItems.length > 0;
+        if (myItems.length > 0) {
+          groupReceiverName = myItems[0].receiverName || receiverName || '';
+        }
+      } else if (g.completedCount === g.totalCount && g.totalCount > 0) {
+        // 已完成的订单，显示首个领取人
+        const receivedItem = g.items.find(item => {
+          const rname = String(item.receiverName || '').trim();
+          return rname;
+        });
+        if (receivedItem) groupReceiverName = receivedItem.receiverName;
       }
 
       return {
@@ -260,6 +274,7 @@ Page({
         isSample: g.sourceType === 'sample' || (!g.orderNo && !!g.patternProductionId),
         canReceive,
         canOperate,
+        receiverName: groupReceiverName, // 对齐裁剪明细页面：显示领取人
       };
     });
   },
