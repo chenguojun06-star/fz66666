@@ -214,8 +214,10 @@ public class TrackingRecordInitHelper {
                 tracking.setQuantity(bundle.getQuantity());
 
                 String processName = getStringValue(node, "name", "工序" + (i + 1));
-                String processId = getStringValue(node, "id", "");
-                tracking.setProcessCode(StringUtils.hasText(processId) ? processId : processName);
+                // processCode 优先取 node.processCode / code；禁止用 node.id（前端工艺流程编辑器生成的 UUID）
+                String processCode = getStringValue(node, "processCode",
+                        getStringValue(node, "code", ""));
+                tracking.setProcessCode(StringUtils.hasText(processCode) ? processCode : processName);
                 tracking.setProcessName(processName);
                 tracking.setProcessOrder(i + 1);
                 tracking.setUnitPrice(getBigDecimalValue(node, "unitPrice", BigDecimal.ZERO));
@@ -293,6 +295,15 @@ public class TrackingRecordInitHelper {
             Object nodesObj = workflow.get("nodes");
             if (nodesObj instanceof List) {
                 List<Map<String, Object>> nodeList = (List<Map<String, Object>>) nodesObj;
+                // 先收集所有阶段名（name === progressStage 的节点是父节点）
+                Set<String> parentStageNames = new HashSet<>();
+                for (Map<String, Object> node : nodeList) {
+                    String name = getStringValue(node, "name", "");
+                    String stage = getStringValue(node, "progressStage", "");
+                    if (StringUtils.hasText(name) && name.equals(stage)) {
+                        parentStageNames.add(name);
+                    }
+                }
                 Set<String> seenNames = new HashSet<>();
                 for (Map<String, Object> node : nodeList) {
                     String progressStage = getStringValue(node, "progressStage", "");
@@ -300,13 +311,21 @@ public class TrackingRecordInitHelper {
                         continue;
                     }
                     String name = getStringValue(node, "name", "");
+                    // 过滤父节点：name === progressStage 且存在其他子节点（progressStage === name）
+                    // 父节点是阶段分组（如"尾部"），不是可扫码工序，不应生成跟踪记录
+                    if (StringUtils.hasText(name) && name.equals(progressStage)
+                            && nodeList.stream().anyMatch(n -> !name.equals(getStringValue(n, "name", ""))
+                                    && name.equals(getStringValue(n, "progressStage", "")))) {
+                        log.info("订单 {} 跳过父节点「{}」（阶段分组，非可扫码工序）", order.getOrderNo(), name);
+                        continue;
+                    }
                     if (StringUtils.hasText(name) && !seenNames.add(name)) {
                         log.warn("订单 {} 工序配置中发现重复工序「{}」，已跳过（保留首次出现）", order.getOrderNo(), name);
                         continue;
                     }
                     nodes.add(node);
                 }
-                log.info("订单 {} 解析工序配置成功：共 {} 个工序", order.getOrderNo(), nodes.size());
+                log.info("订单 {} 解析工序配置成功：共 {} 个工序（父节点已过滤）", order.getOrderNo(), nodes.size());
             } else {
                 log.warn("订单 {} 的 progressWorkflowJson 格式错误：nodes 不是数组", order.getOrderNo());
             }

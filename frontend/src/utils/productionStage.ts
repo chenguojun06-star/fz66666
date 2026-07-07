@@ -131,7 +131,10 @@ export const formatProcessDisplayName = (processCode?: string, processName?: str
   const code = String(processCode || '').trim();
   const name = String(processName || '').trim();
   if (!code && !name) return '-';
-  if (!code || code === name) return name || '-';
+  // 防御：processCode 若是 UUID（32位hex 或标准UUID格式），视为无效，仅显示工序名
+  const isUuid = /^[0-9a-f]{32}$/i.test(code)
+    || /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(code);
+  if (!code || code === name || isUuid) return name || '-';
   if (!name) return code;
   return `${code} ${name}`;
 };

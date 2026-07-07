@@ -32,7 +32,7 @@ const CuttingWorkflowEditorModal: React.FC<CuttingWorkflowEditorModalProps> = ({
   orderNo,
   onSaved,
 }) => {
-  const { message } = App.useApp();
+  const { message, modal } = App.useApp();
   const [orderId, setOrderId] = useState('');
   const [rows, setRows] = useState<WorkflowRow[]>([]);
   const [loading, setLoading] = useState(false);
@@ -107,6 +107,55 @@ const CuttingWorkflowEditorModal: React.FC<CuttingWorkflowEditorModalProps> = ({
     if (invalid) {
       message.warning('工序名称不能为空');
       return;
+    }
+    // 校验：合并工序名（含2+个标准工序关键词）警告
+    const standardProcessKeywords = ['剪线', '大烫', '整烫', '熨烫', '包装', '打包', '绣花', '印花', '水洗', '压花', '裁剪', '车缝', '缝制'];
+    const mergedNameRow = rows.find(r => {
+      const n = r.name.trim();
+      return standardProcessKeywords.filter(kw => n.includes(kw)).length >= 2;
+    });
+    if (mergedNameRow) {
+      const confirmed = await new Promise<boolean>(resolve => {
+        modal.confirm({
+          title: '工序名疑似合并',
+          content: `工序「${mergedNameRow.name}」包含多个工序关键词，建议拆分为多行独立工序，否则无法单独扫码和结算工资。确认仍要这样保存吗？`,
+          okText: '仍然保存',
+          cancelText: '返回修改',
+          onOk: () => resolve(true),
+          onCancel: () => resolve(false),
+        });
+      });
+      if (!confirmed) return;
+    }
+    // 校验：工序名暗示的阶段与所选progressStage不一致警告
+    const deriveStage = (name: string): string | null => {
+      const n = name.trim();
+      if (!n) return null;
+      if (n.includes('剪线') || n.includes('大烫') || n.includes('整烫') || n.includes('熨烫') || n.includes('包装') || n.includes('打包')) return '尾部';
+      if (n.includes('绣花') || n.includes('印花') || n.includes('水洗') || n.includes('压花')) return '二次工艺';
+      if (n.includes('裁剪') || n.includes('裁床')) return '裁剪';
+      if (n.includes('车缝') || n.includes('缝制') || n.includes('缝纫')) return '车缝';
+      if (n.includes('入库')) return '入库';
+      return null;
+    };
+    const mismatchRow = rows.find(r => {
+      const derived = deriveStage(r.name);
+      const selected = r.progressStage.trim();
+      return derived && selected && derived !== selected;
+    });
+    if (mismatchRow) {
+      const derived = deriveStage(mismatchRow.name);
+      const confirmed = await new Promise<boolean>(resolve => {
+        modal.confirm({
+          title: '阶段归属可能错误',
+          content: `工序「${mismatchRow.name}」通常属于「${derived}」，但当前选择了「${mismatchRow.progressStage}」。这会导致该工序在工序跟踪中显示在错误的分组下。确认是否继续？`,
+          okText: '仍然保存',
+          cancelText: '返回修改',
+          onOk: () => resolve(true),
+          onCancel: () => resolve(false),
+        });
+      });
+      if (!confirmed) return;
     }
     const nodes = rows.map((r, idx) => {
       const progressStage = r.progressStage.trim() || r.name.trim();

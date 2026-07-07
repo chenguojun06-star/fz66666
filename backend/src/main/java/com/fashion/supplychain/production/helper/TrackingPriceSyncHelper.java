@@ -322,11 +322,54 @@ public class TrackingPriceSyncHelper {
 
                 String stage = nameToStage.get(pName);
                 if (stage == null && !pCode.isEmpty()) stage = nameToStage.get(pCode);
-                if (stage != null) r.setProgressStage(stage);
+                if (stage != null) {
+                    // 防御：若JSON配置的stage与工序名暗示的stage冲突，以工序名推导为准
+                    // 解决"剪线大烫包装"被错误归到"二次工艺"这类配置错误
+                    String derived = deriveStageFromProcessName(pName);
+                    if (derived != null && !derived.equals(stage)) {
+                        log.warn("工序[{}]的JSON配置stage[{}]与名称推导stage[{}]冲突，采用推导值 orderNo={}",
+                                pName, stage, derived, order.getOrderNo());
+                        r.setProgressStage(derived);
+                    } else {
+                        r.setProgressStage(stage);
+                    }
+                }
             }
         } catch (Exception e) {
             log.warn("填充progressStage失败，忽略 orderNo={}: {}", order.getOrderNo(), e.getMessage());
         }
+    }
+
+    /**
+     * 根据工序名推导所属阶段（用于纠正JSON配置错误的progressStage）
+     * 仅在工序名明显暗示某阶段时返回非null，模糊不清返回null（不覆盖JSON配置）
+     */
+    private String deriveStageFromProcessName(String processName) {
+        if (processName == null) return null;
+        String n = processName.trim();
+        if (n.isEmpty()) return null;
+        // 尾部：剪线/大烫/整烫/熨烫/包装/打包/后整/后道
+        if (n.contains("剪线") || n.contains("大烫") || n.contains("整烫") || n.contains("熨烫")
+                || n.contains("包装") || n.contains("打包") || n.contains("后整") || n.contains("后道")) {
+            return "尾部";
+        }
+        // 二次工艺：绣花/印花/水洗/压花
+        if (n.contains("绣花") || n.contains("印花") || n.contains("水洗") || n.contains("压花")) {
+            return "二次工艺";
+        }
+        // 裁剪
+        if (n.contains("裁剪") || n.contains("裁床") || n.contains("剪裁")) {
+            return "裁剪";
+        }
+        // 车缝
+        if (n.contains("车缝") || n.contains("缝制") || n.contains("缝纫") || n.contains("车工")) {
+            return "车缝";
+        }
+        // 入库
+        if (n.contains("入库") || n.contains("入仓")) {
+            return "入库";
+        }
+        return null;
     }
 
     private void fillScanBlocked(List<ProductionProcessTracking> records) {
