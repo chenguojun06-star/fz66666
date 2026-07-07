@@ -169,38 +169,32 @@ Page({
         const sizesArr = data.sizes || [];
         const sizesText = sizesArr.length ? sizesArr.join('/') : (data.size ? String(data.size) : '-');
 
-        // 构建工序选择列表（同时把 color/size/quantity 转发给 WXML）
+        // 构建工序选择列表（全部开放，不上锁，过滤已完成的）
         const rawOptions = Array.isArray(data.operationOptions) ? data.operationOptions : [];
-        const processList = rawOptions.map(function(opt) {
-          return {
-            value: opt.value,
-            name: opt.label || opt.processName || opt.value,
-            completed: opt.completed === true,
-            canOperate: opt.canOperate === true,
-            locked: opt.locked === true,
-            lockReason: opt.lockReason || '',
-            processName: opt.processName || opt.value,
-            progressStage: opt.progressStage || opt.value,
-            scanType: opt.scanType || 'production',
-            color: opt.color || data.color || '',
-            size: opt.size || data.size || (sizesArr.length ? sizesArr.join('/') : ''),
-            quantity: typeof opt.quantity === 'number' ? opt.quantity : (typeof data.quantity === 'number' ? data.quantity : 0),
-          };
-        });
+        const processList = rawOptions
+          .filter(function(opt) { return !opt.completed; }) // 已完成的不显示
+          .map(function(opt) {
+            return {
+              value: opt.value,
+              name: opt.label || opt.processName || opt.value,
+              checked: false,
+              processName: opt.processName || opt.value,
+              progressStage: opt.progressStage || opt.value,
+              scanType: opt.scanType || 'production',
+            };
+          });
 
         // 判断视图模式
         const hasDirectProcess = !!manualScanType;
-        const firstOperable = processList.find(function(p) { return p.canOperate; });
-        const allCompleted = processList.length > 0 && processList.every(function(p) { return p.completed; });
 
-        if (allCompleted) {
+        if (processList.length === 0) {
           finish();
           toast.success('所有工序已完成');
           setTimeout(() => { try { wx.navigateBack({ delta: 1 }); } catch (_e) {} }, 500);
           return;
         }
 
-        if (hasDirectProcess && firstOperable) {
+        if (hasDirectProcess) {
           finish();
           // 直接进入操作视图
           that._buildOperateView(data, manualScanType);
@@ -210,6 +204,7 @@ Page({
           that.setData({
             viewMode: 'select',
             processList: processList,
+            selectedCount: 0,
             detail: {
               patternId: data.patternId,
               styleNo: data.styleNo || data.patternId,
@@ -220,6 +215,7 @@ Page({
               sizesText: sizesText,
               quantity: data.quantity || 0,
               coverImage: data.cover || getAuthedImageUrl(''),
+              deliveryTime: data.deliveryTime || (data.patternDetail && data.patternDetail.deliveryTime) || '',
             },
           });
         }
@@ -233,22 +229,23 @@ Page({
       });
   },
 
-  // 选择某个工序后，进入操作页
-  onProcessSelect(e) {
-    const idx = e.currentTarget.dataset.index;
-    if (idx === undefined || idx === null) return;
-    const processList = this.data.processList || [];
-    const proc = processList[idx];
-    if (!proc) return;
+  // 工序 chip 点击（多选切换）
+  onProcessChipTap(e) {
+    const value = e.currentTarget.dataset.value;
+    if (!value) return;
+    const processList = (this.data.processList || []).map(function(p) {
+      if (p.value === value) p.checked = !p.checked;
+      return p;
+    });
+    const selectedCount = processList.filter(function(p) { return p.checked; }).length;
+    this.setData({ processList: processList, selectedCount: selectedCount });
+  },
 
-    if (proc.locked) {
-      toast.error(proc.lockReason || '该工序暂不可操作');
-      return;
-    }
-    if (!proc.canOperate) {
-      if (proc.completed) {
-        toast.error('该工序已完成');
-      }
+  // 确认选择，进入操作页（取第一个选中的工序）
+  onConfirmProcess() {
+    const checked = (this.data.processList || []).filter(function(p) { return p.checked; });
+    if (checked.length === 0) {
+      toast.error('请至少选择一个工序');
       return;
     }
 
@@ -261,7 +258,8 @@ Page({
       return;
     }
 
-    this._buildOperateView(data, proc.processName || proc.value);
+    // 单选直接进入操作页；多选暂取第一个（后续可扩展批量提交）
+    this._buildOperateView(data, checked[0].processName || checked[0].value);
   },
 
   // 构建操作视图（原 onLoad 的核心逻辑）

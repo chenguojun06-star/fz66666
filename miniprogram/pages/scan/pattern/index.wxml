@@ -1,50 +1,54 @@
 <!-- 样板生产操作页 -->
 <view class="container">
 
-  <!-- 视图 A：工序选择（扫码进入，或未指定工序时） -->
+  <!-- 视图 A：工序选择（与大货扫码一致：顶部信息卡片 + chip多选） -->
   <view wx:if="{{viewMode === 'select'}}" class="select-view">
-    <view class="pattern-brief-card">
-      <image wx:if="{{detail.coverImage}}" class="pattern-cover" src="{{detail.coverImage}}" lazy-load mode="aspectFill" />
-      <view class="pattern-brief-info">
-        <text class="pattern-style-no">{{detail.styleNo}}</text>
-        <text wx:if="{{detail.styleName}}" class="pattern-style-name">{{detail.styleName}}</text>
-        <text wx:if="{{detail.color}}" class="pattern-color">颜色：{{detail.color}}</text>
-        <text wx:if="{{detail.size}}" class="pattern-color">码数：{{detail.size}}</text>
-        <text wx:elif="{{detail.sizesText && detail.sizesText !== '-'}}" class="pattern-color">码数：{{detail.sizesText}}</text>
-        <text wx:if="{{detail.quantity && detail.quantity > 0}}" class="pattern-color">数量：{{detail.quantity}} 件</text>
-      </view>
-    </view>
 
-    <view class="select-title">请选择要操作的工序</view>
-
-    <view class="process-select-list">
-      <view wx:for="{{processList}}" wx:key="value" wx:for-item="proc"
-            class="process-select-item {{proc.completed ? 'done' : ''}} {{proc.canOperate ? 'can-operate' : ''}} {{proc.locked ? 'locked' : ''}}"
-            data-index="{{index}}" bindtap="onProcessSelect">
-        <view class="process-select-dot">
-          <text wx:if="{{proc.completed}}" class="dot-check">✓</text>
-          <text wx:elif="{{proc.canOperate}}" class="dot-arrow">→</text>
-          <text wx:elif="{{proc.locked}}" class="dot-lock">🔒</text>
-          <text wx:else class="dot-empty">○</text>
-        </view>
-        <view class="process-select-content">
-          <text class="process-select-name">{{proc.name}}</text>
-          <!-- 工序基础信息：颜色/码数/数量（同一订单下工序共用） -->
-          <view class="process-select-meta">
-            <text wx:if="{{proc.color}}" class="meta-item">颜色：{{proc.color}}</text>
-            <text wx:if="{{proc.size}}" class="meta-item">码数：{{proc.size}}</text>
-            <text wx:if="{{proc.quantity && proc.quantity > 0}}" class="meta-item">数量：{{proc.quantity}}件</text>
+    <!-- 顶部信息卡片（与大货扫码一致的三行清晰式） -->
+    <view class="task-card">
+      <view class="card-header">
+        <image-preview class="cover-wrap" src="{{detail.coverImage || ''}}" mode="aspectFill" />
+        <view class="header-info">
+          <text class="style-no">{{(detail.styleNo || '-') + (detail.styleName ? ' · ' + detail.styleName : '')}}</text>
+          <view class="header-meta">
+            <text wx:if="{{detail.deliveryTime}}" class="header-meta-item header-meta-item--delivery">交期：{{detail.deliveryTime}}</text>
           </view>
-          <text wx:if="{{proc.completed}}" class="process-select-hint done-hint">已完成</text>
-          <text wx:elif="{{proc.canOperate}}" class="process-select-hint can-hint">点击操作</text>
-          <text wx:elif="{{proc.locked}}" class="process-select-hint lock-hint">{{proc.lockReason || '前置工序未完成'}}</text>
-          <text wx:else class="process-select-hint">待执行</text>
         </view>
+      </view>
+
+      <!-- 颜色 码数 数量（同一行） -->
+      <view class="info-row info-row--specs">
+        <text wx:if="{{detail.color}}" class="info-label">颜色</text>
+        <text wx:if="{{detail.color}}" class="info-value">{{detail.color}}</text>
+        <text wx:if="{{detail.color && (detail.size || detail.sizesText !== '-')}}" class="info-divider">·</text>
+        <text wx:if="{{detail.size || (detail.sizesText && detail.sizesText !== '-')}}" class="info-label">码数</text>
+        <text wx:if="{{detail.size}}" class="info-value">{{detail.size}}</text>
+        <text wx:elif="{{detail.sizesText && detail.sizesText !== '-'}}" class="info-value">{{detail.sizesText}}</text>
+        <text wx:if="{{(detail.color || detail.size) && detail.quantity && detail.quantity > 0}}" class="info-divider">·</text>
+        <text wx:if="{{detail.quantity && detail.quantity > 0}}" class="info-label">数量</text>
+        <text wx:if="{{detail.quantity && detail.quantity > 0}}" class="info-value info-value--qty">{{detail.quantity}}件</text>
       </view>
     </view>
 
-    <view class="select-footer">
-      <view class="btn-cancel" hover-class="footer-bar-hover" bindtap="goBack">返回</view>
+    <!-- 工序选择（chip 标签式多选，与大货扫码一致） -->
+    <view class="section-card">
+      <text class="section-title">选择工序（可多选）</text>
+      <scroll-view class="process-scroll" scroll-y style="max-height:600rpx">
+        <view wx:for="{{processList}}" wx:key="value"
+              class="process-chip {{item.checked ? 'active' : ''}}"
+              data-value="{{item.value}}"
+              bindtap="onProcessChipTap">
+          <text class="chip-label">{{item.name}}</text>
+        </view>
+      </scroll-view>
+      <view class="summary-bar" wx:if="{{selectedCount > 0}}">
+        <text class="summary-text">已选 {{selectedCount}} 个工序</text>
+      </view>
+    </view>
+
+    <view class="footer-bar">
+      <view class="btn-cancel" hover-class="footer-bar-hover" bindtap="goBack">取消</view>
+      <view class="btn-submit {{selectedCount === 0 ? 'btn-disabled' : ''}}" hover-class="footer-bar-hover" bindtap="onConfirmProcess">下一步</view>
     </view>
   </view>
 

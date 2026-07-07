@@ -394,6 +394,82 @@
   margin-bottom: var(--spacing-lg);
 }
 
+/* ========= 工序 chip 多选（与大货扫码一致） ========= */
+.process-scroll {
+  padding: 4rpx 0;
+}
+.process-chip {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20rpx 28rpx;
+  margin-bottom: 16rpx;
+  border-radius: var(--radius-md);
+  background: var(--color-bg-gray);
+  border: 2rpx solid transparent;
+  transition: all 0.2s;
+}
+.process-chip.active {
+  background: var(--color-blue-light);
+  border-color: var(--color-border-blue);
+}
+.chip-label {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--color-text-primary);
+}
+.process-chip.active .chip-label {
+  color: var(--color-primary);
+  font-weight: 600;
+}
+.summary-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 20rpx;
+  padding-top: 16rpx;
+  border-top: 1rpx solid var(--color-border);
+}
+.summary-text {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+
+/* ========= 底部按钮栏 ========= */
+.footer-bar {
+  display: flex;
+  gap: 20rpx;
+  padding: 20rpx 30rpx;
+  background: var(--color-bg-card);
+  border-top: 1rpx solid var(--color-border);
+}
+.btn-cancel {
+  flex: 1;
+  text-align: center;
+  padding: 24rpx 0;
+  border-radius: var(--radius-md);
+  background: var(--color-bg-gray);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-base);
+}
+.btn-submit {
+  flex: 1;
+  text-align: center;
+  padding: 24rpx 0;
+  border-radius: var(--radius-md);
+  background: var(--color-primary);
+  color: #fff;
+  font-size: var(--font-size-base);
+  font-weight: 600;
+}
+.btn-disabled {
+  opacity: 0.5;
+}
+.footer-bar-hover {
+  opacity: 0.85;
+}
+
 /* --- 工序选择器 --- */
 .ops-label {
   font-size: var(--font-size-xs);
