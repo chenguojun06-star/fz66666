@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fashion.supplychain.common.ParamUtils;
+import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.constant.OrderStatusConstants;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.helper.CuttingWorkflowBuilderHelper;
@@ -267,19 +268,19 @@ public class ProductionOrderQueryService {
         List<CompletableFuture<Void>> futures = new java.util.ArrayList<>();
         
         // 异步任务组1：基础信息填充
-        futures.add(CompletableFuture.runAsync(() -> fillStyleCover(records), enrichExecutor));
-        futures.add(CompletableFuture.runAsync(() -> orderCuttingFillService.fillCuttingSummary(records), enrichExecutor));
-        futures.add(CompletableFuture.runAsync(() -> progressFillHelper.fillCurrentProcessName(records), enrichExecutor));
-        futures.add(CompletableFuture.runAsync(() -> orderStockFillService.fillStockSummary(records), enrichExecutor));
-        futures.add(CompletableFuture.runAsync(() -> flowStageFillHelper.fillFlowStageFields(records), enrichExecutor));
-        futures.add(CompletableFuture.runAsync(() -> orderQualityFillService.fillQualityStats(records), enrichExecutor));
-        futures.add(CompletableFuture.runAsync(() -> stageBundleStatsFillHelper.fillStageBundleStats(records), enrichExecutor));
-        futures.add(CompletableFuture.runAsync(() -> fillHasSecondaryProcess(records), enrichExecutor));
+        futures.add(CompletableFuture.runAsync(UserContext.wrap(() -> fillStyleCover(records)), enrichExecutor));
+        futures.add(CompletableFuture.runAsync(UserContext.wrap(() -> orderCuttingFillService.fillCuttingSummary(records)), enrichExecutor));
+        futures.add(CompletableFuture.runAsync(UserContext.wrap(() -> progressFillHelper.fillCurrentProcessName(records)), enrichExecutor));
+        futures.add(CompletableFuture.runAsync(UserContext.wrap(() -> orderStockFillService.fillStockSummary(records)), enrichExecutor));
+        futures.add(CompletableFuture.runAsync(UserContext.wrap(() -> flowStageFillHelper.fillFlowStageFields(records)), enrichExecutor));
+        futures.add(CompletableFuture.runAsync(UserContext.wrap(() -> orderQualityFillService.fillQualityStats(records)), enrichExecutor));
+        futures.add(CompletableFuture.runAsync(UserContext.wrap(() -> stageBundleStatsFillHelper.fillStageBundleStats(records)), enrichExecutor));
+        futures.add(CompletableFuture.runAsync(UserContext.wrap(() -> fillHasSecondaryProcess(records)), enrichExecutor));
         
         // 异步任务组2：价格信息填充
-        futures.add(CompletableFuture.runAsync(() -> priceFillHelper.fillFactoryUnitPrice(records), enrichExecutor));
-        futures.add(CompletableFuture.runAsync(() -> priceFillHelper.fillQuotationUnitPrice(records), enrichExecutor));
-        futures.add(CompletableFuture.runAsync(() -> priceFillHelper.fillProgressNodeUnitPrices(records), enrichExecutor));
+        futures.add(CompletableFuture.runAsync(UserContext.wrap(() -> priceFillHelper.fillFactoryUnitPrice(records)), enrichExecutor));
+        futures.add(CompletableFuture.runAsync(UserContext.wrap(() -> priceFillHelper.fillQuotationUnitPrice(records)), enrichExecutor));
+        futures.add(CompletableFuture.runAsync(UserContext.wrap(() -> priceFillHelper.fillProgressNodeUnitPrices(records)), enrichExecutor));
         
         // 等待所有异步任务完成
         try {
