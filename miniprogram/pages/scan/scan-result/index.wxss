@@ -5,43 +5,47 @@
   padding: var(--page-padding-x) var(--page-padding-x) calc(env(safe-area-inset-bottom) + 160rpx);
 }
 
-/* ================ 扫码成功醒目提示（顶部 Banner） ================ */
+/* ================ 扫码成功醒目提示（顶部 Banner，紧凑版） ================ */
 .scan-success-banner {
   background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-  border-radius: var(--radius-xl);
-  padding: 32rpx 40rpx 28rpx;
-  margin-bottom: 24rpx;
-  box-shadow: 0 8rpx 24rpx rgba(16,185,129,0.25);
+  border-radius: var(--radius-lg);
+  padding: 16rpx 24rpx 14rpx;
+  margin-bottom: 16rpx;
+  box-shadow: 0 4rpx 12rpx rgba(16,185,129,0.2);
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
   animation: fadeInUp 0.4s ease-out;
 }
 .scan-success-icon {
-  width: 80rpx;
-  height: 80rpx;
+  width: 40rpx;
+  height: 40rpx;
   background: rgba(255,255,255,0.25);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 48rpx;
+  font-size: 28rpx;
   color: #fff;
   font-weight: 700;
-  margin-bottom: 16rpx;
+  margin-right: 16rpx;
+  flex-shrink: 0;
 }
 .scan-success-text {
-  font-size: 60rpx;
+  font-size: 32rpx;
   color: #fff;
   font-weight: 700;
-  letter-spacing: 4rpx;
-  margin-bottom: 20rpx;
+  letter-spacing: 2rpx;
+  margin-right: 20rpx;
+  flex-shrink: 0;
 }
 .scan-success-info {
   display: flex;
   align-items: center;
-  margin-bottom: 8rpx;
-  font-size: 32rpx;
+  margin-bottom: 0;
+  font-size: 26rpx;
+  flex: 1;
+  min-width: 0;
 }
 .scan-success-key {
   color: rgba(255,255,255,0.75);
@@ -50,6 +54,7 @@
 .scan-success-value {
   color: #fff;
   font-weight: 700;
+  margin-left: 4rpx;
 }
 
 @keyframes fadeInUp {

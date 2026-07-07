@@ -180,95 +180,43 @@ async function handlePatternScan(handler, parsedData, manualScanType) {
  * 根据样衣状态和扫码记录，判断下一步可执行的操作
  */
 function buildSampleOperationOptions(patternDetail, scanRecords, manualScanType) {
+  // 全部开放：所有操作都展示给用户选择，已完成的操作不显示
+  // 用户反馈：不要按状态上锁，让用户自由选择，已领取/已完成的操作自动隐藏
   const options = [];
   const status = String(patternDetail.status || '').toUpperCase();
-  
-  // 提取已完成的操作类型
+
+  // 提取已完成的操作类型（已领取/已完成的操作不重复显示）
   const completedOps = new Set(
     scanRecords
       .filter(function(r) { return r.operationType && r.success !== false; })
       .map(function(r) { return String(r.operationType).toUpperCase(); })
   );
 
-  // 根据样衣状态和已完成操作，构建可选操作
-  // 样衣流程：PENDING(待领取) → IN_PROGRESS(制作中) → COMPLETED(已完成) → 审核 → WAREHOUSE_IN(已入库)
-  
-  if (status === 'PENDING' || !completedOps.has('RECEIVE')) {
-    // 待领取状态，只能领取
-    options.push({
-      value: 'RECEIVE',
-      label: '领取样衣',
-      icon: 'scan',
-    });
-  } else if (status === 'IN_PROGRESS' || status === 'RECEIVED') {
-    // 制作中，可以车板、跟单、完成
-    if (!completedOps.has('PLATE')) {
-      options.push({
-        value: 'PLATE',
-        label: '车板',
-        icon: 'tool',
-      });
+  // 所有操作清单（按流程顺序）
+  const allOps = [
+    { value: 'RECEIVE', label: '领取样衣', icon: 'scan' },
+    { value: 'PLATE', label: '车板', icon: 'tool' },
+    { value: 'FOLLOW_UP', label: '跟单确认', icon: 'check-circle' },
+    { value: 'COMPLETE', label: '完成确认', icon: 'check' },
+    { value: 'REVIEW', label: '样衣审核', icon: 'eye' },
+    { value: 'WAREHOUSE_IN', label: '样衣入库', icon: 'inbox' },
+    { value: 'WAREHOUSE_OUT', label: '样衣出库', icon: 'export' },
+    { value: 'WAREHOUSE_RETURN', label: '样衣归还', icon: 'rollback' },
+  ];
+
+  // 已入库状态额外允许出库/归还（即使没扫过也显示）
+  for (let i = 0; i < allOps.length; i++) {
+    const op = allOps[i];
+    const isCompleted = completedOps.has(op.value);
+    // 已完成的操作不显示（避免重复领取）
+    if (isCompleted) continue;
+    // 已入库状态：出库/归还总是显示
+    if (status === 'WAREHOUSE_IN' && (op.value === 'WAREHOUSE_OUT' || op.value === 'WAREHOUSE_RETURN')) {
+      options.push(op);
+      continue;
     }
-    if (!completedOps.has('FOLLOW_UP')) {
-      options.push({
-        value: 'FOLLOW_UP',
-        label: '跟单确认',
-        icon: 'check-circle',
-      });
-    }
-    if (!completedOps.has('COMPLETE')) {
-      options.push({
-        value: 'COMPLETE',
-        label: '完成确认',
-        icon: 'check',
-      });
-    }
-  } else if (status === 'COMPLETED') {
-    // 已完成，需要审核
-    const reviewStatus = String(patternDetail.reviewStatus || '').toUpperCase();
-    const reviewResult = String(patternDetail.reviewResult || '').toUpperCase();
-    
-    if (reviewStatus === 'APPROVED' || reviewResult === 'APPROVED') {
-      // 审核通过，可以入库
-      if (!completedOps.has('WAREHOUSE_IN')) {
-        options.push({
-          value: 'WAREHOUSE_IN',
-          label: '样衣入库',
-          icon: 'inbox',
-        });
-      }
-    } else if (reviewStatus === 'REWORK' || reviewResult === 'REWORK') {
-      // 返修状态，可以重新车板
-      options.push({
-        value: 'PLATE',
-        label: '返修车板',
-        icon: 'tool',
-      });
-      options.push({
-        value: 'COMPLETE',
-        label: '返修完成',
-        icon: 'check',
-      });
-    } else {
-      // 待审核或其他状态，提示需要审核
-      options.push({
-        value: 'REVIEW',
-        label: '样衣审核',
-        icon: 'eye',
-      });
-    }
-  } else if (status === 'WAREHOUSE_IN') {
-    // 已入库，可以出库或归还
-    options.push({
-      value: 'WAREHOUSE_OUT',
-      label: '样衣出库',
-      icon: 'export',
-    });
-    options.push({
-      value: 'WAREHOUSE_RETURN',
-      label: '样衣归还',
-      icon: 'rollback',
-    });
+    // 其他操作：只要未完成就显示
+    options.push(op);
   }
 
   return options;

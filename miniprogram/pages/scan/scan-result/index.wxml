@@ -1,6 +1,6 @@
 <wxs src="../../../utils/money.wxs" module="money" />
 <view class="container">
-  <!-- ============== 扫码成功醒目提示（顶部） ============== -->
+  <!-- ============== 扫码成功醒目提示（顶部，紧凑横排） ============== -->
   <view class="scan-success-banner">
     <view class="scan-success-icon">✓</view>
     <view class="scan-success-text">扫描成功</view>
@@ -9,12 +9,12 @@
       <text class="scan-success-value">{{detail.styleNo || '—'}}</text>
     </view>
     <view class="scan-success-info" wx:if="{{detail.processName}}">
-      <text class="scan-success-key">工序：</text>
+      <text class="scan-success-key" style="margin-left:16rpx;">工序：</text>
       <text class="scan-success-value">{{detail.processName}}</text>
     </view>
     <view class="scan-success-info" wx:if="{{detail.displayQuantity || detail.quantity}}">
-      <text class="scan-success-key">数量：</text>
-      <text class="scan-success-value">{{detail.displayQuantity || detail.quantity || 0}} 件</text>
+      <text class="scan-success-key" style="margin-left:16rpx;">数量：</text>
+      <text class="scan-success-value">{{detail.displayQuantity || detail.quantity || 0}}件</text>
     </view>
   </view>
 

@@ -319,8 +319,10 @@ public class ScanRecordController {
     public Result<?> getProcessConfigByOrderNo(@PathVariable String orderNo) {
         try {
             List<Map<String, Object>> processConfig = skuService.getProcessUnitPrices(orderNo);
+            // 没配单价时返回空数组而非fail，避免前端扫码时把"未配置"当成错误卡住
             if (processConfig == null || processConfig.isEmpty()) {
-                return Result.fail("订单[" + orderNo + "]未配置工序单价模板");
+                log.warn("订单[{}]未配置工序单价模板，返回空数组，前端走默认单价", orderNo);
+                return Result.success(new java.util.ArrayList<>());
             }
             return Result.success(processConfig);
         } catch (Exception e) {
