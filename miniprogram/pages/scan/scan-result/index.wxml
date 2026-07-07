@@ -39,6 +39,7 @@
         <view class="style-card__meta">
           <text wx:if="{{detail.orderNo}}" class="style-card__metaItem">订单：{{detail.orderNo}}</text>
           <text wx:if="{{detail.customerName}}" class="style-card__metaItem">客户：{{detail.customerName}}</text>
+          <text wx:if="{{detail.deliveryDate}}" class="style-card__metaItem style-card__metaItem--delivery">交期：{{detail.deliveryDate}}</text>
         </view>
       </view>
     </view>

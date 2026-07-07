@@ -139,6 +139,11 @@
   padding: 4rpx 12rpx;
   border-radius: 8rpx;
 }
+.style-card__metaItem--delivery {
+  color: #c2410c;
+  background: #fff7ed;
+  font-weight: 600;
+}
 .style-card__process {
   margin-top: 20rpx;
   padding-top: 18rpx;

@@ -106,6 +106,11 @@ public class ScanExecutorSupport {
         info.put("styleNo", order.getStyleNo());
         safePut(info, "styleName", order.getStyleName());
 
+        // —— 交货日期：工人扫码时能看到交期，合理安排生产 ——
+        if (order.getExpectedShipDate() != null) {
+            info.put("deliveryDate", order.getExpectedShipDate().toLocalDate().toString());
+        }
+
         // —— 外发工厂：仅本厂才展示客户名，外发状态下屏蔽客户信息 ——
         if (!isOutsourceFactory(bundle)) {
             safePut(info, "customerName", order.getCustomerName());
