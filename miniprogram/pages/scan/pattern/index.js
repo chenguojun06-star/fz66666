@@ -214,7 +214,7 @@ Page({
               sizes: sizesArr,
               sizesText: sizesText,
               quantity: data.quantity || 0,
-              coverImage: data.cover || getAuthedImageUrl(''),
+              coverImage: getAuthedImageUrl(data.cover || data.coverImage || (data.patternDetail && data.patternDetail.coverImage) || ''),
               deliveryTime: data.deliveryTime || (data.patternDetail && data.patternDetail.deliveryTime) || '',
             },
           });

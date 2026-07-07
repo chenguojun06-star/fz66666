@@ -145,6 +145,8 @@ async function handlePatternScan(handler, parsedData, manualScanType) {
     const coverVal = patternDetail.coverImage || patternDetail.styleImage || patternDetail.cover || '';
     // sizes 数组
     const sizesArrVal = Array.isArray(patternDetail.sizes) ? patternDetail.sizes.slice() : [];
+    // 交期（后端 enrichRecord 已做兜底：PatternProduction.deliveryTime → StyleInfo.deliveryDate）
+    const deliveryTimeVal = patternDetail.deliveryTime || '';
 
     return {
       success: true,
@@ -166,6 +168,7 @@ async function handlePatternScan(handler, parsedData, manualScanType) {
         status: patternDetail.status || '',
         hasProcessSystem: hasProcessSystem,
         cover: coverVal,
+        deliveryTime: deliveryTimeVal,
       },
       message: '请确认样衣操作',
     };

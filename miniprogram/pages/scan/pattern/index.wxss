@@ -1,136 +1,19 @@
 @import '/styles/page-utils.wxss';
 
-/* ===== 新视图：工序选择视图 ===== */
+/* ===== 工序选择视图 ===== */
 .select-view {
   padding: var(--spacing-2xl);
   min-height: 100vh;
   background: var(--color-bg-page);
 }
 
-.pattern-brief-card {
-  display: flex;
-  align-items: center;
-  padding: var(--spacing-lg);
-  margin-bottom: var(--spacing-lg);
+/* ========= 顶部信息卡片（与大货扫码 style-card 一致） ========= */
+.task-card {
   background: var(--color-bg-card);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
-}
-.pattern-cover {
-  width: 120rpx;
-  height: 120rpx;
-  border-radius: var(--radius-md);
-  margin-right: var(--spacing-lg);
-}
-.pattern-brief-info {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-.pattern-style-no {
-  font-size: var(--font-size-md);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-text-primary);
-  margin-bottom: 8rpx;
-}
-.pattern-color {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
-}
-
-.select-title {
-  font-size: var(--font-size-base);
-  color: var(--color-text-primary);
-  font-weight: var(--font-weight-semibold);
-  margin: var(--spacing-lg) 4rpx var(--spacing-md);
-}
-
-/* 工序选择列表 */
-.process-select-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-lg);
-  margin-bottom: var(--spacing-2xl);
-}
-.process-select-item {
-  display: flex;
-  align-items: center;
-  padding: var(--spacing-xl) var(--spacing-lg);
-  background: var(--color-bg-card);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
-}
-.process-select-dot {
-  width: 56rpx;
-  height: 56rpx;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-right: var(--spacing-lg);
-  font-size: var(--font-size-sm);
-  background: var(--color-border-light);
-  color: var(--color-text-secondary);
-}
-.process-select-item.done .process-select-dot {
-  background: var(--color-success);
-  color: var(--color-text-white);
-}
-.process-select-item.can-operate {
-  border: 2rpx solid var(--color-primary-border);
-}
-.process-select-item.can-operate .process-select-dot {
-  background: var(--color-primary);
-  color: var(--color-text-white);
-}
-.process-select-item.locked .process-select-dot {
-  background: var(--color-warning-bg);
-  color: var(--color-warning);
-}
-.process-select-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-}
-.process-select-name {
-  font-size: var(--font-size-base);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-text-primary);
-  margin-bottom: 8rpx;
-}
-.process-select-hint {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-tertiary);
-}
-.process-select-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--spacing-md) var(--spacing-xl);
-  margin: 4rpx 0 8rpx 0;
-}
-.process-select-meta .meta-item {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-secondary);
-}
-.can-hint { color: var(--color-primary); font-weight: var(--font-weight-medium); }
-.done-hint { color: var(--color-success); }
-.lock-hint { color: var(--color-warning); }
-
-.select-footer {
-  display: flex;
-  gap: var(--spacing-xl);
-  justify-content: center;
-  padding: var(--spacing-2xl) 0;
-}
-.select-footer .btn-cancel {
-  width: 40%;
-  padding: var(--spacing-lg);
-  text-align: center;
-  font-size: var(--font-size-base);
-  border-radius: var(--radius-md);
-  background: var(--color-bg-gray);
-  color: var(--color-text-primary);
+  border-radius: var(--radius-xl);
+  padding: 24rpx;
+  margin-bottom: 20rpx;
+  box-shadow: 0 4rpx 16rpx rgba(0,0,0,0.04);
 }
 
 /* ===== 扫码主页容器 ===== */
@@ -468,62 +351,6 @@
 }
 .footer-bar-hover {
   opacity: 0.85;
-}
-
-/* --- 工序选择器 --- */
-.ops-label {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-secondary);
-  margin-bottom: var(--spacing-md);
-}
-.selector-list {
-  max-height: 340rpx;
-  background: var(--color-info-bg);
-  border-radius: var(--radius-lg);
-  padding: 8rpx;
-  margin-bottom: var(--spacing-lg);
-}
-.selector-item {
-  display: flex;
-  align-items: center;
-  padding: var(--spacing-md) var(--spacing-lg);
-  border-radius: var(--radius-md);
-  margin-bottom: 6rpx;
-  border: 2rpx solid transparent;
-  transition: all 0.15s;
-}
-.selector-item.active {
-  background: var(--color-primary-bg);
-  border-color: var(--color-primary);
-}
-.selector-item.disabled {
-  opacity: 0.4;
-}
-.selector-radio {
-  width: 36rpx;
-  height: 36rpx;
-  border-radius: 50%;
-  border: 2rpx solid var(--color-border);
-  margin-right: var(--spacing-lg);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-.selector-radio.checked {
-  border-color: var(--color-primary);
-  background: var(--color-primary);
-}
-.selector-dot {
-  width: 16rpx;
-  height: 16rpx;
-  border-radius: 50%;
-  background: var(--color-bg-card);
-}
-.selector-label {
-  font-size: var(--font-size-md);
-  color: var(--color-text-primary);
-  font-weight: var(--font-weight-medium);
 }
 
 /* --- 审核提示 --- */
