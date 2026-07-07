@@ -30,9 +30,7 @@ WHERE progress_workflow_json LIKE '%"二次工艺":[{"id":"剪线大烫包装"%'
 
 -- 步骤3：删除"剪线大烫包装"相关的待扫码跟踪记录（已扫码的保留，避免丢工资数据）
 -- 删除后，用户下次打开订单详情页时，TrackingRecordInitHelper 会根据修正后的JSON重新生成
-DELETE FROM t_production_process_tracking
-WHERE process_name = '剪线大烫包装'
-  AND scan_status = 'pending';
+DELETE FROM t_production_process_tracking WHERE process_name = '剪线大烫包装' AND scan_status = 'pending';
 
 -- 步骤4：把已扫码的"剪线大烫包装"记录重命名为"剪线"（保留扫描和工资数据）
 UPDATE t_production_process_tracking

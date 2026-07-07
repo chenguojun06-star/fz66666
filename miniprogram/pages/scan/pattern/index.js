@@ -99,7 +99,14 @@ Page({
   onLoad(options) {
     const that = this;
     const opts = options || {};
-    const patternId = opts.patternId || '';
+    // 优先读 URL 参数；缺失时从 globalData.patternScanData 兜底（ConfirmModalHandler 跳转时不传 URL 参数）
+    let patternId = opts.patternId || '';
+    if (!patternId) {
+      try {
+        const gs = getApp().globalData.patternScanData || {};
+        patternId = gs.patternId || (gs.patternDetail && gs.patternDetail.id) || '';
+      } catch (_e) { /* ignore */ }
+    }
 
     if (!patternId) {
       toast.error('无效的样衣编号');

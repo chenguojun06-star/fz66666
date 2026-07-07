@@ -99,6 +99,11 @@ const scanLifecycleMixin = Behavior({
       this.getTabBar().setData({ selected: 1 });
     }
 
+    // 防御性重置：每次 onShow 强制清除 loading 状态，防止上次扫码流程异常中断后 loading 卡在 true 导致"扫码识别"按钮点击无反应
+    if (this.data && this.data.loading) {
+      this.setData({ loading: false });
+    }
+
     // 从扫码确认页返回时，读取最新扫码结果并显示成功提示
     try {
       const lastScanRes = getApp().globalData.lastScanResult;

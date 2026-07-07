@@ -15,6 +15,40 @@
 
 var stageDetection = require('../../../shared/stageDetection');
 
+/**
+ * 规范化 patternId：从多种格式中提取真正的样衣 ID
+ * 防御性清洗：无论入口传什么，都确保拿到纯 id，避免后端 400
+ *
+ * 支持格式：
+ * 1. 纯 id：'2068567491605024769'
+ * 2. JSON 字符串：'{"type":"pattern","id":"2068567491605024769"}'
+ * 3. URL 参数：'?type=pattern&patternId=xxx' 或 'xxx?patternId=yyy'
+ * 4. 带 pattern 前缀：'pattern:2068567491605024769'
+ */
+function normalizePatternId(patternId) {
+  if (!patternId) return '';
+  const s = String(patternId).trim();
+  if (!s) return '';
+  // 情况1：JSON 字符串
+  if (s.charAt(0) === '{') {
+    try {
+      const obj = JSON.parse(s);
+      const id = obj.id || obj.patternId || obj.patternProductionId || obj.orderId;
+      if (id) return String(id).trim();
+    } catch (_e) { /* 解析失败，继续下面的尝试 */ }
+  }
+  // 情况2：URL 参数格式 ?patternId=xxx
+  const m = s.match(/[?&]patternId=([^&]+)/);
+  if (m && m[1]) {
+    try { return decodeURIComponent(m[1]).trim(); } catch (_e) { return String(m[1]).trim(); }
+  }
+  // 情况3：带 pattern 前缀（pattern:xxx / pattern-xxx / pattern_xxx）
+  const prefixMatch = s.match(/^pattern[-:_#](.+)/i);
+  if (prefixMatch && prefixMatch[1]) return String(prefixMatch[1]).trim();
+  // 情况4：纯 id
+  return s;
+}
+
 // 样衣生产操作类型（5个基本操作）
 const SAMPLE_OPERATIONS = [
   { key: 'RECEIVE', label: '领取样衣', color: '#1890ff', icon: 'scan' },
@@ -34,7 +68,10 @@ const DEV_STAGES = [
 ];
 
 async function handlePatternScan(handler, parsedData, manualScanType) {
-  const patternId = parsedData.patternId || parsedData.scanCode;
+  // 防御性清洗：无论入口传什么格式，都提取出纯 patternId
+  // 修复 P0：onTopScan 扫 JSON 二维码时把整个 JSON 当 id 传过来，导致后端 400
+  const rawPatternId = parsedData.patternId || parsedData.scanCode;
+  const patternId = normalizePatternId(rawPatternId);
   if (!patternId) {
     return handler._errorResult('无效的样衣二维码');
   }
@@ -242,7 +279,7 @@ function buildSampleOperationOptions(patternDetail, scanRecords, manualScanType)
  */
 async function getPatternDetail(handler, patternId) {
   try {
-    const res = await handler.api.production.getPatternDetail(patternId);
+    const res = await handler.api.production.getPatternDetail(normalizePatternId(patternId));
     return res || null;
   } catch (e) {
     console.error('[PatternScanProcessor] 获取样衣详情失败:', e);
@@ -255,7 +292,7 @@ async function getPatternDetail(handler, patternId) {
  */
 async function getPatternScanRecords(handler, patternId) {
   try {
-    const list = await handler.api.production.getPatternScanRecords(patternId);
+    const list = await handler.api.production.getPatternScanRecords(normalizePatternId(patternId));
     return Array.isArray(list) ? list : [];
   } catch (e) {
     console.error('[PatternScanProcessor] 获取样衣扫码记录失败:', e);
@@ -268,7 +305,7 @@ async function getPatternScanRecords(handler, patternId) {
  */
 async function getPatternProcessConfig(handler, patternId) {
   try {
-    const config = await handler.api.production.getPatternProcessConfig(patternId);
+    const config = await handler.api.production.getPatternProcessConfig(normalizePatternId(patternId));
     return Array.isArray(config) ? config : [];
   } catch (e) {
     console.error('[PatternScanProcessor] 获取样衣工序配置失败:', e);
