@@ -51,7 +51,7 @@
   <!-- 视图 B：操作确认（点击工序后，或从列表页直接指定工序） -->
   <view wx:elif="{{viewMode === 'operate'}}">
 
-    <!-- 样板信息卡片 -->
+    <!-- 样板信息卡片（三行清晰式，与大货扫码一致） -->
     <view class="task-card">
       <view class="status-tag tag tag-{{detail.statusColor}}">{{detail.statusLabel || '-'}}</view>
       <view class="card-header">
@@ -61,57 +61,50 @@
         </view>
       </view>
 
-      <view class="field-list">
-        <!-- 颜色（优先显示） -->
-        <view class="field-row" wx:if="{{detail.color}}">
-          <text class="field-label">颜色</text>
-          <text class="field-value">{{detail.color}}</text>
-        </view>
+      <!-- 第一行：款号信息（订单/客户/交期） -->
+      <view class="info-row info-row--meta">
+        <text wx:if="{{detail.orderNo}}" class="info-meta-item">订单：{{detail.orderNo}}</text>
+        <text wx:if="{{detail.customerName}}" class="info-meta-item">客户：{{detail.customerName}}</text>
+        <text wx:if="{{detail.deliveryTime}}" class="info-meta-item info-meta-item--delivery">交期：{{detail.deliveryTime}}</text>
+      </view>
 
-        <!-- 数量（优先显示） -->
-        <view class="field-row" wx:if="{{detail.quantity && detail.quantity > 0}}">
-          <text class="field-label">数量</text>
-          <text class="field-value">{{detail.quantity}} 件</text>
-        </view>
+      <!-- 第二行：颜色 码数 数量（同一行） -->
+      <view class="info-row info-row--specs">
+        <text wx:if="{{detail.color}}" class="info-label">颜色</text>
+        <text wx:if="{{detail.color}}" class="info-value">{{detail.color}}</text>
+        <text wx:if="{{detail.color && (detail.size || detail.sizesText) && detail.sizesText !== '-'}}" class="info-divider">·</text>
+        <text wx:if="{{detail.size || (detail.sizesText && detail.sizesText !== '-')}}" class="info-label">码数</text>
+        <text wx:if="{{detail.size}}" class="info-value">{{detail.size}}</text>
+        <text wx:elif="{{detail.sizesText && detail.sizesText !== '-'}}" class="info-value">{{detail.sizesText}}</text>
+        <text wx:if="{{(detail.color || detail.size) && detail.quantity && detail.quantity > 0}}" class="info-divider">·</text>
+        <text wx:if="{{detail.quantity && detail.quantity > 0}}" class="info-label">数量</text>
+        <text wx:if="{{detail.quantity && detail.quantity > 0}}" class="info-value info-value--qty">{{detail.quantity}}件</text>
+      </view>
 
-        <!-- 颜色码数矩阵 -->
-        <view wx:if="{{detail.hasMatrix}}" class="matrix-section">
-          <view class="matrix-table">
-            <view class="matrix-row matrix-header">
-              <view class="matrix-cell matrix-label-cell">码数</view>
-              <view wx:for="{{detail.matrixSizes}}" wx:key="*this" class="matrix-cell">{{item}}</view>
-            </view>
-            <view wx:for="{{detail.matrixRows}}" wx:for-item="row" wx:key="color" class="matrix-row">
-              <view class="matrix-cell matrix-label-cell">{{row.color}}</view>
-              <view wx:for="{{row.quantities}}" wx:for-item="qty" wx:key="qIdx" class="matrix-cell">{{qty}}</view>
-            </view>
+      <!-- 颜色码数矩阵（如有） -->
+      <view wx:if="{{detail.hasMatrix}}" class="matrix-section">
+        <view class="matrix-table">
+          <view class="matrix-row matrix-header">
+            <view class="matrix-cell matrix-label-cell">码数</view>
+            <view wx:for="{{detail.matrixSizes}}" wx:key="*this" class="matrix-cell">{{item}}</view>
           </view>
-          <view class="matrix-footer">
-            <text class="matrix-grand-total">总数: {{detail.matrixTotal}} 件</text>
+          <view wx:for="{{detail.matrixRows}}" wx:for-item="row" wx:key="color" class="matrix-row">
+            <view class="matrix-cell matrix-label-cell">{{row.color}}</view>
+            <view wx:for="{{row.quantities}}" wx:for-item="qty" wx:key="qIdx" class="matrix-cell">{{qty}}</view>
           </view>
         </view>
-        <!-- 无矩阵但有单独码数时的兜底展示 -->
-        <view wx:elif="{{detail.size}}" class="field-row">
-          <text class="field-label">码数</text>
-          <text class="field-value">{{detail.size}}</text>
+        <view class="matrix-footer">
+          <text class="matrix-grand-total">总数: {{detail.matrixTotal}} 件</text>
         </view>
-        <view wx:elif="{{detail.sizesText && detail.sizesText !== '-'}}" class="field-row">
-          <text class="field-label">码数</text>
-          <text class="field-value">{{detail.sizesText}}</text>
-        </view>
+      </view>
 
-        <view class="field-row">
-          <text class="field-label">交板</text>
-          <text class="field-value">{{detail.deliveryTime || '-'}}</text>
-        </view>
-        <view class="field-row" wx:if="{{detail.designer}}">
-          <text class="field-label">设计师</text>
-          <text class="field-value">{{detail.designer}}</text>
-        </view>
-        <view class="field-row" wx:if="{{detail.patternDeveloper}}">
-          <text class="field-label">纸样师</text>
-          <text class="field-value">{{detail.patternDeveloper}}</text>
-        </view>
+      <!-- 第三行：交板/设计师/纸样师（同一行，按需显示） -->
+      <view class="info-row info-row--extra" wx:if="{{detail.designer || detail.patternDeveloper}}">
+        <text wx:if="{{detail.designer}}" class="info-label">设计师</text>
+        <text wx:if="{{detail.designer}}" class="info-value">{{detail.designer}}</text>
+        <text wx:if="{{detail.designer && detail.patternDeveloper}}" class="info-divider">·</text>
+        <text wx:if="{{detail.patternDeveloper}}" class="info-label">纸样师</text>
+        <text wx:if="{{detail.patternDeveloper}}" class="info-value">{{detail.patternDeveloper}}</text>
       </view>
     </view>
 

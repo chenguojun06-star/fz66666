@@ -248,6 +248,63 @@
   color: var(--color-primary);
 }
 
+/* ================ 三行清晰式信息布局（与大货扫码一致） ================ */
+.info-row {
+  display: flex;
+  align-items: center;
+  padding: 8rpx 0;
+  font-size: 26rpx;
+  line-height: 40rpx;
+}
+.info-row--meta {
+  flex-wrap: wrap;
+  gap: 12rpx;
+  margin-top: 16rpx;
+}
+.info-row--specs {
+  border-top: 1rpx solid var(--color-border-light, #eef1f6);
+  margin-top: 8rpx;
+  padding-top: 12rpx;
+}
+.info-row--extra {
+  border-top: 1rpx solid var(--color-border-light, #eef1f6);
+  margin-top: 8rpx;
+  padding-top: 12rpx;
+  color: var(--color-text-secondary);
+}
+.info-meta-item {
+  font-size: 24rpx;
+  color: #6b7280;
+  background: #f5f7fa;
+  padding: 4rpx 12rpx;
+  border-radius: 8rpx;
+}
+.info-meta-item--delivery {
+  color: #c2410c;
+  background: #fff7ed;
+  font-weight: 600;
+}
+.info-label {
+  font-size: 26rpx;
+  color: var(--color-text-secondary);
+  margin-right: 8rpx;
+  flex-shrink: 0;
+}
+.info-value {
+  font-size: 26rpx;
+  color: var(--color-text-primary);
+  font-weight: 500;
+}
+.info-value--qty {
+  font-weight: 700;
+  color: #2563eb;
+}
+.info-divider {
+  color: var(--color-text-tertiary);
+  font-size: 26rpx;
+  margin: 0 12rpx;
+}
+
 /* --- 颜色码数聚合矩阵 --- */
 .matrix-section {
   margin-top: var(--spacing-lg);
