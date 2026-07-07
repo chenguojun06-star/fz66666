@@ -58,14 +58,16 @@
         <image-preview class="cover-wrap" src="{{detail.coverImage || ''}}" mode="aspectFill" />
         <view class="header-info">
           <text class="style-no">{{(detail.styleNo || '-') + (detail.styleName ? ' · ' + detail.styleName : '')}}</text>
+          <view class="header-meta">
+            <text wx:if="{{detail.orderNo}}" class="header-meta-item">订单：{{detail.orderNo}}</text>
+            <text wx:if="{{detail.deliveryTime}}" class="header-meta-item header-meta-item--delivery">交期：{{detail.deliveryTime}}</text>
+          </view>
         </view>
       </view>
 
-      <!-- 第一行：款号信息（订单/客户/交期） -->
-      <view class="info-row info-row--meta">
-        <text wx:if="{{detail.orderNo}}" class="info-meta-item">订单：{{detail.orderNo}}</text>
-        <text wx:if="{{detail.customerName}}" class="info-meta-item">客户：{{detail.customerName}}</text>
-        <text wx:if="{{detail.deliveryTime}}" class="info-meta-item info-meta-item--delivery">交期：{{detail.deliveryTime}}</text>
+      <!-- 第一行：款号信息（客户，如有） -->
+      <view class="info-row info-row--meta" wx:if="{{detail.customerName}}">
+        <text class="info-meta-item">客户：{{detail.customerName}}</text>
       </view>
 
       <!-- 第二行：颜色 码数 数量（同一行） -->

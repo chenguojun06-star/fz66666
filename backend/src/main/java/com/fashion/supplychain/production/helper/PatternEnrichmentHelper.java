@@ -74,7 +74,8 @@ public class PatternEnrichmentHelper {
         map.put("size", record.getSize());
         map.put("quantity", record.getQuantity());
         map.put("releaseTime", record.getReleaseTime() != null ? record.getReleaseTime().format(fmt) : null);
-        map.put("deliveryTime", record.getDeliveryTime());
+        map.put("deliveryTime", record.getDeliveryTime() != null
+                ? record.getDeliveryTime().toLocalDate().toString() : null);
         map.put("receiver", record.getReceiver());
         map.put("receiveTime", record.getReceiveTime() != null ? record.getReceiveTime().format(fmt) : null);
         map.put("completeTime", resolvedCompleteTime != null ? resolvedCompleteTime.format(fmt) : null);
@@ -143,6 +144,11 @@ public class PatternEnrichmentHelper {
                     customer = styleInfo.getCustomer();
                     developmentSourceType = styleInfo.getDevelopmentSourceType();
                     styleNo = styleInfo.getStyleNo();
+
+                    // 交期兜底：若 PatternProduction.deliveryTime 为空，从 StyleInfo.deliveryDate 取
+                    if (map.get("deliveryTime") == null && styleInfo.getDeliveryDate() != null) {
+                        map.put("deliveryTime", styleInfo.getDeliveryDate().toLocalDate().toString());
+                    }
 
                     String sizeColorConfig = styleInfo.getSizeColorConfig();
                     if (StringUtils.hasText(sizeColorConfig)) {

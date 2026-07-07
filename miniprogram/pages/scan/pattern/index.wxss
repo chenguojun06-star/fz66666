@@ -248,6 +248,25 @@
   color: var(--color-primary);
 }
 
+.header-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10rpx;
+  margin-top: 8rpx;
+}
+.header-meta-item {
+  font-size: 22rpx;
+  color: #6b7280;
+  background: #f5f7fa;
+  padding: 3rpx 10rpx;
+  border-radius: 6rpx;
+}
+.header-meta-item--delivery {
+  color: #c2410c;
+  background: #fff7ed;
+  font-weight: 600;
+}
+
 /* ================ 三行清晰式信息布局（与大货扫码一致） ================ */
 .info-row {
   display: flex;
