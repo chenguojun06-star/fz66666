@@ -153,6 +153,8 @@
       <view wx:for="{{processOptions}}" wx:key="value"
             class="process-chip {{item.checked ? 'active' : ''}}"
             data-value="{{item.value}}"
+            hover-class="process-chip-hover"
+            hover-stay-time="80"
             bindtap="onProcessTap">
         <text class="chip-label">{{item.label}}</text>
         <text wx:if="{{!item.hidePrice}}" class="chip-price">¥{{money.toFixed2(item.unitPrice)}}</text>
@@ -228,7 +230,7 @@
   <view class="footer-bar">
     <view class="btn-cancel" hover-class="footer-bar-hover" bindtap="goBack">取消</view>
     <view class="btn-submit {{loading || selectedCount === 0 ? 'btn-disabled' : ''}}" hover-class="footer-bar-hover" bindtap="submitScanResult">
-      {{loading ? '提交中...' : (isQualityReceive ? '质检录入' : '确认提交')}}
+      {{loading ? '提交中…' : (isQualityReceive ? '质检录入' : '确认提交')}}
     </view>
   </view>
 </view>

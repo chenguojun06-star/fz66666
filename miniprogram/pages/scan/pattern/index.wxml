@@ -37,6 +37,8 @@
         <view wx:for="{{processList}}" wx:key="value"
               class="process-chip {{item.checked ? 'active' : ''}}"
               data-value="{{item.value}}"
+              hover-class="process-chip-hover"
+              hover-stay-time="80"
               bindtap="onProcessChipTap">
           <text class="chip-label">{{item.name}}</text>
           <text class="chip-price" wx:if="{{item.unitPriceText}}">¥{{item.unitPriceText}}</text>
@@ -229,7 +231,7 @@
       <!-- 备注 -->
       <view class="remark-row">
         <text class="input-label">备注</text>
-        <textarea class="remark-area" placeholder="请输入备注信息..."
+        <textarea class="remark-area" placeholder="请输入备注信息…"
                   value="{{detail.remark}}" bindinput="onRemarkInput" maxlength="200" />
       </view>
     </view>
@@ -237,13 +239,13 @@
     <view class="footer-bar">
       <view class="btn-cancel" hover-class="footer-bar-hover" bindtap="goBack">取消</view>
       <view class="btn-submit {{loading ? 'btn-disabled' : ''}}" hover-class="footer-bar-hover" bindtap="submitOp">
-        {{loading ? '提交中...' : (detail.submitLabel || '提交')}}
+        {{loading ? '提交中…' : (detail.submitLabel || '提交')}}
       </view>
     </view>
   </view>
 
   <!-- 视图 C：加载中（兜底） -->
   <view wx:else class="loading-wrap">
-    <text class="loading-text">加载中...</text>
+    <text class="loading-text">加载中…</text>
   </view>
 </view>

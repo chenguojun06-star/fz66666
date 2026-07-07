@@ -291,7 +291,14 @@
   border-radius: var(--radius-md);
   background: var(--color-bg-gray);
   border: 2rpx solid transparent;
-  transition: all 0.2s;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  font-variant-numeric: tabular-nums;
+}
+.process-chip-hover {
+  opacity: 0.7;
+  transform: scale(0.98);
 }
 .process-chip.active {
   background: var(--color-blue-light);
@@ -311,6 +318,7 @@
   color: var(--color-text-tertiary);
   margin-left: 12rpx;
   flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
 }
 .process-chip.active .chip-price {
   color: var(--color-primary);
@@ -320,6 +328,7 @@
   font-size: 28rpx;
   font-weight: 700;
   color: var(--color-primary);
+  font-variant-numeric: tabular-nums;
 }
 .summary-bar {
   display: flex;
@@ -341,6 +350,12 @@
   padding: 12rpx 24rpx calc(env(safe-area-inset-bottom) + 12rpx);
   background: var(--color-bg-card);
   border-top: 1rpx solid var(--color-border);
+}
+.btn-cancel,
+.btn-submit {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  transition: opacity 0.12s ease, transform 0.12s ease;
 }
 .btn-cancel {
   flex: 1;
@@ -366,6 +381,20 @@
 }
 .footer-bar-hover {
   opacity: 0.85;
+  transform: scale(0.98);
+}
+
+/* ========= 尊重用户减少动画偏好 ========= */
+@media (prefers-reduced-motion: reduce) {
+  .process-chip,
+  .btn-cancel,
+  .btn-submit,
+  .process-chip-hover,
+  .footer-bar-hover {
+    transition: none !important;
+    animation: none !important;
+    transform: none !important;
+  }
 }
 
 /* --- 审核提示 --- */

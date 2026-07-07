@@ -412,7 +412,10 @@
   border-radius: var(--radius-md);
   background: var(--color-bg-gray);
   border: 2rpx solid transparent;
-  transition: all 0.2s;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  font-variant-numeric: tabular-nums;
 }
 .process-chip.active {
   background: var(--color-blue-light);
@@ -686,4 +689,41 @@
 .worker-hint-value--alert {
   color: #B45309;
   font-weight: 700;
+}
+
+/* ========= 触感反馈 & 数值对齐 ========= */
+.process-chip-hover {
+  opacity: 0.7;
+  transform: scale(0.98);
+}
+.chip-price,
+.summary-amount,
+.bundle-card__value--qty,
+.bundle-card__value--bold,
+.scan-success-value {
+  font-variant-numeric: tabular-nums;
+}
+.btn-cancel,
+.btn-submit {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  transition: opacity 0.12s ease, transform 0.12s ease;
+}
+.footer-bar-hover {
+  opacity: 0.85;
+  transform: scale(0.98);
+}
+
+/* ========= 尊重用户减少动画偏好 ========= */
+@media (prefers-reduced-motion: reduce) {
+  .scan-success-banner,
+  .process-chip,
+  .process-chip-hover,
+  .btn-cancel,
+  .btn-submit,
+  .footer-bar-hover {
+    transition: none !important;
+    animation: none !important;
+    transform: none !important;
+  }
 }
