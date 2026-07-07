@@ -120,7 +120,7 @@
 
     <!-- 操作区域 -->
     <view class="section-card">
-      <view class="section-title">✂️ {{detail.operationLabel}}</view>
+      <view class="section-title">{{detail.operationLabel}}</view>
 
       <!-- 审核未完成提示 -->
       <view wx:if="{{detail.requiresReviewBeforeInbound}}" class="review-warning">

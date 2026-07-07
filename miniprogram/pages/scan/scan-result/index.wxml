@@ -3,7 +3,7 @@
   <!-- ============== 扫码成功醒目提示（顶部，三行清晰式） ============== -->
   <view class="scan-success-banner">
     <view class="scan-success-row">
-      <view class="scan-success-icon">✓</view>
+      <view class="scan-success-icon"></view>
       <text class="scan-success-text">扫描成功</text>
       <text class="scan-success-value">{{detail.styleNo || '—'}}</text>
     </view>
@@ -53,7 +53,6 @@
   <!-- ============== ② 菲号信息（最核心，三行清晰式） ============== -->
   <view wx:if="{{detail.bundleNo || detail.color || detail.size || detail.displayQuantity}}" class="bundle-card">
     <view class="bundle-card__title">
-      <text class="bundle-card__title-icon">📦</text>
       <text class="bundle-card__title-text">菲号信息</text>
     </view>
 
@@ -92,7 +91,7 @@
 
   <!-- ============== ③ 生产提示（样衣开发提醒） ============== -->
   <view wx:if="{{detail.workerHint || detail.secondaryProcessHint || detail.difficultyLabel || detail.fabricComposition || detail.needleHint || (detail.processHints && detail.processHints.length > 0) || detail.imageInsight}}" class="worker-hint-card">
-    <view class="worker-hint-title">⚠️ 生产提示（样衣开发提醒）</view>
+    <view class="worker-hint-title">生产提示（样衣开发提醒）</view>
 
     <!-- 难度徽章，按等级分色 -->
     <view wx:if="{{detail.difficultyLabel}}" class="worker-hint-row worker-hint-row--difficulty">

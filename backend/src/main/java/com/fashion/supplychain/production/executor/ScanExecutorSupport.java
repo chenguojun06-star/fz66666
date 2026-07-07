@@ -107,6 +107,7 @@ public class ScanExecutorSupport {
         safePut(info, "styleName", order.getStyleName());
 
         // —— 交货日期：工人扫码时能看到交期，合理安排生产 ——
+        // 优先取 ProductionOrder.expectedShipDate；为空时兜底从 StyleInfo.deliveryDate 取
         if (order.getExpectedShipDate() != null) {
             info.put("deliveryDate", order.getExpectedShipDate().toLocalDate().toString());
         }
@@ -136,6 +137,12 @@ public class ScanExecutorSupport {
             log.warn("buildOrderInfo查询二次工艺失败: styleId={}", order.getStyleId(), e);
         }
         WorkerHintComposer.composeInto(info, si, processes);
+
+        // 交期兜底：若 ProductionOrder.expectedShipDate 为空，从 StyleInfo.deliveryDate 取
+        if (info.get("deliveryDate") == null && si != null && si.getDeliveryDate() != null) {
+            info.put("deliveryDate", si.getDeliveryDate().toLocalDate().toString());
+        }
+
         return info;
     }
 

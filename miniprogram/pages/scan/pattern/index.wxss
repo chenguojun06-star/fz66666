@@ -11,9 +11,9 @@
 .task-card {
   background: var(--color-bg-card);
   border-radius: var(--radius-xl);
-  padding: 24rpx;
+  padding: 28rpx;
   margin-bottom: 20rpx;
-  box-shadow: 0 4rpx 16rpx rgba(0,0,0,0.04);
+  box-shadow: 0 2rpx 12rpx rgba(0,0,0,0.05);
 }
 
 /* ===== 扫码主页容器 ===== */
@@ -266,9 +266,9 @@
 .section-card {
   background: var(--color-bg-card);
   border-radius: var(--radius-xl);
-  padding: var(--spacing-xl);
-  box-shadow: var(--shadow-sm);
-  margin-bottom: var(--spacing-2xl);
+  padding: 28rpx;
+  box-shadow: 0 2rpx 12rpx rgba(0,0,0,0.05);
+  margin-bottom: 20rpx;
 }
 .section-title {
   font-size: var(--font-size-base);
