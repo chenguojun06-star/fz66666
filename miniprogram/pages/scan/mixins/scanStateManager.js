@@ -46,6 +46,10 @@ module.exports = {
 
     loadMyPanel: function(refresh) {
       if (refresh === undefined) refresh = false;
+      if (!this.data || !this.data.my) {
+        console.error('[loadMyPanel] page.data.my 未初始化，跳过加载');
+        return;
+      }
       if (this.data.my.loadingStats && !refresh) return;
       this.setData({ 'my.loadingStats': true });
       const self = this;
