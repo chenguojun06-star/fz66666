@@ -5,27 +5,25 @@
   padding: var(--page-padding-x) var(--page-padding-x) calc(env(safe-area-inset-bottom) + 160rpx);
 }
 
-/* ================ 扫码成功醒目提示（顶部 Banner，两行紧凑式） ================ */
+/* ================ 扫码成功醒目提示（顶部 Banner，三行清晰式） ================ */
 .scan-success-banner {
   background: linear-gradient(135deg, #10b981 0%, #059669 100%);
   border-radius: var(--radius-lg);
-  padding: 14rpx 24rpx 12rpx;
+  padding: 20rpx 28rpx;
   margin-bottom: 16rpx;
   box-shadow: 0 4rpx 12rpx rgba(16,185,129,0.2);
   display: flex;
   flex-direction: column;
   animation: fadeInUp 0.4s ease-out;
 }
-.scan-success-row1 {
+.scan-success-row {
   display: flex;
   align-items: center;
-  margin-bottom: 8rpx;
+  height: 56rpx;
+  line-height: 56rpx;
 }
-.scan-success-row2 {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6rpx 20rpx;
+.scan-success-row--info {
+  border-top: 1rpx solid rgba(255,255,255,0.18);
 }
 .scan-success-icon {
   width: 36rpx;
@@ -35,7 +33,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 24rpx;
+  font-size: 26rpx;
   color: #fff;
   font-weight: 700;
   margin-right: 12rpx;
@@ -49,19 +47,26 @@
   margin-right: 20rpx;
   flex-shrink: 0;
 }
-.scan-success-info {
-  display: flex;
-  align-items: center;
-  font-size: 24rpx;
-}
-.scan-success-key {
-  color: rgba(255,255,255,0.7);
-  font-weight: 400;
-  margin-right: 4rpx;
+.scan-success-label {
+  font-size: 26rpx;
+  color: rgba(255,255,255,0.75);
+  margin-right: 8rpx;
+  flex-shrink: 0;
 }
 .scan-success-value {
+  font-size: 26rpx;
   color: #fff;
   font-weight: 600;
+  word-break: break-all;
+}
+.scan-success-row .scan-success-text + .scan-success-value {
+  font-size: 30rpx;
+  font-weight: 700;
+}
+.scan-success-divider {
+  color: rgba(255,255,255,0.5);
+  font-size: 26rpx;
+  margin: 0 12rpx;
 }
 
 @keyframes fadeInUp {

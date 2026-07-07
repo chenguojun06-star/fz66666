@@ -1,32 +1,25 @@
 <wxs src="../../../utils/money.wxs" module="money" />
 <view class="container">
-  <!-- ============== 扫码成功醒目提示（顶部，两行紧凑式） ============== -->
+  <!-- ============== 扫码成功醒目提示（顶部，三行清晰式） ============== -->
   <view class="scan-success-banner">
-    <view class="scan-success-row1">
+    <view class="scan-success-row">
       <view class="scan-success-icon">✓</view>
-      <view class="scan-success-text">扫描成功</view>
-      <view class="scan-success-info">
-        <text class="scan-success-key">款号</text>
-        <text class="scan-success-value">{{detail.styleNo || '—'}}</text>
-      </view>
+      <text class="scan-success-text">扫描成功</text>
+      <text class="scan-success-value">{{detail.styleNo || '—'}}</text>
     </view>
-    <view class="scan-success-row2">
-      <view class="scan-success-info" wx:if="{{detail.processName}}">
-        <text class="scan-success-key">工序</text>
-        <text class="scan-success-value">{{detail.processName}}</text>
-      </view>
-      <view class="scan-success-info" wx:if="{{detail.displayQuantity || detail.quantity}}">
-        <text class="scan-success-key">数量</text>
-        <text class="scan-success-value">{{detail.displayQuantity || detail.quantity || 0}}件</text>
-      </view>
-      <view class="scan-success-info" wx:if="{{detail.color}}">
-        <text class="scan-success-key">颜色</text>
-        <text class="scan-success-value">{{detail.color}}</text>
-      </view>
-      <view class="scan-success-info" wx:if="{{detail.size}}">
-        <text class="scan-success-key">尺码</text>
-        <text class="scan-success-value">{{detail.size}}</text>
-      </view>
+    <view class="scan-success-row scan-success-row--info">
+      <text class="scan-success-label">菲号</text>
+      <text class="scan-success-value">{{detail.orderNo ? detail.orderNo + '-' : ''}}{{detail.bundleNo}}</text>
+    </view>
+    <view class="scan-success-row scan-success-row--info">
+      <text class="scan-success-label">颜色</text>
+      <text class="scan-success-value">{{detail.color || '—'}}</text>
+      <text class="scan-success-divider">·</text>
+      <text class="scan-success-label">码数</text>
+      <text class="scan-success-value">{{detail.size || '—'}}</text>
+      <text class="scan-success-divider">·</text>
+      <text class="scan-success-label">数量</text>
+      <text class="scan-success-value">{{detail.displayQuantity || detail.quantity || 0}}件</text>
     </view>
   </view>
 
