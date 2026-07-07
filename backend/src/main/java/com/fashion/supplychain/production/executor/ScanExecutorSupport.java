@@ -187,10 +187,11 @@ public class ScanExecutorSupport {
         if (result == null || orderInfo == null || orderInfo.isEmpty()) return;
         String[] keys = {
                 "orderNo", "styleNo", "styleName", "customerName",
+                "deliveryDate", "deliveryTime",
                 "difficultyLabel", "difficultyScore", "difficultyLevel", "difficultySeverity",
                 "fabricComposition", "imageInsight", "visionRaw",
                 "workerHint", "secondaryProcessHint", "secondaryProcesses",
-                "processHints", "needleHint",
+                "processHints", "needleHint", "needleReason",
                 "description", "cover", "fabricCompositionParts"
         };
         for (String k : keys) {
