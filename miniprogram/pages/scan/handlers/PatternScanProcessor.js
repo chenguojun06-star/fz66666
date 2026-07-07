@@ -330,59 +330,29 @@ function buildProcessOperationOptions(processConfig, scanRecords, patternDetail,
   const status = String(patternDetail.status || '').toUpperCase();
   
   // 完全按 PC 端工序配置构建操作选项
-  // 1. 已完成的工序：显示已完成标记
-  // 2. 当前可操作工序（父工序都已完成）：显示可操作
-  // 3. 被门禁拦截的工序：显示锁定
-  
-  // 遍历工序配置，逐个构建选项（不 break）
-  let foundFirstOperable = false;
+  // 用户要求：不上锁，全部开放，已完成的不显示
+  // 1. 已完成的工序：过滤掉，不显示
+  // 2. 其他工序：全部开放，可多选
+
+  // 遍历工序配置，逐个构建选项
   for (let i = 0; i < processConfig.length; i++) {
     const config = processConfig[i];
     const processName = String(config.processName || config.operationType || '').trim();
     const progressStage = String(config.progressStage || processName).trim();
     const scanType = String(config.scanType || 'production').trim();
     const isCompleted = completedStages.has(processName) || completedStages.has(config.operationType) || completedStages.has(stageDetection.canonicalStageKey(processName));
-    
+
+    // 已完成的工序直接跳过，不显示
     if (isCompleted) {
-      options.push({
-        value: processName,
-        label: processName,
-        icon: 'check',
-        processName: processName,
-        progressStage: progressStage,
-        scanType: scanType,
-        sortOrder: config.sortOrder || i,
-        completed: true,
-        color: baseColor,
-        size: baseSize,
-        sizes: baseSizes,
-        quantity: baseQuantity,
-      });
       continue;
     }
-    
-    // 门禁校验：检查父工序是否全部完成
-    const gate = stageDetection.checkParentStageGate(progressStage, completedStages);
-    if (!gate.pass) {
-      options.push({
-        value: processName,
-        label: processName,
-        icon: 'lock',
-        processName: processName,
-        progressStage: progressStage,
-        scanType: scanType,
-        sortOrder: config.sortOrder || i,
-        locked: true,
-        lockReason: '需先完成：' + gate.missing.join('、'),
-        color: baseColor,
-        size: baseSize,
-        sizes: baseSizes,
-        quantity: baseQuantity,
-      });
-      continue; // 门禁拦截后继续显示后续工序（只读展示）
-    }
-    
-    // 门禁通过：可操作
+
+    // 全部开放，不上锁
+    // 单价：优先 unitPrice，其次 price
+    const rawPrice = config.unitPrice != null ? config.unitPrice : (config.price != null ? config.price : 0);
+    const numPrice = Number(rawPrice) || 0;
+    const unitPriceText = numPrice > 0 ? numPrice.toFixed(2) : '';
+
     options.push({
       value: processName,
       label: processName,
@@ -391,15 +361,15 @@ function buildProcessOperationOptions(processConfig, scanRecords, patternDetail,
       progressStage: progressStage,
       scanType: scanType,
       sortOrder: config.sortOrder || i,
-      canOperate: !foundFirstOperable, // 只有第一个可操作项能执行（父子顺序）
+      unitPrice: numPrice,
+      unitPriceText: unitPriceText,
       color: baseColor,
       size: baseSize,
       sizes: baseSizes,
       quantity: baseQuantity,
     });
-    foundFirstOperable = true;
   }
-  
+
   return options;
 }
 

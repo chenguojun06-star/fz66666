@@ -174,6 +174,7 @@ Page({
         const processList = rawOptions
           .filter(function(opt) { return !opt.completed; }) // 已完成的不显示
           .map(function(opt) {
+            const numPrice = Number(opt.unitPrice != null ? opt.unitPrice : (opt.price != null ? opt.price : 0)) || 0;
             return {
               value: opt.value,
               name: opt.label || opt.processName || opt.value,
@@ -181,6 +182,8 @@ Page({
               processName: opt.processName || opt.value,
               progressStage: opt.progressStage || opt.value,
               scanType: opt.scanType || 'production',
+              unitPrice: numPrice,
+              unitPriceText: numPrice > 0 ? numPrice.toFixed(2) : '',
             };
           });
 
@@ -237,8 +240,11 @@ Page({
       if (p.value === value) p.checked = !p.checked;
       return p;
     });
-    const selectedCount = processList.filter(function(p) { return p.checked; }).length;
-    this.setData({ processList: processList, selectedCount: selectedCount });
+    const checkedItems = processList.filter(function(p) { return p.checked; });
+    const selectedCount = checkedItems.length;
+    const totalAmount = checkedItems.reduce(function(sum, p) { return sum + (Number(p.unitPrice) || 0); }, 0);
+    const totalAmountText = totalAmount > 0 ? totalAmount.toFixed(2) : '';
+    this.setData({ processList: processList, selectedCount: selectedCount, totalAmountText: totalAmountText });
   },
 
   // 确认选择，进入操作页（取第一个选中的工序）

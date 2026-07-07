@@ -39,16 +39,18 @@
               data-value="{{item.value}}"
               bindtap="onProcessChipTap">
           <text class="chip-label">{{item.name}}</text>
+          <text class="chip-price" wx:if="{{item.unitPriceText}}">¥{{item.unitPriceText}}</text>
         </view>
       </scroll-view>
       <view class="summary-bar" wx:if="{{selectedCount > 0}}">
         <text class="summary-text">已选 {{selectedCount}} 个工序</text>
+        <text class="summary-amount" wx:if="{{totalAmountText}}">合计 ¥{{totalAmountText}}</text>
       </view>
     </view>
 
     <view class="footer-bar">
       <view class="btn-cancel" hover-class="footer-bar-hover" bindtap="goBack">取消</view>
-      <view class="btn-submit {{selectedCount === 0 ? 'btn-disabled' : ''}}" hover-class="footer-bar-hover" bindtap="onConfirmProcess">下一步</view>
+      <view class="btn-submit {{selectedCount === 0 ? 'btn-disabled' : ''}}" hover-class="footer-bar-hover" bindtap="onConfirmProcess">确认领取</view>
     </view>
   </view>
 
