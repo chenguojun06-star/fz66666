@@ -41,8 +41,8 @@ import type { OrderLine } from '@/types/production';
 export const orderStatusTag = (status: any) => <OrderStatusTag status={status} />;
 
 const statusTag = (status: FlowStage['status']) => {
-  if (status === 'completed') return React.createElement(Tag, { color: 'default' }, '已完成');
-  if (status === 'in_progress') return React.createElement(Tag, { color: 'success' }, '进行中');
+  if (status === 'completed') return React.createElement(Tag, { color: 'success' }, '已完成');
+  if (status === 'in_progress') return React.createElement(Tag, { color: 'processing' }, '进行中');
   return React.createElement(Tag, null, '未开始');
 };
 
@@ -150,7 +150,8 @@ export function useOrderFlowData() {
       };
 
       const materialArrivalRate = order?.materialArrivalRate || 0;
-      if (materialArrivalRate >= 100) {
+      const isProcurementManuallyCompleted = order?.procurementManuallyCompleted === 1;
+      if (isProcurementManuallyCompleted || materialArrivalRate >= 100) {
         purchaseStage.status = 'completed';
       } else if (materialArrivalRate > 0) {
         purchaseStage.status = 'in_progress';

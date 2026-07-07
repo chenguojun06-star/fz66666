@@ -127,8 +127,8 @@ export interface ProductionOrder extends Record<string, unknown> {
   // 工序单价和明细
   progressNodeUnitPrices?: any[]; // 工序节点单价数组
 
-  // 采购手动确认相关字段
-  procurementManuallyCompleted?: boolean;
+  // 采购手动确认相关字段（后端 Integer 0/1，前端用 === 1 判断）
+  procurementManuallyCompleted?: number | boolean;
   procurementConfirmedBy?: string;
   procurementConfirmedByName?: string;
   procurementConfirmedAt?: string;

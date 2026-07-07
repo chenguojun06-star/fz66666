@@ -99,8 +99,10 @@ public class OrderFlowStageFillHelper {
         try {
             qr.flowRows = scanRecordMapper.selectFlowStageSnapshot(orderIds, tenantId);
             qr.flowSnapshotOk = true;
+            log.info("[FlowStage] selectFlowStageSnapshot ok: orderIdsCount={}, rows={}, tenantId={}",
+                    orderIds.size(), qr.flowRows != null ? qr.flowRows.size() : 0, tenantId);
         } catch (Exception e) {
-            log.warn("Failed to query flow stage snapshot: orderIdsCount={}", orderIds.size(), e);
+            log.error("[FlowStage] Failed to query flow stage snapshot: orderIdsCount={}, tenantId={}", orderIds.size(), tenantId, e);
         }
 
         qr.trackingQtyMap = loadTrackingQtyMap(orderIds, tenantId);
@@ -108,8 +110,10 @@ public class OrderFlowStageFillHelper {
         try {
             qr.procurementRows = materialPurchaseMapper.selectProcurementSnapshot(orderIds, tenantId);
             qr.procurementSnapshotOk = true;
+            log.info("[FlowStage] selectProcurementSnapshot ok: orderIdsCount={}, rows={}, tenantId={}",
+                    orderIds.size(), qr.procurementRows != null ? qr.procurementRows.size() : 0, tenantId);
         } catch (Exception e) {
-            log.warn("Failed to query procurement snapshot: orderIdsCount={}", orderIds.size(), e);
+            log.error("[FlowStage] Failed to query procurement snapshot: orderIdsCount={}, tenantId={}", orderIds.size(), tenantId, e);
         }
 
         qr.procurementByOrder = buildMapByOrderId(qr.procurementRows);
@@ -235,6 +239,12 @@ public class OrderFlowStageFillHelper {
             LocalDateTime os = toLocalDateTime(ParamUtils.getIgnoreCase(flow, "orderStartTime"));
             LocalDateTime oe = toLocalDateTime(ParamUtils.getIgnoreCase(flow, "orderEndTime"));
             if (os != null) { d.orderStart = os; d.orderEnd = oe == null ? os : oe; d.orderOperator = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(flow, "orderOperatorName")); }
+            log.info("[FlowStage] extractFlowStageData orderId={}, flowData={}", o.getId(), flow);
+        } else {
+            log.warn("[FlowStage] extractFlowStageData orderId={}, flowRow is NULL (tenant mismatch or not in snapshot)", o.getId());
+        }
+        if (proc != null) {
+            log.info("[FlowStage] extractFlowStageData orderId={}, procData={}", o.getId(), proc);
         }
         if ((!StringUtils.hasText(d.orderOperator) || "system".equalsIgnoreCase(d.orderOperator)) && StringUtils.hasText(o.getCreatedByName())) {
             d.orderOperator = o.getCreatedByName();
@@ -247,9 +257,14 @@ public class OrderFlowStageFillHelper {
             long purchaseQty = toLongSafe(ParamUtils.getIgnoreCase(proc, "purchaseQuantity"));
             long arrivedQty = toLongSafe(ParamUtils.getIgnoreCase(proc, "arrivedQuantity"));
             d.procurementRateFromPurchases = purchaseQty > 0 ? (int) Math.round(Math.max(0L, arrivedQty) * 100.0 / purchaseQty) : 0;
-        } else if (flow != null) {
+        }
+        if (d.procurementStart == null && flow != null) {
             d.procurementStart = toLocalDateTime(ParamUtils.getIgnoreCase(flow, "procurementScanStartTime"));
+        }
+        if (d.procurementEnd == null && flow != null) {
             d.procurementEnd = toLocalDateTime(ParamUtils.getIgnoreCase(flow, "procurementScanEndTime"));
+        }
+        if (!StringUtils.hasText(d.procurementOperator) && flow != null) {
             d.procurementOperator = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(flow, "procurementScanOperatorName"));
         }
 

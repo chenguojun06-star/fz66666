@@ -36,7 +36,8 @@ function getDeliveryMeta(record, allStagesCompleted) {
   if (!deliveryDate) return { tone: 'normal', label: '待补交期' };
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const target = new Date(deliveryDate);
+  // iOS 兼容：'yyyy-MM-dd HH:mm:ss' 在 iOS 下无法解析，需替换为 'yyyy/MM/dd HH:mm:ss'
+  const target = new Date(String(deliveryDate).replace(/-/g, '/'));
   target.setHours(0, 0, 0, 0);
   const diffDays = Math.ceil((target.getTime() - today.getTime()) / 86400000);
   if (diffDays < 0) return { tone: 'danger', label: '延期' + Math.abs(diffDays) + '天' };
