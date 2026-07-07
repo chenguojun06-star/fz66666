@@ -49,7 +49,7 @@
     </view>
   </view>
 
-  <!-- ============== ② 菲号信息（最核心） ============== -->
+  <!-- ============== ② 菲号信息（最核心，三行清晰式） ============== -->
   <view wx:if="{{detail.bundleNo || detail.color || detail.size || detail.displayQuantity}}" class="bundle-card">
     <view class="bundle-card__title">
       <text class="bundle-card__title-icon">📦</text>
@@ -62,31 +62,25 @@
         <text class="bundle-card__value bundle-card__value--bold">{{detail.orderNo ? detail.orderNo + '-' : ''}}{{detail.bundleNo}}</text>
       </view>
 
+      <view class="bundle-card__row">
+        <text class="bundle-card__label">颜色</text>
+        <text class="bundle-card__value">{{detail.color || '—'}}</text>
+        <text class="bundle-card__divider">·</text>
+        <text class="bundle-card__label">码数</text>
+        <text class="bundle-card__value">{{detail.size || '—'}}</text>
+        <text class="bundle-card__divider">·</text>
+        <text class="bundle-card__label">数量</text>
+        <text class="bundle-card__value bundle-card__value--qty">{{detail.displayQuantity || detail.quantity || 0}}件</text>
+      </view>
+
       <view wx:if="{{detail.bundleLabel}}" class="bundle-card__row">
         <text class="bundle-card__label">标签</text>
         <text class="bundle-card__value">{{detail.bundleLabel}}</text>
       </view>
 
-      <view class="bundle-card__row bundle-card__row--split">
-        <view class="bundle-card__cell">
-          <text class="bundle-card__label">颜色</text>
-          <text class="bundle-card__value">{{detail.color || '—'}}</text>
-        </view>
-        <view class="bundle-card__cell">
-          <text class="bundle-card__label">尺码</text>
-          <text class="bundle-card__value">{{detail.size || '—'}}</text>
-        </view>
-      </view>
-
-      <view class="bundle-card__row bundle-card__row--split">
-        <view class="bundle-card__cell bundle-card__cell--qty">
-          <text class="bundle-card__label">数量</text>
-          <text class="bundle-card__value bundle-card__value--qty">{{detail.displayQuantity || detail.quantity || 0}} 件</text>
-        </view>
-        <view wx:if="{{detail.bedNoDisplay || detail.bedNo}}" class="bundle-card__cell">
-          <text class="bundle-card__label">床号</text>
-          <text class="bundle-card__value">{{detail.bedNoDisplay || detail.bedNo}}</text>
-        </view>
+      <view wx:if="{{detail.bedNoDisplay || detail.bedNo}}" class="bundle-card__row">
+        <text class="bundle-card__label">床号</text>
+        <text class="bundle-card__value">{{detail.bedNoDisplay || detail.bedNo}}</text>
       </view>
     </view>
 

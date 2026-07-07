@@ -194,8 +194,8 @@
 .bundle-card__row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   padding: 4rpx 0;
+  font-size: 26rpx;
 }
 .bundle-card__row--split {
   gap: 24rpx;
@@ -211,32 +211,31 @@
   border: 1rpx solid #f0f4fa;
 }
 .bundle-card__label {
-  font-size: 24rpx;
+  font-size: 26rpx;
   color: var(--color-text-secondary);
   flex-shrink: 0;
+  margin-right: 8rpx;
 }
 .bundle-card__value {
-  font-size: 28rpx;
+  font-size: 26rpx;
   color: var(--color-text-primary);
   font-weight: 500;
-  text-align: right;
   flex: 1;
-  margin-left: 16rpx;
-}
-.bundle-card__value--bold {
-  font-size: 32rpx;
-  font-weight: 700;
-  color: #1f2937;
   word-break: break-all;
 }
+.bundle-card__value--bold {
+  font-size: 30rpx;
+  font-weight: 700;
+  color: #1f2937;
+}
 .bundle-card__value--qty {
-  font-size: 32rpx;
   font-weight: 700;
   color: #2563eb;
 }
-.bundle-card__cell--qty {
-  background: linear-gradient(135deg, #eff6ff, #dbeafe);
-  border-color: #bfdbfe;
+.bundle-card__divider {
+  color: var(--color-text-tertiary);
+  font-size: 26rpx;
+  margin: 0 12rpx;
 }
 .bundle-card__hint {
   margin-top: 16rpx;
