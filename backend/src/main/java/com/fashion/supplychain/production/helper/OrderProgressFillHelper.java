@@ -49,8 +49,18 @@ public class OrderProgressFillHelper {
             return;
         }
 
-        TenantAssert.assertTenantContext();
-        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        // 异步线程（CompletableFuture.runAsync）没有继承 UserContext ThreadLocal，
+        // 不能调用 TenantAssert.assertTenantContext()，否则抛"缺少租户上下文"异常。
+        // 优先从订单记录获取 tenantId，fallback 到 UserContext（同步调用场景）。
+        Long tenantId = records.stream()
+                .map(r -> r == null ? null : r.getTenantId())
+                .filter(java.util.Objects::nonNull)
+                .findFirst()
+                .orElse(com.fashion.supplychain.common.UserContext.tenantId());
+        if (tenantId == null) {
+            log.warn("[Progress] fillCurrentProcessName skipped: tenantId is null, recordCount={}", records.size());
+            return;
+        }
 
         List<String> orderIds = records.stream()
                 .map(r -> r == null ? null : r.getId())

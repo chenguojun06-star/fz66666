@@ -39,7 +39,12 @@ public class OrderStageBundleStatsFillHelper {
             return;
         }
 
-        Long tenantId = UserContext.tenantId();
+        // 异步线程（CompletableFuture.runAsync）没有继承 UserContext ThreadLocal，优先从订单记录获取 tenantId。
+        Long tenantId = records.stream()
+                .map(r -> r == null ? null : r.getTenantId())
+                .filter(java.util.Objects::nonNull)
+                .findFirst()
+                .orElse(UserContext.tenantId());
 
         Map<String, Map<String, Integer>> aggregated = queryProcessScannedBundles(orderIds, tenantId);
 
