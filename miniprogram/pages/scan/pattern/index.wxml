@@ -1,47 +1,71 @@
 <!-- 样板生产操作页 -->
 <view class="container">
 
-  <!-- 视图 A：工序选择（与大货扫码一致：顶部信息卡片 + chip多选） -->
+  <!-- 视图 A：工序选择（与大货扫码一致：Hero + 卡片式 checkbox 多选） -->
   <view wx:if="{{viewMode === 'select'}}" class="select-view">
 
-    <!-- 顶部信息卡片（与大货扫码一致的三行清晰式） -->
-    <view class="task-card">
-      <view class="card-header">
-        <image-preview class="cover-wrap" src="{{detail.coverImage || ''}}" mode="aspectFill" />
-        <view class="header-info">
-          <text class="style-no">{{(detail.styleNo || '-') + (detail.styleName ? ' · ' + detail.styleName : '')}}</text>
-          <view class="header-meta">
-            <text wx:if="{{detail.deliveryTime}}" class="header-meta-item header-meta-item--delivery">交期：{{detail.deliveryTime}}</text>
-          </view>
+    <!-- 顶部 Hero 区（与大货扫码一致） -->
+    <view class="hero">
+      <view class="hero__main">
+        <view class="hero__icon"></view>
+        <view class="hero__mainText">
+          <text class="hero__title">样衣扫码</text>
+          <text class="hero__styleNo">{{detail.styleNo || '-'}}</text>
+        </view>
+        <view wx:if="{{detail.deliveryTime}}" class="hero__delivery">
+          <text class="hero__deliveryLabel">交期</text>
+          <text class="hero__deliveryValue">{{detail.deliveryTime}}</text>
         </view>
       </view>
 
-      <!-- 颜色 码数 数量（同一行） -->
-      <view class="info-row info-row--specs">
-        <text wx:if="{{detail.color}}" class="info-label">颜色</text>
-        <text wx:if="{{detail.color}}" class="info-value">{{detail.color}}</text>
-        <text wx:if="{{detail.color && (detail.size || detail.sizesText !== '-')}}" class="info-divider">·</text>
-        <text wx:if="{{detail.size || (detail.sizesText && detail.sizesText !== '-')}}" class="info-label">码数</text>
-        <text wx:if="{{detail.size}}" class="info-value">{{detail.size}}</text>
-        <text wx:elif="{{detail.sizesText && detail.sizesText !== '-'}}" class="info-value">{{detail.sizesText}}</text>
-        <text wx:if="{{(detail.color || detail.size) && detail.quantity && detail.quantity > 0}}" class="info-divider">·</text>
-        <text wx:if="{{detail.quantity && detail.quantity > 0}}" class="info-label">数量</text>
-        <text wx:if="{{detail.quantity && detail.quantity > 0}}" class="info-value info-value--qty">{{detail.quantity}}件</text>
+      <view class="hero__info">
+        <view class="hero__infoItem">
+          <text class="hero__infoLabel">颜色</text>
+          <text class="hero__infoValue">{{detail.color || '—'}}</text>
+        </view>
+        <view class="hero__infoDivider"></view>
+        <view class="hero__infoItem">
+          <text class="hero__infoLabel">码数</text>
+          <text class="hero__infoValue">{{detail.size || detail.sizesText || '—'}}</text>
+        </view>
+        <view class="hero__infoDivider"></view>
+        <view class="hero__infoItem">
+          <text class="hero__infoLabel">数量</text>
+          <text class="hero__infoValue hero__infoValue--qty">{{detail.quantity || 0}}</text>
+        </view>
       </view>
     </view>
 
-    <!-- 工序选择（chip 标签式多选，与大货扫码一致） -->
-    <view class="section-card">
-      <text class="section-title">选择工序（可多选）</text>
+    <!-- 款式信息卡片 -->
+    <view class="card style-card">
+      <view class="card__title">
+        <text class="card__titleText">款式信息</text>
+      </view>
+      <view class="style-card__body">
+        <image-preview class="style-card__cover" src="{{detail.coverImage || ''}}" mode="aspectFill" />
+        <view class="style-card__info">
+          <text class="style-card__styleNo">{{detail.styleNo || '-'}}</text>
+          <text wx:if="{{detail.styleName}}" class="style-card__styleName">{{detail.styleName}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 工序选择（卡片式 checkbox 多选，与大货扫码一致） -->
+    <view class="card">
+      <view class="card__title">
+        <text class="card__titleText">选择工序</text>
+        <text class="card__titleHint">可多选</text>
+      </view>
       <scroll-view class="process-scroll" scroll-y style="max-height:600rpx">
         <view wx:for="{{processList}}" wx:key="value"
-              class="process-chip {{item.checked ? 'active' : ''}}"
+              class="process-item {{item.checked ? 'process-item--active' : ''}}"
               data-value="{{item.value}}"
-              hover-class="process-chip-hover"
+              hover-class="process-item-hover"
               hover-stay-time="80"
               bindtap="onProcessChipTap">
-          <text class="chip-label">{{item.name}}</text>
-          <text class="chip-price" wx:if="{{item.unitPriceText}}">¥{{item.unitPriceText}}</text>
+          <view class="process-item__checkbox {{item.checked ? 'process-item__checkbox--checked' : ''}}"></view>
+          <text class="process-item__name">{{item.name}}</text>
+          <text class="process-item__price" wx:if="{{item.unitPriceText}}">¥{{item.unitPriceText}}</text>
         </view>
       </scroll-view>
       <view class="summary-bar" wx:if="{{selectedCount > 0}}">
@@ -51,100 +75,94 @@
     </view>
 
     <view class="footer-bar">
-      <view class="btn-cancel" hover-class="footer-bar-hover" bindtap="goBack">取消</view>
-      <view class="btn-submit {{selectedCount === 0 ? 'btn-disabled' : ''}}" hover-class="footer-bar-hover" bindtap="onConfirmProcess">确认领取</view>
+      <view class="btn-cancel" hover-class="btn-hover" bindtap="goBack">取消</view>
+      <view class="btn-submit {{selectedCount === 0 ? 'btn-disabled' : ''}}" hover-class="btn-hover" bindtap="onConfirmProcess">确认领取</view>
     </view>
   </view>
 
   <!-- 视图 B：操作确认（点击工序后，或从列表页直接指定工序） -->
   <view wx:elif="{{viewMode === 'operate'}}">
 
-    <!-- 样板信息卡片（三行清晰式，与大货扫码一致） -->
-    <view class="task-card">
-      <view class="status-tag tag tag-{{detail.statusColor}}">{{detail.statusLabel || '-'}}</view>
-      <view class="card-header">
-        <image-preview class="cover-wrap" src="{{detail.coverImage || ''}}" mode="aspectFill" />
-        <view class="header-info">
-          <text class="style-no">{{(detail.styleNo || '-') + (detail.styleName ? ' · ' + detail.styleName : '')}}</text>
-          <view class="header-meta">
-            <text wx:if="{{detail.orderNo}}" class="header-meta-item">订单：{{detail.orderNo}}</text>
-            <text wx:if="{{detail.deliveryTime}}" class="header-meta-item header-meta-item--delivery">交期：{{detail.deliveryTime}}</text>
-          </view>
+    <!-- 顶部 Hero 区 -->
+    <view class="hero">
+      <view class="hero__main">
+        <view class="hero__icon"></view>
+        <view class="hero__mainText">
+          <text class="hero__title">{{detail.operationLabel || '样衣操作'}}</text>
+          <text class="hero__styleNo">{{detail.styleNo || '-'}}</text>
+        </view>
+        <view wx:if="{{detail.deliveryTime}}" class="hero__delivery">
+          <text class="hero__deliveryLabel">交期</text>
+          <text class="hero__deliveryValue">{{detail.deliveryTime}}</text>
         </view>
       </view>
 
-      <!-- 第一行：款号信息（客户，如有） -->
-      <view class="info-row info-row--meta" wx:if="{{detail.customerName}}">
-        <text class="info-meta-item">客户：{{detail.customerName}}</text>
-      </view>
-
-      <!-- 第二行：颜色 码数 数量（同一行） -->
-      <view class="info-row info-row--specs">
-        <text wx:if="{{detail.color}}" class="info-label">颜色</text>
-        <text wx:if="{{detail.color}}" class="info-value">{{detail.color}}</text>
-        <text wx:if="{{detail.color && (detail.size || detail.sizesText) && detail.sizesText !== '-'}}" class="info-divider">·</text>
-        <text wx:if="{{detail.size || (detail.sizesText && detail.sizesText !== '-')}}" class="info-label">码数</text>
-        <text wx:if="{{detail.size}}" class="info-value">{{detail.size}}</text>
-        <text wx:elif="{{detail.sizesText && detail.sizesText !== '-'}}" class="info-value">{{detail.sizesText}}</text>
-        <text wx:if="{{(detail.color || detail.size) && detail.quantity && detail.quantity > 0}}" class="info-divider">·</text>
-        <text wx:if="{{detail.quantity && detail.quantity > 0}}" class="info-label">数量</text>
-        <text wx:if="{{detail.quantity && detail.quantity > 0}}" class="info-value info-value--qty">{{detail.quantity}}件</text>
-      </view>
-
-      <!-- 颜色码数矩阵（如有） -->
-      <view wx:if="{{detail.hasMatrix}}" class="matrix-section">
-        <view class="matrix-table">
-          <view class="matrix-row matrix-header">
-            <view class="matrix-cell matrix-label-cell">码数</view>
-            <view wx:for="{{detail.matrixSizes}}" wx:key="*this" class="matrix-cell">{{item}}</view>
-          </view>
-          <view wx:for="{{detail.matrixRows}}" wx:for-item="row" wx:key="color" class="matrix-row">
-            <view class="matrix-cell matrix-label-cell">{{row.color}}</view>
-            <view wx:for="{{row.quantities}}" wx:for-item="qty" wx:key="qIdx" class="matrix-cell">{{qty}}</view>
-          </view>
+      <view class="hero__info">
+        <view class="hero__infoItem">
+          <text class="hero__infoLabel">颜色</text>
+          <text class="hero__infoValue">{{detail.color || '—'}}</text>
         </view>
-        <view class="matrix-footer">
-          <text class="matrix-grand-total">总数: {{detail.matrixTotal}} 件</text>
+        <view class="hero__infoDivider"></view>
+        <view class="hero__infoItem">
+          <text class="hero__infoLabel">码数</text>
+          <text class="hero__infoValue">{{detail.size || detail.sizesText || '—'}}</text>
+        </view>
+        <view class="hero__infoDivider"></view>
+        <view class="hero__infoItem">
+          <text class="hero__infoLabel">数量</text>
+          <text class="hero__infoValue hero__infoValue--qty">{{detail.quantity || 0}}</text>
         </view>
       </view>
+    </view>
 
-      <!-- 第三行：交板/设计师/纸样师（同一行，按需显示） -->
-      <view class="info-row info-row--extra" wx:if="{{detail.designer || detail.patternDeveloper}}">
-        <text wx:if="{{detail.designer}}" class="info-label">设计师</text>
-        <text wx:if="{{detail.designer}}" class="info-value">{{detail.designer}}</text>
-        <text wx:if="{{detail.designer && detail.patternDeveloper}}" class="info-divider">·</text>
-        <text wx:if="{{detail.patternDeveloper}}" class="info-label">纸样师</text>
-        <text wx:if="{{detail.patternDeveloper}}" class="info-value">{{detail.patternDeveloper}}</text>
+    <!-- 款式信息卡片 -->
+    <view class="card style-card">
+      <view class="card__title">
+        <text class="card__titleText">款式信息</text>
+        <text wx:if="{{detail.statusLabel}}" class="card__titleTag card__titleTag--{{detail.statusColor || 'default'}}">{{detail.statusLabel}}</text>
+      </view>
+      <view class="style-card__body">
+        <image-preview class="style-card__cover" src="{{detail.coverImage || ''}}" mode="aspectFill" />
+        <view class="style-card__info">
+          <text class="style-card__styleNo">{{detail.styleNo || '-'}}</text>
+          <text wx:if="{{detail.styleName}}" class="style-card__styleName">{{detail.styleName}}</text>
+          <view class="style-card__meta">
+            <text wx:if="{{detail.orderNo}}" class="meta-tag">订单 {{detail.orderNo}}</text>
+            <text wx:if="{{detail.customerName}}" class="meta-tag">客户 {{detail.customerName}}</text>
+          </view>
+        </view>
       </view>
     </view>
 
     <!-- 操作区域 -->
-    <view class="section-card">
-      <view class="section-title">{{detail.operationLabel}}</view>
+    <view class="card">
+      <view class="card__title">
+        <text class="card__titleText">{{detail.operationLabel}}</text>
+      </view>
 
       <!-- 审核未完成提示 -->
-      <view wx:if="{{detail.requiresReviewBeforeInbound}}" class="review-warning">
-        <text class="review-warning-text">⚠ 当前未完成样衣审核，本次会先提交审核再执行入库</text>
+      <view wx:if="{{detail.requiresReviewBeforeInbound}}" class="card__hint">
+        <text>当前未完成样衣审核，本次会先提交审核再执行入库</text>
       </view>
 
       <!-- 审批选择器（审核操作时显示） -->
-      <view wx:if="{{detail.operationType === 'REVIEW'}}" class="review-selector">
+      <view wx:if="{{detail.operationType === 'REVIEW'}}" class="review-section">
         <text class="input-label">审批结论</text>
         <view class="review-options">
-          <view class="review-option {{detail.reviewResult === 'PASS' ? 'review-option-active' : ''}}" data-result="PASS" bindtap="onReviewResultChange">
-            <text>✅ 通过</text>
+          <view class="review-option {{detail.reviewResult === 'PASS' ? 'review-option--active review-option--pass' : ''}}" data-result="PASS" bindtap="onReviewResultChange">
+            <text>通过</text>
           </view>
-          <view class="review-option {{detail.reviewResult === 'REWORK' ? 'review-option-active' : ''}}" data-result="REWORK" bindtap="onReviewResultChange">
-            <text>🔧 返修</text>
+          <view class="review-option {{detail.reviewResult === 'REWORK' ? 'review-option--active review-option--rework' : ''}}" data-result="REWORK" bindtap="onReviewResultChange">
+            <text>返修</text>
           </view>
-          <view class="review-option {{detail.reviewResult === 'REJECT' ? 'review-option-active' : ''}}" data-result="REJECT" bindtap="onReviewResultChange">
-            <text>❌ 不通过</text>
+          <view class="review-option {{detail.reviewResult === 'REJECT' ? 'review-option--active review-option--reject' : ''}}" data-result="REJECT" bindtap="onReviewResultChange">
+            <text>不通过</text>
           </view>
         </view>
       </view>
 
-      <!-- 审核图片上传（审核操作时显示） -->
-      <view wx:if="{{detail.operationType === 'REVIEW'}}" class="review-images-section">
+      <!-- 审核图片上传 -->
+      <view wx:if="{{detail.operationType === 'REVIEW'}}" class="review-section">
         <text class="input-label">审核图片（最多{{maxImages}}张）</text>
         <view class="review-images-list">
           <view wx:for="{{reviewImages}}" wx:key="*this" class="review-image-item">
@@ -159,8 +177,8 @@
       </view>
 
       <!-- 多色多码选择 -->
-      <view wx:if="{{skuList.length > 0 && detail.operationType !== 'COMPLETE' && detail.operationType !== 'REVIEW'}}" class="section-card" style="margin-top: 0; padding: 0; background: transparent;">
-        <text class="section-title">扫码明细（{{skuList.length}}项）</text>
+      <view wx:if="{{skuList.length > 0 && detail.operationType !== 'COMPLETE' && detail.operationType !== 'REVIEW'}}" class="sku-section">
+        <text class="input-label">扫码明细（{{skuList.length}}项）</text>
         <view class="sku-list">
           <view wx:for="{{skuList}}" wx:key="id" class="sku-item">
             <view class="sku-info">
@@ -171,7 +189,7 @@
               <input class="sku-qty-input" type="number"
                      value="{{item.inputQuantity}}"
                      data-index="{{index}}" bindinput="onSkuInput"
-                     placeholder="数量" />
+                     placeholder="数量…" />
               <text class="sku-unit">件</text>
             </view>
           </view>
@@ -179,11 +197,9 @@
       </view>
 
       <!-- 数量汇总 -->
-      <view wx:if="{{skuList.length > 0 && detail.operationType !== 'COMPLETE' && detail.operationType !== 'REVIEW'}}" class="summary-card">
-        <view class="summary-row">
-          <text class="summary-label">总数量</text>
-          <text class="summary-value">{{summary.totalQuantity}} 件</text>
-        </view>
+      <view wx:if="{{skuList.length > 0 && detail.operationType !== 'COMPLETE' && detail.operationType !== 'REVIEW'}}" class="summary-bar">
+        <text class="summary-text">总数量</text>
+        <text class="summary-amount">{{summary.totalQuantity}} 件</text>
       </view>
 
       <!-- 数量输入 -->
@@ -191,7 +207,7 @@
         <text class="input-label">数量</text>
         <input class="input-field"
                type="digit"
-               placeholder="请输入数量"
+               placeholder="请输入数量…"
                value="{{detail.quantity}}"
                bindinput="onQuantityInput" />
         <text class="input-suffix">件（最多{{detail.maxQuantity || detail.quantity || 0}}件）</text>
@@ -199,7 +215,7 @@
 
       <!-- 仓位编号（仓库操作时显示） -->
       <view wx:if="{{detail.requiresWarehouseInput}}" class="warehouse-section">
-        <view class="input-label">入库仓库</view>
+        <text class="input-label">入库仓库</text>
         <view class="warehouse-option-row">
           <view wx:for="{{warehouseOptions}}" wx:key="index"
                 class="warehouse-chip {{detail.warehouseCode === item ? 'warehouse-chip--active' : ''}}"
@@ -209,7 +225,7 @@
                 bindtap="onWarehouseClear" hover-class="warehouse-chip-hover">清除</view>
         </view>
         <input class="input-field"
-               placeholder="或手动输入仓库编号"
+               placeholder="或手动输入仓库编号…"
                value="{{detail.warehouseCode}}"
                bindinput="onWarehouseInput" />
 
@@ -223,7 +239,7 @@
                 bindtap="onLocationClear" hover-class="warehouse-chip-hover">清除</view>
         </view>
         <input wx:if="{{detail.warehouseCode}}" class="input-field"
-               placeholder="或手动输入库位编号"
+               placeholder="或手动输入库位编号…"
                value="{{warehouseLocationCode}}"
                bindinput="onLocationCodeInput" />
       </view>
@@ -237,8 +253,8 @@
     </view>
 
     <view class="footer-bar">
-      <view class="btn-cancel" hover-class="footer-bar-hover" bindtap="goBack">取消</view>
-      <view class="btn-submit {{loading ? 'btn-disabled' : ''}}" hover-class="footer-bar-hover" bindtap="submitOp">
+      <view class="btn-cancel" hover-class="btn-hover" bindtap="goBack">取消</view>
+      <view class="btn-submit {{loading ? 'btn-disabled' : ''}}" hover-class="btn-hover" bindtap="submitOp">
         {{loading ? '提交中…' : (detail.submitLabel || '提交')}}
       </view>
     </view>
