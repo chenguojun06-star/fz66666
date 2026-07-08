@@ -13,6 +13,8 @@ import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.service.SecondaryProcessService;
 import com.fashion.supplychain.style.service.StyleInfoService;
 import lombok.extern.slf4j.Slf4j;
+
+import java.util.concurrent.CompletableFuture;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -37,6 +39,9 @@ public class ScanExecutorSupport {
 
     @Autowired
     private ProductionOrderService productionOrderService;
+
+    @Autowired(required = false)
+    private OrderProgressWebSocketServer orderProgressWebSocketServer;
 
     @Autowired(required = false)
     private ProductionProcessTrackingOrchestrator processTrackingOrchestrator;
@@ -83,6 +88,22 @@ public class ScanExecutorSupport {
         ExceptionHandler.runRecoverable("订单进度同步重算", () -> {
             if (productionOrderService != null) productionOrderService.recomputeProgressFromRecords(orderId);
         }, e -> log.warn("订单进度同步重算失败(不阻断): orderId={}", orderId, e));
+        
+        pushProgressNotification(orderId);
+    }
+
+    private void pushProgressNotification(String orderId) {
+        if (orderProgressWebSocketServer == null) return;
+        CompletableFuture.runAsync(() -> {
+            try {
+                ProductionOrder order = productionOrderService.getById(orderId);
+                if (order != null) {
+                    orderProgressWebSocketServer.broadcastOrderProgressFromOrder(order);
+                }
+            } catch (Exception e) {
+                log.warn("[WS] 进度推送失败(不阻断): orderId={}", orderId, e);
+            }
+        });
     }
 
     public void recomputeProgressAsync(String orderId) {

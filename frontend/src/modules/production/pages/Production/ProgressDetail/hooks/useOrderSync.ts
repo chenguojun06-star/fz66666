@@ -2,6 +2,8 @@ import React, { useCallback, useEffect, useRef } from 'react';
 import type { ProductionOrder } from '@/types/production';
 import { useSync } from '@/utils/syncManager';
 import { invalidateBoardStatsTimestamp } from './useBoardStats';
+import { useWebSocket } from '@/hooks/useWebSocket';
+
 
 type UseOrderSyncParams = {
   fetchOrders: (options?: { silent?: boolean }) => Promise<void>;
@@ -10,6 +12,8 @@ type UseOrderSyncParams = {
   activeOrderRef: React.MutableRefObject<ProductionOrder | null>;
   setActiveOrder: (order: ProductionOrder | null) => void;
   orderSyncingRef: React.MutableRefObject<boolean>;
+  userId?: string;
+  tenantId?: string | number;
 };
 
 export const useOrderSync = ({
@@ -19,7 +23,14 @@ export const useOrderSync = ({
   activeOrderRef,
   setActiveOrder,
   orderSyncingRef,
+  userId,
+  tenantId,
 }: UseOrderSyncParams) => {
+  const { connected: wsConnected, subscribeProgress } = useWebSocket({
+    userId,
+    tenantId,
+    enabled: true,
+  });
   const syncingRef = useRef(false);
   const fetchOrdersRef = useRef(fetchOrders);
   const fetchOrderDetailRef = useRef(fetchOrderDetail);
@@ -48,7 +59,7 @@ export const useOrderSync = ({
     return null;
   }, [setActiveOrder, activeOrderRef, orderSyncingRef]);
 
-  useSync('progress-detail-order', fetchFn, () => {}, { interval: 30000, pauseOnHidden: true });
+  useSync('progress-detail-order', fetchFn, () => {}, { interval: 300000, pauseOnHidden: true });
 
   useEffect(() => {
     const handleProgressChanged = (event?: Event) => {
@@ -62,4 +73,14 @@ export const useOrderSync = ({
     window.addEventListener('order:progress:changed', handleProgressChanged);
     return () => window.removeEventListener('order:progress:changed', handleProgressChanged);
   }, [fetchFn, orderSyncingRef]);
+
+  useEffect(() => {
+    const handleWsProgress = (msg: { orderId: string }) => {
+      if (!msg.orderId || syncingRef.current || orderSyncingRef.current) return;
+      invalidateBoardStatsTimestamp(msg.orderId);
+      fetchFn();
+    };
+    const unsubscribe = subscribeProgress(handleWsProgress);
+    return unsubscribe;
+  }, [subscribeProgress, fetchFn, orderSyncingRef]);
 };

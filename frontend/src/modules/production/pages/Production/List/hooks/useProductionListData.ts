@@ -6,6 +6,8 @@ import type { PaginatedResponse } from '@/types/api';
 import api, { isApiSuccess, isOrderTerminal } from '@/utils/api';
 import { useLocation } from 'react-router-dom';
 import { useSync } from '@/utils/syncManager';
+import { useWebSocket } from '@/hooks/useWebSocket';
+import { useUser } from '@/utils/AuthContext';
 import { DEFAULT_PAGE_SIZE, readPageSize } from '@/utils/pageSizeStore';
 import { usePersistentSort } from '@/hooks/usePersistentSort';
 import type { Dayjs } from 'dayjs';
@@ -14,7 +16,7 @@ import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import { useDeliveryRiskMap } from '../../ProgressDetail/hooks/useDeliveryRiskMap';
 import { useStagnantDetection } from '../../ProgressDetail/hooks/useStagnantDetection';
 import { useProductionSmartQueue } from '../../useProductionSmartQueue';
-import { ensureBoardStatsForOrder, clearBoardStatsTimestamps } from '../../ProgressDetail/hooks/useBoardStats';
+import { ensureBoardStatsForOrder, clearBoardStatsTimestamps, invalidateBoardStatsTimestamp } from '../../ProgressDetail/hooks/useBoardStats';
 import { getDynamicParentMapping, setDynamicParentMapping } from '../../ProgressDetail/utils';
 import { processParentMappingApi } from '@/services/production/productionApi';
 import { useCardProgress } from '../hooks/useCardProgress';
@@ -33,6 +35,13 @@ const DEFAULT_HOVER_NODES: ProgressNode[] = [
 export function useProductionListData() {
   const { message } = App.useApp();
   const location = useLocation();
+  const { user } = useUser();
+  const tenantId = user?.tenantId ? String(user.tenantId) : undefined;
+  const { connected: wsConnected, subscribeProgress } = useWebSocket({
+    userId: user?.id,
+    tenantId,
+    enabled: true,
+  });
 
   const [queryParams, setQueryParams] = useState<ProductionQueryParams>(() => {
     const initSearch = new URLSearchParams(window.location.search);
@@ -207,7 +216,7 @@ export function useProductionListData() {
       } catch { return []; }
     },
     (newData, oldData) => { if (oldData !== null) setProductionList(newData); },
-    { interval: 30000, enabled: !loading, pauseOnHidden: true, onError: (error) => { console.error('[实时同步] 错误', error); } }
+    { interval: 300000, enabled: !loading, pauseOnHidden: true, onError: (error) => { console.error('[实时同步] 错误', error); } }
   );
 
   const wsRefreshRef = useRef(0);
@@ -216,6 +225,17 @@ export function useProductionListData() {
     window.addEventListener('order:progress:changed', handleProgressChanged);
     return () => window.removeEventListener('order:progress:changed', handleProgressChanged);
   }, [fetchProductionList]);
+
+  useEffect(() => {
+    const handleWsProgress = (msg: { orderId: string }) => {
+      if (!msg.orderId) return;
+      invalidateBoardStatsTimestamp(msg.orderId);
+      wsRefreshRef.current += 1;
+      fetchProductionList();
+    };
+    const unsubscribe = subscribeProgress(handleWsProgress);
+    return unsubscribe;
+  }, [subscribeProgress, fetchProductionList]);
 
   const sortedProductionList = useMemo(() => {
     // 延期环节跳转：直接用后端返回的精确订单 ID，从原始数据中筛选

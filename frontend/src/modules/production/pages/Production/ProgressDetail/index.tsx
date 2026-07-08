@@ -11,7 +11,8 @@ import ProcessKanbanDrawer from './components/ProcessKanbanDrawer';
 import { useOrganizationFilterOptions } from '@/hooks/useOrganizationFilterOptions';
 import { useProductionBoardStore } from '@/stores';
 import { useProductionSmartQueue } from '../useProductionSmartQueue';
-import { useWebSocket, type WsMessage } from '@/hooks/useWebSocket';
+// WS 订阅已移至 useOrderSync，此处仅保留类型导入
+import type { WsMessage } from '@/hooks/useWebSocket';
 import { invalidateBoardStatsTimestamp } from './hooks/useBoardStats';
 import '../../../styles.css';
 
@@ -115,31 +116,6 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     mergeBoardStatsForOrder, mergeBoardTimesForOrder,
     setBoardLoadingForOrder, mergeProcessDataForOrder,
   });
-
-  const { subscribe } = useWebSocket({
-    userId: user?.id,
-    tenantId: user?.tenantId,
-    enabled: !!user?.id,
-    token: localStorage.getItem('authToken') ?? '',
-  });
-
-  useEffect(() => {
-    const unsub = subscribe('order:progress:changed', (msg: WsMessage) => {
-      const payload = msg.payload as Record<string, unknown> | undefined;
-      const orderNo = String(payload?.orderNo || '').trim();
-      const progress = Number(payload?.progress ?? 0);
-      if (orderNo) {
-        const matchOrder = orders.find(o => o.orderNo === orderNo);
-        if (matchOrder?.id) {
-          invalidateBoardStatsTimestamp(matchOrder.id);
-        }
-        window.dispatchEvent(new CustomEvent('order:progress:changed', {
-          detail: { orderNo, progress, orderId: matchOrder?.id },
-        }));
-      }
-    });
-    return unsub;
-  }, [subscribe, orders]);
 
   const [activeOrder, setActiveOrder] = useState<ProductionOrder | null>(null);
   const [scanHistory, setScanHistory] = useState<ScanRecord[]>([]);
@@ -259,7 +235,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
 
   useNodeStats({ scanHistory, activeOrder, cuttingBundles, nodes });
   useNodeWorkflowActions({ activeOrderId: activeOrder?.id, isSupervisorOrAbove, nodeWorkflowLocked, nodes, defaultNodes, saveNodes, setNodeWorkflowDirty, message, Modal });
-  useOrderSync({ fetchOrders, fetchOrderDetail, fetchScanHistory, activeOrderRef, setActiveOrder, orderSyncingRef });
+  useOrderSync({ fetchOrders, fetchOrderDetail, fetchScanHistory, activeOrderRef, setActiveOrder, orderSyncingRef, userId: user?.id, tenantId: user?.tenantId });
 
   const { updateOrderProgress } = useOrderProgress({ activeOrder, fetchOrders, fetchOrderDetail, setActiveOrder, ensureNodesFromTemplateIfNeeded, fetchScanHistory, progressNodesByStyleNo, nodes, productionOrderApi, message });
   const { submitConfirmedScan, closeScanConfirm } = useScanExecution({ scanConfirmState, closeScanConfirmState, setScanConfirmLoading, activeOrder, message, submitScanFeedback, progressNodesByStyleNo, nodes, cuttingBundles, updateOrderProgress, fetchScanHistory, fetchOrders, scanForm, scanInputRef, setScanSubmitting, scanSubmittingRef, lastFailedRequestRef });
