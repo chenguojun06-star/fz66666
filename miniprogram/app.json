@@ -138,6 +138,11 @@
         "overview/index",
         "order-list/index"
       ]
+    },
+    {
+      "root": "pages/return",
+      "name": "pkg-return",
+      "pages": ["list/index", "detail/index"]
     }
   ],
   "preloadRule": {

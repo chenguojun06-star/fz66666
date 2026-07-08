@@ -13,3 +13,4 @@ export const OrderFlow = React.lazy(() => import('./pages/Production/OrderFlow')
 export const ProgressDetail = React.lazy(() => import('./pages/Production/ProgressDetail'));
 export const MaterialPicking = React.lazy(() => import('./pages/Production/MaterialPicking'));
 export const ExternalFactory = React.lazy(() => import('./pages/Production/ExternalFactory'));
+export const ReturnManagement = React.lazy(() => import('./pages/Production/ReturnManagement'));
