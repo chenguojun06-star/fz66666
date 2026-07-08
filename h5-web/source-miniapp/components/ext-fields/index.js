@@ -3,7 +3,7 @@
  * 支持两种模式：form（表单录入）/ view（详情展示）
  * 根据 t_field_config 配置自动渲染自定义字段
  */
-const { parseExtJson, collectExtValues, filterCustomFields, parseOptions, formatFieldValue } = require('../../../utils/api-modules/field-config-helpers');
+const { parseExtJson, collectExtValues, filterCustomFields, parseOptions, formatFieldValue } = require('../../utils/api-modules/field-config-helpers');
 
 Component({
   properties: {

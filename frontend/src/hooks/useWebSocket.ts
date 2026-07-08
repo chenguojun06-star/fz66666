@@ -51,8 +51,15 @@ export function useWebSocket(options: UseWebSocketOptions) {
   const connect = useCallback(() => {
     if (!enabled || !userId || tenantId === undefined) return;
 
+    // 获取token并拼接到WebSocket URL（防止跨租户连接）
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+    if (!token) {
+      console.warn('[WS] 缺失token，无法建立WebSocket连接');
+      return;
+    }
+
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/ws/order-progress/${tenantId}`;
+    const wsUrl = `${protocol}//${window.location.host}/ws/order-progress/${tenantId}?token=${encodeURIComponent(token)}`;
 
     if (wsRef.current) {
       wsRef.current.close();

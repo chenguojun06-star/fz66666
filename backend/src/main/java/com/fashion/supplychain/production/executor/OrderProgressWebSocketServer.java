@@ -1,6 +1,7 @@
 package com.fashion.supplychain.production.executor;
 
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.config.WebSocketHandshakeInterceptor;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -17,7 +18,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
 
-@ServerEndpoint("/ws/order-progress/{tenantId}")
+@ServerEndpoint(value = "/ws/order-progress/{tenantId}", configurator = WebSocketHandshakeInterceptor.class)
 @Component
 @Slf4j
 public class OrderProgressWebSocketServer {
