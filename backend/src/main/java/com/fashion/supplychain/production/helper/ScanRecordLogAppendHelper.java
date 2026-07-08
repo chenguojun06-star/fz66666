@@ -9,11 +9,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-/**
- * 扫码记录操作日志追加
- * P0铁律#6: 操作日志必须记录关键业务操作
- * 双写策略：ScanRecord.remark + ProductionOrder.remarks（用户要求所有操作记录都进订单备注时间线）
- */
 @Slf4j
 @Component
 public class ScanRecordLogAppendHelper {
@@ -27,48 +22,39 @@ public class ScanRecordLogAppendHelper {
     @Autowired
     private OrderRemarkHelper orderRemarkHelper;
 
-    /**
-     * 扫码成功后写日志：ScanRecord 仍存在，可双写
-     * @param scanRecordId ScanRecord 的 id
-     */
     public void appendScan(String scanRecordId, String scanType, String bundleNo, String result) {
         if (scanRecordId == null || scanRecordId.trim().isEmpty()) return;
         String id = scanRecordId.trim();
-        String detail = "扫码类型：" + scanType + "，菲号：" + bundleNo + "，结果：" + result;
-        // 1. 写 ScanRecord.remark
+
+        String typeLabel = formatScanType(scanType);
+        String resultLabel = "success".equalsIgnoreCase(result) ? "成功" : "失败";
+        String detail = typeLabel + "扫码" + resultLabel;
+
         OperationLogAppendUtil.appendOperation(
             id,
             scanRecordService,
             ScanRecord::getRemark,
             ScanRecord::setRemark,
-            "扫码",
+            typeLabel + "扫码",
             detail,
             "扫码记录"
         );
-        // 2. 同步到 ProductionOrder.remarks（基于 ScanRecord 查 orderId）
-        syncScanRecordToOrder(id, "扫码", detail);
+
+        syncScanRecordToOrder(id, typeLabel + "扫码", detail);
     }
 
-    /**
-     * 撤回扫码后写日志：ScanRecord 已被删除，无法再查，需直接传 orderId
-     * 只写 ProductionOrder.remarks + t_order_remark（双写由 OrderRemarkHelper 完成）
-     */
     public void appendUndo(String orderId, String scanType, String bundleNo, String undoType) {
-        String detail = "撤回类型：" + undoType + "，扫码类型：" + scanType + "，菲号：" + bundleNo;
+        String typeLabel = formatScanType(scanType);
+        String detail = "撤回" + typeLabel + "扫码记录（菲号" + bundleNo + "）";
         appendOrderLog(orderId, "扫码撤回", detail);
     }
 
-    /**
-     * 退回重扫后写日志：ScanRecord 已被删除，需直接传 orderId
-     */
     public void appendRescan(String orderId, String scanType, String scanCode) {
-        String detail = "扫码类型：" + scanType + "，码：" + scanCode;
+        String typeLabel = formatScanType(scanType);
+        String detail = "重新扫码：" + scanCode;
         appendOrderLog(orderId, "重新扫码", detail);
     }
 
-    /**
-     * 直接写 ProductionOrder.remarks（用于 ScanRecord 已被删除的场景）
-     */
     private void appendOrderLog(String orderId, String action, String detail) {
         if (orderId == null || orderId.trim().isEmpty()) return;
         try {
@@ -81,9 +67,6 @@ public class ScanRecordLogAppendHelper {
         }
     }
 
-    /**
-     * 通过 ScanRecord id 查到 orderId，再写 ProductionOrder.remarks
-     */
     private void syncScanRecordToOrder(String scanRecordId, String action, String detail) {
         try {
             ScanRecord sr = scanRecordService.getById(scanRecordId);
@@ -92,21 +75,44 @@ public class ScanRecordLogAppendHelper {
             if (orderId == null || orderId.trim().isEmpty()) return;
             ProductionOrder order = productionOrderService.getById(orderId);
             if (order == null) return;
-            // 拼上菲号+工序，方便在订单备注时间线中识别
-            String richDetail = detail;
-            Integer bundleNoInt = sr.getCuttingBundleNo();
-            String bundleNo = bundleNoInt == null ? null : String.valueOf(bundleNoInt);
-            String processName = sr.getProgressStage();
-            StringBuilder extra = new StringBuilder();
-            if (bundleNo != null && !bundleNo.isEmpty()) extra.append("菲号").append(bundleNo).append("，");
-            if (processName != null && !processName.isEmpty()) extra.append("工序").append(processName);
-            if (extra.length() > 0) {
-                richDetail = detail + "（" + extra + "）";
+
+            String bundleNo = sr.getCuttingBundleNo() != null ? String.valueOf(sr.getCuttingBundleNo()) : null;
+            String processName = sr.getProcessName();
+            String stageName = sr.getProgressStage();
+            String operatorName = sr.getOperatorName();
+
+            StringBuilder richDetail = new StringBuilder();
+            if (operatorName != null && !operatorName.isEmpty()) {
+                richDetail.append(operatorName).append(" ");
             }
-            orderRemarkHelper.append(order, action, richDetail);
+            richDetail.append("完成").append(" ");
+            if (stageName != null && !stageName.isEmpty() && !"其他".equals(stageName)) {
+                richDetail.append(stageName).append(" · ");
+            }
+            if (processName != null && !processName.isEmpty()) {
+                richDetail.append(processName).append(" ");
+            }
+            if (bundleNo != null && !bundleNo.isEmpty()) {
+                richDetail.append("菲号").append(bundleNo);
+            }
+
+            orderRemarkHelper.append(order, action, richDetail.toString());
         } catch (Exception e) {
             log.debug("[ScanLog] 同步到订单备注失败（不阻断）: scanRecordId={}, action={}, err={}",
                     scanRecordId, action, e.getMessage());
+        }
+    }
+
+    private String formatScanType(String scanType) {
+        if (scanType == null || scanType.isEmpty()) return "扫码";
+        switch (scanType.toLowerCase()) {
+            case "production": return "生产";
+            case "cutting": return "裁剪";
+            case "quality": return "质检";
+            case "warehouse": return "入库";
+            case "outsource": return "外协";
+            case "secondary": return "二次工艺";
+            default: return scanType;
         }
     }
 }
