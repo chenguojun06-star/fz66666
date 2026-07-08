@@ -1,31 +1,23 @@
-import { Tag } from 'antd';
-import RowActions from '@/components/common/RowActions';
-import type { RowAction } from '@/components/common/RowActions';
-import { formatDateTime } from '@/utils/datetime';
-import { formatProcessDisplayName } from '@/utils/productionStage';
-import type { ProcessTrackingRecord } from './processTrackingFilter';
-import { canUndoTracking, canManualCompleteTracking } from './processTrackingFilter';
+import React from 'react';
+import type { ColumnsType } from 'antd/es/table';
+import type { ScanRecord } from '@/types/shared';
+import { formatProcessDisplayName } from '@/utils/processHelper';
 
-interface ColumnContext {
-  actioningRecordId: string;
-  isAdmin: boolean;
-  orderStatus?: string;
-  orderNo?: string;
-  orderId?: string;
-  onManualComplete: (record: ProcessTrackingRecord) => void;
-  onUndo: (record: ProcessTrackingRecord) => void;
-}
-
-export function useProcessTrackingColumns(ctx: ColumnContext) {
+export function useProcessTrackingColumns(): ColumnsType<ScanRecord> {
   return [
     {
       title: '菲号',
       dataIndex: 'bundleNo',
       key: 'bundleNo',
-      width: 70,
-      render: (v: number) => (
-        <span style={{ fontSize: 14, fontWeight: 700, color: '#1f2937' }}>{v}</span>
-      ),
+      width: 200,
+      render: (_: unknown, record: any) => {
+        const qrCode = String(record.cuttingBundleQrCode || record.qrCode || '').trim();
+        const bundleNo = String(record.bundleNo || '').trim();
+        const displayText = qrCode ? qrCode.split('|SIG-')[0].split('|SKU-')[0] : bundleNo;
+        return (
+          <span style={{ fontSize: 13, fontWeight: 700, color: '#1f2937' }}>{displayText || bundleNo}</span>
+        );
+      },
     },
     {
       title: '工序',
@@ -77,12 +69,16 @@ export function useProcessTrackingColumns(ctx: ColumnContext) {
       width: 90,
       render: (status: string) => {
         const sm: Record<string, { color: string; label: string }> = {
-          scanned: { color: 'var(--color-success)', label: '已扫码' },
-          pending: { color: 'var(--color-warning)', label: '待扫码' },
-          reset: { color: 'var(--color-danger)', label: '已重置' },
+          scanned: { color: '#16a34a', label: '已扫码' },
+          pending: { color: '#f97316', label: '待扫码' },
+          partial: { color: '#eab308', label: '部分扫码' },
         };
-        const cfg = sm[status] || { color: 'var(--color-border-antd)', label: '未知' };
-        return <Tag color={cfg.color} style={{ fontSize: 14, margin: 0 }}>{cfg.label}</Tag>;
+        const s = sm[status] || { color: '#64748b', label: status || '-' };
+        return (
+          <span style={{ fontSize: 13, color: s.color, fontWeight: 600 }}>
+            {s.label}
+          </span>
+        );
       },
     },
     {
@@ -90,57 +86,26 @@ export function useProcessTrackingColumns(ctx: ColumnContext) {
       dataIndex: 'scanTime',
       key: 'scanTime',
       width: 140,
-      render: (time: string) => (
-        <span style={{ fontSize: 14, color: 'var(--color-text-secondary)' }}>{time ? formatDateTime(time) : '-'}</span>
-      ),
+      render: (v: string) => <span style={{ fontSize: 13, color: '#475569' }}>{v || '-'}</span>,
     },
     {
       title: '操作人',
       dataIndex: 'operatorName',
       key: 'operatorName',
-      width: 90,
-      render: (v: string) => <span style={{ fontSize: 14 }}>{v || '-'}</span>,
+      width: 100,
+      render: (v: string) => <span style={{ fontSize: 13 }}>{v || '-'}</span>,
     },
     {
       title: '结算金额',
       dataIndex: 'settlementAmount',
       key: 'settlementAmount',
-      width: 100,
+      width: 90,
       align: 'right' as const,
-      render: (amount: number) => (
-        <span style={{ fontSize: 14, color: 'var(--color-success)', fontWeight: 600 }}>
-          {amount ? `¥${Number(amount).toFixed(2)}` : '-'}
+      render: (v: number) => (
+        <span style={{ fontSize: 13, color: '#dc2626', fontWeight: 600 }}>
+          {v ? `¥${Number(v).toFixed(2)}` : '-'}
         </span>
       ),
-    },
-    {
-      title: '操作',
-      key: 'actions',
-      width: 138,
-      render: (_: any, record: ProcessTrackingRecord) => {
-        const actions: RowAction[] = [];
-        if (canManualCompleteTracking(record, ctx.orderStatus, ctx.orderNo, ctx.orderId)) {
-          const acting = ctx.actioningRecordId === record.id;
-          actions.push({
-            key: 'complete',
-            label: acting ? '完成中...' : '手动完成',
-            primary: true,
-            disabled: acting,
-            onClick: () => ctx.onManualComplete(record),
-          });
-        }
-        if (canUndoTracking(record, ctx.orderStatus, ctx.isAdmin)) {
-          actions.push({
-            key: 'undo',
-            label: '撤回',
-            danger: true,
-            primary: actions.length === 0,
-            onClick: () => ctx.onUndo(record),
-          });
-        }
-        if (!actions.length) return null;
-        return <RowActions actions={actions} />;
-      },
     },
   ];
 }
