@@ -124,6 +124,7 @@ public class NlQueryOrchestrator {
         if ((resp = matchAdvancedAnalysis(question)) != null) return resp;
         if ((resp = matchFinanceQueries(question)) != null) return resp;
         if ((resp = matchApprovalAndMaterial(question, tenantId, factoryId)) != null) return resp;
+        if ((resp = matchLogAndRemarkQuery(question, tenantId, factoryId)) != null) return resp;
         if ((resp = matchDirectActionAndHelp(question, tenantId, factoryId)) != null) return resp;
 
         // ── 智能底：调用 DeepSeek 处理无法匹配关键词的自由问题
@@ -259,7 +260,7 @@ public class NlQueryOrchestrator {
         return null;
     }
 
-    /** 20.1)~20.4) 根因/规律/目标/例会 高级分析 */
+    /** 20.1)~20.5) 根因/规律/目标/例会/日志备注 高级分析 */
     private NlQueryResponse matchAdvancedAnalysis(String question) {
         // 20.1) 根因分析
         if (containsAny(question, "根因", "原因分析", "为什么会", "为什么", "背后原因")) {
@@ -276,6 +277,17 @@ public class NlQueryOrchestrator {
         // 20.4) Agent 例会
         if (containsAny(question, "例会", "会议", "讨论", "辩论", "共识")) {
             return smartHandlers.handleMeetingQuery(question);
+        }
+        return null;
+    }
+
+    /** 24) 日志/备注查询 */
+    private NlQueryResponse matchLogAndRemarkQuery(String question, Long tenantId, String factoryId) {
+        if (containsAny(question, "日志", "操作日志", "审计日志", "记录日志")) {
+            return dataHandlers.handleLogQuery(question, tenantId, factoryId);
+        }
+        if (containsAny(question, "备注", "订单备注", "记录备注")) {
+            return dataHandlers.handleRemarkQuery(question, tenantId, factoryId);
         }
         return null;
     }

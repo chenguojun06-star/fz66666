@@ -799,4 +799,105 @@ public class NlQueryDataHandlers {
         }
         return resp;
     }
+
+    // ── 日志查询 ──
+
+    public NlQueryResponse handleLogQuery(String question, Long tenantId, String factoryId) {
+        NlQueryResponse resp = new NlQueryResponse();
+        resp.setIntent("log_query");
+        try {
+            LocalDateTime todayStart = LocalDateTime.of(LocalDate.now(), LocalTime.MIN);
+            LocalDateTime todayEnd = LocalDateTime.of(LocalDate.now(), LocalTime.MAX);
+
+            QueryWrapper<ScanRecord> qw = new QueryWrapper<>();
+            qw.eq("tenant_id", tenantId)
+              .eq(StringUtils.hasText(factoryId), "factory_id", factoryId)
+              .ge("scan_time", todayStart).le("scan_time", todayEnd)
+              .eq("delete_flag", 0)
+              .orderByDesc("scan_time")
+              .last("limit 20");
+
+            List<ScanRecord> records = scanRecordService.list(qw);
+
+            if (records.isEmpty()) {
+                resp.setAnswer("📝 今日暂无扫码操作日志");
+                resp.setConfidence(80);
+            } else {
+                StringBuilder sb = new StringBuilder("📝 今日扫码操作日志（最近20条）：\n");
+                for (ScanRecord r : records) {
+                    String operator = r.getOperatorName() != null ? r.getOperatorName() : (r.getOperatorId() != null ? r.getOperatorId() : "未知");
+                    String time = r.getScanTime() != null ? r.getScanTime().toString() : "";
+                    sb.append(String.format("• [%s] %s | %s | %s | %s\n",
+                            time.substring(time.length() > 16 ? 11 : 0),
+                            operator,
+                            r.getOrderNo() != null ? r.getOrderNo() : "",
+                            r.getProcessName() != null ? r.getProcessName() : "",
+                            r.getScanResult() != null ? r.getScanResult() : ""));
+                }
+                resp.setAnswer(sb.toString().trim());
+                resp.setConfidence(85);
+            }
+            resp.setSuggestions(Arrays.asList("查看异常日志", "查看订单备注", "查看某个操作员的日志"));
+        } catch (Exception e) {
+            String traceId = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 8);
+            log.error("[NlQuery] 日志查询失败 traceId={}: {}", traceId, e.getMessage());
+            resp.setErrorTraceId(traceId);
+            resp.setAnswer("日志查询失败（追踪ID: " + traceId + "），请稍后重试");
+            resp.setConfidence(20);
+        }
+        return resp;
+    }
+
+    // ── 备注查询 ──
+
+    public NlQueryResponse handleRemarkQuery(String question, Long tenantId, String factoryId) {
+        NlQueryResponse resp = new NlQueryResponse();
+        resp.setIntent("remark_query");
+        try {
+            String orderNo = extractOrderNo(question);
+
+            if (!StringUtils.hasText(orderNo)) {
+                resp.setAnswer("📝 请告诉我您要查询的订单号，例如：「PO20260615001 的备注」");
+                resp.setConfidence(60);
+                resp.setSuggestions(Arrays.asList("查询某订单备注", "查看今日操作日志", "添加备注"));
+                return resp;
+            }
+
+            QueryWrapper<ProductionOrder> qw = new QueryWrapper<>();
+            qw.eq("tenant_id", tenantId)
+              .eq(StringUtils.hasText(factoryId), "factory_id", factoryId)
+              .eq("order_no", orderNo)
+              .eq("delete_flag", 0);
+
+            ProductionOrder order = productionOrderService.getOne(qw, false);
+
+            if (order == null) {
+                resp.setAnswer("📝 未找到订单：" + orderNo);
+                resp.setConfidence(60);
+            } else {
+                String remarks = order.getRemarks();
+                if (!StringUtils.hasText(remarks)) {
+                    resp.setAnswer("📝 订单 " + orderNo + " 暂无备注信息");
+                } else {
+                    resp.setAnswer("📝 订单 " + orderNo + " 的备注信息：\n\n" + remarks);
+                }
+                resp.setConfidence(85);
+            }
+            resp.setSuggestions(Arrays.asList("查看其他订单备注", "添加备注", "查看操作日志"));
+        } catch (Exception e) {
+            String traceId = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 8);
+            log.error("[NlQuery] 备注查询失败 traceId={}: {}", traceId, e.getMessage());
+            resp.setErrorTraceId(traceId);
+            resp.setAnswer("备注查询失败（追踪ID: " + traceId + "），请稍后重试");
+            resp.setConfidence(20);
+        }
+        return resp;
+    }
+
+    private String extractOrderNo(String question) {
+        if (!StringUtils.hasText(question)) return null;
+        var matcher = ORDER_NO_PATTERN.matcher(question);
+        if (matcher.find()) return matcher.group();
+        return null;
+    }
 }

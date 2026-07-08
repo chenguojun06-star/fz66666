@@ -1037,15 +1037,14 @@ public class AiAgentOrchestrator {
     }
 
     private boolean isQuickPathEligible(String userMessage) {
-        if (userMessage == null || userMessage.length() > 800) return false;
+        if (userMessage == null || userMessage.length() > 1000) return false;
         XiaoyunPatterns.IntentType intent = XiaoyunPatterns.estimateIntent(userMessage);
         if (intent == XiaoyunPatterns.IntentType.ACTION_COMMAND) return false;
         if (intent == XiaoyunPatterns.IntentType.SMALL_TALK) return true;
         if (intent == XiaoyunPatterns.IntentType.KNOWLEDGE_ASK) return true;
         if (intent == XiaoyunPatterns.IntentType.SIMPLE_QUERY) return true;
-        // 轻度分析类问题（≤300字符）也尝试走快速通道
-        if (intent == XiaoyunPatterns.IntentType.COMPLEX_ANALYSIS && userMessage.length() <= 300) return true;
-        return userMessage.length() <= 50;
+        if (intent == XiaoyunPatterns.IntentType.COMPLEX_ANALYSIS && userMessage.length() <= 500) return true;
+        return userMessage.length() <= 100;
     }
 
     /** 安全获取 CompletableFuture 当前结果：未完成或异常返回空字符串，不阻塞 */

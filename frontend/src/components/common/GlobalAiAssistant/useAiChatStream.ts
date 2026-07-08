@@ -10,7 +10,7 @@ import type { Message, FollowUpAction } from './types';
 import { parseAiResponse } from './types';
 import { describeToolName } from './helpers';
 
-const SSE_INACTIVITY_TIMEOUT_MS = 60_000;
+const SSE_INACTIVITY_TIMEOUT_MS = 30_000;
 
 export interface LiveStatus {
   mood?: XiaoyunMood;

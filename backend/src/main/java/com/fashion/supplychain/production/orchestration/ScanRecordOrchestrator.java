@@ -149,7 +149,14 @@ public class ScanRecordOrchestrator {
         UserContext ctx = UserContext.get();
         String ctxUserId = ctx == null ? null : ctx.getUserId();
         String ctxUsername = ctx == null ? null : ctx.getUsername();
-        if (hasText(ctxUserId) && hasText(ctxUsername)) { operatorId = ctxUserId; operatorName = ctxUsername; }
+        if (hasText(ctxUserId)) {
+            operatorId = ctxUserId;
+        }
+        if (hasText(ctxUsername) && !"system".equalsIgnoreCase(ctxUsername) && !ctxUsername.startsWith("SYSTEM_TASK:")) {
+            if (!hasText(operatorName) || "system".equalsIgnoreCase(operatorName)) {
+                operatorName = ctxUsername;
+            }
+        }
         safeParams.put("operatorId", operatorId);
         safeParams.put("operatorName", operatorName);
     }
