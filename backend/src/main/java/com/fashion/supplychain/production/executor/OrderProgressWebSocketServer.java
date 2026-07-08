@@ -1,16 +1,14 @@
 package com.fashion.supplychain.production.executor;
 
-import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.SpringContextHolder;
 import com.fashion.supplychain.config.WebSocketHandshakeInterceptor;
 import com.fashion.supplychain.production.entity.ProductionOrder;
-import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.websocket.*;
 import jakarta.websocket.server.PathParam;
 import jakarta.websocket.server.ServerEndpoint;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -18,16 +16,22 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
 
+/**
+ * 订单进度 WebSocket 推送端点
+ *
+ * 实现说明：
+ * 本类标注 {@link ServerEndpoint}，实例由 Tomcat 容器创建，不走 Spring 注入。
+ * 因此 {@link ObjectMapper} 等依赖通过 {@link SpringContextHolder#getBean} 静态获取，
+ * 禁止再用 @Autowired（历史教训：2026-07-09 注入为 null 导致 500）。
+ *
+ * 注意：本类虽然标了 @Component，但 Tomcat 创建的实例并非该 Spring Bean。
+ * @Component 仅用于让 Spring 扫描到本类以便其他组件通过注入调用 broadcastOrderProgressFromOrder。
+ * 实际推送方法通过 Spring 管理的 Bean 调用，内部读 static tenantSessions（线程安全）。
+ */
 @ServerEndpoint(value = "/ws/order-progress/{tenantId}", configurator = WebSocketHandshakeInterceptor.class)
 @Component
 @Slf4j
 public class OrderProgressWebSocketServer {
-
-    @Autowired
-    private ProductionOrderService productionOrderService;
-
-    @Autowired
-    private ObjectMapper objectMapper;
 
     private static final Map<Long, CopyOnWriteArraySet<Session>> tenantSessions = new ConcurrentHashMap<>();
 
@@ -77,6 +81,9 @@ public class OrderProgressWebSocketServer {
         }
 
         try {
+            // ObjectMapper 由 SpringContextHolder 静态获取（@ServerEndpoint 实例非 Spring 管理）
+            ObjectMapper objectMapper = SpringContextHolder.getBean(ObjectMapper.class);
+
             ProgressMessage msg = new ProgressMessage();
             msg.setOrderId(orderId);
             msg.setOrderNo(orderNo);
