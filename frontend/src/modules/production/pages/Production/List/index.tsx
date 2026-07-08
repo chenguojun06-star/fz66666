@@ -54,7 +54,6 @@ import SmartReceiveModal from '../MaterialPurchase/components/SmartReceiveModal'
 import { useDelayedStageBreakdown } from '@/modules/dashboard/components/DelayedStageBreakdown/useDelayedStageBreakdown';
 import { useFieldConfig } from '@/hooks/useFieldConfig';
 import { useExtColumns } from '@/hooks/useExtColumns';
-import SchemaPrint from '@/components/common/SchemaPrint';
 import { SettingOutlined } from '@ant-design/icons';
 import { paths } from '@/routeConfig';
 
