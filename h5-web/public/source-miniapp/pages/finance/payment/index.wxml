@@ -169,7 +169,7 @@
       <view wx:if="{{searchPayeeResults.length > 0}}">
         <view class="payee-result-item" wx:for="{{searchPayeeResults}}" wx:key="id" data-index="{{index}}" bindtap="onSelectSearchPayee">
           <text class="payee-result-name">{{item.name || item.payeeName || '—'}}</text>
-          <text class="payee-result-type">{{item.type || item.payeeType || ''}}</text>
+          <text class="payee-result-type">{{item.payeeTypeText}}</text>
         </view>
       </view>
       <view wx:elif="{{searchPayeeKeyword && searchPayeeResults.length === 0}}" class="empty-hint">

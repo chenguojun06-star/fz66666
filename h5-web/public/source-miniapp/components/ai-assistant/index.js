@@ -45,7 +45,7 @@ const TOOL_NAMES = {
 };
 
 function describeTool(name) {
-  return TOOL_NAMES[name] || (name || '').replace(/^tool_/, '').replace(/_/g, '');
+  return TOOL_NAMES[name] || '系统能力';
 }
 
 function parseAiCards(text) {

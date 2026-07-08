@@ -105,6 +105,23 @@
         </view>
       </view>
 
+      <!-- ════════════ ①.5 裁剪任务领取条 ════════════ -->
+      <view class="task-receive-bar" wx:if="{{cuttingTaskInfo && cuttingTaskInfo.showReceiveBar}}">
+        <!-- 待领取:显示领取按钮 -->
+        <block wx:if="{{cuttingTaskInfo.canReceive}}">
+          <text class="receive-hint">该订单裁剪任务待领取</text>
+          <view class="receive-btn" catchtap="onReceiveCuttingTask">领取裁剪任务</view>
+        </block>
+        <!-- 已被我领取:显示提示 -->
+        <block wx:elif="{{cuttingTaskInfo.receivedByMe}}">
+          <text class="receive-hint receive-hint--mine">✓ 已由你领取,可开始裁剪分扎</text>
+        </block>
+        <!-- 已被他人领取 -->
+        <block wx:else>
+          <text class="receive-hint receive-hint--other">已被 {{cuttingTaskInfo.receiverName || '他人'}} 领取</text>
+        </block>
+      </view>
+
       <!-- ════════════ ② 裁剪分扎表单（无菲号时显示） ════════════ -->
       <block wx:if="{{showCuttingForm}}">
         <view class="section-card">
@@ -391,7 +408,7 @@
                   </view>
                   <view class="tf-process-body">
                     <view class="tf-process-top">
-                      <text class="tf-process-code">{{item.processCode}}</text>
+                      <text class="tf-process-code">{{item.processCodeText}}</text>
                       <text class="tf-process-name">{{item.processName}}</text>
                       <text class="tf-process-price">{{item.priceText}}</text>
                       <text class="tf-process-status" wx:if="{{item._completed}}">已完成</text>

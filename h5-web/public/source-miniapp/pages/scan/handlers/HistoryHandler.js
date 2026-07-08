@@ -398,7 +398,11 @@ function _getToday() {
  * @returns {Promise<void>} 异步加载并更新页面数据
  */
 async function loadMyHistory(page, refresh = false) {
-  const { my } = page.data;
+  const { my } = page.data || {};
+  if (!my) {
+    console.error('[loadMyHistory] page.data.my 未初始化，跳过加载');
+    return;
+  }
   if (my.loadingHistory) {
     // 强制刷新在并发场景下不应被直接丢弃，改为排队到当前请求结束后执行
     if (refresh) {

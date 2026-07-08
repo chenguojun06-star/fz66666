@@ -16,6 +16,7 @@ const { style, warehouse, material, materialRoll, orderManagement, sampleStock }
 const { dashboard, wechat, common } = require('./api-modules/common');
 const { employeeAdvance, wagePayment, payrollSettlement, wageSettlementFeedback } = require('./api-modules/finance');
 const { ecommerce } = require('./api-modules/ecommerce');
+const { purchaseReturn, salesReturn } = require('./api-modules/return');
 
 // ── 聚合对象（与拆分前完全一致的接口） ──────────────────────
 const api = {
@@ -44,6 +45,8 @@ const api = {
   wageSettlementFeedback,
   ecommerce,
   fieldConfig,
+  purchaseReturn,
+  salesReturn,
 };
 
 // ── 导出（保持原有 module.exports + named exports 兼容） ───
@@ -69,6 +72,8 @@ module.exports.payrollSettlement = payrollSettlement;
 module.exports.wageSettlementFeedback = wageSettlementFeedback;
 module.exports.ecommerce = ecommerce;
 module.exports.fieldConfig = fieldConfig;
+module.exports.purchaseReturn = purchaseReturn;
+module.exports.salesReturn = salesReturn;
 
 /* --- 拆分前原始代码已归档至 api-modules/ 各领域文件 --- */
 /* helpers.js       — ok / raw / pickMessage / createBizError / uploadFile */

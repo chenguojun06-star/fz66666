@@ -1,234 +1,257 @@
 <wxs src="../../../utils/money.wxs" module="money" />
 <view class="container">
-  <!-- ============== 扫码成功醒目提示（顶部） ============== -->
-  <view class="scan-success-banner">
-    <view class="scan-success-icon">✓</view>
-    <view class="scan-success-text">扫描成功</view>
-    <view class="scan-success-info">
-      <text class="scan-success-key">款号：</text>
-      <text class="scan-success-value">{{detail.styleNo || '—'}}</text>
+  <!-- ============== 顶部状态卡（苹果风格大白卡） ============== -->
+  <view class="status-card">
+    <view class="status-card__icon">
+      <view class="status-card__check"></view>
     </view>
-    <view class="scan-success-info" wx:if="{{detail.processName}}">
-      <text class="scan-success-key">工序：</text>
-      <text class="scan-success-value">{{detail.processName}}</text>
+    <view class="status-card__text">
+      <text class="status-card__title">扫描成功</text>
+      <text class="status-card__subtitle">{{detail.styleNo || '—'}}</text>
     </view>
-    <view class="scan-success-info" wx:if="{{detail.displayQuantity || detail.quantity}}">
-      <text class="scan-success-key">数量：</text>
-      <text class="scan-success-value">{{detail.displayQuantity || detail.quantity || 0}} 件</text>
+    <view wx:if="{{detail.deliveryDate}}" class="status-card__delivery">
+      <text class="status-card__deliveryLabel">交期</text>
+      <text class="status-card__deliveryValue">{{detail.deliveryDate}}</text>
     </view>
   </view>
 
-  <!-- ============== ① 款式 + 客户信息 ============== -->
-  <view class="style-card">
-    <view class="style-card__header" bindtap="previewImage">
-      <image-preview
-        class="style-card__cover"
-        src="{{detail.coverImage || detail.cover || ''}}"
-        mode="aspectFill"
-      />
-      <view class="style-card__info">
-        <view class="style-card__style">
-          <text class="style-card__styleNo">{{detail.styleNo}}</text>
-          <text wx:if="{{detail.styleName}}" class="style-card__styleName">{{detail.styleName}}</text>
+  <!-- ============== 关键信息分组（苹果 Grouped List 风格） ============== -->
+  <view class="group">
+    <view class="group__header">菲号信息</view>
+    <view class="group__body">
+      <view class="cell">
+        <text class="cell__label">菲号</text>
+        <text class="cell__value cell__value--bold">{{detail.orderNo ? detail.orderNo + '-' : ''}}{{detail.bundleNo || '—'}}</text>
+      </view>
+      <view class="cell-divider"></view>
+      <view class="cell">
+        <text class="cell__label">颜色</text>
+        <text class="cell__value">{{detail.color || '—'}}</text>
+      </view>
+      <view class="cell-divider"></view>
+      <view class="cell">
+        <text class="cell__label">码数</text>
+        <text class="cell__value">{{detail.size || '—'}}</text>
+      </view>
+      <view class="cell-divider"></view>
+      <view class="cell">
+        <text class="cell__label">数量</text>
+        <text class="cell__value cell__value--qty">{{detail.displayQuantity || detail.quantity || 0}} 件</text>
+      </view>
+      <block wx:if="{{detail.bundleLabel}}">
+        <view class="cell-divider"></view>
+        <view class="cell">
+          <text class="cell__label">标签</text>
+          <text class="cell__value">{{detail.bundleLabel}}</text>
         </view>
-        <view class="style-card__meta">
-          <text wx:if="{{detail.orderNo}}" class="style-card__metaItem">订单：{{detail.orderNo}}</text>
-          <text wx:if="{{detail.customerName}}" class="style-card__metaItem">客户：{{detail.customerName}}</text>
+      </block>
+      <block wx:if="{{detail.bedNoDisplay || detail.bedNo}}">
+        <view class="cell-divider"></view>
+        <view class="cell">
+          <text class="cell__label">床号</text>
+          <text class="cell__value">{{detail.bedNoDisplay || detail.bedNo}}</text>
+        </view>
+      </block>
+    </view>
+    <view wx:if="{{detail.bundleSplitHint}}" class="group__footer">{{detail.bundleSplitHint}}</view>
+  </view>
+
+  <!-- ============== 款式信息分组 ============== -->
+  <view class="group">
+    <view class="group__header">款式信息</view>
+    <view class="group__body">
+      <view class="cell cell--media" bindtap="previewImage">
+        <image-preview
+          class="cell__cover"
+          src="{{detail.coverImage || detail.cover || ''}}"
+          mode="aspectFill"
+        />
+        <view class="cell__mediaBody">
+          <text class="cell__styleNo">{{detail.styleNo}}</text>
+          <text wx:if="{{detail.styleName}}" class="cell__styleName">{{detail.styleName}}</text>
+          <view class="cell__tags">
+            <text wx:if="{{detail.orderNo}}" class="tag">{{detail.orderNo}}</text>
+            <text wx:if="{{detail.customerName}}" class="tag">{{detail.customerName}}</text>
+          </view>
         </view>
       </view>
-    </view>
-
-    <view wx:if="{{detail.processName}}" class="style-card__process">
-      <text class="style-card__process-label">当前工序</text>
-      <text class="style-card__process-name">{{detail.processName}}</text>
+      <view wx:if="{{detail.processName}}" class="cell-divider"></view>
+      <view wx:if="{{detail.processName}}" class="cell">
+        <text class="cell__label">当前工序</text>
+        <text class="cell__value cell__value--accent">{{detail.processName}}</text>
+      </view>
     </view>
   </view>
 
-  <!-- ============== ② 菲号信息（最核心） ============== -->
-  <view wx:if="{{detail.bundleNo || detail.color || detail.size || detail.displayQuantity}}" class="bundle-card">
-    <view class="bundle-card__title">
-      <text class="bundle-card__title-icon">📦</text>
-      <text class="bundle-card__title-text">菲号信息</text>
-    </view>
-
-    <view class="bundle-card__grid">
-      <view class="bundle-card__row">
-        <text class="bundle-card__label">菲号</text>
-        <text class="bundle-card__value bundle-card__value--bold">No. {{detail.bundleNo}}</text>
-      </view>
-
-      <view wx:if="{{detail.bundleLabel}}" class="bundle-card__row">
-        <text class="bundle-card__label">标签</text>
-        <text class="bundle-card__value">{{detail.bundleLabel}}</text>
-      </view>
-
-      <view class="bundle-card__row bundle-card__row--split">
-        <view class="bundle-card__cell">
-          <text class="bundle-card__label">颜色</text>
-          <text class="bundle-card__value">{{detail.color || '—'}}</text>
-        </view>
-        <view class="bundle-card__cell">
-          <text class="bundle-card__label">尺码</text>
-          <text class="bundle-card__value">{{detail.size || '—'}}</text>
+  <!-- ============== 生产提示分组 ============== -->
+  <view wx:if="{{detail.workerHint || detail.secondaryProcessHint || detail.difficultyLabel || detail.fabricComposition || detail.needleHint || (detail.processHints && detail.processHints.length > 0) || detail.imageInsight}}" class="group">
+    <view class="group__header">生产提示</view>
+    <view class="group__body">
+      <view wx:if="{{detail.difficultyLabel}}" class="cell">
+        <text class="cell__label">难度</text>
+        <view class="cell__accessory">
+          <view class="badge badge--{{detail.difficultyLevelInfo.severity}}">
+            <text class="badge__text">{{detail.difficultyLabel}}</text>
+            <text wx:if="{{detail.difficultyScore}}" class="badge__score">{{detail.difficultyScore}}/10</text>
+          </view>
         </view>
       </view>
 
-      <view class="bundle-card__row bundle-card__row--split">
-        <view class="bundle-card__cell bundle-card__cell--qty">
-          <text class="bundle-card__label">数量</text>
-          <text class="bundle-card__value bundle-card__value--qty">{{detail.displayQuantity || detail.quantity || 0}} 件</text>
+      <view wx:if="{{detail.fabricComposition}}" class="cell-divider"></view>
+      <view wx:if="{{detail.fabricComposition}}" class="cell">
+        <text class="cell__label">面料</text>
+        <text class="cell__value">{{detail.fabricComposition}}</text>
+      </view>
+
+      <view wx:if="{{detail.needleHint}}" class="cell-divider"></view>
+      <view wx:if="{{detail.needleHint}}" class="cell cell--column">
+        <text class="cell__label">针号</text>
+        <view class="cell__columnBody">
+          <text class="cell__value">{{detail.needleHint}}</text>
+          <text wx:if="{{detail.needleReason}}" class="cell__hint">{{detail.needleReason}}</text>
         </view>
-        <view wx:if="{{detail.bedNoDisplay || detail.bedNo}}" class="bundle-card__cell">
-          <text class="bundle-card__label">床号</text>
-          <text class="bundle-card__value">{{detail.bedNoDisplay || detail.bedNo}}</text>
+      </view>
+
+      <view wx:if="{{detail.processHints && detail.processHints.length > 0}}" class="cell-divider"></view>
+      <view wx:if="{{detail.processHints && detail.processHints.length > 0}}" class="cell cell--column">
+        <text class="cell__label">工艺要点</text>
+        <view class="cell__chips">
+          <text wx:for="{{detail.processHints}}" wx:key="*this" class="chip">{{item}}</text>
         </view>
       </view>
-    </view>
 
-    <view wx:if="{{detail.bundleSplitHint}}" class="bundle-card__hint">
-      <text>⚡ {{detail.bundleSplitHint}}</text>
+      <view wx:if="{{detail.secondaryProcessHint}}" class="cell-divider"></view>
+      <view wx:if="{{detail.secondaryProcessHint}}" class="cell">
+        <text class="cell__label">二次工艺</text>
+        <text class="cell__value">{{detail.secondaryProcessHint}}</text>
+      </view>
+
+      <view wx:if="{{detail.description}}" class="cell-divider"></view>
+      <view wx:if="{{detail.description}}" class="cell cell--column">
+        <text class="cell__label">款式备注</text>
+        <text class="cell__value cell__value--desc">{{detail.description}}</text>
+      </view>
+
+      <view wx:if="{{detail.imageInsight}}" class="cell-divider"></view>
+      <view wx:if="{{detail.imageInsight}}" class="cell cell--column">
+        <text class="cell__label">系统提示</text>
+        <text class="cell__value cell__value--insight">{{detail.imageInsight}}（仅供参考，以实际面料手感为准）</text>
+      </view>
+
+      <view wx:if="{{detail.workerHint && !detail.difficultyLabel && !detail.fabricComposition && !detail.needleHint && (!(detail.processHints && detail.processHints.length > 0))}}" class="cell-divider"></view>
+      <view wx:if="{{detail.workerHint && !detail.difficultyLabel && !detail.fabricComposition && !detail.needleHint && (!(detail.processHints && detail.processHints.length > 0))}}" class="cell">
+        <text class="cell__label">综合提示</text>
+        <text class="cell__value">{{detail.workerHint}}</text>
+      </view>
     </view>
   </view>
 
-  <!-- ============== ③ 生产提示（样衣开发提醒） ============== -->
-  <view wx:if="{{detail.workerHint || detail.secondaryProcessHint || detail.difficultyLabel || detail.fabricComposition || detail.needleHint || (detail.processHints && detail.processHints.length > 0) || detail.imageInsight}}" class="worker-hint-card">
-    <view class="worker-hint-title">⚠️ 生产提示（样衣开发提醒）</view>
-
-    <!-- 难度徽章，按等级分色 -->
-    <view wx:if="{{detail.difficultyLabel}}" class="worker-hint-row worker-hint-row--difficulty">
-      <text class="worker-hint-key">难度</text>
-      <view class="worker-difficulty-badge worker-difficulty--{{detail.difficultyLevelInfo.severity}}">
-        <text class="worker-difficulty-label">{{detail.difficultyLabel}}</text>
-        <text wx:if="{{detail.difficultyScore}}" class="worker-difficulty-score">{{detail.difficultyScore}}/10</text>
+  <!-- ============== 工序选择分组 ============== -->
+  <view class="group">
+    <view class="group__header group__header--withHint">
+      <text>选择工序</text>
+      <text class="group__hint">可多选</text>
+    </view>
+    <view class="group__body">
+      <scroll-view class="process-scroll" scroll-y style="max-height:600rpx">
+        <view wx:for="{{processOptions}}" wx:key="value"
+              class="cell cell--toggle {{item.checked ? 'cell--selected' : ''}}"
+              data-value="{{item.value}}"
+              hover-class="cell-hover"
+              hover-stay-time="80"
+              bindtap="onProcessTap">
+          <view class="cell__check {{item.checked ? 'cell__check--on' : ''}}"></view>
+          <text class="cell__value cell__value--flex">{{item.label}}</text>
+          <text wx:if="{{!item.hidePrice}}" class="cell__price">¥{{money.toFixed2(item.unitPrice)}}</text>
+        </view>
+      </scroll-view>
+      <view wx:if="{{selectedCount > 0}}" class="cell-divider"></view>
+      <view wx:if="{{selectedCount > 0}}" class="cell cell--summary">
+        <text class="cell__label">已选 {{selectedCount}} 个工序</text>
+        <text wx:if="{{selectedAmount > 0}}" class="cell__value cell__value--accent">合计 ¥{{money.toFixed2(selectedAmount)}}</text>
       </view>
-    </view>
-
-    <view wx:if="{{detail.fabricComposition}}" class="worker-hint-row">
-      <text class="worker-hint-key">面料</text>
-      <text class="worker-hint-value">{{detail.fabricComposition}}</text>
-    </view>
-
-    <view wx:if="{{detail.needleHint}}" class="worker-hint-row">
-      <text class="worker-hint-key">针号</text>
-      <view class="worker-hint-value-wrap">
-        <text class="worker-hint-value">{{detail.needleHint}}</text>
-        <text wx:if="{{detail.needleReason}}" class="worker-hint-sub">{{detail.needleReason}}</text>
-      </view>
-    </view>
-
-    <view wx:if="{{detail.processHints && detail.processHints.length > 0}}" class="worker-hint-row worker-hint-row--processes">
-      <text class="worker-hint-key">工艺要点</text>
-      <view class="worker-process-chips">
-        <text wx:for="{{detail.processHints}}" wx:key="*this" class="worker-process-chip">{{item}}</text>
-      </view>
-    </view>
-
-    <view wx:if="{{detail.secondaryProcessHint}}" class="worker-hint-row">
-      <text class="worker-hint-key">二次工艺</text>
-      <text class="worker-hint-value">{{detail.secondaryProcessHint}}</text>
-    </view>
-
-    <view wx:if="{{detail.description}}" class="worker-hint-row worker-hint-row--description">
-      <text class="worker-hint-key">款式备注</text>
-      <text class="worker-hint-value worker-hint-value--desc">{{detail.description}}</text>
-    </view>
-
-    <!-- 系统提示（AI视觉识别结果）：放在卡片最末，降低权重，工人以实际面料为准 -->
-    <view wx:if="{{detail.imageInsight}}" class="worker-hint-row worker-hint-row--insight">
-      <text class="worker-hint-key">📋 系统提示</text>
-      <text class="worker-hint-value worker-hint-value--insight">{{detail.imageInsight}}（仅供参考，以实际面料手感为准）</text>
-    </view>
-
-    <!-- 综合提示：只有上面"都没匹配上但又确实有内容"时才展示 -->
-    <view wx:if="{{detail.workerHint && !detail.difficultyLabel && !detail.fabricComposition && !detail.needleHint && (!(detail.processHints && detail.processHints.length > 0))}}" class="worker-hint-row worker-hint-row--summary">
-      <text class="worker-hint-key">综合提示</text>
-      <text class="worker-hint-value worker-hint-value--summary">{{detail.workerHint}}</text>
     </view>
   </view>
 
-  <!-- ============== ④ 工序选择（可多选） ============== -->
-  <view class="section-card">
-    <text class="section-title">选择工序（可多选）</text>
-    <scroll-view class="process-scroll" scroll-y style="max-height:600rpx">
-      <view wx:for="{{processOptions}}" wx:key="value"
-            class="process-chip {{item.checked ? 'active' : ''}}"
-            data-value="{{item.value}}"
-            bindtap="onProcessTap">
-        <text class="chip-label">{{item.label}}</text>
-        <text wx:if="{{!item.hidePrice}}" class="chip-price">¥{{money.toFixed2(item.unitPrice)}}</text>
+  <!-- ============== 目标仓库分组（仅入库阶段） ============== -->
+  <view wx:if="{{showWarehouse}}" class="group">
+    <view class="group__header">目标仓库</view>
+    <view class="group__body">
+      <view class="cell">
+        <text class="cell__label">仓库</text>
+        <text class="cell__value">{{warehouseName}}</text>
       </view>
-    </scroll-view>
-    <view class="summary-bar" wx:if="{{selectedCount > 0}}">
-      <text class="summary-text">已选 {{selectedCount}} 个工序</text>
-      <text wx:if="{{selectedAmount > 0}}" class="summary-amount">合计 ¥{{money.toFixed2(selectedAmount)}}</text>
+      <view wx:if="{{warehouseOptions.length > 0}}" class="cell-divider"></view>
+      <view wx:if="{{warehouseOptions.length > 0}}" class="cell cell--column">
+        <text class="cell__label">库位编号</text>
+        <view class="cell__chips">
+          <text
+            wx:for="{{warehouseOptions}}"
+            wx:key="index"
+            class="chip {{warehouseCode === item ? 'chip--on' : ''}}"
+            bindtap="onWarehouseChipTap"
+            data-value="{{item}}"
+            hover-class="chip-hover"
+            hover-stay-time="100"
+          >{{item}}</text>
+          <text
+            class="chip chip--clear {{warehouseCode ? '' : 'chip--disabled'}}"
+            bindtap="onWarehouseClear"
+            hover-class="chip-hover"
+            hover-stay-time="100"
+          >清除</text>
+        </view>
+      </view>
+      <view class="cell-divider"></view>
+      <view class="cell cell--input">
+        <input
+          class="cell__input"
+          placeholder="{{warehouseOptions.length > 0 ? '或手动输入库位编号…' : '请输入库位编号…'}}"
+          value="{{warehouseCode}}"
+          bindinput="onWarehouseInput"
+        />
+      </view>
+
+      <block wx:if="{{warehouseCode && locationOptions.length > 0}}">
+        <view class="cell-divider"></view>
+        <view class="cell cell--column">
+          <text class="cell__label">库位</text>
+          <view class="cell__chips">
+            <text
+              wx:for="{{locationOptions}}"
+              wx:key="index"
+              class="chip {{warehouseLocationCode === item ? 'chip--on' : ''}}"
+              bindtap="onLocationChipTap"
+              data-value="{{item}}"
+              hover-class="chip-hover"
+              hover-stay-time="100"
+            >{{item}}</text>
+            <text
+              class="chip chip--clear {{warehouseLocationCode ? '' : 'chip--disabled'}}"
+              bindtap="onLocationClear"
+              hover-class="chip-hover"
+              hover-stay-time="100"
+            >清除</text>
+          </view>
+        </view>
+        <view class="cell-divider"></view>
+        <view class="cell cell--input">
+          <input
+            class="cell__input"
+            placeholder="或手动输入库位编号…"
+            value="{{warehouseLocationCode}}"
+            bindinput="onLocationInput"
+          />
+        </view>
+      </block>
     </view>
   </view>
 
-  <!-- ============== ⑤ 目标仓库（仅入库阶段） ============== -->
-  <view wx:if="{{showWarehouse}}" class="section-card">
-    <text class="section-title">目标仓库</text>
-    <view class="warehouse-row">
-      <view class="warehouse-name">
-        <text class="warehouse-name-label">仓库：</text>
-        <text class="warehouse-name-value">{{warehouseName}}</text>
-      </view>
-      <view class="warehouse-option-row" wx:if="{{warehouseOptions.length > 0}}">
-        <view
-          wx:for="{{warehouseOptions}}"
-          wx:key="index"
-          class="warehouse-chip {{warehouseCode === item ? 'warehouse-chip--active' : ''}}"
-          bindtap="onWarehouseChipTap"
-          data-value="{{item}}"
-          hover-class="warehouse-chip-hover"
-          hover-stay-time="100"
-        >{{item}}</view>
-        <view
-          class="warehouse-chip warehouse-chip--clear {{warehouseCode ? '' : 'warehouse-chip--disabled'}}"
-          bindtap="onWarehouseClear"
-          hover-class="warehouse-chip-hover"
-          hover-stay-time="100"
-        >清除</view>
-      </view>
-      <input
-        class="input-box"
-        placeholder="{{warehouseOptions.length > 0 ? '或手动输入库位编号' : '请输入库位编号'}}"
-        value="{{warehouseCode}}"
-        bindinput="onWarehouseInput"
-      />
-
-      <!-- 库位选择 -->
-      <view wx:if="{{warehouseCode && locationOptions.length > 0}}" class="warehouse-option-row" style="margin-top: 16rpx;">
-        <view
-          wx:for="{{locationOptions}}"
-          wx:key="index"
-          class="warehouse-chip {{warehouseLocationCode === item ? 'warehouse-chip--active' : ''}}"
-          bindtap="onLocationChipTap"
-          data-value="{{item}}"
-          hover-class="warehouse-chip-hover"
-          hover-stay-time="100"
-        >{{item}}</view>
-        <view
-          class="warehouse-chip warehouse-chip--clear {{warehouseLocationCode ? '' : 'warehouse-chip--disabled'}}"
-          bindtap="onLocationClear"
-          hover-class="warehouse-chip-hover"
-          hover-stay-time="100"
-        >清除</view>
-      </view>
-      <input
-        wx:if="{{warehouseCode}}"
-        class="input-box"
-        placeholder="或手动输入库位编号"
-        value="{{warehouseLocationCode}}"
-        bindinput="onLocationInput"
-      />
-    </view>
-  </view>
-
-  <!-- ============== ⑥ 提交按钮 ============== -->
-  <view class="footer-bar">
-    <view class="btn-cancel" hover-class="footer-bar-hover" bindtap="goBack">取消</view>
-    <view class="btn-submit {{loading || selectedCount === 0 ? 'btn-disabled' : ''}}" hover-class="footer-bar-hover" bindtap="submitScanResult">
-      {{loading ? '提交中...' : (isQualityReceive ? '质检录入' : '确认提交')}}
+  <!-- ============== 底部固定操作栏 ============== -->
+  <view class="action-bar">
+    <view class="action-bar__btn action-bar__btn--secondary" hover-class="btn-hover" bindtap="goBack">取消</view>
+    <view class="action-bar__btn action-bar__btn--primary {{loading || selectedCount === 0 ? 'action-bar__btn--disabled' : ''}}" hover-class="btn-hover" bindtap="submitScanResult">
+      {{loading ? '提交中…' : (isQualityReceive ? '质检录入' : '确认提交')}}
     </view>
   </view>
 </view>

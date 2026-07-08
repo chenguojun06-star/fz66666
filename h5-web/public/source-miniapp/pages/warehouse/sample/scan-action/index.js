@@ -40,7 +40,7 @@ const SAMPLE_TYPE_MAP = {
 
 function translateSampleType(type) {
   if (!type) return '-';
-  return SAMPLE_TYPE_MAP[type] || type;
+  return SAMPLE_TYPE_MAP[type] || '未知';
 }
 
 function buildImageUrl(url) {

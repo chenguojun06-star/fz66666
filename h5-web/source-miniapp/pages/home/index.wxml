@@ -17,29 +17,6 @@
     <view class="weather-tip">{{dateInfo.dailyTip}}</view>
   </view>
 
-  <!-- 我的待办（按职务聚合） -->
-  <view wx:if="{{myTodos.length > 0}}" class="todo-section">
-    <view class="todo-header">
-      <text class="todo-title">📋 任务列表</text>
-    </view>
-    <view class="todo-list">
-      <view
-        wx:for="{{myTodos}}"
-        wx:key="key"
-        class="todo-card"
-        bindtap="onTodoTap"
-        data-url="{{item.url}}"
-      >
-        <text class="todo-icon">{{item.icon}}</text>
-        <view class="todo-info">
-          <text class="todo-name">{{item.title}}</text>
-        </view>
-        <text class="todo-count">{{item.count}}</text>
-        <text class="todo-arrow">›</text>
-      </view>
-    </view>
-  </view>
-
   <!-- 常用应用 -->
   <view class="menu-section">
     <view class="section-header">

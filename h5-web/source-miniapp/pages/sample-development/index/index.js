@@ -35,7 +35,8 @@ function getDeliveryMeta(record, allStagesCompleted) {
   if (!deliveryDate) return { tone: 'normal', label: '待补交期' };
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const target = new Date(deliveryDate);
+  // iOS 兼容：'yyyy-MM-dd HH:mm:ss' 在 iOS 下无法解析，需替换为 'yyyy/MM/dd HH:mm:ss'
+  const target = new Date(String(deliveryDate).replace(/-/g, '/'));
   target.setHours(0, 0, 0, 0);
   const diffDays = Math.ceil((target.getTime() - today.getTime()) / 86400000);
   if (diffDays < 0) return { tone: 'danger', label: `延期${Math.abs(diffDays)}天` };
@@ -315,7 +316,8 @@ Page({
           const customerCandidates = [item.customer, styleInfo.customer, item.customerName, styleInfo.customerName, item.buyer, styleInfo.buyer];
           item._customer = customerCandidates.find(function (v) { return v != null && String(v).trim() !== ''; }) || '';
           item._category = item.category || styleInfo.category || '';
-          item._sourceType = SOURCE_TYPE_LABELS[item.developmentSourceType || styleInfo.developmentSourceType || item.sourceType || styleInfo.sourceType] || item.developmentSourceType || styleInfo.developmentSourceType || item.sourceType || styleInfo.sourceType || '';
+          const rawSourceType = item.developmentSourceType || styleInfo.developmentSourceType || item.sourceType || styleInfo.sourceType || '';
+          item._sourceType = rawSourceType ? (SOURCE_TYPE_LABELS[rawSourceType] || '其他') : '';
           item._season = item.season || styleInfo.season || '';
           item._patternMaker = item.patternMaker || styleInfo.patternDeveloper || item.receiver || '';
           item._receiver = item.receiver || '';
@@ -656,11 +658,24 @@ Page({
           toast.error('扫码内容为空');
           return;
         }
-        // 解析 patternId：优先从 URL ?patternId= 取，其次取纯数字/ID
+        // 解析 patternId：支持 JSON / URL参数 / 纯id 三种格式
+        // 修复 P0：扫 JSON 二维码 {"type":"pattern","id":"xxx"} 时
+        // 旧逻辑把整个 JSON 当 patternId 传给扫码页，导致后端 400
         let patternId = scanCode;
-        const match = scanCode.match(/[?&]patternId=([^&]+)/);
-        if (match && match[1]) {
-          patternId = decodeURIComponent(match[1]);
+        const trimmed = scanCode.trim();
+        // 1) JSON 格式 {"type":"pattern","id":"xxx"}
+        if (trimmed.charAt(0) === '{') {
+          try {
+            const obj = JSON.parse(trimmed);
+            const id = obj.id || obj.patternId || obj.patternProductionId || obj.orderId;
+            if (id) patternId = String(id);
+          } catch (_e) { /* 解析失败，回退到原 scanCode */ }
+        } else {
+          // 2) URL 参数格式 ?patternId=xxx
+          const match = scanCode.match(/[?&]patternId=([^&]+)/);
+          if (match && match[1]) {
+            try { patternId = decodeURIComponent(match[1]); } catch (_e) { patternId = match[1]; }
+          }
         }
         // 跳转扫码页，让扫码页自己获取工序配置
         safeNavigate({

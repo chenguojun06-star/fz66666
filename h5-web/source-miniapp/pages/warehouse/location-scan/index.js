@@ -29,8 +29,8 @@ Page({
   async loadLocationItems(locationCode) {
     this.setData({ loading: true, error: '' });
     try {
-      const res = await api.get('/warehouse/location/items', { locationCode });
-      const data = res?.data?.data || res?.data || {};
+      const res = await api.warehouse.locationItems(locationCode);
+      const data = (res && res.data) || res || {};
       this.setData({
         locationInfo: {
           locationCode: data.locationCode || locationCode,
@@ -45,7 +45,7 @@ Page({
       });
     } catch (err) {
       this.setData({
-        error: err?.message || '加载库位库存失败',
+        error: (err && err.errMsg) || (err && err.message) || '加载库位库存失败',
         loading: false,
       });
     }

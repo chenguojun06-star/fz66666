@@ -203,7 +203,7 @@
 
   <view class="footer-bar">
     <view class="btn-cancel" hover-class="footer-bar-hover" bindtap="goBack">取消</view>
-    <view class="btn-submit {{loading ? 'btn-disabled' : ''}}" hover-class="footer-bar-hover" bindtap="confirmScan">
+    <view class="btn-submit {{(loading || (isCutting && cuttingTask && cuttingTask.isTerminal)) ? 'btn-disabled' : ''}}" hover-class="{{(loading || (isCutting && cuttingTask && cuttingTask.isTerminal)) ? '' : 'footer-bar-hover'}}" bindtap="confirmScan">
       {{loading ? '提交中...' : buttonText}}
     </view>
   </view>

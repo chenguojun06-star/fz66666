@@ -1,5 +1,5 @@
 {
-  "navigationBarTitleText": "采购任务",
+  "navigationBarTitleText": "采购页面",
   "enablePullDownRefresh": true,
   "backgroundColor": "#ededed",
   "usingComponents": {

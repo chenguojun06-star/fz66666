@@ -4,8 +4,6 @@ const { fieldConfig } = require('../../../utils/api-modules/field-config');
 const { toast } = require('../../../utils/uiHelper');
 const permission = require('../../../utils/permission');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
-// P1-6：采购单状态映射统一引用 shared/statusMap.js（与 PC MATERIAL_PURCHASE_STATUS_MAP 对齐）
-const { getPurchaseStatusText } = require('../../../shared/statusMap');
 
 /* ========== 纸样状态 / 开发来源 中文化 ========== */
 var PATTERN_STATUS_LABELS = { PENDING: '未开始', IN_PROGRESS: '进行中', COMPLETED: '已完成', RETURNED: '已退回', LOCKED: '已锁定', UNLOCKED: '未锁定', NOT_STARTED: '未开始' };
@@ -38,7 +36,8 @@ function getDeliveryMeta(record, allStagesCompleted) {
   if (!deliveryDate) return { tone: 'normal', label: '待补交期' };
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const target = new Date(deliveryDate);
+  // iOS 兼容：'yyyy-MM-dd HH:mm:ss' 在 iOS 下无法解析，需替换为 'yyyy/MM/dd HH:mm:ss'
+  const target = new Date(String(deliveryDate).replace(/-/g, '/'));
   target.setHours(0, 0, 0, 0);
   const diffDays = Math.ceil((target.getTime() - today.getTime()) / 86400000);
   if (diffDays < 0) return { tone: 'danger', label: '延期' + Math.abs(diffDays) + '天' };
@@ -204,6 +203,9 @@ Page({
             customer: detail.customer || detail.customerName || detail.buyer || '',
             category: detail.category || '',
             developmentSourceType: detail.developmentSourceType || detail.sourceType || '',
+            developmentSourceText: (detail.developmentSourceType || detail.sourceType)
+              ? (SOURCE_TYPE_LABELS[String(detail.developmentSourceType || detail.sourceType).toUpperCase()] || '其他')
+              : '',
             season: detail.season || '',
             patternMaker: detail.patternMaker || detail.patternDeveloper || detail.receiver || '',
             receiver: detail.receiver || '',
@@ -274,6 +276,9 @@ Page({
         customer: styleInfo.customer || styleInfo.customerName || styleInfo.buyer || styleInfo.buyerName || '',
         category: styleInfo.category || styleInfo.productCategory || '',
         developmentSourceType: styleInfo.developmentSourceType || styleInfo.sourceType || '',
+        developmentSourceText: (styleInfo.developmentSourceType || styleInfo.sourceType)
+          ? (SOURCE_TYPE_LABELS[String(styleInfo.developmentSourceType || styleInfo.sourceType).toUpperCase()] || '其他')
+          : '',
         season: styleInfo.season || '',
         // 制版师 / 操作工
         patternMaker: styleInfo.patternMaker || styleInfo.patternDeveloper || styleInfo.receiver || '',
@@ -483,11 +488,18 @@ Page({
     this.setData({ purchaseLoading: false });
   },
 
-  /** 采购状态 → 中文（直接代理到 shared/statusMap.getPurchaseStatusText）
-   *  保留本方法名以避免改写调用点；后续新页面可直接用 getPurchaseStatusText
-   */
+  /** 采购状态 → 中文 */
   _purchaseStatusText(status) {
-    return getPurchaseStatusText(status, '');
+    const s = String(status || '').toLowerCase();
+    const map = {
+      pending: '待采购',
+      received: '已领取',
+      awaiting_confirm: '待确认',
+      completed: '已完成',
+      partial_arrived: '部分到货',
+      cancelled: '已取消',
+    };
+    return map[s] || status || '';
   },
 
   /** 生成样衣采购单（基于 BOM，与 PC 端 handleGeneratePurchase 一致） */
@@ -649,9 +661,24 @@ Page({
     this.setData({ processLoading: true });
     try {
       const res = await style.listProcesses({ styleId: this.data.styleId });
-      this.setData({ processList: res?.data?.records || res?.data || res?.records || [] });
+      const list = res?.data?.records || res?.data || res?.records || [];
+      // 添加 processCodeText 字段用于显示（processCode 是工序编号，保留原值）
+      list.forEach(p => {
+        p.processCodeText = p.processCode || '';
+      });
+      this.setData({ processList: list });
     } catch (e) { console.error('工序加载失败', e); }
     this.setData({ processLoading: false });
+  },
+
+  /** 跳转工序模板配置页 */
+  onGoProcessTemplate() {
+    const { styleId, styleNo } = this.data;
+    if (!styleId) { toast.error('缺少款式信息'); return; }
+    const styleName = (this.data.styleInfo && this.data.styleInfo.styleName) || '';
+    wx.navigateTo({
+      url: `/pages/dashboard/process-template/index?styleId=${encodeURIComponent(styleId)}&styleNo=${encodeURIComponent(styleNo || '')}&styleName=${encodeURIComponent(styleName)}`,
+    }).catch(() => {});
   },
 
   /** 加载生产工序扫码（父子工序，可操作） */
@@ -757,7 +784,18 @@ Page({
     this.setData({ secondaryLoading: true });
     try {
       const res = await style.listSecondaryProcesses({ styleId: this.data.styleId });
-      this.setData({ secondaryList: res?.data?.records || res?.data || res?.records || [] });
+      const list = res?.data?.records || res?.data || res?.records || [];
+      // 二次工艺类型英文 code → 中文映射，兜底 '未知'，不展示英文 code
+      const PROCESS_TYPE_MAP = {
+        embroidery: '绣花', printing: '印花', washing: '洗水',
+        dyeing: '染色', ironing: '整烫', pleating: '压褶',
+        beading: '钉珠', other: '其他',
+      };
+      list.forEach(s => {
+        const rawType = s.type || s.processType || '';
+        s.typeText = rawType ? (PROCESS_TYPE_MAP[rawType] || '未知') : '';
+      });
+      this.setData({ secondaryList: list });
     } catch (e) { console.error('二次工艺加载失败', e); }
     this.setData({ secondaryLoading: false });
   },
@@ -768,7 +806,11 @@ Page({
     try {
       const res = await style.getPatternRevision(this.data.styleId);
       // getPatternRevision 直接返回纸样对象或null
-      this.setData({ patternData: res || null });
+      const patternData = res ? Object.assign({}, res) : null;
+      if (patternData && patternData.status) {
+        patternData.statusText = PATTERN_STATUS_LABELS[String(patternData.status).toUpperCase()] || '其他';
+      }
+      this.setData({ patternData });
     } catch (e) { console.error('纸样加载失败', e); }
     this.setData({ patternLoading: false });
   },

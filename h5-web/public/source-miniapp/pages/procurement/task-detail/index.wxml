@@ -164,7 +164,7 @@
 </view>
 
 <!-- ===== 底部操作栏 ===== -->
-<view class="footer-bar" wx:if="{{materialPurchases.length > 0 && !loading}}">
+<view class="footer-bar" wx:if="{{materialPurchases.length > 0 && !loading && !allProcurementCompleted}}">
   <view class="btn-secondary {{hasReturnConfirmed ? 'btn-disabled' : ''}}" hover-class="{{hasReturnConfirmed ? '' : 'footer-bar-hover'}}" bindtap="onReceiveAll">一键采购</view>
   <view class="btn-submit {{(!hasInput || submitting || hasReturnConfirmed) ? 'btn-disabled' : ''}}"
     hover-class="{{(hasInput && !submitting && !hasReturnConfirmed) ? 'footer-bar-hover' : ''}}" bindtap="onSubmit">提交到货</view>

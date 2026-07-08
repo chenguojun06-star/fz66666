@@ -52,7 +52,9 @@ const { scanPageData } = require('./mixins/scanDataConfig');
 
 // ============ 扫码页默认数据（无 AI 相关字段）============
 function _buildScanData() {
-  return {};
+  // 必须返回 scanPageData，否则 data.my 是 undefined，
+  // loadMyHistory/loadMyPanel 读取 my.loadingHistory/my.loadingStats 会崩溃导致扫码页打不开
+  return JSON.parse(JSON.stringify(scanPageData));
 }
 
 // 导入 Handlers (所有委托调用)

@@ -4,6 +4,31 @@
  */
 const { ok } = require('./helpers');
 
+/**
+ * 规范化 patternId：从 JSON / URL参数 / 前缀格式中提取纯 id
+ * 最后一道防线：无论调用方传什么，都确保 URL 拼接的是纯 id
+ * 修复 P0：JSON 二维码被整体当作 id 传入导致后端 400
+ */
+function _normalizePatternId(patternId) {
+  if (!patternId) return '';
+  const s = String(patternId).trim();
+  if (!s) return '';
+  if (s.charAt(0) === '{') {
+    try {
+      const obj = JSON.parse(s);
+      const id = obj.id || obj.patternId || obj.patternProductionId || obj.orderId;
+      if (id) return String(id).trim();
+    } catch (_e) { /* 解析失败继续 */ }
+  }
+  const m = s.match(/[?&]patternId=([^&]+)/);
+  if (m && m[1]) {
+    try { return decodeURIComponent(m[1]).trim(); } catch (_e) { return String(m[1]).trim(); }
+  }
+  const prefixMatch = s.match(/^pattern[-:_#](.+)/i);
+  if (prefixMatch && prefixMatch[1]) return String(prefixMatch[1]).trim();
+  return s;
+}
+
 const production = {
   listOrders(params) {
     return ok('/api/production/order/list', 'GET', params || {});
@@ -23,16 +48,6 @@ const production = {
   createOutstock(payload) {
     return ok('/api/production/outstock', 'POST', payload || {});
   },
-  /**
-   * 订单详情（兜底接口，按 UUID 或 orderNo 取基础订单信息）
-   *
-   * 三端路径说明（P1-4 注释，不强制统一）：
-   *   - PC 主流程：/production/order/flow/{orderId}（OrderFlow 页 useOrderFlowData.tsx）
-   *   - 小程序/H5 主流程：getOrderFlow(orderId)（同样走 /production/order/flow/{id}，与 PC 一致）
-   *   - 此处 orderDetail 仅作 fallback：当 flow 接口未返回 order 时，按 UUID 走
-   *     /production/order/detail/{uuid}（基础信息），或按 orderNo 走 list 接口
-   *   - 路径差异是有意设计：flow 返回完整工序/扫码/采购树，detail/list 只返回订单基础字段
-   */
   orderDetail(idOrOrderNo) {
     const value = String(idOrOrderNo || '').trim();
     const uuidPattern =
@@ -46,10 +61,7 @@ const production = {
     const on = String(orderNo || '').trim();
     return ok('/api/production/order/list', 'GET', { orderNo: on });
   },
-  /**
-   * 获取订单完整流程数据（含工序阶段/扫码记录/物料采购/BOM等）
-   * 三端统一入口：PC OrderFlow 页 / 小程序 dashboard/order-detail / H5 同小程序
-   */
+  /** 获取订单完整流程数据（含工序阶段/扫码记录/物料采购/BOM等） */
   getOrderFlow(orderId) {
     return ok(`/api/production/order/flow/${encodeURIComponent(orderId)}`, 'GET', {});
   },
@@ -109,12 +121,11 @@ const production = {
     return ok('/api/production/purchase/update-arrived-quantity', 'POST', payload || {});
   },
   getMaterialPurchases(params) {
-    // 三端统一（PC/小程序/H5）：只在有 orderNo 时传 orderNo，只在有 scanCode 时传 scanCode
-    // 后端 MaterialPurchaseController.list 会根据是否含 scanCode 走不同分支：
-    //   - 含 scanCode → getByScanCode（扫码场景专用）
-    //   - 否则 → listWithEnrichment（按 orderNo/styleNo 等过滤，与 PC 端一致）
-    // 因此调用方应明确传 scanCode（扫码场景），不要让适配层自动补
-    return ok('/api/production/purchase/list', 'GET', { ...(params || {}) });
+    const payload = { ...(params || {}) };
+    if (payload.orderNo && !payload.scanCode) {
+      payload.scanCode = payload.orderNo;
+    }
+    return ok('/api/production/purchase/list', 'GET', payload);
   },
   myProcurementTasks() {
     return ok('/api/production/purchase/list', 'GET', { myTasks: 'true' });
@@ -198,7 +209,7 @@ const production = {
     return ok(`/api/production/cutting/family/${bundleId}`, 'GET', {});
   },
   getPatternDetail(patternId) {
-    const id = String(patternId || '').trim();
+    const id = _normalizePatternId(patternId);
     return ok(`/api/production/pattern/${encodeURIComponent(id)}`, 'GET', {});
   },
   listPatterns(params) {
@@ -212,22 +223,22 @@ const production = {
     return ok('/api/production/pattern/sample-stats', 'GET', {});
   },
   getPatternProcessConfig(patternId) {
-    const id = String(patternId || '').trim();
+    const id = _normalizePatternId(patternId);
     return ok(`/api/production/pattern/${encodeURIComponent(id)}/process-config`, 'GET', {});
   },
   getPatternLinkedOrder(patternId) {
-    const id = String(patternId || '').trim();
+    const id = _normalizePatternId(patternId);
     return ok(`/api/production/pattern/${encodeURIComponent(id)}/linked-order`, 'GET', {});
   },
   getPatternScanRecords(patternId) {
-    const id = String(patternId || '').trim();
+    const id = _normalizePatternId(patternId);
     return ok(`/api/production/pattern/${encodeURIComponent(id)}/scan-records`, 'GET', {});
   },
   submitPatternScan(payload) {
     return ok('/api/production/pattern/scan', 'POST', payload || {});
   },
   reviewPattern(patternId, result, remark, images) {
-    const id = String(patternId || '').trim();
+    const id = _normalizePatternId(patternId);
     const action = encodeURIComponent('review');
     const payload = { result, remark };
     if (images && Array.isArray(images) && images.length > 0) {
@@ -240,12 +251,12 @@ const production = {
    * action: receive / complete / warehouse-in / review
    */
   patternWorkflowAction(patternId, action, payload) {
-    const id = String(patternId || '').trim();
+    const id = _normalizePatternId(patternId);
     const act = encodeURIComponent(action || '');
     return ok(`/api/production/pattern/${encodeURIComponent(id)}/workflow-action?action=${act}`, 'POST', payload || {});
   },
   receivePattern(patternId, remark, extra) {
-    const id = String(patternId || '').trim();
+    const id = _normalizePatternId(patternId);
     const payload = { remark: remark || '' };
     if (extra) {
       if (extra.color) payload.color = extra.color;
@@ -254,11 +265,11 @@ const production = {
     return ok(`/api/production/pattern/${encodeURIComponent(id)}/workflow-action?action=receive`, 'POST', payload);
   },
   completePatternByTask(patternId) {
-    const id = String(patternId || '').trim();
+    const id = _normalizePatternId(patternId);
     return ok(`/api/production/pattern/${encodeURIComponent(id)}/complete`, 'POST', {});
   },
   warehouseIn(patternId, warehouseCode, warehouseAreaId, warehouseLocationCode, remark) {
-    const id = String(patternId || '').trim();
+    const id = _normalizePatternId(patternId);
     return ok(`/api/production/pattern/${encodeURIComponent(id)}/workflow-action?action=warehouse-in`, 'POST', {
       warehouseCode: warehouseCode || '',
       warehouseAreaId: warehouseAreaId || '',

@@ -1,6 +1,9 @@
 const api = require('../../../utils/api');
 const { toast } = require('../../../utils/uiHelper');
 
+/* ========== 拆菲状态 中文化 ========== */
+var SPLIT_STATUS_LABELS = { PENDING: '待确认', APPROVED: '已确认', REJECTED: '已驳回', CANCELLED: '已取消', SPLIT_CHILD: '子菲号', SPLIT_PARENT: '主菲号', NORMAL: '常规' };
+
 function showTip(msg) { toast.info(msg); }
 
 Page({
@@ -360,7 +363,14 @@ Page({
     try {
       const res = await api.production.listPendingSplits();
       const list = Array.isArray(res) ? res : (res || []);
-      this.setData({ pendingSplits: Array.isArray(list) ? list : [], pendingLoading: false });
+      const safeList = Array.isArray(list) ? list : [];
+      // 拆菲状态中文化：兜底 '其他'，不展示英文 code
+      safeList.forEach(function (item) {
+        if (item && item.splitStatus) {
+          item.splitStatusText = SPLIT_STATUS_LABELS[String(item.splitStatus).toUpperCase()] || '其他';
+        }
+      });
+      this.setData({ pendingSplits: safeList, pendingLoading: false });
     } catch (e) {
       console.warn('[bundle-split] loadPendingSplits fail', e);
       this.setData({ pendingLoading: false });

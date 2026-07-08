@@ -3,6 +3,7 @@ const { parseProductionOrderLines, sortSizeNames } = require('../../../utils/ord
 const { toast, safeNavigate } = require('../../../utils/uiHelper');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 const { triggerDataRefresh } = require('../../../utils/eventBus');
+const { getUserInfo } = require('../../../utils/storage');
 const blePrinter = require('../utils/blePrinter');
 
 /**
@@ -83,6 +84,9 @@ Page({
     cuttingLinesHasData: false,
     cuttingSummary: { totalOrdered: 0, totalCutting: 0, totalBundles: 0 },
     cuttingSubmitting: false,
+
+    /* ── 裁剪任务领取（与 t_cutting_task 关联）── */
+    cuttingTaskInfo: null,   // { taskId, status, receiverId, receiverName, canReceive, receivedByMe }
 
     /* ── Tab: detail(菲号明细) | transfer(转单) ── */
     activeTab: 'detail',
@@ -230,6 +234,8 @@ Page({
     this.setData({ loading: true });
     try {
       await this.loadOrderInfo(orderNo);
+      // 串行：先加载裁剪任务状态（决定后续是否显示裁剪分扎表单）
+      await this._loadCuttingTask(orderNo);
       await this.loadCuttingBundles(orderNo);
     } catch (e) {
       console.error('[bundle-detail] loadAll error', e);
@@ -237,6 +243,79 @@ Page({
     } finally {
       this.setData({ loading: false });
     }
+  },
+
+  /** 查询该订单的裁剪任务状态,用于显示「领取裁剪任务」按钮 */
+  async _loadCuttingTask(orderNo) {
+    try {
+      const res = await api.production.getCuttingTaskByOrderId(orderNo).catch(() => null);
+      const list = this._extractList(res);
+      const task = list && list.length > 0 ? list[0] : null;
+      if (!task) {
+        this.setData({ cuttingTaskInfo: null });
+        return;
+      }
+      const userInfo = getUserInfo() || {};
+      const myId = String(userInfo.id || userInfo.userId || '').trim();
+      const status = String(task.status || '').toLowerCase();
+      const receiverId = String(task.receiverId || '').trim();
+      // 终态：已完成/已分扎/已结束 — 不允许再领取或操作
+      const isTerminal = status === 'completed' || status === 'done' || status === 'bundled';
+      const canReceive = !isTerminal && (status === 'pending' || (!receiverId && status !== 'bundled'));
+      const receivedByMe = !isTerminal && receiverId && myId && receiverId === myId;
+      const showReceiveBar = !isTerminal;
+      this.setData({
+        cuttingTaskInfo: {
+          taskId: task.id,
+          status: status,
+          receiverId: receiverId,
+          receiverName: task.receiverName || '',
+          canReceive: canReceive,
+          receivedByMe: receivedByMe,
+          showReceiveBar: showReceiveBar,
+          isTerminal: isTerminal,
+        },
+      });
+    } catch (e) {
+      console.warn('[bundle-detail] 加载裁剪任务状态失败', e);
+      this.setData({ cuttingTaskInfo: null });
+    }
+  },
+
+  /** 领取裁剪任务 */
+  onReceiveCuttingTask() {
+    const that = this;
+    const info = this.data.cuttingTaskInfo;
+    if (!info || !info.taskId) {
+      toast.error('未找到裁剪任务');
+      return;
+    }
+    const userInfo = getUserInfo() || {};
+    const receiverId = String(userInfo.id || userInfo.userId || '').trim();
+    const receiverName = String(userInfo.name || userInfo.username || userInfo.nickName || '').trim();
+    if (!receiverId) {
+      toast.error('用户信息缺失,无法领取');
+      return;
+    }
+    wx.showModal({
+      title: '领取裁剪任务',
+      content: '确定领取该订单的裁剪任务?',
+      confirmText: '领取',
+      success(res) {
+        if (!res.confirm) return;
+        wx.showLoading({ title: '领取中...' });
+        api.production.receiveCuttingTaskById(info.taskId, receiverId, receiverName).then(function () {
+          wx.hideLoading();
+          toast.success('领取成功');
+          // 重新加载裁剪任务状态
+          that._loadCuttingTask(that.data.orderNo);
+        }).catch(function (err) {
+          wx.hideLoading();
+          console.error('[bundle-detail] 领取裁剪任务失败', err);
+          toast.error('领取失败:' + (err && err.message ? err.message : '请重试'));
+        });
+      },
+    });
   },
 
   /** 加载订单信息 + 工序数 + 下单矩阵 */
@@ -286,15 +365,18 @@ Page({
       const bundles = this._extractList(res);
 
       if (!bundles.length) {
+        // 终态或已被他人领取时，不显示裁剪分扎表单
+        const info = this.data.cuttingTaskInfo;
+        const canEdit = !info || !info.isTerminal;
         this.setData({
           cuttingTotal: 0, cuttingExcess: 0, maxBedNo: '-',
           operatorName: '-', latestBundleTime: '-',
           hasBundles: false, _rawBundles: [],
           cuttingMatrix: { sizes: [], rows: [] },
           cuttingSimpleRows: [],
-          showCuttingForm: true,
+          showCuttingForm: canEdit,
         });
-        this._parseAndSetCuttingLines(this.data.orderInfo);
+        if (canEdit) this._parseAndSetCuttingLines(this.data.orderInfo);
         return;
       }
 
@@ -625,10 +707,7 @@ Page({
     return { sizes, matrix };
   },
 
-  /** 转成 sku-matrix 组件所需格式
-   *  P1-5：等价于 utils/skuMatrixAdapter.fromMap({ matrix, sizes })
-   *  保留本页私有方法以避免改写现有调用点；新页面应直接用 skuMatrixAdapter
-   */
+  /** 转成 sku-matrix 组件所需格式 */
   _toSkuMatrix(matrix, sizes) {
     const rows = Object.keys(matrix).map(color => ({
       color,
@@ -827,6 +906,7 @@ Page({
               const s = scanMap[code];
               result.push({
                 processCode: code,
+                processCodeText: n.name || n.processName || '未知',
                 processName: n.name || n.processName || '-',
                 unitPrice: price,
                 priceText: price > 0 ? '¥' + price.toFixed(2) : '待定价',
@@ -847,6 +927,7 @@ Page({
           const s = scanMap[code];
           return {
             processCode: code,
+            processCodeText: n.name || '未知',
             processName: n.name || '-',
             unitPrice: price,
             priceText: price > 0 ? '¥' + price.toFixed(2) : '待定价',
@@ -869,6 +950,7 @@ Page({
           const s = scanMap[code];
           return {
             processCode: code,
+            processCodeText: p.processName || p.name || '未知',
             processName: p.processName || p.name || '-',
             unitPrice: price,
             priceText: price > 0 ? '¥' + price.toFixed(2) : '待定价',
@@ -1217,6 +1299,15 @@ Page({
   onGenerateBundles() {
     if (this.data.cuttingSubmitting) return;
     const d = this.data;
+    const info = d.cuttingTaskInfo;
+    // 终态禁止操作
+    if (info && info.isTerminal) {
+      return toast.info('裁剪任务已完成，无法生成菲号');
+    }
+    // 已被他人领取禁止操作
+    if (info && info.receiverId && !info.receivedByMe) {
+      return toast.error('该任务已被他人领取，无法操作');
+    }
     const cuttingOrderLines = d.cuttingOrderLines;
     const bundleSize = parseInt(d.bundleSize, 10) || 20;
     const orderId = d.orderId;

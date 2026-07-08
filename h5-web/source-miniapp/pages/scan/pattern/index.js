@@ -99,7 +99,14 @@ Page({
   onLoad(options) {
     const that = this;
     const opts = options || {};
-    const patternId = opts.patternId || '';
+    // 优先读 URL 参数；缺失时从 globalData.patternScanData 兜底（ConfirmModalHandler 跳转时不传 URL 参数）
+    let patternId = opts.patternId || '';
+    if (!patternId) {
+      try {
+        const gs = getApp().globalData.patternScanData || {};
+        patternId = gs.patternId || (gs.patternDetail && gs.patternDetail.id) || '';
+      } catch (_e) { /* ignore */ }
+    }
 
     if (!patternId) {
       toast.error('无效的样衣编号');
@@ -162,38 +169,35 @@ Page({
         const sizesArr = data.sizes || [];
         const sizesText = sizesArr.length ? sizesArr.join('/') : (data.size ? String(data.size) : '-');
 
-        // 构建工序选择列表（同时把 color/size/quantity 转发给 WXML）
+        // 构建工序选择列表（全部开放，不上锁，过滤已完成的）
         const rawOptions = Array.isArray(data.operationOptions) ? data.operationOptions : [];
-        const processList = rawOptions.map(function(opt) {
-          return {
-            value: opt.value,
-            name: opt.label || opt.processName || opt.value,
-            completed: opt.completed === true,
-            canOperate: opt.canOperate === true,
-            locked: opt.locked === true,
-            lockReason: opt.lockReason || '',
-            processName: opt.processName || opt.value,
-            progressStage: opt.progressStage || opt.value,
-            scanType: opt.scanType || 'production',
-            color: opt.color || data.color || '',
-            size: opt.size || data.size || (sizesArr.length ? sizesArr.join('/') : ''),
-            quantity: typeof opt.quantity === 'number' ? opt.quantity : (typeof data.quantity === 'number' ? data.quantity : 0),
-          };
-        });
+        const processList = rawOptions
+          .filter(function(opt) { return !opt.completed; }) // 已完成的不显示
+          .map(function(opt) {
+            const numPrice = Number(opt.unitPrice != null ? opt.unitPrice : (opt.price != null ? opt.price : 0)) || 0;
+            return {
+              value: opt.value,
+              name: opt.label || opt.processName || opt.value,
+              checked: false,
+              processName: opt.processName || opt.value,
+              progressStage: opt.progressStage || opt.value,
+              scanType: opt.scanType || 'production',
+              unitPrice: numPrice,
+              unitPriceText: numPrice > 0 ? numPrice.toFixed(2) : '',
+            };
+          });
 
         // 判断视图模式
         const hasDirectProcess = !!manualScanType;
-        const firstOperable = processList.find(function(p) { return p.canOperate; });
-        const allCompleted = processList.length > 0 && processList.every(function(p) { return p.completed; });
 
-        if (allCompleted) {
+        if (processList.length === 0) {
           finish();
           toast.success('所有工序已完成');
           setTimeout(() => { try { wx.navigateBack({ delta: 1 }); } catch (_e) {} }, 500);
           return;
         }
 
-        if (hasDirectProcess && firstOperable) {
+        if (hasDirectProcess) {
           finish();
           // 直接进入操作视图
           that._buildOperateView(data, manualScanType);
@@ -203,6 +207,7 @@ Page({
           that.setData({
             viewMode: 'select',
             processList: processList,
+            selectedCount: 0,
             detail: {
               patternId: data.patternId,
               styleNo: data.styleNo || data.patternId,
@@ -212,7 +217,8 @@ Page({
               sizes: sizesArr,
               sizesText: sizesText,
               quantity: data.quantity || 0,
-              coverImage: data.cover || getAuthedImageUrl(''),
+              coverImage: getAuthedImageUrl(data.cover || data.coverImage || (data.patternDetail && data.patternDetail.coverImage) || ''),
+              deliveryTime: data.deliveryTime || (data.patternDetail && data.patternDetail.deliveryTime) || '',
             },
           });
         }
@@ -226,22 +232,26 @@ Page({
       });
   },
 
-  // 选择某个工序后，进入操作页
-  onProcessSelect(e) {
-    const idx = e.currentTarget.dataset.index;
-    if (idx === undefined || idx === null) return;
-    const processList = this.data.processList || [];
-    const proc = processList[idx];
-    if (!proc) return;
+  // 工序 chip 点击（多选切换）
+  onProcessChipTap(e) {
+    const value = e.currentTarget.dataset.value;
+    if (!value) return;
+    const processList = (this.data.processList || []).map(function(p) {
+      if (p.value === value) p.checked = !p.checked;
+      return p;
+    });
+    const checkedItems = processList.filter(function(p) { return p.checked; });
+    const selectedCount = checkedItems.length;
+    const totalAmount = checkedItems.reduce(function(sum, p) { return sum + (Number(p.unitPrice) || 0); }, 0);
+    const totalAmountText = totalAmount > 0 ? totalAmount.toFixed(2) : '';
+    this.setData({ processList: processList, selectedCount: selectedCount, totalAmountText: totalAmountText });
+  },
 
-    if (proc.locked) {
-      toast.error(proc.lockReason || '该工序暂不可操作');
-      return;
-    }
-    if (!proc.canOperate) {
-      if (proc.completed) {
-        toast.error('该工序已完成');
-      }
+  // 确认选择，进入操作页（取第一个选中的工序）
+  onConfirmProcess() {
+    const checked = (this.data.processList || []).filter(function(p) { return p.checked; });
+    if (checked.length === 0) {
+      toast.error('请至少选择一个工序');
       return;
     }
 
@@ -254,7 +264,8 @@ Page({
       return;
     }
 
-    this._buildOperateView(data, proc.processName || proc.value);
+    // 单选直接进入操作页；多选暂取第一个（后续可扩展批量提交）
+    this._buildOperateView(data, checked[0].processName || checked[0].value);
   },
 
   // 构建操作视图（原 onLoad 的核心逻辑）
@@ -291,7 +302,7 @@ Page({
       SEWING: '车缝', TAIL: '尾部',
     };
     const operationType = String(selected.value || '').toUpperCase() || 'RECEIVE';
-    const operationLabel = selected.label || operationType;
+    const operationLabel = selected.label || '未知';
     const scanType = String(selected.scanType || '').toLowerCase();
     const requiresWarehouseInput = data.hasProcessSystem
       ? scanType === 'warehouse' || scanType === 'warehouse_in'
@@ -337,10 +348,6 @@ Page({
     });
 
     // 处理颜色/码数矩阵（如果有）
-    // 数据结构（matrixRows 格式）：{ matrixSizes, matrixRows: [{ color, quantities: [1,2,3], rowTotal }] }
-    // 与 sku-matrix 组件标准格式（{ sizes, rows: [{ color, cells: [{size,quantity}] }] }）不同，
-    // 本页内联渲染（detail.matrixSizes / detail.matrixRows），未使用组件。
-    // 如需迁移到 <sku-matrix /> 组件，使用 utils/skuMatrixAdapter.toSkuMatrixModel(matrix, 'matrixRows')
     const matrix = patternDetail.sizeColorMatrix;
     if (matrix && Array.isArray(matrix.matrixRows) && matrix.matrixRows.length > 0) {
       const matrixSizes = Array.isArray(matrix.sizes) ? matrix.sizes : [];
@@ -781,7 +788,8 @@ Page({
         // 添加仓库信息到每个请求
         requests.forEach(function(req) {
           req.scanType = scanType;
-          req.bundleNo = d.bundleNo || '01';
+          // 样衣没有菲号概念，使用 SAMPLE 标识，避免与大货菲号混淆
+          req.bundleNo = d.bundleNo || 'SAMPLE';
           if (!req.styleNo && d.styleNo) req.styleNo = d.styleNo;
           if (!req.color && d.color) req.color = d.color;
           if (!req.size && d.size) req.size = d.size;
@@ -820,7 +828,8 @@ Page({
         const scanData = {
           orderNo: d.orderNo || '',
           orderId: d.orderId || '',
-          bundleNo: d.bundleNo || '01',
+          // 样衣没有菲号概念，使用 SAMPLE 标识，避免与大货菲号混淆
+          bundleNo: d.bundleNo || 'SAMPLE',
           processName: processName,
           progressStage: progressStage,
           scanType: scanType,

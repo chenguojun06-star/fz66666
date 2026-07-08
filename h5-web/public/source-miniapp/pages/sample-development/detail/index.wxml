@@ -31,9 +31,9 @@
           <text class="info-label">品类</text>
           <text class="info-value">{{styleInfo.category}}</text>
         </view>
-        <view class="info-row" wx:if="{{styleInfo.developmentSourceType}}">
+        <view class="info-row" wx:if="{{styleInfo.developmentSourceText}}">
           <text class="info-label">来源</text>
-          <text class="info-value">{{styleInfo.developmentSourceType}}</text>
+          <text class="info-value">{{styleInfo.developmentSourceText}}</text>
         </view>
         <view class="info-row" wx:if="{{styleInfo.season}}">
           <text class="info-label">季节</text>
@@ -270,7 +270,7 @@
       <view wx:elif="{{!patternData}}" class="empty-inline">暂无纸样数据</view>
       <view wx:else class="kv-list">
         <view class="kv-row"><text class="kv-label">版本</text><text class="kv-value">{{patternData.revision || patternData.version || '-'}}</text></view>
-        <view class="kv-row"><text class="kv-label">状态</text><text class="kv-value">{{patternData.status || '-'}}</text></view>
+        <view class="kv-row"><text class="kv-label">状态</text><text class="kv-value">{{patternData.statusText || '-'}}</text></view>
         <view class="kv-row"><text class="kv-label">制版师</text><text class="kv-value">{{patternData.patternMaker || patternData.assignee || '-'}}</text></view>
         <view class="kv-row" wx:if="{{patternData.notes}}"><text class="kv-label">备注</text><text class="kv-value kv-long">{{patternData.notes}}</text></view>
       </view>
@@ -281,6 +281,7 @@
       <view class="section-hd">
         <text class="section-title">工序单价</text>
         <text class="section-count">{{processList.length}} 项</text>
+        <text class="section-link" catchtap="onGoProcessTemplate">配置模板 ›</text>
       </view>
       <view wx:if="{{processLoading}}" class="empty-inline">加载中...</view>
       <view wx:elif="{{processList.length === 0}}" class="empty-inline">暂无工序单价数据</view>
@@ -288,7 +289,7 @@
         <view class="item-row" wx:for="{{processList}}" wx:key="id">
           <view class="ir-main">
             <text class="ir-title">{{item.processName || item.name}}</text>
-            <text class="ir-sub">{{item.processCode || ''}}</text>
+            <text class="ir-sub">{{item.processCodeText}}</text>
           </view>
           <view class="ir-right">
             <text class="ir-price">¥{{item.unitPrice || 0}}/件</text>
@@ -309,7 +310,7 @@
         <view class="item-row" wx:for="{{secondaryList}}" wx:key="id">
           <view class="ir-main">
             <text class="ir-title">{{item.processName || item.name}}</text>
-            <text class="ir-sub">{{item.type || item.processType || ''}} {{item.position || ''}}</text>
+            <text class="ir-sub">{{item.typeText}} {{item.position || ''}}</text>
           </view>
           <view class="ir-right">
             <text class="ir-price">¥{{item.unitPrice || item.price || 0}}</text>

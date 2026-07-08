@@ -67,7 +67,7 @@ Page({
       };
       materialPurchases = raw.materialPurchases.map(function(item) {
         return Object.assign({}, item, {
-          materialTypeCN: MATERIAL_TYPE_MAP[item.materialType] || item.materialType || '',
+          materialTypeCN: MATERIAL_TYPE_MAP[item.materialType] || '未知',
         });
       });
       materialPurchases.forEach(function(item) {
@@ -84,8 +84,10 @@ Page({
         pending: '待领取', not_started: '待领取',
         received: '已领取', in_progress: '已领取',
         bundled: '已完成', completed: '已完成', done: '已完成',
+        cancelled: '已取消', archived: '已归档',
       };
-      cuttingTask.statusText = statusMap[cuttingTask.status] || cuttingTask.status || '待领取';
+      cuttingTask.statusText = statusMap[cuttingTask.status] || '未知状态';
+      cuttingTask.isTerminal = ['completed', 'done', 'bundled', 'cancelled', 'archived'].includes(cuttingTask.status);
     }
 
     let btnText = '确认扫码';
@@ -110,8 +112,8 @@ Page({
     const rawProcesses = orderDetail.secondaryProcesses || raw.secondaryProcesses || [];
     const secondaryProcesses = rawProcesses.map(function(item) {
       return Object.assign({}, item, {
-        processTypeCN: PROCESS_TYPE_MAP[item.processType] || item.processType || '',
-        statusCN: STATUS_MAP[item.status] || item.status || '',
+        processTypeCN: PROCESS_TYPE_MAP[item.processType] || '未知',
+        statusCN: STATUS_MAP[item.status] || '未知',
       });
     });
 

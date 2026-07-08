@@ -15,6 +15,40 @@
 
 var stageDetection = require('../../../shared/stageDetection');
 
+/**
+ * 规范化 patternId：从多种格式中提取真正的样衣 ID
+ * 防御性清洗：无论入口传什么，都确保拿到纯 id，避免后端 400
+ *
+ * 支持格式：
+ * 1. 纯 id：'2068567491605024769'
+ * 2. JSON 字符串：'{"type":"pattern","id":"2068567491605024769"}'
+ * 3. URL 参数：'?type=pattern&patternId=xxx' 或 'xxx?patternId=yyy'
+ * 4. 带 pattern 前缀：'pattern:2068567491605024769'
+ */
+function normalizePatternId(patternId) {
+  if (!patternId) return '';
+  const s = String(patternId).trim();
+  if (!s) return '';
+  // 情况1：JSON 字符串
+  if (s.charAt(0) === '{') {
+    try {
+      const obj = JSON.parse(s);
+      const id = obj.id || obj.patternId || obj.patternProductionId || obj.orderId;
+      if (id) return String(id).trim();
+    } catch (_e) { /* 解析失败，继续下面的尝试 */ }
+  }
+  // 情况2：URL 参数格式 ?patternId=xxx
+  const m = s.match(/[?&]patternId=([^&]+)/);
+  if (m && m[1]) {
+    try { return decodeURIComponent(m[1]).trim(); } catch (_e) { return String(m[1]).trim(); }
+  }
+  // 情况3：带 pattern 前缀（pattern:xxx / pattern-xxx / pattern_xxx）
+  const prefixMatch = s.match(/^pattern[-:_#](.+)/i);
+  if (prefixMatch && prefixMatch[1]) return String(prefixMatch[1]).trim();
+  // 情况4：纯 id
+  return s;
+}
+
 // 样衣生产操作类型（5个基本操作）
 const SAMPLE_OPERATIONS = [
   { key: 'RECEIVE', label: '领取样衣', color: '#1890ff', icon: 'scan' },
@@ -34,7 +68,10 @@ const DEV_STAGES = [
 ];
 
 async function handlePatternScan(handler, parsedData, manualScanType) {
-  const patternId = parsedData.patternId || parsedData.scanCode;
+  // 防御性清洗：无论入口传什么格式，都提取出纯 patternId
+  // 修复 P0：onTopScan 扫 JSON 二维码时把整个 JSON 当 id 传过来，导致后端 400
+  const rawPatternId = parsedData.patternId || parsedData.scanCode;
+  const patternId = normalizePatternId(rawPatternId);
   if (!patternId) {
     return handler._errorResult('无效的样衣二维码');
   }
@@ -108,6 +145,8 @@ async function handlePatternScan(handler, parsedData, manualScanType) {
     const coverVal = patternDetail.coverImage || patternDetail.styleImage || patternDetail.cover || '';
     // sizes 数组
     const sizesArrVal = Array.isArray(patternDetail.sizes) ? patternDetail.sizes.slice() : [];
+    // 交期（后端 enrichRecord 已做兜底：PatternProduction.deliveryTime → StyleInfo.deliveryDate）
+    const deliveryTimeVal = patternDetail.deliveryTime || '';
 
     return {
       success: true,
@@ -129,6 +168,7 @@ async function handlePatternScan(handler, parsedData, manualScanType) {
         status: patternDetail.status || '',
         hasProcessSystem: hasProcessSystem,
         cover: coverVal,
+        deliveryTime: deliveryTimeVal,
       },
       message: '请确认样衣操作',
     };
@@ -143,95 +183,43 @@ async function handlePatternScan(handler, parsedData, manualScanType) {
  * 根据样衣状态和扫码记录，判断下一步可执行的操作
  */
 function buildSampleOperationOptions(patternDetail, scanRecords, manualScanType) {
+  // 全部开放：所有操作都展示给用户选择，已完成的操作不显示
+  // 用户反馈：不要按状态上锁，让用户自由选择，已领取/已完成的操作自动隐藏
   const options = [];
   const status = String(patternDetail.status || '').toUpperCase();
-  
-  // 提取已完成的操作类型
+
+  // 提取已完成的操作类型（已领取/已完成的操作不重复显示）
   const completedOps = new Set(
     scanRecords
       .filter(function(r) { return r.operationType && r.success !== false; })
       .map(function(r) { return String(r.operationType).toUpperCase(); })
   );
 
-  // 根据样衣状态和已完成操作，构建可选操作
-  // 样衣流程：PENDING(待领取) → IN_PROGRESS(制作中) → COMPLETED(已完成) → 审核 → WAREHOUSE_IN(已入库)
-  
-  if (status === 'PENDING' || !completedOps.has('RECEIVE')) {
-    // 待领取状态，只能领取
-    options.push({
-      value: 'RECEIVE',
-      label: '领取样衣',
-      icon: 'scan',
-    });
-  } else if (status === 'IN_PROGRESS' || status === 'RECEIVED') {
-    // 制作中，可以车板、跟单、完成
-    if (!completedOps.has('PLATE')) {
-      options.push({
-        value: 'PLATE',
-        label: '车板',
-        icon: 'tool',
-      });
+  // 所有操作清单（按流程顺序）
+  const allOps = [
+    { value: 'RECEIVE', label: '领取样衣', icon: 'scan' },
+    { value: 'PLATE', label: '车板', icon: 'tool' },
+    { value: 'FOLLOW_UP', label: '跟单确认', icon: 'check-circle' },
+    { value: 'COMPLETE', label: '完成确认', icon: 'check' },
+    { value: 'REVIEW', label: '样衣审核', icon: 'eye' },
+    { value: 'WAREHOUSE_IN', label: '样衣入库', icon: 'inbox' },
+    { value: 'WAREHOUSE_OUT', label: '样衣出库', icon: 'export' },
+    { value: 'WAREHOUSE_RETURN', label: '样衣归还', icon: 'rollback' },
+  ];
+
+  // 已入库状态额外允许出库/归还（即使没扫过也显示）
+  for (let i = 0; i < allOps.length; i++) {
+    const op = allOps[i];
+    const isCompleted = completedOps.has(op.value);
+    // 已完成的操作不显示（避免重复领取）
+    if (isCompleted) continue;
+    // 已入库状态：出库/归还总是显示
+    if (status === 'WAREHOUSE_IN' && (op.value === 'WAREHOUSE_OUT' || op.value === 'WAREHOUSE_RETURN')) {
+      options.push(op);
+      continue;
     }
-    if (!completedOps.has('FOLLOW_UP')) {
-      options.push({
-        value: 'FOLLOW_UP',
-        label: '跟单确认',
-        icon: 'check-circle',
-      });
-    }
-    if (!completedOps.has('COMPLETE')) {
-      options.push({
-        value: 'COMPLETE',
-        label: '完成确认',
-        icon: 'check',
-      });
-    }
-  } else if (status === 'COMPLETED') {
-    // 已完成，需要审核
-    const reviewStatus = String(patternDetail.reviewStatus || '').toUpperCase();
-    const reviewResult = String(patternDetail.reviewResult || '').toUpperCase();
-    
-    if (reviewStatus === 'APPROVED' || reviewResult === 'APPROVED') {
-      // 审核通过，可以入库
-      if (!completedOps.has('WAREHOUSE_IN')) {
-        options.push({
-          value: 'WAREHOUSE_IN',
-          label: '样衣入库',
-          icon: 'inbox',
-        });
-      }
-    } else if (reviewStatus === 'REWORK' || reviewResult === 'REWORK') {
-      // 返修状态，可以重新车板
-      options.push({
-        value: 'PLATE',
-        label: '返修车板',
-        icon: 'tool',
-      });
-      options.push({
-        value: 'COMPLETE',
-        label: '返修完成',
-        icon: 'check',
-      });
-    } else {
-      // 待审核或其他状态，提示需要审核
-      options.push({
-        value: 'REVIEW',
-        label: '样衣审核',
-        icon: 'eye',
-      });
-    }
-  } else if (status === 'WAREHOUSE_IN') {
-    // 已入库，可以出库或归还
-    options.push({
-      value: 'WAREHOUSE_OUT',
-      label: '样衣出库',
-      icon: 'export',
-    });
-    options.push({
-      value: 'WAREHOUSE_RETURN',
-      label: '样衣归还',
-      icon: 'rollback',
-    });
+    // 其他操作：只要未完成就显示
+    options.push(op);
   }
 
   return options;
@@ -242,7 +230,7 @@ function buildSampleOperationOptions(patternDetail, scanRecords, manualScanType)
  */
 async function getPatternDetail(handler, patternId) {
   try {
-    const res = await handler.api.production.getPatternDetail(patternId);
+    const res = await handler.api.production.getPatternDetail(normalizePatternId(patternId));
     return res || null;
   } catch (e) {
     console.error('[PatternScanProcessor] 获取样衣详情失败:', e);
@@ -255,7 +243,7 @@ async function getPatternDetail(handler, patternId) {
  */
 async function getPatternScanRecords(handler, patternId) {
   try {
-    const list = await handler.api.production.getPatternScanRecords(patternId);
+    const list = await handler.api.production.getPatternScanRecords(normalizePatternId(patternId));
     return Array.isArray(list) ? list : [];
   } catch (e) {
     console.error('[PatternScanProcessor] 获取样衣扫码记录失败:', e);
@@ -268,7 +256,7 @@ async function getPatternScanRecords(handler, patternId) {
  */
 async function getPatternProcessConfig(handler, patternId) {
   try {
-    const config = await handler.api.production.getPatternProcessConfig(patternId);
+    const config = await handler.api.production.getPatternProcessConfig(normalizePatternId(patternId));
     return Array.isArray(config) ? config : [];
   } catch (e) {
     console.error('[PatternScanProcessor] 获取样衣工序配置失败:', e);
@@ -342,59 +330,29 @@ function buildProcessOperationOptions(processConfig, scanRecords, patternDetail,
   const status = String(patternDetail.status || '').toUpperCase();
   
   // 完全按 PC 端工序配置构建操作选项
-  // 1. 已完成的工序：显示已完成标记
-  // 2. 当前可操作工序（父工序都已完成）：显示可操作
-  // 3. 被门禁拦截的工序：显示锁定
-  
-  // 遍历工序配置，逐个构建选项（不 break）
-  let foundFirstOperable = false;
+  // 用户要求：不上锁，全部开放，已完成的不显示
+  // 1. 已完成的工序：过滤掉，不显示
+  // 2. 其他工序：全部开放，可多选
+
+  // 遍历工序配置，逐个构建选项
   for (let i = 0; i < processConfig.length; i++) {
     const config = processConfig[i];
     const processName = String(config.processName || config.operationType || '').trim();
     const progressStage = String(config.progressStage || processName).trim();
     const scanType = String(config.scanType || 'production').trim();
     const isCompleted = completedStages.has(processName) || completedStages.has(config.operationType) || completedStages.has(stageDetection.canonicalStageKey(processName));
-    
+
+    // 已完成的工序直接跳过，不显示
     if (isCompleted) {
-      options.push({
-        value: processName,
-        label: processName,
-        icon: 'check',
-        processName: processName,
-        progressStage: progressStage,
-        scanType: scanType,
-        sortOrder: config.sortOrder || i,
-        completed: true,
-        color: baseColor,
-        size: baseSize,
-        sizes: baseSizes,
-        quantity: baseQuantity,
-      });
       continue;
     }
-    
-    // 门禁校验：检查父工序是否全部完成
-    const gate = stageDetection.checkParentStageGate(progressStage, completedStages);
-    if (!gate.pass) {
-      options.push({
-        value: processName,
-        label: processName,
-        icon: 'lock',
-        processName: processName,
-        progressStage: progressStage,
-        scanType: scanType,
-        sortOrder: config.sortOrder || i,
-        locked: true,
-        lockReason: '需先完成：' + gate.missing.join('、'),
-        color: baseColor,
-        size: baseSize,
-        sizes: baseSizes,
-        quantity: baseQuantity,
-      });
-      continue; // 门禁拦截后继续显示后续工序（只读展示）
-    }
-    
-    // 门禁通过：可操作
+
+    // 全部开放，不上锁
+    // 单价：优先 unitPrice，其次 price
+    const rawPrice = config.unitPrice != null ? config.unitPrice : (config.price != null ? config.price : 0);
+    const numPrice = Number(rawPrice) || 0;
+    const unitPriceText = numPrice > 0 ? numPrice.toFixed(2) : '';
+
     options.push({
       value: processName,
       label: processName,
@@ -403,15 +361,15 @@ function buildProcessOperationOptions(processConfig, scanRecords, patternDetail,
       progressStage: progressStage,
       scanType: scanType,
       sortOrder: config.sortOrder || i,
-      canOperate: !foundFirstOperable, // 只有第一个可操作项能执行（父子顺序）
+      unitPrice: numPrice,
+      unitPriceText: unitPriceText,
       color: baseColor,
       size: baseSize,
       sizes: baseSizes,
       quantity: baseQuantity,
     });
-    foundFirstOperable = true;
   }
-  
+
   return options;
 }
 

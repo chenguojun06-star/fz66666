@@ -41,9 +41,9 @@ Page({
   },
 
   _processDetail: function (d) {
-    d.defectCategoryText = DEFECT_CATEGORY_MAP[d.defectCategory] || d.defectCategory || '';
-    d.qualityStatusText = QUALITY_STATUS_MAP[d.qualityStatus] || d.qualityStatus || '';
-    d.scanModeText = SCAN_MODE_MAP[d.scanMode] || d.scanMode || '';
+    d.defectCategoryText = d.defectCategory ? (DEFECT_CATEGORY_MAP[d.defectCategory] || '未知') : '';
+    d.qualityStatusText = d.qualityStatus ? (QUALITY_STATUS_MAP[d.qualityStatus] || '未知') : '';
+    d.scanModeText = d.scanMode ? (SCAN_MODE_MAP[d.scanMode] || '未知') : '';
 
     if (d.createTime) {
       d.createTimeText = this._formatTime(d.createTime);

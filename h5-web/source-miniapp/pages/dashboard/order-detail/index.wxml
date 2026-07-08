@@ -87,9 +87,9 @@
           <text class="info-value">{{deliveryDateStr}}</text>
           <text class="remain-badge {{remainDaysClass}}" wx:if="{{remainDaysText}}">{{remainDaysText}}</text>
         </view>
-        <view class="info-row" wx:if="{{order.orderBizType}}">
+        <view class="info-row" wx:if="{{orderBizTypeText}}">
           <text class="info-label">业务</text>
-          <text class="info-value">{{order.orderBizType}}</text>
+          <text class="info-value">{{orderBizTypeText}}</text>
         </view>
         <view class="info-row" wx:if="{{ecPlatformName}}">
           <text class="info-label">平台来源</text>
@@ -300,7 +300,7 @@
       <view class="bom-group" wx:for="{{bomList}}" wx:key="index">
         <view class="bom-item">
           <view class="bom-left">
-            <text class="bom-type">{{item.materialType}}</text>
+            <text class="bom-type">{{item.materialTypeText}}</text>
             <text class="bom-name">{{item.materialName}}</text>
           </view>
           <view class="bom-right">
@@ -325,9 +325,9 @@
           <text class="qt-label">单价</text>
           <text class="qt-value">¥{{quotation.unitPrice}}</text>
         </view>
-        <view class="qt-cell" wx:if="{{quotation.pricingMode}}">
+        <view class="qt-cell" wx:if="{{quotation.pricingModeText}}">
           <text class="qt-label">计价方式</text>
-          <text class="qt-value">{{quotation.pricingMode}}</text>
+          <text class="qt-value">{{quotation.pricingModeText}}</text>
         </view>
       </view>
     </view>

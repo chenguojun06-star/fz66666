@@ -14,9 +14,9 @@ const DEDUCT_MAP = {
   repaid:   { text: '已扣完', cls: 'tag-green' },
 };
 
-function statusText(s) { return (STATUS_MAP[s] || {}).text || s || ''; }
+function statusText(s) { return s ? ((STATUS_MAP[s] || {}).text || '未知') : ''; }
 function statusCls(s) { return (STATUS_MAP[s] || {}).cls || 'tag-gray'; }
-function deductText(s) { return (DEDUCT_MAP[s] || {}).text || s || ''; }
+function deductText(s) { return s ? ((DEDUCT_MAP[s] || {}).text || '未知') : ''; }
 function deductCls(s) { return (DEDUCT_MAP[s] || {}).cls || 'tag-gray'; }
 
 Page({

@@ -1,0 +1,63 @@
+<view class="page-bg">
+  <view class="type-tabs">
+    <view
+      wx:for="{{typeTabs}}"
+      wx:key="key"
+      class="type-tab {{activeType === item.key ? 'active' : ''}}"
+      data-key="{{item.key}}"
+      bindtap="onTypeChange"
+    >{{item.label}}</view>
+  </view>
+
+  <scroll-view scroll-x class="status-tabs-scroll" enhanced show-scrollbar="{{false}}">
+    <view class="status-tabs">
+      <view
+        wx:for="{{activeType === 'purchase' ? statusTabs : statusTabsSales}}"
+        wx:key="key"
+        class="status-tab {{activeStatus === item.key ? 'active' : ''}}"
+        data-key="{{item.key}}"
+        bindtap="onStatusChange"
+      >{{item.label}}</view>
+    </view>
+  </scroll-view>
+
+  <view class="list-wrap">
+    <block wx:if="{{list.length === 0 && !loading}}">
+      <view class="empty-state">
+        <view class="empty-text">暂无退货单</view>
+      </view>
+    </block>
+
+    <block wx:for="{{list}}" wx:key="id">
+      <view class="card" data-id="{{item.id}}" data-type="{{item._type}}" bindtap="goDetail">
+        <view class="card-header">
+          <text class="return-no">{{item.returnNo}}</text>
+          <text class="status-badge" style="color:{{item.statusColor}};border-color:{{item.statusColor}};">{{item.statusLabel}}</text>
+        </view>
+        <view class="card-row">
+          <text class="row-label">原单号</text>
+          <text class="row-value">{{item.originalNo}}</text>
+        </view>
+        <view class="card-row">
+          <text class="row-label">{{item._type === 'purchase' ? '供应商' : '客户'}}</text>
+          <text class="row-value">{{item.partyName}}</text>
+        </view>
+        <view class="card-row">
+          <text class="row-label">类型</text>
+          <text class="row-value">{{item.returnType}}</text>
+        </view>
+        <view class="card-row" wx:if="{{item.returnReason !== '-'}}">
+          <text class="row-label">原因</text>
+          <text class="row-value reason">{{item.returnReason}}</text>
+        </view>
+        <view class="card-footer">
+          <text class="amount">¥{{item.totalAmount}}</text>
+          <text class="time">{{item.createTime}}</text>
+        </view>
+      </view>
+    </block>
+
+    <view wx:if="{{loading}}" class="loading-more">加载中...</view>
+    <view wx:elif="{{!hasMore && list.length > 0}}" class="loading-more">没有更多了</view>
+  </view>
+</view>

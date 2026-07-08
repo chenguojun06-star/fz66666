@@ -252,6 +252,12 @@
   font-size: 22rpx;
   color: var(--color-text-tertiary);
 }
+.section-link {
+  margin-left: auto;
+  font-size: 24rpx;
+  color: #007aff;
+  padding: 4rpx 8rpx;
+}
 
 /* ============ ④ 执行进度区 · 生产工序 ============ */
 .process-list {

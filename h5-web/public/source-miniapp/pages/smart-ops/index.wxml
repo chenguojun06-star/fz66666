@@ -294,7 +294,7 @@
               </view>
             </view>
             <view class="factory-card-foot">
-              <text class="factory-card-time" wx:if="{{item.timeText}}最近扫码 {{item.timeText}}</text>
+              <text class="factory-card-time" wx:if="{{item.timeText}}">最近扫码 {{item.timeText}}</text>
               <text class="factory-card-time" wx:else>暂无扫码</text>
             </view>
           </view>

@@ -21,6 +21,11 @@ const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 const { parseProductionOrderLines, sortSizeNames } = require('../../../utils/orderParser');
 const { getUserInfo } = require('../../../utils/storage');
 
+/* ========== 业务类型 / 物料类型 / 计价方式 中文化 ========== */
+var BIZ_TYPE_LABELS = { FOB: 'FOB 离岸价', ODM: 'ODM 原厂设计', OEM: 'OEM 代工生产', CMT: 'CMT 来料加工' };
+var MATERIAL_TYPE_LABELS = { fabricA: '主面料', fabricB: '副面料', liningA: '里料A', liningB: '里料B', liningC: '里料C', accessoryA: '辅料A', accessoryB: '辅料B', accessoryC: '辅料C' };
+var PRICING_MODE_LABELS = { PROCESS: '工序单价', SIZE: '尺码单价', COST: '外发整件单价', QUOTE: '报价单价', MANUAL: '手动单价' };
+
 /* ========== 工具函数 ========== */
 function fmt(val, fallback) { return (val != null && val !== '') ? val : (fallback || '-'); }
 function fmtNum(v, fallback) { return (v != null && !isNaN(v)) ? Number(v) : (fallback || 0); }
@@ -56,7 +61,7 @@ function getStatusInfo(raw) {
   if (s === 'pending' || s === 'pending_start') {
     return { text: '待开始', cls: 'tag-warning' };
   }
-  return { text: fmt(raw, '未知'), cls: 'tag-default' };
+  return { text: '未知', cls: 'tag-default' };
 }
 
 /* 工序阶段状态 */
@@ -91,14 +96,6 @@ function getScanTypeClass(r) {
 /* 从订单数据构建矩阵模型（与订单列表页 parseProductionOrderLines 保持一致的解析逻辑）
  * 返回：{ sizes: [尺码排序], rows: [{label, quantities, rowTotal}], total, hasData,
  *         colorGroups: [{color, sizeMap, total}], allSizes, colors: [颜色], sizeSummary: [{size, qty}] }
- *
- * P1-5 数据结构说明：
- *   本页用 quantities 格式（rows[].quantities 数组）+ colorGroups 格式（sizeMap 对象）双视图，
- *   与 sku-matrix 组件标准格式（rows[].cells: [{size,quantity}]）不同。
- *   本页内联渲染，未使用 <sku-matrix /> 组件。
- *   如需迁移到组件，使用 utils/skuMatrixAdapter：
- *     - toSkuMatrixModel({ sizes, rows }, 'quantities')
- *     - toSkuMatrixModel({ colorGroups, allSizes }, 'colorGroups')
  */
 function buildMatrixModel(order) {
   if (!order) return { sizes: [], rows: [], total: 0, hasData: false, flatList: [], colorGroups: [], allSizes: [], colors: [], sizeSummary: [] };
@@ -361,7 +358,7 @@ Page({
           'completed': { text: '已完成', cls: 'tag-default' },
         };
         const rawStatus = String(mp.status || '').toLowerCase();
-        const st = statusMap[rawStatus] || { text: fmt(mp.status, '未知'), cls: 'tag-default' };
+        const st = statusMap[rawStatus] || { text: '未知', cls: 'tag-default' };
         const isClaimable = (rawStatus === 'pending' || rawStatus === '');
         return {
           id: mp.id || mp.purchaseId || mp.materialPurchaseId,
@@ -424,7 +421,7 @@ Page({
             'completed': { text: '已完成', cls: 'tag-success' },
             'done': { text: '已完成', cls: 'tag-success' },
           };
-          const st = statusMap[rawStatus] || { text: fmt(b.status, '待领取'), cls: 'tag-default' };
+          const st = statusMap[rawStatus] || { text: '待领取', cls: 'tag-default' };
           return {
             id: b.id,
             taskId: b.taskId || b.id,
@@ -458,6 +455,24 @@ Page({
       // 平台来源（电商订单 ecPlatform → 中文名）
       const ecPlatformName = getPlatformName(order.ecPlatform || order.platform || order.platformCode);
 
+      // 业务类型中文化（兜底 '未知'，不展示英文 code）
+      const orderBizTypeText = order.orderBizType ? (BIZ_TYPE_LABELS[order.orderBizType] || '未知') : '';
+
+      // BOM 物料类型中文化
+      bomList.forEach(function (b) {
+        b.materialTypeText = b.materialType && b.materialType !== '-' ? (MATERIAL_TYPE_LABELS[b.materialType] || '其他') : '-';
+      });
+
+      // 款式报价计价方式中文化
+      const rawQuotation = ctx.styleQuotation || ctx.quotation || null;
+      let quotation = null;
+      if (rawQuotation) {
+        quotation = Object.assign({}, rawQuotation);
+        if (quotation.pricingMode) {
+          quotation.pricingModeText = PRICING_MODE_LABELS[quotation.pricingMode] || '未知';
+        }
+      }
+
       that.setData({
         order: order,
         isEditable: isEditable,
@@ -473,6 +488,7 @@ Page({
         progressPct: progressPct,
         specSummary: specSummary,
         ecPlatformName: ecPlatformName,
+        orderBizTypeText: orderBizTypeText,
         stages: stages,
         records: records,
         materialPurchases: materialPurchases,
@@ -482,7 +498,7 @@ Page({
         cuttingBundleList: cuttingBundleList,
         bundleSummary: bundleSummary,
         matrixModel: matrixModel,
-        quotation: ctx.styleQuotation || ctx.quotation || null,
+        quotation: quotation,
         loading: false,
       });
 

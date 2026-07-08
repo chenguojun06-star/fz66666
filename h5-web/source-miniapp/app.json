@@ -54,7 +54,7 @@
     {
       "root": "pages/cutting",
       "name": "pkg-cutting",
-      "pages": ["task-list/index", "bundle-detail/index"]
+      "pages": ["bundle-detail/index"]
     },
     {
       "root": "pages/procurement",
@@ -93,8 +93,8 @@
     },
     {
         "root": "pages/dashboard",
-        "name": "pkg-dashboard",
-        "pages": ["index", "process-edit/index", "order-detail/index"]
+      "name": "pkg-dashboard",
+      "pages": ["index", "process-edit/index", "order-detail/index", "process-template/index"]
       },
     {
       "root": "pages/smart-ops",
@@ -138,6 +138,11 @@
         "overview/index",
         "order-list/index"
       ]
+    },
+    {
+      "root": "pages/return",
+      "name": "pkg-return",
+      "pages": ["list/index", "detail/index"]
     }
   ],
   "preloadRule": {

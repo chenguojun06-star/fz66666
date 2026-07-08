@@ -209,6 +209,10 @@ const warehouse = {
   listLocations(warehouseType, areaId) {
     return ok('/api/warehouse/location/list-by-type', 'GET', { warehouseType: warehouseType || '', areaId: areaId });
   },
+  // 库位库存详情（库位扫码后查询）
+  locationItems(locationCode) {
+    return ok('/api/warehouse/location/items', 'GET', { locationCode });
+  },
 };
 
 

@@ -22,14 +22,14 @@ var PLATFORM_NAMES = {
 };
 
 /**
- * 根据平台短码获取中文名，未知平台返回原值（不返回空，便于排查）
+ * 根据平台短码获取中文名，未知平台返回中文"未知"（不返回原英文 code，避免给用户展示英文）
  * @param {string} code 平台短码（TB/JD/...）
  * @returns {string}
  */
 function getPlatformName(code) {
   var c = String(code || '').trim();
   if (!c) return '';
-  return PLATFORM_NAMES[c] || c;
+  return PLATFORM_NAMES[c] || '未知';
 }
 
 module.exports = {

@@ -32,20 +32,22 @@ module.exports = {
     refreshMy: function() { this.loadMyPanel(true); },
 
     _playScanAudio: function(success) {
+      // 音频文件可能不存在（/assets/audio/scan-success.mp3 等），改用震动反馈避免崩溃
       try {
-        if (!this._scanAudioCtx) {
-          this._scanAudioCtx = wx.createInnerAudioContext();
-          this._scanAudioCtx.onError(() => {});
+        if (success) {
+          wx.vibrateShort({ type: 'light' });
+        } else {
+          wx.vibrateLong();
         }
-        // 成功：短促"叮" / 失败：低沉"嘟" — 用本地音频包内文件
-        this._scanAudioCtx.src = success ? '/assets/audio/scan-success.mp3' : '/assets/audio/scan-error.mp3';
-        this._scanAudioCtx.stop();
-        this._scanAudioCtx.play();
-      } catch (_) { /* 音频播放失败不影响扫码 */ }
+      } catch (_) { /* 震动失败不影响扫码 */ }
     },
 
     loadMyPanel: function(refresh) {
       if (refresh === undefined) refresh = false;
+      if (!this.data || !this.data.my) {
+        console.error('[loadMyPanel] page.data.my 未初始化，跳过加载');
+        return;
+      }
       if (this.data.my.loadingStats && !refresh) return;
       this.setData({ 'my.loadingStats': true });
       const self = this;
