@@ -203,6 +203,29 @@ cd frontend && npx tsc --noEmit         # ✅ 前端类型检查
 
 ---
 
+### AP-WF-03: 会话开始未加载 Memory Bank 就动手
+**识别信号**：用户说线上有问题，AI 直接看代码、改代码，不读 `memory-bank/` 任何文件
+**错误做法**：跳过 `agent-workflow.md` 第1步（RooFlow Memory Bank 加载），凭对话上下文猜项目背景
+**正确做法**：
+1. 会话开始先读 `memory-bank/quick-start-5min.md` + `activeContext.md` + `decisionLog.md`（至少这三份）
+2. 涉及部署/CI 时再读 `anti-patterns.md` + `change-impact-matrix.md`
+3. 不知道部署流就去查 Memory Bank，不要凭空让用户"刷新页面"
+**历史教训**：2026-07-09 WS token 修复，AI 没加载 Memory Bank，不知道"GitHub push → 微信云自动拉取"的部署流，让用户"刷新页面"被骂
+
+---
+
+### AP-WF-04: 修复线上问题却让用户手动刷新/部署
+**识别信号**：用户反馈云端控制台报错，AI 改完代码后说"刷新页面后即可生效"
+**错误做法**：改完代码不 push，让用户"刷新浏览器"或"手动部署"
+**正确做法**：
+1. 本项目部署流：`git commit` → `git push origin main` → 微信云自动拉取部署
+2. 改完代码直接 commit + push，不要等用户问"怎么部署"
+3. push 后告知用户"已推送，微信云会自动拉取"，而不是"请刷新页面"
+**触发P0铁律**：无（部署流程规范，但严重影响用户体验）
+**历史教训**：2026-07-09 WS token 修复后让用户"刷新页面"，被用户怒斥"云端部署的代码，本地刷新没用"
+
+---
+
 ## 🛡️ AI 助手常见反模式
 
 ### AP-AI-01: AI 输出代码后用户不问"是否符合P0铁律"

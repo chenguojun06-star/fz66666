@@ -16,6 +16,27 @@
 
 ## 最近变更（Latest Changes）
 
+### 2026-07-09 WebSocket 缺失 token 导致控制台刷屏
+
+- **问题**：云端控制台疯狂报 `[WS] 缺失token，无法建立WebSocket连接`，伴随 React 无限重连堆栈刷屏。
+- **根因**：`frontend/src/hooks/useWebSocket.ts` 第 55 行从 `localStorage.getItem('token')` 读 token，但项目实际存储 key 是 `authToken`（见 `AuthContext.tsx` L115 / `api/core.ts` L288），永远读不到。调用方（`GlobalAiAssistant` / `useCockpit`）传入的 `options.token` 也被解构时忽略。→ token 永远为空 → `onclose` 触发 → 5 秒重连 → 又失败 → 控制台刷屏。
+- **修复**（commit `d4e380363`，已 push origin/main）：
+  1. 解构出 `token: explicitToken`（之前被忽略）
+  2. token 兜底链：`explicitToken` → `localStorage.authToken` → `sessionStorage.authToken` → `localStorage.token`
+  3. `useCallback` 依赖补 `explicitToken`
+- **教训**：会话开始未加载 Memory Bank（违反工作流第1步），导致不知道部署流（GitHub push → 微信云自动拉取），让用户"刷新页面"被骂。已新增反模式 AP-WF-03 / AP-WF-04。
+
+### 2026-07-08 小程序样衣开发列表点击不跳转修复
+
+- **问题**：微信端「样衣开发」列表页点击卡片无响应，无法进入详情页。
+- **根因**：列表页 `onGoDetail` 通过 `data-item="{{item}}"` 传递整个对象，再取 `item.styleId` / `item.id`。小程序 `data-*` 传对象在部分机型/编译条件下会序列化失败，导致两个参数都为空，函数直接 `return` 不导航。
+- **修复**：
+  - `miniprogram/pages/sample-development/index/index.wxml`：改传字符串 `data-style-id="{{item.styleId}}" data-id="{{item.id}}"`。
+  - `miniprogram/pages/sample-development/index/index.js`：`onGoDetail` 改为从 `e.currentTarget.dataset` 读字符串参数，并增加 `console.log` / `console.warn` 调试日志。
+  - `miniprogram/pages/sample-development/detail/index.js`：`onLoad` 增加参数解析日志，方便在开发者工具 Console 中确认是否收到参数。
+- **验证**：`npx eslint` 无新增语法错误。
+- **待验证**：用户在微信开发者工具真机/模拟器点击卡片，查看 Console 中 `[sample-dev:index]` 和 `[sample-dev:detail]` 日志。
+
 ### 2026-07-05 ~ 2026-07-08 高密度问题修复期（64 个提交）
 
 **概况**：4 天 64 个提交，平均每天 16 个，问题集中在扫码模块（20+项）和多端一致性。
