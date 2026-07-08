@@ -26,6 +26,18 @@
   3. `useCallback` 依赖补 `explicitToken`
 - **教训**：会话开始未加载 Memory Bank（违反工作流第1步），导致不知道部署流（GitHub push → 微信云自动拉取），让用户"刷新页面"被骂。已新增反模式 AP-WF-03 / AP-WF-04。
 
+### 2026-07-09 WebSocket 握手 500 - @ServerEndpoint 注入失效
+
+- **问题**：token 修复后，WS 连接拿到 token 但握手返回 500（`Unexpected response code: 500`），前端反复重连刷屏。
+- **根因**：D-033（7-08）新增的 `OrderProgressWebSocketServer`（`@ServerEndpoint`）及其 Configurator `WebSocketHandshakeInterceptor`，用 `@Autowired` / Setter 注入 `AuthTokenService` / `ObjectMapper`。但 `@ServerEndpoint` 的 Configurator 和 Endpoint 实例由 **Tomcat 容器 new**，不走 Spring 容器，注入全部失效 → `authTokenService` 永远 null → 握手时 NPE → 500。
+- **修复**（commit `01a91f4f3`，已 push origin/main）：
+  1. 新增 `SpringContextHolder`（`ApplicationContextAware`）静态获取 Bean
+  2. `WebSocketHandshakeInterceptor`：改用 `SpringContextHolder.getBean(AuthTokenService.class)`，删除无效 Setter 注入
+  3. `OrderProgressWebSocketServer`：改用 `SpringContextHolder.getBean(ObjectMapper.class)`，删除无效 `@Autowired`
+  4. `WebSocketConfig`：删除无效的 `setAuthTokenService` 调用
+  5. 顺带修复 token 未 URL 解码问题（前端 `encodeURIComponent` 编码）
+- **教训**：`@ServerEndpoint` + Spring 注入是经典陷阱，已新增反模式 AP-FE-00。本地测试要通过真实握手验证，不能只测 Spring Bean 实例的方法调用。
+
 ### 2026-07-08 小程序样衣开发列表点击不跳转修复
 
 - **问题**：微信端「样衣开发」列表页点击卡片无响应，无法进入详情页。

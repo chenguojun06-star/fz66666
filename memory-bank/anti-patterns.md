@@ -106,6 +106,28 @@ public Result audit() { ... }
 
 ## 🖥️ 前端相关
 
+### AP-FE-00: @ServerEndpoint 用 @Autowired 注入 Spring Bean
+**识别信号**：WebSocket 端点类（`@ServerEndpoint`）或其 Configurator 里用了 `@Autowired` / Setter 注入 Spring Bean
+**错误做法**：
+```java
+@ServerEndpoint(value = "/ws/xxx", configurator = MyConfigurator.class)
+@Component
+public class MyEndpoint {
+    @Autowired private SomeService service;  // ❌ 永远是 null
+}
+```
+**正确做法**：
+```java
+// 用 SpringContextHolder 静态获取 Bean
+SomeService service = SpringContextHolder.getBean(SomeService.class);
+```
+**根因**：`@ServerEndpoint` 的 Configurator 和 Endpoint 实例由 **Tomcat 容器 new**，不走 Spring 容器，`@Autowired` 和 Setter 注入全部失效。即使标了 `@Component`，Tomcat 创建的实例也不是那个 Spring Bean。
+**后果**：握手时 NPE → HTTP 500 → 前端 WS 连接失败 → 控制台刷屏
+**触发P0铁律**：无（但属于 Spring + JSR-356 集成经典陷阱）
+**历史教训**：2026-07-09 WebSocket 握手 500，AuthTokenService 和 ObjectMapper 永远为 null。D-033 新增的 WS 功能一上线就崩。
+
+---
+
 ### AP-FE-01: 打印组件 font-family 用 sans-serif
 **识别信号**：打印页面的 CSS 里写了 `font-family: 'PingFang SC', sans-serif;`
 **错误做法**：
