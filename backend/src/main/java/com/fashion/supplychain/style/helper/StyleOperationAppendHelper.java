@@ -1,10 +1,7 @@
 package com.fashion.supplychain.style.helper;
 
-import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.service.StyleInfoService;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -15,63 +12,37 @@ import org.springframework.util.StringUtils;
 public class StyleOperationAppendHelper {
 
     @Autowired
-    private StyleInfoService styleInfoService;
+    private StyleLogHelper styleLogHelper;
 
-    private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    @Autowired
+    private StyleInfoService styleInfoService;
 
     public void appendOperation(Long styleId, String action, String detail) {
         if (styleId == null) {
             return;
         }
-        try {
-            StyleInfo style = styleInfoService.getById(styleId);
-            if (style != null) {
-                appendToDescription(style, action, detail);
-                styleInfoService.updateById(style);
-            }
-        } catch (Exception e) {
-            log.warn("Failed to append operation log to style description: styleId={}, action={}", styleId, action, e);
-        }
+        styleLogHelper.saveStyleLog(styleId, action, detail);
     }
 
     public void appendOperation(StyleInfo style, String action, String detail) {
         if (style == null || style.getId() == null) {
             return;
         }
-        try {
-            appendToDescription(style, action, detail);
-            styleInfoService.updateById(style);
-        } catch (Exception e) {
-            log.warn("Failed to append operation log to style description: styleId={}, action={}", style.getId(), action, e);
-        }
+        styleLogHelper.saveStyleLog(style.getId(), action, detail);
     }
 
-    private void appendToDescription(StyleInfo style, String action, String detail) {
-        String operator = getOperator();
-        String time = LocalDateTime.now().format(FORMATTER);
-        
-        StringBuilder logEntry = new StringBuilder();
-        logEntry.append("[").append(time).append("] ");
-        logEntry.append(operator).append(" ");
-        logEntry.append(action);
-        if (StringUtils.hasText(detail)) {
-            logEntry.append("：").append(detail);
+    public void appendSaveProductionRequirements(Long styleId) {
+        if (styleId == null) {
+            return;
         }
-        
-        String existing = style.getDescription();
-        if (StringUtils.hasText(existing)) {
-            style.setDescription(logEntry.toString() + "\n" + existing);
-        } else {
-            style.setDescription(logEntry.toString());
-        }
+        styleLogHelper.saveStyleLog(styleId, "PRODUCTION_REQUIREMENTS_SAVE", null);
     }
 
-    private String getOperator() {
-        UserContext ctx = UserContext.get();
-        if (ctx != null && StringUtils.hasText(ctx.getUsername())) {
-            return ctx.getUsername();
+    public void appendRollbackProductionRequirements(Long styleId, String reason) {
+        if (styleId == null) {
+            return;
         }
-        return "系统管理员";
+        styleLogHelper.saveMaintenanceLog(styleId, "PRODUCTION_REQUIREMENTS_ROLLBACK", reason);
     }
 
     public void appendCreate(Long styleId) {

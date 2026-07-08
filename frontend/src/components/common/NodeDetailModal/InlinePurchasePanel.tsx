@@ -522,6 +522,7 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = ({ orderId, orde
   }, [inboundModalRecord, inboundForm, user, message, loadData]);
 
   const handleReceiveAll = useCallback(async () => {
+    if (actionLoading) return; // 防重入
     const pendingItems = purchases.filter(p => normalizeStatus(p.status) === MATERIAL_PURCHASE_STATUS.PENDING);
     if (pendingItems.length === 0) {
       message.info('没有待采购的物料');
@@ -529,6 +530,10 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = ({ orderId, orde
     }
     const receiverId = String(user?.id || '').trim();
     const receiverName = String(user?.name || user?.username || '').trim();
+    if (!receiverId && !receiverName) {
+      message.error('领取人信息缺失，请重新登录');
+      return;
+    }
     setActionLoading(true);
     try {
       const purchaseIds = pendingItems.map(p => String(p.id || '')).filter(Boolean);
@@ -548,7 +553,7 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = ({ orderId, orde
     } finally {
       setActionLoading(false);
     }
-  }, [purchases, user, message, loadData]);
+  }, [actionLoading, purchases, user, message, loadData]);
 
   const handleConfirmReturn = useCallback(async (record: MaterialPurchase) => {
     setReturnModalRecord(record);
@@ -1335,7 +1340,7 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = ({ orderId, orde
                 <Button
                   type="primary"
                   size="small"
-                  disabled={!purchases.some(p => normalizeStatus(p.status) === MATERIAL_PURCHASE_STATUS.PENDING) || !canProcure}
+                  disabled={actionLoading || !purchases.some(p => normalizeStatus(p.status) === MATERIAL_PURCHASE_STATUS.PENDING) || !canProcure}
                   loading={actionLoading}
                   onClick={handleReceiveAll}
                 >

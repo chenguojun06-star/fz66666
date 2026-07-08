@@ -3,7 +3,6 @@ package com.fashion.supplychain.style.helper;
 import com.fashion.supplychain.common.BusinessException;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.style.entity.StyleInfo;
-import com.fashion.supplychain.style.helper.StyleOperationAppendHelper;
 import com.fashion.supplychain.style.service.StyleAttachmentService;
 import com.fashion.supplychain.style.service.StyleInfoService;
 import java.time.LocalDateTime;
@@ -15,19 +14,12 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
-/**
- * 款式前段阶段流转辅助类（生产要求/生产/纸样/样衣）
- * 后段阶段（尺寸表/BOM/工序/码数单价/二次工艺）已拆分到 StyleStageCompletionHelper
- */
 @Component
 @Slf4j
 public class StyleStageHelper {
 
     @Autowired
     private StyleInfoService styleInfoService;
-
-    @Autowired
-    private StyleLogHelper styleLogHelper;
 
     @Autowired
     private StyleOperationAppendHelper styleOperationAppendHelper;
@@ -58,8 +50,7 @@ public class StyleStageHelper {
                 .update();
 
         if (ok) {
-            styleLogHelper.saveStyleLog(id, "PRODUCTION_REQUIREMENTS_SAVE", null);
-            styleOperationAppendHelper.appendOperation(id, "保存生产要求", null);
+            styleOperationAppendHelper.appendSaveProductionRequirements(id);
         }
 
         if (!ok) {
@@ -98,7 +89,6 @@ public class StyleStageHelper {
             throw new IllegalArgumentException("退回原因不能为空");
         }
 
-        // 写入解锁状态和退回信息
         boolean ok = styleInfoService.lambdaUpdate()
                 .eq(StyleInfo::getId, id)
                 .set(StyleInfo::getDescriptionLocked, 0)
@@ -112,14 +102,10 @@ public class StyleStageHelper {
             throw new IllegalStateException("退回操作失败");
         }
 
-        styleLogHelper.saveMaintenanceLog(id, "PRODUCTION_REQUIREMENTS_ROLLBACK", reason);
-        styleOperationAppendHelper.appendOperation(id, "退回生产要求", "原因：" + reason);
+        styleOperationAppendHelper.appendRollbackProductionRequirements(id, reason);
         return true;
     }
 
-    // ==================== Production Stage ====================
-
-    /** 管理员退回纸样修改，允许用户提交新记录 */
     public boolean rollbackPatternRevision(Long id, Map<String, Object> body) {
         if (!UserContext.isSupervisorOrAbove()) {
             throw new AccessDeniedException("无权限操作");
@@ -145,12 +131,10 @@ public class StyleStageHelper {
         if (!ok) {
             throw new IllegalStateException("退回操作失败");
         }
-        styleLogHelper.saveMaintenanceLog(id, "PATTERN_REVISION_ROLLBACK", reason);
         styleOperationAppendHelper.appendOperation(id, "退回纸样修改", "原因：" + reason);
         return true;
     }
 
-    /** 纸样修改提交后自动锁定，防止重复提交 */
     public void lockPatternRevision(Long id) {
         styleInfoService.lambdaUpdate()
                 .eq(StyleInfo::getId, id)
@@ -160,7 +144,6 @@ public class StyleStageHelper {
                 .update();
     }
 
-    /** 生产要求取消修改后重新锁定 */
     public void lockProductionRequirements(Long id) {
         styleInfoService.lambdaUpdate()
                 .eq(StyleInfo::getId, id)
@@ -178,7 +161,7 @@ public class StyleStageHelper {
             throw new NoSuchElementException("款号不存在");
         }
         if (current.getProductionStartTime() != null) {
-            return true; // 已开始，幂等
+            return true;
         }
         String currentUser = UserContext.username();
         boolean ok = styleInfoService.lambdaUpdate()
@@ -188,7 +171,6 @@ public class StyleStageHelper {
                 .set(StyleInfo::getUpdateTime, LocalDateTime.now())
                 .update();
         if (!ok) throw new IllegalStateException("操作失败");
-        styleLogHelper.saveStyleLog(id, "PRODUCTION_START", null);
         styleOperationAppendHelper.appendStart(id, "生产制单");
         return true;
     }
@@ -208,7 +190,6 @@ public class StyleStageHelper {
                 .set(StyleInfo::getUpdateTime, LocalDateTime.now())
                 .update();
         if (!ok) throw new IllegalStateException("操作失败");
-        styleLogHelper.saveStyleLog(id, "PRODUCTION_COMPLETED", null);
         styleOperationAppendHelper.appendComplete(id, "生产制单");
         return true;
     }
@@ -232,13 +213,10 @@ public class StyleStageHelper {
                 .set(StyleInfo::getUpdateTime, LocalDateTime.now())
                 .update();
         if (!ok) throw new IllegalStateException("操作失败");
-        styleLogHelper.saveMaintenanceLog(id, "PRODUCTION_RESET", reason);
         styleOperationAppendHelper.appendOperation(id, "退回生产制单", "原因：" + reason);
         log.info("生产制单已退回维护: styleId={}, reason={}", id, reason);
         return true;
     }
-
-    // ==================== Pattern Stage ====================
 
     public boolean startPattern(Long id) {
         StyleInfo current = getStyleWithTenant(id);
@@ -253,22 +231,18 @@ public class StyleStageHelper {
         String currentUser = UserContext.username();
         LocalDateTime now = LocalDateTime.now();
 
-        // 构建更新链
         var updateChain = styleInfoService.lambdaUpdate()
                 .eq(StyleInfo::getId, id)
                 .set(StyleInfo::getPatternStatus, "IN_PROGRESS")
                 .set(StyleInfo::getPatternAssignee, currentUser)
                 .set(StyleInfo::getPatternStartTime, now)
                 .set(StyleInfo::getPatternCompletedTime, null)
-                // 纸样开始时同步更新尺寸表开始时间（尺寸被纸样控制）
                 .set(StyleInfo::getSizeAssignee, currentUser)
                 .set(StyleInfo::getSizeStartTime, now)
-                // 纸样开始时同步更新生产制单开始时间（生产制单跟随纸样）
                 .set(StyleInfo::getProductionAssignee, currentUser)
                 .set(StyleInfo::getProductionStartTime, now)
                 .set(StyleInfo::getUpdateTime, now);
 
-        // 纸样师 = 领取纸样开发的人（如果还没有设置）
         if (!StringUtils.hasText(current.getSampleSupplier())) {
             updateChain.set(StyleInfo::getSampleSupplier, currentUser);
             log.info("Synced pattern developer to style info: styleId={}, patternDeveloper={}", id, currentUser);
@@ -276,7 +250,6 @@ public class StyleStageHelper {
 
         boolean ok = updateChain.update();
         if (ok) {
-            styleLogHelper.savePatternLog(id, "PATTERN_START", null);
             styleOperationAppendHelper.appendStart(id, "纸样开发");
             log.info("纸样开始，已同步更新尺寸表和生产制单开始时间: styleId={}", id);
         }
@@ -301,12 +274,10 @@ public class StyleStageHelper {
                 .eq(StyleInfo::getId, id)
                 .set(StyleInfo::getPatternStatus, "COMPLETED")
                 .set(StyleInfo::getPatternCompletedTime, now)
-                // 纸样完成时同步标记尺寸表完成（尺寸由纸样控制，纸样done则尺寸done）
                 .set(StyleInfo::getSizeCompletedTime, now)
                 .set(StyleInfo::getUpdateTime, now)
                 .update();
         if (ok) {
-            styleLogHelper.savePatternLog(id, "PATTERN_COMPLETED", null);
             styleOperationAppendHelper.appendComplete(id, "纸样开发");
             log.info("纸样完成，已同步完成尺寸表: styleId={}", id);
         }
@@ -324,8 +295,6 @@ public class StyleStageHelper {
         if (current == null) {
             throw new NoSuchElementException("款号不存在");
         }
-        // ✅ 移除过度限制：用户在开发阶段应该能自由退回修改
-        // ensureStyleFullyCompletedBeforeMaintenance(current);
         Object reasonValue = body == null ? null : body.get("reason");
         String reason = reasonValue == null ? "" : String.valueOf(reasonValue).trim();
         String remark = StringUtils.hasText(reason) ? reason : "";
@@ -336,21 +305,16 @@ public class StyleStageHelper {
                 .eq(StyleInfo::getId, id)
                 .set(StyleInfo::getPatternStatus, null)
                 .set(StyleInfo::getPatternCompletedTime, null)
-                // 退回纸样时同步清除尺寸完成时间（纸样控制尺寸，退回则尺寸也退回）
                 .set(StyleInfo::getSizeCompletedTime, null)
-                // 关联回退样衣状态
                 .set(StyleInfo::getSampleStatus, "IN_PROGRESS")
                 .set(StyleInfo::getSampleProgress, 0)
                 .set(StyleInfo::getSampleCompletedTime, null)
-                // 维护后允许再次推送：清除推送标志
                 .set(StyleInfo::getOrderType, null)
                 .set(StyleInfo::getPushedToOrder, 0)
                 .set(StyleInfo::getPushedToOrderTime, null)
                 .set(StyleInfo::getUpdateTime, LocalDateTime.now())
                 .update();
         if (ok) {
-            styleLogHelper.saveMaintenanceLog(id, "PATTERN_RESET", remark);
-            styleLogHelper.saveMaintenanceLog(id, "SAMPLE_RESET", "关联纸样回退自动同步: " + remark);
             styleOperationAppendHelper.appendOperation(id, "退回纸样开发", "原因：" + remark);
         }
         if (!ok) {
@@ -358,8 +322,6 @@ public class StyleStageHelper {
         }
         return true;
     }
-
-    // ==================== Sample Stage ====================
 
     public boolean startSample(Long id) {
         StyleInfo current = getStyleWithTenant(id);
@@ -377,7 +339,6 @@ public class StyleStageHelper {
                 .set(StyleInfo::getUpdateTime, LocalDateTime.now())
                 .update();
         if (ok) {
-            styleLogHelper.saveSampleLog(id, "RECEIVE_START", null);
             styleOperationAppendHelper.appendStart(id, "样衣制作");
         }
         if (!ok) {
@@ -430,8 +391,6 @@ public class StyleStageHelper {
             throw new IllegalStateException("样衣已完成，无需重复操作");
         }
 
-        // 前置校验：所有开发资料环节必须完成才能标记样衣完成
-        // 样衣完成 = 开发资料全部闭环 + 样衣制作完成，不允许跳过任何环节
         java.util.List<String> pendingStages = new java.util.ArrayList<>();
         if (current.getPatternCompletedTime() == null) {
             pendingStages.add("纸样开发");
@@ -455,7 +414,6 @@ public class StyleStageHelper {
             throw new BusinessException("请先完成以下环节再标记样衣完成：" + String.join("、", pendingStages));
         }
 
-        // 校验通过：所有开发资料环节已完成，直接标记样衣完成
         LocalDateTime now = LocalDateTime.now();
 
         boolean ok = styleInfoService.lambdaUpdate()
@@ -467,7 +425,6 @@ public class StyleStageHelper {
                 .update();
 
         if (ok) {
-            styleLogHelper.saveSampleLog(id, "SAMPLE_COMPLETED", "点击样衣完成（前置校验通过）");
             styleOperationAppendHelper.appendComplete(id, "样衣制作");
             log.info("样衣完成成功：styleId={}, 所有开发资料环节已闭环", id);
         }
@@ -482,8 +439,6 @@ public class StyleStageHelper {
         if (current == null) {
             throw new NoSuchElementException("款号不存在");
         }
-        // ✅ 移除过度限制：用户在开发阶段应该能自由退回修改
-        // ensureStyleFullyCompletedBeforeMaintenance(current);
         Object reasonValue = body == null ? null : body.get("reason");
         String reason = reasonValue == null ? "" : String.valueOf(reasonValue).trim();
         String remark = StringUtils.hasText(reason) ? reason : "";
@@ -495,22 +450,16 @@ public class StyleStageHelper {
                 .set(StyleInfo::getSampleStatus, null)
                 .set(StyleInfo::getSampleProgress, 0)
                 .set(StyleInfo::getSampleCompletedTime, null)
-                // 维护后允许再次推送：清除推送标志（orderType存储跨单员和已推送展示）
                 .set(StyleInfo::getOrderType, null)
                 .set(StyleInfo::getPushedToOrder, 0)
                 .set(StyleInfo::getPushedToOrderTime, null)
                 .set(StyleInfo::getUpdateTime, LocalDateTime.now())
                 .update();
-        if (ok) {
-            styleLogHelper.saveMaintenanceLog(id, "SAMPLE_RESET", remark);
-        }
         if (!ok) {
             throw new IllegalStateException("操作失败");
         }
         return true;
     }
-
-    // ==================== Size Stage ====================
 
     private boolean isCompleted(String status) {
         String s = String.valueOf(status == null ? "" : status).trim();

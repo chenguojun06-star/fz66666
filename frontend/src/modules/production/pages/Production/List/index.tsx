@@ -217,40 +217,8 @@ const ProductionList: React.FC = () => {
     return visibleColumns[col.key as string] !== false;
   });
 
-  // 给操作列追加 SchemaPrint 详情打印按钮
-  const columnsWithExtPrint = useMemo(() => {
-    return filteredColumns.map(col => {
-      if (col.key !== 'action') return col;
-      const originalRender = (col as any).render;
-      return {
-        ...col,
-        width: (col as any).width ? (col as any).width + 32 : undefined,
-        render: (_: unknown, record: ProductionOrder, index: number) => {
-          const originalNode = originalRender(_, record, index);
-          return (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              {originalNode}
-              <Tooltip title="打印字段详情（含自定义字段）">
-                <SchemaPrint
-                  mode="detail"
-                  fields={fieldConfigs}
-                  data={record as unknown as Record<string, unknown>}
-                  title={`生产订单详情 - ${record.orderNo || ''}`}
-                  subtitle="生产订单档案打印"
-                  column={2}
-                  type="default"
-                  buttonText=""
-                />
-              </Tooltip>
-            </div>
-          );
-        },
-      };
-    });
-  }, [filteredColumns, fieldConfigs]);
-
   // 追加自定义字段列
-  const columns = [...columnsWithExtPrint, ...extColumns];
+  const columns = [...filteredColumns, ...extColumns];
 
   
   const patrolTitleTags = useMemo(() => (record: ProductionOrder) => {
@@ -466,8 +434,6 @@ const ProductionList: React.FC = () => {
               openProcessDetail={openProcessDetail}
               openNodeDetail={openNodeDetail}
               syncProcessFromTemplate={syncProcessFromTemplate}
-              setPrintModalVisible={(v: boolean) => { if (!v) printModal.close(); }}
-              setPrintingRecord={(r: ProductionOrder | null) => { if (r) printModal.open(r); else printModal.close(); }}
               quickEditModal={quickEditModal}
               handleShareOrder={handleShareOrder}
               handlePrintLabel={handlePrintLabel}

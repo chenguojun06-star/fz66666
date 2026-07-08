@@ -39,12 +39,17 @@ public class OrderStageBundleStatsFillHelper {
             return;
         }
 
-        // 异步线程（CompletableFuture.runAsync）没有继承 UserContext ThreadLocal，优先从订单记录获取 tenantId。
+        // 异步线程（CompletableFuture.runAsync）没有继承 UserContext ThreadLocal，
+        // 优先从订单记录获取 tenantId，fallback 到 UserContext（同步调用场景）。
         Long tenantId = records.stream()
                 .map(r -> r == null ? null : r.getTenantId())
                 .filter(java.util.Objects::nonNull)
                 .findFirst()
                 .orElse(UserContext.tenantId());
+        if (tenantId == null) {
+            log.warn("[StageBundleStats] fillStageBundleStats skipped: tenantId is null, recordCount={}", records.size());
+            return;
+        }
 
         Map<String, Map<String, Integer>> aggregated = queryProcessScannedBundles(orderIds, tenantId);
 
