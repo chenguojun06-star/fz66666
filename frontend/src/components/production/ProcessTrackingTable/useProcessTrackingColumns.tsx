@@ -1,7 +1,7 @@
 import React from 'react';
 import type { ColumnsType } from 'antd/es/table';
-import type { ScanRecord } from '@/types/shared';
-import { formatProcessDisplayName } from '@/utils/processHelper';
+import { formatProcessDisplayName } from '@/utils/productionStage';
+import type { ProcessTrackingRecord } from './processTrackingFilter';
 
 export interface ProcessTrackingColumnOptions {
   orderNo?: string;
@@ -9,11 +9,11 @@ export interface ProcessTrackingColumnOptions {
   orderStatus?: string;
   isAdmin?: boolean;
   actioningRecordId?: string | null;
-  onManualComplete?: (record: ScanRecord) => void;
-  onUndo?: (record: ScanRecord) => void;
+  onManualComplete?: (record: ProcessTrackingRecord) => void;
+  onUndo?: (record: ProcessTrackingRecord) => void;
 }
 
-export function useProcessTrackingColumns(options: ProcessTrackingColumnOptions = {}): ColumnsType<ScanRecord> {
+export function useProcessTrackingColumns(options: ProcessTrackingColumnOptions = {}): ColumnsType<ProcessTrackingRecord> {
   const { orderNo } = options;
   return [
     {
