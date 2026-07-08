@@ -1383,3 +1383,15 @@ SelfCritiqueGateTest 和 EvolutionOrchestratorTest 需要修复 Spring ObjectPro
 - 用户健康度仪表盘后端 API（DAU/任务完成率/P0数/AI解决率）
 - EvolutionOrchestrator 死代码清理（getUnifiedMetrics/runHealthCheck 无人调用）
 - 服装专属 Skill 触发关键词调优（基于实际使用数据）
+
+### 2026-07-08 二次工艺筛选 + 菲号显示修复（`bee543b48`）
+
+**问题1：二次工艺父节点混入尾部子工序**
+- 现象："二次工艺"筛选下出现"04 剪线大烫包装"等尾部工序
+- 根因：`getNodeProcessList` 未对二次工艺子节点做 `isSecondaryProcessSubNode` 校验
+- 修复：`riskBadgeRenderers.tsx` 中二次工艺节点只保留明确属于二次工艺的工序，尾部组合工序通过 `t_process_parent_mapping` 映射到正确父节点
+
+**问题2：菲号只显示简单序号**
+- 现象：菲号列显示 "1"、"2" 等纯数字，无法区分订单
+- 修复：`useProcessTrackingColumns.tsx` 接收 `orderNo` 参数，当 `bundleNo` 为纯数字时拼接订单号显示（如 `PO20260505002-1`）
+- 兜底：二维码存在时仍优先显示完整二维码信息（订单号/款号/颜色/尺码/数量/菲号）

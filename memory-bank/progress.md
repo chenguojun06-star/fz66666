@@ -353,3 +353,7 @@
 - [x] 测试配置修复：application-test.yml 添加 allow-bean-definition-overriding
 - [x] 测试文件修复 13 个（Service/Controller/集成测试 mock 缺失与断言修正）
 - 详见 `.trae/rules/optimization-log-20260620.md` 第十五章
+### 2026-07-08 二次工艺筛选 + 菲号显示修复（`bee543b48`）
+
+- [x] 二次工艺筛选去混入尾部子工序 — `riskBadgeRenderers.tsx` 使用 `isSecondaryProcessSubNode` 过滤
+- [x] 菲号显示带订单号信息 — `useProcessTrackingColumns.tsx` 接收 `orderNo`，纯数字 bundleNo 拼接订单号
