@@ -439,3 +439,59 @@
   - L4 Procedural Memory 设计稿（five-layer-memory-design.md）的 P0 阶段全部落地
   - Hermes 学习闭环形成：用户反馈 → SkillTemplate.successCount/avgRating 更新 → useCount≥20 触发 ProceduralMemory 升级 → 下次直接调用 SOP 步骤
   - 编译验证通过（`mvn compile -q -pl .` exit code 0），无需回滚
+
+## D-033：工序进度实时同步从轮询改为 WebSocket 推送
+
+- **日期**：2026-07-08
+- **上下文**：所有工序节点（扫码/采购/裁剪/车缝/二次工艺/尾部质检/入库/返修申报）均依赖 30 秒轮询更新进度，用户反馈"进度不同步"、"扫码了半天看不到变化"。前端 useWebSocket.ts 为空壳实现，无法建立真实 WebSocket 连接。order:progress:changed 事件仅在 PC 手动改进度时触发，扫码等其他操作不触发。
+- **决策**：
+  1. 后端新增 `OrderProgressWebSocketServer`（@ServerEndpoint），按订单号分组推送
+  2. `ScanExecutorSupport.recomputeProgressSync` 后添加 WebSocket 推送（带 tenantId 多租户隔离）
+  3. 前端重写 `useWebSocket.ts`，实现真实连接 + 自动重连 + 心跳检测
+  4. 前端生产列表和订单详情订阅 WS 消息，收到后立即刷新数据
+  5. 保留 5 分钟长轮询作为兜底（防止 WS 断连后完全不更新）
+- **关键设计权衡**：
+  1. **按订单号分组而非全量广播**：避免无关消息浪费带宽，一个订单的进度变化只推送给关注该订单的客户端
+  2. **5 分钟长轮询兜底**：WS 连接可能因网络/nginx 超时断开，长轮询确保最终一致性
+  3. **ServerEndpointExporter Bean 必须存在**：Spring Boot 内嵌 Tomcat 需要此 Bean 才能注册 @ServerEndpoint，缺失会导致 WS 连接 404
+  4. **Nginx 需配置 WS 升级**：proxy_set_header Upgrade $http_upgrade + Connection "upgrade"，超时设 30min
+- **影响**：
+  - 扫码后进度从"最多等30秒"变为"秒级实时"
+  - 新增文件：OrderProgressWebSocketServer.java、WebSocketConfig.java
+  - 修改文件：ScanExecutorSupport.java、useWebSocket.ts、useProductionListData.ts、useOrderSync.ts
+  - 部署后需验证 WS 连接是否成功建立（浏览器 F12 → Network → WS）
+
+## D-034：异步线程必须显式传递租户上下文
+
+- **日期**：2026-07-08
+- **上下文**：P0 事故——生产订单列表和进度球数据全部不显示。根因：ProductionOrderQueryService 使用 CompletableFuture.runAsync 创建异步线程，ThreadLocal 中的 UserContext（含 tenantId）未传递到异步线程，导致 TenantAssert.assertTenantContext 抛异常、TenantInterceptor 跳过租户过滤，引发进度数据丢失和跨租户数据泄漏风险。
+- **决策**：
+  1. **所有异步操作必须显式传递 tenantId**：禁止在异步线程中依赖 ThreadLocal 的 UserContext
+  2. **优先使用 UserContext.wrap()**：包裹 Runnable/Callable，自动捕获和恢复上下文
+  3. **无法 wrap 时从数据库记录取 tenantId**：如订单查询场景，先从主记录获取 tenantId，再传入异步任务
+  4. **Code Review 检查项**：凡是看到 CompletableFuture / @Async / 新建 Thread，必须检查是否传递了租户上下文
+- **关键教训**：
+  - ThreadLocal 在异步线程中默认不继承（InheritableThreadLocal 也仅在创建线程时继承，线程池复用时失效）
+  - 多租户系统中，异步线程丢失 tenantId = 数据隔离失效 = P0 级事故
+  - 修复顺序：先从数据源头获取 tenantId（最安全），再考虑上下文传递
+- **影响**：
+  - 修复了订单进度球数据不显示的 P0 事故
+  - 系统性排查并修复了订单列表中所有异步线程的租户上下文传递
+  - 提交：585af8405（进度球修复）+ 786310508（系统性修复）
+
+## D-035：操作日志与业务字段必须分离，禁止污染业务字段
+
+- **日期**：2026-07-08
+- **上下文**：用户反馈样衣详情中"生产要求"字段出现无关操作日志（如"退回纸样开发"、"修改款式"）。根因：StyleOperationAppendHelper.java 将所有操作日志都追加到 style_info.description 字段（"生产要求"字段），而该字段是给制单人员填写业务内容的地方，操作日志混入后业务内容被污染。
+- **决策**：
+  1. **操作日志写入专用表**：t_style_operation_log，禁止写入业务字段
+  2. **业务字段（description/生产要求）只保存用户主动输入的内容**：系统操作不得自动追加
+  3. **历史数据清理**：用 Flyway 迁移脚本将已混入的操作日志从 description 中分离到专用表
+  4. **通用规则**：所有业务对象的"备注/描述"字段，系统自动日志都走独立 operation_log 表，不污染业务字段
+- **关键设计权衡**：
+  - 专用表 vs JSON 扩展列：专用表查询性能更好、支持按时间/操作人筛选、不影响原表结构
+  - 清理脚本幂等性：使用 PREPARE/EXECUTE 模式，重复执行不损坏数据
+- **影响**：
+  - 修复文件：StyleOperationAppendHelper.java、StyleStageHelper.java
+  - 新增迁移：V20260708002__clean_operation_logs_from_style_description.sql
+  - 提交：befdce60f
