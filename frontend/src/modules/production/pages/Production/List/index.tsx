@@ -407,15 +407,7 @@ const ProductionList: React.FC = () => {
               >
                 <SettingOutlined /> 字段配置
               </a>
-              <SchemaPrint
-                mode="list"
-                fields={fieldConfigs}
-                data={sortedProductionList as unknown as Record<string, unknown>[]}
-                title="生产订单列表"
-                subtitle={`共 ${total} 条记录`}
-                buttonText="打印列表"
-                type="default"
-              />
+
             </>
           }
         >
