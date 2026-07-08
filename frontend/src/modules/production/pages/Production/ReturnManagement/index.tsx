@@ -90,7 +90,7 @@ const ReturnManagement: React.FC = () => {
     else fetchSalesList();
   }, [activeTab, fetchPurchaseList, fetchSalesList]);
 
-  useEffect(() => { reload(); /* eslint-disable-next-line */ }, [activeTab, page, pageSize]);
+  useEffect(() => { reload(); }, [activeTab, page, pageSize]);
 
   const onSearch = () => { setPage(1); reload(); };
 
