@@ -1,0 +1,125 @@
+<view class="page-bg">
+  <!-- 顶部款式信息卡 -->
+  <view class="status-card" wx:if="{{styleNo}}">
+    <view class="status-card-row">
+      <text class="status-card-title">{{styleNo}}</text>
+      <text class="status-card-sub" wx:if="{{styleName}}">{{styleName}}</text>
+    </view>
+    <view class="status-card-meta">
+      <text class="meta-chip">共 {{totalProcessCount}} 道工序</text>
+      <text class="meta-chip meta-chip--price">合计 ¥{{totalPrice}}</text>
+    </view>
+  </view>
+
+  <!-- 加载中 -->
+  <view wx:if="{{loading}}" class="loading-wrap">
+    <text class="loading-text">加载中...</text>
+  </view>
+
+  <!-- 阶段分组列表 -->
+  <view wx:if="{{!loading}}" class="group-list">
+    <block wx:for="{{stages}}" wx:key="id" wx:for-item="stage">
+      <view class="group">
+        <!-- 组头 -->
+        <view class="group-header" data-stage-id="{{stage.id}}" bindtap="onToggleCollapse">
+          <view class="group-header-left">
+            <text class="group-header-name">{{stage.name}}</text>
+            <text class="group-header-count">{{stage.processes.length}}</text>
+          </view>
+          <view class="group-header-right">
+            <text class="group-header-add" catchtap="onAddProcess" data-stage-id="{{stage.id}}">＋</text>
+            <text class="group-header-arrow {{stage.collapsed ? '' : 'arrow-down'}}">›</text>
+          </view>
+        </view>
+        <!-- 工序列表 -->
+        <view wx:if="{{!stage.collapsed}}" class="cell-list">
+          <view wx:if="{{stage.processes.length === 0}}" class="cell-empty">
+            <text class="cell-empty-text">暂无工序，点击 + 添加</text>
+          </view>
+          <view wx:for="{{stage.processes}}" wx:key="id" wx:for-item="proc" wx:for-index="pIdx" class="cell">
+            <view class="cell-main">
+              <view class="cell-title-row">
+                <text class="cell-title">{{proc.processName}}</text>
+                <text wx:if="{{proc.processCode}}" class="cell-code">{{proc.processCode}}</text>
+              </view>
+              <view class="cell-meta-row">
+                <text wx:if="{{proc.machineType}}" class="cell-meta">{{proc.machineType}}</text>
+                <text wx:if="{{proc.difficulty}}" class="cell-meta">{{proc.difficulty}}</text>
+                <text class="cell-meta cell-meta--price">¥{{proc.price}}</text>
+                <text wx:if="{{proc.standardTime}}" class="cell-meta">{{proc.standardTime}}s</text>
+              </view>
+              <text wx:if="{{proc.description}}" class="cell-desc">{{proc.description}}</text>
+            </view>
+            <view class="cell-actions">
+              <text class="cell-action cell-action--edit" catchtap="onEditProcess" data-stage-id="{{stage.id}}" data-process-id="{{proc.id}}">编辑</text>
+              <text class="cell-action cell-action--del" catchtap="onDeleteProcess" data-stage-id="{{stage.id}}" data-process-id="{{proc.id}}">删除</text>
+            </view>
+          </view>
+        </view>
+      </view>
+    </block>
+  </view>
+
+  <!-- 底部操作栏 -->
+  <view wx:if="{{!loading && styleId}}" class="action-bar">
+    <button class="action-btn action-btn--secondary" bindtap="onAddProcess" data-stage-id="carSewing">添加工序</button>
+    <button class="action-btn action-btn--primary" loading="{{saving}}" bindtap="onSaveAll">保存模板</button>
+  </view>
+</view>
+
+<!-- 添加/编辑工序弹窗 -->
+<view wx:if="{{modalVisible}}" class="modal-overlay" bindtap="onModalCancel"></view>
+<view wx:if="{{modalVisible}}" class="modal-panel">
+  <view class="modal-header">
+    <text class="modal-title">{{modalMode === 'add' ? '添加工序' : '编辑工序'}}</text>
+    <text class="modal-close" bindtap="onModalCancel">✕</text>
+  </view>
+  <view class="modal-body">
+    <view class="form-item">
+      <text class="form-label">工序名称</text>
+      <input class="form-input" value="{{form.processName}}" data-field="processName" bindinput="onFormInput" placeholder="如：合缝、上领、钉扣" />
+    </view>
+    <view class="form-item">
+      <text class="form-label">工序编码</text>
+      <input class="form-input" value="{{form.processCode}}" data-field="processCode" bindinput="onFormInput" placeholder="如：01、02（可选）" />
+    </view>
+    <view class="form-item">
+      <text class="form-label">所属阶段</text>
+      <picker mode="selector" range="{{stageOptions}}" range-key="name" value="{{formStageIndex}}" bindchange="onStageChange">
+        <view class="form-picker">
+          <text>{{stageOptions[formStageIndex].name}}</text>
+          <text class="form-picker-arrow">›</text>
+        </view>
+      </picker>
+    </view>
+    <view class="form-item">
+      <text class="form-label">机器类型</text>
+      <input class="form-input" value="{{form.machineType}}" data-field="machineType" bindinput="onFormInput" placeholder="如：平车、包缝车（可选）" />
+    </view>
+    <view class="form-item">
+      <text class="form-label">难度</text>
+      <picker mode="selector" range="{{difficultyOptions}}" value="{{formDifficultyIndex}}" bindchange="onDifficultyChange">
+        <view class="form-picker">
+          <text>{{difficultyOptions[formDifficultyIndex]}}</text>
+          <text class="form-picker-arrow">›</text>
+        </view>
+      </picker>
+    </view>
+    <view class="form-item">
+      <text class="form-label">标准工时（秒）</text>
+      <input class="form-input" type="digit" value="{{form.standardTime}}" data-field="standardTime" bindinput="onFormInput" placeholder="如：60" />
+    </view>
+    <view class="form-item">
+      <text class="form-label">单价（元）</text>
+      <input class="form-input" type="digit" value="{{form.price}}" data-field="price" bindinput="onFormInput" placeholder="如：0.50" />
+    </view>
+    <view class="form-item">
+      <text class="form-label">描述</text>
+      <textarea class="form-textarea" value="{{form.description}}" data-field="description" bindinput="onFormInput" placeholder="工序描述（可选）" />
+    </view>
+  </view>
+  <view class="modal-footer">
+    <button class="modal-btn modal-btn--cancel" bindtap="onModalCancel">取消</button>
+    <button class="modal-btn modal-btn--confirm" bindtap="onModalConfirm">确定</button>
+  </view>
+</view>

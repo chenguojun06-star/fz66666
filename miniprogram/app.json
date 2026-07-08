@@ -93,8 +93,8 @@
     },
     {
         "root": "pages/dashboard",
-        "name": "pkg-dashboard",
-        "pages": ["index", "process-edit/index", "order-detail/index"]
+      "name": "pkg-dashboard",
+      "pages": ["index", "process-edit/index", "order-detail/index", "process-template/index"]
       },
     {
       "root": "pages/smart-ops",

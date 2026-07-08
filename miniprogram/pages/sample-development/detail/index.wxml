@@ -281,6 +281,7 @@
       <view class="section-hd">
         <text class="section-title">工序单价</text>
         <text class="section-count">{{processList.length}} 项</text>
+        <text class="section-link" catchtap="onGoProcessTemplate">配置模板 ›</text>
       </view>
       <view wx:if="{{processLoading}}" class="empty-inline">加载中...</view>
       <view wx:elif="{{processList.length === 0}}" class="empty-inline">暂无工序单价数据</view>

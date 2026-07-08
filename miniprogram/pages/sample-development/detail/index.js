@@ -671,6 +671,16 @@ Page({
     this.setData({ processLoading: false });
   },
 
+  /** 跳转工序模板配置页 */
+  onGoProcessTemplate() {
+    const { styleId, styleNo } = this.data;
+    if (!styleId) { toast.error('缺少款式信息'); return; }
+    const styleName = (this.data.styleInfo && this.data.styleInfo.styleName) || '';
+    wx.navigateTo({
+      url: `/pages/dashboard/process-template/index?styleId=${encodeURIComponent(styleId)}&styleNo=${encodeURIComponent(styleNo || '')}&styleName=${encodeURIComponent(styleName)}`,
+    }).catch(() => {});
+  },
+
   /** 加载生产工序扫码（父子工序，可操作） */
   async loadProductionScanStages() {
     const pid = (this.data.patternId || '').trim();
