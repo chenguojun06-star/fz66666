@@ -94,7 +94,7 @@ public class ScanExecutorSupport {
 
     private void pushProgressNotification(String orderId) {
         if (orderProgressWebSocketServer == null) return;
-        CompletableFuture.runAsync(() -> {
+        CompletableFuture.runAsync(UserContext.wrap(() -> {
             try {
                 ProductionOrder order = productionOrderService.getById(orderId);
                 if (order != null) {
@@ -103,7 +103,7 @@ public class ScanExecutorSupport {
             } catch (Exception e) {
                 log.warn("[WS] 进度推送失败(不阻断): orderId={}", orderId, e);
             }
-        });
+        }));
     }
 
     public void recomputeProgressAsync(String orderId) {

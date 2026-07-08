@@ -3,7 +3,18 @@ import type { ColumnsType } from 'antd/es/table';
 import type { ScanRecord } from '@/types/shared';
 import { formatProcessDisplayName } from '@/utils/processHelper';
 
-export function useProcessTrackingColumns(): ColumnsType<ScanRecord> {
+export interface ProcessTrackingColumnOptions {
+  orderNo?: string;
+  orderId?: string;
+  orderStatus?: string;
+  isAdmin?: boolean;
+  actioningRecordId?: string | null;
+  onManualComplete?: (record: ScanRecord) => void;
+  onUndo?: (record: ScanRecord) => void;
+}
+
+export function useProcessTrackingColumns(options: ProcessTrackingColumnOptions = {}): ColumnsType<ScanRecord> {
+  const { orderNo } = options;
   return [
     {
       title: '菲号',
@@ -13,7 +24,12 @@ export function useProcessTrackingColumns(): ColumnsType<ScanRecord> {
       render: (_: unknown, record: any) => {
         const qrCode = String(record.cuttingBundleQrCode || record.qrCode || '').trim();
         const bundleNo = String(record.bundleNo || '').trim();
-        const displayText = qrCode ? qrCode.split('|SIG-')[0].split('|SKU-')[0] : bundleNo;
+        // 优先使用完整二维码信息(含订单号/款号/颜色/尺码/数量/菲号)
+        let displayText = qrCode ? qrCode.split('|SIG-')[0].split('|SKU-')[0] : bundleNo;
+        // 如果二维码为空，且 bundleNo 是纯数字，则拼接订单号避免只显示简单序号
+        if (!qrCode && bundleNo && /^\d+$/.test(bundleNo) && orderNo) {
+          displayText = `${orderNo}-${bundleNo}`;
+        }
         return (
           <span style={{ fontSize: 13, fontWeight: 700, color: '#1f2937' }}>{displayText || bundleNo}</span>
         );

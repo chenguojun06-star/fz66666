@@ -7,6 +7,7 @@ import { isOrderFrozenByStatus } from '@/utils/api';
 import LiquidProgressBar from '@/components/common/LiquidProgressBar';
 import BudgetDaysEditor from '@/components/common/BudgetDaysEditor';
 import { getProcessesByNodeFromOrder } from '../../ProgressDetail/utils';
+import { isSecondaryProcessSubNode } from '../../ProgressDetail/utils/stageMapping';
 
 export const PROGRESS_CELL_BASE: React.CSSProperties = { padding: '4px', transition: 'background 0.2s' };
 export const COUNT_TEXT_STYLE: React.CSSProperties = { fontSize: '11px', color: 'var(--color-text-secondary)', marginBottom: '2px', textAlign: 'center' };
@@ -26,11 +27,20 @@ export function getNodeProcessList(record: ProductionOrder, nodeName: string): {
   const byParent = getProcessesByNodeFromOrder(record);
   if (nodeName === '二次工艺') {
     const exactChildren = byParent['二次工艺'] || [];
+    // 过滤：只保留明确属于二次工艺的工序，防止尾部工序被错误归入
+    const filtered = exactChildren.filter(c => isSecondaryProcessSubNode(c.name, c.processCode));
+    if (filtered.length > 0) {
+      return filtered.map(c => ({ name: c.name, unitPrice: c.unitPrice, processCode: c.processCode }));
+    }
+    // 如果没有找到二次工艺子工序，尝试从其他阶段查找
     const STD_STAGES = new Set(['采购', '裁剪', '车缝', '尾部', '入库', '二次工艺']);
     const orphanChildren = Object.entries(byParent)
       .filter(([stage]) => !STD_STAGES.has(stage))
-      .flatMap(([, nodes]) => nodes || []);
-    return [...exactChildren, ...orphanChildren].map(c => ({ name: c.name, unitPrice: c.unitPrice, processCode: c.processCode }));
+      .flatMap(([, nodes]) => nodes || [])
+      .filter(c => isSecondaryProcessSubNode(c.name, c.processCode));
+    if (orphanChildren.length > 0) {
+      return orphanChildren.map(c => ({ name: c.name, unitPrice: c.unitPrice, processCode: c.processCode }));
+    }
   }
   let children = byParent[nodeName];
   if (!children?.length) {
