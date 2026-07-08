@@ -40,6 +40,7 @@ export function useWebSocket(options: UseWebSocketOptions) {
     reconnectInterval = 5000,
     maxReconnectAttempts = 10,
     tenantId,
+    token: explicitToken,
   } = options;
 
   const [connected, setConnected] = useState(false);
@@ -52,7 +53,12 @@ export function useWebSocket(options: UseWebSocketOptions) {
     if (!enabled || !userId || tenantId === undefined) return;
 
     // 获取token并拼接到WebSocket URL（防止跨租户连接）
-    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+    // 项目实际存储 key 为 'authToken'（见 AuthContext.tsx / api/core.ts），不是 'token'
+    const token =
+      explicitToken ||
+      localStorage.getItem('authToken') ||
+      sessionStorage.getItem('authToken') ||
+      localStorage.getItem('token');
     if (!token) {
       console.warn('[WS] 缺失token，无法建立WebSocket连接');
       return;
@@ -117,7 +123,7 @@ export function useWebSocket(options: UseWebSocketOptions) {
     };
 
     wsRef.current = ws;
-  }, [enabled, userId, tenantId, reconnectInterval, maxReconnectAttempts]);
+  }, [enabled, userId, tenantId, reconnectInterval, maxReconnectAttempts, explicitToken]);
 
   useEffect(() => {
     if (enabled) {
