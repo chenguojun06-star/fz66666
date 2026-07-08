@@ -1,5 +1,5 @@
 <view class="container">
-  <!-- 样衣开发统计 + 智能提示标签（与 PC 端 PageStatCards hints 一致） -->
+  <!-- 统计条 -->
   <view class="stats-bar">
     <view class="stat-item stat-primary">
       <text class="stat-val">{{sampleCount}}</text>
@@ -36,7 +36,7 @@
     </view>
   </view>
 
-  <!-- 顶部操作栏：扫码入口 -->
+  <!-- 扫码入口 -->
   <view class="top-action-bar">
     <button class="action-btn action-btn-outline action-btn-full" hover-class="btn-outline-hover" bindtap="onTopScan">
       <text class="scan-icon">📷</text>
@@ -71,167 +71,45 @@
   <!-- 空状态 -->
   <empty-state wx:elif="{{!loading && displayList.length === 0}}" iconEmoji="👔" text="{{smartFilter ? '当前筛选条件下无样衣记录' : '暂无样衣开发记录'}}" hint="{{smartFilter ? '点击「清除筛选」查看全部' : '点击上方「扫码样衣」录入新的样衣任务'}}"></empty-state>
 
-  <!-- 任务列表 -->
+  <!-- 任务列表（精简卡片：封面+款号+款式名+客户+状态/交期+阶段进度条） -->
   <block wx:else>
-    <view class="task-card" wx:for="{{displayList}}" wx:key="id" data-id="{{item.id}}" data-item="{{item}}" bindtap="onCardTap" hover-class="task-card-hover">
-      <!-- 卡片头部：款号 + 状态 + 交期标签 -->
-      <view class="card-header-row">
-        <text class="style-no">{{item._styleNo || '-'}}</text>
-        <view class="tag-row">
-          <text class="status-tag tag tag-{{item._progressColor}}">{{item._progressNode}}</text>
-          <text wx:if="{{item._deliveryLabel && (item._deliveryTone === 'danger' || item._deliveryTone === 'warning' || item._deliveryTone === 'success')}}" class="status-tag tag tag-{{item._deliveryTone === 'danger' ? 'error' : (item._deliveryTone === 'warning' ? 'warning' : (item._deliveryTone === 'success' ? 'success' : 'processing'))}}">{{item._deliveryLabel}}</text>
-        </view>
-      </view>
-
-      <!-- 卡片主体：图片(左) + 规格信息(右) -->
-      <view class="card-body-row">
-        <!-- 左侧封面图：与生产管理一致 100rpx 方形 -->
+    <view class="task-card" wx:for="{{displayList}}" wx:key="id" data-item="{{item}}" bindtap="onGoDetail" hover-class="task-card-hover">
+      <!-- 第一行：封面图 + 主信息 -->
+      <view class="card-main-row">
         <view class="card-cover-wrap" data-src="{{item._cover}}" catchtap="onPreviewImage">
           <image wx:if="{{item._cover}}" src="{{item._cover}}" mode="aspectFill" class="cover-img" lazy-load="true"></image>
           <view wx:else class="cover-placeholder-box">
             <text class="cover-placeholder">👔</text>
           </view>
         </view>
-
-        <!-- 右侧规格信息 -->
-        <view class="spec-grid">
-          <!-- 基础信息行1 -->
-          <view class="spec-row">
-            <view class="spec-item" wx:if="{{item._customer}}">
-              <text class="spec-label">客户</text>
-              <text class="spec-value">{{item._customer}}</text>
-            </view>
-            <view class="spec-item" wx:if="{{item._category}}">
-              <text class="spec-label">品类</text>
-              <text class="spec-value">{{item._category}}</text>
+        <view class="card-info">
+          <view class="card-title-row">
+            <text class="style-name">{{item.styleName || item.name || '未命名款式'}}</text>
+            <view class="tag-row">
+              <text class="status-tag tag tag-{{item._progressColor}}">{{item._progressNode}}</text>
+              <text wx:if="{{item._deliveryLabel && (item._deliveryTone === 'danger' || item._deliveryTone === 'warning' || item._deliveryTone === 'success')}}" class="status-tag tag tag-{{item._deliveryTone === 'danger' ? 'error' : (item._deliveryTone === 'warning' ? 'warning' : 'success')}}">{{item._deliveryLabel}}</text>
             </view>
           </view>
-          <!-- 基础信息行2 -->
-          <view class="spec-row">
-            <view class="spec-item" wx:if="{{item._sourceType}}">
-              <text class="spec-label">来源</text>
-              <text class="spec-value">{{item._sourceType}}</text>
-            </view>
-            <view class="spec-item" wx:if="{{item._season}}">
-              <text class="spec-label">季节</text>
-              <text class="spec-value">{{item._season}}</text>
-            </view>
+          <text class="style-no">{{item._styleNo || '-'}}</text>
+          <view class="card-meta-row" wx:if="{{item._customer || item._category || item._season}}">
+            <text wx:if="{{item._customer}}" class="meta-text">{{item._customer}}</text>
+            <text wx:if="{{item._category}}" class="meta-text">· {{item._category}}</text>
+            <text wx:if="{{item._season}}" class="meta-text">· {{item._season}}</text>
           </view>
-          <!-- 分隔线 -->
-          <view class="spec-divider"></view>
-          <!-- 规格信息行1 -->
-          <view class="spec-row">
-            <view class="spec-item" wx:if="{{item._color}}">
-              <text class="spec-label">颜色</text>
-              <text class="spec-value">{{item._color}}</text>
-            </view>
-            <view class="spec-item" wx:if="{{item._size}}">
-              <text class="spec-label">码数</text>
-              <text class="spec-value">{{item._size}}</text>
-            </view>
-          </view>
-          <!-- 规格信息行2 -->
-          <view class="spec-row">
-            <view class="spec-item" wx:if="{{item._quantity}}">
-              <text class="spec-label">数量</text>
-              <text class="spec-value">{{item._quantity}}件</text>
-            </view>
-            <view class="spec-item" wx:if="{{item._deliveryTimeFull}}">
-              <text class="spec-label">交板</text>
-              <text class="spec-value">{{item._deliveryTimeFull}}</text>
-            </view>
-          </view>
-          <!-- 规格信息行3 -->
-          <view class="spec-row">
-            <view class="spec-item" wx:if="{{item._patternMaker}}">
-              <text class="spec-label">版师</text>
-              <text class="spec-value">{{item._patternMaker}}</text>
-            </view>
-            <view class="spec-item" wx:if="{{item._receiver && item._receiver !== item._patternMaker}}">
-              <text class="spec-label">领取</text>
-              <text class="spec-value">{{item._receiver}}</text>
-            </view>
-          </view>
-          <!-- 创建人 -->
-          <view class="spec-row" wx:if="{{item._creator}}">
-            <view class="spec-item">
-              <text class="spec-label">创建人</text>
-              <text class="spec-value">{{item._creator}}</text>
-            </view>
+          <view class="card-meta-row" wx:if="{{item._color || item._size || item._quantity}}">
+            <text wx:if="{{item._color}}" class="meta-text">{{item._color}}</text>
+            <text wx:if="{{item._size}}" class="meta-text">· {{item._size}}</text>
+            <text wx:if="{{item._quantity}}" class="meta-text">· {{item._quantity}}件</text>
           </view>
         </view>
       </view>
 
-      <!-- 折叠区域：点击展开 BOM / 纸样 / 单价 / 二次工艺 / 生产制单 / 生产工序 / 查看详情 -->
-      <view wx:if="{{expandedId === item.id}}" class="card-detail">
-        <view wx:if="{{detailLoading}}" class="detail-loading">加载详情中…</view>
-
-        <block wx:else>
-          <!-- 快捷数据块：BOM / 纸样 / 单价 / 二次工艺 / 生产制单（数量等详情加载后展示） -->
-          <view class="quick-data-row">
-            <view class="quick-data-item">
-              <text class="quick-data-num">{{item._bomCount || '-'}}</text>
-              <text class="quick-data-label">BOM物料</text>
-            </view>
-            <view class="quick-data-item">
-              <text class="quick-data-num">{{item._patternCount || '-'}}</text>
-              <text class="quick-data-label">纸样版本</text>
-            </view>
-            <view class="quick-data-item">
-              <text class="quick-data-num">{{item._processCount || '-'}}</text>
-              <text class="quick-data-label">工序单价</text>
-            </view>
-            <view class="quick-data-item">
-              <text class="quick-data-num">{{item._secondaryCount || '-'}}</text>
-              <text class="quick-data-label">二次工艺</text>
-            </view>
-            <view class="quick-data-item">
-              <text class="quick-data-num">{{item._productionCount || '-'}}</text>
-              <text class="quick-data-label">生产制单</text>
-            </view>
-          </view>
-
-          <!-- 生产工序（有数据才显示） -->
-          <view wx:if="{{processStages.length > 0}}" class="stage-section">
-            <text class="section-title">生产工序</text>
-            <view class="process-stages-list">
-              <view
-                wx:for="{{processStages}}"
-                wx:key="name"
-                wx:for-item="stage"
-                class="process-stage-item {{stage.completed ? 'done' : ''}} {{stage.canOperate ? 'can-operate' : ''}} {{stage.locked ? 'locked' : ''}}"
-                data-stage="{{stage}}"
-                data-pattern-id="{{item.id}}"
-                catchtap="onProcessOperate"
-              >
-                <view class="process-stage-dot {{stage.completed ? 'dot-done' : ''}} {{stage.canOperate ? 'dot-active' : ''}}">
-                  <text wx:if="{{stage.completed}}" class="dot-check">✓</text>
-                  <text wx:elif="{{stage.canOperate}}" class="dot-arrow">→</text>
-                  <text wx:elif="{{stage.locked}}" class="dot-lock">🔒</text>
-                  <text wx:else class="dot-empty">○</text>
-                </view>
-                <view class="process-stage-content">
-                  <text class="process-stage-name">{{stage.name}}</text>
-                  <text wx:if="{{stage.completed}}" class="process-stage-time">{{stage.time || '已完成'}}{{stage.operatorName ? ' · ' + stage.operatorName : ''}}</text>
-                  <text wx:elif="{{stage.canOperate}}" class="process-stage-action">点击操作</text>
-                  <text wx:elif="{{stage.locked}}" class="process-stage-lock">{{stage.lockReason}}</text>
-                  <text wx:else class="process-stage-pending">待执行</text>
-                </view>
-              </view>
-            </view>
-          </view>
-
-          <!-- 未配置工序提示 -->
-          <view wx:elif="{{processStages.length === 0}}" class="no-process-hint">
-            <text class="no-process-icon">📋</text>
-            <text class="no-process-text">未配置生产工序</text>
-          </view>
-
-          <!-- 查看详情按钮 -->
-          <view class="detail-action-row">
-            <button class="action-btn action-btn-outline" data-item="{{item}}" catchtap="onGoDetail">查看详情</button>
-          </view>
-        </block>
+      <!-- 第二行：阶段进度条（紧凑显示 5 个阶段点） -->
+      <view wx:if="{{item._stageSummary}}" class="stage-bar">
+        <view wx:for="{{item._stageSummary}}" wx:key="key" wx:for-item="st" class="stage-bar-item {{st.status}}">
+          <view class="sb-dot"></view>
+          <text class="sb-name">{{st.short}}</text>
+        </view>
       </view>
     </view>
 

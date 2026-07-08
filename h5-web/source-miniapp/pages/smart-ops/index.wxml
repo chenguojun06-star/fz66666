@@ -63,59 +63,6 @@
     </view>
   </view>
 
-  <!-- 预警订单：直接列出，不用点 -->
-  <view class="section" wx:if="{{delayedOrders.length > 0 || riskOrders.length > 0}}">
-    <view class="card warn-card">
-      <view class="card-header">
-        <view class="live-dot-sm warn-dot"></view>
-        <text class="card-title">预警订单</text>
-        <text class="card-badge warn-badge">{{delayedOrders.length + riskOrders.length}} 单</text>
-      </view>
-      <view class="card-body">
-        <block wx:if="{{delayedOrders.length > 0}}">
-          <view class="warn-section-label">已延期 · {{delayedOrders.length}} 单</view>
-          <view class="order-row warn-row" wx:for="{{delayedOrders}}" wx:for-item="item" wx:key="orderNo" data-index="{{index}}" bindtap="onDelayedOrderTap">
-            <view class="order-cover" wx:if="{{item.styleCoverUrl}}" catchtap="onPreviewCover" data-url="{{item.styleCoverUrl}}">
-              <image class="order-cover-img" src="{{item.styleCoverUrl}}" mode="aspectFill" lazy-load />
-            </view>
-            <view class="order-content">
-              <view class="order-top">
-                <text class="order-no">{{item.orderNo}}</text>
-                <text class="order-progress warn">{{item.progress}}%</text>
-              </view>
-              <view class="order-info">
-                <text class="order-style">{{item.styleNo}}</text>
-                <text class="order-factory">{{item.factoryName || '--'}}</text>
-                <text class="order-qty">{{item.orderQuantity}}件</text>
-                <text class="order-date warn-text">已延期</text>
-              </view>
-            </view>
-          </view>
-        </block>
-        <block wx:if="{{riskOrders.length > 0}}">
-          <view class="warn-section-label risk-label">高风险 · {{riskOrders.length}} 单</view>
-          <view class="order-row warn-row" wx:for="{{riskOrders}}" wx:for-item="item" wx:key="orderNo" data-index="{{index}}" bindtap="onRiskOrderTap">
-            <view class="order-cover" wx:if="{{item.styleCoverUrl}}" catchtap="onPreviewCover" data-url="{{item.styleCoverUrl}}">
-              <image class="order-cover-img" src="{{item.styleCoverUrl}}" mode="aspectFill" lazy-load />
-            </view>
-            <view class="order-content">
-              <view class="order-top">
-                <text class="order-no">{{item.orderNo}}</text>
-                <text class="order-progress risk">{{item.progress}}%</text>
-              </view>
-              <view class="order-info">
-                <text class="order-style">{{item.styleNo}}</text>
-                <text class="order-factory">{{item.factoryName || '--'}}</text>
-                <text class="order-qty">{{item.orderQuantity}}件</text>
-                <text class="order-date risk-text">交期{{item.plannedEndDate}}</text>
-              </view>
-            </view>
-          </view>
-        </block>
-      </view>
-    </view>
-  </view>
-
   <view class="section">
     <view class="card">
       <view class="card-header">

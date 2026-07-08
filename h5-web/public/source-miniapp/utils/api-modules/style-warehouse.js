@@ -61,40 +61,36 @@ const style = {
     return ok('/api/style/bom/generate-purchase', 'POST', payload || {});
   },
 
-  // 工序
+  // 工序（与 PC 端共用 /api/style/process 系列，PUT 的 id 在 body 中）
   listProcesses(params) {
     return ok('/api/style/process/list', 'GET', params || {});
   },
   createProcess(payload) {
     return ok('/api/style/process', 'POST', payload || {});
   },
-  updateProcess(processId, payload) {
-    const id = String(processId || '').trim();
-    return ok(`/api/style/process/${encodeURIComponent(id)}`, 'PUT', payload || {});
+  updateProcess(payload) {
+    // 修复 P0：后端 PUT /api/style/process 的 id 在 body 中，不在 URL 路径里
+    return ok('/api/style/process', 'PUT', payload || {});
   },
   deleteProcess(processId) {
     const id = String(processId || '').trim();
     return ok(`/api/style/process/${encodeURIComponent(id)}`, 'DELETE', {});
   },
 
-  // 工序模板
+  // 工序模板库（与 PC 端共用 /api/template-library 系列）
   listProcessTemplates(params) {
-    return ok('/api/style/process-template/list', 'GET', params || {});
+    return ok('/api/template-library/list', 'GET', params || {});
   },
   getProcessTemplate(templateId) {
     const id = String(templateId || '').trim();
-    return ok(`/api/style/process-template/${encodeURIComponent(id)}`, 'GET', {});
+    return ok(`/api/template-library/${encodeURIComponent(id)}`, 'GET', {});
   },
-  createProcessTemplate(payload) {
-    return ok('/api/style/process-template', 'POST', payload || {});
+  applyProcessTemplateToStyle(payload) {
+    // 套用模板到款号：body = { templateId, targetStyleId, mode: 'overwrite' | 'merge' }
+    return ok('/api/template-library/apply-to-style', 'POST', payload || {});
   },
-  updateProcessTemplate(templateId, payload) {
-    const id = String(templateId || '').trim();
-    return ok(`/api/style/process-template/${encodeURIComponent(id)}`, 'PUT', payload || {});
-  },
-  deleteProcessTemplate(templateId) {
-    const id = String(templateId || '').trim();
-    return ok(`/api/style/process-template/${encodeURIComponent(id)}`, 'DELETE', {});
+  createTemplateFromStyle(payload) {
+    return ok('/api/template-library/create-from-style', 'POST', payload || {});
   },
 
   // 二次工艺

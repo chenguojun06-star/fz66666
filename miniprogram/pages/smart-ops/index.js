@@ -90,16 +90,20 @@ function isDelayed(o) {
 }
 
 function isHighRisk(o) {
+  // 高风险：未延期但 7 天内交期且进度 < 50%（与后端 SQL 一致，排除已延期）
   const end = o.plannedEndDate || o.expectedShipDate;
   if (!end) return false;
   const d = safeDate(end);
   if (!d) return false;
+  if (d < new Date()) return false; // 已延期的由 isDelayed 处理，不重复
   const daysLeft = Math.ceil((d.getTime() - Date.now()) / 86400000);
   const prog = calcProgress(o);
   return daysLeft >= 0 && daysLeft <= 7 && prog < 50;
 }
 
-function isRisk(o) { return isDelayed(o) || isHighRisk(o); }
+// 风险订单 = 高风险（未延期但临近交期且进度落后）
+// 注意：isRisk 不再包含 isDelayed，与后端 SQL 一致，避免与 delayedOrders 重复计数
+function isRisk(o) { return isHighRisk(o); }
 
 Page({
   data: {
@@ -107,7 +111,6 @@ Page({
     menuData: { inProduction: 0, todayOrders: 0, todayInbound: 0, todayOutbound: 0, delayedOrders: 0, riskOrders: 0 },
     menuExtra: { inProductionQty: 0, todayOrdersQty: 0, todayInboundQty: 0, todayOutboundQty: 0, delayedOrdersQty: 0, riskOrdersQty: 0 },
     activeMenu: '', activeMenuTitle: '', activeOrders: [],
-    delayedOrders: [], riskOrders: [],
     stageBuckets: [], activeStage: '', activeStageLabel: '', activeStageOrders: [],
     factoryList: [], factoryOnline: 0, factoryStagnant: 0, factoryTotalOrders: 0, factoryTotalQty: 0,
     lastRefreshTime: '', loading: false,
@@ -172,26 +175,6 @@ Page({
   onOrderTap: function (e) {
     const idx = e.currentTarget.dataset.index;
     const orders = this.data.activeOrders;
-    if (!orders || !orders[idx]) return;
-    const order = orders[idx];
-    if (order.id) {
-      safeNavigate({ url: '/pages/dashboard/index?orderId=' + encodeURIComponent(order.id) }).catch(() => {});
-    }
-  },
-
-  onDelayedOrderTap: function (e) {
-    const idx = e.currentTarget.dataset.index;
-    const orders = this.data.delayedOrders;
-    if (!orders || !orders[idx]) return;
-    const order = orders[idx];
-    if (order.id) {
-      safeNavigate({ url: '/pages/dashboard/index?orderId=' + encodeURIComponent(order.id) }).catch(() => {});
-    }
-  },
-
-  onRiskOrderTap: function (e) {
-    const idx = e.currentTarget.dataset.index;
-    const orders = this.data.riskOrders;
     if (!orders || !orders[idx]) return;
     const order = orders[idx];
     if (order.id) {
@@ -381,8 +364,6 @@ Page({
 
       self.setData({
         menuData: menuData, menuExtra: menuExtra, totalWarn: totalWarn,
-        delayedOrders: delayed.slice(0, 5).map(toOrderRow),
-        riskOrders: risk.slice(0, 5).map(toOrderRow),
         stageBuckets: stageBuckets,
         factoryList: factoryList, factoryOnline: factoryOnline, factoryStagnant: factoryStagnant,
         factoryTotalOrders: factoryTotalOrders, factoryTotalQty: factoryTotalQty,

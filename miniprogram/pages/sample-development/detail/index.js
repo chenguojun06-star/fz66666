@@ -84,7 +84,8 @@ function resolveMainStatus(styleInfo) {
 }
 
 // 可手动领取/完成的子工序（其他只展示）
-const ACTIONABLE_STAGES = new Set(['pattern', 'bom', 'process', 'secondary', 'production']);
+// ES5 数组替代 new Set()（避免小程序 ES6→ES5 转换异常）
+const ACTIONABLE_STAGES = ['pattern', 'bom', 'process', 'secondary', 'production'];
 
 Page({
   data: {
@@ -92,9 +93,12 @@ Page({
     patternId: '',
     styleInfo: null,
     loading: true,
-    showDetails: false,
-    // 开发阶段快捷操作（与 PC 端 useStagePanel 一致）
-    stages: [],
+    // 各阶段控制栏数据（按 PC 端 StyleStageControlBar 模式）
+    bomStage: null,
+    patternStage: null,
+    processStage: null,
+    secondaryStage: null,
+    productionStage: null,
     // 样衣生产工作流快捷操作（与 PC 端 useSampleStage 一致）
     showSampleWorkflow: false,
     canReceiveSample: false,
@@ -113,6 +117,18 @@ Page({
     // 工序单价
     processList: [],
     processLoading: false,
+    // 工序内联编辑（参考大货 process-edit，无弹窗）
+    processStages6: [],  // 按阶段分组的工序列表
+    editingProcessId: '',   // 当前编辑中的工序 id，'' 表示无
+    processEditForm: {},   // 编辑中的工序表单
+    addingProcessStage: '', // 新增工序所属阶段 id，'' 表示未在新增
+    addingProcessForm: {}, // 新增工序表单
+    // 工序模板导入（底部按钮 + 半屏 sheet 预览）
+    processTemplateList: [],
+    processTemplateSheetVisible: false,
+    processTemplateLoading: false,
+    applyingTemplateId: '',
+    previewingTemplate: null, // 预览中的模板详情
     // 生产工序扫码（父子工序，可操作）
     processStages: [],
     processScanLoading: false,
@@ -139,8 +155,10 @@ Page({
   },
 
   onLoad(options) {
-    const styleId = options.styleId || '';
-    const patternId = options.id || options.patternId || '';
+    console.log('[sample-dev:detail] onLoad options=', options);
+    const styleId = (options.styleId || '').trim();
+    const patternId = (options.id || options.patternId || '').trim();
+    console.log('[sample-dev:detail] parsed styleId=' + styleId + ' patternId=' + patternId);
     if (!styleId && !patternId) {
       wx.showToast({ title: '缺少参数', icon: 'none' });
       return;
@@ -315,24 +333,18 @@ Page({
       { key: 'process', name: '工序单价' },
       { key: 'secondary', name: '二次工艺' },
       { key: 'production', name: '生产制单' },
-      { key: 'quotation', name: '报价单' },
-      { key: 'attachment', name: '附件文件' },
     ];
+    const stagesMap = {};
     const stages = stageConfig.map(s => {
-      // 用实际时间字段判断状态（比 xxxStage 字段更可靠）
       const completedTime = info[`${s.key}CompletedTime`] || '';
       const startTime = info[`${s.key}StartTime`] || '';
       let status;
-      if (completedTime) {
-        status = 'completed';
-      } else if (startTime) {
-        status = 'in_progress';
-      } else {
-        status = 'not_started';
-      }
-      const actionable = ACTIONABLE_STAGES.has(s.key);
+      if (completedTime) status = 'completed';
+      else if (startTime) status = 'in_progress';
+      else status = 'not_started';
+      const actionable = ACTIONABLE_STAGES.indexOf(s.key) !== -1;
       const canRollback = actionable && status === 'completed' && permission.isAdminOrSupervisor();
-      return {
+      const stage = {
         key: s.key,
         name: s.name,
         status,
@@ -345,8 +357,19 @@ Page({
         canComplete: actionable && status === 'in_progress',
         canRollback,
       };
+      stagesMap[s.key] = stage;
+      return stage;
     });
-    this.setData({ stages });
+    // 同时保留 stages 数组（用于阶段进度概览条）
+    // 并设置各阶段单独对象供 wxml 使用
+    this.setData({
+      stages,
+      bomStage: stagesMap.bom,
+      patternStage: stagesMap.pattern,
+      processStage: stagesMap.process,
+      secondaryStage: stagesMap.secondary,
+      productionStage: stagesMap.production,
+    });
   },
 
   /**
@@ -426,11 +449,6 @@ Page({
     if (status === 'completed') return '已完成';
     if (status === 'in_progress') return '进行中';
     return '未开始';
-  },
-
-  /** 切换折叠区域的展开/收起 */
-  onToggleCollapse() {
-    this.setData({ showDetails: !this.data.showDetails });
   },
 
   // === 数据加载方法 ===
@@ -657,28 +675,420 @@ Page({
   },
 
   async loadStyleProcesses() {
-    if (this.data.processList.length > 0) return;
     this.setData({ processLoading: true });
     try {
       const res = await style.listProcesses({ styleId: this.data.styleId });
       const list = res?.data?.records || res?.data || res?.records || [];
-      // 添加 processCodeText 字段用于显示（processCode 是工序编号，保留原值）
-      list.forEach(p => {
-        p.processCodeText = p.processCode || '';
+      // 工序编号自动规整（与 PC 端一致：按 sortOrder 排序，processCode = "01"~"99"）
+      list.sort((a, b) => (a.sortOrder || 999) - (b.sortOrder || 999));
+      list.forEach((p, idx) => {
+        p.processCode = p.processCode || String(idx + 1).padStart(2, '0');
+        p.processCodeText = p.processCode;
       });
+      // 按阶段分组（与大货 process-edit 一致的6阶段）
+      this._buildProcessStages6(list);
       this.setData({ processList: list });
     } catch (e) { console.error('工序加载失败', e); }
     this.setData({ processLoading: false });
   },
 
-  /** 跳转工序模板配置页 */
-  onGoProcessTemplate() {
-    const { styleId, styleNo } = this.data;
-    if (!styleId) { toast.error('缺少款式信息'); return; }
-    const styleName = (this.data.styleInfo && this.data.styleInfo.styleName) || '';
-    wx.navigateTo({
-      url: `/pages/dashboard/process-template/index?styleId=${encodeURIComponent(styleId)}&styleNo=${encodeURIComponent(styleNo || '')}&styleName=${encodeURIComponent(styleName)}`,
-    }).catch(() => {});
+  /** 构建6阶段分组的工序列表（与大货 process-edit 一致） */
+  _buildProcessStages6(processes) {
+    const STAGES = [
+      { id: 'procurement', name: '采购' },
+      { id: 'cutting', name: '裁剪' },
+      { id: 'secondaryProcess', name: '二次工艺' },
+      { id: 'carSewing', name: '车缝' },
+      { id: 'tailProcess', name: '尾部' },
+      { id: 'warehousing', name: '入库' },
+    ];
+    const map = {};
+    STAGES.forEach(s => { map[s.id] = { id: s.id, name: s.name, processes: [] }; });
+    processes.forEach(p => {
+      const rawStage = String(p.progressStage || '').trim();
+      // 阶段映射（兼容后端返回的中文/英文阶段名）
+      const stageId = this._mapStageToId(rawStage);
+      if (map[stageId]) {
+        map[stageId].processes.push(p);
+      } else {
+        // 未知阶段归到"车缝"
+        map.carSewing.processes.push(p);
+      }
+    });
+    const stages6 = STAGES.map(s => map[s.id]);
+    this.setData({ processStages6: stages6 });
+  },
+
+  /** 阶段名 → 阶段ID 映射（兼容多种格式） */
+  _mapStageToId(rawStage) {
+    const s = String(rawStage || '').trim();
+    if (!s) return 'carSewing';
+    const lower = s.toLowerCase();
+    if (/采购|procurement/.test(lower) || lower === 'purchase') return 'procurement';
+    if (/裁剪|cutting|cut/.test(lower)) return 'cutting';
+    if (/二次|secondary|secondaryprocess/.test(lower)) return 'secondaryProcess';
+    if (/尾部|tail|tailprocess/.test(lower)) return 'tailProcess';
+    if (/入库|warehouse|warehousing|storage/.test(lower)) return 'warehousing';
+    if (/车缝|sew|sewing|car/.test(lower)) return 'carSewing';
+    return 'carSewing';
+  },
+
+  /** 阶段ID → 阶段中文名 */
+  _stageIdToName(stageId) {
+    const map = {
+      procurement: '采购', cutting: '裁剪', secondaryProcess: '二次工艺',
+      carSewing: '车缝', tailProcess: '尾部', warehousing: '入库',
+    };
+    return map[stageId] || '车缝';
+  },
+
+  // ============ 工序内联编辑方法（参考大货 process-edit，无弹窗） ============
+
+  /** 点击"编辑"按钮：进入行内编辑态 */
+  onEditProcess(e) {
+    const id = e.currentTarget.dataset.id;
+    const proc = this.data.processList.find(p => p.id === id);
+    if (!proc) return;
+    this.setData({
+      editingProcessId: id,
+      processEditForm: {
+        id: proc.id,
+        processName: proc.processName || '',
+        processCode: proc.processCode || '',
+        progressStage: proc.progressStage || '',
+        machineType: proc.machineType || '',
+        difficulty: proc.difficulty || '中',
+        standardTime: proc.standardTime != null ? String(proc.standardTime) : '',
+        price: proc.price != null ? String(proc.price) : '',
+        description: proc.description || '',
+        sortOrder: proc.sortOrder || 0,
+        styleId: this.data.styleId,
+      },
+      addingProcessStage: '',
+      addingProcessForm: {},
+    });
+  },
+
+  /** 取消编辑 */
+  onCancelEditProcess() {
+    this.setData({ editingProcessId: '', processEditForm: {} });
+  },
+
+  /** 编辑表单输入 */
+  onProcessEditInput(e) {
+    const field = e.currentTarget.dataset.field;
+    const value = e.detail.value;
+    this.setData({ [`processEditForm.${field}`]: value });
+  },
+
+  /** 编辑表单 - 阶段picker */
+  onProcessEditStageChange(e) {
+    const idx = Number(e.detail.value);
+    const STAGES = ['procurement', 'cutting', 'secondaryProcess', 'carSewing', 'tailProcess', 'warehousing'];
+    const stageId = STAGES[idx] || 'carSewing';
+    this.setData({ 'processEditForm.progressStage': stageId });
+  },
+
+  /** 编辑表单 - 难度picker */
+  onProcessEditDifficultyChange(e) {
+    const idx = Number(e.detail.value);
+    const OPTIONS = ['易', '中', '难'];
+    this.setData({ 'processEditForm.difficulty': OPTIONS[idx] || '中' });
+  },
+
+  /** 保存编辑（即时保存：PUT /api/style/process，id 在 body） */
+  async onSaveProcessEdit() {
+    const form = this.data.processEditForm;
+    if (!form.processName || !form.processName.trim()) {
+      toast.error('请输入工序名称'); return;
+    }
+    if (!form.price || isNaN(Number(form.price))) {
+      toast.error('请输入有效单价'); return;
+    }
+    const payload = {
+      id: form.id,
+      styleId: Number(this.data.styleId),
+      processCode: form.processCode,
+      processName: form.processName.trim(),
+      progressStage: form.progressStage || 'carSewing',
+      machineType: form.machineType || '',
+      difficulty: form.difficulty || '中',
+      standardTime: form.standardTime ? Number(form.standardTime) : 0,
+      price: Number(form.price),
+      description: form.description || '',
+      sortOrder: form.sortOrder || 0,
+    };
+    wx.showLoading({ title: '保存中...' });
+    try {
+      await style.updateProcess(payload);
+      wx.hideLoading();
+      wx.showToast({ title: '已保存', icon: 'success' });
+      this.setData({ editingProcessId: '', processEditForm: {} });
+      await this.loadStyleProcesses();
+    } catch (e) {
+      wx.hideLoading();
+      const msg = (e && e.message) || '保存失败';
+      toast.error(msg);
+    }
+  },
+
+  /** 删除工序（即时删除：DELETE /api/style/process/{id}） */
+  onDeleteProcess(e) {
+    const id = e.currentTarget.dataset.id;
+    if (!id) return;
+    wx.showModal({
+      title: '删除工序',
+      content: '确认删除此工序？此操作不可撤销。',
+      confirmText: '删除',
+      confirmColor: '#ff3b30',
+      success: async (res) => {
+        if (!res.confirm) return;
+        wx.showLoading({ title: '删除中...' });
+        try {
+          await style.deleteProcess(id);
+          wx.hideLoading();
+          wx.showToast({ title: '已删除', icon: 'success' });
+          await this.loadStyleProcesses();
+        } catch (e) {
+          wx.hideLoading();
+          const msg = (e && e.message) || '删除失败';
+          toast.error(msg);
+        }
+      },
+    });
+  },
+
+  // ============ 新增工序（内联表单，无弹窗） ============
+
+  /** 点击"+"按钮：展开新增工序表单 */
+  onAddProcess(e) {
+    const stageId = e.currentTarget.dataset.stageId || 'carSewing';
+    this.setData({
+      addingProcessStage: stageId,
+      addingProcessForm: {
+        processName: '',
+        progressStage: stageId,
+        machineType: '',
+        difficulty: '中',
+        standardTime: '',
+        price: '',
+        description: '',
+      },
+      editingProcessId: '',
+      processEditForm: {},
+    });
+  },
+
+  /** 取消新增 */
+  onCancelAddProcess() {
+    this.setData({ addingProcessStage: '', addingProcessForm: {} });
+  },
+
+  /** 新增表单输入 */
+  onAddProcessInput(e) {
+    const field = e.currentTarget.dataset.field;
+    const value = e.detail.value;
+    this.setData({ [`addingProcessForm.${field}`]: value });
+  },
+
+  /** 新增表单 - 阶段picker */
+  onAddProcessStageChange(e) {
+    const idx = Number(e.detail.value);
+    const STAGES = ['procurement', 'cutting', 'secondaryProcess', 'carSewing', 'tailProcess', 'warehousing'];
+    const stageId = STAGES[idx] || 'carSewing';
+    this.setData({ 'addingProcessForm.progressStage': stageId });
+  },
+
+  /** 新增表单 - 难度picker */
+  onAddProcessDifficultyChange(e) {
+    const idx = Number(e.detail.value);
+    const OPTIONS = ['易', '中', '难'];
+    this.setData({ 'addingProcessForm.difficulty': OPTIONS[idx] || '中' });
+  },
+
+  /** 保存新增工序（即时保存：POST /api/style/process） */
+  async onSaveNewProcess() {
+    const form = this.data.addingProcessForm;
+    if (!form.processName || !form.processName.trim()) {
+      toast.error('请输入工序名称'); return;
+    }
+    if (!form.price || isNaN(Number(form.price))) {
+      toast.error('请输入有效单价'); return;
+    }
+    // processCode 自动生成：当前最大序号 + 1
+    const maxSort = this.data.processList.length
+      ? Math.max(...this.data.processList.map(p => Number(p.sortOrder) || 0))
+      : 0;
+    const nextSort = maxSort + 1;
+    const autoCode = String(nextSort).padStart(2, '0');
+    const payload = {
+      styleId: Number(this.data.styleId),
+      processCode: autoCode,
+      processName: form.processName.trim(),
+      progressStage: form.progressStage || 'carSewing',
+      machineType: form.machineType || '',
+      difficulty: form.difficulty || '中',
+      standardTime: form.standardTime ? Number(form.standardTime) : 0,
+      price: Number(form.price),
+      description: form.description || '',
+      sortOrder: nextSort,
+    };
+    wx.showLoading({ title: '保存中...' });
+    try {
+      await style.createProcess(payload);
+      wx.hideLoading();
+      wx.showToast({ title: '已添加', icon: 'success' });
+      this.setData({ addingProcessStage: '', addingProcessForm: {} });
+      await this.loadStyleProcesses();
+    } catch (e) {
+      wx.hideLoading();
+      const msg = (e && e.message) || '添加失败';
+      toast.error(msg);
+    }
+  },
+
+  /** 新增并继续添加下一道 */
+  async onSaveAndContinue() {
+    const form = this.data.addingProcessForm;
+    if (!form.processName || !form.processName.trim()) {
+      toast.error('请输入工序名称'); return;
+    }
+    if (!form.price || isNaN(Number(form.price))) {
+      toast.error('请输入有效单价'); return;
+    }
+    const maxSort = this.data.processList.length
+      ? Math.max(...this.data.processList.map(p => Number(p.sortOrder) || 0))
+      : 0;
+    const nextSort = maxSort + 1;
+    const autoCode = String(nextSort).padStart(2, '0');
+    const payload = {
+      styleId: Number(this.data.styleId),
+      processCode: autoCode,
+      processName: form.processName.trim(),
+      progressStage: form.progressStage || 'carSewing',
+      machineType: form.machineType || '',
+      difficulty: form.difficulty || '中',
+      standardTime: form.standardTime ? Number(form.standardTime) : 0,
+      price: Number(form.price),
+      description: form.description || '',
+      sortOrder: nextSort,
+    };
+    wx.showLoading({ title: '保存中...' });
+    try {
+      await style.createProcess(payload);
+      wx.hideLoading();
+      wx.showToast({ title: '已添加，继续下一道', icon: 'success' });
+      // 保留阶段，清空字段
+      const keepStage = form.progressStage;
+      await this.loadStyleProcesses();
+      this.setData({
+        addingProcessForm: {
+          processName: '',
+          progressStage: keepStage,
+          machineType: '',
+          difficulty: '中',
+          standardTime: '',
+          price: '',
+          description: '',
+        },
+      });
+    } catch (e) {
+      wx.hideLoading();
+      const msg = (e && e.message) || '添加失败';
+      toast.error(msg);
+    }
+  },
+
+  // ============ 模板导入（底部按钮 + 半屏 sheet 预览） ============
+
+  /** 打开"导入模板"半屏 sheet */
+  async onOpenTemplateSheet() {
+    this.setData({ processTemplateSheetVisible: true });
+    if (this.data.processTemplateList.length > 0) return;
+    this.setData({ processTemplateLoading: true });
+    try {
+      const res = await style.listProcessTemplates({ templateType: 'process', page: 1, pageSize: 200 });
+      const data = res?.data || res || {};
+      const list = data.records || (Array.isArray(data) ? data : []);
+      this.setData({ processTemplateList: list });
+    } catch (e) {
+      console.error('加载模板列表失败', e);
+      toast.error('模板列表加载失败');
+    }
+    this.setData({ processTemplateLoading: false });
+  },
+
+  /** 关闭"导入模板"半屏 sheet */
+  onCloseTemplateSheet() {
+    this.setData({
+      processTemplateSheetVisible: false,
+      previewingTemplate: null,
+    });
+  },
+
+  /** 预览模板（点击列表项展开内容） */
+  async onPreviewTemplate(e) {
+    const templateId = e.currentTarget.dataset.id;
+    if (!templateId) return;
+    const tpl = this.data.processTemplateList.find(t => t.id === templateId);
+    if (!tpl) return;
+    // 解析模板内容
+    let steps = [];
+    try {
+      const content = typeof tpl.templateContent === 'string'
+        ? JSON.parse(tpl.templateContent)
+        : tpl.templateContent;
+      steps = (content && content.steps) || [];
+    } catch (_e) { steps = []; }
+    this.setData({ previewingTemplate: { ...tpl, _steps: steps } });
+  },
+
+  /** 关闭模板预览 */
+  onClosePreviewTemplate() {
+    this.setData({ previewingTemplate: null });
+  },
+
+  /** 应用模板到当前款号（覆盖模式） */
+  onApplyTemplate(e) {
+    const templateId = e.currentTarget.dataset.id;
+    const styleId = this.data.styleId;
+    if (!templateId || !styleId) {
+      toast.error('缺少必要参数'); return;
+    }
+    const hasExisting = this.data.processList.length > 0;
+    wx.showModal({
+      title: '导入工艺模板',
+      content: hasExisting
+        ? '当前已存在工序数据，导入将覆盖现有工序（删除后重新生成），确认继续？'
+        : '将基于模板批量生成工序，确认继续？',
+      confirmText: '确认导入',
+      confirmColor: '#007aff',
+      success: async (res) => {
+        if (!res.confirm) return;
+        this.setData({ applyingTemplateId: templateId });
+        wx.showLoading({ title: '导入中...' });
+        try {
+          await style.applyProcessTemplateToStyle({
+            templateId,
+            targetStyleId: Number(styleId),
+            mode: 'overwrite',
+          });
+          wx.hideLoading();
+          wx.showToast({ title: '模板已导入', icon: 'success' });
+          this.setData({
+            processTemplateSheetVisible: false,
+            previewingTemplate: null,
+            applyingTemplateId: '',
+          });
+          await this.loadStyleProcesses();
+        } catch (e) {
+          wx.hideLoading();
+          this.setData({ applyingTemplateId: '' });
+          const msg = (e && e.message) || '导入失败';
+          toast.error(msg);
+        }
+      },
+    });
   },
 
   /** 加载生产工序扫码（父子工序，可操作） */
@@ -727,17 +1137,18 @@ Page({
     const qtyCandidates = [patternDetail && patternDetail.quantity, patternDetail && patternDetail.sampleQuantity, patternDetail && patternDetail.totalQuantity, patternDetail && patternDetail.orderQuantity];
     const baseQuantity = qtyCandidates.find(function (v) { return typeof v === 'number' && v > 0; }) || 0;
 
-    const completedSet = new Set();
-    (records || []).forEach(r => {
+    // ES5 数组替代 new Set()（避免小程序 ES6→ES5 转换异常）
+    const completedNames = [];
+    (records || []).forEach(function (r) {
       const name = (r.progressStage || r.processName || r.operationType || '').toString().trim();
-      if (name) completedSet.add(name);
+      if (name && completedNames.indexOf(name) === -1) completedNames.push(name);
     });
     const stages = [];
     let firstIncompleteIdx = -1;
     for (let i = 0; i < config.length; i++) {
       const c = config[i];
       const processName = String(c.processName || c.operationType || '').trim();
-      const isCompleted = completedSet.has(processName);
+      const isCompleted = completedNames.indexOf(processName) !== -1;
       if (!isCompleted && firstIncompleteIdx === -1) firstIncompleteIdx = i;
       const stageRecord = (records || []).find(r =>
         (r.progressStage || r.processName || r.operationType || '').toString().trim() === processName
@@ -869,7 +1280,9 @@ Page({
         .map(it => it.url || it.fileUrl);
       if (imageUrls.length > 0) {
         const existing = this.data.styleImages || [];
-        const merged = [...new Set([...existing, ...imageUrls])];
+        // ES5 数组去重（避免 new Set() 在小程序 ES6→ES5 转换时异常）
+        const merged = existing.slice();
+        imageUrls.forEach(function (u) { if (merged.indexOf(u) === -1) merged.push(u); });
         this.setData({ styleImages: merged });
       }
     } catch (e) { console.error('附件加载失败', e); }

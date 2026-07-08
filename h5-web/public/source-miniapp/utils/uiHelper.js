@@ -160,9 +160,10 @@ function prompt({
 let navigating = false;
 let navigateTimer = null;
 let navigateStartTime = 0;
-const NAVIGATE_TIMEOUT = 5000; // 导航超时时间(ms)：5秒后自动释放锁（SDK崩溃时锁无法正常释放）
-const NAVIGATE_MAX_LOCK = 8000; // 导航锁最大持有时间：8秒兜底释放（防止SDK完全冻结）
-const NAVIGATE_UNLOCK_DELAY = 300; // 导航完成后解锁延迟(ms)，减少不必要的等待
+let currentNavigateUrl = ''; // 当前正在导航的 url，用于判断是否是相同请求
+const NAVIGATE_TIMEOUT = 2500; // 导航超时时间(ms)：2.5秒后自动释放锁并主动 redirectTo 兜底
+const NAVIGATE_MAX_LOCK = 4000; // 导航锁最大持有时间：4秒兜底释放（防止SDK完全冻结）
+const NAVIGATE_UNLOCK_DELAY = 200; // 导航完成后解锁延迟(ms)，减少不必要的等待
 
 // tabBar 页面路径集合（与 app.json tabBar.list 保持一致）
 const TAB_BAR_PAGES = new Set([
@@ -182,15 +183,23 @@ const TAB_BAR_PAGES = new Set([
  * @returns {Promise} - 导航结果
  */
 function safeNavigate(options, method = 'navigateTo') {
+  const targetUrl = options.url || '';
+  const targetPath = targetUrl.split('?')[0];
+
+  // 防抖：相同 url 在导航锁内才忽略；不同 url 强制切换（覆盖旧锁）
   if (navigating) {
-    console.warn('[SafeNavigate] 导航进行中，忽略重复调用:', options.url);
-    return Promise.resolve();
+    if (currentNavigateUrl === targetUrl) {
+      console.warn('[SafeNavigate] 相同导航进行中，忽略:', targetUrl);
+      return Promise.resolve();
+    }
+    // 不同 url：旧导航可能已被 SDK 卡死，强制释放旧锁，开始新导航
+    console.warn('[SafeNavigate] 切换导航目标，强制释放旧锁:', currentNavigateUrl, '→', targetUrl);
+    navigating = false;
+    if (navigateTimer) { try { clearTimeout(navigateTimer); } catch (_e) {} navigateTimer = null; }
   }
 
-  const urlPath = (options.url || '').split('?')[0];
-
   // 自动检测 tabBar 页面：如果目标是 tabBar 页面且当前不是 switchTab，自动纠正
-  if (TAB_BAR_PAGES.has(urlPath) && method !== 'switchTab') {
+  if (TAB_BAR_PAGES.has(targetPath) && method !== 'switchTab') {
     method = 'switchTab';
   }
 
@@ -208,17 +217,19 @@ function safeNavigate(options, method = 'navigateTo') {
   }
 
   navigating = true;
+  currentNavigateUrl = targetUrl;
   navigateStartTime = Date.now();
 
   if (navigateTimer) {
     clearTimeout(navigateTimer);
     navigateTimer = null;
   }
-  // 兜底：即使所有定时器都失效，8秒后强制释放锁
+  // 兜底：即使所有定时器都失效，4秒后强制释放锁
   navigateTimer = setTimeout(() => {
-    if (navigating) {
-      console.warn('[SafeNavigate] 导航锁兜底释放(' + NAVIGATE_MAX_LOCK + 'ms)：', options.url);
+    if (navigating && currentNavigateUrl === targetUrl) {
+      console.warn('[SafeNavigate] 导航锁兜底释放(' + NAVIGATE_MAX_LOCK + 'ms)：', targetUrl);
       navigating = false;
+      currentNavigateUrl = '';
       navigateStartTime = 0;
     }
   }, NAVIGATE_MAX_LOCK);
@@ -239,6 +250,7 @@ function safeNavigate(options, method = 'navigateTo') {
     if (timeoutTimer) { try { clearTimeout(timeoutTimer); } catch (_e) {} timeoutTimer = null; }
     if (navigateTimer) { try { clearTimeout(navigateTimer); } catch (_e) {} navigateTimer = null; }
     try { navigating = false; } catch (_e) {}
+    currentNavigateUrl = '';
     navigateStartTime = 0;
   }
 
@@ -246,7 +258,7 @@ function safeNavigate(options, method = 'navigateTo') {
     if (finished) return;
     try {
       wx.redirectTo({
-        url: options.url,
+        url: targetUrl,
         success: () => { unlock(); },
         fail: () => {
           if (finished) return;
@@ -261,11 +273,13 @@ function safeNavigate(options, method = 'navigateTo') {
   }
 
   return new Promise((resolve) => {
-    // 超时保护：5秒后释放锁，让后续导航可以继续
+    // 超时保护：2.5秒后释放锁，并主动 redirectTo 兜底（防止SDK卡死让点击丢失）
     timeoutTimer = setTimeout(() => {
       if (finished) return;
-      console.warn('[SafeNavigate] 导航超时(' + NAVIGATE_TIMEOUT + 'ms)，页面仍在加载中:', options.url);
-      unlock();
+      console.warn('[SafeNavigate] 导航超时(' + NAVIGATE_TIMEOUT + 'ms)，主动 redirectTo 兜底:', targetUrl);
+      // 不立即 unlock，先尝试 redirectTo 兜底（兜底成功后 unlock）
+      safeFallback();
+      // 兜底也卡死的极端情况：再等 NAVIGATE_MAX_LOCK - NAVIGATE_TIMEOUT 由 navigateTimer 兜底
       resolve();
     }, NAVIGATE_TIMEOUT);
 

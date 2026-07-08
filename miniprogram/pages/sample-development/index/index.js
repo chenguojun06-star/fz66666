@@ -1,4 +1,4 @@
-const api = require('../../../utils/api');
+const production = require('../../../utils/api-modules/production');
 const { toast, safeNavigate } = require('../../../utils/uiHelper');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 const { eventBus, Events } = require('../../../utils/eventBus');
@@ -44,16 +44,6 @@ function getDeliveryMeta(record, allStagesCompleted) {
   return { tone: 'normal', label: `${diffDays}天后交板` };
 }
 
-// 样衣审核状态标签（PC 端同款）
-const REVIEW_STATUS_LABELS = {
-  'APPROVED': '已通过',
-  'REJECTED': '已驳回',
-  'PENDING': '待审核',
-  'IN_REVIEW': '审核中',
-  'DRAFT': '草稿',
-  'SUBMITTED': '已提交',
-};
-
 // 开发来源中文映射（后端返回英文枚举，前端映射为中文）
 const SOURCE_TYPE_LABELS = {
   'SELF_DEVELOPED': '自主开发',
@@ -77,43 +67,19 @@ const STATUS_TABS = [
   { key: 'WAREHOUSE_IN', label: '已入库' },
 ];
 
-const DEV_STAGES = [
-  { key: 'bom', name: 'BOM' },
-  { key: 'pattern', name: '纸样' },
-  { key: 'process', name: '单价' },
-  { key: 'secondary', name: '二次工艺' },
-  { key: 'production', name: '生产制单' },
+// 卡片底部阶段进度条配置（紧凑显示，每阶段一个 short 中文名）
+const STAGE_SUMMARY_CONFIG = [
+  { key: 'bom',        short: 'BOM' },
+  { key: 'pattern',    short: '纸样' },
+  { key: 'process',    short: '单价' },
+  { key: 'secondary',  short: '二次' },
+  { key: 'production', short: '制单' },
 ];
 
 function formatDate(v) {
   if (!v) return '';
   const s = String(v);
   if (s.length >= 10) return s.substring(0, 10);
-  return s;
-}
-
-function fmtDate(v) {
-  if (!v) return '';
-  const s = String(v);
-  try {
-    const parts = s.split(/[-T :]/);
-    if (parts.length >= 3) return parts[1] + '-' + parts[2];
-  } catch (_e) { /* ignore */ }
-  return s;
-}
-
-/** 格式化为 MM-DD HH:mm（完整时间，去掉年份） */
-function fmtDateTime(v) {
-  if (!v) return '';
-  const s = String(v);
-  try {
-    // 支持 YYYY-MM-DDTHH:mm:ss 或 YYYY-MM-DD HH:mm:ss
-    const parts = s.split(/[-T :]/);
-    if (parts.length >= 5) {
-      return parts[1] + '-' + parts[2] + ' ' + parts[3] + ':' + parts[4];
-    }
-    if (parts.length >= 3) return parts[1] + '-' + parts[2];
-  } catch (_e) { /* ignore */ }
   return s;
 }
 
@@ -138,14 +104,7 @@ Page({
     hasMore: false,
     loadingMore: false,
 
-    expandedId: '',
-    patternDetail: null,
-    detailLoading: false,
     roleHint: '',
-    // 工序配置与展示
-    processConfig: [],
-    processStages: [],
-    hasProcessSystem: false,
   },
 
   onLoad: function () {
@@ -222,7 +181,7 @@ Page({
 
     // 并行获取样衣开发统计（与 PC 端 activeStyles 逻辑一致）
     if (reset) {
-      api.production.getSampleStats().then(function (res) {
+      production.getSampleStats().then(function (res) {
         const d = (res && res.data) || res || {};
         that.setData({
           sampleCount: Number(d.activeCount) || 0,
@@ -233,7 +192,7 @@ Page({
       }).catch(function () { /* 静默失败，不阻塞列表 */ });
     }
 
-    api.production.listPatterns(params)
+    production.listPatterns(params)
       .then(function (res) {
         const data = res && res.data ? res.data : res;
         const records = (data && data.records) ? data.records : (Array.isArray(data) ? data : []);
@@ -248,8 +207,6 @@ Page({
         const list = records.map(function (item) {
           const styleInfo = item.styleInfo || {};
           // ========== 与 PC 端一致：progressNode 作为主状态 ==========
-          // 优先用 styleInfo.progressNode（款式维度），其次用 item.progressNode（样衣任务维度），
-          // 再兜底到 styleInfo.sampleStatus / item.status（英文枚举）做中文映射
           let progressNode = String(
             styleInfo.progressNode || item.progressNode || styleInfo.sampleStatus || item.status || '未开始'
           ).trim() || '未开始';
@@ -287,7 +244,6 @@ Page({
           item._deliveryLabel = deliveryMeta.label;
 
           // ========== 基础字段：颜色 / 码数 / 数量 ==========
-          /** 将任意值转为规范显示字符串（数组用/或,连接） */
           function normalizeVal(v, sep) {
             sep = sep || '/';
             if (!v) return '';
@@ -296,7 +252,6 @@ Page({
             if (s.startsWith('[')) {
               try { return normalizeVal(JSON.parse(s), sep); } catch (e) { return s; }
             }
-            // 逗号分隔的字符串也展开
             if (s.indexOf(',') !== -1) return s.split(',').map(function (x) { return x.trim(); }).filter(function (x) { return x; }).join(sep);
             return s;
           }
@@ -316,43 +271,29 @@ Page({
           const customerCandidates = [item.customer, styleInfo.customer, item.customerName, styleInfo.customerName, item.buyer, styleInfo.buyer];
           item._customer = customerCandidates.find(function (v) { return v != null && String(v).trim() !== ''; }) || '';
           item._category = item.category || styleInfo.category || '';
-          const rawSourceType = item.developmentSourceType || styleInfo.developmentSourceType || item.sourceType || styleInfo.sourceType || '';
-          item._sourceType = rawSourceType ? (SOURCE_TYPE_LABELS[rawSourceType] || '其他') : '';
           item._season = item.season || styleInfo.season || '';
-          item._patternMaker = item.patternMaker || styleInfo.patternDeveloper || item.receiver || '';
-          item._receiver = item.receiver || '';
-          item._creator = item.createBy || ''; // 创建人
 
-          // ========== 时间字段 ==========
-          item._deliveryDate = formatDate(item.deliveryTime || styleInfo.deliveryTime);
-          item._deliveryTimeFull = fmtDateTime(item.deliveryTime || styleInfo.deliveryTime);
-          item._createDate = formatDate(item.releaseTime || item.createTime);
-          item._completeDate = formatDate(item.completeTime);
-          item._deliveryDateShort = item._deliveryDate ? item._deliveryDate.substring(5) : '';
-          item._createDateShort = item._createDate ? item._createDate.substring(5) : '';
-
-          // ========== 开发阶段（只读，用于展示进度） ==========
-          item._expanded = false;
-          item._devStages = DEV_STAGES.map(function (s) {
-            return {
-              key: s.key,
-              name: s.name,
-              completed: !!(item[s.key + 'CompletedTime'] || (styleInfo && styleInfo[s.key + 'CompletedTime'])),
-            };
+          // ========== 阶段进度摘要（紧凑 5 点进度条） ==========
+          // 优先取 styleInfo 上的阶段时间字段，再兜底到 item 顶层
+          item._stageSummary = STAGE_SUMMARY_CONFIG.map(function (s) {
+            const completedTime = item[s.key + 'CompletedTime'] || (styleInfo && styleInfo[s.key + 'CompletedTime']) || '';
+            const startTime = item[s.key + 'StartTime'] || (styleInfo && styleInfo[s.key + 'StartTime']) || '';
+            let status;
+            if (completedTime) status = 'completed';
+            else if (startTime) status = 'in_progress';
+            else status = 'not_started';
+            return { key: s.key, short: s.short, status: status };
           });
-          item._devDoneCount = item._devStages.filter(function (s) { return s.completed; }).length;
-          item._devTotalCount = item._devStages.length;
-          // 进度百分比（0-100）
-          item._progressPct = item._devTotalCount ? Math.round((item._devDoneCount / item._devTotalCount) * 100) : 0;
 
           return item;
         });
 
         const merged = reset ? list : (that.data.list || []).concat(list);
-        const seen = new Set();
+        // ES5 数组去重（避免 new Set() 在小程序 ES6→ES5 转换时异常）
+        const seenIds = [];
         const newList = merged.filter(function (item) {
-          if (seen.has(item.id)) return false;
-          seen.add(item.id);
+          if (seenIds.indexOf(item.id) !== -1) return false;
+          seenIds.push(item.id);
           return true;
         });
         that.setData({
@@ -398,25 +339,25 @@ Page({
 
   onFilterTap: function (e) {
     const key = e.currentTarget.dataset.key;
-    this.setData({ activeFilter: key });
+    // 状态筛选与智能筛选互斥：选状态时清空智能筛选
+    this.setData({ activeFilter: key, smartFilter: '' });
     this.loadData(true);
+    this._refreshDisplayList();
   },
 
   /**
-   * 智能筛选标签点击（与 PC 端 smartFilter 逻辑一致）
-   * 点击「已延期」→ 只看 _deliveryTone==='danger' 的款号
-   * 点击「临近交期」→ 只看 _deliveryTone==='warning' 的款号
-   * 点击「已完成」→ 只看 _deliveryTone==='success' 的款号
-   * 再次点击同一标签 → 取消筛选
+   * 智能筛选标签点击（已延期/临近交期）—— 前端过滤，不请求后端
+   * 与状态筛选互斥：选智能筛选时清空状态筛选
    */
   onSmartFilterTap: function (e) {
-    const target = e.currentTarget.dataset.key; // 'overdue' | 'warning' | 'completed'
+    const target = e.currentTarget.dataset.key; // 'overdue' | 'warning'
     const current = this.data.smartFilter;
     if (current === target) {
-      // 再次点击同一标签 → 取消筛选
-      this.setData({ smartFilter: '' });
+      // 再次点击同一个 → 取消
+      this.setData({ smartFilter: '', activeFilter: '' });
     } else {
-      this.setData({ smartFilter: target });
+      // 智能筛选时清空状态筛选
+      this.setData({ smartFilter: target, activeFilter: target });
     }
     this._refreshDisplayList();
   },
@@ -428,11 +369,7 @@ Page({
   },
 
   /**
-   * 应用智能筛选后返回展示列表（与 PC 端 displayData 逻辑一致）
-   * smartFilter='overdue' → 只显示 _deliveryTone==='danger' 的记录
-   * smartFilter='warning' → 只显示 _deliveryTone==='warning' 的记录
-   * smartFilter='completed' → 只显示 _deliveryTone==='success' 的记录
-   * smartFilter='' → 显示全部
+   * 应用智能筛选后返回展示列表
    */
   _getDisplayList: function () {
     const sf = this.data.smartFilter;
@@ -450,200 +387,22 @@ Page({
     this.setData({ displayList: this._getDisplayList() });
   },
 
-  onCardTap: function (e) {
-    const id = e.currentTarget.dataset.id;
-    if (!id) return;
-    const expandedId = this.data.expandedId === id ? '' : id;
-    this.setData({ expandedId: expandedId });
-
-    if (expandedId) {
-      this.loadDetail(id);
-    } else {
-      this.setData({ patternDetail: null, processConfig: [], processStages: [], hasProcessSystem: false });
-    }
-  },
-
-  loadDetail: function (patternId) {
-    const that = this;
-    that.setData({ detailLoading: true });
-    const detailPromise = api.production.getPatternDetail(patternId);
-    const configPromise = api.production.getPatternProcessConfig(patternId);
-    const recordsPromise = api.production.getPatternScanRecords(patternId);
-    // 工序单价（款式维度）
-    const processPromise = api.production.listStyleProcesses(patternId)
-      .catch(function () { return []; });
-
-    Promise.all([detailPromise, configPromise, recordsPromise, processPromise])
-      .then(function (results) {
-        const detail = results[0] && results[0].data ? results[0].data : results[0];
-        if (detail.reviewStatus) {
-          detail._reviewStatusLabel = REVIEW_STATUS_LABELS[detail.reviewStatus] || detail.reviewStatus;
-        }
-        const config = Array.isArray(results[1]) ? results[1] : (results[1] && results[1].data ? (Array.isArray(results[1].data) ? results[1].data : []) : []);
-        const records = Array.isArray(results[2]) ? results[2] : (results[2] && results[2].data ? (Array.isArray(results[2].data) ? results[2].data : []) : []);
-        const processList = Array.isArray(results[3]) ? results[3] : (results[3] && results[3].data ? (Array.isArray(results[3].data) ? results[3].data : []) : []);
-
-        const stages = that._buildProcessStages(config, records, detail);
-
-        // 更新列表中对应项的数量
-        const list = that.data.list.map(function (item) {
-          if (String(item.id) === String(patternId)) {
-            return Object.assign({}, item, {
-              _bomCount: detail.bomItemCount || detail.bomCount || 0,
-              _patternCount: detail.patternRevisionCount || detail.revisionCount || 0,
-              _processCount: processList.length || 0,
-              _secondaryCount: detail.secondaryProcessCount || 0,
-              _productionCount: detail.productionSheetCount || 0,
-            });
-          }
-          return item;
-        });
-
-        that.setData({
-          list: list,
-          patternDetail: detail,
-          processConfig: config,
-          processStages: stages,
-          hasProcessSystem: config.length > 0,
-          detailLoading: false,
-        });
-      })
-      .catch(function (err) {
-        that.setData({ detailLoading: false });
-        const msg = (err && err.message) || '';
-        if (msg.includes('timeout')) toast.error('加载超时，请重试');
-        else toast.error('加载失败');
-      });
-  },
-
-  _buildProcessStages: function (config, records, patternDetail) {
-    if (!config || !Array.isArray(config) || config.length === 0) {
-      return [];
-    }
-
-    const completedSet = new Set();
-    if (records && Array.isArray(records)) {
-      records.forEach(function (r) {
-        const op = String(r.operationType || '').trim();
-        const pn = String(r.processName || '').trim();
-        const ps = String(r.progressStage || '').trim();
-        if (op) completedSet.add(op);
-        if (pn) completedSet.add(pn);
-        if (ps) completedSet.add(ps);
-        // 规范化 key
-        completedSet.add(op.toLowerCase());
-        completedSet.add(pn.toLowerCase());
-      });
-    }
-
-    const status = String(patternDetail.status || '').toUpperCase();
-
-    // 按 PC 端工序配置构建工序列表（不自动加"领取样衣"或"入库"）
-    const stages = [];
-
-    // 找到第一个尚未完成的工序索引（用于判断可操作性）
-    let firstIncompleteIdx = -1;
-
-    for (let i = 0; i < config.length; i++) {
-      const c = config[i];
-      const processName = String(c.processName || c.operationType || '').trim();
-      const progressStage = String(c.progressStage || processName).trim();
-      const scanType = String(c.scanType || 'production').trim();
-      const isCompleted = completedSet.has(processName) || completedSet.has(progressStage) || completedSet.has(progressStage.toLowerCase());
-
-      // 查找完成时间 + 操作人
-      let time = '';
-      let operatorName = '';
-      let operatorRole = '';
-      if (records && Array.isArray(records)) {
-        for (let j = 0; j < records.length; j++) {
-          const r = records[j];
-          const rOp = String(r.operationType || '').trim();
-          const rPn = String(r.processName || '').trim();
-          if ((rOp === processName || rPn === processName) && r.scanTime) {
-            time = fmtDate(r.scanTime);
-            operatorName = r.operatorName || '';
-            operatorRole = r.operatorRole || '';
-            break;
-          }
-        }
-      }
-
-      // 可操作判断：该工序尚未完成，且前面的工序都已完成
-      let canOperate = false;
-      let locked = false;
-      let lockReason = '';
-
-      if (!isCompleted) {
-        if (firstIncompleteIdx === -1) {
-          firstIncompleteIdx = i;
-        }
-        // 只有第一个未完成的工序可以操作
-        if (firstIncompleteIdx === i) {
-          // 检查前面的工序是否都完成了
-          let prevAllDone = true;
-          for (let j = 0; j < i; j++) {
-            const prev = config[j];
-            const prevName = String(prev.processName || prev.operationType || '').trim();
-            const prevDone = completedSet.has(prevName) || completedSet.has(String(prev.progressStage || prevName).trim());
-            if (!prevDone) {
-              prevAllDone = false;
-              break;
-            }
-          }
-          if (prevAllDone) {
-            canOperate = true;
-          } else {
-            locked = true;
-            lockReason = '需先完成前置工序';
-          }
-        } else {
-          locked = true;
-          lockReason = '需先完成前置工序';
-        }
-      }
-
-      // 从 patternDetail 提取通用基础字段（每个工序展示同样的基础信息）
-      const colorCandidates = [patternDetail.color, patternDetail.colorName, patternDetail.sampleColor, patternDetail.colour];
-      const baseColor = colorCandidates.find(function (v) { return v != null && v !== ''; }) || '';
-      let baseSize = patternDetail.size || patternDetail.sizeName || '';
-      if (!baseSize && Array.isArray(patternDetail.sizes) && patternDetail.sizes.length) baseSize = patternDetail.sizes.join('/');
-      const qtyCandidates = [patternDetail.quantity, patternDetail.sampleQuantity, patternDetail.totalQuantity, patternDetail.orderQuantity];
-      const baseQuantity = qtyCandidates.find(function (v) { return typeof v === 'number' && v > 0; }) || 0;
-
-      stages.push({
-        name: processName,
-        processName: processName,
-        progressStage: progressStage,
-        scanType: scanType,
-        completed: isCompleted,
-        time: time,
-        operatorName: operatorName,
-        operatorRole: operatorRole,
-        canOperate: canOperate,
-        locked: locked,
-        lockReason: lockReason,
-        isReceive: false,
-        color: baseColor,
-        size: baseSize,
-        quantity: baseQuantity,
-      });
-    }
-
-    // 注意：入库等操作完全依赖 PC 端工序配置，不再自动追加
-    return stages;
-  },
-
+  /** 整卡点击：进入详情页 */
   onGoDetail: function (e) {
-    const item = e.currentTarget.dataset.item;
-    if (!item) return;
-    const styleId = item.styleId || '';
-    const patternId = item.id || '';
-    if (!styleId && !patternId) return;
+    const ds = e.currentTarget.dataset || {};
+    const styleId = String(ds.styleId || '').trim();
+    const patternId = String(ds.id || '').trim();
+    console.log('[sample-dev:index] onGoDetail styleId=' + styleId + ' patternId=' + patternId, ds);
+    if (!styleId && !patternId) {
+      console.warn('[sample-dev:index] 缺少跳转参数，不导航');
+      return;
+    }
     const param = styleId ? 'styleId=' + encodeURIComponent(styleId) : 'id=' + encodeURIComponent(patternId);
     safeNavigate({
       url: '/pages/sample-development/detail/index?' + param,
-    }).catch(() => {});
+    }).catch(function (err) {
+      console.warn('[sample-dev:index] 导航失败:', err);
+    });
   },
 
   // 顶部扫码按钮：扫码识别样衣，进入扫码页
@@ -659,8 +418,6 @@ Page({
           return;
         }
         // 解析 patternId：支持 JSON / URL参数 / 纯id 三种格式
-        // 修复 P0：扫 JSON 二维码 {"type":"pattern","id":"xxx"} 时
-        // 旧逻辑把整个 JSON 当 patternId 传给扫码页，导致后端 400
         let patternId = scanCode;
         const trimmed = scanCode.trim();
         // 1) JSON 格式 {"type":"pattern","id":"xxx"}
@@ -686,34 +443,6 @@ Page({
         // 用户取消不提示
       }
     });
-  },
-
-  // 点击工序项：直接跳转到扫码页，让扫码页自己获取工序配置
-  onProcessOperate: function (e) {
-    const stage = e.currentTarget.dataset.stage;
-    const patternId = e.currentTarget.dataset.patternId || this.data.expandedId;
-    if (!stage || !patternId) return;
-
-    if (stage.locked) {
-      toast.error(stage.lockReason || '前置工序未完成');
-      return;
-    }
-    if (!stage.canOperate) {
-      if (stage.completed) {
-        toast.error('该工序已完成');
-      }
-      return;
-    }
-
-    // 跳转到扫码页，带上指定工序名，扫码页自动定位到该工序
-    const param = 'patternId=' + encodeURIComponent(patternId) +
-      '&manual=1' +
-      '&processName=' + encodeURIComponent(stage.processName || '') +
-      '&progressStage=' + encodeURIComponent(stage.progressStage || '') +
-      '&scanType=' + encodeURIComponent(stage.scanType || '');
-    safeNavigate({
-      url: '/pages/scan/pattern/index?' + param,
-    }).catch(function () {});
   },
 
   onPreviewImage: function (e) {

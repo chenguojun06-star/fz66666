@@ -1,32 +1,4 @@
 <view class="container">
-  <!-- 样衣开发统计 + 智能提示标签（与 PC 端 PageStatCards hints 一致） -->
-  <view class="stats-bar">
-    <view class="stat-item stat-primary">
-      <text class="stat-val">{{sampleCount}}</text>
-      <text class="stat-lbl">开发中</text>
-    </view>
-    <view class="stat-item stat-success {{smartFilter === 'completed' ? 'stat-active' : ''}} {{completedCount === 0 ? 'stat-zero' : ''}}"
-          data-key="completed" bindtap="onSmartFilterTap">
-      <text class="stat-val">{{completedCount}}</text>
-      <text class="stat-lbl">已完成</text>
-    </view>
-    <view class="stat-item stat-overdue {{smartFilter === 'overdue' ? 'stat-active' : ''}} {{overdueCount === 0 ? 'stat-zero' : ''}}"
-          data-key="overdue" bindtap="onSmartFilterTap">
-      <text class="stat-val">{{overdueCount}}</text>
-      <text class="stat-lbl">已延期</text>
-    </view>
-    <view class="stat-item stat-warning {{smartFilter === 'warning' ? 'stat-active' : ''}} {{warningCount === 0 ? 'stat-zero' : ''}}"
-          data-key="warning" bindtap="onSmartFilterTap">
-      <text class="stat-val">{{warningCount}}</text>
-      <text class="stat-lbl">临近交期</text>
-    </view>
-  </view>
-
-  <!-- 清除智能筛选 -->
-  <view wx:if="{{smartFilter}}" class="clear-filter-bar" bindtap="onClearSmartFilter">
-    <text class="clear-filter-text">清除筛选 ✕</text>
-  </view>
-
   <!-- 搜索栏 -->
   <view class="search-bar">
     <view class="search-input-wrap">
@@ -34,13 +6,8 @@
       <input class="search-input" placeholder="搜索款号/款式名" value="{{keyword}}" bindinput="onSearchInput" confirm-type="search" />
       <text wx:if="{{keyword}}" class="search-clear" data-clear="1" bindtap="onSearchInput">✕</text>
     </view>
-  </view>
-
-  <!-- 顶部操作栏：扫码入口 -->
-  <view class="top-action-bar">
-    <button class="action-btn action-btn-outline action-btn-full" hover-class="btn-outline-hover" bindtap="onTopScan">
+    <button class="scan-btn" hover-class="scan-btn-hover" bindtap="onTopScan">
       <text class="scan-icon">📷</text>
-      <text>扫码样衣</text>
     </button>
   </view>
 
@@ -50,18 +17,33 @@
     <text class="role-hint-text">{{roleHint}}</text>
   </view>
 
-  <!-- 状态筛选 Tab -->
-  <view class="filter-tabs">
-    <view
-      wx:for="{{statusTabs}}"
-      wx:key="key"
-      class="filter-tab {{activeFilter === item.key ? 'active' : ''}}"
-      bindtap="onFilterTap"
-      data-key="{{item.key}}"
-    >
-      <text>{{item.label}}</text>
+  <!-- 统一筛选条（状态 + 智能筛选合并一行） -->
+  <scroll-view class="filter-tabs" scroll-x="true" enhanced="true" show-scrollbar="{{false}}">
+    <view class="filter-tab {{activeFilter === '' && !smartFilter ? 'active' : ''}}" data-key="" bindtap="onFilterTap">
+      <text>全部</text>
+      <text class="filter-count">{{total}}</text>
     </view>
-  </view>
+    <view class="filter-tab {{activeFilter === 'overdue' ? 'active tab-overdue' : ''}}" data-key="overdue" bindtap="onSmartFilterTap">
+      <text>已延期</text>
+      <text wx:if="{{overdueCount > 0}}" class="filter-count filter-count-overdue">{{overdueCount}}</text>
+    </view>
+    <view class="filter-tab {{activeFilter === 'warning' ? 'active tab-warning' : ''}}" data-key="warning" bindtap="onSmartFilterTap">
+      <text>临近交期</text>
+      <text wx:if="{{warningCount > 0}}" class="filter-count filter-count-warning">{{warningCount}}</text>
+    </view>
+    <view class="filter-tab {{activeFilter === 'PENDING' ? 'active' : ''}}" data-key="PENDING" bindtap="onFilterTap">
+      <text>待领取</text>
+    </view>
+    <view class="filter-tab {{activeFilter === 'IN_PROGRESS' ? 'active' : ''}}" data-key="IN_PROGRESS" bindtap="onFilterTap">
+      <text>制作中</text>
+    </view>
+    <view class="filter-tab {{activeFilter === 'COMPLETED' ? 'active tab-success' : ''}}" data-key="COMPLETED" bindtap="onFilterTap">
+      <text>已完成</text>
+    </view>
+    <view class="filter-tab {{activeFilter === 'WAREHOUSE_IN' ? 'active tab-success' : ''}}" data-key="WAREHOUSE_IN" bindtap="onFilterTap">
+      <text>已入库</text>
+    </view>
+  </scroll-view>
 
   <!-- 加载中 -->
   <view wx:if="{{loading && displayList.length === 0}}" class="loading-state">
@@ -69,169 +51,47 @@
   </view>
 
   <!-- 空状态 -->
-  <empty-state wx:elif="{{!loading && displayList.length === 0}}" iconEmoji="👔" text="{{smartFilter ? '当前筛选条件下无样衣记录' : '暂无样衣开发记录'}}" hint="{{smartFilter ? '点击「清除筛选」查看全部' : '点击上方「扫码样衣」录入新的样衣任务'}}"></empty-state>
+  <empty-state wx:elif="{{!loading && displayList.length === 0}}" iconEmoji="👔" text="暂无样衣开发记录" hint="点击上方📷扫码录入新的样衣任务"></empty-state>
 
   <!-- 任务列表 -->
   <block wx:else>
-    <view class="task-card" wx:for="{{displayList}}" wx:key="id" data-id="{{item.id}}" data-item="{{item}}" bindtap="onCardTap" hover-class="task-card-hover">
-      <!-- 卡片头部：款号 + 状态 + 交期标签 -->
-      <view class="card-header-row">
-        <text class="style-no">{{item._styleNo || '-'}}</text>
-        <view class="tag-row">
-          <text class="status-tag tag tag-{{item._progressColor}}">{{item._progressNode}}</text>
-          <text wx:if="{{item._deliveryLabel && (item._deliveryTone === 'danger' || item._deliveryTone === 'warning' || item._deliveryTone === 'success')}}" class="status-tag tag tag-{{item._deliveryTone === 'danger' ? 'error' : (item._deliveryTone === 'warning' ? 'warning' : (item._deliveryTone === 'success' ? 'success' : 'processing'))}}">{{item._deliveryLabel}}</text>
-        </view>
-      </view>
-
-      <!-- 卡片主体：图片(左) + 规格信息(右) -->
-      <view class="card-body-row">
-        <!-- 左侧封面图：与生产管理一致 100rpx 方形 -->
+    <view class="task-card" wx:for="{{displayList}}" wx:key="id" data-style-id="{{item.styleId}}" data-id="{{item.id}}" bindtap="onGoDetail" hover-class="task-card-hover">
+      <!-- 第一行：封面图 + 主信息 -->
+      <view class="card-main-row">
         <view class="card-cover-wrap" data-src="{{item._cover}}" catchtap="onPreviewImage">
           <image wx:if="{{item._cover}}" src="{{item._cover}}" mode="aspectFill" class="cover-img" lazy-load="true"></image>
           <view wx:else class="cover-placeholder-box">
             <text class="cover-placeholder">👔</text>
           </view>
         </view>
-
-        <!-- 右侧规格信息 -->
-        <view class="spec-grid">
-          <!-- 基础信息行1 -->
-          <view class="spec-row">
-            <view class="spec-item" wx:if="{{item._customer}}">
-              <text class="spec-label">客户</text>
-              <text class="spec-value">{{item._customer}}</text>
-            </view>
-            <view class="spec-item" wx:if="{{item._category}}">
-              <text class="spec-label">品类</text>
-              <text class="spec-value">{{item._category}}</text>
+        <view class="card-info">
+          <view class="card-title-row">
+            <text class="style-no">{{item._styleNo || '-'}}</text>
+            <view class="tag-row">
+              <text class="status-tag tag tag-{{item._progressColor}}">{{item._progressNode}}</text>
+              <text wx:if="{{item._deliveryLabel && (item._deliveryTone === 'danger' || item._deliveryTone === 'warning' || item._deliveryTone === 'success')}}" class="status-tag tag tag-{{item._deliveryTone === 'danger' ? 'error' : (item._deliveryTone === 'warning' ? 'warning' : 'success')}}">{{item._deliveryLabel}}</text>
             </view>
           </view>
-          <!-- 基础信息行2 -->
-          <view class="spec-row">
-            <view class="spec-item" wx:if="{{item._sourceType}}">
-              <text class="spec-label">来源</text>
-              <text class="spec-value">{{item._sourceType}}</text>
-            </view>
-            <view class="spec-item" wx:if="{{item._season}}">
-              <text class="spec-label">季节</text>
-              <text class="spec-value">{{item._season}}</text>
-            </view>
+          <text wx:if="{{item.styleName || item.name}}" class="style-name">{{item.styleName || item.name}}</text>
+          <view class="card-meta-row" wx:if="{{item._customer || item._category || item._season}}">
+            <text wx:if="{{item._customer}}" class="meta-text">{{item._customer}}</text>
+            <text wx:if="{{item._category}}" class="meta-text">· {{item._category}}</text>
+            <text wx:if="{{item._season}}" class="meta-text">· {{item._season}}</text>
           </view>
-          <!-- 分隔线 -->
-          <view class="spec-divider"></view>
-          <!-- 规格信息行1 -->
-          <view class="spec-row">
-            <view class="spec-item" wx:if="{{item._color}}">
-              <text class="spec-label">颜色</text>
-              <text class="spec-value">{{item._color}}</text>
-            </view>
-            <view class="spec-item" wx:if="{{item._size}}">
-              <text class="spec-label">码数</text>
-              <text class="spec-value">{{item._size}}</text>
-            </view>
-          </view>
-          <!-- 规格信息行2 -->
-          <view class="spec-row">
-            <view class="spec-item" wx:if="{{item._quantity}}">
-              <text class="spec-label">数量</text>
-              <text class="spec-value">{{item._quantity}}件</text>
-            </view>
-            <view class="spec-item" wx:if="{{item._deliveryTimeFull}}">
-              <text class="spec-label">交板</text>
-              <text class="spec-value">{{item._deliveryTimeFull}}</text>
-            </view>
-          </view>
-          <!-- 规格信息行3 -->
-          <view class="spec-row">
-            <view class="spec-item" wx:if="{{item._patternMaker}}">
-              <text class="spec-label">版师</text>
-              <text class="spec-value">{{item._patternMaker}}</text>
-            </view>
-            <view class="spec-item" wx:if="{{item._receiver && item._receiver !== item._patternMaker}}">
-              <text class="spec-label">领取</text>
-              <text class="spec-value">{{item._receiver}}</text>
-            </view>
-          </view>
-          <!-- 创建人 -->
-          <view class="spec-row" wx:if="{{item._creator}}">
-            <view class="spec-item">
-              <text class="spec-label">创建人</text>
-              <text class="spec-value">{{item._creator}}</text>
-            </view>
+          <view class="card-meta-row" wx:if="{{item._color || item._size || item._quantity}}">
+            <text wx:if="{{item._color}}" class="meta-text">{{item._color}}</text>
+            <text wx:if="{{item._size}}" class="meta-text">· {{item._size}}</text>
+            <text wx:if="{{item._quantity}}" class="meta-text">· {{item._quantity}}件</text>
           </view>
         </view>
       </view>
 
-      <!-- 折叠区域：点击展开 BOM / 纸样 / 单价 / 二次工艺 / 生产制单 / 生产工序 / 查看详情 -->
-      <view wx:if="{{expandedId === item.id}}" class="card-detail">
-        <view wx:if="{{detailLoading}}" class="detail-loading">加载详情中…</view>
-
-        <block wx:else>
-          <!-- 快捷数据块：BOM / 纸样 / 单价 / 二次工艺 / 生产制单（数量等详情加载后展示） -->
-          <view class="quick-data-row">
-            <view class="quick-data-item">
-              <text class="quick-data-num">{{item._bomCount || '-'}}</text>
-              <text class="quick-data-label">BOM物料</text>
-            </view>
-            <view class="quick-data-item">
-              <text class="quick-data-num">{{item._patternCount || '-'}}</text>
-              <text class="quick-data-label">纸样版本</text>
-            </view>
-            <view class="quick-data-item">
-              <text class="quick-data-num">{{item._processCount || '-'}}</text>
-              <text class="quick-data-label">工序单价</text>
-            </view>
-            <view class="quick-data-item">
-              <text class="quick-data-num">{{item._secondaryCount || '-'}}</text>
-              <text class="quick-data-label">二次工艺</text>
-            </view>
-            <view class="quick-data-item">
-              <text class="quick-data-num">{{item._productionCount || '-'}}</text>
-              <text class="quick-data-label">生产制单</text>
-            </view>
-          </view>
-
-          <!-- 生产工序（有数据才显示） -->
-          <view wx:if="{{processStages.length > 0}}" class="stage-section">
-            <text class="section-title">生产工序</text>
-            <view class="process-stages-list">
-              <view
-                wx:for="{{processStages}}"
-                wx:key="name"
-                wx:for-item="stage"
-                class="process-stage-item {{stage.completed ? 'done' : ''}} {{stage.canOperate ? 'can-operate' : ''}} {{stage.locked ? 'locked' : ''}}"
-                data-stage="{{stage}}"
-                data-pattern-id="{{item.id}}"
-                catchtap="onProcessOperate"
-              >
-                <view class="process-stage-dot {{stage.completed ? 'dot-done' : ''}} {{stage.canOperate ? 'dot-active' : ''}}">
-                  <text wx:if="{{stage.completed}}" class="dot-check">✓</text>
-                  <text wx:elif="{{stage.canOperate}}" class="dot-arrow">→</text>
-                  <text wx:elif="{{stage.locked}}" class="dot-lock">🔒</text>
-                  <text wx:else class="dot-empty">○</text>
-                </view>
-                <view class="process-stage-content">
-                  <text class="process-stage-name">{{stage.name}}</text>
-                  <text wx:if="{{stage.completed}}" class="process-stage-time">{{stage.time || '已完成'}}{{stage.operatorName ? ' · ' + stage.operatorName : ''}}</text>
-                  <text wx:elif="{{stage.canOperate}}" class="process-stage-action">点击操作</text>
-                  <text wx:elif="{{stage.locked}}" class="process-stage-lock">{{stage.lockReason}}</text>
-                  <text wx:else class="process-stage-pending">待执行</text>
-                </view>
-              </view>
-            </view>
-          </view>
-
-          <!-- 未配置工序提示 -->
-          <view wx:elif="{{processStages.length === 0}}" class="no-process-hint">
-            <text class="no-process-icon">📋</text>
-            <text class="no-process-text">未配置生产工序</text>
-          </view>
-
-          <!-- 查看详情按钮 -->
-          <view class="detail-action-row">
-            <button class="action-btn action-btn-outline" data-item="{{item}}" catchtap="onGoDetail">查看详情</button>
-          </view>
-        </block>
+      <!-- 第二行：阶段进度条 -->
+      <view wx:if="{{item._stageSummary}}" class="stage-bar">
+        <view wx:for="{{item._stageSummary}}" wx:key="key" wx:for-item="st" class="stage-bar-item {{st.status}}">
+          <view class="sb-dot"></view>
+          <text class="sb-name">{{st.short}}</text>
+        </view>
       </view>
     </view>
 

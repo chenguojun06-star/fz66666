@@ -111,71 +111,7 @@
   padding: 0 0 12rpx;
 }
 
-/* 智能提示小标签（与订单卡片 tag 保持一致的紧凑样式） */
-.smart-hints {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 12rpx;
-  padding: 12rpx 0 8rpx;
-}
-.smart-hint {
-  display: inline-flex;
-  align-items: center;
-  gap: 6rpx;
-  padding: 6rpx 16rpx;
-  border-radius: var(--radius-lg);
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-medium);
-  border: 1rpx solid;
-  background: var(--color-bg-card);
-}
-.smart-hint-num {
-  font-weight: 700;
-}
-.smart-hint--danger {
-  background: var(--color-error-bg);
-  color: var(--color-error);
-  border-color: var(--color-error-border);
-}
-.smart-hint--danger .smart-hint-num {
-  color: var(--color-error);
-}
-.smart-hint--warning {
-  background: var(--color-warning-bg);
-  color: var(--color-warning);
-  border-color: var(--color-warning-border);
-}
-.smart-hint--warning .smart-hint-num {
-  color: var(--color-warning);
-}
-.smart-hint--active.smart-hint--danger {
-  background: var(--color-error);
-  color: #fff;
-  border-color: var(--color-error);
-}
-.smart-hint--active.smart-hint--danger .smart-hint-num,
-.smart-hint--active.smart-hint--danger .smart-hint-lbl {
-  color: #fff;
-}
-.smart-hint--active.smart-hint--warning {
-  background: var(--color-warning);
-  color: #fff;
-  border-color: var(--color-warning);
-}
-.smart-hint--active.smart-hint--warning .smart-hint-num,
-.smart-hint--active.smart-hint--warning .smart-hint-lbl {
-  color: #fff;
-}
-.smart-hint--zero {
-  opacity: 0.55;
-}
-.smart-hint-clear {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-tertiary);
-  padding: 6rpx 12rpx;
-  border-radius: var(--radius-lg);
-}
+/* 智能提示小标签已合并到状态过滤条（smart-hints 删除） */
 
 .filter-pill {
   display: inline-flex;
@@ -210,6 +146,11 @@
 .filter-pill--danger .filter-num { color: var(--color-danger); }
 .filter-pill--danger.filter-pill--on { background: var(--color-danger); }
 .filter-pill--danger.filter-pill--on .filter-num { color: #fff; }
+
+/* 临近交期 */
+.filter-pill--warning .filter-num { color: var(--color-warning); }
+.filter-pill--warning.filter-pill--on { background: var(--color-warning); }
+.filter-pill--warning.filter-pill--on .filter-num { color: #fff; }
 
 /* 已完成 */
 .filter-pill--done .filter-num { color: var(--color-success); }
