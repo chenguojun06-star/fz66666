@@ -666,7 +666,7 @@
   font-size: clamp(9px, 0.65vw, 11px);
 }
 
-.login-filing { margin-top: clamp(4px, 0.6vw, 10px); }
+.login-filing { margin-top: clamp(4px, 0.6vw, 10px); font-size: 11px; }
 
 .login-filing-row {
   display: flex;
