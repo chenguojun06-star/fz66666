@@ -2,6 +2,7 @@ const api = require('../../../utils/api');
 const { isAdminOrSupervisor } = require('../../../utils/permission');
 const { isTenantOwner, isFactoryOwner, isSuperAdmin } = require('../../../utils/storage');
 const { toast } = require('../../../utils/uiHelper');
+const { bindPageEvents, unbindPageEvents } = require('../../../utils/pageEventBinder');
 
 Page({
   data: {
@@ -25,6 +26,17 @@ Page({
     rejectReason: '',
     roleOptions: [],
     roleLoading: false,
+  },
+
+  onLoad() {
+    bindPageEvents(this, () => {
+      if (this.data.isPlatformAdmin) this.loadPendingUsers(true);
+      if (this.data.isTenantOwner || this.data.isFactoryOwner) this.loadTenantRegistrations();
+    });
+  },
+
+  onUnload() {
+    unbindPageEvents(this);
   },
 
   onShow() {

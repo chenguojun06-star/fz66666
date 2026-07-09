@@ -3,6 +3,7 @@ const { toast, safeNavigate } = require('../../../utils/uiHelper');
 const { normalizeScanType } = require('../handlers/helpers/ScanModeResolver');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 const { triggerDataRefresh } = require('../../../utils/eventBus');
+const { bindPageEvents, unbindPageEvents, Events } = require('../../../utils/pageEventBinder');
 
 function normalizePositiveInt(value, fallback) {
   fallback = (fallback === undefined) ? 1 : fallback;
@@ -226,9 +227,11 @@ Page({
     }
 
     this._backfillBundleDisplayMeta(raw, orderDetail);
+    bindPageEvents(this, () => {}, [Events.SCAN_SUCCESS]);
   },
 
   onUnload() {
+    unbindPageEvents(this);
     getApp().globalData.scanResultData = null;
   },
 

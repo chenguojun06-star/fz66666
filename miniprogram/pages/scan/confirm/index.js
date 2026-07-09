@@ -7,6 +7,7 @@ const { getUserInfo } = require('../../../utils/storage');
 const { triggerDataRefresh } = require('../../../utils/eventBus');
 const { sortSizeNames } = require('../../../utils/orderParser');
 const permission = require('../../../utils/permission');
+const { bindPageEvents, unbindPageEvents, Events } = require('../../../utils/pageEventBinder');
 
 Page({
   data: {
@@ -166,9 +167,11 @@ Page({
     if (raw.orderNo) {
       this._fetchAiTip(raw.orderNo, raw.processName || raw.progressStage || '');
     }
+    bindPageEvents(this, () => {}, [Events.SCAN_SUCCESS]);
   },
 
   onUnload() {
+    unbindPageEvents(this);
     getApp().globalData.confirmScanData = null;
   },
 

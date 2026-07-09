@@ -1,5 +1,6 @@
 const api = require('../../../utils/api');
 const { toast } = require('../../../utils/uiHelper');
+const { bindPageEvents, unbindPageEvents, Events } = require('../../../utils/pageEventBinder');
 
 const STAGE_MAP = [
   { id: 'procurement', name: '采购' },
@@ -57,6 +58,7 @@ Page({
       wx.showToast({ title: '缺少订单ID', icon: 'none' });
     }
     this._loadDictData();
+    bindPageEvents(this, () => {}, [Events.ORDER_PROGRESS_CHANGED]);
   },
 
   onShow: function () {
@@ -68,6 +70,7 @@ Page({
   },
 
   onUnload: function () {
+    unbindPageEvents(this);
     this._unbindKeyboardEvents();
   },
 

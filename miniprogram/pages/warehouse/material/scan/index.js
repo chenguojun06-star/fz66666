@@ -10,6 +10,7 @@
 const api = require('../../../../utils/api');
 const { eventBus } = require('../../../../utils/eventBus');
 const { toast } = require('../../../../utils/uiHelper');
+const { bindPageEvents, unbindPageEvents, Events } = require('../../../../utils/pageEventBinder');
 
 /**
  * 调用料卷扫码接口（封装，使用统一 api.js）
@@ -57,9 +58,12 @@ Page({
         } catch (_) { /* 静默忽略 */ }
       });
     }
+
+    bindPageEvents(this, () => {}, [Events.STOCK_CHANGED]);
   },
 
   onUnload() {
+    unbindPageEvents(this);
     if (this._unsubPrivacy) {
       this._unsubPrivacy();
       this._unsubPrivacy = null;

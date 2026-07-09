@@ -8,6 +8,7 @@ import SmallModal from '@/components/common/SmallModal';
 import StylePrintModal from '@/components/common/StylePrintModal';
 import PageStatCards from '@/components/common/PageStatCards';
 import { useDelayedStageBreakdown } from '@/modules/dashboard/components/DelayedStageBreakdown/useDelayedStageBreakdown';
+import { useSync } from '@/utils/syncManager';
 import api from '@/utils/api';
 import { StyleInfo } from '@/types/style';
 import { getStyleCardSizeText, getStyleCardColorText, getStyleCardQuantityText } from '@/utils/cardSizeQuantity';
@@ -178,13 +179,39 @@ const StyleInfoListPage: React.FC = () => {
       if (!document.hidden) refreshIfNeeded();
     };
 
+    // 监听订单进度变更事件，实时刷新款式列表（500ms 防抖）
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+    const handleProgressChange = () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        fetchList();
+        loadDevelopmentStats(statsRangeType);
+      }, 500);
+    };
+
     window.addEventListener('focus', handleFocus);
     document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('order:progress:changed', handleProgressChange);
+    window.addEventListener('data:changed', handleProgressChange);
     return () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
       window.removeEventListener('focus', handleFocus);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('order:progress:changed', handleProgressChange);
+      window.removeEventListener('data:changed', handleProgressChange);
     };
   }, [fetchList, loadDevelopmentStats, statsRangeType]);
+
+  // 90s 轮询兜底（页面可见时才轮询，避免后台浪费资源）
+  useSync(
+    'style-info-list-poll',
+    async () => {
+      await fetchList();
+      return null;
+    },
+    () => {},
+    { interval: 90000, pauseOnHidden: true }
+  );
 
   const stockStateLoadedRef = useRef('');
 

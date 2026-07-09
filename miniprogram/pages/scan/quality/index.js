@@ -6,6 +6,7 @@ const { toast } = require('../../../utils/uiHelper');
 const { getUserInfo } = require('../../../utils/storage');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 const { eventBus, triggerDataRefresh } = require('../../../utils/eventBus');
+const { bindPageEvents, unbindPageEvents, Events } = require('../../../utils/pageEventBinder');
 
 const HANDLE_METHODS = ['返修', '报废'];
 
@@ -78,9 +79,12 @@ Page({
     if (raw.orderId) {
       this._fetchAiSuggestion(raw.orderId);
     }
+
+    bindPageEvents(this, () => {}, [Events.SCAN_SUCCESS]);
   },
 
   onUnload() {
+    unbindPageEvents(this);
     if (this._unsubPrivacy) { this._unsubPrivacy(); this._unsubPrivacy = null; }
     getApp().globalData.qualityData = null;
   },

@@ -1,5 +1,6 @@
 const api = require('../../../utils/api');
 const { toast, safeNavigate } = require('../../../utils/uiHelper');
+const { bindPageEvents, unbindPageEvents } = require('../../../utils/pageEventBinder');
 
 const STAGES = [
   { id: 'procurement', name: '采购' },
@@ -54,6 +55,11 @@ Page({
       this.setData({ loading: false });
       toast.error('缺少款式ID');
     }
+    bindPageEvents(this, () => this._loadProcesses(this.data.styleId));
+  },
+
+  onUnload() {
+    unbindPageEvents(this);
   },
 
   _loadProcesses(styleId) {
