@@ -1,4 +1,5 @@
 const { getAuthedImageUrl } = require('../../utils/fileUrl');
+const { bindPageEvents, unbindPageEvents } = require('../../utils/pageEventBinder');
 
 const DEFECT_CATEGORY_MAP = {
   appearance_integrity: '外观完整性问题',
@@ -38,6 +39,12 @@ Page({
         console.error('[QualityDetail] parse data error:', e);
       }
     }
+    // 数据来自导航参数快照，无 API 可刷新；订阅事件以便未来扩展
+    bindPageEvents(this, () => {}, ['QUALITY_CHECKED', 'QUALITY_REPAIRED']);
+  },
+
+  onUnload: function () {
+    unbindPageEvents(this);
   },
 
   _processDetail: function (d) {

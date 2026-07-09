@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { XOutlined, KeyOutlined, MacCommandOutlined } from '@ant-design/icons';
+import { KeyOutlined, MacCommandOutlined } from '@ant-design/icons';
 import { Modal } from 'antd';
 import './KeyboardShortcuts.css';
 

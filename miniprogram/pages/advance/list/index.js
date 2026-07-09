@@ -1,6 +1,7 @@
 const api = require('../../../utils/api');
 const { toast, safeNavigate } = require('../../../utils/uiHelper');
 const { isAdminOrSupervisor, hasFeaturePermission } = require('../../../utils/permission');
+const { bindPageEvents, unbindPageEvents } = require('../../../utils/pageEventBinder');
 
 const STATUS_MAP = {
   pending: { text: '待审批', cls: 'tag-orange' },
@@ -53,6 +54,11 @@ Page({
 
   onLoad: function () {
     this.setData({ canApprove: isAdminOrSupervisor() });
+    bindPageEvents(this, () => this._resetAndLoad());
+  },
+
+  onUnload: function () {
+    unbindPageEvents(this);
   },
 
   onShow: function () {

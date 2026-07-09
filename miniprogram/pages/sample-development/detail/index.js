@@ -4,6 +4,7 @@ const { fieldConfig } = require('../../../utils/api-modules/field-config');
 const { toast } = require('../../../utils/uiHelper');
 const permission = require('../../../utils/permission');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
+const { bindPageEvents, unbindPageEvents } = require('../../../utils/pageEventBinder');
 
 /* ========== 纸样状态 / 开发来源 中文化 ========== */
 var PATTERN_STATUS_LABELS = { PENDING: '未开始', IN_PROGRESS: '进行中', COMPLETED: '已完成', RETURNED: '已退回', LOCKED: '已锁定', UNLOCKED: '未锁定', NOT_STARTED: '未开始' };
@@ -172,6 +173,11 @@ Page({
     } else {
       this.loadStyleDetail();
     }
+    bindPageEvents(this, () => this.loadStyleDetail());
+  },
+
+  onUnload() {
+    unbindPageEvents(this);
   },
 
   onPullDownRefresh() {

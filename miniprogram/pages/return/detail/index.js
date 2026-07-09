@@ -1,5 +1,6 @@
 const api = require('../../../utils/api');
 const { toast } = require('../../../utils/uiHelper');
+const { bindPageEvents, unbindPageEvents } = require('../../../utils/pageEventBinder');
 
 Page({
   data: {
@@ -23,6 +24,11 @@ Page({
     const type = options.type === 'sales' ? 'sales' : 'purchase';
     this.setData({ id, type, partyLabel: type === 'purchase' ? '供应商' : '客户' });
     this.loadDetail();
+    bindPageEvents(this, () => this.loadDetail());
+  },
+
+  onUnload() {
+    unbindPageEvents(this);
   },
 
   async loadDetail() {

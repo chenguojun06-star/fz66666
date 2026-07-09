@@ -32,6 +32,7 @@ import type { PickingRow } from './hooks/useMaterialPickupData';
 import MaterialOutboundPrintModal from './components/MaterialOutboundPrintModal';
 import StockPickModal from './components/StockPickModal';
 import MaterialInventoryModals from './MaterialInventoryModals';
+import { useSync } from '@/utils/syncManager';
 
 const { Option } = Select;
 
@@ -65,6 +66,14 @@ const _MaterialInventory: React.FC = () => {
     handleOutbound,
     handlePrintOutbound,
   } = inventoryData;
+
+  // 30秒轮询自动刷新物料库存
+  useSync(
+    'warehouse-material-inventory-poll',
+    async () => { await fetchData(); },
+    () => {},
+    { interval: 30000, pauseOnHidden: true }
+  );
 
   const canSeePrice = canViewPrice(user);
 

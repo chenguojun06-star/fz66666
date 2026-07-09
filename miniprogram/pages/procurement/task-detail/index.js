@@ -2,6 +2,7 @@ const api = require('../../../utils/api');
 const { getUserInfo } = require('../../../utils/storage');
 const { toast } = require('../../../utils/uiHelper');
 const { triggerDataRefresh } = require('../../../utils/eventBus');
+const { bindPageEvents, unbindPageEvents } = require('../../../utils/pageEventBinder');
 const permission = require('../../../utils/permission');
 
 const MATERIAL_TYPE_MAP = {
@@ -45,6 +46,11 @@ Page({
     } else if (this.orderNo) {
       this._loadDetail();
     }
+    bindPageEvents(this, () => this._loadDetail(), ['TASK_RECEIVED', 'TASK_RETURNED']);
+  },
+
+  onUnload() {
+    unbindPageEvents(this);
   },
 
   onShow() {

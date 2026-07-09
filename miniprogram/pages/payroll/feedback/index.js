@@ -1,5 +1,6 @@
 const api = require('../../../utils/api');
 const { toast } = require('../../../utils/uiHelper');
+const { bindPageEvents, unbindPageEvents } = require('../../../utils/pageEventBinder');
 
 Page({
   data: {
@@ -15,6 +16,11 @@ Page({
 
   onLoad() {
     this.loadSettlements();
+    bindPageEvents(this, () => this.loadSettlements());
+  },
+
+  onUnload() {
+    unbindPageEvents(this);
   },
 
   onPullDownRefresh() {

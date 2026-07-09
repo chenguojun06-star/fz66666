@@ -8,6 +8,7 @@ import api from '@/utils/api';
 import type { PendingPicking as PickingRecord } from '@/types/warehouse';
 import type { MaterialOutboundPrintPayload } from '../components/MaterialOutboundPrintModal';
 import { message } from '@/utils/antdStatic';
+import { useSync } from '@/utils/syncManager';
 
 export interface PickingItem {
   id: string;
@@ -134,6 +135,14 @@ export function useMaterialPickupData() {
     void fetchData({ silent: true });
   }, [fetchData]);
 
+  // 30秒轮询自动刷新领料记录
+  useSync(
+    'warehouse-material-pickup-poll',
+    async () => { await fetchData({ silent: true }); },
+    () => {},
+    { interval: 30000, pauseOnHidden: true }
+  );
+
   useEffect(() => {
     api.get('/dashboard/menu-badge-counts')
       .then((res: any) => {
@@ -182,6 +191,11 @@ export function useMaterialPickupData() {
     try {
       await materialInventoryApi.confirmOutbound(record.id);
       message.success('出库确认成功！库存已扣减。');
+      try {
+        window.dispatchEvent(new Event('data:changed'));
+      } catch (_e) {
+        // 事件派发失败不影响业务
+      }
       setPrintPayload(buildPrintPayload({ ...record, status: 'completed' }));
       setPrintVisible(true);
       void fetchData();

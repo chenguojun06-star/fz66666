@@ -343,6 +343,12 @@ export const useProductWarehousing = () => {
       await Promise.all(workers);
 
       message.success('入库完成');
+      try {
+        window.dispatchEvent(new Event('warehouse:in'));
+        window.dispatchEvent(new Event('data:changed'));
+      } catch (_e) {
+        // 事件派发失败不影响业务
+      }
       closeWarehousingModal();
       fetchWarehousingList();
     } catch (e: unknown) {

@@ -1,5 +1,6 @@
 const api = require('../../../utils/api');
 const { toast } = require('../../../utils/uiHelper');
+const { bindPageEvents, unbindPageEvents } = require('../../../utils/pageEventBinder');
 
 Page({
   data: {
@@ -35,6 +36,11 @@ Page({
     const app = getApp();
     if (app && typeof app.requireAuth === 'function' && !app.requireAuth()) return;
     this.loadData();
+    bindPageEvents(this, () => this.loadData());
+  },
+
+  onUnload() {
+    unbindPageEvents(this);
   },
 
   onShow() {

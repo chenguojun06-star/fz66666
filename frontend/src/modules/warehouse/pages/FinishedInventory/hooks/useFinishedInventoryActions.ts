@@ -97,6 +97,11 @@ export const useFinishedInventoryActions = (rawDataSource: FinishedInventory[], 
         ...(outboundShippingAddress ? { shippingAddress: outboundShippingAddress } : {}),
       });
       message.success(`出库成功，共 ${outboundItems.length} 个SKU已出库`);
+      try {
+        window.dispatchEvent(new Event('data:changed'));
+      } catch (_e) {
+        // 事件派发失败不影响业务
+      }
       outboundModal.close();
       setOutboundProductionOrderNo(''); setOutboundTrackingNo(''); setOutboundExpressCompany('');
       setOutboundCustomerName(''); setOutboundCustomerPhone(''); setOutboundShippingAddress('');

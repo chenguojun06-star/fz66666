@@ -59,9 +59,12 @@ export const useOpenScan = ({
     setNodeWorkflowLocked(Number((effective as any)?.progressWorkflowLocked) === 1);
     setNodeWorkflowDirty(false);
     await ensureNodesFromTemplateIfNeeded(effective);
-    await fetchScanHistory(effective);
-    await fetchCuttingBundles(effective);
-    const procs = await fetchPricingProcesses(effective);
+    // 3个独立请求并行化（原串行~600ms，并行后~200ms）
+    const [, , procs] = await Promise.all([
+      fetchScanHistory(effective),
+      fetchCuttingBundles(effective),
+      fetchPricingProcesses(effective),
+    ]);
     setScanBundlesExpanded(false);
     setBundleSelectedQr('');
     setScanOpen(true);

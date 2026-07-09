@@ -32,7 +32,7 @@ interface StreamConfig {
 }
 
 export function useAiChatStream(config: StreamConfig) {
-  const { setMessages, setIsTyping, location, advisorSessionId, isSuperAdmin, speak, onLiveStatusChange } = config;
+  const { location, advisorSessionId, isSuperAdmin, speak } = config;
 
   const streamAbortRef = useRef<AbortController | null>(null);
   const subRequestAbortRef = useRef<AbortController | null>(null);
@@ -431,7 +431,7 @@ export function useAiChatStream(config: StreamConfig) {
       if (inactivityTimer) { clearTimeout(inactivityTimer); inactivityTimer = undefined; }
       finishTyping();
     }
-  }, [setMessages, setIsTyping, location, advisorSessionId, isSuperAdmin, speak, onLiveStatusChange]);
+  }, [location, advisorSessionId, isSuperAdmin, speak, safeSetIsTyping, safeSetMessages, safeUpdateLiveStatus, scheduleTimer]);
 
   return { startStream, abort, streamAbortRef };
 }

@@ -1,6 +1,7 @@
 const api = require('../../../utils/api');
 const { toast } = require('../../../utils/uiHelper');
 const { isAdminOrSupervisor, hasFeaturePermission } = require('../../../utils/permission');
+const { bindPageEvents, unbindPageEvents } = require('../../../utils/pageEventBinder');
 
 /* ========== 收款人类型 中文化 ========== */
 var PAYEE_TYPE_LABELS = { WORKER: '员工', TEAM: '团队', FACTORY: '工厂', SUPPLIER: '供应商' };
@@ -66,6 +67,11 @@ Page({
 
   onLoad: function () {
     this.setData({ canPay: isAdminOrSupervisor() });
+    bindPageEvents(this, () => this._resetAndLoad());
+  },
+
+  onUnload: function () {
+    unbindPageEvents(this);
   },
 
   onShow: function () {

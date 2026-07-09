@@ -18,6 +18,7 @@ import StandardToolbar from '@/components/common/StandardToolbar';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { useFinishedInventoryData } from './hooks/useFinishedInventoryData';
 import { useFinishedInventoryActions } from './hooks/useFinishedInventoryActions';
+import { useSync } from '@/utils/syncManager';
 
 const _FinishedInventory: React.FC = () => {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -30,6 +31,14 @@ const _FinishedInventory: React.FC = () => {
 
   const { rawDataSource, dataSource, pagedDataSource, totalRecords, loading, smartError, showSmartErrorNotice, searchText, setSearchText, statusValue, setStatusValue, selectedFactoryType, setSelectedFactoryType, factoryTypeOptions, pagination, loadData } = useFinishedInventoryData();
   const { outboundModal, inboundHistoryModal, skuDetails, inboundHistory, outstockTotal, outboundType, setOutboundType, outboundReason, setOutboundReason, outboundProductionOrderNo, setOutboundProductionOrderNo, outboundTrackingNo, setOutboundTrackingNo, outboundExpressCompany, setOutboundExpressCompany, outboundCustomerName, setOutboundCustomerName, outboundCustomerPhone, setOutboundCustomerPhone, outboundShippingAddress, setOutboundShippingAddress, outboundSubmitting, handleOutbound, handleSKUQtyChange, handleSKUSalesPriceChange, handleSKUPriceReasonChange, handleOutboundConfirm, handleViewInboundHistory } = useFinishedInventoryActions(rawDataSource, loadData);
+
+  // 30秒轮询自动刷新成品库存
+  useSync(
+    'warehouse-finished-inventory-poll',
+    async () => { await loadData(); },
+    () => {},
+    { interval: 30000, pauseOnHidden: true }
+  );
 
   const columns = getMainColumns({ handleOutbound, handleViewInboundHistory });
   const skuColumns = getSkuColumns({ handleSKUQtyChange, handleSKUSalesPriceChange, handleSKUPriceReasonChange });

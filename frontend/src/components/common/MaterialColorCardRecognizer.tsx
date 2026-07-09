@@ -1,11 +1,11 @@
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
-  Button, Modal, Upload, Image, Tag, Input, Alert, Space, Tooltip, Progress, message as antdMessage,
+  Button, Modal, Upload, Image, Tag, Input, Alert, Space, Progress, message as antdMessage,
 } from 'antd';
 import {
   CameraOutlined, UploadOutlined, ScanOutlined, EditOutlined,
 } from '@ant-design/icons';
-import type { UploadFile, UploadProps } from 'antd/es/upload/interface';
+import type { UploadProps } from 'antd/es/upload/interface';
 import api from '@/utils/api';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import type { FormInstance } from 'antd';
@@ -59,7 +59,6 @@ export const MaterialColorCardRecognizer: React.FC<Props> = ({
   const [recognizing, setRecognizing] = useState(false);
   const [result, setResult] = useState<MaterialColorCardRecognitionResult | null>(null);
   const [editValues, setEditValues] = useState<Record<string, string>>({});
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [progressPercent, setProgressPercent] = useState<number>(0);
 
   /** 打开弹窗 */

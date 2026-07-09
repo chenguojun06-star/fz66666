@@ -4,6 +4,7 @@ const { isAdminOrSupervisor } = require('../../../utils/permission');
 const { isFactoryOwner } = require('../../../utils/storage');
 const { transformOrderData } = require('../utils/orderTransform');
 const { buildProcessNodesWithRates, calcOrderProgress } = require('../utils/progressNodes');
+const { bindPageEvents, unbindPageEvents } = require('../../../utils/pageEventBinder');
 
 const STATUS_MAP = {
   pending: { text: '待收货', cls: 'tag-warning' },
@@ -76,6 +77,11 @@ Page({
     const factory = isFactoryOwner();
     const admin = isAdminOrSupervisor();
     this.setData({ isFactory: factory, isTenantAdmin: admin, activeTab: 0 });
+    bindPageEvents(this, () => this._resetAndLoad(), ['ORDER_STATUS_CHANGED']);
+  },
+
+  onUnload: function () {
+    unbindPageEvents(this);
   },
 
   onShow: function () {

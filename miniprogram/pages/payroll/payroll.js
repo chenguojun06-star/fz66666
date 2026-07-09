@@ -2,6 +2,7 @@
 const api = require('../../utils/api');
 const { toast, safeNavigate } = require('../../utils/uiHelper');
 const { hasFeaturePermission } = require('../../utils/permission');
+const { bindPageEvents, unbindPageEvents } = require('../../utils/pageEventBinder');
 
 // 日期格式化工具函数（重构版 - 消除重复代码）
 
@@ -111,6 +112,11 @@ Page({
   onLoad() {
     this.initDates();
     // 数据加载由 onShow 统一处理（onLoad 后立即触发 onShow，首次也会加载）
+    bindPageEvents(this, () => this.loadData());
+  },
+
+  onUnload() {
+    unbindPageEvents(this);
   },
 
   // 每次进入页面（包括首次、从子页面返回）都刷新最新工资数据

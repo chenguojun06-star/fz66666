@@ -6,6 +6,7 @@ const api = require('../../../../utils/api');
 const { getAuthedImageUrl } = require('../../../../utils/fileUrl');
 const { ok } = require('../../../../utils/api-modules/helpers');
 const { toast } = require('../../../../utils/uiHelper');
+const { bindPageEvents, unbindPageEvents } = require('../../../../utils/pageEventBinder');
 
 const SAMPLE_TYPE_MAP = {
   'development': '开发样',
@@ -140,9 +141,17 @@ Page({
       };
       wx.onNeedPrivacyAuthorization(this._privacyCb);
     }
+    bindPageEvents(this, () => {
+      if (this.data.viewMode === 'list') {
+        this.loadStockList(true);
+      } else {
+        this.querySample(this.data.styleNo, this.data.color, this.data.size);
+      }
+    }, ['STOCK_CHANGED']);
   },
 
   onUnload() {
+    unbindPageEvents(this);
     if (wx.offNeedPrivacyAuthorization && this._privacyCb) {
       wx.offNeedPrivacyAuthorization(this._privacyCb);
     }

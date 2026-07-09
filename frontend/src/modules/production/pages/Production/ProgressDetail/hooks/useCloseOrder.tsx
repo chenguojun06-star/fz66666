@@ -88,6 +88,12 @@ export const useCloseOrder = ({
       const result = await productionOrderApi.close(pendingCloseOrder.orderId, 'productionProgress', remark || undefined, pendingCloseOrder.isSpecial);
       if ((result as any)?.code !== 200) throw new Error((result as any)?.message || '关单失败');
       message.success('关单成功');
+      try {
+        window.dispatchEvent(new Event('order:progress:changed'));
+        window.dispatchEvent(new Event('data:changed'));
+      } catch (_e) {
+        // 事件派发失败不影响业务
+      }
       setPendingCloseOrder(null);
       await fetchOrders();
       if (String(activeOrderId || '').trim() === pendingCloseOrder.orderId) {

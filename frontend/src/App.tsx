@@ -19,7 +19,7 @@ import { PurchaseCartProvider, usePurchaseCartContext } from './context/Purchase
 import { PurchaseCartDrawer } from './components/common/PurchaseCartDrawer';
 
 import { StyleInfo, StyleInfoList, OrderManagement, DataCenter, TemplateCenter, PatternRevisionManagement, MaintenanceCenter } from './modules/basic';
-import { MaterialReconciliation, PayrollOperatorSummary, FinanceCenter, ExpenseReimbursement, EmployeeAdvance, ExpenseManagement, WagePayment, EcSalesRevenue, TaxExport, OrderWasteAnalysis, FinanceDashboard, ReceivableList as FinanceReceivableList, PayableList, PaymentSchedule } from './modules/finance';
+import { MaterialReconciliation, PayrollOperatorSummary, FinanceCenter, ExpenseReimbursement, EmployeeAdvance, ExpenseManagement, WagePayment, EcSalesRevenue, TaxExport, FinanceDashboard, ReceivableList as FinanceReceivableList, PayableList, PaymentSchedule } from './modules/finance';
 import { CrmDashboard, ReceivableList as CrmReceivableList } from './modules/crm';
 import { SelectionCenter } from './modules/selection';
 import { MaterialInventory, MaterialDatabase, FinishedInventory, SampleInventory, EcommerceOrders, InventoryCheck, LabelPrint, ProductInfo, WarehouseLocationMap } from './modules/warehouse';

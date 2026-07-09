@@ -74,6 +74,14 @@ const MaterialScanOperationModal: React.FC<MaterialScanOperationModalProps> = ({
         await materialWarehouseApi.scanOutbound({ materialCode: materialCode.trim(), quantity, outstockType, warehouseLocation: warehouseLocation || '默认仓', warehouseAreaId: warehouseAreaId || undefined, remark });
         message.success('物料扫码出库成功');
       }
+      try {
+        if (operationType === 'inbound') {
+          window.dispatchEvent(new Event('warehouse:in'));
+        }
+        window.dispatchEvent(new Event('data:changed'));
+      } catch (_e) {
+        // 事件派发失败不影响业务
+      }
       onSuccess();
     } catch (e: any) { message.error(e.message || '操作失败'); }
     finally { setLoading(false); }

@@ -282,7 +282,7 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = ({ orderId, orde
     } finally {
       setLoading(false);
     }
-  }, [orderNo, patternId, sourceType, styleNo]);
+  }, [orderNo, patternId, sourceType, styleNo, propColor, propQuantity]);
 
   useEffect(() => {
     loadData();
@@ -396,7 +396,7 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = ({ orderId, orde
     } finally {
       setSaving(false);
     }
-  }, [editableData, purchases, message, loadData]);
+  }, [editableData, purchases, message, loadData, order?.sourceBizType, patternId, sourceType]);
 
   const handleOpenMaterialModal = useCallback((rowId: string) => {
     setMaterialTargetRowId(rowId);
@@ -679,7 +679,7 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = ({ orderId, orde
         }
       },
     });
-  }, [purchases, user, message, loadData]);
+  }, [purchases, user, message, modal, loadData]);
 
   const handleConfirmComplete = useCallback(async () => {
     const awaiting = purchases.filter(p => normalizeStatus(p.status) === MATERIAL_PURCHASE_STATUS.AWAITING_CONFIRM);

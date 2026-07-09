@@ -29,6 +29,7 @@ import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
 import { useSearchParams } from 'react-router-dom';
 import { formatDateTime } from '@/utils/datetime';
+import { useSync } from '@/utils/syncManager';
 
 export const STYLE_INFO_LIST_REFRESH_KEY = 'style-info-list:refresh-needed';
 
@@ -136,6 +137,14 @@ const SampleInventory: React.FC = () => {
 
   }, [loadData]);
 
+  // 30秒轮询自动刷新样衣库存
+  useSync(
+    'warehouse-sample-inventory-poll',
+    async () => { await loadData(); },
+    () => {},
+    { interval: 30000, pauseOnHidden: true }
+  );
+
   const searchParamsStr = searchParams.toString();
 
   useEffect(() => {
@@ -184,6 +193,7 @@ const SampleInventory: React.FC = () => {
         message.success('样衣库存已销毁');
         closeDestroyModal();
         await loadData();
+        try { window.dispatchEvent(new Event('data:changed')); } catch (_e) { /* 事件派发失败不影响业务 */ }
         return;
       }
       message.error(res.message || '销毁失败');
@@ -465,6 +475,7 @@ const SampleInventory: React.FC = () => {
             localStorage.setItem(STYLE_INFO_LIST_REFRESH_KEY, String(Date.now()));
             closeInboundModal();
             loadData();
+            try { window.dispatchEvent(new Event('warehouse:in')); window.dispatchEvent(new Event('data:changed')); } catch (_e) { /* 事件派发失败不影响业务 */ }
           }}
         />
 
@@ -475,6 +486,7 @@ const SampleInventory: React.FC = () => {
           onSuccess={() => {
             loanModal.close();
             loadData();
+            try { window.dispatchEvent(new Event('data:changed')); } catch (_e) { /* 事件派发失败不影响业务 */ }
           }}
         />
 
@@ -493,6 +505,7 @@ const SampleInventory: React.FC = () => {
             setTransferVisible(false);
             setSelectedStock(null);
             loadData();
+            try { window.dispatchEvent(new Event('data:changed')); } catch (_e) { /* 事件派发失败不影响业务 */ }
           }}
         />
         <Modal

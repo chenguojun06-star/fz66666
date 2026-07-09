@@ -241,7 +241,7 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
     }
     
     e.target.value = '';
-  }, []);
+  }, [isImageFile]);
   
   const handleCancelPreview = useCallback(() => {
     setAttachedFile(null);

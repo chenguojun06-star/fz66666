@@ -114,8 +114,8 @@ export function useScanExecution({
             });
           }
         } else {
-          await fetchOrders();
-          await fetchScanHistory(activeOrder);
+          // 两个独立请求并行化
+          await Promise.all([fetchOrders(), fetchScanHistory(activeOrder)]);
         }
         scanForm.setFieldsValue({ scanCode: '', quantity: undefined });
         setTimeout(() => scanInputRef.current?.focus?.(), 0);
