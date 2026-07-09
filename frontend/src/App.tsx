@@ -338,7 +338,7 @@ const GlobalCartFloatButton: React.FC = () => {
   const shouldShow = itemCount > 0 && PURCHASE_CART_ROUTES.some(r => location.pathname.startsWith(r));
 
   React.useEffect(() => {
-    loadCart().catch(() => {});
+    loadCart().catch((err) => console.error('加载采购车数据失败:', err));
   }, [loadCart]);
 
   return (

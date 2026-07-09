@@ -32,7 +32,9 @@ public class ProducesRelationExtractor implements RelationExtractor {
     @Override
     public List<KgRelation> extract(Long tenantId) {
         if (tenantId == null) return List.of();
-        List<Factory> factories = factoryMapper.selectList(null);
+        List<Factory> factories = factoryMapper.selectList(
+                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<Factory>()
+                        .eq(Factory::getTenantId, tenantId));
         if (factories.isEmpty()) return List.of();
 
         Set<String> tenantFactoryIds = factories.stream()

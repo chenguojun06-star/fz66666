@@ -147,7 +147,11 @@ Page({
 
   onCoverPreview(e) {
     const url = e.currentTarget.dataset.url;
-    if (!url) return;
+    if (!url) {
+      // 无封面图时，不阻止卡片跳转，继续冒泡触发 onGroupTap
+      return;
+    }
+    e.stopPropagation && e.stopPropagation();
     try {
       wx.previewImage({ current: url, urls: [url] });
     } catch (err) { /* ignore */ }
@@ -263,46 +267,50 @@ Page({
     });
 
     return Object.values(map).map(g => {
-      const userInfo = getUserInfo() || {};
-      const receiverId = String(userInfo.id || userInfo.userId || '').trim();
-      const receiverName = String(userInfo.name || userInfo.username || '').trim();
+        const userInfo = getUserInfo() || {};
+        const receiverId = String(userInfo.id || userInfo.userId || '').trim();
+        const receiverName = String(userInfo.name || userInfo.username || '').trim();
 
-      let canReceive = false;
-      let canOperate = false;
-      // 对齐裁剪明细页面：显示领取人（取该订单下本人领取的物料对应的领取人）
-      let groupReceiverName = '';
+        let canReceive = false;
+        let canOperate = false;
+        // 对齐裁剪明细页面：显示领取人（取该订单下本人领取的物料对应的领取人）
+        let groupReceiverName = '';
 
-      if (g.pendingCount > 0) {
-        canReceive = true;
-      } else if (g.receivedCount > 0) {
-        const myItems = g.items.filter(item => {
-          const rid = String(item.receiverId || '').trim();
-          const rname = String(item.receiverName || '').trim();
-          return rid === receiverId || rname === receiverName;
-        });
-        canOperate = myItems.length > 0;
-        if (myItems.length > 0) {
-          groupReceiverName = myItems[0].receiverName || receiverName || '';
+        if (g.pendingCount > 0) {
+          canReceive = true;
+        } else if (g.receivedCount > 0) {
+          const myItems = g.items.filter(item => {
+            const rid = String(item.receiverId || '').trim();
+            const rname = String(item.receiverName || '').trim();
+            return rid === receiverId || rname === receiverName;
+          });
+          canOperate = myItems.length > 0;
+          if (myItems.length > 0) {
+            groupReceiverName = myItems[0].receiverName || receiverName || '';
+          }
+        } else if (g.completedCount === g.totalCount && g.totalCount > 0) {
+          // 已完成的订单，显示首个领取人
+          const receivedItem = g.items.find(item => {
+            const rname = String(item.receiverName || '').trim();
+            return rname;
+          });
+          if (receivedItem) groupReceiverName = receivedItem.receiverName;
         }
-      } else if (g.completedCount === g.totalCount && g.totalCount > 0) {
-        // 已完成的订单，显示首个领取人
-        const receivedItem = g.items.find(item => {
-          const rname = String(item.receiverName || '').trim();
-          return rname;
-        });
-        if (receivedItem) groupReceiverName = receivedItem.receiverName;
-      }
 
-      return {
-        ...g,
-        arrivalRate: g.totalPurchased > 0 ? Math.round(g.totalArrived / g.totalPurchased * 100) : 0,
-        statusText: g.completedCount === g.totalCount ? '已完成' : (g.pendingCount === g.totalCount ? '待采购' : '采购中'),
-        statusColor: g.completedCount === g.totalCount ? 'success' : (g.pendingCount === g.totalCount ? 'warning' : 'processing'),
-        isSample: g.sourceType === 'sample' || (!g.orderNo && !!g.patternProductionId),
-        canReceive,
-        canOperate,
-        receiverName: groupReceiverName, // 对齐裁剪明细页面：显示领取人
-      };
-    });
-  },
+        // 样衣采购无 orderNo，需要唯一 key 和显示标识
+        const isSample = g.sourceType === 'sample' || (!g.orderNo && !!g.patternProductionId);
+        return {
+          ...g,
+          groupKey: g.orderNo || (g.patternProductionId ? `sample_${g.patternProductionId}` : `unknown_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`),
+          displayOrderNo: g.orderNo || (isSample ? '样衣采购' : '无订单号'),
+          arrivalRate: g.totalPurchased > 0 ? Math.round(g.totalArrived / g.totalPurchased * 100) : 0,
+          statusText: g.completedCount === g.totalCount ? '已完成' : (g.pendingCount === g.totalCount ? '待采购' : '采购中'),
+          statusColor: g.completedCount === g.totalCount ? 'success' : (g.pendingCount === g.totalCount ? 'warning' : 'processing'),
+          isSample,
+          canReceive,
+          canOperate,
+          receiverName: groupReceiverName, // 对齐裁剪明细页面：显示领取人
+        };
+      });
+    },
 });

@@ -82,7 +82,7 @@ export function useMaterialInventoryList() {
               setStats(prev => ({ ...prev, lowStockCount: lowCount }));
             }
           })
-          .catch(() => {});
+          .catch((err) => console.error('加载库存角标计数失败:', err));
         if (showSmartErrorNotice) setSmartError(null);
       }
     } catch {

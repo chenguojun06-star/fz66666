@@ -74,7 +74,9 @@ Page({
 
   _formatTime: function (t) {
     if (!t) return '';
-    const d = new Date(t);
+    // iOS 不支持 "yyyy-MM-dd HH:mm:ss"，需将空格替换为 T 兼容 ISO 8601
+    const normalized = typeof t === 'string' ? t.replace(' ', 'T') : t;
+    const d = new Date(normalized);
     if (isNaN(d.getTime())) return t;
     const y = d.getFullYear();
     const m = d.getMonth() + 1;

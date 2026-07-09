@@ -147,7 +147,11 @@ Page({
 
   onCoverPreview(e) {
     const url = e.currentTarget.dataset.url;
-    if (!url) return;
+    if (!url) {
+      // 无封面图时，不阻止卡片跳转，继续冒泡触发 onGroupTap
+      return;
+    }
+    e.stopPropagation && e.stopPropagation();
     try {
       wx.previewImage({ current: url, urls: [url] });
     } catch (err) { /* ignore */ }
@@ -293,12 +297,16 @@ Page({
         if (receivedItem) groupReceiverName = receivedItem.receiverName;
       }
 
+      // 样衣采购无 orderNo，需要唯一 key 和显示标识
+      const isSample = g.sourceType === 'sample' || (!g.orderNo && !!g.patternProductionId);
       return {
         ...g,
+        groupKey: g.orderNo || (g.patternProductionId ? `sample_${g.patternProductionId}` : `unknown_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`),
+        displayOrderNo: g.orderNo || (isSample ? '样衣采购' : '无订单号'),
         arrivalRate: g.totalPurchased > 0 ? Math.round(g.totalArrived / g.totalPurchased * 100) : 0,
         statusText: g.completedCount === g.totalCount ? '已完成' : (g.pendingCount === g.totalCount ? '待采购' : '采购中'),
         statusColor: g.completedCount === g.totalCount ? 'success' : (g.pendingCount === g.totalCount ? 'warning' : 'processing'),
-        isSample: g.sourceType === 'sample' || (!g.orderNo && !!g.patternProductionId),
+        isSample,
         canReceive,
         canOperate,
         receiverName: groupReceiverName, // 对齐裁剪明细页面：显示领取人

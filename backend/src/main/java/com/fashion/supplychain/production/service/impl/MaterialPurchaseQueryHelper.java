@@ -18,6 +18,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -159,15 +160,23 @@ class MaterialPurchaseQueryHelper {
                 .collect(Collectors.toList());
         if (styleIds.isEmpty()) return;
 
-        // 一次查询所有 StyleInfo（按 styleId 字符串匹配 StyleInfo.id，需转 Long）
+        // 批量查询所有 StyleInfo（避免 N+1：原循环内 getById 改为 listByIds 批量查询）
         Map<String, StyleInfo> styleByIdStr = new HashMap<>();
+        List<Long> validLongIds = new ArrayList<>();
+        Map<Long, String> longIdToStrId = new HashMap<>();
         for (String sid : styleIds) {
             try {
                 Long lid = Long.parseLong(sid);
-                StyleInfo info = styleInfoService.getById(lid);
-                if (info != null) styleByIdStr.put(sid, info);
+                validLongIds.add(lid);
+                longIdToStrId.put(lid, sid);
             } catch (NumberFormatException ignore) {
                 // styleId 非数字，跳过
+            }
+        }
+        if (!validLongIds.isEmpty()) {
+            for (StyleInfo info : styleInfoService.listByIds(validLongIds)) {
+                String sid = longIdToStrId.get(info.getId());
+                if (sid != null) styleByIdStr.put(sid, info);
             }
         }
         if (styleByIdStr.isEmpty()) return;

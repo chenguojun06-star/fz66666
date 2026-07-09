@@ -165,73 +165,83 @@ public class DataConsistencyChecker {
      */
     private void checkIsolatedRecords(CheckResult result) {
         log.info("[DataConsistency] 检查孤立记录...");
-        
+
         try {
+            // 一次查询订单（只查需要的列），复用于三个子检查，避免全表扫描3次
+            List<ProductionOrder> orders = orderMapper.selectList(
+                new LambdaQueryWrapper<ProductionOrder>()
+                    .select(ProductionOrder::getId, ProductionOrder::getStyleId, ProductionOrder::getOrderNo)
+            );
+
             // 1. 检查订单引用的款式是否存在
-            checkOrphanStyleReferences(result);
-            
+            checkOrphanStyleReferences(result, orders);
+
             // 2. 检查裁剪包引用的订单是否存在
-            checkOrphanOrderReferences(result);
-            
+            checkOrphanOrderReferences(result, orders);
+
             // 3. 检查扫码记录引用的订单是否存在
-            checkOrphanScanRecordReferences(result);
-            
+            checkOrphanScanRecordReferences(result, orders);
+
         } catch (Exception e) {
             log.error("[DataConsistency] 检查孤立记录异常", e);
             result.addError("checkIsolatedRecords", e.getMessage());
         }
     }
 
-    private void checkOrphanStyleReferences(CheckResult result) {
-        // 获取所有款式ID
-        Set<Long> validStyleIds = styleInfoMapper.selectList(null).stream()
+    private void checkOrphanStyleReferences(CheckResult result, List<ProductionOrder> orders) {
+        // 获取所有款式ID（只查ID列，避免全表扫描）
+        Set<Long> validStyleIds = styleInfoMapper.selectList(
+            new LambdaQueryWrapper<StyleInfo>().select(StyleInfo::getId)
+        ).stream()
             .map(StyleInfo::getId)
             .collect(Collectors.toSet());
-        
+
         if (validStyleIds.isEmpty()) return;
-        
-        // 查询引用的款式ID但款式不存在的订单
-        List<ProductionOrder> orders = orderMapper.selectList(null);
+
+        // 复用已查询的订单数据
         List<String> orphanStyleOrders = orders.stream()
             .filter(o -> o.getStyleId() != null && !validStyleIds.contains(o.getStyleId()))
             .map(ProductionOrder::getOrderNo)
             .collect(Collectors.toList());
-        
+
         if (!orphanStyleOrders.isEmpty()) {
             result.addIssue("t_production_order", "孤立款式引用", orphanStyleOrders.size(),
                 "订单引用的款式不存在: " + orphanStyleOrders.stream().limit(5).collect(Collectors.joining(",")));
         }
     }
 
-    private void checkOrphanOrderReferences(CheckResult result) {
-        // 获取所有订单ID
-        Set<String> validOrderIds = orderMapper.selectList(null).stream()
+    private void checkOrphanOrderReferences(CheckResult result, List<ProductionOrder> orders) {
+        // 复用已查询的订单数据
+        Set<String> validOrderIds = orders.stream()
             .map(ProductionOrder::getId)
             .collect(Collectors.toSet());
-        
+
         if (validOrderIds.isEmpty()) return;
-        
-        // 查询引用的订单ID但订单不存在的裁剪包
-        List<CuttingBundle> bundles = cuttingBundleMapper.selectList(null);
+
+        // 查询裁剪包（只查需要的列，避免全表扫描）
+        List<CuttingBundle> bundles = cuttingBundleMapper.selectList(
+            new LambdaQueryWrapper<CuttingBundle>()
+                .select(CuttingBundle::getProductionOrderId, CuttingBundle::getBundleNo)
+        );
         List<String> orphanOrderBundles = bundles.stream()
             .filter(b -> b.getProductionOrderId() != null && !validOrderIds.contains(b.getProductionOrderId()))
             .map(b -> "bundleNo=" + b.getBundleNo())
             .collect(Collectors.toList());
-        
+
         if (!orphanOrderBundles.isEmpty()) {
             result.addIssue("t_cutting_bundle", "孤立订单引用", orphanOrderBundles.size(),
                 "裁剪包引用的订单不存在: " + orphanOrderBundles.stream().limit(5).collect(Collectors.joining(",")));
         }
     }
 
-    private void checkOrphanScanRecordReferences(CheckResult result) {
-        // 获取所有订单ID
-        Set<String> validOrderIds = orderMapper.selectList(null).stream()
+    private void checkOrphanScanRecordReferences(CheckResult result, List<ProductionOrder> orders) {
+        // 复用已查询的订单数据
+        Set<String> validOrderIds = orders.stream()
             .map(ProductionOrder::getId)
             .collect(Collectors.toSet());
-        
+
         if (validOrderIds.isEmpty()) return;
-        
+
         // 查询引用的订单ID但订单不存在的扫码记录
         List<ScanRecord> orphanScans = scanRecordMapper.selectList(
             new LambdaQueryWrapper<ScanRecord>()

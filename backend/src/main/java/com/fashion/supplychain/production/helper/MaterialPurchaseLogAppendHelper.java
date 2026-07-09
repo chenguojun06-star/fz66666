@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 采购操作日志追加
@@ -119,19 +120,29 @@ public class MaterialPurchaseLogAppendHelper {
     public void appendBatchReceive(List<String> purchaseIds, String receiverName, int successCount, int skipCount) {
         if (purchaseIds == null || purchaseIds.isEmpty()) return;
         String detail = "领取人：" + receiverName + "，成功：" + successCount + "，跳过：" + skipCount + "，共：" + purchaseIds.size();
-        for (String pid : purchaseIds) {
-            // 每条都同步到对应订单备注
+        // 批量查询 MaterialPurchase（避免 N+1：原循环内 getById 改为 listByIds）
+        List<MaterialPurchase> purchases = materialPurchaseService.listByIds(purchaseIds);
+        // 收集 orderId，批量查询 ProductionOrder（避免 N+1）
+        List<String> orderIds = purchases.stream()
+                .map(MaterialPurchase::getOrderId)
+                .filter(id -> id != null && !id.trim().isEmpty())
+                .distinct()
+                .collect(java.util.stream.Collectors.toList());
+        Map<String, ProductionOrder> orderMap = new java.util.HashMap<>();
+        if (!orderIds.isEmpty()) {
+            productionOrderService.listByIds(orderIds).forEach(o -> orderMap.put(o.getId(), o));
+        }
+        for (MaterialPurchase p : purchases) {
+            if (p == null) continue;
             try {
-                MaterialPurchase p = materialPurchaseService.getById(pid);
-                if (p == null) continue;
                 String orderId = p.getOrderId();
                 if (orderId == null || orderId.trim().isEmpty()) continue;
-                ProductionOrder order = productionOrderService.getById(orderId);
+                ProductionOrder order = orderMap.get(orderId);
                 if (order == null) continue;
                 String richDetail = detail + "（物料：" + (p.getMaterialName() == null ? "" : p.getMaterialName()) + "）";
                 orderRemarkHelper.append(order, "批量领取采购", richDetail);
             } catch (Exception e) {
-                log.debug("[PurchaseLog] batchReceive 同步订单备注失败: pid={}, err={}", pid, e.getMessage());
+                log.debug("[PurchaseLog] batchReceive 同步订单备注失败: pid={}, err={}", p.getId(), e.getMessage());
             }
         }
     }

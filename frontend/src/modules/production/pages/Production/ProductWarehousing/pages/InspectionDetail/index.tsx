@@ -108,7 +108,7 @@ const InspectionDetail: React.FC<InspectionDetailProps> = ({ orderId: propOrderI
         .then((detail) => {
           if (detail) void formHook.handleOrderChange(orderId, { data: detail });
         })
-        .catch(() => {});
+        .catch((err) => console.error('初始化加载订单详情失败:', err));
     }
     autoInitRef.current = true;
   }, [orderId, orderDetail, formHook]);

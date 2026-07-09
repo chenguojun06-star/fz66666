@@ -251,7 +251,7 @@ const SmartAlertBell: React.FC = () => {
     if (unreadIds.length === 0) return;
     Promise.allSettled(unreadIds.map(id => sysNoticeApi.markRead(id)))
       .then(() => fetchMyNotices())
-      .catch(() => {});
+      .catch((err) => console.error('批量标记通知已读失败:', err));
     setDismissedNoticeIds(prev => {
       const next = new Set([...prev, ...unreadIds]);
       saveDismissedNotices(next);
@@ -589,7 +589,7 @@ const SmartAlertBell: React.FC = () => {
                           urgeRecordId={n.urgeRecordId}
                           orderNo={n.orderNo}
                           onReplied={() => {
-                            sysNoticeApi.markRead(n.id).then(() => fetchMyNotices()).catch(() => {});
+                            sysNoticeApi.markRead(n.id).then(() => fetchMyNotices()).catch((err) => console.error('标记通知已读失败:', err));
                             setDismissedNoticeIds(prev => {
                               const next = new Set([...prev, n.id]);
                               saveDismissedNotices(next);
@@ -602,7 +602,7 @@ const SmartAlertBell: React.FC = () => {
                         <OneClickActionInline
                           notice={n}
                           onDone={() => {
-                            sysNoticeApi.markRead(n.id).then(() => fetchMyNotices()).catch(() => {});
+                            sysNoticeApi.markRead(n.id).then(() => fetchMyNotices()).catch((err) => console.error('标记通知已读失败:', err));
                             setDismissedNoticeIds(prev => {
                               const next = new Set([...prev, n.id]);
                               saveDismissedNotices(next);

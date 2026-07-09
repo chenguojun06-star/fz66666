@@ -173,9 +173,14 @@ public class PromptContextProvider {
                 if (m.getId() != null) hitIds.add(m.getId());
             }
             sb.append("（以上为系统从历史对话中提炼的记忆，请结合工具查询数据综合判断，不要只依赖记忆）\n\n");
-            hitIds.forEach(id -> {
-                try { longTermMemoryOrchestrator.incrementHit(id); } catch (Exception e) { log.warn("[AiAgent-LTM] 命中计数更新失败: id={}", id); }
-            });
+            // 异步更新命中计数，不阻塞主流程（原同步 forEach 内逐条 incrementHit）
+            if (!hitIds.isEmpty()) {
+                CompletableFuture.runAsync(() -> {
+                    hitIds.forEach(id -> {
+                        try { longTermMemoryOrchestrator.incrementHit(id); } catch (Exception e) { log.warn("[AiAgent-LTM] 命中计数更新失败: id={}", id); }
+                    });
+                });
+            }
             log.debug("[AiAgent-LTM] 已注入 {} 条长期记忆到提示词", mems.size());
             return sb.toString();
         } catch (Exception e) {

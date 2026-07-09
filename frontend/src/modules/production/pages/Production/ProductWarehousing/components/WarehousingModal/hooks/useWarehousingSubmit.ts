@@ -44,7 +44,7 @@ export const useWarehousingSubmit = (deps: SubmitDeps) => {
       });
       if (res.code === 200) {
         message.success('批量合格质检成功');
-        intelligenceApi.feedback({ orderId: String(orderId || ''), stageName: '入库', actualFinishTime: new Date().toISOString(), actualResult: 'success' }).catch(() => {});
+        intelligenceApi.feedback({ orderId: String(orderId || ''), stageName: '入库', actualFinishTime: new Date().toISOString(), actualResult: 'success' }).catch((err) => console.error('入库成功反馈智能中心失败:', err));
         onSuccess();
       } else {
         message.error(res.message || '批量入库失败');
@@ -123,7 +123,7 @@ export const useWarehousingSubmit = (deps: SubmitDeps) => {
           intelligenceApi.feedback({
             orderId: String(values.orderId || ''), orderNo: String(values.orderNo || ''),
             stageName: '入库', actualFinishTime: new Date().toISOString(), actualResult: 'success',
-          }).catch(() => {});
+          }).catch((err) => console.error('入库成功反馈智能中心失败:', err));
         }
         onSuccess();
       } else {

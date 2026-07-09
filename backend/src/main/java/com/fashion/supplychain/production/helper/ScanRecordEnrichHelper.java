@@ -147,15 +147,23 @@ public class ScanRecordEnrichHelper {
                     .collect(Collectors.toList());
             if (styleIds.isEmpty()) return;
 
-            // 批量查询 StyleInfo
+            // 批量查询 StyleInfo（避免 N+1：原循环内 getById 改为 listByIds 批量查询）
             Map<String, StyleInfo> styleByIdStr = new HashMap<>();
+            List<Long> validLongIds = new ArrayList<>();
+            Map<Long, String> longIdToStrId = new HashMap<>();
             for (String sid : styleIds) {
                 try {
                     Long lid = Long.parseLong(sid);
-                    StyleInfo info = styleInfoService.getById(lid);
-                    if (info != null) styleByIdStr.put(sid, info);
+                    validLongIds.add(lid);
+                    longIdToStrId.put(lid, sid);
                 } catch (NumberFormatException ignore) {
                     // styleId 非数字，跳过
+                }
+            }
+            if (!validLongIds.isEmpty()) {
+                for (StyleInfo info : styleInfoService.listByIds(validLongIds)) {
+                    String sid = longIdToStrId.get(info.getId());
+                    if (sid != null) styleByIdStr.put(sid, info);
                 }
             }
             if (styleByIdStr.isEmpty()) return;

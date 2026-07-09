@@ -150,7 +150,7 @@ export function useMaterialPickupData() {
           setPendingPickupCount(res.data['/warehouse/material-pickup'] || 0);
         }
       })
-      .catch(() => {});
+      .catch((err) => console.error('加载领料角标计数失败:', err));
   }, []);
 
   const buildPrintPayload = (record: PickingRow): MaterialOutboundPrintPayload => ({

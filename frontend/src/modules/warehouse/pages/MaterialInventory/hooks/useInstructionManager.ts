@@ -112,7 +112,7 @@ export function useInstructionManager({ alertList, user }: UseInstructionManager
             );
           }
         })
-        .catch(() => {}); // 静默失败，不影响主流程
+        .catch((err) => console.error('加载物料资料库补充信息失败:', err)); // 不影响主流程
     }
     const suggested = Number(alert.suggestedSafetyStock ?? alert.safetyStock ?? 0);
     const current = Number(alert.quantity ?? 0);

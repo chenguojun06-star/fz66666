@@ -78,7 +78,7 @@ const IndependentDetailModal: React.FC<IndependentDetailModalProps> = ({
         setStyleSampleReviewer(String(res.data.sampleReviewer || '').trim());
         setStyleSampleReviewTime(String(res.data.sampleReviewTime || '').trim());
       }
-    }).catch(() => {});
+    }).catch((err) => console.error('加载款号信息失败:', err));
     return () => { cancelled = true; };
   }, [styleId, open]);
 

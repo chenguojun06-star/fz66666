@@ -182,7 +182,7 @@ const PayableTab: React.FC = () => {
         defaultHeight="50vh"
         footer={[
           <Button key="cancel" onClick={() => setFormOpen(false)}>取消</Button>,
-          <Button key="ok" type="primary" loading={submitting} onClick={() => createForm.validateFields().then(handleCreate).catch(() => {})}>保存</Button>,
+          <Button key="ok" type="primary" loading={submitting} onClick={() => createForm.validateFields().then(handleCreate).catch((err) => console.error('创建应付款失败:', err))}>保存</Button>,
         ]}
       >
         <Form form={createForm} layout="vertical" style={{ padding: '16px 0' }}>

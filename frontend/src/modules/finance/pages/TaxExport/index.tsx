@@ -37,7 +37,7 @@ const TaxExport: React.FC = () => {
       const taxApp = list.find((a: any) => a.appCode === 'FINANCE_TAX' && !a.isExpired);
       setSubscribed(!!taxApp);
       if (taxApp) setSubscriptionType(taxApp.subscriptionType || '');
-    }).catch(() => { }).finally(() => setChecking(false));
+    }).catch((err) => console.error('检查财税模块订阅状态失败:', err)).finally(() => setChecking(false));
   }, [isSuperAdmin]);
 
   const handleFormatClick = (opt: typeof FORMAT_OPTIONS[0]) => {

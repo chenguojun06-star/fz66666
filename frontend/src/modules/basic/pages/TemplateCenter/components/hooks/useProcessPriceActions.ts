@@ -90,7 +90,7 @@ export default function useProcessPriceActions(open: boolean, initialStyleNo?: s
         const labels = records.filter((item: any) => item.dictLabel).map((item: any) => item.dictLabel);
         if (labels.length) setSizes(sortSizeNames(labels));
       })
-      .catch(() => {});
+      .catch((err) => console.error('加载尺码字典失败:', err));
   }, []);
 
   const resetEditingState = useCallback(() => {

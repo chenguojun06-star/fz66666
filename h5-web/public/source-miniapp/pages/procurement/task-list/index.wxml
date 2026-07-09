@@ -47,14 +47,14 @@
     <view class="order-list">
       <view
         wx:for="{{filteredGroups}}"
-        wx:key="orderNo"
+        wx:key="groupKey"
         class="order-sel-card"
         data-group="{{item}}"
         bindtap="onGroupTap"
         hover-class="task-card-hover"
       >
         <!-- 左侧款式缩略图 -->
-        <view class="sel-cover-box" catchtap="onCoverPreview" data-url="{{item.styleCoverUrl}}">
+        <view class="sel-cover-box" catchtap="onCoverPreview" data-url="{{item.styleCoverUrl}}" data-group="{{item}}">
           <image wx:if="{{item.styleCoverUrl}}" class="sel-cover-img" src="{{item.styleCoverUrl}}" mode="aspectFill" lazy-load="{{true}}" />
           <view wx:else class="sel-cover-empty">
             <text class="cover-abbr">📦</text>
@@ -64,7 +64,7 @@
         <view class="sel-card-info">
           <!-- 顶部：订单号 + 状态标签 -->
           <view class="info-top">
-            <text class="order-no">{{item.orderNo}}</text>
+            <text class="order-no {{item.isSample ? 'sample-order-no' : ''}}">{{item.displayOrderNo}}</text>
             <text class="status-tag tag tag-{{item.statusColor}}">{{item.statusText}}</text>
           </view>
           <!-- 规格行：款号 + 物料 + 到货率 -->

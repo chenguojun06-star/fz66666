@@ -35,7 +35,7 @@ export function useTodayBrief(): TodayBrief {
           });
         }
       })
-      .catch(() => {});
+      .catch((err) => console.error('加载今日简报数据失败:', err));
     return () => ac.abort();
   }, []);
 

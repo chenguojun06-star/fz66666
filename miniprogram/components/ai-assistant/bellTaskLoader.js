@@ -157,7 +157,9 @@ async function loadProcurementTasks() {
       g.items.push(item);
       g.totalPurchased += Number(item.purchaseQuantity || 0);
       g.totalArrived += Number(item.arrivedQuantity || 0);
-      const rt = item.receivedTime ? new Date(item.receivedTime) : null;
+      // iOS 不支持 "yyyy-MM-dd HH:mm:ss"，需将空格替换为 T 兼容 ISO 8601
+      const rtRaw = item.receivedTime;
+      const rt = rtRaw ? new Date(typeof rtRaw === 'string' ? rtRaw.replace(' ', 'T') : rtRaw) : null;
       if (rt && (!g.latestReceivedTime || rt > g.latestReceivedTime)) {
         g.latestReceivedTime = rt;
       }

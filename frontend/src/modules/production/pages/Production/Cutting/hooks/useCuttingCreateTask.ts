@@ -136,7 +136,7 @@ export function useCuttingCreateTask({ message, navigate, fetchTasks }: UseCutti
           setDynamicProcessMapping(res.data);
         }
       })
-      .catch(() => {});
+      .catch((err) => console.error('加载工序映射失败:', err));
   }, []);
 
   useEffect(() => {
@@ -144,7 +144,7 @@ export function useCuttingCreateTask({ message, navigate, fetchTasks }: UseCutti
       .then((res) => {
         if (res?.data) setFactoryCapacities(res.data);
       })
-      .catch(() => {});
+      .catch((err) => console.error('加载工厂产能数据失败:', err));
   }, []);
 
   const selectedFactoryStat = useMemo(() => {

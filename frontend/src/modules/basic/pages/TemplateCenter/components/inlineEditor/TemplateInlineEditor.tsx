@@ -85,7 +85,7 @@ const TemplateInlineEditor: React.FC<TemplateInlineEditorProps> = ({
         const labels = records.filter((item: any) => item.dictLabel).map((item: any) => item.dictLabel);
         if (labels.length) dictSizesRef.current = sortSizeNames(labels);
       })
-      .catch(() => {});
+      .catch((err) => console.error('加载尺码字典失败:', err));
   }, []);
 
   useEffect(() => {

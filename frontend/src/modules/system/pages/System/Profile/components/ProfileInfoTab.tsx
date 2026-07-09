@@ -171,11 +171,11 @@ const ProfileInfoTab: React.FC = () => {
         loadProfile();
         tenantSmartFeatureService.list().then((flags) => {
             setSmartFlags(replaceSmartFeatureFlags(flags));
-        }).catch(() => {});
+        }).catch((err) => console.error('加载智能功能开关失败:', err));
 
         tenantSmartFeatureService.listMiniprogramMenus().then((flags) => {
             setMiniprogramMenuFlags(replaceMiniprogramMenuFlags(flags));
-        }).catch(() => {});
+        }).catch((err) => console.error('加载小程序菜单开关失败:', err));
 
         const tid = (cur as any)?.tenantId;
         if (tid) {
@@ -201,7 +201,7 @@ const ProfileInfoTab: React.FC = () => {
                             wechatWorkWebhookUrl: info.wechatWorkWebhookUrl,
                         });
                     }
-                }).catch(() => {});
+                }).catch((err) => console.error('加载租户信息失败:', err));
             }
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
