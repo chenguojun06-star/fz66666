@@ -66,7 +66,10 @@ public class WebSocketHandshakeInterceptor extends ServerEndpointConfig.Configur
             }
 
             Long urlTenantId = Long.parseLong(pathTenantId);
-            if (!urlTenantId.equals(tokenTenantId)) {
+            if (tokenTenantId == null) {
+                log.warn("[WS] token中缺失tenantId，使用URL路径中的tenantId: urlTenantId={}", urlTenantId);
+                tokenTenantId = urlTenantId;
+            } else if (!urlTenantId.equals(tokenTenantId)) {
                 log.warn("[WS] tenantId不匹配: urlTenantId={}, tokenTenantId={}, 拒绝跨租户连接",
                          urlTenantId, tokenTenantId);
                 throw new SecurityException("tenantId不匹配，拒绝跨租户连接");
