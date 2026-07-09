@@ -49,6 +49,10 @@ public class WebSocketHandshakeInterceptor extends ServerEndpointConfig.Configur
 
         // 2. 校验token有效性（AuthTokenService 由 SpringContextHolder 静态获取）
         try {
+            if (!SpringContextHolder.isReady()) {
+                log.error("[WS] SpringContextHolder 未就绪，applicationContext=null。请检查 WebSocketConfig 是否被扫描，或是否类加载器隔离导致静态字段丢失。uri={}", request.getRequestURI());
+                throw new SecurityException("服务未就绪，请稍后重试");
+            }
             AuthTokenService authTokenService = SpringContextHolder.getBean(AuthTokenService.class);
             TokenSubject tokenSubject = authTokenService.verifyAndParse(token);
             if (tokenSubject == null) {
