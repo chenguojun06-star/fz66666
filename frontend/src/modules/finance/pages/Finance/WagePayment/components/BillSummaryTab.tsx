@@ -271,6 +271,7 @@ const BillSummaryTab: React.FC<BillSummaryTabProps> = ({ defaultBillType }) => {
         dataSource={bills}
         rowKey="id"
         loading={loading}
+        emptyDescription="暂无工资数据"
         scroll={{ x: 1600 }}
        
         rowSelection={{

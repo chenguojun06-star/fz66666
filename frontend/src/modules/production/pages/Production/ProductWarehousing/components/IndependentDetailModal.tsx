@@ -177,6 +177,7 @@ const IndependentDetailModal: React.FC<IndependentDetailModalProps> = ({
                 showIndex={false}
                 rowKey="key"
                 loading={orderDetailLoading}
+                emptyDescription="暂无入库数据"
                 pagination={false}
                 dataSource={orderLineWarehousingRows}
                 sticky
@@ -325,6 +326,7 @@ const IndependentDetailModal: React.FC<IndependentDetailModalProps> = ({
                         <ResizableTable
                           storageKey="independent-detail-requirements"
                           rowKey="key" pagination={false}
+                          emptyDescription="暂无数据"
                           showIndex={false}
                           dataSource={fixedRows}
                           style={{ fontSize: 14 }}

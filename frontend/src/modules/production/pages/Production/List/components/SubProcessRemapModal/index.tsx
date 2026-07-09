@@ -334,7 +334,7 @@ export default function SubProcessRemapModal({
           dataSource={tableRows}
           columns={columns}
           pagination={false}
-         
+          emptyDescription="暂无工序数据"
           bordered
           rowKey="key"
           scroll={{ x: 600 }}

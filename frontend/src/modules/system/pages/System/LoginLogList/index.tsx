@@ -154,6 +154,7 @@ const LoginLogList: React.FC = () => {
           columns={columns as any}
           dataSource={loginLogs}
           loading={loading}
+          emptyDescription="暂无日志数据"
           pagination={{
             current: queryParams.page,
             pageSize: queryParams.pageSize,

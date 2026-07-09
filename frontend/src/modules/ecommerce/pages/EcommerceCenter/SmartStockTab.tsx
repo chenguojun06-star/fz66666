@@ -43,6 +43,7 @@ const SplitDetailModal: React.FC<{ open: boolean; splits: { orderNo: string; sku
         { title: '数量', dataIndex: 'qty' },
         { title: '原因', dataIndex: 'reason' },
       ]}
+      emptyDescription="暂无数据"
     />
   </ResizableModal>
 );
@@ -560,7 +561,7 @@ const SmartStockTab: React.FC = () => {
   ];
 
   const tabItems = [
-    { key: 'alerts', label: <span><WarningOutlined /> 预警列表</span>, children: <ResizableTable<StockAlert> dataSource={st.alerts} columns={alertCols} rowKey="id" size="small" loading={st.loading} /> },
+    { key: 'alerts', label: <span><WarningOutlined /> 预警列表</span>, children: <ResizableTable<StockAlert> dataSource={st.alerts} columns={alertCols} rowKey="id" size="small" loading={st.loading} emptyDescription="暂无数据" /> },
     {
       key: 'suggestions',
       label: <span><ShoppingCartOutlined /> 补货建议</span>,
@@ -575,12 +576,12 @@ const SmartStockTab: React.FC = () => {
               <Button icon={<ThunderboltOutlined />} loading={aiScanning} onClick={handleAiScan}>AI 扫描生成建议</Button>
             </Space>
           </div>
-          <ResizableTable<PurchaseSuggestion> dataSource={st.suggestions} columns={suggestionCols} rowKey="id" size="small" loading={st.loading} />
+          <ResizableTable<PurchaseSuggestion> dataSource={st.suggestions} columns={suggestionCols} rowKey="id" size="small" loading={st.loading} emptyDescription="暂无数据" />
         </div>
       ),
     },
-    { key: 'stock', label: <span><InboxOutlined /> 库存明细</span>, children: <ResizableTable<UniversalStock> dataSource={st.stockList} columns={stockCols} rowKey="id" size="small" loading={st.loading} /> },
-    { key: 'allocations', label: <span><SwapOutlined /> 分配记录</span>, children: <ResizableTable<WarehouseAllocation> dataSource={st.allocations} columns={allocCols} rowKey="id" size="small" loading={st.loading} /> },
+    { key: 'stock', label: <span><InboxOutlined /> 库存明细</span>, children: <ResizableTable<UniversalStock> dataSource={st.stockList} columns={stockCols} rowKey="id" size="small" loading={st.loading} emptyDescription="暂无库存数据" /> },
+    { key: 'allocations', label: <span><SwapOutlined /> 分配记录</span>, children: <ResizableTable<WarehouseAllocation> dataSource={st.allocations} columns={allocCols} rowKey="id" size="small" loading={st.loading} emptyDescription="暂无数据" /> },
     {
       key: 'merge',
       label: <span><MergeCellsOutlined /> 合单管理</span>,
@@ -589,7 +590,7 @@ const SmartStockTab: React.FC = () => {
           <div style={{ color: 'var(--color-text-secondary)', fontSize: 13, marginBottom: 12 }}>
             系统自动扫描同收货人+同平台的多笔待发货订单，合并成一个包裹发货可节省运费
           </div>
-          <ResizableTable<MergeGroup> dataSource={st.mergeGroups} columns={mergeCols} rowKey={(r) => `${r.receiverPhone}_${r.platform}`} size="small" loading={st.loading} />
+          <ResizableTable<MergeGroup> dataSource={st.mergeGroups} columns={mergeCols} rowKey={(r) => `${r.receiverPhone}_${r.platform}`} size="small" loading={st.loading} emptyDescription="暂无数据" />
         </div>
       ),
     },
@@ -604,7 +605,7 @@ const SmartStockTab: React.FC = () => {
             </span>
             <Button icon={<PlusOutlined />} type="primary" onClick={() => { setGiftRuleRecord(null); setGiftRuleModalOpen(true); }}>新增规则</Button>
           </div>
-          <ResizableTable<GiftRule> dataSource={st.giftRules} columns={giftRuleCols} rowKey="id" size="small" loading={st.loading} />
+          <ResizableTable<GiftRule> dataSource={st.giftRules} columns={giftRuleCols} rowKey="id" size="small" loading={st.loading} emptyDescription="暂无数据" />
         </div>
       ),
     },
@@ -620,7 +621,7 @@ const SmartStockTab: React.FC = () => {
             </span>
             <Button icon={<ThunderboltOutlined />} loading={anomalyScanning} onClick={handleScanAnomalies}>扫描物流异常</Button>
           </div>
-          <ResizableTable<LogisticsAnomaly> dataSource={st.anomalies} columns={anomalyCols} rowKey="id" size="small" loading={st.loading} />
+          <ResizableTable<LogisticsAnomaly> dataSource={st.anomalies} columns={anomalyCols} rowKey="id" size="small" loading={st.loading} emptyDescription="暂无数据" />
         </div>
       ),
     },
@@ -636,7 +637,7 @@ const SmartStockTab: React.FC = () => {
             </span>
             <Button icon={<ThunderboltOutlined />} loading={billReconciling} onClick={handleReconcileBills}>触发对账</Button>
           </div>
-          <ResizableTable<PlatformBill> dataSource={st.bills} columns={billCols} rowKey="id" size="small" loading={st.loading} />
+          <ResizableTable<PlatformBill> dataSource={st.bills} columns={billCols} rowKey="id" size="small" loading={st.loading} emptyDescription="暂无财务数据" />
         </div>
       ),
     },

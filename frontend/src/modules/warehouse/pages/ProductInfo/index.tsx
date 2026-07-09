@@ -370,6 +370,7 @@ const ProductInfoPage: React.FC = () => {
           stickyHeader
           scroll={{ x: 'max-content' }}
           size={isMobile ? 'small' : 'middle'}
+          emptyDescription="暂无款式数据"
           pagination={{
             current: queryParams.page,
             pageSize: queryParams.pageSize,

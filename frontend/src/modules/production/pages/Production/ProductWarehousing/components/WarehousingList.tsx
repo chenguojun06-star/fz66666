@@ -246,6 +246,7 @@ const WarehousingList: React.FC<WarehousingListProps> = ({ hook }) => {
                 storageKey="warehousing-list"
                 rowKey="bundleId"
                 columns={pendingColumns}
+                emptyDescription="暂无入库数据"
                 dataSource={(() => {
                   const kw = (queryParams.warehousingNo || '').toLowerCase().trim();
                   return kw

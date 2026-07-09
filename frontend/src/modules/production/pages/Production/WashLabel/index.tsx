@@ -397,6 +397,7 @@ const WashLabelPage: React.FC = () => {
           columns={columns}
           dataSource={orders}
           loading={loading}
+          emptyDescription="暂无生产订单"
           stickyHeader
           scroll={{ x: 1200 }}
           rowSelection={{

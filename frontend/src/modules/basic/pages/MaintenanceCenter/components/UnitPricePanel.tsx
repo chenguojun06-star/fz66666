@@ -569,7 +569,7 @@ const UnitPricePanel: React.FC<UnitPricePanelProps> = ({ styleNo, onSaved }) => 
               onChange: (p, ps) => fetchList({ page: p, pageSize: ps }),
             }}
             scroll={{ x: 'max-content' }}
-           
+            emptyDescription="暂无模板数据"
           />
         </>
       )}

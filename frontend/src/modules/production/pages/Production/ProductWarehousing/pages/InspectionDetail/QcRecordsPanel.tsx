@@ -52,6 +52,7 @@ const QcRecordsPanel: React.FC<Props> = ({ qcRecords, qcStats, recordsLoading, h
       <ResizableTable<WarehousingDetailRecord>
         storageKey="qc-records-panel-table"
         rowKey="id" pagination={false}
+        emptyDescription="暂无质检数据"
         dataSource={qcRecords}
         resizableColumns={false}
         scroll={{ x: 1100 }}

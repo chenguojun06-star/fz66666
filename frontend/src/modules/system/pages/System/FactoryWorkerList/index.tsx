@@ -269,6 +269,7 @@ const FactoryWorkerList: React.FC = () => {
           loading={loading}
           pagination={{ pageSize: 20, showSizeChanger: false }}
           scroll={{ x: 700 }}
+          emptyDescription="暂无工厂数据"
         />
       </PageLayout>
 

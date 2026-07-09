@@ -257,6 +257,7 @@ const PatternSupplementButton: React.FC<{
               pagination={false}
               scroll={{ x: 'max-content', y: tableScrollY }}
               storageKey={storageKey}
+              emptyDescription="暂无数据"
             />
           </div>
         </div>

@@ -402,6 +402,7 @@ const StyleSizeTab: React.FC<Props> = ({
         columns={columns as any}
         pagination={false}
         loading={loading}
+        emptyDescription="暂无数据"
         rowKey="key"
         scroll={{ x: 'max-content' }}
         rowClassName={(_record, rowIndex) => {

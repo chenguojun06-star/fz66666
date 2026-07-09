@@ -316,6 +316,7 @@ export default function AiExecutionPanel() {
               columns={columns}
               dataSource={pendingCommands}
               rowKey="commandId"
+              emptyDescription="暂无数据"
               pagination={{
                 defaultPageSize: readPageSize(10),
                 showSizeChanger: true,

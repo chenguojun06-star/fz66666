@@ -184,6 +184,7 @@ const SupplierUserManager: React.FC<Props> = ({ open, supplierId, supplierName, 
           columns={columns as any}
           dataSource={users}
           loading={loading}
+          emptyDescription="暂无数据"
           pagination={false}
          
           scroll={{ x: 900 }}

@@ -252,6 +252,7 @@ const ZipImportPanel: React.FC = () => {
                   rowKey="row"
                  
                   pagination={false}
+                  emptyDescription="暂无数据"
                   scroll={{ y: 300 }}
                 />
               </>
@@ -461,6 +462,7 @@ const ImportPanel: React.FC<{ config: TabConfig }> = ({ config }) => {
                   rowKey="row"
                  
                   pagination={false}
+                  emptyDescription="暂无数据"
                   scroll={{ y: 300 }}
                 />
               </>

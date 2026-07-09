@@ -149,6 +149,7 @@ const RegistrationTab: React.FC = () => {
             columns={tenantAppColumns}
             dataSource={tenantApps}
             loading={tenantAppsLoading}
+            emptyDescription="暂无数据"
             pagination={false}
            
           />

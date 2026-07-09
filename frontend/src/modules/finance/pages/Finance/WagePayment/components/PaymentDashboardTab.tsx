@@ -206,7 +206,7 @@ const PaymentDashboard: React.FC = () => {
           columns={agingColumns}
           dataSource={agingData}
           rowKey="range"
-         
+          emptyDescription="暂无财务数据"
           pagination={false}
           scroll={{ x: 600 }}
         />

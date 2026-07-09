@@ -298,7 +298,7 @@ const [expressModalOpen, setExpressModalOpen] = useState(false);
               <Button icon={<ReloadOutlined />} onClick={loadOrders}>刷新</Button>
             </Space>
           </Card>
-          <ResizableTable rowKey="id" dataSource={orders} columns={orderColumns} loading={orderLoading} stickyHeader scroll={{ x: 1200 }}
+          <ResizableTable rowKey="id" dataSource={orders} columns={orderColumns} loading={orderLoading} stickyHeader scroll={{ x: 1200 }} emptyDescription="暂无订单数据"
             pagination={{ current: orderPage, pageSize: orderPageSize, total: orderTotal, showSizeChanger: true, showTotal: t => `共 ${t} 条`, onChange: (p, ps) => { setOrderPage(p); setOrderPageSize(ps); } }} />
         </div>
       ) : <Empty description="请先配置平台连接"><Button type="primary" onClick={() => setActiveTab('config')}>去配置</Button></Empty>,

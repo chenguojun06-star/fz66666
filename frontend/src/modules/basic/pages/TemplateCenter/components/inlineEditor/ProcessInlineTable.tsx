@@ -428,6 +428,7 @@ const ProcessInlineTable: React.FC<ProcessInlineTableProps> = ({
         rowKey={(record: ProcessStepRow & { _origIdx?: number }) => String(record.processCode || record._origIdx || 0)}
         columns={columns}
         dataSource={sortedSteps}
+        emptyDescription="暂无工序数据"
         footer={() => (readOnly ? null : (
           <Dropdown
             menu={{

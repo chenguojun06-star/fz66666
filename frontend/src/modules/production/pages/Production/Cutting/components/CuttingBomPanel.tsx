@@ -421,7 +421,7 @@ const CuttingBomPanel: React.FC<CuttingBomPanelProps> = ({
           dataSource={bomList}
           rowKey={(r: CuttingBomRow) => r.id || `${r.materialCode}-${r.materialName}`}
           pagination={false}
-         
+          emptyDescription="暂无物料数据"
           scroll={{ x: 'max-content' }}
         />
       )}
@@ -521,7 +521,7 @@ const CuttingBomMaterialModal: React.FC<CuttingBomMaterialModalProps> = ({
               </div>
               <ResizableTable
                 storageKey="cutting-bom-material-select"
-               
+                emptyDescription="暂无物料数据"
                 loading={materialLoading}
                 dataSource={materialList}
                 rowKey={(record: Record<string, unknown>) => String(record.id || record.materialCode || '')}

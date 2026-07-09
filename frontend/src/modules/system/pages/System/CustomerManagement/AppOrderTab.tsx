@@ -268,6 +268,7 @@ const AppOrderTab: React.FC<{ onOrderActivated?: () => void }> = ({ onOrderActiv
        
         pagination={{ pageSize: 20, showTotal: (t) => `共 ${t} 条` }}
         scroll={{ x: 1200 }}
+        emptyDescription="暂无数据"
       />
 
       {/* 激活确认弹窗 */}

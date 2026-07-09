@@ -598,6 +598,7 @@ const StyleBomTab: React.FC<Props> = ({
             rowClassName="editable-row"
             pagination={false}
             loading={loading}
+            emptyDescription="暂无物料数据"
             rowKey="id"
             scroll={{ x: 'max-content' }}
             showIndex

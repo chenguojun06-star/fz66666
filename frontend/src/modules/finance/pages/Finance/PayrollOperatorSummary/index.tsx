@@ -463,7 +463,7 @@ const PayrollOperatorSummary: React.FC = () => {
                                     storageKey="finance-payroll-internal-orders"
                                     rowKey={(r: Record<string, unknown>) => String(r?.orderId || r?.orderNo || '')}
                                     columns={internalOrderColumns as any}
-                                    dataSource={internalOrders as any} loading={internalOrdersLoading}
+                                    dataSource={internalOrders as any} loading={internalOrdersLoading} emptyDescription="暂无工资数据"
                                     pagination={{ showTotal: (total) => `共 ${total} 条`, showSizeChanger: true, pageSizeOptions: ['20', '50', '100', '200'], defaultPageSize: readPageSize(20) }}
                                     sticky scroll={{ x: 1800 }}
                                     showExport={true}

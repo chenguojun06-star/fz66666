@@ -135,6 +135,7 @@ const SystemStatusTab: React.FC = () => {
           <ResizableTable
             dataSource={tenantStats.tenants}
             rowKey="tenantId"
+            emptyDescription="暂无数据"
            
             pagination={false}
             columns={[

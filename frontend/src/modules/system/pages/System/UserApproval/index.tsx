@@ -349,6 +349,7 @@ const UserApproval: React.FC = () => {
                 }}
                 stickyHeader
                 scroll={{ x: 'max-content' }}
+                emptyDescription="暂无用户数据"
               />
             </>
           )}
@@ -380,6 +381,7 @@ const UserApproval: React.FC = () => {
                 pagination={false}
                 stickyHeader
                 scroll={{ x: 'max-content' }}
+                emptyDescription="暂无用户数据"
               />
             </>
           )}

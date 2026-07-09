@@ -88,7 +88,7 @@ const WorkerEfficiencyTab: React.FC<WorkerEfficiencyTabProps> = ({ list, loading
                 loading={loading}
                 pagination={{ showTotal: (t) => `共 ${t} 人`, defaultPageSize: readPageSize(50), showSizeChanger: true }}
                 scroll={{ x: 900 }}
-               
+                emptyDescription="暂无工资数据"
             />
         </>
     );

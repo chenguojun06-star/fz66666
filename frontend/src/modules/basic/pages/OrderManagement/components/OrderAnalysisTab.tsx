@@ -231,6 +231,7 @@ const OrderAnalysisTab: React.FC = () => {
       <ResizableTable
         rowKey={(r) => (r as StyleInfo).styleNo}
         loading={loading}
+        emptyDescription="暂无款式数据"
         dataSource={styles}
         columns={columns as any}
         stickyHeader

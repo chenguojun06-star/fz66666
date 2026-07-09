@@ -174,7 +174,7 @@ const StylePatternSimpleTab: React.FC<Props> = ({ styleId, styleNo }) => {
                       return (
                         <ResizableTable
                           storageKey="style-pattern-requirements"
-                         
+                          emptyDescription="暂无数据"
                           pagination={false}
                           dataSource={lines.map((line, idx) => ({
                             key: idx,

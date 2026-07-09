@@ -110,6 +110,7 @@ const StyleSecondaryProcessTab: React.FC<Props> = ({
           dataSource={dataSource}
           rowKey="id"
           loading={loading}
+          emptyDescription="暂无数据"
           pagination={false}
           scroll={{ x: 1540 }}
           size="middle"

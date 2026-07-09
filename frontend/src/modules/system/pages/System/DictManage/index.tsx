@@ -533,6 +533,7 @@ const DictManage: React.FC = () => {
         dataSource={dataSource}
         loading={loading}
         rowKey={(record) => record.id || `${record.dictType}-${record.dictCode}`}
+        emptyDescription="暂无数据"
         pagination={{
           pageSize: dictPageSize,
           onChange: (_, ps) => setDictPageSize(ps),

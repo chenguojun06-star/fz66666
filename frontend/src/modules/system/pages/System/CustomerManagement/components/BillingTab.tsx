@@ -355,6 +355,7 @@ const BillingTab: React.FC = () => {
         columns={tenantColumns}
         dataSource={tenants}
         loading={loading}
+        emptyDescription="暂无财务数据"
         pagination={false}
        
       />
@@ -387,6 +388,7 @@ const BillingTab: React.FC = () => {
         columns={billColumns}
         dataSource={bills}
         loading={billsLoading}
+        emptyDescription="暂无财务数据"
         pagination={{
           current: billParams.page, pageSize: billParams.pageSize, total: billsTotal,
           onChange: (p, ps) => setBillParams(prev => ({ ...prev, page: p, pageSize: ps })),
@@ -520,6 +522,7 @@ const BillingTab: React.FC = () => {
                     { title: '支付时间', dataIndex: 'paidTime', width: 150 },
                   ]}
                   dataSource={overview.recentBills}
+                  emptyDescription="暂无财务数据"
                   pagination={false}
                  
                 />

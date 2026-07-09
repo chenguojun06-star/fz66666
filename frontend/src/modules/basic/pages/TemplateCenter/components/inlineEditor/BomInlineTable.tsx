@@ -502,6 +502,7 @@ const BomInlineTable: React.FC<BomInlineTableProps> = ({ value, onChange, readOn
         rowKey="__rowKey"
         columns={columns}
         dataSource={tableData}
+        emptyDescription="暂无物料数据"
       />
     </div>
   );

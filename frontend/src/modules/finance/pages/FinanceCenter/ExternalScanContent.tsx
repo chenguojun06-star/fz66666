@@ -265,6 +265,7 @@ const ExternalScanContent: React.FC = () => {
         dataSource={data}
         rowKey="id"
         loading={loading}
+        emptyDescription="暂无扫码记录"
         pagination={{
           current: page,
           pageSize,

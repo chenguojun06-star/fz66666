@@ -34,11 +34,12 @@ const RecentStylesTable: React.FC<{ records: ProcessKnowledgeStyleRecord[] }> = 
   ];
   return (
     <ResizableTable
-     
+
       columns={cols}
       dataSource={records}
       rowKey={(r) => r.styleNo + r.createTime}
       pagination={false}
+      emptyDescription="暂无工序数据"
       style={{ margin: '0 24px' }}
     />
   );
@@ -302,6 +303,7 @@ const StyleProcessKnowledgeTab: React.FC<StyleProcessKnowledgeTabProps> = ({
       expandable={expandable}
       rowSelection={rowSelection}
       pagination={false}
+      emptyDescription="暂无工序数据"
       scroll={{ x: 1000 }}
     />
   );
@@ -410,6 +412,7 @@ const StyleProcessKnowledgeTab: React.FC<StyleProcessKnowledgeTabProps> = ({
         <ResizableTable<ProcessKnowledgeItem>
           size="middle"
           loading={loading}
+          emptyDescription="暂无工序数据"
           columns={columns}
           dataSource={items}
           rowKey="processName"

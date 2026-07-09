@@ -536,6 +536,7 @@ const _MaterialInventory: React.FC = () => {
                   columns={pickingColumns}
                   dataSource={pickupData.dataSource}
                   loading={pickupData.loading}
+                  emptyDescription="暂无领料数据"
                   rowKey="id"
                   stickyHeader
                   scroll={{ x: 1600 }}
@@ -546,7 +547,7 @@ const _MaterialInventory: React.FC = () => {
                         rowKey="id"
                         dataSource={record.items || []}
                         pagination={false}
-                       
+                        emptyDescription="暂无数据"
                         columns={itemColumns}
                       />
                     ),

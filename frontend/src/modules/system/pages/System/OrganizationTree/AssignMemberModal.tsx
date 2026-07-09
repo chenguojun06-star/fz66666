@@ -54,6 +54,7 @@ const AssignMemberModal: React.FC<AssignMemberModalProps> = ({
           rowKey={(r) => String(r.id)}
           dataSource={filteredAssignableUsers}
           pagination={false}
+          emptyDescription="暂无用户数据"
           rowSelection={{
             type: 'checkbox',
             selectedRowKeys: batchSelectedIds,

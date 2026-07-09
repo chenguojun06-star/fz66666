@@ -95,7 +95,7 @@ const TaxConfigTab: React.FC = () => {
       <div style={{ marginBottom: 12 }}>
         <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditRecord(null); setFormOpen(true); }}>新增税率</Button>
       </div>
-      <ResizableTable storageKey="finance-tax-config" size="small" rowKey="id" columns={columns} dataSource={list} loading={loading} scroll={{ x: 'max-content' }} pagination={false} />
+      <ResizableTable storageKey="finance-tax-config" size="small" rowKey="id" columns={columns} dataSource={list} loading={loading} emptyDescription="暂无财务数据" scroll={{ x: 'max-content' }} pagination={false} />
       <ResizableModal
         title={editRecord ? '编辑税率' : '新增税率'}
         open={formOpen}

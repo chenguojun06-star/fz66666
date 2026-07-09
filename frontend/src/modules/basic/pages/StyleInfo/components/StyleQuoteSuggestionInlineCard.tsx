@@ -142,9 +142,10 @@ const StyleQuoteSuggestionInlineCard: React.FC<Props> = ({ styleNo, sourceStyleN
 
               {Array.isArray(data.recentOrders) && data.recentOrders.length > 0 ? (
                 <ResizableTable
-                 
+
                   rowKey="orderNo"
                   pagination={false}
+                  emptyDescription="暂无订单数据"
                   dataSource={data.recentOrders.slice(0, 5)}
                   columns={[
                     { title: '历史订单', dataIndex: 'orderNo', width: 140 },

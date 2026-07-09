@@ -408,6 +408,7 @@ const InspectionDetail: React.FC<InspectionDetailProps> = ({ orderId: propOrderI
                     <ResizableTable
                       storageKey="inspection-bom-table"
                       rowKey="id" pagination={false}
+                      emptyDescription="暂无物料数据"
                       scroll={{ x: 650 }} dataSource={bom}
                       columns={BOM_COLUMNS}
                     />

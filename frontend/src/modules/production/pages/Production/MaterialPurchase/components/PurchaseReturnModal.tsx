@@ -242,6 +242,7 @@ const PurchaseReturnModal: React.FC<PurchaseReturnModalProps> = ({
         columns={columns}
         rowKey="purchaseId"
         pagination={false}
+        emptyDescription="暂无采购退货记录"
         scroll={{ y: 300 }}
       />
     </ResizableModal>

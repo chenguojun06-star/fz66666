@@ -526,6 +526,7 @@ const UserList: React.FC = () => {
             dataSource={logRecords}
             rowKey={(r) => String(r.id || `${r.bizType}-${r.bizId}-${r.createTime}`)}
             loading={logLoading}
+            emptyDescription="暂无日志数据"
             pagination={false}
             scroll={{ x: 'max-content' }}
           />

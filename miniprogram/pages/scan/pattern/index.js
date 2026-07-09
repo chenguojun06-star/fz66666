@@ -650,110 +650,38 @@ Page({
       return;
     }
 
-    // 样衣有自己独立的父子关系逻辑，不走大货的菲号系统
-    // 优先使用工序系统（如果有），否则使用传统样衣流程
-    if (d.hasProcessSystem) {
-      return await this._submitProcessScan(d, operationType, qty, remark);
-    }
-
-    // 传统样衣流程：领取 → 完成 → 审核 → 入库
-    if (operationType !== 'REVIEW' && operationType !== 'COMPLETE' && qty <= 0) {
-      toast.error('请输入正确数量');
+    // 样衣走工序系统：无工序配置时提示用户去PC端配置
+    if (!d.hasProcessSystem) {
+      toast.error('该款式未配置工序，请先在PC端款式开发页配置工序后再扫码');
       return;
     }
-    const maxQty = d.maxQuantity || d.quantity || 999999;
-    if (operationType !== 'REVIEW' && operationType !== 'COMPLETE' && qty > maxQty) {
-      toast.error('数量不能超过最大数量 ' + maxQty + ' 件');
-      return;
-    }
-    if (operationType === 'REVIEW' && !remark) {
-      toast.error('请填写审核备注');
-      return;
-    }
-    if (WAREHOUSE_OPERATIONS.has(operationType)) {
-      if (!String(d.warehouseCode || '').trim()) {
-        toast.error('请选择入库仓库');
-        return;
-      }
-      if (!this.data.warehouseAreaId) {
-        toast.error('请选择仓库区域');
-        return;
-      }
-      if (!this.data.warehouseLocationCode) {
-        toast.error('请选择库位');
-        return;
-      }
-    }
 
-    this.setData({ loading: true });
-    try {
-      let result;
-
-      if (operationType === 'REVIEW') {
-        const reviewResult = d.reviewResult || 'PASS';
-        const images = this.data.reviewImages || [];
-        const res = await api.production.reviewPattern(d.patternId, reviewResult, remark, images);
-        const resultMsg = reviewResult === 'PASS' ? '审核通过' : reviewResult === 'REWORK' ? '审核返修，请扫码返修' : '审核已驳回';
-        result = res ? { success: true, message: resultMsg } : { success: false, message: '审核提交失败' };
-
-      } else if (operationType === 'COMPLETE') {
-        const res = await api.production.completePatternByTask(d.patternId);
-        result = res ? { success: true, message: '制作完成' } : { success: false, message: '完成操作失败' };
-
-      } else if (operationType === 'WAREHOUSE_IN') {
-        // 入库操作，不再自动审核
-        const wiRes = await api.production.warehouseIn(d.patternId, d.warehouseCode || '',
-          this.data.warehouseAreaId, this.data.warehouseLocationCode, remark);
-        result = wiRes ? { success: true, message: '样衣入库成功' } : { success: false, message: '入库失败' };
-
-      } else if (operationType === 'RECEIVE') {
-        const receiveExtra = {};
-        if (d.color) receiveExtra.color = d.color;
-        if (d.size) receiveExtra.size = d.size;
-        if (qty > 0) receiveExtra.quantity = qty;
-        const rcvRes = await api.production.receivePattern(d.patternId, remark, receiveExtra);
-        result = rcvRes ? { success: true, message: '领取成功' } : { success: false, message: '领取样板失败' };
-
-      } else {
-        const scanRes = await api.production.submitPatternScan({
-          patternId: d.patternId,
-          operationType: operationType,
-          operatorRole: 'PLATE_WORKER',
-          quantity: qty,
-          size: d.size,
-          color: d.color,
-          warehouseCode: d.warehouseCode,
-          warehouseAreaId: this.data.warehouseAreaId,
-          warehouseLocationCode: this.data.warehouseLocationCode,
-          remark: remark,
-        });
-        result = {
-          success: true,
-          message: (scanRes && scanRes.message) || `${d.operationLabel || '操作'}成功`,
-          data: scanRes,
-        };
-      }
-
-      if (result && result.success) {
-        toast.success(result.message || '操作成功');
-        this._emitRefresh();
-        wx.navigateBack();
-      } else {
-        toast.error((result && result.message) || '操作失败');
-      }
-    } catch (e) {
-      console.error('[样板页] 提交失败:', e);
-      toast.error(e.errMsg || e.message || '提交失败');
-    } finally {
-      this.setData({ loading: false });
-    }
+    return await this._submitProcessScan(d, operationType, qty, remark);
   },
 
   async _submitProcessScan(d, operationType, qty, remark) {
     const selectedOption = (d.operationOptions || []).find(function(o) { return o.value === operationType; });
     const processName = selectedOption && selectedOption.processName || operationType;
     const progressStage = selectedOption && selectedOption.progressStage || operationType;
-    const scanType = selectedOption && selectedOption.scanType || 'production';
+
+    // 样衣走独立接口 /api/production/pattern/scan，不走大货 executeScan（无菲号概念）
+    const buildPayload = function(qtyVal, colorVal, sizeVal) {
+      const payload = {
+        patternId: d.patternId,
+        operationType: operationType,
+        operatorRole: 'PLATE_WORKER',
+        remark: remark || '',
+        quantity: qtyVal,
+        color: colorVal || d.color || '',
+        size: sizeVal || d.size || '',
+        processName: processName,
+        progressStage: progressStage,
+      };
+      if (d.warehouseCode) payload.warehouseCode = d.warehouseCode;
+      if (this.data.warehouseAreaId) payload.warehouseAreaId = this.data.warehouseAreaId;
+      if (this.data.warehouseLocationCode) payload.warehouseLocationCode = this.data.warehouseLocationCode;
+      return payload;
+    }.bind(this);
 
     // 检查是否有多色多码选择
     const hasSkuList = this.data.skuList && this.data.skuList.length > 0;
@@ -770,39 +698,10 @@ Page({
 
       this.setData({ loading: true });
       try {
-        const requests = SKUProcessor.generateScanRequests(
-          validation.validList,
-          d.orderNo,
-          d.styleNo,
-          progressStage,
-          {
-            scanCode: d.patternId || '',
-            sourceBizType: 'SAMPLE',
-            operatorRole: 'PLATE_WORKER',
-            orderId: d.orderId,
-            processName: processName,
-            styleNo: d.styleNo || '',
-            color: d.color || '',
-            size: d.size || '',
-            remark: remark || '',
-          },
-        );
-
-        // 添加仓库信息到每个请求
-        requests.forEach(function(req) {
-          req.scanType = scanType;
-          // 样衣没有菲号概念，使用 SAMPLE 标识，避免与大货菲号混淆
-          req.bundleNo = d.bundleNo || 'SAMPLE';
-          if (!req.styleNo && d.styleNo) req.styleNo = d.styleNo;
-          if (!req.color && d.color) req.color = d.color;
-          if (!req.size && d.size) req.size = d.size;
-          if (d.warehouseCode) req.warehouse = d.warehouseCode;
-          if (this.data.warehouseAreaId) req.warehouseAreaId = this.data.warehouseAreaId;
-          if (this.data.warehouseLocationCode) req.warehouseLocationCode = this.data.warehouseLocationCode;
-        }.bind(this));
-
-        const tasks = requests.map(function(req) {
-          return api.production.executeScan(req);
+        const tasks = validation.validList.map(function(input) {
+          return api.production.submitPatternScan(
+            buildPayload(Number(input.inputQuantity), input.color, input.size)
+          );
         });
 
         await Promise.all(tasks);
@@ -828,29 +727,7 @@ Page({
 
       this.setData({ loading: true });
       try {
-        const scanData = {
-          orderNo: d.orderNo || '',
-          orderId: d.orderId || '',
-          // 样衣没有菲号概念，使用 SAMPLE 标识，避免与大货菲号混淆
-          bundleNo: d.bundleNo || 'SAMPLE',
-          processName: processName,
-          progressStage: progressStage,
-          scanType: scanType,
-          quantity: qty,
-          scanCode: d.patternId || '',
-          sourceBizType: 'SAMPLE',
-          operatorRole: 'PLATE_WORKER',
-          styleNo: d.styleNo || '',
-          color: d.color || '',
-          size: d.size || '',
-          remark: remark || '',
-        };
-
-        if (d.warehouseCode) scanData.warehouse = d.warehouseCode;
-        if (this.data.warehouseAreaId) scanData.warehouseAreaId = this.data.warehouseAreaId;
-        if (this.data.warehouseLocationCode) scanData.warehouseLocationCode = this.data.warehouseLocationCode;
-
-        await api.production.executeScan(scanData);
+        await api.production.submitPatternScan(buildPayload(qty, d.color, d.size));
         toast.success((selectedOption && selectedOption.label) || processName + ' 完成');
         this._emitRefresh();
         wx.navigateBack();

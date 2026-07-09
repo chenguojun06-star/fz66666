@@ -227,7 +227,7 @@ const SyncProcessPriceModal = memo(function SyncProcessPriceModal({
         columns={columns}
         dataSource={data}
         rowKey="id"
-       
+        emptyDescription="暂无工序数据"
         bordered
         loading={loadingTemplate}
         scroll={{ x: 'max-content', y: 'calc(100vh - 380px)' }}

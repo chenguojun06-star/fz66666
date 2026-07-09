@@ -325,6 +325,7 @@ const FactoryPersonalCenterModal: React.FC<FactoryPersonalCenterModalProps> = ({
                     columns={columns}
                     rowKey="id"
                     loading={membersLoading}
+                    emptyDescription="暂无用户数据"
                     pagination={false}
                   />
                 </div>

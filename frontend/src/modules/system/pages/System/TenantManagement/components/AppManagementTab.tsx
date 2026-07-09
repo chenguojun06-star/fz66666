@@ -177,6 +177,7 @@ const AppManagementTab: React.FC = () => {
         columns={columns}
         dataSource={apps}
         loading={loading}
+        emptyDescription="暂无数据"
         pagination={{
           current: queryParams.page, pageSize: queryParams.size, total,
           onChange: (p, ps) => setQueryParams(prev => ({ ...prev, page: p, size: ps })),
@@ -285,6 +286,7 @@ const AppManagementTab: React.FC = () => {
           columns={logColumns}
           dataSource={logs}
           loading={logsLoading}
+          emptyDescription="暂无数据"
           pagination={{ total: logsTotal, pageSize: 50, showTotal: (t) => `共 ${t} 条` }}
          
         />

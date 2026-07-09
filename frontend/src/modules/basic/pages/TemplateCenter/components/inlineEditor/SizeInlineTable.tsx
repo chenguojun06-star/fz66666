@@ -343,6 +343,7 @@ const SizeInlineTable: React.FC<SizeInlineTableProps> = ({ value, onChange, read
         rowKey="__rowKey"
         columns={columns}
         dataSource={tableData}
+        emptyDescription="暂无尺码数据"
       />
     </div>
   );

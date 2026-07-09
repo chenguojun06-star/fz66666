@@ -664,6 +664,7 @@ const FactoryList: React.FC = () => {
                     scroll={{ x: 'max-content' }}
                     showExport={true}
                     exportFilename="供应商列表.xlsx"
+                    emptyDescription="暂无供应商数据"
                   />
                 </>
               ),
@@ -713,6 +714,7 @@ const FactoryList: React.FC = () => {
           loading={logLoading}
           pagination={false}
           scroll={{ x: 'max-content' }}
+          emptyDescription="暂无日志数据"
         />
       </ResizableModal>
 

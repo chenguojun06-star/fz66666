@@ -228,7 +228,7 @@ export default function SystemIssueBoard() {
               columns={columns}
               rowKey={(r) => `${r.category}-${r.title}`}
               pagination={false}
-             
+              emptyDescription="暂无数据"
               rowClassName={(record) =>
                 record.level === 'ERROR' ? 'issue-row-error' :
                 record.level === 'WARN'  ? 'issue-row-warn'  : ''
@@ -253,7 +253,7 @@ export default function SystemIssueBoard() {
               columns={feColumns}
               rowKey={(r) => `${r.occurredAt}-${feErrors.indexOf(r)}`}
               pagination={{ pageSize: 20, showSizeChanger: false }}
-             
+              emptyDescription="暂无数据"
             />
           )}
         </Spin>

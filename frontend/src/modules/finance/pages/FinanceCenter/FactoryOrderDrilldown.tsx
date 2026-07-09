@@ -147,7 +147,7 @@ const FactoryOrderDrilldown: React.FC<FactoryOrderDrilldownProps> = ({
           dataSource={orders}
           rowKey="orderId"
           loading={loading}
-         
+          emptyDescription="暂无订单数据"
           pagination={false}
           scroll={{ x: 1300 }}
           summary={() => {

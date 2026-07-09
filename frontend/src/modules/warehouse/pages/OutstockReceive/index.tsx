@@ -115,6 +115,7 @@ const OutstockReceive: React.FC = () => {
           loading={loading}
           scroll={{ x: 1400 }}
           pagination={false}
+          emptyDescription="暂无数据"
         />
         <StandardPagination
           current={pagination.current}

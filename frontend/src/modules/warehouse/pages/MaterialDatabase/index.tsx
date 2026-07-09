@@ -610,7 +610,7 @@ const MaterialDatabasePage: React.FC = () => {
           </Card>
           <ResizableTable<MaterialDatabase>
             columns={columns} dataSource={dataList} rowKey={(r) => String(r?.id || r?.materialCode || '')}
-            loading={loading} stickyHeader scroll={{ x: 'max-content' }} size={isMobile ? 'small' : 'middle'}
+            loading={loading} stickyHeader scroll={{ x: 'max-content' }} size={isMobile ? 'small' : 'middle'} emptyDescription="暂无物料数据"
             pagination={{ ...pagination, simple: false, showTotal: (t) => `共 ${t} 条`, showSizeChanger: true, pageSizeOptions: ['20', '50', '100', '200'], onChange, size: isMobile ? 'small' : 'default' }}
           />
         </Card>

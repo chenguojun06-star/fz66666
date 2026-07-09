@@ -182,6 +182,7 @@ const FeedbackTab: React.FC = () => {
         columns={columns}
         dataSource={data}
         loading={loading}
+        emptyDescription="暂无数据"
         pagination={{
           current: queryParams.page,
           pageSize: queryParams.pageSize,

@@ -465,8 +465,9 @@ const InboundModal: React.FC<InboundModalProps> = ({ visible, onCancel, onSucces
           ) : styleSnapshot?.planRows?.length ? (
             <ResizableTable<InboundPlanRow>
               rowKey="key"
-             
+
               pagination={false}
+              emptyDescription="暂无入库数据"
               dataSource={styleSnapshot.planRows}
               columns={[
                 { title: '颜色', dataIndex: 'color', key: 'color', width: 160 },

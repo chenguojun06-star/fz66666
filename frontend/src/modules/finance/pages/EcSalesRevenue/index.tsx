@@ -353,7 +353,7 @@ const EcSalesRevenue: React.FC = () => {
             dataSource={records}
             columns={columns}
             scroll={{ x: 1100 }}
-           
+            emptyDescription="暂无财务数据"
             pagination={{
               current: filters.page,
               pageSize: filters.pageSize,

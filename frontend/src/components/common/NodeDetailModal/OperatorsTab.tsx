@@ -42,6 +42,7 @@ const OperatorsTab: React.FC<OperatorsTabProps> = ({ operatorSummary }) => (
       rowKey="operatorId"
       dataSource={operatorSummary}
       columns={operatorColumns}
+      emptyDescription="暂无数据"
       pagination={false}
     />
   </div>

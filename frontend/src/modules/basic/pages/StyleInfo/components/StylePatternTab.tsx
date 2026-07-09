@@ -570,6 +570,7 @@ const StylePatternTab: React.FC<Props> = ({
                 dataSource={patternRows}
                 columns={usageColumns}
                 pagination={false}
+                emptyDescription="暂无数据"
                 scroll={{ x: 'max-content' }}
               />
             )}

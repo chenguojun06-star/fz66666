@@ -336,7 +336,7 @@ const ProductionSheetPanel: React.FC<ProductionSheetPanelProps> = ({ styleNo, on
         />
       </Card>
 
-      <ResizableTable rowKey={(r) => String((r as any).id ?? r.styleNo)} columns={columns as any} dataSource={styles} loading={loading}
+      <ResizableTable rowKey={(r) => String((r as any).id ?? r.styleNo)} columns={columns as any} dataSource={styles} loading={loading} emptyDescription="暂无生产订单"
         pagination={{ current: queryParams.page, pageSize: queryParams.pageSize, total, showTotal: (t) => `共 ${t} 条`, showSizeChanger: true, pageSizeOptions: ['10', '20', '50', '100'],
           onChange: (page, pageSize) => setQueryParams(prev => ({ ...prev, page, pageSize })) }} />
 

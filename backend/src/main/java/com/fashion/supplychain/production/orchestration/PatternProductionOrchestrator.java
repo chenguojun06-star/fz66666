@@ -380,7 +380,8 @@ public class PatternProductionOrchestrator {
     public Map<String, Object> submitScan(String patternId, String operationType, String operatorRole, String remark,
                                           Integer quantity, String color, String size,
                                           String warehouseCode, String warehouseAreaId,
-                                          String warehouseLocationCode, BigDecimal unitPrice) {
+                                          String warehouseLocationCode, BigDecimal unitPrice,
+                                          String processName, String progressStage) {
         assertSubmitScanParams(patternId, operationType);
         PatternProduction pattern = loadPatternForScan(patternId);
         statusHelper.validateWarehouseOperationFlow(patternId, operationType);
@@ -395,7 +396,7 @@ public class PatternProductionOrchestrator {
 
         PatternScanRecord scanRecord = createPatternScanRecord(pattern, operationType, operatorId, operatorName,
                 operatorRole, remark, quantity, effectiveColor, effectiveSize,
-                warehouseCode, warehouseAreaId, warehouseLocationCode);
+                warehouseCode, warehouseAreaId, warehouseLocationCode, processName, progressStage);
         patternScanRecordService.save(scanRecord);
 
         syncToScanRecord(pattern, operationType, operatorId, operatorName, remark, unitPrice, effectiveColor, effectiveSize);
@@ -434,7 +435,8 @@ public class PatternProductionOrchestrator {
     private PatternScanRecord createPatternScanRecord(PatternProduction pattern, String operationType,
             String operatorId, String operatorName, String operatorRole, String remark, Integer quantity,
             String effectiveColor, String effectiveSize,
-            String warehouseCode, String warehouseAreaId, String warehouseLocationCode) {
+            String warehouseCode, String warehouseAreaId, String warehouseLocationCode,
+            String processName, String progressStage) {
         PatternScanRecord scanRecord = new PatternScanRecord();
         scanRecord.setPatternProductionId(pattern.getId());
         scanRecord.setStyleId(pattern.getStyleId());
@@ -448,10 +450,9 @@ public class PatternProductionOrchestrator {
             scanRecord.setQuantity(pattern.getQuantity());
         }
         scanRecord.setOperationType(operationType);
-        // 补充 processName 和 progressStage，解决前端工序完成度匹配问题
-        String processLabel = patternOperationLabel(operationType);
-        scanRecord.setProcessName(processLabel);
-        scanRecord.setProgressStage(mapOperationTypeToProgressStage(operationType));
+        // 工序名/阶段：优先使用前端工序系统传入的动态值，为空时按 operationType 映射
+        scanRecord.setProcessName(StringUtils.hasText(processName) ? processName : patternOperationLabel(operationType));
+        scanRecord.setProgressStage(StringUtils.hasText(progressStage) ? progressStage : mapOperationTypeToProgressStage(operationType));
         scanRecord.setProcessCode(operationType);
         scanRecord.setOperatorId(operatorId);
         scanRecord.setOperatorName(operatorName);
@@ -538,7 +539,7 @@ public class PatternProductionOrchestrator {
 
         Map<String, Object> result = submitScan(patternId, "WAREHOUSE_IN", "WAREHOUSE", remark,
                 pattern.getQuantity(), pattern.getColor(), pattern.getSize(),
-                warehouseCode, warehouseAreaId, warehouseLocationCode, null);
+                warehouseCode, warehouseAreaId, warehouseLocationCode, null, null, null);
         result.put("message", "样衣入库成功");
         return result;
     }

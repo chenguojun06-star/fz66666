@@ -349,6 +349,7 @@ const FactoryTemplateTab: React.FC = () => {
           onChange: (p, ps) => { setPageSize(ps); fetchList(p); },
         }}
         scroll={{ x: 960 }}
+        emptyDescription="暂无模板数据"
       />
 
       <ResizableModal

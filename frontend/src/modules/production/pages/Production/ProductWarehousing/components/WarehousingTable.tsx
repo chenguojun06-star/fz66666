@@ -425,6 +425,7 @@ const WarehousingTable: React.FC<WarehousingTableProps> = ({
       dataSource={dataSource as any[]}
       rowKey="id"
       loading={loading}
+      emptyDescription="暂无入库数据"
       scroll={{ x: 'max-content' }}
       pagination={{
         current: queryParams.page,

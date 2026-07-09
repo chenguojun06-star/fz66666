@@ -151,7 +151,7 @@ const EcRevenueTab: React.FC = () => {
             <Button icon={<ReloadOutlined />} onClick={() => { setFilters((prev) => ({ ...prev, page: 1 })); }} />
           </Tooltip>
         </Space>
-        <ResizableTable rowKey="id" loading={loading} dataSource={records} columns={columns} scroll={{ x: 1100 }}
+        <ResizableTable rowKey="id" loading={loading} emptyDescription="暂无财务数据" dataSource={records} columns={columns} scroll={{ x: 1100 }}
           pagination={{ current: filters.page, pageSize: filters.pageSize, total, showSizeChanger: true, showTotal: (t) => `共 ${t} 条`,
             onChange: (page, pageSize) => setFilters((prev) => ({ ...prev, page, pageSize })) }} />
       </Card>

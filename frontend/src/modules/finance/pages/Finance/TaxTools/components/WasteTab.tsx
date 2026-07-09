@@ -130,7 +130,7 @@ const WasteTab: React.FC = () => {
             onChange={(dates) => setFilters(prev => ({ ...prev, dateRange: dates ? [dates[0]!, dates[1]!] : [] }))} style={{ width: 260 }} />
           <Button type="primary" ghost onClick={handleSearch}>查询</Button>
         </Space>
-        <ResizableTable columns={columns} dataSource={dataSource} rowKey="id" loading={loading} scroll={{ x: 1200 }}
+        <ResizableTable columns={columns} dataSource={dataSource} rowKey="id" loading={loading} scroll={{ x: 1200 }} emptyDescription="暂无财务数据"
           pagination={{
             current: pagination.current,
             pageSize: pagination.pageSize,

@@ -161,8 +161,9 @@ const HistoryTable: React.FC = () => {
       dataSource={history}
       columns={columns}
       loading={historyLoading}
+      emptyDescription="暂无数据"
       rowKey="id"
-     
+
       pagination={false}
       style={{ marginTop: 8 }}
     />

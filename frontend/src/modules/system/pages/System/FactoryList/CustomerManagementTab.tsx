@@ -383,6 +383,7 @@ const CustomerManagementTab: React.FC<Props> = ({ active }) => {
           columns={columns as any}
           dataSource={customers}
           loading={loading}
+          emptyDescription="暂无客户数据"
           pagination={false}
           stickyHeader
           scroll={{ x: 'max-content' }}

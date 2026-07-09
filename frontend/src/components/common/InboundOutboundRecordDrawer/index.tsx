@@ -157,6 +157,7 @@ const InboundOutboundRecordDrawer: React.FC<InboundOutboundRecordDrawerProps> = 
       <ResizableTable
         storageKey="material-inventory-details-drawer"
         loading={loading}
+        emptyDescription="暂无库存数据"
         dataSource={records}
         rowKey={(r) => `${r.type}-${r.operationTime}-${records.indexOf(r)}`}
         columns={columns}

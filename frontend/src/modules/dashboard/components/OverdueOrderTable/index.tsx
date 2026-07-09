@@ -239,6 +239,7 @@ const OverdueOrderTable: React.FC = () => {
             columns={columns}
             dataSource={filteredDataSource}
             rowKey="id"
+            emptyDescription="暂无生产订单"
             scroll={{ x: 'max-content', y: 9999 }}
             pagination={{
               defaultPageSize: 10,

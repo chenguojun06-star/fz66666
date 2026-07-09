@@ -801,6 +801,7 @@ const RoleList: React.FC = () => {
           rowKey={(r) => String(r.id || r.username)}
           loading={employeeLoading}
           pagination={employeeList.length > 10 ? { pageSize: 10 } : false}
+          emptyDescription="暂无用户数据"
         />
       </ResizableModal>
 
@@ -821,6 +822,7 @@ const RoleList: React.FC = () => {
           loading={logLoading}
           pagination={false}
           scroll={{ x: 'max-content' }}
+          emptyDescription="暂无日志数据"
         />
       </ResizableModal>
 

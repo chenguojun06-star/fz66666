@@ -247,13 +247,14 @@ const PurchaseDocRecognizeModal: React.FC<Props> = ({ open, orderNo, onCancel, o
                 已匹配采购记录 <strong>{matchedCount}</strong> 项（可编辑数量后点击应用）
               </div>
               <ResizableTable
-               
+
                 rowKey={(r: RecognizedItem) =>
                   r.purchaseId || r.materialCode || r.materialName
                 }
                 dataSource={result.items}
                 columns={columns}
                 pagination={false}
+                emptyDescription="暂无物料数据"
               />
               <Space style={{ justifyContent: 'flex-end', width: '100%' }}>
                 <Button

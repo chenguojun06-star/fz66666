@@ -386,6 +386,7 @@ const OutstockRecordTab: React.FC = () => {
         columns={columns}
         dataSource={records}
         loading={loading}
+        emptyDescription="暂无出库记录"
         rowKey="id"
         stickyHeader
         scroll={{ x: 2400 }}

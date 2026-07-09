@@ -177,8 +177,9 @@ const LoanHistoryDrawer: React.FC<LoanHistoryDrawerProps> = ({ visible, stock, o
           dataSource={data}
           rowKey="id"
           loading={loading}
+          emptyDescription="暂无借出记录"
           pagination={false}
-         
+
         />
       </ResizableModal>
 

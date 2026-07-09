@@ -165,6 +165,7 @@ const MaterialPickingList: React.FC = () => {
           columns={columns}
           rowKey="id"
           stickyHeader
+          emptyDescription="暂无领料数据"
           pagination={{
             total,
             current,

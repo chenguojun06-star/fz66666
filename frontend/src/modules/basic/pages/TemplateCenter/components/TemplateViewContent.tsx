@@ -187,6 +187,7 @@ const BomView: React.FC<{ obj: unknown }> = ({ obj }) => {
         },
       ]}
       dataSource={rows}
+      emptyDescription="暂无物料数据"
     />
   );
 };
@@ -230,6 +231,7 @@ const SizeView: React.FC<{ obj: unknown }> = ({ obj }) => {
       scroll={{ x: 'max-content' }}
       columns={[...baseCols, ...sizeCols]}
       dataSource={parts}
+      emptyDescription="暂无尺码数据"
     />
   );
 };

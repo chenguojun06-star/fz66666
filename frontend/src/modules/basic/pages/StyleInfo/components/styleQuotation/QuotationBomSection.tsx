@@ -65,6 +65,7 @@ const QuotationBomSection: React.FC<Props> = ({ bomList, bomColorCosts, material
         rowKey={(record: any) => record.id || String(Math.random())}
         pagination={false}
         size="small"
+        emptyDescription="暂无物料数据"
         dataSource={bomList}
         showIndex
         columns={[

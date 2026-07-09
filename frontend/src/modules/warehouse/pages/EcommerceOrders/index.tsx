@@ -349,7 +349,7 @@ const OrdersTab: React.FC = () => {
         loading={loading}
         stickyHeader
         scroll={{ x: 1350 }}
-       
+        emptyDescription="暂无订单数据"
         pagination={{ current: page, pageSize, total, showSizeChanger: true,
           showTotal: t => `共 ${t} 条`,
           onChange: (p, ps) => { setPage(p); setPageSize(ps); } }}
@@ -588,7 +588,7 @@ const PricingTab: React.FC = () => {
         columns={pricingColumns}
         loading={loading}
         stickyHeader
-       
+        emptyDescription="暂无SKU数据"
         scroll={{ x: 900 }}
         pagination={{ current: page, pageSize: 20, total,
           showTotal: t => `共 ${t} 个 SKU`,

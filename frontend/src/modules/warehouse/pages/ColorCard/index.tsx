@@ -466,6 +466,7 @@ const ColorCardPage: React.FC = () => {
           showTotal: (t) => `共 ${t} 本色卡本`,
           onChange: (p, ps) => { setPage(p); setPageSize(ps); },
         }}
+        emptyDescription="暂无数据"
       />
 
       {/* ===== 色卡本新建/编辑弹窗 ===== */}

@@ -252,6 +252,7 @@ const LoanHistoryModal: React.FC<LoanHistoryModalProps> = ({ visible, stock, onC
           dataSource={data}
           rowKey="id"
           loading={loading}
+          emptyDescription="暂无借出记录"
           pagination={false}
         />
       </ResizableModal>

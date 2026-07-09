@@ -12,6 +12,7 @@ const OrderLinesTable: React.FC<Props> = ({ rows, loading }) => (
     <ResizableTable<OrderLineWarehousingRow>
       storageKey="order-lines-warehousing-table"
       rowKey="key" loading={loading}
+      emptyDescription="暂无入库数据"
       pagination={false} dataSource={rows}
       resizableColumns={false}
       scroll={{ x: 820 }}

@@ -309,6 +309,7 @@ const OrderTransferPage: React.FC = () => {
           dataSource={sortedTransfers}
           rowKey="id"
           loading={loading}
+          emptyDescription="暂无数据"
           pagination={{
             defaultPageSize: readPageSize(10),
             showSizeChanger: true,

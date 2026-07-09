@@ -423,6 +423,7 @@ const StyleAttachmentTab: React.FC<Props> = ({ styleId, styleNo, bizType, upload
         dataSource={data}
         rowKey="id"
         loading={loading}
+        emptyDescription="暂无数据"
         pagination={false}
        
         scroll={{ x: 'max-content' }}

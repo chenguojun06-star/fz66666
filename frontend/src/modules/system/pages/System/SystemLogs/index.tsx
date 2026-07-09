@@ -447,6 +447,7 @@ const SystemLogs: React.FC = () => {
                     scroll={{ x: 'max-content' }}
                     showExport={true}
                     exportFilename="登录日志.xlsx"
+                    emptyDescription="暂无日志数据"
                   />
                 </>
               ),
@@ -576,6 +577,7 @@ const SystemLogs: React.FC = () => {
                     scroll={{ x: 1200 }}
                     showExport={true}
                     exportFilename="操作日志.xlsx"
+                    emptyDescription="暂无日志数据"
                   />
                 </>
               ),

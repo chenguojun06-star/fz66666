@@ -1407,6 +1407,7 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = ({ orderId, orde
             pagination={false}
             size="small"
             scroll={{ x: 'max-content' }}
+            emptyDescription="暂无采购明细"
             columns={editColumns as any}
           />
         ) : purchases.length === 0 && !loading ? (
@@ -1442,6 +1443,7 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = ({ orderId, orde
                   pagination={false}
                   size="small"
                   scroll={{ x: 'max-content' }}
+                  emptyDescription="暂无采购明细"
                   columns={columns}
                 />
               ),
@@ -1471,6 +1473,7 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = ({ orderId, orde
         <ResizableTable
           storageKey="purchase-inline-material-select"
           loading={materialLoading}
+          emptyDescription="暂无物料数据"
           dataSource={materialList}
           rowKey={(record: Record<string, unknown>) => String(record.id || record.materialCode || '')}
           pagination={{

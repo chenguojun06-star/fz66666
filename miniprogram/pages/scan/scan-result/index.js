@@ -280,54 +280,64 @@ Page({
 
     const patch = {};
 
-    if (needColor || needSize || !detail.styleNo) {
-      try {
-        const bundle = await api.production.getCuttingBundle(raw.orderNo, raw.bundleNo);
-        if (bundle) {
-          if (needColor && bundle.color) {
-            patch['detail.color'] = String(bundle.color);
-          }
-          if (needSize && bundle.size) {
-            patch['detail.size'] = String(bundle.size);
-          }
-          if (!detail.styleNo && bundle.styleNo) {
-            patch['detail.styleNo'] = String(bundle.styleNo);
-          }
+    // 两个回填请求互相独立，并行触发（原串行~2个RTT，并行后~1个RTT）
+    const needBundle = needColor || needSize || !detail.styleNo;
+    let source = orderDetail || {};
+    const hasDelivery = source.deliveryDate || source.expectedShipDate || source.shipDate || source.plannedShipDate || source.plannedEndDate;
+    // needCoverImage 时强制重新请求，确保拿到后端最新 coverImage（含 styleNo 查款式三级兜底）
+    const needOrderFetch = (needDeliveryDate || needCoverImage) && (!hasDelivery || needCoverImage);
+
+    const tasks = [];
+    let bundleIdx = -1, orderIdx = -1;
+    if (needBundle) {
+      bundleIdx = tasks.length;
+      tasks.push(api.production.getCuttingBundle(raw.orderNo, raw.bundleNo)
+        .catch(function (e) { console.warn('[scan-result] 回填菲号颜色/码数失败:', e); return null; }));
+    }
+    if (needOrderFetch) {
+      orderIdx = tasks.length;
+      tasks.push(api.production.orderDetailByOrderNo(raw.orderNo)
+        .catch(function (e) { console.warn('[scan-result] 回填交货日期/封面图失败:', e); return null; }));
+    }
+
+    if (tasks.length > 0) {
+      const results = await Promise.all(tasks);
+      const bundle = bundleIdx >= 0 ? results[bundleIdx] : null;
+      const orderRes = orderIdx >= 0 ? results[orderIdx] : null;
+
+      if (bundle) {
+        if (needColor && bundle.color) {
+          patch['detail.color'] = String(bundle.color);
         }
-      } catch (e) {
-        console.warn('[scan-result] 回填菲号颜色/码数失败:', e);
+        if (needSize && bundle.size) {
+          patch['detail.size'] = String(bundle.size);
+        }
+        if (!detail.styleNo && bundle.styleNo) {
+          patch['detail.styleNo'] = String(bundle.styleNo);
+        }
+      }
+
+      if (orderRes) {
+        if (orderRes && Array.isArray(orderRes.records) && orderRes.records.length > 0) {
+          source = orderRes.records[0] || source;
+        } else if (orderRes && typeof orderRes === 'object') {
+          source = orderRes;
+        }
       }
     }
 
-    if (needDeliveryDate || needCoverImage) {
-      try {
-        let source = orderDetail || {};
-        const hasDelivery = source.deliveryDate || source.expectedShipDate || source.shipDate || source.plannedShipDate || source.plannedEndDate;
-        // needCoverImage 时强制重新请求，确保拿到后端最新 coverImage（含 styleNo 查款式三级兜底）
-        if (!hasDelivery || needCoverImage) {
-          const orderRes = await api.production.orderDetailByOrderNo(raw.orderNo);
-          if (orderRes && Array.isArray(orderRes.records) && orderRes.records.length > 0) {
-            source = orderRes.records[0] || source;
-          } else if (orderRes && typeof orderRes === 'object') {
-            source = orderRes;
-          }
-        }
-        if (needDeliveryDate) {
-          const dateVal = source.deliveryDate || source.expectedShipDate || source.shipDate || source.plannedShipDate || source.plannedEndDate || '';
-          const dateText = this._formatYMD(dateVal);
-          if (dateText) {
-            patch['detail.deliveryDateDisplay'] = dateText;
-          }
-        }
-        // 回填款式封面图（后端 queryPage 路径会通过 styleNo 三级兜底填充 coverImage）
-        if (needCoverImage) {
-          const coverUrl = source.coverImage || source.styleImage || source.styleCover || '';
-          if (coverUrl) {
-            patch['detail.coverImage'] = getAuthedImageUrl(coverUrl);
-          }
-        }
-      } catch (e) {
-        console.warn('[scan-result] 回填交货日期/封面图失败:', e);
+    if (needDeliveryDate) {
+      const dateVal = source.deliveryDate || source.expectedShipDate || source.shipDate || source.plannedShipDate || source.plannedEndDate || '';
+      const dateText = this._formatYMD(dateVal);
+      if (dateText) {
+        patch['detail.deliveryDateDisplay'] = dateText;
+      }
+    }
+    // 回填款式封面图（后端 queryPage 路径会通过 styleNo 三级兜底填充 coverImage）
+    if (needCoverImage) {
+      const coverUrl = source.coverImage || source.styleImage || source.styleCover || '';
+      if (coverUrl) {
+        patch['detail.coverImage'] = getAuthedImageUrl(coverUrl);
       }
     }
 

@@ -127,6 +127,7 @@ const PaymentRecordsTab: React.FC<Props> = ({ active }) => {
         columns={columns}
         dataSource={data}
         loading={loading}
+        emptyDescription="暂无财务数据"
         pagination={{
           current: page, pageSize, total, showSizeChanger: true, showQuickJumper: true,
           showTotal: (t: number) => `共 ${t} 条`,

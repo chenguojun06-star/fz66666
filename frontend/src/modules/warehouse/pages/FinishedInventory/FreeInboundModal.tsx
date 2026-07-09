@@ -314,7 +314,7 @@ const FreeInboundModal: React.FC<FreeInboundModalProps> = ({ open, onClose, onSu
 
         {items.length > 0 && (
           <>
-            <ResizableTable columns={columns} dataSource={items} rowKey="key" pagination={false} size="small" />
+            <ResizableTable columns={columns} dataSource={items} rowKey="key" pagination={false} emptyDescription="暂无SKU数据" size="small" />
             <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', background: 'var(--color-bg-highlight)', borderRadius: 6 }}>
               <span>共 <b>{items.length}</b> 个SKU</span>
               <span>合计 <b>{items.reduce((s, i) => s + i.quantity, 0)}</b> 件</span>

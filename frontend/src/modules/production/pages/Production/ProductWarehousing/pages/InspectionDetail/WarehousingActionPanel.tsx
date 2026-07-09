@@ -150,6 +150,7 @@ const WarehousingActionPanel: React.FC<Props> = ({
       >
         <ResizableTable<WarehousingDetailRecord>
           rowKey="id" pagination={false}
+          emptyDescription="暂无入库数据"
           dataSource={pendingRecords}
           resizableColumns={false}
           scroll={{ x: 900 }}

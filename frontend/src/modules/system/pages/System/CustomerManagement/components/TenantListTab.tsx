@@ -200,7 +200,7 @@ const TenantListTab: React.FC = () => {
           <Button type="primary" icon={<PlusOutlined />} onClick={() => { modal.open(); }}>新建租户</Button>
         </div>
       </div>
-      <ResizableTable storageKey="customer-tenant-list" rowKey="id" columns={columns} dataSource={data} loading={loading} pagination={{ current: queryParams.page, pageSize: queryParams.pageSize, total, onChange: (p, ps) => setQueryParams(prev => ({ ...prev, page: p, pageSize: ps })) }} />
+      <ResizableTable storageKey="customer-tenant-list" rowKey="id" columns={columns} dataSource={data} loading={loading} emptyDescription="暂无客户数据" pagination={{ current: queryParams.page, pageSize: queryParams.pageSize, total, onChange: (p, ps) => setQueryParams(prev => ({ ...prev, page: p, pageSize: ps })) }} />
 
       <SmallModal open={rejectModal.visible} title={`拒绝入驻申请 - ${rejectModal.data?.tenantName || ''}`} onCancel={() => { rejectModal.close(); rejectReasonForm.resetFields(); }} footer={<Space><Button onClick={() => { rejectModal.close(); rejectReasonForm.resetFields(); }}>取消</Button><Button danger type="default" loading={processingId === rejectModal.data?.id} onClick={handleRejectApplication}>确认拒绝</Button></Space>}>
         <Form form={rejectReasonForm} layout="vertical"><Alert title={`申请账号：${rejectModal.data?.applyUsername || '-'}`} type="warning" showIcon style={{ marginBottom: 16 }} /><Form.Item label="拒绝原因" name="reason" rules={[{ required: true, message: '请填写拒绝原因' }]}><Input.TextArea rows={3} placeholder="请填写拒绝原因（将记录在备注中）" /></Form.Item></Form>

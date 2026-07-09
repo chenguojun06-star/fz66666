@@ -84,9 +84,10 @@ const BatchSelectionPanel: React.FC<BatchSelectionPanelProps> = ({
                             <div style={{ maxHeight: 280, overflowY: 'auto' }}>
                                 <ResizableTable<BatchSelectBundleRow>
                                     storageKey="batch-selection"
-                                   
+
                                     rowKey="qr"
                                     pagination={false}
+                                    emptyDescription="暂无质检数据"
                                     dataSource={batchSelectRows}
                                     rowSelection={{
                                         selectedRowKeys: batchSelectedBundleQrs,

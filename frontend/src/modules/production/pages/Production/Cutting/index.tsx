@@ -548,6 +548,7 @@ const CuttingManagement: React.FC = () => {
                 dataSource={tasks.sortedTaskList}
                 rowKey={(row) => row.id || row.productionOrderId}
                 loading={tasks.taskLoading}
+                emptyDescription="暂无裁剪数据"
                 pagination={{
                   current: tasks.taskQuery.page,
                   pageSize: tasks.taskQuery.pageSize,
@@ -750,6 +751,7 @@ const CuttingManagement: React.FC = () => {
                 }}
                 loading={bundles.listLoading}
                 scroll={{ x: 'max-content' }}
+                emptyDescription="暂无裁剪数据"
                 pagination={{
                   current: bundles.queryParams.page,
                   pageSize: bundles.queryParams.pageSize,

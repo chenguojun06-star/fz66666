@@ -68,6 +68,7 @@ const InspectFormPanel: React.FC<InspectFormPanelProps> = ({
           <ResizableTable<BatchSelectBundleRow>
             storageKey="inspect-bundle-table"
             rowKey="qr" pagination={false}
+            emptyDescription="暂无质检数据"
             dataSource={batchSelectRows}
             scroll={{ x: 680 }}
             rowSelection={{

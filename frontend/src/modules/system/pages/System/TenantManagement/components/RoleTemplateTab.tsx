@@ -50,6 +50,7 @@ const RoleTemplateTab: React.FC = () => {
         columns={columns}
         dataSource={templates}
         loading={loading}
+        emptyDescription="暂无模板数据"
         pagination={false}
        
       />

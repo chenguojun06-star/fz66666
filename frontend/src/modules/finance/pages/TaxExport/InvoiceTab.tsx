@@ -184,7 +184,7 @@ const InvoiceTab: React.FC = () => {
           </Col>
         </Row>
       </Card>
-      <ResizableTable storageKey="finance-invoice-ledger" size="small" rowKey="id" columns={columns} dataSource={list} loading={loading} scroll={{ x: 'max-content' }}
+      <ResizableTable storageKey="finance-invoice-ledger" size="small" rowKey="id" columns={columns} dataSource={list} loading={loading} emptyDescription="暂无财务数据" scroll={{ x: 'max-content' }}
         pagination={{ current: page, total, pageSize: 20, onChange: setPage, showSizeChanger: false }}
       />
       <ResizableModal

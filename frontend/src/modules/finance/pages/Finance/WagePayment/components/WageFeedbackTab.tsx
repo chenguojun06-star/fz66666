@@ -128,8 +128,9 @@ const WageFeedbackTab: React.FC = () => {
         columns={columns}
         dataSource={list}
         rowKey="id"
-       
+
         loading={loading}
+        emptyDescription="暂无工资数据"
         pagination={{ pageSize: 20 }}
         scroll={{ x: 900 }}
       />

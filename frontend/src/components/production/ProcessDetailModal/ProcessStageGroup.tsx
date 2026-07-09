@@ -56,6 +56,7 @@ const ProcessStageGroup: React.FC<ProcessStageGroupProps> = ({
           description: p.description || descriptionMap.get(String(p.name || '').trim()) || '',
         }))}
         showIndex
+        emptyDescription="暂无工序数据"
         columns={[
           {
             title: '工序',

@@ -196,6 +196,7 @@ const TemplateCenter: React.FC = () => {
               rowKey={(r) => String(r.id || r.templateKey)} columns={columns} dataSource={data as TemplateLibraryRecord[]}
               loading={loading} stickyHeader scroll={{ x: 'max-content' }}
               pagination={{ current: page, pageSize, total, showTotal: (total) => `共 ${total} 条`, showSizeChanger: true, pageSizeOptions: ['10', '20', '50', '100'], onChange: (p, ps) => fetchList({ page: p, pageSize: ps }) }}
+              emptyDescription="暂无模板数据"
               showExport={true}
               exportFilename="模板列表.xlsx"
             />

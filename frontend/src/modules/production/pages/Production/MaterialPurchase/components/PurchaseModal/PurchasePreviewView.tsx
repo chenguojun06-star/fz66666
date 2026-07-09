@@ -136,6 +136,7 @@ const PurchasePreviewView: React.FC<PurchasePreviewViewProps> = ({ previewList, 
         pagination={false}
         scroll={{ x: 'max-content' }}
         size={isMobile ? 'small' : 'middle'}
+        emptyDescription="暂无采购明细"
       />
     </div>
   );

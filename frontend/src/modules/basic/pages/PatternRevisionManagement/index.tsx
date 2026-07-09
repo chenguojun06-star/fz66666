@@ -537,6 +537,7 @@ const PatternRevisionManagement: React.FC = () => {
             columns={columns}
             dataSource={data}
             loading={loading}
+            emptyDescription="暂无数据"
             scroll={{ x: 'max-content' }}
             pagination={{
               current: page,

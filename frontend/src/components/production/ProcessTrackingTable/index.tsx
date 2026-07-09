@@ -182,8 +182,9 @@ const ProcessTrackingTable: React.FC<ProcessTrackingTableProps> = ({
         columns={columns}
         dataSource={flatData}
         loading={loading}
+        emptyDescription="暂无工序数据"
         rowKey="key"
-       
+
         scroll={{ x: 900 }}
         rowSelection={rowSelection}
         pagination={{

@@ -215,7 +215,7 @@ public class PatternProductionController {
                     return Result.success(receiveMsg);
                 case "complete":
                     Map<String, Object> completeResult = patternProductionOrchestrator.submitScan(
-                            id, "COMPLETE", "PLATE_WORKER", null, null, null, null, null, null, null, null);
+                            id, "COMPLETE", "PLATE_WORKER", null, null, null, null, null, null, null, null, null, null);
                     return Result.success(completeResult);
                 case "warehouse-in":
                     String remark = request != null ? (String) request.get("remark") : null;
@@ -349,10 +349,14 @@ public class PatternProductionController {
             // 接收前端传入的颜色/尺码，用于覆盖样板单的默认值（兜底场景：样板单未填色/码）
             String color = request.get("color") == null ? null : String.valueOf(request.get("color")).trim();
             String size = request.get("size") == null ? null : String.valueOf(request.get("size")).trim();
+            // 接收前端工序系统传入的工序名/阶段（动态工序场景），为空时后端按 operationType 映射
+            String processName = request.get("processName") == null ? null : String.valueOf(request.get("processName")).trim();
+            String progressStage = request.get("progressStage") == null ? null : String.valueOf(request.get("progressStage")).trim();
 
             Map<String, Object> result = patternProductionOrchestrator.submitScan(
                     patternId, operationType, operatorRole, remark, quantity, color, size,
-                    warehouseCode, warehouseAreaId, warehouseLocationCode, unitPrice);
+                    warehouseCode, warehouseAreaId, warehouseLocationCode, unitPrice,
+                    processName, progressStage);
             return Result.success(result);
         } catch (IllegalArgumentException e) {
             return Result.fail(e.getMessage());

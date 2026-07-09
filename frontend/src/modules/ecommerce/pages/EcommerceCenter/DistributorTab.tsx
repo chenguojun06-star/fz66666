@@ -513,35 +513,35 @@ const DistributorTab: React.FC = () => {
         <Space><TeamOutlined style={{ color: 'var(--color-primary)' }} /><strong>分销商档案</strong></Space>
         <Button type="primary" icon={<PlusOutlined />} onClick={() => setProfileModal({ open: true, record: null })}>新增分销商</Button>
       </div>
-      <ResizableTable<DistributorProfile> dataSource={st.profiles} rowKey="id" size="small" columns={profileCols} pagination={{ pageSize: 5 }} />
+      <ResizableTable<DistributorProfile> dataSource={st.profiles} rowKey="id" size="small" columns={profileCols} pagination={{ pageSize: 5 }} emptyDescription="暂无客户数据" />
 
       {/* 等级管理 */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '20px 0 8px' }}>
         <Space><TeamOutlined style={{ color: 'var(--color-accent-purple)' }} /><strong>分销商等级</strong></Space>
         <Button icon={<PlusOutlined />} onClick={() => setLevelModal({ open: true, record: null })}>新增等级</Button>
       </div>
-      <ResizableTable<DistributorLevel> dataSource={st.levels} rowKey="id" size="small" columns={levelCols} pagination={false} />
+      <ResizableTable<DistributorLevel> dataSource={st.levels} rowKey="id" size="small" columns={levelCols} pagination={false} emptyDescription="暂无数据" />
 
       {/* 价格政策 */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '20px 0 8px' }}>
         <Space><DollarOutlined style={{ color: 'var(--color-success)' }} /><strong>价格政策</strong></Space>
         <Button icon={<PlusOutlined />} onClick={() => setPolicyModal({ open: true, record: null })}>新增政策</Button>
       </div>
-      <ResizableTable<DistributorPricePolicy> dataSource={st.policies} rowKey="id" size="small" columns={policyCols} pagination={{ pageSize: 5 }} />
+      <ResizableTable<DistributorPricePolicy> dataSource={st.policies} rowKey="id" size="small" columns={policyCols} pagination={{ pageSize: 5 }} emptyDescription="暂无数据" />
 
       {/* B2B 订单 */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '20px 0 8px' }}>
         <Space><ShoppingOutlined style={{ color: 'var(--color-warning)' }} /><strong>B2B 分销订单</strong></Space>
         <Button type="primary" icon={<PlusOutlined />} onClick={() => setB2bModal(true)}>创建B2B订单</Button>
       </div>
-      <ResizableTable<B2BOrder> dataSource={st.b2bOrders} rowKey="id" size="small" columns={b2bCols} pagination={{ pageSize: 5 }} />
+      <ResizableTable<B2BOrder> dataSource={st.b2bOrders} rowKey="id" size="small" columns={b2bCols} pagination={{ pageSize: 5 }} emptyDescription="暂无订单数据" />
 
       {/* 分销对账 */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '20px 0 8px' }}>
         <Space><AuditOutlined style={{ color: 'var(--color-danger)' }} /><strong>分销对账</strong></Space>
         <Button loading={reconciling} onClick={handleReconcile}>触发对账</Button>
       </div>
-      <ResizableTable<DistributorBill> dataSource={st.bills} rowKey="id" size="small" columns={billCols} pagination={{ pageSize: 5 }} />
+      <ResizableTable<DistributorBill> dataSource={st.bills} rowKey="id" size="small" columns={billCols} pagination={{ pageSize: 5 }} emptyDescription="暂无财务数据" />
 
       {/* 弹窗 */}
       <ProfileModal open={profileModal.open} record={profileModal.record} levels={st.levels} onClose={() => setProfileModal({ open: false, record: null })} onOk={handleSaveProfile} />

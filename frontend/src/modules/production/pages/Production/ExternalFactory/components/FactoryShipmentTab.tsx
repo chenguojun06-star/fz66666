@@ -316,6 +316,7 @@ const FactoryShipmentTab: React.FC<FactoryShipmentTabProps> = ({ selectedFactory
         dataSource={shipments}
         rowKey="id"
         loading={loading}
+        emptyDescription="暂无发货数据"
         scroll={{ x: 'max-content' }}
         expandable={{
           expandedRowRender: (record) => {

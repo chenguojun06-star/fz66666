@@ -44,6 +44,7 @@ const QuotationProcessSection: React.FC<Props> = ({ processList, onRateChange, i
         rowKey={(record: any) => record.id || String(Math.random())}
         pagination={false}
         size="small"
+        emptyDescription="暂无工序数据"
         dataSource={processList}
         showIndex
         columns={[

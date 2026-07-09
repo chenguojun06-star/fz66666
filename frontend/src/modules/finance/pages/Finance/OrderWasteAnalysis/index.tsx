@@ -294,6 +294,7 @@ const OrderWasteAnalysis: React.FC = () => {
             loading={loading}
             pagination={false}
             scroll={{ x: 1800 }}
+            emptyDescription="暂无财务数据"
           />
           <StandardPagination
             current={pagination.current}
