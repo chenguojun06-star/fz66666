@@ -339,7 +339,7 @@
 - [ ] P2：@Version与手写原子SQL混用风险统一
 - [ ] P2：前端移除xlsx重复依赖
 - [ ] P2：vendor-react-antd chunk拆分
-- [ ] P2：RESTful迁移第二批（cutting-task/by-style-no等）
+- [x] P2：RESTful迁移第二批（cutting-task/by-style-no等）
 - [ ] 前端硬编码颜色值批量替换（~555处中性色）
 - [ ] Service层@Transactional违规治理（剩余62处，需逐个分析调用链）
 

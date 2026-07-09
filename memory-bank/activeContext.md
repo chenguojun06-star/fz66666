@@ -1442,3 +1442,62 @@ SelfCritiqueGateTest 和 EvolutionOrchestratorTest 需要修复 Spring ObjectPro
 - [MaterialPurchaseMapper.java](backend/src/main/java/com/fashion/supplychain/production/mapper/MaterialPurchaseMapper.java)
 - [WarehouseDashboardOrchestrator.java](backend/src/main/java/com/fashion/supplychain/warehouse/orchestration/WarehouseDashboardOrchestrator.java)
 - [V20260709001__ensure_material_purchase_arrival_date_index.sql](backend/src/main/resources/db/migration/V20260709001__ensure_material_purchase_arrival_date_index.sql)
+
+### 2026-07-09 RESTful迁移第二批完成
+
+**背景**：清理旧式API端点命名（/by-style-no、/list-by-type、/list-by-order等），统一为RESTful规范的/search路径。
+
+**后端修改（7个Controller）**：
+
+| Controller | 旧路径 | 新路径 | HTTP方法 |
+|-----------|--------|--------|----------|
+| CrmController | `/receivables/by-style-no` | `/receivables/search` | GET→POST |
+| CuttingBomController | `/list-by-style-no` | `/search` | GET→POST |
+| WarehouseLocationController | `/list-by-type` | `/search` | GET→POST |
+| WarehouseAreaController | `/list-by-type` | `/search` | GET→POST |
+| ProductSkuController | `/list-by-style` | `/search` | POST（不变） |
+| FactoryShipmentController | `/list-by-order` | `/search` | POST（不变） |
+| DictController | `/list-by-type` | `/search` | POST（不变） |
+
+**前端修改（5个文件）**：
+- `warehouseLocationMapApi.ts` — `list-by-type` → `search`
+- `warehouseAreaApi.ts` — `list-by-type` → `search`
+- `factoryShipmentApi.ts` — `list-by-order` → `search`
+- `StyleSkuColorImages.tsx` — `list-by-style` → `search`
+- `StyleSkuTab.tsx` — `list-by-style` → `search`
+- `useWarehouseAreaOptions.ts` — `list-by-type` → `search`（GET→POST）
+
+**小程序修改（3个文件）**：
+- `production.js` — `list-by-order` → `search`
+- `system.js` — `list-by-type` → `search`
+- `style-warehouse.js` — `list-by-type` → `search`（两处）
+
+**H5修改（7个文件）**：
+- `h5-web/src/api/index.js` — `list-by-type` / `list-by-inbound` → `search`
+- `h5-web/public/source-miniapp/` — production.js / system.js / style-warehouse.js
+- `h5-web/source-miniapp/` — production.js / system.js / style-warehouse.js
+
+**验证**：前端 `npx tsc --noEmit` 0 errors ✅
+
+### 2026-07-09 WebSocket握手500复发修复（第二次）
+
+**现象**：用户反馈 `wss://www.webyszl.cn/ws/order-progress/2?token=...` 握手返回 500，前端控制台疯狂刷屏。
+
+**根因**：[WebSocketHandshakeInterceptor.java](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/java/com/fashion/supplychain/config/WebSocketHandshakeInterceptor.java) 第69行：
+
+```java
+Long urlTenantId = Long.parseLong(pathTenantId);
+if (!urlTenantId.equals(tokenTenantId)) {  // ⚠️ tokenTenantId为null时抛NPE
+```
+
+当 token 中没有 `tenantId` 字段时（旧版 JWT），`tokenTenantId` 为 null，调用 `urlTenantId.equals(null)` 抛出 `NullPointerException`，被 `catch (Exception e)` 捕获后转为 `SecurityException("token解析异常")`，导致握手返回 500。
+
+**修复**（commit `88a782352）：
+- 当 `tokenTenantId == null` 时，使用 URL 路径中的 tenantId 替代
+- 保留原有跨租户校验逻辑（token 中有 tenantId 时仍严格校验）
+- 增加 warn 日志便于排查
+
+**历史教训**：
+- 这是 7-09 当天第二次 WebSocket 500 问题，第一次是注入失效（`01a91f4f3`），这次是 NPE
+- 根本原因：对 JWT payload 字段缺失的兼容性考虑不足
+- 以后写 equals 比较时，永远考虑 null 情况，尤其是从 JWT 取出来的字段都可能为 null
