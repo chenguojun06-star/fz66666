@@ -442,7 +442,7 @@ const CustomerManagement: React.FC = () => {
             showTotal: t => `共 ${t} 条`,
           }}
           onChange={handleTableChange}
-         
+          emptyDescription="暂无客户数据"
         />
       </Card>
 

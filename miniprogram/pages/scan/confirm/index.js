@@ -445,7 +445,6 @@ Page({
       this._emitRefresh();
       wx.navigateBack();
     } catch (e) {
-      this.setData({ loading: false });
       var raw = this._scanContext;
       getApp().globalData.lastScanResult = {
         orderNo: (raw && raw.orderNo) || '',
@@ -460,6 +459,8 @@ Page({
         showCancel: false,
         confirmText: '知道了',
       });
+    } finally {
+      this.setData({ loading: false });
     }
   },
 

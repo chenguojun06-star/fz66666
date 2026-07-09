@@ -235,7 +235,10 @@ Page({
           }
         }
       }
-    }).catch(function (e) { console.warn('[dashboard] loadOrders失败:', e.message || e); });
+    }).catch(function (e) {
+      console.warn('[dashboard] loadOrders失败:', e.message || e);
+      toast.error('订单加载失败，请下拉刷新');
+    });
   },
 
   /* ======== 刷新状态计数 ======== */

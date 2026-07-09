@@ -74,7 +74,8 @@ export function useOrderDataFetch({ queryParams, visible, showSmartErrorNotice, 
       if (response.code === 200) {
         setFactories(response.data.records || []);
       }
-    } catch {
+    } catch (err) {
+      console.error('加载工厂数据失败:', err);
       setFactories([]);
     }
   };
@@ -85,7 +86,8 @@ export function useOrderDataFetch({ queryParams, visible, showSmartErrorNotice, 
       if (res.code === 200) {
         setDepartments(res.data || []);
       }
-    } catch {
+    } catch (err) {
+      console.error('加载部门数据失败:', err);
       setDepartments([]);
     }
   };
@@ -111,7 +113,8 @@ export function useOrderDataFetch({ queryParams, visible, showSmartErrorNotice, 
       if (response.code === 200) {
         setUsers(response.data.records || []);
       }
-    } catch {
+    } catch (err) {
+      console.error('加载用户数据失败:', err);
       setUsers([]);
     }
   };
@@ -159,7 +162,7 @@ export function useOrderDataFetch({ queryParams, visible, showSmartErrorNotice, 
       .then(([, , , capRes]) => {
         if (capRes?.data) setFactoryCapacities(capRes.data);
       })
-      .catch(() => {});
+      .catch((err) => { console.error('辅助数据加载失败:', err); });
   }, []);
 
   // 监听订单进度变更事件，实时刷新款式列表（避免 60s 轮询延迟）

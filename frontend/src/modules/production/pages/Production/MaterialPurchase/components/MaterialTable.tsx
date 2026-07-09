@@ -672,6 +672,7 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
       dataSource={dataSource}
       rowKey="id"
       loading={loading}
+      emptyDescription="暂无采购任务"
       rowSelection={{
         selectedRowKeys: selectedRows.map(r => r.id as string),
         onChange: (keys, rows) => setSelectedRows(rows),

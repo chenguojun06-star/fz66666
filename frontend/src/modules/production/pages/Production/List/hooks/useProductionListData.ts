@@ -216,7 +216,7 @@ export function useProductionListData() {
       } catch { return []; }
     },
     (newData, oldData) => { if (oldData !== null) setProductionList(newData); },
-    { interval: 300000, enabled: !loading, pauseOnHidden: true, onError: (error) => { console.error('[实时同步] 错误', error); } }
+    { interval: 300000, enabled: !loading, pauseOnHidden: true, onError: (error) => { console.error('订单同步失败:', error); } }
   );
 
   const wsRefreshRef = useRef(0);

@@ -214,7 +214,8 @@ const FlowStepRenderer: React.FC<Props> = ({
             label: '概览',
             children: (
               <ResizableTable storageKey="order-flow-stages" size="small" columns={stageColumns}
-                dataSource={enrichedStages} rowKey={(r: any) => r.processName} pagination={false} scroll={{ x: 980 }} />
+                dataSource={enrichedStages} rowKey={(r: any) => r.processName} pagination={false} scroll={{ x: 980 }}
+                emptyDescription="暂无阶段数据" />
             ),
           },
           {
@@ -224,7 +225,8 @@ const FlowStepRenderer: React.FC<Props> = ({
               <ResizableTable storageKey="order-flow-order-lines"
                 columns={isFactoryUser ? orderLineColumns.filter((c: any) => c.key !== 'totalPrice') : orderLineColumns}
                 dataSource={orderLines} rowKey={(r: any) => String((r as any)?.skuNo || `${r.color}-${r.size}`)}
-                pagination={false} scroll={{ x: 1060 }} />
+                pagination={false} scroll={{ x: 1060 }}
+                emptyDescription="暂无下单明细" />
             ),
           },
           ...(cuttingBundles && cuttingBundles.length > 0 ? [
@@ -238,6 +240,7 @@ const FlowStepRenderer: React.FC<Props> = ({
                       <ResizableTable storageKey="order-flow-cutting-tasks" size="small"
                         dataSource={cuttingTasks}
                         rowKey={(r: any) => r.id || `${r.bedNo || ''}-${r.createTime || ''}`}
+                        emptyDescription="暂无裁剪任务"
                         columns={[
                           { title: '床号', dataIndex: 'bedNo', key: 'bedNo', width: 100, render: (v: any) => v ? `第${v}床` : '-' },
                           { title: '裁片数', dataIndex: 'cuttingQuantity', key: 'cuttingQuantity', width: 100, align: 'right' as const, render: (v: any) => toNumberSafe(v) },
@@ -251,6 +254,7 @@ const FlowStepRenderer: React.FC<Props> = ({
                   <ResizableTable storageKey="order-flow-cutting" size="small"
                     dataSource={cuttingBundles}
                     rowKey={(r: any) => r.id}
+                    emptyDescription="暂无裁剪明细"
                     columns={[
                       { title: '床号', dataIndex: 'bedNo', key: 'bedNo', width: 90, render: (v: any, record: any) => {
                         if (!v) return '-';
@@ -285,7 +289,8 @@ const FlowStepRenderer: React.FC<Props> = ({
                   { title: '裁剪数量', dataIndex: 'quantity', key: 'quantity', width: 120, align: 'right' as const },
                 ]}
                 dataSource={cuttingSizeItems} rowKey={(r: any) => `${r.color || ''}-${r.size}`}
-                pagination={false} scroll={{ x: 360 }} />
+                pagination={false} scroll={{ x: 360 }}
+                emptyDescription="暂无裁剪明细" />
             ),
           }] : []),
           ...(data?.order?.styleId ? [
@@ -322,6 +327,7 @@ const FlowStepRenderer: React.FC<Props> = ({
                     dataSource={materialPurchases}
                     rowKey={(r: any) => r.id || `mp-${Math.random()}`}
                     showIndex
+                    emptyDescription="暂无采购明细"
                     columns={[
                       { title: '物料类型', dataIndex: 'materialType', key: 'materialType', width: 100, render: (v: any) => getMaterialTypeLabel(v) },
                       { title: '物料编码', dataIndex: 'materialCode', key: 'materialCode', width: 120, render: (v: any) => v || '-' },
@@ -370,6 +376,7 @@ const FlowStepRenderer: React.FC<Props> = ({
                     rowKey={(r: any) => r.id || `bom-${Math.random()}`}
                     columns={bomColumns}
                     showIndex
+                    emptyDescription="暂无BOM物料"
                     pagination={false} bordered scroll={{ x: 'max-content' }} />
                 </>
               ) : <Alert title="暂无面辅料信息" description="此订单尚未录入采购物料，也关联的款号未录入BOM物料清单" type="info" showIcon />,
@@ -447,6 +454,7 @@ const FlowStepRenderer: React.FC<Props> = ({
                           <ResizableTable storageKey="order-flow-workflow" dataSource={workflowNodes}
                             rowKey={(record: any) => record.id || `${record.name}-${record.progressStage}`}
                             showIndex
+                            emptyDescription="暂无工序数据"
                             columns={[
                               { title: '工序名称', dataIndex: 'name', key: 'name', width: 180, render: (v: any, record: any) => formatProcessDisplayName(record.id, v) },
                               { title: '阶段', dataIndex: 'progressStage', key: 'progressStage', width: 120, render: (v: any) => {

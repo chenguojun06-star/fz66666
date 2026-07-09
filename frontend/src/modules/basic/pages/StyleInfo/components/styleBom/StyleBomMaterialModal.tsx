@@ -78,7 +78,7 @@ const StyleBomMaterialModal: React.FC<StyleBomMaterialModalProps> = ({
               </div>
               <ResizableTable
                 storageKey="style-bom-material-select"
-               
+                emptyDescription="暂无物料数据"
                 loading={materialLoading}
                 dataSource={materialList}
                 rowKey={(record: Record<string, unknown>) => String(record.id || record.materialCode || '')}

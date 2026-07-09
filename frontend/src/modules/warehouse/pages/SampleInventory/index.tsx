@@ -457,6 +457,7 @@ const SampleInventory: React.FC = () => {
             loading={loading}
             rowKey="id"
             stickyHeader
+            emptyDescription="暂无样衣库存"
             pagination={{
               ...pagination.pagination,
               showTotal: (total) => `共 ${total} 条`,

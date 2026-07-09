@@ -50,6 +50,7 @@ const PickingDetailModal: React.FC<PickingDetailModalProps> = ({ visible, pickin
     >
       <ResizableTable
         storageKey="picking-detail"
+        emptyDescription="暂无领料明细"
         loading={loading}
         dataSource={items}
         columns={columns}

@@ -362,6 +362,7 @@ const MaterialPurchase: React.FC = () => {
               pagination={false}
               size="small"
               scroll={{ x: 720, y: 400 }}
+              emptyDescription="暂无生产订单"
               columns={[
                 { title: '订单号', dataIndex: 'orderNo', width: 180 },
                 { title: '款号', dataIndex: 'styleNo', width: 120 },
@@ -447,6 +448,7 @@ const MaterialPurchase: React.FC = () => {
                     pagination={false}
                     size="small"
                     rowKey="id"
+                    emptyDescription="暂无数据"
                     columns={[
                       { title: '物料编号', dataIndex: 'materialCode', key: 'materialCode', width: 120, render: (v: any) => v || '-' },
                       { title: '物料名称', dataIndex: 'materialName', key: 'materialName', width: 140, render: (v: any) => v || '-' },
@@ -697,6 +699,7 @@ const MaterialPurchase: React.FC = () => {
               <Form form={returnConfirmForm} layout="vertical" preserve={false}>
                 <ResizableTable
                   storageKey="material-purchase-return"
+                  emptyDescription="暂无回料明细"
                   dataSource={(returnConfirmModal.data || []).map((t, idx) => ({
                     key: String(t?.id || idx),
                     id: t?.id,

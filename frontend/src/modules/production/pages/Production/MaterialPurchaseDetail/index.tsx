@@ -522,6 +522,7 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
         ) : (
           <ResizableTable
             storageKey="material-purchase-detail-table"
+            emptyDescription="暂无采购明细"
             columns={columns as any}
             dataSource={displayData}
             rowKey={(r: MaterialPurchase) => r.id || `${r.purchaseNo || ''}-${r.materialCode || ''}`}
@@ -561,6 +562,7 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
                   </div>
                   <ResizableTable
                     storageKey="purchase-detail-material-select"
+                    emptyDescription="暂无物料数据"
                     loading={materialLoading}
                     dataSource={materialList}
                     rowKey={(record) => String(record.id || record.materialCode || '')}

@@ -47,7 +47,7 @@ const LoanModal: React.FC<LoanModalProps> = ({ visible, stock, onCancel, onSucce
           label: f.factoryName || f.name || f.id,
           value: f.id,
         })));
-      }).catch(() => {});
+      }).catch((err) => { console.error('工厂列表加载失败:', err); });
     }
   }, [visible]);
 
@@ -87,6 +87,7 @@ const LoanModal: React.FC<LoanModalProps> = ({ visible, stock, onCancel, onSucce
     } catch (error) {
       console.error(error);
       reportSmartError('样衣借出失败', (error as Error)?.message || '网络异常或服务不可用，请稍后重试', 'SAMPLE_LOAN_SUBMIT_EXCEPTION');
+      message.error((error as Error)?.message || '借出失败');
     } finally {
       setLoading(false);
     }

@@ -308,6 +308,7 @@ const OutboundModal: React.FC<OutboundModalProps> = ({
             </div>
             <ResizableTable
               storageKey="material-inventory-batch-out"
+              emptyDescription="暂无出库批次数据"
               columns={[
                 {
                   title: '批次号',

@@ -220,11 +220,11 @@ const PickingForm: React.FC<PickingFormProps> = ({ visible, onCancel, onSuccess 
 
         <ResizableTable
             storageKey="picking-form"
+            emptyDescription="暂无领料明细"
             dataSource={materials}
             columns={columns}
             rowKey="key"
             pagination={false}
-           
         />
       </Form>
     </ResizableModal>

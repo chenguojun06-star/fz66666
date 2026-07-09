@@ -586,6 +586,7 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
             pagination={false}
             size={isMobile ? 'small' : 'middle'}
             scroll={{ x: 'max-content' }}
+            emptyDescription="暂无采购明细"
             columns={[
               {
                 title: '物料类型', dataIndex: 'materialType', key: 'materialType', width: 110,
@@ -806,6 +807,7 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
                   pagination={false}
                   size={isMobile ? 'small' : 'middle'}
                   scroll={{ x: 'max-content' }}
+                  emptyDescription="暂无数据"
                   rowClassName={(record: MaterialPurchaseType) => {
                     const isConfirmed = Number(record?.returnConfirmed || 0) === 1;
                     return isConfirmed ? 'row-confirmed-disabled' : '';
@@ -1252,6 +1254,7 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
           }}
           size="small"
           scroll={{ x: 800 }}
+          emptyDescription="暂无物料数据"
           columns={[
             { title: '物料编码', dataIndex: 'materialCode', width: 120 },
             { title: '物料名称', dataIndex: 'materialName', width: 160, ellipsis: true },

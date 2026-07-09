@@ -500,7 +500,7 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = ({ styleId, styleNo, skc: initia
             columns={columns}
             rowKey={(record) => String(getRowKey(record))}
             loading={loading}
-
+            emptyDescription="暂无SKU数据"
             pagination={false}
             scroll={{ y: 400 }}
             showIndex

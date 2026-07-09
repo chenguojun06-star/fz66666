@@ -140,7 +140,7 @@ export const useFinishedInventoryActions = (rawDataSource: FinishedInventory[], 
       const rows: Array<{ outstockQuantity?: number; styleNo?: string }> = outstockData.records || [];
       const total = rows.filter(r => !record.styleNo || r.styleNo === record.styleNo).reduce((s, r) => s + (r.outstockQuantity || 0), 0);
       setOutstockTotal(total);
-    } catch { setOutstockTotal(0); }
+    } catch (err) { console.error('加载出库总数失败:', err); setOutstockTotal(0); }
     inboundHistoryModal.open(record);
   }, [message, inboundHistoryModal]);
 

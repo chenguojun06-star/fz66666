@@ -286,7 +286,7 @@ const PayableList: React.FC = () => {
       const res: any = await payableApi.stats();
       const data = (res?.data ?? res) as PayableStats | undefined;
       setStats(data ?? { pendingAmount: 0, overdueAmount: 0, overdueCount: 0, paidAmount: 0, newThisMonth: 0 });
-    } catch { /* 不影响主流程 */ }
+    } catch (err) { console.error('统计加载失败:', err); /* 不影响主流程 */ }
   }, []);
 
   useEffect(() => {
@@ -307,7 +307,7 @@ const PayableList: React.FC = () => {
     async () => {
       try {
         await Promise.all([fetchList(), fetchStats()]);
-      } catch { /* 轮询失败忽略 */ }
+      } catch (err) { console.error('轮询同步失败:', err); /* 轮询失败忽略 */ }
       return null;
     },
     () => {},
@@ -320,8 +320,9 @@ const PayableList: React.FC = () => {
     const handleChange = () => {
       if (debounceTimer) clearTimeout(debounceTimer);
       debounceTimer = setTimeout(() => {
-        fetchList();
-        fetchStats();
+        Promise.all([fetchList(), fetchStats()]).catch((err) => {
+          console.error('事件刷新失败:', err);
+        });
       }, 500);
     };
     window.addEventListener('data:changed', handleChange);

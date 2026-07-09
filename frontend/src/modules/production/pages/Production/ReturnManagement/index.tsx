@@ -258,6 +258,7 @@ const ReturnManagement: React.FC = () => {
                   columns={purchaseColumns}
                   rowKey="id"
                   loading={loading}
+                  emptyDescription="暂无采购退货记录"
                   scroll={{ x: 1400 }}
                   pagination={{
                     current: page,
@@ -282,6 +283,7 @@ const ReturnManagement: React.FC = () => {
                   columns={salesColumns}
                   rowKey="id"
                   loading={loading}
+                  emptyDescription="暂无销售退货记录"
                   scroll={{ x: 1400 }}
                   pagination={{
                     current: page,
