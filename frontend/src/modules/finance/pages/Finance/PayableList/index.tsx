@@ -16,6 +16,7 @@ import { message } from '@/utils/antdStatic';
 import { confirmDelete } from '@/utils/confirm';
 import type { ApiResult } from '@/utils/api';
 import { toMoneyLocale } from '@/utils/format';
+import { useSync } from '@/utils/syncManager';
 
 const { Text } = Typography;
 
@@ -299,6 +300,36 @@ const PayableList: React.FC = () => {
     fetchList(1, initialStatus, initialKeyword);
     fetchStats();
   }, [fetchList, fetchStats, searchParams]);
+
+  // 60s 轮询刷新应付列表+统计
+  useSync(
+    'payable-list',
+    async () => {
+      try {
+        await Promise.all([fetchList(), fetchStats()]);
+      } catch { /* 轮询失败忽略 */ }
+      return null;
+    },
+    () => {},
+    { interval: 60000, pauseOnHidden: true },
+  );
+
+  // 监听 data:changed 事件，500ms 防抖后刷新列表+统计
+  useEffect(() => {
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+    const handleChange = () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        fetchList();
+        fetchStats();
+      }, 500);
+    };
+    window.addEventListener('data:changed', handleChange);
+    return () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      window.removeEventListener('data:changed', handleChange);
+    };
+  }, [fetchList, fetchStats]);
 
   const openPayableDetail = useCallback((record: Payable) => {
     if (!record.id) {

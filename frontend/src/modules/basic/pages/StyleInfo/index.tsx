@@ -180,6 +180,28 @@ const StyleInfoDetailPage: React.FC = () => {
     return editLocked && Boolean(currentStyle?.id);
   };
 
+  // 监听订单进度变更/数据变更事件，500ms 防抖后刷新详情
+  // 重要：用户编辑中（editLocked=true 且已有 id）不刷新，避免丢失草稿
+  useEffect(() => {
+    if (!styleIdParam || isNewPage) return;
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+    const handleChange = () => {
+      if (editLocked && Boolean(currentStyle?.id)) return;
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        if (editLocked && Boolean(currentStyle?.id)) return;
+        void fetchDetail(styleIdParam);
+      }, 500);
+    };
+    window.addEventListener('order:progress:changed', handleChange);
+    window.addEventListener('data:changed', handleChange);
+    return () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      window.removeEventListener('order:progress:changed', handleChange);
+      window.removeEventListener('data:changed', handleChange);
+    };
+  }, [styleIdParam, isNewPage, editLocked, currentStyle?.id, fetchDetail]);
+
   if (!isDetailPage && !isNewPage) {
     return null;
   }

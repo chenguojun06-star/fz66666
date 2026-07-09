@@ -34,6 +34,9 @@ jobs:
     - name: 校验新增迁移的列依赖（拦截引用不存在列的事故）
       run: python3 scripts/check-flyway-column-deps.py
 
+    - name: 检查小程序 eventBus 订阅（防止操作后不刷新）
+      run: node scripts/check-eventbus-subscription.js
+
     - name: 生产配置安全扫描
       run: |
         echo "🔍 开始生产配置安全扫描..."

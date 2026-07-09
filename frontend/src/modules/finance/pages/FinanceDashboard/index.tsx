@@ -1,8 +1,9 @@
-import React, { useMemo, useState, Suspense, lazy } from 'react';
+import React, { useEffect, useMemo, useState, Suspense, lazy } from 'react';
 import { Card, Row, Col, Button, Spin, Space, Table, Empty, Segmented } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import { useFinanceBIData, type TimeRangeType } from './hooks/useFinanceBIData';
+import { useSync } from '@/utils/syncManager';
 import styles from './index.module.css';
 
 const ReactECharts = lazy(() => import('echarts-for-react'));
@@ -159,9 +160,38 @@ const PieChart: React.FC<{ data: { type: string; value: number }[] }> = ({ data 
 };
 
 const FinanceDashboard: React.FC = () => {
-  const { loading, data, timeRange, setTimeRange, goToModule } = useFinanceBIData();
+  const { loading, data, timeRange, setTimeRange, goToModule, refresh } = useFinanceBIData();
   const [selectedDetail, setSelectedDetail] = useState<StatKey>('revenue');
   const [cashFlowDays, setCashFlowDays] = useState<CashFlowDays>(30);
+
+  // 90s 轮询刷新财务看板数据
+  useSync(
+    'finance-dashboard',
+    async () => {
+      try {
+        await refresh();
+      } catch { /* 轮询失败忽略 */ }
+      return null;
+    },
+    () => {},
+    { interval: 90000, pauseOnHidden: true },
+  );
+
+  // 监听 data:changed 事件，500ms 防抖后刷新看板数据
+  useEffect(() => {
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+    const handleChange = () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        refresh();
+      }, 500);
+    };
+    window.addEventListener('data:changed', handleChange);
+    return () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      window.removeEventListener('data:changed', handleChange);
+    };
+  }, [refresh]);
 
   const cashFlowData = useMemo(() => generateCashFlowMockData(cashFlowDays), [cashFlowDays]);
 
