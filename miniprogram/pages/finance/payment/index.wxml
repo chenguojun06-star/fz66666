@@ -109,11 +109,11 @@
         </view>
         <view class="mf-kv">
           <text class="mf-kv-key">待付金额</text>
-          <text class="mf-kv-val" style="color:var(--color-danger);">¥{{currentPayable.remainingAmount || currentPayable.amount || 0}}</text>
+          <text class="mf-kv-val mf-kv-val--danger">¥{{currentPayable.remainingAmount || currentPayable.amount || 0}}</text>
         </view>
       </view>
 
-      <view class="mf-item" style="margin-top:12px;">
+      <view class="mf-item mf-item--first">
         <text class="mf-label mf-required">支付金额</text>
         <input class="mf-input" type="digit" placeholder="请输入支付金额" value="{{payForm.amount}}" bindinput="onPayAmountInput" />
       </view>

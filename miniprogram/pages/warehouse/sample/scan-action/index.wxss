@@ -1,14 +1,14 @@
 /* 样衣仓库管理页 */
 
 .container {
-  padding: 12rpx var(--page-padding-x);
-  background: var(--color-bg-page, var(--color-bg-light));
+  padding: var(--spacing-sm) var(--page-padding-x);
+  background: var(--color-bg-page);
   min-height: 100vh;
 }
 
 /* ==================== 搜索栏 ==================== */
 .search-bar {
-  margin-bottom: 12rpx;
+  margin-bottom: var(--spacing-sm);
 }
 
 .search-box {
@@ -16,30 +16,30 @@
   align-items: center;
   background: var(--color-bg-card);
   border-radius: var(--radius-md);
-  padding: 12rpx 16rpx;
+  padding: var(--spacing-xs) var(--spacing-md);
   border: 1px solid var(--color-border-light);
 }
 
 .search-icon {
-  font-size: 28rpx;
-  margin-right: 8rpx;
+  font-size: var(--font-size-lg);
+  margin-right: var(--spacing-xs);
 }
 
 .search-input {
   flex: 1;
-  font-size: 28rpx;
-  color: var(--color-text);
+  font-size: var(--font-size-md);
+  color: var(--color-text-primary);
 }
 
 .search-clear {
-  font-size: 24rpx;
+  font-size: var(--font-size-sm);
   color: var(--color-text-secondary);
-  padding: 8rpx;
+  padding: var(--spacing-xs);
 }
 
 /* ==================== 操作栏 ==================== */
 .action-bar {
-  margin-bottom: 12rpx;
+  margin-bottom: var(--spacing-sm);
 }
 
 .btn-scan {
@@ -49,22 +49,22 @@
   background: var(--color-bg-card);
   border: 1px solid var(--color-border-light);
   border-radius: var(--radius-md);
-  padding: 20rpx;
+  padding: var(--spacing-md);
 }
 
 .btn-scan .btn-icon {
-  font-size: 36rpx;
-  margin-right: 8rpx;
+  font-size: var(--font-size-2xl);
+  margin-right: var(--spacing-xs);
 }
 
 .btn-scan .btn-text {
-  font-size: 28rpx;
-  color: var(--color-text);
+  font-size: var(--font-size-md);
+  color: var(--color-text-primary);
 }
 
 /* ==================== 列表 ==================== */
 .stock-list {
-  margin-top: 8rpx;
+  margin-top: var(--spacing-xs);
 }
 
 .stock-item {
@@ -73,31 +73,32 @@
   justify-content: space-between;
   background: var(--color-bg-card);
   border-radius: var(--radius-md);
-  padding: 24rpx;
-  margin-bottom: 12rpx;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  padding: var(--spacing-md);
+  margin-bottom: var(--spacing-sm);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--color-border-light);
 }
 
 .stock-thumb {
-  width: 100rpx;
-  height: 100rpx;
-  border-radius: 8rpx;
-  margin-right: 16rpx;
+  width: 50px;
+  height: 50px;
+  border-radius: var(--radius-xs);
+  margin-right: var(--spacing-md);
   flex-shrink: 0;
   background: var(--color-bg-light);
 }
 
 .stock-thumb-placeholder {
-  width: 100rpx;
-  height: 100rpx;
-  border-radius: 8rpx;
-  margin-right: 16rpx;
+  width: 50px;
+  height: 50px;
+  border-radius: var(--radius-xs);
+  margin-right: var(--spacing-md);
   flex-shrink: 0;
   background: var(--color-bg-light);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 48rpx;
+  font-size: var(--font-size-3xl);
 }
 
 .stock-info {
@@ -107,7 +108,7 @@
 .stock-row {
   display: flex;
   align-items: center;
-  margin-bottom: 8rpx;
+  margin-bottom: var(--spacing-xs);
 }
 
 .stock-row:last-child {
@@ -115,15 +116,15 @@
 }
 
 .stock-label {
-  font-size: 24rpx;
+  font-size: var(--font-size-xs);
   color: var(--color-text-secondary);
-  width: 60rpx;
+  width: 30px;
   flex-shrink: 0;
 }
 
 .stock-value {
-  font-size: 28rpx;
-  color: var(--color-text);
+  font-size: var(--font-size-md);
+  color: var(--color-text-primary);
 }
 
 .stock-status {
@@ -138,27 +139,27 @@
 }
 
 .qty-num {
-  font-size: 36rpx;
-  font-weight: bold;
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
   color: var(--color-primary);
 }
 
 .qty-unit {
-  font-size: 24rpx;
+  font-size: var(--font-size-xs);
   color: var(--color-text-secondary);
-  margin-left: 4rpx;
+  margin-left: 2px;
 }
 
 .stock-loan {
-  font-size: 22rpx;
+  font-size: var(--font-size-xs);
   color: var(--color-warning);
-  margin-top: 4rpx;
+  margin-top: 2px;
 }
 
 .stock-arrow {
-  font-size: 32rpx;
+  font-size: var(--font-size-lg);
   color: var(--color-text-secondary);
-  margin-top: 4rpx;
+  margin-top: 2px;
 }
 
 /* 空状态 */
@@ -166,51 +167,51 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 80rpx 0;
+  padding: 40px 0;
 }
 
 .empty-icon {
-  font-size: 80rpx;
-  margin-bottom: 16rpx;
+  font-size: 40px;
+  margin-bottom: var(--spacing-sm);
   opacity: 0.6;
 }
 
 .empty-text {
-  font-size: 28rpx;
+  font-size: var(--font-size-md);
   color: var(--color-text-secondary);
 }
 
 /* 加载更多 */
 .load-more {
   text-align: center;
-  padding: 24rpx 0;
+  padding: var(--spacing-md) 0;
 }
 
 .load-text {
-  font-size: 26rpx;
+  font-size: var(--font-size-sm);
   color: var(--color-text-secondary);
 }
 
 /* ==================== 详情页头部 ==================== */
 .header {
   position: relative;
-  margin-bottom: 12rpx;
+  margin-bottom: var(--spacing-sm);
 }
 
 .header-back {
   position: absolute;
   left: 0;
   top: 0;
-  font-size: 28rpx;
+  font-size: var(--font-size-md);
   color: var(--color-primary);
-  padding: 8rpx 0;
+  padding: var(--spacing-xs) 0;
 }
 
 .header-title {
   text-align: center;
-  font-size: 32rpx;
-  font-weight: bold;
-  color: var(--color-text);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
   display: block;
 }
 
@@ -218,18 +219,18 @@
   position: absolute;
   right: 0;
   top: 0;
-  font-size: 26rpx;
+  font-size: var(--font-size-sm);
   color: var(--color-primary);
-  padding: 8rpx 0;
+  padding: var(--spacing-xs) 0;
 }
 
 .header-info {
   text-align: center;
-  margin-bottom: 16rpx;
+  margin-bottom: var(--spacing-md);
 }
 
 .header-sub {
-  font-size: 28rpx;
+  font-size: var(--font-size-md);
   color: var(--color-text-secondary);
 }
 
@@ -240,8 +241,9 @@
   display: flex; 
   justify-content: center; 
   align-items: center; 
-  padding: 60px 0; 
+  padding: 30px 0; 
 }
+
 .loading-text { 
   font-size: var(--font-size-md); 
   color: var(--color-text-secondary); 
@@ -249,20 +251,21 @@
 
 /* 错误 */
 .error-card {
-  background: var(--color-error-bg);
-  border: 1px solid var(--color-error);
+  background: var(--color-danger-bg);
+  border: 1px solid var(--color-danger-border);
   border-radius: var(--radius-md);
-  padding: 20px;
+  padding: var(--spacing-lg);
   display: flex;
   flex-direction: column;
   align-items: center;
 }
-.error-icon { font-size: var(--font-size-4xl); margin-bottom: 8px; }
-.error-msg { font-size: var(--font-size-md); color: var(--color-error); text-align: center; margin-bottom: 12px; }
+
+.error-icon { font-size: var(--font-size-4xl); margin-bottom: var(--spacing-xs); }
+.error-msg { font-size: var(--font-size-md); color: var(--color-danger); text-align: center; margin-bottom: var(--spacing-sm); }
 .btn-retry {
   font-size: var(--font-size-md);
   color: var(--color-primary);
-  padding: 6px 20px;
+  padding: 3px var(--spacing-lg);
   border: 1px solid var(--color-primary);
   border-radius: var(--radius-xs);
 }
@@ -270,38 +273,42 @@
 /* 成功 */
 .success-banner {
   background: var(--color-success-bg);
-  border: 1px solid var(--color-success);
+  border: 1px solid var(--color-success-border);
   border-radius: var(--radius-md);
-  padding: 10px 14px;
+  padding: var(--spacing-sm) var(--spacing-md);
   display: flex;
   align-items: center;
-  margin-bottom: 10px;
+  margin-bottom: var(--spacing-sm);
 }
-.success-icon { font-size: var(--font-size-lg-xl); margin-right: 8px; }
+
+.success-icon { font-size: var(--font-size-xl); margin-right: var(--spacing-xs); }
 .success-text { font-size: var(--font-size-md); color: var(--color-success); }
 
 /* 信息卡片 */
 .info-card {
   background: var(--color-bg-card);
   border-radius: var(--radius-md);
-  padding: 12px 14px;
-  margin-bottom: 10px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  padding: var(--spacing-sm) var(--spacing-md);
+  margin-bottom: var(--spacing-sm);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--color-border-light);
 }
 
 .detail-header {
   display: flex;
   align-items: flex-start;
 }
+
 .detail-info {
   flex: 1;
   min-width: 0;
 }
+
 .detail-thumb {
-  width: 120rpx;
-  height: 120rpx;
-  border-radius: 8rpx;
-  margin-left: 16rpx;
+  width: 60px;
+  height: 60px;
+  border-radius: var(--radius-xs);
+  margin-left: var(--spacing-md);
   flex-shrink: 0;
   background: var(--color-bg-light);
 }
@@ -309,28 +316,28 @@
 .info-row {
   display: flex;
   align-items: center;
-  padding: 6px 0;
+  padding: var(--spacing-xs) 0;
   border-bottom: 1px solid var(--color-border-light);
 }
+
 .info-row:last-child { border-bottom: none; }
+
 .info-label { font-size: var(--font-size-sm); color: var(--color-text-secondary); width: 60px; flex-shrink: 0; }
-.info-value { font-size: var(--font-size-md); color: var(--color-text); flex: 1; }
+.info-label--wide { width: auto; font-weight: var(--font-weight-bold); color: var(--color-text-primary); }
+.info-value { font-size: var(--font-size-md); color: var(--color-text-primary); flex: 1; }
 .info-value.bold,
-.bold { font-weight: bold; font-size: var(--font-size-md-lg); color: var(--color-primary); }
-
-
-
+.bold { font-weight: var(--font-weight-bold); font-size: var(--font-size-md); color: var(--color-primary); }
 
 /* 借调记录 */
-.loan-item { margin-top: 4px; padding-top: 4px; border-top: 1px dashed var(--color-border-light); }
+.loan-item { margin-top: var(--spacing-xs); padding-top: var(--spacing-xs); border-top: 1px dashed var(--color-border-light); }
 
 /* 操作按钮 */
-.action-area { margin-bottom: 10px; }
+.action-area { margin-bottom: var(--spacing-sm); }
 
 /* 仓库选择区域 */
 .warehouse-section {
-  margin-bottom: 12rpx;
-  padding: 16rpx;
+  margin-bottom: var(--spacing-sm);
+  padding: var(--spacing-md);
   background: var(--color-bg-light);
   border-radius: var(--radius-md);
   border: 1px solid var(--color-border-light);
@@ -339,18 +346,22 @@
 .warehouse-label {
   font-size: var(--font-size-sm);
   color: var(--color-text-secondary);
-  margin-bottom: 6px;
+  margin-bottom: var(--spacing-xs);
+}
+
+.warehouse-label--mt {
+  margin-top: var(--spacing-sm);
 }
 
 .warehouse-option-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 8px;
+  gap: var(--spacing-xs);
+  margin-bottom: var(--spacing-xs);
 }
 
 .warehouse-chip {
-  padding: 4px 14px;
+  padding: 2px var(--spacing-md);
   border-radius: var(--radius-full);
   font-size: var(--font-size-sm);
   border: 1px solid var(--color-border);
@@ -365,8 +376,8 @@
 }
 
 .warehouse-chip--clear {
-  background: rgba(254, 226, 226, 0.6);
-  border-color: rgba(252, 165, 165, 0.5);
+  background: var(--color-danger-bg);
+  border-color: var(--color-danger-border);
   color: var(--color-danger);
 }
 
@@ -381,12 +392,13 @@
 
 .input-box {
   width: 100%;
-  height: 40px;
+  height: var(--input-height-sm);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  padding: 0 12px;
+  padding: 0 var(--spacing-md);
   font-size: var(--font-size-sm);
   box-sizing: border-box;
+  background: var(--color-bg-card);
 }
 
 .btn-inbound {
@@ -394,11 +406,11 @@
   color: var(--color-text-white);
   text-align: center;
   border-radius: var(--radius-md);
-  padding: 14px 0;
-  font-size: var(--font-size-md-lg);
-  font-weight: bold;
-  box-shadow: 0 2px 8px rgba(24,144,255,0.25);
-  margin-bottom: 8px;
+  padding: var(--spacing-md) 0;
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-bold);
+  box-shadow: var(--shadow-sm);
+  margin-bottom: var(--spacing-xs);
 }
 
 .btn-loan {
@@ -406,90 +418,107 @@
   color: var(--color-text-white);
   text-align: center;
   border-radius: var(--radius-md);
-  padding: 14px 0;
-  font-size: var(--font-size-md-lg);
-  font-weight: bold;
-  box-shadow: 0 2px 8px rgba(24,144,255,0.25);
-  margin-bottom: 8px;
+  padding: var(--spacing-md) 0;
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-bold);
+  box-shadow: var(--shadow-sm);
+  margin-bottom: var(--spacing-xs);
 }
 
 /* ==================== 借调内联表单 ==================== */
 .loan-inline {
-  background: var(--color-bg-base);
+  background: var(--color-bg-gray);
   border: 1px solid var(--color-border-light);
   border-radius: var(--radius-md);
-  padding: 12px;
-  margin-bottom: 8px;
+  padding: var(--spacing-md);
+  margin-bottom: var(--spacing-xs);
 }
+
 .loan-inline-row {
   display: flex;
   align-items: center;
-  margin-bottom: 8px;
+  margin-bottom: var(--spacing-sm);
 }
+
 .loan-inline-label {
-  font-size: 26rpx;
+  font-size: var(--font-size-sm);
   color: var(--color-text-secondary);
-  width: 120rpx;
+  width: 60px;
   flex-shrink: 0;
 }
+
 .loan-inline-radios {
   display: flex;
-  gap: 16px;
+  gap: var(--spacing-lg);
 }
+
 .loan-inline-input {
   flex: 1;
-  font-size: 28rpx;
-  padding: 8px 12px;
+  font-size: var(--font-size-md);
+  padding: var(--spacing-xs) var(--spacing-md);
   border: 1px solid var(--color-border-light);
   border-radius: var(--radius-sm);
-  background: var(--color-bg-white);
+  background: var(--color-bg-card);
+  height: var(--input-height-sm);
+  box-sizing: border-box;
 }
+
 .loan-inline-actions {
   display: flex;
-  gap: 8px;
-  margin-top: 4px;
+  gap: var(--spacing-xs);
+  margin-top: var(--spacing-xs);
 }
+
 .loan-inline-btn {
   flex: 1;
   text-align: center;
-  padding: 10px 0;
+  padding: var(--spacing-sm) 0;
   border-radius: var(--radius-sm);
-  font-size: 28rpx;
-  font-weight: bold;
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-bold);
 }
+
 .loan-inline-btn--cancel {
-  background: var(--color-bg-subtle);
+  background: var(--color-bg-gray);
   color: var(--color-text-secondary);
+  border: 1px solid var(--color-border-light);
 }
+
 .loan-inline-btn--confirm {
   background: var(--color-primary);
   color: var(--color-text-white);
 }
+
 .loan-inline-selected {
-  font-size: 26rpx;
+  font-size: var(--font-size-sm);
   color: var(--color-primary);
-  background: rgba(24,144,255,0.08);
-  padding: 6px 10px;
+  background: var(--color-primary-bg);
+  padding: 3px 5px;
   border-radius: var(--radius-xs);
-  margin-bottom: 8px;
+  margin-bottom: var(--spacing-sm);
+  display: inline-block;
 }
+
 .loan-inline-list {
-  max-height: 200rpx;
+  max-height: 100px;
   overflow-y: auto;
   border: 1px solid var(--color-border-light);
   border-radius: var(--radius-sm);
-  margin-bottom: 8px;
+  margin-bottom: var(--spacing-sm);
 }
+
 .loan-inline-option {
-  padding: 8px 12px;
-  font-size: 26rpx;
+  padding: var(--spacing-xs) var(--spacing-md);
+  font-size: var(--font-size-sm);
   border-bottom: 1px solid var(--color-border-light);
 }
+
 .loan-inline-option:last-child {
   border-bottom: none;
 }
+
 .loan-inline-option:active {
-  background: rgba(24,144,255,0.08);
+  background: var(--color-primary-bg);
 }
 
 .btn-return {
@@ -497,11 +526,11 @@
   color: var(--color-text-white);
   text-align: center;
   border-radius: var(--radius-md);
-  padding: 14px 0;
-  font-size: var(--font-size-md-lg);
-  font-weight: bold;
-  box-shadow: 0 2px 8px rgba(250,173,20,0.25);
-  margin-bottom: 8px;
+  padding: var(--spacing-md) 0;
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-bold);
+  box-shadow: var(--shadow-sm);
+  margin-bottom: var(--spacing-xs);
 }
 
 .btn-disabled { opacity: 0.6; pointer-events: none; }
@@ -510,22 +539,22 @@
 .loan-actions {
   display: flex;
   justify-content: flex-end;
-  margin-top: 6px;
+  margin-top: 3px;
 }
 
 .btn-transfer-sm {
-  font-size: 24rpx;
+  font-size: var(--font-size-xs);
   color: var(--color-primary);
   border: 1px solid var(--color-primary);
   border-radius: var(--radius-xs);
-  padding: 4px 12px;
+  padding: 2px 6px;
 }
 
 .transfer-tag {
-  font-size: 24rpx;
+  font-size: var(--font-size-xs);
   color: var(--color-primary);
-  background: rgba(24,144,255,0.08);
-  padding: 2px 8px;
+  background: var(--color-primary-bg);
+  padding: 1px 4px;
   border-radius: var(--radius-xs);
 }
 
@@ -533,8 +562,8 @@
 .modal-mask {
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0,0,0,0.5);
-  z-index: 1000;
+  background: var(--color-overlay);
+  z-index: var(--z-modal);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -548,15 +577,15 @@
 }
 
 .modal-title {
-  font-size: 32rpx;
-  font-weight: bold;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
   text-align: center;
-  padding: 24rpx 0 12rpx;
-  color: var(--color-text);
+  padding: var(--spacing-lg) 0 var(--spacing-md);
+  color: var(--color-text-primary);
 }
 
 .modal-body {
-  padding: 12rpx 32rpx 24rpx;
+  padding: var(--spacing-sm) var(--spacing-xl) var(--spacing-lg);
 }
 
 .modal-actions {
@@ -568,8 +597,8 @@
 .modal-btn-confirm {
   flex: 1;
   text-align: center;
-  padding: 24rpx 0;
-  font-size: 30rpx;
+  padding: var(--spacing-lg) 0;
+  font-size: var(--font-size-md);
 }
 
 .modal-btn-cancel {
@@ -579,35 +608,37 @@
 
 .modal-btn-confirm {
   color: var(--color-primary);
-  font-weight: bold;
+  font-weight: var(--font-weight-bold);
 }
 
 /* 表单项 */
 .form-item {
-  margin-bottom: 16rpx;
+  margin-bottom: var(--spacing-md);
 }
 
-.form-label {
-  font-size: 26rpx;
+.form-item .form-label {
+  font-size: var(--font-size-sm);
   color: var(--color-text-secondary);
-  margin-bottom: 6rpx;
+  margin-bottom: var(--spacing-xs);
   display: block;
+  width: auto;
 }
 
 .form-input {
   width: 100%;
-  height: 72rpx;
+  height: var(--input-height-sm);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  padding: 0 20rpx;
-  font-size: 28rpx;
+  padding: 0 var(--spacing-md);
+  font-size: var(--font-size-md);
   box-sizing: border-box;
+  background: var(--color-bg-card);
 }
 
 .radio-item {
   display: inline-block;
-  margin-right: 24rpx;
-  font-size: 28rpx;
+  margin-right: var(--spacing-lg);
+  font-size: var(--font-size-md);
 }
 
 /* 归还选择 */
@@ -615,14 +646,14 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 20rpx 16rpx;
+  padding: var(--spacing-md) var(--spacing-sm);
   border: 1px solid var(--color-border-light);
   border-radius: var(--radius-md);
-  margin-bottom: 8rpx;
-  font-size: 28rpx;
+  margin-bottom: var(--spacing-xs);
+  font-size: var(--font-size-md);
 }
 
 .return-pick-item--active {
   border-color: var(--color-primary);
-  background: rgba(24,144,255,0.06);
+  background: var(--color-primary-bg);
 }

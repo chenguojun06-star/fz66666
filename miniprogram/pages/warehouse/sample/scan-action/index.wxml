@@ -203,7 +203,7 @@
       <!-- 借调记录 -->
       <view class="info-card" wx:if="{{stockInfo.activeLoans && stockInfo.activeLoans.length > 0}}">
         <view class="info-row">
-          <text class="info-label bold" style="width:auto">当前借调记录</text>
+          <text class="info-label info-label--wide">当前借调记录</text>
         </view>
         <view class="loan-item" wx:for="{{stockInfo.activeLoans}}" wx:key="id">
           <view class="info-row">
@@ -264,7 +264,7 @@
           />
           
           <!-- 库位选择 -->
-          <view wx:if="{{warehouse && locationOptions.length > 0}}" class="warehouse-label" style="margin-top: 12rpx;">入库库位：</view>
+          <view wx:if="{{warehouse && locationOptions.length > 0}}" class="warehouse-label warehouse-label--mt">入库库位：</view>
           <view wx:if="{{warehouse && locationOptions.length > 0}}" class="warehouse-option-row">
             <view
               wx:for="{{locationOptions}}"

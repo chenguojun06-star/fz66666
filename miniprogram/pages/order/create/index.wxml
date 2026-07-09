@@ -58,7 +58,7 @@
         </view>
       </view>
 
-      <button class="next-btn" wx:if="{{noDataUploadedImage}}" bindtap="goToNoDataOrderForm">
+      <button class="btn btn-primary btn-block next-btn" wx:if="{{noDataUploadedImage}}" bindtap="goToNoDataOrderForm">
         下一步：填写订单信息
       </button>
     </view>

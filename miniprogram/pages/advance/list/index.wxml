@@ -56,7 +56,7 @@
         </view>
         <view class="info-row">
           <text class="info-label">扣款</text>
-          <text class="tag {{item.repayCls}}" style="font-size:11px;">{{item.repayText}}</text>
+          <text class="tag tag-sm {{item.repayCls}}">{{item.repayText}}</text>
         </view>
       </view>
       <view class="card-footer">

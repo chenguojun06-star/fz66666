@@ -180,6 +180,6 @@
   </view>
 
   <view class="submit-wrap">
-    <button class="submit-btn" loading="{{submitting}}" bindtap="submitOrder">创建订单</button>
+    <button class="btn btn-primary btn-block" loading="{{submitting}}" bindtap="submitOrder">创建订单</button>
   </view>
 </view>

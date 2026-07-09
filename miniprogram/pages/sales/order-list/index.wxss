@@ -22,6 +22,11 @@
   font-size: var(--font-size-sm);
   color: var(--color-text-primary);
 }
+.search-icon {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-tertiary);
+  flex-shrink: 0;
+}
 .search-clear {
   font-size: 16px;
   color: var(--color-text-tertiary);
@@ -45,7 +50,7 @@
 }
 .tab-pill--on {
   background: var(--color-primary);
-  color: #fff;
+  color: var(--color-text-white);
   border-color: var(--color-primary);
   font-weight: 600;
 }
@@ -82,7 +87,8 @@
   background: var(--color-bg-card);
   border-radius: var(--radius-lg);
   padding: 12px 14px;
-  box-shadow: var(--shadow-sm, 0 1px 2px rgba(0,0,0,0.04));
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--color-border-light);
 }
 .oc-head {
   display: flex;

@@ -110,29 +110,30 @@
 
 .advance-card {
   background: var(--color-bg-card);
-  border-radius: var(--radius-md);
-  padding: 12px;
-  margin-bottom: 8px;
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-md);
+  margin-bottom: var(--spacing-sm);
   box-shadow: var(--shadow-sm);
+  border: 1px solid var(--color-border-light);
 }
 
 .card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px;
+  margin-bottom: var(--spacing-sm);
 }
 
 .advance-no {
   font-size: var(--font-size-sm);
   color: var(--color-text-secondary);
-  font-weight: 500;
+  font-weight: var(--font-weight-medium);
 }
 
 .card-body {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px 16px;
+  gap: 4px var(--spacing-lg);
 }
 
 .info-row {
@@ -152,17 +153,22 @@
 
 .info-value.amount {
   color: var(--color-primary);
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
 }
 
 .info-value.remaining {
   color: var(--color-danger);
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
+}
+
+.tag-sm {
+  font-size: var(--font-size-xs);
+  padding: 2px 8px;
 }
 
 .card-footer {
-  margin-top: 8px;
-  padding-top: 8px;
+  margin-top: var(--spacing-sm);
+  padding-top: var(--spacing-sm);
   border-top: 1px solid var(--color-border-light);
 }
 

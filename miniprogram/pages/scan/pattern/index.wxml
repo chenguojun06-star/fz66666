@@ -61,7 +61,7 @@
         <text class="group__hint">可多选</text>
       </view>
       <view class="group__body">
-        <scroll-view class="process-scroll" scroll-y style="max-height:600rpx">
+        <scroll-view class="process-scroll" scroll-y>
           <view wx:for="{{processList}}" wx:key="value"
                 class="cell cell--toggle {{item.checked ? 'cell--selected' : ''}}"
                 data-value="{{item.value}}"
@@ -82,9 +82,9 @@
     </view>
 
     <!-- 底部固定操作栏 -->
-    <view class="action-bar">
-      <view class="action-bar__btn action-bar__btn--secondary" hover-class="btn-hover" bindtap="goBack">取消</view>
-      <view class="action-bar__btn action-bar__btn--primary {{selectedCount === 0 ? 'action-bar__btn--disabled' : ''}}" hover-class="btn-hover" bindtap="onConfirmProcess">确认领取</view>
+    <view class="footer-bar">
+      <view class="btn-secondary" hover-class="footer-bar-hover" bindtap="goBack">取消</view>
+      <view class="btn-primary {{selectedCount === 0 ? 'btn-disabled' : ''}}" hover-class="footer-bar-hover" bindtap="onConfirmProcess">确认领取</view>
     </view>
   </view>
 
@@ -290,9 +290,9 @@
     </view>
 
     <!-- 底部固定操作栏 -->
-    <view class="action-bar">
-      <view class="action-bar__btn action-bar__btn--secondary" hover-class="btn-hover" bindtap="goBack">取消</view>
-      <view class="action-bar__btn action-bar__btn--primary {{loading ? 'action-bar__btn--disabled' : ''}}" hover-class="btn-hover" bindtap="submitOp">
+    <view class="footer-bar">
+      <view class="btn-secondary" hover-class="footer-bar-hover" bindtap="goBack">取消</view>
+      <view class="btn-primary {{loading ? 'btn-disabled' : ''}}" hover-class="footer-bar-hover" bindtap="submitOp">
         {{loading ? '提交中…' : (detail.submitLabel || '提交')}}
       </view>
     </view>

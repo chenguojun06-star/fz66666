@@ -3,7 +3,7 @@
 <view class="page">
   <!-- 搜索框 -->
   <view class="search-bar">
-    <icon type="search" size="14" color="#999" />
+    <view class="line-icon line-icon--sm icon-search search-icon"></view>
     <input class="search-input" placeholder="输入订单号/买家名后按搜索" value="{{keyword}}"
            confirm-type="search" bindinput="onSearchInput" bindconfirm="onSearchConfirm" />
     <text wx:if="{{keyword}}" class="search-clear" bindtap="onClearKeyword">✕</text>

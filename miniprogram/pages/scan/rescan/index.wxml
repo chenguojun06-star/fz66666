@@ -42,7 +42,7 @@
   </view>
 
   <view class="footer-bar">
-    <view class="btn-cancel" hover-class="footer-bar-hover" bindtap="goBack">取消</view>
+    <view class="btn-secondary" hover-class="footer-bar-hover" bindtap="goBack">取消</view>
     <view class="btn-danger {{loading ? 'btn-disabled' : ''}}" hover-class="footer-bar-hover" bindtap="confirmRescan">
       {{loading ? '退回中...' : '确认退回'}}
     </view>

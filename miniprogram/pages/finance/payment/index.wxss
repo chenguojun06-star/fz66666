@@ -9,15 +9,15 @@
 
 .stats-bar {
   display: flex;
-  gap: 8px;
-  padding: 12px;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md);
   background: var(--color-bg-card);
 }
 
 .stat-card {
   flex: 1;
   text-align: center;
-  padding: 10px;
+  padding: var(--spacing-sm) + 2px;
   background: var(--color-bg-gray);
   border-radius: var(--radius-md);
 }
@@ -25,7 +25,7 @@
 .stat-value {
   display: block;
   font-size: var(--font-size-xl);
-  font-weight: 700;
+  font-weight: var(--font-weight-bold);
   color: var(--color-primary);
 }
 
@@ -45,7 +45,7 @@
 .tab-item {
   flex: 1;
   text-align: center;
-  padding: 12px 0;
+  padding: var(--spacing-md) 0;
   font-size: var(--font-size-md);
   color: var(--color-text-secondary);
   position: relative;
@@ -53,7 +53,7 @@
 
 .tab-active {
   color: var(--color-primary);
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
 }
 
 .tab-active::after {
@@ -64,34 +64,35 @@
   right: 30%;
   height: 3px;
   background: var(--color-primary);
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
 }
 
 .payable-card, .payment-card {
   background: var(--color-bg-card);
-  border-radius: var(--radius-md);
-  padding: 12px;
-  margin: 8px 12px;
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-md);
+  margin: var(--spacing-sm) var(--page-padding-x);
   box-shadow: var(--shadow-sm);
+  border: 1px solid var(--color-border-light);
 }
 
 .card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px;
+  margin-bottom: var(--spacing-sm);
 }
 
 .payee-name {
   font-size: var(--font-size-md);
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
   color: var(--color-text-primary);
 }
 
 .card-body {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px 16px;
+  gap: 4px var(--spacing-lg);
 }
 
 .info-row {
@@ -111,7 +112,7 @@
 
 .info-value.amount {
   color: var(--color-primary);
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
 }
 
 .info-value.paid {
@@ -120,7 +121,7 @@
 
 .info-value.remaining {
   color: var(--color-danger);
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
 }
 
 .info-value.desc {
@@ -132,23 +133,38 @@
 }
 
 .card-actions {
-  margin-top: 10px;
-  padding-top: 10px;
+  margin-top: var(--spacing-sm) + 2px;
+  padding-top: var(--spacing-sm) + 2px;
   border-top: 1px solid var(--color-border-light);
   display: flex;
   justify-content: flex-end;
+  gap: var(--spacing-sm);
 }
 
 .action-btn {
-  padding: 6px 16px;
-  border-radius: var(--radius-sm);
+  height: var(--btn-height-sm);
+  padding: 0 var(--spacing-lg);
+  border-radius: var(--radius-md);
   font-size: var(--font-size-sm);
-  font-weight: 500;
+  font-weight: var(--font-weight-medium);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .pay-btn {
   background: var(--color-primary);
-  color: #fff;
+  color: var(--color-text-white);
+}
+
+.confirm-btn {
+  background: var(--color-success);
+  color: var(--color-text-white);
+}
+
+.cancel-btn {
+  background: var(--color-bg-gray);
+  color: var(--color-text-secondary);
 }
 
 .modal-mask {
@@ -157,7 +173,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0,0,0,0.4);
+  background: var(--color-overlay);
   z-index: var(--z-modal);
 }
 
@@ -191,7 +207,8 @@
 
 .modal-title {
   font-size: var(--font-size-lg);
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
 }
 
 .modal-close {
@@ -204,23 +221,26 @@
   flex: 1;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  padding: 16px;
+  padding: var(--spacing-lg);
 }
 
 .modal-footer {
   display: flex;
-  gap: 12px;
-  padding: 12px 16px;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md) 16px;
   border-top: 1px solid var(--color-border-light);
 }
 
 .modal-btn {
   flex: 1;
   text-align: center;
-  padding: 10px 0;
+  height: var(--btn-height-md);
   border-radius: var(--radius-md);
   font-size: var(--font-size-md);
-  font-weight: 500;
+  font-weight: var(--font-weight-medium);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .modal-btn.cancel {
@@ -230,17 +250,83 @@
 
 .modal-btn.confirm {
   background: var(--color-primary);
-  color: #fff;
+  color: var(--color-text-white);
+}
+
+.mf-kv-list {
+  margin-bottom: var(--spacing-md);
+}
+
+.mf-kv {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-sm) 0;
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.mf-kv:last-child {
+  border-bottom: none;
+}
+
+.mf-kv-key {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.mf-kv-val {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-medium);
+}
+
+.mf-kv-val--danger {
+  color: var(--color-danger);
+  font-weight: var(--font-weight-semibold);
+}
+
+.mf-item {
+  margin-bottom: var(--spacing-md);
+}
+
+.mf-item--first {
+  margin-top: var(--spacing-md);
+}
+
+.mf-label {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  margin-bottom: var(--spacing-xs);
+  display: block;
+}
+
+.mf-required::before {
+  content: '*';
+  color: var(--color-danger);
+  margin-right: 2px;
+}
+
+.mf-input {
+  width: 100%;
+  height: var(--input-height-sm);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 0 var(--spacing-md);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  background: var(--color-bg-card);
+  box-sizing: border-box;
 }
 
 .picker-box {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 12px;
+  padding: var(--spacing-sm) var(--spacing-md);
   background: var(--color-bg-gray);
   border-radius: var(--radius-sm);
   font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
 }
 
 .picker-box .arrow {
@@ -251,59 +337,52 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  margin-right: 12px;
+  margin-right: var(--spacing-md);
   margin-bottom: 4px;
   font-size: var(--font-size-sm);
   color: var(--color-text-primary);
 }
 
-/* 确认/取消/重新支付按钮 */
-.confirm-btn {
-  background: var(--color-success);
-  color: #fff;
-}
-
-.cancel-btn {
-  background: var(--color-bg-gray);
-  color: var(--color-text-secondary);
-  margin-right: 8px;
-}
-
-/* 支付弹窗内的子操作按钮 */
 .modal-sub-actions {
   display: flex;
-  gap: 8px;
-  margin-top: 12px;
-  padding-top: 12px;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-md);
+  padding-top: var(--spacing-md);
   border-top: 1px solid var(--color-border-light);
 }
 
 .sub-action-btn {
   flex: 1;
   text-align: center;
-  padding: 8px 0;
+  height: var(--btn-height-sm);
   border-radius: var(--radius-sm);
   font-size: var(--font-size-sm);
   color: var(--color-primary);
   background: var(--color-bg-gray);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-/* 搜索收款人 */
 .search-btn {
   text-align: center;
-  padding: 8px 0;
-  margin-top: 8px;
+  height: var(--btn-height-sm);
+  margin-top: var(--spacing-sm);
   background: var(--color-primary);
-  color: #fff;
+  color: var(--color-text-white);
   border-radius: var(--radius-sm);
   font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .payee-result-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px 0;
+  padding: var(--spacing-sm) 0;
   border-bottom: 1px solid var(--color-border-light);
 }
 
@@ -322,4 +401,15 @@
   padding: 20px 0;
   color: var(--color-text-tertiary);
   font-size: var(--font-size-sm);
+}
+
+.load-more {
+  text-align: center;
+  padding: var(--spacing-md) 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-tertiary);
+}
+
+.load-more.disabled {
+  color: var(--color-text-disabled);
 }

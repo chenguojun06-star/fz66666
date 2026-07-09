@@ -53,6 +53,11 @@
   align-items: center;
   justify-content: center;
 }
+
+.scan-icon-img {
+  width: 28px;
+  height: 28px;
+}
 .scan-btn-text-group {
   display: flex;
   flex-direction: column;
@@ -81,6 +86,15 @@
   font-size: var(--font-size-sm);
   color: var(--color-text-secondary, var(--color-text-secondary));
   margin-bottom: 6px;
+}
+
+.warehouse-label--location {
+  margin-top: 6px;
+}
+
+.factory-info-text {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
 }
 
 .warehouse-option-row {

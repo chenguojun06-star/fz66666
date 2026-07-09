@@ -16,7 +16,7 @@
         />
         <view class="scan-btn" bindtap="onScanCode">
           <view class="scan-icon-svg">
-            <image src="/assets/icons/scan-blue.svg" mode="aspectFit" style="width: 20px; height: 20px;" />
+            <image class="scan-icon-img" src="/assets/icons/scan-blue.svg" mode="aspectFit" />
           </view>
         </view>
       </view>
