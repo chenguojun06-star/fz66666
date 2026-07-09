@@ -529,7 +529,7 @@ public class WarehouseDashboardOrchestrator {
                 inboundByMonth.put(month, count);
             }
         } else {
-            List<Map<String, Object>> inboundList = materialPurchaseMapper.selectYearInboundByMonthAndType(currentYear, type, tid);
+            List<Map<String, Object>> inboundList = materialPurchaseMapper.selectYearInboundByMonthAndType(LocalDate.of(currentYear, 1, 1), LocalDate.of(currentYear + 1, 1, 1), type, tid);
             for (Map<String, Object> row : inboundList) {
                 Integer month = ((Number) row.get("month")).intValue();
                 Integer count = ((Number) row.get("count")).intValue();

@@ -71,7 +71,7 @@ public interface MaterialPurchaseMapper extends BaseMapper<MaterialPurchase> {
             "  COUNT(*) as count " +
             "FROM t_material_purchase " +
             "WHERE actual_arrival_date >= #{startDate} " +
-            "  AND actual_arrival_date <= #{endDate} " +
+            "  AND actual_arrival_date < DATE_ADD(#{endDate}, INTERVAL 1 DAY) " +
             "  AND delete_flag = 0 " +
             "  AND tenant_id = #{tenantId} " +
             "  AND (material_type LIKE CONCAT(#{materialType}, '%') " +
@@ -91,7 +91,7 @@ public interface MaterialPurchaseMapper extends BaseMapper<MaterialPurchase> {
             "  COUNT(*) as count " +
             "FROM t_material_purchase " +
             "WHERE actual_arrival_date >= #{startDate} " +
-            "  AND actual_arrival_date <= #{endDate} " +
+            "  AND actual_arrival_date < DATE_ADD(#{endDate}, INTERVAL 1 DAY) " +
             "  AND delete_flag = 0 " +
             "  AND tenant_id = #{tenantId} " +
             "  AND (material_type LIKE CONCAT(#{materialType}, '%') " +
@@ -110,7 +110,8 @@ public interface MaterialPurchaseMapper extends BaseMapper<MaterialPurchase> {
             "  MONTH(actual_arrival_date) as month, " +
             "  COUNT(*) as count " +
             "FROM t_material_purchase " +
-            "WHERE YEAR(actual_arrival_date) = #{year} " +
+            "WHERE actual_arrival_date >= #{yearStart} " +
+            "  AND actual_arrival_date < #{yearNextStart} " +
             "  AND delete_flag = 0 " +
             "  AND tenant_id = #{tenantId} " +
             "  AND (material_type LIKE CONCAT(#{materialType}, '%') " +
@@ -119,7 +120,8 @@ public interface MaterialPurchaseMapper extends BaseMapper<MaterialPurchase> {
             "       OR (#{materialType} = 'accessory' AND material_type = '辅料')) " +
             "GROUP BY MONTH(actual_arrival_date)")
     List<Map<String, Object>> selectYearInboundByMonthAndType(
-        @Param("year") Integer year,
+        @Param("yearStart") LocalDate yearStart,
+        @Param("yearNextStart") LocalDate yearNextStart,
         @Param("materialType") String materialType,
         @Param("tenantId") Long tenantId
     );
