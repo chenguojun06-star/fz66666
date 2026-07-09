@@ -495,3 +495,37 @@
   - 修复文件：StyleOperationAppendHelper.java、StyleStageHelper.java
   - 新增迁移：V20260708002__clean_operation_logs_from_style_description.sql
   - 提交：befdce60f
+
+## D-036：工序阶段前置校验必须动态跳过被禁用的阶段
+
+- **日期**：2026-07-09
+- **上下文**：没有二次工艺的款式（hasSecondaryProcess=false），扫码进车缝时被误拦截："二次工艺阶段尚未开始，暂不能进入车缝"。根因：ProductionScanStageSupport.validateParentStagePrerequisite 用固定数组索引 FIXED_PRODUCTION_NODES[currentIdx - 1] 找前置阶段，没考虑该阶段被禁用的场景。
+- **决策**：
+  1. **新增 findPrevEnabledStage 方法**：从当前阶段往前遍历，跳过所有被 isStageExplicitlyDisabled 判定为禁用的阶段，返回第一个启用的阶段
+  2. **isStageExplicitlyDisabled 判断逻辑**：检查 hasSecondaryProcess=false（二次工艺禁用）或 nodeOperations 中该阶段被移除
+  3. **ProcessStageDetector.isAutoSkippableStageName 增强**：二次工艺阶段也检查 hasSecondaryProcess，若禁用则自动跳过
+- **理由**：固定数组索引无法适应动态禁用场景，必须运行时动态判断
+- **影响**：
+  - 修改文件：ProductionScanStageSupport.java / ProcessStageDetector.java
+  - 新增测试：ProductionScanStageSupportTest.java（3个测试用例）
+  - 提交：ec9b20fd0
+- **教训**：用户反馈"这个问题为什么反反复复在处理"——说明之前修复不彻底，只处理了表面没解决根因
+
+## D-037：出库不需要选仓库/库位，系统自动从库存记录获取
+
+- **日期**：2026-07-09
+- **上下文**：样衣借出弹窗要求用户选"出库仓库"和"库位"，用户反馈"出库是样衣在仓库里面的东西出去，为什么还要选仓库？只有入库才有选择库位"。核实发现物料出库、成品扫码出库都有同样问题。
+- **决策**：
+  1. **出库移除仓库/库位选择器**：样衣借出、物料出库、成品扫码出库三个场景统一移除
+  2. **改为只读显示当前存储位置**：让用户知道东西从哪里出，但不需要手动选
+  3. **后端自动从库存记录获取仓库和库位**：
+     - 样衣：从 SampleStock.warehouseAreaId/warehouseAreaName 获取
+     - 物料：从 MaterialInventory.warehouseAreaId/location 获取
+     - 成品：从最新 ProductWarehousing 记录获取（SKU本身不存库位）
+  4. **成品库存查询接口增强**：/style/sku/inventory/{skuCode} 返回值从 Integer 改为 {stock, warehouseLocation, warehouseAreaId, warehouseAreaName}
+- **理由**：出库时库存已经在仓库里了，系统应该知道东西在哪里。入库才需要选（决定放哪里）。
+- **参考实现**：TransferToOutstockModal（样衣转出库）本身就是正确实现——没有仓库选择，应作为标准参考
+- **影响**：
+  - 后端：SampleStockOrchestrator / MaterialWarehouseOperationOrchestrator / FinishedOutstockHelper / ProductSkuController
+  - 前端：LoanModal.tsx / OutboundModal.tsx / QrcodeOutboundModal.tsx / types.ts / useOutboundActions.ts
+  - 提交：324ec2b06

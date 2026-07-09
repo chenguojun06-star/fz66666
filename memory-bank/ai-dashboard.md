@@ -158,20 +158,93 @@
 | 指标 | 值 | 状态 |
 |------|-----|------|
 | 日期 | 2026-07-09 | — |
-| 修改文件数 | 22 个 | — |
-| RESTful迁移 | 7个后端Controller + 15个前端/小程序/H5文件 | ✅ 已完成 |
+| 当日提交数 | 16 个 | 📈 |
+| 修改文件数 | 42 个 | — |
+| 出库优化 | 3个场景（样衣/物料/成品） | ✅ 已完成 |
+| 工序阶段修复 | 二次工艺禁用动态跳过 | ✅ 已完成 |
+| WebSocket修复 | 3项（token/握手500/StrictMode） | ✅ 已完成 |
+| RESTful迁移 | 7个Controller + 15个前端文件 | ✅ 已完成 |
+| Flyway修复 | 2项（MySQL 8.0兼容 + 表名错误） | ✅ 已完成 |
+| CI优化 | 2项（job合并 + 变量名修复） | ✅ 已完成 |
 | 前端编译验证 | npx tsc --noEmit 0 errors | ✅ 通过 |
+| 后端编译验证 | mvn compile | ✅ 通过 |
 
 ---
 
 ## 🎯 7-09 会话目标与结果
 
-**目标主题**：RESTful迁移第二批完成
+**目标主题**：工序阶段误判修复 + 出库仓库/库位选择优化 + WebSocket修复 + RESTful迁移
 
 **关键任务完成清单**：
-- [x] 后端7个Controller旧路径统一为/search规范
-- [x] 前端5个API调用文件同步更新
-- [x] 小程序3个API模块同步更新
-- [x] H5端7个API文件同步更新
-- [x] 编译验证通过
-- [x] 记忆文件更新完成
+- [x] 🔧：工序阶段误判修复 — 二次工艺禁用时动态跳过，不再误拦车缝
+- [x] 🔧：出库仓库/库位选择优化 — 3个场景移除选择器，改为显示当前位置
+- [x] 🐛：WebSocket token缺失导致控制台刷屏
+- [x] 🐛：WebSocket握手500 — @ServerEndpoint注入失效
+- [x] 🐛：WebSocket StrictMode双重挂载
+- [x] 🔄：RESTful迁移第二批 — 7个Controller + 15个前端/小程序/H5文件
+- [x] 🐛：Flyway V202606240001/002/003 MySQL 8.0不兼容语法修复
+- [x] 🐛：Flyway V20260708002表名错误 style_info→t_style_info
+- [x] 🔧：CI门禁job合并 + concurrency减少排队
+- [x] 🐛：CI GITHUB_ENV变量名拼写错误
+
+---
+
+## 📝 7-09 操作日志（按时间倒序）
+
+### 21:19 - 记忆文件补录
+- **操作类型**：记忆同步
+- **修改文件**：activeContext.md / progress.md / decisionLog.md（补D-036/D-037）/ ai-dashboard.md
+- **commit**：03d856f4f
+
+### 21:10 - 记忆文件更新
+- **操作类型**：记忆同步
+- **修改文件**：activeContext.md / ai-dashboard.md / progress.md
+- **commit**：0494c7571
+
+### 20:50 - 出库仓库/库位选择优化
+- **操作类型**：UX优化（用户反馈）
+- **修改文件**：10个（4后端 + 6前端）
+- **核心变更**：
+  - 样衣借出：移除仓库/库位选择，改为显示当前存储位置
+  - 物料出库：移除仓库/库位选择，显示当前位置
+  - 成品扫码出库：移除仓库/库位选择，表格增加"当前库位"列
+  - 后端统一自动从库存记录获取仓库和库位
+- **commit**：324ec2b06
+
+### 20:30 - 工序阶段误判修复
+- **操作类型**：Bug修复（反复出现的P1问题）
+- **修改文件**：3个（ProductionScanStageSupport.java / ProcessStageDetector.java / ProductionScanStageSupportTest.java）
+- **核心变更**：新增 findPrevEnabledStage 动态跳过被禁用的阶段
+- **commit**：ec9b20fd0
+
+### 20:00 - WebSocket StrictMode双重挂载修复
+- **操作类型**：Bug修复
+- **commit**：3c26e7bff
+
+### 19:30 - Flyway表名错误修复
+- **操作类型**：Bug修复
+- **commit**：afa2d72c0
+
+### 19:00 - CI优化
+- **操作类型**：CI/CD
+- **commit**：531d7adc1 + 0b4d3e3cd
+
+### 18:00 - RESTful迁移第二批 + WebSocket优化
+- **操作类型**：重构
+- **commit**：324ec2b06
+
+### 17:00 - WebSocket握手500修复
+- **操作类型**：Bug修复
+- **commit**：88a782352 + c356c8660 + f7fb21267
+
+### 16:00 - Flyway MySQL 8.0兼容修复
+- **操作类型**：Bug修复
+- **commit**：ae98091a0
+
+### 15:00 - 样衣开发列表统计 + 语音输入
+- **操作类型**：功能优化
+- **commit**：9a71f486b
+
+### 14:00 - MaterialPurchase索引修复记录
+- **操作类型**：记忆同步
+- **commit**：0a648b240
