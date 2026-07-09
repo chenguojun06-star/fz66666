@@ -13,7 +13,7 @@ import java.util.Map;
 /**
  * 采购退货Controller
  * RESTful API端点
- * 权限码：PURCHASE_RETURN_CREATE / PURCHASE_RETURN_APPROVE / PURCHASE_RETURN_COMPLETE / PURCHASE_RETURN_VIEW
+ * 与 SalesReturnController 保持一致：类级 isAuthenticated()，方法级不再细粒度鉴权
  */
 @RestController
 @RequestMapping("/api/production/purchase-return")
@@ -29,7 +29,6 @@ public class PurchaseReturnController {
      * @return 退货单ID
      */
     @PostMapping
-    @PreAuthorize("hasAuthority('PURCHASE_RETURN_CREATE')")
     public Result<Long> createReturn(@RequestBody Map<String, Object> params) {
         Long returnId = purchaseReturnOrchestrator.createReturn(params);
         return Result.success(returnId);
@@ -41,7 +40,6 @@ public class PurchaseReturnController {
      * @param params approved(boolean), reason(String)
      */
     @PostMapping("/{returnId}/approve")
-    @PreAuthorize("hasAuthority('PURCHASE_RETURN_APPROVE')")
     public Result<Boolean> approveReturn(@PathVariable Long returnId, @RequestBody Map<String, Object> params) {
         Boolean approved = (Boolean) params.get("approved");
         String reason = (String) params.get("reason");
@@ -57,7 +55,6 @@ public class PurchaseReturnController {
      * @param returnId 退货单ID
      */
     @PostMapping("/{returnId}/complete")
-    @PreAuthorize("hasAuthority('PURCHASE_RETURN_COMPLETE')")
     public Result<Boolean> completeReturn(@PathVariable Long returnId) {
         purchaseReturnOrchestrator.completeReturn(returnId);
         return Result.success(true);
@@ -68,7 +65,6 @@ public class PurchaseReturnController {
      * @param params 筛选参数：originalPurchaseId, returnStatus
      */
     @GetMapping("/list")
-    @PreAuthorize("hasAuthority('PURCHASE_RETURN_VIEW')")
     public Result<List<PurchaseReturn>> listReturns(@RequestParam Map<String, Object> params) {
         List<PurchaseReturn> returns = purchaseReturnOrchestrator.listReturns(params);
         return Result.success(returns);
@@ -79,7 +75,6 @@ public class PurchaseReturnController {
      * @param returnId 退货单ID
      */
     @GetMapping("/{returnId}")
-    @PreAuthorize("hasAuthority('PURCHASE_RETURN_VIEW')")
     public Result<Map<String, Object>> getReturnDetail(@PathVariable Long returnId) {
         Map<String, Object> detail = purchaseReturnOrchestrator.getReturnDetail(returnId);
         return Result.success(detail);

@@ -36,7 +36,6 @@ function buildMenuItems(opts) {
   items.push({ id: 'password', label: '修改密码', iconClass: 'icon-lock', url: '/pages/admin/misc/change-password/index' });
   items.push({ id: 'payroll', label: '工资查询', iconClass: 'icon-payroll', url: '/pages/payroll/payroll' });
   items.push({ id: 'advance', label: '员工借支', iconClass: 'icon-clock', url: '/pages/advance/list/index' });
-  items.push({ id: 'return', label: '退货管理', iconClass: 'icon-stats', url: '/pages/return/list/index' });
   if (opts.showWagePayment) {
     items.push({ id: 'wagePayment', label: '收付款中心', iconClass: 'icon-stats', url: '/pages/finance/payment/index' });
   }

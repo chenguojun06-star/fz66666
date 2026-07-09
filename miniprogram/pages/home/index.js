@@ -54,6 +54,7 @@ const MENU_KEY_MAP = {
   wagePayment: 'miniprogram.menu.wagePayment',
   salesData: 'miniprogram.menu.salesData',
   platformOrder: 'miniprogram.menu.platformOrder',
+  returnManage: 'miniprogram.menu.returnManage',
 };
 
 function getGreeting() {
@@ -118,6 +119,10 @@ function buildMenuItems(menuVisibility) {
   // 平台订单：外发工厂不开放
   if (!isFactory && visibility.platformOrder !== false) {
     items.push({ id: 'platformOrder', name: '平台订单', iconClass: 'icon-menu-order', circleClass: 'menu-icon-circle--blue', route: '/pages/sales/order-list/index' });
+  }
+  // 退货管理：外发工厂不开放
+  if (!isFactory && visibility.returnManage !== false) {
+    items.push({ id: 'returnManage', name: '退货管理', iconClass: 'icon-menu-shipment', circleClass: 'menu-icon-circle--red', route: '/pages/return/list/index' });
   }
 
   return items;
