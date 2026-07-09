@@ -8,6 +8,7 @@
 const api = require('../../../utils/api');
 const { DEBUG_MODE } = require('../../../config');
 const { toast } = require('../../../utils/uiHelper');
+const { triggerDataRefresh } = require('../../../utils/eventBus');
 
 /** 扫码结果通知停留时长：20 分钟 */
 const RESULT_DISMISS_MS = 20 * 60 * 1000;
@@ -93,6 +94,8 @@ module.exports = {
       this._startResultDismissTimer();
       this.addToLocalHistory(formattedResult);
       this.startUndoTimer(formattedResult);
+      // 触发全局数据刷新事件，通知订单详情页/看板主页等其他页面更新进度
+      try { triggerDataRefresh('scan'); } catch (_e) { /* eventBus 异常不影响扫码 */ }
       const self = this;
       this._scanRefreshTimer = setTimeout(function() {
         if (self && self.data) self.loadMyPanel(true);

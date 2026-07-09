@@ -20,6 +20,8 @@ const { toast, safeNavigate } = require('../../../utils/uiHelper');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 const { parseProductionOrderLines, sortSizeNames } = require('../../../utils/orderParser');
 const { getUserInfo } = require('../../../utils/storage');
+const eventBus = require('../../../utils/eventBus');
+const { Events } = eventBus;
 
 /* ========== 业务类型 / 物料类型 / 计价方式 中文化 ========== */
 var BIZ_TYPE_LABELS = { FOB: 'FOB 离岸价', ODM: 'ODM 原厂设计', OEM: 'OEM 代工生产', CMT: 'CMT 来料加工' };
@@ -221,6 +223,13 @@ Page({
     const orderNo = opts.orderNo ? decodeURIComponent(opts.orderNo) : '';
     this.setData({ orderId, orderNo });
     this._loadFlow();
+    // 订阅扫码/进度变更事件，实时刷新订单详情（历史bug：扫码后进度不更新）
+    this._dataChangedHandler = () => {
+      if (this.data.orderId) this._loadFlow();
+    };
+    eventBus.on(Events.DATA_CHANGED, this._dataChangedHandler);
+    eventBus.on(Events.REFRESH_ALL, this._dataChangedHandler);
+    eventBus.on(Events.ORDER_PROGRESS_CHANGED, this._dataChangedHandler);
   },
 
   onShow: function () {
@@ -229,6 +238,16 @@ Page({
     if (this.data.orderId) {
       // 从子页面返回时刷新
       this._loadFlow();
+    }
+  },
+
+  onUnload: function () {
+    // 取消事件订阅，避免内存泄漏
+    if (this._dataChangedHandler) {
+      eventBus.off(Events.DATA_CHANGED, this._dataChangedHandler);
+      eventBus.off(Events.REFRESH_ALL, this._dataChangedHandler);
+      eventBus.off(Events.ORDER_PROGRESS_CHANGED, this._dataChangedHandler);
+      this._dataChangedHandler = null;
     }
   },
 
