@@ -29,9 +29,9 @@ public class WarehouseAreaController {
     }
 
     @PreAuthorize("isAuthenticated()")
-    @GetMapping("/list-by-type")
-    public Result<List<WarehouseArea>> listByType(
-            @RequestParam(required = false) String warehouseType) {
+    @PostMapping("/search")
+    public Result<List<WarehouseArea>> search(@RequestBody Map<String, Object> params) {
+        String warehouseType = params.get("warehouseType") != null ? String.valueOf(params.get("warehouseType")) : null;
         return areaOrchestrator.listByType(warehouseType);
     }
 

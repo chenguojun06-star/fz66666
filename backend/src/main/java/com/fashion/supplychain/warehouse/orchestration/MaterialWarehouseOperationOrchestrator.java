@@ -389,8 +389,11 @@ public class MaterialWarehouseOperationOrchestrator {
         logEntry.setReceiverName(receiverName);
         logEntry.setWarehouseLocation(stock.getLocation());
         String warehouseAreaId = trimToNull(params.get("warehouseAreaId"));
+        if (!StringUtils.hasText(warehouseAreaId) && stock.getWarehouseAreaId() != null) {
+            warehouseAreaId = stock.getWarehouseAreaId();
+        }
         logEntry.setWarehouseAreaId(warehouseAreaId);
-        logEntry.setWarehouseAreaName(resolveWarehouseAreaName(warehouseAreaId));
+        logEntry.setWarehouseAreaName(StringUtils.hasText(warehouseAreaId) ? resolveWarehouseAreaName(warehouseAreaId) : stock.getWarehouseAreaName());
         logEntry.setRemark(remark);
         logEntry.setOutboundTime(now);
         logEntry.setCreateTime(now);

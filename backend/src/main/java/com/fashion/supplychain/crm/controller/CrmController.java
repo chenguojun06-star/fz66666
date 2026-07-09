@@ -97,9 +97,10 @@ public class CrmController {
     }
 
     /** v2: 按款号查询收款状态（AI 智能问答专用） */
-    @GetMapping("/receivables/by-style-no")
+    @PostMapping("/receivables/search")
     @PreAuthorize("isAuthenticated()")
-    public Result<?> queryReceivableByStyleNo(@RequestParam String styleNo) {
+    public Result<?> searchReceivables(@RequestBody Map<String, Object> params) {
+        String styleNo = params.get("styleNo") != null ? String.valueOf(params.get("styleNo")) : null;
         return Result.success(receivableOrchestrator.queryByStyleNo(styleNo));
     }
 

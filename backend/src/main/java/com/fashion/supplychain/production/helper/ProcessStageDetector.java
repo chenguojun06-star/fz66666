@@ -78,7 +78,79 @@ public class ProcessStageDetector {
                     && order.getProcurementManuallyCompleted() == 1) return true;
             return false;
         }
+        if (templateLibraryService.progressStageNameMatches("二次工艺", pn)
+                || "二次工艺".equals(pn)) {
+            if (order != null && Boolean.FALSE.equals(order.getHasSecondaryProcess())) {
+                return true;
+            }
+            if (isStageDisabledByNodeOperations(order, "secondaryProcess")) {
+                return true;
+            }
+            return false;
+        }
+        if (templateLibraryService.progressStageNameMatches("裁剪", pn)
+                || "裁剪".equals(pn)) {
+            if (isStageDisabledByNodeOperations(order, "cutting")) {
+                return true;
+            }
+            return false;
+        }
+        if (templateLibraryService.progressStageNameMatches("车缝", pn)
+                || "车缝".equals(pn)) {
+            if (isStageDisabledByNodeOperations(order, "carSewing")) {
+                return true;
+            }
+            return false;
+        }
+        if (templateLibraryService.progressStageNameMatches("尾部", pn)
+                || "尾部".equals(pn)) {
+            if (isStageDisabledByNodeOperations(order, "tailProcess")) {
+                return true;
+            }
+            return false;
+        }
+        if (templateLibraryService.progressStageNameMatches("入库", pn)
+                || "入库".equals(pn)) {
+            if (isStageDisabledByNodeOperations(order, "warehousing")) {
+                return true;
+            }
+            return false;
+        }
+        if (templateLibraryService.progressStageNameMatches("采购", pn)
+                || "采购".equals(pn)) {
+            if (isStageDisabledByNodeOperations(order, "procurement")) {
+                return true;
+            }
+            return false;
+        }
         return false;
+    }
+
+    private boolean isStageDisabledByNodeOperations(ProductionOrder order, String stageKey) {
+        if (order == null || !hasText(order.getNodeOperations())) {
+            return false;
+        }
+        try {
+            com.fasterxml.jackson.databind.ObjectMapper objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            java.util.Map<String, Object> root = objectMapper.readValue(order.getNodeOperations(),
+                    new com.fasterxml.jackson.core.type.TypeReference<java.util.Map<String, Object>>() {});
+            Object remapObj = root.get("subProcessRemap");
+            if (!(remapObj instanceof java.util.Map)) {
+                return false;
+            }
+            java.util.Map<String, Object> remap = (java.util.Map<String, Object>) remapObj;
+            Object stageObj = remap.get(stageKey);
+            if (!(stageObj instanceof java.util.Map)) {
+                return false;
+            }
+            java.util.Map<String, Object> cfg = (java.util.Map<String, Object>) stageObj;
+            boolean enabled = Boolean.TRUE.equals(cfg.get("enabled"));
+            return !enabled;
+        } catch (Exception e) {
+            log.warn("判断阶段是否禁用时解析nodeOperations失败: orderNo={}, stageKey={}",
+                    order.getOrderNo(), stageKey, e);
+            return false;
+        }
     }
 
     /**
@@ -197,12 +269,14 @@ public class ProcessStageDetector {
         String resolvedParent = resolveParentForAutoCheck(autoResult);
         int resultIdx = indexOfFixedNode(resolvedParent);
         if (resultIdx > 1) {
-            boolean hasCuttingRecord = hasAnyScanRecordForParent(order, "裁剪");
-            if (!hasCuttingRecord) {
-                log.warn("自动识别跳过裁剪: orderNo={}, autoResult={}, 回退到裁剪", order.getOrderNo(), autoResult);
-                String cuttingProcess = findFirstProcessUnderParent(nodes, order, "裁剪");
-                if (hasText(cuttingProcess)) return cuttingProcess;
-                return "裁剪";
+            if (!isStageDisabled(order, "裁剪")) {
+                boolean hasCuttingRecord = hasAnyScanRecordForParent(order, "裁剪");
+                if (!hasCuttingRecord) {
+                    log.warn("自动识别跳过裁剪: orderNo={}, autoResult={}, 回退到裁剪", order.getOrderNo(), autoResult);
+                    String cuttingProcess = findFirstProcessUnderParent(nodes, order, "裁剪");
+                    if (hasText(cuttingProcess)) return cuttingProcess;
+                    return "裁剪";
+                }
             }
         }
         return autoResult;
@@ -423,5 +497,54 @@ public class ProcessStageDetector {
             if (parentName.equals(normalized)) return n;
         }
         return null;
+    }
+
+    private boolean isStageDisabled(ProductionOrder order, String stageName) {
+        if (order == null || !hasText(stageName)) {
+            return false;
+        }
+        if ("二次工艺".equals(stageName) && Boolean.FALSE.equals(order.getHasSecondaryProcess())) {
+            return true;
+        }
+        if (!hasText(order.getNodeOperations())) {
+            return false;
+        }
+        try {
+            com.fasterxml.jackson.databind.ObjectMapper objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            java.util.Map<String, Object> root = objectMapper.readValue(order.getNodeOperations(),
+                    new com.fasterxml.jackson.core.type.TypeReference<java.util.Map<String, Object>>() {});
+            Object remapObj = root.get("subProcessRemap");
+            if (!(remapObj instanceof java.util.Map)) {
+                return false;
+            }
+            java.util.Map<String, Object> remap = (java.util.Map<String, Object>) remapObj;
+            for (java.util.Map.Entry<String, Object> entry : remap.entrySet()) {
+                String stageKey = entry.getKey();
+                String parent = null;
+                switch (stageKey) {
+                    case "procurement": parent = "采购"; break;
+                    case "cutting": parent = "裁剪"; break;
+                    case "secondaryProcess": parent = "二次工艺"; break;
+                    case "carSewing": parent = "车缝"; break;
+                    case "tailProcess": parent = "尾部"; break;
+                    case "warehousing": parent = "入库"; break;
+                }
+                if (parent == null || !parent.equals(stageName)) {
+                    continue;
+                }
+                if (!(entry.getValue() instanceof java.util.Map)) {
+                    continue;
+                }
+                java.util.Map<String, Object> stageCfg = (java.util.Map<String, Object>) entry.getValue();
+                boolean enabled = Boolean.TRUE.equals(stageCfg.get("enabled"));
+                if (!enabled) {
+                    return true;
+                }
+            }
+        } catch (Exception e) {
+            log.warn("判断阶段是否禁用时解析nodeOperations失败: orderNo={}, stageName={}",
+                    order.getOrderNo(), stageName, e);
+        }
+        return false;
     }
 }

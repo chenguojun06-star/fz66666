@@ -7,7 +7,7 @@ export const warehouseAreaApi = {
     api.get(`${BASE}/list`, { params }),
 
   listByType: (warehouseType?: string) =>
-    api.get(`${BASE}/list-by-type`, { params: { warehouseType } }),
+    api.post(`${BASE}/search`, { warehouseType }),
 
   create: (data: Record<string, unknown>) =>
     api.post(BASE, data),

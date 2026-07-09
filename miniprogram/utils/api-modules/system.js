@@ -42,7 +42,7 @@ const system = {
     return ok('/api/system/feedback/my-list', 'POST', params || {});
   },
   getDictList(type) {
-    return ok('/api/system/dict/list-by-type', 'POST', { type });
+    return ok('/api/system/dict/search', 'POST', { type });
   },
   getMiniprogramMenuConfig() {
     return ok('/api/system/tenant-miniprogram-menu/my-menus', 'GET', {});

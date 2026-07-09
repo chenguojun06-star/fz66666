@@ -60,6 +60,26 @@ public class ProductionScanStageSupport {
     @Autowired
     private ProcessStageDetector processStageDetector;
 
+    public void setTemplateLibraryService(TemplateLibraryService templateLibraryService) {
+        this.templateLibraryService = templateLibraryService;
+    }
+
+    public void setProcessParentMappingService(ProcessParentMappingService processParentMappingService) {
+        this.processParentMappingService = processParentMappingService;
+    }
+
+    public void setScanRecordService(ScanRecordService scanRecordService) {
+        this.scanRecordService = scanRecordService;
+    }
+
+    public void setStyleAttachmentService(StyleAttachmentService styleAttachmentService) {
+        this.styleAttachmentService = styleAttachmentService;
+    }
+
+    public void setProcessStageDetector(ProcessStageDetector processStageDetector) {
+        this.processStageDetector = processStageDetector;
+    }
+
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public String normalizeFixedProductionNodeName(String name) {

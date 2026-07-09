@@ -108,37 +108,17 @@ export function useWebSocket(options: UseWebSocketOptions) {
       }
     };
 
-    // onerror 静默处理：浏览器 WS error 事件不携带有用信息（出于安全考虑），
-    // 且 onerror 后必然触发 onclose，重连/停止逻辑统一在 onclose 中处理。
-    ws.onerror = () => {
-      // 静默：不打印 error 对象，避免控制台刷屏
+    ws.onerror = (error) => {
+      console.error('[WS] 错误:', error);
     };
 
     ws.onclose = (event) => {
+      console.log('[WS] 连接关闭:', event.code, event.reason);
       setConnected(false);
 
-      // 1000 = 正常关闭，不重连
-      if (event.code === 1000) {
-        console.log('[WS] 连接正常关闭');
-        return;
-      }
-
-      // 1006 = 异常关闭（握手失败/网络中断/服务重启），指数退避重连
-      // 避免握手500时疯狂重连刷屏
-      if (reconnectAttemptsRef.current < maxReconnectAttempts) {
+      if (enabled && reconnectAttemptsRef.current < maxReconnectAttempts) {
         reconnectAttemptsRef.current++;
-        const attempt = reconnectAttemptsRef.current;
-        // 指数退避：5s -> 10s -> 20s -> 30s -> 30s ...（上限30s）
-        const delay = Math.min(reconnectInterval * Math.pow(2, attempt - 1), 30000);
-        console.warn(`[WS] 连接异常关闭(code=${event.code})，${delay / 1000}s 后重连(${attempt}/${maxReconnectAttempts})`);
-        setTimeout(() => {
-          // 重连前检查 enabled 状态，避免组件卸载后还在重连
-          if (enabled && userId && tenantId !== undefined) {
-            connect();
-          }
-        }, delay);
-      } else {
-        console.warn(`[WS] 已达最大重连次数(${maxReconnectAttempts})，停止重连`);
+        setTimeout(connect, reconnectInterval);
       }
     };
 

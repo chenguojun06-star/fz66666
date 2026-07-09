@@ -31,11 +31,14 @@ const production = {
   receivePurchase: (payload) => http.post('/api/production/purchase/receive', payload),
   createPurchaseInstruction: (payload) => http.post('/api/production/purchase/instruction', payload),
   updateArrivedQuantity: (payload) => http.post('/api/production/purchase/update-arrived-quantity', payload),
+  // P0 修复（D-023 2026-07-09）：去掉 orderNo→scanCode 转换。
+  //   旧版把 orderNo 转 scanCode 触发后端 getByScanCode 分支，绕过了：
+  //     1. 多租户隔离（无 tenant_id WHERE）
+  //     2. 工厂/物料库/StyleInfo/订单维度 enrichment
+  //   统一传 orderNo，与 PC 端 usePurchaseList 走相同后端路径（listWithEnrichment）。
+  //   兜底传 pageSize=500，避免分页默认 10 条导致物料被截断显示不全。
   getMaterialPurchases: (params) => {
-    const payload = { ...(params || {}) };
-    if (payload.orderNo && !payload.scanCode) {
-      payload.scanCode = payload.orderNo;
-    }
+    const payload = { ...(params || {}), pageSize: 500 };
     return http.get('/api/production/purchase/list', { params: payload });
   },
   myProcurementTasks: () => http.get('/api/production/purchase/list', { params: { myTasks: 'true' } }),
@@ -114,7 +117,7 @@ const system = {
   changePassword: (data) => http.post('/api/system/user/me/change-password', data || {}),
   submitFeedback: (data) => http.post('/api/system/feedback/submit', data),
   myFeedbackList: (params) => http.post('/api/system/feedback/my-list', params || {}),
-  getDictList: (type) => http.post('/api/system/dict/list-by-type', { type }),
+  getDictList: (type) => http.post('/api/system/dict/search', { type }),
   getMiniprogramMenuConfig: () => http.get('/api/system/tenant-miniprogram-menu/my-menus'),
   saveMiniprogramMenuConfig: (payload) => http.put('/api/system/tenant-miniprogram-menu', payload),
 };
@@ -357,7 +360,7 @@ const material = {
 
 const materialRoll = {
   scan: (data) => http.post('/api/production/material/roll/scan', data),
-  listByInbound: (params) => http.get('/api/production/material/roll/list-by-inbound', { params: params || {} }),
+  listByInbound: (params) => http.get('/api/production/material/roll/search', { params: params || {} }),
 };
 
 const orderManagement = {

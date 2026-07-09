@@ -8,7 +8,6 @@ import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.common.constant.MaterialConstants;
 import com.fashion.supplychain.production.entity.MaterialPurchase;
 import com.fashion.supplychain.production.entity.ProductionOrder;
-import com.fashion.supplychain.production.orchestration.MaterialPurchaseOrchestratorHelper;
 import com.fashion.supplychain.production.service.MaterialPurchaseService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import java.util.ArrayList;
@@ -31,9 +30,6 @@ public class MaterialPurchaseQueryHelper {
     @Autowired
     private ProductionOrderService productionOrderService;
 
-    @Autowired
-    private MaterialPurchaseOrchestratorHelper orchestratorHelper;
-
     public IPage<MaterialPurchase> list(Map<String, Object> params) {
         // 🔒 PC端默认隔离：未指定工厂类型时，跟单员/管理员只查内部工厂采购记录
         Map<String, Object> effectiveParams = params != null ? params : new java.util.HashMap<>();
@@ -45,59 +41,14 @@ public class MaterialPurchaseQueryHelper {
         return materialPurchaseService.queryPage(effectiveParams);
     }
 
-    /**
-     * 通过扫码获取关联的采购单列表
-     *
-     * @param params 包含 scanCode 和 orderNo
-     * @return 采购单列表
-     */
-    public List<MaterialPurchase> getByScanCode(Map<String, Object> params) {
-        String scanCode = params.get("scanCode") != null ? String.valueOf(params.get("scanCode")).trim() : null;
-        String orderNo = params.get("orderNo") != null ? String.valueOf(params.get("orderNo")).trim() : null;
-
-        // 如果有 scanCode，尝试多种方式匹配
-        if (StringUtils.hasText(scanCode)) {
-            // 1. 先尝试作为采购单号精确查询
-            LambdaQueryWrapper<MaterialPurchase> wrapper = new LambdaQueryWrapper<>();
-            wrapper.eq(MaterialPurchase::getPurchaseNo, scanCode);
-            wrapper.eq(MaterialPurchase::getDeleteFlag, 0);
-            List<MaterialPurchase> purchases = materialPurchaseService.list(wrapper);
-
-            if (purchases != null && !purchases.isEmpty()) {
-                return purchases;
-            }
-
-            // 2. 尝试将 scanCode 转换为订单号格式
-            // P020226012201 -> PO20260122001
-            String normalizedOrderNo = orchestratorHelper.normalizeOrderNo(scanCode);
-            if (StringUtils.hasText(normalizedOrderNo)) {
-                wrapper = new LambdaQueryWrapper<>();
-                wrapper.eq(MaterialPurchase::getOrderNo, normalizedOrderNo);
-                wrapper.eq(MaterialPurchase::getDeleteFlag, 0);
-                wrapper.orderByDesc(MaterialPurchase::getCreateTime);
-                purchases = materialPurchaseService.list(wrapper);
-
-                if (purchases != null && !purchases.isEmpty()) {
-                    return purchases;
-                }
-            }
-        }
-
-        // 如果有明确的订单号参数，用它查询
-        if (StringUtils.hasText(orderNo)) {
-            LambdaQueryWrapper<MaterialPurchase> wrapper = new LambdaQueryWrapper<>();
-            wrapper.eq(MaterialPurchase::getOrderNo, orderNo);
-            wrapper.eq(MaterialPurchase::getDeleteFlag, 0);
-            wrapper.orderByDesc(MaterialPurchase::getCreateTime);
-            List<MaterialPurchase> purchases = materialPurchaseService.list(wrapper);
-
-            if (purchases != null && !purchases.isEmpty()) {
-                return purchases;
-            }
-        }
-
-        return new ArrayList<>();
-    }
+    // P0 修复（D-023 2026-07-09）：删除 getByScanCode 方法。
+    //   旧版手机端调用此方法存在以下问题：
+    //     1. 无 tenant_id WHERE，违反 P0 #4 / #19 多租户隔离铁律
+    //     2. 无工厂/物料库/StyleInfo/订单维度 enrichment
+    //     3. purchaseNo/orderNo 精确匹配逻辑容易误匹配
+    //   统一改用 list(Map) → queryPage(effectiveParams) → listWithEnrichment 路径，
+    //   三端（PC / H5 / 小程序）走完全相同的代码路径。
+    //   该方法在 MaterialPurchaseController.list 中已无引用，确认全代码库无其他调用方后删除。
 
     public List<MaterialPurchase> getMyTasks() {
         Long tenantId = UserContext.tenantId();

@@ -74,7 +74,7 @@ public class FactoryShipmentController {
     }
 
     /** 按订单查发货单（无分页） */
-    @PostMapping("/list-by-order")
+    @PostMapping("/search")
     public Result<?> listByOrderPost(@RequestBody Map<String, String> params) {
         String orderId = params != null ? params.get("orderId") : null;
         if (orderId == null || orderId.isBlank()) {

@@ -10,9 +10,11 @@ import com.fashion.supplychain.finance.orchestration.BillAggregationOrchestrator
 import com.fashion.supplychain.finance.service.BillAggregationService;
 import com.fashion.supplychain.integration.ecommerce.orchestration.EcommerceOrderOrchestrator;
 import com.fashion.supplychain.production.entity.ProductOutstock;
+import com.fashion.supplychain.production.entity.ProductWarehousing;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.ProductOutstockService;
+import com.fashion.supplychain.production.service.ProductWarehousingService;
 import com.fashion.supplychain.style.entity.ProductSku;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.service.ProductSkuService;
@@ -43,6 +45,7 @@ public class FinishedOutstockHelper {
     private final ProductOutstockService productOutstockService;
     private final StyleInfoService styleInfoService;
     private final WarehouseAreaService warehouseAreaService;
+    private final ProductWarehousingService productWarehousingService;
 
     @Lazy
     @Autowired
@@ -60,11 +63,13 @@ public class FinishedOutstockHelper {
     public FinishedOutstockHelper(ProductSkuService productSkuService,
                                   ProductOutstockService productOutstockService,
                                   StyleInfoService styleInfoService,
-                                  WarehouseAreaService warehouseAreaService) {
+                                  WarehouseAreaService warehouseAreaService,
+                                  ProductWarehousingService productWarehousingService) {
         this.productSkuService = productSkuService;
         this.productOutstockService = productOutstockService;
         this.styleInfoService = styleInfoService;
         this.warehouseAreaService = warehouseAreaService;
+        this.productWarehousingService = productWarehousingService;
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -143,10 +148,23 @@ public class FinishedOutstockHelper {
             }
             String priceAdjustmentReason = trimToNull(item.get("priceAdjustmentReason"));
 
-            recordProductOutstock(sku, quantity, requestOrderId, requestOrderNo, requestWarehouse,
+            String effectiveWarehouse = requestWarehouse;
+            String effectiveAreaId = warehouseAreaId;
+            String effectiveAreaName = warehouseAreaName;
+            if (!StringUtils.hasText(effectiveWarehouse) && !StringUtils.hasText(effectiveAreaId)) {
+                Long currentTenantId = UserContext.tenantId();
+                String[] resolved = resolveWarehouseFromLatestInbound(skuCode, currentTenantId);
+                if (resolved != null) {
+                    effectiveWarehouse = resolved[0];
+                    effectiveAreaId = resolved[1];
+                    effectiveAreaName = resolved[2];
+                }
+            }
+
+            recordProductOutstock(sku, quantity, requestOrderId, requestOrderNo, effectiveWarehouse,
                     "成品库存页面出库|sku=" + skuCode, trackingNo, expressCompany,
                     customerName, customerPhone, shippingAddress, finalOutstockType,
-                    warehouseAreaId, warehouseAreaName, overrideSalesPrice, priceAdjustmentReason, platformCode);
+                    effectiveAreaId, effectiveAreaName, overrideSalesPrice, priceAdjustmentReason, platformCode);
             totalItems++;
             totalQty += quantity;
         }
@@ -481,6 +499,24 @@ public class FinishedOutstockHelper {
         } catch (Exception e) {
             return null;
         }
+    }
+
+    private String[] resolveWarehouseFromLatestInbound(String skuCode, Long tenantId) {
+        try {
+            ProductWarehousing latest = productWarehousingService.lambdaQuery()
+                    .eq(ProductWarehousing::getSkuCode, skuCode)
+                    .eq(ProductWarehousing::getTenantId, tenantId)
+                    .eq(ProductWarehousing::getDeleteFlag, 0)
+                    .orderByDesc(ProductWarehousing::getWarehousingEndTime)
+                    .last("LIMIT 1")
+                    .one();
+            if (latest != null) {
+                return new String[]{latest.getWarehouse(), latest.getWarehouseAreaId(), latest.getWarehouseAreaName()};
+            }
+        } catch (Exception e) {
+            log.warn("[出库] 从入库记录解析仓库位置失败: skuCode={}", skuCode, e);
+        }
+        return null;
     }
 
     private String buildOutstockNo(LocalDateTime now) {

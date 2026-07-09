@@ -218,11 +218,21 @@ public class MaterialPurchaseServiceHelper {
             return List.of(line);
         }
 
+        // P0 修复（D-023 2026-07-09）：order_details 实际格式为 {"lines":[...],"pricing":{...}}
+        //   而不是直接的数组。旧代码把它当数组解析，每次都失败走到 catch 兜底，
+        //   导致整个订单被当作一行（size="M,S,L,XL,XXL" 逗号字符串），
+        //   size_usage_map 匹配不到任何 key，全部 fallback 到 usage_amount，
+        //   最终所有物料的采购数量都 = usage_amount * total_quantity，
+        //   表现为"所有物料数量都一样"。
+        //   修复：先尝试解析为对象（取 .lines 字段），失败再尝试数组，再失败才兜底。
         try {
-            List<OrderLine> lines = objectMapper.readValue(raw, new TypeReference<List<OrderLine>>() {
-            });
-            if (lines == null) {
-                return List.of();
+            List<OrderLine> lines = tryParseOrderLines(raw);
+            if (lines == null || lines.isEmpty()) {
+                OrderLine line = new OrderLine();
+                line.color = StringUtils.hasText(order.getColor()) ? order.getColor() : "";
+                line.size = StringUtils.hasText(order.getSize()) ? order.getSize() : "";
+                line.quantity = order.getOrderQuantity() == null ? 0 : order.getOrderQuantity();
+                return List.of(line);
             }
             List<OrderLine> cleaned = new ArrayList<>();
             for (OrderLine l : lines) {
@@ -233,7 +243,16 @@ public class MaterialPurchaseServiceHelper {
                 next.color = l.color == null ? "" : l.color.trim();
                 next.size = l.size == null ? "" : l.size.trim();
                 next.quantity = l.quantity == null ? 0 : l.quantity;
-                cleaned.add(next);
+                if (next.quantity != null && next.quantity > 0) {
+                    cleaned.add(next);
+                }
+            }
+            if (cleaned.isEmpty()) {
+                OrderLine line = new OrderLine();
+                line.color = StringUtils.hasText(order.getColor()) ? order.getColor() : "";
+                line.size = StringUtils.hasText(order.getSize()) ? order.getSize() : "";
+                line.quantity = order.getOrderQuantity() == null ? 0 : order.getOrderQuantity();
+                return List.of(line);
             }
             return cleaned;
         } catch (Exception e) {
@@ -242,6 +261,33 @@ public class MaterialPurchaseServiceHelper {
             line.size = StringUtils.hasText(order.getSize()) ? order.getSize() : "";
             line.quantity = order.getOrderQuantity() == null ? 0 : order.getOrderQuantity();
             return List.of(line);
+        }
+    }
+
+    /**
+     * 尝试解析 order_details JSON：先按对象格式（{"lines":[...]}），失败再按数组格式。
+     * 解析失败返回 null，让调用方走兜底逻辑。
+     */
+    private List<OrderLine> tryParseOrderLines(String raw) {
+        if (!StringUtils.hasText(raw)) return null;
+        String trimmed = raw.trim();
+        try {
+            if (trimmed.startsWith("{")) {
+                Map<String, Object> root = objectMapper.readValue(trimmed, new TypeReference<Map<String, Object>>() {});
+                Object linesRaw = root == null ? null : root.get("lines");
+                if (linesRaw instanceof List<?>) {
+                    String linesJson = objectMapper.writeValueAsString(linesRaw);
+                    return objectMapper.readValue(linesJson, new TypeReference<List<OrderLine>>() {});
+                }
+                return null;
+            }
+            if (trimmed.startsWith("[")) {
+                return objectMapper.readValue(trimmed, new TypeReference<List<OrderLine>>() {});
+            }
+            return null;
+        } catch (Exception e) {
+            log.warn("parse order_details failed, raw={}", raw == null ? "null" : raw.substring(0, Math.min(raw.length(), 100)), e);
+            return null;
         }
     }
 

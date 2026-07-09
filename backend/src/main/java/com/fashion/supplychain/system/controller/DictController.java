@@ -36,7 +36,7 @@ public class DictController {
      * 按类型查询启用的词典项（无分页，下拉专用）
      * POST /api/system/dict/list-by-type  body: { "type": "garment_part" }
      */
-    @PostMapping("/list-by-type")
+    @PostMapping("/search")
     public Result<List<Dict>> listByType(@RequestBody Map<String, String> params) {
         String type = params != null ? params.get("type") : null;
         if (type == null || type.isBlank()) {

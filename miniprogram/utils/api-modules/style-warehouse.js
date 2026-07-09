@@ -200,10 +200,10 @@ const warehouse = {
     return ok('/api/warehouse/finished-inventory/edit', 'POST', { warehousingId, changes });
   },
   listWarehouseAreas(warehouseType) {
-    return ok('/api/warehouse/area/list-by-type', 'GET', { warehouseType: warehouseType || '' });
+    return ok('/api/warehouse/area/search', 'GET', { warehouseType: warehouseType || '' });
   },
   listLocations(warehouseType, areaId) {
-    return ok('/api/warehouse/location/list-by-type', 'GET', { warehouseType: warehouseType || '', areaId: areaId });
+    return ok('/api/warehouse/location/search', 'GET', { warehouseType: warehouseType || '', areaId: areaId });
   },
   // 库位库存详情（库位扫码后查询）
   locationItems(locationCode) {

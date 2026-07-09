@@ -489,10 +489,6 @@ public class MaterialPurchaseOrchestrator {
 
     // ── Query aggregation (delegated to QueryHelper) ────────
 
-    public List<MaterialPurchase> getByScanCode(Map<String, Object> params) {
-        return queryHelper.getByScanCode(params);
-    }
-
     public List<MaterialPurchase> getMyTasks() {
         return queryHelper.getMyTasks();
     }

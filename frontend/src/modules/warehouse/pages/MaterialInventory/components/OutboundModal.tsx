@@ -12,12 +12,12 @@ import {
   InputNumber,
   Button,
   Drawer,
+  Typography,
 } from 'antd';
 import { ExportOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
 import MaterialInfoCard from './MaterialInfoCard';
 import type { MaterialBatchDetail } from '../hooks/useMaterialInventoryData';
-import { useWarehouseAreaOptions, useWarehouseLocationByArea } from '@/hooks/useWarehouseAreaOptions';
 
 const { Option } = Select;
 
@@ -62,9 +62,6 @@ const OutboundModal: React.FC<OutboundModalProps> = ({
   autoMatchOutboundContext,
   outboundSubmitting,
 }) => {
-  const warehouseAreaId = Form.useWatch('warehouseAreaId', outboundForm);
-  const { selectOptions: areaOptions } = useWarehouseAreaOptions('MATERIAL');
-  const { selectOptions: locationOptions } = useWarehouseLocationByArea('MATERIAL', warehouseAreaId);
   const factorySearchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   return (
     <Drawer
@@ -289,33 +286,12 @@ const OutboundModal: React.FC<OutboundModalProps> = ({
                     }}
                   </Form.Item>
                 </Col>
-                <Col span={12}>
-                  <Form.Item label="出库仓库" name="warehouseAreaId">
-                    <Select
-                      placeholder="选择仓库"
-                      allowClear
-                      showSearch
-                      optionFilterProp="label"
-                      options={areaOptions}
-                      onChange={() => outboundForm.setFieldValue('warehouseLocation', undefined)}
-                    />
-                  </Form.Item>
-                </Col>
-                <Col span={12}>
-                  <Form.Item noStyle shouldUpdate={(prev, cur) => prev.warehouseAreaId !== cur.warehouseAreaId}>
-                    {() => (
-                      <Form.Item label="库位" name="warehouseLocation">
-                        <Select
-                          placeholder={warehouseAreaId ? '选择库位' : '请先选择仓库'}
-                          allowClear
-                          showSearch
-                          optionFilterProp="label"
-                          options={locationOptions}
-                          disabled={!warehouseAreaId}
-                        />
-                      </Form.Item>
-                    )}
-                  </Form.Item>
+                <Col span={24}>
+                  <div style={{ background: '#f5f7fa', padding: '10px 12px', borderRadius: 6, marginBottom: 8 }}>
+                    <Typography.Text type="secondary" style={{ fontSize: 13 }}>
+                      当前库存位置：{outboundModal.data?.warehouseLocation || '-'}（出库将自动从该位置扣减）
+                    </Typography.Text>
+                  </div>
                 </Col>
               </Row>
             </Form>

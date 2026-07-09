@@ -31,10 +31,10 @@ public class WarehouseLocationController {
     }
 
     @PreAuthorize("isAuthenticated()")
-    @GetMapping("/list-by-type")
-    public Result<List<WarehouseLocation>> listByType(
-            @RequestParam(required = false) String warehouseType,
-            @RequestParam(required = false) String areaId) {
+    @PostMapping("/search")
+    public Result<List<WarehouseLocation>> search(@RequestBody Map<String, Object> params) {
+        String warehouseType = params.get("warehouseType") != null ? String.valueOf(params.get("warehouseType")) : null;
+        String areaId = params.get("areaId") != null ? String.valueOf(params.get("areaId")) : null;
         return locationOrchestrator.listByType(warehouseType, areaId);
     }
 

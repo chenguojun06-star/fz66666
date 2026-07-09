@@ -23,8 +23,9 @@ public class CuttingBomController {
         return Result.success(list);
     }
 
-    @GetMapping("/list-by-style-no")
-    public Result<?> listByStyleNo(@RequestParam String styleNo) {
+    @PostMapping("/search")
+    public Result<?> search(@RequestBody Map<String, Object> params) {
+        String styleNo = params.get("styleNo") != null ? String.valueOf(params.get("styleNo")) : null;
         List<CuttingBom> list = cuttingBomOrchestrator.listByStyleNo(styleNo);
         return Result.success(list);
     }

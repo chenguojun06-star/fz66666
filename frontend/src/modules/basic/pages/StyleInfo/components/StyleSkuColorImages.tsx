@@ -34,7 +34,7 @@ const StyleSkuColorImages: React.FC<StyleSkuColorImagesProps> = ({ styleId, styl
     setLoading(true);
     try {
       // 获取SKU列表
-      const res = await api.post<{ code: number; data: any[] }>('/style/sku/list-by-style', { styleId: Number(styleId) });
+      const res = await api.post<{ code: number; data: any[] }>('/style/sku/search', { styleId: Number(styleId) });
       if (res.code === 200 && res.data) {
         // 按颜色分组统计SKU数量
         const colorMap = new Map<string, number>();

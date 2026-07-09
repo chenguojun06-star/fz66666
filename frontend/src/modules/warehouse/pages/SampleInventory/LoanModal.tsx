@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Form, Input, InputNumber, DatePicker, Select, Radio } from 'antd';
+import { Form, Input, InputNumber, DatePicker, Select, Radio, Typography } from 'antd';
 import ResizableModal from '@/components/common/ResizableModal';
 import { SampleStock } from './types';
 import api from '@/utils/api';
@@ -9,7 +9,6 @@ import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
 import { message } from '@/utils/antdStatic';
-import { useWarehouseAreaOptions, useWarehouseLocationByArea } from '@/hooks/useWarehouseAreaOptions';
 import { factoryApi } from '@/services/system/factoryApi';
 
 interface LoanModalProps {
@@ -26,10 +25,7 @@ const LoanModal: React.FC<LoanModalProps> = ({ visible, stock, onCancel, onSucce
   const showSmartErrorNotice = useMemo(() => isSmartFeatureEnabled('smart.production.precheck.enabled'), []);
   const [factoryOptions, setFactoryOptions] = useState<{ label: string; value: string }[]>([]);
 
-  const warehouseAreaId = Form.useWatch('warehouseAreaId', form);
   const lendToType = Form.useWatch('lendToType', form);
-  const { selectOptions: areaOptions } = useWarehouseAreaOptions('SAMPLE');
-  const { selectOptions: locationOptions } = useWarehouseLocationByArea('SAMPLE', warehouseAreaId);
 
   const reportSmartError = (title: string, reason?: string, code?: string) => {
     if (!showSmartErrorNotice) return;
@@ -66,8 +62,6 @@ const LoanModal: React.FC<LoanModalProps> = ({ visible, stock, onCancel, onSucce
         quantity: values.quantity,
         expectedReturnDate: values.expectedReturnDate ? formatDateTimeSecond(values.expectedReturnDate) : undefined,
         remark: values.remark,
-        warehouseAreaId: values.warehouseAreaId,
-        warehouseLocation: values.warehouseLocation,
         lendToType: values.lendToType,
       };
 
@@ -187,30 +181,14 @@ const LoanModal: React.FC<LoanModalProps> = ({ visible, stock, onCancel, onSucce
         >
           <Input.TextArea rows={2} />
         </Form.Item>
-        <Form.Item label="出库仓库" name="warehouseAreaId">
-          <Select
-            placeholder="选择仓库"
-            allowClear
-            showSearch
-            optionFilterProp="label"
-            options={areaOptions}
-            onChange={() => form.setFieldValue('warehouseLocation', undefined)}
-          />
-        </Form.Item>
-        <Form.Item noStyle shouldUpdate={(prev, cur) => prev.warehouseAreaId !== cur.warehouseAreaId}>
-          {() => (
-            <Form.Item label="库位" name="warehouseLocation">
-              <Select
-                placeholder={warehouseAreaId ? '选择库位' : '请先选择仓库'}
-                allowClear
-                showSearch
-                optionFilterProp="label"
-                options={locationOptions}
-                disabled={!warehouseAreaId}
-              />
-            </Form.Item>
-          )}
-        </Form.Item>
+        {(stock?.warehouseAreaName || stock?.location) && (
+          <div style={{ background: '#f5f7fa', padding: '10px 12px', borderRadius: 6, marginBottom: 8 }}>
+            <Typography.Text type="secondary" style={{ fontSize: 13 }}>
+              出库仓库：{stock.warehouseAreaName || '-'}
+              {stock?.location ? `　|　库位：${stock.location}` : ''}
+            </Typography.Text>
+          </div>
+        )}
       </Form>
     </ResizableModal>
   );

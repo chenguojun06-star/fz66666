@@ -53,7 +53,7 @@ export const factoryShipmentApi = {
 
   listByOrder: (orderId: string) =>
     api.post<{ code: number; data: FactoryShipment[] }>(
-      '/production/factory-shipment/list-by-order', { orderId }),
+      '/production/factory-shipment/search', { orderId }),
 
   shippable: (orderId: string) =>
     api.get<{ code: number; data: ShippableInfo }>(

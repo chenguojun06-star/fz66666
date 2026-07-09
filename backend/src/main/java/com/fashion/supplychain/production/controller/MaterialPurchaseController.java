@@ -46,16 +46,30 @@ public class MaterialPurchaseController {
 
     /**
      * 支持参数：
-     * - scanCode: 扫码查询（需配合orderNo）
+     * - orderNo: 按订单号查询（PC端列表 + 手机端扫码详情统一走此路径）
      * - myTasks: true表示查询当前用户的采购任务
-     * - 其他筛选参数：orderId, styleNo, status等
+     * - 其他筛选参数：purchaseNo, materialCode, supplierName, status 等
      *
-     * @since 2026-02-01 优化版本
+     * P0 修复（D-023）：删除 scanCode 特殊分支，统一走 listWithEnrichment。
+     *   旧版手机端（H5/小程序）走 getByScanCode 直查表，缺少：
+     *     1. 多租户隔离（无 tenant_id WHERE，违反 P0 #4/#19）
+     *     2. 订单维度字段（orderQuantity、orderColor、factoryName、isOrphan 等）
+     *     3. 工厂/物料库/StyleInfo enrichment
+     *   统一后 PC / H5 / 小程序走完全相同接口、相同代码路径、相同返回数据。
+     *
+     * P0 修复（D-023）：当调用方只传 orderNo（扫码详情场景）未传 pageSize 时，
+     *   自动放大到 500，避免分页默认 10 条导致物料被截断显示不全。
+     *
+     * @since 2026-07-09 统一接口版本
      */
     @GetMapping("/list")
     public Result<?> list(@RequestParam Map<String, Object> params) {
-        if (params.containsKey("scanCode")) {
-            return Result.success(materialPurchaseOrchestrator.getByScanCode(params));
+        // P0 修复（D-023）：扫码详情场景（orderNo 或 patternProductionId 单查）未传 pageSize 时，
+        //   自动放大到 500，避免分页默认 10 条导致物料被截断显示不全。
+        boolean isScanDetailQuery = (params.containsKey("orderNo") || params.containsKey("patternProductionId"))
+                && !params.containsKey("pageSize");
+        if (isScanDetailQuery) {
+            params.put("pageSize", 500);
         }
 
         if ("true".equals(String.valueOf(params.get("myTasks")))) {

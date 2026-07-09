@@ -9,6 +9,8 @@ import com.fashion.supplychain.style.dto.SkuBatchUpdateDTO;
 import com.fashion.supplychain.style.dto.StockUpdateDTO;
 import com.fashion.supplychain.style.entity.ProductSku;
 import com.fashion.supplychain.style.orchestration.ProductSkuOrchestrator;
+import com.fashion.supplychain.production.entity.ProductWarehousing;
+import com.fashion.supplychain.production.service.ProductWarehousingService;
 import com.fashion.supplychain.style.service.ProductSkuService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,6 +18,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -31,8 +34,11 @@ public class ProductSkuController {
     @Autowired
     private ProductSkuOrchestrator productSkuOrchestrator;
 
+    @Autowired
+    private ProductWarehousingService productWarehousingService;
+
     @GetMapping("/inventory/{skuCode}")
-    public Result<Integer> getInventory(@PathVariable String skuCode) {
+    public Result<Map<String, Object>> getInventory(@PathVariable String skuCode) {
         TenantAssert.assertTenantContext();
         Long tid = UserContext.tenantId();
         ProductSku sku = productSkuService.getOne(new LambdaQueryWrapper<ProductSku>()
@@ -41,7 +47,22 @@ public class ProductSkuController {
         if (sku == null) {
             return Result.fail("SKU not found");
         }
-        return Result.success(sku.getStockQuantity());
+        Map<String, Object> result = new HashMap<>();
+        result.put("stock", sku.getStockQuantity());
+
+        ProductWarehousing latest = productWarehousingService.lambdaQuery()
+                .eq(ProductWarehousing::getSkuCode, skuCode)
+                .eq(ProductWarehousing::getTenantId, tid)
+                .eq(ProductWarehousing::getDeleteFlag, 0)
+                .orderByDesc(ProductWarehousing::getWarehousingEndTime)
+                .last("LIMIT 1")
+                .one();
+        if (latest != null) {
+            result.put("warehouseLocation", latest.getWarehouse());
+            result.put("warehouseAreaId", latest.getWarehouseAreaId());
+            result.put("warehouseAreaName", latest.getWarehouseAreaName());
+        }
+        return Result.success(result);
     }
 
     @PostMapping("/inventory/update")
@@ -110,7 +131,7 @@ public class ProductSkuController {
         return Result.success(productSkuService.updateById(sku));
     }
 
-    @PostMapping("/list-by-style")
+    @PostMapping("/search")
     public Result<List<ProductSku>> listByStyle(@RequestBody Map<String, Long> body) {
         TenantAssert.assertTenantContext();
         Long styleId = body.get("styleId");

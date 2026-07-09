@@ -8,7 +8,7 @@ export const warehouseLocationMapApi = {
     api.get(`${AREA_BASE}/list`, { params }),
 
   getAreaListByType: (warehouseType?: string) =>
-    api.get(`${AREA_BASE}/list-by-type`, { params: { warehouseType } }),
+    api.post(`${AREA_BASE}/search`, { warehouseType }),
 
   getAreaOverview: () =>
     api.get(`${AREA_BASE}/overview`),
@@ -29,7 +29,7 @@ export const warehouseLocationMapApi = {
     api.get(`${LOCATION_BASE}/list`, { params }),
 
   getLocationListByType: (warehouseType?: string, areaId?: string) =>
-    api.get(`${LOCATION_BASE}/list-by-type`, { params: { warehouseType, areaId } }),
+    api.post(`${LOCATION_BASE}/search`, { warehouseType, areaId }),
 
   createLocation: (data: Record<string, unknown>) =>
     api.post(LOCATION_BASE, data),

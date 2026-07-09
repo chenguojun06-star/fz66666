@@ -212,6 +212,10 @@ public class SampleStockOrchestrator {
                 log.warn("样衣借出查询仓库区域失败: areaId={}", loan.getWarehouseAreaId(), e);
             }
         }
+        if (!StringUtils.hasText(loan.getWarehouseAreaId()) && stock.getWarehouseAreaId() != null) {
+            loan.setWarehouseAreaId(stock.getWarehouseAreaId());
+            loan.setWarehouseAreaName(stock.getWarehouseAreaName());
+        }
         sampleLoanMapper.insert(loan);
 
         sampleStockMapper.updateLoanedQuantity(stock.getId(), loanQty, currentTenantId);

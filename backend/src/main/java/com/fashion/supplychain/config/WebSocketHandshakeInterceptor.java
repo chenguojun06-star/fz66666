@@ -50,31 +50,18 @@ public class WebSocketHandshakeInterceptor extends ServerEndpointConfig.Configur
         // 2. 校验token有效性（AuthTokenService 由 SpringContextHolder 静态获取）
         try {
             AuthTokenService authTokenService = SpringContextHolder.getBean(AuthTokenService.class);
-            log.debug("[WS] AuthTokenService 获取成功: {}", authTokenService.getClass().getName());
-            
             TokenSubject tokenSubject = authTokenService.verifyAndParse(token);
-            log.debug("[WS] token解析结果: subject={}, userId={}, tenantId={}, username={}", 
-                      tokenSubject != null, 
-                      tokenSubject != null ? tokenSubject.getUserId() : "null",
-                      tokenSubject != null ? tokenSubject.getTenantId() : "null",
-                      tokenSubject != null ? tokenSubject.getUsername() : "null");
-            
             if (tokenSubject == null) {
-                log.warn("[WS] token验证失败，token无效或过期，token前50字符={}", 
-                         token.length() > 50 ? token.substring(0, 50) + "..." : token);
+                log.warn("[WS] token验证失败，token无效或过期");
                 throw new SecurityException("token无效或过期");
             }
 
             // 3. 提取tenantId并验证与URL路径匹配
             Long tokenTenantId = tokenSubject.getTenantId();
-            String requestPath = request.getRequestURI().getPath();
-            String pathTenantId = extractTenantIdFromPath(requestPath);
-
-            log.debug("[WS] 路径解析: path={}, pathTenantId={}, tokenTenantId={}", 
-                      requestPath, pathTenantId, tokenTenantId);
+            String pathTenantId = extractTenantIdFromPath(request.getRequestURI().getPath());
 
             if (pathTenantId == null) {
-                log.warn("[WS] URL路径中缺失tenantId: path={}", requestPath);
+                log.warn("[WS] URL路径中缺失tenantId: path={}", request.getRequestURI().getPath());
                 throw new SecurityException("URL路径缺失tenantId");
             }
 
@@ -99,18 +86,12 @@ public class WebSocketHandshakeInterceptor extends ServerEndpointConfig.Configur
                      tokenTenantId, tokenSubject.getUserId(), tokenSubject.getUsername());
 
         } catch (SecurityException e) {
-            log.warn("[WS] 安全校验失败: {}", e.getMessage());
             throw e; // 直接抛出SecurityException终止握手
         } catch (IllegalStateException e) {
             log.error("[WS] Spring上下文未就绪，拒绝连接: {}", e.getMessage());
             throw new SecurityException("服务未就绪");
-        } catch (NumberFormatException e) {
-            log.error("[WS] tenantId解析失败: pathTenantId={}, error={}", 
-                      extractTenantIdFromPath(request.getRequestURI().getPath()), e.getMessage());
-            throw new SecurityException("tenantId格式错误");
         } catch (Exception e) {
-            log.error("[WS] token解析异常，拒绝连接: error={}, stack={}", 
-                      e.getMessage(), e.getStackTrace()[0].toString());
+            log.error("[WS] token解析异常，拒绝连接: {}", e.getMessage());
             throw new SecurityException("token解析异常");
         }
     }
@@ -145,4 +126,3 @@ public class WebSocketHandshakeInterceptor extends ServerEndpointConfig.Configur
         return null;
     }
 }
-

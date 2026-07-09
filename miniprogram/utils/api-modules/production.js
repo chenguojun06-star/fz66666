@@ -120,11 +120,12 @@ const production = {
   updateArrivedQuantity(payload) {
     return ok('/api/production/purchase/update-arrived-quantity', 'POST', payload || {});
   },
+  // P0 修复（D-023 2026-07-09）：去掉 orderNo→scanCode 转换。
+  //   旧版触发后端 getByScanCode 分支，绕过多租户隔离 + 字段 enrichment。
+  //   统一传 orderNo，与 PC 端 usePurchaseList 走相同后端路径（listWithEnrichment）。
+  //   兜底传 pageSize=500，避免分页默认 10 条导致物料被截断显示不全。
   getMaterialPurchases(params) {
-    const payload = { ...(params || {}) };
-    if (payload.orderNo && !payload.scanCode) {
-      payload.scanCode = payload.orderNo;
-    }
+    const payload = { ...(params || {}), pageSize: 500 };
     return ok('/api/production/purchase/list', 'GET', payload);
   },
   myProcurementTasks() {
@@ -365,7 +366,7 @@ const factoryShipment = {
     return ok('/api/production/factory-shipment/list', 'POST', params || {});
   },
   listByOrder: function (orderId) {
-    return ok('/api/production/factory-shipment/list-by-order', 'POST', { orderId: orderId });
+    return ok('/api/production/factory-shipment/search', 'POST', { orderId: orderId });
   },
   shippable: function (orderId) {
     return ok('/api/production/factory-shipment/shippable/' + encodeURIComponent(orderId), 'GET', {});

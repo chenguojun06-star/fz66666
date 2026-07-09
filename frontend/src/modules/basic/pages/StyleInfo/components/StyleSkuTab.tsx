@@ -51,7 +51,7 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = ({ styleId, styleNo, skc: initia
     if (!styleId) return;
     setLoading(true);
     try {
-      const res = await api.post<{ code: number; data: ProductSku[] }>('/style/sku/list-by-style', { styleId });
+      const res = await api.post<{ code: number; data: ProductSku[] }>('/style/sku/search', { styleId });
       if (res.code === 200 && res.data) {
         setSkus(res.data);
         setEditingData({});

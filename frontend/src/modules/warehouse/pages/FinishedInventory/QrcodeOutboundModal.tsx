@@ -5,7 +5,6 @@ import ResizableModal from '@/components/common/ResizableModal';
 import ResizableTable from '@/components/common/ResizableTable';
 import api, { type ApiResult } from '@/utils/api';
 import CustomerInfoSection from './CustomerInfoSection';
-import { useWarehouseAreaOptions, useWarehouseLocationByArea } from '@/hooks/useWarehouseAreaOptions';
 
 type QrcodeOutboundType = 'sales' | 'transfer' | 'scrap';
 
@@ -19,6 +18,8 @@ interface QrcodeItem {
   stock: number | null;
   quantity: number;
   scanCount: number; // 已扫件数（每次扫码 +1）
+  warehouseLocation?: string;   // 当前库存所在库位
+  warehouseAreaName?: string;   // 当前库存所在仓库
 }
 
 function parseOutboundQr(code: string) {
@@ -56,12 +57,7 @@ const QrcodeOutboundModal: React.FC<Props> = ({ open, onClose, onSuccess }) => {
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [shippingAddress, setShippingAddress] = useState('');
-  const [warehouseAreaId, setWarehouseAreaId] = useState<string | undefined>(undefined);
-  const [warehouseLocation, setWarehouseLocation] = useState<string | undefined>(undefined);
   const inputRef = useRef<HTMLInputElement>(null);
-
-  const { selectOptions: areaOptions } = useWarehouseAreaOptions('FINISHED');
-  const { selectOptions: locationOptions } = useWarehouseLocationByArea('FINISHED', warehouseAreaId);
 
   const handleAdd = async () => {
     const code = inputVal.trim();
@@ -75,10 +71,19 @@ const QrcodeOutboundModal: React.FC<Props> = ({ open, onClose, onSuccess }) => {
 
     setAdding(true);
     let stock: number | null = null;
+    let warehouseLocation: string | undefined;
+    let warehouseAreaName: string | undefined;
     try {
       const res: ApiResult = await (api as any).get(`/style/sku/inventory/${encodeURIComponent(parsed.skuCode)}`);
-      const rawStock = res?.data ?? res;
-      stock = Number(rawStock ?? 0);
+      const data = res?.data ?? res;
+      if (data && typeof data === 'object') {
+        const d = data as Record<string, any>;
+        stock = Number(d.stock ?? 0);
+        warehouseLocation = d.warehouseLocation;
+        warehouseAreaName = d.warehouseAreaName;
+      } else {
+        stock = Number(data ?? 0);
+      }
       if (Number.isNaN(stock)) {
         stock = 0;
       }
@@ -111,6 +116,8 @@ const QrcodeOutboundModal: React.FC<Props> = ({ open, onClose, onSuccess }) => {
         stock,
         quantity: 1,
         scanCount: 1,
+        warehouseLocation,
+        warehouseAreaName,
       }];
     });
     setInputVal('');
@@ -143,8 +150,6 @@ const QrcodeOutboundModal: React.FC<Props> = ({ open, onClose, onSuccess }) => {
         ...(outboundType === 'sales' ? { customerName: customerName.trim() } : {}),
         ...(customerPhone.trim() ? { customerPhone: customerPhone.trim() } : {}),
         ...(shippingAddress.trim() ? { shippingAddress: shippingAddress.trim() } : {}),
-        ...(warehouseAreaId ? { warehouseAreaId } : {}),
-        ...(warehouseLocation ? { warehouseLocation } : {}),
         items: items.map(it => ({ qrCode: it.qrCode, quantity: it.quantity })),
       });
       message.success(`出库成功，共 ${items.length} 项`);
@@ -165,8 +170,6 @@ const QrcodeOutboundModal: React.FC<Props> = ({ open, onClose, onSuccess }) => {
     setCustomerName('');
     setCustomerPhone('');
     setShippingAddress('');
-    setWarehouseAreaId(undefined);
-    setWarehouseLocation(undefined);
     onClose();
   };
 
@@ -202,14 +205,24 @@ const QrcodeOutboundModal: React.FC<Props> = ({ open, onClose, onSuccess }) => {
       title: '库存',
       dataIndex: 'stock',
       key: 'stock',
-      width: 90,
+      width: 80,
       render: (v: number | null) => v == null ? '查询失败' : v,
+    },
+    {
+      title: '当前库位',
+      key: 'location',
+      width: 140,
+      render: (_: unknown, record: QrcodeItem) => (
+        <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+          {record.warehouseAreaName || record.warehouseLocation || '-'}
+        </Typography.Text>
+      ),
     },
     {
       title: '出库数量',
       dataIndex: 'quantity',
       key: 'quantity',
-      width: 130,
+      width: 120,
       render: (_: number, record: QrcodeItem) => (
         <InputNumber
           min={1}
@@ -287,37 +300,22 @@ const QrcodeOutboundModal: React.FC<Props> = ({ open, onClose, onSuccess }) => {
       </Space.Compact>
 
       <Typography.Text type="secondary" style={{ display: 'block', marginBottom: 8, fontSize: 14 }}>
-        二维码格式：款号-颜色-尺码-序号。扫码后会自动显示 SKU、颜色、码数、当前库存，再填写本次要出库的数量。
+        二维码格式：款号-颜色-尺码-序号。扫码后会自动显示 SKU、颜色、码数、当前库存及库位，再填写本次要出库的数量。
       </Typography.Text>
+
+      {items.length > 0 && (
+        <div style={{ background: '#f5f7fa', borderRadius: 6, padding: '8px 12px', marginBottom: 12 }}>
+          <Typography.Text type="secondary" style={{ fontSize: 13 }}>
+            出库将自动从各 SKU 当前存储的库位扣减，无需手动选择仓库
+          </Typography.Text>
+        </div>
+      )}
 
       <div style={{ background: '#f8f9fa', borderRadius: 8, padding: '12px 16px', marginBottom: 12 }}>
         <Space wrap style={{ width: '100%' }}>
           <span>
             出库类型：
             <Select style={{ width: 140 }} value={outboundType} onChange={v => setOutboundType(v)} options={[{ label: '销售出库', value: 'sales' }, { label: '调拨出库', value: 'transfer' }, { label: '报废出库', value: 'scrap' }]} />
-          </span>
-          <span>
-            出库仓库：
-            <Select
-              style={{ width: 160 }}
-              placeholder="选择仓库"
-              allowClear
-              value={warehouseAreaId}
-              onChange={(v) => { setWarehouseAreaId(v); setWarehouseLocation(undefined); }}
-              options={areaOptions}
-            />
-          </span>
-          <span>
-            库位：
-            <Select
-              style={{ width: 140 }}
-              placeholder="选择库位"
-              allowClear
-              value={warehouseLocation}
-              onChange={setWarehouseLocation}
-              options={locationOptions}
-              disabled={!warehouseAreaId}
-            />
           </span>
           {outboundType === 'scrap' && (
             <span>

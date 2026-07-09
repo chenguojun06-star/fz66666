@@ -73,9 +73,7 @@ export function useWarehouseLocationByArea(warehouseType?: string, areaId?: stri
     }
     let cancelled = false;
     setLoading(true);
-    api.get('/warehouse/location/list-by-type', {
-      params: { warehouseType, areaId },
-    })
+    api.post('/warehouse/location/search', { warehouseType, areaId })
       .then((res: any) => {
         if (cancelled) return;
         const data = res.data?.data || res.data;

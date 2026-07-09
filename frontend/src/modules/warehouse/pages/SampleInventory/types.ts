@@ -10,6 +10,8 @@ export interface SampleStock {
   quantity: number;
   loanedQuantity: number;
   location?: string;
+  warehouseAreaId?: string;
+  warehouseAreaName?: string;
   imageUrl?: string;
   remark?: string;
   sampleCompletedTime?: string;
