@@ -185,7 +185,7 @@ const LoanModal: React.FC<LoanModalProps> = ({ visible, stock, onCancel, onSucce
           <div style={{ background: '#f5f7fa', padding: '10px 12px', borderRadius: 6, marginBottom: 8 }}>
             <Typography.Text type="secondary" style={{ fontSize: 13 }}>
               出库仓库：{stock.warehouseAreaName || '-'}
-              {stock?.location ? `　|　库位：${stock.location}` : ''}
+              {stock?.location ? ` | 库位：${stock.location}` : ''}
             </Typography.Text>
           </div>
         )}
