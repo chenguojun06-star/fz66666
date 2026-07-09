@@ -99,7 +99,12 @@ public class ProductionScanStageSupport {
             return;
         }
 
-        String prevParent = FIXED_PRODUCTION_NODES[currentIdx - 1];
+        String prevParent = findPrevEnabledStage(order, currentIdx);
+        if (prevParent == null) {
+            log.info("所有前置阶段均被禁用，跳过门禁: orderNo={}, targetParent={}",
+                    order.getOrderNo(), targetParent);
+            return;
+        }
         Map<String, Set<String>> requiredByParent = resolveRequiredProcessesByParent(order);
         Set<String> required = requiredByParent.getOrDefault(prevParent, new LinkedHashSet<>());
 
@@ -492,6 +497,57 @@ public class ProductionScanStageSupport {
             if (parentStage.equals(mappedParent)) {
                 return true;
             }
+        }
+        return false;
+    }
+
+    private String findPrevEnabledStage(ProductionOrder order, int currentIdx) {
+        for (int i = currentIdx - 1; i >= 0; i--) {
+            String stage = FIXED_PRODUCTION_NODES[i];
+            if (!isStageExplicitlyDisabled(order, stage)) {
+                return stage;
+            }
+            log.debug("前置阶段{}被禁用，继续往前找: orderNo={}", stage, order.getOrderNo());
+        }
+        return null;
+    }
+
+    private boolean isStageExplicitlyDisabled(ProductionOrder order, String parentStage) {
+        if (order == null || !StringUtils.hasText(parentStage)) {
+            return false;
+        }
+        if ("二次工艺".equals(parentStage) && Boolean.FALSE.equals(order.getHasSecondaryProcess())) {
+            return true;
+        }
+        if (!StringUtils.hasText(order.getNodeOperations())) {
+            return false;
+        }
+        try {
+            Map<String, Object> root = objectMapper.readValue(order.getNodeOperations(),
+                    new TypeReference<Map<String, Object>>() {});
+            Object remapObj = root.get("subProcessRemap");
+            if (!(remapObj instanceof Map)) {
+                return false;
+            }
+            Map<String, Object> remap = (Map<String, Object>) remapObj;
+            for (Map.Entry<String, Object> entry : remap.entrySet()) {
+                String stageKey = entry.getKey();
+                String parent = STAGE_KEY_TO_PARENT.get(stageKey);
+                if (parent == null || !parent.equals(parentStage)) {
+                    continue;
+                }
+                if (!(entry.getValue() instanceof Map)) {
+                    continue;
+                }
+                Map<String, Object> stageCfg = (Map<String, Object>) entry.getValue();
+                boolean enabled = Boolean.TRUE.equals(stageCfg.get("enabled"));
+                if (!enabled) {
+                    return true;
+                }
+            }
+        } catch (Exception e) {
+            log.warn("判断阶段是否禁用时解析nodeOperations失败: orderNo={}, parentStage={}",
+                    order.getOrderNo(), parentStage, e);
         }
         return false;
     }
