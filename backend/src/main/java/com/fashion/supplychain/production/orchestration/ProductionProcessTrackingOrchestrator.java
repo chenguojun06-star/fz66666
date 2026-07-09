@@ -673,9 +673,12 @@ public class ProductionProcessTrackingOrchestrator {
         int skipCount = 0;
         List<String> errors = new ArrayList<>();
 
+        Map<String, ProductionProcessTracking> trackingMap = trackingService.listByIds(trackingIds).stream()
+                .collect(Collectors.toMap(ProductionProcessTracking::getId, t -> t));
+
         for (String trackingId : trackingIds) {
             try {
-                ProductionProcessTracking tracking = trackingService.getById(trackingId);
+                ProductionProcessTracking tracking = trackingMap.get(trackingId);
                 if (tracking == null) {
                     errors.add("记录不存在: " + trackingId);
                     continue;

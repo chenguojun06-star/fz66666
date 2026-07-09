@@ -15,6 +15,8 @@ import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * 采购退货库存与应付账款辅助类（P2#10 拆分自 PurchaseReturnOrchestrator）
@@ -46,8 +48,16 @@ public class PurchaseReturnStockHelper {
      * @param items 退货明细
      */
     public void decreaseStockForItems(List<PurchaseReturnItem> items) {
+        List<String> purchaseIds = items.stream()
+                .map(PurchaseReturnItem::getPurchaseId)
+                .filter(java.util.Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList());
+        Map<String, MaterialPurchase> purchaseMap = materialPurchaseService.listByIds(purchaseIds).stream()
+                .collect(Collectors.toMap(MaterialPurchase::getId, p -> p));
+
         for (PurchaseReturnItem item : items) {
-            MaterialPurchase purchaseItem = materialPurchaseService.getById(item.getPurchaseId());
+            MaterialPurchase purchaseItem = purchaseMap.get(item.getPurchaseId());
             if (purchaseItem == null) {
                 log.warn("采购退货跳过库存扣减（原采购记录不存在）: purchaseId={}", item.getPurchaseId());
                 continue;

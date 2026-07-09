@@ -31,6 +31,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -347,10 +348,19 @@ public class OrderManagementOrchestrator {
             List<EcUniversalStock> ecStocks = ecUniversalStockService.list(new LambdaQueryWrapper<EcUniversalStock>()
                     .eq(EcUniversalStock::getStyleId, Long.parseLong(styleId))
                     .eq(EcUniversalStock::getTenantId, tid));
+            if (ecStocks.isEmpty() || productSkuService == null) return;
+
+            List<Long> skuIds = ecStocks.stream()
+                    .map(EcUniversalStock::getSkuId)
+                    .filter(Objects::nonNull)
+                    .distinct()
+                    .collect(Collectors.toList());
+            Map<Long, ProductSku> skuMap = productSkuService.listByIds(skuIds).stream()
+                    .collect(Collectors.toMap(ProductSku::getId, s -> s));
+
             for (EcUniversalStock ec : ecStocks) {
-                // EcUniversalStock 没有 color/size，需要通过 skuId 关联 ProductSku
-                if (ec.getSkuId() == null || productSkuService == null) continue;
-                ProductSku sku = productSkuService.getById(ec.getSkuId());
+                if (ec.getSkuId() == null) continue;
+                ProductSku sku = skuMap.get(ec.getSkuId());
                 if (sku == null) continue;
                 String color = normalizeKey(sku.getColor());
                 String size = normalizeKey(sku.getSize());

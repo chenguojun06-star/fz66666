@@ -22,11 +22,15 @@ public class QualityRiskDetector implements RiskDetector {
     @Override
     public List<RiskItem> detect(Long tenantId) {
         if (tenantId == null) return List.of();
+        java.time.LocalDateTime threeMonthsAgo = java.time.LocalDateTime.now().minusMonths(3);
         List<ProductionOrder> orders = orderMapper.selectList(
                 new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<ProductionOrder>()
+                        .select(ProductionOrder::getId, ProductionOrder::getOrderNo,
+                                ProductionOrder::getStatus, ProductionOrder::getRemarks)
                         .eq(ProductionOrder::getTenantId, tenantId)
                         .eq(ProductionOrder::getDeleteFlag, 0)
-                        .last("LIMIT 2000"));
+                        .ge(ProductionOrder::getUpdateTime, threeMonthsAgo)
+                        .last("LIMIT 500"));
         if (orders.isEmpty()) return List.of();
 
         List<RiskItem> items = new ArrayList<>();

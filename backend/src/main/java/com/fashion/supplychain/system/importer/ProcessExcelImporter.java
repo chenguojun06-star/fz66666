@@ -84,13 +84,16 @@ public class ProcessExcelImporter {
             if (StringUtils.hasText(sn)) styleNos.add(sn);
         }
         Map<String, StyleInfo> styleMap = new HashMap<>();
-        for (String sn : styleNos) {
-            StyleInfo si = styleInfoService.getOne(
-                    new LambdaQueryWrapper<StyleInfo>()
-                            .eq(StyleInfo::getStyleNo, sn)
-                            .last("LIMIT 1")
-            );
-            if (si != null) styleMap.put(sn, si);
+        if (styleNos.isEmpty()) return styleMap;
+
+        List<StyleInfo> styles = styleInfoService.list(
+                new LambdaQueryWrapper<StyleInfo>()
+                        .in(StyleInfo::getStyleNo, styleNos)
+        );
+        for (StyleInfo si : styles) {
+            if (si.getStyleNo() != null && !styleMap.containsKey(si.getStyleNo())) {
+                styleMap.put(si.getStyleNo(), si);
+            }
         }
         return styleMap;
     }

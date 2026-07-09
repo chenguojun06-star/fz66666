@@ -22,11 +22,16 @@ public class MaterialRiskDetector implements RiskDetector {
     @Override
     public List<RiskItem> detect(Long tenantId) {
         if (tenantId == null) return List.of();
+        java.time.LocalDateTime threeMonthsAgo = java.time.LocalDateTime.now().minusMonths(3);
         List<MaterialPurchase> purchases = purchaseMapper.selectList(
                 new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<MaterialPurchase>()
+                        .select(MaterialPurchase::getOrderId, MaterialPurchase::getMaterialName,
+                                MaterialPurchase::getMaterialId, MaterialPurchase::getPurchaseQuantity,
+                                MaterialPurchase::getArrivedQuantity, MaterialPurchase::getStatus)
                         .eq(MaterialPurchase::getTenantId, tenantId)
                         .eq(MaterialPurchase::getDeleteFlag, 0)
-                        .last("LIMIT 2000"));
+                        .ge(MaterialPurchase::getUpdateTime, threeMonthsAgo)
+                        .last("LIMIT 500"));
         if (purchases.isEmpty()) return List.of();
 
         List<RiskItem> items = new ArrayList<>();

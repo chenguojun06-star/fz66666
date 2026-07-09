@@ -11,6 +11,8 @@ import org.springframework.context.annotation.Lazy;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Component
 @Lazy
@@ -34,10 +36,18 @@ public class ContainsRelationExtractor implements RelationExtractor {
                         .last("LIMIT 2000"));
         if (processes.isEmpty()) return List.of();
 
+        List<Long> styleIds = processes.stream()
+                .map(StyleProcess::getStyleId)
+                .filter(java.util.Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList());
+        Map<Long, StyleInfo> styleMap = styleInfoMapper.selectBatchIds(styleIds).stream()
+                .collect(Collectors.toMap(StyleInfo::getId, s -> s));
+
         List<KgRelation> results = new ArrayList<>();
         for (StyleProcess sp : processes) {
             if (sp.getStyleId() == null) continue;
-            StyleInfo style = styleInfoMapper.selectById(sp.getStyleId());
+            StyleInfo style = styleMap.get(sp.getStyleId());
             if (style == null) continue;
             KgRelation rel = new KgRelation();
             rel.setRelationType(RelationType.CONTAINS.name());
