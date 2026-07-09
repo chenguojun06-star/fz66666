@@ -566,6 +566,9 @@ const PayableList: React.FC = () => {
             }}
             showExport={true}
             exportFilename="应付账款.xlsx"
+            emptyDescription="暂无应付账款记录"
+            emptyActionText="去创建应付单"
+            onEmptyAction={() => setCreateOpen(true)}
           />
         </Card>
 

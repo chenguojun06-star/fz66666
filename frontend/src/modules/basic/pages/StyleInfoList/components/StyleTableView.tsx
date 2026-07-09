@@ -202,7 +202,9 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
       <div className="style-smart-list style-smart-list--style-info">
         {data.length === 0 && !loading ? (
         <div className="style-smart-list__empty">
-          <Empty description="暂无样衣数据" />
+          <Empty description="暂无样衣数据">
+            <Button type="primary" onClick={() => navigate('/style-info/new')}>去创建第一款</Button>
+          </Empty>
         </div>
       ) : (
         rows.map(({ deliveryMeta, maintainedAfterCompletion, metaItems, overallProgress, progressNode, record, rowState, stages }) => {

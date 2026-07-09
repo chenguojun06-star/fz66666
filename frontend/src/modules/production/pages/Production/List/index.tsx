@@ -460,6 +460,9 @@ const ProductionList: React.FC = () => {
               }}
               showExport={true}
               exportFilename="生产订单.xlsx"
+              emptyDescription="暂无生产订单"
+              emptyActionText="去创建订单"
+              onEmptyAction={() => navigate('/order-management')}
             />
           ) : (
             <>
