@@ -12,6 +12,7 @@ import { INITIAL_MSG, getPageSuggestions } from './constants';
 import { getPageLabel } from '@/routeConfig';
 import { extractOrderNo, isPurchaseDocFile, shouldAutoInbound, shouldAutoArrival, buildReportInsight } from './helpers';
 import { speakText } from './speechUtils';
+import type { SpeechRecognition as ISpeechRecognition, SpeechRecognitionEvent, SpeechRecognitionErrorEvent } from './speech.types';
 import { useAiChatStream } from './useAiChatStream';
 import type { LiveStatus } from './useAiChatStream';
 
@@ -248,29 +249,22 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
   }, []);
 
   const handleVoiceInput = useCallback(() => {
-    // @ts-ignore
-    const SR = (window as unknown as Record<string, unknown>).SpeechRecognition
-             // @ts-ignore
-             || (window as unknown as Record<string, unknown>).webkitSpeechRecognition;
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) { void handleSend('语音功能暂不支持该浏览器，请改用 Chrome。'); return; }
     if (isRecording) return;
-    // @ts-ignore
-    const recognition = new SR() as { lang: string; interimResults: boolean; maxAlternatives: number; start: () => void; onresult: ((e: Event) => void) | null; onerror: (() => void) | null; onend: (() => void) | null; };
+    const recognition: ISpeechRecognition = new SR();
     recognition.lang = 'zh-CN';
     recognition.interimResults = false;
     recognition.maxAlternatives = 1;
     setIsRecording(true);
     recognition.start();
-    recognition.onresult = async (e: Event) => {
-      // @ts-ignore
-      const text = (e as { results: { [key: number]: { [key: number]: { transcript: string } } } }).results[0][0].transcript.trim();
+    recognition.onresult = async (e: SpeechRecognitionEvent) => {
+      const text = e.results[0][0].transcript.trim();
       setIsRecording(false);
       if (!text) return;
       setInputValue(text);
       try {
-        // @ts-ignore
         const res = await api.post('/intelligence/voice/command', { transcribedText: text, mode: 'QUERY' });
-        // @ts-ignore
         const data = (res as Record<string, unknown>)?.data ?? res;
         const answer: string = ((data as Record<string, unknown>)?.responseText ?? (data as Record<string, unknown>)?.speakableText ?? '') as string;
         if (answer) {
@@ -288,7 +282,7 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
         void handleSend(text);
       }
     };
-    recognition.onerror = () => setIsRecording(false);
+    recognition.onerror = (_e: SpeechRecognitionErrorEvent) => setIsRecording(false);
     recognition.onend = () => setIsRecording(false);
   }, [isRecording, handleSend, speak]);
 

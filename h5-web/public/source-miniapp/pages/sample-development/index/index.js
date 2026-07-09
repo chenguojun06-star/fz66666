@@ -1,4 +1,5 @@
-const api = require('../../../utils/api');
+const production = require('../../../utils/api-modules/production');
+const dashboard = require('../../../utils/api-modules/dashboard');
 const { toast, safeNavigate } = require('../../../utils/uiHelper');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 const { eventBus, Events } = require('../../../utils/eventBus');
@@ -59,14 +60,6 @@ const SOURCE_TYPE_LABELS = {
   'BUYER': '买手采购',
 };
 
-const STATUS_TABS = [
-  { key: '', label: '全部' },
-  { key: 'PENDING', label: '待领取' },
-  { key: 'IN_PROGRESS', label: '制作中' },
-  { key: 'COMPLETED', label: '已完成' },
-  { key: 'WAREHOUSE_IN', label: '已入库' },
-];
-
 // 卡片底部阶段进度条配置（紧凑显示，每阶段一个 short 中文名）
 const STAGE_SUMMARY_CONFIG = [
   { key: 'bom',        short: 'BOM' },
@@ -88,13 +81,17 @@ Page({
     loading: true,
     keyword: '',
     activeFilter: '',
-    statusTabs: STATUS_TABS,
-    // 样衣开发统计（与 PC 端 activeStyles 逻辑一致）
-    sampleCount: 0,       // 开发中（活跃款式数量）
+    // 统计卡片（与 PC 端 PageStatCards 一致）
+    sampleCount: 0,       // 开发中
     completedCount: 0,    // 已完成
     overdueCount: 0,      // 已延期
-    warningCount: 0,      // 临近交期
-    smartFilter: '',      // 智能筛选：'' | 'overdue' | 'warning'
+    totalCount: 0,        // 全部款号
+    warningCount: 0,      // 临近交期（前端计算）
+
+    // 智能提示（延期环节分组，对齐 PC 端 delayedHints）
+    delayedHints: [],     // [{ stageName, count, items }]
+    // 当前选中的智能提示 key（'overdue' / 'warning' / stageName）
+    activeHint: '',
 
     list: [],
     displayList: [],  // 应用智能筛选后的展示列表
@@ -112,6 +109,7 @@ Page({
       this.setData({ roleHint: `您当前职务「${permission.getRoleDisplayName()}」非样衣岗，如需代领请知会主管` });
     }
     this.loadData(true);
+    this.loadDelayedBreakdown();
   },
 
   onShow: function () {
@@ -164,7 +162,7 @@ Page({
     }
   },
 
-  loadData: function (reset) {
+  loadData: function (reset, opts) {
     const that = this;
     if (reset) {
       that.setData({ loading: true, page: 1, list: [] });
@@ -177,22 +175,10 @@ Page({
       size: that.data.pageSize,
     };
     if (that.data.keyword.trim()) params.keyword = that.data.keyword.trim();
-    if (that.data.activeFilter) params.status = that.data.activeFilter;
+    // 首次加载拿全量（用于前端准确计算统计数字，确保统计与列表一致）
+    if (reset) params.size = 200;
 
-    // 并行获取样衣开发统计（与 PC 端 activeStyles 逻辑一致）
-    if (reset) {
-      api.production.getSampleStats().then(function (res) {
-        const d = (res && res.data) || res || {};
-        that.setData({
-          sampleCount: Number(d.activeCount) || 0,
-          completedCount: Number(d.completedCount) || 0,
-          overdueCount: Number(d.overdueCount) || 0,
-          warningCount: Number(d.warningCount) || 0,
-        });
-      }).catch(function () { /* 静默失败，不阻塞列表 */ });
-    }
-
-    api.production.listPatterns(params)
+    production.listPatterns(params)
       .then(function (res) {
         const data = res && res.data ? res.data : res;
         const records = (data && data.records) ? data.records : (Array.isArray(data) ? data : []);
@@ -298,15 +284,43 @@ Page({
         });
         that.setData({
           list: newList,
-          displayList: newList,  // 默认展示全部，smartFilter 切换时再过滤
+          displayList: newList,  // 默认展示全部，activeHint 切换时再过滤
           total: total,
           hasMore: newList.length < total,
           loading: false,
           loadingMore: false,
           page: reset ? 1 : that.data.page + 1,
         });
+
+        // 从列表数据自己算统计（不依赖后端 stats API，确保和列表一致）
+        if (reset) {
+          let cntActive = 0;
+          let cntCompleted = 0;
+          let cntOverdue = 0;
+          let cntWarning = 0;
+          newList.forEach(function (item) {
+            const node = String(item._progressNode || '').trim();
+            const tone = String(item._deliveryTone || '').trim();
+            const isDone = node === '已完成' || node === '已入库' || node === '样衣报废' || node === '已关单' || node === '已通过';
+            if (isDone) {
+              cntCompleted++;
+            } else {
+              cntActive++;
+              if (tone === 'danger') cntOverdue++;
+              if (tone === 'warning') cntWarning++;
+            }
+          });
+          that.setData({
+            totalCount: newList.length,        // 全部款号 = 列表条数
+            sampleCount: cntActive,           // 开发中 = 活跃款式
+            completedCount: cntCompleted,     // 已完成
+            overdueCount: cntOverdue,         // 已延期（活跃的子集）
+            warningCount: cntWarning,          // 临近交期（活跃的子集）
+          });
+        }
+
         // 若已有智能筛选，应用过滤
-        if (that.data.smartFilter) {
+        if (that.data.activeHint || that.data.activeFilter === 'IN_PROGRESS') {
           that._refreshDisplayList();
         }
       })
@@ -339,41 +353,87 @@ Page({
 
   onFilterTap: function (e) {
     const key = e.currentTarget.dataset.key;
-    this.setData({ activeFilter: key });
-    this.loadData(true);
+    // 状态筛选与智能筛选互斥：选状态时清空智能筛选
+    // 注意：'IN_PROGRESS'（开发中）不传给后端，因为后端 PatternProduction.status 字段值与统计逻辑不一致，
+    // 改为前端按 _progressNode 过滤
+    this.setData({ activeFilter: key, activeHint: '' });
+    if (key === 'IN_PROGRESS') {
+      // 开发中：不传 status 给后端，前端按 _progressNode 过滤活跃款式
+      this.loadData(true, { skipStatus: true });
+    } else {
+      this.loadData(true);
+    }
   },
 
   /**
-   * 智能筛选标签点击（与 PC 端 smartFilter 逻辑一致）
+   * 智能提示标签点击（已延期/临近交期/XX环节延期）
+   * 与状态筛选互斥
    */
-  onSmartFilterTap: function (e) {
-    const target = e.currentTarget.dataset.key; // 'overdue' | 'warning' | 'completed'
-    const current = this.data.smartFilter;
-    if (current === target) {
-      this.setData({ smartFilter: '' });
+  onHintTap: function (e) {
+    const key = e.currentTarget.dataset.key;
+    const current = this.data.activeHint;
+    if (current === key) {
+      this.setData({ activeHint: '', activeFilter: '' });
     } else {
-      this.setData({ smartFilter: target });
+      this.setData({ activeHint: key, activeFilter: '' });
     }
     this._refreshDisplayList();
   },
 
-  /** 清除智能筛选 */
-  onClearSmartFilter: function () {
-    this.setData({ smartFilter: '' });
-    this._refreshDisplayList();
+  /**
+   * 加载延期环节分组统计（对齐 PC 端 useDelayedStageBreakdown）
+   */
+  loadDelayedBreakdown: function () {
+    const that = this;
+    dashboard.getDelayedStageBreakdown().then(function (res) {
+      const d = (res && res.data) || res || {};
+      const arr = Array.isArray(d.sampleDelayed) ? d.sampleDelayed : [];
+      // 过滤 count > 0 的环节（与 PC 端 visibleHints 逻辑一致）
+      const hints = arr.filter(function (h) { return Number(h.count) > 0; }).map(function (h) {
+        return {
+          stageName: h.stageName,
+          count: Number(h.count) || 0,
+          styleIds: Array.isArray(h.items) ? h.items.map(function (it) { return String(it.id); }) : [],
+        };
+      });
+      that.setData({ delayedHints: hints });
+    }).catch(function () { /* 静默失败 */ });
   },
 
   /**
    * 应用智能筛选后返回展示列表
    */
   _getDisplayList: function () {
-    const sf = this.data.smartFilter;
-    if (!sf) return this.data.list;
-    return this.data.list.filter(function (item) {
-      if (sf === 'overdue') return item._deliveryTone === 'danger';
-      if (sf === 'warning') return item._deliveryTone === 'warning';
-      if (sf === 'completed') return item._deliveryTone === 'success';
-      return true;
+    const hint = this.data.activeHint;
+    const filter = this.data.activeFilter;
+    const list = this.data.list;
+
+    // 开发中：前端按 _progressNode 过滤活跃款式（不传 status 给后端）
+    if (filter === 'IN_PROGRESS' && !hint) {
+      return list.filter(function (item) {
+        const node = String(item._progressNode || '').trim();
+        // 活跃 = 非已完成/已入库/已报废/已关单
+        if (node === '已完成' || node === '已入库' || node === '样衣报废' || node === '已关单') return false;
+        return true;
+      });
+    }
+
+    if (!hint) return list;
+    const delayedHints = this.data.delayedHints || [];
+    return list.filter(function (item) {
+      if (hint === 'overdue') return item._deliveryTone === 'danger';
+      if (hint === 'warning') return item._deliveryTone === 'warning';
+      // 按环节名匹配：用该环节的 styleIds 判断（ES5 兼容，不用 find）
+      var matched = null;
+      for (var i = 0; i < delayedHints.length; i++) {
+        if (delayedHints[i].stageName === hint) { matched = delayedHints[i]; break; }
+      }
+      if (matched && matched.styleIds.length) {
+        const idStr = String(item.id || '');
+        const styleIdStr = String(item.styleId || '');
+        return matched.styleIds.indexOf(idStr) !== -1 || matched.styleIds.indexOf(styleIdStr) !== -1;
+      }
+      return false;
     });
   },
 
@@ -384,15 +444,20 @@ Page({
 
   /** 整卡点击：进入详情页 */
   onGoDetail: function (e) {
-    const item = e.currentTarget.dataset.item;
-    if (!item) return;
-    const styleId = item.styleId || '';
-    const patternId = item.id || '';
-    if (!styleId && !patternId) return;
+    const ds = e.currentTarget.dataset || {};
+    const styleId = String(ds.styleId || '').trim();
+    const patternId = String(ds.id || '').trim();
+    console.log('[sample-dev:index] onGoDetail styleId=' + styleId + ' patternId=' + patternId, ds);
+    if (!styleId && !patternId) {
+      console.warn('[sample-dev:index] 缺少跳转参数，不导航');
+      return;
+    }
     const param = styleId ? 'styleId=' + encodeURIComponent(styleId) : 'id=' + encodeURIComponent(patternId);
     safeNavigate({
       url: '/pages/sample-development/detail/index?' + param,
-    }).catch(() => {});
+    }).catch(function (err) {
+      console.warn('[sample-dev:index] 导航失败:', err);
+    });
   },
 
   // 顶部扫码按钮：扫码识别样衣，进入扫码页

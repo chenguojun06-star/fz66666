@@ -20,7 +20,18 @@
     "localPlugins": false,
     "disableUseStrict": false,
     "useCompilerPlugins": false,
-    "condition": false,
+    "condition": {
+      "miniprogram": {
+        "list": [
+          {
+            "name": "样衣开发列表",
+            "pathName": "pages/sample-development/index/index",
+            "query": "",
+            "scene": null
+          }
+        ]
+      }
+    },
     "swc": false,
     "disableSWC": true,
     "babelSetting": {

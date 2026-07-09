@@ -203,6 +203,8 @@ public class PatternProductionOrchestrator {
         stats.put("completedCount", completedCount);
         stats.put("overdueCount", overdueCount);
         stats.put("warningCount", warningCount);
+        // 全部款号 = 开发中 + 已完成（已排除报废/归档/审核通过的不计入）
+        stats.put("totalCount", activeCount + completedCount);
         return stats;
     }
 

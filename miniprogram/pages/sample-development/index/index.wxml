@@ -1,14 +1,14 @@
 <view class="container">
-  <!-- 搜索栏 -->
+  <!-- 搜索栏（搜索框 4/5 + 扫码按钮 1/5） -->
   <view class="search-bar">
     <view class="search-input-wrap">
       <text class="search-icon">🔍</text>
       <input class="search-input" placeholder="搜索款号/款式名" value="{{keyword}}" bindinput="onSearchInput" confirm-type="search" />
       <text wx:if="{{keyword}}" class="search-clear" data-clear="1" bindtap="onSearchInput">✕</text>
     </view>
-    <button class="scan-btn" hover-class="scan-btn-hover" bindtap="onTopScan">
+    <view class="scan-btn" hover-class="scan-btn-hover" bindtap="onTopScan">
       <text class="scan-icon">📷</text>
-    </button>
+    </view>
   </view>
 
   <!-- 跨岗位提示条 -->
@@ -17,33 +17,47 @@
     <text class="role-hint-text">{{roleHint}}</text>
   </view>
 
-  <!-- 统一筛选条（状态 + 智能筛选合并一行） -->
-  <scroll-view class="filter-tabs" scroll-x="true" enhanced="true" show-scrollbar="{{false}}">
-    <view class="filter-tab {{activeFilter === '' && !smartFilter ? 'active' : ''}}" data-key="" bindtap="onFilterTap">
-      <text>全部</text>
-      <text class="filter-count">{{total}}</text>
+  <!-- 统计标签 + 智能提示（一行 flex wrap，对齐 PC 端 PageStatCards） -->
+  <view class="stat-cards-row">
+    <!-- 统计标签区 -->
+    <view class="stat-tag {{(activeFilter === '' && !activeHint) ? 'stat-tag-active' : ''}}" data-key="" bindtap="onFilterTap">
+      <text class="stat-label">全部款号</text>
+      <text class="stat-value">{{totalCount}}</text>
+      <text class="stat-unit">个</text>
     </view>
-    <view class="filter-tab {{activeFilter === 'overdue' ? 'active tab-overdue' : ''}}" data-key="overdue" bindtap="onSmartFilterTap">
-      <text>已延期</text>
-      <text wx:if="{{overdueCount > 0}}" class="filter-count filter-count-overdue">{{overdueCount}}</text>
+    <view class="stat-tag stat-tag-primary {{activeFilter === 'IN_PROGRESS' ? 'stat-tag-active stat-tag-active-primary' : ''}}" data-key="IN_PROGRESS" bindtap="onFilterTap">
+      <text class="stat-label">开发中</text>
+      <text class="stat-value">{{sampleCount}}</text>
+      <text class="stat-unit">个</text>
     </view>
-    <view class="filter-tab {{activeFilter === 'warning' ? 'active tab-warning' : ''}}" data-key="warning" bindtap="onSmartFilterTap">
-      <text>临近交期</text>
-      <text wx:if="{{warningCount > 0}}" class="filter-count filter-count-warning">{{warningCount}}</text>
+    <view class="stat-tag stat-tag-success {{activeFilter === 'COMPLETED' ? 'stat-tag-active stat-tag-active-success' : ''}}" data-key="COMPLETED" bindtap="onFilterTap">
+      <text class="stat-label">已完成</text>
+      <text class="stat-value">{{completedCount}}</text>
+      <text class="stat-unit">个</text>
     </view>
-    <view class="filter-tab {{activeFilter === 'PENDING' ? 'active' : ''}}" data-key="PENDING" bindtap="onFilterTap">
-      <text>待领取</text>
+    <view class="stat-tag stat-tag-danger {{activeHint === 'overdue' ? 'stat-tag-active stat-tag-active-danger' : ''}}" data-key="overdue" bindtap="onHintTap">
+      <text class="stat-label">已延期</text>
+      <text class="stat-value">{{overdueCount}}</text>
+      <text class="stat-unit">个</text>
     </view>
-    <view class="filter-tab {{activeFilter === 'IN_PROGRESS' ? 'active' : ''}}" data-key="IN_PROGRESS" bindtap="onFilterTap">
-      <text>制作中</text>
+
+    <!-- 竖分隔线 -->
+    <view wx:if="{{overdueCount > 0 || warningCount > 0 || delayedHints.length > 0}}" class="stat-divider"></view>
+
+    <!-- 智能提示标题 -->
+    <text wx:if="{{overdueCount > 0 || warningCount > 0 || delayedHints.length > 0}}" class="hint-title">智能提示：</text>
+
+    <!-- 智能提示标签 -->
+    <view wx:if="{{overdueCount > 0}}" class="hint-tag hint-red {{activeHint === 'overdue' ? 'hint-tag-active' : ''}}" data-key="overdue" bindtap="onHintTap">
+      <text>已延期 {{overdueCount}}</text>
     </view>
-    <view class="filter-tab {{activeFilter === 'COMPLETED' ? 'active tab-success' : ''}}" data-key="COMPLETED" bindtap="onFilterTap">
-      <text>已完成</text>
+    <view wx:if="{{warningCount > 0}}" class="hint-tag hint-orange {{activeHint === 'warning' ? 'hint-tag-active' : ''}}" data-key="warning" bindtap="onHintTap">
+      <text>临近交期 {{warningCount}}</text>
     </view>
-    <view class="filter-tab {{activeFilter === 'WAREHOUSE_IN' ? 'active tab-success' : ''}}" data-key="WAREHOUSE_IN" bindtap="onFilterTap">
-      <text>已入库</text>
+    <view wx:for="{{delayedHints}}" wx:key="stageName" class="hint-tag hint-orange {{activeHint === item.stageName ? 'hint-tag-active' : ''}}" data-key="{{item.stageName}}" bindtap="onHintTap">
+      <text>{{item.stageName}}延期 {{item.count}}</text>
     </view>
-  </scroll-view>
+  </view>
 
   <!-- 加载中 -->
   <view wx:if="{{loading && displayList.length === 0}}" class="loading-state">

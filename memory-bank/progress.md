@@ -24,6 +24,7 @@
 - [x] 新功能 5 项（数据链路可视化地图/统计卡片/聚水潭对接/字段配置简化/操作日志全链路）
 - [x] 补录 memory-bank/activeContext.md（7-05~7-08 记录，之前滞后到 7-04）
 - [x] 创建 TRAE 项目记忆 project_memory.md（含"记忆同步规则"）
+- [x] 小程序样衣开发列表点击不跳转修复（改 `data-item` 为字符串 `data-style-id` / `data-id`）
 
 ### 2026-07-04 款式一键复制功能实现完成
 
@@ -333,8 +334,8 @@
 ## 待办
 
 - [ ] 小云AI全链路测试（规划引擎+结构化输出+主动风险检测实际效果验证）
-- [ ] P1性能：MaterialPurchase统计查询DATE()函数索引失效
-- [ ] P1性能：订单列表查询添加缓存
+- [x] P1性能：MaterialPurchase统计查询DATE()函数索引失效（291d42b55）
+- [x] P1性能：订单列表查询添加缓存（已接入OrderListCacheHelper）
 - [ ] P2：@Version与手写原子SQL混用风险统一
 - [ ] P2：前端移除xlsx重复依赖
 - [ ] P2：vendor-react-antd chunk拆分

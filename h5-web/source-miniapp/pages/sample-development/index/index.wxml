@@ -1,47 +1,14 @@
 <view class="container">
-  <!-- 统计条 -->
-  <view class="stats-bar">
-    <view class="stat-item stat-primary">
-      <text class="stat-val">{{sampleCount}}</text>
-      <text class="stat-lbl">开发中</text>
-    </view>
-    <view class="stat-item stat-success {{smartFilter === 'completed' ? 'stat-active' : ''}} {{completedCount === 0 ? 'stat-zero' : ''}}"
-          data-key="completed" bindtap="onSmartFilterTap">
-      <text class="stat-val">{{completedCount}}</text>
-      <text class="stat-lbl">已完成</text>
-    </view>
-    <view class="stat-item stat-overdue {{smartFilter === 'overdue' ? 'stat-active' : ''}} {{overdueCount === 0 ? 'stat-zero' : ''}}"
-          data-key="overdue" bindtap="onSmartFilterTap">
-      <text class="stat-val">{{overdueCount}}</text>
-      <text class="stat-lbl">已延期</text>
-    </view>
-    <view class="stat-item stat-warning {{smartFilter === 'warning' ? 'stat-active' : ''}} {{warningCount === 0 ? 'stat-zero' : ''}}"
-          data-key="warning" bindtap="onSmartFilterTap">
-      <text class="stat-val">{{warningCount}}</text>
-      <text class="stat-lbl">临近交期</text>
-    </view>
-  </view>
-
-  <!-- 清除智能筛选 -->
-  <view wx:if="{{smartFilter}}" class="clear-filter-bar" bindtap="onClearSmartFilter">
-    <text class="clear-filter-text">清除筛选 ✕</text>
-  </view>
-
-  <!-- 搜索栏 -->
+  <!-- 搜索栏（搜索框 4/5 + 扫码按钮 1/5） -->
   <view class="search-bar">
     <view class="search-input-wrap">
       <text class="search-icon">🔍</text>
       <input class="search-input" placeholder="搜索款号/款式名" value="{{keyword}}" bindinput="onSearchInput" confirm-type="search" />
       <text wx:if="{{keyword}}" class="search-clear" data-clear="1" bindtap="onSearchInput">✕</text>
     </view>
-  </view>
-
-  <!-- 扫码入口 -->
-  <view class="top-action-bar">
-    <button class="action-btn action-btn-outline action-btn-full" hover-class="btn-outline-hover" bindtap="onTopScan">
+    <view class="scan-btn" hover-class="scan-btn-hover" bindtap="onTopScan">
       <text class="scan-icon">📷</text>
-      <text>扫码样衣</text>
-    </button>
+    </view>
   </view>
 
   <!-- 跨岗位提示条 -->
@@ -50,16 +17,45 @@
     <text class="role-hint-text">{{roleHint}}</text>
   </view>
 
-  <!-- 状态筛选 Tab -->
-  <view class="filter-tabs">
-    <view
-      wx:for="{{statusTabs}}"
-      wx:key="key"
-      class="filter-tab {{activeFilter === item.key ? 'active' : ''}}"
-      bindtap="onFilterTap"
-      data-key="{{item.key}}"
-    >
-      <text>{{item.label}}</text>
+  <!-- 统计标签 + 智能提示（一行 flex wrap，对齐 PC 端 PageStatCards） -->
+  <view class="stat-cards-row">
+    <!-- 统计标签区 -->
+    <view class="stat-tag {{(activeFilter === '' && !activeHint) ? 'stat-tag-active' : ''}}" data-key="" bindtap="onFilterTap">
+      <text class="stat-label">全部款号</text>
+      <text class="stat-value">{{totalCount}}</text>
+      <text class="stat-unit">个</text>
+    </view>
+    <view class="stat-tag stat-tag-primary {{activeFilter === 'IN_PROGRESS' ? 'stat-tag-active stat-tag-active-primary' : ''}}" data-key="IN_PROGRESS" bindtap="onFilterTap">
+      <text class="stat-label">开发中</text>
+      <text class="stat-value">{{sampleCount}}</text>
+      <text class="stat-unit">个</text>
+    </view>
+    <view class="stat-tag stat-tag-success {{activeFilter === 'COMPLETED' ? 'stat-tag-active stat-tag-active-success' : ''}}" data-key="COMPLETED" bindtap="onFilterTap">
+      <text class="stat-label">已完成</text>
+      <text class="stat-value">{{completedCount}}</text>
+      <text class="stat-unit">个</text>
+    </view>
+    <view class="stat-tag stat-tag-danger {{activeHint === 'overdue' ? 'stat-tag-active stat-tag-active-danger' : ''}}" data-key="overdue" bindtap="onHintTap">
+      <text class="stat-label">已延期</text>
+      <text class="stat-value">{{overdueCount}}</text>
+      <text class="stat-unit">个</text>
+    </view>
+
+    <!-- 竖分隔线 -->
+    <view wx:if="{{overdueCount > 0 || warningCount > 0 || delayedHints.length > 0}}" class="stat-divider"></view>
+
+    <!-- 智能提示标题 -->
+    <text wx:if="{{overdueCount > 0 || warningCount > 0 || delayedHints.length > 0}}" class="hint-title">智能提示：</text>
+
+    <!-- 智能提示标签 -->
+    <view wx:if="{{overdueCount > 0}}" class="hint-tag hint-red {{activeHint === 'overdue' ? 'hint-tag-active' : ''}}" data-key="overdue" bindtap="onHintTap">
+      <text>已延期 {{overdueCount}}</text>
+    </view>
+    <view wx:if="{{warningCount > 0}}" class="hint-tag hint-orange {{activeHint === 'warning' ? 'hint-tag-active' : ''}}" data-key="warning" bindtap="onHintTap">
+      <text>临近交期 {{warningCount}}</text>
+    </view>
+    <view wx:for="{{delayedHints}}" wx:key="stageName" class="hint-tag hint-orange {{activeHint === item.stageName ? 'hint-tag-active' : ''}}" data-key="{{item.stageName}}" bindtap="onHintTap">
+      <text>{{item.stageName}}延期 {{item.count}}</text>
     </view>
   </view>
 
@@ -69,11 +65,11 @@
   </view>
 
   <!-- 空状态 -->
-  <empty-state wx:elif="{{!loading && displayList.length === 0}}" iconEmoji="👔" text="{{smartFilter ? '当前筛选条件下无样衣记录' : '暂无样衣开发记录'}}" hint="{{smartFilter ? '点击「清除筛选」查看全部' : '点击上方「扫码样衣」录入新的样衣任务'}}"></empty-state>
+  <empty-state wx:elif="{{!loading && displayList.length === 0}}" iconEmoji="👔" text="暂无样衣开发记录" hint="点击上方📷扫码录入新的样衣任务"></empty-state>
 
-  <!-- 任务列表（精简卡片：封面+款号+款式名+客户+状态/交期+阶段进度条） -->
+  <!-- 任务列表 -->
   <block wx:else>
-    <view class="task-card" wx:for="{{displayList}}" wx:key="id" data-item="{{item}}" bindtap="onGoDetail" hover-class="task-card-hover">
+    <view class="task-card" wx:for="{{displayList}}" wx:key="id" data-style-id="{{item.styleId}}" data-id="{{item.id}}" bindtap="onGoDetail" hover-class="task-card-hover">
       <!-- 第一行：封面图 + 主信息 -->
       <view class="card-main-row">
         <view class="card-cover-wrap" data-src="{{item._cover}}" catchtap="onPreviewImage">
@@ -84,13 +80,13 @@
         </view>
         <view class="card-info">
           <view class="card-title-row">
-            <text class="style-name">{{item.styleName || item.name || '未命名款式'}}</text>
+            <text class="style-no">{{item._styleNo || '-'}}</text>
             <view class="tag-row">
               <text class="status-tag tag tag-{{item._progressColor}}">{{item._progressNode}}</text>
               <text wx:if="{{item._deliveryLabel && (item._deliveryTone === 'danger' || item._deliveryTone === 'warning' || item._deliveryTone === 'success')}}" class="status-tag tag tag-{{item._deliveryTone === 'danger' ? 'error' : (item._deliveryTone === 'warning' ? 'warning' : 'success')}}">{{item._deliveryLabel}}</text>
             </view>
           </view>
-          <text class="style-no">{{item._styleNo || '-'}}</text>
+          <text wx:if="{{item.styleName || item.name}}" class="style-name">{{item.styleName || item.name}}</text>
           <view class="card-meta-row" wx:if="{{item._customer || item._category || item._season}}">
             <text wx:if="{{item._customer}}" class="meta-text">{{item._customer}}</text>
             <text wx:if="{{item._category}}" class="meta-text">· {{item._category}}</text>
@@ -104,7 +100,7 @@
         </view>
       </view>
 
-      <!-- 第二行：阶段进度条（紧凑显示 5 个阶段点） -->
+      <!-- 第二行：阶段进度条 -->
       <view wx:if="{{item._stageSummary}}" class="stage-bar">
         <view wx:for="{{item._stageSummary}}" wx:key="key" wx:for-item="st" class="stage-bar-item {{st.status}}">
           <view class="sb-dot"></view>
