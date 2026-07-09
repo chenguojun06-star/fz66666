@@ -1428,3 +1428,17 @@ SelfCritiqueGateTest 和 EvolutionOrchestratorTest 需要修复 Spring ObjectPro
 - 现象：菲号列显示 "1"、"2" 等纯数字，无法区分订单
 - 修复：`useProcessTrackingColumns.tsx` 接收 `orderNo` 参数，当 `bundleNo` 为纯数字时拼接订单号显示（如 `PO20260505002-1`）
 - 兜底：二维码存在时仍优先显示完整二维码信息（订单号/款号/颜色/尺码/数量/菲号）
+
+### 2026-07-09 MaterialPurchase 日期查询索引失效+当天数据丢失Bug修复
+
+**commit**: `291d42b55`
+
+**修复内容**：
+1. `selectYearInboundByMonthAndType`：`YEAR(actual_arrival_date) = #{year}` → 范围查询 `>= #{yearStart} AND < #{yearNextStart}`，走索引
+2. `selectLast7Days/30DaysInboundByType`：`<= #{endDate}` → `< DATE_ADD(#{endDate}, INTERVAL 1 DAY)`，修复当天数据丢失Bug
+3. 新增 `V20260709001__ensure_material_purchase_arrival_date_index.sql`：用 PREPARE/EXECUTE 幂等模式确保复合索引存在，替代 V20260623005 的 DELIMITER 版本
+
+**修改文件**：
+- [MaterialPurchaseMapper.java](backend/src/main/java/com/fashion/supplychain/production/mapper/MaterialPurchaseMapper.java)
+- [WarehouseDashboardOrchestrator.java](backend/src/main/java/com/fashion/supplychain/warehouse/orchestration/WarehouseDashboardOrchestrator.java)
+- [V20260709001__ensure_material_purchase_arrival_date_index.sql](backend/src/main/resources/db/migration/V20260709001__ensure_material_purchase_arrival_date_index.sql)
