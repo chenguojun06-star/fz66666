@@ -48,6 +48,8 @@ export function useWebSocket(options: UseWebSocketOptions) {
   const reconnectAttemptsRef = useRef(0);
   const handlersRef = useRef<Map<string, Set<MessageHandler>>>(new Map());
   const progressHandlersRef = useRef<Set<ProgressHandler>>(new Set());
+  const manualCloseRef = useRef(false);
+  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const connect = useCallback(() => {
     if (!enabled || !userId || tenantId === undefined) return;
@@ -67,14 +69,22 @@ export function useWebSocket(options: UseWebSocketOptions) {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const wsUrl = `${protocol}//${window.location.host}/ws/order-progress/${tenantId}?token=${encodeURIComponent(token)}`;
 
+    if (reconnectTimerRef.current) {
+      clearTimeout(reconnectTimerRef.current);
+      reconnectTimerRef.current = null;
+    }
+
     if (wsRef.current) {
+      manualCloseRef.current = true;
       wsRef.current.close();
     }
+
+    manualCloseRef.current = false;
 
     const ws = new WebSocket(wsUrl);
 
     ws.onopen = () => {
-      console.log('[WS] 连接建立:', wsUrl);
+      console.log('[WS] 连接建立');
       setConnected(true);
       reconnectAttemptsRef.current = 0;
     };
@@ -108,17 +118,24 @@ export function useWebSocket(options: UseWebSocketOptions) {
       }
     };
 
-    ws.onerror = (error) => {
-      console.error('[WS] 错误:', error);
+    ws.onerror = () => {
+      // 静默处理：onclose 会处理重连
     };
 
     ws.onclose = (event) => {
-      console.log('[WS] 连接关闭:', event.code, event.reason);
       setConnected(false);
+
+      // 主动关闭时不重连（React StrictMode 卸载或组件销毁）
+      if (manualCloseRef.current) return;
+
+      console.log('[WS] 连接关闭:', event.code);
 
       if (enabled && reconnectAttemptsRef.current < maxReconnectAttempts) {
         reconnectAttemptsRef.current++;
-        setTimeout(connect, reconnectInterval);
+        // 指数退避：5s -> 10s -> 20s -> 30s（上限30s）
+        const delay = Math.min(reconnectInterval * Math.pow(2, reconnectAttemptsRef.current - 1), 30000);
+        console.log(`[WS] ${delay / 1000}s 后重连（第${reconnectAttemptsRef.current}次）`);
+        reconnectTimerRef.current = setTimeout(connect, delay);
       }
     };
 
@@ -131,8 +148,14 @@ export function useWebSocket(options: UseWebSocketOptions) {
     }
 
     return () => {
+      manualCloseRef.current = true;
+      if (reconnectTimerRef.current) {
+        clearTimeout(reconnectTimerRef.current);
+        reconnectTimerRef.current = null;
+      }
       if (wsRef.current) {
         wsRef.current.close();
+        wsRef.current = null;
       }
     };
   }, [connect, enabled]);
