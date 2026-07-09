@@ -16,6 +16,27 @@
 
 ## 最近变更（Latest Changes）
 
+### 2026-07-09 出库仓库/库位选择优化（用户反馈）
+
+- **问题**：样衣借出弹窗要求用户选"出库仓库"和"库位"，但出库时东西已经在仓库里了，用户觉得莫名其妙。
+- **用户原话**："为什么样衣出库还要选仓库呢 莫名其妙的 出库是样衣在仓库里面的东西出去 只有入库才有选择库位啊"
+- **核实范围**：3个出库场景全部有此问题 — 样衣借出 / 物料出库 / 成品扫码出库
+- **修复方案**：出库移除选择器，改为显示当前存储位置，后端自动从库存记录获取仓库和库位
+- **修改文件**：
+  - 后端：SampleStockOrchestrator（样衣借出自动补全仓库）/ MaterialWarehouseOperationOrchestrator（物料出库自动补全）/ FinishedOutstockHelper（成品出库从入库记录获取库位）/ ProductSkuController（库存查询接口返回库位）
+  - 前端：LoanModal.tsx（显示当前库位）/ OutboundModal.tsx（显示当前位置）/ QrcodeOutboundModal.tsx（表格增加"当前库位"列）/ types.ts / useOutboundActions.ts
+- **commit**：`324ec2b06` + `0494c7571`（已push）
+- **教训**：出库不需要选仓库（东西本来就在仓库里），入库才需要选（决定放哪里）。TransferToOutstockModal本身就是正确实现（没有仓库选择），应该作为参考。
+
+### 2026-07-09 工序阶段误判修复（二次工艺禁用时不拦截车缝）
+
+- **问题**：没有二次工艺的款式，扫码进车缝时被误拦截："二次工艺阶段尚未开始，暂不能进入车缝"
+- **根因**：`ProductionScanStageSupport.validateParentStagePrerequisite` 用固定数组索引找前置阶段，没考虑 `hasSecondaryProcess=false` 时二次工艺被禁用的场景
+- **修复**：新增 `findPrevEnabledStage` 动态跳过被禁用的阶段；`ProcessStageDetector.isAutoSkippableStageName` 增加二次工艺禁用判断
+- **修改文件**：ProductionScanStageSupport.java / ProcessStageDetector.java / ProductionScanStageSupportTest.java（新增单元测试）
+- **commit**：`ec9b20fd0`（已push）
+- **用户反馈**："这个问题为什么反反复复在处理 我们智能化的系统这个都处理不好吗"
+
 ### 2026-07-09 WebSocket 缺失 token 导致控制台刷屏
 
 - **问题**：云端控制台疯狂报 `[WS] 缺失token，无法建立WebSocket连接`，伴随 React 无限重连堆栈刷屏。
