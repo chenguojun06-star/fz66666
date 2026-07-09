@@ -47,12 +47,18 @@ export default function useSampleProcessProgress(
       let nodes: ProcessNodeInfo[] = [];
       let loadedOrderId: string | null = null;
       let loadedOrderNo: string | null = null;
-      let scannedNames = new Set<string>();
-      let scannedStages = new Set<string>();
+      const scannedNames = new Set<string>();
+      const scannedStages = new Set<string>();
 
       if (productionOrderId) {
-        const orderRes: any = await api.get(`/production/order/${productionOrderId}`);
-        const orderData = orderRes?.data;
+        // 并行请求：订单详情 + board统计 + 扫码记录（3个请求并行，不再串行累加延迟）
+        const [orderRes, statsRes, scanRes] = await Promise.allSettled([
+          api.get(`/production/order/${productionOrderId}`),
+          api.get(`/production/order/${productionOrderId}/board-stats`),
+          api.get(`/production/scan/list`, { params: { orderId: productionOrderId, pageSize: 200 } }),
+        ]);
+
+        const orderData = orderRes.status === 'fulfilled' ? (orderRes.value as any)?.data : null;
         if (orderData) {
           loadedOrderId = orderData.id || null;
           loadedOrderNo = orderData.orderNo || null;
@@ -71,53 +77,56 @@ export default function useSampleProcessProgress(
               }
             } catch { nodes = []; }
           }
+        }
 
-          try {
-            const statsRes: any = await api.get(`/production/order/${productionOrderId}/board-stats`);
-            if (statsRes?.data && typeof statsRes.data === 'object') {
-              const stats: Record<string, { completed: number; total: number }> = {};
-              for (const [key, val] of Object.entries(statsRes.data as Record<string, unknown>)) {
-                const v = val as Record<string, unknown>;
-                stats[key] = {
-                  completed: Number(v.completed || v.scanned || 0),
-                  total: Number(v.total || v.planned || 0),
-                };
-              }
-              setTrackingStats(stats);
+        if (statsRes.status === 'fulfilled') {
+          const statsData = (statsRes.value as any)?.data;
+          if (statsData && typeof statsData === 'object') {
+            const stats: Record<string, { completed: number; total: number }> = {};
+            for (const [key, val] of Object.entries(statsData as Record<string, unknown>)) {
+              const v = val as Record<string, unknown>;
+              stats[key] = {
+                completed: Number(v.completed || v.scanned || 0),
+                total: Number(v.total || v.planned || 0),
+              };
             }
-          } catch {
+            setTrackingStats(stats);
+          } else {
             setTrackingStats({});
           }
+        } else {
+          setTrackingStats({});
+        }
 
-          try {
-            const scanRes: any = await api.get(`/production/scan/list`, {
-              params: { orderId: loadedOrderId, pageSize: 200 },
-            });
-            const records = Array.isArray(scanRes?.data?.records) ? scanRes.data.records : Array.isArray(scanRes?.data) ? scanRes.data : [];
-            for (const r of records) {
-              if (r.processName && r.success !== false) scannedNames.add(r.processName);
-              // 同时收集 operationType 和规范化后的 key
-              if (r.operationType && r.success !== false) {
-                scannedNames.add(r.operationType);
-                const normalized = normalizeOperationType(r.operationType);
-                if (normalized) {
-                  scannedNames.add(normalized);
-                  scannedStages.add(normalized);
-                }
+        if (scanRes.status === 'fulfilled') {
+          const scanData = (scanRes.value as any)?.data;
+          const records = Array.isArray(scanData?.records) ? scanData.records : Array.isArray(scanData) ? scanData : [];
+          for (const r of records) {
+            if (r.processName && r.success !== false) scannedNames.add(r.processName);
+            if (r.operationType && r.success !== false) {
+              scannedNames.add(r.operationType);
+              const normalized = normalizeOperationType(r.operationType);
+              if (normalized) {
+                scannedNames.add(normalized);
+                scannedStages.add(normalized);
               }
-              // 收集 progressStage（标准阶段名，用于匹配自定义工序名）
-              if (r.progressStage) scannedStages.add(r.progressStage);
             }
-          } catch { /* ignore */ }
+            if (r.progressStage) scannedStages.add(r.progressStage);
+          }
         }
       }
 
       if (patternProductionId && nodes.length === 0) {
         loadedOrderId = null;
         loadedOrderNo = null;
-        try {
-          const configRes: any = await api.get(`/production/pattern/${patternProductionId}/process-config`);
-          const configData = configRes?.data;
+        // 并行请求：工序配置 + 样衣扫码记录
+        const [configRes, patternScanRes] = await Promise.allSettled([
+          api.get(`/production/pattern/${patternProductionId}/process-config`),
+          api.get(`/production/pattern/${patternProductionId}/scan-records`),
+        ]);
+
+        if (configRes.status === 'fulfilled') {
+          const configData = (configRes.value as any)?.data;
           if (Array.isArray(configData) && configData.length > 0) {
             nodes = configData.map((item: any, idx: number) => ({
               id: String(item.sortOrder || idx + 1),
@@ -127,25 +136,22 @@ export default function useSampleProcessProgress(
               unitPrice: Number(item.unitPrice || item.price || 0),
             }));
           }
-        } catch { /* ignore */ }
+        }
 
-        try {
-          const scanRes: any = await api.get(`/production/pattern/${patternProductionId}/scan-records`);
-          const records = Array.isArray(scanRes?.data) ? scanRes.data : Array.isArray(scanRes) ? scanRes : [];
+        if (patternScanRes.status === 'fulfilled') {
+          const scanData = (patternScanRes.value as any)?.data;
+          const records = Array.isArray(scanData) ? scanData : Array.isArray(scanData?.data) ? scanData.data : [];
           for (const r of records) {
-            // 样衣扫码记录中 processName 可能为 NULL，需同时收集 operationType
             if (r.processName) scannedNames.add(r.processName);
             if (r.operationType) scannedNames.add(r.operationType);
-            // 同时收集规范化后的 key（英文大写 → 中文映射）
             const normalized = normalizeOperationType(r.operationType);
             if (normalized) {
               scannedNames.add(normalized);
               scannedStages.add(normalized);
             }
-            // 收集 progressStage（标准阶段名，用于匹配自定义工序名）
             if (r.progressStage) scannedStages.add(r.progressStage);
           }
-        } catch { /* ignore */ }
+        }
 
         setTrackingStats({});
       }

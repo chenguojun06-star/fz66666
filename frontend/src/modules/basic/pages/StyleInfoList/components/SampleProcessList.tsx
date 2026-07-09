@@ -193,29 +193,10 @@ export default function SampleProcessList({
   const subTableData = useMemo<SubProcessRow[]>(() => {
     if (!currentStage) return [];
     if (needsConfig) return [];
+    // 该阶段未配置子工序时返回空数组，不生成占位假工序（历史bug：切换tab会出现一行假工序，刷新消失）
+    if (currentStage.subProcesses.length === 0) return [];
     const isDone = currentStage.percent >= 100;
     const isActive = currentStage.percent > 0 && currentStage.percent < 100;
-    let qtyLabel = '-';
-    if (currentStage.key === 'procurement') {
-      qtyLabel = currentStage.subProcesses.length > 0 ? `${currentStage.subProcesses.length}种面料` : '-';
-    } else if (quantity != null && quantity > 0) {
-      qtyLabel = String(quantity);
-    }
-    if (currentStage.subProcesses.length === 0) {
-      return [{
-        key: currentStage.key,
-        name: currentStage.label,
-        processCode: currentStage.key,
-        styleNo,
-        color,
-        size,
-        quantity: qtyLabel,
-        receiver: isDone ? receiver : isActive ? receiver : '-',
-        time: isDone ? (receiveTime || '-') : isActive ? (receiveTime || '-') : '-',
-        status: isDone ? 'completed' as const : isActive ? 'in_progress' as const : 'pending' as const,
-        percent: currentStage.percent,
-      }];
-    }
     return currentStage.subProcesses.map((sub) => {
       const subDone = isDone;
       const subActive = isActive;
