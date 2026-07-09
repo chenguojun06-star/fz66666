@@ -120,8 +120,7 @@ export const PurchaseCartProvider: React.FC<PurchaseCartProviderProps> = ({
     setSubmitting(true);
     try {
       const result = await purchaseCartApi.addItem(request);
-      await loadCart();
-      await loadMergeSuggestions();
+      await Promise.all([loadCart(), loadMergeSuggestions()]);
       setCartVersion(v => v + 1);
       return result;
     } catch (error) {
@@ -136,8 +135,7 @@ export const PurchaseCartProvider: React.FC<PurchaseCartProviderProps> = ({
         setSubmitting(true);
         try {
             const result = await purchaseCartApi.batchAddItems(requests);
-            await loadCart();
-            await loadMergeSuggestions();
+            await Promise.all([loadCart(), loadMergeSuggestions()]);
             setCartVersion(v => v + 1);
             if (result.mergedCount > 0) {
                 message.info(`已添加 ${result.successCount} 个物料，其中 ${result.mergedCount} 个与现有物料合并`);
@@ -158,8 +156,7 @@ export const PurchaseCartProvider: React.FC<PurchaseCartProviderProps> = ({
     setSubmitting(true);
     try {
       await purchaseCartApi.updateItem(itemId, request);
-      await loadCart();
-      await loadMergeSuggestions();
+      await Promise.all([loadCart(), loadMergeSuggestions()]);
       setCartVersion(v => v + 1);
       message.success('更新成功');
     } catch (error) {
@@ -173,8 +170,7 @@ export const PurchaseCartProvider: React.FC<PurchaseCartProviderProps> = ({
     setSubmitting(true);
     try {
       await purchaseCartApi.deleteItem(itemId);
-      await loadCart();
-      await loadMergeSuggestions();
+      await Promise.all([loadCart(), loadMergeSuggestions()]);
       setCartVersion(v => v + 1);
       message.success('删除成功');
     } catch (error) {
@@ -188,8 +184,7 @@ export const PurchaseCartProvider: React.FC<PurchaseCartProviderProps> = ({
     setSubmitting(true);
     try {
       await purchaseCartApi.mergeItems(request);
-      await loadCart();
-      await loadMergeSuggestions();
+      await Promise.all([loadCart(), loadMergeSuggestions()]);
       setCartVersion(v => v + 1);
       message.success('合并成功');
     } catch (error) {
@@ -203,8 +198,7 @@ export const PurchaseCartProvider: React.FC<PurchaseCartProviderProps> = ({
     setSubmitting(true);
     try {
       await purchaseCartApi.splitItem(request);
-      await loadCart();
-      await loadMergeSuggestions();
+      await Promise.all([loadCart(), loadMergeSuggestions()]);
       setCartVersion(v => v + 1);
       message.success('拆分成功');
     } catch (error) {
@@ -233,8 +227,7 @@ export const PurchaseCartProvider: React.FC<PurchaseCartProviderProps> = ({
       const result: ConfirmResult = await purchaseCartApi.confirm(itemIds);
       setPreviewVisible(false);
       setPreviewData(null);
-      await loadCart();
-      await loadMergeSuggestions();
+      await Promise.all([loadCart(), loadMergeSuggestions()]);
       setCartVersion(v => v + 1);
       message.success('下单成功！');
       if (onConfirmSuccessRef.current) {
@@ -251,8 +244,7 @@ export const PurchaseCartProvider: React.FC<PurchaseCartProviderProps> = ({
     setSubmitting(true);
     try {
       await purchaseCartApi.clearCart();
-      await loadCart();
-      await loadMergeSuggestions();
+      await Promise.all([loadCart(), loadMergeSuggestions()]);
       setCartVersion(v => v + 1);
       message.success('购物车已清空');
     } catch (error) {

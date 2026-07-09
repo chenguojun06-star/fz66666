@@ -113,8 +113,7 @@ const MaterialQualityIssueModal: React.FC<Props> = ({ open, purchase, onClose, o
       });
       message.success('品质异常已登记');
       createForm.setFieldValue('remark', '');
-      await loadIssues();
-      await onChanged?.();
+      await Promise.all([loadIssues(), onChanged?.()]);
     } catch (error: unknown) {
       message.error(error instanceof Error ? error.message : '品质异常登记失败');
     } finally {
@@ -144,8 +143,7 @@ const MaterialQualityIssueModal: React.FC<Props> = ({ open, purchase, onClose, o
       message.success('品质异常已处理');
       setResolveTarget(null);
       resolveForm.resetFields();
-      await loadIssues();
-      await onChanged?.();
+      await Promise.all([loadIssues(), onChanged?.()]);
     } catch (error: unknown) {
       message.error(error instanceof Error ? error.message : '处理失败');
     } finally {

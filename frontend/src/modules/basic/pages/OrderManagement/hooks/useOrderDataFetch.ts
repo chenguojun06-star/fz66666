@@ -162,6 +162,25 @@ export function useOrderDataFetch({ queryParams, visible, showSmartErrorNotice, 
       .catch(() => {});
   }, []);
 
+  // 监听订单进度变更事件，实时刷新款式列表（避免 60s 轮询延迟）
+  useEffect(() => {
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+    const handleProgressChange = () => {
+      // 500ms 防抖：避免短时间多次事件触发重复请求
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        fetchStyles(queryParams);
+      }, 500);
+    };
+    window.addEventListener('order:progress:changed', handleProgressChange);
+    window.addEventListener('data:changed', handleProgressChange);
+    return () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      window.removeEventListener('order:progress:changed', handleProgressChange);
+      window.removeEventListener('data:changed', handleProgressChange);
+    };
+  }, [fetchStyles, queryParams]);
+
   const refetchStyles = useCallback(() => fetchStyles(queryParams), [fetchStyles, queryParams]);
 
   return useMemo(() => ({

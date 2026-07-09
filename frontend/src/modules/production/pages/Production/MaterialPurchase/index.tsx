@@ -419,8 +419,7 @@ const MaterialPurchase: React.FC = () => {
           isOrderFrozenForRecord={isOrderFrozenForRecord}
           onWarehousePick={handleWarehousePickFromDetail}
           onRefresh={async () => {
-            await fetchMaterialPurchaseList();
-            await reloadCurrentDetail();
+            await Promise.all([fetchMaterialPurchaseList(), reloadCurrentDetail()]);
           }}
         />
 
@@ -525,8 +524,7 @@ const MaterialPurchase: React.FC = () => {
           open={qualityIssueOpen}
           purchase={qualityIssuePurchase}
           onChanged={async () => {
-            await fetchMaterialPurchaseList();
-            await reloadCurrentDetail();
+            await Promise.all([fetchMaterialPurchaseList(), reloadCurrentDetail()]);
           }}
           onClose={() => {
             setQualityIssueOpen(false);

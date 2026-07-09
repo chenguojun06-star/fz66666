@@ -218,8 +218,7 @@ export default function usePatternPanelActions(styleNo?: string) {
         setPatternRevisionModalVisible(false);
         setPatternRevisionRecord(null);
         patternRevisionForm.resetFields();
-        await fetchStyles();
-        await loadPatternMeta(targetRecord);
+        await Promise.all([fetchStyles(), loadPatternMeta(targetRecord)]);
       } else { message.error(res.message || '保存失败'); }
     } catch (e: unknown) { message.error((e as any)?.message || '保存失败'); }
     finally { setPatternRevisionSaving(false); }
@@ -237,8 +236,7 @@ export default function usePatternPanelActions(styleNo?: string) {
         setReturnPatternModalVisible(false);
         setReturnPatternRecord(null);
         returnPatternForm.resetFields();
-        await fetchStyles();
-        await loadPatternMeta(targetRecord);
+        await Promise.all([fetchStyles(), loadPatternMeta(targetRecord)]);
       } else { message.error(res.message || '退回失败'); }
     } catch (e: unknown) { message.error((e as any)?.message || '退回失败'); }
     finally { setReturnPatternSaving(false); }

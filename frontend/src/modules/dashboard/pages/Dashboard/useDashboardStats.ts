@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import api from '@/utils/api';
 import { useSync } from '@/utils/syncManager';
 
@@ -133,6 +133,24 @@ export const useDashboardStats = () => {
       setLoading(false);
     }
   }, [applyDashboardData]);
+
+  // 监听订单进度变更事件，实时刷新仪表盘（避免 60s 轮询延迟）
+  useEffect(() => {
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+    const handleProgressChange = () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        fetchDashboard();
+      }, 500);
+    };
+    window.addEventListener('order:progress:changed', handleProgressChange);
+    window.addEventListener('data:changed', handleProgressChange);
+    return () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      window.removeEventListener('order:progress:changed', handleProgressChange);
+      window.removeEventListener('data:changed', handleProgressChange);
+    };
+  }, [fetchDashboard]);
 
   const handleRetry = useCallback(() => {
     setRetryCount(prev => prev + 1);

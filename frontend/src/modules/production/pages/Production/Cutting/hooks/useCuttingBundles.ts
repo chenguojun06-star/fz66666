@@ -257,8 +257,7 @@ export function useCuttingBundles({
           if (res.code === 200) {
             message.success('保存并生成成功');
             clearBundleSelection();
-            await fetchBundles();
-            await syncActiveTaskByOrderNo(activeTask.productionOrderNo);
+            await Promise.all([fetchBundles(), syncActiveTaskByOrderNo(activeTask.productionOrderNo)]);
             setImportLocked(true);
           } else {
             message.error(res.message || '生成失败');
