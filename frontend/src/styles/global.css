@@ -1179,8 +1179,6 @@ body {
 
 .ant-table-wrapper .ant-table-tbody > tr.ant-table-row-selected > td {
   background: var(--table-selected-row-bg);
-  position: relative;
-  z-index: var(--z-local);
 }
 
 .resizable-table-shell {

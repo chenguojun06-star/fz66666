@@ -87,23 +87,26 @@
 
 .act-btn {
   flex: 1;
-  text-align: center;
-  padding: 14px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 0;
   border-radius: var(--radius-md);
-  font-size: var(--font-size-md);
+  font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
+  min-height: 32px;
 }
 
 .act-btn--photo {
-  background: var(--color-bg-gray);
+  background: transparent;
   border: 1px solid var(--color-border);
   color: var(--color-text-secondary);
 }
 
 .act-btn--submit {
   background: transparent;
-  color: var(--color-primary);
-  border: 1px solid var(--color-primary);
+  color: var(--color-info);
+  border: 1px solid var(--color-info);
 }
 
 .act-btn--disabled {

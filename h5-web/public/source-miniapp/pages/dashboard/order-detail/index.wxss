@@ -869,79 +869,49 @@
 }
 .dc-value--wrap { line-height: 1.5; }
 
-/* ============ 操作按钮区（镂空风格） ============ */
+/* ============ 操作按钮区（横向镂空文字按钮） ============ */
 .action-bar {
   position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
   background: var(--color-bg-card);
-  padding: var(--spacing-sm) var(--page-padding-x) calc(env(safe-area-inset-bottom) + var(--spacing-sm));
+  padding: 10px var(--page-padding-x) calc(env(safe-area-inset-bottom) + 10px);
   display: flex;
   align-items: center;
-  justify-content: space-around;
-  gap: var(--spacing-sm);
+  justify-content: space-between;
+  gap: 10px;
   z-index: var(--z-dropdown);
-  box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.05);
 }
 .action-btn {
+  flex: 1;
+  height: 36px;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  padding: var(--spacing-xs) 0;
-  flex: 1;
-  border-radius: var(--radius-lg);
+  padding: 0 4px;
+  border-radius: var(--radius-md);
   background: transparent;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--color-primary);
+  color: var(--color-primary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  text-align: center;
+  line-height: 1;
   transition: all 0.15s ease;
+  box-sizing: border-box;
 }
 .action-btn:active {
   opacity: 0.7;
-  transform: scale(0.95);
-}
-.ab-icon-wrap {
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-md);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.15s ease;
-  border: 1px solid var(--color-primary);
-  background: transparent;
-}
-.ab-icon {
-  font-size: 14px;
-  line-height: 1;
-}
-.ab-icon--purple .ab-icon { color: var(--color-primary); }
-.ab-icon--blue .ab-icon { color: var(--color-info); }
-.ab-icon--teal .ab-icon { color: var(--color-success); }
-.ab-icon--orange .ab-icon { color: var(--color-warning); }
-.ab-icon--gray .ab-icon { color: var(--color-text-tertiary); }
-.ab-icon--purple { border-color: var(--color-primary); }
-.ab-icon--blue { border-color: var(--color-info); }
-.ab-icon--teal { border-color: var(--color-success); }
-.ab-icon--orange { border-color: var(--color-warning); }
-.ab-icon--gray { border-color: var(--color-border); }
-.ab-label {
-  font-size: 11px;
-  color: var(--color-text-secondary);
-  font-weight: var(--font-weight-medium);
+  transform: scale(0.96);
 }
 
 /* 终端状态（已完成/已作废/已关闭）：按钮变灰 + 禁止点击 */
 .action-bar--disabled .action-btn {
   opacity: 0.4;
   pointer-events: none;
-}
-.action-bar--disabled .ab-icon-wrap {
-  filter: grayscale(100%);
   border-color: var(--color-border-light);
-}
-.action-bar--disabled .ab-label {
   color: var(--color-text-tertiary);
 }
 

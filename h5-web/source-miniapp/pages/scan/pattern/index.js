@@ -647,11 +647,13 @@ Page({
       return;
     }
 
-    // 样衣有自己独立的父子关系逻辑，不走大货的菲号系统
-    // 优先使用工序系统（如果有），否则使用传统样衣流程
-    if (d.hasProcessSystem) {
-      return await this._submitProcessScan(d, operationType, qty, remark);
+    // 无工序配置时提示用户去PC端配置
+    if (!d.hasProcessSystem) {
+      toast.error('该款式未配置工序，请先在PC端款式开发页配置工序后再扫码');
+      return;
     }
+
+    return await this._submitProcessScan(d, operationType, qty, remark);
 
     // 传统样衣流程：领取 → 完成 → 审核 → 入库
     if (operationType !== 'REVIEW' && operationType !== 'COMPLETE' && qty <= 0) {

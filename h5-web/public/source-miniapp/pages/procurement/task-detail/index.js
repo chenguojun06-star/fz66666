@@ -22,6 +22,7 @@ Page({
     materialPurchases: [],
     remark: '',
     hasInput: false,
+    hasReturnInput: false,
     canConfirmProcurement: false,
     hasReturnConfirmed: false,
     overallArrivalRate: -1,
@@ -33,14 +34,17 @@ Page({
     // P1-2 修复：样衣采购任务无 orderNo，按 patternProductionId 关联查询
     this.patternProductionId = decodeURIComponent(options.patternProductionId || '');
     this.sourceType = decodeURIComponent(options.sourceType || '');
+    this.styleId = decodeURIComponent(options.styleId || '');
     this.setData({
       orderNo: this.orderNo,
       styleNo,
       patternProductionId: this.patternProductionId,
       sourceType: this.sourceType,
     });
-    // 样衣采购：按 patternProductionId 查询；大货订单：按 orderNo 查询
+    // 样衣采购：按 patternProductionId 查询；旧样衣兜底用 styleId；大货订单：按 orderNo 查询
     if (this.patternProductionId && this.sourceType === 'sample') {
+      this._loadDetail();
+    } else if (this.styleId && this.sourceType === 'sample') {
       this._loadDetail();
     } else if (this.orderNo) {
       this._loadDetail();
@@ -57,10 +61,12 @@ Page({
   async _loadDetail() {
     this.setData({ loading: true });
     try {
-      // P1-2 修复：样衣采购按 patternProductionId 查询；大货订单按 orderNo 查询
+      // P1-2 修复：样衣采购按 patternProductionId 查询；旧样衣兜底用 styleId；大货订单按 orderNo 查询
       const params = (this.patternProductionId && this.sourceType === 'sample')
         ? { patternProductionId: this.patternProductionId, sourceType: 'sample' }
-        : { orderNo: this.orderNo };
+        : (this.styleId && this.sourceType === 'sample')
+          ? { styleId: this.styleId, sourceType: 'sample' }
+          : { orderNo: this.orderNo };
       const res = await api.production.getMaterialPurchases(params);
       const list = this._normalizeToArray(res);
       const userInfo = getUserInfo() || {};
@@ -103,6 +109,7 @@ Page({
           returnConfirmed,
           canConfirmReturn,
           inputQuantity: '',
+          returnQtyInput: '',
           arrivalRate: purchaseQty > 0 ? Math.round(arrivedQty / purchaseQty * 100) : 0,
           returnConfirmTimeText,
         };
@@ -116,7 +123,7 @@ Page({
       // canConfirmProcurement 需排除整体已完成的情况
       const canConfirmProcurement = hasUnconfirmed && overallArrivalRate >= 50 && !allProcurementCompleted;
 
-      this.setData({ orderId, materialPurchases, loading: false, overallArrivalRate, canConfirmProcurement, hasReturnConfirmed, allProcurementCompleted });
+      this.setData({ orderId, materialPurchases, loading: false, overallArrivalRate, canConfirmProcurement, hasReturnConfirmed, hasReturnInput: false, allProcurementCompleted });
     } catch (e) {
       console.error('加载采购详情失败:', e);
       this.setData({ loading: false });
@@ -135,6 +142,19 @@ Page({
     });
     const hasInput = materials.some(m => m.inputQuantity && Number(m.inputQuantity) > 0);
     this.setData({ materialPurchases: materials, hasInput });
+  },
+
+  onReturnQtyInput(e) {
+    const { id } = e.currentTarget.dataset;
+    const value = e.detail.value;
+    const materials = this.data.materialPurchases.map(item => {
+      if ((item.id || item.purchaseId) === id) {
+        return { ...item, returnQtyInput: value };
+      }
+      return item;
+    });
+    const hasReturnInput = materials.some(m => m.canConfirmReturn && !m.returnConfirmed && m.returnQtyInput && Number(m.returnQtyInput) > 0);
+    this.setData({ materialPurchases: materials, hasReturnInput });
   },
 
   onRemarkInput(e) {
@@ -195,53 +215,85 @@ Page({
   },
 
   async onReturnConfirm(e) {
-    const { id, name, arrived, purchase, unit } = e.currentTarget.dataset;
+    const { id } = e.currentTarget.dataset;
     if (!id) return;
 
-    const defaultQty = (Number(arrived) > 0 ? Number(arrived) : Number(purchase)) || 0;
+    const item = this.data.materialPurchases.find(m => (m.id || m.purchaseId) === id);
+    if (!item) return;
 
-    wx.showModal({
-      title: '确认回料',
-      content: `确认「${name || '该物料'}」回料数量（可修改）:`,
-      editable: true,
-      placeholderText: String(defaultQty),
-      confirmText: '确认回料',
-      confirmColor: '#1677ff',
-      success: async (res) => {
-        if (!res.confirm) return;
+    const arrivedQty = Number(item.arrivedQuantity || 0);
+    const purchaseQty = Number(item.purchaseQuantity || 0);
+    const defaultQty = arrivedQty > 0 ? arrivedQty : purchaseQty;
+    const inputQty = item.returnQtyInput ? Number(item.returnQtyInput) : defaultQty;
 
-        const qty = (res.content !== undefined && res.content !== '')
-          ? Number(res.content)
-          : defaultQty;
-        if (isNaN(qty) || qty < 0) {
-          toast.error('请输入有效的回料数量');
-          return;
-        }
+    if (isNaN(inputQty) || inputQty < 0) {
+      toast.error('请输入有效的回料数量');
+      return;
+    }
 
-        const userInfo = getUserInfo() || {};
-        const confirmerId = String(userInfo.id || userInfo.userId || '').trim();
-        const confirmerName = String(userInfo.name || userInfo.username || '').trim();
+    const userInfo = getUserInfo() || {};
+    const confirmerId = String(userInfo.id || userInfo.userId || '').trim();
+    const confirmerName = String(userInfo.name || userInfo.username || '').trim();
 
-        wx.showLoading({ title: '确认中...', mask: true });
-        try {
-          await api.production.confirmReturnPurchase({
-            purchaseId: id,
-            confirmerId,
-            confirmerName,
-            returnQuantity: qty,
-          });
-          wx.hideLoading();
-          toast.success('回料确认成功');
+    wx.showLoading({ title: '确认中...', mask: true });
+    try {
+      await api.production.confirmReturnPurchase({
+        purchaseId: id,
+        confirmerId,
+        confirmerName,
+        returnQuantity: inputQty,
+      });
+      wx.hideLoading();
+      toast.success('回料确认成功');
+      triggerDataRefresh('procurement');
+      this._loadDetail();
+    } catch (err) {
+      wx.hideLoading();
+      toast.error(err.errMsg || err.message || '确认失败');
+    }
+  },
 
-          triggerDataRefresh('procurement');
+  async onConfirmAllReturns() {
+    const { materialPurchases, hasReturnConfirmed } = this.data;
+    if (hasReturnConfirmed) {
+      toast.info('已有物料完成回料确认，无法重复操作');
+      return;
+    }
 
-          this._loadDetail();
-        } catch (err) {
-          wx.hideLoading();
-          toast.error(err.errMsg || err.message || '确认失败');
-        }
-      },
-    });
+    // 找到所有可确认回料且未确认的物料
+    const confirmableItems = materialPurchases.filter(m => m.canConfirmReturn && !m.returnConfirmed);
+    if (confirmableItems.length === 0) {
+      toast.info('没有待确认回料的物料');
+      return;
+    }
+
+    const userInfo = getUserInfo() || {};
+    const confirmerId = String(userInfo.id || userInfo.userId || '').trim();
+    const confirmerName = String(userInfo.name || userInfo.username || '').trim();
+
+    wx.showLoading({ title: '一键确认中...', mask: true });
+    try {
+      await Promise.all(confirmableItems.map(item => {
+        const arrivedQty = Number(item.arrivedQuantity || 0);
+        const purchaseQty = Number(item.purchaseQuantity || 0);
+        const defaultQty = arrivedQty > 0 ? arrivedQty : purchaseQty;
+        const inputQty = item.returnQtyInput ? Number(item.returnQtyInput) : defaultQty;
+        return api.production.confirmReturnPurchase({
+          purchaseId: item.id || item.purchaseId,
+          confirmerId,
+          confirmerName,
+          returnQuantity: inputQty,
+        });
+      }));
+      wx.hideLoading();
+      toast.success(`已确认 ${confirmableItems.length} 项回料`);
+      triggerDataRefresh('procurement');
+      this._loadDetail();
+    } catch (err) {
+      wx.hideLoading();
+      toast.error(err.errMsg || err.message || '批量确认失败');
+      this._loadDetail();
+    }
   },
 
   async onConfirmProcurement() {
@@ -257,36 +309,23 @@ Page({
     const { orderId, orderNo, overallArrivalRate } = this.data;
     if (!orderNo) return;
 
-    wx.showModal({
-      title: '确认回料完成',
-      content: `当前到货率 ${overallArrivalRate}%，确认后采购阶段将流转到裁剪环节。确定？`,
-      confirmText: '确认完成',
-      confirmColor: '#1677ff',
-      editable: true,
-      placeholderText: '备注（选填）',
-      success: async (res) => {
-        if (!res.confirm) return;
-
-        wx.showLoading({ title: '确认中...', mask: true });
-        try {
-          const remark = (res.content || '').trim();
-          await api.production.confirmProcurementComplete({
-            id: orderId,
-            orderNo,
-            remark,
-          });
-          wx.hideLoading();
-          toast.success('采购阶段已完成，已流转到裁剪');
-
-          triggerDataRefresh('procurement');
-
-          setTimeout(() => wx.navigateBack(), 1000);
-        } catch (err) {
-          wx.hideLoading();
-          toast.error(err.errMsg || err.message || '确认失败');
-        }
-      },
-    });
+    // 砍掉弹窗，直接执行（备注从页面输入框取）
+    wx.showLoading({ title: '确认中...', mask: true });
+    try {
+      const remark = (this.data.remark || '').trim();
+      await api.production.confirmProcurementComplete({
+        id: orderId,
+        orderNo,
+        remark,
+      });
+      wx.hideLoading();
+      toast.success('采购阶段已完成，已流转到裁剪');
+      triggerDataRefresh('procurement');
+      setTimeout(() => wx.navigateBack(), 1000);
+    } catch (err) {
+      wx.hideLoading();
+      toast.error(err.errMsg || err.message || '确认失败');
+    }
   },
 
   async onSubmit() {

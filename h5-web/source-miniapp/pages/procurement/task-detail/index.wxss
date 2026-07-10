@@ -293,6 +293,37 @@
   display: flex;
   justify-content: flex-start;
 }
+
+/* 回料确认行：输入框+按钮并排 */
+.mat-return-row {
+  margin-top: 7px;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+.mat-return-input {
+  flex: 1;
+  height: 36px;
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: var(--input-radius);
+  padding: 0 var(--spacing-md);
+  font-size: var(--font-size-base);
+  color: var(--color-text-primary);
+  box-sizing: border-box;
+}
+.mat-return-row .btn-return-confirm {
+  flex-shrink: 0;
+  padding: 0 14px;
+  height: 36px;
+  line-height: 36px;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-primary);
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-sm);
+  background: transparent;
+}
 .btn-return-confirm {
   display: inline-block;
   padding: 5px 14px;
@@ -343,7 +374,7 @@
   align-items: center;
   justify-content: center;
   border-radius: var(--radius-lg);
-  font-size: var(--font-size-lg);
+  font-size: var(--font-size-base);
   font-weight: var(--font-weight-medium);
   background: transparent;
   border: 1px solid var(--color-border);

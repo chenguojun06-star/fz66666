@@ -152,16 +152,21 @@
 .tag-row {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
   gap: var(--spacing-sm);
   margin-top: var(--spacing-md);
 }
 .status-tag.tag {
-  display: inline-block;
-  padding: 2px 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 10px;
   border-radius: var(--radius-sm);
   font-size: var(--font-size-xs);
-  line-height: 1.4;
+  line-height: 1;
   font-weight: var(--font-weight-medium);
+  text-align: center;
 }
 .tag-default { background: var(--color-bg-gray); color: var(--color-text-tertiary); }
 .tag-success { background: var(--color-success-bg); color: var(--color-success); }

@@ -52,6 +52,7 @@ class MaterialPurchaseQueryHelper {
         String status = (String) safeParams.getOrDefault("status", "");
         String orderNo = (String) safeParams.getOrDefault("orderNo", "");
         String styleNo = (String) safeParams.getOrDefault("styleNo", "");
+        String styleId = (String) safeParams.getOrDefault("styleId", "");
         String materialType = (String) safeParams.getOrDefault("materialType", "");
         String sourceType = (String) safeParams.getOrDefault("sourceType", "");
         String factoryType = (String) safeParams.getOrDefault("factoryType", "");
@@ -70,6 +71,7 @@ class MaterialPurchaseQueryHelper {
         applyMaterialTypeFilter(wrapper, materialType);
         applySupplierFilter(wrapper, supplierName, supplier);
         applyPatternProductionIdFilter(wrapper, patternProductionId);
+        applyStyleIdFilter(wrapper, styleId);
         excludeScrappedOrders(wrapper, tenantId);
         applyFactoryFilters(wrapper, tenantId, factoryType, factoryName);
         applyFactoryOrderIds(wrapper, safeParams);
@@ -300,6 +302,11 @@ class MaterialPurchaseQueryHelper {
     private void applyPatternProductionIdFilter(LambdaQueryWrapper<MaterialPurchase> wrapper, String patternProductionId) {
         if (!StringUtils.hasText(patternProductionId)) return;
         wrapper.eq(MaterialPurchase::getPatternProductionId, patternProductionId.trim());
+    }
+
+    private void applyStyleIdFilter(LambdaQueryWrapper<MaterialPurchase> wrapper, String styleId) {
+        if (!StringUtils.hasText(styleId)) return;
+        wrapper.eq(MaterialPurchase::getStyleId, styleId.trim());
     }
 
     private void excludeScrappedOrders(LambdaQueryWrapper<MaterialPurchase> wrapper, Long tenantId) {

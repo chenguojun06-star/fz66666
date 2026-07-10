@@ -33,7 +33,7 @@ function normalizePatternId(patternId) {
   if (s.charAt(0) === '{') {
     try {
       const obj = JSON.parse(s);
-      const id = obj.id || obj.patternId || obj.patternProductionId || obj.orderId;
+      const id = obj.id || obj.patternId || obj.patternProductionId;
       if (id) return String(id).trim();
     } catch (_e) { /* 解析失败，继续下面的尝试 */ }
   }

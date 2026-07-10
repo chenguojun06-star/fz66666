@@ -348,11 +348,17 @@ Page({
       this._orderMatrix = orderMatrix;
       this._orderSimpleRows = orderSimpleRows;
       const orderWithAbbr = Object.assign({}, order, { _styleAbbr: order && order.styleNo ? String(order.styleNo).slice(0, 2) : '--' });
-      this.setData({
+      // 如果 URL 未传 orderId，从订单数据中补充
+      const orderIdFromOrder = String(order.id || '');
+      const updateData = {
         orderInfo: orderWithAbbr,
         coverImage,
         orderTotal,
-      });
+      };
+      if (orderIdFromOrder && !this.data.orderId) {
+        updateData.orderId = orderIdFromOrder;
+      }
+      this.setData(updateData);
     } catch (e) {
       console.error('[bundle-detail] loadOrderInfo error', e);
     }
@@ -1310,10 +1316,10 @@ Page({
     }
     const cuttingOrderLines = d.cuttingOrderLines;
     const bundleSize = parseInt(d.bundleSize, 10) || 20;
-    const orderId = d.orderId;
+    const orderId = d.orderId || (d.orderInfo && d.orderInfo.id) || '';
     const orderNo = d.orderNo;
 
-    if (!orderId) return toast.error('缺少订单信息');
+    if (!orderId) return toast.error('缺少订单信息，请下拉刷新重试');
     if (!cuttingOrderLines.length) return toast.error('无可裁剪的尺码数据');
 
     const items = [];

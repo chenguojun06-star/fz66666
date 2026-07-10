@@ -650,7 +650,7 @@ Page({
       return;
     }
 
-    // 样衣走工序系统：无工序配置时提示用户去PC端配置
+    // 无工序配置时提示用户去PC端配置
     if (!d.hasProcessSystem) {
       toast.error('该款式未配置工序，请先在PC端款式开发页配置工序后再扫码');
       return;

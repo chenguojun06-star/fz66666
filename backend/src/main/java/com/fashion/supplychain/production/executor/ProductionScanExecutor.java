@@ -63,10 +63,10 @@ public class ProductionScanExecutor {
         String patternProductionId = TextUtils.safeText(params.get("patternProductionId"));
         boolean isSampleScan = "SAMPLE".equalsIgnoreCase(sourceBizType) || hasText(patternProductionId);
 
-        if (isSampleScan && ctx.order == null) {
-            // 样衣无关联生产订单：直接记录扫码，不走大货流程
-            log.info("样衣扫码（无生产订单关联），直接记录: patternProductionId={}, scanType={}, processName={}",
-                    patternProductionId, scanType, params.get("processName"));
+        if (isSampleScan) {
+            // 样衣扫码：一个二维码走完所有工序，跳过大货特有的菲号/门禁/库存校验
+            log.info("样衣扫码（跳过大货校验），直接记录: patternProductionId={}, scanType={}, processName={}, hasOrder={}",
+                    patternProductionId, scanType, params.get("processName"), ctx.order != null);
             Map<String, Object> sampleResult = new HashMap<>();
             sampleResult.put("success", true);
             sampleResult.put("scanType", scanType);

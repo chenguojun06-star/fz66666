@@ -81,7 +81,11 @@ public class ScanRecordOrchestrator {
         TenantAssert.assertTenantContext();
         Map<String, Object> safeParams = params == null ? new HashMap<>() : new HashMap<>(params);
         String orderNo = safeParams.get("orderNo") == null ? null : String.valueOf(safeParams.get("orderNo"));
-        String lockKey = "scan:" + (orderNo != null ? orderNo : "unknown");
+        String patternProductionId = safeParams.get("patternProductionId") == null ? null : String.valueOf(safeParams.get("patternProductionId"));
+        String scanCode = safeParams.get("scanCode") == null ? null : String.valueOf(safeParams.get("scanCode"));
+        String lockKey = "scan:" + (orderNo != null ? orderNo
+            : (patternProductionId != null ? "sample:" + patternProductionId
+            : (scanCode != null ? "code:" + scanCode : "unknown")));
         return distributedLockService.executeWithLockOrFallback(lockKey, 30, java.util.concurrent.TimeUnit.SECONDS, () -> {
             // 仅核心 DB 写入在事务内
             Map<String, Object> result = transactionTemplate.execute(status -> {

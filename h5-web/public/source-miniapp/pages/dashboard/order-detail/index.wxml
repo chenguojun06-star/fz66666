@@ -157,36 +157,11 @@
 
     <!-- ════════════ ③ 操作区 ════════════ -->
     <view class="action-bar {{isEditable ? '' : 'action-bar--disabled'}}">
-      <view class="action-btn" bindtap="onActionProcurement" data-editable="{{isEditable}}">
-        <view class="ab-icon-wrap ab-icon--purple">
-          <text class="icon-box"></text>
-        </view>
-        <text class="ab-label">采购</text>
-      </view>
-      <view class="action-btn" bindtap="onActionCutting" data-editable="{{isEditable}}">
-        <view class="ab-icon-wrap ab-icon--blue">
-          <text class="icon-cut"></text>
-        </view>
-        <text class="ab-label">裁剪</text>
-      </view>
-      <view class="action-btn" wx:if="{{isEditable && order.status === 'production'}}" bindtap="onActionProcessEdit">
-        <view class="ab-icon-wrap ab-icon--teal">
-          <text class="icon-setting"></text>
-        </view>
-        <text class="ab-label">工序</text>
-      </view>
-      <view class="action-btn" bindtap="onActionTransfer" data-editable="{{isEditable}}">
-        <view class="ab-icon-wrap ab-icon--orange">
-          <text class="icon-refresh"></text>
-        </view>
-        <text class="ab-label">转单</text>
-      </view>
-      <view class="action-btn" bindtap="onActionRemark" data-editable="{{isEditable}}">
-        <view class="ab-icon-wrap ab-icon--gray">
-          <text class="icon-edit"></text>
-        </view>
-        <text class="ab-label">备注</text>
-      </view>
+      <view class="action-btn" bindtap="onActionProcurement" data-editable="{{isEditable}}">采购</view>
+      <view class="action-btn" bindtap="onActionCutting" data-editable="{{isEditable}}">裁剪</view>
+      <view class="action-btn" wx:if="{{isEditable && order.status === 'production'}}" bindtap="onActionProcessEdit">工序</view>
+      <view class="action-btn" bindtap="onActionTransfer" data-editable="{{isEditable}}">转单</view>
+      <view class="action-btn" bindtap="onActionRemark" data-editable="{{isEditable}}">备注</view>
     </view>
 
     <!-- ════════════ ④ 执行进度区 · 工序进度 ════════════ -->
@@ -258,6 +233,7 @@
     <view class="section-card" wx:if="{{cuttingBundleList.length > 0}}">
       <view class="section-hd">
         <text class="section-title">裁剪明细</text>
+        <text class="status-tag tag tag-success" wx:if="{{cuttingAllDone}}">已完成</text>
         <text class="section-count">{{bundleSummary.totalBundles}}扎 / {{bundleSummary.totalQty}}件</text>
       </view>
       <view class="cut-list">
@@ -298,6 +274,7 @@
     <view class="section-card" wx:if="{{hasMaterialPurchases}}">
       <view class="section-hd">
         <text class="section-title">物料采购</text>
+        <text class="status-tag tag tag-success" wx:if="{{procurementAllDone}}">已完成</text>
         <text class="section-count">{{materialPurchases.length}}项</text>
       </view>
       <view class="mat-list">

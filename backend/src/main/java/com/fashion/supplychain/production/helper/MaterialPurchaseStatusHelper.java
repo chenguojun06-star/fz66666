@@ -526,14 +526,17 @@ public class MaterialPurchaseStatusHelper {
             throw new IllegalStateException("该采购单已取消，不可操作");
         }
 
-        com.fashion.supplychain.production.entity.MaterialPicking pendingPicking = materialPickingService.getOne(
-                new LambdaQueryWrapper<com.fashion.supplychain.production.entity.MaterialPicking>()
-                        .eq(com.fashion.supplychain.production.entity.MaterialPicking::getOrderNo, purchase.getOrderNo())
-                        .eq(com.fashion.supplychain.production.entity.MaterialPicking::getStatus, "pending")
-                        .orderByDesc(com.fashion.supplychain.production.entity.MaterialPicking::getCreateTime)
-                        .last("LIMIT 1"), false);
-        if (pendingPicking != null) {
-            throw new IllegalStateException("该采购单存在待确认出库单（" + pendingPicking.getPickingNo() + "），请先撤销出库单");
+        // 样衣采购不涉及出库单流程，跳过 MaterialPicking 查询
+        if (!"sample".equals(purchase.getSourceType())) {
+            com.fashion.supplychain.production.entity.MaterialPicking pendingPicking = materialPickingService.getOne(
+                    new LambdaQueryWrapper<com.fashion.supplychain.production.entity.MaterialPicking>()
+                            .eq(com.fashion.supplychain.production.entity.MaterialPicking::getOrderNo, purchase.getOrderNo())
+                            .eq(com.fashion.supplychain.production.entity.MaterialPicking::getStatus, "pending")
+                            .orderByDesc(com.fashion.supplychain.production.entity.MaterialPicking::getCreateTime)
+                            .last("LIMIT 1"), false);
+            if (pendingPicking != null) {
+                throw new IllegalStateException("该采购单存在待确认出库单（" + pendingPicking.getPickingNo() + "），请先撤销出库单");
+            }
         }
 
         String operator = UserContext.username();

@@ -242,8 +242,8 @@ Page({
   onShow: function () {
     const app = getApp();
     if (app && typeof app.requireAuth === 'function' && !app.requireAuth()) return;
-    if (this.data.orderId) {
-      // 从子页面返回时刷新
+    if (this.data.orderId && !this.data.order) {
+      // 首次加载或数据为空时才请求，避免从子页面返回时重复请求
       this._loadFlow();
     }
   },
@@ -465,6 +465,7 @@ Page({
       }
       let bundleSummary = null;
       let cuttingBundleList = [];
+      let cuttingAllDone = false;
       if (cuttingBundles.length > 0) {
         const totalBundles = cuttingBundles.length;
         const totalQty2 = cuttingBundles.reduce(function (s, b) { return s + fmtNum(b.quantity); }, 0);
@@ -495,7 +496,18 @@ Page({
             orderNo: fmt(b.orderNo || order.orderNo, ''),
           };
         });
+        // 整体裁剪完成判定
+        cuttingAllDone = cuttingBundles.every(function (b) {
+          const s = String(b.status || '').toLowerCase();
+          return s === 'completed' || s === 'done';
+        });
       }
+
+      // 整体采购完成判定
+      const procurementAllDone = rawMaterials.length > 0 && rawMaterials.every(function (mp) {
+        const s = String(mp.status || '').toLowerCase();
+        return s === 'completed' || s === 'arrived';
+      });
 
       // 下单矩阵（与列表页用相同解析逻辑，兼容 orderDetails JSON 各种格式）
       const matrixModel = buildMatrixModel(order);
@@ -556,6 +568,8 @@ Page({
         hasBomList: bomList.length > 0,
         cuttingBundleList: cuttingBundleList,
         bundleSummary: bundleSummary,
+        cuttingAllDone: cuttingAllDone,
+        procurementAllDone: procurementAllDone,
         matrixModel: matrixModel,
         quotation: quotation,
         imageList: imageList,
@@ -582,48 +596,19 @@ Page({
       }
     }, 10000);
 
-    const flowPromise = orderId
-      ? production.getOrderFlow(orderId).then(function (res) {
-          console.log('[order-detail] flow res:', JSON.stringify(res));
-          // 防御后端返回 HTTP 200 但业务 code 非 200 的情况
-          if (res && typeof res.code === 'number' && res.code !== 200) {
-            const msg = res.message || ('服务端返回错误码 ' + res.code);
-            console.warn('[order-detail] flow 业务失败:', msg, res);
-            throw new Error(msg);
-          }
-          const data = (res && res.data) || {};
-          const order = resolveOrderFromFlow(data);
-          if (!order) {
-            console.warn('[order-detail] flow 返回数据中无法解析 order:', JSON.stringify(data));
-            // 不再静默返回，而是抛错走 fallback 分支用 orderDetail 接口
-            throw new Error('flow-data-empty');
-          }
-          render(order, data);
-        })
-      : Promise.resolve();
-
-    flowPromise.then(function () {
-      clearTimeout(timeoutTimer);
-    });
-    // 返回 Promise，供 onPullDownRefresh 用 .finally 停止下拉动画
-    return flowPromise.catch(function (flowErr) {
-      clearTimeout(timeoutTimer);
-      const errMsg = (flowErr && flowErr.message) || String(flowErr || '');
-      console.warn('[order-detail] flow 接口异常:', errMsg, flowErr);
-      // 如果用户已经在 timeout 分支关闭了 loading，这里就不再处理
-      if (!that.data.loading) return;
-      // fallback：调用 orderDetail
-      const key = orderId || orderNo;
+    // 内联 fallback 函数：用 orderDetail 接口获取订单
+    function fallbackToDetail(key) {
       if (!key) {
+        console.warn('[order-detail] fallback 缺少 key');
         that.setData({ loading: false, loadError: '缺少订单参数' });
-        return;
+        return Promise.resolve();
       }
+      console.log('[order-detail] 启动 fallback orderDetail, key:', key);
       return production.orderDetail(key).then(function (res) {
-        console.log('[order-detail] detail fallback res:', JSON.stringify(res));
-        // 同样防御业务 code 非 200
+        console.log('[order-detail] detail fallback res:', JSON.stringify(res).substring(0, 500));
         if (res && typeof res.code === 'number' && res.code !== 200) {
           const msg = res.message || ('服务端返回错误码 ' + res.code);
-          console.warn('[order-detail] detail fallback 业务失败:', msg, res);
+          console.warn('[order-detail] detail fallback 业务失败:', msg);
           throw new Error(msg);
         }
         let order = null;
@@ -632,23 +617,52 @@ Page({
           order = payload[0] || null;
         } else if (Array.isArray(payload.records)) {
           order = payload.records[0] || null;
-        } else if (payload.id) {
+        } else if (payload && payload.id) {
           order = payload;
-        } else if (payload.order && payload.order.id) {
+        } else if (payload && payload.order && payload.order.id) {
           order = payload.order;
         }
         if (!order || !order.id) {
-          throw new Error('detail-no-order');
+          console.warn('[order-detail] detail fallback 也无法解析 order:', JSON.stringify(payload).substring(0, 300));
+          throw new Error('订单数据不存在');
         }
         render(order, {});
       }).catch(function (detailErr) {
         const detailMsg = (detailErr && detailErr.message) || String(detailErr || '');
-        console.warn('[order-detail] detail fallback 也失败:', detailMsg, detailErr);
-        if (that.data.loading) {
-          that.setData({ loading: false, loadError: detailMsg || '订单数据加载失败' });
-        }
+        console.warn('[order-detail] detail fallback 失败:', detailMsg);
+        that.setData({ loading: false, loadError: detailMsg || '订单数据加载失败' });
       });
-    });
+    }
+
+    const key = orderId || orderNo;
+    const flowPromise = orderId
+      ? production.getOrderFlow(orderId).then(function (res) {
+          console.log('[order-detail] flow res:', JSON.stringify(res).substring(0, 500));
+          clearTimeout(timeoutTimer);
+          // 防御后端返回 HTTP 200 但业务 code 非 200 的情况
+          if (res && typeof res.code === 'number' && res.code !== 200) {
+            const msg = res.message || ('服务端返回错误码 ' + res.code);
+            console.warn('[order-detail] flow 业务失败:', msg, '→ 启动 fallback');
+            return fallbackToDetail(key);
+          }
+          const data = (res && res.data) || {};
+          const order = resolveOrderFromFlow(data);
+          if (!order) {
+            console.warn('[order-detail] flow 数据无法解析 order → 启动 fallback');
+            return fallbackToDetail(key);
+          }
+          render(order, data);
+        }).catch(function (flowErr) {
+          clearTimeout(timeoutTimer);
+          const errMsg = (flowErr && flowErr.message) || String(flowErr || '');
+          console.warn('[order-detail] flow 接口异常:', errMsg, '→ 启动 fallback');
+          if (!that.data.loading) return Promise.resolve();
+          return fallbackToDetail(key);
+        })
+      : Promise.resolve();
+
+    // 返回 Promise，供 onPullDownRefresh 用 .finally 停止下拉动画
+    return flowPromise;
   },
 
   /* ======== 图片轮播控制 ======== */

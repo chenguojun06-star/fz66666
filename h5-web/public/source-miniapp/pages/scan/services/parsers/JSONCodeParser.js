@@ -72,7 +72,7 @@ class JSONCodeParser {
     }
 
     // 处理样板生产类型
-    const patternId = obj.id || obj.patternId || obj.patternProductionId || obj.orderId;
+    const patternId = obj.id || obj.patternId || obj.patternProductionId;
     const isPatternType = ['pattern', 'sample', 'pattern_production', 'patternproduction'].includes(qrType);
     const isLegacyStylePattern = qrType === 'style' && !!patternId && (!obj.orderNo || obj.isPattern === true);
 

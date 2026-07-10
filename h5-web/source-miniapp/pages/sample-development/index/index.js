@@ -479,7 +479,7 @@ Page({
         if (trimmed.charAt(0) === '{') {
           try {
             const obj = JSON.parse(trimmed);
-            const id = obj.id || obj.patternId || obj.patternProductionId || obj.orderId;
+            const id = obj.id || obj.patternId || obj.patternProductionId;
             if (id) patternId = String(id);
           } catch (_e) { /* 解析失败，回退到原 scanCode */ }
         } else {

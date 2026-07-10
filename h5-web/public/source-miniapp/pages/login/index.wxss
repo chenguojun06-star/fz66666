@@ -222,8 +222,8 @@ page {
   background: rgba(255,255,255,0.9);
   border: 1px solid rgba(180,190,210,0.4);
   border-radius: 12rpx;
-  padding: 0 20rpx;
-  height: 88rpx;
+  padding: 0 24rpx;
+  height: 96rpx;
   transition: all 0.2s ease;
 }
 .login-input-wrap:focus-within {
@@ -232,17 +232,17 @@ page {
   box-shadow: 0 0 0 6rpx rgba(31,117,234,0.06);
 }
 
-.login-input-icon { font-size: 34rpx; margin-right: 14rpx; color: #a0aab7; flex-shrink: 0; }
+.login-input-icon { font-size: 38rpx; margin-right: 18rpx; color: #a0aab7; flex-shrink: 0; }
 
 .login-input {
   flex: 1; height: 100%;
-  font-size: 30rpx; color: #22384a;
+  font-size: 32rpx; color: #22384a;
   background: transparent;
 }
 .login-input::placeholder { color: #b0b8c4; }
 
-.login-input-clear { font-size: 28rpx; color: #b0b8c4; padding: 8rpx; }
-.login-input-eye { font-size: 24rpx; color: #8a96a6; padding: 8rpx; }
+.login-input-clear { font-size: 32rpx; color: #b0b8c4; padding: 8rpx; }
+.login-input-eye { font-size: 28rpx; color: #8a96a6; padding: 8rpx; }
 
 .tenant-selected-tag {
   margin-top: 12rpx; font-size: 24rpx; color: #1f75ea;
@@ -269,7 +269,7 @@ page {
 .login-btn-wrap { margin-top: 32rpx; }
 
 .login-btn {
-  width: 100%; height: 96rpx;
+  width: 100%; height: 104rpx;
   display: flex; align-items: center; justify-content: center;
   background: #1f75ea; color: #fff;
   font-size: 32rpx; font-weight: 700;

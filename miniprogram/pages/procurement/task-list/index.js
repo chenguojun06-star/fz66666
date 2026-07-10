@@ -140,10 +140,21 @@ Page({
       || (group.items && group.items[0] && group.items[0].orderNo)
       || '';
     const styleNo = group.styleNo || '';
+    const styleId = (group.items && group.items[0] && group.items[0].styleId) || '';
+    const sourceType = group.sourceType || (group.items && group.items[0] && group.items[0].sourceType) || '';
     // P1-2 修复：样衣采购无 orderNo，按 patternProductionId 跳转
     if (!orderNo && patternProductionId) {
       safeNavigate({
         url: `/pages/procurement/task-detail/index?patternProductionId=${encodeURIComponent(patternProductionId)}&sourceType=sample&styleNo=${encodeURIComponent(styleNo)}`,
+      }).catch(() => {
+        toast.error('跳转失败，请稍后重试');
+      });
+      return;
+    }
+    // 兜底：旧样衣采购无 patternProductionId 但有 styleId，用 styleId 跳转
+    if (!orderNo && !patternProductionId && sourceType === 'sample' && styleId) {
+      safeNavigate({
+        url: `/pages/procurement/task-detail/index?styleId=${encodeURIComponent(styleId)}&sourceType=sample&styleNo=${encodeURIComponent(styleNo)}`,
       }).catch(() => {
         toast.error('跳转失败，请稍后重试');
       });

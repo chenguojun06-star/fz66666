@@ -6,7 +6,7 @@
   </view>
 
   <view class="empty-state" wx:elif="{{materialPurchases.length === 0}}">
-    <text class="empty-icon">📦</text>
+    <text class="empty-icon icon-box"></text>
     <text class="empty-text">暂无采购物料</text>
   </view>
 
@@ -133,11 +133,13 @@
               bindinput="onMaterialInput" value="{{item.inputQuantity}}" />
           </view>
 
-          <view class="mat-action-row" wx:if="{{item.canConfirmReturn && !item.returnConfirmed}}">
+          <!-- 回料确认：页面内直接输入数量+确认按钮 -->
+          <view class="mat-return-row" wx:if="{{item.canConfirmReturn && !item.returnConfirmed}}">
+            <input class="mat-return-input" type="digit" placeholder="回料数量（默认到货量）"
+              data-id="{{item.id || item.purchaseId}}"
+              bindinput="onReturnQtyInput" value="{{item.returnQtyInput}}" />
             <view class="btn-return-confirm" data-id="{{item.id || item.purchaseId}}"
-              data-name="{{item.materialName}}" data-arrived="{{item.arrivedQuantity}}"
-              data-purchase="{{item.purchaseQuantity}}"
-              data-unit="{{item.unit || ''}}" bindtap="onReturnConfirm">
+              bindtap="onReturnConfirm">
               确认回料
             </view>
           </view>
@@ -166,6 +168,8 @@
 <!-- ===== 底部操作栏 ===== -->
 <view class="footer-bar" wx:if="{{materialPurchases.length > 0 && !loading && !allProcurementCompleted}}">
   <view class="btn-secondary {{hasReturnConfirmed ? 'btn-disabled' : ''}}" hover-class="{{hasReturnConfirmed ? '' : 'footer-bar-hover'}}" bindtap="onReceiveAll">一键采购</view>
-  <view class="btn-submit {{(!hasInput || submitting || hasReturnConfirmed) ? 'btn-disabled' : ''}}"
+  <view class="btn-secondary {{(!hasInput || submitting || hasReturnConfirmed) ? 'btn-disabled' : ''}}"
     hover-class="{{(hasInput && !submitting && !hasReturnConfirmed) ? 'footer-bar-hover' : ''}}" bindtap="onSubmit">提交到货</view>
+  <view class="btn-submit {{hasReturnConfirmed ? 'btn-disabled' : ''}}"
+    hover-class="{{!hasReturnConfirmed ? 'footer-bar-hover' : ''}}" bindtap="onConfirmAllReturns">一键全部完成</view>
 </view>
