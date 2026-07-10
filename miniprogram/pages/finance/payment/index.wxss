@@ -153,8 +153,9 @@
 }
 
 .pay-btn {
-  background: var(--color-primary);
-  color: var(--color-text-white);
+  background: transparent;
+  color: var(--color-primary);
+  border: 1px solid var(--color-primary);
 }
 
 .confirm-btn {
@@ -212,7 +213,7 @@
 }
 
 .modal-close {
-  font-size: 20px;
+  font-size: 13px;
   color: var(--color-text-tertiary);
   padding: 4px;
 }
@@ -368,8 +369,9 @@
   text-align: center;
   height: var(--btn-height-sm);
   margin-top: var(--spacing-sm);
-  background: var(--color-primary);
-  color: var(--color-text-white);
+  background: transparent;
+  color: var(--color-primary);
+  border: 1px solid var(--color-primary);
   border-radius: var(--radius-sm);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);

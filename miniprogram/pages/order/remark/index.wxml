@@ -17,7 +17,7 @@
 
     <view class="action-bar">
       <view class="act-btn act-btn--photo" bindtap="onChooseImage">
-        <text>📷 拍照/选图</text>
+        <text><text class="line-icon icon-camera"></text> 拍照/选图</text>
       </view>
       <view class="act-btn act-btn--submit {{submitting ? 'act-btn--disabled' : ''}}" bindtap="onSubmitRemark">
         <text>{{submitting ? '提交中…' : '提交备注'}}</text>

@@ -64,7 +64,7 @@
 
   <!-- 空状态（区分加载失败） -->
   <view class="empty-state" wx:if="{{!loading && platforms.length === 0 && !loadError}}">
-    <text class="empty-icon">📊</text>
+    <text class="empty-icon icon-chart"></text>
     <text class="empty-text">暂无销售数据</text>
     <text class="empty-hint">所选时间段内未统计到销售数据</text>
   </view>

@@ -18,7 +18,7 @@
   box-shadow: var(--shadow-sm);
 }
 .feedback-entry-text { font-size: var(--font-size-md); color: var(--color-primary); font-weight: 500; }
-.feedback-entry-arrow { font-size: 24px; color: var(--color-text-secondary); }
+.feedback-entry-arrow { font-size: 14px; color: var(--color-text-secondary); }
 .feedback-entry-hover { opacity: 0.8; }
 
 
@@ -102,9 +102,10 @@
   align-items: center;
   gap: 4px;
   padding: 6px 10px;
-  background: var(--color-primary);
+  background: transparent;
+  border: 1px solid var(--color-primary);
   border-radius: var(--radius-md);
-  color: var(--color-text-white);
+  color: var(--color-primary);
 }
 
 .sort-btn-hover {
@@ -113,7 +114,7 @@
 
 .sort-text {
   font-size: var(--font-size-sm);
-  color: var(--color-text-white);
+  color: var(--color-primary);
   font-weight: 600;
 }
 

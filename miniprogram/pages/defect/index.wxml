@@ -35,7 +35,7 @@
     </view>
 
     <view wx:elif="{{list.length === 0}}" class="empty-state">
-      <text class="empty-icon">📋</text>
+      <text class="empty-icon"><text class="line-icon line-icon--lg icon-clipboard"></text></text>
       <text class="empty-text">暂无质检通知</text>
       <text class="empty-hint">质检不合格的菲号会出现在这里</text>
     </view>
@@ -48,7 +48,7 @@
             <view class="img-badge" wx:if="{{item.imageCount > 1}}">{{item.imageCount}}</view>
           </view>
           <view class="card-cover card-cover-empty" wx:else>
-            <text class="cover-placeholder">📷</text>
+            <text class="cover-placeholder"><text class="line-icon icon-camera"></text></text>
           </view>
           <view class="card-info">
             <view class="card-row-top">

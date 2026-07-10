@@ -132,17 +132,33 @@ Page({
   onGroupTap(e) {
     const group = e.currentTarget.dataset.group;
     if (!group) return;
+    // 从 items 兜底获取 patternProductionId（后端可能未在分组层返回）
+    const patternProductionId = group.patternProductionId
+      || (group.items && group.items[0] && group.items[0].patternProductionId)
+      || '';
+    const orderNo = group.orderNo
+      || (group.items && group.items[0] && group.items[0].orderNo)
+      || '';
+    const styleNo = group.styleNo || '';
     // P1-2 修复：样衣采购无 orderNo，按 patternProductionId 跳转
-    if (!group.orderNo && group.patternProductionId) {
+    if (!orderNo && patternProductionId) {
       safeNavigate({
-        url: `/pages/procurement/task-detail/index?patternProductionId=${encodeURIComponent(group.patternProductionId)}&sourceType=sample&styleNo=${encodeURIComponent(group.styleNo || '')}`,
-      }).catch(() => {});
+        url: `/pages/procurement/task-detail/index?patternProductionId=${encodeURIComponent(patternProductionId)}&sourceType=sample&styleNo=${encodeURIComponent(styleNo)}`,
+      }).catch(() => {
+        toast.error('跳转失败，请稍后重试');
+      });
       return;
     }
-    if (!group.orderNo) return;
+    if (!orderNo && !patternProductionId) {
+      toast.info('该任务缺少订单信息，无法查看详情');
+      return;
+    }
+    if (!orderNo) return;
     safeNavigate({
-      url: `/pages/procurement/task-detail/index?orderNo=${encodeURIComponent(group.orderNo)}&styleNo=${encodeURIComponent(group.styleNo || '')}`,
-    }).catch(() => {});
+      url: `/pages/procurement/task-detail/index?orderNo=${encodeURIComponent(orderNo)}&styleNo=${encodeURIComponent(styleNo)}`,
+    }).catch(() => {
+      toast.error('跳转失败，请稍后重试');
+    });
   },
 
   onCoverPreview(e) {
@@ -267,50 +283,50 @@ Page({
     });
 
     return Object.values(map).map(g => {
-      const userInfo = getUserInfo() || {};
-      const receiverId = String(userInfo.id || userInfo.userId || '').trim();
-      const receiverName = String(userInfo.name || userInfo.username || '').trim();
+        const userInfo = getUserInfo() || {};
+        const receiverId = String(userInfo.id || userInfo.userId || '').trim();
+        const receiverName = String(userInfo.name || userInfo.username || '').trim();
 
-      let canReceive = false;
-      let canOperate = false;
-      // 对齐裁剪明细页面：显示领取人（取该订单下本人领取的物料对应的领取人）
-      let groupReceiverName = '';
+        let canReceive = false;
+        let canOperate = false;
+        // 对齐裁剪明细页面：显示领取人（取该订单下本人领取的物料对应的领取人）
+        let groupReceiverName = '';
 
-      if (g.pendingCount > 0) {
-        canReceive = true;
-      } else if (g.receivedCount > 0) {
-        const myItems = g.items.filter(item => {
-          const rid = String(item.receiverId || '').trim();
-          const rname = String(item.receiverName || '').trim();
-          return rid === receiverId || rname === receiverName;
-        });
-        canOperate = myItems.length > 0;
-        if (myItems.length > 0) {
-          groupReceiverName = myItems[0].receiverName || receiverName || '';
+        if (g.pendingCount > 0) {
+          canReceive = true;
+        } else if (g.receivedCount > 0) {
+          const myItems = g.items.filter(item => {
+            const rid = String(item.receiverId || '').trim();
+            const rname = String(item.receiverName || '').trim();
+            return rid === receiverId || rname === receiverName;
+          });
+          canOperate = myItems.length > 0;
+          if (myItems.length > 0) {
+            groupReceiverName = myItems[0].receiverName || receiverName || '';
+          }
+        } else if (g.completedCount === g.totalCount && g.totalCount > 0) {
+          // 已完成的订单，显示首个领取人
+          const receivedItem = g.items.find(item => {
+            const rname = String(item.receiverName || '').trim();
+            return rname;
+          });
+          if (receivedItem) groupReceiverName = receivedItem.receiverName;
         }
-      } else if (g.completedCount === g.totalCount && g.totalCount > 0) {
-        // 已完成的订单，显示首个领取人
-        const receivedItem = g.items.find(item => {
-          const rname = String(item.receiverName || '').trim();
-          return rname;
-        });
-        if (receivedItem) groupReceiverName = receivedItem.receiverName;
-      }
 
-      // 样衣采购无 orderNo，需要唯一 key 和显示标识
-      const isSample = g.sourceType === 'sample' || (!g.orderNo && !!g.patternProductionId);
-      return {
-        ...g,
-        groupKey: g.orderNo || (g.patternProductionId ? `sample_${g.patternProductionId}` : `unknown_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`),
-        displayOrderNo: g.orderNo || (isSample ? '样衣采购' : '无订单号'),
-        arrivalRate: g.totalPurchased > 0 ? Math.round(g.totalArrived / g.totalPurchased * 100) : 0,
-        statusText: g.completedCount === g.totalCount ? '已完成' : (g.pendingCount === g.totalCount ? '待采购' : '采购中'),
-        statusColor: g.completedCount === g.totalCount ? 'success' : (g.pendingCount === g.totalCount ? 'warning' : 'processing'),
-        isSample,
-        canReceive,
-        canOperate,
-        receiverName: groupReceiverName, // 对齐裁剪明细页面：显示领取人
-      };
-    });
-  },
+        // 样衣采购无 orderNo，需要唯一 key 和显示标识
+        const isSample = g.sourceType === 'sample' || (!g.orderNo && !!g.patternProductionId);
+        return {
+          ...g,
+          groupKey: g.orderNo || (g.patternProductionId ? `sample_${g.patternProductionId}` : `unknown_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`),
+          displayOrderNo: g.orderNo || (isSample ? '样衣采购' : '无订单号'),
+          arrivalRate: g.totalPurchased > 0 ? Math.round(g.totalArrived / g.totalPurchased * 100) : 0,
+          statusText: g.completedCount === g.totalCount ? '已完成' : (g.pendingCount === g.totalCount ? '待采购' : '采购中'),
+          statusColor: g.completedCount === g.totalCount ? 'success' : (g.pendingCount === g.totalCount ? 'warning' : 'processing'),
+          isSample,
+          canReceive,
+          canOperate,
+          receiverName: groupReceiverName, // 对齐裁剪明细页面：显示领取人
+        };
+      });
+    },
 });

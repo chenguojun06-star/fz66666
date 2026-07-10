@@ -33,7 +33,7 @@
 
 .picker-box .arrow {
   color: var(--color-text-tertiary);
-  font-size: 14px;
+  font-size: var(--font-size-xl);
 }
 
 .filter-section {
@@ -48,29 +48,7 @@
   gap: 8px;
 }
 
-.search-box {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  background: var(--color-bg-gray);
-  border-radius: var(--radius-sm);
-}
-
-.search-icon {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-tertiary);
-  flex-shrink: 0;
-}
-
-.search-input {
-  font-size: var(--font-size-base);
-  color: var(--color-text-primary);
-  width: 100%;
-  padding: 4px 0;
-  min-height: 24px;
-}
+/* .search-box / .search-icon / .search-input 使用 app.wxss 全局样式 */
 
 .search-btn {
   padding: 8px 16px;
@@ -110,29 +88,30 @@
 
 .advance-card {
   background: var(--color-bg-card);
-  border-radius: var(--radius-md);
-  padding: 12px;
-  margin-bottom: 8px;
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-md);
+  margin-bottom: var(--spacing-sm);
   box-shadow: var(--shadow-sm);
+  border: 1px solid var(--color-border-light);
 }
 
 .card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px;
+  margin-bottom: var(--spacing-sm);
 }
 
 .advance-no {
   font-size: var(--font-size-sm);
   color: var(--color-text-secondary);
-  font-weight: 500;
+  font-weight: var(--font-weight-medium);
 }
 
 .card-body {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px 16px;
+  gap: 4px var(--spacing-lg);
 }
 
 .info-row {
@@ -152,17 +131,22 @@
 
 .info-value.amount {
   color: var(--color-primary);
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
 }
 
 .info-value.remaining {
   color: var(--color-danger);
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
+}
+
+.tag-sm {
+  font-size: var(--font-size-xs);
+  padding: 2px 8px;
 }
 
 .card-footer {
-  margin-top: 8px;
-  padding-top: 8px;
+  margin-top: var(--spacing-sm);
+  padding-top: var(--spacing-sm);
   border-top: 1px solid var(--color-border-light);
 }
 
@@ -178,9 +162,10 @@
   width: 50px;
   height: 50px;
   border-radius: 50%;
-  background: var(--color-primary);
-  color: #fff;
-  font-size: 28px;
+  background: transparent;
+  color: var(--color-primary);
+  border: 1px solid var(--color-primary);
+  font-size: var(--font-size-xl);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -291,7 +276,7 @@
 }
 
 .modal-close {
-  font-size: 20px;
+  font-size: var(--font-size-lg);
   color: var(--color-text-tertiary);
   padding: 4px;
 }

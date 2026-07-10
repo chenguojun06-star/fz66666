@@ -160,10 +160,30 @@ public class MaterialPurchaseQueryHelper {
         // 复用 queryPage 的筛选逻辑，但不分页
         applyStatusStatsFilters(wrapper, params);
 
+        // 排除已关闭/已完成/已取消/已归档/已报废/已删除订单关联的采购记录
+        excludeInvalidOrdersFromStats(wrapper, qTenantId);
+
         wrapper.last("LIMIT 5000");
         List<MaterialPurchase> all = materialPurchaseService.list(wrapper);
 
         return computeStatusStats(all);
+    }
+
+    /**
+     * 统计查询中排除无效订单（已删除/已关闭/已完成/已取消/已归档/已报废）关联的采购记录。
+     * 与 service/impl/MaterialPurchaseQueryHelper.excludeScrappedOrders 逻辑保持一致。
+     */
+    private void excludeInvalidOrdersFromStats(LambdaQueryWrapper<MaterialPurchase> wrapper, Long tenantId) {
+        List<String> invalidOrderIds = productionOrderService.list(
+                new LambdaQueryWrapper<ProductionOrder>()
+                        .select(ProductionOrder::getId)
+                        .eq(ProductionOrder::getTenantId, tenantId)
+                        .and(w -> w.eq(ProductionOrder::getDeleteFlag, 1)
+                                .or().in(ProductionOrder::getStatus, "scrapped", "closed", "completed", "cancelled", "archived")))
+                .stream().map(ProductionOrder::getId).filter(StringUtils::hasText).collect(Collectors.toList());
+        if (!invalidOrderIds.isEmpty()) {
+            wrapper.and(w -> w.isNull(MaterialPurchase::getOrderId).or().eq(MaterialPurchase::getOrderId, "").or().notIn(MaterialPurchase::getOrderId, invalidOrderIds));
+        }
     }
 
     private boolean shouldReturnEmptyForFactory(LambdaQueryWrapper<MaterialPurchase> wrapper,
@@ -176,7 +196,7 @@ public class MaterialPurchaseQueryHelper {
                         .select(ProductionOrder::getId)
                         .eq(ProductionOrder::getTenantId, qTenantId)
                         .eq(ProductionOrder::getFactoryId, qFactoryId)
-                        .ne(ProductionOrder::getStatus, "scrapped")
+                        .notIn(ProductionOrder::getStatus, "scrapped", "closed", "completed", "cancelled", "archived")
                         .and(w -> w.isNull(ProductionOrder::getDeleteFlag).or().eq(ProductionOrder::getDeleteFlag, 0))
         ).stream().map(ProductionOrder::getId).collect(Collectors.toList());
         if (factoryOrderIds.isEmpty()) {

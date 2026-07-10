@@ -42,15 +42,16 @@
 /* ============ 4 摘要卡片 ============ */
 .stats-row {
   display: flex;
-  gap: 4px;
-  padding: 0 0 var(--spacing-xs);
+  gap: 8px;
+  padding: 0 0 12px;
 }
 .stat-card {
   flex: 1;
   text-align: center;
-  padding: var(--spacing-xs) 2px;
-  border-radius: var(--radius-md);
+  padding: 12px 4px;
+  border-radius: 12px;
   background: var(--color-bg-card);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.03);
 }
 .stat-val {
   display: block;
@@ -83,29 +84,6 @@
 .skel-line--short { width: 60%; height: 20px; margin-bottom: 6px; }
 .skel-line--long  { width: 70%; height: 10px; }
 
-/* ============ 搜索栏 ============ */
-.search-bar { padding: 0 0 var(--spacing-xs); }
-.search-box {
-  display: flex;
-  align-items: center;
-  background: var(--color-bg-card);
-  border-radius: var(--radius-full);
-  padding: 9px 14px;
-}
-.search-emoji { font-size: var(--font-size-md); margin-right: 6px; }
-.search-input {
-  flex: 1;
-  font-size: var(--font-size-md);
-  color: var(--color-text-primary);
-  height: var(--btn-height-xs);
-  padding: 0 4px;
-}
-.search-clear {
-  font-size: var(--font-size-lg);
-  color: var(--color-text-tertiary);
-  padding: 0 4px;
-}
-
 .filter-scroll {
   white-space: nowrap;
   padding: 0 0 var(--spacing-xs);
@@ -116,10 +94,11 @@
   flex-direction: column;
   align-items: center;
   padding: 7px 14px;
-  border-radius: var(--radius-md);
+  border-radius: 12px;
   background: var(--color-bg-card);
-  margin-right: var(--spacing-sm);
+  margin-right: 8px;
   min-width: 52px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.03);
 }
 .filter-pill--on {
   background: var(--color-primary);
@@ -161,14 +140,13 @@
 /* ============ 订单卡片 ============ */
 .order-card {
   background: var(--color-bg-card);
-  border-radius: var(--radius-lg);
-  margin-bottom: var(--spacing-md);
+  border-radius: 16px;
+  margin-bottom: 12px;
   overflow: hidden;
-  border: 1px solid var(--color-border-light);
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.03);
 }
 .order-card--overdue {
-  border-left: 1px solid var(--color-danger);
+  box-shadow: 0 2px 8px rgba(255, 77, 79, 0.08), 0 1px 2px rgba(255, 77, 79, 0.06);
 }
 
 /* — 主行：封面 + 信息 — */
@@ -264,7 +242,7 @@
   flex-shrink: 0;
 }
 .arrow-icon {
-  font-size: 20px;
+  font-size: 14px;
   color: var(--color-text-tertiary);
   transition: transform 0.2s;
   font-weight: 300;
@@ -277,25 +255,46 @@
 /* — 数量行（交期下方） — */
 .info-qty-row {
   display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding-top: 3px;
+}
+.iq-main {
+  display: flex;
   align-items: baseline;
   gap: 2px;
-  padding-top: 2px;
 }
 .iq-num {
   font-size: var(--font-size-md);
   font-weight: var(--font-weight-semibold);
   color: var(--color-text-primary);
 }
+.iq-unit {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+}
+.iq-sub {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
 .iq-num--done {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
   color: var(--color-success);
 }
 .iq-num--remain {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
   color: var(--color-text-secondary);
 }
 .iq-lbl {
   font-size: var(--font-size-xs);
   color: var(--color-text-tertiary);
-  margin-right: 8px;
+}
+.iq-divider {
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-xs);
 }
 
 /* — 进度条（交期下方） — */
@@ -475,23 +474,23 @@
   color: var(--color-primary);
 }
 
-/* 快捷操作 */
+/* 快捷操作 - 填充风格按钮（与外发工厂页面统一） */
 .expand-actions {
   display: flex;
-  gap: 6px;
-  padding-top: var(--spacing-md);
-  border-top: 1px solid var(--color-border-light);
-  margin-top: 4px;
+  gap: var(--spacing-md);
+  padding-top: var(--spacing-lg);
+  margin-top: 2px;
   flex-wrap: wrap;
 }
+.card-action-btn,
 .act-btn {
   font-size: var(--font-size-xs);
-  padding: 5px 12px;
-  border-radius: var(--radius-xs);
+  padding: 3px var(--spacing-md);
+  border-radius: var(--radius-sm);
   color: var(--color-text-secondary);
-  background: var(--color-bg-hover);
-  line-height: 18px;
-  min-height: auto;
+  background: var(--color-bg-gray);
+  border: none;
+  line-height: 1.4;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -499,7 +498,7 @@
 }
 .act-btn--primary {
   color: var(--color-primary);
-  background: var(--color-primary-bg);
+  background: var(--color-info-bg);
 }
 .act-btn--warn {
   color: var(--color-warning);
@@ -508,12 +507,11 @@
 .act-btn--detail {
   color: #7c5cfc;
   background: rgba(124, 92, 252, 0.1);
-  font-weight: var(--font-weight-semibold);
+  font-weight: 600;
 }
 .act-btn--remark {
   color: var(--color-primary);
   background: var(--color-primary-bg);
-  border-color: transparent;
 }
 
 /* ============ 加载 / 空状态 ============ */
@@ -533,7 +531,7 @@
   padding: 60px 0;
 }
 .empty-icon {
-  font-size: 40px;
+  font-size: 16px;
   margin-bottom: var(--spacing-sm);
 }
 .empty-text {

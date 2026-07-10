@@ -16,7 +16,7 @@
   <block wx:if="{{!loading}}">
     <!-- 空订单引导 -->
     <view class="empty-guide" wx:if="{{totalProcessCount === 0 && editable && !addStageId}}">
-      <view class="eg-icon">📋</view>
+      <view class="eg-icon"><text class="line-icon line-icon--lg icon-clipboard"></text></view>
       <text class="eg-title">该订单暂无工序</text>
       <text class="eg-desc">点击下方"添加"开始配置生产工序</text>
     </view>

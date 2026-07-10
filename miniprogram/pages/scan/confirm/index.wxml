@@ -24,7 +24,7 @@
   <!-- ===== AI智能提示气泡（所有阶段通用，可关闭） ===== -->
   <view wx:if="{{aiTipVisible && aiTipData && aiTipData.aiTip}}" class="ai-bubble {{aiTipData.priority === 'high' ? 'ai-bubble-high' : 'ai-bubble-normal'}}">
     <view class="ai-bubble-header">
-      <text class="ai-bubble-icon">{{aiTipData.priority === 'high' ? '🔴' : '💡'}}</text>
+      <text class="ai-bubble-icon"><text class="line-icon line-icon--lg {{aiTipData.priority === 'high' ? 'icon-danger' : 'icon-lightbulb'}}"></text></text>
       <text class="ai-bubble-stage" wx:if="{{aiTipData.stage}}">{{aiTipData.stage}}</text>
       <view class="ai-bubble-close" bindtap="dismissAiTip">✕</view>
     </view>
@@ -196,7 +196,7 @@
     </view>
 
     <view wx:if="{{isCutting}}" class="tip-card">
-      <text class="tip-icon">📋</text>
+      <text class="tip-icon"><text class="line-icon icon-clipboard"></text></text>
       <text class="tip-text">领取后请到「小云帮助中心」任务列表中点击任务进行分扎，生成菲号</text>
     </view>
   </block>

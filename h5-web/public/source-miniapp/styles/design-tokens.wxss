@@ -39,12 +39,13 @@ page {
   --color-link: #576b95;
 
   /* ========== 背景色 ========== */
-  --color-bg-page: #ededed;
+  --color-bg-page: #f4f5f7;
   --color-bg-card: #ffffff;
   --color-bg-gray: #f7f7f7;
   --color-bg-light: #fafbfc;
   --color-bg-hover: rgba(0, 0, 0, 0.03);
   --color-bg-active: #ececec;
+  --color-bg-section: #f0f2f5;
 
   /* ========== 文字色 ========== */
   --color-text-primary: rgba(0, 0, 0, 0.9);
@@ -80,24 +81,24 @@ page {
   --spacing-xxl: 24px;
 
   /* ========== 阴影系统 ========== */
-  --shadow-sm: 0 0 1px rgba(0, 0, 0, 0.04);
-  --shadow-md: 0 0 1px rgba(0, 0, 0, 0.04), 0 2px 4px rgba(0, 0, 0, 0.06);
-  --shadow-lg: 0 0 1px rgba(0, 0, 0, 0.04), 0 4px 8px rgba(0, 0, 0, 0.08);
-  --shadow-xl: 0 0 1px rgba(0, 0, 0, 0.04), 0 8px 16px rgba(0, 0, 0, 0.1);
-  --shadow-modal: 0 16px 48px rgba(0, 0, 0, 0.12);
+  --shadow-sm: 0 0 1px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
+  --shadow-md: 0 0 1px rgba(0, 0, 0, 0.04), 0 2px 4px rgba(0, 0, 0, 0.04), 0 4px 8px rgba(0, 0, 0, 0.02);
+  --shadow-lg: 0 0 1px rgba(0, 0, 0, 0.04), 0 4px 8px rgba(0, 0, 0, 0.06), 0 8px 16px rgba(0, 0, 0, 0.04);
+  --shadow-xl: 0 0 1px rgba(0, 0, 0, 0.04), 0 8px 16px rgba(0, 0, 0, 0.08), 0 16px 32px rgba(0, 0, 0, 0.06);
+  --shadow-modal: 0 16px 48px rgba(0, 0, 0, 0.12), 0 0 1px rgba(0, 0, 0, 0.04);
 
-  /* ========== 字体系统 ========== */
+  /* ========== 字体系统（主体统一13px，用颜色区分重点） ========== */
   --font-size-xs: 11px;
   --font-size-sm: 12px;
-  --font-size-md: 14px;
-  --font-size-base: 15px;
-  --font-size-lg: 16px;
-  --font-size-xl: 17px;
-  --font-size-2xl: 20px;
-  --font-size-3xl: 24px;
-  --font-size-4xl: 32px;
-  --font-size-5xl: 40px;
-  --font-size-6xl: 48px;
+  --font-size-md: 13px;
+  --font-size-base: 13px;
+  --font-size-lg: 14px;
+  --font-size-xl: 15px;
+  --font-size-2xl: 16px;
+  --font-size-3xl: 17px;
+  --font-size-4xl: 19px;
+  --font-size-5xl: 21px;
+  --font-size-6xl: 23px;
 
   --font-weight-normal: 400;
   --font-weight-medium: 500;
@@ -110,22 +111,22 @@ page {
   --line-height-relaxed: 1.6;
 
   /* ========== 输入框系统 ========== */
-  --input-height: 44px;
-  --input-height-sm: 36px;
-  --input-height-xs: 28px;
+  --input-height: 32px;
+  --input-height-sm: 28px;
+  --input-height-xs: 24px;
   --input-bg: var(--color-bg-card);
   --input-border: var(--color-border);
   --input-focus-border: var(--color-primary);
   --input-placeholder: var(--color-text-placeholder);
   --input-radius: var(--radius-sm);
 
-  /* ========== 按钮系统 ========== */
-  --btn-height-lg: 48px;
-  --btn-height-md: 44px;
-  --btn-height-sm: 36px;
-  --btn-height-xs: 28px;
-  --btn-font-size: 16px;
-  --btn-radius: 8px;
+  /* ========== 按钮系统（紧凑 · 主28/次24/底部32） ========== */
+  --btn-height-lg: 32px;
+  --btn-height-md: 28px;
+  --btn-height-sm: 24px;
+  --btn-height-xs: 22px;
+  --btn-font-size: 13px;
+  --btn-radius: 6px;
 
   /* ========== 层级系统 ========== */
   --z-base: 1;

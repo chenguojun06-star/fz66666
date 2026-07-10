@@ -3,10 +3,14 @@
 <view class="page">
   <!-- 搜索框 -->
   <view class="search-bar">
-    <view class="line-icon line-icon--sm icon-search search-icon"></view>
-    <input class="search-input" placeholder="输入订单号/买家名后按搜索" value="{{keyword}}"
-           confirm-type="search" bindinput="onSearchInput" bindconfirm="onSearchConfirm" />
-    <text wx:if="{{keyword}}" class="search-clear" bindtap="onClearKeyword">✕</text>
+    <view class="search-box">
+      <view class="line-icon line-icon--sm icon-search search-icon"></view>
+      <input class="search-input" placeholder="输入订单号/买家名后按搜索" value="{{keyword}}"
+             confirm-type="search" bindinput="onSearchInput" bindconfirm="onSearchConfirm" />
+      <view wx:if="{{keyword}}" class="search-clear" bindtap="onClearKeyword">
+        <view class="icon-close"></view>
+      </view>
+    </view>
   </view>
 
   <!-- 平台筛选 Tab（横向滚动） -->
@@ -97,7 +101,7 @@
 
   <!-- 空状态（区分加载失败） -->
   <view class="empty-state" wx:if="{{!loading && list.length === 0 && !loadError}}">
-    <text class="empty-icon">📦</text>
+    <text class="empty-icon icon-order"></text>
     <text class="empty-text">暂无订单</text>
     <text class="empty-hint">切换平台或状态试试</text>
   </view>

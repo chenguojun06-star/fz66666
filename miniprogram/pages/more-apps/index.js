@@ -4,11 +4,11 @@ const api = require('../../utils/api');
 
 // 所有应用配置
 const ALL_APPS = [
-  { group: '📝 开发下单', items: [
+  { group: '开发下单', items: [
     { id: 'orderCreate', name: '下单管理', iconClass: 'icon-menu-order', circleClass: 'menu-icon-circle--blue', route: '/pages/order/create/index' },
     { id: 'smartOps', name: '运营看板', iconClass: 'icon-menu-ai', circleClass: 'menu-icon-circle--purple', route: '/pages/smart-ops/index' },
   ]},
-  { group: '🏭 生产模块', items: [
+  { group: '生产模块', items: [
     { id: 'dashboard', name: '生产管理', iconClass: 'icon-menu-production', circleClass: 'menu-icon-circle--teal', route: '/pages/dashboard/index' },
     { id: 'processEdit', name: '生产进度', iconClass: 'icon-menu-production', circleClass: 'menu-icon-circle--blue', route: '/pages/dashboard/process-edit/index' },
     { id: 'sampleDev', name: '样衣开发', iconClass: 'icon-menu-garment', circleClass: 'menu-icon-circle--teal', route: '/pages/sample-development/index/index' },
@@ -18,42 +18,42 @@ const ALL_APPS = [
     { id: 'factoryShipment', name: '外发工厂', iconClass: 'icon-menu-shipment', circleClass: 'menu-icon-circle--cyan', route: '/pages/factory/shipment/index' },
     { id: 'bundleSplit', name: '菲号单价', iconClass: 'icon-menu-price', circleClass: 'menu-icon-circle--orange', route: '/pages/work/bundle-split/index' },
   ]},
-  { group: '📷 扫码管理', items: [
+  { group: '扫码管理', items: [
     { id: 'scan', name: '生产扫码', iconClass: 'icon-menu-scan', circleClass: 'menu-icon-circle--green', route: '/pages/scan/index' },
     { id: 'history', name: '扫码历史', iconClass: 'icon-menu-history', circleClass: 'menu-icon-circle--indigo', route: '/pages/scan/history/index' },
     { id: 'patternScan', name: '样衣扫码', iconClass: 'icon-menu-garment', circleClass: 'menu-icon-circle--teal', route: '/pages/scan/pattern/index' },
     { id: 'scanQuality', name: '质检扫码', iconClass: 'icon-menu-quality-scan', circleClass: 'menu-icon-circle--amber', route: '/pages/scan/quality/index' },
   ]},
-  { group: '🔍 质检管理', items: [
+  { group: '质检管理', items: [
     { id: 'production', name: '质检通知', iconClass: 'icon-menu-quality-notice', circleClass: 'menu-icon-circle--amber', route: '/pages/defect/index' },
     { id: 'qualityDetail', name: '质检明细', iconClass: 'icon-menu-quality-detail', circleClass: 'menu-icon-circle--green', route: '/pages/quality-detail/index' },
   ]},
-  { group: '📦 库存管理', items: [
+  { group: '库存管理', items: [
     { id: 'materialScan', name: '物料扫码', iconClass: 'icon-menu-warehouse', circleClass: 'menu-icon-circle--cyan', route: '/pages/warehouse/material/scan/index' },
     { id: 'sampleStock', name: '样衣仓库', iconClass: 'icon-menu-garment', circleClass: 'menu-icon-circle--indigo', route: '/pages/warehouse/sample/scan-action/index' },
   ]},
-  { group: '💰 财务管理', items: [
+  { group: '财务管理', items: [
     { id: 'wagePayment', name: '工资发放', iconClass: 'icon-menu-wage', circleClass: 'menu-icon-circle--orange', route: '/pages/finance/payment/index' },
     { id: 'payroll', name: '工资单', iconClass: 'icon-menu-wage', circleClass: 'menu-icon-circle--teal', route: '/pages/payroll/payroll' },
     { id: 'payrollFeedback', name: '工资反馈', iconClass: 'icon-menu-payroll-feedback', circleClass: 'menu-icon-circle--blue', route: '/pages/payroll/feedback/index' },
     { id: 'advance', name: '预付款', iconClass: 'icon-menu-advance', circleClass: 'menu-icon-circle--green', route: '/pages/advance/list/index' },
   ]},
-  { group: '📊 销售管理', items: [
+  { group: '销售管理', items: [
     { id: 'salesData', name: '销售数据', iconClass: 'icon-menu-ai', circleClass: 'menu-icon-circle--rose', route: '/pages/sales/overview/index' },
     { id: 'platformOrder', name: '平台订单', iconClass: 'icon-menu-order', circleClass: 'menu-icon-circle--blue', route: '/pages/sales/order-list/index' },
   ]},
-  { group: '👥 人员管理', items: [
+  { group: '人员管理', items: [
     { id: 'userApproval', name: '用户审批', iconClass: 'icon-menu-user', circleClass: 'menu-icon-circle--purple', route: '/pages/admin/user-approval/index' },
     { id: 'invite', name: '邀请成员', iconClass: 'icon-menu-invite', circleClass: 'menu-icon-circle--rose', route: '/pages/admin/misc/invite/index' },
     { id: 'feedback', name: '意见反馈', iconClass: 'icon-menu-feedback', circleClass: 'menu-icon-circle--amber', route: '/pages/admin/misc/feedback/index' },
   ]},
-  { group: '⚙️ 系统设置', items: [
+  { group: '系统设置', items: [
     { id: 'changePassword', name: '修改密码', iconClass: 'icon-menu-password', circleClass: 'menu-icon-circle--indigo', route: '/pages/admin/misc/change-password/index' },
   ]},
 ];
 
 // 外发工厂不可见的应用分组（与 home/index.js 保持一致）
-const FACTORY_HIDDEN_GROUPS = ['📝 开发下单', '📊 销售管理'];
+const FACTORY_HIDDEN_GROUPS = ['开发下单', '销售管理'];
 
 // 根据角色过滤应用列表
 function filterAppsByRole(apps) {

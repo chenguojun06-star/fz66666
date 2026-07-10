@@ -68,13 +68,20 @@ page {
 }
 
 .logout-btn {
-  padding: var(--spacing-xs) var(--spacing-md);
-  background: var(--color-danger-bg);
-  border-radius: var(--radius-md);
+  padding: 8px 14px;
+  min-height: 32px;
+  background: rgba(239, 68, 68, 0.08);
+  border-radius: var(--radius-full);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .logout-btn-hover {
-  background: var(--color-danger-border);
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.3);
 }
 
 .logout-text {
@@ -129,15 +136,15 @@ page {
 }
 
 .menu-icon-wrap {
-  width: 34px;
-  height: 34px;
-  border-radius: var(--radius-lg);
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.98);
+  background: linear-gradient(135deg, var(--color-primary-bg), rgba(255, 255, 255, 0.98));
   border: 1px solid var(--color-primary-border);
-  box-shadow: 0 4px 10px rgba(var(--color-primary-rgb), 0.08);
+  box-shadow: 0 2px 8px rgba(var(--color-primary-rgb), 0.1);
   margin-right: var(--spacing-md);
   flex-shrink: 0;
 }
@@ -146,6 +153,7 @@ page {
   flex: 1;
   font-size: var(--font-size-base);
   color: var(--color-text-primary);
+  font-weight: var(--font-weight-medium);
 }
 
 .menu-value {
@@ -158,6 +166,7 @@ page {
   font-size: var(--font-size-lg);
   color: var(--color-text-disabled);
   flex-shrink: 0;
+  font-weight: 300;
 }
 
 .mm-overlay {
@@ -332,8 +341,9 @@ page {
 }
 
 .mm-btn-save {
-  background: var(--color-primary);
-  color: var(--color-text-white);
+  background: transparent;
+  color: var(--color-primary);
+  border: 1px solid var(--color-primary);
 }
 
 .mm-btn-disabled {

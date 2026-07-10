@@ -5,17 +5,17 @@
   <block wx:if="{{showOrderList}}">
     <view class="order-list-wrap">
       <!-- 搜索框 -->
-      <view class="order-search-bar">
-        <input
-          class="order-search-input"
-          placeholder="搜索订单号 / 款号"
-          value="{{orderSearchKeyword}}"
-          bindinput="onOrderSearchInput"
-          confirm-type="search"
-          bindconfirm="onOrderSearchConfirm"
-        />
-        <view class="order-search-icon">
-          <text class="icon-search">S</text>
+      <view class="search-bar">
+        <view class="search-box">
+          <view class="search-icon"><text class="icon-search">S</text></view>
+          <input
+            class="search-input"
+            placeholder="搜索订单号 / 款号"
+            value="{{orderSearchKeyword}}"
+            bindinput="onOrderSearchInput"
+            confirm-type="search"
+            bindconfirm="onOrderSearchConfirm"
+          />
         </view>
       </view>
 
@@ -507,7 +507,7 @@
     <!-- ⑤ 底部操作栏（菲号明细模式 → 打印 + 转单） -->
     <view class="footer-bar footer-bar--dual" wx:elif="{{orderNo && activeTab == 'detail' && !showCuttingForm}}">
       <view class="action-btn" bindtap="onPrintBundleLabels" wx:if="{{hasBundles}}">
-        <text class="ab-icon">🖨</text>
+        <text class="ab-icon"><text class="line-icon icon-print"></text></text>
         <text class="ab-label">打印菲号</text>
       </view>
       <view class="action-btn" bindtap="onTransfer">

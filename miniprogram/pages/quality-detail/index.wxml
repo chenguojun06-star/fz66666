@@ -6,14 +6,16 @@
   <view class="top-card">
     <view class="top-left">
       <view class="cover-placeholder">
-        <text class="cover-icon">✓</text>
+        <view class="cover-icon icon-quality"></view>
         <text class="cover-label">质检</text>
       </view>
     </view>
     <view class="top-right">
       <view class="top-title">
         <text class="order-no">{{detail.orderNo || '-'}}</text>
-        <text class="status-tag tag {{detail.qualityStatus === 'unqualified' ? 'tag-error' : 'tag-success'}}">{{detail.qualityStatusText || '-'}}</text>
+        <view class="status-tag" style="background: {{detail._statusColor}}15; color: {{detail._statusColor}};">
+          {{detail._statusText}}
+        </view>
       </view>
       <view class="info-row" wx:if="{{detail.warehousingNo}}">
         <text class="info-label">入库号</text>
@@ -31,17 +33,17 @@
         <text class="info-label">生产方</text>
         <text class="info-value">{{detail.factoryName || '-'}}</text>
       </view>
-      <view class="info-row">
+      <view class="info-row" wx:if="{{detail.bundleNo}}">
         <text class="info-label">菲号</text>
-        <text class="info-value">{{detail.bundleNo || '-'}}</text>
+        <text class="info-value">{{detail.bundleNo}}</text>
       </view>
-      <view class="info-row">
+      <view class="info-row" wx:if="{{detail.color}}">
         <text class="info-label">颜色</text>
-        <text class="info-value">{{detail.color || '-'}}</text>
+        <text class="info-value">{{detail.color}}</text>
       </view>
-      <view class="info-row">
+      <view class="info-row" wx:if="{{detail.size}}">
         <text class="info-label">尺码</text>
-        <text class="info-value">{{detail.size || '-'}}</text>
+        <text class="info-value">{{detail.size}}</text>
       </view>
     </view>
   </view>

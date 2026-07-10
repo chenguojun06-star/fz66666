@@ -71,7 +71,7 @@
       </view>
     </view>
     <view class="scan-mode-tip">
-      <text>说明：系统会按订单工序模板与历史扫码自动识别当前应执行工序，仅允许流转到未完成工序。</text>
+      <text>扫码后自动匹配工序，按订单流转顺序执行</text>
     </view>
   </view>
 

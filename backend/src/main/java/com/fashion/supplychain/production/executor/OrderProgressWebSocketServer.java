@@ -65,7 +65,14 @@ public class OrderProgressWebSocketServer {
 
     @OnError
     public void onError(Session session, Throwable error, @PathParam("tenantId") String tenantIdStr) {
-        log.error("[WS] 错误: tenantId={}, sessionId={}, error={}", tenantIdStr, session.getId(), error.getMessage());
+        // WebSocket 连接断开时 error.getMessage() 可能为 null（正常关闭/心跳超时）
+        // 降级为 warn，避免日志噪音；仅在有真实异常消息时才记 error
+        String errMsg = (error != null && error.getMessage() != null) ? error.getMessage() : "连接关闭（无异常消息）";
+        if (error != null && error.getMessage() != null) {
+            log.error("[WS] 错误: tenantId={}, sessionId={}, error={}", tenantIdStr, session.getId(), errMsg);
+        } else {
+            log.warn("[WS] 连接断开: tenantId={}, sessionId={}", tenantIdStr, session.getId());
+        }
     }
 
     @OnMessage

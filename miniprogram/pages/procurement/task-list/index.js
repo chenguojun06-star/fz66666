@@ -132,17 +132,33 @@ Page({
   onGroupTap(e) {
     const group = e.currentTarget.dataset.group;
     if (!group) return;
+    // 从 items 兜底获取 patternProductionId（后端可能未在分组层返回）
+    const patternProductionId = group.patternProductionId
+      || (group.items && group.items[0] && group.items[0].patternProductionId)
+      || '';
+    const orderNo = group.orderNo
+      || (group.items && group.items[0] && group.items[0].orderNo)
+      || '';
+    const styleNo = group.styleNo || '';
     // P1-2 修复：样衣采购无 orderNo，按 patternProductionId 跳转
-    if (!group.orderNo && group.patternProductionId) {
+    if (!orderNo && patternProductionId) {
       safeNavigate({
-        url: `/pages/procurement/task-detail/index?patternProductionId=${encodeURIComponent(group.patternProductionId)}&sourceType=sample&styleNo=${encodeURIComponent(group.styleNo || '')}`,
-      }).catch(() => {});
+        url: `/pages/procurement/task-detail/index?patternProductionId=${encodeURIComponent(patternProductionId)}&sourceType=sample&styleNo=${encodeURIComponent(styleNo)}`,
+      }).catch(() => {
+        toast.error('跳转失败，请稍后重试');
+      });
       return;
     }
-    if (!group.orderNo) return;
+    if (!orderNo && !patternProductionId) {
+      toast.info('该任务缺少订单信息，无法查看详情');
+      return;
+    }
+    if (!orderNo) return;
     safeNavigate({
-      url: `/pages/procurement/task-detail/index?orderNo=${encodeURIComponent(group.orderNo)}&styleNo=${encodeURIComponent(group.styleNo || '')}`,
-    }).catch(() => {});
+      url: `/pages/procurement/task-detail/index?orderNo=${encodeURIComponent(orderNo)}&styleNo=${encodeURIComponent(styleNo)}`,
+    }).catch(() => {
+      toast.error('跳转失败，请稍后重试');
+    });
   },
 
   onCoverPreview(e) {

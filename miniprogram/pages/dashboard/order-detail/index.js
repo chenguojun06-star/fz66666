@@ -20,8 +20,7 @@ const { toast, safeNavigate } = require('../../../utils/uiHelper');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 const { parseProductionOrderLines, sortSizeNames } = require('../../../utils/orderParser');
 const { getUserInfo } = require('../../../utils/storage');
-const eventBus = require('../../../utils/eventBus');
-const { Events } = eventBus;
+const { eventBus, Events } = require('../../../utils/eventBus');
 
 /* ========== 业务类型 / 物料类型 / 计价方式 中文化 ========== */
 var BIZ_TYPE_LABELS = { FOB: 'FOB 离岸价', ODM: 'ODM 原厂设计', OEM: 'OEM 代工生产', CMT: 'CMT 来料加工' };
@@ -215,6 +214,11 @@ Page({
 
     // 下单矩阵（颜色×尺码×数量）
     matrixModel: { sizes: [], rows: [], total: 0, hasData: false, flatList: [] },
+
+    // 图片列表（封面图 + 款式附件 + 订单备注图）
+    imageList: [],
+    currentImageIndex: 0,
+    hasMultipleImages: false,
   },
 
   onLoad: function (options) {
@@ -263,6 +267,11 @@ Page({
     }, 8000);
   },
 
+  onRetryLoad: function () {
+    this.setData({ loading: true });
+    this._loadFlow();
+  },
+
   /* ======== 加载完整流程数据 ======== */
   _loadFlow: function () {
     const that = this;
@@ -300,6 +309,34 @@ Page({
       // 封面图
       let coverUrl = order.styleCover || order.coverImage || order.styleImage || '';
       if (coverUrl) coverUrl = getAuthedImageUrl(coverUrl);
+
+      // 构建图片列表（封面图 + 款式附件图 + 订单备注图）
+      const imageList = [];
+      if (coverUrl) {
+        imageList.push({ url: coverUrl, type: 'cover', label: '封面' });
+      }
+      // 款式附件图（从 styleImages 或 attachments 解析）
+      const styleAttachments = order.styleImages || order.styleAttachmentList || order.attachments || [];
+      if (Array.isArray(styleAttachments)) {
+        styleAttachments.forEach(function (att) {
+          const url = att.fileUrl || att.imageUrl || att.url || att;
+          if (url && typeof url === 'string') {
+            const fullUrl = url.startsWith('http') ? url : getAuthedImageUrl(url);
+            imageList.push({ url: fullUrl, type: 'style', label: '款式' });
+          }
+        });
+      }
+      // 订单备注图
+      const orderImages = order.orderImages || order.remarkImages || [];
+      if (Array.isArray(orderImages)) {
+        orderImages.forEach(function (img) {
+          const url = img.imageUrl || img.fileUrl || img.url || img;
+          if (url && typeof url === 'string') {
+            const fullUrl = url.startsWith('http') ? url : getAuthedImageUrl(url);
+            imageList.push({ url: fullUrl, type: 'order', label: '备注', id: img.id });
+          }
+        });
+      }
 
       // 交期信息
       const rawDelivery = order.plannedEndDate || order.expectedShipDate || order.deliveryDate || '';
@@ -518,6 +555,9 @@ Page({
         bundleSummary: bundleSummary,
         matrixModel: matrixModel,
         quotation: quotation,
+        imageList: imageList,
+        currentImageIndex: 0,
+        hasMultipleImages: imageList.length > 1,
         loading: false,
       });
 
@@ -543,10 +583,14 @@ Page({
       ? production.getOrderFlow(orderId).then(function (res) {
           const data = (res && res.data) || {};
           const order = resolveOrderFromFlow(data);
-          if (!order) throw new Error('flow-no-order');
+          if (!order) {
+            // 数据为空时静默处理，不抛错误
+            that.setData({ loading: false });
+            return;
+          }
           render(order, data);
         })
-      : Promise.reject(new Error('no-orderId'));
+      : Promise.resolve();
 
     flowPromise.then(function () {
       clearTimeout(timeoutTimer);
@@ -554,7 +598,7 @@ Page({
     // 返回 Promise，供 onPullDownRefresh 用 .finally 停止下拉动画
     return flowPromise.catch(function (flowErr) {
       clearTimeout(timeoutTimer);
-      if (flowErr && flowErr.message && flowErr.message !== 'flow-no-order' && flowErr.message !== 'no-orderId') {
+      if (flowErr && flowErr.message) {
         console.warn('[order-detail] flow 接口异常:', flowErr.message);
       }
       // 如果用户已经在 timeout 分支关闭了 loading，这里就不再弹 toast
@@ -592,11 +636,32 @@ Page({
     });
   },
 
-  /* ======== 封面预览 ======== */
+  /* ======== 图片轮播控制 ======== */
+  onImageChange: function (e) {
+    const idx = e && e.detail && typeof e.detail.current === 'number' ? e.detail.current : 0;
+    this.setData({ currentImageIndex: idx });
+  },
+  goPrevImage: function () {
+    const idx = this.data.currentImageIndex;
+    if (idx <= 0) return;
+    this.setData({ currentImageIndex: idx - 1 });
+  },
+  goNextImage: function () {
+    const idx = this.data.currentImageIndex;
+    const list = this.data.imageList;
+    if (!list || idx >= list.length - 1) return;
+    this.setData({ currentImageIndex: idx + 1 });
+  },
+  onPreviewImage: function () {
+    const list = this.data.imageList;
+    const idx = this.data.currentImageIndex;
+    if (!list || !list.length) return;
+    const urls = list.map(function (item) { return item.url; });
+    wx.previewImage({ current: urls[idx], urls: urls });
+  },
+  /* ======== 封面预览（兼容旧逻辑） ======== */
   onPreviewCover: function () {
-    const url = this.data.styleCoverUrl;
-    if (!url) return;
-    wx.previewImage({ current: url, urls: [url] });
+    this.onPreviewImage();
   },
 
   /* ======== 复制订单号 ======== */

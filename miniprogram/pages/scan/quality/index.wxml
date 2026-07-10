@@ -18,7 +18,7 @@
 
   <!-- AI 建议 -->
   <view wx:if="{{aiSuggestion}}" class="insight-card">
-    <text class="insight-icon">🤖</text>
+    <text class="insight-icon"><text class="line-icon line-icon--lg icon-ai"></text></text>
     <view class="insight-body">
       <text wx:if="{{historicalDefectRate}}" class="insight-text">历史不良率 {{historicalDefectRate}}</text>
       <text wx:if="{{aiSuggestion.urgentTip}}" class="insight-text insight-urgent">⚠️ {{aiSuggestion.urgentTip}}</text>
@@ -90,7 +90,7 @@
           <view class="photo-del" data-index="{{index}}" catchtap="onDeleteImage">×</view>
         </view>
         <view wx:if="{{images.length < 5}}" class="photo-add" bindtap="onUploadImage">
-          <text class="add-icon">📷</text>
+          <text class="add-icon"><text class="line-icon icon-camera"></text></text>
           <text class="add-text">拍照/选图</text>
         </view>
       </view>
@@ -99,7 +99,7 @@
     <!-- AI 图片分析结果 -->
     <view wx:if="{{images.length > 0 && (aiImageAnalyzing || aiImageResult || aiImageError)}}" class="ai-image-result">
       <view class="ai-image-header">
-        <text class="ai-image-icon">🔍</text>
+        <text class="ai-image-icon"><text class="line-icon icon-search"></text></text>
         <text class="ai-image-title">AI 图片分析</text>
         <view wx:if="{{aiImageResult && aiImageResult.detectedItems.length > 0}}"
               class="ai-image-adopt" bindtap="onAdoptImageAiResult">采纳</view>

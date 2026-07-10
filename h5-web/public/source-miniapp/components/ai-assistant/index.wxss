@@ -315,14 +315,15 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--color-primary);
+  background: transparent;
+  border: 1px solid var(--color-primary);
   border-radius: 50%;
   flex-shrink: 0;
 }
 
 .send-btn-mini .send-icon {
   font-size: var(--font-size-lg);
-  color: var(--color-text-white);
+  color: var(--color-primary);
 }
 
 .send-btn-mini.btn-disabled {
@@ -569,20 +570,20 @@
   height: 26px !important;
   line-height: 1 !important;
   border-radius: 13px !important;
-  color: var(--color-text-white) !important;
-  background: var(--color-primary) !important;
-  border: none !important;
+  color: var(--color-primary) !important;
+  background: transparent !important;
+  border: 1px solid var(--color-primary) !important;
   white-space: nowrap;
   box-sizing: border-box;
   text-align: center;
   margin: 0 !important;
 }
-.quality-btn  { background: var(--color-primary) !important; box-shadow: 0 2px 6px rgba(37,99,235,0.2); }
-.cutting-btn  { background: var(--color-primary) !important; box-shadow: 0 2px 6px rgba(37,99,235,0.2); }
+.quality-btn  { background: transparent !important; border: 1px solid var(--color-primary) !important; box-shadow: none; }
+.cutting-btn  { background: transparent !important; border: 1px solid var(--color-primary) !important; box-shadow: none; }
 .repair-btn   { background: var(--color-danger) !important; box-shadow: 0 2px 6px rgba(255,77,79,0.2); }
 .approve-btn  { background: var(--color-success) !important; box-shadow: 0 2px 6px rgba(5,150,105,0.18); margin-right: 6px !important; }
 .reject-btn   { background: var(--color-danger) !important; box-shadow: 0 2px 6px rgba(255,77,79,0.18); }
-.default-btn  { background: var(--color-primary) !important; box-shadow: 0 2px 6px rgba(37,99,235,0.2); }
+.default-btn  { background: transparent !important; border: 1px solid var(--color-primary) !important; box-shadow: none; }
 .task-action-btn::after { border: none !important; }
 
 
@@ -692,8 +693,9 @@
 }
 .action-card-btn {
   flex-shrink: 0;
-  background: var(--color-primary);
-  color: var(--color-text-white);
+  background: transparent;
+  color: var(--color-primary);
+  border: 1px solid var(--color-primary);
   font-size: 10px;
   padding: 3px 10px;
   border-radius: var(--radius-lg);
@@ -764,7 +766,7 @@
 .wizard-date-trigger { display: flex; align-items: center; justify-content: space-between; font-size: 12px; padding: 6px 10px; border-radius: 8px; background: var(--input-bg); border: 1px solid var(--input-border); }
 .wizard-date-placeholder { color: var(--color-text-disabled); }
 .wizard-date-arrow { color: var(--color-text-disabled); font-size: 12px; }
-.wizard-submit { margin-top: 10px; background: var(--color-primary); color: var(--color-text-white); font-size: 13px; font-weight: 600; text-align: center; padding: 8px 0; border-radius: 18px; }
+.wizard-submit { margin-top: 10px; background: transparent; color: var(--color-primary); border: 1px solid var(--color-primary); font-size: 13px; font-weight: 600; text-align: center; padding: 8px 0; border-radius: 18px; }
 .wizard-submit-hover { opacity: 0.85; }
 
 .team-status-cards { margin-top: 8px; display: flex; flex-direction: column; gap: 8px; }

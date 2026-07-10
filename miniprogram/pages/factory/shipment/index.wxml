@@ -41,7 +41,7 @@
 
   <view class="search-bar">
     <view class="search-box">
-      <text class="search-emoji">🔍</text>
+      <text class="icon-search search-icon"></text>
       <input class="search-input" placeholder="搜索订单号 / 款号" value="{{keyword}}" bindinput="onKeywordInput" confirm-type="search" bindconfirm="onKeywordSearch" />
     </view>
   </view>
@@ -73,7 +73,7 @@
     </view>
 
     <view wx:if="{{orders.length===0 && !orderLoading}}" class="empty">
-      <empty-state iconEmoji="🏭" text="暂无数据" hint="下拉刷新试试" card="{{true}}"></empty-state>
+      <empty-state icon="icon-factory" text="暂无数据" hint="下拉刷新试试" card="{{true}}"></empty-state>
     </view>
 
     <view class="order-list" wx:if="{{orders.length > 0}}">
@@ -84,7 +84,7 @@
         <view class="order-cover" catchtap="onCoverPreview" data-url="{{item.styleCoverUrl}}">
           <image wx:if="{{item.styleCoverUrl}}" class="cover-pic" src="{{item.styleCoverUrl}}" mode="aspectFill" lazy-load />
           <view wx:else class="cover-placeholder">
-            <text class="cover-ph-text">📦</text>
+            <text class="icon-box"></text>
           </view>
         </view>
 
@@ -167,7 +167,7 @@
 
   <view wx:if="{{activeTab===1}}" class="tab-content">
     <view wx:if="{{shipments.length===0 && !shipmentLoading}}" class="empty">
-      <empty-state iconEmoji="🏭" text="暂无数据" hint="下拉刷新试试" card="{{true}}"></empty-state>
+      <empty-state icon="icon-factory" text="暂无数据" hint="下拉刷新试试" card="{{true}}"></empty-state>
     </view>
     <view wx:for="{{shipments}}" wx:key="id" class="task-card" data-index="{{index}}" bindtap="onTapShipment">
       <view class="shipment-top">

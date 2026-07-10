@@ -7,53 +7,18 @@ page {
   padding-bottom: calc(60px + env(safe-area-inset-bottom));
 }
 
-/* -- 搜索栏 -- */
-.search-bar {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-md);
-  padding: var(--spacing-lg) var(--page-padding-x);
-  background: var(--color-bg-card);
-  position: sticky;
-  top: 0;
-  z-index: var(--z-sticky);
-}
-
-.search-box {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-  height: var(--input-height-sm);
-  background: var(--color-bg-gray);
-  border-radius: var(--radius-full);
-  padding: 0 var(--spacing-md);
-}
-
-.search-icon {
-  font-size: 16px;
-  opacity: 0.6;
-}
-
-.search-input {
-  flex: 1;
-  height: 100%;
-  font-size: var(--font-size-md);
-  color: var(--color-text-primary);
-}
-
-.search-clear {
-  font-size: 16px;
-  color: var(--color-text-tertiary);
-  padding: 4px;
-}
+/* -- 搜索栏（基础样式走 app.wxss 全局 .search-bar / .search-box；本页 sticky 用 --sticky 修饰类） -- */
 
 .edit-btn {
   font-size: var(--font-size-md);
   color: var(--color-primary);
-  padding: 6px 12px;
+  padding: 8px 12px;
+  min-height: 32px;
   border-radius: var(--radius-full);
   background: var(--color-primary-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .edit-btn-active {
@@ -88,9 +53,10 @@ page {
 }
 
 .section-title {
-  font-size: var(--font-size-base);
-  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
   color: var(--color-text-primary);
+  letter-spacing: 0.5px;
 }
 
 .section-count {
@@ -122,20 +88,20 @@ page {
 }
 
 .menu-icon-circle {
-  width: 53px;
-  height: 53px;
-  border-radius: 15px;
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: transform 0.15s ease;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
   position: relative;
 }
 
 .menu-icon-circle .line-icon--lg {
-  width: 28px;
-  height: 28px;
-  background-size: 28px 28px;
+  width: 30px;
+  height: 30px;
+  background-size: 30px 30px;
 }
 
 .menu-badge {
@@ -160,7 +126,7 @@ page {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 20px;
+  font-size: 14px;
   opacity: 0.6;
   z-index: 2;
 }
@@ -174,10 +140,11 @@ page {
   color: var(--color-text-primary);
   text-align: center;
   line-height: var(--line-height-tight);
-  max-width: 72px;
+  max-width: 80px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-weight: var(--font-weight-medium);
 }
 
 .remove-btn {
@@ -186,6 +153,7 @@ page {
   right: -4px;
   width: 20px;
   height: 20px;
+  padding: 6px;
   background: var(--color-danger);
   color: var(--color-text-white);
   border-radius: 50%;
@@ -209,11 +177,11 @@ page {
   align-items: center;
   justify-content: space-between;
   font-size: var(--font-size-md);
-  font-weight: var(--font-weight-semibold);
+  font-weight: var(--font-weight-bold);
   color: var(--color-text-primary);
   margin-bottom: var(--spacing-md);
   padding-bottom: var(--spacing-sm);
-  border-bottom: 1px solid var(--color-divider);
+  border-bottom: 2px solid var(--color-primary-border);
 }
 
 .group-count {
@@ -232,7 +200,7 @@ page {
 }
 
 .empty-icon {
-  font-size: 48px;
+  font-size: 24px;
 }
 
 .empty-text {

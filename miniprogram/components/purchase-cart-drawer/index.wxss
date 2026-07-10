@@ -48,7 +48,7 @@
 }
 
 .cart-title-text {
-  font-size: 18px;
+  font-size: var(--font-size-4xl);
   font-weight: 600;
   color: white;
 }
@@ -72,7 +72,7 @@
 }
 
 .close-icon {
-  font-size: 18px;
+  font-size: var(--font-size-4xl);
   color: white;
   font-weight: 400;
 }
@@ -98,7 +98,7 @@
 }
 
 .merge-title {
-  font-size: 14px;
+  font-size: var(--font-size-xl);
   font-weight: 500;
   color: #0369a1;
 }
@@ -116,16 +116,17 @@
 }
 
 .merge-text {
-  font-size: 13px;
+  font-size: var(--font-size-lg);
   color: #374151;
 }
 
 .merge-btn {
-  background: #3b82f6;
-  color: white;
+  background: transparent;
+  color: var(--color-primary);
+  border: 1px solid var(--color-primary);
   padding: 6px 16px;
   border-radius: 6px;
-  font-size: 13px;
+  font-size: var(--font-size-lg);
 }
 
 /* 购物车列表 */
@@ -149,7 +150,7 @@
 }
 
 .item-name {
-  font-size: 15px;
+  font-size: var(--font-size-2xl);
   font-weight: 500;
   color: #1f2937;
   margin-bottom: 4px;
@@ -190,7 +191,7 @@
   border: 1px solid #e5e7eb;
   border-radius: 4px;
   padding: 6px 8px;
-  font-size: 13px;
+  font-size: var(--font-size-lg);
 }
 
 .quantity-control {
@@ -207,7 +208,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 16px;
+  font-size: var(--font-size-3xl);
   font-weight: 500;
   color: #374151;
 }
@@ -219,7 +220,7 @@
   border-radius: 4px;
   padding: 6px 8px;
   margin: 0 4px;
-  font-size: 13px;
+  font-size: var(--font-size-lg);
 }
 
 .item-right {
@@ -244,7 +245,7 @@
 }
 
 .split-icon {
-  font-size: 16px;
+  font-size: var(--font-size-3xl);
 }
 
 .item-delete {
@@ -252,7 +253,7 @@
 }
 
 .delete-icon {
-  font-size: 16px;
+  font-size: var(--font-size-3xl);
 }
 
 /* 空状态 */
@@ -266,12 +267,12 @@
 }
 
 .empty-icon {
-  font-size: 64px;
+  font-size: var(--font-size-6xl);
   margin-bottom: 16px;
 }
 
 .empty-text {
-  font-size: 14px;
+  font-size: var(--font-size-xl);
   color: #9ca3af;
 }
 
@@ -291,7 +292,7 @@
 }
 
 .select-all-text {
-  font-size: 13px;
+  font-size: var(--font-size-lg);
   color: #374151;
 }
 
@@ -304,12 +305,12 @@
 }
 
 .total-label {
-  font-size: 13px;
+  font-size: var(--font-size-lg);
   color: #6b7280;
 }
 
 .total-price {
-  font-size: 18px;
+  font-size: var(--font-size-4xl);
   font-weight: 600;
   color: #dc2626;
 }
@@ -324,7 +325,7 @@
 .confirm-btn {
   padding: 10px 16px;
   border-radius: 8px;
-  font-size: 14px;
+  font-size: var(--font-size-xl);
   font-weight: 500;
 }
 
@@ -334,8 +335,9 @@
 }
 
 .confirm-btn {
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-  color: white;
+  background: transparent;
+  color: var(--color-primary);
+  border: 1px solid var(--color-primary);
 }
 
 /* 预览弹窗 */
@@ -372,13 +374,13 @@
 }
 
 .preview-title {
-  font-size: 16px;
+  font-size: var(--font-size-3xl);
   font-weight: 600;
   color: #1f2937;
 }
 
 .preview-close {
-  font-size: 20px;
+  font-size: var(--font-size-5xl);
   color: #9ca3af;
 }
 
@@ -403,13 +405,13 @@
 }
 
 .group-name {
-  font-size: 15px;
+  font-size: var(--font-size-2xl);
   font-weight: 500;
   color: #1f2937;
 }
 
 .group-total {
-  font-size: 15px;
+  font-size: var(--font-size-2xl);
   font-weight: 600;
   color: #dc2626;
 }
@@ -422,7 +424,7 @@
 
 .group-spec,
 .group-quantity {
-  font-size: 13px;
+  font-size: var(--font-size-lg);
   color: #6b7280;
 }
 
@@ -461,22 +463,23 @@
 }
 
 .preview-total-label {
-  font-size: 15px;
+  font-size: var(--font-size-2xl);
   color: #374151;
 }
 
 .preview-total-price {
-  font-size: 22px;
+  font-size: var(--font-size-6xl);
   font-weight: 700;
   color: #dc2626;
 }
 
 .preview-confirm-btn {
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-  color: white;
+  background: transparent;
+  color: var(--color-primary);
+  border: 1px solid var(--color-primary);
   text-align: center;
   padding: 14px;
   border-radius: 8px;
-  font-size: 16px;
+  font-size: var(--font-size-3xl);
   font-weight: 600;
 }

@@ -1,110 +1,150 @@
-<view class="page-bg">
+<view class="page-container">
   <block wx:if="{{loading}}">
     <view class="loading-wrap">加载中...</view>
   </block>
 
   <block wx:elif="{{detail}}">
-    <view class="status-card">
-      <view class="status-row">
-        <text class="status-label">状态</text>
-        <text class="status-value" style="color:{{statusColor}};">{{statusLabel}}</text>
+    <!-- ══ 顶部信息卡 ══ -->
+    <view class="top-card">
+      <view class="top-left">
+        <view class="cover-placeholder">
+          <text class="icon-return"></text>
+        </view>
       </view>
-      <view class="status-row">
-        <text class="status-label">退货单号</text>
-        <text class="status-value no">{{detail.returnNo}}</text>
-      </view>
-      <view class="status-row">
-        <text class="status-label">退货金额</text>
-        <text class="status-value amount">¥{{detail.totalAmount}}</text>
-      </view>
-    </view>
-
-    <view class="section">
-      <view class="section-title">基本信息</view>
-      <view class="info-card">
-        <view class="info-row">
-          <text class="info-label">原单号</text>
-          <text class="info-value">{{detail.originalNo}}</text>
+      <view class="top-right">
+        <view class="top-title-row">
+          <text class="top-order-no">{{detail.returnNo}}</text>
+          <view class="status-tag" style="background:{{statusColor}}1a;color:{{statusColor}};">
+            <text>{{statusLabel}}</text>
+          </view>
         </view>
-        <view class="info-row">
-          <text class="info-label">{{partyLabel}}</text>
-          <text class="info-value">{{detail.partyName}}</text>
+        <view class="top-sub-row">
+          <text class="top-sub-text">{{detail.returnType}} · {{items.length}}项</text>
         </view>
-        <view class="info-row">
-          <text class="info-label">退货类型</text>
-          <text class="info-value">{{detail.returnType}}</text>
-        </view>
-        <view class="info-row">
-          <text class="info-label">退货原因</text>
-          <text class="info-value">{{detail.returnReason}}</text>
-        </view>
-        <view class="info-row">
-          <text class="info-label">操作人</text>
-          <text class="info-value">{{detail.operatorName}}</text>
-        </view>
-        <view class="info-row">
-          <text class="info-label">创建时间</text>
-          <text class="info-value">{{detail.createTime}}</text>
-        </view>
-        <view class="info-row" wx:if="{{detail.approveUserName}}">
-          <text class="info-label">审核人</text>
-          <text class="info-value">{{detail.approveUserName}}</text>
-        </view>
-        <view class="info-row" wx:if="{{detail.approveTime}}">
-          <text class="info-label">审核时间</text>
-          <text class="info-value">{{detail.approveTime}}</text>
-        </view>
-        <view class="info-row" wx:if="{{detail.returnTime}}">
-          <text class="info-label">退货时间</text>
-          <text class="info-value">{{detail.returnTime}}</text>
-        </view>
-        <view class="info-row" wx:if="{{detail.refundTime}}">
-          <text class="info-label">退款时间</text>
-          <text class="info-value">{{detail.refundTime}}</text>
-        </view>
-        <view class="info-row" wx:if="{{detail.refundAmount}}">
-          <text class="info-label">退款金额</text>
-          <text class="info-value refund">¥{{detail.refundAmount}}</text>
-        </view>
-        <view class="info-row">
-          <text class="info-label">备注</text>
-          <text class="info-value">{{detail.remark}}</text>
+        <view class="top-amount-row">
+          <text class="top-amount-label">退货金额</text>
+          <text class="top-amount-value">¥{{detail.totalAmount}}</text>
         </view>
       </view>
     </view>
 
-    <view class="section">
-      <view class="section-title">退货明细（{{items.length}}）</view>
-      <view class="items-card">
+    <!-- ══ 数据概览卡 ══ -->
+    <view class="overview-card">
+      <view class="overview-item">
+        <text class="overview-value">{{detail.returnType === '全部退货' ? '100%' : returnRatio}}</text>
+        <text class="overview-label">退货比例</text>
+      </view>
+      <view class="overview-divider"></view>
+      <view class="overview-item">
+        <text class="overview-value">{{items.length}}</text>
+        <text class="overview-label">退货项数</text>
+      </view>
+      <view class="overview-divider"></view>
+      <view class="overview-item">
+        <text class="overview-value">¥{{detail.totalAmount}}</text>
+        <text class="overview-label">退货金额</text>
+      </view>
+    </view>
+
+    <!-- ══ 基本信息 ══ -->
+    <view class="section-card">
+      <view class="section-header">
+        <text class="section-title">基本信息</text>
+      </view>
+      <view class="info-grid">
+        <view class="info-item">
+          <text class="info-item-label">原单号</text>
+          <text class="info-item-value">{{detail.originalNo}}</text>
+        </view>
+        <view class="info-item">
+          <text class="info-item-label">{{partyLabel}}</text>
+          <text class="info-item-value">{{detail.partyName}}</text>
+        </view>
+        <view class="info-item">
+          <text class="info-item-label">退货类型</text>
+          <text class="info-item-value">{{detail.returnType}}</text>
+        </view>
+        <view class="info-item">
+          <text class="info-item-label">操作人</text>
+          <text class="info-item-value">{{detail.operatorName}}</text>
+        </view>
+        <view class="info-item">
+          <text class="info-item-label">创建时间</text>
+          <text class="info-item-value">{{detail.createTime}}</text>
+        </view>
+        <view class="info-item" wx:if="{{detail.approveUserName}}">
+          <text class="info-item-label">审核人</text>
+          <text class="info-item-value">{{detail.approveUserName}}</text>
+        </view>
+        <view class="info-item" wx:if="{{detail.approveTime}}">
+          <text class="info-item-label">审核时间</text>
+          <text class="info-item-value">{{detail.approveTime}}</text>
+        </view>
+        <view class="info-item" wx:if="{{detail.returnTime}}">
+          <text class="info-item-label">退货时间</text>
+          <text class="info-item-value">{{detail.returnTime}}</text>
+        </view>
+        <view class="info-item" wx:if="{{detail.refundTime}}">
+          <text class="info-item-label">退款时间</text>
+          <text class="info-item-value">{{detail.refundTime}}</text>
+        </view>
+        <view class="info-item" wx:if="{{detail.refundAmount}}">
+          <text class="info-item-label">退款金额</text>
+          <text class="info-item-value refund-value">¥{{detail.refundAmount}}</text>
+        </view>
+      </view>
+      <view class="info-full-row" wx:if="{{detail.returnReason && detail.returnReason !== '-'}}">
+        <text class="info-item-label">退货原因</text>
+        <text class="info-item-value full-value">{{detail.returnReason}}</text>
+      </view>
+      <view class="info-full-row" wx:if="{{detail.remark && detail.remark !== '-'}}">
+        <text class="info-item-label">备注</text>
+        <text class="info-item-value full-value">{{detail.remark}}</text>
+      </view>
+    </view>
+
+    <!-- ══ 退货明细 ══ -->
+    <view class="section-card">
+      <view class="section-header">
+        <text class="section-title">退货明细</text>
+        <text class="section-count">共{{items.length}}项</text>
+      </view>
+      <view class="item-list">
         <block wx:for="{{items}}" wx:key="idx">
-          <view class="item-row">
-            <view class="item-header">
-              <text class="item-idx">{{item.idx}}</text>
+          <view class="item-card">
+            <view class="item-header-row">
               <text class="item-name">{{item.name}}</text>
+              <text class="item-amount">¥{{item.amount}}</text>
             </view>
-            <view class="item-meta">
-              <text wx:if="{{item.code}}" class="item-code">{{item.code}}</text>
-              <text wx:if="{{item.color}}" class="item-tag">{{item.color}}</text>
-              <text wx:if="{{item.size}}" class="item-tag">{{item.size}}</text>
+            <view class="item-tags-row" wx:if="{{item.code || item.color || item.size}}">
+              <text wx:if="{{item.code}}" class="item-code-tag">{{item.code}}</text>
+              <text wx:if="{{item.color}}" class="item-attr-tag">{{item.color}}</text>
+              <text wx:if="{{item.size}}" class="item-attr-tag">{{item.size}}</text>
             </view>
-            <view class="item-qty-row">
-              <text class="item-qty">数量: {{item.quantity}}{{item.unit}}</text>
-              <text class="item-price">单价: ¥{{item.unitPrice}}</text>
-              <text class="item-amount">小计: ¥{{item.amount}}</text>
+            <view class="item-bottom-row">
+              <text class="item-qty">数量：{{item.quantity}}{{item.unit}}</text>
+              <text class="item-price">单价：¥{{item.unitPrice}}</text>
             </view>
-            <view class="item-reason" wx:if="{{item.returnReason}}">原因: {{item.returnReason}}</view>
+            <view class="item-reason-row" wx:if="{{item.returnReason}}">
+              <text class="item-reason-label">退货原因：</text>
+              <text class="item-reason-text">{{item.returnReason}}</text>
+            </view>
           </view>
         </block>
       </view>
     </view>
 
+    <!-- 底部安全距离 -->
+    <view class="bottom-safe" wx:if="{{canApprove || canComplete || canReject || showRefundBtn}}"></view>
+
+    <!-- ══ 底部操作栏 ══ -->
     <view class="action-bar" wx:if="{{canApprove || canComplete || canReject}}">
-      <button wx:if="{{canApprove}}" class="btn btn-primary" bindtap="onApprove">审核通过</button>
-      <button wx:if="{{canReject}}" class="btn btn-danger" bindtap="onReject">拒绝</button>
-      <button wx:if="{{canComplete}}" class="btn btn-primary" bindtap="onComplete">完成退货</button>
+      <button wx:if="{{canReject}}" class="action-btn action-btn--danger" bindtap="onReject">拒绝</button>
+      <button wx:if="{{canApprove}}" class="action-btn action-btn--primary" bindtap="onApprove">审核通过</button>
+      <button wx:if="{{canComplete}}" class="action-btn action-btn--primary" bindtap="onComplete">完成退货</button>
     </view>
-    <view class="action-bar" wx:elif="{{type === 'sales' && detail.returnStatus === 'APPROVED'}}">
-      <button class="btn btn-primary" bindtap="onRefund">标记退款完成</button>
+    <view class="action-bar" wx:elif="{{showRefundBtn}}">
+      <button class="action-btn action-btn--primary" bindtap="onRefund">标记退款完成</button>
     </view>
   </block>
 </view>

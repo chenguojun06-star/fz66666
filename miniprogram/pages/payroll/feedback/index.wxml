@@ -6,7 +6,7 @@
   <view wx:if="{{loading}}" class="loading">加载中...</view>
 
   <view wx:if="{{!loading && settlements.length === 0}}" class="empty">
-    <text class="empty-icon">📋</text>
+    <text class="empty-icon"><text class="line-icon line-icon--lg icon-clipboard"></text></text>
     <text class="empty-text">暂无已发放的工资结算单</text>
   </view>
 

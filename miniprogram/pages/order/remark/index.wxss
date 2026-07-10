@@ -101,8 +101,9 @@
 }
 
 .act-btn--submit {
-  background: var(--color-primary);
-  color: var(--color-text-white);
+  background: transparent;
+  color: var(--color-primary);
+  border: 1px solid var(--color-primary);
 }
 
 .act-btn--disabled {

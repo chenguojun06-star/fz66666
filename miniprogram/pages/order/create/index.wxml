@@ -7,9 +7,11 @@
   <view class="tab-content" wx:if="{{activeTab === 'style'}}">
     <view class="search-bar">
       <view class="search-box">
-        <text class="search-emoji">🔍</text>
+        <text class="icon-search search-icon"></text>
         <input class="search-input" placeholder="搜索款号/款名" value="{{styleKeyword}}" bindinput="onStyleSearchInput" confirm-type="search" />
-        <text class="search-clear" wx:if="{{styleKeyword}}" catchtap="onStyleSearchClear">✕</text>
+        <view class="search-clear" wx:if="{{styleKeyword}}" catchtap="onStyleSearchClear">
+          <view class="icon-close"></view>
+        </view>
       </view>
     </view>
 
@@ -41,15 +43,14 @@
   <view class="tab-content" wx:if="{{activeTab === 'noData'}}">
     <view class="no-data-upload-section">
       <view class="upload-hint">
-        <text class="hint-icon">📷</text>
         <text class="hint-title">无资料下单</text>
         <text class="hint-desc">上传款式图片后，填写订单信息即可下单</text>
       </view>
-      
+
       <view class="image-upload-large" bindtap="chooseNoDataImage">
         <image wx:if="{{noDataUploadedImage}}" src="{{noDataUploadedImage}}" lazy-load mode="aspectFill" catchtap="previewNoDataImage" />
         <view wx:else class="upload-placeholder-large">
-          <text class="upload-icon-large">📷</text>
+          <text class="upload-icon-large icon-camera"></text>
           <text class="upload-text">点击上传款式图片</text>
           <text class="upload-hint-text">支持 JPG、PNG 格式</text>
         </view>

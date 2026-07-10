@@ -245,7 +245,7 @@
 }
 
 .upload-icon {
-  font-size: 48px;
+  font-size: var(--font-size-6xl);
   opacity: 0.6;
 }
 
@@ -338,12 +338,12 @@
   width: 100%;
   height: var(--btn-height-md);
   line-height: var(--btn-height-md);
-  background: var(--color-primary);
-  color: var(--color-text-white);
+  background: transparent;
+  color: var(--color-primary);
+  border: 1px solid var(--color-primary);
   border-radius: var(--radius-md);
   font-size: var(--font-size-lg);
   font-weight: var(--font-weight-medium);
-  border: none;
 }
 
 .submit-btn:active {

@@ -4,27 +4,27 @@
 .page {
   min-height: 100vh;
   background: var(--color-bg-page);
-  padding: 0 var(--page-padding-x) 20rpx;
+  padding: 0 var(--page-padding-x) var(--spacing-md);
 }
 
 .feedback-entry {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin: 12rpx 0;
-  padding: 12rpx 16rpx;
+  margin: var(--spacing-sm) 0;
+  padding: var(--spacing-sm) var(--spacing-md);
   background: var(--color-bg-card);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
 }
 .feedback-entry-text { font-size: var(--font-size-md); color: var(--color-primary); font-weight: 500; }
-.feedback-entry-arrow { font-size: 24px; color: var(--color-text-secondary); }
+.feedback-entry-arrow { font-size: 14px; color: var(--color-text-secondary); }
 .feedback-entry-hover { opacity: 0.8; }
 
 
 /* 筛选器 */
 .filter-bar {
-  margin: 12rpx 0;
+  margin: var(--spacing-sm) 0;
   background: var(--color-bg-card);
   border-radius: var(--radius-lg);
   padding: 4px;
@@ -60,8 +60,8 @@
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin: 0 0 12rpx;
-  gap: 8rpx;
+  margin: 0 0 var(--spacing-sm);
+  gap: var(--spacing-xs);
 }
 
 .date-col {
@@ -80,7 +80,7 @@
 
 /* 明细区域 */
 .detail-section {
-  margin: 12rpx 0;
+  margin: var(--spacing-sm) 0;
 }
 
 .section-header {
@@ -102,9 +102,10 @@
   align-items: center;
   gap: 4px;
   padding: 6px 10px;
-  background: var(--color-primary);
+  background: transparent;
+  border: 1px solid var(--color-primary);
   border-radius: var(--radius-md);
-  color: var(--color-text-white);
+  color: var(--color-primary);
 }
 
 .sort-btn-hover {
@@ -113,7 +114,7 @@
 
 .sort-text {
   font-size: var(--font-size-sm);
-  color: var(--color-text-white);
+  color: var(--color-primary);
   font-weight: 600;
 }
 
@@ -298,8 +299,8 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin: 12rpx 0;
-  padding: 12rpx;
+  margin: var(--spacing-sm) 0;
+  padding: var(--spacing-sm);
   background: linear-gradient(
     90deg,
     rgba(var(--color-primary-rgb), 0.1) 0%,

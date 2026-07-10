@@ -1,9 +1,11 @@
 <view class="page">
-  <view class="search-bar">
+  <view class="search-bar search-bar--sticky">
     <view class="search-box">
-      <text class="search-icon">🔍</text>
+      <view class="line-icon icon-search search-icon"></view>
       <input class="search-input" placeholder="搜索应用名称" value="{{searchKeyword}}" bindinput="onSearchInput" />
-      <text class="search-clear" wx:if="{{searchKeyword}}" catchtap="onSearchInput" data-clear="true">✕</text>
+      <view class="search-clear" wx:if="{{searchKeyword}}" catchtap="onSearchInput" data-clear="true">
+        <view class="icon-close"></view>
+      </view>
     </view>
     <text class="edit-btn {{editing ? 'edit-btn-active' : ''}}" bindtap="onEditToggle">{{editing ? '完成' : '编辑'}}</text>
   </view>
@@ -11,7 +13,7 @@
   <view class="fav-section" wx:if="{{favoriteApps.length > 0}}">
     <view class="section-header">
       <view class="section-title-row">
-        <text class="section-title">⭐ 我的收藏</text>
+        <text class="section-title">我的收藏</text>
         <text class="section-count">{{favoriteApps.length}}</text>
       </view>
       <text class="clear-btn" wx:if="{{editing}}" bindtap="onClearFavorites">清空</text>
@@ -21,7 +23,7 @@
         <view class="menu-icon-circle {{item.circleClass}}">
           <view class="line-icon line-icon--lg {{item.iconClass}}"></view>
           <text wx:if="{{item.badge}}" class="menu-badge">{{item.badge}}</text>
-          <view class="fav-star" catchtap="onToggleFavorite" data-app="{{item}}">⭐</view>
+          <view class="fav-star" catchtap="onToggleFavorite" data-app="{{item}}"></view>
         </view>
         <text class="app-name">{{item.name}}</text>
         <view class="remove-btn" wx:if="{{editing}}" data-app="{{item}}" catchtap="onToggleFavorite">✕</view>
@@ -32,13 +34,13 @@
   <view class="all-apps-section">
     <view class="section-header">
       <view class="section-title-row">
-        <text class="section-title">📱 全部应用</text>
+        <text class="section-title">全部应用</text>
         <text class="section-count">{{filteredApps.length > 0 ? (filteredApps.length + '个分组') : '暂无结果'}}</text>
       </view>
     </view>
 
     <view class="empty-result" wx:if="{{filteredApps.length === 0 && searchKeyword}}">
-      <text class="empty-icon">🔍</text>
+      <view class="line-icon icon-search empty-icon"></view>
       <text class="empty-text">未找到"{{searchKeyword}}"相关应用</text>
     </view>
 
@@ -52,9 +54,7 @@
           <view class="menu-icon-circle {{app.circleClass}}">
             <view class="line-icon line-icon--lg {{app.iconClass}}"></view>
             <text wx:if="{{app.badge}}" class="menu-badge">{{app.badge}}</text>
-            <view class="fav-star {{app.isFav ? 'fav-star-active' : ''}}" catchtap="onToggleFavorite" data-app="{{app}}">
-              {{app.isFav ? '⭐' : '☆'}}
-            </view>
+            <view class="fav-star {{app.isFav ? 'fav-star-active' : ''}}" catchtap="onToggleFavorite" data-app="{{app}}"></view>
           </view>
           <text class="app-name">{{app.name}}</text>
         </view>

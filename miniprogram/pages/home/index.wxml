@@ -1,20 +1,21 @@
 <view class="page">
   <view class="header">
-    <view class="greeting-name">{{userName}}，{{greeting}}</view>
-    <view class="greeting-sub">{{orgName ? orgName + '，欢迎使用衣智链' : '欢迎使用衣智链'}}</view>
-  </view>
-
-  <view class="weather-card">
-    <view class="weather-top">
-      <view class="weather-left">
-        <view class="weather-temp-wrap">
-          <text class="weather-temp">{{dateInfo.date}}</text>
-          <text class="weather-desc">{{dateInfo.day}}</text>
+    <view class="header-top">
+      <view class="header-left">
+        <view class="greeting-name">{{userName}}，{{greeting}}</view>
+        <view class="greeting-sub">{{orgName || '衣智链'}}</view>
+      </view>
+      <view class="header-right">
+        <view class="header-date">
+          <text class="date-day">{{dateInfo.day}}</text>
+          <text class="date-md">{{dateInfo.date}}</text>
         </view>
       </view>
-      <text class="weather-season">{{dateInfo.season}}</text>
     </view>
-    <view class="weather-tip">{{dateInfo.dailyTip}}</view>
+    <view class="header-tip" wx:if="{{dateInfo.dailyTip}}">
+      <view class="tip-icon icon-lightbulb"></view>
+      <text class="tip-text">{{dateInfo.dailyTip}}</text>
+    </view>
   </view>
 
   <!-- 常用应用 -->
@@ -47,7 +48,7 @@
     </view>
     
     <view class="empty-hint" wx:if="{{favoriteApps.length === 0}}">
-      <text class="empty-icon">📱</text>
+      <view class="empty-icon icon-mobile"></view>
       <text class="empty-text">还没有添加常用应用，点击「管理」添加吧</text>
     </view>
   </view>

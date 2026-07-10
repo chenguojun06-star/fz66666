@@ -1,21 +1,14 @@
 <!-- 生产管理 · 美团风格订单卡片 -->
 
 <view class="page">
-  <!-- 今日概览 · 紧凑横条 -->
-  <view class="today-bar">
-    <view class="today-left">
-      <text class="today-label">今日概览</text>
-      <text class="today-date">{{todayStr}}</text>
-    </view>
-    <text class="today-scan" wx:if="{{todayScanCount > 0}}">{{todayScanCount}} 次扫码</text>
-  </view>
-
   <!-- 搜索栏 -->
   <view class="search-bar">
     <view class="search-box">
-      <text class="search-emoji">🔍</text>
+      <text class="icon-search search-icon"></text>
       <input class="search-input" placeholder="搜索订单号 / 款号" value="{{searchKey}}" bindinput="onSearchInput" confirm-type="search" />
-      <text class="search-clear" wx:if="{{searchKey}}" catchtap="onSearchClear">✕</text>
+      <view class="search-clear" wx:if="{{searchKey}}" catchtap="onSearchClear">
+        <view class="icon-close"></view>
+      </view>
     </view>
   </view>
 
@@ -39,7 +32,7 @@
         <view class="order-cover" catchtap="onCoverPreview" data-url="{{item.styleCoverUrl}}">
           <image wx:if="{{item.styleCoverUrl}}" class="cover-pic" src="{{item.styleCoverUrl}}" mode="aspectFill" lazy-load />
           <view wx:else class="cover-placeholder">
-            <text class="cover-ph-text">📦</text>
+            <text class="icon-box"></text>
           </view>
         </view>
 
@@ -68,14 +61,19 @@
             <text class="info-remain {{item.remainDaysClass}}" wx:if="{{item.remainDaysText}}">{{item.remainDaysText}}</text>
           </view>
 
-          <!-- 数量 + 进度条 -->
+          <!-- 数量信息 -->
           <view class="info-qty-row">
-            <text class="iq-num">{{item.cuttingQty || item.totalQuantity || item.orderQuantity || 0}}</text>
-            <text class="iq-lbl">总数</text>
-            <text class="iq-num iq-num--done">{{item.completedQuantity || 0}}</text>
-            <text class="iq-lbl">已完成</text>
-            <text class="iq-num iq-num--remain">{{item.remainQuantity || 0}}</text>
-            <text class="iq-lbl">剩余</text>
+            <view class="iq-main">
+              <text class="iq-num">{{item.cuttingQty || item.totalQuantity || item.orderQuantity || 0}}</text>
+              <text class="iq-unit">件</text>
+            </view>
+            <view class="iq-sub">
+              <text class="iq-num iq-num--done">{{item.completedQuantity || 0}}</text>
+              <text class="iq-lbl">已完成</text>
+              <text class="iq-divider">·</text>
+              <text class="iq-num iq-num--remain">{{item.remainQuantity || 0}}</text>
+              <text class="iq-lbl">剩余</text>
+            </view>
           </view>
           <view class="info-progress">
             <view class="ip-bar">
@@ -158,7 +156,7 @@
 
   <!-- 空状态 -->
   <view class="empty" wx:if="{{!loading && !orders.loading && orders.list.length === 0}}">
-    <text class="empty-icon">📋</text>
+    <text class="icon-clipboard"></text>
     <text class="empty-text">暂无订单数据</text>
   </view>
 

@@ -181,3 +181,7 @@ graphify-out/
 # 数据链路神经网络可视化地图（仅本地开发工具，不入库）
 # 每次提交后由 .git/hooks/post-commit 自动重新扫描+探测更新
 tools/data-link-map/
+
+# 设计预览文件（仅本地开发，不入库）
+miniprogram/design-preview*.html
+miniprogram/design-philosophy.md

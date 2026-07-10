@@ -15,7 +15,7 @@
 
 const EMPTY_TEXT = '-';
 
-/* ============== 状态映射（与 PC statusMaps.ts 对齐） ============== */
+/* ============== 颜色常量 ============== */
 
 const STATUS_COLOR_DEFAULT = 'var(--color-border-antd)';
 const STATUS_COLOR_SUCCESS = 'var(--color-success)';
@@ -28,6 +28,8 @@ const STATUS_COLOR_ORANGE = 'var(--color-warning-secondary)';
 const STATUS_COLOR_VOLCANO = 'var(--color-error-secondary)';
 const STATUS_COLOR_PURPLE = 'var(--color-purple)';
 const STATUS_COLOR_GEEKBLUE = 'var(--color-geekblue)';
+
+/* ============== 订单状态映射（与 PC statusMaps.ts 对齐） ============== */
 
 const ORDER_STATUS_LABEL = {
   not_started: '未开始',
@@ -105,7 +107,81 @@ const ORDER_STATUS_COLOR = {
   created: STATUS_COLOR_DEFAULT,
 };
 
-/* ============== 工具函数 ============== */
+/* ============== 质检状态映射 ============== */
+
+const QUALITY_STATUS_LABEL = {
+  qualified: '合格',
+  unqualified: '不合格',
+  repaired: '返修完成',
+  pending: '待质检',
+  checking: '质检中',
+};
+
+const QUALITY_STATUS_COLOR = {
+  qualified: STATUS_COLOR_SUCCESS,
+  unqualified: STATUS_COLOR_ERROR,
+  repaired: STATUS_COLOR_DEFAULT,
+  pending: STATUS_COLOR_WARNING,
+  checking: STATUS_COLOR_PROCESSING,
+};
+
+/* ============== 采购状态映射 ============== */
+
+const PURCHASE_STATUS_LABEL = {
+  draft: '草稿',
+  pending: '待采购',
+  purchasing: '采购中',
+  partial: '部分到货',
+  partial_arrival: '部分到货',
+  received: '已领取',
+  completed: '已完成',
+  cancelled: '已取消',
+  confirmed: '已确认',
+  awaiting_confirm: '待确认',
+};
+
+const PURCHASE_STATUS_COLOR = {
+  draft: STATUS_COLOR_DEFAULT,
+  pending: STATUS_COLOR_WARNING,
+  purchasing: STATUS_COLOR_PROCESSING,
+  partial: STATUS_COLOR_CYAN,
+  partial_arrival: STATUS_COLOR_CYAN,
+  received: STATUS_COLOR_BLUE,
+  completed: STATUS_COLOR_SUCCESS,
+  cancelled: STATUS_COLOR_DEFAULT,
+  confirmed: STATUS_COLOR_BLUE,
+  awaiting_confirm: STATUS_COLOR_BLUE,
+};
+
+/* ============== 退货状态映射 ============== */
+
+const RETURN_STATUS_LABEL = {
+  pending: '待处理',
+  processing: '处理中',
+  completed: '已完成',
+  cancelled: '已取消',
+  rejected: '已拒绝',
+};
+
+const RETURN_STATUS_COLOR = {
+  pending: STATUS_COLOR_WARNING,
+  processing: STATUS_COLOR_PROCESSING,
+  completed: STATUS_COLOR_SUCCESS,
+  cancelled: STATUS_COLOR_DEFAULT,
+  rejected: STATUS_COLOR_ERROR,
+};
+
+/* ============== 缺陷类别映射 ============== */
+
+const DEFECT_CATEGORY_LABEL = {
+  appearance_integrity: '外观完整性问题',
+  size_accuracy: '尺寸精度问题',
+  process_compliance: '工艺规范性问题',
+  functional_effectiveness: '功能有效性问题',
+  other: '其他问题',
+};
+
+/* ============== 基础工具函数 ============== */
 
 function isEmpty(value) {
   if (value == null) return true;
@@ -226,6 +302,90 @@ function displayPercent(value, decimals, isRatio) {
   return ir ? `${(n * 100).toFixed(d)}%` : `${n.toFixed(d)}%`;
 }
 
+/* ============== 进度计算 ============== */
+
+/**
+ * 安全计算百分比（防除零、防NaN）
+ * @param {number} completed - 已完成数量
+ * @param {number} total - 总数量
+ * @param {number} decimals - 小数位数，默认0
+ * @returns {string} 百分比文本，如 "85%"
+ */
+function calcProgressPercent(completed, total, decimals) {
+  const d = typeof decimals === 'number' ? decimals : 0;
+  const c = Number(completed) || 0;
+  const t = Number(total) || 0;
+  if (t <= 0) return '0%';
+  const pct = Math.min(100, (c / t) * 100);
+  return `${pct.toFixed(d)}%`;
+}
+
+/**
+ * 安全计算进度比例（0~1）
+ * @param {number} completed
+ * @param {number} total
+ * @returns {number} 0~1 之间的比例
+ */
+function calcProgressRatio(completed, total) {
+  const c = Number(completed) || 0;
+  const t = Number(total) || 0;
+  if (t <= 0) return 0;
+  return Math.min(1, c / t);
+}
+
+/* ============== 交期统一提取 ============== */
+
+/**
+ * 从订单/款式对象中统一提取交期日期
+ * 优先级：deliveryTime > deliveryDate > expectedShipDate > plannedEndDate > createTime
+ * @param {Object} obj - 订单或款式对象
+ * @returns {string} 格式化后的日期字符串
+ */
+function extractDeliveryDate(obj) {
+  if (!obj) return EMPTY_TEXT;
+  const candidates = [
+    obj.deliveryTime,
+    obj.deliveryDate,
+    obj.expectedShipDate,
+    obj.plannedEndDate,
+    obj.planEndDate,
+    obj.estimatedDate,
+  ];
+  for (const c of candidates) {
+    if (!isEmpty(c)) {
+      const d = toDate(c);
+      if (d) return formatDate(d);
+    }
+  }
+  return EMPTY_TEXT;
+}
+
+/**
+ * 判断是否逾期
+ * @param {Object} obj - 订单或款式对象
+ * @param {string} status - 当前状态
+ * @returns {boolean}
+ */
+function isOverdue(obj, status) {
+  if (!obj) return false;
+  // 已完成/已取消/已关单 不显示逾期
+  if (status) {
+    const s = String(status).toLowerCase();
+    if (['completed', 'cancelled', 'canceled', 'closed', 'archived', 'scrapped'].includes(s)) {
+      return false;
+    }
+  }
+  const delivery = extractDeliveryDate(obj);
+  if (delivery === EMPTY_TEXT) return false;
+  const d = toDate(delivery);
+  if (!d) return false;
+  // 比较日期（忽略时间）
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const deliveryDay = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  return deliveryDay < today;
+}
+
 /* ============== 状态文字/颜色 ============== */
 
 function findStatus(key, mapLabel, mapColor) {
@@ -244,6 +404,32 @@ function displayStatus(status) {
   return found || { text: String(status), color: STATUS_COLOR_DEFAULT };
 }
 
+function displayQualityStatus(status) {
+  if (isEmpty(status)) return { text: EMPTY_TEXT, color: STATUS_COLOR_DEFAULT };
+  const found = findStatus(status, QUALITY_STATUS_LABEL, QUALITY_STATUS_COLOR);
+  return found || { text: String(status), color: STATUS_COLOR_DEFAULT };
+}
+
+function displayPurchaseStatus(status) {
+  if (isEmpty(status)) return { text: EMPTY_TEXT, color: STATUS_COLOR_DEFAULT };
+  const found = findStatus(status, PURCHASE_STATUS_LABEL, PURCHASE_STATUS_COLOR);
+  return found || { text: String(status), color: STATUS_COLOR_DEFAULT };
+}
+
+function displayReturnStatus(status) {
+  if (isEmpty(status)) return { text: EMPTY_TEXT, color: STATUS_COLOR_DEFAULT };
+  const found = findStatus(status, RETURN_STATUS_LABEL, RETURN_STATUS_COLOR);
+  return found || { text: String(status), color: STATUS_COLOR_DEFAULT };
+}
+
+function displayDefectCategory(category) {
+  if (isEmpty(category)) return EMPTY_TEXT;
+  const k = String(category).trim().toLowerCase();
+  return DEFECT_CATEGORY_LABEL[k] || String(category);
+}
+
+/* ============== 导出 ============== */
+
 module.exports = {
   // 空值
   isEmpty,
@@ -255,18 +441,42 @@ module.exports = {
   formatMonthDay,
   formatCompact,
   formatDateRange,
+  toDate,
   // 数字
   displayAmount,
   displayQuantity,
   displayNumber,
   displayPercent,
+  // 进度
+  calcProgressPercent,
+  calcProgressRatio,
+  // 交期
+  extractDeliveryDate,
+  isOverdue,
   // 状态
   displayStatus,
   displayStatusText: (s) => displayStatus(s).text,
   displayStatusColor: (s) => displayStatus(s).color,
-  // 完整映射（方便其他文件引用）
+  displayQualityStatus,
+  displayQualityStatusText: (s) => displayQualityStatus(s).text,
+  displayQualityStatusColor: (s) => displayQualityStatus(s).color,
+  displayPurchaseStatus,
+  displayPurchaseStatusText: (s) => displayPurchaseStatus(s).text,
+  displayPurchaseStatusColor: (s) => displayPurchaseStatus(s).color,
+  displayReturnStatus,
+  displayReturnStatusText: (s) => displayReturnStatus(s).text,
+  displayReturnStatusColor: (s) => displayReturnStatus(s).color,
+  displayDefectCategory,
+  // 完整映射
   ORDER_STATUS_LABEL,
   ORDER_STATUS_COLOR,
+  QUALITY_STATUS_LABEL,
+  QUALITY_STATUS_COLOR,
+  PURCHASE_STATUS_LABEL,
+  PURCHASE_STATUS_COLOR,
+  RETURN_STATUS_LABEL,
+  RETURN_STATUS_COLOR,
+  DEFECT_CATEGORY_LABEL,
   // 颜色常量
   STATUS_COLOR_DEFAULT,
   STATUS_COLOR_SUCCESS,

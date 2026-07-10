@@ -30,7 +30,7 @@
   padding: 60px 0;
 }
 .empty-icon {
-  font-size: 40px;
+  font-size: 20px;
   opacity: 0.4;
 }
 .empty-text {
@@ -218,8 +218,9 @@
   flex: 1;
   text-align: center;
   padding: var(--spacing-sm) 0;
-  background: var(--color-primary);
-  color: var(--color-text-white);
+  background: transparent;
+  color: var(--color-primary);
+  border: 1px solid var(--color-primary);
   border-radius: var(--radius-sm);
   font-size: var(--font-size-base);
   font-weight: var(--font-weight-medium);

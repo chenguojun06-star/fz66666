@@ -6,7 +6,7 @@
   </view>
 
   <view class="empty-state" wx:elif="{{materialPurchases.length === 0}}">
-    <text class="empty-icon">📦</text>
+    <text class="empty-icon icon-box"></text>
     <text class="empty-text">暂无采购物料</text>
   </view>
 

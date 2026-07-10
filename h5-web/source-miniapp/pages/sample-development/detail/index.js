@@ -4,6 +4,7 @@ const { fieldConfig } = require('../../../utils/api-modules/field-config');
 const { toast } = require('../../../utils/uiHelper');
 const permission = require('../../../utils/permission');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
+const { bindPageEvents, unbindPageEvents } = require('../../../utils/pageEventBinder');
 
 /* ========== 纸样状态 / 开发来源 中文化 ========== */
 var PATTERN_STATUS_LABELS = { PENDING: '未开始', IN_PROGRESS: '进行中', COMPLETED: '已完成', RETURNED: '已退回', LOCKED: '已锁定', UNLOCKED: '未锁定', NOT_STARTED: '未开始' };
@@ -150,13 +151,16 @@ Page({
     attachmentLoading: false,
     // 款式图片（cover + 附件中的图片）
     styleImages: [],
+    currentImageIndex: 0,
     // 扩展字段配置
     extFields: [],
   },
 
   onLoad(options) {
-    const styleId = options.styleId || '';
-    const patternId = options.id || options.patternId || '';
+    console.log('[sample-dev:detail] onLoad options=', options);
+    const styleId = (options.styleId || '').trim();
+    const patternId = (options.id || options.patternId || '').trim();
+    console.log('[sample-dev:detail] parsed styleId=' + styleId + ' patternId=' + patternId);
     if (!styleId && !patternId) {
       wx.showToast({ title: '缺少参数', icon: 'none' });
       return;
@@ -170,6 +174,11 @@ Page({
     } else {
       this.loadStyleDetail();
     }
+    bindPageEvents(this, () => this.loadStyleDetail());
+  },
+
+  onUnload() {
+    unbindPageEvents(this);
   },
 
   onPullDownRefresh() {
@@ -1272,15 +1281,15 @@ Page({
       let list = res?.data?.records || res?.data || res?.records || [];
       list = list.map(it => ({ ...it, fileSizeText: this.formatFileSize(it.fileSize || it.size || 0) }));
       this.setData({ attachmentList: list });
-      // 把图片附件补充到 styleImages
+      // 把图片附件补充到 styleImages（必须鉴权处理，否则 <image> 无法加载受保护文件）
       const imageUrls = list
         .filter(it => /\.(jpg|jpeg|png|gif|webp|bmp)$/i.test(it.url || it.fileUrl || ''))
-        .map(it => it.url || it.fileUrl);
+        .map(it => getAuthedImageUrl(it.url || it.fileUrl));
       if (imageUrls.length > 0) {
         const existing = this.data.styleImages || [];
         // ES5 数组去重（避免 new Set() 在小程序 ES6→ES5 转换时异常）
         const merged = existing.slice();
-        imageUrls.forEach(function (u) { if (merged.indexOf(u) === -1) merged.push(u); });
+        imageUrls.forEach(function (u) { if (u && merged.indexOf(u) === -1) merged.push(u); });
         this.setData({ styleImages: merged });
       }
     } catch (e) { console.error('附件加载失败', e); }
@@ -1292,8 +1301,29 @@ Page({
   /** 封面图点击预览 */
   onCoverTap() {
     const cover = this.data.styleInfo?.cover;
-    if (!cover) return;
-    wx.previewImage({ urls: this.data.styleImages.length > 0 ? this.data.styleImages : [cover], current: cover });
+    if (!cover && this.data.styleImages.length === 0) return;
+    const urls = this.data.styleImages.length > 0 ? this.data.styleImages : [cover];
+    const current = urls[this.data.currentImageIndex] || urls[0];
+    wx.previewImage({ urls, current });
+  },
+
+  /** 图片轮播切换 */
+  onImageChange(e) {
+    this.setData({ currentImageIndex: e.detail.current });
+  },
+
+  /** 上一张图片 */
+  goPrevImage() {
+    if (this.data.currentImageIndex > 0) {
+      this.setData({ currentImageIndex: this.data.currentImageIndex - 1 });
+    }
+  },
+
+  /** 下一张图片 */
+  goNextImage() {
+    if (this.data.currentImageIndex < this.data.styleImages.length - 1) {
+      this.setData({ currentImageIndex: this.data.currentImageIndex + 1 });
+    }
   },
 
   /** 款式图片点击预览 */
@@ -1303,20 +1333,271 @@ Page({
     wx.previewImage({ urls: this.data.styleImages, current: url });
   },
 
-  /** 预览附件 */
+  /** 预览附件 - 支持图片/PDF/其他文件下载 */
   onAttachmentTap(e) {
     const url = e.currentTarget.dataset.url;
     if (!url) return;
+
     // 图片预览
     if (/\.(jpg|jpeg|png|gif|webp|bmp)$/i.test(url)) {
       wx.previewImage({ urls: [url], current: url });
-    } else {
-      // 其他文件复制链接
-      wx.setClipboardData({
-        data: url,
-        success: () => wx.showToast({ title: '链接已复制', icon: 'success' })
-      });
+      return;
     }
+
+    // PDF 预览
+    if (/\.pdf$/i.test(url)) {
+      this.previewPdf(url);
+      return;
+    }
+
+    // Office 文档预览（doc/docx/xls/xlsx/ppt/pptx）
+    if (/\.(doc|docx|xls|xlsx|ppt|pptx)$/i.test(url)) {
+      this.previewOffice(url);
+      return;
+    }
+
+    // 其他文件：提供下载选项
+    wx.showActionSheet({
+      itemList: ['下载到本地', '复制链接'],
+      success: (res) => {
+        if (res.tapIndex === 0) {
+          this.downloadFile(url);
+        } else if (res.tapIndex === 1) {
+          wx.setClipboardData({
+            data: url,
+            success: () => wx.showToast({ title: '链接已复制', icon: 'success' })
+          });
+        }
+      }
+    });
+  },
+
+  /** 预览PDF文件 */
+  previewPdf(url) {
+    const authedUrl = getAuthedImageUrl(url);
+    wx.showLoading({ title: '加载中...', mask: true });
+
+    wx.downloadFile({
+      url: authedUrl,
+      success: (res) => {
+        wx.hideLoading();
+        if (res.statusCode === 200) {
+          wx.openDocument({
+            filePath: res.tempFilePath,
+            fileType: 'pdf',
+            success: () => { /* PDF已打开 */ },
+            fail: (err) => {
+              console.error('PDF打开失败', err);
+              wx.showToast({ title: 'PDF打开失败', icon: 'none' });
+            }
+          });
+        } else {
+          wx.showToast({ title: '文件下载失败', icon: 'none' });
+        }
+      },
+      fail: (err) => {
+        wx.hideLoading();
+        console.error('PDF下载失败', err);
+        wx.showToast({ title: '下载失败，请重试', icon: 'none' });
+      }
+    });
+  },
+
+  /** 预览Office文档 */
+  previewOffice(url) {
+    const authedUrl = getAuthedImageUrl(url);
+    const ext = url.split('.').pop().toLowerCase();
+
+    // 扩展名映射到 fileType
+    const fileTypeMap = {
+      doc: 'doc',
+      docx: 'docx',
+      xls: 'xls',
+      xlsx: 'xlsx',
+      ppt: 'ppt',
+      pptx: 'pptx'
+    };
+
+    wx.showLoading({ title: '加载中...', mask: true });
+
+    wx.downloadFile({
+      url: authedUrl,
+      success: (res) => {
+        wx.hideLoading();
+        if (res.statusCode === 200) {
+          wx.openDocument({
+            filePath: res.tempFilePath,
+            fileType: fileTypeMap[ext] || 'pdf',
+            success: () => { /* 文档已打开 */ },
+            fail: (err) => {
+              console.error('文档打开失败', err);
+              wx.showToast({ title: '文档打开失败', icon: 'none' });
+            }
+          });
+        } else {
+          wx.showToast({ title: '文件下载失败', icon: 'none' });
+        }
+      },
+      fail: (err) => {
+        wx.hideLoading();
+        console.error('文档下载失败', err);
+        wx.showToast({ title: '下载失败，请重试', icon: 'none' });
+      }
+    });
+  },
+
+  /** 下载文件到本地 */
+  downloadFile(url) {
+    const authedUrl = getAuthedImageUrl(url);
+    const fileName = url.split('/').pop() || 'download';
+
+    wx.showLoading({ title: '下载中...', mask: true });
+
+    wx.downloadFile({
+      url: authedUrl,
+      success: (res) => {
+        wx.hideLoading();
+        if (res.statusCode === 200) {
+          // 保存到本地相册/文件
+          wx.saveFile({
+            tempFilePath: res.tempFilePath,
+            success: (saveRes) => {
+              wx.showToast({ title: '已保存', icon: 'success' });
+              console.log('文件保存路径:', saveRes.savedFilePath);
+            },
+            fail: (err) => {
+              console.error('保存失败', err);
+              // 保存失败时尝试直接打开
+              wx.openDocument({
+                filePath: res.tempFilePath,
+                success: () => { wx.showToast({ title: '已打开', icon: 'success' }); },
+                fail: () => { wx.showToast({ title: '打开失败', icon: 'none' }); }
+              });
+            }
+          });
+        } else {
+          wx.showToast({ title: '下载失败', icon: 'none' });
+        }
+      },
+      fail: (err) => {
+        wx.hideLoading();
+        console.error('下载失败', err);
+        wx.showToast({ title: '下载失败，请重试', icon: 'none' });
+      }
+    });
+  },
+
+  /** 上传附件 - 仅支持图片（拍照/相册） */
+  onUploadAttachment() {
+    wx.showActionSheet({
+      itemList: ['拍照上传', '从相册选择'],
+      success: (res) => {
+        if (res.tapIndex === 0) {
+          this.chooseImage('camera');
+        } else if (res.tapIndex === 1) {
+          this.chooseImage('album');
+        }
+      }
+    });
+  },
+
+  /** 选择图片（拍照或相册） */
+  chooseImage(sourceType) {
+    const that = this;
+    wx.chooseMedia({
+      count: 9,
+      mediaType: ['image'],
+      sourceType: [sourceType],
+      sizeType: ['compressed'],
+      success: (res) => {
+        // 预览图片
+        const tempFiles = res.tempFiles;
+        if (tempFiles.length === 1) {
+          // 单张直接上传
+          that.uploadImage(tempFiles[0]);
+        } else {
+          // 多张批量上传
+          wx.showLoading({ title: '上传中...', mask: true });
+          let uploadedCount = 0;
+          tempFiles.forEach((tempFile) => {
+            that.uploadImage(tempFile, () => {
+              uploadedCount++;
+              if (uploadedCount === tempFiles.length) {
+                wx.hideLoading();
+                wx.showToast({ title: '上传完成', icon: 'success' });
+                that.setData({ attachmentList: [] });
+                that.loadAttachments();
+              }
+            });
+          });
+        }
+      },
+      fail: (err) => {
+        console.error('选择图片失败', err);
+        if (err.errMsg && err.errMsg.includes('cancel')) {
+          // 用户取消选择，不提示
+        } else {
+          wx.showToast({ title: '选择失败', icon: 'none' });
+        }
+      }
+    });
+  },
+
+  /** 上传图片 */
+  uploadImage(tempFile, callback) {
+    const that = this;
+    const filePath = tempFile.tempFilePath;
+    const fileSize = tempFile.size;
+    const fileName = 'style_' + this.data.styleId + '_' + Date.now() + '.jpg';
+
+    // 文件大小校验（10MB）
+    if (fileSize > 10 * 1024 * 1024) {
+      wx.showToast({ title: '图片不能超过10MB', icon: 'none' });
+      if (callback) callback();
+      return;
+    }
+
+    const token = require('../../../utils/storage').getToken();
+    const { getBaseUrl } = require('../../../config');
+    const baseUrl = getBaseUrl();
+
+    wx.uploadFile({
+      url: baseUrl + '/api/style/attachment/upload',
+      filePath: filePath,
+      name: 'file',
+      formData: {
+        styleId: String(this.data.styleId),
+        styleNo: this.data.styleInfo?.styleNo || '',
+        bizType: 'general',
+        fileName: fileName
+      },
+      header: {
+        'Authorization': 'Bearer ' + token
+      },
+      success: (res) => {
+        try {
+          const data = typeof res.data === 'string' ? JSON.parse(res.data) : res.data;
+          if (data.code === 200) {
+            if (!callback) {
+              wx.showToast({ title: '上传成功', icon: 'success' });
+              that.setData({ attachmentList: [] });
+              that.loadAttachments();
+            }
+          } else {
+            wx.showToast({ title: data.message || '上传失败', icon: 'none' });
+          }
+        } catch (e) {
+          console.error('解析响应失败', e);
+          wx.showToast({ title: '上传失败', icon: 'none' });
+        }
+        if (callback) callback();
+      },
+      fail: (err) => {
+        console.error('上传失败', err);
+        wx.showToast({ title: '上传失败', icon: 'none' });
+        if (callback) callback();
+      }
+    });
   },
 
   /** 领取子工序 */

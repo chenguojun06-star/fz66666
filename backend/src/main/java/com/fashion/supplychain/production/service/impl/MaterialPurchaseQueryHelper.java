@@ -303,14 +303,16 @@ class MaterialPurchaseQueryHelper {
     }
 
     private void excludeScrappedOrders(LambdaQueryWrapper<MaterialPurchase> wrapper, Long tenantId) {
-        List<String> scrappedOrderIds = productionOrderService.list(
+        // 排除已删除 + 已关闭/已完成/已取消/已归档/已报废 的订单关联采购记录
+        List<String> invalidOrderIds = productionOrderService.list(
                 new LambdaQueryWrapper<ProductionOrder>()
                         .select(ProductionOrder::getId)
                         .eq(ProductionOrder::getTenantId, tenantId)
-                        .and(w -> w.eq(ProductionOrder::getDeleteFlag, 1).or().eq(ProductionOrder::getStatus, "scrapped")))
+                        .and(w -> w.eq(ProductionOrder::getDeleteFlag, 1)
+                                .or().in(ProductionOrder::getStatus, "scrapped", "closed", "completed", "cancelled", "archived")))
                 .stream().map(ProductionOrder::getId).filter(StringUtils::hasText).collect(Collectors.toList());
-        if (!scrappedOrderIds.isEmpty()) {
-            wrapper.and(w -> w.isNull(MaterialPurchase::getOrderId).or().eq(MaterialPurchase::getOrderId, "").or().notIn(MaterialPurchase::getOrderId, scrappedOrderIds));
+        if (!invalidOrderIds.isEmpty()) {
+            wrapper.and(w -> w.isNull(MaterialPurchase::getOrderId).or().eq(MaterialPurchase::getOrderId, "").or().notIn(MaterialPurchase::getOrderId, invalidOrderIds));
         }
     }
 
@@ -321,7 +323,7 @@ class MaterialPurchaseQueryHelper {
                             .select(ProductionOrder::getId).eq(ProductionOrder::getTenantId, tenantId)
                             .eq(ProductionOrder::getFactoryType, factoryType.trim().toUpperCase())
                             .and(w -> w.isNull(ProductionOrder::getDeleteFlag).or().eq(ProductionOrder::getDeleteFlag, 0))
-                            .ne(ProductionOrder::getStatus, "scrapped"))
+                            .notIn(ProductionOrder::getStatus, "scrapped", "closed", "completed", "cancelled", "archived"))
                     .stream().map(ProductionOrder::getId).filter(StringUtils::hasText).collect(Collectors.toList());
             wrapper.and(w -> { w.isNull(MaterialPurchase::getOrderId).or().eq(MaterialPurchase::getOrderId, ""); if (!ftOrderIds.isEmpty()) w.or().in(MaterialPurchase::getOrderId, ftOrderIds); });
         }
@@ -331,7 +333,7 @@ class MaterialPurchaseQueryHelper {
                             .select(ProductionOrder::getId).eq(ProductionOrder::getTenantId, tenantId)
                             .like(ProductionOrder::getFactoryName, factoryName.trim())
                             .and(w -> w.isNull(ProductionOrder::getDeleteFlag).or().eq(ProductionOrder::getDeleteFlag, 0))
-                            .ne(ProductionOrder::getStatus, "scrapped"))
+                            .notIn(ProductionOrder::getStatus, "scrapped", "closed", "completed", "cancelled", "archived"))
                     .stream().map(ProductionOrder::getId).filter(StringUtils::hasText).collect(Collectors.toList());
             wrapper.and(w -> { w.isNull(MaterialPurchase::getOrderId).or().eq(MaterialPurchase::getOrderId, ""); if (!fnOrderIds.isEmpty()) w.or().in(MaterialPurchase::getOrderId, fnOrderIds); });
         }

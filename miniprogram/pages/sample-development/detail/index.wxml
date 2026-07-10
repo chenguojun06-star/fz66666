@@ -17,9 +17,26 @@
   <block wx:else>
     <!-- ══ ① 顶部基础信息卡（精简，紧凑布局） ══ -->
     <view class="top-card">
-      <view class="top-left">
-        <image wx:if="{{styleInfo.cover}}" class="cover-img" src="{{styleInfo.cover}}" lazy-load mode="aspectFill" bindtap="onCoverTap" />
-        <view wx:else class="cover-placeholder"><text class="cover-icon">👔</text></view>
+      <view class="top-left {{styleImages.length > 1 ? 'top-left--carousel' : ''}}" bindtap="onCoverTap">
+        <swiper class="img-swiper" wx:if="{{styleImages.length > 0}}" current="{{currentImageIndex}}" bindchange="onImageChange" autoplay="{{false}}" circular="{{false}}">
+          <swiper-item wx:for="{{styleImages}}" wx:key="index">
+            <image class="cover-img" src="{{item}}" mode="aspectFill" lazy-load />
+          </swiper-item>
+        </swiper>
+        <view wx:else class="cover-placeholder">
+          <view class="cover-icon icon-placeholder"></view>
+        </view>
+
+        <view class="img-nav img-nav--prev" wx:if="{{styleImages.length > 1 && currentImageIndex > 0}}" catchtap="goPrevImage">
+          <view class="icon-chevron-left"></view>
+        </view>
+        <view class="img-nav img-nav--next" wx:if="{{styleImages.length > 1 && currentImageIndex < styleImages.length - 1}}" catchtap="goNextImage">
+          <view class="icon-chevron-right"></view>
+        </view>
+
+        <view class="img-indicator" wx:if="{{styleImages.length > 1}}">
+          <text class="img-indicator-text">{{currentImageIndex + 1}} / {{styleImages.length}}</text>
+        </view>
       </view>
       <view class="top-right">
         <text class="top-title">{{styleInfo.styleName || styleInfo.name || '未命名款式'}}</text>
@@ -89,7 +106,7 @@
           <view wx:if="{{bomStage.canReceive}}" class="scb-btn sb-primary" data-key="bom" bindtap="onStageReceive"><text>开始</text></view>
           <view wx:if="{{bomStage.canComplete}}" class="scb-btn sb-primary" data-key="bom" bindtap="onStageConfirm"><text>标记完成</text></view>
           <view wx:if="{{bomStage.canRollback}}" class="scb-btn sb-danger" data-key="bom" bindtap="onStageRollback"><text>退回</text></view>
-          <text wx:if="{{bomStage.status === 'completed'}}" class="scb-done-mark">✓</text>
+          <view wx:if="{{bomStage.status === 'completed'}}" class="scb-done-mark icon-checkmark"></view>
         </view>
       </view>
       <!-- 内容区：未开始不显示 -->
@@ -168,7 +185,7 @@
           <view wx:if="{{patternStage.canReceive}}" class="scb-btn sb-primary" data-key="pattern" bindtap="onStageReceive"><text>开始</text></view>
           <view wx:if="{{patternStage.canComplete}}" class="scb-btn sb-primary" data-key="pattern" bindtap="onStageConfirm"><text>标记完成</text></view>
           <view wx:if="{{patternStage.canRollback}}" class="scb-btn sb-danger" data-key="pattern" bindtap="onStageRollback"><text>退回</text></view>
-          <text wx:if="{{patternStage.status === 'completed'}}" class="scb-done-mark">✓</text>
+          <view wx:if="{{patternStage.status === 'completed'}}" class="scb-done-mark icon-checkmark"></view>
         </view>
       </view>
       <block wx:if="{{patternStage.status !== 'not_started'}}">
@@ -198,7 +215,7 @@
           <view wx:if="{{processStage.canReceive}}" class="scb-btn sb-primary" data-key="process" bindtap="onStageReceive"><text>开始</text></view>
           <view wx:if="{{processStage.canComplete}}" class="scb-btn sb-primary" data-key="process" bindtap="onStageConfirm"><text>标记完成</text></view>
           <view wx:if="{{processStage.canRollback}}" class="scb-btn sb-danger" data-key="process" bindtap="onStageRollback"><text>退回</text></view>
-          <text wx:if="{{processStage.status === 'completed'}}" class="scb-done-mark">✓</text>
+          <view wx:if="{{processStage.status === 'completed'}}" class="scb-done-mark icon-checkmark"></view>
         </view>
       </view>
       <block wx:if="{{processStage.status !== 'not_started'}}">
@@ -210,10 +227,10 @@
           </view>
           <block wx:if="{{processStage.status === 'in_progress'}}">
             <view class="pt-btn pt-btn-outline" catchtap="onOpenTemplateSheet">
-              <text>📦 导入模板</text>
+              <text>导入模板</text>
             </view>
             <view class="pt-btn pt-btn-primary" catchtap="onAddProcess" data-stage-id="carSewing">
-              <text>＋ 添加工序</text>
+              <text>添加工序</text>
             </view>
           </block>
         </view>
@@ -238,7 +255,9 @@
             <view class="psg-header">
               <text class="psg-name">{{stageGroup.name}}</text>
               <text class="psg-count">{{stageGroup.processes.length}}</text>
-              <view wx:if="{{processStage.status === 'in_progress'}}" class="psg-add" catchtap="onAddProcess" data-stage-id="{{stageGroup.id}}">＋</view>
+              <view wx:if="{{processStage.status === 'in_progress'}}" class="psg-add" catchtap="onAddProcess" data-stage-id="{{stageGroup.id}}">
+                <text class="psg-add-icon icon-plus"></text>
+              </view>
             </view>
 
             <view class="psg-list" wx:if="{{stageGroup.processes.length > 0}}">
@@ -280,15 +299,15 @@
                     <input class="pre-input pre-input-desc" placeholder="工序描述（可选）" value="{{processEditForm.description}}" data-field="description" bindinput="onProcessEditInput" />
                   </view>
                   <view class="pre-actions">
-                    <view class="pre-btn pre-btn-save" catchtap="onSaveProcessEdit"><text>✓ 保存</text></view>
-                    <view class="pre-btn pre-btn-cancel" catchtap="onCancelEditProcess"><text>✕ 取消</text></view>
+                    <view class="pre-btn pre-btn-save" catchtap="onSaveProcessEdit"><text>保存</text></view>
+                    <view class="pre-btn pre-btn-cancel" catchtap="onCancelEditProcess"><text>取消</text></view>
                   </view>
                 </view>
               </view>
             </view>
             <view wx:else class="psg-empty">
               <text>暂无工序，点击</text>
-              <text class="section-link" catchtap="onAddProcess" data-stage-id="{{stageGroup.id}}">＋</text>
+              <text class="section-link" catchtap="onAddProcess" data-stage-id="{{stageGroup.id}}">添加</text>
             </view>
 
             <!-- 新增工序表单（在该阶段下方内联展开） -->
@@ -308,9 +327,9 @@
                 <input class="pre-input pre-input-desc" placeholder="工序描述（可选）" value="{{addingProcessForm.description}}" data-field="description" bindinput="onAddProcessInput" />
               </view>
               <view class="paf-actions">
-                <view class="pre-btn pre-btn-save" catchtap="onSaveNewProcess"><text>✓ 保存</text></view>
-                <view class="pre-btn pre-btn-save" catchtap="onSaveAndContinue"><text>＋ 保存并继续</text></view>
-                <view class="pre-btn pre-btn-cancel" catchtap="onCancelAddProcess"><text>✕ 取消</text></view>
+                <view class="pre-btn pre-btn-save" catchtap="onSaveNewProcess"><text>保存</text></view>
+                <view class="pre-btn pre-btn-save" catchtap="onSaveAndContinue"><text>保存并继续</text></view>
+                <view class="pre-btn pre-btn-cancel" catchtap="onCancelAddProcess"><text>取消</text></view>
               </view>
             </view>
           </view>
@@ -334,7 +353,7 @@
           <view wx:if="{{secondaryStage.canReceive}}" class="scb-btn sb-primary" data-key="secondary" bindtap="onStageReceive"><text>开始</text></view>
           <view wx:if="{{secondaryStage.canComplete}}" class="scb-btn sb-primary" data-key="secondary" bindtap="onStageConfirm"><text>标记完成</text></view>
           <view wx:if="{{secondaryStage.canRollback}}" class="scb-btn sb-danger" data-key="secondary" bindtap="onStageRollback"><text>退回</text></view>
-          <text wx:if="{{secondaryStage.status === 'completed'}}" class="scb-done-mark">✓</text>
+          <view wx:if="{{secondaryStage.status === 'completed'}}" class="scb-done-mark icon-checkmark"></view>
         </view>
       </view>
       <block wx:if="{{secondaryStage.status !== 'not_started'}}">
@@ -370,7 +389,7 @@
           <view wx:if="{{productionStage.canReceive}}" class="scb-btn sb-primary" data-key="production" bindtap="onStageReceive"><text>开始</text></view>
           <view wx:if="{{productionStage.canComplete}}" class="scb-btn sb-primary" data-key="production" bindtap="onStageConfirm"><text>标记完成</text></view>
           <view wx:if="{{productionStage.canRollback}}" class="scb-btn sb-danger" data-key="production" bindtap="onStageRollback"><text>退回</text></view>
-          <text wx:if="{{productionStage.status === 'completed'}}" class="scb-done-mark">✓</text>
+          <view wx:if="{{productionStage.status === 'completed'}}" class="scb-done-mark icon-checkmark"></view>
         </view>
       </view>
       <block wx:if="{{productionStage.status !== 'not_started'}}">
@@ -407,7 +426,7 @@
         <view class="scb-right">
           <view wx:if="{{canReceiveSample}}" class="scb-btn sb-primary" bindtap="onSampleReceive"><text>领取样衣</text></view>
           <view wx:if="{{canCompleteSample}}" class="scb-btn sb-primary" bindtap="onSampleComplete"><text>标记完成</text></view>
-          <text wx:if="{{!canReceiveSample && !canCompleteSample}}" class="scb-done-mark">✓</text>
+          <view wx:if="{{!canReceiveSample && !canCompleteSample}}" class="scb-done-mark icon-checkmark"></view>
         </view>
       </view>
       <!-- 生产工序扫码进度（仅在有 patternId 时显示） -->
@@ -459,10 +478,19 @@
     <view class="section-card">
       <view class="section-hd">
         <text class="section-title">附件文件</text>
-        <text class="section-count">{{attachmentList.length}} 个</text>
+        <view class="section-actions">
+          <text class="section-count">{{attachmentList.length}} 个</text>
+          <view class="upload-btn" catchtap="onUploadAttachment">
+            <text class="upload-icon icon-plus"></text>
+            <text class="upload-text">上传</text>
+          </view>
+        </view>
       </view>
       <view wx:if="{{attachmentLoading}}" class="empty-inline">加载中...</view>
-      <view wx:elif="{{attachmentList.length === 0}}" class="empty-inline">暂无附件</view>
+      <view wx:elif="{{attachmentList.length === 0}}" class="empty-inline">
+        <text>暂无附件，点击</text>
+        <text class="section-link" catchtap="onUploadAttachment">上传附件</text>
+      </view>
       <view wx:else class="item-list">
         <view class="item-row" wx:for="{{attachmentList}}" wx:key="id" data-url="{{item.url || item.fileUrl}}" bindtap="onAttachmentTap">
           <view class="ir-main">
@@ -485,15 +513,15 @@
 <view wx:if="{{processTemplateSheetVisible}}" class="tpl-sheet">
   <view class="tpl-sheet-handle"></view>
   <view class="tpl-sheet-header">
-    <text class="tpl-sheet-title">📦 导入工艺模板</text>
-    <text class="tpl-sheet-close" bindtap="onCloseTemplateSheet">✕</text>
+    <text class="tpl-sheet-title">导入工艺模板</text>
+    <text class="tpl-sheet-close" bindtap="onCloseTemplateSheet">关闭</text>
   </view>
 
   <!-- 模板列表 -->
   <view wx:if="{{!previewingTemplate}}" class="tpl-sheet-body">
     <view wx:if="{{processTemplateLoading}}" class="tpl-loading">加载中...</view>
     <view wx:elif="{{processTemplateList.length === 0}}" class="tpl-empty">
-      <text class="tpl-empty-icon">📋</text>
+      <view class="tpl-empty-icon icon-placeholder"></view>
       <text class="tpl-empty-text">暂无模板</text>
       <text class="tpl-empty-hint">在 PC 端「模板中心」创建模板后可在此导入</text>
     </view>

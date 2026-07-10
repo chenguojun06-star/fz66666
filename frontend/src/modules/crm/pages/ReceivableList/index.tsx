@@ -15,7 +15,7 @@ import { receivableApi, type Receivable, type ReceivableReceiptLog, type Receiva
 import { message } from '@/utils/antdStatic';
 import { confirmDelete } from '@/utils/confirm';
 import type { ApiResult } from '@/utils/api';
-import { toMoneyLocale } from '@/utils/format';
+import { toMoneyLocale, formatMoney } from '@/utils/format';
 import { paths } from '@/routeConfig';
 
 const { Text } = Typography;
@@ -163,9 +163,9 @@ const MarkReceivedModal: React.FC<{
         <div style={{ marginTop: 16 }}>
           <Descriptions column={1} bordered style={{ marginBottom: 16 }}>
             <Descriptions.Item label="客户">{record.customerName}</Descriptions.Item>
-            <Descriptions.Item label="应收金额">¥ {toMoneyLocale(record.amount)}</Descriptions.Item>
-            <Descriptions.Item label="已收金额">¥ {toMoneyLocale(record.receivedAmount)}</Descriptions.Item>
-            <Descriptions.Item label="待收余款"><Text type="warning">¥ {toMoneyLocale(remaining)}</Text></Descriptions.Item>
+            <Descriptions.Item label="应收金额">{formatMoney(record.amount)}</Descriptions.Item>
+            <Descriptions.Item label="已收金额">{formatMoney(record.receivedAmount)}</Descriptions.Item>
+            <Descriptions.Item label="待收余款"><Text type="warning">{formatMoney(remaining)}</Text></Descriptions.Item>
           </Descriptions>
           <Form form={form} layout="vertical">
             <Form.Item
@@ -233,10 +233,10 @@ const ReceivableDetailModal: React.FC<{
             {detail?.sourceBizType === 'MATERIAL_PICKUP' ? <Tag color="purple">面辅料领取</Tag> : (detail?.sourceBizType || '-')}
           </Descriptions.Item>
           <Descriptions.Item label="来源单号">{detail?.sourceBizNo || '-'}</Descriptions.Item>
-          <Descriptions.Item label="应收金额">¥ {toMoneyLocale(detail?.amount)}</Descriptions.Item>
-          <Descriptions.Item label="已收金额">¥ {toMoneyLocale(detail?.receivedAmount)}</Descriptions.Item>
+          <Descriptions.Item label="应收金额">{formatMoney(detail?.amount)}</Descriptions.Item>
+          <Descriptions.Item label="已收金额">{formatMoney(detail?.receivedAmount)}</Descriptions.Item>
           <Descriptions.Item label="待收余款">
-            ¥ {toMoneyLocale((Number(detail?.amount ?? 0) - Number(detail?.receivedAmount ?? 0)))}
+            {formatMoney(Number(detail?.amount ?? 0) - Number(detail?.receivedAmount ?? 0))}
           </Descriptions.Item>
           <Descriptions.Item label="状态">
             {detail?.status ? <Tag color={(STATUS_CONFIG[detail.status] ?? { color: 'default' }).color}>{(STATUS_CONFIG[detail.status] ?? { label: detail.status }).label}</Tag> : '-'}
@@ -255,7 +255,7 @@ const ReceivableDetailModal: React.FC<{
             locale={{ emptyText: '暂无回款流水' }}
             columns={[
               { title: '回款时间', dataIndex: 'receivedTime', width: 160, render: (v?: string) => v?.replace('T', ' ').substring(0, 16) || '-' },
-              { title: '回款金额', dataIndex: 'receivedAmount', width: 120, align: 'right', render: (v?: number) => `¥ ${toMoneyLocale(v)}` },
+              { title: '回款金额', dataIndex: 'receivedAmount', width: 120, align: 'right', render: (v?: number) => formatMoney(v) },
               { title: '操作人', dataIndex: 'operatorName', width: 120, render: (v?: string) => v || '-' },
               { title: '备注', dataIndex: 'remark', render: (v?: string) => v || '-' },
             ]}
@@ -413,17 +413,17 @@ const ReceivableList: React.FC = () => {
     },
     {
       title: '应收金额', dataIndex: 'amount', width: 120, align: 'right',
-      render: v => <Text strong>¥ {toMoneyLocale(v)}</Text>,
+      render: v => <Text strong>{formatMoney(v)}</Text>,
     },
     {
       title: '已收金额', dataIndex: 'receivedAmount', width: 120, align: 'right',
-      render: v => <Text type="success">¥ {toMoneyLocale(v)}</Text>,
+      render: v => <Text type="success">{formatMoney(v)}</Text>,
     },
     {
       title: '待收余款', width: 120, align: 'right',
       render: (_, r) => {
         const rem = Number(r.amount) - Number(r.receivedAmount ?? 0);
-        return <Text type={rem > 0 ? 'warning' : 'secondary'}>¥ {toMoneyLocale(rem)}</Text>;
+        return <Text type={rem > 0 ? 'warning' : 'secondary'}>{formatMoney(rem)}</Text>;
       },
     },
     {
@@ -493,7 +493,7 @@ const ReceivableList: React.FC = () => {
                 precision={2}
                 prefix={<DollarOutlined />}
                 styles={{ content: { color: 'var(--color-primary)' } }}
-                formatter={v => `¥ ${toMoneyLocale(Number(v))}`}
+                formatter={v => formatMoney(Number(v))}
               />
             </Card>
           </Col>
@@ -505,7 +505,7 @@ const ReceivableList: React.FC = () => {
                 precision={2}
                 prefix={<WarningOutlined />}
                 styles={{ content: { color: 'var(--color-danger)' } }}
-                formatter={v => `¥ ${toMoneyLocale(Number(v))}`}
+                formatter={v => formatMoney(Number(v))}
               />
             </Card>
           </Col>

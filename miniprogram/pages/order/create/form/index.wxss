@@ -17,7 +17,6 @@ page {
   padding: 12px;
   background: var(--color-bg-card);
   border-radius: var(--radius-md);
-  border: 1px solid var(--color-border-light);
   box-shadow: var(--shadow-sm);
 }
 
@@ -29,9 +28,8 @@ page {
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
   color: var(--color-text-primary);
-  margin-bottom: 6px;
+  margin-bottom: 10px;
   padding-bottom: 6px;
-  border-bottom: 1px solid var(--color-border-light);
 }
 
 .summary-card {
@@ -43,7 +41,6 @@ page {
   background: var(--color-bg-card);
   border-radius: var(--radius-md);
   gap: 8px;
-  border: 1px solid var(--color-border-light);
   box-shadow: var(--shadow-sm);
 }
 
@@ -194,9 +191,10 @@ page {
 
 .f-btn {
   flex-shrink: 0;
-  height: 28px;
+  height: 32px;
   padding: 0 16px;
-  background: var(--color-primary);
+  background: transparent;
+  border: 1px solid var(--color-primary);
   border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
@@ -205,12 +203,12 @@ page {
 
 .f-btn text {
   font-size: var(--font-size-xs);
-  color: var(--color-text-white);
+  color: var(--color-primary);
   font-weight: var(--font-weight-medium);
 }
 
 .f-btn--sm {
-  height: 26px;
+  height: 32px;
   padding: 0 12px;
 }
 
@@ -290,13 +288,11 @@ page {
   font-size: var(--font-size-sm);
   background: var(--color-bg-gray);
   color: var(--color-text-secondary);
-  border: 1px solid var(--color-border);
 }
 
 .chip.on {
   background: var(--color-primary-bg);
   color: var(--color-primary);
-  border-color: var(--color-primary);
 }
 
 .qfill {
@@ -321,9 +317,9 @@ page {
 
 .gtable {
   margin-top: 6px;
-  border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   overflow-x: auto;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
 .grow {
@@ -332,7 +328,7 @@ page {
 }
 
 .grow + .grow {
-  border-top: 1px solid var(--color-border-light);
+  margin-top: 4px;
 }
 
 .gh {
@@ -401,19 +397,20 @@ page {
   padding: 12px 20px;
   padding-bottom: calc(12px + env(safe-area-inset-bottom));
   background: var(--color-bg-card);
-  border-top: 1px solid var(--color-border-light);
+  box-shadow: 0 -1px 4px rgba(0, 0, 0, 0.08);
 }
 
 .bar-btn {
   height: var(--btn-height-md);
-  background: var(--color-primary);
+  background: transparent;
+  border: 1px solid var(--color-primary);
   border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: var(--font-size-lg);
   font-weight: var(--font-weight-semibold);
-  color: var(--color-text-white);
+  color: var(--color-primary);
 }
 
 .bar-btn.dis {

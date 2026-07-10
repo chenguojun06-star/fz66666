@@ -57,7 +57,7 @@ public class MaterialPurchaseOrchestratorHelper {
                             .select(ProductionOrder::getId)
                             .eq(ProductionOrder::getTenantId, ctxTenantId)
                             .eq(ProductionOrder::getFactoryId, ctxFactoryId)
-                            .ne(ProductionOrder::getStatus, "scrapped")
+                            .notIn(ProductionOrder::getStatus, "scrapped", "closed", "completed", "cancelled", "archived")
                             .and(w -> w.isNull(ProductionOrder::getDeleteFlag).or().eq(ProductionOrder::getDeleteFlag, 0))
             ).stream().map(ProductionOrder::getId).collect(Collectors.toList());
             if (factoryOrderIds.isEmpty()) {

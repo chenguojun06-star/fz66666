@@ -20,10 +20,33 @@
   <block wx:if="{{!loading && order}}">
     <!-- ══ 顶部信息卡 ══ -->
     <view class="top-card">
-      <view class="top-left" bindtap="onPreviewCover">
-        <image wx:if="{{styleCoverUrl}}" class="cover-img" src="{{styleCoverUrl}}" mode="aspectFill" lazy-load />
+      <!-- 图片轮播区 -->
+      <view class="top-left {{hasMultipleImages ? 'top-left--carousel' : ''}}" bindtap="onPreviewImage">
+        <swiper class="img-swiper" wx:if="{{imageList.length > 0}}" current="{{currentImageIndex}}" bindchange="onImageChange" autoplay="{{false}}" circular="{{false}}">
+          <swiper-item wx:for="{{imageList}}" wx:key="index">
+            <image class="cover-img" src="{{item.url}}" mode="aspectFill" lazy-load />
+          </swiper-item>
+        </swiper>
         <view wx:else class="cover-placeholder">
-          <text class="cover-icon">📦</text>
+          <text class="icon-box"></text>
+        </view>
+
+        <!-- 左右切换箭头（多张图时显示） -->
+        <view class="img-nav img-nav--prev" wx:if="{{hasMultipleImages && currentImageIndex > 0}}" catchtap="goPrevImage">
+          <text class="icon-chevron-left"></text>
+        </view>
+        <view class="img-nav img-nav--next" wx:if="{{hasMultipleImages && currentImageIndex < imageList.length - 1}}" catchtap="goNextImage">
+          <text class="icon-chevron-right"></text>
+        </view>
+
+        <!-- 图片索引指示器 -->
+        <view class="img-indicator" wx:if="{{hasMultipleImages}}">
+          <text class="img-indicator-text">{{currentImageIndex + 1}} / {{imageList.length}}</text>
+        </view>
+
+        <!-- 图片类型标签 -->
+        <view class="img-type-tag" wx:if="{{imageList.length > 0}}">
+          <text>{{imageList[currentImageIndex].label}}</text>
         </view>
       </view>
       <view class="top-right">
@@ -126,23 +149,42 @@
       <view class="progress-bar">
         <view class="progress-fill" style="width:{{progressPct > 100 ? 100 : progressPct}}%"></view>
       </view>
+      <view class="progress-info">
+        <text class="progress-qty">{{completedQuantity}}/{{totalQuantity}}件</text>
+        <text class="progress-pct">{{progressPct}}%</text>
+      </view>
     </view>
 
     <!-- ════════════ ③ 操作区 ════════════ -->
     <view class="action-bar {{isEditable ? '' : 'action-bar--disabled'}}">
       <view class="action-btn" bindtap="onActionProcurement" data-editable="{{isEditable}}">
+        <view class="ab-icon-wrap ab-icon--purple">
+          <text class="icon-box"></text>
+        </view>
         <text class="ab-label">采购</text>
       </view>
       <view class="action-btn" bindtap="onActionCutting" data-editable="{{isEditable}}">
+        <view class="ab-icon-wrap ab-icon--blue">
+          <text class="icon-cut"></text>
+        </view>
         <text class="ab-label">裁剪</text>
       </view>
       <view class="action-btn" wx:if="{{isEditable && order.status === 'production'}}" bindtap="onActionProcessEdit">
+        <view class="ab-icon-wrap ab-icon--teal">
+          <text class="icon-setting"></text>
+        </view>
         <text class="ab-label">工序</text>
       </view>
       <view class="action-btn" bindtap="onActionTransfer" data-editable="{{isEditable}}">
+        <view class="ab-icon-wrap ab-icon--orange">
+          <text class="icon-refresh"></text>
+        </view>
         <text class="ab-label">转单</text>
       </view>
       <view class="action-btn" bindtap="onActionRemark" data-editable="{{isEditable}}">
+        <view class="ab-icon-wrap ab-icon--gray">
+          <text class="icon-edit"></text>
+        </view>
         <text class="ab-label">备注</text>
       </view>
     </view>
@@ -157,7 +199,10 @@
         <view class="stage-item" wx:for="{{stages}}" wx:key="name">
           <view class="stage-info">
             <view class="stage-left">
-              <view class="stage-dot {{item.statusCls}}"></view>
+              <view class="stage-dot {{item.statusCls}}">
+              <view class="icon-checkmark-sm" wx:if="{{item.statusCls === 'stage-done'}}"></view>
+              <view class="icon-dot-sm" wx:if="{{item.statusCls === 'stage-doing'}}"></view>
+            </view>
               <text class="stage-name">{{item.name}}</text>
             </view>
             <text class="stage-status {{item.statusCls}}">{{item.status}}</text>
@@ -356,4 +401,10 @@
     <!-- 底部间距 -->
     <view class="bottom-gap"></view>
   </block>
+
+  <!-- 加载失败/空数据兜底 -->
+  <view class="detail-empty-state" wx:elif="{{!loading && !order}}">
+    <text class="detail-empty-text">订单数据加载失败</text>
+    <view class="detail-empty-retry" bindtap="onRetryLoad">点击重试</view>
+  </view>
 </view>

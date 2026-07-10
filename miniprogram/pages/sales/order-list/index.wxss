@@ -6,33 +6,6 @@
   background: var(--color-bg-page);
 }
 
-/* ============ 搜索框 ============ */
-.search-bar {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  background: var(--color-bg-card);
-  border-radius: var(--radius-lg);
-  padding: 8px 12px;
-  margin: 12px 0 4px;
-  border: 1px solid var(--color-border-light);
-}
-.search-input {
-  flex: 1;
-  font-size: var(--font-size-sm);
-  color: var(--color-text-primary);
-}
-.search-icon {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-tertiary);
-  flex-shrink: 0;
-}
-.search-clear {
-  font-size: 16px;
-  color: var(--color-text-tertiary);
-  padding: 0 4px;
-}
-
 /* ============ 平台筛选 Tab ============ */
 .tab-scroll {
   white-space: nowrap;
@@ -46,7 +19,7 @@
   background: var(--color-bg-card);
   font-size: var(--font-size-sm);
   color: var(--color-text-secondary);
-  border: 1px solid var(--color-border-light);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.03);
 }
 .tab-pill--on {
   background: var(--color-primary);
@@ -68,7 +41,7 @@
   background: var(--color-bg-card);
   font-size: var(--font-size-xs);
   color: var(--color-text-tertiary);
-  border: 1px solid var(--color-border-light);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.03);
 }
 .status-pill--on {
   background: var(--color-primary-bg);
@@ -81,21 +54,20 @@
 .order-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 .order-card {
   background: var(--color-bg-card);
-  border-radius: var(--radius-lg);
-  padding: 12px 14px;
-  box-shadow: var(--shadow-sm);
-  border: 1px solid var(--color-border-light);
+  border-radius: 16px;
+  padding: 14px 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.03);
+  border: none;
 }
 .oc-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding-bottom: 8px;
-  border-bottom: 1px solid var(--color-divider);
+  padding-bottom: 10px;
 }
 .oc-head-left {
   display: flex;
@@ -103,13 +75,13 @@
   gap: 8px;
 }
 .oc-platform {
-  font-size: 14px;
+  font-size: var(--font-size-2xl);
   font-weight: 600;
   color: var(--color-text-primary);
 }
 .oc-prod-no {
   font-size: 10px;
-  padding: 1px 6px;
+  padding: 2px 6px;
   border-radius: var(--radius-sm);
   background: var(--color-success-bg);
   color: var(--color-success);
@@ -128,49 +100,50 @@
 .oc-no {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 0;
+  gap: 10px;
+  padding: 6px 0;
 }
 .oc-no-label {
-  font-size: var(--font-size-xs);
+  font-size: 11px;
   color: var(--color-text-tertiary);
 }
 .oc-no-val {
   flex: 1;
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-lg);
   color: var(--color-text-primary);
-  font-weight: 500;
+  font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .oc-copy {
-  font-size: var(--font-size-xs);
+  font-size: 11px;
   color: var(--color-primary);
-  padding: 2px 8px;
-  border: 1px solid var(--color-primary-border);
+  padding: 3px 10px;
+  border: 1px solid var(--color-primary);
   border-radius: var(--radius-sm);
+  background: transparent;
 }
 
 .oc-row {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 4px 0;
+  padding: 5px 0;
 }
 .oc-label {
-  font-size: var(--font-size-xs);
+  font-size: 11px;
   color: var(--color-text-tertiary);
-  min-width: 36px;
+  min-width: 38px;
 }
 .oc-val {
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-lg);
   color: var(--color-text-primary);
 }
 .oc-amount {
   color: var(--color-primary);
   font-weight: 600;
-  font-size: 15px;
+  font-size: var(--font-size-2xl);
 }
 .oc-product {
   color: var(--color-text-secondary);
