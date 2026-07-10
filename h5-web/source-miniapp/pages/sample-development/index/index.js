@@ -271,6 +271,13 @@ Page({
             return { key: s.key, short: s.short, status: status };
           });
 
+          // ========== 与 dashboard 一致的进度百分比 + 数量行 ==========
+          var completedStages = 0;
+          item._stageSummary.forEach(function (s) { if (s.status === 'completed') completedStages++; });
+          item._completedStages = completedStages;
+          item._remainStages = STAGE_SUMMARY_CONFIG.length - completedStages;
+          item._progressPct = Math.round(completedStages / STAGE_SUMMARY_CONFIG.length * 100);
+
           return item;
         });
 

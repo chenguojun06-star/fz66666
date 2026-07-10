@@ -41,7 +41,7 @@
 
   <view class="search-bar">
     <view class="search-box">
-      <text class="search-emoji">🔍</text>
+      <text class="icon-search search-icon"></text>
       <input class="search-input" placeholder="搜索订单号 / 款号" value="{{keyword}}" bindinput="onKeywordInput" confirm-type="search" bindconfirm="onKeywordSearch" />
     </view>
   </view>
@@ -73,7 +73,7 @@
     </view>
 
     <view wx:if="{{orders.length===0 && !orderLoading}}" class="empty">
-      <empty-state iconEmoji="🏭" text="暂无数据" hint="下拉刷新试试" card="{{true}}"></empty-state>
+      <empty-state icon="icon-factory" text="暂无数据" hint="下拉刷新试试" card="{{true}}"></empty-state>
     </view>
 
     <view class="order-list" wx:if="{{orders.length > 0}}">
@@ -84,7 +84,7 @@
         <view class="order-cover" catchtap="onCoverPreview" data-url="{{item.styleCoverUrl}}">
           <image wx:if="{{item.styleCoverUrl}}" class="cover-pic" src="{{item.styleCoverUrl}}" mode="aspectFill" lazy-load />
           <view wx:else class="cover-placeholder">
-            <text class="cover-ph-text">📦</text>
+            <text class="icon-box"></text>
           </view>
         </view>
 
@@ -93,6 +93,8 @@
             <text class="order-no">{{item.orderNo}}</text>
             <text wx:if="{{item.urgencyTagText === '急'}}" class="status-tag tag tag-warning">急</text>
             <text wx:if="{{item.plateTypeTagText}}" class="status-tag tag tag-processing">{{item.plateTypeTagText}}</text>
+            <text wx:if="{{item.status === 'completed'}}" class="status-tag tag tag-success">已完成</text>
+            <text wx:elif="{{item.remainDaysClass === 'days-overdue'}}" class="status-tag tag tag-error">已逾期</text>
           </view>
 
           <view class="info-spec-row">
@@ -109,12 +111,17 @@
           </view>
 
           <view class="info-qty-row">
-            <text class="iq-num">{{item.cuttingQty || item.totalQuantity || item.orderQuantity || 0}}</text>
-            <text class="iq-lbl">总数</text>
-            <text class="iq-num iq-num--done">{{item.completedQuantity || 0}}</text>
-            <text class="iq-lbl">已完成</text>
-            <text class="iq-num iq-num--remain">{{item.remainQuantity || 0}}</text>
-            <text class="iq-lbl">剩余</text>
+            <view class="iq-main">
+              <text class="iq-num">{{item.cuttingQty || item.totalQuantity || item.orderQuantity || 0}}</text>
+              <text class="iq-unit">件</text>
+            </view>
+            <view class="iq-sub">
+              <text class="iq-num iq-num--done">{{item.completedQuantity || 0}}</text>
+              <text class="iq-lbl">已完成</text>
+              <text class="iq-divider">·</text>
+              <text class="iq-num iq-num--remain">{{item.remainQuantity || 0}}</text>
+              <text class="iq-lbl">剩余</text>
+            </view>
           </view>
           <view class="info-progress">
             <view class="ip-bar">
@@ -137,9 +144,13 @@
                 <text class="node-name">{{node.name}}</text>
                 <text class="node-pct {{node.percent >= 100 ? 'node-pct--done' : ''}}">{{node.percent}}%</text>
               </view>
+              <view class="node-meta">
+                <text class="node-qty" wx:if="{{node.qtyInfo}}">{{node.qtyInfo.completed}}/{{node.qtyInfo.total}}件</text>
+                <text class="node-dot" wx:if="{{node.qtyInfo && node.bundleInfo}}">·</text>
+                <text class="node-bundle-text" wx:if="{{node.bundleInfo}}">{{node.bundleInfo.scanned}}/{{node.bundleInfo.total}}菲</text>
+              </view>
               <view class="node-bar-bg">
-                <text class="node-bundle" wx:if="{{node.bundleInfo}}">{{node.bundleInfo.scanned}}/{{node.bundleInfo.total}}菲</text>
-                <view class="node-bar-fill {{node.percent >= 100 ? 'node-bar-fill--done' : ''}}" style="width:{{node.percent}}%"></view>
+                <view class="node-bar-fill {{node.percent >= 100 ? 'node-bar-fill--done' : ''}}" style="width:{{node.percent > 100 ? 100 : node.percent}}%"></view>
               </view>
             </view>
           </view>
@@ -163,7 +174,7 @@
 
   <view wx:if="{{activeTab===1}}" class="tab-content">
     <view wx:if="{{shipments.length===0 && !shipmentLoading}}" class="empty">
-      <empty-state iconEmoji="🏭" text="暂无数据" hint="下拉刷新试试" card="{{true}}"></empty-state>
+      <empty-state icon="icon-factory" text="暂无数据" hint="下拉刷新试试" card="{{true}}"></empty-state>
     </view>
     <view wx:for="{{shipments}}" wx:key="id" class="task-card" data-index="{{index}}" bindtap="onTapShipment">
       <view class="shipment-top">

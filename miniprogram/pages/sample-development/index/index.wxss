@@ -275,6 +275,76 @@
 .tag-error    { background: var(--color-danger-bg); color: var(--color-danger); }
 .tag-processing { background: var(--color-primary-bg); color: var(--color-primary); }
 
+/* ===== 数量行 + 进度条（与 dashboard 统一风格） ===== */
+.info-qty-row {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding-top: 3px;
+}
+.iq-main {
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+}
+.iq-num {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+.iq-unit {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-tertiary);
+}
+.iq-sub {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+.iq-num--done {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-success);
+}
+.iq-num--remain {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+}
+.iq-lbl {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-tertiary);
+}
+.iq-divider {
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-sm);
+}
+.info-progress {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding-top: 3px;
+}
+.ip-bar {
+  flex: 1;
+  height: 3px;
+  background: var(--color-border-light);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.ip-fill {
+  height: 100%;
+  background: var(--color-primary);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+.ip-pct {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  min-width: 32px;
+  text-align: right;
+}
+
 /* ===== 第二行：阶段进度条（紧凑 5 点） ===== */
 .stage-bar {
   display: flex;

@@ -93,6 +93,8 @@
             <text class="order-no">{{item.orderNo}}</text>
             <text wx:if="{{item.urgencyTagText === '急'}}" class="status-tag tag tag-warning">急</text>
             <text wx:if="{{item.plateTypeTagText}}" class="status-tag tag tag-processing">{{item.plateTypeTagText}}</text>
+            <text wx:if="{{item.status === 'completed'}}" class="status-tag tag tag-success">已完成</text>
+            <text wx:elif="{{item.remainDaysClass === 'days-overdue'}}" class="status-tag tag tag-error">已逾期</text>
           </view>
 
           <view class="info-spec-row">
@@ -109,12 +111,17 @@
           </view>
 
           <view class="info-qty-row">
-            <text class="iq-num">{{item.cuttingQty || item.totalQuantity || item.orderQuantity || 0}}</text>
-            <text class="iq-lbl">总数</text>
-            <text class="iq-num iq-num--done">{{item.completedQuantity || 0}}</text>
-            <text class="iq-lbl">已完成</text>
-            <text class="iq-num iq-num--remain">{{item.remainQuantity || 0}}</text>
-            <text class="iq-lbl">剩余</text>
+            <view class="iq-main">
+              <text class="iq-num">{{item.cuttingQty || item.totalQuantity || item.orderQuantity || 0}}</text>
+              <text class="iq-unit">件</text>
+            </view>
+            <view class="iq-sub">
+              <text class="iq-num iq-num--done">{{item.completedQuantity || 0}}</text>
+              <text class="iq-lbl">已完成</text>
+              <text class="iq-divider">·</text>
+              <text class="iq-num iq-num--remain">{{item.remainQuantity || 0}}</text>
+              <text class="iq-lbl">剩余</text>
+            </view>
           </view>
           <view class="info-progress">
             <view class="ip-bar">

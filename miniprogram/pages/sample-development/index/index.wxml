@@ -94,10 +94,31 @@
             <text wx:if="{{item._category}}" class="meta-text">· {{item._category}}</text>
             <text wx:if="{{item._season}}" class="meta-text">· {{item._season}}</text>
           </view>
-          <view class="card-meta-row" wx:if="{{item._color || item._size || item._quantity}}">
+          <view class="card-meta-row" wx:if="{{item._color || item._size}}">
             <text wx:if="{{item._color}}" class="meta-text">{{item._color}}</text>
             <text wx:if="{{item._size}}" class="meta-text">· {{item._size}}</text>
-            <text wx:if="{{item._quantity}}" class="meta-text">· {{item._quantity}}件</text>
+          </view>
+
+          <!-- 数量行（与 dashboard 统一风格） -->
+          <view class="info-qty-row" wx:if="{{item._quantity}}">
+            <view class="iq-main">
+              <text class="iq-num">{{item._quantity}}</text>
+              <text class="iq-unit">件</text>
+            </view>
+            <view class="iq-sub">
+              <text class="iq-num iq-num--done">{{item._completedStages || 0}}</text>
+              <text class="iq-lbl">已完成</text>
+              <text class="iq-divider">·</text>
+              <text class="iq-num iq-num--remain">{{item._remainStages || 0}}</text>
+              <text class="iq-lbl">剩余</text>
+            </view>
+          </view>
+          <!-- 进度条（与 dashboard 统一风格） -->
+          <view class="info-progress">
+            <view class="ip-bar">
+              <view class="ip-fill" style="width:{{item._progressPct || 0}}%"></view>
+            </view>
+            <text class="ip-pct">{{item._progressPct || 0}}%</text>
           </view>
         </view>
       </view>

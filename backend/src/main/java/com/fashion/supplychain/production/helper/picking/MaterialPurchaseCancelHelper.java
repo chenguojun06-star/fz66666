@@ -64,11 +64,7 @@ public class MaterialPurchaseCancelHelper {
             throw new IllegalArgumentException("撤销原因不能为空");
         }
 
-        String currentRole = UserContext.role();
-        if (currentRole == null || (!currentRole.contains("admin") && !currentRole.contains("supervisor")
-                && !currentRole.contains("manager") && !currentRole.contains("主管") && !currentRole.contains("管理员"))) {
-            throw new IllegalStateException("仅主管以上可撤销出库单，当前角色: " + currentRole);
-        }
+        // 权限由租户角色配置决定，不在后端硬编码角色限制
 
         MaterialPicking picking = materialPickingService.getById(pickingId);
         if (picking == null || picking.getDeleteFlag() != null && picking.getDeleteFlag() == 1) {

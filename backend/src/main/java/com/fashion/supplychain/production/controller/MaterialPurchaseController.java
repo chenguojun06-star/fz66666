@@ -184,9 +184,6 @@ public class MaterialPurchaseController {
 
     @DeleteMapping("/{id}")
     public Result<Boolean> delete(@PathVariable String id) {
-        if (!com.fashion.supplychain.common.UserContext.isSupervisorOrAbove()) {
-            return Result.fail("仅主管以上可删除采购记录");
-        }
         return Result.success(materialPurchaseOrchestrator.delete(id));
     }
 
@@ -200,11 +197,6 @@ public class MaterialPurchaseController {
         String remark = (String) payload.get("remark");
         String expectedShipDate = (String) payload.get("expectedShipDate");
         Object purchaseQtyObj = payload.get("purchaseQuantity");
-
-        // 修改采购数量需要主管以上权限
-        if (purchaseQtyObj != null && !com.fashion.supplychain.common.UserContext.isSupervisorOrAbove()) {
-            return Result.fail("仅主管以上可修改采购数量");
-        }
 
         MaterialPurchase purchase = new MaterialPurchase();
         purchase.setId(id);

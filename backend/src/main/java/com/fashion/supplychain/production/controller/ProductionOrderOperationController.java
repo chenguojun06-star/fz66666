@@ -49,9 +49,6 @@ public class ProductionOrderOperationController {
      */
     @PostMapping("/scrap")
     public Result<?> scrap(@Valid @RequestBody ScrapOrderRequest body) {
-        if (!UserContext.isSupervisorOrAbove()) {
-            return Result.fail("仅主管以上可报废订单");
-        }
         if (!assertFactoryOrderAccess(body.getId())) {
             return Result.fail("无权操作：订单不属于当前工厂");
         }
@@ -64,9 +61,6 @@ public class ProductionOrderOperationController {
      */
     @PostMapping("/complete")
     public Result<?> complete(@Valid @RequestBody CompleteProductionRequest body) {
-        if (!UserContext.isSupervisorOrAbove()) {
-            return Result.fail("仅主管以上可完成生产");
-        }
         if (!assertFactoryOrderAccess(body.getId())) {
             return Result.fail("无权操作：订单不属于当前工厂");
         }
@@ -81,9 +75,6 @@ public class ProductionOrderOperationController {
      */
     @PostMapping("/close")
     public Result<?> close(@Valid @RequestBody CloseOrderRequest body) {
-        if (!UserContext.isSupervisorOrAbove()) {
-            return Result.fail("仅主管以上可关闭订单");
-        }
         if (!assertFactoryOrderAccess(body.getId())) {
             return Result.fail("无权操作：订单不属于当前工厂");
         }
@@ -99,9 +90,6 @@ public class ProductionOrderOperationController {
      */
     @PostMapping("/delegate-process")
     public Result<?> delegateProcess(@Valid @RequestBody DelegateProcessRequest body) {
-        if (!UserContext.isSupervisorOrAbove()) {
-            return Result.fail("仅主管以上可委派工序及设置单价");
-        }
         if (!assertFactoryOrderAccess(body.getOrderId())) {
             return Result.fail("无权操作：订单不属于当前工厂");
         }

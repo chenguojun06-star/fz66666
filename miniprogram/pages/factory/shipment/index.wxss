@@ -330,25 +330,46 @@
 
 .info-qty-row {
   display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding-top: 3px;
+}
+.iq-main {
+  display: flex;
   align-items: baseline;
   gap: 2px;
-  padding-top: 1px;
 }
 .iq-num {
-  font-size: var(--font-size-base);
+  font-size: var(--font-size-lg);
   font-weight: var(--font-weight-semibold);
   color: var(--color-text-primary);
 }
+.iq-unit {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-tertiary);
+}
+.iq-sub {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
 .iq-num--done {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
   color: var(--color-success);
 }
 .iq-num--remain {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
   color: var(--color-text-secondary);
 }
 .iq-lbl {
-  font-size: var(--font-size-xs);
+  font-size: var(--font-size-sm);
   color: var(--color-text-tertiary);
-  margin-right: var(--spacing-md);
+}
+.iq-divider {
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-sm);
 }
 
 .info-progress {

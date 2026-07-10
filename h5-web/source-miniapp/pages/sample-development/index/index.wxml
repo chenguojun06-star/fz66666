@@ -1,13 +1,15 @@
 <view class="container">
   <!-- 搜索栏（搜索框 4/5 + 扫码按钮 1/5） -->
   <view class="search-bar">
-    <view class="search-input-wrap">
-      <text class="search-icon">🔍</text>
+    <view class="search-box">
+      <text class="search-icon icon-search"></text>
       <input class="search-input" placeholder="搜索款号/款式名" value="{{keyword}}" bindinput="onSearchInput" confirm-type="search" />
-      <text wx:if="{{keyword}}" class="search-clear" data-clear="1" bindtap="onSearchInput">✕</text>
+      <view wx:if="{{keyword}}" class="search-clear" data-clear="1" bindtap="onSearchInput">
+        <view class="icon-close"></view>
+      </view>
     </view>
     <view class="scan-btn" hover-class="scan-btn-hover" bindtap="onTopScan">
-      <text class="scan-icon">📷</text>
+      <view class="scan-icon icon-camera"></view>
     </view>
   </view>
 
@@ -65,7 +67,7 @@
   </view>
 
   <!-- 空状态 -->
-  <empty-state wx:elif="{{!loading && displayList.length === 0}}" iconEmoji="👔" text="暂无样衣开发记录" hint="点击上方📷扫码录入新的样衣任务"></empty-state>
+  <empty-state wx:elif="{{!loading && displayList.length === 0}}" text="暂无样衣开发记录" hint="点击上方扫码录入新的样衣任务"></empty-state>
 
   <!-- 任务列表 -->
   <block wx:else>
@@ -75,7 +77,7 @@
         <view class="card-cover-wrap" data-src="{{item._cover}}" catchtap="onPreviewImage">
           <image wx:if="{{item._cover}}" src="{{item._cover}}" mode="aspectFill" class="cover-img" lazy-load="true"></image>
           <view wx:else class="cover-placeholder-box">
-            <text class="cover-placeholder">👔</text>
+            <text class="cover-placeholder icon-placeholder"></text>
           </view>
         </view>
         <view class="card-info">
@@ -92,10 +94,31 @@
             <text wx:if="{{item._category}}" class="meta-text">· {{item._category}}</text>
             <text wx:if="{{item._season}}" class="meta-text">· {{item._season}}</text>
           </view>
-          <view class="card-meta-row" wx:if="{{item._color || item._size || item._quantity}}">
+          <view class="card-meta-row" wx:if="{{item._color || item._size}}">
             <text wx:if="{{item._color}}" class="meta-text">{{item._color}}</text>
             <text wx:if="{{item._size}}" class="meta-text">· {{item._size}}</text>
-            <text wx:if="{{item._quantity}}" class="meta-text">· {{item._quantity}}件</text>
+          </view>
+
+          <!-- 数量行（与 dashboard 统一风格） -->
+          <view class="info-qty-row" wx:if="{{item._quantity}}">
+            <view class="iq-main">
+              <text class="iq-num">{{item._quantity}}</text>
+              <text class="iq-unit">件</text>
+            </view>
+            <view class="iq-sub">
+              <text class="iq-num iq-num--done">{{item._completedStages || 0}}</text>
+              <text class="iq-lbl">已完成</text>
+              <text class="iq-divider">·</text>
+              <text class="iq-num iq-num--remain">{{item._remainStages || 0}}</text>
+              <text class="iq-lbl">剩余</text>
+            </view>
+          </view>
+          <!-- 进度条（与 dashboard 统一风格） -->
+          <view class="info-progress">
+            <view class="ip-bar">
+              <view class="ip-fill" style="width:{{item._progressPct || 0}}%"></view>
+            </view>
+            <text class="ip-pct">{{item._progressPct || 0}}%</text>
           </view>
         </view>
       </view>

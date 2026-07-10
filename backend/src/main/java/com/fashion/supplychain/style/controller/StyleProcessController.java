@@ -31,25 +31,16 @@ public class StyleProcessController {
 
     @PostMapping
     public Result<Boolean> save(@RequestBody StyleProcess styleProcess) {
-        if (!UserContext.isSupervisorOrAbove()) {
-            return Result.fail("仅主管以上可添加工序");
-        }
         return Result.success(styleProcessOrchestrator.save(styleProcess));
     }
 
     @PutMapping
     public Result<Boolean> update(@RequestBody StyleProcess styleProcess) {
-        if (!UserContext.isSupervisorOrAbove()) {
-            return Result.fail("仅主管以上可修改工序");
-        }
         return Result.success(styleProcessOrchestrator.update(styleProcess));
     }
 
     @DeleteMapping("/{id}")
     public Result<Boolean> delete(@PathVariable String id) {
-        if (!UserContext.isSupervisorOrAbove()) {
-            return Result.fail("仅主管以上可删除工序");
-        }
         return Result.success(styleProcessOrchestrator.delete(id));
     }
 }
