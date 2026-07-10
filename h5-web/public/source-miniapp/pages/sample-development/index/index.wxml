@@ -100,21 +100,14 @@
             <text wx:if="{{item._size}}" class="meta-text">· {{item._size}}</text>
           </view>
 
-          <!-- 数量行（与 dashboard 统一风格） -->
+          <!-- 数量行（样衣只有总数量，无已完成/剩余件数概念） -->
           <view class="info-qty-row" wx:if="{{item._quantity}}">
             <view class="iq-main">
               <text class="iq-num">{{item._quantity}}</text>
               <text class="iq-unit">件</text>
             </view>
-            <view class="iq-sub">
-              <text class="iq-num iq-num--done">{{item._completedStages || 0}}</text>
-              <text class="iq-lbl">已完成</text>
-              <text class="iq-divider">·</text>
-              <text class="iq-num iq-num--remain">{{item._remainStages || 0}}</text>
-              <text class="iq-lbl">剩余</text>
-            </view>
           </view>
-          <!-- 进度条（与 dashboard 统一风格） -->
+          <!-- 进度条（基于5阶段完成率） -->
           <view class="info-progress">
             <view class="ip-bar">
               <view class="ip-fill" style="width:{{item._progressPct || 0}}%"></view>
