@@ -22,7 +22,10 @@
       <view class="srt-chunk">
         <view wx:for="{{chunk.items}}" wx:for-item="item" wx:key="id" class="srt-table-row" hover-class="srt-table-row-hover" hover-stay-time="50">
           <text class="srt-td srt-td-worker" user-select>{{item.displayWorker}}</text>
-          <text class="srt-td srt-td-order" user-select>{{item.displayOrderNo}}</text>
+          <view class="srt-td srt-td-order">
+            <text user-select>{{item.displayOrderNo}}</text>
+            <text wx:if="{{item.displayTypeTag}}" class="srt-type-tag srt-type-{{item.displayTypeTag}}">{{item.displayTypeTag}}</text>
+          </view>
           <text class="srt-td srt-td-bundle" user-select>{{item.displayBundleNo}}</text>
           <text class="srt-td srt-td-process" user-select>{{item.displayProcess}}</text>
           <text class="srt-td srt-td-colorsize" user-select>{{item.displayColorSize}}</text>

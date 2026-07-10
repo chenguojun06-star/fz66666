@@ -67,6 +67,24 @@
 .srt-th-order,
 .srt-td-order {
   width: 100px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.srt-type-tag {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  line-height: 1.4;
+  font-weight: 500;
+  align-self: flex-start;
+}
+
+.srt-type-样衣 {
+  background: #fff3e0;
+  color: #e65100;
 }
 
 .srt-th-bundle,

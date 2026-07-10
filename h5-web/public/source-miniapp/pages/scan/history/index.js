@@ -51,7 +51,7 @@ function _formatPatternRecord(item) {
     displayProcess: item.processName || item.progressStage || item.operationType || '-',
     displayWorker: item.operatorName || '-',
     displayOrderNo: item.styleNo || item.orderNo || '-',
-    displayBundleNo: item.color || '-',
+    displayBundleNo: '-',
     displayColor: item.color || '-',
     displaySize: item.size || '-',
     // 合并字段：颜色/码数 与 单价/金额 — 降低 WXML 节点数（每行 12→10），
@@ -64,6 +64,7 @@ function _formatPatternRecord(item) {
     displayLineAmount: '-',
     isPayable: false,
     displayBedNo: '-',
+    displayTypeTag: '样衣',
   };
 }
 
@@ -304,6 +305,7 @@ Page({
         })(),
         isPayable: (Number(item.totalAmount) > 0) || (Number(item.scanCost) > 0) || ((Number(item.unitPrice) || 0) > 0 && (Number(item.quantity) || 0) > 0),
         displayBedNo: item.bedNo != null ? String(item.bedNo) : '-',
+        displayTypeTag: '',
       }));
 
       const prevList = reset ? [] : (this._records || []);
