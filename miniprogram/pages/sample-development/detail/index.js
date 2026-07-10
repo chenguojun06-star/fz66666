@@ -1380,13 +1380,81 @@ Page({
         dyeing: '染色', ironing: '整烫', pleating: '压褶',
         beading: '钉珠', other: '其他',
       };
+      // 与 PC 端 statusOptions 一致
+      const STATUS_MAP = {
+        pending: { label: '待处理', color: 'default' },
+        processing: { label: '处理中', color: 'processing' },
+        completed: { label: '已完成', color: 'success' },
+        cancelled: { label: '已取消', color: 'error' },
+      };
       list.forEach(s => {
         const rawType = s.type || s.processType || '';
         s.typeText = rawType ? (PROCESS_TYPE_MAP[rawType] || '未知') : '';
+        // 状态文本
+        const statusKey = String(s.status || '').toLowerCase();
+        const statusInfo = STATUS_MAP[statusKey];
+        s._statusText = statusInfo ? statusInfo.label : (s.status || '');
+        // 总价：优先取后端 totalPrice，否则 quantity × unitPrice
+        const qty = Number(s.quantity || 0);
+        const price = Number(s.unitPrice || s.price || 0);
+        const total = s.totalPrice !== undefined && s.totalPrice !== null
+          ? Number(s.totalPrice)
+          : qty * price;
+        s._totalPriceText = total > 0 ? total.toFixed(2) : '';
+        // 图片缩略图（首张）
+        let imgs = s.images || s.imageUrls || s.imageList;
+        if (typeof imgs === 'string') {
+          try { imgs = JSON.parse(imgs); } catch (e) { imgs = imgs.split(',').filter(Boolean); }
+        }
+        s._thumbUrl = Array.isArray(imgs) && imgs.length > 0 ? getAuthedImageUrl(imgs[0]) : '';
+        // 附件计数
+        let atts = s.attachments || s.attachmentList;
+        if (typeof atts === 'string') {
+          try { atts = JSON.parse(atts); } catch (e) { atts = atts.split(',').filter(Boolean); }
+        }
+        s._attachmentCount = Array.isArray(atts) ? atts.length : 0;
+        // 完成时间格式化
+        s.completedTimeText = this._fmtDateTime(s.completedTime || s.completeTime);
       });
       this.setData({ secondaryList: list });
     } catch (e) { console.error('二次工艺加载失败', e); }
     this.setData({ secondaryLoading: false });
+  },
+
+  /** 二次工艺项点击：查看详情（图片预览 / 附件列表） */
+  onSecondaryTap(e) {
+    const id = e.currentTarget.dataset.id;
+    const item = this.data.secondaryList.find(s => String(s.id) === String(id));
+    if (!item) return;
+    // 收集所有图片可预览
+    let imgs = item.images || item.imageUrls || item.imageList;
+    if (typeof imgs === 'string') {
+      try { imgs = JSON.parse(imgs); } catch (e) { imgs = imgs.split(',').filter(Boolean); }
+    }
+    const imgUrls = Array.isArray(imgs) ? imgs.map(u => getAuthedImageUrl(u)) : [];
+    if (imgUrls.length > 0) {
+      wx.previewImage({ current: imgUrls[0], urls: imgUrls });
+      return;
+    }
+    // 无图片：显示详情
+    const lines = [];
+    if (item.processName) lines.push('工艺：' + item.processName);
+    if (item.typeText) lines.push('类型：' + item.typeText);
+    if (item.description) lines.push('描述：' + item.description);
+    if (item.quantity) lines.push('数量：' + item.quantity);
+    if (item.unitPrice) lines.push('单价：¥' + item.unitPrice);
+    if (item._totalPriceText) lines.push('总价：¥' + item._totalPriceText);
+    if (item.factoryName) lines.push('加工厂：' + item.factoryName);
+    if (item._statusText) lines.push('状态：' + item._statusText);
+    if (item.assignee) lines.push('领取人：' + item.assignee);
+    if (item.completedTimeText) lines.push('完成时间：' + item.completedTimeText);
+    if (item.remark) lines.push('备注：' + item.remark);
+    wx.showModal({
+      title: item.processName || '二次工艺详情',
+      content: lines.join('\n'),
+      showCancel: false,
+      confirmText: '关闭',
+    });
   },
 
   async loadPattern() {
@@ -1450,7 +1518,11 @@ Page({
     try {
       const res = await style.listAttachments({ styleId: this.data.styleId });
       let list = res?.data?.records || res?.data || res?.records || [];
-      list = list.map(it => ({ ...it, fileSizeText: this.formatFileSize(it.fileSize || it.size || 0) }));
+      list = list.map(it => ({
+        ...it,
+        fileSizeText: this.formatFileSize(it.fileSize || it.size || 0),
+        createTimeText: it.createTime ? this._fmtDateTime(it.createTime) : '',
+      }));
       this.setData({ attachmentList: list });
       // 把图片附件补充到 styleImages（必须鉴权处理，否则 <image> 无法加载受保护文件）
       const imageUrls = list
@@ -1511,7 +1583,8 @@ Page({
 
     // 图片预览
     if (/\.(jpg|jpeg|png|gif|webp|bmp)$/i.test(url)) {
-      wx.previewImage({ urls: [url], current: url });
+      const authedUrl = getAuthedImageUrl(url);
+      wx.previewImage({ urls: [authedUrl], current: authedUrl });
       return;
     }
 
@@ -1538,6 +1611,38 @@ Page({
             data: url,
             success: () => wx.showToast({ title: '链接已复制', icon: 'success' })
           });
+        }
+      }
+    });
+  },
+
+  /** 下载附件 */
+  onAttachmentDownload(e) {
+    const url = e.currentTarget.dataset.url;
+    const name = e.currentTarget.dataset.name || '文件';
+    if (!url) return;
+    this.downloadFile(url, name);
+  },
+
+  /** 删除附件 */
+  onAttachmentDelete(e) {
+    const id = e.currentTarget.dataset.id;
+    const name = e.currentTarget.dataset.name || '该附件';
+    if (!id) return;
+    const that = this;
+    wx.showModal({
+      title: '确认删除',
+      content: '确定删除「' + name + '」？删除后不可恢复',
+      confirmColor: '#ff4d4f',
+      success: async (res) => {
+        if (!res.confirm) return;
+        try {
+          await style.deleteAttachment(id);
+          wx.showToast({ title: '已删除', icon: 'success' });
+          that.setData({ attachmentList: [] });
+          that.loadAttachments();
+        } catch (err) {
+          wx.showToast({ title: '删除失败', icon: 'none' });
         }
       }
     });
@@ -1658,16 +1763,105 @@ Page({
     });
   },
 
-  /** 上传附件 - 仅支持图片（拍照/相册） */
+  /** 上传附件 - 支持图片拍照/相册 + 文件选择 */
   onUploadAttachment() {
     wx.showActionSheet({
-      itemList: ['拍照上传', '从相册选择'],
+      itemList: ['拍照上传', '从相册选择', '选择文件（PDF/文档/CAD等）'],
       success: (res) => {
         if (res.tapIndex === 0) {
           this.chooseImage('camera');
         } else if (res.tapIndex === 1) {
           this.chooseImage('album');
+        } else if (res.tapIndex === 2) {
+          this.chooseFile();
         }
+      }
+    });
+  },
+
+  /** 选择文件（通过微信会话文件） */
+  chooseFile() {
+    const that = this;
+    // 微信小程序只能通过 wx.chooseMessageFile 从聊天记录选文件
+    wx.chooseMessageFile({
+      count: 5,
+      type: 'file',
+      extension: ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'dxf', 'plt', 'ets', 'paj', 'zip', 'rar', 'txt'],
+      success: (res) => {
+        const tempFiles = res.tempFiles;
+        if (!tempFiles || tempFiles.length === 0) return;
+        wx.showLoading({ title: '上传中...', mask: true });
+        let uploadedCount = 0;
+        tempFiles.forEach((tempFile) => {
+          that.uploadFileAttachment(tempFile, () => {
+            uploadedCount++;
+            if (uploadedCount === tempFiles.length) {
+              wx.hideLoading();
+              wx.showToast({ title: '上传完成', icon: 'success' });
+              that.setData({ attachmentList: [] });
+              that.loadAttachments();
+            }
+          });
+        });
+      },
+      fail: (err) => {
+        console.error('选择文件失败', err);
+        if (err.errMsg && err.errMsg.includes('cancel')) return;
+        wx.showToast({ title: '选择失败', icon: 'none' });
+      }
+    });
+  },
+
+  /** 上传文件附件（非图片） */
+  uploadFileAttachment(tempFile, callback) {
+    const that = this;
+    const filePath = tempFile.path || tempFile.tempFilePath;
+    const fileSize = tempFile.size;
+    const fileName = tempFile.name || ('file_' + Date.now());
+
+    // 文件大小校验（15MB，与PC端一致）
+    if (fileSize > 15 * 1024 * 1024) {
+      wx.showToast({ title: '文件不能超过15MB', icon: 'none' });
+      if (callback) callback();
+      return;
+    }
+
+    const token = require('../../../utils/storage').getToken();
+    const { getBaseUrl } = require('../../../config');
+    const baseUrl = getBaseUrl();
+
+    wx.uploadFile({
+      url: baseUrl + '/api/style/attachment/upload',
+      filePath: filePath,
+      name: 'file',
+      formData: {
+        styleId: String(that.data.styleId),
+        styleNo: that.data.styleInfo?.styleNo || '',
+        bizType: 'general',
+      },
+      header: {
+        'Authorization': 'Bearer ' + token
+      },
+      success: (res) => {
+        try {
+          const data = typeof res.data === 'string' ? JSON.parse(res.data) : res.data;
+          if (data.code === 200) {
+            if (!callback) {
+              wx.showToast({ title: '上传成功', icon: 'success' });
+              that.setData({ attachmentList: [] });
+              that.loadAttachments();
+            }
+          } else {
+            wx.showToast({ title: data.message || '上传失败', icon: 'none' });
+          }
+        } catch (e) {
+          wx.showToast({ title: '上传失败', icon: 'none' });
+        }
+        if (callback) callback();
+      },
+      fail: () => {
+        wx.showToast({ title: '上传失败', icon: 'none' });
+        if (callback) callback();
       }
     });
   },

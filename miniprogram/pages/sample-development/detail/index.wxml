@@ -119,6 +119,9 @@
               <view class="ir-main">
                 <text class="ir-title">{{item._materialLabel}}</text>
                 <text class="ir-sub">{{item._specLabel}}</text>
+                <text class="ir-sub" wx:if="{{item.materialCode || item.materialType}}">{{item.materialType || ''}}{{item.materialType && item.materialCode ? ' · ' : ''}}{{item.materialCode || ''}}</text>
+                <text class="ir-sub" wx:if="{{item.fabricComposition || item.fabricWeight}}">{{item.fabricComposition || ''}}{{item.fabricComposition && item.fabricWeight ? ' · ' : ''}}{{item.fabricWeight ? item.fabricWeight + 'g' : ''}}</text>
+                <text class="ir-sub" wx:if="{{item.unitPrice || item.supplier}}">{{item.unitPrice ? '¥' + item.unitPrice : ''}}{{item.unitPrice && item.supplier ? ' · ' : ''}}{{item.supplier || ''}}</text>
               </view>
               <view class="ir-right bom-right">
                 <view wx:if="{{editingBomId === item.id && bomStage.status === 'in_progress'}}" class="bom-edit-wrap">
@@ -378,13 +381,30 @@
         <view wx:if="{{secondaryLoading}}" class="empty-inline">加载中...</view>
         <view wx:elif="{{secondaryList.length === 0}}" class="empty-inline">暂无二次工艺数据</view>
         <view wx:else class="item-list">
-          <view class="item-row" wx:for="{{secondaryList}}" wx:key="id">
-            <view class="ir-main">
-              <text class="ir-title">{{item.processName || item.name}}</text>
-              <text class="ir-sub">{{item.typeText}} {{item.position || ''}}</text>
+          <view class="item-row sec-row" wx:for="{{secondaryList}}" wx:key="id" data-id="{{item.id}}" bindtap="onSecondaryTap">
+            <!-- 图片缩略图（首张） -->
+            <view wx:if="{{item._thumbUrl}}" class="sec-thumb">
+              <image src="{{item._thumbUrl}}" mode="aspectFill" lazy-load />
             </view>
-            <view class="ir-right">
+            <view class="ir-main">
+              <view class="sec-title-row">
+                <text class="ir-title">{{item.processName || item.name}}</text>
+                <text class="sec-status-tag sst-{{item.status}}">{{item._statusText}}</text>
+              </view>
+              <text class="ir-sub" wx:if="{{item.typeText || item.position}}">{{item.typeText}}{{item.typeText && item.position ? ' · ' : ''}}{{item.position || ''}}</text>
+              <text class="ir-sub" wx:if="{{item.description}}">{{item.description}}</text>
+              <text class="ir-sub" wx:if="{{item.quantity || item.unitPrice || item._totalPriceText}}">
+                <text wx:if="{{item.quantity || item.unitPrice}}">{{item.quantity || 0}}件 × ¥{{item.unitPrice || 0}}</text>
+                <text wx:if="{{item.quantity && item._totalPriceText}}"> · </text>
+                <text wx:if="{{item._totalPriceText}}" class="sec-total">总价¥{{item._totalPriceText}}</text>
+              </text>
+              <text class="ir-sub" wx:if="{{item.factoryName}}">加工厂：{{item.factoryName}}</text>
+              <text class="ir-sub" wx:if="{{item.assignee || item.completedTimeText}}">{{item.assignee || ''}}{{item.assignee && item.completedTimeText ? ' · ' : ''}}{{item.completedTimeText || ''}}</text>
+              <text class="ir-sub" wx:if="{{item.remark}}">备注：{{item.remark}}</text>
+            </view>
+            <view class="ir-right sec-right">
               <text class="ir-price">¥{{item.unitPrice || item.price || 0}}</text>
+              <text wx:if="{{item._attachmentCount > 0}}" class="sec-att-badge">附件{{item._attachmentCount}}</text>
             </view>
           </view>
         </view>
@@ -596,13 +616,15 @@
         <text class="section-link" catchtap="onUploadAttachment">上传附件</text>
       </view>
       <view wx:else class="item-list">
-        <view class="item-row" wx:for="{{attachmentList}}" wx:key="id" data-url="{{item.url || item.fileUrl}}" bindtap="onAttachmentTap">
+        <view class="item-row" wx:for="{{attachmentList}}" wx:key="id" data-url="{{item.url || item.fileUrl}}" data-id="{{item.id}}" bindtap="onAttachmentTap">
           <view class="ir-main">
             <text class="ir-title">{{item.fileName || item.name || '文件'}}</text>
-            <text class="ir-sub">{{item.fileType || item.type || ''}} {{item.fileSizeText}}</text>
+            <text class="ir-sub">{{item.fileType || item.type || ''}} · {{item.fileSizeText}}</text>
+            <text class="ir-sub" wx:if="{{item.uploader || item.createTime}}">{{item.uploader || ''}}{{item.uploader && item.createTime ? ' · ' : ''}}{{item.createTimeText || ''}}</text>
           </view>
           <view class="ir-right">
-            <text class="ir-link">查看</text>
+            <text class="ir-link" catchtap="onAttachmentDownload" data-url="{{item.url || item.fileUrl}}" data-name="{{item.fileName || item.name || '文件'}}">下载</text>
+            <text class="ir-link ir-danger" catchtap="onAttachmentDelete" data-id="{{item.id}}" data-name="{{item.fileName || item.name || '文件'}}">删除</text>
           </view>
         </view>
       </view>
