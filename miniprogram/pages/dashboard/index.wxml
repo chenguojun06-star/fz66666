@@ -46,12 +46,26 @@
             <text wx:elif="{{item.remainDaysClass === 'days-overdue'}}" class="status-tag tag tag-error">已逾期</text>
           </view>
 
-          <!-- 基础信息（款号 + 工厂） -->
+          <!-- 基础信息（款号 + 款名） -->
           <view class="info-spec-row">
             <text class="info-spec-label">款号</text>
             <text class="info-spec-value">{{item.styleNo || '-'}}</text>
-            <text class="info-spec-label" wx:if="{{item.factoryName}}">工厂</text>
-            <text class="info-spec-value" wx:if="{{item.factoryName}}">{{item.factoryName}}</text>
+            <text class="info-spec-label" wx:if="{{item.styleNameDisplay}}">款名</text>
+            <text class="info-spec-value info-spec-value--name" wx:if="{{item.styleNameDisplay}}">{{item.styleNameDisplay}}</text>
+          </view>
+
+          <!-- 跟单员 + 客户 -->
+          <view class="info-spec-row" wx:if="{{item.merchandiserDisplay || item.customerDisplay}}">
+            <text class="info-spec-label" wx:if="{{item.merchandiserDisplay}}">跟单</text>
+            <text class="info-spec-value" wx:if="{{item.merchandiserDisplay}}">{{item.merchandiserDisplay}}</text>
+            <text class="info-spec-label" wx:if="{{item.customerDisplay}}">客户</text>
+            <text class="info-spec-value" wx:if="{{item.customerDisplay}}">{{item.customerDisplay}}</text>
+          </view>
+
+          <!-- 工厂 -->
+          <view class="info-spec-row" wx:if="{{item.factoryName}}">
+            <text class="info-spec-label">工厂</text>
+            <text class="info-spec-value">{{item.factoryName}}</text>
           </view>
 
           <!-- 交期信息 -->

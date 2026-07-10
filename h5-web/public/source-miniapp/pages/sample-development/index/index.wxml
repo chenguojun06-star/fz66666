@@ -91,6 +91,7 @@
           <text wx:if="{{item.styleName || item.name}}" class="style-name">{{item.styleName || item.name}}</text>
           <view class="card-meta-row" wx:if="{{item._customer || item._category || item._season}}">
             <text wx:if="{{item._customer}}" class="meta-text">{{item._customer}}</text>
+            <text wx:if="{{item._merchandiser}}" class="meta-text">· 跟单: {{item._merchandiser}}</text>
             <text wx:if="{{item._category}}" class="meta-text">· {{item._category}}</text>
             <text wx:if="{{item._season}}" class="meta-text">· {{item._season}}</text>
           </view>

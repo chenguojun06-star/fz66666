@@ -4,6 +4,7 @@ const { isAdminOrSupervisor } = require('../../../utils/permission');
 const { isFactoryOwner } = require('../../../utils/storage');
 const { transformOrderData } = require('../utils/orderTransform');
 const { buildProcessNodesWithRates, calcOrderProgress } = require('../utils/progressNodes');
+const { bindPageEvents, unbindPageEvents } = require('../../../utils/pageEventBinder');
 
 const STATUS_MAP = {
   pending: { text: '待收货', cls: 'tag-warning' },
@@ -20,6 +21,10 @@ function enrichForDashboard(order) {
   order.remainQuantity = Math.max(0, total - completed);
   order.calculatedProgress = calcOrderProgress(order);
   order.expanded = false;
+  // 对齐PC端显示字段
+  order.styleNameDisplay = order.styleName || '';
+  order.merchandiserDisplay = order.merchandiser || '';
+  order.customerDisplay = order.company || order.customer || order.customerName || '';
   return order;
 }
 
@@ -76,6 +81,11 @@ Page({
     const factory = isFactoryOwner();
     const admin = isAdminOrSupervisor();
     this.setData({ isFactory: factory, isTenantAdmin: admin, activeTab: 0 });
+    bindPageEvents(this, () => this._resetAndLoad(), ['ORDER_STATUS_CHANGED']);
+  },
+
+  onUnload: function () {
+    unbindPageEvents(this);
   },
 
   onShow: function () {

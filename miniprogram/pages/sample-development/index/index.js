@@ -256,6 +256,7 @@ Page({
           // ========== 与 PC 端一致的 metaItems：来源 / 品类 / 季节 / 客户 / 版师 ==========
           const customerCandidates = [item.customer, styleInfo.customer, item.customerName, styleInfo.customerName, item.buyer, styleInfo.buyer];
           item._customer = customerCandidates.find(function (v) { return v != null && String(v).trim() !== ''; }) || '';
+          item._merchandiser = item.merchandiser || styleInfo.merchandiser || '';
           item._category = item.category || styleInfo.category || '';
           item._season = item.season || styleInfo.season || '';
 

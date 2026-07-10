@@ -45,6 +45,10 @@ function enrichForDashboard(order) {
   order.remainQuantity = Math.max(0, total - completed);
   order.calculatedProgress = calcOrderProgress(order);
   order.expanded = false;
+  // 对齐PC端显示字段
+  order.styleNameDisplay = order.styleName || '';
+  order.merchandiserDisplay = order.merchandiser || '';
+  order.customerDisplay = order.company || order.customer || order.customerName || '';
   return order;
 }
 
@@ -235,7 +239,10 @@ Page({
           }
         }
       }
-    }).catch(function (e) { console.warn('[dashboard] loadOrders失败:', e.message || e); });
+    }).catch(function (e) {
+      console.warn('[dashboard] loadOrders失败:', e.message || e);
+      toast.error('订单加载失败，请下拉刷新');
+    });
   },
 
   /* ======== 刷新状态计数 ======== */
