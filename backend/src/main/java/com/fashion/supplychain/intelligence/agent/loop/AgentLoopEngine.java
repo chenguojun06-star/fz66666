@@ -629,6 +629,19 @@ public class AgentLoopEngine {
             }
         }
 
+        // 数据真实性守卫（4项并行校验，纯规则无LLM，约1-3秒）
+        // 包含：数据真实性 + 数字一致性 + 实体事实 + 接地率检查
+        try {
+            if (ctx.getAllExecRecords() != null && !ctx.getAllExecRecords().isEmpty()) {
+                String guardWarnings = runDataTruthGuards(ctx, content);
+                if (guardWarnings != null && !guardWarnings.isBlank()) {
+                    content += "\n" + guardWarnings;
+                }
+            }
+        } catch (Exception e) {
+            log.debug("[AsyncPost] 数据真实性守卫异常: {}", e.getMessage());
+        }
+
         // 自我一致性验证（仅高风险工具，约1-2秒）
         try {
             boolean usedHighRiskTool = ctx.getAllExecRecords().stream()
@@ -713,6 +726,7 @@ public class AgentLoopEngine {
             }
 
             java.util.List<String> toolNames = new java.util.ArrayList<>();
+            java.util.List<String> failedTools = new java.util.ArrayList<>();
             java.util.Set<String> seen = new java.util.HashSet<>();
             for (AiAgentToolExecHelper.ToolExecRecord rec : ctx.getAllExecRecords()) {
                 if (rec.toolName == null) continue;
@@ -720,19 +734,39 @@ public class AgentLoopEngine {
                 if (seen.add(displayName)) {
                     toolNames.add(displayName);
                 }
+                if (isToolFailed(rec.rawResult)) {
+                    if (!failedTools.contains(displayName)) {
+                        failedTools.add(displayName);
+                    }
+                }
             }
 
-            String footer;
+            StringBuilder footer = new StringBuilder();
+            footer.append("\n\n---\n> 📊 数据来源：");
             if (toolCount <= 2) {
-                footer = "\n\n---\n> 📊 数据来源：" + String.join("、", toolNames);
+                footer.append(String.join("、", toolNames));
             } else {
-                footer = "\n\n---\n> 📊 数据来源：已查询 " + toolCount + " 个数据源（" + String.join("、", toolNames) + "）";
+                footer.append("已查询 ").append(toolCount).append(" 个数据源（")
+                        .append(String.join("、", toolNames)).append("）");
             }
-            content += footer;
+
+            if (!failedTools.isEmpty()) {
+                footer.append("\n> ⚠️ 部分数据查询失败（").append(String.join("、", failedTools))
+                        .append("），结果可能不完整，请稍后重试。");
+            }
+
+            content += footer.toString();
         } catch (Exception e) {
             log.debug("[AgentLoop] 数据来源标识添加失败: {}", e.getMessage());
         }
         return content;
+    }
+
+    private boolean isToolFailed(String rawResult) {
+        if (rawResult == null || rawResult.isBlank()) return true;
+        return rawResult.contains("\"error\"")
+                && !rawResult.contains("\"success\":true")
+                && !rawResult.contains("\"success\": true");
     }
 
     private String mapToolDisplayName(String toolName) {
