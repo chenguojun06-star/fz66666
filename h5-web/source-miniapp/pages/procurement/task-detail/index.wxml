@@ -99,7 +99,7 @@
             </view>
             <view class="qty-cell">
               <text class="qty-lbl">待到</text>
-              <text class="qty-val pending">{{item.pendingQuantity || (item.purchaseQuantity - item.arrivedQuantity) || 0}}</text>
+              <text class="qty-val pending">{{item.pendingQuantity || 0}}</text>
             </view>
             <view class="qty-cell">
               <text class="qty-lbl">到货率</text>

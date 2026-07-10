@@ -67,7 +67,7 @@ public class MaterialPurchaseCancelHelper {
         String currentRole = UserContext.role();
         if (currentRole == null || (!currentRole.contains("admin") && !currentRole.contains("supervisor")
                 && !currentRole.contains("manager") && !currentRole.contains("主管") && !currentRole.contains("管理员"))) {
-            log.warn("用户 {} 尝试撤销出库单，角色: {}", UserContext.username(), currentRole);
+            throw new IllegalStateException("仅主管以上可撤销出库单，当前角色: " + currentRole);
         }
 
         MaterialPicking picking = materialPickingService.getById(pickingId);

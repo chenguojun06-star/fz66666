@@ -39,6 +39,9 @@ public class ProductionOrderProgressController {
      */
     @PostMapping("/update-progress")
     public Result<?> updateProgress(@Valid @RequestBody UpdateProgressRequest body) {
+        if (!UserContext.isSupervisorOrAbove()) {
+            return Result.fail("仅主管以上可更新生产进度");
+        }
         productionOrderOrchestrator.updateProductionProgress(
                 body.getId(),
                 body.getProgress(),
@@ -52,6 +55,9 @@ public class ProductionOrderProgressController {
      */
     @PostMapping("/update-material-rate")
     public Result<?> updateMaterialRate(@Valid @RequestBody UpdateMaterialRateRequest body) {
+        if (!UserContext.isSupervisorOrAbove()) {
+            return Result.fail("仅主管以上可更新物料到位率");
+        }
         productionOrderOrchestrator.updateMaterialArrivalRate(body.getId(), body.getRate());
         return Result.successMessage("更新成功");
     }
@@ -61,6 +67,9 @@ public class ProductionOrderProgressController {
      */
     @PostMapping("/progress-workflow/lock")
     public Result<?> lockProgressWorkflow(@Valid @RequestBody LockProgressWorkflowRequest body) {
+        if (!UserContext.isSupervisorOrAbove()) {
+            return Result.fail("仅主管以上可锁定工序流程");
+        }
         ProductionOrder updated = productionOrderOrchestrator.lockProgressWorkflow(body.getId(),
                 body.getWorkflowJson());
         return Result.success(updated);
@@ -71,6 +80,9 @@ public class ProductionOrderProgressController {
      */
     @PostMapping("/progress-workflow/rollback")
     public Result<?> rollbackProgressWorkflow(@Valid @RequestBody RollbackProgressWorkflowRequest body) {
+        if (!UserContext.isSupervisorOrAbove()) {
+            return Result.fail("仅主管以上可回退工序流程");
+        }
         ProductionOrder updated = productionOrderOrchestrator.rollbackProgressWorkflow(body.getId(), body.getReason());
         return Result.success(updated);
     }

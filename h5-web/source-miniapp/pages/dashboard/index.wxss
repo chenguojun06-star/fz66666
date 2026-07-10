@@ -210,17 +210,17 @@
   flex-wrap: wrap;
 }
 .info-spec-label {
-  font-size: var(--font-size-xs);
+  font-size: var(--font-size-sm);
   color: var(--color-text-tertiary);
 }
 .info-spec-value {
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-md);
   color: var(--color-text-primary);
   font-weight: var(--font-weight-medium);
 }
 
 .info-remain {
-  font-size: var(--font-size-xs);
+  font-size: var(--font-size-sm);
   padding: 2px 6px;
   border-radius: var(--radius-sm);
   font-weight: var(--font-weight-medium);
@@ -265,12 +265,12 @@
   gap: 2px;
 }
 .iq-num {
-  font-size: var(--font-size-md);
+  font-size: var(--font-size-lg);
   font-weight: var(--font-weight-semibold);
   color: var(--color-text-primary);
 }
 .iq-unit {
-  font-size: var(--font-size-xs);
+  font-size: var(--font-size-sm);
   color: var(--color-text-tertiary);
 }
 .iq-sub {
@@ -279,22 +279,22 @@
   gap: 3px;
 }
 .iq-num--done {
-  font-size: var(--font-size-xs);
+  font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
   color: var(--color-success);
 }
 .iq-num--remain {
-  font-size: var(--font-size-xs);
+  font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
   color: var(--color-text-secondary);
 }
 .iq-lbl {
-  font-size: var(--font-size-xs);
+  font-size: var(--font-size-sm);
   color: var(--color-text-tertiary);
 }
 .iq-divider {
   color: var(--color-text-tertiary);
-  font-size: var(--font-size-xs);
+  font-size: var(--font-size-sm);
 }
 
 /* — 进度条（交期下方） — */
@@ -320,7 +320,7 @@
   background: var(--color-danger);
 }
 .ip-pct {
-  font-size: var(--font-size-xs);
+  font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
   color: var(--color-text-secondary);
   min-width: 30px;

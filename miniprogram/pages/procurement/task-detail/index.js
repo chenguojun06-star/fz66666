@@ -94,6 +94,7 @@ Page({
 
         const purchaseQty = Number(item.purchaseQuantity || 0);
         const arrivedQty = Number(item.arrivedQuantity || 0);
+        const pendingQty = Math.max(0, purchaseQty - arrivedQty);
         totalPurchased += purchaseQty;
         totalArrived += arrivedQty;
         if (!returnConfirmed) hasUnconfirmed = true;
@@ -105,7 +106,7 @@ Page({
 
         return {
           ...item,
-          _status: status,  // 保留标准化后的状态用于整体判断
+          _status: status,
           materialTypeCN: item.materialType ? (MATERIAL_TYPE_MAP[item.materialType] || '未知') : '',
           statusText: this._getStatusText(status),
           statusColor: this._getStatusColor(status),
@@ -116,6 +117,10 @@ Page({
           canConfirmReturn,
           inputQuantity: '',
           returnQtyInput: '',
+          purchaseQuantity: this._fmtQty(purchaseQty),
+          arrivedQuantity: this._fmtQty(arrivedQty),
+          pendingQuantity: this._fmtQty(pendingQty),
+          returnQuantity: this._fmtQty(Number(item.returnQuantity || 0)),
           arrivalRate: purchaseQty > 0 ? Math.round(arrivedQty / purchaseQty * 100) : 0,
           returnConfirmTimeText,
         };
@@ -426,6 +431,11 @@ Page({
 
   _normalizeStatus(rawStatus) {
     return String(rawStatus || '').trim().toLowerCase();
+  },
+
+  _fmtQty(n) {
+    const num = Number(n || 0);
+    return Math.round(num * 100) / 100;
   },
 
   _getStatusText(status) {

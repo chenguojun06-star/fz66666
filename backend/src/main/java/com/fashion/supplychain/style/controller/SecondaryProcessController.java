@@ -1,6 +1,7 @@
 package com.fashion.supplychain.style.controller;
 
 import com.fashion.supplychain.common.Result;
+import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.style.entity.SecondaryProcess;
 import com.fashion.supplychain.style.orchestration.SecondaryProcessOrchestrator;
@@ -94,11 +95,13 @@ public class SecondaryProcessController {
     }
 
     @Operation(summary = "审批二次工艺（主管权限）")
-    @PreAuthorize("isAuthenticated()")
     @PostMapping("/{id}/approve")
     public Result<SecondaryProcess> approve(
             @PathVariable Long id,
             @RequestBody Map<String, Object> body) {
+        if (!UserContext.isSupervisorOrAbove()) {
+            return Result.fail("仅主管以上可审批二次工艺");
+        }
         SecondaryProcess existing = secondaryProcessOrchestrator.getById(id);
         if (existing == null) {
             return Result.fail("二次工艺不存在");

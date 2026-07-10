@@ -1,5 +1,6 @@
 package com.fashion.supplychain.style.orchestration;
 
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.style.entity.StyleProcess;
 import com.fashion.supplychain.style.service.StyleProcessService;
 import java.time.LocalDateTime;
@@ -89,6 +90,7 @@ public class StyleProcessOrchestrator {
         if (current == null) {
             throw new NoSuchElementException("记录不存在");
         }
+        TenantAssert.assertBelongsToCurrentTenant(current.getTenantId(), "工序");
         boolean ok = styleProcessService.removeById(id);
         if (!ok) {
             if (styleProcessService.getById(id) == null) {

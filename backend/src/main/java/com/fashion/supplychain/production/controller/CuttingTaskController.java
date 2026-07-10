@@ -112,8 +112,10 @@ public class CuttingTaskController {
     }
 
     private Result<?> doListByStyle(String styleNo) {
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
         List<com.fashion.supplychain.production.entity.CuttingTask> tasks = cuttingTaskService.lambdaQuery()
                 .eq(com.fashion.supplychain.production.entity.CuttingTask::getStyleNo, styleNo)
+                .eq(tenantId != null, com.fashion.supplychain.production.entity.CuttingTask::getTenantId, tenantId)
                 .orderByDesc(com.fashion.supplychain.production.entity.CuttingTask::getCreateTime)
                 .list();
         List<com.fashion.supplychain.production.entity.CuttingBom> bomList = cuttingBomOrchestrator.listByStyleNo(styleNo);
