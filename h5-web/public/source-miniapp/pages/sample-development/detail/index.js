@@ -416,6 +416,7 @@ Page({
       (Array.isArray(patternDetail.sizes) && patternDetail.sizes.length ? patternDetail.sizes.join('/') : '');
     const sampleWfQuantity = patternDetail.quantity || patternDetail.sampleQuantity || patternDetail.totalQuantity || 0;
     const sampleWfRemark = patternDetail.remark || patternDetail.notes || '';
+    const sampleWfRemarksLog = patternDetail.remarks || '';
 
     this.setData({
       showSampleWorkflow: !isScrapped,
@@ -429,6 +430,7 @@ Page({
       sampleWfSize,
       sampleWfQuantity,
       sampleWfRemark,
+      sampleWfRemarksLog,
     });
   },
 

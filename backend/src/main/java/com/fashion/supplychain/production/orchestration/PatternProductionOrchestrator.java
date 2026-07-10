@@ -396,8 +396,11 @@ public class PatternProductionOrchestrator {
 
         PatternScanRecord scanRecord = createPatternScanRecord(pattern, operationType, operatorId, operatorName,
                 operatorRole, remark, quantity, effectiveColor, effectiveSize,
-                warehouseCode, warehouseAreaId, warehouseLocationCode, processName, progressStage);
+                warehouseCode, warehouseAreaId, warehouseLocationCode, processName, progressStage, unitPrice);
         patternScanRecordService.save(scanRecord);
+
+        // 自动追加操作日志到 PatternProduction.remarks（与大货 ProductionOrder.remarks 一致）
+        appendPatternRemark(pattern, operationType, operatorName, scanRecord, unitPrice);
 
         syncToScanRecord(pattern, operationType, operatorId, operatorName, remark, unitPrice, effectiveColor, effectiveSize);
         statusHelper.updatePatternStatusByOperation(pattern, operationType, operatorName);
@@ -436,7 +439,7 @@ public class PatternProductionOrchestrator {
             String operatorId, String operatorName, String operatorRole, String remark, Integer quantity,
             String effectiveColor, String effectiveSize,
             String warehouseCode, String warehouseAreaId, String warehouseLocationCode,
-            String processName, String progressStage) {
+            String processName, String progressStage, BigDecimal unitPrice) {
         PatternScanRecord scanRecord = new PatternScanRecord();
         scanRecord.setPatternProductionId(pattern.getId());
         scanRecord.setStyleId(pattern.getStyleId());
@@ -444,10 +447,15 @@ public class PatternProductionOrchestrator {
         scanRecord.setColor(effectiveColor);
         scanRecord.setSize(effectiveSize);
         // 数量：优先使用本次扫码传入的数量，其次取样板生产单的数量
+        int effectiveQty = 1;
         if (quantity != null && quantity > 0) {
+            effectiveQty = quantity;
             scanRecord.setQuantity(quantity);
         } else if (pattern.getQuantity() != null && pattern.getQuantity() > 0) {
+            effectiveQty = pattern.getQuantity();
             scanRecord.setQuantity(pattern.getQuantity());
+        } else {
+            scanRecord.setQuantity(effectiveQty);
         }
         scanRecord.setOperationType(operationType);
         // 工序名/阶段：优先使用前端工序系统传入的动态值，为空时按 operationType 映射
@@ -462,6 +470,11 @@ public class PatternProductionOrchestrator {
         scanRecord.setWarehouseAreaId(StringUtils.hasText(warehouseAreaId) ? warehouseAreaId.trim() : null);
         scanRecord.setWarehouseLocationCode(StringUtils.hasText(warehouseLocationCode) ? warehouseLocationCode.trim() : null);
         scanRecord.setRemark(remark);
+        // 保存单价和扫码成本（支持按样衣单价结算工资）
+        if (unitPrice != null && unitPrice.compareTo(BigDecimal.ZERO) > 0) {
+            scanRecord.setUnitPrice(unitPrice);
+            scanRecord.setScanCost(unitPrice.multiply(BigDecimal.valueOf(effectiveQty)));
+        }
         scanRecord.setCreateTime(LocalDateTime.now());
         scanRecord.setDeleteFlag(0);
         return scanRecord;
@@ -517,6 +530,63 @@ public class PatternProductionOrchestrator {
         result.put("scanTime", scanRecord.getScanTime());
         result.put("newStatus", pattern.getStatus());
         return result;
+    }
+
+    /**
+     * 自动追加操作日志到 PatternProduction.remarks
+     * 格式与大货一致：[yyyy-MM-dd HH:mm:ss] 操作人 动作：详情
+     */
+    private void appendPatternRemark(PatternProduction pattern, String operationType, String operatorName,
+                                     PatternScanRecord scanRecord, BigDecimal unitPrice) {
+        try {
+            String actionLabel = patternOperationLabel(operationType);
+            StringBuilder detail = new StringBuilder();
+            detail.append(scanRecord.getProcessName() != null ? scanRecord.getProcessName() : actionLabel);
+            if (scanRecord.getQuantity() != null && scanRecord.getQuantity() > 0) {
+                detail.append(" · 数量").append(scanRecord.getQuantity());
+            }
+            if (scanRecord.getColor() != null && !scanRecord.getColor().isEmpty()) {
+                detail.append(" · ").append(scanRecord.getColor());
+            }
+            if (scanRecord.getSize() != null && !scanRecord.getSize().isEmpty()) {
+                detail.append("/").append(scanRecord.getSize());
+            }
+            if (unitPrice != null && unitPrice.compareTo(BigDecimal.ZERO) > 0) {
+                detail.append(" · 单价¥").append(unitPrice.toPlainString());
+            }
+
+            String now = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+                    .format(java.time.LocalDateTime.now());
+            String newEntry = "[" + now + "] " + (operatorName != null ? operatorName : "-") + " " + actionLabel + "：" + detail;
+
+            // 重新查询最新数据再追加（避免覆盖并发写入）
+            PatternProduction fresh = patternProductionService.getById(pattern.getId());
+            if (fresh == null) return;
+            String existing = fresh.getRemarks();
+            String merged;
+            if (existing == null || existing.trim().isEmpty()) {
+                merged = newEntry;
+            } else {
+                merged = existing + "\n" + newEntry;
+            }
+            // 限制最大长度 4000 字符，保留最近 20 条
+            if (merged.length() > 4000) {
+                String[] lines = merged.split("\n");
+                int keep = Math.min(lines.length, 20);
+                StringBuilder sb = new StringBuilder();
+                for (int i = lines.length - keep; i < lines.length; i++) {
+                    if (sb.length() > 0) sb.append("\n");
+                    sb.append(lines[i]);
+                }
+                merged = sb.toString();
+            }
+            fresh.setRemarks(merged);
+            patternProductionService.updateById(fresh);
+            // 同步到内存对象，供后续逻辑使用
+            pattern.setRemarks(merged);
+        } catch (Exception e) {
+            log.warn("样衣扫码追加操作日志失败，不影响主流程: patternId={}, error={}", pattern.getId(), e.getMessage());
+        }
     }
 
     /**

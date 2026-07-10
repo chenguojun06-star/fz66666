@@ -630,6 +630,13 @@
   word-break: break-all;
 }
 .kv-long { line-height: 1.5; }
+.kv-log {
+  white-space: pre-wrap;
+  font-size: 12px;
+  color: #666;
+  max-height: 200px;
+  overflow-y: auto;
+}
 .price-danger { color: var(--color-danger); font-weight: var(--font-weight-semibold); }
 .price-success { color: var(--color-success); font-weight: var(--font-weight-semibold); }
 

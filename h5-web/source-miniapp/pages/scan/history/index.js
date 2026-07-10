@@ -58,11 +58,28 @@ function _formatPatternRecord(item) {
     // 避免 pages/scan/history/index 节点总数 >1000 触发性能告警。
     displayColorSize: ((item.color || '-') + ' / ' + (item.size || '-')),
     displayQuantity: qty,
-    displayUnitPrice: '-',
-    displayPriceAmount: '-',
-    lineAmount: 0,
-    displayLineAmount: '-',
-    isPayable: false,
+    displayUnitPrice: (function() {
+      var p = Number(item.unitPrice);
+      return (p != null && p > 0) ? '¥' + p.toFixed(2) : '-';
+    })(),
+    displayPriceAmount: (function() {
+      var p = Number(item.unitPrice);
+      var c = Number(item.scanCost);
+      var amt = c > 0 ? c : (p > 0 ? p * qty : 0);
+      if (p > 0 && amt > 0) return '¥' + p.toFixed(2) + ' / ¥' + amt.toFixed(2);
+      if (p > 0) return '¥' + p.toFixed(2) + ' / -';
+      return '-';
+    })(),
+    lineAmount: (function() {
+      var c = Number(item.scanCost);
+      var p = Number(item.unitPrice);
+      return c > 0 ? c : (p > 0 ? p * qty : 0);
+    })(),
+    displayLineAmount: (function() {
+      var amt = Number(item.scanCost) || (Number(item.unitPrice) || 0) * qty;
+      return amt > 0 ? '¥' + amt.toFixed(2) : '-';
+    })(),
+    isPayable: (Number(item.scanCost) > 0) || (Number(item.unitPrice) > 0 && qty > 0),
     displayBedNo: '-',
     displayTypeTag: '样衣',
   };

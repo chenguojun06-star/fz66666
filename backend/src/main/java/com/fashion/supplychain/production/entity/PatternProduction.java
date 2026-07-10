@@ -177,4 +177,7 @@ public class PatternProduction {
     private Integer reworkCount;
 
     private String reworkRemark;
+
+    /** 备注/操作日志（自动追加，与大货 ProductionOrder.remarks 一致） */
+    private String remarks;
 }

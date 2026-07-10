@@ -472,6 +472,11 @@
           <text class="kv-label">备注</text>
           <text class="kv-value kv-long">{{sampleWfRemark}}</text>
         </view>
+        <!-- 操作日志（自动追加，与大货 ProductionOrder.remarks 一致） -->
+        <view class="kv-row" wx:if="{{sampleWfRemarksLog}}">
+          <text class="kv-label">操作日志</text>
+          <text class="kv-value kv-long kv-log">{{sampleWfRemarksLog}}</text>
+        </view>
       </view>
 
       <view class="sample-wf-hint" wx:if="{{canReceiveSample}}">当前还没有领取样衣生产，节点进度会在领取并推进后更新。</view>
