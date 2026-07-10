@@ -718,7 +718,23 @@
   border-color: #34c759;
   color: #34c759;
 }
+.proc-op-btn.op-undo {
+  border-color: #ff4d4f;
+  color: #ff4d4f;
+}
 .proc-op-text { color: #ccc; font-size: 12px; }
+
+/* ══ 样衣扫码记录表（与 PC 端 SampleScanRecordsTable 对齐） ══ */
+.sr-col-op { width: 120px; }
+.sr-col-worker { width: 90px; }
+.sr-col-time { width: 130px; }
+.sr-col-wh { width: 80px; }
+.sr-col-remark { min-width: 100px; }
+.sr-col-action { width: 60px; }
+.sr-op-label { display: block; font-size: 12px; color: #1c1c1e; font-weight: 500; }
+.sr-op-sub { display: block; font-size: 10px; color: #8e8e93; margin-top: 2px; }
+.sr-worker { display: block; font-size: 12px; color: #1c1c1e; }
+.sr-worker-sub { display: block; font-size: 10px; color: #8e8e93; margin-top: 2px; }
 
 /* 操作日志按钮 */
 .remark-log-btn {

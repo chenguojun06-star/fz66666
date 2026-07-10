@@ -243,6 +243,16 @@ const production = {
     const id = _normalizePatternId(patternId);
     return ok(`/api/production/pattern/${encodeURIComponent(id)}/scan-records`, 'GET', {});
   },
+  /**
+   * 撤销样衣扫码记录（与 PC 端 useSampleScanRecords.undoScanRecord 一致）
+   * 后端：DELETE /api/production/pattern/{patternId}/scan-records/{scanRecordId}
+   * 30 分钟内可撤销（前端校验，后端也会校验）
+   */
+  undoPatternScanRecord(patternId, scanRecordId) {
+    const pid = _normalizePatternId(patternId);
+    const sid = String(scanRecordId || '').trim();
+    return ok(`/api/production/pattern/${encodeURIComponent(pid)}/scan-records/${encodeURIComponent(sid)}`, 'DELETE', {});
+  },
   submitPatternScan(payload) {
     return ok('/api/production/pattern/scan', 'POST', payload || {});
   },

@@ -134,6 +134,9 @@ Page({
     processStages: [],
     processScanLoading: false,
     hasProcessSystem: false,
+    // 样衣扫码记录（与 PC 端 SampleScanRecordsTable 6列对齐）
+    patternScanRecords: [],
+    patternScanLoading: false,
     // 二次工艺
     secondaryList: [],
     secondaryLoading: false,
@@ -1260,10 +1263,87 @@ Page({
         hasProcessSystem: config.length > 0,
         processScanLoading: false,
       });
+      // 同时加载扫码记录列表（与 PC 端 SampleScanRecordsTable 对齐）
+      this._loadPatternScanRecords(records);
     } catch (e) {
       console.error('加载生产工序失败', e);
       this.setData({ processScanLoading: false });
     }
+  },
+
+  /**
+   * 加载样衣扫码记录列表（与 PC 端 SampleScanRecordsTable 6列对齐）
+   * 数据来源：getPatternScanRecords 返回的 records（已在 loadProductionScanStages 中获取）
+   * 字段：工序/操作、操作人、扫码时间、仓库、备注、操作（撤回）
+   */
+  _loadPatternScanRecords(records) {
+    // 与 PC 端 OPERATION_TYPE_LABELS 一致
+    const OPERATION_TYPE_LABELS = {
+      RECEIVE: '领取样板', PLATE: '车板', FOLLOW_UP: '跟单', COMPLETE: '完成确认',
+      PROCUREMENT: '采购', CUTTING: '裁剪', SECONDARY: '二次工艺', SEWING: '车缝',
+      TAIL: '尾部', REVIEW: '审核', WAREHOUSE_IN: '入库', WAREHOUSE_OUT: '出库',
+      WAREHOUSE_RETURN: '归还', REWORK: '返修完成',
+    };
+    const now = Date.now();
+    const list = (records || []).map(r => {
+      const opType = String(r.operationType || '').toUpperCase();
+      const opLabel = OPERATION_TYPE_LABELS[opType] || '未知';
+      // 操作人角色中文
+      let roleText = '';
+      if (r.operatorRole === 'QUALITY') roleText = '质检';
+      else if (r.operatorRole === 'TAILOR') roleText = '裁缝';
+      else if (r.operatorRole) roleText = r.operatorRole;
+      // 30分钟内可撤回（与 PC 端 canUndo 一致）
+      const scanTime = r.scanTime ? new Date(String(r.scanTime).replace(/-/g, '/')).getTime() : 0;
+      const canUndo = scanTime > 0 && (now - scanTime) < 30 * 60 * 1000;
+      return Object.assign({}, r, {
+        _operationLabel: opLabel,
+        _operatorRoleText: roleText,
+        _scanTimeText: this._fmtDateTime(r.scanTime),
+        _canUndo: canUndo,
+      });
+    }).sort((a, b) => {
+      // 按扫码时间倒序（最新在前）
+      const ta = a.scanTime || '';
+      const tb = b.scanTime || '';
+      return tb > ta ? 1 : (tb < ta ? -1 : 0);
+    });
+    this.setData({ patternScanRecords: list, patternScanLoading: false });
+  },
+
+  /** 撤销样衣扫码记录（与 PC 端 undoScanRecord 一致） */
+  async onUndoPatternScan(e) {
+    const scanRecordId = e.currentTarget.dataset.id;
+    const patternId = this.data.patternId;
+    if (!scanRecordId || !patternId) return;
+    const item = this.data.patternScanRecords.find(r => String(r.id) === String(scanRecordId));
+    if (!item) return;
+    wx.showModal({
+      title: '确认撤回',
+      content: '撤回后该扫码记录将被删除，是否继续？',
+      confirmText: '撤回',
+      confirmColor: '#ff4d4f',
+      success: async (res) => {
+        if (!res.confirm) return;
+        wx.showLoading({ title: '撤回中...', mask: true });
+        try {
+          await production.undoPatternScanRecord(patternId, scanRecordId);
+          wx.hideLoading();
+          wx.showToast({ title: '已撤销', icon: 'success' });
+          // 刷新数据：扫码记录 + 工序进度 + 样衣工作流状态
+          this.setData({
+            patternScanRecords: [],
+            processStages: [],
+          });
+          this.loadProductionScanStages();
+          this.loadStyleDetail();
+        } catch (err) {
+          wx.hideLoading();
+          const msg = err && err.message ? err.message : '撤销失败';
+          wx.showToast({ title: msg, icon: 'none' });
+        }
+      },
+    });
   },
 
   /** 统一时间格式化：确保显示到分钟（yyyy-MM-dd HH:mm） */
