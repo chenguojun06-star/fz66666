@@ -359,7 +359,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 3px;
+  margin-bottom: 2px;
 }
 .node-name {
   font-size: var(--font-size-sm);
@@ -373,19 +373,31 @@
 .node-pct--done {
   color: var(--color-success);
 }
+.node-meta {
+  display: flex;
+  align-items: center;
+  margin-bottom: 4px;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+  line-height: 1.4;
+}
+.node-qty {
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-medium);
+}
+.node-dot {
+  margin: 0 6px;
+  color: var(--color-text-tertiary);
+}
+.node-bundle-text {
+  color: var(--color-text-tertiary);
+}
 .node-bar-bg {
   height: 4px;
   background: var(--color-bg-hover);
   border-radius: var(--radius-xs);
   overflow: hidden;
   position: relative;
-}
-.node-bundle {
-  position: absolute;
-  top: -15px;
-  right: 0;
-  font-size: var(--font-size-xs);
-  color: var(--color-text-tertiary);
 }
 .node-bar-fill {
   height: 100%;

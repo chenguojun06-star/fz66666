@@ -137,9 +137,13 @@
                 <text class="node-name">{{node.name}}</text>
                 <text class="node-pct {{node.percent >= 100 ? 'node-pct--done' : ''}}">{{node.percent}}%</text>
               </view>
+              <view class="node-meta">
+                <text class="node-qty" wx:if="{{node.qtyInfo}}">{{node.qtyInfo.completed}}/{{node.qtyInfo.total}}件</text>
+                <text class="node-dot" wx:if="{{node.qtyInfo && node.bundleInfo}}">·</text>
+                <text class="node-bundle-text" wx:if="{{node.bundleInfo}}">{{node.bundleInfo.scanned}}/{{node.bundleInfo.total}}菲</text>
+              </view>
               <view class="node-bar-bg">
-                <text class="node-bundle" wx:if="{{node.bundleInfo}}">{{node.bundleInfo.scanned}}/{{node.bundleInfo.total}}菲</text>
-                <view class="node-bar-fill {{node.percent >= 100 ? 'node-bar-fill--done' : ''}}" style="width:{{node.percent}}%"></view>
+                <view class="node-bar-fill {{node.percent >= 100 ? 'node-bar-fill--done' : ''}}" style="width:{{node.percent > 100 ? 100 : node.percent}}%"></view>
               </view>
             </view>
           </view>
