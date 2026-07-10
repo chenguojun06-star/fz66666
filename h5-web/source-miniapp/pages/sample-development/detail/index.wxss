@@ -637,6 +637,101 @@
   max-height: 200px;
   overflow-y: auto;
 }
+
+/* ══ 工序表格（与PC端一致） ══ */
+.proc-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin-top: 8px;
+}
+.proc-table {
+  min-width: 700px;
+  width: max-content;
+}
+.proc-tr {
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid #f0f0f0;
+  height: 40px;
+}
+.proc-thead {
+  background: #fafafa;
+  height: 36px;
+  border-radius: 6px;
+}
+.proc-th {
+  font-size: 11px;
+  color: #999;
+  font-weight: 500;
+  padding: 0 6px;
+  text-align: center;
+}
+.proc-td {
+  font-size: 12px;
+  color: #333;
+  padding: 0 6px;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.proc-col-name { width: 90px; display: flex; align-items: center; gap: 4px; text-align: left; }
+.proc-col-style { width: 90px; }
+.proc-col-cs { width: 100px; }
+.proc-col-qty { width: 50px; }
+.proc-col-worker { width: 70px; }
+.proc-col-time { width: 110px; }
+.proc-col-status { width: 70px; }
+.proc-col-op { width: 60px; }
+.proc-dot {
+  display: inline-block;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.dot-done { background: #34c759; }
+.dot-doing { background: #007aff; }
+.dot-pending { background: #ccc; }
+.tr-done .proc-td { color: #34c759; }
+.tr-active { background: #f0f8ff; }
+.tr-locked .proc-td { color: #ccc; }
+.ps-tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+}
+.ps-done { background: #e8f5e9; color: #2e7d32; }
+.ps-doing { background: #e3f2fd; color: #1565c0; }
+.ps-locked { background: #f5f5f5; color: #999; }
+.ps-pending { background: #f5f5f5; color: #999; }
+.proc-op-btn {
+  display: inline-block;
+  padding: 2px 10px;
+  border: 1px solid #007aff;
+  border-radius: 4px;
+  color: #007aff;
+  font-size: 11px;
+}
+.proc-op-btn.op-done {
+  border-color: #34c759;
+  color: #34c759;
+}
+.proc-op-text { color: #ccc; font-size: 12px; }
+
+/* 操作日志按钮 */
+.remark-log-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 12px;
+  padding: 10px 14px;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+.rlb-text { font-size: 13px; color: #007aff; }
+.rlb-arrow { font-size: 16px; color: #ccc; }
 .price-danger { color: var(--color-danger); font-weight: var(--font-weight-semibold); }
 .price-success { color: var(--color-success); font-weight: var(--font-weight-semibold); }
 

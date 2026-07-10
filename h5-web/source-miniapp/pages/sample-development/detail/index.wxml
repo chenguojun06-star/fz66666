@@ -510,29 +510,52 @@
         </view>
       </view>
 
-      <!-- 生产工序扫码进度（仅在有 patternId 时显示） -->
+      <!-- 生产工序扫码进度（与PC端一致的表格布局） -->
       <block wx:if="{{processStages.length > 0}}">
         <view wx:if="{{processScanLoading}}" class="empty-inline">加载中...</view>
-        <view wx:else class="process-list">
-          <view wx:for="{{processStages}}" wx:key="processName" wx:for-item="stage"
-                class="process-item {{stage.completed ? 'pi-done' : ''}} {{stage.canOperate ? 'pi-active' : ''}} {{stage.locked ? 'pi-locked' : ''}}"
-                data-stage="{{stage}}" bindtap="onProductionProcessOperate">
-            <view class="pi-left">
-              <view class="pi-dot {{stage.completed ? 'stage-done' : (stage.canOperate ? 'stage-doing' : 'stage-pending')}}"></view>
-              <view class="pi-main">
-                <text class="pi-name">{{stage.processName}}</text>
+        <scroll-view scroll-x wx:else class="proc-table-wrap">
+          <view class="proc-table">
+            <!-- 表头 -->
+            <view class="proc-tr proc-thead">
+              <text class="proc-th proc-col-name">工序</text>
+              <text class="proc-th proc-col-style">款号</text>
+              <text class="proc-th proc-col-cs">颜色/码数</text>
+              <text class="proc-th proc-col-qty">数量</text>
+              <text class="proc-th proc-col-worker">领取人</text>
+              <text class="proc-th proc-col-time">时间</text>
+              <text class="proc-th proc-col-status">状态</text>
+              <text class="proc-th proc-col-op">操作</text>
+            </view>
+            <!-- 数据行 -->
+            <view wx:for="{{processStages}}" wx:key="processName" wx:for-item="stage"
+                  class="proc-tr {{stage.completed ? 'tr-done' : ''}} {{stage.canOperate ? 'tr-active' : ''}} {{stage.locked ? 'tr-locked' : ''}}">
+              <text class="proc-td proc-col-name">
+                <text class="proc-dot {{stage.completed ? 'dot-done' : (stage.canOperate ? 'dot-doing' : 'dot-pending')}}"></text>
+                {{stage.processName}}
+              </text>
+              <text class="proc-td proc-col-style">{{stage.styleNo || '-'}}</text>
+              <text class="proc-td proc-col-cs">{{stage.color || '-'}}/{{stage.size || '-'}}</text>
+              <text class="proc-td proc-col-qty">{{stage.quantity || '-'}}</text>
+              <text class="proc-td proc-col-worker">{{stage.operatorName || '-'}}</text>
+              <text class="proc-td proc-col-time">{{stage.time || '-'}}</text>
+              <text class="proc-td proc-col-status">
+                <text wx:if="{{stage.completed}}" class="ps-tag ps-done">已完成</text>
+                <text wx:elif="{{stage.canOperate}}" class="ps-tag ps-doing">待操作</text>
+                <text wx:elif="{{stage.locked}}" class="ps-tag ps-locked">{{stage.lockReason}}</text>
+                <text wx:else class="ps-tag ps-pending">待执行</text>
+              </text>
+              <view class="proc-td proc-col-op">
+                <text wx:if="{{stage.canOperate}}" class="proc-op-btn" data-stage="{{stage}}" catchtap="onProductionProcessOperate">扫码</text>
+                <text wx:elif="{{stage.completed}}" class="proc-op-btn op-done" data-stage="{{stage}}" catchtap="onViewProcessDetail">详情</text>
+                <text wx:else class="proc-op-text">-</text>
               </view>
             </view>
-            <view class="pi-right">
-              <text wx:if="{{stage.completed}}" class="pi-status stage-done">已完成</text>
-              <text wx:elif="{{stage.canOperate}}" class="pi-status stage-doing">点击操作</text>
-              <text wx:elif="{{stage.locked}}" class="pi-status stage-pending">{{stage.lockReason}}</text>
-              <text wx:else class="pi-status stage-pending">待执行</text>
-              <text wx:if="{{stage.operatorName || stage.time}}" class="pi-sub">
-                {{stage.operatorName || ''}}{{stage.operatorName && stage.time ? ' · ' : ''}}{{stage.time || ''}}
-              </text>
-            </view>
           </view>
+        </scroll-view>
+        <!-- 操作日志按钮 -->
+        <view class="remark-log-btn" wx:if="{{sampleWfRemarksLog}}" bindtap="onViewRemarkLog">
+          <text class="rlb-text">查看操作日志</text>
+          <text class="rlb-arrow">›</text>
         </view>
       </block>
       <view wx:elif="{{!processScanLoading}}" class="empty-inline">暂无生产工序配置</view>

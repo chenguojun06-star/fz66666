@@ -1313,6 +1313,7 @@ Page({
         canOperate: !isCompleted && i === firstIncompleteIdx,
         locked: !isCompleted && i > firstIncompleteIdx,
         lockReason: !isCompleted && i > firstIncompleteIdx ? '前置工序未完成' : '',
+        styleNo: (patternDetail && patternDetail.styleNo) || '',
         color: (stageRecord && stageRecord.color) || baseColor,
         size: (stageRecord && stageRecord.size) || baseSize,
         quantity: (stageRecord && stageRecord.quantity) || baseQuantity,
@@ -1340,6 +1341,31 @@ Page({
       `&progressStage=${encodeURIComponent(stage.progressStage || '')}` +
       `&scanType=${encodeURIComponent(stage.scanType || '')}`;
     wx.navigateTo({ url }).catch(() => {});
+  },
+
+  /** 查看工序详情（已完成工序的详情） */
+  onViewProcessDetail(e) {
+    const stage = e.currentTarget.dataset.stage;
+    if (!stage) return;
+    const lines = [];
+    lines.push('工序：' + (stage.processName || '-'));
+    lines.push('款号：' + (stage.styleNo || '-'));
+    lines.push('颜色/码数：' + (stage.color || '-') + '/' + (stage.size || '-'));
+    lines.push('数量：' + (stage.quantity || '-'));
+    lines.push('领取人：' + (stage.operatorName || '-'));
+    lines.push('时间：' + (stage.time || '-'));
+    lines.push('状态：已完成');
+    wx.showModal({ title: '工序详情', content: lines.join('\n'), showCancel: false, confirmText: '关闭' });
+  },
+
+  /** 查看操作日志（跳转备注页） */
+  onViewRemarkLog() {
+    const patternId = this.data.patternId;
+    const styleNo = this.data.styleInfo.styleNo || '';
+    if (!patternId) { toast.error('无样衣单号'); return; }
+    wx.navigateTo({
+      url: '/pages/order/remark/index?targetType=pattern&targetNo=' + encodeURIComponent(patternId) + '&title=' + encodeURIComponent('样衣操作日志 - ' + styleNo),
+    }).catch(() => {});
   },
 
   async loadSecondary() {
