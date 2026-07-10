@@ -219,13 +219,16 @@ Page({
     imageList: [],
     currentImageIndex: 0,
     hasMultipleImages: false,
+
+    // 加载失败提示
+    loadError: '',
   },
 
   onLoad: function (options) {
     const opts = options || {};
     const orderId = opts.orderId ? decodeURIComponent(opts.orderId) : '';
     const orderNo = opts.orderNo ? decodeURIComponent(opts.orderNo) : '';
-    this.setData({ orderId, orderNo });
+    this.setData({ orderId, orderNo, loadError: '' });
     this._loadFlow();
     // 订阅扫码/进度变更事件，实时刷新订单详情（历史bug：扫码后进度不更新）
     this._dataChangedHandler = () => {
@@ -268,7 +271,7 @@ Page({
   },
 
   onRetryLoad: function () {
-    this.setData({ loading: true });
+    this.setData({ loading: true, loadError: '' });
     this._loadFlow();
   },
 
@@ -581,12 +584,19 @@ Page({
 
     const flowPromise = orderId
       ? production.getOrderFlow(orderId).then(function (res) {
+          console.log('[order-detail] flow res:', JSON.stringify(res));
+          // 防御后端返回 HTTP 200 但业务 code 非 200 的情况
+          if (res && typeof res.code === 'number' && res.code !== 200) {
+            const msg = res.message || ('服务端返回错误码 ' + res.code);
+            console.warn('[order-detail] flow 业务失败:', msg, res);
+            throw new Error(msg);
+          }
           const data = (res && res.data) || {};
           const order = resolveOrderFromFlow(data);
           if (!order) {
-            // 数据为空时静默处理，不抛错误
-            that.setData({ loading: false });
-            return;
+            console.warn('[order-detail] flow 返回数据中无法解析 order:', JSON.stringify(data));
+            // 不再静默返回，而是抛错走 fallback 分支用 orderDetail 接口
+            throw new Error('flow-data-empty');
           }
           render(order, data);
         })
@@ -598,19 +608,24 @@ Page({
     // 返回 Promise，供 onPullDownRefresh 用 .finally 停止下拉动画
     return flowPromise.catch(function (flowErr) {
       clearTimeout(timeoutTimer);
-      if (flowErr && flowErr.message) {
-        console.warn('[order-detail] flow 接口异常:', flowErr.message);
-      }
-      // 如果用户已经在 timeout 分支关闭了 loading，这里就不再弹 toast
+      const errMsg = (flowErr && flowErr.message) || String(flowErr || '');
+      console.warn('[order-detail] flow 接口异常:', errMsg, flowErr);
+      // 如果用户已经在 timeout 分支关闭了 loading，这里就不再处理
       if (!that.data.loading) return;
       // fallback：调用 orderDetail
       const key = orderId || orderNo;
       if (!key) {
-        toast.error('加载失败，请重试');
-        that.setData({ loading: false });
+        that.setData({ loading: false, loadError: '缺少订单参数' });
         return;
       }
       return production.orderDetail(key).then(function (res) {
+        console.log('[order-detail] detail fallback res:', JSON.stringify(res));
+        // 同样防御业务 code 非 200
+        if (res && typeof res.code === 'number' && res.code !== 200) {
+          const msg = res.message || ('服务端返回错误码 ' + res.code);
+          console.warn('[order-detail] detail fallback 业务失败:', msg, res);
+          throw new Error(msg);
+        }
         let order = null;
         const payload = (res && res.data) || res || {};
         if (Array.isArray(payload)) {
@@ -627,10 +642,10 @@ Page({
         }
         render(order, {});
       }).catch(function (detailErr) {
-        console.warn('[order-detail] 加载失败:', detailErr && detailErr.message);
+        const detailMsg = (detailErr && detailErr.message) || String(detailErr || '');
+        console.warn('[order-detail] detail fallback 也失败:', detailMsg, detailErr);
         if (that.data.loading) {
-          toast.error('加载失败，请重试');
-          that.setData({ loading: false });
+          that.setData({ loading: false, loadError: detailMsg || '订单数据加载失败' });
         }
       });
     });

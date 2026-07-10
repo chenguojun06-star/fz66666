@@ -12,6 +12,8 @@ import com.fashion.supplychain.crm.service.SalesReturnItemService;
 import com.fashion.supplychain.crm.service.SalesReturnService;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.service.ProductionOrderService;
+import com.fashion.supplychain.integration.ecommerce.entity.EcommerceOrder;
+import com.fashion.supplychain.integration.ecommerce.service.EcommerceOrderService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -45,6 +47,9 @@ public class SalesReturnOrchestrator {
 
     @Autowired
     private ProductionOrderService productionOrderService;
+
+    @Autowired
+    private EcommerceOrderService ecommerceOrderService;
 
     @Autowired
     private SalesReturnQueryHelper queryHelper;
@@ -88,6 +93,7 @@ public class SalesReturnOrchestrator {
         returnOrder.setReturnNo(returnNo);
         returnOrder.setOriginalOrderId(request.getOriginalOrderId());
         returnOrder.setOriginalOrderNo(originalOrder.getOrderNo());
+        returnOrder.setEcommerceOrderId(request.getEcommerceOrderId());
         returnOrder.setCustomerId(originalOrder.getCustomerId());
         returnOrder.setCustomerName(originalOrder.getCompany());
         returnOrder.setReturnType(returnType);
@@ -184,6 +190,16 @@ public class SalesReturnOrchestrator {
             }
         }
 
+        // 电商退货：审核通过时更新电商订单状态为"退款中"(status=5)
+        if (returnOrder.getEcommerceOrderId() != null) {
+            EcommerceOrder ecOrder = ecommerceOrderService.getById(returnOrder.getEcommerceOrderId());
+            if (ecOrder != null && ecOrder.getTenantId().equals(tenantId)) {
+                ecOrder.setStatus(5);
+                ecOrder.setUpdateTime(LocalDateTime.now());
+                ecommerceOrderService.updateById(ecOrder);
+            }
+        }
+
         log.info("[销售退货] 审核退货单: returnId={}, status=APPROVED", request.getReturnId());
     }
 
@@ -240,6 +256,16 @@ public class SalesReturnOrchestrator {
         returnOrder.setRefundTime(LocalDateTime.now());
         returnOrder.setUpdateTime(LocalDateTime.now());
         salesReturnService.updateById(returnOrder);
+
+        // 电商退货：退款完成后更新电商订单状态为"已取消"(status=4)
+        if (returnOrder.getEcommerceOrderId() != null) {
+            EcommerceOrder ecOrder = ecommerceOrderService.getById(returnOrder.getEcommerceOrderId());
+            if (ecOrder != null && ecOrder.getTenantId().equals(tenantId)) {
+                ecOrder.setStatus(4);
+                ecOrder.setUpdateTime(LocalDateTime.now());
+                ecommerceOrderService.updateById(ecOrder);
+            }
+        }
 
         log.info("[销售退货] 标记退款完成: returnId={}, status=REFUNDED", returnId);
     }

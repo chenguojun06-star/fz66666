@@ -108,11 +108,18 @@ public class MaterialPickingOrchestrator {
             }
         }
 
+        // MaterialPickingItem 表无 deleteFlag 字段，items 仍需物理删除
         materialPickingItemMapper.delete(
                 new LambdaQueryWrapper<MaterialPickingItem>()
                         .eq(MaterialPickingItem::getPickingId, id));
-        materialPickingService.removeById(id);
-        log.info("[Picking] 取消待出库领料单: pickingNo={}", picking.getPickingNo());
+        // P0-2 修复：picking 改为逻辑删除（status=cancelled），与 cancelPicking 保持一致，
+        // 保留审计痕迹，避免统计/历史查询丢失记录
+        picking.setStatus("cancelled");
+        picking.setRemark("【取消待出库】操作人: " + UserContext.username()
+                + " | 原备注: " + (picking.getRemark() != null ? picking.getRemark() : ""));
+        picking.setUpdateTime(java.time.LocalDateTime.now());
+        materialPickingService.updateById(picking);
+        log.info("[Picking] 取消待出库领料单（逻辑删除）: pickingNo={}", picking.getPickingNo());
     }
 
     /**

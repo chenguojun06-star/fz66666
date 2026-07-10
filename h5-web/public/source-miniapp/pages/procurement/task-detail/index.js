@@ -157,7 +157,7 @@ Page({
     }
 
     if (this.data.hasReturnConfirmed) {
-      toast.warning('已有物料完成回料确认，无法继续采购');
+      toast.info('已有物料完成回料确认，无法继续采购');
       return;
     }
 
@@ -246,7 +246,7 @@ Page({
 
   async onConfirmProcurement() {
     if (this.data.hasReturnConfirmed) {
-      toast.warning('已有物料完成回料确认，无需再次确认');
+      toast.info('已有物料完成回料确认，无需再次确认');
       return;
     }
     if (this.data.allProcurementCompleted) {
@@ -291,7 +291,7 @@ Page({
 
   async onSubmit() {
     if (this.data.hasReturnConfirmed) {
-      toast.warning('已有物料完成回料确认，无法继续到货登记');
+      toast.info('已有物料完成回料确认，无法继续到货登记');
       return;
     }
 

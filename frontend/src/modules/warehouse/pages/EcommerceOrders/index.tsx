@@ -7,6 +7,7 @@ import {
   CarOutlined, CheckCircleOutlined, EditOutlined, EyeOutlined,
   LinkOutlined, ReloadOutlined, RiseOutlined, SaveOutlined,
   SearchOutlined, ShoppingCartOutlined, ApiOutlined, ShopOutlined,
+  RollbackOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import ResizableTable from '@/components/common/ResizableTable';
@@ -15,6 +16,7 @@ import { message } from '@/utils/antdStatic';
 import { readPageSize } from '@/utils/pageSizeStore';
 import { formatMoney } from '@/utils/format';
 import { getPlatformTag, getPlatformOptions } from '@/utils/platform';
+import EcommerceReturnTab from './EcommerceReturnTab';
 
 const { Text } = Typography;
 const { Option } = Select;
@@ -44,7 +46,7 @@ interface EcOrder {
   trackingNo: string; expressCompany: string;
   buyerRemark: string; sellerRemark: string;
   status: number; warehouseStatus: number;
-  productionOrderNo: string; createTime: string;
+  productionOrderId: string; productionOrderNo: string; createTime: string;
 }
 interface Sku {
   id: number; styleNo: string; skuCode: string;
@@ -54,7 +56,7 @@ interface Sku {
 }
 
 // ─── 订单管理 Tab ─────────────────────────────────────────
-const OrdersTab: React.FC = () => {
+const OrdersTab: React.FC<{ onInitReturn?: (order: EcOrder) => void }> = ({ onInitReturn }) => {
   const [data, setData] = useState<EcOrder[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -257,7 +259,7 @@ const OrdersTab: React.FC = () => {
       render: v => <span style={{ fontSize: 14 }}>{v?.slice(0, 16)}</span>,
     },
     {
-      title: '操作', width: 130, fixed: 'right',
+      title: '操作', width: 160, fixed: 'right',
       render: (_: unknown, r: EcOrder) => (
         <Space size={4}>
           <Tooltip title="查看详情">
@@ -272,6 +274,12 @@ const OrdersTab: React.FC = () => {
             <Tooltip title="现货直接出库">
               <Button type="text" icon={<CarOutlined />}
                 onClick={() => { setOutboundTarget(r); }} />
+            </Tooltip>
+          )}
+          {onInitReturn && r.productionOrderId && (
+            <Tooltip title="发起退货">
+              <Button type="text" icon={<RollbackOutlined />}
+                onClick={() => onInitReturn(r)} />
             </Tooltip>
           )}
         </Space>
@@ -599,7 +607,10 @@ const PricingTab: React.FC = () => {
 };
 
 // ─── 主页面 ───────────────────────────────────────────────
-const EcommerceOrders: React.FC = () => (
+const EcommerceOrders: React.FC = () => {
+  const [selectedOrder, setSelectedOrder] = useState<EcOrder | null>(null);
+  const [activeTab, setActiveTab] = useState('orders');
+  return (
   <>
   <div style={{ padding: 20 }}>
     <Alert style={{ marginBottom: 14, fontSize: 14 }} type="info" showIcon
@@ -616,22 +627,28 @@ const EcommerceOrders: React.FC = () => (
         />
       }
     />
-    <Tabs defaultActiveKey="orders" type="card"
+    <Tabs activeKey={activeTab} onChange={setActiveTab} type="card"
       items={[
         {
           key: 'orders',
           label: <><ShoppingCartOutlined /> 订单管理</>,
-          children: <OrdersTab />,
+          children: <OrdersTab onInitReturn={(r) => { setSelectedOrder(r); setActiveTab('return'); }} />,
         },
         {
           key: 'pricing',
           label: <><EditOutlined /> SKU 定价</>,
           children: <PricingTab />,
         },
+        {
+          key: 'return',
+          label: <><RollbackOutlined /> 退货管理</>,
+          children: <EcommerceReturnTab selectedOrder={selectedOrder} onRefreshOrder={() => { setSelectedOrder(null); }} />,
+        },
       ]}
     />
   </div>
   </>
-);
+  );
+};
 
 export default EcommerceOrders;

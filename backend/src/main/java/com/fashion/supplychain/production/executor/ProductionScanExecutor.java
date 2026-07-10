@@ -58,6 +58,23 @@ public class ProductionScanExecutor {
         try {
         ctx = resolveScanContext(params, scanType, quantity, autoProcess, operatorId, operatorName);
 
+        // 样衣模式：ctx.order 和 ctx.bundle 可能为 null，跳过大货特有的校验和流程
+        String sourceBizType = params.get("sourceBizType") == null ? "" : String.valueOf(params.get("sourceBizType")).trim();
+        String patternProductionId = TextUtils.safeText(params.get("patternProductionId"));
+        boolean isSampleScan = "SAMPLE".equalsIgnoreCase(sourceBizType) || hasText(patternProductionId);
+
+        if (isSampleScan && ctx.order == null) {
+            // 样衣无关联生产订单：直接记录扫码，不走大货流程
+            log.info("样衣扫码（无生产订单关联），直接记录: patternProductionId={}, scanType={}, processName={}",
+                    patternProductionId, scanType, params.get("processName"));
+            Map<String, Object> sampleResult = new HashMap<>();
+            sampleResult.put("success", true);
+            sampleResult.put("scanType", scanType);
+            sampleResult.put("patternProductionId", patternProductionId);
+            sampleResult.put("message", "样衣扫码成功");
+            return sampleResult;
+        }
+
         executorSupport.validateBundleNotBlocked(ctx.bundle, "生产");
 
         resolveProcessStage(ctx, params, autoProcess);
@@ -138,6 +155,36 @@ public class ProductionScanExecutor {
         ScanContext ctx = new ScanContext();
         ctx.scanCode = TextUtils.safeText(params.get("scanCode"));
         ctx.orderNo = TextUtils.safeText(params.get("orderNo"));
+
+        // 样衣豁免：样衣是一个二维码走所有工序，无菲号概念
+        // 当 sourceBizType=SAMPLE 或有 patternProductionId 参数时，跳过菲号查找
+        String sourceBizType = params.get("sourceBizType") == null ? "" : String.valueOf(params.get("sourceBizType")).trim();
+        String patternProductionId = TextUtils.safeText(params.get("patternProductionId"));
+        boolean isSampleScan = "SAMPLE".equalsIgnoreCase(sourceBizType) || hasText(patternProductionId);
+
+        if (isSampleScan) {
+            // 样衣模式：不查找菲号，直接用 patternProductionId 或 scanCode 作为订单标识
+            log.info("样衣扫码模式（跳过菲号查找）: patternProductionId={}, scanCode={}", patternProductionId, ctx.scanCode);
+            if (!hasText(ctx.orderNo) && hasText(patternProductionId)) {
+                // 样衣没有 orderNo，用 patternProductionId 关联订单
+                ctx.orderNo = patternProductionId;
+            }
+            if (!hasText(ctx.orderNo) && !hasText(ctx.scanCode)) {
+                throw new IllegalArgumentException("样衣扫码内容不能为空");
+            }
+            // 尝试用 orderNo 查找订单（样衣可能有关联的生产订单）
+            ctx.order = resolveOrder(null, ctx.orderNo);
+            if (ctx.order == null) {
+                // 样衣没有关联的生产订单，创建一个虚拟上下文（不阻塞扫码）
+                log.info("样衣无关联生产订单，继续扫码: patternProductionId={}", patternProductionId);
+                if (!hasText(ctx.scanCode)) ctx.scanCode = ctx.orderNo;
+            } else {
+                if (!hasText(ctx.scanCode)) ctx.scanCode = ctx.orderNo;
+            }
+            // 跳过终态校验（样衣流程独立于大货订单状态）
+            if (quantity <= 0) throw new IllegalArgumentException("扫码数量必须大于0");
+            return ctx;
+        }
 
         BundleLookupContext lookupContext = BundleLookupContext.from(params);
         ctx.bundle = bundleLookupService.lookup(lookupContext);

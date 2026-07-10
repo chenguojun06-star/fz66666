@@ -79,6 +79,9 @@ public class MaterialPurchaseOrchestrator {
     @Autowired(required = false)
     private com.fashion.supplychain.intelligence.orchestration.ProcurementIntelligenceOrchestrator procurementIntelligenceOrchestrator;
 
+    @Autowired
+    private com.fashion.supplychain.production.service.MaterialStockService materialStockService;
+
     // ── Query ───────────────────────────────────────────────
 
     public IPage<MaterialPurchase> list(Map<String, Object> params) {
@@ -648,5 +651,52 @@ public class MaterialPurchaseOrchestrator {
         boolean ok = materialPurchaseService.updateById(record);
         log.info("[采购单] 更新发票URL: purchaseId={}, ok={}", purchaseId, ok);
         return ok;
+    }
+
+    /**
+     * 查询物料仓库可用库存（样衣采购节点匹配库存用）
+     * @param materialCodes 逗号分隔的物料编码列表
+     * @return List<Map> 每个物料编码的可用库存信息
+     */
+    public java.util.List<java.util.Map<String, Object>> checkMaterialStock(String materialCodes) {
+        if (materialCodes == null || materialCodes.trim().isEmpty()) {
+            return java.util.Collections.emptyList();
+        }
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        java.util.List<String> codeList = java.util.Arrays.stream(materialCodes.split(","))
+                .map(String::trim)
+                .filter(StringUtils::hasText)
+                .distinct()
+                .collect(java.util.stream.Collectors.toList());
+        if (codeList.isEmpty()) return java.util.Collections.emptyList();
+
+        // 查询物料库存表
+        com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<com.fashion.supplychain.production.entity.MaterialStock> wrapper =
+                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<>();
+        wrapper.in(com.fashion.supplychain.production.entity.MaterialStock::getMaterialCode, codeList)
+               .eq(com.fashion.supplychain.production.entity.MaterialStock::getTenantId, tenantId)
+               .eq(com.fashion.supplychain.production.entity.MaterialStock::getDeleteFlag, 0);
+        java.util.List<com.fashion.supplychain.production.entity.MaterialStock> stocks = materialStockService.list(wrapper);
+
+        // 按物料编码聚合可用库存
+        java.util.Map<String, Integer> stockByCode = new java.util.HashMap<>();
+        for (com.fashion.supplychain.production.entity.MaterialStock s : stocks) {
+            if (s == null || s.getMaterialCode() == null) continue;
+            int qty = s.getQuantity() != null ? s.getQuantity() : 0;
+            int locked = s.getLockedQuantity() != null ? s.getLockedQuantity() : 0;
+            int available = Math.max(0, qty - locked);
+            stockByCode.merge(s.getMaterialCode().trim(), available, Integer::sum);
+        }
+
+        // 构建返回结果
+        java.util.List<java.util.Map<String, Object>> result = new java.util.ArrayList<>();
+        for (String code : codeList) {
+            java.util.Map<String, Object> item = new java.util.HashMap<>();
+            item.put("materialCode", code);
+            item.put("availableStock", stockByCode.getOrDefault(code, 0));
+            item.put("hasStock", stockByCode.getOrDefault(code, 0) > 0);
+            result.add(item);
+        }
+        return result;
     }
 }

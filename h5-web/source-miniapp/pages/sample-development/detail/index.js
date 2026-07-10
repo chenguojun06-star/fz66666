@@ -505,12 +505,52 @@ Page({
         p._statusText = this._purchaseStatusText(p.status);
         p._canReceive = p.status === 'pending';
         p._canComplete = p.status === 'received' || p.status === 'awaiting_confirm';
+        p._canEdit = p.status === 'pending'; // 待采购状态可编辑数量
+        p._editing = false;
+        p._editQty = p.purchaseQuantity;
+        p._availableStock = 0;
+        p._hasStock = false;
       });
       this.setData({ purchaseList: records });
+      // 加载库存匹配
+      this._loadStockInfo(records);
     } catch (e) {
       console.error('采购列表加载失败', e);
     }
     this.setData({ purchaseLoading: false });
+  },
+
+  /** 库存匹配：按物料编码批量查询仓库可用库存 */
+  async _loadStockInfo(records) {
+    if (!records || records.length === 0) return;
+    const codes = records
+      .map(r => r.materialCode)
+      .filter(c => c && c.trim())
+      .filter((c, i, arr) => arr.indexOf(c) === i);
+    if (codes.length === 0) return;
+    try {
+      const res = await production.checkMaterialStock(codes.join(','));
+      const stockList = res?.data || res || [];
+      const stockMap = {};
+      (Array.isArray(stockList) ? stockList : []).forEach(s => {
+        if (s && s.materialCode) stockMap[s.materialCode.trim()] = s;
+      });
+      const list = this.data.purchaseList.map(p => {
+        const code = (p.materialCode || '').trim();
+        const stock = stockMap[code];
+        if (stock) {
+          return {
+            ...p,
+            _availableStock: stock.availableStock || 0,
+            _hasStock: (stock.availableStock || 0) > 0,
+          };
+        }
+        return p;
+      });
+      this.setData({ purchaseList: list });
+    } catch (e) {
+      console.warn('库存查询失败', e);
+    }
   },
 
   /** 采购状态 → 中文 */
@@ -679,6 +719,60 @@ Page({
         }
       }
     });
+  },
+
+  /** 开启采购数量内联编辑 */
+  onEditPurchaseQty(e) {
+    const id = e.currentTarget.dataset.id;
+    const list = this.data.purchaseList.map(p => {
+      if (p.id === id) {
+        return { ...p, _editing: true, _editQty: p.purchaseQuantity };
+      }
+      return p;
+    });
+    this.setData({ purchaseList: list });
+  },
+
+  /** 采购数量输入 */
+  onPurchaseQtyInput(e) {
+    const id = e.currentTarget.dataset.id;
+    const val = e.detail.value;
+    const list = this.data.purchaseList.map(p => {
+      if (p.id === id) return { ...p, _editQty: val };
+      return p;
+    });
+    this.setData({ purchaseList: list });
+  },
+
+  /** 保存采购数量 */
+  onSavePurchaseQty(e) {
+    const id = e.currentTarget.dataset.id;
+    const item = this.data.purchaseList.find(p => p.id === id);
+    if (!item) return;
+    const qty = parseFloat(item._editQty);
+    if (isNaN(qty) || qty < 0) {
+      toast.error('数量必须≥0');
+      return;
+    }
+    wx.showLoading({ title: '保存中...' });
+    production.quickEditPurchase({ id: id, purchaseQuantity: qty }).then(() => {
+      wx.hideLoading();
+      toast.success('已保存');
+      this.loadPurchases();
+    }).catch(err => {
+      wx.hideLoading();
+      toast.error((err && err.message) || '保存失败');
+    });
+  },
+
+  /** 取消编辑 */
+  onCancelEditPurchaseQty(e) {
+    const id = e.currentTarget.dataset.id;
+    const list = this.data.purchaseList.map(p => {
+      if (p.id === id) return { ...p, _editing: false, _editQty: p.purchaseQuantity };
+      return p;
+    });
+    this.setData({ purchaseList: list });
   },
 
   async loadStyleProcesses() {

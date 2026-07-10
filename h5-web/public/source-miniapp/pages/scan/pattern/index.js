@@ -410,7 +410,7 @@ Page({
     const inputQty = parseInt(e.detail.value, 10) || 0;
     // 如果输入超过最大值，自动修正
     if (inputQty > maxQty) {
-      toast.warning('数量不能超过最大数量 ' + maxQty + ' 件');
+      toast.info('数量不能超过最大数量 ' + maxQty + ' 件');
       this.setData({ 'detail.quantity': maxQty });
     } else {
       this.setData({ 'detail.quantity': e.detail.value });
@@ -555,7 +555,7 @@ Page({
     const images = this.data.reviewImages || [];
     const remaining = this.data.maxImages - images.length;
     if (remaining <= 0) {
-      toast.warning('最多只能上传' + this.data.maxImages + '张图片');
+      toast.info('最多只能上传' + this.data.maxImages + '张图片');
       return;
     }
 

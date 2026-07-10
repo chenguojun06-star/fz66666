@@ -31,7 +31,6 @@ import {
   BarChartOutlined,
   ClockCircleOutlined,
   PrinterOutlined,
-  RollbackOutlined,
 } from '@ant-design/icons';
 
 export const paths = {
@@ -66,7 +65,6 @@ export const paths = {
   warehousingInspect: '/production/warehousing/inspect/:orderId',
   orderTransfer: '/production/transfer',
   materialPicking: '/production/picking',
-  returnManagement: '/production/return',
 
   materialReconciliation: '/finance/material-reconciliation',
   payrollOperatorSummary: '/finance/payroll-operator-summary',
@@ -441,7 +439,6 @@ export const permissionCodes = {
   materialPicking: 'MENU_MATERIAL_PICKING',
   warehousing: 'MENU_WAREHOUSING',
   orderTransfer: 'MENU_ORDER_TRANSFER',
-  returnManagement: 'MENU_ORDER_TRANSFER', // 退货管理复用订单管理权限码
 
   materialRecon: 'MENU_MATERIAL_RECON',
   financeCenter: 'MENU_FINISHED_SETTLEMENT',
@@ -535,7 +532,6 @@ export const menuConfig: MenuSection[] = [
       { label: '物料采购', path: paths.materialPurchase, icon: React.createElement(ShoppingCartOutlined) },
       { label: '物料出入库', path: paths.materialInventory, icon: React.createElement(InboxOutlined) },
       { label: '物料新增', path: paths.materialDatabase, icon: React.createElement(DatabaseOutlined) },
-      { label: '退货管理', path: paths.returnManagement, icon: React.createElement(RollbackOutlined) },
     ],
   },
   {
@@ -697,7 +693,6 @@ export const routeToPermissionCode: Record<string, string> = {
   [paths.externalFactory]: permissionCodes.progress,
   [paths.orderFlow]: permissionCodes.progress,
   [paths.orderTransfer]: permissionCodes.orderTransfer,
-  [paths.returnManagement]: permissionCodes.returnManagement,
   [paths.warehousing]: permissionCodes.warehousing,
 
   [paths.patternRevision]: permissionCodes.patternRevision,

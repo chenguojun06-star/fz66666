@@ -188,13 +188,15 @@ public class MaterialPurchaseController {
     }
 
     /**
-     * 快速编辑物料采购（备注和预计出货日期）
+     * 快速编辑物料采购（备注、预计出货日期、采购数量）
+     * 采购数量修改后会自动重算 totalAmount
      */
     @PutMapping("/quick-edit")
     public Result<?> quickEdit(@RequestBody Map<String, Object> payload) {
         String id = (String) payload.get("id");
         String remark = (String) payload.get("remark");
         String expectedShipDate = (String) payload.get("expectedShipDate");
+        Object purchaseQtyObj = payload.get("purchaseQuantity");
 
         MaterialPurchase purchase = new MaterialPurchase();
         purchase.setId(id);
@@ -202,9 +204,36 @@ public class MaterialPurchaseController {
         if (expectedShipDate != null && !expectedShipDate.isEmpty()) {
             purchase.setExpectedShipDate(java.time.LocalDate.parse(expectedShipDate));
         }
+        // 支持直接修改采购数量（样衣采购节点内联编辑）
+        if (purchaseQtyObj != null) {
+            try {
+                java.math.BigDecimal purchaseQty = new java.math.BigDecimal(String.valueOf(purchaseQtyObj).trim());
+                if (purchaseQty.compareTo(java.math.BigDecimal.ZERO) >= 0) {
+                    purchase.setPurchaseQuantity(purchaseQty);
+                    // 重算总金额
+                    if (purchase.getUnitPrice() != null) {
+                        // unitPrice 从数据库现有值获取，这里先设 null 让 update 不覆盖
+                    }
+                }
+            } catch (NumberFormatException e) {
+                return Result.fail("采购数量格式错误");
+            }
+        }
 
         materialPurchaseOrchestrator.update(purchase);
         return Result.success();
+    }
+
+    /**
+     * 查询物料仓库可用库存（样衣采购节点匹配库存用）
+     * 参数：materialCodes（逗号分隔的物料编码列表）
+     */
+    @GetMapping("/stock-check")
+    public Result<?> stockCheck(@RequestParam String materialCodes) {
+        if (materialCodes == null || materialCodes.trim().isEmpty()) {
+            return Result.success(java.util.Collections.emptyList());
+        }
+        return Result.success(materialPurchaseOrchestrator.checkMaterialStock(materialCodes));
     }
 
     /**

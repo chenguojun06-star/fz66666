@@ -5,6 +5,7 @@ export interface SalesReturn {
   returnNo: string;
   originalOrderId: number;
   originalOrderNo: string;
+  ecommerceOrderId?: number;
   customerId?: string;
   customerName?: string;
   returnType: 'FULL' | 'PARTIAL';
@@ -44,6 +45,7 @@ export interface SalesReturnItem {
 /** 创建退货单请求 */
 export interface CreateSalesReturnRequest {
   originalOrderId: number;
+  ecommerceOrderId?: number;
   returnReason?: string;
   remark?: string;
   items: SalesReturnItemRequest[];

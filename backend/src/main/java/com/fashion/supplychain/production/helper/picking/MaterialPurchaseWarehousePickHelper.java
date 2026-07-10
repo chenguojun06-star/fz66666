@@ -7,6 +7,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.stream.Collectors;
 
 import com.fashion.supplychain.common.ParamUtils;
 import com.fashion.supplychain.common.UserContext;
@@ -18,13 +19,16 @@ import com.fashion.supplychain.production.entity.MaterialPicking;
 import com.fashion.supplychain.production.entity.MaterialPickingItem;
 import com.fashion.supplychain.production.entity.MaterialPurchase;
 import com.fashion.supplychain.production.entity.MaterialStock;
+import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.helper.ExternalFactoryMaterialDeductionHelper;
+import com.fashion.supplychain.production.helper.OrderRemarkHelper;
 import com.fashion.supplychain.production.mapper.MaterialOutboundLogMapper;
 import com.fashion.supplychain.production.orchestration.MaterialPurchaseOrchestratorHelper;
 import com.fashion.supplychain.production.orchestration.ProductionOrderOrchestrator;
 import com.fashion.supplychain.production.service.MaterialPickingService;
 import com.fashion.supplychain.production.service.MaterialPurchaseService;
 import com.fashion.supplychain.production.service.MaterialStockService;
+import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.warehouse.orchestration.MaterialPickupOrchestrator;
 
 import lombok.extern.slf4j.Slf4j;
@@ -74,6 +78,12 @@ public class MaterialPurchaseWarehousePickHelper {
 
     @Autowired
     private MaterialPurchasePickingSupport support;
+
+    @Autowired
+    private ProductionOrderService productionOrderService;
+
+    @Autowired
+    private OrderRemarkHelper orderRemarkHelper;
 
     // ───────────── 单项仓库领取 ─────────────
 
@@ -212,7 +222,36 @@ public class MaterialPurchaseWarehousePickHelper {
             externalFactoryDeductionHelper.applyMaterialDeduction(picking, purchase, items, factorySnapshot);
         }
 
+        // P1-1 修复：仓库确认出库补订单备注双写（铁律：所有仓库操作必须写入 ProductionOrder.remarks）
+        appendOrderRemarkForOutbound(picking, items, pickedTotalQty);
+
         log.info("✅ 仓库确认出库完成: pickingId={}, itemCount={}", pickingId, items.size());
+    }
+
+    /**
+     * P1-1 修复：仓库确认出库写入订单备注，确保出库操作可追溯
+     */
+    private void appendOrderRemarkForOutbound(MaterialPicking picking, List<MaterialPickingItem> items, int pickedTotalQty) {
+        try {
+            if (!StringUtils.hasText(picking.getOrderId())) {
+                return;
+            }
+            ProductionOrder order = productionOrderService.getById(picking.getOrderId());
+            if (order == null) {
+                return;
+            }
+            String materialSummary = items.stream()
+                    .filter(it -> StringUtils.hasText(it.getMaterialCode()))
+                    .map(it -> it.getMaterialCode() + "×" + (it.getQuantity() != null ? it.getQuantity() : 0))
+                    .collect(Collectors.joining(","));
+            String detail = "出库单" + picking.getPickingNo()
+                    + "|物料:" + (StringUtils.hasText(materialSummary) ? materialSummary : "无")
+                    + "|数量:" + pickedTotalQty
+                    + "|领取人:" + (StringUtils.hasText(picking.getPickerName()) ? picking.getPickerName() : "-");
+            orderRemarkHelper.append(order, "仓库确认出库", detail);
+        } catch (Exception e) {
+            log.warn("仓库确认出库写入订单备注失败（不阻塞主流程）: pickingId={}, error={}", picking.getId(), e.getMessage());
+        }
     }
 
     private int deductStockForOutboundItems(MaterialPicking picking, List<MaterialPickingItem> items) {

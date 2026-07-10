@@ -402,9 +402,9 @@
     <view class="bottom-gap"></view>
   </block>
 
-  <!-- 加载失败/空数据兜底 -->
-  <view class="detail-empty-state" wx:elif="{{!loading && !order}}">
-    <text class="detail-empty-text">订单数据加载失败</text>
+  <!-- 加载失败/空数据兜底（独立 wx:if，不与上面的 block wx:if 关联） -->
+  <view class="detail-empty-state" wx:if="{{!loading && !order}}">
+    <text class="detail-empty-text">{{loadError || '订单数据加载失败'}}</text>
     <view class="detail-empty-retry" bindtap="onRetryLoad">点击重试</view>
   </view>
 </view>

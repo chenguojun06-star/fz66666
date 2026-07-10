@@ -53,7 +53,7 @@ Page({
   onCopyTenantCode() {
     const code = this.data.tenantCode;
     if (!code) {
-      toast.warn('暂无邀请码');
+      toast.info('暂无邀请码');
       return;
     }
     wx.setClipboardData({
@@ -66,7 +66,7 @@ Page({
     const code = this.data.tenantCode;
     const name = this._tenantName || '工厂';
     if (!code) {
-      toast.warn('暂无邀请码');
+      toast.info('暂无邀请码');
       return;
     }
     const origin = getFrontendOrigin();

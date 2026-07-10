@@ -12,10 +12,12 @@ import com.fashion.supplychain.common.ParamUtils;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.constant.MaterialConstants;
 import com.fashion.supplychain.common.tenant.TenantAssert;
+import com.fashion.supplychain.production.entity.MaterialOutboundLog;
 import com.fashion.supplychain.production.entity.MaterialPicking;
 import com.fashion.supplychain.production.entity.MaterialPickingItem;
 import com.fashion.supplychain.production.entity.MaterialPurchase;
 import com.fashion.supplychain.production.helper.ExternalFactoryMaterialDeductionHelper;
+import com.fashion.supplychain.production.mapper.MaterialOutboundLogMapper;
 import com.fashion.supplychain.production.service.MaterialPickingService;
 import com.fashion.supplychain.production.service.MaterialPurchaseService;
 import com.fashion.supplychain.production.service.MaterialStockService;
@@ -46,6 +48,9 @@ public class MaterialPurchaseCancelHelper {
 
     @Autowired
     private ExternalFactoryMaterialDeductionHelper externalFactoryDeductionHelper;
+
+    @Autowired
+    private MaterialOutboundLogMapper materialOutboundLogMapper;
 
     @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> cancelPicking(Map<String, Object> body) {
@@ -87,6 +92,8 @@ public class MaterialPurchaseCancelHelper {
 
         if (wasCompleted) {
             externalFactoryDeductionHelper.rollbackMaterialDeduction(pickingId);
+            // P0修复：撤回已完成的出库时，软删除对应的出库流水记录，避免统计虚高
+            softDeleteOutboundLogs(pickingId);
         }
 
         restoreRelatedPurchaseStatus(picking.getOrderNo(), items);
@@ -141,5 +148,21 @@ public class MaterialPurchaseCancelHelper {
                 .set(MaterialPurchase::getUpdateTime, LocalDateTime.now())
                 .update();
         log.info("✅ 采购任务已批量恢复: orderNo={}, materialCodes={}", orderNo, materialCodes);
+    }
+
+    /**
+     * P0修复：软删除出库流水记录（撤回出库时调用）
+     * 避免出库报表/统计金额虚高，同时保留审计痕迹
+     */
+    private void softDeleteOutboundLogs(String pickingId) {
+        try {
+            materialOutboundLogMapper.delete(
+                    new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<MaterialOutboundLog>()
+                            .eq(MaterialOutboundLog::getPickingId, pickingId)
+                            .eq(MaterialOutboundLog::getDeleteFlag, 0));
+            log.info("✅ 出库流水已清理: pickingId={}", pickingId);
+        } catch (Exception e) {
+            log.warn("清理出库流水失败（不阻塞撤回）: pickingId={}, error={}", pickingId, e.getMessage());
+        }
     }
 }

@@ -12,6 +12,7 @@ import com.fashion.supplychain.integration.ecommerce.orchestration.EcommerceOrde
 import com.fashion.supplychain.production.entity.ProductOutstock;
 import com.fashion.supplychain.production.entity.ProductWarehousing;
 import com.fashion.supplychain.production.entity.ProductionOrder;
+import com.fashion.supplychain.production.helper.OrderRemarkHelper;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.ProductOutstockService;
 import com.fashion.supplychain.production.service.ProductWarehousingService;
@@ -59,6 +60,9 @@ public class FinishedOutstockHelper {
 
     @Autowired
     private ProductionOrderService productionOrderService;
+
+    @Autowired
+    private OrderRemarkHelper orderRemarkHelper;
 
     public FinishedOutstockHelper(ProductSkuService productSkuService,
                                   ProductOutstockService productOutstockService,
@@ -179,15 +183,60 @@ public class FinishedOutstockHelper {
                 ecommerceOrderOrchestrator.onWarehouseOutbound(productionOrderNo,
                         trackingNo != null ? trackingNo : "", expressCompany != null ? expressCompany : "");
             } catch (Exception ex) {
-                log.warn("[EC回写失败不阻塞主流程] productionOrderNo={} err={}", productionOrderNo, ex.getMessage());
+                // P1-3 修复：EC回写失败由静默 warn 升级为 error 级别告警，便于排查订单状态不同步问题
+                log.error("[EC回写失败] productionOrderNo={} trackingNo={} expressCompany={} err={}",
+                        productionOrderNo, trackingNo, expressCompany, ex.getMessage(), ex);
             }
         } else if (StringUtils.hasText(requestOrderId)) {
             log.warn("[EC回写跳过] 缺少 productionOrderNo 与 orderNo，无法回写EC订单 orderId={} customer={}",
                     requestOrderId, customerName);
         }
 
+        // P1-2 修复：成品出库补订单备注双写（铁律：所有仓库操作必须写入 ProductionOrder.remarks）
+        appendOrderRemarkForOutbound(requestOrderId, requestOrderNo, customerName, totalItems, totalQty,
+                finalOutstockType, trackingNo, expressCompany);
+
         log.info("[FinishedOutbound] 成品批量出库: operator={}, orderId={}, orderNo={}, customer={}, items={}, totalQty={}, type={}",
                 UserContext.username(), requestOrderId, requestOrderNo, customerName, totalItems, totalQty, finalOutstockType);
+    }
+
+    /**
+     * P1-2 修复：成品出库写入订单备注，确保出库操作可追溯
+     */
+    private void appendOrderRemarkForOutbound(String orderId, String orderNo, String customerName,
+                                              int totalItems, int totalQty, String outstockType,
+                                              String trackingNo, String expressCompany) {
+        try {
+            ProductionOrder order = null;
+            if (StringUtils.hasText(orderId)) {
+                order = productionOrderService.getById(orderId);
+            }
+            if (order == null && StringUtils.hasText(orderNo)) {
+                Long currentTenantId = UserContext.tenantId();
+                order = productionOrderService.lambdaQuery()
+                        .eq(ProductionOrder::getOrderNo, orderNo)
+                        .eq(currentTenantId != null, ProductionOrder::getTenantId, currentTenantId)
+                        .one();
+            }
+            if (order == null) {
+                return;
+            }
+            StringBuilder detail = new StringBuilder();
+            detail.append("客户:").append(customerName != null ? customerName : "-");
+            detail.append("|类型:").append(outstockType);
+            detail.append("|SKU数:").append(totalItems);
+            detail.append("|总数量:").append(totalQty);
+            if (StringUtils.hasText(trackingNo)) {
+                detail.append("|快递单号:").append(trackingNo);
+            }
+            if (StringUtils.hasText(expressCompany)) {
+                detail.append("|快递公司:").append(expressCompany);
+            }
+            orderRemarkHelper.append(order, "成品出库", detail.toString());
+        } catch (Exception e) {
+            log.warn("成品出库写入订单备注失败（不阻塞主流程）: orderId={}, orderNo={}, error={}",
+                    orderId, orderNo, e.getMessage());
+        }
     }
 
     @Transactional(rollbackFor = Exception.class)

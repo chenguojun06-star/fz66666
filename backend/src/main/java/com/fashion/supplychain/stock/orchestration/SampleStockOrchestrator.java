@@ -474,9 +474,12 @@ public class SampleStockOrchestrator {
             throw new IllegalStateException("可用库存不足，当前可用 " + available + " 件，无法出库 " + outQty + " 件");
         }
 
-        stock.setQuantity(stock.getQuantity() - outQty);
-        stock.setUpdateTime(LocalDateTime.now());
-        sampleStockService.updateById(stock);
+        // P2 修复：改用原子 SQL 扣减，替代"读-改-写"非原子操作，避免并发超扣
+        int affected = sampleStockMapper.decreaseStockQuantity(stock.getId(), outQty, currentTenantId);
+        if (affected != 1) {
+            throw new IllegalStateException("库存扣减失败（并发冲突或库存不足）：stockId=" + stock.getId()
+                    + "，申请出库 " + outQty + " 件");
+        }
 
         ProductOutstock outstock = new ProductOutstock();
         outstock.setStyleId(stock.getStyleId());

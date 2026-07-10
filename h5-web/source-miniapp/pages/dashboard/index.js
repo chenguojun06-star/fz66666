@@ -167,7 +167,7 @@ Page({
       if (apiFailCount >= 3) {
         toast.error('数据加载失败，请下拉刷新');
       } else if (apiFailCount > 0) {
-        toast.warn('部分数据加载失败');
+        toast.info('部分数据加载失败');
       }
     }).catch(function (err) {
       console.error('[Dashboard] refreshCards error:', err);

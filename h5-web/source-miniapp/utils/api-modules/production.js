@@ -120,12 +120,21 @@ const production = {
   updateArrivedQuantity(payload) {
     return ok('/api/production/purchase/update-arrived-quantity', 'POST', payload || {});
   },
+  // P0 修复（D-023 2026-07-09）：去掉 orderNo→scanCode 转换。
+  //   旧版触发后端 getByScanCode 分支，绕过多租户隔离 + 字段 enrichment。
+  //   统一传 orderNo，与 PC 端 usePurchaseList 走相同后端路径（listWithEnrichment）。
+  //   兜底传 pageSize=500，避免分页默认 10 条导致物料被截断显示不全。
   getMaterialPurchases(params) {
-    const payload = { ...(params || {}) };
-    if (payload.orderNo && !payload.scanCode) {
-      payload.scanCode = payload.orderNo;
-    }
+    const payload = { ...(params || {}), pageSize: 500 };
     return ok('/api/production/purchase/list', 'GET', payload);
+  },
+  // 采购数量编辑（样衣采购节点内联编辑）
+  quickEditPurchase(payload) {
+    return ok('/api/production/purchase/quick-edit', 'PUT', payload || {});
+  },
+  // 库存匹配查询（按物料编码查仓库可用库存）
+  checkMaterialStock(materialCodes) {
+    return ok('/api/production/purchase/stock-check', 'GET', { materialCodes });
   },
   myProcurementTasks() {
     return ok('/api/production/purchase/list', 'GET', { myTasks: 'true' });

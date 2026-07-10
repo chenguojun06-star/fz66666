@@ -128,6 +128,14 @@ const production = {
     const payload = { ...(params || {}), pageSize: 500 };
     return ok('/api/production/purchase/list', 'GET', payload);
   },
+  // 采购数量编辑（样衣采购节点内联编辑）
+  quickEditPurchase(payload) {
+    return ok('/api/production/purchase/quick-edit', 'PUT', payload || {});
+  },
+  // 库存匹配查询（按物料编码查仓库可用库存）
+  checkMaterialStock(materialCodes) {
+    return ok('/api/production/purchase/stock-check', 'GET', { materialCodes });
+  },
   myProcurementTasks() {
     return ok('/api/production/purchase/list', 'GET', { myTasks: 'true' });
   },

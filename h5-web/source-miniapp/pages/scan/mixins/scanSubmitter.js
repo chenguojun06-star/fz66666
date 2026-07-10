@@ -140,7 +140,7 @@ module.exports = {
       }
       if (e.isOfflineQueued) {
         markRecent(codeStr, 2000);
-        toast.warn('📶 已离线缓存，联网后自动同步');
+        toast.info('📶 已离线缓存，联网后自动同步');
         this.setData({
           lastResult: { success: false, queued: true, message: '📶 无网络，已离线缓存，联网后自动上传', displayTime: new Date().toLocaleTimeString(), statusText: '已缓存', statusClass: 'queued', errorAction: null },
           offlinePendingCount: e.offlineCount || 0,

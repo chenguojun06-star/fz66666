@@ -27,7 +27,7 @@ import { Dashboard } from './modules/dashboard';
 import { UserList, UserApproval, RoleList, OrganizationTree, PartnerManagement, FactoryList, FactoryWorkerList, LoginLogList, SystemLogs, Profile, DictManage, Tutorial, TenantManagement, CustomerManagement, AppStore, DataImport, SystemIssueBoard, OrphanDataPage, FieldConfigPage, PrintTemplateList } from './modules/system';
 import { EcommerceCenter, PlatformDetail } from './modules/ecommerce';
 import { AiAgentTraceCenter, CockpitPage, IntelligenceCenter, PlatformDashboard } from './modules/intelligence';
-import { ProductionList, CuttingManagement, MaterialPurchase, MaterialPurchaseDetail, ProductWarehousing, InspectionDetail, OrderTransfer, OrderFlow, ProgressDetail, MaterialPicking, ExternalFactory, ReturnManagement } from './modules/production';
+import { ProductionList, CuttingManagement, MaterialPurchase, MaterialPurchaseDetail, ProductWarehousing, InspectionDetail, OrderTransfer, OrderFlow, ProgressDetail, MaterialPicking, ExternalFactory } from './modules/production';
 
 const NotFound = React.lazy(() => import('./pages/NotFound'));
 const ShareOrderPage = React.lazy(() => import('./modules/production/pages/ShareOrderPage/index'));
@@ -204,7 +204,6 @@ const AppRoutes: React.FC = () => {
           <Route path={paths.materialPicking} element={<RouteErrorBoundary pageName="领料出库"><Suspense fallback={routeFallback}><MaterialPicking /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.warehousingDetail} element={<RouteErrorBoundary pageName="入库详情"><Suspense fallback={routeFallback}><ProductWarehousing /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.orderTransfer} element={<RouteErrorBoundary pageName="订单转交"><Suspense fallback={routeFallback}><OrderTransfer /></Suspense></RouteErrorBoundary>} />
-          <Route path={paths.returnManagement} element={<RouteErrorBoundary pageName="退货管理"><Suspense fallback={routeFallback}><ReturnManagement /></Suspense></RouteErrorBoundary>} />
           <Route
             path={paths.progressDetail}
             element={

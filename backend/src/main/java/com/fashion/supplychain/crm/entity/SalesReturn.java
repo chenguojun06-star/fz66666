@@ -30,6 +30,9 @@ public class SalesReturn {
     /** 原订单号 */
     private String originalOrderNo;
 
+    /** 关联电商订单ID（t_ecommerce_order.id），为空表示非电商退货 */
+    private Long ecommerceOrderId;
+
     /** 客户ID */
     private String customerId;
 

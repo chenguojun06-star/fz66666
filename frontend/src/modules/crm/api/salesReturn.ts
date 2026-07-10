@@ -14,6 +14,7 @@ export function getSalesReturnList(params: {
   originalOrderNo?: string;
   customerName?: string;
   returnStatus?: string;
+  ecommerceOrderId?: number;
 }): Promise<{ records: SalesReturn[]; total: number }> {
   return api.get('/crm/sales-return/list', { params });
 }

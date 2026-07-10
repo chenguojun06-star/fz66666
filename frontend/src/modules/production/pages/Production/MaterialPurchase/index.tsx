@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef } from 'react';
-import { Card, Input, Form, InputNumber, Tooltip, Button, message, Modal, Space } from 'antd';
+import { Card, Input, Form, InputNumber, Tooltip, Button, message, Modal, Space, Tabs } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import { QuestionCircleOutlined, InboxOutlined, FileSearchOutlined, ShopOutlined, ShoppingCartOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
@@ -12,6 +12,7 @@ import MaterialTable from './components/MaterialTable';
 import PurchaseModal from './components/PurchaseModal';
 import MaterialPurchaseAIBanner from './components/MaterialPurchaseAIBanner';
 import MaterialQualityIssueModal from './components/MaterialQualityIssueModal';
+import PurchaseReturnTab from './components/PurchaseReturnTab';
 import RemarkTimelineModal from '@/components/common/RemarkTimelineModal';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { PurchaseCartDrawer } from '@/components/common/PurchaseCartDrawer';
@@ -24,6 +25,7 @@ import api from '@/utils/api';
 
 const MaterialPurchase: React.FC = () => {
   const navigate = useNavigate();
+  const [activeMainTab, setActiveMainTab] = useState('purchase');
   const [orderPickerOpen, setOrderPickerOpen] = useState(false);
   const [orderPickerKeyword, setOrderPickerKeyword] = useState('');
   const [orderPickerList, setOrderPickerList] = useState<any[]>([]);
@@ -161,6 +163,22 @@ const MaterialPurchase: React.FC = () => {
       {modalContextHolder}
       <Form form={form} component={false} />
       <Form form={materialDatabaseForm} component={false} />
+      <Tabs
+        activeKey={activeMainTab}
+        onChange={setActiveMainTab}
+        type="card"
+        style={{ marginBottom: 0 }}
+        items={[
+          { key: 'purchase', label: '采购管理', children: null },
+          { key: 'return', label: '退货记录', children: null },
+        ]}
+      />
+      {activeMainTab === 'return' ? (
+        <Card bordered={false} style={{ borderTop: 'none' }}>
+          <PurchaseReturnTab />
+        </Card>
+      ) : (
+        <>
         <PageLayout
           title="物料采购"
           headerContent={
@@ -323,6 +341,8 @@ const MaterialPurchase: React.FC = () => {
                       }}
                     />
         </PageLayout>
+        </>
+      )}
 
         <PurchaseCartDrawer
           open={cartDrawerOpen}

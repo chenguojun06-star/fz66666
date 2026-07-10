@@ -151,15 +151,36 @@
                 <view class="pur-left">
                   <text class="pur-name">{{item.materialName || item.materialCode || '物料'}}</text>
                   <view class="pur-meta">
-                    <text class="pur-qty">采购量：{{item.purchaseQuantity || 0}}{{item.unit || ''}}</text>
+                    <!-- 采购量：非编辑模式显示文字，编辑模式显示输入框 -->
+                    <view wx:if="{{item._canEdit && item._editing}}" class="pur-qty-edit">
+                      <input class="pur-qty-input" type="digit" value="{{item._editQty}}" data-id="{{item.id}}" bindinput="onPurchaseQtyInput" />
+                      <text class="pur-unit">{{item.unit || ''}}</text>
+                    </view>
+                    <view wx:else class="pur-qty-row">
+                      <text class="pur-qty">采购量：{{item.purchaseQuantity || 0}}{{item.unit || ''}}</text>
+                      <text wx:if="{{item._canEdit}}" class="pur-edit-link" data-id="{{item.id}}" bindtap="onEditPurchaseQty">改</text>
+                    </view>
+                    <!-- 库存匹配 -->
+                    <view class="pur-stock-row">
+                      <text wx:if="{{item._hasStock}}" class="pur-stock ps-ok">仓库有货：{{item._availableStock}}{{item.unit || ''}}</text>
+                      <text wx:elif="{{item._availableStock === 0}}" class="pur-stock ps-none">仓库无库存</text>
+                    </view>
                     <text wx:if="{{item.supplier}}" class="pur-supplier">{{item.supplier}}</text>
                   </view>
                 </view>
                 <view class="pur-right">
                   <text class="pur-status ps-{{item.status}}">{{item._statusText}}</text>
                   <view class="pur-actions">
-                    <view wx:if="{{item._canReceive}}" class="pur-btn pb-primary" data-id="{{item.id}}" bindtap="onReceivePurchase"><text>领取</text></view>
-                    <view wx:if="{{item._canComplete}}" class="pur-btn pb-primary" data-id="{{item.id}}" bindtap="onConfirmPurchaseComplete"><text>确认完成</text></view>
+                    <!-- 编辑模式：保存/取消 -->
+                    <block wx:if="{{item._canEdit && item._editing}}">
+                      <view class="pur-btn pb-primary" data-id="{{item.id}}" bindtap="onSavePurchaseQty"><text>保存</text></view>
+                      <view class="pur-btn pb-default" data-id="{{item.id}}" bindtap="onCancelEditPurchaseQty"><text>取消</text></view>
+                    </block>
+                    <!-- 非编辑模式：领取/完成 -->
+                    <block wx:else>
+                      <view wx:if="{{item._canReceive}}" class="pur-btn pb-primary" data-id="{{item.id}}" bindtap="onReceivePurchase"><text>领取</text></view>
+                      <view wx:if="{{item._canComplete}}" class="pur-btn pb-primary" data-id="{{item.id}}" bindtap="onConfirmPurchaseComplete"><text>确认完成</text></view>
+                    </block>
                   </view>
                 </view>
               </view>
