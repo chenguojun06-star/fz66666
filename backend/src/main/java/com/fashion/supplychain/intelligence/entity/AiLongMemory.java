@@ -41,6 +41,15 @@ public class AiLongMemory {
     /** 0-100 */
     private BigDecimal confidence;
 
+    /** 双时态：事实生效时间 */
+    private LocalDateTime validFrom;
+
+    /** 双时态：事实失效时间（NULL=当前有效） */
+    private LocalDateTime invalidAt;
+
+    /** 事实唯一键（subjectType:subjectId:predicate），用于冲突消解 */
+    private String factKey;
+
     private Integer hitCount;
     private LocalDateTime lastHitTime;
 

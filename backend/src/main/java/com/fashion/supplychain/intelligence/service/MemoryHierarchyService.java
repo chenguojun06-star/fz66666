@@ -29,6 +29,9 @@ public class MemoryHierarchyService {
     @Autowired
     private AiLongMemoryMapper longMemoryMapper;
 
+    @Autowired
+    private org.springframework.beans.factory.ObjectProvider<MemoryConflictResolver> conflictResolverProvider;
+
     @Value("${xiaoyun.memory.max-working-items:20}")
     private int maxWorkingItems;
 
@@ -202,8 +205,14 @@ public class MemoryHierarchyService {
                 memory.setDeleteFlag(0);
                 memory.setCreateTime(LocalDateTime.now());
                 memory.setUpdateTime(LocalDateTime.now());
+                memory.setValidFrom(LocalDateTime.now());
 
-                longMemoryMapper.insert(memory);
+                MemoryConflictResolver resolver = conflictResolverProvider.getIfAvailable();
+                if (resolver != null) {
+                    resolver.upsertFactWithConflictResolution(memory);
+                } else {
+                    longMemoryMapper.insert(memory);
+                }
             }
 
             log.debug("[MemoryHierarchy] 语义概念学习: {}", concept);

@@ -1,5 +1,5 @@
 const api = require('../../utils/api');
-const { getUserInfo, getToken, setUserInfo, isFactoryOwner, isTenantOwner } = require('../../utils/storage');
+const { getUserInfo, getToken, setUserInfo, isFactoryOwner } = require('../../utils/storage');
 const { getBaseUrl } = require('../../config');
 const { getRoleDisplayName, isAdminOrSupervisor } = require('../../utils/permission');
 const { onDataRefresh, eventBus, Events } = require('../../utils/eventBus');
@@ -28,27 +28,10 @@ const MENU_ROLE_MAP = {
 };
 
 function buildMenuItems(opts) {
-  const showInviteSection = opts.showInviteSection || false;
-  const showApprovalEntry = opts.showApprovalEntry || false;
   const showMenuManage = opts.showMenuManage || false;
   const items = [];
 
   items.push({ id: 'password', label: '修改密码', iconClass: 'icon-lock', url: '/pages/admin/misc/change-password/index' });
-  items.push({ id: 'payroll', label: '工资查询', iconClass: 'icon-payroll', url: '/pages/payroll/payroll' });
-  items.push({ id: 'advance', label: '员工借支', iconClass: 'icon-clock', url: '/pages/advance/list/index' });
-  if (opts.showWagePayment) {
-    items.push({ id: 'wagePayment', label: '收付款中心', iconClass: 'icon-stats', url: '/pages/finance/payment/index' });
-  }
-
-  if (showInviteSection) {
-    items.push({ id: 'invite', label: '邀请员工', iconClass: 'icon-user-group', url: '/pages/admin/misc/invite/index' });
-  }
-
-  items.push({ id: 'feedback', label: '问题反馈', iconClass: 'icon-feedback', url: '/pages/admin/misc/feedback/index' });
-
-  if (showApprovalEntry) {
-    items.push({ id: 'approval', label: '用户审批', iconClass: 'icon-approval', url: '/pages/admin/user-approval/index' });
-  }
 
   if (showMenuManage) {
     items.push({ id: 'menu-manage', label: '菜单管理', iconClass: 'icon-setting', action: 'openMenuManage' });
@@ -87,8 +70,8 @@ Page({
     }
     const canManage = isAdminOrSupervisor() || isFactoryOwner();
     this._showMenuManage = canManage;
-    this._showWagePayment = isTenantOwner() || isAdminOrSupervisor();
-    this.loadUserInfo(canManage);
+    this.setData({ showApprovalEntry: canManage });
+    this.loadUserInfo();
     this.loadSystemInfo();
     this.setupDataRefreshListener();
   },
@@ -111,10 +94,7 @@ Page({
   refreshMenuItems: function () {
     this.setData({
       menuItems: buildMenuItems({
-        showInviteSection: this._showInviteSection || false,
-        showApprovalEntry: this.data.showApprovalEntry,
         showMenuManage: this._showMenuManage || false,
-        showWagePayment: this._showWagePayment || false,
       }),
     });
   },
@@ -295,7 +275,7 @@ Page({
     this.loadSystemInfo().finally(function () { wx.stopPullDownRefresh(); });
   },
 
-  loadUserInfo: function (showApprovalEntry) {
+  loadUserInfo: function () {
     const userInfo = getUserInfo();
     const roleDisplayName = getRoleDisplayName();
     const userName = (userInfo && userInfo.name) || (userInfo && userInfo.username) || '未知';
@@ -308,9 +288,6 @@ Page({
     }
 
     const patch = { userInfo: userInfo, roleDisplayName: roleDisplayName, avatarLetter: avatarLetter, avatarImgUrl: avatarImgUrl };
-    if (typeof showApprovalEntry === 'boolean') {
-      patch.showApprovalEntry = showApprovalEntry;
-    }
     this.setData(patch);
     this.refreshMenuItems();
 
@@ -350,8 +327,6 @@ Page({
           if (tenantCode) {
             self._recruitInfo = { show: true, tenantCode: tenantCode, tenantName: tenantName };
           }
-          self._showInviteSection = true;
-          self.refreshMenuItems();
           return onlineCount;
         }).catch(function (e) {
           console.error('加载租户信息失败', e);

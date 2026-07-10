@@ -533,6 +533,7 @@ public class AgentLoopEngine {
         fastContent = evidenceHelper.appendStepWizardCards(fastContent, ctx.getStepWizardCards());
         fastContent = evidenceHelper.appendReportPreviewCards(fastContent, ctx.getReportPreviewCards());
         fastContent = enrichWithRiskDetection(ctx, fastContent);
+        fastContent = appendDataSourcesFooter(ctx, fastContent);
 
         if (fastContent == null || fastContent.isBlank()) {
             String toolSummary = ctx.getAllExecRecords().stream()
@@ -697,6 +698,63 @@ public class AgentLoopEngine {
             }
         }
         return content;
+    }
+
+    private String appendDataSourcesFooter(AgentLoopContext ctx, String content) {
+        if (content == null || content.isBlank()) return content;
+        try {
+            int toolCount = ctx.getAllExecRecords() == null ? 0 : ctx.getAllExecRecords().size();
+            if (toolCount == 0) {
+                if (XiaoyunPatterns.isGreeting(ctx.getUserMessage())) {
+                    return content;
+                }
+                content += "\n\n---\n> 💡 提示：以上回答基于模型推理，未查询实时数据。如需准确数据请明确说明。";
+                return content;
+            }
+
+            java.util.List<String> toolNames = new java.util.ArrayList<>();
+            java.util.Set<String> seen = new java.util.HashSet<>();
+            for (AiAgentToolExecHelper.ToolExecRecord rec : ctx.getAllExecRecords()) {
+                if (rec.toolName == null) continue;
+                String displayName = mapToolDisplayName(rec.toolName);
+                if (seen.add(displayName)) {
+                    toolNames.add(displayName);
+                }
+            }
+
+            String footer;
+            if (toolCount <= 2) {
+                footer = "\n\n---\n> 📊 数据来源：" + String.join("、", toolNames);
+            } else {
+                footer = "\n\n---\n> 📊 数据来源：已查询 " + toolCount + " 个数据源（" + String.join("、", toolNames) + "）";
+            }
+            content += footer;
+        } catch (Exception e) {
+            log.debug("[AgentLoop] 数据来源标识添加失败: {}", e.getMessage());
+        }
+        return content;
+    }
+
+    private String mapToolDisplayName(String toolName) {
+        if (toolName == null) return "未知工具";
+        switch (toolName) {
+            case "tool_production_progress": return "生产进度";
+            case "tool_warehouse_stock": return "库存查询";
+            case "tool_finished_product_stock": return "成品库存";
+            case "tool_style_info": return "款式资料";
+            case "tool_supplier": return "供应商";
+            case "tool_knowledge_search": return "知识库";
+            case "tool_nl_query": return "数据查询";
+            case "tool_order_timeline": return "订单时间线";
+            case "tool_financial_payroll": return "工资结算";
+            case "tool_quality_check": return "质检数据";
+            case "tool_smart_report": return "智能报表";
+            default:
+                if (toolName.startsWith("tool_")) {
+                    return toolName.substring(5).replace("_", " ");
+                }
+                return toolName;
+        }
     }
 
     private String runDataTruthGuards(AgentLoopContext ctx, String content) {
