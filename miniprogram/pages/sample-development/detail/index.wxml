@@ -109,8 +109,8 @@
           <view wx:if="{{bomStage.status === 'completed'}}" class="scb-done-mark icon-checkmark"></view>
         </view>
       </view>
-      <!-- 内容区：未开始不显示 -->
-      <block wx:if="{{bomStage.status !== 'not_started'}}">
+      <!-- 内容区：始终显示（编辑按钮受阶段状态控制） -->
+      <block>
         <view wx:if="{{bomLoading}}" class="empty-inline">加载中...</view>
         <block wx:else>
           <view wx:if="{{bomList.length === 0}}" class="empty-inline">暂无BOM数据</view>
@@ -188,7 +188,6 @@
           </view>
         </block>
       </block>
-      <view wx:else class="stage-empty-hint">点击「开始」领取任务后可编辑 BOM</view>
     </view>
 
     <!-- ══ ⑥ 纸样开发阶段（控制栏 + 只读内容） ══ -->
@@ -209,7 +208,7 @@
           <view wx:if="{{patternStage.status === 'completed'}}" class="scb-done-mark icon-checkmark"></view>
         </view>
       </view>
-      <block wx:if="{{patternStage.status !== 'not_started'}}">
+      <block>
         <view wx:if="{{patternLoading}}" class="empty-inline">加载中...</view>
         <view wx:elif="{{!patternData}}" class="empty-inline">暂无纸样数据</view>
         <view wx:else class="kv-list">
@@ -218,7 +217,6 @@
           <view class="kv-row" wx:if="{{patternData.notes}}"><text class="kv-label">备注</text><text class="kv-value kv-long">{{patternData.notes}}</text></view>
         </view>
       </block>
-      <view wx:else class="stage-empty-hint">点击「开始」领取任务后可登记纸样</view>
     </view>
 
     <!-- ══ ⑦ 工序单价阶段（控制栏 + 内联编辑器 + 模板导入入口） ══ -->
@@ -239,7 +237,7 @@
           <view wx:if="{{processStage.status === 'completed'}}" class="scb-done-mark icon-checkmark"></view>
         </view>
       </view>
-      <block wx:if="{{processStage.status !== 'not_started'}}">
+      <block>
         <!-- 顶部工具栏：导入模板 + 添加工序 + 工序数统计 -->
         <view class="process-toolbar">
           <view class="pt-stat">
@@ -356,7 +354,6 @@
           </view>
         </block>
       </block>
-      <view wx:else class="stage-empty-hint">点击「开始」领取任务后可配置工序</view>
     </view>
 
     <!-- ══ ⑧ 二次工艺阶段（控制栏 + 只读内容） ══ -->
@@ -377,7 +374,7 @@
           <view wx:if="{{secondaryStage.status === 'completed'}}" class="scb-done-mark icon-checkmark"></view>
         </view>
       </view>
-      <block wx:if="{{secondaryStage.status !== 'not_started'}}">
+      <block>
         <view wx:if="{{secondaryLoading}}" class="empty-inline">加载中...</view>
         <view wx:elif="{{secondaryList.length === 0}}" class="empty-inline">暂无二次工艺数据</view>
         <view wx:else class="item-list">
@@ -392,7 +389,6 @@
           </view>
         </view>
       </block>
-      <view wx:else class="stage-empty-hint">点击「开始」领取任务后可登记工艺</view>
     </view>
 
     <!-- ══ ⑨ 生产制单阶段（控制栏 + 内容） ══ -->
@@ -413,7 +409,7 @@
           <view wx:if="{{productionStage.status === 'completed'}}" class="scb-done-mark icon-checkmark"></view>
         </view>
       </view>
-      <block wx:if="{{productionStage.status !== 'not_started'}}">
+      <block>
         <view wx:if="{{productionLoading}}" class="empty-inline">加载中...</view>
         <view wx:elif="{{!productionData}}" class="empty-inline">暂无制单数据</view>
         <view wx:else class="note-list">
@@ -432,7 +428,6 @@
           <view wx:if="{{!productionData.productionNotes && !productionData.techSpec && !productionData.sizeSpec}}" class="empty-inline">暂无制单内容</view>
         </view>
       </block>
-      <view wx:else class="stage-empty-hint">点击「开始」领取任务后可填写制单</view>
     </view>
 
     <!-- ══ ⑩ 样衣生产工作流（领取/完成 + 工序扫码进度） ══ -->
