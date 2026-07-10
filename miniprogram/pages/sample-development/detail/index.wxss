@@ -779,6 +779,60 @@
   padding: 1px 6px; border-radius: 4px;
 }
 
+/* ══ 报价单锁定/审核标签 ══ */
+.q-lock-tag {
+  font-size: 10px; padding: 2px 8px; border-radius: 4px;
+  margin-right: 6px; line-height: 1.4;
+}
+.q-lock-tag.qlt-locked { background: #fff7e6; color: #fa8c16; border: 1px solid #ffd591; }
+.q-lock-tag.qlt-unlocked { background: #f2f2f7; color: #8e8e93; }
+.q-audit-tag {
+  display: inline-block; font-size: 10px; padding: 1px 6px;
+  border-radius: 4px; line-height: 1.4;
+}
+.q-audit-tag.qat-success { background: #e6f9ed; color: #34c759; }
+.q-audit-tag.qat-warning { background: #fff7e6; color: #fa8c16; }
+.q-audit-tag.qat-error { background: #ffeceb; color: #ff4d4f; }
+.q-audit-tag.qat-default { background: #f2f2f7; color: #8e8e93; }
+.price-warning { color: #fa8c16; font-weight: 600; }
+
+/* ══ 纸样 - 各码用量配比（与 PC 端 StylePatternTab 对齐） ══ */
+.pattern-usage-section {
+  margin-top: 10px; padding: 10px 12px;
+  background: #f8f9fa; border-radius: 8px;
+}
+.pus-title {
+  font-size: 13px; font-weight: 600; color: #1c1c1e;
+  margin-bottom: 8px;
+}
+.pus-list { display: flex; flex-direction: column; gap: 10px; }
+.pus-item {
+  background: #fff; border-radius: 6px; padding: 8px 10px;
+}
+.pus-item-hd {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 6px;
+}
+.pus-name { font-size: 12px; font-weight: 500; color: #1c1c1e; flex: 1; }
+.pus-unit { font-size: 11px; color: #8e8e93; }
+.pus-sizes {
+  display: flex; flex-wrap: wrap; gap: 6px;
+}
+.pus-size {
+  display: flex; flex-direction: column; align-items: center;
+  min-width: 44px; padding: 4px 6px;
+  background: #f2f2f7; border-radius: 4px;
+}
+.pus-size-name { font-size: 10px; color: #8e8e93; line-height: 1.2; }
+.pus-size-val {
+  font-size: 12px; color: #1c1c1e; font-weight: 500;
+  font-variant-numeric: tabular-nums; line-height: 1.4;
+}
+.pus-meta {
+  display: flex; gap: 10px; margin-top: 6px;
+}
+.pus-meta-text { font-size: 10px; color: #8e8e93; }
+
 /* ══ note-list（生产制单，去除border分隔线） ══ */
 .note-list { padding: var(--spacing-md) var(--spacing-lg); }
 .note-item {

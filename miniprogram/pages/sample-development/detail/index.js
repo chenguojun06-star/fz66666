@@ -143,6 +143,8 @@ Page({
     // 纸样
     patternData: null,
     patternLoading: false,
+    // 纸样 - 各码用量配比（与 PC 端 StylePatternTab 对齐）
+    patternSizeUsageList: [],
     // 生产制单
     productionData: null,
     productionLoading: false,
@@ -315,6 +317,19 @@ Page({
         _releaseTime: styleInfo.releaseTime || styleInfo.createTime || '',
         _deliveryTime: styleInfo.deliveryTime || '',
         _completeTime: styleInfo.completeTime || styleInfo.sampleCompletedTime || '',
+        // 样衣审核信息（与 PC 端 StyleProductionTab 对齐）
+        _reviewStatusText: (function() {
+          const REVIEW_LABELS = { PASS: '通过', REWORK: '需修改', REJECT: '不通过' };
+          return REVIEW_LABELS[String(styleInfo.sampleReviewStatus || '').toUpperCase()] || '';
+        })(),
+        _reviewStatusColor: (function() {
+          const s = String(styleInfo.sampleReviewStatus || '').toUpperCase();
+          if (s === 'PASS') return 'success';
+          if (s === 'REWORK') return 'warning';
+          if (s === 'REJECT') return 'error';
+          return 'default';
+        })(),
+        _reviewTimeText: styleInfo.sampleReviewTime || '',
       });
       this.setData({ styleInfo, loading: false });
       this.buildStages(styleInfo);
@@ -500,10 +515,83 @@ Page({
         it._specLabel = [it.spec, it.specification, it.color].filter(v => v).join(' ');
       });
       this.setData({ bomList: list });
+      // 构建各码用量配比数据（与 PC 端 StylePatternTab 对齐）
+      this._buildPatternSizeUsageList(list);
       // BOM 加载完后，若有 styleNo 则加载采购列表
       this.loadPurchases();
     } catch (e) { console.error('BOM加载失败', e); }
     this.setData({ bomLoading: false });
+  },
+
+  /**
+   * 构建各码用量配比数据（与 PC 端 StylePatternTab 对齐）
+   * 数据来源：BOM 列表中的 patternSizeUsageMap / sizeUsageMap（JSON字符串）
+   * 每行：物料名 + 单位 + 各码用量 + 损耗率 + 均值
+   */
+  _buildPatternSizeUsageList(bomList) {
+    if (!bomList || !bomList.length) {
+      this.setData({ patternSizeUsageList: [] });
+      return;
+    }
+    // 收集所有码数（从所有 BOM 行的 sizeUsageMap/patternSizeUsageMap 中提取）
+    const allSizes = [];
+    const sizeSet = {};
+    bomList.forEach(bom => {
+      const maps = [bom.patternSizeUsageMap, bom.sizeUsageMap];
+      maps.forEach(rawMap => {
+        if (!rawMap) return;
+        let map = rawMap;
+        if (typeof rawMap === 'string') {
+          try { map = JSON.parse(rawMap); } catch (e) { map = {}; }
+        }
+        if (map && typeof map === 'object') {
+          Object.keys(map).forEach(size => {
+            if (!sizeSet[size]) {
+              sizeSet[size] = true;
+              allSizes.push(size);
+            }
+          });
+        }
+      });
+    });
+    if (allSizes.length === 0) {
+      this.setData({ patternSizeUsageList: [] });
+      return;
+    }
+    // 构建每行数据
+    const result = bomList.filter(bom => {
+      return bom.materialName || bom.materialCode;
+    }).map(bom => {
+      // 优先 patternSizeUsageMap，兜底 sizeUsageMap
+      let rawMap = bom.patternSizeUsageMap || bom.sizeUsageMap;
+      let map = {};
+      if (rawMap) {
+        if (typeof rawMap === 'string') {
+          try { map = JSON.parse(rawMap); } catch (e) { map = {}; }
+        } else if (typeof rawMap === 'object') {
+          map = rawMap;
+        }
+      }
+      const sizes = allSizes.map(size => ({
+        name: size,
+        value: map[size] != null ? map[size] : '',
+      }));
+      // 计算均值
+      const validValues = sizes.filter(s => s.value !== '' && s.value != null).map(s => Number(s.value));
+      const avgUsage = validValues.length > 0
+        ? (validValues.reduce((a, b) => a + b, 0) / validValues.length).toFixed(2)
+        : (bom.usageAmount || '');
+      return {
+        key: bom.id || (bom.materialCode + '_' + (bom.color || '')),
+        materialName: bom.materialName || bom.materialCode || '',
+        color: bom.color || '',
+        unit: bom.unit || '',
+        sizes,
+        lossRate: bom.lossRate != null ? bom.lossRate : '',
+        avgUsage,
+      };
+    });
+    this.setData({ patternSizeUsageList: result });
   },
 
   /**
@@ -1574,7 +1662,25 @@ Page({
     this.setData({ quotationLoading: true });
     try {
       const res = await style.getQuotation(this.data.styleId);
-      this.setData({ quotationData: res?.data || res || null });
+      const q = res?.data || res || null;
+      if (q) {
+        // 与 PC 端 StyleQuotationTab 对齐：补齐利润率/锁定/审核信息
+        const totalCost = Number(q.totalCost || 0);
+        const totalPrice = Number(q.totalPrice || q.suggestedPrice || 0);
+        const profit = totalPrice - totalCost;
+        const actualProfitRate = totalPrice > 0 ? (profit / totalPrice * 100) : 0;
+        // 审核状态中文
+        const AUDIT_MAP = { 0: '待审核', 1: '审核通过', 2: '已驳回' };
+        q._auditStatusText = q.auditStatus != null ? (AUDIT_MAP[q.auditStatus] || '-') : '';
+        q._auditStatusColor = q.auditStatus === 1 ? 'success' : (q.auditStatus === 2 ? 'error' : 'warning');
+        q._isLocked = q.isLocked === 1 || q.isLocked === true;
+        q._profitText = profit >= 0 ? ('+¥' + profit.toFixed(2)) : ('-¥' + Math.abs(profit).toFixed(2));
+        q._profitColor = profit >= 0 ? 'success' : 'danger';
+        q._actualProfitRateText = actualProfitRate.toFixed(1) + '%';
+        q._lockText = q._isLocked ? '已锁定' : '未锁定';
+        q._auditTimeText = this._fmtDateTime(q.auditTime);
+      }
+      this.setData({ quotationData: q });
     } catch (e) { console.error('报价单加载失败', e); }
     this.setData({ quotationLoading: false });
   },

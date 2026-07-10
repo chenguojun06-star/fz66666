@@ -214,10 +214,34 @@
       <block>
         <view wx:if="{{patternLoading}}" class="empty-inline">加载中...</view>
         <view wx:elif="{{!patternData}}" class="empty-inline">暂无纸样数据</view>
-        <view wx:else class="kv-list">
-          <view class="kv-row"><text class="kv-label">版本</text><text class="kv-value">{{patternData.revision || patternData.version || '-'}}</text></view>
-          <view class="kv-row"><text class="kv-label">状态</text><text class="kv-value">{{patternData.statusText || '-'}}</text></view>
-          <view class="kv-row" wx:if="{{patternData.notes}}"><text class="kv-label">备注</text><text class="kv-value kv-long">{{patternData.notes}}</text></view>
+        <view wx:else>
+          <view class="kv-list">
+            <view class="kv-row"><text class="kv-label">版本</text><text class="kv-value">{{patternData.revision || patternData.version || '-'}}</text></view>
+            <view class="kv-row"><text class="kv-label">状态</text><text class="kv-value">{{patternData.statusText || '-'}}</text></view>
+            <view class="kv-row" wx:if="{{patternData.notes}}"><text class="kv-label">备注</text><text class="kv-value kv-long">{{patternData.notes}}</text></view>
+          </view>
+          <!-- 各码用量配比（与 PC 端 StylePatternTab 对齐，紧凑列表式展示） -->
+          <view wx:if="{{patternSizeUsageList.length > 0}}" class="pattern-usage-section">
+            <view class="pus-title">各码用量配比</view>
+            <view class="pus-list">
+              <view class="pus-item" wx:for="{{patternSizeUsageList}}" wx:key="key">
+                <view class="pus-item-hd">
+                  <text class="pus-name">{{item.materialName}}{{item.color ? ' · ' + item.color : ''}}</text>
+                  <text class="pus-unit">{{item.unit || ''}}</text>
+                </view>
+                <view class="pus-sizes">
+                  <text class="pus-size" wx:for="{{item.sizes}}" wx:for-item="sz" wx:key="name">
+                    <text class="pus-size-name">{{sz.name}}</text>
+                    <text class="pus-size-val">{{sz.value || '-'}}</text>
+                  </text>
+                </view>
+                <view class="pus-meta" wx:if="{{item.lossRate || item.avgUsage}}">
+                  <text wx:if="{{item.avgUsage}}" class="pus-meta-text">均值 {{item.avgUsage}}</text>
+                  <text wx:if="{{item.lossRate}}" class="pus-meta-text">损耗 {{item.lossRate}}%</text>
+                </view>
+              </view>
+            </view>
+          </view>
         </view>
       </block>
     </view>
@@ -622,11 +646,14 @@
       </scroll-view>
     </view>
 
-    <!-- ══ ⑪ 报价单（只读汇总） ══ -->
+    <!-- ══ ⑪ 报价单（与 PC 端 StyleQuotationTab 对齐：利润率/锁定/审核） ══ -->
     <view class="section-card">
       <view class="section-hd">
         <text class="section-title">报价单</text>
-        <text class="section-count">{{quotationData ? '已生成' : '无数据'}}</text>
+        <view class="section-actions">
+          <text wx:if="{{quotationData}}" class="q-lock-tag {{quotationData._isLocked ? 'qlt-locked' : 'qlt-unlocked'}}">{{quotationData._lockText}}</text>
+          <text class="section-count">{{quotationData ? '已生成' : '无数据'}}</text>
+        </view>
       </view>
       <view wx:if="{{quotationLoading}}" class="empty-inline">加载中...</view>
       <view wx:elif="{{!quotationData}}" class="empty-inline">完成各阶段后自动生成</view>
@@ -634,8 +661,34 @@
         <view class="kv-row" wx:if="{{quotationData.materialCost}}"><text class="kv-label">物料成本</text><text class="kv-value">¥{{quotationData.materialCost}}</text></view>
         <view class="kv-row" wx:if="{{quotationData.processCost}}"><text class="kv-label">加工成本</text><text class="kv-value">¥{{quotationData.processCost}}</text></view>
         <view class="kv-row" wx:if="{{quotationData.secondaryProcessCost}}"><text class="kv-label">二次工艺成本</text><text class="kv-value">¥{{quotationData.secondaryProcessCost}}</text></view>
-        <view class="kv-row" wx:if="{{quotationData.totalCost}}"><text class="kv-label">总成本</text><text class="kv-value price-danger">¥{{quotationData.totalCost}}</text></view>
-        <view class="kv-row" wx:if="{{quotationData.suggestedPrice}}"><text class="kv-label">建议售价</text><text class="kv-value price-success">¥{{quotationData.suggestedPrice}}</text></view>
+        <view class="kv-row" wx:if="{{quotationData.otherCost}}"><text class="kv-label">其他成本</text><text class="kv-value">¥{{quotationData.otherCost}}</text></view>
+        <view class="kv-row" wx:if="{{quotationData.totalCost}}"><text class="kv-label">单件总成本</text><text class="kv-value price-danger">¥{{quotationData.totalCost}}</text></view>
+        <view class="kv-row" wx:if="{{quotationData.profitRate != null}}"><text class="kv-label">目标利润率</text><text class="kv-value">{{quotationData.profitRate}}%</text></view>
+        <view class="kv-row" wx:if="{{quotationData.totalPrice || quotationData.suggestedPrice}}"><text class="kv-label">最终报价</text><text class="kv-value price-success">¥{{quotationData.totalPrice || quotationData.suggestedPrice}}</text></view>
+        <view class="kv-row" wx:if="{{quotationData._profitText}}"><text class="kv-label">预计利润</text><text class="kv-value price-{{quotationData._profitColor}}">{{quotationData._profitText}}</text></view>
+        <view class="kv-row" wx:if="{{quotationData._actualProfitRateText}}"><text class="kv-label">实际利润率</text><text class="kv-value">{{quotationData._actualProfitRateText}}</text></view>
+        <view class="kv-row" wx:if="{{quotationData.totalQty && quotationData.totalQty > 1}}"><text class="kv-label">开发数量</text><text class="kv-value">{{quotationData.totalQty}}件（成本摊薄）</text></view>
+        <!-- 审核信息 -->
+        <view class="kv-row" wx:if="{{quotationData._auditStatusText}}">
+          <text class="kv-label">审核状态</text>
+          <text class="kv-value"><text class="q-audit-tag qat-{{quotationData._auditStatusColor}}">{{quotationData._auditStatusText}}</text></text>
+        </view>
+        <view class="kv-row" wx:if="{{quotationData.auditorName}}"><text class="kv-label">审核人</text><text class="kv-value">{{quotationData.auditorName}}</text></view>
+        <view class="kv-row" wx:if="{{quotationData._auditTimeText}}"><text class="kv-label">审核时间</text><text class="kv-value">{{quotationData._auditTimeText}}</text></view>
+        <view class="kv-row" wx:if="{{quotationData.auditRemark}}"><text class="kv-label">审核意见</text><text class="kv-value kv-long">{{quotationData.auditRemark}}</text></view>
+      </view>
+    </view>
+
+    <!-- ══ ⑪.1 样衣审核信息（与 PC 端 StyleProductionTab 对齐） ══ -->
+    <view wx:if="{{styleInfo.sampleReviewStatus}}" class="section-card">
+      <view class="section-hd">
+        <text class="section-title">样衣审核</text>
+        <text class="q-audit-tag qat-{{styleInfo._reviewStatusColor}}">{{styleInfo._reviewStatusText}}</text>
+      </view>
+      <view class="kv-list">
+        <view class="kv-row" wx:if="{{styleInfo.sampleReviewer}}"><text class="kv-label">审核人</text><text class="kv-value">{{styleInfo.sampleReviewer}}</text></view>
+        <view class="kv-row" wx:if="{{styleInfo._reviewTimeText}}"><text class="kv-label">审核时间</text><text class="kv-value">{{styleInfo._reviewTimeText}}</text></view>
+        <view class="kv-row" wx:if="{{styleInfo.sampleReviewComment}}"><text class="kv-label">审核评语</text><text class="kv-value kv-long">{{styleInfo.sampleReviewComment}}</text></view>
       </view>
     </view>
 
