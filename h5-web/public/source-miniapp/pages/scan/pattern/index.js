@@ -8,6 +8,7 @@ const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 const { triggerDataRefresh } = require('../../../utils/eventBus');
 const SKUProcessor = require('../processors/SKUProcessor');
 const { handlePatternScan } = require('../handlers/PatternScanProcessor');
+const { bindPageEvents, unbindPageEvents, Events } = require('../../../utils/pageEventBinder');
 
 // ---- 常量（样板操作类型定义） ----
 const OPERATION_LABELS = {
@@ -230,6 +231,7 @@ Page({
         toast.error('加载失败，请重试');
         setTimeout(() => { try { wx.navigateBack({ delta: 1 }); } catch (_e) {} }, 500);
       });
+    bindPageEvents(this, () => {}, [Events.SCAN_SUCCESS]);
   },
 
   // 工序 chip 点击（多选切换）
@@ -375,6 +377,7 @@ Page({
   },
 
   onUnload() {
+    unbindPageEvents(this);
     const app = getApp();
     if (app.globalData) {
       app.globalData.patternScanData = null;
@@ -704,7 +707,7 @@ Page({
         await Promise.all(tasks);
         toast.success((selectedOption && selectedOption.label) || processName + ' 完成（' + tasks.length + '条）');
         this._emitRefresh();
-        wx.navigateBack();
+        setTimeout(function() { wx.navigateBack(); }, 1200);
       } catch (e) {
         console.error('[样板页] 工序扫码提交失败:', e);
         toast.error(e.errMsg || e.message || '工序扫码失败');
@@ -727,7 +730,7 @@ Page({
         await api.production.submitPatternScan(buildPayload(qty, d.color, d.size));
         toast.success((selectedOption && selectedOption.label) || processName + ' 完成');
         this._emitRefresh();
-        wx.navigateBack();
+        setTimeout(function() { wx.navigateBack(); }, 1200);
       } catch (e) {
         console.error('[样板页] 工序扫码提交失败:', e);
         toast.error(e.errMsg || e.message || '工序扫码失败');

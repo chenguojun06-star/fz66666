@@ -707,7 +707,7 @@ Page({
         await Promise.all(tasks);
         toast.success((selectedOption && selectedOption.label) || processName + ' 完成（' + tasks.length + '条）');
         this._emitRefresh();
-        wx.navigateBack();
+        setTimeout(function() { wx.navigateBack(); }, 1200);
       } catch (e) {
         console.error('[样板页] 工序扫码提交失败:', e);
         toast.error(e.errMsg || e.message || '工序扫码失败');
@@ -730,7 +730,7 @@ Page({
         await api.production.submitPatternScan(buildPayload(qty, d.color, d.size));
         toast.success((selectedOption && selectedOption.label) || processName + ' 完成');
         this._emitRefresh();
-        wx.navigateBack();
+        setTimeout(function() { wx.navigateBack(); }, 1200);
       } catch (e) {
         console.error('[样板页] 工序扫码提交失败:', e);
         toast.error(e.errMsg || e.message || '工序扫码失败');

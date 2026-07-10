@@ -445,6 +445,66 @@
           <view wx:if="{{!canReceiveSample && !canCompleteSample}}" class="scb-done-mark icon-checkmark"></view>
         </view>
       </view>
+
+      <!-- 样衣生产信息卡 -->
+      <view class="sample-wf-info">
+        <view class="kv-row">
+          <text class="kv-label">领取人</text>
+          <text class="kv-value">{{sampleWfReceiver || '-'}}</text>
+        </view>
+        <view class="kv-row">
+          <text class="kv-label">领取时间</text>
+          <text class="kv-value">{{sampleWfReceiveTime || '待领取'}}</text>
+        </view>
+        <view class="kv-row">
+          <text class="kv-label">完成时间</text>
+          <text class="kv-value">{{sampleWfCompleteTime || '待领取'}}</text>
+        </view>
+        <view class="kv-row" wx:if="{{sampleWfColor}}">
+          <text class="kv-label">颜色</text>
+          <text class="kv-value">{{sampleWfColor}}</text>
+        </view>
+        <view class="kv-row" wx:if="{{sampleWfQuantity}}">
+          <text class="kv-label">数量</text>
+          <text class="kv-value">{{sampleWfQuantity}}</text>
+        </view>
+        <view class="kv-row" wx:if="{{sampleWfRemark}}">
+          <text class="kv-label">备注</text>
+          <text class="kv-value kv-long">{{sampleWfRemark}}</text>
+        </view>
+      </view>
+
+      <view class="sample-wf-hint" wx:if="{{canReceiveSample}}">当前还没有领取样衣生产，节点进度会在领取并推进后更新。</view>
+
+      <!-- 样衣单号 -->
+      <view class="kv-row" wx:if="{{patternId}}">
+        <text class="kv-label">样衣单号</text>
+        <text class="kv-value">{{patternId}}</text>
+      </view>
+
+      <!-- 工序列表完成统计 -->
+      <view class="process-stat-row" wx:if="{{processStages.length > 0}}">
+        <text class="psr-text">工序列表 {{processCompletedCount}}/{{processStages.length}} 完成</text>
+      </view>
+
+      <!-- 款号/颜色/码数信息 -->
+      <view class="kv-row" wx:if="{{styleInfo.styleNo}}">
+        <text class="kv-label">款号</text>
+        <text class="kv-value">{{styleInfo.styleNo}}</text>
+      </view>
+      <view class="kv-row" wx:if="{{sampleWfColor || sampleWfSize}}">
+        <text class="kv-label">颜色/码数</text>
+        <text class="kv-value">{{sampleWfColor || '-'}} · {{sampleWfSize || '-'}}</text>
+      </view>
+
+      <!-- 工序分组统计 -->
+      <view class="stage-group-stats" wx:if="{{processStages.length > 0}}">
+        <view class="sgs-item" wx:for="{{processStageStats}}" wx:key="name">
+          <text class="sgs-name">{{item.name}}</text>
+          <text class="sgs-count {{item.completed ? 'sgs-done' : ''}}">{{item.count}}</text>
+        </view>
+      </view>
+
       <!-- 生产工序扫码进度（仅在有 patternId 时显示） -->
       <block wx:if="{{processStages.length > 0}}">
         <view wx:if="{{processScanLoading}}" class="empty-inline">加载中...</view>

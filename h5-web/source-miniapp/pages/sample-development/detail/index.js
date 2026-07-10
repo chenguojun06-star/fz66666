@@ -357,8 +357,8 @@ Page({
         status,
         statusText: this.statusText(status),
         assignee: info[`${s.key}Assignee`] || '',
-        startTime: startTime ? String(startTime).substring(0, 16) : '',
-        completedAt: completedTime ? String(completedTime).substring(0, 16) : '',
+        startTime: startTime ? this._fmtDateTime(startTime) : '',
+        completedAt: completedTime ? this._fmtDateTime(completedTime) : '',
         actionable,
         canReceive: actionable && status === 'not_started',
         canComplete: actionable && status === 'in_progress',
@@ -403,11 +403,32 @@ Page({
     if (isScrapped) statusText = '已报废/关单';
     else if (isCompleted) statusText = '已完成';
     else if (isReceived) statusText = '制作中';
+
+    // 时间格式化（补齐小时分钟）
+    const fmtTime = this._fmtDateTime;
+
+    // 提取样衣生产信息字段
+    const sampleWfReceiver = patternDetail.receiver || patternDetail.receiverName || patternDetail.operatorName || '';
+    const sampleWfReceiveTime = fmtTime(patternDetail.receiveTime || patternDetail.startTime);
+    const sampleWfCompleteTime = fmtTime(patternDetail.completeTime || patternDetail.completedTime || patternDetail.finishTime);
+    const sampleWfColor = patternDetail.color || patternDetail.colorName || patternDetail.sampleColor || '';
+    const sampleWfSize = patternDetail.size || patternDetail.sizeName ||
+      (Array.isArray(patternDetail.sizes) && patternDetail.sizes.length ? patternDetail.sizes.join('/') : '');
+    const sampleWfQuantity = patternDetail.quantity || patternDetail.sampleQuantity || patternDetail.totalQuantity || 0;
+    const sampleWfRemark = patternDetail.remark || patternDetail.notes || '';
+
     this.setData({
       showSampleWorkflow: !isScrapped,
       canReceiveSample: canReceive,
       canCompleteSample: canComplete,
       sampleWfStatusText: statusText,
+      sampleWfReceiver,
+      sampleWfReceiveTime,
+      sampleWfCompleteTime,
+      sampleWfColor,
+      sampleWfSize,
+      sampleWfQuantity,
+      sampleWfRemark,
     });
   },
 
@@ -1213,8 +1234,27 @@ Page({
       const processStages = this._buildProcessStages(config, records, detail);
       // 同步更新样衣生产工作流状态（detail 中含最新 status/receiveTime）
       this.buildSampleWorkflow(detail);
+      // 计算工序列表完成统计
+      const processCompletedCount = processStages.filter(function(s) { return s.completed; }).length;
+      // 按阶段分组统计
+      const stageNameMap = { cut: '裁剪', secondary: '二次工艺', sewing: '车缝', finishing: '尾部', warehouse: '入库', purchase: '采购' };
+      const groupMap = {};
+      processStages.forEach(function(s) {
+        const g = stageNameMap[s.progressStage] || s.progressStage || '其他';
+        if (!groupMap[g]) groupMap[g] = { name: g, count: 0, completed: false };
+        groupMap[g].count++;
+      });
+      Object.keys(groupMap).forEach(function(k) {
+        const items = processStages.filter(function(s) {
+          return (stageNameMap[s.progressStage] || s.progressStage || '其他') === k;
+        });
+        groupMap[k].completed = items.every(function(s) { return s.completed; });
+      });
+      const processStageStats = Object.keys(groupMap).map(function(k) { return groupMap[k]; });
       this.setData({
         processStages,
+        processCompletedCount,
+        processStageStats,
         hasProcessSystem: config.length > 0,
         processScanLoading: false,
       });
@@ -1222,6 +1262,15 @@ Page({
       console.error('加载生产工序失败', e);
       this.setData({ processScanLoading: false });
     }
+  },
+
+  /** 统一时间格式化：确保显示到分钟（yyyy-MM-dd HH:mm） */
+  _fmtDateTime(t) {
+    if (!t) return '';
+    const s = String(t).replace('T', ' ');
+    if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}/.test(s)) return s.substring(0, 16);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s.trim())) return s.trim() + ' 00:00';
+    return s.substring(0, 16);
   },
 
   /** 构建生产工序列表（与列表页一致） */
@@ -1267,7 +1316,7 @@ Page({
         quantity: (stageRecord && stageRecord.quantity) || baseQuantity,
         operatorName: stageRecord && stageRecord.operatorName ? stageRecord.operatorName : '',
         time: stageRecord && stageRecord.scanTime
-          ? String(stageRecord.scanTime).substring(0, 16).replace('T', ' ')
+          ? this._fmtDateTime(stageRecord.scanTime)
           : '',
       });
     }
