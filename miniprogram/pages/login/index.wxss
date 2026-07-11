@@ -13,7 +13,10 @@
 
 .login-garments {
   position: absolute;
-  inset: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
   pointer-events: none;
   overflow: hidden;
   z-index: 0;
@@ -105,7 +108,10 @@
 
 .login-subtle-grid {
   position: absolute;
-  inset: -10%;
+  top: -10%;
+  right: -10%;
+  bottom: -10%;
+  left: -10%;
   background-image:
     linear-gradient(rgba(143, 167, 212, 0.04) 1px, transparent 1px),
     linear-gradient(90deg, rgba(143, 167, 212, 0.04) 1px, transparent 1px);
@@ -165,7 +171,10 @@
 
 .login-cloud-glow {
   position: absolute;
-  inset: -8px;
+  top: -8px;
+  right: -8px;
+  bottom: -8px;
+  left: -8px;
   border-radius: 50%;
   background: radial-gradient(circle, rgba(74,140,255,0.18), transparent 66%);
   filter: blur(24px);
@@ -345,8 +354,8 @@
   background: rgba(255,255,255,0.95);
   border: 1.5px solid rgba(37, 99, 235, 0.12);
   border-radius: var(--radius-md);
-  padding: 0 var(--spacing-md);
-  height: var(--input-height);
+  padding: 0 var(--spacing-lg);
+  height: 46px;
   transition: all 0.25s ease;
 }
 
@@ -357,8 +366,8 @@
 }
 
 .login-input-icon {
-  font-size: 18px;
-  margin-right: var(--spacing-sm);
+  font-size: 20px;
+  margin-right: var(--spacing-md);
   color: var(--color-text-tertiary);
   flex-shrink: 0;
   opacity: 0.7;
@@ -367,7 +376,7 @@
 .login-input {
   flex: 1;
   height: 100%;
-  font-size: var(--font-size-md);
+  font-size: 15px;
   color: var(--color-text-primary);
   background: transparent;
 }
@@ -377,13 +386,13 @@
 }
 
 .login-input-clear {
-  font-size: var(--font-size-lg);
+  font-size: 18px;
   color: var(--color-text-tertiary);
   padding: var(--spacing-xs);
 }
 
 .login-input-eye {
-  font-size: var(--font-size-sm);
+  font-size: 14px;
   color: var(--color-text-secondary);
   padding: var(--spacing-xs);
 }
@@ -431,7 +440,7 @@
 
 .login-btn {
   width: 100%;
-  height: var(--btn-height-lg);
+  height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;

@@ -650,6 +650,8 @@ public class ProductionOrderQueryService {
         String excludeTerminal = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "excludeTerminal"));
         String delayedOnly = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "delayedOnly"));
         String todayOnly = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "todayOnly"));
+        String factoryType = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "factoryType"));
+        String factoryId = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "factoryId"));
 
         QueryWrapper<ProductionOrder> wrapper = new QueryWrapper<>();
         wrapper.eq("delete_flag", 0);
@@ -664,6 +666,7 @@ public class ProductionOrderQueryService {
             .eq(StringUtils.hasText(urgencyLevel), "urgency_level", urgencyLevel)
             .eq(StringUtils.hasText(plateType), "plate_type", plateType)
             .like(StringUtils.hasText(merchandiser), "merchandiser", merchandiser)
+            .eq(StringUtils.hasText(factoryType), "factory_type", factoryType)
             .ne(!"true".equalsIgnoreCase(includeScrapped), "status", "scrapped");
 
         if ("true".equalsIgnoreCase(excludeTerminal) && !StringUtils.hasText(status)) {
@@ -683,6 +686,8 @@ public class ProductionOrderQueryService {
         String ctxFactoryId2 = com.fashion.supplychain.common.UserContext.factoryId();
         if (org.springframework.util.StringUtils.hasText(ctxFactoryId2)) {
             wrapper.eq("factory_id", ctxFactoryId2);
+        } else if (org.springframework.util.StringUtils.hasText(factoryId)) {
+            wrapper.eq("factory_id", factoryId);
         }
         return wrapper;
     }

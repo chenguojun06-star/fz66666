@@ -16,6 +16,89 @@
 
 ## 最近变更（Latest Changes）
 
+### 2026-07-10 小程序/UI/性能/扫码全量优化日（补录）
+
+今天围绕 ERP 小程序专业度、性能稳定性、扫码流程、数据联动进行了多轮密集修复和优化，以下按主题汇总：
+
+#### 1. iOS 兼容 + 样衣扫码优化
+- iOS 日期格式兼容：`new Date("2026-07-09 15:11:00")` 通过 `.replace(' ', 'T')` 转为 ISO 格式
+- 样衣扫码脱离大货菲号系统，添加无工序配置提示，修复交期显示和图片加载
+
+#### 2. 性能优化（P1）
+- 修复 5 处 N+1 查询：`PurchaseReturnStockHelper`、`OrderManagementOrchestrator` 等循环 `getById` 改为批量查询
+- 优化 7 个 `RiskDetector` 全表扫描：添加 3 个月时间范围过滤、列裁剪、`LIMIT 500`
+
+#### 3. 工序进度条优化
+- 进度条新增数量信息，格式为「完成件数/总件数 · 完成菲数/总菲数」
+- 保留原有百分比和进度条图形
+
+#### 4. 小程序全局 UI/UX 专业化改造
+- 移除所有页面级 emoji（小云 AI 聊天界面除外），统一 SVG 图标
+- 按钮统一镂空风格（透明背景 + 蓝色边框 + 蓝色文字）
+- 导航栏统一蓝色，禁用渐变色，全部使用纯色
+- 减少装饰性边框，使用阴影和间距区分区块
+- 输入框保留灰色边框，卡片使用白色背景 + 双层阴影
+- 字体大小统一，主体 12px，辅助 10-11px，强调 13-14px
+- 搜索框统一胶囊形、36px 高、灰色背景
+- 货币符号统一半角 ¥ 在前无空格
+- 74 个文件样式调整，涉及首页、订单详情、生产管理、采购、样衣开发、质检等页面
+
+#### 5. 详情页增强
+- 订单详情页图片轮播：左右切换按钮、索引指示器、图片类型标签
+- 样衣开发详情页读取 PC 端全部业务数据，附件支持 PDF/Office 预览、下载、图片上传
+- 质检详情页、样衣开发详情页等接入 `displayHelper.js` 统一数据处理
+
+#### 6. 设计预览与评审
+- 创建 `design-preview.html` 预览 4 个核心界面
+- 识别并修复 6 类问题：数量信息密度、清除按钮大小、阶段圆点、进度条标注、完成图标、工序可视化
+
+#### 7. 按钮/输入框高度统一
+- 底部固定按钮 32px、主按钮 28px、次按钮 24px、超小按钮 22px
+- 输入框 32px / 小输入框 28px
+- 处理 11 处硬编码高度、22 处实心蓝按钮改镂空
+
+#### 8. 多项线上问题修复
+- 运营看板/进度节点/工厂全景字体过大统一调小
+- 采购页面样衣采购点击无反应修复
+- 生产管理底部按钮外圈过大修复
+- 订单详情空白加载失败修复（`toast.warning` 改为 `toast.info`、`wx:elif` 结构修复）
+- 样衣详情图片不可见修复（父元素高度塌陷）
+- WXML 编译错误修复（`user-approval/index.wxml` 标签嵌套）
+- 样衣裁剪领取「未匹配到菲号」修复（样衣走大货接口豁免）
+
+#### 9. 数据联动与业务逻辑
+- 样衣开发与采购节点联动：采购数量直接编辑、仓库库存匹配、BOM 与采购数据双向同步
+- 新增 `quick-edit` 和 `stock-check` 接口
+- 已关闭订单采购记录过滤：`closed/completed/cancelled/archived` 状态不再显示
+
+#### 10. WebSocket/后端稳定性
+- WebSocket 正常断开记录为 warn，真实异常记录为 error
+- 修复 `/error` 500 由前端 JS 错误引发的问题
+
+#### 11. 采购表格勾选后序号列消失修复（当前会话）
+- **根因**：`global.css` 中 `.ant-table-row-selected > td` 的 `position: relative` + `z-index` 破坏固定列 sticky 定位
+- **修复**：移除冲突属性，仅保留背景色
+
+### 2026-07-11 外发工厂/发货多端逻辑一致性修复
+
+- **问题**：用户反馈手机端外发工厂页面与 PC 端显示逻辑不一致，且发货功能疑似不一致
+- **核实结论**：
+  1. 手机端外发工厂订单列表 **未传 `factoryType: 'EXTERNAL'`**，导致查出内部工厂订单
+  2. 手机端发货单列表 **未按选中工厂 `factoryId` 过滤**，管理员视角会显示全部工厂发货单
+  3. 手机端顶部状态统计 **未传 `factoryType` / `excludeTerminal`**，且后端 `buildStatsQueryWrapper` 也不支持这两个参数
+  4. 发货的创建/收货/删除调用的是同一套后端 API，流程等价，仅列表筛选不一致
+- **修复文件**：
+  - 小程序：`miniprogram/pages/factory/shipment/index.js`
+  - H5 源：`h5-web/source-miniapp/pages/factory/shipment/index.js`
+  - H5 产物：`h5-web/public/source-miniapp/pages/factory/shipment/index.js`
+  - 后端：`backend/src/main/java/com/fashion/supplychain/production/service/ProductionOrderQueryService.java`
+- **修复内容**：
+  - 手机端订单查询统一加 `factoryType: 'EXTERNAL'`
+  - 手机端统计查询同步加 `factoryType: 'EXTERNAL'` + `excludeTerminal: 'true'`
+  - 手机端发货单列表按 `selectedFactoryId` 过滤
+  - 后端 `buildStatsQueryWrapper` 补充 `factoryType` / `factoryId` 参数处理
+- **验证**：后端 `mvn compile -DskipTests -q` 通过；前端 `npx tsc --noEmit` 通过
+
 ### 2026-07-09 出库仓库/库位选择优化（用户反馈）
 
 - **问题**：样衣借出弹窗要求用户选"出库仓库"和"库位"，但出库时东西已经在仓库里了，用户觉得莫名其妙。

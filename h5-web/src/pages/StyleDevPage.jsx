@@ -349,15 +349,74 @@ export default function StyleDevPage() {
 function BomTab({ data }) {
   if (!data || (Array.isArray(data) && data.length === 0)) return <EmptyTab text="暂无BOM清单" />;
   const list = Array.isArray(data) ? data : [];
+  // 按物料类型分组
+  const groups = { main: [], accessory: [], other: [] };
+  list.forEach(it => {
+    const mType = String(it.materialType || '').toLowerCase();
+    if (/主料|面料|main|fabric/.test(mType)) groups.main.push(it);
+    else if (/辅料|accessory|lining|button|zipper|thread/.test(mType)) groups.accessory.push(it);
+    else groups.other.push(it);
+  });
+  const bomGroups = [
+    { key: 'main', name: '主料', count: groups.main.length, items: groups.main },
+    { key: 'accessory', name: '辅料', count: groups.accessory.length, items: groups.accessory },
+    { key: 'other', name: '其他', count: groups.other.length, items: groups.other },
+  ].filter(g => g.count > 0);
+  // 汇总
+  let totalAmount = 0;
+  list.forEach(it => {
+    const qty = Number(it.usageAmount || it.devUsageAmount || it.quantity || 0);
+    const price = Number(it.unitPrice || 0);
+    totalAmount += qty * price;
+  });
   return (
-    <div className="tab-data-list">
-      {list.map((item, i) => (
-        <div key={item.id || i} className="tab-data-item">
-          <div className="tab-data-row"><span className="tab-data-label">物料名称</span><span>{item.materialName || item.name || '-'}</span></div>
-          <div className="tab-data-row"><span className="tab-data-label">规格</span><span>{item.spec || item.specification || '-'}</span></div>
-          <div className="tab-data-row"><span className="tab-data-label">用量</span><span>{item.usageQuantity || item.quantity || '-'}</span></div>
-          <div className="tab-data-row"><span className="tab-data-label">单位</span><span>{item.unit || '-'}</span></div>
-          {item.unitPrice != null && <div className="tab-data-row"><span className="tab-data-label">单价</span><span>¥{item.unitPrice}</span></div>}
+    <div className="bom-tab-container">
+      <div className="bom-summary-bar">
+        <div className="bsb-item"><span className="bsb-label">物料数</span><span className="bsb-value">{list.length}种</span></div>
+        <div className="bsb-divider" />
+        <div className="bsb-item"><span className="bsb-label">主料</span><span className="bsb-value">{groups.main.length}种</span></div>
+        <div className="bsb-divider" />
+        <div className="bsb-item"><span className="bsb-label">辅料</span><span className="bsb-value">{groups.accessory.length}种</span></div>
+        <div className="bsb-divider" />
+        <div className="bsb-item"><span className="bsb-label">物料成本</span><span className="bsb-value bsb-amount">¥{totalAmount.toFixed(2)}</span></div>
+      </div>
+      {bomGroups.map(group => (
+        <div key={group.key} className="bom-group">
+          <div className="bom-group-title">
+            <span className={`bgt-icon bgi-${group.key}`} />
+            <span className="bgt-name">{group.name}</span>
+            <span className="bgt-count">{group.count}种</span>
+          </div>
+          {group.items.map((item, i) => (
+            <div key={item.id || i} className={`bom-card bc-${group.key}`}>
+              <div className="bc-header">
+                <div className="bc-left">
+                  <div className={`bc-icon bci-${group.key}`} />
+                  <div className="bc-info">
+                    <div className="bc-name">{item.materialName || item.name || '-'}</div>
+                    <div className="bc-spec">{item.spec || item.specification || ''} {item.color || ''}</div>
+                  </div>
+                </div>
+                <div className="bc-right">
+                  <div className="bc-qty">{item.usageAmount || item.devUsageAmount || item.quantity || '-'}{item.unit || ''}</div>
+                  <div className="bc-unit">用量</div>
+                </div>
+              </div>
+              <div className="bc-body">
+                <div className="bc-meta-row">
+                  {item.materialCode && <div className="bc-meta-item"><span className="bc-meta-label">编码</span><span className="bc-meta-value">{item.materialCode}</span></div>}
+                  {item.materialType && <div className="bc-meta-item"><span className="bc-meta-label">类型</span><span className="bc-meta-value">{item.materialType}</span></div>}
+                  {item.unitPrice != null && <div className="bc-meta-item"><span className="bc-meta-label">单价</span><span className="bc-meta-value bcm-price">¥{item.unitPrice}</span></div>}
+                  {item.unitPrice != null && <div className="bc-meta-item"><span className="bc-meta-label">金额</span><span className="bc-meta-value bcm-price">¥{(Number(item.usageAmount || item.devUsageAmount || item.quantity || 0) * Number(item.unitPrice || 0)).toFixed(2)}</span></div>}
+                </div>
+                <div className="bc-meta-row">
+                  {item.fabricComposition && <div className="bc-meta-item"><span className="bc-meta-label">成分</span><span className="bc-meta-value">{item.fabricComposition}</span></div>}
+                  {item.fabricWeight && <div className="bc-meta-item"><span className="bc-meta-label">克重</span><span className="bc-meta-value">{item.fabricWeight}g</span></div>}
+                  {item.supplier && <div className="bc-meta-item"><span className="bc-meta-label">供应商</span><span className="bc-meta-value">{item.supplier}</span></div>}
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       ))}
     </div>
@@ -429,17 +488,74 @@ function ProductionTab({ data }) {
 
 function QuotationTab({ data }) {
   if (!data) return <EmptyTab text="暂无报价单" />;
+  const totalPrice = Number(data.totalPrice || data.suggestedPrice || 0);
+  const totalCost = Number(data.totalCost || 0) || (Number(data.materialCost || 0) + Number(data.processCost || 0) + Number(data.factoryPrice || 0) + Number(data.otherCost || 0));
+  const profit = totalPrice - totalCost;
+  const profitRate = totalPrice > 0 ? (profit / totalPrice * 100) : 0;
+  const profitColor = profit >= 0 ? (profitRate >= 20 ? 'success' : 'warning') : 'danger';
+  const materialCost = Number(data.materialCost || 0);
+  const processCost = Number(data.processCost || data.factoryPrice || 0);
+  const secondaryCost = Number(data.secondaryProcessCost || 0);
+  const otherCost = Number(data.otherCost || 0);
+  const materialPct = totalCost > 0 ? Math.round(materialCost / totalCost * 100) : 0;
+  const processPct = totalCost > 0 ? Math.round(processCost / totalCost * 100) : 0;
+  const secondaryPct = totalCost > 0 ? Math.round(secondaryCost / totalCost * 100) : 0;
+  const otherPct = totalCost > 0 ? Math.round(otherCost / totalCost * 100) : 0;
   return (
-    <div className="tab-data-list">
-      <div className="tab-data-item">
-        {data.totalPrice != null && <div className="tab-data-row"><span className="tab-data-label">总价</span><span style={{ fontWeight: 700, color: 'var(--color-primary)' }}>¥{data.totalPrice}</span></div>}
-        {data.materialCost != null && <div className="tab-data-row"><span className="tab-data-label">面辅料成本</span><span>¥{data.materialCost}</span></div>}
-        {data.processCost != null && <div className="tab-data-row"><span className="tab-data-label">工序成本</span><span>¥{data.processCost}</span></div>}
-        {data.factoryPrice != null && <div className="tab-data-row"><span className="tab-data-label">加工费</span><span>¥{data.factoryPrice}</span></div>}
-        {data.profit != null && <div className="tab-data-row"><span className="tab-data-label">利润</span><span style={{ color: data.profit >= 0 ? 'var(--color-success)' : 'var(--color-danger)' }}>¥{data.profit}</span></div>}
-        {data.profitRate != null && <div className="tab-data-row"><span className="tab-data-label">利润率</span><span>{data.profitRate}%</span></div>}
-        {!data.totalPrice && !data.materialCost && !data.processCost && <EmptyTab text="暂无报价数据" />}
+    <div className="quotation-card-pro">
+      <div className="qp-hero">
+        <div className="qp-ring-wrap">
+          <div className="qp-ring">
+            <div className="qp-ring-bg" />
+            <div className={`qp-ring-progress qp-ring-${profitColor}`} style={{ '--progress': Math.round(profitRate) }} />
+            <div className="qp-ring-inner">
+              <div className="qp-ring-value">{profitRate.toFixed(1)}%</div>
+              <div className="qp-ring-label">利润率</div>
+            </div>
+          </div>
+        </div>
+        <div className="qp-hero-right">
+          <div className="qp-price-group">
+            <div className="qp-price-label">最终报价 / 件</div>
+            <div className="qp-price-row">
+              <span className="qp-price-symbol">¥</span>
+              <span className="qp-price-num">{totalPrice}</span>
+            </div>
+          </div>
+          <div className="qp-profit-group">
+            <div className="qp-profit-row">
+              <span className="qp-profit-label">单件利润</span>
+              <span className={`qp-profit-value qp-profit-${profitColor}`}>¥{profit.toFixed(2)}</span>
+            </div>
+          </div>
+        </div>
       </div>
+      <div className="qp-cost-section">
+        <div className="qp-cost-header">
+          <span className="qp-cost-title">成本构成分析</span>
+          <span className="qp-cost-total">总成本 ¥{totalCost.toFixed(2)}</span>
+        </div>
+        <div className="qp-cost-bar">
+          {materialCost > 0 && <div className="qp-cost-seg qcs-material" style={{ width: `${materialPct}%` }}>{materialPct >= 15 && <span className="qcs-pct">{materialPct}%</span>}</div>}
+          {processCost > 0 && <div className="qp-cost-seg qcs-process" style={{ width: `${processPct}%` }}>{processPct >= 15 && <span className="qcs-pct">{processPct}%</span>}</div>}
+          {secondaryCost > 0 && <div className="qp-cost-seg qcs-secondary" style={{ width: `${secondaryPct}%` }}>{secondaryPct >= 15 && <span className="qcs-pct">{secondaryPct}%</span>}</div>}
+          {otherCost > 0 && <div className="qp-cost-seg qcs-other" style={{ width: `${otherPct}%` }}>{otherPct >= 15 && <span className="qcs-pct">{otherPct}%</span>}</div>}
+        </div>
+        <div className="qp-cost-legend">
+          <div className="qcl-item"><span className="qcl-dot qcl-material" /><span className="qcl-label">物料</span><span className="qcl-value">¥{materialCost.toFixed(2)}</span></div>
+          <div className="qcl-item"><span className="qcl-dot qcl-process" /><span className="qcl-label">加工</span><span className="qcl-value">¥{processCost.toFixed(2)}</span></div>
+          {secondaryCost > 0 && <div className="qcl-item"><span className="qcl-dot qcl-secondary" /><span className="qcl-label">二次工艺</span><span className="qcl-value">¥{secondaryCost.toFixed(2)}</span></div>}
+          {otherCost > 0 && <div className="qcl-item"><span className="qcl-dot qcl-other" /><span className="qcl-label">其他</span><span className="qcl-value">¥{otherCost.toFixed(2)}</span></div>}
+        </div>
+      </div>
+      <div className="qp-metrics">
+        <div className="qp-metric-item"><span className="qpm-label">目标利润率</span><span className="qpm-value">{data.profitRate != null ? `${data.profitRate}%` : '-'}</span></div>
+        <div className="qp-metric-divider" />
+        <div className="qp-metric-item"><span className="qpm-label">物料占比</span><span className="qpm-value">{materialPct}%</span></div>
+        <div className="qp-metric-divider" />
+        <div className="qp-metric-item"><span className="qpm-label">加工占比</span><span className="qpm-value">{processPct}%</span></div>
+      </div>
+      {(data.version || data.updateTime) && <div className="qp-footer"><span className="qp-footer-text">v{data.version || 1} · 更新于 {data.updateTime || '-'}</span></div>}
     </div>
   );
 }

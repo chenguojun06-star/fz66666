@@ -377,11 +377,11 @@ public class ProductionScanStageSupport {
             }
         }
 
-        if (Boolean.FALSE.equals(order.getHasSecondaryProcess())) {
+        if (!Boolean.TRUE.equals(order.getHasSecondaryProcess())) {
             Set<String> secondary = result.get("二次工艺");
             if (secondary != null && !secondary.isEmpty()) {
-                log.debug("订单 hasSecondaryProcess=false，清空二次工艺必做子工序: orderNo={}, cleared={}",
-                        order.getOrderNo(), secondary);
+                log.debug("订单未开启二次工艺(hasSecondaryProcess={})，清空二次工艺必做子工序: orderNo={}, cleared={}",
+                        order.getHasSecondaryProcess(), order.getOrderNo(), secondary);
                 secondary.clear();
             }
         }
@@ -536,7 +536,9 @@ public class ProductionScanStageSupport {
         if (order == null || !StringUtils.hasText(parentStage)) {
             return false;
         }
-        if ("二次工艺".equals(parentStage) && Boolean.FALSE.equals(order.getHasSecondaryProcess())) {
+        // 修复：hasSecondaryProcess 为 null 或 false 时，均视为禁用二次工艺阶段
+        // 之前仅 Boolean.FALSE.equals() 才禁用，null 时不停用导致无二次工艺的订单仍被门禁拦截
+        if ("二次工艺".equals(parentStage) && !Boolean.TRUE.equals(order.getHasSecondaryProcess())) {
             return true;
         }
         if (!StringUtils.hasText(order.getNodeOperations())) {

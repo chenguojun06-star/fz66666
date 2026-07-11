@@ -173,7 +173,7 @@ Page({
     }
 
     this.setData({ orderLoading: true });
-    const params = { page: page, pageSize: smartFilter ? 50 : 20, excludeTerminal: 'true' };
+    const params = { page: page, pageSize: smartFilter ? 50 : 20, excludeTerminal: 'true', factoryType: 'EXTERNAL' };
     if (filterVal) params.status = filterVal;
     if (this.data.keyword) params.orderNo = this.data.keyword;
     if (this.data.selectedFactoryId) params.factoryId = this.data.selectedFactoryId;
@@ -206,7 +206,7 @@ Page({
   /* 刷新状态计数和 smart-hints 计数 */
   _refreshStatCounts: function () {
     const that = this;
-    const params = {};
+    const params = { factoryType: 'EXTERNAL', excludeTerminal: 'true' };
     if (that.data.selectedFactoryId) params.factoryId = that.data.selectedFactoryId;
     return api.production.orderStats(params).then(function (stats) {
       const s = stats || {};
@@ -230,6 +230,7 @@ Page({
     const that = this;
     this.setData({ shipmentLoading: true });
     const params = { page: this.data.shipmentPage, pageSize: 20 };
+    if (this.data.selectedFactoryId) params.factoryId = this.data.selectedFactoryId;
     return api.factoryShipment.list(params).then(function (res) {
       const records = (res && res.records) || [];
       const total = (res && res.total) || 0;

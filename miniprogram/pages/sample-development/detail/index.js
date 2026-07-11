@@ -302,6 +302,16 @@ Page({
           sampleStatus: styleInfo.sampleStatus || styleInfo.status,
           status: styleInfo.status,
         }, false).tone,
+        // 交期倒计时天数
+        _countdownDays: (function() {
+          const deliveryDate = basic._deliveryLabel ? null : (styleInfo.deliveryTime || styleInfo.deliveryDate);
+          if (!deliveryDate) return null;
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          const target = new Date(String(deliveryDate).replace(/-/g, '/'));
+          target.setHours(0, 0, 0, 0);
+          return Math.ceil((target.getTime() - today.getTime()) / 86400000);
+        })(),
         // 客户信息（兼容多字段）
         customer: styleInfo.customer || styleInfo.customerName || styleInfo.buyer || styleInfo.buyerName || '',
         category: styleInfo.category || styleInfo.productCategory || '',
@@ -385,6 +395,18 @@ Page({
       stagesMap[s.key] = stage;
       return stage;
     });
+    // 计算总体进度统计
+    let completedCount = 0;
+    let inProgressCount = 0;
+    let notStartedCount = 0;
+    stages.forEach(s => {
+      if (s.status === 'completed') completedCount++;
+      else if (s.status === 'in_progress') inProgressCount++;
+      else notStartedCount++;
+    });
+    const overallProgress = stages.length > 0
+      ? Math.round(((completedCount * 100) + (inProgressCount * 50)) / stages.length)
+      : 0;
     // 同时保留 stages 数组（用于阶段进度概览条）
     // 并设置各阶段单独对象供 wxml 使用
     this.setData({
@@ -394,7 +416,31 @@ Page({
       processStage: stagesMap.process,
       secondaryStage: stagesMap.secondary,
       productionStage: stagesMap.production,
+      _overallProgress: overallProgress,
+      _completedStages: completedCount,
+      _inProgressStages: inProgressCount,
+      _notStartedStages: notStartedCount,
     });
+  },
+
+  /** 点击阶段时间线项 → 滚动到对应区块 */
+  onStageJump(e) {
+    const key = e.currentTarget.dataset.key;
+    if (!key) return;
+    const idMap = {
+      bom: 'bom-section',
+      pattern: 'pattern-section',
+      process: 'process-section',
+      secondary: 'secondary-section',
+      production: 'production-section',
+    };
+    const anchorId = idMap[key];
+    if (anchorId && wx.pageScrollTo) {
+      wx.pageScrollTo({
+        selector: '#' + anchorId,
+        duration: 300,
+      });
+    }
   },
 
   /**
@@ -513,8 +559,30 @@ Page({
         it._unit = it.unit || '';
         it._materialLabel = it.materialName || it.name || '';
         it._specLabel = [it.spec, it.specification, it.color].filter(v => v).join(' ');
+        it._amount = (Number(it.devUsageAmount || it.usageAmount || 0) * Number(it.unitPrice || 0)).toFixed(2);
+        const mType = String(it.materialType || '').toLowerCase();
+        if (/主料|面料|main|fabric/.test(mType)) it._category = 'main';
+        else if (/辅料|accessory|lining|button|zipper|thread/.test(mType)) it._category = 'accessory';
+        else it._category = 'other';
       });
-      this.setData({ bomList: list });
+      // 按分类分组
+      const groups = { main: [], accessory: [], other: [] };
+      list.forEach(it => { groups[it._category].push(it); });
+      const bomGroups = [
+        { key: 'main', name: '主料', iconClass: 'bci-main', count: groups.main.length, items: groups.main },
+        { key: 'accessory', name: '辅料', iconClass: 'bci-accessory', count: groups.accessory.length, items: groups.accessory },
+        { key: 'other', name: '其他', iconClass: 'bci-other', count: groups.other.length, items: groups.other },
+      ].filter(g => g.count > 0);
+      // 计算汇总
+      let totalAmount = 0;
+      list.forEach(it => { totalAmount += Number(it._amount || 0); });
+      const bomSummary = {
+        totalCount: list.length,
+        totalAmount: totalAmount.toFixed(2),
+        mainCount: groups.main.length,
+        accessoryCount: groups.accessory.length,
+      };
+      this.setData({ bomList: list, bomGroups, bomSummary });
       // 构建各码用量配比数据（与 PC 端 StylePatternTab 对齐）
       this._buildPatternSizeUsageList(list);
       // BOM 加载完后，若有 styleNo 则加载采购列表
@@ -1372,10 +1440,18 @@ Page({
       TAIL: '尾部', REVIEW: '审核', WAREHOUSE_IN: '入库', WAREHOUSE_OUT: '出库',
       WAREHOUSE_RETURN: '归还', REWORK: '返修完成',
     };
+    // 操作类型 → 图标（用于卡片视觉区分）
+    const OP_ICON_MAP = {
+      RECEIVE: 'receive', PLATE: 'sewing', FOLLOW_UP: 'follow', COMPLETE: 'check',
+      PROCUREMENT: 'purchase', CUTTING: 'cut', SECONDARY: 'secondary', SEWING: 'sewing',
+      TAIL: 'tail', REVIEW: 'review', WAREHOUSE_IN: 'warehouse-in', WAREHOUSE_OUT: 'warehouse-out',
+      WAREHOUSE_RETURN: 'return', REWORK: 'rework',
+    };
     const now = Date.now();
     const list = (records || []).map(r => {
       const opType = String(r.operationType || '').toUpperCase();
       const opLabel = OPERATION_TYPE_LABELS[opType] || '未知';
+      const opIcon = OP_ICON_MAP[opType] || 'scan';
       // 操作人角色中文
       let roleText = '';
       if (r.operatorRole === 'QUALITY') roleText = '质检';
@@ -1386,6 +1462,7 @@ Page({
       const canUndo = scanTime > 0 && (now - scanTime) < 30 * 60 * 1000;
       return Object.assign({}, r, {
         _operationLabel: opLabel,
+        _opIcon: opIcon,
         _operatorRoleText: roleText,
         _scanTimeText: this._fmtDateTime(r.scanTime),
         _canUndo: canUndo,
@@ -1680,6 +1757,28 @@ Page({
         q._actualProfitRateText = actualProfitRate.toFixed(1) + '%';
         q._lockText = q._isLocked ? '已锁定' : '未锁定';
         q._auditTimeText = this._fmtDateTime(q.auditTime);
+        // 成本构成百分比（用于进度条可视化）
+        const materialCost = Number(q.materialCost || 0);
+        const processCost = Number(q.processCost || 0);
+        const secondaryCost = Number(q.secondaryProcessCost || 0);
+        const otherCost = Number(q.otherCost || 0);
+        const costSum = materialCost + processCost + secondaryCost + otherCost;
+        if (costSum > 0) {
+          q._materialPct = Math.round(materialCost / costSum * 100);
+          q._processPct = Math.round(processCost / costSum * 100);
+          q._secondaryPct = Math.round(secondaryCost / costSum * 100);
+          q._otherPct = Math.round(otherCost / costSum * 100);
+          // 修正四舍五入误差，确保总和为100%
+          const pctSum = q._materialPct + q._processPct + q._secondaryPct + q._otherPct;
+          if (pctSum !== 100) {
+            q._materialPct += (100 - pctSum);
+          }
+        } else {
+          q._materialPct = 0;
+          q._processPct = 0;
+          q._secondaryPct = 0;
+          q._otherPct = 0;
+        }
       }
       this.setData({ quotationData: q });
     } catch (e) { console.error('报价单加载失败', e); }
@@ -1705,11 +1804,23 @@ Page({
     try {
       const res = await style.listAttachments({ styleId: this.data.styleId });
       let list = res?.data?.records || res?.data || res?.records || [];
-      list = list.map(it => ({
-        ...it,
-        fileSizeText: this.formatFileSize(it.fileSize || it.size || 0),
-        createTimeText: it.createTime ? this._fmtDateTime(it.createTime) : '',
-      }));
+      list = list.map(it => {
+        const fileName = it.fileName || it.name || '';
+        const fileType = it.fileType || it.type || '';
+        const lowerName = (fileName + '.' + fileType).toLowerCase();
+        let iconClass = 'ai-default';
+        if (/\.pdf$/.test(lowerName)) iconClass = 'ai-pdf';
+        else if (/\.(doc|docx|xls|xlsx|ppt|pptx|txt|md)$/.test(lowerName)) iconClass = 'ai-doc';
+        else if (/\.(jpg|jpeg|png|gif|webp|bmp|svg)$/.test(lowerName)) iconClass = 'ai-img';
+        else if (/\.(zip|rar|7z|tar|gz)$/.test(lowerName)) iconClass = 'ai-zip';
+        else if (/\.(dxf|dwg|plt|dst|cad)$/.test(lowerName)) iconClass = 'ai-cad';
+        return {
+          ...it,
+          fileSizeText: this.formatFileSize(it.fileSize || it.size || 0),
+          createTimeText: it.createTime ? this._fmtDateTime(it.createTime) : '',
+          _iconClass: iconClass,
+        };
+      });
       this.setData({ attachmentList: list });
       // 把图片附件补充到 styleImages（必须鉴权处理，否则 <image> 无法加载受保护文件）
       const imageUrls = list
