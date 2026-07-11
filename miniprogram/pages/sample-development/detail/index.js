@@ -329,7 +329,7 @@ Page({
           if (s === 'REJECT') return 'error';
           return 'default';
         })(),
-        _reviewTimeText: styleInfo.sampleReviewTime || '',
+        _reviewTimeText: this._fmtDateTime(styleInfo.sampleReviewTime),
       });
       this.setData({ styleInfo, loading: false });
       this.buildStages(styleInfo);
@@ -1314,7 +1314,7 @@ Page({
       return;
     }
     if (this.data.processStages.length > 0) return;
-    this.setData({ processScanLoading: true });
+    this.setData({ processScanLoading: true, patternScanLoading: true });
     try {
       const [detailRes, configRes, recordsRes] = await Promise.all([
         production.getPatternDetail(pid),
@@ -1355,7 +1355,7 @@ Page({
       this._loadPatternScanRecords(records);
     } catch (e) {
       console.error('加载生产工序失败', e);
-      this.setData({ processScanLoading: false });
+      this.setData({ processScanLoading: false, patternScanLoading: false });
     }
   },
 
@@ -1558,10 +1558,11 @@ Page({
       list.forEach(s => {
         const rawType = s.type || s.processType || '';
         s.typeText = rawType ? (PROCESS_TYPE_MAP[rawType] || '未知') : '';
-        // 状态文本
+        // 状态文本（与 PC 端 statusOptions 一致，统一小写用于 CSS 类名）
         const statusKey = String(s.status || '').toLowerCase();
         const statusInfo = STATUS_MAP[statusKey];
         s._statusText = statusInfo ? statusInfo.label : (s.status || '');
+        s.status = statusKey || s.status; // 统一小写，WXML 中 sst-{{item.status}} 匹配 CSS
         // 总价：优先取后端 totalPrice，否则 quantity × unitPrice
         const qty = Number(s.quantity || 0);
         const price = Number(s.unitPrice || s.price || 0);
