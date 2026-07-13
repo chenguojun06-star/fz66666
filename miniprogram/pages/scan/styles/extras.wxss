@@ -38,7 +38,7 @@
   border-radius: var(--radius-card);
   background: linear-gradient(135deg, #7C3AED 0%, #6366F1 100%);
   box-shadow: 0 4px 14px rgba(99, 102, 241, 0.22);
-  color: #fff;
+  color: var(--color-text-white);
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 .ai-scan-helper-hover {
@@ -66,7 +66,7 @@
 .ai-scan-helper-title {
   font-size: 15px;
   font-weight: 700;
-  color: #fff;
+  color: var(--color-text-white);
   margin-bottom: 3px;
 }
 .ai-scan-helper-tips {
@@ -199,11 +199,11 @@
 .ai-scan-result-key {
   flex-shrink: 0;
   width: 56px;
-  color: #8c8c8c;
+  color: var(--color-text-secondary);
 }
 .ai-scan-result-val {
   flex: 1;
-  color: #1f1f1f;
+  color: var(--color-text-primary);
   font-weight: 500;
 }
 

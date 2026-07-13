@@ -355,7 +355,7 @@ page {
   font-size: var(--font-size-2xl);
   font-weight: 700;
   margin-bottom: 4px;
-  color: #fff;
+  color: var(--color-text-white);
 }
 .ai-welcome-text {
   font-size: var(--font-size-lg);
@@ -407,7 +407,7 @@ page {
 .ai-assistant-entry-title {
   font-size: var(--font-size-3xl);
   font-weight: 700;
-  color: #fff;
+  color: var(--color-text-white);
 }
 .ai-assistant-entry-sub {
   font-size: 12px;
@@ -442,7 +442,7 @@ page {
 .ai-ops-title {
   font-size: var(--font-size-2xl);
   font-weight: 700;
-  color: #fff;
+  color: var(--color-text-white);
 }
 .ai-ops-cta {
   font-size: 12px;
@@ -471,7 +471,7 @@ page {
 .ai-ops-stat-num {
   font-size: var(--font-size-xl);
   font-weight: 600;
-  color: #fff;
+  color: var(--color-text-white);
   line-height: 1.2;
 }
 .ai-ops-stat-label {

@@ -353,7 +353,7 @@ page {
 
 .ts-check {
   font-size: var(--font-size-xs);
-  color: #fff;
+  color: var(--color-text-white);
 }
 
 .ts-circle-active {

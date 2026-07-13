@@ -67,7 +67,7 @@
 .sum-card--blue   .sum-val { color: var(--color-primary); }
 .sum-card--green  .sum-val { color: var(--color-success); }
 .sum-card--orange .sum-val { color: var(--color-warning); }
-.sum-card--purple .sum-val { color: #7c5cfc; }
+.sum-card--purple .sum-val { color: var(--color-purple-light); }
 
 /* ============ 分区标题 ============ */
 .section-hd {

@@ -115,7 +115,7 @@
   background: rgba(0, 0, 0, 0.35);
   border-radius: var(--radius-sm);
   z-index: 2;
-  color: #fff;
+  color: var(--color-text-white);
   font-size: 12px;
   line-height: 1;
 }
@@ -137,7 +137,7 @@
 }
 .img-indicator-text {
   font-size: 11px;
-  color: #fff;
+  color: var(--color-text-white);
   font-weight: var(--font-weight-medium);
   line-height: 1;
 }
@@ -154,7 +154,7 @@
 }
 .img-type-tag text {
   font-size: 11px;
-  color: #fff;
+  color: var(--color-text-white);
   font-weight: var(--font-weight-medium);
   line-height: 1;
 }
@@ -632,11 +632,11 @@
 }
 .stage-done { 
   background: var(--color-success); 
-  color: #fff;
+  color: var(--color-text-white);
 }
 .stage-doing { 
   background: var(--color-primary); 
-  color: #fff;
+  color: var(--color-text-white);
 }
 .stage-pending { 
   background: var(--color-bg-hover); 
@@ -728,7 +728,7 @@
   font-weight: var(--font-weight-medium);
   white-space: nowrap;
 }
-.record-type-scan-cutting { background: rgba(124,92,252,0.1); color: #7c5cfc; }
+.record-type-scan-cutting { background: rgba(124,92,252,0.1); color: var(--color-purple-light); }
 .record-type-scan-quality { background: var(--color-warning-bg); color: var(--color-warning); }
 .record-type-scan-warehouse { background: var(--color-success-bg); color: var(--color-success); }
 .record-type-scan-default { background: var(--color-info-bg); color: var(--color-info); }

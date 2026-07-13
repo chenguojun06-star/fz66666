@@ -269,7 +269,7 @@
   font-weight: var(--font-weight-medium);
   white-space: nowrap;
 }
-.tag-default  { background: var(--color-bg-gray); color: var(--color-text-tertiary); }
+.tag-default  { background: var(--color-bg-gray); color: var(--color-text-secondary); }
 .tag-success  { background: var(--color-success-bg); color: var(--color-success); }
 .tag-warning  { background: var(--color-warning-bg); color: var(--color-warning); }
 .tag-error    { background: var(--color-danger-bg); color: var(--color-danger); }
