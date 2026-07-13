@@ -26,7 +26,7 @@ page {
   --color-success-bg: #e9f9ee;
   --color-success-border: rgba(52, 199, 89, 0.2);
 
-  --color-warning: var(--color-warning);
+  --color-warning: #ff9500;
   --color-warning-bg: #fff5e6;
   --color-warning-border: rgba(255, 149, 0, 0.2);
 
@@ -39,7 +39,7 @@ page {
   --color-info-border: rgba(90, 200, 250, 0.2);
 
   --color-purple: #5856d6;
-  --color-purple-light: var(--color-purple-light);
+  --color-purple-light: #7a78f0;
   --color-purple-bg: #f0effe;
   --color-purple-bg-light: rgba(88, 86, 214, 0.1);
   --color-purple-border: rgba(88, 86, 214, 0.2);
@@ -64,7 +64,7 @@ page {
   --color-text-secondary: #6e6e73;
   --color-text-tertiary: #8e8e93;
   --color-text-placeholder: #8e8e93;
-  --color-text-disabled: var(--color-text-disabled);
+  --color-text-disabled: #c7c7cc;
   --color-text-white: #ffffff;
 
   /* ========== 边框色（Apple Separator） ========== */

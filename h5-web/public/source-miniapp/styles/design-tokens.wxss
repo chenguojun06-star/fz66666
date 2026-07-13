@@ -39,7 +39,7 @@ page {
   --color-info-border: rgba(90, 200, 250, 0.2);
 
   --color-purple: #5856d6;
-  --color-purple-light: #7c5cfc;
+  --color-purple-light: #7a78f0;
   --color-purple-bg: #f0effe;
   --color-purple-bg-light: rgba(88, 86, 214, 0.1);
   --color-purple-border: rgba(88, 86, 214, 0.2);
@@ -53,6 +53,7 @@ page {
   --color-bg-page: #f2f2f7;
   --color-bg-card: #ffffff;
   --color-bg-gray: #f2f2f7;
+  --color-bg-gray-light: #f7f7fa;
   --color-bg-light: #f7f7fa;
   --color-bg-hover: rgba(0, 0, 0, 0.03);
   --color-bg-active: rgba(0, 0, 0, 0.06);
@@ -149,9 +150,9 @@ page {
   --input-radius: var(--radius-md);
 
   /* ========== 按钮系统（Apple 风格：填充式） ========== */
-  --btn-height-lg: 50px;
-  --btn-height-md: 44px;
-  --btn-height-sm: 36px;
+  --btn-height-lg: 44px;
+  --btn-height-md: 40px;
+  --btn-height-sm: 34px;
   --btn-height-xs: 28px;
   --btn-font-size: 14px;
   --btn-radius: var(--radius-md);
@@ -174,6 +175,32 @@ page {
   --page-padding-y: 12px;
   --card-gap: 12px;
   --nav-bar-height: 44px;
+
+  /* ========== 菜单图标渐变系统（Apple 风格：柔和渐变） ========== */
+  --gradient-purple: linear-gradient(135deg, #7C3AED, #8B5CF6);
+  --gradient-blue: linear-gradient(135deg, #2563EB, #3B82F6);
+  --gradient-teal: linear-gradient(135deg, #0D9488, #14B8A6);
+  --gradient-amber: linear-gradient(135deg, #D97706, #F59E0B);
+  --gradient-green: linear-gradient(135deg, #059669, #10B981);
+  --gradient-orange: linear-gradient(135deg, #EA580C, #F97316);
+  --gradient-rose: linear-gradient(135deg, #E11D48, #F43F5E);
+  --gradient-indigo: linear-gradient(135deg, #4F46E5, #6366F1);
+  --gradient-cyan: linear-gradient(135deg, #0891B2, #06B6D4);
+  --gradient-red: linear-gradient(135deg, #DC2626, #EF4444);
+  --gradient-gray: linear-gradient(135deg, #6B7280, #9CA3AF);
+
+  /* 渐变阴影变量 */
+  --shadow-gradient-purple: 0 4px 12px rgba(124, 58, 237, 0.3);
+  --shadow-gradient-blue: 0 4px 12px rgba(37, 99, 235, 0.3);
+  --shadow-gradient-teal: 0 4px 12px rgba(13, 148, 136, 0.3);
+  --shadow-gradient-amber: 0 4px 12px rgba(217, 119, 6, 0.3);
+  --shadow-gradient-green: 0 4px 12px rgba(5, 150, 105, 0.3);
+  --shadow-gradient-orange: 0 4px 12px rgba(234, 88, 12, 0.3);
+  --shadow-gradient-rose: 0 4px 12px rgba(225, 29, 72, 0.3);
+  --shadow-gradient-indigo: 0 4px 12px rgba(79, 70, 229, 0.3);
+  --shadow-gradient-cyan: 0 4px 12px rgba(8, 145, 178, 0.3);
+  --shadow-gradient-red: 0 4px 12px rgba(220, 38, 38, 0.3);
+  --shadow-gradient-gray: 0 4px 12px rgba(107, 114, 128, 0.3);
 
   /* ========== 兼容别名（保持向下兼容） ========== */
   --color-error: var(--color-danger);
