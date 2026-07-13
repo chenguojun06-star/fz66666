@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "销售数据",
+  "backgroundColor": "#f5f6f8",
+  "enablePullDownRefresh": true,
+  "usingComponents": {}
+}
