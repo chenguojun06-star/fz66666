@@ -876,13 +876,13 @@
   left: 0;
   right: 0;
   background: var(--color-bg-card);
-  padding: 10px var(--page-padding-x) calc(env(safe-area-inset-bottom) + 10px);
+  padding: var(--spacing-sm) var(--page-padding-x) calc(env(safe-area-inset-bottom) + var(--spacing-sm));
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: var(--spacing-sm);
   z-index: var(--z-dropdown);
-  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-lg);
 }
 .action-btn {
   flex: 1;

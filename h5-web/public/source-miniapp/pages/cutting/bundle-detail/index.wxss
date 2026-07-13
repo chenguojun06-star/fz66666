@@ -1005,11 +1005,11 @@
   left: 0;
   right: 0;
   background: var(--color-bg-card);
-  padding: 10px var(--page-padding-x) calc(10px + env(safe-area-inset-bottom));
-  box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.06);
+  padding: var(--spacing-sm) var(--page-padding-x) calc(var(--spacing-sm) + env(safe-area-inset-bottom));
+  box-shadow: var(--shadow-lg);
   z-index: var(--z-dropdown);
   display: flex;
-  gap: 10px;
+  gap: var(--spacing-sm);
   align-items: center;
 }
 

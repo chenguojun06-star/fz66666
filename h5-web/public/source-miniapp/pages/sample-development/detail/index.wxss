@@ -926,7 +926,7 @@
   border: none;
 }
 .pc-btn-primary:active {
-  background: #0056b3;
+  background: var(--color-primary-dark);
 }
 .pc-btn-success {
   background: transparent;
@@ -1963,7 +1963,7 @@
 .qcl-material { background: var(--color-primary); }
 .qcl-process { background: var(--color-success); }
 .qcl-secondary { background: var(--color-warning); }
-.qcl-other { background: #8e8e93; }
+.qcl-other { background: var(--color-text-tertiary); }
 .qcl-label {
   font-size: 11px;
   color: var(--color-text-secondary);

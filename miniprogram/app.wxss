@@ -525,26 +525,26 @@ page {
   left: 0;
   right: 0;
   display: flex;
-  gap: 8px;
-  padding: 4px var(--page-padding-x) calc(4px + env(safe-area-inset-bottom));
-  background: rgba(255, 255, 255, 0.92);
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--page-padding-x) calc(var(--spacing-sm) + env(safe-area-inset-bottom));
+  background: var(--color-bg-card);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-top: none;
   z-index: var(--z-dropdown);
-  box-shadow: 0 -1px 8px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--shadow-lg);
 }
 
 .footer-bar .btn-cancel,
 .footer-bar .btn-secondary {
   flex: 1;
-  height: 36px;
+  height: var(--btn-height-md);
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: var(--btn-radius);
-  font-size: 16px;
-  font-weight: var(--font-weight-semibold);
+  border-radius: var(--radius-button);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
   background: var(--color-bg-gray);
   color: var(--color-text-primary);
   border: none;
@@ -552,13 +552,13 @@ page {
 
 .footer-bar .btn-submit {
   flex: 1;
-  height: 36px;
+  height: var(--btn-height-md);
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: var(--btn-radius);
-  font-size: 16px;
-  font-weight: var(--font-weight-semibold);
+  border-radius: var(--radius-button);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
   background: transparent;
   color: var(--color-primary);
   border: 1.5px solid var(--color-primary);

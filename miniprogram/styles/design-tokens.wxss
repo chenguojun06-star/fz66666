@@ -150,9 +150,9 @@ page {
   --input-radius: var(--radius-md);
 
   /* ========== 按钮系统（Apple 风格：填充式） ========== */
-  --btn-height-lg: 50px;
-  --btn-height-md: 44px;
-  --btn-height-sm: 36px;
+  --btn-height-lg: 44px;
+  --btn-height-md: 40px;
+  --btn-height-sm: 34px;
   --btn-height-xs: 28px;
   --btn-font-size: 14px;
   --btn-radius: var(--radius-md);

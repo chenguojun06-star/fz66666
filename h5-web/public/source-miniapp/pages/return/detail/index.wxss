@@ -340,10 +340,10 @@
   left: 0;
   right: 0;
   display: flex;
-  gap: 10px;
-  padding: 10px var(--page-padding-x) calc(10px + env(safe-area-inset-bottom));
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--page-padding-x) calc(var(--spacing-sm) + env(safe-area-inset-bottom));
   background: var(--color-bg-card);
-  box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--shadow-lg);
   z-index: var(--z-dropdown);
 }
 

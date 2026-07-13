@@ -252,8 +252,8 @@ page {
   position: absolute;
   top: -4px;
   right: -4px;
-  background: #EF4444;
-  color: white;
+  background: var(--color-danger);
+  color: var(--color-text-white);
   font-size: 10px;
   padding: 1px 6px;
   border-radius: 10px;
