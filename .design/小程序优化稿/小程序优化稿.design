@@ -94,6 +94,7 @@
       "path": "/Users/guojunmini4/.trae-cn/design_libraries/dl_builtin_apple",
       "versionSource": "metadata.json"
     },
-    "showEdge": false
+    "showEdge": false,
+    "visualEditorEnabled": false
   }
 }

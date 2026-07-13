@@ -208,53 +208,51 @@ page {
   color: var(--color-text-secondary);
 }
 
-/* -- 图标渐变色 -- */
+/* -- 图标颜色（Apple 风格：淡背景） -- */
 .menu-icon-circle--purple {
-  background: var(--gradient-purple);
-  box-shadow: var(--shadow-gradient-purple);
+  background: var(--icon-bg-purple);
 }
 
 .menu-icon-circle--blue {
-  background: var(--gradient-blue);
-  box-shadow: var(--shadow-gradient-blue);
+  background: var(--icon-bg-blue);
 }
 
 .menu-icon-circle--teal {
-  background: var(--gradient-teal);
-  box-shadow: var(--shadow-gradient-teal);
+  background: var(--icon-bg-teal);
 }
 
 .menu-icon-circle--amber {
-  background: var(--gradient-amber);
-  box-shadow: var(--shadow-gradient-amber);
+  background: var(--icon-bg-amber);
 }
 
 .menu-icon-circle--green {
-  background: var(--gradient-green);
-  box-shadow: var(--shadow-gradient-green);
+  background: var(--icon-bg-green);
 }
 
 .menu-icon-circle--orange {
-  background: var(--gradient-orange);
-  box-shadow: var(--shadow-gradient-orange);
+  background: var(--icon-bg-orange);
 }
 
 .menu-icon-circle--rose {
-  background: var(--gradient-rose);
-  box-shadow: var(--shadow-gradient-rose);
+  background: var(--icon-bg-rose);
 }
 
 .menu-icon-circle--indigo {
-  background: var(--gradient-indigo);
-  box-shadow: var(--shadow-gradient-indigo);
+  background: var(--icon-bg-indigo);
 }
 
 .menu-icon-circle--cyan {
-  background: var(--gradient-cyan);
-  box-shadow: var(--shadow-gradient-cyan);
+  background: var(--icon-bg-cyan);
+}
+
+.menu-icon-circle--magenta {
+  background: var(--color-magenta-bg);
+}
+
+.menu-icon-circle--lightblue {
+  background: var(--icon-bg-cyan);
 }
 
 .menu-icon-circle--gray {
-  background: var(--gradient-gray);
-  box-shadow: var(--shadow-gradient-gray);
+  background: var(--icon-bg-gray);
 }
